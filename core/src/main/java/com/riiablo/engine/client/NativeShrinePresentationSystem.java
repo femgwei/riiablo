@@ -98,9 +98,9 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
         || Riiablo.files == null || Riiablo.files.Shrines == null
         || shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return;
     Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
-    if (shrine == null || shrine.ViewName == null) return;
-    String name = Riiablo.string.lookup(shrine.ViewName);
-    if (name == null || name.isEmpty()) name = shrine.ViewName;
+    if (shrine == null) return;
+    String name = ClientEntityFactory.shrineDisplayName(shrine);
+    if (name == null || name.isEmpty()) return;
     if (mLabel.get(entityId).actor instanceof com.riiablo.widget.Label) {
       ((com.riiablo.widget.Label) mLabel.get(entityId).actor).setText(name);
     }

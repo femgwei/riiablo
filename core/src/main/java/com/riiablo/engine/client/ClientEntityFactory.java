@@ -188,9 +188,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     int shrineId = resolveClientShrineId(base, x, y);
     if (shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return null;
     Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
-    if (shrine == null || shrine.ViewName == null || shrine.ViewName.isEmpty()) return null;
-    String view = Riiablo.string.lookup(shrine.ViewName);
-    return view == null || view.isEmpty() ? shrine.ViewName : view;
+    return shrineDisplayName(shrine);
   }
 
   private int resolveClientShrineId(Objects.Entry base, float x, float y) {
@@ -220,6 +218,30 @@ public class ClientEntityFactory extends ServerEntityFactory {
       case 15: return "shrine_experience";
       default: return null;
     }
+  }
+
+  /**
+   * Resolves the native shrine tooltip name.  Retail Shrines.txt stores
+   * {@code view name} as the placeholder "blah"; the actual localized names
+   * are the string-table keys ShrId0..ShrId22.
+   */
+  static String shrineDisplayName(Shrines.Entry shrine) {
+    if (shrine == null) return null;
+    String key = "ShrId" + shrine.Code;
+    String localized = Riiablo.string == null ? null : Riiablo.string.lookup(key);
+    if (localized != null && !localized.isEmpty()
+        && !localized.regionMatches(true, 0, "ERROR:", 0, 6)) {
+      return localized;
+    }
+
+    String view = shrine.ViewName;
+    if (view != null && !view.isEmpty() && !view.equalsIgnoreCase("blah")) {
+      String resolved = Riiablo.string == null ? null : Riiablo.string.lookup(view);
+      if (resolved != null && !resolved.isEmpty()
+          && !resolved.regionMatches(true, 0, "ERROR:", 0, 6)) return resolved;
+      return view;
+    }
+    return com.riiablo.engine.server.object.ShrineType.getName(shrine.Code);
   }
 
   static boolean isInitiallySelectable(Objects.Entry base) {
