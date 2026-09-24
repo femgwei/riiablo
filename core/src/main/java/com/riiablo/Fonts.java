@@ -111,6 +111,10 @@ public class Fonts {
     font42       = load(assets, "font42", BlendMode.ID);
     fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
     fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
+    // The native Chinese scrolling-dialog font uses a different bearing from
+    // the menu/button fonts. Normalize only this font; applying the correction
+    // globally moves Exocet menu text outside its button bounds.
+    ((FontTBL.BitmapFontData) fontformal11.getData()).alignGlyphsToBaseline();
     fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
     ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
     gameplayFontsLoaded = true;

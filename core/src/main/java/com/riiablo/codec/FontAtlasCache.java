@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,15 +26,22 @@ public final class FontAtlasCache {
   private static final int MAGIC = 0x52464E54; // RFNT
   // Glyph bearings are part of the serialized data. Bump this whenever the
   // bearing calculation changes so stale atlases cannot restore old offsets.
-  private static final int VERSION = 2;
-  private static final String CACHE_DIR = "cache/fonts";
-
+  private static final int VERSION = 3;
   private FontAtlasCache() {}
 
   public static FileHandle fileFor(FileHandle tbl, FileHandle dc6) {
-    if (Gdx.files == null) return null;
     try {
-      return Gdx.files.local(CACHE_DIR + "/font-" + sourceKey(tbl, dc6) + ".bin");
+      String configured = System.getProperty("riiablo.cache.dir", "").trim();
+      File root;
+      if (!configured.isEmpty()) {
+        root = new File(configured);
+      } else {
+        String localAppData = System.getenv("LOCALAPPDATA");
+        root = localAppData == null || localAppData.trim().isEmpty()
+            ? new File(System.getProperty("user.home"), ".riiablo/cache")
+            : new File(localAppData, "Riiablo/cache");
+      }
+      return new FileHandle(new File(root, "fonts/font-" + sourceKey(tbl, dc6) + ".bin"));
     } catch (Throwable ignored) {
       return null;
     }

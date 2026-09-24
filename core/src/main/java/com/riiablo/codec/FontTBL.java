@@ -96,10 +96,7 @@ public class FontTBL {
 
         glyph.width = Math.min(cData.width + 1, charWidth);
         glyph.height = charHeight; // this was  {@code charHeight - 1} before, maybe because of no glyph padding in the backing texture
-        // BitmapFontCache adds the glyph offset to the baseline (ascent).
-        // Using -2 * height moved CJK glyphs an entire extra glyph above the
-        // line, leaving only the lower half visible inside TextField/Label.
-        glyph.yoffset = -glyph.height;
+        glyph.yoffset = -(2 * glyph.height);
         glyph.xadvance = cData.width;
 
         // This was messing with
@@ -227,6 +224,17 @@ public class FontTBL {
         if (pageGlyphs == null) continue;
         for (BitmapFont.Glyph glyph : pageGlyphs) {
           if (glyph != null) glyph.yoffset += delta;
+        }
+      }
+    }
+
+    /** Aligns glyph bitmaps to the LibGDX baseline used by scrolling text fields. */
+    public void alignGlyphsToBaseline() {
+      for (int page = 0; page < glyphs.length; page++) {
+        BitmapFont.Glyph[] pageGlyphs = glyphs[page];
+        if (pageGlyphs == null) continue;
+        for (BitmapFont.Glyph glyph : pageGlyphs) {
+          if (glyph != null) glyph.yoffset = -glyph.height;
         }
       }
     }
