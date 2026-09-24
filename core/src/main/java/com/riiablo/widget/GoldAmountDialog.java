@@ -22,30 +22,35 @@ import com.riiablo.codec.DC6;
  */
 public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   private static final String BACKGROUND_PATH = "data\\global\\ui\\MENU\\dialogbackground.dc6";
-  private static final String OK_PATH = "data\\global\\ui\\MENU\\buttontempok.dc6";
-  private static final String CANCEL_PATH = "data\\global\\ui\\MENU\\buttontempcancel.dc6";
+  // The in-game panel sheet contains the native square cancel/confirm glyphs.
+  // Frames 10/11 are cancel (normal/pressed), 16/17 are confirm.
+  private static final String OK_CANCEL_PATH = "data\\global\\ui\\PANEL\\buysellbtn.dc6";
+  private static final String GOLD_BUTTON_PATH = "data\\global\\ui\\BIGMENU\\numberarrows.dc6";
 
   private final AssetDescriptor<DC6> backgroundDescriptor =
       new AssetDescriptor<>(BACKGROUND_PATH, DC6.class);
-  private final AssetDescriptor<DC6> okDescriptor =
-      new AssetDescriptor<>(OK_PATH, DC6.class);
-  private final AssetDescriptor<DC6> cancelDescriptor =
-      new AssetDescriptor<>(CANCEL_PATH, DC6.class);
+  private final AssetDescriptor<DC6> okCancelDescriptor =
+      new AssetDescriptor<>(OK_CANCEL_PATH, DC6.class);
+  private final AssetDescriptor<DC6> goldButtonDescriptor =
+      new AssetDescriptor<>(GOLD_BUTTON_PATH, DC6.class);
 
   private final TextureRegion background;
   private final Button okButton;
   private final Button cancelButton;
+  private final Button increaseButton;
+  private final Button decreaseButton;
+  private final Label title;
   private final TextField amount;
   private final boolean allowNegative;
   private Listener listener;
   private float dialogX;
   private float dialogY;
 
-  public GoldAmountDialog(Listener listener) {
-    this(listener, false);
+  public GoldAmountDialog(String titleText, Listener listener) {
+    this(titleText, listener, false);
   }
 
-  public GoldAmountDialog(Listener listener, boolean allowNegative) {
+  public GoldAmountDialog(String titleText, Listener listener, boolean allowNegative) {
     this.listener = listener;
     this.allowNegative = allowNegative;
     setTouchable(Touchable.enabled);
@@ -70,21 +75,21 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     });
 
     Riiablo.assets.load(backgroundDescriptor);
-    Riiablo.assets.load(okDescriptor);
-    Riiablo.assets.load(cancelDescriptor);
+    Riiablo.assets.load(okCancelDescriptor);
+    Riiablo.assets.load(goldButtonDescriptor);
     Riiablo.assets.finishLoadingAsset(backgroundDescriptor);
-    Riiablo.assets.finishLoadingAsset(okDescriptor);
-    Riiablo.assets.finishLoadingAsset(cancelDescriptor);
+    Riiablo.assets.finishLoadingAsset(okCancelDescriptor);
+    Riiablo.assets.finishLoadingAsset(goldButtonDescriptor);
 
     DC6 backgroundDc6 = Riiablo.assets.get(backgroundDescriptor);
-    DC6 okDc6 = Riiablo.assets.get(okDescriptor);
-    DC6 cancelDc6 = Riiablo.assets.get(cancelDescriptor);
+    DC6 okCancelDc6 = Riiablo.assets.get(okCancelDescriptor);
+    DC6 goldButtonDc6 = Riiablo.assets.get(goldButtonDescriptor);
     background = backgroundDc6.getTexture();
 
-    TextureRegion okUp = frame(okDc6, 0);
-    TextureRegion okDown = frame(okDc6, 1);
-    TextureRegion cancelUp = frame(cancelDc6, 0);
-    TextureRegion cancelDown = frame(cancelDc6, 1);
+    TextureRegion cancelUp = frame(okCancelDc6, 10);
+    TextureRegion cancelDown = frame(okCancelDc6, 11);
+    TextureRegion okUp = frame(okCancelDc6, 16);
+    TextureRegion okDown = frame(okCancelDc6, 17);
     okButton = new Button(new Button.ButtonStyle(
         new TextureRegionDrawable(okUp), new TextureRegionDrawable(okDown)));
     cancelButton = new Button(new Button.ButtonStyle(
@@ -101,15 +106,34 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
         cancel();
       }
     });
+    increaseButton = new Button(new Button.ButtonStyle(
+        new TextureRegionDrawable(frame(goldButtonDc6, 0)),
+        new TextureRegionDrawable(frame(goldButtonDc6, 1))));
+    decreaseButton = new Button(new Button.ButtonStyle(
+        new TextureRegionDrawable(frame(goldButtonDc6, 2)),
+        new TextureRegionDrawable(frame(goldButtonDc6, 3))));
+    increaseButton.addListener(new ClickListener() {
+      @Override public void clicked(InputEvent event, float x, float y) { adjust(1); }
+    });
+    decreaseButton.addListener(new ClickListener() {
+      @Override public void clicked(InputEvent event, float x, float y) { adjust(-1); }
+    });
     addActor(okButton);
     addActor(cancelButton);
+    addActor(increaseButton);
+    addActor(decreaseButton);
+
+    title = new Label(titleText, Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+    title.setAlignment(Align.center);
+    title.setTouchable(Touchable.disabled);
+    addActor(title);
 
     amount = new TextField("", new TextField.TextFieldStyle() {{
       font = Riiablo.fonts.fontformal11;
       fontColor = Riiablo.colors.white;
       cursor = new TextureRegionDrawable(Riiablo.textures.white);
     }});
-    amount.setAlignment(Align.center);
+    amount.setAlignment(Align.left);
     amount.setMaxLength(9);
     amount.setTextFieldFilter((textField, c) -> Character.isDigit(c)
         || allowNegative && c == '-' && textField.getText().isEmpty());
@@ -139,10 +163,13 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     dialogX = (getWidth() - background.getRegionWidth()) / 2f;
     dialogY = (getHeight() - background.getRegionHeight()) / 2f;
 
-    amount.setText("");
-    amount.setBounds(dialogX + 29, dialogY + 61, 170, 27);
-    placeButton(okButton, dialogX + 34, dialogY + 14);
-    placeButton(cancelButton, dialogX + 112, dialogY + 14);
+    amount.setText("0");
+    amount.setBounds(dialogX + 30, dialogY + 61, 169, 26);
+    title.setBounds(dialogX + 8, dialogY + 108, background.getRegionWidth() - 16, 20);
+    placeButton(increaseButton, dialogX + 7, dialogY + 79);
+    placeButton(decreaseButton, dialogX + 7, dialogY + 61);
+    placeButton(okButton, dialogX + 35, dialogY + 14);
+    placeButton(cancelButton, dialogX + 140, dialogY + 14);
     setVisible(true);
     toFront();
     if (getStage() != null) getStage().setKeyboardFocus(amount);
@@ -177,6 +204,20 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     if (listener != null) listener.submitted(value);
   }
 
+  private void adjust(int delta) {
+    int value;
+    try {
+      value = Integer.parseInt(amount.getText().trim());
+    } catch (NumberFormatException e) {
+      value = 0;
+    }
+    long next = (long) value + delta;
+    if (next > 999_999_999L) next = 999_999_999L;
+    if (next < -999_999_999L) next = -999_999_999L;
+    amount.setText(Long.toString(next));
+    if (getStage() != null) getStage().setKeyboardFocus(amount);
+  }
+
   private void cancel() {
     if (!isVisible()) return;
     close();
@@ -193,9 +234,11 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   public void dispose() {
     okButton.dispose();
     cancelButton.dispose();
+    increaseButton.dispose();
+    decreaseButton.dispose();
     Riiablo.assets.unload(backgroundDescriptor.fileName);
-    Riiablo.assets.unload(okDescriptor.fileName);
-    Riiablo.assets.unload(cancelDescriptor.fileName);
+    Riiablo.assets.unload(okCancelDescriptor.fileName);
+    Riiablo.assets.unload(goldButtonDescriptor.fileName);
   }
 
   private static TextureRegion frame(DC6 dc6, int index) {

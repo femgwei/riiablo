@@ -105,7 +105,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     });
     addActor(btnDropGold);
 
-    goldDialog = new GoldAmountDialog(new GoldAmountDialog.Listener() {
+    goldDialog = new GoldAmountDialog(Riiablo.bundle.get("stash_gold_prompt"),
+        new GoldAmountDialog.Listener() {
       @Override
       public void submitted(String text) {
         try {
@@ -120,7 +121,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
       @Override
       public void canceled() {}
-    }, true);
+        }, true);
     addActor(goldDialog);
 
     //setDebug(true, true);

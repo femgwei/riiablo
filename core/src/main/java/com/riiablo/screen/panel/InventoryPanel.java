@@ -313,7 +313,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     });
     addActor(btnDropGold);
 
-    goldDialog = new GoldAmountDialog(new GoldAmountDialog.Listener() {
+    goldDialog = new GoldAmountDialog(Riiablo.bundle.get("drop_gold_prompt"),
+        new GoldAmountDialog.Listener() {
       @Override
       public void submitted(String text) {
         try {
@@ -326,7 +327,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
       @Override
       public void canceled() {}
-    });
+        });
     addActor(goldDialog);
 
     //setDebug(true, true);

@@ -23,10 +23,11 @@
   放到鼠标光标以及右键直接购买的行为保留，不再按“原版没有购买确认”处理。后续只替换
   窗口视觉资源，不改变该交互分流。
 - [x] Inventory/箱子金币输入不再调用平台原生 `Gdx.input.getTextInput`。新增
-  `GoldAmountDialog`，使用原版 `MENU/dialogbackground.dc6` 与
-  `MENU/buttontempok.dc6`/`buttontempcancel.dc6`，保留数字过滤、Enter/按钮确认、取消和
-  现有本地/D2GS 金币回调；箱子继续兼容正数存入、负数取出。资源导出器清单也已补充
-  `dialogbackground`、`buttontemp*`、`okcancelbtn` 和 `goldbtn`，可用同一 MPQ 命令复核。
+  `GoldAmountDialog`，使用原版 `MENU/dialogbackground.dc6`，`PANEL/buysellbtn.dc6`
+  的确认/取消方形图标（帧 16/17、10/11）和 `BIGMENU/numberarrows.dc6` 上下调节按钮，
+  输入框左对齐并显示顶部标题；保留数字过滤、Enter/按钮确认、取消和现有本地/D2GS
+  金币回调，箱子继续兼容正数存入、负数取出。资源导出器清单已补充这些原版资源，可用
+  同一 MPQ 命令复核。
 - [ ] 商人购买确认框仍使用程序化背景和文字按钮；下一步应将其替换为原版游戏内对话框资源，
   但必须保持已经实机确认的购买确认行为。
 - [ ] 角色删除确认：`SelectCharacterScreen*` 当前使用 `Label.MODAL`，待评估
