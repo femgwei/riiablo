@@ -66,12 +66,10 @@ public final class FontAtlasCache {
       // reading the complete TBL/DC6 just to calculate an MD5 on startup.
       String identity = tbl.toString() + "|" + tbl.length() + "|"
           + dc6.toString() + "|" + dc6.length();
-      StringBuilder key = new StringBuilder(identity.length());
-      for (int i = 0; i < identity.length(); i++) {
-        char c = identity.charAt(i);
-        key.append(Character.isLetterOrDigit(c) || c == '.' || c == '-'
-            ? c : '_');
-      }
+      MessageDigest digest = MessageDigest.getInstance("MD5");
+      byte[] digestBytes = digest.digest(identity.getBytes("UTF-8"));
+      StringBuilder key = new StringBuilder(32);
+      for (byte b : digestBytes) key.append(String.format("%02x", b & 0xff));
       return new FileHandle(new File(root, "fonts/index-" + key + ".idx"));
     } catch (Throwable ignored) {
       return null;

@@ -179,6 +179,27 @@ public class Fonts {
     return gameplayFontsLoaded;
   }
 
+  /**
+   * Fast check used by the entry screen to avoid showing a second loading
+   * animation when all staged fonts already have indexed caches. It never
+   * hashes TBL/DC6 contents; a legacy cache is migrated by the normal load
+   * path instead.
+   */
+  public boolean hasIndexedGameplayFontCache() {
+    if (gameplayFontsLoaded) return true;
+    final String[] names = {"font6", "font8", "font24", "font30", "font42",
+        "fontformal10", "fontformal11", "fontridiculous", "ReallyTheLastSucker"};
+    for (String name : names) {
+      String path = "data\\local\\font\\" + fontDirectory + "\\" + name;
+      FileHandle tbl = Riiablo.mpqs.resolve(path + ".TBL");
+      FileHandle dc6 = Riiablo.mpqs.resolve(path + ".DC6");
+      if (tbl == null || dc6 == null) return false;
+      if (com.riiablo.codec.FontAtlasCache.indexed(
+          com.riiablo.codec.FontAtlasCache.indexFor(tbl, dc6)) == null) return false;
+    }
+    return true;
+  }
+
   private void applyMetrics() {
     BitmapFont.BitmapFontData data;
     data = font8.getData();

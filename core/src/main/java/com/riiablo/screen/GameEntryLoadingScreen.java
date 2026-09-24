@@ -26,6 +26,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   private final Stage stage;
   private final AnimationWrapper image;
   private boolean entered;
+  private boolean showEntryLoading;
 
   public GameEntryLoadingScreen(CharData charData) {
     this(charData, null, false);
@@ -56,6 +57,10 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
 
   @Override public void show() {
     Riiablo.viewport = Riiablo.defaultViewport;
+    // Once staged fonts are indexed, the following GameLoadingScreen is the
+    // only visible progress screen. Keeping this screen black for the tiny
+    // handoff prevents the loading animation from appearing twice.
+    showEntryLoading = !Riiablo.fonts.hasIndexedGameplayFontCache();
     Riiablo.fonts.queueGameplayFonts();
   }
 
@@ -81,6 +86,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   }
 
   private void drawLoading(float delta) {
+    if (!showEntryLoading) return;
     Riiablo.batch.setPalette(Riiablo.palettes.loading);
     stage.act(delta);
     stage.draw();
