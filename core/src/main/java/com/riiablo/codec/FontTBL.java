@@ -96,7 +96,10 @@ public class FontTBL {
 
         glyph.width = Math.min(cData.width + 1, charWidth);
         glyph.height = charHeight; // this was  {@code charHeight - 1} before, maybe because of no glyph padding in the backing texture
-        glyph.yoffset = -(2 * glyph.height);
+        // BitmapFontCache adds the glyph offset to the baseline (ascent).
+        // Using -2 * height moved CJK glyphs an entire extra glyph above the
+        // line, leaving only the lower half visible inside TextField/Label.
+        glyph.yoffset = -glyph.height;
         glyph.xadvance = cData.width;
 
         // This was messing with

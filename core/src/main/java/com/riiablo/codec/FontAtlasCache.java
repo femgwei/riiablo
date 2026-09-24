@@ -23,7 +23,9 @@ import com.riiablo.graphics.PaletteIndexedPixmap;
  */
 public final class FontAtlasCache {
   private static final int MAGIC = 0x52464E54; // RFNT
-  private static final int VERSION = 1;
+  // Glyph bearings are part of the serialized data. Bump this whenever the
+  // bearing calculation changes so stale atlases cannot restore old offsets.
+  private static final int VERSION = 2;
   private static final String CACHE_DIR = "cache/fonts";
 
   private FontAtlasCache() {}
