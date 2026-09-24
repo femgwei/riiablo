@@ -62,11 +62,14 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
     // called by AssetManager on the render thread; hashing and reading a full
     // CJK atlas here made screen transitions appear frozen.
     cached = null;
+    if (params != null && params.cached) return null;
     return Array.<AssetDescriptor>with(new AssetDescriptor<>(name + ".DC6", DC6.class));
   }
 
   public static class Params extends AssetLoaderParameters<FontTBL.BitmapFont> {
     public int blendMode;
+    /** Set by the background cache probe; skips the DC6 dependency on a hit. */
+    public boolean cached;
 
     public static Params of(int blendMode) {
       Params params = new Params();

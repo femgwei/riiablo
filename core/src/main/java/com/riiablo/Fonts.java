@@ -3,6 +3,10 @@ package com.riiablo;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.files.FileHandle;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.codec.FontTBL;
@@ -29,6 +33,8 @@ public class Fonts {
   private final String fontDirectory;
   private final AssetManager assets;
   private boolean gameplayFontsLoaded;
+  private boolean gameplayFontsQueued;
+  private Future<FontProbe[]> gameplayFontProbe;
 
   public Fonts(AssetManager assets) {
     this(assets, D2Language.ENGLISH);
@@ -111,24 +117,57 @@ public class Fonts {
     font42       = load(assets, "font42", BlendMode.ID);
     fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
     fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
+    FontTBL.BitmapFontData formal11Data = (FontTBL.BitmapFontData) fontformal11.getData();
+    com.badlogic.gdx.graphics.g2d.BitmapFont.Glyph formal11Glyph = formal11Data.getGlyph('\u4e2d');
+    if (formal11Glyph != null) formal11Data.shiftGlyphsY(formal11Glyph.height / 2);
     fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
     ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
     gameplayFontsLoaded = true;
     applyMetrics();
   }
 
-  /** Queues staged fonts without blocking the render thread. */
+  /** Starts probing staged font caches without blocking the render thread. */
   public void queueGameplayFonts() {
-    if (gameplayFontsLoaded) return;
-    assets.load(getDescriptor("font6", BlendMode.LUMINOSITY_TINT));
-    assets.load(getDescriptor("font8", BlendMode.LUMINOSITY_TINT));
-    assets.load(getDescriptor("font24", BlendMode.ID));
-    assets.load(getDescriptor("font30", BlendMode.ID));
-    assets.load(getDescriptor("font42", BlendMode.ID));
-    assets.load(getDescriptor("fontformal10", BlendMode.LUMINOSITY_TINT));
-    assets.load(getDescriptor("fontformal11", BlendMode.LUMINOSITY_TINT));
-    assets.load(getDescriptor("fontridiculous", BlendMode.TINT_BLACKS));
-    assets.load(getDescriptor("ReallyTheLastSucker", BlendMode.ID));
+    if (gameplayFontsLoaded || gameplayFontProbe != null || gameplayFontsQueued) return;
+    final String[] names = {"font6", "font8", "font24", "font30", "font42",
+        "fontformal10", "fontformal11", "fontridiculous", "ReallyTheLastSucker"};
+    final int[] modes = {BlendMode.LUMINOSITY_TINT, BlendMode.LUMINOSITY_TINT,
+        BlendMode.ID, BlendMode.ID, BlendMode.ID, BlendMode.LUMINOSITY_TINT,
+        BlendMode.LUMINOSITY_TINT, BlendMode.TINT_BLACKS, BlendMode.ID};
+    ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+      Thread thread = new Thread(r, "riiablo-font-cache-probe");
+      thread.setDaemon(true);
+      return thread;
+    });
+    gameplayFontProbe = executor.submit(() -> {
+      try {
+        FontProbe[] result = new FontProbe[names.length];
+        for (int i = 0; i < names.length; i++) {
+          FileHandle tbl = Riiablo.mpqs.resolve("data\\local\\font\\" + fontDirectory + "\\" + names[i] + ".TBL");
+          FileHandle dc6 = Riiablo.mpqs.resolve("data\\local\\font\\" + fontDirectory + "\\" + names[i] + ".DC6");
+          FileHandle cache = com.riiablo.codec.FontAtlasCache.fileFor(tbl, dc6);
+          result[i] = new FontProbe(names[i], modes[i], cache != null && cache.exists());
+        }
+        return result;
+      } finally {
+        executor.shutdown();
+      }
+    });
+  }
+
+  /** Queues fonts after the background cache probe has completed. */
+  public boolean finishQueueGameplayFonts() {
+    if (gameplayFontsLoaded || gameplayFontsQueued) return true;
+    if (gameplayFontProbe == null || !gameplayFontProbe.isDone()) return false;
+    try {
+      for (FontProbe probe : gameplayFontProbe.get()) {
+        assets.load(getDescriptor(probe.name, probe.blendMode, probe.cached));
+      }
+      gameplayFontsQueued = true;
+      return true;
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to prepare gameplay fonts", e);
+    }
   }
 
   public boolean isGameplayFontsLoaded() {
@@ -187,6 +226,23 @@ public class Fonts {
   }
 
   private AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode) {
-    return new AssetDescriptor<>("data\\local\\font\\" + fontDirectory + "\\" + fontName + ".TBL", FontTBL.BitmapFont.class, BitmapFontLoader.Params.of(blendMode));
+    return getDescriptor(fontName, blendMode, false);
+  }
+
+  private AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode, boolean cached) {
+    BitmapFontLoader.Params params = BitmapFontLoader.Params.of(blendMode);
+    params.cached = cached;
+    return new AssetDescriptor<>("data\\local\\font\\" + fontDirectory + "\\" + fontName + ".TBL", FontTBL.BitmapFont.class, params);
+  }
+
+  private static final class FontProbe {
+    final String name;
+    final int blendMode;
+    final boolean cached;
+    FontProbe(String name, int blendMode, boolean cached) {
+      this.name = name;
+      this.blendMode = blendMode;
+      this.cached = cached;
+    }
   }
 }

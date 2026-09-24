@@ -7,7 +7,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
-import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.AnimationWrapper;
 
@@ -19,7 +18,7 @@ import com.riiablo.widget.AnimationWrapper;
 public final class GameEntryLoadingScreen extends ScreenAdapter {
   private static final String TAG = "GameEntryLoadingScreen";
   private static final AssetDescriptor<DC6> LOADING = new AssetDescriptor<>(
-      "data\\local\\ui\\loadingscreen.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
+      "data\\local\\ui\\loadingscreen.dc6", DC6.class);
 
   private final CharData charData;
   private final com.badlogic.gdx.net.Socket socket;
@@ -65,6 +64,10 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   }
 
   @Override public void render(float delta) {
+    if (!Riiablo.fonts.finishQueueGameplayFonts()) {
+      drawLoading(delta);
+      return;
+    }
     if (!entered && Riiablo.assets.update()) {
       entered = true;
       Riiablo.fonts.initializeGameplayFonts();
@@ -74,6 +77,10 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
       return;
     }
 
+    drawLoading(delta);
+  }
+
+  private void drawLoading(float delta) {
     Riiablo.batch.setPalette(Riiablo.palettes.loading);
     stage.act(delta);
     stage.draw();
