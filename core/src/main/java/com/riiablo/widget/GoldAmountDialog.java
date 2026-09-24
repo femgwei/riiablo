@@ -208,7 +208,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     dialogX = (getWidth() - background.getRegionWidth()) / 2f;
     dialogY = (getHeight() - background.getRegionHeight()) / 2f;
 
-    amount.setText("0");
+    amount.setText("");
     // dialogbackground already paints the textbox border. Keep the editable
     // text/cursor inset from both inner edges like the native dialog.
     amount.setBounds(dialogX + 45, dialogY + 61, 139, 26);
