@@ -9,6 +9,9 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import org.junit.jupiter.api.Test;
 
 class ManaRecoverySystemTest extends RiiabloTest {
@@ -55,6 +58,34 @@ class ManaRecoverySystemTest extends RiiabloTest {
       world.process(); // submit the newly composed entity to aspect subscriptions
       world.process();
       assertEquals(0f, attrs.get(Stat.mana).asFixed(), 0.0001f);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void manaShrineStateIncreasesRecoveryRate() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new ManaRecoverySystem())
+        .build());
+    try {
+      int entityId = world.create();
+      world.getMapper(Player.class).create(entityId);
+      Attributes attrs = Attributes.obtainStandard();
+      attrs.base().put(Stat.mana, 0f);
+      attrs.base().put(Stat.maxmana, 100f);
+      attrs.base().put(Stat.hitpoints, 1f);
+      attrs.reset();
+      world.getMapper(AttributesWrapper.class).create(entityId).attrs = attrs;
+      UnitStates states = world.getMapper(UnitStates.class).create(entityId).init(entityId);
+      UnitState shrine = states.stateList.addState(
+          StateId.SHRINE_MANA_REGEN, 100, 1, 99);
+      shrine.setNativeModifier(Stat.manarecoverybonus, 400);
+
+      world.process();
+
+      assertEquals(15, attrs.get(Stat.mana).encodedValues(),
+          "100 mana regenerates 3 encoded units per tick; +400% must produce 15");
     } finally {
       world.dispose();
     }

@@ -11,6 +11,7 @@ import com.riiablo.codec.excel.CharStats;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.UnitLifecycle;
+import com.riiablo.engine.server.component.UnitStates;
 
 /** Authoritative Diablo II 25 Hz player mana regeneration. */
 @All({Player.class, AttributesWrapper.class})
@@ -21,6 +22,7 @@ public class ManaRecoverySystem extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<UnitLifecycle> mUnitLifecycle;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   @Override
   protected void process(int entityId) {
@@ -37,6 +39,12 @@ public class ManaRecoverySystem extends IteratingSystem {
     if (currentEncoded >= maximumEncoded) return;
 
     int recoveryBonus = encodedInt(attrs, Stat.manarecoverybonus);
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states != null && states.stateList != null) {
+        recoveryBonus += states.stateList.getTotalManaRecoveryModifier();
+      }
+    }
     int flatRecoveryEncoded = encodedValue(attrs, Stat.manarecovery);
     int recoveryEncoded = recoveryPerTickEncoded(
         maximumEncoded, manaRegenSeconds(mPlayer.get(entityId)), recoveryBonus,

@@ -88,6 +88,16 @@ class NativeShrineEffectSystemTest extends RiiabloTest {
     assertEquals(2, states.getTotalSkillModifier(),
         "experience shrine must not remove the skill shrine");
 
+    UnitState mana = NativeShrineEffectSystem.applyTimedEffect(
+        states, 13, 13, 400, 0, 2);
+    assertNotNull(mana);
+    assertEquals(400, states.getTotalManaRecoveryModifier());
+
+    UnitState stamina = NativeShrineEffectSystem.applyTimedEffect(
+        states, 14, 14, 200, 0, 2);
+    assertNotNull(stamina);
+    assertEquals(1000, states.getTotalStaminaRecoveryModifier());
+
     states.update();
     assertEquals(2, states.getTotalSkillModifier());
     assertEquals(50, states.getTotalExperienceModifier());

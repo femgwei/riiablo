@@ -786,6 +786,28 @@ public class StateList {
     return total;
   }
 
+  /** Aggregates temporary mana-regeneration bonuses carried by state stat lists. */
+  public int getTotalManaRecoveryModifier() {
+    int total = 0;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.manarecoverybonus)
+          ? state.getStatContributionValue(Stat.manarecoverybonus)
+          : state.manaRecoveryModifier;
+    }
+    return total;
+  }
+
+  /** Aggregates temporary stamina-regeneration bonuses carried by state stat lists. */
+  public int getTotalStaminaRecoveryModifier() {
+    int total = 0;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.staminarecoverybonus)
+          ? state.getStatContributionValue(Stat.staminarecoverybonus)
+          : state.staminaRecoveryModifier;
+    }
+    return total;
+  }
+
   public int getTotalMaxLifeModifier() {
     int total = 0;
     for (UnitState state : states) {

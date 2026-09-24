@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.TemporaryRunning;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -43,6 +44,7 @@ public class StaminaSystem extends IteratingSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<TemporaryRunning> mTemporaryRunning;
+  protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
   @Override
@@ -68,9 +70,10 @@ public class StaminaSystem extends IteratingSystem {
     boolean running = moving && VelocityModeChanger.isRunRequested(
         mRunning.has(entityId), mTemporaryRunning.has(entityId));
     boolean inTown = isInTown(entityId);
-    int recoveryBonus = resolveRecoveryBonus(attrs);
+    int recoveryBonus = resolveRecoveryBonus(entityId, attrs);
     float next;
-    if (shouldDrain(running, inTown, current)) {
+    if (shouldDrain(running, inTown, current)
+        && recoveryBonus < ALWAYS_RECOVER_BONUS) {
       float drain = drainPerTick(
           resolveRunDrain(player), resolveArmorSpeed(player), resolveStaminaDrainPercent(attrs));
       next = current - drain;
@@ -99,9 +102,16 @@ public class StaminaSystem extends IteratingSystem {
     return DEFAULT_RUN_DRAIN;
   }
 
-  private int resolveRecoveryBonus(Attributes attrs) {
+  private int resolveRecoveryBonus(int entityId, Attributes attrs) {
     StatRef bonus = attrs.get(Stat.staminarecoverybonus, StatRef.obtain());
-    return bonus == null ? 0 : bonus.asInt();
+    int resolved = bonus == null ? 0 : bonus.asInt();
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states != null && states.stateList != null) {
+        resolved += states.stateList.getTotalStaminaRecoveryModifier();
+      }
+    }
+    return resolved;
   }
 
   private int resolveStaminaDrainPercent(Attributes attrs) {
