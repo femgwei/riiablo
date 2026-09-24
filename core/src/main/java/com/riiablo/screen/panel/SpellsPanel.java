@@ -401,7 +401,12 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
           if (desc.descline[i] <= 0) break;
           if (i == 0) {
             add().height(font.getLineHeight()).center().space(SPACING).row();
-            add(new Label(sLvl <= 0 ? Riiablo.string.lookup("StrSkill17") : Riiablo.string.lookup("StrSkill2") + sLvl, font)).center().space(SPACING).row();
+            add(new Label(
+                sLvl <= 0 ? Riiablo.string.lookup("StrSkill17")
+                    : Riiablo.string.lookup("StrSkill2") + sLvl,
+                font,
+                sLvl > permanentLvl ? Riiablo.colors.blue : Riiablo.colors.white))
+                .center().space(SPACING).row();
           }
           String str = calc(desc, i, desc.descline, desc.desctexta, desc.desctextb, desc.desccalca, desc.desccalcb, skill, sLvl);
           if (str != null) add(new Label(str, Riiablo.fonts.font16)).center().space(SPACING).row();

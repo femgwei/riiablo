@@ -3,6 +3,7 @@ package com.riiablo.widget;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
@@ -93,7 +94,9 @@ public final class SkillDetails extends Table {
     }
 
     add().height(font.getLineHeight()).center().space(spacing).row();
-    add(new Label(Riiablo.string.lookup("StrSkill2") + level, font))
+    Color levelColor = chargedSkill == null && activePlayerSkillBonus() != 0
+        ? Riiablo.colors.blue : Riiablo.colors.white;
+    add(new Label(Riiablo.string.lookup("StrSkill2") + level, font, levelColor))
         .center().space(spacing).row();
     for (int i = 0; i < desc.descline.length && desc.descline[i] > 0; i++) {
       String line = formatLine(desc.descline[i], desc.desctexta[i], desc.desctextb[i],
