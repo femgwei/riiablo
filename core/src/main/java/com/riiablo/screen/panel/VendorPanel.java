@@ -146,7 +146,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   // Keep the purchase prompt as compact as ItemLabeler's tooltip. The
   // vertical buttons do not require a fixed-width dialog reservation.
   private static final float PURCHASE_PROMPT_CONTENT_MARGIN = 12;
-  private static final float PURCHASE_PROMPT_PADDING = 4;
+  private static final float PURCHASE_PROMPT_PADDING = 0;
   private static final float PURCHASE_PROMPT_ROW_SPACING = 0;
   private static final float PURCHASE_PROMPT_SIDE_MARGIN = 6;
 
