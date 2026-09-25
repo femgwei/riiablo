@@ -51,8 +51,10 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
   // After the locale-wide font calibration, font8 is three pixels lower and
   // ReallyTheLastSucker is two pixels higher than their English references.
   // The remaining cross-font panel alignment requires a nine-pixel layout
-  // correction (the old uncalibrated value was fourteen pixels).
-  private static final float COMPACT_VALUE_BASELINE_OFFSET = -9f;
+  // correction (the old uncalibrated value was fourteen pixels). The compact
+  // values were still one logical pixel low after moving calibration out of
+  // the glyph atlas, so keep the whole value column consistent at -8.
+  private static final float COMPACT_VALUE_BASELINE_OFFSET = -8f;
 
   final AssetDescriptor<DC6> NpcInvDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\NpcInv.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion NpcInv;
