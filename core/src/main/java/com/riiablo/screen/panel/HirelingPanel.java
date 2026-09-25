@@ -48,7 +48,11 @@ import com.riiablo.widget.Label;
 public class HirelingPanel extends WidgetGroup implements Disposable {
   private static final String TAG = "HirelingPanel";
   private static final float HEADER_TEXT_Y = 220f;
-  private static final float COMPACT_VALUE_BASELINE_OFFSET = -14f;
+  // After the locale-wide font calibration, font8 is three pixels lower and
+  // ReallyTheLastSucker is two pixels higher than their English references.
+  // The remaining cross-font panel alignment requires a nine-pixel layout
+  // correction (the old uncalibrated value was fourteen pixels).
+  private static final float COMPACT_VALUE_BASELINE_OFFSET = -9f;
 
   final AssetDescriptor<DC6> NpcInvDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\NpcInv.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion NpcInv;
