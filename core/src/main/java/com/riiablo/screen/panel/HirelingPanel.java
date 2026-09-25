@@ -170,135 +170,147 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
         Riiablo.fonts.ReallyTheLastSucker);
     mercenaryName.setSize(150, 16);
     mercenaryName.setPosition(6, 216);
-    mercenaryName.setAlignment(Align.left);
+    mercenaryName.setAlignment(Align.left | Align.bottom);
     addActor(mercenaryName);
 
     Table health = new Table();
     health.setSize(151, 16);
     health.setPosition(163, 216);
-    health.add(Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker));
+    Label healthLabel = Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker);
+    healthLabel.setAlignment(Align.left | Align.bottom);
+    health.add(healthLabel);
     healthValue = new Label(Integer.toString(0), Riiablo.fonts.font8, Align.center);
+    healthValue.setAlignment(Align.center | Align.bottom);
     health.add(healthValue).growX().row();
     addActor(health);
 
     Table exp = new Table();
     exp.setSize(120, 30);
     exp.setPosition(8, 177);
-    exp.add(Label.i18n("strchrexp", Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label expLabel = Label.i18n("strchrexp", Riiablo.fonts.ReallyTheLastSucker);
+    expLabel.setAlignment(Align.left | Align.bottom);
+    exp.add(expLabel).row();
     experienceValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    experienceValue.setAlignment(Align.center | Align.bottom);
     exp.add(experienceValue).growY().row();
     addActor(exp);
 
     Table level = new Table();
     level.setSize(45, 30);
     level.setPosition(138, 177);
-    level.add(Label.i18n("strchrlvl", Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label levelLabel = Label.i18n("strchrlvl", Riiablo.fonts.ReallyTheLastSucker);
+    levelLabel.setAlignment(Align.center | Align.bottom);
+    level.add(levelLabel).row();
     levelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    levelValue.setAlignment(Align.center | Align.bottom);
     level.add(levelValue).growY().row();
     addActor(level);
 
     Table nextLevel = new Table();
     nextLevel.setSize(120, 30);
     nextLevel.setPosition(194, 177);
-    nextLevel.add(Label.i18n("strchrnxtlvl", Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label nextLevelLabel = Label.i18n("strchrnxtlvl", Riiablo.fonts.ReallyTheLastSucker);
+    nextLevelLabel.setAlignment(Align.center | Align.bottom);
+    nextLevel.add(nextLevelLabel).row();
     nextLevelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    nextLevelValue.setAlignment(Align.center | Align.bottom);
     nextLevel.add(nextLevelValue).growY().row();
     addActor(nextLevel);
 
     Label strLabel = Label.i18n("strchrstr", Riiablo.fonts.ReallyTheLastSucker);
     strLabel.setSize(96, 16);
     strLabel.setPosition(8, 149);
-    strLabel.setAlignment(Align.left);
+    strLabel.setAlignment(Align.left | Align.bottom);
     addActor(strLabel);
 
     strValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     strValue.setSize(46, 16);
     strValue.setPosition(109, 149);
-    strValue.setAlignment(Align.right);
+    strValue.setAlignment(Align.right | Align.bottom);
     addActor(strValue);
 
     Label dexLabel = Label.i18n("strchrdex", Riiablo.fonts.ReallyTheLastSucker);
     dexLabel.setSize(96, 16);
     dexLabel.setPosition(8, 125);
-    strLabel.setAlignment(Align.left);
+    dexLabel.setAlignment(Align.left | Align.bottom);
     addActor(dexLabel);
 
     dexValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     dexValue.setSize(46, 16);
     dexValue.setPosition(109, 125);
-    dexValue.setAlignment(Align.right);
+    dexValue.setAlignment(Align.right | Align.bottom);
     addActor(dexValue);
 
     Label damLabel = Label.i18n("strchrskm", Riiablo.fonts.ReallyTheLastSucker);
     damLabel.setSize(96, 16);
     damLabel.setPosition(8, 101);
-    strLabel.setAlignment(Align.left);
+    damLabel.setAlignment(Align.left | Align.bottom);
     addActor(damLabel);
 
     damageValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     damageValue.setSize(46, 16);
     damageValue.setPosition(109, 101);
-    damageValue.setAlignment(Align.right);
+    damageValue.setAlignment(Align.right | Align.bottom);
     addActor(damageValue);
 
     Label defLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defLabel.setSize(96, 16);
     defLabel.setPosition(8, 77);
-    strLabel.setAlignment(Align.left);
+    defLabel.setAlignment(Align.left | Align.bottom);
     addActor(defLabel);
 
     defenseValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     defenseValue.setSize(46, 16);
     defenseValue.setPosition(109, 77);
-    defenseValue.setAlignment(Align.right);
+    defenseValue.setAlignment(Align.right | Align.bottom);
     addActor(defenseValue);
 
     Label fireResLabel = Label.i18n("strchrfir", Riiablo.fonts.ReallyTheLastSucker);
     fireResLabel.setSize(96, 16);
     fireResLabel.setPosition(165, 149);
-    fireResLabel.setAlignment(Align.center);
+    fireResLabel.setAlignment(Align.center | Align.bottom);
     addActor(fireResLabel);
 
     fireResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     fireResValue.setSize(46, 16);
     fireResValue.setPosition(266, 149);
-    fireResValue.setAlignment(Align.right);
+    fireResValue.setAlignment(Align.right | Align.bottom);
     addActor(fireResValue);
 
     Label coldResLabel = Label.i18n("strchrcol", Riiablo.fonts.ReallyTheLastSucker);
     coldResLabel.setSize(96, 16);
     coldResLabel.setPosition(165, 125);
-    coldResLabel.setAlignment(Align.center);
+    coldResLabel.setAlignment(Align.center | Align.bottom);
     addActor(coldResLabel);
 
     coldResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     coldResValue.setSize(46, 16);
     coldResValue.setPosition(266, 125);
-    coldResValue.setAlignment(Align.right);
+    coldResValue.setAlignment(Align.right | Align.bottom);
     addActor(coldResValue);
 
     Label lightResLabel = Label.i18n("strchrlit", Riiablo.fonts.ReallyTheLastSucker);
     lightResLabel.setSize(96, 16);
     lightResLabel.setPosition(165, 101);
-    lightResLabel.setAlignment(Align.center);
+    lightResLabel.setAlignment(Align.center | Align.bottom);
     addActor(lightResLabel);
 
     lightResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     lightResValue.setSize(46, 16);
     lightResValue.setPosition(266, 101);
-    lightResValue.setAlignment(Align.right);
+    lightResValue.setAlignment(Align.right | Align.bottom);
     addActor(lightResValue);
 
     Label poisonResLabel = Label.i18n("strchrpos", Riiablo.fonts.ReallyTheLastSucker);
     poisonResLabel.setSize(96, 16);
     poisonResLabel.setPosition(165, 77);
-    poisonResLabel.setAlignment(Align.center);
+    poisonResLabel.setAlignment(Align.center | Align.bottom);
     addActor(poisonResLabel);
 
     poisonResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     poisonResValue.setSize(46, 16);
     poisonResValue.setPosition(266, 77);
-    poisonResValue.setAlignment(Align.right);
+    poisonResValue.setAlignment(Align.right | Align.bottom);
     addActor(poisonResValue);
 
     //setDebug(true, true);
