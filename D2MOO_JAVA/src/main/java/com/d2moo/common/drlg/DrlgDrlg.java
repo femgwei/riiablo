@@ -1,5 +1,7 @@
 package com.d2moo.common.drlg;
 
+import java.util.Arrays;
+
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.datatbls.D2LevelDefBin;
 import com.d2moo.common.dungeon.Dungeon;
@@ -589,6 +591,24 @@ public class DrlgDrlg {
      * 计算关卡传送门信息
      */
     public static void computeLevelWarpInfo(D2DrlgLevel level) {
+        if (level == null) {
+            return;
+        }
+
+        // This routine is also reached when a level is reactivated after its
+        // room graph was rebuilt.  nRoomCoords is an output count, not an
+        // append cursor: retaining the previous value makes a second pass
+        // report overflow before it has examined the new room list.  The
+        // native structure exposes exactly nine public slots, so reset only
+        // those slots and preserve the ABI instead of growing the arrays.
+        level.setNRoomCoords(0);
+        if (level.getNRoomCenterWarpX() != null) {
+            Arrays.fill(level.getNRoomCenterWarpX(), 0);
+        }
+        if (level.getNRoomCenterWarpY() != null) {
+            Arrays.fill(level.getNRoomCenterWarpY(), 0);
+        }
+
         D2DrlgRoom drlgRoom = level.getFirstRoomEx();
         while (drlgRoom != null) {
             // 检查是否有传送点
