@@ -149,7 +149,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(mercenaryId);
     name.setText(resolveMercenaryName(merc));
     name.setSize(WIDTH, 14);
-    tooltip.setText(hovered ? localized("mercenary_heal_hint", "拖动治疗药水到此处") : "");
+    tooltip.setText(hovered ? localized("mercenary_heal_hint", "DRAG POTION HERE") : "");
   }
 
   /** Resolves the native Hireling.txt name key (the saved value is a name slot). */
