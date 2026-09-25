@@ -155,6 +155,9 @@ public class SkillCastHandler extends PassiveSystem {
       case 36: // Nest: the server creates the summoned monster at the MIS
                 // keyframe; client presentation is limited to sound/overlay.
         break;
+      case 45: // Werewolf/Werebear: DruidShapeShiftResolver owns the form
+                // presentation; stsound/castoverlay were handled above.
+        break;
       default:
         log.warn("Unsupported cltstfunc({}) for {} casting {}", event.cltstfunc, event.entityId, event.skillId);
     }

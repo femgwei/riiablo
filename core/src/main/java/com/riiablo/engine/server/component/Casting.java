@@ -16,6 +16,8 @@ public class Casting extends PooledComponent {
   @EntityId
   public int targetId;
   public final Vector2 targetVec = new Vector2();
+  /** Native SrvDo116 is a one-shot state toggle for the current cast. */
+  public boolean shapeShiftProcessed;
   /** Authoritative 25 Hz position frame frozen for this cast/attack. */
   public long positionSnapshotTick;
   /** Native Amazon Jab sequence: A1 followed by two A2 thrusts. */
@@ -99,6 +101,7 @@ public class Casting extends PooledComponent {
     this.skillId = skillId;
     this.targetId = targetId;
     this.targetVec.set(targetVec);
+    shapeShiftProcessed = false;
     this.positionSnapshotTick = positionSnapshotTick;
     jabRemainingStrikes = 0;
     jabStrikeProcessed = false;
@@ -164,6 +167,7 @@ public class Casting extends PooledComponent {
     skillId = -1;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();
+    shapeShiftProcessed = false;
     positionSnapshotTick = 0L;
     jabRemainingStrikes = 0;
     jabStrikeProcessed = false;

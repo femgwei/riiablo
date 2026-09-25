@@ -865,7 +865,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (previousMaxLifePercent != maxLifePercent
         || previousMaxManaPercent != maxManaPercent
         || previousMaxStaminaPercent != maxStaminaPercent) {
-      log.info("[BARBARIAN_BATTLE_ORDERS] phase=resource_refresh entity={} "
+      log.info("[RESOURCE_MAX_REFRESH] phase=resource_refresh entity={} "
               + "lifePercent={}=>{} manaPercent={}=>{} staminaPercent={}=>{} "
               + "maxHp={} maxMana={} maxStamina={}",
           entityId, previousMaxLifePercent, maxLifePercent,

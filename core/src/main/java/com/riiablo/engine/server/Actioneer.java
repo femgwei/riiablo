@@ -633,6 +633,19 @@ public class Actioneer extends PassiveSystem {
       mSequence.remove(event.entityId);
       return;
     }
+
+    // SrvDo116 toggles the transform state and is emitted by the animation
+    // keyframe stream.  Werewolf/Werebear COFs can contain both ATK and MIS
+    // markers; treating every marker as a new cast immediately removes the
+    // state that the previous marker just applied, causing the presentation
+    // resolver to oscillate between human and wolf/bear visuals.  The native
+    // transform callback is one-shot for a cast; a new cast gets a fresh
+    // Casting component (and therefore a cleared flag).
+    if (skill.srvdofunc == 116 && casting.shapeShiftProcessed) {
+      log.debug("[DRUID_SHAPE] phase=skip entity={} skill={} keyframe={} reason=already_processed",
+          event.entityId, skill.skill, Engine.getKeyframe(event.keyframe));
+      return;
+    }
     
     // Most skills skip dead targets. Native SrvDo097 Resurrect explicitly
     // requires one, so it must still execute on the animation keyframe.
@@ -643,6 +656,7 @@ public class Actioneer extends PassiveSystem {
     boolean zealRetarget = skill != null && skill.Id == SkillId.ZEAL
         && casting.zealInitialized && casting.zealRemainingStrikes > 0;
     if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget || zealRetarget) {
+      if (skill.srvdofunc == 116) casting.shapeShiftProcessed = true;
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {
         com.badlogic.gdx.Gdx.app.log("Actioneer", String.format(

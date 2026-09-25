@@ -109,6 +109,48 @@ class DruidShapeShiftTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void actioneerDoesNotToggleShapeForEveryAnimationKeyframe() {
+    Actioneer actioneer = new Actioneer();
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      Skills.Entry wolf = Riiablo.files.skills.get(SkillId.WEREWOLF);
+      CharData data = CharData.createRemote("shape", (byte) Riiablo.DRUID);
+      data.setSkillLevel(SkillId.WEREWOLF, 1);
+      int player = world.create();
+      world.getMapper(Player.class).create(player).data = data;
+      world.getMapper(UnitStates.class).create(player).init(player);
+      Casting casting = world.getMapper(Casting.class).create(player)
+          .set(wolf.Id, Engine.INVALID_ENTITY, Vector2.Zero);
+
+      actioneer.onAnimDataKeyframe(
+          AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_ATK));
+      assertTrue(world.getMapper(UnitStates.class).get(player)
+          .stateList.hasState(StateId.WOLF));
+
+      // The native Werewolf COF also contains a MIS marker.  It belongs to
+      // the same cast and must not toggle the already-applied state off.
+      actioneer.onAnimDataKeyframe(
+          AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_MIS));
+      assertTrue(world.getMapper(UnitStates.class).get(player)
+          .stateList.hasState(StateId.WOLF));
+      assertTrue(casting.shapeShiftProcessed);
+
+      // A new cast is allowed to toggle the active form off.
+      casting.set(wolf.Id, Engine.INVALID_ENTITY, Vector2.Zero);
+      actioneer.onAnimDataKeyframe(
+          AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_ATK));
+      assertFalse(world.getMapper(UnitStates.class).get(player)
+          .stateList.hasState(StateId.WOLF));
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static DruidSkills.ShapeShiftResult apply(
       StateList states, Skills.Entry skill, int level, int lycanthropyLevel) {
     return DruidSkills.applyShapeShiftState(states, skill, level, 1,
