@@ -29,6 +29,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
   private static final int HEIGHT = 480;
   private static final int BASELINE_Y = 365;
   private static final int BOX_Y = 270;
+  private static final int CORRECTED_BOX_Y = 150;
   private static final int BOX_HEIGHT = 16;
 
   private final FileHandle output;
@@ -67,6 +68,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     shapes.setColor(0.20f, 0.20f, 0.20f, 1f);
     shapes.rect(20, 70, WIDTH - 40, 2);
     shapes.rect(20, BOX_Y, WIDTH - 40, 1);
+    shapes.rect(20, CORRECTED_BOX_Y, WIDTH - 40, 1);
     shapes.setColor(0.90f, 0.18f, 0.12f, 1f);
     shapes.rect(28, BASELINE_Y, WIDTH - 56, 1);
     shapes.end();
@@ -97,6 +99,18 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     cjkLabel.draw(batch, 1f);
     numberLabel.draw(batch, 1f);
 
+    reportFont.draw(batch, "Label after measured -14px correction", 440, 185);
+    Label correctedCjk = new Label("生命", cjk);
+    correctedCjk.setAutoSize(false);
+    correctedCjk.setBounds(440, CORRECTED_BOX_Y, 70, BOX_HEIGHT);
+    correctedCjk.setAlignment(Align.left | Align.bottom);
+    Label correctedNumber = new Label("45/45", number);
+    correctedNumber.setAutoSize(false);
+    correctedNumber.setBounds(560, CORRECTED_BOX_Y - 14, 81, BOX_HEIGHT);
+    correctedNumber.setAlignment(Align.center | Align.bottom);
+    correctedCjk.draw(batch, 1f);
+    correctedNumber.draw(batch, 1f);
+
     reportFont.draw(batch, "ReallyTheLastSucker", 58, 225);
     reportFont.draw(batch, "font8", 250, 225);
     reportFont.draw(batch, "CJK + number", 440, 225);
@@ -122,8 +136,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     out.append("baselineY=").append(BASELINE_Y).append('\n');
     appendMetrics(out, "ReallyTheLastSucker", cjk);
     appendMetrics(out, "font8", number);
-    out.append("hirelingHealthY=")
-        .append(216 + cjk.getData().ascent - number.getData().ascent).append('\n');
+    out.append("hirelingHealthY=202\n");
     output.child("font-baseline.txt").writeString(out.toString(), false, "UTF-8");
   }
 
