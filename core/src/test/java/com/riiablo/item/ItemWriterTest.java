@@ -13,6 +13,7 @@ import com.badlogic.gdx.backends.headless.HeadlessApplication;
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.StringTBLs;
+import com.riiablo.codec.excel.Armor;
 import com.riiablo.io.ByteInput;
 import com.riiablo.io.ByteOutput;
 import com.riiablo.mpq.MPQFileHandleResolver;
@@ -21,7 +22,11 @@ public class ItemWriterTest {
   @BeforeAll
   public static void setup() {
     Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
-    Riiablo.home = Gdx.files.absolute("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Diablo II");
+    String d2Home = System.getenv("D2_HOME");
+    if (d2Home == null || d2Home.isEmpty()) {
+      d2Home = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Diablo II";
+    }
+    Riiablo.home = Gdx.files.absolute(d2Home);
     Riiablo.mpqs = new MPQFileHandleResolver();
     Riiablo.string = new StringTBLs(Riiablo.mpqs);
     Riiablo.files = new Files();
@@ -116,6 +121,7 @@ public class ItemWriterTest {
     Item item = new ItemGenerator().generate("qf2");
     assertNotNull(item);
     assertNotNull(item.attrs);
+    prepareStandardItem(item);
     item.attrs.base().clear();
     ByteOutput out = ByteOutput.wrap(Unpooled.buffer());
     assertDoesNotThrow(() -> new ItemWriter().writeItem(item, out));
@@ -123,16 +129,43 @@ public class ItemWriterTest {
   }
 
   @Test
-  public void MissingArmorClassStatStillSerialize() {
-    // A rebuilt/legacy armor can omit its base armor-class StatRef.  The
-    // native item stream still requires the armor-class slot.
-    Item item = new ItemGenerator().generate("qui");
+  public void MissingArmorClassStatStillSerializes() {
+    // A generated/legacy armor can lose its base stat during item mutation.
+    // The native stream still requires the inline armorclass field.
+    Item item = new ItemGenerator().generate("cap");
     assertNotNull(item);
     assertNotNull(item.attrs);
+    assertTrue(item.type.is(Type.ARMO));
+    prepareStandardItem(item);
+    Armor.Entry base = item.getBase();
+    int expectedArmorClass = Math.min(base.minac, base.maxac)
+        + Math.floorMod(item.id, Math.abs(base.maxac - base.minac) + 1);
+    int expectedDurability = item.base.nodurability ? 0 : base.durability;
     item.attrs.base().clear();
+
     ByteOutput out = ByteOutput.wrap(Unpooled.buffer());
     assertDoesNotThrow(() -> new ItemWriter().writeItem(item, out));
     assertTrue(out.bytesWritten() > 0);
+
+    Item restored = assertDoesNotThrow(() ->
+        new ItemReader().readItem(ByteInput.wrap(out.buffer())));
+    assertTrue(restored.type.is(Type.ARMO));
+    assertEquals(expectedArmorClass,
+        restored.attrs.base().get(com.riiablo.attributes.Stat.armorclass).asInt());
+    assertEquals(expectedDurability,
+        restored.attrs.base().get(com.riiablo.attributes.Stat.maxdurability).asInt());
+    if (expectedDurability > 0) {
+      assertEquals(expectedDurability,
+          restored.attrs.base().get(com.riiablo.attributes.Stat.durability).asInt());
+    }
+  }
+
+  private static void prepareStandardItem(Item item) {
+    item.id = 1;
+    item.version = Item.VERSION_110;
+    item.ilvl = 1;
+    item.quality = Quality.NORMAL;
+    item.flags |= Item.ITEMFLAG_IDENTIFIED;
   }
 
   @Test

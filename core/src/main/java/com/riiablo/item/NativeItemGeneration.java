@@ -63,6 +63,43 @@ public final class NativeItemGeneration {
     }
   }
 
+  /**
+   * Completes the base fields required by native vendor stock.
+   *
+   * <p>Vendor items are created through the lightweight {@link ItemGenerator#generate(ItemEntry)}
+   * path, which deliberately only attaches the base record. Armor still needs
+   * its rolled defense and all durable equipment must be offered fully repaired.
+   * Existing generated values are preserved so magic stock is not rerolled.</p>
+   */
+  public static void normalizeVendorBaseStats(Item item, RandomSource random) {
+    if (item == null || item.base == null || random == null) return;
+    if (item.base instanceof Armor.Entry
+        && item.attrs.base().get(Stat.armorclass) == null) {
+      Armor.Entry armor = (Armor.Entry) item.base;
+      item.attrs.base().put(Stat.armorclass,
+          between(random, Math.min(armor.minac, armor.maxac),
+              Math.max(armor.minac, armor.maxac)));
+    }
+
+    int baseDurability = 0;
+    if (item.base instanceof Armor.Entry) {
+      baseDurability = ((Armor.Entry) item.base).durability;
+    } else if (item.base instanceof Weapons.Entry) {
+      baseDurability = ((Weapons.Entry) item.base).durability;
+    } else {
+      return;
+    }
+
+    StatRef max = item.attrs.base().get(Stat.maxdurability);
+    int maxDurability = max == null
+        ? (item.base.nodurability ? 0 : Math.max(0, Math.min(255, baseDurability)))
+        : Math.max(0, Math.min(255, max.asInt()));
+    item.attrs.base().put(Stat.maxdurability, maxDurability);
+    if (maxDurability > 0) {
+      item.attrs.base().put(Stat.durability, maxDurability);
+    }
+  }
+
   public static boolean rollSockets(Item item, Quality quality, int itemLevel,
       int difficulty, int startSeed, RandomSource random) {
     if (item == null || quality == null

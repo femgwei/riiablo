@@ -2,6 +2,7 @@ package com.riiablo.item;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.RiiabloTest;
@@ -77,6 +78,32 @@ class NativeItemGenerationTest extends RiiabloTest {
     assertFalse(NativeItemGeneration.applyEtherealIfNeeded(item));
     assertEquals(150, item.attrs.base().get(Stat.armorclass).asInt(),
         "PropertyFunc23 must not scale an already ethereal item twice");
+  }
+
+  @Test
+  void vendorArmorReceivesDefenseAndFullDurabilityWithoutRerollingExistingDefense() {
+    Item item = armor(0, 2, 2, 40);
+    Armor.Entry armor = (Armor.Entry) item.base;
+    armor.minac = 8;
+    armor.maxac = 12;
+
+    NativeItemGeneration.normalizeVendorBaseStats(item, bound -> 0);
+
+    assertEquals(8, item.attrs.base().get(Stat.armorclass).asInt());
+    assertEquals(40, item.attrs.base().get(Stat.maxdurability).asInt());
+    assertEquals(40, item.attrs.base().get(Stat.durability).asInt());
+
+    item.attrs.base().put(Stat.armorclass, 11);
+    item.attrs.base().put(Stat.maxdurability, 25);
+    item.attrs.base().put(Stat.durability, 3);
+    NativeItemGeneration.normalizeVendorBaseStats(item, bound -> {
+      throw new AssertionError("existing defense must not be rerolled");
+    });
+
+    assertNotNull(item.attrs.base().get(Stat.armorclass));
+    assertEquals(11, item.attrs.base().get(Stat.armorclass).asInt());
+    assertEquals(25, item.attrs.base().get(Stat.maxdurability).asInt());
+    assertEquals(25, item.attrs.base().get(Stat.durability).asInt());
   }
 
   private static Item armor(int sockets, int width, int height, int durability) {

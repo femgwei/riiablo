@@ -83,9 +83,9 @@ public enum D2SWriter {
       return false;
     } catch (RuntimeException e) {
       // A malformed legacy item must not terminate the LWJGL application
-      // thread when saving.  Item writers use explicit zero slots for known
-      // missing stats; keep this final boundary defensive for other stale
-      // save-state data and report a failed save to the caller.
+      // thread when saving. Item writers repair known missing inline stats;
+      // keep this final boundary defensive for other stale save-state data
+      // and report a failed save to the caller.
       log.error("Failed to serialize character '" + charData.name + "'", e);
       return false;
     }
