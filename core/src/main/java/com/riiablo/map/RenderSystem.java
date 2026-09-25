@@ -57,6 +57,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Classname;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Object;
@@ -235,6 +236,7 @@ public class RenderSystem extends BaseEntitySystem {
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<Item> mItem;
   protected ComponentMapper<com.riiablo.engine.server.component.Warp> mWarp;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<com.riiablo.engine.server.component.Interactable> mInteractable;
@@ -625,9 +627,20 @@ public class RenderSystem extends BaseEntitySystem {
         Object objectComponent = mObject.get(id);
         if (objectComponent != null) {
           CofReference reference = mCofReference.get(id);
-          orderFlag = objectComponent.base.OrderFlag[reference.mode];
+          orderFlag = entityOrderFlag(true,
+              objectComponent.base.OrderFlag[reference.mode], false);
+        } else if (mItem.has(id)) {
+          // Ground items belong to the floor layer.  Drawing them in the
+          // ordinary object/unit layer lets a coin dropped on the player's
+          // tile be submitted after the player and cover the character.
+          orderFlag = entityOrderFlag(false, 0, true);
         } else {
-          orderFlag = stx == pos.x || sty == pos.y ? 2 : 0;
+          // Units are drawn after walls.  The old tile-boundary heuristic
+          // placed a unit in cache[2] whenever its position happened to be
+          // exactly on a tile edge; cache[2] is rendered before drawWalls(),
+          // so the wall then covered the unit's upper body.  Wall occlusion
+          // must not be decided from floating-point tile-edge coincidence.
+          orderFlag = entityOrderFlag(false, 0, false);
         }
 
         cache[orderFlag].add(id);
@@ -936,6 +949,19 @@ public class RenderSystem extends BaseEntitySystem {
       default:
         return false;
     }
+  }
+
+  /**
+   * Resolves the render bucket for an entity occupying a map tile.
+   *
+   * Objects retain their native per-mode order flag. Ground items are placed
+   * in the floor bucket and ordinary units in the post-wall unit bucket so a
+   * same-tile item cannot cover a unit and a tile-edge position cannot hide a
+   * unit behind a wall.
+   */
+  static int entityOrderFlag(boolean object, int objectOrderFlag, boolean groundItem) {
+    if (object) return objectOrderFlag;
+    return groundItem ? 1 : 0;
   }
 
   /**
