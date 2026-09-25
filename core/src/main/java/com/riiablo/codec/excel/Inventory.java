@@ -12,7 +12,10 @@ public class Inventory extends Excel<Inventory.Entry> {
       case 3:
       case 4:  return get(classId);
       case 5:
-      case 6:  return get(classId + 15);
+      case 6:
+        // Druid/Assassin rows follow the common five classes. The +15 rows
+        // are alternate wide-layout pages, not player-class layouts.
+        return get(classId + 10);
       default: throw new GdxRuntimeException("Invalid class id: " + classId);
     }
   }
