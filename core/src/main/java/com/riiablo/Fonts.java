@@ -30,8 +30,6 @@ public class Fonts {
     REALLY_THE_LAST_SUCKER
   }
 
-  /** Native CJK glyphs sit one pixel high when the font16 atlas is shared. */
-  private static final int CHINESE_SHARED_BASELINE_ADJUST = -1;
   public final BitmapFont         consolas12;
   public final BitmapFont         consolas16;
   public FontTBL.BitmapFont font6;
@@ -80,8 +78,6 @@ public class Fonts {
       FontTBL.BitmapFont base = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
       // This compatibility mode is opt-in. Native Chinese fonts have distinct
       // glyph bearings and must be loaded independently for accurate layout.
-      ((FontTBL.BitmapFontData) base.getData())
-          .shiftGlyphsY(CHINESE_SHARED_BASELINE_ADJUST);
       font16 = base;
       font6 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
       font8 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
@@ -132,7 +128,6 @@ public class Fonts {
     }
 
     applyMetrics();
-    applyChineseBaselineCalibration(false);
     registerCurrentFonts();
   }
 
@@ -150,7 +145,6 @@ public class Fonts {
     ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
     gameplayFontsLoaded = true;
     applyMetrics();
-    applyChineseBaselineCalibration(true);
     registerCurrentFonts();
     generation++;
   }
@@ -205,34 +199,31 @@ public class Fonts {
   }
 
   /**
-   * Applies the per-font offsets measured against the matching English
-   * bitmap font.  These are glyph-atlas corrections, so every Label using a
-   * font receives the same correction instead of each panel guessing a Y
-   * offset. Shared-font compatibility mode is intentionally excluded because
-   * all views point at one mutable glyph array.
+   * Returns the measured correction for baseline-anchored labels. The
+   * correction is intentionally not written into the shared glyph atlas:
+   * centered controls (for example TextButton) must keep their visual center.
    */
-  private void applyChineseBaselineCalibration(boolean allGameplayFonts) {
+  public int baselineCorrection(BitmapFont font) {
     if (!chinese || sharedChinese
-        || Boolean.getBoolean("riiablo.font-baseline-raw")) return;
-    shift(font16, FontBaselineCalibration.chineseCorrection("font16"));
-    shift(fontformal12, FontBaselineCalibration.chineseCorrection("fontformal12"));
-    shift(fontexocet10, FontBaselineCalibration.chineseCorrection("fontexocet10"));
-    if (!allGameplayFonts) return;
-    shift(font6, FontBaselineCalibration.chineseCorrection("font6"));
-    shift(font8, FontBaselineCalibration.chineseCorrection("font8"));
-    shift(font24, FontBaselineCalibration.chineseCorrection("font24"));
-    shift(font30, FontBaselineCalibration.chineseCorrection("font30"));
-    shift(font42, FontBaselineCalibration.chineseCorrection("font42"));
-    shift(fontformal10, FontBaselineCalibration.chineseCorrection("fontformal10"));
-    shift(fontformal11, FontBaselineCalibration.chineseCorrection("fontformal11"));
-    shift(fontridiculous, FontBaselineCalibration.chineseCorrection("fontridiculous"));
-    shift(ReallyTheLastSucker,
-        FontBaselineCalibration.chineseCorrection("ReallyTheLastSucker"));
-  }
-
-  private static void shift(FontTBL.BitmapFont font, int delta) {
-    if (font == null || delta == 0) return;
-    ((FontTBL.BitmapFontData) font.getData()).shiftGlyphsY(delta);
+        || Boolean.getBoolean("riiablo.font-baseline-raw")) return 0;
+    Role role = roleOf(font);
+    if (role == null) return 0;
+    switch (role) {
+      case FONT6: return FontBaselineCalibration.chineseCorrection("font6");
+      case FONT8: return FontBaselineCalibration.chineseCorrection("font8");
+      case FONT16: return FontBaselineCalibration.chineseCorrection("font16");
+      case FONT24: return FontBaselineCalibration.chineseCorrection("font24");
+      case FONT30: return FontBaselineCalibration.chineseCorrection("font30");
+      case FONT42: return FontBaselineCalibration.chineseCorrection("font42");
+      case FONTFORMAL10: return FontBaselineCalibration.chineseCorrection("fontformal10");
+      case FONTFORMAL11: return FontBaselineCalibration.chineseCorrection("fontformal11");
+      case FONTFORMAL12: return FontBaselineCalibration.chineseCorrection("fontformal12");
+      case FONTEXOCET10: return FontBaselineCalibration.chineseCorrection("fontexocet10");
+      case FONTRIDICULOUS: return FontBaselineCalibration.chineseCorrection("fontridiculous");
+      case REALLY_THE_LAST_SUCKER:
+        return FontBaselineCalibration.chineseCorrection("ReallyTheLastSucker");
+      default: throw new AssertionError(role);
+    }
   }
 
   /** Starts probing staged font caches without blocking the render thread. */

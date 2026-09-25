@@ -17,6 +17,9 @@ public class TextButton extends Button {
   public TextButton(String text, TextButtonStyle style) {
     super(style);
     label = new Label(text, style.font);
+    // The label is centered inside the button. Applying a baseline shift to
+    // the glyph atlas here would move the text away from the visual center.
+    label.setBaselineAligned(false);
     label.getStyle().fontColor = style.fontColor;
     label.setAlignment(Align.center);
     add(label).expand().fill();

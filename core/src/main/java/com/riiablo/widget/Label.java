@@ -25,6 +25,7 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
   boolean updateSize = true; // FIXME: find a less hacky solution
   private Fonts.Role fontRole;
   private int fontGeneration = -1;
+  private boolean baselineAligned = true;
 
   /**
    * Controls whether changing the text also replaces the actor's explicit
@@ -101,6 +102,20 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
     invalidateHierarchy();
   }
 
+  /**
+   * Controls whether the measured Chinese-vs-English baseline correction is
+   * applied while drawing. Centered controls should disable this; their
+   * layout already centers the complete label inside its bounds.
+   */
+  public Label setBaselineAligned(boolean baselineAligned) {
+    this.baselineAligned = baselineAligned;
+    return this;
+  }
+
+  public boolean isBaselineAligned() {
+    return baselineAligned;
+  }
+
   private void refreshBoundFont() {
     Fonts fonts = Riiablo.fonts;
     if (fontRole == null || fonts == null || fontGeneration == fonts.generation()) return;
@@ -152,7 +167,10 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
     batch.setBlendMode(((FontTBL.BitmapFont) getStyle().font).getBlendMode());
     BitmapFontCache cache = getBitmapFontCache();
-    cache.setPosition(getX(), getY());
+    float baselineCorrection = baselineAligned && Riiablo.fonts != null
+        ? Riiablo.fonts.baselineCorrection(getStyle().font)
+        : 0;
+    cache.setPosition(getX(), getY() + baselineCorrection);
     cache.tint(getColor());
     cache.draw(batch);
     batch.resetBlendMode();
