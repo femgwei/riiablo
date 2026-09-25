@@ -20,7 +20,7 @@ import com.riiablo.engine.server.component.Sequence;
  * the native movement base, stop at melee/ranged distance, and trigger the
  * normal attack animation/keyframe pipeline.</p>
  */
-public final class GenericMonster extends AI {
+public class GenericMonster extends AI {
   private final String nativeAiName;
   private float nextThink;
   private String state = "IDLE";
