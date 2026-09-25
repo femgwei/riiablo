@@ -146,9 +146,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   // Match ItemLabeler's compact tooltip padding (6px on each side). The
   // vertical buttons do not require a fixed-width dialog reservation.
   private static final float PURCHASE_PROMPT_CONTENT_MARGIN = 12;
-  private static final float PURCHASE_PROMPT_HEIGHT = 116;
+  private static final float PURCHASE_PROMPT_PADDING = 6;
+  private static final float PURCHASE_PROMPT_ROW_SPACING = 2;
   private static final float PURCHASE_PROMPT_SIDE_MARGIN = 6;
-  private static final float PURCHASE_PROMPT_BUTTON_HEIGHT = 22;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -347,7 +347,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
     purchasePrompt = new WidgetGroup();
     purchasePrompt.setTouchable(Touchable.enabled);
-    purchasePrompt.setSize(1, PURCHASE_PROMPT_HEIGHT);
+    purchasePrompt.setSize(1, 1);
     centerPurchasePrompt();
     purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
@@ -366,21 +366,21 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     purchasePromptTitle = new Label(Riiablo.bundle.get("vendor_buy_title"),
         Riiablo.fonts.fontformal11, Riiablo.colors.gold);
     purchasePromptTitle.setAlignment(Align.center);
-    purchasePromptTitle.setBounds(0, 88, purchasePrompt.getWidth(), 16);
+    purchasePromptTitle.setBounds(0, 0, purchasePrompt.getWidth(), 1);
     purchasePrompt.addActor(purchasePromptTitle);
     purchasePromptItem = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
     purchasePromptItem.setAlignment(Align.center);
-    purchasePromptItem.setBounds(0, 68, purchasePrompt.getWidth(), 18);
+    purchasePromptItem.setBounds(0, 0, purchasePrompt.getWidth(), 1);
     purchasePrompt.addActor(purchasePromptItem);
     purchasePromptPrice = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
     purchasePromptPrice.setAlignment(Align.center);
-    purchasePromptPrice.setBounds(0, 49, purchasePrompt.getWidth(), 16);
+    purchasePromptPrice.setBounds(0, 0, purchasePrompt.getWidth(), 1);
     purchasePrompt.addActor(purchasePromptPrice);
     // LabelButton already follows the native text treatment: white at rest and
     // palette blue while hovered/pressed.
     purchaseConfirm = new LabelButton(Riiablo.bundle.get("yes"), Riiablo.fonts.fontformal11);
     purchaseConfirm.setAlignment(Align.center);
-    purchaseConfirm.setBounds(0, 25, 1, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    purchaseConfirm.setBounds(0, 0, 1, 1);
     purchaseConfirm.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -392,7 +392,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     purchasePrompt.addActor(purchaseConfirm);
     purchaseCancel = new LabelButton(Riiablo.bundle.get("no"), Riiablo.fonts.fontformal11);
     purchaseCancel.setAlignment(Align.center);
-    purchaseCancel.setBounds(0, 2, 1, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    purchaseCancel.setBounds(0, 0, 1, 1);
     purchaseCancel.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -437,17 +437,24 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     contentWidth = Math.max(contentWidth, purchaseCancel.getPrefWidth());
     float width = contentWidth + PURCHASE_PROMPT_CONTENT_MARGIN;
     width = Math.min(width, Math.max(16, getWidth() - 16));
-    purchasePrompt.setWidth(width);
-    purchasePromptBackground.setBounds(0, 0, width, purchasePrompt.getHeight());
-    purchasePromptTitle.setBounds(0, 88, width, 16);
-    purchasePromptItem.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 68,
-        width - PURCHASE_PROMPT_SIDE_MARGIN * 2, 18);
-    purchasePromptPrice.setBounds(0, 49, width, 16);
+    float lineHeight = Riiablo.fonts.fontformal11.getLineHeight();
+    float height = PURCHASE_PROMPT_PADDING * 2
+        + lineHeight * 5
+        + PURCHASE_PROMPT_ROW_SPACING * 4;
+    purchasePrompt.setSize(width, height);
+    purchasePromptBackground.setBounds(0, 0, width, height);
     float buttonWidth = Math.max(1, width - PURCHASE_PROMPT_SIDE_MARGIN * 2);
-    purchaseConfirm.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 25,
-        buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
-    purchaseCancel.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 2,
-        buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    float y = PURCHASE_PROMPT_PADDING;
+    purchaseCancel.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, y, buttonWidth, lineHeight);
+    y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
+    purchaseConfirm.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, y, buttonWidth, lineHeight);
+    y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
+    purchasePromptPrice.setBounds(0, y, width, lineHeight);
+    y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
+    purchasePromptItem.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, y,
+        width - PURCHASE_PROMPT_SIDE_MARGIN * 2, lineHeight);
+    y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
+    purchasePromptTitle.setBounds(0, y, width, lineHeight);
     positionPurchasePromptAtMouse();
     if (getStage() != null) getStage().addCaptureListener(purchasePromptDismissListener);
     purchasePrompt.setVisible(true);
