@@ -1295,6 +1295,20 @@ public class DrlgRoomTile {
                 // 添加偏移
                 nPosX += pLvlWarpTxtRecord.getDwOffsetX();
                 nPosY += pLvlWarpTxtRecord.getDwOffsetY();
+
+                // The same DS1 exit can be visited by both the wall and
+                // floor passes.  Native D2 keeps one preset tile at the exact
+                // coordinate; do not enqueue a duplicate unit on the second
+                // pass.
+                for (D2PresetUnit existing = drlgRoom.getPresetUnits();
+                        existing != null; existing = existing.getPNext()) {
+                    if (existing.getNUnitType() == D2UnitTypes.UNIT_TILE
+                            && existing.getNIndex() == pLvlWarpTxtRecord.getDwLevelId()
+                            && existing.getNXpos() == nPosX
+                            && existing.getNYpos() == nPosY) {
+                        return true;
+                    }
+                }
                 
                 // 分配预设单位（UNIT_TILE 类型）
                 Object memPool = drlgRoom.getLevel().getDrlg().getMempool();
@@ -1415,6 +1429,23 @@ public class DrlgRoomTile {
             // is expected; keep it visible at debug level without flooding the
             // warning stream. A mapped or partially linked warp remains a real
             // diagnostic warning.
+            // A generated outdoor entrance may legitimately have no linked
+            // RoomTile when the destination level has not produced its
+            // reciprocal room yet.  The native game still materializes the
+            // entrance UNIT_TILE from LvlWarp.txt so interaction/transition
+            // remains available.  The exact-coordinate check in addWarp()
+            // keeps wall/floor passes idempotent.
+            int nTileSequence = tileInfo.getNTileSequence();
+            int nTilePosX = drlgRoom.getNTileXPos() + pTileData.getNPosX();
+            int nTilePosY = drlgRoom.getNTileYPos() + pTileData.getNPosY();
+            if (pTileData != null && lvlWarpId >= 0
+                    && (nTileSequence != 0 && nTileSequence != 4
+                        || addWarp(drlgRoom, nTilePosX, nTilePosY,
+                                   nPackedTileInformation, nTileType))) {
+                D2Log.debug(message + "; fallback=UNIT_TILE");
+                return;
+            }
+
             if (lvlWarpId < 0 && linked.length() == 0) {
                 D2Log.debug(message);
             } else {
