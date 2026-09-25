@@ -123,6 +123,19 @@ public class ItemWriterTest {
   }
 
   @Test
+  public void MissingArmorClassStatStillSerialize() {
+    // A rebuilt/legacy armor can omit its base armor-class StatRef.  The
+    // native item stream still requires the armor-class slot.
+    Item item = new ItemGenerator().generate("qui");
+    assertNotNull(item);
+    assertNotNull(item.attrs);
+    item.attrs.base().clear();
+    ByteOutput out = ByteOutput.wrap(Unpooled.buffer());
+    assertDoesNotThrow(() -> new ItemWriter().writeItem(item, out));
+    assertTrue(out.bytesWritten() > 0);
+  }
+
+  @Test
   public void Rugged_Small_Charm_of_Vita() {
     testItem(Gdx.files.internal("test/Rugged Small Charm of Vita.d2i").readBytes());
   }

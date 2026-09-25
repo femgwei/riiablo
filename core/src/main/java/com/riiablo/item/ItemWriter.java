@@ -168,7 +168,18 @@ public class ItemWriter {
   private boolean writeArmorClass(Item item, BitOutput bits) {
     boolean hasAC = item.type.is(Type.ARMO);
     if (hasAC) {
-      statListWriter.write(item.attrs.base(), Stat.armorclass, bits, false);
+      // Legacy/quest armors can reach the save path without a materialized
+      // base armor-class StatRef (for example after an attribute rebuild).
+      // The native item stream still contains the armor-class slot, so emit
+      // its zero form instead of passing null into StatListWriter.
+      StatRef armorClass = item.attrs.base().get(Stat.armorclass);
+      if (armorClass != null) {
+        statListWriter.write(item.attrs.base(), armorClass, bits, false);
+      } else {
+        log.warn("Missing armorclass stat while saving item code={} id={}; writing zero slot",
+            item.code, item.id);
+        writeZeroStat(Stat.armorclass, bits);
+      }
     }
     return hasAC;
   }

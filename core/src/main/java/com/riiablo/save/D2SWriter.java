@@ -81,6 +81,13 @@ public enum D2SWriter {
     } catch (IllegalArgumentException e) {
       log.error("Refusing to write an incompatible D2S character name: " + charData.name, e);
       return false;
+    } catch (RuntimeException e) {
+      // A malformed legacy item must not terminate the LWJGL application
+      // thread when saving.  Item writers use explicit zero slots for known
+      // missing stats; keep this final boundary defensive for other stale
+      // save-state data and report a failed save to the caller.
+      log.error("Failed to serialize character '" + charData.name + "'", e);
+      return false;
     }
   }
 }
