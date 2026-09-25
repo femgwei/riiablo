@@ -143,11 +143,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     }
   };
 
-  // Match ItemLabeler's compact tooltip padding (6px on each side). The
+  // Keep the purchase prompt as compact as ItemLabeler's tooltip. The
   // vertical buttons do not require a fixed-width dialog reservation.
   private static final float PURCHASE_PROMPT_CONTENT_MARGIN = 12;
-  private static final float PURCHASE_PROMPT_PADDING = 6;
-  private static final float PURCHASE_PROMPT_ROW_SPACING = 2;
+  private static final float PURCHASE_PROMPT_PADDING = 4;
+  private static final float PURCHASE_PROMPT_ROW_SPACING = 0;
   private static final float PURCHASE_PROMPT_SIDE_MARGIN = 6;
 
   public VendorPanel() {
@@ -428,7 +428,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
             ? VendorPricing.buyPrice(item)
             : VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
     purchasePromptItem.setText(item.getNameString());
-    purchasePromptPrice.setText(Integer.toString(price));
+    purchasePromptPrice.setText(Riiablo.bundle.format("vendor_buy_gold", price));
     // The native dialog grows only for a long item name. Keep a small fixed
     // margin around the widest line instead of reserving the whole vendor
     // panel, then re-center every child in the resized window.
