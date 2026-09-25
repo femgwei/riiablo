@@ -202,8 +202,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       float baseAngle = MathUtils.atan2(event.dy, event.dx);
       createVisual(source, first(children, 0), event, baseAngle);
       String secondary = first(children, 1);
-      for (int i = 0; i < 4; i++) {
-        createVisual(source, secondary, event, i * MathUtils.PI2 / 4f);
+      int radialCount = clientHit14RadialCount(source);
+      for (int i = 0; i < radialCount; i++) {
+        createVisual(source, secondary, event,
+            clientHit14RadialAngle(baseAngle, i, radialCount));
       }
       return;
     }
@@ -263,6 +265,23 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   static int clientHitScatterCount(Missiles.Entry source) {
     int step = clientHitStep(source);
     return (FROZEN_ORB_X.length + step - 1) / step;
+  }
+
+  /**
+   * Native client hit function 14 emits four cardinal secondary effects for
+   * the 1.10f freezing-arrow family.  A few custom data packs expose a
+   * positive cHitPar1 override; honor it without changing the vanilla zero
+   * value semantics.
+   */
+  static int clientHit14RadialCount(Missiles.Entry source) {
+    if (source != null && source.cHitPar != null && source.cHitPar.length > 0
+        && source.cHitPar[0] > 0) return source.cHitPar[0];
+    return 4;
+  }
+
+  static float clientHit14RadialAngle(float baseAngle, int index, int count) {
+    if (count <= 0) return baseAngle;
+    return baseAngle + index * MathUtils.PI2 / count;
   }
 
   static int cltParam(Missiles.Entry source, int index, int fallback) {

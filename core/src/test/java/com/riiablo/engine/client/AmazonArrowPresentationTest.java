@@ -150,6 +150,16 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals("fistoftheheavensbolt", delay.CltHitSubMissile[0]);
   }
 
+  @Test
+  void freezingArrowHitFunctionUsesNativeDefaultAndTableOverride() {
+    Missiles.Entry freezing = Riiablo.files.Missiles.get("freezingarrow");
+    assertNotNull(freezing);
+    assertEquals(4, MissileImpactPresentationSystem.clientHit14RadialCount(freezing));
+    Missiles.Entry custom = new Missiles.Entry();
+    custom.cHitPar = new int[] {6, 0, 0};
+    assertEquals(6, MissileImpactPresentationSystem.clientHit14RadialCount(custom));
+  }
+
   private static final class SilentAudio extends Audio {
     SilentAudio() { super(null); }
     @Override public Instance play(String id, boolean global) { return null; }

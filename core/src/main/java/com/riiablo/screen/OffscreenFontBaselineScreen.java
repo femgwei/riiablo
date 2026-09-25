@@ -12,7 +12,10 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Align;
 import com.riiablo.Riiablo;
+import com.riiablo.D2Language;
+import com.riiablo.Fonts;
 import com.riiablo.codec.FontTBL;
+import com.riiablo.codec.FontBaselineCalibration;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.widget.Label;
 
@@ -85,6 +88,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
 
     FontTBL.BitmapFont cjk = Riiablo.fonts.ReallyTheLastSucker;
     FontTBL.BitmapFont number = Riiablo.fonts.font8;
+    Fonts englishFonts = new Fonts(Riiablo.assets, D2Language.ENGLISH);
     drawDirect(batch, cjk, "生命", 58, BASELINE_Y);
     drawDirect(batch, number, "45/45", 250, BASELINE_Y);
 
@@ -119,7 +123,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     Pixmap pixels = Pixmap.createFromFrameBuffer(0, 0, WIDTH, HEIGHT);
     frameBuffer.end();
     savePng(pixels);
-    writeReport(cjk, number);
+    writeReport(cjk, number, englishFonts);
     Gdx.app.log("OffscreenFontBaselineScreen", "[FONT_BASELINE_PROBE] output=" + output.path());
     Gdx.app.exit();
   }
@@ -130,12 +134,42 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     font.draw(batch, text, x, baseline);
   }
 
-  private void writeReport(FontTBL.BitmapFont cjk, FontTBL.BitmapFont number) {
+  private void writeReport(FontTBL.BitmapFont cjk, FontTBL.BitmapFont number, Fonts englishFonts) {
     StringBuilder out = new StringBuilder();
     out.append("viewport=").append(WIDTH).append('x').append(HEIGHT).append('\n');
     out.append("baselineY=").append(BASELINE_Y).append('\n');
     appendMetrics(out, "ReallyTheLastSucker", cjk);
     appendMetrics(out, "font8", number);
+    out.append("calibration.font8=")
+        .append(FontBaselineCalibration.correction(englishFonts.font8, number)).append('\n');
+    out.append("calibration.font16=")
+        .append(FontBaselineCalibration.correction(englishFonts.font16, Riiablo.fonts.font16)).append('\n');
+    out.append("calibration.fontformal11=")
+        .append(FontBaselineCalibration.correction(englishFonts.fontformal11,
+            Riiablo.fonts.fontformal11)).append('\n');
+    out.append("calibration.font6=")
+        .append(FontBaselineCalibration.correction(englishFonts.font6, Riiablo.fonts.font6)).append('\n');
+    out.append("calibration.font24=")
+        .append(FontBaselineCalibration.correction(englishFonts.font24, Riiablo.fonts.font24)).append('\n');
+    out.append("calibration.font30=")
+        .append(FontBaselineCalibration.correction(englishFonts.font30, Riiablo.fonts.font30)).append('\n');
+    out.append("calibration.font42=")
+        .append(FontBaselineCalibration.correction(englishFonts.font42, Riiablo.fonts.font42)).append('\n');
+    out.append("calibration.fontformal10=")
+        .append(FontBaselineCalibration.correction(englishFonts.fontformal10,
+            Riiablo.fonts.fontformal10)).append('\n');
+    out.append("calibration.fontformal12=")
+        .append(FontBaselineCalibration.correction(englishFonts.fontformal12,
+            Riiablo.fonts.fontformal12)).append('\n');
+    out.append("calibration.fontexocet10=")
+        .append(FontBaselineCalibration.correction(englishFonts.fontexocet10,
+            Riiablo.fonts.fontexocet10)).append('\n');
+    out.append("calibration.fontridiculous=")
+        .append(FontBaselineCalibration.correction(englishFonts.fontridiculous,
+            Riiablo.fonts.fontridiculous)).append('\n');
+    out.append("calibration.ReallyTheLastSucker=")
+        .append(FontBaselineCalibration.correction(englishFonts.ReallyTheLastSucker,
+            cjk)).append('\n');
     out.append("hirelingHealthY=202\n");
     output.child("font-baseline.txt").writeString(out.toString(), false, "UTF-8");
   }

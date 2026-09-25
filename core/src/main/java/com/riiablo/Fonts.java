@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.riiablo.graphics.BlendMode;
+import com.riiablo.codec.FontBaselineCalibration;
 import com.riiablo.codec.FontTBL;
 import com.riiablo.loader.BitmapFontLoader;
 
@@ -31,6 +32,8 @@ public class Fonts {
   public FontTBL.BitmapFont ReallyTheLastSucker;
 
   private final String fontDirectory;
+  private final boolean chinese;
+  private final boolean sharedChinese;
   private final AssetManager assets;
   private boolean gameplayFontsLoaded;
   private boolean gameplayFontsQueued;
@@ -43,10 +46,11 @@ public class Fonts {
   public Fonts(AssetManager assets, D2Language language) {
     this.assets = assets;
     fontDirectory = language.fontDirectory;
+    chinese = language == D2Language.CHINESE;
+    sharedChinese = chinese && Boolean.getBoolean("riiablo.chinese.sharedFont");
     consolas12   = loadEx(assets, "consolas12.fnt");
     consolas16   = loadEx(assets, "consolas16.fnt");
-    if (language == D2Language.CHINESE
-        && Boolean.getBoolean("riiablo.chinese.sharedFont")) {
+    if (sharedChinese) {
       // Native CJK fonts contain 13,806 glyphs each. Build the complete
       // font16 atlas once and share it across the UI variants; each copy has
       // isolated metrics and blend mode but does not duplicate textures.
@@ -105,6 +109,7 @@ public class Fonts {
     }
 
     applyMetrics();
+    applyChineseBaselineCalibration(false);
   }
 
   /** Loads the remaining native fonts at the first transition into gameplay. */
@@ -121,6 +126,38 @@ public class Fonts {
     ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
     gameplayFontsLoaded = true;
     applyMetrics();
+    applyChineseBaselineCalibration(true);
+  }
+
+  /**
+   * Applies the per-font offsets measured against the matching English
+   * bitmap font.  These are glyph-atlas corrections, so every Label using a
+   * font receives the same correction instead of each panel guessing a Y
+   * offset. Shared-font compatibility mode is intentionally excluded because
+   * all views point at one mutable glyph array.
+   */
+  private void applyChineseBaselineCalibration(boolean allGameplayFonts) {
+    if (!chinese || sharedChinese
+        || Boolean.getBoolean("riiablo.font-baseline-raw")) return;
+    shift(font16, FontBaselineCalibration.chineseCorrection("font16"));
+    shift(fontformal12, FontBaselineCalibration.chineseCorrection("fontformal12"));
+    shift(fontexocet10, FontBaselineCalibration.chineseCorrection("fontexocet10"));
+    if (!allGameplayFonts) return;
+    shift(font6, FontBaselineCalibration.chineseCorrection("font6"));
+    shift(font8, FontBaselineCalibration.chineseCorrection("font8"));
+    shift(font24, FontBaselineCalibration.chineseCorrection("font24"));
+    shift(font30, FontBaselineCalibration.chineseCorrection("font30"));
+    shift(font42, FontBaselineCalibration.chineseCorrection("font42"));
+    shift(fontformal10, FontBaselineCalibration.chineseCorrection("fontformal10"));
+    shift(fontformal11, FontBaselineCalibration.chineseCorrection("fontformal11"));
+    shift(fontridiculous, FontBaselineCalibration.chineseCorrection("fontridiculous"));
+    shift(ReallyTheLastSucker,
+        FontBaselineCalibration.chineseCorrection("ReallyTheLastSucker"));
+  }
+
+  private static void shift(FontTBL.BitmapFont font, int delta) {
+    if (font == null || delta == 0) return;
+    ((FontTBL.BitmapFontData) font.getData()).shiftGlyphsY(delta);
   }
 
   /** Starts probing staged font caches without blocking the render thread. */

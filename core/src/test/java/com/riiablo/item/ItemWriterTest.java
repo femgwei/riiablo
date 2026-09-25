@@ -129,7 +129,7 @@ public class ItemWriterTest {
   }
 
   @Test
-  public void MissingArmorClassStillSerializes() {
+  public void MissingArmorClassStatStillSerializes() {
     // A generated/legacy armor can lose its base stat during item mutation.
     // The native stream still requires the inline armorclass field.
     Item item = new ItemGenerator().generate("cap");

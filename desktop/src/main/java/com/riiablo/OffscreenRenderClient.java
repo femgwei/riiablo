@@ -46,6 +46,8 @@ public final class OffscreenRenderClient {
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
     System.setProperty("riiablo.offscreen-font-baseline",
         Boolean.toString("font-baseline".equals(mode)));
+    System.setProperty("riiablo.font-baseline-raw",
+        Boolean.toString("font-baseline".equals(mode)));
     System.setProperty("riiablo.offscreen-camp", Boolean.toString("camp".equals(mode)
         || "object-audit".equals(mode)
         || "shrine-audit".equals(mode)
