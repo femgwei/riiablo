@@ -50,8 +50,7 @@ public class StatLabel extends Label {
   public void setText(CharSequence newText) {
     BitmapFont font = getFont(newText.length());
     if (font != getStyle().font) {
-      getStyle().font = font;
-      setStyle(getStyle()); // hacky, but only way to correct update style with changes
+      setFont(font);
     }
 
     super.setText(newText);

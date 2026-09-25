@@ -4,6 +4,7 @@ import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.files.FileHandle;
+import java.util.IdentityHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -14,6 +15,21 @@ import com.riiablo.codec.FontTBL;
 import com.riiablo.loader.BitmapFontLoader;
 
 public class Fonts {
+  public enum Role {
+    FONT6,
+    FONT8,
+    FONT16,
+    FONT24,
+    FONT30,
+    FONT42,
+    FONTFORMAL10,
+    FONTFORMAL11,
+    FONTFORMAL12,
+    FONTEXOCET10,
+    FONTRIDICULOUS,
+    REALLY_THE_LAST_SUCKER
+  }
+
   /** Native CJK glyphs sit one pixel high when the font16 atlas is shared. */
   private static final int CHINESE_SHARED_BASELINE_ADJUST = -1;
   public final BitmapFont         consolas12;
@@ -35,6 +51,13 @@ public class Fonts {
   private final boolean chinese;
   private final boolean sharedChinese;
   private final AssetManager assets;
+  /**
+   * Includes both the current fonts and fonts replaced after staged loading.
+   * Identity semantics are intentional: several staged fonts share textures,
+   * but each object represents a different UI font role.
+   */
+  private final IdentityHashMap<BitmapFont, Role> fontRoles = new IdentityHashMap<>();
+  private int generation;
   private boolean gameplayFontsLoaded;
   private boolean gameplayFontsQueued;
   private Future<FontProbe[]> gameplayFontProbe;
@@ -110,6 +133,7 @@ public class Fonts {
 
     applyMetrics();
     applyChineseBaselineCalibration(false);
+    registerCurrentFonts();
   }
 
   /** Loads the remaining native fonts at the first transition into gameplay. */
@@ -127,6 +151,57 @@ public class Fonts {
     gameplayFontsLoaded = true;
     applyMetrics();
     applyChineseBaselineCalibration(true);
+    registerCurrentFonts();
+    generation++;
+  }
+
+  private void registerCurrentFonts() {
+    register(font6, Role.FONT6);
+    register(font8, Role.FONT8);
+    register(font16, Role.FONT16);
+    register(font24, Role.FONT24);
+    register(font30, Role.FONT30);
+    register(font42, Role.FONT42);
+    register(fontformal10, Role.FONTFORMAL10);
+    register(fontformal11, Role.FONTFORMAL11);
+    register(fontformal12, Role.FONTFORMAL12);
+    register(fontexocet10, Role.FONTEXOCET10);
+    register(fontridiculous, Role.FONTRIDICULOUS);
+    register(ReallyTheLastSucker, Role.REALLY_THE_LAST_SUCKER);
+  }
+
+  private void register(BitmapFont font, Role role) {
+    if (font != null) fontRoles.put(font, role);
+  }
+
+  /** Returns the stable UI role represented by this font object. */
+  public Role roleOf(BitmapFont font) {
+    return fontRoles.get(font);
+  }
+
+  /** Returns the latest font object for a stable UI role. */
+  public BitmapFont get(Role role) {
+    if (role == null) return null;
+    switch (role) {
+      case FONT6: return font6;
+      case FONT8: return font8;
+      case FONT16: return font16;
+      case FONT24: return font24;
+      case FONT30: return font30;
+      case FONT42: return font42;
+      case FONTFORMAL10: return fontformal10;
+      case FONTFORMAL11: return fontformal11;
+      case FONTFORMAL12: return fontformal12;
+      case FONTEXOCET10: return fontexocet10;
+      case FONTRIDICULOUS: return fontridiculous;
+      case REALLY_THE_LAST_SUCKER: return ReallyTheLastSucker;
+      default: throw new AssertionError(role);
+    }
+  }
+
+  /** Changes only when staged font objects have been replaced. */
+  public int generation() {
+    return generation;
   }
 
   /**

@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Fonts;
 import com.riiablo.codec.FontTBL;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
@@ -22,6 +23,8 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
   }};
 
   boolean updateSize = true; // FIXME: find a less hacky solution
+  private Fonts.Role fontRole;
+  private int fontGeneration = -1;
 
   /**
    * Controls whether changing the text also replaces the actor's explicit
@@ -48,11 +51,13 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
   public Label(String text, BitmapFont font, int align) {
     super(text, new LabelStyle(font, null));
+    bindFont(font);
     setAlignment(align);
   }
 
   public Label(String text, BitmapFont font) {
     super(text, new LabelStyle(font, null));
+    bindFont(font);
   }
 
   public Label(String text, BitmapFont font, Color color) {
@@ -66,11 +71,52 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
   public Label(LabelStyle style) {
     super(null, style);
+    bindFont(style.font);
   }
 
   public Label(Label src) {
     super(src.getText(), src.getStyle());
+    fontRole = src.fontRole;
+    fontGeneration = src.fontGeneration;
     setColor(src.getColor());
+  }
+
+  /**
+   * Binds this label to a logical Riiablo font. If staged loading replaces
+   * that font object, the label follows the role instead of retaining the
+   * temporary startup font forever. External fonts remain fixed.
+   */
+  public void bindFont(BitmapFont font) {
+    Fonts fonts = Riiablo.fonts;
+    fontRole = fonts == null ? null : fonts.roleOf(font);
+    fontGeneration = fonts == null ? -1 : fonts.generation();
+  }
+
+  /** Replaces the font and updates its logical role in one operation. */
+  public void setFont(BitmapFont font) {
+    LabelStyle style = getStyle();
+    style.font = font;
+    bindFont(font);
+    setStyle(style);
+    invalidateHierarchy();
+  }
+
+  private void refreshBoundFont() {
+    Fonts fonts = Riiablo.fonts;
+    if (fontRole == null || fonts == null || fontGeneration == fonts.generation()) return;
+    fontGeneration = fonts.generation();
+    BitmapFont font = fonts.get(fontRole);
+    LabelStyle style = getStyle();
+    if (font == null || style.font == font) return;
+    style.font = font;
+    setStyle(style);
+    invalidateHierarchy();
+  }
+
+  @Override
+  public void act(float delta) {
+    refreshBoundFont();
+    super.act(delta);
   }
 
   public static Label i18n(String id, BitmapFont font) {
@@ -91,6 +137,7 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
   }
 
   public void draw(PaletteIndexedBatch batch, float a) {
+    refreshBoundFont();
     validate();
 
     LabelStyle style = getStyle();

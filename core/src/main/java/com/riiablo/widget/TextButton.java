@@ -34,6 +34,7 @@ public class TextButton extends Button {
       labelStyle.font = style.font;
       labelStyle.fontColor = style.fontColor;
       label.setStyle(labelStyle);
+      label.bindFont(style.font);
     }
   }
 
