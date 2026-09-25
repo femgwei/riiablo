@@ -131,13 +131,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private LabelButton purchaseCancel;
   private Item pendingPurchaseItem;
 
-  // Match ItemLabeler's compact tooltip padding (6px on each side) instead
-  // of reserving a wide fixed dialog for every vendor item.
-  private static final float PURCHASE_PROMPT_MIN_WIDTH = 112;
+  // Match ItemLabeler's compact tooltip padding (6px on each side). The
+  // vertical buttons do not require a fixed-width dialog reservation.
+  private static final float PURCHASE_PROMPT_CONTENT_MARGIN = 12;
   private static final float PURCHASE_PROMPT_HEIGHT = 116;
-  private static final float PURCHASE_PROMPT_ITEM_MARGIN = 12;
   private static final float PURCHASE_PROMPT_SIDE_MARGIN = 6;
-  private static final float PURCHASE_PROMPT_BUTTON_WIDTH = 80;
   private static final float PURCHASE_PROMPT_BUTTON_HEIGHT = 22;
 
   public VendorPanel() {
@@ -337,7 +335,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
     purchasePrompt = new WidgetGroup();
     purchasePrompt.setTouchable(Touchable.enabled);
-    purchasePrompt.setSize(PURCHASE_PROMPT_MIN_WIDTH, PURCHASE_PROMPT_HEIGHT);
+    purchasePrompt.setSize(1, PURCHASE_PROMPT_HEIGHT);
     centerPurchasePrompt();
     purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
@@ -370,7 +368,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     // palette blue while hovered/pressed.
     purchaseConfirm = new LabelButton(Riiablo.bundle.get("yes"), Riiablo.fonts.fontformal11);
     purchaseConfirm.setAlignment(Align.center);
-    purchaseConfirm.setBounds(0, 25, PURCHASE_PROMPT_BUTTON_WIDTH, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    purchaseConfirm.setBounds(0, 25, 1, PURCHASE_PROMPT_BUTTON_HEIGHT);
     purchaseConfirm.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -382,7 +380,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     purchasePrompt.addActor(purchaseConfirm);
     purchaseCancel = new LabelButton(Riiablo.bundle.get("no"), Riiablo.fonts.fontformal11);
     purchaseCancel.setAlignment(Align.center);
-    purchaseCancel.setBounds(0, 2, PURCHASE_PROMPT_BUTTON_WIDTH, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    purchaseCancel.setBounds(0, 2, 1, PURCHASE_PROMPT_BUTTON_HEIGHT);
     purchaseCancel.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -422,17 +420,22 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     // The native dialog grows only for a long item name. Keep a small fixed
     // margin around the widest line instead of reserving the whole vendor
     // panel, then re-center every child in the resized window.
-    float itemWidth = purchasePromptItem.getPrefWidth();
-    float width = Math.max(PURCHASE_PROMPT_MIN_WIDTH, itemWidth + PURCHASE_PROMPT_ITEM_MARGIN);
-    width = Math.min(width, Math.max(PURCHASE_PROMPT_MIN_WIDTH, getWidth() - 16));
+    float contentWidth = Math.max(purchasePromptItem.getPrefWidth(), purchasePromptTitle.getPrefWidth());
+    contentWidth = Math.max(contentWidth, purchaseConfirm.getPrefWidth());
+    contentWidth = Math.max(contentWidth, purchaseCancel.getPrefWidth());
+    float width = contentWidth + PURCHASE_PROMPT_CONTENT_MARGIN;
+    width = Math.min(width, Math.max(16, getWidth() - 16));
     purchasePrompt.setWidth(width);
     purchasePromptBackground.setBounds(0, 0, width, purchasePrompt.getHeight());
     purchasePromptTitle.setBounds(0, 88, width, 16);
     purchasePromptItem.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 68,
         width - PURCHASE_PROMPT_SIDE_MARGIN * 2, 18);
     purchasePromptPrice.setBounds(0, 49, width, 16);
-    purchaseConfirm.setPosition((width - PURCHASE_PROMPT_BUTTON_WIDTH) / 2f, 25);
-    purchaseCancel.setPosition((width - PURCHASE_PROMPT_BUTTON_WIDTH) / 2f, 2);
+    float buttonWidth = Math.max(1, width - PURCHASE_PROMPT_SIDE_MARGIN * 2);
+    purchaseConfirm.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 25,
+        buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
+    purchaseCancel.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 2,
+        buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
     centerPurchasePrompt();
     purchasePrompt.setVisible(true);
   }
