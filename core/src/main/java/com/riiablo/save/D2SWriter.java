@@ -81,6 +81,13 @@ public enum D2SWriter {
     } catch (IllegalArgumentException e) {
       log.error("Refusing to write an incompatible D2S character name: " + charData.name, e);
       return false;
+    } catch (RuntimeException e) {
+      // A malformed runtime item/stat must not terminate the render thread
+      // while the user is leaving the game. Item writers emit native zero
+      // fields for known omissions; this is the final safety boundary for
+      // unexpected legacy or generated data.
+      log.error("Failed to serialize character save: " + charData.name, e);
+      return false;
     }
   }
 }

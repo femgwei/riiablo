@@ -11,6 +11,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
+import com.riiablo.attributes.Stat;
+import com.riiablo.engine.server.NativeRng;
+import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
 import com.riiablo.item.TreasureClassResolver;
 import org.junit.jupiter.api.Test;
 
@@ -109,5 +114,29 @@ class TreasureClassExTest extends RiiabloTest {
     assertTrue(Riiablo.files.armor.get(code) != null
         || Riiablo.files.weapons.get(code) != null
         || Riiablo.files.misc.get(code) != null);
+  }
+
+  @Test
+  void fallenTreasureClassCanProduceArmorWithNativeBaseDefense() {
+    TreasureClassResolver resolver = new TreasureClassResolver(
+        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
+    String armorCode = null;
+    for (int seed = 1; seed <= 20_000 && armorCode == null; seed++) {
+      NativeRng rng = new NativeRng(seed);
+      List<TreasureClassResolver.Drop> drops = resolver.resolve(
+          "Act 1 H2H A", 0, rng::nextInt);
+      for (TreasureClassResolver.Drop drop : drops) {
+        String code = TreasureClassResolver.baseToken(drop.token);
+        if (Riiablo.files.armor.get(code) != null) {
+          armorCode = code;
+          break;
+        }
+      }
+    }
+
+    assertNotNull(armorCode, "Act 1 fallen TC never selected an armor base");
+    Item armor = new ItemGenerator().generateLootItem(
+        armorCode, 1, Quality.NORMAL, 0x13572468, Riiablo.NORMAL);
+    assertNotNull(armor.attrs.base().get(Stat.armorclass));
   }
 }

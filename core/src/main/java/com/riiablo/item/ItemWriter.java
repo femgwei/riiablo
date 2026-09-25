@@ -8,8 +8,10 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListFlags;
 import com.riiablo.attributes.StatListWriter;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.SetItems;
 import com.riiablo.codec.excel.Sets;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.io.BitInput;
 import com.riiablo.io.BitOutput;
 import com.riiablo.io.ByteOutput;
@@ -168,7 +170,20 @@ public class ItemWriter {
   private boolean writeArmorClass(Item item, BitOutput bits) {
     boolean hasAC = item.type.is(Type.ARMO);
     if (hasAC) {
-      statListWriter.write(item.attrs.base(), Stat.armorclass, bits, false);
+      StatRef armorClass = item.attrs.base().get(Stat.armorclass);
+      if (armorClass != null) {
+        statListWriter.write(item.attrs.base(), armorClass, bits, false);
+      } else {
+        // Every armor item has an inline armorclass field in the native item
+        // stream, even when a generated/legacy item omitted the base stat.
+        // Derive a stable base roll so an already-owned malformed vendor item
+        // remains usable after it is saved and loaded again.
+        int fallback = fallbackArmorClass(item);
+        log.warn("Missing armorclass stat while saving item: code={} id={} "
+                + "quality={} qualityId={}; writing fallback={}",
+            item.code, item.id, item.quality, item.qualityId, fallback);
+        writeInlineStatValue(Stat.armorclass, fallback, bits);
+      }
     }
     return hasAC;
   }
@@ -184,29 +199,47 @@ public class ItemWriter {
       if (maxStat != null) {
         maxdurability = statListWriter.write(item.attrs.base(), maxStat, bits, false).asInt();
       } else {
-        com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(Stat.maxdurability);
-        bits.write15u(Stat.maxdurability, 9); // Stat.BITS (D2 stat id width)
-        bits.write63u(0, entry.Save_Param_Bits);
-        bits.write63u(entry.Save_Add, entry.Save_Bits);
-        maxdurability = 0;
+        maxdurability = fallbackMaxDurability(item);
+        writeInlineStatValue(Stat.maxdurability, maxdurability, bits);
       }
       if (maxdurability > 0) {
         StatRef durability = item.attrs.base().get(Stat.durability);
         if (durability != null) {
           statListWriter.write(item.attrs.base(), durability, bits, false);
         } else {
-          writeZeroStat(Stat.durability, bits);
+          writeInlineStatValue(Stat.durability, maxdurability, bits);
         }
       }
     }
     return hasDurability;
   }
 
-  private static void writeZeroStat(short stat, BitOutput bits) {
+  /** Inline item fields carry only the encoded value, not a 9-bit stat id. */
+  private static void writeInlineStatValue(short stat, int value, BitOutput bits) {
     com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(stat);
-    bits.write15u(stat, 9);
     bits.write63u(0, entry.Save_Param_Bits);
-    bits.write63u(entry.Save_Add, entry.Save_Bits);
+    bits.write63u(value + entry.Save_Add, entry.Save_Bits);
+  }
+
+  private static int fallbackArmorClass(Item item) {
+    if (!(item.base instanceof Armor.Entry)) return 0;
+    Armor.Entry armor = (Armor.Entry) item.base;
+    int min = Math.min(armor.minac, armor.maxac);
+    int max = Math.max(armor.minac, armor.maxac);
+    return max <= min ? min : min + Math.floorMod(item.id, max - min + 1);
+  }
+
+  private static int fallbackMaxDurability(Item item) {
+    if (item.base == null || item.base.nodurability) return 0;
+    int durability;
+    if (item.base instanceof Armor.Entry) {
+      durability = ((Armor.Entry) item.base).durability;
+    } else if (item.base instanceof Weapons.Entry) {
+      durability = ((Weapons.Entry) item.base).durability;
+    } else {
+      return 0;
+    }
+    return Math.max(0, Math.min(255, durability));
   }
 
   private boolean writeSockets(Item item, BitOutput bits) {

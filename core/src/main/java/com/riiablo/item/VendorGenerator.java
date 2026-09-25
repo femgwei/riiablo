@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.ItemEntry;
+import com.riiablo.engine.server.NativeRng;
 
 public class VendorGenerator extends PassiveSystem {
   private static final int FIRST_VENDOR_ITEM_ID = 0x60000000;
@@ -87,13 +88,17 @@ public class VendorGenerator extends PassiveSystem {
   }
 
   private Item createNormal(ItemEntry base) {
+    int id = nextId();
     Item item = generator.generate(base);
-    item.id = nextId();
+    item.id = id;
     item.version = Item.VERSION_110;
     item.ilvl = (byte) Math.max(1, Math.min(99, base.level));
     item.quality = Quality.NORMAL;
     item.flags |= Item.ITEMFLAG_IDENTIFIED;
     item.flags2 |= Item.ITEMFLAG2_INSTORE;
+    NativeRng rng = new NativeRng(id);
+    NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
+    item.attrs.reset();
     item.load();
     return item;
   }
@@ -111,6 +116,9 @@ public class VendorGenerator extends PassiveSystem {
       Item item = generator.generateQuestReward(
           base.code, Math.max(base.level, magicLevel), Quality.MAGIC, id);
       item.flags2 |= Item.ITEMFLAG2_INSTORE;
+      NativeRng rng = new NativeRng(id);
+      NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
+      item.attrs.reset();
       item.load();
       return item;
     } catch (RuntimeException ignored) {
