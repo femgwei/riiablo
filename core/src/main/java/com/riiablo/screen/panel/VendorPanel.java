@@ -438,8 +438,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     float width = contentWidth + PURCHASE_PROMPT_CONTENT_MARGIN;
     width = Math.min(width, Math.max(16, getWidth() - 16));
     float lineHeight = Riiablo.fonts.fontformal11.getLineHeight();
+    float priceHeight = Math.max(lineHeight, purchasePromptPrice.getPrefHeight());
     float height = PURCHASE_PROMPT_PADDING * 2
-        + lineHeight * 5
+        + lineHeight * 4
+        + priceHeight
         + PURCHASE_PROMPT_ROW_SPACING * 4;
     purchasePrompt.setSize(width, height);
     purchasePromptBackground.setBounds(0, 0, width, height);
@@ -449,8 +451,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
     purchaseConfirm.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, y, buttonWidth, lineHeight);
     y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
-    purchasePromptPrice.setBounds(0, y, width, lineHeight);
-    y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
+    purchasePromptPrice.setBounds(0, y, width, priceHeight);
+    y += priceHeight + PURCHASE_PROMPT_ROW_SPACING;
     purchasePromptItem.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, y,
         width - PURCHASE_PROMPT_SIDE_MARGIN * 2, lineHeight);
     y += lineHeight + PURCHASE_PROMPT_ROW_SPACING;
