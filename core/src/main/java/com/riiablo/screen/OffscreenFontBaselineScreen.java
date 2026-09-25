@@ -103,14 +103,16 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     cjkLabel.draw(batch, 1f);
     numberLabel.draw(batch, 1f);
 
-    reportFont.draw(batch, "Label after measured -14px correction", 440, 185);
+    reportFont.draw(batch, "Label after measured compact correction", 440, 185);
     Label correctedCjk = new Label("生命", cjk);
     correctedCjk.setAutoSize(false);
     correctedCjk.setBounds(440, CORRECTED_BOX_Y, 70, BOX_HEIGHT);
     correctedCjk.setAlignment(Align.left | Align.bottom);
     Label correctedNumber = new Label("45/45", number);
     correctedNumber.setAutoSize(false);
-    correctedNumber.setBounds(560, CORRECTED_BOX_Y - 14, 81, BOX_HEIGHT);
+    float compactOffset = Riiablo.fonts.visualBottomAlignmentOffset(
+        cjk, "生命", number, "35");
+    correctedNumber.setBounds(560, CORRECTED_BOX_Y + compactOffset, 81, BOX_HEIGHT);
     correctedNumber.setAlignment(Align.center | Align.bottom);
     correctedCjk.draw(batch, 1f);
     correctedNumber.draw(batch, 1f);
@@ -170,6 +172,9 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     out.append("calibration.ReallyTheLastSucker=")
         .append(FontBaselineCalibration.correction(englishFonts.ReallyTheLastSucker,
             cjk)).append('\n');
+    out.append("hirelingCompactValueOffset=")
+        .append(Riiablo.fonts.visualBottomAlignmentOffset(cjk, "生命", number, "35"))
+        .append('\n');
     out.append("hirelingHealthY=202\n");
     output.child("font-baseline.txt").writeString(out.toString(), false, "UTF-8");
   }

@@ -226,6 +226,21 @@ public class Fonts {
     }
   }
 
+  /**
+   * Computes the actor-Y adjustment needed to align the visible bottoms of a
+   * candidate label and a reference label. This includes the per-font
+   * baseline corrections used by Label, so callers do not stack a measured
+   * value on top of an old hand-tuned offset.
+   */
+  public int visualBottomAlignmentOffset(BitmapFont reference, CharSequence referenceText,
+      BitmapFont candidate, CharSequence candidateText) {
+    int referenceBottom = FontBaselineCalibration.textBottom(reference, referenceText)
+        + baselineCorrection(reference);
+    int candidateBottom = FontBaselineCalibration.textBottom(candidate, candidateText)
+        + baselineCorrection(candidate);
+    return referenceBottom - candidateBottom;
+  }
+
   /** Starts probing staged font caches without blocking the render thread. */
   public void queueGameplayFonts() {
     if (gameplayFontsLoaded || gameplayFontProbe != null || gameplayFontsQueued) return;

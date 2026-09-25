@@ -48,13 +48,6 @@ import com.riiablo.widget.Label;
 public class HirelingPanel extends WidgetGroup implements Disposable {
   private static final String TAG = "HirelingPanel";
   private static final float HEADER_TEXT_Y = 220f;
-  // After the locale-wide font calibration, font8 is three pixels lower and
-  // ReallyTheLastSucker is two pixels higher than their English references.
-  // The remaining cross-font panel alignment requires a nine-pixel layout
-  // correction (the old uncalibrated value was fourteen pixels). The compact
-  // values were still one logical pixel low after moving calibration out of
-  // the glyph atlas, so keep the whole value column consistent at -8.
-  private static final float COMPACT_VALUE_BASELINE_OFFSET = -8f;
 
   final AssetDescriptor<DC6> NpcInvDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\NpcInv.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion NpcInv;
@@ -82,6 +75,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
   private Label healthValue, experienceValue, levelValue, nextLevelValue;
   private Label strValue, dexValue, damageValue, defenseValue;
   private Label fireResValue, coldResValue, lightResValue, poisonResValue;
+  private final float compactValueBaselineOffset;
 
   public HirelingPanel() {
     Riiablo.assets.load(NpcInvDescriptor);
@@ -116,6 +110,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(btnExit);
 
     inventory = Riiablo.files.inventory.get("Hireling");
+    compactValueBaselineOffset = measureCompactValueBaselineOffset();
 
     Riiablo.assets.load(inv_armorDescriptor);
     Riiablo.assets.load(inv_helm_gloveDescriptor);
@@ -198,7 +193,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     // the native Chinese atlases. The offscreen font-baseline probe measures
     // a 14px correction for the 16px panel row, so keep the numeric glyph on
     // the same visible baseline as the name and life label.
-    healthValue.setPosition(233, HEADER_TEXT_Y + COMPACT_VALUE_BASELINE_OFFSET);
+    healthValue.setPosition(233, HEADER_TEXT_Y + compactValueBaselineOffset);
     healthValue.setAlignment(Align.center | Align.bottom);
     addActor(healthValue);
 
@@ -247,7 +242,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     strValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     strValue.setAutoSize(false);
     strValue.setSize(46, 16);
-    strValue.setPosition(109, 149 + COMPACT_VALUE_BASELINE_OFFSET);
+    strValue.setPosition(109, 149 + compactValueBaselineOffset);
     strValue.setAlignment(Align.right | Align.bottom);
     addActor(strValue);
 
@@ -260,7 +255,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     dexValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     dexValue.setAutoSize(false);
     dexValue.setSize(46, 16);
-    dexValue.setPosition(109, 125 + COMPACT_VALUE_BASELINE_OFFSET);
+    dexValue.setPosition(109, 125 + compactValueBaselineOffset);
     dexValue.setAlignment(Align.right | Align.bottom);
     addActor(dexValue);
 
@@ -273,7 +268,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     damageValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     damageValue.setAutoSize(false);
     damageValue.setSize(46, 16);
-    damageValue.setPosition(109, 101 + COMPACT_VALUE_BASELINE_OFFSET);
+    damageValue.setPosition(109, 101 + compactValueBaselineOffset);
     damageValue.setAlignment(Align.right | Align.bottom);
     addActor(damageValue);
 
@@ -286,7 +281,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     defenseValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     defenseValue.setAutoSize(false);
     defenseValue.setSize(46, 16);
-    defenseValue.setPosition(109, 77 + COMPACT_VALUE_BASELINE_OFFSET);
+    defenseValue.setPosition(109, 77 + compactValueBaselineOffset);
     defenseValue.setAlignment(Align.right | Align.bottom);
     addActor(defenseValue);
 
@@ -299,7 +294,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     fireResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     fireResValue.setAutoSize(false);
     fireResValue.setSize(46, 16);
-    fireResValue.setPosition(266, 149 + COMPACT_VALUE_BASELINE_OFFSET);
+    fireResValue.setPosition(266, 149 + compactValueBaselineOffset);
     fireResValue.setAlignment(Align.right | Align.bottom);
     addActor(fireResValue);
 
@@ -312,7 +307,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     coldResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     coldResValue.setAutoSize(false);
     coldResValue.setSize(46, 16);
-    coldResValue.setPosition(266, 125 + COMPACT_VALUE_BASELINE_OFFSET);
+    coldResValue.setPosition(266, 125 + compactValueBaselineOffset);
     coldResValue.setAlignment(Align.right | Align.bottom);
     addActor(coldResValue);
 
@@ -325,7 +320,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     lightResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     lightResValue.setAutoSize(false);
     lightResValue.setSize(46, 16);
-    lightResValue.setPosition(266, 101 + COMPACT_VALUE_BASELINE_OFFSET);
+    lightResValue.setPosition(266, 101 + compactValueBaselineOffset);
     lightResValue.setAlignment(Align.right | Align.bottom);
     addActor(lightResValue);
 
@@ -338,11 +333,20 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     poisonResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
     poisonResValue.setAutoSize(false);
     poisonResValue.setSize(46, 16);
-    poisonResValue.setPosition(266, 77 + COMPACT_VALUE_BASELINE_OFFSET);
+    poisonResValue.setPosition(266, 77 + compactValueBaselineOffset);
     poisonResValue.setAlignment(Align.right | Align.bottom);
     addActor(poisonResValue);
 
     //setDebug(true, true);
+  }
+
+  private static float measureCompactValueBaselineOffset() {
+    if (Riiablo.fonts == null) return -8f;
+    String referenceText = Riiablo.string.lookup("strchrstr");
+    if (referenceText == null || referenceText.isEmpty()) referenceText = "力量";
+    return Riiablo.fonts.visualBottomAlignmentOffset(
+        Riiablo.fonts.ReallyTheLastSucker, referenceText,
+        Riiablo.fonts.font8, "35");
   }
 
   @Override

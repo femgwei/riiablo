@@ -51,4 +51,24 @@ public final class FontBaselineCalibration {
     java.util.Arrays.sort(deltas, 0, count);
     return deltas[count / 2];
   }
+
+  /**
+   * Returns the median visible glyph bottom relative to a text baseline.
+   * Using the median makes this stable for labels containing a mixture of
+   * glyphs with slightly different descenders.
+   */
+  public static int textBottom(BitmapFont font, CharSequence text) {
+    if (font == null || text == null || text.length() == 0) return 0;
+    BitmapFont.BitmapFontData data = font.getData();
+    int[] bottoms = new int[text.length()];
+    int count = 0;
+    for (int i = 0; i < text.length(); i++) {
+      BitmapFont.Glyph glyph = data.getGlyph(text.charAt(i));
+      if (glyph == null || glyph.height <= 0) continue;
+      bottoms[count++] = glyph.yoffset + glyph.height;
+    }
+    if (count == 0) return 0;
+    java.util.Arrays.sort(bottoms, 0, count);
+    return bottoms[count / 2];
+  }
 }
