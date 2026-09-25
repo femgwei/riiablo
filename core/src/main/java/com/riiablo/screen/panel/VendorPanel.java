@@ -26,9 +26,8 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.Npc;
+import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
 import com.riiablo.graphics.BlendMode;
-import com.riiablo.graphics.PaletteIndexedBatch;
-import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
@@ -124,31 +123,20 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private int pendingItemIndex = -1;
   private boolean pendingBuyToCursor;
   private WidgetGroup purchasePrompt;
-  private Label purchasePromptText;
+  private Label purchasePromptBackground;
+  private Label purchasePromptTitle;
+  private Label purchasePromptItem;
+  private Label purchasePromptPrice;
   private LabelButton purchaseConfirm;
   private LabelButton purchaseCancel;
   private Item pendingPurchaseItem;
 
-  /** The in-game purchase prompt uses the same restrained treatment as the original UI. */
-  private static final class PurchasePromptDrawable extends PaletteIndexedColorDrawable {
-    PurchasePromptDrawable() {
-      super(Riiablo.colors.modal75);
-    }
-
-    @Override
-    public void draw(Batch batch, float x, float y, float width, float height) {
-      super.draw(batch, x, y, width, height);
-      if (!(batch instanceof PaletteIndexedBatch)) return;
-
-      PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
-      b.setBlendMode(BlendMode.SOLID, Riiablo.colors.gold);
-      b.draw(Riiablo.textures.white, x, y + height - 1, width, 1);
-      b.draw(Riiablo.textures.white, x, y, width, 1);
-      b.draw(Riiablo.textures.white, x, y, 1, height);
-      b.draw(Riiablo.textures.white, x + width - 1, y, 1, height);
-      b.resetBlendMode();
-    }
-  }
+  private static final float PURCHASE_PROMPT_MIN_WIDTH = 168;
+  private static final float PURCHASE_PROMPT_HEIGHT = 158;
+  private static final float PURCHASE_PROMPT_ITEM_MARGIN = 32;
+  private static final float PURCHASE_PROMPT_SIDE_MARGIN = 10;
+  private static final float PURCHASE_PROMPT_BUTTON_WIDTH = 80;
+  private static final float PURCHASE_PROMPT_BUTTON_HEIGHT = 22;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -347,27 +335,40 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
     purchasePrompt = new WidgetGroup();
     purchasePrompt.setTouchable(Touchable.enabled);
-    purchasePrompt.setSize(230, 86);
-    purchasePrompt.setPosition((getWidth() - purchasePrompt.getWidth()) / 2f,
-        (getHeight() - purchasePrompt.getHeight()) / 2f);
+    purchasePrompt.setSize(PURCHASE_PROMPT_MIN_WIDTH, PURCHASE_PROMPT_HEIGHT);
+    centerPurchasePrompt();
     purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
         return true;
       }
     });
-    Label purchasePromptBackground = new Label("", Riiablo.fonts.font16);
-    purchasePromptBackground.getStyle().background = new PurchasePromptDrawable();
+    purchasePromptBackground = new Label("", Riiablo.fonts.fontformal11);
+    // Reuse the native MENU/boxpieces.dc6 frame used by NPC/task dialogs.
+    // This changes only the prompt presentation; purchase confirmation and
+    // cancellation behavior remain unchanged.
+    purchasePromptBackground.getStyle().background = new BorderedPaletteIndexedDrawable();
     purchasePromptBackground.setTouchable(Touchable.disabled);
     purchasePromptBackground.setBounds(0, 0, purchasePrompt.getWidth(), purchasePrompt.getHeight());
     purchasePrompt.addActor(purchasePromptBackground);
-    purchasePromptText = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold);
-    purchasePromptText.setAlignment(Align.center);
-    purchasePromptText.setBounds(4, 42, purchasePrompt.getWidth() - 8, 36);
-    purchasePrompt.addActor(purchasePromptText);
-    purchaseConfirm = new LabelButton(Riiablo.bundle.get("vendor_buy"), Riiablo.fonts.font16);
-    purchaseConfirm.setColor(Riiablo.colors.gold);
-    purchaseConfirm.setBounds(35, 10, 70, 24);
+    purchasePromptTitle = new Label(Riiablo.bundle.get("vendor_buy_title"),
+        Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+    purchasePromptTitle.setAlignment(Align.center);
+    purchasePromptTitle.setBounds(0, 123, purchasePrompt.getWidth(), 18);
+    purchasePrompt.addActor(purchasePromptTitle);
+    purchasePromptItem = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+    purchasePromptItem.setAlignment(Align.center);
+    purchasePromptItem.setBounds(0, 94, purchasePrompt.getWidth(), 22);
+    purchasePrompt.addActor(purchasePromptItem);
+    purchasePromptPrice = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+    purchasePromptPrice.setAlignment(Align.center);
+    purchasePromptPrice.setBounds(0, 68, purchasePrompt.getWidth(), 18);
+    purchasePrompt.addActor(purchasePromptPrice);
+    // LabelButton already follows the native text treatment: white at rest and
+    // palette blue while hovered/pressed.
+    purchaseConfirm = new LabelButton(Riiablo.bundle.get("yes"), Riiablo.fonts.fontformal11);
+    purchaseConfirm.setAlignment(Align.center);
+    purchaseConfirm.setBounds(0, 38, PURCHASE_PROMPT_BUTTON_WIDTH, PURCHASE_PROMPT_BUTTON_HEIGHT);
     purchaseConfirm.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -377,9 +378,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
     });
     purchasePrompt.addActor(purchaseConfirm);
-    purchaseCancel = new LabelButton(Riiablo.bundle.get("cancel"), Riiablo.fonts.font16);
-    purchaseCancel.setColor(Riiablo.colors.gold);
-    purchaseCancel.setBounds(125, 10, 70, 24);
+    purchaseCancel = new LabelButton(Riiablo.bundle.get("no"), Riiablo.fonts.fontformal11);
+    purchaseCancel.setAlignment(Align.center);
+    purchaseCancel.setBounds(0, 10, PURCHASE_PROMPT_BUTTON_WIDTH, PURCHASE_PROMPT_BUTTON_HEIGHT);
     purchaseCancel.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -414,9 +415,29 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         : localPricing == null
             ? VendorPricing.buyPrice(item)
             : VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
-    purchasePromptText.setText(Riiablo.bundle.format(
-        "vendor_buy_prompt", item.getNameString(), price));
+    purchasePromptItem.setText(item.getNameString());
+    purchasePromptPrice.setText(Integer.toString(price));
+    // The native dialog grows only for a long item name. Keep a small fixed
+    // margin around the widest line instead of reserving the whole vendor
+    // panel, then re-center every child in the resized window.
+    float itemWidth = purchasePromptItem.getPrefWidth();
+    float width = Math.max(PURCHASE_PROMPT_MIN_WIDTH, itemWidth + PURCHASE_PROMPT_ITEM_MARGIN);
+    width = Math.min(width, Math.max(PURCHASE_PROMPT_MIN_WIDTH, getWidth() - 16));
+    purchasePrompt.setWidth(width);
+    purchasePromptBackground.setBounds(0, 0, width, purchasePrompt.getHeight());
+    purchasePromptTitle.setBounds(0, 123, width, 18);
+    purchasePromptItem.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 94,
+        width - PURCHASE_PROMPT_SIDE_MARGIN * 2, 22);
+    purchasePromptPrice.setBounds(0, 68, width, 18);
+    purchaseConfirm.setPosition((width - PURCHASE_PROMPT_BUTTON_WIDTH) / 2f, 38);
+    purchaseCancel.setPosition((width - PURCHASE_PROMPT_BUTTON_WIDTH) / 2f, 10);
+    centerPurchasePrompt();
     purchasePrompt.setVisible(true);
+  }
+
+  private void centerPurchasePrompt() {
+    purchasePrompt.setPosition((getWidth() - purchasePrompt.getWidth()) / 2f,
+        (getHeight() - purchasePrompt.getHeight()) / 2f);
   }
 
   private void hidePurchasePrompt() {

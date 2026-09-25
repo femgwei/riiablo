@@ -49,7 +49,8 @@ public class LabelButton extends Label {
 
   @Override
   public void draw(PaletteIndexedBatch batch, float a) {
-    setColor(clickListener.isOver() ? Riiablo.colors.blue : Riiablo.colors.white);
+    setColor(clickListener.isOver() || clickListener.isPressed()
+        ? Riiablo.colors.blue : Riiablo.colors.white);
     super.draw(batch, a);
   }
 }
