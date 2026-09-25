@@ -160,6 +160,17 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals(6, MissileImpactPresentationSystem.clientHit14RadialCount(custom));
   }
 
+  @Test
+  void circularClientCallbacksUseMissileDirectionCount() {
+    Missiles.Entry frostNova = Riiablo.files.Missiles.get("frostnova");
+    assertNotNull(frostNova);
+    assertEquals(16, frostNova.NumDirections);
+    assertEquals(16, SkillCastHandler.nativeDirectionCount(frostNova, 64));
+
+    Missiles.Entry unspecified = new Missiles.Entry();
+    assertEquals(64, SkillCastHandler.nativeDirectionCount(unspecified, 64));
+  }
+
   private static final class SilentAudio extends Audio {
     SilentAudio() { super(null); }
     @Override public Instance play(String id, boolean global) { return null; }

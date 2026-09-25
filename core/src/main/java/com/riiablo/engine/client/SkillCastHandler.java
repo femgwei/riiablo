@@ -639,7 +639,7 @@ public class SkillCastHandler extends PassiveSystem {
     Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
-    int numMissiles = 64;
+    int numMissiles = nativeDirectionCount(missile, 64);
     for (int i = 0; i < numMissiles; i++) {
       Vector2 angle = new Vector2(Vector2.X);
       angle.setAngleRad(Direction.directionToRadians(i, numMissiles));
@@ -688,7 +688,7 @@ public class SkillCastHandler extends PassiveSystem {
     if (missile == null) return;
 
     // Aura pulse emanates from caster
-    int numMissiles = 16;
+    int numMissiles = nativeDirectionCount(missile, 16);
     for (int i = 0; i < numMissiles; i++) {
       Vector2 angle = new Vector2(Vector2.X);
       angle.setAngleRad(Direction.directionToRadians(i, numMissiles));
@@ -755,6 +755,12 @@ public class SkillCastHandler extends PassiveSystem {
     return shouldReuseServerMissile(skill, networkClient, localMonsterServer,
         localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
         localChargedBoltServer, separateCorpseBurst, false);
+  }
+
+  /** Uses Missiles.txt.NumDirections before falling back to legacy callback defaults. */
+  static int nativeDirectionCount(Missiles.Entry missile, int fallback) {
+    return missile != null && missile.NumDirections > 0
+        ? missile.NumDirections : fallback;
   }
 
   static boolean shouldReuseServerMissile(Skills.Entry skill, boolean networkClient,
