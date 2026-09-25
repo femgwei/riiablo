@@ -83,10 +83,11 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     tooltip.setPosition(0, -35);
     tooltip.setSize(300, 32);
     tooltip.setAlignment(Align.left);
+    tooltip.setTouchable(Touchable.disabled);
     tooltip.setVisible(false);
     addActor(tooltip);
 
-    addListener(new ClickListener() {
+    addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override public void enter(InputEvent event, float x, float y, int pointer,
           com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
         hovered = true;
@@ -100,14 +101,19 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
       }
 
       @Override public void clicked(InputEvent event, float x, float y) {
-        if (event.getButton() == Input.Buttons.RIGHT) {
-          if (Riiablo.game != null && Riiablo.game.hirelingPanel != null) {
-            Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
-          }
-          return;
-        }
         Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
         if (item != null && itemController != null) itemController.useCursorPotionOnMercenary();
+      }
+    });
+    // Keep the right-button action separate from the potion drop listener.
+    // This avoids the default ClickListener's button state being shared with
+    // a left-button drag/drop interaction.
+    addListener(new ClickListener(Input.Buttons.RIGHT) {
+      @Override public void clicked(InputEvent event, float x, float y) {
+        if (Riiablo.game != null && Riiablo.game.hirelingPanel != null) {
+          Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
+          event.handle();
+        }
       }
     });
   }
@@ -227,8 +233,15 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     float barY = getY() + 63f;
     Color healthColor = healthBarColor(ratio);
     // The original portrait has no dark/opaque background behind the life bar.
-    batch.setColor(healthColor.r, healthColor.g, healthColor.b, parentAlpha);
+    if (batch instanceof PaletteIndexedBatch) {
+      ((PaletteIndexedBatch) batch).setBlendMode(BlendMode.SOLID, healthColor);
+    } else {
+      batch.setColor(healthColor.r, healthColor.g, healthColor.b, parentAlpha);
+    }
     batch.draw(fill, barX, barY, 46f * ratio, 5f);
+    if (batch instanceof PaletteIndexedBatch) {
+      ((PaletteIndexedBatch) batch).resetBlendMode();
+    }
     batch.setColor(Color.WHITE);
     super.draw(batch, parentAlpha);
   }
