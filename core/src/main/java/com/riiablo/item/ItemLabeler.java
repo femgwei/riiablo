@@ -172,7 +172,7 @@ public class ItemLabeler {
     table.setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
 
     if ((labelFlags & LABELFLAG_CANSELL) != 0 && transactionPrice >= 0) {
-      table.add(new Label(formatSellPrice(transactionPrice), font, Riiablo.colors.gold))
+      table.add(new Label(formatSellPrice(transactionPrice), font, name.getColor()))
           .center().space(SPACING).row();
     }
     if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
