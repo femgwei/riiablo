@@ -174,18 +174,23 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     mercenaryName.setAlignment(Align.left | Align.bottom);
     addActor(mercenaryName);
 
-    Table health = new Table();
-    health.setSize(151, 16);
-    health.setPosition(163, 216);
     Label healthLabel = Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker);
+    healthLabel.setSize(70, 16);
+    healthLabel.setPosition(163, 216);
     healthLabel.setAlignment(Align.left | Align.bottom);
-    health.add(healthLabel);
+    addActor(healthLabel);
+
     healthValue = new Label(Integer.toString(0), Riiablo.fonts.font8, Align.center);
     healthValue.setAutoSize(false);
-    healthValue.setSize(151, 16);
+    healthValue.setSize(81, 16);
+    // Keep the compact numeric font on the same visual baseline as the
+    // native Chinese label.  The two fonts intentionally have different
+    // ascent values, so Align.bottom alone does not align their glyphs.
+    healthValue.setPosition(233, 216
+        + Riiablo.fonts.ReallyTheLastSucker.getData().ascent
+        - Riiablo.fonts.font8.getData().ascent);
     healthValue.setAlignment(Align.center | Align.bottom);
-    health.add(healthValue).growX().row();
-    addActor(health);
+    addActor(healthValue);
 
     Table exp = new Table();
     exp.setSize(120, 30);
