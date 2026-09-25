@@ -33,21 +33,102 @@ import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
 import org.junit.jupiter.api.Test;
 
 /** End-to-end headless regression for automatic combat followed by Shaman resurrection. */
 class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
+  @Test
+  void ordinaryFallenRuntimePipelineDispatchesNativeAttackKeyframeAndDamage() throws Exception {
+    MonStats.Entry fallenRow = Riiablo.files.monstats.get("fallen1");
+    MonStats2.Entry fallenStats2 = Riiablo.files.monstats2.get(fallenRow.MonStatsEx);
+    World previousEngine = Riiablo.engine;
+    com.riiablo.codec.D2 previousAnim = Riiablo.anim;
+    Riiablo.anim = com.riiablo.codec.D2.loadFromFile(
+        Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new Actioneer(), new DynamicUnitCollisionSystem(false),
+            new Pathfinder(), new CofManager(), new AnimDataResolver(), new SequenceHandler(),
+            new AnimStepper(), new TestFactory())
+        .build()
+        .register("map", new Map(0, 0)));
+    Riiablo.engine = world;
+    try {
+      int player = createPlayer(world);
+      world.getMapper(Position.class).get(player).position.set(11f, 10f);
+      Attributes playerAttrs = world.getMapper(AttributesWrapper.class).get(player).attrs;
+      playerAttrs.base().put(Stat.armorclass, 0);
+      playerAttrs.reset();
+
+      int fallen = createMonster(world, fallenRow, fallenStats2, 10f, 10f, 24f);
+      Attributes fallenAttrs = world.getMapper(AttributesWrapper.class).get(fallen).attrs;
+      fallenAttrs.base().put(Stat.armorclass, 0);
+      fallenAttrs.base().put(Stat.mindamage, 20);
+      fallenAttrs.base().put(Stat.maxdamage, 20);
+      fallenAttrs.base().put(Stat.tohit, 10_000);
+      fallenAttrs.reset();
+      world.getMapper(MovementModes.class).create(fallen).set(
+          Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
+      world.getMapper(CofReference.class).create(fallen).set("FA", Engine.Monster.MODE_NU);
+
+      // Enter through the same native AI decision used by the live server,
+      // rather than calling Actioneer directly.  This catches target/range
+      // and AI state regressions before the animation pipeline starts.
+      Fallen ai = new Fallen(fallen);
+      world.getInjector().inject(ai);
+      ai.initialize();
+      Field params = AI.class.getDeclaredField("params");
+      params.setAccessible(true);
+      int[] values = (int[]) params.get(ai);
+      values[0] = 0;
+      values[2] = 100;
+      ai.update(1f);
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Casting.class).has(fallen),
+          "Fallen AI cast must install authoritative Casting");
+      assertTrue(world.getMapper(Sequence.class).has(fallen),
+          "Fallen AI cast must install a native attack sequence");
+
+      world.setDelta(Animation.FRAME_DURATION);
+      // The native A1 marker is frame 7.  Stop before the action completes;
+      // SequenceHandler then returns the monster to NU, whose COF has a
+      // different frame count and would hide which attack animation ran.
+      for (int i = 0; i < 8; i++) world.process();
+
+      AnimData anim = world.getMapper(AnimData.class).get(fallen);
+      assertNotNull(anim, "the native FA A1 COF must resolve to AnimData");
+      assertEquals(Engine.Monster.MODE_A1,
+          world.getMapper(CofReference.class).get(fallen).mode);
+      assertTrue(probe.attackKeyframes > 0,
+          "the runtime FA A1 animation must dispatch its native ATK keyframe");
+      assertTrue(probe.damageEvents > 0,
+          "the dispatched ATK keyframe must reach Actioneer melee damage resolution");
+      assertTrue(hitpoints(playerAttrs) < 100f,
+          "the resolved Fallen hit must reduce the player's life");
+      System.out.println("[FALLEN_MELEE_PIPELINE] entity=" + fallen
+          + " keyframes=" + probe.attackKeyframes + " damageEvents=" + probe.damageEvents
+          + " playerHp=" + hitpoints(playerAttrs) + " status=PASS");
+    } finally {
+      Riiablo.engine = previousEngine;
+      Riiablo.anim = previousAnim;
+      world.dispose();
+    }
+  }
+
   @Test
   void ordinaryFallenAttacksWhenNativeFootprintsAreInMeleeRange() throws Exception {
     MonStats.Entry fallenRow = Riiablo.files.monstats.get("fallen1");
@@ -272,6 +353,19 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
   }
 
   private static final class Probe extends BaseSystem {
+    int attackKeyframes;
+    int damageEvents;
+
+    @Subscribe
+    public void onKeyframe(AnimDataKeyframeEvent event) {
+      if (event.keyframe == Engine.KEYFRAME_ATK) attackKeyframes++;
+    }
+
+    @Subscribe
+    public void onDamage(DamageEvent event) {
+      damageEvents++;
+    }
+
     @Override protected void processSystem() {}
   }
 
