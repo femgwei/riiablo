@@ -48,6 +48,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private final Texture fill;
   private final Label name;
   private final Label tooltip;
+  private final Label feedback;
   private EntitySubscription mercenaries;
   private final ItemController itemController;
   private int mercenaryId = -1;
@@ -55,6 +56,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private float life;
   private float maxLife;
   private boolean hovered;
+  private float feedbackRemaining;
 
   @SuppressWarnings("unchecked")
   public MercenaryHud(ItemController itemController) {
@@ -88,6 +90,14 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     tooltip.setTouchable(Touchable.disabled);
     tooltip.setVisible(false);
     addActor(tooltip);
+
+    feedback = new Label("", Riiablo.fonts.font16, Color.WHITE);
+    feedback.setPosition(-38, HEIGHT + 2);
+    feedback.setSize(132, 16);
+    feedback.setAlignment(Align.center);
+    feedback.setTouchable(Touchable.disabled);
+    feedback.setVisible(false);
+    addActor(feedback);
 
     addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override public void enter(InputEvent event, float x, float y, int pointer,
@@ -131,10 +141,25 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
           + item.id);
       return false;
     }
+    // Avoid sending a network request for a native no-op.  D2 leaves the
+    // potion on the cursor and lets the hireling answer above the portrait.
+    if (maxLife > 0 && life >= maxLife) {
+      showTemporaryMessage("暂时还不用，谢谢");
+      Gdx.app.log("MercenaryHud", "[MERC_POTION_UI] phase=reject reason=mercenary_full_health item="
+          + item.id + " hp=" + life + " max=" + maxLife);
+      return false;
+    }
     boolean used = itemController.useCursorPotionOnMercenary();
     Gdx.app.log("MercenaryHud", "[MERC_POTION_UI] phase=dispatch item=" + item.id
         + " code=" + item.code + " location=" + item.location + " used=" + used);
     return used;
+  }
+
+  /** Shows a short native-style response above the hireling portrait. */
+  public void showTemporaryMessage(String message) {
+    feedback.setText(message == null ? "" : message);
+    feedbackRemaining = 1.5f;
+    feedback.setVisible(message != null && !message.isEmpty());
   }
 
   /** Tests a screen/stage point against the whole portrait drop target. */
@@ -145,6 +170,13 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
 
   @Override public void act(float delta) {
     super.act(delta);
+    if (feedbackRemaining > 0) {
+      feedbackRemaining -= delta;
+      if (feedbackRemaining <= 0) {
+        feedbackRemaining = 0;
+        feedback.setVisible(false);
+      }
+    }
     refreshState();
   }
 
