@@ -171,6 +171,18 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals(64, SkillCastHandler.nativeDirectionCount(unspecified, 64));
   }
 
+  @Test
+  void blizzardHitFunctionExposesRawClientParameters() {
+    Missiles.Entry blizzard = Riiablo.files.Missiles.get("blizzard1");
+    Missiles.Entry andy = Riiablo.files.Missiles.get("andyfallingdebris1");
+    assertNotNull(blizzard);
+    assertNotNull(andy);
+    assertEquals(120, MissileImpactPresentationSystem.clientHit19Param(blizzard, 0, -1));
+    assertEquals(5, MissileImpactPresentationSystem.clientHit19Param(blizzard, 1, -1));
+    assertEquals(200, MissileImpactPresentationSystem.clientHit19Param(andy, 0, -1));
+    assertEquals(25, MissileImpactPresentationSystem.clientHit19Param(andy, 1, -1));
+  }
+
   private static final class SilentAudio extends Audio {
     SilentAudio() { super(null); }
     @Override public Instance play(String id, boolean global) { return null; }

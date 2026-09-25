@@ -176,6 +176,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       return;
     }
 
+    if (source.pCltHitFunc == 19) {
+      log.info("[MISSILE_IMPACT_FUNC19] source={} sourceId={} param1={} param2={} "
+              + "child1={} child2={} impact=({}, {}) direction=({}, {})",
+          source.Missile, event.missileEntityId, clientHit19Param(source, 0, 0),
+          clientHit19Param(source, 1, 0), first(source.CltHitSubMissile, 0),
+          first(source.CltHitSubMissile, 1), event.x, event.y, event.dx, event.dy);
+    }
+
     String[] children = source.CltHitSubMissile;
     if (children == null || factory == null) return;
 
@@ -288,6 +296,12 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     return source != null && source.CltParam != null && index >= 0
         && index < source.CltParam.length && source.CltParam[index] != 0
         ? source.CltParam[index] : fallback;
+  }
+
+  /** Raw pCltHitFunc=19 parameter accessor; zero is a valid table value. */
+  static int clientHit19Param(Missiles.Entry source, int index, int fallback) {
+    return source != null && source.CltParam != null && index >= 0
+        && index < source.CltParam.length ? source.CltParam[index] : fallback;
   }
 
   static int nativePresentationLifetimeFrames(Missiles.Entry child) {
