@@ -186,9 +186,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     // Keep the compact numeric font on the same visual baseline as the
     // native Chinese label.  The two fonts intentionally have different
     // ascent values, so Align.bottom alone does not align their glyphs.
-    healthValue.setPosition(233, 216
-        + Riiablo.fonts.ReallyTheLastSucker.getData().ascent
-        - Riiablo.fonts.font8.getData().ascent);
+    // The rendered glyph bottoms (not only the font ascent values) differ in
+    // the native Chinese atlases. The offscreen font-baseline probe measures
+    // a 14px correction for the 16px panel row, so keep the numeric glyph on
+    // the same visible baseline as the name and life label.
+    healthValue.setPosition(233, 202);
     healthValue.setAlignment(Align.center | Align.bottom);
     addActor(healthValue);
 

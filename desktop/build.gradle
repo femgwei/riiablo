@@ -37,6 +37,20 @@ task offscreenRender(type: JavaExec) {
   if (project.hasProperty('language')) systemProperty 'riiablo.language', project.property('language')
 }
 
+task offscreenFontBaseline(type: JavaExec) {
+  group = 'verification'
+  description = 'Render native Chinese/name and compact numeric fonts with baseline guides.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/font-baseline',
+       '--mode', 'font-baseline',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.hasProperty('language')) systemProperty 'riiablo.language', project.property('language')
+  ignoreExitValue = false
+}
+
 task offscreenCamp(type: JavaExec) {
   group = 'verification'
   description = 'Load and render the real Act I Rogue Encampment through a 1x1 hidden client.'
