@@ -115,6 +115,32 @@ class AmazonArrowPresentationTest extends RiiabloTest {
         MissileImpactPresentationSystem.nativePresentationLifetimeFrames(stationary));
   }
 
+  @Test
+  void frozenOrbClientHitScatterUsesNativeHitParStride() {
+    Missiles.Entry orb = Riiablo.files.Missiles.get("frozenorb");
+    assertNotNull(orb);
+    assertEquals(30, orb.pCltHitFunc);
+    assertEquals(4, MissileImpactPresentationSystem.clientHitStep(orb));
+    // D2MOO walks the 64-point table in steps of HitPar1=4.
+    assertEquals(16, MissileImpactPresentationSystem.clientHitScatterCount(orb));
+
+    Missiles.Entry dense = new Missiles.Entry();
+    dense.cHitPar = new int[] {1, 0, 0};
+    assertEquals(64, MissileImpactPresentationSystem.clientHitScatterCount(dense));
+  }
+
+  @Test
+  void clientFlightCallbacksReadTheirNativeFrameInterval() {
+    Missiles.Entry lightning = Riiablo.files.Missiles.get("chainlightning2");
+    Missiles.Entry vines = Riiablo.files.Missiles.get("vines");
+    assertNotNull(lightning);
+    assertNotNull(vines);
+    assertEquals(8, lightning.pCltDoFunc);
+    assertEquals(3, MissileImpactPresentationSystem.cltParam(lightning, 0, 1));
+    assertEquals(49, vines.pCltDoFunc);
+    assertEquals(9, MissileImpactPresentationSystem.cltParam(vines, 0, 1));
+  }
+
   private static final class SilentAudio extends Audio {
     SilentAudio() { super(null); }
     @Override public Instance play(String id, boolean global) { return null; }

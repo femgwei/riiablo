@@ -39,13 +39,43 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private final Vector2 direction = new Vector2(1f, 0f);
 
+  // D2MOO MISSMODE_SrvHit29_FrozenOrb uses this exact 64-point lattice.  The
+  // client hit callback uses the same table, but skips entries according to
+  // Missiles.txt.cHitPar1.  Keeping the table here avoids turning the native
+  // scatter into an evenly-spaced approximation (which is visibly different
+  // near the cardinal directions).
+  private static final int[] FROZEN_ORB_X = {
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28,
+      -29, -29, -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16,
+      -14, -11, -8, -5, -2, 0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26,
+      27, 28, 29, 29
+  };
+  private static final int[] FROZEN_ORB_Y = {
+      0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26, 27, 28, 29, 29,
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28,
+      -29, -29, -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16,
+      -14, -11, -8, -5, -2
+  };
+
   @Override
   protected void process(int entityId) {
     Missile visual = mMissile.get(entityId);
-    if (!visual.presentationOnly) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;
     float distance = velocity.len() * delta;
+
+    // Network replicas are visual-only from the local simulation's point of
+    // view, but they still run the native pCltDoFunc callback while flying.
+    // Local authoritative missiles already execute their server-side control
+    // functions, so restricting this to authoritative=false prevents doubled
+    // trails in single-player and on the server host.
+    if (!visual.presentationOnly && !visual.authoritative) {
+      processClientFlightFunction(entityId, visual, velocity, delta);
+      return;
+    }
+    if (!visual.presentationOnly) return;
     if (distance > 0f) {
       mPosition.get(entityId).position.mulAdd(velocity, delta);
       visual.distanceTraveled += distance;
@@ -66,6 +96,57 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         && animation.animation.isFinished()) {
       world.delete(entityId);
     }
+  }
+
+  private void processClientFlightFunction(int entityId, Missile visual,
+      Vector2 velocity, float delta) {
+    Missiles.Entry source = visual.missile;
+    if (source == null) return;
+    int function = source.pCltDoFunc;
+    if (function != 8 && function != 49) return;
+    String childName = first(source.CltSubMissile, 0);
+    if (childName == null || childName.isEmpty() || factory == null) return;
+
+    int elapsedFrames = Math.max(1, Math.round(delta * 25f));
+    int previousFrame = visual.nativeFrame;
+    visual.nativeFrame += elapsedFrames;
+    int interval = Math.max(1, cltParam(source, 0, 1));
+    int firstFrame = previousFrame + 1;
+    int lastFrame = visual.nativeFrame;
+    for (int frame = firstFrame; frame <= lastFrame; frame++) {
+      if (frame % interval != 0) continue;
+      Vector2 at = mPosition.get(entityId).position;
+      float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
+      createFlightVisual(source, childName, at, angle);
+    }
+  }
+
+  private void createFlightVisual(Missiles.Entry source, String childName,
+      Vector2 position, float angle) {
+    Missiles.Entry child = Riiablo.files.Missiles.get(childName);
+    if (child == null) {
+      log.warn("[MISSILE_FLIGHT] source={} missing CltSubMissile={}",
+          source.Missile, childName);
+      return;
+    }
+    direction.set(MathUtils.cos(angle), MathUtils.sin(angle));
+    int id;
+    if (factory instanceof ClientEntityFactory) {
+      id = ((ClientEntityFactory) factory).createMissilePresentation(child, direction,
+          position);
+    } else {
+      id = factory.createMissile(child, direction, position, -1);
+    }
+    if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
+    Missile visual = mMissile.get(id);
+    visual.authoritative = false;
+    visual.presentationOnly = true;
+    visual.ownerId = -1;
+    visual.persistent = false;
+    visual.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
+    log.debug("[MISSILE_FLIGHT] source={} child={} entity={} pos=({}, {}) interval={}",
+        source.Missile, childName, id, position.x, position.y,
+        cltParam(source, 0, 1));
   }
 
   @Subscribe
@@ -96,8 +177,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // HitSubMissile entities.  Do not create a second client-only copy.
     if (source.pCltHitFunc == 30 && source.pSrvHitFunc != 29) {
       String child = first(children, 0);
-      for (int i = 0; i < 16; i++) {
-        createVisual(source, child, event, i * MathUtils.PI2 / 16f);
+      int step = clientHitStep(source);
+      for (int i = 0; i < FROZEN_ORB_X.length; i += step) {
+        // The native server/client coordinate transform is the isometric
+        // half-sum/half-difference used by Frozen Orb's late-path steering.
+        float offsetX = (FROZEN_ORB_X[i] - FROZEN_ORB_Y[i]) * 0.5f;
+        float offsetY = (FROZEN_ORB_X[i] + FROZEN_ORB_Y[i]) * 0.5f;
+        float angle = MathUtils.atan2(offsetY, offsetX);
+        createVisual(source, child, event, angle, offsetX, offsetY);
       }
       return;
     }
@@ -116,6 +203,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void createVisual(Missiles.Entry source, String childName,
       MissileImpactEvent event, float angle) {
+    createVisual(source, childName, event, angle, 0f, 0f);
+  }
+
+  private void createVisual(Missiles.Entry source, String childName,
+      MissileImpactEvent event, float angle, float offsetX, float offsetY) {
     if (childName == null || childName.isEmpty()) return;
     Missiles.Entry child = Riiablo.files.Missiles.get(childName);
     if (child == null) {
@@ -127,10 +219,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     int id;
     if (factory instanceof ClientEntityFactory) {
       id = ((ClientEntityFactory) factory).createMissilePresentation(child, direction,
-          new Vector2(event.x, event.y));
+          new Vector2(event.x + offsetX, event.y + offsetY));
     } else {
       id = factory.createMissile(child, direction,
-          new Vector2(event.x, event.y), -1);
+          new Vector2(event.x + offsetX, event.y + offsetY), -1);
     }
     if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
     Missile visual = mMissile.get(id);
@@ -149,6 +241,24 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private static String first(String[] values, int index) {
     return values != null && index >= 0 && index < values.length ? values[index] : null;
+  }
+
+  /** Native client Frozen Orb step: cHitPar1 is the stride through 64 offsets. */
+  static int clientHitStep(Missiles.Entry source) {
+    if (source == null || source.cHitPar == null || source.cHitPar.length == 0) return 4;
+    return Math.max(1, source.cHitPar[0]);
+  }
+
+  /** Number of client Frozen Orb scatter children emitted for a row. */
+  static int clientHitScatterCount(Missiles.Entry source) {
+    int step = clientHitStep(source);
+    return (FROZEN_ORB_X.length + step - 1) / step;
+  }
+
+  static int cltParam(Missiles.Entry source, int index, int fallback) {
+    return source != null && source.CltParam != null && index >= 0
+        && index < source.CltParam.length && source.CltParam[index] != 0
+        ? source.CltParam[index] : fallback;
   }
 
   static int nativePresentationLifetimeFrames(Missiles.Entry child) {
