@@ -4,6 +4,7 @@ import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -37,6 +38,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private static final String[] ICON_NAMES = {
       "rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6", "barbhirable_icon.dc6"
   };
+  private static final String UNNAMED = "UNNAMED";
 
   private final AssetDescriptor<DC6>[] iconDescriptors;
   private final Texture fill;
@@ -73,8 +75,8 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     name.setSize(WIDTH, 14);
     name.setAlignment(Align.center);
     addActor(name);
-    tooltip = new Label("", Riiablo.fonts.fontformal12, Color.WHITE);
-    tooltip.setPosition(-20, -16);
+    tooltip = new Label("", Riiablo.fonts.font16, Color.WHITE);
+    tooltip.setPosition(-32, -14);
     tooltip.setSize(WIDTH + 40, 14);
     tooltip.setAlignment(Align.center);
     tooltip.setVisible(false);
@@ -94,6 +96,12 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
       }
 
       @Override public void clicked(InputEvent event, float x, float y) {
+        if (event.getButton() == Input.Buttons.RIGHT) {
+          if (Riiablo.game != null && Riiablo.game.hirelingPanel != null) {
+            Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
+          }
+          return;
+        }
         Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
         if (item != null && itemController != null) itemController.useCursorPotionOnMercenary();
       }
@@ -138,10 +146,46 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     if (!isVisible()) return;
     // MercData.name is a compact native name id, not a printable string. Until
     // Hireling.txt's NameFirst/NameLast mapping is loaded, do not leak 0x0000.
-    String mercName = Riiablo.bundle.get("key_hireling");
-    name.setText(mercName == null || mercName.isEmpty() ? "佣兵" : mercName);
+    Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(mercenaryId);
+    name.setText(resolveMercenaryName(merc));
     name.setSize(WIDTH, 14);
-    tooltip.setText(hovered ? "拖动治疗药水到此处" : "");
+    tooltip.setText(hovered ? localized("mercenary_heal_hint", "拖动治疗药水到此处") : "");
+  }
+
+  /** Resolves the native Hireling.txt name key (the saved value is a name slot). */
+  static String resolveMercenaryName(Mercenary merc) {
+    if (merc == null || Riiablo.string == null) return localized("hireling_unnamed", UNNAMED);
+    int id = Math.max(0, merc.nameId);
+    String[] keys;
+    switch (merc.mercType) {
+      case 0:
+        keys = new String[] {String.format(java.util.Locale.ROOT, "merc%02d", id + 1)};
+        break;
+      case 1:
+        keys = new String[] {String.format(java.util.Locale.ROOT, "merca%03d", id + 181),
+            String.format(java.util.Locale.ROOT, "merca%03d", id + 201)};
+        break;
+      case 2:
+        keys = new String[] {String.format(java.util.Locale.ROOT, "merca%03d", id + 182),
+            String.format(java.util.Locale.ROOT, "merca%03d", Math.min(241, id + 222))};
+        break;
+      case 3:
+        keys = new String[] {String.format(java.util.Locale.ROOT, "MercX%03d", id + 31),
+            String.format(java.util.Locale.ROOT, "MercX%03d", id + 101)};
+        break;
+      default: return localized("hireling_unnamed", UNNAMED);
+    }
+    for (String key : keys) {
+      String value = Riiablo.string.lookup(key);
+      if (value != null && !value.startsWith("ERROR:")) return value;
+    }
+    return localized("hireling_unnamed", UNNAMED);
+  }
+
+  private static String localized(String key, String fallback) {
+    if (Riiablo.bundle == null) return fallback;
+    String value = Riiablo.bundle.get(key);
+    return value == null || value.isEmpty() ? fallback : value;
   }
 
   @Override public void draw(Batch batch, float parentAlpha) {
@@ -153,7 +197,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
       TextureRegion region = icon.getTexture(0);
       // Native portraits are 46x41 (barbarian is 47x41). Do not rescale them.
       float x = getX() + (getWidth() - region.getRegionWidth()) * 0.5f;
-      float y = getY() + 20f;
+      float y = getY() + 19f;
       batch.setColor(1f, 1f, 1f, parentAlpha);
       if (hovered && batch instanceof PaletteIndexedBatch) {
         PaletteIndexedBatch indexed = (PaletteIndexedBatch) batch;
@@ -168,9 +212,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     float ratio = maxLife <= 0 ? 0 : Math.max(0, Math.min(1, life / maxLife));
     float barX = getX() + 5f;
     float barY = getY() + 63f;
-    batch.setColor(0.18f, 0.05f, 0.03f, parentAlpha);
+    batch.setColor(0f, 0.18f, 0f, parentAlpha);
     batch.draw(fill, barX, barY, 46f, 5f);
-    batch.setColor(0.12f, 0.75f, 0.16f, parentAlpha);
+    batch.setColor(0f, 1f, 0f, parentAlpha);
     batch.draw(fill, barX, barY, 46f * ratio, 5f);
     batch.setColor(Color.WHITE);
     super.draw(batch, parentAlpha);

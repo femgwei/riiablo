@@ -463,7 +463,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     stage.addActor(hirelingPanel);
 
     mercenaryHud = new MercenaryHud(itemController);
-    mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight());
+    // Keep the native portrait inset symmetrical: its top and left margins are
+    // both eight virtual pixels instead of touching the top edge.
+    mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight() - 8);
     stage.addActor(mercenaryHud);
 
     stashPanel = new StashPanel();
@@ -1111,7 +1113,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         stage.getWidth() - inventoryPanel.getWidth(),
         stage.getHeight() - inventoryPanel.getHeight());
     if (mercenaryHud != null) mercenaryHud.setPosition(
-        8, stage.getHeight() - mercenaryHud.getHeight());
+        8, stage.getHeight() - mercenaryHud.getHeight() - 8);
     if (Boolean.TRUE.equals(Cvars.Client.Display.KeepControlPanelGrouped.get())) {
       controlPanel.setWidth(stage.getWidth());
       controlPanel.layout();

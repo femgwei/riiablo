@@ -2,6 +2,9 @@ package com.riiablo.screen.panel;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.artemis.Aspect;
+import com.artemis.EntitySubscription;
+import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
@@ -22,6 +25,9 @@ import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.BodyLocs;
 import com.riiablo.codec.excel.Inventory;
@@ -34,6 +40,8 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 
@@ -61,6 +69,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
   protected ItemController itemController;
 
   protected AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
+  private EntitySubscription mercenaries;
+  private Label mercenaryName;
+  private Label healthValue, experienceValue, levelValue, nextLevelValue;
+  private Label strValue, dexValue, damageValue, defenseValue;
+  private Label fireResValue, coldResValue, lightResValue, poisonResValue;
 
   public HirelingPanel() {
     Riiablo.assets.load(NpcInvDescriptor);
@@ -153,39 +166,43 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
       bodyParts[i].setBodyPart(Riiablo.files.bodylocs.get(i).Code);
     }
 
-    Label name = new Label(Riiablo.bundle.get("hireling_unnamed"),
+    mercenaryName = new Label(Riiablo.bundle.get("hireling_unnamed"),
         Riiablo.fonts.ReallyTheLastSucker);
-    name.setSize(150, 16);
-    name.setPosition(6, 216);
-    name.setAlignment(Align.left);
-    addActor(name);
+    mercenaryName.setSize(150, 16);
+    mercenaryName.setPosition(6, 216);
+    mercenaryName.setAlignment(Align.left);
+    addActor(mercenaryName);
 
     Table health = new Table();
     health.setSize(151, 16);
     health.setPosition(163, 216);
     health.add(Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker));
-    health.add(new Label(Integer.toString(0), Riiablo.fonts.font8, Align.center)).growX().row();
+    healthValue = new Label(Integer.toString(0), Riiablo.fonts.font8, Align.center);
+    health.add(healthValue).growX().row();
     addActor(health);
 
     Table exp = new Table();
     exp.setSize(120, 30);
     exp.setPosition(8, 177);
     exp.add(Label.i18n("strchrexp", Riiablo.fonts.ReallyTheLastSucker)).row();
-    exp.add(new Label(Integer.toString(0), Riiablo.fonts.font8)).growY().row();
+    experienceValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    exp.add(experienceValue).growY().row();
     addActor(exp);
 
     Table level = new Table();
     level.setSize(45, 30);
     level.setPosition(138, 177);
     level.add(Label.i18n("strchrlvl", Riiablo.fonts.ReallyTheLastSucker)).row();
-    level.add(new Label(Integer.toString(0), Riiablo.fonts.font8)).growY().row();
+    levelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    level.add(levelValue).growY().row();
     addActor(level);
 
     Table nextLevel = new Table();
     nextLevel.setSize(120, 30);
     nextLevel.setPosition(194, 177);
     nextLevel.add(Label.i18n("strchrnxtlvl", Riiablo.fonts.ReallyTheLastSucker)).row();
-    nextLevel.add(new Label(Integer.toString(0), Riiablo.fonts.font8)).growY().row();
+    nextLevelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    nextLevel.add(nextLevelValue).growY().row();
     addActor(nextLevel);
 
     Label strLabel = Label.i18n("strchrstr", Riiablo.fonts.ReallyTheLastSucker);
@@ -194,11 +211,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     strLabel.setAlignment(Align.left);
     addActor(strLabel);
 
-    Label str = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    str.setSize(46, 16);
-    str.setPosition(109, 149);
-    str.setAlignment(Align.right);
-    addActor(str);
+    strValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    strValue.setSize(46, 16);
+    strValue.setPosition(109, 149);
+    strValue.setAlignment(Align.right);
+    addActor(strValue);
 
     Label dexLabel = Label.i18n("strchrdex", Riiablo.fonts.ReallyTheLastSucker);
     dexLabel.setSize(96, 16);
@@ -206,11 +223,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     strLabel.setAlignment(Align.left);
     addActor(dexLabel);
 
-    Label dex = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    dex.setSize(46, 16);
-    dex.setPosition(109, 125);
-    dex.setAlignment(Align.right);
-    addActor(dex);
+    dexValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    dexValue.setSize(46, 16);
+    dexValue.setPosition(109, 125);
+    dexValue.setAlignment(Align.right);
+    addActor(dexValue);
 
     Label damLabel = Label.i18n("strchrskm", Riiablo.fonts.ReallyTheLastSucker);
     damLabel.setSize(96, 16);
@@ -218,11 +235,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     strLabel.setAlignment(Align.left);
     addActor(damLabel);
 
-    Label dam = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    dam.setSize(46, 16);
-    dam.setPosition(109, 101);
-    dam.setAlignment(Align.right);
-    addActor(dam);
+    damageValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    damageValue.setSize(46, 16);
+    damageValue.setPosition(109, 101);
+    damageValue.setAlignment(Align.right);
+    addActor(damageValue);
 
     Label defLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defLabel.setSize(96, 16);
@@ -230,11 +247,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     strLabel.setAlignment(Align.left);
     addActor(defLabel);
 
-    Label def = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    def.setSize(46, 16);
-    def.setPosition(109, 77);
-    def.setAlignment(Align.right);
-    addActor(def);
+    defenseValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    defenseValue.setSize(46, 16);
+    defenseValue.setPosition(109, 77);
+    defenseValue.setAlignment(Align.right);
+    addActor(defenseValue);
 
     Label fireResLabel = Label.i18n("strchrfir", Riiablo.fonts.ReallyTheLastSucker);
     fireResLabel.setSize(96, 16);
@@ -242,11 +259,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     fireResLabel.setAlignment(Align.center);
     addActor(fireResLabel);
 
-    Label fireRes = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    fireRes.setSize(46, 16);
-    fireRes.setPosition(266, 149);
-    fireRes.setAlignment(Align.right);
-    addActor(fireRes);
+    fireResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    fireResValue.setSize(46, 16);
+    fireResValue.setPosition(266, 149);
+    fireResValue.setAlignment(Align.right);
+    addActor(fireResValue);
 
     Label coldResLabel = Label.i18n("strchrcol", Riiablo.fonts.ReallyTheLastSucker);
     coldResLabel.setSize(96, 16);
@@ -254,11 +271,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     coldResLabel.setAlignment(Align.center);
     addActor(coldResLabel);
 
-    Label coldRes = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    coldRes.setSize(46, 16);
-    coldRes.setPosition(266, 125);
-    coldRes.setAlignment(Align.right);
-    addActor(coldRes);
+    coldResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    coldResValue.setSize(46, 16);
+    coldResValue.setPosition(266, 125);
+    coldResValue.setAlignment(Align.right);
+    addActor(coldResValue);
 
     Label lightResLabel = Label.i18n("strchrlit", Riiablo.fonts.ReallyTheLastSucker);
     lightResLabel.setSize(96, 16);
@@ -266,11 +283,11 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     lightResLabel.setAlignment(Align.center);
     addActor(lightResLabel);
 
-    Label lightRes = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    lightRes.setSize(46, 16);
-    lightRes.setPosition(266, 101);
-    lightRes.setAlignment(Align.right);
-    addActor(lightRes);
+    lightResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    lightResValue.setSize(46, 16);
+    lightResValue.setPosition(266, 101);
+    lightResValue.setAlignment(Align.right);
+    addActor(lightResValue);
 
     Label poisonResLabel = Label.i18n("strchrpos", Riiablo.fonts.ReallyTheLastSucker);
     poisonResLabel.setSize(96, 16);
@@ -278,13 +295,74 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     poisonResLabel.setAlignment(Align.center);
     addActor(poisonResLabel);
 
-    Label poisonRes = new Label(Integer.toString(0), Riiablo.fonts.font8);
-    poisonRes.setSize(46, 16);
-    poisonRes.setPosition(266, 77);
-    poisonRes.setAlignment(Align.right);
-    addActor(poisonRes);
+    poisonResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    poisonResValue.setSize(46, 16);
+    poisonResValue.setPosition(266, 77);
+    poisonResValue.setAlignment(Align.right);
+    addActor(poisonResValue);
 
     //setDebug(true, true);
+  }
+
+  @Override
+  public void act(float delta) {
+    super.act(delta);
+    refreshMercenaryStats();
+  }
+
+  private void refreshMercenaryStats() {
+    if (Riiablo.engine == null || Riiablo.game == null) return;
+    if (mercenaries == null) {
+      mercenaries = Riiablo.engine.getAspectSubscriptionManager().get(
+          Aspect.all(Mercenary.class, AttributesWrapper.class));
+    }
+    Mercenary mercenary = null;
+    AttributesWrapper wrapper = null;
+    IntBag entities = mercenaries.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Mercenary candidate = Riiablo.engine.getMapper(Mercenary.class).get(ids[i]);
+      if (candidate != null && candidate.ownerId == Riiablo.game.player) {
+        mercenary = candidate;
+        wrapper = Riiablo.engine.getMapper(AttributesWrapper.class).get(ids[i]);
+        break;
+      }
+    }
+    if (mercenary == null || wrapper == null || wrapper.attrs == null) return;
+    StatListRef stats = wrapper.attrs.aggregate();
+    mercenaryName.setText(MercenaryHud.resolveMercenaryName(mercenary));
+    healthValue.setText(value(stats, Stat.hitpoints) + "/" + value(stats, Stat.maxhp));
+    int level = value(stats, Stat.level);
+    if (level <= 0) level = mercenary.level;
+    levelValue.setText(Integer.toString(level));
+    long experience = longValue(stats, Stat.experience);
+    experienceValue.setText(Long.toString(experience));
+    long next = longValue(stats, Stat.nextexp);
+    nextLevelValue.setText(Long.toString(next));
+    strValue.setText(Integer.toString(value(stats, Stat.strength)));
+    dexValue.setText(Integer.toString(value(stats, Stat.dexterity)));
+    int damageMin = value(stats, Stat.mindamage);
+    int damageMax = value(stats, Stat.maxdamage);
+    if (damageMin == 0 && damageMax == 0) {
+      damageMin = value(stats, Stat.secondary_mindamage);
+      damageMax = value(stats, Stat.secondary_maxdamage);
+    }
+    damageValue.setText(damageMin + "-" + damageMax);
+    defenseValue.setText(Integer.toString(value(stats, Stat.armorclass)));
+    fireResValue.setText(Integer.toString(value(stats, Stat.fireresist)));
+    coldResValue.setText(Integer.toString(value(stats, Stat.coldresist)));
+    lightResValue.setText(Integer.toString(value(stats, Stat.lightresist)));
+    poisonResValue.setText(Integer.toString(value(stats, Stat.poisonresist)));
+  }
+
+  private static int value(StatListRef stats, short stat) {
+    StatRef ref = stats.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static long longValue(StatListRef stats, short stat) {
+    StatRef ref = stats.get(stat, StatRef.obtain());
+    return ref == null ? 0L : ref.asLong();
   }
 
   @Override
