@@ -140,8 +140,19 @@ public class CofLayerLoader extends IteratingSystem {
         descriptor = descriptors[c] = new AssetDescriptor<>(path, DCC.class);
       } else {
         path = builder.replace(start + 16, start + 19, DC6.EXT).toString();
-        assert Riiablo.mpqs.contains(path) : "Failed to locate " + path + " after looking for DCC and DC6";
-        descriptor = descriptors[c] = new AssetDescriptor<>(path, DC6.class);
+        if (Riiablo.mpqs.contains(path)) {
+          descriptor = descriptors[c] = new AssetDescriptor<>(path, DC6.class);
+        } else {
+          // Some MonStats/COF rows advertise a component for which the
+          // installed MPQ has no DCC or DC6 (for example a vine's TR layer in
+          // older 1.10 data).  Do not enqueue a descriptor for a nonexistent
+          // file: DC6.loadFromFile would receive a null FileHandle and crash
+          // the LWJGL thread.  The remaining COF layers can still render.
+          unload(c, descriptors);
+          Gdx.app.error(TAG, "Missing COF component; skipping layer "
+              + Engine.getComposite(c) + " for " + path);
+          continue;
+        }
       }
 
       if (DEBUG) Gdx.app.log(TAG, "Loading[" + Engine.getComposite(c) + "] " + path);
