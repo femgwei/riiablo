@@ -78,6 +78,7 @@ import com.riiablo.engine.client.CorpseManager;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.DirectionResolver;
 import com.riiablo.engine.client.FootstepEmitter;
+import com.riiablo.engine.client.GroundItemGleamSystem;
 import com.riiablo.engine.client.HoveredManager;
 import com.riiablo.engine.client.ItemEffectManager;
 import com.riiablo.engine.client.ItemLoader;
@@ -1005,6 +1006,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new DirectionResolver())
 
         .with(renderer)
+        // Native D2 flashes dropped ground items with Gleam.dcc periodically;
+        // the item itself remains absent from the Automap entity layer.
+        .with(new GroundItemGleamSystem())
         // Quest markers are GPU systems and must run after the world renderer
         // so the map cannot overwrite the NPC "!" labels.
         .with(new Act1QuestIndicatorSystem())
