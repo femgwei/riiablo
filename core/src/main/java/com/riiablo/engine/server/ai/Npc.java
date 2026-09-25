@@ -3,7 +3,11 @@ package com.riiablo.engine.server.ai;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import com.artemis.Aspect;
 import java.util.Locale;
+
+import com.artemis.EntitySubscription;
+import com.artemis.utils.IntBag;
 
 import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -19,12 +23,15 @@ import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.MenuManager;
 import com.riiablo.engine.client.Act1QuestDialogController;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MenuWrapper;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
@@ -121,6 +128,7 @@ public class Npc extends AI {
   }
 
   protected VendorGenerator vendors;
+  private EntitySubscription mercenaries;
   /** Normal trade stock persists until the town inventory is refreshed. */
   private Array<Item> vendorStock;
   private String vendorStockType;
@@ -135,6 +143,10 @@ public class Npc extends AI {
     monstats = monster.monstats;
     name = monstats.NameStr.equalsIgnoreCase("dummy") ? monstats.Id : Riiablo.string.lookup(monstats.NameStr);
     mSize.get(entityId).size = 1; // fixes pathfinding issues
+    if (Riiablo.engine != null) {
+      mercenaries = Riiablo.engine.getAspectSubscriptionManager()
+          .get(Aspect.all(Mercenary.class, AttributesWrapper.class));
+    }
   }
 
   public void createMenu(MenuManager menuManager, final DialogManager dialogManager) {
@@ -296,13 +308,64 @@ public class Npc extends AI {
     restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
     restoreResource(attrs, Stat.mana, Stat.maxmana);
     restoreResource(attrs, Stat.stamina, Stat.maxstamina);
+    int restoredMercenaries = healMercenaries(playerId);
     if (mUnitStates.has(playerId)) {
       com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
       if (states != null && states.stateList != null) {
         states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
       }
     }
-    log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina", monstats.hcIdx, playerId);
+    log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina mercenaries={}",
+        monstats.hcIdx, playerId, restoredMercenaries);
+  }
+
+  /**
+   * Restores the owner's living hireling using the same runtime attributes as
+   * combat, HUD and potion use. Dead hirelings are intentionally left alone;
+   * D2 requires a paid hireling resurrection instead of a free healer revive.
+   */
+  private int healMercenaries(int playerId) {
+    if (mercenaries == null || mMercenary == null || mAttributesWrapper == null) return 0;
+    IntBag entities = mercenaries.getEntities();
+    if (entities == null) return 0;
+
+    int restored = 0;
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int mercenaryId = ids[i];
+      if (!mMercenary.has(mercenaryId)) continue;
+      Mercenary mercenary = mMercenary.get(mercenaryId);
+      if (mercenary == null || mercenary.ownerId != playerId
+          || !mAttributesWrapper.has(mercenaryId)) continue;
+
+      AttributesWrapper wrapper = mAttributesWrapper.get(mercenaryId);
+      Attributes mercenaryAttrs = wrapper == null ? null : wrapper.attrs;
+      if (mercenaryAttrs == null || mercenaryAttrs.aggregate() == null
+          || mercenaryAttrs.base() == null) continue;
+
+      // A dead hireling must be revived through the hireling resurrection
+      // service, not by talking to a town healer.
+      if (!restoreLivingMercenary(mercenaryAttrs)) continue;
+      if (mUnitStates.has(mercenaryId)) {
+        com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(mercenaryId);
+        if (states != null && states.stateList != null) {
+          states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
+        }
+      }
+      restored++;
+    }
+    return restored;
+  }
+
+  /** Returns false for missing or dead hireling attributes. */
+  static boolean restoreLivingMercenary(Attributes attrs) {
+    if (attrs == null || attrs.aggregate() == null || attrs.base() == null) return false;
+    StatRef hitpoints = attrs.aggregate().get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return false;
+    restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
+    restoreResource(attrs, Stat.mana, Stat.maxmana);
+    restoreResource(attrs, Stat.stamina, Stat.maxstamina);
+    return true;
   }
 
   private static void restoreResource(Attributes attrs, short resource, short maximum) {
