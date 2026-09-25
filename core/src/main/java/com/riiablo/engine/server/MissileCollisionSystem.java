@@ -1325,7 +1325,13 @@ public class MissileCollisionSystem extends IteratingSystem {
       int targetId, Position targetPos) {
     // Use swept segment collision so fast missiles cannot jump over a target.
     float distance = distanceToSegment(targetPos.position, previousPos, missilePos);
-    float collisionRadius = isNativeAreaEffect(missile)
+    // A travelling missile may use SrvHit01/SrvHit14 to create an explosion
+    // while still retaining the native area-processing path after contact.
+    // The explosion radius belongs to the child effect, not to the parent
+    // projectile's first contact test.
+    boolean travellingExplosion = missile != null && missile.missile != null
+        && hasMissileName(missile.missile.ExplosionMissile);
+    float collisionRadius = isNativeAreaEffect(missile) && !travellingExplosion
         ? nativeAreaRadius(missile) : unitCollisionRadius(targetId);
     
     // Debug log disabled to reduce noise
