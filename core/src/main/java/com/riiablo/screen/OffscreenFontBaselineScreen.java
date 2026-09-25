@@ -110,8 +110,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
     correctedCjk.setAlignment(Align.left | Align.bottom);
     Label correctedNumber = new Label("45/45", number);
     correctedNumber.setAutoSize(false);
-    float compactOffset = Riiablo.fonts.visualBottomAlignmentOffset(
-        cjk, "生命", number, "35");
+    float compactOffset = Riiablo.fonts.labelBaselineAlignmentOffset(cjk, number);
     correctedNumber.setBounds(560, CORRECTED_BOX_Y + compactOffset, 81, BOX_HEIGHT);
     correctedNumber.setAlignment(Align.center | Align.bottom);
     correctedCjk.draw(batch, 1f);
@@ -173,7 +172,7 @@ public final class OffscreenFontBaselineScreen extends ScreenAdapter {
         .append(FontBaselineCalibration.correction(englishFonts.ReallyTheLastSucker,
             cjk)).append('\n');
     out.append("hirelingCompactValueOffset=")
-        .append(Riiablo.fonts.visualBottomAlignmentOffset(cjk, "生命", number, "35"))
+        .append(Riiablo.fonts.labelBaselineAlignmentOffset(cjk, number))
         .append('\n');
     out.append("hirelingHealthY=202\n");
     output.child("font-baseline.txt").writeString(out.toString(), false, "UTF-8");

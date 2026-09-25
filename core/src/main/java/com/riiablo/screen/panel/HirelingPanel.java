@@ -342,11 +342,8 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
   private static float measureCompactValueBaselineOffset() {
     if (Riiablo.fonts == null) return -8f;
-    String referenceText = Riiablo.string.lookup("strchrstr");
-    if (referenceText == null || referenceText.isEmpty()) referenceText = "力量";
-    return Riiablo.fonts.visualBottomAlignmentOffset(
-        Riiablo.fonts.ReallyTheLastSucker, referenceText,
-        Riiablo.fonts.font8, "35");
+    return Riiablo.fonts.labelBaselineAlignmentOffset(
+        Riiablo.fonts.ReallyTheLastSucker, Riiablo.fonts.font8);
   }
 
   @Override

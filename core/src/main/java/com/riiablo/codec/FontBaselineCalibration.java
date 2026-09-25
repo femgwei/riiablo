@@ -71,4 +71,15 @@ public final class FontBaselineCalibration {
     java.util.Arrays.sort(bottoms, 0, count);
     return bottoms[count / 2];
   }
+
+  /**
+   * Text baseline relative to the Actor origin for a non-wrapped Label using
+   * Align.bottom. This mirrors libGDX Label.layout(): the cache baseline is
+   * capHeight + ascent - descent above the actor origin.
+   */
+  public static int labelBaseline(BitmapFont font) {
+    if (font == null) return 0;
+    BitmapFont.BitmapFontData data = font.getData();
+    return Math.round(data.capHeight + data.ascent - data.descent);
+  }
 }

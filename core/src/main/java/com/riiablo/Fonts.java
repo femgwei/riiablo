@@ -232,13 +232,12 @@ public class Fonts {
    * baseline corrections used by Label, so callers do not stack a measured
    * value on top of an old hand-tuned offset.
    */
-  public int visualBottomAlignmentOffset(BitmapFont reference, CharSequence referenceText,
-      BitmapFont candidate, CharSequence candidateText) {
-    int referenceBottom = FontBaselineCalibration.textBottom(reference, referenceText)
+  public int labelBaselineAlignmentOffset(BitmapFont reference, BitmapFont candidate) {
+    int referenceBaseline = FontBaselineCalibration.labelBaseline(reference)
         + baselineCorrection(reference);
-    int candidateBottom = FontBaselineCalibration.textBottom(candidate, candidateText)
+    int candidateBaseline = FontBaselineCalibration.labelBaseline(candidate)
         + baselineCorrection(candidate);
-    return referenceBottom - candidateBottom;
+    return referenceBaseline - candidateBaseline;
   }
 
   /** Starts probing staged font caches without blocking the render thread. */
