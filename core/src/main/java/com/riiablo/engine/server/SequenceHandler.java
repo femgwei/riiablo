@@ -7,6 +7,7 @@ import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
@@ -24,6 +25,7 @@ public class SequenceHandler extends IteratingSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<WhirlwindRuntime> mWhirlwindRuntime;
+  protected ComponentMapper<Monster> mMonster;
 
   protected CofManager cofs;
 
@@ -116,6 +118,30 @@ public class SequenceHandler extends IteratingSystem {
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    Monster monster = mMonster.get(entityId);
+    boolean monsterMelee = monster != null && casting != null
+        && casting.skillId == com.riiablo.skill.SkillCodes.attack
+        && Monster.isMeleeMode(sequence.mode1);
+    if (monsterMelee && !sequence.started) {
+      AnimData anim = mAnimData.get(entityId);
+      log.info("[MONSTER_MELEE] phase=sequence_start entity={} monster={} mode1={} mode2={} "
+              + "cofMode={} animFrame={} animFrames={} speed={} keyframes={} target={} skill={}",
+          entityId, monster.monstats != null ? monster.monstats.Id : "unknown",
+          Monster.modeName(sequence.mode1), Monster.modeName(sequence.mode2),
+          Monster.modeName(mCofReference.get(entityId).mode),
+          anim.frame, anim.numFrames, anim.speed,
+          anim.keyframes != null ? anim.keyframes.length : 0,
+          casting.targetId, casting.skillId);
+    }
+    if (monsterMelee && sequence.started
+        && mCofReference.get(entityId).mode != sequence.mode1) {
+      log.warn("[MONSTER_MELEE] phase=sequence_mode_mismatch entity={} monster={} "
+              + "requestedMode={} actualMode={} target={} animFrame={} animFrames={} keyframes={}",
+          entityId, monster.monstats != null ? monster.monstats.Id : "unknown",
+          Monster.modeName(sequence.mode1), Monster.modeName(mCofReference.get(entityId).mode),
+          casting.targetId, mAnimData.get(entityId).frame, mAnimData.get(entityId).numFrames,
+          mAnimData.get(entityId).keyframes != null ? mAnimData.get(entityId).keyframes.length : 0);
+    }
     if (!sequence.started) {
       if (casting != null && casting.dragonTalonInitialized) {
         casting.dragonTalonKickProcessed = false;

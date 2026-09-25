@@ -8,6 +8,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.codec.D2;
 import com.riiablo.logger.LogManager;
@@ -26,6 +27,7 @@ public class AnimDataResolver extends PassiveSystem {
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<Monster> mMonster;
 
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
@@ -103,6 +105,20 @@ public class AnimDataResolver extends PassiveSystem {
       animData.numFrames = entry.framesPerDir << 8;
       animData.keyframes = entry.data;
       animData.lastKeyframeIndex = -1;
+      Monster monster = mMonster.get(entityId);
+      if (monster != null && Monster.isMeleeMode(mode)) {
+        int attackKeyframes = 0;
+        if (entry.data != null) {
+          for (byte keyframe : entry.data) {
+            if (keyframe == Engine.KEYFRAME_ATK) attackKeyframes++;
+          }
+        }
+        log.info("[MONSTER_MELEE] phase=anim_resolved entity={} monster={} cof={} mode={} "
+                + "frames={} speed={} keyframes={} atkKeyframes={}",
+            entityId, monster.monstats != null ? monster.monstats.Id : "unknown", cof,
+            Monster.modeName(mode), entry.framesPerDir, entry.speed,
+            entry.data != null ? entry.data.length : 0, attackKeyframes);
+      }
     }
   }
 

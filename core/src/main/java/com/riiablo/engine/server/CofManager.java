@@ -9,6 +9,10 @@ import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.event.AlphaChangeEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
@@ -29,6 +33,10 @@ public class CofManager extends BaseEntitySystem {
   protected ComponentMapper<CofDirtyComponents> mCofDirtyComponents;
   protected ComponentMapper<CofAlphas> mCofAlphas;
   protected ComponentMapper<CofTransforms> mCofTransforms;
+  protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Sequence> mSequence;
 
   protected EventSystem event;
 
@@ -50,6 +58,25 @@ public class CofManager extends BaseEntitySystem {
     CofReference reference = mCofReference.get(id);
     boolean restart = reference.mode == mode;
     if (restart && !force) return;
+    Monster monster = mMonster.get(id);
+    if (monster != null && (Monster.isMeleeMode(reference.mode) || Monster.isMeleeMode(mode)
+        || (mSequence.has(id) && Monster.isMeleeMode(mSequence.get(id).mode1)))) {
+      AnimData anim = mAnimData.get(id);
+      Casting casting = mCasting.get(id);
+      Sequence sequence = mSequence.get(id);
+      log.info("[MONSTER_MELEE] phase=mode_change entity={} monster={} previousMode={} "
+              + "requestedMode={} force={} restart={} sequence={} sequenceStarted={} "
+              + "skill={} target={} animFrame={} animFrames={} keyframes={}",
+          id, monster.monstats != null ? monster.monstats.Id : "unknown",
+          Monster.modeName(reference.mode), Monster.modeName(mode), force, restart,
+          sequence != null ? Monster.modeName(sequence.mode1) : "none",
+          sequence != null && sequence.started,
+          casting != null ? casting.skillId : -1,
+          casting != null ? casting.targetId : -1,
+          anim != null ? anim.frame : -1,
+          anim != null ? anim.numFrames : -1,
+          anim != null && anim.keyframes != null ? anim.keyframes.length : 0);
+    }
     NativeObjectState state = mNativeObjectState.get(id);
     if (state != null && state.kind == com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) {
       log.info("[SHRINE_ANIM] phase=set_mode entity={} requested={} previous={} force={} "

@@ -9,6 +9,7 @@ import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.engine.server.component.AIWrapper;
+import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
@@ -19,6 +20,7 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.RenderSystem;
@@ -33,6 +35,8 @@ public class AIStepper extends IteratingSystem {
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -121,8 +125,19 @@ public class AIStepper extends IteratingSystem {
         && Monster.isMeleeMode(requestedMode);
     String marker = melee ? "[MONSTER_MELEE]"
         : casting.skillId == SkillCodes.attack ? "[MONSTER_ACTION]" : "[MONSTER_SKILL]";
+    Position sourcePosition = mPosition.get(entityId);
+    Position targetPosition = mPosition.has(casting.targetId) ? mPosition.get(casting.targetId) : null;
+    float dx = targetPosition != null ? targetPosition.position.x - sourcePosition.position.x : Float.NaN;
+    float dy = targetPosition != null ? targetPosition.position.y - sourcePosition.position.y : Float.NaN;
+    float distance = targetPosition != null ? sourcePosition.position.dst(targetPosition.position) : Float.NaN;
+    int sourceSize = mSize.has(entityId) ? mSize.get(entityId).size : -1;
+    int targetSize = mSize.has(casting.targetId) ? mSize.get(casting.targetId).size : -1;
+    int meleeRange = monster.monstats2 != null ? monster.monstats2.MeleeRng : -1;
     log.info("{} phase=decision entity={} monster={} ai={} skill={} currentMode={} "
-            + "requestedMode={} target={} replaced={} resurrected={} resurrectedBy={} playerRevive={}",
+            + "requestedMode={} target={} replaced={} resurrected={} resurrectedBy={} playerRevive={} "
+            + "pos=({}, {}) targetPos=({}, {}) delta=({}, {}) distance={} meleeRng={} sourceSize={} "
+            + "targetSize={} hasSequence={} sequenceStarted={} hasAnimData={} animFrame={} animFrames={} "
+            + "keyframes={} hasPathfind={} velocity={}",
         marker,
         entityId,
         monster.monstats != null ? monster.monstats.Id : "unknown",
@@ -134,7 +149,18 @@ public class AIStepper extends IteratingSystem {
         hadCasting,
         monster.resurrected,
         monster.resurrectedBy,
-        monster.playerRevive);
+        monster.playerRevive,
+        sourcePosition.position.x, sourcePosition.position.y,
+        targetPosition != null ? targetPosition.position.x : Float.NaN,
+        targetPosition != null ? targetPosition.position.y : Float.NaN,
+        dx, dy, distance, meleeRange, sourceSize, targetSize,
+        mSequence.has(entityId), mSequence.has(entityId) && mSequence.get(entityId).started,
+        mAnimData.has(entityId), mAnimData.has(entityId) ? mAnimData.get(entityId).frame : -1,
+        mAnimData.has(entityId) ? mAnimData.get(entityId).numFrames : -1,
+        mAnimData.has(entityId) && mAnimData.get(entityId).keyframes != null
+            ? mAnimData.get(entityId).keyframes.length : 0,
+        mPathfind.has(entityId),
+        mVelocity.has(entityId) ? mVelocity.get(entityId).velocity.len() : 0f);
   }
 
   /**
