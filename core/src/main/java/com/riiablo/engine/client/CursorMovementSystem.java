@@ -90,6 +90,9 @@ public class CursorMovementSystem extends BaseSystem {
   private final PointerClickQueue pendingRightClicks = new PointerClickQueue();
   private boolean sampledLeftDown;
   private boolean sampledRightDown;
+  private boolean pendingLeftRelease;
+  private float pendingLeftReleaseX;
+  private float pendingLeftReleaseY;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
   int lastAttackRangeTarget = Engine.INVALID_ENTITY;
@@ -126,6 +129,7 @@ public class CursorMovementSystem extends BaseSystem {
     // render frame captures its coordinates; consume it once here so a ground
     // move is never lost just because the button was released before the next
     // fixed step.
+    if (consumePendingMercenaryPotionDrop()) return;
     if (consumePendingLeftPress(playerId)) return;
     if (consumePendingRightPress(playerId)) return;
     
@@ -187,6 +191,11 @@ public class CursorMovementSystem extends BaseSystem {
   public void capturePointerInput() {
     if (Gdx.input == null) return;
     boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+    if (!leftDown && sampledLeftDown) {
+      pendingLeftRelease = true;
+      pendingLeftReleaseX = Gdx.input.getX();
+      pendingLeftReleaseY = Gdx.input.getY();
+    }
     if (leftDown && !sampledLeftDown) {
       pendingLeftClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
           networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
@@ -198,6 +207,24 @@ public class CursorMovementSystem extends BaseSystem {
           networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
     }
     sampledRightDown = rightDown;
+  }
+
+  /**
+   * Scene2D ClickListener only receives a release when its own actor captured
+   * the press. A potion drag starts in an inventory slot, so the portrait must
+   * consume the render-frame release explicitly when the cursor is over it.
+   */
+  private boolean consumePendingMercenaryPotionDrop() {
+    if (!pendingLeftRelease) return false;
+    pendingLeftRelease = false;
+    if (Riiablo.game == null || Riiablo.game.mercenaryHud == null
+        || !Riiablo.game.mercenaryHud.isVisible()) return false;
+    stage.screenToStageCoordinates(tmpVec2.set(pendingLeftReleaseX, pendingLeftReleaseY));
+    if (!Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) return false;
+    // Keep the UI click consumed even if the item is not a healing potion; the
+    // invalid item remains on the cursor instead of being dropped on the map.
+    Riiablo.game.mercenaryHud.useCursorPotion();
+    return true;
   }
 
   private boolean consumePendingLeftPress(int src) {
@@ -270,6 +297,16 @@ public class CursorMovementSystem extends BaseSystem {
     if (click == null) return false;
 
     stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
+    if (Riiablo.game != null && Riiablo.game.mercenaryHud != null
+        && Riiablo.game.mercenaryHud.isVisible()
+        && Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) {
+      // The simulation-side pointer queue can consume the click before
+      // Scene2D's ClickListener sees it. Route the portrait action here too.
+      if (Riiablo.game.hirelingPanel != null) {
+        Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
+      }
+      return true;
+    }
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
     scaledStage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
     Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);

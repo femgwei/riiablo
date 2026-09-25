@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
@@ -101,8 +102,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
       }
 
       @Override public void clicked(InputEvent event, float x, float y) {
-        Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
-        if (item != null && itemController != null) itemController.useCursorPotionOnMercenary();
+        useCursorPotion();
       }
     });
     // Keep the right-button action separate from the potion drop listener.
@@ -116,6 +116,18 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
         }
       }
     });
+  }
+
+  /** Handles a potion released here after the drag began in another actor. */
+  public boolean useCursorPotion() {
+    Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
+    return item != null && itemController != null && itemController.useCursorPotionOnMercenary();
+  }
+
+  /** Tests a screen/stage point against the whole portrait drop target. */
+  public boolean containsStagePoint(float stageX, float stageY) {
+    Vector2 point = stageToLocalCoordinates(new Vector2(stageX, stageY));
+    return point.x >= 0 && point.y >= 0 && point.x <= getWidth() && point.y <= getHeight();
   }
 
   @Override public void act(float delta) {
