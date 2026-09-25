@@ -217,9 +217,19 @@ public class NetworkedClientItemManager extends ClientItemManager {
   public boolean useCursorPotionOnMercenary() {
     com.riiablo.item.Item potion = Riiablo.charData == null
         ? null : Riiablo.charData.getItems().getCursor();
-    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) return false;
+    if (potion == null) {
+      log.info("[MERC_POTION] phase=rejected mode=network reason=empty_cursor");
+      return false;
+    }
+    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) {
+      log.info("[MERC_POTION] phase=rejected mode=network reason=not_healing_potion item={} code={} type={} location={}",
+          potion.id, potion.code, potion.type, potion.location);
+      return false;
+    }
     send(ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY, potion.id, -1, -1,
         -1, -1, -1, true);
+    log.info("[MERC_POTION] phase=requested mode=network item={} code={} player={}",
+        potion.id, potion.code, Riiablo.game == null ? -1 : Riiablo.game.player);
     return true;
   }
 

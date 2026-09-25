@@ -3,6 +3,7 @@ package com.riiablo.screen.panel;
 import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -121,7 +122,19 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   /** Handles a potion released here after the drag began in another actor. */
   public boolean useCursorPotion() {
     Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
-    return item != null && itemController != null && itemController.useCursorPotionOnMercenary();
+    if (item == null) {
+      Gdx.app.log("MercenaryHud", "[MERC_POTION_UI] phase=reject reason=empty_cursor");
+      return false;
+    }
+    if (itemController == null) {
+      Gdx.app.log("MercenaryHud", "[MERC_POTION_UI] phase=reject reason=item_controller_missing item="
+          + item.id);
+      return false;
+    }
+    boolean used = itemController.useCursorPotionOnMercenary();
+    Gdx.app.log("MercenaryHud", "[MERC_POTION_UI] phase=dispatch item=" + item.id
+        + " code=" + item.code + " location=" + item.location + " used=" + used);
+    return used;
   }
 
   /** Tests a screen/stage point against the whole portrait drop target. */

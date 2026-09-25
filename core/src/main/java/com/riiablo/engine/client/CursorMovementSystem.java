@@ -236,6 +236,21 @@ public class CursorMovementSystem extends BaseSystem {
     // UI clicks must remain owned by Stage. Use the captured coordinates rather
     // than the current cursor, which may already have moved by this tick.
     stage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
+    // A potion is commonly picked up in an inventory slot and then released on
+    // the portrait.  The Stage hit-test only reports that the HUD owns the
+    // click; it does not dispatch the Scene2D listener because this queue is
+    // consumed by the simulation loop.  Route that specific case explicitly
+    // before returning from the generic UI-click branch.
+    if (Riiablo.game != null && Riiablo.game.mercenaryHud != null
+        && Riiablo.game.mercenaryHud.isVisible()
+        && Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)
+        && Riiablo.cursor != null && Riiablo.cursor.getItem() != null) {
+      int itemId = Riiablo.cursor.getItem().id;
+      boolean used = Riiablo.game.mercenaryHud.useCursorPotion();
+      Gdx.app.log(TAG, "[MERC_POTION_UI] phase=queued-click used=" + used
+          + " item=" + itemId);
+      return true;
+    }
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
     scaledStage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
     Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);

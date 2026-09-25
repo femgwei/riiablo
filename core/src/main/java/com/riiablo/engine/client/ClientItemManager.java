@@ -197,15 +197,42 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public boolean useCursorPotionOnMercenary() {
-    if (Riiablo.charData == null || Riiablo.game == null) return false;
+    if (Riiablo.charData == null || Riiablo.game == null) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=game_state_missing");
+      return false;
+    }
     com.riiablo.item.Item potion = Riiablo.charData.getItems().getCursor();
-    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) return false;
+    if (potion == null) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=empty_cursor");
+      return false;
+    }
+    final int itemId = potion.id;
+    final String itemCode = potion.code;
+    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=not_healing_potion item={} code={} type={} location={}",
+          itemId, itemCode, potion.type, potion.location);
+      return false;
+    }
     com.riiablo.engine.server.MercenaryPotionSystem service =
         world.getSystem(com.riiablo.engine.server.MercenaryPotionSystem.class);
-    if (service == null || !service.useOnMercenary(Riiablo.game.player, potion)) return false;
-    if (!Riiablo.charData.consumeCursorPotion(potion)) return false;
+    if (service == null) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=service_missing item={} code={}",
+          itemId, itemCode);
+      return false;
+    }
+    if (!service.useOnMercenary(Riiablo.game.player, potion)) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=service_rejected item={} code={} player={}",
+          itemId, itemCode, Riiablo.game.player);
+      return false;
+    }
+    if (!Riiablo.charData.consumeCursorPotion(potion)) {
+      log.info("[MERC_POTION] phase=rejected mode=local reason=consume_failed item={} code={}",
+          itemId, itemCode);
+      return false;
+    }
     if (Riiablo.audio != null) Riiablo.audio.play(potion.getUseSound(), true);
-    log.info("[MERC_POTION] phase=used mode=local item={} player={}", potion.id, Riiablo.game.player);
+    log.info("[MERC_POTION] phase=used mode=local item={} code={} player={}", itemId, itemCode,
+        Riiablo.game.player);
     return true;
   }
 
