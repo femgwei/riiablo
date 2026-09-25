@@ -230,3 +230,19 @@ table MissileP {
   skillId:int32 = -1;
   damageLevel:uint8;
 }
+
+// One-shot presentation event.  It is deliberately not an ECS component:
+// an impact can happen and the source missile can be deleted in the same
+// authoritative tick.  Clients resolve the native Missiles.txt row by id.
+table MissileImpactP {
+  missileEntityId:int32;
+  missileId:uint16;
+  ownerId:int32;
+  targetEntityId:int32;
+  x:float32;
+  y:float32;
+  // Direction at impact, retained because the source missile may be deleted
+  // before a client consumes this one-shot presentation event.
+  dx:float32 = 1.0;
+  dy:float32;
+}

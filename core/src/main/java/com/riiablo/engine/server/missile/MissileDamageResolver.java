@@ -24,6 +24,8 @@ import com.riiablo.logger.Logger;
 /** Builds the damage stat snapshot D2MOO stores on each missile unit. */
 public final class MissileDamageResolver {
   private static final Logger log = LogManager.getLogger(MissileDamageResolver.class);
+  /** Visible in remote game logs to distinguish the snapshot-preservation build. */
+  private static final String MISSILE_FIX_BUILD = "missile-snapshot-fix-20260925-v2";
 
   private static final int PHYSICAL = 0;
   private static final int FIRE = 1;
@@ -47,11 +49,32 @@ public final class MissileDamageResolver {
     Missiles.Entry row = projectile.missile;
     level = Math.max(1, level);
     difficulty = Math.max(0, Math.min(2, difficulty));
+    // ServerEntityFactory captures the table-owned packet first.  The generic
+    // ServerSkillSystem path may then call this method again with the skill
+    // level; never replace a valid higher-level in-flight snapshot with that
+    // lower-level duplicate initialization.
+    if (projectile.damageSnapshot && projectile.damageLevel >= level) {
+      if (isShamanDiagnosticMissile(row)) {
+        log.info("[MISSILE_FIX_MARKER] build={} phase=generic_skip_existing "
+                + "missile={} requestedLevel={} existingLevel={} snapshot={}",
+            MISSILE_FIX_BUILD, row.Missile, level, projectile.damageLevel,
+            projectile.damageSnapshot);
+      }
+      return true;
+    }
+    if (isShamanDiagnosticMissile(row)) {
+      log.info("[MISSILE_FIX_MARKER] build={} phase=generic_initialize missile={} "
+              + "level={} snapshotBefore={} skillRow={} missileSkill={}",
+          MISSILE_FIX_BUILD, row.Missile, level, projectile.damageSnapshot,
+          row.Skill, row.MissileSkill);
+    }
     projectile.damageLevel = level;
 
     boolean skillDamage = hasText(row.Skill) || row.MissileSkill;
     if (skillDamage) {
-      projectile.damageSnapshot = false;
+      // Skill-owned rows are normally initialized by initializeSkill.  If a
+      // caller repeats generic initialization after a table-owned snapshot
+      // was already captured, leave that authoritative packet intact.
       return false;
     }
 
@@ -110,7 +133,6 @@ public final class MissileDamageResolver {
       meaningful |= elementalMax[i] > 0;
     }
     if (!meaningful) {
-      projectile.damageSnapshot = false;
       return false;
     }
 
@@ -361,8 +383,6 @@ public final class MissileDamageResolver {
       ToIntFunction<String> baseSkillLevel, int additionalMastery) {
     if (projectile == null || skill == null) return false;
     level = Math.max(1, level);
-    projectile.skillId = skill.Id;
-    projectile.damageLevel = level;
     int sourceScale = includeSource ? Math.max(0, skill.SrcDam) : 0;
     int sourceMin = statInt(ownerAttrs, Stat.mindamage);
     int sourceMax = statInt(ownerAttrs, Stat.maxdamage);
@@ -411,9 +431,35 @@ public final class MissileDamageResolver {
       elementalMax[type] += convertedMax;
     }
     if (physicalMax <= 0 && elementalMax[type] <= 0) {
-      projectile.damageSnapshot = false;
+      // A missile can already have a complete Missiles.txt snapshot.  This is
+      // the native monster-projectile path: the corresponding Skills.txt row
+      // (for example ShamanFire) is only a dispatch row and has no damage
+      // values of its own.  Do not destroy the table-owned packet and thereby
+      // fall back to the owner's A1 weapon damage/attack rating.
+      if (projectile.damageSnapshot) {
+        if (isShamanDiagnosticMissile(projectile.missile)) {
+          log.info("[MISSILE_FIX_MARKER] build={} phase=skill_initialize_empty "
+                  + "missile={} skill={} action=preserve snapshot={} damageLevel={}",
+              MISSILE_FIX_BUILD, projectile.missile.Missile, skill.skill,
+              projectile.damageSnapshot, projectile.damageLevel);
+        }
+        log.debug("[SKILL_DAMAGE_SNAPSHOT] preserve_missile_snapshot missile={} "
+                + "skill={} level={} damageLevel={}",
+            projectile.missile != null ? projectile.missile.Missile : "", skill.skill,
+            level, projectile.damageLevel);
+      } else {
+        if (isShamanDiagnosticMissile(projectile.missile)) {
+          log.info("[MISSILE_FIX_MARKER] build={} phase=skill_initialize_empty "
+                  + "missile={} skill={} action=empty snapshot={} damageLevel={}",
+              MISSILE_FIX_BUILD, projectile.missile != null ? projectile.missile.Missile : "",
+              skill.skill, projectile.damageSnapshot, projectile.damageLevel);
+        }
+        projectile.damageSnapshot = false;
+      }
       return false;
     }
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = level;
     writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
     log.info("[SKILL_DAMAGE_SNAPSHOT] missile={} skill={} level={} physical={}..{} element={}..{} "
@@ -438,6 +484,12 @@ public final class MissileDamageResolver {
         || "freeze".equalsIgnoreCase(element)
         || "frze".equalsIgnoreCase(element)) return Stat.passive_cold_mastery;
     return 0;
+  }
+
+  private static boolean isShamanDiagnosticMissile(Missiles.Entry row) {
+    if (row == null || row.Missile == null) return false;
+    String missile = row.Missile.toLowerCase(java.util.Locale.ROOT);
+    return missile.startsWith("shafire") || "shamanexp".equals(missile);
   }
 
   /** Replaces the source A1 profile with the A2 profile selected by Actioneer. */

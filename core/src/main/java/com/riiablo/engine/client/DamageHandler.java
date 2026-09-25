@@ -110,8 +110,14 @@ public class DamageHandler extends PassiveSystem {
       }
     }
     
-    String sound = event.hitSound;
-    if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
-    if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
+    // MissileImpactPresentationSystem owns Missiles.txt HitSound playback.
+    // DamageEvent may also represent melee, DOT, or a server-side effect;
+    // retain the legacy generic impact for those paths only.  An empty
+    // missile HitSound is native silence, not a request for a blunt sample.
+    if (event.kind != DamageEvent.MISSILE) {
+      String sound = event.hitSound;
+      if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
+      if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
+    }
   }
 }

@@ -56,6 +56,7 @@ union D2GSData {
   GoldResult,
   TradeRequest,
   TradeResult,
+  MissileImpactP,
 }
 
 table D2GS {

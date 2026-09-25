@@ -45,7 +45,13 @@ public class MissileLoader extends IteratingSystem {
         .build();
     animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
     animation.setFrame(entry.RandStart);
-    animation.setFrameDelta(256); // FIXME: entry.animrate was too fast
+    // D2Common initializes missile wAnimSpeed as
+    //   (animrate << 8) / 1024.
+    // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
+    // the table value here preserves per-missile impact/child timing instead
+    // of forcing every DCC to 25 frames per second.
+    int nativeFrameDelta = entry.animrate > 0 ? (entry.animrate >> 2) : 256;
+    animation.setFrameDelta(Math.max(1, nativeFrameDelta));
     
     // Set direction based on Angle component if available
     if (mAngle.has(entityId)) {

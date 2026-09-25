@@ -48,6 +48,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -95,6 +96,7 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.MissileP;
+import com.riiablo.net.packet.d2gs.MissileImpactP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
@@ -270,6 +272,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.EntitySync:
         Synchronize(packet);
+        break;
+      case D2GSData.MissileImpactP:
+        MissileImpactP impact = (MissileImpactP) packet.data(new MissileImpactP());
+        if (events != null) {
+          events.dispatch(MissileImpactEvent.obtain(impact.missileEntityId(),
+              impact.missileId(), impact.ownerId(), impact.targetEntityId(),
+              new Vector2(impact.x(), impact.y()),
+              new Vector2(impact.dx(), impact.dy())));
+        }
         break;
       case D2GSData.SnapshotBaseline:
         SnapshotBaseline(packet);

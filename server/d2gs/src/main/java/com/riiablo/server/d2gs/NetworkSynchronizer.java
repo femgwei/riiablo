@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.AuthoritativeSimulation;
+import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
@@ -21,11 +22,13 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
+import com.riiablo.net.packet.d2gs.MissileImpactP;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.EntitySnapshotCache;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 @All(Networked.class)
 public class NetworkSynchronizer extends BaseEntitySystem {
@@ -275,6 +278,28 @@ public class NetworkSynchronizer extends BaseEntitySystem {
           + " entity=" + entityId + " level=" + levelOf(entityId)
           + " recipientMask=0x" + Integer.toHexString(recipientMask)
           + " queued=" + outPackets.size());
+    }
+  }
+
+  /** Broadcasts a one-shot native missile impact to clients that saw the source. */
+  @Subscribe
+  public void onMissileImpact(MissileImpactEvent event) {
+    if (event == null || event.missileId < 0) return;
+    int recipients = recipientMask(event.missileEntityId);
+    if (recipients == 0) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int impact = MissileImpactP.createMissileImpactP(builder,
+        event.missileEntityId, event.missileId, event.ownerId,
+        event.targetEntityId, event.x, event.y, event.dx, event.dy);
+    int root = D2GS.createD2GS(builder, D2GSData.MissileImpactP, impact);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer bytes = builder.dataBuffer().duplicate();
+    byte[] copy = new byte[bytes.remaining()];
+    bytes.get(copy);
+    if (!outPackets.offer(Packet.obtain(recipients, ByteBuffer.wrap(copy)))) {
+      Gdx.app.error(TAG, "[MISSILE_IMPACT] phase=network_drop source="
+          + event.missileEntityId + " recipients=0x"
+          + Integer.toHexString(recipients));
     }
   }
 

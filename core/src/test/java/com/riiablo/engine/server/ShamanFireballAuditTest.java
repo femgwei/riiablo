@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Locale;
@@ -110,6 +111,61 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   }
 
   @Test
+  void emptyShamanSkillRowDoesNotEraseMissilesDamageSnapshot() {
+    Missiles.Entry missileRow = Riiablo.files.Missiles.get("shafire1");
+    Skills.Entry skillRow = Riiablo.files.skills.get("ShamanFire");
+    assertNotNull(missileRow);
+    assertNotNull(skillRow);
+
+    Missile projectile = new Missile();
+    projectile.set(missileRow, new Vector2(), missileRow.Range).setOwner(7);
+    Attributes owner = combatAttributes(100, 1, 1, 12, 2);
+
+    assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 2, 0));
+    int fireMin = statInt(projectile.damage, Stat.firemindam);
+    int fireMax = statInt(projectile.damage, Stat.firemaxdam);
+    int damageLevel = projectile.damageLevel;
+    assertTrue(projectile.damageSnapshot);
+    assertTrue(fireMax > 0);
+
+    assertFalse(MissileDamageResolver.initializeSkill(projectile, skillRow, owner, 1));
+    assertTrue(projectile.damageSnapshot,
+        "an empty Skills.txt dispatch row must not erase the Missiles.txt packet");
+    assertEquals(fireMin, statInt(projectile.damage, Stat.firemindam));
+    assertEquals(fireMax, statInt(projectile.damage, Stat.firemaxdam));
+    assertEquals(damageLevel, projectile.damageLevel,
+        "failed skill initialization must not replace the missile damage level");
+    System.out.println("[SHAMAN_FIREBALL_DAMAGE] phase=skill_fallback_preserved "
+        + "missile=shafire1 fire=" + fireMin + ".." + fireMax
+        + " damageLevel=" + projectile.damageLevel + " status=PASS");
+  }
+
+  @Test
+  void repeatedFactoryAndSkillInitializationKeepsMissilesSnapshot() {
+    Missiles.Entry missileRow = Riiablo.files.Missiles.get("shafire1");
+    Skills.Entry skillRow = Riiablo.files.skills.get("ShamanFire");
+    assertNotNull(missileRow);
+    assertNotNull(skillRow);
+
+    Missile projectile = new Missile();
+    projectile.set(missileRow, new Vector2(), missileRow.Range).setOwner(7);
+    Attributes owner = combatAttributes(100, 1, 1, 12, 2);
+
+    // Mirrors ServerEntityFactory.createMissile(..., owner level).
+    assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 2, 0));
+    // Mirrors ServerSkillSystem.createMissile(..., skill level=1).
+    assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 1, 0));
+    assertFalse(MissileDamageResolver.initializeSkill(projectile, skillRow, owner, 1));
+
+    assertTrue(projectile.damageSnapshot);
+    assertEquals(11, statInt(projectile.damage, Stat.firemindam));
+    assertEquals(14, statInt(projectile.damage, Stat.firemaxdam));
+    assertEquals(2, projectile.damageLevel);
+    System.out.println("[SHAMAN_FIREBALL_DAMAGE] phase=repeated_initialization_preserved "
+        + "missile=shafire1 fire=11..14 damageLevel=2 status=PASS");
+  }
+
+  @Test
   void dumpNativeProjectileDamageRows() {
     dumpRows("missiles", "Missile",
         new String[] {"shafire1", "shafire2", "shafire3", "shafire4",
@@ -185,7 +241,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     ServerSkillSystem skills = new ServerSkillSystem();
     Map map = new Map(0, 0);
     WorldConfiguration config = new WorldConfigurationBuilder()
-        .with(skills, factory)
+        .with(new EventSystem(), skills, factory)
         .build()
         .register("factory", factory)
         .register("map", map);
@@ -290,7 +346,10 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       assertTrue(factory.creations > 0, "skill event must create a missile entity");
       assertTrue(hpAfter < hpBefore,
           "authoritative shaman missile must eventually hit and damage the player");
-      assertEquals(Riiablo.files.Missiles.get("shafire3").Id, factory.missileId);
+      assertTrue(factory.creations >= 2,
+          "the impact must create both the source fireball and its explosion missile");
+      assertEquals(Riiablo.files.Missiles.get("shamanexp").Id, factory.missileId,
+          "the explosion is the final missile created for a shaman fireball hit");
       System.out.println("[SHAMAN_PROJECTILE_SCENARIO] phase=damage_assert monster=" + row.Id
           + " owner=" + shamanId + " target=" + playerId
           + " missile=shafire3 attempts=" + attempts
@@ -372,10 +431,12 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       assertTrue(probe.animKeyframes >= 1, "Actioneer must receive the attack keyframe");
       assertEquals(1, probe.skillDoEvents, "keyframe must dispatch exactly one SkillDoEvent");
       assertTrue(factory.creations > 0, "SkillDoEvent must create a server missile");
-      assertEquals(1, probe.damageEvents, "missile collision must dispatch DamageEvent");
+      assertTrue(probe.damageEvents >= 2,
+          "a repaired shaman fireball must damage through both source and explosion packets");
       assertEquals(1, probe.deathEvents, "lethal missile collision must dispatch DeathEvent");
       assertEquals(0f, hpAfter, 0.001f, "lethal fireball must reduce target HP to zero");
-      assertEquals(Riiablo.files.Missiles.get("shafire3").Id, factory.missileId);
+      assertTrue(factory.creations >= 2);
+      assertEquals(Riiablo.files.Missiles.get("shamanexp").Id, factory.missileId);
     } finally {
       world.dispose();
     }
@@ -527,12 +588,12 @@ public class ShamanFireballAuditTest extends RiiabloTest {
           world.getMapper(com.riiablo.engine.server.component.Sequence.class).get(shaman).mode1,
           "seq_shamanresurrect must request FSA2HTH instead of the nonexistent FSXXHTH");
       aiStepper.setEnabled(false);
-      for (int i = 0; i < 64 && probe.damageEvents == 0; i++) world.process();
+      for (int i = 0; i < 64 && probe.damageEvents < 2; i++) world.process();
 
       float hpAfter = hitpoints(playerAttrs);
       assertEquals(1, probe.skillDoEvents);
-      assertEquals(1, factory.creations);
-      assertEquals(1, probe.damageEvents);
+      assertTrue(factory.creations >= 2);
+      assertTrue(probe.damageEvents >= 2);
       assertTrue(hpAfter < hpBefore);
       System.out.println("[SHAMAN_AI_CHAIN] phase=summary decisionFrames=" + decisionFrames
           + " state=" + wrapper.ai.getState() + " skillDo=" + probe.skillDoEvents

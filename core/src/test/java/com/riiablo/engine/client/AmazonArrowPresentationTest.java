@@ -2,7 +2,9 @@ package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -16,6 +18,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -57,6 +60,59 @@ class AmazonArrowPresentationTest extends RiiabloTest {
       world.dispose();
       Riiablo.audio = previousAudio;
     }
+  }
+
+  @Test
+  void fireArrowImpactUsesNativeHitSoundAndExplosionWiring() {
+    Missiles.Entry fireArrow = Riiablo.files.Missiles.get("firearrow");
+    assertNotNull(fireArrow);
+    assertEquals("sorceress_firebolt_impact_1", fireArrow.HitSound);
+    assertEquals("fireexplode", fireArrow.ExplosionMissile);
+    assertTrue(fireArrow.CltHitSubMissile != null);
+    for (String child : fireArrow.CltHitSubMissile) {
+      assertTrue(child == null || child.isEmpty(),
+          "plain Fire Arrow must not invent a client hit sub-missile");
+    }
+  }
+
+  @Test
+  void elementalImpactRowsExposeClientHitSubMissiles() {
+    Missiles.Entry exploding = Riiablo.files.Missiles.get("explodingarrow");
+    Missiles.Entry freezing = Riiablo.files.Missiles.get("freezingarrow");
+    assertNotNull(exploding);
+    assertNotNull(freezing);
+    assertEquals("fireexplosion2", exploding.CltHitSubMissile[0]);
+    assertEquals("freezingarrowexp1", freezing.CltHitSubMissile[0]);
+    assertEquals("freezingarrowexp2", freezing.CltHitSubMissile[1]);
+  }
+
+  @Test
+  void nativeMissileHitClassSoundMappingKeepsArrowTargetRule() {
+    assertEquals("impact_fire_1",
+        MissileImpactPresentationSystem.hitClassSound(32, Engine.INVALID_ENTITY));
+    assertEquals("impact_arrow_1",
+        MissileImpactPresentationSystem.hitClassSound(10, 1));
+    assertNull(
+        MissileImpactPresentationSystem.hitClassSound(10, Engine.INVALID_ENTITY));
+  }
+
+  @Test
+  void impactEventPreservesMissileFacingForDirectionalHitAnimation() {
+    MissileImpactEvent event = MissileImpactEvent.obtain(7, 8, 9, 10,
+        new Vector2(12f, 13f), new Vector2(0f, 4f));
+    assertEquals(0f, event.dx, 0.0001f);
+    assertEquals(1f, event.dy, 0.0001f);
+  }
+
+  @Test
+  void movingHitMissilesUseDistanceInsteadOfRangeAsFrameLifetime() {
+    Missiles.Entry moving = Riiablo.files.Missiles.get("frozenorbnova");
+    Missiles.Entry stationary = Riiablo.files.Missiles.get("freezingarrowexp1");
+    assertNotNull(moving);
+    assertNotNull(stationary);
+    assertEquals(0, MissileImpactPresentationSystem.nativePresentationLifetimeFrames(moving));
+    assertEquals(stationary.Range,
+        MissileImpactPresentationSystem.nativePresentationLifetimeFrames(stationary));
   }
 
   private static final class SilentAudio extends Audio {

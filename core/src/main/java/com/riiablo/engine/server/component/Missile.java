@@ -28,6 +28,8 @@ public class Missile extends PooledComponent {
 
   /** False for client-side replicas; only the server may resolve collisions. */
   public boolean authoritative = true;
+  /** True only for client-created CltHitSubMissile presentation children. */
+  public boolean presentationOnly;
   
   /** 已移动距离（用于范围检查，与 d2mod 一致） */
   public float distanceTraveled = 0f;
@@ -184,6 +186,8 @@ public class Missile extends PooledComponent {
 
   /** Prevents impact sub-effects from being emitted once per area target. */
   public boolean hitFunctionTriggered;
+  /** Prevents one-shot client impact sound/visuals from repeating per target. */
+  public boolean impactPresentationTriggered;
 
   /** D2MOO SrvDo30 Rabies controller attached to the infected unit. */
   public boolean rabiesController;
@@ -223,6 +227,7 @@ public class Missile extends PooledComponent {
     rngState = 0;
     roomId = -1;
     authoritative = true;
+    presentationOnly = false;
     distanceTraveled = 0f;
     attackMinDamage = 0;
     attackMaxDamage = 0;
@@ -303,6 +308,7 @@ public class Missile extends PooledComponent {
     chaosIceY = 0;
     chaosIceNextTurnFrame = 0;
     hitFunctionTriggered = false;
+    impactPresentationTriggered = false;
     rabiesController = false;
     rabiesSourceId = -1;
     rabiesNextPulseFrame = 0;

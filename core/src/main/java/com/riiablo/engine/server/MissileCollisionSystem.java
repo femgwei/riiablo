@@ -51,6 +51,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -1197,7 +1198,9 @@ public class MissileCollisionSystem extends IteratingSystem {
         missile.missile.CollideType, Integer.toHexString(mask), from.x, from.y,
         to.x, to.y, impact != null ? impact.x : to.x, impact != null ? impact.y : to.y,
         missile.missile.CanDestroy, missile.missile.CollideKill);
-    spawnNativeMapExplosion(missile, impact != null && !impact.isZero(0.0001f) ? impact : to);
+    Vector2 impactPosition = impact != null && !impact.isZero(0.0001f) ? impact : to;
+    emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
+    spawnNativeMapExplosion(missile, impactPosition);
     // Native SrvDmgHitHandler is invoked with a null target for barrier/wall
     // collisions.  It consumes the travelling missile even when CollideKill
     // is clear; CollideKill controls unit-hit persistence, not map barriers.
@@ -1342,6 +1345,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (distance <= collisionRadius) {
       int hitFunction = missile.missile != null ? missile.missile.pSrvHitFunc : 0;
       if (hitFunction == 17 || hitFunction == 18 || hitFunction == 21) {
+        // War Cry/Howl/Shout waves resolve their native hit function before
+        // entering the ordinary damage path. They still consume the source
+        // row's HitSound/CltHitSubMissile presentation at the contact point.
+        emitImpactPresentation(missileId, missile, targetId, missilePos);
         handleWarCryCollision(missileId, missile, targetId, hitFunction);
         // Howl and shout waves have CollideKill=0 and continue through the
         // whole ring. They are state carriers, never ordinary damage packets.
@@ -1352,6 +1359,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) {
             return false;
           }
+          emitImpactPresentation(missileId, missile, targetId, missilePos);
           healHolyBoltTarget(missileId, missile, targetId);
           if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
           return true;
@@ -1379,6 +1387,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         return true;
       }
       if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
+
+      // Impact presentation is independent from damage.  A blocked, absorbed,
+      // or zero-damage hit still consumes the native HitSound/CltHitSubMissile
+      // definition exactly once for this projectile/target pair.
+      emitImpactPresentation(missileId, missile, targetId, missilePos);
 
       // Native MISSMODE_SrvHit29 does not apply the root row as damage.  It
       // fans out the authoritative frozen-orb nova shards; each shard then
@@ -1629,6 +1642,29 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** Emits one native impact presentation per projectile, not once per AoE target. */
+  private void emitImpactPresentation(int missileId, Missile missile, int targetId,
+      Vector2 position) {
+    if (events == null || missile == null || missile.missile == null) return;
+    // A native area missile has one visual impact even when its broad-phase
+    // resolves several targets.  Pierce is the opposite case: every target
+    // crossed by the same arrow/bolt receives the row's HitSound and client
+    // hit animation.  Do not let the AoE de-duplication flag suppress later
+    // legitimate pierce contacts.
+    boolean repeatingPierce = missile.pierceEnabled
+        && missile.missile.pSrvHitFunc != 1
+        && missile.missile.pSrvHitFunc != 14;
+    if (missile.impactPresentationTriggered && !repeatingPierce) return;
+    if (!repeatingPierce) missile.impactPresentationTriggered = true;
+    Vector2 facing = null;
+    if (mVelocity.has(missileId)) facing = mVelocity.get(missileId).velocity;
+    if ((facing == null || facing.isZero(0.0001f)) && mAngle.has(missileId)) {
+      facing = mAngle.get(missileId).target;
+    }
+    events.dispatch(MissileImpactEvent.obtain(missileId, missile.missile.Id,
+        missile.ownerId, targetId, position, facing));
   }
 
   /** Native SrvHit07 pet/ally branch. */
@@ -2205,6 +2241,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.skillId = source.skillId;
     child.damageLevel = Math.max(1, source.damageLevel);
     child.damageMultiplier = source.damageMultiplier;
+    child.freezesTarget = source.freezesTarget;
+    child.usesAttackRating = source.usesAttackRating;
+    child.attackMinDamage = source.attackMinDamage;
+    child.attackMaxDamage = source.attackMaxDamage;
+    child.attackRating = source.attackRating;
     if (source.damageSnapshot) {
       for (StatRef stat : source.damage.base()) {
         child.damage.base().putEncoded(stat.id(), stat.encodedParams(), stat.encodedValues());

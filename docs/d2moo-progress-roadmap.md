@@ -17,6 +17,32 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-25 Missile 命中表现数据链（本轮进行中）
+
+- [x] 服务端导弹命中/地图屏障命中统一发布一次性 `MissileImpactEvent`；命中声音和
+  客户端命中子导弹不再依赖 `DamageEvent` 的通用伤害回退，也不会因 AoE 多目标重复播放。
+- [x] 本地客户端和 D2GS 客户端均消费同一命中事件，按 `Missiles.txt.HitSound` 播放声音，
+  按 `CltHitSubMissile[]` 创建仅表现导弹；`pCltHitFunc=14/30` 的冰箭/冻结球径向
+  子效果已接入，表现实体不会进入服务端碰撞或伤害链。
+- [x] 空 `HitSound` 保持原生静音；`impact_blunt_1` 仅保留给非导弹伤害事件。FlatBuffers
+  追加 `MissileImpactP`，保证多人客户端不再从 `VitalsP` 猜测命中声音。
+- [x] `HitClass` 的原生 `impact_*` 目标命中音也从同一事件播放（箭类保留需要有效目标
+  的规则），与表内显式 `HitSound` 分开处理。
+- [x] 命中表现去重仅作用于范围导弹；具备原生 Pierce 的箭/矢会在每个不同目标上
+  重复消费 `HitSound` 与 `CltHitSubMissile[]`，避免穿透箭第二次命中被错误静音。
+- [x] 命中事件携带源导弹的最终朝向，并通过多人 `MissileImpactP` 传递；命中子导弹
+  不再全部固定朝向地图东侧，方向性 DCC 动画能保持原始飞行方向。
+- [x] 命中表现子导弹的生命周期区分移动/静止两类：移动导弹按 `Range` 距离回收，
+  只有 `Vel=0` 的一次性命中动画才把 `Range`/`AnimLen` 解释为帧寿命。
+- [x] War Cry/Howl/Shout 的专用 `SrvHit17/18/21` 分支也进入统一命中表现事件，
+  不再因绕过普通伤害分支而漏播表内命中声音或动画。
+- [x] 导弹动画速度改用 D2MOO 的 `(animrate << 8) / 1024` 规则，不再统一强制 256。
+- [x] 回归：`:core:test --tests com.riiablo.engine.client.AmazonArrowPresentationTest`
+  通过；`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+- [ ] 仍待补齐所有非径向 `pCltHitFunc` 的逐函数参数语义、`pCltDoFunc/CltSubMissile` 的
+  飞行期客户端控制、`ProgSound/ProgOverlay` 和真实 1.10f 双客户端听觉/画面验收；因此
+  本模块暂不标记为完全原生对齐。
+
 ## 2026-09-24 游戏内对话框资源替换
 
 - [x] 用户实机确认原版商人购买存在确认流程；当前 `VendorPanel` 的左键确认、确认后

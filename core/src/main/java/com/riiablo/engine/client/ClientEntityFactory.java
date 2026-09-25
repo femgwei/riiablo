@@ -485,6 +485,21 @@ public class ClientEntityFactory extends ServerEntityFactory {
     return id;
   }
 
+  /** Creates a local-only hit child without replaying its TravelSound. */
+  public int createMissilePresentation(Missiles.Entry missile, Vector2 angle,
+      Vector2 position) {
+    if (missile == null) return Engine.INVALID_ENTITY;
+    int id = super.createMissile(missile.Id, angle, position, -1);
+    if (id == Engine.INVALID_ENTITY) return id;
+    if (mNetworked.has(id)) mNetworked.remove(id);
+    if (mMissile.has(id)) {
+      mMissile.get(id).authoritative = false;
+      mMissile.get(id).presentationOnly = true;
+    }
+    Riiablo.assets.load(mMissile.get(id).missileDescriptor);
+    return id;
+  }
+
   private static com.riiablo.widget.Label createLabel(String text) {
     com.riiablo.widget.Label label = new com.riiablo.widget.Label(Riiablo.fonts.font16);
     label.setAlignment(Align.center);
