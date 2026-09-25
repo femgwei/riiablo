@@ -168,6 +168,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
     mercenaryName = new Label(Riiablo.bundle.get("hireling_unnamed"),
         Riiablo.fonts.ReallyTheLastSucker);
+    mercenaryName.setAutoSize(false);
     mercenaryName.setSize(150, 16);
     mercenaryName.setPosition(6, 216);
     mercenaryName.setAlignment(Align.left | Align.bottom);
@@ -180,6 +181,8 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     healthLabel.setAlignment(Align.left | Align.bottom);
     health.add(healthLabel);
     healthValue = new Label(Integer.toString(0), Riiablo.fonts.font8, Align.center);
+    healthValue.setAutoSize(false);
+    healthValue.setSize(151, 16);
     healthValue.setAlignment(Align.center | Align.bottom);
     health.add(healthValue).growX().row();
     addActor(health);
@@ -191,6 +194,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     expLabel.setAlignment(Align.left | Align.bottom);
     exp.add(expLabel).row();
     experienceValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    experienceValue.setAutoSize(false);
     experienceValue.setAlignment(Align.center | Align.bottom);
     exp.add(experienceValue).growY().row();
     addActor(exp);
@@ -202,6 +206,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     levelLabel.setAlignment(Align.center | Align.bottom);
     level.add(levelLabel).row();
     levelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    levelValue.setAutoSize(false);
     levelValue.setAlignment(Align.center | Align.bottom);
     level.add(levelValue).growY().row();
     addActor(level);
@@ -213,6 +218,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     nextLevelLabel.setAlignment(Align.center | Align.bottom);
     nextLevel.add(nextLevelLabel).row();
     nextLevelValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    nextLevelValue.setAutoSize(false);
     nextLevelValue.setAlignment(Align.center | Align.bottom);
     nextLevel.add(nextLevelValue).growY().row();
     addActor(nextLevel);
@@ -224,6 +230,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(strLabel);
 
     strValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    strValue.setAutoSize(false);
     strValue.setSize(46, 16);
     strValue.setPosition(109, 149);
     strValue.setAlignment(Align.right | Align.bottom);
@@ -236,6 +243,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(dexLabel);
 
     dexValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    dexValue.setAutoSize(false);
     dexValue.setSize(46, 16);
     dexValue.setPosition(109, 125);
     dexValue.setAlignment(Align.right | Align.bottom);
@@ -248,6 +256,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(damLabel);
 
     damageValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    damageValue.setAutoSize(false);
     damageValue.setSize(46, 16);
     damageValue.setPosition(109, 101);
     damageValue.setAlignment(Align.right | Align.bottom);
@@ -260,6 +269,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(defLabel);
 
     defenseValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    defenseValue.setAutoSize(false);
     defenseValue.setSize(46, 16);
     defenseValue.setPosition(109, 77);
     defenseValue.setAlignment(Align.right | Align.bottom);
@@ -272,6 +282,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(fireResLabel);
 
     fireResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    fireResValue.setAutoSize(false);
     fireResValue.setSize(46, 16);
     fireResValue.setPosition(266, 149);
     fireResValue.setAlignment(Align.right | Align.bottom);
@@ -284,6 +295,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(coldResLabel);
 
     coldResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    coldResValue.setAutoSize(false);
     coldResValue.setSize(46, 16);
     coldResValue.setPosition(266, 125);
     coldResValue.setAlignment(Align.right | Align.bottom);
@@ -296,6 +308,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(lightResLabel);
 
     lightResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    lightResValue.setAutoSize(false);
     lightResValue.setSize(46, 16);
     lightResValue.setPosition(266, 101);
     lightResValue.setAlignment(Align.right | Align.bottom);
@@ -308,6 +321,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     addActor(poisonResLabel);
 
     poisonResValue = new Label(Integer.toString(0), Riiablo.fonts.font8);
+    poisonResValue.setAutoSize(false);
     poisonResValue.setSize(46, 16);
     poisonResValue.setPosition(266, 77);
     poisonResValue.setAlignment(Align.right | Align.bottom);

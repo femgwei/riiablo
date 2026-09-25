@@ -23,6 +23,20 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
   boolean updateSize = true; // FIXME: find a less hacky solution
 
+  /**
+   * Controls whether changing the text also replaces the actor's explicit
+   * layout size with the font's preferred size. Fixed native UI panels need
+   * this disabled so dynamic values cannot move their baseline or alignment.
+   */
+  public Label setAutoSize(boolean autoSize) {
+    updateSize = autoSize;
+    return this;
+  }
+
+  public boolean isAutoSize() {
+    return updateSize;
+  }
+
   public Label(int id, BitmapFont font) {
     this(id == -1 ? "" : Riiablo.string.lookup(id), font);
   }
