@@ -1,11 +1,13 @@
 package com.riiablo.screen.panel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.headless.HeadlessApplication;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.mpq.MPQFileHandleResolver;
@@ -14,6 +16,16 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 class MercenaryHudAssetProbeTest {
+  @Test
+  void usesNativeLifeBarColorThresholds() {
+    assertSame(Color.GREEN, MercenaryHud.healthBarColor(1f));
+    assertSame(Color.GREEN, MercenaryHud.healthBarColor(0.67f));
+    assertSame(Color.YELLOW, MercenaryHud.healthBarColor(2f / 3f));
+    assertSame(Color.YELLOW, MercenaryHud.healthBarColor(0.34f));
+    assertSame(Color.RED, MercenaryHud.healthBarColor(1f / 3f));
+    assertSame(Color.RED, MercenaryHud.healthBarColor(0f));
+  }
+
   @Test
   void probeNativeHirelingIconGeometry() {
     String home = System.getenv("D2_LOCALIZATION_HOME");

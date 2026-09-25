@@ -39,6 +39,8 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
       "rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6", "barbhirable_icon.dc6"
   };
   private static final String UNNAMED = "UNNAMED";
+  private static final float HEALTH_GREEN_THRESHOLD = 2f / 3f;
+  private static final float HEALTH_YELLOW_THRESHOLD = 1f / 3f;
 
   private final AssetDescriptor<DC6>[] iconDescriptors;
   private final Texture fill;
@@ -76,9 +78,11 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     name.setAlignment(Align.center);
     addActor(name);
     tooltip = new Label("", Riiablo.fonts.font16, Color.WHITE);
-    tooltip.setPosition(-32, -14);
-    tooltip.setSize(WIDTH + 40, 14);
-    tooltip.setAlignment(Align.center);
+    // Native tooltip is a two-line hint below the name, not a single line
+    // overlaying the portrait.
+    tooltip.setPosition(0, -35);
+    tooltip.setSize(300, 32);
+    tooltip.setAlignment(Align.left);
     tooltip.setVisible(false);
     addActor(tooltip);
 
@@ -149,7 +153,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(mercenaryId);
     name.setText(resolveMercenaryName(merc));
     name.setSize(WIDTH, 14);
-    tooltip.setText(hovered ? localized("mercenary_heal_hint", "DRAG POTION HERE") : "");
+    tooltip.setText(hovered ? localized("mercenary_heal_hint",
+        "将药水放在肖像上即可治疗\n按下滑鼠右键可打開物品栏（O)") : "");
+    tooltip.setSize(300, 32);
   }
 
   /** Resolves the native Hireling.txt name key (the saved value is a name slot). */
@@ -188,6 +194,13 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     return value == null || value.isEmpty() ? fallback : value;
   }
 
+  /** Native hireling life-bar color bands: green, yellow, then red. */
+  static Color healthBarColor(float ratio) {
+    if (ratio > HEALTH_GREEN_THRESHOLD) return Color.GREEN;
+    if (ratio > HEALTH_YELLOW_THRESHOLD) return Color.YELLOW;
+    return Color.RED;
+  }
+
   @Override public void draw(Batch batch, float parentAlpha) {
     if (!isVisible()) return;
     AssetDescriptor<DC6> iconDescriptor = mercenaryType >= 0
@@ -212,9 +225,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     float ratio = maxLife <= 0 ? 0 : Math.max(0, Math.min(1, life / maxLife));
     float barX = getX() + 5f;
     float barY = getY() + 63f;
-    batch.setColor(0f, 0.18f, 0f, parentAlpha);
-    batch.draw(fill, barX, barY, 46f, 5f);
-    batch.setColor(0f, 1f, 0f, parentAlpha);
+    Color healthColor = healthBarColor(ratio);
+    // The original portrait has no dark/opaque background behind the life bar.
+    batch.setColor(healthColor.r, healthColor.g, healthColor.b, parentAlpha);
     batch.draw(fill, barX, barY, 46f * ratio, 5f);
     batch.setColor(Color.WHITE);
     super.draw(batch, parentAlpha);
