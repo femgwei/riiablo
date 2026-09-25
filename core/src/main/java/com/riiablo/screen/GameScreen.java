@@ -371,6 +371,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public GameScreen(CharData charData, Socket socket) {
     this.charData = charData;
     this.socket = socket;
+    // Create the item controller before any HUD/panel captures it.  The
+    // mercenary portrait accepts cursor potions through this controller; the
+    // previous order constructed MercenaryHud first and permanently retained
+    // a null reference.
+    itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
 
     // Native Diablo II key bindings are character-scoped (unlike the
     // preferences fallback used by the controls screen).  Load them as soon
@@ -763,7 +768,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     iso = renderer.iso();
     scaledStage = new Stage(new ScreenViewport(iso), Riiablo.batch);
     factory = new ClientEntityFactory();
-    itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
     TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
