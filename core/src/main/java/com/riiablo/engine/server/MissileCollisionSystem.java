@@ -88,6 +88,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<com.riiablo.engine.server.component.Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Class> mClass;
@@ -1261,7 +1262,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     // Include the whole swept segment in the broad-phase query. Without this,
     // a fast missile can pass a target between ticks while the target is no
     // longer within the radius of the missile's end point.
-    float checkRadius = (areaEffect ? nativeAreaRadius(missile) : 2.0f)
+    // The broad phase only decides which entities need an exact swept test.
+    // Keep a conservative maximum unit radius here so a large monster is not
+    // skipped, but do not use this value as the actual hit radius.  The old
+    // code used 2.0f for both phases, which made every arrow hit small units
+    // almost one tile before reaching them.
+    float checkRadius = (areaEffect ? nativeAreaRadius(missile) : maximumUnitCollisionRadius())
         + currentPos.dst(lastPos);
     Array<Integer> nearbyEntities = getEntitiesInRange(currentPos.x, currentPos.y, checkRadius);
     
@@ -1320,7 +1326,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     // Use swept segment collision so fast missiles cannot jump over a target.
     float distance = distanceToSegment(targetPos.position, previousPos, missilePos);
     float collisionRadius = isNativeAreaEffect(missile)
-        ? nativeAreaRadius(missile) : 2.0f;
+        ? nativeAreaRadius(missile) : unitCollisionRadius(targetId);
     
     // Debug log disabled to reduce noise
     // log.debug("Missile {} checking collision with {}: distance={}, radius={}, missilePos=({}, {}), targetPos=({}, {})", 
@@ -2562,6 +2568,30 @@ public class MissileCollisionSystem extends IteratingSystem {
     float closestX = start.x + t * dx;
     float closestY = start.y + t * dy;
     return point.dst(closestX, closestY);
+  }
+
+  /**
+   * Returns the radius occupied by a unit for point/swept missile collision.
+   *
+   * <p>MonStats2.SizeX is the native footprint width in subtiles.  The
+   * runtime Size component stores the same value; a width of 1 is a point,
+   * width 2 occupies one subtile on either side of its center, and so on.
+   * Missile collision is against the unit footprint, not a universal two-unit
+   * circle.  A small compatibility radius is retained for synthetic entities
+   * (some server tests and network replicas do not carry Size).</p>
+   */
+  private float unitCollisionRadius(int targetId) {
+    if (mSize != null && mSize.has(targetId)) {
+      int footprint = Math.max(1, mSize.get(targetId).size);
+      return Math.max(0.25f, footprint - 1f);
+    }
+    return 0.5f;
+  }
+
+  /** Maximum radius used only by the broad-phase candidate query. */
+  private static float maximumUnitCollisionRadius() {
+    // MonStats2 supports SizeX values 1..3.  Size 3 has a radius of 2.
+    return 2.0f;
   }
 
   private void applyCombatStates(Missile missile, int targetId,
