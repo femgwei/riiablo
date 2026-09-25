@@ -5,7 +5,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
@@ -130,6 +132,16 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private LabelButton purchaseConfirm;
   private LabelButton purchaseCancel;
   private Item pendingPurchaseItem;
+  private final Vector2 purchasePromptPoint = new Vector2();
+  private final InputListener purchasePromptDismissListener = new InputListener() {
+    @Override
+    public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+      if (purchasePrompt == null || !purchasePrompt.isVisible()) return false;
+      if (isInsidePurchasePrompt(event)) return false;
+      hidePurchasePrompt();
+      return true;
+    }
+  };
 
   // Match ItemLabeler's compact tooltip padding (6px on each side). The
   // vertical buttons do not require a fixed-width dialog reservation.
@@ -436,7 +448,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
     purchaseCancel.setBounds(PURCHASE_PROMPT_SIDE_MARGIN, 2,
         buttonWidth, PURCHASE_PROMPT_BUTTON_HEIGHT);
-    centerPurchasePrompt();
+    positionPurchasePromptAtMouse();
+    if (getStage() != null) getStage().addCaptureListener(purchasePromptDismissListener);
     purchasePrompt.setVisible(true);
   }
 
@@ -445,9 +458,32 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         (getHeight() - purchasePrompt.getHeight()) / 2f);
   }
 
+  private void positionPurchasePromptAtMouse() {
+    if (getStage() == null || Gdx.input == null) {
+      centerPurchasePrompt();
+      return;
+    }
+    purchasePromptPoint.set(Gdx.input.getX(), Gdx.input.getY());
+    getStage().screenToStageCoordinates(purchasePromptPoint);
+    stageToLocalCoordinates(purchasePromptPoint);
+
+    float yesCenterX = purchaseConfirm.getX() + purchaseConfirm.getWidth() / 2f;
+    float yesCenterY = purchaseConfirm.getY() + purchaseConfirm.getHeight() / 2f;
+    purchasePrompt.setPosition(
+        purchasePromptPoint.x - yesCenterX,
+        purchasePromptPoint.y - yesCenterY);
+  }
+
+  private boolean isInsidePurchasePrompt(InputEvent event) {
+    purchasePromptPoint.set(event.getStageX(), event.getStageY());
+    purchasePrompt.stageToLocalCoordinates(purchasePromptPoint);
+    return purchasePrompt.hit(purchasePromptPoint.x, purchasePromptPoint.y, true) != null;
+  }
+
   private void hidePurchasePrompt() {
     pendingPurchaseItem = null;
     if (purchasePrompt != null) purchasePrompt.setVisible(false);
+    if (getStage() != null) getStage().removeCaptureListener(purchasePromptDismissListener);
   }
 
   private boolean sellCursorItem() {
