@@ -66,3 +66,4 @@ public final class MissileImpactP extends Table {
     public MissileImpactP get(MissileImpactP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+
