@@ -993,6 +993,11 @@ public class ServerEntityFactory extends EntityFactory {
   @Override
   public int createItem(com.riiablo.item.Item item, float x, float y) {
     int id = super.createEntity(Class.Type.ITM, "item");
+    // An ECS item entity created at world coordinates is always the native
+    // ground representation.  Items moved out of the character data are
+    // cleared to null by ItemData.drop(), so preserve the authoritative
+    // location explicitly for network snapshots and client presentation.
+    if (item != null) item.location = com.riiablo.item.Location.GROUND;
     com.riiablo.engine.server.item.GroundDropOwnership.created(id);
     mItem.create(id).set(item);
 

@@ -86,8 +86,11 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
     for (int i = 0, size = getEntityIds().size(); i < size; i++) {
       int entityId = getEntityIds().get(i);
       Item component = mItem.get(entityId);
-      if (component == null || component.item == null
-          || component.item.location != com.riiablo.item.Location.GROUND) continue;
+      // Position + Item is the ECS ground-item family.  Older network
+      // snapshots may carry a null location, so do not suppress the gleam on
+      // that legacy representation; inventory/vendor items never have this
+      // world Position component.
+      if (component == null || component.item == null) continue;
 
       GleamState state = states.get(entityId);
       if (state == null) {
