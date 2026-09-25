@@ -141,6 +141,15 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals(9, MissileImpactPresentationSystem.cltParam(vines, 0, 1));
   }
 
+  @Test
+  void holyBoltDelayUsesAuthoritativeServerChild() {
+    Missiles.Entry delay = Riiablo.files.Missiles.get("fistoftheheavensdelay");
+    assertNotNull(delay);
+    assertEquals(26, delay.pCltHitFunc);
+    assertEquals(22, delay.pSrvHitFunc);
+    assertEquals("fistoftheheavensbolt", delay.CltHitSubMissile[0]);
+  }
+
   private static final class SilentAudio extends Audio {
     SilentAudio() { super(null); }
     @Override public Instance play(String id, boolean global) { return null; }

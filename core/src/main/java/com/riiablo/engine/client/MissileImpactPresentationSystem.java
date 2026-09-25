@@ -166,6 +166,16 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       Riiablo.audio.play(hitClassSound, true);
     }
 
+    // SrvHit22 creates the Holy Bolt authoritatively when the delay missile
+    // expires.  The native client callback number 26 is only the legacy
+    // client-side fallback; consuming it here as well would render a second
+    // bolt on both local and network clients.
+    if (source.pCltHitFunc == 26 && source.pSrvHitFunc == 22) {
+      log.debug("[MISSILE_IMPACT] source={} clientHitFunc=26 action=use_server_bolt",
+          source.Missile);
+      return;
+    }
+
     String[] children = source.CltHitSubMissile;
     if (children == null || factory == null) return;
 
