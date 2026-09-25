@@ -335,6 +335,18 @@ public class Client extends Game {
     assets.setLoader(DS1.class, new DS1Loader(mpqs));
     assets.setLoader(COF.class, new COFLoader(mpqs));
 
+    // A missing or corrupt optional resource must not terminate the render
+    // thread.  Monster COF layers are loaded asynchronously and old/modded
+    // MPQs can advertise a DCC/DC6 that is absent or unreadable.  LibGDX's
+    // default AssetManager rethrows that failure from update(), which used to
+    // turn one bad presentation layer into a full game crash.  Installing an
+    // error listener makes AssetManager discard the failed task and continue
+    // loading the remaining queue; the affected layer simply remains absent.
+    assets.setErrorListener((asset, throwable) -> {
+      String path = asset == null ? "<unknown>" : asset.fileName;
+      Gdx.app.error(TAG, "Skipping failed optional asset " + path, throwable);
+    });
+
     Riiablo.palettes = palettes = new Palettes(assets);
     Riiablo.colormaps = colormaps = new Colormaps(assets);
     Riiablo.fonts = fonts = new Fonts(assets, language);
