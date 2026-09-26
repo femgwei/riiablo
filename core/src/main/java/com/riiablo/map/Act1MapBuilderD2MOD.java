@@ -3456,9 +3456,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (zone == null || grid == null || zone.dt1s == null || zone.tiles == null) return;
     int width = Math.min(grid.width, zone.tilesX);
     int height = Math.min(grid.height, zone.tilesY);
+    clearNativeTileLayers(zone);
     LayerApplyCounts counts = applyTileGridLayers(
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, null);
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
+    else zone.specials.clear();
     registerSpecialWalls(grid, zone.specials, width, height);
     rebuildTileCollisionFlags(grid, zone.tiles, zone.dt1s, zone.flags,
         zone.tilesX, zone.tilesY, width, height);
@@ -3473,6 +3475,20 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             + " wall=" + formatTileIds(counts.failedWallIds)
             + " shadow=" + formatTileIds(counts.failedShadowIds));
       }
+    }
+  }
+
+  /**
+   * Native RoomEx export is authoritative for the whole zone.  Preset zones
+   * are generated once before the export is applied, so leaving old layer
+   * entries in cells that the native grid does not populate overlays two
+   * different maps and also leaves stale collision flags behind.
+   */
+  static void clearNativeTileLayers(Zone zone) {
+    if (zone == null || zone.tiles == null) return;
+    for (int layer = 0; layer < zone.tiles.length; layer++) {
+      DT1.Tile[] tiles = zone.tiles[layer];
+      if (tiles != null) Arrays.fill(tiles, null);
     }
   }
 

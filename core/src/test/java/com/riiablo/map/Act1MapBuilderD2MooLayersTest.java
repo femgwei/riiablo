@@ -218,6 +218,20 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void clearsCompatibilityLayersBeforeApplyingAuthoritativeNativeExport() throws Exception {
+    Map.Zone zone = new Map.Zone();
+    zone.tiles[Map.FLOOR_OFFSET] = new DT1.Tile[2];
+    zone.tiles[Map.FLOOR_OFFSET][0] = tile(Orientation.FLOOR, 1, 1);
+    zone.tiles[Map.WALL_OFFSET] = new DT1.Tile[2];
+    zone.tiles[Map.WALL_OFFSET][1] = tile(Orientation.LEFT_WALL, 2, 1);
+
+    Act1MapBuilderD2MOD.clearNativeTileLayers(zone);
+
+    assertNull(zone.tiles[Map.FLOOR_OFFSET][0]);
+    assertNull(zone.tiles[Map.WALL_OFFSET][1]);
+  }
+
+  @Test
   void hidesPoppedPresetMarkersByPopPadSubIndex() throws Exception {
     DT1.Tile popPad = tile(Orientation.SPECIAL_10, 8, 46);
     Bits popped = new Bits();
