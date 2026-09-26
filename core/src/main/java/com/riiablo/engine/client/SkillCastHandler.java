@@ -17,6 +17,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -32,6 +33,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Angle> mAngle;
 
   protected OverlayManager overlays;
 
@@ -353,8 +355,13 @@ public class SkillCastHandler extends PassiveSystem {
         cltDoStreamMissile(event, skill, position);
         break;
 
-      case 20: // Static Field - pulse visual
-        cltDoStaticFieldVisual(event, skill, position);
+      case 20: // Strafe - rapid attack animation/facing sequence
+        if (event.srvdofunc == 12 || skill.srvdofunc == 12
+            || "Strafe".equalsIgnoreCase(skill.skill)) {
+          cltDoStrafeAnimation(event, skill, position);
+        } else {
+          cltDoStaticFieldVisual(event, skill, position);
+        }
         break;
 
       case 21: // Telekinesis visual
@@ -758,6 +765,20 @@ public class SkillCastHandler extends PassiveSystem {
     return shouldReuseServerMissile(skill, networkClient, localMonsterServer,
         localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
         localChargedBoltServer, separateCorpseBurst, false);
+  }
+
+  /**
+   * Strafe's client callback is not a static field pulse.  D2's sequence
+   * repeats the A1 bow animation for each released arrow while the unit turns
+   * toward the next target.  The authoritative server owns the missiles; this
+   * callback only keeps the local presentation facing synchronized.
+   */
+  private void cltDoStrafeAnimation(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
+    if (position == null || !mAngle.has(event.entityId)) return;
+    Vector2 direction = resolveTargetDirection(event, position, tmpVec);
+    mAngle.get(event.entityId).target.set(direction);
+    log.info("[STRAFE_ANIM] phase=client_keyframe entity={} target={} direction=({}, {})",
+        event.entityId, event.targetId, direction.x, direction.y);
   }
 
   /** Uses Missiles.txt.NumDirections before falling back to legacy callback defaults. */

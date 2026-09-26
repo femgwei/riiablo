@@ -712,6 +712,32 @@ public class Actioneer extends PassiveSystem {
         return;
       }
     }
+
+    // Native Strafe keeps the cast alive while its remaining arrows are
+    // released by successive attack-animation keyframes.  ServerSkillSystem
+    // creates the authoritative arrow set once; each repeat only advances the
+    // facing target so clients see the rapid bow turns from the original.
+    if (casting.strafeInitialized && casting.strafeRemainingArrows > 0) {
+      int nextIndex = casting.strafeArrowIndex + 1;
+      if (nextIndex < casting.strafeTargetIds.size) {
+        casting.strafeArrowIndex = nextIndex;
+        casting.strafeRemainingArrows--;
+        int nextTarget = casting.strafeTargetIds.get(nextIndex);
+        casting.targetId = nextTarget;
+        if (mPosition.has(nextTarget)) {
+          casting.targetVec.set(mPosition.get(nextTarget).position);
+          if (mAngle.has(event.entityId) && mPosition.has(event.entityId)) {
+            mAngle.get(event.entityId).target.set(casting.targetVec)
+                .sub(mPosition.get(event.entityId).position).nor();
+          }
+        }
+        log.info("[STRAFE_ANIM] phase=next_arrow entity={} index={} remaining={} target={}",
+            event.entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows,
+            casting.targetId);
+        return;
+      }
+      casting.strafeRemainingArrows = 0;
+    }
     
     // D2MOD: Check if target is dead after attack animation completes
     boolean targetDead = false;

@@ -16,6 +16,7 @@ import com.riiablo.codec.excel.States;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -125,6 +126,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -2955,6 +2957,16 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, missileName);
       return;
     }
+    Casting casting = mCasting.has(event.entityId) ? mCasting.get(event.entityId) : null;
+    // SrvDo012 is raised again for each native Strafe animation cycle.  The
+    // authoritative missiles are already emitted by the first callback; the
+    // later callbacks only advance the player's facing/animation sequence.
+    if (casting != null && casting.strafeInitialized) {
+      log.info("[STRAFE] phase=animation_keyframe entity={} index={} remaining={} target={}",
+          event.entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows,
+          casting.targetId);
+      return;
+    }
     int count = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
     if (count <= 0) count = AmazonSkills.getStrafeArrowCount(skillLevel);
     count = Math.max(1, Math.min(24, count));
@@ -2986,6 +2998,7 @@ public class ServerSkillSystem extends PassiveSystem {
         initializeSkillDamage(id, skill, event.entityId, skillLevel);
         Missile arrow = mMissile.get(id);
         arrow.targetId = targetId;
+        if (casting != null) casting.strafeTargetIds.add(targetId);
         created++;
       }
     }
@@ -2994,12 +3007,33 @@ public class ServerSkillSystem extends PassiveSystem {
       int id = createMissile(missile, direction, start, event.entityId, null, skillLevel);
       if (id >= 0 && mMissile.has(id)) {
         initializeSkillDamage(id, skill, event.entityId, skillLevel);
+        if (casting != null && event.targetId >= 0) casting.strafeTargetIds.add(event.targetId);
         created = 1;
       }
     }
-    if (created > 0) consumeRangedAmmoForSkill(event, skill);
-    log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} missile={}",
-        event.entityId, skillLevel, count, targets.size(), created, missileName);
+    if (created > 0) {
+      consumeRangedAmmoForSkill(event, skill);
+      if (casting != null) {
+        casting.strafeInitialized = true;
+        casting.strafeArrowIndex = 0;
+        casting.strafeRemainingArrows = Math.max(0, casting.strafeTargetIds.size - 1);
+        if (casting.strafeTargetIds.size > 0) {
+          int firstTarget = casting.strafeTargetIds.get(0);
+          if (mPosition.has(firstTarget)) {
+            casting.targetId = firstTarget;
+            casting.targetVec.set(mPosition.get(firstTarget).position);
+            if (mAngle.has(event.entityId)) {
+              mAngle.get(event.entityId).target.set(casting.targetVec)
+                  .sub(start).nor();
+            }
+          }
+        }
+      }
+    }
+    log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} "
+            + "missile={} animationRemaining={}",
+        event.entityId, skillLevel, count, targets.size(), created, missileName,
+        casting != null ? casting.strafeRemainingArrows : 0);
   }
 
   private boolean mNativeUnitFlagsValid(int entityId) {

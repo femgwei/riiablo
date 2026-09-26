@@ -5,6 +5,7 @@ import com.artemis.annotations.EntityId;
 import com.artemis.annotations.PooledWeaver;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntArray;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.combat.CombatSystem;
@@ -53,6 +54,11 @@ public class Casting extends PooledComponent {
   public int furyRemainingStrikes;
   public int furyStrikeIndex;
   @EntityId public int furyCurrentTargetId;
+  /** Native Strafe emits one arrow per repeated attack-animation keyframe. */
+  public boolean strafeInitialized;
+  public int strafeRemainingArrows;
+  public int strafeArrowIndex;
+  public final IntArray strafeTargetIds = new IntArray(false, 24);
   /** Native Paladin Zeal SrvSt37/SrvDo013 sequence state. */
   public boolean zealInitialized;
   public boolean zealStrikeProcessed;
@@ -129,6 +135,10 @@ public class Casting extends PooledComponent {
     furyRemainingStrikes = 0;
     furyStrikeIndex = 0;
     furyCurrentTargetId = Engine.INVALID_ENTITY;
+    strafeInitialized = false;
+    strafeRemainingArrows = 0;
+    strafeArrowIndex = 0;
+    strafeTargetIds.clear();
     zealInitialized = false;
     zealStrikeProcessed = false;
     zealRemainingStrikes = 0;
@@ -195,6 +205,10 @@ public class Casting extends PooledComponent {
     furyRemainingStrikes = 0;
     furyStrikeIndex = 0;
     furyCurrentTargetId = Engine.INVALID_ENTITY;
+    strafeInitialized = false;
+    strafeRemainingArrows = 0;
+    strafeArrowIndex = 0;
+    strafeTargetIds.clear();
     zealInitialized = false;
     zealStrikeProcessed = false;
     zealRemainingStrikes = 0;

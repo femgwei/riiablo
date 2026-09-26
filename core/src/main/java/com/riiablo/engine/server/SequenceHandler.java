@@ -86,6 +86,14 @@ public class SequenceHandler extends IteratingSystem {
           (int) com.riiablo.engine.Engine.Player.MODE_A2);
       return;
     }
+    if (casting != null && casting.strafeInitialized
+        && casting.strafeRemainingArrows > 0) {
+      sequence.sequence(sequence.mode1, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      log.info("[STRAFE_ANIM] phase=repeat_sequence entity={} index={} remaining={}",
+          event.entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows);
+      return;
+    }
     if (casting != null && casting.furyInitialized
         && casting.furyRemainingStrikes > 0
         && casting.furyStrikeProcessed) {
