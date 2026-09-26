@@ -373,8 +373,19 @@ public final class AmazonSkills {
    * @return 箭矢数量
    */
   public static int getStrafeArrowCount(int skillLevel) {
-    // 基础 4，每 2 级 +1（最高 10）
-    return Math.min(10, 4 + skillLevel / 2);
+    return getStrafeMaxArrows(skillLevel);
+  }
+
+  /** Native minimum arrow count when fewer hostile units are available. */
+  public static int getStrafeMinArrows(int skillLevel) {
+    int level = Math.max(1, skillLevel);
+    return Math.min(getStrafeMaxArrows(level), 2 + level / 4);
+  }
+
+  /** Native maximum arrow count: five at level 1, +1 per level, capped at ten. */
+  public static int getStrafeMaxArrows(int skillLevel) {
+    int level = Math.max(1, skillLevel);
+    return Math.min(10, 4 + level);
   }
 
   /**

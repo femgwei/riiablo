@@ -2979,9 +2979,8 @@ public class ServerSkillSystem extends PassiveSystem {
       createStrafeArrow(event, skill, missile, start, skillLevel, targetId, index);
       return;
     }
-    int count = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
-    if (count <= 0) count = AmazonSkills.getStrafeArrowCount(skillLevel);
-    count = Math.max(1, Math.min(24, count));
+    int maxArrows = AmazonSkills.getStrafeMaxArrows(skillLevel);
+    int minArrows = AmazonSkills.getStrafeMinArrows(skillLevel);
     int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
     if (range <= 0) range = firstParam(skill, 5, 50);
     range = Math.max(1, Math.min(64, range));
@@ -2997,19 +2996,25 @@ public class ServerSkillSystem extends PassiveSystem {
     if (event.targetId >= 0 && mPosition.has(event.targetId) && !targets.contains(event.targetId)) {
       targets.add(0, event.targetId);
     }
-    final Vector2 origin = start;
-    targets.sort((a, b) -> Float.compare(mPosition.get(a).position.dst2(origin),
-        mPosition.get(b).position.dst2(origin)));
-    // Cache the native target order for the repeated callbacks, but emit only
-    // the first arrow now.  Subsequent callbacks use the index advanced by
-    // Actioneer.onAnimDataFinished().
-    if (targets.size() > count) targets.subList(count, targets.size()).clear();
     if (targets.isEmpty() && event.targetId >= 0 && mPosition.has(event.targetId)) {
       targets.add(event.targetId);
     }
+    final Vector2 origin = start;
+    targets.sort((a, b) -> Float.compare(mPosition.get(a).position.dst2(origin),
+        mPosition.get(b).position.dst2(origin)));
+    // Native Strafe keeps a minimum number of arrows even when fewer hostile
+    // units are available. Extra arrows are assigned to existing targets
+    // again instead of silently shortening the rollback sequence.
+    int totalArrows = targets.isEmpty() ? 1
+        : Math.min(maxArrows, Math.max(minArrows, targets.size()));
+    totalArrows = Math.max(1, Math.min(24, totalArrows));
+    java.util.ArrayList<Integer> arrowTargets = new java.util.ArrayList<>(totalArrows);
+    for (int i = 0; i < totalArrows && !targets.isEmpty(); i++) {
+      arrowTargets.add(targets.get(i % targets.size()));
+    }
     if (casting != null) {
       casting.strafeTargetIds.clear();
-      for (int targetId : targets) casting.strafeTargetIds.add(targetId);
+      for (int targetId : arrowTargets) casting.strafeTargetIds.add(targetId);
       casting.strafeInitialized = true;
       casting.strafeArrowIndex = 0;
       casting.strafeRemainingArrows = Math.max(0, casting.strafeTargetIds.size - 1);
@@ -3022,8 +3027,8 @@ public class ServerSkillSystem extends PassiveSystem {
     // the compatibility volley behavior; authoritative casts always take the
     // one-arrow-per-keyframe branch above.
     if (casting == null) {
-      for (int i = 0; i < targets.size(); i++) {
-        if (createStrafeArrow(event, skill, missile, start, skillLevel, targets.get(i), i)) {
+      for (int i = 0; i < arrowTargets.size(); i++) {
+        if (createStrafeArrow(event, skill, missile, start, skillLevel, arrowTargets.get(i), i)) {
           created++;
         }
       }
@@ -3058,9 +3063,11 @@ public class ServerSkillSystem extends PassiveSystem {
         }
       }
     }
-    log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} "
+    log.info("[STRAFE] phase=create entity={} level={} minArrows={} maxArrows={} "
+            + "targets={} totalArrows={} created={} "
             + "missile={} animationRemaining={} emission=per_keyframe",
-        event.entityId, skillLevel, count, targets.size(), created, missileName,
+        event.entityId, skillLevel, minArrows, maxArrows, targets.size(), totalArrows,
+        created, missileName,
         casting != null ? casting.strafeRemainingArrows : 0);
   }
 
