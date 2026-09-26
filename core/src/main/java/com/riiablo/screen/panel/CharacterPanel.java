@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -27,8 +28,9 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.CharStats;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
-import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
+import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.loader.DC6Loader;
@@ -98,11 +100,18 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     statPointsRow.setSize(150, 24);
     addActor(statPointsRow);
 
-    Label statPointsLabel = new Label(4075, Riiablo.fonts.ReallyTheLastSucker);
+    Label statPointsLabel = new Label(statPointsRemainingText(), Riiablo.fonts.ReallyTheLastSucker);
     statPointsLabel.setPosition(11, getHeight() - 373);
     statPointsLabel.setSize(108, 16);
     statPointsLabel.setAlignment(Align.center);
     addActor(statPointsLabel);
+
+    // Keep the caption and the remaining value as separate labels, with the
+    // native-style divider between their two cells.
+    Image statPointsDivider = new Image(new PaletteIndexedColorDrawable(Riiablo.colors.gold));
+    statPointsDivider.setPosition(119, getHeight() - 373);
+    statPointsDivider.setSize(1, 16);
+    addActor(statPointsDivider);
 
     statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
     statPoints.setAutoSize(false);
@@ -329,6 +338,12 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     label.setSize(width, 16);
     label.setAlignment(Align.center);
     addActor(label);
+  }
+
+  private static String statPointsRemainingText() {
+    return Riiablo.language == com.riiablo.D2Language.CHINESE
+        ? "基本屬性點剩餘"
+        : "Stat Points Remaining";
   }
 
   private void addCombatRow(int labelId, float y, Label[] values, Label[] names,
