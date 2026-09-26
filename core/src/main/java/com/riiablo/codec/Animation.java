@@ -42,6 +42,10 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
   int startIndex;
   int endIndex;
+  /** Optional native missile sub-loop, entered after the first full pass. */
+  int subLoopStart;
+  int subLoopEnd;
+  boolean hasSubLoop;
 
   float frameDuration = FRAME_DURATION;
   float elapsedTime;
@@ -82,6 +86,9 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     direction     = 0;
     startIndex    = 0;
     endIndex      = 0;
+    subLoopStart  = 0;
+    subLoopEnd    = 0;
+    hasSubLoop    = false;
     mode          = Mode.LOOP;
     reversed      = false;
     frameDuration = FRAME_DURATION;
@@ -161,6 +168,12 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     int frameRange = endIndex - startIndex;
     if (frameRange <= 1) return startIndex;
     int frameNumber = (int) (stateTime / frameDuration);
+    if (hasSubLoop && mode == Mode.LOOP && frameNumber >= frameRange) {
+      int subLoopRange = subLoopEnd - subLoopStart;
+      if (subLoopRange > 0) {
+        return subLoopStart + ((frameNumber - frameRange) % subLoopRange);
+      }
+    }
     switch (mode) {
       case ONCE:  return startIndex + Math.min(frameRange, frameNumber);
       case LOOP:  return startIndex + (frameNumber % frameRange);
@@ -194,6 +207,31 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   public void setMode(Mode mode) {
     assert mode != null;
     this.mode = mode;
+  }
+
+  /**
+   * Configures the native missile sub-loop. The end frame is exclusive, as in
+   * Missiles.txt/OpenDiablo2. The first animation pass still covers the full
+   * frame range before this loop is entered.
+   */
+  public void setSubLoop(int startIndex, int endIndex) {
+    Validate.isTrue(0 <= startIndex && startIndex < endIndex && endIndex <= numFrames,
+        "Invalid sub-loop range: %s..%s (frames=%s)", startIndex, endIndex, numFrames);
+    this.subLoopStart = startIndex;
+    this.subLoopEnd = endIndex;
+    this.hasSubLoop = true;
+  }
+
+  public boolean hasSubLoop() {
+    return hasSubLoop;
+  }
+
+  public int getSubLoopStart() {
+    return subLoopStart;
+  }
+
+  public int getSubLoopEnd() {
+    return subLoopEnd;
   }
 
   public boolean isReversed() {
@@ -327,6 +365,9 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
       startIndex = 0;
       endIndex   = numFrames;
+      subLoopStart = 0;
+      subLoopEnd = 0;
+      hasSubLoop = false;
 
       return true;
     }
@@ -765,6 +806,9 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       animation.numFrames     = first.numFrames;
       animation.startIndex    = 0;
       animation.endIndex      = animation.numFrames;
+      animation.subLoopStart  = 0;
+      animation.subLoopEnd    = 0;
+      animation.hasSubLoop    = false;
       animation.frame         = animation.startIndex;
       animation.elapsedTime   = 0;
       System.arraycopy(layers, 0, animation.layers, 0, size);

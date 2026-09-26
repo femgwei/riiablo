@@ -133,6 +133,7 @@ public class SequenceHandler extends IteratingSystem {
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    boolean sequenceWasStarted = sequence.started;
     Monster monster = mMonster.get(entityId);
     boolean monsterMelee = monster != null && casting != null
         && casting.skillId == com.riiablo.skill.SkillCodes.attack
@@ -197,9 +198,30 @@ public class SequenceHandler extends IteratingSystem {
       AnimData animData = mAnimData.get(entityId);
       animData.override = Math.max(1, animData.speed * 3);
     }
-    if (casting != null && casting.strafeInitialized) {
+    if (casting != null && mPlayer.has(entityId)) {
       AnimData animData = mAnimData.get(entityId);
-      animData.override = strafeAnimationSpeed(entityId, animData.speed);
+      boolean strafe = casting.strafeInitialized;
+      // D2MOO routes both normal A1/A2 attacks and the SQ/Strafe sequence
+      // through UNITS_UpdateAttackAnimRateAndVelocity.  Previously only
+      // Strafe installed an override here, leaving ordinary bow attacks at
+      // the raw COF speed (256).  That made Strafe appear dramatically slower
+      // even with the same weapon and IAS.  Apply the same native attack-rate
+      // calculation to every player attack mode that allows attack-rate
+      // modulation; Strafe supplies its native -30 sequence penalty.
+      boolean attackRateMode = strafe
+          || sequence.mode1 == com.riiablo.engine.Engine.Player.MODE_A1
+          || sequence.mode1 == com.riiablo.engine.Engine.Player.MODE_A2;
+      if (attackRateMode) {
+        int sequencePenalty = strafe ? 30 : 0;
+        animData.override = playerAttackAnimationSpeed(
+            entityId, animData.speed, sequencePenalty);
+        if (!sequenceWasStarted) {
+          log.info("[PLAYER_ATTACK_ANIM] phase=start entity={} mode={} skill={} "
+                  + "baseSpeed={} sequencePenalty={} finalSpeed={}",
+              entityId, sequence.mode1, casting.skillId, animData.speed,
+              sequencePenalty, animData.override);
+        }
+      }
     }
   }
 
@@ -231,7 +253,7 @@ public class SequenceHandler extends IteratingSystem {
         ? Math.min(rollbackFrame, Math.max(0, attackFrame - 1)) : rollbackFrame;
     anim.frame = Math.min(Math.max(0, restartFrame), Math.max(0, anim.numFrames - 1));
     anim.lastKeyframeIndex = Math.max(-1, (anim.frame >>> 8) - 1);
-    anim.override = strafeAnimationSpeed(entityId, anim.speed);
+    anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 30);
     // Keep SequenceHandler from invoking CofManager's ordinary frame-zero
     // mode transition on the next tick; the client receives the forced mode
     // restart and applies the same seek in CofLayerLoader.
@@ -250,8 +272,17 @@ public class SequenceHandler extends IteratingSystem {
     return -1;
   }
 
-  /** Weapon IAS/base bow speed affects Strafe's visible attack cadence. */
-  private int strafeAnimationSpeed(int entityId, int baseSpeed) {
+  /**
+   * D2Common's UNITS_UpdateAttackAnimRateAndVelocity for player attacks.
+   *
+   * <p>The normal A1/A2 modes use the calculated attack rate directly.  The
+   * native player sequence (Strafe) uses the same rate with an additional
+   * 30-point sequence penalty.  Keeping this in one helper is important:
+   * otherwise ordinary arrows run at the raw COF speed while Strafe is
+   * correctly scaled, which makes a fast bow look slower during Strafe.</p>
+   */
+  private int playerAttackAnimationSpeed(int entityId, int baseSpeed,
+      int sequencePenalty) {
     // Mirrors D2Common's UNITS_UpdateAttackAnimRateAndVelocity:
     // nRate = effective IAS + STAT_ATTACKRATE - 30 (SEQUENCE), clamped to
     // [15,175], then multiplied by the animation table's base speed.
@@ -296,9 +327,9 @@ public class SequenceHandler extends IteratingSystem {
     if (fasterAttackRate > 0) {
       fasterAttackRate = 120 * fasterAttackRate / (fasterAttackRate + 120);
     }
-    int sequenceRate = attackRate + fasterAttackRate - 30;
-    sequenceRate = Math.max(15, Math.min(175, sequenceRate));
-    return Math.max(1, baseSpeed * sequenceRate / 100);
+    int rate = attackRate + fasterAttackRate - sequencePenalty;
+    rate = Math.max(15, Math.min(175, rate));
+    return Math.max(1, baseSpeed * rate / 100);
   }
 
   private static int itemStatInt(Item item, short stat, int fallback) {

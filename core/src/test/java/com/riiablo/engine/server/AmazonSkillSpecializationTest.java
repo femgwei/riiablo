@@ -287,6 +287,49 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void immolationArrowAppliesImmediateRadiusDamageAtImpact() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      int primary = monster(world, 1.2f, 0);
+      world.getMapper(AttributesWrapper.class).create(primary).attrs = attributes(1, 100);
+      int nearby = monster(world, 2.0f, 2.0f);
+      world.getMapper(AttributesWrapper.class).create(nearby).attrs = attributes(1, 100);
+      float before = world.getMapper(AttributesWrapper.class).get(nearby).attrs
+          .get(Stat.hitpoints).asFixed();
+
+      Skills.Entry skill = Riiablo.files.skills.get("Immolation Arrow");
+      Missiles.Entry row = Riiablo.files.Missiles.get("immolationarrow");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      MissileDamageResolver.initializeSkill(
+          world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 4; i++) world.process();
+
+      float after = world.getMapper(AttributesWrapper.class).get(nearby).attrs
+          .get(Stat.hitpoints).asFixed();
+      assertTrue(after < before,
+          "SrvHit09 must apply the arrow packet to hostile units within radius 4");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void poisonJavelinCreatesPersistentPoisonCloud() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     MissileCollisionSystem collisions = new MissileCollisionSystem();

@@ -1356,6 +1356,19 @@ public class MissileCollisionSystem extends IteratingSystem {
    */
   private boolean checkCollisionWithEntity(int missileId, Missile missile, Vector2 previousPos, Vector2 missilePos,
       int targetId, Position targetPos) {
+    return checkCollisionWithEntity(missileId, missile, previousPos, missilePos,
+        targetId, targetPos, -1f, false);
+  }
+
+  /**
+   * Resolves one collision, optionally using a forced radius for native hit
+   * callbacks such as Immolation Arrow's immediate impact area. Suppressed
+   * side effects retain the source damage packet while avoiding duplicate
+   * impact visuals, hit callbacks, and projectile deletion.
+   */
+  private boolean checkCollisionWithEntity(int missileId, Missile missile,
+      Vector2 previousPos, Vector2 missilePos, int targetId, Position targetPos,
+      float forcedRadius, boolean suppressSideEffects) {
     // Use swept segment collision so fast missiles cannot jump over a target.
     float distance = distanceToSegment(targetPos.position, previousPos, missilePos);
     // A travelling missile may use SrvHit01/SrvHit14 to create an explosion
@@ -1364,8 +1377,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     // projectile's first contact test.
     boolean travellingExplosion = missile != null && missile.missile != null
         && hasMissileName(missile.missile.ExplosionMissile);
-    float collisionRadius = isNativeAreaEffect(missile) && !travellingExplosion
-        ? nativeAreaRadius(missile) : unitCollisionRadius(targetId);
+    float collisionRadius = forcedRadius >= 0f ? forcedRadius
+        : (isNativeAreaEffect(missile) && !travellingExplosion
+            ? nativeAreaRadius(missile) : unitCollisionRadius(targetId));
     
     // Debug log disabled to reduce noise
     // log.debug("Missile {} checking collision with {}: distance={}, radius={}, missilePos=({}, {}), targetPos=({}, {})", 
@@ -1421,7 +1435,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Impact presentation is independent from damage.  A blocked, absorbed,
       // or zero-damage hit still consumes the native HitSound/CltHitSubMissile
       // definition exactly once for this projectile/target pair.
-      emitImpactPresentation(missileId, missile, targetId, missilePos);
+      if (!suppressSideEffects) {
+        emitImpactPresentation(missileId, missile, targetId, missilePos);
+      }
 
       // Native MISSMODE_SrvHit29 does not apply the root row as damage.  It
       // fans out the authoritative frozen-orb nova shards; each shard then
@@ -1431,7 +1447,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.info("[SORCERESS_FROZEN_ORB] phase=root_hit missileId={} owner={} target={} "
                 + "position=({}, {})", missileId, missile.ownerId, targetId,
             missilePos.x, missilePos.y);
-        if (!missile.attached) world.delete(missileId);
+        if (!suppressSideEffects && !missile.attached) world.delete(missileId);
         return true;
       }
       if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
@@ -1442,7 +1458,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           missile.ownerId, targetId, distance, collisionRadius,
           missilePos.x, missilePos.y, missile.distanceTraveled, missile.range);
 
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 4) {
+      if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 4) {
         // SrvHit04 (Amazon magic/elemental arrow family) may describe the
         // impact effect in either HitSubMissile or ExplosionMissile depending
         // on the 1.10 data pack.  The old path only consulted HitSubMissile,
@@ -1452,7 +1468,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         if (spawned == 0) {
           spawnNativeMapExplosion(missile, missilePos);
         }
-      } else if (missile.missile != null
+      } else if (!suppressSideEffects && missile.missile != null
           && (missile.missile.Explosion != 0
               || hasMissileName(missile.missile.ExplosionMissile))) {
         // Rows that do not use SrvHit04 still route their unit impact through
@@ -1460,18 +1476,21 @@ public class MissileCollisionSystem extends IteratingSystem {
         // visual is emitted for monster/player impacts as well as walls.
         spawnNativeMapExplosion(missile, missilePos);
       }
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 9) {
-        spawnImmolationFire(missile, missilePos);
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 9
+          && !missile.hitFunctionTriggered) {
+        missile.hitFunctionTriggered = true;
+        spawnImmolationFire(missileId, missile, missilePos);
+        resolveImmolationArrowAreaDamage(missileId, missile, missilePos);
       }
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 2) {
+      if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 2) {
         spawnPoisonCloud(missile, missilePos);
       }
 
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 20) {
+      if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 20) {
         spawnLightningFuryBolts(missile, missilePos, targetId);
       }
 
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 14
+      if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 14
           && !missile.hitFunctionTriggered) {
         missile.hitFunctionTriggered = true;
         spawnRoyalStrikeMeteorFire(missile, missilePos);
@@ -1479,7 +1498,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
-        if (!missile.attached) world.delete(missileId);
+        if (!suppressSideEffects && !missile.attached) world.delete(missileId);
         return true;
       }
 
@@ -1673,7 +1692,9 @@ public class MissileCollisionSystem extends IteratingSystem {
             missile.hitTargets.size);
         return true;
       }
-      if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
+      if (!suppressSideEffects && !missile.persistent && collidesKill(missile)) {
+        world.delete(missileId);
+      }
       return true;
     }
     
@@ -2525,8 +2546,27 @@ public class MissileCollisionSystem extends IteratingSystem {
         source.ownerId, struckTarget, nextTarget, child.chainHitsRemaining, id);
   }
 
+  /** D2MOO SrvHit09 immediately resolves the arrow packet in a radius-4 area. */
+  private void resolveImmolationArrowAreaDamage(int missileId, Missile source, Vector2 origin) {
+    if (source == null || origin == null) return;
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, 4f);
+    int affected = 0;
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == source.ownerId || !mPosition.has(targetId)
+          || !mAttributesWrapper.has(targetId) || !isEnemy(source.ownerId, targetId)
+          || !isAlive(targetId)) continue;
+      if (checkCollisionWithEntity(missileId, source, origin, origin, targetId,
+          mPosition.get(targetId), 4f, true)) {
+        affected++;
+      }
+    }
+    log.info("[AMAZON_IMMOLATION_FIRE] phase=impact_aoe owner={} missileId={} radius=4 affected={}",
+        source.ownerId, missileId, affected);
+  }
+
   /** D2MOO SrvHit09 creates a circular grid of stationary Immolation Fire missiles. */
-  private void spawnImmolationFire(Missile source, Vector2 origin) {
+  private void spawnImmolationFire(int sourceId, Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null) return;
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId)
         : Riiablo.files.skills.get("Immolation Arrow");
@@ -2541,10 +2581,18 @@ public class MissileCollisionSystem extends IteratingSystem {
     Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
     int spawned = 0;
+    Map map = null;
+    Map.Zone originZone = null;
+    if (sourceId >= 0 && mMapWrapper.has(sourceId)) {
+      MapWrapper wrapper = mMapWrapper.get(sourceId);
+      map = wrapper != null ? wrapper.map : null;
+      originZone = map != null ? map.getZone(origin) : null;
+    }
     for (int x = -radius; x <= radius; x++) {
       for (int y = -radius; y <= radius; y++) {
         if (x * x + y * y > radius * radius) continue;
         Vector2 position = new Vector2(origin).add(x, y);
+        if (!isImmolationFirePointAllowed(map, originZone, x, y, position)) continue;
         int id = factory.createMissile(row, new Vector2(1f, 0f), position, source.ownerId);
         if (id < 0 || !mMissile.has(id)) continue;
         Missile fire = mMissile.get(id);
@@ -2571,6 +2619,19 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[AMAZON_IMMOLATION_FIRE] phase=spawn owner={} skill={} level={} radius={} "
             + "missile={} count={} duration={} tick={}", source.ownerId, source.skillId,
         level, radius, name, spawned, row.Range, row.DamageRate);
+  }
+
+  /** Matches D2MOO's short collision ray and room/town checks for each point. */
+  private boolean isImmolationFirePointAllowed(Map map, Map.Zone originZone,
+      int offsetX, int offsetY, Vector2 point) {
+    // Synthetic/headless tests do not export RoomEx topology. Keep their
+    // historical permissive behavior while real maps use native filtering.
+    if (map == null || originZone == null) return true;
+    Map.Zone targetZone = map.getZone(point);
+    if (targetZone == null || targetZone.isTown()) return false;
+    if (offsetX == 0 && offsetY == 0) return true;
+    wallRay.set(point, tmpVec.set(point).add(offsetX, offsetY));
+    return !map.castRay(wallRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, wallCollision);
   }
 
   /** D2MOO SrvDo02/SrvHit02 poison-javelin cloud creation. */

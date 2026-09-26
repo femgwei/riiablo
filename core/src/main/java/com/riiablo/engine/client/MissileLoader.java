@@ -44,6 +44,9 @@ public class MissileLoader extends IteratingSystem {
         .layer(celFile, blendMode)
         .build();
     animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
+    if (entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
+      animation.setSubLoop(entry.SubStart, entry.SubStop);
+    }
     animation.setFrame(entry.RandStart);
     // D2Common initializes missile wAnimSpeed as
     //   (animrate << 8) / 1024.
