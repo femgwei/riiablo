@@ -463,13 +463,39 @@ public class ClientNetworkReceiver extends IntervalSystem {
         DS1ObjectWrapperP ds1ObjectWrapper = findTable(sync, ComponentP.DS1ObjectWrapperP, new DS1ObjectWrapperP());
         if (ds1ObjectWrapper != null) {
           PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
+          if (position == null) {
+            Gdx.app.error(TAG, "[ENTITY_SYNC] phase=monster_reject serverEntity="
+                + sync.entityId() + " reason=missing_position");
+            return Engine.INVALID_ENTITY;
+          }
           String objectType = Riiablo.files.MonPreset.getPlace(ds1ObjectWrapper.act(), ds1ObjectWrapper.id());
           MonStats.Entry monstats = Riiablo.files.monstats.get(objectType);
-          return factory.createMonster(monstats, position.x(), position.y());
+          if (monstats == null) {
+            Gdx.app.error(TAG, "[ENTITY_SYNC] phase=monster_reject serverEntity="
+                + sync.entityId() + " reason=missing_monstats placement=" + objectType);
+            return Engine.INVALID_ENTITY;
+          }
+          int created = factory.createMonster(monstats, position.x(), position.y());
+          Gdx.app.log(TAG, String.format(
+              "[ENTITY_SYNC] phase=monster_create serverEntity=%d localEntity=%d "
+                  + "monster=%s position=(%.2f,%.2f) source=ds1",
+              sync.entityId(), created, monstats.Id, position.x(), position.y()));
+          return created;
         } else {
           PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
           MonsterP monster = findTable(sync, ComponentP.MonsterP, new MonsterP());
-          return factory.createMonster(monster.monsterId(), position.x(), position.y());
+          if (position == null || monster == null) {
+            Gdx.app.error(TAG, "[ENTITY_SYNC] phase=monster_reject serverEntity="
+                + sync.entityId() + " reason="
+                + (position == null ? "missing_position" : "missing_monster"));
+            return Engine.INVALID_ENTITY;
+          }
+          int created = factory.createMonster(monster.monsterId(), position.x(), position.y());
+          Gdx.app.log(TAG, String.format(
+              "[ENTITY_SYNC] phase=monster_create serverEntity=%d localEntity=%d "
+                  + "monsterId=%d position=(%.2f,%.2f) source=monster_p",
+              sync.entityId(), created, monster.monsterId(), position.x(), position.y()));
+          return created;
         }
       }
       case PLR: {

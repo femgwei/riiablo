@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.ai.Npc;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.event.CofChangeEvent;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -41,6 +42,7 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<AIWrapper> mAIWrapper;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
 
@@ -65,6 +67,12 @@ public class CofLayerCacher extends IteratingSystem {
 //    if (cof == null) return;
     // FIXME: logic here needs to be looked into -- should below operations be performed when cof didn't change?
     boolean newCof = animation.setCOF(cof);
+    if (newCof && mSummonedPet.has(entityId)) {
+      Gdx.app.log(TAG, String.format(
+          "[SUMMON_PRESENTATION] phase=cof_ready entity=%d frames=%d layers=%d",
+          entityId,
+          animation.getNumFramesPerDir(), cof.getNumLayers()));
+    }
     if (newCof) {
       AnimData animData = mAnimData.get(entityId);
       if (animData.override >= 0) {

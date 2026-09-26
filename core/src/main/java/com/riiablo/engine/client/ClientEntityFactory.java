@@ -309,18 +309,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
     int id = super.createMonster(monsterId, x, y, rank, affixes, championType, uniqueId);
     if (id == Engine.INVALID_ENTITY) return id;
 
+    attachMonsterPresentation(id);
+
     Monster monster = mMonster.get(id);
     MonStats.Entry monstats = monster.monstats;
     MonStats2.Entry monstats2 = monster.monstats2;
 
     String name = monstats.NameStr.equalsIgnoreCase("dummy")
         ? monstats.Id : Riiablo.string.lookup(monstats.NameStr);
-
-    mCofComponentDescriptors.create(id);
-
-    mAnimationWrapper.create(id);
-    mBBoxWrapper.create(id).box = mAnimationWrapper.get(id).animation.getBox();
-    mBox2DBody.create(id);
 
     if (monstats.Align == 1) {
       Label label = mLabel.create(id);
@@ -336,6 +332,49 @@ public class ClientEntityFactory extends ServerEntityFactory {
       ((Npc) ai).createMenu(menuManager, dialogManager);
     }
 
+    return id;
+  }
+
+  /**
+   * Ensures that every client-side monster, including a player-owned summon,
+   * enters the render pipeline with all transient presentation components.
+   *
+   * <p>The authoritative factory intentionally only creates server components.
+   * Summons are created through that factory as well, so keeping this repair
+   * in one idempotent helper prevents a future summon path from silently
+   * becoming an invisible ECS monster.</p>
+   */
+  private void attachMonsterPresentation(int id) {
+    if (!mCofComponentDescriptors.has(id)) mCofComponentDescriptors.create(id);
+    if (!mAnimationWrapper.has(id)) mAnimationWrapper.create(id);
+    if (!mBBoxWrapper.has(id)) {
+      mBBoxWrapper.create(id).box = mAnimationWrapper.get(id).animation.getBox();
+    }
+    if (!mBox2DBody.has(id)) mBox2DBody.create(id);
+  }
+
+  @Override
+  public int createSummonedPet(int ownerId, MonStats.Entry summon, String petType,
+      int skillId, int skillLevel, int petMax, boolean passive, int durationFrames,
+      float x, float y) {
+    int id = super.createSummonedPet(ownerId, summon, petType, skillId, skillLevel,
+        petMax, passive, durationFrames, x, y);
+    if (id == Engine.INVALID_ENTITY) return id;
+
+    // createSummonedPet delegates to the virtual createMonster method, but
+    // keep this explicit guard for alternate factories and future refactors.
+    attachMonsterPresentation(id);
+    Monster monster = mMonster.get(id);
+    com.badlogic.gdx.Gdx.app.log(TAG, String.format(
+        "[SUMMON_PRESENTATION] phase=attached entity=%d owner=%d summon=%s petType=%s "
+            + "token=%s mode=%s animation=%s bbox=%s body=%s",
+        id, ownerId, summon == null ? "" : summon.Id, petType,
+        mCofReference.has(id) ? mCofReference.get(id).effectiveToken() : "missing",
+        mCofReference.has(id) && monster != null
+            ? Engine.Monster.MODE_NU == mCofReference.get(id).mode ? "NU"
+                : Byte.toString(mCofReference.get(id).mode)
+            : "missing",
+        mAnimationWrapper.has(id), mBBoxWrapper.has(id), mBox2DBody.has(id)));
     return id;
   }
 
