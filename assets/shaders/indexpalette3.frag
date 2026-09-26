@@ -42,6 +42,12 @@ void main() {
   } else if (blendMode == 2) {
     if (color.a > 0.0) color.a = (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0;
 
+  // Palette-preserving luminosity mask with caller-controlled flicker alpha.
+  } else if (blendMode == 11) {
+    if (color.a > 0.0) {
+      color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0 * tint.a);
+    }
+
   // Set alpha based on luminance and color to tint
   } else if (blendMode == 3) {
     if (color.a > 0.0) {

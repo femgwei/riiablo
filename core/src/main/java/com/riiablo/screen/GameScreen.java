@@ -989,6 +989,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new ItemLoader())
         .with(new MissileLoader())
         .with(new AnimationStepper())
+        // Apply ground-fire flicker after the animation frame advances and
+        // before RenderSystem submits the DCC.
+        .with(new com.riiablo.engine.client.MissileFirePresentationSystem())
         .with(new ObjectCollisionUpdater())
         // Bone Wall/Prison are monster units, not map objects. Their
         // temporary walk footprint must exist in local and network clients.

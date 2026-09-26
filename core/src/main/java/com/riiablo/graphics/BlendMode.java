@@ -17,4 +17,6 @@ public interface BlendMode {
   int BRIGHTEN        = 8;
   int TINT_ID_RED     = 9;
   int DARKEN          = 10;
+  /** Palette-preserving luminosity mask with caller-controlled alpha. */
+  int LUMINOSITY_FLICKER = 11;
 }

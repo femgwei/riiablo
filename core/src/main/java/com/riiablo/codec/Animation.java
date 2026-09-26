@@ -678,6 +678,10 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       return setBlendMode(blendMode, Color.WHITE);
     }
 
+    public int getBlendMode() {
+      return blendMode;
+    }
+
     public Layer setBlendMode(int blendMode, Color tint) {
       this.blendMode = blendMode;
       this.tint      = tint;

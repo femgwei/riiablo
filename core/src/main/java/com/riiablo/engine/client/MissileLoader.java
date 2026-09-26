@@ -35,7 +35,11 @@ public class MissileLoader extends IteratingSystem {
     int blendMode;
     switch (entry.Trans) {
       case 0:  blendMode = BlendMode.ID; break;
-      case 1:  blendMode = BlendMode.LUMINOSITY; break;
+      // Ground-fire DCCs use the native luminosity mask, but their
+      // Light/Flicker fields modulate that mask over time. Keep source
+      // palette RGB values intact instead of recolouring the sprite.
+      case 1:  blendMode = isGroundFire(entry)
+          ? BlendMode.LUMINOSITY_FLICKER : BlendMode.LUMINOSITY; break;
       default: blendMode = BlendMode.ID; break;
     }
 
@@ -47,7 +51,13 @@ public class MissileLoader extends IteratingSystem {
     if (entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
       animation.setSubLoop(entry.SubStart, entry.SubStop);
     }
-    animation.setFrame(entry.RandStart);
+    int initialFrame = entry.RandStart;
+    if (isGroundFire(entry) && animation.getNumFramesPerDir() > 0) {
+      initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
+    }
+    if (animation.getNumFramesPerDir() > 0) {
+      animation.setFrame(Math.floorMod(initialFrame, animation.getNumFramesPerDir()));
+    }
     // D2Common initializes missile wAnimSpeed as
     //   (animrate << 8) / 1024.
     // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
@@ -66,5 +76,23 @@ public class MissileLoader extends IteratingSystem {
     }
 
     mBBoxWrapper.create(entityId).box = animation.getBox();
+  }
+
+  /** Ground-fire rows share the native groundFireBig DCC and flicker fields. */
+  static boolean isGroundFire(Missiles.Entry entry) {
+    return entry != null
+        && entry.CelFile != null
+        && "groundFireBig".equalsIgnoreCase(entry.CelFile)
+        && entry.Light > 0
+        && entry.Flicker > 0;
+  }
+
+  /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */
+  static int groundFirePhase(Missile missile, int frameCount) {
+    if (frameCount <= 0 || missile == null) return 0;
+    int x = Math.round(missile.start.x);
+    int y = Math.round(missile.start.y);
+    int hash = x * 0x45D9F3B ^ y * 0x27D4EB2D;
+    return Math.floorMod(hash, frameCount);
   }
 }
