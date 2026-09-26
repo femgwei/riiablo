@@ -66,7 +66,14 @@ public class AnimStepper extends IntervalIteratingSystem {
             "[ATTACK_ANIM] phase=finished entity=%d frame=%d frames=%d lastKeyframe=%d",
             entityId, animData.frame, animData.numFrames, animData.lastKeyframeIndex));
       }
+      // A repeated native action may seek the animation during the finished
+      // event (Strafe's Param6 rollback). Preserve that authoritative seek
+      // instead of overwriting it with the wrapped frame below.
+      int frameBeforeFinished = animData.frame;
       events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+      if (animData.frame != frameBeforeFinished) {
+        nextFrame = animData.frame;
+      }
       animData.lastKeyframeIndex = -1;
     }
     animData.frame = nextFrame;
