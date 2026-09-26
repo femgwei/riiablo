@@ -246,13 +246,24 @@ public class SequenceHandler extends IteratingSystem {
 
   /** Weapon IAS/base bow speed affects Strafe's visible attack cadence. */
   private int strafeAnimationSpeed(int entityId, int baseSpeed) {
+    // Mirrors D2Common's UNITS_UpdateAttackAnimRateAndVelocity:
+    // nRate = effective IAS + STAT_ATTACKRATE - 30 (SEQUENCE), clamped to
+    // [15,175], then multiplied by the animation table's base speed.
     int attackRate = 100;
+    if (mAttributesWrapper.has(entityId)
+        && mAttributesWrapper.get(entityId).attrs != null) {
+      StatRef base = mAttributesWrapper.get(entityId).attrs
+          .get(Stat.attackrate, StatRef.obtain());
+      if (base != null) attackRate = base.asInt();
+    }
     boolean aggregateIas = false;
-    if (mAttributesWrapper.has(entityId)) {
+    int fasterAttackRate = 0;
+    if (mAttributesWrapper.has(entityId)
+        && mAttributesWrapper.get(entityId).attrs != null) {
       StatRef ias = mAttributesWrapper.get(entityId).attrs
           .get(Stat.item_fasterattackrate, StatRef.obtain());
       if (ias != null) {
-        attackRate += ias.asInt();
+        fasterAttackRate = ias.asInt();
         aggregateIas = true;
       }
     }
@@ -260,16 +271,30 @@ public class SequenceHandler extends IteratingSystem {
       Item weapon = mPlayer.get(entityId).data.getItems().getEquippedRangedWeapon();
       if (weapon != null) {
         if (weapon.base instanceof Weapons.Entry) {
-          attackRate += -((Weapons.Entry) weapon.base).speed;
+          int weaponAttackRate = itemStatInt(weapon, Stat.attackrate,
+              -((Weapons.Entry) weapon.base).speed);
+          attackRate += weaponAttackRate;
         }
         StatRef ias = !aggregateIas && weapon.attrs != null
             ? weapon.attrs.get(Stat.item_fasterattackrate, StatRef.obtain()) : null;
         if (ias == null && !aggregateIas && weapon.attrs != null) {
           ias = weapon.attrs.base().get(Stat.item_fasterattackrate, StatRef.obtain());
         }
-        if (ias != null) attackRate += ias.asInt();
+        if (ias != null) fasterAttackRate = ias.asInt();
       }
     }
-    return Math.max(1, baseSpeed * Math.max(1, attackRate) / 100);
+    if (fasterAttackRate > 0) {
+      fasterAttackRate = 120 * fasterAttackRate / (fasterAttackRate + 120);
+    }
+    int sequenceRate = attackRate + fasterAttackRate - 30;
+    sequenceRate = Math.max(15, Math.min(175, sequenceRate));
+    return Math.max(1, baseSpeed * sequenceRate / 100);
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
   }
 }
