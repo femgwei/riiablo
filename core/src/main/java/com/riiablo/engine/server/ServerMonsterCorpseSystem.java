@@ -149,5 +149,16 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     if (mRunning.has(entityId)) mRunning.remove(entityId);
     if (mTarget.has(entityId)) mTarget.remove(entityId);
     if (mInteractable.has(entityId)) mInteractable.remove(entityId);
+
+    // A shattered monster has no corpse entity in the native world.  Keeping
+    // the dead monster around after removing Corpse leaves its MODE_DD sprite
+    // visible beside the icebreak missile, which makes every successful
+    // shatter look like an ordinary corpse to the client.  The mode event has
+    // already dispatched the presentation path, so it is safe to retire the
+    // authoritative entity now; normal corpses remain available for revive.
+    if (shattered && world.getEntityManager().isActive(entityId)) {
+      world.delete(entityId);
+      log.info("[MONSTER_CORPSE] phase=removed_after_shatter entity={}", entityId);
+    }
   }
 }
