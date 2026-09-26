@@ -201,6 +201,29 @@ public final class MissileDamageResolver {
     return true;
   }
 
+  /** Builds the cold packet for a Missiles.txt freeze child from its skill row. */
+  public static boolean initializeColdSkillMissile(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level) {
+    if (projectile == null || projectile.missile == null || skill == null) return false;
+    level = Math.max(1, level);
+    int min = shiftedDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
+    int max = shiftedDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
+    if (max <= 0) return false;
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    elementalMin[COLD] = min;
+    elementalMax[COLD] = Math.max(min, max);
+    int coldLength = Math.max(0, skill.ELen + damageBonusByLevel(level, skill.ELevLen));
+    writeSnapshot(projectile, ownerAttrs, false, level, 0, 0,
+        statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
+    projectile.damageLevel = level;
+    projectile.freezesTarget = true;
+    projectile.usesAttackRating = false;
+    log.info("[MISSILE_COLD_SKILL_SNAPSHOT] missile={} skill={} level={} cold={}..{} length={}",
+        projectile.missile.Missile, skill.skill, level, min, max, coldLength);
+    return true;
+  }
+
   /** Builds the native Skills.txt damage snapshot used by elemental arrows. */
   public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {

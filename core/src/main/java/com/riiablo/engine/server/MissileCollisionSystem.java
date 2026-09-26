@@ -1454,6 +1454,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
 
       Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
+      ensureFreezeChildSnapshot(missile, ownerAttrs);
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       Attributes attackAttrs = missile.damageSnapshot ? missile.damage : ownerAttrs;
       StatRef targetHitpoints = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
@@ -2187,6 +2188,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (skill == null && source.missile.Skill != null && !source.missile.Skill.isEmpty()) {
       skill = Riiablo.files.skills.get(source.missile.Skill);
     }
+    // Client-created elemental arrows do not always carry skillId, and the
+    // primary Missiles.txt row can leave Skill blank. Recover the dispatch
+    // skill from the native missile identity before building the explosion
+    // packet; otherwise freezingarrowexp3 falls back to weapon damage.
+    if (source.missile.Missile != null) {
+      String missileName = source.missile.Missile.trim().toLowerCase(java.util.Locale.ROOT);
+      if (missileName.equals("freezingarrow")
+          || source.missile.Id == com.riiablo.engine.server.missile.MissileId.FREEZING_ARROW) {
+        skill = Riiablo.files.skills.get("Freezing Arrow");
+        if (skill == null) {
+          skill = Riiablo.files.skills.get(
+              com.riiablo.engine.server.skill.SkillId.FREEZING_ARROW);
+        }
+      }
+    }
     int spawned = 0;
     for (String name : source.missile.HitSubMissile) {
       if (name == null || name.isEmpty()) continue;
@@ -2215,10 +2231,23 @@ public class MissileCollisionSystem extends IteratingSystem {
         child.skillId = source.skillId;
         child.damageLevel = level;
       }
+      if (tableSnapshot && !child.damageSnapshot
+          && "frze".equalsIgnoreCase(row.EType)) {
+        Skills.Entry freezingArrow = Riiablo.files.skills.get("Freezing Arrow");
+        if (freezingArrow != null) {
+          MissileDamageResolver.initializeColdSkillMissile(child, freezingArrow,
+              ownerAttrs, level);
+        }
+      }
       // The row owns the freeze behavior even when its elemental damage is
       // supplied by the associated Skills.txt dispatch row (for example
       // freezingarrowexp3 has EType=frze but zero EMin/EMax).
       if (tableSnapshot) child.freezesTarget = true;
+      log.info("[AMAZON_ARROW_EXPLOSION_DAMAGE] source={} child={} skillResolved={} "
+              + "tableSnapshot={} tableInitialized={} snapshot={} cold={}..{}",
+          source.missile.Missile, name, skill != null ? skill.skill : "<none>",
+          tableSnapshot, initialized, child.damageSnapshot,
+          statInt(child.damage, Stat.coldmindam), statInt(child.damage, Stat.coldmaxdam));
       log.info("[AMAZON_ARROW_EXPLOSION] phase=create owner={} skill={} source={} child={} "
               + "missile={} radius={} freeze={}",
           source.ownerId, source.skillId, source.missile.Missile, childId, name,
@@ -2672,6 +2701,22 @@ public class MissileCollisionSystem extends IteratingSystem {
         StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       }
     }
+  }
+
+  /** Last-line guard for client-created Freezing Arrow children. */
+  private void ensureFreezeChildSnapshot(Missile missile, Attributes ownerAttrs) {
+    if (missile == null || missile.damageSnapshot || missile.missile == null
+        || !"frze".equalsIgnoreCase(missile.missile.EType)
+        || !"freezingarrowexp3".equalsIgnoreCase(missile.missile.Missile)) return;
+    Skills.Entry skill = Riiablo.files.skills.get("Freezing Arrow");
+    if (skill != null) {
+      MissileDamageResolver.initializeColdSkillMissile(
+          missile, skill, ownerAttrs, Math.max(1, missile.damageLevel));
+    }
+    missile.freezesTarget = true;
+    log.info("[MISSILE_FREEZE_GUARD] missile={} snapshot={} freezesTarget={} cold={}..{}",
+        missile.missile.Missile, missile.damageSnapshot, missile.freezesTarget,
+        statInt(missile.damage, Stat.coldmindam), statInt(missile.damage, Stat.coldmaxdam));
   }
 
   private static int statInt(Attributes attrs, short stat) {
