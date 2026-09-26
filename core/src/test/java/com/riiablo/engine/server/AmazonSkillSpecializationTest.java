@@ -274,7 +274,9 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertTrue(fire != null, "SrvHit09 must create immolationfire fields");
       assertTrue(fire.persistent);
       assertTrue(fire.remainingFrames <= 100 && fire.remainingFrames >= 95);
-      assertEquals(41, fire.tickInterval);
+      assertEquals(1, fire.tickInterval,
+          "SrvDo05 resolves stationary fire collisions every game frame");
+      assertTrue(fire.fixedElementalRate);
       float before = world.getMapper(AttributesWrapper.class).get(target).attrs
           .get(Stat.hitpoints).asFixed();
       for (int i = 0; i < 42; i++) world.process();
@@ -318,7 +320,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       MissileDamageResolver.initializeSkill(
           world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
-      for (int i = 0; i < 45; i++) world.process();
+      for (int i = 0; i < 75; i++) world.process();
 
       assertEquals(0f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.0001f,
           "a six-life Fallen standing in the fire must be killed by its first tick");

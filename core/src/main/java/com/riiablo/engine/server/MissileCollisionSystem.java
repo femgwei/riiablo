@@ -2601,18 +2601,24 @@ public class MissileCollisionSystem extends IteratingSystem {
         fire.damageLevel = level;
         fire.persistent = true;
         fire.remainingFrames = Math.max(1, row.Range);
-        fire.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 1);
+        // SrvDo05 runs the stationary fire missile through collision every
+        // game frame. DamageRate is passed to native damage mitigation as
+        // STAT_DAMAGE_FRAMERATE; it is not a 41-frame tick interval.
+        fire.tickInterval = 1;
         fire.pierceEnabled = true;
         fire.pierceRemaining = -1;
-        // HitShift=2 stores sub-1-point fixed damage in D2; retain at least
-        // one integer point in this engine's integer combat representation.
-        if (fire.damage.get(Stat.firemaxdam) == null
-            || fire.damage.get(Stat.firemaxdam).asInt() <= 0) {
-          fire.damage.base().put(Stat.firemindam, Math.max(1, row.EMin));
-          fire.damage.base().put(Stat.firemaxdam, Math.max(row.EMin, row.Emax));
-          fire.damage.reset();
-          fire.damageSnapshot = true;
-        }
+        fire.fixedElementalRate = true;
+        fire.fixedElementalType = CombatSystem.DAMAGE_FIRE;
+        fire.elementalMinRateFixed = MissileDamageResolver.missileElementalDamageFixed(
+            row, level, true);
+        fire.elementalMaxRateFixed = Math.max(fire.elementalMinRateFixed,
+            MissileDamageResolver.missileElementalDamageFixed(row, level, false));
+        fire.elementalDamageRate = Math.max(0, row.DamageRate);
+        fire.elementalAttackerPlayer = mPlayer.has(source.ownerId);
+        fire.elementalPiercePercent = ownerAttrs == null ? 0
+            : statInt(ownerAttrs, Stat.item_pierce_fire)
+                + statInt(ownerAttrs, Stat.passive_fire_pierce);
+        fire.damageSnapshot = true;
         spawned++;
       }
     }

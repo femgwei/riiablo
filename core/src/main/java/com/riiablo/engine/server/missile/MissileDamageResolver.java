@@ -716,6 +716,18 @@ public final class MissileDamageResolver {
     return (level - 1) * l1;
   }
 
+  /** Returns a Missiles.txt elemental packet in native 8.8 fixed-point form. */
+  public static int missileElementalDamageFixed(Missiles.Entry row, int level,
+      boolean minimum) {
+    if (row == null) return 0;
+    int base = minimum ? row.EMin : row.Emax;
+    int[] perLevel = minimum ? row.MinELev : row.MaxELev;
+    long value = Math.max(0L, (long) base + damageBonusByLevel(Math.max(1, level), perLevel));
+    int shift = Math.max(0, Math.min(30, row.HitShift));
+    value <<= shift;
+    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+  }
+
   private static int shiftedDamage(int base, int[] perLevel, int level, int hitShift) {
     long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
     int shift = hitShift - 8;
