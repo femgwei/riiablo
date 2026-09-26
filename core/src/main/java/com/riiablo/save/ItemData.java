@@ -288,6 +288,20 @@ public class ItemData {
     return isThrowableWeapon(left) ? left : null;
   }
 
+  /** Returns the active Amazon javelin/spear weapon, from the current set only. */
+  public Item getEquippedJavelinWeapon() {
+    Item right = getEquipped(BodyLoc.RARM);
+    if (isJavelinWeapon(right)) return right;
+    Item left = getEquipped(BodyLoc.LARM);
+    return isJavelinWeapon(left) ? left : null;
+  }
+
+  /** Javelin and spear are the weapon classes used by Amazon's Javelin tree. */
+  public static boolean isJavelinWeapon(Item item) {
+    return item != null && item.type != null
+        && (item.type.is(Type.JAVE) || item.type.is(Type.SPEA));
+  }
+
   /** Returns the active bow/crossbow, independent of which hand owns it. */
   public Item getEquippedRangedWeapon() {
     Item right = getEquipped(BodyLoc.RARM);

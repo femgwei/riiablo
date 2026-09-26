@@ -90,6 +90,23 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void amazonJavelinTreeRequiresTheActiveJavelinWeaponSet() {
+    Skills.Entry jab = new Skills.Entry();
+    jab.skill = "Jab";
+    assertTrue(NativeSkillResolver.isAmazonJavelinSkill(jab));
+    assertTrue(NativeSkillResolver.requiresThrowableWeapon(jab));
+
+    Skills.Entry lightningFury = new Skills.Entry();
+    lightningFury.skill = "Lightning Fury";
+    assertTrue(NativeSkillResolver.isAmazonJavelinSkill(lightningFury));
+
+    Skills.Entry bow = new Skills.Entry();
+    bow.skill = "Magic Arrow";
+    assertFalse(NativeSkillResolver.isAmazonJavelinSkill(bow));
+    assertFalse(NativeSkillResolver.requiresThrowableWeapon(bow));
+  }
+
+  @Test
   public void manaUsesNativeFixedPointFormula() {
     Skills.Entry skill = new Skills.Entry();
     skill.mana = 12;

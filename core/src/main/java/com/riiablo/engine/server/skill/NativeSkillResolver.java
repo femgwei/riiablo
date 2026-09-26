@@ -166,6 +166,37 @@ public final class NativeSkillResolver {
     }
   }
 
+  /**
+   * Amazon Javelin and Spear skills require a weapon from the active
+   * javelin/spear weapon set.  Skills.txt does not expose the item-type
+   * restriction as a column, so keep the native skill-tree allow-list here
+   * instead of accidentally treating these skills as unarmed attacks when a
+   * bow is active.
+   */
+  public static boolean isAmazonJavelinSkill(Skills.Entry skill) {
+    if (skill == null || skill.skill == null) return false;
+    switch (skill.skill.trim().toLowerCase(java.util.Locale.ROOT)) {
+      case "jab":
+      case "power strike":
+      case "poison javelin":
+      case "impale":
+      case "lightning bolt":
+      case "charged strike":
+      case "plague javelin":
+      case "fend":
+      case "lightning strike":
+      case "lightning fury":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** Returns whether a skill requires a javelin/spear or a throwing weapon. */
+  public static boolean requiresThrowableWeapon(Skills.Entry skill) {
+    return isThrowableSkill(skill) || isAmazonJavelinSkill(skill);
+  }
+
   /** Whether this skill consumes the quiver paired with the equipped ranged weapon. */
   public static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
     if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;

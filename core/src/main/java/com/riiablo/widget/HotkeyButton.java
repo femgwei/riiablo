@@ -109,13 +109,21 @@ public class HotkeyButton extends Button {
           if (ammo == null) reason = "missing_ammo";
           else if (value <= 0) reason = "empty_quantity";
         } else if (!NativeSkillResolver.isAmazonBowSkill(skill)
-            && NativeSkillResolver.isThrowableSkill(skill)) {
-          Item throwable = items.getEquippedThrowableWeapon();
+            && NativeSkillResolver.requiresThrowableWeapon(skill)) {
+          boolean javelinSkill = NativeSkillResolver.isAmazonJavelinSkill(skill);
+          Item throwable = javelinSkill
+              ? items.getEquippedJavelinWeapon()
+              : items.getEquippedThrowableWeapon();
           int value = itemQuantity(throwable);
-          if (throwable != null) quantityText = Integer.toString(value);
-          disabled = throwable == null || value <= 0;
+          if (throwable != null && NativeSkillResolver.isThrowableSkill(skill)) {
+            quantityText = Integer.toString(value);
+          }
+          // Javelin-tree melee skills only require the active javelin/spear;
+          // quantity is relevant to explicit throw skills, not Jab/Fend/etc.
+          boolean emptyThrowStack = !javelinSkill && value <= 0;
+          disabled = throwable == null || emptyThrowStack;
           if (throwable == null) reason = "no_throwable_weapon";
-          else if (value <= 0) reason = "empty_quantity";
+          else if (emptyThrowStack) reason = "empty_quantity";
         }
       }
 
