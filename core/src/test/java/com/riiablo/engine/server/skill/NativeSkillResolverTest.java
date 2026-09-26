@@ -105,8 +105,11 @@ public class NativeSkillResolverTest {
       Skills.Entry nativeRow = new Skills.Entry();
       nativeRow.Id = id;
       nativeRow.skill = "";
+      nativeRow.decquant = true;
       assertTrue(NativeSkillResolver.isAmazonJavelinSkill(nativeRow),
           "native Amazon javelin skill id=" + id);
+      assertFalse(NativeSkillResolver.isAmazonBowSkill(nativeRow),
+          "javelin skill must not be treated as a bow skill id=" + id);
     }
 
     Skills.Entry throwSkill = new Skills.Entry();

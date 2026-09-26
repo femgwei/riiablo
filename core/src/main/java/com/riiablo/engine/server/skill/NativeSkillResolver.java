@@ -230,7 +230,11 @@ public final class NativeSkillResolver {
   /** Whether this skill consumes the quiver paired with the equipped ranged weapon. */
   public static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
     if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;
-    return skill.Id == SkillCodes.attack || skill.decquant || isAmazonBowSkill(skill);
+    // decquant is also set on Amazon javelin skills (Poison Javelin,
+    // Lightning Bolt, Plague Javelin and Lightning Fury) because they consume
+    // the weapon's quantity.  It must not make those skills consume a bow's
+    // arrow quiver when a bow is active.
+    return skill.Id == SkillCodes.attack || isAmazonBowSkill(skill);
   }
 
   /**
