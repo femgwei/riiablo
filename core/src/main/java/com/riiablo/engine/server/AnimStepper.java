@@ -71,10 +71,11 @@ public class AnimStepper extends IntervalIteratingSystem {
       // instead of overwriting it with the wrapped frame below.
       int frameBeforeFinished = animData.frame;
       events.dispatch(AnimDataFinishedEvent.obtain(entityId));
-      if (animData.frame != frameBeforeFinished) {
+      boolean animationWasRewound = animData.frame != frameBeforeFinished;
+      if (animationWasRewound) {
         nextFrame = animData.frame;
       }
-      animData.lastKeyframeIndex = -1;
+      if (!animationWasRewound) animData.lastKeyframeIndex = -1;
     }
     animData.frame = nextFrame;
 

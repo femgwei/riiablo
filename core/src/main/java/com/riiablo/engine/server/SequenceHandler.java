@@ -211,6 +211,7 @@ public class SequenceHandler extends IteratingSystem {
    */
   private void restartStrafeAnimation(int entityId, Casting casting) {
     AnimData anim = mAnimData.get(entityId);
+    int currentFrame = anim.frame >>> 8;
     int rollbackPercent = 50;
     com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
     if (skill != null && skill.Param != null && skill.Param.length > 5
@@ -220,11 +221,16 @@ public class SequenceHandler extends IteratingSystem {
     // handling this event; the precise rollback is applied immediately after.
     cofs.setMode(entityId, mSequence.get(entityId).mode1, true);
     anim = mAnimData.get(entityId);
-    int midpoint = Math.max(0, anim.numFrames * (100 - rollbackPercent) / 100);
+    // D2MOO uses the current sequence frame, not the table's total frame
+    // count: nCalc = (100 - Param6) * currentFrame / 100, then it resumes at
+    // currentFrame - nCalc.  With Param6=50 and a 13-frame terminal position,
+    // that is frame 6 (integer truncation), not frame 7 of a 14-frame COF.
+    int rollbackFrame = Math.max(0, currentFrame * rollbackPercent / 100);
     int attackFrame = firstAttackFrame(anim);
-    int restartFrame = attackFrame >= 0 ? Math.min(midpoint, Math.max(0, attackFrame - 1)) : midpoint;
+    int restartFrame = attackFrame >= 0
+        ? Math.min(rollbackFrame, Math.max(0, attackFrame - 1)) : rollbackFrame;
     anim.frame = Math.min(Math.max(0, restartFrame), Math.max(0, anim.numFrames - 1));
-    anim.lastKeyframeIndex = -1;
+    anim.lastKeyframeIndex = Math.max(-1, (anim.frame >>> 8) - 1);
     anim.override = strafeAnimationSpeed(entityId, anim.speed);
     // Keep SequenceHandler from invoking CofManager's ordinary frame-zero
     // mode transition on the next tick; the client receives the forced mode

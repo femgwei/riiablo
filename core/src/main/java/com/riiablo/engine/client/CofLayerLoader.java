@@ -77,13 +77,13 @@ public class CofLayerLoader extends IteratingSystem {
         int frame = 0;
         Casting casting = mCasting.has(event.entityId) ? mCasting.get(event.entityId) : null;
         if (casting != null && casting.strafeInitialized) {
+          int currentFrame = animation.getFrame();
           AnimData anim = mAnimData.get(event.entityId);
           int rollbackPercent = 50;
           com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
           if (skill != null && skill.Param != null && skill.Param.length > 5
               && skill.Param[5] > 0) rollbackPercent = skill.Param[5];
-          int midpoint = Math.max(0,
-              animation.getNumFramesPerDir() * (100 - rollbackPercent) / 100);
+          int rollbackFrame = Math.max(0, currentFrame * rollbackPercent / 100);
           int attackFrame = -1;
           if (anim != null && anim.keyframes != null) {
             for (int i = 0; i < anim.keyframes.length; i++) {
@@ -93,11 +93,14 @@ public class CofLayerLoader extends IteratingSystem {
               }
             }
           }
-          frame = attackFrame >= 0 ? Math.min(midpoint, Math.max(0, attackFrame - 1)) : midpoint;
+          frame = attackFrame >= 0
+              ? Math.min(rollbackFrame, Math.max(0, attackFrame - 1)) : rollbackFrame;
           frame = Math.min(frame, animation.getNumFramesPerDir() - 1);
           Gdx.app.log(TAG, String.format(
-              "[STRAFE_ANIM] phase=client_rollback entity=%d frame=%d attackFrame=%d rollbackPercent=%d",
-              event.entityId, frame, attackFrame, rollbackPercent));
+              "[STRAFE_ANIM] phase=client_rollback entity=%d currentFrame=%d frame=%d "
+                  + "attackFrame=%d rollbackPercent=%d frameDelta=%d",
+              event.entityId, currentFrame, frame, attackFrame, rollbackPercent,
+              animation.getFrameDelta()));
         }
         animation.setFrame(frame);
         animation.updateBox();
