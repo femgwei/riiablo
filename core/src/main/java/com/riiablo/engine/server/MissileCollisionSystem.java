@@ -2824,10 +2824,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     if (combat.coldDuration > 0
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
+      // D2Game invokes ApplyColdState and ApplyFreezeState independently.
+      // Cold must run first because it owns the native shatter roll.
+      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       if (missile != null && missile.freezesTarget) {
         StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
-      } else {
-        StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       }
     }
   }

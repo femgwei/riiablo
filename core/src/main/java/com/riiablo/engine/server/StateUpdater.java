@@ -1724,15 +1724,16 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyNativeShatterRoll(int entityId, int duration, int sourceId) {
     if (!mMonster.has(entityId) || !mUnitStates.has(entityId)) return;
     Monster monster = mMonster.get(entityId);
-    if (monster.monstats2 == null || !monster.monstats2.deadCol) return;
     UnitStates component = mUnitStates.get(entityId);
     if (component.stateList == null) component.init(entityId);
     if (monster.rngState == 0) {
       monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, entityId).state();
     }
     NativeRng rng = new NativeRng(monster.rngState);
-    boolean shatter = rng.nextInt(100) >= 20;
+    int roll = rng.nextInt(100);
     monster.rngState = rng.state();
+    boolean eligible = monster.monstats2 != null && monster.monstats2.deadCol;
+    boolean shatter = eligible && roll >= 20;
     if (shatter) {
       UnitState state = component.stateList.extendState(
           StateId.SHATTER, Math.max(1, duration), 1, sourceId);
@@ -1740,8 +1741,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     } else {
       component.stateList.removeState(StateId.SHATTER);
     }
-    log.debug("[MONSTER_SHATTER] phase=cold_roll entity={} source={} deadCol={} shatter={}",
-        entityId, sourceId, true, shatter);
+    log.debug("[MONSTER_SHATTER] phase=cold_roll entity={} source={} deadCol={} eligible={} roll={} shatter={}",
+        entityId, sourceId, monster.monstats2 != null && monster.monstats2.deadCol,
+        eligible, roll, shatter);
   }
 
   private UnitState applyNativeFreezeState(int entityId, StateList states,
@@ -1768,11 +1770,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState freeze = states.extendState(
         StateId.FREEZE, Math.max(1, duration), level, sourceId);
     if (freeze != null) freeze.needsSync = true;
-    // Freeze packets carry the same cold elemental hit in riiablo's missile
-    // result.  Native death handling still performs the deadCol shatter roll
-    // before the eventual DeathEvent, so Freezing Arrow and Glacial Spike can
-    // produce an icebreak corpse just like D2MOO.
-    applyNativeShatterRoll(entityId, Math.max(1, duration), sourceId);
+    // Native ApplyFreezeState does not perform the shatter roll for ordinary
+    // monsters.  The missile path applies COLD immediately before FREEZE, and
+    // ApplyColdState owns that roll.
     return freeze;
   }
 
