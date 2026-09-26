@@ -6,6 +6,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
@@ -53,6 +54,8 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<UnitLifecycle> mLifecycle;
+  protected ComponentMapper<CofReference> mCofReference;
+  protected CofManager cofs;
 
   @Subscribe
   public void onDeath(DeathEvent event) {
@@ -73,9 +76,10 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     }
 
     Monster monster = mMonster.get(event.victim);
+    boolean shattered = false;
     if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {
       StateList states = mUnitStates.get(event.victim).stateList;
-      boolean shattered = states.hasState(
+      shattered = states.hasState(
           com.riiablo.engine.server.state.StateId.SHATTER);
       boolean boss = monster != null && monster.monstats != null && monster.monstats.boss;
       states.retainForDeath(
@@ -86,6 +90,18 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       if (shattered && !states.hasState(com.riiablo.engine.server.state.StateId.SHATTER)) {
         states.addState(com.riiablo.engine.server.state.StateId.SHATTER, 0, 1, event.killer);
       }
+    }
+
+    // Shattered monsters do not play the ordinary DT death animation.  Native
+    // cold-kill presentation jumps straight to DD/icebreak; dispatching DD
+    // here also gives the client DeathHandler a single synchronous point to
+    // spawn the icebreak missile before the entity is retired.
+    if (shattered && cofs != null && mCofReference != null
+        && mCofReference.has(event.victim)) {
+      log.info("[MONSTER_CORPSE] phase=shatter_death_skip entity={} killer={}",
+          event.victim, event.killer);
+      cofs.setMode(event.victim, Engine.Monster.MODE_DD, true);
+      return;
     }
 
     // Local GameScreen still has DeathHandler, so this call is intentionally
