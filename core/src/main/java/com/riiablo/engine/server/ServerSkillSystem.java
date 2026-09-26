@@ -460,6 +460,10 @@ public class ServerSkillSystem extends PassiveSystem {
         // it is filtered here, SkillCastHandler falls back to client-only
         // fan arrows created without an owner, so they can never collide.
         && event.srvdofunc != 8
+        // Guided Arrow (SrvDo010) and Strafe (SrvDo012) also have native
+        // authoritative local-game paths. They must reach spawnGuidedArrow /
+        // spawnStrafe instead of being reduced to ammo consumption.
+        && event.srvdofunc != 10 && event.srvdofunc != 12
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -481,6 +485,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 144
         && skill.srvdofunc != 3 && skill.srvdofunc != 5
         && skill.srvdofunc != 8
+        && skill.srvdofunc != 10 && skill.srvdofunc != 12
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
