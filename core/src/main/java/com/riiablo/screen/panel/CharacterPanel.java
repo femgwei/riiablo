@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -26,6 +27,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.CharStats;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -90,6 +92,12 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     // The stat-point balance belongs to the lower-left "Stat Points" row.
     // It used to be attached to the top "Next Level" box, which made the
     // number appear as an extra value after the next-level experience.
+    Table statPointsRow = new Table();
+    statPointsRow.setBackground(new BorderedPaletteIndexedDrawable());
+    statPointsRow.setPosition(8, getHeight() - 379);
+    statPointsRow.setSize(150, 24);
+    addActor(statPointsRow);
+
     Label statPointsLabel = new Label(4075, Riiablo.fonts.ReallyTheLastSucker);
     statPointsLabel.setPosition(11, getHeight() - 373);
     statPointsLabel.setSize(108, 16);
@@ -401,10 +409,6 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   static boolean skillUsesAttackRating(Skills.Entry skill) {
     if (skill == null || skill.passive || skill.aura) return false;
-    // Native ResultFlags bit 0 marks an always-hit packet. Such skills do not
-    // have a meaningful attack-rating value even when they carry weapon
-    // source damage (Guided Arrow is the common example).
-    if ((skill.ResultFlags & 1) != 0) return false;
     switch (skill.Id) {
       case SkillCodes.attack:
       case SkillCodes.kick:
@@ -413,6 +417,10 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       case SkillCodes.left_hand_swing:
         return true;
       default:
+        // Native ResultFlags bit 0 marks an always-hit packet. Such skills do
+        // not have a meaningful attack-rating value even when they carry
+        // weapon source damage (Guided Arrow is the common example).
+        if ((skill.ResultFlags & 1) != 0) return false;
         // Weapon attacks either scale source damage or expose the native
         // ToHit/LevToHit modifier. Pure spells have none of these fields.
         return skill.SrcDam > 0 || skill.ToHit != 0 || skill.LevToHit != 0;
@@ -520,7 +528,11 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   private long statLong(short stat) {
     StatRef value = Riiablo.charData.getStats().get(stat, StatRef.obtain());
-    return value == null ? 0L : value.asLong();
+    if (value == null) return 0L;
+    // D2 stores experience as an unsigned 32-bit stat. StatList keeps the
+    // encoded value in an int, so high-level characters otherwise display a
+    // negative experience and next-level number in the character panel.
+    return stat == Stat.experience ? value.asLong() & 0xFFFFFFFFL : value.asLong();
   }
 
   private void setNumber(Label label, long value) {
