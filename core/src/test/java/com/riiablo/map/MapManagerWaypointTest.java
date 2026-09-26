@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.badlogic.gdx.math.Vector2;
 import org.junit.jupiter.api.Test;
 
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.Engine;
 
 class MapManagerWaypointTest {
@@ -41,5 +42,17 @@ class MapManagerWaypointTest {
     Map.Zone legacy = new Map.Zone();
     legacy.addRoomEx(0, 0, 40, 40);
     assertTrue(MapManager.shouldCreateNativeObjectsImmediately(legacy));
+  }
+
+  @Test
+  void ignoresNativeWarpMarkerWithoutDestinationOrWarpRow() {
+    Levels.Entry level = new Levels.Entry();
+    level.Vis = new int[] {78, 0};
+    level.Warp = new int[] {55, -1};
+
+    assertTrue(MapManager.hasWarpDestination(level, 0, -1));
+    assertFalse(MapManager.hasWarpDestination(level, 1, -1));
+    assertFalse(MapManager.hasWarpDestination(level, 4, -1));
+    assertTrue(MapManager.hasWarpDestination(level, 4, 88));
   }
 }

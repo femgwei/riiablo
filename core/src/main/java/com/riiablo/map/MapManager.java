@@ -51,8 +51,17 @@ public class MapManager extends PassiveSystem {
     for (IntMap.Entry<DS1.Cell> entry : specials.entries()) {
       DS1.Cell cell = entry.value;
       if (Map.ID.WARPS.contains(cell.id)) {
+        int mainIndex = DT1.Tile.Index.mainIndex(cell.id);
+        int destinationOverride = zone.level == null ? -1
+            : map.getWarpDestinationOverride(zone.level.Id, mainIndex);
+        if (!hasWarpDestination(zone.level, mainIndex, destinationOverride)) {
+          Gdx.app.debug(TAG, String.format(
+              "Skipping unbound warp marker level=%s(%d) mainIndex=%d special=0x%08X",
+              zone.level == null ? "null" : zone.level.LevelName,
+              zone.level == null ? -1 : zone.level.Id, mainIndex, cell.id));
+          continue;
+        }
         if (act3WarpSlots != null) {
-          int mainIndex = DT1.Tile.Index.mainIndex(cell.id);
           // RoomEx exports may contain several wall components for one
           // logical LvlWarp slot.  D2Game creates one interactive warp per
           // slot; deduplicate the visual components before creating entities.
@@ -96,6 +105,19 @@ public class MapManager extends PassiveSystem {
         }
       }
     }
+  }
+
+  static boolean hasWarpDestination(
+      Levels.Entry level, int mainIndex, int destinationOverride) {
+    if (destinationOverride > 0) return true;
+    return level != null
+        && level.Vis != null
+        && level.Warp != null
+        && mainIndex >= 0
+        && mainIndex < level.Vis.length
+        && mainIndex < level.Warp.length
+        && level.Vis[mainIndex] > 0
+        && level.Warp[mainIndex] >= 0;
   }
 
   public void createEntities(Map.Zone zone) {
