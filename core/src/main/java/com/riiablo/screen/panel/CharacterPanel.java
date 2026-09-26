@@ -30,6 +30,7 @@ import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.skill.SkillCodes;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.StatLabel;
@@ -166,7 +167,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 137, getHeight() - 154);
 
     addCombatRow(4063, getHeight() - 162, attackRatingValues, attackRatingNames, 0, false);
-    addCombatRow(4063, getHeight() - 186, attackRatingValues, attackRatingNames, 1, true);
+    addCombatRow(4063, getHeight() - 186, attackRatingValues, attackRatingNames, 1, false);
 
     Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defenseLabel.setPosition(165, getHeight() - 210);
@@ -380,15 +381,53 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     return Riiablo.language == com.riiablo.D2Language.CHINESE ? "" : " ";
   }
 
+  private Skills.Entry selectedSkill(int button) {
+    if (Riiablo.charData == null || Riiablo.files == null) return null;
+    return Riiablo.files.skills.get(Riiablo.charData.getAction(button));
+  }
+
   private String selectedSkillName() {
-    if (Riiablo.charData == null || Riiablo.files == null) return "";
-    int skillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
-    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    return selectedSkillName(Input.Buttons.LEFT);
+  }
+
+  private String selectedSkillName(int button) {
+    Skills.Entry skill = selectedSkill(button);
     if (skill == null) return "";
     SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
     if (desc == null || desc.str_name == null || desc.str_name.isEmpty()) return skill.skill;
     String name = Riiablo.string.lookup(desc.str_name);
     return name == null || name.startsWith("ERROR:") ? skill.skill : name;
+  }
+
+  static boolean skillUsesAttackRating(Skills.Entry skill) {
+    if (skill == null || skill.passive || skill.aura) return false;
+    // Native ResultFlags bit 0 marks an always-hit packet. Such skills do not
+    // have a meaningful attack-rating value even when they carry weapon
+    // source damage (Guided Arrow is the common example).
+    if ((skill.ResultFlags & 1) != 0) return false;
+    switch (skill.Id) {
+      case SkillCodes.attack:
+      case SkillCodes.kick:
+      case SkillCodes.throw_:
+      case SkillCodes.left_hand_throw:
+      case SkillCodes.left_hand_swing:
+        return true;
+      default:
+        // Weapon attacks either scale source damage or expose the native
+        // ToHit/LevToHit modifier. Pure spells have none of these fields.
+        return skill.SrcDam > 0 || skill.ToHit != 0 || skill.LevToHit != 0;
+    }
+  }
+
+  static boolean isNormalAttack(Skills.Entry skill) {
+    return skill != null
+        && (skill.Id == SkillCodes.attack || skill.Id == SkillCodes.left_hand_swing);
+  }
+
+  static int calculateSkillAttackRating(int baseAttackRating, Skills.Entry skill, int level) {
+    if (!skillUsesAttackRating(skill)) return 0;
+    int bonus = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
+    return Math.max(0, baseAttackRating + baseAttackRating * bonus / 100);
   }
 
   private void addStatButton(final int statType, float centerX, float centerY) {
@@ -447,16 +486,27 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     if (damageNames[1] != null) {
       damageNames[1].setText(combatLabel(4061, skillName, true));
     }
-    if (attackRatingNames[0] != null) {
-      attackRatingNames[0].setText(combatLabel(4063, skillName, false));
-    }
-    if (attackRatingNames[1] != null) {
-      attackRatingNames[1].setText(combatLabel(4063, skillName, true));
-    }
+    int baseAttackRating = displayedAttackRating();
+    int[] buttons = {Input.Buttons.LEFT, Input.Buttons.RIGHT};
+    for (int i = 0; i < buttons.length; i++) {
+      Skills.Entry skill = selectedSkill(buttons[i]);
+      Label name = attackRatingNames[i];
+      Label value = attackRatingValues[i];
+      if (!skillUsesAttackRating(skill)) {
+        if (name != null) name.setText("");
+        if (value != null) setCompactText(value, "");
+        continue;
+      }
 
-    int attackRating = displayedAttackRating();
-    for (Label label : attackRatingValues) {
-      if (label != null) setNumber(label, attackRating);
+      if (name != null) {
+        name.setText(isNormalAttack(skill)
+            ? combatLabel(4063, "", false)
+            : combatLabel(4063, selectedSkillName(buttons[i]), true));
+      }
+      if (value != null) {
+        int skillLevel = Math.max(1, Riiablo.charData.getSkill(skill.Id));
+        setNumber(value, calculateSkillAttackRating(baseAttackRating, skill, skillLevel));
+      }
     }
     for (Button button : statButtons) {
       if (button != null) button.setVisible(isVisible() && available > 0);
