@@ -99,12 +99,20 @@ public class AnimStepper extends IntervalIteratingSystem {
 
     int start = animData.lastKeyframeIndex + 1;
     if (start < 0) start = 0;
+    int frameBeforeDispatch = animData.frame;
     if (start <= currentIndex) {
       dispatchRange(entityId, animData.keyframes, start, currentIndex);
     } else if (beforeWrap) {
       dispatchRange(entityId, animData.keyframes, start, maxIndex);
     }
-    animData.lastKeyframeIndex = currentIndex;
+    // A native sequence callback can rewind the animation immediately after
+    // its keyframe (Strafe's Param6 path). Do not overwrite that seek with
+    // the pre-rewind keyframe index, or the next cycle will skip the marker.
+    if (animData.frame != frameBeforeDispatch) {
+      animData.lastKeyframeIndex = Math.max(-1, (animData.frame >>> 8) - 1);
+    } else {
+      animData.lastKeyframeIndex = currentIndex;
+    }
   }
 
   private void dispatchRange(int entityId, byte[] keyframes, int start, int end) {

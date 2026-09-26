@@ -95,12 +95,6 @@ public class SequenceHandler extends IteratingSystem {
           (int) com.riiablo.engine.Engine.Player.MODE_A2);
       return;
     }
-    if (casting != null && casting.strafeInitialized
-        && casting.strafeRemainingArrows > 0) {
-      sequence.sequence(sequence.mode1, sequence.mode2);
-      restartStrafeAnimation(event.entityId, casting);
-      return;
-    }
     if (casting != null && casting.furyInitialized
         && casting.furyRemainingStrikes > 0
         && casting.furyStrikeProcessed) {
@@ -231,7 +225,7 @@ public class SequenceHandler extends IteratingSystem {
    * attack event.  Keep the rewind short enough to cross the first attack
    * marker, which is what produces the rapid bow-firing cadence.
    */
-  private void restartStrafeAnimation(int entityId, Casting casting) {
+  void restartStrafeAnimation(int entityId, Casting casting) {
     AnimData anim = mAnimData.get(entityId);
     int currentFrame = anim.frame >>> 8;
     int rollbackPercent = 50;

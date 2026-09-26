@@ -668,6 +668,12 @@ public class Actioneer extends PassiveSystem {
           event.entityId, casting.skillId,
           casting.targetId, casting.targetVec,
           skill.srvdofunc, skill.cltdofunc));
+      // Native SKILLS_SrvDo012_Strafe selects the next target and invokes
+      // sub_6FD15080 immediately after creating each arrow. Waiting for the
+      // whole COF to finish makes Strafe several times slower than vanilla.
+      if (casting.strafeInitialized && casting.strafeRemainingArrows > 0) {
+        advanceStrafeArrow(event.entityId, casting);
+      }
     } else {
       log.trace("Target {} is dead, skipping damage but continuing attack animation for {}", casting.targetId, event.entityId);
     }
@@ -713,32 +719,6 @@ public class Actioneer extends PassiveSystem {
       }
     }
 
-    // Native Strafe keeps the cast alive while its remaining arrows are
-    // released by successive attack-animation keyframes.  ServerSkillSystem
-    // creates the authoritative arrow set once; each repeat only advances the
-    // facing target so clients see the rapid bow turns from the original.
-    if (casting.strafeInitialized && casting.strafeRemainingArrows > 0) {
-      int nextIndex = casting.strafeArrowIndex + 1;
-      if (nextIndex < casting.strafeTargetIds.size) {
-        casting.strafeArrowIndex = nextIndex;
-        casting.strafeRemainingArrows--;
-        int nextTarget = casting.strafeTargetIds.get(nextIndex);
-        casting.targetId = nextTarget;
-        if (mPosition.has(nextTarget)) {
-          casting.targetVec.set(mPosition.get(nextTarget).position);
-          if (mAngle.has(event.entityId) && mPosition.has(event.entityId)) {
-            mAngle.get(event.entityId).target.set(casting.targetVec)
-                .sub(mPosition.get(event.entityId).position).nor();
-          }
-        }
-        log.info("[STRAFE_ANIM] phase=next_arrow entity={} index={} remaining={} target={}",
-            event.entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows,
-            casting.targetId);
-        return;
-      }
-      casting.strafeRemainingArrows = 0;
-    }
-    
     // D2MOD: Check if target is dead after attack animation completes
     boolean targetDead = false;
     if (casting.targetId != Engine.INVALID_ENTITY) {
@@ -821,6 +801,36 @@ public class Actioneer extends PassiveSystem {
       // D2MOD: Require release before next attack; prevents repeated swinging after target death
       lastAttackTargetDied.add(event.entityId);
     }
+  }
+
+  /**
+   * Advances Strafe's native target stream and rewinds the current sequence
+   * immediately after one missile has been emitted.
+   */
+  private void advanceStrafeArrow(int entityId, Casting casting) {
+    int nextIndex = casting.strafeArrowIndex + 1;
+    if (nextIndex >= casting.strafeTargetIds.size) {
+      casting.strafeRemainingArrows = 0;
+      return;
+    }
+    casting.strafeArrowIndex = nextIndex;
+    casting.strafeRemainingArrows--;
+    int nextTarget = casting.strafeTargetIds.get(nextIndex);
+    casting.targetId = nextTarget;
+    if (mPosition.has(nextTarget)) {
+      casting.targetVec.set(mPosition.get(nextTarget).position);
+      if (mAngle.has(entityId) && mPosition.has(entityId)) {
+        mAngle.get(entityId).target.set(casting.targetVec)
+            .sub(mPosition.get(entityId).position).nor();
+      }
+    }
+    SequenceHandler sequenceHandler = world.getSystem(SequenceHandler.class);
+    if (sequenceHandler != null) {
+      sequenceHandler.restartStrafeAnimation(entityId, casting);
+    }
+    log.info("[STRAFE_ANIM] phase=next_arrow entity={} index={} remaining={} target={} timing=immediate",
+        entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows,
+        casting.targetId);
   }
 
   @Subscribe
