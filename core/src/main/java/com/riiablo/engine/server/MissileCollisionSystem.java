@@ -1551,6 +1551,12 @@ public class MissileCollisionSystem extends IteratingSystem {
             combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll,
             combat.physicalDamage, damage, combat.critical, combat.deadlyStrike,
             combat.crushingBlow);
+        // Native cold/freeze callbacks run as part of the impact packet,
+        // before life is reduced and before the lethal DeathEvent is emitted.
+        // This lets deadCol monsters retain SHATTER for the death-mode choice.
+        // It also preserves poison/cold application for packets whose
+        // immediate damage is zero.
+        applyCombatStates(missile, targetId, combat);
         if (damage > 0 && mAttributesWrapper.has(targetId)) {
           log.info("Missile {} hits {} for {} damage (ownerId={}, critical={}, deadly={})",
               missileId, targetId, damage, missile.ownerId, combat.critical, combat.deadlyStrike);
@@ -1616,9 +1622,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           }
         }
         // Poison is intentionally excluded from immediate totalDamage and is
-        // resolved by StateUpdater over poisonDuration.  Apply hit states even
-        // when this is a pure poison cloud whose immediate damage is zero.
-        applyCombatStates(missile, targetId, combat);
+        // resolved by StateUpdater over poisonDuration.
       }
 
       if (damageHit) applyNativeMissileDamageState(missileId, missile, targetId);
