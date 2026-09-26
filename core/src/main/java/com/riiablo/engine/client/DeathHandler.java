@@ -41,6 +41,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.item.BodyLoc;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Box2DPhysics;
@@ -68,6 +69,9 @@ public class DeathHandler extends PassiveSystem {
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<UnitStates> mUnitStates;
+
+  @Wire(name = "factory")
+  protected EntityFactory factory;
 
   protected CofManager cofs;
 
@@ -269,6 +273,10 @@ public class DeathHandler extends PassiveSystem {
     // Handle monster corpse mode
     if (mMonster.has(entityId) && event.mode == Engine.Monster.MODE_DD) {
       log.debug("Monster {} entered corpse mode (MODE_DD)", entityId);
+      boolean shattered = isShattered(entityId);
+      if (shattered) {
+        spawnShatterEffect(entityId);
+      }
       // Destroy physics body so corpse doesn't block movement
       if (mBox2DBody.has(entityId)) {
         Body body = mBox2DBody.get(entityId).body;
@@ -304,11 +312,44 @@ public class DeathHandler extends PassiveSystem {
 
       // Add the persistent native corpse marker. RoomEx lifecycle/explicit
       // corpse-consuming skills own removal; this is not a ten-second timer.
-      if (!mCorpse.has(entityId)) {
+      if (!shattered && !mCorpse.has(entityId)) {
         mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
         log.debug("Monster {} entered persistent native corpse state", entityId);
+      } else if (shattered && mCorpse.has(entityId)) {
+        mCorpse.remove(entityId);
       }
     }
+  }
+
+  private boolean isShattered(int entityId) {
+    return mUnitStates.has(entityId)
+        && mUnitStates.get(entityId).stateList != null
+        && mUnitStates.get(entityId).stateList.hasState(
+            com.riiablo.engine.server.state.StateId.SHATTER);
+  }
+
+  private void spawnShatterEffect(int entityId) {
+    if (factory == null || !(factory instanceof ClientEntityFactory)
+        || !mPosition.has(entityId) || Riiablo.files == null
+        || Riiablo.files.Missiles == null) return;
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.MEDIUM;
+    String name = shatterMissileName(size);
+    com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+    int visualId = ((ClientEntityFactory) factory).createMissilePresentation(row,
+        new Vector2(1f, 0f), new Vector2(mPosition.get(entityId).position));
+    if (Riiablo.audio != null && row.TravelSound != null && !row.TravelSound.isEmpty()) {
+      Riiablo.audio.play(row.TravelSound, true);
+    }
+    log.info("[MONSTER_SHATTER] entity={} size={} missile={} visualId={} position=({}, {})",
+        entityId, size, name, visualId,
+        mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
+  }
+
+  static String shatterMissileName(int size) {
+    if (size >= Size.LARGE) return "icebreaklarge";
+    if (size <= Size.SMALL) return "icebreaksmall";
+    return "icebreakmedium";
   }
   
   /**

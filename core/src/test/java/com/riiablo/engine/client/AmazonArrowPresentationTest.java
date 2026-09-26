@@ -161,6 +161,13 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void shatterDeathUsesNativeIcebreakMissileByMonsterSize() {
+    assertEquals("icebreaksmall", DeathHandler.shatterMissileName(1));
+    assertEquals("icebreakmedium", DeathHandler.shatterMissileName(2));
+    assertEquals("icebreaklarge", DeathHandler.shatterMissileName(3));
+  }
+
+  @Test
   void circularClientCallbacksUseMissileDirectionCount() {
     Missiles.Entry frostNova = Riiablo.files.Missiles.get("frostnova");
     assertNotNull(frostNova);

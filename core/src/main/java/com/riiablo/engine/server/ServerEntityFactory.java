@@ -390,6 +390,7 @@ public class ServerEntityFactory extends EntityFactory {
     mNativeUnitFlags.create(id).reset().set(NativeUnitFlags.MONSTER_TARGET);
     Monster monster = mMonster.create(id).set(monstats, monstats2)
         .setRank(rank, affixes, championType, uniqueId);
+    monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
 
     Attributes attrs = Attributes.obtainStandard();

@@ -1709,7 +1709,39 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           NativeStatResolver.Operation.ADD, coldEffect);
       cold.needsSync = true;
     }
+    applyNativeShatterRoll(entityId, duration, sourceId);
     return cold;
+  }
+
+  /**
+   * D2MOO's SUNITDMG_ApplyColdState rolls the defender seed after applying
+   * cold. Only MonStats2.deadCol monsters may retain STATE_SHATTER into
+   * death; the death systems then suppress the usable corpse and the client
+   * plays the icebreaksmall/medium/large presentation.
+   *
+   * <p>The native comparison is intentionally preserved: (roll % 100) >= 20.
+   */
+  private void applyNativeShatterRoll(int entityId, int duration, int sourceId) {
+    if (!mMonster.has(entityId) || !mUnitStates.has(entityId)) return;
+    Monster monster = mMonster.get(entityId);
+    if (monster.monstats2 == null || !monster.monstats2.deadCol) return;
+    UnitStates component = mUnitStates.get(entityId);
+    if (component.stateList == null) component.init(entityId);
+    if (monster.rngState == 0) {
+      monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, entityId).state();
+    }
+    NativeRng rng = new NativeRng(monster.rngState);
+    boolean shatter = rng.nextInt(100) >= 20;
+    monster.rngState = rng.state();
+    if (shatter) {
+      UnitState state = component.stateList.extendState(
+          StateId.SHATTER, Math.max(1, duration), 1, sourceId);
+      if (state != null) state.needsSync = true;
+    } else {
+      component.stateList.removeState(StateId.SHATTER);
+    }
+    log.debug("[MONSTER_SHATTER] phase=cold_roll entity={} source={} deadCol={} shatter={}",
+        entityId, sourceId, true, shatter);
   }
 
   private UnitState applyNativeFreezeState(int entityId, StateList states,
@@ -1736,6 +1768,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState freeze = states.extendState(
         StateId.FREEZE, Math.max(1, duration), level, sourceId);
     if (freeze != null) freeze.needsSync = true;
+    // Freeze packets carry the same cold elemental hit in riiablo's missile
+    // result.  Native death handling still performs the deadCol shatter roll
+    // before the eventual DeathEvent, so Freezing Arrow and Glacial Spike can
+    // produce an icebreak corpse just like D2MOO.
+    applyNativeShatterRoll(entityId, Math.max(1, duration), sourceId);
     return freeze;
   }
 

@@ -34,6 +34,8 @@ public class Monster extends Component {
 
   /** Native MonsterSpawn minion owner for ordinary monster party members. */
   public int minionOwnerId = -1;
+  /** Native per-monster seed consumed by cold/shatter rolls. */
+  public int rngState;
   /** Deferred RoomEx pack identity and leader marker used during activation. */
   public int nativePackId = -1;
   public boolean nativePackLeader;
@@ -74,6 +76,7 @@ public class Monster extends Component {
     baalWaveRoomId = -1;
     baalWaveLeader = false;
     minionOwnerId = -1;
+    rngState = 0;
     nativePackId = -1;
     nativePackLeader = false;
     attack2MinDamage = 0;

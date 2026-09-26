@@ -126,6 +126,14 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         new Vector2(), 40).setOwner(1);
     assertTrue(MissileDamageResolver.initializeSkill(iceMissile, ice, owner, 1));
     assertTrue(iceMissile.freezesTarget);
+
+    Skills.Entry glacial = Riiablo.files.skills.get("Glacial Spike");
+    assertNotNull(glacial);
+    Missile glacialMissile = new Missile().set(Riiablo.files.Missiles.get("glacialspike"),
+        new Vector2(), 1).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkillArea(glacialMissile, glacial, owner, 1));
+    assertTrue(glacialMissile.freezesTarget,
+        "Glacial Spike's frze missile type must apply the native freeze path");
   }
 
   @Test
