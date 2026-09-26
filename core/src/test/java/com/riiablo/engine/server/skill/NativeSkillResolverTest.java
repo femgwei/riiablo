@@ -100,6 +100,15 @@ public class NativeSkillResolverTest {
     lightningFury.skill = "Lightning Fury";
     assertTrue(NativeSkillResolver.isAmazonJavelinSkill(lightningFury));
 
+    int[] javelinIds = {15, 20, 25, 35};
+    for (int id : javelinIds) {
+      Skills.Entry nativeRow = new Skills.Entry();
+      nativeRow.Id = id;
+      nativeRow.skill = "";
+      assertTrue(NativeSkillResolver.isAmazonJavelinSkill(nativeRow),
+          "native Amazon javelin skill id=" + id);
+    }
+
     Skills.Entry throwSkill = new Skills.Entry();
     throwSkill.Id = com.riiablo.skill.SkillCodes.throw_;
     assertTrue(NativeSkillResolver.isAmazonJavelinWeaponSkill(throwSkill, Riiablo.AMAZON));

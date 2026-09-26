@@ -174,7 +174,25 @@ public final class NativeSkillResolver {
    * bow is active.
    */
   public static boolean isAmazonJavelinSkill(Skills.Entry skill) {
-    if (skill == null || skill.skill == null) return false;
+    if (skill == null) return false;
+    // The 1.10 Skills.txt IDs are stable and remain reliable when a
+    // localized/custom table changes the display name or leaves it empty.
+    switch (skill.Id) {
+      case 10: // Jab
+      case 14: // Power Strike
+      case 15: // Poison Javelin
+      case 19: // Impale
+      case 20: // Lightning Bolt
+      case 24: // Charged Strike
+      case 25: // Plague Javelin
+      case 30: // Fend
+      case 34: // Lightning Strike
+      case 35: // Lightning Fury
+        return true;
+      default:
+        break;
+    }
+    if (skill.skill == null) return false;
     switch (skill.skill.trim().toLowerCase(java.util.Locale.ROOT)) {
       case "jab":
       case "power strike":
