@@ -26,6 +26,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.MonPreset;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.COF;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AIWrapper;
@@ -449,13 +450,26 @@ public class ServerEntityFactory extends EntityFactory {
     reference.mode   = monstats.spawnmode.isEmpty() ? Engine.Monster.MODE_NU : (byte) Riiablo.files.MonMode.index(monstats.spawnmode);
     reference.wclass = (byte) Riiablo.files.WeaponClass.index(monstats2.BaseW);
     int[] component = mCofComponents.create(id).component;
+    boolean hasComponentValue = false;
     for (byte i = 0; i < monstats2.ComponentV.length; i++) {
       String ComponentV = monstats2.ComponentV[i];
       if (!ComponentV.isEmpty()) {
+        hasComponentValue = true;
         String[] v = StringUtils.remove(ComponentV, '"').split(",");
         int random = MathUtils.random(0, v.length - 1);
         component[i] = Riiablo.files.compcode.index(v[random]);
       }
+    }
+    // A few native summon rows (most notably Valkyrie/Dopplezon) leave
+    // ComponentV completely empty even though their COF contains a mandatory
+    // TR body layer. D2Common resolves that omitted standalone body to LIT;
+    // keeping it as NIL makes CofLayerCacher clear the only layer and leaves
+    // an ECS monster with valid AI/physics but no visible sprite. Optional
+    // equipment layers remain NIL.
+    if (!hasComponentValue && component[COF.Component.TR] == CofComponents.COMPONENT_NIL) {
+      component[COF.Component.TR] = CofComponents.COMPONENT_LIT;
+      log.debug("[MONSTER_PRESENTATION] entity={} monster={} defaultTR=LIT reason=empty_ComponentV",
+          id, monstats.Id);
     }
 
     mCofAlphas.create(id);

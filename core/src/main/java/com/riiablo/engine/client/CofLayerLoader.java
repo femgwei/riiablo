@@ -136,10 +136,37 @@ public class CofLayerLoader extends IteratingSystem {
       if (!isLocalPlayer(entityId)) unload(c, descriptors);
       AssetDescriptor<? extends DC> descriptor = descriptors[c];
       String path = builder.replace(start + 16, start + 19, DCC.EXT).toString();
+      // Standalone summon rows such as Valkyrie ship one-frame COFs but only
+      // a NU body DCC.  Their WL/GH/etc. COFs intentionally reuse that static
+      // sprite; requiring a mode-specific DCC clears the only layer as soon
+      // as the pet starts moving.  Try the native NU body only for one-frame
+      // COFs, preserving strict mode lookup for animated monsters.
+      if (!Riiablo.mpqs.contains(path) && cof.getNumFramesPerDir() <= 1
+          && mode != Engine.Monster.MODE_NU) {
+        String fallback = new StringBuilder(builder)
+            .replace(start + 10, start + 12, type.getMode(Engine.Monster.MODE_NU))
+            .replace(start + 16, start + 19, DCC.EXT)
+            .toString();
+        if (Riiablo.mpqs.contains(fallback)) {
+          Gdx.app.debug(TAG, "Reusing static NU COF layer for " + path);
+          path = fallback;
+        }
+      }
       if (Riiablo.mpqs.contains(path)) {
         descriptor = descriptors[c] = new AssetDescriptor<>(path, DCC.class);
       } else {
         path = builder.replace(start + 16, start + 19, DC6.EXT).toString();
+        if (!Riiablo.mpqs.contains(path) && cof.getNumFramesPerDir() <= 1
+            && mode != Engine.Monster.MODE_NU) {
+          String fallback = new StringBuilder(builder)
+              .replace(start + 10, start + 12, type.getMode(Engine.Monster.MODE_NU))
+              .replace(start + 16, start + 19, DC6.EXT)
+              .toString();
+          if (Riiablo.mpqs.contains(fallback)) {
+            Gdx.app.debug(TAG, "Reusing static NU COF layer for " + path);
+            path = fallback;
+          }
+        }
         if (Riiablo.mpqs.contains(path)) {
           descriptor = descriptors[c] = new AssetDescriptor<>(path, DC6.class);
         } else {

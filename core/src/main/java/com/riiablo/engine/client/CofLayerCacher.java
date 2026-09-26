@@ -49,6 +49,12 @@ public class CofLayerCacher extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     CofLoadingComponents loading = mCofLoadingComponents.get(entityId);
+    // A mode/COF change can remove the transient loading component while this
+    // subscription is being iterated (notably during the initial town
+    // presentation pass).  Artemis may still hand the stale entity id to
+    // this system for the current pass; do not turn that benign race into a
+    // LWJGL-thread crash that aborts the game before summons are presented.
+    if (loading == null) return;
     loading.flags = cacheDcs(entityId, loading.flags);
     if (loading.flags == Dirty.NONE) mCofLoadingComponents.remove(entityId);
   }
