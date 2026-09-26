@@ -3,13 +3,13 @@ package com.riiablo.screen.panel;
 import java.text.NumberFormat;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -24,6 +24,8 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.SkillDesc;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -48,6 +50,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private Label nextLevelValue;
   private final Label[] damageValues = new Label[2];
   private final Label[] attackRatingValues = new Label[2];
+  private final Label[] damageNames = new Label[2];
+  private final Label[] attackRatingNames = new Label[2];
   private final Button[] statButtons = new Button[4];
   private Button.ButtonStyle statButtonStyle;
 
@@ -82,8 +86,18 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     });
     addActor(btnExit);
 
+    // The stat-point balance belongs to the lower-left "Stat Points" row.
+    // It used to be attached to the top "Next Level" box, which made the
+    // number appear as an extra value after the next-level experience.
+    Label statPointsLabel = new Label(4075, Riiablo.fonts.ReallyTheLastSucker);
+    statPointsLabel.setPosition(11, getHeight() - 373);
+    statPointsLabel.setSize(108, 16);
+    statPointsLabel.setAlignment(Align.center);
+    addActor(statPointsLabel);
+
     statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
-    statPoints.setPosition(275, getHeight() - 65);
+    statPoints.setAutoSize(false);
+    statPoints.setPosition(120, getHeight() - 373);
     statPoints.setSize(36, 16);
     statPoints.setAlignment(Align.center);
     addActor(statPoints);
@@ -94,21 +108,21 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     name.setAlignment(Align.center);
     addActor(name);
 
-    Table level = new Table();
-    level.setPosition(12, getHeight() - 65);
-    level.setSize(42, 33);
-    level.add(new Label(4057, Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label levelLabel = new Label(4057, Riiablo.fonts.ReallyTheLastSucker);
+    levelLabel.setPosition(12, getHeight() - 48);
+    levelLabel.setSize(42, 14);
+    levelLabel.setAlignment(Align.center);
+    addActor(levelLabel);
     levelValue = new Label("0", Riiablo.fonts.font16);
-    level.add(levelValue).growY().row();
-    addActor(level);
+    configureTopValue(levelValue, 12, 42);
 
-    Table exp = new Table();
-    exp.setPosition(66, getHeight() - 65);
-    exp.setSize(114, 33);
-    exp.add(new Label(4058, Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label expLabel = new Label(4058, Riiablo.fonts.ReallyTheLastSucker);
+    expLabel.setPosition(66, getHeight() - 48);
+    expLabel.setSize(114, 14);
+    expLabel.setAlignment(Align.center);
+    addActor(expLabel);
     experienceValue = new Label("0", Riiablo.fonts.font16);
-    exp.add(experienceValue).growY().row();
-    addActor(exp);
+    configureTopValue(experienceValue, 66, 114);
 
     Label clazz = new Label(Riiablo.charData.classId.name, Riiablo.fonts.font16);
     clazz.setPosition(194, getHeight() - 24);
@@ -116,13 +130,13 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     clazz.setAlignment(Align.center);
     addActor(clazz);
 
-    Table nextLevel = new Table();
-    nextLevel.setPosition(194, getHeight() - 65);
-    nextLevel.setSize(114, 33);
-    nextLevel.add(new Label(4059, Riiablo.fonts.ReallyTheLastSucker)).row();
+    Label nextLevelLabel = new Label(4059, Riiablo.fonts.ReallyTheLastSucker);
+    nextLevelLabel.setPosition(194, getHeight() - 48);
+    nextLevelLabel.setSize(114, 14);
+    nextLevelLabel.setAlignment(Align.center);
+    addActor(nextLevelLabel);
     nextLevelValue = new Label("0", Riiablo.fonts.font16);
-    nextLevel.add(nextLevelValue).growY().row();
-    addActor(nextLevel);
+    configureTopValue(nextLevelValue, 194, 114);
 
     Label strLabel = new Label(4060, Riiablo.fonts.ReallyTheLastSucker);
     strLabel.setPosition(11, getHeight() - 100);
@@ -136,8 +150,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     addActor(str);
     addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 137, getHeight() - 92);
 
-    addCombatRow(4061, getHeight() - 100, damageValues, 0);
-    addCombatRow(4061, getHeight() - 124, damageValues, 1);
+    addCombatRow(4061, getHeight() - 100, damageValues, damageNames, 0, false);
+    addCombatRow(4061, getHeight() - 124, damageValues, damageNames, 1, true);
 
     Label dexLabel = new Label(4062, Riiablo.fonts.ReallyTheLastSucker);
     dexLabel.setPosition(11, getHeight() - 162);
@@ -151,8 +165,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     addActor(dex);
     addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 137, getHeight() - 154);
 
-    addCombatRow(4063, getHeight() - 162, attackRatingValues, 0);
-    addCombatRow(4063, getHeight() - 186, attackRatingValues, 1);
+    addCombatRow(4063, getHeight() - 162, attackRatingValues, attackRatingNames, 0, false);
+    addCombatRow(4063, getHeight() - 186, attackRatingValues, attackRatingNames, 1, true);
 
     Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defenseLabel.setPosition(165, getHeight() - 210);
@@ -297,18 +311,84 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     return new StatLabel(attrs, statId, colorizer);
   }
 
-  private void addCombatRow(int labelId, float y, Label[] values, int index) {
+  private void configureTopValue(Label label, float x, float width) {
+    label.setAutoSize(false);
+    // Keep the value in a fixed lower row. Table.growY() made the value's
+    // baseline depend on the current string/font metrics, which was visible
+    // as the experience and next-level numbers sitting too low.
+    label.setPosition(x, getHeight() - 65);
+    label.setSize(width, 16);
+    label.setAlignment(Align.center);
+    addActor(label);
+  }
+
+  private void addCombatRow(int labelId, float y, Label[] values, Label[] names,
+      int index, boolean skillQualified) {
     Label name = new Label(labelId, Riiablo.fonts.ReallyTheLastSucker);
+    name.setAutoSize(false);
     name.setPosition(165, y);
     name.setSize(108, 16);
     name.setAlignment(Align.center);
+    if (skillQualified) name.setText(combatLabel(labelId, selectedSkillName(), true));
+    else name.setText(combatLabel(labelId, selectedSkillName(), false));
+    names[index] = name;
     addActor(name);
 
     Label value = values[index] = new Label("0", Riiablo.fonts.font16);
+    value.setAutoSize(false);
     value.setPosition(272, y);
     value.setSize(40, 16);
     value.setAlignment(Align.center);
     addActor(value);
+  }
+
+  /**
+   * Character-panel labels 4061/4063 are native format strings. The first
+   * row is the plain stat name, while the second row includes the currently
+   * selected left-button skill. Do not render the native %s placeholder when
+   * the plain row is requested.
+   */
+  private static String combatLabel(int labelId, String skillName, boolean skillQualified) {
+    String format = Riiablo.string.lookup(labelId);
+    if (format == null) return skillQualified ? skillName : "";
+    String placeholder = format.contains("%s1") ? "%s1" : "%s";
+    if (format.contains(placeholder)) {
+      // In the native Chinese table 4063 is deliberately just "%s". The
+      // client supplies the localized "Attack Rating" caption at runtime;
+      // using the raw string leaves a visible percent marker in Riiablo.
+      if (labelId == 4063) {
+        String attackRating = localizedAttackRating();
+        String replacement = skillQualified && skillName != null && !skillName.isEmpty()
+            ? skillName + localizedSeparator() + attackRating : attackRating;
+        return format.replace(placeholder, replacement);
+      }
+      if (skillQualified) return format.replace(placeholder, skillName);
+      return format.replace(placeholder, "").trim();
+    }
+    return skillQualified ? skillName + localizedSeparator() + format : format;
+  }
+
+  private static String localizedAttackRating() {
+    // 4240 is the native "Attack" caption and 3480 is the native
+    // "Accuracy/Rating" caption. Combining them keeps this localized for
+    // both the Chinese and English string tables.
+    return Riiablo.string.lookup(4240) + localizedSeparator()
+        + Riiablo.string.lookup(3480);
+  }
+
+  private static String localizedSeparator() {
+    return Riiablo.language == com.riiablo.D2Language.CHINESE ? "" : " ";
+  }
+
+  private String selectedSkillName() {
+    if (Riiablo.charData == null || Riiablo.files == null) return "";
+    int skillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return "";
+    SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+    if (desc == null || desc.str_name == null || desc.str_name.isEmpty()) return skill.skill;
+    String name = Riiablo.string.lookup(desc.str_name);
+    return name == null || name.startsWith("ERROR:") ? skill.skill : name;
   }
 
   private void addStatButton(final int statType, float centerX, float centerY) {
@@ -358,6 +438,20 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       if (label == null) continue;
       setCompactText(label, damageText);
       label.setColor(damageColor);
+    }
+
+    String skillName = selectedSkillName();
+    if (damageNames[0] != null) {
+      damageNames[0].setText(combatLabel(4061, skillName, false));
+    }
+    if (damageNames[1] != null) {
+      damageNames[1].setText(combatLabel(4061, skillName, true));
+    }
+    if (attackRatingNames[0] != null) {
+      attackRatingNames[0].setText(combatLabel(4063, skillName, false));
+    }
+    if (attackRatingNames[1] != null) {
+      attackRatingNames[1].setText(combatLabel(4063, skillName, true));
     }
 
     int attackRating = displayedAttackRating();
