@@ -217,17 +217,32 @@ public class MissileCollisionSystem extends IteratingSystem {
             entityId, missile.ownerId, acquired, position.position.x, position.position.y);
       }
     }
-    // Keep the current speed while steering; when the target disappears the
-    // missile continues along its last heading, matching D2MOO's fallback.
+    // Keep the initial heading until the native retarget frame.  Guided Arrow
+    // Param1 is five frames in the shipped Missiles.txt; D2MOO evaluates the
+    // path correction only at those intervals, which produces the familiar
+    // short straight segment followed by a turn toward the target.
     if (missile.homing && missile.targetId >= 0 && mPosition.has(missile.targetId)) {
       Attributes targetAttrs = mAttributesWrapper.has(missile.targetId)
           ? mAttributesWrapper.get(missile.targetId).attrs : null;
       boolean alive = targetAttrs == null || targetAttrs.get(Stat.hitpoints) == null
           || targetAttrs.get(Stat.hitpoints).asFixed() > 0f;
-      if (alive) {
-        float speed = velocity.velocity.len();
+      int interval = guidedRetargetInterval(missile);
+      if (missile.homingNextTurnFrame <= 0) missile.homingNextTurnFrame = interval;
+      if (alive && missile.nativeFrame >= missile.homingNextTurnFrame) {
         tmpVec.set(mPosition.get(missile.targetId).position).sub(position.position);
-        if (!tmpVec.isZero(0.0001f) && speed > 0f) velocity.velocity.set(tmpVec).setLength(speed);
+        float distance = tmpVec.len();
+        // MISSMODE_SrvDo07 only bends a live target path in the native
+        // 3..25-tile window; outside it, preserve the current trajectory.
+        if (distance > 3f && distance < 25f) {
+          float speed = velocity.velocity.len();
+          if (speed > 0f && !tmpVec.isZero(0.0001f)) {
+            velocity.velocity.set(tmpVec).setLength(speed);
+            if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity).nor();
+          }
+        }
+        while (missile.homingNextTurnFrame <= missile.nativeFrame) {
+          missile.homingNextTurnFrame += interval;
+        }
       }
     }
 
@@ -2146,6 +2161,12 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private boolean isGuidedMissile(Missile missile) {
     return missile != null && missile.missile != null && missile.missile.pSrvDoFunc == 7;
+  }
+
+  private int guidedRetargetInterval(Missile missile) {
+    if (missile == null || missile.missile == null
+        || missile.missile.Param == null || missile.missile.Param.length == 0) return 5;
+    return Math.max(1, missile.missile.Param[0] > 0 ? missile.missile.Param[0] : 5);
   }
 
   /**

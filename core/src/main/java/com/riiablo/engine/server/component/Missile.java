@@ -94,6 +94,8 @@ public class Missile extends PooledComponent {
   /** Optional native homing target (Guided Arrow/Bone Spirit). */
   public int targetId = -1;
   public boolean homing;
+  /** Next native SrvDo07 path correction frame (Guided Arrow Param1). */
+  public int homingNextTurnFrame;
 
   /**
    * D2MOO Missile SrvDo20 attaches Blade Creeper's visual/damage missile to
@@ -265,6 +267,7 @@ public class Missile extends PooledComponent {
     poisonAttackerPlayer = false;
     targetId = -1;
     homing = false;
+    homingNextTurnFrame = 0;
     attachedEntityId = -1;
     attached = false;
     nativeFrame = 0;
