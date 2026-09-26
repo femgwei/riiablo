@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
@@ -47,6 +48,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   static final int MOTION_TELEPORT = 3;
 
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributes;
@@ -72,13 +74,19 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   private volatile int lastOwner = Engine.INVALID_ENTITY;
 
   public MercenaryFollowSystem() {
-    super(Aspect.all(Mercenary.class, Position.class, MapWrapper.class));
+    // Valkyrie uses the same owner trail, separation, leash and cross-zone
+    // relocation path as a hireling.  Keep ordinary summons on their native
+    // AI path; only the Valkyrie pet type enters this system.
+    super(Aspect.all(Position.class, MapWrapper.class)
+        .one(Mercenary.class, SummonedPet.class));
   }
 
   @Override
   protected void process(int entityId) {
-    Mercenary mercenary = mMercenary.get(entityId);
-    int ownerId = mercenary.ownerId;
+    Mercenary mercenary = mMercenary.has(entityId) ? mMercenary.get(entityId) : null;
+    SummonedPet summonedPet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
+    if (!isFollowableCompanion(mercenary, summonedPet)) return;
+    int ownerId = mercenary != null ? mercenary.ownerId : summonedPet.ownerId;
     if (ownerId == Engine.INVALID_ENTITY || !mPosition.has(ownerId)
         || !mMapWrapper.has(ownerId)) return;
 
@@ -404,4 +412,11 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   public int followCount() { return followCount; }
   public int lastMercenary() { return lastMercenary; }
   public int lastOwner() { return lastOwner; }
+
+  /** Returns the only summoned-pet type that uses hireling-style movement. */
+  static boolean isFollowableCompanion(Mercenary mercenary, SummonedPet pet) {
+    if (mercenary != null) return true;
+    return pet != null && !pet.passive && !pet.boneWall
+        && pet.petType != null && pet.petType.equalsIgnoreCase("valkyrie");
+  }
 }

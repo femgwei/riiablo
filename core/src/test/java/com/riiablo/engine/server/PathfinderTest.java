@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.map.pfa.GraphPath;
@@ -78,6 +79,12 @@ class PathfinderTest {
     assertTrue(Pathfinder.isMercenaryOwnerTarget(mercenary, 42));
     assertFalse(Pathfinder.isMercenaryOwnerTarget(mercenary, 43));
     assertFalse(Pathfinder.isMercenaryOwnerTarget(mercenary, -1));
+
+    SummonedPet valkyrie = new SummonedPet();
+    valkyrie.ownerId = 42;
+    valkyrie.petType = "Valkyrie";
+    assertTrue(Pathfinder.isValkyrieOwnerTarget(valkyrie, 42));
+    assertFalse(Pathfinder.isValkyrieOwnerTarget(valkyrie, 43));
   }
 
   @Test

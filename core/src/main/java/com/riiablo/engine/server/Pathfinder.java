@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.logger.LogManager;
@@ -51,6 +52,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   /**
    * Optional for focused headless tests and legacy worlds.  The movement
@@ -127,6 +129,9 @@ public class Pathfinder extends IteratingSystem {
       // actual hostile targets.
       boolean ownerFollowTarget = mMercenary.has(entityId)
           && isMercenaryOwnerTarget(mMercenary.get(entityId), targetId);
+      if (!ownerFollowTarget && mSummonedPet.has(entityId)) {
+        ownerFollowTarget = isValkyrieOwnerTarget(mSummonedPet.get(entityId), targetId);
+      }
       if (!ownerFollowTarget && mMonster.has(entityId)) {
         com.riiablo.engine.server.component.Monster monster = mMonster.get(entityId);
         if ((monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) ||
@@ -255,6 +260,12 @@ public class Pathfinder extends IteratingSystem {
   static boolean isMercenaryOwnerTarget(Mercenary mercenary, int targetId) {
     return mercenary != null && mercenary.ownerId != Engine.INVALID_ENTITY
         && mercenary.ownerId == targetId;
+  }
+
+  static boolean isValkyrieOwnerTarget(SummonedPet pet, int targetId) {
+    return pet != null && !pet.passive && !pet.boneWall
+        && pet.petType != null && pet.petType.equalsIgnoreCase("valkyrie")
+        && pet.ownerId != Engine.INVALID_ENTITY && pet.ownerId == targetId;
   }
 
   /**

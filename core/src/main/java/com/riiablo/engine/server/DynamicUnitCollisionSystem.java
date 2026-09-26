@@ -14,7 +14,9 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.Engine;
 import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -30,6 +32,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private EntitySubscription units;
@@ -79,7 +82,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int size = footprint(entityId);
       if (grid.isFree(entityId, -1, x, y, size)) {
         grid.put(entityId, x, y, size);
-      } else if (isOwnedMercenaryOverlappingOwner(entityId)) {
+      } else if (isOwnedCompanionOverlappingOwner(entityId)) {
         // Keep the real position in the collision index. MercenaryFollowSystem
         // will install a native Escape path; changing the coordinate here
         // produces a visible one-cell teleport when the player approaches.
@@ -197,24 +200,36 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /**
    * D2's player path mask contains no monster/pet bit.  Keep ordinary unit
    * collision intact for the rest of this legacy grid, but do not let the
-   * owner's own hireling block player path planning or authoritative steps.
-   * Monster movers still see the hireling, matching COLLIDE_PET behavior.
+   * owner's own hireling/Valkyrie block player path planning or authoritative
+   * steps. Monster movers still see the companion, matching COLLIDE_PET.
    */
   private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
     if (isPlayer(moverId)) {
-      return entityId -> mMercenary == null || !mMercenary.has(entityId)
-          || mMercenary.get(entityId).ownerId != moverId;
+      return entityId -> ownedCompanionOwner(entityId) != moverId;
     }
-    if (mMercenary != null && mMercenary.has(moverId)) {
-      int ownerId = mMercenary.get(moverId).ownerId;
+    int ownerId = ownedCompanionOwner(moverId);
+    if (ownerId != Engine.INVALID_ENTITY) {
       return entityId -> entityId != ownerId;
     }
     return null;
   }
 
-  private boolean isOwnedMercenaryOverlappingOwner(int entityId) {
-    if (mMercenary == null || !mMercenary.has(entityId)) return false;
-    int ownerId = mMercenary.get(entityId).ownerId;
+  private int ownedCompanionOwner(int entityId) {
+    if (mMercenary != null && mMercenary.has(entityId)) {
+      return mMercenary.get(entityId).ownerId;
+    }
+    if (mSummonedPet != null && mSummonedPet.has(entityId)) {
+      SummonedPet pet = mSummonedPet.get(entityId);
+      if (pet != null && !pet.passive && !pet.boneWall
+          && pet.petType != null && pet.petType.equalsIgnoreCase("valkyrie")) {
+        return pet.ownerId;
+      }
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private boolean isOwnedCompanionOverlappingOwner(int entityId) {
+    int ownerId = ownedCompanionOwner(entityId);
     return ownerId >= 0 && isPlayer(ownerId) && mPosition.has(ownerId);
   }
 }
