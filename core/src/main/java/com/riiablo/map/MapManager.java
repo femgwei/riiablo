@@ -120,6 +120,10 @@ public class MapManager extends PassiveSystem {
         && level.Warp[mainIndex] >= 0;
   }
 
+  static boolean isWaypointOwnedByZone(Map.Zone entityZone, Map.Zone requestedZone) {
+    return entityZone != null && entityZone == requestedZone;
+  }
+
   public void createEntities(Map.Zone zone) {
     if (shouldCreateNativeObjectsImmediately(zone)) {
       createNativeObjects(zone);
@@ -419,8 +423,23 @@ public class MapManager extends PassiveSystem {
       int entityId = zone.entities.get(i);
       Object object = mObject.get(entityId);
       Position position = mPosition.get(entityId);
+      MapWrapper wrapper = mMapWrapper.get(entityId);
       if (object == null || position == null
+          || wrapper == null || !isWaypointOwnedByZone(wrapper.zone, zone)
           || (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == 0) {
+        if (object != null && position != null
+            && (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) != 0
+            && wrapper != null && !isWaypointOwnedByZone(wrapper.zone, zone)) {
+          Gdx.app.debug(TAG, String.format(
+              "Ignoring waypoint entity from another zone: entity=%d expected=%s(%d) actual=%s(%d)",
+              entityId,
+              zone.level == null ? "null" : zone.level.LevelName,
+              zone.level == null ? -1 : zone.level.Id,
+              wrapper.zone == null || wrapper.zone.level == null
+                  ? "null" : wrapper.zone.level.LevelName,
+              wrapper.zone == null || wrapper.zone.level == null
+                  ? -1 : wrapper.zone.level.Id));
+        }
         continue;
       }
 

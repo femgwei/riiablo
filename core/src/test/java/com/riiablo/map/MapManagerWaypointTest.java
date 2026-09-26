@@ -55,4 +55,13 @@ class MapManagerWaypointTest {
     assertFalse(MapManager.hasWarpDestination(level, 4, -1));
     assertTrue(MapManager.hasWarpDestination(level, 4, 88));
   }
+
+  @Test
+  void waypointLookupRequiresTheEntityToBelongToRequestedZone() {
+    Map.Zone requested = new Map.Zone();
+    Map.Zone town = new Map.Zone();
+
+    assertTrue(MapManager.isWaypointOwnedByZone(requested, requested));
+    assertFalse(MapManager.isWaypointOwnedByZone(town, requested));
+  }
 }
