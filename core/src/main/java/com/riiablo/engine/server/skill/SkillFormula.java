@@ -17,7 +17,22 @@ import java.util.function.ToIntFunction;
  * {@code lnAB}, {@code min/max(a,b)} and {@code skill('name'.blvl)}.</p>
  */
 public final class SkillFormula {
+  /** Diablo II simulation rate used by Skills.txt duration values. */
+  public static final int GAME_FRAMES_PER_SECOND = 25;
+
   private SkillFormula() {}
+
+  /**
+   * Converts a native skill duration (stored in game frames) to the integer
+   * seconds shown by the skill description UI.  Skills.txt and SkillDesc.txt
+   * use the same native frame value; the description suffix (StrSkill16) is
+   * explicitly expressed in seconds, so displaying the raw value would turn
+   * Dopplezon's 250 frames into the incorrect "250 seconds".
+   */
+  public static int durationSeconds(int frames) {
+    if (frames <= 0) return 0;
+    return Math.max(1, Math.round(frames / (float) GAME_FRAMES_PER_SECOND));
+  }
 
   public static int evaluate(String expression, Skills.Entry skill, int skillLevel) {
     return evaluate(expression, skill, skillLevel, name -> 0, name -> null);

@@ -2471,6 +2471,10 @@ public class ServerSkillSystem extends PassiveSystem {
         valkyrie ? "VALKYRIE" : "DECOY", event.entityId, petId, summon.Id,
         skill.pettype, event.skillId, skillLevel, petLevel, petMax, duration,
         target.x, target.y);
+    if (!valkyrie) {
+      log.info("[AMAZON_DECOY] phase=duration skillLevel={} formula={} durationFrames={} "
+              + "durationSeconds={}", skillLevel, skill.calc2, duration, duration / 25f);
+    }
   }
 
   /** Native SKILLS_SrvDo114 Raven, SrvDo115 Vines and SrvDo119 DruidSummon. */

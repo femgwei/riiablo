@@ -17,6 +17,8 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.codec.excel.Shrines;
+import com.riiablo.codec.excel.Armor;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -369,7 +371,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // createSummonedPet delegates to the virtual createMonster method, but
     // keep this explicit guard for alternate factories and future refactors.
     attachMonsterPresentation(id);
-    attachAmazonPlayerComposite(id, ownerId, petType);
+    attachAmazonPlayerComposite(id, ownerId, petType, skillLevel);
     Monster monster = mMonster.get(id);
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
         "[SUMMON_PRESENTATION] phase=attached entity=%d owner=%d summon=%s petType=%s "
@@ -392,7 +394,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
    * owner's resolved composite and switch only the presentation type/token.
    * This also mirrors Decoy's native "look like the caster" behavior.
    */
-  private void attachAmazonPlayerComposite(int entityId, int ownerId, String petType) {
+  private void attachAmazonPlayerComposite(int entityId, int ownerId, String petType,
+      int skillLevel) {
     if (petType == null) return;
     String normalized = petType.trim().toLowerCase(java.util.Locale.ROOT);
     if (!(normalized.equals("valkyrie") || normalized.equals("decoy")
@@ -406,7 +409,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
 
     CofReference owner = mCofReference.get(ownerId);
-    String token = owner.effectiveToken();
+    // Valkyrie/Decoy are Amazon-class visuals regardless of the owner's
+    // current transformed/override token.  In particular, do not inherit a
+    // Druid/monster shape or the player's equipped armor token.
+    String token = normalized.equals("valkyrie") ? "AM" : owner.effectiveToken();
     if (token == null || token.isEmpty()) {
       com.badlogic.gdx.Gdx.app.log(TAG,
           "[SUMMON_PRESENTATION] phase=player_composite_skipped entity=" + entityId
@@ -414,24 +420,84 @@ public class ClientEntityFactory extends ServerEntityFactory {
       return;
     }
 
-    int[] ownerComponents = mCofComponents.get(ownerId).component;
-    for (int c = 0; c < ownerComponents.length; c++) {
-      int code = ownerComponents[c];
-      // PlayerItemHandler normally resolves empty armor slots to LIT.  Keep a
-      // safe base layer for a remote/early owner snapshot whose vector is not
-      // populated yet; NIL optional layers remain NIL when explicitly absent.
-      if (code == CofComponents.COMPONENT_NULL
-          || (code == CofComponents.COMPONENT_NIL && isPlayerBaseLayer(c))) {
-        code = CofComponents.COMPONENT_LIT;
+    byte weaponClass = Engine.WEAPON_HTH;
+    if (normalized.equals("valkyrie")) {
+      // Valkyrie is an Amazon visual, but not a copy of the caster's current
+      // equipment.  The native client receives a dedicated Valkyrie item
+      // composite (MonEquip.txt); use the corresponding fixed tier here until
+      // the full monster-inventory packet is available on the client.
+      clearPlayerComposite(entityId);
+      weaponClass = applyValkyrieComposite(entityId, skillLevel);
+    } else {
+      int[] ownerComponents = mCofComponents.get(ownerId).component;
+      for (int c = 0; c < ownerComponents.length; c++) {
+        int code = ownerComponents[c];
+        // PlayerItemHandler normally resolves empty armor slots to LIT.  Keep
+        // a safe base layer for an early owner snapshot.
+        if (code == CofComponents.COMPONENT_NULL
+            || (code == CofComponents.COMPONENT_NIL && isPlayerBaseLayer(c))) {
+          code = CofComponents.COMPONENT_LIT;
+        }
+        cofs.setComponent(entityId, c, code);
       }
-      cofs.setComponent(entityId, c, code);
     }
-    cofs.setVisualOverride(entityId, Class.Type.PLR, token, Engine.WEAPON_HTH);
+    cofs.setVisualOverride(entityId, Class.Type.PLR, token, weaponClass);
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
         "[SUMMON_PRESENTATION] phase=player_composite entity=%d owner=%d petType=%s "
             + "token=%s mode=%d weaponClass=%d",
         entityId, ownerId, normalized, token,
-        mCofReference.get(entityId).mode & 0xFF, Engine.WEAPON_HTH));
+        mCofReference.get(entityId).mode & 0xFF, weaponClass));
+  }
+
+  private void clearPlayerComposite(int entityId) {
+    for (int c = 0; c < com.riiablo.codec.COF.Component.NUM_COMPONENTS; c++) {
+      cofs.setComponent(entityId, c, CofComponents.COMPONENT_NIL);
+    }
+    for (int c : new int[] {
+        com.riiablo.codec.COF.Component.HD, com.riiablo.codec.COF.Component.TR,
+        com.riiablo.codec.COF.Component.LG, com.riiablo.codec.COF.Component.RA,
+        com.riiablo.codec.COF.Component.LA, com.riiablo.codec.COF.Component.S1,
+        com.riiablo.codec.COF.Component.S2
+    }) {
+      cofs.setComponent(entityId, c, CofComponents.COMPONENT_LIT);
+    }
+  }
+
+  private byte applyValkyrieComposite(int entityId, int skillLevel) {
+    // MonEquip.txt gives Valkyrie an item level of 25 + 3*(slvl-1).  At the
+    // first skill level the selected rows already contain the uar/7p7 tier;
+    // the head upgrades from ci0 to ci2 at item level 27 (skill level 2).
+    Armor.Entry body = Riiablo.files.armor.get("uar");
+    if (body == null) body = Riiablo.files.armor.get("ful");
+    if (body != null) {
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.TR, body.Torso + 1);
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.LG, body.Legs + 1);
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.RA, body.rArm + 1);
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.LA, body.lArm + 1);
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.S1, body.lSPad + 1);
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.S2, body.rSPad + 1);
+    }
+
+    int itemLevel = 25 + Math.max(0, skillLevel - 1) * 3;
+    Armor.Entry head = itemLevel >= 27
+        ? Riiablo.files.armor.get("ci2") : Riiablo.files.armor.get("ci0");
+    if (head != null && head.alternateGfx != null && !head.alternateGfx.isEmpty()) {
+      cofs.setComponent(entityId, com.riiablo.codec.COF.Component.HD,
+          Class.Type.PLR.getComponent(head.alternateGfx));
+    }
+
+    Weapons.Entry weapon = Riiablo.files.weapons.get("7p7");
+    if (weapon == null) weapon = Riiablo.files.weapons.get("spr");
+    byte weaponClass = Engine.WEAPON_HTH;
+    if (weapon != null) {
+      if (weapon.alternateGfx != null && !weapon.alternateGfx.isEmpty()) {
+        cofs.setComponent(entityId, com.riiablo.codec.COF.Component.RH,
+            Class.Type.PLR.getComponent(weapon.alternateGfx));
+      }
+      int resolved = Riiablo.files.WeaponClass.index(weapon.wclass);
+      if (resolved >= 0) weaponClass = (byte) resolved;
+    }
+    return weaponClass;
   }
 
   private static boolean isPlayerBaseLayer(int component) {

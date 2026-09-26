@@ -126,7 +126,7 @@ public final class SkillDetails extends Table {
       case 7: return value + a;
       case 8: return a + b;
       case 9: return a + b + lookup("StrSkill4") + "+" + value;
-      case 12: return a + value + lookup("StrSkill16");
+      case 12: return a + SkillFormula.durationSeconds(value) + lookup("StrSkill16");
       case 13: return lookup("StrSkill42") + value;
       case 19: return b + a + (value * 2f / 3f) + lookup("StrSkill26");
       case 28: return lookup("StrSkill18") + "1" + lookup("StrSkill36");

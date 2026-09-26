@@ -29,6 +29,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.player.PlayerStatsManager;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.logger.LogManager;
@@ -254,7 +255,9 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       case 9:  return String.format("%s%s%s+%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i]), Riiablo.string.lookup("StrSkill4"), eval(skill, lvl, desccalca[i])); // Damage bonus
       //case 10: return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i])); // (Elem) Damage: X-Y
       //case 11: return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i])); // Same as above?
-      case 12: return String.format("%s%s%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]), Riiablo.string.lookup("StrSkill16")); // Duration: 4 seconds
+      case 12: return String.format("%s%s%s", Riiablo.string.lookup(desctexta[i]),
+          SkillFormula.durationSeconds(Math.round(eval(skill, lvl, desccalca[i]))),
+          Riiablo.string.lookup("StrSkill16")); // Duration: native frames -> seconds
       case 13: return String.format("%s%s", Riiablo.string.lookup("StrSkill42"), eval(skill, lvl, desccalca[i])); // Life: 100
       //case 14: return String.format()
       //case 15: return String.format("%s:%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i]));
