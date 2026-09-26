@@ -26,6 +26,8 @@ public class HotkeyButton extends Button {
   private boolean lastDisabled;
   private boolean disabledInitialized;
   private String displayedQuantity;
+  /** Quick-selection grids tint only native weapon/ammunition restrictions. */
+  private boolean weaponRestrictionOnly;
 
   public HotkeyButton(final DC dc, final int index, int skillId) {
     this(dc, index, skillId, null);
@@ -65,6 +67,15 @@ public class HotkeyButton extends Button {
 
   public int getSkill() {
     return skillId;
+  }
+
+  /**
+   * Uses the native quick-skill palette rule: missing required equipment is
+   * red, while temporary cast failures such as town or low mana stay white.
+   */
+  public void setWeaponRestrictionOnly(boolean weaponRestrictionOnly) {
+    this.weaponRestrictionOnly = weaponRestrictionOnly;
+    refreshDisabled();
   }
 
   /**
@@ -108,31 +119,31 @@ public class HotkeyButton extends Button {
         }
       }
 
-      StatRef hp = Riiablo.charData.getStats().get(Stat.hitpoints);
-      if (!disabled && hp != null && hp.asFixed() <= 0) {
-        disabled = true;
-        reason = "dead";
-      }
-
-      // Item charges replace the mana payment. Learned and system skills use
-      // the same fixed-point cost comparison as the authoritative cast path.
-      if (!disabled && chargedSkill == null) {
-        int level = Math.max(1, SkillDetails.effectivePlayerSkillLevel(skillId));
-        float manaCost = NativeSkillResolver.manaCost(skill, level);
-        StatRef mana = Riiablo.charData.getStats().get(Stat.mana);
-        float currentMana = mana == null ? 0f : mana.asFixed();
-        if (!NativeSkillResolver.hasEnoughMana(currentMana, manaCost)) {
+      if (!weaponRestrictionOnly) {
+        StatRef hp = Riiablo.charData.getStats().get(Stat.hitpoints);
+        if (!disabled && hp != null && hp.asFixed() <= 0) {
           disabled = true;
-          reason = "insufficient_mana";
+          reason = "dead";
         }
-      }
 
-      // D2 evaluates the Skills.txt InTown bit against the caster's current
-      // room.  Weapon attacks and offensive spells therefore remain visible
-      // but receive the red disabled tint while the player is in a town; the
-      // same selected skill becomes usable immediately after leaving it.
-      if (!disabled && isPlayerInTown()) {
-        if (!NativeSkillResolver.isAllowedInTown(skill)) {
+        // Item charges replace the mana payment. Learned and system skills use
+        // the same fixed-point cost comparison as the authoritative cast path.
+        if (!disabled && chargedSkill == null) {
+          int level = Math.max(1, SkillDetails.effectivePlayerSkillLevel(skillId));
+          float manaCost = NativeSkillResolver.manaCost(skill, level);
+          StatRef mana = Riiablo.charData.getStats().get(Stat.mana);
+          float currentMana = mana == null ? 0f : mana.asFixed();
+          if (!NativeSkillResolver.hasEnoughMana(currentMana, manaCost)) {
+            disabled = true;
+            reason = "insufficient_mana";
+          }
+        }
+
+        // Town and mana are immediate cast-state restrictions. Native D2
+        // applies them to the selected HUD action, not to every entry in the
+        // expanded quick-skill grid.
+        if (!disabled && isPlayerInTown()
+            && !NativeSkillResolver.isAllowedInTown(skill)) {
           disabled = true;
           reason = "town";
         }

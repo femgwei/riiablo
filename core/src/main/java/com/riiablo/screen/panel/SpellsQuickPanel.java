@@ -9,6 +9,7 @@ import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
@@ -109,6 +110,16 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
       Table table = tables[i] = new Table();
       add(table).align(ALIGN).row();
     }
+    // A click on empty space in the expanded grid is also a dismissal. A
+    // click that originated on a skill button is left to that button's own
+    // listener, which selects the skill and then hides the grid.
+    addListener(new InputListener() {
+      @Override
+      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        if (!isSkillButtonTarget(event.getTarget())) setVisible(false);
+        return false;
+      }
+    });
     pack();
     //setDebug(true, true);
 
@@ -161,6 +172,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         iconCel = 20;
       }
       final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id, chargedSkill);
+      button.setWeaponRestrictionOnly(true);
       if (skill.aura) {
         button.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
       }
@@ -201,6 +213,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         iconCel = 20;
       }
       final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id);
+      button.setWeaponRestrictionOnly(true);
       if (skill.aura) {
         button.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
       }
@@ -231,6 +244,14 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
 
   public void setObserver(HotkeyButton observer) {
     this.observer = observer;
+  }
+
+  private boolean isSkillButtonTarget(Actor target) {
+    for (Actor current = target; current != null && current != this;
+        current = current.getParent()) {
+      if (current instanceof HotkeyButton) return true;
+    }
+    return false;
   }
 
   private void selectSkill(int skillId) {

@@ -24,6 +24,8 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -352,6 +354,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   Actor details;
 
+  private static boolean isInside(Actor target, Actor ancestor) {
+    if (target == null || ancestor == null) return false;
+    return target == ancestor || target.isDescendantOf(ancestor);
+  }
+
   /**
    * FIXME: there has to be a better way of doing this -- some way to layout the stage (or relevant
    *        parts) and get the coordinates I need. Right now it flashes the control panel for a
@@ -521,6 +528,28 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     spellsQuickPanelR.setPosition(stage.getWidth(), 100, Align.bottomRight);
     spellsQuickPanelR.setVisible(false);
     stage.addActor(spellsQuickPanelR);
+
+    // Native quick-skill grids are transient. Any pointer press outside the
+    // open grid closes it before world/UI input continues. The HUD skill
+    // buttons are excluded so their own toggle listener can close the grid
+    // without the capture phase immediately reopening it.
+    stage.addCaptureListener(new InputListener() {
+      @Override
+      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        Actor target = event.getTarget();
+        if (spellsQuickPanelL.isVisible()
+            && !isInside(target, spellsQuickPanelL)
+            && !isInside(target, controlPanel.getLeftSkill())) {
+          spellsQuickPanelL.setVisible(false);
+        }
+        if (spellsQuickPanelR.isVisible()
+            && !isInside(target, spellsQuickPanelR)
+            && !isInside(target, controlPanel.getRightSkill())) {
+          spellsQuickPanelR.setVisible(false);
+        }
+        return false;
+      }
+    });
 
     helpPanel = new HelpPanel();
     stage.addActor(helpPanel);
