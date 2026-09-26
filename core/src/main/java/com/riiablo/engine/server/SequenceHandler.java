@@ -17,7 +17,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.Item;
-import com.riiablo.Riiablo;
+import com.riiablo.item.Type;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
 import com.riiablo.logger.LogManager;
@@ -201,61 +201,75 @@ public class SequenceHandler extends IteratingSystem {
       // the raw COF speed (256).  That made Strafe appear dramatically slower
       // even with the same weapon and IAS.  Apply the same native attack-rate
       // calculation to every player attack mode that allows attack-rate
-      // modulation; Strafe supplies its native -30 sequence penalty.
+      // modulation; Strafe uses the separate hard-coded rollback formula.
       boolean attackRateMode = strafe
           || sequence.mode1 == com.riiablo.engine.Engine.Player.MODE_A1
           || sequence.mode1 == com.riiablo.engine.Engine.Player.MODE_A2;
       if (attackRateMode) {
-        int sequencePenalty = strafe ? 30 : 0;
-        animData.override = playerAttackAnimationSpeed(
-            entityId, animData.speed, sequencePenalty);
+        if (strafe) {
+          StrafeTiming timing = resolveStrafeTiming(entityId, animData.speed);
+          animData.override = timing.animationSpeed;
+          if (!sequenceWasStarted) {
+            log.info("[STRAFE_TIMING] phase=start entity={} weapon={} crossbow={} wsm={} "
+                    + "iasRaw={} effectiveIAS={} eias={} animSpeed={} baseFrame={} "
+                    + "actionFrame={} A={} B={} C={} rollbackFrame={}",
+                entityId, timing.weaponCode, timing.crossbow, timing.wsm,
+                timing.totalIAS, timing.effectiveIAS, timing.eias, timing.animationSpeed,
+                timing.baseFrame, timing.actionFrame, timing.initialFrame,
+                timing.middleFrame, timing.lastFrame, timing.rollbackFrame);
+          }
+        } else {
+          // Ordinary A1/A2 attacks use the regular attack-rate path. Strafe
+          // has its own native rollback formula above and must not receive
+          // the normal sequence penalty.
+          animData.override = playerAttackAnimationSpeed(entityId, animData.speed, 0);
+        }
         if (!sequenceWasStarted) {
           log.info("[PLAYER_ATTACK_ANIM] phase=start entity={} mode={} skill={} "
                   + "baseSpeed={} sequencePenalty={} finalSpeed={}",
               entityId, sequence.mode1, casting.skillId, animData.speed,
-              sequencePenalty, animData.override);
+              strafe ? -1 : 0, animData.override);
         }
       }
     }
   }
 
   /**
-   * D2's sub_6FCBCFD0(Param6) does not replay Strafe from frame zero.  It
-   * rewinds the current action by Param6 percent and schedules the next
-   * attack event.  Keep the rewind short enough to cross the first attack
-   * marker, which is what produces the rapid bow-firing cadence.
+   * D2's sub_6FCBCFD0(Param6) does not replay Strafe from frame zero. It
+   * seeks to the rollback sequence's calculated middle start frame and
+   * schedules the next attack event, producing the rapid bow-firing cadence.
    */
   void restartStrafeAnimation(int entityId, Casting casting) {
     AnimData anim = mAnimData.get(entityId);
-    int currentFrame = anim.frame >>> 8;
-    int rollbackPercent = 50;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
-    if (skill != null && skill.Param != null && skill.Param.length > 5
-        && skill.Param[5] > 0) rollbackPercent = skill.Param[5];
     // Broadcast a forced same-mode restart so the client seeks its resident
     // animation as well. AnimDataResolver may reset the server record while
     // handling this event; the precise rollback is applied immediately after.
     cofs.setMode(entityId, mSequence.get(entityId).mode1, true);
     anim = mAnimData.get(entityId);
-    // D2MOO uses the current sequence frame, not the table's total frame
-    // count: nCalc = (100 - Param6) * currentFrame / 100, then it resumes at
-    // currentFrame - nCalc.  With Param6=50 and a 13-frame terminal position,
-    // that is frame 6 (integer truncation), not frame 7 of a 14-frame COF.
-    int rollbackFrame = Math.max(0, currentFrame * rollbackPercent / 100);
+    StrafeTiming timing = resolveStrafeTiming(entityId, anim.speed);
     int attackFrame = firstAttackFrame(anim);
-    int restartFrame = attackFrame >= 0
-        ? Math.min(rollbackFrame, Math.max(0, attackFrame - 1)) : rollbackFrame;
-    anim.frame = Math.min(Math.max(0, restartFrame), Math.max(0, anim.numFrames - 1));
+    // The rollback sequence rewinds to the formula's middle start frame. The
+    // keyframe clamp is only a safety guard for incomplete/custom COFs; it
+    // must not replace the native A/B/C timing on a valid player animation.
+    int restartFrame = timing.rollbackFrame;
+    if (attackFrame >= 0) restartFrame = Math.min(restartFrame, Math.max(0, attackFrame - 1));
+    int maxFrame = Math.max(0, (anim.numFrames >>> 8) - 1);
+    restartFrame = Math.min(Math.max(0, restartFrame), maxFrame);
+    // AnimData.frame is 24.8 fixed point. The old path wrote an integer here,
+    // effectively seeking to a fraction of a frame and making every repeat
+    // depend on the simulation tick rather than the rollback formula.
+    anim.frame = restartFrame << 8;
     anim.lastKeyframeIndex = Math.max(-1, (anim.frame >>> 8) - 1);
-    anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 30);
+    anim.override = timing.animationSpeed;
     // Keep SequenceHandler from invoking CofManager's ordinary frame-zero
     // mode transition on the next tick; the client receives the forced mode
     // restart and applies the same seek in CofLayerLoader.
     mSequence.get(entityId).started = true;
     log.info("[STRAFE_ANIM] phase=rollback entity={} index={} remaining={} frame={} "
-            + "attackFrame={} rollbackPercent={} speed={}", entityId,
+            + "attackFrame={} rollbackFrame={} A={} B={} C={} speed={}", entityId,
         casting.strafeArrowIndex, casting.strafeRemainingArrows, anim.frame,
-        attackFrame, rollbackPercent, anim.override);
+        attackFrame, timing.rollbackFrame, timing.initialFrame, timing.middleFrame,
+        timing.lastFrame, anim.override);
   }
 
   private int firstAttackFrame(AnimData anim) {
@@ -267,13 +281,123 @@ public class SequenceHandler extends IteratingSystem {
   }
 
   /**
+   * Native Strafe rollback timing. Unlike ordinary A1/A2 attacks, Strafe's
+   * middle-arrow cadence is calculated by the hard-coded rollback sequence;
+   * there is no B-frame table in skills.txt or missiles.txt.
+   */
+  private StrafeTiming resolveStrafeTiming(int entityId, int baseSpeed) {
+    int totalIAS = 0;
+    int attackRateModifier = 0;
+    String weaponCode = "none";
+    int wsm = 0;
+    boolean crossbow = false;
+    if (mAttributesWrapper.has(entityId)
+        && mAttributesWrapper.get(entityId).attrs != null) {
+      com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      StatRef ias = attrs.get(Stat.item_fasterattackrate, StatRef.obtain());
+      if (ias == null) ias = attrs.remaining().get(Stat.item_fasterattackrate, StatRef.obtain());
+      if (ias != null) totalIAS = ias.asInt();
+      StatRef attackRate = attrs.get(Stat.attackrate, StatRef.obtain());
+      if (attackRate != null) attackRateModifier = attackRate.asInt() - 100;
+    }
+    Item weapon = null;
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      weapon = mPlayer.get(entityId).data.getItems().getEquippedRangedWeapon();
+    }
+    if (weapon != null) {
+      weaponCode = weapon.base instanceof Weapons.Entry
+          ? ((Weapons.Entry) weapon.base).code : "unknown";
+      crossbow = weapon.type != null && weapon.type.is(Type.XBOW);
+      if (weapon.base instanceof Weapons.Entry) {
+        // Weapons.txt stores the signed attack-speed modifier used by D2's
+        // normal attack code. Keep that sign: a fast weapon is negative WSM.
+        wsm = -((Weapons.Entry) weapon.base).speed;
+      }
+      // In reduced test entities the aggregate item stat may be absent. Read
+      // the weapon's own IAS as the native fallback, without double counting
+      // an aggregate value already present on the character.
+      if (totalIAS == 0 && weapon.attrs != null) {
+        StatRef ias = weapon.attrs.get(Stat.item_fasterattackrate, StatRef.obtain());
+        if (ias == null) ias = weapon.attrs.base().get(Stat.item_fasterattackrate, StatRef.obtain());
+        if (ias != null) totalIAS = ias.asInt();
+      }
+    }
+    totalIAS += attackRateModifier;
+    return calculateStrafeTiming(baseSpeed, totalIAS, wsm, crossbow, weaponCode);
+  }
+
+  static StrafeTiming calculateStrafeTiming(int baseSpeed, int totalIAS, int wsm,
+      boolean crossbow) {
+    return calculateStrafeTiming(baseSpeed, totalIAS, wsm, crossbow, "unknown");
+  }
+
+  private static StrafeTiming calculateStrafeTiming(int baseSpeed, int totalIAS, int wsm,
+      boolean crossbow, String weaponCode) {
+    int clampedIAS = Math.max(-119, totalIAS);
+    int effectiveIAS = 120 * clampedIAS / (120 + clampedIAS);
+    int eias = effectiveIAS - wsm;
+    int speed = Math.max(1, 256 * (100 + eias) / 100);
+    int baseFrame = crossbow ? 20 : 14;
+    int actionFrame = crossbow ? 9 : 6;
+    int initialFrame = ceilDiv(actionFrame * 256, speed);
+    int middleStart = floorHalf((initialFrame * speed) / 256);
+    int middleFrame = ceilDiv((actionFrame - middleStart) * 256, speed);
+    int lastStart = floorHalf(middleStart + (middleFrame * speed) / 256);
+    int lastFrame = ceilDiv((baseFrame - lastStart) * 256, speed);
+    int animationSpeed = Math.max(1, (int) ((long) Math.max(1, baseSpeed) * speed / 256));
+    return new StrafeTiming(weaponCode, crossbow, totalIAS, effectiveIAS, wsm, eias,
+        animationSpeed, baseFrame, actionFrame, initialFrame, middleFrame, lastFrame,
+        middleStart);
+  }
+
+  private static int ceilDiv(int numerator, int denominator) {
+    return (numerator + denominator - 1) / denominator;
+  }
+
+  private static int floorHalf(int value) {
+    return value / 2;
+  }
+
+  static final class StrafeTiming {
+    final String weaponCode;
+    final boolean crossbow;
+    final int totalIAS;
+    final int effectiveIAS;
+    final int wsm;
+    final int eias;
+    final int animationSpeed;
+    final int baseFrame;
+    final int actionFrame;
+    final int initialFrame;
+    final int middleFrame;
+    final int lastFrame;
+    final int rollbackFrame;
+
+    StrafeTiming(String weaponCode, boolean crossbow, int totalIAS, int effectiveIAS,
+        int wsm, int eias, int animationSpeed, int baseFrame, int actionFrame,
+        int initialFrame, int middleFrame, int lastFrame, int rollbackFrame) {
+      this.weaponCode = weaponCode;
+      this.crossbow = crossbow;
+      this.totalIAS = totalIAS;
+      this.effectiveIAS = effectiveIAS;
+      this.wsm = wsm;
+      this.eias = eias;
+      this.animationSpeed = animationSpeed;
+      this.baseFrame = baseFrame;
+      this.actionFrame = actionFrame;
+      this.initialFrame = initialFrame;
+      this.middleFrame = middleFrame;
+      this.lastFrame = lastFrame;
+      this.rollbackFrame = rollbackFrame;
+    }
+  }
+
+  /**
    * D2Common's UNITS_UpdateAttackAnimRateAndVelocity for player attacks.
    *
-   * <p>The normal A1/A2 modes use the calculated attack rate directly.  The
-   * native player sequence (Strafe) uses the same rate with an additional
-   * 30-point sequence penalty.  Keeping this in one helper is important:
-   * otherwise ordinary arrows run at the raw COF speed while Strafe is
-   * correctly scaled, which makes a fast bow look slower during Strafe.</p>
+   * <p>The normal A1/A2 modes use the calculated attack rate directly. Strafe
+   * does not call this helper: its native rollback sequence has a separate
+   * EIAS/WSM calculation above.</p>
    */
   private int playerAttackAnimationSpeed(int entityId, int baseSpeed,
       int sequencePenalty) {
