@@ -115,7 +115,9 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
     statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
     statPoints.setAutoSize(false);
-    statPoints.setPosition(120, getHeight() - 373);
+    // font16 has a different calibrated baseline from the caption font; move
+    // the numeric value down slightly so it sits on the same visual center.
+    statPoints.setPosition(120, getHeight() - 375);
     statPoints.setSize(36, 16);
     statPoints.setAlignment(Align.center);
     addActor(statPoints);
@@ -513,9 +515,15 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       }
 
       if (name != null) {
-        name.setText(isNormalAttack(skill)
-            ? combatLabel(4063, "", false)
-            : combatLabel(4063, selectedSkillName(buttons[i]), true));
+        boolean special = !isNormalAttack(skill);
+        // 4063 is a two-line native format for special attacks.  The full
+        // bilingual skill name is too wide/tall for the 16px panel font and
+        // overlaps the neighboring row, so use the compact native font only
+        // for this dynamic label.
+        name.setFont(special ? Riiablo.fonts.font8 : Riiablo.fonts.ReallyTheLastSucker);
+        name.setText(special
+            ? combatLabel(4063, selectedSkillName(buttons[i]), true)
+            : combatLabel(4063, "", false));
       }
       if (value != null) {
         int skillLevel = Math.max(1, Riiablo.charData.getSkill(skill.Id));
