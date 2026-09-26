@@ -110,7 +110,8 @@ public class HotkeyButton extends Button {
           else if (value <= 0) reason = "empty_quantity";
         } else if (!NativeSkillResolver.isAmazonBowSkill(skill)
             && NativeSkillResolver.requiresThrowableWeapon(skill)) {
-          boolean javelinSkill = NativeSkillResolver.isAmazonJavelinSkill(skill);
+          boolean javelinSkill = NativeSkillResolver.isAmazonJavelinWeaponSkill(skill,
+              Riiablo.charData.charClass & 0xFF);
           Item throwable = javelinSkill
               ? items.getEquippedJavelinWeapon()
               : items.getEquippedThrowableWeapon();

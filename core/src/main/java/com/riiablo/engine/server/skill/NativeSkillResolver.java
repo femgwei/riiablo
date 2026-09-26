@@ -192,6 +192,18 @@ public final class NativeSkillResolver {
     }
   }
 
+  /**
+   * Amazon's generic Throw actions use the active javelin/spear set as well.
+   * Other classes retain the native generic-throw behavior for knives and
+   * throwing axes.
+   */
+  public static boolean isAmazonJavelinWeaponSkill(Skills.Entry skill,
+      int characterClassId) {
+    if (isAmazonJavelinSkill(skill)) return true;
+    if (characterClassId != CharacterClass.AMAZON.id || skill == null) return false;
+    return skill.Id == SkillCodes.throw_ || skill.Id == SkillCodes.left_hand_throw;
+  }
+
   /** Returns whether a skill requires a javelin/spear or a throwing weapon. */
   public static boolean requiresThrowableWeapon(Skills.Entry skill) {
     return isThrowableSkill(skill) || isAmazonJavelinSkill(skill);

@@ -100,6 +100,11 @@ public class NativeSkillResolverTest {
     lightningFury.skill = "Lightning Fury";
     assertTrue(NativeSkillResolver.isAmazonJavelinSkill(lightningFury));
 
+    Skills.Entry throwSkill = new Skills.Entry();
+    throwSkill.Id = com.riiablo.skill.SkillCodes.throw_;
+    assertTrue(NativeSkillResolver.isAmazonJavelinWeaponSkill(throwSkill, Riiablo.AMAZON));
+    assertFalse(NativeSkillResolver.isAmazonJavelinWeaponSkill(throwSkill, Riiablo.BARBARIAN));
+
     Skills.Entry bow = new Skills.Entry();
     bow.skill = "Magic Arrow";
     assertFalse(NativeSkillResolver.isAmazonJavelinSkill(bow));
