@@ -47,17 +47,28 @@ public class NpcMenu extends Table {
   }
 
   public NpcMenu addItem(int id, ClickListener clickListener) {
-    LabelButton button = new LabelButton(id, Riiablo.fonts.font16);
-    button.addListener(clickListener);
-    add(button).space(SPACING).row();
+    addItemButton(new LabelButton(id, Riiablo.fonts.font16), clickListener);
     return this;
   }
 
   public NpcMenu addItem(String text, ClickListener clickListener) {
-    LabelButton button = new LabelButton(text, Riiablo.fonts.font16);
+    addItemButton(new LabelButton(text, Riiablo.fonts.font16), clickListener);
+    return this;
+  }
+
+  /** Adds a menu button and returns it so dynamic NPC options can be refreshed. */
+  public LabelButton addItemButton(LabelButton button, ClickListener clickListener) {
     button.addListener(clickListener);
     add(button).space(SPACING).row();
-    return this;
+    return button;
+  }
+
+  /** Removes a dynamic option and repacks the menu without changing its owner. */
+  public void removeItem(LabelButton button) {
+    if (button != null && button.getParent() == this) {
+      button.remove();
+      pack();
+    }
   }
 
   public NpcMenu addItem(int id, final NpcMenu menu) {

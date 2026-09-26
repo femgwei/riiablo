@@ -249,6 +249,12 @@ public class MercenaryManager {
     /** Restores the existing dead hireling entity in place. */
     boolean resurrectMercenaryEntity(int entityId, int playerId);
 
+    /** Creates a replacement entity when a level-scoped corpse was unloaded. */
+    default int recreateMercenaryEntity(int playerId, MercenaryDefinition def,
+        int level, int seed, int nameId) {
+      return Engine.INVALID_ENTITY;
+    }
+
     /**
      * 获取玩家金币
      */
@@ -645,9 +651,18 @@ public class MercenaryManager {
     // place. Validate that transition before charging; gold mutation is then
     // deterministic on the same authoritative server thread.
     if (!callback.resurrectMercenaryEntity(merc.entityId, playerId)) {
-      log.warn("Player {} mercenary entity could not be resurrected: entity={}",
-          playerId, merc.entityId);
-      return false;
+      // A dead hireling corpse is level-scoped.  When its owner leaves that
+      // level the corpse entity is deleted, but the D2S mercenary record stays
+      // dead and can be materialized beside the owner when Kashya (or the
+      // other native hireling vendor) is used in town.
+      int recreated = callback.recreateMercenaryEntity(playerId, merc.definition,
+          merc.level, merc.seed, merc.nameId);
+      if (recreated == Engine.INVALID_ENTITY) {
+        log.warn("Player {} mercenary entity could not be resurrected: entity={}",
+            playerId, merc.entityId);
+        return false;
+      }
+      merc.entityId = recreated;
     }
     if (!callback.deductPlayerGold(playerId, cost)) {
       // getPlayerGold and deduction execute on one server thread, so this is
@@ -756,6 +771,14 @@ public class MercenaryManager {
    */
   public int calculateResurrectCost(MercenaryDefinition def, int level) {
     return nativeResurrectionCost(level);
+  }
+
+  /** Marks a level-scoped dead corpse entity as gone without dismissing the hireling. */
+  public boolean discardDeadMercenaryEntity(int playerId, int entityId) {
+    ActiveMercenary merc = playerMercs.get(playerId);
+    if (merc == null || merc.state != STATE_DEAD || merc.entityId != entityId) return false;
+    merc.entityId = Engine.INVALID_ENTITY;
+    return true;
   }
 
   /** Mirrors D2Common #11083 MONSTERS_GetHirelingResurrectionCost. */

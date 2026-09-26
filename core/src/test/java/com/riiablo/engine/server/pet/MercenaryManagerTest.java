@@ -125,6 +125,26 @@ class MercenaryManagerTest {
   }
 
   @Test
+  void unloadedDeadCorpseRecreatesBesideOwnerBeforeCharging() {
+    MercenaryManager manager = new MercenaryManager();
+    Callback callback = new Callback();
+    callback.entityId = 81;
+    callback.gold = 10_000;
+    callback.resurrectResult = false;
+    callback.recreatedEntityId = 99;
+    manager.setCallback(callback);
+    assertTrue(manager.grantFreeRogue(6, 10));
+    manager.onMercenaryDeath(6);
+    assertTrue(manager.discardDeadMercenaryEntity(6, 81));
+
+    assertTrue(manager.resurrectMercenary(6));
+    assertEquals(99, manager.getPlayerMercenary(6).entityId);
+    assertEquals(MercenaryManager.STATE_HIRED, manager.getPlayerMercenary(6).state);
+    assertEquals(1, callback.recreateCalls);
+    assertEquals(1, callback.deductCalls);
+  }
+
+  @Test
   void restoresDeadSavedMercenaryWithoutChargingOrRewritingSave() {
     MercenaryManager manager = new MercenaryManager();
     Callback callback = new Callback();
@@ -209,6 +229,8 @@ class MercenaryManagerTest {
     int dismissedCalls;
     int playerLevel = 1;
     boolean resurrectResult;
+    int recreatedEntityId = Engine.INVALID_ENTITY;
+    int recreateCalls;
 
     @Override
     public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
@@ -240,6 +262,11 @@ class MercenaryManagerTest {
     @Override public boolean resurrectMercenaryEntity(int entityId, int playerId) {
       resurrectCalls++;
       return resurrectResult;
+    }
+    @Override public int recreateMercenaryEntity(int playerId,
+        MercenaryManager.MercenaryDefinition def, int level, int seed, int nameId) {
+      recreateCalls++;
+      return recreatedEntityId;
     }
     @Override public int getPlayerGold(int playerId) { return gold; }
     @Override public int getPlayerLevel(int playerId) { return playerLevel; }

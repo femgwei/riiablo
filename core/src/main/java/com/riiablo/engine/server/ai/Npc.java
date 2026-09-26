@@ -29,7 +29,9 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.MenuManager;
 import com.riiablo.engine.client.Act1QuestDialogController;
+import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
+import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MenuWrapper;
@@ -42,6 +44,7 @@ import com.riiablo.item.VendorGenerator;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.DS1;
+import com.riiablo.save.CharData;
 import com.riiablo.screen.panel.VendorPanel;
 import com.riiablo.widget.NpcDialogBox;
 import com.riiablo.widget.NpcMenu;
@@ -67,7 +70,11 @@ public class Npc extends AI {
     REPAIRERS.addAll(154);
     TRADERS.addAll(147, 148, 154);
     GAMBLERS.addAll(147);
-    HIRERERS.addAll(150);
+    // Native hireling vendors: Kashya (A1), Greiz (A2), Asheara (A3),
+    // and Qual-Kehk (A5). Each vendor resolves its act-specific pool in the
+    // authoritative mercenary service via the NPC's native hcIdx.
+    HIRERERS.addAll(MercenaryManager.NPC_KASHYA, MercenaryManager.NPC_GREIZ,
+        MercenaryManager.NPC_ASHEARA, MercenaryManager.NPC_QUAL_KEHK);
     HEALERS.addAll(MonsterType.AKARA, MonsterType.FARA, MonsterType.ORMUS, 406, 513);
 
     // Act 2
@@ -110,6 +117,8 @@ public class Npc extends AI {
   float actionTimer = 0;
   boolean actionPerformed = false;
   NpcMenu menu;
+  private MenuManager menuManager;
+  private DialogManager dialogManager;
   String state = "";
 
   String name;
@@ -151,6 +160,8 @@ public class Npc extends AI {
 
   public void createMenu(MenuManager menuManager, final DialogManager dialogManager) {
     Validate.validState(menu == null, "menu already initialized!");
+    this.menuManager = menuManager;
+    this.dialogManager = dialogManager;
     menu = mMenuWrapper.create(entityId).menu = new NpcMenu(menuManager, entityId, name);
 
     final int entType = monstats.hcIdx;
@@ -224,6 +235,14 @@ public class Npc extends AI {
     }
 
     if (HIRERERS.contains(entType)) {
+      if (hasDeadMercenary(Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player)) {
+        menu.addItem(resurrectionLabel(Riiablo.game.player), new ClickListener() {
+          @Override
+          public void clicked(InputEvent event, float x, float y) {
+            resurrectMercenary(menuManager);
+          }
+        });
+      }
       menu.addItem(3397, new ClickListener() { // hire
         @Override
         public void clicked(InputEvent event, float x, float y) {
@@ -253,6 +272,88 @@ public class Npc extends AI {
         }
       })
       .build();
+  }
+
+  /** Refreshes the hireling menu so a death after the first interaction is visible. */
+  private void refreshHirelingMenu() {
+    if (!HIRERERS.contains(monstats == null ? -1 : monstats.hcIdx)
+        || menuManager == null || dialogManager == null) return;
+    if (menu != null) menu.remove();
+    menu = null;
+    createMenu(menuManager, dialogManager);
+  }
+
+  private boolean hasDeadMercenary(int playerId) {
+    if (playerId == Engine.INVALID_ENTITY) return false;
+    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
+        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+    if (rewards != null && rewards.hasDeadMercenary(playerId)) return true;
+    if (Riiablo.charData != null && Riiablo.charData.hasMerc()
+        && (Riiablo.charData.getMerc().flags & MercenaryManager.FLAG_DEAD) != 0) return true;
+    if (mercenaries == null || mMercenary == null || mCorpse == null) return false;
+    IntBag entities = mercenaries.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Mercenary merc = mMercenary.get(ids[i]);
+      if (merc != null && merc.ownerId == playerId && mCorpse.has(ids[i])) return true;
+    }
+    return false;
+  }
+
+  private String resurrectionLabel(int playerId) {
+    Mercenary merc = null;
+    if (mercenaries != null && mMercenary != null) {
+      IntBag entities = mercenaries.getEntities();
+      int[] ids = entities.getData();
+      for (int i = 0; i < entities.size(); i++) {
+        Mercenary candidate = mMercenary.get(ids[i]);
+        if (candidate != null && candidate.ownerId == playerId) {
+          merc = candidate;
+          break;
+        }
+      }
+    }
+    int mercType = merc == null ? MercenaryManager.MERC_TYPE_ROGUE : merc.mercType;
+    int nameId = merc == null ? 0 : merc.nameId;
+    int level = merc == null ? 1 : Math.max(1, merc.level);
+    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
+        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+    if (rewards != null) {
+      int serviceLevel = rewards.mercenaryLevel(playerId);
+      if (serviceLevel > 0) level = serviceLevel;
+    }
+    if (merc == null && Riiablo.charData != null && Riiablo.charData.hasMerc()) {
+      CharData.MercData data = Riiablo.charData.getMerc();
+      mercType = data.type & 0xFFFF;
+      nameId = data.name & 0xFFFF;
+    }
+    String name = com.riiablo.screen.panel.MercenaryHud.resolveMercenaryName(mercType, nameId);
+    int cost = MercenaryManager.nativeResurrectionCost(level);
+    String template = Riiablo.bundle == null ? null : Riiablo.bundle.get("mercenary_resurrect");
+    if (template == null || template.isEmpty() || template.startsWith("ERROR:")) {
+      return "复活 " + name + ": " + cost;
+    }
+    return Riiablo.bundle.format("mercenary_resurrect", name, cost);
+  }
+
+  private void resurrectMercenary(MenuManager menus) {
+    if (Riiablo.game == null) return;
+    int playerId = Riiablo.game.player;
+    if (Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked()) {
+      ClientNetworkSynchronizer network = Riiablo.engine == null ? null
+          : Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
+      if (network != null) {
+        network.requestNpcService(entityId,
+            com.riiablo.net.packet.d2gs.NpcServiceType.RESURRECT,
+            com.riiablo.net.packet.d2gs.NpcServiceOperation.RESURRECT,
+            0, -1, 0);
+      }
+    } else {
+      NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
+          : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+      if (rewards != null) rewards.resurrectMercenary(playerId);
+    }
+    if (menus != null) menus.setMenu(null, Engine.INVALID_ENTITY);
   }
 
   private void openVendor(int flags, byte service) {
@@ -392,6 +493,7 @@ public class Npc extends AI {
 
     actionTimer = Float.POSITIVE_INFINITY;
     actionPerformed = false;
+    refreshHirelingMenu();
     event.dispatch(NpcInteractionEvent.obatin(src, entityId));
     mInteractable.get(entityId).count++;
   }

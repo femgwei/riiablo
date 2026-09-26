@@ -17,6 +17,17 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-26 佣兵死亡尸体与 NPC 复活菜单
+
+- [x] A1 卡夏、A2 格瑞兹、A3 阿舍拉、A5 夸尔·凯克均显示佣兵服务；佣兵死亡后动态加入
+  “复活 `<名字>`：`价格`”菜单项，名称、等级和价格从权威佣兵记录读取。
+- [x] 复活价格与 D2MOO `MONSTERS_GetHirelingResurrectionCost` 对齐：
+  `min(50000, 15 * level * level / 2)`；本地和 D2GS 多人请求都走同一扣金币/复活事务。
+- [x] 死亡佣兵尸体固定在死亡 Level，既不通过传送门也不跨区域跟随玩家；玩家离开 Level
+  后删除尸体实体但保留 D2S 死亡佣兵记录，返回雇佣 NPC 后可付费重建并复活。
+- [x] 定向验证：`MercenaryFollowSystemTest`、`MercenaryManagerTest` 共 18 项通过，
+  `:core:compileJava` 通过；真实 MPQ 双客户端菜单和视觉仍待实机验收。
+
 ## 2026-09-26 玩家召唤技能城镇施法
 
 - [x] 客户端快捷键、鼠标输入和服务端权威校验统一允许玩家召唤类技能在城镇开始施法；

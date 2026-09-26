@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.MercenaryFollowSystem;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.Riiablo;
@@ -164,6 +165,41 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   public int resurrectionCost(int playerId) {
     MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
     return merc == null ? 0 : MercenaryManager.nativeResurrectionCost(merc.level);
+  }
+
+  /**
+   * A dead hireling is a level-scoped corpse.  Leaving the level removes the
+   * corpse entity, while the persisted dead hireling remains available for a
+   * paid resurrection in town.
+   */
+  @Subscribe
+  public void onOwnerZoneChanged(ZoneChangeEvent change) {
+    if (change == null || change.zone == null || mMercenary == null || mMapWrapper == null) return;
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Mercenary.class, MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = ids[i];
+      Mercenary merc = mMercenary.get(entityId);
+      if (merc == null || merc.ownerId != change.entityId || !mCorpse.has(entityId)) continue;
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      if (wrapper != null && sameLevel(wrapper.zone, change.zone)) continue;
+      if (mercenaries.discardDeadMercenaryEntity(merc.ownerId, entityId)) {
+        world.delete(entityId);
+        log.info("[MERC_LIFECYCLE] phase=corpse_unload owner={} entity={} fromLevel={} toLevel={}",
+            merc.ownerId, entityId, levelId(wrapper == null ? null : wrapper.zone),
+            levelId(change.zone));
+      }
+    }
+  }
+
+  private static boolean sameLevel(Map.Zone first, Map.Zone second) {
+    return first != null && second != null && levelId(first) >= 0
+        && levelId(first) == levelId(second);
+  }
+
+  private static int levelId(Map.Zone zone) {
+    return zone == null || zone.level == null ? -1 : zone.level.Id;
   }
 
   public int mercenaryState(int playerId) {
@@ -409,6 +445,12 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (mInteractable.has(entityId)) mInteractable.remove(entityId);
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
     return true;
+  }
+
+  @Override
+  public int recreateMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
+      int level, int seed, int nameId) {
+    return createMercenaryEntity(playerId, def, level, seed, nameId);
   }
 
   @Override

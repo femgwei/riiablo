@@ -97,6 +97,18 @@ waypoints, caves, quest rewards and collision boundaries.
 
 ## Progress
 
+### 2026-09-26 佣兵死亡/复活生命周期
+
+- [x] 雇佣 NPC 菜单已覆盖 A1 卡夏、A2 格瑞兹、A3 阿舍拉和 A5 夸尔·凯克；佣兵死亡
+  后动态添加“复活 `<名字>`：`价格`”选项，菜单打开前会重新读取死亡状态。
+- [x] 复活价格采用 D2MOO `MONSTERS_GetHirelingResurrectionCost`：
+  `min(50000, 15 * level * level / 2)`，并由本地/多人 NPC 服务共用同一权威交易。
+- [x] 死亡佣兵保留原地 `Corpse`，不再跨房间/传送门跟随；玩家离开 Level 时仅删除尸体
+  ECS 实体，D2S 佣兵死亡标志、等级、名字、经验和装备记录继续保留，回到雇佣 NPC
+  后可付费重建实体并复活。
+- [x] 覆盖死亡佣兵不跟随、尸体卸载后重建并扣费、各 Act 雇佣 NPC 映射及复活价格的
+  定向回归测试；完整客户端/双客户端的菜单显示仍需使用真实 MPQ 实机验收。
+
 - [ ] Phase 1: native quest foundation and A1Q1 (in progress)
   - [x] Native 16-bit save-record flags and A1Q1 record transitions.
   - [x] Per-character/per-difficulty storage through `CharData`.
@@ -162,7 +174,9 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Gheed gambling stock generation and purchase handoff.
   - [x] Paid Kashya Rogue creation reuses the A1Q2 mercenary entity path.
   - [x] Native `Items.txt`/`Npc.txt` transaction-cost fields and 1024-scale price calculation.
-  - [ ] Hire-selection panel, resurrection dialog and restored-save entity recreation.
+  - [x] Hire-selection/resurrection menu and restored-save entity recreation; death corpses are
+    level-scoped and paid resurrection uses the native D2MOO price formula. Full hire-selection
+    panel visuals and real-MPQ client verification remain open.
   - [x] Authoritative multiplayer NPC-service request/result/stock protocol and D2GS validation boundary.
     - [x] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
       - [x] Network VendorPanel consumes server stock/prices and commits wallet/item changes on acknowledgement.

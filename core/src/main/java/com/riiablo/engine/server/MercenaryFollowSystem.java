@@ -132,7 +132,11 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     // do not turn it into an unconditional warp.  The old sameZone overload
     // remains for focused compatibility tests, while the live path uses the
     // map-aware rule.
-    int motion = motion(sameMap, sameZone, distance, dead, true);
+    // A dead hireling is a corpse, not a travelling pet.  It must remain at
+    // its death coordinates until the owner leaves the level; the zone-change
+    // lifecycle then unloads the corpse instead of carrying it through a warp.
+    if (dead) return;
+    int motion = motion(sameMap, sameZone, distance, false, true);
     // Native hirelings also follow inside the 16..24 band while the owner is
     // actively walking/running; otherwise they wait until the outer leash.
     if (motion == MOTION_NONE && !dead && distance > SETTLE_DISTANCE
@@ -152,7 +156,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
       teleport(entityId, ownerId, map, ownerZone, landing, distance, dead);
       return;
     }
-    if (dead || actioneer == null) return;
+    if (actioneer == null) return;
 
     // A combat chase installs the hostile entity as Target while the
     // hireling is outside its skill range.  Do not replace that target with
@@ -322,8 +326,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   }
 
   static int motion(boolean sameZone, float distance, boolean dead) {
-    if (!sameZone || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
     if (dead) return MOTION_NONE;
+    if (!sameZone || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
     if (distance > FOLLOW_DISTANCE) return MOTION_FOLLOW;
     if (distance <= SETTLE_DISTANCE) return MOTION_SETTLE;
     return MOTION_NONE;
@@ -336,8 +340,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
    */
   static int motion(boolean sameMap, boolean sameZone, float distance, boolean dead,
       boolean pathAvailable) {
-    if (!sameMap || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
     if (dead) return MOTION_NONE;
+    if (!sameMap || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
     if (!pathAvailable && distance > FOLLOW_DISTANCE) return MOTION_TELEPORT;
     if (distance > FOLLOW_DISTANCE) return MOTION_FOLLOW;
     if (distance <= SETTLE_DISTANCE) return MOTION_SETTLE;

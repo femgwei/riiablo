@@ -222,11 +222,17 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   }
 
   /** Resolves the native Hireling.txt name key (the saved value is a name slot). */
-  static String resolveMercenaryName(Mercenary merc) {
-    if (merc == null || Riiablo.string == null) return localized("hireling_unnamed", UNNAMED);
-    int id = Math.max(0, merc.nameId);
+  public static String resolveMercenaryName(Mercenary merc) {
+    return merc == null ? localized("hireling_unnamed", UNNAMED)
+        : resolveMercenaryName(merc.mercType, merc.nameId);
+  }
+
+  /** Resolves a persisted hireling header after its level-scoped entity unloads. */
+  public static String resolveMercenaryName(int mercType, int nameId) {
+    if (Riiablo.string == null) return localized("hireling_unnamed", UNNAMED);
+    int id = Math.max(0, nameId);
     String[] keys;
-    switch (merc.mercType) {
+    switch (mercType) {
       case 0:
         keys = new String[] {String.format(java.util.Locale.ROOT, "merc%02d", id + 1)};
         break;

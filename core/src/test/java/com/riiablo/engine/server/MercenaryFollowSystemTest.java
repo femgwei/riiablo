@@ -23,10 +23,10 @@ class MercenaryFollowSystemTest {
   }
 
   @Test
-  void deadHirelingOnlyMovesAcrossZoneBoundary() {
+  void deadHirelingNeverFollowsOrTeleports() {
     assertEquals(MercenaryFollowSystem.MOTION_NONE,
         MercenaryFollowSystem.motion(true, 80f, true));
-    assertEquals(MercenaryFollowSystem.MOTION_TELEPORT,
+    assertEquals(MercenaryFollowSystem.MOTION_NONE,
         MercenaryFollowSystem.motion(false, 2f, true));
   }
 
