@@ -266,8 +266,12 @@ public class SequenceHandler extends IteratingSystem {
     int fasterAttackRate = 0;
     if (mAttributesWrapper.has(entityId)
         && mAttributesWrapper.get(entityId).attrs != null) {
-      StatRef ias = mAttributesWrapper.get(entityId).attrs
-          .get(Stat.item_fasterattackrate, StatRef.obtain());
+      com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      StatRef ias = attrs.get(Stat.item_fasterattackrate, StatRef.obtain());
+      // ItemStatCost entries that are not character-base stats remain in the
+      // character's remaining list after ItemData.updateStats(). D2 still
+      // includes them in STATLIST_UnitGetItemStatOrSkillStatValue().
+      if (ias == null) ias = attrs.remaining().get(Stat.item_fasterattackrate, StatRef.obtain());
       if (ias != null) {
         fasterAttackRate = ias.asInt();
         aggregateIas = true;
