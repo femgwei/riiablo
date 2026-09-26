@@ -1286,6 +1286,7 @@ public class Actioneer extends PassiveSystem {
       case 0:
         break;
       case 6:   // Inner Sight/Slow Missiles: ServerSkillSystem applies the state.
+      case 15:  // Decoy/Dopplezon: ServerSkillSystem creates the owned summon.
       case 16:  // Valkyrie: ServerSkillSystem creates the owned summon.
       case 110: // RogueMissile: ServerSkillSystem creates the authoritative missile.
         // Actioneer is responsible for the animation keyframe only.  These

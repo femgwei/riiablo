@@ -25,7 +25,11 @@ import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.client.component.Label;
 import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.ServerEntityFactory;
+import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -46,6 +50,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
   protected ComponentMapper<Selectable> mSelectable;
   protected ComponentMapper<SoundEmitter> mSoundEmitter;
   protected ComponentMapper<Box2DBody> mBox2DBody;
+  protected CofManager cofs;
 
   protected MenuManager menuManager;
   protected DialogManager dialogManager;
@@ -364,6 +369,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // createSummonedPet delegates to the virtual createMonster method, but
     // keep this explicit guard for alternate factories and future refactors.
     attachMonsterPresentation(id);
+    attachAmazonPlayerComposite(id, ownerId, petType);
     Monster monster = mMonster.get(id);
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
         "[SUMMON_PRESENTATION] phase=attached entity=%d owner=%d summon=%s petType=%s "
@@ -376,6 +382,66 @@ public class ClientEntityFactory extends ServerEntityFactory {
             : "missing",
         mAnimationWrapper.has(id), mBBoxWrapper.has(id), mBox2DBody.has(id)));
     return id;
+  }
+
+  /**
+   * Valkyrie and Decoy are monster units on the authoritative side, but the
+   * native client renders both from the owner's player composite.  The VK
+   * monster row only contains a 2x2 TR marker; using it directly makes the
+   * summon technically present while leaving no visible character.  Copy the
+   * owner's resolved composite and switch only the presentation type/token.
+   * This also mirrors Decoy's native "look like the caster" behavior.
+   */
+  private void attachAmazonPlayerComposite(int entityId, int ownerId, String petType) {
+    if (petType == null) return;
+    String normalized = petType.trim().toLowerCase(java.util.Locale.ROOT);
+    if (!(normalized.equals("valkyrie") || normalized.equals("decoy")
+        || normalized.equals("dopplezon"))) return;
+    if (cofs == null || !mCofReference.has(ownerId) || !mCofComponents.has(ownerId)
+        || !mCofComponents.has(entityId)) {
+      com.badlogic.gdx.Gdx.app.log(TAG,
+          "[SUMMON_PRESENTATION] phase=player_composite_skipped entity=" + entityId
+              + " owner=" + ownerId + " reason=owner_composite_unavailable");
+      return;
+    }
+
+    CofReference owner = mCofReference.get(ownerId);
+    String token = owner.effectiveToken();
+    if (token == null || token.isEmpty()) {
+      com.badlogic.gdx.Gdx.app.log(TAG,
+          "[SUMMON_PRESENTATION] phase=player_composite_skipped entity=" + entityId
+              + " owner=" + ownerId + " reason=owner_token_missing");
+      return;
+    }
+
+    int[] ownerComponents = mCofComponents.get(ownerId).component;
+    for (int c = 0; c < ownerComponents.length; c++) {
+      int code = ownerComponents[c];
+      // PlayerItemHandler normally resolves empty armor slots to LIT.  Keep a
+      // safe base layer for a remote/early owner snapshot whose vector is not
+      // populated yet; NIL optional layers remain NIL when explicitly absent.
+      if (code == CofComponents.COMPONENT_NULL
+          || (code == CofComponents.COMPONENT_NIL && isPlayerBaseLayer(c))) {
+        code = CofComponents.COMPONENT_LIT;
+      }
+      cofs.setComponent(entityId, c, code);
+    }
+    cofs.setVisualOverride(entityId, Class.Type.PLR, token, Engine.WEAPON_HTH);
+    com.badlogic.gdx.Gdx.app.log(TAG, String.format(
+        "[SUMMON_PRESENTATION] phase=player_composite entity=%d owner=%d petType=%s "
+            + "token=%s mode=%d weaponClass=%d",
+        entityId, ownerId, normalized, token,
+        mCofReference.get(entityId).mode & 0xFF, Engine.WEAPON_HTH));
+  }
+
+  private static boolean isPlayerBaseLayer(int component) {
+    return component == com.riiablo.codec.COF.Component.HD
+        || component == com.riiablo.codec.COF.Component.TR
+        || component == com.riiablo.codec.COF.Component.LG
+        || component == com.riiablo.codec.COF.Component.RA
+        || component == com.riiablo.codec.COF.Component.LA
+        || component == com.riiablo.codec.COF.Component.S1
+        || component == com.riiablo.codec.COF.Component.S2;
   }
 
   @Override

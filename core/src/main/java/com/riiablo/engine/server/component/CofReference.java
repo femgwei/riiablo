@@ -9,6 +9,15 @@ public class CofReference extends Component {
   private static final byte[] PLAYER_TO_MONSTER_MODE = {
       0, 1, 2, 15, 3, 1, 2, 4, 5, 6, 7, 4, 11, 8, 9, 10, 11, 12, 14, 13
   };
+  /**
+   * D2 uses a monster unit for Amazon summons, but the Valkyrie/Decoy
+   * presentation is composed with the owner's player token.  Player and
+   * monster mode tables are not index-compatible (A1 is 7 for players and 4
+   * for monsters), so a player visual override needs the inverse conversion.
+   */
+  private static final byte[] MONSTER_TO_PLAYER_MODE = {
+      0, 1, 2, 4, 7, 8, 9, 10, 13, 14, 15, 16, 17, 4, 18, 3
+  };
 
   public String token;
   public byte   mode;
@@ -80,6 +89,10 @@ public class CofReference extends Component {
         }
       }
       return converted;
+    }
+    if (logicalType == Class.Type.MON && visualType == Class.Type.PLR
+        && mode >= 0 && mode < MONSTER_TO_PLAYER_MODE.length) {
+      return MONSTER_TO_PLAYER_MODE[mode];
     }
     return mode;
   }
