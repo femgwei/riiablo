@@ -19,6 +19,8 @@ import com.riiablo.engine.client.component.CofLoadingComponents;
 import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.CofChangeEvent;
@@ -46,6 +48,8 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<CofLoadingComponents> mCofLoadingComponents;
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Casting> mCasting;
 
   @Override
   protected void process(int entityId) {}
@@ -70,7 +74,32 @@ public class CofLayerLoader extends IteratingSystem {
           ? mAnimationWrapper.get(event.entityId) : null;
       Animation animation = wrapper == null ? null : wrapper.animation;
       if (animation != null && animation.getNumFramesPerDir() > 0) {
-        animation.setFrame(0);
+        int frame = 0;
+        Casting casting = mCasting.has(event.entityId) ? mCasting.get(event.entityId) : null;
+        if (casting != null && casting.strafeInitialized) {
+          AnimData anim = mAnimData.get(event.entityId);
+          int rollbackPercent = 50;
+          com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+          if (skill != null && skill.Param != null && skill.Param.length > 5
+              && skill.Param[5] > 0) rollbackPercent = skill.Param[5];
+          int midpoint = Math.max(0,
+              animation.getNumFramesPerDir() * (100 - rollbackPercent) / 100);
+          int attackFrame = -1;
+          if (anim != null && anim.keyframes != null) {
+            for (int i = 0; i < anim.keyframes.length; i++) {
+              if (anim.keyframes[i] == com.riiablo.engine.Engine.KEYFRAME_ATK) {
+                attackFrame = i;
+                break;
+              }
+            }
+          }
+          frame = attackFrame >= 0 ? Math.min(midpoint, Math.max(0, attackFrame - 1)) : midpoint;
+          frame = Math.min(frame, animation.getNumFramesPerDir() - 1);
+          Gdx.app.log(TAG, String.format(
+              "[STRAFE_ANIM] phase=client_rollback entity=%d frame=%d attackFrame=%d rollbackPercent=%d",
+              event.entityId, frame, attackFrame, rollbackPercent));
+        }
+        animation.setFrame(frame);
         animation.updateBox();
       }
       if (DEBUG_EVENTS) Gdx.app.debug(TAG, "restart animation without COF reload");

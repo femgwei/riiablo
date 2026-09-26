@@ -2964,13 +2964,19 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     Casting casting = mCasting.has(event.entityId) ? mCasting.get(event.entityId) : null;
-    // SrvDo012 is raised again for each native Strafe animation cycle.  The
-    // authoritative missiles are already emitted by the first callback; the
-    // later callbacks only advance the player's facing/animation sequence.
+    // SrvDo012 is raised once for every attack-animation keyframe.  Native
+    // D2 creates exactly one missile per callback, then decrements the skill
+    // parameter and selects the next target.  Do not eagerly create the whole
+    // volley here: doing so makes every arrow leave on the same frame.
     if (casting != null && casting.strafeInitialized) {
-      log.info("[STRAFE] phase=animation_keyframe entity={} index={} remaining={} target={}",
-          event.entityId, casting.strafeArrowIndex, casting.strafeRemainingArrows,
-          casting.targetId);
+      int index = casting.strafeArrowIndex;
+      if (index < 0 || index >= casting.strafeTargetIds.size) {
+        log.info("[STRAFE] phase=animation_keyframe entity={} index={} remaining={} result=complete",
+            event.entityId, index, casting.strafeRemainingArrows);
+        return;
+      }
+      int targetId = casting.strafeTargetIds.get(index);
+      createStrafeArrow(event, skill, missile, start, skillLevel, targetId, index);
       return;
     }
     int count = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
@@ -2994,35 +3000,51 @@ public class ServerSkillSystem extends PassiveSystem {
     final Vector2 origin = start;
     targets.sort((a, b) -> Float.compare(mPosition.get(a).position.dst2(origin),
         mPosition.get(b).position.dst2(origin)));
-    int created = 0;
-    for (int i = 0; i < targets.size() && created < count; i++) {
-      int targetId = targets.get(i);
-      Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
-      if (direction.isZero(0.0001f)) continue;
-      int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
-      if (id >= 0 && mMissile.has(id)) {
-        initializeSkillDamage(id, skill, event.entityId, skillLevel);
-        Missile arrow = mMissile.get(id);
-        arrow.targetId = targetId;
-        if (casting != null) casting.strafeTargetIds.add(targetId);
-        created++;
-      }
+    // Cache the native target order for the repeated callbacks, but emit only
+    // the first arrow now.  Subsequent callbacks use the index advanced by
+    // Actioneer.onAnimDataFinished().
+    if (targets.size() > count) targets.subList(count, targets.size()).clear();
+    if (targets.isEmpty() && event.targetId >= 0 && mPosition.has(event.targetId)) {
+      targets.add(event.targetId);
     }
-    if (created == 0) {
+    if (casting != null) {
+      casting.strafeTargetIds.clear();
+      for (int targetId : targets) casting.strafeTargetIds.add(targetId);
+      casting.strafeInitialized = true;
+      casting.strafeArrowIndex = 0;
+      casting.strafeRemainingArrows = Math.max(0, casting.strafeTargetIds.size - 1);
+    }
+
+    int created = 0;
+    // Direct SkillDoEvent consumers (for example data-driven server tests and
+    // network presentation probes) do not carry Actioneer's Casting state.
+    // There is no later animation keyframe available in that mode, so retain
+    // the compatibility volley behavior; authoritative casts always take the
+    // one-arrow-per-keyframe branch above.
+    if (casting == null) {
+      for (int i = 0; i < targets.size(); i++) {
+        if (createStrafeArrow(event, skill, missile, start, skillLevel, targets.get(i), i)) {
+          created++;
+        }
+      }
+    } else if (casting.strafeTargetIds.size > 0) {
+      int targetId = casting.strafeTargetIds.get(0);
+      if (createStrafeArrow(event, skill, missile, start, skillLevel, targetId, 0)) {
+        created = 1;
+      }
+    } else {
       Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start).nor();
       int id = createMissile(missile, direction, start, event.entityId, null, skillLevel);
       if (id >= 0 && mMissile.has(id)) {
         initializeSkillDamage(id, skill, event.entityId, skillLevel);
-        if (casting != null && event.targetId >= 0) casting.strafeTargetIds.add(event.targetId);
         created = 1;
+        log.info("[STRAFE] phase=arrow_create entity={} index=0 target={} missileId={} fallback=true",
+            event.entityId, event.targetId, id);
       }
     }
     if (created > 0) {
       consumeRangedAmmoForSkill(event, skill);
       if (casting != null) {
-        casting.strafeInitialized = true;
-        casting.strafeArrowIndex = 0;
-        casting.strafeRemainingArrows = Math.max(0, casting.strafeTargetIds.size - 1);
         if (casting.strafeTargetIds.size > 0) {
           int firstTarget = casting.strafeTargetIds.get(0);
           if (mPosition.has(firstTarget)) {
@@ -3037,9 +3059,24 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} "
-            + "missile={} animationRemaining={}",
+            + "missile={} animationRemaining={} emission=per_keyframe",
         event.entityId, skillLevel, count, targets.size(), created, missileName,
         casting != null ? casting.strafeRemainingArrows : 0);
+  }
+
+  private boolean createStrafeArrow(SkillDoEvent event, Skills.Entry skill,
+      Missiles.Entry missile, Vector2 start, int skillLevel, int targetId, int index) {
+    if (targetId < 0 || !mPosition.has(targetId)) return false;
+    Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
+    if (direction.isZero(0.0001f)) return false;
+    int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
+    if (id < 0 || !mMissile.has(id)) return false;
+    initializeSkillDamage(id, skill, event.entityId, skillLevel);
+    Missile arrow = mMissile.get(id);
+    arrow.targetId = targetId;
+    log.info("[STRAFE] phase=arrow_create entity={} index={} target={} missileId={} direction=({}, {})",
+        event.entityId, index, targetId, id, direction.x, direction.y);
+    return true;
   }
 
   private boolean mNativeUnitFlagsValid(int entityId) {
