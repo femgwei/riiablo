@@ -287,6 +287,59 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void immolationArrowFireKillsSixHitPointMonster() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      // A zero-resistance Fallen with six life must die on the first native
+      // immolation-fire damage tick (DamageRate=41), not merely lose a
+      // fractional display amount.
+      int target = monster(world, 1.2f, 0);
+      Attributes targetAttrs = attributes(1, 6);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+
+      Skills.Entry skill = Riiablo.files.skills.get("Immolation Arrow");
+      Missiles.Entry row = Riiablo.files.Missiles.get("immolationarrow");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      MissileDamageResolver.initializeSkill(
+          world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 45; i++) world.process();
+
+      assertEquals(0f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.0001f,
+          "a six-life Fallen standing in the fire must be killed by its first tick");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void immolationArrowDescriptionIncludesFireFieldDetails() {
+    Skills.Entry skill = Riiablo.files.skills.get("Immolation Arrow");
+    com.riiablo.codec.excel.SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+    assertTrue(com.riiablo.widget.SkillDetails.formatLine(
+        22, "", "", "", skill, 1, desc.str_mana).contains("Continuous Fire Damage:"));
+    assertTrue(com.riiablo.widget.SkillDetails.formatLine(
+        23, "StrSkill82", "", "", skill, 1, desc.str_mana).contains("4 seconds"));
+    assertTrue(com.riiablo.widget.SkillDetails.formatLine(
+        24, "StrSkill83", "", "", skill, 1, desc.str_mana).contains("7-9"));
+  }
+
+  @Test
   void immolationArrowAppliesImmediateRadiusDamageAtImpact() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     MissileCollisionSystem collisions = new MissileCollisionSystem();

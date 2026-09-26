@@ -29,7 +29,6 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.player.PlayerStatsManager;
-import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.logger.LogManager;
@@ -243,54 +242,8 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   }
 
   private String calc(SkillDesc.Entry desc, int i, int[] descline, String[] desctexta, String[] desctextb, String[] desccalca, String[] desccalcb, Skills.Entry skill, int lvl) {
-    switch(descline[i]) {
-      case 1:  return String.format("%s%s", Riiablo.string.lookup(desc.str_mana), getManaCost(skill, lvl)); // Mana Cost: 3
-      case 2:  return String.format("%s+%s%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctextb[i])); // Fire Damage: +30 percent
-      case 3:  return String.format("%s%s%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctextb[i])); // Weakens enemies by 25 percent
-      case 4:  return String.format("%s+%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i])); // Heals +2
-      case 5:  return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i])); // Minimum mana to cast: 4
-      case 6:  return String.format("+%s%s", eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctexta[i])); // +30 percent
-      case 7:  return String.format("%s%s", eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctexta[i])); // 13 percent chance
-      case 8:  return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i])); // 200 Attack Rating
-      case 9:  return String.format("%s%s%s+%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i]), Riiablo.string.lookup("StrSkill4"), eval(skill, lvl, desccalca[i])); // Damage bonus
-      //case 10: return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i])); // (Elem) Damage: X-Y
-      //case 11: return String.format("%s%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i])); // Same as above?
-      case 12: return String.format("%s%s%s", Riiablo.string.lookup(desctexta[i]),
-          SkillFormula.durationSeconds(Math.round(eval(skill, lvl, desccalca[i]))),
-          Riiablo.string.lookup("StrSkill16")); // Duration: native frames -> seconds
-      case 13: return String.format("%s%s", Riiablo.string.lookup("StrSkill42"), eval(skill, lvl, desccalca[i])); // Life: 100
-      //case 14: return String.format()
-      //case 15: return String.format("%s:%s", Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i]));
-      case 19: return String.format("%s%s%s%s", (desctextb[i].length() > 0 ? Riiablo.string.lookup(desctextb[i]) : ""), Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]) * 2f/3f, Riiablo.string.lookup("StrSkill26")); // Radius: 2.6 yards
-      case 28: return String.format("%s1%s", Riiablo.string.lookup("StrSkill18"), Riiablo.string.lookup("StrSkill36")); // Radius 1 yard
-      case 40: return String.format(Riiablo.string.lookup(desctexta[i]), Riiablo.string.lookup(desctextb[i]));
-      case 63: return String.format("%s: +%s%% %s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctextb[i]));
-      case 67: return String.format("%s: +%s%s", Riiablo.string.lookup(desctexta[i]), eval(skill, lvl, desccalca[i]), Riiablo.string.lookup(desctextb[i]));
-      default: return null;
-    }
-  }
-
-  private float eval(Skills.Entry skill, int lvl, String calc) {
-    if (calc.startsWith("par")) {
-      return skill.Param[calc.charAt(3) - '1'];
-    } else if (calc.startsWith("ln")) {
-      int a = skill.Param[calc.charAt(2) - '1'];
-      int b = skill.Param[calc.charAt(3) - '1'];
-      return a + lvl * b;
-    } else if (calc.startsWith("dm")) {
-      int a = skill.Param[calc.charAt(2) - '1'];
-      int b = skill.Param[calc.charAt(3) - '1'];
-      return ((110*lvl) * (b-a))/(100 * (lvl+6)) + a;
-    } else {
-      return -1;
-    }
-  }
-
-  private float getManaCost(Skills.Entry skill, int lvl) {
-    int level = Math.max(1, lvl);
-    float calculated = (1 << Math.max(0, Math.min(30, skill.manashift))) / 256f
-        * (skill.mana + (level - 1) * skill.lvlmana);
-    return Math.max(Math.max(0, skill.minmana), calculated);
+    return SkillDetails.formatLine(descline[i], desctexta[i], desctextb[i],
+        desccalca[i], skill, lvl, desc.str_mana);
   }
 
   @Override

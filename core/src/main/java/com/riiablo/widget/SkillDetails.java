@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Align;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.SkillDesc;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -106,7 +107,9 @@ public final class SkillDetails extends Table {
     pack();
   }
 
-  private static String formatLine(int type, String textA, String textB, String calc,
+  /** Formats one SkillDesc row, including the native missile-backed rows used
+   * by Immolation Arrow (continuous fire, duration, and explosion damage). */
+  public static String formatLine(int type, String textA, String textB, String calc,
       Skills.Entry skill, int level, String manaText) {
     String a = lookup(textA);
     String b = lookup(textB);
@@ -129,6 +132,13 @@ public final class SkillDetails extends Table {
       case 12: return a + SkillFormula.durationSeconds(value) + lookup("StrSkill16");
       case 13: return lookup("StrSkill42") + value;
       case 19: return b + a + (value * 2f / 3f) + lookup("StrSkill26");
+      case 22:
+        return formatMissileDamageLine(skill, level, lookup("StrSkill35"));
+      case 23:
+        return formatMissileDurationLine(skill, level, a);
+      case 24:
+        return formatMissileDamageLine(skill, level,
+            a.isEmpty() ? lookup("StrSkill83") : a);
       case 28: return lookup("StrSkill18") + "1" + lookup("StrSkill36");
       case 40: return String.format(a, b);
       case 63: return a + ": +" + value + "% " + b;
@@ -139,5 +149,45 @@ public final class SkillDetails extends Table {
 
   private static String lookup(String key) {
     return key == null || key.isEmpty() ? "" : Riiablo.string.lookup(key);
+  }
+
+  private static Missiles.Entry descriptionMissile(Skills.Entry skill) {
+    if (skill == null || Riiablo.files == null || Riiablo.files.skilldesc == null
+        || Riiablo.files.Missiles == null) return null;
+    SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+    if (desc == null || desc.descmissile1 == null || desc.descmissile1.isEmpty()) return null;
+    return Riiablo.files.Missiles.get(desc.descmissile1);
+  }
+
+  private static String formatMissileDamageLine(Skills.Entry skill, int level, String label) {
+    Missiles.Entry missile = descriptionMissile(skill);
+    if (missile == null || missile.EType == null || missile.EType.isEmpty()) return null;
+    int min = missile.EMin + missileDamageBonus(level, missile.MinELev);
+    int max = missile.Emax + missileDamageBonus(level, missile.MaxELev);
+    min = Math.max(0, min);
+    max = Math.max(min, max);
+    return label + min + "-" + max;
+  }
+
+  private static String formatMissileDurationLine(Skills.Entry skill, int level, String label) {
+    Missiles.Entry missile = descriptionMissile(skill);
+    if (missile == null) return null;
+    int frames = missile.Range + Math.max(0, level - 1) * missile.LevRange;
+    String prefix = label.isEmpty() ? lookup("StrSkill82") : label;
+    return prefix + SkillFormula.durationSeconds(frames) + lookup("StrSkill16");
+  }
+
+  private static int missileDamageBonus(int level, int[] perLevel) {
+    if (level <= 1 || perLevel == null || perLevel.length == 0) return 0;
+    int l1 = perLevel.length > 0 ? perLevel[0] : 0;
+    int l2 = perLevel.length > 1 ? perLevel[1] : 0;
+    int l3 = perLevel.length > 2 ? perLevel[2] : 0;
+    int l4 = perLevel.length > 3 ? perLevel[3] : 0;
+    int l5 = perLevel.length > 4 ? perLevel[4] : 0;
+    if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+    if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+    if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+    if (level > 8) return 7 * l1 + (level - 8) * l2;
+    return (level - 1) * l1;
   }
 }
