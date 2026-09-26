@@ -1715,9 +1715,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   /**
    * D2MOO's SUNITDMG_ApplyColdState rolls the defender seed after applying
-   * cold. Only MonStats2.deadCol monsters may retain STATE_SHATTER into
-   * death; the death systems then suppress the usable corpse and the client
-   * plays the icebreaksmall/medium/large presentation.
+   * cold. Explicit MonStats2.deadCol monsters may retain STATE_SHATTER into
+   * death; the 1.10f ordinary Fallen/Fallen Rogue rows leave deadCol blank,
+   * but the original client still performs the normal-monster ice shatter
+   * presentation for them.  Keep that ordinary/minion compatibility path
+   * while retaining the explicit table flag for special monster rows.
    *
    * <p>The native comparison is intentionally preserved: (roll % 100) >= 20.
    */
@@ -1732,7 +1734,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     NativeRng rng = new NativeRng(monster.rngState);
     int roll = rng.nextInt(100);
     monster.rngState = rng.state();
-    boolean eligible = monster.monstats2 != null && monster.monstats2.deadCol;
+    boolean eligible = isNativeShatterEligible(monster);
     boolean shatter = eligible && roll >= 20;
     if (shatter) {
       UnitState state = component.stateList.extendState(
@@ -1744,6 +1746,21 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     log.debug("[MONSTER_SHATTER] phase=cold_roll entity={} source={} deadCol={} eligible={} roll={} shatter={}",
         entityId, sourceId, monster.monstats2 != null && monster.monstats2.deadCol,
         eligible, roll, shatter);
+  }
+
+  /**
+   * Returns the monster classes that can retain SHATTER through death.
+   *
+   * <p>D2MOO gates its cold callback on MonStats2.deadCol.  In the shipped
+   * 1.10f tables, however, ordinary Fallen-family rows have an empty deadCol
+   * cell even though the retail game visibly shatters them when cold-killed.
+   * Normal/minion rank is therefore the data-compatible fallback; explicit
+   * deadCol remains authoritative for special rows such as Duriel.
+   */
+  private boolean isNativeShatterEligible(Monster monster) {
+    if (monster == null || monster.monstats2 == null) return false;
+    if (monster.monstats2.deadCol) return true;
+    return monster.rank == MonsterRank.NORMAL || monster.rank == MonsterRank.MINION;
   }
 
   private UnitState applyNativeFreezeState(int entityId, StateList states,
