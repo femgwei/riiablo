@@ -65,6 +65,12 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.SHIVERARMOR));
     reconcile(entityId, StateId.CHILLINGARMOR,
         states.stateList.getState(StateId.CHILLINGARMOR));
+    // Valkyrie carries a native looping gold ring around her feet.  It is a
+    // synchronized summon state rather than part of the Amazon composite,
+    // so it must be restored from StateP snapshots just like the armor and
+    // aura overlays above.
+    reconcile(entityId, StateId.VALKYRIE,
+        states.stateList.getState(StateId.VALKYRIE));
     // D2's shrine buffs are native timed states with the same overhead
     // presentation used by the original client.  Keep these in the client
     // reconciliation path so StateP snapshots and local games behave alike.
@@ -207,6 +213,11 @@ public class StateOverlaySystem extends IteratingSystem {
         break;
       case StateId.CHILLINGARMOR:
         candidates = new String[] {"chillarmor", "chillingarmor"};
+        break;
+      case StateId.VALKYRIE:
+        // The retail filename is misspelled "ValkarieGlow".  Keep the
+        // correctly-spelled aliases for data packs that fixed the typo.
+        candidates = new String[] {"ValkarieGlow", "ValkyrieGlow", "valkyrieglow"};
         break;
       case StateId.SHRINE_ARMOR:
         candidates = new String[] {"shrine_armor"};
