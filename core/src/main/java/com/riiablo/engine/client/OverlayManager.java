@@ -33,6 +33,15 @@ public class OverlayManager extends IteratingSystem {
       animation.edit()
           .layer(dc, overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID)
           .build();
+      // Overlay.txt stores AnimRate as the number of overlay frames played
+      // per second.  The generic Animation default is the 25 Hz game tick;
+      // using it for ValkarieGlow (native AnimRate=8) makes the gold ring
+      // pulse more than three times faster than the retail client.  Preserve
+      // the native rate for every overlay that provides one and retain the
+      // 25 Hz fallback for legacy/partial rows with AnimRate=0.
+      if (overlay.entry.AnimRate > 0) {
+        animation.setFrameDuration(1f / overlay.entry.AnimRate);
+      }
       animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.ONCE);
       // FIXME: set frame to elapsed time since creation
       overlay.isLoaded = true;
