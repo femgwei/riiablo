@@ -50,4 +50,13 @@ class CharacterPanelStatsTest {
     alwaysHit.ResultFlags = 1;
     assertFalse(CharacterPanel.skillUsesAttackRating(alwaysHit));
   }
+
+  @Test
+  void nativeAttackRatingPlaceholderOnlyContainsSpecialSkillName() {
+    String nativeFormat = "%s\nAttack Rating (AR)";
+    assertEquals("Multiple Shot\nAttack Rating (AR)",
+        CharacterPanel.formatCombatLabel(nativeFormat, "Multiple Shot", true));
+    assertEquals("Attack Rating (AR)",
+        CharacterPanel.formatCombatLabel(nativeFormat, "", false));
+  }
 }

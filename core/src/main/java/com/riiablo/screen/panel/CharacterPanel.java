@@ -359,30 +359,21 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
    */
   private static String combatLabel(int labelId, String skillName, boolean skillQualified) {
     String format = Riiablo.string.lookup(labelId);
+    return formatCombatLabel(format, skillName, skillQualified);
+  }
+
+  static String formatCombatLabel(String format, String skillName, boolean skillQualified) {
     if (format == null) return skillQualified ? skillName : "";
     String placeholder = format.contains("%s1") ? "%s1" : "%s";
     if (format.contains(placeholder)) {
-      // In the native Chinese table 4063 is deliberately just "%s". The
-      // client supplies the localized "Attack Rating" caption at runtime;
-      // using the raw string leaves a visible percent marker in Riiablo.
-      if (labelId == 4063) {
-        String attackRating = localizedAttackRating();
-        String replacement = skillQualified && skillName != null && !skillName.isEmpty()
-            ? skillName + localizedSeparator() + attackRating : attackRating;
-        return format.replace(placeholder, replacement);
-      }
+      // Native 4063 is "%s\nAttack Rating". For a weapon skill, %s is the
+      // skill name and Attack Rating remains on line two. For normal attack,
+      // remove the empty placeholder and leading newline so Attack Rating is
+      // rendered by itself on line one.
       if (skillQualified) return format.replace(placeholder, skillName);
       return format.replace(placeholder, "").trim();
     }
     return skillQualified ? skillName + localizedSeparator() + format : format;
-  }
-
-  private static String localizedAttackRating() {
-    // 4240 is the native "Attack" caption and 3480 is the native
-    // "Accuracy/Rating" caption. Combining them keeps this localized for
-    // both the Chinese and English string tables.
-    return Riiablo.string.lookup(4240) + localizedSeparator()
-        + Riiablo.string.lookup(3480);
   }
 
   private static String localizedSeparator() {
