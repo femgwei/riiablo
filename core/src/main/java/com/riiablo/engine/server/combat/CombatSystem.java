@@ -1337,6 +1337,7 @@ public class CombatSystem {
     d.defenseVsMissile = statInt(defender, Stat.armorclass_vs_missile, 0);
     d.defenseVsMelee = statInt(defender, Stat.armorclass_vs_hth, 0);
     if (defenderStates != null) {
+      d.defense = Math.max(0, d.defense + defenderStates.getTotalFlatDefenseModifier());
       d.defense = Math.max(0, d.defense * (100 + defenderStates.getTotalDefenseModifier()) / 100);
     }
     d.currentLife = Math.max(0, statInt(defender, Stat.hitpoints, 0));

@@ -1285,6 +1285,14 @@ public class Actioneer extends PassiveSystem {
     switch (srvdofunc) {
       case 0:
         break;
+      case 6:   // Inner Sight/Slow Missiles: ServerSkillSystem applies the state.
+      case 16:  // Valkyrie: ServerSkillSystem creates the owned summon.
+      case 110: // RogueMissile: ServerSkillSystem creates the authoritative missile.
+        // Actioneer is responsible for the animation keyframe only.  These
+        // callbacks are consumed by ServerSkillSystem from the same
+        // SkillDoEvent; falling through to the warning path would incorrectly
+        // report a successful native effect as unsupported.
+        break;
       case 120: { // SKILLS_SrvDo120_FeralRage_Maul
         resolveFeralMaul(entityId, targetId);
         break;

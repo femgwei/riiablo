@@ -409,7 +409,8 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId, event.targetId, event.srvdofunc, event.cltdofunc));
     }
     if (!mPosition.has(event.entityId)) return;
-    if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
+    if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)
+        && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
     boolean rangedNormalAttack = isPlayerRangedNormalAttack(event.entityId, event.skillId);
@@ -442,6 +443,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 29
+        && event.srvdofunc != 6
         && event.srvdofunc != 117
         && event.srvdofunc != 123
         && event.srvdofunc != 124
@@ -471,6 +473,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 29
+        && skill.srvdofunc != 6
         && skill.srvdofunc != 117
         && skill.srvdofunc != 123
         && skill.srvdofunc != 124
@@ -493,6 +496,11 @@ public class ServerSkillSystem extends PassiveSystem {
         || event.skillId == SkillId.THUNDER_STORM
         || "Thunder Storm".equalsIgnoreCase(skill.skill)) {
       applyThunderStormState(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 6 || skill.srvdofunc == 6
+        || "Inner Sight".equalsIgnoreCase(skill.skill)) {
+      applyInnerSight(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 20 || skill.srvdofunc == 20) {
@@ -1437,6 +1445,47 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
+            + "defense={} affected={} status=PASS",
+        event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  /** Native SrvDo006: apply Inner Sight's flat defense reduction to hostiles. */
+  private void applyInnerSight(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    // Inner Sight is a timed aura in the 1.10 data.  Keep the data-driven
+    // values when available, with the native level-one defaults as a guard for
+    // stripped/modded Skills.txt rows.
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
+    if (duration <= 0) duration = 200 + Math.max(0, skillLevel - 1) * 25;
+    int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    if (range <= 0) range = 13 + Math.max(0, skillLevel - 1);
+    duration = Math.max(1, duration);
+    range = Math.max(1, Math.min(128, range));
+    int defenseReduction = -AmazonSkills.calculateInnerSightDefenseReduce(skillLevel);
+    int affected = 0;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    float range2 = range * (float) range;
+    for (int i = 0; i < entities.size(); i++) {
+      int targetId = entities.get(i);
+      if (targetId == event.entityId || !isHostile(event.entityId, targetId)
+          || !mPosition.has(targetId) || !hasPositiveLife(targetId)
+          || caster.dst2(mPosition.get(targetId).position) > range2) continue;
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      UnitStates states = mUnitStates.get(targetId);
+      if (states.stateList == null) states.init(targetId);
+      UnitState state = states.stateList.addStateLayer(
+          StateId.INNERSIGHT, duration, skillLevel, event.entityId, event.skillId);
+      if (state == null) continue;
+      // Unlike Cloak of Shadows, Inner Sight lowers armor by a fixed amount,
+      // not a percentage.  Store it in the native armorclass stat-list so the
+      // combat path can apply it before the attack-mode defense selection.
+      state.setStatContribution(Stat.armorclass, 0,
+          NativeStatResolver.Operation.ADD, defenseReduction);
+      state.needsSync = true;
+      affected++;
+    }
+    log.info("[INNER_SIGHT] phase=apply source={} skill={} level={} range={} duration={} "
             + "defense={} affected={} status=PASS",
         event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
   }

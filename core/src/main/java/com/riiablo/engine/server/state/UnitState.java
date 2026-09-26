@@ -433,9 +433,14 @@ public class UnitState {
 
   public int resolvedDefenseModifier() {
     syncLegacyModifiers();
-    return hasAnyStatContribution(Stat.item_armor_percent, Stat.skill_armor_percent, Stat.armorclass)
-        ? sumStatContributions(Stat.item_armor_percent, Stat.skill_armor_percent, Stat.armorclass)
-        : defenseModifier;
+    // Stat.armorclass is a flat defense contribution (for example Inner
+    // Sight), whereas item/skill_armor_percent are percentage modifiers.
+    // Keep the two domains separate so a flat -40 does not become -40%.
+    if (hasAnyStatContribution(Stat.item_armor_percent, Stat.skill_armor_percent)) {
+      return sumStatContributions(Stat.item_armor_percent, Stat.skill_armor_percent);
+    }
+    if (hasStatContribution(Stat.armorclass)) return 0;
+    return defenseModifier;
   }
 
   public int resolvedAttackModifier() {

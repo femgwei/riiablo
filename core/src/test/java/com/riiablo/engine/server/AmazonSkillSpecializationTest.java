@@ -583,6 +583,46 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void innerSightAppliesFlatDefenseReductionToHostiles() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry innerSight = Riiablo.files.skills.get("Inner Sight");
+      assertNotNull(innerSight);
+      data.setSkillLevel(innerSight.Id, 2);
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(10, 100);
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(4, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(5, 100);
+      world.getMapper(UnitStates.class).create(target).init(target);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, innerSight.Id, Engine.INVALID_ENTITY, new Vector2(), innerSight.srvdofunc, 0));
+
+      UnitState state = world.getMapper(UnitStates.class).get(target)
+          .stateList.getStateLayer(StateId.INNERSIGHT, amazon, innerSight.Id);
+      assertNotNull(state);
+      assertEquals(-AmazonSkills.calculateInnerSightDefenseReduce(2),
+          state.getStatContributionValue(Stat.armorclass));
+      assertEquals(-60, world.getMapper(UnitStates.class).get(target)
+          .stateList.getTotalFlatDefenseModifier());
+      assertEquals(0, world.getMapper(UnitStates.class).get(target)
+          .stateList.getTotalDefenseModifier(),
+          "Inner Sight must not be interpreted as a percentage defense modifier");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void passiveDodgeAvoidEvadeUseNativeAttackContext() {
     DefenseCalculator defense = DefenseCalculator.INSTANCE;
     assertEquals(DefenseCalculator.DEFENSE_DODGE,

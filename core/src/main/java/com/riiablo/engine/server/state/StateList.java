@@ -662,6 +662,11 @@ public class StateList {
     return total;
   }
 
+  /** Returns flat defense changes supplied by state stat-lists. */
+  public int getTotalFlatDefenseModifier() {
+    return getTotalStatContribution(Stat.armorclass);
+  }
+
   /**
    * 计算所有状态的移动速度修正总和
    * 
