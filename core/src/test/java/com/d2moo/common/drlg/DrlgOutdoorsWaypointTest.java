@@ -18,4 +18,16 @@ class DrlgOutdoorsWaypointTest {
     assertTrue(DrlgOutdoors.matchesColdPlainsWaypointLink(0x800, 0));
     assertFalse(DrlgOutdoors.matchesColdPlainsWaypointLink(0x10000, 0));
   }
+
+  @Test
+  void act3WaypointLevelsMatchRetailOutdoorLayout() {
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_SPIDERFOREST));
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_FLAYERJUNGLE));
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_LOWERKURAST));
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_KURASTBAZAAR));
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_UPPERKURAST));
+    assertTrue(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_TRAVINCAL));
+    assertFalse(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_GREATMARSH));
+    assertFalse(DrlgOutWild.isAct3WaypointLevel(D2LevelIds.LEVEL_KURASTCAUSEWAY));
+  }
 }

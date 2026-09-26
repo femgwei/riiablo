@@ -105,7 +105,8 @@ public class DrlgOutWild {
             addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_BORDER, "border");
         }
 
-        if (levelId >= D2LevelIds.LEVEL_COLDPLAINS && levelId <= D2LevelIds.LEVEL_BLACKMARSH) {
+        if (levelId >= D2LevelIds.LEVEL_COLDPLAINS && levelId <= D2LevelIds.LEVEL_BLACKMARSH
+                || isAct3WaypointLevel(levelId)) {
             DrlgOutdoors.spawnAct12Waypoint(level);
             logGrid2Flags(level, outdoors, "waypoint");
         }
@@ -121,6 +122,22 @@ public class DrlgOutWild {
     static boolean isAct1Wilderness(int levelId) {
         return levelId >= D2LevelIds.LEVEL_BLOODMOOR
                 && levelId <= D2LevelIds.LEVEL_TAMOEHIGHLAND;
+    }
+
+    /**
+     * Act III uses the same outdoor waypoint substitution pipeline as Acts I
+     * and II.  The old bridge only invoked it for the Act I wilderness range,
+     * leaving the native Act III rooms without a Waypoint.ds1/WaySmall.ds1
+     * substitution and consequently without an exported waypoint object.
+     * Great Marsh and Kurast Causeway intentionally have no retail waypoint.
+     */
+    static boolean isAct3WaypointLevel(int levelId) {
+        return levelId == D2LevelIds.LEVEL_SPIDERFOREST
+                || levelId == D2LevelIds.LEVEL_FLAYERJUNGLE
+                || levelId == D2LevelIds.LEVEL_LOWERKURAST
+                || levelId == D2LevelIds.LEVEL_KURASTBAZAAR
+                || levelId == D2LevelIds.LEVEL_UPPERKURAST
+                || levelId == D2LevelIds.LEVEL_TRAVINCAL;
     }
 
     static boolean preservesInitialDirections(int levelId) {
