@@ -134,6 +134,16 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertTrue(MissileDamageResolver.initializeSkillArea(glacialMissile, glacial, owner, 1));
     assertTrue(glacialMissile.freezesTarget,
         "Glacial Spike's frze missile type must apply the native freeze path");
+
+    Missile tableExplosion = new Missile().set(Riiablo.files.Missiles.get("freezingarrowexp3"),
+        new Vector2(), 1).setOwner(1);
+    assertTrue(!MissileDamageResolver.initializeTableMissile(tableExplosion, owner, 1),
+        "zero-damage dispatch rows must fall back to their skill packet");
+    assertTrue(MissileDamageResolver.initializeSkillArea(tableExplosion,
+        freezing, owner, 1));
+    tableExplosion.freezesTarget = true;
+    assertTrue(tableExplosion.damage.get(Stat.coldmaxdam).asInt() > 0,
+        "Freezing Arrow explosion must retain cold damage from its skill packet");
   }
 
   @Test
@@ -165,6 +175,10 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
       MissileDamageResolver.initializeSkill(
           world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
+      // The local client presentation path can arrive at the authoritative
+      // collision system without carrying skillId; the Missiles.txt row must
+      // still recover the Freezing Arrow dispatch packet.
+      world.getMapper(Missile.class).get(sourceId).skillId = -1;
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
       for (int i = 0; i < 4; i++) world.process();
 

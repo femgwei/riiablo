@@ -151,6 +151,56 @@ public final class MissileDamageResolver {
     return true;
   }
 
+  /**
+   * Initializes a child missile directly from its Missiles.txt damage row.
+   *
+   * <p>Amazon elemental arrow explosions are authoritative Missiles.txt
+   * packets. Their dispatch skill may be absent on the server-side child
+   * (and the corresponding Skills.txt row can intentionally contain no
+   * damage), so routing them through initializeSkill would erase EType/EMin/
+   * EMax and lose the freeze flag.
+   */
+  public static boolean initializeTableMissile(Missile projectile,
+      Attributes ownerAttrs, int level) {
+    if (projectile == null || projectile.missile == null) return false;
+    Missiles.Entry row = projectile.missile;
+    level = Math.max(1, level);
+    int type = damageType(row.EType);
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    int physicalMin = shiftedDamage(row.MinDamage, row.MinLevDam, level, row.HitShift);
+    int physicalMax = shiftedDamage(row.MaxDamage, row.MaxLevDam, level, row.HitShift);
+    int coldLength = 0;
+    int poisonLength = 0;
+    if (type > PHYSICAL) {
+      elementalMin[type] = shiftedDamage(row.EMin, row.MinELev, level, row.HitShift);
+      elementalMax[type] = shiftedDamage(row.Emax, row.MaxELev, level, row.HitShift);
+      int length = elementalLength(row, level);
+      if (type == COLD) coldLength = length;
+      if (type == POISON) poisonLength = length;
+      if (row.ApplyMastery && ownerAttrs != null) {
+        short mastery = masteryStat(row.EType);
+        int bonus = mastery != 0 ? Math.max(0, statInt(ownerAttrs, mastery)) : 0;
+        elementalMin[type] += elementalMin[type] * bonus / 100;
+        elementalMax[type] += elementalMax[type] * bonus / 100;
+      }
+    }
+    boolean meaningful = physicalMax > 0;
+    for (int i = 1; i < DAMAGE_TYPES; i++) meaningful |= elementalMax[i] > 0;
+    if (!meaningful) return false;
+    writeSnapshot(projectile, ownerAttrs, false, level, physicalMin, physicalMax,
+        statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
+    projectile.damageLevel = level;
+    projectile.freezesTarget = row.pSrvDmgFunc == 2
+        || "freeze".equalsIgnoreCase(row.EType)
+        || "frze".equalsIgnoreCase(row.EType);
+    projectile.usesAttackRating = false;
+    log.info("[MISSILE_TABLE_SNAPSHOT] missile={} level={} element={} damage={}..{} "
+            + "coldLength={} freezesTarget={}", row.Missile, level, row.EType,
+        elementalMin[type], elementalMax[type], coldLength, projectile.freezesTarget);
+    return true;
+  }
+
   /** Builds the native Skills.txt damage snapshot used by elemental arrows. */
   public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {

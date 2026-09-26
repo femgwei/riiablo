@@ -2184,6 +2184,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (factory == null || source == null || source.missile == null
         || source.missile.HitSubMissile == null) return 0;
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    if (skill == null && source.missile.Skill != null && !source.missile.Skill.isEmpty()) {
+      skill = Riiablo.files.skills.get(source.missile.Skill);
+    }
     int spawned = 0;
     for (String name : source.missile.HitSubMissile) {
       if (name == null || name.isEmpty()) continue;
@@ -2193,10 +2196,16 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (childId < 0 || !mMissile.has(childId)) continue;
       spawned++;
       Missile child = mMissile.get(childId);
-      if (skill != null) {
-        Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
-            ? mAttributesWrapper.get(source.ownerId).attrs : null;
-        int level = Math.max(1, source.damageLevel);
+      Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+          ? mAttributesWrapper.get(source.ownerId).attrs : null;
+      int level = Math.max(1, source.damageLevel);
+      boolean tableSnapshot = row.EType != null
+          && ("cold".equalsIgnoreCase(row.EType)
+              || "freeze".equalsIgnoreCase(row.EType)
+              || "frze".equalsIgnoreCase(row.EType));
+      boolean initialized = tableSnapshot
+          && MissileDamageResolver.initializeTableMissile(child, ownerAttrs, level);
+      if (!initialized && skill != null) {
         if (!MissileDamageResolver.initializeSkillArea(
             child, skill, ownerAttrs, level,
             synergyName -> baseSkillLevel(source.ownerId, synergyName),
@@ -2206,6 +2215,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         child.skillId = source.skillId;
         child.damageLevel = level;
       }
+      // The row owns the freeze behavior even when its elemental damage is
+      // supplied by the associated Skills.txt dispatch row (for example
+      // freezingarrowexp3 has EType=frze but zero EMin/EMax).
+      if (tableSnapshot) child.freezesTarget = true;
       log.info("[AMAZON_ARROW_EXPLOSION] phase=create owner={} skill={} source={} child={} "
               + "missile={} radius={} freeze={}",
           source.ownerId, source.skillId, source.missile.Missile, childId, name,
