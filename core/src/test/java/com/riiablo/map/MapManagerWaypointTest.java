@@ -45,6 +45,20 @@ class MapManagerWaypointTest {
   }
 
   @Test
+  void nativeOutdoorTopologyDoesNotNeedCompatibilityWaypointPresets() {
+    Map.Zone nativeZone = new Map.Zone();
+    Map.RoomEx room = nativeZone.addRoomEx(0, 0, 40, 40);
+    room.setAdjacentRoomIds(new int[0]);
+
+    assertTrue(nativeZone.hasNativeRoomTopology());
+    assertFalse(MapManager.shouldCreateCompatibilityOutdoorWaypoints(nativeZone));
+
+    Map.Zone legacy = new Map.Zone();
+    assertFalse(legacy.hasNativeRoomTopology());
+    assertTrue(MapManager.shouldCreateCompatibilityOutdoorWaypoints(legacy));
+  }
+
+  @Test
   void ignoresNativeWarpMarkerWithoutDestinationOrWarpRow() {
     Levels.Entry level = new Levels.Entry();
     level.Vis = new int[] {78, 0};

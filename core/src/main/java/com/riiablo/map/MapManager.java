@@ -137,9 +137,15 @@ public class MapManager extends PassiveSystem {
     // 只对城镇区域创建 NPC 和其他对象
     // 野外区域的对象应该通过 generator 或其他方式创建
     if (!zone.town) {
-      // Outdoor waypoint presets contain the actual selectable DS1 object.
-      // Keep skipping monsters/NPCs here, but do not discard the waypoint.
-      createPresetEntities(zone, true);
+      // A complete native RoomEx export owns all preset units, including the
+      // waypoint.  The native waypoint is deferred until its room enters the
+      // client sight ring, so adding the legacy outdoor preset here would
+      // leave one compatibility waypoint behind and create a second native
+      // waypoint when that room is activated.
+      if (shouldCreateCompatibilityOutdoorWaypoints(zone)) {
+        // Legacy outdoor maps still need the selectable DS1 waypoint preset.
+        createPresetEntities(zone, true);
+      }
       return;
     }
 
@@ -158,6 +164,15 @@ public class MapManager extends PassiveSystem {
 
   static boolean shouldCreateNativeObjectsImmediately(Map.Zone zone) {
     return zone == null || zone.town || !zone.hasNativeRoomTopology();
+  }
+
+  /**
+   * Returns whether the legacy DS1 outdoor waypoint should be injected.
+   * Complete native RoomEx exports own that object and will materialize it
+   * when its room becomes visible; injecting the preset as well duplicates it.
+   */
+  static boolean shouldCreateCompatibilityOutdoorWaypoints(Map.Zone zone) {
+    return zone != null && !zone.hasNativeRoomTopology();
   }
 
   public void createNativeObjects(Map.Zone zone) {
