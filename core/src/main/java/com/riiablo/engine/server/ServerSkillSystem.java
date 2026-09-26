@@ -2536,7 +2536,7 @@ public class ServerSkillSystem extends PassiveSystem {
    * Native {@code SKILLS_SrvDo144_Hydra}.
    *
    * <p>The original routine validates the target room (Hydra cannot be cast
-   * in town), derives a single lifetime from {@code Param[0]/Param[1]}, then
+   * derives a single lifetime from {@code Param[0]/Param[1]}, then
    * creates three owned Hydra monsters at the fixed offsets {@code (-1,-1)},
    * {@code (0,0)} and {@code (1,-1)}.  The summon factory owns the PetType
    * limit and authoritative network entity creation; the Hydra monster's
@@ -2555,14 +2555,6 @@ public class ServerSkillSystem extends PassiveSystem {
     String summonName = skill.summon == null || skill.summon.isEmpty()
         ? "hydra" : skill.summon;
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
-    if (map != null) {
-      Map.Zone zone = map.getZone(target.x, target.y);
-      if (zone != null && zone.isTown()) {
-        log.info("[HYDRA] phase=reject owner={} skill={} position=({}, {}) reason=town",
-            event.entityId, event.skillId, target.x, target.y);
-        return;
-      }
-    }
     MonStats.Entry summon = Riiablo.files.monstats.get(summonName);
     if (summon == null) {
       log.warn("[HYDRA] phase=reject owner={} skill={} row={} reason=missing_monstats",

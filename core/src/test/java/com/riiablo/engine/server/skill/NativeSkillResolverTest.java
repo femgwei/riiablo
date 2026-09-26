@@ -51,6 +51,34 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void playerSummonsAreAllowedInTownButGroundBoneSkillsAreNotSummons() {
+    Skills.Entry skeleton = new Skills.Entry();
+    skeleton.Id = 70;
+    skeleton.skill = "Raise Skeleton";
+    skeleton.srvdofunc = 31;
+    skeleton.summon = "necroskeleton";
+    skeleton.pettype = "skeleton";
+    assertTrue(NativeSkillResolver.isPlayerSummonSkill(skeleton));
+    assertTrue(NativeSkillResolver.isAllowedInTown(skeleton, true));
+
+    Skills.Entry hydra = new Skills.Entry();
+    hydra.Id = 62;
+    hydra.skill = "Hydra";
+    hydra.srvdofunc = 144;
+    assertTrue(NativeSkillResolver.isPlayerSummonSkill(hydra),
+        "Hydra must remain recognized when a reduced table omits Summon");
+    assertTrue(NativeSkillResolver.isAllowedInTown(hydra, true));
+
+    Skills.Entry boneWall = new Skills.Entry();
+    boneWall.Id = 78;
+    boneWall.skill = "Bone Wall";
+    boneWall.srvdofunc = 60;
+    boneWall.summon = "bonewall";
+    boneWall.pettype = "bonewall";
+    assertFalse(NativeSkillResolver.isPlayerSummonSkill(boneWall));
+  }
+
+  @Test
   public void basicAttackRetainsTargetableOnlyFallback() {
     Skills.Entry attack = new Skills.Entry();
     attack.Id = com.riiablo.skill.SkillCodes.attack;

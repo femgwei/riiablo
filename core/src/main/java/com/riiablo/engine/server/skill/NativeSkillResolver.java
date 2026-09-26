@@ -44,13 +44,16 @@ public final class NativeSkillResolver {
   }
 
   /**
-   * Returns the native Skills.txt InTown flag.  The flag is an allow-list:
-   * attack/weapon skills and offensive spells normally resolve to false in a
-   * town, while utility skills are enabled only when their native row says so.
+   * Returns whether a player skill may be started in town.  The native
+   * Skills.txt flag remains the default allow-list, but player summon skills
+   * are deliberately allowed here: their result is an owned pet/entity, not
+   * a direct attack on a town target.  Specialist handlers still validate
+   * their own target/placement rules (for example Bone Wall ground checks).
    * Keep a conservative system-skill fallback for reduced/custom tables.
    */
   public static boolean isAllowedInTown(Skills.Entry skill) {
     if (skill == null) return true;
+    if (isPlayerSummonSkill(skill)) return true;
     if (com.riiablo.Riiablo.files != null
         && com.riiablo.Riiablo.files.NativeSkills != null) {
       com.riiablo.codec.excel.NativeSkills nativeSkills = com.riiablo.Riiablo.files.NativeSkills;
@@ -73,6 +76,39 @@ public final class NativeSkillResolver {
    */
   public static boolean isAllowedInTown(Skills.Entry skill, boolean inTown) {
     return !inTown || isAllowedInTown(skill);
+  }
+
+  /**
+   * Returns whether a Skills.txt row creates a player-owned summon/trap unit.
+   * The summon columns are preferred, with SrvDoFunc fallbacks for native rows
+   * whose reduced/custom exports omit the Summon column (notably Hydra).
+   * Bone Wall and Bone Prison deliberately remain ground/unit skills: their
+   * handlers require a non-town placement and must not be opened by this
+   * town-cast exception.
+   */
+  public static boolean isPlayerSummonSkill(Skills.Entry skill) {
+    if (skill == null) return false;
+    if (skill.srvdofunc == 60 || skill.srvdofunc == 62) return false;
+    if (skill.summon != null && !skill.summon.trim().isEmpty()
+        && skill.pettype != null && !skill.pettype.trim().isEmpty()) return true;
+    switch (skill.srvdofunc) {
+      case 15:  // Amazon Decoy
+      case 16:  // Amazon Valkyrie
+      case 31:  // Necromancer Skeleton/Skeletal Mage
+      case 44:  // Assassin Blade Sentinel
+      case 45:  // Assassin Sentry traps
+      case 49:  // Assassin Shadow Warrior/Master
+      case 56:  // Necromancer Clay/Blood/Fire Golem
+      case 57:  // Necromancer Iron Golem
+      case 58:  // Necromancer Revive
+      case 114: // Druid Raven
+      case 115: // Druid Vines
+      case 119: // Druid Wolves/Spirits/Grizzly
+      case 144: // Sorceress Hydra
+        return true;
+      default:
+        return false;
+    }
   }
 
   /** Returns the native TargetableOnly rule used by unmodified mouse input. */

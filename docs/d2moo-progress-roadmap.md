@@ -17,6 +17,15 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-26 玩家召唤技能城镇施法
+
+- [x] 客户端快捷键、鼠标输入和服务端权威校验统一允许玩家召唤类技能在城镇开始施法；
+  识别骷髅/石魔/复活、德鲁伊召唤、诱饵/女武神、刺客影子/陷阱和 Hydra。攻击、诅咒及
+  地面持续伤害仍按城镇规则限制；Bone Wall/Bone Prison 继续由自身的非城镇落点校验保护。
+- [x] 新增 `NativeSkillResolverTest.playerSummonsAreAllowedInTownButGroundBoneSkillsAreNotSummons`
+  覆盖普通召唤、缺少 `Summon` 列时的 Hydra 回退以及骨墙排除。
+- [ ] 仍需使用真实 1.10f MPQ 在营地实机验证各职业召唤动画、落点和实体同步。
+
 ## 2026-09-25 Missile 命中表现数据链（本轮进行中）
 
 - [x] 服务端导弹命中/地图屏障命中统一发布一次性 `MissileImpactEvent`；命中声音和
