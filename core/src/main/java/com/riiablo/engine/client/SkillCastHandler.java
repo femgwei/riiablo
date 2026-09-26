@@ -203,6 +203,8 @@ public class SkillCastHandler extends PassiveSystem {
     // monsters in the server collision system.
     boolean localMultipleShotServer = localServer
         && (event.srvdofunc == 8 || skill.srvdofunc == 8);
+    boolean localStrafeServer = localServer
+        && (event.srvdofunc == 12 || skill.srvdofunc == 12);
     boolean authoritativeThrow = event.skillId == SkillCodes.throw_
         || event.skillId == SkillCodes.left_hand_throw;
     // Throwing weapons are created by ServerSkillSystem (including the local
@@ -234,7 +236,8 @@ public class SkillCastHandler extends PassiveSystem {
         && event.cltdofunc == 33;
     if (shouldReuseServerMissile(skill, networkClient, localMonsterServer,
         localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
-        localChargedBoltServer, separateCorpseBurst, localMultipleShotServer)) {
+        localChargedBoltServer, separateCorpseBurst, localMultipleShotServer,
+        localStrafeServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
               + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={} "
           + "localFistOfHeavens={} localHolyBolt={} localChargedBolt={}",
@@ -792,10 +795,20 @@ public class SkillCastHandler extends PassiveSystem {
       boolean localFistOfHeavensServer, boolean localHolyBoltServer,
       boolean localChargedBoltServer, boolean separateCorpseBurst,
       boolean localMultipleShotServer) {
+    return shouldReuseServerMissile(skill, networkClient, localMonsterServer,
+        localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
+        localChargedBoltServer, separateCorpseBurst, localMultipleShotServer, false);
+  }
+
+  static boolean shouldReuseServerMissile(Skills.Entry skill, boolean networkClient,
+      boolean localMonsterServer, boolean localBlessedHammerServer,
+      boolean localFistOfHeavensServer, boolean localHolyBoltServer,
+      boolean localChargedBoltServer, boolean separateCorpseBurst,
+      boolean localMultipleShotServer, boolean localStrafeServer) {
     return (hasServerMissile(skill) || localMultipleShotServer) && !separateCorpseBurst
         && (networkClient || localMonsterServer || localBlessedHammerServer
             || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer
-            || localMultipleShotServer);
+            || localMultipleShotServer || localStrafeServer);
   }
 
   static boolean hasServerMissile(Skills.Entry skill) {

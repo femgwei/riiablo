@@ -2885,7 +2885,9 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Native SKILLS_SrvDo010_GuidedArrow_BoneSpirit. */
   private void spawnGuidedArrow(SkillDoEvent event, Skills.Entry skill,
       Vector2 start, int skillLevel) {
-    String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
+    // D2MOO selects SrvMissileB for bows/crossbows and SrvMissileA only for
+    // hand-to-hand.  Strafe's two rows are strafearrow/strafebolt.
+    String missileName = selectSrvDo008Missile(event.entityId, skill);
     if (missileName == null) missileName = firstNonEmpty(skill.srvmissile, skill.cltmissilea);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
     if (missile == null) {
