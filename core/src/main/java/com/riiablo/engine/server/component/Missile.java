@@ -55,6 +55,8 @@ public class Missile extends PooledComponent {
   public int skillId = -1;
   /** Ice Arrow and freeze-element explosions convert cold length to freeze. */
   public boolean freezesTarget;
+  /** Freezing Arrow's cold explosion, spawned before the parent packet lands. */
+  public int freezeExplosionId = -1;
   /** Weapon-source skills still perform the native attack-rating check. */
   public boolean usesAttackRating;
   /** Stationary native area missile (Immolation Fire) remains for its range. */
@@ -240,6 +242,7 @@ public class Missile extends PooledComponent {
     damageLevel = 0;
     skillId = -1;
     freezesTarget = false;
+    freezeExplosionId = -1;
     usesAttackRating = false;
     persistent = false;
     remainingFrames = 0;

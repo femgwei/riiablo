@@ -1418,7 +1418,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         // on the 1.10 data pack.  The old path only consulted HitSubMissile,
         // which made Magic Arrow show its burst on map barriers (the generic
         // map-explosion path) but not when it struck a monster.
-        int spawned = spawnAmazonExplosion(missile, missilePos);
+        int spawned = spawnAmazonExplosion(missile, missilePos, targetId);
         if (spawned == 0) {
           spawnNativeMapExplosion(missile, missilePos);
         }
@@ -1576,6 +1576,7 @@ public class MissileCollisionSystem extends IteratingSystem {
               missile.ownerId, targetId, damage,
               combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound)
               .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
+          deferLethalFreezingArrowDamage(missile, targetId, targetAttrs, event);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same
@@ -2185,7 +2186,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** D2MOO SrvHit04 creates a zero-velocity SrvHit01 explosion sub-missile. */
-  private int spawnAmazonExplosion(Missile source, Vector2 origin) {
+  private int spawnAmazonExplosion(Missile source, Vector2 origin, int targetId) {
     if (factory == null || source == null || source.missile == null
         || source.missile.HitSubMissile == null) return 0;
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
@@ -2247,6 +2248,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       // supplied by the associated Skills.txt dispatch row (for example
       // freezingarrowexp3 has EType=frze but zero EMin/EMax).
       if (tableSnapshot) child.freezesTarget = true;
+      if (source.missile.Missile != null
+          && "freezingarrow".equalsIgnoreCase(source.missile.Missile)
+          && "freezingarrowexp3".equalsIgnoreCase(name)) {
+        source.freezeExplosionId = childId;
+      }
       log.info("[AMAZON_ARROW_EXPLOSION_DAMAGE] source={} child={} skillResolved={} "
               + "tableSnapshot={} tableInitialized={} snapshot={} cold={}..{}",
           source.missile.Missile, name, skill != null ? skill.skill : "<none>",
@@ -2258,6 +2264,53 @@ public class MissileCollisionSystem extends IteratingSystem {
           nativeAreaRadius(child), child.freezesTarget);
     }
     return spawned;
+  }
+
+  /**
+   * Keeps a lethal Freezing Arrow parent from ending the unit before its
+   * cold explosion gets one simulation step.  Native SrvHit04 treats the
+   * arrow and explosion as one impact packet; riiablo represents the cold
+   * packet as a child missile, so leave one life point when that child has
+   * effective cold damage and let the child deliver the lethal packet.
+   */
+  private void deferLethalFreezingArrowDamage(Missile parent, int targetId,
+      Attributes targetAttrs, DamageEvent event) {
+    if (parent == null || event == null || event.damage <= 0f
+        || !mMonster.has(targetId) || parent.freezeExplosionId < 0
+        || !mMissile.has(parent.freezeExplosionId)) return;
+    StatRef hitpoints = targetAttrs != null
+        ? targetAttrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    if (hitpoints == null || hitpoints.asFixed() <= 0f || event.damage < hitpoints.asFixed()) {
+      return;
+    }
+    Missile child = mMissile.get(parent.freezeExplosionId);
+    if (!hasEffectiveColdExplosion(child, targetId, targetAttrs)) return;
+
+    float before = event.damage;
+    float deferred = Math.max(0f, hitpoints.asFixed() - 1f);
+    float scale = before > 0f ? deferred / before : 0f;
+    event.damage = deferred;
+    event.physicalDamage *= scale;
+    log.info("[MISSILE_FREEZE_DEFER] parent={} child={} target={} damage={} deferred={} hp={}",
+        parent.missile != null ? parent.missile.Missile : "unknown",
+        child.missile != null ? child.missile.Missile : "unknown", targetId,
+        before, deferred, hitpoints.asFixed());
+  }
+
+  private boolean hasEffectiveColdExplosion(Missile child, int targetId,
+      Attributes targetAttrs) {
+    if (child == null || !child.damageSnapshot || child.missile == null
+        || !child.freezesTarget || targetAttrs == null) return false;
+    int rawCold = statInt(child.damage, Stat.coldmaxdam);
+    if (rawCold <= 0) return false;
+    StateList targetStates = stateList(targetId);
+    int pierce = statInt(child.damage, Stat.item_pierce_cold)
+        + statInt(child.damage, Stat.passive_cold_pierce);
+    CombatSystem.CombatResult cold = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        targetAttrs, mPlayer.has(targetId), mPlayer.has(child.ownerId),
+        CombatSystem.DAMAGE_COLD, rawCold, pierce, targetStates,
+        combatDifficulty(child.ownerId, targetId));
+    return cold.totalDamage > 0;
   }
 
   /**
