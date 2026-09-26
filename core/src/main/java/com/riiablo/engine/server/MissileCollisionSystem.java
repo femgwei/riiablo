@@ -202,6 +202,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     // Guided Arrow/Bone Spirit tracks its native target every server tick.
+    // D2MOO also reacquires a hostile unit when the cast did not carry a
+    // target (or when the previous target died).  The old implementation only
+    // steered when the creation event had a valid targetId, so a ground-click
+    // arrow flew straight forever even though its missile row is homing.
+    if (isGuidedMissile(missile)
+        && (!missile.homing || missile.targetId < 0 || !mPosition.has(missile.targetId)
+            || !isAlive(missile.targetId))) {
+      int acquired = acquireGuidedTarget(entityId, missile, position.position);
+      if (acquired >= 0) {
+        missile.targetId = acquired;
+        missile.homing = true;
+        log.info("[GUIDED_ARROW] phase=acquire missileId={} owner={} target={} position=({}, {})",
+            entityId, missile.ownerId, acquired, position.position.x, position.position.y);
+      }
+    }
     // Keep the current speed while steering; when the target disappears the
     // missile continues along its last heading, matching D2MOO's fallback.
     if (missile.homing && missile.targetId >= 0 && mPosition.has(missile.targetId)) {
@@ -2127,6 +2142,42 @@ public class MissileCollisionSystem extends IteratingSystem {
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
     StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
     return hp == null || hp.asFixed() > 0f;
+  }
+
+  private boolean isGuidedMissile(Missile missile) {
+    return missile != null && missile.missile != null && missile.missile.pSrvDoFunc == 7;
+  }
+
+  /**
+   * Native Guided Arrow/Bone Spirit target acquisition used when the cast did
+   * not contain a unit target.  D2MOO searches a small radius around the
+   * moving missile; keeping that search on the authoritative tick makes a
+   * ground-click arrow acquire a monster instead of flying inertly forever.
+   */
+  private int acquireGuidedTarget(int missileId, Missile missile, Vector2 origin) {
+    if (origin == null || missile.ownerId < 0) return Engine.INVALID_ENTITY;
+    int configuredRadius = missile.missile != null && missile.missile.Param != null
+        && missile.missile.Param.length > 1 ? missile.missile.Param[1] : 0;
+    float radius = configuredRadius > 0 ? configuredRadius : 15f;
+    float nearestDistance = radius * radius;
+    int nearest = Engine.INVALID_ENTITY;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class)).getEntities();
+    for (int i = 0; i < candidates.size(); i++) {
+      int candidate = candidates.get(i);
+      if (candidate == missileId || candidate == missile.ownerId
+          || !world.getEntityManager().isActive(candidate)
+          || !isAlive(candidate) || !isEnemy(missile.ownerId, candidate)
+          || !mPosition.has(candidate) || missile.hitTargets.contains(candidate)) continue;
+      if (mNativeUnitFlags.has(candidate)
+          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(candidate))) continue;
+      float distance = origin.dst2(mPosition.get(candidate).position);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = candidate;
+      }
+    }
+    return nearest;
   }
 
   private int entityLevel(int entityId) {
