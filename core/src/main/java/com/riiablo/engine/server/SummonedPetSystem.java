@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -59,6 +60,7 @@ public class SummonedPetSystem extends IteratingSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Interactable> mInteractable;
   private final Vector2 warpPosition = new Vector2();
   private final Vector2 landingProbe = new Vector2();
   private final IntMap<Float> regroupRetry = new IntMap<>();
@@ -67,6 +69,22 @@ public class SummonedPetSystem extends IteratingSystem {
   protected void process(int entityId) {
     SummonedPet pet = mSummonedPet.get(entityId);
     if (pet == null) return;
+    // Once a native pet-list removal has begun, keep the unit alive until the
+    // normal monster DT -> DD presentation reaches its short corpse window.
+    // This is shared by explicit Unsummon, quota eviction and duration expiry.
+    if (pet.unsummonPending) {
+      if (mCorpse.has(entityId)) {
+        pet.deathPending = true;
+        pet.deadFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
+        if (pet.deadFrames >= 25f) {
+          log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} reason={} "
+                  + "dismissal_complete",
+              entityId, pet.ownerId, pet.petType, pet.unsummonReason);
+          world.delete(entityId);
+        }
+      }
+      return;
+    }
     if (pet.ownerId < 0 || !mPlayer.has(pet.ownerId)) {
       log.info("[SUMMON_PET] phase=remove entity={} owner={} reason=owner_missing",
           entityId, pet.ownerId);
@@ -173,10 +191,48 @@ public class SummonedPetSystem extends IteratingSystem {
     if (pet.durationFrames <= 0) return;
     pet.elapsedFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
     if (pet.elapsedFrames < pet.durationFrames) return;
-    log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} reason=expired "
-            + "duration={}",
+    log.info("[SUMMON_PET] phase=dismiss_request entity={} owner={} petType={} "
+            + "reason=expired duration={}",
         entityId, pet.ownerId, pet.petType, pet.durationFrames);
-    world.delete(entityId);
+    if (!beginUnsummon(entityId, "expired")) {
+      // PetType.txt deliberately omits Unsummon for traps/Hydra/ravens; those
+      // rows keep their native hard removal semantics.
+      world.delete(entityId);
+    }
+  }
+
+  /**
+   * Starts the same native death presentation used by D2MOO's
+   * PLAYERPETS_RemovePetFromList.  The entity is not deleted here: clients
+   * must receive the summon-specific DT animation and death sound first.
+   */
+  public boolean beginUnsummon(int entityId, String reason) {
+    if (!world.getEntityManager().isActive(entityId) || !mSummonedPet.has(entityId)) {
+      return false;
+    }
+    SummonedPet pet = mSummonedPet.get(entityId);
+    if (pet == null || pet.unsummonPending || mCorpse.has(entityId)) return false;
+    if (!PetType.canBeUnsummoned(pet.petType)) return false;
+
+    pet.unsummonPending = true;
+    pet.unsummonReason = reason == null ? "unsummon" : reason;
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mInteractable.has(entityId)) mInteractable.remove(entityId);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+
+    if (mAIWrapper.has(entityId) && mAIWrapper.get(entityId).ai != null) {
+      // Every native summon AI installs MODE_DT -> MODE_DD and emits the
+      // MonSounds death sample from kill().
+      mAIWrapper.get(entityId).ai.kill();
+    } else {
+      mSequence.create(entityId).sequence(
+          com.riiablo.engine.Engine.Monster.MODE_DT,
+          com.riiablo.engine.Engine.Monster.MODE_DD);
+    }
+    log.info("[SUMMON_PET] phase=dismiss_start entity={} owner={} petType={} reason={}",
+        entityId, pet.ownerId, pet.petType, pet.unsummonReason);
+    return true;
   }
 
   private boolean isLivingController(int entityId) {

@@ -8,6 +8,8 @@ import com.artemis.annotations.Transient;
 @Transient
 @PooledWeaver
 public class SummonedPet extends Component {
+  private static long nextSpawnOrder;
+
   public int ownerId = -1;
   public String petType;
   public int skillId = -1;
@@ -17,6 +19,13 @@ public class SummonedPet extends Component {
   /** Native duration in 25 Hz game frames; zero means permanent. */
   public int durationFrames;
   public float elapsedFrames;
+  /** Monotonic native pet-list insertion order used for quota eviction. */
+  public long spawnOrder;
+  /** True after pet-list removal has started the DT -> DD sequence. */
+  public boolean unsummonPending;
+  public String unsummonReason;
+  /** Client-only marker: this component came from a D2GS replica. */
+  public boolean networkReplica;
   /** Native assassin-trap shot budget; zero means unlimited/non-sentry summon. */
   public int maxShots;
   public int shotsFired;
@@ -59,6 +68,10 @@ public class SummonedPet extends Component {
     this.passive = passive;
     this.durationFrames = Math.max(0, durationFrames);
     elapsedFrames = 0f;
+    spawnOrder = ++nextSpawnOrder;
+    unsummonPending = false;
+    unsummonReason = null;
+    networkReplica = false;
     maxShots = 0;
     shotsFired = 0;
     attackCooldownFrames = 0;

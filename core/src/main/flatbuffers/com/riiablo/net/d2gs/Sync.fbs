@@ -49,6 +49,7 @@ union ComponentP {
   VitalsP,
   CofReferenceP,
   MissileP,
+  SummonedPetP,
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -152,6 +153,16 @@ table WarpP {
 
 table MonsterP {
   monsterId:uint16;
+}
+
+// Player-owned summon metadata is separate from MonsterP so old clients can
+// still construct the visual monster while newer clients can apply native
+// PetType ownership/unsummon selection rules.
+table SummonedPetP {
+  ownerId:int32;
+  petType:string;
+  skillId:uint16;
+  unsummonable:bool;
 }
 
 table ItemP {

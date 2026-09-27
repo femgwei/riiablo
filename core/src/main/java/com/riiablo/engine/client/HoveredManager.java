@@ -8,8 +8,10 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.camera.IsometricCamera;
+import com.riiablo.Riiablo;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -20,6 +22,8 @@ import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.skill.SkillId;
 
 @All({Selectable.class, BBoxWrapper.class, Position.class})
 public class HoveredManager extends IteratingSystem {
@@ -36,6 +40,7 @@ public class HoveredManager extends IteratingSystem {
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Item> mItem;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   @Wire(name="iso")
   protected IsometricCamera iso;
@@ -65,6 +70,10 @@ public class HoveredManager extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    if (mSummonedPet.has(entityId) && !isUnsummonSelected()) {
+      setHovered(entityId, false);
+      return;
+    }
     BBox box = mBBoxWrapper.get(entityId).box;
     if (box == null) return;
     Vector2 position = mPosition.get(entityId).position;
@@ -87,6 +96,7 @@ public class HoveredManager extends IteratingSystem {
     for (int i = 0, size = selectable.size(); i < size; i++) {
       int candidate = selectable.get(i);
       if (candidate == sourceId) continue;
+      if (mSummonedPet.has(candidate) && !isUnsummonSelected()) continue;
       Position candidatePosition = mPosition.get(candidate);
       BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
       if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
@@ -143,6 +153,12 @@ public class HoveredManager extends IteratingSystem {
     float y = entityScreen.y - box.yMax - paddingY;
     return x <= pointer.x && pointer.x <= x + box.width + paddingX * 2f
         && y <= pointer.y && pointer.y <= y + box.height + paddingY * 2f;
+  }
+
+  private boolean isUnsummonSelected() {
+    if (Riiablo.charData == null) return false;
+    return Riiablo.charData.getAction(Input.Buttons.LEFT) == SkillId.UNSUMMON
+        || Riiablo.charData.getAction(Input.Buttons.RIGHT) == SkillId.UNSUMMON;
   }
 
   static boolean containsLabelPoint(com.badlogic.gdx.scenes.scene2d.Actor actor,

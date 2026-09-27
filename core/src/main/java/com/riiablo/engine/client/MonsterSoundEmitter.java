@@ -14,6 +14,9 @@ import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.event.ModeChangeEvent;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 /**
  * Reproduces the client-side part of the native monster sound bank.
@@ -35,8 +38,21 @@ public class MonsterSoundEmitter extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   private final IntMap<State> states = new IntMap<>();
+
+  @Subscribe
+  public void onModeChanged(ModeChangeEvent event) {
+    if (event == null || event.mode != Engine.Monster.MODE_DT
+        || !mSummonedPet.has(event.entityId)
+        || !mSummonedPet.get(event.entityId).networkReplica
+        || !mMonster.has(event.entityId)) return;
+    MonSounds.Entry bank = soundBank(mMonster.get(event.entityId));
+    if (bank != null && hasSound(bank.DeathSound) && Riiablo.audio != null) {
+      Riiablo.audio.play(bank.DeathSound, true);
+    }
+  }
 
   @Override
   protected void process(int entityId) {

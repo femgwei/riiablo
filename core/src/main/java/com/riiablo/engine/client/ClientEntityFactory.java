@@ -41,6 +41,7 @@ import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.engine.server.object.NativeShrineResolver;
+import com.riiablo.engine.server.pet.PetType;
 
 public class ClientEntityFactory extends ServerEntityFactory {
   private static final String TAG = "ClientEntityFactory";
@@ -372,6 +373,11 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // keep this explicit guard for alternate factories and future refactors.
     attachMonsterPresentation(id);
     attachAmazonPlayerComposite(id, ownerId, petType, skillLevel);
+    // PetType.txt's unsummon flag is the client-side selection gate.  This
+    // keeps ordinary friendly summons from becoming accidental click targets
+    // while still allowing HoveredManager to highlight every native
+    // Unsummon-capable row when skill 3 is equipped.
+    if (PetType.canBeUnsummoned(petType)) mSelectable.create(id);
     Monster monster = mMonster.get(id);
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
         "[SUMMON_PRESENTATION] phase=attached entity=%d owner=%d summon=%s petType=%s "

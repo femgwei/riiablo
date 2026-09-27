@@ -154,6 +154,12 @@ public final class PetType {
     if ("spirit wolf".equals(value)) return "spiritwolf";
     if ("skeleton mage".equals(value) || "skeletal mage".equals(value)) return "skeletonmage";
     if ("dire wolf".equals(value) || "summon fenris".equals(value)) return "fenris";
+    // Skills.txt normally stores all golems as the native PetType.txt
+    // ``golem`` row.  Keep explicit monster-style names in the same list too
+    // so custom skill tables cannot accidentally allow several golems.
+    if ("claygolem".equals(value) || "bloodgolem".equals(value)
+        || "irongolem".equals(value) || "firegolem".equals(value)) return "golem";
+    if ("shadow master".equals(value)) return "shadowwarrior";
     if ("oak sage".equals(value)) return "totem";
     if ("heart of wolverine".equals(value) || "spirit of barbs".equals(value)) return "totem";
     if ("poison creeper".equals(value) || "carrion vine".equals(value)
@@ -175,6 +181,32 @@ public final class PetType {
   public static boolean sameNativeType(String left, String right) {
     String a = canonical(left), b = canonical(right);
     return !a.isEmpty() && a.equals(b);
+  }
+
+  /**
+   * PetType.txt's bit 3 ({@code unsummon}).  This is intentionally an
+   * allow-list rather than a generic "is summon" check: D2MOO rejects
+   * Unsummon for mercenaries, ravens, traps and Hydra even though they are
+   * represented by player-owned monster units.
+   */
+  public static boolean canBeUnsummoned(String petType) {
+    switch (canonical(petType)) {
+      case "valkyrie":
+      case "golem":
+      case "skeleton":
+      case "skeletonmage":
+      case "revive":
+      case "dopplezon":
+      case "spiritwolf":
+      case "fenris":
+      case "totem":
+      case "vine":
+      case "grizzly":
+      case "shadowwarrior":
+        return true;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -264,5 +296,24 @@ public final class PetType {
       case MERC_ACT5_BARBARIAN: return "Act 5 Mercenary";
       default: return "Unknown";
     }
+  }
+
+  /** Human-readable fallback used by the client summon health label. */
+  public static String getNameForLabel(String petType) {
+    String value = canonical(petType);
+    if (value.isEmpty()) return "";
+    if ("golem".equals(value)) return "Golem";
+    if ("skeletonmage".equals(value)) return "Skeleton Mage";
+    if ("shadowwarrior".equals(value)) return "Shadow Warrior";
+    if ("spiritwolf".equals(value)) return "Spirit Wolf";
+    if ("fenris".equals(value)) return "Dire Wolf";
+    if ("totem".equals(value)) return "Spirit";
+    if ("dopplezon".equals(value)) return "Decoy";
+    if ("valkyrie".equals(value)) return "Valkyrie";
+    if ("skeleton".equals(value)) return "Skeleton";
+    if ("revive".equals(value)) return "Revive";
+    if ("vine".equals(value)) return "Vine";
+    if ("grizzly".equals(value)) return "Grizzly";
+    return value;
   }
 }

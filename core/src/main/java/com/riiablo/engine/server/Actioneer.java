@@ -881,7 +881,15 @@ public class Actioneer extends PassiveSystem {
         break;
       case 11: // Arctic Blast channel setup is consumed by ServerSkillSystem.
         break;
-      case 3: // throw
+      case 3: { // throw, or native Unsummon SrvSt03
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (ServerSkillSystem.isUnsummonSkill(skill, casting != null ? casting.skillId : -1)) {
+          log.info("[UNSUMMON] phase=start entity={} target={} delegated=keyframe",
+              entityId, targetId);
+        }
+        break;
+      }
       case 65: // Throw skill (skillId=2)
         break;
       case 50: // SKILLS_SrvSt50_QuickStrike: reserve the target; SrvDo092
@@ -1323,6 +1331,16 @@ public class Actioneer extends PassiveSystem {
     switch (srvdofunc) {
       case 0:
         break;
+      case 4: { // SKILLS_SrvDo004_Unsummon
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (ServerSkillSystem.isUnsummonSkill(skill, casting != null ? casting.skillId : -1)
+            && casting != null && mSummonedPet.has(casting.targetId)) {
+          SummonedPetSystem pets = world.getSystem(SummonedPetSystem.class);
+          if (pets != null) pets.beginUnsummon(casting.targetId, "skill");
+        }
+        break;
+      }
       case 6:   // Inner Sight/Slow Missiles: ServerSkillSystem applies the state.
       case 15:  // Decoy/Dopplezon: ServerSkillSystem creates the owned summon.
       case 16:  // Valkyrie: ServerSkillSystem creates the owned summon.

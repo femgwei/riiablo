@@ -21,6 +21,8 @@ import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.profiler.GpuSystem;
@@ -32,6 +34,7 @@ import com.riiablo.widget.Label;
 public class MonsterLabelManager extends BaseEntitySystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -101,7 +104,16 @@ public class MonsterLabelManager extends BaseEntitySystem {
 
     float set(int entityId) {
       MonStats.Entry monstats = mMonster.get(entityId).monstats;
-      name.setText(Riiablo.string.lookup(monstats.NameStr));
+      String displayName = Riiablo.string.lookup(monstats.NameStr);
+      if (mSummonedPet.has(entityId)) {
+        SummonedPet pet = mSummonedPet.get(entityId);
+        // Monster rows such as skeleton1 and druidbear use generic native
+        // names.  PetType is the authoritative summon-list name and keeps
+        // the top-center label stable across revived/custom monster rows.
+        String summonName = PetType.getNameForLabel(pet != null ? pet.petType : null);
+        if (summonName != null && !summonName.isEmpty()) displayName = summonName;
+      }
+      name.setText(displayName);
       typeBuilder.setLength(0);
       if (monstats.lUndead || monstats.hUndead) {
         typeBuilder.append(Riiablo.string.lookup("UndeadDescriptX")).append(' ');
@@ -117,10 +129,16 @@ public class MonsterLabelManager extends BaseEntitySystem {
       type.setText(typeBuilder);
       //pack();
 
-      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-      final float hitpoints = attrs.get(Stat.hitpoints).asFixed();
-      final float maxhp = attrs.get(Stat.maxhp).asFixed();
-      return background.percent = hitpoints / maxhp;
+      AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
+      if (wrapper == null || wrapper.attrs == null) return 0f;
+      Attributes attrs = wrapper.attrs;
+      com.riiablo.attributes.StatRef hp = attrs.get(Stat.hitpoints);
+      com.riiablo.attributes.StatRef max = attrs.get(Stat.maxhp);
+      if (hp == null || max == null) return 0f;
+      final float hitpoints = hp.asFixed();
+      final float maxhp = max.asFixed();
+      if (!Float.isFinite(hitpoints) || !Float.isFinite(maxhp) || maxhp <= 0f) return 0f;
+      return background.percent = Math.max(0f, Math.min(1f, hitpoints / maxhp));
     }
   }
 }

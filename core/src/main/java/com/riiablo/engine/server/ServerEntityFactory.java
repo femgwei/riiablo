@@ -512,9 +512,11 @@ public class ServerEntityFactory extends EntityFactory {
       SummonedPet pet = mSummonedPet.get(pets.get(i));
       if (pet == null || pet.ownerId != ownerId) continue;
       if (PetType.sameNativeType(nativePetType, pet.petType)) {
+        if (pet.unsummonPending) continue;
         matching++;
         matchingIds.add(pets.get(i));
       } else if (PetType.sameNativeList(nativePetType, pet.petType)) {
+        if (pet.unsummonPending) continue;
         // D2MOO sub_6FC7D7A0 removes every pet in another PetType row from
         // the same non-zero group. It does not retain old Spirit Wolves up to
         // the new Dire Wolf limit.
@@ -543,18 +545,39 @@ public class ServerEntityFactory extends EntityFactory {
     mSummonedPet.create(entityId).set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    SummonedPetSystem petSystem = world.getSystem(SummonedPetSystem.class);
     for (int i = 0; i < conflictingGroupIds.size; i++) {
       int oldId = conflictingGroupIds.get(i);
-      world.delete(oldId);
+      if (petSystem == null || !petSystem.beginUnsummon(oldId, "group_replaced")) {
+        world.delete(oldId);
+      }
       log.info("[SUMMON_PET] phase=replace_group owner={} petType={} oldEntity={} newEntity={}",
           ownerId, nativePetType, oldId, entityId);
     }
     int replacements = Math.max(0, matching + 1 - maximum);
-    for (int i = 0; i < replacements && i < matchingIds.size; i++) {
-      int oldId = matchingIds.get(i);
-      world.delete(oldId);
-      log.info("[SUMMON_PET] phase=replace owner={} petType={} oldEntity={} newEntity={}",
-          ownerId, nativePetType, oldId, entityId);
+    // D2MOO removes the head of the native pet list.  Entity iteration order
+    // is not a stable contract, so explicitly sort by the insertion sequence
+    // recorded on each SummonedPet component and evict the oldest first.
+    for (int i = 0; i < replacements; i++) {
+      int oldest = Engine.INVALID_ENTITY;
+      long oldestOrder = Long.MAX_VALUE;
+      for (int j = 0; j < matchingIds.size; j++) {
+        int candidate = matchingIds.get(j);
+        if (!world.getEntityManager().isActive(candidate) || !mSummonedPet.has(candidate)) continue;
+        SummonedPet candidatePet = mSummonedPet.get(candidate);
+        if (candidatePet == null || candidatePet.unsummonPending) continue;
+        if (candidatePet.spawnOrder < oldestOrder) {
+          oldest = candidate;
+          oldestOrder = candidatePet.spawnOrder;
+        }
+      }
+      if (oldest == Engine.INVALID_ENTITY) break;
+      if (petSystem == null || !petSystem.beginUnsummon(oldest, "quota_replaced")) {
+        world.delete(oldest);
+      }
+      log.info("[SUMMON_PET] phase=replace owner={} petType={} oldEntity={} newEntity={} "
+              + "spawnOrder={}",
+          ownerId, nativePetType, oldest, entityId, oldestOrder);
     }
     log.info("[SUMMON_PET] phase=created owner={} entity={} summon={} petType={} "
             + "skill={} level={} max={} passive={} duration={} position=({}, {})",

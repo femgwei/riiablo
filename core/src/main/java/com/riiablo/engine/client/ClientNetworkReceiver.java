@@ -43,6 +43,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
@@ -77,6 +78,7 @@ import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.GoldResult;
 import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
+import com.riiablo.net.packet.d2gs.SummonedPetP;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PartyResult;
@@ -133,6 +135,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Selectable> mSelectable;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
   protected NetworkIdManager syncIds;
@@ -1060,6 +1063,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
           }
           break;
         }
+        case ComponentP.SummonedPetP: {
+          SummonedPetP data = (SummonedPetP) entityData.component(
+              new SummonedPetP(), i);
+          applySummonedPetSnapshot(entityId, data);
+          break;
+        }
         case ComponentP.StateP: {
           StateP data = (StateP) entityData.component(new StateP(), i);
           applyStateSnapshot(entityId, data);
@@ -1136,6 +1145,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+  }
+
+  private void applySummonedPetSnapshot(int entityId, SummonedPetP data) {
+    if (data == null || mSummonedPet == null) return;
+    int owner = syncIds.get(data.ownerId());
+    if (owner == Engine.INVALID_ENTITY) owner = data.ownerId();
+    String type = data.petType();
+    SummonedPet pet = mSummonedPet.create(entityId).set(owner, type,
+        data.skillId(), 1, false, 0);
+    pet.networkReplica = true;
+    if (data.unsummonable()) mSelectable.create(entityId);
   }
 
   /** Removes stale remote entities retained from the level we just left. */

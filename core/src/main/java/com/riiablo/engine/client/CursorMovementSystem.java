@@ -30,6 +30,7 @@ import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
@@ -454,7 +455,8 @@ public class CursorMovementSystem extends BaseSystem {
           // SkillCodes.attack rather than an explicit bow skill.  Treating
           // only Throw as ranged made an unshifted left click chase the target
           // until melee range before ServerSkillSystem could create the arrow.
-          if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)) {
+          if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)
+              || selectedSkillId == SkillId.UNSUMMON) {
             requestCast(src, selectedSkillId, targetId, targetPos);
             // A release is a single attack request.  Clear the interaction
             // target immediately; retaining it caused every subsequent
@@ -635,7 +637,8 @@ public class CursorMovementSystem extends BaseSystem {
       traceAttackRange(src, target, selectedSkillId, dst, inMeleeRange,
           explicitThrowSkill, canThrow, rangedNormalAttack);
 
-      if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)) {
+      if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)
+          || selectedSkillId == SkillId.UNSUMMON) {
         requestCast(src, selectedSkillId, target, targetPos);
         return true;
       }

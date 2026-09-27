@@ -22,8 +22,9 @@ public final class ComponentP {
   public static final byte VitalsP = 15;
   public static final byte CofReferenceP = 16;
   public static final byte MissileP = 17;
+  public static final byte SummonedPetP = 18;
 
-  public static final String[] names = { "NONE", "ClassP", "CofComponentsP", "CofTransformsP", "CofAlphasP", "PositionP", "VelocityP", "AngleP", "PlayerP", "DS1ObjectWrapperP", "WarpP", "MonsterP", "ItemP", "StateP", "ObjectP", "VitalsP", "CofReferenceP", "MissileP", };
+  public static final String[] names = { "NONE", "ClassP", "CofComponentsP", "CofTransformsP", "CofAlphasP", "PositionP", "VelocityP", "AngleP", "PlayerP", "DS1ObjectWrapperP", "WarpP", "MonsterP", "ItemP", "StateP", "ObjectP", "VitalsP", "CofReferenceP", "MissileP", "SummonedPetP", };
 
   public static String name(int e) { return names[e]; }
 }

@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.serializer.AngleSerializer;
 import com.riiablo.engine.server.component.serializer.VitalsSerializer;
 import com.riiablo.engine.server.component.serializer.CofAlphasSerializer;
@@ -45,6 +46,7 @@ import com.riiablo.engine.server.component.serializer.ObjectSerializer;
 import com.riiablo.engine.server.component.serializer.VelocitySerializer;
 import com.riiablo.engine.server.component.serializer.WarpSerializer;
 import com.riiablo.engine.server.component.serializer.StateSerializer;
+import com.riiablo.engine.server.component.serializer.SummonedPetSerializer;
 import com.riiablo.net.packet.d2gs.CofAlphasP;
 import com.riiablo.net.packet.d2gs.CofComponentsP;
 import com.riiablo.net.packet.d2gs.CofTransformsP;
@@ -112,6 +114,7 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(Missile.class, new MissileSerializer());
     serializers.put(Item.class, new ItemSerializer());
     serializers.put(UnitStates.class, new StateSerializer());
+    serializers.put(SummonedPet.class, new SummonedPetSerializer());
     serializers.put(Object.class, new ObjectSerializer());
 
     deserializers = (Class<? extends Component>[]) new Class[ComponentP.names.length];
@@ -132,6 +135,7 @@ public class SerializationManager extends PassiveSystem {
     deserializers[ComponentP.ItemP] = Item.class;
     deserializers[ComponentP.StateP] = UnitStates.class;
     deserializers[ComponentP.ObjectP] = Object.class;
+    deserializers[ComponentP.SummonedPetP] = SummonedPet.class;
 
     cm = new ComponentMapper[ComponentP.names.length];
     cm[ComponentP.ClassP] = null; //mClass;
@@ -151,6 +155,7 @@ public class SerializationManager extends PassiveSystem {
     cm[ComponentP.ItemP] = null;
     cm[ComponentP.StateP] = null; // state snapshots are server-authoritative
     cm[ComponentP.ObjectP] = null;
+    cm[ComponentP.SummonedPetP] = null;
   }
 
   @SuppressWarnings("unchecked")
@@ -314,6 +319,7 @@ public class SerializationManager extends PassiveSystem {
         case ComponentP.ItemP:
         case ComponentP.StateP:
         case ComponentP.ObjectP:
+        case ComponentP.SummonedPetP:
           break;
         default: {
           Class<? extends Component> clazz = deserializers[dataType];

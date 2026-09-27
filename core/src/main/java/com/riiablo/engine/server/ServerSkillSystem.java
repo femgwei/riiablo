@@ -188,8 +188,21 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    boolean unsummonSkill = isUnsummonSkill(skill, event.skillId);
+    // D2MOO SKILLS_SrvSt03_Unsummon performs this ownership and PetType flag
+    // check before the animation is accepted.  Do it before generic hostile
+    // target validation because the target is intentionally a friendly unit.
+    if (unsummonSkill) {
+      if (!isValidUnsummonTarget(event.entityId, event.targetId)) {
+        reject(event, 3, "Unsummon requires the caster's unsummonable pet");
+        log.info("[UNSUMMON] phase=cast_reject source={} target={} reason=ownership_or_pettype",
+            event.entityId, event.targetId);
+        return;
+      }
+    }
+
     Player player = mPlayer.get(event.entityId);
-    if (event.targetId >= 0 && (mPlayer.has(event.targetId)
+    if (!unsummonSkill && event.targetId >= 0 && (mPlayer.has(event.targetId)
         || mMercenary.has(event.targetId) || mSummonedPet.has(event.targetId))
         && !PvpCombatRules.canTarget(partyManager, event.entityId,
             playerAlignmentOwner(event.targetId), true, true)) {
@@ -202,7 +215,7 @@ public class ServerSkillSystem extends PassiveSystem {
         || skill.srvdofunc == 58 || skill.srvdofunc == 63
         || skill.srvdofunc == 69 || skill.srvdofunc == 72
         || skill.srvdofunc == 75;
-    if (event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
+    if (!unsummonSkill && event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
         && mNativeUnitFlags.has(event.targetId)
         && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(event.targetId))) {
       reject(event, 8, "target is not a native combat target");
@@ -459,6 +472,18 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (isUnsummonSkill(skill, event.skillId)) {
+      // Actioneer normally consumes SrvDo004 at the same keyframe.  Keeping
+      // this idempotent fallback also covers dedicated-server casts whose
+      // animation callback is routed directly to ServerSkillSystem.
+      if (isValidUnsummonTarget(event.entityId, event.targetId)) {
+        SummonedPetSystem pets = world.getSystem(SummonedPetSystem.class);
+        if (pets != null) pets.beginUnsummon(event.targetId, "skill");
+        log.info("[UNSUMMON] phase=keyframe source={} target={} reason=skill",
+            event.entityId, event.targetId);
+      }
+      return;
+    }
     boolean rangedNormalAttack = isPlayerRangedNormalAttack(event.entityId, event.skillId);
     if (mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null) {
       ItemData items = mPlayer.get(event.entityId).data.getItems();
@@ -4031,17 +4056,31 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int i = 0; i < pets.size(); i++) {
       int id = pets.get(i);
       SummonedPet pet = mSummonedPet.get(id);
-      if (pet != null && pet.ownerId == ownerId && PetType.sameNativeType(petType, pet.petType)) excess++;
+      if (pet != null && !pet.unsummonPending && pet.ownerId == ownerId
+          && PetType.sameNativeType(petType, pet.petType)) excess++;
     }
     excess -= Math.max(1, maximum);
-    for (int i = 0; excess > 0 && i < pets.size(); i++) {
-      int id = pets.get(i);
-      SummonedPet pet = mSummonedPet.get(id);
-      if (id != newestId && pet != null && pet.ownerId == ownerId
-          && PetType.sameNativeType(petType, pet.petType)) {
-        world.delete(id);
-        excess--;
+    SummonedPetSystem petSystem = world.getSystem(SummonedPetSystem.class);
+    while (excess > 0) {
+      int oldest = Engine.INVALID_ENTITY;
+      long oldestOrder = Long.MAX_VALUE;
+      for (int i = 0; i < pets.size(); i++) {
+        int id = pets.get(i);
+        SummonedPet pet = mSummonedPet.get(id);
+        if (id == newestId || pet == null || pet.unsummonPending || pet.ownerId != ownerId
+            || !PetType.sameNativeType(petType, pet.petType)) continue;
+        if (pet.spawnOrder < oldestOrder) {
+          oldest = id;
+          oldestOrder = pet.spawnOrder;
+        }
       }
+      if (oldest == Engine.INVALID_ENTITY) break;
+      if (petSystem == null || !petSystem.beginUnsummon(oldest, "quota_replaced")) {
+        world.delete(oldest);
+      }
+      excess--;
+      log.info("[SUMMON_PET] phase=replace owner={} petType={} oldEntity={} newEntity={} "
+              + "spawnOrder={}", ownerId, petType, oldest, newestId, oldestOrder);
     }
   }
 
@@ -4340,6 +4379,19 @@ public class ServerSkillSystem extends PassiveSystem {
     ItemData items = mPlayer.get(event.entityId).data.getItems();
     Item weapon = items.getEquippedRangedWeapon();
     consumeRangedAmmo(items, weapon);
+  }
+
+  static boolean isUnsummonSkill(Skills.Entry skill, int skillId) {
+    return skillId == SkillId.UNSUMMON || skill != null && (skill.Id == SkillId.UNSUMMON
+        || "Unsummon".equalsIgnoreCase(skill.skill)
+        || skill.srvstfunc == 3 && skill.srvdofunc == 4);
+  }
+
+  private boolean isValidUnsummonTarget(int ownerId, int targetId) {
+    if (!mPlayer.has(ownerId) || targetId < 0 || !mSummonedPet.has(targetId)) return false;
+    SummonedPet pet = mSummonedPet.get(targetId);
+    return pet != null && pet.ownerId == ownerId && !pet.unsummonPending
+        && PetType.canBeUnsummoned(pet.petType);
   }
 
   private void reject(SkillCastEvent event, int resultCode, String reason) {
