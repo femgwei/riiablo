@@ -95,6 +95,16 @@ public class SequenceHandler extends IteratingSystem {
           (int) com.riiablo.engine.Engine.Player.MODE_A2);
       return;
     }
+    if (casting != null && casting.fendInitialized
+        && casting.fendRemainingStrikes > 0
+        && casting.fendStrikeProcessed) {
+      sequence.sequence(sequence.mode1, sequence.mode2);
+      casting.fendStrikeProcessed = false;
+      mAnimData.get(event.entityId).override = -1;
+      log.info("[AMAZON_FEND] phase=repeat_animation entity={} remaining={} mode={}",
+          event.entityId, casting.fendRemainingStrikes, (int) sequence.mode1);
+      return;
+    }
     if (casting != null && casting.furyInitialized
         && casting.furyRemainingStrikes > 0
         && casting.furyStrikeProcessed) {
@@ -161,6 +171,9 @@ public class SequenceHandler extends IteratingSystem {
       }
       if (casting != null && casting.furyInitialized) {
         casting.furyStrikeProcessed = false;
+      }
+      if (casting != null && casting.fendInitialized) {
+        casting.fendStrikeProcessed = false;
       }
       sequence.started = true;
       NativeObjectState shrine = mNativeObjectState.get(entityId);

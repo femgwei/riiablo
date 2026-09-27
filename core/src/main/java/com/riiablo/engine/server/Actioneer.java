@@ -36,6 +36,7 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
@@ -673,7 +674,10 @@ public class Actioneer extends PassiveSystem {
         && casting.furyInitialized && casting.furyRemainingStrikes > 0;
     boolean zealRetarget = skill != null && skill.Id == SkillId.ZEAL
         && casting.zealInitialized && casting.zealRemainingStrikes > 0;
-    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget || zealRetarget) {
+    boolean fendRetarget = skill != null && skill.Id == SkillId.FEND
+        && casting.fendInitialized && casting.fendRemainingStrikes > 0;
+    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget
+        || zealRetarget || fendRetarget) {
       if (skill.srvdofunc == 116) casting.shapeShiftProcessed = true;
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {
@@ -801,6 +805,14 @@ public class Actioneer extends PassiveSystem {
       log.info("[PALADIN_ZEAL] phase=continue source={} nextTarget={} remaining={} nextStrike={}",
           event.entityId, casting.zealCurrentTargetId,
           casting.zealRemainingStrikes, casting.zealStrikeIndex + 1);
+      return;
+    }
+    if (casting.fendInitialized
+        && casting.fendRemainingStrikes > 0
+        && casting.fendStrikeProcessed) {
+      log.info("[AMAZON_FEND] phase=continue source={} nextTarget={} remaining={} nextStrike={}",
+          event.entityId, casting.fendCurrentTargetId,
+          casting.fendRemainingStrikes, casting.fendStrikeIndex + 1);
       return;
     }
     if (mWhirlwindRuntime.has(event.entityId)) {
@@ -931,6 +943,14 @@ public class Actioneer extends PassiveSystem {
         log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
             entityId, targetId, srvstfunc);
         break;
+      case 7: { // SKILLS_SrvSt07_Impale: allocate the one-hit combat record.
+        prepareImpale(entityId, targetId);
+        break;
+      }
+      case 9: { // SKILLS_SrvSt09_Fend: initialize the native target stream.
+        prepareFend(entityId, targetId);
+        break;
+      }
       case 12: { // SKILLS_SrvSt12_Telekinesis_DragonFlight
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
@@ -1384,7 +1404,8 @@ public class Actioneer extends PassiveSystem {
       case 13: { // SKILLS_SrvDo013_Fend_Zeal_Fury
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
-        if (skill != null && skill.Id == SkillId.ZEAL) resolveZeal(entityId);
+        if (skill != null && skill.Id == SkillId.FEND) resolveFend(entityId);
+        else if (skill != null && skill.Id == SkillId.ZEAL) resolveZeal(entityId);
         else if (DruidSkills.isFury(skill)) resolveFury(entityId);
         else log.warn("Unsupported shared srvdofunc(13) for {} skill={}",
             entityId, skill != null ? skill.skill : "none");
@@ -1414,6 +1435,10 @@ public class Actioneer extends PassiveSystem {
         Casting vengeanceCasting = mCasting.get(entityId);
         Skills.Entry vengeanceSkill = vengeanceCasting != null
             ? Riiablo.files.skills.get(vengeanceCasting.skillId) : null;
+        if (srvdofunc == 2 && vengeanceSkill != null && vengeanceSkill.Id == SkillId.IMPALE) {
+          resolveImpale(entityId, targetId);
+          break;
+        }
         if (srvdofunc == 2 && vengeanceSkill != null
             && vengeanceSkill.Id == SkillId.VENGEANCE) {
           resolveVengeance(entityId, targetId);
@@ -1797,6 +1822,26 @@ public class Actioneer extends PassiveSystem {
               dragonClawStrike == 0 ? "right" : "left", dragonClawWeapon.code,
               clawDamage[0], clawDamage[1], attackRating,
               activeCasting.dragonClawRemainingStrikes);
+        } else if (jab && activeSkill != null) {
+          Item jabWeapon = activeAttackWeapon(entityId);
+          int[] weaponDamage = AmazonSkills.calculateWeaponDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, jabWeapon, stateList(entityId));
+          int attackRating = AmazonSkills.getAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
+          int conversion = activeSkill.EType != null && !activeSkill.EType.isEmpty()
+              ? Math.max(0, Math.min(100,
+                  SkillFormula.evaluate(activeSkill.calc3, activeSkill, activeSkillLevel))) : 0;
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              weaponDamage[0], weaponDamage[1], attackRating,
+              conversion, lightningDamageType(activeSkill.EType),
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              weaponMastery(entityId, jabWeapon, false));
+          log.info("[AMAZON_JAB] phase=roll source={} target={} level={} strike={} "
+                  + "damageRange={}..{} attackRating={} chance={}",
+              entityId, targetId, activeSkillLevel,
+              AmazonSkills.getJabHitCount() - activeCasting.jabRemainingStrikes,
+              weaponDamage[0], weaponDamage[1], attackRating, combat.hitChance);
         } else if (lightningStrike) {
           int level = Math.max(1, activeSkillLevel);
           int lightningMin = MissileDamageResolver.skillElementalDamage(
@@ -1883,6 +1928,9 @@ public class Actioneer extends PassiveSystem {
         }
         if (berserk && berserkWeapon != null) {
           drainFrenzyDurability(berserkWeapon, targetId);
+        }
+        if (jab) {
+          drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
         }
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
@@ -2216,6 +2264,215 @@ public class Actioneer extends PassiveSystem {
     return mMonster.has(entityId) && mMonster.get(entityId).monstats != null
         && (mMonster.get(entityId).monstats.lUndead
             || mMonster.get(entityId).monstats.hUndead);
+  }
+
+  /** Native SrvSt07: roll Impale once and retain the combat record for SrvDo002. */
+  private void prepareImpale(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || skill == null || skill.Id != SkillId.IMPALE
+        || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
+        || !mAttributesWrapper.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRangeAtTick(entityId, targetId, 0, casting.positionSnapshotTick)) {
+      log.info("[AMAZON_IMPALE] phase=start_reject source={} target={} reason=target_or_range",
+          entityId, targetId);
+      mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    Item weapon = activeAttackWeapon(entityId);
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    int[] damage = AmazonSkills.calculateWeaponDamage(
+        skill, level, attacker, weapon, stateList(entityId));
+    int attackRating = AmazonSkills.getAttackRating(
+        skill, level, attacker, isPlayerEntity(entityId));
+    int conversion = skill.EType != null && !skill.EType.isEmpty()
+        ? Math.max(0, Math.min(100, SkillFormula.evaluate(
+            skill.calc3, skill, level))) : 0;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+        damage[0], damage[1], attackRating, conversion,
+        lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
+        isEntityMoving(targetId), weaponMastery(entityId, weapon, false));
+    casting.impaleCombat = combat;
+    casting.impaleTargetId = targetId;
+    casting.impaleWeapon = weapon;
+    casting.impalePrepared = true;
+    log.info("[AMAZON_IMPALE] phase=start source={} target={} level={} damageRange={}..{} "
+            + "attackRating={} chance={} hit={} blocked={}", entityId, targetId, level,
+        damage[0], damage[1], attackRating, combat.hitChance, combat.hit, combat.blocked);
+  }
+
+  /** Native SrvDo002 consumer for Impale's retained combat record. */
+  private void resolveImpale(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    if (casting == null || !casting.impalePrepared || casting.impaleCombat == null
+        || casting.impaleTargetId != targetId) {
+      log.info("[AMAZON_IMPALE] phase=keyframe_reject source={} target={} reason=not_prepared",
+          entityId, targetId);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.impaleCombat;
+    Item weapon = casting.impaleWeapon;
+    casting.impaleCombat = null;
+    casting.impaleTargetId = Engine.INVALID_ENTITY;
+    casting.impaleWeapon = null;
+    casting.impalePrepared = false;
+    if (!mAttributesWrapper.has(targetId) || !isAlive(targetId)
+        || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) return;
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
+    if (!combat.hit || combat.blocked) {
+      if (combat.blocked) queueHitReaction(targetId, true);
+      log.info("[AMAZON_IMPALE] phase=keyframe source={} target={} result={}", entityId,
+          targetId, combat.blocked ? "blocked" : "miss");
+      return;
+    }
+    drainFrenzyDurability(weapon, targetId);
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent damageEvent = DamageEvent.obtainMelee(
+        entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage);
+    events.dispatch(damageEvent);
+    float applied = Math.max(0f, damageEvent.damage);
+    applyElementalAbsorb(defender, combat, 1f);
+    hp.sub(applied);
+    if (hp.asFixed() < 0f) hp.set(0f);
+    applyCombatStates(entityId, targetId, combat);
+    if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    log.info("[AMAZON_IMPALE] phase=keyframe source={} target={} result=hit damage={} hp={} -> {}",
+        entityId, targetId, applied, before, hp.asFixed());
+  }
+
+  /** Native SrvSt09: choose the first target and cap attacks by nearby targets/calc1. */
+  private void prepareFend(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    int resolved = targetId != Engine.INVALID_ENTITY && isAlive(targetId)
+        && isValidFrenzyTarget(entityId, targetId) ? targetId
+        : findNextFendTarget(entityId, Engine.INVALID_ENTITY);
+    int level = casting != null ? Math.max(1, skillLevel(entityId, casting.skillId)) : 1;
+    int attacks = AmazonSkills.getFendHitCount(skill, level);
+    int nearby = countFendTargets(entityId);
+    if (casting == null || skill == null || skill.Id != SkillId.FEND
+        || resolved == Engine.INVALID_ENTITY || attacks <= 0 || nearby <= 0) {
+      log.info("[AMAZON_FEND] phase=start_reject source={} target={} reason=no_target",
+          entityId, targetId);
+      mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      return;
+    }
+    casting.fendInitialized = true;
+    casting.fendStrikeProcessed = false;
+    casting.fendStrikeIndex = 0;
+    casting.fendRemainingStrikes = Math.min(attacks, nearby);
+    casting.fendCurrentTargetId = resolved;
+    casting.targetId = resolved;
+    if (mPosition.has(resolved)) casting.targetVec.set(mPosition.get(resolved).position);
+    log.info("[AMAZON_FEND] phase=start source={} target={} level={} attacks={} nearby={}",
+        entityId, resolved, level, casting.fendRemainingStrikes, nearby);
+  }
+
+  private int countFendTargets(int sourceId) {
+    if (!mPosition.has(sourceId)) return 0;
+    Vector2 source = mPosition.get(sourceId).position;
+    float range = getMeleeRange(sourceId) + 4f;
+    float range2 = range * range;
+    int count = 0;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int candidate = ids[i];
+      if (candidate != sourceId && isAlive(candidate)
+          && source.dst2(mPosition.get(candidate).position) <= range2
+          && isValidFrenzyTarget(sourceId, candidate)) count++;
+    }
+    return count;
+  }
+
+  private int findNextFendTarget(int sourceId, int previousTargetId) {
+    int next = findNextFrenzyTarget(sourceId, previousTargetId);
+    return next == previousTargetId ? Engine.INVALID_ENTITY : next;
+  }
+
+  /** Native SrvDo013 Fend: resolve one hit, then advance to the next target. */
+  private void resolveFend(int entityId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !casting.fendInitialized || skill == null
+        || skill.Id != SkillId.FEND || casting.fendRemainingStrikes <= 0
+        || !mAttributesWrapper.has(entityId) || !isAlive(entityId)) return;
+    int target = casting.fendCurrentTargetId;
+    if (target == Engine.INVALID_ENTITY || !isAlive(target)
+        || !isValidFrenzyTarget(entityId, target)
+        || !isInMeleeRange(entityId, target, 0)) {
+      target = findNextFendTarget(entityId, target);
+    }
+    if (target == Engine.INVALID_ENTITY || !mAttributesWrapper.has(target)) {
+      casting.fendRemainingStrikes = 0;
+      casting.fendStrikeProcessed = true;
+      return;
+    }
+    if (mAngle.has(entityId) && mPosition.has(target)) {
+      mAngle.get(entityId).target.set(mPosition.get(target).position)
+          .sub(mPosition.get(entityId).position).nor();
+    }
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(target).attrs;
+    Item weapon = activeAttackWeapon(entityId);
+    int[] damage = AmazonSkills.calculateWeaponDamage(
+        skill, level, attacker, weapon, stateList(entityId));
+    int attackRating = AmazonSkills.getAttackRating(
+        skill, level, attacker, isPlayerEntity(entityId));
+    int conversion = skill.EType != null && !skill.EType.isEmpty()
+        ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc3, skill, level))) : 0;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, isPlayerEntity(entityId), isPlayerEntity(target),
+        damage[0], damage[1], attackRating, conversion,
+        lightningDamageType(skill.EType), stateList(entityId), stateList(target),
+        isEntityMoving(target), weaponMastery(entityId, weapon, false));
+    int strike = ++casting.fendStrikeIndex;
+    casting.fendRemainingStrikes--;
+    casting.fendStrikeProcessed = true;
+    casting.fendCurrentTargetId = target;
+    casting.targetId = target;
+    events.dispatch(MeleeAttackEvent.obtain(entityId, target, combat.hit, combat.blocked));
+    if (weapon != null) drainFrenzyDurability(weapon, target);
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    float before = hp != null ? hp.asFixed() : 0f;
+    float applied = 0f;
+    if (combat.blocked) queueHitReaction(target, true);
+    else if (combat.hit && hp != null && before > 0f) {
+      DamageEvent damageEvent = DamageEvent.obtainMelee(
+          entityId, target, Math.max(0, combat.totalDamage), combat.physicalDamage);
+      events.dispatch(damageEvent);
+      applied = Math.max(0f, damageEvent.damage);
+      applyElementalAbsorb(defender, combat, 1f);
+      hp.sub(applied);
+      if (hp.asFixed() < 0f) hp.set(0f);
+      applyCombatStates(entityId, target, combat);
+      if (hp.asFixed() > 0f) queueHitReaction(target, false);
+      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, target));
+    }
+    int next = Engine.INVALID_ENTITY;
+    if (casting.fendRemainingStrikes > 0) next = findNextFendTarget(entityId, target);
+    if (next == Engine.INVALID_ENTITY) casting.fendRemainingStrikes = 0;
+    casting.fendCurrentTargetId = next;
+    casting.targetId = next;
+    if (next != Engine.INVALID_ENTITY && mPosition.has(next)) {
+      casting.targetVec.set(mPosition.get(next).position);
+    }
+    log.info("[AMAZON_FEND] phase=strike source={} index={} target={} result={} damage={} "
+            + "hp={} -> {} damageRange={}..{} attackRating={} chance={} remaining={} nextTarget={}",
+        entityId, strike, target, combat.blocked ? "blocked" : combat.hit ? "hit" : "miss",
+        applied, before, hp != null ? hp.asFixed() : before, damage[0], damage[1],
+        attackRating, combat.hitChance, casting.fendRemainingStrikes, next);
   }
 
   /** Native SrvSt16: roll one dagger combat record before the attack keyframe. */

@@ -3,12 +3,16 @@ package com.riiablo.engine.server.skill;
 import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -53,6 +57,88 @@ public final class AmazonSkills {
   public static int calculateJabDamageBonus(int skillLevel) {
     // 每级 +8%
     return 8 * skillLevel;
+  }
+
+  /** Native SKILLS_GetToHitFactor contribution for Amazon melee skills. */
+  public static int getAttackRating(Skills.Entry skill, int skillLevel,
+      Attributes attacker, boolean player) {
+    int base = statInt(attacker, Stat.tohit);
+    int level = Math.max(1, skillLevel);
+    int factor = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    return player ? Math.max(1, base * Math.max(0, 100 + factor) / 100)
+        : Math.max(1, base + factor);
+  }
+
+  /** Resolves the native physical percentage field from Skills.txt. */
+  public static int getPhysicalDamagePercent(Skills.Entry skill, int skillLevel) {
+    if (skill == null) return 0;
+    String formula = skill.Id == SkillId.FEND ? skill.calc2 : skill.calc1;
+    int value = SkillFormula.evaluate(formula, skill, Math.max(1, skillLevel));
+    if (value != 0) return value;
+    switch (skill.Id) {
+      case SkillId.JAB: return calculateJabDamageBonus(skillLevel);
+      case SkillId.IMPALE: return calculateImpaleDamageBonus(skillLevel);
+      case SkillId.FEND: return 70 + (Math.max(1, skillLevel) - 1) * 4;
+      default: return 0;
+    }
+  }
+
+  /** Complete weapon packet used by Jab, Impale and Fend. */
+  public static int[] calculateWeaponDamage(Skills.Entry skill, int skillLevel,
+      Attributes attacker, Item weapon, StateList states) {
+    if (attacker == null) return new int[] {0, 0};
+    int min;
+    int max;
+    int attributePercent;
+    if (weapon != null && weapon.base instanceof Weapons.Entry) {
+      Weapons.Entry base = (Weapons.Entry) weapon.base;
+      min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+      max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+      attributePercent = base.StrBonus * statInt(attacker, Stat.strength) / 100
+          + base.DexBonus * statInt(attacker, Stat.dexterity) / 100;
+    } else {
+      min = Math.max(0, statInt(attacker, Stat.mindamage));
+      max = Math.max(min, statInt(attacker, Stat.maxdamage));
+      attributePercent = statInt(attacker, Stat.strength);
+    }
+    int percent = getPhysicalDamagePercent(skill, skillLevel) + attributePercent
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) {
+      percent += states.getTotalDamageModifier();
+      if (weapon != null) {
+        percent += states.getWeaponMastery(weapon, false,
+            new StateList.WeaponMasteryBonus()).damagePercent;
+      }
+    }
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scaleSource(scalePercent(min, percent), sourceDamage),
+        scaleSource(scalePercent(Math.max(min, max), percent), sourceDamage)
+    };
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
+  }
+
+  private static int scalePercent(int value, int percent) {
+    return Math.max(0, (int) Math.min(Integer.MAX_VALUE,
+        (long) Math.max(0, value) * Math.max(0, 100 + percent) / 100L));
+  }
+
+  private static int scaleSource(int value, int sourceDamage) {
+    return Math.max(0, (int) Math.min(Integer.MAX_VALUE,
+        (long) Math.max(0, value) * Math.max(0, sourceDamage) / 128L));
   }
 
   /**
@@ -194,6 +280,13 @@ public final class AmazonSkills {
   public static int getSlowMissilesPercent(int skillLevel) {
     // 固定 33% 减速
     return 33;
+  }
+
+  /** Native Fend attack count (calc1), capped by the target stream at start. */
+  public static int getFendHitCount(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.FEND) return 0;
+    int value = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
+    return Math.max(1, value > 0 ? value : getFendHitCount(skillLevel));
   }
 
   /** Returns true for the native Slow Missiles row (SrvDo006). */

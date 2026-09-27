@@ -24,6 +24,17 @@ public class Casting extends PooledComponent {
   /** Native Amazon Jab sequence: A1 followed by two A2 thrusts. */
   public int jabRemainingStrikes;
   public boolean jabStrikeProcessed;
+  /** Native Amazon Impale SrvSt07 combat record consumed by SrvDo002. */
+  public CombatSystem.CombatResult impaleCombat;
+  @EntityId public int impaleTargetId;
+  public Item impaleWeapon;
+  public boolean impalePrepared;
+  /** Native Amazon Fend SrvSt09/SrvDo013 target stream. */
+  public boolean fendInitialized;
+  public boolean fendStrikeProcessed;
+  public int fendRemainingStrikes;
+  public int fendStrikeIndex;
+  @EntityId public int fendCurrentTargetId;
   /** Server-only state for native Dragon Talon SrvSt24/SrvDo042 chaining. */
   public int dragonTalonRemainingKicks;
   public int dragonTalonSuccessfulKicks;
@@ -111,6 +122,15 @@ public class Casting extends PooledComponent {
     this.positionSnapshotTick = positionSnapshotTick;
     jabRemainingStrikes = 0;
     jabStrikeProcessed = false;
+    impaleCombat = null;
+    impaleTargetId = Engine.INVALID_ENTITY;
+    impaleWeapon = null;
+    impalePrepared = false;
+    fendInitialized = false;
+    fendStrikeProcessed = false;
+    fendRemainingStrikes = 0;
+    fendStrikeIndex = 0;
+    fendCurrentTargetId = Engine.INVALID_ENTITY;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;
@@ -181,6 +201,15 @@ public class Casting extends PooledComponent {
     positionSnapshotTick = 0L;
     jabRemainingStrikes = 0;
     jabStrikeProcessed = false;
+    impaleCombat = null;
+    impaleTargetId = Engine.INVALID_ENTITY;
+    impaleWeapon = null;
+    impalePrepared = false;
+    fendInitialized = false;
+    fendStrikeProcessed = false;
+    fendRemainingStrikes = 0;
+    fendStrikeIndex = 0;
+    fendCurrentTargetId = Engine.INVALID_ENTITY;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;
