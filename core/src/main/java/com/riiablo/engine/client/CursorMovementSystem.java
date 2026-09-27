@@ -404,11 +404,16 @@ public class CursorMovementSystem extends BaseSystem {
       Target target = mTarget.get(src);
       if (target != null) {
         int targetId = target.target;
-        Vector2 srcPos = mPosition.get(src).position;
-        if (mPosition.get(targetId) == null) {
+        // The target component can outlive the target entity for one client
+        // tick (for example when a missile kills it between mouse-down and
+        // mouse-up). ComponentMapper.get() does not accept INVALID_ENTITY;
+        // clear the stale interaction target before touching its position.
+        if (targetId == Engine.INVALID_ENTITY || !mPosition.has(src)
+            || !mPosition.has(targetId)) {
           actioneer.moveTo(src, Engine.INVALID_ENTITY);
           return;
         }
+        Vector2 srcPos = mPosition.get(src).position;
         Vector2 targetPos = mPosition.get(targetId).position;
         // not interactable -> attacking? check weapon range to auto attack or cast spell
         Interactable interactable = mInteractable.get(targetId);
