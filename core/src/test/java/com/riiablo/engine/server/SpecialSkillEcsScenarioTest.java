@@ -66,6 +66,36 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void lightningStrikeCreatesRootFromMeleeVictimAndDefersContinuation() {
+    int skillId = com.riiablo.engine.server.skill.SkillId.LIGHTNING_STRIKE;
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = world.create();
+      world.getMapper(Player.class).create(caster);
+      world.getMapper(Class.class).create(caster).type = Class.Type.PLR;
+      world.getMapper(Position.class).create(caster).position.set(0, 0);
+      int victim = monster(world, 5, 0);
+      monster(world, 8, 0);
+      monster(world, 11, 0);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skillId, victim, new Vector2(5, 0), 14, 0));
+
+      assertEquals(1, factory.created,
+          "Lightning Strike must create one root; SrvHit12 owns later jumps");
+      Missile root = world.getMapper(Missile.class).get(factory.lastMissileId);
+      assertEquals(5f, root.start.x, 0.0001f);
+      assertEquals(0f, root.start.y, 0.0001f);
+      assertEquals(2, root.chainHitsRemaining);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void frenzyStateRaisesAuthoritativeMovementMultiplierAndExpires() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

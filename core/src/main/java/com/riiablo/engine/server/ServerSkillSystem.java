@@ -2460,6 +2460,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId >= 0 && mMissile.has(missileId)) {
       Missile projectile = mMissile.get(missileId);
       projectile.chainHitsRemaining = maxHits;
+      projectile.skillId = skill.Id;
+      projectile.damageLevel = level;
       log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} missile={} "
               + "missileId={} jumps={} status=PASS",
           event.entityId, initialTarget, missileName, missileId, maxHits);
@@ -2512,7 +2514,11 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** Native Amazon SrvDo014: chain from the melee victim to nearby enemies. */
   private void spawnLightningStrike(SkillDoEvent event, Skills.Entry skill) {
-    if (event.targetId < 0 || !mPosition.has(event.targetId)) return;
+    // SrvDo014 does not build the whole chain.  SrvSt10 has already resolved
+    // the melee hit against this unit; the do-function only finds the first
+    // *other* unit around that victim and creates one progressive missile.
+    if (event.targetId < 0 || !mPosition.has(event.targetId)
+        || !isHostile(event.entityId, event.targetId)) return;
     String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
     if (missile == null) {
@@ -2524,30 +2530,32 @@ public class ServerSkillSystem extends PassiveSystem {
     int maxJumps = lightningStrikeJumpCount(skill, skillLevel);
     float range = lightningStrikeRange(skill, skillLevel);
     float range2 = range * range;
-    IntSet visited = new IntSet();
-    visited.add(event.targetId);
-    Vector2 from = new Vector2(mPosition.get(event.targetId).position);
+    IntSet sharedTargets = new IntSet();
+    // The melee victim is the origin, not a second missile target.  Sharing
+    // this set with SrvHit12 also prevents a child segment from looping back
+    // into the victim or any earlier chain target.
+    sharedTargets.add(event.targetId);
+    Vector2 origin = new Vector2(mPosition.get(event.targetId).position);
+    int next = findNearestHostile(event.entityId, origin, sharedTargets, range2);
     int created = 0;
-    for (int jump = 0; jump < maxJumps; jump++) {
-      int next = findNearestHostile(event.entityId, from, visited, range2);
-      if (next < 0 || !mPosition.has(next)) break;
-      Vector2 destination = mPosition.get(next).position;
-      Vector2 direction = new Vector2(destination).sub(from);
-      IntSet segmentHits = copySet(visited);
+    if (next >= 0 && mPosition.has(next)) {
+      Vector2 direction = new Vector2(mPosition.get(next).position).sub(origin);
       if (!direction.isZero(0.0001f)) {
-        int missileId = createMissile(missile, direction.nor(), from, event.entityId,
-            segmentHits, skillLevel);
-        if (missileId >= 0) {
+        int missileId = createMissile(missile, direction.nor(), origin, event.entityId,
+            sharedTargets, skillLevel);
+        if (missileId >= 0 && mMissile.has(missileId)) {
+          Missile projectile = mMissile.get(missileId);
+          projectile.chainHitsRemaining = maxJumps;
+          projectile.skillId = skill.Id;
+          projectile.damageLevel = skillLevel;
           initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
           created++;
         }
       }
-      visited.add(next);
-      from.set(destination);
     }
     log.info("[AMAZON_LIGHTNING_STRIKE] phase=spawn source={} initialTarget={} "
-            + "level={} range={} maxJumps={} created={} missile={}",
-        event.entityId, event.targetId, skillLevel, range, maxJumps, created, missileName);
+        + "firstTarget={} level={} range={} maxJumps={} created={} missile={}",
+        event.entityId, event.targetId, next, skillLevel, range, maxJumps, created, missileName);
   }
 
   /** Native Amazon SrvDo015/SrvDo016: create an owned Decoy or Valkyrie. */
@@ -2877,13 +2885,6 @@ public class ServerSkillSystem extends PassiveSystem {
   static float lightningStrikeRange(Skills.Entry skill, int skillLevel) {
     int range = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
     return Math.max(1, Math.min(64, range));
-  }
-
-  private static IntSet copySet(IntSet source) {
-    IntSet copy = new IntSet(source != null ? source.size : 0);
-    if (source == null) return copy;
-    for (IntSet.IntSetIterator it = source.iterator(); it.hasNext; ) copy.add(it.next());
-    return copy;
   }
 
   private boolean isHostile(int sourceId, int candidate) {

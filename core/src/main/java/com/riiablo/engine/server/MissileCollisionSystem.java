@@ -2544,8 +2544,15 @@ public class MissileCollisionSystem extends IteratingSystem {
       Missile source, int struckTarget, Vector2 origin) {
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
     int level = Math.max(1, source.damageLevel);
+    // Amazon Lightning Strike stores its seek radius in calc1.  Sorceress
+    // Chain Lightning uses AuraRangeCalc instead; using the latter for both
+    // skills silently makes Lightning Strike jump with the wrong radius.
+    boolean lightningStrike = skill != null
+        && (skill.Id == com.riiablo.engine.server.skill.SkillId.LIGHTNING_STRIKE
+            || "Lightning Strike".equalsIgnoreCase(skill.skill));
     int range = skill != null
-        ? Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, level)) : 8;
+        ? Math.max(1, SkillFormula.evaluate(
+            lightningStrike ? skill.calc1 : skill.aurarangecalc, skill, level)) : 8;
     int nextTarget = Engine.INVALID_ENTITY;
     float best = Float.MAX_VALUE;
     Array<Integer> candidates = getEntitiesInRange(origin.x, origin.y, range);

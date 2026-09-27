@@ -1081,6 +1081,49 @@ public class CombatSystem {
         attackerStates, defenderStates, defenderMoving, mastery);
   }
 
+  /**
+   * Native Amazon Lightning Strike melee packet.  SrvSt10 adds the skill's
+   * lightning range to the normal weapon packet, applies Calc1 as enhanced
+   * physical damage, and optionally converts Calc4 percent of that physical
+   * packet to EType before resistance.
+   */
+  public CombatResult calculateLightningStrikeAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int lightningMin, int lightningMax, int damagePercent,
+      int conversionPercent, int conversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, int difficulty,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed) {
+    int[] elementalMin = new int[DAMAGE_TYPE_COUNT];
+    int[] elementalMax = new int[DAMAGE_TYPE_COUNT];
+    short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
+        Stat.poisonmindam, Stat.magicmindam};
+    short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
+        Stat.poisonmaxdam, Stat.magicmaxdam};
+    for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
+      elementalMin[type] = Math.max(0, statInt(attacker, minStats[type], 0));
+      elementalMax[type] = Math.max(elementalMin[type],
+          statInt(attacker, maxStats[type], elementalMin[type]));
+      if (attackerStates != null) {
+        elementalMin[type] += attackerStates.getTotalStatContribution(minStats[type]);
+        elementalMax[type] += attackerStates.getTotalStatContribution(maxStats[type]);
+      }
+    }
+    elementalMin[DAMAGE_LIGHTNING] += Math.max(0, lightningMin);
+    elementalMax[DAMAGE_LIGHTNING] = Math.max(elementalMin[DAMAGE_LIGHTNING],
+        elementalMax[DAMAGE_LIGHTNING] + Math.max(0, lightningMax));
+    int coldLength = statInt(attacker, Stat.coldlength, 0);
+    int poisonLength = statInt(attacker, Stat.poisonlength, 0);
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
+        0, 0, 0, false, elementalMin, elementalMax, coldLength, poisonLength,
+        attackerStates, defenderStates, defenderMoving, false,
+        Math.max(0, Math.min(100, conversionPercent)), conversionType, null,
+        difficulty, 0, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, Math.max(0, damagePercent));
+  }
+
   public CombatResult calculatePrecomputedMeleeAttack(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer,
@@ -1177,6 +1220,28 @@ public class CombatSystem {
       StateList.WeaponMasteryBonus mastery, int difficulty,
       int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, precomputedPhysicalDamage,
+        physicalConversionPercent, physicalConversionType, mastery, difficulty,
+        magicTargetBonusPercent, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, 0);
+  }
+
+  private CombatResult calculateAttackInternal(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, boolean precomputedPhysicalDamage,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList.WeaponMasteryBonus mastery, int difficulty,
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -1226,7 +1291,8 @@ public class CombatSystem {
         a.maxDamage = throwMax;
       }
     }
-    a.enhancedDamagePercent = statInt(attacker, Stat.damagepercent, 0);
+    a.enhancedDamagePercent = statInt(attacker, Stat.damagepercent, 0)
+        + Math.max(0, enhancedDamageBonus);
     a.physicalConversionPercent = Math.max(0, Math.min(100, physicalConversionPercent));
     a.physicalConversionType = physicalConversionType;
     if (attackerStates != null) {

@@ -813,6 +813,13 @@ public final class MissileDamageResolver {
     return damage >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) damage;
   }
 
+  /** Native integer damage returned by SKILLS_GetMin/MaxElemDamage. */
+  public static int skillElementalDamage(Skills.Entry skill, int level,
+      boolean minimum, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null) return 0;
+    return skillElementalDamageFixed(skill, Math.max(1, level), minimum, baseSkillLevel) >> 8;
+  }
+
   private static int percentage(int value, int percent) {
     long result = (long) Math.max(0, value) * Math.max(0, percent) / 100L;
     return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;

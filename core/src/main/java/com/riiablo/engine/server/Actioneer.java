@@ -1425,6 +1425,9 @@ public class Actioneer extends PassiveSystem {
         boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
             && activeSkill.srvdofunc == 2;
         boolean fireClaws = activeSkill != null && DruidSkills.isFireClaws(activeSkill);
+        boolean lightningStrike = activeSkill != null
+            && (activeSkill.Id == SkillId.LIGHTNING_STRIKE
+                || "Lightning Strike".equalsIgnoreCase(activeSkill.skill));
         Item berserkWeapon = null;
         CombatSystem.CombatResult dragonTailCombat = dragonTail && activeCasting != null
             && activeCasting.dragonTailPrepared
@@ -1776,6 +1779,30 @@ public class Actioneer extends PassiveSystem {
               dragonClawStrike == 0 ? "right" : "left", dragonClawWeapon.code,
               clawDamage[0], clawDamage[1], attackRating,
               activeCasting.dragonClawRemainingStrikes);
+        } else if (lightningStrike) {
+          int level = Math.max(1, activeSkillLevel);
+          int lightningMin = MissileDamageResolver.skillElementalDamage(
+              activeSkill, level, true, name -> baseSkillLevel(entityId, name));
+          int lightningMax = MissileDamageResolver.skillElementalDamage(
+              activeSkill, level, false, name -> baseSkillLevel(entityId, name));
+          int mastery = Math.max(0, statInt(attackerAttrs, Stat.passive_ltng_mastery));
+          lightningMin = lightningMin * (100 + mastery) / 100;
+          lightningMax = Math.max(lightningMin, lightningMax * (100 + mastery) / 100);
+          int damagePercent = Math.max(0,
+              SkillFormula.evaluate(activeSkill.calc1, activeSkill, level));
+          int conversionPercent = activeSkill.EType != null && !activeSkill.EType.isEmpty()
+              ? Math.max(0, SkillFormula.evaluate(activeSkill.calc4, activeSkill, level)) : 0;
+          combat = CombatSystem.INSTANCE.calculateLightningStrikeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              lightningMin, lightningMax, damagePercent,
+              conversionPercent, lightningDamageType(activeSkill.EType),
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              combatDifficulty(), isDemonTarget(targetId), isUndeadTarget(targetId),
+              ignoreTargetDefenseAllowed);
+          log.info("[AMAZON_LIGHTNING_STRIKE] phase=melee_hit source={} target={} level={} "
+                  + "lightning={}..{} damagePercent={} conversion={} chance={}",
+              entityId, targetId, level, lightningMin, lightningMax, damagePercent,
+              conversionPercent, combat.hitChance);
         } else {
           Item attackWeapon = activeAttackWeapon(entityId);
           combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
@@ -4374,6 +4401,20 @@ public class Actioneer extends PassiveSystem {
     min = Math.max(0, min);
     max = Math.max(min, max);
     return max > min ? MathUtils.random(min, max) : min;
+  }
+
+  private static int lightningDamageType(String eType) {
+    if (eType == null) return CombatSystem.DAMAGE_LIGHTNING;
+    if ("fire".equalsIgnoreCase(eType)) return CombatSystem.DAMAGE_FIRE;
+    if ("cold".equalsIgnoreCase(eType) || "freeze".equalsIgnoreCase(eType)
+        || "frze".equalsIgnoreCase(eType)) return CombatSystem.DAMAGE_COLD;
+    if ("pois".equalsIgnoreCase(eType) || "poison".equalsIgnoreCase(eType)) {
+      return CombatSystem.DAMAGE_POISON;
+    }
+    if ("mag".equalsIgnoreCase(eType) || "magic".equalsIgnoreCase(eType)) {
+      return CombatSystem.DAMAGE_MAGIC;
+    }
+    return CombatSystem.DAMAGE_LIGHTNING;
   }
 
   private static int resistedDamage(int rawDamage, Attributes defender,
