@@ -152,8 +152,26 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public void setFrameDuration(float f) {
+    // Animation rates are adjusted while a unit is moving (for example when
+    // its velocity changes from one fixed tick to the next).  Recomputing the
+    // elapsed time from the integer frame discards the fractional frame
+    // progress on every such adjustment.  With continuously changing monster
+    // rates this can keep the animation on frame 0 forever even though the
+    // entity position continues to advance.  Preserve the current position in
+    // animation-frame units and only change the time scale.
+    float previousDuration = frameDuration;
+    if (!Float.isFinite(f) || f <= 0f
+        || !Float.isFinite(previousDuration) || previousDuration <= 0f) {
+      // Keep the historical behavior for malformed/degenerate rates.  Native
+      // data normally supplies a positive finite duration, but a bad custom
+      // COF should not turn a presentation update into an exception.
+      frameDuration = f;
+      elapsedTime = frameDuration * frame;
+      return;
+    }
+    float framePosition = elapsedTime / previousDuration;
     frameDuration = f;
-    elapsedTime = frameDuration * frame;
+    elapsedTime = Math.max(0f, framePosition) * frameDuration;
   }
 
   public int getFrameDelta() {

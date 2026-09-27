@@ -3,6 +3,17 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-28 动画速率切换保持帧相位
+
+- [x] 修复单位移动时动画速率按速度逐 Tick 调整导致的动画冻结：`Animation.setFrameDuration`
+  现在保留当前小数帧进度，只改变时间尺度，不再把 `elapsedTime` 重置到当前整数帧；
+  角色/怪物位置继续移动但精灵停在同一帧的问题已覆盖。
+- [x] 新增 `AnimationSubLoopTest.changingRatePreservesFractionalFrameProgress`，并通过
+  `:core:test --tests com.riiablo.codec.AnimationSubLoopTest --no-daemon`；
+  `:core:compileJava --no-daemon` 通过。
+- [ ] 仍需另一台电脑使用真实 1.10f MPQ 验证 Ice Arrow 连续施法释放后能回到 NU，且
+  移动中的怪物动画持续推进；本次修复不改变攻击输入/技能伤害时序。
+
 ## 2026-09-27 亚马逊三类冰箭状态与碎尸表现
 
 - [x] Cold Arrow（冰箭）只应用原生 `COLD`：怪物减速并显示 `cblu` 蓝色变换，

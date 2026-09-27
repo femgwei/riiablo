@@ -32,4 +32,20 @@ class AnimationSubLoopTest extends RiiabloTest {
     assertEquals(35, animation.getFrame(60f));
     assertEquals(12, animation.getFrame(61f));
   }
+
+  @Test
+  void changingRatePreservesFractionalFrameProgress() {
+    Animation animation = Animation.newAnimation();
+    animation.numFrames = 8;
+    animation.startIndex = 0;
+    animation.endIndex = 8;
+    animation.setFrameDuration(1f);
+    animation.update(0.75f);
+
+    // A rate change must not rewind the 0.75-frame position to frame zero.
+    animation.setFrameDuration(0.5f);
+    animation.update(0.7f);
+
+    assertEquals(2, animation.getFrame());
+  }
 }
