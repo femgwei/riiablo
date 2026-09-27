@@ -244,7 +244,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   private String calc(SkillDesc.Entry desc, int i, int[] descline, String[] desctexta, String[] desctextb, String[] desccalca, String[] desccalcb, Skills.Entry skill, int lvl) {
     return SkillDetails.formatLine(descline[i], desctexta[i], desctextb[i],
-        desccalca[i], skill, lvl, desc.str_mana);
+        desccalca[i], desccalcb[i], skill, lvl, desc.str_mana);
   }
 
   @Override
@@ -351,7 +351,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
         for (int i = 0; i < desc.dsc2line.length; i++) {
           if (desc.dsc2line[i] <= 0) break;
           if (i == 0) add().height(font.getLineHeight()).center().space(SPACING).row();
-          String str = calc(desc, i, desc.descline, desc.dsc2texta, desc.dsc2textb, desc.dsc2calca, desc.dsc2calcb, skill, sLvl);
+          String str = calc(desc, i, desc.dsc2line, desc.dsc2texta, desc.dsc2textb, desc.dsc2calca, desc.dsc2calcb, skill, sLvl);
           if (str != null) add(new Label(str, Riiablo.fonts.font16)).center().space(SPACING).row();
         }
         for (int i = 0; i < desc.descline.length; i++) {

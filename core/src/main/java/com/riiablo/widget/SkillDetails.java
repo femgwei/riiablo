@@ -9,10 +9,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.component.UnitStates;
@@ -99,21 +102,42 @@ public final class SkillDetails extends Table {
         ? Riiablo.colors.blue : Riiablo.colors.white;
     add(new Label(Riiablo.string.lookup("StrSkill2") + level, font, levelColor))
         .center().space(spacing).row();
-    for (int i = 0; i < desc.descline.length && desc.descline[i] > 0; i++) {
-      String line = formatLine(desc.descline[i], desc.desctexta[i], desc.desctextb[i],
-          desc.desccalca[i], skill, level, desc.str_mana);
-      if (line != null) add(new Label(line, font)).center().space(spacing).row();
-    }
+    appendLines(desc.dsc2line, desc.dsc2texta, desc.dsc2textb,
+        desc.dsc2calca, desc.dsc2calcb, skill, level, desc.str_mana, font, spacing);
+    appendLines(desc.descline, desc.desctexta, desc.desctextb,
+        desc.desccalca, desc.desccalcb, skill, level, desc.str_mana, font, spacing);
+    appendLines(desc.dsc3line, desc.dsc3texta, desc.dsc3textb,
+        desc.dsc3calca, desc.dsc3calcb, skill, level, desc.str_mana, font, spacing);
     pack();
+  }
+
+  private void appendLines(int[] types, String[] textA, String[] textB,
+      String[] calcA, String[] calcB, Skills.Entry skill, int level,
+      String manaText, BitmapFont font, float spacing) {
+    if (types == null) return;
+    for (int i = 0; i < types.length && types[i] > 0; i++) {
+      String line = formatLine(types[i], textA[i], textB[i], calcA[i], calcB[i],
+          skill, level, manaText);
+      if (line != null && !line.isEmpty()) {
+        add(new Label(line, font)).center().space(spacing).row();
+      }
+    }
   }
 
   /** Formats one SkillDesc row, including the native missile-backed rows used
    * by Immolation Arrow (continuous fire, duration, and explosion damage). */
   public static String formatLine(int type, String textA, String textB, String calc,
       Skills.Entry skill, int level, String manaText) {
+    return formatLine(type, textA, textB, calc, "", skill, level, manaText);
+  }
+
+  /** Formats a SkillDesc row using both native calculation operands. */
+  public static String formatLine(int type, String textA, String textB,
+      String calcA, String calcB, Skills.Entry skill, int level, String manaText) {
     String a = lookup(textA);
     String b = lookup(textB);
-    int value = SkillFormula.evaluate(calc, skill, level);
+    int value = evaluate(calcA, skill, level);
+    int valueB = evaluate(calcB, skill, level);
     switch (type) {
       case 1:
         float mana = NativeSkillResolver.manaCost(skill, level);
@@ -129,8 +153,14 @@ public final class SkillDetails extends Table {
       case 7: return value + a;
       case 8: return a + b;
       case 9: return a + b + lookup("StrSkill4") + "+" + value;
+      case 10:
+        return formatElementalDamageLine(skill, level);
+      case 11:
+        return formatWeaponDamageLine(skill, level);
       case 12: return a + SkillFormula.durationSeconds(value) + lookup("StrSkill16");
       case 13: return lookup("StrSkill42") + value;
+      case 14:
+        return formatElementalDamageLine(skill, level);
       case 19: return b + a + (value * 2f / 3f) + lookup("StrSkill26");
       case 22:
         return formatMissileDamageLine(skill, level, lookup("StrSkill35"));
@@ -142,13 +172,135 @@ public final class SkillDetails extends Table {
       case 28: return lookup("StrSkill18") + "1" + lookup("StrSkill36");
       case 40: return String.format(a, b);
       case 63: return a + ": +" + value + "% " + b;
+      case 66: return a + value + "%";
       case 67: return a + ": +" + value + b;
+      case 73:
+        return formatWeaponPercentLine(a, value, valueB);
       default: return null;
     }
   }
 
+  private static int evaluate(String expression, Skills.Entry skill, int level) {
+    return SkillFormula.evaluate(expression, skill, level,
+        SkillDetails::hardSkillLevel, SkillNameResolver::entry);
+  }
+
+  private static int hardSkillLevel(String internalName) {
+    Skills.Entry referenced = SkillNameResolver.entry(internalName);
+    return referenced == null || Riiablo.charData == null
+        ? 0 : Math.max(0, Riiablo.charData.getSkill(referenced.Id));
+  }
+
   private static String lookup(String key) {
     return key == null || key.isEmpty() ? "" : Riiablo.string.lookup(key);
+  }
+
+  private static String formatElementalDamageLine(Skills.Entry skill, int level) {
+    if (skill == null || skill.EType == null || skill.EType.isEmpty()) return null;
+    long minFixed = skillElementalDamageFixed(skill, level, true);
+    long maxFixed = Math.max(minFixed, skillElementalDamageFixed(skill, level, false));
+    String label = elementalDamageLabel(skill.EType);
+    if (isPoison(skill.EType)) {
+      int frames = Math.max(1,
+          skill.ELen + missileDamageBonus(Math.max(1, level), skill.ELevLen));
+      long min = minFixed * frames / 256L;
+      long max = Math.max(min, maxFixed * frames / 256L);
+      return label + min + "-" + max + " over "
+          + SkillFormula.durationSeconds(frames) + lookup("StrSkill16");
+    }
+    long min = minFixed / 256L;
+    long max = Math.max(min, maxFixed / 256L);
+    return label + min + "-" + max;
+  }
+
+  private static long skillElementalDamageFixed(
+      Skills.Entry skill, int level, boolean minimum) {
+    level = Math.max(1, level);
+    int base = minimum ? skill.EMin : skill.EMax;
+    int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;
+    long damage = Math.max(0L, (long) base + missileDamageBonus(level, perLevel));
+    damage <<= Math.max(0, Math.min(30, skill.HitShift));
+    // Keep this in native 8.8 units. The server applies the same hard-point
+    // synergy before writing a missile damage snapshot.
+    boolean applySynergy = !minimum || damage > 256L
+        || (perLevel != null && perLevel.length > 0 && perLevel[0] != 0);
+    if (applySynergy) {
+      int synergy = Math.max(0, evaluate(skill.EDmgSymPerCalc, skill, level));
+      damage += damage * synergy / 100L;
+    }
+    return damage;
+  }
+
+  private static boolean isPoison(String element) {
+    return "pois".equalsIgnoreCase(element) || "poison".equalsIgnoreCase(element);
+  }
+
+  private static String elementalDamageLabel(String element) {
+    if ("fire".equalsIgnoreCase(element)) return "Fire Damage: ";
+    if ("ltng".equalsIgnoreCase(element)
+        || "lightning".equalsIgnoreCase(element)) return "Lightning Damage: ";
+    if ("cold".equalsIgnoreCase(element) || "freeze".equalsIgnoreCase(element)
+        || "frze".equalsIgnoreCase(element)) return "Cold Damage: ";
+    if (isPoison(element)) return "Poison Damage: ";
+    if ("mag".equalsIgnoreCase(element) || "magic".equalsIgnoreCase(element)) {
+      return "Magic Damage: ";
+    }
+    return "Damage: ";
+  }
+
+  private static String formatWeaponDamageLine(Skills.Entry skill, int level) {
+    if (skill == null || skill.SrcDam <= 0) return null;
+    int[] weapon = currentWeaponDamage();
+    if (weapon != null) {
+      int min = weapon[0] * skill.SrcDam / 128
+          + shiftedSkillDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+      int max = weapon[1] * skill.SrcDam / 128
+          + shiftedSkillDamage(skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+      return "Weapon Damage: " + Math.max(0, min) + "-" + Math.max(min, max);
+    }
+    int percent = Math.max(0, Math.round(skill.SrcDam * 100f / 128f));
+    return "Weapon Damage: " + percent + "%";
+  }
+
+  private static int shiftedSkillDamage(int base, int[] perLevel, int level, int hitShift) {
+    long value = Math.max(0L,
+        (long) base + missileDamageBonus(Math.max(1, level), perLevel));
+    int shift = hitShift - 8;
+    if (shift > 0) value <<= Math.min(shift, 30);
+    else if (shift < 0) value >>= Math.min(-shift, 30);
+    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+  }
+
+  private static int[] currentWeaponDamage() {
+    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return null;
+    try {
+      com.artemis.ComponentMapper<AttributesWrapper> mapper =
+          Riiablo.engine.getMapper(AttributesWrapper.class);
+      if (mapper == null || !mapper.has(Riiablo.game.player)) return null;
+      Attributes attrs = mapper.get(Riiablo.game.player).attrs;
+      if (attrs == null) return null;
+      int min = statValue(attrs, Stat.mindamage);
+      int max = statValue(attrs, Stat.maxdamage);
+      int throwMax = statValue(attrs, Stat.item_throw_maxdamage);
+      if (throwMax > 0) {
+        min = statValue(attrs, Stat.item_throw_mindamage);
+        max = throwMax;
+      }
+      return max > 0 ? new int[] {Math.max(0, min), Math.max(min, max)} : null;
+    } catch (RuntimeException ignored) {
+      return null;
+    }
+  }
+
+  private static int statValue(Attributes attrs, short stat) {
+    StatRef value = attrs.get(stat);
+    return value == null ? 0 : value.asInt();
+  }
+
+  private static String formatWeaponPercentLine(String label, int numerator, int denominator) {
+    if (denominator <= 0) return null;
+    String prefix = label == null || label.isEmpty() ? "Weapon Damage: " : label;
+    return prefix + Math.max(0, Math.round(numerator * 100f / denominator)) + "%";
   }
 
   private static Missiles.Entry descriptionMissile(Skills.Entry skill) {

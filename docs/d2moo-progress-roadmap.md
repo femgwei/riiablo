@@ -5426,6 +5426,20 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：在真实德鲁伊/死灵法师/刺客角色存档中做窗口验收，确认召唤物图标尺寸和本地化名称。
 
+### 2026-09-27 亚马逊技能说明伤害显示（本轮完成）
+
+- [x] ~~技能伤害行渲染~~：补齐 `SkillDesc.txt` 类型 10/11/14/66/73，显示亚马逊
+  火焰、闪电、冰冷、毒素技能的当前等级伤害范围、毒素持续时间，以及弓/标枪技能的
+  当前武器伤害或继承比例。
+- [x] ~~技能书描述接线~~：`dsc2line` 使用自身类型数组，`desccalcb/dsc2calcb/dsc3calcb`
+  不再丢失；快捷技能提示框同时渲染三组原生描述行，并按硬点技能等级计算协同。
+- 验证：`:core:test --tests com.riiablo.widget.SkillDetailsDamageTest --no-daemon`、
+  `:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest --no-daemon`
+  均通过；提交和远程推送见 Git 交接记录。
+
+下一项：在真实 Amazon 存档中验收技能树/快捷栏的本地化文本和装备切换后的武器伤害数值，
+继续保持服务端伤害快照与客户端预览公式一致。
+
 ## Git 交接基线（2026-09-15）
 
 当前可交接 commit 为 `c297c6ecf1f0f542cfa05d5e7c3dc668d6e81712`，且已在
