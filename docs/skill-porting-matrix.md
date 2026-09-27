@@ -19,7 +19,7 @@
 
 共享入口是 `NativeSkillResolver`、`SkillExecutor`、`ServerSkillSystem`；职业专用逻辑位于 `AmazonSkills`、`AssassinSkills`、`BarbarianSkills`、`DruidSkills`、`NecromancerSkills`、`PaladinSkills`、`SorceressSkills`。
 
-现有职业专项测试数量（按文件名统计）为：Amazon 3、Assassin 2、Barbarian 7、Druid 18、Necromancer 16、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
+现有职业专项测试数量（按文件名统计）为：Amazon 4、Assassin 2、Barbarian 7、Druid 18、Necromancer 16、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
 
 ### dark-magic
 
