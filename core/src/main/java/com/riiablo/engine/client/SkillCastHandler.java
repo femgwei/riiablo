@@ -69,6 +69,8 @@ public class SkillCastHandler extends PassiveSystem {
       case 6: // left hand swing
       case 12: // Telekinesis / Dragon Flight target validation is server-authoritative
         break;
+      case 11: // Arctic Blast channel setup is driven by the server missile.
+        break;
       case 65: // Throw skill (skillId=2) - same as case 3
         break;
       case 42: // Fire Hit performs its native pre-hit setup on the server
@@ -143,6 +145,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 11: // Arrow/Bolt client start; cltdofunc owns the presentation.
         break;
+      case 15: // Arctic Blast channel start; server missile owns the stream.
+        break;
       case 2: // Channeled skills (inferno, arctic blast)
         // Start channeling effect
         break;
@@ -205,6 +209,8 @@ public class SkillCastHandler extends PassiveSystem {
         && (event.srvdofunc == 8 || skill.srvdofunc == 8);
     boolean localStrafeServer = localServer
         && (event.srvdofunc == 12 || skill.srvdofunc == 12);
+    boolean localStreamServer = localServer
+        && (event.srvdofunc == 19 || skill.srvdofunc == 19);
     boolean authoritativeThrow = event.skillId == SkillCodes.throw_
         || event.skillId == SkillCodes.left_hand_throw;
     // Throwing weapons are created by ServerSkillSystem (including the local
@@ -237,7 +243,7 @@ public class SkillCastHandler extends PassiveSystem {
     if (shouldReuseServerMissile(skill, networkClient, localMonsterServer,
         localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
         localChargedBoltServer, separateCorpseBurst, localMultipleShotServer,
-        localStrafeServer)) {
+        localStrafeServer, localStreamServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
               + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={} "
           + "localFistOfHeavens={} localHolyBolt={} localChargedBolt={}",
@@ -809,6 +815,19 @@ public class SkillCastHandler extends PassiveSystem {
         && (networkClient || localMonsterServer || localBlessedHammerServer
             || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer
             || localMultipleShotServer || localStrafeServer);
+  }
+
+  static boolean shouldReuseServerMissile(Skills.Entry skill, boolean networkClient,
+      boolean localMonsterServer, boolean localBlessedHammerServer,
+      boolean localFistOfHeavensServer, boolean localHolyBoltServer,
+      boolean localChargedBoltServer, boolean separateCorpseBurst,
+      boolean localMultipleShotServer, boolean localStrafeServer,
+      boolean localStreamServer) {
+    return (hasServerMissile(skill) || localMultipleShotServer || localStreamServer)
+        && !separateCorpseBurst
+        && (networkClient || localMonsterServer || localBlessedHammerServer
+            || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer
+            || localMultipleShotServer || localStrafeServer || localStreamServer);
   }
 
   static boolean hasServerMissile(Skills.Entry skill) {

@@ -623,7 +623,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createMissile(int missileId, Vector2 angle, Vector2 position) {
-    return createMissile(missileId, angle, position, -1);
+    int id = createMissile(missileId, angle, position, -1);
+    // Client callbacks use this overload for presentation-only effects. The
+    // missing owner must not make the projectile enter authoritative collision.
+    if (id != Engine.INVALID_ENTITY && mMissile.has(id)) {
+      mMissile.get(id).authoritative = false;
+      mMissile.get(id).presentationOnly = true;
+    }
+    return id;
   }
   
   @Override

@@ -879,6 +879,8 @@ public class Actioneer extends PassiveSystem {
         log.debug("[AMAZON_ARROW] phase=start entity={} target={} delegated=keyframe",
             entityId, targetId);
         break;
+      case 11: // Arctic Blast channel setup is consumed by ServerSkillSystem.
+        break;
       case 3: // throw
       case 65: // Throw skill (skillId=2)
         break;
@@ -1325,6 +1327,7 @@ public class Actioneer extends PassiveSystem {
       case 15:  // Decoy/Dopplezon: ServerSkillSystem creates the owned summon.
       case 16:  // Valkyrie: ServerSkillSystem creates the owned summon.
       case 110: // RogueMissile: ServerSkillSystem creates the authoritative missile.
+      case 19:  // Arctic Blast stream: ServerSkillSystem creates the owned missile.
         // Actioneer is responsible for the animation keyframe only.  These
         // callbacks are consumed by ServerSkillSystem from the same
         // SkillDoEvent; falling through to the warning path would incorrectly

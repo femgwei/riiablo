@@ -81,6 +81,15 @@ class AuthoritativeAreaSkillSnapshotTest extends RiiabloTest {
         false, false, false, false, false, false, false, true));
   }
 
+  @Test
+  void arcticBlastUsesTheLocalAuthoritativeStreamMissile() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.ARCTIC_BLAST);
+    assertNotNull(skill);
+    assertEquals(19, skill.srvdofunc);
+    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+        false, false, false, false, false, false, false, false, false, true));
+  }
+
   private static String firstNonEmpty(String first, String second) {
     return first != null && !first.isEmpty() ? first : second;
   }
