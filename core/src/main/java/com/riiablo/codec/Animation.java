@@ -662,7 +662,13 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       numFrames      = dc.getNumFramesPerDir();
       transform      = null;
       transformColor = 0;
-      shadow         = (blendMode != BlendMode.LUMINOSITY && blendMode != BlendMode.LUMINOSITY_TINT);
+      // Screen/luminosity effects are already composited against the scene;
+      // projecting their source rectangle as a solid D2 unit shadow produces
+      // the black ellipses visible beneath PoisonSmokePuff frames.  Native
+      // poison clouds never cast a separate ground shadow.
+      shadow         = blendMode != BlendMode.SCREEN
+          && blendMode != BlendMode.LUMINOSITY
+          && blendMode != BlendMode.LUMINOSITY_TINT;
       return this;
     }
 
