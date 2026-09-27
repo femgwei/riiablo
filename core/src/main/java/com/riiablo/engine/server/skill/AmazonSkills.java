@@ -30,7 +30,11 @@ public final class AmazonSkills {
 
   /** Returns true for the two Amazon poison-javelin cast-delay skills. */
   public static boolean isPoisonJavelin(Skills.Entry skill) {
-    if (skill == null || skill.skill == null) return false;
+    if (skill == null) return false;
+    if (skill.Id == SkillId.POISON_JAVELIN || skill.Id == SkillId.PLAGUE_JAVELIN) {
+      return true;
+    }
+    if (skill.skill == null) return false;
     String name = skill.skill.trim();
     return "Poison Javelin".equalsIgnoreCase(name)
         || "Plague Javelin".equalsIgnoreCase(name);
