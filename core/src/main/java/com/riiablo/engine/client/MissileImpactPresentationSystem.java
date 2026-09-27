@@ -66,16 +66,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Vector2 velocity = mVelocity.get(entityId).velocity;
     float distance = velocity.len() * delta;
 
-    // Network replicas are visual-only from the local simulation's point of
-    // view, but they still run the native pCltDoFunc callback while flying.
-    // Local authoritative missiles already execute their server-side control
-    // functions, so restricting this to authoritative=false prevents doubled
-    // trails in single-player and on the server host.
-    if (!visual.presentationOnly && !visual.authoritative) {
+    // pCltDoFunc is a client presentation callback and must run for both
+    // network replicas and the local authoritative simulation.  The latter
+    // is the normal single-player path: the server creates the PoisonSparks
+    // cloud, while this system supplies the separate PoisonSmokePuff layer.
+    // Server-side MissileCollisionSystem already advances nativeFrame for an
+    // authoritative missile, so processClientFlightFunction only advances
+    // the clock for replicas (avoiding a doubled callback rate locally).
+    if (!visual.presentationOnly) {
       processClientFlightFunction(entityId, visual, velocity, delta);
       return;
     }
-    if (!visual.presentationOnly) return;
     if (distance > 0f) {
       mPosition.get(entityId).position.mulAdd(velocity, delta);
       visual.distanceTraveled += distance;
@@ -113,7 +114,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
     int elapsedFrames = Math.max(1, Math.round(delta * 25f));
     int previousFrame = visual.nativeFrame;
-    visual.nativeFrame += elapsedFrames;
+    if (!visual.authoritative) visual.nativeFrame += elapsedFrames;
     int interval = Math.max(1, cltParam(source, 0, 1));
     int firstFrame = previousFrame + 1;
     int lastFrame = visual.nativeFrame;
