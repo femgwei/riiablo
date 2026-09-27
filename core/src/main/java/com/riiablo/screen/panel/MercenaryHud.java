@@ -21,6 +21,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
+import com.riiablo.codec.excel.LosslessTxtTable;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
@@ -32,6 +33,7 @@ import com.riiablo.item.Item;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.widget.Label;
+import com.riiablo.widget.SkillNameResolver;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.badlogic.gdx.files.FileHandle;
 
 /** Native-style portrait strip for the hireling and all living player summons. */
 public final class MercenaryHud extends WidgetGroup implements Disposable {
@@ -48,6 +51,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private static final String UNNAMED = "UNNAMED";
   private static final float HEALTH_GREEN_THRESHOLD = 2f / 3f;
   private static final float HEALTH_YELLOW_THRESHOLD = 1f / 3f;
+  private static volatile Map<String, String> petTypeNameKeys;
 
   private enum SummonKind {
     RAVEN(5, "Raven", "Raven.dc6"), WOLF(10, "Wolf", "Wolf.dc6"),
@@ -200,7 +204,65 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private void removeSlot(SummonKind k) { for (int i = slots.size() - 1; i >= 0; i--) if (slots.get(i).kind == k) slots.remove(i); }
   private com.riiablo.codec.excel.Skills.Entry skillEntry(int id) { return Riiablo.files != null && Riiablo.files.skills != null && id >= 0 ? Riiablo.files.skills.get(id) : null; }
   private int skillTableOrder(int id) { if (id < 0 || Riiablo.files == null || Riiablo.files.skills == null) return Integer.MAX_VALUE; int n = 0; for (com.riiablo.codec.excel.Skills.Entry e : Riiablo.files.skills) { if (e != null && e.Id == id) return n; n++; } return Integer.MAX_VALUE - 1; }
-  private String summonName(SummonedPet pet, SummonKind kind) { if (kind == SummonKind.VALKYRIE) return resolveValkyrieName(); com.riiablo.codec.excel.Skills.Entry e = skillEntry(pet.skillId); return e != null && e.skill != null && !e.skill.isEmpty() ? e.skill : kind.fallbackName; }
+  private String summonName(SummonedPet pet, SummonKind kind) {
+    if (kind == SummonKind.VALKYRIE) return resolveValkyrieName();
+    com.riiablo.codec.excel.Skills.Entry skill = skillEntry(pet.skillId);
+    String petType = skill != null && skill.pettype != null && !skill.pettype.trim().isEmpty()
+        ? skill.pettype : pet.petType;
+    String nameKey = petTypeNameKey(petType);
+    if (nameKey != null && Riiablo.string != null) {
+      String value = Riiablo.string.lookup(nameKey);
+      if (value != null && !value.startsWith("ERROR:")) return value;
+    }
+    String skillName = SkillNameResolver.name(skill);
+    return skillName.isEmpty() ? kind.fallbackName : skillName;
+  }
+  /** Returns the PetType.txt name key for a raw Skills.pettype value. */
+  static String petTypeNameKey(String petType) {
+    Map<String, String> names = loadPetTypeNameKeys();
+    if (petType == null || petType.trim().isEmpty() || names.isEmpty()) return null;
+    String raw = petType.trim().toLowerCase(Locale.ROOT);
+    String key = names.get(raw);
+    if (key != null) return key;
+    return names.get(PetType.canonical(petType));
+  }
+  /** PetType.txt is not part of Files yet; read only its name mapping lazily and losslessly. */
+  private static Map<String, String> loadPetTypeNameKeys() {
+    Map<String, String> cached = petTypeNameKeys;
+    if (cached != null) return cached;
+    Map<String, String> result = new LinkedHashMap<String, String>();
+    if (Riiablo.mpqs != null) {
+      try {
+        FileHandle file = Riiablo.mpqs.resolve("data\\global\\excel\\PetType.txt");
+        if (file != null && file.exists()) {
+          LosslessTxtTable table = LosslessTxtTable.parse(file.readBytes());
+          int typeColumn = firstColumn(table, "Pet Type", "pettype", "type");
+          int nameColumn = firstColumn(table, "Name", "name");
+          if (typeColumn >= 0 && nameColumn >= 0) {
+            for (int i = 0; i < table.rowCount(); i++) {
+              String type = table.get(i, typeColumn).trim();
+              String name = table.get(i, nameColumn).trim();
+              if (type.isEmpty() || name.isEmpty()) continue;
+              result.put(type.toLowerCase(Locale.ROOT), name);
+              String canonical = PetType.canonical(type);
+              if (!canonical.isEmpty() && !result.containsKey(canonical)) result.put(canonical, name);
+            }
+          }
+        }
+      } catch (Exception ignored) {
+        // Keep the HUD usable with old/custom MPQ sets that omit PetType.txt.
+      }
+    }
+    petTypeNameKeys = result;
+    return result;
+  }
+  private static int firstColumn(LosslessTxtTable table, String... names) {
+    for (String name : names) {
+      int column = table.columnIndex(name);
+      if (column >= 0) return column;
+    }
+    return -1;
+  }
   private AssetDescriptor<DC6> iconForSummon(SummonedPet pet, SummonKind kind) {
     String icon = kind.iconName; com.riiablo.codec.excel.Skills.Entry e = skillEntry(pet.skillId); String n = e == null || e.skill == null ? "" : e.skill.toLowerCase(Locale.ROOT).replace(" ", "");
     if (kind == SummonKind.GOLEM) { if (n.contains("bloodgolem")) icon = "bloodgolumicon.dc6"; else if (n.contains("irongolem")) icon = "metalgolumicon.dc6"; else if (n.contains("firegolem")) icon = "firegolumicon.dc6"; else if (n.contains("claygolem")) icon = "earthgolumicon.dc6"; }
@@ -216,7 +278,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   static boolean isLivingSummon(SummonedPet p, UnitLifecycle l, float hp, float max) { return p != null && !p.deathPending && p.deadFrames <= 0 && (l == null || !l.isDead()) && max > 0 && hp > 0; }
   static int companionSlotCount(boolean merc, boolean valk) { return merc || valk ? (merc && valk ? 2 : 1) : 0; }
   static float companionSlotX(boolean merc, boolean valk) { return valk && merc ? WIDTH + SLOT_GAP : 0; }
-  private static String resolveValkyrieName() { if (Riiablo.string != null && Riiablo.files != null && Riiablo.files.skills != null && Riiablo.files.skilldesc != null) { com.riiablo.codec.excel.Skills.Entry s = Riiablo.files.skills.get("Valkyrie"); if (s != null) { com.riiablo.codec.excel.SkillDesc.Entry d = Riiablo.files.skilldesc.get(s.skilldesc); if (d != null && d.str_name != null) { String v = Riiablo.string.lookup(d.str_name); if (v != null && !v.startsWith("ERROR:")) return v; } } } return "女武神"; }
+  private static String resolveValkyrieName() { String name = SkillNameResolver.nameByInternalId("Valkyrie"); return name.isEmpty() ? "女武神" : name; }
   public static String resolveMercenaryName(Mercenary m) { return m == null ? localized("hireling_unnamed", UNNAMED) : resolveMercenaryName(m.mercType, m.nameId); }
   public static String resolveMercenaryName(int type, int id) { if (Riiablo.string == null) return localized("hireling_unnamed", UNNAMED); id = Math.max(0, id); String[] keys; switch (type) { case 0: keys = new String[] {String.format(Locale.ROOT, "merc%02d", id + 1)}; break; case 1: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 181), String.format(Locale.ROOT, "merca%03d", id + 201)}; break; case 2: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 182), String.format(Locale.ROOT, "merca%03d", Math.min(241, id + 222))}; break; case 3: keys = new String[] {String.format(Locale.ROOT, "MercX%03d", id + 31), String.format(Locale.ROOT, "MercX%03d", id + 101)}; break; default: return localized("hireling_unnamed", UNNAMED); } for (String k : keys) { String v = Riiablo.string.lookup(k); if (v != null && !v.startsWith("ERROR:")) return v; } return localized("hireling_unnamed", UNNAMED); }
   private static String localized(String key, String fallback) { if (Riiablo.bundle == null) return fallback; String v = Riiablo.bundle.get(key); return v == null || v.isEmpty() ? fallback : v; }

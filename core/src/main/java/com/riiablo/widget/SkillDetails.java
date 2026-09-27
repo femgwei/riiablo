@@ -70,7 +70,7 @@ public final class SkillDetails extends Table {
         || Riiablo.files.skilldesc == null) return;
     Skills.Entry skill = Riiablo.files.skills.get(skillId);
     if (skill == null) return;
-    SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+    SkillDesc.Entry desc = SkillNameResolver.description(skill);
     if (desc == null) return;
     int level = chargedSkill != null
         ? Math.max(1, chargedSkill.param0())
@@ -82,7 +82,7 @@ public final class SkillDetails extends Table {
     final float spacing = 2f;
     final BitmapFont font = Riiablo.fonts.font16;
     setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
-    add(new Label(Riiablo.string.lookup(desc.str_name), font, Riiablo.colors.green))
+    add(new Label(SkillNameResolver.name(skill), font, Riiablo.colors.green))
         .center().space(spacing).row();
 
     String text = Riiablo.string.lookup(desc.str_long);
@@ -154,7 +154,7 @@ public final class SkillDetails extends Table {
   private static Missiles.Entry descriptionMissile(Skills.Entry skill) {
     if (skill == null || Riiablo.files == null || Riiablo.files.skilldesc == null
         || Riiablo.files.Missiles == null) return null;
-    SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+    SkillDesc.Entry desc = SkillNameResolver.description(skill);
     if (desc == null || desc.descmissile1 == null || desc.descmissile1.isEmpty()) return null;
     return Riiablo.files.Missiles.get(desc.descmissile1);
   }

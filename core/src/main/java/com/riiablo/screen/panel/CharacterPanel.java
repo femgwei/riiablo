@@ -26,7 +26,6 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.CharStats;
-import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
@@ -38,6 +37,7 @@ import com.riiablo.skill.SkillCodes;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.StatLabel;
+import com.riiablo.widget.SkillNameResolver;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 
 public class CharacterPanel extends WidgetGroup implements Disposable {
@@ -408,11 +408,9 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   private String selectedSkillName(int button) {
     Skills.Entry skill = selectedSkill(button);
-    if (skill == null) return "";
-    SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
-    if (desc == null || desc.str_name == null || desc.str_name.isEmpty()) return skill.skill;
-    String name = Riiablo.string.lookup(desc.str_name);
-    return name == null || name.startsWith("ERROR:") ? skill.skill : name;
+    // Skills.Entry.skill is an internal Skills.txt identifier, not display
+    // text. Never leak it as a fallback into the character panel.
+    return SkillNameResolver.name(skill);
   }
 
   static boolean skillUsesAttackRating(Skills.Entry skill) {

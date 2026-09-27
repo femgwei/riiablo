@@ -38,6 +38,7 @@ import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
 import com.riiablo.widget.SkillDetails;
+import com.riiablo.widget.SkillNameResolver;
 
 public class SpellsPanel extends WidgetGroup implements Disposable, CharData.SkillListener {
   private static final String TAG = "SpellsPanel";
@@ -160,7 +161,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     buttons = new SkillButton[charClass.lastSpell - charClass.firstSpell];
     for (int i = charClass.firstSpell; i < charClass.lastSpell; i++) {
       final Skills.Entry skill = Riiablo.files.skills.get(i);
-      final SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+      final SkillDesc.Entry desc = SkillNameResolver.description(skill);
       SkillButton button = buttons[i - charClass.firstSpell] = new SkillButton(skill, desc);
       button.setPosition(X[desc.SkillColumn], Y[desc.SkillRow]);
       button.addListener(new ClickListener(Input.Buttons.LEFT) {
@@ -334,7 +335,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
         final float SPACING = 2;
         final BitmapFont font = Riiablo.fonts.font16;
         setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
-        add(new Label(Riiablo.string.lookup(desc.str_name), font, Riiablo.colors.green)).center().space(SPACING).row();
+        add(new Label(SkillNameResolver.name(skill), font, Riiablo.colors.green)).center().space(SPACING).row();
         add(new Label(font) {{
           // TODO: It might possible to optimize this more -- goal is to reverse lines since they are backwards for some reason
           String text = Riiablo.string.lookup(desc.str_long);
