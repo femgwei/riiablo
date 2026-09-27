@@ -13,6 +13,8 @@
   一枚火球只应用一次伤害包。
 - [x] 死亡阶段移除 `MovementModes` 后，玩家切换区域时会重建该组件，避免 waypoint/
   zone change 在 `ZoneMovementModesChanger` 中空指针崩溃。
+- [x] waypoint、普通传送门和跨 Act 传送现在在服务端统一拒绝死亡玩家；只有认证的
+  town respawn 流程可以移动带有 `PlayerCorpse` 的玩家。
 - [x] `:core:compileJava`、`:core:compileTestJava` 和 ShamanFire 等级快照定向任务通过；
   仍需另一台电脑用真实 1.10f MPQ 实机确认 A1 伤害与死亡后传送流程。
 

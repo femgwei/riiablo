@@ -6997,6 +6997,9 @@ public class D2GS extends ApplicationAdapter {
 
   private String validateWarpInteraction(int playerId, int warpId,
                                          boolean allowMissingCrossActDestination) {
+    // A dead player cannot use a waypoint or portal.  Only the authenticated
+    // respawn request is allowed to move the corpse back to town.
+    if (isPlayerDead(playerId)) return "PLAYER_DEAD";
     com.riiablo.engine.server.component.Warp warp =
         world.getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
     com.riiablo.engine.server.component.Interactable interactable =

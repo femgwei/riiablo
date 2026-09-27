@@ -12,8 +12,10 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Warp;
@@ -39,6 +41,8 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   /** Dynamic unit footprints used by movement/pathing.  A warp bypasses the
    * normal movement step, so it must consult the same grid before committing
@@ -75,6 +79,24 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
 
   /** Performs one validated server/local authoritative warp transaction. */
   public boolean warp(int src, int entity) {
+    // D2MOO keeps a dead player on the current level until the authenticated
+    // respawn flow moves them to town.  Reject every waypoint/portal path
+    // before touching destination state; the old null MovementModes guard
+    // must not turn death into an implicit teleport permission.
+    boolean deadMarker = mPlayerCorpse != null && mPlayerCorpse.has(src);
+    boolean zeroLife = false;
+    if (!deadMarker && mAttributesWrapper != null && mAttributesWrapper.has(src)) {
+      AttributesWrapper attributes = mAttributesWrapper.get(src);
+      com.riiablo.attributes.StatRef life = attributes != null && attributes.attrs != null
+          ? attributes.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+              com.riiablo.attributes.StatRef.obtain()) : null;
+      zeroLife = life != null && life.asFixed() <= 0f;
+    }
+    if (deadMarker || zeroLife) {
+      Gdx.app.log(TAG, "Warp interaction rejected: player=" + src
+          + " reason=PLAYER_DEAD");
+      return false;
+    }
     Warp warp = mWarp.get(entity);
     MapWrapper sourceWrapper = mMapWrapper.get(entity);
     Map.Zone source = sourceWrapper == null ? null : sourceWrapper.zone;
