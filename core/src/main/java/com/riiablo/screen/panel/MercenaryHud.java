@@ -386,8 +386,12 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     AssetDescriptor<DC6> iconDescriptor = mercenaryType >= 0
         ? iconDescriptors[mercenaryType] : null;
     drawCompanion(batch, parentAlpha, iconDescriptor, 0, life, maxLife, hovered);
-    drawCompanion(batch, parentAlpha, valkyrieIconDescriptor,
-        companionSlotX(mercenaryId >= 0, true), valkyrieLife, valkyrieMaxLife, false);
+    // The asset is preloaded for the next summon, but must not be rendered
+    // while the owner's Valkyrie entity is absent or has already died.
+    if (valkyrieId >= 0) {
+      drawCompanion(batch, parentAlpha, valkyrieIconDescriptor,
+          companionSlotX(mercenaryId >= 0, true), valkyrieLife, valkyrieMaxLife, false);
+    }
     batch.setColor(Color.WHITE);
     super.draw(batch, parentAlpha);
   }
