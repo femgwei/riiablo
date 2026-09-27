@@ -3030,8 +3030,21 @@ public class MissileCollisionSystem extends IteratingSystem {
           combat.elementalDamage[CombatSystem.DAMAGE_POISON],
           combat.poisonDuration, attackerId);
     }
-    if (combat.coldDuration > 0
-        && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
+    // Cold length is a separate native packet from cold damage.  D2Game still
+    // applies COLD/FREEZE when the damage portion is absorbed or reduced to
+    // zero; gating the callback on elementalDamage made ordinary A1 monsters
+    // receive neither the slow nor the frozen presentation.
+    if (combat.coldDuration > 0 && hasColdPacket(missile)) {
+      log.info("[COLD_STATE] missile={} skillId={} target={} snapshot={} freeze={} "
+              + "cold={}..{} length={} duration={} damage={}",
+          missile != null && missile.missile != null ? missile.missile.Missile : "unknown",
+          missile != null ? missile.skillId : -1, targetId,
+          missile != null && missile.damageSnapshot,
+          missile != null && missile.freezesTarget,
+          missile != null ? statInt(missile.damage, Stat.coldmindam) : 0,
+          missile != null ? statInt(missile.damage, Stat.coldmaxdam) : 0,
+          missile != null ? statInt(missile.damage, Stat.coldlength) : 0,
+          combat.coldDuration, combat.elementalDamage[CombatSystem.DAMAGE_COLD]);
       // D2Game invokes ApplyColdState and ApplyFreezeState independently.
       // Cold must run first because it owns the native shatter roll.
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
@@ -3048,6 +3061,24 @@ public class MissileCollisionSystem extends IteratingSystem {
         clearShatter(targetId);
       }
     }
+  }
+
+  private boolean hasColdPacket(Missile missile) {
+    if (missile == null) return false;
+    if (missile.damageSnapshot) {
+      return statInt(missile.damage, Stat.coldlength) > 0
+          || statInt(missile.damage, Stat.coldmindam) > 0
+          || statInt(missile.damage, Stat.coldmaxdam) > 0;
+    }
+    if (missile.skillId == com.riiablo.engine.server.skill.SkillId.COLD_ARROW
+        || missile.skillId == com.riiablo.engine.server.skill.SkillId.ICE_ARROW
+        || missile.skillId == com.riiablo.engine.server.skill.SkillId.FREEZING_ARROW) {
+      return true;
+    }
+    return missile.missile != null
+        && ("cold".equalsIgnoreCase(missile.missile.EType)
+            || "freeze".equalsIgnoreCase(missile.missile.EType)
+            || "frze".equalsIgnoreCase(missile.missile.EType));
   }
 
   private void markFrozenShatter(int targetId, int sourceId, int duration) {

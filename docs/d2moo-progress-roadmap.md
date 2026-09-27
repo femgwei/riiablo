@@ -3,6 +3,13 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-28 冰箭状态表现链修正
+
+- [x] 冷状态回调不再要求冷元素最终伤害大于零；冷伤害被抗性/吸收降为零时，仍按原生冷长度应用 `COLD` 或 `FREEZE`，避免冰箭命中只有伤害而没有减速/冻结。
+- [x] `StateOverlaySystem` 调整到 COF 图层加载、缓存和变换处理之后执行，避免后续图层刷新覆盖 `cblu` 蓝色变换。
+- [x] 增加 `[COLD_STATE]` 运行诊断，记录导弹类型、快照冷伤害/冷长度、冻结标志和最终状态时长，便于另一台电脑用真实 MPQ 验收。
+- [x] 定向回归：`FreezingArrowDeathOrderTest`、`AmazonSkillSpecializationTest`、`StateOverlaySystemTest` 通过；仍需实机确认 Cold Arrow 蓝色/减速、Ice Arrow 冻结和冰块碎裂。
+
 ## 2026-09-28 动画速率切换保持帧相位
 
 - [x] 修复单位移动时动画速率按速度逐 Tick 调整导致的动画冻结：`Animation.setFrameDuration`

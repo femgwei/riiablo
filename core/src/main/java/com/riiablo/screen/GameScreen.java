@@ -911,7 +911,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.client.MissileImpactPresentationSystem())
         .with(new com.riiablo.engine.client.NativeShrinePresentationSystem())
-        .with(new com.riiablo.engine.client.StateOverlaySystem())
         .with(new OverlayStepper()) // TODO: move to more appropriate spot in list
         .with(new DamageHandler()) // TODO: move to more appropriate spot in list
         .with(new DeathHandler()) // TODO: move to more appropriate spot in list
@@ -995,7 +994,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new ObjectCollisionUpdater())
         // Bone Wall/Prison are monster units, not map objects. Their
         // temporary walk footprint must exist in local and network clients.
-        .with(new com.riiablo.engine.server.BoneWallCollisionSystem());
+        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
+        // Apply state-driven transforms after COF/layer systems have finished
+        // their frame. Otherwise a late layer refresh can overwrite cblu.
+        .with(new com.riiablo.engine.client.StateOverlaySystem());
 //        .with(new VelocityAdder());
     if (socket != null) {
       // FIXME: crash when changing acts in multiplayer
