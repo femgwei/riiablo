@@ -2700,10 +2700,10 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /**
-   * Native SrvHit02 fan-out for Plague Javelin/poison potion.  The first ring
-   * uses HitPar[0] as its stride; the interleaved ring uses HitPar[1].  The
-   * third parameter is the native child-loop count and is retained in the
-   * child lifetime approximation below.
+   * Native SrvHit02 fan-out for Plague Javelin/poison potion.  D2MOO passes
+   * HitPar[0] as the interleaved-ring stride and HitPar[1] as the main-ring
+   * stride.  The third parameter is the native child-loop count and is
+   * retained in the child lifetime approximation below.
    */
   private void spawnPoisonCloudHitSubmissiles(Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null || origin == null) return;
@@ -2714,8 +2714,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missiles.Entry row = Riiablo.files.Missiles.get(name);
     if (row == null) return;
 
-    int mainStep = Math.max(1, arrayValue(source.missile.sHitPar, 0));
-    int subStep = Math.max(0, arrayValue(source.missile.sHitPar, 1));
+    // D2MOO passes HitPar[0] as the interleaved-ring step and HitPar[1]
+    // as the main-ring step (SrvHit02 -> CreatePoisonCloudHitSubmissiles).
+    int subStep = Math.max(0, arrayValue(source.missile.sHitPar, 0));
+    int mainStep = Math.max(1, arrayValue(source.missile.sHitPar, 1));
     int loops = Math.max(0, arrayValue(source.missile.sHitPar, 2));
     int level = Math.max(1, source.damageLevel);
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
@@ -2792,7 +2794,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!cloud.damageSnapshot && damageSkill != null) {
       MissileDamageResolver.initializeSkillPoisonArea(
           cloud, damageSkill, ownerAttrs, mPlayer.has(cloud.ownerId),
-          Math.max(1, cloud.damageLevel));
+          Math.max(1, cloud.damageLevel),
+          name -> baseSkillLevel(cloud.ownerId, name));
     }
     if (!cloud.damageSnapshot) {
       int min = Math.max(1, cloud.missile.EMin);

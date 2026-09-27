@@ -578,9 +578,9 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
 
       long clouds = factory.createdNames.stream()
           .filter(name -> "plaguejavcloud".equalsIgnoreCase(name)).count();
-      assertEquals(24, clouds,
-          "SrvHit02 must create the 16 main and 8 interleaved native cloud children");
-      assertEquals(24, factory.created.stream()
+      assertEquals(23, clouds,
+          "SrvHit02 must create the 8 main and 15 interleaved native cloud children");
+      assertEquals(23, factory.created.stream()
           .filter(m -> m.missile != null && "plaguejavcloud".equalsIgnoreCase(m.missile.Missile))
           .filter(m -> m.poisonCloudTraveling).count(),
           "ring children must travel from the impact origin to their native offsets");

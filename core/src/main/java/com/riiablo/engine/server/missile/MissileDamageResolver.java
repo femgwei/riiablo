@@ -269,16 +269,26 @@ public final class MissileDamageResolver {
   /** Captures the native 8.8 poison rate for a skill-owned persistent cloud. */
   public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, boolean attackerPlayer, int level) {
+    return initializeSkillPoisonArea(projectile, skill, ownerAttrs, attackerPlayer, level,
+        name -> 0);
+  }
+
+  /** Captures poison damage with the caster's hard-point synergy levels. */
+  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || skill == null || !"pois".equalsIgnoreCase(skill.EType)) {
       return false;
     }
     level = Math.max(1, level);
-    boolean initialized = initializeSkillArea(projectile, skill, ownerAttrs, level);
+    ToIntFunction<String> levels = baseSkillLevel == null ? name -> 0 : baseSkillLevel;
+    boolean initialized = initializeSkill(projectile, skill, ownerAttrs, level, false, true,
+        levels, 0);
     projectile.fixedPoisonRate = true;
     projectile.poisonMinRateFixed = Math.max(0,
-        skillElementalDamageFixed(skill, level, true, name -> 0));
+        skillElementalDamageFixed(skill, level, true, levels));
     projectile.poisonMaxRateFixed = Math.max(projectile.poisonMinRateFixed,
-        skillElementalDamageFixed(skill, level, false, name -> 0));
+        skillElementalDamageFixed(skill, level, false, levels));
     projectile.poisonDurationFrames = Math.max(1,
         skill.ELen + damageBonusByLevel(level, skill.ELevLen));
     projectile.poisonPiercePercent = statInt(ownerAttrs, Stat.item_pierce_pois)
