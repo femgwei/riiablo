@@ -1836,11 +1836,30 @@ public class Map implements Disposable {
       }
       
       tiles[Map.FLOOR_OFFSET] = Zone.obtainTileArray(tilesX * tilesY);
+      // D2MOO exports a complete RoomEx/TileGrid even when the compatibility
+      // zone was created from one LvlPrest DS1. In that case the preset array
+      // is intentionally 1x1, so the normal loop would invoke the generator
+      // only for the first 8x8 block. Keep the preset copy, but let the
+      // native Act-I generator visit every 8x8 block so monster population is
+      // queued for all exported rooms (D2GAME_PopulateRoom equivalent).
+      boolean hasAnyPreset = false;
+      for (Preset[] row : presets) {
+        for (Preset preset : row) {
+          if (preset != null) {
+            hasAnyPreset = true;
+            break;
+          }
+        }
+        if (hasAnyPreset) break;
+      }
+      boolean nativeExportedPreset = map.act == 0 && !town && level != null
+          && com.riiablo.map.Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(level.Id)
+          && hasAnyPreset;
       for (int x = 0, gridX = 0, gridY = 0; x < gridsX; x++, gridX += gridSizeX, gridY = 0) {
         for (int y = 0; y < gridsY; y++, gridY += gridSizeY) {
           Preset preset = presets[x][y];
           if (preset == null) {
-            generator.generate(this, dt1s, gridX, gridY);
+            if (!nativeExportedPreset) generator.generate(this, dt1s, gridX, gridY);
             continue;
           }
 
@@ -1849,8 +1868,16 @@ public class Map implements Disposable {
           
           // 对于非城镇区域，即使有preset也要生成怪物
           // 因为preset只包含地形，不包含怪物
-          if (!town && generator != EMPTY_GENERATOR) {
+          if (!nativeExportedPreset && !town && generator != EMPTY_GENERATOR) {
             generator.generate(this, dt1s, gridX, gridY);
+          }
+        }
+      }
+      if (nativeExportedPreset && generator != EMPTY_GENERATOR) {
+        final int nativeBlock = 8;
+        for (int blockX = 0; blockX < tilesX; blockX += nativeBlock) {
+          for (int blockY = 0; blockY < tilesY; blockY += nativeBlock) {
+            generator.generate(this, dt1s, blockX, blockY);
           }
         }
       }

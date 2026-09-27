@@ -6,12 +6,16 @@ import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
@@ -40,6 +44,8 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 @Wire(failOnNull = false)
 public class ObjectInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "ObjectInteractor";
+  /** D2Game's door handler ignores repeated operations for roughly one frame. */
+  private static final long DOOR_INTERACTION_DEBOUNCE_MILLIS = 500L;
 
   private enum InteractionResult {
     NOT_HANDLED,
@@ -51,7 +57,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<Interactable> mInteractable;
@@ -66,6 +74,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected WarpInteractor warpInteractor;
 
   private EntitySubscription warps;
+  private EntitySubscription positionedEntities;
+  private final IntMap<Long> lastDoorInteractions = new IntMap<>();
 
   @Wire(name = "map")
   protected Map map;
@@ -73,6 +83,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   @Override
   protected void initialize() {
     warps = world.getAspectSubscriptionManager().get(Aspect.all(Warp.class, Position.class));
+    positionedEntities = world.getAspectSubscriptionManager().get(Aspect.all(Position.class));
   }
 
   @Subscribe
@@ -344,7 +355,26 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
     // Doors are reversible. D2Game transitions through OP and then leaves the
     // unit in ON (open) or NU (closed); this also drives ObjectCollisionUpdater.
+    // A click can be delivered more than once while the player is still inside
+    // interaction range. Native ObjMode.cpp rejects those requests while the
+    // operation animation is active and also applies a short debounce window.
+    if (cof.mode == Engine.Object.MODE_OP || mSequence.has(entityId)) {
+      return InteractionResult.HANDLED_UNCHANGED;
+    }
+    long now = TimeUtils.millis();
+    Long lastInteraction = lastDoorInteractions.get(entityId);
+    if (lastInteraction != null
+        && now - lastInteraction < DOOR_INTERACTION_DEBOUNCE_MILLIS) {
+      return InteractionResult.HANDLED_UNCHANGED;
+    }
+    lastDoorInteractions.put(entityId, now);
     boolean close = cof.mode == Engine.Object.MODE_ON;
+    if (close && hasDoorOccupant(entityId, base)) {
+      // D2MOO keeps an opened door active while a player, monster, or corpse
+      // still occupies its collision rectangle. This avoids an open/close
+      // loop when interaction is retried near the doorway.
+      return InteractionResult.HANDLED_UNCHANGED;
+    }
     if (state != null) {
       state.persistOpened(!close);
       state.persistMode(close ? Engine.Object.MODE_NU : Engine.Object.MODE_ON);
@@ -354,6 +384,38 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     Gdx.app.log(TAG, "Native door toggled: entity=" + entityId + " object=" + base.Id
         + " open=" + !close);
     return InteractionResult.HANDLED_CHANGED;
+  }
+
+  private boolean hasDoorOccupant(int doorId,
+      com.riiablo.codec.excel.Objects.Entry base) {
+    if (positionedEntities == null || !mPosition.has(doorId) || base == null) return false;
+    MapWrapper doorWrapper = mMapWrapper.get(doorId);
+    Position doorPosition = mPosition.get(doorId);
+    int width = Math.max(1, base.SizeX);
+    int height = Math.max(1, base.SizeY);
+    float minX = doorPosition.position.x - width / 2f;
+    float maxX = minX + width;
+    float minY = doorPosition.position.y - height / 2f;
+    float maxY = minY + height;
+
+    IntBag entities = positionedEntities.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidate = ids[i];
+      if (candidate == doorId
+          || (!mPlayer.has(candidate) && !mMonster.has(candidate) && !mCorpse.has(candidate))) {
+        continue;
+      }
+      MapWrapper candidateWrapper = mMapWrapper.get(candidate);
+      if (doorWrapper != null && candidateWrapper != null
+          && candidateWrapper.zone != doorWrapper.zone) continue;
+      Position candidatePosition = mPosition.get(candidate);
+      if (candidatePosition == null) continue;
+      float x = candidatePosition.position.x;
+      float y = candidatePosition.position.y;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) return true;
+    }
+    return false;
   }
 
   private boolean operate(int src, int entityId, int operateFn) {
