@@ -10,6 +10,8 @@
   百分比固定为 33，不改变怪物移动或攻击速度）。
 - [x] 怪物创建 `Missiles.txt:CanSlow=1` 的投射物时，在生成瞬间读取该状态并将速度缩放为
   状态百分比；玩家投射物、`CanSlow=0` 投射物和已经飞行的投射物不受影响。
+- [x] 客户端按 `States.txt:slowmissiles.overlay1=innersight`，在受影响怪物头顶显示原生
+  `innersight` Overlay，并随 `SLOWMISSILES` 状态移除。
 - [x] 新增慢速箭状态/属性测试和 `CanSlow` 门控测试：
   `AmazonSkillSpecializationTest.slowMissilesAppliesNativeStateAndVelocityStatInsteadOfInnerSight`、
   `MissileNativePolicyTest.slowMissileVelocityUsesCanSlowAndNativeStateStat`；定向测试通过。

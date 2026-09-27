@@ -44,6 +44,11 @@ public class StateOverlaySystem extends IteratingSystem {
     if (states == null || states.stateList == null) return;
 
     reconcile(entityId, StateId.DIMVISION, states.stateList.getState(StateId.DIMVISION));
+    // States.txt assigns slowmissiles overlay1=innersight.  The server state
+    // marks affected monsters; keep the native overhead marker visible for
+    // exactly the same lifetime on local and network clients.
+    reconcile(entityId, StateId.SLOWMISSILES,
+        states.stateList.getState(StateId.SLOWMISSILES));
     reconcile(entityId, StateId.BLADESHIELD,
         states.stateList.getState(StateId.BLADESHIELD));
     // Barbarian states use the native States.txt overlay records.  The
@@ -178,6 +183,9 @@ public class StateOverlaySystem extends IteratingSystem {
             "cursedimvision", "CurseDimVisionEffect", "CurseDimVision",
             "dimvision", "dimvisionoverlay", "curse"
         };
+        break;
+      case StateId.SLOWMISSILES:
+        candidates = new String[] {"innersight"};
         break;
       case StateId.BLADESHIELD:
         candidates = new String[] {"bladeshield"};

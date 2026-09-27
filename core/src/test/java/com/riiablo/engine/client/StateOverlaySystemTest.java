@@ -111,6 +111,33 @@ class StateOverlaySystemTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void slowMissilesUsesNativeInnerSightOverheadOverlay() {
+    assertEquals("innersight",
+        Riiablo.files.States.get(StateId.SLOWMISSILES).overlays[0]);
+    assertTrue(Riiablo.files.Overlay.get("innersight") != null,
+        "stock Overlay.txt must contain the Slow Missiles marker row");
+
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build());
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.stateList.addState(StateId.SLOWMISSILES, 100, 1, entity);
+
+      world.process();
+      assertEquals("innersight", overlays.overlayFor(StateId.SLOWMISSILES));
+
+      states.stateList.removeState(StateId.SLOWMISSILES);
+      world.process();
+      assertFalse(overlays.overlays.containsKey(StateId.SLOWMISSILES));
+    } finally {
+      world.dispose();
+    }
+  }
+
   @com.artemis.annotations.All(com.riiablo.engine.client.component.Overlay.class)
   private static final class RecordingOverlayManager extends OverlayManager {
     boolean bladeShieldActive;
