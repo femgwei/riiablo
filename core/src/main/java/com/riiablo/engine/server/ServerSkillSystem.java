@@ -134,6 +134,16 @@ public class ServerSkillSystem extends PassiveSystem {
     }
   }
 
+  /**
+   * PassiveSystem disables its per-frame processing by default.  Poison and
+   * Plague Javelin keep a native Cast Delay in this system, so wake the system
+   * only while at least one caster has an active delay timer.
+   */
+  @Override
+  protected boolean checkProcessing() {
+    return poisonJavelinDelayFrames.size > 0;
+  }
+
   @Override
   protected void initialize() {
     itemGenerator = world.getSystem(ItemGenerator.class);
