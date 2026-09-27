@@ -142,7 +142,6 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
     if (item == null || itemController == null || mercenaryId < 0) return false;
     if (maxLife > 0 && life >= maxLife) {
-      showTemporaryMessage(localized("mercenary_full_health_hint", "Not yet, thank you"));
       return false;
     }
     return itemController.useCursorPotionOnMercenary();
