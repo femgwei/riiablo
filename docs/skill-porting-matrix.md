@@ -45,7 +45,9 @@
   SrvDo007 keyframe 并拒绝过期第四次；Impale 在 SrvSt07 预计算一次 CombatResult，
   由 SrvDo002 幂等消费；Fend 按 SrvSt09 的 calc1 上限建立目标流，由 SrvDo013 每次
   keyframe 前进到不同附近目标。测试保留真实命中 RNG，miss 不被误判为生命周期失败。
-  这仍只完成 ECS/纯逻辑层的一轮门槛，耐久、武器数量、真实 MPQ 动画和重连仍待验收。
+  本轮又补充了 SrvSt05 无目标 fail-closed、Impale 近战范围拒绝和 Fend 首目标死亡
+  重定向。 这仍只完成 ECS/纯逻辑层的一轮门槛，耐久、武器数量、真实 MPQ 动画和重连
+  仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress

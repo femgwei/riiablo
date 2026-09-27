@@ -105,6 +105,85 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
   }
 
   @Test
+  void jabRejectsAnInvalidTargetAtNativeStart() {
+    World world = world();
+    try {
+      Skills.Entry jab = Riiablo.files.skills.get("Jab");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, jab, "hax");
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(jab.Id, Engine.INVALID_ENTITY, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, jab.Id, Engine.INVALID_ENTITY, casting.targetVec,
+          jab.srvstfunc, jab.cltstfunc));
+
+      assertFalse(world.getMapper(Casting.class).has(amazon),
+          "SrvSt05 must fail closed when no target unit exists");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void impaleRejectsAStartTargetOutsideNativeMeleeRange() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, impale, "hax");
+      int target = monster(world, 10, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(10, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, impale.Id, target, casting.targetVec,
+          impale.srvstfunc, impale.cltstfunc));
+
+      assertFalse(casting.impalePrepared,
+          "SrvSt07 must not retain a combat record outside melee range");
+      assertFalse(world.getMapper(Casting.class).has(amazon),
+          "rejected Impale must clear the pending cast");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fendSkipsADeadFirstTargetBeforeConsumingTheNextStrike() {
+    World world = world();
+    try {
+      Skills.Entry fend = Riiablo.files.skills.get("Fend");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, fend, "hax");
+      int deadTarget = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      int liveTarget = monster(world, 2, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(fend.Id, deadTarget, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, fend.Id, deadTarget, casting.targetVec,
+          fend.srvstfunc, fend.cltstfunc));
+
+      assertTrue(casting.fendInitialized);
+      assertEquals(deadTarget, casting.fendCurrentTargetId);
+      float liveBefore = hp(world, liveTarget);
+      world.getMapper(AttributesWrapper.class).get(deadTarget).attrs.base()
+          .put(Stat.hitpoints, 0);
+      world.getMapper(AttributesWrapper.class).get(deadTarget).attrs.reset();
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertTrue(hp(world, liveTarget) <= liveBefore,
+          "SrvDo013 must retarget the live target before resolving the hit");
+      assertEquals(1, casting.fendStrikeIndex);
+      assertEquals(0, casting.fendRemainingStrikes);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void fendUsesNativeCalc1AsAttackCapAndAdvancesDistinctNearbyTargets() {
     World world = world();
     try {

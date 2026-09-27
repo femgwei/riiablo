@@ -930,12 +930,22 @@ public class Actioneer extends PassiveSystem {
       case 5: { // Left-hand action; Jab owns native player sequence 1.
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
-        if (skill != null && skill.srvdofunc == 7) {
-          casting.jabRemainingStrikes = 3;
-          casting.jabStrikeProcessed = false;
-          log.info("[AMAZON_JAB] phase=start entity={} target={} strikes={}",
-              entityId, targetId, casting.jabRemainingStrikes);
+        // D2MOO SrvSt05 returns failure when SUNIT_GetTargetUnit cannot
+        // resolve a target. Do not leave a Jab sequence armed to consume
+        // animation keyframes after that authoritative start rejection.
+        if (skill == null || skill.srvdofunc != 7
+            || targetId == Engine.INVALID_ENTITY
+            || !mAttributesWrapper.has(targetId)) {
+          log.info("[AMAZON_JAB] phase=start_reject entity={} target={} reason=no_target",
+              entityId, targetId);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
         }
+        casting.jabRemainingStrikes = 3;
+        casting.jabStrikeProcessed = false;
+        log.info("[AMAZON_JAB] phase=start entity={} target={} strikes={}",
+            entityId, targetId, casting.jabRemainingStrikes);
         break;
       }
       case 6: // Amazon Power/Charged Strike; combat resolves at the keyframe
