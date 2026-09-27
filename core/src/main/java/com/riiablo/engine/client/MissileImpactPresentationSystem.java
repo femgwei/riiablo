@@ -81,7 +81,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // pCltDoFunc=3; those cloud entities must still run pCltDoFunc=4 to emit
     // their PoisonSmokePuff layer.  Skipping the callback here leaves only the
     // PoisonSparks dots along the trail.
-    if (visual.missile != null && isClientFlightFunction(visual.missile.pCltDoFunc)) {
+    if (shouldProcessClientFlightCallback(visual)) {
       processClientFlightFunction(entityId, visual, velocity, delta);
     }
     if (distance > 0f) {
@@ -161,6 +161,15 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   static boolean isClientFlightFunction(int function) {
     return function == 3 || function == 4 || function == 8 || function == 49;
+  }
+
+  /**
+   * Client-created cloud children still execute their own native client
+   * callback; terminal visuals such as poisonpuff do not.
+   */
+  static boolean shouldProcessClientFlightCallback(Missile visual) {
+    return visual != null && visual.missile != null
+        && isClientFlightFunction(visual.missile.pCltDoFunc);
   }
 
   static int advanceClientFrame(Missile visual, int elapsedFrames) {
