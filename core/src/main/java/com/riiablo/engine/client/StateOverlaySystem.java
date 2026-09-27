@@ -108,10 +108,10 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.SHRINE_EXPERIENCE));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
-    reconcileColdTransform(entityId, coldColorShift(states));
+    reconcileColdTransform(entityId, elementalColorShift(states));
   }
 
-  /** Native COLD/FREEZE presentation: all monster composite layers turn blue. */
+  /** Native elemental presentation: COLD/FREEZE blue or POISON green. */
   private void reconcileColdTransform(int entityId, int colorShift) {
     if (!mCofTransforms.has(entityId)) return;
     byte packedTransform = coldPackedTransform();
@@ -155,13 +155,15 @@ public class StateOverlaySystem extends IteratingSystem {
     applyAnimationTransform(entityId, colorShift);
   }
 
-  private int coldColorShift(UnitStates states) {
+  private int elementalColorShift(UnitStates states) {
     boolean cold = states.stateList.hasState(StateId.COLD);
     boolean freezeActive = states.stateList.hasState(StateId.FREEZE);
-    if (!cold && !freezeActive) return -1;
-    // Stock 1.10f States.txt uses ColorShift 108 for both COLD and FREEZE.
+    boolean poison = states.stateList.hasState(StateId.POISON);
+    if (!cold && !freezeActive && !poison) return -1;
+    // Stock 1.10f States.txt uses ColorShift 108 for COLD/FREEZE and 104
+    // for POISON (the row also carries the native green flag).
     // Keep the native fallback for headless tests or trimmed data packs.
-    int fallback = 108;
+    int fallback = cold || freezeActive ? 108 : 104;
     if (Riiablo.files == null || Riiablo.files.States == null) return fallback;
     States.Entry best = null;
     if (cold) {
@@ -171,6 +173,12 @@ public class StateOverlaySystem extends IteratingSystem {
       States.Entry freezeEntry = Riiablo.files.States.get("freeze");
       if (freezeEntry != null && (best == null || freezeEntry.colorPriority >= best.colorPriority)) {
         best = freezeEntry;
+      }
+    }
+    if (poison) {
+      States.Entry poisonEntry = Riiablo.files.States.get("poison");
+      if (poisonEntry != null && (best == null || poisonEntry.colorPriority > best.colorPriority)) {
+        best = poisonEntry;
       }
     }
     return best == null ? fallback : best.colorShift;
