@@ -42,6 +42,12 @@ class MercenaryHudAssetProbeTest {
         MercenaryHud.isValkyriePetType(" valkyrie "));
     org.junit.jupiter.api.Assertions.assertFalse(
         MercenaryHud.isValkyriePetType("decoy"));
+    assertEquals(5, MercenaryHud.druidSummonPriority("raven"));
+    assertEquals(10, MercenaryHud.druidSummonPriority("spiritwolf"));
+    assertEquals(20, MercenaryHud.druidSummonPriority("oak sage"));
+    assertEquals(30, MercenaryHud.druidSummonPriority("poison creeper"));
+    assertEquals(40, MercenaryHud.druidSummonPriority("grizzly"));
+    assertEquals(12, MercenaryHud.summonSortPriority("skeleton", 12));
 
     SummonedPet living = new SummonedPet().set(7, "valkyrie", 32, 5, false, 0);
     assertEquals(true, MercenaryHud.isLivingSummon(living, null, 10f, 20f));
@@ -61,15 +67,22 @@ class MercenaryHudAssetProbeTest {
     Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
     MPQFileHandleResolver resolver = new MPQFileHandleResolver(new FileHandle(home));
     String[] icons = {"rogueicon", "act2hireableicon", "act3hireableicon", "barbhirable_icon",
-        "valkarieicon"};
+        "valkarieicon", "Raven", "Wolf", "Bear", "Vines", "OakSage", "skeletonicon",
+        "skeletonmageicon", "golemicon", "revivedicon", "ShadowAssassin"};
     for (String icon : icons) {
       DC6 dc6 = DC6.loadFromFile(resolver.resolve(
           "data\\global\\ui\\HIREABLES\\" + icon + ".dc6"));
       assertEquals(1, dc6.getNumDirections(), icon);
       assertEquals(1, dc6.getNumFramesPerDir(), icon);
       BBox box = dc6.getBox(0, 0);
-      assertEquals(41, box.height, icon);
-      assertEquals(icon.equals("barbhirable_icon") ? 47 : 46, box.width, icon);
+      if (icon.equals("rogueicon") || icon.equals("act2hireableicon")
+          || icon.equals("act3hireableicon") || icon.equals("barbhirable_icon")
+          || icon.equals("valkarieicon")) {
+        assertEquals(41, box.height, icon);
+        assertEquals(icon.equals("barbhirable_icon") ? 47 : 46, box.width, icon);
+      } else {
+        org.junit.jupiter.api.Assertions.assertTrue(box.width > 0 && box.height > 0, icon);
+      }
       dc6.dispose();
     }
   }
