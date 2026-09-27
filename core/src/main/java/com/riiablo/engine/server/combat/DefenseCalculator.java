@@ -159,16 +159,19 @@ public class DefenseCalculator {
    */
   public int checkPassiveDefense(int attackType, boolean isMoving,
       int dodgeChance, int avoidChance, int evadeChance, int weaponBlockChance) {
-    if (weaponBlockChance > 0 && rollPassive(weaponBlockChance)) {
-      log.debug("Weapon block successful: {}%", weaponBlockChance);
-      return DEFENSE_WEAPON_BLOCK;
-    }
+    // D2MOO's SUNITDMG_ApplyDodge returns from the moving branch before it
+    // evaluates weapon block. Evade therefore has priority while walking or
+    // running, even when another stat-list contributes weapon block.
     if (isMoving) {
       if (evadeChance > 0 && rollPassive(evadeChance)) {
         log.debug("Evade successful: {}%", evadeChance);
         return DEFENSE_EVADE;
       }
       return DEFENSE_NONE;
+    }
+    if (weaponBlockChance > 0 && rollPassive(weaponBlockChance)) {
+      log.debug("Weapon block successful: {}%", weaponBlockChance);
+      return DEFENSE_WEAPON_BLOCK;
     }
     if (attackType == ATTACK_MELEE && dodgeChance > 0 && rollPassive(dodgeChance)) {
       log.debug("Dodge successful: {}%", dodgeChance);

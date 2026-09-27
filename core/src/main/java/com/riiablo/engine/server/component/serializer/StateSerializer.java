@@ -6,6 +6,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SorceressSkills;
@@ -151,6 +152,22 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
           state.runtimeValue = replicatedDefense > 0 ? replicatedDefense
               : PaladinSkills.getHolyShieldDefenseBonus(holyShield, level, name -> 0);
           state.needsSync = false;
+        }
+        if ((state.stateId == StateId.CRITICALSTRIKE || state.stateId == StateId.DODGE
+            || state.stateId == StateId.AVOID || state.stateId == StateId.PENETRATE
+            || state.stateId == StateId.EVADE || state.stateId == StateId.PIERCE)
+            && Riiablo.files != null && Riiablo.files.skills != null
+            && state.skillId >= 0) {
+          com.riiablo.codec.excel.Skills.Entry passive =
+              Riiablo.files.skills.get(state.skillId);
+          if (passive != null && AmazonSkills.getPassiveStateId(passive) == state.stateId) {
+            // Restore the source/skill identity before asking the native
+            // bridge to rebuild the existing snapshot layer; otherwise
+            // addStateLayer would create a duplicate for the old -1 key.
+            AmazonSkills.applyPassiveState(component.stateList, passive,
+                Math.max(1, state.level), state.sourceEntityId);
+            state.needsSync = false;
+          }
         }
         if ((state.stateId == StateId.FROZENARMOR
             || state.stateId == StateId.SHIVERARMOR

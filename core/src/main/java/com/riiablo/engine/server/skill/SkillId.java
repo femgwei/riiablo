@@ -34,24 +34,24 @@ public final class SkillId {
   public static final int LIGHTNING_BOLT = 20;
   public static final int CHARGED_STRIKE = 24;
   public static final int PLAGUE_JAVELIN = 25;
-  public static final int FEND = 29;
-  public static final int LIGHTNING_STRIKE = 30;
+  public static final int FEND = 30;
+  public static final int LIGHTNING_STRIKE = 34;
   public static final int LIGHTNING_FURY = 35;
 
   //==========================================================================
   // 亚马逊技能 - 被动和魔法
   //==========================================================================
   
-  public static final int INNER_SIGHT = 11;
-  public static final int CRITICAL_STRIKE = 12;
-  public static final int DODGE = 16;
+  public static final int INNER_SIGHT = 8;
+  public static final int CRITICAL_STRIKE = 9;
+  public static final int DODGE = 13;
   public static final int SLOW_MISSILES = 17;
-  public static final int AVOID = 21;
-  public static final int PENETRATE = 22;
-  public static final int DECOY = 26;
-  public static final int EVADE = 27;
-  public static final int VALKYRIE = 31;
-  public static final int PIERCE = 32;
+  public static final int AVOID = 18;
+  public static final int PENETRATE = 23;
+  public static final int DECOY = 28;
+  public static final int EVADE = 29;
+  public static final int VALKYRIE = 32;
+  public static final int PIERCE = 33;
 
   //==========================================================================
   // 亚马逊技能 - 弓和弩

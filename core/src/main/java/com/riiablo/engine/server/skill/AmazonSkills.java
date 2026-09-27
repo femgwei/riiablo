@@ -3,9 +3,16 @@ package com.riiablo.engine.server.skill;
 import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+
+import java.util.Locale;
 
 /**
  * 亚马逊技能实现 - 基于 D2MOD SkillAma.cpp 移植
@@ -179,12 +186,7 @@ public final class AmazonSkills {
    * @return 暴击概率百分比
    */
   public static int getCriticalStrikeChance(int skillLevel) {
-    // 基础 16%，每级 +7%（递减）
-    int base = 16;
-    for (int i = 1; i < skillLevel; i++) {
-      base += Math.max(1, 7 - i / 3);
-    }
-    return Math.min(75, base);
+    return nativePassiveValue("Critical Strike", skillLevel);
   }
 
   /**
@@ -194,8 +196,7 @@ public final class AmazonSkills {
    * @return 闪避概率百分比
    */
   public static int getDodgeChance(int skillLevel) {
-    // 基础 18%，递增
-    return Math.min(60, 18 + (skillLevel - 1) * 6);
+    return nativePassiveValue("Dodge", skillLevel);
   }
 
   /**
@@ -216,8 +217,7 @@ public final class AmazonSkills {
    * @return 闪避概率百分比
    */
   public static int getAvoidChance(int skillLevel) {
-    // 基础 18%，递增
-    return Math.min(60, 18 + (skillLevel - 1) * 5);
+    return nativePassiveValue("Avoid", skillLevel);
   }
 
   /**
@@ -227,8 +227,7 @@ public final class AmazonSkills {
    * @return 攻击等级加成百分比
    */
   public static int calculatePenetrateBonus(int skillLevel) {
-    // 基础 35%，每级 +10%
-    return 35 + (skillLevel - 1) * 10;
+    return nativePassiveValue("Penetrate", skillLevel);
   }
 
   /**
@@ -249,8 +248,7 @@ public final class AmazonSkills {
    * @return 闪避概率百分比
    */
   public static int getEvadeChance(int skillLevel) {
-    // 基础 18%，递增
-    return Math.min(60, 18 + (skillLevel - 1) * 5);
+    return nativePassiveValue("Evade", skillLevel);
   }
 
   /**
@@ -270,11 +268,65 @@ public final class AmazonSkills {
    * @return 穿透概率百分比
    */
   public static int getPierceChance(int skillLevel) {
-    if (skillLevel <= 0 || Riiablo.files == null) return 0;
-    Skills.Entry pierce = Riiablo.files.skills.get(SkillId.PIERCE);
-    if (pierce == null || pierce.passivecalc == null || pierce.passivecalc.length == 0) return 0;
-    return Math.max(0, Math.min(100,
-        SkillFormula.evaluate(pierce.passivecalc[0], pierce, skillLevel)));
+    return nativePassiveValue("Pierce", skillLevel);
+  }
+
+  /** Evaluates a native Amazon passive row through its Skills.txt formula. */
+  private static int nativePassiveValue(String skillName, int skillLevel) {
+    if (skillLevel <= 0 || Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    if (skill == null || !skill.passive || skill.passivecalc == null) return 0;
+    for (int i = 0; i < skill.passivecalc.length; i++) {
+      if (skill.passivecalc[i] == null || skill.passivecalc[i].trim().isEmpty()) continue;
+      return Math.max(0, SkillFormula.evaluate(
+          skill.passivecalc[i], skill, Math.max(1, skillLevel)));
+    }
+    return 0;
+  }
+
+  /** Maps the six permanent Amazon passive stat-list states from States.txt. */
+  public static int getPassiveStateId(Skills.Entry skill) {
+    if (skill == null || skill.passivestate == null) return StateId.NONE;
+    switch (skill.passivestate.trim().toLowerCase(Locale.ROOT)) {
+      case "criticalstrike": return StateId.CRITICALSTRIKE;
+      case "dodge": return StateId.DODGE;
+      case "avoid": return StateId.AVOID;
+      case "penetrate": return StateId.PENETRATE;
+      case "evade": return StateId.EVADE;
+      case "pierce": return StateId.PIERCE;
+      default: return StateId.NONE;
+    }
+  }
+
+  /** Builds the D2Common passive stat-list directly from passivestat/passivecalc. */
+  public static UnitState applyPassiveState(
+      StateList states, Skills.Entry skill, int skillLevel, int ownerId) {
+    int stateId = getPassiveStateId(skill);
+    if (states == null || skill == null || !skill.passive || skillLevel <= 0
+        || stateId == StateId.NONE) return null;
+    UnitState state = states.addStateLayer(stateId, 0, skillLevel, ownerId, skill.Id);
+    if (state == null) return null;
+    state.duration = 0;
+    state.initialDuration = 0;
+    state.level = skillLevel;
+    state.sourceEntityId = ownerId;
+    state.skillId = skill.Id;
+    state.basicStatList = true;
+    state.clearModifiers();
+    int count = Math.min(skill.passivestat != null ? skill.passivestat.length : 0,
+        skill.passivecalc != null ? skill.passivecalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String statName = skill.passivestat[i];
+      String formula = skill.passivecalc[i];
+      if (statName == null || statName.trim().isEmpty()
+          || formula == null || formula.trim().isEmpty()) continue;
+      int statId = Stat.index(statName.trim());
+      if (statId < 0) continue;
+      int value = SkillFormula.evaluate(formula, skill, skillLevel);
+      state.setStatContribution(statId, 0, NativeStatResolver.Operation.ADD, value);
+    }
+    state.needsSync = true;
+    return state;
   }
 
   //==========================================================================

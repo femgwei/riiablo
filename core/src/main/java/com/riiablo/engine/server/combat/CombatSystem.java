@@ -1287,6 +1287,10 @@ public class CombatSystem {
     a.elementalPierce[DAMAGE_MAGIC] = statInt(attacker, Stat.passive_mag_pierce, 0);
     a.deadlyStrike = statInt(attacker, Stat.item_deadlystrike, 0);
     a.criticalStrike = statInt(attacker, Stat.passive_critical_strike, 0);
+    if (attackerStates != null) {
+      a.criticalStrike += attackerStates.getTotalStatContribution(
+          Stat.passive_critical_strike);
+    }
     if (mastery != null) a.criticalStrike += mastery.criticalChance;
     a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
     a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
@@ -1358,6 +1362,11 @@ public class CombatSystem {
     d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
     d.passiveAvoid = statInt(defender, Stat.passive_avoid, 0);
     d.passiveEvade = statInt(defender, Stat.passive_evade, 0);
+    if (defenderStates != null) {
+      d.passiveDodge += defenderStates.getTotalStatContribution(Stat.passive_dodge);
+      d.passiveAvoid += defenderStates.getTotalStatContribution(Stat.passive_avoid);
+      d.passiveEvade += defenderStates.getTotalStatContribution(Stat.passive_evade);
+    }
     d.passiveWeaponBlock = statInt(defender, Stat.passive_weaponblock, 0);
     d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
     d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
@@ -1488,7 +1497,10 @@ public class CombatSystem {
 
     // 4. 判定暴击/致命一击
     result.critical = rollCriticalStrike(attacker);
-    result.deadlyStrike = rollDeadlyStrike(attacker);
+    // D2MOO only rolls Deadly Strike after the passive/mastery critical
+    // branch fails. This preserves both native RNG consumption and the
+    // mutually-exclusive result flags.
+    result.deadlyStrike = !result.critical && rollDeadlyStrike(attacker);
 
     // 暴击和致命一击不叠加，取较高者
     if (result.critical || result.deadlyStrike) {

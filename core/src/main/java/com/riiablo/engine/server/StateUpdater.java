@@ -43,6 +43,7 @@ import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
@@ -95,6 +96,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private static final int[] PALADIN_HARD_POINT_PASSIVE_STATES = {
       StateId.PASSIVE_RESISTFIRE, StateId.PASSIVE_RESISTCOLD,
       StateId.PASSIVE_RESISTLTNG, StateId.PENETRATE
+  };
+  private static final int[] AMAZON_PASSIVE_SKILLS = {
+      SkillId.CRITICAL_STRIKE, SkillId.DODGE, SkillId.AVOID,
+      SkillId.PENETRATE, SkillId.EVADE, SkillId.PIERCE
+  };
+  private static final int[] AMAZON_PASSIVE_STATES = {
+      StateId.CRITICALSTRIKE, StateId.DODGE, StateId.AVOID,
+      StateId.PENETRATE, StateId.EVADE, StateId.PIERCE
   };
 
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -788,6 +797,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     synchronizeBarbarianPassives(entityId, stateList);
     synchronizePaladinHardPointPassives(entityId, stateList);
+    synchronizeAmazonPassives(entityId, stateList);
     synchronizeSorceressPassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
@@ -1108,6 +1118,42 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             applied.getStatContributionValue(Stat.maxcoldresist),
             applied.getStatContributionValue(Stat.maxlightresist),
             applied.getStatContributionValue(Stat.item_tohit_percent));
+      }
+    }
+  }
+
+  /** Keeps the six native Amazon permanent passive stat-lists current. */
+  private void synchronizeAmazonPassives(int entityId, StateList states) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
+        || mPlayer.get(entityId).data.classId != CharacterClass.AMAZON) return;
+    for (int i = 0; i < AMAZON_PASSIVE_SKILLS.length; i++) {
+      int skillId = AMAZON_PASSIVE_SKILLS[i];
+      int stateId = AMAZON_PASSIVE_STATES[i];
+      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      int level = skill == null ? 0
+          : Math.max(0, mPlayer.get(entityId).data.getSkill(skillId));
+      UnitState current = states.getState(stateId);
+      if (level <= 0 || skill == null || !skill.passive
+          || AmazonSkills.getPassiveStateId(skill) != stateId) {
+        if (current != null) {
+          states.removeState(stateId);
+          log.info("[AMAZON_PASSIVE] phase=remove entity={} skill={} state={}",
+              entityId, skillId, StateId.getName(stateId));
+        }
+        continue;
+      }
+      if (current != null && current.level == level && !current.expired) continue;
+      UnitState applied = AmazonSkills.applyPassiveState(states, skill, level, entityId);
+      if (applied != null) {
+        log.info("[AMAZON_PASSIVE] phase=refresh entity={} skill={} level={} state={} "
+                + "statValues={}/{}/{}/{}/{}/{}",
+            entityId, skillId, level, StateId.getName(applied.stateId),
+            applied.getStatContributionValue(Stat.passive_critical_strike),
+            applied.getStatContributionValue(Stat.passive_dodge),
+            applied.getStatContributionValue(Stat.passive_avoid),
+            applied.getStatContributionValue(Stat.item_tohit_percent),
+            applied.getStatContributionValue(Stat.passive_evade),
+            applied.getStatContributionValue(Stat.skill_pierce));
       }
     }
   }
