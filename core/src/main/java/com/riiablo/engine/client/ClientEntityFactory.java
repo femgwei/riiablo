@@ -494,14 +494,16 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     Weapons.Entry weapon = Riiablo.files.weapons.get("7p7");
     if (weapon == null) weapon = Riiablo.files.weapons.get("spr");
+    // Valkyrie's native player composite uses the 7p7 visual weapon, but
+    // MonStats only ships AM* COFs for the HTH animation class.  Keeping the
+    // weapon's visual layer while resolving animations as 2HT produces the
+    // missing AMDT2HT key seen when Unsummon starts the death sequence.
     byte weaponClass = Engine.WEAPON_HTH;
     if (weapon != null) {
       if (weapon.alternateGfx != null && !weapon.alternateGfx.isEmpty()) {
         cofs.setComponent(entityId, com.riiablo.codec.COF.Component.RH,
             Class.Type.PLR.getComponent(weapon.alternateGfx));
       }
-      int resolved = Riiablo.files.WeaponClass.index(weapon.wclass);
-      if (resolved >= 0) weaponClass = (byte) resolved;
     }
     return weaponClass;
   }
