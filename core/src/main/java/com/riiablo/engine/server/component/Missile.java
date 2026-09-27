@@ -113,6 +113,8 @@ public class Missile extends PooledComponent {
   public int nativeFrame;
   /** Independent client pCltDoFunc clock; server simulation may advance nativeFrame first. */
   public int clientFrame;
+  /** Whether the native client flight callback has emitted its initial child. */
+  public boolean clientFlightInitialized;
   /** Frame lifetime for zero-velocity one-shot missiles such as Blades of Ice cubes. */
   public int nativeLifetimeFrames;
   public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
@@ -282,6 +284,7 @@ public class Missile extends PooledComponent {
     attached = false;
     nativeFrame = 0;
     clientFrame = 0;
+    clientFlightInitialized = false;
     nativeLifetimeFrames = 0;
     nextHitFrame.clear();
     wakeMaker = false;

@@ -111,6 +111,18 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     String childName = first(source.CltSubMissile, 0);
     if (childName == null || childName.isEmpty() || factory == null) return;
 
+    // D2 emits the first client child when the flight missile is initialized;
+    // CltParam1 is the spacing for subsequent children, not an initial delay.
+    // Without this edge emission Riiablo shows only PoisonSparks during the
+    // opening frames, unlike the native screenshot where a large puff is
+    // already present at the start of the trail.
+    if (!visual.clientFlightInitialized) {
+      Vector2 at = mPosition.get(entityId).position;
+      float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
+      createFlightVisual(source, childName, at, angle);
+      visual.clientFlightInitialized = true;
+    }
+
     int elapsedFrames = Math.max(1, Math.round(delta * 25f));
     int previousFrame = advanceClientFrame(visual, elapsedFrames);
     int interval = Math.max(1, cltParam(source, 0, 1));

@@ -161,6 +161,7 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   void poisonCloudClientClockAdvancesIndependentlyFromAuthoritativeClock() {
     Missile cloud = new Missile();
     cloud.authoritative = true;
+    assertFalse(cloud.clientFlightInitialized);
     cloud.nativeFrame = 24;
     assertEquals(0, MissileImpactPresentationSystem.advanceClientFrame(cloud, 1));
     assertEquals(1, cloud.clientFrame);
