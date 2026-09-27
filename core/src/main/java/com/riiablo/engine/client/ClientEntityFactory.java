@@ -649,10 +649,28 @@ public class ClientEntityFactory extends ServerEntityFactory {
   @Override
   public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
     int id = super.createMissile(missileId, angle, position, ownerId);
+    return finishMissile(id);
+  }
+
+  /**
+   * Local authoritative skills carry their native skill level through this
+   * overload. Keep the client-side presentation setup in that path too;
+   * otherwise the server missile can collide and deal damage without ever
+   * loading its DCC for the local renderer.
+   */
+  @Override
+  public int createMissile(Missiles.Entry missile, Vector2 angle, Vector2 position,
+      int ownerId, int skillLevel) {
+    int id = super.createMissile(missile, angle, position, ownerId, skillLevel);
+    return finishMissile(id);
+  }
+
+  private int finishMissile(int id) {
+    if (id == Engine.INVALID_ENTITY || !mMissile.has(id)) return id;
     // The client replica is registered by ClientNetworkReceiver with the
     // server entity id after creation. Do not expose the temporary -1 id to
     // NetworkIdManager or it will alias every local projectile.
-    if (id != Engine.INVALID_ENTITY && mNetworked.has(id)) mNetworked.remove(id);
+    if (mNetworked.has(id)) mNetworked.remove(id);
     Missile missileWrapper = mMissile.get(id);
     Riiablo.assets.load(missileWrapper.missileDescriptor);
     mBox2DBody.create(id);

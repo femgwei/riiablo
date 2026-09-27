@@ -3,6 +3,15 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-27 炮轰本地箭矢表现
+
+- [x] 本地游戏的炮轰服务端导弹继续由 `ServerSkillSystem` 权威创建并结算；
+  `ClientEntityFactory` 现在也为带原生技能等级的导弹重载执行 DCC 资源加载、动画
+  和碰撞表现初始化，修复“攻击动画和命中正常但看不见箭”的回归。网络客户端仍只
+  使用同步来的权威导弹，不额外生成重复箭矢。
+- [x] `AuthoritativeAreaSkillSnapshotTest` 定向回归通过；另一台电脑仍需带真实
+  1.10f MPQ 实机确认炮轰箭矢轨迹和多箭节拍。
+
 ## 2026-09-27 Fallen Shaman 火球伤害与死亡传送稳定性
 
 - [x] 怪物技能导弹创建现在把 `Skills.txt` 的实际技能等级写入伤害快照，与 D2MOO
