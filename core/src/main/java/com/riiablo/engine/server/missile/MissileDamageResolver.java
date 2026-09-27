@@ -266,6 +266,32 @@ public final class MissileDamageResolver {
     return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0, 0);
   }
 
+  /** Captures the native 8.8 poison rate for a skill-owned persistent cloud. */
+  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, boolean attackerPlayer, int level) {
+    if (projectile == null || skill == null || !"pois".equalsIgnoreCase(skill.EType)) {
+      return false;
+    }
+    level = Math.max(1, level);
+    boolean initialized = initializeSkillArea(projectile, skill, ownerAttrs, level);
+    projectile.fixedPoisonRate = true;
+    projectile.poisonMinRateFixed = Math.max(0,
+        skillElementalDamageFixed(skill, level, true, name -> 0));
+    projectile.poisonMaxRateFixed = Math.max(projectile.poisonMinRateFixed,
+        skillElementalDamageFixed(skill, level, false, name -> 0));
+    projectile.poisonDurationFrames = Math.max(1,
+        skill.ELen + damageBonusByLevel(level, skill.ELevLen));
+    projectile.poisonPiercePercent = statInt(ownerAttrs, Stat.item_pierce_pois)
+        + statInt(ownerAttrs, Stat.passive_pois_pierce);
+    projectile.poisonAttackerPlayer = attackerPlayer;
+    log.info("[POISON_AREA_DAMAGE] missile={} skill={} level={} rawFixed={}..{} "
+            + "duration={} pierce={}",
+        projectile.missile != null ? projectile.missile.Missile : "", skill.skill, level,
+        projectile.poisonMinRateFixed, projectile.poisonMaxRateFixed,
+        projectile.poisonDurationFrames, projectile.poisonPiercePercent);
+    return initialized || projectile.poisonMaxRateFixed > 0;
+  }
+
   /** Elemental-only explosion snapshot including the owner's passive stat lists. */
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
@@ -492,6 +518,8 @@ public final class MissileDamageResolver {
     }
     int coldLength = includeElement && type == COLD ? Math.max(0, skill.ELen
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
+    int poisonLength = includeElement && type == POISON ? Math.max(0, skill.ELen
+        + damageBonusByLevel(level, skill.ELevLen)) : 0;
     if (includeSource && projectile.missile != null
         && projectile.missile.pSrvDmgFunc == 1 && type > PHYSICAL) {
       int conversion = Math.min(100, Math.max(0,
@@ -534,7 +562,15 @@ public final class MissileDamageResolver {
     projectile.skillId = skill.Id;
     projectile.damageLevel = level;
     writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
-        statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
+        statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
+    if (includeSource) {
+      int skillToHit = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
+      if (skillToHit != 0) {
+        int existing = statInt(projectile.damage, Stat.item_tohit_percent);
+        projectile.damage.base().put(Stat.item_tohit_percent, existing + skillToHit);
+        projectile.damage.reset();
+      }
+    }
     log.info("[SKILL_DAMAGE_SNAPSHOT] missile={} skill={} level={} physical={}..{} element={}..{} "
             + "coldLength={} srcDam={}", projectile.missile != null ? projectile.missile.Missile : "",
         skill.skill, level, physicalMin, physicalMax, elementalMin[type], elementalMax[type],

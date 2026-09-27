@@ -86,6 +86,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
       0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
       -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16, -14, -11, -8, -5, -2};
+  /** D2MOO MISSMODE_CreatePoisonCloudHitSubmissiles ring coordinates. */
+  private static final int[] POISON_CLOUD_X = {
+      0, 1, 2, 2, 2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1};
+  private static final int[] POISON_CLOUD_Y = {
+      2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1, 0, 1, 2, 2};
   
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
@@ -363,6 +368,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
         missile.lastCollideResolved = true;
         checkCollisions(entityId, missile, position, lastPos);
+        if (!world.getEntityManager().isActive(entityId)) return;
+        triggerNativeNullHit(entityId, missile, position.position);
         if (!world.getEntityManager().isActive(entityId)) return;
       }
       log.debug("Missile {} reached max range ({}), disposing. ownerId={}, pos=({}, {})", 
@@ -1230,6 +1237,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         missile.missile.CanDestroy, missile.missile.CollideKill);
     Vector2 impactPosition = impact != null && !impact.isZero(0.0001f) ? impact : to;
     emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
+    triggerNativeNullHit(entityId, missile, impactPosition);
     spawnNativeMapExplosion(missile, impactPosition);
     // Native SrvDmgHitHandler is invoked with a null target for barrier/wall
     // collisions.  It consumes the travelling missile even when CollideKill
@@ -1483,7 +1491,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         resolveImmolationArrowAreaDamage(missileId, missile, missilePos);
       }
       if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 2) {
-        spawnPoisonCloud(missile, missilePos);
+        if (!missile.hitFunctionTriggered) {
+          missile.hitFunctionTriggered = true;
+          spawnPoisonCloudHitSubmissiles(missile, targetPos.position);
+        }
       }
 
       if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 20) {
@@ -2455,6 +2466,16 @@ public class MissileCollisionSystem extends IteratingSystem {
         && nativeAreaRadius(missile) > 0;
   }
 
+  /** Native SrvDmgHitHandler(null target) path used by walls and LastCollide. */
+  private void triggerNativeNullHit(int sourceId, Missile source, Vector2 origin) {
+    if (source == null || source.missile == null || origin == null
+        || source.hitFunctionTriggered || source.missile.pSrvHitFunc != 2) return;
+    source.hitFunctionTriggered = true;
+    spawnPoisonCloudHitSubmissiles(source, origin);
+    log.debug("[AMAZON_PLAGUE_JAVELIN] phase=null_target_hit source={} missile={} origin=({}, {})",
+        sourceId, source.missile.Missile, origin.x, origin.y);
+  }
+
   /** D2MOO SrvHit14 creates the Royal Strike meteor's 18-position fire field. */
   private void spawnRoyalStrikeMeteorFire(Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null
@@ -2673,6 +2694,62 @@ public class MissileCollisionSystem extends IteratingSystem {
         statInt(cloud.damage, Stat.poisonlength));
   }
 
+  /**
+   * Native SrvHit02 fan-out for Plague Javelin/poison potion.  The first ring
+   * uses HitPar[0] as its stride; the interleaved ring uses HitPar[1].  The
+   * third parameter is the native child-loop count and is retained in the
+   * child lifetime approximation below.
+   */
+  private void spawnPoisonCloudHitSubmissiles(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null || origin == null) return;
+    String name = source.missile.HitSubMissile != null
+        && source.missile.HitSubMissile.length > 0
+        ? source.missile.HitSubMissile[0] : null;
+    if (name == null || name.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+
+    int mainStep = Math.max(1, arrayValue(source.missile.sHitPar, 0));
+    int subStep = Math.max(0, arrayValue(source.missile.sHitPar, 1));
+    int loops = Math.max(0, arrayValue(source.missile.sHitPar, 2));
+    int level = Math.max(1, source.damageLevel);
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    int created = 0;
+    for (int i = 0; i < POISON_CLOUD_X.length; i += mainStep) {
+      created += createPoisonCloudChild(source, row, skill, ownerAttrs, origin,
+          POISON_CLOUD_X[i], POISON_CLOUD_Y[i], loops);
+    }
+    if (subStep > 0) {
+      for (int i = 0; i < POISON_CLOUD_X.length - 1; i += subStep) {
+        int offset = i + 1;
+        created += createPoisonCloudChild(source, row, skill, ownerAttrs, origin,
+            POISON_CLOUD_X[offset], POISON_CLOUD_Y[offset], loops);
+      }
+    }
+    log.info("[AMAZON_PLAGUE_JAVELIN] phase=cloud_fanout owner={} skill={} source={} "
+            + "child={} mainStep={} subStep={} loops={} created={}",
+        source.ownerId, source.skillId, source.missile.Missile, name,
+        mainStep, subStep, loops, created);
+  }
+
+  private int createPoisonCloudChild(Missile source, Missiles.Entry row,
+      Skills.Entry skill, Attributes ownerAttrs, Vector2 origin,
+      int offsetX, int offsetY, int loops) {
+    int id = factory.createMissile(row, Vector2.X,
+        new Vector2(origin).add(offsetX, offsetY), source.ownerId);
+    if (id < 0 || !mMissile.has(id)) return 0;
+    Missile cloud = mMissile.get(id);
+    cloud.skillId = source.skillId;
+    cloud.damageLevel = Math.max(1, source.damageLevel);
+    configurePersistentPoisonCloud(cloud, skill);
+    // nLoops controls the native child path.  The Java area is stationary,
+    // so preserve it as a diagnostic/lifetime hint without moving the cloud.
+    if (loops > 0) cloud.remainingFrames = Math.max(cloud.remainingFrames, loops);
+    return 1;
+  }
+
   private void configurePersistentPoisonCloud(Missile cloud, Skills.Entry sourceSkill) {
     if (cloud == null || cloud.missile == null) return;
     Attributes ownerAttrs = mAttributesWrapper.has(cloud.ownerId)
@@ -2684,8 +2761,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (missileSkill != null) damageSkill = missileSkill;
     }
     if (!cloud.damageSnapshot && damageSkill != null) {
-      MissileDamageResolver.initializeSkillArea(
-          cloud, damageSkill, ownerAttrs, Math.max(1, cloud.damageLevel));
+      MissileDamageResolver.initializeSkillPoisonArea(
+          cloud, damageSkill, ownerAttrs, mPlayer.has(cloud.ownerId),
+          Math.max(1, cloud.damageLevel));
     }
     if (!cloud.damageSnapshot) {
       int min = Math.max(1, cloud.missile.EMin);

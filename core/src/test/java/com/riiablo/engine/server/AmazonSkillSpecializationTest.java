@@ -13,6 +13,7 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -412,6 +413,11 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       Missile source = world.getMapper(Missile.class).get(sourceId);
       MissileDamageResolver.initializeSkill(source, skill, owner, 1);
       assertEquals(skill.Id, source.skillId);
+      assertEquals(skill.ELen, source.damage.get(Stat.poisonlength).asInt(),
+          "skill poison duration must enter the cast-time damage snapshot");
+      StatRef skillToHit = source.damage.get(Stat.item_tohit_percent, StatRef.obtain());
+      assertEquals(skill.ToHit, skillToHit == null ? 0 : skillToHit.asInt(),
+          "skill ToHit must be applied as an attack-rating percentage");
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
       world.process();
       assertTrue(factory.createdNames.stream().anyMatch(
@@ -429,6 +435,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(10, cloud.tickInterval);
       assertEquals(skill.Id, cloud.skillId);
       assertTrue(cloud.damageSnapshot);
+      assertTrue(cloud.fixedPoisonRate);
+      assertEquals(skill.ELen, cloud.poisonDurationFrames);
       assertTrue(cloud.damage.get(Stat.poisonmaxdam).asInt() > 0);
       assertTrue(cloud.damage.get(Stat.poisonlength).asInt() > 0);
 
@@ -524,6 +532,50 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     } finally {
       world.dispose();
       com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void plagueJavelinHitFansOutNativePoisonCloudRing() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new StateUpdater(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      int target = monster(world, 0.8f, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 100);
+      world.getMapper(UnitStates.class).create(target).init(target);
+
+      Skills.Entry skill = Riiablo.files.skills.get("Plague Javelin");
+      Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissile);
+      assertEquals(2, row.pSrvHitFunc);
+      assertEquals(1, row.sHitPar[0]);
+      assertEquals(2, row.sHitPar[1]);
+      assertEquals(3, row.sHitPar[2]);
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      Missile source = world.getMapper(Missile.class).get(sourceId);
+      MissileDamageResolver.initializeSkill(source, skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 4 && world.getEntityManager().isActive(sourceId); i++) world.process();
+
+      long clouds = factory.createdNames.stream()
+          .filter(name -> "plaguejavcloud".equalsIgnoreCase(name)).count();
+      assertEquals(24, clouds,
+          "SrvHit02 must create the 16 main and 8 interleaved native cloud children");
+    } finally {
+      world.dispose();
     }
   }
 
