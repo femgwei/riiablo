@@ -45,6 +45,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.client.component.Label;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
@@ -135,6 +136,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Selectable> mSelectable;
+  protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
@@ -1149,6 +1151,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void applySummonedPetSnapshot(int entityId, SummonedPetP data) {
     if (data == null || mSummonedPet == null) return;
+    if (mLabel != null && mLabel.has(entityId)) mLabel.remove(entityId);
     int owner = syncIds.get(data.ownerId());
     if (owner == Engine.INVALID_ENTITY) owner = data.ownerId();
     String type = data.petType();

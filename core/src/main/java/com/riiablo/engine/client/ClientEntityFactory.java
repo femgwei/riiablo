@@ -369,6 +369,11 @@ public class ClientEntityFactory extends ServerEntityFactory {
         petMax, passive, durationFrames, x, y);
     if (id == Engine.INVALID_ENTITY) return id;
 
+    // Summons use the fixed top-center Unsummon HUD. Do not leave the normal
+    // world-space Label component attached, otherwise LabelManager renders a
+    // second nameplate above the summon and MonsterLabelManager is excluded.
+    if (mLabel.has(id)) mLabel.remove(id);
+
     // createSummonedPet delegates to the virtual createMonster method, but
     // keep this explicit guard for alternate factories and future refactors.
     attachMonsterPresentation(id);
