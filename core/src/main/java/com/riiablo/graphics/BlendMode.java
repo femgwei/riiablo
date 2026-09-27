@@ -19,4 +19,6 @@ public interface BlendMode {
   int DARKEN          = 10;
   /** Palette-preserving luminosity mask with caller-controlled alpha. */
   int LUMINOSITY_FLICKER = 11;
+  /** Native D2 PL2/Screen blend used by poison-cloud missiles. */
+  int SCREEN           = 12;
 }

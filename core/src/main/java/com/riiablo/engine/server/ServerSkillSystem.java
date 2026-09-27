@@ -77,6 +77,7 @@ import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.IntIntMap;
 
 /**
  * Server-authoritative part of the player skill pipeline.
@@ -109,6 +110,8 @@ public class ServerSkillSystem extends PassiveSystem {
   private final Ray<Vector2> auraRay = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> auraCollision =
       new Collision<>(new Vector2(), new Vector2());
+  /** Native Cast Delay survives removal of the transient Casting component. */
+  private final IntIntMap poisonJavelinDelayFrames = new IntIntMap();
 
   public ServerSkillSystem() {
     this(false);
@@ -117,6 +120,18 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Local games use this mode because legacy player presentation owns its projectiles. */
   public ServerSkillSystem(boolean monstersOnly) {
     this.monstersOnly = monstersOnly;
+  }
+
+  @Override
+  protected void processSystem() {
+    int elapsed = Math.max(1, Math.round(world.delta * 25f));
+    IntIntMap.Entries entries = poisonJavelinDelayFrames.entries();
+    while (entries.hasNext) {
+      IntIntMap.Entry entry = entries.next();
+      int remaining = entry.value - elapsed;
+      if (remaining <= 0) poisonJavelinDelayFrames.remove(entry.key, 0);
+      else poisonJavelinDelayFrames.put(entry.key, remaining);
+    }
   }
 
   @Override
@@ -232,6 +247,19 @@ public class ServerSkillSystem extends PassiveSystem {
       log.info("[SKILL_CAST] phase=reject source={} skill={} reason=town_in_town_flag",
           event.entityId, skill.skill);
       return;
+    }
+
+    // Poison Javelin and Plague Javelin use Skills.txt's native Cast Delay.
+    // This cannot live in Casting: that component is removed when the attack
+    // animation finishes, while D2 keeps the delay on the caster.
+    if (AmazonSkills.isPoisonJavelin(skill)) {
+      int remaining = poisonJavelinDelayFrames.get(event.entityId, 0);
+      if (remaining > 0) {
+        reject(event, 2, "poison javelin cast delay");
+        log.info("[AMAZON_POISON_DELAY] phase=reject entity={} skill={} remaining={}",
+            event.entityId, event.skillId, remaining);
+        return;
+      }
     }
 
     UnitStates casterStates = mUnitStates.has(event.entityId)
@@ -365,6 +393,22 @@ public class ServerSkillSystem extends PassiveSystem {
       log.debug("Server skill accepted: entity={}, skill={}, level={}, manaCost={}, manaLeft={}",
           event.entityId, event.skillId, skillLevel, manaCost, mana.asFixed());
     }
+    if (AmazonSkills.isPoisonJavelin(skill)) {
+      int delay = nativeCastDelayFrames(skill);
+      if (delay > 0) {
+        poisonJavelinDelayFrames.put(event.entityId, delay);
+        log.info("[AMAZON_POISON_DELAY] phase=start entity={} skill={} delay={}",
+            event.entityId, event.skillId, delay);
+      }
+    }
+  }
+
+  private static int nativeCastDelayFrames(Skills.Entry skill) {
+    if (skill == null || Riiablo.files == null || Riiablo.files.NativeSkills == null) return 0;
+    com.riiablo.codec.excel.NativeSkills.Entry row =
+        Riiablo.files.NativeSkills.get(skill.Id);
+    Integer delay = row == null ? null : row.integer("delay");
+    return delay == null ? 0 : Math.max(0, delay);
   }
 
   private static Item activeMeleeWeapon(ItemData items) {

@@ -38,8 +38,8 @@ public class MissileLoader extends IteratingSystem {
       // Ground-fire DCCs use the native luminosity mask, but their
       // Light/Flicker fields modulate that mask over time. Keep source
       // palette RGB values intact instead of recolouring the sprite.
-      case 1:  blendMode = isGroundFire(entry)
-          ? BlendMode.LUMINOSITY_FLICKER : BlendMode.LUMINOSITY; break;
+      case 1:  blendMode = isPoisonMissile(entry) ? BlendMode.SCREEN
+          : isGroundFire(entry) ? BlendMode.LUMINOSITY_FLICKER : BlendMode.LUMINOSITY; break;
       default: blendMode = BlendMode.ID; break;
     }
 
@@ -85,6 +85,19 @@ public class MissileLoader extends IteratingSystem {
         && "groundFireBig".equalsIgnoreCase(entry.CelFile)
         && entry.Light > 0
         && entry.Flicker > 0;
+  }
+
+  /** Native poison/plague missiles use PL2 Screen instead of alpha-over. */
+  static boolean isPoisonMissile(Missiles.Entry entry) {
+    if (entry == null) return false;
+    String type = entry.EType;
+    String missile = entry.Missile;
+    String skill = entry.Skill;
+    return "pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type)
+        || missile != null && (missile.toLowerCase(java.util.Locale.ROOT).contains("poison")
+            || missile.toLowerCase(java.util.Locale.ROOT).contains("plague"))
+        || skill != null && (skill.toLowerCase(java.util.Locale.ROOT).contains("poison")
+            || skill.toLowerCase(java.util.Locale.ROOT).contains("plague"));
   }
 
   /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */

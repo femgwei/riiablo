@@ -88,6 +88,14 @@ public class PaletteIndexedBatch extends SpriteBatch {
       shader.setUniformi(BLENDMODE_LOCATION, blendMode);
       this.blendMode = blendMode;
     }
+    // D2's poison clouds use the fixed-function Screen equation rather than
+    // ordinary alpha-over. Keep the source alpha as the PL2 luminance mask
+    // and let the destination factor implement 1 - source.rgb.
+    if (blendMode == BlendMode.SCREEN) {
+      super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_COLOR);
+    } else {
+      super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    }
   }
 
   public void resetBlendMode() {

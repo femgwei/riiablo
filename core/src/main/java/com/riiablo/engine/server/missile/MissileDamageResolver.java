@@ -485,6 +485,15 @@ public final class MissileDamageResolver {
     int sourceScale = includeSource ? Math.max(0, skill.SrcDam) : 0;
     int sourceMin = statInt(ownerAttrs, Stat.mindamage);
     int sourceMax = statInt(ownerAttrs, Stat.maxdamage);
+    // Throwing skills expose the weapon packet through item_throw_* rather
+    // than the ordinary melee mindamage/maxdamage stats.  D2Common uses that
+    // packet whenever SrcDam is non-zero, including Amazon poison javelins.
+    int throwMin = statInt(ownerAttrs, Stat.item_throw_mindamage);
+    int throwMax = statInt(ownerAttrs, Stat.item_throw_maxdamage);
+    if (throwMax > 0) {
+      sourceMin = throwMin;
+      sourceMax = throwMax;
+    }
     int physicalMin = (sourceScale > 0 ? sourceMin * sourceScale / 128 : 0)
         + (includeSource ? shiftedDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift) : 0);
     int physicalMax = (sourceScale > 0 ? sourceMax * sourceScale / 128 : 0)
@@ -667,7 +676,13 @@ public final class MissileDamageResolver {
     if (poisonLength > 0) base.put(Stat.poisonlength, poisonLength);
     if (copySourceBonuses) {
       copyStat(ownerAttrs, base, Stat.damagepercent);
+      copyStat(ownerAttrs, base, Stat.item_maxdamage_percent);
       copyStat(ownerAttrs, base, Stat.item_tohit_percent);
+      copyStat(ownerAttrs, base, Stat.item_tohit_percent_vs_monster);
+      copyStat(ownerAttrs, base, Stat.item_demon_tohit);
+      copyStat(ownerAttrs, base, Stat.item_undead_tohit);
+      copyStat(ownerAttrs, base, Stat.item_demondamage_percent);
+      copyStat(ownerAttrs, base, Stat.item_undeaddamage_percent);
       copyStat(ownerAttrs, base, Stat.item_deadlystrike);
       copyStat(ownerAttrs, base, Stat.passive_critical_strike);
       copyStat(ownerAttrs, base, Stat.item_crushingblow);

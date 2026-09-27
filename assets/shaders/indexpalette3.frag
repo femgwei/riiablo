@@ -48,6 +48,14 @@ void main() {
       color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0 * tint.a);
     }
 
+  // Native PL2/Screen poison-cloud mask. The fixed-function blend state is
+  // SRC_ALPHA, ONE_MINUS_SRC_COLOR, so this branch only supplies the source
+  // RGB and its luminance-driven intensity.
+  } else if (blendMode == 12) {
+    if (color.a > 0.0) {
+      color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0);
+    }
+
   // Set alpha based on luminance and color to tint
   } else if (blendMode == 3) {
     if (color.a > 0.0) {
