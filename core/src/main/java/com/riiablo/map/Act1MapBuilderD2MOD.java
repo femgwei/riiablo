@@ -15,6 +15,8 @@ import java.util.IdentityHashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.DrlgDrlgRoom;
+import com.d2moo.common.drlg.DrlgDrlgWarp;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
@@ -1579,6 +1581,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             applier.getUniqueFloorIdCount(), applier.getUniqueWallIdCount(),
             applier.getUniqueShadowIdCount()));
       }
+      // D2Common's outdoor/maze link pass writes runtime Vis/Warp slots and
+      // may not leave a normal DS1 marker in the exported wall list.  Keep
+      // those slots authoritative and synthesize only the missing endpoint
+      // marker so MapManager can create the same interactive Warp entity.
+      installNativeWarpLinks(map, drlg);
       DrlgDrlg.freeDrlg(drlg);
       Act1D2MOOLayoutBridge.releaseDataTables();
     }
@@ -3419,6 +3426,93 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       }
     }
     return counts;
+  }
+
+  /**
+   * Projects D2MOO's runtime {@code D2DrlgWarp.nWarp[]} table into riiablo.
+   * Outer Cloister and Barracks are the important case: DrlgMaze connects
+   * their RoomEx entrance with {@code addOrth}, while the corresponding warp
+   * cell can be absent from the flattened preset wall export.  Relying only
+   * on Levels.txt/DS1 markers therefore creates the zone rectangles but leaves
+   * no usable transition (and consequently no room activation/monster spawn).
+   */
+  private static void installNativeWarpLinks(Map map, D2DrlgStrc drlg) {
+    if (map == null || drlg == null) return;
+    int links = 0;
+    for (Zone source : new Array.ArrayIterator<>(map.zones)) {
+      if (source == null || source.level == null) continue;
+      int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, source.level.Id);
+      int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, source.level.Id);
+      if (vis == null || warp == null) continue;
+      int slots = Math.min(8, Math.min(vis.length, warp.length));
+      for (int slot = 0; slot < slots; slot++) {
+        // D2MOO stores the destination level in nVis. nWarp is the selected
+        // LvlWarp/graphics slot, not another level id (runtime SetWarpId
+        // commonly writes -1 there for the seamless monastery links).
+        int destinationLevelId = vis[slot];
+        if (destinationLevelId <= 0) continue;
+        if (!isMonasteryRuntimeLink(source.level.Id, destinationLevelId)) continue;
+        Zone destination = findZoneByLevelId(map, destinationLevelId);
+        if (destination == null || destination == source || destination.level == null) continue;
+
+        map.addWarpDestinationOverride(source.level.Id, slot, destinationLevelId);
+        if (!hasWarpMarker(source, slot)) {
+          source.addNativeWarpMarker(slot, nativeWarpX(source, destination),
+              nativeWarpY(source, destination));
+        }
+        int reverseSlot = findNativeReverseSlot(drlg, destination.level.Id, source.level.Id);
+        if (reverseSlot >= 0 && !hasWarpMarker(destination, reverseSlot)) {
+          map.addWarpDestinationOverride(destination.level.Id, reverseSlot, source.level.Id);
+          destination.addNativeWarpMarker(reverseSlot,
+              nativeWarpX(destination, source), nativeWarpY(destination, source));
+        }
+        links++;
+      }
+    }
+    if (links > 0 && Gdx.app != null) {
+      Gdx.app.log(TAG, "D2MOO native warp slots installed: " + links);
+    }
+  }
+
+  private static int findNativeReverseSlot(D2DrlgStrc drlg, int levelId, int targetLevelId) {
+    int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+    int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
+    if (vis == null || warp == null) return -1;
+    int slots = Math.min(8, Math.min(vis.length, warp.length));
+    for (int slot = 0; slot < slots; slot++) {
+      if (vis[slot] == targetLevelId) return slot;
+    }
+    return -1;
+  }
+
+  private static boolean isMonasteryRuntimeLink(int sourceLevelId, int destinationLevelId) {
+    return (sourceLevelId == 26 || sourceLevelId == 27 || sourceLevelId == 28)
+        && (destinationLevelId == 26 || destinationLevelId == 27 || destinationLevelId == 28)
+        && sourceLevelId != destinationLevelId;
+  }
+
+  private static boolean hasWarpMarker(Zone zone, int mainIndex) {
+    if (zone == null || mainIndex < 0 || zone.specials == null) return false;
+    for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id)
+          && DT1.Tile.Index.mainIndex(cell.id) == mainIndex) return true;
+    }
+    return false;
+  }
+
+  private static int nativeWarpX(Zone zone, Zone destination) {
+    if (zone == null || destination == null) return 0;
+    if (destination.x + destination.width <= zone.x) return 0;
+    if (destination.x >= zone.x + zone.width) return Math.max(0, zone.width - 1);
+    return zone.width / 2;
+  }
+
+  private static int nativeWarpY(Zone zone, Zone destination) {
+    if (zone == null || destination == null) return 0;
+    if (destination.y + destination.height <= zone.y) return 0;
+    if (destination.y >= zone.y + zone.height) return Math.max(0, zone.height - 1);
+    return zone.height / 2;
   }
 
   private static void logTileLayerAudit(TileGrid grid, DT1s dt1s, int x, int y,

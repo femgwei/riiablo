@@ -291,6 +291,39 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   }
 
   @Test
+  public void mapBuilderProjectsNativeMonasteryWarpSlots() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    Map map = new Map(seed, DEFAULT_DIFFICULTY);
+    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    try {
+      int[][] links = {
+          { D2LevelIds.LEVEL_MONASTERYGATE, D2LevelIds.LEVEL_OUTERCLOISTER },
+          { D2LevelIds.LEVEL_OUTERCLOISTER, D2LevelIds.LEVEL_MONASTERYGATE },
+          { D2LevelIds.LEVEL_OUTERCLOISTER, D2LevelIds.LEVEL_BARRACKS },
+          { D2LevelIds.LEVEL_BARRACKS, D2LevelIds.LEVEL_OUTERCLOISTER },
+      };
+      for (int[] link : links) {
+        Map.Zone source = zone(map, link[0]);
+        Map.Zone target = zone(map, link[1]);
+        assertNotNull(source, "native monastery source is missing " + link[0]);
+        assertNotNull(target, "native monastery target is missing " + link[1]);
+        boolean found = false;
+        for (int slot = 0; slot < 8; slot++) {
+          if (map.getWarpDestinationOverride(link[0], slot) == link[1]) {
+            found = true;
+            break;
+          }
+        }
+        assertTrue(found, "native warp slot is missing " + link[0] + " -> " + link[1]);
+        assertTrue(source.nativeDiagnostics()[13] > 0,
+            "native monastery source has no warp endpoint " + link[0]);
+      }
+    } finally {
+      map.dispose();
+    }
+  }
+
+  @Test
   public void mapBuilderCreatesDynamicPortalDestinations() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
