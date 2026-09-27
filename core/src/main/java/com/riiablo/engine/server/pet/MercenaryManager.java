@@ -246,7 +246,7 @@ public class MercenaryManager {
      */
     void removeMercenaryEntity(int entityId);
 
-    /** Restores the existing dead hireling entity in place. */
+    /** Restores the existing live hireling entity in place. */
     boolean resurrectMercenaryEntity(int entityId, int playerId);
 
     /** Creates a replacement entity when a level-scoped corpse was unloaded. */
@@ -527,9 +527,12 @@ public class MercenaryManager {
     }
 
     int safeLevel = Math.max(1, Math.min(98, level));
-    int entityId = callback.createMercenaryEntity(
+    // A saved dead hireling is a persistent record, not a world corpse.  D2
+    // does not materialize its monster entity while the player enters town;
+    // the NPC resurrection transaction creates it only after payment.
+    int entityId = dead ? Engine.INVALID_ENTITY : callback.createMercenaryEntity(
         playerId, definition, safeLevel, seed, nameId);
-    if (entityId == Engine.INVALID_ENTITY) {
+    if (!dead && entityId == Engine.INVALID_ENTITY) {
       log.warn("Persisted mercenary entity creation failed: player={} type={} level={}",
           playerId, mercType, safeLevel);
       return false;

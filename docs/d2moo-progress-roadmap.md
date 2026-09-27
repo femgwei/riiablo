@@ -15,6 +15,8 @@
   zone change 在 `ZoneMovementModesChanger` 中空指针崩溃。
 - [x] waypoint、普通传送门和跨 Act 传送现在在服务端统一拒绝死亡玩家；只有认证的
   town respawn 流程可以移动带有 `PlayerCorpse` 的玩家。
+- [x] 已死亡且尚未复活的佣兵从存档恢复时只保留 `MercenaryManager`/D2S 死亡记录，
+  不再在城镇出生点创建尸体实体；访问雇佣 NPC 并支付费用时才重新创建并复活。
 - [x] `:core:compileJava`、`:core:compileTestJava` 和 ShamanFire 等级快照定向任务通过；
   仍需另一台电脑用真实 1.10f MPQ 实机确认 A1 伤害与死亡后传送流程。
 

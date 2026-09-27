@@ -148,7 +148,6 @@ class MercenaryManagerTest {
   void restoresDeadSavedMercenaryWithoutChargingOrRewritingSave() {
     MercenaryManager manager = new MercenaryManager();
     Callback callback = new Callback();
-    callback.entityId = 93;
     manager.setCallback(callback);
 
     assertTrue(manager.restoreMercenary(12, MercenaryManager.MERC_TYPE_ROGUE,
@@ -156,7 +155,8 @@ class MercenaryManagerTest {
 
     MercenaryManager.ActiveMercenary merc = manager.getPlayerMercenary(12);
     assertNotNull(merc);
-    assertEquals(93, merc.entityId);
+    assertEquals(Engine.INVALID_ENTITY, merc.entityId,
+        "dead saved hirelings stay as a town record until resurrection");
     assertEquals(17, merc.level);
     assertEquals(123_456L, merc.experience);
     assertEquals(13, merc.nameId);

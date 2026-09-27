@@ -168,9 +168,9 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   }
 
   /**
-   * A dead hireling is a level-scoped corpse.  Leaving the level removes the
-   * corpse entity, while the persisted dead hireling remains available for a
-   * paid resurrection in town.
+   * A materialized dead hireling is a level-scoped corpse.  Leaving the level
+   * removes that entity; a saved dead hireling is kept as a record only until
+   * the player pays an NPC for resurrection.
    */
   @Subscribe
   public void onOwnerZoneChanged(ZoneChangeEvent change) {
@@ -277,21 +277,21 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         data.seed, nameId, dead)) return false;
 
     MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
-    if (merc == null || !mAttributesWrapper.has(merc.entityId)) {
+    if (merc == null || (!dead && !mAttributesWrapper.has(merc.entityId))) {
       mercenaries.unloadMercenary(playerId);
       return false;
+    }
+    if (dead) {
+      // Keep only the manager/D2S dead record.  Materializing a corpse here
+      // makes every town/waypoint entry draw the old hireling on the ground;
+      // resurrection will recreate the entity at the NPC transaction.
+      log.info("[MERC_RESTORE] phase=dead_record_only player={} type={} level={} xp={}",
+          playerId, mercType, level, data.xp);
+      return true;
     }
     // The runtime entity and persistent equipment share one Attributes object;
     // later equipment and level updates therefore affect authoritative combat.
     mAttributesWrapper.get(merc.entityId).attrs = data.getStats();
-    if (dead) {
-      data.getStats().aggregate().put(Stat.hitpoints, 0);
-      // PLRSAVE2_ReadMercData restores a dead hireling directly in MONMODE_DEAD.
-      // Reserve its corpse immediately so an NPC resurrection request cannot
-      // race the presentation DT -> DD sequence during the first server ticks.
-      mCorpse.create(merc.entityId).reset(Corpse.DEFAULT_DURATION, true);
-      event.dispatch(DeathEvent.obtain(playerId, merc.entityId));
-    }
     log.info("[MERC_RESTORE] phase=restored player={} entity={} type={} level={} xp={} "
             + "dead={} items={}",
         playerId, merc.entityId, mercType, level, data.xp, dead,
