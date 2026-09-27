@@ -2499,10 +2499,6 @@ public class ServerSkillSystem extends PassiveSystem {
     base.nor();
     int mainDirection = AssassinTrapSystem.chargedBoltMainDirection(base);
     int originX = MathUtils.floor(origin.x);
-    IntSet hitTargets = new IntSet();
-    // The melee stage resolves the struck target. Native charged bolts start
-    // on that target but do not immediately re-hit it.
-    hitTargets.add(event.targetId);
     int created = 0;
     Vector2 direction = new Vector2();
     for (int i = 0; i < count; i++) {
@@ -2514,8 +2510,10 @@ public class ServerSkillSystem extends PassiveSystem {
       seedLow = (int) rolled;
       int directionIndex = AssassinTrapSystem.chargedBoltDirection(mainDirection, seedLow);
       AssassinTrapSystem.chargedBoltVector(directionIndex, direction);
+      // Each charged bolt resolves collisions independently; in particular,
+      // several bolts may hit the melee target just as in the native skill.
       int missileId = createMissile(missile, direction, origin, event.entityId,
-          hitTargets, skillLevel);
+          null, skillLevel);
       if (missileId < 0 || !mMissile.has(missileId)) continue;
       Missile bolt = mMissile.get(missileId);
       bolt.skillId = skill.Id;
