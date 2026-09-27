@@ -410,7 +410,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     Skills.Entry skill = selectedSkill(button);
     // Skills.Entry.skill is an internal Skills.txt identifier, not display
     // text. Never leak it as a fallback into the character panel.
-    return SkillNameResolver.name(skill);
+    return SkillNameResolver.characterScreenName(skill);
   }
 
   static boolean skillUsesAttackRating(Skills.Entry skill) {

@@ -21,11 +21,11 @@ SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
 String displayName = Riiablo.string.lookup(desc.str_name);
 ```
 
-界面代码统一使用 `SkillNameResolver.name(skill)`。资源未加载或 key 缺失时返回空字符串，而不是把 `skill.skill` 内部 ID 显示给玩家。
+技能树、快捷栏和详情标题使用 `SkillNameResolver.name(skill)`（`str name`）；角色属性页选中技能名称使用 `SkillNameResolver.characterScreenName(skill)`（`str alt`）。资源未加载或 key 缺失时回退到另一层本地化名称，而不是把 `skill.skill` 内部 ID 显示给玩家。
 
 已核对的入口包括：
 
-- `CharacterPanel` 动态攻击/伤害技能名；
+- `CharacterPanel` 动态攻击/伤害技能名（优先使用 `str alt` 角色页别名）；
 - `SpellsPanel` 技能树和详情；
 - `SkillDetails` / `HotkeyButton` 快捷技能详情；
 - `StatFormatter` 的 `+技能`、按等级施放和 `oskill` 属性；

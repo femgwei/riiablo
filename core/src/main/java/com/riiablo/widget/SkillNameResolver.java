@@ -40,6 +40,20 @@ public final class SkillNameResolver {
     return value == null || value.isEmpty() || value.startsWith("ERROR:") ? "" : value;
   }
 
+  /**
+   * Resolves the alternate skill name used by the native Character Screen.
+   * SkillDesc.txt documents this field as the selected-skill name for that
+   * screen; it is distinct from the regular skill-tree {@code str name}.
+   */
+  public static String characterScreenName(Skills.Entry skill) {
+    SkillDesc.Entry desc = description(skill);
+    if (desc == null || desc.str_alt == null || desc.str_alt.isEmpty()
+        || Riiablo.string == null) return name(skill);
+    String value = Riiablo.string.lookup(desc.str_alt);
+    return value == null || value.isEmpty() || value.startsWith("ERROR:")
+        ? name(skill) : value;
+  }
+
   public static String name(int skillId) {
     return name(entry(skillId));
   }
