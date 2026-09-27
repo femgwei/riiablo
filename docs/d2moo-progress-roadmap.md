@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
+
+- [x] 对照 D2MOO `SkillAma.cpp` 的 `SrvSt05/SrvDo007`、`SrvSt07/SrvDo002` 和
+  `SrvSt09/SrvDo013`，补充 `AmazonMeleeSkillLifecycleTest`：Jab 三次 keyframe、
+  过期第四次拒绝；Impale 预计算战斗记录且只消费一次；Fend 使用 `calc1` 上限并在
+  附近敌人间前进，不重复目标。
+- [x] 修复 Jab 序列耗尽后旧 keyframe 落入通用 `SrvDo002` 的第四击问题；测试不把原生
+  命中 RNG 的合法 miss 误判为生命周期失败。
+- [ ] 仍待补齐武器耐久/数量、ToHit/SrcDam/Calc 边界、目标死亡/失手、真实 1.10f MPQ
+  动画和断线重连验收。
+
 ## 2026-09-28 dark-magic 行为族框架落地
 
 - [x] 新增 `NativeSkillBehavior` / `NativeSkillBehaviorRegistry`，按 Amazon 30 个 1.10f

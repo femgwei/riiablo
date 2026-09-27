@@ -1463,8 +1463,13 @@ public class Actioneer extends PassiveSystem {
         Item dragonClawWeapon = null;
         boolean dragonTail = srvdofunc == 50;
         boolean dragonFlight = srvdofunc == 52;
-        boolean jab = srvdofunc == 7 && activeCasting != null
-            && activeCasting.jabRemainingStrikes > 0;
+        boolean amazonJab = srvdofunc == 7 && activeCasting != null
+            && activeSkill != null && activeSkill.Id == SkillId.JAB;
+        // Native SrvSt05/SrvDo007 owns exactly three Jab records.  A stale
+        // animation keyframe after the sequence has finished must not fall
+        // through to the generic SrvDo002 melee path as a fourth hit.
+        if (amazonJab && activeCasting.jabRemainingStrikes <= 0) break;
+        boolean jab = amazonJab && activeCasting.jabRemainingStrikes > 0;
         boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
             && activeSkill.srvdofunc == 2;
         boolean fireClaws = activeSkill != null && DruidSkills.isFireClaws(activeSkill);

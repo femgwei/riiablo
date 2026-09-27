@@ -32,15 +32,20 @@
 ### Amazon（当前最高优先级）
 
 - riiablo 入口：`AmazonSkills.java`、`Actioneer` 的 Amazon 分支、`NativeSkillResolver.isAmazonBowSkill/isAmazonJavelinSkill`。
-- 当前测试：`AmazonSkillSpecializationTest`、`NativeAmazonPassiveDataTest`、`NativeAmazonPoisonJavelinDataTest`。
+- 当前测试：`AmazonSkillSpecializationTest`、`NativeAmazonPassiveDataTest`、
+  `NativeAmazonPoisonJavelinDataTest`、`NativeAmazonSkillMatrixTest`、
+  `AmazonMeleeSkillLifecycleTest`。
 - 本轮新增 `NativeAmazonSkillMatrixTest` 与 `NativeSkillBehaviorRegistry`：30 行 Amazon
   技能以 exact ID + `srvstfunc/srvdofunc` 注册行为族；`NativeSkillResolver` 只在回调号
   与注册声明完全一致时把行为族写入 `SkillExecutor.SkillData`，未知/篡改行保持未注册
   （fail-closed）。这是 dark-magic `skill-behavior-coverage` manifest 的 Java 对应层，
   目前只声明 Amazon，不能据此声称其他职业已覆盖。
 - dark-magic 对照：没有 Amazon exact-ID 配置；Amazon 必须直接按 D2MOO 1.10f 和真实 1.10f 数据审计，不能把 dark-magic 的其他职业行为族当作 Amazon 结论。
-- Jab/Impale/Fend 的动作、伤害和目标流已有 Java 路径，但尚未满足四层验收；后续改动应
-  继续以行为族为边界单独验证和提交，不把数据覆盖误记为执行完成。
+- Jab/Impale/Fend 已补齐一轮 D2MOO SrvSt/SrvDo 生命周期回归：Jab 固定消费三次
+  SrvDo007 keyframe 并拒绝过期第四次；Impale 在 SrvSt07 预计算一次 CombatResult，
+  由 SrvDo002 幂等消费；Fend 按 SrvSt09 的 calc1 上限建立目标流，由 SrvDo013 每次
+  keyframe 前进到不同附近目标。测试保留真实命中 RNG，miss 不被误判为生命周期失败。
+  这仍只完成 ECS/纯逻辑层的一轮门槛，耐久、武器数量、真实 MPQ 动画和重连仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress
@@ -120,8 +125,9 @@
 
 ## 当前执行顺序
 
-1. Amazon 30 个技能逐行建立 Native 数据断言；已加入 exact-ID 行为注册表，下一步继续把
-   Jab/Impale/Fend 的动作、耐久、目标流断言接到同一行为族生命周期。
+1. Amazon 30 个技能逐行建立 Native 数据断言；exact-ID 行为注册表及 Jab/Impale/Fend
+   的首轮动作/目标流生命周期已完成，下一步补齐耐久、武器数量、失手/死亡、重连和真实
+   1.10f MPQ 验收。
 2. 把 dark-magic 的 exact-ID/fail-closed、导弹生命周期、状态来源、checkpoint 断言移植成 riiablo Java 测试模板。
 3. 对照 D2MOO 1.10f 复核 Amazon 的 ToHit、SrcDam、Calc、武器/弹药、穿透、元素和多目标规则。
 4. 依次审计 Paladin Aura、Necromancer summon/golem、Assassin trap、Sorceress missile/state。
