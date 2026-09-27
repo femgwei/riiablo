@@ -28,6 +28,14 @@ public final class AmazonSkills {
 
   private AmazonSkills() {} // 不可实例化
 
+  /** Returns true for the two Amazon poison-javelin cast-delay skills. */
+  public static boolean isPoisonJavelin(Skills.Entry skill) {
+    if (skill == null || skill.skill == null) return false;
+    String name = skill.skill.trim();
+    return "Poison Javelin".equalsIgnoreCase(name)
+        || "Plague Javelin".equalsIgnoreCase(name);
+  }
+
   //==========================================================================
   // 标枪和长矛技能
   //==========================================================================
@@ -63,19 +71,6 @@ public final class AmazonSkills {
     // 基础 1-40，每级 +1-8
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
-  }
-
-  /**
-   * 毒枪 - 投掷毒素标枪
-   * 
-   * @param skillLevel 技能等级
-   * @return 总毒素伤害
-   */
-  public static int calculatePoisonJavelinDamage(int skillLevel) {
-    // 基础 25-50，每级 +25
-    int minDamage = 25 + (skillLevel - 1) * 25;
-    int maxDamage = 50 + (skillLevel - 1) * 25;
     return MathUtils.random(minDamage, maxDamage);
   }
 
@@ -125,19 +120,6 @@ public final class AmazonSkills {
   public static int getChargedStrikeBoltCount(int skillLevel) {
     // 基础 3，每 4 级 +1
     return 3 + skillLevel / 4;
-  }
-
-  /**
-   * 瘟疫之枪 - 留下毒雾的标枪
-   * 
-   * @param skillLevel 技能等级
-   * @return 毒素伤害
-   */
-  public static int calculatePlagueJavelinDamage(int skillLevel) {
-    // 基础 50-100，每级 +50
-    int minDamage = 50 + (skillLevel - 1) * 50;
-    int maxDamage = 100 + (skillLevel - 1) * 50;
-    return MathUtils.random(minDamage, maxDamage);
   }
 
   /**
