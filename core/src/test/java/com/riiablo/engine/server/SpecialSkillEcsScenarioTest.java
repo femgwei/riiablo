@@ -70,7 +70,7 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
     int skillId = com.riiablo.engine.server.skill.SkillId.LIGHTNING_STRIKE;
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
         .build().register("factory", factory).register("map", new Map(0, 0)));
     try {
       int caster = world.create();
