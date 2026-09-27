@@ -668,6 +668,12 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(first.y, centre.y, 0.0001f);
     assertEquals(first.x, last.x, 0.0001f);
     assertEquals(first.y, last.y, 0.0001f);
+
+    // PATH_GetDirections(...)[0] uses D2MOO's integer tile classifier.
+    assertEquals(0, AssassinTrapSystem.chargedBoltMainDirection(0, 0, 3, 0));
+    assertEquals(2, AssassinTrapSystem.chargedBoltMainDirection(0, 0, 0, 3));
+    assertEquals(4, AssassinTrapSystem.chargedBoltMainDirection(0, 0, -3, 0));
+    assertEquals(6, AssassinTrapSystem.chargedBoltMainDirection(0, 0, 0, -3));
   }
 
   @Test

@@ -230,6 +230,46 @@ public class AssassinTrapSystem extends IteratingSystem {
     return octant;
   }
 
+  /**
+   * D2Common's PATH_GetDirections(...)[0] for Charged Bolt.  The native
+   * direction classifier uses the integer tile delta and its 25-entry lookup
+   * table rather than a floating-point angle threshold.
+   */
+  static int chargedBoltMainDirection(int startX, int startY, int targetX, int targetY) {
+    int diffX = targetX - startX;
+    int diffY = targetY - startY;
+    int absX = Math.abs(diffX);
+    int absY = Math.abs(diffY);
+    int index;
+    if (absX < 2 * absY) {
+      if (absY >= 2 * absX) {
+        if (diffX < 0) {
+          if (diffY < -1) return 5;
+          if (diffY > 1) diffY = 2;
+          return (diffY + 7) & 7;
+        }
+        diffX &= 1;
+      }
+    } else {
+      diffY = diffY >= 0 ? diffY & 1 : -1;
+    }
+    if (diffX < -1) diffX = -2;
+    else if (diffX > 1) diffX = 2;
+    if (diffY < -1) index = 5 * diffX + 10;
+    else {
+      if (diffY > 1) diffY = 2;
+      index = diffY + 5 * diffX + 12;
+    }
+
+    // stru_6FDD2158[index].unk0x00 from D2Common/PathMisc.cpp.
+    final int[] mainDirections = {
+        5, 4, 4, 4, 3, 6, 5, 4, 3, 2,
+        6, 6, 6, 2, 2, 6, 7, 0, 1, 2,
+        7, 0, 0, 0, 1
+    };
+    return mainDirections[Math.max(0, Math.min(mainDirections.length - 1, index))];
+  }
+
   static long chargedBoltRoll(int low, int high) {
     return Integer.toUnsignedLong(high) + 0x6AC690C5L * Integer.toUnsignedLong(low);
   }

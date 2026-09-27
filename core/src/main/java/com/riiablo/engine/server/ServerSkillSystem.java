@@ -2494,11 +2494,17 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
     int count = chargedStrikeBoltCount(skill, skillLevel);
     Vector2 origin = mPosition.get(event.targetId).position;
-    Vector2 base = new Vector2(origin).sub(caster);
+    int originX = MathUtils.floor(origin.x);
+    int originY = MathUtils.floor(origin.y);
+    int casterX = MathUtils.floor(caster.x);
+    int casterY = MathUtils.floor(caster.y);
+    int targetX = 2 * originX - casterX;
+    int targetY = 2 * originY - casterY;
+    Vector2 base = new Vector2(targetX - originX, targetY - originY);
     if (base.isZero(0.0001f)) base.set(1f, 0f);
     base.nor();
-    int mainDirection = AssassinTrapSystem.chargedBoltMainDirection(base);
-    int originX = MathUtils.floor(origin.x);
+    int mainDirection = AssassinTrapSystem.chargedBoltMainDirection(
+        originX, originY, targetX, targetY);
     int created = 0;
     Vector2 direction = new Vector2();
     for (int i = 0; i < count; i++) {
@@ -2523,7 +2529,10 @@ public class ServerSkillSystem extends PassiveSystem {
       bolt.chargedBoltSeedLow = (int) rolled;
       bolt.chargedBoltSeedHigh = (int) (rolled >>> 32);
       bolt.chargedBoltNextTurnDistance = 2f;
+      bolt.chargedBoltTargetX = targetX;
+      bolt.chargedBoltTargetY = targetY;
       // SKILLS_MissileInit_ChargedBolt caps the native path at 77 frames.
+      bolt.nativeLifetimeFrames = 77;
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
       created++;

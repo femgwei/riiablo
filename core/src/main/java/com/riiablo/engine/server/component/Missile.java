@@ -136,6 +136,9 @@ public class Missile extends PooledComponent {
   public int chargedBoltSeedLow;
   public int chargedBoltSeedHigh;
   public float chargedBoltNextTurnDistance;
+  /** Integer D2DynamicPath target used by PATHTYPE_CHARGEDBOLT. */
+  public int chargedBoltTargetX;
+  public int chargedBoltTargetY;
 
   /**
    * D2Common PATHTYPE_BLESSEDHAMMER. The native path contains 77 points on an
@@ -299,6 +302,8 @@ public class Missile extends PooledComponent {
     chargedBoltSeedLow = 0;
     chargedBoltSeedHigh = 0;
     chargedBoltNextTurnDistance = 0f;
+    chargedBoltTargetX = 0;
+    chargedBoltTargetY = 0;
     blessedHammerPath = false;
     blessedHammerOrigin.setZero();
     blessedHammerPointIndex = 0;
