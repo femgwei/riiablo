@@ -44,6 +44,9 @@ class SummonedPetSystemTest {
       world.process();
       assertTrue(world.getEntityManager().isActive(pet));
       world.process();
+      assertTrue(world.getEntityManager().isActive(pet));
+      world.process();
+      world.process();
       assertFalse(world.getEntityManager().isActive(pet));
     } finally {
       world.dispose();

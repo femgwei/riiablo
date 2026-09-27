@@ -73,15 +73,18 @@ public class SummonedPetSystem extends IteratingSystem {
     // normal monster DT -> DD presentation reaches its short corpse window.
     // This is shared by explicit Unsummon, quota eviction and duration expiry.
     if (pet.unsummonPending) {
+      pet.deadFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
       if (mCorpse.has(entityId)) {
         pet.deathPending = true;
-        pet.deadFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
-        if (pet.deadFrames >= 25f) {
-          log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} reason={} "
-                  + "dismissal_complete",
-              entityId, pet.ownerId, pet.petType, pet.unsummonReason);
-          world.delete(entityId);
-        }
+      }
+      // AI/Corpse systems normally remove the unit after MODE_DD. Keep a
+      // deterministic native-frame timeout for minimal/test worlds where
+      // that presentation system is absent.
+      if (pet.deadFrames >= 25f) {
+        log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} reason={} "
+                + "dismissal_complete",
+            entityId, pet.ownerId, pet.petType, pet.unsummonReason);
+        world.delete(entityId);
       }
       return;
     }
