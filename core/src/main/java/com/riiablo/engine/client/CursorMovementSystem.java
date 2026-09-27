@@ -752,7 +752,21 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private boolean isMeleeNormalAttack(int skillId) {
-    return skillId == SkillCodes.attack && !isRangedNormalAttack(skillId);
+    // These Amazon skills use the weapon's point-blank attack packet.  They
+    // must approach a unit target before requesting the cast; otherwise the
+    // server correctly rejects the distant melee hit while the client has
+    // already cleared movement, leaving the player standing still.
+    return (skillId == SkillCodes.attack && !isRangedNormalAttack(skillId))
+        || isAmazonMeleeSkill(skillId);
+  }
+
+  static boolean isAmazonMeleeSkill(int skillId) {
+    return skillId == SkillId.JAB
+        || skillId == SkillId.POWER_STRIKE
+        || skillId == SkillId.IMPALE
+        || skillId == SkillId.CHARGED_STRIKE
+        || skillId == SkillId.FEND
+        || skillId == SkillId.LIGHTNING_STRIKE;
   }
 
   private void traceAttackRange(int src, int targetId, int skillId, float distance,

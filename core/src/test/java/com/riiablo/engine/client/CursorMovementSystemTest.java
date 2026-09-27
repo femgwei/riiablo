@@ -12,12 +12,24 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.skill.SkillCodes;
 
 class CursorMovementSystemTest {
   @Test
   void normalMeleeInputDoesNotUseServerHitGraceRange() {
     assertEquals(0, CursorMovementSystem.MELEE_APPROACH_RANGE_BONUS);
+  }
+
+  @Test
+  void amazonWeaponSkillsApproachUnitTargetsBeforeCasting() {
+    int[] skills = {
+        SkillId.JAB, SkillId.POWER_STRIKE, SkillId.IMPALE,
+        SkillId.CHARGED_STRIKE, SkillId.FEND, SkillId.LIGHTNING_STRIKE};
+    for (int skill : skills) {
+      assertTrue(CursorMovementSystem.isAmazonMeleeSkill(skill),
+          "skill must use melee approach path: " + skill);
+    }
   }
 
   @Test
