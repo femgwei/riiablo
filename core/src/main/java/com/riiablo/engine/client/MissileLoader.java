@@ -1,5 +1,6 @@
 package com.riiablo.engine.client;
 
+import com.badlogic.gdx.Gdx;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
@@ -59,8 +60,12 @@ public class MissileLoader extends IteratingSystem {
     // per-entity phase from the missile seed/position so local and network
     // clients get varied, reproducible large/small puffs without global RNG.
     if (isPoisonSmokePuff(entry) && animation.getNumFramesPerDir() > 0) {
-      initialFrame += poisonPuffPhase(missile, entityId,
-          animation.getNumFramesPerDir());
+      int phase = poisonPuffPhase(missile, entityId, animation.getNumFramesPerDir());
+      initialFrame += phase;
+      Gdx.app.debug("MissileLoader", String.format(
+          "[MISSILE_ANIM_PHASE] entity=%d missile=%s phase=%d frames=%d initial=%d",
+          entityId, entry.Missile, phase, animation.getNumFramesPerDir(),
+          Math.floorMod(initialFrame, animation.getNumFramesPerDir())));
     }
     if (isGroundFire(entry) && animation.getNumFramesPerDir() > 0) {
       initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
