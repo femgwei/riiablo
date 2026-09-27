@@ -16,6 +16,7 @@ import com.riiablo.engine.Direction;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
@@ -211,6 +212,16 @@ public class SkillCastHandler extends PassiveSystem {
         && (event.srvdofunc == 12 || skill.srvdofunc == 12);
     boolean localStreamServer = localServer
         && (event.srvdofunc == 19 || skill.srvdofunc == 19);
+    // Lightning Strike's shipped cltDoFunc is shared with Nova/Frost Nova in
+    // some table exports.  When the local server owns SrvDo014, dispatching
+    // that callback would incorrectly fan the LightningStrike missile in all
+    // directions.  The authoritative root/continuation missiles already
+    // carry the correct directional LightningStrike visual.
+    if (isLocalAuthoritativeLightningStrike(skill, localServer, event.srvdofunc)) {
+      log.info("[AMAZON_LIGHTNING_STRIKE] phase=client_reuse_server_missile entity={} skill={}",
+          event.entityId, skill.skill);
+      return;
+    }
     boolean authoritativeThrow = event.skillId == SkillCodes.throw_
         || event.skillId == SkillCodes.left_hand_throw;
     // Throwing weapons are created by ServerSkillSystem (including the local
@@ -774,6 +785,13 @@ public class SkillCastHandler extends PassiveSystem {
     return shouldReuseServerMissile(skill, networkClient, localMonsterServer,
         localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
         localChargedBoltServer, separateCorpseBurst, false);
+  }
+
+  static boolean isLocalAuthoritativeLightningStrike(
+      Skills.Entry skill, boolean localServer, int srvdofunc) {
+    return localServer && skill != null
+        && (srvdofunc == 14 || skill.srvdofunc == 14
+            || skill.Id == SkillId.LIGHTNING_STRIKE);
   }
 
   /**

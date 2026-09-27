@@ -90,6 +90,15 @@ class AuthoritativeAreaSkillSnapshotTest extends RiiabloTest {
         false, false, false, false, false, false, false, false, false, true));
   }
 
+  @Test
+  void lightningStrikeDoesNotUseSharedNovaClientFan() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.LIGHTNING_STRIKE);
+    assertNotNull(skill);
+    assertEquals(14, skill.srvdofunc);
+    assertTrue(SkillCastHandler.isLocalAuthoritativeLightningStrike(skill, true, 14));
+    assertFalse(SkillCastHandler.isLocalAuthoritativeLightningStrike(skill, false, 14));
+  }
+
   private static String firstNonEmpty(String first, String second) {
     return first != null && !first.isEmpty() ? first : second;
   }
