@@ -327,6 +327,12 @@ public final class NativeSkillResolver {
         : SkillExecutor.SKILL_TYPE_SPELL;
     data.requireTarget = !skill.passive && !skill.aura;
     data.requirePosition = !skill.passive;
+    NativeSkillBehavior behavior = NativeSkillBehaviorRegistry.resolve(skill);
+    if (behavior != null) {
+      data.nativeBehaviorFamily = behavior.family;
+      data.nativeSrvStartFunction = behavior.serverStartFunction;
+      data.nativeSrvDoFunction = behavior.serverDoFunction;
+    }
     return data;
   }
 

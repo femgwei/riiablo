@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-28 dark-magic 行为族框架落地
+
+- [x] 新增 `NativeSkillBehavior` / `NativeSkillBehaviorRegistry`，按 Amazon 30 个 1.10f
+  exact skill ID 注册行为族，并同时锁定 D2MOO `SrvSt`/`SrvDo` 回调号；回调不匹配时
+  解析结果为未注册，避免按函数形状误放行。
+- [x] `NativeSkillResolver.toSkillData` 将已验证行为族和原生回调号带入
+  `SkillExecutor.SkillData`；`NativeAmazonSkillMatrixTest` 覆盖技能名、职业、弹药、
+  `SrcDam`、元素、原生投影和 fail-closed 变异测试。
+- [ ] 当前注册表只覆盖 Amazon；其他职业必须按同样的 exact-ID + D2MOO 分发表逐职业
+  增加，不能把 dark-magic 1.14d 行为族直接当作 riiablo 1.10f 实现。
+
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 

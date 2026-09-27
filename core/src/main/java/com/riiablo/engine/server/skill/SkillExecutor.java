@@ -200,6 +200,11 @@ public class SkillExecutor {
     public boolean isAura;
     public boolean requireTarget;
     public boolean requirePosition;
+    /** Exact native behavior family, when the row is registered and matches. */
+    public String nativeBehaviorFamily;
+    /** Native callback numbers captured with the behavior declaration. */
+    public int nativeSrvStartFunction = -1;
+    public int nativeSrvDoFunction = -1;
   }
 
   //==========================================================================

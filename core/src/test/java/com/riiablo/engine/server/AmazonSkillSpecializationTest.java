@@ -591,10 +591,12 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
 
   @Test
   void auditNativeAmazonSpecialRows() {
-    String[] names = {"Magic Arrow", "Fire Arrow", "Cold Arrow", "Multiple Shot",
-        "Exploding Arrow", "Ice Arrow", "Guided Arrow", "Strafe", "Immolation Arrow",
-        "Freezing Arrow", "Pierce", "Charged Strike", "Cloak of Shadows",
-        "Dopplezon", "Valkyrie", "Lightning Strike", "Lightning Fury"};
+    String[] names = {"Magic Arrow", "Fire Arrow", "Inner Sight", "Critical Strike", "Jab",
+        "Cold Arrow", "Multiple Shot", "Dodge", "Power Strike", "Poison Javelin",
+        "Exploding Arrow", "Slow Missiles", "Avoid", "Impale", "Lightning Bolt",
+        "Ice Arrow", "Guided Arrow", "Penetrate", "Charged Strike", "Plague Javelin",
+        "Strafe", "Immolation Arrow", "Dopplezon", "Evade", "Fend", "Freezing Arrow",
+        "Valkyrie", "Pierce", "Lightning Strike", "Lightning Fury"};
     for (String name : names) {
       Skills.Entry skill = Riiablo.files.skills.get(name);
       assertNotNull(skill, name);

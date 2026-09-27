@@ -33,8 +33,14 @@
 
 - riiablo 入口：`AmazonSkills.java`、`Actioneer` 的 Amazon 分支、`NativeSkillResolver.isAmazonBowSkill/isAmazonJavelinSkill`。
 - 当前测试：`AmazonSkillSpecializationTest`、`NativeAmazonPassiveDataTest`、`NativeAmazonPoisonJavelinDataTest`。
+- 本轮新增 `NativeAmazonSkillMatrixTest` 与 `NativeSkillBehaviorRegistry`：30 行 Amazon
+  技能以 exact ID + `srvstfunc/srvdofunc` 注册行为族；`NativeSkillResolver` 只在回调号
+  与注册声明完全一致时把行为族写入 `SkillExecutor.SkillData`，未知/篡改行保持未注册
+  （fail-closed）。这是 dark-magic `skill-behavior-coverage` manifest 的 Java 对应层，
+  目前只声明 Amazon，不能据此声称其他职业已覆盖。
 - dark-magic 对照：没有 Amazon exact-ID 配置；Amazon 必须直接按 D2MOO 1.10f 和真实 1.10f 数据审计，不能把 dark-magic 的其他职业行为族当作 Amazon 结论。
-- 当前工作区正在修改 Jab/Impale/Fend 的动作、伤害和目标流；这些改动必须在单独提交中完成，不能与本表混提交。
+- Jab/Impale/Fend 的动作、伤害和目标流已有 Java 路径，但尚未满足四层验收；后续改动应
+  继续以行为族为边界单独验证和提交，不把数据覆盖误记为执行完成。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress
@@ -114,7 +120,8 @@
 
 ## 当前执行顺序
 
-1. Amazon 30 个技能逐行建立 Native 数据断言；优先处理当前未提交的 Jab/Impale/Fend 改动。
+1. Amazon 30 个技能逐行建立 Native 数据断言；已加入 exact-ID 行为注册表，下一步继续把
+   Jab/Impale/Fend 的动作、耐久、目标流断言接到同一行为族生命周期。
 2. 把 dark-magic 的 exact-ID/fail-closed、导弹生命周期、状态来源、checkpoint 断言移植成 riiablo Java 测试模板。
 3. 对照 D2MOO 1.10f 复核 Amazon 的 ToHit、SrcDam、Calc、武器/弹药、穿透、元素和多目标规则。
 4. 依次审计 Paladin Aura、Necromancer summon/golem、Assassin trap、Sorceress missile/state。
