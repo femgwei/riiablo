@@ -23,7 +23,9 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.skill.SkillId;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 @All({Selectable.class, BBoxWrapper.class, Position.class})
 public class HoveredManager extends IteratingSystem {
@@ -41,6 +43,7 @@ public class HoveredManager extends IteratingSystem {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<Selectable> mSelectable;
 
   @Wire(name="iso")
   protected IsometricCamera iso;
@@ -127,6 +130,15 @@ public class HoveredManager extends IteratingSystem {
       }
     }
     return selected;
+  }
+
+  /** Hide and disable the fixed Unsummon HUD as soon as dismissal starts. */
+  @Subscribe
+  public void onModeChanged(ModeChangeEvent event) {
+    if (event == null || event.mode != Engine.Monster.MODE_DT
+        || !mSummonedPet.has(event.entityId)) return;
+    setHovered(event.entityId, false);
+    if (mSelectable.has(event.entityId)) mSelectable.remove(event.entityId);
   }
 
   private boolean isVisibleItemLabel(int entityId) {
