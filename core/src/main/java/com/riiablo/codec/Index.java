@@ -37,6 +37,21 @@ public class Index implements Disposable {
     this.indexes = indexes;
   }
 
+  /** Creates an indexed colormap from already decoded palette rows. */
+  public static Index fromColormaps(String name, byte[][] rows) {
+    if (rows == null || rows.length != INDEXES) {
+      throw new IllegalArgumentException("rows must contain " + INDEXES + " colormaps");
+    }
+    byte[][] indexes = new byte[INDEXES][Palette.COLORS];
+    for (int i = 0; i < INDEXES; i++) {
+      if (rows[i] == null || rows[i].length != Palette.COLORS) {
+        throw new IllegalArgumentException("row " + i + " must contain " + Palette.COLORS + " colors");
+      }
+      System.arraycopy(rows[i], 0, indexes[i], 0, Palette.COLORS);
+    }
+    return new Index(name, indexes);
+  }
+
   @Override
   public void dispose() {
     if (texture != null) texture.dispose();

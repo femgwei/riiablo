@@ -8,12 +8,16 @@ import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.COF;
+import com.riiablo.codec.Index;
+import com.riiablo.codec.Animation;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.codec.excel.States;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -31,6 +35,7 @@ public class StateOverlaySystem extends IteratingSystem {
 
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<CofTransforms> mCofTransforms;
+  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
 
@@ -103,16 +108,15 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.SHRINE_EXPERIENCE));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
-    reconcileColdTransform(entityId,
-        states.stateList.hasState(StateId.COLD)
-            || states.stateList.hasState(StateId.FREEZE));
+    reconcileColdTransform(entityId, coldColorShift(states));
   }
 
   /** Native COLD/FREEZE presentation: all monster composite layers turn blue. */
-  private void reconcileColdTransform(int entityId, boolean active) {
+  private void reconcileColdTransform(int entityId, int colorShift) {
     if (!mCofTransforms.has(entityId)) return;
     byte packedTransform = coldPackedTransform();
     if (packedTransform == CofTransforms.TRANSFORM_NULL) return;
+    boolean active = colorShift >= 0;
 
     CofTransforms transforms = mCofTransforms.get(entityId);
     if (!active) {
@@ -124,6 +128,7 @@ public class StateOverlaySystem extends IteratingSystem {
         flags |= cofs.setTransform(entityId, component, original[component]);
       }
       cofs.updateTransform(entityId, flags);
+      restoreAnimationTransforms(entityId, original);
       return;
     }
 
@@ -147,6 +152,56 @@ public class StateOverlaySystem extends IteratingSystem {
       flags |= cofs.setTransform(entityId, component, packedTransform);
     }
     cofs.updateTransform(entityId, flags);
+    applyAnimationTransform(entityId, colorShift);
+  }
+
+  private int coldColorShift(UnitStates states) {
+    boolean cold = states.stateList.hasState(StateId.COLD);
+    boolean freeze = states.stateList.hasState(StateId.FREEZE);
+    if (!cold && !freeze) return -1;
+    // Stock 1.10f States.txt uses ColorShift 108 for both COLD and FREEZE.
+    // Keep the native fallback for headless tests or trimmed data packs.
+    int fallback = 108;
+    if (Riiablo.files == null || Riiablo.files.States == null) return fallback;
+    States.Entry best = null;
+    if (cold) {
+      best = Riiablo.files.States.get("cold");
+    }
+    if (freeze) {
+      States.Entry freeze = Riiablo.files.States.get("freeze");
+      if (freeze != null && (best == null || freeze.colorPriority >= best.colorPriority)) {
+        best = freeze;
+      }
+    }
+    return best == null ? fallback : best.colorShift;
+  }
+
+  /** Applies the native PL2 hue row directly to loaded animation layers. */
+  private void applyAnimationTransform(int entityId, int colorShift) {
+    if (mAnimationWrapper == null || !mAnimationWrapper.has(entityId)
+        || Riiablo.colormaps == null) return;
+    Index transform = Riiablo.colormaps.getStateTransform(colorShift);
+    if (transform == null) return;
+    Animation animation = mAnimationWrapper.get(entityId).animation;
+    COF cof = animation.getCOF();
+    if (cof == null) return;
+    for (int i = 0; i < cof.getNumLayers(); i++) {
+      int component = cof.getLayer(i).component;
+      Animation.Layer layer = animation.getLayer(component);
+      if (layer != null) layer.setTransform(transform, 1);
+    }
+  }
+
+  private void restoreAnimationTransforms(int entityId, byte[] original) {
+    if (mAnimationWrapper == null || !mAnimationWrapper.has(entityId)) return;
+    Animation animation = mAnimationWrapper.get(entityId).animation;
+    COF cof = animation.getCOF();
+    if (cof == null) return;
+    for (int i = 0; i < cof.getNumLayers(); i++) {
+      int component = cof.getLayer(i).component;
+      Animation.Layer layer = animation.getLayer(component);
+      if (layer != null) layer.setTransform(original[component]);
+    }
   }
 
   /** States.txt venomclaws itemtrans=cgrn, applied to both weapon layers. */

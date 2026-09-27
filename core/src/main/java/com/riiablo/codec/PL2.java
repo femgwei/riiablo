@@ -19,6 +19,11 @@ public class PL2 {
   private static final int TINTS     = 13;
   private static final int TINT_SIZE = 3 + Palette.COLORS;
 
+  // PL2 sections before HueVariations: light(32), inverse(16), selected(1),
+  // alpha(3*256), additive(256), multiplicative(256).
+  private static final int HUE_VARIATIONS_OFFSET = 1329;
+  private static final int HUE_VARIATIONS = 111;
+
   public static final int DEFAULT_INDEX = 31;
 
   public static final int TINT_WHITE  = COLORMAPS + 0;
@@ -47,6 +52,12 @@ public class PL2 {
 
   public byte[] getColormap(int index) {
     return colormaps[index];
+  }
+
+  /** Returns the native PL2 hue-variation row used by States.txt colorshift. */
+  public byte[] getHueVariation(int colorShift) {
+    if (colorShift < 0 || colorShift >= HUE_VARIATIONS) return null;
+    return colormaps[HUE_VARIATIONS_OFFSET + colorShift];
   }
 
   public int getTint(int index) {
