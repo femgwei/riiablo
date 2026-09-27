@@ -3,6 +3,18 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-28 原生 Cold/Freeze 客户端调色链
+
+- [x] 对照 D2MOO、dark-magic 和 OpenDiablo2：三者都没有把元素伤害统一接成
+  单位精灵染色；OpenDiablo2 只解析 `States.txt` 的 `ColorPri/ColorShift/Blue`
+  字段，riiablo 改为使用原生 `Pal.pl2` HueVariations。
+- [x] 修复旧 `cblu` packed transform 只写低 5 位、最终选择不存在 `colormap 0`
+  的问题；Cold/Freeze 现在使用 `States.txt` 的 `ColorShift=108` 直接覆盖已加载
+  COF 图层，状态结束恢复装备原始变换。
+- [ ] 仍需另一台电脑使用真实 1.10f MPQ 实机确认 Cold Arrow 的蓝色/减速、Ice
+  Arrow 的冻结，以及 Freezing Arrow 的碎冰死亡表现。当前工作区已有的
+  `Map.java` 未完成改动仍导致完整 Gradle 编译失败（`Zone.hasAnyPreset()` 未定义）。
+
 ## 2026-09-28 冰箭状态表现链修正
 
 - [x] 冷状态回调不再要求冷元素最终伤害大于零；冷伤害被抗性/吸收降为零时，仍按原生冷长度应用 `COLD` 或 `FREEZE`，避免冰箭命中只有伤害而没有减速/冻结。
