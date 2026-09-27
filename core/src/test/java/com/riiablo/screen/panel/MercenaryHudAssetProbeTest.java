@@ -27,12 +27,29 @@ class MercenaryHudAssetProbeTest {
   }
 
   @Test
+  void laysOutValkyrieBesideMercenary() {
+    assertEquals(0, MercenaryHud.companionSlotCount(false, false));
+    assertEquals(1, MercenaryHud.companionSlotCount(true, false));
+    assertEquals(1, MercenaryHud.companionSlotCount(false, true));
+    assertEquals(2, MercenaryHud.companionSlotCount(true, true));
+    assertEquals(0f, MercenaryHud.companionSlotX(false, true));
+    assertEquals(56f, MercenaryHud.companionSlotX(true, true));
+    org.junit.jupiter.api.Assertions.assertTrue(
+        MercenaryHud.isValkyriePetType("Valkyrie"));
+    org.junit.jupiter.api.Assertions.assertTrue(
+        MercenaryHud.isValkyriePetType(" valkyrie "));
+    org.junit.jupiter.api.Assertions.assertFalse(
+        MercenaryHud.isValkyriePetType("decoy"));
+  }
+
+  @Test
   void probeNativeHirelingIconGeometry() {
     String home = System.getenv("D2_LOCALIZATION_HOME");
     Assumptions.assumeTrue(home != null && new File(home, "d2data.mpq").isFile());
     Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
     MPQFileHandleResolver resolver = new MPQFileHandleResolver(new FileHandle(home));
-    String[] icons = {"rogueicon", "act2hireableicon", "act3hireableicon", "barbhirable_icon"};
+    String[] icons = {"rogueicon", "act2hireableicon", "act3hireableicon", "barbhirable_icon",
+        "valkarieicon"};
     for (String icon : icons) {
       DC6 dc6 = DC6.loadFromFile(resolver.resolve(
           "data\\global\\ui\\HIREABLES\\" + icon + ".dc6"));

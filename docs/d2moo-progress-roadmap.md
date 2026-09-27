@@ -17,6 +17,15 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-27 女武神头像与生命条
+
+- [x] `MercenaryHud` 现在识别当前角色拥有的 `Valkyrie` 召唤物，加载原版
+  `HIREABLES/valkarieicon.dc6`，并按佣兵相同的生命值比例和绿/黄/红阈值绘制生命条。
+  只有女武神时占用第一个头像位；佣兵存在时女武神自动绘制在佣兵右侧，同时显示原生
+  技能名称（含本地化回退）。佣兵药水拖放和右键打开佣兵面板仍只作用于佣兵头像。
+- [x] 新增头像资源尺寸、宠物类型识别及单/双头像布局回归测试；`:core:test --tests
+  com.riiablo.screen.panel.MercenaryHudAssetProbeTest --no-daemon` 通过。
+
 ## 2026-09-26 佣兵死亡尸体与 NPC 复活菜单
 
 - [x] A1 卡夏、A2 格瑞兹、A3 阿舍拉、A5 夸尔·凯克均显示佣兵服务；佣兵死亡后动态加入

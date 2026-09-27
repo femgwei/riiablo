@@ -24,6 +24,8 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.item.Item;
@@ -35,26 +37,34 @@ import com.riiablo.widget.Label;
 public final class MercenaryHud extends WidgetGroup implements Disposable {
   // Native D2 uses a small portrait, rather than a wide opaque status panel.
   private static final float WIDTH = 56f;
+  private static final float SLOT_GAP = 0f;
   private static final float HEIGHT = 70f;
   private static final String ICON_ROOT = "data\\global\\ui\\HIREABLES\\";
   private static final String[] ICON_NAMES = {
       "rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6", "barbhirable_icon.dc6"
   };
+  private static final String VALKYRIE_ICON_NAME = "valkarieicon.dc6";
   private static final String UNNAMED = "UNNAMED";
   private static final float HEALTH_GREEN_THRESHOLD = 2f / 3f;
   private static final float HEALTH_YELLOW_THRESHOLD = 1f / 3f;
 
   private final AssetDescriptor<DC6>[] iconDescriptors;
+  private final AssetDescriptor<DC6> valkyrieIconDescriptor;
   private final Texture fill;
   private final Label name;
+  private final Label valkyrieName;
   private final Label tooltip;
   private final Label feedback;
   private EntitySubscription mercenaries;
+  private EntitySubscription summonedPets;
   private final ItemController itemController;
   private int mercenaryId = -1;
   private int mercenaryType = -1;
   private float life;
   private float maxLife;
+  private int valkyrieId = -1;
+  private float valkyrieLife;
+  private float valkyrieMaxLife;
   private boolean hovered;
   private float feedbackRemaining;
 
@@ -69,6 +79,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
           ICON_ROOT + ICON_NAMES[i], DC6.class, DC6Loader.DC6Parameters.COMBINE);
       Riiablo.assets.load(iconDescriptors[i]);
     }
+    valkyrieIconDescriptor = new AssetDescriptor<>(
+        ICON_ROOT + VALKYRIE_ICON_NAME, DC6.class, DC6Loader.DC6Parameters.COMBINE);
+    Riiablo.assets.load(valkyrieIconDescriptor);
 
     Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
     pixmap.setColor(Color.WHITE);
@@ -81,6 +94,13 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     name.setSize(WIDTH, 14);
     name.setAlignment(Align.center);
     addActor(name);
+    valkyrieName = new Label(resolveValkyrieName(), Riiablo.fonts.font16, Color.WHITE);
+    valkyrieName.setPosition(WIDTH + SLOT_GAP, 1);
+    valkyrieName.setSize(WIDTH, 14);
+    valkyrieName.setAlignment(Align.center);
+    valkyrieName.setTouchable(Touchable.disabled);
+    valkyrieName.setVisible(false);
+    addActor(valkyrieName);
     tooltip = new Label("", Riiablo.fonts.font16, Color.WHITE);
     // Native tooltip is a two-line hint below the name, not a single line
     // overlaying the portrait.
@@ -102,8 +122,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override public void enter(InputEvent event, float x, float y, int pointer,
           com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
-        hovered = true;
-        tooltip.setVisible(true);
+        updateHover(x);
       }
 
       @Override public void exit(InputEvent event, float x, float y, int pointer,
@@ -112,8 +131,13 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
         tooltip.setVisible(false);
       }
 
+      @Override public boolean mouseMoved(InputEvent event, float x, float y) {
+        updateHover(x);
+        return true;
+      }
+
       @Override public void clicked(InputEvent event, float x, float y) {
-        useCursorPotion();
+        if (isMercenaryPoint(x, y)) useCursorPotion();
       }
     });
     // Keep the right-button action separate from the potion drop listener.
@@ -121,7 +145,8 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     // a left-button drag/drop interaction.
     addListener(new ClickListener(Input.Buttons.RIGHT) {
       @Override public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null && Riiablo.game.hirelingPanel != null) {
+        if (isMercenaryPoint(x, y) && Riiablo.game != null
+            && Riiablo.game.hirelingPanel != null) {
           Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
           event.handle();
         }
@@ -165,7 +190,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   /** Tests a screen/stage point against the whole portrait drop target. */
   public boolean containsStagePoint(float stageX, float stageY) {
     Vector2 point = stageToLocalCoordinates(new Vector2(stageX, stageY));
-    return point.x >= 0 && point.y >= 0 && point.x <= getWidth() && point.y <= getHeight();
+    return isMercenaryPoint(point.x, point.y);
   }
 
   @Override public void act(float delta) {
@@ -185,40 +210,112 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     mercenaryType = -1;
     life = 0;
     maxLife = 0;
+    valkyrieId = -1;
+    valkyrieLife = 0;
+    valkyrieMaxLife = 0;
     if (mercenaries == null && Riiablo.engine != null) {
       mercenaries = Riiablo.engine.getAspectSubscriptionManager().get(
           Aspect.all(Mercenary.class, AttributesWrapper.class));
     }
-    if (mercenaries == null || Riiablo.game == null) {
+    if (summonedPets == null && Riiablo.engine != null) {
+      summonedPets = Riiablo.engine.getAspectSubscriptionManager().get(
+          Aspect.all(SummonedPet.class, AttributesWrapper.class));
+    }
+    if (Riiablo.game == null) {
       setVisible(false);
       return;
     }
-    IntBag entities = mercenaries.getEntities();
-    int[] ids = entities.getData();
-    for (int i = 0; i < entities.size(); i++) {
-      Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(ids[i]);
-      if (merc == null || merc.ownerId != Riiablo.game.player) continue;
-      mercenaryId = ids[i];
-      mercenaryType = Math.max(0, Math.min(iconDescriptors.length - 1, merc.mercType));
-      AttributesWrapper attrs = Riiablo.engine.getMapper(AttributesWrapper.class).get(mercenaryId);
-      if (attrs != null && attrs.attrs != null) {
-        StatRef hp = attrs.attrs.aggregate().get(Stat.hitpoints, StatRef.obtain());
-        StatRef max = attrs.attrs.aggregate().get(Stat.maxhp, StatRef.obtain());
-        life = hp == null ? 0 : hp.asFixed();
-        maxLife = max == null ? 0 : max.asFixed();
+    if (mercenaries != null) {
+      IntBag entities = mercenaries.getEntities();
+      int[] ids = entities.getData();
+      for (int i = 0; i < entities.size(); i++) {
+        Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(ids[i]);
+        if (merc == null || merc.ownerId != Riiablo.game.player) continue;
+        mercenaryId = ids[i];
+        mercenaryType = Math.max(0, Math.min(iconDescriptors.length - 1, merc.mercType));
+        float[] vitals = readVitals(mercenaryId);
+        life = vitals[0];
+        maxLife = vitals[1];
+        break;
       }
-      break;
     }
-    setVisible(mercenaryId >= 0);
+    if (summonedPets != null) {
+      IntBag entities = summonedPets.getEntities();
+      int[] ids = entities.getData();
+      for (int i = 0; i < entities.size(); i++) {
+        SummonedPet pet = Riiablo.engine.getMapper(SummonedPet.class).get(ids[i]);
+        if (pet == null || pet.ownerId != Riiablo.game.player || !isValkyriePetType(pet.petType)) {
+          continue;
+        }
+        valkyrieId = ids[i];
+        float[] vitals = readVitals(valkyrieId);
+        valkyrieLife = vitals[0];
+        valkyrieMaxLife = vitals[1];
+        break;
+      }
+    }
+    int slots = companionSlotCount(mercenaryId >= 0, valkyrieId >= 0);
+    setSize(slots * WIDTH + Math.max(0, slots - 1) * SLOT_GAP, HEIGHT);
+    valkyrieName.setPosition(companionSlotX(mercenaryId >= 0, true), 1);
+    name.setVisible(mercenaryId >= 0);
+    valkyrieName.setVisible(valkyrieId >= 0);
+    setVisible(slots > 0);
     if (!isVisible()) return;
     // MercData.name is a compact native name id, not a printable string. Until
     // Hireling.txt's NameFirst/NameLast mapping is loaded, do not leak 0x0000.
     Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(mercenaryId);
     name.setText(resolveMercenaryName(merc));
+    name.setPosition(companionSlotX(false, false), 1);
     name.setSize(WIDTH, 14);
+    valkyrieName.setText(resolveValkyrieName());
+    tooltip.setPosition(companionSlotX(false, false), -35);
     tooltip.setText(hovered ? localized("mercenary_heal_hint",
         "将药水放在肖像上即可治疗\n按下滑鼠右键可打開物品栏（O)") : "");
     tooltip.setSize(300, 32);
+  }
+
+  private float[] readVitals(int entityId) {
+    AttributesWrapper attrs = Riiablo.engine.getMapper(AttributesWrapper.class).get(entityId);
+    if (attrs == null || attrs.attrs == null) return new float[] {0, 0};
+    StatRef hp = attrs.attrs.aggregate().get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = attrs.attrs.aggregate().get(Stat.maxhp, StatRef.obtain());
+    return new float[] {hp == null ? 0 : hp.asFixed(), max == null ? 0 : max.asFixed()};
+  }
+
+  private void updateHover(float x) {
+    hovered = isMercenaryPoint(x, 0);
+    tooltip.setVisible(hovered);
+  }
+
+  private boolean isMercenaryPoint(float x, float y) {
+    return mercenaryId >= 0 && x >= 0 && x <= WIDTH && y >= 0 && y <= HEIGHT;
+  }
+
+  static boolean isValkyriePetType(String petType) {
+    return "valkyrie".equals(PetType.canonical(petType));
+  }
+
+  static int companionSlotCount(boolean hasMercenary, boolean hasValkyrie) {
+    return hasMercenary || hasValkyrie ? (hasMercenary && hasValkyrie ? 2 : 1) : 0;
+  }
+
+  static float companionSlotX(boolean hasMercenary, boolean valkyrie) {
+    return valkyrie && hasMercenary ? WIDTH + SLOT_GAP : 0;
+  }
+
+  private static String resolveValkyrieName() {
+    if (Riiablo.string != null && Riiablo.files != null && Riiablo.files.skills != null
+        && Riiablo.files.skilldesc != null) {
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get("Valkyrie");
+      if (skill != null) {
+        com.riiablo.codec.excel.SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
+        if (desc != null && desc.str_name != null) {
+          String value = Riiablo.string.lookup(desc.str_name);
+          if (value != null && !value.startsWith("ERROR:")) return value;
+        }
+      }
+    }
+    return "女武神";
   }
 
   /** Resolves the native Hireling.txt name key (the saved value is a name slot). */
@@ -274,25 +371,33 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     if (!isVisible()) return;
     AssetDescriptor<DC6> iconDescriptor = mercenaryType >= 0
         ? iconDescriptors[mercenaryType] : null;
-    if (iconDescriptor != null && Riiablo.assets.isLoaded(iconDescriptor.fileName, DC6.class)) {
-      DC6 icon = Riiablo.assets.get(iconDescriptor.fileName, DC6.class);
-      TextureRegion region = icon.getTexture(0);
-      // Native portraits are 46x41 (barbarian is 47x41). Do not rescale them.
-      float x = getX() + (getWidth() - region.getRegionWidth()) * 0.5f;
-      float y = getY() + 19f;
-      batch.setColor(1f, 1f, 1f, parentAlpha);
-      if (hovered && batch instanceof PaletteIndexedBatch) {
-        PaletteIndexedBatch indexed = (PaletteIndexedBatch) batch;
-        indexed.setBlendMode(BlendMode.BRIGHTEN, Riiablo.colors.highlight);
-        batch.draw(region, x, y);
-        indexed.resetBlendMode();
-      } else {
-        batch.draw(region, x, y);
-      }
+    drawCompanion(batch, parentAlpha, iconDescriptor, 0, life, maxLife, hovered);
+    drawCompanion(batch, parentAlpha, valkyrieIconDescriptor,
+        companionSlotX(mercenaryId >= 0, true), valkyrieLife, valkyrieMaxLife, false);
+    batch.setColor(Color.WHITE);
+    super.draw(batch, parentAlpha);
+  }
+
+  private void drawCompanion(Batch batch, float parentAlpha, AssetDescriptor<DC6> descriptor,
+      float slotX, float currentLife, float maximumLife, boolean highlight) {
+    if (descriptor == null || !Riiablo.assets.isLoaded(descriptor.fileName, DC6.class)) return;
+    DC6 icon = Riiablo.assets.get(descriptor.fileName, DC6.class);
+    TextureRegion region = icon.getTexture(0);
+    // Native portraits are 46x41 (barbarian is 47x41). Do not rescale them.
+    float x = getX() + slotX + (WIDTH - region.getRegionWidth()) * 0.5f;
+    float y = getY() + 19f;
+    batch.setColor(1f, 1f, 1f, parentAlpha);
+    if (highlight && batch instanceof PaletteIndexedBatch) {
+      PaletteIndexedBatch indexed = (PaletteIndexedBatch) batch;
+      indexed.setBlendMode(BlendMode.BRIGHTEN, Riiablo.colors.highlight);
+      batch.draw(region, x, y);
+      indexed.resetBlendMode();
+    } else {
+      batch.draw(region, x, y);
     }
 
-    float ratio = maxLife <= 0 ? 0 : Math.max(0, Math.min(1, life / maxLife));
-    float barX = getX() + 5f;
+    float ratio = maximumLife <= 0 ? 0 : Math.max(0, Math.min(1, currentLife / maximumLife));
+    float barX = getX() + slotX + 5f;
     float barY = getY() + 63f;
     Color healthColor = healthBarColor(ratio);
     // The original portrait has no dark/opaque background behind the life bar.
@@ -305,8 +410,6 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     if (batch instanceof PaletteIndexedBatch) {
       ((PaletteIndexedBatch) batch).resetBlendMode();
     }
-    batch.setColor(Color.WHITE);
-    super.draw(batch, parentAlpha);
   }
 
   @Override public void dispose() {
@@ -314,5 +417,6 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     for (AssetDescriptor<DC6> iconDescriptor : iconDescriptors) {
       Riiablo.assets.unload(iconDescriptor.fileName);
     }
+    Riiablo.assets.unload(valkyrieIconDescriptor.fileName);
   }
 }
