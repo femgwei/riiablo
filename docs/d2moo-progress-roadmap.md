@@ -5435,7 +5435,7 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
   不再丢失；快捷技能提示框同时渲染三组原生描述行，并按硬点技能等级计算协同。
 - 验证：`:core:test --tests com.riiablo.widget.SkillDetailsDamageTest --no-daemon`、
   `:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest --no-daemon`
-  均通过；功能提交为 `9cb1a1ef`，远程推送状态在本轮交接后核对。
+  均通过；功能提交为 `9cb1a1ef`，已推送至 `origin/master`，当前本地与远程一致。
 
 下一项：在真实 Amazon 存档中验收技能树/快捷栏的本地化文本和装备切换后的武器伤害数值，
 继续保持服务端伤害快照与客户端预览公式一致。
