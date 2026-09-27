@@ -142,6 +142,20 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void poisonCloudUsesLargeClientPuffCallback() {
+    Missiles.Entry cloud = Riiablo.files.Missiles.get("poisonjavcloud");
+    Missiles.Entry plague = Riiablo.files.Missiles.get("plaguejavcloud");
+    assertNotNull(cloud);
+    assertNotNull(plague);
+    assertEquals(4, cloud.pCltDoFunc);
+    assertEquals(4, plague.pCltDoFunc);
+    assertEquals("PoisonSparks", cloud.CelFile);
+    assertEquals("poisonpuff", cloud.CltSubMissile[0]);
+    assertEquals(24, MissileImpactPresentationSystem.cltParam(cloud, 0, 1));
+    assertTrue(MissileImpactPresentationSystem.isClientFlightFunction(cloud.pCltDoFunc));
+  }
+
+  @Test
   void holyBoltDelayUsesAuthoritativeServerChild() {
     Missiles.Entry delay = Riiablo.files.Missiles.get("fistoftheheavensdelay");
     assertNotNull(delay);

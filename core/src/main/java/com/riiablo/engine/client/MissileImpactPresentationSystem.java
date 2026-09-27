@@ -103,7 +103,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
-    if (function != 8 && function != 49) return;
+    // Native client callback 4 is used by poisonjavcloud/plaguejavcloud:
+    // every CltParam1 frames it emits the large poisonpuff visual.  The
+    // authoritative server already replicates the small PoisonSparks cloud;
+    // this callback supplies the separate PoisonSmokePuff layer seen in D2.
+    if (!isClientFlightFunction(function)) return;
     String childName = first(source.CltSubMissile, 0);
     if (childName == null || childName.isEmpty() || factory == null) return;
 
@@ -119,6 +123,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
       createFlightVisual(source, childName, at, angle);
     }
+  }
+
+  static boolean isClientFlightFunction(int function) {
+    return function == 4 || function == 8 || function == 49;
   }
 
   private void createFlightVisual(Missiles.Entry source, String childName,
