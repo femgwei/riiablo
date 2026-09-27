@@ -312,6 +312,10 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     if (!updateNativeRoom(entityId, missile, position)) return;
 
+    if (missile.poisonCloudTraveling) {
+      advancePoisonCloudTravel(missile, position, velocity, moveDistance);
+    }
+
     if (!missile.persistent && isStationaryPoisonCloud(missile, velocity)) {
       configurePersistentPoisonCloud(missile, null);
     }
@@ -2684,6 +2688,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missile cloud = mMissile.get(id);
     cloud.skillId = source.skillId;
     cloud.damageLevel = Math.max(1, source.damageLevel);
+    cloud.poisonCloudLoops = 2 * Math.max(0, cloud.damageLevel - 1);
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
     configurePersistentPoisonCloud(cloud, skill);
     log.info("[AMAZON_POISON_CLOUD] phase=create owner={} skill={} source={} child={} "
@@ -2719,13 +2724,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     int created = 0;
     for (int i = 0; i < POISON_CLOUD_X.length; i += mainStep) {
       created += createPoisonCloudChild(source, row, skill, ownerAttrs, origin,
-          POISON_CLOUD_X[i], POISON_CLOUD_Y[i], loops);
+          POISON_CLOUD_X[i], POISON_CLOUD_Y[i], loops, false);
     }
     if (subStep > 0) {
       for (int i = 0; i < POISON_CLOUD_X.length - 1; i += subStep) {
         int offset = i + 1;
         created += createPoisonCloudChild(source, row, skill, ownerAttrs, origin,
-            POISON_CLOUD_X[offset], POISON_CLOUD_Y[offset], loops);
+            POISON_CLOUD_X[offset], POISON_CLOUD_Y[offset], loops, true);
       }
     }
     log.info("[AMAZON_PLAGUE_JAVELIN] phase=cloud_fanout owner={} skill={} source={} "
@@ -2736,18 +2741,42 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private int createPoisonCloudChild(Missile source, Missiles.Entry row,
       Skills.Entry skill, Attributes ownerAttrs, Vector2 origin,
-      int offsetX, int offsetY, int loops) {
+      int offsetX, int offsetY, int loops, boolean subRing) {
     int id = factory.createMissile(row, Vector2.X,
         new Vector2(origin).add(offsetX, offsetY), source.ownerId);
     if (id < 0 || !mMissile.has(id)) return 0;
     Missile cloud = mMissile.get(id);
     cloud.skillId = source.skillId;
     cloud.damageLevel = Math.max(1, source.damageLevel);
-    configurePersistentPoisonCloud(cloud, skill);
-    // nLoops controls the native child path.  The Java area is stationary,
-    // so preserve it as a diagnostic/lifetime hint without moving the cloud.
-    if (loops > 0) cloud.remainingFrames = Math.max(cloud.remainingFrames, loops);
+    cloud.poisonCloudLoops = loops;
+    cloud.poisonCloudTarget.set(origin).add(offsetX, offsetY);
+    cloud.poisonCloudTraveling = true;
+    int speedParam = arrayValue(row.Param, subRing ? 1 : 0);
+    if (mVelocity.has(id)) {
+      Vector2 velocity = mVelocity.get(id).velocity;
+      velocity.set(cloud.poisonCloudTarget).sub(origin);
+      if (velocity.isZero(0.0001f)) {
+        cloud.poisonCloudTraveling = false;
+        velocity.setZero();
+        configurePersistentPoisonCloud(cloud, skill);
+      } else {
+        velocity.setLength(Math.max(0.1f, speedParam) * 0.75f);
+      }
+    }
     return 1;
+  }
+
+  /** Advances a D2MOO poison-cloud child to its ring target and starts its area mode. */
+  private void advancePoisonCloudTravel(Missile cloud, Position position,
+      Velocity velocity, float moveDistance) {
+    if (cloud == null || position == null || velocity == null || !cloud.poisonCloudTraveling) return;
+    float remaining = position.position.dst(cloud.poisonCloudTarget);
+    if (remaining > Math.max(0.05f, moveDistance) && moveDistance > 0f) return;
+    position.position.set(cloud.poisonCloudTarget);
+    velocity.velocity.setZero();
+    cloud.poisonCloudTraveling = false;
+    Skills.Entry skill = cloud.skillId >= 0 ? Riiablo.files.skills.get(cloud.skillId) : null;
+    configurePersistentPoisonCloud(cloud, skill);
   }
 
   private void configurePersistentPoisonCloud(Missile cloud, Skills.Entry sourceSkill) {
@@ -2786,7 +2815,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       cloud.damageSnapshot = true;
     }
     cloud.persistent = true;
-    cloud.remainingFrames = Math.max(1, cloud.missile.Range);
+    int loops = Math.max(0, cloud.poisonCloudLoops);
+    cloud.remainingFrames = poisonCloudLifetime(cloud.missile, loops);
     cloud.tickInterval = Math.max(1,
         cloud.missile.DamageRate > 0 ? cloud.missile.DamageRate : 10);
     cloud.pierceEnabled = true;
@@ -2802,6 +2832,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     return "pois".equalsIgnoreCase(type)
         || name != null && name.toLowerCase(java.util.Locale.ROOT).contains("poisoncloud")
         || skill != null && skill.toLowerCase(java.util.Locale.ROOT).contains("poison");
+  }
+
+  static int poisonCloudLifetime(Missiles.Entry row, int loops) {
+    if (row == null) return 0;
+    int loopFrames = row.SubLoop > 0
+        ? Math.max(0, row.SubStop - row.SubStart) : 0;
+    return Math.max(1, row.Range + Math.max(0, loops) * loopFrames);
   }
 
   private static int skillDamageLengthBonus(Skills.Entry skill, int level) {

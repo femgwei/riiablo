@@ -564,6 +564,9 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(1, row.sHitPar[0]);
       assertEquals(2, row.sHitPar[1]);
       assertEquals(3, row.sHitPar[2]);
+      assertEquals(row.Range + 3 * (row.SubStop - row.SubStart),
+          MissileCollisionSystem.poisonCloudLifetime(row, row.sHitPar[2]),
+          "native SubLoop must extend each poison-cloud child lifetime");
       int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
       Missile source = world.getMapper(Missile.class).get(sourceId);
       MissileDamageResolver.initializeSkill(source, skill, owner, 1);
@@ -574,6 +577,10 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           .filter(name -> "plaguejavcloud".equalsIgnoreCase(name)).count();
       assertEquals(24, clouds,
           "SrvHit02 must create the 16 main and 8 interleaved native cloud children");
+      assertEquals(24, factory.created.stream()
+          .filter(m -> m.missile != null && "plaguejavcloud".equalsIgnoreCase(m.missile.Missile))
+          .filter(m -> m.poisonCloudTraveling).count(),
+          "ring children must travel from the impact origin to their native offsets");
     } finally {
       world.dispose();
     }
