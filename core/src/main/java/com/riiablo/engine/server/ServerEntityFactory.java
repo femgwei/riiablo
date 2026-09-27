@@ -63,6 +63,8 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.event.SkillStartEvent;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -1101,7 +1103,10 @@ public class ServerEntityFactory extends EntityFactory {
     Map.RoomEx missileRoom = missileZone != null
         ? missileZone.findRoomEx(position.x, position.y) : null;
     missileComponent.roomId = missileRoom != null ? missileRoom.id : -1;
-    mVelocity.create(id).velocity.set(angle).setLength(missile.Vel);
+    float velocity = missile.Vel;
+    int slowPercent = slowMissileVelocityPercent(ownerId, missile);
+    if (slowPercent > 0) velocity = velocity * slowPercent / 100f;
+    mVelocity.create(id).velocity.set(angle).setLength(velocity);
     mAngle.create(id).set(angle);
     mSize.create(id).size = Size.SMALL;
     // Missiles are authoritative network entities. Their deletion is then
@@ -1113,5 +1118,24 @@ public class ServerEntityFactory extends EntityFactory {
         id, ownerId, missile.Range, position.x, position.y, 
         missileComponent.missileDescriptor != null ? missileComponent.missileDescriptor.fileName : "null");
     return id;
+  }
+
+  /**
+   * D2MOO Missiles.cpp applies slowmissiles when a monster projectile is
+   * created, not while it is already in flight.  The state carries the native
+   * STAT_SKILL_HANDOFATHENA percentage; CanSlow remains a per-missile gate.
+   */
+  private int slowMissileVelocityPercent(int ownerId, Missiles.Entry missile) {
+    if (ownerId < 0 || !mMonster.has(ownerId) || !mUnitStates.has(ownerId)) return 0;
+    UnitStates unitStates = mUnitStates.get(ownerId);
+    return slowMissileVelocityPercent(missile,
+        unitStates != null ? unitStates.stateList : null);
+  }
+
+  static int slowMissileVelocityPercent(Missiles.Entry missile, StateList states) {
+    if (missile == null || !missile.CanSlow || states == null
+        || !states.hasState(StateId.SLOWMISSILES)) return 0;
+    int percent = states.getTotalStatContribution(Stat.skill_handofathena);
+    return Math.max(0, Math.min(100, percent));
   }
 }

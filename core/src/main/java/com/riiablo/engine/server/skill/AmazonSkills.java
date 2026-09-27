@@ -196,6 +196,12 @@ public final class AmazonSkills {
     return 33;
   }
 
+  /** Returns true for the native Slow Missiles row (SrvDo006). */
+  public static boolean isSlowMissiles(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillId.SLOW_MISSILES
+        || skill.skill != null && "Slow Missiles".equalsIgnoreCase(skill.skill.trim()));
+  }
+
   /**
    * 躲避 - 闪避远程攻击
    * 

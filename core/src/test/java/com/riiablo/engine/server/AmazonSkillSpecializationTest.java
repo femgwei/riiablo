@@ -805,6 +805,43 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void slowMissilesAppliesNativeStateAndVelocityStatInsteadOfInnerSight() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry slowMissiles = Riiablo.files.skills.get("Slow Missiles");
+      assertNotNull(slowMissiles);
+      data.setSkillLevel(slowMissiles.Id, 1);
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(10, 100);
+
+      int target = monster(world, 4, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(5, 100);
+      world.getMapper(UnitStates.class).create(target).init(target);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, slowMissiles.Id, Engine.INVALID_ENTITY, new Vector2(),
+          slowMissiles.srvdofunc, 0));
+
+      UnitState state = world.getMapper(UnitStates.class).get(target)
+          .stateList.getStateLayer(StateId.SLOWMISSILES, amazon, slowMissiles.Id);
+      assertNotNull(state);
+      assertEquals(AmazonSkills.getSlowMissilesPercent(1),
+          state.getStatContributionValue(Stat.skill_handofathena));
+      assertEquals(0, world.getMapper(UnitStates.class).get(target)
+          .stateList.getTotalFlatDefenseModifier());
+      assertTrue(state.duration > 0);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void passiveDodgeAvoidEvadeUseNativeAttackContext() {
     DefenseCalculator defense = DefenseCalculator.INSTANCE;
     assertEquals(DefenseCalculator.DEFENSE_DODGE,

@@ -3,6 +3,18 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-27 Slow Missiles（慢速箭）链路修正
+
+- [x] `SrvDo006` 现在区分 Inner Sight 与 Slow Missiles；慢速箭按原生范围/持续时间
+  给敌方单位添加 `SLOWMISSILES` 状态，并写入 `STAT_SKILL_HANDOFATHENA=33`（有效速度
+  百分比固定为 33，不改变怪物移动或攻击速度）。
+- [x] 怪物创建 `Missiles.txt:CanSlow=1` 的投射物时，在生成瞬间读取该状态并将速度缩放为
+  状态百分比；玩家投射物、`CanSlow=0` 投射物和已经飞行的投射物不受影响。
+- [x] 新增慢速箭状态/属性测试和 `CanSlow` 门控测试：
+  `AmazonSkillSpecializationTest.slowMissilesAppliesNativeStateAndVelocityStatInsteadOfInnerSight`、
+  `MissileNativePolicyTest.slowMissileVelocityUsesCanSlowAndNativeStateStat`；定向测试通过。
+- [ ] 仍需带真实 1.10f MPQ 的怪物远程投射物离屏/双客户端验证。
+
 ## 说明
 
 这里的百分比按“可运行行为 + 原生分支 + 数据表/RNG + 状态副作用 + 测试覆盖”估算，

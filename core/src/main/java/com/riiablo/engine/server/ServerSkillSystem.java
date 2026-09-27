@@ -578,7 +578,11 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 6 || skill.srvdofunc == 6
         || "Inner Sight".equalsIgnoreCase(skill.skill)) {
-      applyInnerSight(event, skill, skillLevel, start);
+      if (AmazonSkills.isSlowMissiles(skill)) {
+        applySlowMissiles(event, skill, skillLevel, start);
+      } else {
+        applyInnerSight(event, skill, skillLevel, start);
+      }
       return;
     }
     if (event.srvdofunc == 20 || skill.srvdofunc == 20) {
@@ -1525,6 +1529,54 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
             + "defense={} affected={} status=PASS",
         event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  /**
+   * Native SrvDo006 also services Slow Missiles.  The two skills share the
+   * callback number in Skills.txt, but their aura target state/stat-list are
+   * different: Inner Sight contributes armorclass while Slow Missiles only
+   * installs the slowmissiles marker and skill_handofathena percentage.
+   */
+  private void applySlowMissiles(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
+    // 1.10f's level-one fallback is 12 seconds; each level adds 6 seconds.
+    if (duration <= 0) duration = 300 + Math.max(0, skillLevel - 1) * 150;
+    int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    if (range <= 0) range = 13 + Math.max(0, skillLevel - 1);
+    duration = Math.max(1, duration);
+    range = Math.max(1, Math.min(128, range));
+
+    int slowPercent = 0;
+    if (skill.aurastatcalc != null && skill.aurastatcalc.length > 0) {
+      slowPercent = SkillFormula.evaluate(skill.aurastatcalc[0], skill, skillLevel);
+    }
+    if (slowPercent <= 0) slowPercent = AmazonSkills.getSlowMissilesPercent(skillLevel);
+    slowPercent = Math.max(1, Math.min(100, slowPercent));
+
+    int affected = 0;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    float range2 = range * (float) range;
+    for (int i = 0; i < entities.size(); i++) {
+      int targetId = entities.get(i);
+      if (targetId == event.entityId || !isHostile(event.entityId, targetId)
+          || !mPosition.has(targetId) || !hasPositiveLife(targetId)
+          || caster.dst2(mPosition.get(targetId).position) > range2) continue;
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      UnitStates states = mUnitStates.get(targetId);
+      if (states.stateList == null) states.init(targetId);
+      UnitState state = states.stateList.addStateLayer(
+          StateId.SLOWMISSILES, duration, skillLevel, event.entityId, event.skillId);
+      if (state == null) continue;
+      state.setStatContribution(Stat.skill_handofathena, 0,
+          NativeStatResolver.Operation.ADD, slowPercent);
+      state.needsSync = true;
+      affected++;
+    }
+    log.info("[SLOW_MISSILES] phase=apply source={} skill={} level={} range={} duration={} "
+            + "velocityPercent={} affected={} status=PASS",
+        event.entityId, event.skillId, skillLevel, range, duration, slowPercent, affected);
   }
 
   /** Native SrvDo006: apply Inner Sight's flat defense reduction to hostiles. */

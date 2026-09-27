@@ -12,12 +12,16 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.map.DT1;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -93,6 +97,23 @@ class MissileNativePolicyTest {
     assertFalse(MissileCollisionSystem.hasLastCollide(missile));
     missile.missile.LastCollide = true;
     assertTrue(MissileCollisionSystem.hasLastCollide(missile));
+  }
+
+  @Test
+  void slowMissileVelocityUsesCanSlowAndNativeStateStat() {
+    Missiles.Entry row = new Missiles.Entry();
+    row.CanSlow = true;
+    StateList states = new StateList(4);
+    UnitState slow = states.addStateLayer(StateId.SLOWMISSILES, 300, 1, 2, 17);
+    slow.setStatContribution(Stat.skill_handofathena, 0,
+        NativeStatResolver.Operation.ADD, 33);
+
+    assertEquals(33, ServerEntityFactory.slowMissileVelocityPercent(row, states));
+    row.CanSlow = false;
+    assertEquals(0, ServerEntityFactory.slowMissileVelocityPercent(row, states));
+    row.CanSlow = true;
+    states.removeState(StateId.SLOWMISSILES);
+    assertEquals(0, ServerEntityFactory.slowMissileVelocityPercent(row, states));
   }
 
   @Test
