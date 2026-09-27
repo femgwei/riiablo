@@ -11,6 +11,8 @@
 - [x] 新增 `AnimationSubLoopTest.changingRatePreservesFractionalFrameProgress`，并通过
   `:core:test --tests com.riiablo.codec.AnimationSubLoopTest --no-daemon`；
   `:core:compileJava --no-daemon` 通过。
+- 功能提交：`946a78bf`，已推送到 `origin/master`；当前工作区仅保留未跟踪诊断日志
+  `game.log`，未纳入提交。
 - [ ] 仍需另一台电脑使用真实 1.10f MPQ 验证 Ice Arrow 连续施法释放后能回到 NU，且
   移动中的怪物动画持续推进；本次修复不改变攻击输入/技能伤害时序。
 
