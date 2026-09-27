@@ -275,15 +275,20 @@ public class Actioneer extends PassiveSystem {
     }
     boolean player = mPlayer.has(entityId);
     boolean rangedNormalAttack = player && isPlayerRangedNormalAttack(entityId);
-    if (requiresNormalMeleeCastRange(skillId, targetId, player, rangedNormalAttack)
-        && !isInMeleeRangeAtTick(entityId, targetId, 0, snapshotTick)) {
+    final Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    boolean lightningStrike = isLightningStrikeSkill(skill);
+    boolean requiresMeleeRange = requiresNormalMeleeCastRange(
+        skillId, targetId, player, rangedNormalAttack)
+        || lightningStrike && targetId != Engine.INVALID_ENTITY;
+    if ((lightningStrike && targetId == Engine.INVALID_ENTITY)
+        || (requiresMeleeRange
+            && !isInMeleeRangeAtTick(entityId, targetId, 0, snapshotTick))) {
       log.info("[ATTACK_ANIM] phase=reject entity={} skill={} target={} "
               + "reason=melee_out_of_range tick={}",
           entityId, skillId, targetId, snapshotTick);
       return;
     }
     moveTo(entityId, Engine.INVALID_ENTITY);
-    final Skills.Entry skill = Riiablo.files.skills.get(skillId);
     log.traceEntry("cast(entityId: {}, skillId: {} ({}), targetId: {}, targetVec: {})",
         entityId, skillId, skill, targetId, targetVec);
 
@@ -631,6 +636,19 @@ public class Actioneer extends PassiveSystem {
       log.warn("Skill {} not found for entity {}, cancelling casting", casting.skillId, event.entityId);
       mCasting.remove(event.entityId);
       mSequence.remove(event.entityId);
+      return;
+    }
+
+    // Lightning Strike is SrvSt10/SrvDo14: its elemental packet is attached
+    // to the same point-blank weapon hit that starts the chain.  Re-check the
+    // native melee range at the attack keyframe as the target may have moved
+    // after cast start; otherwise a ranged click can still create the strike.
+    if (isLightningStrikeSkill(skill)
+        && (casting.targetId == Engine.INVALID_ENTITY
+            || !isInMeleeRange(event.entityId, casting.targetId, 0))) {
+      log.info("[AMAZON_LIGHTNING_STRIKE] phase=reject source={} target={} "
+              + "reason=melee_out_of_range",
+          event.entityId, casting.targetId);
       return;
     }
 
@@ -1580,7 +1598,7 @@ public class Actioneer extends PassiveSystem {
             // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
             break;
           }
-          int bonus = isPlayerEntity(entityId) ? 3 : 0;
+          int bonus = lightningStrike ? 0 : isPlayerEntity(entityId) ? 3 : 0;
           // Native monster basic attacks backed by MonStats.MissA1/MissA2
           // are ranged even though they use the shared Attack skill.  The
           // melee-range rejection must not run before their projectile is
@@ -3682,6 +3700,12 @@ public class Actioneer extends PassiveSystem {
       int skillId, int targetId, boolean player, boolean rangedNormalAttack) {
     return player && skillId == SkillCodes.attack
         && targetId != Engine.INVALID_ENTITY && !rangedNormalAttack;
+  }
+
+  private static boolean isLightningStrikeSkill(Skills.Entry skill) {
+    return skill != null
+        && (skill.Id == SkillId.LIGHTNING_STRIKE
+            || "Lightning Strike".equalsIgnoreCase(skill.skill));
   }
 
   private static int statInt(Attributes attrs, short stat) {
