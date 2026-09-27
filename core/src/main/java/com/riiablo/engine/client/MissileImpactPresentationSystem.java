@@ -103,11 +103,18 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
+    // Native client callback 3 is used by Plague Javelin itself.  Its server
+    // callback is SrvDo03, so the server only creates the poison cloud fan-out
+    // at impact; the client callback must lay the visual cloud trail while the
+    // javelin is still in flight.  Poison Javelin also has pCltDoFunc=3, but
+    // its SrvDo02 already emits authoritative cloud children every update, so
+    // do not add a second client-only trail for that row.
     // Native client callback 4 is used by poisonjavcloud/plaguejavcloud:
     // every CltParam1 frames it emits the large poisonpuff visual.  The
     // authoritative server already replicates the small PoisonSparks cloud;
     // this callback supplies the separate PoisonSmokePuff layer seen in D2.
     if (!isClientFlightFunction(function)) return;
+    if (function == 3 && source.pSrvDoFunc != 3) return;
     String childName = first(source.CltSubMissile, 0);
     if (childName == null || childName.isEmpty() || factory == null) return;
 
@@ -116,16 +123,24 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // Without this edge emission Riiablo shows only PoisonSparks during the
     // opening frames, unlike the native screenshot where a large puff is
     // already present at the start of the trail.
+    boolean trailCallback = function == 3;
     if (!visual.clientFlightInitialized) {
       Vector2 at = mPosition.get(entityId).position;
       float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
       createFlightVisual(source, childName, at, angle);
       visual.clientFlightInitialized = true;
+      // Callback 3 emits one cloud at the missile's current position on the
+      // initialization update.  Do not emit a second cloud for that same
+      // update; subsequent updates emit one cloud each frame.
+      if (trailCallback) {
+        advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
+        return;
+      }
     }
 
     int elapsedFrames = Math.max(1, Math.round(delta * 25f));
     int previousFrame = advanceClientFrame(visual, elapsedFrames);
-    int interval = Math.max(1, cltParam(source, 0, 1));
+    int interval = trailCallback ? 1 : Math.max(1, cltParam(source, 0, 1));
     int firstFrame = previousFrame + 1;
     int lastFrame = visual.clientFrame;
     for (int frame = firstFrame; frame <= lastFrame; frame++) {
@@ -137,7 +152,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   }
 
   static boolean isClientFlightFunction(int function) {
-    return function == 4 || function == 8 || function == 49;
+    return function == 3 || function == 4 || function == 8 || function == 49;
   }
 
   static int advanceClientFrame(Missile visual, int elapsedFrames) {

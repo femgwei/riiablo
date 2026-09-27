@@ -158,6 +158,16 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void plagueJavelinUsesClientFlightTrailCallback() {
+    Missiles.Entry plague = Riiablo.files.Missiles.get("plaguejavelin");
+    assertNotNull(plague);
+    assertEquals(3, plague.pCltDoFunc);
+    assertEquals(3, plague.pSrvDoFunc);
+    assertEquals("plaguejavcloud", plague.CltSubMissile[0]);
+    assertTrue(MissileImpactPresentationSystem.isClientFlightFunction(plague.pCltDoFunc));
+  }
+
+  @Test
   void poisonCloudClientClockAdvancesIndependentlyFromAuthoritativeClock() {
     Missile cloud = new Missile();
     cloud.authoritative = true;
