@@ -20,7 +20,6 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.graphics.PaletteIndexedBatch;
@@ -29,7 +28,7 @@ import com.riiablo.profiler.GpuSystem;
 import com.riiablo.widget.Label;
 
 @GpuSystem
-@All({Monster.class, Hovered.class, Position.class})
+@All({Monster.class, Hovered.class})
 @Exclude(com.riiablo.engine.client.component.Label.class)
 public class MonsterLabelManager extends BaseEntitySystem {
   protected ComponentMapper<Monster> mMonster;
@@ -54,6 +53,8 @@ public class MonsterLabelManager extends BaseEntitySystem {
   protected void end() {
     if (!monsterLabel.isVisible()) return;
     batch.begin();
+    // This is the native top-center summon/monster header, not a world-space
+    // nameplate. Keep it aligned with the top edge of the summon icon strip.
     tmpVec2.set(Gdx.graphics.getWidth() / 2, iso.viewportHeight * 0.05f);
     iso.unproject(tmpVec2);
     monsterLabel.setPosition(tmpVec2.x, tmpVec2.y, Align.top | Align.center);
@@ -81,8 +82,6 @@ public class MonsterLabelManager extends BaseEntitySystem {
 
     Table label;
     Label name;
-    Label type;
-    StringBuilder typeBuilder = new StringBuilder(32);
     PaletteIndexedColorDrawable background;
 
     MonsterLabel() {
@@ -97,37 +96,25 @@ public class MonsterLabelManager extends BaseEntitySystem {
       label.add(name = new com.riiablo.widget.Label(Riiablo.fonts.font16));
       label.pack();
 
-      add(label).space(4).center().row();
-      add(type = new Label(Riiablo.fonts.ReallyTheLastSucker)).row();
+      // The original header is a compact dark-red health bar with the name
+      // centered inside it; there is no second monster-description row.
+      add(label).center().row();
       pack();
     }
 
     float set(int entityId) {
       MonStats.Entry monstats = mMonster.get(entityId).monstats;
-      String displayName = Riiablo.string.lookup(monstats.NameStr);
+      String displayName = monstats != null ? Riiablo.string.lookup(monstats.NameStr) : "";
       if (mSummonedPet.has(entityId)) {
         SummonedPet pet = mSummonedPet.get(entityId);
         // Monster rows such as skeleton1 and druidbear use generic native
         // names.  PetType is the authoritative summon-list name and keeps
         // the top-center label stable across revived/custom monster rows.
         String summonName = PetType.getNameForLabel(pet != null ? pet.petType : null);
-        if (summonName != null && !summonName.isEmpty()) displayName = summonName;
+        if ((displayName == null || displayName.isEmpty())
+            && summonName != null && !summonName.isEmpty()) displayName = summonName;
       }
       name.setText(displayName);
-      typeBuilder.setLength(0);
-      if (monstats.lUndead || monstats.hUndead) {
-        typeBuilder.append(Riiablo.string.lookup("UndeadDescriptX")).append(' ');
-      } else if (monstats.demon) {
-        typeBuilder.append(Riiablo.string.lookup("DemonID")).append(' ');
-      }
-
-      if (!monstats.DescStr.isEmpty()) {
-        typeBuilder.append(Riiablo.string.lookup(monstats.DescStr)).append(' ');
-      }
-
-      if (typeBuilder.length() > 0) typeBuilder.setLength(typeBuilder.length() - 1);
-      type.setText(typeBuilder);
-      //pack();
 
       AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
       if (wrapper == null || wrapper.attrs == null) return 0f;
