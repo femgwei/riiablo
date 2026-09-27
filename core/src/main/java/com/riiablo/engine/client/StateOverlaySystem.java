@@ -157,8 +157,8 @@ public class StateOverlaySystem extends IteratingSystem {
 
   private int coldColorShift(UnitStates states) {
     boolean cold = states.stateList.hasState(StateId.COLD);
-    boolean freeze = states.stateList.hasState(StateId.FREEZE);
-    if (!cold && !freeze) return -1;
+    boolean freezeActive = states.stateList.hasState(StateId.FREEZE);
+    if (!cold && !freezeActive) return -1;
     // Stock 1.10f States.txt uses ColorShift 108 for both COLD and FREEZE.
     // Keep the native fallback for headless tests or trimmed data packs.
     int fallback = 108;
@@ -167,10 +167,10 @@ public class StateOverlaySystem extends IteratingSystem {
     if (cold) {
       best = Riiablo.files.States.get("cold");
     }
-    if (freeze) {
-      States.Entry freeze = Riiablo.files.States.get("freeze");
-      if (freeze != null && (best == null || freeze.colorPriority >= best.colorPriority)) {
-        best = freeze;
+    if (freezeActive) {
+      States.Entry freezeEntry = Riiablo.files.States.get("freeze");
+      if (freezeEntry != null && (best == null || freezeEntry.colorPriority >= best.colorPriority)) {
+        best = freezeEntry;
       }
     }
     return best == null ? fallback : best.colorShift;

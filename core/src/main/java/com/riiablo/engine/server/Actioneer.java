@@ -1830,7 +1830,7 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
           int conversion = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, Math.min(100,
-                  SkillFormula.evaluate(activeSkill.calc3, activeSkill, activeSkillLevel))) : 0;
+                  SkillFormula.evaluate(activeSkill.calc4, activeSkill, activeSkillLevel))) : 0;
           combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
@@ -2290,7 +2290,7 @@ public class Actioneer extends PassiveSystem {
         skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(
-            skill.calc3, skill, level))) : 0;
+            skill.calc4, skill, level))) : 0;
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating, conversion,
@@ -2315,6 +2315,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     CombatSystem.CombatResult combat = casting.impaleCombat;
+    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
     Item weapon = casting.impaleWeapon;
     casting.impaleCombat = null;
     casting.impaleTargetId = Engine.INVALID_ENTITY;
@@ -2329,7 +2330,7 @@ public class Actioneer extends PassiveSystem {
           targetId, combat.blocked ? "blocked" : "miss");
       return;
     }
-    drainFrenzyDurability(weapon, targetId);
+    drainImpaleDurability(weapon, skill, Math.max(1, skillLevel(entityId, skill.Id)), targetId);
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
@@ -2346,6 +2347,30 @@ public class Actioneer extends PassiveSystem {
     if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
     log.info("[AMAZON_IMPALE] phase=keyframe source={} target={} result=hit damage={} hp={} -> {}",
         entityId, targetId, applied, before, hp.asFixed());
+  }
+
+  /** Impale's native calc2/calc3 weapon quantity/durability roll. */
+  private void drainImpaleDurability(Item weapon, Skills.Entry skill, int level, int targetId) {
+    if (weapon != null && weapon.base != null && weapon.attrs != null) {
+      int chance = Math.max(0, Math.min(100,
+          SkillFormula.evaluate(skill.calc2, skill, level)));
+      int amount = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, level));
+      if (MathUtils.random(99) < chance) {
+        if (weapon.base.stackable) {
+          StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+          if (quantity != null && quantity.asInt() > 0) {
+            int next = quantity.asInt() - 1;
+            weapon.attrs.base().put(Stat.quantity, next);
+            weapon.attrs.aggregate().put(Stat.quantity, next);
+          }
+        } else {
+          ItemDurabilityManager.INSTANCE.drainDurability(weapon, amount);
+        }
+      }
+    }
+    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
+      ItemDurabilityManager.INSTANCE.drainArmorDurability(mPlayer.get(targetId).data.getItems());
+    }
   }
 
   /** Native SrvSt09: choose the first target and cap attacks by nearby targets/calc1. */
@@ -2431,7 +2456,7 @@ public class Actioneer extends PassiveSystem {
     int attackRating = AmazonSkills.getAttackRating(
         skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
-        ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc3, skill, level))) : 0;
+        ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(target),
         damage[0], damage[1], attackRating, conversion,
