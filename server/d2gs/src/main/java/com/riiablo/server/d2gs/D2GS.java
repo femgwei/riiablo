@@ -7542,7 +7542,13 @@ public class D2GS extends ApplicationAdapter {
         return true;
       });
     } else if (operation == ItemMoveOperation.USE_INVENTORY_ITEM) {
-      outcome = useInventoryItem(playerEntityId, character, intent);
+      com.riiablo.item.Item inventoryItem = ownedItem(character, intent.itemId);
+      if (inventoryItem != null && inventoryItem.type != null
+          && inventoryItem.type.is(com.riiablo.item.Type.POTI)) {
+        outcome = authoritativeItems.useInventoryPotion(playerEntityId, character, intent);
+      } else {
+        outcome = useInventoryItem(playerEntityId, character, intent);
+      }
     } else if (operation == ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY) {
       com.riiablo.engine.server.MercenaryPotionSystem potions =
           world.getSystem(com.riiablo.engine.server.MercenaryPotionSystem.class);
@@ -7557,6 +7563,15 @@ public class D2GS extends ApplicationAdapter {
         + " revision=" + outcome.revision + " consumeGround=" + outcome.consumeGroundEntity);
     sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true,
         operation == ItemMoveOperation.GROUND_TO_CURSOR && !outcome.consumeGroundEntity);
+  }
+
+  /** Returns an owned item by its stable item id. */
+  private static com.riiablo.item.Item ownedItem(CharData character, int itemId) {
+    if (character == null || itemId < 0 || character.getItems() == null) return null;
+    for (com.riiablo.item.Item item : character.getItems().getItems()) {
+      if (item != null && item.id == itemId) return item;
+    }
+    return null;
   }
 
   /** Creates a native town-portal visual/warp pair for a validated tsc/tbk. */

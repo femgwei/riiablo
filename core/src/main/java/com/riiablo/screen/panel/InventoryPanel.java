@@ -425,11 +425,15 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     // an item from the inventory onto the vendor area; right-click remains the
     // use action for consumables and does nothing for equipment.
     if (item != null && item.base != null && item.base.useable) {
-      if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)
-          && !(itemController instanceof NetworkedClientItemManager)
-          && Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
-        if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
-        return true;
+      if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)) {
+        if (itemController instanceof NetworkedClientItemManager) {
+          itemController.useInventoryItem(item);
+          return true;
+        }
+        if (Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
+          if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+          return true;
+        }
       }
       // Misc consumables (notably tsc/tbk) must be routed through the item
       // controller instead of falling through to the legacy "play sound only"

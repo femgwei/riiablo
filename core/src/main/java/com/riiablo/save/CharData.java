@@ -967,7 +967,12 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     Misc.Entry misc = potion.base instanceof Misc.Entry ? (Misc.Entry) potion.base : null;
     int pSpell = misc == null ? 0 : misc.pSpell;
     boolean applied;
-    if (pSpell == 3) {
+    if (pSpell == 9) {
+      // Native pSpell 9 is the stamina potion handler.  Riiablo keeps the
+      // resource in the same fixed-point stat list as the server, so the
+      // authoritative result is an immediate refill to the current maximum.
+      applied = restorePotionToMaximum(Stat.stamina, Stat.maxstamina);
+    } else if (pSpell == 3) {
       applied = applyTimedPotion(potion.code, misc);
     } else if (pSpell == 5) {
       applied = applyRejuvenationPotion(potion.code, misc);
@@ -979,8 +984,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
         applied = applyTimedPotion(code, misc);
       } else if ("rvs".equals(code) || "rvl".equals(code)) {
         applied = applyRejuvenationPotion(code, misc);
+      } else if ("stam".equals(code) || "stamina".equals(code)) {
+        applied = restorePotionToMaximum(Stat.stamina, Stat.maxstamina);
       } else {
-        // Stamina, antidote and thawing potions require their own timed states.
+        // Antidote and thawing potions require their own timed states.
         return false;
       }
     }
@@ -1051,6 +1058,16 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     long amount = (long) maximum.encodedValues() * percent / 100L;
     restorePotionStatEncoded(currentStat, maximumStat,
         (int) Math.min(Integer.MAX_VALUE, amount));
+  }
+
+  private boolean restorePotionToMaximum(short currentStat, short maximumStat) {
+    StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
+    StatRef current = statData.aggregate().get(currentStat, StatRef.obtain());
+    if (maximum == null || current == null) return false;
+    int maximumEncoded = maximum.encodedValues();
+    if (maximumEncoded <= 0) return false;
+    current.setEncoded(maximumEncoded);
+    return true;
   }
 
   private void restorePotionStatEncoded(

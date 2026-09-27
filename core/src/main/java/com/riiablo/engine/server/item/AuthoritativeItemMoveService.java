@@ -151,6 +151,26 @@ public final class AuthoritativeItemMoveService {
     return new Outcome(true, ItemMoveFailure.NONE, next);
   }
 
+  /** Uses an inventory potion after validation and advances the item revision. */
+  public synchronized Outcome useInventoryPotion(int playerEntityId, CharData character,
+                                                  ItemMoveIntent intent) {
+    long current = revision(playerEntityId);
+    if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
+    if (intent == null || intent.operation != ItemMoveOperation.USE_INVENTORY_ITEM)
+      return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
+    if (intent.revision != current) return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
+    byte failure = ItemMoveValidator.validate(character, intent);
+    if (failure != ItemMoveFailure.NONE) return new Outcome(false, failure, current);
+    Item item = ownedById(character, intent.itemId);
+    if (item == null || item.type == null || !item.type.is(com.riiablo.item.Type.POTI)
+        || !character.useInventoryPotion(item)) {
+      return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+    }
+    long next = current + 1L;
+    revisions.put(playerEntityId, next);
+    return new Outcome(true, ItemMoveFailure.NONE, next);
+  }
+
   /** Applies a validated cursor-held potion after the world confirms the hireling heal. */
   public synchronized Outcome useCursorItemOnMercenary(int playerEntityId, CharData character,
       ItemMoveIntent intent, BooleanSupplier heal) {

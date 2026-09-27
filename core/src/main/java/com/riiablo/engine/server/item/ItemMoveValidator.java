@@ -112,6 +112,7 @@ public final class ItemMoveValidator {
         }
         String code = item.code.toLowerCase(java.util.Locale.ROOT);
         return "tsc".equals(code) || "tbk".equals(code)
+            || (item.type != null && item.type.is(com.riiablo.item.Type.POTI))
             ? ItemMoveFailure.NONE : ItemMoveFailure.INVALID_ITEM;
       }
       case ItemMoveOperation.STORE_TO_BELT: {

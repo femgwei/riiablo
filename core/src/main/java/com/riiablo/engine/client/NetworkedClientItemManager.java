@@ -235,9 +235,13 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   @Override
   public void useInventoryItem(com.riiablo.item.Item item) {
-    if (item == null || item.id < 0 || item.code == null
-        || (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code))) return;
-    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
+    if (item == null || item.id < 0 || item.code == null) return;
+    boolean portal = "tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code);
+    boolean potion = item.type != null && item.type.is(com.riiablo.item.Type.POTI);
+    if (!portal && !potion) return;
+    if (Riiablo.audio != null) {
+      Riiablo.audio.play(portal ? "player_townportal_cast" : item.getUseSound(), true);
+    }
     send(ItemMoveOperation.USE_INVENTORY_ITEM, item.id, -1, -1, -1, -1, -1, false);
   }
 
