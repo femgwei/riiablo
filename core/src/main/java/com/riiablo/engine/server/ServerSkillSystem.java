@@ -2839,7 +2839,13 @@ public class ServerSkillSystem extends PassiveSystem {
       if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourceId, candidate)
           || !mPosition.has(candidate)
           || (!mPlayer.has(candidate) && !mMonster.has(candidate)
-              && !mMercenary.has(candidate) && !mSummonedPet.has(candidate))) continue;
+              && !mMercenary.has(candidate) && !mSummonedPet.has(candidate))
+          // D2MOO's target search excludes dead units even while their corpse
+          // entity remains in the world.  Without this guard Lightning Strike
+          // can lock onto a stale corpse and send the next segment away from
+          // the live pack, which looks like a random-direction bolt. Synthetic
+          // headless tests may omit Attributes, so those entities remain valid.
+          || mAttributesWrapper.has(candidate) && !hasPositiveLife(candidate)) continue;
       float distance = origin.dst2(mPosition.get(candidate).position);
       if (distance <= range2 && distance < nearestDistance) {
         nearestDistance = distance;
