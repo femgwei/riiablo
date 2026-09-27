@@ -37,6 +37,8 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntSet missingOverlayLogged = new IntSet();
   private final IntSet venomTransformActive = new IntSet();
   private final IntMap<byte[]> venomOriginalTransforms = new IntMap<>();
+  private final IntSet coldTransformActive = new IntSet();
+  private final IntMap<byte[]> coldOriginalTransforms = new IntMap<>();
 
   @Override
   protected void process(int entityId) {
@@ -101,6 +103,50 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.SHRINE_EXPERIENCE));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
+    reconcileColdTransform(entityId,
+        states.stateList.hasState(StateId.COLD)
+            || states.stateList.hasState(StateId.FREEZE));
+  }
+
+  /** Native COLD/FREEZE presentation: all monster composite layers turn blue. */
+  private void reconcileColdTransform(int entityId, boolean active) {
+    if (!mCofTransforms.has(entityId)) return;
+    byte packedTransform = coldPackedTransform();
+    if (packedTransform == CofTransforms.TRANSFORM_NULL) return;
+
+    CofTransforms transforms = mCofTransforms.get(entityId);
+    if (!active) {
+      if (!coldTransformActive.remove(entityId)) return;
+      byte[] original = coldOriginalTransforms.remove(entityId);
+      if (original == null) return;
+      int flags = Dirty.NONE;
+      for (int component = 0; component < transforms.transform.length; component++) {
+        flags |= cofs.setTransform(entityId, component, original[component]);
+      }
+      cofs.updateTransform(entityId, flags);
+      return;
+    }
+
+    byte[] original = coldOriginalTransforms.get(entityId);
+    if (original == null) {
+      original = transforms.transform.clone();
+      coldOriginalTransforms.put(entityId, original);
+    } else {
+      // Preserve equipment/composite changes made while the cold state is
+      // active, then reapply the native blue transform over those layers.
+      for (int component = 0; component < transforms.transform.length; component++) {
+        byte current = transforms.transform[component];
+        if (current != packedTransform && current != original[component]) {
+          original[component] = current;
+        }
+      }
+    }
+    coldTransformActive.add(entityId);
+    int flags = Dirty.NONE;
+    for (int component = 0; component < transforms.transform.length; component++) {
+      flags |= cofs.setTransform(entityId, component, packedTransform);
+    }
+    cofs.updateTransform(entityId, flags);
   }
 
   /** States.txt venomclaws itemtrans=cgrn, applied to both weapon layers. */
@@ -153,10 +199,20 @@ public class StateOverlaySystem extends IteratingSystem {
         ? (byte) color : CofTransforms.TRANSFORM_NULL;
   }
 
+  static byte coldPackedTransform() {
+    if (Riiablo.files == null || Riiablo.files.colors == null) {
+      return CofTransforms.TRANSFORM_NULL;
+    }
+    int color = Riiablo.files.colors.index("cblu") + 1;
+    return color > 0 && color < 32 ? (byte) color : CofTransforms.TRANSFORM_NULL;
+  }
+
   @Override
   protected void removed(int entityId) {
     venomTransformActive.remove(entityId);
     venomOriginalTransforms.remove(entityId);
+    coldTransformActive.remove(entityId);
+    coldOriginalTransforms.remove(entityId);
   }
 
   private void reconcile(int entityId, int stateId, UnitState state) {

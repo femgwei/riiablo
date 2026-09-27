@@ -3037,8 +3037,37 @@ public class MissileCollisionSystem extends IteratingSystem {
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       if (missile != null && missile.freezesTarget) {
         StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
+        // Ice Arrow, Freezing Arrow and the other native freeze packets keep
+        // the frozen death mode through the lethal hit.  The old path only
+        // relied on the cold callback's random shatter roll, so most frozen
+        // monsters still entered an ordinary corpse animation.
+        markFrozenShatter(targetId, attackerId, combat.coldDuration);
+      } else if (isColdArrow(missile)) {
+        // Cold Arrow is a chill-only packet.  It slows and tints the target,
+        // but its lethal hit must retain the normal corpse.
+        clearShatter(targetId);
       }
     }
+  }
+
+  private void markFrozenShatter(int targetId, int sourceId, int duration) {
+    if (!mUnitStates.has(targetId)) return;
+    StateList states = mUnitStates.get(targetId).stateList;
+    if (states == null || !states.hasState(StateId.FREEZE)) return;
+    UnitState shatter = states.extendState(StateId.SHATTER, Math.max(1, duration), 1, sourceId);
+    if (shatter != null) shatter.needsSync = true;
+  }
+
+  private void clearShatter(int targetId) {
+    if (!mUnitStates.has(targetId)) return;
+    StateList states = mUnitStates.get(targetId).stateList;
+    if (states != null) states.removeState(StateId.SHATTER);
+  }
+
+  private static boolean isColdArrow(Missile missile) {
+    if (missile == null) return false;
+    if (missile.skillId == com.riiablo.engine.server.skill.SkillId.COLD_ARROW) return true;
+    return missile.missile != null && "coldarrow".equalsIgnoreCase(missile.missile.Missile);
   }
 
   /** Last-line guard for client-created Freezing Arrow children. */

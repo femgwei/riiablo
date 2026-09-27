@@ -55,6 +55,38 @@ class StateOverlaySystemTest extends RiiabloTest {
   }
 
   @Test
+  void coldAndFreezeStatesApplyNativeBlueTransformAndRestoreLayers() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build());
+    try {
+      int entity = world.create();
+      CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
+      byte originalBody = 3;
+      byte originalWeapon = 5;
+      transforms.transform[COF.Component.HD] = originalBody;
+      transforms.transform[COF.Component.RH] = originalWeapon;
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      byte blue = StateOverlaySystem.coldPackedTransform();
+      assertTrue(blue != CofTransforms.TRANSFORM_NULL,
+          "stock Colors.txt must contain the cblu transform");
+
+      states.stateList.addState(StateId.COLD, 100, 1, entity);
+      world.process();
+      assertEquals(blue, transforms.transform[COF.Component.HD]);
+      assertEquals(blue, transforms.transform[COF.Component.RH]);
+
+      states.stateList.removeState(StateId.COLD);
+      world.process();
+      assertEquals(originalBody, transforms.transform[COF.Component.HD]);
+      assertEquals(originalWeapon, transforms.transform[COF.Component.RH]);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void barbarianStateOverlaysFollowAuthoritativeSnapshots() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()

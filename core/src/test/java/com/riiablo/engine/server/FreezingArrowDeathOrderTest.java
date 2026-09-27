@@ -56,9 +56,10 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
       int target = world.create();
       MonStats.Entry stats = new MonStats.Entry();
       MonStats2.Entry stats2 = new MonStats2.Entry();
-      stats2.deadCol = true;
+      // The freeze packet itself owns the ice-break death mode. It must not
+      // depend on a random cold shatter roll or a deadCol table bit.
+      stats2.deadCol = false;
       Monster monster = world.getMapper(Monster.class).create(target).set(stats, stats2);
-      monster.rngState = 1; // first native shatter roll is 90%, i.e. success
       world.getMapper(Position.class).create(target).position.set(0, 0);
       world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 1);
       probe.targetStates = world.getMapper(UnitStates.class).create(target).init(target);
@@ -71,7 +72,8 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
 
       assertTrue(probe.deathObserved, "the lethal explosion must dispatch DeathEvent");
       assertTrue(probe.freezeAtDeath, "FREEZE must be visible before DeathEvent");
-      assertTrue(probe.shatterAtDeath, "deadCol monster must retain SHATTER before DeathEvent");
+      assertTrue(probe.shatterAtDeath,
+          "a lethal freeze packet must retain SHATTER before DeathEvent");
     } finally {
       StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
