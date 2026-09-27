@@ -194,6 +194,7 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
     FileHandle savesLocation = Riiablo.saves;
     Gdx.app.debug(TAG, "Accessing saves within " + savesLocation.toString());
     FileHandle[] saves = savesLocation.list(D2S.EXT);
+    CharacterSaveSorter.sort(saves);
     for (FileHandle save : saves) {
       Gdx.app.debug(TAG, "Loading " + save.toString());
       D2S d2s = D2SReader.INSTANCE.readD2S(save);

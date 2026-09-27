@@ -17,6 +17,14 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-27 角色选择按存档最后修改时间排序
+
+- [x] `SelectCharacterScreen`、`SelectCharacterScreen2` 和 `SelectCharacterScreen3`
+  统一按 `.d2s` 存档文件的最后修改时间降序排列，最近保存的角色显示在最前面；时间
+  相同时按文件名升序作为确定性回退。
+- [x] 新增 `CharacterSaveSorterTest`，覆盖最新存档优先和同时间文件名回退；核心编译及
+  `:core:test --tests com.riiablo.screen.CharacterSaveSorterTest --no-daemon` 通过。
+
 ## 2026-09-27 女武神头像与生命条
 
 - [x] `MercenaryHud` 现在识别当前角色拥有的 `Valkyrie` 召唤物，加载原版
