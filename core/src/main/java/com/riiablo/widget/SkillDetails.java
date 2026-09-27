@@ -161,7 +161,7 @@ public final class SkillDetails extends Table {
       case 13: return lookup("StrSkill42") + value;
       case 14:
         return formatElementalDamageLine(skill, level);
-      case 19: return b + a + (value * 2f / 3f) + lookup("StrSkill26");
+      case 19: return b + a + Math.round(value * 2f / 3f) + lookup("StrSkill26");
       case 22:
         return formatMissileDamageLine(skill, level, lookup("StrSkill35"));
       case 23:
@@ -172,7 +172,7 @@ public final class SkillDetails extends Table {
       case 28: return lookup("StrSkill18") + "1" + lookup("StrSkill36");
       case 40: return String.format(a, b);
       case 63: return a + ": +" + value + "% " + b;
-      case 66: return a + value + "%";
+      case 66: return String.format(a, value);
       case 67: return a + ": +" + value + b;
       case 73:
         return formatWeaponPercentLine(a, value, valueB);
