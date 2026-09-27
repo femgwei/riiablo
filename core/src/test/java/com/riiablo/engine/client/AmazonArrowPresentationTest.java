@@ -16,6 +16,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.MissileImpactEvent;
@@ -153,6 +154,18 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals("poisonpuff", cloud.CltSubMissile[0]);
     assertEquals(24, MissileImpactPresentationSystem.cltParam(cloud, 0, 1));
     assertTrue(MissileImpactPresentationSystem.isClientFlightFunction(cloud.pCltDoFunc));
+  }
+
+  @Test
+  void poisonCloudClientClockAdvancesIndependentlyFromAuthoritativeClock() {
+    Missile cloud = new Missile();
+    cloud.authoritative = true;
+    cloud.nativeFrame = 24;
+    assertEquals(0, MissileImpactPresentationSystem.advanceClientFrame(cloud, 1));
+    assertEquals(1, cloud.clientFrame);
+    assertEquals(24, cloud.nativeFrame);
+    assertEquals(1, MissileImpactPresentationSystem.advanceClientFrame(cloud, 23));
+    assertEquals(24, cloud.clientFrame);
   }
 
   @Test

@@ -111,6 +111,8 @@ public class Missile extends PooledComponent {
   public boolean attached;
   /** Native frame clock used by NextHit/NextDelay for attached missiles. */
   public int nativeFrame;
+  /** Independent client pCltDoFunc clock; server simulation may advance nativeFrame first. */
+  public int clientFrame;
   /** Frame lifetime for zero-velocity one-shot missiles such as Blades of Ice cubes. */
   public int nativeLifetimeFrames;
   public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
@@ -279,6 +281,7 @@ public class Missile extends PooledComponent {
     attachedEntityId = -1;
     attached = false;
     nativeFrame = 0;
+    clientFrame = 0;
     nativeLifetimeFrames = 0;
     nextHitFrame.clear();
     wakeMaker = false;

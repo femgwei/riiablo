@@ -70,9 +70,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // network replicas and the local authoritative simulation.  The latter
     // is the normal single-player path: the server creates the PoisonSparks
     // cloud, while this system supplies the separate PoisonSmokePuff layer.
-    // Server-side MissileCollisionSystem already advances nativeFrame for an
-    // authoritative missile, so processClientFlightFunction only advances
-    // the clock for replicas (avoiding a doubled callback rate locally).
+    // The client callback owns an independent frame clock because the server
+    // simulation advances nativeFrame before this presentation system runs.
     if (!visual.presentationOnly) {
       processClientFlightFunction(entityId, visual, velocity, delta);
       return;
@@ -113,11 +112,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (childName == null || childName.isEmpty() || factory == null) return;
 
     int elapsedFrames = Math.max(1, Math.round(delta * 25f));
-    int previousFrame = visual.nativeFrame;
-    if (!visual.authoritative) visual.nativeFrame += elapsedFrames;
+    int previousFrame = advanceClientFrame(visual, elapsedFrames);
     int interval = Math.max(1, cltParam(source, 0, 1));
     int firstFrame = previousFrame + 1;
-    int lastFrame = visual.nativeFrame;
+    int lastFrame = visual.clientFrame;
     for (int frame = firstFrame; frame <= lastFrame; frame++) {
       if (frame % interval != 0) continue;
       Vector2 at = mPosition.get(entityId).position;
@@ -128,6 +126,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   static boolean isClientFlightFunction(int function) {
     return function == 4 || function == 8 || function == 49;
+  }
+
+  static int advanceClientFrame(Missile visual, int elapsedFrames) {
+    if (visual == null) return 0;
+    int previousFrame = visual.clientFrame;
+    visual.clientFrame += Math.max(1, elapsedFrames);
+    return previousFrame;
   }
 
   private void createFlightVisual(Missiles.Entry source, String childName,
