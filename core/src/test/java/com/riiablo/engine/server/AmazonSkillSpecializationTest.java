@@ -648,7 +648,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
-  void chargedStrikeUsesNativeBoltCountAndNormalizedSpread() {
+  void chargedStrikeUsesNativeBoltCountAndTargetDirection() {
     Skills.Entry skill = Riiablo.files.skills.get("Charged Strike");
     assertNotNull(skill);
     assertEquals(3, ServerSkillSystem.chargedStrikeBoltCount(skill, 1));
@@ -662,7 +662,12 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(1f, first.len(), 0.0001f);
     assertEquals(1f, centre.len(), 0.0001f);
     assertEquals(1f, last.len(), 0.0001f);
-    assertEquals(first.y, -last.y, 0.0001f);
+    assertEquals(1f, first.x, 0.0001f);
+    assertEquals(0f, first.y, 0.0001f);
+    assertEquals(first.x, centre.x, 0.0001f);
+    assertEquals(first.y, centre.y, 0.0001f);
+    assertEquals(first.x, last.x, 0.0001f);
+    assertEquals(first.y, last.y, 0.0001f);
   }
 
   @Test

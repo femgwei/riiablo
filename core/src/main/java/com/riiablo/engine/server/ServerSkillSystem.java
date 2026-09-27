@@ -2497,6 +2497,8 @@ public class ServerSkillSystem extends PassiveSystem {
     Vector2 base = new Vector2(origin).sub(caster);
     if (base.isZero(0.0001f)) base.set(1f, 0f);
     base.nor();
+    int mainDirection = AssassinTrapSystem.chargedBoltMainDirection(base);
+    int originX = MathUtils.floor(origin.x);
     IntSet hitTargets = new IntSet();
     // The melee stage resolves the struck target. Native charged bolts start
     // on that target but do not immediately re-hit it.
@@ -2504,17 +2506,34 @@ public class ServerSkillSystem extends PassiveSystem {
     int created = 0;
     Vector2 direction = new Vector2();
     for (int i = 0; i < count; i++) {
-      chargedStrikeDirection(base, i, count, direction);
+      // D2MOO starts each bolt at the struck target and aims its charged-bolt
+      // path at 2 * target - attacker.  The first two-tile segment consumes a
+      // seeded roll and may use only the main octant or one neighbour.
+      int seedLow = i + originX;
+      long rolled = AssassinTrapSystem.chargedBoltRoll(seedLow, 666);
+      seedLow = (int) rolled;
+      int directionIndex = AssassinTrapSystem.chargedBoltDirection(mainDirection, seedLow);
+      AssassinTrapSystem.chargedBoltVector(directionIndex, direction);
       int missileId = createMissile(missile, direction, origin, event.entityId,
           hitTargets, skillLevel);
-      if (missileId >= 0) {
-        initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
-        created++;
-      }
+      if (missileId < 0 || !mMissile.has(missileId)) continue;
+      Missile bolt = mMissile.get(missileId);
+      bolt.skillId = skill.Id;
+      bolt.damageLevel = skillLevel;
+      bolt.chargedBoltPath = true;
+      bolt.chargedBoltMainDirection = mainDirection;
+      bolt.chargedBoltSeedLow = (int) rolled;
+      bolt.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      bolt.chargedBoltNextTurnDistance = 2f;
+      // SKILLS_MissileInit_ChargedBolt caps the native path at 77 frames.
+      bolt.range = Math.min(77f, Math.max(1f, bolt.range));
+      initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      created++;
     }
     log.info("[AMAZON_CHARGED_STRIKE] phase=spawn source={} target={} level={} "
-            + "missile={} requested={} created={}",
-        event.entityId, event.targetId, skillLevel, missileName, count, created);
+            + "missile={} requested={} created={} mainDirection={} origin=({}, {})",
+        event.entityId, event.targetId, skillLevel, missileName, count, created,
+        mainDirection, origin.x, origin.y);
   }
 
   /** Native Amazon SrvDo014: chain from the melee victim to nearby enemies. */
@@ -2880,12 +2899,10 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   static Vector2 chargedStrikeDirection(Vector2 base, int index, int count, Vector2 out) {
-    if (count <= 1) return out.set(base).nor();
-    // Native SKILLS_MissileInit_ChargedBolt seeds each bolt by ordinal. A
-    // deterministic 180-degree fan preserves that separation on this engine's
-    // direction-based missile API.
-    float offset = MathUtils.PI * (index / (float) (count - 1) - 0.5f);
-    return out.set(base).rotateRad(offset).nor();
+    // Charged Strike uses the same charged-bolt path as D2MOO.  Its initial
+    // direction is the target-to-attacker reverse direction; per-missile
+    // seeded octant selection is applied by spawnChargedStrike.
+    return out.set(base).nor();
   }
 
   static int lightningStrikeJumpCount(Skills.Entry skill, int skillLevel) {
