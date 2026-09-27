@@ -52,6 +52,16 @@ public class MissileLoader extends IteratingSystem {
       animation.setSubLoop(entry.SubStart, entry.SubStop);
     }
     int initialFrame = entry.RandStart;
+    // PoisonSmokePuff is spawned as a client-only child by the native poison
+    // javelin callback.  Its table RandStart is empty, but D2 seeds each new
+    // puff at a different animation frame; starting every child at frame 0
+    // produces an obvious row of synchronized tiny sparks.  Derive a stable
+    // per-entity phase from the missile seed/position so local and network
+    // clients get varied, reproducible large/small puffs without global RNG.
+    if (isPoisonSmokePuff(entry) && animation.getNumFramesPerDir() > 0) {
+      initialFrame += poisonPuffPhase(missile, entityId,
+          animation.getNumFramesPerDir());
+    }
     if (isGroundFire(entry) && animation.getNumFramesPerDir() > 0) {
       initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
     }
@@ -85,6 +95,23 @@ public class MissileLoader extends IteratingSystem {
         && "groundFireBig".equalsIgnoreCase(entry.CelFile)
         && entry.Light > 0
         && entry.Flicker > 0;
+  }
+
+  static boolean isPoisonSmokePuff(Missiles.Entry entry) {
+    return entry != null && entry.CelFile != null
+        && "PoisonSmokePuff".equalsIgnoreCase(entry.CelFile);
+  }
+
+  static int poisonPuffPhase(Missile missile, int entityId, int frameCount) {
+    if (frameCount <= 0) return 0;
+    int x = missile != null ? Math.round(missile.start.x * 16f) : 0;
+    int y = missile != null ? Math.round(missile.start.y * 16f) : 0;
+    int seed = missile != null ? missile.rngState : 0;
+    int hash = seed ^ entityId * 0x9E3779B9 ^ x * 0x45D9F3B ^ y * 0x27D4EB2D;
+    hash ^= hash >>> 16;
+    hash *= 0x7FEB352D;
+    hash ^= hash >>> 15;
+    return Math.floorMod(hash, frameCount);
   }
 
   /** Native poison/plague missiles use PL2 Screen instead of alpha-over. */

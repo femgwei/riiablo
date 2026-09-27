@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
@@ -166,6 +167,24 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertEquals(24, cloud.nativeFrame);
     assertEquals(1, MissileImpactPresentationSystem.advanceClientFrame(cloud, 23));
     assertEquals(24, cloud.clientFrame);
+  }
+
+  @Test
+  void poisonSmokePuffsUseDifferentDeterministicAnimationPhases() {
+    Missiles.Entry puff = Riiablo.files.Missiles.get("poisonpuff");
+    assertNotNull(puff);
+    assertTrue(MissileLoader.isPoisonSmokePuff(puff));
+    Missile first = new Missile();
+    first.start.set(10f, 20f);
+    first.rngState = 11;
+    Missile second = new Missile();
+    second.start.set(10f, 20f);
+    second.rngState = 29;
+    int frameCount = puff.AnimLen;
+    assertTrue(MissileLoader.poisonPuffPhase(first, 101, frameCount) >= 0);
+    assertTrue(MissileLoader.poisonPuffPhase(first, 101, frameCount) < frameCount);
+    assertNotEquals(MissileLoader.poisonPuffPhase(first, 101, frameCount),
+        MissileLoader.poisonPuffPhase(second, 102, frameCount));
   }
 
   @Test
