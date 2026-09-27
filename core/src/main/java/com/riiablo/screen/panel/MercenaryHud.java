@@ -141,7 +141,10 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   public boolean useCursorPotion() {
     Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
     if (item == null || itemController == null || mercenaryId < 0) return false;
-    if (maxLife > 0 && life >= maxLife) { showTemporaryMessage("暂时还不用，谢谢"); return false; }
+    if (maxLife > 0 && life >= maxLife) {
+      showTemporaryMessage(localized("mercenary_full_health_hint", "Not yet, thank you"));
+      return false;
+    }
     return itemController.useCursorPotionOnMercenary();
   }
   public void showTemporaryMessage(String message) { feedback.setText(message == null ? "" : message); feedbackRemaining = 1.5f; feedback.setVisible(message != null && !message.isEmpty()); }
@@ -205,7 +208,6 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private com.riiablo.codec.excel.Skills.Entry skillEntry(int id) { return Riiablo.files != null && Riiablo.files.skills != null && id >= 0 ? Riiablo.files.skills.get(id) : null; }
   private int skillTableOrder(int id) { if (id < 0 || Riiablo.files == null || Riiablo.files.skills == null) return Integer.MAX_VALUE; int n = 0; for (com.riiablo.codec.excel.Skills.Entry e : Riiablo.files.skills) { if (e != null && e.Id == id) return n; n++; } return Integer.MAX_VALUE - 1; }
   private String summonName(SummonedPet pet, SummonKind kind) {
-    if (kind == SummonKind.VALKYRIE) return resolveValkyrieName();
     com.riiablo.codec.excel.Skills.Entry skill = skillEntry(pet.skillId);
     String petType = skill != null && skill.pettype != null && !skill.pettype.trim().isEmpty()
         ? skill.pettype : pet.petType;
@@ -269,7 +271,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     else if (kind == SummonKind.SPIRIT) { if (n.contains("heartofwolverine")) icon = "HeartOfWolverine.dc6"; else if (n.contains("spiritofbarbs")) icon = "SpiritOfBarbs.dc6"; }
     for (Map.Entry<SummonKind, AssetDescriptor<DC6>> x : summonIcons.entrySet()) if (x.getValue().fileName.endsWith(icon)) return x.getValue(); return summonIcons.get(kind);
   }
-  private void updateSlotLabels() { hideSlotLabels(); for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); float x = i * (WIDTH + SLOT_GAP); Label n = slotNames.get(i); n.setPosition(x, 1); n.setSize(WIDTH, 14); n.setText(s.name); n.setVisible(true); Label c = slotCounts.get(i); c.setPosition(x + 10f, ICON_Y + 5f); c.setSize(WIDTH - 10f, 18); c.setAlignment(Align.left); c.setText(s.count > 1 ? Integer.toString(s.count) : ""); c.setVisible(s.count > 1); } tooltip.setPosition(Math.max(0, mercenarySlotIndex) * (WIDTH + SLOT_GAP), -35); tooltip.setText(hovered ? localized("mercenary_heal_hint", "将药水放在肖像上即可治疗\n按下滑鼠右键可打開物品栏（O)") : ""); tooltip.setVisible(hovered && mercenarySlotIndex >= 0); }
+  private void updateSlotLabels() { hideSlotLabels(); for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); float x = i * (WIDTH + SLOT_GAP); Label n = slotNames.get(i); n.setPosition(x, 1); n.setSize(WIDTH, 14); n.setText(s.name); n.setVisible(true); Label c = slotCounts.get(i); c.setPosition(x + 15f, ICON_Y + 5f); c.setSize(WIDTH - 15f, 18); c.setAlignment(Align.left); c.setText(s.count > 1 ? Integer.toString(s.count) : ""); c.setVisible(s.count > 1); } tooltip.setPosition(Math.max(0, mercenarySlotIndex) * (WIDTH + SLOT_GAP), -35); tooltip.setText(hovered ? localized("mercenary_heal_hint", "Place a potion on the portrait to heal\nRight-click to open the inventory (O)") : ""); tooltip.setVisible(hovered && mercenarySlotIndex >= 0); }
   private void hideSlotLabels() { for (Label l : slotNames) l.setVisible(false); for (Label l : slotCounts) l.setVisible(false); tooltip.setVisible(false); }
   private float[] readVitals(int id) { AttributesWrapper a = Riiablo.engine.getMapper(AttributesWrapper.class).get(id); if (a == null || a.attrs == null) return new float[] {0, 0}; StatRef hp = a.attrs.aggregate().get(Stat.hitpoints, StatRef.obtain()); StatRef max = a.attrs.aggregate().get(Stat.maxhp, StatRef.obtain()); return new float[] {hp == null ? 0 : hp.asFixed(), max == null ? 0 : max.asFixed()}; }
   private void updateHover(float x) { hovered = isMercenaryPoint(x, 0); tooltip.setVisible(hovered); }
@@ -278,7 +280,6 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   static boolean isLivingSummon(SummonedPet p, UnitLifecycle l, float hp, float max) { return p != null && !p.deathPending && p.deadFrames <= 0 && (l == null || !l.isDead()) && max > 0 && hp > 0; }
   static int companionSlotCount(boolean merc, boolean valk) { return merc || valk ? (merc && valk ? 2 : 1) : 0; }
   static float companionSlotX(boolean merc, boolean valk) { return valk && merc ? WIDTH + SLOT_GAP : 0; }
-  private static String resolveValkyrieName() { String name = SkillNameResolver.nameByInternalId("Valkyrie"); return name.isEmpty() ? "女武神" : name; }
   public static String resolveMercenaryName(Mercenary m) { return m == null ? localized("hireling_unnamed", UNNAMED) : resolveMercenaryName(m.mercType, m.nameId); }
   public static String resolveMercenaryName(int type, int id) { if (Riiablo.string == null) return localized("hireling_unnamed", UNNAMED); id = Math.max(0, id); String[] keys; switch (type) { case 0: keys = new String[] {String.format(Locale.ROOT, "merc%02d", id + 1)}; break; case 1: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 181), String.format(Locale.ROOT, "merca%03d", id + 201)}; break; case 2: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 182), String.format(Locale.ROOT, "merca%03d", Math.min(241, id + 222))}; break; case 3: keys = new String[] {String.format(Locale.ROOT, "MercX%03d", id + 31), String.format(Locale.ROOT, "MercX%03d", id + 101)}; break; default: return localized("hireling_unnamed", UNNAMED); } for (String k : keys) { String v = Riiablo.string.lookup(k); if (v != null && !v.startsWith("ERROR:")) return v; } return localized("hireling_unnamed", UNNAMED); }
   private static String localized(String key, String fallback) { if (Riiablo.bundle == null) return fallback; String v = Riiablo.bundle.get(key); return v == null || v.isEmpty() ? fallback : v; }
