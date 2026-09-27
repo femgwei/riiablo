@@ -76,6 +76,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       processClientFlightFunction(entityId, visual, velocity, delta);
       return;
     }
+    // A client-only flight child can itself carry a native client callback.
+    // Plague Javelin creates presentation-only plaguejavcloud entities from
+    // pCltDoFunc=3; those cloud entities must still run pCltDoFunc=4 to emit
+    // their PoisonSmokePuff layer.  Skipping the callback here leaves only the
+    // PoisonSparks dots along the trail.
+    if (visual.missile != null && isClientFlightFunction(visual.missile.pCltDoFunc)) {
+      processClientFlightFunction(entityId, visual, velocity, delta);
+    }
     if (distance > 0f) {
       mPosition.get(entityId).position.mulAdd(velocity, delta);
       visual.distanceTraveled += distance;
