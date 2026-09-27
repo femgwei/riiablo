@@ -2817,8 +2817,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.persistent = true;
     int loops = Math.max(0, cloud.poisonCloudLoops);
     cloud.remainingFrames = poisonCloudLifetime(cloud.missile, loops);
-    cloud.tickInterval = Math.max(1,
-        cloud.missile.DamageRate > 0 ? cloud.missile.DamageRate : 10);
+    // SrvDo03 calls MISSMODE_HandleMissileCollision every native frame when
+    // DamageRate is zero; DamageRate is not a poison-cloud tick interval.
+    cloud.tickInterval = Math.max(1, cloud.missile.DamageRate);
     cloud.pierceEnabled = true;
     cloud.pierceRemaining = -1;
   }
@@ -2851,9 +2852,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     return (level - 1) * first;
   }
 
-  private static int nativeAreaRadius(Missile missile) {
+  static int nativeAreaRadius(Missile missile) {
     if (missile == null || missile.missile == null) return 0;
-    if (missile.persistent) return 1;
+    if (missile.persistent) {
+      // The native missile footprint is SizeX-1 subtiles around its center.
+      return Math.max(1, missile.missile.Size - 1);
+    }
     return Math.max(0, arrayValue(missile.missile.sHitPar, 0));
   }
 

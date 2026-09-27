@@ -432,11 +432,14 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertNotNull(cloud);
       assertTrue(cloud.persistent);
       assertEquals(60, cloud.remainingFrames);
-      assertEquals(10, cloud.tickInterval);
+      assertEquals(1, cloud.tickInterval,
+          "SrvDo03 resolves poison-cloud collision every native frame when DamageRate=0");
       assertEquals(skill.Id, cloud.skillId);
       assertTrue(cloud.damageSnapshot);
       assertTrue(cloud.fixedPoisonRate);
       assertEquals(skill.ELen, cloud.poisonDurationFrames);
+      assertEquals(1, MissileCollisionSystem.nativeAreaRadius(cloud),
+          "Size=2 poison cloud uses a one-subtile native collision radius");
       assertTrue(cloud.damage.get(Stat.poisonmaxdam).asInt() > 0);
       assertTrue(cloud.damage.get(Stat.poisonlength).asInt() > 0);
 
