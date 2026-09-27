@@ -86,4 +86,14 @@ class MercenaryHudAssetProbeTest {
       dc6.dispose();
     }
   }
+
+  @Test
+  void resolvesPetTypeNameKeysFromNativeTable() {
+    String home = System.getenv("D2_LOCALIZATION_HOME");
+    Assumptions.assumeTrue(home != null && new File(home, "d2data.mpq").isFile());
+    Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
+    com.riiablo.Riiablo.mpqs = new MPQFileHandleResolver(new FileHandle(home));
+    org.junit.jupiter.api.Assertions.assertNotNull(MercenaryHud.petTypeNameKey("skeleton"));
+    org.junit.jupiter.api.Assertions.assertNotNull(MercenaryHud.petTypeNameKey("spiritwolf"));
+  }
 }

@@ -5402,6 +5402,12 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 - [x] ~~生命条/数量与生命周期~~：单个召唤物绘制生命条，同类型多个实例在头像上显示数量；
   乌鸦不绘制生命条；实体不存在、死亡、生命值为零或狼/熊互斥时实时移除对应图标。
 - [x] ~~交互隔离~~：佣兵药水拖放和右键雇佣兵面板仍只作用于佣兵槽，其他召唤物不接收交互。
+- [x] ~~召唤物名称数据流~~：左上角头像下方名称现在读取
+  `Skills.txt.pettype -> PetType.txt.name -> StringTBLs`；`txt` 中保存的是大小写敏感的
+  字符串 KEY，不直接读取中文。`MercenaryHud` 使用无损 `PetType.txt` 映射并通过
+  `Riiablo.string.lookup` 查 PatchString/ExpansionString/String，缺失资源时才回退到技能名。
+  `MonStats.NameStr` 仅用于怪物本体悬浮名称，不作为宠物栏名称来源；佣兵名称继续走独立
+  的佣兵随机名字表，女武神继续走 `Skills -> SkillDesc -> tbl`。
 - 验证：`:core:compileJava`、`MercenaryHudAssetProbeTest` 定向测试通过。
 
 下一项：在真实德鲁伊/死灵法师/刺客角色存档中做窗口验收，确认召唤物图标尺寸和本地化名称。
