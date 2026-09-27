@@ -25,6 +25,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
@@ -249,6 +250,11 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
         }
         valkyrieId = ids[i];
         float[] vitals = readVitals(valkyrieId);
+        UnitLifecycle lifecycle = Riiablo.engine.getMapper(UnitLifecycle.class).get(valkyrieId);
+        if (!isLivingSummon(pet, lifecycle, vitals[0], vitals[1])) {
+          valkyrieId = -1;
+          continue;
+        }
         valkyrieLife = vitals[0];
         valkyrieMaxLife = vitals[1];
         break;
@@ -293,6 +299,14 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
 
   static boolean isValkyriePetType(String petType) {
     return "valkyrie".equals(PetType.canonical(petType));
+  }
+
+  /** A summon is HUD-visible only while its entity and native life are active. */
+  static boolean isLivingSummon(SummonedPet pet, UnitLifecycle lifecycle,
+      float currentLife, float maximumLife) {
+    return pet != null && !pet.deathPending && pet.deadFrames <= 0
+        && (lifecycle == null || !lifecycle.isDead())
+        && maximumLife > 0 && currentLife > 0;
   }
 
   static int companionSlotCount(boolean hasMercenary, boolean hasValkyrie) {

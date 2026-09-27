@@ -10,6 +10,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.util.BBox;
+import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import java.io.File;
 import org.junit.jupiter.api.Assumptions;
@@ -40,6 +42,16 @@ class MercenaryHudAssetProbeTest {
         MercenaryHud.isValkyriePetType(" valkyrie "));
     org.junit.jupiter.api.Assertions.assertFalse(
         MercenaryHud.isValkyriePetType("decoy"));
+
+    SummonedPet living = new SummonedPet().set(7, "valkyrie", 32, 5, false, 0);
+    assertEquals(true, MercenaryHud.isLivingSummon(living, null, 10f, 20f));
+    living.deathPending = true;
+    assertEquals(false, MercenaryHud.isLivingSummon(living, null, 10f, 20f));
+    living.deathPending = false;
+    UnitLifecycle dead = new UnitLifecycle().reset();
+    dead.transition(UnitLifecycle.Phase.DEATH);
+    assertEquals(false, MercenaryHud.isLivingSummon(living, dead, 10f, 20f));
+    assertEquals(false, MercenaryHud.isLivingSummon(living, null, 0f, 20f));
   }
 
   @Test
