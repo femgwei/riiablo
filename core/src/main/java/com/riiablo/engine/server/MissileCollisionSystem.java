@@ -2453,12 +2453,24 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.attackMinDamage = source.attackMinDamage;
     child.attackMaxDamage = source.attackMaxDamage;
     child.attackRating = source.attackRating;
-    if (source.damageSnapshot) {
+    boolean visualOnlyShamanExplosion = "shamanexp".equalsIgnoreCase(row.Missile);
+    if (source.damageSnapshot && !visualOnlyShamanExplosion) {
       for (StatRef stat : source.damage.base()) {
         child.damage.base().putEncoded(stat.id(), stat.encodedParams(), stat.encodedValues());
       }
       child.damage.reset();
       child.damageSnapshot = true;
+    } else if (visualOnlyShamanExplosion) {
+      // D2MOO's shamanexp is the stationary impact animation.  Its parent
+      // shafire packet is already resolved on the travelling missile; copying
+      // that snapshot here makes the same fire damage apply a second time.
+      child.damage.base().clear();
+      child.damage.reset();
+      child.damageSnapshot = true;
+      child.attackMinDamage = 0;
+      child.attackMaxDamage = 0;
+      child.attackRating = 0;
+      child.usesAttackRating = false;
     }
     log.debug("[MISSILE_MAP_HIT] explosion_spawn source={} child={} missile={} pos=({}, {})",
         source.missile.Missile, childId, name, origin.x, origin.y);

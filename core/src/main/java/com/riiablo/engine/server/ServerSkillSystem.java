@@ -3283,7 +3283,11 @@ public class ServerSkillSystem extends PassiveSystem {
   private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,
       int ownerId, IntSet sharedHitTargets, int damageLevel) {
     if (factory == null) return -1;
-    int missileId = factory.createMissile(missile, direction, start, ownerId);
+    // D2MOO stores the skill's nSkillLevel in the missile params before
+    // MISSILE_CalculateDamageData runs.  Do not initialize a monster skill
+    // projectile from the owner's monster level here (e.g. ShamanFire level
+    // 1 must not become a level-11 shafire packet).
+    int missileId = factory.createMissile(missile, direction, start, ownerId, damageLevel);
     if (missileId >= 0 && mMercenary.has(ownerId)) mercenaryMissileCount++;
     if (missileId >= 0 && mMissile.has(missileId)) {
       Missile projectile = mMissile.get(missileId);

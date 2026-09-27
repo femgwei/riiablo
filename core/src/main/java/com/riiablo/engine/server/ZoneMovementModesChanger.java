@@ -17,14 +17,14 @@ public class ZoneMovementModesChanger extends PassiveSystem {
   public void onZoneChanged(ZoneChangeEvent event) {
     if (!mPlayer.has(event.entityId)) return;
     // zone 可能为 null（例如位置不在任何区域或地图未初始化），使用默认值（非城镇模式）
+    MovementModes movementModes = mMovementModes.has(event.entityId)
+        ? mMovementModes.get(event.entityId) : mMovementModes.create(event.entityId);
     if (event.zone == null) {
-      MovementModes movementModes = mMovementModes.get(event.entityId);
       movementModes.NU = Engine.Player.MODE_NU;
       movementModes.WL = Engine.Player.MODE_WL;
       movementModes.RN = Engine.Player.MODE_RN;
       return;
     }
-    MovementModes movementModes = mMovementModes.get(event.entityId);
     if (event.zone.isTown()) {
       movementModes.NU = Engine.Player.MODE_TN;
       movementModes.WL = Engine.Player.MODE_TW;

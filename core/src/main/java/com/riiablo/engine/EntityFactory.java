@@ -199,6 +199,16 @@ public abstract class EntityFactory extends PassiveSystem {
     return createMissile(missile.Id, angle, position, ownerId);
   }
 
+  /**
+   * Creates a missile while supplying the native skill level used to build
+   * its cast-time damage packet.  Implementations without missile snapshots
+   * retain the ordinary owner-only creation path.
+   */
+  public int createMissile(Missiles.Entry missile, Vector2 angle, Vector2 position,
+      int ownerId, int skillLevel) {
+    return createMissile(missile, angle, position, ownerId);
+  }
+
   public abstract int createMissile(int missileId, Vector2 angle, Vector2 position);
   
   public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {

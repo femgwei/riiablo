@@ -141,7 +141,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   }
 
   @Test
-  void repeatedFactoryAndSkillInitializationKeepsMissilesSnapshot() {
+  void skillFactoryInitializationUsesNativeSkillLevelForMissilesSnapshot() {
     Missiles.Entry missileRow = Riiablo.files.Missiles.get("shafire1");
     Skills.Entry skillRow = Riiablo.files.skills.get("ShamanFire");
     assertNotNull(missileRow);
@@ -151,18 +151,18 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     projectile.set(missileRow, new Vector2(), missileRow.Range).setOwner(7);
     Attributes owner = combatAttributes(100, 1, 1, 12, 2);
 
-    // Mirrors ServerEntityFactory.createMissile(..., owner level).
-    assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 2, 0));
-    // Mirrors ServerSkillSystem.createMissile(..., skill level=1).
+    // Mirrors ServerSkillSystem.createMissile(..., native ShamanFire level=1).
     assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 1, 0));
     assertFalse(MissileDamageResolver.initializeSkill(projectile, skillRow, owner, 1));
 
     assertTrue(projectile.damageSnapshot);
-    assertEquals(11, statInt(projectile.damage, Stat.firemindam));
-    assertEquals(14, statInt(projectile.damage, Stat.firemaxdam));
-    assertEquals(2, projectile.damageLevel);
-    System.out.println("[SHAMAN_FIREBALL_DAMAGE] phase=repeated_initialization_preserved "
-        + "missile=shafire1 fire=11..14 damageLevel=2 status=PASS");
+    assertEquals(1, projectile.damageLevel);
+    assertTrue(statInt(projectile.damage, Stat.firemaxdam) < 11,
+        "skill level 1 must not use the monster/owner level-2 growth packet");
+    System.out.println("[SHAMAN_FIREBALL_DAMAGE] phase=skill_level_snapshot "
+        + "missile=shafire1 fire=" + statInt(projectile.damage, Stat.firemindam)
+        + ".." + statInt(projectile.damage, Stat.firemaxdam)
+        + " damageLevel=1 status=PASS");
   }
 
   @Test
@@ -403,7 +403,9 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       int playerId = world.create();
       world.getMapper(Player.class).create(playerId);
       world.getMapper(Position.class).create(playerId).position.set(15, 10);
-      Attributes playerAttrs = combatAttributes(7, 1, 2, 1, 1);
+      // Keep this scenario lethal with the single native shafire packet; the
+      // shamanexp impact animation no longer supplies a duplicate hit.
+      Attributes playerAttrs = combatAttributes(1, 1, 2, 1, 1);
       world.getMapper(AttributesWrapper.class).create(playerId).attrs = playerAttrs;
 
       // Scripted AI decision: Actioneer owns the cast state and animation.
@@ -431,8 +433,8 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       assertTrue(probe.animKeyframes >= 1, "Actioneer must receive the attack keyframe");
       assertEquals(1, probe.skillDoEvents, "keyframe must dispatch exactly one SkillDoEvent");
       assertTrue(factory.creations > 0, "SkillDoEvent must create a server missile");
-      assertTrue(probe.damageEvents >= 2,
-          "a repaired shaman fireball must damage through both source and explosion packets");
+      assertEquals(1, probe.damageEvents,
+          "shamanexp is an impact animation and must not reapply the shafire damage packet");
       assertEquals(1, probe.deathEvents, "lethal missile collision must dispatch DeathEvent");
       assertEquals(0f, hpAfter, 0.001f, "lethal fireball must reduce target HP to zero");
       assertTrue(factory.creations >= 2);

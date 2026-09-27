@@ -1077,6 +1077,20 @@ public class ServerEntityFactory extends EntityFactory {
    * @return 创建的实体 ID
    */
   public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
+    int ownerLevel = ownerId >= 0 && mAttributesWrapper.has(ownerId)
+        ? statInt(mAttributesWrapper.get(ownerId).attrs, Stat.level) : 1;
+    return createMissile(missileId, angle, position, ownerId, ownerLevel);
+  }
+
+  @Override
+  public int createMissile(Missiles.Entry missile, Vector2 angle, Vector2 position,
+      int ownerId, int skillLevel) {
+    if (missile == null) return Engine.INVALID_ENTITY;
+    return createMissile(missile.Id, angle, position, ownerId, skillLevel);
+  }
+
+  private int createMissile(int missileId, Vector2 angle, Vector2 position,
+      int ownerId, int damageLevel) {
     Missiles.Entry missile = Riiablo.files.Missiles.get(missileId);
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
@@ -1089,9 +1103,8 @@ public class ServerEntityFactory extends EntityFactory {
         ? mMonster.get(ownerId) : null;
     int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
         ? mCofReference.get(ownerId).mode : -1;
-    int damageLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
     MissileDamageResolver.initialize(missileComponent, ownerAttrs, ownerMonster,
-        ownerMode, damageLevel, 0);
+        ownerMode, Math.max(1, damageLevel), 0);
 
     mPosition.create(id).position.set(position);
     MapWrapper ownerMap = ownerId >= 0 && mMapWrapper.has(ownerId)

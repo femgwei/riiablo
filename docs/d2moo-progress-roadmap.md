@@ -3,6 +3,19 @@
 更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
+## 2026-09-27 Fallen Shaman 火球伤害与死亡传送稳定性
+
+- [x] 怪物技能导弹创建现在把 `Skills.txt` 的实际技能等级写入伤害快照，与 D2MOO
+  `SKILLS_SrvDo085_UnholyBolt_ShamanFire -> sub_6FD11420` 的 `nSkillLevel` 传递一致；
+  不再把 Dark Shaman 的怪物等级 11 错当成 ShamanFire 等级，使 `shafire4` 从等级 1
+  的原生表伤害成长到等级 11 的 `102..108` 火焰伤害。
+- [x] `shamanexp` 保留为命中爆炸表现，但不再复制并二次结算父 `shafire` 的伤害快照；
+  一枚火球只应用一次伤害包。
+- [x] 死亡阶段移除 `MovementModes` 后，玩家切换区域时会重建该组件，避免 waypoint/
+  zone change 在 `ZoneMovementModesChanger` 中空指针崩溃。
+- [x] `:core:compileJava`、`:core:compileTestJava` 和 ShamanFire 等级快照定向任务通过；
+  仍需另一台电脑用真实 1.10f MPQ 实机确认 A1 伤害与死亡后传送流程。
+
 ## 2026-09-27 Slow Missiles（慢速箭）链路修正
 
 - [x] `SrvDo006` 现在区分 Inner Sight 与 Slow Missiles；慢速箭按原生范围/持续时间
