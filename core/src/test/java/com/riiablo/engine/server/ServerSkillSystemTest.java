@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.excel.Skills;
@@ -68,6 +69,22 @@ public class ServerSkillSystemTest {
     assertEquals(1f, right.len(), EPSILON);
     assertEquals(0f, centre.y, EPSILON);
     assertEquals(left.y, -right.y, EPSILON);
+  }
+
+  @Test
+  public void srvDo008UsesNativePerpendicularLaneSpacing() {
+    Vector2 start = new Vector2(0, 0);
+    Vector2 target = new Vector2(6, 0);
+    Vector2 first = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 0, 3, new Vector2());
+    Vector2 centre = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 1, 3, new Vector2());
+    Vector2 last = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 2, 3, new Vector2());
+    assertEquals(centre.x, 1f, EPSILON);
+    assertEquals(centre.y, 0f, EPSILON);
+    assertTrue(first.y > 0f);
+    assertEquals(first.y, -last.y, EPSILON);
   }
 
   @Test

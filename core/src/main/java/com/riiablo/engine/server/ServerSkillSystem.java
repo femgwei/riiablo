@@ -850,9 +850,7 @@ public class ServerSkillSystem extends PassiveSystem {
     } else {
       target.set(start).add(1, 0);
     }
-    target.sub(start);
-    if (target.isZero(0.0001f)) target.set(1, 0);
-    target.nor();
+    if (target.epsilonEquals(start, 0.0001f)) target.set(start).add(1, 0);
 
     String throwableMissile = resolveThrowableMissile(event.entityId, event.skillId, skill);
     String normalAttackMissile = resolveNormalAttackMissile(event.entityId, event.skillId);
@@ -3028,7 +3026,7 @@ public class ServerSkillSystem extends PassiveSystem {
     Vector2 direction = new Vector2();
     int created = 0;
     for (int i = 0; i < total; i++) {
-      fanDirection(target, i, total, direction);
+      nativeMultipleShotDirection(start, target, i, total, direction);
       int missileId = createMissile(missile, direction, start, event.entityId,
           sharedHitTargets, skillLevel);
       if (missileId >= 0) {
@@ -3329,6 +3327,34 @@ public class ServerSkillSystem extends PassiveSystem {
     if (count <= 1) return out.set(base).nor();
     float offset = (index - (count - 1) * 0.5f) * MULTI_MISSILE_SPREAD_RADIANS;
     return out.set(base).rotateRad(offset).nor();
+  }
+
+  /** Reproduces D2MOO's integer lane spacing from SrvDo008. */
+  static Vector2 nativeMultipleShotDirection(Vector2 start, Vector2 target,
+      int index, int count, Vector2 out) {
+    if (out == null) out = new Vector2();
+    if (start == null || target == null || count <= 0) return out.set(1, 0);
+    int dx = Math.round(target.x - start.x);
+    int dy = Math.round(target.y - start.y);
+    int distance = dx * dx + dy * dy;
+    if (distance < 4) {
+      dx *= 4;
+      dy *= 4;
+      distance = dx * dx + dy * dy;
+    }
+    if (distance < 16) {
+      dx *= 2;
+      dy *= 2;
+    }
+    int px = dy;
+    int py = -dx;
+    while (px * px + py * py > 3) {
+      px /= 2;
+      py /= 2;
+    }
+    int lane = Math.max(0, Math.min(count - 1, index)) - count / 2;
+    out.set(target.x + lane * px, target.y + lane * py).sub(start);
+    return out.isZero(0.0001f) ? out.set(1, 0) : out.nor();
   }
 
   private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,
