@@ -1198,6 +1198,16 @@ public class ItemData {
     float stamina = currentResource(Stat.stamina);
     StatRef stat;
     int equippedArmorClass = 0;
+    int equippedFireMin = 0;
+    int equippedFireMax = 0;
+    int equippedLightMin = 0;
+    int equippedLightMax = 0;
+    int equippedColdMin = 0;
+    int equippedColdMax = 0;
+    int equippedColdLength = 0;
+    int equippedPoisonMin = 0;
+    int equippedPoisonMax = 0;
+    int equippedPoisonLength = 0;
     final UpdateSequence update = updater.update(stats, charStats);
     int[] cache = equipped.values();
     for (int i = 0, s = cache.length, j; i < s; i++) {
@@ -1215,6 +1225,24 @@ public class ItemData {
         // stats such as armorclass. D2MOO adds equipped armor defense once, then
         // UNITS_GetDefense adds dexterity / 4.
         update.add(item.attrs.remaining());
+
+        // Elemental weapon/item damage is an op=0 stat, but it is not part of
+        // the character's persistent base list.  AttributesUpdater therefore
+        // leaves it in the item's remaining list instead of folding it into
+        // the character aggregate.  Native D2 includes these values in the
+        // attacker's unit stats (and ranged missiles snapshot those stats at
+        // spawn time), so collect both the item's aggregate and unapplied
+        // remainder and add them after the character reset/apply below.
+        equippedFireMin += itemStatValue(item, Stat.firemindam);
+        equippedFireMax += itemStatValue(item, Stat.firemaxdam);
+        equippedLightMin += itemStatValue(item, Stat.lightmindam);
+        equippedLightMax += itemStatValue(item, Stat.lightmaxdam);
+        equippedColdMin += itemStatValue(item, Stat.coldmindam);
+        equippedColdMax += itemStatValue(item, Stat.coldmaxdam);
+        equippedColdLength += itemStatValue(item, Stat.coldlength);
+        equippedPoisonMin += itemStatValue(item, Stat.poisonmindam);
+        equippedPoisonMax += itemStatValue(item, Stat.poisonmaxdam);
+        equippedPoisonLength += itemStatValue(item, Stat.poisonlength);
         
         // Directly add weapon damage from item base() to character aggregate()
         // This ensures weapon damage is properly aggregated even if not in character base()
@@ -1272,6 +1300,24 @@ public class ItemData {
     }
     update.apply();
 
+    // Apply the collected equipment elemental channels after UpdateSequence
+    // resets/rebuilds the character aggregate.  Keep min/max ranges ordered,
+    // matching the native stat-list representation.
+    addEquipmentStat(stats, Stat.firemindam, Math.max(0, equippedFireMin));
+    addEquipmentStat(stats, Stat.firemaxdam,
+        Math.max(equippedFireMin, equippedFireMax));
+    addEquipmentStat(stats, Stat.lightmindam, Math.max(0, equippedLightMin));
+    addEquipmentStat(stats, Stat.lightmaxdam,
+        Math.max(equippedLightMin, equippedLightMax));
+    addEquipmentStat(stats, Stat.coldmindam, Math.max(0, equippedColdMin));
+    addEquipmentStat(stats, Stat.coldmaxdam,
+        Math.max(equippedColdMin, equippedColdMax));
+    addEquipmentStat(stats, Stat.coldlength, Math.max(0, equippedColdLength));
+    addEquipmentStat(stats, Stat.poisonmindam, Math.max(0, equippedPoisonMin));
+    addEquipmentStat(stats, Stat.poisonmaxdam,
+        Math.max(equippedPoisonMin, equippedPoisonMax));
+    addEquipmentStat(stats, Stat.poisonlength, Math.max(0, equippedPoisonLength));
+
     if (equippedArmorClass != 0) {
       stats.aggregate().add(Stat.armorclass, equippedArmorClass);
     }
@@ -1323,6 +1369,20 @@ public class ItemData {
     StatRef current = stats.aggregate().get(statId, StatRef.obtain());
     if (current == null) current = stats.base().get(statId, StatRef.obtain());
     return current != null ? current.asFixed() : 0f;
+  }
+
+  /** Returns an item stat from both its applied and unapplied lists. */
+  private static int itemStatValue(Item item, short stat) {
+    if (item == null || item.attrs == null) return 0;
+    StatRef aggregate = item.attrs.get(stat, StatRef.obtain());
+    StatRef remaining = item.attrs.remaining().get(stat, StatRef.obtain());
+    int value = aggregate != null ? aggregate.asInt() : 0;
+    if (remaining != null) value += remaining.asInt();
+    return value;
+  }
+
+  private static void addEquipmentStat(Attributes stats, short stat, int value) {
+    if (value != 0) stats.aggregate().add(stat, value);
   }
 
   private void restoreCurrentResource(short statId, short maximumStatId, float value) {
