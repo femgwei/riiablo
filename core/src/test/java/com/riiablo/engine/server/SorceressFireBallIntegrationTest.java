@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.item.Item;
@@ -35,6 +36,8 @@ import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 /** Headless contract for D2MOO MISSMODE_SrvHit01 Fire Ball impact behavior. */
@@ -112,6 +115,66 @@ class SorceressFireBallIntegrationTest extends RiiabloTest {
           "a map barrier must still produce Fire Ball's impact presentation");
       assertEquals(1000f, life(world, behindWall), EPSILON,
           "the parent must stop at the wall before reaching the unit behind it");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void lethalCenterStillCreatesImpactBeforeDeathAndDamagesNearbyTarget() {
+    RecordingFactory factory = new RecordingFactory(null, null);
+    DeathProbe probe = new DeathProbe(factory);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new ServerSkillSystem(false),
+            new MissileCollisionSystem(), factory)
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      int caster = player(world, 1);
+      int center = monster(world, 5, 0);
+      world.getMapper(AttributesWrapper.class).get(center).attrs.get(Stat.hitpoints).set(1f);
+      int nearby = monster(world, 5, 3);
+      cast(world, caster, center);
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 12; i++) world.process();
+
+      assertTrue(probe.deathObserved, "lethal Fire Ball must dispatch DeathEvent");
+      assertTrue(probe.impactCreatedAtDeath,
+          "SrvHit01 must create the impact child before the lethal DeathEvent");
+      assertEquals(0f, life(world, center), EPSILON);
+      assertTrue(life(world, nearby) < 1000f,
+          "the impact child must still fan out after the center target dies");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void impactPresentationUsesNativeLifetimeAndExpiresWithoutRecreating() {
+    Map.Zone zone = new Map.Zone();
+    Map blocked = new WallMap(zone);
+    RecordingFactory factory = new RecordingFactory(blocked, zone);
+    World world = world(factory, blocked);
+    try {
+      int caster = player(world, 1);
+      int behindWall = monster(world, 8, 0);
+      cast(world, caster, behindWall);
+
+      world.setDelta(1f / 25f);
+      world.process();
+      assertTrue(factory.createdNames.contains("explodingarrowexp"));
+      int childId = factory.createdIds.get(factory.createdIds.size() - 1);
+      Missile child = world.getMapper(Missile.class).get(childId);
+      assertEquals(16, child.nativeLifetimeFrames,
+          "the impact presentation must use the native ExplosionMissile range");
+
+      for (int i = 0; i < 20; i++) world.process();
+      assertTrue(!world.getMapper(Missile.class).has(childId),
+          "the one-shot impact presentation must expire after its native lifetime");
+      assertEquals(2, factory.createdNames.size(),
+          "impact expiry must not recreate another explosion child");
     } finally {
       world.dispose();
     }
@@ -228,6 +291,22 @@ class SorceressFireBallIntegrationTest extends RiiabloTest {
 
     @Override public int createItem(Item item, float x, float y) {
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private static final class DeathProbe extends PassiveSystem {
+    final RecordingFactory factory;
+    boolean deathObserved;
+    boolean impactCreatedAtDeath;
+
+    DeathProbe(RecordingFactory factory) {
+      this.factory = factory;
+    }
+
+    @Subscribe
+    public void onDeath(DeathEvent event) {
+      deathObserved = true;
+      impactCreatedAtDeath = factory.createdNames.contains("explodingarrowexp");
     }
   }
 
