@@ -108,7 +108,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       return;
     }
     AnimationWrapper animation = mAnimationWrapper.get(entityId);
-    if (!animation.animation.isLooping()
+    // Native one-shot impact rows use Range as their frame clock.  Their DCC
+    // may report "finished" as soon as the loader installs the first frame;
+    // deleting on that signal would remove fireexplosion2 before the renderer
+    // gets a visible frame.  Only rows without a native lifetime use the
+    // animation-finished fallback.
+    if (visual.nativeLifetimeFrames <= 0
+        && !animation.animation.isLooping()
         && animation.animation.isFinished()) {
       world.delete(entityId);
     }
