@@ -745,6 +745,56 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void piercingAmazonProjectileSkipsCorpseAndReachesNextLiveTarget() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      Attributes owner = attributes(20, 100);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      int corpse = monster(world, 1.1f, 0);
+      Attributes corpseAttrs = attributes(1, 0);
+      world.getMapper(AttributesWrapper.class).create(corpse).attrs = corpseAttrs;
+      int live = monster(world, 2.5f, 0);
+      Attributes liveAttrs = attributes(1, 100);
+      world.getMapper(AttributesWrapper.class).create(live).attrs = liveAttrs;
+
+      Skills.Entry attack = Riiablo.files.skills.get(SkillCodes.attack);
+      int sourceId = factory.createMissile(Riiablo.files.Missiles.get("arrow"),
+          new Vector2(1, 0), new Vector2(0, 0), amazon);
+      Missile source = world.getMapper(Missile.class).get(sourceId);
+      MissileDamageResolver.initializeSkill(source, attack, owner, 1);
+      source.pierceEnabled = true;
+      source.pierceChance = 100;
+      source.pierceRemaining = -1;
+
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 5 && world.getEntityManager().isActive(sourceId); i++) {
+        world.process();
+      }
+
+      assertTrue(world.getEntityManager().isActive(sourceId),
+          "a piercing arrow must not be consumed by a corpse still present in ECS");
+      assertTrue(liveAttrs.get(Stat.hitpoints).asFixed() < 100f,
+          "the projectile must continue to the live target behind the corpse");
+      assertEquals(0f, corpseAttrs.get(Stat.hitpoints).asFixed());
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void cloakOfShadowsAppliesNativeDimVisionToHostiles() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     World world = new World(new WorldConfigurationBuilder()

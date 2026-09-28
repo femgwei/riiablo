@@ -1442,6 +1442,18 @@ public class MissileCollisionSystem extends IteratingSystem {
         world.delete(missileId);
         return true;
       }
+
+      // D2MOO's unit-find callbacks reject dead/non-attackable units before
+      // MISSMODE_SrvDmgHitHandler is entered.  A corpse can remain in the ECS
+      // briefly while its death animation and rewards are processed; it must
+      // not claim the projectile's hit set or consume Pierce.  In particular,
+      // a piercing Amazon arrow must continue through such a corpse toward the
+      // next live target.
+      if (mAttributesWrapper.has(targetId) && !isAlive(targetId)) {
+        log.info("[MISSILE_HIT] phase=skip_dead_target missileId={} owner={} target={}",
+            missileId, missile.ownerId, targetId);
+        return false;
+      }
       if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
 
       // Impact presentation is independent from damage.  A blocked, absorbed,
