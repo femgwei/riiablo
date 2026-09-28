@@ -850,6 +850,21 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void guidedArrowRejectsIncidentalHostileContact() {
+    Missile guided = new Missile();
+    guided.missile = Riiablo.files.Missiles.get("guidedarrow");
+    assertNotNull(guided.missile);
+    guided.targetId = 42;
+    assertTrue(MissileCollisionSystem.guidedTargetMatches(guided, 42));
+    assertTrue(!MissileCollisionSystem.guidedTargetMatches(guided, 43),
+        "SrvHit10 must not damage a hostile unit other than the locked target");
+
+    guided.targetId = Engine.INVALID_ENTITY;
+    assertTrue(MissileCollisionSystem.guidedTargetMatches(guided, 43),
+        "a ground-fired Guided Arrow remains eligible to acquire a target");
+  }
+
+  @Test
   void strafeTargetSearchSkipsDeadAndBlockedTargets() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     World world = new World(new WorldConfigurationBuilder()

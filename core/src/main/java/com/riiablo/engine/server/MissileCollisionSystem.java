@@ -1426,6 +1426,16 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (!isEnemy(missile.ownerId, targetId)) {
         return false;
       }
+      // D2MOO's SrvHit10 returns the special "wrong target" result when a
+      // Guided Arrow crosses a different hostile unit.  Do not let the
+      // generic swept collision path turn that incidental contact into a
+      // damage packet; a ground-fired arrow may still acquire a target later.
+      if (!guidedTargetMatches(missile, targetId)) {
+        log.debug("[GUIDED_ARROW] phase=skip_wrong_target missileId={} owner={} "
+                + "lockedTarget={} contactTarget={}",
+            missileId, missile.ownerId, missile.targetId, targetId);
+        return false;
+      }
       if (mNativeUnitFlags.has(targetId)
           && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) {
         log.debug("[MISSILE_HIT] phase=skip_native_target missileId={} owner={} target={} flags=0x{}",
@@ -2025,6 +2035,13 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static boolean collidesKill(Missile missile) {
     return missile == null || missile.missile == null || missile.missile.CollideKill;
+  }
+
+  static boolean guidedTargetMatches(Missile missile, int targetId) {
+    if (missile == null || missile.missile == null || missile.missile.pSrvHitFunc != 10) {
+      return true;
+    }
+    return missile.targetId < 0 || missile.targetId == targetId;
   }
 
   static boolean hasLastCollide(Missile missile) {
