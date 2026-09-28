@@ -105,3 +105,16 @@ Paladin Aura 只有在上述关键场景的纯数据层和 ECS 层测试均通�
 
 这项修正只覆盖已由 D2MOO 证实的资源/生命周期差异；Holy Fire、Holy Freeze、
 Redemption 和多来源优先级仍按待办中的独立场景继续核对。
+
+## Redemption 对照结果（2026-09-28）
+
+D2MOO `SKILLS_SrvDo082_Redemption` 通过 `args2.nCounter` 判断本次范围扫描是否
+至少成功消费一具合法尸体；没有成功消费时只清除 mana-regeneration suppression，
+不扣 pulse mana，也不因一次失败而取消选中的 Aura。riiablo 现在让
+`applyRedemptionEffect` 返回“是否成功消费尸体”，并将该结果纳入统一的
+`pulseUseful` 结算。
+
+新增 `AuraManagerPulseTest.redemptionConsumesManaOnlyAfterACorpseIsActuallyConsumed`，
+覆盖空范围失败 pulse 与下一次成功 pulse 的扣蓝边界。Holy Freeze 的冷免疫过滤和
+Shatter 生命周期已有 `PaladinSpecialAuraIntegrationTest` 覆盖，后续将继续核对
+不同来源/不同状态的胜者关系。
