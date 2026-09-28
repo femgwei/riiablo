@@ -68,6 +68,11 @@
 - 当前测试：防御状态、火焰区域、投射物、Blizzard、Frozen Orb、Meteor、Static Field、Thunder Storm、Frost Nova 等专项测试。
 - dark-magic exact-ID 对照：Fire Bolt(36) `missile.straight`；Frozen Armor(40)、Shiver Armor(50)、Chilling Armor(60) `state.self-timed`；Ice Blast(45) `missile.straight-freeze`；Fire Ball(47) `missile.straight-impact-area`；Nova(48) `missile.radial`；Enchant(52) `state.targeted-timed`；Teleport(54) `movement.point-relocate`；Glacial Spike(55) `missile.straight-impact-area-freeze`。
 - 重点借鉴：把“投射物移动/接触/伤害”和“爆炸表现实体”分开；把冰甲的防御、持续时间、触发条件、冻结/减速和状态替换放入同一来源生命周期。
+- 本轮先完成 Teleport(54) 的数据对照：D2MOO `SKILLS_SrvDo027_Teleport` 与
+  dark-magic `movement.point-relocate` 均要求按 Levels.Teleport 策略验证落点；
+  Skills.txt mana 行为为 `24 - (level-1)`，最低 1。riiablo 已补充原生行测试，
+  并修正 `SorceressSkills.calculateTeleportManaCost` 的旧最低值 6；实际地图落点、
+  flying collision 和旧移动意图清理已有 `SpecialSkillEcsScenarioTest` 覆盖。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
 ### Necromancer

@@ -510,8 +510,9 @@ public final class SorceressSkills {
    * @return 法力消耗
    */
   public static int calculateTeleportManaCost(int skillLevel) {
-    // 基础 24，每级 -1（最低 6）
-    return Math.max(6, 24 - (skillLevel - 1));
+    // Skills.txt: mana=24, lvlmana=-1, minmana=1, manashift=8.
+    // Keep this helper consistent with NativeSkillResolver's fixed-point row.
+    return Math.max(1, 24 - (skillLevel - 1));
   }
 
   /**

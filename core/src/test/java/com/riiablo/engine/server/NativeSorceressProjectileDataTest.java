@@ -115,6 +115,20 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
   }
 
   @Test
+  void teleportUsesNativePointRelocateRowAndMinimumMana() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.TELEPORT);
+    assertNotNull(skill);
+    assertEquals("Teleport", skill.skill);
+    assertEquals(27, skill.srvdofunc);
+    assertEquals(24f,
+        com.riiablo.engine.server.skill.NativeSkillResolver.manaCost(skill, 1), 0.001f);
+    assertEquals(1f,
+        com.riiablo.engine.server.skill.NativeSkillResolver.manaCost(skill, 24), 0.001f);
+    assertEquals(24, SorceressSkills.calculateTeleportManaCost(1));
+    assertEquals(1, SorceressSkills.calculateTeleportManaCost(24));
+  }
+
+  @Test
   void frostNovaUsesNativeSrvDo22MissileAndColdPacket() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.FROST_NOVA);
     assertNotNull(skill);
