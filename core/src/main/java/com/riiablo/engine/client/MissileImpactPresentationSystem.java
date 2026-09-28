@@ -38,6 +38,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   @com.artemis.annotations.Wire(name = "factory")
   protected EntityFactory factory;
+  @com.artemis.annotations.Wire(failOnNull = false)
+  protected OverlayManager overlays;
 
   private final Vector2 direction = new Vector2(1f, 0f);
 
@@ -313,6 +315,20 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       }
     }
     if (children == null || factory == null) return;
+
+    // Keep the native fireexplosion2 child above as the primary DCC path, but
+    // also use the already-proven unit overlay for Exploding Arrow.  Some
+    // installations stream missile DCC pages lazily and can omit a one-shot
+    // child from the render cache even though the impact event arrived.  The
+    // overlay is presentation-only and does not alter damage or spawn another
+    // authoritative missile; it guarantees the impact flash is visible while
+    // retaining the native child whenever the DCC is available.
+    if ("explodingarrow".equalsIgnoreCase(source.Missile)
+        && event.targetEntityId >= 0 && overlays != null) {
+      overlays.set(event.targetEntityId, "fire_hit");
+      log.debug("[MISSILE_IMPACT] source={} fallback=fire_hit_overlay target={}",
+          source.Missile, event.targetEntityId);
+    }
 
     // These are the native client hit-function families that emit a radial
     // visual rather than a single child at the impact point.  The authoritative
