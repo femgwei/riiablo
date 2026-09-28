@@ -141,8 +141,8 @@ public class AuraManager {
     default void applyCleansingEffect(int targetId, int percent,
         int sourceEntityId, int skillId) {}
     /** Native Redemption scans and atomically consumes nearby corpses. */
-    default void applyRedemptionEffect(int casterId, int skillId,
-        int skillLevel, float range) {}
+    default boolean applyRedemptionEffect(int casterId, int skillId,
+        int skillLevel, float range) { return false; }
   }
 
   private final IntMap<AuraDefinition> auraDefinitions = new IntMap<>();
@@ -291,7 +291,7 @@ public class AuraManager {
     }
     aura.affectedEntities = affected;
     if (aura.pulseFunded && definition.skillId == SkillId.REDEMPTION) {
-      callback.applyRedemptionEffect(aura.casterId, definition.skillId,
+      aura.pulseUseful = callback.applyRedemptionEffect(aura.casterId, definition.skillId,
           aura.skillLevel, aura.range);
     }
     aura.lastUpdateTime = gameFrame / 25f;

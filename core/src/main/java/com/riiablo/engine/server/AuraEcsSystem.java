@@ -355,14 +355,14 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
   }
 
-  @Override public void applyRedemptionEffect(int casterId, int skillId,
+  @Override public boolean applyRedemptionEffect(int casterId, int skillId,
       int skillLevel, float range) {
     if (mCorpse == null || mMonster == null || mPosition == null || mAttributes == null
         || !mAttributes.has(casterId) || !mPosition.has(casterId)
-        || isInTown(casterId)) return;
+        || isInTown(casterId)) return false;
     Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
         ? Riiablo.files.skills.get(skillId) : null;
-    if (skill == null) return;
+    if (skill == null) return false;
     int chance = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, skillLevel));
     int hpGain = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, skillLevel));
     int manaGain = Math.max(0, SkillFormula.evaluate(skill.calc3, skill, skillLevel));
@@ -398,8 +398,9 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       corpseStates.addState(StateId.REDEEMED, 0, skillLevel, casterId).needsSync = true;
       log.info("[REDEMPTION] phase=consume caster={} corpse={} chance={} roll={} hp={} mana={}",
           casterId, corpseId, chance, roll, hpGain, manaGain);
-      break;
+      return true;
     }
+    return false;
   }
 
   private void heal(int entityId, short statId, int amount) {
