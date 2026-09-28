@@ -112,6 +112,11 @@ public class CofLayerLoader extends IteratingSystem {
         // native rollback frame and must retain the explicit seek.
         if (casting == null || !casting.strafeInitialized) {
           animation.restart();
+          if (mObject.has(event.entityId)) {
+            com.riiablo.engine.server.component.Object object = mObject.get(event.entityId);
+            animation.setFrame(objectAnimationStartFrame(object == null ? null : object.base,
+                mCofReference.get(event.entityId).mode, animation.getNumFramesPerDir()));
+          }
         } else {
           animation.setFrame(frame);
         }
@@ -252,6 +257,12 @@ public class CofLayerLoader extends IteratingSystem {
     // Preserve the legacy behavior for stripped/custom tables that do not
     // provide CycleAnim columns.
     return Animation.Mode.LOOP;
+  }
+
+  static int objectAnimationStartFrame(Objects.Entry base, byte mode, int frameCount) {
+    if (frameCount <= 0 || base == null || base.Start == null
+        || mode < 0 || mode >= base.Start.length) return 0;
+    return Math.max(0, Math.min(frameCount - 1, base.Start[mode]));
   }
 
   private Animation.Mode objectAnimationMode(int entityId, byte mode) {

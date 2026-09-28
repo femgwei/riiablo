@@ -9,6 +9,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.DC;
+import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -18,6 +19,7 @@ import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.ai.Npc;
@@ -43,6 +45,8 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<CofReference> mCofReference;
 
   protected CofManager cofs;
 
@@ -86,6 +90,12 @@ public class CofLayerCacher extends IteratingSystem {
 //    if (cof == null) return;
     // FIXME: logic here needs to be looked into -- should below operations be performed when cof didn't change?
     boolean newCof = animation.setCOF(cof);
+    if (mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      byte mode = mCofReference.get(entityId).mode;
+      animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
+          object == null ? null : object.base, mode, animation.getNumFramesPerDir()));
+    }
     if (newCof && mSummonedPet.has(entityId)) {
       Gdx.app.log(TAG, String.format(
           "[SUMMON_PRESENTATION] phase=cof_ready entity=%d frames=%d layers=%d",

@@ -55,4 +55,18 @@ class CofLayerLoaderReleaseTest {
     assertEquals(Animation.Mode.CLAMP,
         CofLayerLoader.objectAnimationMode(base, Engine.Object.MODE_OP));
   }
+
+  @Test
+  void objectAnimationUsesNativeStartFrame() {
+    Objects.Entry base = new Objects.Entry();
+    base.Start = new int[8];
+    base.Start[Engine.Object.MODE_NU] = 3;
+    assertEquals(3, CofLayerLoader.objectAnimationStartFrame(
+        base, Engine.Object.MODE_NU, 8));
+    assertEquals(3, CofLayerLoader.objectAnimationStartFrame(
+        base, Engine.Object.MODE_NU, 4));
+    base.Start[Engine.Object.MODE_NU] = 7;
+    assertEquals(3, CofLayerLoader.objectAnimationStartFrame(
+        base, Engine.Object.MODE_NU, 4));
+  }
 }
