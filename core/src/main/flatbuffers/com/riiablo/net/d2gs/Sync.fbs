@@ -228,6 +228,9 @@ table VitalsP {
 table CofReferenceP {
   mode:uint8;
   weaponClass:uint8;
+  // Monotonic server-side sequence used to restart a repeated attack on
+  // clients even when the COF mode itself does not change.
+  animationRestartId:uint32;
 }
 
 // Authoritative projectile identity. Position, velocity and angle are sent

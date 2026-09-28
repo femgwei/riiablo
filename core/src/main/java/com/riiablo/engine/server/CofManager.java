@@ -58,6 +58,7 @@ public class CofManager extends BaseEntitySystem {
     CofReference reference = mCofReference.get(id);
     boolean restart = reference.mode == mode;
     if (restart && !force) return;
+    if (force) reference.animationRestartId++;
     Monster monster = mMonster.get(id);
     if (monster != null && (Monster.isMeleeMode(reference.mode) || Monster.isMeleeMode(mode)
         || (mSequence.has(id) && Monster.isMeleeMode(mSequence.get(id).mode1)))) {
@@ -90,6 +91,25 @@ public class CofManager extends BaseEntitySystem {
     // animation at frame zero.  Mark it explicitly so the client can reset
     // the existing Animation without unloading/reloading every DCC layer.
     event.dispatch(ModeChangeEvent.obtain(id, mode, restart));
+  }
+
+  /**
+   * Applies an authoritative mode snapshot received from the server.  A
+   * network restart id must be copied verbatim; calling {@link #setMode(int,
+   * byte, boolean)} here would increment the local counter and make the next
+   * snapshot look stale.  A changed id still dispatches the same forced
+   * restart event used by local sequence code.
+   */
+  public void applyNetworkMode(int id, byte mode, int animationRestartId) {
+    CofReference reference = mCofReference.get(id);
+    boolean modeChanged = reference.mode != mode;
+    boolean restartChanged = reference.animationRestartId != animationRestartId;
+    reference.animationRestartId = animationRestartId;
+    if (modeChanged) {
+      setMode(id, mode);
+    } else if (restartChanged) {
+      event.dispatch(ModeChangeEvent.obtain(id, mode, true));
+    }
   }
 
   public void setWClass(int id, byte wclass) {

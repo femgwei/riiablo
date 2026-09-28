@@ -1431,12 +1431,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
     CofReference old = mCofReference.get(entityId);
     byte oldMode = old.mode;
     byte oldWClass = old.wclass;
-    cofs.setMode(entityId, (byte) data.mode());
+    int oldRestartId = old.animationRestartId;
+    cofs.applyNetworkMode(entityId, (byte) data.mode(), (int) data.animationRestartId());
     cofs.setWClass(entityId, (byte) data.weaponClass());
-    if (oldMode != (byte) data.mode() || oldWClass != (byte) data.weaponClass()) {
+    if (oldMode != (byte) data.mode() || oldWClass != (byte) data.weaponClass()
+        || oldRestartId != (int) data.animationRestartId()) {
       Gdx.app.log(TAG, String.format(
-          "[COF_SYNC] entity=%d mode=%d oldMode=%d weaponClass=%d oldWeaponClass=%d",
-          entityId, data.mode(), oldMode & 0xFF, data.weaponClass(), oldWClass & 0xFF));
+          "[COF_SYNC] entity=%d mode=%d oldMode=%d weaponClass=%d oldWeaponClass=%d "
+              + "restartId=%d oldRestartId=%d",
+          entityId, data.mode(), oldMode & 0xFF, data.weaponClass(), oldWClass & 0xFF,
+          (int) data.animationRestartId(), oldRestartId));
     }
   }
 

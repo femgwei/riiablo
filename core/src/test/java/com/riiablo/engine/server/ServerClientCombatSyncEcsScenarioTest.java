@@ -46,6 +46,7 @@ class ServerClientCombatSyncEcsScenarioTest extends RiiabloTest {
           vitals(0f, 64f, 7f, 30f);
       server.getMapper(CofReference.class).create(serverPlayer)
           .set(Engine.Player.getToken(Riiablo.AMAZON), Engine.Player.MODE_DT);
+      server.getMapper(CofReference.class).get(serverPlayer).animationRestartId = 37;
 
       EntitySync packet = serialize(serialization, serverPlayer);
       assertTrue(find(packet, ComponentP.PlayerP) >= 0);
@@ -71,6 +72,7 @@ class ServerClientCombatSyncEcsScenarioTest extends RiiabloTest {
       assertEquals(7f, value(clientVitals.attrs, Stat.mana), 0.001f);
       assertEquals(30f, value(clientVitals.attrs, Stat.maxmana), 0.001f);
       assertEquals(Engine.Player.MODE_DT, clientCof.mode);
+      assertEquals(37, clientCof.animationRestartId);
       assertEquals(2, wirePlayer.level());
       assertEquals(600L, wirePlayer.experience());
       assertEquals(1, wirePlayer.skillPoints());

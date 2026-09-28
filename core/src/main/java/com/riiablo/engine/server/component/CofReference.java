@@ -23,6 +23,13 @@ public class CofReference extends Component {
   public byte   mode;
   public byte   wclass = Engine.WEAPON_HTH;
 
+  /**
+   * Authoritative animation restart sequence.  Repeated attacks such as Jab
+   * deliberately reuse the same mode; this value lets remote clients observe
+   * each forced restart instead of treating the snapshot as unchanged.
+   */
+  public int animationRestartId;
+
   /** Presentation-only shape override; logical entity type remains PLR. */
   public Class.Type visualType;
   public String visualToken;
