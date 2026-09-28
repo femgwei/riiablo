@@ -543,6 +543,12 @@ public final class MissileDamageResolver {
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
     int poisonLength = includeElement && type == POISON ? Math.max(0, skill.ELen
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
+    if (includeSource && sourceScale > 0 && ownerAttrs != null) {
+      coldLength = Math.max(coldLength,
+          scaleSource(statInt(ownerAttrs, Stat.coldlength), sourceScale));
+      poisonLength = Math.max(poisonLength,
+          scaleSource(statInt(ownerAttrs, Stat.poisonlength), sourceScale));
+    }
     // Glacial Spike's SrvHit13 does not read Skills.txt ELen.  It computes
     // the area freeze length from AuraLenCalc (ln34), with Blizzard hard
     // points contributing through the same native formula evaluator.
@@ -571,6 +577,16 @@ public final class MissileDamageResolver {
       physicalMax -= convertedMax;
       elementalMin[type] += convertedMin;
       elementalMax[type] += convertedMax;
+    }
+    // SrcDam missiles inherit the attacker's item elemental packet in native
+    // D2 (ordinary Attack, Guided Arrow, Multi-Shot, and elemental arrows all
+    // retain fire/cold/lightning/poison damage from equipped gear).  The
+    // factory has already captured this packet once, but skill initialization
+    // runs afterwards and must carry it forward instead of replacing it with
+    // only the skill's own EType damage.  Add it after skill mastery so item
+    // elemental damage is not incorrectly multiplied by the skill mastery.
+    if (includeSource && sourceScale > 0 && ownerAttrs != null) {
+      addOwnerElemental(ownerAttrs, sourceScale, elementalMin, elementalMax);
     }
     if (physicalMax <= 0 && elementalMax[type] <= 0) {
       // A missile can already have a complete Missiles.txt snapshot.  This is
