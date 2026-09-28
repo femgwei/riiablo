@@ -34,7 +34,8 @@
 - riiablo 入口：`AmazonSkills.java`、`Actioneer` 的 Amazon 分支、`NativeSkillResolver.isAmazonBowSkill/isAmazonJavelinSkill`。
 - 当前测试：`AmazonSkillSpecializationTest`、`NativeAmazonPassiveDataTest`、
   `NativeAmazonPoisonJavelinDataTest`、`NativeAmazonSkillMatrixTest`、
-  `AmazonMeleeSkillLifecycleTest`、`NativeAmazonCombatFormulaTest`。
+  `AmazonMeleeSkillLifecycleTest`、`NativeAmazonCombatFormulaTest`、
+  `NativeAmazonAmmoPolicyTest`。
 - 本轮新增 `NativeAmazonSkillMatrixTest` 与 `NativeSkillBehaviorRegistry`：30 行 Amazon
   技能以 exact ID + `srvstfunc/srvdofunc` 注册行为族；`NativeSkillResolver` 只在回调号
   与注册声明完全一致时把行为族写入 `SkillExecutor.SkillData`，未知/篡改行保持未注册
@@ -51,6 +52,8 @@
   伤害百分比下限；确认 1.10f Jab 的实际 Calc1 为 `-15`，不再使用经验性 +8% 兜底。
   Impale 的 miss 与 keyframe 前目标死亡也已验证为不消耗武器资源，并在动画完成时清理
   遗留记录。
+  弹药策略按 `isAmazonBowSkill && !noammo` 对齐：Magic Arrow 虽是弓技能但原生
+  `noammo=1`，标枪技能不会错误消耗弓箭袋。
   这仍只完成 ECS/纯逻辑层的一轮门槛，真实 MPQ 动画和重连仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
