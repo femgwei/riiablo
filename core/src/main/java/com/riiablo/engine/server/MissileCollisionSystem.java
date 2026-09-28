@@ -1473,6 +1473,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         emitImpactPresentation(missileId, missile, targetId, missilePos);
       }
 
+      // MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown applies the same
+      // packet to every hostile unit in its impact radius.  The travelling
+      // missile itself still owns the first contact, so fan out only to the
+      // other candidates here; the ordinary path below resolves targetId.
+      if (!suppressSideEffects && missile.missile != null
+          && missile.missile.pSrvHitFunc == 13) {
+        resolveGlacialSpikeAreaDamage(missileId, missile, missilePos, targetId);
+      }
+
       // Native MISSMODE_SrvHit29 does not apply the root row as damage.  It
       // fans out the authoritative frozen-orb nova shards; each shard then
       // resolves the Frozen Orb cold packet independently.
@@ -3102,8 +3111,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       // ordinary freeze packets (for example Freezing Arrow). Ice Blast is
       // the exception: MISSMODE_SrvDmg04_IceBlast moves ColdLen into FrzLen
       // and clears ColdLen, so it must not leave a second chill state behind.
-      boolean iceBlast = isIceBlast(missile);
-      if (!iceBlast) {
+      boolean freezePacket = convertsColdToFreeze(missile);
+      if (!freezePacket) {
         // Cold must run first because it owns the native shatter roll.
         StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       }
@@ -3180,6 +3189,40 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile == null) return false;
     if (missile.skillId == com.riiablo.engine.server.skill.SkillId.ICE_BLAST) return true;
     return missile.missile != null && "iceblast".equalsIgnoreCase(missile.missile.Missile);
+  }
+
+  private static boolean convertsColdToFreeze(Missile missile) {
+    if (isIceBlast(missile)) return true;
+    return missile != null && missile.missile != null
+        && ("frze".equalsIgnoreCase(missile.missile.EType)
+            || "freeze".equalsIgnoreCase(missile.missile.EType));
+  }
+
+  private void resolveGlacialSpikeAreaDamage(int missileId, Missile source,
+      Vector2 origin, int struckTargetId) {
+    int radius = glacialSpikeRadius(source);
+    if (radius <= 0) return;
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, radius);
+    targets.sort(Integer::compare);
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == struckTargetId || targetId == source.ownerId
+          || !mMonster.has(targetId) || !mPosition.has(targetId)
+          || !mAttributesWrapper.has(targetId) || !isAlive(targetId)
+          || !isEnemy(source.ownerId, targetId)) continue;
+      checkCollisionWithEntity(missileId, source, origin, origin, targetId,
+          mPosition.get(targetId), radius, true);
+    }
+  }
+
+  private static int glacialSpikeRadius(Missile missile) {
+    if (missile == null || missile.missile == null
+        || missile.missile.pSrvHitFunc != 13) return 0;
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId)
+        : Riiablo.files.skills.get("Glacial Spike");
+    if (skill == null) return 0;
+    return Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill,
+        Math.max(1, missile.damageLevel)));
   }
 
   /** Last-line guard for client-created Freezing Arrow children. */

@@ -105,6 +105,57 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void glacialSpikeAppliesOneFreezePacketToEachTargetInImpactRadius() {
+    RecordingFactory factory = new RecordingFactory();
+    StateUpdater states = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new net.mostlyoriginal.api.event.common.EventSystem(), states,
+            new MissileCollisionSystem(), factory).build()
+        .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    StatusEffectApplier.INSTANCE.setStateSink(states);
+    try {
+      int caster = caster(world);
+      int center = targetAt(world, 0, 0, 0);
+      int nearby = targetAt(world, 3, 0, 0);
+      int immune = targetAt(world, -3, 0, 100);
+      int outside = targetAt(world, 5, 0, 0);
+      Missiles.Entry row = Riiablo.files.Missiles.get("glacialspike");
+      int missileId = world.create();
+      Missile projectile = world.getMapper(Missile.class).create(missileId)
+          .set(row, new Vector2(), row.Range).setOwner(caster);
+      projectile.skillId = SkillId.GLACIAL_SPIKE;
+      projectile.damageLevel = 1;
+      world.getMapper(Position.class).create(missileId).position.set(0, 0);
+      world.getMapper(Velocity.class).create(missileId).velocity.setZero();
+      assertTrue(MissileDamageResolver.initializeSkill(projectile,
+          Riiablo.files.skills.get(SkillId.GLACIAL_SPIKE),
+          world.getMapper(AttributesWrapper.class).get(caster).attrs, 1, name -> 0));
+      assertTrue(projectile.freezesTarget);
+
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      world.process();
+
+      assertTrue(life(world, center) < 100f);
+      assertTrue(life(world, nearby) < 100f);
+      assertEquals(100f, life(world, immune), 0.0001f);
+      assertEquals(100f, life(world, outside), 0.0001f);
+      assertTrue(world.getMapper(UnitStates.class).get(center).stateList.hasState(StateId.FREEZE));
+      assertTrue(world.getMapper(UnitStates.class).get(nearby).stateList.hasState(StateId.FREEZE));
+      assertEquals(50, world.getMapper(UnitStates.class).get(center)
+          .stateList.getStateDuration(StateId.FREEZE));
+      assertEquals(50, world.getMapper(UnitStates.class).get(nearby)
+          .stateList.getStateDuration(StateId.FREEZE));
+      assertFalse(world.getMapper(UnitStates.class).get(center).stateList.hasState(StateId.COLD));
+      assertFalse(world.getMapper(UnitStates.class).get(nearby).stateList.hasState(StateId.COLD));
+      assertFalse(world.getMapper(UnitStates.class).get(immune).stateList.hasState(StateId.FREEZE));
+      assertFalse(world.getMapper(UnitStates.class).get(outside).stateList.hasState(StateId.FREEZE));
+    } finally {
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+      world.dispose();
+    }
+  }
+
   private static int caster(World world) {
     int id = world.create();
     world.getMapper(Player.class).create(id);
@@ -115,9 +166,15 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
   }
 
   private static int target(World world, int coldResistance) {
+    return targetAt(world, 0, 0, coldResistance);
+  }
+
+  private static int targetAt(World world, float x, float y, int coldResistance) {
     int id = world.create();
-    world.getMapper(Monster.class).create(id).set(new MonStats.Entry(), new MonStats2.Entry());
-    world.getMapper(Position.class).create(id).position.set(0, 0);
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.coldeffect = new int[] {-50, -50, -50};
+    world.getMapper(Monster.class).create(id).set(stats, new MonStats2.Entry());
+    world.getMapper(Position.class).create(id).position.set(x, y);
     world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1, 100, coldResistance);
     world.getMapper(UnitStates.class).create(id).init(id);
     return id;

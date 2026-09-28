@@ -543,6 +543,14 @@ public final class MissileDamageResolver {
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
     int poisonLength = includeElement && type == POISON ? Math.max(0, skill.ELen
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
+    // Glacial Spike's SrvHit13 does not read Skills.txt ELen.  It computes
+    // the area freeze length from AuraLenCalc (ln34), with Blizzard hard
+    // points contributing through the same native formula evaluator.
+    if (includeElement && type == COLD && projectile.missile != null
+        && projectile.missile.pSrvHitFunc == 13) {
+      coldLength = Math.max(0, SkillFormula.evaluate(skill.auralencalc, skill, level,
+          baseSkillLevel));
+    }
     // SKILLS_GetElementalLength applies ELenSymPerCalc as a percentage of
     // the base length. Ice Blast uses this for Glacial Spike hard points;
     // omitting it shortens the native freeze packet while damage synergies

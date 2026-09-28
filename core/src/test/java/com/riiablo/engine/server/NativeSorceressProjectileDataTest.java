@@ -193,6 +193,43 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
         "base 75 frames plus 10% Glacial Spike duration synergy");
   }
 
+  @Test
+  void glacialSpikeUsesNativeAreaFreezeRow() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.GLACIAL_SPIKE);
+    assertNotNull(skill);
+    assertEquals("Glacial Spike", skill.skill);
+    assertEquals("glacialspike", skill.srvmissile);
+    assertEquals("cold", skill.EType);
+    assertEquals(32, skill.EMin);
+    assertEquals(48, skill.EMax);
+    assertEquals(7, skill.HitShift);
+    assertEquals("ln12", skill.aurarangecalc);
+    assertEquals("ln34 * (100 + skill('Blizzard'.blvl) * par7) / 100",
+        skill.auralencalc);
+    assertEquals(4, skill.Param[0]);
+    assertEquals(50, skill.Param[2]);
+    assertEquals(3, skill.Param[3]);
+
+    Missiles.Entry row = Riiablo.files.Missiles.get("glacialspike");
+    assertNotNull(row);
+    assertEquals(13, row.pSrvHitFunc);
+    assertEquals("frze", row.EType);
+    assertEquals(2, row.HitFlags);
+    assertEquals("freezingarrowexp1", row.CltHitSubMissile[0]);
+
+    Missile projectile = new Missile();
+    projectile.missile = row;
+    com.riiablo.attributes.Attributes attrs =
+        com.riiablo.attributes.Attributes.obtainStandard();
+    assertTrue(com.riiablo.engine.server.missile.MissileDamageResolver.initializeSkill(
+        projectile, skill, attrs, 1, name -> 1));
+    assertTrue(projectile.freezesTarget);
+    assertEquals(18, projectile.damage.get(Stat.coldmindam).asInt());
+    assertEquals(27, projectile.damage.get(Stat.coldmaxdam).asInt());
+    assertEquals(51, projectile.damage.get(Stat.coldlength).asInt(),
+        "50 base frames plus one Blizzard hard point at 3%");
+  }
+
   private static void assertGenericBolt(
       int skillId, String name, String expectedMissile, String expectedElement) {
     Skills.Entry skill = Riiablo.files.skills.get(skillId);

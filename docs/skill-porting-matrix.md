@@ -83,6 +83,13 @@
   `SorceressIceBlastIntegrationTest` 已覆盖 ECS 层的冷免疫、只建立 FREEZE、以及
   单目标重复命中门闩；致死命中时的冻结/SHATTER 顺序仍沿用现有 D2MOO 冻结包回归，
   后续再单独核对 Ice Blast 与普通冻结箭的差异。
+- Glacial Spike(55) 已按 dark-magic `missile.straight-impact-area-freeze` 与 D2MOO
+  `MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown` 对照：命中点按
+  `AuraRangeCalc` 对其他敌对目标扇出同一伤害包，冻结时长来自 `AuraLenCalc`，而不是
+  普通 `ELen`。riiablo 已补 `pSrvHitFunc=13` 的扇出路径、`frze` 包只建立 FREEZE、
+  冷免疫过滤和目标一次性命中；`NativeSorceressProjectileDataTest` 锁定真实行的
+  `ln12/ln34`、参数、HitFlags 和 helper 表现导弹，`SorceressIceBlastIntegrationTest`
+  覆盖中心/范围内/范围外/冷免疫目标及冻结时长。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
 ### Necromancer
