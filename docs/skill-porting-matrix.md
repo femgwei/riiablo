@@ -56,6 +56,8 @@
   `noammo=1`，标枪技能不会错误消耗弓箭袋。
   `Casting` 组件池复用也已覆盖 Impale 预计算记录清理，避免实体重绑定后沿用旧的
   `CombatResult`；真实网络断线重连仍待验收。
+  Power Strike/Charged Strike 已按 D2MOO 的 `SrvDo002/SrvDo011` 接入成功命中扣武器耐久，
+  并由 Amazon 技能矩阵锁定该耐久行为族。
   这仍只完成 ECS/纯逻辑层的一轮门槛，真实 MPQ 动画和重连仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 

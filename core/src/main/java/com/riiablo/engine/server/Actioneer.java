@@ -1947,6 +1947,11 @@ public class Actioneer extends PassiveSystem {
         if (jab) {
           drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
         }
+        if (AmazonSkills.usesNativeMeleeDurability(activeSkill)) {
+          // D2MOO Power Strike (SrvDo002) and Charged Strike (SrvDo011)
+          // both call SUNITDMG_DrainItemDurability after a successful hit.
+          drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
+        }
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
         if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)

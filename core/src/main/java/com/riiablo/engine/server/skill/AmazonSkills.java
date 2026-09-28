@@ -44,6 +44,12 @@ public final class AmazonSkills {
         || "Plague Javelin".equalsIgnoreCase(name);
   }
 
+  /** Native SrvDo002/SrvDo011 skills that drain the equipped weapon on hit. */
+  public static boolean usesNativeMeleeDurability(Skills.Entry skill) {
+    return skill != null
+        && (skill.Id == SkillId.POWER_STRIKE || skill.Id == SkillId.CHARGED_STRIKE);
+  }
+
   //==========================================================================
   // 标枪和长矛技能
   //==========================================================================

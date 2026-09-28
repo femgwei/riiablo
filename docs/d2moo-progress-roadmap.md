@@ -21,6 +21,8 @@
   Magic Arrow 的原生 `noammo=1` 和所有标枪技能均不会错误消耗弓箭。
 - [x] 验证 `Casting` 组件池复用会清空 Impale 的预计算 `CombatResult`，防止实体重绑定/断线重连
   后误消费旧攻击记录；真实网络重连流程仍待验收。
+- [x] 对照 D2MOO `SrvDo002/SrvDo011`，将 Power Strike 与 Charged Strike 纳入成功命中后的
+  `SUNITDMG_DrainItemDurability` 路径，并锁定技能族回归。
 - [ ] 仍待补齐真实 1.10f MPQ 动画和断线重连验收。
 
 ## 2026-09-28 dark-magic 行为族框架落地

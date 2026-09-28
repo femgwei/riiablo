@@ -103,6 +103,20 @@ class NativeAmazonSkillMatrixTest extends RiiabloTest {
   }
 
   @Test
+  void powerAndChargedStrikeUseTheNativeMeleeDurabilityPath() {
+    assertTrue(NativeSkillResolver.isAmazonJavelinSkill(
+        Riiablo.files.skills.get("Power Strike")));
+    assertTrue(NativeSkillResolver.isAmazonJavelinSkill(
+        Riiablo.files.skills.get("Charged Strike")));
+    assertTrue(com.riiablo.engine.server.skill.AmazonSkills.usesNativeMeleeDurability(
+        Riiablo.files.skills.get("Power Strike")));
+    assertTrue(com.riiablo.engine.server.skill.AmazonSkills.usesNativeMeleeDurability(
+        Riiablo.files.skills.get("Charged Strike")));
+    assertTrue(!com.riiablo.engine.server.skill.AmazonSkills.usesNativeMeleeDurability(
+        Riiablo.files.skills.get("Jab")));
+  }
+
+  @Test
   void callbackMismatchFailsClosedInsteadOfUsingTheFamily() {
     Skills.Entry jab = Riiablo.files.skills.get("Jab");
     assertNotNull(jab);
