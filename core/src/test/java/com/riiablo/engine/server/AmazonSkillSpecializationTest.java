@@ -700,6 +700,61 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void lightningFuryAuraRejectsBlockedAndNoAuraTargets() {
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions).build());
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(20, 100);
+      int target = monster(world, 6, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 100);
+
+      com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+      com.riiablo.map.Map blocked = new com.riiablo.map.Map(0, 0) {
+        @Override public Zone getZone(float x, float y) { return zone; }
+        @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+            int flags, int size,
+            com.badlogic.gdx.ai.utils.Collision<Vector2> collision) {
+          assertEquals(com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP, flags);
+          return true;
+        }
+      };
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+          .create(amazon).set(blocked, zone);
+      assertTrue(!collisions.isLightningFuryAuraTarget(
+          amazon, target, Engine.INVALID_ENTITY, new Vector2(0, 0)),
+          "AuraFilter 0xA783 must reject targets behind missile barriers");
+
+      com.riiablo.map.Map clear = new com.riiablo.map.Map(0, 0) {
+        @Override public Zone getZone(float x, float y) { return zone; }
+        @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+            int flags, int size,
+            com.badlogic.gdx.ai.utils.Collision<Vector2> collision) {
+          return false;
+        }
+      };
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+          .get(amazon).set(clear, zone);
+      assertTrue(collisions.isLightningFuryAuraTarget(
+          amazon, target, Engine.INVALID_ENTITY, new Vector2(0, 0)));
+
+      com.riiablo.codec.excel.MonStats.Entry monstats =
+          new com.riiablo.codec.excel.MonStats.Entry();
+      monstats.noAura = true;
+      world.getMapper(Monster.class).get(target).monstats = monstats;
+      assertTrue(!collisions.isLightningFuryAuraTarget(
+          amazon, target, Engine.INVALID_ENTITY, new Vector2(0, 0)),
+          "the native bCheckMonAuraFlag gate must reject NoAura monsters");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void guidedArrowCapturesTargetAndStrafeSelectsUniqueTargets() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     World world = new World(new WorldConfigurationBuilder()

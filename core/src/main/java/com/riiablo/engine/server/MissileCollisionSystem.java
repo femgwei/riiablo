@@ -2921,14 +2921,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int created = 0;
     for (int i = 0; i < targets.size && created < maximum; i++) {
       int targetId = targets.get(i);
-      if (targetId == struckTarget || targetId == source.ownerId
-          || !mPosition.has(targetId) || !isEnemy(source.ownerId, targetId)) continue;
-      // D2MOO's aura target filter only visits valid live units.  A monster
-      // can remain in the ECS during its death animation; do not spend one of
-      // Lightning Fury's limited child bolts on that corpse.
-      if (!isAlive(targetId)) continue;
-      if (mNativeUnitFlags.has(targetId)
-          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
+      if (!isLightningFuryAuraTarget(source.ownerId, targetId, struckTarget, origin)) continue;
       Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
       if (direction.isZero(0.0001f)) continue;
       int boltId = factory.createMissile(subMissile, direction.nor(), origin, source.ownerId);
@@ -2949,6 +2942,27 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[AMAZON_LIGHTNING_FURY] phase=split owner={} struckTarget={} level={} "
             + "range={} maximum={} created={} missile={}",
         source.ownerId, struckTarget, level, range, maximum, created, subMissileName);
+  }
+
+  /** D2MOO Lightning Fury AuraFilter 0xA783 plus the NoAura monster gate. */
+  boolean isLightningFuryAuraTarget(
+      int sourceId, int targetId, int struckTarget, Vector2 origin) {
+    if (targetId == struckTarget || targetId == sourceId || origin == null
+        || !mPosition.has(targetId) || !isAlive(targetId)) return false;
+    if (!mPlayer.has(targetId) && !mMonster.has(targetId)) return false;
+    if (mMonster.has(targetId)) {
+      Monster monster = mMonster.get(targetId);
+      if (monster.monstats != null && monster.monstats.noAura) return false;
+    }
+    if (mNativeUnitFlags.has(targetId)) {
+      NativeUnitFlags flags = mNativeUnitFlags.get(targetId);
+      if (!NativeTargeting.canBeAttacked(flags)
+          || !NativeTargeting.isValidCombatTarget(flags)) return false;
+    }
+    if (isTownUnit(targetId) || !isEnemy(sourceId, targetId)) return false;
+    // 0xA783 includes 0x0200: native COLLISION_RayTrace uses collision mask 4,
+    // represented by FLAG_BLOCK_JUMP in the map runtime.
+    return hasAuraLineOfSight(sourceId, origin, targetId);
   }
 
   static int lightningFuryRange(Missiles.Entry missile, Skills.Entry skill, int level) {
