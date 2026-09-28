@@ -111,6 +111,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
 
+  @com.artemis.annotations.Wire(failOnNull = false)
+  protected Actioneer actioneer;
+
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
@@ -1640,11 +1643,17 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit "
                 + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
                 + "chance={} roll={} "
-                + "physical={} total={} critical={} deadly={} crushing={}",
+                + "physical={} fire={} lightning={} cold={} poison={} total={} "
+                + "critical={} deadly={} crushing={}",
             missileId, missile.ownerId, targetId,
             statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
             combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll,
-            combat.physicalDamage, damage, combat.critical, combat.deadlyStrike,
+            combat.physicalDamage,
+            combat.elementalDamage[CombatSystem.DAMAGE_FIRE],
+            combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING],
+            combat.elementalDamage[CombatSystem.DAMAGE_COLD],
+            combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+            damage, combat.critical, combat.deadlyStrike,
             combat.crushingBlow);
         // Native cold/freeze callbacks run as part of the impact packet,
         // before life is reduced and before the lethal DeathEvent is emitted.
@@ -1718,6 +1727,9 @@ public class MissileCollisionSystem extends IteratingSystem {
               combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
+            if (actioneer != null) {
+              actioneer.markLastRangedAttackTargetDied(missile.ownerId, missile.skillId);
+            }
             events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
           }
         }
@@ -3162,7 +3174,17 @@ public class MissileCollisionSystem extends IteratingSystem {
   private static boolean hasNativeElementalPresentation(Missile missile) {
     if (missile == null || missile.missile == null) return false;
     int hitClass = missile.missile.HitClass;
-    return hitClass == 32 || hitClass == 48 || hitClass == 64 || hitClass == 80;
+    if (hitClass != 32 && hitClass != 48 && hitClass != 64 && hitClass != 80) return false;
+    // HitClass only selects the native impact sound family.  Ordinary arrows
+    // can carry an elemental weapon packet while still having no client hit
+    // callback; do not suppress the generic weapon flash in that case.
+    if (missile.missile.pCltHitFunc != 0) return true;
+    if (missile.missile.CltHitSubMissile != null) {
+      for (String child : missile.missile.CltHitSubMissile) {
+        if (child != null && !child.isEmpty()) return true;
+      }
+    }
+    return false;
   }
 
   private void markFrozenShatter(int targetId, int sourceId, int duration) {

@@ -39,16 +39,17 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
     // Ordinary arrows have no elemental hit class and remain eligible here.
     if (event.suppressElementalPresentation) return;
 
-    present(event, event.fireDamage, HITCLASS_FIRE, "impact_fire_1");
-    present(event, event.lightningDamage, HITCLASS_LIGHTNING, "impact_lightning_1");
-    present(event, event.coldDamage, HITCLASS_COLD, "impact_cold_1");
-    present(event, event.poisonDamage, HITCLASS_POISON, "impact_poison_1");
+    present(event, event.fireDamage, HITCLASS_FIRE, "fire", "impact_fire_1");
+    present(event, event.lightningDamage, HITCLASS_LIGHTNING, "lightning", "impact_lightning_1");
+    present(event, event.coldDamage, HITCLASS_COLD, "cold", "impact_cold_1");
+    present(event, event.poisonDamage, HITCLASS_POISON, "poison", "impact_poison_1");
   }
 
-  private void present(DamageEvent event, float damage, int hitClass, String sound) {
+  private void present(DamageEvent event, float damage, int hitClass,
+      String element, String sound) {
     if (damage <= 0f) return;
     if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
-    Missiles.Entry visual = resolveImpactVisual(hitClass);
+    Missiles.Entry visual = resolveImpactVisual(hitClass, element);
     if (visual == null || factory == null) {
       log.warn("[ELEMENTAL_HIT] class={} result=no_visual", hitClass);
       return;
@@ -76,20 +77,35 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
   }
 
   /** Resolves a native client hit child for the requested elemental HitClass. */
-  private static Missiles.Entry resolveImpactVisual(int hitClass) {
+  private static Missiles.Entry resolveImpactVisual(int hitClass, String element) {
     if (Riiablo.files == null || Riiablo.files.Missiles == null) return null;
+    Missiles.Entry childFallback = null;
     Missiles.Entry stationaryFallback = null;
     for (Missiles.Entry source : Riiablo.files.Missiles) {
-      if (source == null || source.HitClass != hitClass) continue;
+      if (source == null || (source.HitClass != hitClass && !isElement(source, element))) continue;
       if (source.CltHitSubMissile != null) {
         for (String childName : source.CltHitSubMissile) {
           if (childName == null || childName.isEmpty()) continue;
           Missiles.Entry child = Riiablo.files.Missiles.get(childName);
-          if (child != null) return child;
+          if (child == null) continue;
+          if (child.Vel == 0) return child;
+          if (childFallback == null) childFallback = child;
         }
       }
       if (stationaryFallback == null && source.Vel == 0) stationaryFallback = source;
     }
-    return stationaryFallback;
+    return stationaryFallback != null ? stationaryFallback : childFallback;
+  }
+
+  private static boolean isElement(Missiles.Entry source, String element) {
+    if (source == null || element == null || source.EType == null) return false;
+    String type = source.EType;
+    if ("lightning".equalsIgnoreCase(element)) {
+      return "ltng".equalsIgnoreCase(type) || "lightning".equalsIgnoreCase(type);
+    }
+    if ("poison".equalsIgnoreCase(element)) {
+      return "pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type);
+    }
+    return element.equalsIgnoreCase(type);
   }
 }
