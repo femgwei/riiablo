@@ -28,6 +28,7 @@ public class CofResolver extends PassiveSystem {
   protected ComponentMapper<CofWrapper> mCofWrapper;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
@@ -47,6 +48,20 @@ public class CofResolver extends PassiveSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
+    // Native objects have two replicated mode fields: Object.mode is the
+    // persistent gameplay state, while CofReference.mode can briefly retain
+    // OP/ON while a room/object snapshot is being applied.  Resolve the COF
+    // from the authoritative idle object mode as well; otherwise the loader
+    // can keep an ON COF while collision and interaction already say NU.
+    // Preserve OP because it is the real one-shot transition animation.
+    if (logicalType == Class.Type.OBJ && mode != Engine.Object.MODE_OP
+        && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      if (object != null && object.mode >= Engine.Object.MODE_NU
+          && object.mode <= Engine.Object.MODE_S5) {
+        mode = object.mode;
+      }
+    }
     byte wclass = reference.effectiveWClass();
     String name = token + type.getMode(mode) + Engine.getWClass(wclass);
     COF cof = null;//type.getCOFs().lookup(name);
