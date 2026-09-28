@@ -2501,6 +2501,15 @@ public class MissileCollisionSystem extends IteratingSystem {
     int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId);
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
+    if (source.missile.pSrvHitFunc == 1) {
+      // SrvHit01 resolves the parent contact and then fans the same packet
+      // through the impact radius. The child row carries presentation data;
+      // carry the radius and parent hit set explicitly so the center is not
+      // damaged a second time.
+      child.areaRadiusOverride = Math.max(0f, nativeAreaRadius(source));
+      child.shareHitTargets(source.sharedHitTargets != null
+          ? source.sharedHitTargets : source.hitTargets);
+    }
     child.skillId = source.skillId;
     child.damageLevel = Math.max(1, source.damageLevel);
     child.damageMultiplier = source.damageMultiplier;
@@ -2533,8 +2542,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private static boolean isNativeAreaEffect(Missile missile) {
-    return missile != null && missile.missile != null
-        && (missile.missile.pSrvHitFunc == 1 || missile.missile.pSrvHitFunc == 14)
+    return missile != null && (missile.areaRadiusOverride >= 0f
+        || missile.missile != null
+        && (missile.missile.pSrvHitFunc == 1 || missile.missile.pSrvHitFunc == 14))
         && nativeAreaRadius(missile) > 0;
   }
 
@@ -2932,6 +2942,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static int nativeAreaRadius(Missile missile) {
     if (missile == null || missile.missile == null) return 0;
+    if (missile.areaRadiusOverride >= 0f) return Math.round(missile.areaRadiusOverride);
     if (missile.persistent) {
       // The native missile footprint is SizeX-1 subtiles around its center.
       return Math.max(1, missile.missile.Size - 1);

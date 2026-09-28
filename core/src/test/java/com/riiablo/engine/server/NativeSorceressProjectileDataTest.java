@@ -194,6 +194,38 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
   }
 
   @Test
+  void fireBallUsesNativeSrvHit01ImpactAreaRow() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRE_BALL);
+    assertNotNull(skill);
+    assertEquals("Fire Ball", skill.skill);
+    assertEquals("fireball", skill.srvmissile);
+    assertEquals("fire", skill.EType);
+
+    Missiles.Entry row = Riiablo.files.Missiles.get("fireball");
+    assertNotNull(row);
+    assertEquals(1, row.pSrvHitFunc,
+        "D2MOO MISSMODE_SrvHit01 owns Fire Ball's impact fan-out");
+    assertEquals(4, row.sHitPar[0]);
+    assertEquals("explodingarrowexp", row.ExplosionMissile);
+    Missiles.Entry explosion = Riiablo.files.Missiles.get(row.ExplosionMissile);
+    assertNotNull(explosion);
+    assertEquals(1, explosion.Explosion);
+    assertEquals(16, explosion.Range);
+
+    // The child row is presentation-only in D2MOO. Runtime metadata carries
+    // the parent's radius and hit set so the impact center is not re-damaged.
+    Missile child = new Missile();
+    child.missile = explosion;
+    child.areaRadiusOverride = row.sHitPar[0];
+    assertEquals(4, MissileCollisionSystem.nativeAreaRadius(child));
+    com.badlogic.gdx.utils.IntSet shared = new com.badlogic.gdx.utils.IntSet();
+    shared.add(7);
+    child.shareHitTargets(shared);
+    assertFalse(MissileCollisionSystem.claimTargetHit(child, 7, null));
+    assertTrue(MissileCollisionSystem.claimTargetHit(child, 8, null));
+  }
+
+  @Test
   void glacialSpikeUsesNativeAreaFreezeRow() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.GLACIAL_SPIKE);
     assertNotNull(skill);

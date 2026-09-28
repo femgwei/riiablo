@@ -70,6 +70,8 @@ public class Missile extends PooledComponent {
   public boolean usesAttackRating;
   /** Stationary native area missile (Immolation Fire) remains for its range. */
   public boolean persistent;
+  /** Runtime impact radius for SrvHit01 explosion children (not in child row). */
+  public float areaRadiusOverride = -1f;
   public int remainingFrames;
   public int tickInterval = 1;
   public int tickFrames;
@@ -274,6 +276,7 @@ public class Missile extends PooledComponent {
     freezeExplosionId = -1;
     usesAttackRating = false;
     persistent = false;
+    areaRadiusOverride = -1f;
     remainingFrames = 0;
     tickInterval = 1;
     tickFrames = 0;

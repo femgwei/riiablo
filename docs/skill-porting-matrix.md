@@ -90,6 +90,13 @@
   冷免疫过滤和目标一次性命中；`NativeSorceressProjectileDataTest` 锁定真实行的
   `ln12/ln34`、参数、HitFlags 和 helper 表现导弹，`SorceressIceBlastIntegrationTest`
   覆盖中心/范围内/范围外/冷免疫目标及冻结时长。
+- Fire Ball(47) 已开始按 dark-magic `missile.straight-impact-area` 对照：D2MOO
+  `MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion` 的父导弹负责
+  命中包，`ExplosionMissile` 只承载同一伤害包的范围扇出。riiablo 现在为爆炸子导弹
+  增加运行时 impact radius 快照，并共享父导弹命中集合，确保中心目标不被父/子导弹
+  重复结算；真实 1.10f `pSrvHitFunc=1`、`sHitPar[0]=4` 和 16 帧表现生命周期
+  已锁定在 `NativeSorceressProjectileDataTest`。下一步补 ECS 多目标命中、墙碰撞、
+  致死顺序和 impact 表现生命周期测试。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
 ### Necromancer
