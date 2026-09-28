@@ -918,7 +918,12 @@ public class ServerSkillSystem extends PassiveSystem {
         continue;
       }
 
-      Vector2 direction = new Vector2(target);
+      // The target above is an absolute world position. Missile creation
+      // expects a direction vector relative to the caster; using the absolute
+      // coordinates makes normal bow/crossbow shots converge on one heading.
+      Vector2 direction = new Vector2(target).sub(start);
+      if (direction.isZero(0.0001f)) direction.set(1, 0);
+      direction.nor();
       if (configuredCount > 1) {
         float offset = (ordinal - (configuredCount - 1) * 0.5f)
             * MULTI_MISSILE_SPREAD_RADIANS;
