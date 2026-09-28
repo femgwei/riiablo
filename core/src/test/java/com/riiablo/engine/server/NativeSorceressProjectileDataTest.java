@@ -159,6 +159,40 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
     assertEquals(14, ServerSkillSystem.nativeMissileRange(missile, 1));
   }
 
+  @Test
+  void iceBlastUsesNativeSrvDmg04FreezeConversionAndLengthSynergy() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.ICE_BLAST);
+    assertNotNull(skill);
+    assertEquals("Ice Blast", skill.skill);
+    assertEquals("iceblast", skill.srvmissile);
+    assertEquals("cold", skill.EType);
+    assertEquals(16, skill.EMin);
+    assertEquals(24, skill.EMax);
+    assertEquals(7, skill.HitShift);
+    assertEquals(75, skill.ELen);
+    assertEquals(5, skill.ELevLen[0]);
+    assertEquals(5, skill.ELevLen[1]);
+    assertEquals(5, skill.ELevLen[2]);
+
+    Missiles.Entry row = Riiablo.files.Missiles.get("iceblast");
+    assertNotNull(row);
+    assertEquals(4, row.pSrvDmgFunc,
+        "D2MOO MISSMODE_SrvDmg04_IceBlast converts ColdLen into FrzLen");
+    assertEquals("Ice Blast", row.Skill);
+
+    Missile projectile = new Missile();
+    projectile.missile = row;
+    com.riiablo.attributes.Attributes attrs =
+        com.riiablo.attributes.Attributes.obtainStandard();
+    assertTrue(com.riiablo.engine.server.missile.MissileDamageResolver.initializeSkill(
+        projectile, skill, attrs, 1, name ->
+            "Glacial Spike".equalsIgnoreCase(name) ? 1 : 0));
+    assertTrue(projectile.freezesTarget,
+        "SrvDmg04 must select the native freeze packet");
+    assertEquals(82, projectile.damage.get(Stat.coldlength).asInt(),
+        "base 75 frames plus 10% Glacial Spike duration synergy");
+  }
+
   private static void assertGenericBolt(
       int skillId, String name, String expectedMissile, String expectedElement) {
     Skills.Entry skill = Riiablo.files.skills.get(skillId);
