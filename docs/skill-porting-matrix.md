@@ -104,8 +104,8 @@
   结算一次，mana 也只在 `SkillCastEvent` 验证成功时扣除一次。新增
   `NativeSorceressProjectileDataTest.novaUsesNativeSrvDo22SixtyFourPathRow` 与
   `SorceressNovaIntegrationTest`，覆盖 64 路创建/方向速度、跨路径去重、后续 tick
-  不重复伤害和前置技能/单次 mana 扣除。剩余门槛是抗性/免疫、墙碰撞、致死顺序、
-  表现生命周期及真实 1.10f MPQ 离屏验证；dark-magic 的 `12 + 4/level` 数量只作
+  不重复伤害、前置技能/单次 mana 扣除和 50%/100% 闪电抗性结算。剩余门槛是墙碰撞、
+  致死顺序、表现生命周期及真实 1.10f MPQ 离屏验证；dark-magic 的 `12 + 4/level` 数量只作
   行为族测试参考，不能替代 D2MOO 固定 64 路规则。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 

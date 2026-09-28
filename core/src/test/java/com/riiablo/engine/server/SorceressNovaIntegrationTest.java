@@ -106,6 +106,34 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void collisionAppliesLightningResistanceAndNativeImmunityGate() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, 1);
+      int resisted = monster(world, 5, 0, 50);
+      int immune = monster(world, 0, 5, 100);
+
+      cast(world, caster);
+      world.setDelta(1f / 25f);
+      // Allow the cardinal paths to sweep through the 5-unit targets while
+      // keeping the assertion before any later repeated-hit opportunity.
+      for (int i = 0; i < 6; i++) world.process();
+
+      float resistedLife = life(world, resisted);
+      assertTrue(resistedLife >= 990f && resistedLife <= 999f,
+          "50% lightning resistance must reduce, not cancel, Nova damage: hp="
+              + resistedLife);
+      assertEquals(1000f, life(world, immune), EPSILON,
+          "100% lightning resistance must preserve native immunity");
+      assertEquals(2, factory.created.get(0).sharedHitTargets.size,
+          "resisted and immune targets are each claimed once by the cast");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void castValidationSpendsNovaManaExactlyOnce() {
     RecordingFactory factory = new RecordingFactory();
     World world = world(factory);
@@ -147,12 +175,19 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   private static int monster(World world, float x, float y) {
+    return monster(world, x, y, 0);
+  }
+
+  private static int monster(World world, float x, float y, int lightningResistance) {
     int id = world.create();
     MonStats.Entry row = new MonStats.Entry();
     row.Id = "nova-target";
     world.getMapper(Monster.class).create(id).set(row, new MonStats2.Entry());
     world.getMapper(Position.class).create(id).position.set(x, y);
-    world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1000);
+    Attributes attrs = attributes(1000);
+    attrs.base().put(Stat.lightresist, lightningResistance);
+    attrs.reset();
+    world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
     world.getMapper(UnitStates.class).create(id).init(id);
     return id;
   }
