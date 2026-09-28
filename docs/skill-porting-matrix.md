@@ -46,8 +46,8 @@
   由 SrvDo002 幂等消费；Fend 按 SrvSt09 的 calc1 上限建立目标流，由 SrvDo013 每次
   keyframe 前进到不同附近目标。测试保留真实命中 RNG，miss 不被误判为生命周期失败。
   本轮又补充了 SrvSt05 无目标 fail-closed、Impale 近战范围拒绝和 Fend 首目标死亡
-  重定向。 这仍只完成 ECS/纯逻辑层的一轮门槛，耐久、武器数量、真实 MPQ 动画和重连
-  仍待验收。
+  重定向，并用可控 RNG 覆盖 Impale `Calc2` stack quantity 与 `Calc3` weapon durability。
+  这仍只完成 ECS/纯逻辑层的一轮门槛，真实 MPQ 动画和重连仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress
@@ -128,8 +128,8 @@
 ## 当前执行顺序
 
 1. Amazon 30 个技能逐行建立 Native 数据断言；exact-ID 行为注册表及 Jab/Impale/Fend
-   的首轮动作/目标流生命周期已完成，下一步补齐耐久、武器数量、失手/死亡、重连和真实
-   1.10f MPQ 验收。
+   的首轮动作/目标流及 Impale 耐久/数量生命周期已完成，下一步补齐失手/死亡、重连和
+   真实 1.10f MPQ 验收。
 2. 把 dark-magic 的 exact-ID/fail-closed、导弹生命周期、状态来源、checkpoint 断言移植成 riiablo Java 测试模板。
 3. 对照 D2MOO 1.10f 复核 Amazon 的 ToHit、SrcDam、Calc、武器/弹药、穿透、元素和多目标规则。
 4. 依次审计 Paladin Aura、Necromancer summon/golem、Assassin trap、Sorceress missile/state。

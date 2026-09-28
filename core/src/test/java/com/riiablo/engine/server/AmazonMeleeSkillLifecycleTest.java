@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
@@ -99,6 +100,67 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
       assertEquals(after, hp(world, target), 0.001f,
           "a second keyframe must not replay Impale damage");
       assertNotNull(weapon);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void impaleConsumesNativeStackQuantityUsingCalc2Chance() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      Item javelin = weapon(world, amazon, "jav", 3, 20);
+      assertTrue(javelin.base.stackable, "jav must use the native stackable path");
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, impale.Id, target, casting.targetVec, impale.srvstfunc, impale.cltstfunc));
+      assertTrue(casting.impalePrepared);
+      casting.impaleCombat.hit = true;
+      casting.impaleCombat.blocked = false;
+      int chance = Math.max(0, Math.min(100,
+          com.riiablo.engine.server.skill.SkillFormula.evaluate(impale.calc2, impale, 1)));
+      MathUtils.random.setSeed(seedForChance(chance));
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertEquals(2, javelin.attrs.base().get(Stat.quantity).asInt(),
+          "successful Impale Calc2 roll must consume one stack quantity");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void impaleConsumesCalc3WeaponDurability() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      Item weapon = equip(world, amazon, impale, "hax");
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, impale.Id, target, casting.targetVec, impale.srvstfunc, impale.cltstfunc));
+      assertTrue(casting.impalePrepared);
+      casting.impaleCombat.hit = true;
+      casting.impaleCombat.blocked = false;
+      int chance = Math.max(0, Math.min(100,
+          com.riiablo.engine.server.skill.SkillFormula.evaluate(impale.calc2, impale, 1)));
+      int amount = Math.max(1,
+          com.riiablo.engine.server.skill.SkillFormula.evaluate(impale.calc3, impale, 1));
+      MathUtils.random.setSeed(seedForChance(chance));
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertEquals(20 - amount, weapon.attrs.get(Stat.durability).asInt(),
+          "successful Impale Calc2 roll must consume Calc3 durability");
     } finally {
       world.dispose();
     }
@@ -264,6 +326,27 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
     weapon.attrs.reset();
     data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(weapon));
     return weapon;
+  }
+
+  private static Item weapon(World world, int amazon, String code, int quantity, int durability) {
+    CharData data = world.getMapper(Player.class).get(amazon).data;
+    Item weapon = new Item();
+    weapon.reset();
+    weapon.setBase(Riiablo.files.weapons.get(code));
+    weapon.attrs.base().put(Stat.quantity, quantity);
+    weapon.attrs.base().put(Stat.durability, durability);
+    weapon.attrs.base().put(Stat.maxdurability, durability);
+    weapon.attrs.reset();
+    data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(weapon));
+    return weapon;
+  }
+
+  private static long seedForChance(int chance) {
+    for (long seed = 1; seed < 10000; seed++) {
+      MathUtils.random.setSeed(seed);
+      if (MathUtils.random(99) < chance) return seed;
+    }
+    throw new AssertionError("unable to find deterministic seed for chance=" + chance);
   }
 
   private static Attributes attributes(float hp, int min, int max, int toHit) {

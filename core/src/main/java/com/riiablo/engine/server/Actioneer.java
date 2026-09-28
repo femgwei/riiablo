@@ -2345,7 +2345,7 @@ public class Actioneer extends PassiveSystem {
           targetId, combat.blocked ? "blocked" : "miss");
       return;
     }
-    drainImpaleDurability(weapon, skill, Math.max(1, skillLevel(entityId, skill.Id)), targetId);
+    drainImpaleDurability(weapon, skill, Math.max(1, skillLevel(entityId, skill.Id)));
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
@@ -2365,7 +2365,7 @@ public class Actioneer extends PassiveSystem {
   }
 
   /** Impale's native calc2/calc3 weapon quantity/durability roll. */
-  private void drainImpaleDurability(Item weapon, Skills.Entry skill, int level, int targetId) {
+  private void drainImpaleDurability(Item weapon, Skills.Entry skill, int level) {
     if (weapon != null && weapon.base != null && weapon.attrs != null) {
       int chance = Math.max(0, Math.min(100,
           SkillFormula.evaluate(skill.calc2, skill, level)));
@@ -2382,9 +2382,6 @@ public class Actioneer extends PassiveSystem {
           ItemDurabilityManager.INSTANCE.drainDurability(weapon, amount);
         }
       }
-    }
-    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
-      ItemDurabilityManager.INSTANCE.drainArmorDurability(mPlayer.get(targetId).data.getItems());
     }
   }
 

@@ -10,8 +10,9 @@
   命中 RNG 的合法 miss 误判为生命周期失败。
 - [x] `SrvSt05` 无目标时现在 fail-closed；补充 Impale 超出近战范围拒绝和 Fend 首目标
   死亡后重定向到下一个有效目标的回归测试。
-- [ ] 仍待补齐武器耐久/数量、ToHit/SrcDam/Calc 边界、目标死亡/失手、真实 1.10f MPQ
-  动画和断线重连验收。
+- [x] Impale 按 D2MOO `Calc2/Calc3` 消耗 stack quantity 或武器耐久；移除错误的通用
+  目标护甲耐久副作用，并用可控 RNG 覆盖两条路径。
+- [ ] 仍待补齐 ToHit/SrcDam/Calc 边界、失手/死亡、真实 1.10f MPQ 动画和断线重连验收。
 
 ## 2026-09-28 dark-magic 行为族框架落地
 
