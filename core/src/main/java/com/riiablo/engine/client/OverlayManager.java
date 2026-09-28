@@ -28,6 +28,13 @@ public class OverlayManager extends IteratingSystem {
     if (!Riiablo.assets.isLoaded(overlay.assetDescriptor)) return;
 
     Animation animation = overlay.animation;
+    // A newly loaded one-frame DCC starts at frame 0, which is also its
+    // terminal frame.  Do not dispose it in the same pass that installs its
+    // layer: RenderSystem has not had a chance to draw that first frame yet.
+    // Remembering the previous loaded state also keeps the normal multi-frame
+    // path unchanged while allowing the transient hit flash to survive one
+    // render frame.
+    boolean loadedBefore = overlay.isLoaded;
     if (!overlay.isLoaded) {
       DC dc = Riiablo.assets.get(overlay.assetDescriptor);
       animation.edit()
@@ -48,7 +55,8 @@ public class OverlayManager extends IteratingSystem {
       log.debug("Loaded {}", overlay.assetDescriptor.fileName);
     }
 
-    if (!overlay.persistent && animation.isFinished()) {
+    if (!overlay.persistent && loadedBefore
+        && animation.getFrame() >= animation.getNumFramesPerDir() - 1) {
       dispose(overlay);
       mOverlay.remove(entityId);
     }
