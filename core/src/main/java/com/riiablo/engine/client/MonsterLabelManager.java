@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.Align;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.client.component.Hovered;
@@ -119,8 +120,11 @@ public class MonsterLabelManager extends BaseEntitySystem {
       AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
       if (wrapper == null || wrapper.attrs == null) return 0f;
       Attributes attrs = wrapper.attrs;
-      com.riiablo.attributes.StatRef hp = attrs.get(Stat.hitpoints);
-      com.riiablo.attributes.StatRef max = attrs.get(Stat.maxhp);
+      // Attributes#get(short) returns a reused temporary reference. Keep
+      // separate refs or the second lookup aliases both stats and the ratio
+      // stays at 1.0 for every monster.
+      StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+      StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
       if (hp == null || max == null) return 0f;
       final float hitpoints = hp.asFixed();
       final float maxhp = max.asFixed();
