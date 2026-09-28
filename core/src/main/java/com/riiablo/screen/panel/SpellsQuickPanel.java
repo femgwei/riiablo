@@ -243,14 +243,19 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     // then top-to-bottom SkillRow, then left-to-right SkillColumn. The left
     // button uses that order and the right button reverses it. Skill id is
     // only a deterministic fallback for entries sharing one book position.
+    // Re-add the sorted buttons instead of sorting getChildren() in place:
+    // LibGDX Table lays out from its Cell list, not the child array order.
     for (Table table : tables) {
-      table.getChildren().sort((a, b) -> {
-        int leftId = ((HotkeyButton) a).getSkill();
-        int rightId = ((HotkeyButton) b).getSkill();
+      Array<HotkeyButton> sorted = new Array<>(table.getChildren().size);
+      for (Actor child : table.getChildren()) sorted.add((HotkeyButton) child);
+      sorted.sort((left, right) -> {
+        int leftId = left.getSkill();
+        int rightId = right.getSkill();
         int order = compareSkillBookOrder(leftId, rightId);
         return leftSkills ? order : -order;
       });
-      table.invalidate();
+      table.clear();
+      for (HotkeyButton button : sorted) table.add(button).size(SIZE);
     }
     float x = getX(ALIGN);
     float y = getY();
