@@ -382,6 +382,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // lifetime makes slow directional hit missiles disappear before they
     // reach their native endpoint.
     visual.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
+    MissileLoader loader = world.getSystem(MissileLoader.class);
+    if (loader != null) loader.loadNow(id);
     log.debug("[MISSILE_IMPACT] source={} sourceId={} child={} entity={} pos=({}, {})",
         source.Missile, event.missileEntityId, childName, id, event.x, event.y);
   }

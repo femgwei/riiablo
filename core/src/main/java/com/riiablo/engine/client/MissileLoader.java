@@ -93,6 +93,16 @@ public class MissileLoader extends IteratingSystem {
     mBBoxWrapper.create(entityId).box = animation.getBox();
   }
 
+  /**
+   * Loads a newly-created presentation missile immediately when its native
+   * impact event is dispatched during the simulation tick.  Normally Artemis
+   * invokes {@link #process(int)} on the next pass, but one-shot impact DCCs
+   * must be visible in the same render frame in which they are spawned.
+   */
+  public void loadNow(int entityId) {
+    if (!mAnimationWrapper.has(entityId)) process(entityId);
+  }
+
   /** Ground-fire rows share the native groundFireBig DCC and flicker fields. */
   static boolean isGroundFire(Missiles.Entry entry) {
     return entry != null
