@@ -96,6 +96,39 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void lightningStrikeJumpSearchStopsAtMissileBarrier() {
+    int skillId = com.riiablo.engine.server.skill.SkillId.LIGHTNING_STRIKE;
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = world.create();
+      world.getMapper(Player.class).create(caster);
+      world.getMapper(Class.class).create(caster).type = Class.Type.PLR;
+      world.getMapper(Position.class).create(caster).position.set(0, 0);
+      int victim = monster(world, 5, 0);
+      monster(world, 8, 0);
+      Map.Zone zone = new Map.Zone();
+      Map blocked = new Map(0, 0) {
+        @Override public Zone getZone(float x, float y) { return zone; }
+        @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+            int flags, int size,
+            com.badlogic.gdx.ai.utils.Collision<Vector2> collision) { return true; }
+      };
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+          .create(caster).set(blocked, zone);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skillId, victim, new Vector2(5, 0), 14, 0));
+      assertEquals(0, factory.created,
+          "Lightning Strike must not create a jump through a missile barrier");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void frenzyStateRaisesAuthoritativeMovementMultiplierAndExpires() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

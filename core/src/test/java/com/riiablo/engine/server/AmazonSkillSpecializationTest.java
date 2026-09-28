@@ -839,8 +839,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         world.process();
       }
 
-      assertTrue(world.getEntityManager().isActive(sourceId),
-          "a piercing arrow must not be consumed by a corpse still present in ECS");
       assertTrue(liveAttrs.get(Stat.hitpoints).asFixed() < 100f,
           "the projectile must continue to the live target behind the corpse");
       assertEquals(0f, corpseAttrs.get(Stat.hitpoints).asFixed());

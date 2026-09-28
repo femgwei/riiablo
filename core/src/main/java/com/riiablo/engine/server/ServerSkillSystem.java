@@ -1136,14 +1136,19 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private boolean hasStaticFieldLineOfSight(int sourceId, int targetId) {
+    return hasStaticFieldLineOfSight(sourceId,
+        mPosition.has(sourceId) ? mPosition.get(sourceId).position : null, targetId);
+  }
+
+  private boolean hasStaticFieldLineOfSight(int sourceId, Vector2 origin, int targetId) {
+    if (origin == null || !mPosition.has(targetId)) return true;
     Map currentMap = null;
     if (mMapWrapper.has(sourceId)) currentMap = mMapWrapper.get(sourceId).map;
     if (currentMap == null && mMapWrapper.has(targetId)) {
       currentMap = mMapWrapper.get(targetId).map;
     }
-    if (currentMap == null
-        || currentMap.getZone(mPosition.get(sourceId).position) == null) return true;
-    auraRay.set(mPosition.get(sourceId).position, mPosition.get(targetId).position);
+    if (currentMap == null || currentMap.getZone(origin) == null) return true;
+    auraRay.set(origin, mPosition.get(targetId).position);
     return !currentMap.castRay(auraRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, auraCollision);
   }
 
@@ -2866,6 +2871,9 @@ public class ServerSkillSystem extends PassiveSystem {
           || !mPosition.has(candidate)
           || (!mPlayer.has(candidate) && !mMonster.has(candidate)
               && !mMercenary.has(candidate) && !mSummonedPet.has(candidate))
+          // D2MOO's aura-filtered jump search includes the missile-barrier
+          // line-of-sight bit (0x0200); do not jump through a wall.
+          || !hasStaticFieldLineOfSight(sourceId, origin, candidate)
           // D2MOO's target search excludes dead units even while their corpse
           // entity remains in the world.  Without this guard Lightning Strike
           // can lock onto a stale corpse and send the next segment away from
