@@ -17,6 +17,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.Item;
+import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Type;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -86,23 +87,16 @@ public class SequenceHandler extends IteratingSystem {
     }
     if (casting != null && casting.jabRemainingStrikes > 0
         && casting.jabStrikeProcessed) {
-      sequence.sequence(com.riiablo.engine.Engine.Player.MODE_A2, sequence.mode2);
       casting.jabStrikeProcessed = false;
-      mAnimData.get(event.entityId).override = -1;
-      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
-          "[AMAZON_JAB] phase=next_animation entity={} remaining={} mode={}",
-          event.entityId, casting.jabRemainingStrikes,
-          (int) com.riiablo.engine.Engine.Player.MODE_A2);
+      restartAmazonStrikeAnimation(event.entityId, casting,
+          com.riiablo.engine.Engine.Player.MODE_A2, "JAB");
       return;
     }
     if (casting != null && casting.fendInitialized
         && casting.fendRemainingStrikes > 0
         && casting.fendStrikeProcessed) {
-      sequence.sequence(sequence.mode1, sequence.mode2);
       casting.fendStrikeProcessed = false;
-      mAnimData.get(event.entityId).override = -1;
-      log.info("[AMAZON_FEND] phase=repeat_animation entity={} remaining={} mode={}",
-          event.entityId, casting.fendRemainingStrikes, (int) sequence.mode1);
+      restartAmazonStrikeAnimation(event.entityId, casting, sequence.mode1, "FEND");
       return;
     }
     if (casting != null && casting.furyInitialized
@@ -293,6 +287,33 @@ public class SequenceHandler extends IteratingSystem {
     return -1;
   }
 
+  /** Restart Jab/Fend at the next attack window instead of replaying a full COF. */
+  private void restartAmazonStrikeAnimation(int entityId, Casting casting,
+      byte mode, String skillName) {
+    Sequence sequence = mSequence.get(entityId);
+    if (sequence == null || !mAnimData.has(entityId)) return;
+    sequence.sequence(mode, sequence.mode2);
+    cofs.setMode(entityId, mode, true);
+    AnimData anim = mAnimData.get(entityId);
+    int attackFrame = firstAttackFrame(anim);
+    if (attackFrame < 0) {
+      log.warn("[AMAZON_{}_ANIM] entity={} mode={} reason=attack_keyframe_missing",
+          skillName, entityId, (int) mode);
+      anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 0);
+      return;
+    }
+    int restartFrame = Math.max(0, attackFrame - 1);
+    int maxFrame = Math.max(0, (anim.numFrames >>> 8) - 1);
+    anim.frame = Math.min(restartFrame, maxFrame) << 8;
+    anim.lastKeyframeIndex = Math.max(-1, (anim.frame >>> 8) - 1);
+    anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 0);
+    sequence.started = true;
+    log.info("[AMAZON_{}_ANIM] phase=restart entity={} mode={} attackFrame={} frame={} "
+            + "speed={} remaining={}", skillName, entityId, (int) mode, attackFrame,
+        anim.frame, anim.override,
+        "JAB".equals(skillName) ? casting.jabRemainingStrikes : casting.fendRemainingStrikes);
+  }
+
   /**
    * Native Strafe rollback timing. Unlike ordinary A1/A2 attacks, Strafe's
    * middle-arrow cadence is calculated by the hard-coded rollback sequence;
@@ -440,7 +461,13 @@ public class SequenceHandler extends IteratingSystem {
       }
     }
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      // D2's attack-rate helper uses the active weapon for both bow and
+      // spear/javelin attacks.  Restricting this lookup to bows makes Jab,
+      // Impale and Fend fall back to WSM=0, which leaves their long A1/A2 COF
+      // at the raw 256 speed and is visibly slower than vanilla.
       Item weapon = mPlayer.get(entityId).data.getItems().getEquippedRangedWeapon();
+      if (weapon == null) weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.RARM);
+      if (weapon == null) weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.LARM);
       if (weapon != null) {
         if (weapon.base instanceof Weapons.Entry) {
           int weaponAttackRate = itemStatInt(weapon, Stat.attackrate,
