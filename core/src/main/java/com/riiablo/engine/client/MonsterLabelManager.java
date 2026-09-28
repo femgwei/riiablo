@@ -87,7 +87,7 @@ public class MonsterLabelManager extends BaseEntitySystem {
     MonsterLabel() {
       label = new Table();
       label.setBackground(background = new PaletteIndexedColorDrawable(
-          Riiablo.colors.darkRed, Riiablo.colors.modal50) {{
+          Riiablo.colors.darkRed) {{
         setTopHeight(VERTICAL_PADDING);
         setBottomHeight(VERTICAL_PADDING);
         setLeftWidth(HORIZONTAL_PADDING);
