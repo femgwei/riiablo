@@ -2986,9 +2986,12 @@ public class ServerSkillSystem extends PassiveSystem {
     } else {
       target.set(start).add(1, 0);
     }
-    target.sub(start);
-    if (target.isZero(0.0001f)) target.set(1, 0);
-    target.nor();
+    // Keep the target as an absolute world position. D2MOO's SrvDo008 first
+    // computes the integer caster-to-target delta, then derives the
+    // perpendicular lane offset from that delta. Passing a normalized
+    // direction here would make the lane calculation depend on the caster's
+    // distance from the world origin instead of the actual target.
+    if (target.dst2(start) < 0.0001f) target.set(start).add(1, 0);
 
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
     int total = DruidSkills.isShockWave(skill)
