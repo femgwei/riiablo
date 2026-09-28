@@ -2542,9 +2542,13 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private static boolean isNativeAreaEffect(Missile missile) {
+    // SrvHit01 is the travelling Fire Ball parent: its radius belongs to the
+    // spawned ExplosionMissile, not to the contact projectile. Treating the
+    // parent as an area missile would resolve the direct packet on every unit
+    // along the path before the child fan-out. Runtime child snapshots carry
+    // areaRadiusOverride; SrvHit14 remains an in-flight native area packet.
     return missile != null && (missile.areaRadiusOverride >= 0f
-        || missile.missile != null
-        && (missile.missile.pSrvHitFunc == 1 || missile.missile.pSrvHitFunc == 14))
+        || missile.missile != null && missile.missile.pSrvHitFunc == 14)
         && nativeAreaRadius(missile) > 0;
   }
 
