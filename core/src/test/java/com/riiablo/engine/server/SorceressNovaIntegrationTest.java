@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
+import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
@@ -20,6 +22,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
@@ -30,11 +33,14 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 /** Headless contract for D2MOO SKILLS_SrvDo022_NovaAttack. */
@@ -153,13 +159,98 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void lethalCardinalPathDoesNotStopOtherNovaPaths() {
+    RecordingFactory factory = new RecordingFactory();
+    DeathProbe probe = new DeathProbe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new ServerSkillSystem(true),
+            new StateUpdater(), new MissileCollisionSystem(), factory)
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      int caster = player(world, 1);
+      int lethal = monster(world, 5, 0);
+      world.getMapper(AttributesWrapper.class).get(lethal).attrs
+          .get(Stat.hitpoints).set(1f);
+      int surviving = monster(world, 0, 5);
+      cast(world, caster);
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 6; i++) world.process();
+
+      assertTrue(probe.deathObserved, "lethal Nova path must dispatch DeathEvent");
+      assertEquals(0f, life(world, lethal), EPSILON);
+      assertTrue(life(world, surviving) < 1000f,
+          "one lethal cardinal path must not stop the other radial paths");
+      assertEquals(2, factory.created.get(0).sharedHitTargets.size,
+          "dead and surviving targets must both be claimed once");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void wallCollisionRemovesBlockedNovaPaths() {
+    Map.Zone zone = new Map.Zone();
+    Map blocked = new WallMap(zone);
+    RecordingFactory factory = new RecordingFactory(blocked, zone);
+    World world = world(factory, blocked);
+    try {
+      int caster = player(world, 1);
+      cast(world, caster);
+
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(64, factory.createdIds.size());
+      for (int id : factory.createdIds) {
+        assertTrue(!world.getMapper(Missile.class).has(id),
+            "a blocking barrier must consume every Nova path that reaches it");
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void nativeNovaRangeExpiresAllPathsWithoutRecreation() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, 1);
+      cast(world, caster);
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 10; i++) world.process();
+      boolean atLeastOneAlive = false;
+      for (int id : factory.createdIds) {
+        atLeastOneAlive |= world.getMapper(Missile.class).has(id);
+      }
+      assertTrue(atLeastOneAlive, "Nova paths must remain alive before native range 13 expires");
+
+      for (int i = 0; i < 8; i++) world.process();
+      for (int id : factory.createdIds) {
+        assertTrue(!world.getMapper(Missile.class).has(id),
+            "all Nova paths must expire at their native range");
+      }
+      assertEquals(64, factory.createdIds.size(),
+          "range expiry must not recreate radial missiles");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static World world(RecordingFactory factory) {
+    return world(factory, new Map(0, 0));
+  }
+
+  private static World world(RecordingFactory factory, Map map) {
     return new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ServerSkillSystem(true),
             new StateUpdater(), new MissileCollisionSystem(), factory)
         .build()
         .register("factory", factory)
-        .register("map", new Map(0, 0)));
+        .register("map", map));
   }
 
   private static int player(World world, int level) {
@@ -222,9 +313,21 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   private static final class RecordingFactory extends EntityFactory {
+    final Map map;
+    final Map.Zone zone;
     final ArrayList<Missile> created = new ArrayList<>();
+    final ArrayList<Integer> createdIds = new ArrayList<>();
     final ArrayList<Vector2> directions = new ArrayList<>();
     final ArrayList<Vector2> velocities = new ArrayList<>();
+
+    RecordingFactory() {
+      this(null, null);
+    }
+
+    RecordingFactory(Map map, Map.Zone zone) {
+      this.map = map;
+      this.zone = zone;
+    }
 
     @Override public int createMissile(
         int id, Vector2 direction, Vector2 position, int ownerId) {
@@ -236,7 +339,9 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       world.getMapper(Position.class).create(entityId).position.set(position);
       Velocity velocity = world.getMapper(Velocity.class).create(entityId);
       velocity.velocity.set(direction).setLength(row.Vel);
+      if (map != null) world.getMapper(MapWrapper.class).create(entityId).set(map, zone);
       created.add(missile);
+      createdIds.add(entityId);
       directions.add(new Vector2(direction));
       velocities.add(velocity.velocity);
       return entityId;
@@ -272,6 +377,34 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
     @Override public int createItem(Item item, float x, float y) {
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private static final class DeathProbe extends PassiveSystem {
+    boolean deathObserved;
+
+    @Subscribe
+    public void onDeath(DeathEvent event) {
+      deathObserved = true;
+    }
+  }
+
+  private static final class WallMap extends Map {
+    private final Zone zone;
+
+    WallMap(Zone zone) {
+      super(0, 0);
+      this.zone = zone;
+    }
+
+    @Override public Zone getZone(float x, float y) {
+      return zone;
+    }
+
+    @Override public boolean castRay(Ray<Vector2> ray, int flags, int size,
+        Collision<Vector2> collision) {
+      collision.point.set(ray.end);
+      return true;
     }
   }
 }
