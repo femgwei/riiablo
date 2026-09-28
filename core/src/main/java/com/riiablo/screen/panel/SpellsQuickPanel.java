@@ -239,16 +239,15 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
       table.add(button).size(SIZE);
       buttons.put(button.getSkill(), button);
     }
-    // Keep the native quick-skill list deterministic within each row. The
-    // left-button list reads ascending by skill id; the right-button list is
-    // presented in the opposite direction. IntIntMap iteration order is not
-    // a skill-order contract, so sort after both charged and learned skills
-    // have been added.
+    // Match the skill-book layout within each quick-skill row: page order,
+    // then top-to-bottom SkillRow, then left-to-right SkillColumn. The left
+    // button uses that order and the right button reverses it. Skill id is
+    // only a deterministic fallback for entries sharing one book position.
     for (Table table : tables) {
       table.getChildren().sort((a, b) -> {
         int leftId = ((HotkeyButton) a).getSkill();
         int rightId = ((HotkeyButton) b).getSkill();
-        int order = Integer.compare(leftId, rightId);
+        int order = compareSkillBookOrder(leftId, rightId);
         return leftSkills ? order : -order;
       });
       table.invalidate();
@@ -257,6 +256,21 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     float y = getY();
     pack();
     setPosition(x, y, Align.bottom | ALIGN);
+  }
+
+  private static int compareSkillBookOrder(int leftId, int rightId) {
+    if (leftId == rightId) return 0;
+    Skills.Entry leftSkill = Riiablo.files.skills.get(leftId);
+    Skills.Entry rightSkill = Riiablo.files.skills.get(rightId);
+    SkillDesc.Entry leftDesc = Riiablo.files.skilldesc.get(leftSkill.skilldesc);
+    SkillDesc.Entry rightDesc = Riiablo.files.skilldesc.get(rightSkill.skilldesc);
+
+    int order = Integer.compare(leftDesc.SkillPage, rightDesc.SkillPage);
+    if (order != 0) return order;
+    order = Integer.compare(leftDesc.SkillRow, rightDesc.SkillRow);
+    if (order != 0) return order;
+    order = Integer.compare(leftDesc.SkillColumn, rightDesc.SkillColumn);
+    return order != 0 ? order : Integer.compare(leftId, rightId);
   }
 
   public void setObserver(HotkeyButton observer) {
