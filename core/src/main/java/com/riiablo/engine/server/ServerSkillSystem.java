@@ -555,7 +555,7 @@ public class ServerSkillSystem extends PassiveSystem {
         // Lightning Strike's cltDoFunc=22 is the shared Nova fan.  Its real
         // directional chain is owned by SrvDo014, so local games must create
         // the same authoritative root missile as dedicated servers.
-        && event.srvdofunc != 14
+        && event.srvdofunc != 11 && event.srvdofunc != 14
         && event.srvdofunc != 19
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
@@ -579,7 +579,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 3 && skill.srvdofunc != 5
         && skill.srvdofunc != 8
         && skill.srvdofunc != 10 && skill.srvdofunc != 12
-        && skill.srvdofunc != 14
+        && skill.srvdofunc != 11 && skill.srvdofunc != 14
         && skill.srvdofunc != 19
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {

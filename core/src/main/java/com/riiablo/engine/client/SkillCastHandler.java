@@ -196,12 +196,15 @@ public class SkillCastHandler extends PassiveSystem {
     boolean localFistOfHeavensServer = localServer
         && (event.srvdofunc == 80 || skill.srvdofunc == 80);
     boolean localHolyBoltServer = localServer && PaladinSkills.isHolyBolt(skill);
-    // Charged Bolt is emitted as authoritative one-per-calc1 missiles by the
-    // local ServerSkillSystem.  Do not also create the legacy client fan or
-    // local games will contain a doubled set of projectiles.
+    // Charged Bolt and Charged Strike are emitted as authoritative missiles by
+    // the local ServerSkillSystem.  Do not also create the legacy client
+    // visual: it has no owner, cannot collide, and would add a misleading
+    // extra bolt to Charged Strike (whose native count starts at three).
     boolean localChargedBoltServer = localServer
         && (event.skillId == com.riiablo.engine.server.skill.SkillId.CHARGED_BOLT
-            || "Charged Bolt".equalsIgnoreCase(skill.skill));
+            || "Charged Bolt".equalsIgnoreCase(skill.skill)
+            || event.skillId == com.riiablo.engine.server.skill.SkillId.CHARGED_STRIKE
+            || event.srvdofunc == 11 || skill.srvdofunc == 11);
     // Multiple Shot uses SrvDo008 to emit one authoritative arrow per lane
     // in the local server. Do not also create the legacy client fan, whose
     // three-argument factory call has no owner and therefore cannot damage
