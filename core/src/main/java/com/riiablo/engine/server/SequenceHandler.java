@@ -302,7 +302,12 @@ public class SequenceHandler extends IteratingSystem {
       anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 0);
       return;
     }
-    int restartFrame = Math.max(0, attackFrame - 1);
+    // D2's native Jab SQ does not rewind the follow-up A2 thrust to the
+    // attack marker.  The 1HS sequence starts each A2 segment at frame 4 and
+    // reaches its attack event at frame 9/10; using attackFrame - 1 here
+    // starts at the hit pose and produces the reported half-animation.
+    // Fend's sequence uses the normal beginning of its selected COF.
+    int restartFrame = "JAB".equals(skillName) ? 4 : 0;
     int maxFrame = Math.max(0, (anim.numFrames >>> 8) - 1);
     anim.frame = Math.min(restartFrame, maxFrame) << 8;
     anim.lastKeyframeIndex = Math.max(-1, (anim.frame >>> 8) - 1);

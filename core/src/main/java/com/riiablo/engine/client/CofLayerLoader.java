@@ -112,6 +112,14 @@ public class CofLayerLoader extends IteratingSystem {
         // native rollback frame and must retain the explicit seek.
         if (casting == null || !casting.strafeInitialized) {
           animation.restart();
+          // Native Amazon Jab's repeated 1HS segments begin at A2 frame 4
+          // (SequenceTbls.cpp), not at the attack marker. Keep the client
+          // presentation aligned with SequenceHandler's authoritative seek.
+          if (casting != null
+              && casting.skillId == com.riiablo.engine.server.skill.SkillId.JAB
+              && mCofReference.get(event.entityId).mode == Engine.Player.MODE_A2) {
+            animation.setFrame(4);
+          }
           if (mObject.has(event.entityId)) {
             com.riiablo.engine.server.component.Object object = mObject.get(event.entityId);
             animation.setFrame(objectAnimationStartFrame(object == null ? null : object.base,
