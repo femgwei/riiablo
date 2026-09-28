@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
@@ -101,6 +102,32 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
       assertEquals(after, hp(world, target), 0.001f,
           "a second keyframe must not replay Impale damage");
       assertNotNull(weapon);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void pooledCastingReuseCannotCarryImpaleCombatAcrossEntityRebind() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting stale = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(1, 0));
+      stale.impalePrepared = true;
+      stale.impaleCombat = new CombatSystem.CombatResult();
+      stale.impaleTargetId = target;
+
+      // A disconnect/rebind can remove the old server entity and reuse its
+      // pooled component.  No prepared hit may cross that lifecycle boundary.
+      world.getMapper(Casting.class).remove(amazon);
+      Casting rebound = world.getMapper(Casting.class).create(amazon);
+      assertFalse(rebound.impalePrepared);
+      assertNull(rebound.impaleCombat);
+      assertEquals(Engine.INVALID_ENTITY, rebound.impaleTargetId);
+      assertNull(rebound.impaleWeapon);
     } finally {
       world.dispose();
     }

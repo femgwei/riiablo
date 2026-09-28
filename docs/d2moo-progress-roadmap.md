@@ -19,6 +19,8 @@
   动画完成后清理遗留 CombatResult，补充对应生命周期回归。
 - [x] 新增 Amazon 弹药策略矩阵：弓技能仅在 `isAmazonBowSkill && !noammo` 时消耗箭袋，
   Magic Arrow 的原生 `noammo=1` 和所有标枪技能均不会错误消耗弓箭。
+- [x] 验证 `Casting` 组件池复用会清空 Impale 的预计算 `CombatResult`，防止实体重绑定/断线重连
+  后误消费旧攻击记录；真实网络重连流程仍待验收。
 - [ ] 仍待补齐真实 1.10f MPQ 动画和断线重连验收。
 
 ## 2026-09-28 dark-magic 行为族框架落地
