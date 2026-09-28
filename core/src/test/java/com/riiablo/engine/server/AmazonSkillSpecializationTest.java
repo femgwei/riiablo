@@ -148,6 +148,28 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void elementalArrowConversionUsesNativeBaseAtLevelOne() {
+    Attributes owner = attributes(20, 200);
+    owner.base().put(Stat.mindamage, 100);
+    owner.base().put(Stat.maxdamage, 100);
+    owner.base().put(Stat.tohit, 100);
+    owner.reset();
+
+    Skills.Entry fire = Riiablo.files.skills.get("Fire Arrow");
+    Missile levelOne = new Missile().set(Riiablo.files.Missiles.get("firearrow"),
+        new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(levelOne, fire, owner, 1));
+    assertEquals(97, levelOne.damage.get(Stat.mindamage).asInt(),
+        "D2MOO dl12 uses dParam1 at level one (Fire Arrow is 3%, not 5%)");
+
+    Missile levelTwo = new Missile().set(Riiablo.files.Missiles.get("firearrow"),
+        new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(levelTwo, fire, owner, 2));
+    assertEquals(95, levelTwo.damage.get(Stat.mindamage).asInt(),
+        "Fire Arrow conversion must add dParam2 only after the first level");
+  }
+
+  @Test
   void explodingArrowCreatesAuthoritativeAreaSubMissile() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     MissileCollisionSystem collisions = new MissileCollisionSystem();

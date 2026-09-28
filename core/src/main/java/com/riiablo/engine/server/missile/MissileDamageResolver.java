@@ -883,13 +883,14 @@ public final class MissileDamageResolver {
     int perLevel = arrayValue(missile != null ? missile.dParam : null, 1);
     // The legacy bin reader used by some installations does not expose the
     // dParam columns, although DmgCalc1 survives. Native dl12 means
-    // dParam1 + level * dParam2; all three Amazon conversion arrows use 1,1.
+    // dParam1 + (level - 1) * dParam2 (the first missile level uses the base
+    // percentage); Magic Arrow uses 1,1 while Fire Arrow uses 3,2.
     if (base == 0 && perLevel == 0 && missile != null
         && "dl12".equalsIgnoreCase(missile.DmgCalc1)) {
       base = 1;
       perLevel = 1;
     }
-    return base + Math.max(1, level) * perLevel;
+    return base + (Math.max(1, level) - 1) * perLevel;
   }
 
   private static boolean hasText(String value) {
