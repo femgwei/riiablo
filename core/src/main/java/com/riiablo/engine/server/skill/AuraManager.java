@@ -90,6 +90,8 @@ public class AuraManager {
     public float lastUpdateTime;
     public float manaCostAccumulator;
     public boolean active;
+    boolean pulseFunded;
+    boolean pulseUseful;
     long nextPulseFrame;
     boolean pulsed;
   }
@@ -124,11 +126,12 @@ public class AuraManager {
     boolean isValidTarget(
         int casterId, int targetId, int skillId, int auraFilter, boolean checkMonsterNoAura);
     boolean isInTown(int entityId);
+    boolean canConsumeMana(int casterId, float amount);
     boolean consumeMana(int casterId, float amount);
     void applyState(int targetId, int stateId, int duration, int sourceEntityId,
         int skillId, int skillLevel, int[] statIds, int[] statValues);
     void removeState(int targetId, int stateId, int sourceEntityId, int skillId);
-    void applyDirectStat(int targetId, int statId, int fixedValue,
+    boolean applyDirectStat(int targetId, int statId, int fixedValue,
         int sourceEntityId, int skillId);
     void applyPeriodicDamage(int casterId, int targetId, int skillId,
         int skillLevel, int minimum, int maximum, String elementType);
@@ -229,16 +232,21 @@ public class AuraManager {
       deactivateAura(casterId);
       reconcile = true;
     }
-    if (reconcile) reconcileWinners();
+    if (reconcile) {
+      reconcileWinners();
+      settlePulseMana();
+    }
   }
 
   private void pulse(ActiveAura aura) {
     AuraDefinition definition = aura.definition;
     float manaCost = nativeManaCost(definition, aura.skillLevel);
-    if (manaCost > 0f && !callback.consumeMana(aura.casterId, manaCost)) {
-      aura.active = false;
-      return;
-    }
+    // Native SrvDo065 keeps the selected aura alive when it cannot fund this
+    // pulse. It evaluates no paid effect in that case, then retries on the
+    // next periodic frame. Mana is consumed only after a callback changed a
+    // target (field_40 > 0), not merely because the pulse became due.
+    aura.pulseFunded = manaCost <= 0f || callback.canConsumeMana(aura.casterId, manaCost);
+    aura.pulseUseful = false;
     float[] casterPos = callback.getEntityPosition(aura.casterId);
     if (casterPos == null) return;
     Array<Integer> range = callback.getEntitiesInRange(casterPos[0], casterPos[1], aura.range);
@@ -260,19 +268,20 @@ public class AuraManager {
       boolean rangeTarget = (definition.affectsParty && ally)
           || (definition.affectsEnemy && !ally);
       if (rangeTarget) affected.add(targetId);
-      if (rangeTarget && definition.skillId == SkillId.CLEANSING) {
+      if (rangeTarget && aura.pulseFunded && definition.skillId == SkillId.CLEANSING) {
         int percent = definition.statIds.length > 0 && definition.statIds[0] >= 0
             ? aura.statValues[0] : 0;
         if (percent > 0) callback.applyCleansingEffect(targetId, percent,
             aura.casterId, definition.skillId);
       }
-      if (rangeTarget && definition.auraType == AURA_TYPE_DAMAGE
+      if (rangeTarget && aura.pulseFunded && definition.auraType == AURA_TYPE_DAMAGE
           && definition.nativeSkill != null && !callback.isInTown(aura.casterId)) {
         int[] damage = nativeElementalDamageRange(definition.nativeSkill, aura.skillLevel,
             name -> callback.getBaseSkillLevel(aura.casterId, name));
         if (damage[1] > 0) {
           callback.applyPeriodicDamage(aura.casterId, targetId, definition.skillId,
               aura.skillLevel, damage[0], damage[1], definition.nativeSkill.EType);
+          aura.pulseUseful = true;
         }
         if (definition.skillId == SkillId.HOLY_FREEZE) {
           callback.updateHolyFreezeShatter(aura.casterId, targetId, definition.skillId,
@@ -281,7 +290,7 @@ public class AuraManager {
       }
     }
     aura.affectedEntities = affected;
-    if (definition.skillId == SkillId.REDEMPTION) {
+    if (aura.pulseFunded && definition.skillId == SkillId.REDEMPTION) {
       callback.applyRedemptionEffect(aura.casterId, definition.skillId,
           aura.skillLevel, aura.range);
     }
@@ -362,8 +371,10 @@ public class AuraManager {
     if (winner.aura.pulsed && winner.direct) {
       for (int i = 0; i < winner.statIds.length && i < winner.statValues.length; i++) {
         if (winner.statIds[i] == Stat.hitpoints && winner.statValues[i] > 0) {
-          callback.applyDirectStat(winner.targetId, winner.statIds[i], winner.statValues[i],
-              winner.aura.casterId, winner.aura.definition.skillId);
+          winner.aura.pulseUseful |= winner.aura.pulseFunded
+              && callback.applyDirectStat(winner.targetId, winner.statIds[i],
+                  winner.statValues[i], winner.aura.casterId,
+                  winner.aura.definition.skillId);
         }
       }
     }
@@ -371,6 +382,15 @@ public class AuraManager {
       callback.onEntityEnterAura(winner.targetId, winner.aura.casterId,
           winner.aura.definition.skillId, winner.statValues);
       addPublicEffect(winner);
+    }
+  }
+
+  private void settlePulseMana() {
+    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+      ActiveAura aura = entry.value;
+      if (!aura.active || !aura.pulsed || !aura.pulseFunded || !aura.pulseUseful) continue;
+      float manaCost = nativeManaCost(aura.definition, aura.skillLevel);
+      if (manaCost > 0f) callback.consumeMana(aura.casterId, manaCost);
     }
   }
 

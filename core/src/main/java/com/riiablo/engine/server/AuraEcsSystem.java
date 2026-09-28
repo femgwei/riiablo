@@ -33,6 +33,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AuraManager;
 import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateList;
@@ -218,6 +219,14 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return true;
   }
 
+  @Override public boolean canConsumeMana(int casterId, float amount) {
+    if (amount <= 0f) return true;
+    if (!mAttributes.has(casterId)) return false;
+    Attributes attrs = mAttributes.get(casterId).attrs;
+    StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
+    return mana != null && NativeSkillResolver.hasEnoughMana(mana.asFixed(), amount);
+  }
+
   @Override public void applyState(int targetId, int stateId, int duration,
       int sourceEntityId, int skillId, int skillLevel,
       int[] statIds, int[] values) {
@@ -260,21 +269,23 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
   }
 
-  @Override public void applyDirectStat(int targetId, int statId, int fixedValue,
+  @Override public boolean applyDirectStat(int targetId, int statId, int fixedValue,
       int sourceEntityId, int skillId) {
-    if (fixedValue <= 0 || !mAttributes.has(targetId)) return;
+    if (fixedValue <= 0 || !mAttributes.has(targetId)) return false;
     Attributes attrs = mAttributes.get(targetId).attrs;
-    if (attrs == null) return;
+    if (attrs == null) return false;
     if (statId == Stat.hitpoints) {
       StatRef current = attrs.get(Stat.hitpoints, StatRef.obtain());
       StatRef maximum = attrs.get(Stat.maxhp, StatRef.obtain());
-      if (current == null || maximum == null || current.asFixed() <= 0f) return;
+      if (current == null || maximum == null || current.asFixed() <= 0f) return false;
       float requested = fixedValue / 256f;
       float restored = Math.min(requested, Math.max(0f, maximum.asFixed() - current.asFixed()));
       if (restored > 0f) current.add(restored);
       log.debug("[AURA] phase=direct_heal target={} source={} skill={} requested={} restored={}",
           targetId, sourceEntityId, skillId, requested, restored);
+      return restored > 0f;
     }
+    return false;
   }
 
   @Override public void applyPeriodicDamage(int casterId, int targetId, int skillId,

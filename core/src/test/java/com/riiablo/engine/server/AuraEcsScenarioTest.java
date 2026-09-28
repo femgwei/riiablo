@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -196,6 +197,51 @@ class AuraEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void prayerSpendsManaOnlyWhenItsPulseActuallyRestoresLife() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      float cost = NativeSkillResolver.manaCost(
+          test.auras.manager().getAuraDefinition(SkillId.PRAYER).nativeSkill, 1);
+      mana(test.world, caster, 10f);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.PRAYER, 1));
+      test.tick();
+      assertEquals(10f, mana(test.world, caster), 0.001f,
+          "a full-life target must not make Prayer consume a pulse cost");
+
+      life(test.world, caster, 98);
+      test.ticks(50);
+      assertEquals(100f, life(test.world, caster), 0.001f);
+      assertEquals(10f - cost, mana(test.world, caster), 0.001f,
+          "one useful Prayer pulse consumes exactly one native cost");
+    }
+  }
+
+  @Test
+  void unfundedPrayerKeepsSelectionAndRetriesOnTheNextPulse() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      float cost = NativeSkillResolver.manaCost(
+          test.auras.manager().getAuraDefinition(SkillId.PRAYER).nativeSkill, 1);
+      life(test.world, caster, 90);
+      mana(test.world, caster, 0f);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.PRAYER, 1));
+      test.tick();
+      assertEquals(90f, life(test.world, caster), 0.001f);
+      assertTrue(test.auras.manager().hasActiveAura(caster),
+          "native mana failure skips one pulse; it does not deselect the aura");
+      assertTrue(states(test.world, caster).hasState(StateId.PRAYER));
+
+      mana(test.world, caster, cost);
+      test.ticks(50);
+      assertEquals(92f, life(test.world, caster), 0.001f);
+      assertEquals(0f, mana(test.world, caster), 0.001f);
+      assertTrue(test.auras.manager().hasActiveAura(caster));
+    }
+  }
+
+  @Test
   void holyFireDoesNotDamageInTownAndPulsesInTheField() {
     try (Harness test = new Harness()) {
       int caster = player(test.world, 0, 0);
@@ -330,6 +376,15 @@ class AuraEcsScenarioTest extends RiiabloTest {
   private static float life(World world, int entityId) {
     return world.getMapper(AttributesWrapper.class).get(entityId)
         .attrs.get(Stat.hitpoints).asFixed();
+  }
+
+  private static void mana(World world, int entityId, float value) {
+    world.getMapper(AttributesWrapper.class).get(entityId).attrs.get(Stat.mana).set(value);
+  }
+
+  private static float mana(World world, int entityId) {
+    return world.getMapper(AttributesWrapper.class).get(entityId)
+        .attrs.get(Stat.mana).asFixed();
   }
 
   private static Attributes attributes() {

@@ -81,3 +81,27 @@ Paladin Aura 只有在上述关键场景的纯数据层和 ECS 层测试均通�
 结构，不覆盖 riiablo 行为。
 
 本文件只记录核对计划和证据边界；任何实现修改仍须单独提交、运行相关测试并推送。
+
+## 第一项实证结果（2026-09-28）
+
+已完成 Prayer 的第一轮 D2MOO ↔ riiablo ECS 对照。D2MOO 的
+`SKILLS_SrvDo065_BasicAura` 先按当前 mana 决定本次 stat/effect 是否可用，
+但不会因为 mana 不足取消已选 Aura；扫描回调只有在确实产生有效效果时才允许
+`D2GAME_SKILLMANA_AuraConsume_6FD10C90` 扣除 pulse cost。riiablo 已按这一顺序
+修正并加入：
+
+- 满生命时 Prayer 不扣 mana；
+- mana 不足时不治疗、不取消 Aura，并在下个 pulse 重试；
+- mana 足够且实际恢复生命时只扣一次 native cost。
+
+对应回归位于 `AuraEcsScenarioTest` 的
+`prayerSpendsManaOnlyWhenItsPulseActuallyRestoresLife` 和
+`unfundedPrayerKeepsSelectionAndRetriesOnTheNextPulse`。已通过：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.AuraEcsScenarioTest
+./gradlew.bat :core:test --tests "com.riiablo.engine.server.*Aura*Test" --tests com.riiablo.engine.server.AuraEcsScenarioTest
+```
+
+这项修正只覆盖已由 D2MOO 证实的资源/生命周期差异；Holy Fire、Holy Freeze、
+Redemption 和多来源优先级仍按待办中的独立场景继续核对。
