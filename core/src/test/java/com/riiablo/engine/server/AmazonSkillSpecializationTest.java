@@ -850,6 +850,41 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void strafeTargetSearchSkipsDeadAndBlockedTargets() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry strafe = Riiablo.files.skills.get("Strafe");
+      data.setSkillLevel(strafe.Id, 1);
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(20, 100);
+      int target = monster(world, 4, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 0);
+
+      com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+      com.riiablo.map.Map blocked = new com.riiablo.map.Map(0, 0) {
+        @Override public Zone getZone(float x, float y) { return zone; }
+        @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+            int flags, int size,
+            com.badlogic.gdx.ai.utils.Collision<Vector2> collision) { return true; }
+      };
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+          .create(amazon).set(blocked, zone);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, strafe.Id, target, null, strafe.srvdofunc, strafe.cltdofunc));
+      assertTrue(factory.created.isEmpty(),
+          "D2MOO Strafe target search must reject dead or line-of-sight blocked units");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void cloakOfShadowsAppliesNativeDimVisionToHostiles() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     World world = new World(new WorldConfigurationBuilder()

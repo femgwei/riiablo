@@ -3160,12 +3160,19 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int i = 0; i < bag.size(); i++) {
       int candidate = bag.get(i);
       if (isHostile(event.entityId, candidate) && mNativeUnitFlagsValid(candidate)
+          && (!mAttributesWrapper.has(candidate) || hasPositiveLife(candidate))
+          && hasStaticFieldLineOfSight(event.entityId, candidate)
           && mPosition.get(candidate).position.dst(start) <= range) targets.add(candidate);
     }
-    if (event.targetId >= 0 && mPosition.has(event.targetId) && !targets.contains(event.targetId)) {
+    if (event.targetId >= 0 && mPosition.has(event.targetId)
+        && (!mAttributesWrapper.has(event.targetId) || hasPositiveLife(event.targetId))
+        && hasStaticFieldLineOfSight(event.entityId, event.targetId)
+        && !targets.contains(event.targetId)) {
       targets.add(0, event.targetId);
     }
-    if (targets.isEmpty() && event.targetId >= 0 && mPosition.has(event.targetId)) {
+    if (targets.isEmpty() && event.targetId >= 0 && mPosition.has(event.targetId)
+        && (!mAttributesWrapper.has(event.targetId) || hasPositiveLife(event.targetId))
+        && hasStaticFieldLineOfSight(event.entityId, event.targetId)) {
       targets.add(event.targetId);
     }
     final Vector2 origin = start;
