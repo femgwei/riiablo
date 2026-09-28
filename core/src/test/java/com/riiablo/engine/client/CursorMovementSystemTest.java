@@ -33,6 +33,16 @@ class CursorMovementSystemTest {
   }
 
   @Test
+  void meleeApproachKeepsSkillCapturedByOriginalUnitClick() {
+    assertEquals(SkillId.CHARGED_STRIKE,
+        CursorMovementSystem.skillForApproachedTarget(
+            42, SkillId.CHARGED_STRIKE, 42, SkillCodes.attack));
+    assertEquals(SkillCodes.attack,
+        CursorMovementSystem.skillForApproachedTarget(
+            42, SkillId.CHARGED_STRIKE, 7, SkillCodes.attack));
+  }
+
+  @Test
   void untargetedRightAttackMovesUnlessShiftIsHeld() {
     Skills.Entry attack = new Skills.Entry();
     attack.Id = SkillCodes.attack;

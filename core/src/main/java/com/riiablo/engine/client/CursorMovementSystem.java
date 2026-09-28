@@ -103,6 +103,9 @@ public class CursorMovementSystem extends BaseSystem {
   boolean lastAttackRangeRangedNormal;
   boolean attackRangeTraceInitialized;
   long lastAttackRangeTraceMillis;
+  /** Skill captured when a unit click starts an out-of-range melee approach. */
+  int approachTarget = Engine.INVALID_ENTITY;
+  int approachSkill = Engine.INVALID_ENTITY;
 
   private final Vector2 tmpVec2 = new Vector2();
 
@@ -151,13 +154,13 @@ public class CursorMovementSystem extends BaseSystem {
     if ((leftPressed && shiftDown) || rightPressed) {
       final int targetId = getHovered(playerId);
       if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
-        actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
+        stopTargeting(playerId);
       } else {
         final int skillId = Riiablo.charData.getAction(
             leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         if (!isSkillAllowedForInput(playerId, skillId)) {
-          actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
+          stopTargeting(playerId);
           return;
         }
         // Shift-click/right-click bypasses updateLeft(). Keep the same melee
@@ -177,7 +180,7 @@ public class CursorMovementSystem extends BaseSystem {
           if (shiftDown) {
             requestCast(playerId, skillId, Engine.INVALID_ENTITY, tmpVec2);
           } else {
-            moveToTarget(playerId, targetId);
+            moveToTargetForSkill(playerId, targetId, skillId);
           }
         } else {
           requestCast(playerId, skillId, targetId, tmpVec2);
@@ -278,7 +281,7 @@ public class CursorMovementSystem extends BaseSystem {
       }
       int skillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, skillId)) {
-        actioneer.moveTo(src, Engine.INVALID_ENTITY);
+        stopTargeting(src);
         return true;
       }
       int targetId = getHoveredAt(src, pendingLeftX, pendingLeftY);
@@ -336,12 +339,12 @@ public class CursorMovementSystem extends BaseSystem {
     int targetId = getHoveredAt(src, click.screenX, click.screenY);
     if (targetId != Engine.INVALID_ENTITY
         && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(src))) {
-      actioneer.moveTo(src, Engine.INVALID_ENTITY);
+      stopTargeting(src);
       return true;
     }
     int skillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
     if (!isSkillAllowedForInput(src, skillId)) {
-      actioneer.moveTo(src, Engine.INVALID_ENTITY);
+      stopTargeting(src);
       return true;
     }
     iso.agg(tmpVec2.set(click.screenX, click.screenY)).unproject().toWorld();
@@ -358,7 +361,7 @@ public class CursorMovementSystem extends BaseSystem {
       if (click.shiftDown) {
         requestCast(src, skillId, Engine.INVALID_ENTITY, tmpVec2);
       } else {
-        moveToTarget(src, targetId);
+        moveToTargetForSkill(src, targetId, skillId);
       }
       return true;
     }
@@ -410,7 +413,7 @@ public class CursorMovementSystem extends BaseSystem {
         // clear the stale interaction target before touching its position.
         if (targetId == Engine.INVALID_ENTITY || !mPosition.has(src)
             || !mPosition.has(targetId)) {
-          actioneer.moveTo(src, Engine.INVALID_ENTITY);
+          stopTargeting(src);
           return;
         }
         Vector2 srcPos = mPosition.get(src).position;
@@ -421,14 +424,14 @@ public class CursorMovementSystem extends BaseSystem {
         if (interactable != null
             && InteractionRange.contains(dst, interactable, mSize.get(src))) {
           traceInteraction(src, targetId, interactable, dst, "trigger", true);
-          actioneer.moveTo(src, Engine.INVALID_ENTITY);
+          stopTargeting(src);
           actioneer.faceTarget(src, targetId);
           interactable.interactor.interact(src, targetId);
         } else if (interactable != null) {
           traceInteraction(src, targetId, interactable, dst, "approach", false);
         } else if (interactable == null) {
           if (isTargetDead(targetId)) {
-            actioneer.moveTo(src, Engine.INVALID_ENTITY);
+            stopTargeting(src);
             return;
           }
           if (actioneer.didLastAttackTargetDie(src)) return;
@@ -437,7 +440,9 @@ public class CursorMovementSystem extends BaseSystem {
           boolean inMeleeRange = actioneer.isInMeleeRange(
               src, targetId, MELEE_APPROACH_RANGE_BONUS);
           
-          final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+          final int selectedSkillId = skillForApproachedTarget(
+              approachTarget, approachSkill, targetId,
+              Riiablo.charData.getAction(Input.Buttons.LEFT));
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
           final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
@@ -466,7 +471,7 @@ public class CursorMovementSystem extends BaseSystem {
             // A release is a single attack request.  Clear the interaction
             // target immediately; retaining it caused every subsequent
             // interruptible frame to replay the attack animation forever.
-            actioneer.moveTo(src, Engine.INVALID_ENTITY);
+            stopTargeting(src);
           }
         }
       }
@@ -474,6 +479,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void moveToGround(int src, Vector2 destination) {
+    clearApproachSkill();
     Position position = mPosition.get(src);
     Pathfind pathfind = mPathfind.get(src);
     if (!shouldRefreshHeldGroundPath(
@@ -485,8 +491,37 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void moveToTarget(int src, int target) {
+    clearApproachSkill();
     closeTradePanelsForMovement();
     actioneer.moveTo(src, target);
+  }
+
+  private void moveToTargetForSkill(int src, int target, int skillId) {
+    rememberApproachSkill(target, skillId);
+    closeTradePanelsForMovement();
+    actioneer.moveTo(src, target);
+  }
+
+  private void stopTargeting(int src) {
+    clearApproachSkill();
+    actioneer.moveTo(src, Engine.INVALID_ENTITY);
+  }
+
+  private void rememberApproachSkill(int target, int skillId) {
+    approachTarget = target;
+    approachSkill = skillId;
+  }
+
+  private void clearApproachSkill() {
+    approachTarget = Engine.INVALID_ENTITY;
+    approachSkill = Engine.INVALID_ENTITY;
+  }
+
+  static int skillForApproachedTarget(
+      int approachTarget, int approachSkill, int currentTarget, int fallbackSkill) {
+    return approachTarget == currentTarget && approachSkill != Engine.INVALID_ENTITY
+        ? approachSkill
+        : fallbackSkill;
   }
 
   private void closeTradePanelsForMovement() {
@@ -514,12 +549,13 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void requestCast(int sourceId, int skillId, int targetId, Vector2 targetVec) {
+    clearApproachSkill();
     // The HUD tint is an affordance, not an input gate.  Mouse clicks can hit
     // the world directly, so repeat the native InTown check here before
     // invoking Actioneer (local) or sending a packet (multiplayer).  Without
     // this guard a red Throw icon still starts the throw animation.
     if (!isSkillAllowedForInput(sourceId, skillId)) {
-      actioneer.moveTo(sourceId, Engine.INVALID_ENTITY);
+      stopTargeting(sourceId);
       return;
     }
     if (socket == null) {
@@ -596,6 +632,7 @@ public class CursorMovementSystem extends BaseSystem {
       return false;
     }
 
+    int approachSkillId = Engine.INVALID_ENTITY;
     Interactable selectedInteractable = mInteractable.get(target);
     if (selectedInteractable != null) {
       Position srcPosition = mPosition.get(src);
@@ -612,7 +649,7 @@ public class CursorMovementSystem extends BaseSystem {
       // and waypoint clicks remain usable while an attack icon is red.
       final int selectedSkill = Riiablo.charData.getAction(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, selectedSkill)) {
-        actioneer.moveTo(src, Engine.INVALID_ENTITY);
+        stopTargeting(src);
         return true;
       }
       
@@ -624,6 +661,7 @@ public class CursorMovementSystem extends BaseSystem {
           src, target, MELEE_APPROACH_RANGE_BONUS);
       
       final int selectedSkillId = selectedSkill;
+      approachSkillId = selectedSkillId;
       final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
       final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
@@ -651,8 +689,15 @@ public class CursorMovementSystem extends BaseSystem {
     
     Target currentTarget = mTarget.get(src);
     Pathfind currentPath = mPathfind.get(src);
+    if (approachSkillId != Engine.INVALID_ENTITY) {
+      rememberApproachSkill(target, approachSkillId);
+    }
     if (shouldIssueTargetMove(currentTarget, currentPath, target)) {
-      moveToTarget(src, target);
+      if (approachSkillId != Engine.INVALID_ENTITY) {
+        moveToTargetForSkill(src, target, approachSkillId);
+      } else {
+        moveToTarget(src, target);
+      }
     }
     return true;
   }
