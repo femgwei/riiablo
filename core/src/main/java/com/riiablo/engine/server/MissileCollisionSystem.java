@@ -1652,7 +1652,8 @@ public class MissileCollisionSystem extends IteratingSystem {
             log.warn("{} has no hitpoints stat", targetId);
             return true; // 返回 true 表示已处理（虽然无法造成伤害）
           }
-          String hitSound = missile.missile != null ? missile.missile.HitSound : null;
+          String hitSound = missile.impactSound != null ? missile.impactSound
+              : missile.missile != null ? missile.missile.HitSound : null;
           log.info("[MISSILE_SOUND] phase=hit missileId={} missile={} target={} hitSound={} playedBy=DamageHandler",
               missileId,
               missile.missile != null ? missile.missile.Missile : "unknown",
@@ -1874,7 +1875,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (damage <= 0f) return;
     DamageEvent event = DamageEvent.obtainMissile(
         missile.ownerId, targetId, damage, 0f,
-        missile.missile != null ? missile.missile.HitSound : null)
+        missile.impactSound != null ? missile.impactSound
+            : missile.missile != null ? missile.missile.HitSound : null)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
@@ -3107,6 +3109,16 @@ public class MissileCollisionSystem extends IteratingSystem {
         // but its lethal hit must retain the normal corpse.
         clearShatter(targetId);
       }
+    }
+    // Preserve any future data-table state without duplicating the native
+    // poison/cold callbacks above, which carry damage and shatter semantics.
+    if (missile != null && missile.onHitStateId > StateId.NONE
+        && missile.onHitStateDuration > 0
+        && missile.onHitStateId != StateId.POISON
+        && missile.onHitStateId != StateId.COLD
+        && missile.onHitStateId != StateId.FREEZE) {
+      StatusEffectApplier.INSTANCE.applyState(targetId, missile.onHitStateId,
+          missile.onHitStateDuration, attackerId);
     }
   }
 

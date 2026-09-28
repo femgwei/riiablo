@@ -137,6 +137,16 @@ public class MissileData {
   /** 毒素持续时间（帧） */
   public int poisonDuration;
 
+  /** Unified elemental channel carried by this projectile (0..5). */
+  public int damageChannel;
+  /** Optional generic state applied on impact. */
+  public int onHitStateId;
+  public int onHitStateDuration;
+  /** Data-driven impact presentation metadata. */
+  public String impactDcc;
+  public String impactPalette;
+  public String impactSound;
+
   /** 最小魔法伤害 */
   public int minMagicDamage;
 
@@ -229,6 +239,12 @@ public class MissileData {
     maxLightningDamage = 0;
     poisonDamage = 0;
     poisonDuration = 0;
+    damageChannel = 0;
+    onHitStateId = -1;
+    onHitStateDuration = 0;
+    impactDcc = null;
+    impactPalette = null;
+    impactSound = null;
     minMagicDamage = 0;
     maxMagicDamage = 0;
 

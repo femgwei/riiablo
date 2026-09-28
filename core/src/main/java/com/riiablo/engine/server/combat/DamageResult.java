@@ -12,6 +12,26 @@ package com.riiablo.engine.server.combat;
  */
 public class DamageResult {
 
+  /** Native damage channels shared by the damage bundle and missile packets. */
+  public static final String[] CHANNELS = {
+      "physical", "fire", "lightning", "cold", "magic", "poison"
+  };
+  /** Poison is a state payload and is not part of immediate hit-point damage. */
+  public static final String[] IMMEDIATE_CHANNELS = {
+      "physical", "fire", "lightning", "cold", "magic"
+  };
+  public static final int CHANNEL_PHYSICAL = 0;
+  public static final int CHANNEL_FIRE = 1;
+  public static final int CHANNEL_LIGHTNING = 2;
+  public static final int CHANNEL_COLD = 3;
+  public static final int CHANNEL_MAGIC = 4;
+  public static final int CHANNEL_POISON = 5;
+
+  /** Raw channel values captured immediately before mitigation. */
+  public final int[] rolled = new int[CHANNELS.length];
+  /** Final channel values after resistance, absorb and PvP modifiers. */
+  public final int[] mitigated = new int[CHANNELS.length];
+
   //==========================================================================
   // 结果标志
   //==========================================================================
@@ -127,6 +147,8 @@ public class DamageResult {
    * 重置所有伤害值为0
    */
   public void reset() {
+    java.util.Arrays.fill(rolled, 0);
+    java.util.Arrays.fill(mitigated, 0);
     resultFlags = 0;
     hitFlags = 0;
     physicalDamage = 0;
@@ -153,6 +175,44 @@ public class DamageResult {
     conversionType = 0;
     conversionPercent = 0;
     overlayId = 0;
+  }
+
+  /** Returns a channel index, or {@code -1} for an unknown channel name. */
+  public static int channelIndexOf(String channel) {
+    if (channel == null) return -1;
+    for (int i = 0; i < CHANNELS.length; i++) {
+      if (CHANNELS[i].equalsIgnoreCase(channel)) return i;
+    }
+    return -1;
+  }
+
+  /** Captures the legacy discrete fields into the raw channel bundle. */
+  public void captureRolledChannels() {
+    rolled[CHANNEL_PHYSICAL] = physicalDamage;
+    rolled[CHANNEL_FIRE] = fireDamage;
+    rolled[CHANNEL_LIGHTNING] = lightningDamage;
+    rolled[CHANNEL_COLD] = coldDamage;
+    rolled[CHANNEL_MAGIC] = magicDamage;
+    rolled[CHANNEL_POISON] = poisonDamage;
+  }
+
+  /** Mirrors the legacy discrete fields into the mitigated channel bundle. */
+  public void syncMitigatedChannels() {
+    mitigated[CHANNEL_PHYSICAL] = physicalDamage;
+    mitigated[CHANNEL_FIRE] = fireDamage;
+    mitigated[CHANNEL_LIGHTNING] = lightningDamage;
+    mitigated[CHANNEL_COLD] = coldDamage;
+    mitigated[CHANNEL_MAGIC] = magicDamage;
+    mitigated[CHANNEL_POISON] = poisonDamage;
+  }
+
+  /** Sums only channels that damage life immediately. */
+  public int immediateTotal() {
+    int total = 0;
+    for (int channel = 0; channel < IMMEDIATE_CHANNELS.length; channel++) {
+      total += mitigated[channelIndexOf(IMMEDIATE_CHANNELS[channel])];
+    }
+    return total;
   }
 
   /**

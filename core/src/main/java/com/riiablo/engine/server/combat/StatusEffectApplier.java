@@ -47,6 +47,13 @@ public class StatusEffectApplier {
     this.stateSink = stateSink;
   }
 
+  /** Applies a data-driven non-damage state carried by a missile packet. */
+  public void applyState(int targetEntityId, int stateId, int duration,
+      int sourceEntityId) {
+    if (stateId <= StateId.NONE || duration <= 0 || stateSink == null) return;
+    stateSink.applyState(targetEntityId, stateId, duration, 1, sourceEntityId, 0, 0);
+  }
+
   //==========================================================================
   // 状态效果常量
   //==========================================================================

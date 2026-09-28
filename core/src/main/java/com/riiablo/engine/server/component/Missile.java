@@ -55,6 +55,15 @@ public class Missile extends PooledComponent {
   public int skillId = -1;
   /** Ice Arrow and freeze-element explosions convert cold length to freeze. */
   public boolean freezesTarget;
+  /** Unified elemental channel carried by this projectile (0..5). */
+  public int damageChannel;
+  /** Optional generic state applied by the projectile on impact. */
+  public int onHitStateId = -1;
+  public int onHitStateDuration;
+  /** Data-driven impact presentation copied from Missiles.txt. */
+  public String impactDcc;
+  public String impactPalette;
+  public String impactSound;
   /** Freezing Arrow's cold explosion, spawned before the parent packet lands. */
   public int freezeExplosionId = -1;
   /** Weapon-source skills still perform the native attack-rating check. */
@@ -256,6 +265,12 @@ public class Missile extends PooledComponent {
     damageLevel = 0;
     skillId = -1;
     freezesTarget = false;
+    damageChannel = 0;
+    onHitStateId = -1;
+    onHitStateDuration = 0;
+    impactDcc = null;
+    impactPalette = null;
+    impactSound = null;
     freezeExplosionId = -1;
     usesAttackRating = false;
     persistent = false;

@@ -210,6 +210,9 @@ public class CombatSystem {
 
     /** 技能等级 */
     public int skillLevel;
+
+    /** Difficulty snapshot used for monster cold-length scaling. */
+    public int difficulty;
   }
 
   /**
@@ -782,7 +785,18 @@ public class CombatSystem {
         baseDuration, d, DAMAGE_COLD, Math.max(0, piercePercent));
     if (d.cannotBeFrozen) return 0;
     if (d.halfFreezeDuration) duration /= 2;
-    return Math.max(0, duration);
+    return scaleMonsterColdDuration(duration, !defenderPlayer, difficulty);
+  }
+
+  /**
+   * Applies Diablo II's monster cold-length penalty after resistance and
+   * Cannot Be Frozen/Half Freeze checks. Normal, Nightmare and Hell monsters
+   * use divisors 1, 2 and 4 respectively; player targets are never scaled.
+   */
+  static int scaleMonsterColdDuration(int duration, boolean monsterTarget, int difficulty) {
+    if (duration <= 0 || !monsterTarget) return Math.max(0, duration);
+    int divisor = difficulty <= 0 ? 1 : difficulty == 1 ? 2 : 4;
+    return Math.max(0, duration / divisor);
   }
 
   /**
@@ -1266,6 +1280,7 @@ public class CombatSystem {
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
     a.alwaysHit = alwaysHit;
+    a.difficulty = Math.max(0, Math.min(2, difficulty));
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
@@ -1614,6 +1629,8 @@ public class CombatSystem {
         attacker.elementalPierce[DAMAGE_COLD]);
     if (defender.cannotBeFrozen) result.coldDuration = 0;
     else if (defender.halfFreezeDuration) result.coldDuration /= 2;
+    result.coldDuration = scaleMonsterColdDuration(
+        result.coldDuration, defender.isMonster, attacker.difficulty);
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);

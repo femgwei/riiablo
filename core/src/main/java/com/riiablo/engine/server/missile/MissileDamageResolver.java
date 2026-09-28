@@ -13,9 +13,11 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.MonsterStatsCalculator;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.combat.DamageResult;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import java.util.function.ToIntFunction;
 import com.riiablo.logger.LogManager;
@@ -194,6 +196,7 @@ public final class MissileDamageResolver {
     projectile.freezesTarget = row.pSrvDmgFunc == 2
         || "freeze".equalsIgnoreCase(row.EType)
         || "frze".equalsIgnoreCase(row.EType);
+    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
     projectile.usesAttackRating = false;
     log.info("[MISSILE_TABLE_SNAPSHOT] missile={} level={} element={} damage={}..{} "
             + "coldLength={} freezesTarget={}", row.Missile, level, row.EType,
@@ -219,6 +222,7 @@ public final class MissileDamageResolver {
     projectile.damageLevel = level;
     projectile.freezesTarget = true;
     projectile.usesAttackRating = false;
+    configureMetadata(projectile, elementalMax, coldLength, 0);
     log.info("[MISSILE_COLD_SKILL_SNAPSHOT] missile={} skill={} level={} cold={}..{} length={}",
         projectile.missile.Missile, skill.skill, level, min, max, coldLength);
     return true;
@@ -598,6 +602,7 @@ public final class MissileDamageResolver {
         && (projectile.missile.pSrvDmgFunc == 2
             || "freeze".equalsIgnoreCase(projectile.missile.EType)
             || "frze".equalsIgnoreCase(projectile.missile.EType));
+    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
     projectile.usesAttackRating = includeSource && skill.SrcDam > 0
         && !"Guided Arrow".equalsIgnoreCase(skill.skill);
     return true;
@@ -705,6 +710,51 @@ public final class MissileDamageResolver {
     projectile.attackMinDamage = physicalMin;
     projectile.attackMaxDamage = physicalMax;
     projectile.attackRating = Math.max(0, attackRating);
+    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
+  }
+
+  /**
+   * Copies the native Missiles.txt packet identity into the runtime missile.
+   * CombatSystem keeps poison before magic in its legacy array, while the
+   * public DamageResult channel order is physical/fire/lightning/cold/magic/poison.
+   */
+  public static void configureMetadata(Missile projectile, int[] elementalMax,
+      int coldDuration, int poisonDuration) {
+    if (projectile == null) return;
+    Missiles.Entry row = projectile.missile;
+    int legacyType = row != null ? damageType(row.EType) : PHYSICAL;
+    if (elementalMax != null) {
+      for (int type = FIRE; type < DAMAGE_TYPES; type++) {
+        if (type < elementalMax.length && elementalMax[type] > 0) {
+          legacyType = type;
+          break;
+        }
+      }
+    }
+    projectile.damageChannel = toDamageResultChannel(legacyType);
+    projectile.onHitStateId = -1;
+    projectile.onHitStateDuration = 0;
+    if (legacyType == POISON || poisonDuration > 0) {
+      projectile.onHitStateId = StateId.POISON;
+      projectile.onHitStateDuration = Math.max(0, poisonDuration);
+    } else if (legacyType == COLD || coldDuration > 0) {
+      boolean freeze = projectile.freezesTarget || (row != null &&
+          (row.pSrvDmgFunc == 2 || "freeze".equalsIgnoreCase(row.EType)
+              || "frze".equalsIgnoreCase(row.EType)));
+      projectile.onHitStateId = freeze ? StateId.FREEZE : StateId.COLD;
+      projectile.onHitStateDuration = Math.max(0, coldDuration);
+    }
+    if (row != null) {
+      projectile.impactDcc = row.CelFile;
+      projectile.impactPalette = null;
+      projectile.impactSound = row.HitSound;
+    }
+  }
+
+  private static int toDamageResultChannel(int legacyType) {
+    if (legacyType == POISON) return DamageResult.CHANNEL_POISON;
+    if (legacyType == MAGIC) return DamageResult.CHANNEL_MAGIC;
+    return Math.max(0, Math.min(DamageResult.CHANNEL_COLD, legacyType));
   }
 
   private static void addOwnerElemental(Attributes attrs, int scale,

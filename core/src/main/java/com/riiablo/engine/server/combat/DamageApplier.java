@@ -82,6 +82,18 @@ public class DamageApplier {
    * @param isPvP 是否为PvP
    */
   public void applyResistancesAndAbsorb(DamageResult result, Attributes defenderAttrs, boolean isPvP) {
+    applyResistancesAndAbsorb(result, defenderAttrs, isPvP, false);
+  }
+
+  /**
+   * Applies the native mitigation chain with an explicit target class.
+   * Monsters with an elemental resistance of 100 or more are immune; player
+   * resistance remains subject to the normal maximum-resistance cap.
+   */
+  public void applyResistancesAndAbsorb(DamageResult result, Attributes defenderAttrs,
+      boolean isPvP, boolean monsterTarget) {
+    if (result == null) return;
+    result.captureRolledChannels();
     // 物理伤害：应用物理抗性和伤害减免
     result.physicalDamage = applyPhysicalResist(
         result.physicalDamage, 
@@ -97,7 +109,7 @@ public class DamageApplier {
         Stat.passive_fire_pierce,
         Stat.item_absorbfire_percent,
         Stat.item_absorbfire,
-        result);
+        result, monsterTarget);
 
     // 闪电伤害
     result.lightningDamage = applyElementalResist(
@@ -108,7 +120,7 @@ public class DamageApplier {
         Stat.passive_ltng_pierce,
         Stat.item_absorblight_percent,
         Stat.item_absorblight,
-        result);
+        result, monsterTarget);
 
     // 冰冷伤害
     result.coldDamage = applyElementalResist(
@@ -119,7 +131,7 @@ public class DamageApplier {
         Stat.passive_cold_pierce,
         Stat.item_absorbcold_percent,
         Stat.item_absorbcold,
-        result);
+        result, monsterTarget);
 
     // 魔法伤害
     result.magicDamage = applyElementalResist(
@@ -130,10 +142,10 @@ public class DamageApplier {
         (short) -1, // 魔法没有穿透
         Stat.item_absorbmagic_percent,
         Stat.item_absorbmagic,
-        result);
+        result, monsterTarget);
 
     // 毒素伤害：应用毒素抗性
-    result.poisonDamage = applyPoisonResist(result.poisonDamage, defenderAttrs);
+    result.poisonDamage = applyPoisonResist(result.poisonDamage, defenderAttrs, monsterTarget);
 
     // 毒素持续时间减免
     result.poisonDuration = applyPoisonLengthResist(result.poisonDuration, defenderAttrs);
@@ -147,8 +159,8 @@ public class DamageApplier {
     }
 
     // 计算总伤害
-    result.totalDamage = result.physicalDamage + result.fireDamage + 
-        result.lightningDamage + result.coldDamage + result.magicDamage;
+    result.syncMitigatedChannels();
+    result.totalDamage = result.immediateTotal();
 
     log.debug("Applied resistances: phys={}, fire={}, ltng={}, cold={}, mag={}, total={}",
         result.physicalDamage, result.fireDamage, result.lightningDamage,
@@ -202,11 +214,20 @@ public class DamageApplier {
   private int applyElementalResist(int damage, Attributes attrs,
       short resistStat, short maxResistStat, short pierceStat,
       short absorbPctStat, short absorbStat, DamageResult result) {
+    return applyElementalResist(damage, attrs, resistStat, maxResistStat, pierceStat,
+        absorbPctStat, absorbStat, result, false);
+  }
+
+  private int applyElementalResist(int damage, Attributes attrs,
+      short resistStat, short maxResistStat, short pierceStat,
+      short absorbPctStat, short absorbStat, DamageResult result,
+      boolean monsterTarget) {
     
     if (damage <= 0) return 0;
 
     // 获取抗性
     int resist = getInt(attrs, resistStat, 0);
+    if (monsterTarget && resist >= 100) return 0;
     
     // 获取最大抗性
     int maxResist = DEFAULT_MAX_RESIST;
@@ -247,9 +268,14 @@ public class DamageApplier {
    * 应用毒素抗性
    */
   private int applyPoisonResist(int damage, Attributes attrs) {
+    return applyPoisonResist(damage, attrs, false);
+  }
+
+  private int applyPoisonResist(int damage, Attributes attrs, boolean monsterTarget) {
     if (damage <= 0) return 0;
 
     int resist = getInt(attrs, Stat.poisonresist, 0);
+    if (monsterTarget && resist >= 100) return 0;
     int maxResist = DEFAULT_MAX_RESIST + getInt(attrs, Stat.maxpoisonresist, 0);
     maxResist = Math.min(maxResist, ABSOLUTE_MAX_RESIST);
     resist = Math.max(MIN_RESIST, Math.min(maxResist, resist));
