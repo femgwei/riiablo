@@ -160,6 +160,34 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
   }
 
   @Test
+  void novaUsesNativeSrvDo22SixtyFourPathRow() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.NOVA);
+    assertNotNull(skill);
+    assertEquals("Nova", skill.skill);
+    assertEquals(22, skill.srvdofunc);
+    assertEquals("nova", skill.srvmissilea);
+    assertEquals("nova", skill.srvmissileb);
+    assertEquals("nova", skill.srvmissilec);
+    assertEquals("ltng", skill.EType);
+    assertEquals(8, skill.HitShift);
+    assertEquals(1, skill.EMin);
+    assertEquals(20, skill.EMax);
+
+    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.srvmissilea);
+    assertNotNull(missile);
+    assertEquals(1, missile.pSrvDoFunc);
+    assertEquals(24, missile.Vel);
+    assertEquals(13, missile.Range);
+    assertEquals(3, missile.CollideType);
+    assertFalse(missile.CollideKill);
+    assertTrue(missile.NextHit);
+    assertEquals(4, missile.NextDelay);
+    assertTrue(missile.LastCollide);
+    assertEquals(24, ServerSkillSystem.nativeNovaVelocity(missile, skill, 1));
+    assertEquals(13, ServerSkillSystem.nativeMissileRange(missile, 1));
+  }
+
+  @Test
   void iceBlastUsesNativeSrvDmg04FreezeConversionAndLengthSynergy() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.ICE_BLAST);
     assertNotNull(skill);

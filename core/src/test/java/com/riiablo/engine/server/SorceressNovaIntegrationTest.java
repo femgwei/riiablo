@@ -1,0 +1,242 @@
+package com.riiablo.engine.server;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.artemis.World;
+import com.artemis.WorldConfigurationBuilder;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
+import com.riiablo.Riiablo;
+import com.riiablo.RiiabloTest;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.SkillCastEvent;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
+import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.item.Item;
+import com.riiablo.map.Map;
+import com.riiablo.save.CharData;
+import java.util.ArrayList;
+import net.mostlyoriginal.api.event.common.EventSystem;
+import org.junit.jupiter.api.Test;
+
+/** Headless contract for D2MOO SKILLS_SrvDo022_NovaAttack. */
+class SorceressNovaIntegrationTest extends RiiabloTest {
+  private static final float EPSILON = 0.0001f;
+
+  @Test
+  void createsNativeSixtyFourPathRingWithOneSharedHitGate() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, 1);
+      cast(world, caster);
+
+      assertEquals(64, factory.created.size(),
+          "D2MOO sub_6FD14170 always emits the fixed 64-offset ring");
+      Missile first = factory.created.get(0);
+      assertEquals("nova", first.missile.Missile);
+      assertEquals(13f, first.range, EPSILON);
+      assertEquals(1, first.damage.get(Stat.lightmindam).asInt());
+      assertEquals(20, first.damage.get(Stat.lightmaxdam).asInt());
+      assertEquals(24f, factory.velocities.get(0).len(), EPSILON);
+      assertEquals(1f, factory.directions.get(0).x, EPSILON);
+      assertEquals(0f, factory.directions.get(0).y, EPSILON);
+      assertEquals(29f / (float) Math.sqrt(29 * 29 + 2 * 2),
+          factory.directions.get(1).x, EPSILON);
+      assertEquals(2f / (float) Math.sqrt(29 * 29 + 2 * 2),
+          factory.directions.get(1).y, EPSILON);
+
+      IntSet shared = first.sharedHitTargets;
+      assertNotNull(shared);
+      for (Missile missile : factory.created) {
+        assertSame(shared, missile.sharedHitTargets,
+            "every path from one cast must share the target claim set");
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void oneCastDamagesEachCrossedTargetOnlyOnce() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, 1);
+      int east = monster(world, 5, 0);
+      int north = monster(world, 0, 5);
+      cast(world, caster);
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 6; i++) world.process();
+
+      float eastAfter = life(world, east);
+      float northAfter = life(world, north);
+      assertTrue(eastAfter >= 980f && eastAfter <= 999f);
+      assertTrue(northAfter >= 980f && northAfter <= 999f);
+      assertEquals(2, factory.created.get(0).sharedHitTargets.size,
+          "the radial cast owns one stable claim per struck target");
+
+      for (int i = 0; i < 6; i++) world.process();
+      assertEquals(eastAfter, life(world, east), EPSILON,
+          "overlapping Nova paths must not replay damage on the east target");
+      assertEquals(northAfter, life(world, north), EPSILON,
+          "overlapping Nova paths must not replay damage on the north target");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void castValidationSpendsNovaManaExactlyOnce() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, 1);
+      float before = mana(world, caster);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.NOVA);
+      float cost = NativeSkillResolver.manaCost(skill, 1);
+      SkillCastEvent event = SkillCastEvent.obtain(
+          caster, skill.Id, Engine.INVALID_ENTITY, Vector2.Zero);
+      world.getSystem(EventSystem.class).dispatch(event);
+      assertTrue(event.accepted, "Nova cast rejected resultCode=" + event.resultCode
+          + " manaCost=" + event.manaCost);
+      assertEquals(before - cost, mana(world, caster), EPSILON);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static World world(RecordingFactory factory) {
+    return new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true),
+            new StateUpdater(), new MissileCollisionSystem(), factory)
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+  }
+
+  private static int player(World world, int level) {
+    int id = world.create();
+    CharData data = CharData.createRemote("nova", (byte) Riiablo.SORCERESS);
+    data.setSkillLevel(SkillId.NOVA, level);
+    data.setSkillLevel(SkillId.STATIC_FIELD, 1);
+    world.getMapper(Player.class).create(id).data = data;
+    world.getMapper(Position.class).create(id).position.setZero();
+    world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1000);
+    world.getMapper(UnitStates.class).create(id).init(id);
+    return id;
+  }
+
+  private static int monster(World world, float x, float y) {
+    int id = world.create();
+    MonStats.Entry row = new MonStats.Entry();
+    row.Id = "nova-target";
+    world.getMapper(Monster.class).create(id).set(row, new MonStats2.Entry());
+    world.getMapper(Position.class).create(id).position.set(x, y);
+    world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1000);
+    world.getMapper(UnitStates.class).create(id).init(id);
+    return id;
+  }
+
+  private static Attributes attributes(float life) {
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().clear();
+    attrs.base().put(Stat.level, 20);
+    attrs.base().put(Stat.hitpoints, life);
+    attrs.base().put(Stat.maxhp, life);
+    attrs.base().put(Stat.mana, 1000);
+    attrs.base().put(Stat.maxmana, 1000);
+    attrs.reset();
+    return attrs;
+  }
+
+  private static void cast(World world, int caster) {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.NOVA);
+    world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+        caster, skill.Id, Engine.INVALID_ENTITY, Vector2.Zero,
+        skill.srvdofunc, skill.cltdofunc));
+  }
+
+  private static float life(World world, int entityId) {
+    return world.getMapper(AttributesWrapper.class).get(entityId)
+        .attrs.get(Stat.hitpoints).asFixed();
+  }
+
+  private static float mana(World world, int entityId) {
+    return world.getMapper(AttributesWrapper.class).get(entityId)
+        .attrs.get(Stat.mana).asFixed();
+  }
+
+  private static final class RecordingFactory extends EntityFactory {
+    final ArrayList<Missile> created = new ArrayList<>();
+    final ArrayList<Vector2> directions = new ArrayList<>();
+    final ArrayList<Vector2> velocities = new ArrayList<>();
+
+    @Override public int createMissile(
+        int id, Vector2 direction, Vector2 position, int ownerId) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(id);
+      if (row == null) return Engine.INVALID_ENTITY;
+      int entityId = world.create();
+      Missile missile = world.getMapper(Missile.class).create(entityId)
+          .set(row, position, row.Range).setOwner(ownerId);
+      world.getMapper(Position.class).create(entityId).position.set(position);
+      Velocity velocity = world.getMapper(Velocity.class).create(entityId);
+      velocity.velocity.set(direction).setLength(row.Vel);
+      created.add(missile);
+      directions.add(new Vector2(direction));
+      velocities.add(velocity.velocity);
+      return entityId;
+    }
+
+    @Override public int createMissile(int id, Vector2 direction, Vector2 position) {
+      return createMissile(id, direction, position, Engine.INVALID_ENTITY);
+    }
+
+    @Override public int createPlayer(CharData data, Vector2 position) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createDynamicObject(int act, int id, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createStaticObject(int act, int id, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createStaticObjectByClassId(int id, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createMonster(int id, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createWarp(int index, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+
+    @Override public int createItem(Item item, float x, float y) {
+      return Engine.INVALID_ENTITY;
+    }
+  }
+}

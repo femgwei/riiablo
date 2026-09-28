@@ -97,6 +97,16 @@
   重复结算；真实 1.10f `pSrvHitFunc=1`、`sHitPar[0]=4` 和 16 帧表现生命周期
   已锁定在 `NativeSorceressProjectileDataTest`。下一步补 ECS 多目标命中、墙碰撞、
   致死顺序和 impact 表现生命周期测试。
+- Nova(48) 已按 D2MOO `SKILLS_SrvDo022_NovaAttack` / `sub_6FD14170` 完成首轮
+  对照。1.10f 原生行为是固定 64 个偏移点、使用 `SrvMissileA` 发射 `nova`，速度为
+  `Missiles.txt.Vel + Skills.txt.Calc1`；riiablo 保留原生坐标表、24 速度、13 格
+  寿命和 1..20 闪电伤害快照。一次施法的 64 枚导弹共享命中集合，因此同一目标只会
+  结算一次，mana 也只在 `SkillCastEvent` 验证成功时扣除一次。新增
+  `NativeSorceressProjectileDataTest.novaUsesNativeSrvDo22SixtyFourPathRow` 与
+  `SorceressNovaIntegrationTest`，覆盖 64 路创建/方向速度、跨路径去重、后续 tick
+  不重复伤害和前置技能/单次 mana 扣除。剩余门槛是抗性/免疫、墙碰撞、致死顺序、
+  表现生命周期及真实 1.10f MPQ 离屏验证；dark-magic 的 `12 + 4/level` 数量只作
+  行为族测试参考，不能替代 D2MOO 固定 64 路规则。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
 ### Necromancer
