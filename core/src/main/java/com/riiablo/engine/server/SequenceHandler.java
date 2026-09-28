@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.Riiablo;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Type;
@@ -96,7 +97,7 @@ public class SequenceHandler extends IteratingSystem {
         && casting.fendRemainingStrikes > 0
         && casting.fendStrikeProcessed) {
       casting.fendStrikeProcessed = false;
-      restartAmazonStrikeAnimation(event.entityId, casting, sequence.mode1, "FEND");
+      restartFendAnimation(event.entityId, casting, sequence.mode1);
       return;
     }
     if (casting != null && casting.furyInitialized
@@ -317,6 +318,37 @@ public class SequenceHandler extends IteratingSystem {
             + "speed={} remaining={}", skillName, entityId, (int) mode, attackFrame,
         anim.frame, anim.override,
         "JAB".equals(skillName) ? casting.jabRemainingStrikes : casting.fendRemainingStrikes);
+  }
+
+  /**
+   * D2MOO's Fend SrvDo013 calls sub_6FCBCFD0 with Skills.txt Param2.  The
+   * 1.10f row sets Param2 to 60 (percent frame rollback), so Fend's next
+   * target is reached by rewinding the current attack sequence rather than
+   * starting another complete A1 animation.  Jab uses a different native SQ
+   * table and must not share this timing path.
+   */
+  private void restartFendAnimation(int entityId, Casting casting, byte mode) {
+    Sequence sequence = mSequence.get(entityId);
+    if (sequence == null || !mAnimData.has(entityId)) return;
+    cofs.setMode(entityId, mode, true);
+    AnimData anim = mAnimData.get(entityId);
+    int rollbackPercent = 60;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    if (skill != null && skill.Param != null && skill.Param.length > 2
+        && skill.Param[2] > 0) {
+      rollbackPercent = Math.min(100, skill.Param[2]);
+    }
+    int maxFrame = Math.max(0, (anim.numFrames >>> 8) - 1);
+    int restartFrame = maxFrame * rollbackPercent / 100;
+    int attackFrame = firstAttackFrame(anim);
+    if (attackFrame >= 0) restartFrame = Math.min(restartFrame, Math.max(0, attackFrame - 1));
+    anim.frame = restartFrame << 8;
+    anim.lastKeyframeIndex = Math.max(-1, restartFrame - 1);
+    anim.override = playerAttackAnimationSpeed(entityId, anim.speed, 0);
+    sequence.started = true;
+    log.info("[AMAZON_FEND_ANIM] phase=rollback entity={} mode={} rollbackPercent={} "
+            + "frame={} attackFrame={} remaining={}", entityId, (int) mode,
+        rollbackPercent, restartFrame, attackFrame, casting.fendRemainingStrikes);
   }
 
   /**

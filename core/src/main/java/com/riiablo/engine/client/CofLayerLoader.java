@@ -119,6 +119,19 @@ public class CofLayerLoader extends IteratingSystem {
               && casting.skillId == com.riiablo.engine.server.skill.SkillId.JAB
               && mCofReference.get(event.entityId).mode == Engine.Player.MODE_A2) {
             animation.setFrame(4);
+          } else if (casting != null
+              && casting.fendInitialized
+              && Riiablo.files.skills != null) {
+            com.riiablo.codec.excel.Skills.Entry skill =
+                Riiablo.files.skills.get(casting.skillId);
+            int rollbackPercent = 60;
+            if (skill != null && skill.Param != null && skill.Param.length > 2
+                && skill.Param[2] > 0) {
+              rollbackPercent = Math.min(100, skill.Param[2]);
+            }
+            int maxFrame = Math.max(0, animation.getNumFramesPerDir() - 1);
+            int restartFrame = maxFrame * rollbackPercent / 100;
+            animation.setFrame(Math.min(restartFrame, maxFrame));
           }
           if (mObject.has(event.entityId)) {
             com.riiablo.engine.server.component.Object object = mObject.get(event.entityId);
