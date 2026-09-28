@@ -101,6 +101,11 @@ public final class AmazonSkills {
       max = Math.max(min, statInt(attacker, Stat.maxdamage));
       attributePercent = statInt(attacker, Stat.strength);
     }
+    // D2MOO SUNITDMG_ApplyDamageBonuses seeds an empty weapon packet with
+    // 1..2 damage before skill/source scaling.  Keeping this invariant here
+    // avoids a zero-damage packet when an item row has no explicit damage.
+    if (min < 1) min = 1;
+    if (max <= min) max = min + 1;
     int percent = getPhysicalDamagePercent(skill, skillLevel) + attributePercent
         + statInt(attacker, Stat.damagepercent)
         + statInt(attacker, Stat.item_maxdamage_percent);
@@ -132,8 +137,9 @@ public final class AmazonSkills {
   }
 
   private static int scalePercent(int value, int percent) {
+    percent = Math.max(-90, percent);
     return Math.max(0, (int) Math.min(Integer.MAX_VALUE,
-        (long) Math.max(0, value) * Math.max(0, 100 + percent) / 100L));
+        (long) Math.max(0, value) * (100L + percent) / 100L));
   }
 
   private static int scaleSource(int value, int sourceDamage) {

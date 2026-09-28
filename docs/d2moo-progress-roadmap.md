@@ -12,7 +12,10 @@
   死亡后重定向到下一个有效目标的回归测试。
 - [x] Impale 按 D2MOO `Calc2/Calc3` 消耗 stack quantity 或武器耐久；移除错误的通用
   目标护甲耐久副作用，并用可控 RNG 覆盖两条路径。
-- [ ] 仍待补齐 ToHit/SrcDam/Calc 边界、失手/死亡、真实 1.10f MPQ 动画和断线重连验收。
+- [x] `AmazonSkills.calculateWeaponDamage` 对齐 D2MOO 的空包 `1..2` 最小约束、伤害百分比
+  `-90%` 下限和 `SrcDam` 固定点缩放；新增 ToHit/LevToHit、Calc1、SrcDam 边界回归，
+  并确认 1.10f Jab 的实际 Calc1 为 `-15`。
+- [ ] 仍待补齐失手/死亡、真实 1.10f MPQ 动画和断线重连验收。
 
 ## 2026-09-28 dark-magic 行为族框架落地
 
