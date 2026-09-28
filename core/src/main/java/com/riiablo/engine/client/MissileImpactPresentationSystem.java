@@ -64,6 +64,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile visual = mMissile.get(entityId);
+    // Impact children are created from the collision event after the regular
+    // MissileLoader pass has already run for this tick.  Very short native
+    // effects (fireexplosion2 uses a one-frame Range) would otherwise be
+    // advanced and deleted before their DCC can be attached, making the hit
+    // appear to have no explosion at all.  Keep the presentation entity alive
+    // until MissileLoader has installed its animation component.
+    if (!mAnimationWrapper.has(entityId)) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;
     float distance = velocity.len() * delta;
@@ -100,9 +107,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       world.delete(entityId);
       return;
     }
-    AnimationWrapper animation = mAnimationWrapper.has(entityId)
-        ? mAnimationWrapper.get(entityId) : null;
-    if (animation != null && !animation.animation.isLooping()
+    AnimationWrapper animation = mAnimationWrapper.get(entityId);
+    if (!animation.animation.isLooping()
         && animation.animation.isFinished()) {
       world.delete(entityId);
     }

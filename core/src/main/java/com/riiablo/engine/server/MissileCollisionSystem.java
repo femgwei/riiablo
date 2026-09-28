@@ -2381,6 +2381,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (childId < 0 || !mMissile.has(childId)) continue;
       spawned++;
       Missile child = mMissile.get(childId);
+      // SrvHit04 creates a stationary SrvHit01 child.  Its radius is owned by
+      // the child row (explodingarrowexp2.sHitPar1), but the runtime collision
+      // path only treats missiles with an explicit override as area effects.
+      // Preserve that native radius so every hostile inside the explosion is
+      // considered, not just units within the ordinary contact radius.
+      child.areaRadiusOverride = Math.max(0f, nativeAreaRadius(child));
+      child.shareHitTargets(source.sharedHitTargets != null
+          ? source.sharedHitTargets : source.hitTargets);
       Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
           ? mAttributesWrapper.get(source.ownerId).attrs : null;
       int level = Math.max(1, source.damageLevel);
