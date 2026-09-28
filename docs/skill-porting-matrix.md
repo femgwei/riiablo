@@ -80,7 +80,9 @@
   硬点），并以真实 1.10f Skills/Missiles 行锁定 `EMin/EMax/HitShift/ELen`、
   `srvDmgFunc` 和 82 帧一级持续时间断言。测试入口为
   `NativeSorceressProjectileDataTest.iceBlastUsesNativeSrvDmg04FreezeConversionAndLengthSynergy`。
-  仍待补 ECS 命中层的冷免疫、致死不落冻结状态和单目标重复命中验收。
+  `SorceressIceBlastIntegrationTest` 已覆盖 ECS 层的冷免疫、只建立 FREEZE、以及
+  单目标重复命中门闩；致死命中时的冻结/SHATTER 顺序仍沿用现有 D2MOO 冻结包回归，
+  后续再单独核对 Ice Blast 与普通冻结箭的差异。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
 ### Necromancer
