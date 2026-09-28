@@ -104,7 +104,17 @@ public class CofLayerLoader extends IteratingSystem {
               event.entityId, currentFrame, frame, attackFrame, rollbackPercent,
               animation.getFrameDelta()));
         }
-        animation.setFrame(frame);
+        // Animation.setFrame is intentionally idempotent and does not reset
+        // elapsed time when the requested frame already equals the current
+        // frame.  A repeated Jab/Fend strike can arrive while the previous
+        // presentation is still on frame zero, so use restart() for ordinary
+        // attack repeats to guarantee a fresh playback window.  Strafe has a
+        // native rollback frame and must retain the explicit seek.
+        if (casting == null || !casting.strafeInitialized) {
+          animation.restart();
+        } else {
+          animation.setFrame(frame);
+        }
         animation.updateBox();
       }
       if (DEBUG_EVENTS) Gdx.app.debug(TAG, "restart animation without COF reload");
