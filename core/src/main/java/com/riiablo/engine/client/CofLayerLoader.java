@@ -11,6 +11,7 @@ import com.riiablo.codec.COF;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.DCC;
+import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.CofComponentDescriptors;
@@ -50,6 +51,7 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   @Override
   protected void process(int entityId) {}
@@ -132,10 +134,7 @@ public class CofLayerLoader extends IteratingSystem {
     // their normal looping behavior.
     if (mAnimationWrapper.has(entityId)) {
       Animation animation = mAnimationWrapper.get(entityId).animation;
-      if (logicalType == Class.Type.OBJ) {
-        animation.setMode(mode == Engine.Object.MODE_OP
-            ? Animation.Mode.CLAMP : Animation.Mode.LOOP);
-      }
+      if (logicalType == Class.Type.OBJ) animation.setMode(objectAnimationMode(entityId, mode));
     }
 
     // data\global\monsters\FK\rh\FKRHFBLA11HS.dcc
@@ -225,6 +224,29 @@ public class CofLayerLoader extends IteratingSystem {
     }
 
     return requiresReload;
+  }
+
+  /**
+   * Objects.txt owns the animation-loop decision for each object mode. Doors
+   * use non-cycling NU/ON frames; treating every object mode as LOOP makes a
+   * closed door render as an endless open/close animation even though its
+   * collision mode remains NU. OP is always a one-shot transition and is
+   * clamped independently of the table flag.
+   */
+  static Animation.Mode objectAnimationMode(Objects.Entry base, byte mode) {
+    if (mode == Engine.Object.MODE_OP) return Animation.Mode.CLAMP;
+    if (base != null && base.CycleAnim != null
+        && mode >= 0 && mode < base.CycleAnim.length) {
+      return base.CycleAnim[mode] ? Animation.Mode.LOOP : Animation.Mode.CLAMP;
+    }
+    // Preserve the legacy behavior for stripped/custom tables that do not
+    // provide CycleAnim columns.
+    return Animation.Mode.LOOP;
+  }
+
+  private Animation.Mode objectAnimationMode(int entityId, byte mode) {
+    com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+    return objectAnimationMode(object == null ? null : object.base, mode);
   }
 
   void unload(int c, AssetDescriptor[] descriptors) {

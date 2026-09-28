@@ -2,12 +2,16 @@ package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.FileHandleResolver;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
+import com.riiablo.codec.Animation;
+import com.riiablo.codec.excel.Objects;
+import com.riiablo.engine.Engine;
 import org.junit.jupiter.api.Test;
 
 /** Regression contract for stale asynchronous COF asset releases. */
@@ -35,5 +39,20 @@ class CofLayerLoaderReleaseTest {
     assertDoesNotThrow(() -> CofLayerLoader.releaseAsset(assets, descriptor));
     assertFalse(assets.contains(descriptor.fileName));
     assets.dispose();
+  }
+
+  @Test
+  void objectAnimationUsesObjectsTxtCycleFlag() {
+    Objects.Entry base = new Objects.Entry();
+    base.CycleAnim = new boolean[8];
+    base.CycleAnim[Engine.Object.MODE_NU] = false;
+    base.CycleAnim[Engine.Object.MODE_ON] = true;
+
+    assertEquals(Animation.Mode.CLAMP,
+        CofLayerLoader.objectAnimationMode(base, Engine.Object.MODE_NU));
+    assertEquals(Animation.Mode.LOOP,
+        CofLayerLoader.objectAnimationMode(base, Engine.Object.MODE_ON));
+    assertEquals(Animation.Mode.CLAMP,
+        CofLayerLoader.objectAnimationMode(base, Engine.Object.MODE_OP));
   }
 }
