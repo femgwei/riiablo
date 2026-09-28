@@ -208,3 +208,10 @@ jar {
     file(archiveFile).setExecutable(true, false)
   }
 }
+
+// The application distribution contains the fat desktop jar as well as the
+// runtime classpath.  Dependencies already embedded in the fat jar otherwise
+// make Gradle 7.x reject distTar/distZip for duplicate entries.
+tasks.withType(AbstractArchiveTask).configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
