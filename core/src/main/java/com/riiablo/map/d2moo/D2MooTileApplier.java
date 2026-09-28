@@ -74,6 +74,10 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     public int getUniqueWallIdCount() { return uniqueWallIds.size; }
     public int getUniqueShadowIdCount() { return uniqueShadowIds.size; }
 
+    public int getBoundaryWallCount() { return boundaryWallCount; }
+
+    private int boundaryWallCount;
+
     public void resetLastExportedFloorCount() {
         exportedFloorCount = 0;
         exportedWallCount = 0;
@@ -96,6 +100,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         uniqueFloorIds.clear();
         uniqueWallIds.clear();
         uniqueShadowIds.clear();
+        boundaryWallCount = 0;
     }
 
     @Override
@@ -132,10 +137,11 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             return;
         }
         if (!grid.inBounds(tx, ty)) {
-            // Native RoomEx floor/wall grids have a shared +1 border. A tile
-            // on the east/south edge belongs to the adjacent room; at the
-            // outer level edge there is no adjacent destination, so clip it
-            // without rejecting the otherwise valid native export.
+            // Native RoomEx floor/wall grids have a shared +1 border. Floor
+            // and shadow cells on that border are not renderable by the
+            // rectangular Zone layer, but an ordinary wall still has a valid
+            // render origin: its graphic extends back into the level. Keep
+            // those edge walls in a side list instead of dropping them.
             boolean sharedBoundary = tx >= 0 && ty >= 0
                 && tx <= grid.width && ty <= grid.height
                 && (tx == grid.width || ty == grid.height);
@@ -147,6 +153,21 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 }
                 clippedBoundaryCount++;
                 if (layer == DrlgExport.LAYER_FLOOR) clippedBoundaryFloorCount++;
+                if (layer == DrlgExport.LAYER_WALL) {
+                    int riiabloTileId = toRiiabloTileIndex(tileId);
+                    if (!Orientation.isSpecial(DT1.Tile.Index.orientation(riiabloTileId))) {
+                        byte sourceIndex = grid.registerSourceFile(sourceFile);
+                        int wallLayer = boundaryWallLayer(grid, tx, ty, riiabloTileId,
+                            sourceIndex);
+                        if (wallLayer >= 0) {
+                            grid.boundaryWalls.add(new TileGrid.BoundaryWall(
+                                wallLayer, tx, ty, riiabloTileId, sourceIndex,
+                                (flags & DrlgTileExporter.FLAG_HIDDEN) != 0));
+                            boundaryWallCount++;
+                            uniqueWallIds.add(riiabloTileId);
+                        }
+                    }
+                }
                 return;
             }
             if (outOfBoundsCount < 8 && Gdx.app != null) {
@@ -239,6 +260,18 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         return Orientation.isWall(orientation)
             || Orientation.isRoof(orientation)
             || Orientation.isSpecial(orientation);
+    }
+
+    private static int boundaryWallLayer(TileGrid grid, int tx, int ty, int tileId,
+            byte sourceIndex) {
+        boolean[] used = new boolean[TileGrid.MAX_WALL_LAYERS];
+        for (TileGrid.BoundaryWall wall : grid.boundaryWalls) {
+            if (wall.x != tx || wall.y != ty) continue;
+            if (wall.tileId == tileId && wall.sourceFile == sourceIndex) return -1;
+            if (wall.layer >= 0 && wall.layer < used.length) used[wall.layer] = true;
+        }
+        for (int layer = 0; layer < used.length; layer++) if (!used[layer]) return layer;
+        return -1;
     }
 
     /** Decode D2MOO's (orientation, style, sequence) wire format and encode

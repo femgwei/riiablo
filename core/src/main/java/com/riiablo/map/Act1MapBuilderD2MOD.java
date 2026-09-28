@@ -3265,8 +3265,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int height = Math.min(grid.height, zone.tilesY);
     IntMap<Integer> idHistogram = DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR
         ? new IntMap<>() : null;
+    zone.clearBoundaryWalls();
     LayerApplyCounts counts = applyTileGridLayers(
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, idHistogram);
+    applyBoundaryWalls(zone, grid);
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
     SpecialApplyCounts specialCounts = registerSpecialWalls(
         grid, zone.specials, width, height);
@@ -3428,6 +3430,29 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return counts;
   }
 
+  static int applyBoundaryWalls(Zone zone, TileGrid grid) {
+    if (zone == null || grid == null || zone.dt1s == null) return 0;
+    zone.clearBoundaryWalls();
+    int applied = 0;
+    for (TileGrid.BoundaryWall boundary : grid.boundaryWalls) {
+      if (boundary.layer < 0 || boundary.layer >= Map.MAX_WALLS) continue;
+      if (boundary.x < 0 || boundary.y < 0
+          || (boundary.x < grid.width && boundary.y < grid.height)) continue;
+      String sourceFile = grid.sourceFile(boundary.sourceFile);
+      DT1.Tile tile = zone.dt1s.get(sourceFile, boundary.tileId);
+      if (tile == null) tile = zone.dt1s.get(boundary.tileId);
+      if (tile == null) continue;
+      zone.putBoundaryWall(Map.WALL_OFFSET + boundary.layer,
+          boundary.x, boundary.y, tile);
+      applied++;
+    }
+    if (applied > 0 && Gdx.app != null) {
+      Gdx.app.debug(TAG, "Applied native boundary walls: level="
+          + zone.levelId() + " count=" + applied);
+    }
+    return applied;
+  }
+
   /**
    * Projects D2MOO's runtime {@code D2DrlgWarp.nWarp[]} table into riiablo.
    * Outer Cloister and Barracks are the important case: DrlgMaze connects
@@ -3551,8 +3576,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int width = Math.min(grid.width, zone.tilesX);
     int height = Math.min(grid.height, zone.tilesY);
     clearNativeTileLayers(zone);
+    zone.clearBoundaryWalls();
     LayerApplyCounts counts = applyTileGridLayers(
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, null);
+    applyBoundaryWalls(zone, grid);
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
     else zone.specials.clear();
     registerSpecialWalls(grid, zone.specials, width, height);

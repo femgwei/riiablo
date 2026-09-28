@@ -820,7 +820,9 @@ public class Map implements Disposable {
   }
 
   public Zone getZone(int x, int y) {
-    for (Zone zone : zones) if (zone.contains(x, y)) return zone;
+    for (Zone zone : zones) {
+      if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
+    }
     return null;
   }
 
@@ -1007,6 +1009,8 @@ public class Map implements Disposable {
 
     static final IntMap<DS1.Cell> EMPTY_INT_CELL_MAP = new IntMap<>();
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
+    /** Native wall graphics whose render origin is on the exclusive zone edge. */
+    IntMap<DT1.Tile> boundaryWalls = new IntMap<>();
 
     static final Generator EMPTY_GENERATOR = new Generator() {
       @Override public void init(Zone zone) {}
@@ -1186,6 +1190,7 @@ public class Map implements Disposable {
       warps = EMPTY_INT_INT_MAP;
       generator = EMPTY_GENERATOR;
       specials = EMPTY_INT_CELL_MAP;
+      boundaryWalls.clear();
     }
 
     @Override
@@ -1392,7 +1397,31 @@ public class Map implements Disposable {
 
     public DT1.Tile get(int layer, int tx, int ty) {
       //System.out.println("layer " + layer + " " + tx + ", " + ty + " -W " + this.tx + ", " + this.ty + " -> " + (tx - this.tx) + ", " + (ty - this.ty));
-      return tiles[layer] == null ? null : tiles[layer][tileIndex(tx - this.tx, ty - this.ty)];
+      int localX = tx - this.tx;
+      int localY = ty - this.ty;
+      if (localX < 0 || localY < 0 || localX >= tilesX || localY >= tilesY) {
+        return boundaryWalls.get(tileHashCode(layer, localX, localY));
+      }
+      return tiles[layer] == null ? null : tiles[layer][tileIndex(localX, localY)];
+    }
+
+    void clearBoundaryWalls() {
+      boundaryWalls.clear();
+    }
+
+    void putBoundaryWall(int layer, int tx, int ty, DT1.Tile tile) {
+      if (tile != null) boundaryWalls.put(tileHashCode(layer, tx, ty), tile);
+    }
+
+    boolean containsBoundaryWall(int worldX, int worldY) {
+      int localX = Math.floorDiv(worldX - x, DT1.Tile.SUBTILE_SIZE);
+      int localY = Math.floorDiv(worldY - y, DT1.Tile.SUBTILE_SIZE);
+      if (localX < 0 || localY < 0 || localX > tilesX || localY > tilesY
+          || (localX < tilesX && localY < tilesY)) return false;
+      for (int layer = Map.WALL_OFFSET; layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
+        if (boundaryWalls.containsKey(tileHashCode(layer, localX, localY))) return true;
+      }
+      return false;
     }
 
     public int flags(int x, int y) {

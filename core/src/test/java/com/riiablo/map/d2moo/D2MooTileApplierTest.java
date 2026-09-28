@@ -153,7 +153,7 @@ class D2MooTileApplierTest {
   }
 
   @Test
-  void clipsNativeSharedRoomBoundaryWithoutHidingTrueOutOfBoundsTiles() {
+  void retainsNativeBoundaryWallsButClipsFloorAndTrueOutOfBoundsTiles() {
     TileGrid grid = new TileGrid(3, 2);
     D2MooTileApplier applier = new D2MooTileApplier();
     applier.putGrid(LEVEL_ID, grid);
@@ -172,6 +172,8 @@ class D2MooTileApplierTest {
     assertEquals(2, applier.getOutOfBoundsCount());
     assertEquals(0, applier.getLastExportedFloorCount());
     assertEquals(0, applier.getExportedWallCount());
+    assertEquals(1, applier.getBoundaryWallCount());
+    assertEquals(index(Orientation.LEFT_WALL, 1, 1), grid.boundaryWalls.get(0).tileId);
   }
 
   @Test

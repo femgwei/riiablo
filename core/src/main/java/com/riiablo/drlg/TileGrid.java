@@ -60,6 +60,32 @@ public class TileGrid {
   public final int[][] shadowIds;
 
   /**
+   * Native wall tiles may sit on the exclusive east/south edge of a level
+   * grid.  They are outside the rectangular floor array but still have a
+   * valid render origin (the wall graphic extends back into the level).
+   */
+  public final List<BoundaryWall> boundaryWalls = new ArrayList<>();
+
+  public static final class BoundaryWall {
+    public final int layer;
+    public final int x;
+    public final int y;
+    public final int tileId;
+    public final byte sourceFile;
+    public final boolean hidden;
+
+    public BoundaryWall(int layer, int x, int y, int tileId, byte sourceFile,
+        boolean hidden) {
+      this.layer = layer;
+      this.x = x;
+      this.y = y;
+      this.tileId = tileId;
+      this.sourceFile = sourceFile;
+      this.hidden = hidden;
+    }
+  }
+
+  /**
    * D2MOD: pDirtPathGrid 等价物。标记路径经过的格子，供 DRLG_OUTDOORS_GenerateDirtPath 使用。
    * dirtPathFlags[y][x] == true 表示该格有路径经过。
    */
@@ -94,6 +120,7 @@ public class TileGrid {
   /** Resets every D2MOO-exported render layer without changing path flags. */
   public void clearExportedTileIds() {
     sourceFiles.clear();
+    boundaryWalls.clear();
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
