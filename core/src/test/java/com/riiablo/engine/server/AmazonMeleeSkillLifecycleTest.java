@@ -134,6 +134,69 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
   }
 
   @Test
+  void powerStrikeConsumesOnePrecomputedElementalCombatRecord() {
+    World world = world();
+    try {
+      Skills.Entry powerStrike = Riiablo.files.skills.get("Power Strike");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, powerStrike, "hax");
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(powerStrike.Id, target, new Vector2(1, 0));
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, powerStrike.Id, target, casting.targetVec,
+          powerStrike.srvstfunc, powerStrike.cltstfunc));
+
+      assertTrue(casting.amazonElementalPrepared);
+      assertNotNull(casting.amazonElementalCombat);
+      assertTrue(casting.amazonElementalCombat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] > 0);
+      casting.amazonElementalCombat.hit = true;
+      casting.amazonElementalCombat.blocked = false;
+      float before = hp(world, target);
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertTrue(hp(world, target) < before,
+          "Power Strike must apply its precomputed lightning packet");
+      assertFalse(casting.amazonElementalPrepared);
+      assertNull(casting.amazonElementalCombat);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void chargedStrikeConsumesTheSamePrecomputedMeleePacketBeforeBoltRelease() {
+    World world = world();
+    try {
+      Skills.Entry chargedStrike = Riiablo.files.skills.get("Charged Strike");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, chargedStrike, "hax");
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(chargedStrike.Id, target, new Vector2(1, 0));
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, chargedStrike.Id, target, casting.targetVec,
+          chargedStrike.srvstfunc, chargedStrike.cltstfunc));
+
+      assertTrue(casting.amazonElementalPrepared);
+      assertNotNull(casting.amazonElementalCombat);
+      casting.amazonElementalCombat.hit = true;
+      casting.amazonElementalCombat.blocked = false;
+      float before = hp(world, target);
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertTrue(hp(world, target) < before,
+          "Charged Strike must apply its melee packet before releasing bolts");
+      assertFalse(casting.amazonElementalPrepared);
+      assertNull(casting.amazonElementalCombat);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void impaleConsumesNativeStackQuantityUsingCalc2Chance() {
     World world = world();
     try {

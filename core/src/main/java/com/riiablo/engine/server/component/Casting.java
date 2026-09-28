@@ -29,6 +29,11 @@ public class Casting extends PooledComponent {
   @EntityId public int impaleTargetId;
   public Item impaleWeapon;
   public boolean impalePrepared;
+  /** Native Amazon SrvSt06 combat record consumed by Power/Charged Strike. */
+  public CombatSystem.CombatResult amazonElementalCombat;
+  @EntityId public int amazonElementalTargetId;
+  public Item amazonElementalWeapon;
+  public boolean amazonElementalPrepared;
   /** Native Amazon Fend SrvSt09/SrvDo013 target stream. */
   public boolean fendInitialized;
   public boolean fendStrikeProcessed;
@@ -126,6 +131,10 @@ public class Casting extends PooledComponent {
     impaleTargetId = Engine.INVALID_ENTITY;
     impaleWeapon = null;
     impalePrepared = false;
+    amazonElementalCombat = null;
+    amazonElementalTargetId = Engine.INVALID_ENTITY;
+    amazonElementalWeapon = null;
+    amazonElementalPrepared = false;
     fendInitialized = false;
     fendStrikeProcessed = false;
     fendRemainingStrikes = 0;
@@ -205,6 +214,10 @@ public class Casting extends PooledComponent {
     impaleTargetId = Engine.INVALID_ENTITY;
     impaleWeapon = null;
     impalePrepared = false;
+    amazonElementalCombat = null;
+    amazonElementalTargetId = Engine.INVALID_ENTITY;
+    amazonElementalWeapon = null;
+    amazonElementalPrepared = false;
     fendInitialized = false;
     fendStrikeProcessed = false;
     fendRemainingStrikes = 0;

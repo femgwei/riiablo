@@ -1035,6 +1035,20 @@ public class CombatSystem {
       boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
       int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
       StateList attackerStates, StateList defenderStates, boolean defenderMoving) {
+    return calculatePrecomputedMeleeElementalAttack(
+        attacker, defender, attackerPlayer, defenderPlayer,
+        physicalMin, physicalMax, attackRating, elementalMin, elementalMax,
+        coldLength, poisonLength, 0, DAMAGE_PHYSICAL,
+        attackerStates, defenderStates, defenderMoving);
+  }
+
+  /** Native melee packet with both skill elements and physical conversion. */
+  public CombatResult calculatePrecomputedMeleeElementalAttack(
+      Attributes attacker, Attributes defender, boolean attackerPlayer,
+      boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
+      int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving) {
     int[] combinedMin = new int[DAMAGE_TYPE_COUNT];
     int[] combinedMax = new int[DAMAGE_TYPE_COUNT];
     short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
@@ -1066,7 +1080,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
         coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        0, DAMAGE_PHYSICAL, null, 0, 0, false, false, true);
+        physicalConversionPercent, physicalConversionType, null, 0, 0, false, false, true);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */

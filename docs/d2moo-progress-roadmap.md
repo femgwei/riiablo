@@ -23,6 +23,8 @@
   后误消费旧攻击记录；真实网络重连流程仍待验收。
 - [x] 对照 D2MOO `SrvDo002/SrvDo011`，将 Power Strike 与 Charged Strike 纳入成功命中后的
   `SUNITDMG_DrainItemDurability` 路径，并锁定技能族回归。
+- [x] Power Strike/Charged Strike 的 `SrvSt06` 现在预计算一次物理+闪电战斗包，keyframe
+  只消费一次；补充元素伤害和 Charged Strike 释放前的生命周期回归。
 - [ ] 仍待补齐真实 1.10f MPQ 动画和断线重连验收。
 
 ## 2026-09-28 dark-magic 行为族框架落地

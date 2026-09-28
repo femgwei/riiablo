@@ -948,7 +948,18 @@ public class Actioneer extends PassiveSystem {
             entityId, targetId, casting.jabRemainingStrikes);
         break;
       }
-      case 6: // Amazon Power/Charged Strike; combat resolves at the keyframe
+      case 6: { // Amazon Power/Charged Strike; roll once before the keyframe
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (AmazonSkills.usesNativeMeleeDurability(skill)
+            && (skill.Id == SkillId.POWER_STRIKE || skill.Id == SkillId.CHARGED_STRIKE)) {
+          prepareAmazonElementalStrike(entityId, targetId);
+        } else {
+          log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
+              entityId, targetId, srvstfunc);
+        }
+        break;
+      }
       case 10: // Amazon Lightning Strike; chain resolves at the keyframe
         log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
             entityId, targetId, srvstfunc);
@@ -1491,6 +1502,10 @@ public class Actioneer extends PassiveSystem {
             && activeCasting.dragonTailPrepared
             && activeCasting.dragonTailTargetId == targetId
             ? activeCasting.dragonTailCombat : null;
+        CombatSystem.CombatResult amazonElementalCombat = activeCasting != null
+            && activeCasting.amazonElementalPrepared
+            && activeCasting.amazonElementalTargetId == targetId
+            ? activeCasting.amazonElementalCombat : null;
         if (frenzyAttack) {
           if (activeCasting == null || activeSkill == null) break;
           if (!activeCasting.frenzyInitialized) {
@@ -1721,7 +1736,18 @@ public class Actioneer extends PassiveSystem {
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
         CombatSystem.CombatResult combat;
-        if (berserk) {
+        if (amazonElementalCombat != null) {
+          combat = amazonElementalCombat;
+          activeCasting.amazonElementalCombat = null;
+          activeCasting.amazonElementalTargetId = Engine.INVALID_ENTITY;
+          activeCasting.amazonElementalWeapon = null;
+          activeCasting.amazonElementalPrepared = false;
+          log.info("[AMAZON_ELEMENTAL_MELEE] phase=keyframe source={} target={} skill={} "
+                  + "physical={} lightning={} total={} chance={} hit={} blocked={}",
+              entityId, targetId, activeSkill != null ? activeSkill.skill : "unknown",
+              combat.physicalDamage, combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING],
+              combat.totalDamage, combat.hitChance, combat.hit, combat.blocked);
+        } else if (berserk) {
           berserkWeapon = whirlwindPrimaryWeapon(entityId);
           int[] weaponDamage = BarbarianSkills.calculateBerserkWeaponDamage(
               activeSkill, activeSkillLevel, attackerAttrs, berserkWeapon,
@@ -2284,6 +2310,54 @@ public class Actioneer extends PassiveSystem {
     return mMonster.has(entityId) && mMonster.get(entityId).monstats != null
         && (mMonster.get(entityId).monstats.lUndead
             || mMonster.get(entityId).monstats.hUndead);
+  }
+
+  /** Native SrvSt06: roll Power/Charged Strike once and retain its combat record. */
+  private void prepareAmazonElementalStrike(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !AmazonSkills.usesNativeMeleeDurability(skill)
+        || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
+        || !mAttributesWrapper.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRangeAtTick(entityId, targetId, 0, casting.positionSnapshotTick)) {
+      log.info("[AMAZON_ELEMENTAL_MELEE] phase=start_reject source={} target={} reason=target_or_range",
+          entityId, targetId);
+      if (casting != null) mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    Item weapon = activeAttackWeapon(entityId);
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    int[] physical = AmazonSkills.calculateWeaponDamage(
+        skill, level, attacker, weapon, stateList(entityId));
+    int[] elementalMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    elementalMin[CombatSystem.DAMAGE_LIGHTNING] = MissileDamageResolver.skillElementalDamage(
+        skill, level, true, name -> baseSkillLevel(entityId, name));
+    elementalMax[CombatSystem.DAMAGE_LIGHTNING] = MissileDamageResolver.skillElementalDamage(
+        skill, level, false, name -> baseSkillLevel(entityId, name));
+    int conversion = skill.EType != null && !skill.EType.isEmpty()
+        ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+        .calculatePrecomputedMeleeElementalAttack(
+            attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+            physical[0], physical[1], AmazonSkills.getAttackRating(
+                skill, level, attacker, isPlayerEntity(entityId)),
+            elementalMin, elementalMax, 0, 0, conversion,
+            lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
+            isEntityMoving(targetId));
+    casting.amazonElementalCombat = combat;
+    casting.amazonElementalTargetId = targetId;
+    casting.amazonElementalWeapon = weapon;
+    casting.amazonElementalPrepared = true;
+    log.info("[AMAZON_ELEMENTAL_MELEE] phase=start source={} skill={} target={} level={} "
+            + "physical={}..{} lightning={}..{} conversion={} chance={} hit={} blocked={}",
+        entityId, skill.skill, targetId, level, physical[0], physical[1],
+        elementalMin[CombatSystem.DAMAGE_LIGHTNING],
+        elementalMax[CombatSystem.DAMAGE_LIGHTNING], conversion,
+        combat.hitChance, combat.hit, combat.blocked);
   }
 
   /** Native SrvSt07: roll Impale once and retain the combat record for SrvDo002. */

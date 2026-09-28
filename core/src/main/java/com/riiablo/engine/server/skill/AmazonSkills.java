@@ -85,6 +85,9 @@ public final class AmazonSkills {
       case SkillId.JAB: return calculateJabDamageBonus(skillLevel);
       case SkillId.IMPALE: return calculateImpaleDamageBonus(skillLevel);
       case SkillId.FEND: return 70 + (Math.max(1, skillLevel) - 1) * 4;
+      case SkillId.POWER_STRIKE:
+      case SkillId.CHARGED_STRIKE:
+        return SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
       default: return 0;
     }
   }
