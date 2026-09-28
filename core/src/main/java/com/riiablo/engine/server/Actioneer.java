@@ -148,6 +148,30 @@ public class Actioneer extends PassiveSystem {
     lastAttackTargetDied.remove(entityId);
   }
 
+  /**
+   * Stops a held normal bow attack as soon as one of its arrows kills a unit.
+   *
+   * <p>Point-targeted bow shots legitimately carry INVALID_ENTITY as their
+   * casting target, so the animation-finished target-death check cannot see
+   * the victim.  The missile collision path calls this hook at the lethal
+   * impact instead.</p>
+   */
+  public void markLastRangedAttackTargetDied(int entityId, int skillId) {
+    if (skillId != SkillCodes.attack || !mPlayer.has(entityId)
+        || !isPlayerRangedNormalAttack(entityId)) return;
+    lastAttackTargetDied.add(entityId);
+    // The lethal arrow can arrive before the attack COF reaches its finished
+    // callback. End that sequence now so its remaining keyframes cannot
+    // produce post-death swing animations or extra arrows.
+    if (mCasting.has(entityId) && mCasting.get(entityId).skillId == skillId) {
+      mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+    }
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    log.info("[ATTACK_ANIM] target_died entity={} skill={} reason=ranged_missile_impact",
+        entityId, skillId);
+  }
+
   public void moveTo(int entityId, Vector2 targetVec) {
     // Don't allow movement if entity doesn't have Velocity component (e.g., dead player)
     if (!mVelocity.has(entityId)) {
