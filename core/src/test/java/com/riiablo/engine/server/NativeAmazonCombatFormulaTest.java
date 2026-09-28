@@ -32,6 +32,19 @@ class NativeAmazonCombatFormulaTest extends RiiabloTest {
   }
 
   @Test
+  void playerAttackRatingIncludesDexterityAndClassFactor() {
+    Skills.Entry jab = Riiablo.files.skills.get("Jab");
+    Attributes attacker = attributes(1, 0);
+    attacker.base().put(Stat.dexterity, 25);
+    attacker.reset();
+    int factor = SkillFormula.evaluate("toht", jab, 1);
+    int classFactor = Riiablo.files.CharStats.get(Riiablo.AMAZON).ToHitFactor;
+
+    assertEquals((1 + 5 * (25 - 7) + classFactor) * (100 + factor) / 100,
+        AmazonSkills.getPlayerAttackRating(jab, 1, attacker, classFactor));
+  }
+
+  @Test
   void weaponDamageKeepsNativeMinimumAndMaximumPacketInvariants() {
     Attributes attacker = attributes(0, 0);
     Item empty = weapon("hax", 0, 0);

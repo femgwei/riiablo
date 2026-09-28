@@ -75,6 +75,21 @@ public final class AmazonSkills {
         : Math.max(1, base + factor);
   }
 
+  /**
+   * Native player attack rating used by SUNITDMG_IsHitSuccessful.  D2MOO
+   * builds the player's base rate with dexterity and the class ToHitFactor
+   * before applying Skills.txt ToHit as a percentage.
+   */
+  public static int getPlayerAttackRating(Skills.Entry skill, int skillLevel,
+      Attributes attacker, int classToHitFactor) {
+    int level = Math.max(1, skillLevel);
+    int factor = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    int base = statInt(attacker, Stat.tohit)
+        + 5 * (statInt(attacker, Stat.dexterity) - 7)
+        + classToHitFactor;
+    return Math.max(1, base * Math.max(0, 100 + factor) / 100);
+  }
+
   /** Resolves the native physical percentage field from Skills.txt. */
   public static int getPhysicalDamagePercent(Skills.Entry skill, int skillLevel) {
     if (skill == null) return 0;

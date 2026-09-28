@@ -1891,8 +1891,8 @@ public class Actioneer extends PassiveSystem {
           Item jabWeapon = activeAttackWeapon(entityId);
           int[] weaponDamage = AmazonSkills.calculateWeaponDamage(
               activeSkill, activeSkillLevel, attackerAttrs, jabWeapon, stateList(entityId));
-          int attackRating = AmazonSkills.getAttackRating(
-              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
+          int attackRating = amazonAttackRating(
+              entityId, activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
           int conversion = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, Math.min(100,
                   SkillFormula.evaluate(activeSkill.calc4, activeSkill, activeSkillLevel))) : 0;
@@ -2367,8 +2367,8 @@ public class Actioneer extends PassiveSystem {
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE
         .calculatePrecomputedMeleeElementalAttack(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
-            physical[0], physical[1], AmazonSkills.getAttackRating(
-                skill, level, attacker, isPlayerEntity(entityId)),
+            physical[0], physical[1], amazonAttackRating(
+                entityId, skill, level, attacker, isPlayerEntity(entityId)),
             elementalMin, elementalMax, 0, 0, conversion,
             lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
             isEntityMoving(targetId));
@@ -2404,8 +2404,8 @@ public class Actioneer extends PassiveSystem {
     int level = Math.max(1, skillLevel(entityId, skill.Id));
     int[] damage = AmazonSkills.calculateWeaponDamage(
         skill, level, attacker, weapon, stateList(entityId));
-    int attackRating = AmazonSkills.getAttackRating(
-        skill, level, attacker, isPlayerEntity(entityId));
+    int attackRating = amazonAttackRating(
+        entityId, skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(
             skill.calc4, skill, level))) : 0;
@@ -2568,8 +2568,8 @@ public class Actioneer extends PassiveSystem {
     Item weapon = activeAttackWeapon(entityId);
     int[] damage = AmazonSkills.calculateWeaponDamage(
         skill, level, attacker, weapon, stateList(entityId));
-    int attackRating = AmazonSkills.getAttackRating(
-        skill, level, attacker, isPlayerEntity(entityId));
+    int attackRating = amazonAttackRating(
+        entityId, skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
@@ -3675,6 +3675,19 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isPlayerEntity(int entityId) {
     return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  /** Resolves the player base AR that D2MOO's UNITS_GetAttackRate uses. */
+  private int amazonAttackRating(int entityId, Skills.Entry skill, int level,
+      Attributes attacker, boolean player) {
+    if (!player || !mPlayer.has(entityId) || mPlayer.get(entityId).data == null
+        || mPlayer.get(entityId).data.classId == null) {
+      return AmazonSkills.getAttackRating(skill, level, attacker, player);
+    }
+    com.riiablo.codec.excel.CharStats.Entry charStats =
+        mPlayer.get(entityId).data.classId.entry();
+    int classFactor = charStats == null ? 0 : charStats.ToHitFactor;
+    return AmazonSkills.getPlayerAttackRating(skill, level, attacker, classFactor);
   }
 
   private Armor.Entry equippedBoots(int entityId) {
