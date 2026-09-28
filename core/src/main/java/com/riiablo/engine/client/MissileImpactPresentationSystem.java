@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.event.MissileImpactEvent;
+import com.riiablo.map.DT1.Tile;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -119,8 +120,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // its SrvDo02 already emits authoritative cloud children every update, so
     // do not add a second client-only trail for that row.
     // Native client callback 4 is used by poisonjavcloud/plaguejavcloud:
-    // frame zero emits the large poisonpuff visual, then CltParam1 is the
-    // reciprocal spawn chance on each update.  The
+    // frame zero is skipped, then CltParam1 is the reciprocal spawn chance
+    // on each later update. The
     // authoritative server already replicates the small PoisonSparks cloud;
     // this callback supplies the separate PoisonSmokePuff layer seen in D2.
     if (!isClientFlightFunction(function)) return;
@@ -163,8 +164,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       Vector2 at = mPosition.get(entityId).position;
       float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
       for (int i = 0; i < count; i++) {
-        float offsetX = radius > 0 ? randomClientOffset(visual, radius) : 0f;
-        float offsetY = radius > 0 ? randomClientOffset(visual, radius) : 0f;
+        float offsetX = radius > 0
+            ? clientOffsetToWorld(randomClientOffset(visual, radius)) : 0f;
+        float offsetY = radius > 0
+            ? clientOffsetToWorld(randomClientOffset(visual, radius)) : 0f;
         createFlightVisual(source, childName, at, angle, offsetX, offsetY);
       }
     }
@@ -207,6 +210,15 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     int offset = rng.nextInt(radius * 2 + 1) - radius;
     visual.rngState = rng.state();
     return offset;
+  }
+
+  /**
+   * Normalizes the client-only jitter for Riiablo's world coordinates. Using
+   * the raw value as world subtiles turns vanilla radius 6 into a 96-pixel
+   * lateral spread instead of a small displacement around the trail.
+   */
+  static float clientOffsetToWorld(int offset) {
+    return offset / (float) Tile.SUBTILE_WIDTH50;
   }
 
   private void createFlightVisual(Missiles.Entry source, String childName,

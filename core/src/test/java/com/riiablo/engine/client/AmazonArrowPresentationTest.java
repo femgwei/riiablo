@@ -192,6 +192,7 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     assertTrue(first >= -6 && first <= 6);
     assertTrue(second >= -6 && second <= 6);
     assertNotEquals(stateBefore, cloud.rngState);
+    assertEquals(0.375f, MissileImpactPresentationSystem.clientOffsetToWorld(6), 0.0001f);
   }
 
   @Test
