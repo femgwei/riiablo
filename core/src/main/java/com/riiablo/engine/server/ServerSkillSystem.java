@@ -968,6 +968,17 @@ public class ServerSkillSystem extends PassiveSystem {
                 ? missile.HitSubMissile[0] : "");
       }
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      // Fire Ball's SrvHit01 parent and its ExplosionMissile are one native
+      // impact packet. Give the parent a cast-lifetime gate even though the
+      // generic path creates only one travelling missile; the parent is
+      // deleted immediately on contact, so its pooled hitTargets set cannot
+      // safely be borrowed by the child impact entity.
+      if (missile.pSrvHitFunc == 1 && mMissile.has(missileId)) {
+        Missile projectile = mMissile.get(missileId);
+        if (projectile.sharedHitTargets == null) {
+          projectile.shareHitTargets(new IntSet());
+        }
+      }
       // Missiles.txt.Pierce is not a blanket property of the generic Throw
       // skill.  The native javelin row is shared by normal throwing and
       // Amazon skills, so ordinary player throws must override the factory's

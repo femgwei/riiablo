@@ -95,8 +95,11 @@
   命中包，`ExplosionMissile` 只承载同一伤害包的范围扇出。riiablo 现在为爆炸子导弹
   增加运行时 impact radius 快照，并共享父导弹命中集合，确保中心目标不被父/子导弹
   重复结算；真实 1.10f `pSrvHitFunc=1`、`sHitPar[0]=4` 和 16 帧表现生命周期
-  已锁定在 `NativeSorceressProjectileDataTest`。下一步补 ECS 多目标命中、墙碰撞、
-  致死顺序和 impact 表现生命周期测试。
+  已锁定在 `NativeSorceressProjectileDataTest`。新增
+  `SorceressFireBallIntegrationTest` 覆盖 ECS 多目标范围扇出、中心目标不重复伤害、
+  墙碰撞停止导弹并生成 impact 表现；同时为父导弹增加独立的 cast-lifetime shared
+  gate，避免父实体池化重置后清空子导弹去重集合。剩余门槛是致死顺序、完整表现生命
+  周期和真实 1.10f MPQ 离屏验证。
 - Nova(48) 已按 D2MOO `SKILLS_SrvDo022_NovaAttack` / `sub_6FD14170` 完成首轮
   对照。1.10f 原生行为是固定 64 个偏移点、使用 `SrvMissileA` 发射 `nova`，速度为
   `Missiles.txt.Vel + Skills.txt.Calc1`；riiablo 保留原生坐标表、24 速度、13 格
