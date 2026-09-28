@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 
+import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
@@ -9,6 +10,7 @@ import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
+import com.riiablo.codec.DCC;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.ai.Npc;
 import com.riiablo.codec.excel.LvlWarp;
@@ -705,7 +707,16 @@ public class ClientEntityFactory extends ServerEntityFactory {
       mMissile.get(id).authoritative = false;
       mMissile.get(id).presentationOnly = true;
     }
-    Riiablo.assets.load(mMissile.get(id).missileDescriptor);
+    AssetDescriptor<DCC> descriptor = mMissile.get(id).missileDescriptor;
+    Riiablo.assets.load(descriptor);
+    // Exploding Arrow's native hit child is a short-lived, zero-velocity
+    // presentation missile.  Queueing its DCC asynchronously can leave the
+    // impact entity alive without an animation for the whole hit window.  The
+    // resource is small and only this native one-shot needs a synchronous
+    // handoff so the first rendered frame cannot be missed.
+    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)) {
+      Riiablo.assets.finishLoadingAsset(descriptor);
+    }
     return id;
   }
 
