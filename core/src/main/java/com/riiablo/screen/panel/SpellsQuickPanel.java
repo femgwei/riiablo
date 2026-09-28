@@ -239,6 +239,20 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
       table.add(button).size(SIZE);
       buttons.put(button.getSkill(), button);
     }
+    // Keep the native quick-skill list deterministic within each row. The
+    // left-button list reads ascending by skill id; the right-button list is
+    // presented in the opposite direction. IntIntMap iteration order is not
+    // a skill-order contract, so sort after both charged and learned skills
+    // have been added.
+    for (Table table : tables) {
+      table.getChildren().sort((a, b) -> {
+        int leftId = ((HotkeyButton) a).getSkill();
+        int rightId = ((HotkeyButton) b).getSkill();
+        int order = Integer.compare(leftId, rightId);
+        return leftSkills ? order : -order;
+      });
+      table.invalidate();
+    }
     float x = getX(ALIGN);
     float y = getY();
     pack();
