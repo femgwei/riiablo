@@ -331,7 +331,7 @@ public class AuraManager {
                     definition.passiveStatIds, aura.passiveStatValues)
                 : aura.statValues;
         candidate.direct = containsDirectStat(candidate.statIds);
-        long key = effectKey(targetId, stateId, definition.skillId);
+        long key = effectKey(targetId, stateId);
         Array<Candidate> bucket = candidates.get(key);
         if (bucket == null) candidates.put(key, bucket = new Array<>());
         bucket.add(candidate);
@@ -629,13 +629,13 @@ public class AuraManager {
     return count;
   }
 
-  private static long effectKey(int targetId, int stateId, int skillId) {
-    // Native replacement compares both state and originating skill. D2 table
-    // ordinals are unsigned 16-bit values, leaving the upper half for the ECS
-    // entity id without collisions between distinct skills sharing a state.
+  private static long effectKey(int targetId, int stateId) {
+    // D2MOO sub_6FD10EC0 locates the existing stat-list by state. A different
+    // originating skill replaces that list instead of creating a second layer.
+    // State ordinals are unsigned 16-bit values, leaving the upper half for
+    // the ECS entity id.
     return ((long) targetId << 32)
-        | ((long) stateId & 0xFFFFL) << 16
-        | ((long) skillId & 0xFFFFL);
+        | ((long) stateId & 0xFFFFL);
   }
 
   private void registerDefaultAuras() {

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.utils.Array;
+import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.skill.AuraManager;
 import com.riiablo.engine.server.skill.SkillId;
 import org.junit.jupiter.api.Test;
@@ -36,9 +37,45 @@ class AuraManagerPulseTest {
         "a successful corpse pulse consumes exactly one native cost");
   }
 
+  @Test
+  void differentSkillsUsingOneStateShareOneNativeWinnerSlot() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition first = definition(9001, 500);
+    AuraManager.AuraDefinition second = definition(9002, 500);
+    manager.registerAuraDefinition(first);
+    manager.registerAuraDefinition(second);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.rangeTarget = 9;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, first.skillId, 1));
+    assertTrue(manager.activateAura(8, second.skillId, 1));
+    manager.update(0f);
+
+    assertEquals(1, callback.appliedStates,
+        "D2MOO replaces a same-state stat-list instead of stacking skill IDs");
+  }
+
+  private static AuraManager.AuraDefinition definition(int skillId, int stateId) {
+    AuraManager.AuraDefinition definition = new AuraManager.AuraDefinition();
+    definition.skillId = skillId;
+    definition.name = "same-state fixture";
+    definition.perDelayFrames = 25;
+    definition.baseRange = 16f;
+    definition.affectsParty = true;
+    definition.targetStateId = stateId;
+    definition.stateId = stateId;
+    definition.auraFilter = AuraManager.FILTER_PLAYER;
+    definition.statIds[0] = Stat.damagepercent;
+    definition.baseStatValues[0] = 10;
+    return definition;
+  }
+
   private static final class RedemptionCallback implements AuraManager.AuraCallback {
     float mana = 10f;
     boolean redemptionSucceeds;
+    int rangeTarget = 7;
+    int appliedStates;
 
     @Override public void onAuraActivated(int casterId, int skillId, int skillLevel) {}
     @Override public void onAuraDeactivated(int casterId, int skillId) {}
@@ -47,7 +84,7 @@ class AuraManagerPulseTest {
     @Override public float[] getEntityPosition(int entityId) { return new float[] {0f, 0f}; }
     @Override public Array<Integer> getEntitiesInRange(float x, float y, float range) {
       Array<Integer> result = new Array<>();
-      result.add(7);
+      result.add(rangeTarget);
       return result;
     }
     @Override public boolean isAlly(int entityId1, int entityId2) { return true; }
@@ -66,7 +103,9 @@ class AuraManagerPulseTest {
       return true;
     }
     @Override public void applyState(int targetId, int stateId, int duration,
-        int sourceEntityId, int skillId, int skillLevel, int[] statIds, int[] statValues) {}
+        int sourceEntityId, int skillId, int skillLevel, int[] statIds, int[] statValues) {
+      appliedStates++;
+    }
     @Override public void removeState(int targetId, int stateId, int sourceEntityId, int skillId) {}
     @Override public boolean applyDirectStat(int targetId, int statId, int fixedValue,
         int sourceEntityId, int skillId) { return false; }

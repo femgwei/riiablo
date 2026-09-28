@@ -125,3 +125,11 @@ Shatter 生命周期已有 `PaladinSpecialAuraIntegrationTest` 覆盖，后续�
 映射为 riiablo 的 `AuraEcsScenarioTest.differentAuraStatesStackOnTheSamePartyMember`。
 测试确认 Might 与 Prayer 可以同时存在于同一队友：Might 的伤害加成保留，Prayer
 仍可执行治疗；两者不会因为均为 party Aura 而相互替换。
+
+## 同状态来源结果（2026-09-28）
+
+D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill 不同，
+旧 stat-list 会被移除后再建立，而不是让两个 skill 层并存。riiablo 原先把
+`skillId` 放进胜者 key，可能造成错误叠加；现在已改为 `target + state`，并以
+`AuraManagerPulseTest.differentSkillsUsingOneStateShareOneNativeWinnerSlot`
+锁定该行为。原有“同技能高等级胜出、同等级按 caster ID 稳定排序”测试继续通过。
