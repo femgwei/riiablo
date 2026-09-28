@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -118,7 +119,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // its SrvDo02 already emits authoritative cloud children every update, so
     // do not add a second client-only trail for that row.
     // Native client callback 4 is used by poisonjavcloud/plaguejavcloud:
-    // every CltParam1 frames it emits the large poisonpuff visual.  The
+    // frame zero emits the large poisonpuff visual, then CltParam1 is the
+    // reciprocal spawn chance on each update.  The
     // authoritative server already replicates the small PoisonSparks cloud;
     // this callback supplies the separate PoisonSmokePuff layer seen in D2.
     if (!isClientFlightFunction(function)) return;
@@ -126,13 +128,12 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     String childName = first(source.CltSubMissile, 0);
     if (childName == null || childName.isEmpty() || factory == null) return;
 
-    // D2 emits the first client child when the flight missile is initialized;
-    // CltParam1 is the spacing for subsequent children, not an initial delay.
-    // Without this edge emission Riiablo shows only PoisonSparks during the
-    // opening frames, unlike the native screenshot where a large puff is
-    // already present at the start of the trail.
+    // Callback 3 creates its first child on initialization. Callback 4 is
+    // different: its native helper first reads MISSILE_GetCurrentFrame and
+    // returns when the frame is zero, so the PoisonSmokePuff layer must wait
+    // for a later client update.
     boolean trailCallback = function == 3;
-    if (!visual.clientFlightInitialized) {
+    if (!visual.clientFlightInitialized && trailCallback) {
       Vector2 at = mPosition.get(entityId).position;
       float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
       createFlightVisual(source, childName, at, angle);
@@ -145,17 +146,27 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         return;
       }
     }
+    if (!visual.clientFlightInitialized) visual.clientFlightInitialized = true;
 
     int elapsedFrames = Math.max(1, Math.round(delta * 25f));
     int previousFrame = advanceClientFrame(visual, elapsedFrames);
     int interval = trailCallback ? 1 : Math.max(1, cltParam(source, 0, 1));
+    int count = Math.max(1, cltParam(source, 1, 1));
+    int radius = Math.max(0, cltParam(source, 2, 0));
     int firstFrame = previousFrame + 1;
     int lastFrame = visual.clientFrame;
     for (int frame = firstFrame; frame <= lastFrame; frame++) {
-      if (frame % interval != 0) continue;
+      // Native callback 4 (D2Client 1.10f, 0x6FB30470) does not use a
+      // frame modulo. Frame zero emits immediately; subsequent updates
+      // consume the missile RNG and emit with probability 1/interval.
+      if (!trailCallback && !rollClientSpawn(visual, interval)) continue;
       Vector2 at = mPosition.get(entityId).position;
       float angle = velocity.isZero(0.0001f) ? 0f : MathUtils.atan2(velocity.y, velocity.x);
-      createFlightVisual(source, childName, at, angle);
+      for (int i = 0; i < count; i++) {
+        float offsetX = radius > 0 ? randomClientOffset(visual, radius) : 0f;
+        float offsetY = radius > 0 ? randomClientOffset(visual, radius) : 0f;
+        createFlightVisual(source, childName, at, angle, offsetX, offsetY);
+      }
     }
   }
 
@@ -179,8 +190,32 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     return previousFrame;
   }
 
+  /** Native callback-4 spawn roll: one success in {@code interval} updates. */
+  static boolean rollClientSpawn(Missile visual, int interval) {
+    if (interval <= 1) return true;
+    if (visual == null) return false;
+    NativeRng rng = new NativeRng(visual.rngState);
+    boolean emit = rng.nextInt(interval) == 0;
+    visual.rngState = rng.state();
+    return emit;
+  }
+
+  /** CltParam3 is a symmetric integer offset around the source position. */
+  static int randomClientOffset(Missile visual, int radius) {
+    if (radius <= 0 || visual == null) return 0;
+    NativeRng rng = new NativeRng(visual.rngState);
+    int offset = rng.nextInt(radius * 2 + 1) - radius;
+    visual.rngState = rng.state();
+    return offset;
+  }
+
   private void createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, float angle) {
+    createFlightVisual(source, childName, position, angle, 0f, 0f);
+  }
+
+  private void createFlightVisual(Missiles.Entry source, String childName,
+      Vector2 position, float angle, float offsetX, float offsetY) {
     Missiles.Entry child = Riiablo.files.Missiles.get(childName);
     if (child == null) {
       log.warn("[MISSILE_FLIGHT] source={} missing CltSubMissile={}",
@@ -189,11 +224,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
     direction.set(MathUtils.cos(angle), MathUtils.sin(angle));
     int id;
+    Vector2 visualPosition = offsetX == 0f && offsetY == 0f
+        ? position : new Vector2(position.x + offsetX, position.y + offsetY);
     if (factory instanceof ClientEntityFactory) {
       id = ((ClientEntityFactory) factory).createMissilePresentation(child, direction,
-          position);
+          visualPosition);
     } else {
-      id = factory.createMissile(child, direction, position, -1);
+      id = factory.createMissile(child, direction, visualPosition, -1);
     }
     if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
     Missile visual = mMissile.get(id);

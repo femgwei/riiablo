@@ -181,6 +181,20 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void poisonCloudCallbackUsesRandomChanceAndRadiusInsteadOfFixedModulo() {
+    Missile cloud = new Missile();
+    cloud.rngState = 0x12345678;
+    assertTrue(MissileImpactPresentationSystem.rollClientSpawn(cloud, 1));
+
+    int stateBefore = cloud.rngState;
+    int first = MissileImpactPresentationSystem.randomClientOffset(cloud, 6);
+    int second = MissileImpactPresentationSystem.randomClientOffset(cloud, 6);
+    assertTrue(first >= -6 && first <= 6);
+    assertTrue(second >= -6 && second <= 6);
+    assertNotEquals(stateBefore, cloud.rngState);
+  }
+
+  @Test
   void poisonSmokePuffsUseDifferentDeterministicAnimationPhases() {
     Missiles.Entry puff = Riiablo.files.Missiles.get("poisonpuff");
     assertNotNull(puff);
