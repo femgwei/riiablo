@@ -121,6 +121,30 @@ class AuraEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void differentAuraStatesStackOnTheSamePartyMember() {
+    try (Harness test = new Harness()) {
+      int mightCaster = player(test.world, 0, 0);
+      int prayerCaster = player(test.world, 1, 0);
+      int ally = player(test.world, 3, 0);
+      short party = test.parties.createParty(mightCaster);
+      assertTrue(party >= 0);
+      assertTrue(test.parties.joinParty(party, prayerCaster));
+      assertTrue(test.parties.joinParty(party, ally));
+      life(test.world, ally, 98);
+
+      assertTrue(test.auras.manager().activateAura(mightCaster, SkillId.MIGHT, 1));
+      assertTrue(test.auras.manager().activateAura(prayerCaster, SkillId.PRAYER, 1));
+      test.tick();
+
+      StateList allyStates = states(test.world, ally);
+      assertTrue(allyStates.hasState(StateId.MIGHT));
+      assertTrue(allyStates.hasState(StateId.PRAYER));
+      assertEquals(40, allyStates.getTotalDamageModifier());
+      assertEquals(100f, life(test.world, ally), 0.001f);
+    }
+  }
+
+  @Test
   void rangeZoneMercenaryAndSummonUseAuthoritativeOwnerRelations() {
     try (Harness test = new Harness()) {
       int caster = player(test.world, 0, 0);

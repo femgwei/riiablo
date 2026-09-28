@@ -118,3 +118,10 @@ D2MOO `SKILLS_SrvDo082_Redemption` 通过 `args2.nCounter` 判断本次范围扫
 覆盖空范围失败 pulse 与下一次成功 pulse 的扣蓝边界。Holy Freeze 的冷免疫过滤和
 Shatter 生命周期已有 `PaladinSpecialAuraIntegrationTest` 覆盖，后续将继续核对
 不同来源/不同状态的胜者关系。
+
+## 不同状态叠加结果（2026-09-28）
+
+已将 dark-magic 的 `different_selected_aura_states_stack_on_each_party_member`
+映射为 riiablo 的 `AuraEcsScenarioTest.differentAuraStatesStackOnTheSamePartyMember`。
+测试确认 Might 与 Prayer 可以同时存在于同一队友：Might 的伤害加成保留，Prayer
+仍可执行治疗；两者不会因为均为 party Aura 而相互替换。
