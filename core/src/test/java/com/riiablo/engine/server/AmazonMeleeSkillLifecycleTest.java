@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -136,6 +137,34 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
   }
 
   @Test
+  void impaleMissDoesNotConsumeCalc2StackQuantity() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      Item javelin = weapon(world, amazon, "jav", 3, 20);
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, impale.Id, target, casting.targetVec, impale.srvstfunc, impale.cltstfunc));
+      assertTrue(casting.impalePrepared);
+      casting.impaleCombat.hit = false;
+      casting.impaleCombat.blocked = false;
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertEquals(3, javelin.attrs.base().get(Stat.quantity).asInt(),
+          "a missed Impale must not consume Calc2 stack quantity");
+      assertFalse(casting.impalePrepared);
+      assertNull(casting.impaleCombat);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void impaleConsumesCalc3WeaponDurability() {
     World world = world();
     try {
@@ -161,6 +190,41 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
 
       assertEquals(20 - amount, weapon.attrs.get(Stat.durability).asInt(),
           "successful Impale Calc2 roll must consume Calc3 durability");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void impaleClearsPreparedRecordWhenTargetDiesBeforeKeyframe() {
+    World world = world();
+    try {
+      Skills.Entry impale = Riiablo.files.skills.get("Impale");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      Item weapon = equip(world, amazon, impale, "hax");
+      int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(impale.Id, target, new Vector2(1, 0));
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, impale.Id, target, casting.targetVec, impale.srvstfunc, impale.cltstfunc));
+      assertTrue(casting.impalePrepared);
+      world.getMapper(AttributesWrapper.class).get(target).attrs.base()
+          .put(Stat.hitpoints, 0);
+      world.getMapper(AttributesWrapper.class).get(target).attrs.reset();
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+      assertEquals(0f, hp(world, target), 0.001f,
+          "a dead target must not receive the retained Impale record");
+      assertEquals(20, weapon.attrs.get(Stat.durability).asInt(),
+          "a dead target must not trigger Calc3 durability loss");
+      assertTrue(casting.impalePrepared,
+          "dead-target keyframe is skipped before SrvDo002 consumes the record");
+      assertNotNull(casting.impaleCombat);
+      world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(amazon));
+      assertFalse(world.getMapper(Casting.class).has(amazon),
+          "animation completion must clear the abandoned Impale record");
     } finally {
       world.dispose();
     }
