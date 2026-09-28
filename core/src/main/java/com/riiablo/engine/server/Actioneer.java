@@ -348,6 +348,16 @@ public class Actioneer extends PassiveSystem {
           return;
         }
       }
+      if (NativeSkillResolver.isAmazonJavelinSkill(skill)
+          && items.getEquippedJavelinWeapon() == null) {
+        // Skills.txt's Amazon javelin/spear tree cannot be executed with a
+        // bow.  Keep this check in the action path as well as the authoritative
+        // SkillCast validator so a stale client cannot start a bow Jab/SQ
+        // animation that has no legal melee weapon behind it.
+        log.info("[AMAZON_WEAPON] phase=cast_reject entity={} skill={} reason=requires_javelin_or_spear",
+            entityId, skillId);
+        return;
+      }
     }
 
     if (skill != null && skill.srvdofunc == 9 && !hasTwoFrenzyWeapons(entityId)) {
@@ -664,6 +674,25 @@ public class Actioneer extends PassiveSystem {
       return;
     }
 
+    // Jab is a native three-hit SQ sequence.  The target pointer remains
+    // attached to the cast after the first hit, so a lethal first strike must
+    // not cancel the remaining animation records.  D2 completes the two
+    // follow-up thrusts against the corpse; they consume the Jab records but
+    // do not run the generic melee damage path a second time.
+    boolean jabAfterTargetDeath = targetDead
+        && skill.Id == SkillId.JAB
+        && casting.jabRemainingStrikes < AmazonSkills.getJabHitCount()
+        && casting.jabRemainingStrikes > 0
+        && event.keyframe == Engine.KEYFRAME_ATK;
+    if (jabAfterTargetDeath) {
+      casting.jabStrikeProcessed = true;
+      casting.jabRemainingStrikes--;
+      log.info("[AMAZON_JAB] phase=strike_skipped source={} target={} "
+              + "reason=target_dead remaining={}", event.entityId, casting.targetId,
+          casting.jabRemainingStrikes);
+      return;
+    }
+
     // Lightning Strike is SrvSt10/SrvDo14: its elemental packet is attached
     // to the same point-blank weapon hit that starts the chain.  Re-check the
     // native melee range at the attack keyframe as the target may have moved
@@ -809,8 +838,8 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     if (casting.jabRemainingStrikes > 0
-        && casting.jabStrikeProcessed
-        && !targetDead) {
+        && (casting.jabStrikeProcessed
+            || targetDead && casting.jabRemainingStrikes < AmazonSkills.getJabHitCount())) {
       log.info("[AMAZON_JAB] phase=continue entity={} target={} remaining={}",
           event.entityId, completedTargetId, casting.jabRemainingStrikes);
       return;

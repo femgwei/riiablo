@@ -74,6 +74,41 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
   }
 
   @Test
+  void jabCompletesRemainingThrustsAfterTheFirstStrikeKillsTarget() {
+    World world = world();
+    try {
+      Skills.Entry jab = Riiablo.files.skills.get("Jab");
+      int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+      equip(world, amazon, jab, "hax");
+      // One successful Jab hit is enough to kill this target.  The native SQ
+      // sequence must still consume its second and third attack records.
+      int target = monster(world, 1, 0, attributes(1, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(amazon)
+          .set(jab.Id, target, new Vector2(1, 0));
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          amazon, jab.Id, target, casting.targetVec, jab.srvstfunc, jab.cltstfunc));
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+      assertEquals(0f, hp(world, target), 0.001f);
+      assertEquals(2, casting.jabRemainingStrikes);
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+      assertEquals(1, casting.jabRemainingStrikes,
+          "a dead target must still consume Jab's second animation record");
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+      assertEquals(0, casting.jabRemainingStrikes,
+          "a dead target must still consume Jab's third animation record");
+      assertEquals(0f, hp(world, target), 0.001f,
+          "follow-up Jab thrusts must not apply damage to the corpse");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void impalePrecomputesOneCombatRecordAndConsumesItOnceAtKeyframe() {
     World world = world();
     try {

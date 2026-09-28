@@ -357,6 +357,13 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     ItemData items = player.data != null ? player.data.getItems() : null;
+    if (NativeSkillResolver.isAmazonJavelinSkill(skill)
+        && (items == null || items.getEquippedJavelinWeapon() == null)) {
+      reject(event, 9, "Amazon javelin/spear skill requires an equipped javelin or spear");
+      log.info("[AMAZON_WEAPON] phase=cast_reject source={} skill={} reason=requires_javelin_or_spear",
+          event.entityId, skill.skill);
+      return;
+    }
     if (NecromancerSkills.isPoisonDagger(skill)) {
       Item weapon = activeMeleeWeapon(items);
       if (!NecromancerSkills.isPoisonDaggerWeapon(weapon)) {
