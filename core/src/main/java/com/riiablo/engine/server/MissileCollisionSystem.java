@@ -2923,6 +2923,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       int targetId = targets.get(i);
       if (targetId == struckTarget || targetId == source.ownerId
           || !mPosition.has(targetId) || !isEnemy(source.ownerId, targetId)) continue;
+      // D2MOO's aura target filter only visits valid live units.  A monster
+      // can remain in the ECS during its death animation; do not spend one of
+      // Lightning Fury's limited child bolts on that corpse.
+      if (!isAlive(targetId)) continue;
       if (mNativeUnitFlags.has(targetId)
           && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
       Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
