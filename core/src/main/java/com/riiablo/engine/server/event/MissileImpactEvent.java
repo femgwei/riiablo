@@ -20,6 +20,9 @@ public final class MissileImpactEvent implements Event {
   /** Impact-facing direction copied before the source missile is deleted. */
   public float dx = 1f;
   public float dy;
+  public String impactDcc;
+  public String impactPalette;
+  public String impactSound;
 
   public static MissileImpactEvent obtain(int missileEntityId, int missileId,
       int ownerId, int targetEntityId, Vector2 position) {
@@ -42,5 +45,13 @@ public final class MissileImpactEvent implements Event {
       event.dy = direction.y / length;
     }
     return event;
+  }
+
+  public MissileImpactEvent withPresentation(
+      String impactDcc, String impactPalette, String impactSound) {
+    this.impactDcc = impactDcc;
+    this.impactPalette = impactPalette;
+    this.impactSound = impactSound;
+    return this;
   }
 }

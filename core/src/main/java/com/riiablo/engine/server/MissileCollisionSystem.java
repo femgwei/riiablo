@@ -1661,7 +1661,10 @@ public class MissileCollisionSystem extends IteratingSystem {
               hitSound == null ? "" : hitSound);
           DamageEvent event = DamageEvent.obtainMissile(
               missile.ownerId, targetId, damage,
-              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound)
+              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound,
+              combat)
+              .withElementalDamage(combat, Math.max(0.01f, missile.damageMultiplier))
+              .suppressElementalPresentation(hasNativeElementalPresentation(missile))
               .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
           deferLethalFreezingArrowDamage(missile, targetId, targetAttrs, event);
           events.dispatch(event);
@@ -1759,7 +1762,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       facing = mAngle.get(missileId).target;
     }
     events.dispatch(MissileImpactEvent.obtain(missileId, missile.missile.Id,
-        missile.ownerId, targetId, position, facing));
+        missile.ownerId, targetId, position, facing).withPresentation(
+            missile.impactDcc, missile.impactPalette, missile.impactSound));
   }
 
   /** Native SrvHit07 pet/ally branch. */
@@ -3094,9 +3098,15 @@ public class MissileCollisionSystem extends IteratingSystem {
           missile != null ? statInt(missile.damage, Stat.coldmaxdam) : 0,
           missile != null ? statInt(missile.damage, Stat.coldlength) : 0,
           combat.coldDuration, combat.elementalDamage[CombatSystem.DAMAGE_COLD]);
-      // D2Game invokes ApplyColdState and ApplyFreezeState independently.
-      // Cold must run first because it owns the native shatter roll.
-      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+      // D2Game invokes ApplyColdState and ApplyFreezeState independently for
+      // ordinary freeze packets (for example Freezing Arrow). Ice Blast is
+      // the exception: MISSMODE_SrvDmg04_IceBlast moves ColdLen into FrzLen
+      // and clears ColdLen, so it must not leave a second chill state behind.
+      boolean iceBlast = isIceBlast(missile);
+      if (!iceBlast) {
+        // Cold must run first because it owns the native shatter roll.
+        StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+      }
       if (missile != null && missile.freezesTarget) {
         StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
         // Ice Arrow, Freezing Arrow and the other native freeze packets keep
@@ -3140,6 +3150,12 @@ public class MissileCollisionSystem extends IteratingSystem {
             || "frze".equalsIgnoreCase(missile.missile.EType));
   }
 
+  private static boolean hasNativeElementalPresentation(Missile missile) {
+    if (missile == null || missile.missile == null) return false;
+    int hitClass = missile.missile.HitClass;
+    return hitClass == 32 || hitClass == 48 || hitClass == 64 || hitClass == 80;
+  }
+
   private void markFrozenShatter(int targetId, int sourceId, int duration) {
     if (!mUnitStates.has(targetId)) return;
     StateList states = mUnitStates.get(targetId).stateList;
@@ -3158,6 +3174,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile == null) return false;
     if (missile.skillId == com.riiablo.engine.server.skill.SkillId.COLD_ARROW) return true;
     return missile.missile != null && "coldarrow".equalsIgnoreCase(missile.missile.Missile);
+  }
+
+  private static boolean isIceBlast(Missile missile) {
+    if (missile == null) return false;
+    if (missile.skillId == com.riiablo.engine.server.skill.SkillId.ICE_BLAST) return true;
+    return missile.missile != null && "iceblast".equalsIgnoreCase(missile.missile.Missile);
   }
 
   /** Last-line guard for client-created Freezing Arrow children. */

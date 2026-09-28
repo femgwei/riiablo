@@ -250,7 +250,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = Riiablo.files.Missiles.get(event.missileId);
     if (source == null) return;
 
-    String hitSound = source.HitSound;
+    String hitSound = event.impactSound != null ? event.impactSound : source.HitSound;
     if (hitSound != null && !hitSound.isEmpty() && Riiablo.audio != null) {
       // An empty native HitSound means silence.  Do not substitute a generic
       // impact sound: that changes the observable Missiles.txt behavior.
@@ -280,6 +280,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
 
     String[] children = source.CltHitSubMissile;
+    if ((children == null || children.length == 0) && event.impactDcc != null) {
+      for (Missiles.Entry candidate : Riiablo.files.Missiles) {
+        if (candidate != null && event.impactDcc.equalsIgnoreCase(candidate.CelFile)) {
+          children = new String[] {candidate.Missile};
+          break;
+        }
+      }
+    }
     if (children == null || factory == null) return;
 
     // These are the native client hit-function families that emit a radial

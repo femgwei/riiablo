@@ -193,7 +193,7 @@ public final class MissileDamageResolver {
     writeSnapshot(projectile, ownerAttrs, false, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
     projectile.damageLevel = level;
-    projectile.freezesTarget = row.pSrvDmgFunc == 2
+    projectile.freezesTarget = row.pSrvDmgFunc == 2 || row.pSrvDmgFunc == 4
         || "freeze".equalsIgnoreCase(row.EType)
         || "frze".equalsIgnoreCase(row.EType);
     configureMetadata(projectile, elementalMax, coldLength, poisonLength);
@@ -543,6 +543,16 @@ public final class MissileDamageResolver {
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
     int poisonLength = includeElement && type == POISON ? Math.max(0, skill.ELen
         + damageBonusByLevel(level, skill.ELevLen)) : 0;
+    // SKILLS_GetElementalLength applies ELenSymPerCalc as a percentage of
+    // the base length. Ice Blast uses this for Glacial Spike hard points;
+    // omitting it shortens the native freeze packet while damage synergies
+    // remain correct.
+    int lengthSynergy = Math.max(0, SkillFormula.evaluate(skill.ELenSymPerCalc,
+        skill, level, baseSkillLevel));
+    if (lengthSynergy > 0) {
+      if (coldLength > 0) coldLength += coldLength * lengthSynergy / 100;
+      if (poisonLength > 0) poisonLength += poisonLength * lengthSynergy / 100;
+    }
     if (includeSource && projectile.missile != null
         && projectile.missile.pSrvDmgFunc == 1 && type > PHYSICAL) {
       int conversion = Math.min(100, Math.max(0,
@@ -600,6 +610,8 @@ public final class MissileDamageResolver {
         coldLength, sourceScale);
     projectile.freezesTarget = projectile.missile != null
         && (projectile.missile.pSrvDmgFunc == 2
+            // D2MOO MISSMODE_SrvDmg04_IceBlast converts ColdLen to FrzLen.
+            || projectile.missile.pSrvDmgFunc == 4
             || "freeze".equalsIgnoreCase(projectile.missile.EType)
             || "frze".equalsIgnoreCase(projectile.missile.EType));
     configureMetadata(projectile, elementalMax, coldLength, poisonLength);
@@ -745,10 +757,25 @@ public final class MissileDamageResolver {
       projectile.onHitStateDuration = Math.max(0, coldDuration);
     }
     if (row != null) {
-      projectile.impactDcc = row.CelFile;
-      projectile.impactPalette = null;
+      Missiles.Entry impact = firstImpactRow(row);
+      projectile.impactDcc = impact != null ? impact.CelFile : row.CelFile;
+      projectile.impactPalette = "data\\global\\palette\\units\\pal.dat";
       projectile.impactSound = row.HitSound;
     }
+  }
+
+  private static Missiles.Entry firstImpactRow(Missiles.Entry row) {
+    if (row == null || Riiablo.files == null || Riiablo.files.Missiles == null) return null;
+    String[][] candidates = {row.CltHitSubMissile, row.HitSubMissile};
+    for (String[] names : candidates) {
+      if (names == null) continue;
+      for (String name : names) {
+        if (name == null || name.isEmpty()) continue;
+        Missiles.Entry impact = Riiablo.files.Missiles.get(name);
+        if (impact != null) return impact;
+      }
+    }
+    return null;
   }
 
   private static int toDamageResultChannel(int legacyType) {
