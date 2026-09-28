@@ -51,6 +51,15 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     // NU collision row. A missing CofReference must not make a solid door or
     // wall object silently non-blocking.
     int mode = reference == null ? Engine.Object.MODE_NU : reference.mode;
+    // Object.mode is the persistent state serialized to clients. CofReference
+    // may still be OP or carry a stale idle mode for one update while a native
+    // room snapshot is applied; reconcile idle collision with the authoritative
+    // object state without interrupting an active operation animation.
+    if (reference != null && mode != Engine.Object.MODE_OP
+        && object != null && object.mode >= Engine.Object.MODE_NU
+        && object.mode <= Engine.Object.MODE_S5 && object.mode != mode) {
+      mode = object.mode;
+    }
     boolean enabled = hasCollision(base, mode);
     setBox2DCollision(entityId, enabled);
 

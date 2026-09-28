@@ -93,6 +93,11 @@ public class CofLayerCacher extends IteratingSystem {
     if (mObject.has(entityId)) {
       com.riiablo.engine.server.component.Object object = mObject.get(entityId);
       byte mode = mCofReference.get(entityId).mode;
+      if (mode != com.riiablo.engine.Engine.Object.MODE_OP && object != null
+          && object.mode >= com.riiablo.engine.Engine.Object.MODE_NU
+          && object.mode <= com.riiablo.engine.Engine.Object.MODE_S5) {
+        mode = object.mode;
+      }
       animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
           object == null ? null : object.base, mode, animation.getNumFramesPerDir()));
     }

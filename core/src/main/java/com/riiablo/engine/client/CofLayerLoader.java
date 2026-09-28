@@ -144,6 +144,19 @@ public class CofLayerLoader extends IteratingSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
+    // Object.mode is the persistent authoritative state mirrored in ObjectP.
+    // CofReference can briefly retain OP/ON from a previous transition while
+    // a room snapshot restores NU; use the persistent state for idle visuals,
+    // but never replace an active OP transition.
+    if (logicalType == Class.Type.OBJ && mode != Engine.Object.MODE_OP
+        && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      if (object != null && object.mode >= Engine.Object.MODE_NU
+          && object.mode <= Engine.Object.MODE_S5
+          && object.mode != mode) {
+        mode = object.mode;
+      }
+    }
     COF cof = mCofWrapper.get(entityId).cof;
     int[] component = mCofComponents.get(entityId).component;
     AssetDescriptor<? extends DC>[] descriptors = mCofComponentDescriptors.get(entityId).descriptors;
