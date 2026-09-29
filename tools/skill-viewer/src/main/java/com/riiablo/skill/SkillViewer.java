@@ -67,9 +67,14 @@ public class SkillViewer extends Tool {
       "Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Druid", "Assassin"
   };
   private static final String[] CLASS_CODES = { "ama", "sor", "nec", "pal", "bar", "dru", "ass" };
-  private static final byte[] CLASS_IDS = {
-      Riiablo.AMAZON, Riiablo.SORCERESS, Riiablo.NECROMANCER, Riiablo.PALADIN,
-      Riiablo.BARBARIAN, Riiablo.DRUID, Riiablo.ASSASSIN
+  private static final SkillCharacterPreset[] PRESETS = {
+      new SkillCharacterPreset(Riiablo.AMAZON, "Amazon", "Short Bow", true),
+      new SkillCharacterPreset(Riiablo.SORCERESS, "Sorceress", "Short Staff", true),
+      new SkillCharacterPreset(Riiablo.NECROMANCER, "Necromancer", "Short Staff", true),
+      new SkillCharacterPreset(Riiablo.PALADIN, "Paladin", "Short Sword + Buckler", true),
+      new SkillCharacterPreset(Riiablo.BARBARIAN, "Barbarian", "Short Sword (dual-wield)", true),
+      new SkillCharacterPreset(Riiablo.DRUID, "Druid", "Club", true),
+      new SkillCharacterPreset(Riiablo.ASSASSIN, "Assassin", "Katar (claw)", true)
   };
   private static final Color GRID = new Color(0.04f, 0.04f, 0.04f, 1f);
 
@@ -310,6 +315,8 @@ public class SkillViewer extends Tool {
     finishSkillLog();
     String skill = skillSelect.getSelected();
     sessionLog.begin(CLASS_NAMES[selectedClass], skill, skillLevel, seed);
+    sessionLog.append("weapon=" + PRESETS[selectedClass].weapon + " weaponRequired="
+        + PRESETS[selectedClass].weaponRequired + "\n");
     targetModeValue = determineTargetMode(skill);
     sessionLog.append("event=skill_selected targetMode=" + targetModeValue + "\n");
     targetMode.setText("目标模式：" + targetModeValue);
@@ -329,6 +336,7 @@ public class SkillViewer extends Tool {
     text.append(resourcesLoaded ? "资源：已加载" : "资源：未加载");
     if (resourceError != null) text.append("（").append(resourceError).append("）");
     text.append(" · ").append(CLASS_NAMES[selectedClass]);
+    text.append(" · 武器 ").append(PRESETS[selectedClass].weapon);
     text.append(" · 怪物 ").append(monsters.size).append(" · 尸体 ").append(corpses.size);
     status.setText(text);
   }
