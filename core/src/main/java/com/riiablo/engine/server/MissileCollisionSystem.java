@@ -3200,7 +3200,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     // damage child must not add the generic weapon FireExplode overlay on top
     // of that native explosion presentation.
     String missileName = missile.missile.Missile;
-    if ("explodingarrowexp".equalsIgnoreCase(missileName)
+    if ("explodingarrow".equalsIgnoreCase(missileName)
+        || "explodingarrowexp".equalsIgnoreCase(missileName)
         || "explodingarrowexp2".equalsIgnoreCase(missileName)) return true;
     int hitClass = missile.missile.HitClass;
     if (hitClass != 32 && hitClass != 48 && hitClass != 64 && hitClass != 80) return false;
