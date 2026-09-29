@@ -6,6 +6,10 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.assets.loaders.MusicLoader;
+import com.badlogic.gdx.assets.loaders.SoundLoader;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -38,6 +42,7 @@ import com.riiablo.Fonts;
 import com.riiablo.Palettes;
 import com.riiablo.Riiablo;
 import com.riiablo.Textures;
+import com.riiablo.audio.Audio;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.D2;
 import com.riiablo.codec.DC6;
@@ -252,12 +257,20 @@ public class SkillViewer extends Tool {
     Riiablo.home = home;
     MPQFileHandleResolver resolver = Riiablo.mpqs = new MPQFileHandleResolver(home);
     assets = Riiablo.assets = new AssetManager();
+    // Skill effects use the same sound references as the game client.  The
+    // standalone viewer must resolve those paths through the Diablo MPQs;
+    // AssetManager's default loaders only know about ordinary filesystem
+    // files.  Audio.update() below services sounds that finish loading after
+    // a keyframe requests them.
+    assets.setLoader(Sound.class, new SoundLoader(resolver));
+    assets.setLoader(Music.class, new MusicLoader(resolver));
     assets.setLoader(COF.class, new COFLoader(resolver));
     assets.setLoader(DCC.class, new DCCLoader(resolver));
     assets.setLoader(DC6.class, new DC6Loader(resolver));
     assets.setLoader(Palette.class, new PaletteLoader(resolver));
     assets.setLoader(FontTBL.BitmapFont.class, new BitmapFontLoader(resolver));
     Riiablo.files = new Files(assets);
+    Riiablo.audio = new Audio(assets);
     Riiablo.fonts = new Fonts(assets);
     Riiablo.palettes = new Palettes(assets);
     Riiablo.colors = new Colors();
@@ -505,6 +518,10 @@ public class SkillViewer extends Tool {
 
   private void disposeResources() {
     resourcesLoaded = false;
+    // Audio keeps the AssetManager it was created with.  Clear the global
+    // reference before disposing that manager so a late ECS event cannot
+    // enqueue a sound on a dead resource set during reload/shutdown.
+    Riiablo.audio = null;
     if (assets != null) {
       assets.dispose();
       assets = null;
@@ -768,6 +785,7 @@ public class SkillViewer extends Tool {
     Gdx.gl.glClearColor(0.48f, 0.48f, 0.48f, 1f);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     if (assets != null) assets.update();
+    if (Riiablo.audio != null) Riiablo.audio.update();
     // This viewer owns a standalone Artemis world instead of the main
     // GameScreen's fixed-step loop.  Feed it the frame delta explicitly;
     // without this, VelocityAdder and AnimationStepper see world.delta == 0
