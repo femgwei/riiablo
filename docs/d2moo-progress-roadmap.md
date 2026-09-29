@@ -5702,9 +5702,13 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 修复 headless fixture 的技能参数说明与解析日志；`222/231/241` 在当前 Skills.bin
   中分别显示为 `Plague Poppy/Cycle of Life/Vines`，这些是当前表的原生行名，不再把
   数字常量误当作显示名称。
-- [ ] 当前仅 `Plague Poppy`（222）完成真实双客户端门槛；`Cycle of Life`（231）和
-  `Vines`（241）施法请求可入队但未生成召唤快照，需继续核对其 action/MonStats 资源链，
-  不能把三种 vine 一并标成实机完成。
+- [x] 三种 vine 的真实双客户端 summon/state/reconnect 门槛均已通过；headless fixture 现在
+  会按 `Skills.txt` 的 `ReqSkill1-3` 递归种植前置技能，避免把合法的 231/241 施法误判为
+  等级或前置技能失败。
+- [ ] `Cycle of Life`（231）和 `Vines`（241）的 MonStats AI 使用 D2MOO
+  `SrvSt63_Corpse_VineCycler`，不是 `Plague Poppy` 的 `Vine Attack` 根导弹；当前已明确
+  标记为 `projectileAttack=not_applicable` 并通过共享/重连验证，尸体目标、`SrvSt63`
+  导弹和尸体消费仍需单独 fixture。
 - [ ] D2MOO 当前 `plague vines trail` 行为数据为 `pSrvHitFunc=50`、`pSrvDmgFunc=0`，
   且没有直接 `EType/EMin/EMax` 毒素字段；本轮只确认 trail 生成和同步，不宣称毒素命中
   已完成。跨区域跟随仍待单独门槛。

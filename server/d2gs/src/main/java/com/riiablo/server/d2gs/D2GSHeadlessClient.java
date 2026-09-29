@@ -7,6 +7,7 @@ import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.AngleP;
@@ -1373,27 +1374,38 @@ public final class D2GSHeadlessClient {
             + " peerStates=" + peer.entityStateIds.get(vineEntity));
       }
 
-      long attackDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
-      boolean attack = false;
-      boolean trail = false;
-      while (System.currentTimeMillis() < attackDeadline) {
-        consumeOne(ownerInput, owner);
-        consumeOne(peerInput, peer);
-        attack = sharedVineAttack(owner, peer, vineEntity);
-        trail = sharedVineTrail(owner, peer, vineEntity);
-        if (attack && trail) break;
+      boolean expectsProjectileAttack = config.vineSkillId == SkillId.POISON_CREEPER;
+      if (expectsProjectileAttack) {
+        long attackDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+        boolean attack = false;
+        boolean trail = false;
+        while (System.currentTimeMillis() < attackDeadline) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          attack = sharedVineAttack(owner, peer, vineEntity);
+          trail = sharedVineTrail(owner, peer, vineEntity);
+          if (attack && trail) break;
+        }
+        if (!attack || !trail) {
+          throw new IllegalStateException("vine attack evidence missing: skill="
+              + config.vineSkillId + " vine=" + vineEntity + " attack=" + attack
+              + " trail=" + trail + " missiles="
+              + areaMissileSummary(owner.areaMissiles) + " targetStates="
+              + owner.entityStateIds.get(targetId) + " allStates=" + owner.entityStateIds);
+        }
+        log("vine_dual_pass", "skill=" + config.vineSkillId + " vine=" + vineEntity
+            + " owner=" + owner.playerId + " peer=" + peer.playerId
+            + " sharedVine=true vineBeast=true vineAttack=true vineTrail=true"
+            + " targetStates=" + owner.entityStateIds.get(targetId));
+      } else {
+        // Cycle of Life/Vines use the native SrvSt63 corpse-cycler AI rather
+        // than Plague Poppy's Vine Attack projectile. Keep summon/state and
+        // reconnect coverage separate until the corpse fixture is implemented.
+        log("vine_variant_pass", "skill=" + config.vineSkillId + " vine=" + vineEntity
+            + " owner=" + owner.playerId + " peer=" + peer.playerId
+            + " sharedVine=true vineBeast=true projectileAttack=not_applicable"
+            + " reason=srvst63_corpse_vine_cycler");
       }
-      if (!attack || !trail) {
-        throw new IllegalStateException("vine attack evidence missing: skill="
-            + config.vineSkillId + " vine=" + vineEntity + " attack=" + attack
-            + " trail=" + trail + " missiles="
-            + areaMissileSummary(owner.areaMissiles) + " targetStates="
-            + owner.entityStateIds.get(targetId) + " allStates=" + owner.entityStateIds);
-      }
-      log("vine_dual_pass", "skill=" + config.vineSkillId + " vine=" + vineEntity
-          + " owner=" + owner.playerId + " peer=" + peer.playerId
-          + " sharedVine=true vineBeast=true vineAttack=" + attack
-          + " vineTrail=" + trail + " targetStates=" + owner.entityStateIds.get(targetId));
 
       // Keep the authoritative owner alive while replacing the observer. The
       // replacement must receive the same vine identity and state, proving
@@ -8892,6 +8904,8 @@ public final class D2GSHeadlessClient {
         : sorceress ? "HeadlessSorc" : necromancer ? "HeadlessNecro" : "HeadlessArea";
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, name, (byte) characterClass);
+    // Keep the D2S header level consistent with the generated stat list.
+    character.level = 30;
     com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
     StatListRef base = character.getStats().base();
     base.put(Stat.strength, stats.str);
@@ -8915,6 +8929,7 @@ public final class D2GSHeadlessClient {
     character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
     character.mapSeed = 0x41524541; // "AREA", stable map fixture.
     character.initializeStartItems(stats);
+    seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
     if (!character.setSkillLevel(skillId, 20)) {
       throw new IllegalStateException("could not seed area skill " + skillId);
     }
@@ -8922,8 +8937,36 @@ public final class D2GSHeadlessClient {
     log("character_generated", "name=" + name + " class="
         + (sorceress ? "sorceress" : necromancer ? "necromancer" : "druid")
         + " skill=" + skillId
-        + " level=20 bytes=" + data.length);
+        + " level=30 bytes=" + data.length);
     return data;
+  }
+
+  /** Seeds native prerequisite rows so real cast validation is exercised. */
+  private static void seedSkillPrerequisites(CharData character, int skillId,
+      Set<Integer> visited) {
+    if (character == null || Riiablo.files == null || Riiablo.files.skills == null
+        || !visited.add(skillId)) return;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return;
+    String[] prerequisites = {skill.reqskill1, skill.reqskill2, skill.reqskill3};
+    for (String name : prerequisites) {
+      Skills.Entry prerequisite = findSkillByName(name);
+      if (prerequisite == null) continue;
+      seedSkillPrerequisites(character, prerequisite.Id, visited);
+      character.setSkillLevel(prerequisite.Id, 1);
+    }
+  }
+
+  private static Skills.Entry findSkillByName(String name) {
+    if (name == null || name.trim().isEmpty() || Riiablo.files == null
+        || Riiablo.files.skills == null) return null;
+    Skills.Entry direct = Riiablo.files.skills.get(name.trim());
+    if (direct != null) return direct;
+    for (Skills.Entry candidate : Riiablo.files.skills) {
+      if (candidate != null && candidate.skill != null
+          && candidate.skill.equalsIgnoreCase(name.trim())) return candidate;
+    }
+    return null;
   }
 
   /** Deterministic level-30 Necromancer fixture with Raise Skeleton learned. */

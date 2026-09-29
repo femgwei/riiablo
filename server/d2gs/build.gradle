@@ -170,7 +170,7 @@ tasks.register('headlessAreaSkill', JavaExec) {
 
 tasks.register('headlessVine', JavaExec) {
   group = 'verification'
-  description = 'Runs a real-MPQ Druid vine summon/attack/poison dual-client gate.'
+  description = 'Runs a real-MPQ Druid vine summon/variant/reconnect dual-client gate.'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
   workingDir = rootProject.file('assets').path

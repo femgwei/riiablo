@@ -219,11 +219,11 @@
   Creeper 均安装 `Vine Attack`（`SumSk1Calc=lvl`）并持有 `VINE_BEAST` 状态；
   `DruidSkills.getSummonGrantedSkillLevel` 和 `DruidSummonIntegrationTest` 锁定父技能等级
   传递，避免回退到 MonStats 静态技能等级。vine 不参与 party aura 投影。
-- 真实 1.10f 双客户端专项已完成 `Plague Poppy`（当前表行 id 222）：`Vine Attack` 根导弹
-  runtime index 474、`plague vines trail` runtime index 475、共享实体/状态和 reconnect
-  均已通过。当前 `Cycle of Life`/`Vines`（231/241）仍有施法入队但无召唤快照的问题，
-  暂不移植为“已完成”。由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为
-  已验证结果。
+- 真实 1.10f 双客户端专项已完成三种 vine 的共享实体、`VINE_BEAST` 和 reconnect；
+  `Plague Poppy`（222）另已通过 `Vine Attack` 根导弹 runtime index 474 与
+  `plague vines trail` runtime index 475。`Cycle of Life`/`Vines`（231/241）按 D2MOO
+  `SrvSt63_Corpse_VineCycler` 标记为非 projectile 分支，尸体目标/消费仍待专项验证。
+  由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为已验证结果。
 
 ## dark-magic 测试用例移植映射
 

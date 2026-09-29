@@ -48,11 +48,11 @@
   Druid vine 的真实 MPQ/双客户端门槛，随后进入其他职业尚未完成的 exact-ID 行为注册
   与四层验收。本轮已完成 vine 的 SumSkill/状态核对与等级传递测试，尚未做真实客户端
   导弹命中验收。
-- 本轮已补上 Druid vine 的真实 MPQ/双客户端门槛：`Plague Poppy` 的共享 vine、
-  `VINE_BEAST`、Vine Attack 根导弹、`plague vines trail` 及 observer reconnect 均通过。
-  `Cycle of Life`/`Vines` 当前仍需继续排查 action/MonStats 链；D2MOO trail 本身没有
-  直接 poison 字段，因此不能把毒素命中写成已完成。相关实现不覆盖 Amazon、Assassin
-  或其他 agent 的未提交修改。
+- 本轮继续完成三种 Druid vine 的真实 MPQ/双客户端 summon、`VINE_BEAST` 和 observer
+  reconnect 门槛；`Plague Poppy` 通过 Vine Attack/trail，`Cycle of Life`/`Vines` 已确认
+  走 D2MOO `SrvSt63_Corpse_VineCycler` 非 projectile 分支。尸体目标/消费仍未移植，
+  trail 本身也没有直接 poison 字段，因此不把毒素命中写成已完成。相关实现不覆盖
+  Amazon、Assassin 或其他 agent 的未提交修改。
 
 - 分支：`master`
 - 当前功能提交：`bc748f2f9b7f4e8e0276554f0bb1537eb5461532`（已与 `origin/master` 一致）
