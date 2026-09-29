@@ -158,6 +158,8 @@ public final class D2GSHeadlessClient {
   private final Map<Long, Long> stateCreationTicks = new HashMap<>();
   private final Map<Long, Long> stateExpirationTicks = new HashMap<>();
   private final Map<Integer, Set<Integer>> entityStateIds = new HashMap<>();
+  /** Latest StateP projection per entity/state, including aura source metadata. */
+  private final Map<Long, AreaState> entityAreaStates = new HashMap<>();
   private final Set<Long> snapshotTicks = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
   private boolean sawAttackMode;
@@ -225,6 +227,8 @@ public final class D2GSHeadlessClient {
     }
     byte[] d2s = config.requireSummonReconnect
         ? createGeneratedNecromancerSave()
+        : config.requireSpiritAura
+        ? createGeneratedAreaSave(config.spiritSkillId)
         : config.requireBaalWaveDual
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireA5AncientDual
@@ -406,6 +410,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireVineScenario) {
       runVineDual(d2s, character);
+      return;
+    }
+    if (config.requireSpiritAura) {
+      runSpiritAuraDual(d2s, character);
       return;
     }
     if (config.requireQuestRecovery) {
@@ -1524,6 +1532,128 @@ public final class D2GSHeadlessClient {
       }
     }
     return false;
+  }
+
+  /**
+   * Real 1.10f dual-client gate for the Druid spirit aura projection.
+   *
+   * <p>The native D2MOO path creates the spirit first and lets its linked
+   * SumSkill publish the party stat-list.  The wire oracle therefore checks
+   * the summon identity and the owner StateP source/skill metadata rather
+   * than inferring an aura from a local skill cast.  Reconnecting the observer
+   * verifies the source layer survives a fresh snapshot; moving the owner to
+   * another level verifies the source-owned layer is revoked with the old
+   * zone.</p>
+   */
+  private void runSpiritAuraDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("SpiritPeer", 0x53504952);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(10)[0];
+    try (Socket peerSocket = peer.openSocket();
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      peer.awaitConnection(peerInput, deadline());
+      try (Socket ownerSocket = owner.openSocket();
+           DataInputStream ownerInput = input(ownerSocket);
+           OutputStream ownerOutput = output(ownerSocket)) {
+        send(ownerOutput, connectionPacket(character, d2s));
+        owner.awaitConnection(ownerInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 10, room)
+            || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, room)) {
+          throw new IOException("failed to stage spirit aura clients");
+        }
+
+        int spiritSkillId = config.spiritSkillId;
+        int spiritStateId = com.riiablo.engine.server.skill.DruidSkills
+            .getSummonAuraState(Riiablo.files.skills.get(spiritSkillId));
+        String spiritPetType = spiritSkillId == SkillId.OAK_SAGE ? "oaksage"
+            : spiritSkillId == SkillId.HEART_OF_WOLVERINE ? "wolverine" : "barbs";
+        int spirit = D2GS.headlessCreateRoomSummon(owner.playerId, 10, room,
+            spiritSkillId, spiritPetType);
+        if (spirit < 0 || spiritStateId == com.riiablo.engine.server.state.StateId.NONE) {
+          throw new IOException("failed to create Druid spirit skill=" + spiritSkillId);
+        }
+        awaitSummonedPet(owner, ownerInput, spirit, owner.playerId,
+            spiritPetType, spiritSkillId, deadline());
+        awaitSummonedPet(peer, peerInput, spirit, owner.playerId,
+            spiritPetType, spiritSkillId, deadline());
+
+        awaitSpiritAuraState(owner, ownerInput, owner.playerId, spirit,
+            spiritStateId, spiritSkillId, deadline());
+        awaitSpiritAuraState(peer, peerInput, owner.playerId, spirit,
+            spiritStateId, spiritSkillId, deadline());
+        log("spirit_aura_dual_pass", "spirit=" + spirit + " owner=" + owner.playerId
+            + " peer=" + peer.playerId + " clients=true,true state="
+            + com.riiablo.engine.server.state.StateId.getName(spiritStateId)
+            + " source=" + spirit + " skill=" + spiritSkillId);
+
+        // Replace only the observer. The owner keeps the authoritative source
+        // alive while the new connection receives the same summon and aura
+        // source layer from its baseline snapshot.
+        int oldPeer = peer.playerId;
+        peerSocket.close();
+        long ownerDeadline = System.currentTimeMillis() + 1_000L;
+        while (System.currentTimeMillis() < ownerDeadline) consumeOne(ownerInput, owner);
+
+        D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+        try (Socket reconnectSocket = reconnected.openSocket();
+             DataInputStream reconnectInput = input(reconnectSocket);
+             OutputStream reconnectOutput = output(reconnectSocket)) {
+          send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+          reconnected.awaitConnection(reconnectInput, deadline());
+          if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
+            throw new IOException("failed to stage reconnected spirit observer");
+          }
+          awaitSummonedPet(reconnected, reconnectInput, spirit, owner.playerId,
+              spiritPetType, spiritSkillId, deadline());
+          awaitSpiritAuraState(reconnected, reconnectInput, owner.playerId, spirit,
+              spiritStateId, spiritSkillId, deadline());
+          log("spirit_aura_reconnect_pass", "spirit=" + spirit + " oldPeer=" + oldPeer
+              + " observer=" + reconnected.playerId + " stale=false source=" + spirit
+              + " skill=" + spiritSkillId);
+        }
+
+        // A level transition changes the authoritative Map.Zone. The old
+        // spirit and its owner-owned aura layer must not leak into the new
+        // level, even if the coordinates overlap.
+        if (!D2GS.headlessEnterLevel(owner.playerId, 2)) {
+          throw new IOException("spirit owner could not enter Blood Moor");
+        }
+        long transitionDeadline = System.currentTimeMillis() + 5_000L;
+        while (System.currentTimeMillis() < transitionDeadline) {
+          consumeOne(ownerInput, owner);
+          if (owner.currentLevelId == 2
+              && !hasState(owner, owner.playerId, spiritStateId)) {
+            log("spirit_aura_cross_area_pass", "spirit=" + spirit
+                + " owner=" + owner.playerId + " oldLevel=10 newLevel=2"
+                + " auraRevoked=true");
+            return;
+          }
+        }
+        throw new IllegalStateException("spirit aura survived owner level transition: spirit="
+            + spirit + " level=" + owner.currentLevelId + " states="
+            + owner.entityStateIds.get(owner.playerId));
+      }
+    }
+  }
+
+  private static void awaitSpiritAuraState(D2GSHeadlessClient client,
+      DataInputStream input, int targetId, int sourceId, int stateId, int skillId,
+      long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      if (hasState(client, targetId, stateId)) {
+        AreaState state = client.entityAreaStates.get(stateKey(targetId, stateId));
+        if (state != null && state.sourceEntityId == sourceId && state.skillId == skillId) return;
+      }
+    }
+    throw new IOException("timed out waiting for Oak Sage aura state target=" + targetId
+        + " source=" + sourceId + " skill=" + skillId + " states="
+        + client.entityStateIds.get(targetId));
   }
 
   private static boolean sharedVineCorpseCycler(D2GSHeadlessClient first,
@@ -8605,6 +8735,15 @@ public final class D2GSHeadlessClient {
       area.periodicCountdownFrames = i < states.periodicCountdownFramesLength()
           ? states.periodicCountdownFrames(i) : 0;
       area.everObserved = true;
+      AreaState projection = new AreaState(stateId);
+      projection.skillId = area.skillId;
+      projection.sourceEntityId = area.sourceEntityId;
+      projection.duration = area.duration;
+      projection.level = area.level;
+      projection.periodicDelayFrames = area.periodicDelayFrames;
+      projection.periodicCountdownFrames = area.periodicCountdownFrames;
+      projection.everObserved = true;
+      entityAreaStates.put(stateKey(sync.entityId(), stateId), projection);
       log("area_state", "entity=" + sync.entityId() + " state=" + stateId
           + " skill=" + area.skillId + " source=" + area.sourceEntityId
           + " duration=" + area.duration + " level=" + area.level
@@ -9003,6 +9142,10 @@ public final class D2GSHeadlessClient {
     return data;
   }
 
+  private static long stateKey(int entityId, int stateId) {
+    return (((long) entityId) << 32) | (stateId & 0xFFFFFFFFL);
+  }
+
   /** Seeds native prerequisite rows so real cast validation is exercised. */
   private static void seedSkillPrerequisites(CharData character, int skillId,
       Set<Integer> visited) {
@@ -9238,6 +9381,8 @@ public final class D2GSHeadlessClient {
     int areaSkillId = SkillId.VOLCANO;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
+    boolean requireSpiritAura;
+    int spiritSkillId = SkillId.OAK_SAGE;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -9307,6 +9452,8 @@ public final class D2GSHeadlessClient {
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
+        else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
+        else if ("--spirit-skill".equals(arg)) config.spiritSkillId = integer(args, ++i, arg);
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -9351,6 +9498,10 @@ public final class D2GSHeadlessClient {
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
             + "Carrion Vine(231), or Solar Creeper(241)");
+      }
+      if (config.requireSpiritAura && !isSpiritSkill(config.spiritSkillId)) {
+        throw new IllegalArgumentException("--spirit-skill must be Oak Sage(226), "
+            + "Heart of Wolverine(236), or Spirit of Barbs(246)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
@@ -9433,6 +9584,11 @@ public final class D2GSHeadlessClient {
           || "Solar Creeper".equalsIgnoreCase(row.skill);
     }
 
+    private static boolean isSpiritSkill(int skillId) {
+      return skillId == SkillId.OAK_SAGE || skillId == SkillId.HEART_OF_WOLVERINE
+          || skillId == SkillId.SPIRIT_OF_BARBS;
+    }
+
     /** Resolve legacy SkillId constants to the actual Skills.txt row id. */
     private static int resolveVineSkillId(int requested) {
       String name;
@@ -9487,6 +9643,7 @@ public final class D2GSHeadlessClient {
           + " [--require-andariel-quest]"
           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
+          + " [--require-spirit-aura] [--spirit-skill 226|236|246]"
           + " [--verbose]"
           + " [--require-reconnect-visibility]"
           + " [--require-summon-reconnect]"

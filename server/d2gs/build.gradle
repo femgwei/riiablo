@@ -184,6 +184,45 @@ tasks.register('headlessVine', JavaExec) {
   if (project.hasProperty('areaVerbose')) args '--verbose'
 }
 
+tasks.register('headlessSpiritAura', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Druid Oak Sage aura dual-client/reconnect/cross-area gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-spirit-aura', '--spirit-skill',
+       (project.hasProperty('spiritSkill') ? project.property('spiritSkill').toString() : '226'),
+       '--test-timeout',
+       (project.hasProperty('spiritTimeout') ? project.property('spiritTimeout').toString() : '90')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
+tasks.register('headlessSpiritAuraRegression') {
+  group = 'verification'
+  description = 'Runs the real-MPQ Oak Sage, Wolverine and Spirit of Barbs aura gates.'
+  dependsOn ':server:d2gs:compileJava'
+
+  doLast {
+    def timeout = project.hasProperty('spiritTimeout')
+        ? project.property('spiritTimeout').toString() : '90'
+    def home = providers.environmentVariable('D2_HOME')
+    [226, 236, 246].each { skill ->
+      project.javaexec {
+        classpath = sourceSets.main.runtimeClasspath
+        mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+        workingDir = rootProject.file('assets').path
+        args '--require-spirit-aura', '--spirit-skill', skill.toString(),
+             '--test-timeout', timeout
+        if (home.isPresent()) args '--home', home.get()
+        if (project.hasProperty('areaVerbose')) args '--verbose'
+      }
+    }
+  }
+}
+
 tasks.register('headlessAreaSkillRegression') {
   group = 'verification'
   description = 'Runs the complete real-MPQ area-skill dual-client and reconnect gate.'

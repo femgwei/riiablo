@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid spirit aura 真实 MPQ 双客户端门槛
+
+- [x] 新增 `:server:d2gs:headlessSpiritAura` 真实 1.10f MPQ 双客户端入口，并提供
+  `headlessSpiritAuraRegression` 一键跑三种 spirit：Oak Sage(226)、Heart of Wolverine(236)、
+  Spirit of Barbs(246)。三者均通过 `SummonedPetP` 确认 summon 身份，并在 owner/observer
+  两端确认 `StateP` 携带正确的 `sourceEntityId=spirit`、对应 skill 元数据。
+- [x] headless summon fixture 现在复用 D2MOO `SrvDo119` 的 linked `SumSkill` 状态安装，
+  不再只创建宠物实体而漏掉 spirit 源状态；该桥接仅用于协议验收，不改变正式施法路径。
+- [x] 真实重连门槛通过：断开 observer 后，新连接仍收到同一 spirit identity 和 owner aura
+  source layer；owner 切换到 Blood Moor 后，旧 zone 的 Oak Sage layer 被撤销。
+- 验证命令：`./gradlew.bat :server:d2gs:headlessSpiritAura -PspiritTimeout=45 --no-daemon`；
+  日志保存在 `build/spirit-aura-pass.log`，结果为 `spirit_aura_dual_pass`、
+  `spirit_aura_reconnect_pass`、`spirit_aura_cross_area_pass`。
+- [ ] 仍待旧客户端（缺少 source/skill 数组）兼容回放；随后转入 Paladin Aura 的同源
+  优先级审计。
+
 ## 2026-09-30 Druid spirit aura 区域边界
 
 - [x] 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SKILLS_SrvDo115_Vines`、
@@ -17,8 +33,8 @@
   来源层及其数值在快照往返后保持隔离。
 - [x] 新增 `reusedSpiritEntityIdCannotResurrectTheOldAuraLayer`：删除 Oak Sage 后复用同一
   entity id 创建 Wolverine，旧 Oak Sage layer 不会恢复，新 spirit 仅发布自己的来源层。
-- [ ] 仍待真实 1.10f MPQ 双客户端确认 spirit aura 的旧客户端快照、重连和跨区迁移表现；
-  下一步继续真实双客户端验收旧客户端兼容和跨区迁移表现。
+- [x] 真实 1.10f MPQ 双客户端的 owner/observer 状态快照、observer 重连和 owner 跨区撤销
+  已由上方 `headlessSpiritAura` 门槛覆盖；旧客户端缺 source/skill 数组的兼容回放仍待补充。
 
 ## 2026-09-30 Paladin 付费周期光环法力门控
 

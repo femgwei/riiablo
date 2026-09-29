@@ -2549,7 +2549,32 @@ public class D2GS extends ApplicationAdapter {
                 : petType,
             skillId,
             1, 1, false, 0, position.x, position.y);
-        if (petId != Engine.INVALID_ENTITY) result.set(petId);
+        if (petId != Engine.INVALID_ENTITY) {
+          // The fixture creates the entity directly instead of traversing the
+          // client cast path. Mirror D2MOO SrvDo119's linked SumSkill setup so
+          // spirit auras are published through the same source-owned StateP
+          // layer as a real Druid cast.
+          com.artemis.ComponentMapper<com.riiablo.engine.server.component.UnitStates>
+              unitStates = server.world.getMapper(
+                  com.riiablo.engine.server.component.UnitStates.class);
+          com.riiablo.engine.server.component.UnitStates states = unitStates.get(petId);
+          int auraState = com.riiablo.engine.server.skill.DruidSkills
+              .getSummonAuraState(skill);
+          if (states != null && auraState != com.riiablo.engine.server.state.StateId.NONE) {
+            if (states.stateList == null) states.init(petId);
+            com.riiablo.engine.server.state.UnitState aura = states.stateList.addState(
+                auraState, 0, 1, playerId);
+            if (aura != null) {
+              aura.skillId = skillId;
+              com.riiablo.codec.excel.Skills.Entry auraSkill =
+                  com.riiablo.engine.server.skill.DruidSkills.getSummonAuraSkill(skill);
+              com.riiablo.engine.server.skill.DruidSkills.applySummonAuraModifiers(
+                  aura, auraSkill != null ? auraSkill : skill, 1, name -> 0);
+              aura.needsSync = true;
+            }
+          }
+          result.set(petId);
+        }
       } finally {
         done.countDown();
       }
