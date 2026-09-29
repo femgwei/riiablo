@@ -2717,8 +2717,9 @@ public class Actioneer extends PassiveSystem {
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
           MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
           stateList(targetId), combatDifficulty());
-      float itemPoisonPerFrame = CombatSystem.fixed8RateToPerFrame(
-          combat.elementalDamage[CombatSystem.DAMAGE_POISON]);
+      int itemPoisonDuration = statInt(attacker, Stat.poisonlength);
+      float itemPoisonPerFrame = CombatSystem.totalPoisonToPerFrame(
+          combat.elementalDamage[CombatSystem.DAMAGE_POISON], itemPoisonDuration);
       combat.elementalDamage[CombatSystem.DAMAGE_POISON] +=
           poison.elementalDamage[CombatSystem.DAMAGE_POISON];
       combat.poisonDamagePerFrame = itemPoisonPerFrame + poison.poisonDamagePerFrame;
@@ -3144,9 +3145,9 @@ public class Actioneer extends PassiveSystem {
           rawFixed, duration, stateList(targetId), combatDifficulty());
       // Weapon poison was already resolved by the melee record. It is also an
       // 8.8 rate and must not be treated as whole damage per frame.
-      float weaponPoisonPerFrame =
-          CombatSystem.fixed8RateToPerFrame(
-              combat.elementalDamage[CombatSystem.DAMAGE_POISON]);
+      int weaponPoisonDuration = statInt(attacker, Stat.poisonlength);
+      float weaponPoisonPerFrame = CombatSystem.totalPoisonToPerFrame(
+          combat.elementalDamage[CombatSystem.DAMAGE_POISON], weaponPoisonDuration);
       combat.elementalDamage[CombatSystem.DAMAGE_POISON] +=
           poison.elementalDamage[CombatSystem.DAMAGE_POISON];
       combat.poisonDamagePerFrame = weaponPoisonPerFrame + poison.poisonDamagePerFrame;
@@ -4239,9 +4240,16 @@ public class Actioneer extends PassiveSystem {
     if (combat.poisonDuration > 0
         && (combat.poisonDamagePerFrame > 0f
             || combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0)) {
+      // Item poison stats are stored as total damage over poisonlength frames,
+      // while skill poison records already carry an 8.8 rate.  Never feed the
+      // item's total packet directly to the per-frame state payload.
+      float poisonPerFrame = combat.poisonDamagePerFrame > 0f
+          ? combat.poisonDamagePerFrame
+          : CombatSystem.totalPoisonToPerFrame(
+              combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+              combat.poisonDuration);
       StatusEffectApplier.INSTANCE.applyPoison(targetId,
-          combat.poisonDamagePerFrame > 0f ? combat.poisonDamagePerFrame
-              : combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+          poisonPerFrame,
           combat.poisonDuration, attackerId);
     }
     if (combat.coldDuration > 0

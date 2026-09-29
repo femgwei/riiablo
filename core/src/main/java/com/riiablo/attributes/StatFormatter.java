@@ -320,6 +320,27 @@ public class StatFormatter {
     }
   }
 
+  /** Formats item poison damage, converting its native frame duration to seconds. */
+  public String formatPoisonDamage(
+      final StatListRef stats,
+      final int index,
+      final int encoded,
+      final String equalsStr,
+      final String rangeStr) {
+    if (encoded != 3) return formatEncoded(stats, index, encoded, equalsStr, rangeStr);
+    int value1 = stats.get(index).asInt();
+    int value2 = stats.get(index + 1).asInt();
+    int frames = stats.get(index + 2).asInt();
+    // Poison lengths are simulation frames (25 frames per second); the
+    // native integer formatter truncates the conversion just like the damage
+    // pipeline truncates fixed-point rates.
+    int seconds = frames <= 0 ? 0 : frames / 25;
+    if (value1 == value2) {
+      return Riiablo.string.format(equalsStr, value2, seconds);
+    }
+    return Riiablo.string.format(rangeStr, value1, value2, seconds);
+  }
+
   /** @see AttributesUpdater#op(StatRef, StatRef, CharStats.Entry, int, int, int) */
   private static int op(StatRef stat, Attributes opBase) {
     if (log.traceEnabled()) log.traceEntry("op(stat: {}, opBase: {})", stat, opBase);

@@ -14,6 +14,12 @@ public class CombatSystemTest extends RiiabloTest {
   private final CombatSystem combat = new CombatSystem();
 
   @Test
+  public void itemPoisonTotalDamageUsesFixedRatePerFrame() {
+    assertEquals(58, CombatSystem.totalPoisonToBitRate(17, 75));
+    assertEquals(58f / 256f, CombatSystem.totalPoisonToPerFrame(17, 75), 0.000001f);
+  }
+
+  @Test
   public void calculatesPvmHitChanceWithLevelFactor() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.level = 10;

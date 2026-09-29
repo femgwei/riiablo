@@ -176,7 +176,7 @@ public class StatListLabeler {
                     stat.debugString(),
                     stats.get(index + 1).debugString(),
                     stats.get(index + 2).debugString());
-                add(entry.descpriority, formatter.formatEncoded(stats, index, encoded,
+                add(entry.descpriority, formatter.formatPoisonDamage(stats, index, encoded,
                     "strModPoisonDamage", "strModPoisonDamageRange"));
                 continue;
               }

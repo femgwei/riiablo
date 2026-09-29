@@ -1406,8 +1406,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (combat.poisonDuration > 0
           && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0
           && mUnitStates.has(targetId)) {
-        applyState(targetId, StateId.POISON, combat.poisonDuration, 1, entityId,
-            combat.elementalDamage[CombatSystem.DAMAGE_POISON], CombatSystem.DAMAGE_POISON);
+        float poisonPerFrame = combat.poisonDamagePerFrame > 0f
+            ? combat.poisonDamagePerFrame
+            : CombatSystem.totalPoisonToPerFrame(
+                combat.elementalDamage[CombatSystem.DAMAGE_POISON], combat.poisonDuration);
+        if (poisonPerFrame > 0f) {
+          applyStateExact(targetId, StateId.POISON, combat.poisonDuration, 1, entityId,
+              poisonPerFrame, CombatSystem.DAMAGE_POISON);
+        }
       }
       if (combat.coldDuration > 0
           && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0

@@ -3134,9 +3134,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     int attackerId = missile != null ? missile.ownerId : Engine.INVALID_ENTITY;
     if (combat.poisonDuration > 0
         && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
-      StatusEffectApplier.INSTANCE.applyPoison(targetId,
-          combat.elementalDamage[CombatSystem.DAMAGE_POISON],
-          combat.poisonDuration, attackerId);
+      float poisonPerFrame = combat.poisonDamagePerFrame > 0f
+          ? combat.poisonDamagePerFrame
+          : CombatSystem.totalPoisonToPerFrame(
+              combat.elementalDamage[CombatSystem.DAMAGE_POISON], combat.poisonDuration);
+      if (poisonPerFrame > 0f) {
+        StatusEffectApplier.INSTANCE.applyPoison(targetId, poisonPerFrame,
+            combat.poisonDuration, attackerId);
+      }
     }
     // Cold length is a separate native packet from cold damage.  D2Game still
     // applies COLD/FREEZE when the damage portion is absorbed or reduced to

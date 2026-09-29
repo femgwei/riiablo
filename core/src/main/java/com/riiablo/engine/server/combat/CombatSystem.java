@@ -1012,6 +1012,23 @@ public class CombatSystem {
     return Math.max(0, damageFixed) / 256f;
   }
 
+  /**
+   * Converts an item poison packet (total damage over its duration) to the
+   * native 8.8 poison rate used by the poison state.  ItemStatCost's
+   * poisonmindam/poisonmaxdam values are not per-frame values; D2 converts
+   * the rolled total into BitRate before installing STATE_POISON.
+   */
+  public static int totalPoisonToBitRate(int totalDamage, int durationFrames) {
+    if (totalDamage <= 0 || durationFrames <= 0) return 0;
+    long rate = (long) totalDamage * 256L / durationFrames;
+    return rate >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) rate;
+  }
+
+  /** Converts an item poison packet to life points per server frame. */
+  public static float totalPoisonToPerFrame(int totalDamage, int durationFrames) {
+    return fixed8RateToPerFrame(totalPoisonToBitRate(totalDamage, durationFrames));
+  }
+
   static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
       int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
     if (defender == null || baseDuration <= 0) return 0;
