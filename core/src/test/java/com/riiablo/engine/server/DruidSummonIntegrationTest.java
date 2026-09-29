@@ -33,6 +33,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.StateP;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -341,6 +342,40 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     assertTrue(restoredFirst != null && restoredSecond != null);
     assertEquals(65, restoredFirst.maxLifeModifier);
     assertEquals(35, restoredSecond.maxLifeModifier);
+  }
+
+  @Test
+  void legacySpiritAuraSnapshotWithoutSourceVectorsFallsBackSafely() {
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int stateIds = StateP.createStateIdVector(builder,
+        new short[] {(short) StateId.OAKSAGE, (short) StateId.OAKSAGE});
+    int durations = StateP.createDurationVector(builder, new int[] {0, 0});
+    int levels = StateP.createLevelVector(builder, new byte[] {4, 8});
+    int maxLife = StateP.createMaxLifeModifierVector(builder, new short[] {35, 65});
+    // Deliberately omit sourceEntityId/skillId and the newer optional vectors:
+    // this is the shape emitted by a pre-source-layer client.
+    int stateOffset = StateP.createStateP(builder, stateIds, durations, levels,
+        0, 0, 0, 0, maxLife, 0, 0, 0, 0, 0, 0);
+    int typeOffset = EntitySync.createComponentTypeVector(builder,
+        new byte[] {ComponentP.StateP});
+    int componentOffset = EntitySync.createComponentVector(builder,
+        new int[] {stateOffset});
+    int root = EntitySync.createEntitySync(builder, 77, 0, 0, typeOffset,
+        componentOffset, 0L, 0L, 0L, 0L, 0L, -1);
+    builder.finish(root);
+
+    UnitStates replica = new UnitStates().init(77);
+    new StateSerializer().getData(
+        EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, replica);
+
+    assertEquals(1, replica.stateList.size(),
+        "legacy clients cannot represent independent source layers");
+    UnitState restored = replica.stateList.getState(StateId.OAKSAGE);
+    assertTrue(restored != null);
+    assertEquals(8, restored.level);
+    assertEquals(65, restored.maxLifeModifier);
+    assertEquals(-1, restored.sourceEntityId);
+    assertEquals(-1, restored.skillId);
   }
 
   @Test

@@ -10,10 +10,13 @@
   不再只创建宠物实体而漏掉 spirit 源状态；该桥接仅用于协议验收，不改变正式施法路径。
 - [x] 真实重连门槛通过：断开 observer 后，新连接仍收到同一 spirit identity 和 owner aura
   source layer；owner 切换到 Blood Moor 后，旧 zone 的 Oak Sage layer 被撤销。
+- [x] 新增 `DruidSummonIntegrationTest.legacySpiritAuraSnapshotWithoutSourceVectorsFallsBackSafely`，
+  手工回放缺少 `sourceEntityId/skillId` 向量的旧 `StateP`：旧客户端只能合并为单一 Oak Sage
+  状态层，但不会崩溃或伪造来源；新客户端仍走带来源的独立层路径。
 - 验证命令：`./gradlew.bat :server:d2gs:headlessSpiritAura -PspiritTimeout=45 --no-daemon`；
   日志保存在 `build/spirit-aura-pass.log`，结果为 `spirit_aura_dual_pass`、
   `spirit_aura_reconnect_pass`、`spirit_aura_cross_area_pass`。
-- [ ] 仍待旧客户端（缺少 source/skill 数组）兼容回放；随后转入 Paladin Aura 的同源
+- [x] 旧客户端缺少 source/skill 数组的兼容回放已覆盖；随后转入 Paladin Aura 的同源
   优先级审计。
 
 ## 2026-09-30 Druid spirit aura 区域边界
