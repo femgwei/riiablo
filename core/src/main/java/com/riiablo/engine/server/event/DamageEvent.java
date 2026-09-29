@@ -9,6 +9,8 @@ public class DamageEvent implements Event {
   public static final byte MELEE = 1;
   public static final byte MISSILE = 2;
   public static final byte REACTIVE = 3;
+  /** Periodic poison/burning/open-wounds tick; it has no impact sound. */
+  public static final byte DAMAGE_OVER_TIME = 4;
 
   @EntityId
   public int attacker;
@@ -114,6 +116,13 @@ public class DamageEvent implements Event {
     DamageEvent event = obtain(attacker, victim, damage);
     event.kind = REACTIVE;
     event.physicalDamage = Math.max(0f, physicalDamage);
+    return event;
+  }
+
+  /** Creates a periodic state-damage event without a hit/pain presentation. */
+  public static DamageEvent obtainDamageOverTime(int attacker, int victim, float damage) {
+    DamageEvent event = obtain(attacker, victim, damage);
+    event.kind = DAMAGE_OVER_TIME;
     return event;
   }
 

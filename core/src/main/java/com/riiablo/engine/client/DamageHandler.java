@@ -97,13 +97,14 @@ public class DamageHandler extends PassiveSystem {
     // the attacker's weapon/missile impact sound).  Play the victim's class
     // voice when the event carries actual damage.  In particular, this covers
     // local player damage events, whose entities do not have an AIWrapper.
-    if (event.damage > 0f && isPlayerVictim) {
+    if (event.damage > 0f && isPlayerVictim
+        && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
       PlayerHitSound.play(mPlayer.get(event.victim));
     }
     
     // Trigger hit reaction for entities with AI (monsters, NPCs, etc.)
     // Players don't have AI components, so we need to check first
-    if (mAIWrapper.has(event.victim)) {
+    if (event.kind != DamageEvent.DAMAGE_OVER_TIME && mAIWrapper.has(event.victim)) {
       AIWrapper aiWrapper = mAIWrapper.get(event.victim);
       if (aiWrapper != null && aiWrapper.ai != null) {
         aiWrapper.ai.hit();
@@ -114,7 +115,8 @@ public class DamageHandler extends PassiveSystem {
     // DamageEvent may also represent melee, DOT, or a server-side effect;
     // retain the legacy generic impact for those paths only.  An empty
     // missile HitSound is native silence, not a request for a blunt sample.
-    if (event.kind != DamageEvent.MISSILE) {
+    if (event.kind != DamageEvent.MISSILE
+        && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
       String sound = event.hitSound;
       if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
       if (Riiablo.audio != null) Riiablo.audio.play(sound, true);

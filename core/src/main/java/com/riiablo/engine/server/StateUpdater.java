@@ -1520,7 +1520,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
 
-    DamageEvent event = DamageEvent.obtain(sourceEntityId, entityId, damage);
+    // A DOT tick is authoritative damage, but it is not a new impact.  Keep a
+    // distinct event kind so the client does not play an impact/pain sound on
+    // every simulation frame while poison or open wounds are active.
+    DamageEvent event = DamageEvent.obtainDamageOverTime(sourceEntityId, entityId, damage);
     if (events != null) events.dispatch(event);
     float appliedDamage = Math.max(0f, event.damage);
     hitpoints.sub(appliedDamage);
