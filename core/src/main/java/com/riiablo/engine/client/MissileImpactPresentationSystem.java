@@ -306,6 +306,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
 
     String[] children = source.CltHitSubMissile;
+    // Exploding Arrow's native ExplosionMissile is the authoritative client
+    // burst (ExpArrowExplode.dcc).  CltHitSubMissile=fireexplosion2 is only a
+    // legacy fallback used by data packs that omit ExplosionMissile.
+    if ("explodingarrow".equalsIgnoreCase(source.Missile)
+        && source.ExplosionMissile != null && !source.ExplosionMissile.isEmpty()
+        && Riiablo.files.Missiles.get(source.ExplosionMissile) != null) {
+      children = new String[] {source.ExplosionMissile};
+    }
     if ((children == null || children.length == 0) && event.impactDcc != null) {
       for (Missiles.Entry candidate : Riiablo.files.Missiles) {
         if (candidate != null && event.impactDcc.equalsIgnoreCase(candidate.CelFile)) {
@@ -384,6 +392,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // lifetime makes slow directional hit missiles disappear before they
     // reach their native endpoint.
     visual.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
+    if ("explodingarrowexp".equalsIgnoreCase(childName)
+        && child.TravelSound != null && !child.TravelSound.isEmpty()
+        && Riiablo.audio != null) {
+      Riiablo.audio.play(child.TravelSound, true);
+    }
     MissileLoader loader = world.getSystem(MissileLoader.class);
     if (loader != null) loader.loadNow(id);
     log.debug("[MISSILE_IMPACT] source={} sourceId={} child={} entity={} pos=({}, {})",
