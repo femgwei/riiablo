@@ -288,6 +288,27 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return false;
   }
 
+  @Override public void setManaRegenSuppression(int casterId, boolean suppressed, int duration,
+      int sourceEntityId, int skillId) {
+    if (!mUnitStates.has(casterId)) return;
+    UnitStates component = mUnitStates.get(casterId);
+    if (component.stateList == null) component.init(casterId);
+    StateList states = component.stateList;
+    if (!suppressed) {
+      states.removeStateLayer(StateId.NOMANAREGEN, sourceEntityId, skillId);
+      return;
+    }
+    UnitState state = states.addStateLayer(StateId.NOMANAREGEN,
+        Math.max(1, duration), 1, sourceEntityId, skillId);
+    if (state != null) {
+      state.duration = Math.max(1, duration);
+      state.initialDuration = state.duration;
+      state.sourceEntityId = sourceEntityId;
+      state.skillId = skillId;
+      state.needsSync = true;
+    }
+  }
+
   @Override public void applyPeriodicDamage(int casterId, int targetId, int skillId,
       int skillLevel, int minimum, int maximum, String elementType) {
     if (minimum < 0 || maximum <= 0 || !mAttributes.has(targetId) || !isAlive(targetId)) return;

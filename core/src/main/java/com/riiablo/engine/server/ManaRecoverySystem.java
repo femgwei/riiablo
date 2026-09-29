@@ -30,6 +30,13 @@ public class ManaRecoverySystem extends IteratingSystem {
     if (wrapper == null || wrapper.attrs == null || isDead(entityId)) return;
 
     Attributes attrs = wrapper.attrs;
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states != null && states.stateList != null
+          && states.stateList.hasState(com.riiablo.engine.server.state.StateId.NOMANAREGEN)) {
+        return;
+      }
+    }
     StatRef mana = attrs.get(Stat.mana, StatRef.obtain());
     StatRef maxMana = attrs.get(Stat.maxmana, StatRef.obtain());
     if (mana == null || maxMana == null) return;

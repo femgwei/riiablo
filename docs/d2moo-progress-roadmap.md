@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Paladin 付费周期光环法力门控
+
+- [x] 对照 D2MOO `SKILLS_SrvDo065_BasicAura`、`SrvDo066_HolyFire_HolyShock_Sanctuary_Conviction`、
+  `SrvDo081_HolyFreeze` 和 `SrvDo082_Redemption`，补齐 `STATE_NOMANAREGEN` 的权威 ECS
+  层：只有脉冲实际提交非零 aura stat、直接治疗或周期伤害时才扣除本次法力并抑制回蓝；
+  无目标、满血、未资助脉冲会立即解除抑制。
+- [x] 未资助玩家脉冲现在仍保留短时 source-owned state，但发布零 stat，避免法力不足时
+  错误获得 Holy Fire/Holy Freeze 等被动数值；后续有足够法力时按下一次 `perdelay`
+  脉冲恢复原生数值。
+- [x] 新增 `AuraManagerPulseTest`、`ManaRecoverySystemTest` 回归，完整 Paladin/Aura
+  专项（10 个测试类）通过。
+- [ ] 仍待真实 1.10f MPQ 双客户端确认付费光环的法力回复抑制/恢复在断线重连和旧客户端
+  状态快照中的表现；下一步转入 Druid spirit/vine aura 目标范围与跨区撤销审计。
+
 ## 2026-09-30 Druid 召唤物跨区所有权回归
 
 - [x] 新增 `SummonedPetSystemTest.druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata`，

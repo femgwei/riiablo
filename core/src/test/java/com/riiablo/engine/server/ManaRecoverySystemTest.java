@@ -91,6 +91,36 @@ class ManaRecoverySystemTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void nativePaidAuraSuppressionBlocksRegenUntilItsLayerIsRemoved() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new ManaRecoverySystem())
+        .build());
+    try {
+      int entityId = world.create();
+      world.getMapper(Player.class).create(entityId);
+      Attributes attrs = Attributes.obtainStandard();
+      attrs.base().put(Stat.mana, 0f);
+      attrs.base().put(Stat.maxmana, 100f);
+      attrs.base().put(Stat.hitpoints, 1f);
+      attrs.reset();
+      world.getMapper(AttributesWrapper.class).create(entityId).attrs = attrs;
+      UnitStates states = world.getMapper(UnitStates.class).create(entityId).init(entityId);
+      states.stateList.addStateLayer(StateId.NOMANAREGEN, 10, 1, entityId,
+          com.riiablo.engine.server.skill.SkillId.HOLY_FIRE);
+
+      world.process();
+      assertEquals(0, attrs.get(Stat.mana).encodedValues());
+
+      states.stateList.removeStateLayer(StateId.NOMANAREGEN, entityId,
+          com.riiablo.engine.server.skill.SkillId.HOLY_FIRE);
+      world.process();
+      assertEquals(3, attrs.get(Stat.mana).encodedValues());
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static Attributes createPlayer(
       World world, float mana, float maximumMana, float hitpoints) {
     int entityId = world.create();

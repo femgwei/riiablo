@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.utils.Array;
@@ -87,6 +88,37 @@ class AuraManagerPulseTest {
         "the caster must receive the native Cleansing pulse");
   }
 
+  @Test
+  void paidAuraPublishesZeroStatsWhenUnfundedAndSuppressesManaRegenOnlyWhenUseful() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition paid = definition(9010, 9011);
+    paid.affectsSelf = true;
+    paid.affectsParty = false;
+    paid.selfStateId = 9011;
+    paid.targetStateId = -1;
+    paid.statIds[0] = Stat.damagepercent;
+    paid.baseStatValues[0] = 25;
+    paid.manaCostPerSecond = 1f;
+    manager.registerAuraDefinition(paid);
+
+    PaidCallback callback = new PaidCallback();
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, paid.skillId, 1));
+
+    callback.mana = 0f;
+    manager.update(0f);
+    assertEquals(0, callback.lastValue,
+        "an unfunded native pulse keeps the state but carries no aura stat");
+    assertFalse(callback.suppressed);
+
+    callback.mana = 10f;
+    for (int i = 0; i < paid.perDelayFrames; i++) manager.update(0f);
+    assertEquals(25, callback.lastValue);
+    assertEquals(9f, callback.mana, 0.001f);
+    assertTrue(callback.suppressed,
+        "a useful paid pulse must hold STATE_NOMANAREGEN for its short layer");
+  }
+
   private static AuraManager.AuraDefinition definition(int skillId, int stateId) {
     AuraManager.AuraDefinition definition = new AuraManager.AuraDefinition();
     definition.skillId = skillId;
@@ -155,5 +187,49 @@ class AuraManagerPulseTest {
         int skillLevel, int duration) {}
     @Override public boolean applyRedemptionEffect(int casterId, int skillId,
         int skillLevel, float range) { return redemptionSucceeds; }
+  }
+
+  private static final class PaidCallback implements AuraManager.AuraCallback {
+    float mana;
+    int lastValue;
+    boolean suppressed;
+
+    @Override public void onAuraActivated(int casterId, int skillId, int skillLevel) {}
+    @Override public void onAuraDeactivated(int casterId, int skillId) {}
+    @Override public void onEntityEnterAura(int entityId, int casterId, int skillId,
+        int[] statValues) {}
+    @Override public void onEntityLeaveAura(int entityId, int casterId, int skillId) {}
+    @Override public float[] getEntityPosition(int entityId) { return new float[] {0f, 0f}; }
+    @Override public Array<Integer> getEntitiesInRange(float x, float y, float range) {
+      Array<Integer> result = new Array<>();
+      result.add(7);
+      return result;
+    }
+    @Override public boolean isAlly(int entityId1, int entityId2) { return true; }
+    @Override public int getBaseSkillLevel(int entityId, String skillName) { return 0; }
+    @Override public boolean isValidTarget(int casterId, int targetId, int skillId,
+        int auraFilter, boolean checkMonsterNoAura) { return true; }
+    @Override public boolean isInTown(int entityId) { return false; }
+    @Override public boolean canConsumeMana(int casterId, float amount) {
+      return mana >= amount;
+    }
+    @Override public boolean consumeMana(int casterId, float amount) {
+      if (!canConsumeMana(casterId, amount)) return false;
+      mana -= amount;
+      return true;
+    }
+    @Override public void setManaRegenSuppression(int casterId, boolean value, int duration,
+        int sourceEntityId, int skillId) { suppressed = value; }
+    @Override public void applyState(int targetId, int stateId, int duration,
+        int sourceEntityId, int skillId, int skillLevel, int[] statIds, int[] statValues) {
+      lastValue = statValues != null && statValues.length > 0 ? statValues[0] : 0;
+    }
+    @Override public void removeState(int targetId, int stateId, int sourceEntityId, int skillId) {}
+    @Override public boolean applyDirectStat(int targetId, int statId, int fixedValue,
+        int sourceEntityId, int skillId) { return false; }
+    @Override public void applyPeriodicDamage(int casterId, int targetId, int skillId,
+        int skillLevel, int minimum, int maximum, String elementType) {}
+    @Override public void updateHolyFreezeShatter(int casterId, int targetId, int skillId,
+        int skillLevel, int duration) {}
   }
 }

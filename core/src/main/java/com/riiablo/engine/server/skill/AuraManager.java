@@ -133,6 +133,9 @@ public class AuraManager {
     void removeState(int targetId, int stateId, int sourceEntityId, int skillId);
     boolean applyDirectStat(int targetId, int statId, int fixedValue,
         int sourceEntityId, int skillId);
+    /** Mirrors D2Game's STATE_NOMANAREGEN toggle for a useful paid pulse. */
+    default void setManaRegenSuppression(int casterId, boolean suppressed, int duration,
+        int sourceEntityId, int skillId) {}
     void applyPeriodicDamage(int casterId, int targetId, int skillId,
         int skillLevel, int minimum, int maximum, String elementType);
     void updateHolyFreezeShatter(int casterId, int targetId, int skillId,
@@ -342,6 +345,13 @@ public class AuraManager {
                 ? mergeValues(definition.statIds, aura.statValues,
                     definition.passiveStatIds, aura.passiveStatValues)
                 : aura.statValues;
+        // D2MOO leaves the stat-list/state in place when a player cannot fund
+        // the current pulse, but the values evaluated by SrvDo065/066/081 are
+        // zero in that case. Keep the source layer visible while publishing
+        // an empty payload until a later funded pulse succeeds.
+        if (aura.pulsed && !aura.pulseFunded) {
+          candidate.statValues = new int[candidate.statValues.length];
+        }
         candidate.direct = containsDirectStat(candidate.statIds);
         long key = effectKey(targetId, stateId);
         Array<Candidate> bucket = candidates.get(key);
@@ -380,6 +390,13 @@ public class AuraManager {
     callback.applyState(winner.targetId, winner.stateId, duration,
         winner.aura.casterId, winner.aura.definition.skillId,
         winner.aura.skillLevel, winner.statIds, winner.statValues);
+    if (winner.aura.pulsed && winner.aura.pulseFunded
+        && hasUsefulStat(winner.statIds, winner.statValues)) {
+      // BasicAura increments field_40 when a non-zero stat is committed. This
+      // is what makes paid support/passive auras consume mana and hold
+      // STATE_NOMANAREGEN even when they do not deal periodic damage.
+      winner.aura.pulseUseful = true;
+    }
     if (winner.aura.pulsed && winner.direct) {
       for (int i = 0; i < winner.statIds.length && i < winner.statValues.length; i++) {
         if (winner.statIds[i] == Stat.hitpoints && winner.statValues[i] > 0) {
@@ -400,9 +417,20 @@ public class AuraManager {
   private void settlePulseMana() {
     for (IntMap.Entry<ActiveAura> entry : activeAuras) {
       ActiveAura aura = entry.value;
-      if (!aura.active || !aura.pulsed || !aura.pulseFunded || !aura.pulseUseful) continue;
+      if (!aura.active || !aura.pulsed) continue;
       float manaCost = nativeManaCost(aura.definition, aura.skillLevel);
-      if (manaCost > 0f) callback.consumeMana(aura.casterId, manaCost);
+      if (manaCost <= 0f) continue;
+      int duration = Math.max(6, aura.definition.perDelayFrames + 1);
+      if (aura.pulseFunded && aura.pulseUseful) {
+        callback.consumeMana(aura.casterId, manaCost);
+        callback.setManaRegenSuppression(aura.casterId, true, duration,
+            aura.casterId, aura.definition.skillId);
+      } else {
+        // Native SrvDo065/066/081/082 explicitly clears NOMANAREGEN when
+        // the pulse has no useful target (including an unfunded pulse).
+        callback.setManaRegenSuppression(aura.casterId, false, duration,
+            aura.casterId, aura.definition.skillId);
+      }
     }
   }
 
@@ -612,6 +640,14 @@ public class AuraManager {
 
   private static boolean containsDirectStat(int[] ids) {
     for (int id : ids) if (id == Stat.hitpoints || id == Stat.mana) return true;
+    return false;
+  }
+
+  private static boolean hasUsefulStat(int[] ids, int[] values) {
+    if (ids == null || values == null) return false;
+    for (int i = 0; i < ids.length && i < values.length; i++) {
+      if (values[i] != 0 && ids[i] != Stat.hitpoints && ids[i] != Stat.mana) return true;
+    }
     return false;
   }
 
