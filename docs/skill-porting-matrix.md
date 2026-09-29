@@ -122,6 +122,9 @@
 - dark-magic exact-ID 对照：Amplify Damage(66)、Weaken(72) `state.point-area-curse`；Raise Skeleton(70)、Raise Skeletal Mage(80)、Revive(95) `summon.targeted-corpse`；Clay(75)、Blood(85)、Iron(90)、Fire Golem(94) `summon.golem`。
 - 重点借鉴：尸体消费和召唤创建必须是一次权威事务；PetType 上限、owner/source、Iron Golem 的物品来源、召唤物替换、断线/换图/死亡清理都要进入测试。
 - riiablo 已有较多对应实现，但应逐项对照 dark-magic 的“创建前验证 → effect tick 再验证 → 成功后消费/替换”顺序。
+- Poison Nova(92) 已补入真实 1.10f D2GS 双客户端门槛：生成 Necromancer 存档并发送真实施法包，
+  两端共同观察同一权威 `poisonnova` 导弹实体、技能 ID 和伤害等级；当前仍需继续核对毒伤快照、
+  毒抗/穿透和尸体召唤事务，不能把该网络表现门槛视作 Necromancer 完成。
 
 ### Paladin
 

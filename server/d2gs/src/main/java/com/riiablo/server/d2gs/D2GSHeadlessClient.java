@@ -8533,13 +8533,17 @@ public final class D2GSHeadlessClient {
   /** Creates a deterministic level-30 caster fixture for native area skills. */
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
+    boolean necromancer = skillId == SkillId.POISON_NOVA;
     boolean sorceress = hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
         || skillId == SkillId.NOVA;
-    int characterClass = sorceress ? Riiablo.SORCERESS : Riiablo.DRUID;
-    CharacterClass classData = sorceress ? CharacterClass.SORCERESS : CharacterClass.DRUID;
-    String name = hydra ? "HeadlessHydra" : sorceress ? "HeadlessSorc" : "HeadlessArea";
+    int characterClass = sorceress ? Riiablo.SORCERESS
+        : necromancer ? Riiablo.NECROMANCER : Riiablo.DRUID;
+    CharacterClass classData = sorceress ? CharacterClass.SORCERESS
+        : necromancer ? CharacterClass.NECROMANCER : CharacterClass.DRUID;
+    String name = hydra ? "HeadlessHydra"
+        : sorceress ? "HeadlessSorc" : necromancer ? "HeadlessNecro" : "HeadlessArea";
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, name, (byte) characterClass);
     com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
@@ -8570,7 +8574,8 @@ public final class D2GSHeadlessClient {
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=" + name + " class="
-        + (sorceress ? "sorceress" : "druid") + " skill=" + skillId
+        + (sorceress ? "sorceress" : necromancer ? "necromancer" : "druid")
+        + " skill=" + skillId
         + " level=20 bytes=" + data.length);
     return data;
   }
@@ -8830,7 +8835,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
-            + "FireBall(47), Nova(48)");
+            + "FireBall(47), Nova(48), PoisonNova(92)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
@@ -8893,7 +8898,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE
           || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
-          || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA;
+          || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
+          || skillId == SkillId.POISON_NOVA;
     }
 
     private static File firstSave(File directory) {

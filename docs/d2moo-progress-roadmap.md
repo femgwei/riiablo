@@ -17,6 +17,14 @@
 - [ ] Sorceress 仍处于 `partial`：继续完成剩余单体公式、状态技能和完整技能树审计；
   本项只确认 Fire Ball/Nova 的真实双客户端实体同步，不替代伤害数值与动画逐帧验收。
 
+## 2026-09-29 Necromancer Poison Nova 真实 MPQ 双客户端门槛
+
+- [x] 将 `headlessAreaSkill` 扩展到 Poison Nova(92)，生成 Necromancer 技能存档并保留
+  D2MOO `SrvDo022` 的 64 路固定径向导弹链；真实 1.10f 资源下两端共同观察同一权威
+  `poisonnova` 实体、技能 ID 和伤害等级，双客户端门槛通过。
+- [ ] 当前只确认网络实体表现和职业存档路由；毒伤 8.8 快照、毒抗/穿透、持续时间以及
+  Raise/Revive/Golem 的尸体或物品原子消费仍需按 D2MOO 逐项验收。
+
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 
 - [x] 对照 D2MOO `SkillAma.cpp` 的 `SrvSt05/SrvDo007`、`SrvSt07/SrvDo002` 和

@@ -174,7 +174,7 @@ tasks.register('headlessAreaSkillRegression') {
   dependsOn ':server:d2gs:compileJava'
 
   doLast {
-    def skills = [62, 244, 249, 250, 57, 56, 59, 64, 47, 48]
+    def skills = [62, 244, 249, 250, 57, 56, 59, 64, 47, 48, 92]
     def timeout = project.hasProperty('areaTimeout')
         ? project.property('areaTimeout').toString() : '60'
     def home = providers.environmentVariable('D2_HOME')
