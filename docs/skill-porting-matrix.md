@@ -222,7 +222,12 @@
 - 真实 1.10f 双客户端专项已完成三种 vine 的共享实体、`VINE_BEAST` 和 reconnect；
   `Plague Poppy`（222）另已通过 `Vine Attack` 根导弹 runtime index 474 与
   `plague vines trail` runtime index 475。`Cycle of Life`/`Vines`（231/241）按 D2MOO
-  `SrvSt63_Corpse_VineCycler` 标记为非 projectile 分支，尸体目标/消费仍待专项验证。
+  `SrvSt63_Corpse_VineCycler` 标记为非 projectile 分支；当前已在 Actioneer 技能开始阶段
+  选择合法尸体、同步 `CORPSE_NOSELECT`，并以 vine 的玩家 owner 在尸体位置创建
+  `VineCycler` 的 `SrvMissileA`（`vine recycler delay`），`DruidVineCorpseCyclerTest`
+  锁定 owner/坐标/skillId/skillLevel 和重复施放防重；`D2GSHeadlessClient
+  --require-vine --vine-skill 231/241` 已通过真实双客户端的尸体目标、导弹共享和
+  observer reconnect 门槛。
   由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为已验证结果。
 
 ## dark-magic 测试用例移植映射

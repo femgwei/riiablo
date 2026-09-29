@@ -489,6 +489,15 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    // D2MOO SrvSt63_Corpse_VineCycler performs its complete effect during
+    // monster skill-start: Actioneer selects the corpse and creates
+    // SrvMissileA at that corpse.  There is no later SrvDo projectile to
+    // replay here; falling through would launch a duplicate from the vine.
+    if (skill.srvstfunc == 63) {
+      log.debug("[VINE_CORPSE] phase=do_skip source={} skill={} reason=start_function",
+          event.entityId, event.skillId);
+      return;
+    }
     if (isUnsummonSkill(skill, event.skillId)) {
       // Actioneer normally consumes SrvDo004 at the same keyframe.  Keeping
       // this idempotent fallback also covers dedicated-server casts whose

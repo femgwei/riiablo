@@ -50,7 +50,10 @@
   导弹命中验收。
 - 本轮继续完成三种 Druid vine 的真实 MPQ/双客户端 summon、`VINE_BEAST` 和 observer
   reconnect 门槛；`Plague Poppy` 通过 Vine Attack/trail，`Cycle of Life`/`Vines` 已确认
-  走 D2MOO `SrvSt63_Corpse_VineCycler` 非 projectile 分支。尸体目标/消费仍未移植，
+  走 D2MOO `SrvSt63_Corpse_VineCycler` 非 projectile 分支；本轮已移植 skill-start 的
+  尸体选择、`CORPSE_NOSELECT` 同步和 owner missile 创建，补齐 `CycleOfLife` AI 别名，
+  并加入 `DruidVineCorpseCyclerTest` 与 231/241 双客户端 fixture。真实尸体最终消费
+  生命周期仍待继续对照，
   trail 本身也没有直接 poison 字段，因此不把毒素命中写成已完成。相关实现不覆盖
   Amazon、Assassin 或其他 agent 的未提交修改。
 

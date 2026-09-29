@@ -38,6 +38,7 @@ import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
+import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -46,6 +47,8 @@ import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.FrenzyRuntime;
 import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.component.Class;
@@ -108,6 +111,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
+  protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Leap> mLeap;
   protected ComponentMapper<Size> mSize;
@@ -1293,6 +1297,10 @@ public class Actioneer extends PassiveSystem {
             entityId, restored);
         break;
       }
+      case 63: { // SKILLS_SrvSt63_Corpse_VineCycler
+        startCorpseVineCycler(entityId, targetId);
+        break;
+      }
       case 51: { // SKILLS_SrvSt51_Submerge
         boolean submerged = mMonster.has(entityId) && factory != null
             && factory.submergeMonster(entityId);
@@ -1450,6 +1458,73 @@ public class Actioneer extends PassiveSystem {
         log.warn("Unsupported srvstfunc({}) for {}", srvstfunc, entityId);
         // TODO: default case will log an error when all valid cases are enumerated
         // log.error("Invalid srvdofunc({}) for {}", srvstfunc, entityId);
+    }
+  }
+
+  /**
+   * Native {@code SKILLS_SrvSt63_Corpse_VineCycler}.
+   *
+   * <p>D2MOO runs this from the monster skill-start callback (not the later
+   * SrvDo keyframe): the vine selects a corpse, marks it
+   * {@code CORPSE_NOSELECT}, and creates {@code SrvMissileA} at the corpse
+   * position with the vine's player owner.</p>
+   */
+  private void startCorpseVineCycler(int entityId, int targetId) {
+    if (!mMonster.has(entityId) || !mSummonedPet.has(entityId)
+        || targetId < 0 || !mCorpse.has(targetId) || !mMonster.has(targetId)
+        || !mPosition.has(targetId) || !mAttributesWrapper.has(targetId)) {
+      log.info("[VINE_CORPSE] phase=start_reject source={} target={} reason=unit_or_corpse_missing",
+          entityId, targetId);
+      return;
+    }
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null && Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(casting.skillId) : null;
+    int skillId = casting != null ? casting.skillId : -1;
+    int level = Math.max(1, skillId >= 0 ? skillLevel(entityId, skillId) : 1);
+    SummonedPet pet = mSummonedPet.get(entityId);
+    int ownerId = pet != null ? pet.ownerId : Engine.INVALID_ENTITY;
+    Missiles.Entry missile = skill != null && skill.srvmissilea != null
+        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
+    UnitStates targetStates = mUnitStates.has(targetId) ? mUnitStates.get(targetId) : null;
+    StateList stateList = targetStates != null ? targetStates.stateList : null;
+    Corpse corpse = mCorpse.get(targetId);
+    if (ownerId < 0 || skill == null || missile == null
+        || !CorpseConsumption.selectable(corpse, mMonster.get(targetId),
+            mAttributesWrapper.get(targetId).attrs, stateList)) {
+      log.info("[VINE_CORPSE] phase=start_reject source={} target={} skill={} owner={} "
+              + "missile={} reason=eligibility",
+          entityId, targetId, skillId, ownerId,
+          missile != null ? missile.Missile : "missing");
+      return;
+    }
+    if (targetStates == null) targetStates = mUnitStates.create(targetId).init(targetId);
+    if (targetStates.stateList == null) targetStates.init(targetId);
+    UnitState noSelect = targetStates.stateList.addState(
+        StateId.CORPSE_NOSELECT, Integer.MAX_VALUE, level, entityId);
+    if (noSelect != null) {
+      noSelect.skillId = skillId;
+      noSelect.needsSync = true;
+    }
+    if (factory == null) {
+      log.warn("[VINE_CORPSE] phase=missile_reject source={} target={} reason=factory_missing",
+          entityId, targetId);
+      return;
+    }
+    int missileId = factory.createMissile(missile, Vector2.X,
+        mPosition.get(targetId).position, ownerId, level);
+    if (missileId >= 0 && mMissile.has(missileId)) {
+      Missile projectile = mMissile.get(missileId);
+      projectile.skillId = skillId;
+      projectile.damageLevel = level;
+      projectile.targetId = targetId;
+      log.info("[VINE_CORPSE] phase=missile_create source={} owner={} target={} skill={} "
+              + "level={} missileId={} missile={} origin=({}, {})",
+          entityId, ownerId, targetId, skillId, level, missileId, missile.Missile,
+          mPosition.get(targetId).position.x, mPosition.get(targetId).position.y);
+    } else {
+      log.warn("[VINE_CORPSE] phase=missile_create_failed source={} owner={} target={} "
+              + "skill={} missile={}", entityId, ownerId, targetId, skillId, missile.Missile);
     }
   }
 

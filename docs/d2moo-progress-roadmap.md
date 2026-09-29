@@ -5705,10 +5705,18 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 三种 vine 的真实双客户端 summon/state/reconnect 门槛均已通过；headless fixture 现在
   会按 `Skills.txt` 的 `ReqSkill1-3` 递归种植前置技能，避免把合法的 231/241 施法误判为
   等级或前置技能失败。
-- [ ] `Cycle of Life`（231）和 `Vines`（241）的 MonStats AI 使用 D2MOO
+- [x] `Cycle of Life`（231）和 `Vines`（241）的 MonStats AI 使用 D2MOO
   `SrvSt63_Corpse_VineCycler`，不是 `Plague Poppy` 的 `Vine Attack` 根导弹；当前已明确
-  标记为 `projectileAttack=not_applicable` 并通过共享/重连验证，尸体目标、`SrvSt63`
-  导弹和尸体消费仍需单独 fixture。
+  标记为 `projectileAttack=not_applicable` 并通过共享/重连验证。服务端已在 Actioneer
+  的 skill-start 阶段按 D2MOO 选择合法尸体、添加 `CORPSE_NOSELECT`，以 vine 的玩家
+  owner 在尸体坐标创建 `VineCycler.SrvMissileA`，并在 `SkillDo` 阶段跳过重复通用发射；
+  `DruidVineCorpseCyclerTest` 覆盖 owner/source skill/等级/坐标和重复施放防重。
+- [x] `D2GSHeadlessClient --require-vine --vine-skill 231` 和 `241` 已覆盖真实双客户端的
+  尸体目标、`SrvSt63` 导弹共享、`CORPSE_NOSELECT` 同步和 observer reconnect；fixture
+  在首次证据后快速重连，避免尸体循环高频导弹复用已断开观察者的实体 ID。
+- [ ] 尸体最终消费/生命周期仍需继续对照 D2MOO 的 `STATES_ToggleState` 持续时间和
+  `vine recycler delay` 命中行为；当前实现保留 corpse 实体并先只标记
+  `CORPSE_NOSELECT`，不提前复用 Necromancer 的立即删除语义。
 - [ ] D2MOO 当前 `plague vines trail` 行为数据为 `pSrvHitFunc=50`、`pSrvDmgFunc=0`，
   且没有直接 `EType/EMin/EMax` 毒素字段；本轮只确认 trail 生成和同步，不宣称毒素命中
   已完成。跨区域跟随仍待单独门槛。

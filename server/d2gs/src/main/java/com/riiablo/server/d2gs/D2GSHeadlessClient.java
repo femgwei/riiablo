@@ -122,6 +122,11 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_THRONEOFDESTRUCTION = 131;
   private static final int LEVEL_WORLDSTONECHAMBER = 132;
   private static final int NATIVE_VINE_ATTACK = 294;
+  // D2's table has two SrvSt63 aliases: CorpseCycler (307) is used by the
+  // Cycle of Life/Solar Creeper MonStats rows, while VineCycler (325) is the
+  // named expansion row. Both execute the same native function.
+  private static final int NATIVE_CORPSE_CYCLER = 307;
+  private static final int NATIVE_VINE_CYCLER = 325;
   // Riiablo's binned Missiles table exposes the 1.10f plague-vines rows at
   // indices 474 (controller) and 475 (trail); these are table indices, not
   // the native enum values in D2MOO's MissilesIds.h.
@@ -1328,10 +1333,12 @@ public final class D2GSHeadlessClient {
       // select a different Blood Moor spawn while the fixture is repositioning
       // the caster. This keeps the observed poison state tied to the target
       // whose id/position was recorded above, without changing game logic.
+      int corpseTargetId = Engine.INVALID_ENTITY;
       for (Snapshot candidate : new ArrayList<>(owner.monsters.values())) {
         if (candidate.entityId == targetId || candidate.deleted
             || !candidate.everActive || !candidate.hasVitals || candidate.life <= 0f
             || candidate.monsterClass < 0) continue;
+        if (corpseTargetId == Engine.INVALID_ENTITY) corpseTargetId = candidate.entityId;
         D2GS.headlessKillMonster(owner.playerId, candidate.entityId);
       }
       // The native vine is rooted at the caster's position and only searches
@@ -1398,12 +1405,28 @@ public final class D2GSHeadlessClient {
             + " sharedVine=true vineBeast=true vineAttack=true vineTrail=true"
             + " targetStates=" + owner.entityStateIds.get(targetId));
       } else {
-        // Cycle of Life/Vines use the native SrvSt63 corpse-cycler AI rather
-        // than Plague Poppy's Vine Attack projectile. Keep summon/state and
-        // reconnect coverage separate until the corpse fixture is implemented.
+        if (corpseTargetId == Engine.INVALID_ENTITY) {
+          throw new IllegalStateException("vine corpse fixture found no secondary monster");
+        }
+        long corpseDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+        boolean cycler = false;
+        while (System.currentTimeMillis() < corpseDeadline) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          cycler = sharedVineCorpseCycler(owner, peer, corpseTargetId, owner.playerId);
+          if (cycler) break;
+        }
+        if (!cycler) {
+          throw new IllegalStateException("vine corpse-cycler evidence missing: skill="
+              + config.vineSkillId + " vine=" + vineEntity + " corpse=" + corpseTargetId
+              + " missiles=" + areaMissileSummary(owner.areaMissiles)
+              + " corpseStates=" + owner.entityStateIds.get(corpseTargetId)
+              + " allStates=" + owner.entityStateIds);
+        }
         log("vine_variant_pass", "skill=" + config.vineSkillId + " vine=" + vineEntity
             + " owner=" + owner.playerId + " peer=" + peer.playerId
-            + " sharedVine=true vineBeast=true projectileAttack=not_applicable"
+            + " corpse=" + corpseTargetId + " sharedVine=true vineBeast=true"
+            + " vineCycler=true corpseNoSelect=true projectileAttack=not_applicable"
             + " reason=srvst63_corpse_vine_cycler");
       }
 
@@ -1412,7 +1435,13 @@ public final class D2GSHeadlessClient {
       // summon metadata survives a real D2GS reconnect baseline.
       int oldPeer = peer.playerId;
       peerSocket.close();
-      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      // CorpseCycler emits a stationary delay missile on every AI think while
+      // an eligible corpse remains.  Waiting five seconds here can recycle a
+      // disconnected observer's entity id for one of those missiles before
+      // the replacement observer joins. Reconnect promptly after the first
+      // shared evidence; Plague Poppy retains the older settle window.
+      long disconnectDeadline = System.currentTimeMillis()
+          + (expectsProjectileAttack ? 5_000L : 250L);
       while (System.currentTimeMillis() < disconnectDeadline) consumeOne(ownerInput, owner);
       D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
       try (Socket reconnectSocket = reconnected.openSocket();
@@ -1495,6 +1524,39 @@ public final class D2GSHeadlessClient {
       }
     }
     return false;
+  }
+
+  private static boolean sharedVineCorpseCycler(D2GSHeadlessClient first,
+      D2GSHeadlessClient second, int corpseId, int ownerId) {
+    if (!hasState(first, corpseId, com.riiablo.engine.server.state.StateId.CORPSE_NOSELECT)
+        || !hasState(second, corpseId, com.riiablo.engine.server.state.StateId.CORPSE_NOSELECT)) {
+      return false;
+    }
+    Set<Integer> shared = new HashSet<>(first.areaMissiles.keySet());
+    shared.retainAll(second.areaMissiles.keySet());
+    for (Integer entityId : shared) {
+      AreaMissile a = first.areaMissiles.get(entityId);
+      AreaMissile b = second.areaMissiles.get(entityId);
+      if (a == null || b == null || !a.everActive || !b.everActive || a.deleted || b.deleted
+          || !isNativeVineCycler(a.skillId) || !isNativeVineCycler(b.skillId)
+          || first.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) != ownerId
+          || second.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) != ownerId) {
+        continue;
+      }
+      if (!a.hasPosition || !b.hasPosition) return true;
+      Snapshot corpseA = first.monsters.get(corpseId);
+      Snapshot corpseB = second.monsters.get(corpseId);
+      if (corpseA != null && corpseB != null && corpseA.hasPosition && corpseB.hasPosition
+          && Math.abs(a.x - corpseA.x) < 0.5f && Math.abs(a.y - corpseA.y) < 0.5f
+          && Math.abs(b.x - corpseB.x) < 0.5f && Math.abs(b.y - corpseB.y) < 0.5f) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isNativeVineCycler(int skillId) {
+    return skillId == NATIVE_CORPSE_CYCLER || skillId == NATIVE_VINE_CYCLER;
   }
 
   private static boolean hasState(D2GSHeadlessClient client, int entityId, int stateId) {
