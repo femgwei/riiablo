@@ -106,6 +106,19 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void trapMissileResolutionRejectsClientOnlyHelperRows() {
+    Skills.Entry visualOnly = new Skills.Entry();
+    visualOnly.cltmissilea = "visual-only-trap";
+    visualOnly.cltmissileb = "visual-only-trap-b";
+    assertEquals(null, AssassinTrapSystem.resolveMissile(visualOnly, null),
+        "client-only missile columns must not become authoritative trap damage");
+
+    visualOnly.srvmissilea = "authoritative-trap";
+    assertEquals("authoritative-trap",
+        AssassinTrapSystem.resolveMissile(visualOnly, null));
+  }
+
+  @Test
   void shadowWarriorUsesNativeSrvDo049AndOwnedPetState() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

@@ -753,10 +753,13 @@ public class AssassinTrapSystem extends IteratingSystem {
     return best;
   }
 
-  private static String resolveMissile(Skills.Entry skill, Monster monster) {
+  static String resolveMissile(Skills.Entry skill, Monster monster) {
     if (skill != null) {
-      String[] names = {skill.srvmissilea, skill.srvmissileb, skill.srvmissile,
-          skill.cltmissilea, skill.cltmissileb};
+      // Skills.txt client missile columns are presentation-only.  Native
+      // SrvDo trap helpers resolve an authoritative server missile; accepting
+      // cltmissile here can turn a visual-only row into a damaging projectile
+      // and hides malformed helper definitions instead of failing closed.
+      String[] names = {skill.srvmissilea, skill.srvmissileb, skill.srvmissile};
       for (String name : names) if (name != null && !name.isEmpty()) return name;
     }
     if (monster != null && monster.monstats != null) {

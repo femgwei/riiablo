@@ -161,6 +161,9 @@
 - 当前测试：`AssassinMartialArtsTest`、`AssassinSkillSpecializationTest`，以及 Native Trap/Object/Fire 测试。
 - dark-magic exact-ID 对照：Fire Blast(251)、Shock Web(256)、Blade Sentinel(257)、Charged Bolt Sentry(261)、Wake of Fire Sentry(262)、Blade Fury(266)、Lightning Sentry(271)、Wake of Inferno(272)、Death Sentry(276)、Blade Shield(277)，统一为 `trap.assassin-family`。
 - 重点借鉴：精确 ID 白名单、helper missile 解码、陷阱落地/替换/数量上限、Blade Sentinel 巡逻、Death Sentry 尸体事务、Blade Shield 周期武器效果。
+- 已补齐 helper missile 的 fail-closed 门槛：`AssassinTrapSystem` 只接受 `srvmissile*`
+  服务端字段，不再把 `cltmissile*` 视觉字段当成权威伤害导弹；对应回归位于
+  `AssassinSkillSpecializationTest.trapMissileResolutionRejectsClientOnlyHelperRows`。
 
 ### Barbarian
 
