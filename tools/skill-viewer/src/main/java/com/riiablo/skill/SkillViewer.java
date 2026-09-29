@@ -770,16 +770,21 @@ public class SkillViewer extends Tool {
 
   private final class ArenaInput extends InputAdapter {
     @Override public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+      com.badlogic.gdx.math.Vector2 inputWorld = pointerToWorld(screenX, screenY);
+      runtimeLog("event=input button=" + button + " screen=(" + screenX + "," + screenY
+          + ") world=" + inputWorld + " player=" + playerEntity
+          + " skillIndex=" + (skillSelect == null ? -1 : skillSelect.getSelectedIndex()));
       if (button == Input.Buttons.LEFT) {
-        com.badlogic.gdx.math.Vector2 world = pointerToWorld(screenX, screenY);
+        com.badlogic.gdx.math.Vector2 world = inputWorld;
         player.x = world.x;
         player.y = world.y;
         if (positions != null && positions.has(playerEntity)) positions.get(playerEntity).position.set(world);
+        runtimeLog("event=player_moved entity=" + playerEntity + " position=" + world);
         return true;
       }
       if (button == Input.Buttons.RIGHT && sessionLog != null && sessionLog.file() != null
           && skillSelect.getSelectedIndex() > 0) {
-        com.badlogic.gdx.math.Vector2 targetPoint = pointerToWorld(screenX, screenY);
+        com.badlogic.gdx.math.Vector2 targetPoint = inputWorld;
         int targetId = targetModeValue == TargetMode.HOSTILE_UNIT ? nearestMonsterEntity()
             : targetModeValue == TargetMode.CORPSE ? nearestCorpseEntity() : Engine.INVALID_ENTITY;
         String targetName = targetId == Engine.INVALID_ENTITY ? "none" : "monster-" + targetId;
@@ -791,11 +796,22 @@ public class SkillViewer extends Tool {
           net.mostlyoriginal.api.event.common.EventSystem events =
               engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class);
           if (skillId >= 0 && events != null) {
-            events.dispatch(SkillCastEvent.obtain(playerEntity, skillId, targetId, targetPoint));
+            SkillCastEvent cast = SkillCastEvent.obtain(playerEntity, skillId, targetId, targetPoint);
+            events.dispatch(cast);
+            String result = "event=cast_result skillId=" + skillId + " target=" + targetName
+                + " accepted=" + cast.accepted + " resultCode=" + cast.resultCode
+                + " manaCost=" + cast.manaCost;
+            sessionLog.append(result);
+            runtimeLog(result);
+          } else {
+            String result = "event=cast_skipped skillId=" + skillId + " events=" + (events != null);
+            sessionLog.append(result);
+            runtimeLog(result);
           }
         }
         return true;
       }
+      runtimeLog("event=input_ignored button=" + button + " reason=skill_not_selected_or_log_unavailable");
       return false;
     }
   }
@@ -803,7 +819,14 @@ public class SkillViewer extends Tool {
   private com.badlogic.gdx.math.Vector2 pointerToWorld(int screenX, int screenY) {
     com.badlogic.gdx.math.Vector2 point = new com.badlogic.gdx.math.Vector2(screenX, screenY);
     if (stage != null) stage.getViewport().unproject(point);
-    return iso == null ? point : iso.screenToWorld(point.x, point.y, point);
+    if (iso == null) return point;
+    // Rendering converts tile coordinates to pixels around (0,0), then adds
+    // the arena centre. Undo that exact transform; do not call
+    // IsometricCamera.screenToWorld here because the point has already been
+    // unprojected by ScreenViewport.
+    point.sub(stage.getViewport().getWorldWidth() * .5f,
+        stage.getViewport().getWorldHeight() * .5f);
+    return iso.toWorld(point);
   }
 
   private int nearestMonsterEntity() {
