@@ -67,6 +67,12 @@
   1.10f 行号和参数。当前剩余项是实际客户端资源观感及 poison trail 命中，不再把尸体
   删除作为待办。
 
+- 同轮补齐 `plague vines trail` 的 D2MOO `SrvHit50`：该函数只在导弹总帧数开始的
+  `Hit delay=15` 帧内允许接触，之后拒绝命中，不直接造成毒素/伤害，也不复用
+  `SrvHit16` 的减速状态；trail 总帧数按 `Range + level*LevRange` 恢复。新增
+  `DruidVineCorpseCyclerTest.plagueVinesTrailUsesNativeHitDelayWindowWithoutImplicitDamage`
+  锁定这些 1.10f 数据和边界。
+
 - 分支：`master`
 - 当前功能提交：`a128ee0661169a09ba4eae31264fbcea12cbaa63`（已与 `origin/master` 一致）
 - 本轮开始基线：`1f8f15cb`（载入崩溃修复）

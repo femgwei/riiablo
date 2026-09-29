@@ -231,6 +231,8 @@
   D2MOO 核对确认该 delay missile 只按 `Range=47` 帧结束，不消费尸体；客户端
   `pCltDoFunc=51` 的第 20/45 帧 `recycler vine`/`recycler explosion` 已按原生参数补齐。
   由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为已验证结果。
+- `plague vines trail` 的 `SrvHit50` 已按 D2MOO 的 `Hit delay=15` 窗口和
+  `Range + level*LevRange` 生命周期注册；其 `pSrvDmgFunc=0`，不擅自推断毒素伤害。
 
 ## dark-magic 测试用例移植映射
 

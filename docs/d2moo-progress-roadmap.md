@@ -5725,3 +5725,7 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [ ] D2MOO 当前 `plague vines trail` 行为数据为 `pSrvHitFunc=50`、`pSrvDmgFunc=0`，
   且没有直接 `EType/EMin/EMax` 毒素字段；本轮只确认 trail 生成和同步，不宣称毒素命中
   已完成。跨区域跟随仍待单独门槛。
+- [x] `plague vines trail` 的 `SrvHit50` 已完成源码对照：仅允许总生命周期开始的
+  `Hit delay=15` 帧窗口，之后拒绝接触；不产生直接伤害或 `SrvHit16` 减速状态。
+  trail 生命周期已按 `Range + level*LevRange` 计算并加入边界回归测试。由于 D2MOO
+  数据本身没有毒素伤害字段，仍不把 poison damage 标记为已实现。

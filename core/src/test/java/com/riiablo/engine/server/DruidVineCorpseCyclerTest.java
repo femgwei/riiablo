@@ -130,6 +130,26 @@ class DruidVineCorpseCyclerTest extends RiiabloTest {
     // corpse cleanup remains owned by the normal corpse lifecycle.
   }
 
+  @Test
+  void plagueVinesTrailUsesNativeHitDelayWindowWithoutImplicitDamage() {
+    Missiles.Entry trail = Riiablo.files.Missiles.get("plague vines trail");
+    assertNotNull(trail);
+    assertEquals(50, trail.pSrvHitFunc);
+    assertEquals(0, trail.pSrvDmgFunc);
+    assertEquals(15, trail.sHitPar[0]);
+    assertEquals(100, trail.Range);
+    assertEquals(25, trail.LevRange);
+
+    Missile projectile = new Missile().set(trail, Vector2.Zero, trail.Range);
+    projectile.damageLevel = 1;
+    projectile.nativeFrame = 1;
+    assertTrue(MissileCollisionSystem.plagueVinesTrailAllowsHit(projectile));
+    projectile.nativeFrame = 15;
+    assertTrue(MissileCollisionSystem.plagueVinesTrailAllowsHit(projectile));
+    projectile.nativeFrame = 16;
+    assertTrue(!MissileCollisionSystem.plagueVinesTrailAllowsHit(projectile));
+  }
+
   private static Attributes attributes(int level, float hp) {
     Attributes attrs = Attributes.obtainStandard();
     attrs.base().put(Stat.level, level);
