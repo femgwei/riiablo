@@ -208,6 +208,9 @@
 - Druid `SrvDo114/115/119` 召唤链已按 D2MOO 使用 `Skills.txt Calc2` 计算召唤基础等级，
   `DruidSummonIntegrationTest.summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic`
   防止角色等级启发式回归；召唤物跨区/重连和旧客户端动画仍待真实资源验收。
+- `SummonedPetSystemTest.druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata`
+  现在锁定 Dire Wolf 的 `fenris` PetType 跨区跟随，以及 owner/skillId/skillLevel 元数据
+  不丢失；spirit/vine aura 的目标传播和撤销仍是 Druid 召唤链下一项。
 
 ## dark-magic 测试用例移植映射
 

@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid 召唤物跨区所有权回归
+
+- [x] 新增 `SummonedPetSystemTest.druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata`，
+  明确 Druid Dire Wolf（`fenris`）跨区域跟随 owner，并保留 owner、PetType、skillId 和
+  skillLevel 元数据。
+- [x] `SummonedPetSystemTest` 与 `DruidSummonIntegrationTest` 通过；本项覆盖 ECS 所有权
+  和跨区迁移，不替代真实 D2GS 重连/旧客户端快照验收。
+- [ ] 下一步继续验证 Druid spirit/vine aura 的目标范围、来源状态和跨区撤销语义。
+
 ## 2026-09-30 Druid 召唤物 Calc2 等级对齐
 
 - [x] 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SrvDo115_Vines` 和
