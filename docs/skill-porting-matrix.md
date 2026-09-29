@@ -205,6 +205,9 @@
   `DruidStormAuraIntegrationTest.periodicStormStrikeCapturesNativeSkillDamageAtPulse`
   锁定：服务端脉冲必须创建带来源技能、等级和元素包的权威导弹，snapshot-only 客户端
   不得自行推进周期时钟。
+- Druid `SrvDo114/115/119` 召唤链已按 D2MOO 使用 `Skills.txt Calc2` 计算召唤基础等级，
+  `DruidSummonIntegrationTest.summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic`
+  防止角色等级启发式回归；召唤物跨区/重连和旧客户端动画仍待真实资源验收。
 
 ## dark-magic 测试用例移植映射
 

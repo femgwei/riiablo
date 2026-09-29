@@ -2718,8 +2718,13 @@ public class ServerSkillSystem extends PassiveSystem {
         ? mAttributesWrapper.get(event.entityId).attrs : null;
     Attributes petAttrs = mAttributesWrapper.has(petId)
         ? mAttributesWrapper.get(petId).attrs : null;
-    int ownerLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
-    int petLevel = summonBaseLevel(ownerLevel, skillLevel);
+    // D2MOO SrvDo114/115/119 evaluates Skills.txt Calc2 (dwCalc[1]) for
+    // the summon base level.  Do not substitute the owner's character level:
+    // high-level casters can intentionally create low-level summons when the
+    // native row's formula says so, and vice versa.
+    int petLevel = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name),
+        name -> Riiablo.files.skills.get(name)));
     if (petAttrs != null) {
       StatRef level = petAttrs.get(Stat.level, StatRef.obtain());
       if (level != null) level.set(petLevel);

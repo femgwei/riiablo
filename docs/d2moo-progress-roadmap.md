@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid 召唤物 Calc2 等级对齐
+
+- [x] 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SrvDo115_Vines` 和
+  `SrvDo119_DruidSummon`，确认召唤基础等级来自 `dwCalc[1]`，即 riiablo
+  `Skills.txt:Calc2`，而不是施法者等级推导。
+- [x] 修正 `ServerSkillSystem.spawnDruidSummon`：按原生 Calc2 计算 Raven、Vine、Wolf、
+  Spirit、Grizzly 等召唤物等级；新增回归证明 20 级角色以 Raven 8 级施法时召唤物等级
+  为原生公式结果 6，而非旧启发式结果 20。
+- [x] `DruidSummonIntegrationTest`、`NativeDruidSummonDataTest` 及本轮五个 Druid
+  区域/状态专项全部通过。
+- [ ] 仍需真实 1.10f MPQ 双客户端验证召唤物动画、跨区所有权和重连快照。
+
 ## 2026-09-30 Druid Armageddon/Hurricane 周期伤害脉冲
 
 - [x] 对照 D2MOO `SKILLS_SrvDo124_Armageddon_Hurricane` 与周期激活事件，新增

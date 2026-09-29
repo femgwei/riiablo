@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,37 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       }
       assertEquals(ids.length, factory.created);
       assertTrue(factory.lastMaximum >= 1);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("druid-level", (byte) Riiablo.DRUID);
+      data.setSkillLevel(SkillId.RAVEN, 8);
+      world.getMapper(Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(10, 10);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(20, 100);
+
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.RAVEN);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.RAVEN, Engine.INVALID_ENTITY, new Vector2(10, 10),
+          skill.srvdofunc, skill.cltdofunc));
+
+      int expected = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, 8,
+          name -> 0, name -> Riiablo.files.skills.get(name)));
+      int actual = world.getMapper(AttributesWrapper.class).get(factory.lastEntity)
+          .attrs.get(Stat.level).asInt();
+      assertEquals(expected, actual,
+          "D2MOO SrvDo114 uses Skills.txt Calc2 for the summoned base level");
     } finally {
       world.dispose();
     }
