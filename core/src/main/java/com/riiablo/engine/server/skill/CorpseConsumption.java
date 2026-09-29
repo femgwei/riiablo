@@ -17,7 +17,8 @@ public final class CorpseConsumption {
   public static boolean selectable(
       Corpse corpse, Monster monster, Attributes attributes, StateList states) {
     if (corpse == null || !corpse.usable || corpse.fading
-        || monster == null || monster.monstats2 == null || !monster.monstats2.corpseSel) {
+        || monster == null || monster.shatteredAtDeath
+        || monster.monstats2 == null || !monster.monstats2.corpseSel) {
       return false;
     }
     StatRef hitpoints = attributes != null

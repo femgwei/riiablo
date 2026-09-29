@@ -49,6 +49,8 @@ public class Monster extends Component {
   public boolean resurrected;
   public int resurrectedBy = -1;
   public boolean playerRevive;
+  /** True when the monster's lethal cold hit selected the native shatter path. */
+  public boolean shatteredAtDeath;
 
   /** Native activation anchor. Monsters do not pursue targets outside their
    * spawn level/room scope; Zone is the current ECS equivalent of a level
@@ -85,6 +87,7 @@ public class Monster extends Component {
     resurrected = false;
     resurrectedBy = -1;
     playerRevive = false;
+    shatteredAtDeath = false;
     spawnZone = null;
     spawnX = 0f;
     spawnY = 0f;
@@ -134,6 +137,7 @@ public class Monster extends Component {
     resurrected = true;
     resurrectedBy = sourceId;
     this.playerRevive = playerRevive;
+    shatteredAtDeath = false;
     return this;
   }
 

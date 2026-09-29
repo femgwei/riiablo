@@ -1422,6 +1422,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     if (distance <= collisionRadius) {
       int hitFunction = missile.missile != null ? missile.missile.pSrvHitFunc : 0;
+      if (hitFunction == 50) {
+        // D2MOO MISSMODE_SrvHit50_PlagueVinesTrail is a timing gate only.
+        // It accepts contacts during the first HitDelay frames and rejects
+        // later contacts; it does not deal damage or apply the Vine Attack
+        // SrvHit16 slow state.
+        if (!plagueVinesTrailAllowsHit(missile)) return false;
+        return false;
+      }
       if (hitFunction == 16) {
         if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) {
           return false;
@@ -1924,6 +1932,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missile child = mMissile.get(childId);
     child.skillId = maker.skillId;
     child.damageLevel = Math.max(1, maker.damageLevel);
+    // MISSILES_CreateMissileFromParams uses Range + skillLevel * LevRange
+    // for default trail lifetime; the generic factory only has the base row
+    // range, so restore the native total-frame value here.
+    child.range = nativeMissileRange(childRow, child.damageLevel);
+    child.nativeLifetimeFrames = childRow.Vel == 0
+        ? Math.max(1, Math.round(child.range)) : 0;
     // The native helper assigns the player as owner.  The current server vine
     // controller already carries that ownership relation, so preserve it on
     // the trail for alignment, state source, and reconnect snapshots.
@@ -2147,6 +2161,19 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static boolean collidesKill(Missile missile) {
     return missile == null || missile.missile == null || missile.missile.CollideKill;
+  }
+
+  /** Native SrvHit50 window for the Plague Vines trail missile. */
+  static boolean plagueVinesTrailAllowsHit(Missile missile) {
+    if (missile == null || missile.missile == null
+        || missile.missile.pSrvHitFunc != 50) return false;
+    int level = Math.max(1, missile.damageLevel);
+    int totalFrames = nativeMissileRange(missile.missile, level);
+    int hitDelay = missile.missile.sHitPar != null
+        && missile.missile.sHitPar.length > 0
+        ? Math.max(0, missile.missile.sHitPar[0]) : 0;
+    int remainingFrames = totalFrames - Math.max(0, missile.nativeFrame);
+    return remainingFrames >= totalFrames - hitDelay;
   }
 
   static boolean guidedTargetMatches(Missile missile, int targetId) {
@@ -2547,6 +2574,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   private void spawnNativeMapExplosion(int sourceId, Missile source, int targetId,
       Vector2 origin) {
     if (source == null || source.missile == null || origin == null) return;
+    // Ice Arrow's ExplosionMissile is client-only.  Its server packet is the
+    // parent missile itself, and walls/obstacles must not create an explosion.
+    if ("icearrow".equalsIgnoreCase(source.missile.Missile)) return;
     String name = source.missile.ExplosionMissile;
     if ((name == null || name.isEmpty()) && source.missile.Explosion != 0
         && source.missile.HitSubMissile != null
@@ -2561,22 +2591,6 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
-    // Ice Arrow's ExplosionMissile is a client-only hit flash.  D2MOO's
-    // server path resolves the parent packet once (SrvDmg02 converts cold
-    // length to freeze length); it does not create a second damaging missile.
-    // Emit the child presentation directly so clients render IceArrowExplode
-    // without applying the packet twice.
-    if ("icearrow".equalsIgnoreCase(source.missile.Missile)) {
-      Vector2 facing = mVelocity.has(sourceId) ? mVelocity.get(sourceId).velocity : Vector2.X;
-      if (events != null) {
-        events.dispatch(MissileImpactEvent.obtain(sourceId, row.Id, source.ownerId, targetId,
-            origin, facing).withPresentation(row.CelFile,
-            "data\\global\\palette\\units\\pal.dat", row.HitSound));
-      }
-      log.debug("[MISSILE_IMPACT] source={} child={} entity={} pos=({}, {})",
-          source.missile.Missile, row.Missile, sourceId, origin.x, origin.y);
-      return;
-    }
     if (factory == null) return;
     int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId);
     if (childId < 0 || !mMissile.has(childId)) return;
@@ -3272,6 +3286,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     // damage child must not add the generic weapon FireExplode overlay on top
     // of that native explosion presentation.
     String missileName = missile.missile.Missile;
+    if ("icearrow".equalsIgnoreCase(missileName)
+        && missile.missile.ExplosionMissile != null
+        && !missile.missile.ExplosionMissile.isEmpty()
+        && Riiablo.files.Missiles.get(missile.missile.ExplosionMissile) != null) {
+      return true;
+    }
     if ("explodingarrow".equalsIgnoreCase(missileName)
         || "explodingarrowexp".equalsIgnoreCase(missileName)
         || "explodingarrowexp2".equalsIgnoreCase(missileName)) return true;
@@ -3340,6 +3360,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     if (shatter) {
+      mMonster.get(targetId).shatteredAtDeath = true;
       UnitState state = states.addState(StateId.SHATTER, 1, 1, missile.ownerId);
       if (state != null) {
         state.duration = 1;

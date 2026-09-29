@@ -693,6 +693,11 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     Monster monster = mMonster.get(monsterId);
+    if (monster.shatteredAtDeath) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=shattered_at_death",
+          sourceId, monsterId);
+      return false;
+    }
     Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
     StatRef hitpoints = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
     StatRef maxhp = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;

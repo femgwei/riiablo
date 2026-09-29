@@ -70,17 +70,24 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     UnitLifecycle lifecycle = mLifecycle == null ? null : mLifecycle.get(event.victim);
     if (lifecycle != null && lifecycle.deathHandled
         && lifecycle.phase.ordinal() >= UnitLifecycle.Phase.DEATH.ordinal()) {
+      if (mMonster.has(event.victim) && mUnitStates.has(event.victim)
+          && mUnitStates.get(event.victim).stateList != null
+          && mUnitStates.get(event.victim).stateList.hasState(
+              com.riiablo.engine.server.state.StateId.SHATTER)) {
+        mMonster.get(event.victim).shatteredAtDeath = true;
+      }
       log.debug("[MONSTER_CORPSE] phase=duplicate_death_ignored entity={} killer={} phase={}",
           event.victim, event.killer, lifecycle.phase);
       return;
     }
 
     Monster monster = mMonster.get(event.victim);
-    boolean shattered = false;
+    boolean shattered = monster != null && monster.shatteredAtDeath;
     if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {
       StateList states = mUnitStates.get(event.victim).stateList;
-      shattered = states.hasState(
+      shattered |= states.hasState(
           com.riiablo.engine.server.state.StateId.SHATTER);
+      if (shattered && monster != null) monster.shatteredAtDeath = true;
       // FREEZE is a live-unit control state.  It must never survive the
       // death boundary, otherwise AnimStepper keeps the corpse's DT/DD
       // animation paused until the old freeze duration expires.

@@ -351,6 +351,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
 
     String[] children = source.CltHitSubMissile;
+    // Ice Arrow's native hit flash is wired through ExplosionMissile rather
+    // than CltHitSubMissile in the data rows used by riiablo.  It is a visual
+    // child only; the server has already resolved the parent damage packet.
+    if ("icearrow".equalsIgnoreCase(source.Missile)
+        && source.ExplosionMissile != null && !source.ExplosionMissile.isEmpty()
+        && Riiablo.files.Missiles.get(source.ExplosionMissile) != null) {
+      children = new String[] {source.ExplosionMissile};
+    }
     // Exploding Arrow's native ExplosionMissile is the authoritative client
     // burst (ExpArrowExplode.dcc).  CltHitSubMissile=fireexplosion2 is only a
     // legacy fallback used by data packs that omit ExplosionMissile.
