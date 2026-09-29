@@ -43,16 +43,16 @@
   其他 agent 的未提交修改。
 - 本轮提交已推送到 `origin/master`；Amazon、Assassin 及本地日志等其他未提交修改
   仍由原工作者保留，未纳入本轮提交。
-- 本轮新增的 Druid aura 代码和专项测试已通过定向编译/测试，待提交并推送；下一项是
+- 本轮新增的 Druid aura 代码和专项测试已通过定向编译/测试，提交为 `bc748f2f` 并已推送
+  到 `origin/master`；下一项是
   Druid vine 的 SumSkill/状态投影及真实 MPQ/双客户端门槛，随后进入其他职业尚未完成的
   exact-ID 行为注册与四层验收。
 
 - 分支：`master`
-- 当前功能提交：以 [`codex-handoff-2026-09-20.md`](codex-handoff-2026-09-20.md)
-  所在提交的 `HEAD` 为准
+- 当前功能提交：`bc748f2f9b7f4e8e0276554f0bb1537eb5461532`（已与 `origin/master` 一致）
 - 本轮开始基线：`1f8f15cb`（载入崩溃修复）
-- 远程：本轮只要求本地提交，是否推送以用户后续指令为准
-- 工作区：本次提交完成后应为干净
+- 远程：已推送 `origin/master`；Git credential lock 警告出现但远端 SHA 已确认更新
+- 工作区：本轮纳入文件已提交；Amazon、Assassin、日志和截图等其他未提交修改仍保留
 - 总体对齐进度：约 70%（详见路线图）
 - 第一章最小可玩闭环：约 79%
 
