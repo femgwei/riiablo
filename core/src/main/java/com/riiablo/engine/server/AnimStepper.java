@@ -172,7 +172,10 @@ public class AnimStepper extends IntervalIteratingSystem {
       int sourceFrame = NativeJabSequence.sourceFrame(sequence.nativeJabWeaponClass, i);
       animData.frame = sourceFrame << 8;
       animData.lastKeyframeIndex = Math.max(-1, sourceFrame - 1);
-      animData.override = 0;
+      // The client uses AnimData.override as its playback delta when a COF
+      // mode changes. Keep it positive; zero would freeze the A1/A2 layer
+      // even though the server-side SQ cursor continues to advance.
+      animData.override = Math.max(1, sequence.nativeJabSpeed);
       if (NativeJabSequence.event(sequence.nativeJabWeaponClass, i)
           == NativeJabSequence.EVENT_MELEE_ATTACK) {
         events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));

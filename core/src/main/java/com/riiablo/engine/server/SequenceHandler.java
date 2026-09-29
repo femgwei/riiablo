@@ -204,7 +204,13 @@ public class SequenceHandler extends IteratingSystem {
       if (!sequenceWasStarted && animData != null) {
         sequence.nativeJabSpeed = playerAttackAnimationSpeed(entityId, animData.speed, 30);
       }
-      if (animData != null) animData.override = 0;
+      // Keep the presentation animation advancing while the authoritative
+      // sequence cursor is driven by AnimStepper.  An override of zero is
+      // interpreted by CofLayerLoader as a zero frame delta, which freezes
+      // the newly selected A1/A2 COF completely.
+      if (animData != null) {
+        animData.override = Math.max(1, sequence.nativeJabSpeed);
+      }
       return;
     }
     if (casting != null && (casting.jabRemainingStrikes > 0
