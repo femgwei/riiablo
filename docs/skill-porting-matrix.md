@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-09-28
+更新时间：2026-09-30
 
 ## 目标与版本边界
 
@@ -153,6 +153,11 @@
   `AuraManager`：施法者自身和范围内盟友都执行 poison/可净化 curse 缩短；新增
   `AuraManagerPulseTest.cleansingPulseAlsoProcessesTheCaster`，避免 self 分支只保留
   AuraState 却漏掉周期净化效果。
+- 又补齐 dark-magic 周期光环的链接技能公式：Cleansing/Meditation 的
+  `skill('Prayer'.edns)` 现在通过 `SkillFormula` 解析为原生 8.8 fixed healing，
+  并由 AuraManager 传入真实技能行解析器；`AuraEcsScenarioTest` 覆盖施法者与队友
+  同 pulse 治疗、Cleansing 净化缩短和 Meditation 法力恢复状态。此前该引用因只支持
+  `.blvl/.lnXY/.dmXY` 而静默得到 0，导致两项技能遗漏 Prayer 治疗。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin

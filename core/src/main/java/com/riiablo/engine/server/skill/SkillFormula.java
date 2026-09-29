@@ -248,7 +248,29 @@ public final class SkillFormula {
         }
         return base + (referencedLevel - 1) * step;
       }
+      // Linked aura healing uses the referenced skill's elemental normal
+      // damage token (for example Meditation/Cleansing's
+      // skill('Prayer'.edns)).  The native calc VM returns this in 8.8 fixed
+      // point, just like a direct edns expression on the current row.
+      if ("edns".equalsIgnoreCase(special)
+          || "enms".equalsIgnoreCase(special)) {
+        return elementalDamageFixed(referencedSkill, referencedLevel, true);
+      }
+      if ("edxs".equalsIgnoreCase(special)
+          || "exms".equalsIgnoreCase(special)) {
+        return elementalDamageFixed(referencedSkill, referencedLevel, false);
+      }
       return 0;
+    }
+
+    private static int elementalDamageFixed(Skills.Entry referenced, int level,
+        boolean minimum) {
+      if (referenced == null) return 0;
+      int base = minimum ? referenced.EMin : referenced.EMax;
+      int[] perLevel = minimum ? referenced.EMinLev : referenced.EMaxLev;
+      long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+      value <<= Math.min(Math.max(0, referenced.HitShift), 30);
+      return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
 
     private String readQuoted() {

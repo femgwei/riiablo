@@ -111,6 +111,21 @@ Paladin Aura 只有在上述关键场景的纯数据层和 ECS 层测试均通�
 这项修正只覆盖已由 D2MOO 证实的资源/生命周期差异；Holy Fire、Holy Freeze、
 Redemption 和多来源优先级仍按待办中的独立场景继续核对。
 
+## 周期光环链接治疗结果（2026-09-30）
+
+对照 dark-magic `periodic_aura_skills_test.lua` 与 1.10f `Skills.txt` 后发现，
+Cleansing 和 Meditation 的第二个 AuraStat 不是常量，而是
+`skill('Prayer'.edns)`。原 `SkillFormula` 只支持 `.blvl/.lnXY/.dmXY`，因此该
+引用被静默解析为 0，两个光环只发布了状态/净化/法力恢复，却漏掉了 Prayer-linked
+治疗。现在解析器支持引用技能的 `.edns/.enms/.edxs/.exms`，保留原生 8.8 fixed
+精度；AuraManager 同时传入真实技能行解析器。新增回归覆盖：
+
+- `Cleansing` 在同一个 pulse 为施法者和队友缩短毒素并按 Prayer 等级治疗；
+- `Meditation` 在发布 `manarecoverybonus` 的同时为施法者和队友按 Prayer 等级治疗。
+
+这项修正没有改动 Amazon，也没有把 dark-magic 的 1.14d 数值带入 riiablo；只补上
+D2MOO/1.10f 已存在的链接公式语义。
+
 ## Redemption 对照结果（2026-09-28）
 
 D2MOO `SKILLS_SrvDo082_Redemption` 通过 `args2.nCounter` 判断本次范围扫描是否

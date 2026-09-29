@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
@@ -264,6 +265,62 @@ class AuraEcsScenarioTest extends RiiabloTest {
       assertEquals(100f, life(test.world, caster), 0.001f);
       assertEquals(10f - cost, mana(test.world, caster), 0.001f,
           "one useful Prayer pulse consumes exactly one native cost");
+    }
+  }
+
+  @Test
+  void cleansingUsesPrayerLevelForLinkedPulseHealingOnCasterAndParty() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int ally = player(test.world, 3, 0);
+      party(test.parties, caster, ally);
+      CharData data = CharData.createRemote("paladin", (byte) Riiablo.PALADIN);
+      test.world.getMapper(Player.class).get(caster).data = data;
+      data.setSkillLevel(SkillId.PRAYER, 1);
+      life(test.world, caster, 98);
+      life(test.world, ally, 98);
+      states(test.world, caster).addState(StateId.POISON, 100, 1, 77);
+      states(test.world, ally).addState(StateId.POISON, 100, 1, 77);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.CLEANSING, 1));
+      assertEquals(512, test.auras.manager().getActiveAura(caster).statValues[1],
+          java.util.Arrays.toString(test.auras.manager().getActiveAura(caster).statValues));
+      test.tick();
+
+      assertEquals(100f, life(test.world, caster), 0.001f,
+          "Cleansing must apply its linked Prayer heal to the owner");
+      assertEquals(100f, life(test.world, ally), 0.001f,
+          "Cleansing must apply its linked Prayer heal to party targets");
+      assertTrue(states(test.world, caster).getState(StateId.POISON).duration < 100);
+      assertTrue(states(test.world, ally).getState(StateId.POISON).duration < 100);
+    }
+  }
+
+  @Test
+  void meditationUsesPrayerLevelForLinkedPulseHealingWhilePublishingManaRecovery() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int ally = player(test.world, 3, 0);
+      party(test.parties, caster, ally);
+      CharData data = CharData.createRemote("paladin", (byte) Riiablo.PALADIN);
+      test.world.getMapper(Player.class).get(caster).data = data;
+      data.setSkillLevel(SkillId.PRAYER, 1);
+      life(test.world, caster, 98);
+      life(test.world, ally, 98);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.MEDITATION, 1));
+      assertEquals(512, test.auras.manager().getActiveAura(caster).statValues[1],
+          java.util.Arrays.toString(test.auras.manager().getActiveAura(caster).statValues));
+      test.tick();
+
+      assertEquals(100f, life(test.world, caster), 0.001f,
+          "Meditation must apply its linked Prayer heal to the owner");
+      assertEquals(100f, life(test.world, ally), 0.001f,
+          "Meditation must apply its linked Prayer heal to party targets");
+      assertTrue(states(test.world, caster).getState(StateId.MEDITATION)
+          .getStatContributionValue(Stat.manarecoverybonus) > 0);
+      assertTrue(states(test.world, ally).getState(StateId.MEDITATION)
+          .getStatContributionValue(Stat.manarecoverybonus) > 0);
     }
   }
 

@@ -484,14 +484,18 @@ public class AuraManager {
         ? name -> 0 : name -> callback.getBaseSkillLevel(aura.casterId, name);
     for (int i = 0; i < MAX_AURA_STATS; i++) {
       aura.statValues[i] = definition.statIds[i] < 0 ? 0
-          : SkillFormula.evaluate(skill.aurastatcalc[i], skill, aura.skillLevel, baseSkills);
+          : SkillFormula.evaluate(skill.aurastatcalc[i], skill, aura.skillLevel, baseSkills,
+              name -> Riiablo.files != null && Riiablo.files.skills != null
+                  ? Riiablo.files.skills.get(name) : null);
       if (definition.passiveStatIds[i] >= 0) {
         // The formula result is already encoded for the destination stat.
         // Holy Fire, for example, explicitly divides its 8.8 `enms` token by
         // 256 inside `enms*par5/256`; dividing a second time erased its melee
         // fire bonus entirely.
         aura.passiveStatValues[i] =
-            SkillFormula.evaluate(skill.passivecalc[i], skill, aura.skillLevel, baseSkills);
+            SkillFormula.evaluate(skill.passivecalc[i], skill, aura.skillLevel, baseSkills,
+                name -> Riiablo.files != null && Riiablo.files.skills != null
+                    ? Riiablo.files.skills.get(name) : null);
       }
     }
   }
