@@ -338,6 +338,25 @@ public class Map implements Disposable {
     this.diff = diff;
   }
 
+  /**
+   * Creates a mapless logical arena for tools that still need native unit,
+   * targeting, and missile code to resolve a Map.Zone. No DS1/DT1 assets are
+   * loaded and every cell starts walkable.
+   */
+  public Zone createSyntheticArena(int levelId, int gridsX, int gridsY) {
+    if (Riiablo.files == null || Riiablo.files.Levels == null) {
+      throw new IllegalStateException("TXT tables must be loaded before creating a synthetic arena");
+    }
+    Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    if (level == null) level = Riiablo.files.Levels.get(1);
+    if (level == null) throw new IllegalStateException("Unable to resolve a synthetic arena level");
+    // 80x80 is the native room grid size; the resulting arena is large enough
+    // for projectile and area-skill tests while remaining cheap to allocate.
+    Zone zone = addZone(level, 80, 80, Math.max(1, gridsX), Math.max(1, gridsY));
+    act = level.Act;
+    return zone;
+  }
+
   public int getAct() {
     return act;
   }
@@ -1632,6 +1651,11 @@ public class Map implements Disposable {
       if (entityId == Engine.INVALID_ENTITY) return;
       if (entities == EMPTY_ENTITY_ARRAY) entities = new IntArray();
       entities.add(entityId);
+    }
+
+    /** Adds a dynamically-created entity to this zone's render/collision index. */
+    public void attachEntity(int entityId) {
+      addEntity(entityId);
     }
 
     /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */
