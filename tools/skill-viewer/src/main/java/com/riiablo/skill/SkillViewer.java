@@ -345,12 +345,28 @@ public class SkillViewer extends Tool {
     playerData.level = 99;
     playerData.getStats().base().put(com.riiablo.attributes.Stat.level, 99);
     playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.level, 99);
+    // CharData.obtain creates a blank remote-like stat block.  Give the
+    // standalone combat actor real resources so spell validation can reach
+    // the skill handler instead of rejecting every cast with resultCode=1.
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.maxhp, 999);
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.hitpoints, 999);
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.maxmana, 999);
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.mana, 999);
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.maxstamina, 999);
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.stamina, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.maxhp, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.hitpoints, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.maxmana, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.mana, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.maxstamina, 999);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.stamina, 999);
     if (Riiablo.files != null && Riiablo.files.skills != null) {
       for (Skills.Entry skill : Riiablo.files.skills) {
         if (skill != null && skill.Id >= 0) playerData.setSkillLevel(skill.Id, 20);
       }
     }
-    runtimeLog("event=debug_character_prepared class=" + PRESETS[selectedClass].name + " level=99 skills=20");
+    runtimeLog("event=debug_character_prepared class=" + PRESETS[selectedClass].name
+        + " level=99 skills=20 mana=999 hitpoints=999 stamina=999");
   }
 
   /** Gives weapon-dependent skills the minimum real D2 equipment they need. */
