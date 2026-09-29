@@ -1828,6 +1828,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (states.hasState(StateId.UNINTERRUPTABLE)) return null;
       Monster monster = mMonster.get(entityId);
       if (mMercenary.has(entityId) || (monster.monstats != null && monster.monstats.boss)
+          || monster.rank == MonsterRank.CHAMPION
           || monster.rank == MonsterRank.UNIQUE
           || monster.rank == MonsterRank.SUPER_UNIQUE) {
         return applyNativeColdState(entityId, states, duration, level, sourceId);

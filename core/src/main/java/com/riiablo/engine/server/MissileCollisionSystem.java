@@ -1737,6 +1737,13 @@ public class MissileCollisionSystem extends IteratingSystem {
               statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
               combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
           if (hpAfter <= 0) {
+            // Corpse presentation depends on the final damage packet, not
+            // merely on whether FREEZE was ever present.  A frozen unit
+            // killed by cold always shatters; a chilled (COLD-only) unit gets
+            // the native 20% shatter roll.  Physical/other elemental kills
+            // explicitly clear any stale SHATTER state (notably the physical
+            // parent arrow of Freezing Arrow).
+            resolveColdShatterDeath(missile, targetId, combat);
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
             if (actioneer != null) {
               actioneer.markLastRangedAttackTargetDied(missile.ownerId, missile.skillId);
@@ -3269,6 +3276,56 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!mUnitStates.has(targetId)) return;
     StateList states = mUnitStates.get(targetId).stateList;
     if (states != null) states.removeState(StateId.SHATTER);
+  }
+
+  /**
+   * Resolves the ice-death rule at the actual lethal hit boundary.
+   *
+   * <p>FREEZE and COLD are independent states.  A target may be visibly blue
+   * while only COLD remains, so the state present on this exact hit is what
+   * selects the corpse mode.  The caller invokes this before DeathEvent is
+   * dispatched, allowing both server and client corpse systems to observe the
+   * SHATTER marker and skip the ordinary death animation.</p>
+   */
+  private void resolveColdShatterDeath(Missile missile, int targetId,
+      CombatSystem.CombatResult combat) {
+    if (missile == null || combat == null || !mMonster.has(targetId)
+        || !mUnitStates.has(targetId)) return;
+    UnitStates component = mUnitStates.get(targetId);
+    if (component == null || component.stateList == null) return;
+    StateList states = component.stateList;
+
+    boolean coldKillingHit = combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0;
+    boolean frozen = states.hasState(StateId.FREEZE);
+    boolean chilled = states.hasState(StateId.COLD);
+    boolean shatter = false;
+    int roll = -1;
+    if (coldKillingHit) {
+      if (frozen) {
+        // Frozen + cold damage is the guaranteed ice-death path.
+        shatter = true;
+      } else if (chilled) {
+        // ApplyColdState already consumed the native 20% roll and left the
+        // SHATTER marker when it succeeded. Reuse that result here so a
+        // Chill-only lethal hit is not rolled twice.
+        shatter = states.hasState(StateId.SHATTER);
+      }
+    }
+
+    if (shatter) {
+      UnitState state = states.addState(StateId.SHATTER, 1, 1, missile.ownerId);
+      if (state != null) {
+        state.duration = 1;
+        state.initialDuration = 1;
+        state.needsSync = true;
+      }
+    } else {
+      states.removeState(StateId.SHATTER);
+    }
+    log.info("[MONSTER_SHATTER] phase=death_roll entity={} missile={} coldHit={} "
+            + "frozen={} chilled={} roll={} shatter={}",
+        targetId, missile.missile != null ? missile.missile.Missile : "unknown",
+        coldKillingHit, frozen, chilled, roll, shatter);
   }
 
   private static boolean isColdArrow(Missile missile) {
