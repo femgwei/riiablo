@@ -873,9 +873,32 @@ public class SkillViewer extends Tool {
 
   private void ensurePresentationAssets() {
     if (engine == null || assets == null) return;
+    // Skills can destroy a monster (the debug character is level 99), while
+    // the viewer's convenience lists intentionally keep the original ids so
+    // the UI can report what was spawned.  Do not feed those stale ids back
+    // into the COF event chain after Artemis has removed their components.
+    pruneInactiveEntities(monsterEntities);
+    pruneInactiveEntities(corpseEntities);
     queuePresentationAsset(playerEntity);
     for (int entity : monsterEntities) queuePresentationAsset(entity);
     for (int entity : corpseEntities) queuePresentationAsset(entity);
+  }
+
+  private void pruneInactiveEntities(Array<Integer> entities) {
+    for (int i = entities.size - 1; i >= 0; i--) {
+      int entity = entities.get(i);
+      if (!isPresentationEntityActive(entity)) {
+        entities.removeIndex(i);
+        runtimeLog("event=entity_removed_from_view entity=" + entity + " reason=inactive");
+      }
+    }
+  }
+
+  private boolean isPresentationEntityActive(int entity) {
+    if (engine == null || entity == Engine.INVALID_ENTITY
+        || !engine.getEntityManager().isActive(entity)) return false;
+    return engine.getMapper(com.riiablo.engine.server.component.Class.class).has(entity)
+        && engine.getMapper(com.riiablo.engine.server.component.CofReference.class).has(entity);
   }
 
   /** Runs the presentation-only systems explicitly, matching the main
@@ -894,7 +917,7 @@ public class SkillViewer extends Tool {
   }
 
   private void queuePresentationAsset(int entity) {
-    if (entity == Engine.INVALID_ENTITY) return;
+    if (!isPresentationEntityActive(entity)) return;
     com.riiablo.engine.client.component.CofDescriptor descriptor =
         engine.getMapper(com.riiablo.engine.client.component.CofDescriptor.class).get(entity);
     if (descriptor == null || descriptor.descriptor == null) return;
