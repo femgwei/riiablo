@@ -123,8 +123,11 @@
 - 重点借鉴：尸体消费和召唤创建必须是一次权威事务；PetType 上限、owner/source、Iron Golem 的物品来源、召唤物替换、断线/换图/死亡清理都要进入测试。
 - riiablo 已有较多对应实现，但应逐项对照 dark-magic 的“创建前验证 → effect tick 再验证 → 成功后消费/替换”顺序。
 - Poison Nova(92) 已补入真实 1.10f D2GS 双客户端门槛：生成 Necromancer 存档并发送真实施法包，
-  两端共同观察同一权威 `poisonnova` 导弹实体、技能 ID 和伤害等级；当前仍需继续核对毒伤快照、
-  毒抗/穿透和尸体召唤事务，不能把该网络表现门槛视作 Necromancer 完成。
+  两端共同观察同一权威 `poisonnova` 导弹实体、技能 ID 和伤害等级。新增
+  `NecromancerPoisonNovaIntegrationTest`，覆盖 64 路共享命中去重、8.8 毒伤/持续帧快照、
+  毒抗免疫、毒穿透对伤害与持续时间的影响，以及施法后修改施法者属性不污染飞行中导弹。
+  当前 Poison Nova 技能链已完成首轮核对；Necromancer 剩余门槛集中在召唤/尸体/物品原子事务、
+  PetType、owner 清理与重连。
 
 ### Paladin
 

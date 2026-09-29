@@ -22,8 +22,11 @@
 - [x] 将 `headlessAreaSkill` 扩展到 Poison Nova(92)，生成 Necromancer 技能存档并保留
   D2MOO `SrvDo022` 的 64 路固定径向导弹链；真实 1.10f 资源下两端共同观察同一权威
   `poisonnova` 实体、技能 ID 和伤害等级，双客户端门槛通过。
-- [ ] 当前只确认网络实体表现和职业存档路由；毒伤 8.8 快照、毒抗/穿透、持续时间以及
-  Raise/Revive/Golem 的尸体或物品原子消费仍需按 D2MOO 逐项验收。
+- [x] 新增 `NecromancerPoisonNovaIntegrationTest`：验证 64 路共享命中集合、每目标单次
+  施毒、8.8 毒伤和持续帧施法快照、100% 怪物毒免疫，以及毒穿透同时作用于毒伤和独立
+  毒持续时间包；施法后修改施法者精通/穿透不会改变已创建导弹。
+- [ ] Poison Nova 的首轮行为核对完成；Raise/Revive/Golem 的尸体或物品原子消费、PetType、
+  owner 清理和重连仍需按 D2MOO 逐项验收。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 
