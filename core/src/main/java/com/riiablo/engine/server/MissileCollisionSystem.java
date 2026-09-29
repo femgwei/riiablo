@@ -3305,10 +3305,17 @@ public class MissileCollisionSystem extends IteratingSystem {
         // Frozen + cold damage is the guaranteed ice-death path.
         shatter = true;
       } else if (chilled) {
-        // ApplyColdState already consumed the native 20% roll and left the
-        // SHATTER marker when it succeeded. Reuse that result here so a
-        // Chill-only lethal hit is not rolled twice.
-        shatter = states.hasState(StateId.SHATTER);
+        // Chill-only deaths retain a corpse most of the time. This is a
+        // death-time roll; any SHATTER marker produced while applying COLD
+        // is deliberately ignored because the lethal hit may be physical.
+        Monster monster = mMonster.get(targetId);
+        if (monster.rngState == 0) {
+          monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, targetId).state();
+        }
+        NativeRng rng = new NativeRng(monster.rngState);
+        roll = rng.nextInt(100);
+        monster.rngState = rng.state();
+        shatter = roll < 20;
       }
     }
 
