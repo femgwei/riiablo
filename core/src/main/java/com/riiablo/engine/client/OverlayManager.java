@@ -56,6 +56,11 @@ public class OverlayManager extends IteratingSystem {
     }
 
     if (!overlay.persistent && loadedBefore
+        && overlay.minimumDisplayFrames > 0) {
+      overlay.minimumDisplayFrames--;
+    }
+    if (!overlay.persistent && loadedBefore
+        && overlay.minimumDisplayFrames <= 0
         && animation.getFrame() >= animation.getNumFramesPerDir() - 1) {
       dispose(overlay);
       mOverlay.remove(entityId);
