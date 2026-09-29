@@ -7,6 +7,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -932,6 +933,22 @@ public final class DruidSkills {
         return StateId.OAKSAGE;
       default: return StateId.NONE;
     }
+  }
+
+  /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */
+  public static Skills.Entry getSummonAuraSkill(Skills.Entry summonSkill) {
+    if (summonSkill == null || com.riiablo.Riiablo.files == null
+        || com.riiablo.Riiablo.files.NativeSkills == null
+        || com.riiablo.Riiablo.files.skills == null) return null;
+    NativeSkills.Entry nativeSummon = com.riiablo.Riiablo.files.NativeSkills.get(summonSkill.Id);
+    if (nativeSummon == null) return null;
+    for (int i = 1; i <= 5; i++) {
+      String name = nativeSummon.string("sumskill" + i);
+      if (name == null || name.trim().isEmpty()) continue;
+      Skills.Entry aura = com.riiablo.Riiablo.files.skills.get(name.trim());
+      if (aura != null && getSummonAuraState(aura) != StateId.NONE) return aura;
+    }
+    return null;
   }
 
   /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */

@@ -2742,7 +2742,14 @@ public class ServerSkillSystem extends PassiveSystem {
             skillLevel, event.entityId);
         if (state != null) {
           state.skillId = event.skillId;
-          DruidSkills.applySummonAuraModifiers(state, skill, skillLevel,
+          // D2MOO stores a spirit's party stat-list in the linked SumSkill
+          // row (Oak Sage Aura/Wolverine Aura/Barbs Aura), not on the summon
+          // row itself. Resolve that native row before evaluating aurastat*;
+          // falling back to the summon row keeps malformed/custom tables
+          // fail-closed without inventing values.
+          Skills.Entry auraSkill = DruidSkills.getSummonAuraSkill(skill);
+          DruidSkills.applySummonAuraModifiers(state,
+              auraSkill != null ? auraSkill : skill, skillLevel,
               name -> getBaseSkillLevel(event.entityId, name));
           state.needsSync = true;
         }

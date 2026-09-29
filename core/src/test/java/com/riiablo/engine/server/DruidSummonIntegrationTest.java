@@ -22,6 +22,8 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -87,6 +89,109 @@ class DruidSummonIntegrationTest extends RiiabloTest {
           .attrs.get(Stat.level).asInt();
       assertEquals(expected, actual,
           "D2MOO SrvDo114 uses Skills.txt Calc2 for the summoned base level");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void spiritAuraProjectsToOwnerWithPetSourceIdentity() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("druid-aura", (byte) Riiablo.DRUID);
+      data.setSkillLevel(SkillId.OAK_SAGE, 8);
+      world.getMapper(Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(10, 10);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(20, 100);
+      world.getMapper(UnitStates.class).create(owner).init(owner);
+
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.OAK_SAGE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.OAK_SAGE, Engine.INVALID_ENTITY, new Vector2(10, 10),
+          skill.srvdofunc, skill.cltdofunc));
+      int source = factory.lastEntity;
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      UnitState aura = world.getMapper(UnitStates.class).get(owner).stateList
+          .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE);
+      UnitState sourceAura = world.getMapper(UnitStates.class).get(source).stateList
+          .getState(StateId.OAKSAGE);
+      assertTrue(aura != null,
+          "Oak Sage must project a source-owned aura layer to its owner");
+      assertEquals(source, aura.sourceEntityId);
+      assertEquals(SkillId.OAK_SAGE, aura.skillId);
+      assertTrue(aura.maxLifeModifier > 0,
+          "Oak Sage owner layer must carry its native max-life modifier source="
+              + (sourceAura != null ? sourceAura.maxLifeModifier : -1)
+              + " skillStats=" + skill.aurastat[0] + " calc=" + skill.aurastatcalc[0]
+              + " auraState=" + skill.aurastate);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void spiritAurasUseLinkedNativeAuraRowsAndRevokeWhenOutOfRangeOrDismissed() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("druid-aura-values", (byte) Riiablo.DRUID);
+      world.getMapper(Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(10, 10);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(20, 100);
+      world.getMapper(UnitStates.class).create(owner).init(owner);
+
+      int[] skills = {SkillId.OAK_SAGE, SkillId.HEART_OF_WOLVERINE, SkillId.SPIRIT_OF_BARBS};
+      int[] sources = new int[skills.length];
+      for (int i = 0; i < skills.length; i++) {
+        data.setSkillLevel(skills[i], 8);
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skills[i]);
+        world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+            owner, skills[i], Engine.INVALID_ENTITY, new Vector2(10, 10),
+            skill.srvdofunc, skill.cltdofunc));
+        sources[i] = factory.lastEntity;
+      }
+      world.setDelta(1f / 25f);
+      world.process();
+
+      UnitStates ownerStates = world.getMapper(UnitStates.class).get(owner);
+      UnitState oak = ownerStates.stateList.getStateLayer(
+          StateId.OAKSAGE, sources[0], SkillId.OAK_SAGE);
+      UnitState wolverine = ownerStates.stateList.getStateLayer(
+          StateId.WOLVERINE, sources[1], SkillId.HEART_OF_WOLVERINE);
+      UnitState barbs = ownerStates.stateList.getStateLayer(
+          StateId.BARBS, sources[2], SkillId.SPIRIT_OF_BARBS);
+      assertEquals(65, oak.maxLifeModifier,
+          "Oak Sage must use linked Oak Sage Aura ln34");
+      assertEquals(74, wolverine.resolvedAttackModifier(),
+          "Wolverine must use linked aura attack ln34");
+      assertEquals(69, wolverine.resolvedDamageModifier(),
+          "Wolverine must use linked aura damage ln56");
+      assertEquals(120, barbs.runtimeValue,
+          "Spirit of Barbs must use linked aura thorns ln34");
+
+      world.getMapper(Position.class).get(sources[1]).position.set(100, 100);
+      world.process();
+      assertTrue(ownerStates.stateList.getStateLayer(
+          StateId.WOLVERINE, sources[1], SkillId.HEART_OF_WOLVERINE) == null,
+          "moving the spirit outside its aura range must revoke its owner layer");
+
+      world.delete(sources[2]);
+      world.process();
+      assertTrue(ownerStates.stateList.getStateLayer(
+          StateId.BARBS, sources[2], SkillId.SPIRIT_OF_BARBS) == null,
+          "removing the spirit must revoke its source-owned layer");
     } finally {
       world.dispose();
     }

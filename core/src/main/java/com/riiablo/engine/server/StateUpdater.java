@@ -8,6 +8,8 @@ import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.ObjectSet;
 
 import com.riiablo.Riiablo;
 import com.riiablo.CharacterClass;
@@ -778,6 +780,115 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   //==========================================================================
   // 系统处理
   //==========================================================================
+
+  @Override
+  protected void begin() {
+    processDruidSummonAuras();
+  }
+
+  /**
+   * Projects the native Oak Sage/Wolverine/Spirit of Barbs stat-list from the
+   * spirit pet onto its owner-owned allies. D2MOO keeps the spirit as the
+   * source unit, so target layers must use the pet entity id rather than the
+   * player id; this also lets removal of the pet revoke the aura cleanly.
+   */
+  private void processDruidSummonAuras() {
+    if (Riiablo.files == null || Riiablo.files.skills == null) return;
+    IntSet activeSources = new IntSet();
+    ObjectSet<String> activeLayers = new ObjectSet<>();
+    IntBag sources = world.getAspectSubscriptionManager()
+        .get(Aspect.all(SummonedPet.class, Position.class, UnitStates.class)).getEntities();
+    for (int i = 0; i < sources.size(); i++) {
+      int sourceId = sources.get(i);
+      SummonedPet pet = mSummonedPet.get(sourceId);
+      UnitStates sourceStates = mUnitStates.get(sourceId);
+      if (pet == null || sourceStates == null || sourceStates.snapshotOnly
+          || pet.ownerId < 0 || sourceStates.stateList == null || !mPosition.has(pet.ownerId)) {
+        continue;
+      }
+      Skills.Entry skill = Riiablo.files.skills.get(pet.skillId);
+      int stateId = DruidSkills.getSummonAuraState(skill);
+      if (!isDruidSpiritAura(stateId)) continue;
+      UnitState sourceAura = sourceStates.stateList.getState(stateId);
+      if (sourceAura == null || !isAlive(sourceId)) continue;
+      activeSources.add(sourceId);
+      int level = Math.max(1, pet.skillLevel > 0 ? pet.skillLevel : sourceAura.level);
+      int range = skill != null
+          ? SkillFormula.evaluate(skill.aurarangecalc, skill, level,
+              name -> baseSkillLevel(pet.ownerId, name)) : 0;
+      range = Math.max(1, range > 0 ? range : 13);
+      Vector2 origin = mPosition.get(sourceId).position;
+      IntBag targets = world.getAspectSubscriptionManager()
+          .get(Aspect.all(Position.class, UnitStates.class, AttributesWrapper.class)).getEntities();
+      for (int j = 0; j < targets.size(); j++) {
+        int targetId = targets.get(j);
+        if (targetId == sourceId || !isAlive(targetId)
+            || !druidAuraAlly(pet.ownerId, targetId)
+            || origin.dst2(mPosition.get(targetId).position) > range * (float) range) continue;
+        UnitStates targetStates = mUnitStates.get(targetId);
+        if (targetStates.snapshotOnly || targetStates.stateList == null) continue;
+        UnitState targetAura = targetStates.stateList.addStateLayer(
+            stateId, 0, level, sourceId, pet.skillId);
+        if (targetAura == null) continue;
+        copyDruidAuraModifiers(sourceAura, targetAura);
+        targetAura.needsSync = true;
+        activeLayers.add(auraLayerKey(targetId, stateId, sourceId, pet.skillId));
+      }
+    }
+
+    // Remove source-owned layers whose spirit was dismissed, killed, or moved
+    // out of the active aura set. Non-Druid states and manually-authored
+    // layers remain untouched.
+    IntBag targets = world.getAspectSubscriptionManager()
+        .get(Aspect.all(UnitStates.class)).getEntities();
+    for (int i = 0; i < targets.size(); i++) {
+      UnitStates targetStates = mUnitStates.get(targets.get(i));
+      if (targetStates == null || targetStates.snapshotOnly || targetStates.stateList == null) continue;
+      for (int stateIndex = targetStates.stateList.getStates().size - 1;
+          stateIndex >= 0; stateIndex--) {
+        UnitState state = targetStates.stateList.getStates().get(stateIndex);
+        if (!isDruidSpiritAura(state.stateId) || state.sourceEntityId < 0
+            || !mSummonedPet.has(state.sourceEntityId)) continue;
+        String key = auraLayerKey(targets.get(i), state.stateId,
+            state.sourceEntityId, state.skillId);
+        if (activeSources.contains(state.sourceEntityId) && activeLayers.contains(key)) continue;
+        targetStates.stateList.removeStateLayer(
+            state.stateId, state.sourceEntityId, state.skillId);
+      }
+    }
+  }
+
+  private static String auraLayerKey(int targetId, int stateId, int sourceId, int skillId) {
+    return targetId + ":" + stateId + ":" + sourceId + ":" + skillId;
+  }
+
+  private static boolean isDruidSpiritAura(int stateId) {
+    return stateId == StateId.OAKSAGE || stateId == StateId.WOLVERINE
+        || stateId == StateId.BARBS;
+  }
+
+  private boolean druidAuraAlly(int ownerId, int targetId) {
+    if (targetId == ownerId) return true;
+    if (mMercenary.has(targetId) && mMercenary.get(targetId).ownerId == ownerId) return true;
+    if (mSummonedPet.has(targetId) && mSummonedPet.get(targetId).ownerId == ownerId) return true;
+    if (mPlayer.has(ownerId) && mPlayer.has(targetId) && partyManager != null) {
+      return partyManager.areInSameParty(ownerId, targetId);
+    }
+    return false;
+  }
+
+  private static void copyDruidAuraModifiers(UnitState source, UnitState target) {
+    target.clearModifiers();
+    target.setNativeModifier(Stat.damagepercent, source.resolvedDamageModifier());
+    target.setNativeModifier(Stat.item_tohit_percent, source.resolvedAttackModifier());
+    target.setNativeModifier(Stat.item_maxhp_percent, source.maxLifeModifier);
+    target.setNativeModifier(Stat.item_armor_percent, source.resolvedDefenseModifier());
+    target.setNativeModifier(Stat.fireresist, source.resolvedResistModifier(0));
+    target.setNativeModifier(Stat.coldresist, source.resolvedResistModifier(1));
+    target.setNativeModifier(Stat.lightresist, source.resolvedResistModifier(2));
+    target.setNativeModifier(Stat.poisonresist, source.resolvedResistModifier(3));
+    target.runtimeValue = source.runtimeValue;
+  }
 
   @Override
   protected void process(int entityId) {

@@ -210,7 +210,11 @@
   防止角色等级启发式回归；召唤物跨区/重连和旧客户端动画仍待真实资源验收。
 - `SummonedPetSystemTest.druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata`
   现在锁定 Dire Wolf 的 `fenris` PetType 跨区跟随，以及 owner/skillId/skillLevel 元数据
-  不丢失；spirit/vine aura 的目标传播和撤销仍是 Druid 召唤链下一项。
+  不丢失。
+- spirit aura 已按 D2MOO `SumSkill/SumSkCalc` 解析关联的 `Oak Sage Aura`、`Wolverine Aura`
+  和 `Barbs Aura` 行；`DruidSummonIntegrationTest` 锁定 Oak Sage max-life、Wolverine
+  attack/damage、Spirit of Barbs thorns 的原生 `ln34/ln56` 数值，以及 owner layer 的
+  pet source identity、超出范围撤销和宠物删除撤销。Druid vine 的 SumSkill/状态投影仍待核对。
 
 ## dark-magic 测试用例移植映射
 

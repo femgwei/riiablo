@@ -5659,3 +5659,21 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 `origin/master` 验证。详细的跨 Chat 事实基线、最近提交、测试命令和下一步目标见
 [`codex-handoff-2026-09-15.md`](codex-handoff-2026-09-15.md)。本次仅更新文档，
 不改变任何功能完成状态；历史未跟踪 `.log` 测试产物保持不变。
+
+### 2026-09-30 Druid spirit aura stat-list 投影（本轮完成）
+
+- [x] ~~关联 aura 行解析~~：按 D2MOO `SumSkill/SumSkCalc` 链路，从 Oak Sage、Heart of
+  Wolverine、Spirit of Barbs 召唤行解析 `Oak Sage Aura`、`Wolverine Aura`、`Barbs Aura`
+  行；不再把召唤行空的 `aurastat*` 当作数值来源。
+- [x] ~~owner/ally 投影与撤销~~：以 spirit pet entity 作为 source，投影到 owner、自有
+  mercenary/召唤物和同 party 玩家；目标离开 aura 范围、宠物死亡或实体删除时，撤销
+  对应 source-owned layer，保留其他来源状态。
+- [x] ~~原生数值回归~~：Oak Sage max life、Wolverine attack/damage、Spirit of Barbs
+  thorns 均按 1.10f `ln34/ln56` 公式锁定。
+- 验证：`:core:test` 的 `DruidSummonIntegrationTest`、`SummonedPetSystemTest`、
+  `NativeDruidSummonDataTest` 定向测试通过。
+- 本轮变更：`DruidSkills`、`ServerSkillSystem`、`StateUpdater` 及 Druid aura 集成测试；
+  未纳入 Amazon、Assassin、日志和截图等其他工作区修改。
+
+下一项：补充 Druid vine 的 `SumSkill`/状态投影核对，并在真实 1.10f 双客户端场景验证
+aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura 的同源优先级审计。

@@ -38,12 +38,14 @@
   子导弹协同测试一起通过四个 Druid 区域技能专项类。
 - Druid `SrvDo114/115/119` 召唤物等级已改为原生 `Skills.txt Calc2`，新增 Raven 等级
   回归，避免高等级角色把召唤物错误提升到角色等级。
-- Druid Dire Wolf 的跨区跟随和技能来源元数据已有专项回归；下一项转向 spirit/vine
-  aura 的目标传播与撤销，不直接覆盖其他 agent 的未提交修改。
+- Druid Dire Wolf 的跨区跟随和技能来源元数据已有专项回归；本轮已完成 spirit aura
+  的 `SumSkill` 关联行解析、owner/ally source-owned 投影及范围/删除撤销，不直接覆盖
+  其他 agent 的未提交修改。
 - 本轮提交已推送到 `origin/master`；Amazon、Assassin 及本地日志等其他未提交修改
   仍由原工作者保留，未纳入本轮提交。
-- 下一项继续按矩阵审计 Druid 复杂区域的真实 MPQ/双客户端门槛，随后进入其他职业
-  尚未完成的 exact-ID 行为注册与四层验收。
+- 本轮新增的 Druid aura 代码和专项测试已通过定向编译/测试，待提交并推送；下一项是
+  Druid vine 的 SumSkill/状态投影及真实 MPQ/双客户端门槛，随后进入其他职业尚未完成的
+  exact-ID 行为注册与四层验收。
 
 - 分支：`master`
 - 当前功能提交：以 [`codex-handoff-2026-09-20.md`](codex-handoff-2026-09-20.md)
