@@ -145,6 +145,10 @@
 - 当前测试：Aura 数据、Resistance/Support/Resource/Special Aura 集成、Blessed Hammer、Fist of the Heavens、Paladin melee。
 - dark-magic exact-ID 对照：Might(98)、Resist Fire(100)、Thorns(103)、Defiance(104)、Resist Cold(105)、Blessed Aim(108)、Resist Lightning(110)、Vigor(115)、Salvation(125) `aura.selected-party-stat`；Prayer(99)、Cleansing(109)、Meditation(120) `aura.selected-party-periodic`；Redemption(124) `aura.selected-corpse-periodic`。
 - 重点借鉴：aura source 身份、右键选择、同级目标稳定排序、半径筛选、pulse 计划、资源不足不改变目标、取消/替换/重连清理。
+- 新增 `AuraEcsScenarioTest.equalLevelAurasUseStableLowestCasterTieBreakRegardlessOfActivationOrder`：
+  对照 dark-magic 的 selected-party aura 稳定排序要求，锁定同等级 Might 不受激活或
+  `IntMap` 遍历顺序影响，最低 caster id 获胜；原 winner 失效后下一次 native pulse
+  才切换到备用 aura，保留短时 state layer 语义。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin

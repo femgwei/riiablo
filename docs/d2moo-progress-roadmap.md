@@ -49,6 +49,13 @@
 - [x] `ServerClientCombatSyncEcsScenarioTest` 锁定同一 `EntitySync` 同时携带
   `MonsterP` 与 `SummonedPetP`，防止后续序列化优化误删旧客户端 fallback 所需的标准组件。
 
+## 2026-09-30 Paladin Aura 同等级来源稳定性
+
+- [x] 对照 dark-magic `aura_skills_test.lua` 的 selected-party source/priority 约束，
+  新增同等级 Might 双来源回归：无论激活顺序或 ECS 遍历顺序，最低 caster id 稳定获胜。
+- [x] 验证当前原生短时 state layer 语义：winner 失效后保留旧层至自然过期，并在备用
+  aura 的下一次 `perdelay` pulse 后切换；Paladin aura 专项回归全部通过。
+
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 
 - [x] 对照 D2MOO `SkillAma.cpp` 的 `SrvSt05/SrvDo007`、`SrvSt07/SrvDo002` 和

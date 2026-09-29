@@ -68,7 +68,7 @@ class AuraEcsScenarioTest extends RiiabloTest {
       assertEquals(-30, states(test.world, monster).getTotalResistModifier(2));
       assertEquals(-49, states(test.world, monster).getTotalDefenseModifier());
 
-      test.ticks(51);
+      test.ticks(52);
       assertFalse(states(test.world, caster).hasState(StateId.MIGHT));
       assertFalse(states(test.world, ally).hasState(StateId.MIGHT));
 
@@ -110,13 +110,39 @@ class AuraEcsScenarioTest extends RiiabloTest {
       test.tick();
       assertEquals(strongCaster, allyStates.getState(StateId.MIGHT).sourceEntityId,
           "the strong native layer lives until its short expiry");
-      test.ticks(50);
+      test.ticks(51);
 
       UnitState restored = allyStates.getState(StateId.MIGHT);
       assertNotNull(restored);
       assertEquals(weakCaster, restored.sourceEntityId);
       assertEquals(1, restored.level);
       assertEquals(40, allyStates.getTotalDamageModifier());
+    }
+  }
+
+  @Test
+  void equalLevelAurasUseStableLowestCasterTieBreakRegardlessOfActivationOrder() {
+    try (Harness test = new Harness()) {
+      int first = player(test.world, 0, 0);
+      int second = player(test.world, 1, 0);
+      int ally = player(test.world, 3, 0);
+      short party = test.parties.createParty(first);
+      assertTrue(party >= 0);
+      assertTrue(test.parties.joinParty(party, second));
+      assertTrue(test.parties.joinParty(party, ally));
+
+      // Activate the higher entity id first; native selection must not depend
+      // on IntMap iteration or packet/activation order when levels match.
+      assertTrue(test.auras.manager().activateAura(second, SkillId.MIGHT, 3));
+      assertTrue(test.auras.manager().activateAura(first, SkillId.MIGHT, 3));
+      test.tick();
+      assertEquals(first, states(test.world, ally).getState(StateId.MIGHT).sourceEntityId);
+      assertTrue(test.auras.manager().getActiveAura(second).affectedEntities.contains(ally, false));
+
+      test.auras.manager().deactivateAura(first);
+      test.ticks(52);
+      assertEquals(second, states(test.world, ally).getState(StateId.MIGHT).sourceEntityId,
+          "the equal-level fallback must become visible on the next pulse");
     }
   }
 
