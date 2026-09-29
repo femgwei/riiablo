@@ -805,7 +805,21 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   void drawEntities(Array<Integer>[] cache, int i) {
+    // Impact/trail missiles are presentation-only sprites.  They share the
+    // unit bucket with the hit target, but native D2 draws the impact over the
+    // unit.  Submit them in a second pass so the target cannot occlude the
+    // exploding-arrow frame when both occupy the same tile.
     for (int entity : cache[i]) {
+      if (isPresentationMissile(entity)) continue;
+      drawEntity(cache, entity);
+    }
+    for (int entity : cache[i]) {
+      if (!isPresentationMissile(entity)) continue;
+      drawEntity(cache, entity);
+    }
+  }
+
+  private void drawEntity(Array<Integer>[] cache, int entity) {
 //      if (!entity.target().isZero() && !entity.position().epsilonEquals(entity.target())) {
 //        entity.angle(angle(entity.position(), entity.target()));
 //      }
@@ -828,7 +842,10 @@ public class RenderSystem extends BaseEntitySystem {
       if (overlay != null && !overlay.entry.PreDraw) {
         overlay.animation.draw(batch, tmp.x, tmp.y);
       }
-    }
+  }
+
+  private boolean isPresentationMissile(int entity) {
+    return mMissile.has(entity) && mMissile.get(entity).presentationOnly;
   }
 
   void drawLowerWalls(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py) {
