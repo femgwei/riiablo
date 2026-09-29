@@ -31,8 +31,11 @@
 - [x] 扩展 `SummonedPetSystemTest`：覆盖 Skeleton/Skeleton Mage/Golem/Revive 的
   PetType 归一化与可跟随标志、owner 离开时统一清理，以及 Golem/Revive 跨区跟随；修正
   带空格的 `Clay Golem`/`Iron Golem` 等 PetType 名称归一化到原生共享 `golem` 列表。
-- [ ] Poison Nova 与召唤事务首轮核对完成；PetType 上限替换、owner 清理和重连仍需按
-  真实 ServerEntityFactory 的 PetMax 最旧实体替换及重连快照仍需按 D2MOO 逐项验收。
+- [x] 新增 `ServerEntityFactorySummonQuotaTest` 和 `SummonedPetSerializerTest`：真实工厂
+  验证 Skeleton PetMax 超限淘汰最旧实体、不同 Golem 行共享单一原生配额，并验证重连快照
+  保留 owner、PetType、skillId 和 unsummonable 字段。
+- [ ] Poison Nova 与召唤事务首轮核对完成；剩余门槛是 D2GS 实际断线/重连时序、快照重放
+  与旧客户端并存时的实体恢复。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 

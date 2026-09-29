@@ -19,7 +19,7 @@
 
 共享入口是 `NativeSkillResolver`、`SkillExecutor`、`ServerSkillSystem`；职业专用逻辑位于 `AmazonSkills`、`AssassinSkills`、`BarbarianSkills`、`DruidSkills`、`NecromancerSkills`、`PaladinSkills`、`SorceressSkills`。
 
-现有职业专项测试数量（按文件名统计）为：Amazon 4、Assassin 2、Barbarian 7、Druid 18、Necromancer 17、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
+现有职业专项测试数量（按文件名统计）为：Amazon 4、Assassin 2、Barbarian 7、Druid 18、Necromancer 19、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
 
 ### dark-magic
 
@@ -128,8 +128,9 @@
   毒抗免疫、毒穿透对伤害与持续时间的影响，以及施法后修改施法者属性不污染飞行中导弹。
   当前 Poison Nova 技能链已完成首轮核对；Raise Skeleton/Revive/Golem 已补齐无效尸体、
   创建失败回滚和 Iron Golem 物品预留回滚门槛；`SummonedPetSystemTest` 已覆盖 Necromancer
-  PetType 归一化、owner 离开清理以及 Golem/Revive 跨区跟随，剩余门槛集中在真实工厂的
-  PetMax 最旧实体替换与重连快照。
+  PetType 归一化、owner 离开清理以及 Golem/Revive 跨区跟随；`ServerEntityFactorySummonQuotaTest`
+  已覆盖真实 PetMax 最旧实体替换和 Golem 共享配额，`SummonedPetSerializerTest` 已覆盖
+  owner/PetType/skillId/unsummonable 重连字段，剩余门槛集中在真实 D2GS 重连时序。
 
 ### Paladin
 
