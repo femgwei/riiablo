@@ -214,7 +214,11 @@
 - spirit aura 已按 D2MOO `SumSkill/SumSkCalc` 解析关联的 `Oak Sage Aura`、`Wolverine Aura`
   和 `Barbs Aura` 行；`DruidSummonIntegrationTest` 锁定 Oak Sage max-life、Wolverine
   attack/damage、Spirit of Barbs thorns 的原生 `ln34/ln56` 数值，以及 owner layer 的
-  pet source identity、超出范围撤销和宠物删除撤销。Druid vine 的 SumSkill/状态投影仍待核对。
+  pet source identity、超出范围撤销和宠物删除撤销。
+- Druid vine 已按 D2MOO `SrvDo115_Vines` 核对：Poison Creeper、Carrion Vine、Solar
+  Creeper 均安装 `Vine Attack`（`SumSk1Calc=lvl`）并持有 `VINE_BEAST` 状态；
+  `DruidSkills.getSummonGrantedSkillLevel` 和 `DruidSummonIntegrationTest` 锁定父技能等级
+  传递，避免回退到 MonStats 静态技能等级。vine 不参与 party aura 投影。
 
 ## dark-magic 测试用例移植映射
 

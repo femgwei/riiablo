@@ -3643,6 +3643,16 @@ public class ServerSkillSystem extends PassiveSystem {
           ? mUnitStates.get(entityId).stateList.getTotalSkillModifier() : 0;
       return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId) + bonus);
     }
+    if (mSummonedPet.has(entityId)) {
+      com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
+      Skills.Entry summonSkill = pet != null && Riiablo.files != null && Riiablo.files.skills != null
+          ? Riiablo.files.skills.get(pet.skillId) : null;
+      int granted = DruidSkills.getSummonGrantedSkillLevel(summonSkill,
+          pet != null ? pet.skillLevel : 1, skillId,
+          name -> pet != null ? getBaseSkillLevel(pet.ownerId, name) : 0);
+      if (granted > 0) return granted;
+      if (pet != null && pet.skillId == skillId) return Math.max(1, pet.skillLevel);
+    }
     if (mMonster.has(entityId)) {
       if (mMercenary.has(entityId)) {
         Mercenary merc = mMercenary.get(entityId);

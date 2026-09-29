@@ -45,8 +45,9 @@
   仍由原工作者保留，未纳入本轮提交。
 - 本轮新增的 Druid aura 代码和专项测试已通过定向编译/测试，提交为 `bc748f2f` 并已推送
   到 `origin/master`；下一项是
-  Druid vine 的 SumSkill/状态投影及真实 MPQ/双客户端门槛，随后进入其他职业尚未完成的
-  exact-ID 行为注册与四层验收。
+  Druid vine 的真实 MPQ/双客户端门槛，随后进入其他职业尚未完成的 exact-ID 行为注册
+  与四层验收。本轮已完成 vine 的 SumSkill/状态核对与等级传递测试，尚未做真实客户端
+  导弹命中验收。
 
 - 分支：`master`
 - 当前功能提交：`bc748f2f9b7f4e8e0276554f0bb1537eb5461532`（已与 `origin/master` 一致）

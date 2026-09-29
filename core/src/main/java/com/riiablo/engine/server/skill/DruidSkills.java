@@ -951,6 +951,26 @@ public final class DruidSkills {
     return null;
   }
 
+  /** Resolves a summon-installed SumSkill level exactly like D2MOO's
+   * D2GAME_SetSummonPassiveStats (for example Vine Attack on SrvDo115 vines). */
+  public static int getSummonGrantedSkillLevel(Skills.Entry summonSkill, int summonLevel,
+      int grantedSkillId, ToIntFunction<String> baseSkillLevel) {
+    if (summonSkill == null || summonSkill.sumskill == null || summonSkill.sumskcalc == null
+        || com.riiablo.Riiablo.files == null || com.riiablo.Riiablo.files.skills == null) return 0;
+    int count = Math.min(summonSkill.sumskill.length, summonSkill.sumskcalc.length);
+    for (int i = 0; i < count; i++) {
+      String name = summonSkill.sumskill[i];
+      if (name == null || name.trim().isEmpty()) continue;
+      Skills.Entry granted = com.riiablo.Riiablo.files.skills.get(name.trim());
+      if (granted == null || granted.Id != grantedSkillId) continue;
+      int level = SkillFormula.evaluate(summonSkill.sumskcalc[i], summonSkill,
+          Math.max(1, summonLevel), baseSkillLevel,
+          skillName -> com.riiablo.Riiablo.files.skills.get(skillName));
+      return Math.max(0, level);
+    }
+    return 0;
+  }
+
   /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */
   public static void applySummonAuraModifiers(UnitState state, Skills.Entry skill,
       int skillLevel, ToIntFunction<String> baseSkillLevel) {

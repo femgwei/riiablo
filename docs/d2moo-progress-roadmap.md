@@ -5677,3 +5677,17 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：补充 Druid vine 的 `SumSkill`/状态投影核对，并在真实 1.10f 双客户端场景验证
 aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura 的同源优先级审计。
+
+### 2026-09-30 Druid vine SumSkill 等级链（本轮完成）
+
+- [x] ~~SrvDo115 原生链路~~：按 D2MOO `SKILLS_SrvDo115_Vines` 核对三种 vine 均使用
+  `aurastate=vine_beast`，并通过 `SumSkill1=Vine Attack`、`SumSk1Calc=lvl` 安装攻击技能。
+- [x] ~~运行时等级~~：召唤物执行关联 `Vine Attack` 时优先读取 SumSkill 计算等级，避免
+  使用 MonStats 静态 `Sk#lvl`；缺少关联行时保持 fail-closed。
+- [x] ~~状态边界~~：vine 保留自身 `VINE_BEAST` 状态，但不进入 Oak Sage/Wolverine/
+  Spirit of Barbs 的 party aura 投影路径。
+- 验证：`DruidSummonIntegrationTest`、`NativeDruidShapeDataTest`、`SummonedPetSystemTest`
+  定向测试及 `:core:compileJava` 通过。
+
+下一项：在真实 1.10f MPQ/双客户端场景验证 vine 的 `Vine Attack` 导弹命中、毒素状态、
+跨区域跟随和重连快照；之后进入 Paladin Aura 的同源优先级审计。
