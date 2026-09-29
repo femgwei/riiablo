@@ -82,6 +82,7 @@ import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerMonsterCorpseSystem;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.StateUpdater;
+import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.ItemInteractor;
@@ -92,6 +93,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -164,6 +166,7 @@ public class SkillViewer extends Tool {
   private final Array<Integer> cofRefreshSent = new Array<>();
   private ComponentMapper<Position> positions;
   private ComponentMapper<Velocity> velocities;
+  private ComponentMapper<Angle> angles;
   private ComponentMapper<AnimationWrapper> animations;
   private Stage stage;
   private VisSelectBox<String> classSelect;
@@ -301,6 +304,7 @@ public class SkillViewer extends Tool {
         .with(new MissileCollisionSystem())
         .with(new ServerSkillSystem(true))
         .with(new com.riiablo.engine.server.VelocityModeChanger())
+        .with(new AngularVelocity())
         .with(new com.riiablo.engine.client.DirectionResolver())
         .with(entityFactory);
     com.artemis.WorldConfiguration worldConfig = config.build()
@@ -317,6 +321,7 @@ public class SkillViewer extends Tool {
     arenaMap.setEntityFactory(entityFactory);
     positions = engine.getMapper(Position.class);
     velocities = engine.getMapper(Velocity.class);
+    angles = engine.getMapper(Angle.class);
     animations = engine.getMapper(AnimationWrapper.class);
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
@@ -693,6 +698,9 @@ public class SkillViewer extends Tool {
     }
     float speed = velocity.walkSpeed > 0f ? velocity.walkSpeed : Engine.Player.SPEED_WALK;
     velocity.velocity.set(delta).nor().setLength(speed);
+    if (angles != null && angles.has(playerEntity)) {
+      angles.get(playerEntity).target.set(delta).nor();
+    }
   }
 
   private void drawEntities() {
