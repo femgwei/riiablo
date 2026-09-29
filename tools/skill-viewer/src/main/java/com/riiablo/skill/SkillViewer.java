@@ -19,9 +19,11 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.artemis.ComponentMapper;
+import com.artemis.Aspect;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.managers.TagManager;
+import com.artemis.utils.IntBag;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
@@ -68,6 +70,7 @@ import com.riiablo.engine.client.CofLoader;
 import com.riiablo.engine.client.CofResolver;
 import com.riiablo.engine.client.CofTransformHandler;
 import com.riiablo.engine.client.CofUnloader;
+import com.riiablo.engine.client.MissileLoader;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.client.SkillCastHandler;
@@ -78,6 +81,7 @@ import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerMonsterCorpseSystem;
+import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.WarpInteractor;
@@ -271,8 +275,10 @@ public class SkillViewer extends Tool {
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
         .with(new CofAlphaHandler(), new CofTransformHandler())
+        .with(new MissileLoader())
         .with(new AnimationStepper())
         .with(new ServerMonsterCorpseSystem())
+        .with(new MissileCollisionSystem())
         .with(new ServerSkillSystem(true))
         .with(entityFactory);
     com.artemis.WorldConfiguration worldConfig = config.build()
@@ -573,6 +579,10 @@ public class SkillViewer extends Tool {
     drawEntityAnimation(playerEntity);
     for (int entity : monsterEntities) drawEntityAnimation(entity);
     for (int entity : corpseEntities) drawEntityAnimation(entity);
+    IntBag missiles = engine.getAspectSubscriptionManager()
+        .get(Aspect.all(com.riiablo.engine.server.component.Missile.class,
+            AnimationWrapper.class, Position.class)).getEntities();
+    for (int i = 0; i < missiles.size(); i++) drawEntityAnimation(missiles.get(i));
     batch.end();
   }
 
