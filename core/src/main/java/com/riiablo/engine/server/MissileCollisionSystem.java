@@ -379,6 +379,17 @@ public class MissileCollisionSystem extends IteratingSystem {
         triggerNativeNullHit(entityId, missile, position.position);
         if (!world.getEntityManager().isActive(entityId)) return;
       }
+      // Missiles.txt AlwaysExplode is a client-visible destruction callback,
+      // not a successful-hit flag.  Exploding Arrow must still show its
+      // fireexplosion2 child (and resolve the area child) when it reaches max
+      // range without touching a unit.
+      if (missile.missile != null && missile.missile.AlwaysExplode
+          && !missile.impactPresentationTriggered) {
+        emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, position.position);
+        if (missile.missile.pSrvHitFunc == 4) {
+          spawnAmazonExplosion(missile, position.position, Engine.INVALID_ENTITY);
+        }
+      }
       log.debug("Missile {} reached max range ({}), disposing. ownerId={}, pos=({}, {})", 
           entityId, missile.range, missile.ownerId, position.position.x, position.position.y);
       world.delete(entityId);
