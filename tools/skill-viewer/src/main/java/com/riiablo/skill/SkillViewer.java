@@ -66,6 +66,7 @@ public class SkillViewer extends Tool {
   private static final String[] CLASS_NAMES = {
       "Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Druid", "Assassin"
   };
+  private static final String[] CLASS_CODES = { "ama", "sor", "nec", "pal", "bar", "dru", "ass" };
   private static final byte[] CLASS_IDS = {
       Riiablo.AMAZON, Riiablo.SORCERESS, Riiablo.NECROMANCER, Riiablo.PALADIN,
       Riiablo.BARBARIAN, Riiablo.DRUID, Riiablo.ASSASSIN
@@ -101,6 +102,7 @@ public class SkillViewer extends Tool {
   private final Array<Marker> monsters = new Array<>();
   private final Array<Marker> corpses = new Array<>();
   private final Marker player = new Marker(0, 0, "player");
+  private TargetMode targetModeValue = TargetMode.NONE;
 
   @Override
   protected String getHelpHeader() {
@@ -281,9 +283,9 @@ public class SkillViewer extends Tool {
     Array<String> names = new Array<>();
     names.add("请选择技能");
     if (resourcesLoaded && Riiablo.files != null && Riiablo.files.skills != null) {
-      String wanted = CLASS_NAMES[selectedClass].toLowerCase(Locale.ROOT);
+      String wanted = CLASS_CODES[selectedClass];
       for (Skills.Entry skill : Riiablo.files.skills) {
-        if (skill.charclass != null && skill.charclass.toLowerCase(Locale.ROOT).equals(wanted)
+        if (skill.charclass != null && skill.charclass.toLowerCase(Locale.ROOT).startsWith(wanted)
             && !skill.passive && skill.skill != null && !skill.skill.isEmpty()) names.add(skill.skill);
       }
     }
@@ -308,8 +310,9 @@ public class SkillViewer extends Tool {
     finishSkillLog();
     String skill = skillSelect.getSelected();
     sessionLog.begin(CLASS_NAMES[selectedClass], skill, skillLevel, seed);
-    sessionLog.append("event=skill_selected targetMode=HOSTILE_UNIT\n");
-    targetMode.setText("目标模式：HOSTILE_UNIT（首版目标分流占位）");
+    targetModeValue = determineTargetMode(skill);
+    sessionLog.append("event=skill_selected targetMode=" + targetModeValue + "\n");
+    targetMode.setText("目标模式：" + targetModeValue);
     updateStatus();
   }
 
@@ -376,16 +379,74 @@ public class SkillViewer extends Tool {
         player.y = Gdx.graphics.getHeight() * .52f - screenY;
         return true;
       }
-      if (button == Input.Buttons.RIGHT && sessionLog != null && sessionLog.file() != null) {
-        sessionLog.append("event=cast skill=" + skillSelect.getSelected() + " x=" + player.x + " y=" + player.y);
+      if (button == Input.Buttons.RIGHT && sessionLog != null && sessionLog.file() != null
+          && skillSelect.getSelectedIndex() > 0) {
+        Marker target = selectTarget(screenX, screenY);
+        String targetName = target == null ? "none" : target.type;
+        sessionLog.append("event=cast skill=" + skillSelect.getSelected()
+            + " targetMode=" + targetModeValue + " target=" + targetName
+            + " x=" + (screenX - Gdx.graphics.getWidth() * .5f)
+            + " y=" + (Gdx.graphics.getHeight() * .52f - screenY));
         return true;
       }
       return false;
     }
   }
 
+  private TargetMode determineTargetMode(String skillName) {
+    if (!resourcesLoaded || Riiablo.files == null || Riiablo.files.NativeSkills == null) {
+      return TargetMode.HOSTILE_UNIT;
+    }
+    for (com.riiablo.codec.excel.NativeSkills.Entry entry : Riiablo.files.NativeSkills) {
+      if (skillName.equalsIgnoreCase(entry.skill)) {
+        if (entry.bool("TargetCorpse")) return TargetMode.CORPSE;
+        if (entry.bool("TargetAlly") || entry.bool("TargetPet")) return TargetMode.ALLY_PET;
+        if (entry.bool("TargetItem")) return TargetMode.ITEM;
+        if (entry.bool("Warp") || entry.bool("TgtPlaceCheck")
+            || entry.bool("SearchOpenXY") || entry.bool("SearchEnemyXY")) {
+          return TargetMode.GROUND_POINT;
+        }
+        if (entry.bool("Passive") || entry.bool("Aura")) return TargetMode.SELF;
+        return TargetMode.HOSTILE_UNIT;
+      }
+    }
+    return TargetMode.HOSTILE_UNIT;
+  }
+
+  private Marker selectTarget(int screenX, int screenY) {
+    switch (targetModeValue) {
+      case CORPSE: return nearest(corpses);
+      case HOSTILE_UNIT: return nearest(monsters);
+      case ALLY_PET:
+      case SELF: return player;
+      case GROUND_POINT:
+        player.x = screenX - Gdx.graphics.getWidth() * .5f;
+        player.y = Gdx.graphics.getHeight() * .52f - screenY;
+        return new Marker(player.x, player.y, "ground");
+      case ITEM:
+      case NONE:
+      default: return null;
+    }
+  }
+
+  private Marker nearest(Array<Marker> candidates) {
+    Marker nearest = null;
+    float best = Float.MAX_VALUE;
+    for (Marker marker : candidates) {
+      float dx = marker.x - player.x;
+      float dy = marker.y - player.y;
+      float distance = dx * dx + dy * dy;
+      if (distance < best) { best = distance; nearest = marker; }
+    }
+    return nearest;
+  }
+
   private static final class Marker {
     float x, y; final String type;
     Marker(float x, float y, String type) { this.x = x; this.y = y; this.type = type; }
+  }
+
+  private enum TargetMode {
+    NONE, HOSTILE_UNIT, GROUND_POINT, CORPSE, ALLY_PET, SELF, ITEM
   }
 }
