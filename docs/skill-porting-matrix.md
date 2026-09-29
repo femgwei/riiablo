@@ -168,10 +168,12 @@
   解析：召唤体缺少 `MonStats.Skill1/Skill2` 时进入 fail-closed，不再回退执行放置技能，
   防止 `SrvDo045` 递归或错误 helper missile；对应回归位于
   `AssassinSkillSpecializationTest.trapAttackResolutionFailsClosedWhenSummonHasNoAttackSkill`。
-- 攻击技能等级暂不改写：D2MOO AI 读取 `SKILLS_GetSkillLevel(pPet, pSkill, 1)`，而
-  `sub_6FCF8610` 又以放置技能等级执行 `SetSummonBaseStats/SetSummonPassiveStats`；现有
-  Death Sentry 回归已锁定等级 4 的尸体爆炸半径。需要继续追 `SKILLS_AssignSkill` 的
-  召唤体初始化后，才能判断 `Sk1lvl/Sk2lvl` 与放置等级的最终优先级。
+- 攻击技能等级已完成核对：D2MOO `Monster.cpp` 先按召唤体 `MonStats.Sk#lvl` 建立初始技能，
+  但 `sub_6FCF8610` 随后调用 `D2GAME_SetSummonPassiveStats`；该函数按放置技能的
+  `SumSkill/SumSkCalc` 再次 `D2GAME_SetSkills`。原生陷阱行的主攻击均为 `SumSkCalc=lvl`
+  （Death Sentry 的 `Skill1`/`Skill2` 也都是 `lvl`），所以运行时应保存放置技能等级快照，
+  不能直接采用静态 `Sk1lvl/Sk2lvl=1`。`AssassinSkillSpecializationTest.auditTrapSummonSkillInheritanceRows`
+  现在锁定六类陷阱的完整继承映射和协同来源；现有 Death Sentry 等级 4 回归与该结论一致。
 
 ### Barbarian
 

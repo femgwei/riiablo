@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,6 +104,50 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       }
     }
     System.out.println("[ASSASSIN_SKILL_SUMMARY] rows=" + rows);
+  }
+
+  @Test
+  void auditTrapSummonSkillInheritanceRows() {
+    java.util.Map<String, String[]> expectedSumSkills = new java.util.LinkedHashMap<>();
+    expectedSumSkills.put("Blade Sentinel", new String[] {"Blade Sentinel", "", "", "", ""});
+    expectedSumSkills.put("Charged Bolt Sentry", new String[] {
+        "BoltSentry", "Fire Trauma", "Shock Field", "Lightning Sentry", "Death Sentry"});
+    expectedSumSkills.put("Wake of Fire Sentry", new String[] {
+        "Wake Of Destruction Sentry", "Fire Trauma", "Inferno Sentry", "", ""});
+    expectedSumSkills.put("Lightning Sentry", new String[] {
+        "sentry lightning", "Shock Field", "Charged Bolt Sentry", "Death Sentry", ""});
+    expectedSumSkills.put("Inferno Sentry", new String[] {
+        "mon inferno sentry", "Fire Trauma", "Wake of Fire Sentry", "Death Sentry", ""});
+    expectedSumSkills.put("Death Sentry", new String[] {
+        "mon death sentry", "death sentry ltng", "Fire Trauma", "Lightning Sentry", ""});
+    java.util.Map<String, String[]> expectedSumSkCalcs = new java.util.LinkedHashMap<>();
+    expectedSumSkCalcs.put("Blade Sentinel", new String[] {"lvl", "", "", "", ""});
+    expectedSumSkCalcs.put("Charged Bolt Sentry", new String[] {
+        "lvl", "skill('Fire Trauma'.blvl)", "skill('Shock Field'.blvl)",
+        "skill('Lightning Sentry'.blvl)", "skill('Death Sentry'.blvl)"});
+    expectedSumSkCalcs.put("Wake of Fire Sentry", new String[] {
+        "lvl", "skill('Fire Trauma'.blvl)", "skill('Inferno Sentry'.blvl)", "", ""});
+    expectedSumSkCalcs.put("Lightning Sentry", new String[] {
+        "lvl", "skill('Shock Field'.blvl)", "skill('Charged Bolt Sentry'.blvl)",
+        "skill('Death Sentry'.blvl)", ""});
+    expectedSumSkCalcs.put("Inferno Sentry", new String[] {
+        "lvl", "skill('Fire Trauma'.blvl)", "skill('Wake of Fire Sentry'.blvl)",
+        "skill('Death Sentry'.blvl)", ""});
+    expectedSumSkCalcs.put("Death Sentry", new String[] {
+        "lvl", "lvl", "skill('Fire Trauma'.blvl)", "skill('Lightning Sentry'.blvl)", ""});
+    for (String placementName : expectedSumSkills.keySet()) {
+      Skills.Entry placement = Riiablo.files.skills.get(placementName);
+      assertNotNull(placement, placementName);
+      System.out.println("[ASSASSIN_SUMMON_INHERIT] placement=" + placementName
+          + " sumskill=" + java.util.Arrays.toString(placement.sumskill)
+          + " sumskcalc=" + java.util.Arrays.toString(placement.sumskcalc));
+      assertTrue(placement.summon != null && !placement.summon.isEmpty(),
+          placementName + " must select a summon row");
+      assertArrayEquals(expectedSumSkills.get(placementName), placement.sumskill,
+          placementName + " SumSkill mapping");
+      assertArrayEquals(expectedSumSkCalcs.get(placementName), placement.sumskcalc,
+          placementName + " SumSkCalc mapping");
+    }
   }
 
   @Test
