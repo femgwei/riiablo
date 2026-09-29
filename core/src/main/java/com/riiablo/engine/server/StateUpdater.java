@@ -1843,9 +1843,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState freeze = states.extendState(
         StateId.FREEZE, Math.max(1, duration), level, sourceId);
     if (freeze != null) freeze.needsSync = true;
-    // Native ApplyFreezeState does not perform the shatter roll for ordinary
-    // monsters.  The missile path applies COLD immediately before FREEZE, and
-    // ApplyColdState owns that roll.
+    // Native ApplyFreezeState does not decide the corpse mode immediately.
+    // The lethal missile path resolves Frozen-vs-Chill shatter semantics at
+    // the exact death boundary, after the final damage type is known.
     return freeze;
   }
 
