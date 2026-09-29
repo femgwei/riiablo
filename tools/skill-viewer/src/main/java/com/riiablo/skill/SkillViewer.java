@@ -195,55 +195,56 @@ public class SkillViewer extends Tool {
     VisTable root = new VisTable();
     root.setFillParent(true);
     root.pad(8);
+    root.top().left();
     stage.addActor(root);
 
     VisTable menu = new VisTable();
-    VisTextButton reload = new VisTextButton("重新加载资源");
-    VisTextButton reset = new VisTextButton("重置场景");
+    VisTextButton reload = new VisTextButton("Reload Resources");
+    VisTextButton reset = new VisTextButton("Reset Scene");
     menu.add(reload).padRight(6);
     menu.add(reset).padRight(12);
-    menu.add(new VisLabel("角色")).padRight(4);
+    menu.add(new VisLabel("Character")).padRight(4);
     classSelect = new VisSelectBox<>();
     classSelect.setItems(CLASS_NAMES);
     menu.add(classSelect).width(140).padRight(8);
-    menu.add(new VisLabel("技能")).padRight(4);
+    menu.add(new VisLabel("Skill")).padRight(4);
     skillSelect = new VisSelectBox<>();
     menu.add(skillSelect).width(230).padRight(8);
-    menu.add(new VisLabel("等级")).padRight(4);
+    menu.add(new VisLabel("Level")).padRight(4);
     VisTextButton level = new VisTextButton("1");
     menu.add(level).width(40).padRight(8);
-    menu.add(new VisLabel("怪物")).padRight(4);
+    menu.add(new VisLabel("Monster")).padRight(4);
     monsterSelect = new VisSelectBox<>();
     monsterSelect.setItems("fallen");
     menu.add(monsterSelect).width(120).padRight(4);
-    VisTextButton addMonster = new VisTextButton("加载怪物");
-    VisTextButton addCorpse = new VisTextButton("加载尸体");
+    VisTextButton addMonster = new VisTextButton("Load Monster");
+    VisTextButton addCorpse = new VisTextButton("Load Corpse");
     menu.add(addMonster).padRight(4);
     menu.add(addCorpse).padRight(8);
-    ai = new VisCheckBox("开启 AI");
+    ai = new VisCheckBox("Enable AI");
     menu.add(ai);
     root.add(menu).growX().left().row();
 
     VisTable info = new VisTable();
     status = new VisLabel();
-    targetMode = new VisLabel("目标模式：请选择技能");
+    targetMode = new VisLabel("Target: select a skill");
     info.add(status).left().expandX();
     info.add(targetMode).right();
     root.add(info).growX().padTop(5).row();
-    root.add(new VisLabel("左键移动角色 · 右键按目标模式施放技能")).left().padTop(3).row();
+    root.add(new VisLabel("Left click: move character | Right click: cast skill")).left().padTop(3).row();
 
     notesPanel = new VisTable();
-    final VisTextButton notesToggle = new VisTextButton("测试记录 ▼");
+    final VisTextButton notesToggle = new VisTextButton("Test Notes ▼");
     notesPanel.add(notesToggle).left().row();
     notes = new VisTextArea("");
     notes.setVisible(false);
     notesPanel.add(notes).grow().minHeight(70);
-    root.add(notesPanel).growX().bottom().padTop(6).row();
+    root.add(notesPanel).growX().expandY().bottom().padTop(6).row();
     notesToggle.addListener(new ChangeListener() {
       @Override public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
         boolean visible = notes.isVisible();
         notes.setVisible(!visible);
-        notesToggle.setText(visible ? "测试记录 ▼" : "测试记录 ▲");
+        notesToggle.setText(visible ? "Test Notes ▼" : "Test Notes ▲");
         notesPanel.invalidateHierarchy();
       }
     });
@@ -322,7 +323,7 @@ public class SkillViewer extends Tool {
 
   private void beginSkillLog() {
     if (skillSelect == null || skillSelect.getSelectedIndex() <= 0) {
-      targetMode.setText("目标模式：请选择技能");
+      targetMode.setText("Target: select a skill");
       return;
     }
     finishSkillLog();
@@ -332,7 +333,7 @@ public class SkillViewer extends Tool {
         + PRESETS[selectedClass].weaponRequired + "\n");
     targetModeValue = determineTargetMode(skill);
     sessionLog.append("event=skill_selected targetMode=" + targetModeValue + "\n");
-    targetMode.setText("目标模式：" + targetModeValue);
+    targetMode.setText("Target: " + targetModeValue);
     updateStatus();
   }
 
@@ -346,11 +347,11 @@ public class SkillViewer extends Tool {
   private void updateStatus() {
     if (status == null) return;
     StringBuilder text = new StringBuilder();
-    text.append(resourcesLoaded ? "资源：已加载" : "资源：未加载");
-    if (resourceError != null) text.append("（").append(resourceError).append("）");
-    text.append(" · ").append(CLASS_NAMES[selectedClass]);
-    text.append(" · 武器 ").append(PRESETS[selectedClass].weapon);
-    text.append(" · 怪物 ").append(monsters.size).append(" · 尸体 ").append(corpses.size);
+    text.append(resourcesLoaded ? "Resources: loaded" : "Resources: unavailable");
+    if (resourceError != null) text.append(" (").append(resourceError).append(")");
+    text.append(" | ").append(CLASS_NAMES[selectedClass]);
+    text.append(" | Weapon: ").append(PRESETS[selectedClass].weapon);
+    text.append(" | Monsters: ").append(monsters.size).append(" | Corpses: ").append(corpses.size);
     status.setText(text);
   }
 
