@@ -91,6 +91,7 @@ import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -162,6 +163,7 @@ public class SkillViewer extends Tool {
   private final Array<String> queuedCofs = new Array<>();
   private final Array<Integer> cofRefreshSent = new Array<>();
   private ComponentMapper<Position> positions;
+  private ComponentMapper<Velocity> velocities;
   private ComponentMapper<AnimationWrapper> animations;
   private Stage stage;
   private VisSelectBox<String> classSelect;
@@ -179,6 +181,8 @@ public class SkillViewer extends Tool {
   private final Marker player = new Marker(0, 0, "player");
   private TargetMode targetModeValue = TargetMode.NONE;
   private boolean renderReadyLogged;
+  private final com.badlogic.gdx.math.Vector2 moveTarget = new com.badlogic.gdx.math.Vector2();
+  private boolean moving;
 
   @Override
   protected String getHelpHeader() {
@@ -312,6 +316,7 @@ public class SkillViewer extends Tool {
     engine.inject(arenaMap);
     arenaMap.setEntityFactory(entityFactory);
     positions = engine.getMapper(Position.class);
+    velocities = engine.getMapper(Velocity.class);
     animations = engine.getMapper(AnimationWrapper.class);
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
@@ -521,6 +526,8 @@ public class SkillViewer extends Tool {
 
   private void resetScene() {
     finishSkillLog();
+    moving = false;
+    moveTarget.setZero();
     runtimeLog("event=scene_reset class=" + PRESETS[selectedClass].name);
     if (resourcesLoaded) {
       try { createCombatArena(); }
@@ -633,6 +640,13 @@ public class SkillViewer extends Tool {
     Gdx.gl.glClearColor(0.48f, 0.48f, 0.48f, 1f);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     if (assets != null) assets.update();
+    // This viewer owns a standalone Artemis world instead of the main
+    // GameScreen's fixed-step loop.  Feed it the frame delta explicitly;
+    // without this, VelocityAdder and AnimationStepper see world.delta == 0
+    // and both movement and client animation remain frozen.
+    float delta = Gdx.graphics.getDeltaTime();
+    if (engine != null) engine.setDelta(delta);
+    updateMovementIntent();
     if (engine != null) engine.process();
     ensurePresentationAssets();
     processPresentationPass();
@@ -662,6 +676,23 @@ public class SkillViewer extends Tool {
       for (Marker marker : corpses) drawMarker(centerX + marker.x, centerY + marker.y, Color.DARK_GRAY);
     }
     shapes.end();
+  }
+
+  private void updateMovementIntent() {
+    if (!moving || positions == null || velocities == null
+        || !positions.has(playerEntity) || !velocities.has(playerEntity)) return;
+    com.badlogic.gdx.math.Vector2 position = positions.get(playerEntity).position;
+    com.badlogic.gdx.math.Vector2 delta = moveTarget.cpy().sub(position);
+    Velocity velocity = velocities.get(playerEntity);
+    if (delta.len2() <= 0.01f) {
+      position.set(moveTarget);
+      velocity.velocity.setZero();
+      moving = false;
+      runtimeLog("event=move_completed entity=" + playerEntity + " position=" + position);
+      return;
+    }
+    float speed = velocity.walkSpeed > 0f ? velocity.walkSpeed : Engine.Player.SPEED_WALK;
+    velocity.velocity.set(delta).nor().setLength(speed);
   }
 
   private void drawEntities() {
@@ -795,13 +826,11 @@ public class SkillViewer extends Tool {
           + " skillIndex=" + (skillSelect == null ? -1 : skillSelect.getSelectedIndex()));
       if (button == Input.Buttons.LEFT) {
         com.badlogic.gdx.math.Vector2 world = inputWorld;
-        boolean pathStarted = false;
-        if (engine != null && playerEntity != Engine.INVALID_ENTITY) {
-          Pathfinder pathfinder = engine.getSystem(Pathfinder.class);
-          pathStarted = pathfinder != null && pathfinder.findPath(playerEntity, world, true);
-        }
+        moveTarget.set(world);
+        moving = playerEntity != Engine.INVALID_ENTITY && positions != null
+            && positions.has(playerEntity) && velocities != null && velocities.has(playerEntity);
         runtimeLog("event=move_requested entity=" + playerEntity + " target=" + world
-            + " pathStarted=" + pathStarted);
+            + " started=" + moving + " mode=open_plane");
         return true;
       }
       if (button == Input.Buttons.RIGHT && sessionLog != null && sessionLog.file() != null
