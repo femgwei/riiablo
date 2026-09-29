@@ -170,9 +170,12 @@ public class StateOverlaySystem extends IteratingSystem {
       best = Riiablo.files.States.get("cold");
     }
     if (freezeActive) {
-      States.Entry freezeEntry = Riiablo.files.States.get("freeze");
-      if (freezeEntry != null && (best == null || freezeEntry.colorPriority >= best.colorPriority)) {
-        best = freezeEntry;
+      // Frozen uses the same blue palette shift as native COLD.  The stock
+      // freeze row can carry a purple colorshift in trimmed/custom data,
+      // but the in-game frozen/chilled presentation is blue.
+      States.Entry coldEntry = Riiablo.files.States.get("cold");
+      if (coldEntry != null && (best == null || coldEntry.colorPriority >= best.colorPriority)) {
+        best = coldEntry;
       }
     }
     if (poison) {
