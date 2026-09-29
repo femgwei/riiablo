@@ -308,7 +308,7 @@ public class SkillViewer extends Tool {
     animations = engine.getMapper(AnimationWrapper.class);
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
-    playerData.setSkillLevel(0, skillLevel);
+    prepareDebugCharacter();
     playerEntity = entityFactory.createPlayer(playerData, new com.badlogic.gdx.math.Vector2(0, 0));
     arenaZone.attachEntity(playerEntity);
     initializePlayerComposite();
@@ -316,6 +316,18 @@ public class SkillViewer extends Tool {
     refreshEntityPresentation(playerEntity);
     runtimeLog("event=player_created entity=" + playerEntity
         + " class=" + PRESETS[selectedClass].name + " position=(0,0)");
+  }
+
+  private void prepareDebugCharacter() {
+    playerData.level = 99;
+    playerData.getStats().base().put(com.riiablo.attributes.Stat.level, 99);
+    playerData.getStats().aggregate().put(com.riiablo.attributes.Stat.level, 99);
+    if (Riiablo.files != null && Riiablo.files.skills != null) {
+      for (Skills.Entry skill : Riiablo.files.skills) {
+        if (skill != null && skill.Id >= 0) playerData.setSkillLevel(skill.Id, 20);
+      }
+    }
+    runtimeLog("event=debug_character_prepared class=" + PRESETS[selectedClass].name + " level=99 skills=20");
   }
 
   private void initializePlayerComposite() {
