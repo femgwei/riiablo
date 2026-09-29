@@ -117,7 +117,11 @@ public class DeathHandler extends PassiveSystem {
     }
     
     // Handle monster/NPC death
-    if (mAIWrapper.has(victimId)) {
+    // ServerMonsterCorpseSystem already switches a shattered monster directly
+    // to MODE_DD and spawns the icebreak presentation. Calling AI.kill()
+    // afterwards would enqueue the ordinary DT death animation and race the
+    // shatter transition, producing an intermittent normal corpse animation.
+    if (mAIWrapper.has(victimId) && !isShattered(victimId)) {
       mAIWrapper.get(victimId).ai.kill();
     }
     

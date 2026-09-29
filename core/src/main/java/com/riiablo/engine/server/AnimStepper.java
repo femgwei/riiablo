@@ -57,6 +57,12 @@ public class AnimStepper extends IntervalIteratingSystem {
     int delta = animData.override >= 0 ? animData.override : animData.speed;
     UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null) {
+      // Native FREEZE stops the current action frame while the unit is alive.
+      // Death processing removes/retains the state before the next animation
+      // tick, allowing an ordinary DT sequence to play when appropriate.
+      if (states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)) {
+        return;
+      }
       delta = scaleStateAnimationSpeed(
           delta, states.stateList.getTotalAnimationRateModifier());
     }

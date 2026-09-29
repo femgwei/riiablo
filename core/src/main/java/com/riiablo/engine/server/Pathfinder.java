@@ -76,6 +76,11 @@ public class Pathfinder extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    Velocity velocity = mVelocity.get(entityId);
+    if (velocity.stateMovementLocked) {
+      velocity.velocity.setZero();
+      return;
+    }
     Vector2 position0 = mPosition.get(entityId).position;
     tmpVec2.set(position0);
     Pathfind pathfind = mPathfind.get(entityId);
@@ -199,12 +204,12 @@ public class Pathfinder extends IteratingSystem {
       }
     }
 
-    Velocity velocity = mVelocity.get(entityId);
     boolean running = VelocityModeChanger.isRunRequested(
             mRunning.has(entityId), mTemporaryRunning.has(entityId))
         && (!mAttributes.has(entityId)
             || StaminaSystem.hasRunStamina(mAttributes.get(entityId)));
-    float speed = velocity.speed(running);
+    float speed = velocity.speed(running)
+        * Math.max(0f, Math.min(1f, velocity.stateSpeedMultiplier));
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
           entityId, running, velocity.walkSpeed, velocity.runSpeed);

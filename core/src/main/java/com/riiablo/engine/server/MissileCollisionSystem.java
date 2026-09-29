@@ -1256,7 +1256,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Vector2 impactPosition = impact != null && !impact.isZero(0.0001f) ? impact : to;
     emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
     triggerNativeNullHit(entityId, missile, impactPosition);
-    spawnNativeMapExplosion(missile, impactPosition);
+    spawnNativeMapExplosion(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
     // Native SrvDmgHitHandler is invoked with a null target for barrier/wall
     // collisions.  It consumes the travelling missile even when CollideKill
     // is clear; CollideKill controls unit-hit persistence, not map barriers.
@@ -1523,7 +1523,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         // map-explosion path) but not when it struck a monster.
         int spawned = spawnAmazonExplosion(missile, missilePos, targetId);
         if (spawned == 0) {
-          spawnNativeMapExplosion(missile, missilePos);
+          spawnNativeMapExplosion(missileId, missile, targetId, missilePos);
         }
       } else if (!suppressSideEffects && missile.missile != null
           && (missile.missile.Explosion != 0
@@ -1531,7 +1531,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         // Rows that do not use SrvHit04 still route their unit impact through
         // the native explosion fields.  Keep this in the unit-hit path so the
         // visual is emitted for monster/player impacts as well as walls.
-        spawnNativeMapExplosion(missile, missilePos);
+        spawnNativeMapExplosion(missileId, missile, targetId, missilePos);
       }
       if (missile.missile != null && missile.missile.pSrvHitFunc == 9
           && !missile.hitFunctionTriggered) {
@@ -2502,8 +2502,9 @@ public class MissileCollisionSystem extends IteratingSystem {
    * create ExplosionMissile or one of the HitSubMissile rows.  Keep this
    * generic so elemental projectiles do not depend on an Amazon-only handler.
    */
-  private void spawnNativeMapExplosion(Missile source, Vector2 origin) {
-    if (factory == null || source == null || source.missile == null || origin == null) return;
+  private void spawnNativeMapExplosion(int sourceId, Missile source, int targetId,
+      Vector2 origin) {
+    if (source == null || source.missile == null || origin == null) return;
     String name = source.missile.ExplosionMissile;
     if ((name == null || name.isEmpty()) && source.missile.Explosion != 0
         && source.missile.HitSubMissile != null
@@ -2517,6 +2518,24 @@ public class MissileCollisionSystem extends IteratingSystem {
           source.missile.Missile, name);
       return;
     }
+
+    // Ice Arrow's ExplosionMissile is a client-only hit flash.  D2MOO's
+    // server path resolves the parent packet once (SrvDmg02 converts cold
+    // length to freeze length); it does not create a second damaging missile.
+    // Emit the child presentation directly so clients render IceArrowExplode
+    // without applying the packet twice.
+    if ("icearrow".equalsIgnoreCase(source.missile.Missile)) {
+      Vector2 facing = mVelocity.has(sourceId) ? mVelocity.get(sourceId).velocity : Vector2.X;
+      if (events != null) {
+        events.dispatch(MissileImpactEvent.obtain(sourceId, row.Id, source.ownerId, targetId,
+            origin, facing).withPresentation(row.CelFile,
+            "data\\global\\palette\\units\\pal.dat", row.HitSound));
+      }
+      log.debug("[MISSILE_IMPACT] source={} child={} entity={} pos=({}, {})",
+          source.missile.Missile, row.Missile, sourceId, origin.x, origin.y);
+      return;
+    }
+    if (factory == null) return;
     int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId);
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
@@ -3169,11 +3188,6 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       if (missile != null && missile.freezesTarget) {
         StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
-        // Ice Arrow, Freezing Arrow and the other native freeze packets keep
-        // the frozen death mode through the lethal hit.  The old path only
-        // relied on the cold callback's random shatter roll, so most frozen
-        // monsters still entered an ordinary corpse animation.
-        markFrozenShatter(targetId, attackerId, combat.coldDuration);
       } else if (isColdArrow(missile)) {
         // Cold Arrow is a chill-only packet.  It slows and tints the target,
         // but its lethal hit must retain the normal corpse.
@@ -3233,14 +3247,6 @@ public class MissileCollisionSystem extends IteratingSystem {
     return false;
   }
 
-  private void markFrozenShatter(int targetId, int sourceId, int duration) {
-    if (!mUnitStates.has(targetId)) return;
-    StateList states = mUnitStates.get(targetId).stateList;
-    if (states == null || !states.hasState(StateId.FREEZE)) return;
-    UnitState shatter = states.extendState(StateId.SHATTER, Math.max(1, duration), 1, sourceId);
-    if (shatter != null) shatter.needsSync = true;
-  }
-
   private void clearShatter(int targetId) {
     if (!mUnitStates.has(targetId)) return;
     StateList states = mUnitStates.get(targetId).stateList;
@@ -3262,7 +3268,8 @@ public class MissileCollisionSystem extends IteratingSystem {
   private static boolean convertsColdToFreeze(Missile missile) {
     if (isIceBlast(missile)) return true;
     return missile != null && missile.missile != null
-        && ("frze".equalsIgnoreCase(missile.missile.EType)
+        && (missile.missile.pSrvDmgFunc == 2
+            || "frze".equalsIgnoreCase(missile.missile.EType)
             || "freeze".equalsIgnoreCase(missile.missile.EType));
   }
 
