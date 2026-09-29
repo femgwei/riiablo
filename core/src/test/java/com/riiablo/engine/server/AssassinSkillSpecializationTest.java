@@ -119,6 +119,15 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void trapAttackResolutionFailsClosedWhenSummonHasNoAttackSkill() {
+    Monster malformedTrap = new Monster();
+    malformedTrap.monstats = new com.riiablo.codec.excel.MonStats.Entry();
+    Skills.Entry placement = Riiablo.files.skills.get("Lightning Sentry");
+    assertEquals(null, AssassinTrapSystem.resolveAttackSkill(malformedTrap, placement),
+        "a trap summon without MonStats Skill1/Skill2 must not reuse its placement skill");
+  }
+
+  @Test
   void shadowWarriorUsesNativeSrvDo049AndOwnedPetState() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

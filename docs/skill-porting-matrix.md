@@ -164,6 +164,10 @@
 - 已补齐 helper missile 的 fail-closed 门槛：`AssassinTrapSystem` 只接受 `srvmissile*`
   服务端字段，不再把 `cltmissile*` 视觉字段当成权威伤害导弹；对应回归位于
   `AssassinSkillSpecializationTest.trapMissileResolutionRejectsClientOnlyHelperRows`。
+- 已按 D2MOO `AITHINK_Fn101_AssassinSentry` / `AITHINK_Fn104_DeathSentry` 收紧攻击技能
+  解析：召唤体缺少 `MonStats.Skill1/Skill2` 时进入 fail-closed，不再回退执行放置技能，
+  防止 `SrvDo045` 递归或错误 helper missile；对应回归位于
+  `AssassinSkillSpecializationTest.trapAttackResolutionFailsClosedWhenSummonHasNoAttackSkill`。
 
 ### Barbarian
 

@@ -688,6 +688,12 @@ public class AssassinTrapSystem extends IteratingSystem {
   }
 
   static Skills.Entry resolveAttackSkill(Monster monster, Skills.Entry fallback) {
+    // D2MOO's sentry AI first resolves MonStats.Skill[0] (and Death Sentry's
+    // corpse/lightning Skill[1]).  A missing row makes the pet idle; it does
+    // not execute the placement skill again.  Falling back to a SrvDo045
+    // placement row could recurse into trap creation or fire the wrong helper
+    // missile, so malformed summon rows fail closed.
+    if (monster == null || monster.monstats == null) return null;
     if (monster != null && monster.monstats != null
         && "DeathSentry".equalsIgnoreCase(monster.monstats.AI)
         && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
@@ -701,7 +707,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       Skills.Entry attack = Riiablo.files.skills.get(monster.monstats.Skill1);
       if (attack != null) return attack;
     }
-    return fallback;
+    return null;
   }
 
   private static int attackChance(Monster monster) {
