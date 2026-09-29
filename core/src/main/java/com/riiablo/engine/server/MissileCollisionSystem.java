@@ -3250,10 +3250,13 @@ public class MissileCollisionSystem extends IteratingSystem {
         || "explodingarrowexp2".equalsIgnoreCase(missileName)) return true;
     int hitClass = missile.missile.HitClass;
     if (hitClass != 32 && hitClass != 48 && hitClass != 64 && hitClass != 80) return false;
-    // HitClass only selects the native impact sound family.  Ordinary arrows
-    // can carry an elemental weapon packet while still having no client hit
-    // callback; do not suppress the generic weapon flash in that case.
-    if (missile.missile.pCltHitFunc != 0) return true;
+    // A client hit callback is not, by itself, proof that this port has a
+    // native visual implementation for the callback.  In particular,
+    // lightningjavelin uses pCltHitFunc=10 with no CltHitSubMissile; the
+    // original client supplies the lightning flash through that callback,
+    // while riiablo must use the generic elemental presentation instead.
+    // Suppress the generic flash only when a concrete native child missile is
+    // available (or an explicit parent implementation above owns the effect).
     if (missile.missile.CltHitSubMissile != null) {
       for (String child : missile.missile.CltHitSubMissile) {
         if (child != null && !child.isEmpty()) return true;
