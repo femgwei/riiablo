@@ -28,8 +28,11 @@
 - [x] 扩展 `NecromancerSummonIntegrationTest`：Raise Skeleton 创建失败释放尸体预留，
   fading corpse 在预留前拒绝，Revive 对可用但不可复活尸体不变更状态，Iron Golem 创建
   失败释放地面金属物品预留；对应 dark-magic 的 effect-time revalidation/atomic rollback。
+- [x] 扩展 `SummonedPetSystemTest`：覆盖 Skeleton/Skeleton Mage/Golem/Revive 的
+  PetType 归一化与可跟随标志、owner 离开时统一清理，以及 Golem/Revive 跨区跟随；修正
+  带空格的 `Clay Golem`/`Iron Golem` 等 PetType 名称归一化到原生共享 `golem` 列表。
 - [ ] Poison Nova 与召唤事务首轮核对完成；PetType 上限替换、owner 清理和重连仍需按
-  D2MOO 逐项验收。
+  真实 ServerEntityFactory 的 PetMax 最旧实体替换及重连快照仍需按 D2MOO 逐项验收。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 

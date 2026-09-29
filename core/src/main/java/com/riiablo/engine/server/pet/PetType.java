@@ -157,8 +157,10 @@ public final class PetType {
     // Skills.txt normally stores all golems as the native PetType.txt
     // ``golem`` row.  Keep explicit monster-style names in the same list too
     // so custom skill tables cannot accidentally allow several golems.
-    if ("claygolem".equals(value) || "bloodgolem".equals(value)
-        || "irongolem".equals(value) || "firegolem".equals(value)) return "golem";
+    if ("claygolem".equals(value) || "clay golem".equals(value)
+        || "bloodgolem".equals(value) || "blood golem".equals(value)
+        || "irongolem".equals(value) || "iron golem".equals(value)
+        || "firegolem".equals(value) || "fire golem".equals(value)) return "golem";
     if ("shadow master".equals(value)) return "shadowwarrior";
     if ("oak sage".equals(value)) return "totem";
     if ("heart of wolverine".equals(value) || "spirit of barbs".equals(value)) return "totem";

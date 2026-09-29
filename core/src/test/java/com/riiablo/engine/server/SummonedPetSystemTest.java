@@ -105,6 +105,66 @@ class SummonedPetSystemTest {
   }
 
   @Test
+  void nativeNecromancerPetTypesShareGolemQuotaAndFollowOwner() {
+    assertEquals("golem", com.riiablo.engine.server.pet.PetType.canonical("Clay Golem"));
+    assertEquals("golem", com.riiablo.engine.server.pet.PetType.canonical("iron golem"));
+    assertTrue(com.riiablo.engine.server.pet.PetType.sameNativeType("claygolem", "firegolem"));
+    assertFalse(com.riiablo.engine.server.pet.PetType.sameNativeType("skeleton", "skeletonmage"));
+    for (String petType : new String[] {"skeleton", "skeletonmage", "golem", "revive"}) {
+      assertTrue(com.riiablo.engine.server.pet.PetType.canBeUnsummoned(petType));
+      assertTrue(com.riiablo.engine.server.pet.PetType.warpsWithOwner(petType));
+    }
+  }
+
+  @Test
+  void necromancerPetsAreRemovedTogetherWhenOwnerLeaves() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new SummonedPetSystem()).build());
+    try {
+      OpenZone zone = new OpenZone();
+      int owner = createOwner(world, zone, 40f, 40f);
+      int skeleton = createPet(world, owner, zone, 38f, 40f, "skeleton");
+      int mage = createPet(world, owner, zone, 39f, 40f, "skeletonmage");
+      int golem = createPet(world, owner, zone, 41f, 40f, "golem");
+      int revive = createPet(world, owner, zone, 42f, 40f, "revive");
+
+      // Player leave removes the owner relation before the summon lifecycle
+      // tick; Artemis entity deletion itself is deferred until after systems.
+      world.getMapper(Player.class).remove(owner);
+      world.process();
+
+      assertFalse(world.getEntityManager().isActive(skeleton));
+      assertFalse(world.getEntityManager().isActive(mage));
+      assertFalse(world.getEntityManager().isActive(golem));
+      assertFalse(world.getEntityManager().isActive(revive));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void necromancerReviveAndGolemFollowOwnerAcrossZoneBoundary() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new SummonedPetSystem()).build());
+    try {
+      OpenZone oldZone = new OpenZone();
+      OpenZone ownerZone = new OpenZone();
+      int owner = createOwner(world, ownerZone, 60f, 60f);
+      int golem = createPet(world, owner, oldZone, 2f, 3f, "golem");
+      int revive = createPet(world, owner, oldZone, 3f, 3f, "revive");
+
+      world.process();
+
+      assertTrue(world.getEntityManager().isActive(golem));
+      assertTrue(world.getEntityManager().isActive(revive));
+      assertSame(ownerZone, world.getMapper(MapWrapper.class).get(golem).zone);
+      assertSame(ownerZone, world.getMapper(MapWrapper.class).get(revive).zone);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void crossZoneWarpClearsOldMovementCombatAndAiIntent() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new SummonedPetSystem()).build());
