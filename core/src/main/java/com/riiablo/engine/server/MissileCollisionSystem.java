@@ -464,7 +464,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (skill != null) {
       MissileDamageResolver.initializeSorceressFireArea(vent, skill,
           owner, mPlayer.has(controller.ownerId), vent.damageLevel,
-          ignored -> 0, null);
+          skillName -> baseSkillLevel(controller.ownerId, skillName), null);
     }
     log.debug("[DRUID_FISSURE] phase=vent controller={} child={} missile={} "
             + "remaining={} tick={} position=({}, {})",
@@ -526,7 +526,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (skill != null) {
       MissileDamageResolver.initializeSorceressFireArea(eruption, skill,
           owner, mPlayer.has(controller.ownerId), eruption.damageLevel,
-          ignored -> 0, null);
+          name2 -> baseSkillLevel(controller.ownerId, name2), null);
     }
     log.debug("[DRUID_VOLCANO] phase=eruption controller={} child={} missile={} "
             + "remaining={} tick={} position=({}, {})",

@@ -307,6 +307,10 @@
   生成火焰裂缝子导弹；服务端固定火焰伤害快照并同步生命周期，新增 Fissure 无渲染测试。
 - 德鲁伊 Volcano `SrvDo123` 已完成首轮：目标点控制导弹、确定性喷发种子、周期火焰
   子导弹及服务端伤害快照均已接通，新增 Volcano 无渲染测试。
+- 对照 D2MOO 的技能协同公式后，修正 Fissure/Volcano 控制器生成子导弹时丢失施法者
+  硬点的问题；子导弹现在沿用 `baseSkillLevel` 读取 `EDmgSymPerCalc`，并由
+  `DruidVolcanoIntegrationTest.eruptionChildSnapshotsDruidFireSynergyFromOwnerHardPoints`
+  锁定 Volcano 的 Eruption 协同快照。
 - 德鲁伊 Armageddon/Hurricane `SrvDo124` 已完成首轮：状态持续时间、周期延迟、合法
   目标筛选、区域导弹和多人状态快照已接通，新增无渲染状态测试。
 

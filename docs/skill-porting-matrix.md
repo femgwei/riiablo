@@ -195,6 +195,9 @@
 - dark-magic exact-ID 对照：当前没有 Druid 配置。
 - 审计依据：D2MOO 1.10f 的 Druid skill/形态/召唤链和真实 MPQ；dark-magic 的通用状态、导弹、持续区域和 summon 测试结构仍可移植。
 - 重点门槛：形态状态与武器/动画、持续区域导弹生命周期、召唤物所有权、毒素/火焰快照和重连。
+- 本轮补齐持续区域子导弹的协同快照：Fissure/Volcano 控制器生成的火焰子导弹现在
+  读取施法者硬点 `baseSkillLevel`，不再因子导弹阶段使用空 resolver 而丢失
+  `EDmgSymPerCalc`；`DruidVolcanoIntegrationTest` 已覆盖 Volcano 的 Eruption 协同。
 
 ## dark-magic 测试用例移植映射
 

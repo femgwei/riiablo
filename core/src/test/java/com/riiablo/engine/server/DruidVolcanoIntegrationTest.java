@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -59,6 +60,41 @@ class DruidVolcanoIntegrationTest extends RiiabloTest {
       assertEquals(4, controller.damageLevel);
       assertTrue(controller.nativeLifetimeFrames > 0);
       assertTrue(controller.damageSnapshot);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void eruptionChildSnapshotsDruidFireSynergyFromOwnerHardPoints() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      world.setDelta(1f / 25f);
+      int druid = createDruid(world, 4);
+      world.getMapper(Player.class).get(druid).data.setSkillLevel(SkillId.FISSURE, 5);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.VOLCANO);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.VOLCANO, Engine.INVALID_ENTITY, new Vector2(8, 0),
+          skill.srvdofunc, skill.cltdofunc));
+      world.process();
+
+      assertTrue(factory.created.size() >= 2,
+          "the native controller must emit at least one eruption child");
+      Missile eruption = factory.created.get(1);
+      int withoutSynergy = MissileDamageResolver.skillElementalDamage(
+          skill, 4, true, name -> 0);
+      int withSynergy = MissileDamageResolver.skillElementalDamage(
+          skill, 4, true,
+          name -> "Eruption".equalsIgnoreCase(name) ? 5 : 0);
+      assertTrue(withSynergy > withoutSynergy,
+          "the 1.10f Volcano row must expose its authored Eruption synergy formula="
+              + skill.EDmgSymPerCalc + " base=" + withoutSynergy + " with=" + withSynergy);
+      assertTrue(eruption.elementalMinRateFixed > (withoutSynergy << 8),
+          "eruption child must preserve the owner's hard-point synergy snapshot");
     } finally {
       world.dispose();
     }
