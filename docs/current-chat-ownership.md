@@ -57,6 +57,16 @@
   trail 本身也没有直接 poison 字段，因此不把毒素命中写成已完成。相关实现不覆盖
   Amazon、Assassin 或其他 agent 的未提交修改。
 
+- 2026-09-30 继续核对 Druid vine 尸体生命周期：D2MOO `SrvSt63` 只设置
+  `CORPSE_NOSELECT`、刷新尸体并创建 `SrvMissileA`，没有尸体删除/隐藏/消费调用；
+  `MISSMODE_SrvDo33_VineRecyclerDelay` 只按 `Range=47` 帧倒计时并最终移除延迟导弹。
+  riiablo 保留 corpse 实体和 `usable`，由零速度导弹的原生 lifetime 在第 47 帧结束，
+  语义已锁定在 `DruidVineCorpseCyclerTest`。同时补齐 `pCltDoFunc=51`：第 20 帧创建
+  `recycler vine`，第 45 帧创建 `recycler explosion`，两者均为客户端表现实体；
+  `DruidVineRecyclerPresentationTest.vineRecyclerUsesNativeDelayedClientChildren` 锁定真实
+  1.10f 行号和参数。当前剩余项是实际客户端资源观感及 poison trail 命中，不再把尸体
+  删除作为待办。
+
 - 分支：`master`
 - 当前功能提交：`a128ee0661169a09ba4eae31264fbcea12cbaa63`（已与 `origin/master` 一致）
 - 本轮开始基线：`1f8f15cb`（载入崩溃修复）

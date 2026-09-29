@@ -107,6 +107,29 @@ class DruidVineCorpseCyclerTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void recyclerDelayUsesNativeLifetimeAndDoesNotConsumeCorpse() {
+    Skills.Entry skill = Riiablo.files.skills.get("VineCycler");
+    assertNotNull(skill);
+    Missiles.Entry delay = Riiablo.files.Missiles.get(skill.srvmissilea);
+    assertNotNull(delay);
+    assertEquals("vine recycler delay", delay.Missile);
+    assertEquals(33, delay.pSrvDoFunc);
+    assertEquals(0, delay.pSrvHitFunc);
+    assertEquals(0, delay.pSrvDmgFunc);
+    assertEquals(45, delay.Param[0]);
+    assertEquals(47, delay.Range);
+    assertEquals(0, delay.Vel);
+
+    Missile projectile = new Missile().set(delay, Vector2.Zero, delay.Range);
+    assertEquals(delay.Range, projectile.nativeLifetimeFrames,
+        "zero-velocity SrvDo33 delay must expire on its native Range frame");
+    assertTrue(MissileCollisionSystem.hasNativeCollision(projectile),
+        "SrvDo33 remains a server missile mode even without hit/damage callbacks");
+    // D2MOO SrvSt63 never removes the corpse or clears CORPSE_NOSELECT;
+    // corpse cleanup remains owned by the normal corpse lifecycle.
+  }
+
   private static Attributes attributes(int level, float hp) {
     Attributes attrs = Attributes.obtainStandard();
     attrs.base().put(Stat.level, level);

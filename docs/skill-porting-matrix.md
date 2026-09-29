@@ -228,6 +228,8 @@
   锁定 owner/坐标/skillId/skillLevel 和重复施放防重；`D2GSHeadlessClient
   --require-vine --vine-skill 231/241` 已通过真实双客户端的尸体目标、导弹共享和
   observer reconnect 门槛。
+  D2MOO 核对确认该 delay missile 只按 `Range=47` 帧结束，不消费尸体；客户端
+  `pCltDoFunc=51` 的第 20/45 帧 `recycler vine`/`recycler explosion` 已按原生参数补齐。
   由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为已验证结果。
 
 ## dark-magic 测试用例移植映射

@@ -5714,9 +5714,14 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] `D2GSHeadlessClient --require-vine --vine-skill 231` 和 `241` 已覆盖真实双客户端的
   尸体目标、`SrvSt63` 导弹共享、`CORPSE_NOSELECT` 同步和 observer reconnect；fixture
   在首次证据后快速重连，避免尸体循环高频导弹复用已断开观察者的实体 ID。
-- [ ] 尸体最终消费/生命周期仍需继续对照 D2MOO 的 `STATES_ToggleState` 持续时间和
-  `vine recycler delay` 命中行为；当前实现保留 corpse 实体并先只标记
-  `CORPSE_NOSELECT`，不提前复用 Necromancer 的立即删除语义。
+- [x] 尸体最终消费/生命周期已按 D2MOO 的 `STATES_ToggleState` 和
+  `vine recycler delay` 行为完成核对；实现保留 corpse 实体并只标记
+  `CORPSE_NOSELECT`，不复用 Necromancer 的立即删除语义。
+- [x] 上述生命周期已完成源码核对：`SrvSt63` 没有 corpse 删除/隐藏/消费调用，
+  `MISSMODE_SrvDo33_VineRecyclerDelay` 只按 `Range=47` 帧结束 delay missile；
+  riiablo 的零速度导弹 lifetime 与 `DruidVineCorpseCyclerTest` 已锁定该行为，
+  并新增原生客户端 `pCltDoFunc=51` 的第 20/45 帧 `recycler vine`/
+  `recycler explosion` 表现子导弹（数据断言见 `DruidVineRecyclerPresentationTest`）。
 - [ ] D2MOO 当前 `plague vines trail` 行为数据为 `pSrvHitFunc=50`、`pSrvDmgFunc=0`，
   且没有直接 `EType/EMin/EMax` 毒素字段；本轮只确认 trail 生成和同步，不宣称毒素命中
   已完成。跨区域跟随仍待单独门槛。

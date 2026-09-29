@@ -127,6 +127,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
+    // Native client callback 51 is used by recycler delay missiles.  The
+    // server-side SrvDo33 only holds the stationary delay missile and does
+    // not create these render-only vine/explosion children.
+    if (function == 51) {
+      processRecyclerDelayFunction(entityId, visual, source, delta);
+      return;
+    }
     // Native client callback 3 is used by Plague Javelin itself.  Its server
     // callback is SrvDo03, so the server only creates the poison cloud fan-out
     // at impact; the client callback must lay the visual cloud trail while the
@@ -188,7 +195,45 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   }
 
   static boolean isClientFlightFunction(int function) {
-    return function == 3 || function == 4 || function == 8 || function == 49;
+    return function == 3 || function == 4 || function == 8 || function == 49
+        || function == 51;
+  }
+
+  /** Executes the native pCltDoFunc=51 recycler-delay timeline. */
+  private void processRecyclerDelayFunction(int entityId, Missile visual,
+      Missiles.Entry source, float delta) {
+    if (source == null) return;
+    int elapsedFrames = Math.max(1, Math.round(delta * 25f));
+    int previousFrame = advanceClientFrame(visual, elapsedFrames);
+    int currentFrame = visual.clientFrame;
+    int vineFrame = cltParam(source, 0, 20);
+    int explosionFrame = cltParam(source, 1, 45);
+    Vector2 at = mPosition.get(entityId).position;
+    if (!visual.clientRecyclerVineSpawned
+        && recyclerFrameReached(previousFrame, currentFrame, vineFrame)) {
+      createFlightVisual(source, first(source.CltSubMissile, 0), at, 0f);
+      visual.clientRecyclerVineSpawned = true;
+      log.debug("[MISSILE_RECYCLER] source={} child=recycler_vine frame={} entity={}",
+          source.Missile, currentFrame, entityId);
+    }
+    if (!visual.clientRecyclerExplosionSpawned
+        && recyclerFrameReached(previousFrame, currentFrame, explosionFrame)) {
+      createFlightVisual(source, first(source.CltSubMissile, 1), at, 0f);
+      visual.clientRecyclerExplosionSpawned = true;
+      log.debug("[MISSILE_RECYCLER] source={} child=recycler_explosion frame={} entity={}",
+          source.Missile, currentFrame, entityId);
+    }
+    // The server removes the delay missile at Range. Keep a local replica
+    // bounded as well when no deletion snapshot arrives in the same frame.
+    if (visual.nativeLifetimeFrames > 0
+        && currentFrame >= visual.nativeLifetimeFrames) {
+      world.delete(entityId);
+    }
+  }
+
+  /** True when a client update crosses a one-shot recycler callback frame. */
+  static boolean recyclerFrameReached(int previousFrame, int currentFrame, int targetFrame) {
+    return targetFrame >= 0 && previousFrame < targetFrame && currentFrame >= targetFrame;
   }
 
   /**
