@@ -104,6 +104,8 @@ import com.riiablo.save.CharData;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Item;
+import com.riiablo.item.BodyLoc;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -326,6 +328,7 @@ public class SkillViewer extends Tool {
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
     prepareDebugCharacter();
+    prepareDebugEquipment();
     playerEntity = entityFactory.createPlayer(playerData, new com.badlogic.gdx.math.Vector2(0, 0));
     arenaZone.attachEntity(playerEntity);
     initializePlayerComposite();
@@ -345,6 +348,26 @@ public class SkillViewer extends Tool {
       }
     }
     runtimeLog("event=debug_character_prepared class=" + PRESETS[selectedClass].name + " level=99 skills=20");
+  }
+
+  /** Gives weapon-dependent skills the minimum real D2 equipment they need. */
+  private void prepareDebugEquipment() {
+    if (playerData == null || Riiablo.files == null) return;
+    if (selectedClass != Riiablo.AMAZON) return;
+    try {
+      ItemGenerator generator = new ItemGenerator();
+      Item bow = generator.generate("sbw");
+      Item arrows = generator.generate("aqv");
+      playerData.getItems().add(bow);
+      playerData.getItems().add(arrows);
+      playerData.getItems().equipItem(BodyLoc.RARM, bow);
+      playerData.getItems().equipItem(BodyLoc.LARM, arrows);
+      runtimeLog("event=debug_equipment_equipped class=Amazon weapon=sbw ammo=aqv quantity="
+          + arrows.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt());
+    } catch (Throwable t) {
+      runtimeLog("event=debug_equipment_failed class=Amazon error="
+          + (t.getMessage() == null ? t.toString() : t.getMessage()).replace('\n', ' '));
+    }
   }
 
   private void initializePlayerComposite() {
