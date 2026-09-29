@@ -515,6 +515,9 @@ public class ServerSkillSystem extends PassiveSystem {
     // native summons are server entities rather than visual projectiles and
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
+        // Amazon bow skills must use the authoritative local missile path so
+        // Skills.txt elemental damage/cold length is captured before impact.
+        && !NativeSkillResolver.isAmazonBowSkill(skill)
         // Normal bow/crossbow Attack has no legacy client projectile. It must
         // reach the authoritative missile path below just like Throw does.
         && !rangedNormalAttack

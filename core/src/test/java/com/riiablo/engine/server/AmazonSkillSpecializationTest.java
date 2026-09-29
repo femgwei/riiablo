@@ -1264,6 +1264,54 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void localEffectsModeCreatesSkillSnapshotForIceArrow() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry iceArrow = Riiablo.files.skills.get("Ice Arrow");
+      data.setSkillLevel(iceArrow.Id, 1);
+      Item bow = new Item();
+      bow.reset();
+      bow.setBase(Riiablo.files.weapons.get("sbw"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+      Item arrows = new Item();
+      arrows.reset();
+      arrows.setBase(Riiablo.files.misc.get("aqv"));
+      arrows.attrs.base().put(Stat.quantity, 2);
+      arrows.attrs.reset();
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+      Attributes attrs = attributes(20, 200);
+      attrs.base().put(Stat.mindamage, 3);
+      attrs.base().put(Stat.maxdamage, 7);
+      attrs.base().put(Stat.tohit, 100);
+      attrs.reset();
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attrs;
+      int target = monster(world, 4, 0);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, iceArrow.Id, target, null, iceArrow.srvdofunc, iceArrow.cltdofunc));
+
+      assertEquals(1, factory.created.size());
+      Missile arrow = factory.created.get(0);
+      assertEquals("icearrow", arrow.missile.Missile);
+      assertTrue(arrow.damageSnapshot,
+          "local Amazon bow skills must use the authoritative snapshot path");
+      assertTrue(arrow.damage.get(Stat.coldmindam).asInt() > 0);
+      assertTrue(arrow.damage.get(Stat.coldlength).asInt() > 0);
+      assertTrue(arrow.freezesTarget);
+      assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void playerSnapshotCarriesAuthoritativeAmmoQuantity() {
     CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
     Item bow = new Item();

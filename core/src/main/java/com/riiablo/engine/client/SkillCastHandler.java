@@ -17,6 +17,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
@@ -190,6 +191,13 @@ public class SkillCastHandler extends PassiveSystem {
     // ServerSkillSystem (Blessed Hammer is now one such authoritative path).
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
     boolean localServer = world.getSystem(ServerSkillSystem.class) != null;
+    // Local single-player worlds use the monsters-only server adapter to keep
+    // player projectiles compatible with the legacy presentation path. Amazon
+    // bow skills are the exception: their cold/fire/impact packet must be
+    // initialized by the authoritative server missile, otherwise Ice Arrow
+    // reaches collision with only the owner's physical weapon damage.
+    boolean localAmazonBowServer = localServer
+        && NativeSkillResolver.isAmazonBowSkill(skill);
     boolean localMonsterServer = mMonster.has(event.entityId) && localServer;
     boolean localBlessedHammerServer = localServer
         && (event.srvdofunc == 73 || skill.srvdofunc == 73);
@@ -234,6 +242,11 @@ public class SkillCastHandler extends PassiveSystem {
     if (authoritativeThrow && (networkClient || localServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_throw entity={} skill={} networkClient={} localServer={}",
           event.entityId, event.skillId, networkClient, localServer);
+      return;
+    }
+    if (localAmazonBowServer) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_amazon_bow entity={} skill={}"
+          + " localServer={}", event.entityId, skill.skill, localServer);
       return;
     }
     boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
