@@ -281,8 +281,13 @@ public class SkillViewer extends Tool {
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new MenuManager(), new DialogManager(), new OverlayManager())
         .with(new ItemManager(), new ItemGenerator())
+        .with(new StateUpdater())
         .with(new Pathfinder(), new Actioneer())
+        .with(new com.riiablo.engine.server.DynamicUnitCollisionSystem(true))
+        .with(new com.riiablo.engine.server.VelocityAdder())
         .with(new AnimDataResolver(), new AnimStepper())
+        .with(new com.riiablo.engine.server.SequenceHandler())
+        .with(new SkillCastHandler())
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
         .with(new CofAlphaHandler(), new CofTransformHandler())
@@ -291,6 +296,8 @@ public class SkillViewer extends Tool {
         .with(new ServerMonsterCorpseSystem())
         .with(new MissileCollisionSystem())
         .with(new ServerSkillSystem(true))
+        .with(new com.riiablo.engine.server.VelocityModeChanger())
+        .with(new com.riiablo.engine.client.DirectionResolver())
         .with(entityFactory);
     com.artemis.WorldConfiguration worldConfig = config.build()
         .register("map", arenaMap)
@@ -788,10 +795,13 @@ public class SkillViewer extends Tool {
           + " skillIndex=" + (skillSelect == null ? -1 : skillSelect.getSelectedIndex()));
       if (button == Input.Buttons.LEFT) {
         com.badlogic.gdx.math.Vector2 world = inputWorld;
-        player.x = world.x;
-        player.y = world.y;
-        if (positions != null && positions.has(playerEntity)) positions.get(playerEntity).position.set(world);
-        runtimeLog("event=player_moved entity=" + playerEntity + " position=" + world);
+        boolean pathStarted = false;
+        if (engine != null && playerEntity != Engine.INVALID_ENTITY) {
+          Pathfinder pathfinder = engine.getSystem(Pathfinder.class);
+          pathStarted = pathfinder != null && pathfinder.findPath(playerEntity, world, true);
+        }
+        runtimeLog("event=move_requested entity=" + playerEntity + " target=" + world
+            + " pathStarted=" + pathStarted);
         return true;
       }
       if (button == Input.Buttons.RIGHT && sessionLog != null && sessionLog.file() != null
