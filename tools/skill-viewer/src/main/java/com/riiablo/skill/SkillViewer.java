@@ -89,15 +89,18 @@ import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.Pathfinder;
+import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 import com.riiablo.save.CharData;
@@ -328,7 +331,7 @@ public class SkillViewer extends Tool {
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
     prepareDebugCharacter();
-    prepareDebugEquipment();
+    prepareDebugEquipment(null);
     playerEntity = entityFactory.createPlayer(playerData, new com.badlogic.gdx.math.Vector2(0, 0));
     arenaZone.attachEntity(playerEntity);
     initializePlayerComposite();
@@ -351,23 +354,98 @@ public class SkillViewer extends Tool {
   }
 
   /** Gives weapon-dependent skills the minimum real D2 equipment they need. */
-  private void prepareDebugEquipment() {
+  private void prepareDebugEquipment(String skillName) {
     if (playerData == null || Riiablo.files == null) return;
-    if (selectedClass != Riiablo.AMAZON) return;
     try {
+      com.riiablo.save.ItemData items = playerData.getItems();
+      if (items.getEquipped(BodyLoc.RARM) != null) items.unequipItem(BodyLoc.RARM);
+      if (items.getEquipped(BodyLoc.LARM) != null) items.unequipItem(BodyLoc.LARM);
+
+      String weaponCode = null;
+      String offhandCode = null;
+      Skills.Entry skill = skillName == null ? null : Riiablo.files.skills.get(skillName);
+      if (selectedClass == Riiablo.AMAZON) {
+        if (NativeSkillResolver.isAmazonJavelinSkill(skill)) weaponCode = "jav";
+        else if (skill == null || NativeSkillResolver.isAmazonBowSkill(skill)) {
+          weaponCode = "sbw";
+          offhandCode = "aqv";
+        }
+      } else if (selectedClass == Riiablo.PALADIN) {
+        weaponCode = "ssd";
+        offhandCode = "buc";
+      } else if (selectedClass == Riiablo.BARBARIAN) {
+        weaponCode = "ssd";
+        offhandCode = "ssd";
+      } else if (selectedClass == Riiablo.ASSASSIN) {
+        weaponCode = "ktr";
+        offhandCode = "ktr";
+      } else if (selectedClass == Riiablo.DRUID) {
+        weaponCode = "clb";
+      } else if (selectedClass == Riiablo.SORCERESS
+          || selectedClass == Riiablo.NECROMANCER) {
+        weaponCode = "sst";
+      }
+      if (weaponCode == null) {
+        runtimeLog("event=debug_equipment_cleared class=" + PRESETS[selectedClass].name
+            + " skill=" + (skillName == null ? "none" : skillName));
+        return;
+      }
       ItemGenerator generator = new ItemGenerator();
-      Item bow = generator.generate("sbw");
-      Item arrows = generator.generate("aqv");
-      playerData.getItems().add(bow);
-      playerData.getItems().add(arrows);
-      playerData.getItems().equipItem(BodyLoc.RARM, bow);
-      playerData.getItems().equipItem(BodyLoc.LARM, arrows);
-      runtimeLog("event=debug_equipment_equipped class=Amazon weapon=sbw ammo=aqv quantity="
-          + arrows.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt());
+      Item weapon = generator.generate(weaponCode);
+      items.add(weapon);
+      items.equipItem(BodyLoc.RARM, weapon);
+      Item offhand = null;
+      if (offhandCode != null) {
+        offhand = generator.generate(offhandCode);
+        items.add(offhand);
+        items.equipItem(BodyLoc.LARM, offhand);
+      }
+      int quantity = offhand != null && offhand.attrs != null
+          && offhand.attrs.base().get(com.riiablo.attributes.Stat.quantity) != null
+          ? offhand.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt() : 0;
+      runtimeLog("event=debug_equipment_equipped class=" + PRESETS[selectedClass].name
+          + " skill=" + (skillName == null ? "none" : skillName)
+          + " weapon=" + weaponCode + " offhand=" + (offhandCode == null ? "none" : offhandCode)
+          + " quantity=" + quantity);
+      refreshPlayerEquipmentPresentation();
     } catch (Throwable t) {
       runtimeLog("event=debug_equipment_failed class=Amazon error="
           + (t.getMessage() == null ? t.toString() : t.getMessage()).replace('\n', ' '));
     }
+  }
+
+  private void refreshPlayerEquipmentPresentation() {
+    if (engine == null || playerEntity == Engine.INVALID_ENTITY || playerData == null) return;
+    CofManager cofs = engine.getSystem(CofManager.class);
+    if (cofs == null) return;
+    com.riiablo.save.ItemData items = playerData.getItems();
+    Item right = items.getEquipped(BodyLoc.RARM);
+    Item left = items.getEquipped(BodyLoc.LARM);
+    Item rh = right != null && right.type.is(com.riiablo.item.Type.WEAP) ? right : null;
+    Item lh = left != null && left.type.is(com.riiablo.item.Type.WEAP) ? left : null;
+    Item shield = right != null && right.type.is(com.riiablo.item.Type.SHLD) ? right
+        : left != null && left.type.is(com.riiablo.item.Type.SHLD) ? left : null;
+    cofs.setWClass(playerEntity, PlayerItemHandler.resolveWeaponClass(items));
+    if ((lh == null) != (rh == null)) {
+      Item bow = rh != null ? rh : lh;
+      if (bow.type.is(com.riiablo.item.Type.BOW)) {
+        lh = bow;
+        rh = null;
+      }
+    }
+    cofs.setComponent(playerEntity, com.riiablo.codec.COF.Component.RH,
+        rh == null ? CofComponents.COMPONENT_NIL
+            : com.riiablo.engine.server.component.Class.Type.PLR.getComponent(rh.base.alternateGfx));
+    cofs.setComponent(playerEntity, com.riiablo.codec.COF.Component.LH,
+        lh == null ? CofComponents.COMPONENT_NIL
+            : com.riiablo.engine.server.component.Class.Type.PLR.getComponent(lh.base.alternateGfx));
+    cofs.setComponent(playerEntity, com.riiablo.codec.COF.Component.SH,
+        shield == null ? CofComponents.COMPONENT_NIL
+            : com.riiablo.engine.server.component.Class.Type.PLR.getComponent(shield.base.alternateGfx));
+    CofChangeEvent event = new CofChangeEvent();
+    event.entityId = playerEntity;
+    engine.getSystem(EventSystem.class).dispatch(event);
+    runtimeLog("event=equipment_presentation_refresh entity=" + playerEntity);
   }
 
   private void initializePlayerComposite() {
@@ -635,9 +713,16 @@ public class SkillViewer extends Tool {
     finishSkillLog();
     String skill = skillSelect.getSelected();
     if (playerData != null) playerData.setSkillLevel(Riiablo.files.skills.index(skill), skillLevel);
+    prepareDebugEquipment(skill);
     sessionLog.begin(CLASS_NAMES[selectedClass], skill, skillLevel, seed);
-    sessionLog.append("weapon=" + PRESETS[selectedClass].weapon + " weaponRequired="
-        + PRESETS[selectedClass].weaponRequired + "\n");
+    Item equippedWeapon = playerData == null ? null
+        : playerData.getItems().getEquippedRangedWeapon();
+    if (equippedWeapon == null && playerData != null) {
+      equippedWeapon = playerData.getItems().getEquipped(BodyLoc.RARM);
+      if (equippedWeapon == null) equippedWeapon = playerData.getItems().getEquipped(BodyLoc.LARM);
+    }
+    sessionLog.append("weapon=" + (equippedWeapon == null ? "none" : equippedWeapon.code)
+        + " weaponRequired=" + PRESETS[selectedClass].weaponRequired + "\n");
     targetModeValue = determineTargetMode(skill);
     sessionLog.append("event=skill_selected targetMode=" + targetModeValue + "\n");
     targetMode.setText("Target: " + targetModeValue);

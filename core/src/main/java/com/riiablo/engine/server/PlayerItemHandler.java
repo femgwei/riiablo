@@ -106,7 +106,7 @@ public class PlayerItemHandler extends BaseEntitySystem implements ItemData.Equi
   }
 
   /** Resolves the active D2 weapon class without loading client presentation assets. */
-  static byte resolveWeaponClass(ItemData itemData) {
+  public static byte resolveWeaponClass(ItemData itemData) {
     Item right = itemData.getEquipped(BodyLoc.RARM);
     Item left = itemData.getEquipped(BodyLoc.LARM);
     Item RH = right != null && right.type.is(com.riiablo.item.Type.WEAP) ? right : null;
