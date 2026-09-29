@@ -32,11 +32,13 @@ import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
+import com.kotcrab.vis.ui.widget.VisSlider;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextArea;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.riiablo.COFs;
 import com.riiablo.Colors;
+import com.riiablo.Colormaps;
 import com.riiablo.Files;
 import com.riiablo.Fonts;
 import com.riiablo.Palettes;
@@ -48,12 +50,14 @@ import com.riiablo.codec.D2;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.FontTBL;
+import com.riiablo.codec.Index;
 import com.riiablo.codec.Palette;
 import com.riiablo.codec.StringTBLs;
 import com.riiablo.loader.BitmapFontLoader;
 import com.riiablo.loader.COFLoader;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.loader.DCCLoader;
+import com.riiablo.loader.IndexLoader;
 import com.riiablo.loader.PaletteLoader;
 import com.riiablo.logger.Level;
 import com.riiablo.logger.LogManager;
@@ -75,6 +79,10 @@ import com.riiablo.engine.client.CofResolver;
 import com.riiablo.engine.client.CofTransformHandler;
 import com.riiablo.engine.client.CofUnloader;
 import com.riiablo.engine.client.MissileLoader;
+import com.riiablo.engine.client.MissileImpactPresentationSystem;
+import com.riiablo.engine.client.ElementalHitPresentationSystem;
+import com.riiablo.engine.client.DeathHandler;
+import com.riiablo.engine.client.StateOverlaySystem;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.client.SkillCastHandler;
@@ -101,6 +109,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.EntityFactory;
@@ -118,6 +127,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.SystemUtils;
 import java.util.Locale;
+import com.riiablo.attributes.Stat;
 
 /**
  * Standalone shell for exercising skills without entering a generated game map.
@@ -177,6 +187,8 @@ public class SkillViewer extends Tool {
   private ComponentMapper<Velocity> velocities;
   private ComponentMapper<Angle> angles;
   private ComponentMapper<AnimationWrapper> animations;
+  private ComponentMapper<AttributesWrapper> attributes;
+  private ComponentMapper<com.riiablo.engine.client.component.Overlay> overlays;
   private Stage stage;
   private VisSelectBox<String> classSelect;
   private VisSelectBox<String> skillSelect;
@@ -186,6 +198,11 @@ public class SkillViewer extends Tool {
   private VisLabel targetMode;
   private VisCheckBox ai;
   private VisCheckBox showGrid;
+  private VisTable selectedMonsterPanel;
+  private VisLabel selectedMonsterLabel;
+  private VisSlider monsterHpSlider;
+  private int selectedMonsterEntity = Engine.INVALID_ENTITY;
+  private boolean updatingMonsterHpSlider;
   private SkillSessionLog sessionLog;
   private VisTable notesPanel;
   private final Array<Marker> monsters = new Array<>();
@@ -264,6 +281,7 @@ public class SkillViewer extends Tool {
     // a keyframe requests them.
     assets.setLoader(Sound.class, new SoundLoader(resolver));
     assets.setLoader(Music.class, new MusicLoader(resolver));
+    assets.setLoader(Index.class, new IndexLoader(resolver));
     assets.setLoader(COF.class, new COFLoader(resolver));
     assets.setLoader(DCC.class, new DCCLoader(resolver));
     assets.setLoader(DC6.class, new DC6Loader(resolver));
@@ -271,6 +289,7 @@ public class SkillViewer extends Tool {
     assets.setLoader(FontTBL.BitmapFont.class, new BitmapFontLoader(resolver));
     Riiablo.files = new Files(assets);
     Riiablo.audio = new Audio(assets);
+    Riiablo.colormaps = new Colormaps(assets);
     Riiablo.fonts = new Fonts(assets);
     Riiablo.palettes = new Palettes(assets);
     Riiablo.colors = new Colors();
@@ -312,12 +331,19 @@ public class SkillViewer extends Tool {
         .with(new AnimDataResolver(), new AnimStepper())
         .with(new com.riiablo.engine.server.SequenceHandler())
         .with(new SkillCastHandler())
+        // Keep the client-side combat presentation that is normally supplied
+        // by GameScreen: elemental hit flashes, freeze color transforms, and
+        // the monster death/shatter callback are all visible in this viewer.
+        .with(new ElementalHitPresentationSystem())
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
         .with(new CofAlphaHandler(), new CofTransformHandler())
         .with(new MissileLoader())
+        .with(new MissileImpactPresentationSystem())
         .with(new AnimationStepper())
+        .with(new StateOverlaySystem())
         .with(new ServerMonsterCorpseSystem())
+        .with(new DeathHandler())
         .with(new MissileCollisionSystem())
         .with(new ServerSkillSystem(true))
         .with(new com.riiablo.engine.server.VelocityModeChanger())
@@ -340,6 +366,8 @@ public class SkillViewer extends Tool {
     velocities = engine.getMapper(Velocity.class);
     angles = engine.getMapper(Angle.class);
     animations = engine.getMapper(AnimationWrapper.class);
+    attributes = engine.getMapper(AttributesWrapper.class);
+    overlays = engine.getMapper(com.riiablo.engine.client.component.Overlay.class);
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
     prepareDebugCharacter();
@@ -522,6 +550,10 @@ public class SkillViewer extends Tool {
     // reference before disposing that manager so a late ECS event cannot
     // enqueue a sound on a dead resource set during reload/shutdown.
     Riiablo.audio = null;
+    if (Riiablo.colormaps != null) {
+      Riiablo.colormaps.dispose();
+      Riiablo.colormaps = null;
+    }
     if (assets != null) {
       assets.dispose();
       assets = null;
@@ -580,7 +612,18 @@ public class SkillViewer extends Tool {
     info.add(status).left().expandX();
     info.add(targetMode).right();
     root.add(info).growX().padTop(5).row();
-    root.add(new VisLabel("Left click: move character | Right click: cast skill")).left().padTop(3).row();
+    root.add(new VisLabel("Left click monster: select + edit HP | Left click ground: move | Right click: cast skill"))
+        .left().padTop(3).row();
+
+    selectedMonsterPanel = new VisTable();
+    selectedMonsterLabel = new VisLabel("Selected monster: none");
+    monsterHpSlider = new VisSlider(0, 100, 1, false);
+    monsterHpSlider.setValue(100);
+    monsterHpSlider.setDisabled(true);
+    selectedMonsterPanel.add(selectedMonsterLabel).width(210).left().padRight(8);
+    selectedMonsterPanel.add(monsterHpSlider).growX().height(24).left();
+    selectedMonsterPanel.setVisible(false);
+    root.add(selectedMonsterPanel).growX().left().padTop(3).row();
 
     notesPanel = new VisTable();
     final VisTextButton notesToggle = new VisTextButton("Test Notes ▼");
@@ -595,6 +638,11 @@ public class SkillViewer extends Tool {
         notes.setVisible(!visible);
         notesToggle.setText(visible ? "Test Notes ▼" : "Test Notes ▲");
     notesPanel.invalidateHierarchy();
+      }
+    });
+    monsterHpSlider.addListener(new ChangeListener() {
+      @Override public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+        if (!updatingMonsterHpSlider) setSelectedMonsterHealth(monsterHpSlider.getValue());
       }
     });
 
@@ -678,6 +726,7 @@ public class SkillViewer extends Tool {
     player.x = 0; player.y = 0;
     monsters.clear();
     corpses.clear();
+    selectMonster(Engine.INVALID_ENTITY);
     ai.setChecked(false);
     updateStatus();
   }
@@ -690,10 +739,27 @@ public class SkillViewer extends Tool {
     int entity = entityFactory.createMonster(fallen.hcIdx, 20 + index * 12, 10 + index * 8);
     if (entity == Engine.INVALID_ENTITY) return;
     arenaZone.attachEntity(entity);
+    prepareDebugMonsterHealth(entity);
     refreshEntityPresentation(entity);
     monsterEntities.add(entity);
     runtimeLog("event=monster_created entity=" + entity + " monster=" + fallen.Id
         + " position=(" + (20 + index * 12) + "," + (10 + index * 8) + ")");
+  }
+
+  /**
+   * Give spawned targets enough life to observe a status effect before the
+   * next missile kills them.  The selected-monster slider can still lower
+   * this value for cold-kill/shatter tests.
+   */
+  private void prepareDebugMonsterHealth(int entity) {
+    if (attributes == null || !attributes.has(entity)) return;
+    com.riiablo.attributes.Attributes attrs = attributes.get(entity).attrs;
+    if (attrs == null) return;
+    attrs.base().put(Stat.maxhp, 999);
+    attrs.base().put(Stat.hitpoints, 999);
+    attrs.aggregate().put(Stat.maxhp, 999);
+    attrs.aggregate().put(Stat.hitpoints, 999);
+    runtimeLog("event=debug_monster_health entity=" + entity + " hp=999 maxhp=999");
   }
 
   private void spawnCorpse() {
@@ -778,6 +844,79 @@ public class SkillViewer extends Tool {
     text.append(" | Weapon: ").append(PRESETS[selectedClass].weapon);
     text.append(" | Monsters: ").append(monsterEntities.size).append(" | Corpses: ").append(corpseEntities.size);
     status.setText(text);
+    updateSelectedMonsterPanel();
+  }
+
+  private int monsterAt(com.badlogic.gdx.math.Vector2 point) {
+    if (positions == null) return Engine.INVALID_ENTITY;
+    int nearest = Engine.INVALID_ENTITY;
+    float best = 10f * 10f;
+    for (int entity : monsterEntities) {
+      if (!isPresentationEntityActive(entity) || !positions.has(entity)) continue;
+      float distance = positions.get(entity).position.dst2(point);
+      if (distance <= best) {
+        best = distance;
+        nearest = entity;
+      }
+    }
+    return nearest;
+  }
+
+  private void selectMonster(int entity) {
+    selectedMonsterEntity = entity;
+    if (entity == Engine.INVALID_ENTITY) {
+      updateSelectedMonsterPanel();
+      return;
+    }
+    runtimeLog("event=monster_selected entity=" + entity);
+    updateSelectedMonsterPanel();
+  }
+
+  private void setSelectedMonsterHealth(float percent) {
+    if (attributes == null || selectedMonsterEntity == Engine.INVALID_ENTITY
+        || !attributes.has(selectedMonsterEntity)) return;
+    com.riiablo.attributes.Attributes attrs = attributes.get(selectedMonsterEntity).attrs;
+    if (attrs == null) return;
+    com.riiablo.attributes.StatRef max = attrs.aggregate().get(Stat.maxhp);
+    if (max == null) max = attrs.base().get(Stat.maxhp);
+    if (max == null) return;
+    float maxHp = Math.max(1f, max.asFixed());
+    float hp = Math.max(0f, Math.min(maxHp, maxHp * percent / 100f));
+    com.riiablo.attributes.StatRef current = attrs.aggregate().get(Stat.hitpoints);
+    if (current == null) current = attrs.aggregate().put(Stat.hitpoints, hp);
+    else current.set(hp);
+    com.riiablo.attributes.StatRef baseCurrent = attrs.base().get(Stat.hitpoints);
+    if (baseCurrent == null) attrs.base().put(Stat.hitpoints, hp);
+    else baseCurrent.set(hp);
+    runtimeLog("event=monster_health_changed entity=" + selectedMonsterEntity
+        + " hp=" + hp + " maxhp=" + maxHp + " percent=" + percent);
+    updateSelectedMonsterPanel();
+  }
+
+  private void updateSelectedMonsterPanel() {
+    if (selectedMonsterPanel == null || selectedMonsterLabel == null || monsterHpSlider == null) return;
+    if (selectedMonsterEntity == Engine.INVALID_ENTITY || attributes == null
+        || !attributes.has(selectedMonsterEntity)) {
+      selectedMonsterPanel.setVisible(false);
+      return;
+    }
+    com.riiablo.attributes.Attributes attrs = attributes.get(selectedMonsterEntity).attrs;
+    com.riiablo.attributes.StatRef hp = attrs == null ? null : attrs.aggregate().get(Stat.hitpoints);
+    com.riiablo.attributes.StatRef max = attrs == null ? null : attrs.aggregate().get(Stat.maxhp);
+    if (hp == null || max == null || max.asFixed() <= 0f) {
+      selectedMonsterPanel.setVisible(false);
+      return;
+    }
+    float currentHp = Math.max(0f, hp.asFixed());
+    float maxHp = Math.max(1f, max.asFixed());
+    float percent = Math.max(0f, Math.min(100f, currentHp / maxHp * 100f));
+    selectedMonsterPanel.setVisible(true);
+    selectedMonsterLabel.setText(String.format(Locale.ROOT,
+        "Selected monster %d: HP %.0f / %.0f", selectedMonsterEntity, currentHp, maxHp));
+    updatingMonsterHpSlider = true;
+    monsterHpSlider.setDisabled(false);
+    monsterHpSlider.setValue(percent);
+    updatingMonsterHpSlider = false;
   }
 
   @Override
@@ -820,6 +959,14 @@ public class SkillViewer extends Tool {
       drawMarker(centerX + player.x, centerY + player.y, Color.CYAN);
       for (Marker marker : monsters) drawMarker(centerX + marker.x, centerY + marker.y, Color.RED);
       for (Marker marker : corpses) drawMarker(centerX + marker.x, centerY + marker.y, Color.DARK_GRAY);
+    }
+    if (selectedMonsterEntity != Engine.INVALID_ENTITY && positions != null
+        && positions.has(selectedMonsterEntity)) {
+      com.badlogic.gdx.math.Vector2 selected = iso.toScreen(
+          positions.get(selectedMonsterEntity).position.cpy());
+      selected.add(Gdx.graphics.getWidth() * .5f, Gdx.graphics.getHeight() * .5f);
+      shapes.setColor(Color.YELLOW);
+      shapes.circle(selected.x, selected.y, 18f, 16);
     }
     shapes.end();
   }
@@ -963,7 +1110,19 @@ public class SkillViewer extends Tool {
     if (animation == null) return;
     com.badlogic.gdx.math.Vector2 screen = iso.toScreen(positions.get(entity).position.cpy());
     screen.add(Gdx.graphics.getWidth() * .5f, Gdx.graphics.getHeight() * .5f);
+    if (overlays != null && overlays.has(entity)) {
+      com.riiablo.engine.client.component.Overlay overlay = overlays.get(entity);
+      if (overlay != null && overlay.isLoaded && overlay.entry != null && overlay.entry.PreDraw) {
+        overlay.animation.draw(batch, screen.x, screen.y);
+      }
+    }
     animation.draw(batch, screen.x, screen.y);
+    if (overlays != null && overlays.has(entity)) {
+      com.riiablo.engine.client.component.Overlay overlay = overlays.get(entity);
+      if (overlay != null && overlay.isLoaded && overlay.entry != null && !overlay.entry.PreDraw) {
+        overlay.animation.draw(batch, screen.x, screen.y);
+      }
+    }
   }
 
   private void drawMarker(float x, float y, Color color) {
@@ -997,6 +1156,11 @@ public class SkillViewer extends Tool {
           + ") world=" + inputWorld + " player=" + playerEntity
           + " skillIndex=" + (skillSelect == null ? -1 : skillSelect.getSelectedIndex()));
       if (button == Input.Buttons.LEFT) {
+        int clickedMonster = monsterAt(inputWorld);
+        if (clickedMonster != Engine.INVALID_ENTITY) {
+          selectMonster(clickedMonster);
+          return true;
+        }
         com.badlogic.gdx.math.Vector2 world = inputWorld;
         moveTarget.set(world);
         moving = playerEntity != Engine.INVALID_ENTITY && positions != null
