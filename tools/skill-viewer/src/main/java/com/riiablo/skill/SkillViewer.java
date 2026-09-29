@@ -221,9 +221,10 @@ public class SkillViewer extends Tool {
     root.add(new VisLabel("左键移动角色 · 右键按目标模式施放技能")).left().padTop(3).row();
 
     notesPanel = new VisTable();
-    final VisTextButton notesToggle = new VisTextButton("测试记录 ▲");
+    final VisTextButton notesToggle = new VisTextButton("测试记录 ▼");
     notesPanel.add(notesToggle).left().row();
     notes = new VisTextArea("");
+    notes.setVisible(false);
     notesPanel.add(notes).grow().minHeight(70);
     root.add(notesPanel).growX().bottom().padTop(6).row();
     notesToggle.addListener(new ChangeListener() {
