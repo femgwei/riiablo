@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Missile;
@@ -112,6 +113,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -806,6 +808,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           || pet.ownerId < 0 || sourceStates.stateList == null || !mPosition.has(pet.ownerId)) {
         continue;
       }
+      if (!sameDruidAuraZone(sourceId, pet.ownerId)) continue;
       Skills.Entry skill = Riiablo.files.skills.get(pet.skillId);
       int stateId = DruidSkills.getSummonAuraState(skill);
       if (!isDruidSpiritAura(stateId)) continue;
@@ -823,6 +826,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       for (int j = 0; j < targets.size(); j++) {
         int targetId = targets.get(j);
         if (targetId == sourceId || !isAlive(targetId)
+            || !sameDruidAuraZone(sourceId, targetId)
             || !druidAuraAlly(pet.ownerId, targetId)
             || origin.dst2(mPosition.get(targetId).position) > range * (float) range) continue;
         UnitStates targetStates = mUnitStates.get(targetId);
@@ -860,6 +864,26 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   private static String auraLayerKey(int targetId, int stateId, int sourceId, int skillId) {
     return targetId + ":" + stateId + ":" + sourceId + ":" + skillId;
+  }
+
+  /** Native aura scans stay inside the current room/level; coordinates alone
+   * must not allow a spirit in another zone to affect its owner. */
+  private boolean sameDruidAuraZone(int first, int second) {
+    if (mMapWrapper != null && mMapWrapper.has(first) && mMapWrapper.has(second)) {
+      MapWrapper firstWrapper = mMapWrapper.get(first);
+      MapWrapper secondWrapper = mMapWrapper.get(second);
+      if (firstWrapper != null && secondWrapper != null
+          && firstWrapper.zone != null && secondWrapper.zone != null) {
+        return firstWrapper.zone == secondWrapper.zone;
+      }
+    }
+    if (map != null && mPosition.has(first) && mPosition.has(second)) {
+      Map.Zone firstZone = map.getZone(mPosition.get(first).position);
+      Map.Zone secondZone = map.getZone(mPosition.get(second).position);
+      if (firstZone != null && secondZone != null) return firstZone == secondZone;
+    }
+    // Headless entities can be inserted before room assignment.
+    return true;
   }
 
   private static boolean isDruidSpiritAura(int stateId) {

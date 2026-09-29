@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid spirit aura 区域边界
+
+- [x] 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SKILLS_SrvDo115_Vines`、
+  `SKILLS_SrvDo119_DruidSummon` 及其 room 归属语义，修正 spirit aura 投影：source、
+  owner、目标必须位于同一 `Map.Zone`；即使跨区坐标重合，也不能继续获得 Oak Sage、
+  Wolverine 或 Spirit of Barbs 的 source-owned layer。
+- [x] 新增 `DruidSummonIntegrationTest.spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap`，
+  覆盖跨区移动后 owner aura layer 的撤销；Druid 召唤/藤蔓/风暴专项全部通过。
+- [ ] 仍待真实 1.10f MPQ 双客户端确认 spirit aura 的旧客户端快照、重连和跨区迁移表现；
+  下一步继续审计 summon aura 的 party/mercenary/summon 目标过滤和死亡时序。
+
 ## 2026-09-30 Paladin 付费周期光环法力门控
 
 - [x] 对照 D2MOO `SKILLS_SrvDo065_BasicAura`、`SrvDo066_HolyFire_HolyShock_Sanctuary_Conviction`、

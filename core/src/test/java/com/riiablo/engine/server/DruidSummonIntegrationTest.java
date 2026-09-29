@@ -13,6 +13,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -209,6 +210,48 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       assertTrue(ownerStates.stateList.getStateLayer(
           StateId.BARBS, sources[2], SkillId.SPIRIT_OF_BARBS) == null,
           "removing the spirit must revoke its source-owned layer");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("druid-zone", (byte) Riiablo.DRUID);
+      data.setSkillLevel(SkillId.OAK_SAGE, 8);
+      world.getMapper(Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(10, 10);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(20, 100);
+      world.getMapper(UnitStates.class).create(owner).init(owner);
+
+      com.riiablo.map.Map.Zone ownerZone = new com.riiablo.map.Map.Zone();
+      com.riiablo.map.Map.Zone otherZone = new com.riiablo.map.Map.Zone();
+      world.getMapper(MapWrapper.class).create(owner).set(map, ownerZone);
+
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.OAK_SAGE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.OAK_SAGE, Engine.INVALID_ENTITY, new Vector2(10, 10),
+          skill.srvdofunc, skill.cltdofunc));
+      int source = factory.lastEntity;
+      world.getMapper(MapWrapper.class).create(source).set(map, ownerZone);
+      world.setDelta(1f / 25f);
+      world.process();
+      assertTrue(world.getMapper(UnitStates.class).get(owner).stateList
+          .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE) != null);
+
+      // Keep the same coordinates but move only the spirit to another zone.
+      world.getMapper(MapWrapper.class).get(source).set(map, otherZone);
+      world.process();
+      assertTrue(world.getMapper(UnitStates.class).get(owner).stateList
+          .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE) == null,
+          "a spirit aura must be revoked when source and owner are in different zones");
     } finally {
       world.dispose();
     }
