@@ -133,8 +133,10 @@
   owner/PetType/skillId/unsummonable 重连字段。
 - `headlessSummonReconnect` 已通过真实 1.10f MPQ 双客户端门槛：死灵法师 Skeleton 在
   `SummonedPetP` 中保持 ownerId/PetType/skillId/unsummonable；观察客户端断线不会清理
-  召唤物，重连后按原 entityId 重放快照，旧 owner 的召唤物仍保持活动。
-- 当前剩余门槛集中在旧客户端不识别 `SummonedPetP` 时的 MonsterP 兼容观感，以及完整技能树审计。
+  召唤物，重连后按原 entityId 重放快照，旧 owner 的召唤物仍保持活动；同一实体帧
+  同时带标准 `MonsterP` 且 type=1，为忽略未知 `SummonedPetP` 的旧客户端保留普通怪物
+  显示路径。
+- 当前剩余门槛集中在真实旧客户端 UI/动画观感，以及完整技能树审计。
 
 ### Paladin
 

@@ -6773,7 +6773,8 @@ public final class D2GSHeadlessClient {
       if (packet != null) client.consume(packet);
       PetSnapshot pet = client.summonedPets.get(entityId);
       if (pet != null && !pet.deleted && pet.ownerId == ownerId
-          && pet.petType.equalsIgnoreCase(petType) && pet.skillId == skillId) return;
+          && pet.petType.equalsIgnoreCase(petType) && pet.skillId == skillId
+          && pet.monsterComponent && pet.entityType == 1) return;
     }
     throw new IOException("timed out waiting for summoned pet snapshot entity=" + entityId);
   }
@@ -8097,6 +8098,8 @@ public final class D2GSHeadlessClient {
       snapshot.petType = pet.petType() == null ? "" : pet.petType();
       snapshot.skillId = pet.skillId();
       snapshot.unsummonable = pet.unsummonable();
+      snapshot.monsterComponent = findComponent(sync, ComponentP.MonsterP) >= 0;
+      snapshot.entityType = sync.type();
       snapshot.deleted = deletionFrame;
     } else if (deletionFrame) {
       PetSnapshot pet = summonedPets.get(sync.entityId());
@@ -8753,6 +8756,8 @@ public final class D2GSHeadlessClient {
     String petType = "";
     int skillId = -1;
     boolean unsummonable;
+    boolean monsterComponent;
+    int entityType = -1;
     boolean deleted;
 
     PetSnapshot(int entityId) {
