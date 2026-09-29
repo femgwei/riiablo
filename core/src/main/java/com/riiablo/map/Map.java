@@ -353,6 +353,7 @@ public class Map implements Disposable {
     // 80x80 is the native room grid size; the resulting arena is large enough
     // for projectile and area-skill tests while remaining cheap to allocate.
     Zone zone = addZone(level, 80, 80, Math.max(1, gridsX), Math.max(1, gridsY));
+    zone.syntheticArena = true;
     act = level.Act;
     return zone;
   }
@@ -1025,6 +1026,7 @@ public class Map implements Disposable {
     /** Native D2MOO RoomEx rectangles in world subtiles. */
     final Array<RoomEx> roomsEx = new Array<>();
     private boolean roomActivationTracking;
+    private boolean syntheticArena;
 
     static final IntMap<DS1.Cell> EMPTY_INT_CELL_MAP = new IntMap<>();
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
@@ -1128,6 +1130,7 @@ public class Map implements Disposable {
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.nativeTileGrid = null;
       this.nativeDt1Mask = 0;
+      this.syntheticArena = false;
       this.townPortalSpawn = null;
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
@@ -1165,7 +1168,7 @@ public class Map implements Disposable {
      * This is called when zones are cleared before they are disposed -- not when obtained.
      */
     @Override
-    public void reset() {}
+    public void reset() { syntheticArena = false; }
 
     @Override
     public void dispose() {
@@ -1282,6 +1285,9 @@ public class Map implements Disposable {
       for (RoomEx room : roomsEx) if (!room.hasNativeAdjacency()) return false;
       return true;
     }
+
+    /** True for the mapless walkable arena used by standalone tools. */
+    public boolean isSyntheticArena() { return syntheticArena; }
 
     /**
      * Compact native-map diagnostics used by the windowless regression

@@ -111,6 +111,12 @@ public class VelocityAdder extends IteratingSystem {
     if (map == null || map.getZone(from) == null) {
       return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
     }
+    // Synthetic skill-viewer arenas intentionally have no DT1 collision map;
+    // their zeroed walk grid is fully traversable. Do not let the empty
+    // raycaster reject every movement step.
+    if (wrapper != null && wrapper.zone != null && wrapper.zone.isSyntheticArena()) {
+      return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
+    }
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
     if (map.castRay(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision)) return false;
