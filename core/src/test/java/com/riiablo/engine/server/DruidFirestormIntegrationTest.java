@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
@@ -61,6 +62,45 @@ class DruidFirestormIntegrationTest extends RiiabloTest {
         assertTrue(missile.damageSnapshot,
             "Firestorm damage snapshot missing for EType=" + skill.EType
                 + " EMin=" + skill.EMin + " EMax=" + skill.EMax);
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void streamsSnapshotDruidSynergyFromOwnerHardPoints() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int druid = createDruid(world, 5);
+      CharData data = world.getMapper(Player.class).get(druid).data;
+      data.setSkillLevel(SkillId.FIRESTORM, 5);
+      data.setSkillLevel(SkillId.MOLTEN_BOULDER, 5);
+      data.setSkillLevel(SkillId.VOLCANO, 5);
+      data.setSkillLevel(SkillId.ARMAGEDDON, 5);
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRESTORM);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.FIRESTORM, Engine.INVALID_ENTITY, new Vector2(12, 0),
+          skill.srvdofunc, skill.cltdofunc));
+
+      assertTrue(factory.created.size() >= 2,
+          "native Firestorm must emit multiple streams before synergy is checked");
+      int synergy = SkillFormula.evaluate(skill.EDmgSymPerCalc, skill, 5,
+          name -> name == null || name.isEmpty() ? 0 : 5,
+          name -> Riiablo.files.skills.get(name));
+      assertTrue(synergy > 0,
+          "the 1.10f Firestorm row must expose its authored synergy formula="
+              + skill.EDmgSymPerCalc + " synergy=" + synergy
+              + " EMin=" + skill.EMin + " EMax=" + skill.EMax
+              + " HitShift=" + skill.HitShift + " missile=" + skill.srvmissilea);
+      int unsynergizedMinFixed = Math.max(0, skill.EMin) << Math.max(0, skill.HitShift);
+      for (Missile stream : factory.created) {
+        assertTrue(stream.elementalMinRateFixed > unsynergizedMinFixed,
+            "Firestorm stream lost the owner's hard-point synergy snapshot");
       }
     } finally {
       world.dispose();

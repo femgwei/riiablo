@@ -32,6 +32,15 @@
 
 ## 当前基线
 
+### 2026-09-30 技能移植对照进度
+
+- Druid Firestorm 已补充 `SrvDo117` 多流硬点协同快照回归；与此前 Fissure/Volcano
+  子导弹协同测试一起通过四个 Druid 区域技能专项类。
+- 本轮提交已推送到 `origin/master`；Amazon、Assassin 及本地日志等其他未提交修改
+  仍由原工作者保留，未纳入本轮提交。
+- 下一项继续按矩阵审计 Druid 复杂区域的真实 MPQ/双客户端门槛，随后进入其他职业
+  尚未完成的 exact-ID 行为注册与四层验收。
+
 - 分支：`master`
 - 当前功能提交：以 [`codex-handoff-2026-09-20.md`](codex-handoff-2026-09-20.md)
   所在提交的 `HEAD` 为准

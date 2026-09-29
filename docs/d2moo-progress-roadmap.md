@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid Firestorm 硬点协同快照回归
+
+- [x] 对照 D2MOO `SKILLS_SrvDo117_Firestorm` 与 `sub_6FCFE4C0` 的多流创建路径，
+  新增 `DruidFirestormIntegrationTest.streamsSnapshotDruidSynergyFromOwnerHardPoints`。
+- [x] 回归确认 Firestorm 的每条权威流在施法时读取 Molten Boulder/Eruption 等硬点协同，
+  并把 1.10f `Skills.txt` 的火焰公式快照写入导弹；后续修改施法者技能不会影响已生成流。
+- [x] `DruidFirestormIntegrationTest`、`DruidFissureIntegrationTest`、
+  `DruidVolcanoIntegrationTest`、`DruidStormAuraIntegrationTest` 共 4 个专项类通过。
+- [ ] Firestorm 仍需真实 1.10f MPQ 双客户端的动画/命中观感验收；本项只覆盖 ECS 创建与
+  施法时数值快照，未替代完整技能树审计。
+
 ## 2026-09-29 Sorceress Fire Ball/Nova 真实 MPQ 双客户端门槛
 
 - [x] 将 `headlessAreaSkill` 的真实 1.10f 技能入口扩展到 Fire Ball(47) 和 Nova(48)，

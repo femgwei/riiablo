@@ -198,6 +198,9 @@
 - 本轮补齐持续区域子导弹的协同快照：Fissure/Volcano 控制器生成的火焰子导弹现在
   读取施法者硬点 `baseSkillLevel`，不再因子导弹阶段使用空 resolver 而丢失
   `EDmgSymPerCalc`；`DruidVolcanoIntegrationTest` 已覆盖 Volcano 的 Eruption 协同。
+- Firestorm 的 `SrvDo117` 多流创建现在由 `DruidFirestormIntegrationTest` 锁定施法时
+  硬点协同快照：每条权威流都必须保留 Molten Boulder/Eruption 协同后的火焰包；真实
+  MPQ 双客户端动画/命中观感仍待验收。
 
 ## dark-magic 测试用例移植映射
 
