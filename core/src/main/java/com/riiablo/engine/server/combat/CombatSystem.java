@@ -315,6 +315,13 @@ public class CombatSystem {
     /** 是否被格挡 */
     public boolean blocked;
 
+    /**
+     * Native defense result retained separately from the aggregate blocked flag.
+     * This lets presentation code distinguish shield/weapon block from the
+     * Amazon passive defenses without changing the damage contract.
+     */
+    public int defenseType = DefenseCalculator.DEFENSE_NONE;
+
     /** 是否暴击 */
     public boolean critical;
 
@@ -349,6 +356,13 @@ public class CombatSystem {
     public int attackRating;
     public int targetDefense;
 
+    /** Whether this result was stopped by Amazon Dodge/Avoid/Evade. */
+    public boolean isAmazonPassiveDefense() {
+      return defenseType == DefenseCalculator.DEFENSE_DODGE
+          || defenseType == DefenseCalculator.DEFENSE_AVOID
+          || defenseType == DefenseCalculator.DEFENSE_EVADE;
+    }
+
     /** The 0..99 hit roll; -1 means the attack used the native always-hit path. */
     public int hitRoll = -1;
 
@@ -367,6 +381,7 @@ public class CombatSystem {
     public void reset() {
       hit = false;
       blocked = false;
+      defenseType = DefenseCalculator.DEFENSE_NONE;
       critical = false;
       deadlyStrike = false;
       crushingBlow = false;
@@ -1584,6 +1599,7 @@ public class CombatSystem {
       result.blocked = rollShieldBlock(blockChance);
 
       if (result.blocked) {
+        result.defenseType = DefenseCalculator.DEFENSE_BLOCK;
         log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
         return result;
       }
@@ -1599,6 +1615,7 @@ public class CombatSystem {
         || passiveDefense == DefenseCalculator.DEFENSE_EVADE
         || passiveDefense == DefenseCalculator.DEFENSE_WEAPON_BLOCK) {
       result.blocked = true;
+      result.defenseType = passiveDefense;
       log.debug("[COMBAT_DEFENSE] passive={} attackType={} moving={}",
           passiveDefense, defender.attackType, defender.isMoving);
       return result;

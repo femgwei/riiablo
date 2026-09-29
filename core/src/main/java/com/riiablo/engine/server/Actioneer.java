@@ -2028,7 +2028,7 @@ public class Actioneer extends PassiveSystem {
         }
         if (combat.blocked) {
           log.debug("{} melee attack blocked by {}", entityId, targetId);
-          queueHitReaction(targetId, true);
+          queueHitReaction(targetId, combat);
           break;
         }
 
@@ -2488,7 +2488,7 @@ public class Actioneer extends PassiveSystem {
         || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) return;
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
-      if (combat.blocked) queueHitReaction(targetId, true);
+      if (combat.blocked) queueHitReaction(targetId, combat);
       log.info("[AMAZON_IMPALE] phase=keyframe source={} target={} result={}", entityId,
           targetId, combat.blocked ? "blocked" : "miss");
       return;
@@ -2632,7 +2632,7 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp != null ? hp.asFixed() : 0f;
     float applied = 0f;
-    if (combat.blocked) queueHitReaction(target, true);
+    if (combat.blocked) queueHitReaction(target, combat);
     else if (combat.hit && hp != null && before > 0f) {
       DamageEvent damageEvent = DamageEvent.obtainMelee(
           entityId, target, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
@@ -2768,7 +2768,7 @@ public class Actioneer extends PassiveSystem {
     }
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
-      if (combat.blocked) queueHitReaction(targetId, true);
+      if (combat.blocked) queueHitReaction(targetId, combat);
       log.info("[NECRO_POISON_DAGGER] phase=keyframe source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
       return;
@@ -3040,7 +3040,7 @@ public class Actioneer extends PassiveSystem {
     if (!combat.hit || combat.blocked || !mAttributesWrapper.has(targetId)) {
       log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} result={} blocked={}",
           entityId, targetId, combat.hit ? "blocked" : "miss", combat.blocked);
-      if (combat.blocked) queueHitReaction(targetId, true);
+      if (combat.blocked) queueHitReaction(targetId, combat);
       return;
     }
     UnitStates states = mUnitStates.get(entityId);
@@ -3344,7 +3344,7 @@ public class Actioneer extends PassiveSystem {
     float before = hp != null ? hp.asFixed() : 0f;
     float applied = 0f;
     if (combat.blocked) {
-      queueHitReaction(current, true);
+      queueHitReaction(current, combat);
     } else if (combat.hit && hp != null && before > 0f) {
       DamageEvent damageEvent = DamageEvent.obtainMelee(
           entityId, current, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
@@ -3411,7 +3411,7 @@ public class Actioneer extends PassiveSystem {
             states.stateList, stateList(targetId), isEntityMoving(targetId));
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
-      if (combat.blocked) queueHitReaction(targetId, true);
+      if (combat.blocked) queueHitReaction(targetId, combat);
       log.info("[DRUID_HUNGER] phase=result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
       return;
@@ -3452,7 +3452,7 @@ public class Actioneer extends PassiveSystem {
     }
     if (combat == null || !combat.hit || combat.blocked
         || !mAttributesWrapper.has(targetId)) {
-      if (combat != null && combat.blocked) queueHitReaction(targetId, true);
+      if (combat != null && combat.blocked) queueHitReaction(targetId, combat);
       return;
     }
     Item weapon = activeAttackWeapon(sourceId);
@@ -3908,7 +3908,7 @@ public class Actioneer extends PassiveSystem {
     if (combat.blocked) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} result=blocked",
           entityId, targetId, strike, whirlwindHand(entityId, strike - 1));
-      queueHitReaction(targetId, true);
+      queueHitReaction(targetId, combat);
       return;
     }
     if (weapon != null) drainFrenzyDurability(weapon, targetId);
@@ -4202,6 +4202,25 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isEntityMoving(int entityId) {
     return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
+  }
+
+  /**
+   * Queues a normal GH/BL reaction for damage results that need one.
+   *
+   * <p>Compatibility fix: Amazon Dodge/Avoid/Evade only suppresses the
+   * server-side damage packet here.  It deliberately does not enter a
+   * dedicated dodge mode or interrupt the client's current attack/sequence
+   * presentation.  This is not fully aligned with D2MOO's DODGE/AVOID mode
+   * transition, but matches riiablo's current no-special-animation policy and
+   * avoids the original sequence interruption bug.</p>
+   */
+  private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
+    if (combat != null && combat.isAmazonPassiveDefense()) {
+      log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={}",
+          victimId, combat.defenseType);
+      return;
+    }
+    queueHitReaction(victimId, combat != null && combat.blocked);
   }
 
   /**
@@ -5467,7 +5486,7 @@ public class Actioneer extends PassiveSystem {
     events.dispatch(MeleeAttackEvent.obtain(
         entityId, resolvedTarget, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
-      if (combat.blocked) queueHitReaction(resolvedTarget, true);
+      if (combat.blocked) queueHitReaction(resolvedTarget, combat);
       log.info("[PALADIN_VENGEANCE] phase=hit_result source={} target={} result={} chance={}",
           entityId, resolvedTarget, combat.blocked ? "blocked" : "miss", combat.hitChance);
       return;
@@ -5540,7 +5559,7 @@ public class Actioneer extends PassiveSystem {
     events.dispatch(MeleeAttackEvent.obtain(
         entityId, resolvedTarget, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
-      if (combat.blocked) queueHitReaction(resolvedTarget, true);
+      if (combat.blocked) queueHitReaction(resolvedTarget, combat);
       if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
       log.info("[PALADIN_CHARGE] phase=hit_result source={} target={} result={} chance={} bonusPct={}",
           entityId, resolvedTarget, combat.blocked ? "blocked" : "miss", combat.hitChance, bonus);

@@ -1648,7 +1648,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
             combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
-        queueHitReaction(targetId, true);
+        queueHitReaction(targetId, combat);
       } else {
         float damage = combat.totalDamage * Math.max(0.01f, missile.damageMultiplier);
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit "
@@ -2138,6 +2138,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     mastery.damagePercent = missile.masteryDamagePercent;
     mastery.criticalChance = missile.masteryCriticalChance;
     return mastery;
+  }
+
+  /**
+   * Compatibility fix: Dodge/Avoid/Evade only reject the server-side damage
+   * packet.  Do not enter a dedicated DODGE/AVOID mode or interrupt the
+   * client's current skill presentation.  This intentionally does not mirror
+   * D2MOO's dedicated passive-defense animation transition.
+   */
+  private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
+    if (combat != null && combat.isAmazonPassiveDefense()) {
+      log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={} source=missile",
+          victimId, combat.defenseType);
+      return;
+    }
+    queueHitReaction(victimId, combat != null && combat.blocked);
   }
 
   /** Replicate native player/monster GH and BL reactions through CofReference. */

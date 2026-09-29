@@ -86,7 +86,9 @@ public class CombatSystemTest extends RiiabloTest {
     defender.level = 1;
     defender.canBlock = true;
     defender.blockChance = 50;
-    assertTrue(deterministicBlock.calculateAttack(physicalArrow, defender).blocked);
+    CombatSystem.CombatResult shieldResult = deterministicBlock.calculateAttack(physicalArrow, defender);
+    assertTrue(shieldResult.blocked);
+    assertEquals(DefenseCalculator.DEFENSE_BLOCK, shieldResult.defenseType);
     assertTrue(CombatSystem.hasBlockablePhysicalDamage(physicalArrow));
 
     CombatSystem.AttackerData elementalSpell = new CombatSystem.AttackerData();
@@ -99,6 +101,41 @@ public class CombatSystemTest extends RiiabloTest {
     assertTrue(result.hit);
     assertTrue(!result.blocked);
     assertTrue(!CombatSystem.hasBlockablePhysicalDamage(elementalSpell));
+  }
+
+  @Test
+  public void amazonPassiveDefenseKeepsTypeAndNoDamage() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.alwaysHit = true;
+    attacker.level = 1;
+    attacker.minDamage = attacker.maxDamage = 10;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 1;
+    defender.currentLife = defender.maxLife = 100;
+    defender.attackType = DefenseCalculator.ATTACK_MELEE;
+    defender.passiveDodge = 100;
+
+    CombatSystem.CombatResult dodge = combat.calculateAttack(attacker, defender);
+    assertTrue(dodge.blocked);
+    assertEquals(DefenseCalculator.DEFENSE_DODGE, dodge.defenseType);
+    assertTrue(dodge.isAmazonPassiveDefense());
+    assertEquals(0, dodge.totalDamage);
+
+    defender.attackType = DefenseCalculator.ATTACK_RANGED;
+    defender.passiveDodge = 0;
+    defender.passiveAvoid = 100;
+    CombatSystem.CombatResult avoid = combat.calculateAttack(attacker, defender);
+    assertEquals(DefenseCalculator.DEFENSE_AVOID, avoid.defenseType);
+    assertTrue(avoid.isAmazonPassiveDefense());
+
+    defender.attackType = DefenseCalculator.ATTACK_MELEE;
+    defender.passiveAvoid = 0;
+    defender.passiveEvade = 100;
+    defender.isMoving = true;
+    CombatSystem.CombatResult evade = combat.calculateAttack(attacker, defender);
+    assertEquals(DefenseCalculator.DEFENSE_EVADE, evade.defenseType);
+    assertTrue(evade.isAmazonPassiveDefense());
   }
 
   @Test
