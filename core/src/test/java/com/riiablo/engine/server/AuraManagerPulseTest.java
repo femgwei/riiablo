@@ -56,6 +56,37 @@ class AuraManagerPulseTest {
         "D2MOO replaces a same-state stat-list instead of stacking skill IDs");
   }
 
+  @Test
+  void cleansingPulseAlsoProcessesTheCaster() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition cleansing = new AuraManager.AuraDefinition();
+    cleansing.skillId = SkillId.CLEANSING;
+    cleansing.name = "Cleansing fixture";
+    cleansing.perDelayFrames = 25;
+    cleansing.baseRange = 16f;
+    cleansing.selfStateId = 9001;
+    cleansing.targetStateId = 9001;
+    cleansing.stateId = 9001;
+    cleansing.statIds[0] = Stat.damagepercent;
+    cleansing.baseStatValues[0] = 50;
+    cleansing.affectsSelf = true;
+    cleansing.affectsParty = true;
+    cleansing.auraFilter = AuraManager.FILTER_PLAYER | AuraManager.FILTER_FIND_ALLY;
+    manager.registerAuraDefinition(cleansing);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.includeCaster = true;
+    callback.rangeTarget = 9;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, SkillId.CLEANSING, 1));
+    manager.update(0f);
+
+    assertEquals(2, callback.cleansingTargets,
+        "Cleansing must shorten the caster and the allied range target");
+    assertTrue(callback.cleansingCasterSeen,
+        "the caster must receive the native Cleansing pulse");
+  }
+
   private static AuraManager.AuraDefinition definition(int skillId, int stateId) {
     AuraManager.AuraDefinition definition = new AuraManager.AuraDefinition();
     definition.skillId = skillId;
@@ -76,6 +107,9 @@ class AuraManagerPulseTest {
     boolean redemptionSucceeds;
     int rangeTarget = 7;
     int appliedStates;
+    boolean includeCaster;
+    int cleansingTargets;
+    boolean cleansingCasterSeen;
 
     @Override public void onAuraActivated(int casterId, int skillId, int skillLevel) {}
     @Override public void onAuraDeactivated(int casterId, int skillId) {}
@@ -84,6 +118,7 @@ class AuraManagerPulseTest {
     @Override public float[] getEntityPosition(int entityId) { return new float[] {0f, 0f}; }
     @Override public Array<Integer> getEntitiesInRange(float x, float y, float range) {
       Array<Integer> result = new Array<>();
+      if (includeCaster) result.add(7);
       result.add(rangeTarget);
       return result;
     }
@@ -101,6 +136,11 @@ class AuraManagerPulseTest {
       if (!canConsumeMana(casterId, amount)) return false;
       mana -= amount;
       return true;
+    }
+    @Override public void applyCleansingEffect(int targetId, int percent,
+        int sourceEntityId, int skillId) {
+      cleansingTargets++;
+      cleansingCasterSeen |= targetId == sourceEntityId;
     }
     @Override public void applyState(int targetId, int stateId, int duration,
         int sourceEntityId, int skillId, int skillLevel, int[] statIds, int[] statValues) {

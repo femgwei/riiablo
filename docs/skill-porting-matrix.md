@@ -149,6 +149,10 @@
   对照 dark-magic 的 selected-party aura 稳定排序要求，锁定同等级 Might 不受激活或
   `IntMap` 遍历顺序影响，最低 caster id 获胜；原 winner 失效后下一次 native pulse
   才切换到备用 aura，保留短时 state layer 语义。
+- 对照 dark-magic `periodic_aura_skills_test.lua` 的 Cleansing pulse 目标语义，修正
+  `AuraManager`：施法者自身和范围内盟友都执行 poison/可净化 curse 缩短；新增
+  `AuraManagerPulseTest.cleansingPulseAlsoProcessesTheCaster`，避免 self 分支只保留
+  AuraState 却漏掉周期净化效果。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin

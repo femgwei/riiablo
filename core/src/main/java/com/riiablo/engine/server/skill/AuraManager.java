@@ -257,7 +257,19 @@ public class AuraManager {
       // before running the filtered room scan. Hostile filters such as Holy
       // Fire's IGNALLY must therefore never reject its own passive layer.
       if (self) {
-        if (definition.affectsSelf) affected.add(targetId);
+        if (definition.affectsSelf) {
+          affected.add(targetId);
+          // Cleansing's SrvDo065 pulse also processes the caster.  Keeping
+          // this in the self branch is important because the owner bypasses
+          // the ally/hostile filter below; otherwise the owner's poison and
+          // curable curses outlive the same pulse applied to party members.
+          if (aura.pulseFunded && definition.skillId == SkillId.CLEANSING) {
+            int percent = definition.statIds.length > 0 && definition.statIds[0] >= 0
+                ? aura.statValues[0] : 0;
+            if (percent > 0) callback.applyCleansingEffect(targetId, percent,
+                aura.casterId, definition.skillId);
+          }
+        }
         continue;
       }
       boolean checkMonsterNoAura = definition.nativeSkill != null

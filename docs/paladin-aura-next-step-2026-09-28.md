@@ -27,6 +27,11 @@
   `SKILLS_SrvDo066` 的调用链显示，目标回调实际成功应用效果后才应决定带目标 Aura 的
   pulse 资源消耗；需要先由测试固定 riiablo 的预期，再决定是否调整实现。
 
+已补齐一项 dark-magic 对照缺口：Cleansing 的 self 目标不能只挂上 AuraState，
+还必须在同一周期 pulse 中执行净化缩短。`AuraManagerPulseTest` 已锁定施法者和
+盟友都会收到 `applyCleansingEffect`；其余 poison/curable 状态判定仍由
+`StateUpdater` 按 1.10f `States.txt` 的 `curable` 位执行。
+
 ### 2. Aura 来源和优先级
 
 - 两个同状态 Aura 重叠时，高技能等级胜出。
