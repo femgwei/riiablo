@@ -185,12 +185,27 @@ public class SequenceHandler extends IteratingSystem {
       // otherwise it inherits the previous frame and can skip its keyframe.
       cofs.setMode(entityId, sequence.mode1, true);
       mAnimData.get(entityId).override = -1;
-    } else if (mCofReference.get(entityId).mode != sequence.mode1) {
+    } else if (!sequence.nativeJab && mCofReference.get(entityId).mode != sequence.mode1) {
       // Log sequence start for debugging
       com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
       log.trace("Starting sequence for entity {}: setting mode to {}", entityId, sequence.mode1);
       cofs.setMode(entityId, sequence.mode1);
       mAnimData.get(entityId).override = -1;
+    }
+    if (sequence.nativeJab) {
+      // D2Common's UNITS_UpdateAttackAnimRateAndVelocity applies the fixed
+      // -30 sequence penalty once to the logical SQ cursor.  AnimStepper
+      // advances that cursor and selects the exact SequenceTbls point.
+      AnimData animData = mAnimData.get(entityId);
+      // The native sequence speed is latched when SQ starts.  A later point
+      // may switch the presentation COF to A2, but D2 keeps dwSeqSpeed from
+      // the sequence initialization instead of recalculating it from A2's
+      // animation record.
+      if (!sequenceWasStarted && animData != null) {
+        sequence.nativeJabSpeed = playerAttackAnimationSpeed(entityId, animData.speed, 30);
+      }
+      if (animData != null) animData.override = 0;
+      return;
     }
     if (casting != null && (casting.jabRemainingStrikes > 0
         || casting.jabStrikeProcessed)) {

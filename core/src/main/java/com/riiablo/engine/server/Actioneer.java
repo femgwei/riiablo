@@ -432,7 +432,14 @@ public class Actioneer extends PassiveSystem {
 
     Vector2 entityPos = mPosition.get(entityId).position;
     mAngle.get(entityId).target.set(targetVec).sub(entityPos).nor();
-    mSequence.create(entityId).sequence(mode, mMovementModes.get(entityId).NU);
+    Sequence actionSequence = mSequence.create(entityId)
+        .sequence(mode, mMovementModes.get(entityId).NU);
+    // Jab is a native SQ sequence.  Keep its hard-coded sequence cursor on
+    // the authoritative server instead of replaying complete A1/A2 COFs.
+    if (type == Class.Type.PLR && skill.Id == SkillId.JAB
+        && "SQ".equalsIgnoreCase(skill.anim) && mCofReference.has(entityId)) {
+      actionSequence.nativeJab(mCofReference.get(entityId).wclass);
+    }
     mCasting.create(entityId).set(skillId, targetId, targetVec, snapshotTick);
     SkillCastEvent castEvent = SkillCastEvent.obtain(entityId, skillId, targetId, targetVec);
     events.dispatch(castEvent);

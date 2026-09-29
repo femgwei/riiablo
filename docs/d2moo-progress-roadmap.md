@@ -175,6 +175,15 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-29 Jab 原生顺序动画
+
+- [x] Jab 不再把完整 A1/A2 COF 当作三段攻击。依据 D2MOO
+  `D2Common/DataTbls/SequenceTbls.cpp`，服务端按 1HT/2HT 的 18/21 个序列点推进，
+  每个序列点直接选择 A1/A2 与源动画帧，并在原生三个 `MELEE_ATTACK` 点触发三次命中；
+  序列攻速应用固定 `-30` 惩罚。新增纯序列表回归测试，避免首段 A1 比后续 A2 更长。
+- [x] 核心编译通过；Jab 生命周期专项测试通过（既有随机命中测试偶发 miss 时仍只影响
+  伤害断言，不影响序列点表）。
+
 ## 2026-09-27 角色选择按存档最后修改时间排序
 
 - [x] `SelectCharacterScreen`、`SelectCharacterScreen2` 和 `SelectCharacterScreen3`

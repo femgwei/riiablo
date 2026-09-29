@@ -12,6 +12,7 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
@@ -28,6 +29,9 @@ public class AnimStepper extends IntervalIteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Sequence> mSequence;
+
+  protected CofManager cofs;
 
   protected EventSystem events;
 
@@ -43,6 +47,11 @@ public class AnimStepper extends IntervalIteratingSystem {
     // in this batch with no AnimData anymore; treat it as a completed
     // animation instead of dereferencing a stale component.
     if (animData == null) return;
+    Sequence sequence = mSequence.get(entityId);
+    if (sequence != null && sequence.nativeJab) {
+      processNativeJab(entityId, sequence, animData);
+      return;
+    }
     if (animData.numFrames <= 0) return;
 
     int delta = animData.override >= 0 ? animData.override : animData.speed;
@@ -112,6 +121,62 @@ public class AnimStepper extends IntervalIteratingSystem {
       animData.lastKeyframeIndex = Math.max(-1, (animData.frame >>> 8) - 1);
     } else {
       animData.lastKeyframeIndex = currentIndex;
+    }
+  }
+
+  /** Advances Jab's D2Common sequence cursor and emits its native hit points. */
+  private void processNativeJab(int entityId, Sequence sequence, AnimData animData) {
+    int frameCount = sequence.nativeJabFrameCount;
+    if (frameCount <= 0) return;
+    int oldFrame = sequence.nativeJabFrame >>> 8;
+    if (!sequence.started) return;
+    if (sequence.nativeJabFrame == 0) {
+      // UNITS_InitializeSequence immediately resolves sequence point zero;
+      // it is not the zero frame of the A1 COF.
+      animData.frame = NativeJabSequence.sourceFrame(
+          sequence.nativeJabWeaponClass, 0) << 8;
+      animData.lastKeyframeIndex = Math.max(-1, (animData.frame >>> 8) - 1);
+    }
+
+    int delta = Math.max(1, sequence.nativeJabSpeed);
+    UnitStates states = mUnitStates.get(entityId);
+    if (states != null && states.stateList != null) {
+      delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+    }
+    int next = sequence.nativeJabFrame + delta;
+    int end = frameCount << 8;
+    if (next >= end) {
+      dispatchNativeJabPoints(entityId, sequence, oldFrame, frameCount - 1, animData);
+      sequence.nativeJabFrame = end;
+      events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+      return;
+    }
+
+    sequence.nativeJabFrame = next;
+    int current = next >>> 8;
+    if (current >= oldFrame) {
+      dispatchNativeJabPoints(entityId, sequence, oldFrame, current, animData);
+    }
+  }
+
+  private void dispatchNativeJabPoints(int entityId, Sequence sequence,
+      int oldFrame, int newFrame, AnimData animData) {
+    for (int i = oldFrame + 1; i <= newFrame; i++) {
+      if (i >= sequence.nativeJabFrameCount) break;
+      byte mode = NativeJabSequence.mode(sequence.nativeJabWeaponClass, i);
+      if (!mCofReference.has(entityId) || mCofReference.get(entityId).mode != mode) {
+        cofs.setMode(entityId, mode);
+        animData = mAnimData.get(entityId);
+      }
+      if (animData == null) return;
+      int sourceFrame = NativeJabSequence.sourceFrame(sequence.nativeJabWeaponClass, i);
+      animData.frame = sourceFrame << 8;
+      animData.lastKeyframeIndex = Math.max(-1, sourceFrame - 1);
+      animData.override = 0;
+      if (NativeJabSequence.event(sequence.nativeJabWeaponClass, i)
+          == NativeJabSequence.EVENT_MELEE_ATTACK) {
+        events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+      }
     }
   }
 
