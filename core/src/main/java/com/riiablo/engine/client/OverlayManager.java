@@ -49,7 +49,12 @@ public class OverlayManager extends IteratingSystem {
       if (overlay.entry.AnimRate > 0) {
         animation.setFrameDuration(1f / overlay.entry.AnimRate);
       }
-      animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.ONCE);
+      // Keep transient effects clamped to their last valid frame.  ONCE
+      // advances to endIndex (one past the final frame), and the simulation
+      // OverlayStepper runs before RenderSystem; a one-frame hit DCC would
+      // therefore be loaded successfully but skipped by Animation.draw().
+      // OverlayManager removes the effect after its hold period below.
+      animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.CLAMP);
       // FIXME: set frame to elapsed time since creation
       overlay.isLoaded = true;
       log.debug("Loaded {}", overlay.assetDescriptor.fileName);
