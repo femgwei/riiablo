@@ -168,6 +168,10 @@
   解析：召唤体缺少 `MonStats.Skill1/Skill2` 时进入 fail-closed，不再回退执行放置技能，
   防止 `SrvDo045` 递归或错误 helper missile；对应回归位于
   `AssassinSkillSpecializationTest.trapAttackResolutionFailsClosedWhenSummonHasNoAttackSkill`。
+- 攻击技能等级暂不改写：D2MOO AI 读取 `SKILLS_GetSkillLevel(pPet, pSkill, 1)`，而
+  `sub_6FCF8610` 又以放置技能等级执行 `SetSummonBaseStats/SetSummonPassiveStats`；现有
+  Death Sentry 回归已锁定等级 4 的尸体爆炸半径。需要继续追 `SKILLS_AssignSkill` 的
+  召唤体初始化后，才能判断 `Sk1lvl/Sk2lvl` 与放置等级的最终优先级。
 
 ### Barbarian
 
