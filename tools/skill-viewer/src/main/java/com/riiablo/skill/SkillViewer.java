@@ -17,7 +17,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.artemis.ComponentMapper;
 import com.artemis.Aspect;
 import com.artemis.World;
@@ -93,6 +92,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
+import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map;
@@ -139,6 +139,7 @@ public class SkillViewer extends Tool {
   }
 
   private com.badlogic.gdx.files.FileHandle home;
+  private com.badlogic.gdx.files.FileHandle runtimeLog;
   private int selectedClass;
   private int skillLevel = 1;
   private long seed = 0x534B494CL;
@@ -158,6 +159,8 @@ public class SkillViewer extends Tool {
   private CharData playerData;
   private final Array<Integer> monsterEntities = new Array<>();
   private final Array<Integer> corpseEntities = new Array<>();
+  private final Array<String> queuedCofs = new Array<>();
+  private final Array<Integer> cofRefreshSent = new Array<>();
   private ComponentMapper<Position> positions;
   private ComponentMapper<AnimationWrapper> animations;
   private Stage stage;
@@ -168,12 +171,14 @@ public class SkillViewer extends Tool {
   private VisLabel status;
   private VisLabel targetMode;
   private VisCheckBox ai;
+  private VisCheckBox showGrid;
   private SkillSessionLog sessionLog;
   private VisTable notesPanel;
   private final Array<Marker> monsters = new Array<>();
   private final Array<Marker> corpses = new Array<>();
   private final Marker player = new Marker(0, 0, "player");
   private TargetMode targetModeValue = TargetMode.NONE;
+  private boolean renderReadyLogged;
 
   @Override
   protected String getHelpHeader() {
@@ -210,7 +215,12 @@ public class SkillViewer extends Tool {
     Gdx.app.setLogLevel(Application.LOG_DEBUG);
     LogManager.setLevel(SkillViewer.class.getName(), Level.DEBUG);
     shapes = new ShapeRenderer();
-    stage = new Stage(new FitViewport(1280, 720));
+    // Keep controls in physical pixels so an 800x450 window remains usable
+    // and enlarging the window only gives the arena more room.
+    stage = new Stage(new ScreenViewport());
+    runtimeLog = Gdx.files.local("logs/skill-viewer.log");
+    runtimeLog.parent().mkdirs();
+    runtimeLog.writeString("", false, "UTF-8");
     // Gradle and the standalone launcher both run with the skill-viewer
     // directory as the working directory. Keep session logs beside the tool.
     sessionLog = new SkillSessionLog(Gdx.files.local("logs"));
@@ -262,8 +272,9 @@ public class SkillViewer extends Tool {
     arenaZone = arenaMap.createSyntheticArena(1, 4, 4);
     entityFactory = new ClientEntityFactory();
     iso = new IsometricCamera();
-    iso.setToOrtho(false, 1280, 720);
+    iso.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     iso.set(0, 0);
+    iso.update();
     WorldConfigurationBuilder config = new WorldConfigurationBuilder()
         .with(new EventSystem(), new TagManager())
         .with(new CofManager())
@@ -300,6 +311,23 @@ public class SkillViewer extends Tool {
     playerData.setSkillLevel(0, skillLevel);
     playerEntity = entityFactory.createPlayer(playerData, new com.badlogic.gdx.math.Vector2(0, 0));
     arenaZone.attachEntity(playerEntity);
+    initializePlayerComposite();
+    renderReadyLogged = false;
+    refreshEntityPresentation(playerEntity);
+    runtimeLog("event=player_created entity=" + playerEntity
+        + " class=" + PRESETS[selectedClass].name + " position=(0,0)");
+  }
+
+  private void initializePlayerComposite() {
+    if (engine == null || playerEntity == Engine.INVALID_ENTITY) return;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.CofComponents> components =
+        engine.getMapper(com.riiablo.engine.server.component.CofComponents.class);
+    if (!components.has(playerEntity)) return;
+    int[] values = components.get(playerEntity).component;
+    java.util.Arrays.fill(values, com.riiablo.engine.server.component.CofComponents.COMPONENT_LIT);
+    engine.getMapper(com.riiablo.engine.client.component.CofDirtyComponents.class)
+        .create(playerEntity).flags |= com.riiablo.engine.Dirty.ALL;
+    runtimeLog("event=player_composite_initialized entity=" + playerEntity + " components=LIT");
   }
 
   private com.riiablo.codec.excel.MonStats.Entry resolveFallen() {
@@ -322,6 +350,8 @@ public class SkillViewer extends Tool {
     }
     monsterEntities.clear();
     corpseEntities.clear();
+    queuedCofs.clear();
+    cofRefreshSent.clear();
     playerEntity = Engine.INVALID_ENTITY;
     playerData = null;
     arenaZone = null;
@@ -336,6 +366,10 @@ public class SkillViewer extends Tool {
     }
   }
 
+  private void runtimeLog(String line) {
+    if (runtimeLog != null) runtimeLog.writeString(line + "\n", true, "UTF-8");
+  }
+
   private void buildUi() {
     VisUI.load(Gdx.files.internal("skin/x1/uiskin.json"));
     Skin skin = VisUI.getSkin();
@@ -348,18 +382,18 @@ public class SkillViewer extends Tool {
     VisTable menu = new VisTable();
     VisTextButton reload = new VisTextButton("Reload Resources");
     VisTextButton reset = new VisTextButton("Reset Scene");
-    menu.add(reload).padRight(6);
-    menu.add(reset).padRight(12);
+    menu.add(reload).height(28).padRight(6);
+    menu.add(reset).height(28).padRight(12);
     menu.add(new VisLabel("Character")).padRight(4);
     classSelect = new VisSelectBox<>();
     classSelect.setItems(CLASS_NAMES);
-    menu.add(classSelect).width(140).padRight(8);
+    menu.add(classSelect).height(28).width(140).padRight(8);
     menu.add(new VisLabel("Skill")).padRight(4);
     skillSelect = new VisSelectBox<>();
-    menu.add(skillSelect).width(230).padRight(8);
+    menu.add(skillSelect).height(28).width(230).padRight(8);
     menu.add(new VisLabel("Level")).padRight(4);
     VisTextButton level = new VisTextButton("1");
-    menu.add(level).width(40).padRight(8);
+    menu.add(level).height(28).width(40).padRight(8);
     root.add(menu).growX().left().row();
 
     VisTable menu2 = new VisTable();
@@ -368,11 +402,14 @@ public class SkillViewer extends Tool {
     VisTextButton addMonster = new VisTextButton("Load Monster");
     VisTextButton addCorpse = new VisTextButton("Load Corpse");
     menu2.add(new VisLabel("Monster")).padRight(4);
-    menu2.add(monsterSelect).width(120).padRight(4);
-    menu2.add(addMonster).padRight(4);
-    menu2.add(addCorpse).padRight(8);
+    menu2.add(monsterSelect).height(28).width(120).padRight(4);
+    menu2.add(addMonster).height(28).padRight(4);
+    menu2.add(addCorpse).height(28).padRight(8);
     ai = new VisCheckBox("Enable AI");
-    menu2.add(ai);
+    menu2.add(ai).height(28).padRight(8);
+    showGrid = new VisCheckBox("Show Grid");
+    showGrid.setChecked(false);
+    menu2.add(showGrid).height(28);
     root.add(menu2).growX().left().row();
 
     VisTable info = new VisTable();
@@ -465,11 +502,13 @@ public class SkillViewer extends Tool {
 
   private void resetScene() {
     finishSkillLog();
+    runtimeLog("event=scene_reset class=" + PRESETS[selectedClass].name);
     if (resourcesLoaded) {
       try { createCombatArena(); }
       catch (Throwable t) {
         resourceError = t.getMessage() == null ? t.toString() : t.getMessage();
         log.error("Unable to reset skill ECS arena", t);
+        runtimeLog("event=player_create_failed error=" + resourceError.replace('\n', ' '));
       }
     }
     player.x = 0; player.y = 0;
@@ -487,7 +526,10 @@ public class SkillViewer extends Tool {
     int entity = entityFactory.createMonster(fallen.hcIdx, 20 + index * 12, 10 + index * 8);
     if (entity == Engine.INVALID_ENTITY) return;
     arenaZone.attachEntity(entity);
+    refreshEntityPresentation(entity);
     monsterEntities.add(entity);
+    runtimeLog("event=monster_created entity=" + entity + " monster=" + fallen.Id
+        + " position=(" + (20 + index * 12) + "," + (10 + index * 8) + ")");
   }
 
   private void spawnCorpse() {
@@ -498,10 +540,37 @@ public class SkillViewer extends Tool {
     int entity = entityFactory.createMonster(fallen.hcIdx, 20 + index * 12, 10 + index * 8);
     if (entity == Engine.INVALID_ENTITY) return;
     arenaZone.attachEntity(entity);
+    refreshEntityPresentation(entity);
     corpseEntities.add(entity);
+    runtimeLog("event=corpse_created entity=" + entity + " monster=" + fallen.Id
+        + " position=(" + (20 + index * 12) + "," + (10 + index * 8) + ")");
     net.mostlyoriginal.api.event.common.EventSystem events =
         engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class);
     if (events != null) events.dispatch(ModeChangeEvent.obtain(entity, Engine.Monster.MODE_DD));
+  }
+
+  /**
+   * Entity creation happens after the Artemis world has been built.  The
+   * factory's initial mode event can be observed by CofResolver before the
+   * CofDescriptor exists, so send one follow-up change to kick the normal
+   * COF/DCC presentation pipeline and make the real sprite visible.
+   */
+  private void refreshEntityPresentation(int entity) {
+    if (engine == null || entity == Engine.INVALID_ENTITY) return;
+    com.riiablo.engine.client.component.CofDescriptor descriptor =
+        engine.getMapper(com.riiablo.engine.client.component.CofDescriptor.class).get(entity);
+    if (descriptor != null && descriptor.descriptor != null && !assets.isLoaded(descriptor.descriptor)) {
+      assets.load(descriptor.descriptor);
+      runtimeLog("event=cof_queued entity=" + entity + " path=" + descriptor.descriptor.fileName);
+    }
+    net.mostlyoriginal.api.event.common.EventSystem events =
+        engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class);
+    if (events != null) {
+      CofChangeEvent event = new CofChangeEvent();
+      event.entityId = entity;
+      events.dispatch(event);
+      runtimeLog("event=presentation_refresh entity=" + entity);
+    }
   }
 
   private void beginSkillLog() {
@@ -533,6 +602,7 @@ public class SkillViewer extends Tool {
     StringBuilder text = new StringBuilder();
     text.append(resourcesLoaded ? "Resources: loaded" : "Resources: unavailable");
     if (resourceError != null) text.append(" (").append(resourceError).append(")");
+    text.append(" | Player: ").append(playerEntity != Engine.INVALID_ENTITY ? "loaded (entity=" + playerEntity + ")" : "NOT LOADED");
     text.append(" | ").append(CLASS_NAMES[selectedClass]);
     text.append(" | Weapon: ").append(PRESETS[selectedClass].weapon);
     text.append(" | Monsters: ").append(monsterEntities.size).append(" | Corpses: ").append(corpseEntities.size);
@@ -545,6 +615,8 @@ public class SkillViewer extends Tool {
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     if (assets != null) assets.update();
     if (engine != null) engine.process();
+    ensurePresentationAssets();
+    processPresentationPass();
     drawArena();
     drawEntities();
     stage.act(Gdx.graphics.getDeltaTime());
@@ -557,9 +629,11 @@ public class SkillViewer extends Tool {
     shapes.setColor(GRID);
     float centerX = stage.getViewport().getWorldWidth() * .5f;
     float centerY = stage.getViewport().getWorldHeight() * .52f;
-    for (int i = -10; i <= 10; i++) {
-      shapes.line(centerX - 700 + i * 72, centerY - 350, centerX + 700 + i * 72, centerY + 350);
-      shapes.line(centerX - 700 + i * 72, centerY + 350, centerX + 700 + i * 72, centerY - 350);
+    if (showGrid != null && showGrid.isChecked()) {
+      for (int i = -10; i <= 10; i++) {
+        shapes.line(centerX - 700 + i * 72, centerY - 350, centerX + 700 + i * 72, centerY + 350);
+        shapes.line(centerX - 700 + i * 72, centerY + 350, centerX + 700 + i * 72, centerY - 350);
+      }
     }
     // Circles are retained only as a diagnostic fallback while an asset is
     // loading; the normal path renders the actual ECS animations below.
@@ -573,7 +647,19 @@ public class SkillViewer extends Tool {
 
   private void drawEntities() {
     if (engine == null || batch == null || animations == null || positions == null) return;
-    batch.setProjectionMatrix(iso.combined);
+    if (!renderReadyLogged && playerEntity != Engine.INVALID_ENTITY && animations.has(playerEntity)
+        && positions.has(playerEntity)
+        && animations.get(playerEntity).animation.getNumFramesPerDir() > 0) {
+      com.riiablo.codec.Animation animation = animations.get(playerEntity).animation;
+      runtimeLog("event=player_render_ready entity=" + playerEntity
+          + " frames=" + animation.getNumFramesPerDir()
+          + " position=" + positions.get(playerEntity).position);
+      renderReadyLogged = true;
+    }
+    // The arena uses tile-space conversion from IsometricCamera, but the
+    // standalone viewport is screen-pixel based. Offset the converted origin
+    // to the centre of the window and draw with the Stage's pixel projection.
+    batch.setProjectionMatrix(stage.getCamera().combined);
     if (Riiablo.palettes != null) batch.setPalette(Riiablo.palettes.act1);
     batch.begin();
     drawEntityAnimation(playerEntity);
@@ -586,11 +672,75 @@ public class SkillViewer extends Tool {
     batch.end();
   }
 
+  private void ensurePresentationAssets() {
+    if (engine == null || assets == null) return;
+    queuePresentationAsset(playerEntity);
+    for (int entity : monsterEntities) queuePresentationAsset(entity);
+    for (int entity : corpseEntities) queuePresentationAsset(entity);
+  }
+
+  /** Runs the presentation-only systems explicitly, matching the main
+   * client's initial pass. Entities are created after the world starts, so
+   * waiting for a full gameplay tick can otherwise leave their DCC layers
+   * unbound in a standalone viewer.
+   */
+  private void processPresentationPass() {
+    if (engine == null) return;
+    engine.getSystem(CofManager.class).process();
+    engine.getSystem(AnimDataResolver.class).process();
+    engine.getSystem(CofResolver.class).process();
+    engine.getSystem(com.riiablo.engine.client.CofLoader.class).process();
+    engine.getSystem(CofLayerLoader.class).process();
+    engine.getSystem(CofLayerCacher.class).process();
+  }
+
+  private void queuePresentationAsset(int entity) {
+    if (entity == Engine.INVALID_ENTITY) return;
+    com.riiablo.engine.client.component.CofDescriptor descriptor =
+        engine.getMapper(com.riiablo.engine.client.component.CofDescriptor.class).get(entity);
+    if (descriptor == null || descriptor.descriptor == null) return;
+    if (assets.isLoaded(descriptor.descriptor)) {
+      com.riiablo.engine.client.component.CofWrapper wrapper =
+          engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).get(entity);
+      if (wrapper == null) {
+        com.riiablo.codec.COF cof = assets.get(descriptor.descriptor);
+        if (cof != null) {
+          engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).create(entity).cof = cof;
+          runtimeLog("event=cof_ready entity=" + entity + " path=" + descriptor.descriptor.fileName);
+        }
+      }
+      if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)
+          && animations != null && animations.has(entity)
+          && animations.get(entity).animation.getNumFramesPerDir() == 0) {
+        engine.getMapper(com.riiablo.engine.client.component.CofDirtyComponents.class)
+            .create(entity).flags |= com.riiablo.engine.Dirty.ALL;
+      }
+      if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)
+          && !cofRefreshSent.contains(entity, false)) {
+        CofChangeEvent refresh = new CofChangeEvent();
+        refresh.entityId = entity;
+        engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class).dispatch(refresh);
+        cofRefreshSent.add(entity);
+        runtimeLog("event=cof_refresh entity=" + entity);
+      }
+      return;
+    }
+    String path = descriptor.descriptor.fileName;
+    if (queuedCofs.contains(path, false)) return;
+    assets.load(descriptor.descriptor);
+    queuedCofs.add(path);
+    runtimeLog("event=cof_queued entity=" + entity + " path=" + path);
+    CofChangeEvent event = new CofChangeEvent();
+    event.entityId = entity;
+    engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class).dispatch(event);
+  }
+
   private void drawEntityAnimation(int entity) {
     if (entity == Engine.INVALID_ENTITY || !animations.has(entity) || !positions.has(entity)) return;
     com.riiablo.codec.Animation animation = animations.get(entity).animation;
     if (animation == null) return;
     com.badlogic.gdx.math.Vector2 screen = iso.toScreen(positions.get(entity).position.cpy());
+    screen.add(Gdx.graphics.getWidth() * .5f, Gdx.graphics.getHeight() * .5f);
     animation.draw(batch, screen.x, screen.y);
   }
 
@@ -599,7 +749,14 @@ public class SkillViewer extends Tool {
     shapes.circle(x, y, 8, 12);
   }
 
-  @Override public void resize(int width, int height) { if (stage != null) stage.getViewport().update(width, height, true); }
+  @Override public void resize(int width, int height) {
+    if (stage != null) stage.getViewport().update(width, height, true);
+    if (iso != null) {
+      iso.setToOrtho(false, width, height);
+      iso.set(0, 0);
+      iso.update();
+    }
+  }
   @Override public void dispose() {
     finishSkillLog();
     disposeCombatArena();
