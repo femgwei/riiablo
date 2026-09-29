@@ -1,3 +1,11 @@
 dependencies { implementation project(':tools:backends:backend-lwjgl3') }
 description = 'Standalone skill effect laboratory.'
 application.mainClass = 'com.riiablo.skill.SkillViewer'
+
+// Reuse the repository's shared VisUI skin instead of requiring every tool to
+// duplicate the atlas, fonts, and texture files.
+tasks.named('processResources') {
+  from(project(':tools:mpq-viewer').file('src/main/resources/skin')) {
+    into 'skin'
+  }
+}
