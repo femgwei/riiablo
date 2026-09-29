@@ -518,6 +518,10 @@ public class ServerSkillSystem extends PassiveSystem {
         // Amazon bow skills must use the authoritative local missile path so
         // Skills.txt elemental damage/cold length is captured before impact.
         && !NativeSkillResolver.isAmazonBowSkill(skill)
+        // Elemental Amazon javelins (Lightning Bolt/Poison Javelin/Plague
+        // Javelin/Lightning Fury) also use SrvDoFunc=0, but their missile
+        // damage must be initialized from Skills.txt before collision.
+        && !NativeSkillResolver.isAmazonElementalMissileSkill(skill)
         // Normal bow/crossbow Attack has no legacy client projectile. It must
         // reach the authoritative missile path below just like Throw does.
         && !rangedNormalAttack
@@ -579,6 +583,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 124
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
+        && !NativeSkillResolver.isAmazonElementalMissileSkill(skill)
         && skill.srvdofunc != 3 && skill.srvdofunc != 5
         && skill.srvdofunc != 8
         && skill.srvdofunc != 10 && skill.srvdofunc != 12

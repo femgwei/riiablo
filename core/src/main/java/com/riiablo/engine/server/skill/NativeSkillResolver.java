@@ -211,6 +211,18 @@ public final class NativeSkillResolver {
   }
 
   /**
+   * Amazon elemental javelin skills use the generic server missile path even
+   * though their Skills.txt SrvDoFunc is zero.  Keeping this separate from
+   * the full javelin list avoids routing Power Strike/Charged Strike melee
+   * records through the projectile presentation path.
+   */
+  public static boolean isAmazonElementalMissileSkill(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 0
+        && skill.EType != null && !skill.EType.isEmpty()
+        && isAmazonJavelinSkill(skill);
+  }
+
+  /**
    * Amazon's generic Throw actions use the active javelin/spear set as well.
    * Other classes retain the native generic-throw behavior for knives and
    * throwing axes.

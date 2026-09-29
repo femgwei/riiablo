@@ -568,7 +568,8 @@ public final class MissileDamageResolver {
       if (poisonLength > 0) poisonLength += poisonLength * lengthSynergy / 100;
     }
     if (includeSource && projectile.missile != null
-        && projectile.missile.pSrvDmgFunc == 1 && type > PHYSICAL) {
+        && (projectile.missile.pSrvDmgFunc == 1
+            || projectile.missile.pSrvDmgFunc == 12) && type > PHYSICAL) {
       int conversion = Math.min(100, Math.max(0,
           damageConversionPercent(projectile.missile, level)));
       int convertedMin = physicalMin * conversion / 100;

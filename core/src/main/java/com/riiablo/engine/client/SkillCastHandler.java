@@ -198,6 +198,8 @@ public class SkillCastHandler extends PassiveSystem {
     // reaches collision with only the owner's physical weapon damage.
     boolean localAmazonBowServer = localServer
         && NativeSkillResolver.isAmazonBowSkill(skill);
+    boolean localAmazonElementalMissileServer = localServer
+        && NativeSkillResolver.isAmazonElementalMissileSkill(skill);
     boolean localMonsterServer = mMonster.has(event.entityId) && localServer;
     boolean localBlessedHammerServer = localServer
         && (event.srvdofunc == 73 || skill.srvdofunc == 73);
@@ -244,9 +246,10 @@ public class SkillCastHandler extends PassiveSystem {
           event.entityId, event.skillId, networkClient, localServer);
       return;
     }
-    if (localAmazonBowServer) {
-      log.info("[SKILL_PRESENTATION] phase=reuse_server_amazon_bow entity={} skill={}"
-          + " localServer={}", event.entityId, skill.skill, localServer);
+    if (localAmazonBowServer || localAmazonElementalMissileServer) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_amazon_missile entity={} skill={}"
+          + " localServer={} elementalMissile={}", event.entityId, skill.skill,
+          localServer, localAmazonElementalMissileServer);
       return;
     }
     boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
