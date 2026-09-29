@@ -11,6 +11,9 @@
 - [x] 修复 D2GS 真实 MPQ 地图加载时 NPC 对客户端 `MenuManager/DialogManager` 的硬注入：
   相关 UI 系统在无头世界惰性注册，摄像机/Stage 依赖可选，避免技能门槛在地图初始化阶段
   被无关 UI 依赖阻断。
+- [x] 执行全 Sorceress 专项回归（53 tests）；修正 Frost Nova 合成目标测试的接触 tick，
+  按当前 0.5 单位 fallback 碰撞半径在第 5 tick 验证伤害/寒冷抗性/免疫/冻结物品门槛，
+  避免旧的第 4 tick 假设造成误报。
 - [ ] Sorceress 仍处于 `partial`：继续完成剩余单体公式、状态技能和完整技能树审计；
   本项只确认 Fire Ball/Nova 的真实双客户端实体同步，不替代伤害数值与动画逐帧验收。
 

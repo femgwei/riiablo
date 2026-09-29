@@ -93,11 +93,11 @@ class SorceressFrostNovaIntegrationTest extends RiiabloTest {
 
       cast(world, caster, Riiablo.files.skills.get(SkillId.FROST_NOVA));
       world.setDelta(1f / 25f);
-      // At speed 24 the cardinal paths first enter the target radius on tick
-      // four. Stop there so StateUpdater has not yet consumed the freshly
+      // At speed 24 the cardinal paths first enter the synthetic target's
+      // 0.5-unit fallback radius on tick five. Stop there so StateUpdater has
+      // not yet consumed the freshly
       // applied duration on a later tick.
-      for (int i = 0; i < 4; i++) world.process();
-
+      for (int i = 0; i < 5; i++) world.process();
       assertTrue(life(world, resisted) >= 98f && life(world, resisted) <= 99f);
       assertEquals(140, cold(world, resisted).duration,
           "50 cold resistance minus 20 Cold Mastery leaves 30%, so 200 frames become 140");
