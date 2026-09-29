@@ -96,7 +96,6 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.CofComponents;
-import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.EntityFactory;
@@ -976,18 +975,16 @@ public class SkillViewer extends Tool {
             + " x=" + targetPoint.x + " y=" + targetPoint.y);
         if (engine != null && playerEntity != Engine.INVALID_ENTITY) {
           int skillId = Riiablo.files.skills.index(skillSelect.getSelected());
-          net.mostlyoriginal.api.event.common.EventSystem events =
-              engine.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class);
-          if (skillId >= 0 && events != null) {
-            SkillCastEvent cast = SkillCastEvent.obtain(playerEntity, skillId, targetId, targetPoint);
-            events.dispatch(cast);
+          Actioneer actioneer = engine.getSystem(Actioneer.class);
+          if (skillId >= 0 && actioneer != null) {
+            boolean accepted = actioneer.castAndReport(playerEntity, skillId, targetId, targetPoint);
             String result = "event=cast_result skillId=" + skillId + " target=" + targetName
-                + " accepted=" + cast.accepted + " resultCode=" + cast.resultCode
-                + " manaCost=" + cast.manaCost;
+                + " accepted=" + accepted + " mode=actioneer";
             sessionLog.append(result);
             runtimeLog(result);
           } else {
-            String result = "event=cast_skipped skillId=" + skillId + " events=" + (events != null);
+            String result = "event=cast_skipped skillId=" + skillId
+                + " actioneer=" + (actioneer != null);
             sessionLog.append(result);
             runtimeLog(result);
           }

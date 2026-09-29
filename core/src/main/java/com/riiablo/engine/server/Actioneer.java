@@ -89,6 +89,7 @@ import com.riiablo.map.DT1;
 
 public class Actioneer extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Actioneer.class);
+  private boolean lastCastAccepted;
 
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Sequence> mSequence;
@@ -272,6 +273,13 @@ public class Actioneer extends PassiveSystem {
         currentCombatTick());
   }
 
+  /** Starts a local cast and reports the authoritative SkillCast validation result. */
+  public boolean castAndReport(int entityId, int skillId, int targetId, Vector2 targetVec) {
+    lastCastAccepted = false;
+    cast(entityId, skillId, targetId, targetVec);
+    return lastCastAccepted;
+  }
+
   /** Starts a cast against the exact authoritative position frame chosen by D2GS. */
   public void castAtTick(
       int entityId, int skillId, int targetId, Vector2 targetVec, long snapshotTick) {
@@ -428,6 +436,7 @@ public class Actioneer extends PassiveSystem {
     mCasting.create(entityId).set(skillId, targetId, targetVec, snapshotTick);
     SkillCastEvent castEvent = SkillCastEvent.obtain(entityId, skillId, targetId, targetVec);
     events.dispatch(castEvent);
+    lastCastAccepted = castEvent.accepted;
     if (!castEvent.accepted) {
       log.debug("Skill cast rejected by server: entity={}, skill={}, resultCode={}, manaCost={}",
           entityId, skillId, castEvent.resultCode, castEvent.manaCost);
