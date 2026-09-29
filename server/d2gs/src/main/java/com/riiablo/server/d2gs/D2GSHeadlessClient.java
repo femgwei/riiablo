@@ -66,6 +66,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -119,6 +120,11 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_WORLDSTONEKEEPLEV3 = 130;
   private static final int LEVEL_THRONEOFDESTRUCTION = 131;
   private static final int LEVEL_WORLDSTONECHAMBER = 132;
+  private static final int NATIVE_VINE_ATTACK = 294;
+  // Riiablo's binned Missiles table exposes the 1.10f plague-vines rows at
+  // indices 474 (controller) and 475 (trail); these are table indices, not
+  // the native enum values in D2MOO's MissilesIds.h.
+  private static final int NATIVE_VINE_TRAIL_MISSILE = 475;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -205,6 +211,12 @@ public final class D2GSHeadlessClient {
     // construction, so wait for the same readiness boundary instead of
     // racing Riiablo.files (which made new headless scenarios flaky).
     if (config.home != null) waitForGameFiles();
+    if (config.requireVineScenario) {
+      int requestedVineSkill = config.vineSkillId;
+      config.vineSkillId = Config.resolveVineSkillId(requestedVineSkill);
+      log("vine_skill_resolve", "requested=" + requestedVineSkill
+          + " resolved=" + config.vineSkillId);
+    }
     byte[] d2s = config.requireSummonReconnect
         ? createGeneratedNecromancerSave()
         : config.requireBaalWaveDual
@@ -251,6 +263,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
+        : config.requireVineScenario
+        ? createGeneratedAreaSave(config.vineSkillId)
         : config.generatedAmazon
         ? createGeneratedAmazonSave(
             config.requireMercenarySkill || config.requireMercenaryProgression
@@ -382,6 +396,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireAreaSkillScenario) {
       runAreaSkillDual(d2s, character);
+      return;
+    }
+    if (config.requireVineScenario) {
+      runVineDual(d2s, character);
       return;
     }
     if (config.requireQuestRecovery) {
@@ -1256,10 +1274,220 @@ public final class D2GSHeadlessClient {
       result.append(missile.entityId).append("=skill:").append(missile.skillId)
           .append("/missile:").append(missile.missileId)
           .append("/level:").append(missile.damageLevel)
+          .append("/pos:").append(missile.hasPosition
+              ? String.format("(%.1f,%.1f)", missile.x, missile.y) : "?")
           .append("/deleted:").append(missile.deleted)
           .append("/active:").append(missile.everActive);
     }
     return result.append('}').toString();
+  }
+
+  /**
+   * Real 1.10f dual-client gate for the Druid vine chain.  Unlike the generic
+   * area-skill fixture, a vine is an owned rooted monster: the authoritative
+   * evidence is therefore the shared SummonedPetP identity followed by the
+   * vine's native Vine Attack missile and poison state on a hostile target.
+   */
+  private void runVineDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("VinePeer", 0x56494E45);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket ownerSocket = owner.openSocket();
+         Socket peerSocket = peer.openSocket()) {
+      DataInputStream ownerInput = input(ownerSocket), peerInput = input(peerSocket);
+      OutputStream ownerOutput = output(ownerSocket), peerOutput = output(peerSocket);
+      send(ownerOutput, connectionPacket(character, d2s));
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      owner.awaitConnection(ownerInput, deadline());
+      peer.awaitConnection(peerInput, deadline());
+      awaitAreaBaselines(owner, peer, ownerInput, peerInput);
+      if (!D2GS.headlessWarpPlayer(owner.playerId)
+          || !D2GS.headlessWarpPlayer(peer.playerId)) {
+        throw new IOException("vine fixture could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline
+          && (owner.currentLevelId != 2 || peer.currentLevelId != 2)) {
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+      }
+      if (owner.currentLevelId != 2 || peer.currentLevelId != 2) {
+        throw new IOException("vine clients did not receive Blood Moor snapshot: owner="
+            + owner.currentLevelId + " peer=" + peer.currentLevelId);
+      }
+
+      Snapshot target = owner.nearestLiveMonster();
+      if (target == null) throw new IOException("vine fixture found no hostile Blood Moor target");
+      int targetId = target.entityId;
+      if (!D2GS.headlessSetMonsterLife(targetId, 100_000f)) {
+        throw new IOException("vine fixture could not stabilize target life");
+      }
+      // Isolate one hostile so the rooted vine's native target search cannot
+      // select a different Blood Moor spawn while the fixture is repositioning
+      // the caster. This keeps the observed poison state tied to the target
+      // whose id/position was recorded above, without changing game logic.
+      for (Snapshot candidate : new ArrayList<>(owner.monsters.values())) {
+        if (candidate.entityId == targetId || candidate.deleted
+            || !candidate.everActive || !candidate.hasVitals || candidate.life <= 0f
+            || candidate.monsterClass < 0) continue;
+        D2GS.headlessKillMonster(owner.playerId, candidate.entityId);
+      }
+      // The native vine is rooted at the caster's position and only searches
+      // its MonStats attack range. Move the owner beside the deterministic
+      // Blood Moor target before casting so the fixture exercises an actual
+      // Vine Attack hit rather than an out-of-range idle loop.
+      send(ownerOutput, positionPacket(owner.playerId, target.x - 1f, target.y));
+      long repositionDeadline = System.currentTimeMillis() + 1_000L;
+      while (System.currentTimeMillis() < repositionDeadline) {
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+      }
+      send(ownerOutput, owner.castPacket(config.vineSkillId, Engine.INVALID_ENTITY,
+          target.x, target.y));
+      com.riiablo.codec.excel.Skills.Entry vineSkill = Riiablo.files.skills.get(config.vineSkillId);
+      log("vine_cast", "skill=" + config.vineSkillId + " owner=" + owner.playerId
+          + " target=" + targetId + " targetPos=(" + target.x + ',' + target.y + ')'
+          + " row=" + (vineSkill != null ? vineSkill.skill : "null")
+          + " srvDo=" + (vineSkill != null ? vineSkill.srvdofunc : -1)
+          + " summon=" + (vineSkill != null ? vineSkill.summon : "")
+          + " petType=" + (vineSkill != null ? vineSkill.pettype : ""));
+
+      long castDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      int vineEntity = Engine.INVALID_ENTITY;
+      while (System.currentTimeMillis() < castDeadline) {
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+        vineEntity = sharedVineEntity(owner, peer, config.vineSkillId);
+        if (vineEntity != Engine.INVALID_ENTITY) break;
+      }
+      if (vineEntity == Engine.INVALID_ENTITY) {
+        throw new IllegalStateException("vine summon snapshot missing: skill="
+            + config.vineSkillId + " ownerPets=" + owner.summonedPets.keySet()
+            + " peerPets=" + peer.summonedPets.keySet());
+      }
+      if (!hasState(owner, vineEntity, com.riiablo.engine.server.state.StateId.VINE_BEAST)
+          || !hasState(peer, vineEntity, com.riiablo.engine.server.state.StateId.VINE_BEAST)) {
+        throw new IllegalStateException("vine_beast state missing on both clients: entity="
+            + vineEntity + " ownerStates=" + owner.entityStateIds.get(vineEntity)
+            + " peerStates=" + peer.entityStateIds.get(vineEntity));
+      }
+
+      long attackDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      boolean attack = false;
+      boolean trail = false;
+      while (System.currentTimeMillis() < attackDeadline) {
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+        attack = sharedVineAttack(owner, peer, vineEntity);
+        trail = sharedVineTrail(owner, peer, vineEntity);
+        if (attack && trail) break;
+      }
+      if (!attack || !trail) {
+        throw new IllegalStateException("vine attack evidence missing: skill="
+            + config.vineSkillId + " vine=" + vineEntity + " attack=" + attack
+            + " trail=" + trail + " missiles="
+            + areaMissileSummary(owner.areaMissiles) + " targetStates="
+            + owner.entityStateIds.get(targetId) + " allStates=" + owner.entityStateIds);
+      }
+      log("vine_dual_pass", "skill=" + config.vineSkillId + " vine=" + vineEntity
+          + " owner=" + owner.playerId + " peer=" + peer.playerId
+          + " sharedVine=true vineBeast=true vineAttack=" + attack
+          + " vineTrail=" + trail + " targetStates=" + owner.entityStateIds.get(targetId));
+
+      // Keep the authoritative owner alive while replacing the observer. The
+      // replacement must receive the same vine identity and state, proving
+      // summon metadata survives a real D2GS reconnect baseline.
+      int oldPeer = peer.playerId;
+      peerSocket.close();
+      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < disconnectDeadline) consumeOne(ownerInput, owner);
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessWarpPlayer(reconnected.playerId)) {
+          throw new IOException("vine reconnect could not enter Blood Moor");
+        }
+        long reconnectDeadline = System.currentTimeMillis() + 5_000L;
+        while (System.currentTimeMillis() < reconnectDeadline) {
+          consumeOne(reconnectInput, reconnected);
+          if (reconnected.currentLevelId == 2
+              && reconnected.summonedPets.containsKey(vineEntity)
+              && !reconnected.summonedPets.get(vineEntity).deleted
+              && hasState(reconnected, vineEntity,
+                  com.riiablo.engine.server.state.StateId.VINE_BEAST)) {
+            log("vine_reconnect_pass", "entity=" + vineEntity + " oldPeer=" + oldPeer
+                + " observer=" + reconnected.playerId + " stale=false");
+            return;
+          }
+        }
+        throw new IllegalStateException("vine reconnect snapshot missing: entity=" + vineEntity
+            + " pets=" + reconnected.summonedPets.keySet()
+            + " states=" + reconnected.entityStateIds.get(vineEntity));
+      }
+    }
+  }
+
+  private static int sharedVineEntity(D2GSHeadlessClient first,
+      D2GSHeadlessClient second, int skillId) {
+    Set<Integer> shared = new HashSet<>(first.summonedPets.keySet());
+    shared.retainAll(second.summonedPets.keySet());
+    for (Integer entityId : shared) {
+      PetSnapshot a = first.summonedPets.get(entityId);
+      PetSnapshot b = second.summonedPets.get(entityId);
+      if (a != null && b != null && !a.deleted && !b.deleted
+          && a.ownerId == first.playerId && b.ownerId == first.playerId
+          && a.skillId == skillId && b.skillId == skillId
+          && "vine".equalsIgnoreCase(a.petType)
+          && a.petType.equalsIgnoreCase(b.petType)) return entityId;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private static boolean sharedVineAttack(D2GSHeadlessClient first,
+      D2GSHeadlessClient second, int vineEntity) {
+    Set<Integer> shared = new HashSet<>(first.areaMissiles.keySet());
+    shared.retainAll(second.areaMissiles.keySet());
+    for (Integer entityId : shared) {
+      AreaMissile a = first.areaMissiles.get(entityId);
+      AreaMissile b = second.areaMissiles.get(entityId);
+      if (a != null && b != null && a.everActive && b.everActive
+          && !a.deleted && !b.deleted && a.skillId == NATIVE_VINE_ATTACK
+          && b.skillId == NATIVE_VINE_ATTACK
+          && first.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == vineEntity
+          && second.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == vineEntity) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean sharedVineTrail(D2GSHeadlessClient first,
+      D2GSHeadlessClient second, int vineEntity) {
+    Set<Integer> shared = new HashSet<>(first.areaMissiles.keySet());
+    shared.retainAll(second.areaMissiles.keySet());
+    for (Integer entityId : shared) {
+      AreaMissile a = first.areaMissiles.get(entityId);
+      AreaMissile b = second.areaMissiles.get(entityId);
+      if (a != null && b != null && a.everActive && b.everActive
+          && !a.deleted && !b.deleted && a.skillId == NATIVE_VINE_ATTACK
+          && b.skillId == NATIVE_VINE_ATTACK
+          && a.missileId == NATIVE_VINE_TRAIL_MISSILE
+          && b.missileId == NATIVE_VINE_TRAIL_MISSILE
+          && first.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == vineEntity
+          && second.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == vineEntity) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean hasState(D2GSHeadlessClient client, int entityId, int stateId) {
+    Set<Integer> states = client.entityStateIds.get(entityId);
+    return states != null && states.contains(stateId);
   }
 
   private Snapshot nearestLiveMonster() {
@@ -8187,6 +8415,13 @@ public final class D2GSHeadlessClient {
         area.missileId = missile.missileId();
         area.skillId = missile.skillId();
         area.damageLevel = missile.damageLevel();
+        int positionIndex = findComponent(sync, ComponentP.PositionP);
+        if (positionIndex >= 0) {
+          PositionP position = (PositionP) sync.component(new PositionP(), positionIndex);
+          area.x = position.x();
+          area.y = position.y();
+          area.hasPosition = true;
+        }
         area.deleted = (sync.flags() & EntityFlags.deleted) != 0;
         if (!area.deleted) {
           area.everActive = true;
@@ -8772,6 +9007,9 @@ public final class D2GSHeadlessClient {
     int damageLevel;
     boolean deleted;
     boolean everActive;
+    float x;
+    float y;
+    boolean hasPosition;
 
     AreaMissile(int entityId) {
       this.entityId = entityId;
@@ -8893,6 +9131,8 @@ public final class D2GSHeadlessClient {
     boolean requireAndarielQuestScenario;
     boolean requireAreaSkillScenario;
     int areaSkillId = SkillId.VOLCANO;
+    boolean requireVineScenario;
+    int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -8960,6 +9200,8 @@ public final class D2GSHeadlessClient {
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
         else if ("--require-area-skill".equals(arg)) config.requireAreaSkillScenario = true;
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
+        else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
+        else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -9001,6 +9243,10 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
             + "FireBall(47), Nova(48), PoisonNova(92)");
       }
+      if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
+        throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
+            + "Carrion Vine(231), or Solar Creeper(241)");
+      }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
           && !config.requireA4IzualDual
@@ -9024,6 +9270,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireVineScenario
           && !config.requireSummonReconnect
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -9051,6 +9298,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireVineScenario
           && !config.requireSummonReconnect
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
@@ -9066,6 +9314,29 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA;
+    }
+
+    private static boolean isVineSkill(int skillId) {
+      if (skillId == SkillId.POISON_CREEPER
+          || skillId == SkillId.CARRION_VINE
+          || skillId == SkillId.SOLAR_CREEPER) return true;
+      if (Riiablo.files == null || Riiablo.files.skills == null) return false;
+      com.riiablo.codec.excel.Skills.Entry row = Riiablo.files.skills.get(skillId);
+      if (row == null || row.skill == null) return false;
+      return "Poison Creeper".equalsIgnoreCase(row.skill)
+          || "Carrion Vine".equalsIgnoreCase(row.skill)
+          || "Solar Creeper".equalsIgnoreCase(row.skill);
+    }
+
+    /** Resolve legacy SkillId constants to the actual Skills.txt row id. */
+    private static int resolveVineSkillId(int requested) {
+      String name;
+      if (requested == SkillId.POISON_CREEPER) name = "Poison Creeper";
+      else if (requested == SkillId.CARRION_VINE) name = "Carrion Vine";
+      else if (requested == SkillId.SOLAR_CREEPER) name = "Solar Creeper";
+      else return requested;
+      com.riiablo.codec.excel.Skills.Entry row = Riiablo.files.skills.get(name);
+      return row != null ? row.Id : requested;
     }
 
     private static File firstSave(File directory) {
@@ -9110,6 +9381,7 @@ public final class D2GSHeadlessClient {
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
+          + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--verbose]"
           + " [--require-reconnect-visibility]"
           + " [--require-summon-reconnect]"

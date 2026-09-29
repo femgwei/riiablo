@@ -328,6 +328,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       // the Poison Javelin trail rather than a single impact puff.
       spawnPoisonCloud(missile, position.position);
     }
+
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 26) {
+      // D2MOO SrvDo26 (Vines/Plague Vines) lays one stationary trail missile
+      // at the moving controller's current tile on the native Param[0] tick.
+      // The trail, not the controller, owns SrvHit16 and applies the skill's
+      // aura target state when it overlaps a hostile unit.
+      processPlagueVinesMaker(missile, position.position);
+    }
     
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
@@ -1406,7 +1414,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     float collisionRadius = forcedRadius >= 0f ? forcedRadius
         : (isNativeAreaEffect(missile) && !travellingExplosion
             ? nativeAreaRadius(missile) : unitCollisionRadius(targetId));
-    
+
     // Debug log disabled to reduce noise
     // log.debug("Missile {} checking collision with {}: distance={}, radius={}, missilePos=({}, {}), targetPos=({}, {})", 
     //     missileId, targetId, distance, collisionRadius, 
@@ -1414,6 +1422,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     if (distance <= collisionRadius) {
       int hitFunction = missile.missile != null ? missile.missile.pSrvHitFunc : 0;
+      if (hitFunction == 16) {
+        if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) {
+          return false;
+        }
+        applyVineTrailState(missile, targetId);
+        if (!missile.attached && collidesKill(missile)) world.delete(missileId);
+        return true;
+      }
       if (hitFunction == 17 || hitFunction == 18 || hitFunction == 21) {
         // War Cry/Howl/Shout waves resolve their native hit function before
         // entering the ordinary damage path. They still consume the source
@@ -1889,6 +1905,58 @@ public class MissileCollisionSystem extends IteratingSystem {
         missileId, missile.ownerId, targetId, missile.skillId, raw,
         poison.poisonDamagePerFrame, poison.poisonDuration,
         missile.poisonPiercePercent);
+  }
+
+  /** Native SrvDo26 controller tick for Plague Vines/Vines. */
+  private void processPlagueVinesMaker(Missile maker, Vector2 origin) {
+    if (maker == null || maker.missile == null || origin == null || factory == null
+        || maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0) return;
+    int interval = maker.missile.Param != null && maker.missile.Param.length > 0
+        ? Math.max(1, maker.missile.Param[0]) : 1;
+    if (maker.nativeFrame <= 0 || maker.nativeFrame % interval != 0) return;
+    String childName = maker.missile.SubMissile[0];
+    if (childName == null || childName.isEmpty()) return;
+    Missiles.Entry childRow = Riiablo.files.Missiles.get(childName);
+    if (childRow == null) return;
+    int childId = factory.createMissile(childRow, tmpVec.setZero(), origin,
+        maker.ownerId, Math.max(1, maker.damageLevel));
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile child = mMissile.get(childId);
+    child.skillId = maker.skillId;
+    child.damageLevel = Math.max(1, maker.damageLevel);
+    // The native helper assigns the player as owner.  The current server vine
+    // controller already carries that ownership relation, so preserve it on
+    // the trail for alignment, state source, and reconnect snapshots.
+    log.info("[VINE_TRAIL] phase=create source={} child={} row={} skill={} level={} "
+            + "hitFunc={} dmgFunc={} eType={} eMin={} eMax={} eLen={} "
+            + "hitSubMissile={} subMissile={} pos=({}, {})",
+        maker.ownerId, childId, childRow.Missile, child.skillId, child.damageLevel,
+        childRow.pSrvHitFunc, childRow.pSrvDmgFunc, childRow.EType,
+        childRow.EMin, childRow.Emax, childRow.ELen,
+        childRow.HitSubMissile != null && childRow.HitSubMissile.length > 0
+            ? childRow.HitSubMissile[0] : "",
+        childRow.SubMissile != null && childRow.SubMissile.length > 0
+            ? childRow.SubMissile[0] : "",
+        origin.x, origin.y);
+  }
+
+  /** Native SrvHit16 for Vine/Plague Vines trail missiles. */
+  private void applyVineTrailState(Missile missile, int targetId) {
+    if (missile == null || targetId < 0) return;
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    if (skill == null || skill.auratargetstate == null || skill.auratargetstate.isEmpty()) return;
+    com.riiablo.codec.excel.States.Entry stateRow = Riiablo.files.States.get(skill.auratargetstate);
+    int stateId = stateRow != null ? stateRow.id : StateId.SLOWED;
+    int level = Math.max(1, missile.damageLevel);
+    int duration = skill.calc4 != null && !skill.calc4.isEmpty()
+        ? Math.max(5, SkillFormula.evaluate(skill.calc4, skill, level)) : 5;
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    StateList targetStates = stateList(targetId);
+    UnitState applied = targetStates.addStateLayer(stateId, duration, level,
+        missile.ownerId, missile.skillId);
+    if (applied != null) applied.needsSync = true;
+    log.info("[VINE_TRAIL] phase=state target={} state={} duration={} level={} source={} skill={}",
+        targetId, stateId, duration, level, missile.ownerId, missile.skillId);
   }
 
   /** Resolves one 8.8 game-frame hit from Blaze or Fire Wall. */

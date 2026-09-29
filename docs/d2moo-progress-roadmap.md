@@ -5691,3 +5691,20 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 
 下一项：在真实 1.10f MPQ/双客户端场景验证 vine 的 `Vine Attack` 导弹命中、毒素状态、
 跨区域跟随和重连快照；之后进入 Paladin Aura 的同源优先级审计。
+## 2026-09-30 Druid Vine Attack 真实 MPQ/双客户端门槛
+
+- [x] 按 D2MOO 1.10f 原生链核对 `Vine Attack`（skill id `294`、`SrvDoFunc=130`）、
+  `plague vines` 控制导弹（runtime index `474`、`pSrvDoFunc=26`）以及周期生成的
+  `plague vines trail`（runtime index `475`）。riiablo 现在按 `Param[0]` 周期生成 trail，
+  并继承来源 skill id 与 SumSkill 等级。
+- [x] 真实 MPQ 双 D2GS 客户端通过：vine 实体共享、`VINE_BEAST` 状态、Vine Attack
+  根导弹、trail 导弹和 observer reconnect 快照均通过，日志见 `build/vine-pass.log`。
+- [x] 修复 headless fixture 的技能参数说明与解析日志；`222/231/241` 在当前 Skills.bin
+  中分别显示为 `Plague Poppy/Cycle of Life/Vines`，这些是当前表的原生行名，不再把
+  数字常量误当作显示名称。
+- [ ] 当前仅 `Plague Poppy`（222）完成真实双客户端门槛；`Cycle of Life`（231）和
+  `Vines`（241）施法请求可入队但未生成召唤快照，需继续核对其 action/MonStats 资源链，
+  不能把三种 vine 一并标成实机完成。
+- [ ] D2MOO 当前 `plague vines trail` 行为数据为 `pSrvHitFunc=50`、`pSrvDmgFunc=0`，
+  且没有直接 `EType/EMin/EMax` 毒素字段；本轮只确认 trail 生成和同步，不宣称毒素命中
+  已完成。跨区域跟随仍待单独门槛。

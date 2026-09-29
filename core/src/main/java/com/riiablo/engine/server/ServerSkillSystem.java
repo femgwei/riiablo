@@ -543,6 +543,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 123
         && event.srvdofunc != 124
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
+        && event.srvdofunc != 130
         && event.srvdofunc != 144
         // Local GameScreen uses the monstersOnly adapter to avoid duplicating
         // ordinary player effects, but Throw is now authoritative as well.
@@ -582,6 +583,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 123
         && skill.srvdofunc != 124
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
+        && skill.srvdofunc != 130
         && skill.srvdofunc != 144
         && !NativeSkillResolver.isAmazonElementalMissileSkill(skill)
         && skill.srvdofunc != 3 && skill.srvdofunc != 5
@@ -939,6 +941,10 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 direction = new Vector2(target).sub(start);
       if (direction.isZero(0.0001f)) direction.set(1, 0);
       direction.nor();
+      // Vine Attack uses the same target-facing vector as the other native
+      // skill missiles.  Keep the generic launcher direction unchanged so a
+      // rooted vine's plague-vines projectile travels toward its selected
+      // target in world coordinates.
       if (configuredCount > 1) {
         float offset = (ordinal - (configuredCount - 1) * 0.5f)
             * MULTI_MISSILE_SPREAD_RADIANS;
@@ -976,6 +982,36 @@ public class ServerSkillSystem extends PassiveSystem {
                 ? missile.HitSubMissile[0] : "");
       }
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      // Native D2MOO SrvDo130 (Vine Attack) uses a MonStats dispatch row
+      // whose Skills.txt damage columns are intentionally empty; the missile
+      // still carries the authoritative source skill and SumSkill level.
+      // Preserve that metadata even when initializeSkillDamage keeps the
+      // table-owned missile snapshot instead of writing a Skills.txt packet.
+      if (event.srvdofunc == 130 && mMissile.has(missileId)) {
+        Missile vineAttack = mMissile.get(missileId);
+        vineAttack.skillId = skill.Id;
+        vineAttack.damageLevel = Math.max(1, skillLevel);
+        log.info("[VINE_ATTACK] phase=configure source={} missileId={} skill={} level={} "
+            + "row={} hitFunc={} dmgFunc={} eType={} eMin={} eMax={} eLen={} "
+            + "size={} collision={} collideType={} collideKill={} nextHit={} "
+            + "snapshot={} poisonFixed={} poison={}..{} duration={}",
+            event.entityId, missileId, skill.skill, skillLevel,
+            vineAttack.missile != null ? vineAttack.missile.Missile : "",
+            vineAttack.missile != null ? vineAttack.missile.pSrvHitFunc : -1,
+            vineAttack.missile != null ? vineAttack.missile.pSrvDmgFunc : -1,
+            vineAttack.missile != null ? vineAttack.missile.EType : "",
+            vineAttack.missile != null ? vineAttack.missile.EMin : 0,
+            vineAttack.missile != null ? vineAttack.missile.Emax : 0,
+            vineAttack.missile != null ? vineAttack.missile.ELen : 0,
+            vineAttack.missile != null ? vineAttack.missile.Size : 0,
+            vineAttack.missile != null && vineAttack.missile.Collision,
+            vineAttack.missile != null ? vineAttack.missile.CollideType : 0,
+            vineAttack.missile != null && vineAttack.missile.CollideKill,
+            vineAttack.missile != null && vineAttack.missile.NextHit,
+            vineAttack.damageSnapshot, vineAttack.fixedPoisonRate,
+            vineAttack.poisonMinRateFixed, vineAttack.poisonMaxRateFixed,
+            vineAttack.poisonDurationFrames);
+      }
       // Fire Ball's SrvHit01 parent and its ExplosionMissile are one native
       // impact packet. Give the parent a cast-lifetime gate even though the
       // generic path creates only one travelling missile; the parent is
@@ -2692,7 +2728,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    MonStats.Entry summon = resolveSummonMonster(skill.summon);
     if (summon == null) {
       log.warn("[DRUID_SUMMON] phase=reject owner={} skill={} row={} reason=missing_monstats",
           event.entityId, event.skillId, skill.summon);

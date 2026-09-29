@@ -168,6 +168,22 @@ tasks.register('headlessAreaSkill', JavaExec) {
   if (project.hasProperty('areaVerbose')) args '--verbose'
 }
 
+tasks.register('headlessVine', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Druid vine summon/attack/poison dual-client gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-vine', '--vine-skill',
+       (project.hasProperty('vineSkill') ? project.property('vineSkill').toString() : '222'),
+       '--test-timeout',
+       (project.hasProperty('vineTimeout') ? project.property('vineTimeout').toString() : '90')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
 tasks.register('headlessAreaSkillRegression') {
   group = 'verification'
   description = 'Runs the complete real-MPQ area-skill dual-client and reconnect gate.'
