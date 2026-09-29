@@ -47,6 +47,14 @@ public class AnimStepper extends IntervalIteratingSystem {
     // in this batch with no AnimData anymore; treat it as a completed
     // animation instead of dereferencing a stale component.
     if (animData == null) return;
+    UnitStates states = mUnitStates.get(entityId);
+    if (states != null && states.stateList != null
+        && states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)) {
+      // FREEZE is a live-unit control state.  Check it before both ordinary
+      // COF playback and native Jab sequences so no attack/death animation
+      // advances while the unit is frozen.
+      return;
+    }
     Sequence sequence = mSequence.get(entityId);
     if (sequence != null && sequence.nativeJab) {
       processNativeJab(entityId, sequence, animData);
@@ -55,14 +63,10 @@ public class AnimStepper extends IntervalIteratingSystem {
     if (animData.numFrames <= 0) return;
 
     int delta = animData.override >= 0 ? animData.override : animData.speed;
-    UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null) {
       // Native FREEZE stops the current action frame while the unit is alive.
       // Death processing removes/retains the state before the next animation
       // tick, allowing an ordinary DT sequence to play when appropriate.
-      if (states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)) {
-        return;
-      }
       delta = scaleStateAnimationSpeed(
           delta, states.stateList.getTotalAnimationRateModifier());
     }

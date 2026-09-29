@@ -81,6 +81,10 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       StateList states = mUnitStates.get(event.victim).stateList;
       shattered = states.hasState(
           com.riiablo.engine.server.state.StateId.SHATTER);
+      // FREEZE is a live-unit control state.  It must never survive the
+      // death boundary, otherwise AnimStepper keeps the corpse's DT/DD
+      // animation paused until the old freeze duration expires.
+      states.removeState(com.riiablo.engine.server.state.StateId.FREEZE);
       boolean boss = monster != null && monster.monstats != null && monster.monstats.boss;
       states.retainForDeath(
           Riiablo.files != null ? Riiablo.files.States : null,

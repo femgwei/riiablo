@@ -95,20 +95,27 @@ public class DeathHandler extends PassiveSystem {
   public void onDeathEvent(DeathEvent event) {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);
     final int victimId = event.victim;
+    boolean shattered = false;
 
-    if (mUnitStates.has(victimId) && !mUnitStates.get(victimId).snapshotOnly
-        && mUnitStates.get(victimId).stateList != null) {
-      StateList.DeathUnitType unitType = StateList.DeathUnitType.MONSTER;
-      if (mPlayer.has(victimId)) {
-        unitType = StateList.DeathUnitType.PLAYER;
-      } else if (mMonster.has(victimId)) {
-        Monster monster = mMonster.get(victimId);
-        if (monster.monstats != null && monster.monstats.boss) {
-          unitType = StateList.DeathUnitType.BOSS;
+    if (mUnitStates.has(victimId) && mUnitStates.get(victimId).stateList != null) {
+      StateList states = mUnitStates.get(victimId).stateList;
+      shattered = states.hasState(com.riiablo.engine.server.state.StateId.SHATTER);
+      // FREEZE only applies while the unit is alive.  Clear it before the
+      // death-retention pass so it cannot stall the ordinary DT -> DD path.
+      states.removeState(com.riiablo.engine.server.state.StateId.FREEZE);
+      if (!mUnitStates.get(victimId).snapshotOnly) {
+        StateList.DeathUnitType unitType = StateList.DeathUnitType.MONSTER;
+        if (mPlayer.has(victimId)) {
+          unitType = StateList.DeathUnitType.PLAYER;
+        } else if (mMonster.has(victimId)) {
+          Monster monster = mMonster.get(victimId);
+          if (monster.monstats != null && monster.monstats.boss) {
+            unitType = StateList.DeathUnitType.BOSS;
+          }
         }
+        states.retainForDeath(
+            Riiablo.files != null ? Riiablo.files.States : null, unitType);
       }
-      mUnitStates.get(victimId).stateList.retainForDeath(
-          Riiablo.files != null ? Riiablo.files.States : null, unitType);
     }
     
     // Handle player death
@@ -121,7 +128,7 @@ public class DeathHandler extends PassiveSystem {
     // to MODE_DD and spawns the icebreak presentation. Calling AI.kill()
     // afterwards would enqueue the ordinary DT death animation and race the
     // shatter transition, producing an intermittent normal corpse animation.
-    if (mAIWrapper.has(victimId) && !isShattered(victimId)) {
+    if (mAIWrapper.has(victimId) && !shattered && !isShattered(victimId)) {
       mAIWrapper.get(victimId).ai.kill();
     }
     
