@@ -15,8 +15,10 @@
   `(stateId, sourceEntityId, skillId)` 恢复独立层，不再把多个同状态 spirit aura 合并；新增
   `spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect`，验证两个 Oak Sage
   来源层及其数值在快照往返后保持隔离。
+- [x] 新增 `reusedSpiritEntityIdCannotResurrectTheOldAuraLayer`：删除 Oak Sage 后复用同一
+  entity id 创建 Wolverine，旧 Oak Sage layer 不会恢复，新 spirit 仅发布自己的来源层。
 - [ ] 仍待真实 1.10f MPQ 双客户端确认 spirit aura 的旧客户端快照、重连和跨区迁移表现；
-  下一步继续审计 summon aura 的重连快照与 source entity 重用防护。
+  下一步继续真实双客户端验收旧客户端兼容和跨区迁移表现。
 
 ## 2026-09-30 Paladin 付费周期光环法力门控
 

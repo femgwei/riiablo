@@ -343,6 +343,49 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     assertEquals(35, restoredSecond.maxLifeModifier);
   }
 
+  @Test
+  void reusedSpiritEntityIdCannotResurrectTheOldAuraLayer() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = createPlayer(world, "reuse-owner", 10, 10);
+      CharData data = world.getMapper(Player.class).get(owner).data;
+      data.setSkillLevel(SkillId.OAK_SAGE, 8);
+      com.riiablo.codec.excel.Skills.Entry oak = Riiablo.files.skills.get(SkillId.OAK_SAGE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.OAK_SAGE, Engine.INVALID_ENTITY, new Vector2(10, 10),
+          oak.srvdofunc, oak.cltdofunc));
+      int oldSource = factory.lastEntity;
+      world.setDelta(1f / 25f);
+      world.process();
+      assertAuraLayer(world, owner, oldSource, true);
+
+      world.delete(oldSource);
+      world.process();
+      assertAuraLayer(world, owner, oldSource, false);
+
+      int reused = world.create();
+      assertEquals(oldSource, reused, "Artemis should reuse the released source id in this fixture");
+      initUnit(world, reused, 10, 10);
+      world.getMapper(SummonedPet.class).create(reused)
+          .set(owner, "wolf", SkillId.HEART_OF_WOLVERINE, 4, false, 0);
+      UnitState wolverine = world.getMapper(UnitStates.class).get(reused).stateList
+          .addStateLayer(StateId.WOLVERINE, 0, 4, owner, SkillId.HEART_OF_WOLVERINE);
+      wolverine.skillId = SkillId.HEART_OF_WOLVERINE;
+      world.process();
+
+      assertAuraLayer(world, owner, reused, false);
+      UnitState newAura = world.getMapper(UnitStates.class).get(owner).stateList
+          .getStateLayer(StateId.WOLVERINE, reused, SkillId.HEART_OF_WOLVERINE);
+      assertTrue(newAura != null, "the replacement spirit may only publish its own aura");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static void assertAuraLayer(World world, int target, int source, boolean expected) {
     UnitState state = world.getMapper(UnitStates.class).get(target).stateList
         .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE);
