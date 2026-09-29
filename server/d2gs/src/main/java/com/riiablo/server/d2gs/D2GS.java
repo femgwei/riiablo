@@ -2517,6 +2517,13 @@ public class D2GS extends ApplicationAdapter {
 
   /** Creates a non-hireling summon owned by the supplied player in one RoomEx. */
   static int headlessCreateRoomSummon(int playerId, int levelId, int roomId) {
+    return headlessCreateRoomSummon(playerId, levelId, roomId,
+        com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF, "spiritwolf");
+  }
+
+  /** Creates a summon fixture using a concrete native skill row. */
+  static int headlessCreateRoomSummon(int playerId, int levelId, int roomId,
+      int skillId, String petType) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || server.map == null
         || server.factory == null || Riiablo.files == null || Gdx.app == null) {
@@ -2532,14 +2539,15 @@ public class D2GS extends ApplicationAdapter {
         Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
             ? null : zone.getRoomsEx().get(roomId);
         Vector2 position = findHeadlessRoomPosition(server, zone, room);
-        com.riiablo.codec.excel.Skills.Entry skill =
-            Riiablo.files.skills.get(com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF);
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
         com.riiablo.codec.excel.MonStats.Entry summon = skill == null
             || skill.summon == null ? null : Riiablo.files.monstats.get(skill.summon);
         if (position == null || summon == null) return;
         int petId = server.factory.createSummonedPet(playerId, summon,
-            skill.pettype == null || skill.pettype.isEmpty() ? "spiritwolf" : skill.pettype,
-            com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF,
+            petType == null || petType.isEmpty()
+                ? (skill.pettype == null || skill.pettype.isEmpty() ? "spiritwolf" : skill.pettype)
+                : petType,
+            skillId,
             1, 1, false, 0, position.x, position.y);
         if (petId != Engine.INVALID_ENTITY) result.set(petId);
       } finally {

@@ -34,8 +34,17 @@
 - [x] 新增 `ServerEntityFactorySummonQuotaTest` 和 `SummonedPetSerializerTest`：真实工厂
   验证 Skeleton PetMax 超限淘汰最旧实体、不同 Golem 行共享单一原生配额，并验证重连快照
   保留 owner、PetType、skillId 和 unsummonable 字段。
-- [ ] Poison Nova 与召唤事务首轮核对完成；剩余门槛是 D2GS 实际断线/重连时序、快照重放
-  与旧客户端并存时的实体恢复。
+- [x] Poison Nova 与召唤事务首轮核对完成；真实 D2GS 重连门槛见下节。
+
+## 2026-09-30 Necromancer 召唤物重连快照门槛
+
+- [x] 新增 `headlessSummonReconnect`：生成真实 1.10f Necromancer 存档并通过
+  `Raise Skeleton(70)` 的原生技能行创建 Skeleton，两个客户端共同观察同一实体的
+  `SummonedPetP(ownerId, petType, skillId, unsummonable)` 字段。
+- [x] 观察客户端断线时 owner 仍在线，召唤物不被错误清理；观察客户端重新连接并回到
+  同一 RoomEx 后，按原 entityId 重放召唤物快照，PetType 与 skillId 保持一致。
+- [x] 该门槛验证服务器实体生命周期和快照投影，不替代旧版客户端对未知组件的视觉
+  兼容验收；下一步保留 MonsterP fallback 检查并继续全技能树审计。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 

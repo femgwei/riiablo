@@ -38,6 +38,7 @@ import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.net.packet.d2gs.StateP;
+import com.riiablo.net.packet.d2gs.SummonedPetP;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
@@ -122,6 +123,7 @@ public final class D2GSHeadlessClient {
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
   private final Map<Integer, Visibility> visibility = new HashMap<>();
+  private final Map<Integer, PetSnapshot> summonedPets = new HashMap<>();
   /** Number of deletion frames observed per entity id on this connection. */
   private final Map<Integer, Integer> deletionFrameCounts = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
@@ -203,7 +205,9 @@ public final class D2GSHeadlessClient {
     // construction, so wait for the same readiness boundary instead of
     // racing Riiablo.files (which made new headless scenarios flaky).
     if (config.home != null) waitForGameFiles();
-    byte[] d2s = config.requireBaalWaveDual
+    byte[] d2s = config.requireSummonReconnect
+        ? createGeneratedNecromancerSave()
+        : config.requireBaalWaveDual
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireA5AncientDual
         ? createGeneratedAmazonSave(80, 0)
@@ -398,6 +402,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireReconnectVisibility) {
       runReconnectVisibility(d2s, character);
+      return;
+    }
+    if (config.requireSummonReconnect) {
+      runSummonReconnect(d2s, character);
       return;
     }
     if (config.requireReconnectGroundLoot) {
@@ -6699,6 +6707,89 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /** Real two-client Necromancer summon snapshot/reconnect regression. */
+  private void runSummonReconnect(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("SummonPeer", 0x53554D50);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(10)[0];
+    try (Socket peerSocket = peer.openSocket();
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      peer.awaitConnection(peerInput, deadline());
+      try (Socket ownerSocket = owner.openSocket();
+           DataInputStream ownerInput = input(ownerSocket);
+           OutputStream ownerOutput = output(ownerSocket)) {
+        send(ownerOutput, connectionPacket(character, d2s));
+        owner.awaitConnection(ownerInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 10, room)
+            || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, room)) {
+          throw new IOException("failed to stage summon reconnect clients");
+        }
+        int summon = D2GS.headlessCreateRoomSummon(owner.playerId, 10, room,
+            SkillId.RAISE_SKELETON, "skeleton");
+        if (summon < 0) throw new IOException("failed to create Necromancer skeleton");
+        awaitSummonedPet(owner, ownerInput, summon, owner.playerId, "skeleton", SkillId.RAISE_SKELETON,
+            deadline());
+        awaitSummonedPet(peer, peerInput, summon, owner.playerId, "skeleton", SkillId.RAISE_SKELETON,
+            deadline());
+        int ownerId = owner.playerId;
+        peerSocket.close();
+        long ownerDeadline = System.currentTimeMillis() + 1000L;
+        while (System.currentTimeMillis() < ownerDeadline) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+          if (packet != null) owner.consume(packet);
+        }
+        PetSnapshot ownerPet = owner.summonedPets.get(summon);
+        if (ownerPet == null || ownerPet.deleted || ownerPet.ownerId != ownerId) {
+          throw new IllegalStateException("owner lost skeleton after peer disconnect");
+        }
+        D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+        try (Socket reconnectSocket = reconnected.openSocket();
+             DataInputStream reconnectInput = input(reconnectSocket);
+             OutputStream reconnectOutput = output(reconnectSocket)) {
+          send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+          reconnected.awaitConnection(reconnectInput, deadline());
+          if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
+            throw new IOException("failed to stage reconnected observer");
+          }
+          awaitSummonedPet(reconnected, reconnectInput, summon, ownerId,
+              "skeleton", SkillId.RAISE_SKELETON, deadline());
+          log("summon_reconnect_pass", "entity=" + summon
+              + " owner=" + ownerId + " observer=" + reconnected.playerId
+              + " clients=true,true petType=skeleton skillId=" + SkillId.RAISE_SKELETON
+              + " ownerSummonPreserved=true observerSnapshotReplay=true");
+        }
+      }
+    }
+  }
+
+  private static void awaitSummonedPet(D2GSHeadlessClient client, DataInputStream input,
+      int entityId, int ownerId, String petType, int skillId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      PetSnapshot pet = client.summonedPets.get(entityId);
+      if (pet != null && !pet.deleted && pet.ownerId == ownerId
+          && pet.petType.equalsIgnoreCase(petType) && pet.skillId == skillId) return;
+    }
+    throw new IOException("timed out waiting for summoned pet snapshot entity=" + entityId);
+  }
+
+  private static void awaitDeleted(D2GSHeadlessClient client, DataInputStream input,
+      int ownerId, int summonId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      Visibility owner = client.visibility.get(ownerId);
+      PetSnapshot pet = client.summonedPets.get(summonId);
+      if (owner != null && owner.deleted && pet != null && pet.deleted) return;
+    }
+    throw new IOException("disconnect did not delete summon owner/pet");
+  }
+
   private static void requireSuccessfulPickup(ItemMoveResult result, int entityId,
       String label) {
     if (result == null || !result.success()
@@ -7994,6 +8085,23 @@ public final class D2GSHeadlessClient {
         playerQuestRevision = player.questRevision();
       }
     }
+    int petIndex = findComponent(sync, ComponentP.SummonedPetP);
+    if (petIndex >= 0) {
+      SummonedPetP pet = (SummonedPetP) sync.component(new SummonedPetP(), petIndex);
+      PetSnapshot snapshot = summonedPets.get(sync.entityId());
+      if (snapshot == null) {
+        snapshot = new PetSnapshot(sync.entityId());
+        summonedPets.put(sync.entityId(), snapshot);
+      }
+      snapshot.ownerId = pet.ownerId();
+      snapshot.petType = pet.petType() == null ? "" : pet.petType();
+      snapshot.skillId = pet.skillId();
+      snapshot.unsummonable = pet.unsummonable();
+      snapshot.deleted = deletionFrame;
+    } else if (deletionFrame) {
+      PetSnapshot pet = summonedPets.get(sync.entityId());
+      if (pet != null) pet.deleted = true;
+    }
     Visibility visible = visibility.get(sync.entityId());
     if (visible == null) {
       visible = new Visibility(sync.entityId());
@@ -8580,6 +8688,42 @@ public final class D2GSHeadlessClient {
     return data;
   }
 
+  /** Deterministic level-30 Necromancer fixture with Raise Skeleton learned. */
+  private static byte[] createGeneratedNecromancerSave() {
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "SummonNecro", Riiablo.NECROMANCER);
+    com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.NECROMANCER.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, stats.dex);
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 200);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 10_000);
+    base.put(Stat.maxmana, 10_000);
+    base.put(Stat.stamina, 10_000);
+    base.put(Stat.maxstamina, 10_000);
+    base.put(Stat.level, 30);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x53554D4E;
+    character.initializeStartItems(stats);
+    if (!character.setSkillLevel(SkillId.RAISE_SKELETON, 20)) {
+      throw new IllegalStateException("could not seed Raise Skeleton");
+    }
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=SummonNecro class=necromancer skill=raise_skeleton bytes="
+        + data.length);
+    return data;
+  }
+
   private static void send(OutputStream output, ByteBuffer buffer) throws IOException {
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
@@ -8599,6 +8743,19 @@ public final class D2GSHeadlessClient {
     boolean deleted;
 
     Visibility(int entityId) {
+      this.entityId = entityId;
+    }
+  }
+
+  private static final class PetSnapshot {
+    final int entityId;
+    int ownerId = -1;
+    String petType = "";
+    int skillId = -1;
+    boolean unsummonable;
+    boolean deleted;
+
+    PetSnapshot(int entityId) {
       this.entityId = entityId;
     }
   }
@@ -8738,6 +8895,7 @@ public final class D2GSHeadlessClient {
     boolean requireMercenaryRestore;
     boolean requireMercenaryTravel;
     boolean requireReconnectVisibility;
+    boolean requireSummonReconnect;
     boolean requireReconnectGroundLoot;
     boolean requireItemFailureCorrections;
     int attempts = 20;
@@ -8804,6 +8962,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-mercenary-restore".equals(arg)) config.requireMercenaryRestore = true;
         else if ("--require-mercenary-travel".equals(arg)) config.requireMercenaryTravel = true;
         else if ("--require-reconnect-visibility".equals(arg)) config.requireReconnectVisibility = true;
+        else if ("--require-summon-reconnect".equals(arg)) config.requireSummonReconnect = true;
         else if ("--require-reconnect-ground-loot".equals(arg)) config.requireReconnectGroundLoot = true;
         else if ("--require-item-failure-corrections".equals(arg)) config.requireItemFailureCorrections = true;
         else if ("--verbose".equals(arg)) config.verbose = true;
@@ -8860,6 +9019,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireSummonReconnect
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -8886,6 +9046,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireSummonReconnect
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -8946,6 +9107,7 @@ public final class D2GSHeadlessClient {
           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--verbose]"
           + " [--require-reconnect-visibility]"
+          + " [--require-summon-reconnect]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }
   }

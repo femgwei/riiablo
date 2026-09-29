@@ -130,7 +130,11 @@
   创建失败回滚和 Iron Golem 物品预留回滚门槛；`SummonedPetSystemTest` 已覆盖 Necromancer
   PetType 归一化、owner 离开清理以及 Golem/Revive 跨区跟随；`ServerEntityFactorySummonQuotaTest`
   已覆盖真实 PetMax 最旧实体替换和 Golem 共享配额，`SummonedPetSerializerTest` 已覆盖
-  owner/PetType/skillId/unsummonable 重连字段，剩余门槛集中在真实 D2GS 重连时序。
+  owner/PetType/skillId/unsummonable 重连字段。
+- `headlessSummonReconnect` 已通过真实 1.10f MPQ 双客户端门槛：死灵法师 Skeleton 在
+  `SummonedPetP` 中保持 ownerId/PetType/skillId/unsummonable；观察客户端断线不会清理
+  召唤物，重连后按原 entityId 重放快照，旧 owner 的召唤物仍保持活动。
+- 当前剩余门槛集中在旧客户端不识别 `SummonedPetP` 时的 MonsterP 兼容观感，以及完整技能树审计。
 
 ### Paladin
 
