@@ -7,11 +7,14 @@ loading a DS1/DT1 map.
 ## Run
 
 ```text
-gradlew :tools:skill-viewer:run --args="--d2 C:\\Diablo II"
+gradlew :tools:skill-viewer:run
 ```
 
-The `--d2` directory must contain the Diablo II 1.10f MPQ files. The viewer
-creates its session logs under `tools/skill-viewer/logs/`.
+The viewer uses the same installation discovery as the main Riiablo client
+(Windows registry / platform-specific search, then the `riiablo` fallback
+directory under the user home). `--d2 <path>` remains available as an optional
+override for testing another Diablo II 1.10f installation. Session logs are
+created under `tools/skill-viewer/logs/`.
 
 ## Current milestone
 

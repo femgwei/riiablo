@@ -54,6 +54,7 @@ import com.riiablo.codec.excel.Skills;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.SystemUtils;
 import java.util.Locale;
 
 /**
@@ -112,7 +113,7 @@ public class SkillViewer extends Tool {
   @Override
   protected String getHelpHeader() {
     return "Standalone skill effect viewer.\n" +
-        "Requires a Diablo II 1.10f installation containing the MPQ files.";
+        "Uses the same Diablo II installation discovery as the main Riiablo client.";
   }
 
   @Override
@@ -125,7 +126,18 @@ public class SkillViewer extends Tool {
   @Override
   protected void handleCliOptions(String cmd, Options options, CommandLine cli) throws Exception {
     super.handleCliOptions(cmd, options, cli);
-    home = InstallationFinder.getInstance().defaultHomeDir("d2", cli.getOptionValue("d2"));
+    InstallationFinder finder = InstallationFinder.getInstance();
+    String override = cli.getOptionValue("d2");
+    if (override != null) {
+      home = finder.defaultHomeDir("d2", override);
+    } else {
+      Array<com.badlogic.gdx.files.FileHandle> homes = finder.getHomeDirs();
+      home = homes.size > 0
+          ? homes.first()
+          : new com.badlogic.gdx.files.FileHandle(SystemUtils.USER_HOME).child("riiablo");
+      home.mkdirs();
+    }
+    log.debug("d2Home: {}", home);
   }
 
   @Override
