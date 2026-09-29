@@ -16,12 +16,17 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.serializer.CofReferenceSerializer;
 import com.riiablo.engine.server.component.serializer.VitalsSerializer;
 import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.PlayerP;
+import com.riiablo.net.packet.d2gs.MonsterP;
+import com.riiablo.net.packet.d2gs.SummonedPetP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -79,6 +84,42 @@ class ServerClientCombatSyncEcsScenarioTest extends RiiabloTest {
 
       System.out.println("[SERVER_CLIENT_COMBAT_SYNC] entity=" + serverPlayer
           + " hp=0/64 dead=true mode=DT experience=600 level=2 skillPoints=1 status=PASS");
+    } finally {
+      server.dispose();
+    }
+  }
+
+  @Test
+  void summonSnapshotRetainsMonsterFallbackForOlderClients() {
+    SerializationManager serialization = new SerializationManager();
+    World server = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), serialization)
+        .build());
+    try {
+      int entity = server.create();
+      server.getMapper(Class.class).create(entity).type = Class.Type.MON;
+      server.getMapper(Flags.class).create(entity);
+      server.getMapper(Position.class).create(entity).position.set(12f, 7f);
+      Monster monster = server.getMapper(Monster.class).create(entity);
+      monster.monstats = Riiablo.files.monstats.get("fallen1");
+      server.getMapper(SummonedPet.class).create(entity)
+          .set(42, "skeleton", com.riiablo.engine.server.skill.SkillId.RAISE_SKELETON,
+              20, false, 0);
+
+      EntitySync packet = serialize(serialization, entity);
+      assertEquals(Class.Type.MON.ordinal(), packet.type());
+      int monsterIndex = find(packet, ComponentP.MonsterP);
+      int petIndex = find(packet, ComponentP.SummonedPetP);
+      assertTrue(monsterIndex >= 0, "MonsterP fallback must be present");
+      assertTrue(petIndex >= 0, "SummonedPetP metadata must be present");
+      MonsterP monsterWire = (MonsterP) packet.component(new MonsterP(), monsterIndex);
+      SummonedPetP petWire = (SummonedPetP) packet.component(new SummonedPetP(), petIndex);
+      assertEquals(monster.monstats.hcIdx, monsterWire.monsterId());
+      assertEquals(42, petWire.ownerId());
+      assertEquals("skeleton", petWire.petType());
+      assertEquals(com.riiablo.engine.server.skill.SkillId.RAISE_SKELETON, petWire.skillId());
+      System.out.println("[SUMMON_FALLBACK_SYNC] entity=" + entity
+          + " monsterP=true summonedPetP=true oldClientPath=true status=PASS");
     } finally {
       server.dispose();
     }

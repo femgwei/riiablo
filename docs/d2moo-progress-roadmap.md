@@ -46,6 +46,8 @@
 - [x] 该门槛验证服务器实体生命周期和快照投影，不替代旧版客户端对未知组件的视觉
   兼容验收；同时确认召唤物帧保留标准 `MonsterP`/type=1，旧客户端忽略未知
   `SummonedPetP` 时仍可按普通怪物实体显示；下一步继续真实旧客户端 UI/动画验收和全技能树审计。
+- [x] `ServerClientCombatSyncEcsScenarioTest` 锁定同一 `EntitySync` 同时携带
+  `MonsterP` 与 `SummonedPetP`，防止后续序列化优化误删旧客户端 fallback 所需的标准组件。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 
