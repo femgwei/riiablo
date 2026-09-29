@@ -14,7 +14,7 @@ The viewer uses the same installation discovery as the main Riiablo client
 (Windows registry / platform-specific search, then the `riiablo` fallback
 directory under the user home). `--d2 <path>` remains available as an optional
 override for testing another Diablo II 1.10f installation. Session logs are
-created under `tools/skill-viewer/logs/`.
+created under `tools/skill-viewer/logs/` (the tool's local `logs` directory).
 
 ## Current milestone
 

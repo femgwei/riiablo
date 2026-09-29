@@ -146,7 +146,9 @@ public class SkillViewer extends Tool {
     LogManager.setLevel(SkillViewer.class.getName(), Level.DEBUG);
     shapes = new ShapeRenderer();
     stage = new Stage(new ScreenViewport());
-    sessionLog = new SkillSessionLog(Gdx.files.local("tools/skill-viewer/logs"));
+    // Gradle and the standalone launcher both run with the skill-viewer
+    // directory as the working directory. Keep session logs beside the tool.
+    sessionLog = new SkillSessionLog(Gdx.files.local("logs"));
     try {
       loadResources();
     } catch (Throwable t) {
