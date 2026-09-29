@@ -25,8 +25,11 @@
 - [x] 新增 `NecromancerPoisonNovaIntegrationTest`：验证 64 路共享命中集合、每目标单次
   施毒、8.8 毒伤和持续帧施法快照、100% 怪物毒免疫，以及毒穿透同时作用于毒伤和独立
   毒持续时间包；施法后修改施法者精通/穿透不会改变已创建导弹。
-- [ ] Poison Nova 的首轮行为核对完成；Raise/Revive/Golem 的尸体或物品原子消费、PetType、
-  owner 清理和重连仍需按 D2MOO 逐项验收。
+- [x] 扩展 `NecromancerSummonIntegrationTest`：Raise Skeleton 创建失败释放尸体预留，
+  fading corpse 在预留前拒绝，Revive 对可用但不可复活尸体不变更状态，Iron Golem 创建
+  失败释放地面金属物品预留；对应 dark-magic 的 effect-time revalidation/atomic rollback。
+- [ ] Poison Nova 与召唤事务首轮核对完成；PetType 上限替换、owner 清理和重连仍需按
+  D2MOO 逐项验收。
 
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 

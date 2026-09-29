@@ -19,7 +19,7 @@
 
 共享入口是 `NativeSkillResolver`、`SkillExecutor`、`ServerSkillSystem`；职业专用逻辑位于 `AmazonSkills`、`AssassinSkills`、`BarbarianSkills`、`DruidSkills`、`NecromancerSkills`、`PaladinSkills`、`SorceressSkills`。
 
-现有职业专项测试数量（按文件名统计）为：Amazon 4、Assassin 2、Barbarian 7、Druid 18、Necromancer 16、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
+现有职业专项测试数量（按文件名统计）为：Amazon 4、Assassin 2、Barbarian 7、Druid 18、Necromancer 17、Paladin 10、Sorceress 11。这个数量只能表示已有测试入口，不能表示技能已经通过原生行为验收。
 
 ### dark-magic
 
@@ -126,8 +126,9 @@
   两端共同观察同一权威 `poisonnova` 导弹实体、技能 ID 和伤害等级。新增
   `NecromancerPoisonNovaIntegrationTest`，覆盖 64 路共享命中去重、8.8 毒伤/持续帧快照、
   毒抗免疫、毒穿透对伤害与持续时间的影响，以及施法后修改施法者属性不污染飞行中导弹。
-  当前 Poison Nova 技能链已完成首轮核对；Necromancer 剩余门槛集中在召唤/尸体/物品原子事务、
-  PetType、owner 清理与重连。
+  当前 Poison Nova 技能链已完成首轮核对；Raise Skeleton/Revive/Golem 已补齐无效尸体、
+  创建失败回滚和 Iron Golem 物品预留回滚门槛，Necromancer 剩余门槛集中在 PetType、
+  owner 清理与重连。
 
 ### Paladin
 
