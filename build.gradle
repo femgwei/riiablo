@@ -72,6 +72,9 @@ task release(type: Copy) {
   dependsOn ':tools:map-viewer:jar'
   from project(':tools:map-viewer').tasks.getByName('jar').outputs.files
 
+  dependsOn ':tools:skill-viewer:jar'
+  from project(':tools:skill-viewer').tasks.getByName('jar').outputs.files
+
   into "$buildDir/release"
   rename '(.*)-SNAPSHOT(.*)', '$1$2'
 }
