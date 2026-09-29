@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-30 Druid Armageddon/Hurricane 周期伤害脉冲
+
+- [x] 对照 D2MOO `SKILLS_SrvDo124_Armageddon_Hurricane` 与周期激活事件，新增
+  `DruidStormAuraIntegrationTest.periodicStormStrikeCapturesNativeSkillDamageAtPulse`。
+- [x] 回归确认 Hurricane 周期脉冲创建权威导弹时保留 `skillId`、技能等级、状态来源和
+  原生冷伤害包；snapshot-only 客户端不会本地递减周期时钟或重复发射。
+- [x] `DruidStormAuraIntegrationTest` 全部 5 项通过；真实 MPQ 双客户端表现和完整
+  Armageddon/Hurricane 技能树审计仍待后续门槛。
+
 ## 2026-09-30 Druid Firestorm 硬点协同快照回归
 
 - [x] 对照 D2MOO `SKILLS_SrvDo117_Firestorm` 与 `sub_6FCFE4C0` 的多流创建路径，

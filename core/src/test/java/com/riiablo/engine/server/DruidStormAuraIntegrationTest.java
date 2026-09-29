@@ -13,11 +13,14 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -28,6 +31,7 @@ import com.riiablo.item.Item;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.save.CharData;
+import java.util.ArrayList;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +134,48 @@ class DruidStormAuraIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void periodicStormStrikeCapturesNativeSkillDamageAtPulse() {
+    StormRecordingFactory factory = new StormRecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int druid = createDruid(world, 6);
+      CharData data = world.getMapper(Player.class).get(druid).data;
+      data.setSkillLevel(SkillId.FIRESTORM, 5);
+      data.setSkillLevel(SkillId.MOLTEN_BOULDER, 5);
+      data.setSkillLevel(SkillId.VOLCANO, 5);
+      data.setSkillLevel(SkillId.ARMAGEDDON, 5);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.HURRICANE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.HURRICANE, Engine.INVALID_ENTITY, new Vector2(6, 0),
+          skill.srvdofunc, skill.cltdofunc));
+      UnitState state = world.getMapper(UnitStates.class).get(druid)
+          .stateList.getState(StateId.HURRICANE);
+      assertNotNull(state);
+      state.periodicCountdownFrames = 1;
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1, factory.created.size(), "one native strike should be emitted at the pulse");
+      Missile strike = factory.created.get(0);
+      assertEquals(SkillId.HURRICANE, strike.skillId);
+      assertEquals(6, strike.damageLevel);
+      assertTrue(strike.damageSnapshot, "periodic Hurricane strike must snapshot skill damage");
+      assertTrue(strike.damage.get(Stat.coldmaxdam) != null
+          && strike.damage.get(Stat.coldmaxdam).asInt() > 0,
+          "periodic Hurricane strike must carry a non-empty native damage packet"
+              + " skillEType=" + skill.EType + " skillEMin=" + skill.EMin
+              + " skillEMax=" + skill.EMax + " missile=" + skill.srvmissilea
+              + " missileEType=" + strike.missile.EType + " missileEMin=" + strike.missile.EMin
+              + " missileEMax=" + strike.missile.Emax);
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static int createDruid(World world, int level) {
     int id = world.create();
     CharData data = CharData.createRemote("storm", (byte) Riiablo.DRUID);
@@ -156,6 +202,32 @@ class DruidStormAuraIntegrationTest extends RiiabloTest {
   private static final class RecordingFactory extends EntityFactory {
     @Override public int createMissile(int id, Vector2 direction, Vector2 position) {
       return Engine.INVALID_ENTITY;
+    }
+    @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
+    @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createDynamicObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObjectByClassId(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createWarp(int index, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createItem(Item item, float x, float y) { return Engine.INVALID_ENTITY; }
+  }
+
+  private static final class StormRecordingFactory extends EntityFactory {
+    final ArrayList<Missile> created = new ArrayList<>();
+
+    @Override public int createMissile(int id, Vector2 direction, Vector2 position, int ownerId) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(id);
+      if (row == null) return Engine.INVALID_ENTITY;
+      int entity = world.create();
+      Missile missile = world.getMapper(Missile.class).create(entity)
+          .set(row, position, row.Range).setOwner(ownerId);
+      world.getMapper(Position.class).create(entity).position.set(position);
+      world.getMapper(Velocity.class).create(entity).velocity.set(direction);
+      created.add(missile);
+      return entity;
+    }
+    @Override public int createMissile(int id, Vector2 direction, Vector2 position) {
+      return createMissile(id, direction, position, Engine.INVALID_ENTITY);
     }
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
     @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }

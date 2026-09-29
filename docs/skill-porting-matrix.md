@@ -201,6 +201,10 @@
 - Firestorm 的 `SrvDo117` 多流创建现在由 `DruidFirestormIntegrationTest` 锁定施法时
   硬点协同快照：每条权威流都必须保留 Molten Boulder/Eruption 协同后的火焰包；真实
   MPQ 双客户端动画/命中观感仍待验收。
+- Armageddon/Hurricane 的 `SrvDo124` 周期状态现在由
+  `DruidStormAuraIntegrationTest.periodicStormStrikeCapturesNativeSkillDamageAtPulse`
+  锁定：服务端脉冲必须创建带来源技能、等级和元素包的权威导弹，snapshot-only 客户端
+  不得自行推进周期时钟。
 
 ## dark-magic 测试用例移植映射
 
