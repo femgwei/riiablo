@@ -317,7 +317,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (children == null || factory == null) return;
 
     // Keep the native fireexplosion2 child above as the primary DCC path, but
-    // also use the already-proven unit overlay for Exploding Arrow.  Some
+    // also use the native common fire_explode overlay for Exploding Arrow.  Some
     // installations stream missile DCC pages lazily and can omit a one-shot
     // child from the render cache even though the impact event arrived.  The
     // overlay is presentation-only and does not alter damage or spawn another
@@ -325,8 +325,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // retaining the native child whenever the DCC is available.
     if ("explodingarrow".equalsIgnoreCase(source.Missile)
         && event.targetEntityId >= 0 && overlays != null) {
-      overlays.set(event.targetEntityId, "fire_hit");
-      log.debug("[MISSILE_IMPACT] source={} fallback=fire_hit_overlay target={}",
+      overlays.set(event.targetEntityId, "fire_explode");
+      log.debug("[MISSILE_IMPACT] source={} fallback=fire_explode_overlay target={}",
           source.Missile, event.targetEntityId);
     }
 

@@ -30,7 +30,10 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
     // Ordinary arrows have no elemental hit class and remain eligible here.
     if (event.suppressElementalPresentation) return;
 
-    present(event, event.fireDamage, HITCLASS_FIRE, "impact_fire_1", "fire_hit");
+    // D2's generic weapon-fire impact is the common fire_explode overlay
+    // (FireExplode.dcc).  fire_hit is the shorter unit-state flash and does
+    // not match the native weapon impact presentation.
+    present(event, event.fireDamage, HITCLASS_FIRE, "impact_fire_1", "fire_explode");
     present(event, event.lightningDamage, HITCLASS_LIGHTNING,
         "impact_lightning_1", "lightning");
     present(event, event.coldDamage, HITCLASS_COLD, "impact_cold_1", "ice_explode");
