@@ -8,8 +8,11 @@
   Wolverine 或 Spirit of Barbs 的 source-owned layer。
 - [x] 新增 `DruidSummonIntegrationTest.spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap`，
   覆盖跨区移动后 owner aura layer 的撤销；Druid 召唤/藤蔓/风暴专项全部通过。
+- [x] 新增 `DruidSummonIntegrationTest.spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath`，
+  锁定 owner、同 party 玩家、owner mercenary、owner summon 四类合法目标，排除 outsider
+  玩家/召唤物，并验证 spirit 死亡后所有 source-owned layer 在下一次状态帧撤销。
 - [ ] 仍待真实 1.10f MPQ 双客户端确认 spirit aura 的旧客户端快照、重连和跨区迁移表现；
-  下一步继续审计 summon aura 的 party/mercenary/summon 目标过滤和死亡时序。
+  下一步继续审计 summon aura 的重连快照与 source entity 重用防护。
 
 ## 2026-09-30 Paladin 付费周期光环法力门控
 

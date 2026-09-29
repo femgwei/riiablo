@@ -15,12 +15,14 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.pet.PetType;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.DruidSkills;
@@ -255,6 +257,92 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath() {
+    RecordingFactory factory = new RecordingFactory();
+    PartyManager parties = new PartyManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0))
+        .register("partyManager", parties));
+    try {
+      int owner = createPlayer(world, "aura-owner", 10, 10);
+      int partyAlly = createPlayer(world, "aura-ally", 11, 10);
+      int outsider = createPlayer(world, "aura-outsider", 12, 10);
+      int ownerMerc = createMercenary(world, owner, 13, 10);
+      int ownerSummon = createSummon(world, owner, 14, 10);
+      int outsiderSummon = createSummon(world, outsider, 15, 10);
+      short party = parties.createParty(owner);
+      assertTrue(party >= 0 && parties.joinParty(party, partyAlly));
+
+      CharData ownerData = world.getMapper(Player.class).get(owner).data;
+      ownerData.setSkillLevel(SkillId.OAK_SAGE, 8);
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.OAK_SAGE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.OAK_SAGE, Engine.INVALID_ENTITY, new Vector2(10, 10),
+          skill.srvdofunc, skill.cltdofunc));
+      int source = factory.lastEntity;
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertAuraLayer(world, owner, source, true);
+      assertAuraLayer(world, partyAlly, source, true);
+      assertAuraLayer(world, ownerMerc, source, true);
+      assertAuraLayer(world, ownerSummon, source, true);
+      assertAuraLayer(world, outsider, source, false);
+      assertAuraLayer(world, outsiderSummon, source, false);
+
+      life(world, source, 0f);
+      world.process();
+      assertAuraLayer(world, owner, source, false);
+      assertAuraLayer(world, partyAlly, source, false);
+      assertAuraLayer(world, ownerMerc, source, false);
+      assertAuraLayer(world, ownerSummon, source, false);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static void assertAuraLayer(World world, int target, int source, boolean expected) {
+    UnitState state = world.getMapper(UnitStates.class).get(target).stateList
+        .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE);
+    assertEquals(expected, state != null, "unexpected Oak Sage layer target=" + target);
+  }
+
+  private static int createPlayer(World world, String name, float x, float y) {
+    int id = world.create();
+    world.getMapper(Player.class).create(id).data =
+        CharData.createRemote(name, (byte) Riiablo.DRUID);
+    initUnit(world, id, x, y);
+    return id;
+  }
+
+  private static int createMercenary(World world, int owner, float x, float y) {
+    int id = world.create();
+    world.getMapper(Mercenary.class).create(id).ownerId = owner;
+    initUnit(world, id, x, y);
+    return id;
+  }
+
+  private static int createSummon(World world, int owner, float x, float y) {
+    int id = world.create();
+    world.getMapper(SummonedPet.class).create(id)
+        .set(owner, "wolf", SkillId.SUMMON_SPIRIT_WOLF, 1, false, 0);
+    initUnit(world, id, x, y);
+    return id;
+  }
+
+  private static void initUnit(World world, int id, float x, float y) {
+    world.getMapper(Position.class).create(id).position.set(x, y);
+    world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1, 100);
+    world.getMapper(UnitStates.class).create(id).init(id);
+  }
+
+  private static void life(World world, int id, float value) {
+    world.getMapper(AttributesWrapper.class).get(id).attrs.get(Stat.hitpoints).set(value);
   }
 
   private static Attributes attributes(int level, float hp) {
