@@ -11,6 +11,10 @@
 - [x] 新增 `DruidSummonIntegrationTest.spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath`，
   锁定 owner、同 party 玩家、owner mercenary、owner summon 四类合法目标，排除 outsider
   玩家/召唤物，并验证 spirit 死亡后所有 source-owned layer 在下一次状态帧撤销。
+- [x] 修正 `StateSerializer`/`StateList.replaceFromSnapshot`：重连快照按
+  `(stateId, sourceEntityId, skillId)` 恢复独立层，不再把多个同状态 spirit aura 合并；新增
+  `spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect`，验证两个 Oak Sage
+  来源层及其数值在快照往返后保持隔离。
 - [ ] 仍待真实 1.10f MPQ 双客户端确认 spirit aura 的旧客户端快照、重连和跨区迁移表现；
   下一步继续审计 summon aura 的重连快照与 source entity 重用防护。
 

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
+import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -20,6 +21,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
@@ -29,6 +31,8 @@ import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.save.CharData;
+import com.riiablo.net.packet.d2gs.ComponentP;
+import com.riiablo.net.packet.d2gs.EntitySync;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -304,6 +308,39 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect() {
+    UnitStates authority = new UnitStates().init(77);
+    UnitState first = authority.stateList.addStateLayer(
+        StateId.OAKSAGE, 0, 8, 101, SkillId.OAK_SAGE);
+    first.maxLifeModifier = 65;
+    UnitState second = authority.stateList.addStateLayer(
+        StateId.OAKSAGE, 0, 4, 202, SkillId.OAK_SAGE);
+    second.maxLifeModifier = 35;
+
+    StateSerializer serializer = new StateSerializer();
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int stateOffset = serializer.putData(builder, authority);
+    int typeOffset = EntitySync.createComponentTypeVector(
+        builder, new byte[] {ComponentP.StateP});
+    int componentOffset = EntitySync.createComponentVector(builder, new int[] {stateOffset});
+    int root = EntitySync.createEntitySync(builder, 77, 0, 0, typeOffset, componentOffset,
+        0L, 0L, 0L, 0L, 0L, -1);
+    builder.finish(root);
+
+    UnitStates replica = new UnitStates().init(77);
+    serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, replica);
+    assertEquals(2, replica.stateList.size(),
+        "reconnect must not collapse same-state spirit layers");
+    UnitState restoredFirst = replica.stateList.getStateLayer(
+        StateId.OAKSAGE, 101, SkillId.OAK_SAGE);
+    UnitState restoredSecond = replica.stateList.getStateLayer(
+        StateId.OAKSAGE, 202, SkillId.OAK_SAGE);
+    assertTrue(restoredFirst != null && restoredSecond != null);
+    assertEquals(65, restoredFirst.maxLifeModifier);
+    assertEquals(35, restoredSecond.maxLifeModifier);
   }
 
   private static void assertAuraLayer(World world, int target, int source, boolean expected) {

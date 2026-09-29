@@ -106,15 +106,22 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     int[] stateIds = new int[count];
     int[] durations = new int[count];
     int[] levels = new int[count];
+    int[] sourceEntityIds = new int[count];
+    int[] skillIds = new int[count];
     for (int i = 0; i < count; i++) {
       stateIds[i] = data.stateId(i);
       durations[i] = i < data.durationLength() ? data.duration(i) : 0;
       levels[i] = i < data.levelLength() ? data.level(i) : 1;
+      sourceEntityIds[i] = i < data.sourceEntityIdLength() ? data.sourceEntityId(i) : -1;
+      skillIds[i] = i < data.skillIdLength() ? data.skillId(i) : -1;
     }
     if (component.stateList == null) component.init(-1);
-    component.stateList.replaceFromSnapshot(stateIds, durations, levels);
+    component.stateList.replaceFromSnapshot(
+        stateIds, durations, levels, sourceEntityIds, skillIds);
     for (int i = 0; i < count; i++) {
-      UnitState state = component.stateList.getState(stateIds[i]);
+      UnitState state = sourceEntityIds[i] >= 0 || skillIds[i] >= 0
+          ? component.stateList.getStateLayer(stateIds[i], sourceEntityIds[i], skillIds[i])
+          : component.stateList.getState(stateIds[i]);
       if (state != null) {
         state.velocityModifier = i < data.velocityModifierLength()
             ? data.velocityModifier(i) : 0;

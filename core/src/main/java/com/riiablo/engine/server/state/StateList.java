@@ -890,13 +890,29 @@ public class StateList {
    * {@link #addState(int, int, int, int)} so source and DOT metadata are kept.
    */
   public void replaceFromSnapshot(int[] stateIds, int[] durations, int[] levels) {
+    replaceFromSnapshot(stateIds, durations, levels, null, null);
+  }
+
+  /**
+   * Restores a network snapshot without collapsing source-owned layers that
+   * share one native state (for example two party Oak Sage spirits).
+   */
+  public void replaceFromSnapshot(int[] stateIds, int[] durations, int[] levels,
+      int[] sourceEntityIds, int[] skillIds) {
     clearAll();
     if (stateIds == null) return;
     int count = stateIds.length;
     for (int i = 0; i < count; i++) {
       int duration = durations != null && i < durations.length ? durations[i] : 0;
       int level = levels != null && i < levels.length ? levels[i] : 1;
-      addState(stateIds[i], duration, level, -1);
+      int source = sourceEntityIds != null && i < sourceEntityIds.length
+          ? sourceEntityIds[i] : -1;
+      int skill = skillIds != null && i < skillIds.length ? skillIds[i] : -1;
+      if (source >= 0 || skill >= 0) {
+        addStateLayer(stateIds[i], duration, level, source, skill);
+      } else {
+        addState(stateIds[i], duration, level, -1);
+      }
     }
   }
 
