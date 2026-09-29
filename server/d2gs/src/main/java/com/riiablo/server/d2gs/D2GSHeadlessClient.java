@@ -871,11 +871,18 @@ public final class D2GSHeadlessClient {
       }
 
       int skillId = config.areaSkillId;
-      float targetX = a.playerX + 1.5f;
-      float targetY = a.playerY;
-      send(outA, a.castPacket(skillId, Engine.INVALID_ENTITY, targetX, targetY));
+      // Fire Ball's native SrvHit01 child is emitted on unit contact.  Aim at
+      // the nearest live Blood Moor monster so the real-MPQ gate observes both
+      // the travelling parent and its explodingarrowexp impact child.  Other
+      // area skills retain the point-target fixture used by their native path.
+      Snapshot fireBallTarget = skillId == SkillId.FIRE_BALL
+          ? a.nearestLiveMonster() : null;
+      int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
+      float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
+      float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
+      send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
-          + " target=(" + targetX + ',' + targetY + ")");
+          + " targetId=" + targetId + " target=(" + targetX + ',' + targetY + ")");
 
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       long castStarted = System.currentTimeMillis();
@@ -1147,11 +1154,16 @@ public final class D2GSHeadlessClient {
    */
   private static boolean requiresAreaChild(int skillId) {
     return skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
-        || skillId == SkillId.METEOR;
+        || skillId == SkillId.METEOR || skillId == SkillId.FIRE_BALL;
   }
 
   private static boolean requiresAreaReconnect(int skillId) {
-    return requiresAreaChild(skillId) || skillId == SkillId.HYDRA
+    // Fire Ball's explodingarrowexp child is an impact packet with the native
+    // short lifetime; unlike controller skills it is not expected to survive
+    // an observer reconnect.  Keep its parent/child evidence gate above, but
+    // do not demand a stale reconnect snapshot for this one-shot effect.
+    return (requiresAreaChild(skillId) && skillId != SkillId.FIRE_BALL)
+        || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
   }
@@ -1240,6 +1252,25 @@ public final class D2GSHeadlessClient {
           .append("/active:").append(missile.everActive);
     }
     return result.append('}').toString();
+  }
+
+  private Snapshot nearestLiveMonster() {
+    Snapshot nearest = null;
+    float nearestDistance2 = Float.MAX_VALUE;
+    for (Snapshot candidate : monsters.values()) {
+      if (candidate.deleted || !candidate.everActive || !candidate.hasPosition
+          || !candidate.hasVitals || candidate.life <= 0f || candidate.monsterClass < 0) {
+        continue;
+      }
+      float dx = candidate.x - playerX;
+      float dy = candidate.y - playerY;
+      float distance2 = dx * dx + dy * dy;
+      if (distance2 < nearestDistance2) {
+        nearestDistance2 = distance2;
+        nearest = candidate;
+      }
+    }
+    return nearest;
   }
 
   private void verifyUndergroundVisibilityLifecycle(D2GSHeadlessClient first,
@@ -8504,7 +8535,8 @@ public final class D2GSHeadlessClient {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean sorceress = hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
-        || skillId == SkillId.FROZEN_ORB;
+        || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
+        || skillId == SkillId.NOVA;
     int characterClass = sorceress ? Riiablo.SORCERESS : Riiablo.DRUID;
     CharacterClass classData = sorceress ? CharacterClass.SORCERESS : CharacterClass.DRUID;
     String name = hydra ? "HeadlessHydra" : sorceress ? "HeadlessSorc" : "HeadlessArea";
@@ -8797,7 +8829,8 @@ public final class D2GSHeadlessClient {
       if (config.requireAreaSkillScenario && !isAreaSkill(config.areaSkillId)) {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
-            + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
+            + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
+            + "FireBall(47), Nova(48)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
@@ -8859,7 +8892,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.FISSURE || skillId == SkillId.VOLCANO
           || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE
           || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM
-          || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB;
+          || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
+          || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA;
     }
 
     private static File firstSave(File directory) {

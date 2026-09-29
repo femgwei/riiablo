@@ -21,10 +21,10 @@ public class MenuManager extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MenuWrapper> mMenuWrapper;
 
-  @Wire(name = "iso")
+  @Wire(name = "iso", failOnNull = false)
   protected IsometricCamera iso;
 
-  @Wire(name = "scaledStage")
+  @Wire(name = "scaledStage", failOnNull = false)
   protected Stage scaledStage;
 
   private NpcMenu menu;

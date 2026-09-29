@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-09-29 Sorceress Fire Ball/Nova 真实 MPQ 双客户端门槛
+
+- [x] 将 `headlessAreaSkill` 的真实 1.10f 技能入口扩展到 Fire Ball(47) 和 Nova(48)，
+  生成 Sorceress 技能存档；Fire Ball 额外以 Blood Moor 最近存活怪物为目标，确保
+  `SrvHit01` 真实触发父/子导弹链。
+- [x] Nova 双端门槛通过：两端共享同一权威 `nova` 导弹实体、技能 ID 和伤害等级；
+  Fire Ball 双端门槛通过：两端共同观察 `fireball` 父导弹与 `explodingarrowexp` 子导弹。
+  Fire Ball 子效果按短生命周期处理，不要求不符合原生语义的重连保活快照。
+- [x] 修复 D2GS 真实 MPQ 地图加载时 NPC 对客户端 `MenuManager/DialogManager` 的硬注入：
+  相关 UI 系统在无头世界惰性注册，摄像机/Stage 依赖可选，避免技能门槛在地图初始化阶段
+  被无关 UI 依赖阻断。
+- [ ] Sorceress 仍处于 `partial`：继续完成剩余单体公式、状态技能和完整技能树审计；
+  本项只确认 Fire Ball/Nova 的真实双客户端实体同步，不替代伤害数值与动画逐帧验收。
+
 ## 2026-09-28 Amazon Jab/Impale/Fend 生命周期回归
 
 - [x] 对照 D2MOO `SkillAma.cpp` 的 `SrvSt05/SrvDo007`、`SrvSt07/SrvDo002` 和

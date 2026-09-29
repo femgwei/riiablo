@@ -117,7 +117,12 @@ public class Npc extends AI {
   float actionTimer = 0;
   boolean actionPerformed = false;
   NpcMenu menu;
+  // Client-only UI systems are absent from the authoritative D2GS world.
+  // Keep these optional so town NPCs can still be spawned by headless/real-MPQ
+  // verification without requiring a scene2d stage or camera.
+  @com.artemis.annotations.Wire(failOnNull = false)
   private MenuManager menuManager;
+  @com.artemis.annotations.Wire(failOnNull = false)
   private DialogManager dialogManager;
   String state = "";
 

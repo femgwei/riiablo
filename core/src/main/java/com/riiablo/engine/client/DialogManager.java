@@ -18,10 +18,10 @@ public class DialogManager extends PassiveSystem {
 
   protected MenuManager menuManager;
 
-  @Wire(name = "iso")
+  @Wire(name = "iso", failOnNull = false)
   protected IsometricCamera iso;
 
-  @Wire(name = "scaledStage")
+  @Wire(name = "scaledStage", failOnNull = false)
   protected Stage scaledStage;
 
   private NpcDialogBox dialog;

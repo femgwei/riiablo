@@ -99,8 +99,9 @@
   `SorceressFireBallIntegrationTest` 覆盖 ECS 多目标范围扇出、中心目标不重复伤害、
   墙碰撞停止导弹并生成 impact 表现；同时为父导弹增加独立的 cast-lifetime shared
   gate，避免父实体池化重置后清空子导弹去重集合；另覆盖中心目标致死前的 impact
-  创建、范围扇出及表现导弹 16 帧生命周期。Fire Ball 剩余门槛是完整真实 1.10f MPQ
-  离屏验证。
+  创建、范围扇出及表现导弹 16 帧生命周期。真实 1.10f MPQ 双客户端门槛现已通过：
+  目标锁定后两端共同观察到 `fireball` 父导弹和 `explodingarrowexp` 子导弹，且短生命周期
+  效果不错误进入重连保活门槛。
 - Nova(48) 已按 D2MOO `SKILLS_SrvDo022_NovaAttack` / `sub_6FD14170` 完成首轮
   对照。1.10f 原生行为是固定 64 个偏移点、使用 `SrvMissileA` 发射 `nova`，速度为
   `Missiles.txt.Vel + Skills.txt.Calc1`；riiablo 保留原生坐标表、24 速度、13 格
@@ -108,9 +109,9 @@
   结算一次，mana 也只在 `SkillCastEvent` 验证成功时扣除一次。新增
   `NativeSorceressProjectileDataTest.novaUsesNativeSrvDo22SixtyFourPathRow` 与
   `SorceressNovaIntegrationTest`，覆盖 64 路创建/方向速度、跨路径去重、后续 tick
-  不重复伤害、前置技能/单次 mana 扣除和 50%/100% 闪电抗性结算。剩余门槛是墙碰撞、
-  致死顺序、表现生命周期及真实 1.10f MPQ 离屏验证；其中墙碰撞、致死后其他路径继续命中、
-  13 格范围到期和不重建已由 ECS 测试覆盖。dark-magic 的 `12 + 4/level` 数量只作
+  不重复伤害、前置技能/单次 mana 扣除和 50%/100% 闪电抗性结算。墙碰撞、致死后其他路径
+  继续命中、13 格范围到期和不重建已由 ECS 测试覆盖；真实 1.10f MPQ 双客户端门槛现已
+  通过，两端共享同一权威 `nova` 导弹实体和伤害等级。dark-magic 的 `12 + 4/level` 数量只作
   行为族测试参考，不能替代 D2MOO 固定 64 路规则。
 - 版本风险：dark-magic 的 Fire Ball/Nova/Ice Blast 数值来自 1.14d；riiablo 必须用 D2MOO 1.10f 的函数和数据重新确认。
 
