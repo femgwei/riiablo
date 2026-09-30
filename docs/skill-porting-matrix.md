@@ -173,6 +173,10 @@
   断线重连以及重新入队后的快照恢复。Might 单项和 Might/Prayer/Salvation 回归均通过；
   不能用区域技能入口代替该流程。为支持 native 快照语义，Aura 对重新创建的 ECS
   entity 会立即重发布当前 winner，不必等待下一次 `perdelay`。
+- 随后补充跨区域撤销断言：owner 从 Act I 进入 Blood Moor、observer 保留在原区域时，
+  Might、Prayer、Salvation 的 target state 都在 `perdelay + 1` 生命周期内消失，日志记录
+  `paladin_aura_cross_area_pass`，未发现跨 `Map.Zone` 泄漏。旧客户端 Aura 图标、动画
+  和范围表现仍需单独的客户端观测。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin

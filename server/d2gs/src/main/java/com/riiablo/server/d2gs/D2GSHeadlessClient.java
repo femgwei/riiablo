@@ -1708,6 +1708,31 @@ public final class D2GSHeadlessClient {
           }
           log("paladin_aura_reconnect_pass", "owner=" + owner.playerId
               + " observer=" + reconnected.playerId + " skill=" + skillId);
+
+          // A selected aura remains active on the owner, but its target layer
+          // must expire when the owner enters another native Map.Zone. This
+          // catches stale cross-area state that a single-client snapshot cannot
+          // expose.
+          if (states[1] >= 0) {
+            if (!D2GS.headlessEnterLevel(owner.playerId, 2)) {
+              throw new IOException("Paladin aura owner could not enter Blood Moor");
+            }
+            long transitionDeadline = System.currentTimeMillis() + 5_000L;
+            while (System.currentTimeMillis() < transitionDeadline) {
+              consumeOne(ownerInput, owner);
+              consumeOne(reconnectInput, reconnected);
+              if (owner.currentLevelId == 2
+                  && !hasState(reconnected, reconnected.playerId, states[1])) {
+                log("paladin_aura_cross_area_pass", "owner=" + owner.playerId
+                    + " observer=" + reconnected.playerId + " oldLevel=10 newLevel=2"
+                    + " targetState=" + states[1] + " auraRevoked=true");
+                return;
+              }
+            }
+            throw new IOException("Paladin aura target survived owner level transition: ownerLevel="
+                + owner.currentLevelId + " observerStates="
+                + reconnected.entityStateIds.get(reconnected.playerId));
+          }
         }
       }
     }

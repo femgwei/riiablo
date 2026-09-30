@@ -229,4 +229,9 @@ Aura selection、验证双方 `StateP.sourceEntityId/skillId`，再断开 observ
 实现中补充了 Aura 对新 ECS 实体的即时重发布：实体重连后即使仍处于原 Aura 的
 `affectedEntities` 集合，也会按当前胜者重新写入状态层，不必等待下一次 `perdelay`。
 重连门槛同时显式恢复 party 关系；否则 native ally filter 会正确拒绝已重建的
-observer。后续仍需补充跨区域撤销以及真实客户端表现侧的 Aura 图标/范围断言。
+observer。
+
+同一门槛随后补充跨区域撤销：owner 从 Act I 区域进入 Blood Moor 后，observer 仍在
+原区域，Might、Prayer、Salvation 的 target state 均在 `perdelay + 1` 短生命周期内
+消失，未发生跨 `Map.Zone` 泄漏。对应日志为 `paladin_aura_cross_area_pass`。后续剩余
+工作集中在真实旧客户端的 Aura 图标、动画和范围表现断言。
