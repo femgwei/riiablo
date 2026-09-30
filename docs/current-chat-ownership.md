@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-09-20（Git 交接基线）
+更新时间：2026-09-30（技能移植 Git 交接基线）
 
 ## 唯一负责人
 
@@ -33,6 +33,42 @@
 ## 当前基线
 
 ### 2026-09-30 技能移植对照进度
+
+#### 接手摘要（必须先读）
+
+- 当前分支为 `master`，HEAD 为 `1ee5b654`，已推送并确认
+  `origin/master=1ee5b6541cdb2159df332c50ca881af4f9684e9f`。
+- dark-magic manifest 当前有 43 个 exact-ID、16 个行为族；riiablo 已为 43/43
+  建立行为对照入口或测试映射，但 dark-magic 自身条目仍全部是 `partial` evidence，
+  因此不能把“已建立对照”写成“技能已完成”。
+- 版本边界固定为：dark-magic 仅借鉴行为族、测试组织和 fail-closed/生命周期断言；
+  数值、函数号、状态时序和技能表必须重新以本地 D2MOO 1.10f、1.10f MPQ，必要时
+  The Phrozen Keep 为准。
+- 当前最高优先级是 Amazon 30 行技能的真实 1.10f MPQ、失手/死亡/重连验收；Amazon
+  没有 dark-magic exact-ID 配置，不能把其他职业的行为族直接套用到 Amazon。
+- 最近已完成的真实门槛：Sorceress Fire Ball/Nova、Necromancer Poison Nova、
+  Paladin 20 Aura 清单、Conviction/Holy Freeze hostile 过滤、Druid vine/尸体
+  recycler 的部分双客户端流程。详细矩阵见 `docs/skill-porting-matrix.md`。
+- 工作区中以下修改和文件属于其他 agent/用户，接手时不得回滚、覆盖或混入提交：
+  `core/src/main/java/com/riiablo/codec/excel/ItemEntry.java`、
+  `core/src/main/java/com/riiablo/engine/server/AssassinTrapSystem.java`、
+  `core/src/main/java/com/riiablo/item/ItemReader.java`、
+  `core/src/test/java/com/riiablo/attributes/StatFormatterTest.java`、
+  `core/src/test/java/com/riiablo/engine/server/AmazonSkillSpecializationTest.java`，
+  以及 `game.log`、`skill-viewer-window*.png` 和 `tools/skill-viewer/logs/`。
+- 本轮 Paladin hostile 过滤提交为 `1ee5b654`；定向 ECS 测试和 Conviction/Holy Freeze
+  双客户端命令均已通过。Git credential helper 偶尔输出 lock 警告，但应以
+  `git ls-remote origin refs/heads/master` 返回的 SHA 为准。
+
+#### 接手后的唯一下一步
+
+先不要重复 Paladin 已通过的矩阵。读取 `docs/skill-porting-matrix.md` 的 Amazon 段，
+检查当前 Amazon 未提交修改的差异，在不触碰其他 agent 文件的前提下继续补：
+真实 MPQ Jab/Impale/Fend/Power Strike/Charged Strike、失手/死亡/重连、弹药/耐久和
+ToHit/SrcDam/Calc 边界；每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
+极小修改可不编译但仍需提交推送。
+
+#### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）
 
 - Druid Firestorm 已补充 `SrvDo117` 多流硬点协同快照回归；与此前 Fissure/Volcano
   子导弹协同测试一起通过四个 Druid 区域技能专项类。
@@ -74,8 +110,8 @@
   锁定这些 1.10f 数据和边界。
 
 - 分支：`master`
-- 当前功能提交：`a128ee0661169a09ba4eae31264fbcea12cbaa63`（已与 `origin/master` 一致）
-- 本轮开始基线：`1f8f15cb`（载入崩溃修复）
+- 当前功能提交：`1ee5b6541cdb2159df332c50ca881af4f9684e9f`（已与 `origin/master` 一致）
+- 本轮开始基线：`e6e377b9`（Paladin hostile Aura ECS 过滤矩阵）
 - 远程：已推送 `origin/master`；Git credential lock 警告出现但远端 SHA 已确认更新
 - 工作区：本轮纳入文件已提交；Amazon、Assassin、日志和截图等其他未提交修改仍保留
 - 总体对齐进度：约 70%（详见路线图）

@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-09-30
+更新时间：2026-09-30（交接快照：HEAD `1ee5b654`）
 
 ## 目标与版本边界
 
@@ -26,6 +26,15 @@
 当前 manifest 位于 `F:/3rd_src/dark-magic/internal/content/d2legacy/manifests/skill-behavior-coverage.v1.json`，共有 43 个 exact-ID 配置，归入 16 个可复用行为族。所有声明仍带有 `partial` evidence 状态。
 
 研究报告曾在 2026-08-18 记录 357 条 Skills.txt、172 种行为签名、33 个明确接入配置和 324 个缺失配置；该统计早于当前 manifest，不能用来替代当前清单。
+
+### 当前移植口径（交接必读）
+
+当前 43/43 exact-ID 已建立 riiablo 行为对照或测试映射，但不是 43/43 完成四层验收。
+最高等级证据集中在 Sorceress Fire Ball/Nova、Necromancer Poison Nova、Paladin 20 Aura
+和 Druid vine 的部分双客户端链路；Amazon 30 行仍是下一优先级，且 dark-magic 没有
+Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改必须保留，接手者
+只能提交自己明确修改的文件。最新交接、工作区边界和测试命令见
+`docs/codex-handoff-2026-09-30.md` 与 `docs/current-chat-ownership.md`。
 
 ## 职业级对照
 
