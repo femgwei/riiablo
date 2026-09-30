@@ -1458,6 +1458,12 @@ public class Map implements Disposable {
     }
 
     public int flags(int x, int y) {
+      // Boundary-wall graphics may intentionally live on the exclusive
+      // right/bottom edge of a Zone.  Map#getZone() returns that owning Zone
+      // so the wall can render, but its collision arrays do not contain the
+      // out-of-range local cell. Treat it as fully blocked instead of
+      // indexing past the generated flag grid.
+      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       int index = index(width, x, y);
       int value = flags[index] & 0xFF;
       if (objectBlockWalkRefs != null && objectBlockWalkRefs[index] > 0) {
@@ -1468,6 +1474,7 @@ public class Map implements Disposable {
 
     /** Returns collision supplied by the generated map, excluding units. */
     public int staticFlags(int x, int y) {
+      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       return flags[index(width, x, y)] & 0xFF;
     }
 
