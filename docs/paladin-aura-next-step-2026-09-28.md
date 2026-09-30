@@ -42,6 +42,8 @@ D2MOO `SrvDo065/SrvDo066` 的“有效效果后结算资源”顺序，避免空
 `pulseUseful` 置真。D2MOO `SKILLS_SrvDo066_HolyFire_HolyShock_Sanctuary_Conviction`
 先建立 self layer，再由 hostile damage scan 的 `field_40` 决定扣 mana；现在
 `AuraManager` 只在伤害 Aura 的非 self 目标产生有效 stat/damage 时结算 pulse cost。
+同一回归随后切换目标为合法状态，确认下一次 pulse 恰好扣除一次 mana，确保修正
+没有把正常的伤害 Aura 资源结算一并屏蔽。
 
 ### 2. Aura 来源和优先级
 

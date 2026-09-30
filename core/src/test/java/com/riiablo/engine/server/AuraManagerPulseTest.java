@@ -87,6 +87,12 @@ class AuraManagerPulseTest {
     assertEquals(10f, callback.mana, 0.001f,
         "SrvDo066 self/passive stats do not replace a missing hostile damage pulse");
     assertTrue(manager.hasActiveAura(7));
+
+    callback.validTarget = true;
+    for (int i = 0; i < damage.perDelayFrames; i++) manager.update(0f);
+    assertEquals(9f, callback.mana, 0.001f,
+        "the first valid damage target makes exactly one pulse useful");
+    assertTrue(manager.hasActiveAura(7));
   }
 
   @Test
