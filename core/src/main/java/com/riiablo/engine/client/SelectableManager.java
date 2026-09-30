@@ -45,6 +45,14 @@ public class SelectableManager extends PassiveSystem {
       return true;
     }
 
+    // Reversible doors remain valid targets in both idle states.  Some stock
+    // Objects.txt rows omit or disagree on the ON selectable flag, while the
+    // native object interactor still accepts ON -> OP -> NU to close them.
+    if (base.IsDoor
+        && (mode == Engine.Object.MODE_NU || mode == Engine.Object.MODE_ON)) {
+      return true;
+    }
+
     if (base.Selectable != null
         && mode >= 0
         && mode < base.Selectable.length
