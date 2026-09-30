@@ -371,6 +371,20 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - 为避免动态单位网格把贴近玩家的目标搬走，bow gate fixture 移除目标动态 footprint；
   这是测试稳定化，不是生产规则覆盖。
 
+### 2026-10-01 Amazon Exploding Arrow 真实范围子导弹 gate
+
+- `Exploding Arrow(16)` 已按 D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter`
+  核对：父箭命中后从 `HitSubMissile[]` 创建 `explodingarrowexp2`，子导弹以原生半径走
+  `SrvDmgHitHandler` 范围伤害；父箭不重复携带爆炸火伤害。
+- `headlessAmazonBow -PamazonBowSkill=16` 通过真实 1.10f MPQ 双客户端 gate：父箭和
+  `explodingarrowexp2` 在 owner/observer 共享、目标生命从 `1,000,000` 降至 `999,850`，
+  箭袋耗尽/恢复和 observer reconnect 均通过。
+- 断言不是只看父箭创建：gate 同时要求 HitSubMissile 子实体在两端出现且目标实际掉血；
+  日志确认 `srv=explodingarrow`、`pSrvHitFunc=4`、`HitSubMissile=[explodingarrowexp2]`、
+  火焰技能字段 `fire:2..6`。
+- 该步只扩展验证入口并复用已有 `spawnAmazonExplosion`，没有用 dark-magic 行为覆盖
+  用户已验证的 Amazon 生产公式；D2S 可恢复属性持久化限制仍独立保留。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

@@ -959,3 +959,18 @@ incarnation，并继续检查跨区域实体基线恢复。
 - 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=21 -PamazonBowTimeout=12`、`:core:test --tests
   com.riiablo.engine.server.AmazonSkillSpecializationTest` 均通过。
+
+### 2026-10-01 Amazon Exploding Arrow 真实范围子导弹 gate（本轮完成）
+
+- [x] `headlessAmazonBow -PamazonBowSkill=16` 接受 `Exploding Arrow(16)`，日志确认真实
+  MPQ 行：`srvMissile=explodingarrow`、`pSrvHitFunc=4`、`HitSubMissile=explodingarrowexp2`、
+  `EType=fire`、技能火焰范围 `2..6`。
+- [x] 父箭命中后 `explodingarrowexp2` 子导弹在 owner/observer 两端以同一实体 ID 共享，
+  爆炸范围目标实际掉血（`1,000,000 -> 999,850`），因此门槛不可能只由父箭创建通过。
+- [x] 箭袋耗尽/可恢复属性和 observer reconnect 通过；本次验证使用权威线程注入的
+  `item_replenish_quantity`，不宣称 D2S writer 已完成该属性持久化。
+- 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=16 -PamazonBowTimeout=15` 均通过；未覆盖用户已有 Amazon 技能公式。
+
+当前下一项：继续按矩阵核对 Amazon 其余导弹（Freezing/Immolation/Multiple/Guided）及
+穿透、爆炸半径和多目标伤害，再转入其他职业的 dark-magic 对照项。

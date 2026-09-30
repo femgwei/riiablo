@@ -5895,3 +5895,19 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   例外：两端观察到 `COLD(state=11)`，没有 `FREEZE(state=1)`。
 - [x] `MissileCollisionSystem` 只在冻结包命中 Boss 时走冷减速分支；普通目标的冻结
   路径保持不变。专项测试 fixture 的动态 footprint 稳定化不影响生产移动逻辑。
+
+## 2026-10-01 Amazon Exploding Arrow 真实范围子导弹 gate
+
+- [x] 按 D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter`
+  复核 `explodingarrow` 的 `SrvHit04`/`HitSubMissile[0]=explodingarrowexp2`；爆炸子导弹
+  使用自身半径和 `SrvDmgHitHandler`，父箭不重复叠加火焰伤害。
+- [x] `headlessAmazonBow` 真实双客户端验证父箭、`explodingarrowexp2` 子导弹共享，
+  目标实际受范围伤害（`1,000,000 -> 999,850`），两端箭袋消耗/恢复及 observer reconnect
+  一致；门槛明确禁止仅凭父箭创建判定成功。
+- [x] 本轮只补充 `D2GSHeadlessClient` 的 16 号技能入口和子导弹共享断言，复用现有
+  `MissileCollisionSystem.spawnAmazonExplosion`；没有覆盖或替换用户已验证的 Amazon
+  伤害公式。验证命令：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=16 -PamazonBowTimeout=15`。
+
+下一项：继续 Freezing/Immolation/Multiple/Guided Arrow 的 D2MOO 行为与多目标/穿透
+门槛，再按职业顺序处理其他技能对照项。
