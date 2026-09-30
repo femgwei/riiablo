@@ -840,8 +840,16 @@ public class Map implements Disposable {
   }
 
   public Zone getZone(int x, int y) {
+    // Native RoomEx wall graphics may be anchored on a zone's exclusive
+    // right/bottom edge.  Act I's compatibility layout places the adjacent
+    // level immediately beyond that edge, so a plain contains() match can
+    // claim the coordinate before the owning zone gets a chance to resolve
+    // its boundary wall.  Prefer an explicit boundary-wall owner first.
     for (Zone zone : zones) {
-      if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
+      if (zone.containsBoundaryWall(x, y)) return zone;
+    }
+    for (Zone zone : zones) {
+      if (zone.contains(x, y)) return zone;
     }
     return null;
   }
