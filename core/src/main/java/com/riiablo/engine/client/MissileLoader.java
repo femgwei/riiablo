@@ -100,7 +100,27 @@ public class MissileLoader extends IteratingSystem {
    * must be visible in the same render frame in which they are spawned.
    */
   public void loadNow(int entityId) {
-    if (!mAnimationWrapper.has(entityId)) process(entityId);
+    if (!mMissile.has(entityId)) return;
+    // Entity ids are recycled by Artemis.  A client-only impact can therefore
+    // inherit an AnimationWrapper from the entity that previously occupied the
+    // id; treating that wrapper as proof that this missile is loaded leaves
+    // IceArrowExplode with the old animation (or an empty wrapper).  This is an
+    // explicit load request for a newly-created missile, so replace stale
+    // presentation components before running the normal loader path.
+    if (mAnimationWrapper.has(entityId)) {
+      mAnimationWrapper.remove(entityId);
+      if (mBBoxWrapper.has(entityId)) mBBoxWrapper.remove(entityId);
+    }
+    process(entityId);
+    Missiles.Entry entry = mMissile.get(entityId).missile;
+    if (entry != null && ("iceexplode".equalsIgnoreCase(entry.Missile)
+        || "fireexplosion2".equalsIgnoreCase(entry.Missile))) {
+      int frames = mAnimationWrapper.has(entityId)
+          ? mAnimationWrapper.get(entityId).animation.getNumFramesPerDir() : 0;
+      Gdx.app.debug("MissileLoader", String.format(
+          "[MISSILE_ANIM_LOAD] entity=%d missile=%s loaded=%s frames=%d",
+          entityId, entry.Missile, mAnimationWrapper.has(entityId), frames));
+    }
   }
 
   /** Ground-fire rows share the native groundFireBig DCC and flicker fields. */
