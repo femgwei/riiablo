@@ -4,8 +4,8 @@
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`24b6fd9ca950756d63b56fd15b52c5c2731b11db`（真实 MPQ Impale quantity/Calc3 durability gate）。
-- 远端：`origin/master=24b6fd9ca950756d63b56fd15b52c5c2731b11db`，已用
+- HEAD：`346a904ee7638d3d75ff9bd28cd443e38ca7976c`（真实 MPQ Impale quantity/Calc3 durability gate 及交接文档）。
+- 远端：`origin/master=346a904ee7638d3d75ff9bd28cd443e38ca7976c`，已用
   `git ls-remote origin refs/heads/master` 核对；push 仍可能输出 credential storage lock
   警告，但远端 SHA 已确认一致。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
