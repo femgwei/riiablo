@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-01（交接快照：HEAD `5bb65a7b`）
+更新时间：2026-10-01（交接快照：HEAD `24b6fd9c`）
 
 ## 目标与版本边界
 
@@ -82,9 +82,11 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   `25%` 路径命中后将装备 `jav` 从 `quantity=16` 降为 `15`，`durability/maxdurability`
   保持 `20/20`；owner/observer 目标生命一致，observer 重连后服务端资源仍为
   `15/20/20`。夹具读取权威装备的 quantity、durability、maxdurability 及 native base
-  标志，避免把客户端快照误当成资源真值。非堆叠武器的 Calc3 durability 分支仍由
-  `AmazonMeleeSkillLifecycleTest` 锁定，真实 MPQ 需后续增加专用武器 fixture。
-- 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试；当前下一项是非堆叠 Calc3 durability、弹药耗尽和剩余 Amazon 导弹/区域行为。
+  标志，避免把客户端快照误当成资源真值。随后新增真实 MPQ 非堆叠 `spr` fixture，
+  确认 `stackable=0,nodurability=0` 时 quantity 缺失保持 `-1`，Calc3 durability
+  从 `20` 降为 `19`，且 owner/observer 与重连资源一致；因此 Calc2/Calc3 两条资源
+  路径均已有真实双客户端 gate。
+- 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试；当前下一项是弹药耗尽/补充和剩余 Amazon 导弹/区域行为。
 
 ### Sorceress
 

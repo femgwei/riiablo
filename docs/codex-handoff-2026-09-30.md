@@ -1,15 +1,16 @@
-# 技能移植交接记录（2026-10-01，Impale quantity gate 后）
+# 技能移植交接记录（2026-10-01，Impale quantity/Calc3 durability gate 后）
 
 ## 当前 Git 基线
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`6c02b84320d9444767b065c6bbe86aff196e3aa8`（真实 MPQ Impale quantity gate）。
-- 远端：`origin/master=6c02b84320d9444767b065c6bbe86aff196e3aa8`，已用
+- HEAD：`24b6fd9ca950756d63b56fd15b52c5c2731b11db`（真实 MPQ Impale quantity/Calc3 durability gate）。
+- 远端：`origin/master=24b6fd9ca950756d63b56fd15b52c5c2731b11db`，已用
   `git ls-remote origin refs/heads/master` 核对；push 仍可能输出 credential storage lock
   警告，但远端 SHA 已确认一致。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
+- 本轮提交：`24b6fd9c` 真实 MPQ Impale quantity/非堆叠 Calc3 durability gate。
 
 ## dark-magic 对照基线
 
@@ -40,8 +41,9 @@ Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久�
 双客户端 `headlessAmazonMelee` 入口已建立，Jab、Power Strike、Impale、Charged Strike、
 Fend、Lightning Strike 六项均已通过真实伤害/双端一致性/重连门槛，且 Lightning Strike
 确认链式导弹；Jab 的真实目标死亡和高防 miss gate 也已通过。本轮 Impale 进一步通过
-真实 MPQ quantity gate（`jav 16 -> 15`，durability `20/20` 不变）及 observer 重连
-资源保持。下一步是非堆叠 Calc3 durability、弹药边界和剩余 Amazon 技能。
+真实 MPQ quantity gate（`jav 16 -> 15`，durability `20/20` 不变）及非堆叠
+Calc3 durability gate（`spr 20 -> 19`）和 observer 重连资源保持。下一步是弹药边界
+和剩余 Amazon 技能。
 完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
 和 Druid 全技能树。
 
@@ -57,7 +59,15 @@ Fend、Lightning Strike 六项均已通过真实伤害/双端一致性/重连门
 
 ```powershell
 ./gradlew.bat :server:d2gs:headlessPaladinAura -PpaladinAuraSkill=123 -PpaladinAuraTimeout=5 -x :core:compileJava --no-daemon
-./gradlew.bat :server:d2gs:headlessPaladinAura -PpaladinAuraSkill=114 -PpaladinAuraTimeout=10 -x :core:compileJava --no-daemon
+ ./gradlew.bat :server:d2gs:headlessPaladinAura -PpaladinAuraSkill=114 -PpaladinAuraTimeout=10 -x :core:compileJava --no-daemon
+```
+
+真实 Amazon Impale 资源门槛：
+
+```powershell
+./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=19 -PamazonMeleeWeapon=jav -PamazonMeleeTimeout=8 --no-daemon
+./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=19 -PamazonMeleeWeapon=spr -PamazonMeleeTimeout=8 --no-daemon
+./gradlew.bat :core:test --tests com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest --no-daemon
 ```
 
 ## 工作区保护边界
@@ -66,5 +76,5 @@ Fend、Lightning Strike 六项均已通过真实伤害/双端一致性/重连门
 AmazonSkillSpecializationTest；逐个 `git hash-object` 核对后，只有 StatFormatterTest 有
 实际内容差异（末尾多一个空行），其余四个文件的工作区 blob 与 HEAD 相同，属于状态/时间戳
 假脏，不应据此回滚代码。`game.log`、技能查看器 PNG 和日志目录是之前调试运行生成的
-未跟踪产物。接手者只能 `git add` 本轮明确修改的文件，禁止 reset、checkout 或覆盖这些
+未跟踪产物；`impale-spr*.log` 也是本轮诊断产物，不纳入提交。接手者只能 `git add` 本轮明确修改的文件，禁止 reset、checkout 或覆盖这些
 文件。实现改动必须专项测试、commit、push；极小文档修改可不编译，但也必须 commit/push。

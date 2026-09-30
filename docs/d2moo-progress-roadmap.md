@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-01 Amazon Impale 真实 MPQ quantity gate
+## 2026-10-01 Amazon Impale 真实 MPQ quantity/Calc3 durability gate
 
 - [x] `D2GSHeadlessClient` 增加权威装备资源读取辅助，读取 owner 当前 RARM/LARM
   武器的 `Stat.quantity`、`durability`、`maxdurability`，并记录 native stackable/
@@ -8,6 +8,10 @@
 - [x] `headlessAmazonMelee` 对 Impale(19) 使用真实 1.10f MPQ `jav` fixture：命中后
   验证 D2MOO `Calc2=par6-dm34` 的 quantity 路径 `16 -> 15`，durability 保持 `20/20`；
   owner/observer 生命一致，observer 重连后资源保持 `15/20/20`。
+- [x] 增加真实 1.10f MPQ 非堆叠 `spr` fixture：在同一 Calc2 成功边界下验证
+  `quantity=-1` 不被伪造，Calc3 按 MPQ 值扣除 durability `20 -> 19`；owner/observer
+  生命一致，observer 重连后权威资源保持 `19/20`。`spr` 的 native base 标记确认
+  `stackable=0,nodurability=0`。
 - [x] 为 Impale 的严格 `SrvSt07` 近战范围使用 1 格 fixture placement；原有其他 Amazon
   行仍使用 3.5 格 placement。Impale 的 Calc2 是概率路径，测试允许在同一 gate 内重试，
   但最终必须观察到一次真实 quantity 消耗才通过。
@@ -15,8 +19,10 @@
   `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=19 -PamazonMeleeTimeout=10 --no-daemon`；结果 `BUILD SUCCESSFUL`，日志包含
   `amazon_impale_resource_pass`、`amazon_melee_dual_pass`、
   `amazon_impale_resource_reconnect_pass`。
-- [ ] 真实 MPQ 尚未覆盖非堆叠武器 Calc3 durability、弹药耗尽/补充，以及其余 Amazon
-  exact-ID 的导弹/区域行为；下一步建立专用非堆叠武器 fixture，再继续剩余技能。
+- [x] 非堆叠 gate 命令：
+  `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=19 -PamazonMeleeWeapon=spr -PamazonMeleeTimeout=8 --no-daemon`；结果 `BUILD SUCCESSFUL`，日志确认 `durability=20 -> 19`。
+- [ ] 真实 MPQ 尚未覆盖弹药耗尽/补充，以及其余 Amazon exact-ID 的导弹/区域行为；
+  下一步转入 Amazon 弹药边界，再继续剩余技能。
 
 ## 2026-10-01 Amazon Power/Charged Strike 关键帧边界回归
 
