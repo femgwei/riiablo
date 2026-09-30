@@ -427,6 +427,12 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
           box.max(layer.dc.getBox());
         }
       }
+      // Some native object ON frames are intentionally transparent (the door
+      // has swung out of the doorway).  Their DCC frame box can therefore be
+      // empty even though the COF still defines the object's interaction
+      // bounds.  Keep that authoritative COF box so transparent open doors
+      // remain selectable and can be closed again.
+      if (box.width <= 0 || box.height <= 0) box.set(cof.box);
     }
   }
 
