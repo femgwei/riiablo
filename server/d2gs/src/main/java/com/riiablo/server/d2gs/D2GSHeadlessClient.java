@@ -1341,12 +1341,13 @@ public final class D2GSHeadlessClient {
       }
       boolean fallback = false;
       boolean damaged = false;
+      boolean targetDeathObserved = false;
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
       boolean sawLightningMissile = !lightningStrike;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
-          && System.currentTimeMillis() < deadline && !damaged; attempt++) {
+          && System.currentTimeMillis() < deadline && !damaged && !targetDeathObserved; attempt++) {
         ownerTarget = owner.monsters.get(targetId);
         if (ownerTarget == null || !ownerTarget.hasPosition) break;
         send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 3.5f, ownerTarget.y));
@@ -1354,9 +1355,13 @@ public final class D2GSHeadlessClient {
             ownerTarget.x, ownerTarget.y));
         log("amazon_melee_cast", "attempt=" + attempt + " skill="
             + config.amazonMeleeSkillId + " target=" + targetId);
+        if (config.amazonMeleeTargetDeath && attempt == 1
+            && !D2GS.headlessKillMonster(owner.playerId, targetId)) {
+          throw new IOException("failed to kill Amazon melee target before keyframe");
+        }
         long attemptStarted = System.currentTimeMillis();
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 1800L);
-        while (System.currentTimeMillis() < attemptDeadline && !damaged) {
+        while (System.currentTimeMillis() < attemptDeadline && !damaged && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
@@ -1365,17 +1370,22 @@ public final class D2GSHeadlessClient {
           // that baseline is stale, absorb one upward correction before
           // requiring the authoritative post-hit life to decrease again.
           if (current != null && current.hasVitals && mirrored != null && mirrored.hasVitals) {
+            if (config.amazonMeleeTargetDeath) {
+              targetDeathObserved = (current.dead || current.life <= 0f)
+                  && (mirrored.dead || mirrored.life <= 0f);
+            }
             float correctedBaseline = Math.max(current.life, mirrored.life);
-            if (correctedBaseline > initialLife + 0.001f) {
+            if (!config.amazonMeleeTargetDeath && correctedBaseline > initialLife + 0.001f) {
               initialLife = correctedBaseline;
-            } else {
+            } else if (!config.amazonMeleeTargetDeath) {
               damaged = current.life < initialLife && mirrored.life < initialLife;
             }
           }
           if (lightningStrike && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
-          if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L && !damaged) {
+          if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
+              && !damaged && !targetDeathObserved) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonMeleeSkillId);
@@ -1384,7 +1394,13 @@ public final class D2GSHeadlessClient {
           }
         }
       }
-      if (!damaged) {
+      if (config.amazonMeleeTargetDeath && !targetDeathObserved) {
+        throw new IllegalStateException("Amazon melee target did not remain dead on both clients: skill="
+            + config.amazonMeleeSkillId + " target=" + targetId
+            + " owner=" + owner.monsters.get(targetId)
+            + " peer=" + peer.monsters.get(targetId));
+      }
+      if (!config.amazonMeleeTargetDeath && !damaged) {
         throw new IllegalStateException("Amazon melee did not damage shared target: skill="
             + config.amazonMeleeSkillId + " target=" + targetId
             + " owner=" + owner.monsters.get(targetId)
@@ -9855,6 +9871,7 @@ public final class D2GSHeadlessClient {
     int areaSkillId = SkillId.VOLCANO;
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
+    boolean amazonMeleeTargetDeath;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -9930,6 +9947,7 @@ public final class D2GSHeadlessClient {
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
+        else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;

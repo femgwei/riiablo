@@ -74,6 +74,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   Strike(14)、Impale(19)、Charged Strike(24)、Fend(30)、Lightning Strike(34)。六项均已
   逐个通过真实伤害、owner/observer 一致性与 observer 重连生命值门槛；Lightning Strike
   还确认链式导弹在客户端观察到。这不等于其余 Amazon exact-ID 行已经完成。
+- 真实 Jab death gate 已通过 `-PamazonMeleeTargetDeath`：首个关键帧前目标死亡后，双方
+  客户端保持死亡状态，后续 Jab 记录不产生额外伤害，observer 重连不恢复生命。miss、
+  quantity/durability 仍以 ECS/D2MOO 测试为主，尚未进入真实 MPQ gate。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress

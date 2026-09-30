@@ -48,7 +48,8 @@
   没有 dark-magic exact-ID 配置，不能把其他职业的行为族直接套用到 Amazon。新的
   `headlessAmazonMelee` 已完成 Jab、Power Strike、Impale、Charged Strike、Fend、Lightning
   Strike 的真实双端伤害/重连门槛，其中 Lightning Strike 还确认链式导弹；其余 Amazon
-  exact-ID 行仍未完成。
+  exact-ID 行仍未完成。Jab 的真实目标死亡 gate 也已通过；miss、quantity/durability
+  仍待接入真实 MPQ 场景。
 - 最近已完成的真实门槛：Sorceress Fire Ball/Nova、Necromancer Poison Nova、
   Paladin 20 Aura 清单、Conviction/Holy Freeze hostile 过滤、Druid vine/尸体
   recycler 的部分双客户端流程。详细矩阵见 `docs/skill-porting-matrix.md`。
@@ -73,7 +74,7 @@
 检查当前 Amazon 未提交修改的差异，在不触碰其他 agent 文件的前提下继续补：
 真实 MPQ Jab/Impale/Fend/Power Strike/Charged Strike、失手/死亡/重连、弹药/耐久和
 ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，真实 MPQ
-`headlessAmazonMelee` 六项 gate 已通过，下一步是失手/死亡/弹药边界和剩余 Amazon 技能。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
+`headlessAmazonMelee` 六项成功 gate 与 Jab death gate 已通过，下一步是失手/弹药/耐久边界和剩余 Amazon 技能。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
 极小修改可不编译但仍需提交推送。
 
 #### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）

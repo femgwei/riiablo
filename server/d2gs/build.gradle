@@ -179,6 +179,7 @@ tasks.register('headlessAmazonMelee', JavaExec) {
        (project.hasProperty('amazonMeleeSkill') ? project.property('amazonMeleeSkill').toString() : '10'),
        '--test-timeout',
        (project.hasProperty('amazonMeleeTimeout') ? project.property('amazonMeleeTimeout').toString() : '90')
+  if (project.hasProperty('amazonMeleeTargetDeath')) args '--amazon-melee-target-death'
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
