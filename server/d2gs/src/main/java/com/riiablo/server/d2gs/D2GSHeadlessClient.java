@@ -278,7 +278,7 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAmazonMelee
         ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId,
-            config.amazonMeleeWeaponCode)
+            config.amazonMeleeWeaponCode, config.amazonMeleeSkillLevel)
         : config.requireAmazonBow
         ? createGeneratedAmazonBowSave(config.amazonBowSkillId)
         : config.requireAreaSkillScenario
@@ -10170,7 +10170,7 @@ public final class D2GSHeadlessClient {
 
   /** Deterministic level-30 Amazon fixture for native melee skill gates. */
   private static byte[] createGeneratedAmazonMeleeSave(int skillId) {
-    return createGeneratedAmazonMeleeSave(skillId, "jav");
+    return createGeneratedAmazonMeleeSave(skillId, "jav", 20);
   }
 
   /** Deterministic level-30 Amazon fixture for native bow/ammunition gates. */
@@ -10233,7 +10233,8 @@ public final class D2GSHeadlessClient {
     return data;
   }
 
-  private static byte[] createGeneratedAmazonMeleeSave(int skillId, String weaponCode) {
+  private static byte[] createGeneratedAmazonMeleeSave(
+      int skillId, String weaponCode, int skillLevel) {
     CharacterClass classData = CharacterClass.AMAZON;
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadAmaMelee", Riiablo.AMAZON);
@@ -10279,12 +10280,13 @@ public final class D2GSHeadlessClient {
     weapon.attrs.reset();
     character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(weapon));
     seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
-    if (!character.setSkillLevel(skillId, 20)) {
+    if (!character.setSkillLevel(skillId, skillLevel)) {
       throw new IllegalStateException("could not seed Amazon melee skill " + skillId);
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=HeadAmaMelee class=amazon skill="
-        + skillId + " weapon=" + weaponCode + " level=30 bytes=" + data.length);
+        + skillId + " skillLevel=" + skillLevel + " weapon=" + weaponCode
+        + " level=30 bytes=" + data.length);
     return data;
   }
 
@@ -10693,6 +10695,7 @@ public final class D2GSHeadlessClient {
     int areaSkillId = SkillId.VOLCANO;
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
+    int amazonMeleeSkillLevel = 20;
     String amazonMeleeWeaponCode = "jav";
     boolean amazonMeleeTargetDeath;
     boolean amazonMeleeExpectMiss;
@@ -10773,6 +10776,7 @@ public final class D2GSHeadlessClient {
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
+        else if ("--amazon-melee-skill-level".equals(arg)) config.amazonMeleeSkillLevel = integer(args, ++i, arg);
         else if ("--amazon-melee-weapon".equals(arg)) config.amazonMeleeWeaponCode = value(args, ++i, arg);
         else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
         else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
@@ -10827,7 +10831,11 @@ public final class D2GSHeadlessClient {
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
-            + "Impale(19), Charged Strike(24), Fend(30), or Lightning Strike(34)");
+            + "Impale(19), Charged Strike(24), Fend(30), Lightning Strike(34), or Lightning Fury(35)");
+      }
+      if (config.requireAmazonMelee && (config.amazonMeleeSkillLevel < 1
+          || config.amazonMeleeSkillLevel > 20)) {
+        throw new IllegalArgumentException("--amazon-melee-skill-level must be between 1 and 20");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeWeapon(config.amazonMeleeWeaponCode)) {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
@@ -11036,7 +11044,9 @@ public final class D2GSHeadlessClient {
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
-          + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
+           + " [--require-amazon-melee] [--amazon-melee-skill 35]"
+           + " [--amazon-melee-skill-level 1..20] [--amazon-melee-weapon jav|spr]"
+           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"
           + " [--verbose]"
