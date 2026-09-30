@@ -158,6 +158,16 @@
   并由 AuraManager 传入真实技能行解析器；`AuraEcsScenarioTest` 覆盖施法者与队友
   同 pulse 治疗、Cleansing 净化缩短和 Meditation 法力恢复状态。此前该引用因只支持
   `.blvl/.lnXY/.dmXY` 而静默得到 0，导致两项技能遗漏 Prayer 治疗。
+- 2026-09-30 已完成 Aura 来源/资源/快照首轮 ECS 回归：不同 skill 共享同一 state
+  只保留一个 winner；高等级来源取消、死亡或离开范围后按 native `perdelay + 1`
+  短层过期并在下一 pulse 重新选主；同一 caster 换 skill 不残留旧 layer；
+  `StateSerializer` 重连快照会替换 stale source/skill layer。对应测试包括
+  `AuraManagerPulseTest` 的 shared-state replacement、unfunded winner、damage Aura
+  self-layer 和有效目标扣蓝场景，以及 `AuraEcsScenarioTest` 的范围恢复/重连快照场景。
+- 2026-09-30 按 D2MOO `SrvDo065/SrvDo066/SrvDo082` 固定 pulse 资源事务：无合法目标、
+  无尸体或 mana 不足时不扣 mana、不取消已选 Aura；Damage Aura 的 self/passive layer
+  不单独触发扣蓝，只有非 self 的有效伤害目标才使 pulse 变为 useful。当前剩余门槛是
+  真实 1.10f 双客户端对 Aura 图标、动画、旧客户端 StateP 兼容和多玩家表现的验收。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin
