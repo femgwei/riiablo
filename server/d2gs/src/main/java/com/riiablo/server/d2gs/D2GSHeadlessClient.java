@@ -277,7 +277,8 @@ public final class D2GSHeadlessClient {
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAmazonMelee
-        ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId)
+        ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId,
+            config.amazonMeleeWeaponCode)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.requireVineScenario
@@ -1371,6 +1372,7 @@ public final class D2GSHeadlessClient {
         // Amazon rows retain the wider normal-cast placement.
         float meleeOffset = impale ? 1f : 3.5f;
         send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - meleeOffset, ownerTarget.y));
+        if (impale) D2GS.headlessSeedImpaleResourceRoll();
         send(ownerOutput, owner.castPacket(config.amazonMeleeSkillId, targetId,
             ownerTarget.x, ownerTarget.y));
         log("amazon_melee_cast", "attempt=" + attempt + " skill="
@@ -1535,7 +1537,7 @@ public final class D2GSHeadlessClient {
   }
 
   private static boolean validAmazonWeaponStats(int[] stats) {
-    return stats != null && stats.length == 7 && stats[0] >= 0
+    return stats != null && stats.length == 7 && stats[0] >= -1
         && stats[1] >= 0 && stats[2] >= stats[1];
   }
 
@@ -9515,6 +9517,10 @@ public final class D2GSHeadlessClient {
 
   /** Deterministic level-30 Amazon fixture for native melee skill gates. */
   private static byte[] createGeneratedAmazonMeleeSave(int skillId) {
+    return createGeneratedAmazonMeleeSave(skillId, "jav");
+  }
+
+  private static byte[] createGeneratedAmazonMeleeSave(int skillId, String weaponCode) {
     CharacterClass classData = CharacterClass.AMAZON;
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadAmaMelee", Riiablo.AMAZON);
@@ -9547,22 +9553,25 @@ public final class D2GSHeadlessClient {
     // cannot accidentally enter the ranged missile branch.
     character.getItems().unequipItem(BodyLoc.RARM);
     character.getItems().unequipItem(BodyLoc.LARM);
-    Item javelin = new Item();
-    javelin.reset();
-    javelin.setBase(Riiablo.files.weapons.get("jav"));
-    javelin.quality = Quality.NORMAL;
-    javelin.attrs.base().put(Stat.quantity, 16);
-    javelin.attrs.base().put(Stat.durability, 20);
-    javelin.attrs.base().put(Stat.maxdurability, 20);
-    javelin.attrs.reset();
-    character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(javelin));
+    Item weapon = new Item();
+    weapon.reset();
+    weapon.setBase(Riiablo.files.weapons.get(weaponCode));
+    if (weapon.base == null) {
+      throw new IllegalArgumentException("unknown Amazon melee fixture weapon: " + weaponCode);
+    }
+    weapon.quality = Quality.NORMAL;
+    if (weapon.base.stackable) weapon.attrs.base().put(Stat.quantity, 16);
+    weapon.attrs.base().put(Stat.durability, 20);
+    weapon.attrs.base().put(Stat.maxdurability, 20);
+    weapon.attrs.reset();
+    character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(weapon));
     seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
     if (!character.setSkillLevel(skillId, 20)) {
       throw new IllegalStateException("could not seed Amazon melee skill " + skillId);
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=HeadAmaMelee class=amazon skill="
-        + skillId + " level=30 bytes=" + data.length);
+        + skillId + " weapon=" + weaponCode + " level=30 bytes=" + data.length);
     return data;
   }
 
@@ -9971,6 +9980,7 @@ public final class D2GSHeadlessClient {
     int areaSkillId = SkillId.VOLCANO;
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
+    String amazonMeleeWeaponCode = "jav";
     boolean amazonMeleeTargetDeath;
     boolean amazonMeleeExpectMiss;
     boolean requireVineScenario;
@@ -10048,6 +10058,7 @@ public final class D2GSHeadlessClient {
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
+        else if ("--amazon-melee-weapon".equals(arg)) config.amazonMeleeWeaponCode = value(args, ++i, arg);
         else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
         else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
@@ -10100,6 +10111,9 @@ public final class D2GSHeadlessClient {
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
             + "Impale(19), Charged Strike(24), Fend(30), or Lightning Strike(34)");
+      }
+      if (config.requireAmazonMelee && !isAmazonMeleeWeapon(config.amazonMeleeWeaponCode)) {
+        throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10189,6 +10203,10 @@ public final class D2GSHeadlessClient {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
           || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE;
+    }
+
+    private static boolean isAmazonMeleeWeapon(String code) {
+      return "jav".equalsIgnoreCase(code) || "spr".equalsIgnoreCase(code);
     }
 
     private static boolean isVineSkill(int skillId) {

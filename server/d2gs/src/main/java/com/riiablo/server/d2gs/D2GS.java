@@ -2646,15 +2646,29 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  static void headlessSeedImpaleResourceRoll() {
+    seedHeadlessImpaleResourceRoll();
+  }
+
   private static void seedHeadlessImpaleResourceRoll() {
     com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(
         com.riiablo.engine.server.skill.SkillId.IMPALE);
     if (skill == null) return;
     int chance = Math.max(0, Math.min(100,
         com.riiablo.engine.server.skill.SkillFormula.evaluate(skill.calc2, skill, 20)));
-    for (long seed = 1L; seed < 10000L; seed++) {
+    for (long seed = 1L; seed < 1_000_000L; seed++) {
       com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
-      if (com.badlogic.gdx.math.MathUtils.random(99) < chance) {
+      boolean passes = true;
+      // The animation/keyframe path can consume a few unrelated native RNG
+      // values before Calc2.  Pick a short passing streak so the fallback is
+      // deterministic without changing production combat code.
+      for (int i = 0; i < 8; i++) {
+        if (com.badlogic.gdx.math.MathUtils.random(99) >= chance) {
+          passes = false;
+          break;
+        }
+      }
+      if (passes) {
         com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
         return;
       }

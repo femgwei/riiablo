@@ -177,6 +177,8 @@ tasks.register('headlessAmazonMelee', JavaExec) {
   workingDir = rootProject.file('assets').path
   args '--require-amazon-melee', '--amazon-melee-skill',
        (project.hasProperty('amazonMeleeSkill') ? project.property('amazonMeleeSkill').toString() : '10'),
+       '--amazon-melee-weapon',
+       (project.hasProperty('amazonMeleeWeapon') ? project.property('amazonMeleeWeapon').toString() : 'jav'),
        '--test-timeout',
        (project.hasProperty('amazonMeleeTimeout') ? project.property('amazonMeleeTimeout').toString() : '90')
   if (project.hasProperty('amazonMeleeTargetDeath')) args '--amazon-melee-target-death'
