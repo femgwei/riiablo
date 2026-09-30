@@ -1564,6 +1564,7 @@ public final class D2GSHeadlessClient {
           + " lastCollide=" + (bowMissile != null && bowMissile.LastCollide)
           + " alwaysExplode=" + (bowMissile != null && bowMissile.AlwaysExplode)
           + " range=" + (bowMissile != null ? bowMissile.Range : -1)
+          + " damageRate=" + (bowMissile != null ? bowMissile.DamageRate : -1)
           + " vel=" + (bowMissile != null ? bowMissile.Vel : -1)
           + " dmg=" + (bowMissile != null ? bowMissile.MinDamage : -1)
               + ".." + (bowMissile != null ? bowMissile.MaxDamage : -1)
@@ -1625,6 +1626,13 @@ public final class D2GSHeadlessClient {
       boolean sawFreezeState = false;
       boolean sawExplosionChild = false;
       boolean sawExplosionChildShared = false;
+      boolean sawImmolationFire = false;
+      boolean sawImmolationFireShared = false;
+      boolean sawImmolationFireTick = false;
+      float immolationFireBaseline = Float.NaN;
+      long immolationFireTick = -1L;
+      boolean coldRequired = Config.expectsAmazonBowColdState(config.amazonBowSkillId);
+      boolean immolation = config.amazonBowSkillId == SkillId.IMMOLATION_ARROW;
       boolean fallback = false;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
@@ -1635,7 +1643,9 @@ public final class D2GSHeadlessClient {
       // assertion.
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline
-          && (!ammoConsumed || !sawMissile || !damaged); attempt++) {
+          && (!ammoConsumed || !sawMissile || !damaged
+              || coldRequired && !sawColdState
+              || immolation && (!sawImmolationFireShared || !sawImmolationFireTick)); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
         if (ownerTarget == null || !ownerTarget.hasPosition) break;
         // Keep the short Fire Arrow segment inside the same open room tile;
@@ -1654,7 +1664,9 @@ public final class D2GSHeadlessClient {
         long attemptStarted = System.currentTimeMillis();
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 5000L);
         while (System.currentTimeMillis() < attemptDeadline
-            && (!ammoConsumed || !sawMissile || !damaged || !sawColdState)) {
+            && (!ammoConsumed || !sawMissile || !damaged
+                || coldRequired && !sawColdState
+                || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
@@ -1695,8 +1707,26 @@ public final class D2GSHeadlessClient {
             sawExplosionChild |= hasAmazonExplosionChild(owner);
             sawExplosionChildShared |= hasSharedAmazonExplosionChild(owner, peer);
           }
+          if (immolation) {
+            sawImmolationFire |= hasAmazonImmolationFire(owner);
+            sawImmolationFireShared |= hasSharedAmazonImmolationFire(owner, peer);
+            if (sawImmolationFire && immolationFireTick < 0L
+                && current != null && current.hasVitals) {
+              immolationFireBaseline = current.life;
+              immolationFireTick = owner.lastSnapshotTick;
+            }
+            if (sawImmolationFireShared && immolationFireTick >= 0L
+                && owner.lastSnapshotTick > immolationFireTick
+                && current != null && current.hasVitals
+                && Float.isFinite(immolationFireBaseline)
+                && current.life < immolationFireBaseline - 0.001f) {
+              sawImmolationFireTick = true;
+            }
+          }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 700L
-              && (!ammoConsumed || !sawMissile || !damaged || !sawColdState)) {
+              && (!ammoConsumed || !sawMissile || !damaged
+                  || coldRequired && !sawColdState
+                  || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonBowSkillId);
@@ -1727,6 +1757,25 @@ public final class D2GSHeadlessClient {
             + config.amazonBowSkillId + " target="
             + targetId + " ownerMissiles=" + owner.playerMissiles.size()
             + " observerMissiles=" + peer.playerMissiles.size());
+      }
+      if (immolation && !sawImmolationFire) {
+        throw new IllegalStateException("Amazon Immolation Arrow did not create immolationfire child: target="
+            + targetId + " ownerMissiles=" + owner.playerMissiles.size());
+      }
+      if (immolation && !sawImmolationFireShared) {
+        throw new IllegalStateException("Amazon Immolation Arrow immolationfire child was not shared by owner/observer: target="
+            + targetId + " ownerMissiles=" + owner.playerMissiles.size()
+            + " observerMissiles=" + peer.playerMissiles.size());
+      }
+      if (immolation && !sawImmolationFireTick) {
+        throw new IllegalStateException("Amazon Immolation Arrow persistent fire did not tick after child creation: target="
+            + targetId + " baseline=" + immolationFireBaseline
+            + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId)));
+      }
+      if (immolation && !areaMissileDeletionConsistent(owner, peer, config.amazonBowSkillId)) {
+        throw new IllegalStateException("Amazon Immolation Arrow missile lifecycle diverged between owner/observer: target="
+            + targetId + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles)
+            + " observerMissiles=" + areaMissileSummary(peer.areaMissiles));
       }
       if (Config.expectsAmazonBowColdState(config.amazonBowSkillId) && !sawColdState) {
         log("amazon_bow_state_debug", "skill=" + config.amazonBowSkillId
@@ -1761,6 +1810,8 @@ public final class D2GSHeadlessClient {
           + " target=" + targetId + " initialLife=" + initialLife
           + " targetDamageObserved=" + damaged
           + " explosionChild=" + sawExplosionChildShared
+          + " immolationFire=" + sawImmolationFireShared
+          + " immolationFireTick=" + sawImmolationFireTick
           + " freezeState=" + sawFreezeState
           + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
           + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
@@ -1839,6 +1890,32 @@ public final class D2GSHeadlessClient {
       if ((exp2 != null && first.missileId == exp2.Id)
           || (exp != null && first.missileId == exp.Id)
           || (exp3 != null && first.missileId == exp3.Id)) return true;
+    }
+    return false;
+  }
+
+  private static boolean hasAmazonImmolationFire(D2GSHeadlessClient client) {
+    if (client == null || Riiablo.files == null || Riiablo.files.Missiles == null) return false;
+    com.riiablo.codec.excel.Missiles.Entry fire = Riiablo.files.Missiles.get("immolationfire");
+    if (fire == null) return false;
+    for (AreaMissile missile : client.areaMissiles.values()) {
+      if (missile != null && missile.everActive && missile.missileId == fire.Id) return true;
+    }
+    return false;
+  }
+
+  private static boolean hasSharedAmazonImmolationFire(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer) {
+    if (owner == null || observer == null || Riiablo.files == null
+        || Riiablo.files.Missiles == null) return false;
+    com.riiablo.codec.excel.Missiles.Entry fire = Riiablo.files.Missiles.get("immolationfire");
+    if (fire == null) return false;
+    for (Integer entityId : owner.areaMissiles.keySet()) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.missileId == fire.Id && second.missileId == fire.Id
+          && first.missileId == second.missileId) return true;
     }
     return false;
   }
@@ -10508,7 +10585,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
       if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
-        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), or Ice Arrow(21)");
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), Ice Arrow(21), or Immolation Arrow(27)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10605,7 +10682,8 @@ public final class D2GSHeadlessClient {
     private static boolean isAmazonBowSkill(int skillId) {
       return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW
           || skillId == SkillId.ICE_ARROW || skillId == SkillId.EXPLODING_ARROW
-          || skillId == SkillId.FREEZING_ARROW;
+          || skillId == SkillId.FREEZING_ARROW
+          || skillId == SkillId.IMMOLATION_ARROW;
     }
 
     private static boolean expectsAmazonBowColdState(int skillId) {
