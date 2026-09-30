@@ -59,6 +59,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   public       byte   charClass;
   public       int    flags;
   public       byte   level;
+  public       int    createTime;
+  public       int    lastTime;
+  public       int    playTime;
   public final int    hotkeys[] = new int[D2S.NUM_HOTKEYS];
   public final int    actions[][] = new int[D2S.NUM_ACTIONS][D2S.NUM_BUTTONS];
   public final byte   towns[] = new byte[D2S.NUM_DIFFS];
@@ -67,12 +70,16 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
   final MercData   mercData = new MercData();
   final short      questData[][][] = new short[Riiablo.NUM_DIFFS][Riiablo.NUM_ACTS][8];
+  final byte       questTails[][] = new byte[Riiablo.NUM_DIFFS][16];
   final int        waypointData[][] = new int[Riiablo.NUM_DIFFS][Riiablo.NUM_ACTS];
+  final byte       waypointReserved[][] = new byte[Riiablo.NUM_DIFFS][17];
   final long       npcIntroData[] = new long[Riiablo.NUM_DIFFS];
   final long       npcReturnData[] = new long[Riiablo.NUM_DIFFS];
   final Attributes statData = Attributes.obtainLarge();
   final IntIntMap  skillData = new IntIntMap();
   final ItemData   itemData = new ItemData(statData, null);
+  final Array<Item> corpseItems = new Array<>(Item.class);
+  final byte[] corpseMetadata = new byte[12];
         Item       golemItemData;
 
   private final PotionRecovery healthPotion = new PotionRecovery();
@@ -140,6 +147,8 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     classId = CharacterClass.get(charClass);
     flags   = D2S.FLAG_EXPANSION;
     level   = 1;
+    createTime = lastTime = (int) (System.currentTimeMillis() / 1000);
+    playTime = -1;
     Arrays.fill(hotkeys, D2S.HOTKEY_UNASSIGNED);
     // D2 stores the normal attack as skill id 0. A newly-created character
     // must still have an explicit left/right action selection; leaving these
@@ -201,12 +210,17 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     classId   = null;
     flags     = 0;
     level     = 0;
+    createTime = 0;
+    lastTime = 0;
+    playTime = 0;
     Arrays.fill(hotkeys, D2S.HOTKEY_UNASSIGNED);
     for (int i = 0, s = D2S.NUM_ACTIONS; i < s; i++) Arrays.fill(actions[i], 0);
     Arrays.fill(towns, (byte) 0);
     mapSeed   = 0;
     potionSeed = 0;
     Arrays.fill(realmData, (byte) 0);
+    Arrays.fill(corpseMetadata, (byte) 0);
+    corpseItems.clear();
 
     mercData.flags = 0;
     mercData.seed  = 0;
@@ -216,7 +230,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
     for (int i = 0, i0 = Riiablo.NUM_DIFFS; i < i0; i++) {
       for (int a = 0; a < Riiablo.NUM_ACTS; a++) Arrays.fill(questData[i][a], (short) 0);
+      Arrays.fill(questTails[i], (byte) 0);
       Arrays.fill(waypointData[i], 0);
+      Arrays.fill(waypointReserved[i], (byte) 0);
       npcIntroData[i] = 0;
       npcReturnData[i] = 0;
     }

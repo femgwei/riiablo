@@ -89,7 +89,23 @@ public class ItemWriter {
   }
 
   private void writeCompact(Item item, BitOutput bits) {
-    // no-op
+    if (item.type != null && item.type.is(Type.GOLD)) {
+      int quantity = item.attrs.base().get(Stat.gold) == null
+          ? 0 : Math.max(0, item.attrs.base().get(Stat.gold).asInt());
+      boolean large = quantity >= 4096;
+      bits.writeBoolean(large);
+      if (large) bits.writeRaw(quantity, 32);
+      else bits.write15u(quantity, 12);
+    }
+    writeRandomData(item, bits);
+  }
+
+  private static void writeRandomData(Item item, BitOutput bits) {
+    bits.writeBoolean(item.hasRandom);
+    if (item.hasRandom) {
+      int[] timestamps = item.randomTimestamp;
+      for (int i = 0; i < 4; i++) bits.writeRaw(timestamps != null && i < timestamps.length ? timestamps[i] : 0, 32);
+    }
   }
 
   private void writeStandard(Item item, BitOutput bits) {
@@ -111,12 +127,7 @@ public class ItemWriter {
       bits.writeString(item.inscription, 7, true);
     }
 
-    /** @see ItemReader#readStandard(BitInput, Item) */
-    if (item.type.is(Type.BOOK)) {
-      bits.writeBoolean(item.code.equalsIgnoreCase("ibk"));
-    } else {
-      bits.skipBits(1);
-    }
+    writeRandomData(item, bits);
 
     writeArmorClass(item, bits);
     writeDurability(item, bits);

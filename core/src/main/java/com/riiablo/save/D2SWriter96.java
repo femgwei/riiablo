@@ -54,7 +54,10 @@ public class D2SWriter96 {
     d2s.flags = charData.flags;
     d2s.charClass = charData.charClass;
     d2s.level = charData.level;
-    d2s.timestamp = (int) (System.currentTimeMillis() / 1000);
+    d2s.createTime = charData.createTime;
+    d2s.lastTime = charData.lastTime != 0 ? charData.lastTime : (int) (System.currentTimeMillis() / 1000);
+    d2s.playTime = charData.playTime;
+    d2s.timestamp = d2s.lastTime;
     d2s.hotkeys = charData.hotkeys.clone();
     d2s.actions = new int[D2S.NUM_ACTIONS][D2S.NUM_BUTTONS];
     for (int i = 0; i < D2S.NUM_ACTIONS; i++) {
@@ -66,6 +69,7 @@ public class D2SWriter96 {
     d2s.towns = charData.towns.clone();
     d2s.towns[charData.diff] = (byte) ((d2s.towns[charData.diff] & 0x7F) | 0x80);
     d2s.mapSeed = charData.mapSeed;
+    d2s.realmData = charData.realmData.clone();
 
     // 佣兵数据
     d2s.merc = new D2S.MercData();
@@ -104,9 +108,11 @@ public class D2SWriter96 {
       d2s.items.items.add(charData.itemData.getItem(i));
     }
 
-    // 尸体数据（目前为空）
+    // 尸体数据
     d2s.corpse = new D2S.ItemData();
     d2s.corpse.items = new Array<>();
+    d2s.corpse.items.addAll(charData.corpseItems);
+    d2s.corpse.corpseMetadata = charData.corpseMetadata.clone();
 
     // 石魔数据
     d2s.golem = new D2S.GolemData();
@@ -134,6 +140,7 @@ public class D2SWriter96 {
           flags[byteIndex++] = (byte) ((questFlag >> 8) & 0xFF);
         }
       }
+      System.arraycopy(charData.questTails[d], 0, flags, 80, 16);
 
       quests.flags[d] = flags;
     }
@@ -162,6 +169,9 @@ public class D2SWriter96 {
       }
 
       waypoints.flags[d] = flags;
+      if (waypoints.reserved == null) waypoints.reserved = new byte[D2S.NUM_DIFFS][17];
+      System.arraycopy(charData.waypointReserved[d], 0, waypoints.reserved[d], 0, 17);
+      System.arraycopy(waypoints.reserved[d], 0, flags, 5, 17);
     }
 
     return waypoints;
@@ -310,9 +320,9 @@ public class D2SWriter96 {
     out.write8(NUM_STATS);
     out.write8(NUM_SKILLS);
     out.write8(d2s.level);
-    out.write32(d2s.timestamp); // dwCreateTime
-    out.write32(d2s.timestamp);
-    out.write32(UNKNOWN_PLAY_TIME);
+    out.write32(d2s.createTime != 0 ? d2s.createTime : d2s.timestamp);
+    out.write32(d2s.lastTime != 0 ? d2s.lastTime : d2s.timestamp);
+    out.write32(d2s.playTime);
 
     // 快捷键
     for (int hotkey : d2s.hotkeys) {
@@ -339,8 +349,13 @@ public class D2SWriter96 {
     // 佣兵头部数据
     writeMercHeader(d2s.merc, out);
 
-    // 领域数据（144字节，未使用）
-    out.skipBytes(144);
+    // 保留原生头部尾区（guild emblem、last level/town/difficulty 等）
+    if (d2s.realmData == null) out.skipBytes(144);
+    else if (d2s.realmData.length == 144) out.writeBytes(d2s.realmData);
+    else {
+      out.writeBytes(d2s.realmData);
+      out.skipBytes(144 - d2s.realmData.length);
+    }
   }
 
   static void writeMercHeader(D2S.MercData merc, ByteOutput out) {
@@ -367,7 +382,11 @@ public class D2SWriter96 {
       }
     } else {
       for (int i = 0; i < D2S.NUM_DIFFS; i++) {
-        out.writeBytes(quests.flags[i]);
+        byte[] flags = quests.flags[i];
+        out.writeBytes(flags, 0, Math.min(flags.length, D2S.QuestData.NUM_QUESTFLAGS));
+        if (flags.length < D2S.QuestData.NUM_QUESTFLAGS) {
+          out.skipBytes(D2S.QuestData.NUM_QUESTFLAGS - flags.length);
+        }
       }
     }
   }
@@ -382,7 +401,11 @@ public class D2SWriter96 {
       if (waypoints == null || waypoints.flags == null) {
         out.skipBytes(D2S.WaypointData.NUM_WAYPOINTFLAGS);
       } else {
-        out.writeBytes(waypoints.flags[i]);
+        byte[] flags = waypoints.flags[i];
+        out.writeBytes(flags, 0, Math.min(flags.length, D2S.WaypointData.NUM_WAYPOINTFLAGS));
+        if (flags.length < D2S.WaypointData.NUM_WAYPOINTFLAGS) {
+          out.skipBytes(D2S.WaypointData.NUM_WAYPOINTFLAGS - flags.length);
+        }
       }
     }
   }
@@ -459,10 +482,13 @@ public class D2SWriter96 {
     if (corpse == null || corpse.items == null || corpse.items.size == 0) {
       out.write16(0);
     } else {
-      out.write16(corpse.items.size);
-      for (Item item : corpse.items) {
-        itemWriter.writeItem(item, out);
+      out.write16(1);
+      if (corpse.corpseMetadata == null || corpse.corpseMetadata.length != 12) {
+        out.skipBytes(12);
+      } else {
+        out.writeBytes(corpse.corpseMetadata);
       }
+      writeItemData(corpse, out);
     }
   }
 

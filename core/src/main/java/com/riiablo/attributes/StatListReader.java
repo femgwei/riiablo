@@ -15,14 +15,23 @@ public class StatListReader {
     final int encodedParams, encodedValues;
     if (cs) {
       log.trace("Reading as character stat...");
-      encodedParams = (int) bits.read63u(entry.CSvParam);
-      encodedValues = (int) bits.read63u(entry.CSvBits);
+      encodedParams = readCharacterBits(bits, entry.CSvParam, true);
+      encodedValues = readCharacterBits(bits, entry.CSvBits, entry.CSvSigned);
     } else {
       log.trace("Reading as standard stat...");
       encodedParams = (int) bits.read63u(entry.Save_Param_Bits);
       encodedValues = Stat.encode(stat, (int) (bits.read63u(entry.Save_Bits) - entry.Save_Add));
     }
     return stats.putEncoded(stat, encodedParams, encodedValues);
+  }
+
+  private static int readCharacterBits(BitInput bits, int width, boolean signed) {
+    if (width <= 0) return 0;
+    if (signed) {
+      if (width <= 32) return bits.read32(width);
+      return (int) bits.read64(width);
+    }
+    return (int) bits.read63u(width);
   }
 
   public StatListRef read(StatListRef stats, BitInput bits, boolean cs) {

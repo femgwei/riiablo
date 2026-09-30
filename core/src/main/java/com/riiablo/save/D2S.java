@@ -71,6 +71,9 @@ public class D2S {
   int flags;
   byte charClass;
   byte level;
+  int createTime;
+  int lastTime;
+  int playTime = -1;
   int timestamp;
   int[] hotkeys;
   int[][] actions;
@@ -78,6 +81,7 @@ public class D2S {
   byte[] colors;
   byte[] towns;
   int mapSeed;
+  byte[] realmData;
   MercData merc;
   QuestData quests;
   WaypointData waypoints;
@@ -231,12 +235,16 @@ public class D2S {
     static final int NUM_QUESTFLAGS = 96;
 
     byte[][] flags;
+    /** Native 16-byte tail after the 40 quest words for each difficulty. */
+    byte[][] tails;
   }
 
   public static class WaypointData {
     static final int NUM_WAYPOINTFLAGS = 22;
 
     byte[][] flags;
+    /** The 17 native reserved bytes following each difficulty's five masks. */
+    byte[][] reserved;
   }
 
   public static class NPCData {
@@ -273,6 +281,8 @@ public class D2S {
 
   public static class ItemData {
     Array<Item> items;
+    /** Native corpse metadata (unit id/coordinates), present only for a corpse. */
+    byte[] corpseMetadata;
   }
 
   public static class GolemData {

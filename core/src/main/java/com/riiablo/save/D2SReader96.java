@@ -91,9 +91,10 @@ public class D2SReader96 {
       log.debug("charClass: {} ({})", d2s.charClass, DebugUtils.getClassString(d2s.charClass));
       in.skipBytes(2); // unknown
       d2s.level = in.readSafe8u();
-      in.skipBytes(4); // unknown
-      d2s.timestamp = in.read32();
-      in.skipBytes(4); // unknown
+      d2s.createTime = in.read32();
+      d2s.lastTime = in.read32();
+      d2s.playTime = in.read32();
+      d2s.timestamp = d2s.lastTime;
       d2s.hotkeys = readInts(in, D2S.NUM_HOTKEYS);
       if (log.debugEnabled()) log.debug("hotkeys: {}", Arrays.toString(d2s.hotkeys));
       d2s.actions = new int[D2S.NUM_ACTIONS][D2S.NUM_BUTTONS];
@@ -115,7 +116,7 @@ public class D2SReader96 {
       } finally {
         MDC.remove("d2s.section");
       }
-      in.skipBytes(144); // realm data (unused)
+      d2s.realmData = in.readBytes(144);
       assert in.bytesRemaining() == 0 : "in.bytesRemaining(" + in.bytesRemaining() + ") > " + 0;
     } finally {
       MDC.remove("d2s.name");
@@ -188,15 +189,19 @@ public class D2SReader96 {
 
       if (!strict) recover(in, ITEMS_SIGNATURE, "corpse");
       MDC.put("d2s.section", "corpse");
-      d2s.corpse = readItemData(in, itemReader, strict);
+      d2s.corpse = readCorpseData(in, itemReader, strict);
 
-      if (!strict) recover(in, MERC_SIGNATURE, "merc");
-      MDC.put("d2s.section", "merc");
-      d2s.merc = readMercData(d2s.merc, in, itemReader, strict);
+      if (d2s.isExpansion()) {
+        if (!strict) recover(in, MERC_SIGNATURE, "merc");
+        MDC.put("d2s.section", "merc");
+        d2s.merc = readMercData(d2s.merc, in, itemReader, strict);
 
-      if (!strict) recover(in, GOLEM_SIGNATURE, "golem");
-      MDC.put("d2s.section", "golem");
-      d2s.golem = readGolemData(in, itemReader);
+        if (!strict) recover(in, GOLEM_SIGNATURE, "golem");
+        MDC.put("d2s.section", "golem");
+        d2s.golem = readGolemData(in, itemReader);
+      } else {
+        d2s.golem = new D2S.GolemData();
+      }
 
       d2s.bodyRead = true;
     } finally {
@@ -220,8 +225,10 @@ public class D2SReader96 {
     }
     in = in.readSlice(size - QUESTS_SIGNATURE.length - 4 - 2);
     final byte[][] flags = quests.flags = new byte[D2S.NUM_DIFFS][];
+    quests.tails = new byte[D2S.NUM_DIFFS][16];
     for (int i = 0; i < D2S.NUM_DIFFS; i++) {
       flags[i] = in.readBytes(D2S.QuestData.NUM_QUESTFLAGS);
+      System.arraycopy(flags[i], 80, quests.tails[i], 0, 16);
       if (log.debugEnabled()) {
         log.debugf("quests.flags[%.4s]: %s",
             DebugUtils.getDifficultyString(i),
@@ -246,8 +253,10 @@ public class D2SReader96 {
     }
     in = in.readSlice(size - WAYPOINTS_SIGNATURE.length - 4 - 2);
     final byte[][] flags = waypoints.flags = new byte[D2S.NUM_DIFFS][];
+    waypoints.reserved = new byte[D2S.NUM_DIFFS][17];
     for (int i = 0; i < D2S.NUM_DIFFS; i++) {
       flags[i] = readWaypointFlags(in);
+      System.arraycopy(flags[i], 5, waypoints.reserved[i], 0, 17);
       if (log.debugEnabled()) {
         log.debugf("waypoints.flags[%.4s]: %s",
             DebugUtils.getDifficultyString(i),
@@ -358,6 +367,22 @@ public class D2SReader96 {
     return items;
   }
 
+  /** Reads the native JM corpse section, including its 12-byte corpse header. */
+  static D2S.ItemData readCorpseData(ByteInput in, ItemReader itemReader, boolean strict) {
+    log.trace("Validating corpse signature");
+    in.readSignature(ITEMS_SIGNATURE);
+    D2S.ItemData corpse = new D2S.ItemData();
+    final int count = in.readSafe16u();
+    if (count > 1) throw new InvalidFormat(in, "corpse.count(" + count + ") > 1");
+    if (count == 1) {
+      corpse.corpseMetadata = in.readBytes(12);
+      corpse.items = readItemData(in, itemReader, strict).items;
+    } else {
+      corpse.items = new Array<>(0);
+    }
+    return corpse;
+  }
+
   static D2S.MercData readMercData(D2S.MercData merc, ByteInput in, ItemReader itemReader) {
     return readMercData(merc, in, itemReader, false);
   }
@@ -394,11 +419,15 @@ public class D2SReader96 {
     data.classId = CharacterClass.get(d2s.charClass);
     data.flags = d2s.flags;
     data.level = d2s.level;
+    data.createTime = d2s.createTime;
+    data.lastTime = d2s.lastTime;
+    data.playTime = d2s.playTime;
     System.arraycopy(d2s.hotkeys, 0, data.hotkeys, 0, D2S.NUM_HOTKEYS);
     for (int i = 0, s = D2S.NUM_ACTIONS; i < s; i++) System.arraycopy(d2s.actions[i], 0, data.actions[i], 0, D2S.NUM_BUTTONS);
     System.arraycopy(d2s.towns, 0, data.towns, 0, D2S.NUM_DIFFS);
     data.mapSeed = d2s.mapSeed;
-//    System.arraycopy(d2s.realmData, 0, data.realmData, 0, d2s.realmData.length);
+    if (d2s.realmData != null) System.arraycopy(d2s.realmData, 0, data.realmData, 0,
+        Math.min(d2s.realmData.length, data.realmData.length));
 
     data.mercData.flags = d2s.merc.flags;
     data.mercData.seed  = d2s.merc.seed;
@@ -406,7 +435,7 @@ public class D2SReader96 {
     data.mercData.type  = d2s.merc.type;
     data.mercData.xp    = d2s.merc.experience;
     data.mercData.itemData.clear();
-    if (d2s.merc.seed != 0) data.mercData.itemData.addAll(d2s.merc.items.items);
+    if (d2s.merc.seed != 0 && d2s.merc.items != null) data.mercData.itemData.addAll(d2s.merc.items.items);
 
     BitInput bits;
     for (int i = 0, i0 = Riiablo.NUM_DIFFS; i < i0; i++) {
@@ -426,6 +455,12 @@ public class D2SReader96 {
       // D2's WAYPOINTS_CopyAndValidateWaypointData always restores the first
       // town waypoint bit for every difficulty.
       data.waypointData[i][Riiablo.ACT1] |= 1;
+      if (d2s.waypoints.reserved != null) {
+        System.arraycopy(d2s.waypoints.reserved[i], 0, data.waypointReserved[i], 0, 17);
+      }
+      if (d2s.quests.tails != null) {
+        System.arraycopy(d2s.quests.tails[i], 0, data.questTails[i], 0, 16);
+      }
 
       bits = BitInput.wrap(d2s.npcs.flags[D2S.NPCData.GREETING_INTRO][i]);
       data.npcIntroData[i] = bits.readRaw(64);
@@ -445,7 +480,13 @@ public class D2SReader96 {
     data.itemData.charStats = classId.entry();
     data.itemData.alternate = d2s.alternate;
 
-    data.golemItemData = d2s.golem.item;
+    data.golemItemData = d2s.golem == null ? null : d2s.golem.item;
+
+    data.corpseItems.clear();
+    if (d2s.corpse != null && d2s.corpse.items != null) data.corpseItems.addAll(d2s.corpse.items);
+    if (d2s.corpse != null && d2s.corpse.corpseMetadata != null) {
+      System.arraycopy(d2s.corpse.corpseMetadata, 0, data.corpseMetadata, 0, 12);
+    }
 
     return data;
   }

@@ -16,8 +16,8 @@ public class StatListWriter {
     if (log.traceEnabled()) log.traceEntry("write(stats: {}, stat: {} ({}), bits: {}, cs: {})", stats, stat, entry, bits, cs);
     if (cs) {
       log.trace("Writing as character stat {}", stat.debugString());
-      bits.write63u(stat.encodedParams(), entry.CSvParam);
-      bits.write63u(stat.encodedValues(), entry.CSvBits);
+      writeCharacterBits(bits, stat.encodedParams(), entry.CSvParam, true);
+      writeCharacterBits(bits, stat.encodedValues(), entry.CSvBits, entry.CSvSigned);
     } else {
       log.trace("Writing as standard stat {}", stat.debugString());
       bits.write63u(stat.encodedParams(), entry.Save_Param_Bits);
@@ -88,6 +88,15 @@ public class StatListWriter {
     if (flags == StatListFlags.FLAG_NONE) {
       bits.write15u(Stat.NONE, Stat.BITS);
     }
+  }
+
+  private static void writeCharacterBits(BitOutput bits, int value, int width, boolean signed) {
+    if (width <= 0) return;
+    if (signed) {
+      if (width <= 32) bits.write32(value, width);
+      else bits.write64(value, width);
+    }
+    else bits.write63u(value, width);
   }
 
   private static int highestList(int flags) {

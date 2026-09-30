@@ -137,6 +137,9 @@ public class Item {
   public Object  qualityData;
   public int     runewordData;
   public String  inscription;
+  /** Native bHasRand flag and its optional four DWORD timestamp payload. */
+  public boolean hasRandom;
+  public int[]   randomTimestamp;
 
   public Attributes attrs;
   public int aggFlags;
@@ -192,6 +195,8 @@ public class Item {
     qualityData   = null;
     runewordData  = 0;
     inscription   = null;
+    hasRandom     = false;
+    randomTimestamp = null;
 
     attrs = null;
     aggFlags = 0;

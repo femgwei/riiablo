@@ -98,7 +98,7 @@ public class ItemReader {
 
     log.trace("code: {} ({})", item.code, item.base.name);
     if ((item.flags & Item.ITEMFLAG_COMPACT) == Item.ITEMFLAG_COMPACT) {
-      readCompact(item);
+      readCompact(item, bits);
     } else {
       readStandard(bits, item);
     }
@@ -109,11 +109,28 @@ public class ItemReader {
     return item;
   }
 
-  private void readCompact(Item item) {
-    if (item.type.is(Type.GEM) || item.type.is(Type.RUNE)) {
+  private void readCompact(Item item, BitInput bits) {
+    if (item.type.is(Type.GOLD)) {
+      // Native 1.10f compact gold stores a large-value flag followed by
+      // either a 12-bit or 32-bit quantity immediately after the code.
+      boolean large = bits.readBoolean();
+      int quantity = large ? (int) bits.readRaw(32) : bits.read15u(12);
+      item.attrs.base().put(Stat.gold, quantity);
+    } else if (item.type.is(Type.GEM) || item.type.is(Type.RUNE)) {
       gems.set(item.attrs, item.code);
     } else {
       assert item.attrs.isEmpty();
+    }
+    readRandomData(bits, item);
+  }
+
+  private static void readRandomData(BitInput bits, Item item) {
+    item.hasRandom = bits.readBoolean();
+    if (item.hasRandom) {
+      item.randomTimestamp = new int[4];
+      for (int i = 0; i < item.randomTimestamp.length; i++) item.randomTimestamp[i] = (int) bits.readRaw(32);
+    } else {
+      item.randomTimestamp = null;
     }
   }
 
@@ -133,7 +150,7 @@ public class ItemReader {
         ? bits.readString(Riiablo.MAX_NAME_LENGTH + 1, 7, true)
         : null;
 
-    bits.skipBits(1); // TODO: Unknown, this usually is 0, but is 1 on a Tome of Identify.  (It's still 0 on a Tome of Townportal.)
+    readRandomData(bits, item);
 
     readArmorClass(bits, item);
     readDurability(bits, item);
