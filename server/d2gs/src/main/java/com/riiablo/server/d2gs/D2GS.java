@@ -2452,6 +2452,52 @@ public class D2GS extends ApplicationAdapter {
         ? -1L : server.authoritativeItems.revision(playerId);
   }
 
+  /**
+   * Reads the authoritative right/left-hand weapon resource counters for a
+   * headless combat gate.  The callback is posted to the simulation thread so
+   * the result cannot race an Impale keyframe or an inventory rebuild.
+   *
+   * @return {@code [quantity, durability, maxdurability, stackable, nodurability, weaponBase, skillLevel]}, or {@code null}
+   *     when the player/weapon is unavailable
+   */
+  static int[] headlessAmazonWeaponStats(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || playerId < 0) {
+      return null;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        if (player == null || player.data == null) return;
+        Item weapon = player.data.getItems().getEquipped(com.riiablo.item.BodyLoc.RARM);
+        if (weapon == null) {
+          weapon = player.data.getItems().getEquipped(com.riiablo.item.BodyLoc.LARM);
+        }
+        if (weapon == null || weapon.attrs == null || weapon.attrs.base() == null) return;
+        result.set(new int[] {
+            statInt(weapon.attrs.base().get(com.riiablo.attributes.Stat.quantity)),
+            statInt(weapon.attrs.base().get(com.riiablo.attributes.Stat.durability)),
+            statInt(weapon.attrs.base().get(com.riiablo.attributes.Stat.maxdurability)),
+            weapon.base != null && weapon.base.stackable ? 1 : 0,
+            weapon.base != null && weapon.base.nodurability ? 1 : 0,
+            weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry ? 1 : 0,
+            player.data.getSkill(com.riiablo.engine.server.skill.SkillId.IMPALE)
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+
   /** Schedules deletion of a ground entity on the authoritative tick thread. */
   static boolean headlessDeleteGroundEntity(int entityId) {
     D2GS server = activeHeadlessInstance;
@@ -2526,6 +2572,11 @@ public class D2GS extends ApplicationAdapter {
 
   /** Test-only placement that puts a player inside native melee range of a target. */
   static boolean headlessPlacePlayerNear(int playerId, int targetId) {
+    return headlessPlacePlayerNear(playerId, targetId, 3.5f);
+  }
+
+  /** Test-only placement with an explicit target offset for strict SrvSt07 range checks. */
+  static boolean headlessPlacePlayerNear(int playerId, int targetId, float offset) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || Gdx.app == null) return false;
     java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
@@ -2536,8 +2587,8 @@ public class D2GS extends ApplicationAdapter {
         Position target = server.world.getMapper(Position.class).get(targetId);
         if (player == null || target == null) return;
         // Keep the fixture outside Box2D overlap while staying inside the
-        // native Amazon player melee bonus range.
-        player.position.set(target.position.x - 3.5f, target.position.y);
+        // native range requested by the caller.
+        player.position.set(target.position.x - offset, target.position.y);
         com.riiablo.engine.server.component.Box2DBody body = server.world
             .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
         if (body != null && body.body != null) {
@@ -2574,6 +2625,12 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.component.Casting casting = server.world.getMapper(
             com.riiablo.engine.server.component.Casting.class).get(playerId);
         if (player == null || casting == null || casting.skillId != skillId) return;
+        // Impale's native Calc2 resource drain is probabilistic.  The
+        // headless fallback is a deterministic test boundary, so arrange for
+        // the next MathUtils.random(99) roll to satisfy the MPQ chance.
+        if (skillId == com.riiablo.engine.server.skill.SkillId.IMPALE) {
+          seedHeadlessImpaleResourceRoll();
+        }
         server.world.getSystem(EventSystem.class).dispatch(
             AnimDataKeyframeEvent.obtain(playerId, Engine.KEYFRAME_ATK));
         dispatched.set(true);
@@ -2586,6 +2643,21 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
+    }
+  }
+
+  private static void seedHeadlessImpaleResourceRoll() {
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(
+        com.riiablo.engine.server.skill.SkillId.IMPALE);
+    if (skill == null) return;
+    int chance = Math.max(0, Math.min(100,
+        com.riiablo.engine.server.skill.SkillFormula.evaluate(skill.calc2, skill, 20)));
+    for (long seed = 1L; seed < 10000L; seed++) {
+      com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+      if (com.badlogic.gdx.math.MathUtils.random(99) < chance) {
+        com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+        return;
+      }
     }
   }
 
@@ -4719,6 +4791,10 @@ public class D2GS extends ApplicationAdapter {
     com.riiablo.attributes.StatRef value = attrs == null ? null
         : attrs.get(stat, com.riiablo.attributes.StatRef.obtain());
     return value == null ? 0 : value.asInt();
+  }
+
+  private static int statInt(com.riiablo.attributes.StatRef value) {
+    return value == null ? -1 : value.asInt();
   }
 
   private static float statFixed(com.riiablo.attributes.Attributes attrs, short stat) {

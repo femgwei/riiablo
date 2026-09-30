@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon 真实 MPQ Jab 双客户端门槛）
+更新时间：2026-10-01（Amazon Impale 真实 MPQ quantity gate）
 
 ## 唯一负责人
 
@@ -36,8 +36,8 @@
 
 #### 接手摘要（必须先读）
 
-- 当前分支为 `master`，HEAD 为 `5bb65a7b`，已推送并确认
-  `origin/master=5bb65a7bc4f2821aca3bda0ec8f421cc63ab90fe`。
+- 当前分支为 `master`；本轮提交后用 `git log -1 --oneline` 和
+  `git ls-remote origin refs/heads/master` 刷新并确认 HEAD/远端 SHA。
 - dark-magic manifest 当前有 43 个 exact-ID、16 个行为族；riiablo 已为 43/43
   建立行为对照入口或测试映射，但 dark-magic 自身条目仍全部是 `partial` evidence，
   因此不能把“已建立对照”写成“技能已完成”。
@@ -47,9 +47,10 @@
 - 当前最高优先级是 Amazon 30 行技能的真实 1.10f MPQ、失手/死亡/重连验收；Amazon
   没有 dark-magic exact-ID 配置，不能把其他职业的行为族直接套用到 Amazon。新的
   `headlessAmazonMelee` 已完成 Jab、Power Strike、Impale、Charged Strike、Fend、Lightning
-  Strike 的真实双端伤害/重连门槛，其中 Lightning Strike 还确认链式导弹；其余 Amazon
+  Strike 的真实双端伤害/重连门槛，其中 Lightning Strike 还确认链式导弹；本轮又补齐
+  Impale 标枪 `quantity` 的真实 MPQ Calc2 消耗和 observer 重连保持；其余 Amazon
   exact-ID 行仍未完成。Jab 的真实目标死亡和高防 miss gate 也已通过；quantity/durability
-  仍待接入真实 MPQ 场景。
+  非堆叠武器的 Impale Calc3 durability 仍由 ECS/D2MOO 测试覆盖，真实 MPQ 还需继续补边界。
 - 最近已完成的真实门槛：Sorceress Fire Ball/Nova、Necromancer Poison Nova、
   Paladin 20 Aura 清单、Conviction/Holy Freeze hostile 过滤、Druid vine/尸体
   recycler 的部分双客户端流程。详细矩阵见 `docs/skill-porting-matrix.md`。
@@ -75,7 +76,7 @@
 检查当前 Amazon 未提交修改的差异，在不触碰其他 agent 文件的前提下继续补：
 真实 MPQ Jab/Impale/Fend/Power Strike/Charged Strike、失手/死亡/重连、弹药/耐久和
 ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，真实 MPQ
-`headlessAmazonMelee` 六项成功 gate、Jab death 和高防 miss gate 已通过，下一步是弹药/耐久边界和剩余 Amazon 技能。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
+  `headlessAmazonMelee` 六项成功 gate、Impale quantity、Jab death 和高防 miss gate 已通过，下一步是非堆叠耐久/弹药边界和剩余 Amazon 技能。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
 极小修改可不编译但仍需提交推送。
 
 #### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）

@@ -78,7 +78,13 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   客户端保持死亡状态，后续 Jab 记录不产生额外伤害，observer 重连不恢复生命。miss、
   quantity/durability 仍以 ECS/D2MOO 测试为主；新增的 `-PamazonMeleeExpectMiss` 已通过
   真实高防/被动闪避 gate，双方生命和重连快照保持不变。
-- 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
+- 真实 MPQ Impale quantity gate 已通过：D2MOO `Calc2=par6-dm34` 在 level 20 的
+  `25%` 路径命中后将装备 `jav` 从 `quantity=16` 降为 `15`，`durability/maxdurability`
+  保持 `20/20`；owner/observer 目标生命一致，observer 重连后服务端资源仍为
+  `15/20/20`。夹具读取权威装备的 quantity、durability、maxdurability 及 native base
+  标志，避免把客户端快照误当成资源真值。非堆叠武器的 Calc3 durability 分支仍由
+  `AmazonMeleeSkillLifecycleTest` 锁定，真实 MPQ 需后续增加专用武器 fixture。
+- 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试；当前下一项是非堆叠 Calc3 durability、弹药耗尽和剩余 Amazon 导弹/区域行为。
 
 ### Sorceress
 

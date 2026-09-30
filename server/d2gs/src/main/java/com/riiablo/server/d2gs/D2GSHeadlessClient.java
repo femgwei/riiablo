@@ -1340,7 +1340,8 @@ public final class D2GSHeadlessClient {
           && !D2GS.headlessSetMonsterDefense(targetId, 1_000_000)) {
         throw new IOException("failed to raise Amazon melee target defense");
       }
-      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId)) {
+      boolean impale = config.amazonMeleeSkillId == SkillId.IMPALE;
+      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, impale ? 1f : 3.5f)) {
         throw new IOException("failed to place Amazon inside melee range");
       }
       boolean fallback = false;
@@ -1348,14 +1349,28 @@ public final class D2GSHeadlessClient {
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
+      int[] impaleResourceBefore = impale
+          ? D2GS.headlessAmazonWeaponStats(owner.playerId) : null;
+      if (impale && !validAmazonWeaponStats(impaleResourceBefore)) {
+        throw new IOException("failed to read authoritative Impale weapon resources before cast");
+      }
+      int[] impaleResourceAfter = null;
+      boolean impaleResourceObserved = false;
       boolean sawLightningMissile = !lightningStrike;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
-          && System.currentTimeMillis() < deadline && !damaged && !targetDeathObserved; attempt++) {
+          && System.currentTimeMillis() < deadline
+          && (!damaged || (impale && !impaleResourceObserved))
+          && !targetDeathObserved; attempt++) {
+        if (impale) fallback = false;
         ownerTarget = owner.monsters.get(targetId);
         if (ownerTarget == null || !ownerTarget.hasPosition) break;
-        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 3.5f, ownerTarget.y));
+        // Impale's native SrvSt07 range check has no player range bonus;
+        // stage it inside the weapon's actual melee envelope.  The other
+        // Amazon rows retain the wider normal-cast placement.
+        float meleeOffset = impale ? 1f : 3.5f;
+        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - meleeOffset, ownerTarget.y));
         send(ownerOutput, owner.castPacket(config.amazonMeleeSkillId, targetId,
             ownerTarget.x, ownerTarget.y));
         log("amazon_melee_cast", "attempt=" + attempt + " skill="
@@ -1365,8 +1380,11 @@ public final class D2GSHeadlessClient {
           throw new IOException("failed to kill Amazon melee target before keyframe");
         }
         long attemptStarted = System.currentTimeMillis();
-        long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 1800L);
-        while (System.currentTimeMillis() < attemptDeadline && !damaged && !targetDeathObserved) {
+        long attemptDeadline = Math.min(deadline, System.currentTimeMillis()
+            + (impale ? 3000L : 1800L));
+        while (System.currentTimeMillis() < attemptDeadline
+            && (!damaged || (impale && !impaleResourceObserved))
+            && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
@@ -1385,13 +1403,18 @@ public final class D2GSHeadlessClient {
             } else if (!config.amazonMeleeTargetDeath) {
               damaged = current.life < initialLife && mirrored.life < initialLife;
             }
+            if (impale && damaged && !impaleResourceObserved) {
+              impaleResourceAfter = D2GS.headlessAmazonWeaponStats(owner.playerId);
+              impaleResourceObserved = impaleResourceChanged(
+                  impaleResourceBefore, impaleResourceAfter);
+            }
           }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
           if (lightningStrike && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
-              && !damaged && !targetDeathObserved) {
+              && !targetDeathObserved && (!damaged || (impale && !impaleResourceObserved))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonMeleeSkillId);
@@ -1420,6 +1443,29 @@ public final class D2GSHeadlessClient {
             + config.amazonMeleeSkillId + " target=" + targetId
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
+      }
+      if (impale && !config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss) {
+        if (!impaleResourceObserved) {
+          throw new IllegalStateException("Amazon Impale did not consume a native weapon resource: before="
+              + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
+              + amazonWeaponStatsSummary(impaleResourceAfter) + " owner=" + owner.monsters.get(targetId)
+              + " peer=" + peer.monsters.get(targetId));
+        }
+        if (impaleResourceBefore[3] == 1
+            && impaleResourceAfter[0] != impaleResourceBefore[0] - 1) {
+          throw new IllegalStateException("Amazon Impale quantity changed outside native Calc2 path: before="
+              + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
+              + amazonWeaponStatsSummary(impaleResourceAfter));
+        }
+        if (impaleResourceBefore[3] == 0
+            && impaleResourceAfter[1] >= impaleResourceBefore[1]) {
+          throw new IllegalStateException("Amazon Impale durability did not follow native Calc3 path: before="
+              + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
+              + amazonWeaponStatsSummary(impaleResourceAfter));
+        }
+        log("amazon_impale_resource_pass", "before="
+            + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
+            + amazonWeaponStatsSummary(impaleResourceAfter));
       }
       if (lightningStrike && !sawLightningMissile) {
         long missileDeadline = System.currentTimeMillis() + 1_000L;
@@ -1471,11 +1517,47 @@ public final class D2GSHeadlessClient {
               + targetId + " initial=" + initialLife + " owner=" + ownerLife
               + " restored=" + restored.life);
         }
+        if (impale && !config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss) {
+          int[] restoredResources = D2GS.headlessAmazonWeaponStats(owner.playerId);
+          if (!sameAmazonWeaponStats(impaleResourceAfter, restoredResources)) {
+            throw new IOException("Amazon Impale weapon resources changed after observer reconnect: before="
+                + amazonWeaponStatsSummary(impaleResourceAfter) + " restored="
+                + amazonWeaponStatsSummary(restoredResources));
+          }
+          log("amazon_impale_resource_reconnect_pass", "resources="
+              + amazonWeaponStatsSummary(restoredResources) + " stale=false");
+        }
         log("amazon_melee_reconnect_pass", "skill=" + config.amazonMeleeSkillId
             + " target=" + targetId + " ownerLife=" + ownerLife
             + " restoredLife=" + restored.life + " stale=false");
       }
     }
+  }
+
+  private static boolean validAmazonWeaponStats(int[] stats) {
+    return stats != null && stats.length == 7 && stats[0] >= 0
+        && stats[1] >= 0 && stats[2] >= stats[1];
+  }
+
+  private static boolean impaleResourceChanged(int[] before, int[] after) {
+    if (!validAmazonWeaponStats(before) || !validAmazonWeaponStats(after)) return false;
+    // The generated MPQ fixture equips the native stackable jav row.  D2MOO
+    // Calc2 therefore decrements quantity; Calc3 durability is the fallback
+    // for a non-stackable weapon and is covered by the ECS test matrix.
+    return before[3] == 1 ? after[0] == before[0] - 1
+        : after[1] < before[1];
+  }
+
+  private static boolean sameAmazonWeaponStats(int[] first, int[] second) {
+    return validAmazonWeaponStats(first) && validAmazonWeaponStats(second)
+        && java.util.Arrays.equals(first, second);
+  }
+
+  private static String amazonWeaponStatsSummary(int[] stats) {
+    return stats == null ? "null"
+        : "quantity=" + stats[0] + ",durability=" + stats[1] + ",maxdurability=" + stats[2]
+            + ",stackable=" + stats[3] + ",nodurability=" + stats[4]
+            + ",weaponBase=" + stats[5] + ",skillLevel=" + stats[6];
   }
 
   private static Snapshot awaitSpecificMonster(D2GSHeadlessClient client,

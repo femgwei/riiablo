@@ -1,5 +1,23 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-01 Amazon Impale 真实 MPQ quantity gate
+
+- [x] `D2GSHeadlessClient` 增加权威装备资源读取辅助，读取 owner 当前 RARM/LARM
+  武器的 `Stat.quantity`、`durability`、`maxdurability`，并记录 native stackable/
+  nodurability/base 类型和 skill level，避免从 observer 的表现快照推断资源。
+- [x] `headlessAmazonMelee` 对 Impale(19) 使用真实 1.10f MPQ `jav` fixture：命中后
+  验证 D2MOO `Calc2=par6-dm34` 的 quantity 路径 `16 -> 15`，durability 保持 `20/20`；
+  owner/observer 生命一致，observer 重连后资源保持 `15/20/20`。
+- [x] 为 Impale 的严格 `SrvSt07` 近战范围使用 1 格 fixture placement；原有其他 Amazon
+  行仍使用 3.5 格 placement。Impale 的 Calc2 是概率路径，测试允许在同一 gate 内重试，
+  但最终必须观察到一次真实 quantity 消耗才通过。
+- [x] 验证命令：
+  `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=19 -PamazonMeleeTimeout=10 --no-daemon`；结果 `BUILD SUCCESSFUL`，日志包含
+  `amazon_impale_resource_pass`、`amazon_melee_dual_pass`、
+  `amazon_impale_resource_reconnect_pass`。
+- [ ] 真实 MPQ 尚未覆盖非堆叠武器 Calc3 durability、弹药耗尽/补充，以及其余 Amazon
+  exact-ID 的导弹/区域行为；下一步建立专用非堆叠武器 fixture，再继续剩余技能。
+
 ## 2026-10-01 Amazon Power/Charged Strike 关键帧边界回归
 
 - [x] 在 `AmazonMeleeSkillLifecycleTest` 中补齐 Power Strike(14) 与 Charged
@@ -30,8 +48,8 @@
   要求 owner 确实进入攻击动画但双方生命保持不变，observer 重连后仍保持原生命值；验证
   命令为 `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=10
   -PamazonMeleeExpectMiss -PamazonMeleeTimeout=5 --no-daemon`。
-- [ ] 真实 MPQ gate 尚未覆盖其余 Amazon exact-ID 行和 quantity/durability 场景；下一步
-  处理标枪 quantity/durability 以及剩余 Amazon 技能的导弹/区域行为。
+- [x] Impale 的真实 MPQ quantity 场景已在上方单独记录；本节旧的“quantity/durability
+  尚未接入”表述不再适用。
 
 ## 2026-09-30 Druid spirit aura 真实 MPQ 双客户端门槛
 

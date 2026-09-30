@@ -1,12 +1,11 @@
-# 技能移植交接记录（2026-10-01）
+# 技能移植交接记录（2026-10-01，Impale quantity gate 后）
 
 ## 当前 Git 基线
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`5bb65a7b`（Amazon `headlessAmazonMelee` miss gate）。
-- 远端：`origin/master=5bb65a7bc4f2821aca3bda0ec8f421cc63ab90fe`，已用
-  `git ls-remote origin refs/heads/master` 核对。
+- HEAD/远端 SHA：本轮提交推送后以 `git log -1 --oneline` 和
+  `git ls-remote origin refs/heads/master` 为准（必须相同）。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
 
@@ -38,7 +37,9 @@ Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久�
 边界。当前 ECS 已锁定 Power/Charged 的成功命中耐久和关键帧前死亡清理；真实 MPQ
 双客户端 `headlessAmazonMelee` 入口已建立，Jab、Power Strike、Impale、Charged Strike、
 Fend、Lightning Strike 六项均已通过真实伤害/双端一致性/重连门槛，且 Lightning Strike
-确认链式导弹；Jab 的真实目标死亡和高防 miss gate 也已通过。下一步是弹药/耐久边界。
+确认链式导弹；Jab 的真实目标死亡和高防 miss gate 也已通过。本轮 Impale 进一步通过
+真实 MPQ quantity gate（`jav 16 -> 15`，durability `20/20` 不变）及 observer 重连
+资源保持。下一步是非堆叠 Calc3 durability、弹药边界和剩余 Amazon 技能。
 完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
 和 Druid 全技能树。
 
