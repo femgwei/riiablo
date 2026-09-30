@@ -153,3 +153,19 @@ D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill
 `skillId` 放进胜者 key，可能造成错误叠加；现在已改为 `target + state`，并以
 `AuraManagerPulseTest.differentSkillsUsingOneStateShareOneNativeWinnerSlot`
 锁定该行为。原有“同技能高等级胜出、同等级按 caster ID 稳定排序”测试继续通过。
+
+## 同状态来源生命周期回归（2026-09-30）
+
+在上述同状态 winner 规则基础上，新增
+`AuraManagerPulseTest.differentSkillsUsingOneStateReplaceAndRestoreWithoutLeavingHiddenEffects`，
+覆盖 dark-magic 测试中 source replacement/removal 的生命周期边界：
+
+- 不同 skill 共享同一 state 时，高等级来源只发布一个公开 AuraEffect；
+- 胜者取消后，旧 skill 的公开来源立即移除，较弱来源在下一个 native pulse 恢复；
+- 同一 caster 切换选中 skill 时，旧 skill layer 不会残留或与新 skill 叠加；
+- 最终取消后，目标没有隐藏的同状态公开效果。
+
+本轮仅补充回归证据，没有覆盖用户已验证的 Amazon 修改，也未改变 Paladin Aura
+运行时代码。`AuraManagerPulseTest` 与 `AuraEcsScenarioTest` 专项测试均通过；
+下一项继续核对来源失去资格（死亡/离开范围/重连）时 ECS 状态层的短暂
+`perdelay + 1` 过期和重新选主语义。

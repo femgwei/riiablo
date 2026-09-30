@@ -58,6 +58,54 @@ class AuraManagerPulseTest {
   }
 
   @Test
+  void differentSkillsUsingOneStateReplaceAndRestoreWithoutLeavingHiddenEffects() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition first = definition(9001, 500);
+    AuraManager.AuraDefinition second = definition(9002, 500);
+    manager.registerAuraDefinition(first);
+    manager.registerAuraDefinition(second);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.rangeTarget = 9;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, first.skillId, 1));
+    assertTrue(manager.activateAura(8, second.skillId, 2),
+        "the higher-level second skill should win the shared state slot");
+    manager.update(0f);
+
+    assertEquals(1, callback.appliedStates,
+        "a shared state must publish one native layer, even when skills differ");
+    assertEquals(8, callback.lastSourceEntityId);
+    assertEquals(second.skillId, callback.lastSkillId);
+    assertEquals(1, manager.getEntityAuraEffects(9).size);
+    assertEquals(second.skillId, manager.getEntityAuraEffects(9).first().skillId);
+
+    manager.deactivateAura(8);
+    assertTrue(manager.getEntityAuraEffects(9) == null,
+        "removing the winning source must not leave a public effect for its old skill");
+
+    // The native layer is allowed to expire for perdelay+1 frames. The weaker
+    // source becomes visible again on its next pulse, rather than stacking
+    // underneath the old skill or depending on activation order.
+    for (int i = 0; i < first.perDelayFrames; i++) manager.update(0f);
+    assertEquals(1, manager.getEntityAuraEffects(9).size);
+    assertEquals(first.skillId, manager.getEntityAuraEffects(9).first().skillId);
+    assertEquals(7, callback.lastSourceEntityId);
+
+    // Switching skills on one caster follows the same source replacement path.
+    assertTrue(manager.activateAura(7, second.skillId, 1));
+    assertTrue(manager.getEntityAuraEffects(9) == null,
+        "switching a caster's selected skill must clear the old skill layer");
+    manager.update(0f);
+    assertEquals(1, manager.getEntityAuraEffects(9).size);
+    assertEquals(second.skillId, manager.getEntityAuraEffects(9).first().skillId);
+
+    manager.deactivateAura(7);
+    assertTrue(manager.getEntityAuraEffects(9) == null,
+        "deactivating the final source must leave no hidden same-state effect");
+  }
+
+  @Test
   void cleansingPulseAlsoProcessesTheCaster() {
     AuraManager manager = new AuraManager();
     AuraManager.AuraDefinition cleansing = new AuraManager.AuraDefinition();
@@ -139,6 +187,9 @@ class AuraManagerPulseTest {
     boolean redemptionSucceeds;
     int rangeTarget = 7;
     int appliedStates;
+    int lastSourceEntityId;
+    int lastSkillId;
+    int lastStateId;
     boolean includeCaster;
     int cleansingTargets;
     boolean cleansingCasterSeen;
@@ -177,6 +228,9 @@ class AuraManagerPulseTest {
     @Override public void applyState(int targetId, int stateId, int duration,
         int sourceEntityId, int skillId, int skillLevel, int[] statIds, int[] statValues) {
       appliedStates++;
+      lastSourceEntityId = sourceEntityId;
+      lastSkillId = skillId;
+      lastStateId = stateId;
     }
     @Override public void removeState(int targetId, int stateId, int sourceEntityId, int skillId) {}
     @Override public boolean applyDirectStat(int targetId, int statId, int fixedValue,
