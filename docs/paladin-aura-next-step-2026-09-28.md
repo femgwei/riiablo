@@ -219,7 +219,9 @@ D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill
 本轮已新增独立 `headlessPaladinAura` fixture，未复用 `headlessAreaSkill`：
 生成 Paladin D2S、建立 owner/party observer、在 D2GS simulation thread 调用原生
 Aura selection、验证双方 `StateP.sourceEntityId/skillId`，再断开 observer、重新入队、
-重连并验证目标状态快照恢复。Might 单项以及 Might/Prayer/Salvation 回归均通过：
+重连并验证目标状态快照恢复。Might 单项以及 Might/Prayer/Redemption/Salvation
+回归均通过；Redemption 作为没有 party target state 的 targetless Aura，单独验证
+self state 和重连流程：
 
 ```text
 ./gradlew.bat :server:d2gs:headlessPaladinAura -PpaladinAuraSkill=98 -PpaladinAuraTimeout=90 --no-daemon

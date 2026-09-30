@@ -241,14 +241,14 @@ tasks.register('headlessPaladinAura', JavaExec) {
 
 tasks.register('headlessPaladinAuraRegression') {
   group = 'verification'
-  description = 'Runs the real-MPQ Might, Prayer and Salvation Paladin aura gates.'
+  description = 'Runs the real-MPQ Might, Prayer, Redemption and Salvation Paladin aura gates.'
   dependsOn ':server:d2gs:compileJava'
 
   doLast {
     def timeout = project.hasProperty('paladinAuraTimeout')
         ? project.property('paladinAuraTimeout').toString() : '90'
     def home = providers.environmentVariable('D2_HOME')
-    [98, 99, 125].each { skill ->
+    [98, 99, 124, 125].each { skill ->
       project.javaexec {
         classpath = sourceSets.main.runtimeClasspath
         mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'

@@ -170,7 +170,8 @@
   真实 1.10f 双客户端对 Aura 图标、动画、旧客户端 StateP 兼容和多玩家表现的验收。
 - 2026-09-30 已增加独立真实 MPQ 双客户端入口 `headlessPaladinAura`，覆盖右键 Aura
   selection、同房间 party ally 的 owner/target `StateP`、source/skill 元数据、observer
-  断线重连以及重新入队后的快照恢复。Might 单项和 Might/Prayer/Salvation 回归均通过；
+  断线重连以及重新入队后的快照恢复。Might 单项和 Might/Prayer/Redemption/Salvation
+  回归均通过；Redemption 的 targetless self-state 分支也纳入门槛；
   不能用区域技能入口代替该流程。为支持 native 快照语义，Aura 对重新创建的 ECS
   entity 会立即重发布当前 winner，不必等待下一次 `perdelay`。
 - 随后补充跨区域撤销断言：owner 从 Act I 进入 Blood Moor、observer 保留在原区域时，
