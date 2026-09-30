@@ -98,8 +98,10 @@ public class ItemWriter {
       if (large) bits.writeRaw(quantity, 32);
       else bits.write15u(quantity, 12);
     }
-    writeExtendedData(item, bits);
-    writeRandomData(item, bits);
+    // Native 1.10f compact records end after the optional gold payload (or
+    // the compact quest/realm fields handled by the save writer).  Extended
+    // charm/scroll/body-part data and bHasRand belong to complete items;
+    // writing them here would make the following JM record unreadable.
   }
 
   private static void writeExtendedData(Item item, BitOutput bits) {

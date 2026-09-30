@@ -122,8 +122,12 @@ public class ItemReader {
     } else {
       assert item.attrs.isEmpty();
     }
-    readExtendedData(bits, item);
-    readRandomData(bits, item);
+    // Compact-save records do not contain the complete-item payload.  In
+    // particular, 1.10f writes no bHasRand bit here; the next byte is the
+    // next JM record after byte alignment.  Charm, body-part and scroll
+    // payloads are complete-item fields as well (see D2MOO's
+    // ITEMS_SerializeItemCompact), so consuming them here shifts all later
+    // records and eventually causes EndOfInput at the end of the save.
   }
 
   private static void readExtendedData(BitInput bits, Item item) {
