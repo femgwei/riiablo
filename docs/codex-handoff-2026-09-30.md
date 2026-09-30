@@ -55,7 +55,9 @@ Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久�
 
 ## 工作区保护边界
 
-当前未提交的 ItemEntry、ItemReader、AssassinTrapSystem、StatFormatterTest、
-AmazonSkillSpecializationTest，以及 `game.log`、技能查看器 PNG 和日志目录均属于其他
-agent/用户。接手者只能 `git add` 本轮明确修改的文件，禁止 reset、checkout 或覆盖这些
+`git status` 目前会列出 ItemEntry、ItemReader、AssassinTrapSystem、StatFormatterTest、
+AmazonSkillSpecializationTest；逐个 `git hash-object` 核对后，只有 StatFormatterTest 有
+实际内容差异（末尾多一个空行），其余四个文件的工作区 blob 与 HEAD 相同，属于状态/时间戳
+假脏，不应据此回滚代码。`game.log`、技能查看器 PNG 和日志目录是之前调试运行生成的
+未跟踪产物。接手者只能 `git add` 本轮明确修改的文件，禁止 reset、checkout 或覆盖这些
 文件。实现改动必须专项测试、commit、push；极小文档修改可不编译，但也必须 commit/push。

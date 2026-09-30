@@ -49,13 +49,16 @@
 - 最近已完成的真实门槛：Sorceress Fire Ball/Nova、Necromancer Poison Nova、
   Paladin 20 Aura 清单、Conviction/Holy Freeze hostile 过滤、Druid vine/尸体
   recycler 的部分双客户端流程。详细矩阵见 `docs/skill-porting-matrix.md`。
-- 工作区中以下修改和文件属于其他 agent/用户，接手时不得回滚、覆盖或混入提交：
+- 工作区中以下文件曾出现在 `git status`，接手时不得盲目回滚或覆盖：
   `core/src/main/java/com/riiablo/codec/excel/ItemEntry.java`、
   `core/src/main/java/com/riiablo/engine/server/AssassinTrapSystem.java`、
   `core/src/main/java/com/riiablo/item/ItemReader.java`、
   `core/src/test/java/com/riiablo/attributes/StatFormatterTest.java`、
-  `core/src/test/java/com/riiablo/engine/server/AmazonSkillSpecializationTest.java`，
-  以及 `game.log`、`skill-viewer-window*.png` 和 `tools/skill-viewer/logs/`。
+  `core/src/test/java/com/riiablo/engine/server/AmazonSkillSpecializationTest.java`。
+  逐个用 `git hash-object` 核对后，只有 `StatFormatterTest.java` 有实际内容差异，
+  只是末尾空行；其余四个文件的工作区 blob 与 HEAD 相同，属于 Git 状态/时间戳假脏。
+  `game.log`、`skill-viewer-window*.png` 和 `tools/skill-viewer/logs/` 是之前技能查看器/调试
+  运行生成的未跟踪产物，不属于技能实现提交。
 - 本轮 Paladin hostile 过滤提交为 `1ee5b654`；定向 ECS 测试和 Conviction/Holy Freeze
   双客户端命令均已通过。Git credential helper 偶尔输出 lock 警告，但应以
   `git ls-remote origin refs/heads/master` 返回的 SHA 为准。
