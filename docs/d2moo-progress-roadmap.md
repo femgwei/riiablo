@@ -5853,3 +5853,14 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `Hit delay=15` 帧窗口，之后拒绝接触；不产生直接伤害或 `SrvHit16` 减速状态。
   trail 生命周期已按 `Range + level*LevRange` 计算并加入边界回归测试。由于 D2MOO
   数据本身没有毒素伤害字段，仍不把 poison damage 标记为已实现。
+
+## 2026-10-01 Amazon 可恢复箭袋耗尽边界
+
+- [x] D2MOO `sub_6FD11340`、`sub_6FC51310`、`sub_6FC4A350` 源码核对完成：
+  `item_replenish_quantity` 箭袋耗尽后保留 item/quantity=0，并由 stat-regeneration
+  event 恢复，不是立即删除。
+- [x] riiablo 仅对可恢复 `BOWQ/XBOQ` 保留零数量箭袋；无恢复属性的普通箭袋保持原有
+  耗尽移除路径。
+- [x] `NativeAmazonAmmoReplenishTest` 覆盖装备槽保留、原生恢复间隔和恢复后重新选弹。
+- [ ] 真实 1.10f MPQ 双客户端 bow/Fire Arrow gate 尚未完成；需继续核对装备切换、
+  observer 同步及重连快照。

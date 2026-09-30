@@ -4608,7 +4608,13 @@ public class ServerSkillSystem extends PassiveSystem {
         && (ammo.type.is(com.riiablo.item.Type.BOWQ)
             || ammo.type.is(com.riiablo.item.Type.XBOQ))
         || "aqv".equalsIgnoreCase(ammo.code) || "cqv".equalsIgnoreCase(ammo.code));
-    if (depleted) items.removeOwnedItem(ammo);
+    // D2MOO's sub_6FD11340 leaves a zero-quantity stack in the inventory and
+    // lets sub_6FC51310 schedule STAT_ITEM_REPLENISH_QUANTITY recovery.  Keep
+    // that native behavior for replenishing quivers; ordinary quivers retain
+    // riiablo's existing remove-on-depletion behavior.
+    StatRef replenishRate = ammo.attrs.base().get(Stat.item_replenish_quantity);
+    boolean replenishes = replenishRate != null && replenishRate.asInt() > 0;
+    if (depleted && !replenishes) items.removeOwnedItem(ammo);
     log.info("[RANGED_AMMO] phase=consume weapon={} ammo={} itemId={} before={} after={}",
         weapon.code, ammo.code, ammo.id, before, before - 1);
     return true;

@@ -336,6 +336,13 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 4. 依次审计 Paladin Aura、Necromancer summon/golem、Assassin trap、Sorceress missile/state。
 5. 最后审计 Barbarian/Druid 的技能树全量分支，并运行七职业聚合矩阵。
 
+### 2026-10-01 Amazon 弹药边界增量
+
+- `BOWQ/XBOQ` 的 `item_replenish_quantity` 零数量保留与恢复已完成纯逻辑/ECS 门槛，
+  对应测试为 `NativeAmazonAmmoReplenishTest`。
+- 普通箭袋耗尽移除行为未改变；真实 MPQ 双客户端 bow/Fire Arrow gate、装备切换和
+  observer reconnect 仍标记为待验收，不能把本项提升为四层完成。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

@@ -904,3 +904,18 @@ incarnation，并继续检查跨区域实体基线恢复。
 
 当前下一项：补充多客户端处于不同 Level 时的负向同步断言，并将 owner incarnation
  水位并入跨区域快照校验。
+
+### 2026-10-01 Amazon 可恢复箭袋耗尽边界（本轮完成）
+
+- [x] 按 D2MOO `sub_6FD11340 -> sub_6FC51310 -> sub_6FC4A350` 核对：技能消耗把
+  `quantity` 置 0，并为 `item_replenish_quantity` 注册恢复事件，不直接删除物品。
+- [x] `ServerSkillSystem.consumeRangedAmmo` 对带 `item_replenish_quantity > 0` 的
+  `BOWQ/XBOQ` 保留 quantity=0 的箭袋；普通箭袋继续沿用耗尽移除行为，避免扩大本轮
+  行为变化。
+- [x] 新增 `NativeAmazonAmmoReplenishTest`：一次消耗后物品仍在装备槽，按原生
+  `max(125, 2500/rate + 1)` 帧恢复，并可继续作为弓的匹配弹药。
+- 验证：`:core:test --tests com.riiablo.engine.server.NativeAmazonAmmoReplenishTest`
+  通过。
+
+当前下一项：补真实 1.10f MPQ 双客户端 bow/Fire Arrow 弹药 gate，特别核对耗尽时的
+  装备切换、恢复期间 observer 同步和重连快照；随后再审计 Amazon 剩余导弹/区域行为。
