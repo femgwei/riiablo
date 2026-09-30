@@ -116,6 +116,13 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     @Override
     public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
             String sourceFile) {
+        onTile(levelId, layer, tx, ty, tileId, flags, sourceFile, -1, 0, 255, 0);
+    }
+
+    @Override
+    public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile, int logicalGroupId, int nativeStateFlags,
+            int nativeAlpha, int fadeTick) {
         callbackCount++;
         if (layer < DrlgExport.LAYER_FLOOR || layer > DrlgExport.LAYER_SHADOW) {
             ignoredLayerCount++;
@@ -162,7 +169,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                         if (wallLayer >= 0) {
                             grid.boundaryWalls.add(new TileGrid.BoundaryWall(
                                 wallLayer, tx, ty, riiabloTileId, sourceIndex,
-                                (flags & DrlgTileExporter.FLAG_HIDDEN) != 0));
+                                (flags & DrlgTileExporter.FLAG_HIDDEN) != 0,
+                                logicalGroupId));
                             boundaryWallCount++;
                             uniqueWallIds.add(riiabloTileId);
                         }
@@ -182,10 +190,12 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         int orientation = DT1.Tile.Index.orientation(riiabloTileId);
         switch (layer) {
             case DrlgExport.LAYER_FLOOR:
-                applyFloor(grid, tx, ty, riiabloTileId, orientation, sourceFile);
+                applyFloor(grid, tx, ty, riiabloTileId, orientation, sourceFile,
+                    logicalGroupId);
                 break;
             case DrlgExport.LAYER_WALL:
-                applyWall(grid, tx, ty, riiabloTileId, orientation, flags, sourceFile);
+                applyWall(grid, tx, ty, riiabloTileId, orientation, flags, sourceFile,
+                    logicalGroupId);
                 break;
             case DrlgExport.LAYER_SHADOW:
                 applyShadow(grid, tx, ty, riiabloTileId, orientation, sourceFile);
@@ -196,19 +206,20 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     }
 
     private void applyFloor(TileGrid grid, int tx, int ty, int tileId, int orientation,
-            String sourceFile) {
+            String sourceFile, int logicalGroupId) {
         if (orientation != Orientation.FLOOR) nonFloorOrientationCount++;
         if (grid.floorIds[ty][tx] != -1) duplicatePositionCount++;
         if (tileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = tileId;
         grid.floorSourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
+        grid.floorLogicalGroups[ty][tx] = logicalGroupId;
         grid.exportedFloorCells[ty][tx] = true;
         uniqueFloorIds.add(tileId);
         exportedFloorCount++;
     }
 
     private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation, int flags,
-            String sourceFile) {
+            String sourceFile, int logicalGroupId) {
         if (!isWallLayerOrientation(orientation)) nonWallOrientationCount++;
         byte sourceIndex = grid.registerSourceFile(sourceFile);
         // Adjacent native RoomEx grids share their boundary row/column and
@@ -219,6 +230,9 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                     && grid.wallSourceFiles[slot][ty][tx] == sourceIndex) {
                 grid.hiddenWallCells[slot][ty][tx] |=
                     (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
+                if (grid.wallLogicalGroups[slot][ty][tx] < 0) {
+                    grid.wallLogicalGroups[slot][ty][tx] = logicalGroupId;
+                }
                 duplicateWallCount++;
                 return;
             }
@@ -227,6 +241,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             if (grid.wallIds[slot][ty][tx] == -1) {
                 grid.wallIds[slot][ty][tx] = tileId;
                 grid.wallSourceFiles[slot][ty][tx] = sourceIndex;
+                grid.wallLogicalGroups[slot][ty][tx] = logicalGroupId;
                 grid.hiddenWallCells[slot][ty][tx] =
                     (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 uniqueWallIds.add(tileId);

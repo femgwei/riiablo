@@ -27,8 +27,12 @@ public class TileGrid {
 
   /** DT1 source selected by native DRLG, encoded as an index into sourceFiles. */
   public final byte[][] floorSourceFiles;
+  /** Native logical coord-list index for each exported floor cell. */
+  public final int[][] floorLogicalGroups;
   /** DT1 source selected for each native wall/roof layer. */
   public final byte[][][] wallSourceFiles;
+  /** Native logical coord-list index for each exported wall/roof layer. */
+  public final int[][][] wallLogicalGroups;
   /** DT1 source selected for the native shadow layer. */
   public final byte[][] shadowSourceFiles;
   private final List<String> sourceFiles = new ArrayList<>();
@@ -73,15 +77,17 @@ public class TileGrid {
     public final int tileId;
     public final byte sourceFile;
     public final boolean hidden;
+    public final int logicalGroupId;
 
     public BoundaryWall(int layer, int x, int y, int tileId, byte sourceFile,
-        boolean hidden) {
+        boolean hidden, int logicalGroupId) {
       this.layer = layer;
       this.x = x;
       this.y = y;
       this.tileId = tileId;
       this.sourceFile = sourceFile;
       this.hidden = hidden;
+      this.logicalGroupId = logicalGroupId;
     }
   }
 
@@ -96,7 +102,9 @@ public class TileGrid {
     this.height = height;
     this.floorIds = new int[height][width];
     this.floorSourceFiles = new byte[height][width];
+    this.floorLogicalGroups = new int[height][width];
     this.wallSourceFiles = new byte[MAX_WALL_LAYERS][height][width];
+    this.wallLogicalGroups = new int[MAX_WALL_LAYERS][height][width];
     this.shadowSourceFiles = new byte[height][width];
     this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
@@ -112,6 +120,7 @@ public class TileGrid {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
         floorSourceFiles[y][x] = 0;
+        floorLogicalGroups[y][x] = -1;
         exportedFloorCells[y][x] = false;
       }
     }
@@ -125,12 +134,14 @@ public class TileGrid {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
         floorSourceFiles[y][x] = 0;
+        floorLogicalGroups[y][x] = -1;
         exportedFloorCells[y][x] = false;
         shadowIds[y][x] = -1;
         shadowSourceFiles[y][x] = 0;
         for (int layer = 0; layer < MAX_WALL_LAYERS; layer++) {
           wallIds[layer][y][x] = -1;
           wallSourceFiles[layer][y][x] = 0;
+          wallLogicalGroups[layer][y][x] = -1;
           hiddenWallCells[layer][y][x] = false;
         }
       }

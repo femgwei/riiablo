@@ -181,7 +181,9 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId, t.getDwFlags(),
-                        sourceFile(t));
+                        sourceFile(t), logicalGroup(room, roomBaseTx + t.getNPosX(),
+                                roomBaseTy + t.getNPosY()), t.getUnk0x24(),
+                        t.getNRed() & 0xFF, t.getUnk0x2C());
                 counts.floors++;
             }
         }
@@ -198,7 +200,8 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags(),
-                        sourceFile(t));
+                        sourceFile(t), t.getUnk0x10(), t.getUnk0x24(),
+                        t.getNRed() & 0xFF, t.getUnk0x2C());
                 counts.walls++;
             }
         }
@@ -219,6 +222,12 @@ public final class DrlgExport {
                 counts.shadows++;
             }
         }
+    }
+
+    private static int logicalGroup(D2DrlgRoom room, int tileX, int tileY) {
+        // DrlgDrlgLogic takes subtile coordinates and performs the native
+        // room-relative conversion (tile coordinate * 5).
+        return DrlgDrlgLogic.getRoomCoordListIndex(room, tileX * 5, tileY * 5);
     }
 
     /**

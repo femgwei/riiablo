@@ -33,4 +33,15 @@ public interface DrlgTileExporter {
             String sourceFile) {
         onTile(levelId, layer, tx, ty, tileId, flags);
     }
+
+    /**
+     * Extended native metadata used by wall occlusion.  The logical group is
+     * the D2Common coord-list index stored in D2DrlgTileDataStrc::unk0x10.
+     * Older consumers can keep implementing the original callback methods.
+     */
+    default void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile, int logicalGroupId, int nativeStateFlags,
+            int nativeAlpha, int fadeTick) {
+        onTile(levelId, layer, tx, ty, tileId, flags, sourceFile);
+    }
 }

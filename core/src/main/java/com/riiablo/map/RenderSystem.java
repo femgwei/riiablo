@@ -64,6 +64,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
+import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.DT1.Tile;
 import com.riiablo.profiler.GpuSystem;
 import com.riiablo.util.DebugUtils;
@@ -72,6 +73,8 @@ import com.riiablo.util.DebugUtils;
 @All(AnimationWrapper.class)
 public class RenderSystem extends BaseEntitySystem {
   private static final String TAG = "RenderSystem";
+  /** First-pass approximation of the classic D2 wall reveal opacity. */
+  static final float WALL_OCCLUDED_ALPHA = 0.55f;
   // Debug overlays are opt-in.  Leaving the historical compile-time switch on
   // paints grid/special-cell geometry over the game world and can look like a
   // solid green chest-sized tile in normal gameplay.
@@ -938,13 +941,59 @@ public class RenderSystem extends BaseEntitySystem {
       if (isPoppedPopPad(popped, tile)) continue;
       if (!isDrawableWallOrientation(tile.orientation)) continue;
       if (py + tile.texture.getRegionHeight() < renderMinY) continue;
+      float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
+      if (alpha != 1f) batch.setAlpha(alpha);
       batch.draw(tile.texture, px, py);
       if (tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
         Tile sibling = zone.dt1s.get(
             Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
         if (sibling != null) batch.draw(sibling.texture, px, py);
       }
+      if (alpha != 1f) batch.resetColor();
     }
+  }
+
+  /**
+   * Returns the opacity for a native wall layer.  D2MOO assigns connected
+   * walls and floor cells to the same logical coord-list index; matching the
+   * player's current floor group makes only the occluding wall group fade.
+   */
+  float wallAlpha(Map.Zone zone, int worldTx, int worldTy, int wallSlot) {
+    if (zone == null || wallSlot < 0 || wallSlot >= TileGrid.MAX_WALL_LAYERS) return 1f;
+    TileGrid grid = zone.nativeTileGrid();
+    if (grid == null) return 1f;
+    int x = worldTx - zone.tx;
+    int y = worldTy - zone.ty;
+    int wallGroup;
+    if (grid.inBounds(x, y)) {
+      wallGroup = grid.wallLogicalGroups[wallSlot][y][x];
+    } else {
+      wallGroup = -1;
+      for (TileGrid.BoundaryWall wall : grid.boundaryWalls) {
+        if (wall.layer == wallSlot && wall.x == x && wall.y == y) {
+          wallGroup = wall.logicalGroupId;
+          break;
+        }
+      }
+    }
+    if (wallGroup < 0) return 1f;
+    if (src < 0 || !mPosition.has(src)) return 1f;
+    Vector2 player = mPosition.get(src).position;
+    int playerX = MathUtils.floor((player.x - zone.x) / Tile.SUBTILE_SIZE);
+    int playerY = MathUtils.floor((player.y - zone.y) / Tile.SUBTILE_SIZE);
+    int playerGroup = logicalGroupAt(grid, playerX, playerY);
+    if (playerGroup < 0) {
+      for (int dy = -1; dy <= 1 && playerGroup < 0; dy++) {
+        for (int dx = -1; dx <= 1 && playerGroup < 0; dx++) {
+          playerGroup = logicalGroupAt(grid, playerX + dx, playerY + dy);
+        }
+      }
+    }
+    return playerGroup == wallGroup ? WALL_OCCLUDED_ALPHA : 1f;
+  }
+
+  private static int logicalGroupAt(TileGrid grid, int x, int y) {
+    return grid.inBounds(x, y) ? grid.floorLogicalGroups[y][x] : -1;
   }
 
   static boolean isDrawableWallOrientation(int orientation) {

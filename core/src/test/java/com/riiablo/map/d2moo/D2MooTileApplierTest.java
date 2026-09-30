@@ -78,6 +78,21 @@ class D2MooTileApplierTest {
   }
 
   @Test
+  void retainsNativeLogicalGroupOnFloorAndWall() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 0, 0,
+        pack(Orientation.FLOOR, 1, 1), 0, "floor.dt1", 7, 0, 255, 0);
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0,
+        pack(Orientation.LEFT_WALL, 2, 1), 0, "wall.dt1", 7, 0, 255, 0);
+
+    assertEquals(7, grid.floorLogicalGroups[0][0]);
+    assertEquals(7, grid.wallLogicalGroups[0][0][0]);
+  }
+
+  @Test
   void doesNotMergeIdenticalWallIdsFromDifferentDt1Sources() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();
