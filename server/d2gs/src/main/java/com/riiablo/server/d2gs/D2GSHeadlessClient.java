@@ -1671,12 +1671,13 @@ public final class D2GSHeadlessClient {
 
         int skillId = config.paladinAuraSkillId;
         int[] states = D2GS.headlessAuraStateIds(skillId);
+        boolean partyTarget = states.length > 2 && states[2] != 0;
         if (states[0] < 0 || !D2GS.headlessSelectAura(owner.playerId, skillId)) {
           throw new IOException("failed to select Paladin aura skill=" + skillId);
         }
         awaitAuraState(owner, ownerInput, owner.playerId, owner.playerId,
             states[0], skillId, deadline());
-        if (states[1] >= 0) {
+        if (states[1] >= 0 && partyTarget) {
           awaitAuraState(peer, peerInput, peer.playerId, owner.playerId,
               states[1], skillId, deadline());
           awaitAuraState(owner, ownerInput, peer.playerId, owner.playerId,
@@ -1702,7 +1703,7 @@ public final class D2GSHeadlessClient {
               || !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
             throw new IOException("failed to restore reconnected Paladin aura party");
           }
-          if (states[1] >= 0) {
+          if (states[1] >= 0 && partyTarget) {
             awaitAuraState(reconnected, reconnectInput, reconnected.playerId, owner.playerId,
                 states[1], skillId, deadline());
           }
@@ -1713,7 +1714,7 @@ public final class D2GSHeadlessClient {
           // must expire when the owner enters another native Map.Zone. This
           // catches stale cross-area state that a single-client snapshot cannot
           // expose.
-          if (states[1] >= 0) {
+          if (states[1] >= 0 && partyTarget) {
             if (!D2GS.headlessEnterLevel(owner.playerId, 2)) {
               throw new IOException("Paladin aura owner could not enter Blood Moor");
             }

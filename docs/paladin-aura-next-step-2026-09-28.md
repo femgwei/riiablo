@@ -238,3 +238,17 @@ observer。
 原区域，Might、Prayer、Salvation 的 target state 均在 `perdelay + 1` 短生命周期内
 消失，未发生跨 `Map.Zone` 泄漏。对应日志为 `paladin_aura_cross_area_pass`。后续剩余
 工作集中在真实旧客户端的 Aura 图标、动画和范围表现断言。
+
+## 完整 Paladin Aura 清单首轮门槛（2026-09-30）
+
+将 `headlessPaladinAuraRegression` 从代表性四/八项扩展为全部 20 个已注册原生 Aura：
+Might、Prayer、Resist Fire、Holy Fire、Thorns、Defiance、Resist Cold、Blessed Aim、
+Cleansing、Resist Lightning、Concentration、Holy Freeze、Vigor、Holy Shock、
+Sanctuary、Fanaticism、Meditation、Conviction、Redemption、Salvation（其中技能表
+实际通过的清单为 20 行，含所有已注册的 Paladin Aura 技能行）。
+
+本轮完整清单运行通过。门槛根据 native `affectsParty` 自动区分：party Aura 验证
+owner/ally target state、重连和跨区域撤销；self-only/targetless Aura（Holy Fire、
+Holy Shock、Sanctuary、Fanaticism、Redemption）只验证 self state、重连和来源元数据。
+Holy Freeze/Conviction 等敌对 target-state 的真实怪物目标过滤尚未由该门槛证明，需下一步
+建立 hostile monster fixture，不能把当前 self-only 通过结果当作敌对目标语义通过。

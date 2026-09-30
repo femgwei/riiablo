@@ -6468,7 +6468,8 @@ public class D2GS extends ApplicationAdapter {
         AuraEcsSystem auraSystem = server.world.getSystem(AuraEcsSystem.class);
         com.riiablo.engine.server.skill.AuraManager.AuraDefinition definition = auraSystem == null
             ? null : auraSystem.manager().getAuraDefinition(skillId);
-        if (definition != null) result.set(new int[] {definition.selfStateId, definition.targetStateId});
+        if (definition != null) result.set(new int[] {definition.selfStateId,
+            definition.targetStateId, definition.affectsParty ? 1 : 0});
       } finally { done.countDown(); }
     });
     try { done.await(5, java.util.concurrent.TimeUnit.SECONDS); }

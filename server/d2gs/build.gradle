@@ -248,7 +248,8 @@ tasks.register('headlessPaladinAuraRegression') {
     def timeout = project.hasProperty('paladinAuraTimeout')
         ? project.property('paladinAuraTimeout').toString() : '90'
     def home = providers.environmentVariable('D2_HOME')
-    [98, 99, 100, 109, 119, 120, 124, 125].each { skill ->
+    [98, 99, 100, 102, 103, 104, 105, 108, 109, 110, 113, 114, 115,
+     118, 119, 120, 122, 123, 124, 125].each { skill ->
       project.javaexec {
         classpath = sourceSets.main.runtimeClasspath
         mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
