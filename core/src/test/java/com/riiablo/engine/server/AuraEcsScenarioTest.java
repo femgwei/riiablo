@@ -381,6 +381,26 @@ class AuraEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void holyFireDoesNotConsumeManaForItsSelfLayerWhenTownSkipsDamageScan() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int target = monster(test.world, 3, 0);
+      Map.Zone town = new Map.Zone() {
+        @Override public boolean isTown() { return true; }
+      };
+      zone(test.world, caster, town);
+      zone(test.world, target, town);
+      mana(test.world, caster, 10f);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.HOLY_FIRE, 1));
+      test.tick();
+      assertEquals(10f, mana(test.world, caster), 0.001f,
+          "D2MOO SrvDo066 returns before the hostile damage scan in town; self stats alone must not consume mana");
+      assertTrue(states(test.world, caster).hasState(StateId.HOLYFIRE));
+    }
+  }
+
+  @Test
   void fanaticismExpiresAfterRangePulseAndUsesItsNativeAttackRateStat() {
     try (Harness test = new Harness()) {
       int caster = player(test.world, 0, 0);

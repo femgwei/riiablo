@@ -67,6 +67,29 @@ class AuraManagerPulseTest {
   }
 
   @Test
+  void damageAuraSelfLayerDoesNotCountAsUsefulWithoutAValidDamageTarget() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition damage = definition(9013, 502);
+    damage.auraType = AuraManager.AURA_TYPE_DAMAGE;
+    damage.affectsSelf = true;
+    damage.selfStateId = 502;
+    damage.manaCostPerSecond = 1f;
+    manager.registerAuraDefinition(damage);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.includeCaster = true;
+    callback.rangeTarget = 9;
+    callback.validTarget = false;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, damage.skillId, 1));
+    manager.update(0f);
+
+    assertEquals(10f, callback.mana, 0.001f,
+        "SrvDo066 self/passive stats do not replace a missing hostile damage pulse");
+    assertTrue(manager.hasActiveAura(7));
+  }
+
+  @Test
   void differentSkillsUsingOneStateShareOneNativeWinnerSlot() {
     AuraManager manager = new AuraManager();
     AuraManager.AuraDefinition first = definition(9001, 500);

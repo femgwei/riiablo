@@ -390,14 +390,20 @@ public class AuraManager {
     callback.applyState(winner.targetId, winner.stateId, duration,
         winner.aura.casterId, winner.aura.definition.skillId,
         winner.aura.skillLevel, winner.statIds, winner.statValues);
-    if (winner.aura.pulsed && winner.aura.pulseFunded
+    // D2MOO SrvDo066 builds the owner's passive/self layer before scanning
+    // hostile targets, but settles mana only from the damage-scan callback's
+    // field_40.  A damage aura therefore must not consume mana merely because
+    // its self layer has non-zero stats when no valid damage target exists.
+    boolean countsAsUsefulPulse = winner.aura.definition.auraType != AURA_TYPE_DAMAGE
+        || winner.targetId != winner.aura.casterId;
+    if (winner.aura.pulsed && winner.aura.pulseFunded && countsAsUsefulPulse
         && hasUsefulStat(winner.statIds, winner.statValues)) {
       // BasicAura increments field_40 when a non-zero stat is committed. This
       // is what makes paid support/passive auras consume mana and hold
       // STATE_NOMANAREGEN even when they do not deal periodic damage.
       winner.aura.pulseUseful = true;
     }
-    if (winner.aura.pulsed && winner.direct) {
+    if (winner.aura.pulsed && winner.direct && countsAsUsefulPulse) {
       for (int i = 0; i < winner.statIds.length && i < winner.statValues.length; i++) {
         if (winner.statIds[i] == Stat.hitpoints && winner.statValues[i] > 0) {
           winner.aura.pulseUseful |= winner.aura.pulseFunded

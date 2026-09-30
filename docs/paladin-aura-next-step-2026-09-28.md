@@ -37,6 +37,12 @@
 下一次出现合法目标并真正提交效果后，才扣除一次 native pulse cost。该测试固定了
 D2MOO `SrvDo065/SrvDo066` 的“有效效果后结算资源”顺序，避免空 pulse 改写来源关系。
 
+随后新增 `damageAuraSelfLayerDoesNotCountAsUsefulWithoutAValidDamageTarget`，暴露并
+修正了一个实现差异：`AURA_TYPE_DAMAGE` 的施法者被动/self layer 不能单独把
+`pulseUseful` 置真。D2MOO `SKILLS_SrvDo066_HolyFire_HolyShock_Sanctuary_Conviction`
+先建立 self layer，再由 hostile damage scan 的 `field_40` 决定扣 mana；现在
+`AuraManager` 只在伤害 Aura 的非 self 目标产生有效 stat/damage 时结算 pulse cost。
+
 ### 2. Aura 来源和优先级
 
 - 两个同状态 Aura 重叠时，高技能等级胜出。
