@@ -2670,6 +2670,59 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Test-only placement that keeps a durable monster at a controlled offset from another. */
+  static boolean headlessPlaceMonsterNear(int monsterId, int anchorId, float dx, float dy) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean placed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position monster = server.world.getMapper(Position.class).get(monsterId);
+        Position anchor = server.world.getMapper(Position.class).get(anchorId);
+        if (monster == null || anchor == null) return;
+        monster.position.set(anchor.position.x + dx, anchor.position.y + dy);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+        if (body != null && body.body != null) {
+          body.body.setTransform(monster.position, body.body.getAngle());
+        }
+        com.riiablo.engine.server.component.Velocity velocity = server.world
+            .getMapper(com.riiablo.engine.server.component.Velocity.class).get(monsterId);
+        if (velocity != null) velocity.velocity.setZero();
+        // A positioned aura target must not wander out of the range gate while
+        // the root missile and its HitSubMissile are being observed.
+        server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class)
+            .remove(monsterId);
+        placed.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && placed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /** Test-only baseline bridge for a durable fixture after observer reconnect. */
+  static boolean headlessSyncEntityTo(int playerId, int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.sync == null || Gdx.app == null) return false;
+    int clientId = server.connectionIdForEntity(playerId);
+    if (clientId < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean synced = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        server.sync.syncEntityTo(clientId, entityId);
+        synced.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && synced.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /**
    * Test-only fallback for Amazon melee skills when a headless COF has no
    * usable ATK keyframe callback. The client still submits a real cast first;

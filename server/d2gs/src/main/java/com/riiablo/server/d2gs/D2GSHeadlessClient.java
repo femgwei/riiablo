@@ -1338,11 +1338,28 @@ public final class D2GSHeadlessClient {
       }
       awaitAreaBaselines(owner, peer, ownerInput, peerInput);
 
+      boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
+      boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
       int targetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
       if (targetId < 0) throw new IOException("failed to create Amazon melee target");
       Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
       Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
       float initialLife = ownerTarget.life;
+      int furyTargetId = Engine.INVALID_ENTITY;
+      float initialFuryLife = Float.NaN;
+      if (lightningFury) {
+        furyTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+        if (furyTargetId < 0 || !D2GS.headlessPlaceMonsterNear(furyTargetId, targetId, 0f, 5f)) {
+          throw new IOException("failed to create and place Lightning Fury aura target");
+        }
+        Snapshot ownerFuryTarget = awaitSpecificMonster(owner, ownerInput, furyTargetId, deadline());
+        Snapshot peerFuryTarget = awaitSpecificMonster(peer, peerInput, furyTargetId, deadline());
+        initialFuryLife = ownerFuryTarget.life;
+        if (!ownerFuryTarget.hasPosition || !peerFuryTarget.hasPosition) {
+          throw new IOException("Lightning Fury aura target did not receive both client baselines: target="
+              + furyTargetId);
+        }
+      }
       if (config.amazonMeleeExpectMiss
           && !D2GS.headlessSetMonsterDefense(targetId, 1_000_000)) {
         throw new IOException("failed to raise Amazon melee target defense");
@@ -1353,10 +1370,10 @@ public final class D2GSHeadlessClient {
       }
       boolean fallback = false;
       boolean damaged = false;
+      boolean furyDamaged = false;
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
-      boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
-      boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
+      boolean sawFuryChildShared = false;
       int[] impaleResourceBefore = impale
           ? D2GS.headlessAmazonWeaponStats(owner.playerId) : null;
       if (impale && !validAmazonWeaponStats(impaleResourceBefore)) {
@@ -1369,7 +1386,9 @@ public final class D2GSHeadlessClient {
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline
-          && (!damaged || (impale && !impaleResourceObserved))
+          && (!lightningFury || !sawLightningMissile)
+          && (!damaged || (lightningFury && (!furyDamaged || !sawFuryChildShared))
+              || (impale && !impaleResourceObserved))
           && !targetDeathObserved; attempt++) {
         if (impale) fallback = false;
         ownerTarget = owner.monsters.get(targetId);
@@ -1392,12 +1411,15 @@ public final class D2GSHeadlessClient {
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis()
             + (impale ? 3000L : 1800L));
         while (System.currentTimeMillis() < attemptDeadline
-            && (!damaged || (impale && !impaleResourceObserved))
+            && (!damaged || (lightningFury && (!furyDamaged || !sawFuryChildShared))
+                || (impale && !impaleResourceObserved))
             && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
           Snapshot mirrored = peer.monsters.get(targetId);
+          Snapshot furyCurrent = lightningFury ? owner.monsters.get(furyTargetId) : null;
+          Snapshot furyMirrored = lightningFury ? peer.monsters.get(furyTargetId) : null;
           // The fixture mutation can race the first visibility baseline. If
           // that baseline is stale, absorb one upward correction before
           // requiring the authoritative post-hit life to decrease again.
@@ -1418,13 +1440,29 @@ public final class D2GSHeadlessClient {
                   impaleResourceBefore, impaleResourceAfter);
             }
           }
+          if (lightningFury && furyCurrent != null && furyCurrent.hasVitals
+              && furyMirrored != null && furyMirrored.hasVitals) {
+            float correctedFuryBaseline = Math.max(furyCurrent.life, furyMirrored.life);
+            if (correctedFuryBaseline > initialFuryLife + 0.001f) {
+              initialFuryLife = correctedFuryBaseline;
+            } else {
+              furyDamaged = furyCurrent.life < initialFuryLife
+                  && furyMirrored.life < initialFuryLife;
+            }
+          }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
           if ((lightningStrike || lightningFury)
               && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
+          if (lightningFury) {
+            sawFuryChildShared = sharedMissileNameCount(owner, peer, "furylightning") > 0;
+          }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
-              && !targetDeathObserved && (!damaged || (impale && !impaleResourceObserved))) {
+              && !targetDeathObserved
+              && (!lightningFury || !sawLightningMissile)
+              && (!damaged || (lightningFury && (!furyDamaged || !sawFuryChildShared))
+                  || (impale && !impaleResourceObserved))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonMeleeSkillId);
@@ -1454,6 +1492,20 @@ public final class D2GSHeadlessClient {
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
       }
+      if (lightningFury && (!sawFuryChildShared || !furyDamaged)) {
+        throw new IllegalStateException("Amazon Lightning Fury did not complete shared aura split: root="
+            + targetId + " auraTarget=" + furyTargetId
+            + " childShared=" + sawFuryChildShared + " auraDamaged=" + furyDamaged
+            + " ownerAura=" + owner.monsters.get(furyTargetId)
+            + " peerAura=" + peer.monsters.get(furyTargetId)
+            + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles));
+      }
+      // The production child inherits the root projectile's shared hit set,
+      // so a furylightning bolt cannot resolve the struck root at its spawn
+      // point. The dual-client gate below proves the selected aura target was
+      // damaged instead; the ECS hit-set test covers the root exclusion
+      // without relying on packet ordering (which may briefly carry an older
+      // root vitals frame during the settle window).
       if (impale && !config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss) {
         if (!impaleResourceObserved) {
           throw new IllegalStateException("Amazon Impale did not consume a native weapon resource: before="
@@ -1519,15 +1571,46 @@ public final class D2GSHeadlessClient {
         if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
           throw new IOException("Amazon melee observer reconnect could not return to room");
         }
+        // Keep the replacement observer in the same RoomEx without placing
+        // its Box2D footprint on top of the durable target. The reconnect
+        // snapshot is room-scoped, so melee-range placement is unnecessary.
+        if (!D2GS.headlessPlacePlayerNear(reconnected.playerId, targetId, 8f)) {
+          throw new IOException("Amazon melee observer reconnect could not restore target vicinity");
+        }
+        // Re-arm the native warped subscription after the fixture placement;
+        // this is needed when a short-lived HitSubMissile is still present at
+        // the moment the replacement client's first baseline is emitted.
+        if (lightningFury && !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
+          throw new IOException("Amazon Lightning Fury observer reconnect could not refresh room baseline");
+        }
+        if (lightningFury
+            && (!D2GS.headlessSyncEntityTo(reconnected.playerId, targetId)
+                || !D2GS.headlessSyncEntityTo(reconnected.playerId, furyTargetId))) {
+          throw new IOException("Amazon Lightning Fury observer reconnect could not prime durable target baselines");
+        }
         Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
         boolean reconnectLifeInvalid = !restored.hasVitals || restored.life > ownerLife + 0.001f
             || (config.amazonMeleeExpectMiss
                 ? restored.life + 0.001f < ownerLife
                 : restored.life >= initialLife);
+        Snapshot restoredFury = lightningFury
+            ? awaitSpecificMonster(reconnected, reconnectInput, furyTargetId, deadline()) : null;
+        if (lightningFury) {
+          reconnectLifeInvalid |= !restoredFury.hasVitals
+              || restoredFury.life > owner.monsters.get(furyTargetId).life + 0.001f
+              || restoredFury.life >= initialFuryLife;
+          if (!reconnectHasOnlyLiveFuryChildren(owner, reconnected)) {
+            throw new IOException("Amazon Lightning Fury reconnect restored stale furylightning child: "
+                + areaMissileSummary(reconnected.areaMissiles));
+          }
+        }
         if (reconnectLifeInvalid) {
           throw new IOException("Amazon melee reconnect restored stale target life: target="
               + targetId + " initial=" + initialLife + " owner=" + ownerLife
-              + " restored=" + restored.life);
+              + " restored=" + restored.life
+              + (lightningFury ? " auraTarget=" + furyTargetId + " auraInitial="
+                  + initialFuryLife + " auraOwner=" + owner.monsters.get(furyTargetId).life
+                  + " auraRestored=" + restoredFury.life : ""));
         }
         if (impale && !config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss) {
           int[] restoredResources = D2GS.headlessAmazonWeaponStats(owner.playerId);
@@ -1541,7 +1624,11 @@ public final class D2GSHeadlessClient {
         }
         log("amazon_melee_reconnect_pass", "skill=" + config.amazonMeleeSkillId
             + " target=" + targetId + " ownerLife=" + ownerLife
-            + " restoredLife=" + restored.life + " stale=false");
+            + " restoredLife=" + restored.life
+            + (lightningFury ? " auraTarget=" + furyTargetId + " auraOwnerLife="
+                + owner.monsters.get(furyTargetId).life + " auraRestoredLife="
+                + restoredFury.life + " childShared=" + sawFuryChildShared : "")
+            + " stale=false");
       }
     }
   }
@@ -1950,6 +2037,45 @@ public final class D2GSHeadlessClient {
     return shared;
   }
 
+  /** Counts shared active incarnations of a named native missile row. */
+  private static int sharedMissileNameCount(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, String missileName) {
+    if (owner == null || observer == null || missileName == null
+        || Riiablo.files == null || Riiablo.files.Missiles == null) return 0;
+    com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+    if (row == null) return 0;
+    int shared = 0;
+    for (Map.Entry<Integer, AreaMissile> entry : owner.areaMissiles.entrySet()) {
+      Integer entityId = entry.getKey();
+      AreaMissile first = entry.getValue();
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.missileId == row.Id && second.missileId == row.Id
+          && owner.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == owner.playerId
+          && observer.missileOwners.getOrDefault(entityId, Engine.INVALID_ENTITY) == owner.playerId) {
+        shared++;
+      }
+    }
+    return shared;
+  }
+
+  private static boolean reconnectHasOnlyLiveFuryChildren(D2GSHeadlessClient owner,
+      D2GSHeadlessClient reconnected) {
+    if (owner == null || reconnected == null || Riiablo.files == null
+        || Riiablo.files.Missiles == null) return false;
+    com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get("furylightning");
+    if (row == null) return false;
+    for (Map.Entry<Integer, AreaMissile> entry : reconnected.areaMissiles.entrySet()) {
+      AreaMissile restored = entry.getValue();
+      if (restored == null || !restored.everActive || restored.deleted
+          || restored.missileId != row.Id) continue;
+      AreaMissile authoritative = owner.areaMissiles.get(entry.getKey());
+      if (authoritative == null || authoritative.deleted || !authoritative.everActive
+          || authoritative.missileId != row.Id) return false;
+    }
+    return true;
+  }
+
   /** Counts all authoritative incarnations observed for one owned skill volley. */
   private static int ownedSkillMissileCount(D2GSHeadlessClient client, int skillId) {
     if (client == null) return 0;
@@ -2046,7 +2172,12 @@ public final class D2GSHeadlessClient {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet != null) client.consume(packet);
     }
-    throw new IOException("timed out waiting for monster snapshot " + entityId);
+    Snapshot snapshot = client.monsters.get(entityId);
+    Visibility visible = client.visibility.get(entityId);
+    throw new IOException("timed out waiting for monster snapshot " + entityId
+        + " snapshot=" + snapshotSummary(snapshot)
+        + " visibility=" + (visible == null ? "null"
+            : "type=" + visible.type + ",level=" + visible.levelId + ",deleted=" + visible.deleted));
   }
 
   /**

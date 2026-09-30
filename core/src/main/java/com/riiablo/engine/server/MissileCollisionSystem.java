@@ -3081,6 +3081,12 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (boltId < 0) continue;
       if (mMissile.has(boltId)) {
         Missile bolt = mMissile.get(boltId);
+        // The native SrvHit20 fan-out starts every furylightning bolt at the
+        // root impact point. Share the root hit set so the first collision
+        // frame cannot immediately re-apply the child to the struck target
+        // before the bolt reaches its selected aura target.
+        bolt.shareHitTargets(source.sharedHitTargets != null
+            ? source.sharedHitTargets : source.hitTargets);
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
             ? mAttributesWrapper.get(source.ownerId).attrs : null;
         if (skill != null) {
