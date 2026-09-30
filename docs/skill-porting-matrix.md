@@ -76,7 +76,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   还确认链式导弹在客户端观察到。这不等于其余 Amazon exact-ID 行已经完成。
 - 真实 Jab death gate 已通过 `-PamazonMeleeTargetDeath`：首个关键帧前目标死亡后，双方
   客户端保持死亡状态，后续 Jab 记录不产生额外伤害，observer 重连不恢复生命。miss、
-  quantity/durability 仍以 ECS/D2MOO 测试为主，尚未进入真实 MPQ gate。
+  quantity/durability 仍以 ECS/D2MOO 测试为主；新增的 `-PamazonMeleeExpectMiss` 已通过
+  真实高防/被动闪避 gate，双方生命和重连快照保持不变。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
 ### Sorceress

@@ -38,7 +38,7 @@ Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久�
 边界。当前 ECS 已锁定 Power/Charged 的成功命中耐久和关键帧前死亡清理；真实 MPQ
 双客户端 `headlessAmazonMelee` 入口已建立，Jab、Power Strike、Impale、Charged Strike、
 Fend、Lightning Strike 六项均已通过真实伤害/双端一致性/重连门槛，且 Lightning Strike
-确认链式导弹；Jab 的真实目标死亡 gate 也已通过。下一步是固定高防失手、弹药/耐久边界。
+确认链式导弹；Jab 的真实目标死亡和高防 miss gate 也已通过。下一步是弹药/耐久边界。
 完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
 和 Druid 全技能树。
 

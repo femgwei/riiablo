@@ -26,8 +26,12 @@
   目标，owner/peer 均观察到死亡生命值，后续 Jab keyframe 不再造成额外伤害，observer
   重连仍收到死亡目标状态；验证命令为 `./gradlew.bat :server:d2gs:headlessAmazonMelee
   -PamazonMeleeSkill=10 -PamazonMeleeTargetDeath -PamazonMeleeTimeout=5 --no-daemon`。
-- [ ] 真实 MPQ gate 尚未覆盖其余 Amazon exact-ID 行和 miss/弹药/耐久场景；下一步处理
-  固定高防失手、标枪 quantity/durability 以及剩余 Amazon 技能的导弹/区域行为。
+- [x] 新增 `-PamazonMeleeExpectMiss` 真实失手边界：夹具使用高防御和 100% 被动闪避组合，
+  要求 owner 确实进入攻击动画但双方生命保持不变，observer 重连后仍保持原生命值；验证
+  命令为 `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=10
+  -PamazonMeleeExpectMiss -PamazonMeleeTimeout=5 --no-daemon`。
+- [ ] 真实 MPQ gate 尚未覆盖其余 Amazon exact-ID 行和 quantity/durability 场景；下一步
+  处理标枪 quantity/durability 以及剩余 Amazon 技能的导弹/区域行为。
 
 ## 2026-09-30 Druid spirit aura 真实 MPQ 双客户端门槛
 

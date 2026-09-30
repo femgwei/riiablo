@@ -3725,6 +3725,40 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: force a live monster's defense for a deterministic miss gate. */
+  static boolean headlessSetMonsterDefense(int monsterId, int defense) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || defense < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.armorclass, defense);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_dodge, 100);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_avoid, 100);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_evade, 100);
+          wrapper.attrs.reset();
+          com.riiablo.engine.server.component.Monster monster = server.world
+              .getMapper(com.riiablo.engine.server.component.Monster.class).get(monsterId);
+          if (monster != null && monster.monstats != null) monster.monstats.boss = true;
+          updated.set(true);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Test-only fixture: keep wave observers out of monster target selection. */
   static boolean headlessSetPlayerTargetable(int playerId, boolean targetable) {
     D2GS server = activeHeadlessInstance;

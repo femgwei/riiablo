@@ -1336,12 +1336,17 @@ public final class D2GSHeadlessClient {
       Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
       Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
       float initialLife = ownerTarget.life;
+      if (config.amazonMeleeExpectMiss
+          && !D2GS.headlessSetMonsterDefense(targetId, 1_000_000)) {
+        throw new IOException("failed to raise Amazon melee target defense");
+      }
       if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId)) {
         throw new IOException("failed to place Amazon inside melee range");
       }
       boolean fallback = false;
       boolean damaged = false;
       boolean targetDeathObserved = false;
+      boolean missAttackObserved = false;
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
       boolean sawLightningMissile = !lightningStrike;
       int missilesBefore = owner.playerMissiles.size();
@@ -1381,6 +1386,7 @@ public final class D2GSHeadlessClient {
               damaged = current.life < initialLife && mirrored.life < initialLife;
             }
           }
+          if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
           if (lightningStrike && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
@@ -1400,7 +1406,16 @@ public final class D2GSHeadlessClient {
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
       }
-      if (!config.amazonMeleeTargetDeath && !damaged) {
+      if (config.amazonMeleeExpectMiss && (!missAttackObserved || damaged)) {
+        throw new IllegalStateException("Amazon melee miss gate failed: attackObserved="
+            + missAttackObserved + " owner=" + owner.monsters.get(targetId)
+            + " ownerLife=" + (owner.monsters.get(targetId) == null
+                ? "none" : owner.monsters.get(targetId).life)
+            + " peerLife=" + (peer.monsters.get(targetId) == null
+                ? "none" : peer.monsters.get(targetId).life)
+            + " initialLife=" + initialLife);
+      }
+      if (!config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss && !damaged) {
         throw new IllegalStateException("Amazon melee did not damage shared target: skill="
             + config.amazonMeleeSkillId + " target=" + targetId
             + " owner=" + owner.monsters.get(targetId)
@@ -1447,8 +1462,11 @@ public final class D2GSHeadlessClient {
           throw new IOException("Amazon melee observer reconnect could not return to room");
         }
         Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
-        if (!restored.hasVitals || restored.life >= initialLife
-            || restored.life > ownerLife + 0.001f) {
+        boolean reconnectLifeInvalid = !restored.hasVitals || restored.life > ownerLife + 0.001f
+            || (config.amazonMeleeExpectMiss
+                ? restored.life + 0.001f < ownerLife
+                : restored.life >= initialLife);
+        if (reconnectLifeInvalid) {
           throw new IOException("Amazon melee reconnect restored stale target life: target="
               + targetId + " initial=" + initialLife + " owner=" + ownerLife
               + " restored=" + restored.life);
@@ -9872,6 +9890,7 @@ public final class D2GSHeadlessClient {
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
     boolean amazonMeleeTargetDeath;
+    boolean amazonMeleeExpectMiss;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -9948,6 +9967,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
         else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
+        else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
