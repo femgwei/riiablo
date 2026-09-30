@@ -36,8 +36,8 @@
 
 #### 接手摘要（必须先读）
 
-- 当前分支为 `master`，HEAD 为 `8e74cb7d`，已推送并确认
-  `origin/master=8e74cb7da35d9ce300ccfeeeef551e1237d6368e`。
+- 当前分支为 `master`，HEAD 为 `9b55bcc6`，已推送并确认
+  `origin/master=9b55bcc6b67fc6af42f7eec8d761585fa532ab19`。
 - dark-magic manifest 当前有 43 个 exact-ID、16 个行为族；riiablo 已为 43/43
   建立行为对照入口或测试映射，但 dark-magic 自身条目仍全部是 `partial` evidence，
   因此不能把“已建立对照”写成“技能已完成”。
@@ -61,8 +61,8 @@
   只是末尾空行；其余四个文件的工作区 blob 与 HEAD 相同，属于 Git 状态/时间戳假脏。
   `game.log`、`skill-viewer-window*.png` 和 `tools/skill-viewer/logs/` 是之前技能查看器/调试
   运行生成的未跟踪产物，不属于技能实现提交。
-- 本轮 Amazon Power/Charged Strike 生命周期提交为 `8e74cb7d`：新增成功命中耐久、
-  关键帧前目标死亡和动画完成清理回归；Amazon 专项测试已通过。Git credential helper
+- 本轮 Amazon Power/Charged Strike 生命周期提交为 `8e74cb7d`；本轮真实 MPQ
+  Amazon 五项近战 gate 与 fixture 提交为 `9b55bcc6`，五次逐项运行均通过。Git credential helper
   偶尔输出 lock 警告，但应以
   `git ls-remote origin refs/heads/master` 返回的 SHA 为准。
 
@@ -117,7 +117,7 @@ ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，真实 MPQ
   锁定这些 1.10f 数据和边界。
 
 - 分支：`master`
-- 当前功能提交：`1ee5b6541cdb2159df332c50ca881af4f9684e9f`（已与 `origin/master` 一致）
+- 当前功能提交：`9b55bcc6b67fc6af42f7eec8d761585fa532ab19`（已与 `origin/master` 一致）
 - 本轮开始基线：`e6e377b9`（Paladin hostile Aura ECS 过滤矩阵）
 - 远程：已推送 `origin/master`；Git credential lock 警告出现但远端 SHA 已确认更新
 - 工作区：本轮纳入文件已提交；Amazon、Assassin、日志和截图等其他未提交修改仍保留
