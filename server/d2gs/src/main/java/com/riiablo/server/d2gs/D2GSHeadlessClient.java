@@ -10585,7 +10585,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
       if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
-        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), Ice Arrow(21), or Immolation Arrow(27)");
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), Ice Arrow(21), Immolation Arrow(27), or Guided Arrow(22)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10683,7 +10683,8 @@ public final class D2GSHeadlessClient {
       return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW
           || skillId == SkillId.ICE_ARROW || skillId == SkillId.EXPLODING_ARROW
           || skillId == SkillId.FREEZING_ARROW
-          || skillId == SkillId.IMMOLATION_ARROW;
+          || skillId == SkillId.IMMOLATION_ARROW
+          || skillId == SkillId.GUIDED_ARROW;
     }
 
     private static boolean expectsAmazonBowColdState(int skillId) {

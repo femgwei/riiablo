@@ -1,5 +1,24 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-01 Amazon Immolation/Guided Arrow 真实 MPQ 导弹 gate
+
+- [x] `headlessAmazonBow` 扩展支持 Immolation Arrow(27)：按 D2MOO
+  `MISSMODE_SrvHit09_ImmolationArrow` 验证父箭、`immolationfire` 圆形持续区域、
+  owner/observer 共享、持续火焰后续 tick 伤害、导弹删除一致性，以及箭袋消耗/恢复和
+  observer 重连。验证命令：
+  `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=27 -PamazonBowTimeout=15 --no-daemon`。
+- [x] `headlessAmazonBow` 扩展支持 Guided Arrow(22)：按 D2MOO
+  `MISSMODE_SrvHit10_GuidedArrow_BoneSpirit` 验证 `guidedarrow` 权威导弹在两端共享、
+  锁定目标实际掉血、箭袋 `1->0`、可恢复箭袋和 observer 重连保持。验证命令：
+  `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=22 -PamazonBowTimeout=15 --no-daemon`。
+- [x] `AmazonSkillSpecializationTest` 定向回归通过，保留现有 Guided Arrow 目标锁定、
+  偶发接触过滤和 Strafe 目标流测试；未覆盖或覆盖用户已验证的 Amazon 生产公式。
+- [ ] Guided Arrow 的真实 gate 当前仍出现 `Actioneer` 对 `SrvDoFunc=10` 的兼容日志，
+  但权威 `ServerSkillSystem` 已创建正确导弹并通过双端行为断言；后续应补无警告的
+  keyframe 委派/旧客户端动画验收，再继续 Multiple Shot/Strafe、多目标穿透和其余
+  Amazon exact-ID 行。
+
+
 ## 2026-10-01 Amazon Impale 真实 MPQ quantity/Calc3 durability gate
 
 - [x] `D2GSHeadlessClient` 增加权威装备资源读取辅助，读取 owner 当前 RARM/LARM

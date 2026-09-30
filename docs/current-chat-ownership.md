@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon Impale 真实 MPQ quantity/Calc3 durability gate）
+更新时间：2026-10-01（Amazon Immolation/Guided Arrow 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -81,6 +81,11 @@
 ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，真实 MPQ
   `headlessAmazonMelee` 六项成功 gate、Impale quantity/Calc3 durability、Jab death 和高防 miss gate 已通过，下一步是弹药边界和剩余 Amazon 技能。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
 极小修改可不编译但仍需提交推送。
+
+本轮后续已完成：Immolation Arrow(27) 与 Guided Arrow(22) 的真实 1.10f MPQ
+双客户端导弹 gate。前者验证 `immolationfire` 持续区域、tick 伤害和删除一致性；后者
+验证 `guidedarrow` 锁定目标、owner/observer 共享、箭袋消耗/恢复和重连。下一项转入
+Multiple Shot/Strafe 的多目标、穿透与命中去重，随后继续其余 Amazon exact-ID 行。
 
 #### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）
 

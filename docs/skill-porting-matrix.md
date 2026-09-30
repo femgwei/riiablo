@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-01（交接快照：HEAD `346a904e`）
+更新时间：2026-10-01（交接快照：Amazon Immolation/Guided Arrow gate）
 
 ## 目标与版本边界
 
@@ -397,6 +397,20 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   的冻结转冷规则。随后修正了 `resolveColdShatterDeath` 的错误二次判定：SHATTER 只由
   `ApplyColdState` 在冷包应用时决定，冻结包不能在 DeathEvent 边界强制生成 SHATTER。
   普通怪物的 `FreezingArrowDeathOrderTest` 现已通过。
+
+### 2026-10-01 Amazon Immolation/Guided Arrow 真实导弹 gate
+
+- `Immolation Arrow(27)` 已按 D2MOO `MISSMODE_SrvHit09_ImmolationArrow` 验证父箭、
+  `immolationfire` 圆形持续区域、两端共享、后续 tick 伤害和生命周期删除一致；
+  箭袋消耗/恢复与 observer 重连也已通过。
+- `Guided Arrow(22)` 已按 D2MOO `MISSMODE_SrvHit10_GuidedArrow_BoneSpirit` 扩展
+  `headlessAmazonBow`，确认 `guidedarrow` 在 owner/observer 共享、锁定目标实际掉血、
+  箭袋 `1->0`、可恢复箭袋和 observer 重连保持。
+- `AmazonSkillSpecializationTest` 定向回归通过。Guided Arrow gate 仍会记录
+  `Actioneer` 对 `SrvDoFunc=10` 的兼容日志，但权威 `ServerSkillSystem` 已完成导弹创建；
+  该日志和旧客户端动画委派仍列为后续收尾项。
+- 当前下一项：Multiple Shot/Strafe 的多目标、穿透和命中去重真实 gate，随后继续
+  Lightning Fury、Plague Javelin/Poison Javelin、Decoy/Valkyrie 等 Amazon 行。
 
 ## 参考入口
 
