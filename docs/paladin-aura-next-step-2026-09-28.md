@@ -45,6 +45,11 @@ D2MOO `SrvDo065/SrvDo066` 的“有效效果后结算资源”顺序，避免空
 同一回归随后切换目标为合法状态，确认下一次 pulse 恰好扣除一次 mana，确保修正
 没有把正常的伤害 Aura 资源结算一并屏蔽。
 
+另外新增 `AuraManagerPulseTest.unfundedStrongerSameStateAuraKeepsItsWinnerRelation`：
+高等级同状态来源在本次 pulse 无法支付 mana 时，仍保留 native winner/source
+关系并发布零值短层，不会错误回退到较弱来源；下一次资金恢复后仍由原来源继续
+刷新。这与 D2MOO 的“资源失败跳过本次有效值，但不取消已选 Aura”语义一致。
+
 ### 2. Aura 来源和优先级
 
 - 两个同状态 Aura 重叠时，高技能等级胜出。

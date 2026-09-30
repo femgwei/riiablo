@@ -96,6 +96,36 @@ class AuraManagerPulseTest {
   }
 
   @Test
+  void unfundedStrongerSameStateAuraKeepsItsWinnerRelation() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition weak = definition(9014, 503);
+    AuraManager.AuraDefinition strong = definition(9015, 503);
+    manager.registerAuraDefinition(weak);
+    manager.registerAuraDefinition(strong);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.rangeTarget = 9;
+    callback.unfundedCaster = 8;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, weak.skillId, 1));
+    assertTrue(manager.activateAura(8, strong.skillId, 5));
+    manager.update(0f);
+
+    assertEquals(8, callback.lastSourceEntityId,
+        "mana failure must not make the native winner fall back to a weaker source");
+    assertEquals(strong.skillId, callback.lastSkillId);
+    assertEquals(1, manager.getEntityAuraEffects(9).size);
+    assertEquals(strong.skillId, manager.getEntityAuraEffects(9).first().skillId);
+    assertTrue(manager.hasActiveAura(8));
+
+    callback.unfundedCaster = -1;
+    for (int i = 0; i < strong.perDelayFrames; i++) manager.update(0f);
+    assertEquals(8, callback.lastSourceEntityId,
+        "the same source remains selected once its next pulse is funded");
+    assertEquals(strong.skillId, manager.getEntityAuraEffects(9).first().skillId);
+  }
+
+  @Test
   void differentSkillsUsingOneStateShareOneNativeWinnerSlot() {
     AuraManager manager = new AuraManager();
     AuraManager.AuraDefinition first = definition(9001, 500);
@@ -248,6 +278,7 @@ class AuraManagerPulseTest {
     int lastSkillId;
     int lastStateId;
     boolean validTarget = true;
+    int unfundedCaster = -1;
     boolean includeCaster;
     int cleansingTargets;
     boolean cleansingCasterSeen;
@@ -271,7 +302,7 @@ class AuraManagerPulseTest {
     }
     @Override public boolean isInTown(int entityId) { return false; }
     @Override public boolean canConsumeMana(int casterId, float amount) {
-      return mana + 0.0001f >= amount;
+      return casterId != unfundedCaster && mana + 0.0001f >= amount;
     }
     @Override public boolean consumeMana(int casterId, float amount) {
       if (!canConsumeMana(casterId, amount)) return false;
