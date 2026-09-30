@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-01 Amazon Power/Charged Strike 关键帧边界回归
+
+- [x] 在 `AmazonMeleeSkillLifecycleTest` 中补齐 Power Strike(14) 与 Charged
+  Strike(24) 共用 `SrvSt06 → SrvDo002/SrvDo011` 路径的成功命中耐久门槛：以原生
+  `ITEMS_UpdateDurability` 的 4% 武器耐久概率固定种子，确认只在确认命中后扣除一点耐久，
+  而不是在施法开始或 miss/blocked 阶段提前扣除。
+- [x] 补齐目标在攻击关键帧前死亡的边界：两项技能均保留预计算战斗记录到动画结束，
+  不执行伤害或耐久扣除，并在 `AnimDataFinished` 清理 abandoned `Casting`，避免旧记录
+  在实体池复用或重连后被再次消费。
+- [x] 验证命令：
+  `./gradlew.bat :core:test --tests com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest --no-daemon`；
+  结果 `BUILD SUCCESSFUL`（12 actionable tasks，4 executed，8 up-to-date）。
+- [ ] Amazon Jab/Impale/Fend/Power Strike/Charged Strike 仍缺真实 1.10f MPQ 双客户端
+  的动画、命中观感和断线重连入口；下一步建立独立 `headlessAmazonMelee` fixture，
+  再将同一门槛扩展到 Lightning Strike/其余 Amazon exact-ID 行。
+
 ## 2026-09-30 Druid spirit aura 真实 MPQ 双客户端门槛
 
 - [x] 新增 `:server:d2gs:headlessSpiritAura` 真实 1.10f MPQ 双客户端入口，并提供

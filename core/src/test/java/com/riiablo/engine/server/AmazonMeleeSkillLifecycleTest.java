@@ -28,6 +28,7 @@ import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
+import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -228,6 +229,71 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
       assertNull(casting.amazonElementalCombat);
     } finally {
       world.dispose();
+    }
+  }
+
+  @Test
+  void powerAndChargedStrikeDrainWeaponDurabilityOnlyAfterAConfirmedHit() {
+    for (String skillName : new String[] {"Power Strike", "Charged Strike"}) {
+      World world = world();
+      try {
+        Skills.Entry skill = Riiablo.files.skills.get(skillName);
+        int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+        Item weapon = equip(world, amazon, skill, "hax");
+        int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+        Casting casting = world.getMapper(Casting.class).create(amazon)
+            .set(skill.Id, target, new Vector2(1, 0));
+        world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+            amazon, skill.Id, target, casting.targetVec,
+            skill.srvstfunc, skill.cltstfunc));
+
+        assertTrue(casting.amazonElementalPrepared, skillName);
+        casting.amazonElementalCombat.hit = true;
+        casting.amazonElementalCombat.blocked = false;
+        MathUtils.random.setSeed(seedForChance(ItemDurabilityManager.WEAPON_DURABILITY_CHANCE));
+        world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+        assertEquals(19, weapon.attrs.get(Stat.durability).asInt(), skillName
+            + " must drain one durability point after a confirmed native hit");
+      } finally {
+        world.dispose();
+      }
+    }
+  }
+
+  @Test
+  void powerAndChargedStrikeKeepTheirPreparedRecordWhenTargetDiesBeforeKeyframe() {
+    for (String skillName : new String[] {"Power Strike", "Charged Strike"}) {
+      World world = world();
+      try {
+        Skills.Entry skill = Riiablo.files.skills.get(skillName);
+        int amazon = player(world, 0, 0, attributes(10000, 100, 100, 10000));
+        Item weapon = equip(world, amazon, skill, "hax");
+        int target = monster(world, 1, 0, attributes(10000, 0, 0, 0));
+        Casting casting = world.getMapper(Casting.class).create(amazon)
+            .set(skill.Id, target, new Vector2(1, 0));
+        world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+            amazon, skill.Id, target, casting.targetVec,
+            skill.srvstfunc, skill.cltstfunc));
+        assertTrue(casting.amazonElementalPrepared, skillName);
+
+        world.getMapper(AttributesWrapper.class).get(target).attrs.base()
+            .put(Stat.hitpoints, 0);
+        world.getMapper(AttributesWrapper.class).get(target).attrs.reset();
+        world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
+
+        assertEquals(20, weapon.attrs.get(Stat.durability).asInt(), skillName
+            + " must not drain durability for a target dead before SrvDo");
+        assertTrue(casting.amazonElementalPrepared, skillName
+            + " must retain the precomputed record until animation completion");
+        world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(amazon));
+        assertFalse(world.getMapper(Casting.class).has(amazon), skillName
+            + " must clear the abandoned record at animation completion");
+      } finally {
+        world.dispose();
+      }
     }
   }
 

@@ -68,6 +68,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   Power Strike/Charged Strike 已按 D2MOO 的 `SrvDo002/SrvDo011` 接入成功命中扣武器耐久，
   并由 Amazon 技能矩阵锁定该耐久行为族。
   两者的 `SrvSt06` 也已改为一次性预计算物理+闪电包，keyframe 不再重新掷骰或丢失元素伤害。
+  `AmazonMeleeSkillLifecycleTest` 现在还锁定原生 4% 耐久概率（成功命中才扣一点）以及
+  关键帧前目标死亡时保留记录到动画结束、跳过伤害/耐久并清理 `Casting` 的边界。
   这仍只完成 ECS/纯逻辑层的一轮门槛，真实 MPQ 动画和重连仍待验收。
 - 首批门槛：30 个 Amazon 行逐行检查 `charclass/reqskill/reqlevel/mana/InTown/SrvStFunc/SrvDoFunc/武器限制/弹药/quantity/ToHit/SrcDam/EType/Calc1..4`，再做固定种子、多目标、失手、墙碰撞、死亡和重连测试。
 
