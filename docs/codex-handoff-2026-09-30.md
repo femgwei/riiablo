@@ -4,8 +4,10 @@
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD/远端 SHA：本轮提交推送后以 `git log -1 --oneline` 和
-  `git ls-remote origin refs/heads/master` 为准（必须相同）。
+- HEAD：`6c02b84320d9444767b065c6bbe86aff196e3aa8`（真实 MPQ Impale quantity gate）。
+- 远端：`origin/master=6c02b84320d9444767b065c6bbe86aff196e3aa8`，已用
+  `git ls-remote origin refs/heads/master` 核对；push 仍可能输出 credential storage lock
+  警告，但远端 SHA 已确认一致。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
 
