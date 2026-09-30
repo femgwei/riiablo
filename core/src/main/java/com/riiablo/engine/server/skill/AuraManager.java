@@ -2,6 +2,7 @@ package com.riiablo.engine.server.skill;
 
 import java.util.Arrays;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.LongMap;
@@ -206,6 +207,36 @@ public class AuraManager {
 
   public ActiveAura getActiveAura(int casterId) {
     return activeAuras.get(casterId);
+  }
+
+  /** Re-publishes currently winning layers for an entity entering a fresh ECS
+   * connection. Native D2GS sends the aura stat-list in that entity's first
+   * snapshot; the source may already have an affected-entity entry from before
+   * the reconnect, so a normal perdelay pulse is not sufficient here. */
+  public void refreshEntity(int targetId) {
+    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+      ActiveAura aura = entry.value;
+      if (!aura.active || callback == null) continue;
+      if (!aura.affectedEntities.contains(targetId, false)) {
+        float[] caster = callback.getEntityPosition(aura.casterId);
+        float[] target = callback.getEntityPosition(targetId);
+        if (caster == null || target == null
+            || Vector2.dst2(caster[0], caster[1], target[0], target[1]) > aura.range * aura.range
+            || targetId != aura.casterId
+                && !callback.isValidTarget(aura.casterId, targetId,
+                    aura.definition.skillId, aura.definition.auraFilter,
+                    aura.definition.nativeSkill != null
+                        && aura.definition.nativeSkill.srvdofunc == 65)
+            || targetId != aura.casterId && !((aura.definition.affectsParty
+                && callback.isAlly(aura.casterId, targetId))
+                || (aura.definition.affectsEnemy
+                && !callback.isAlly(aura.casterId, targetId)))) continue;
+        aura.affectedEntities.add(targetId);
+      }
+      aura.pulsed = true;
+    }
+    reconcileWinners();
+    for (IntMap.Entry<ActiveAura> entry : activeAuras) entry.value.pulsed = false;
   }
 
   /** Advances exactly one authoritative simulation frame. */

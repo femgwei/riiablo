@@ -223,6 +223,45 @@ tasks.register('headlessSpiritAuraRegression') {
   }
 }
 
+tasks.register('headlessPaladinAura', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Paladin selected-aura dual-client/reconnect gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-paladin-aura', '--paladin-aura-skill',
+       (project.hasProperty('paladinAuraSkill') ? project.property('paladinAuraSkill').toString() : '98'),
+       '--test-timeout',
+       (project.hasProperty('paladinAuraTimeout') ? project.property('paladinAuraTimeout').toString() : '90')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
+tasks.register('headlessPaladinAuraRegression') {
+  group = 'verification'
+  description = 'Runs the real-MPQ Might, Prayer and Salvation Paladin aura gates.'
+  dependsOn ':server:d2gs:compileJava'
+
+  doLast {
+    def timeout = project.hasProperty('paladinAuraTimeout')
+        ? project.property('paladinAuraTimeout').toString() : '90'
+    def home = providers.environmentVariable('D2_HOME')
+    [98, 99, 125].each { skill ->
+      project.javaexec {
+        classpath = sourceSets.main.runtimeClasspath
+        mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+        workingDir = rootProject.file('assets').path
+        args '--require-paladin-aura', '--paladin-aura-skill', skill.toString(),
+             '--test-timeout', timeout
+        if (home.isPresent()) args '--home', home.get()
+        if (project.hasProperty('areaVerbose')) args '--verbose'
+      }
+    }
+  }
+}
+
 tasks.register('headlessAreaSkillRegression') {
   group = 'verification'
   description = 'Runs the complete real-MPQ area-skill dual-client and reconnect gate.'

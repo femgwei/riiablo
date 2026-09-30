@@ -485,6 +485,8 @@ public class D2GS extends ApplicationAdapter {
           states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
               2, 1, playerId);
         }
+        AuraEcsSystem auraSystem = server.world.getSystem(AuraEcsSystem.class);
+        if (auraSystem != null) auraSystem.refreshEntity(playerId);
         moved.set(true);
       } finally { done.countDown(); }
     });
@@ -6436,6 +6438,42 @@ public class D2GS extends ApplicationAdapter {
     response.duplicate().get(bytes);
     if (cacheResponse) partyRequestCache.put(clientId, requestId, intent, bytes);
     outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
+  /** Test-only authoritative right-button aura selection for MPQ gates. */
+  static boolean headlessSelectAura(int playerId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean selected = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        AuraEcsSystem auraSystem = server.world.getSystem(AuraEcsSystem.class);
+        selected.set(auraSystem != null && auraSystem.selectAura(playerId, skillId));
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && selected.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /** Returns the native self/target state IDs for a selected Paladin aura. */
+  static int[] headlessAuraStateIds(int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[] {-1, -1};
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[] {-1, -1});
+    Gdx.app.postRunnable(() -> {
+      try {
+        AuraEcsSystem auraSystem = server.world.getSystem(AuraEcsSystem.class);
+        com.riiablo.engine.server.skill.AuraManager.AuraDefinition definition = auraSystem == null
+            ? null : auraSystem.manager().getAuraDefinition(skillId);
+        if (definition != null) result.set(new int[] {definition.selfStateId, definition.targetStateId});
+      } finally { done.countDown(); }
+    });
+    try { done.await(5, java.util.concurrent.TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    return result.get();
   }
 
   /**

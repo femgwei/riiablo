@@ -103,6 +103,11 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return auras;
   }
 
+  /** Re-publish aura layers for an entity that just received a fresh snapshot. */
+  public void refreshEntity(int entityId) {
+    auras.refreshEntity(entityId);
+  }
+
   public void clearAura(int entityId) {
     auras.deactivateAura(entityId);
   }

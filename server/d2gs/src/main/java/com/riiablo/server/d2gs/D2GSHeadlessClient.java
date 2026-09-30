@@ -229,6 +229,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedNecromancerSave()
         : config.requireSpiritAura
         ? createGeneratedAreaSave(config.spiritSkillId)
+        : config.requirePaladinAura
+        ? createGeneratedPaladinAuraSave(config.paladinAuraSkillId)
         : config.requireBaalWaveDual
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireA5AncientDual
@@ -414,6 +416,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireSpiritAura) {
       runSpiritAuraDual(d2s, character);
+      return;
+    }
+    if (config.requirePaladinAura) {
+      runPaladinAuraDual(d2s, character);
       return;
     }
     if (config.requireQuestRecovery) {
@@ -1638,6 +1644,87 @@ public final class D2GSHeadlessClient {
             + owner.entityStateIds.get(owner.playerId));
       }
     }
+  }
+
+  /** Real 1.10f dual-client gate for a selected Paladin party aura. */
+  private void runPaladinAuraDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("PaladinAuraPeer", 0x41555250);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(10)[0];
+    try (Socket peerSocket = peer.openSocket();
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      peer.awaitConnection(peerInput, deadline());
+      try (Socket ownerSocket = owner.openSocket();
+           DataInputStream ownerInput = input(ownerSocket);
+           OutputStream ownerOutput = output(ownerSocket)) {
+        send(ownerOutput, connectionPacket(character, d2s));
+        owner.awaitConnection(ownerInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 10, room)
+            || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, room)
+            || !D2GS.headlessJoinParty(owner.playerId, peer.playerId)) {
+          throw new IOException("failed to stage Paladin aura party fixture");
+        }
+
+        int skillId = config.paladinAuraSkillId;
+        int[] states = D2GS.headlessAuraStateIds(skillId);
+        if (states[0] < 0 || !D2GS.headlessSelectAura(owner.playerId, skillId)) {
+          throw new IOException("failed to select Paladin aura skill=" + skillId);
+        }
+        awaitAuraState(owner, ownerInput, owner.playerId, owner.playerId,
+            states[0], skillId, deadline());
+        if (states[1] >= 0) {
+          awaitAuraState(peer, peerInput, peer.playerId, owner.playerId,
+              states[1], skillId, deadline());
+          awaitAuraState(owner, ownerInput, peer.playerId, owner.playerId,
+              states[1], skillId, deadline());
+        }
+        log("paladin_aura_dual_pass", "owner=" + owner.playerId + " peer=" + peer.playerId
+            + " skill=" + skillId + " selfState=" + states[0]
+            + " targetState=" + states[1]);
+
+        peerSocket.close();
+        long ownerDeadline = System.currentTimeMillis() + 1_000L;
+        while (System.currentTimeMillis() < ownerDeadline) consumeOne(ownerInput, owner);
+        D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+        try (Socket reconnectSocket = reconnected.openSocket();
+             DataInputStream reconnectInput = input(reconnectSocket);
+             OutputStream reconnectOutput = output(reconnectSocket)) {
+          send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+          reconnected.awaitConnection(reconnectInput, deadline());
+          if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
+            throw new IOException("failed to stage reconnected Paladin observer");
+          }
+          if (!D2GS.headlessJoinParty(owner.playerId, reconnected.playerId)
+              || !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
+            throw new IOException("failed to restore reconnected Paladin aura party");
+          }
+          if (states[1] >= 0) {
+            awaitAuraState(reconnected, reconnectInput, reconnected.playerId, owner.playerId,
+                states[1], skillId, deadline());
+          }
+          log("paladin_aura_reconnect_pass", "owner=" + owner.playerId
+              + " observer=" + reconnected.playerId + " skill=" + skillId);
+        }
+      }
+    }
+  }
+
+  private static void awaitAuraState(D2GSHeadlessClient client, DataInputStream input,
+      int targetId, int sourceId, int stateId, int skillId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      if (hasState(client, targetId, stateId)) {
+        AreaState state = client.entityAreaStates.get(stateKey(targetId, stateId));
+        if (state != null && state.sourceEntityId == sourceId && state.skillId == skillId) return;
+      }
+    }
+    throw new IOException("timed out waiting for Paladin aura target=" + targetId
+        + " source=" + sourceId + " skill=" + skillId + " state=" + stateId);
   }
 
   private static void awaitSpiritAuraState(D2GSHeadlessClient client,
@@ -9142,6 +9229,45 @@ public final class D2GSHeadlessClient {
     return data;
   }
 
+  /** Deterministic level-30 Paladin fixture for the selected-aura MPQ gate. */
+  private static byte[] createGeneratedPaladinAuraSave(int skillId) {
+    CharacterClass classData = CharacterClass.PALADIN;
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "HeadPalAura", (byte) Riiablo.PALADIN);
+    character.level = 30;
+    com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, stats.dex);
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 200);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 10_000);
+    base.put(Stat.maxmana, 10_000);
+    base.put(Stat.stamina, 10_000);
+    base.put(Stat.maxstamina, 10_000);
+    base.put(Stat.level, 30);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x41555241; // "AURA"
+    character.initializeStartItems(stats);
+    seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
+    if (!character.setSkillLevel(skillId, 20)) {
+      throw new IllegalStateException("could not seed Paladin aura " + skillId);
+    }
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=HeadPalAura class=paladin skill="
+        + skillId + " level=30 bytes=" + data.length);
+    return data;
+  }
+
   private static long stateKey(int entityId, int stateId) {
     return (((long) entityId) << 32) | (stateId & 0xFFFFFFFFL);
   }
@@ -9383,6 +9509,8 @@ public final class D2GSHeadlessClient {
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
     int spiritSkillId = SkillId.OAK_SAGE;
+    boolean requirePaladinAura;
+    int paladinAuraSkillId = SkillId.MIGHT;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -9454,6 +9582,8 @@ public final class D2GSHeadlessClient {
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
         else if ("--spirit-skill".equals(arg)) config.spiritSkillId = integer(args, ++i, arg);
+        else if ("--require-paladin-aura".equals(arg)) config.requirePaladinAura = true;
+        else if ("--paladin-aura-skill".equals(arg)) config.paladinAuraSkillId = integer(args, ++i, arg);
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -9503,6 +9633,9 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--spirit-skill must be Oak Sage(226), "
             + "Heart of Wolverine(236), or Spirit of Barbs(246)");
       }
+      if (config.requirePaladinAura && !isPaladinAuraSkill(config.paladinAuraSkillId)) {
+        throw new IllegalArgumentException("--paladin-aura-skill must be a native Paladin aura skill");
+      }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
           && !config.requireA4IzualDual
@@ -9527,6 +9660,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireVineScenario
+          && !config.requirePaladinAura
           && !config.requireSummonReconnect
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -9555,6 +9689,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireVineScenario
+          && !config.requirePaladinAura
           && !config.requireSummonReconnect
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
@@ -9587,6 +9722,19 @@ public final class D2GSHeadlessClient {
     private static boolean isSpiritSkill(int skillId) {
       return skillId == SkillId.OAK_SAGE || skillId == SkillId.HEART_OF_WOLVERINE
           || skillId == SkillId.SPIRIT_OF_BARBS;
+    }
+
+    private static boolean isPaladinAuraSkill(int skillId) {
+      return skillId == SkillId.MIGHT || skillId == SkillId.PRAYER
+          || skillId == SkillId.RESIST_FIRE || skillId == SkillId.THORNS
+          || skillId == SkillId.DEFIANCE || skillId == SkillId.RESIST_COLD
+          || skillId == SkillId.BLESSED_AIM || skillId == SkillId.RESIST_LIGHTNING
+          || skillId == SkillId.VIGOR || skillId == SkillId.HOLY_FIRE
+          || skillId == SkillId.HOLY_FREEZE || skillId == SkillId.CONCENTRATION
+          || skillId == SkillId.HOLY_SHOCK || skillId == SkillId.SANCTUARY
+          || skillId == SkillId.FANATICISM || skillId == SkillId.CLEANSING
+          || skillId == SkillId.SALVATION || skillId == SkillId.MEDITATION
+          || skillId == SkillId.CONVICTION || skillId == SkillId.REDEMPTION;
     }
 
     /** Resolve legacy SkillId constants to the actual Skills.txt row id. */

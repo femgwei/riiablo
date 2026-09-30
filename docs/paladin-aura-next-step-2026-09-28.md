@@ -216,9 +216,17 @@ D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill
   --no-daemon
 ```
 
-当前 `server:d2gs` 的真实双客户端入口仍只有区域技能、Druid Vine 和 Druid Spirit
-Aura；它没有 Paladin 的右键 Aura 选择、Party 关系建立及跨 observer `StateP` 来源
-断言。不能把 `headlessAreaSkill` 直接复用于 Paladin，否则会把“选择 Aura”和“施放
-一次技能”混成不同原生流程。下一项需要新增独立 `headlessPaladinAura` fixture：
-生成 Paladin D2S、建立 owner/party observer、选择 Aura、验证 owner/ally 的
-`StateP.sourceEntityId/skillId`，然后执行 observer reconnect 和跨区域撤销。
+本轮已新增独立 `headlessPaladinAura` fixture，未复用 `headlessAreaSkill`：
+生成 Paladin D2S、建立 owner/party observer、在 D2GS simulation thread 调用原生
+Aura selection、验证双方 `StateP.sourceEntityId/skillId`，再断开 observer、重新入队、
+重连并验证目标状态快照恢复。Might 单项以及 Might/Prayer/Salvation 回归均通过：
+
+```text
+./gradlew.bat :server:d2gs:headlessPaladinAura -PpaladinAuraSkill=98 -PpaladinAuraTimeout=90 --no-daemon
+./gradlew.bat :server:d2gs:headlessPaladinAuraRegression --no-daemon
+```
+
+实现中补充了 Aura 对新 ECS 实体的即时重发布：实体重连后即使仍处于原 Aura 的
+`affectedEntities` 集合，也会按当前胜者重新写入状态层，不必等待下一次 `perdelay`。
+重连门槛同时显式恢复 party 关系；否则 native ally filter 会正确拒绝已重建的
+observer。后续仍需补充跨区域撤销以及真实客户端表现侧的 Aura 图标/范围断言。
