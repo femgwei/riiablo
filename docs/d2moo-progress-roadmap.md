@@ -5862,8 +5862,9 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] riiablo 仅对可恢复 `BOWQ/XBOQ` 保留零数量箭袋；无恢复属性的普通箭袋保持原有
   耗尽移除路径。
 - [x] `NativeAmazonAmmoReplenishTest` 覆盖装备槽保留、原生恢复间隔和恢复后重新选弹。
-- [ ] 真实 1.10f MPQ 双客户端 bow/Fire Arrow gate 尚未完成；需继续核对装备切换、
-  observer 同步及重连快照。
+- [x] 真实 1.10f MPQ 双客户端 bow/Fire Arrow gate 已完成：导弹共享、命中伤害、箭袋
+  耗尽保留、恢复和 observer 重连均通过；D2S `item_replenish_quantity` 持久化仍单独
+  保留为限制项。
 
 ## 2026-10-01 Amazon Fire Arrow 真实 MPQ 弹药 gate
 
@@ -5874,3 +5875,13 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] Fire Arrow 导弹对 headless 目标的命中/伤害已通过双客户端真实门槛；门槛等待
   实际目标生命下降，并保留 owner/observer/reconnect 校验。测试 fixture 仅注入
   确定性的 ToHit/弓物理伤害，生产 Fire Arrow 的 D2MOO 转换路径未被改写。
+
+## 2026-10-01 Amazon Cold Arrow 真实命中与减速 gate
+
+- [x] `headlessAmazonBow` 泛化接受 `Cold Arrow(11)`；真实 1.10f MPQ 双客户端确认
+  `coldarrow` 导弹在 owner/observer 两端出现，目标生命从 `1,000,000` 降至 `999,922`。
+- [x] 两端均收到 `COLD(state=11)`，未伪造 `FREEZE` 状态；这与 D2MOO
+  `MISSMODE_SrvDmg01_FireArrow_MagicArrow_ColdArrow` 的物理转换回调及冷减速分离路径一致。
+- [x] 箭袋 `quantity=1->0`、可恢复属性和 observer reconnect 通过；测试命令为
+  `:server:d2gs:compileJava` 与 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=11
+  -PamazonBowTimeout=12`。

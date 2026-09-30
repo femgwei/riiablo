@@ -1619,6 +1619,7 @@ public final class D2GSHeadlessClient {
       boolean damaged = false;
       boolean ammoConsumed = false;
       boolean sawMissile = false;
+      boolean sawColdState = false;
       boolean fallback = false;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
@@ -1648,7 +1649,7 @@ public final class D2GSHeadlessClient {
         long attemptStarted = System.currentTimeMillis();
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 5000L);
         while (System.currentTimeMillis() < attemptDeadline
-            && (!ammoConsumed || !sawMissile || !damaged)) {
+            && (!ammoConsumed || !sawMissile || !damaged || !sawColdState)) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
@@ -1663,6 +1664,12 @@ public final class D2GSHeadlessClient {
               initialLife = correctedBaseline;
             } else {
               damaged = current.life < initialLife && mirrored.life < initialLife;
+              if (config.amazonBowSkillId == SkillId.COLD_ARROW) {
+                sawColdState = hasState(owner, targetId,
+                    com.riiablo.engine.server.state.StateId.COLD)
+                    && hasState(peer, targetId,
+                    com.riiablo.engine.server.state.StateId.COLD);
+              }
             }
           }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
@@ -1673,7 +1680,7 @@ public final class D2GSHeadlessClient {
           ammoConsumed |= validAmazonAmmoStats(ammo) && ammo[0] < ammoBefore[0];
           sawMissile |= owner.playerMissiles.size() > missilesBefore;
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 700L
-              && (!ammoConsumed || !sawMissile || !damaged)) {
+              && (!ammoConsumed || !sawMissile || !damaged || !sawColdState)) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonBowSkillId);
@@ -1691,6 +1698,11 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("Amazon bow did not create a shared missile: target="
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
+      }
+      if (config.amazonBowSkillId == SkillId.COLD_ARROW && !sawColdState) {
+        throw new IllegalStateException("Cold Arrow did not apply COLD state on both clients: target="
+            + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
+            + " peerStates=" + peer.entityStateIds.get(targetId));
       }
       log("amazon_bow_dual_pass", "skill=" + config.amazonBowSkillId
           + " target=" + targetId + " initialLife=" + initialLife
@@ -10407,8 +10419,8 @@ public final class D2GSHeadlessClient {
       if (config.requireAmazonMelee && !isAmazonMeleeWeapon(config.amazonMeleeWeaponCode)) {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
-      if (config.requireAmazonBow && config.amazonBowSkillId != SkillId.FIRE_ARROW) {
-        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7)");
+      if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7) or Cold Arrow(11)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10500,6 +10512,10 @@ public final class D2GSHeadlessClient {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
           || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE;
+    }
+
+    private static boolean isAmazonBowSkill(int skillId) {
+      return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW;
     }
 
     private static boolean isAmazonMeleeWeapon(String code) {

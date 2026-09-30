@@ -340,8 +340,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 
 - `BOWQ/XBOQ` 的 `item_replenish_quantity` 零数量保留与恢复已完成纯逻辑/ECS 门槛，
   对应测试为 `NativeAmazonAmmoReplenishTest`。
-- 普通箭袋耗尽移除行为未改变；真实 MPQ 双客户端 bow/Fire Arrow gate、装备切换和
-  observer reconnect 仍标记为待验收，不能把本项提升为四层完成。
+- 普通箭袋耗尽移除行为未改变；真实 MPQ 双客户端 bow/Fire Arrow gate、目标命中和
+  observer reconnect 已通过，装备切换与 D2S `item_replenish_quantity` 持久化仍是
+  独立限制项。
 
 ### 2026-10-01 Amazon Fire Arrow 真实资源增量
 
@@ -351,6 +352,15 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - Fire Arrow 目标命中/伤害已通过：门槛等待实际模拟碰撞而非只看到导弹创建，并在
   owner/observer 两端观察到目标生命下降；测试 fixture 显式提供弓的 ToHit/物理伤害，
   不改变生产技能公式。D2S `item_replenish_quantity` 持久化限制仍单独保留。
+
+### 2026-10-01 Amazon Cold Arrow 真实 gate
+
+- `headlessAmazonBow` 现支持 `Cold Arrow(11)`，并通过真实 MPQ 双客户端导弹共享、
+  命中伤害、箭袋消耗/恢复与 observer reconnect。
+- owner/observer 两端均观察到目标 `COLD(state=11)`，没有误判为 `FREEZE`；该断言对应
+  D2MOO 的 `SrvDmgFunc=1` 物理转换和独立冷状态应用链。
+- 这一步只扩展测试入口和断言，没有用 dark-magic 或测试逻辑覆盖用户已验证的 Amazon
+  生产技能公式；D2S 恢复属性持久化仍需另行处理。
 
 ## 参考入口
 
