@@ -4,8 +4,8 @@
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`586be648`（Amazon `headlessAmazonMelee` Lightning Strike chain gate）。
-- 远端：`origin/master=586be6487200daea5dcdaa718df06c69585a8dfe`，已用
+- HEAD：`d40a6731`（Amazon `headlessAmazonMelee` target-death gate）。
+- 远端：`origin/master=d40a6731f92d2b4955b7c66cc4bfa968d8171e96`，已用
   `git ls-remote origin refs/heads/master` 核对。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
