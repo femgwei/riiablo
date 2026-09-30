@@ -180,9 +180,10 @@
   `paladin_aura_cross_area_pass`，未发现跨 `Map.Zone` 泄漏。旧客户端 Aura 图标、动画
   和范围表现仍需单独的客户端观测。
 - `headlessPaladinAuraRegression` 已扩展为 20 个已注册 Paladin Aura 技能的完整清单，
-  并按 native `affectsParty` 区分 party target-state 与 self-only/targetless 分支；全清单
-  运行通过。Holy Freeze、Conviction 等敌对 target-state 仍需 hostile monster fixture
-  验证，当前结果不能替代敌我过滤和敌对目标状态的真实证明。
+  并按 native `affectsParty`/`affectsEnemy` 区分 party、hostile target-state 与
+  self-only/targetless 分支；全清单运行通过。Holy Freeze、Conviction 已使用 deterministic
+  hostile monster fixture 验证 target-state、source/skill、重连和跨区域撤销；怪物免疫、
+  `noAura`、不可攻击目标等组合仍需独立过滤矩阵。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin

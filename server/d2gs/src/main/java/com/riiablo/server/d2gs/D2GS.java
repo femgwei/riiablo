@@ -2523,6 +2523,41 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF, "spiritwolf");
   }
 
+  /** Creates one deterministic live hostile monster for aura target gates. */
+  static int headlessCreateRoomMonsterFixture(int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        int zombieClass = Riiablo.files.monstats == null ? -1
+            : Riiablo.files.monstats.index("zombie1");
+        if (position == null || zombieClass < 0) return;
+        int monsterId = server.factory.createMonster(zombieClass, position.x, position.y);
+        if (monsterId < 0) return;
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(monsterId);
+        if (wrapper == null) return;
+        wrapper.set(server.map, zone);
+        wrapper.roomId = room.id;
+        result.set(monsterId);
+      } finally { done.countDown(); }
+    });
+    try { done.await(5, java.util.concurrent.TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    return result.get();
+  }
+
   /** Creates a summon fixture using a concrete native skill row. */
   static int headlessCreateRoomSummon(int playerId, int levelId, int roomId,
       int skillId, String petType) {
@@ -6469,7 +6504,8 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.skill.AuraManager.AuraDefinition definition = auraSystem == null
             ? null : auraSystem.manager().getAuraDefinition(skillId);
         if (definition != null) result.set(new int[] {definition.selfStateId,
-            definition.targetStateId, definition.affectsParty ? 1 : 0});
+            definition.targetStateId, definition.affectsParty ? 1 : 0,
+            definition.affectsEnemy ? 1 : 0});
       } finally { done.countDown(); }
     });
     try { done.await(5, java.util.concurrent.TimeUnit.SECONDS); }

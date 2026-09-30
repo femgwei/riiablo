@@ -1672,6 +1672,12 @@ public final class D2GSHeadlessClient {
         int skillId = config.paladinAuraSkillId;
         int[] states = D2GS.headlessAuraStateIds(skillId);
         boolean partyTarget = states.length > 2 && states[2] != 0;
+        boolean enemyTarget = states.length > 3 && states[3] != 0;
+        int hostileId = Engine.INVALID_ENTITY;
+        if (enemyTarget && states[1] >= 0) {
+          hostileId = D2GS.headlessCreateRoomMonsterFixture(10, room);
+          if (hostileId < 0) throw new IOException("failed to create hostile Paladin aura fixture");
+        }
         if (states[0] < 0 || !D2GS.headlessSelectAura(owner.playerId, skillId)) {
           throw new IOException("failed to select Paladin aura skill=" + skillId);
         }
@@ -1681,6 +1687,14 @@ public final class D2GSHeadlessClient {
           awaitAuraState(peer, peerInput, peer.playerId, owner.playerId,
               states[1], skillId, deadline());
           awaitAuraState(owner, ownerInput, peer.playerId, owner.playerId,
+              states[1], skillId, deadline());
+        }
+        if (states[1] >= 0 && enemyTarget) {
+          awaitMonsterStateEntity(owner, ownerInput, hostileId, deadline());
+          awaitMonsterStateEntity(peer, peerInput, hostileId, deadline());
+          awaitAuraState(owner, ownerInput, hostileId, owner.playerId,
+              states[1], skillId, deadline());
+          awaitAuraState(peer, peerInput, hostileId, owner.playerId,
               states[1], skillId, deadline());
         }
         log("paladin_aura_dual_pass", "owner=" + owner.playerId + " peer=" + peer.playerId
@@ -1705,6 +1719,11 @@ public final class D2GSHeadlessClient {
           }
           if (states[1] >= 0 && partyTarget) {
             awaitAuraState(reconnected, reconnectInput, reconnected.playerId, owner.playerId,
+                states[1], skillId, deadline());
+          }
+          if (states[1] >= 0 && enemyTarget) {
+            awaitMonsterStateEntity(reconnected, reconnectInput, hostileId, deadline());
+            awaitAuraState(reconnected, reconnectInput, hostileId, owner.playerId,
                 states[1], skillId, deadline());
           }
           log("paladin_aura_reconnect_pass", "owner=" + owner.playerId
@@ -1734,6 +1753,27 @@ public final class D2GSHeadlessClient {
                 + owner.currentLevelId + " observerStates="
                 + reconnected.entityStateIds.get(reconnected.playerId));
           }
+          if (states[1] >= 0 && enemyTarget) {
+            if (!D2GS.headlessEnterLevel(owner.playerId, 2)) {
+              throw new IOException("Paladin enemy aura owner could not enter Blood Moor");
+            }
+            long transitionDeadline = System.currentTimeMillis() + 5_000L;
+            while (System.currentTimeMillis() < transitionDeadline) {
+              consumeOne(ownerInput, owner);
+              consumeOne(reconnectInput, reconnected);
+              if (owner.currentLevelId == 2
+                  && !hasState(reconnected, hostileId, states[1])) {
+                log("paladin_aura_cross_area_pass", "owner=" + owner.playerId
+                    + " observer=" + reconnected.playerId + " oldLevel=10 newLevel=2"
+                    + " target=" + hostileId + " targetState=" + states[1]
+                    + " auraRevoked=true");
+                return;
+              }
+            }
+            throw new IOException("Paladin enemy aura target survived owner level transition: ownerLevel="
+                + owner.currentLevelId + " observerStates="
+                + reconnected.entityStateIds.get(hostileId));
+          }
         }
       }
     }
@@ -1751,6 +1791,22 @@ public final class D2GSHeadlessClient {
     }
     throw new IOException("timed out waiting for Paladin aura target=" + targetId
         + " source=" + sourceId + " skill=" + skillId + " state=" + stateId);
+  }
+
+  private static void awaitMonsterStateEntity(D2GSHeadlessClient client,
+      DataInputStream input, int monsterId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      Snapshot snapshot = client.monsters.get(monsterId);
+      Visibility visible = client.visibility.get(monsterId);
+      if ((snapshot != null && !snapshot.deleted && snapshot.monsterClass >= 0
+          && snapshot.hasPosition)
+          || (visible != null && !visible.deleted && client.entityStateIds.containsKey(monsterId))) {
+        return;
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+    }
+    throw new IOException("timed out waiting for hostile aura monster=" + monsterId);
   }
 
   private static void awaitSpiritAuraState(D2GSHeadlessClient client,

@@ -250,5 +250,7 @@ Sanctuary、Fanaticism、Meditation、Conviction、Redemption、Salvation（其�
 本轮完整清单运行通过。门槛根据 native `affectsParty` 自动区分：party Aura 验证
 owner/ally target state、重连和跨区域撤销；self-only/targetless Aura（Holy Fire、
 Holy Shock、Sanctuary、Fanaticism、Redemption）只验证 self state、重连和来源元数据。
-Holy Freeze/Conviction 等敌对 target-state 的真实怪物目标过滤尚未由该门槛证明，需下一步
-建立 hostile monster fixture，不能把当前 self-only 通过结果当作敌对目标语义通过。
+Holy Freeze/Conviction 已建立 deterministic hostile monster fixture，并验证 monster
+target state 的 source/skill 元数据、observer 重连恢复及 owner 跨区域后的撤销。当前仍
+未覆盖所有怪物免疫/不可攻击/noAura 组合；这些属于下一层目标过滤专项，而不是本轮 Aura
+生命周期门槛的缺失。
