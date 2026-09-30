@@ -5944,3 +5944,27 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `deadCol`/原生随机结果投影。`FreezingArrowDeathOrderTest` 与 Amazon 技能专项测试通过。
 
 下一项：审计 Immolation、Multiple 和 Guided Arrow 的穿透/多目标行为。
+
+## 2026-10-01 Amazon Multiple Shot / Strafe 多箭 gate
+
+- [x] D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave` 已复核：`Calc1` 为总箭数、
+  `Calc3` 为中心组、`Calc2` 为激活帧；当前 `nativeMultipleShotDirection` 保持整数
+  delta、垂直 lane 和 `SrvMissileA/B` 武器选择，整轮导弹共享命中集合。
+- [x] `headlessAmazonBow -PamazonBowSkill=12` 真实双客户端通过：MPQ level-20
+  Multiple Shot 创建 21 枚权威导弹，owner/observer 共享同一批实体，目标实际掉血，
+  箭袋只消耗一次，observer reconnect 后箭袋恢复一致。
+- [x] D2MOO `SKILLS_SrvSt08_Strafe`/`SKILLS_SrvDo012_Strafe` 已复核：初始箭数和
+  `AuraRangeCalc` 在 SrvSt08 决定，SrvDo012 每个关键帧只创建一箭并递减 Param1，
+  通过 Param2/Param3 继续找目标；riiablo 保留 per-keyframe target stream，且只在
+  首箭扣一次弹药，续发 keyframe 不再因零数量箭袋被错误拒绝。
+- [x] `headlessAmazonBow -PamazonBowSkill=26` 真实双客户端通过：Strafe 权威目标流
+  推进到多个箭实体，owner/observer 共享、目标实际掉血、箭袋单次消耗和 reconnect
+  均一致。headless COF 缺少完整后续关键帧时，测试 fallback 只重放剩余 keyframe，
+  不改生产技能为瞬发整轮。
+- [ ] Actioneer 对 `srvstfunc=8`、`srvdofunc=12` 的旧客户端动画日志仍有兼容 warning；
+  权威导弹/目标流已通过，但旧客户端动画委派和完整多目标穿透仍需后续画面/资源门槛。
+
+验证命令：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
+--tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。

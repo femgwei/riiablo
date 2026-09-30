@@ -412,6 +412,21 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - 当前下一项：Multiple Shot/Strafe 的多目标、穿透和命中去重真实 gate，随后继续
   Lightning Fury、Plague Javelin/Poison Javelin、Decoy/Valkyrie 等 Amazon 行。
 
+### 2026-10-01 Amazon Multiple Shot / Strafe 对照完成
+
+- `Multiple Shot(12)`：D2MOO `SrvDo008` 的 `Calc1/Calc3`、整数垂直 lane、
+  `SrvMissileA/B` 选择和一次施法共享命中集合已与 `ServerSkillSystem` 对齐；真实
+  MPQ gate 在 level 20 观察到 21 枚权威导弹，owner/observer 实体一致，目标掉血，
+  箭袋只扣一次并可重连恢复。
+- `Strafe(26)`：D2MOO `SrvSt08` 的初始目标/箭数与 `SrvDo012` 的 Param1/2/3
+  续发语义已核对；riiablo 维持每个 keyframe 一箭、目标流按范围排序、首箭单次
+  弹药扣除。真实双客户端 gate 已观察多箭共享、伤害和 reconnect 一致。
+- 这两项没有覆盖用户已验证 Amazon 数值公式；dark-magic 仅作为 exact-ID、事务和
+  测试组织参考，数值/回调仍以 D2MOO 1.10f 和当前 MPQ 为准。
+- 限制：旧客户端 `Actioneer` 仍可能对 `srvstfunc=8` / `srvdofunc=12` 输出 warning；
+  headless fallback 仅用于补齐缺失 COF 关键帧，不代表画面动画已完全收尾。多目标
+  穿透、墙碰撞和旧客户端观感仍列为后续 gate。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

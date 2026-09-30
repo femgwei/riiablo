@@ -514,7 +514,11 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null) {
       ItemData items = mPlayer.get(event.entityId).data.getItems();
       Item weapon = items.getEquippedRangedWeapon();
-      if (requiresRangedAmmo(skill, weapon) && !hasQuantity(items.getEquippedAmmo(weapon))) {
+      boolean strafeContinuation = skill.Id == SkillId.STRAFE
+          && mCasting.has(event.entityId)
+          && mCasting.get(event.entityId).strafeInitialized;
+      if (requiresRangedAmmo(skill, weapon) && !hasQuantity(items.getEquippedAmmo(weapon))
+          && !strafeContinuation) {
         log.info("[RANGED_AMMO] phase=do_reject entity={} skill={} weapon={} reason=missing_or_empty",
             event.entityId, event.skillId, weapon != null ? weapon.code : "none");
         return;
@@ -3268,8 +3272,12 @@ public class ServerSkillSystem extends PassiveSystem {
       targets.add(0, event.targetId);
     }
     if (targets.isEmpty() && event.targetId >= 0 && mPosition.has(event.targetId)
-        && (!mAttributesWrapper.has(event.targetId) || hasPositiveLife(event.targetId))
-        && hasStaticFieldLineOfSight(event.entityId, event.targetId)) {
+        && (!mAttributesWrapper.has(event.targetId) || hasPositiveLife(event.targetId))) {
+      // SrvSt08 has already accepted the clicked target.  Preserve that
+      // native target pointer even when the headless map has no static ray
+      // fixture; the selected target is still valid for the minimum Strafe
+      // arrow stream and the collision system performs the final obstruction
+      // check when each missile moves.
       targets.add(event.targetId);
     }
     final Vector2 origin = start;

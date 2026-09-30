@@ -996,3 +996,24 @@ incarnation，并继续检查跨区域实体基线恢复。
   既有失败退出。
 
 当前下一项：继续 Immolation Arrow 和 Multiple/Guided Arrow 的真实导弹门槛。
+
+### 2026-10-01 Amazon Multiple Shot / Strafe（本轮完成）
+
+- [x] D2MOO `SrvDo008` 与 `SrvSt08/SrvDo012` 已完成本轮源码对照；Multiple Shot
+  lane/中心组和 Strafe Param1/2/3 目标流均以 1.10f MPQ 为准，没有用 dark-magic
+  数值覆盖 Amazon 生产公式。
+- [x] `headlessAmazonBow -PamazonBowSkill=12` 通过真实双客户端多箭、共享实体、
+  目标掉血、单次箭袋消耗和 observer reconnect。
+- [x] `headlessAmazonBow -PamazonBowSkill=26` 通过真实双客户端 Strafe 多箭目标流、
+  单次箭袋消耗、共享实体、目标掉血和 reconnect；续发 keyframe 在零数量可恢复箭袋
+  状态下不会再次触发通用“无弹药”拒绝。
+- [x] headless COF 缺少完整 Strafe 后续关键帧时，`headlessDispatchAmazonMelee`
+  只重放剩余 `AnimDataKeyframeEvent`，仍进入 `ServerSkillSystem.spawnStrafe`，不伪造
+  一次性整轮导弹。
+- [ ] `Actioneer` 仍可能输出 `srvstfunc=8` / `srvdofunc=12` warning；旧客户端动画、
+  多目标穿透/墙碰撞的真实画面门槛仍待后续。当前工作区其他 agent 的未提交修改未动。
+
+验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
+--tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。

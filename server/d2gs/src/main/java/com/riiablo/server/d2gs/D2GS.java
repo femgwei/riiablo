@@ -2695,8 +2695,24 @@ public class D2GS extends ApplicationAdapter {
         if (skillId == com.riiablo.engine.server.skill.SkillId.IMPALE) {
           seedHeadlessImpaleResourceRoll();
         }
-        server.world.getSystem(EventSystem.class).dispatch(
-            AnimDataKeyframeEvent.obtain(playerId, Engine.KEYFRAME_ATK));
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        events.dispatch(AnimDataKeyframeEvent.obtain(playerId, Engine.KEYFRAME_ATK));
+        // Strafe's native SrvDo012 callback emits one arrow per animation
+        // keyframe.  A headless fixture can lack a complete client COF, so
+        // replay the remaining authoritative keyframes synchronously after
+        // the real cast has initialized its target stream.  This keeps the
+        // fallback bounded and still exercises ServerSkillSystem's per-arrow
+        // target/parameter lifecycle instead of using a synthetic volley.
+        if (skillId == com.riiablo.engine.server.skill.SkillId.STRAFE) {
+          com.artemis.ComponentMapper<com.riiablo.engine.server.component.Casting> casts =
+              server.world.getMapper(com.riiablo.engine.server.component.Casting.class);
+          for (int i = 0; i < 32; i++) {
+            com.riiablo.engine.server.component.Casting active = casts.get(playerId);
+            if (active == null || !active.strafeInitialized
+                || active.strafeRemainingArrows <= 0) break;
+            events.dispatch(AnimDataKeyframeEvent.obtain(playerId, Engine.KEYFRAME_ATK));
+          }
+        }
         dispatched.set(true);
       } finally {
         completed.countDown();

@@ -1629,6 +1629,11 @@ public final class D2GSHeadlessClient {
       boolean sawImmolationFire = false;
       boolean sawImmolationFireShared = false;
       boolean sawImmolationFireTick = false;
+      boolean multipleShot = config.amazonBowSkillId == SkillId.MULTIPLE_SHOT;
+      boolean strafe = config.amazonBowSkillId == SkillId.STRAFE;
+      boolean volleyRequired = multipleShot || strafe;
+      int volleyMissilesBefore = owner.playerMissiles.size();
+      boolean sawVolleyShared = false;
       float immolationFireBaseline = Float.NaN;
       long immolationFireTick = -1L;
       boolean coldRequired = Config.expectsAmazonBowColdState(config.amazonBowSkillId);
@@ -1644,6 +1649,9 @@ public final class D2GSHeadlessClient {
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline
           && (!ammoConsumed || !sawMissile || !damaged
+              || volleyRequired && ownedSkillMissileCount(owner,
+                  config.amazonBowSkillId) < 2
+              || volleyRequired && !sawVolleyShared
               || coldRequired && !sawColdState
               || immolation && (!sawImmolationFireShared || !sawImmolationFireTick)); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
@@ -1665,6 +1673,9 @@ public final class D2GSHeadlessClient {
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 5000L);
         while (System.currentTimeMillis() < attemptDeadline
             && (!ammoConsumed || !sawMissile || !damaged
+                || volleyRequired && ownedSkillMissileCount(owner,
+                    config.amazonBowSkillId) < 2
+                || volleyRequired && !sawVolleyShared
                 || coldRequired && !sawColdState
                 || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
           consumeOne(ownerInput, owner);
@@ -1702,6 +1713,10 @@ public final class D2GSHeadlessClient {
           // authoritative item still exists during reconnect.
           ammoConsumed |= validAmazonAmmoStats(ammo) && ammo[0] < ammoBefore[0];
           sawMissile |= owner.playerMissiles.size() > missilesBefore;
+          if (volleyRequired) {
+            sawVolleyShared = sharedSkillMissileCount(owner, peer,
+                config.amazonBowSkillId) >= 2;
+          }
           if (config.amazonBowSkillId == SkillId.EXPLODING_ARROW
               || config.amazonBowSkillId == SkillId.FREEZING_ARROW) {
             sawExplosionChild |= hasAmazonExplosionChild(owner);
@@ -1725,6 +1740,9 @@ public final class D2GSHeadlessClient {
           }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 700L
               && (!ammoConsumed || !sawMissile || !damaged
+                  || volleyRequired && ownedSkillMissileCount(owner,
+                      config.amazonBowSkillId) < 2
+                  || volleyRequired && !sawVolleyShared
                   || coldRequired && !sawColdState
                   || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
             fallback = true;
@@ -1744,6 +1762,16 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("Amazon bow did not create a shared missile: target="
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
+      }
+      if (volleyRequired && ownedSkillMissileCount(owner, config.amazonBowSkillId) < 2) {
+        throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")
+            + " did not create a multi-arrow volley: before=" + volleyMissilesBefore
+            + " after=" + ownedSkillMissileCount(owner, config.amazonBowSkillId));
+      }
+      if (volleyRequired && !sawVolleyShared) {
+        throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")
+            + " volley was not shared by owner/observer: ownerMissiles="
+            + owner.playerMissiles.size() + " observerEntities=" + peer.areaMissiles.size());
       }
       if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
           || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChild) {
@@ -1809,6 +1837,10 @@ public final class D2GSHeadlessClient {
       log("amazon_bow_dual_pass", "skill=" + config.amazonBowSkillId
           + " target=" + targetId + " initialLife=" + initialLife
           + " targetDamageObserved=" + damaged
+          + " volleyMissiles=" + (volleyRequired
+              ? ownedSkillMissileCount(owner, config.amazonBowSkillId)
+              : owner.playerMissiles.size() - volleyMissilesBefore)
+          + " volleyShared=" + sawVolleyShared
           + " explosionChild=" + sawExplosionChildShared
           + " immolationFire=" + sawImmolationFireShared
           + " immolationFireTick=" + sawImmolationFireTick
@@ -1892,6 +1924,41 @@ public final class D2GSHeadlessClient {
           || (exp3 != null && first.missileId == exp3.Id)) return true;
     }
     return false;
+  }
+
+  /** Counts authoritative player-owned missiles visible with the same entity id on both clients. */
+  private static int sharedSkillMissileCount(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, int skillId) {
+    if (owner == null || observer == null) return 0;
+    int shared = 0;
+    for (Map.Entry<Integer, AreaMissile> entry : owner.areaMissiles.entrySet()) {
+      Integer entityId = entry.getKey();
+      if (entityId == null) continue;
+      Integer missileOwner = owner.missileOwners.get(entityId);
+      if (missileOwner == null || missileOwner != owner.playerId) continue;
+      AreaMissile first = entry.getValue();
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.skillId == skillId && second.skillId == skillId) {
+        shared++;
+      }
+    }
+    return shared;
+  }
+
+  /** Counts all authoritative incarnations observed for one owned skill volley. */
+  private static int ownedSkillMissileCount(D2GSHeadlessClient client, int skillId) {
+    if (client == null) return 0;
+    int count = 0;
+    for (Map.Entry<Integer, AreaMissile> entry : client.areaMissiles.entrySet()) {
+      AreaMissile missile = entry.getValue();
+      Integer ownerId = client.missileOwners.get(entry.getKey());
+      if (missile != null && missile.everActive && missile.skillId == skillId
+          && ownerId != null && ownerId == client.playerId) {
+        count++;
+      }
+    }
+    return count;
   }
 
   private static boolean hasAmazonImmolationFire(D2GSHeadlessClient client) {
@@ -10684,7 +10751,9 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.ICE_ARROW || skillId == SkillId.EXPLODING_ARROW
           || skillId == SkillId.FREEZING_ARROW
           || skillId == SkillId.IMMOLATION_ARROW
-          || skillId == SkillId.GUIDED_ARROW;
+          || skillId == SkillId.GUIDED_ARROW
+          || skillId == SkillId.MULTIPLE_SHOT
+          || skillId == SkillId.STRAFE;
     }
 
     private static boolean expectsAmazonBowColdState(int skillId) {
