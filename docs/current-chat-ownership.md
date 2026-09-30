@@ -946,3 +946,16 @@ incarnation，并继续检查跨区域实体基线恢复。
   数据；生产冷伤害/状态链未被测试桥接改写。
 - 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=11 -PamazonBowTimeout=12` 均通过。
+
+### 2026-10-01 Amazon Ice Arrow Boss 冷冻规则 gate（本轮完成）
+
+- [x] `headlessAmazonBow -PamazonBowSkill=21` 通过真实 MPQ 双客户端 Ice Arrow 命中、
+  箭袋消耗/恢复与 observer reconnect。
+- [x] 依据 D2MOO `SUNITDMG_ApplyFreezeState`，Boss 目标的 `SrvDmgFunc=2` 冻结包被
+  转换为 `COLD(state=11)`，两端均未建立 `FREEZE`；这不是把普通怪物的冻结规则改成
+  冷减速，而是覆盖原生 Boss/Unique/Hireling 例外。
+- [x] bow gate fixture 仅移除目标的动态 footprint，避免玩家贴近时测试网格把目标搬走；
+  生产移动与碰撞系统未改变。
+- 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=21 -PamazonBowTimeout=12`、`:core:test --tests
+  com.riiablo.engine.server.AmazonSkillSpecializationTest` 均通过。

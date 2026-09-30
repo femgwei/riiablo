@@ -5885,3 +5885,13 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 箭袋 `quantity=1->0`、可恢复属性和 observer reconnect 通过；测试命令为
   `:server:d2gs:compileJava` 与 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=11
   -PamazonBowTimeout=12`。
+
+## 2026-10-01 Amazon Ice Arrow Boss 冷冻规则 gate
+
+- [x] `headlessAmazonBow` 支持 `Ice Arrow(21)`，真实双客户端确认导弹命中、目标生命
+  下降、箭袋耗尽/恢复和 observer reconnect。
+- [x] D2MOO `MISSMODE_SrvDmg02_IceArrow_RoyalStrikeChaos` 将 ColdLen 转为 FrzLen；
+  随后的 `SUNITDMG_ApplyFreezeState` 对 Boss 目标转回普通 COLD。riiablo 现同步该
+  例外：两端观察到 `COLD(state=11)`，没有 `FREEZE(state=1)`。
+- [x] `MissileCollisionSystem` 只在冻结包命中 Boss 时走冷减速分支；普通目标的冻结
+  路径保持不变。专项测试 fixture 的动态 footprint 稳定化不影响生产移动逻辑。

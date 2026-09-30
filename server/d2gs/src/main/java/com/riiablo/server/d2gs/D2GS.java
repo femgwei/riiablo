@@ -3958,6 +3958,21 @@ public class D2GS extends ApplicationAdapter {
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_avoid, 0);
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_evade, 0);
           wrapper.attrs.reset();
+          com.riiablo.engine.server.component.Box2DBody body = server.world
+              .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+          if (body != null && body.body != null) {
+            // Keep the ranged target fixed while the arrow traverses the
+            // swept segment; this is a fixture-only stabilization and does
+            // not alter production monster movement or collision rules.
+            body.body.setType(com.badlogic.gdx.physics.box2d.BodyDef.BodyType.StaticBody);
+            body.body.setLinearVelocity(0f, 0f);
+          }
+          // The ranged gate uses swept projectile collision rather than
+          // monster pathing; remove only the fixture's dynamic-footprint
+          // component so the target cannot be relocated when the player is
+          // staged beside it.
+          server.world.getMapper(com.riiablo.engine.server.component.Velocity.class)
+              .remove(monsterId);
           updated.set(true);
         }
       } finally {

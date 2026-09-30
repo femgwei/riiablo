@@ -3243,7 +3243,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
       }
       if (missile != null && missile.freezesTarget) {
-        StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
+        // D2Game's ApplyFreezeState converts the packet back to ordinary COLD
+        // for bosses, uniques and hirelings.  Ice Arrow therefore remains a
+        // chill packet on those targets even though its missile row uses
+        // SrvDmgFunc=2 and normally converts ColdLen to FrzLen.
+        if (freezePacket && nativeFreezeSuppressed(targetId)) {
+          StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+        } else {
+          StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
+        }
       } else if (isColdArrow(missile)) {
         // Cold Arrow is a chill-only packet.  It slows and tints the target,
         // but its lethal hit must retain the normal corpse.
@@ -3278,6 +3286,17 @@ public class MissileCollisionSystem extends IteratingSystem {
         && ("cold".equalsIgnoreCase(missile.missile.EType)
             || "freeze".equalsIgnoreCase(missile.missile.EType)
             || "frze".equalsIgnoreCase(missile.missile.EType));
+  }
+
+  private boolean nativeFreezeSuppressed(int targetId) {
+    if (!mMonster.has(targetId)) return false;
+    Monster monster = mMonster.get(targetId);
+    if (monster == null) return false;
+    return mMercenary.has(targetId)
+        || monster.monstats != null && monster.monstats.boss
+        || monster.rank == MonsterRank.CHAMPION
+        || monster.rank == MonsterRank.UNIQUE
+        || monster.rank == MonsterRank.SUPER_UNIQUE;
   }
 
   private static boolean hasNativeElementalPresentation(Missile missile) {

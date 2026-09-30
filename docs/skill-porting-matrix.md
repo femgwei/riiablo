@@ -362,6 +362,15 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - 这一步只扩展测试入口和断言，没有用 dark-magic 或测试逻辑覆盖用户已验证的 Amazon
   生产技能公式；D2S 恢复属性持久化仍需另行处理。
 
+### 2026-10-01 Amazon Ice Arrow Boss gate
+
+- `Ice Arrow(21)` 已通过真实 MPQ 双客户端导弹/命中/箭袋/reconnect gate。
+- D2MOO 的 `SrvDmgFunc=2` 先把冷长度转成冻结长度，但 Boss 在
+  `SUNITDMG_ApplyFreezeState` 中只能被冷却；riiablo 现在对 Boss 目标应用 `COLD(state=11)`
+  且明确禁止 `FREEZE(state=1)`，普通目标冻结语义不变。
+- 为避免动态单位网格把贴近玩家的目标搬走，bow gate fixture 移除目标动态 footprint；
+  这是测试稳定化，不是生产规则覆盖。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

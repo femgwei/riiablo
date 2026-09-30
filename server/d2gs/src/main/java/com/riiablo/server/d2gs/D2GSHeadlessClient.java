@@ -1553,6 +1553,8 @@ public final class D2GSHeadlessClient {
           + " a=" + bowSkill.srvmissilea + " b=" + bowSkill.srvmissileb
           + " c=" + bowSkill.srvmissilec + " d=" + bowSkill.srvmissiled
           + " clt=" + bowSkill.cltmissilea + "/" + bowSkill.cltmissileb
+          + " skillE=" + bowSkill.EType + ":" + bowSkill.EMin + ".." + bowSkill.EMax
+          + " len=" + bowSkill.ELen + "+" + java.util.Arrays.toString(bowSkill.ELevLen)
           + " missileRow=" + (bowMissile != null ? bowMissile.Missile : "null")
           + " do=" + (bowMissile != null ? bowMissile.pSrvDoFunc : -1)
           + " hit=" + (bowMissile != null ? bowMissile.pSrvHitFunc : -1)
@@ -1664,7 +1666,7 @@ public final class D2GSHeadlessClient {
               initialLife = correctedBaseline;
             } else {
               damaged = current.life < initialLife && mirrored.life < initialLife;
-              if (config.amazonBowSkillId == SkillId.COLD_ARROW) {
+              if (Config.expectsAmazonBowColdState(config.amazonBowSkillId)) {
                 sawColdState = hasState(owner, targetId,
                     com.riiablo.engine.server.state.StateId.COLD)
                     && hasState(peer, targetId,
@@ -1699,8 +1701,20 @@ public final class D2GSHeadlessClient {
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
       }
-      if (config.amazonBowSkillId == SkillId.COLD_ARROW && !sawColdState) {
-        throw new IllegalStateException("Cold Arrow did not apply COLD state on both clients: target="
+      if (Config.expectsAmazonBowColdState(config.amazonBowSkillId) && !sawColdState) {
+        log("amazon_bow_state_debug", "skill=" + config.amazonBowSkillId
+            + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
+            + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
+            + " ownerStates=" + owner.entityStateIds.get(targetId)
+            + " peerStates=" + peer.entityStateIds.get(targetId));
+        throw new IllegalStateException("Amazon elemental arrow did not apply COLD state on both clients: target="
+            + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
+            + " peerStates=" + peer.entityStateIds.get(targetId));
+      }
+      if (config.amazonBowSkillId == SkillId.ICE_ARROW
+          && (hasState(owner, targetId, com.riiablo.engine.server.state.StateId.FREEZE)
+              || hasState(peer, targetId, com.riiablo.engine.server.state.StateId.FREEZE))) {
+        throw new IllegalStateException("Ice Arrow incorrectly applied FREEZE to the boss fixture: target="
             + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
             + " peerStates=" + peer.entityStateIds.get(targetId));
       }
@@ -10420,7 +10434,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
       if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
-        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7) or Cold Arrow(11)");
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), or Ice Arrow(21)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10515,7 +10529,12 @@ public final class D2GSHeadlessClient {
     }
 
     private static boolean isAmazonBowSkill(int skillId) {
-      return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW;
+      return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW
+          || skillId == SkillId.ICE_ARROW;
+    }
+
+    private static boolean expectsAmazonBowColdState(int skillId) {
+      return skillId == SkillId.COLD_ARROW || skillId == SkillId.ICE_ARROW;
     }
 
     private static boolean isAmazonMeleeWeapon(String code) {
