@@ -714,7 +714,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // impact entity alive without an animation for the whole hit window.  The
     // resource is small and only this native one-shot needs a synchronous
     // handoff so the first rendered frame cannot be missed.
-    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)) {
+    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)
+        || "iceexplode".equalsIgnoreCase(missile.Missile)) {
       Riiablo.assets.finishLoadingAsset(descriptor);
     }
     return id;
