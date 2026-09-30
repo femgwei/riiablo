@@ -61,6 +61,26 @@ class UnitLifecycleSystemTest {
   }
 
   @Test
+  void resurrectionReopensTheDeathBoundaryForASecondDeath() {
+    UnitLifecycle lifecycle = new UnitLifecycle().reset();
+    lifecycle.transition(UnitLifecycle.Phase.INSERTED)
+        .transition(UnitLifecycle.Phase.ACTIVE)
+        .transition(UnitLifecycle.Phase.DEATH);
+    lifecycle.deathHandled = true;
+    lifecycle.deathKiller = 42;
+    lifecycle.deathTick = 7;
+
+    lifecycle.revive();
+
+    assertEquals(UnitLifecycle.Phase.ACTIVE, lifecycle.phase);
+    assertFalse(lifecycle.deathHandled);
+    assertEquals(-1, lifecycle.deathKiller);
+    assertEquals(-1L, lifecycle.deathTick);
+    lifecycle.transition(UnitLifecycle.Phase.DEATH);
+    assertEquals(UnitLifecycle.Phase.DEATH, lifecycle.phase);
+  }
+
+  @Test
   void destroyedEntityLeavesLifecycleSubscription() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new UnitLifecycleSystem())

@@ -31,6 +31,24 @@ public class UnitLifecycle extends Component {
   }
 
   /**
+   * Reopens a retained monster lifecycle after native corpse resurrection.
+   *
+   * <p>Resurrection is the one legitimate exception to the normal forward-only
+   * lifecycle transitions: D2 keeps the corpse entity and restores it as a live
+   * unit.  Clearing the death bookkeeping is required so a later death event is
+   * not mistaken for the original death.</p>
+   */
+  public UnitLifecycle revive() {
+    if (phase == Phase.DEATH) {
+      phase = Phase.ACTIVE;
+      deathKiller = -1;
+      deathTick = -1L;
+      deathHandled = false;
+    }
+    return this;
+  }
+
+  /**
    * Returns whether a lifecycle transition is valid at a native boundary.
    * Spawn/insert/active are strictly forward-only; death may be observed from
    * any live phase, and removal/destruction are terminal. Invalid transitions

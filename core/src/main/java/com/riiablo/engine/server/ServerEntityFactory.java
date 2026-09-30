@@ -58,6 +58,7 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
@@ -103,6 +104,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<UnitLifecycle> mLifecycle;
   protected ComponentMapper<SuperUnique> mSuperUnique;
   protected ComponentMapper<SummonedPet> mSummonedPet;
 
@@ -746,6 +748,12 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     mCorpse.remove(monsterId);
+    // D2MOO's SKILLS_ResurrectUnit restores a retained corpse as a live,
+    // targetable monster. Reopen the authoritative lifecycle as well, or the
+    // next death event is incorrectly treated as a duplicate of the old death.
+    if (mLifecycle != null && mLifecycle.has(monsterId)) {
+      mLifecycle.get(monsterId).revive();
+    }
     mRunning.remove(monsterId);
     mVelocity.create(monsterId).setMonster(monster.monstats.Velocity);
     mMovementModes.create(monsterId).set(
