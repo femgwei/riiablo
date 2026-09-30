@@ -517,6 +517,12 @@ public class AutomapManager implements Disposable {
     int minTy = AutomapProjection.tileIndex(zone.y());
     int maxTx = AutomapProjection.tileEndExclusive(zone.x() + zone.width());
     int maxTy = AutomapProjection.tileEndExclusive(zone.y() + zone.height());
+    // Native D2MOO wall origins may sit on the exclusive right/bottom edge
+    // of a Zone.  They are outside the floor rectangle by design, but still
+    // need an automap cell; otherwise the native wall is present in gameplay
+    // data yet remains missing from the map image.
+    maxTx++;
+    maxTy++;
     for (int ty = minTy; ty < maxTy; ty++) {
       for (int tx = minTx; tx < maxTx; tx++) {
         int worldX = tx * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;

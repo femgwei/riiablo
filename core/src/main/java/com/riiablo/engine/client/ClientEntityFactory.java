@@ -709,13 +709,17 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
     AssetDescriptor<DCC> descriptor = mMissile.get(id).missileDescriptor;
     Riiablo.assets.load(descriptor);
-    // These are independent, zero-velocity hit missiles. Finish their DCC
-    // handoff before returning so MissileLoader can attach the animation in
-    // the same impact tick; this does not couple their lifetime to the parent.
-    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)
+    // Impact/trail children are independent, short-lived missiles. Finish
+    // zero-velocity DCCs before returning so the loader can attach their
+    // animation in the same impact tick; otherwise a client-only child can
+    // expire with no AnimationWrapper and never reach RenderSystem.
+    if (missile.Vel == 0
+        || "fireexplosion2".equalsIgnoreCase(missile.Missile)
         || "iceexplode".equalsIgnoreCase(missile.Missile)) {
       Riiablo.assets.finishLoadingAsset(descriptor);
     }
+    MissileLoader loader = world.getSystem(MissileLoader.class);
+    if (loader != null) loader.loadNow(id);
     return id;
   }
 
