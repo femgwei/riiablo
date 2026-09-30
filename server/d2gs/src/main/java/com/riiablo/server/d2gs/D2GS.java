@@ -2525,6 +2525,19 @@ public class D2GS extends ApplicationAdapter {
 
   /** Creates one deterministic live hostile monster for aura target gates. */
   static int headlessCreateRoomMonsterFixture(int levelId, int roomId) {
+    return headlessCreateRoomMonsterFixture(levelId, roomId,
+        false, false, false, true, true, false);
+  }
+
+  /**
+   * Creates a deterministic hostile monster with the native aura-filter fields
+   * overridden for a real dual-client target matrix.  The fixture deliberately
+   * keeps the normal zombie row as its base and only changes the fields that
+   * D2MOO's sub_6FD0FA00/sub_6FD0FE80 read while scanning an aura.
+   */
+  static int headlessCreateRoomMonsterFixture(int levelId, int roomId,
+      boolean noAura, boolean boss, boolean primeEvil, boolean isAtt,
+      boolean selectable, boolean coldImmune) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || server.map == null
         || server.factory == null || Riiablo.files == null || Gdx.app == null) {
@@ -2545,6 +2558,24 @@ public class D2GS extends ApplicationAdapter {
         if (position == null || zombieClass < 0) return;
         int monsterId = server.factory.createMonster(zombieClass, position.x, position.y);
         if (monsterId < 0) return;
+        com.riiablo.engine.server.component.Monster monster = server.world
+            .getMapper(com.riiablo.engine.server.component.Monster.class).get(monsterId);
+        if (monster == null) return;
+        // Excel rows are shared singletons.  Never mutate the zombie table
+        // entry in place or a later fixture would silently inherit its flags.
+        com.riiablo.codec.excel.MonStats.Entry auraStats =
+            new com.riiablo.codec.excel.MonStats.Entry();
+        auraStats.npc = false;
+        auraStats.noAura = noAura;
+        auraStats.boss = boss;
+        auraStats.primeevil = primeEvil;
+        auraStats.coldeffect = coldImmune ? new int[] {0, 0, 0} : new int[] {-1, -1, -1};
+        monster.monstats = auraStats;
+        com.riiablo.codec.excel.MonStats2.Entry auraStats2 =
+            new com.riiablo.codec.excel.MonStats2.Entry();
+        auraStats2.isAtt = isAtt;
+        auraStats2.noSel = !selectable;
+        monster.monstats2 = auraStats2;
         com.riiablo.engine.server.component.MapWrapper wrapper = server.world
             .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(monsterId);
         if (wrapper == null) return;

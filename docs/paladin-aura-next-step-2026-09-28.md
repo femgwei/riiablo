@@ -265,3 +265,9 @@ Freeze（SrvDo081）传 0，所以 Boss、Prime Evil 及 `noAura` 怪物仍进�
 Holy Freeze 随后在 `SKILLS_AuraCallback_HolyFreeze` 依据当前难度的 `coldeffect`
 拒绝冷免疫目标。对应测试为
 `AuraEcsScenarioTest.hostileAuraFilterMatrixMatchesD2MooBossPrimeNoAuraAndAttackabilityRules`。
+
+真实 MPQ 双客户端入口随后扩展为同一过滤 fixture：Conviction=123 的门槛覆盖 Boss、
+Prime Evil、`noAura`、不可攻击和不可选中目标；Holy Freeze=114 覆盖 `noAura` 和
+冷免疫目标。每个 fixture 使用独立的 `MonStats/MonStats2` 副本，避免修改共享 Excel
+单例导致后创建目标继承前一目标标志。实测两项均通过，且 Holy Freeze 的短 target
+state 在 observer 重连及 owner 跨区撤销阶段仍能稳定收敛。

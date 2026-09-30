@@ -1674,9 +1674,30 @@ public final class D2GSHeadlessClient {
         boolean partyTarget = states.length > 2 && states[2] != 0;
         boolean enemyTarget = states.length > 3 && states[3] != 0;
         int hostileId = Engine.INVALID_ENTITY;
+        int[] hostileFilterFixtures = new int[0];
         if (enemyTarget && states[1] >= 0) {
           hostileId = D2GS.headlessCreateRoomMonsterFixture(10, room);
           if (hostileId < 0) throw new IOException("failed to create hostile Paladin aura fixture");
+          // D2MOO SrvDo066/SrvDo081 pass bCheckMonAuraFlag=0: noAura is not
+          // a hostile-target rejection.  The remaining fixtures exercise the
+          // aurafilter FINDISATT/FINDISSEL bits and Holy Freeze coldeffect gate.
+          int boss = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              false, true, false, true, true, false);
+          int prime = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              false, false, true, true, true, false);
+          int noAura = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              true, false, false, true, true, false);
+          int notAtt = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              false, false, false, false, true, false);
+          int notSelectable = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              false, false, false, true, false, false);
+          int coldImmune = D2GS.headlessCreateRoomMonsterFixture(10, room,
+              false, false, false, true, true, true);
+          hostileFilterFixtures = new int[] {boss, prime, noAura, notAtt,
+              notSelectable, coldImmune};
+          for (int fixture : hostileFilterFixtures) {
+            if (fixture < 0) throw new IOException("failed to create hostile aura filter fixture");
+          }
         }
         if (states[0] < 0 || !D2GS.headlessSelectAura(owner.playerId, skillId)) {
           throw new IOException("failed to select Paladin aura skill=" + skillId);
@@ -1696,6 +1717,31 @@ public final class D2GSHeadlessClient {
               states[1], skillId, deadline());
           awaitAuraState(peer, peerInput, hostileId, owner.playerId,
               states[1], skillId, deadline());
+          for (int i = 0; i < hostileFilterFixtures.length; i++) {
+            int fixture = hostileFilterFixtures[i];
+            // Conviction exercises the full aurafilter matrix.  Holy Freeze's
+            // real gate only needs its native noAura bypass and coldeffect
+            // immunity callback here; attackability/selectability remain
+            // covered by the deterministic ECS matrix.
+            if (skillId == com.riiablo.engine.server.skill.SkillId.HOLY_FREEZE
+                && (i == 0 || i == 1 || i == 3 || i == 4)) continue;
+            awaitMonsterStateEntity(owner, ownerInput, fixture, deadline());
+            awaitMonsterStateEntity(peer, peerInput, fixture, deadline());
+            boolean shouldReceive = skillId == com.riiablo.engine.server.skill.SkillId.CONVICTION
+                ? i < 3 || i == 5
+                : skillId == com.riiablo.engine.server.skill.SkillId.HOLY_FREEZE && i < 3;
+            if (shouldReceive) {
+              awaitAuraState(owner, ownerInput, fixture, owner.playerId,
+                  states[1], skillId, deadline());
+              awaitAuraState(peer, peerInput, fixture, owner.playerId,
+                  states[1], skillId, deadline());
+            } else {
+              assertNoAuraState(owner, ownerInput, fixture, states[1], skillId,
+                  Math.min(deadline(), System.currentTimeMillis() + 200L));
+              assertNoAuraState(peer, peerInput, fixture, states[1], skillId,
+                  Math.min(deadline(), System.currentTimeMillis() + 200L));
+            }
+          }
         }
         log("paladin_aura_dual_pass", "owner=" + owner.playerId + " peer=" + peer.playerId
             + " skill=" + skillId + " selfState=" + states[0]
@@ -1807,6 +1853,18 @@ public final class D2GSHeadlessClient {
       if (packet != null) client.consume(packet);
     }
     throw new IOException("timed out waiting for hostile aura monster=" + monsterId);
+  }
+
+  private static void assertNoAuraState(D2GSHeadlessClient client, DataInputStream input,
+      int targetId, int stateId, int skillId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      if (hasState(client, targetId, stateId)) {
+        throw new IOException("unexpected Paladin aura target=" + targetId
+            + " sourceSkill=" + skillId + " state=" + stateId);
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+    }
   }
 
   private static void awaitSpiritAuraState(D2GSHeadlessClient client,
