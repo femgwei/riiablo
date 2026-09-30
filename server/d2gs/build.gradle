@@ -52,6 +52,7 @@ tasks.register('headlessSimulationTick', JavaExec) {
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
 }
 
 tasks.register('headlessMovementIntent', JavaExec) {
@@ -162,6 +163,22 @@ tasks.register('headlessAreaSkill', JavaExec) {
        (project.hasProperty('areaSkill') ? project.property('areaSkill').toString() : '244'),
        '--test-timeout',
        (project.hasProperty('areaTimeout') ? project.property('areaTimeout').toString() : '60')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
+tasks.register('headlessAmazonMelee', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Amazon melee skill dual-client, damage and reconnect gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-amazon-melee', '--amazon-melee-skill',
+       (project.hasProperty('amazonMeleeSkill') ? project.property('amazonMeleeSkill').toString() : '10'),
+       '--test-timeout',
+       (project.hasProperty('amazonMeleeTimeout') ? project.property('amazonMeleeTimeout').toString() : '90')
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()

@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon elemental melee 生命周期回归）
+更新时间：2026-10-01（Amazon 真实 MPQ Jab 双客户端门槛）
 
 ## 唯一负责人
 
@@ -45,7 +45,9 @@
   数值、函数号、状态时序和技能表必须重新以本地 D2MOO 1.10f、1.10f MPQ，必要时
   The Phrozen Keep 为准。
 - 当前最高优先级是 Amazon 30 行技能的真实 1.10f MPQ、失手/死亡/重连验收；Amazon
-  没有 dark-magic exact-ID 配置，不能把其他职业的行为族直接套用到 Amazon。
+  没有 dark-magic exact-ID 配置，不能把其他职业的行为族直接套用到 Amazon。新的
+  `headlessAmazonMelee` 已完成 Jab、Power Strike、Impale、Charged Strike、Fend 的真实
+  双端伤害/重连门槛；Lightning Strike 及其余 Amazon exact-ID 行仍未完成。
 - 最近已完成的真实门槛：Sorceress Fire Ball/Nova、Necromancer Poison Nova、
   Paladin 20 Aura 清单、Conviction/Holy Freeze hostile 过滤、Druid vine/尸体
   recycler 的部分双客户端流程。详细矩阵见 `docs/skill-porting-matrix.md`。
@@ -69,8 +71,8 @@
 先不要重复 Paladin 已通过的矩阵。读取 `docs/skill-porting-matrix.md` 的 Amazon 段，
 检查当前 Amazon 未提交修改的差异，在不触碰其他 agent 文件的前提下继续补：
 真实 MPQ Jab/Impale/Fend/Power Strike/Charged Strike、失手/死亡/重连、弹药/耐久和
-ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，下一步建立真实 MPQ
-`headlessAmazonMelee` 双客户端入口。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
+ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，真实 MPQ
+`headlessAmazonMelee` 五项近战 gate 已通过，下一步是 Lightning Strike 与失手/死亡边界。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
 极小修改可不编译但仍需提交推送。
 
 #### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）

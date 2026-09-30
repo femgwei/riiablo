@@ -1,12 +1,12 @@
-# 技能移植交接记录（2026-09-30）
+# 技能移植交接记录（2026-10-01）
 
 ## 当前 Git 基线
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`8e74cb7d`（`test: tighten Amazon elemental melee lifecycle gates`）
-- 远端：`origin/master` 已确认指向
-  `8e74cb7da35d9ce300ccfeeeef551e1237d6368e`
+- HEAD：本轮 Amazon `headlessAmazonMelee` gate 提交后更新；以
+  `git ls-remote origin refs/heads/master` 为准。
+- 远端：本轮提交推送后以 `git ls-remote origin refs/heads/master` 核对。
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
 
@@ -35,8 +35,10 @@ riiablo 已建立 43/43 的行为对照入口或测试映射，但这只表示�
 Amazon 没有 dark-magic exact-ID 配置，必须单独按 D2MOO 1.10f 审计。优先处理 Amazon
 30 行 Native 数据和当前未提交的 Amazon 测试，补真实 MPQ 的 Jab/Impale/Fend/
 Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久、ToHit/SrcDam/Calc
-边界。当前 ECS 已锁定 Power/Charged 的成功命中耐久和关键帧前死亡清理；下一步是
-真实 MPQ 双客户端 `headlessAmazonMelee` 入口。完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
+边界。当前 ECS 已锁定 Power/Charged 的成功命中耐久和关键帧前死亡清理；真实 MPQ
+双客户端 `headlessAmazonMelee` 入口已建立，Jab、Power Strike、Impale、Charged Strike、
+Fend 五项均已通过真实伤害/双端一致性/重连门槛；下一步是 Lightning Strike 与失手/死亡
+边界。完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
 和 Druid 全技能树。
 
 ## 测试入口

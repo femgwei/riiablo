@@ -12,9 +12,17 @@
 - [x] 验证命令：
   `./gradlew.bat :core:test --tests com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest --no-daemon`；
   结果 `BUILD SUCCESSFUL`（12 actionable tasks，4 executed，8 up-to-date）。
-- [ ] Amazon Jab/Impale/Fend/Power Strike/Charged Strike 仍缺真实 1.10f MPQ 双客户端
-  的动画、命中观感和断线重连入口；下一步建立独立 `headlessAmazonMelee` fixture，
-  再将同一门槛扩展到 Lightning Strike/其余 Amazon exact-ID 行。
+- [x] 新增真实 1.10f MPQ 双客户端 `headlessAmazonMelee` fixture，覆盖 Jab(10)、
+  Power Strike(14)、Impale(19)、Charged Strike(24)、Fend(30) 的近战施法入口、
+  共享目标伤害、observer 双端一致性和 observer 重连后的生命值保持。夹具使用真实
+  Amazon 存档与 `jav`，并保留 COF 无可用 ATK keyframe 时的服务端回放兜底。
+- [x] 五个技能均已逐个通过真实 gate：Jab(10)、Power Strike(14)、Impale(19)、
+  Charged Strike(24)、Fend(30) 均完成服务端命中/扣血、owner/peer 生命一致和 observer
+  重连生命保持。逐项命令为 `./gradlew.bat :server:d2gs:headlessAmazonMelee
+  -PamazonMeleeSkill=<10|14|19|24|30> -PamazonMeleeTimeout=5 --no-daemon`，五次均为
+  `BUILD SUCCESSFUL`。
+- [ ] 真实 MPQ gate 尚未覆盖 Lightning Strike 及其余 Amazon exact-ID 行；下一步补
+  Lightning Strike 的近战+链式导弹双客户端门槛，再处理失手/死亡/弹药/耐久边界。
 
 ## 2026-09-30 Druid spirit aura 真实 MPQ 双客户端门槛
 

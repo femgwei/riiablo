@@ -108,6 +108,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
@@ -2523,10 +2524,122 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF, "spiritwolf");
   }
 
+  /** Test-only placement that puts a player inside native melee range of a target. */
+  static boolean headlessPlacePlayerNear(int playerId, int targetId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean placed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position player = server.world.getMapper(Position.class).get(playerId);
+        Position target = server.world.getMapper(Position.class).get(targetId);
+        if (player == null || target == null) return;
+        // Keep the fixture outside Box2D overlap while staying inside the
+        // native Amazon player melee bonus range.
+        player.position.set(target.position.x - 3.5f, target.position.y);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) {
+          body.body.setTransform(player.position, body.body.getAngle());
+        }
+        com.riiablo.engine.server.component.Velocity velocity = server.world
+            .getMapper(com.riiablo.engine.server.component.Velocity.class).get(playerId);
+        if (velocity != null) velocity.velocity.setZero();
+        placed.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && placed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /**
+   * Test-only fallback for Amazon melee skills when a headless COF has no
+   * usable ATK keyframe callback. The client still submits a real cast first;
+   * this only replays the authoritative attack keyframe on the server thread.
+   */
+  static boolean headlessDispatchAmazonMelee(int playerId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null
+        || Riiablo.files == null || Riiablo.files.skills.get(skillId) == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean dispatched =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.Player player = server.world.getMapper(
+            com.riiablo.engine.server.component.Player.class).get(playerId);
+        com.riiablo.engine.server.component.Casting casting = server.world.getMapper(
+            com.riiablo.engine.server.component.Casting.class).get(playerId);
+        if (player == null || casting == null || casting.skillId != skillId) return;
+        server.world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(playerId, Engine.KEYFRAME_ATK));
+        dispatched.set(true);
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && dispatched.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Creates one deterministic live hostile monster for aura target gates. */
   static int headlessCreateRoomMonsterFixture(int levelId, int roomId) {
     return headlessCreateRoomMonsterFixture(levelId, roomId,
         false, false, false, true, true, false);
+  }
+
+  /** Creates a durable melee target so a dual-client cast can be reconnected. */
+  static int headlessCreateRoomMeleeFixture(int levelId, int roomId) {
+    int monsterId = headlessCreateRoomMonsterFixture(levelId, roomId);
+    D2GS server = activeHeadlessInstance;
+    if (monsterId < 0 || server == null || server.world == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class)
+            .get(monsterId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 1_000_000);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxhp, 1_000_000);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.armorclass, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.level, 1);
+          wrapper.attrs.reset();
+        }
+        // The ordinary zombie fixture installs a live AI that immediately
+        // chases the Amazon.  A melee gate needs a stable native target so
+        // movement cannot turn a lifecycle assertion into a range race.
+        server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class)
+            .remove(monsterId);
+        com.riiablo.engine.server.component.Velocity velocity = server.world
+            .getMapper(com.riiablo.engine.server.component.Velocity.class).get(monsterId);
+        if (velocity != null) velocity.velocity.setZero();
+        com.riiablo.engine.server.component.Position position = server.world
+            .getMapper(com.riiablo.engine.server.component.Position.class).get(monsterId);
+        if (position != null) {
+          position.position.x += 3f;
+          com.riiablo.engine.server.component.Box2DBody body = server.world
+              .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+          if (body != null && body.body != null) {
+            body.body.setTransform(position.position, body.body.getAngle());
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try { done.await(5, java.util.concurrent.TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    return monsterId;
   }
 
   /**

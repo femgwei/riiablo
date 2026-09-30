@@ -47,8 +47,11 @@ import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter96;
 import com.riiablo.io.ByteInput;
 import com.riiablo.io.ByteOutput;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
 import com.riiablo.item.ItemWriter;
+import com.riiablo.item.Quality;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
@@ -273,6 +276,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireAmazonMelee
+        ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.requireVineScenario
@@ -392,6 +397,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireEarlyObjectDual) {
       runEarlyObjectDual(d2s, character);
+      return;
+    }
+    if (config.requireAmazonMelee) {
+      runAmazonMeleeDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -1300,6 +1309,132 @@ public final class D2GSHeadlessClient {
           .append("/active:").append(missile.everActive);
     }
     return result.append('}').toString();
+  }
+
+  /** Real 1.10f dual-client gate for Amazon Jab/Impale/Fend/elemental melee. */
+  private void runAmazonMeleeDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AmazonMeleePeer", 0x414D454C);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(2)[0];
+    try (Socket ownerSocket = owner.openSocket(); Socket peerSocket = peer.openSocket()) {
+      DataInputStream ownerInput = input(ownerSocket), peerInput = input(peerSocket);
+      OutputStream ownerOutput = output(ownerSocket), peerOutput = output(peerSocket);
+      send(ownerOutput, connectionPacket(character, d2s));
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      owner.awaitConnection(ownerInput, deadline());
+      peer.awaitConnection(peerInput, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 2, room)
+          || !D2GS.headlessMovePlayerToRoom(peer.playerId, 2, room)) {
+        throw new IOException("failed to stage Amazon melee fixture");
+      }
+      awaitAreaBaselines(owner, peer, ownerInput, peerInput);
+
+      int targetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+      if (targetId < 0) throw new IOException("failed to create Amazon melee target");
+      Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
+      Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
+      float initialLife = ownerTarget.life;
+      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId)) {
+        throw new IOException("failed to place Amazon inside melee range");
+      }
+      boolean fallback = false;
+      boolean damaged = false;
+      long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      for (int attempt = 1; attempt <= config.attempts
+          && System.currentTimeMillis() < deadline && !damaged; attempt++) {
+        ownerTarget = owner.monsters.get(targetId);
+        if (ownerTarget == null || !ownerTarget.hasPosition) break;
+        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 3.5f, ownerTarget.y));
+        send(ownerOutput, owner.castPacket(config.amazonMeleeSkillId, targetId,
+            ownerTarget.x, ownerTarget.y));
+        log("amazon_melee_cast", "attempt=" + attempt + " skill="
+            + config.amazonMeleeSkillId + " target=" + targetId);
+        long attemptStarted = System.currentTimeMillis();
+        long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 1800L);
+        while (System.currentTimeMillis() < attemptDeadline && !damaged) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          Snapshot current = owner.monsters.get(targetId);
+          Snapshot mirrored = peer.monsters.get(targetId);
+          // The fixture mutation can race the first visibility baseline. If
+          // that baseline is stale, absorb one upward correction before
+          // requiring the authoritative post-hit life to decrease again.
+          if (current != null && current.hasVitals && mirrored != null && mirrored.hasVitals) {
+            float correctedBaseline = Math.max(current.life, mirrored.life);
+            if (correctedBaseline > initialLife + 0.001f) {
+              initialLife = correctedBaseline;
+            } else {
+              damaged = current.life < initialLife && mirrored.life < initialLife;
+            }
+          }
+          if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L && !damaged) {
+            fallback = true;
+            boolean dispatched = D2GS.headlessDispatchAmazonMelee(
+                owner.playerId, config.amazonMeleeSkillId);
+            log("amazon_melee_animation_fallback", "skill="
+                + config.amazonMeleeSkillId + " dispatched=" + dispatched);
+          }
+        }
+      }
+      if (!damaged) {
+        throw new IllegalStateException("Amazon melee did not damage shared target: skill="
+            + config.amazonMeleeSkillId + " target=" + targetId
+            + " owner=" + owner.monsters.get(targetId)
+            + " peer=" + peer.monsters.get(targetId));
+      }
+      float ownerLife = owner.monsters.get(targetId).life;
+      float peerLife = peer.monsters.get(targetId).life;
+      if (Math.abs(ownerLife - peerLife) > 0.001f) {
+        throw new IllegalStateException("Amazon melee life diverged: owner=" + ownerLife
+            + " peer=" + peerLife + " target=" + targetId);
+      }
+      log("amazon_melee_dual_pass", "skill=" + config.amazonMeleeSkillId
+          + " target=" + targetId + " initialLife=" + initialLife
+          + " ownerLife=" + ownerLife + " peerLife=" + peerLife
+          + " animationFallback=" + fallback);
+
+      // Keep the durable target alive for the reconnect assertion. A replacement
+      // observer must receive the same authoritative target incarnation, not a
+      // client-created copy or a stale pre-hit vitals snapshot.
+      peerSocket.close();
+      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < disconnectDeadline) consumeOne(ownerInput, owner);
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
+          throw new IOException("Amazon melee observer reconnect could not return to room");
+        }
+        Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
+        if (!restored.hasVitals || restored.life >= initialLife
+            || restored.life > ownerLife + 0.001f) {
+          throw new IOException("Amazon melee reconnect restored stale target life: target="
+              + targetId + " initial=" + initialLife + " owner=" + ownerLife
+              + " restored=" + restored.life);
+        }
+        log("amazon_melee_reconnect_pass", "skill=" + config.amazonMeleeSkillId
+            + " target=" + targetId + " ownerLife=" + ownerLife
+            + " restoredLife=" + restored.life + " stale=false");
+      }
+    }
+  }
+
+  private static Snapshot awaitSpecificMonster(D2GSHeadlessClient client,
+      DataInputStream input, int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      Snapshot snapshot = client.monsters.get(entityId);
+      if (snapshot != null && snapshot.everActive && snapshot.hasVitals && !snapshot.deleted) {
+        return snapshot;
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+    }
+    throw new IOException("timed out waiting for monster snapshot " + entityId);
   }
 
   /**
@@ -9242,6 +9377,59 @@ public final class D2GSHeadlessClient {
     return data;
   }
 
+  /** Deterministic level-30 Amazon fixture for native melee skill gates. */
+  private static byte[] createGeneratedAmazonMeleeSave(int skillId) {
+    CharacterClass classData = CharacterClass.AMAZON;
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "HeadAmaMelee", Riiablo.AMAZON);
+    character.level = 30;
+    com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, Math.max(stats.dex, 100));
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 200);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 10_000);
+    base.put(Stat.maxmana, 10_000);
+    base.put(Stat.stamina, 10_000);
+    base.put(Stat.maxstamina, 10_000);
+    base.put(Stat.level, 30);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x414D454C; // "AMEL", stable melee fixture.
+    character.initializeStartItems(stats);
+    // Amazon start items normally leave the bow equipped.  Replace both hand
+    // slots with a durable native javelin so Jab/Impale/Power/Charged/Fend
+    // cannot accidentally enter the ranged missile branch.
+    character.getItems().unequipItem(BodyLoc.RARM);
+    character.getItems().unequipItem(BodyLoc.LARM);
+    Item javelin = new Item();
+    javelin.reset();
+    javelin.setBase(Riiablo.files.weapons.get("jav"));
+    javelin.quality = Quality.NORMAL;
+    javelin.attrs.base().put(Stat.quantity, 16);
+    javelin.attrs.base().put(Stat.durability, 20);
+    javelin.attrs.base().put(Stat.maxdurability, 20);
+    javelin.attrs.reset();
+    character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(javelin));
+    seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
+    if (!character.setSkillLevel(skillId, 20)) {
+      throw new IllegalStateException("could not seed Amazon melee skill " + skillId);
+    }
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=HeadAmaMelee class=amazon skill="
+        + skillId + " level=30 bytes=" + data.length);
+    return data;
+  }
+
   /** Durable second client used only as a passive multiplayer observer/picker. */
   private static byte[] createGeneratedObserverSave() {
     return createGeneratedObserverSave("HeadlessPeer", 0x50454552);
@@ -9645,6 +9833,8 @@ public final class D2GSHeadlessClient {
     boolean requireAndarielQuestScenario;
     boolean requireAreaSkillScenario;
     int areaSkillId = SkillId.VOLCANO;
+    boolean requireAmazonMelee;
+    int amazonMeleeSkillId = SkillId.JAB;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -9718,6 +9908,8 @@ public final class D2GSHeadlessClient {
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
         else if ("--require-area-skill".equals(arg)) config.requireAreaSkillScenario = true;
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
+        else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
+        else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
@@ -9765,6 +9957,10 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
             + "FireBall(47), Nova(48), PoisonNova(92)");
       }
+      if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
+        throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
+            + "Impale(19), Charged Strike(24), or Fend(30)");
+      }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
             + "Carrion Vine(231), or Solar Creeper(241)");
@@ -9799,6 +9995,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireAmazonMelee
           && !config.requireVineScenario
           && !config.requirePaladinAura
           && !config.requireSummonReconnect
@@ -9828,6 +10025,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
+          && !config.requireAmazonMelee
           && !config.requireVineScenario
           && !config.requirePaladinAura
           && !config.requireSummonReconnect
@@ -9845,6 +10043,12 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA;
+    }
+
+    private static boolean isAmazonMeleeSkill(int skillId) {
+      return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
+          || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
+          || skillId == SkillId.FEND;
     }
 
     private static boolean isVineSkill(int skillId) {
