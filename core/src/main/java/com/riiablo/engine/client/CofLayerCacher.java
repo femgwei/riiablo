@@ -184,6 +184,22 @@ public class CofLayerCacher extends IteratingSystem {
 
     if (alteredLayers != Dirty.NONE) {
       animation.updateBox();
+      if (mObject.has(entityId)) {
+        com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+        // Native door interaction is anchored to Objects.txt's fixed
+        // selection rectangle, not to the visible pixels of the current DCC
+        // frame. ON door frames can be transparent, so retaining Left/Top /
+        // Width/Height keeps the original hover label and click target at the
+        // doorway after opening without making the whole door selectable.
+        if (object != null && object.base != null && object.base.IsDoor) {
+          Objects.Entry base = object.base;
+          if (base.Width > 0 && base.Height > 0) {
+            animation.getBox().asBox(base.Left, base.Top, base.Width, base.Height);
+          } else {
+            animation.getBox().set(cof.getBox());
+          }
+        }
+      }
       cofs.updateAlpha(entityId, alteredLayers);
       cofs.updateTransform(entityId, alteredLayers);
     }

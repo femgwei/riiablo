@@ -116,6 +116,11 @@ public class COF {
     return header.yMax;
   }
 
+  /** Returns the native object bounds declared by this COF. */
+  public BBox getBox() {
+    return box;
+  }
+
   public int getAnimRate() {
     return header.animRate;
   }
