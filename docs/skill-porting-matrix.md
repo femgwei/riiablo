@@ -427,6 +427,17 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   headless fallback 仅用于补齐缺失 COF 关键帧，不代表画面动画已完全收尾。多目标
   穿透、墙碰撞和旧客户端观感仍列为后续 gate。
 
+### 2026-10-01 Amazon Lightning Fury 真实 gate
+
+- `Lightning Fury(35)`：D2MOO `MISSMODE_SrvHit20` 的 `HitPar[0]/HitPar[1]`、
+  `AuraFilter=0xA783` 和 `HitSubMissile=furylightning` 已与当前 ECS 分裂路径对照。
+- 真实 `headlessAmazonMelee` 现在接受 35 号技能，使用 `jav` fixture 验证根 javelin
+  导弹、owner/observer 目标生命一致和 observer reconnect；没有覆盖或改写用户已验证
+  的 Amazon 元素伤害公式。
+- 纯逻辑已有范围、分裂数量、静态阻挡、NoAura 和目标合法性测试；当前真实 MPQ gate
+  仍是单稳定目标，多目标分裂子导弹和逐目标伤害列为下一项，不能把根导弹通过等同于
+  Lightning Fury 全部完成。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

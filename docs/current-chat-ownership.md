@@ -1017,3 +1017,18 @@ incarnation，并继续检查跨区域实体基线恢复。
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。
+
+### 2026-10-01 Amazon Lightning Fury(35)（本轮完成根导弹 gate）
+
+- [x] 已按 D2MOO `MISSMODE_SrvHit20_LightningFury` 核对 `HitPar[0]/HitPar[1]`、
+  `AuraFilter=0xA783`、`HitSubMissile=furylightning` 和 `NoAura/阻挡/敌对目标`筛选。
+- [x] `headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav`
+  通过真实双客户端根 javelin 导弹、owner/observer 伤害一致和 observer reconnect。
+- [x] `isAmazonMeleeSkill` 已纳入 Lightning Fury，生成的 `jav` fixture 可直接用于
+  后续 javelin 技能 gate。
+- [ ] 当前真实夹具只有一个稳定目标，尚未严格断言 `furylightning` 多目标分裂数量；
+  下一步应增加可定位的第二/第三目标，验证 AuraFilter、范围上限、分裂顺序和多目标
+  命中去重。其他 agent 的未提交修改仍未动。
+
+验证：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=35
+-PamazonMeleeWeapon=jav -PamazonMeleeTimeout=15 --no-daemon`。

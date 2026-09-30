@@ -1356,6 +1356,7 @@ public final class D2GSHeadlessClient {
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
+      boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
       int[] impaleResourceBefore = impale
           ? D2GS.headlessAmazonWeaponStats(owner.playerId) : null;
       if (impale && !validAmazonWeaponStats(impaleResourceBefore)) {
@@ -1363,7 +1364,7 @@ public final class D2GSHeadlessClient {
       }
       int[] impaleResourceAfter = null;
       boolean impaleResourceObserved = false;
-      boolean sawLightningMissile = !lightningStrike;
+      boolean sawLightningMissile = !lightningStrike && !lightningFury;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
@@ -1418,7 +1419,8 @@ public final class D2GSHeadlessClient {
             }
           }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
-          if (lightningStrike && owner.playerMissiles.size() > missilesBefore) {
+          if ((lightningStrike || lightningFury)
+              && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
@@ -1475,7 +1477,7 @@ public final class D2GSHeadlessClient {
             + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
             + amazonWeaponStatsSummary(impaleResourceAfter));
       }
-      if (lightningStrike && !sawLightningMissile) {
+      if ((lightningStrike || lightningFury) && !sawLightningMissile) {
         long missileDeadline = System.currentTimeMillis() + 1_000L;
         while (System.currentTimeMillis() < missileDeadline
             && !sawLightningMissile) {
@@ -1485,7 +1487,9 @@ public final class D2GSHeadlessClient {
         }
       }
       if (!sawLightningMissile) {
-        throw new IllegalStateException("Amazon Lightning Strike did not create a chain missile: target="
+        throw new IllegalStateException("Amazon "
+            + (lightningFury ? "Lightning Fury" : "Lightning Strike")
+            + " did not create its authoritative missile: target="
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
       }
@@ -10743,7 +10747,8 @@ public final class D2GSHeadlessClient {
     private static boolean isAmazonMeleeSkill(int skillId) {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
-          || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE;
+          || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE
+          || skillId == SkillId.LIGHTNING_FURY;
     }
 
     private static boolean isAmazonBowSkill(int skillId) {

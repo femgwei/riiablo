@@ -5968,3 +5968,16 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。
+
+## 2026-10-01 Amazon Lightning Fury 真实根导弹 gate
+
+- [x] D2MOO `MISSMODE_SrvHit20_LightningFury` 已核对：命中后使用 `HitSubMissile[0]`，
+  按 `HitPar[0]`/`AuraRangeCalc` 扫描 `AuraFilter=0xA783` 合法目标，最多生成
+  `HitPar[1]`/`Calc1` 枚 `furylightning`；riiablo 已保留 `NoAura`、敌对关系、静态
+  阻挡和目标去重筛选。
+- [x] `headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav` 真实
+  双客户端通过：Lightning Fury 根 javelin 权威导弹、owner/observer 伤害一致、
+  observer reconnect 不恢复陈旧生命；该入口现在明确接受 Amazon Lightning Fury(35)。
+- [x] 纯 ECS 已锁定一级范围 15、分裂数量 2、十级数量 11，以及阻挡/NoAura 目标拒绝。
+- [ ] 本轮真实 gate 使用单个稳定目标，尚未把多个可定位目标加入 MPQ 夹具；分裂子导弹
+  的多目标数量和每目标伤害仍需下一轮真实多目标 gate，不能仅凭根导弹通过宣称完成。
