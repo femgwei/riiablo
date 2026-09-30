@@ -39,6 +39,34 @@ class AuraManagerPulseTest {
   }
 
   @Test
+  void paidAuraWithNoValidRangeTargetKeepsSelectionAndDefersManaUntilUsefulPulse() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition paid = definition(9012, 501);
+    paid.manaCostPerSecond = 1f;
+    manager.registerAuraDefinition(paid);
+
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.rangeTarget = 9;
+    callback.validTarget = false;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, paid.skillId, 1));
+
+    manager.update(0f);
+    assertEquals(10f, callback.mana, 0.001f,
+        "an empty/invalid target scan must not consume the paid aura pulse");
+    assertEquals(0, callback.appliedStates);
+    assertTrue(manager.hasActiveAura(7),
+        "a no-target pulse must not cancel the selected aura");
+
+    callback.validTarget = true;
+    for (int i = 0; i < paid.perDelayFrames; i++) manager.update(0f);
+    assertEquals(9f, callback.mana, 0.001f,
+        "the first useful pulse consumes exactly one native mana cost");
+    assertEquals(1, callback.appliedStates);
+    assertTrue(manager.hasActiveAura(7));
+  }
+
+  @Test
   void differentSkillsUsingOneStateShareOneNativeWinnerSlot() {
     AuraManager manager = new AuraManager();
     AuraManager.AuraDefinition first = definition(9001, 500);
@@ -190,6 +218,7 @@ class AuraManagerPulseTest {
     int lastSourceEntityId;
     int lastSkillId;
     int lastStateId;
+    boolean validTarget = true;
     boolean includeCaster;
     int cleansingTargets;
     boolean cleansingCasterSeen;
@@ -209,7 +238,7 @@ class AuraManagerPulseTest {
     @Override public int getBaseSkillLevel(int entityId, String skillName) { return 0; }
     @Override public boolean isValidTarget(
         int casterId, int targetId, int skillId, int auraFilter, boolean checkMonsterNoAura) {
-      return true;
+      return validTarget;
     }
     @Override public boolean isInTown(int entityId) { return false; }
     @Override public boolean canConsumeMana(int casterId, float amount) {

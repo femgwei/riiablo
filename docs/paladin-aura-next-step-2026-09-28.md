@@ -32,6 +32,11 @@
 盟友都会收到 `applyCleansingEffect`；其余 poison/curable 状态判定仍由
 `StateUpdater` 按 1.10f `States.txt` 的 `curable` 位执行。
 
+本轮又补充 `AuraManagerPulseTest.paidAuraWithNoValidRangeTargetKeepsSelectionAndDefersManaUntilUsefulPulse`：
+付费 Aura 在范围扫描没有合法目标时保持已选状态、不扣 mana、不发布 stat layer；
+下一次出现合法目标并真正提交效果后，才扣除一次 native pulse cost。该测试固定了
+D2MOO `SrvDo065/SrvDo066` 的“有效效果后结算资源”顺序，避免空 pulse 改写来源关系。
+
 ### 2. Aura 来源和优先级
 
 - 两个同状态 Aura 重叠时，高技能等级胜出。
