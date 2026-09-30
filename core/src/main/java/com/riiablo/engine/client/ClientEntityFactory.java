@@ -709,13 +709,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
     AssetDescriptor<DCC> descriptor = mMissile.get(id).missileDescriptor;
     Riiablo.assets.load(descriptor);
-    // Exploding Arrow's native hit child is a short-lived, zero-velocity
-    // presentation missile.  Queueing its DCC asynchronously can leave the
-    // impact entity alive without an animation for the whole hit window.  The
-    // resource is small and only this native one-shot needs a synchronous
-    // handoff so the first rendered frame cannot be missed.
-    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)
-        || "iceexplode".equalsIgnoreCase(missile.Missile)) {
+    // Exploding Arrow's legacy fireexplosion2 child is a short-lived,
+    // zero-velocity presentation missile. Queue its DCC synchronously so the
+    // first rendered frame cannot be missed. Ice Arrow's iceexplode child has
+    // its own independent presentation lifetime and must remain on the normal
+    // asset-loading path.
+    if ("fireexplosion2".equalsIgnoreCase(missile.Missile)) {
       Riiablo.assets.finishLoadingAsset(descriptor);
     }
     return id;
