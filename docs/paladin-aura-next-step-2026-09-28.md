@@ -203,3 +203,22 @@ D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill
 `strongestSameSkillAuraWinsAndWeakerReturnsOnItsNextPulse` 覆盖；本轮没有修改
 运行时代码。这样 Paladin Aura 的 server-side 失去资格、重新选主和 client
 快照替换均有独立回归证据，仍需后续补充双客户端真实 MPQ 门槛验证。
+
+## 当前真实 MPQ 门槛状态（2026-09-30）
+
+本轮运行完整 Paladin 服务端专项集合并通过：
+
+```text
+./gradlew.bat :core:test \
+  --tests "com.riiablo.engine.server.*Paladin*Test" \
+  --tests com.riiablo.engine.server.AuraManagerPulseTest \
+  --tests com.riiablo.engine.server.AuraEcsScenarioTest \
+  --no-daemon
+```
+
+当前 `server:d2gs` 的真实双客户端入口仍只有区域技能、Druid Vine 和 Druid Spirit
+Aura；它没有 Paladin 的右键 Aura 选择、Party 关系建立及跨 observer `StateP` 来源
+断言。不能把 `headlessAreaSkill` 直接复用于 Paladin，否则会把“选择 Aura”和“施放
+一次技能”混成不同原生流程。下一项需要新增独立 `headlessPaladinAura` fixture：
+生成 Paladin D2S、建立 owner/party observer、选择 Aura、验证 owner/ally 的
+`StateP.sourceEntityId/skillId`，然后执行 observer reconnect 和跨区域撤销。
