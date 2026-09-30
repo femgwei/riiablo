@@ -432,11 +432,12 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `Lightning Fury(35)`：D2MOO `MISSMODE_SrvHit20` 的 `HitPar[0]/HitPar[1]`、
   `AuraFilter=0xA783` 和 `HitSubMissile=furylightning` 已与当前 ECS 分裂路径对照。
 - 真实 `headlessAmazonMelee` 现在接受 35 号技能，使用 `jav` fixture 验证根 javelin、
-  同 RoomEx 第二目标的 `furylightning` 子导弹 owner/observer 共享、两目标掉血和
+  同 RoomEx 第二/第三目标的 `furylightning` 子导弹 owner/observer 共享、三目标掉血和
   observer reconnect；没有覆盖或改写用户已验证的 Amazon 元素伤害公式。
 - `MissileCollisionSystem` 让子导弹继承根导弹共享命中集合，阻止从根命中点出生时对
   根目标的第一帧重复命中；纯逻辑已有范围、分裂数量、静态阻挡、NoAura 和目标合法性
-  测试。当前仍只覆盖两个目标，第三目标排序、2/11 最大分裂数量和墙后目标留待下一项。
+  测试。当前真实 gate 已覆盖三个目标和至少两枚共享子导弹；第三目标排序、2/11 最大
+  分裂数量的完整等级矩阵和墙后目标留待下一项。
 
 ## 参考入口
 

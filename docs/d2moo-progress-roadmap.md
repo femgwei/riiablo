@@ -5976,10 +5976,12 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `HitPar[1]`/`Calc1` 枚 `furylightning`；riiablo 已保留 `NoAura`、敌对关系、静态
   阻挡和目标去重筛选。
 - [x] `headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav` 真实
-  双客户端通过：根 javelin、同 RoomEx 第二目标的 `furylightning` 子导弹共享、两目标
+  双客户端通过：根 javelin、同 RoomEx 第二/第三目标的 `furylightning` 子导弹共享、三目标
   掉血，以及 observer reconnect 不恢复陈旧生命；该入口现在明确接受 Lightning Fury(35)。
 - [x] 纯 ECS 已锁定一级范围 15、分裂数量 2、十级数量 11，以及阻挡/NoAura 目标拒绝。
 - [x] 子导弹继承根导弹共享命中集合，避免从根命中点出生时在第一帧重复命中根目标；
   重连通过显式权威实体 baseline 验证两目标和短生命周期子导弹无陈旧恢复。
-- [ ] 当前仍只覆盖两个目标；第三目标排序、2/11 最大分裂数量和墙后目标的真实 MPQ
-  gate 留待下一步，不能将本轮等同于完整 Lightning Fury 多目标矩阵。
+- [x] 当前 level-20 gate 要求至少两枚 owner/observer 共享的 `furylightning`，并验证第二、
+  第三目标实际掉血；第三目标放在根目标同一可见通道的 10 格纵向位置。
+- [ ] 第三目标精确排序、2/11 最大分裂数量的完整等级矩阵和墙后目标的真实 MPQ gate
+  仍待后续，不能将本轮等同于完整 Lightning Fury 多目标矩阵。

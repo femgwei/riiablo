@@ -1023,18 +1023,22 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] 已按 D2MOO `MISSMODE_SrvHit20_LightningFury` 核对 `HitPar[0]/HitPar[1]`、
   `AuraFilter=0xA783`、`HitSubMissile=furylightning` 和 `NoAura/阻挡/敌对目标`筛选。
 - [x] `headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav`
-  通过真实双客户端根 javelin、第二目标 `furylightning` 子导弹共享、两目标掉血和
-  observer reconnect；重连时复用权威实体 baseline，验证两个目标生命与子导弹不恢复
+  通过真实双客户端根 javelin、第二/第三目标 `furylightning` 子导弹共享、三目标掉血和
+  observer reconnect；重连时复用权威实体 baseline，验证三个目标生命与子导弹不恢复
   陈旧数据。
 - [x] `isAmazonMeleeSkill` 已纳入 Lightning Fury，生成的 `jav` fixture 可直接用于
   后续 javelin 技能 gate。
-- [x] 真实夹具增加同 RoomEx、5 格距离的第二个 durable monster；gate 要求至少一枚
-  `furylightning` 在 owner/observer 以同一实体 ID 出现，并要求第二目标实际掉血。
+- [x] 真实夹具增加同 RoomEx、5 格距离的第二个和第三个 durable monster；gate 要求至少
+  两枚 `furylightning` 在 owner/observer 以同一实体 ID 出现，并要求两个分裂目标实际掉血。
 - [x] `MissileCollisionSystem` 让子导弹继承根导弹共享命中集合，避免子导弹从根命中点
   出生时在第一帧重复命中根目标；纯 ECS 仍保留范围/NoAura/阻挡/去重门槛。
-- [ ] 当前仍只覆盖两个目标；最大 2/11 枚分裂数量、第三目标排序和墙后目标的真实
-  MPQ gate 留给下一步，不能将本轮等同于完整 Lightning Fury 多目标矩阵。其他 agent
-  的未提交修改仍未动。
+- [x] 当前 level-20 真实 gate 已覆盖根目标、第二目标和第三目标，并确认至少两枚共享
+  `furylightning`；第三目标使用同一可见通道的 10 格纵向位置以避免地图静态阻挡。
+- [ ] 最大 2/11 枚分裂数量的完整等级矩阵、第三目标精确排序和墙后目标的真实 MPQ gate
+  仍待后续，不应将本轮等同于完整 Lightning Fury 多目标矩阵。其他 agent 的未提交修改
+  仍未动。
 
-验证：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=35
--PamazonMeleeWeapon=jav -PamazonMeleeTimeout=15 --no-daemon`。
+验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
+--tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`；
+`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav
+-PamazonMeleeTimeout=15 --no-daemon`。
