@@ -39,6 +39,9 @@ public final class ItemMoveValidator {
         if (cursor == null) return ItemMoveFailure.CURSOR_EMPTY;
         StoreLoc store = StoreLoc.valueOf(intent.storeLoc);
         if (store == null || store == StoreLoc.NONE) return ItemMoveFailure.INVALID_STORE;
+        if (store == StoreLoc.INVENTORY
+            && data.canMergeCursorIntoStackAt(store, intent.x, intent.y))
+          return ItemMoveFailure.NONE;
         return validateGrid(cursor, data, store, intent.x, intent.y, -1);
       case ItemMoveOperation.SWAP_STORE_ITEM: {
         if (cursor == null) return ItemMoveFailure.CURSOR_EMPTY;
@@ -50,6 +53,9 @@ public final class ItemMoveValidator {
         if (target.storeLoc != targetStore
             || !overlaps(target, cursor, intent.x, intent.y))
           return ItemMoveFailure.ITEM_NOT_OWNED;
+        if (targetStore == StoreLoc.INVENTORY
+            && data.canMergeCursorIntoStack(data.indexOf(target)))
+          return ItemMoveFailure.NONE;
         return validateGrid(cursor, data, targetStore, intent.x, intent.y, data.indexOf(target));
       }
       case ItemMoveOperation.BODY_TO_CURSOR: {

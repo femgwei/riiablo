@@ -8,6 +8,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
@@ -86,6 +87,44 @@ class VendorPricingTest extends RiiabloTest {
     assertEquals(20, tome.attrs.base().get(Stat.quantity).asInt());
     assertEquals(Location.STORED, tome.location);
     assertTrue(!character.getItems().contains(scroll));
+  }
+
+  @Test
+  void pickupAndPurchaseMergeNativeAutoStackableItems() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "StackBuyer", Riiablo.AMAZON);
+    Item carried = stackable("key", 301, 4, 10);
+    assertTrue(character.getItems().addToInventory(carried));
+
+    Item ground = stackable("key", 302, 3, 10);
+    assertTrue(character.getItems().addGroundPickup(ground, character));
+    assertEquals(7, quantity(carried));
+    assertFalse(character.getItems().contains(ground));
+
+    character.getStats().base().put(Stat.gold, 100000);
+    character.getStats().aggregate().put(Stat.gold, 100000);
+    Item bought = stackable("key", 303, 5, 10);
+    bought.flags2 |= Item.ITEMFLAG2_INSTORE;
+    assertTrue(VendorPricing.buy(character, bought));
+    assertEquals(10, quantity(carried));
+    assertTrue(character.getItems().contains(bought));
+    assertEquals(2, quantity(bought));
+  }
+
+  @Test
+  void cursorDropMergesAutoStackableRemainder() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "StackCursor", Riiablo.AMAZON);
+    Item target = stackable("gpl", 304, 8, 10);
+    assertTrue(character.getItems().addToInventory(target));
+    Item source = stackable("gpl", 305, 5, 10);
+    character.groundToCursor(source);
+
+    character.swapStoreItem(character.getItems().indexOf(target), StoreLoc.INVENTORY,
+        target.gridX, target.gridY);
+    assertEquals(10, quantity(target));
+    assertSame(source, character.getItems().getCursor());
+    assertEquals(3, quantity(source));
   }
 
   @Test
@@ -317,5 +356,22 @@ class VendorPricingTest extends RiiabloTest {
     item.storeLoc = StoreLoc.NONE;
     item.quality = Quality.NORMAL;
     return item;
+  }
+
+  private static Item stackable(String code, int id, int quantity, int maxStack) {
+    Item item = item(code, 1, 1);
+    item.id = id;
+    item.base.stackable = true;
+    item.base.maxstack = maxStack;
+    item.typeEntry = new ItemTypes.Entry();
+    item.typeEntry.AutoStack = true;
+    item.attrs.base().put(Stat.quantity, quantity);
+    item.attrs.aggregate().put(Stat.quantity, quantity);
+    return item;
+  }
+
+  private static int quantity(Item item) {
+    StatRef ref = item.attrs.base().get(Stat.quantity);
+    return ref == null ? 0 : ref.asInt();
   }
 }

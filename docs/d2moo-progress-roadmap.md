@@ -288,6 +288,20 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-30 物品自动堆叠与卷轴书接入
+
+- [x] 自动拾取、商店直接购买和鼠标拖放/交换现在统一按 D2MOO 的
+  `Stackable + ItemTypes.AutoStack`、`ITEMS_AreStackablesEqual` 和 `MaxStack +
+  ItemExtraStack` 规则合并相同物品；覆盖钥匙、爆炸/毒药水及其他原生可堆叠物品，
+  不再只特殊处理箭/弩。堆满时保留剩余数量并继续走背包放置。
+- [x] Town Portal/Identify 卷轴优先填充对应 `tbk`/`ibk` 卷轴书，容量遵循卷轴书的
+  `MaxStack`（通常为 20）；鼠标把卷轴放到对应卷轴书上时也支持完整堆叠和余量留在光标。
+- [x] 服务端 `ItemMoveValidator` 允许合法堆叠目标重叠，实际数量转移仍由权威
+  `ItemData` 执行；新增商店/拾取/光标余量回归覆盖。
+- [x] 定向验证：`:core:test --tests com.riiablo.item.VendorPricingTest --no-daemon`
+  通过；完整物品移动定向集合中保留一个既有的 `USE_INVENTORY_ITEM` 药水断言不一致项，
+  与本次堆叠改动无关。
+
 ## 2026-09-29 Jab 原生顺序动画
 
 - [x] Jab 不再把完整 A1/A2 COF 当作三段攻击。依据 D2MOO

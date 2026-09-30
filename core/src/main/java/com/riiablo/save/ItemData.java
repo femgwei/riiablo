@@ -610,8 +610,9 @@ public class ItemData {
    */
   public boolean addAutoPickup(Item item, CharData character) {
     if (item == null || contains(item)) return false;
-    if (addPotionToBelt(item)) return true;
     if (addScrollToTome(item)) return true;
+    if (addAutoStackable(item)) return true;
+    if (addPotionToBelt(item)) return true;
 
     BodyLoc bodyLoc = character == null ? null : findAutoEquipLocation(item, character);
     if (bodyLoc != null) {
@@ -619,6 +620,16 @@ public class ItemData {
       return true;
     }
     return addToInventory(item);
+  }
+
+  /**
+   * Applies the native Items.txt/ItemTypes.txt automatic stack rule to an
+   * acquired item.  The source item is not inserted into the item list until
+   * every unit has either been merged or placed in a new inventory stack.
+   */
+  private boolean addAutoStackable(Item item) {
+    if (!isAutoStackable(item)) return false;
+    return mergeIncomingIntoInventory(item, null);
   }
 
   private BodyLoc findAutoEquipLocation(Item item, CharData character) {
@@ -660,33 +671,157 @@ public class ItemData {
     else if ("tsc".equalsIgnoreCase(scroll.code)) tomeCode = "tbk";
     else return false;
 
-    int sourceQuantity = quantity(scroll);
+    return mergeIncomingIntoInventory(scroll, tomeCode);
+  }
+
+  /**
+   * Merges an acquired item into matching inventory stacks.  When
+   * {@code requiredCode} is non-null, only the matching tome code is used;
+   * this is the native scroll-book priority path.  Any remainder is placed as
+   * a normal inventory stack, and all mutations are rolled back if that final
+   * placement cannot be made.
+   */
+  private boolean mergeIncomingIntoInventory(Item incoming, String requiredCode) {
+    if (incoming == null || incoming.attrs == null || incoming.base == null) return false;
+
+    int sourceQuantity = quantity(incoming);
+    if (sourceQuantity <= 0) return false;
+    int originalQuantity = sourceQuantity;
+    Array<Item> changed = new Array<>(false, 4, Item.class);
+    IntArray previous = new IntArray(false, 4);
     for (Item tome : itemData) {
       if (tome == null || tome.location == Location.GROUND
-          || !tomeCode.equalsIgnoreCase(tome.code) || tome.attrs == null) continue;
+          || tome.location != Location.STORED || tome.storeLoc != StoreLoc.INVENTORY
+          || tome.attrs == null) continue;
+      if (requiredCode != null) {
+        if (!requiredCode.equalsIgnoreCase(tome.code)) continue;
+      } else if (!areStackablesEqual(incoming, tome)) {
+        continue;
+      }
       int current = quantity(tome);
-      int maximum = tome.base == null || tome.base.maxstack <= 0
-          ? 20 : tome.base.maxstack;
+      int maximum = maxStack(tome);
       if (current >= maximum || sourceQuantity <= 0) continue;
       int moved = Math.min(sourceQuantity, maximum - current);
+      changed.add(tome);
+      previous.add(current);
       setQuantity(tome, current + moved);
       sourceQuantity -= moved;
-      if (sourceQuantity == 0) {
-        notifyUpdated();
-        return true;
+    }
+
+    if (changed.size == 0) return false;
+    if (sourceQuantity > 0) {
+      setQuantity(incoming, sourceQuantity);
+      if (!addToInventory(incoming)) {
+        for (int i = 0; i < changed.size; i++) setQuantity(changed.get(i), previous.get(i));
+        setQuantity(incoming, originalQuantity);
+        return false;
       }
-      setQuantity(scroll, sourceQuantity);
-      if (addToInventory(scroll)) {
-        notifyUpdated();
-        return true;
-      }
-      // No inventory room for the remainder: roll back the tome mutation so
-      // the caller can report a failed pickup without losing the scroll.
-      setQuantity(tome, current);
-      setQuantity(scroll, sourceQuantity + moved);
-      return false;
+    }
+    notifyUpdated();
+    return true;
+  }
+
+  private static boolean isAutoStackable(Item item) {
+    return item != null && item.base != null && item.base.stackable
+        && item.base.maxstack > 0 && item.typeEntry != null && item.typeEntry.AutoStack;
+  }
+
+  private static int maxStack(Item item) {
+    if (item == null || item.base == null) return 0;
+    int extra = item.attrs == null ? 0 : stat(item.attrs, Stat.item_extra_stack);
+    return Math.min(511, Math.max(0, item.base.maxstack + extra));
+  }
+
+  private static int stat(Attributes attrs, short stat) {
+    StatRef value = attrs == null ? null : attrs.base().get(stat);
+    return value == null ? 0 : Math.max(0, value.asInt());
+  }
+
+  /** D2MOO ITEMS_AreStackablesEqual, reduced to the fields represented by Item. */
+  private static boolean areStackablesEqual(Item first, Item second) {
+    if (first == null || second == null || first == second
+        || first.base == null || second.base == null
+        || !first.base.stackable || !second.base.stackable
+        || first.base.maxstack <= 0 || second.base.maxstack <= 0
+        || first.code == null || !first.code.equalsIgnoreCase(second.code)
+        || first.quality != second.quality || first.qualityId != second.qualityId
+        || first.hasFlag(Item.ITEMFLAG_ETHEREAL) != second.hasFlag(Item.ITEMFLAG_ETHEREAL)
+        || first.socketsFilled != 0 || second.socketsFilled != 0) return false;
+    return stat(first.attrs, Stat.mindamage) == stat(second.attrs, Stat.mindamage)
+        && stat(first.attrs, Stat.maxdamage) == stat(second.attrs, Stat.maxdamage)
+        && stat(first.attrs, Stat.secondary_mindamage) == stat(second.attrs, Stat.secondary_mindamage)
+        && stat(first.attrs, Stat.secondary_maxdamage) == stat(second.attrs, Stat.secondary_maxdamage)
+        && stat(first.attrs, Stat.item_throw_mindamage) == stat(second.attrs, Stat.item_throw_mindamage)
+        && stat(first.attrs, Stat.item_throw_maxdamage) == stat(second.attrs, Stat.item_throw_maxdamage);
+  }
+
+  /** Returns whether the cursor item can merge into the selected inventory item. */
+  public boolean canMergeCursorIntoStack(int targetIndex) {
+    if (cursor == INVALID_ITEM || targetIndex < 0 || targetIndex >= itemData.size
+        || targetIndex == cursor) return false;
+    Item source = getItem(cursor);
+    Item target = getItem(targetIndex);
+    if (source == null || target == null || target.location != Location.STORED
+        || target.storeLoc != StoreLoc.INVENTORY || target.attrs == null) return false;
+    return (isScrollTomePair(source, target) || areStackablesEqual(source, target))
+        && quantity(target) < maxStack(target);
+  }
+
+  /** Merges as many cursor units as fit, leaving any remainder on the cursor. */
+  public boolean mergeCursorIntoStack(int targetIndex) {
+    if (!canMergeCursorIntoStack(targetIndex)) return false;
+    Item source = getItem(cursor);
+    Item target = getItem(targetIndex);
+    int sourceQuantity = quantity(source);
+    int targetQuantity = quantity(target);
+    int moved = Math.min(sourceQuantity, maxStack(target) - targetQuantity);
+    if (moved <= 0) return false;
+    setQuantity(target, targetQuantity + moved);
+    sourceQuantity -= moved;
+    if (sourceQuantity > 0) {
+      setQuantity(source, sourceQuantity);
+    } else {
+      int sourceIndex = cursor;
+      cursor = INVALID_ITEM;
+      setLocation(source, null);
+      remove(sourceIndex);
+    }
+    notifyUpdated();
+    return true;
+  }
+
+  /** Finds and merges onto a stack at an inventory grid coordinate. */
+  public boolean canMergeCursorIntoStackAt(StoreLoc storeLoc, int x, int y) {
+    if (storeLoc != StoreLoc.INVENTORY) return false;
+    for (int i = 0; i < itemData.size; i++) {
+      Item target = itemData.get(i);
+      if (target == null || target.location != Location.STORED || target.storeLoc != storeLoc
+          || target.base == null || x < target.gridX || y < target.gridY
+          || x >= target.gridX + target.base.invwidth || y >= target.gridY + target.base.invheight)
+        continue;
+      return canMergeCursorIntoStack(i);
     }
     return false;
+  }
+
+  /** Finds and merges onto a stack at an inventory grid coordinate. */
+  public boolean mergeCursorIntoStackAt(StoreLoc storeLoc, int x, int y) {
+    if (!canMergeCursorIntoStackAt(storeLoc, x, y)) return false;
+    for (int i = 0; i < itemData.size; i++) {
+      Item target = itemData.get(i);
+      if (target != null && target.location == Location.STORED && target.storeLoc == storeLoc
+          && target.base != null && x >= target.gridX && y >= target.gridY
+          && x < target.gridX + target.base.invwidth
+          && y < target.gridY + target.base.invheight)
+        return mergeCursorIntoStack(i);
+    }
+    return false;
+  }
+
+  private static boolean isScrollTomePair(Item source, Item target) {
+    if (source == null || target == null || source.code == null || target.code == null) return false;
+    return ("isc".equalsIgnoreCase(source.code) && "ibk".equalsIgnoreCase(target.code))
+        || ("tsc".equalsIgnoreCase(source.code) && "tbk".equalsIgnoreCase(target.code));
   }
 
   private static int quantity(Item item) {
