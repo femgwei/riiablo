@@ -1341,6 +1341,9 @@ public final class D2GSHeadlessClient {
       }
       boolean fallback = false;
       boolean damaged = false;
+      boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
+      boolean sawLightningMissile = !lightningStrike;
+      int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline && !damaged; attempt++) {
@@ -1369,6 +1372,9 @@ public final class D2GSHeadlessClient {
               damaged = current.life < initialLife && mirrored.life < initialLife;
             }
           }
+          if (lightningStrike && owner.playerMissiles.size() > missilesBefore) {
+            sawLightningMissile = true;
+          }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L && !damaged) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
@@ -1383,6 +1389,20 @@ public final class D2GSHeadlessClient {
             + config.amazonMeleeSkillId + " target=" + targetId
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
+      }
+      if (lightningStrike && !sawLightningMissile) {
+        long missileDeadline = System.currentTimeMillis() + 1_000L;
+        while (System.currentTimeMillis() < missileDeadline
+            && !sawLightningMissile) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          sawLightningMissile = owner.playerMissiles.size() > missilesBefore;
+        }
+      }
+      if (!sawLightningMissile) {
+        throw new IllegalStateException("Amazon Lightning Strike did not create a chain missile: target="
+            + targetId + " missilesBefore=" + missilesBefore
+            + " missilesAfter=" + owner.playerMissiles.size());
       }
       float ownerLife = owner.monsters.get(targetId).life;
       float peerLife = peer.monsters.get(targetId).life;
@@ -9959,7 +9979,7 @@ public final class D2GSHeadlessClient {
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
-            + "Impale(19), Charged Strike(24), or Fend(30)");
+            + "Impale(19), Charged Strike(24), Fend(30), or Lightning Strike(34)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10048,7 +10068,7 @@ public final class D2GSHeadlessClient {
     private static boolean isAmazonMeleeSkill(int skillId) {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
-          || skillId == SkillId.FEND;
+          || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE;
     }
 
     private static boolean isVineSkill(int skillId) {
