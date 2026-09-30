@@ -254,3 +254,14 @@ Holy Freeze/Conviction 已建立 deterministic hostile monster fixture，并验�
 target state 的 source/skill 元数据、observer 重连恢复及 owner 跨区域后的撤销。当前仍
 未覆盖所有怪物免疫/不可攻击/noAura 组合；这些属于下一层目标过滤专项，而不是本轮 Aura
 生命周期门槛的缺失。
+
+## Hostile Aura 目标过滤矩阵（2026-09-30）
+
+已将 D2MOO 的目标筛选拆成可执行 ECS 断言。`sub_6FD0FA00` 的 `FINDISATT`、
+`FINDISSEL` 对应 `MonStats2.isAtt/noSel`，因此 Conviction 对不可攻击或不可选中的
+目标不发布 `StateId.CONVICTION`。D2MOO 的 `sub_6FD0FE80` 只有在
+`bCheckMonAuraFlag=1` 时检查 `MonStats.noAura`；Conviction（SrvDo066）和 Holy
+Freeze（SrvDo081）传 0，所以 Boss、Prime Evil 及 `noAura` 怪物仍进入 hostile scan。
+Holy Freeze 随后在 `SKILLS_AuraCallback_HolyFreeze` 依据当前难度的 `coldeffect`
+拒绝冷免疫目标。对应测试为
+`AuraEcsScenarioTest.hostileAuraFilterMatrixMatchesD2MooBossPrimeNoAuraAndAttackabilityRules`。

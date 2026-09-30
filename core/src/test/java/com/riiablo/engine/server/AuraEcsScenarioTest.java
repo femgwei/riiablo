@@ -14,6 +14,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -82,6 +83,47 @@ class AuraEcsScenarioTest extends RiiabloTest {
       assertFalse(test.auras.manager().hasActiveAura(caster));
       test.ticks(51);
       assertFalse(states(test.world, monster).hasState(StateId.CONVICTION));
+    }
+  }
+
+  @Test
+  void hostileAuraFilterMatrixMatchesD2MooBossPrimeNoAuraAndAttackabilityRules() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int boss = monsterWith(test.world, 3, 0, false, true, false, true, true);
+      int primeEvil = monsterWith(test.world, 4, 0, false, false, true, true, true);
+      int noAura = monsterWith(test.world, 5, 0, true, false, false, true, true);
+      int notAttackable = monsterWith(test.world, 6, 0, false, false, false, false, true);
+      int notSelectable = monsterWith(test.world, 7, 0, false, false, false, true, false);
+
+      // D2MOO's Conviction row is SrvDo066 with aurafilter 0xA583: it does
+      // not carry IGNBO[B] or IGNPRIME, and SrvDo066 passes bCheckMonAuraFlag=0.
+      // Consequently bosses, Prime Evils, and noAura monsters are valid, while
+      // FINDISATT/FINDISSEL still reject the two corresponding MonStats2 rows.
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.CONVICTION, 1));
+      test.tick();
+      assertTrue(states(test.world, boss).hasState(StateId.CONVICTION));
+      assertTrue(states(test.world, primeEvil).hasState(StateId.CONVICTION));
+      assertTrue(states(test.world, noAura).hasState(StateId.CONVICTION));
+      assertFalse(states(test.world, notAttackable).hasState(StateId.CONVICTION));
+      assertFalse(states(test.world, notSelectable).hasState(StateId.CONVICTION));
+
+      // Holy Freeze is SrvDo081 and uses the same noAura bypass, but its
+      // callback adds the native coldeffect immunity gate after aurafilter.
+      test.auras.manager().deactivateAura(caster);
+      int coldImmune = monsterWith(test.world, 2.5f, 0, false, false, false, true, true);
+      MonStats.Entry coldRow = test.world.getMapper(Monster.class).get(coldImmune).monstats;
+      coldRow.coldeffect = new int[] {0, 0, 0};
+      int coldVulnerable = monsterWith(test.world, 5.5f, 0, true, false, false, true, true);
+      MonStats.Entry vulnerableRow = test.world.getMapper(Monster.class).get(coldVulnerable).monstats;
+      vulnerableRow.coldeffect = new int[] {-1, -1, -1};
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.HOLY_FREEZE, 1));
+      test.tick();
+      assertFalse(states(test.world, coldImmune).hasState(44),
+          "native Holy Freeze rejects monsters with non-negative coldeffect");
+      assertTrue(states(test.world, coldVulnerable).hasState(44),
+          "SrvDo081 still reaches a susceptible noAura monster");
     }
   }
 
@@ -515,6 +557,22 @@ class AuraEcsScenarioTest extends RiiabloTest {
   private static int monster(World world, float x, float y) {
     int id = unit(world, x, y);
     world.getMapper(Monster.class).create(id);
+    return id;
+  }
+
+  private static int monsterWith(World world, float x, float y, boolean noAura,
+      boolean boss, boolean primeEvil, boolean isAtt, boolean selectable) {
+    int id = monster(world, x, y);
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.noAura = noAura;
+    stats.boss = boss;
+    stats.primeevil = primeEvil;
+    stats.npc = false;
+    world.getMapper(Monster.class).get(id).monstats = stats;
+    MonStats2.Entry stats2 = new MonStats2.Entry();
+    stats2.isAtt = isAtt;
+    stats2.noSel = !selectable;
+    world.getMapper(Monster.class).get(id).monstats2 = stats2;
     return id;
   }
 

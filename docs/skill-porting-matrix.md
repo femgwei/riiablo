@@ -184,6 +184,13 @@
   self-only/targetless 分支；全清单运行通过。Holy Freeze、Conviction 已使用 deterministic
   hostile monster fixture 验证 target-state、source/skill、重连和跨区域撤销；怪物免疫、
   `noAura`、不可攻击目标等组合仍需独立过滤矩阵。
+- 2026-09-30 已补充 `AuraEcsScenarioTest.hostileAuraFilterMatrixMatchesD2MooBossPrimeNoAuraAndAttackabilityRules`。
+  该矩阵按 D2MOO `sub_6FD0FA00/sub_6FD0FE80` 锁定：Conviction（SrvDo066，
+  `bCheckMonAuraFlag=0`）命中 Boss、Prime Evil 与 `noAura` 怪物，但拒绝
+  `MonStats2.isAtt=false` 或 `noSel=true`；Holy Freeze（SrvDo081）同样不把
+  `noAura` 当作过滤条件，再额外按 `MonStats.coldeffect` 拒绝冷免疫目标。后续只需把
+  真实 MPQ 双客户端的过滤结果和 Aura 图标/动画观测接到同一清单，不应把 `noAura`
+  规则泛化到 SrvDo066/081。
 - 这是 riiablo 下一批最值得迁移 dark-magic 测试结构的职业之一，尤其是 aura 优先级和多人快照。
 
 ### Assassin
