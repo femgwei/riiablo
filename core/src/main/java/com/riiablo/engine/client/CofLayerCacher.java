@@ -178,6 +178,44 @@ public class CofLayerCacher extends IteratingSystem {
       cofs.updateAlpha(entityId, alteredLayers);
       cofs.updateTransform(entityId, alteredLayers);
     }
+    // Keep a compact presentation trace for doors.  Their gameplay state is
+    // authoritative in Object.mode, while the visual state is assembled from
+    // a COF plus one DCC/DC6 per layer; logging both sides makes a wrong frame
+    // or facing immediately distinguishable from a collision bug.
+    if (newCof && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      Objects.Entry base = object == null ? null : object.base;
+      if (base != null && base.IsDoor) {
+        CofReference reference = mCofReference.get(entityId);
+        byte mode = reference.mode;
+        if (mode != Engine.Object.MODE_OP && object.mode >= Engine.Object.MODE_NU
+            && object.mode <= Engine.Object.MODE_S5) {
+          mode = object.mode;
+        }
+        StringBuilder paths = new StringBuilder();
+        for (AssetDescriptor<? extends DC> descriptor : descriptors) {
+          if (descriptor != null) {
+            if (paths.length() > 0) paths.append('|');
+            paths.append(descriptor.fileName);
+          }
+        }
+        int startFrame = CofLayerLoader.objectAnimationStartFrame(
+            base, mode, animation.getNumFramesPerDir());
+        Gdx.app.log(TAG, String.format(
+            "[DOOR_PRESENTATION] entity=%d objectId=%d token=%s orientation=%d "
+                + "objectMode=%d cofMode=%d cof=%s directions=%d frames=%d "
+                + "start=%d animationDirection=%d animationFrame=%d animationMode=%s "
+                + "cycle=%s dcc=%s",
+            entityId, base.Id, base.Token, base.Orientation, object.mode, reference.mode,
+            reference.effectiveToken() + com.riiablo.engine.server.component.Class.Type.OBJ
+                .getMode(mode) + Engine.getWClass(reference.effectiveWClass()),
+            cof.getNumDirections(), cof.getNumFramesPerDir(), startFrame,
+            animation.getDirection(), animation.getFrame(), animation.getMode(),
+            base.CycleAnim != null && mode >= 0 && mode < base.CycleAnim.length
+                ? base.CycleAnim[mode] : false,
+            paths));
+      }
+    }
     if (DEBUG) Gdx.app.debug(TAG, "Remaining layers: " + Dirty.toString(flags));
     return flags;
   }
