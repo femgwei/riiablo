@@ -919,3 +919,19 @@ incarnation，并继续检查跨区域实体基线恢复。
 
 当前下一项：补真实 1.10f MPQ 双客户端 bow/Fire Arrow 弹药 gate，特别核对耗尽时的
   装备切换、恢复期间 observer 同步和重连快照；随后再审计 Amazon 剩余导弹/区域行为。
+
+### 2026-10-01 Amazon Fire Arrow 真实 MPQ 弹药 gate（本轮完成）
+
+- [x] 新增 `headlessAmazonBow`：真实 1.10f MPQ 双客户端使用 `sbw` + `aqv` 施放
+  `Fire Arrow(7)`，确认原生导弹在 owner/observer 两端出现。
+- [x] gate 锁定箭袋 `quantity 1 -> 0`、`BOWQ` 类型和可恢复物品保留；observer 断开后
+  重连，权威箭袋恢复为 `quantity=1,replenish=100`，未丢失或被错误删除。
+- [x] 发现 `item_replenish_quantity` 当前 D2S 写入路径不会持久化，因此 fixture 在
+  连接后的权威模拟线程注入该 stat；这只用于验证运行时恢复链，不宣称存档序列化已完成。
+- [ ] Fire Arrow 导弹命中当前 headless 目标的碰撞/伤害仍未通过；本轮只将导弹创建、
+  弹药消耗、保留、恢复和重连标为完成，伤害命中另列待审计项。
+- 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=7 -PamazonBowTimeout=6` 均通过。
+
+当前下一项：单独定位 Fire Arrow `missile=12/29` 的目标碰撞与伤害快照，确认
+SrvMissileA/B、方向和命中窗口后再补伤害门槛；随后覆盖其他 Amazon 导弹/区域技能。

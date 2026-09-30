@@ -343,6 +343,13 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - 普通箭袋耗尽移除行为未改变；真实 MPQ 双客户端 bow/Fire Arrow gate、装备切换和
   observer reconnect 仍标记为待验收，不能把本项提升为四层完成。
 
+### 2026-10-01 Amazon Fire Arrow 真实资源增量
+
+- `headlessAmazonBow` 已完成真实 MPQ 的 Fire Arrow 导弹共享、箭袋 `1->0`、可恢复
+  物品保留、恢复和 observer reconnect；测试桥接注入的 `item_replenish_quantity` 不
+  代表 D2S 序列化已完成。
+- Fire Arrow 目标命中/伤害仍是独立待审计项；当前 Amazon 弓技能不能标记为四层完成。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

@@ -279,6 +279,8 @@ public final class D2GSHeadlessClient {
         : config.requireAmazonMelee
         ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId,
             config.amazonMeleeWeaponCode)
+        : config.requireAmazonBow
+        ? createGeneratedAmazonBowSave(config.amazonBowSkillId)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.requireVineScenario
@@ -402,6 +404,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireAmazonMelee) {
       runAmazonMeleeDual(d2s, character);
+      return;
+    }
+    if (config.requireAmazonBow) {
+      runAmazonBowDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -1536,9 +1542,162 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /** Real 1.10f dual-client gate for an Amazon bow skill and its quiver. */
+  private void runAmazonBowDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AmazonBowPeer", 0x41424F57);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(2)[0];
+    try (Socket ownerSocket = owner.openSocket(); Socket peerSocket = peer.openSocket()) {
+      DataInputStream ownerInput = input(ownerSocket), peerInput = input(peerSocket);
+      OutputStream ownerOutput = output(ownerSocket), peerOutput = output(peerSocket);
+      send(ownerOutput, connectionPacket(character, d2s));
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      owner.awaitConnection(ownerInput, deadline());
+      peer.awaitConnection(peerInput, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 2, room)
+          || !D2GS.headlessMovePlayerToRoom(peer.playerId, 2, room)) {
+        throw new IOException("failed to stage Amazon bow fixture");
+      }
+      awaitAreaBaselines(owner, peer, ownerInput, peerInput);
+
+      int targetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+      if (targetId < 0) throw new IOException("failed to create Amazon bow target");
+      Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
+      Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
+      float initialLife = ownerTarget.life;
+      if (!D2GS.headlessSetMonsterDefense(targetId, 1)) {
+        throw new IOException("failed to lower Amazon bow target defense");
+      }
+      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, 6f)) {
+        throw new IOException("failed to place Amazon bow player");
+      }
+      if (!D2GS.headlessSetAmazonAmmoReplenish(owner.playerId, 100)) {
+        throw new IOException("failed to install in-memory replenishing quiver stat");
+      }
+      int[] ammoBefore = D2GS.headlessAmazonAmmoStats(owner.playerId);
+      if (!validAmazonAmmoStats(ammoBefore) || ammoBefore[0] != 1
+          || ammoBefore[1] <= 0 || ammoBefore[2] != 1) {
+        throw new IOException("invalid Amazon bow ammo before cast: "
+            + amazonAmmoStatsSummary(ammoBefore));
+      }
+
+      boolean damaged = false;
+      boolean ammoConsumed = false;
+      boolean sawMissile = false;
+      boolean fallback = false;
+      int missilesBefore = owner.playerMissiles.size();
+      long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      for (int attempt = 1; attempt <= config.attempts
+          && System.currentTimeMillis() < deadline && (!ammoConsumed || !sawMissile); attempt++) {
+        ownerTarget = owner.monsters.get(targetId);
+        if (ownerTarget == null || !ownerTarget.hasPosition) break;
+        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 3.5f, ownerTarget.y));
+        // Let the authoritative movement packet land before deriving the
+        // missile heading; melee gates can tolerate the old position, arrows
+        // cannot when the target is several tiles away.
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+        send(ownerOutput, owner.castPacket(config.amazonBowSkillId, targetId,
+            ownerTarget.x, ownerTarget.y));
+        log("amazon_bow_cast", "attempt=" + attempt + " skill="
+            + config.amazonBowSkillId + " target=" + targetId);
+        long attemptStarted = System.currentTimeMillis();
+        long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 2200L);
+        while (System.currentTimeMillis() < attemptDeadline && (!ammoConsumed || !sawMissile)) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          Snapshot current = owner.monsters.get(targetId);
+          Snapshot mirrored = peer.monsters.get(targetId);
+          if (current != null && current.hasVitals && mirrored != null && mirrored.hasVitals) {
+            damaged = current.life < initialLife && mirrored.life < initialLife;
+          }
+          int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
+          ammoConsumed = validAmazonAmmoStats(ammo) && ammo[0] == 0;
+          sawMissile |= owner.playerMissiles.size() > missilesBefore;
+          if (!fallback && System.currentTimeMillis() - attemptStarted >= 700L
+              && (!ammoConsumed || !sawMissile)) {
+            fallback = true;
+            boolean dispatched = D2GS.headlessDispatchAmazonMelee(
+                owner.playerId, config.amazonBowSkillId);
+            log("amazon_bow_animation_fallback", "skill="
+                + config.amazonBowSkillId + " dispatched=" + dispatched);
+          }
+        }
+      }
+      if (!ammoConsumed) {
+        throw new IllegalStateException("Amazon bow did not consume its quiver: before="
+            + amazonAmmoStatsSummary(ammoBefore)
+            + " after=" + amazonAmmoStatsSummary(D2GS.headlessAmazonAmmoStats(owner.playerId)));
+      }
+      if (!sawMissile) {
+        throw new IllegalStateException("Amazon bow did not create a shared missile: target="
+            + targetId + " missilesBefore=" + missilesBefore
+            + " missilesAfter=" + owner.playerMissiles.size());
+      }
+      log("amazon_bow_dual_pass", "skill=" + config.amazonBowSkillId
+          + " target=" + targetId + " initialLife=" + initialLife
+          + " targetDamageObserved=" + damaged
+          + " ammo=" + amazonAmmoStatsSummary(D2GS.headlessAmazonAmmoStats(owner.playerId))
+          + " animationFallback=" + fallback);
+
+      peerSocket.close();
+      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < disconnectDeadline) consumeOne(ownerInput, owner);
+      int[] reconnectAmmo = D2GS.headlessAmazonAmmoStats(owner.playerId);
+      if (!validAmazonAmmoStats(reconnectAmmo) || reconnectAmmo[2] != 1) {
+        throw new IOException("Amazon bow quiver disappeared before reconnect: "
+            + amazonAmmoStatsSummary(reconnectAmmo));
+      }
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
+          throw new IOException("Amazon bow observer reconnect could not return to room");
+        }
+        long reconnectBaselineDeadline = System.currentTimeMillis() + 5_000L;
+        while (reconnected.baselineInventoryRevision < 0L
+            && System.currentTimeMillis() < reconnectBaselineDeadline) {
+          consumeOne(reconnectInput, reconnected);
+        }
+        if (reconnected.baselineInventoryRevision < 0L) {
+          throw new IOException("Amazon bow observer reconnect did not receive an inventory baseline");
+        }
+        int[] restoredAmmo = D2GS.headlessAmazonAmmoStats(owner.playerId);
+        if (!sameAmazonAmmoStats(reconnectAmmo, restoredAmmo)) {
+          throw new IOException("Amazon bow quiver changed after observer reconnect: before="
+              + amazonAmmoStatsSummary(reconnectAmmo) + " after="
+              + amazonAmmoStatsSummary(restoredAmmo));
+        }
+        log("amazon_bow_reconnect_pass", "skill=" + config.amazonBowSkillId
+            + " target=" + targetId + " ammo=" + amazonAmmoStatsSummary(restoredAmmo)
+            + " stale=false");
+      }
+    }
+  }
+
   private static boolean validAmazonWeaponStats(int[] stats) {
     return stats != null && stats.length == 7 && stats[0] >= -1
         && stats[1] >= 0 && stats[2] >= stats[1];
+  }
+
+  private static boolean validAmazonAmmoStats(int[] stats) {
+    return stats != null && stats.length == 4 && stats[0] >= 0 && stats[1] >= 0;
+  }
+
+  private static boolean sameAmazonAmmoStats(int[] first, int[] second) {
+    return validAmazonAmmoStats(first) && validAmazonAmmoStats(second)
+        && java.util.Arrays.equals(first, second);
+  }
+
+  private static String amazonAmmoStatsSummary(int[] stats) {
+    return stats == null ? "null"
+        : "quantity=" + stats[0] + ",replenish=" + stats[1]
+            + ",bowq=" + stats[2] + ",xboq=" + stats[3];
   }
 
   private static boolean impaleResourceChanged(int[] before, int[] after) {
@@ -9520,6 +9679,66 @@ public final class D2GSHeadlessClient {
     return createGeneratedAmazonMeleeSave(skillId, "jav");
   }
 
+  /** Deterministic level-30 Amazon fixture for native bow/ammunition gates. */
+  private static byte[] createGeneratedAmazonBowSave(int skillId) {
+    CharacterClass classData = CharacterClass.AMAZON;
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "HeadAmaBow", Riiablo.AMAZON);
+    character.level = 30;
+    com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, Math.max(stats.dex, 100));
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 200);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 10_000);
+    base.put(Stat.maxmana, 10_000);
+    base.put(Stat.stamina, 10_000);
+    base.put(Stat.maxstamina, 10_000);
+    base.put(Stat.level, 30);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x41424F57; // "ABOW", stable ranged fixture.
+    character.initializeStartItems(stats);
+    character.getItems().unequipItem(BodyLoc.RARM);
+    character.getItems().unequipItem(BodyLoc.LARM);
+
+    Item bow = new Item();
+    bow.reset();
+    bow.setBase(Riiablo.files.weapons.get("sbw"));
+    if (bow.base == null) throw new IllegalArgumentException("native bow fixture unavailable");
+    bow.quality = Quality.NORMAL;
+    bow.attrs.reset();
+    character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(bow));
+
+    Item arrows = new Item();
+    arrows.reset();
+    arrows.setBase(Riiablo.files.misc.get("aqv"));
+    if (arrows.base == null) throw new IllegalArgumentException("native arrow fixture unavailable");
+    arrows.quality = Quality.NORMAL;
+    arrows.attrs.base().put(Stat.quantity, 1);
+    arrows.attrs.base().put(Stat.item_replenish_quantity, 100);
+    arrows.attrs.reset();
+    character.getItems().equipItem(BodyLoc.LARM, character.getItems().add(arrows));
+
+    seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
+    if (!character.setSkillLevel(skillId, 20)) {
+      throw new IllegalStateException("could not seed Amazon bow skill " + skillId);
+    }
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=HeadAmaBow class=amazon skill="
+        + skillId + " bow=sbw arrows=aqv quantity=1 replenish=100 level=30 bytes=" + data.length);
+    return data;
+  }
+
   private static byte[] createGeneratedAmazonMeleeSave(int skillId, String weaponCode) {
     CharacterClass classData = CharacterClass.AMAZON;
     CharData character = CharData.obtain().clear()
@@ -9983,6 +10202,8 @@ public final class D2GSHeadlessClient {
     String amazonMeleeWeaponCode = "jav";
     boolean amazonMeleeTargetDeath;
     boolean amazonMeleeExpectMiss;
+    boolean requireAmazonBow;
+    int amazonBowSkillId = SkillId.FIRE_ARROW;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -10061,6 +10282,8 @@ public final class D2GSHeadlessClient {
         else if ("--amazon-melee-weapon".equals(arg)) config.amazonMeleeWeaponCode = value(args, ++i, arg);
         else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
         else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
+        else if ("--require-amazon-bow".equals(arg)) config.requireAmazonBow = true;
+        else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
@@ -10115,6 +10338,9 @@ public final class D2GSHeadlessClient {
       if (config.requireAmazonMelee && !isAmazonMeleeWeapon(config.amazonMeleeWeaponCode)) {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
+      if (config.requireAmazonBow && config.amazonBowSkillId != SkillId.FIRE_ARROW) {
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7)");
+      }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
             + "Carrion Vine(231), or Solar Creeper(241)");
@@ -10150,6 +10376,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireAmazonMelee
+          && !config.requireAmazonBow
           && !config.requireVineScenario
           && !config.requirePaladinAura
           && !config.requireSummonReconnect
@@ -10180,6 +10407,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireAmazonMelee
+          && !config.requireAmazonBow
           && !config.requireVineScenario
           && !config.requirePaladinAura
           && !config.requireSummonReconnect

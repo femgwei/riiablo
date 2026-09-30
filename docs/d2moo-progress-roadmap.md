@@ -5864,3 +5864,12 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] `NativeAmazonAmmoReplenishTest` 覆盖装备槽保留、原生恢复间隔和恢复后重新选弹。
 - [ ] 真实 1.10f MPQ 双客户端 bow/Fire Arrow gate 尚未完成；需继续核对装备切换、
   observer 同步及重连快照。
+
+## 2026-10-01 Amazon Fire Arrow 真实 MPQ 弹药 gate
+
+- [x] `headlessAmazonBow` 通过真实双客户端连接、Fire Arrow 原生导弹创建/共享、
+  `BOWQ` 箭袋耗尽保留、stat-regeneration 恢复和 observer reconnect。
+- [x] 由于 `item_replenish_quantity` 尚未由当前 D2S writer 持久化，测试在连接后通过
+  权威模拟线程注入 stat；该限制已记录，不能视为存档序列化完成。
+- [ ] Fire Arrow 导弹对 headless 目标的命中/伤害仍未通过；需对照 D2MOO 的
+  `SrvMissileA/B`、方向和碰撞窗口单独修复与验收。

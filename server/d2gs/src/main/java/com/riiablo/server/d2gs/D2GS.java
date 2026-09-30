@@ -2498,6 +2498,70 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Reads the authoritative equipped bow-quiver counters for the ranged gate. */
+  static int[] headlessAmazonAmmoStats(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || playerId < 0) {
+      return null;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        if (player == null || player.data == null) return;
+        Item weapon = player.data.getItems().getEquippedRangedWeapon();
+        Item ammo = player.data.getItems().getEquippedAmmo(weapon);
+        if (ammo == null || ammo.attrs == null || ammo.attrs.base() == null) return;
+        result.set(new int[] {
+            statInt(ammo.attrs.base().get(com.riiablo.attributes.Stat.quantity)),
+            statInt(ammo.attrs.base().get(com.riiablo.attributes.Stat.item_replenish_quantity)),
+            ammo.type != null && ammo.type.is(com.riiablo.item.Type.BOWQ) ? 1 : 0,
+            ammo.type != null && ammo.type.is(com.riiablo.item.Type.XBOQ) ? 1 : 0
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+
+  /** Test-only native stat bridge for an in-memory replenishing quiver. */
+  static boolean headlessSetAmazonAmmoReplenish(int playerId, int rate) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || playerId < 0 || rate <= 0) {
+      return false;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        if (player == null || player.data == null) return;
+        Item weapon = player.data.getItems().getEquippedRangedWeapon();
+        Item ammo = player.data.getItems().getEquippedAmmo(weapon);
+        if (ammo == null || ammo.attrs == null || ammo.attrs.base() == null) return;
+        ammo.attrs.base().put(com.riiablo.attributes.Stat.item_replenish_quantity, rate);
+        ammo.attrs.reset();
+        updated.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Schedules deletion of a ground entity on the authoritative tick thread. */
   static boolean headlessDeleteGroundEntity(int entityId) {
     D2GS server = activeHeadlessInstance;

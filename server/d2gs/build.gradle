@@ -189,6 +189,21 @@ tasks.register('headlessAmazonMelee', JavaExec) {
   if (project.hasProperty('areaVerbose')) args '--verbose'
 }
 
+tasks.register('headlessAmazonBow', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Amazon bow skill, quiver and reconnect gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-amazon-bow', '--amazon-bow-skill',
+       (project.hasProperty('amazonBowSkill') ? project.property('amazonBowSkill').toString() : '7'),
+       '--test-timeout',
+       (project.hasProperty('amazonBowTimeout') ? project.property('amazonBowTimeout').toString() : '60')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessVine', JavaExec) {
   group = 'verification'
   description = 'Runs a real-MPQ Druid vine summon/variant/reconnect dual-client gate.'
