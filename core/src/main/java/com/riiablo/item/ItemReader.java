@@ -9,6 +9,7 @@ import com.riiablo.attributes.PropertiesGenerator;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListFlags;
 import com.riiablo.attributes.StatListReader;
+import com.riiablo.codec.excel.Misc;
 import com.riiablo.io.BitInput;
 import com.riiablo.io.ByteInput;
 import com.riiablo.logger.LogManager;
@@ -121,7 +122,35 @@ public class ItemReader {
     } else {
       assert item.attrs.isEmpty();
     }
+    readExtendedData(bits, item);
     readRandomData(bits, item);
+  }
+
+  private static void readExtendedData(BitInput bits, Item item) {
+    if (item.quality == Quality.NORMAL && item.typeEntry != null && item.typeEntry.Charm) {
+      item.charmData = bits.read15u(12);
+    }
+    if (hasMonsterId(item)) {
+      item.monsterId = bits.read15u(10);
+    } else if (hasSpellId(item)) {
+      item.hasSpellId = true;
+      item.spellId = bits.read7u(5);
+    }
+  }
+
+  private static boolean hasMonsterId(Item item) {
+    switch (item.code) {
+      case "hrt": case "brz": case "jaw": case "eyz": case "hrn":
+      case "tal": case "flg": case "fng": case "qll": case "sol":
+      case "scz": case "spe": case "qey": case "qhr": case "qbr":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private static boolean hasSpellId(Item item) {
+    return item.base instanceof Misc.Entry && ((Misc.Entry) item.base).pSpell > 0;
   }
 
   private static void readRandomData(BitInput bits, Item item) {
@@ -150,6 +179,7 @@ public class ItemReader {
         ? bits.readString(Riiablo.MAX_NAME_LENGTH + 1, 7, true)
         : null;
 
+    readExtendedData(bits, item);
     readRandomData(bits, item);
 
     readArmorClass(bits, item);

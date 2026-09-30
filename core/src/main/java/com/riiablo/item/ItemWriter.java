@@ -12,6 +12,7 @@ import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.SetItems;
 import com.riiablo.codec.excel.Sets;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.codec.excel.Misc;
 import com.riiablo.io.BitInput;
 import com.riiablo.io.BitOutput;
 import com.riiablo.io.ByteOutput;
@@ -97,7 +98,35 @@ public class ItemWriter {
       if (large) bits.writeRaw(quantity, 32);
       else bits.write15u(quantity, 12);
     }
+    writeExtendedData(item, bits);
     writeRandomData(item, bits);
+  }
+
+  private static void writeExtendedData(Item item, BitOutput bits) {
+    if (item.quality == Quality.NORMAL && item.typeEntry != null && item.typeEntry.Charm) {
+      bits.write15u(item.charmData, 12);
+    }
+    if (hasMonsterId(item)) {
+      bits.write15u(item.monsterId, 10);
+    } else if (hasSpellId(item)) {
+      int spell = item.hasSpellId ? item.spellId : ((Misc.Entry) item.base).pSpell - 1;
+      bits.write7u(spell, 5);
+    }
+  }
+
+  private static boolean hasMonsterId(Item item) {
+    switch (item.code) {
+      case "hrt": case "brz": case "jaw": case "eyz": case "hrn":
+      case "tal": case "flg": case "fng": case "qll": case "sol":
+      case "scz": case "spe": case "qey": case "qhr": case "qbr":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private static boolean hasSpellId(Item item) {
+    return item.base instanceof Misc.Entry && ((Misc.Entry) item.base).pSpell > 0;
   }
 
   private static void writeRandomData(Item item, BitOutput bits) {
@@ -127,6 +156,7 @@ public class ItemWriter {
       bits.writeString(item.inscription, 7, true);
     }
 
+    writeExtendedData(item, bits);
     writeRandomData(item, bits);
 
     writeArmorClass(item, bits);

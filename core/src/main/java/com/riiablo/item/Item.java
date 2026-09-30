@@ -140,6 +140,13 @@ public class Item {
   /** Native bHasRand flag and its optional four DWORD timestamp payload. */
   public boolean hasRandom;
   public int[]   randomTimestamp;
+  /** Native charm variant payload (12 bits on normal-quality charms). */
+  public int     charmData;
+  /** Native monster/body-part payload (10 bits). */
+  public int     monsterId;
+  /** Native spell payload (5 bits); value is the encoded save value. */
+  public int     spellId;
+  public boolean hasSpellId;
 
   public Attributes attrs;
   public int aggFlags;
@@ -197,6 +204,10 @@ public class Item {
     inscription   = null;
     hasRandom     = false;
     randomTimestamp = null;
+    charmData     = 0;
+    monsterId     = 0;
+    spellId       = 0;
+    hasSpellId    = false;
 
     attrs = null;
     aggFlags = 0;
