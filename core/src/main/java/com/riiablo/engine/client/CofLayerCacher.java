@@ -98,8 +98,17 @@ public class CofLayerCacher extends IteratingSystem {
           && object.mode <= com.riiablo.engine.Engine.Object.MODE_S5) {
         mode = object.mode;
       }
-      animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
-          object == null ? null : object.base, mode, animation.getNumFramesPerDir()));
+      if (object != null && object.base != null) {
+        int nativeFrameCount = CofLayerLoader.objectAnimationFrameCount(
+            object.base, mode, animation.getNumFramesPerDir());
+        animation.setFrameRange(0, nativeFrameCount);
+        animation.setMode(CofLayerLoader.objectAnimationMode(object.base, mode));
+        animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
+            object.base, mode, nativeFrameCount));
+      } else {
+        animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
+            null, mode, animation.getNumFramesPerDir()));
+      }
     }
     if (newCof && mSummonedPet.has(entityId)) {
       Gdx.app.log(TAG, String.format(
@@ -204,12 +213,14 @@ public class CofLayerCacher extends IteratingSystem {
         Gdx.app.log(TAG, String.format(
             "[DOOR_PRESENTATION] entity=%d objectId=%d token=%s orientation=%d "
                 + "objectMode=%d cofMode=%d cof=%s directions=%d frames=%d "
-                + "start=%d animationDirection=%d animationFrame=%d animationMode=%s "
+                + "nativeFrames=%d start=%d animationDirection=%d animationFrame=%d animationMode=%s "
                 + "cycle=%s dcc=%s",
             entityId, base.Id, base.Token, base.Orientation, object.mode, reference.mode,
             reference.effectiveToken() + com.riiablo.engine.server.component.Class.Type.OBJ
                 .getMode(mode) + Engine.getWClass(reference.effectiveWClass()),
-            cof.getNumDirections(), cof.getNumFramesPerDir(), startFrame,
+            cof.getNumDirections(), cof.getNumFramesPerDir(),
+            CofLayerLoader.objectAnimationFrameCount(base, mode, cof.getNumFramesPerDir()),
+            startFrame,
             animation.getDirection(), animation.getFrame(), animation.getMode(),
             base.CycleAnim != null && mode >= 0 && mode < base.CycleAnim.length
                 ? base.CycleAnim[mode] : false,

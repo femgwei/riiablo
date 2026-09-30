@@ -214,8 +214,19 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
   public void setClamp(int startIndex, int endIndex) {
     setMode(Mode.CLAMP);
+    setFrameRange(startIndex, endIndex);
+  }
+
+  /** Sets the native animation sub-range without changing LOOP/CLAMP mode. */
+  public void setFrameRange(int startIndex, int endIndex) {
+    Validate.isTrue(0 <= startIndex && startIndex < endIndex && endIndex <= numFrames,
+        "Invalid frame range: %s..%s (frames=%s)", startIndex, endIndex, numFrames);
     this.startIndex = startIndex;
     this.endIndex   = endIndex;
+    if (frame < startIndex || frame >= endIndex) {
+      frame = startIndex;
+      elapsedTime = 0;
+    }
   }
 
   public Mode getMode() {

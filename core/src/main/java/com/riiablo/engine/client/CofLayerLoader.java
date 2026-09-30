@@ -299,6 +299,14 @@ public class CofLayerLoader extends IteratingSystem {
     return Math.max(0, Math.min(frameCount - 1, base.Start[mode]));
   }
 
+  static int objectAnimationFrameCount(Objects.Entry base, byte mode, int cofFrameCount) {
+    if (cofFrameCount <= 0 || base == null || base.FrameCnt == null
+        || mode < 0 || mode >= base.FrameCnt.length || base.FrameCnt[mode] <= 0) {
+      return cofFrameCount;
+    }
+    return Math.min(cofFrameCount, base.FrameCnt[mode]);
+  }
+
   private Animation.Mode objectAnimationMode(int entityId, byte mode) {
     com.riiablo.engine.server.component.Object object = mObject.get(entityId);
     return objectAnimationMode(object == null ? null : object.base, mode);
