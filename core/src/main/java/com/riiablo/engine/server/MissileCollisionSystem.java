@@ -3357,26 +3357,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     boolean coldKillingHit = combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0;
     boolean frozen = states.hasState(StateId.FREEZE);
     boolean chilled = states.hasState(StateId.COLD);
-    boolean shatter = false;
-    int roll = -1;
-    if (coldKillingHit) {
-      if (frozen) {
-        // Frozen + cold damage is the guaranteed ice-death path.
-        shatter = true;
-      } else if (chilled) {
-        // Chill-only deaths retain a corpse most of the time. This is a
-        // death-time roll; any SHATTER marker produced while applying COLD
-        // is deliberately ignored because the lethal hit may be physical.
-        Monster monster = mMonster.get(targetId);
-        if (monster.rngState == 0) {
-          monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, targetId).state();
-        }
-        NativeRng rng = new NativeRng(monster.rngState);
-        roll = rng.nextInt(100);
-        monster.rngState = rng.state();
-        shatter = roll < 20;
-      }
-    }
+    boolean shatter = coldKillingHit && states.hasState(StateId.SHATTER);
+    // D2MOO's SUNITDMG_ApplyColdState owns the shatter roll while the cold
+    // packet is applied.  A freeze packet (Freezing/Ice Arrow) then calls
+    // ApplyFreezeState and must not manufacture a guaranteed SHATTER at the
+    // DeathEvent boundary.  Preserve the already-projected marker instead of
+    // rolling a second time here; this is what keeps ordinary Freezing Arrow
+    // lethal hits frozen but non-shattering when deadCol is unset.
 
     if (shatter) {
       mMonster.get(targetId).shatteredAtDeath = true;
@@ -3387,12 +3374,14 @@ public class MissileCollisionSystem extends IteratingSystem {
         state.needsSync = true;
       }
     } else {
+      // A physical/other-element lethal hit must not inherit a stale cold
+      // corpse marker from an earlier nonlethal chill.
       states.removeState(StateId.SHATTER);
     }
     log.info("[MONSTER_SHATTER] phase=death_roll entity={} missile={} coldHit={} "
-            + "frozen={} chilled={} roll={} shatter={}",
+            + "frozen={} chilled={} roll=preserved shatter={}",
         targetId, missile.missile != null ? missile.missile.Missile : "unknown",
-        coldKillingHit, frozen, chilled, roll, shatter);
+        coldKillingHit, frozen, chilled, shatter);
   }
 
   private static boolean isColdArrow(Missile missile) {

@@ -981,13 +981,13 @@ incarnation，并继续检查跨区域实体基线恢复。
   `srvMissile=freezingarrow`、`pSrvHitFunc=4`、`HitSubMissile=freezingarrowexp3`、
   `EType=cold`、`cold length=50`。
 - [x] owner/observer 共享父箭和 `freezingarrowexp3` 子导弹，Boss 目标生命从
-  `1,000,000` 降到 `999,625`，两端收到 `COLD(state=11)+SHATTER(state=107)`，且 gate
+  `1,000,000` 降到 `999,644`，两端收到 `COLD(state=11)+SHATTER(state=107)`，且 gate
   明确拒绝 `FREEZE(state=1)`；箭袋消耗/恢复和 observer reconnect 通过。
-- [ ] 普通怪物的致死冻结事件顺序仍未闭环：现有 `FreezingArrowDeathOrderTest` 在本基线
-  失败（`freezeAtDeath=false`），本轮没有修改该测试或覆盖其他 agent 的工作。
+- [x] 修复普通怪物致死冻结事件顺序：`resolveColdShatterDeath` 不再把冻结+冷伤害强制
+  转成 SHATTER；现在沿 D2MOO 规则保留 `FREEZE` 至 DeathEvent，SHATTER 只由冷包应用
+  时的 `ApplyColdState` 决定。`FreezingArrowDeathOrderTest` 已通过。
 - 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=31 -PamazonBowTimeout=15` 通过；core 定向测试命令已运行但因上述
   既有失败退出。
 
-当前下一项：先修复/核对普通怪物 Freezing Arrow 的致死状态时序，再继续 Immolation Arrow
-和 Multiple/Guided Arrow 的真实导弹门槛。
+当前下一项：继续 Immolation Arrow 和 Multiple/Guided Arrow 的真实导弹门槛。

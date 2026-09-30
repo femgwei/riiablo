@@ -5918,11 +5918,10 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   子导弹按冷/冻结包走范围 `SrvDmgHitHandler`；日志确认当前 1.10f 行的 `cold:40..50`
   和 `ColdLen=50`。
 - [x] 真实双客户端 gate 通过：父箭、`freezingarrowexp3` 子导弹共享，Boss 目标实际
-  掉血 `1,000,000 -> 999,625`；Boss 冻结例外投影为 `COLD(state=11)+SHATTER(state=107)`，
+  掉血 `1,000,000 -> 999,644`；Boss 冻结例外投影为 `COLD(state=11)+SHATTER(state=107)`，
   无 `FREEZE(state=1)`，箭袋与 observer reconnect 一致。
-- [ ] 普通怪物致死 freeze 的 DeathEvent 边界仍是已知失败项：
-  `FreezingArrowDeathOrderTest` 当前报告 `freezeAtDeath=false`。本轮仅加入 Boss gate，
-  未假装该普通目标路径已完成。
+- [x] 修复普通怪物致死 freeze 的 DeathEvent 边界：删除 `resolveColdShatterDeath` 对
+  “冻结+冷伤害”的强制 SHATTER；D2MOO 的 SHATTER 只在 `ApplyColdState` 冷包应用时按
+  `deadCol`/原生随机结果投影。`FreezingArrowDeathOrderTest` 与 Amazon 技能专项测试通过。
 
-下一项：修复普通怪物 Freezing Arrow 的致死冻结状态顺序，再审计 Immolation、Multiple
-和 Guided Arrow 的穿透/多目标行为。
+下一项：审计 Immolation、Multiple 和 Guided Arrow 的穿透/多目标行为。
