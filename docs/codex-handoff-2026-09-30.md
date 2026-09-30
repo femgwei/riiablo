@@ -4,9 +4,9 @@
 
 - 仓库：`F:/3rd_src/riiablo`
 - 分支：`master`
-- HEAD：`1ee5b654`（`test: add dual-client hostile aura filter gate`）
+- HEAD：`8e74cb7d`（`test: tighten Amazon elemental melee lifecycle gates`）
 - 远端：`origin/master` 已确认指向
-  `1ee5b6541cdb2159df332c50ca881af4f9684e9f`
+  `8e74cb7da35d9ce300ccfeeeef551e1237d6368e`
 - 最近关键提交：`e6e377b9` hostile Aura ECS 过滤矩阵，`df61e780` hostile Aura
   真实目标门槛，`bcba2e23` Paladin 20 Aura 清单。
 
@@ -35,7 +35,8 @@ riiablo 已建立 43/43 的行为对照入口或测试映射，但这只表示�
 Amazon 没有 dark-magic exact-ID 配置，必须单独按 D2MOO 1.10f 审计。优先处理 Amazon
 30 行 Native 数据和当前未提交的 Amazon 测试，补真实 MPQ 的 Jab/Impale/Fend/
 Power Strike/Charged Strike，以及失手、死亡、重连、弹药、耐久、ToHit/SrcDam/Calc
-边界。完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
+边界。当前 ECS 已锁定 Power/Charged 的成功命中耐久和关键帧前死亡清理；下一步是
+真实 MPQ 双客户端 `headlessAmazonMelee` 入口。完成后再继续 Assassin/Sorceress 尚未达到四层验收的技能，最后处理 Barbarian
 和 Druid 全技能树。
 
 ## 测试入口

@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-09-30（技能移植 Git 交接基线）
+更新时间：2026-10-01（Amazon elemental melee 生命周期回归）
 
 ## 唯一负责人
 
@@ -36,8 +36,8 @@
 
 #### 接手摘要（必须先读）
 
-- 当前分支为 `master`，HEAD 为 `1ee5b654`，已推送并确认
-  `origin/master=1ee5b6541cdb2159df332c50ca881af4f9684e9f`。
+- 当前分支为 `master`，HEAD 为 `8e74cb7d`，已推送并确认
+  `origin/master=8e74cb7da35d9ce300ccfeeeef551e1237d6368e`。
 - dark-magic manifest 当前有 43 个 exact-ID、16 个行为族；riiablo 已为 43/43
   建立行为对照入口或测试映射，但 dark-magic 自身条目仍全部是 `partial` evidence，
   因此不能把“已建立对照”写成“技能已完成”。
@@ -59,8 +59,9 @@
   只是末尾空行；其余四个文件的工作区 blob 与 HEAD 相同，属于 Git 状态/时间戳假脏。
   `game.log`、`skill-viewer-window*.png` 和 `tools/skill-viewer/logs/` 是之前技能查看器/调试
   运行生成的未跟踪产物，不属于技能实现提交。
-- 本轮 Paladin hostile 过滤提交为 `1ee5b654`；定向 ECS 测试和 Conviction/Holy Freeze
-  双客户端命令均已通过。Git credential helper 偶尔输出 lock 警告，但应以
+- 本轮 Amazon Power/Charged Strike 生命周期提交为 `8e74cb7d`：新增成功命中耐久、
+  关键帧前目标死亡和动画完成清理回归；Amazon 专项测试已通过。Git credential helper
+  偶尔输出 lock 警告，但应以
   `git ls-remote origin refs/heads/master` 返回的 SHA 为准。
 
 #### 接手后的唯一下一步
@@ -68,7 +69,8 @@
 先不要重复 Paladin 已通过的矩阵。读取 `docs/skill-porting-matrix.md` 的 Amazon 段，
 检查当前 Amazon 未提交修改的差异，在不触碰其他 agent 文件的前提下继续补：
 真实 MPQ Jab/Impale/Fend/Power Strike/Charged Strike、失手/死亡/重连、弹药/耐久和
-ToHit/SrcDam/Calc 边界；每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
+ToHit/SrcDam/Calc 边界；当前 ECS 耐久/死亡边界已完成，下一步建立真实 MPQ
+`headlessAmazonMelee` 双客户端入口。每轮实现改动专项测试、提交并推送 `origin/master`，纯文档或
 极小修改可不编译但仍需提交推送。
 
 #### 历史 Druid 记录（保留，当前接手优先级以“接手摘要”为准）
