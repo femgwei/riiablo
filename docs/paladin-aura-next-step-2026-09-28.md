@@ -169,3 +169,19 @@ D2MOO `sub_6FD10EC0` 按目标 state 查找已有 stat-list；如果来源 skill
 运行时代码。`AuraManagerPulseTest` 与 `AuraEcsScenarioTest` 专项测试均通过；
 下一项继续核对来源失去资格（死亡/离开范围/重连）时 ECS 状态层的短暂
 `perdelay + 1` 过期和重新选主语义。
+
+## 失去资格与重连快照回归（2026-09-30）
+
+继续补充 `AuraEcsScenarioTest` 的 ECS 证据：
+
+- `fanaticismExpiresAfterRangePulseAndUsesItsNativeAttackRateStat` 现在同时验证
+  目标离开范围后状态过期，以及重新进入范围后同一来源在下一次 native pulse
+  重新发布状态；
+- 新增 `paladinAuraSnapshotReplacesStaleSourceLayerAcrossReconnect`，用真实
+  `StateSerializer`/`StateP` 序列化路径验证重连快照保留 Paladin Aura 的
+  `sourceEntityId`、`skillId`、等级和持续时间，并清除 replica 中旧的来源层。
+
+来源死亡后的 winner 恢复已由
+`strongestSameSkillAuraWinsAndWeakerReturnsOnItsNextPulse` 覆盖；本轮没有修改
+运行时代码。这样 Paladin Aura 的 server-side 失去资格、重新选主和 client
+快照替换均有独立回归证据，仍需后续补充双客户端真实 MPQ 门槛验证。

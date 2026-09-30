@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
+import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -24,6 +25,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillId;
@@ -32,6 +34,8 @@ import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
+import com.riiablo.net.packet.d2gs.ComponentP;
+import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -395,6 +399,56 @@ class AuraEcsScenarioTest extends RiiabloTest {
       test.ticks(51);
       assertFalse(states(test.world, ally).hasState(StateId.FANATICISM));
       assertEquals(1f, velocity.stateSpeedMultiplier, 0.001f);
+
+      // Re-entering the aura range must allow the same source to publish a
+      // fresh layer on its next native pulse after the old one expires.
+      position(test.world, ally).set(3, 0);
+      test.ticks(50);
+      UnitState restored = states(test.world, ally).getState(StateId.FANATICISM);
+      assertNotNull(restored);
+      assertEquals(caster, restored.sourceEntityId);
+      assertEquals(SkillId.FANATICISM, restored.skillId);
+      assertEquals(1f, velocity.stateSpeedMultiplier, 0.001f);
+    }
+  }
+
+  @Test
+  void paladinAuraSnapshotReplacesStaleSourceLayerAcrossReconnect() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int ally = player(test.world, 3, 0);
+      party(test.parties, caster, ally);
+
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.MIGHT, 3));
+      test.tick();
+      UnitState authoritative = states(test.world, ally).getState(StateId.MIGHT);
+      assertNotNull(authoritative);
+      assertEquals(caster, authoritative.sourceEntityId);
+      assertEquals(SkillId.MIGHT, authoritative.skillId);
+
+      StateSerializer serializer = new StateSerializer();
+      FlatBufferBuilder builder = new FlatBufferBuilder(256);
+      int stateOffset = serializer.putData(builder,
+          test.world.getMapper(UnitStates.class).get(ally));
+      int types = EntitySync.createComponentTypeVector(builder,
+          new byte[] {ComponentP.StateP});
+      int components = EntitySync.createComponentVector(builder, new int[] {stateOffset});
+      int root = EntitySync.createEntitySync(builder, ally, 0, 0, types, components,
+          0L, 0L, 0L, 0L, 0L, -1);
+      builder.finish(root);
+
+      UnitStates replica = new UnitStates().init(ally);
+      replica.stateList.addStateLayer(StateId.MIGHT, 99, 1, 999, 9001);
+      serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, replica);
+
+      assertEquals(1, replica.stateList.size(),
+          "reconnect must replace the snapshot, not retain a stale source layer");
+      assertTrue(replica.stateList.getStateLayer(StateId.MIGHT, 999, 9001) == null);
+      UnitState restored = replica.stateList.getStateLayer(
+          StateId.MIGHT, caster, SkillId.MIGHT);
+      assertNotNull(restored);
+      assertEquals(3, restored.level);
+      assertEquals(authoritative.duration, restored.duration);
     }
   }
 
