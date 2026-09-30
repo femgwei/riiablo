@@ -136,7 +136,7 @@ public class ItemReader {
     }
     if (hasMonsterId(item)) {
       item.monsterId = bits.read15u(10);
-    } else if (hasSpellId(item)) {
+    } else if (item.quality == Quality.NORMAL && hasSpellId(item)) {
       item.hasSpellId = true;
       item.spellId = bits.read7u(5);
     }
@@ -287,8 +287,15 @@ public class ItemReader {
   }
 
   private static boolean readBook(BitInput bits, Item item) {
-    boolean isBook = item.type.is(Type.BOOK);
-    if (isBook) bits.skipBits(5); // TODO: Appears to be 0 for tbk and 1 for ibk
+    boolean isBook = item.quality == Quality.NORMAL && item.type.is(Type.BOOK);
+    // The native 1.10f book/scroll field is already consumed by
+    // readExtendedData when the Misc row has pSpell.  Only consume it here
+    // for legacy rows without that metadata; reading it twice shifts the
+    // quantity and property list by five bits (notably for tbk).
+    if (isBook && !item.hasSpellId) {
+      item.hasSpellId = true;
+      item.spellId = bits.read7u(5);
+    }
     return isBook;
   }
 

@@ -110,7 +110,7 @@ public class ItemWriter {
     }
     if (hasMonsterId(item)) {
       bits.write15u(item.monsterId, 10);
-    } else if (hasSpellId(item)) {
+    } else if (item.quality == Quality.NORMAL && hasSpellId(item)) {
       int spell = item.hasSpellId ? item.spellId : ((Misc.Entry) item.base).pSpell - 1;
       bits.write7u(spell, 5);
     }
@@ -297,8 +297,10 @@ public class ItemWriter {
   }
 
   private static boolean writeBook(Item item, BitOutput bits) {
-    boolean isBook = item.type.is(Type.BOOK);
-    if (isBook) bits.skipBits(5); /** @see ItemReader#readBook(BitInput, Item) */
+    boolean isBook = item.quality == Quality.NORMAL && item.type.is(Type.BOOK);
+    // writeExtendedData emits this field when pSpell is present.  Keep a
+    // five-bit fallback for legacy book rows that lack that metadata.
+    if (isBook && !hasSpellId(item)) bits.skipBits(5);
     return isBook;
   }
 
