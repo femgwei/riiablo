@@ -1544,6 +1544,33 @@ public final class D2GSHeadlessClient {
 
   /** Real 1.10f dual-client gate for an Amazon bow skill and its quiver. */
   private void runAmazonBowDual(byte[] d2s, CharacterHeader character) throws Exception {
+    Skills.Entry bowSkill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(config.amazonBowSkillId) : null;
+    if (bowSkill != null) {
+      com.riiablo.codec.excel.Missiles.Entry bowMissile = bowSkill.srvmissile != null
+          ? Riiablo.files.Missiles.get(bowSkill.srvmissile) : null;
+      log("amazon_bow_skill_row", "skill=" + bowSkill.skill + " srv=" + bowSkill.srvmissile
+          + " a=" + bowSkill.srvmissilea + " b=" + bowSkill.srvmissileb
+          + " c=" + bowSkill.srvmissilec + " d=" + bowSkill.srvmissiled
+          + " clt=" + bowSkill.cltmissilea + "/" + bowSkill.cltmissileb
+          + " missileRow=" + (bowMissile != null ? bowMissile.Missile : "null")
+          + " do=" + (bowMissile != null ? bowMissile.pSrvDoFunc : -1)
+          + " hit=" + (bowMissile != null ? bowMissile.pSrvHitFunc : -1)
+          + " dmg=" + (bowMissile != null ? bowMissile.pSrvDmgFunc : -1)
+          + " collision=" + (bowMissile != null && bowMissile.Collision)
+          + " collideType=" + (bowMissile != null ? bowMissile.CollideType : -1)
+          + " lastCollide=" + (bowMissile != null && bowMissile.LastCollide)
+          + " alwaysExplode=" + (bowMissile != null && bowMissile.AlwaysExplode)
+          + " range=" + (bowMissile != null ? bowMissile.Range : -1)
+          + " vel=" + (bowMissile != null ? bowMissile.Vel : -1)
+          + " dmg=" + (bowMissile != null ? bowMissile.MinDamage : -1)
+              + ".." + (bowMissile != null ? bowMissile.MaxDamage : -1)
+          + " e=" + (bowMissile != null ? bowMissile.EType : "")
+              + ":" + (bowMissile != null ? bowMissile.EMin : -1)
+              + ".." + (bowMissile != null ? bowMissile.Emax : -1)
+          + " hitSub=" + (bowMissile != null && bowMissile.HitSubMissile != null
+              ? java.util.Arrays.toString(bowMissile.HitSubMissile) : "null"));
+    }
     D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
     D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
     byte[] peerD2s = createGeneratedObserverSave("AmazonBowPeer", 0x41424F57);
@@ -1570,8 +1597,14 @@ public final class D2GSHeadlessClient {
       if (!D2GS.headlessSetMonsterDefense(targetId, 1)) {
         throw new IOException("failed to lower Amazon bow target defense");
       }
-      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, 6f)) {
+      if (!D2GS.headlessSetMonsterBowDefense(targetId)) {
+        throw new IOException("failed to clear Amazon bow target avoidance");
+      }
+      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, 2f)) {
         throw new IOException("failed to place Amazon bow player");
+      }
+      if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId)) {
+        throw new IOException("failed to install deterministic Amazon bow attack profile");
       }
       if (!D2GS.headlessSetAmazonAmmoReplenish(owner.playerId, 100)) {
         throw new IOException("failed to install in-memory replenishing quiver stat");
@@ -1589,11 +1622,20 @@ public final class D2GSHeadlessClient {
       boolean fallback = false;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      // Do not stop the gate as soon as the first missile is observed.  The
+      // projectile is authoritative, but its swept collision and damage
+      // packet are processed on a later simulation tick; ending the loop at
+      // creation time made targetDamageObserved a race rather than a real
+      // assertion.
       for (int attempt = 1; attempt <= config.attempts
-          && System.currentTimeMillis() < deadline && (!ammoConsumed || !sawMissile); attempt++) {
+          && System.currentTimeMillis() < deadline
+          && (!ammoConsumed || !sawMissile || !damaged); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
         if (ownerTarget == null || !ownerTarget.hasPosition) break;
-        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 3.5f, ownerTarget.y));
+        // Keep the short Fire Arrow segment inside the same open room tile;
+        // the native CollideType=3 map ray otherwise can legitimately stop
+        // the fixture's first arrow on a room boundary before unit collision.
+        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 1.5f, ownerTarget.y));
         // Let the authoritative movement packet land before deriving the
         // missile heading; melee gates can tolerate the old position, arrows
         // cannot when the target is several tiles away.
@@ -1604,20 +1646,34 @@ public final class D2GSHeadlessClient {
         log("amazon_bow_cast", "attempt=" + attempt + " skill="
             + config.amazonBowSkillId + " target=" + targetId);
         long attemptStarted = System.currentTimeMillis();
-        long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 2200L);
-        while (System.currentTimeMillis() < attemptDeadline && (!ammoConsumed || !sawMissile)) {
+        long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 5000L);
+        while (System.currentTimeMillis() < attemptDeadline
+            && (!ammoConsumed || !sawMissile || !damaged)) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
           Snapshot mirrored = peer.monsters.get(targetId);
           if (current != null && current.hasVitals && mirrored != null && mirrored.hasVitals) {
-            damaged = current.life < initialLife && mirrored.life < initialLife;
+            // The fixture raises the target to its durable 1,000,000 HP on
+            // the server thread after creation.  The first visibility frame
+            // can still carry the zombie's original HP, so absorb that one
+            // upward correction before evaluating the arrow's hit.
+            float correctedBaseline = Math.max(current.life, mirrored.life);
+            if (correctedBaseline > initialLife + 0.001f) {
+              initialLife = correctedBaseline;
+            } else {
+              damaged = current.life < initialLife && mirrored.life < initialLife;
+            }
           }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
-          ammoConsumed = validAmazonAmmoStats(ammo) && ammo[0] == 0;
+          // A replenishing quiver can return to quantity=1 before the next
+          // network tick is consumed.  Record the native decrement as an
+          // edge (quantity below the pre-cast value), then validate the
+          // authoritative item still exists during reconnect.
+          ammoConsumed |= validAmazonAmmoStats(ammo) && ammo[0] < ammoBefore[0];
           sawMissile |= owner.playerMissiles.size() > missilesBefore;
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 700L
-              && (!ammoConsumed || !sawMissile)) {
+              && (!ammoConsumed || !sawMissile || !damaged)) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonBowSkillId);
@@ -1639,6 +1695,8 @@ public final class D2GSHeadlessClient {
       log("amazon_bow_dual_pass", "skill=" + config.amazonBowSkillId
           + " target=" + targetId + " initialLife=" + initialLife
           + " targetDamageObserved=" + damaged
+          + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
+          + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
           + " ammo=" + amazonAmmoStatsSummary(D2GS.headlessAmazonAmmoStats(owner.playerId))
           + " animationFallback=" + fallback);
 
@@ -1698,6 +1756,15 @@ public final class D2GSHeadlessClient {
     return stats == null ? "null"
         : "quantity=" + stats[0] + ",replenish=" + stats[1]
             + ",bowq=" + stats[2] + ",xboq=" + stats[3];
+  }
+
+  private static String snapshotSummary(Snapshot snapshot) {
+    if (snapshot == null) return "null";
+    return String.format("life=%.2f,pos=%s,deleted=%s,dead=%s",
+        snapshot.life,
+        snapshot.hasPosition
+            ? String.format("(%.2f,%.2f)", snapshot.x, snapshot.y) : "?",
+        snapshot.deleted, snapshot.dead);
   }
 
   private static boolean impaleResourceChanged(int[] before, int[] after) {
@@ -9296,7 +9363,9 @@ public final class D2GSHeadlessClient {
         if (missile.ownerId() == playerId && playerMissiles.add(sync.entityId())) {
           log("missile", "entity=" + sync.entityId() + " owner=" + missile.ownerId()
               + " missile=" + missile.missileId() + " skill=" + missile.skillId()
-              + " damageLevel=" + missile.damageLevel());
+              + " damageLevel=" + missile.damageLevel()
+              + " pos=" + (area.hasPosition
+                  ? String.format("(%.2f,%.2f)", area.x, area.y) : "?"));
         }
       }
       return;

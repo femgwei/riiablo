@@ -348,7 +348,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `headlessAmazonBow` 已完成真实 MPQ 的 Fire Arrow 导弹共享、箭袋 `1->0`、可恢复
   物品保留、恢复和 observer reconnect；测试桥接注入的 `item_replenish_quantity` 不
   代表 D2S 序列化已完成。
-- Fire Arrow 目标命中/伤害仍是独立待审计项；当前 Amazon 弓技能不能标记为四层完成。
+- Fire Arrow 目标命中/伤害已通过：门槛等待实际模拟碰撞而非只看到导弹创建，并在
+  owner/observer 两端观察到目标生命下降；测试 fixture 显式提供弓的 ToHit/物理伤害，
+  不改变生产技能公式。D2S `item_replenish_quantity` 持久化限制仍单独保留。
 
 ## 参考入口
 

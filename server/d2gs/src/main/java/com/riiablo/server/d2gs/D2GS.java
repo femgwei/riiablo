@@ -3909,6 +3909,69 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: make the generated Amazon's bow attack deterministic. */
+  static boolean headlessSetPlayerBowAttackProfile(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(playerId);
+        if (wrapper != null && wrapper.attrs != null) {
+          // Fire Arrow's native SrvDmg01 still performs the physical-to-fire
+          // conversion, but the real bow must first pass the to-hit roll.
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.tohit, 100_000);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.mindamage, 20);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxdamage, 30);
+          wrapper.attrs.reset();
+          updated.set(true);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Test-only fixture: remove dodge/avoid/evade from the bow target. */
+  static boolean headlessSetMonsterBowDefense(int monsterId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.armorclass, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_dodge, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_avoid, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_evade, 0);
+          wrapper.attrs.reset();
+          updated.set(true);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Test-only fixture: keep wave observers out of monster target selection. */
   static boolean headlessSetPlayerTargetable(int playerId, boolean targetable) {
     D2GS server = activeHeadlessInstance;

@@ -5871,5 +5871,6 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `BOWQ` 箭袋耗尽保留、stat-regeneration 恢复和 observer reconnect。
 - [x] 由于 `item_replenish_quantity` 尚未由当前 D2S writer 持久化，测试在连接后通过
   权威模拟线程注入 stat；该限制已记录，不能视为存档序列化完成。
-- [ ] Fire Arrow 导弹对 headless 目标的命中/伤害仍未通过；需对照 D2MOO 的
-  `SrvMissileA/B`、方向和碰撞窗口单独修复与验收。
+- [x] Fire Arrow 导弹对 headless 目标的命中/伤害已通过双客户端真实门槛；门槛等待
+  实际目标生命下降，并保留 owner/observer/reconnect 校验。测试 fixture 仅注入
+  确定性的 ToHit/弓物理伤害，生产 Fire Arrow 的 D2MOO 转换路径未被改写。

@@ -933,5 +933,5 @@ incarnation，并继续检查跨区域实体基线恢复。
 - 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=7 -PamazonBowTimeout=6` 均通过。
 
-当前下一项：单独定位 Fire Arrow `missile=12/29` 的目标碰撞与伤害快照，确认
-SrvMissileA/B、方向和命中窗口后再补伤害门槛；随后覆盖其他 Amazon 导弹/区域技能。
+当前下一项：把已通过的 Fire Arrow 真实命中门槛推广到其他 Amazon 导弹/区域技能，
+并继续核对装备切换、D2S 弹药恢复属性持久化和其他职业的对照项。
