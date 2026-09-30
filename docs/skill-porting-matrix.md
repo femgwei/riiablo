@@ -385,6 +385,18 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - 该步只扩展验证入口并复用已有 `spawnAmazonExplosion`，没有用 dark-magic 行为覆盖
   用户已验证的 Amazon 生产公式；D2S 可恢复属性持久化限制仍独立保留。
 
+### 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate
+
+- `Freezing Arrow(31)` 按 D2MOO `SrvHit04` 和 `HitSubMissile[0]=freezingarrowexp3`
+  核对；爆炸子导弹携带冷伤害/冻结包，父箭与范围子导弹分别参与命中处理。
+- 真实 MPQ 双客户端 gate 已通过：`freezingarrow` 父箭和 `freezingarrowexp3` 子导弹在
+  owner/observer 共享，目标生命 `1,000,000 -> 999,625`，两端观察到 Boss 例外的
+  `COLD(state=11)+SHATTER(state=107)`，没有错误建立 `FREEZE(state=1)`；箭袋耗尽、恢复
+  和 observer reconnect 也通过。
+- 这是 Boss 目标门槛，符合 D2MOO `SUNITDMG_ApplyFreezeState` 对 Boss/Unique/Hireling
+  的冻结转冷规则；普通怪物的致死 freeze 时序仍由 `FreezingArrowDeathOrderTest` 覆盖，
+  当前该既有测试在本基线仍失败，未将其误标为完成。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

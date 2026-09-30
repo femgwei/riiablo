@@ -5911,3 +5911,18 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 
 下一项：继续 Freezing/Immolation/Multiple/Guided Arrow 的 D2MOO 行为与多目标/穿透
 门槛，再按职业顺序处理其他技能对照项。
+
+## 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate
+
+- [x] D2MOO 数据/代码核对：`SrvHit04` 从 `HitSubMissile[]` 创建 `freezingarrowexp3`，
+  子导弹按冷/冻结包走范围 `SrvDmgHitHandler`；日志确认当前 1.10f 行的 `cold:40..50`
+  和 `ColdLen=50`。
+- [x] 真实双客户端 gate 通过：父箭、`freezingarrowexp3` 子导弹共享，Boss 目标实际
+  掉血 `1,000,000 -> 999,625`；Boss 冻结例外投影为 `COLD(state=11)+SHATTER(state=107)`，
+  无 `FREEZE(state=1)`，箭袋与 observer reconnect 一致。
+- [ ] 普通怪物致死 freeze 的 DeathEvent 边界仍是已知失败项：
+  `FreezingArrowDeathOrderTest` 当前报告 `freezeAtDeath=false`。本轮仅加入 Boss gate，
+  未假装该普通目标路径已完成。
+
+下一项：修复普通怪物 Freezing Arrow 的致死冻结状态顺序，再审计 Immolation、Multiple
+和 Guided Arrow 的穿透/多目标行为。

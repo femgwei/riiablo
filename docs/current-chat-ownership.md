@@ -974,3 +974,20 @@ incarnation，并继续检查跨区域实体基线恢复。
 
 当前下一项：继续按矩阵核对 Amazon 其余导弹（Freezing/Immolation/Multiple/Guided）及
 穿透、爆炸半径和多目标伤害，再转入其他职业的 dark-magic 对照项。
+
+### 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate（本轮完成）
+
+- [x] `headlessAmazonBow -PamazonBowSkill=31` 接受 `Freezing Arrow(31)`，真实日志确认
+  `srvMissile=freezingarrow`、`pSrvHitFunc=4`、`HitSubMissile=freezingarrowexp3`、
+  `EType=cold`、`cold length=50`。
+- [x] owner/observer 共享父箭和 `freezingarrowexp3` 子导弹，Boss 目标生命从
+  `1,000,000` 降到 `999,625`，两端收到 `COLD(state=11)+SHATTER(state=107)`，且 gate
+  明确拒绝 `FREEZE(state=1)`；箭袋消耗/恢复和 observer reconnect 通过。
+- [ ] 普通怪物的致死冻结事件顺序仍未闭环：现有 `FreezingArrowDeathOrderTest` 在本基线
+  失败（`freezeAtDeath=false`），本轮没有修改该测试或覆盖其他 agent 的工作。
+- 验证：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=31 -PamazonBowTimeout=15` 通过；core 定向测试命令已运行但因上述
+  既有失败退出。
+
+当前下一项：先修复/核对普通怪物 Freezing Arrow 的致死状态时序，再继续 Immolation Arrow
+和 Multiple/Guided Arrow 的真实导弹门槛。

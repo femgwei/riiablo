@@ -1622,6 +1622,7 @@ public final class D2GSHeadlessClient {
       boolean ammoConsumed = false;
       boolean sawMissile = false;
       boolean sawColdState = false;
+      boolean sawFreezeState = false;
       boolean sawExplosionChild = false;
       boolean sawExplosionChildShared = false;
       boolean fallback = false;
@@ -1674,6 +1675,12 @@ public final class D2GSHeadlessClient {
                     && hasState(peer, targetId,
                     com.riiablo.engine.server.state.StateId.COLD);
               }
+              if (Config.expectsAmazonBowFreezeState(config.amazonBowSkillId)) {
+                sawFreezeState = hasState(owner, targetId,
+                    com.riiablo.engine.server.state.StateId.FREEZE)
+                    && hasState(peer, targetId,
+                    com.riiablo.engine.server.state.StateId.FREEZE);
+              }
             }
           }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
@@ -1683,7 +1690,8 @@ public final class D2GSHeadlessClient {
           // authoritative item still exists during reconnect.
           ammoConsumed |= validAmazonAmmoStats(ammo) && ammo[0] < ammoBefore[0];
           sawMissile |= owner.playerMissiles.size() > missilesBefore;
-          if (config.amazonBowSkillId == SkillId.EXPLODING_ARROW) {
+          if (config.amazonBowSkillId == SkillId.EXPLODING_ARROW
+              || config.amazonBowSkillId == SkillId.FREEZING_ARROW) {
             sawExplosionChild |= hasAmazonExplosionChild(owner);
             sawExplosionChildShared |= hasSharedAmazonExplosionChild(owner, peer);
           }
@@ -1707,12 +1715,16 @@ public final class D2GSHeadlessClient {
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
       }
-      if (config.amazonBowSkillId == SkillId.EXPLODING_ARROW && !sawExplosionChild) {
-        throw new IllegalStateException("Exploding Arrow did not create its HitSubMissile child: target="
+      if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
+          || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChild) {
+        throw new IllegalStateException("Amazon elemental arrow did not create its HitSubMissile child: skill="
+            + config.amazonBowSkillId + " target="
             + targetId + " ownerMissiles=" + owner.playerMissiles.size());
       }
-      if (config.amazonBowSkillId == SkillId.EXPLODING_ARROW && !sawExplosionChildShared) {
-        throw new IllegalStateException("Exploding Arrow HitSubMissile was not shared by owner/observer: target="
+      if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
+          || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChildShared) {
+        throw new IllegalStateException("Amazon elemental arrow HitSubMissile was not shared by owner/observer: skill="
+            + config.amazonBowSkillId + " target="
             + targetId + " ownerMissiles=" + owner.playerMissiles.size()
             + " observerMissiles=" + peer.playerMissiles.size());
       }
@@ -1726,10 +1738,22 @@ public final class D2GSHeadlessClient {
             + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
             + " peerStates=" + peer.entityStateIds.get(targetId));
       }
-      if (config.amazonBowSkillId == SkillId.ICE_ARROW
+      if ((config.amazonBowSkillId == SkillId.ICE_ARROW
+          || config.amazonBowSkillId == SkillId.FREEZING_ARROW)
           && (hasState(owner, targetId, com.riiablo.engine.server.state.StateId.FREEZE)
               || hasState(peer, targetId, com.riiablo.engine.server.state.StateId.FREEZE))) {
-        throw new IllegalStateException("Ice Arrow incorrectly applied FREEZE to the boss fixture: target="
+        throw new IllegalStateException("Amazon freeze arrow incorrectly applied FREEZE to the boss fixture: skill="
+            + config.amazonBowSkillId + " target="
+            + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
+            + " peerStates=" + peer.entityStateIds.get(targetId));
+      }
+      if (Config.expectsAmazonBowFreezeState(config.amazonBowSkillId) && !sawFreezeState) {
+        log("amazon_bow_state_debug", "skill=" + config.amazonBowSkillId
+            + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
+            + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
+            + " ownerStates=" + owner.entityStateIds.get(targetId)
+            + " peerStates=" + peer.entityStateIds.get(targetId));
+        throw new IllegalStateException("Freezing Arrow did not apply FREEZE state on both clients: target="
             + targetId + " ownerStates=" + owner.entityStateIds.get(targetId)
             + " peerStates=" + peer.entityStateIds.get(targetId));
       }
@@ -1737,6 +1761,7 @@ public final class D2GSHeadlessClient {
           + " target=" + targetId + " initialLife=" + initialLife
           + " targetDamageObserved=" + damaged
           + " explosionChild=" + sawExplosionChildShared
+          + " freezeState=" + sawFreezeState
           + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
           + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
           + " ammo=" + amazonAmmoStatsSummary(D2GS.headlessAmazonAmmoStats(owner.playerId))
@@ -1791,8 +1816,10 @@ public final class D2GSHeadlessClient {
     com.riiablo.codec.excel.Missiles.Entry exp = Riiablo.files.Missiles.get("explodingarrowexp");
     for (AreaMissile missile : client.areaMissiles.values()) {
       if (missile == null || !missile.everActive) continue;
+      com.riiablo.codec.excel.Missiles.Entry exp3 = Riiablo.files.Missiles.get("freezingarrowexp3");
       if (exp2 != null && missile.missileId == exp2.Id) return true;
       if (exp != null && missile.missileId == exp.Id) return true;
+      if (exp3 != null && missile.missileId == exp3.Id) return true;
     }
     return false;
   }
@@ -1803,13 +1830,15 @@ public final class D2GSHeadlessClient {
         || Riiablo.files.Missiles == null) return false;
     com.riiablo.codec.excel.Missiles.Entry exp2 = Riiablo.files.Missiles.get("explodingarrowexp2");
     com.riiablo.codec.excel.Missiles.Entry exp = Riiablo.files.Missiles.get("explodingarrowexp");
+    com.riiablo.codec.excel.Missiles.Entry exp3 = Riiablo.files.Missiles.get("freezingarrowexp3");
     for (Integer entityId : owner.areaMissiles.keySet()) {
       AreaMissile first = owner.areaMissiles.get(entityId);
       AreaMissile second = observer.areaMissiles.get(entityId);
       if (first == null || second == null || !first.everActive || !second.everActive) continue;
       if (first.missileId != second.missileId) continue;
       if ((exp2 != null && first.missileId == exp2.Id)
-          || (exp != null && first.missileId == exp.Id)) return true;
+          || (exp != null && first.missileId == exp.Id)
+          || (exp3 != null && first.missileId == exp3.Id)) return true;
     }
     return false;
   }
@@ -10479,7 +10508,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
       if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
-        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), or Ice Arrow(21)");
+        throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), or Ice Arrow(21)");
       }
       if (config.requireVineScenario && !isVineSkill(config.vineSkillId)) {
         throw new IllegalArgumentException("--vine-skill must be Poison Creeper(222), "
@@ -10575,11 +10604,20 @@ public final class D2GSHeadlessClient {
 
     private static boolean isAmazonBowSkill(int skillId) {
       return skillId == SkillId.FIRE_ARROW || skillId == SkillId.COLD_ARROW
-          || skillId == SkillId.ICE_ARROW || skillId == SkillId.EXPLODING_ARROW;
+          || skillId == SkillId.ICE_ARROW || skillId == SkillId.EXPLODING_ARROW
+          || skillId == SkillId.FREEZING_ARROW;
     }
 
     private static boolean expectsAmazonBowColdState(int skillId) {
-      return skillId == SkillId.COLD_ARROW || skillId == SkillId.ICE_ARROW;
+      return skillId == SkillId.COLD_ARROW || skillId == SkillId.ICE_ARROW
+          || skillId == SkillId.FREEZING_ARROW;
+    }
+
+    private static boolean expectsAmazonBowFreezeState(int skillId) {
+      // The shared bow fixture marks its durable target as a Boss so the same
+      // gate can exercise D2MOO's freeze-to-cold exception.  An ordinary
+      // monster freeze gate remains covered by the core FreezingArrow tests.
+      return false;
     }
 
     private static boolean isAmazonMeleeWeapon(String code) {
