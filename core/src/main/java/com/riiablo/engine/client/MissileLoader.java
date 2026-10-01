@@ -41,16 +41,32 @@ public class MissileLoader extends IteratingSystem {
       celFile.loadDirection(0);
       com.badlogic.gdx.graphics.Pixmap pixmap = celFile.getPixmap(0, 0);
       if (pixmap != null) {
-        int nonZero = 0;
+        int firstPixel = pixmap.getPixel(0, 0);
+        int distinct = 0;
+        int minLow = 255;
+        int maxLow = 0;
+        int minHigh = 255;
+        int maxHigh = 0;
+        int previous = Integer.MIN_VALUE;
         for (int py = 0; py < pixmap.getHeight(); py++) {
           for (int px = 0; px < pixmap.getWidth(); px++) {
-            if (pixmap.getPixel(px, py) != 0) nonZero++;
+            int pixel = pixmap.getPixel(px, py);
+            int low = pixel & 0xff;
+            int high = pixel >>> 24;
+            minLow = Math.min(minLow, low);
+            maxLow = Math.max(maxLow, low);
+            minHigh = Math.min(minHigh, high);
+            maxHigh = Math.max(maxHigh, high);
+            if (pixel != previous) distinct++;
+            previous = pixel;
           }
         }
         com.badlogic.gdx.graphics.g2d.TextureRegion region = celFile.getTexture(0, 0);
         Gdx.app.debug("MissileLoader", String.format(
-            "[MISSILE_DCC] entity=%d size=%dx%d nonZero=%d texture=%s",
-            entityId, pixmap.getWidth(), pixmap.getHeight(), nonZero,
+            "[MISSILE_DCC] entity=%d size=%dx%d first=0x%08x distinct=%d "
+                + "low=%d..%d high=%d..%d texture=%s",
+            entityId, pixmap.getWidth(), pixmap.getHeight(), firstPixel, distinct,
+            minLow, maxLow, minHigh, maxHigh,
             region != null ? region.getTexture().getTextureObjectHandle() : "null"));
       }
     }
