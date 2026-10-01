@@ -6043,5 +6043,11 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 不会重复命中同一目标，而同一 lane 的跨帧重复接触仍由 per-projectile 集合拦截。该测试
 只锁定 D2MOO 的跨导弹命中事务语义，不替代尚不稳定的真实动态多目标地图夹具。
 
+本轮尝试扩展 Amazon `Lightning Bolt(20)` 真实双客户端 gate，并按 D2MOO
+`MISSMODE_SrvDmg12_LightningJavelin` 核对 `lightningjavelin` 导弹及其物理转闪电路径。
+两次运行均能创建权威导弹（runtime missile id 205），但在目标防御降为 1 时仍未观察到
+双方目标掉血；因此该 gate 明确保持未完成，未修改生产碰撞、ToHit 或伤害公式。后续应先
+单独诊断 `lightningjavelin` 的 swept collision/命中判定/伤害快照，再决定是否加入真实门槛。
+
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。
