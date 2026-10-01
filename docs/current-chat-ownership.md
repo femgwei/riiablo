@@ -1110,7 +1110,20 @@ incarnation，并继续检查跨区域实体基线恢复。
   fan lane/目标排序夹具，不得将“两目标掉血”降级为 Pierce 成功。
 - 本轮新增生产只读桥接：`MissileCollisionSystem.headlessPierceState` 与
   `D2GS.headlessAmazonPierceState`；仅服务 headless gate，不改变生产伤害/概率公式。
+- `headlessPierceState` 末字段现在明确表示该同一导弹命中第二目标时
+  `pierceEnabled` 是否为真；因此 Multiple Shot 的“两个目标分别掉血”仍不能替代同一
+  导弹 Pierce 证据。
 
 验证命令：
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
 -PamazonBowPierceGate=true --no-daemon`。
+
+### 2026-10-01 Amazon 不可恢复箭袋耗尽 gate（本轮完成）
+
+- [x] 新增 `-PamazonBowAmmoGate=true`，使用真实 1.10f MPQ Fire Arrow、`quantity=1`
+  且 `item_replenish_quantity=0` 的 `BOWQ` 箭袋；首发命中后箭袋被移除，空箭袋重试不
+  创建导弹、不继续掉血。
+- [x] gate 在第二次施法前等待权威 Actioneer 的首发动画序列结束，避免延迟 keyframe
+  被误计入重试；observer 断开并重连后权威箭袋仍为空。
+- 验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=7
+  -PamazonBowTimeout=15 -PamazonBowAmmoGate=true --no-daemon`。

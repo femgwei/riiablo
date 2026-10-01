@@ -5927,6 +5927,19 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   实际目标生命下降，并保留 owner/observer/reconnect 校验。测试 fixture 仅注入
   确定性的 ToHit/弓物理伤害，生产 Fire Arrow 的 D2MOO 转换路径未被改写。
 
+## 2026-10-01 Amazon 不可恢复箭袋耗尽拒绝 gate
+
+- [x] 新增 `-PamazonBowAmmoGate=true`：真实 MPQ 双客户端以 `quantity=1,
+  item_replenish_quantity=0` 的 `BOWQ` fixture 施放 Fire Arrow，确认首发实际命中并
+  移除箭袋，第二次施法不再创建新导弹或继续降低 owner/observer 目标生命。
+- [x] gate 还验证权威箭袋在 observer 断开及重连后仍为空；首发动画的延迟 keyframe
+  会先由测试桥接等待完成，避免把同一施法的迟到导弹误判为第二次施法。
+- [x] 本项只覆盖运行时空弹药拒绝；可恢复箭袋的 `quantity=0` 保留与恢复路径仍由前述
+  `item_replenish_quantity` gate 覆盖，D2S writer 属性持久化仍是独立限制项。
+
+验证命令：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=7
+-PamazonBowTimeout=15 -PamazonBowAmmoGate=true --no-daemon`。
+
 ## 2026-10-01 Amazon Cold Arrow 真实命中与减速 gate
 
 - [x] `headlessAmazonBow` 泛化接受 `Cold Arrow(11)`；真实 1.10f MPQ 双客户端确认

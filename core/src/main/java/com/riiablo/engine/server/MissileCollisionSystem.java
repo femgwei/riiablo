@@ -145,6 +145,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   private volatile int headlessPierceFirstTarget = Engine.INVALID_ENTITY;
   private volatile int headlessPierceSecondTarget = Engine.INVALID_ENTITY;
   private volatile int headlessPiercePairCount;
+  private volatile boolean headlessPiercePairWasEnabled;
   
   @Override
   protected void process(int entityId) {
@@ -1666,7 +1667,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed);
       boolean damageHit = combat.hit && !combat.blocked;
-      if (damageHit && missile.pierceEnabled && missile.hitTargets.size >= 2) {
+      if (damageHit && missile.hitTargets.size >= 2) {
         int firstTarget = Engine.INVALID_ENTITY;
         for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = missile.hitTargets.iterator();
             it.hasNext;) {
@@ -1682,6 +1683,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           headlessPierceMissile = missileId;
           headlessPierceFirstTarget = firstTarget;
           headlessPierceSecondTarget = targetId;
+          headlessPiercePairWasEnabled = missile.pierceEnabled;
           headlessPiercePairCount++;
         }
       }
@@ -3329,11 +3331,11 @@ public class MissileCollisionSystem extends IteratingSystem {
   public int[] headlessPierceState(int ownerId, int skillId) {
     if (headlessPierceOwner != ownerId || headlessPierceSkill != skillId) {
       return new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
-          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, 0};
+          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, 0, 0};
     }
     return new int[] {headlessPiercePairCount, headlessPierceMissile,
         headlessPierceFirstTarget, headlessPierceSecondTarget, headlessPierceSkill,
-        headlessPierceOwner};
+        headlessPierceOwner, headlessPiercePairWasEnabled ? 1 : 0};
   }
 
   /** Native AuraFilter ordering: nearest eligible unit wins each split slot. */

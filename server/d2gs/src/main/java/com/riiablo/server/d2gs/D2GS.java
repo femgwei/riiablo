@@ -2658,7 +2658,7 @@ public class D2GS extends ApplicationAdapter {
   /** Test-only native stat bridge for an in-memory replenishing quiver. */
   static boolean headlessSetAmazonAmmoReplenish(int playerId, int rate) {
     D2GS server = activeHeadlessInstance;
-    if (server == null || server.world == null || Gdx.app == null || playerId < 0 || rate <= 0) {
+    if (server == null || server.world == null || Gdx.app == null || playerId < 0 || rate < 0) {
       return false;
     }
     java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
@@ -3003,6 +3003,32 @@ public class D2GS extends ApplicationAdapter {
     });
     try {
       return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && dispatched.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Test-only read of the authoritative animation lifecycle for a player cast. */
+  static boolean headlessAmazonCastActive(int playerId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || playerId < 0) {
+      return false;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean active =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.Casting casting = server.world.getMapper(
+            com.riiablo.engine.server.component.Casting.class).get(playerId);
+        active.set(casting != null && (skillId < 0 || casting.skillId == skillId));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && active.get();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
@@ -5514,12 +5540,14 @@ public class D2GS extends ApplicationAdapter {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null) {
       return new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
-          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
+          0, 0, 0, 0};
     }
     com.riiablo.engine.server.MissileCollisionSystem collisions = server.world
         .getSystem(com.riiablo.engine.server.MissileCollisionSystem.class);
     return collisions == null ? new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
-        Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY}
+        Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
+        0, 0, 0, 0}
         : collisions.headlessPierceState(ownerId, skillId);
   }
 

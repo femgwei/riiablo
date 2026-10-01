@@ -233,6 +233,10 @@ tasks.register('headlessAmazonBow', JavaExec) {
       && project.property('amazonBowPierceGate').toString().toBoolean()) {
     args '--amazon-bow-pierce-gate'
   }
+  if (project.hasProperty('amazonBowAmmoGate')
+      && project.property('amazonBowAmmoGate').toString().toBoolean()) {
+    args '--amazon-bow-ammo-gate'
+  }
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
