@@ -44,6 +44,15 @@ class MissileNativePolicyTest {
     assertTrue(MissileCollisionSystem.hasNativeCollision(impact));
     assertTrue(MissileCollisionSystem.collidesKill(impact));
     assertTrue(MissileCollisionSystem.hasNativeCollision(new Missile()));
+
+    // Multiple Shot/Strafe's 1.10f arrow rows intentionally leave Collision=0
+    // but carry SrvDoFunc=1; the native server still sends them through the
+    // swept unit-collision path.
+    Missile amazonVolley = new Missile();
+    amazonVolley.missile = new Missiles.Entry();
+    amazonVolley.missile.Collision = false;
+    amazonVolley.missile.pSrvDoFunc = 1;
+    assertTrue(MissileCollisionSystem.hasNativeCollision(amazonVolley));
   }
 
   @Test
@@ -84,6 +93,8 @@ class MissileNativePolicyTest {
     assertEquals(0, MissileCollisionSystem.nativeMapCollisionMask(0));
     assertEquals(0, MissileCollisionSystem.nativeMapCollisionMask(4));
     assertEquals(0, MissileCollisionSystem.nativeMapCollisionMask(7));
+    assertEquals(DT1.Tile.FLAG_BLOCK_JUMP,
+        MissileCollisionSystem.nativeMapCollisionMask(3));
     assertEquals(DT1.Tile.FLAG_BLOCK_JUMP,
         MissileCollisionSystem.nativeMapCollisionMask(6));
     assertEquals(DT1.Tile.FLAG_BLOCK_JUMP | DT1.Tile.FLAG_BLOCK_WALK,

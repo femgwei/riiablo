@@ -435,6 +435,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   用 D2MOO 的整数 caster→target delta 和垂直 lane halving 锁定斜向中心/外侧箭方向；
   `MissileNativePolicyTest` 同时确认跨导弹共享命中集合不会重复命中同一目标。真实动态
   多目标 gate 仍待稳定夹具，不将单位重定位实验计入完成度。
+- `MissileNativePolicyTest` 另锁定 1.10f Amazon 箭行的 `Collision=false + SrvDoFunc=1`
+  仍必须进入 swept unit collision，以及 `CollideType=3` 使用 missile-barrier mask；
+  Lightning Fury 墙体 gate 复跑通过，墙后目标未被选中且未掉血。
 
 ### 2026-10-01 Amazon Multiple Shot / Strafe 对照完成
 

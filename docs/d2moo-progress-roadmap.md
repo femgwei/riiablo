@@ -6032,7 +6032,9 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 
 Multiple Shot/Strafe 的下一步先落在纯 ECS 证据：`ServerSkillSystemTest` 已锁定
 D2MOO `SrvDo008` 斜向整数 lane 方向，`MissileNativePolicyTest` 已锁定跨导弹共享命中
-集合的去重语义；真实多目标、墙碰撞和旧客户端动画门槛仍需独立稳定夹具。
+集合的去重语义，并锁定 Amazon 箭行 `Collision=false + SrvDoFunc=1` 仍走 swept
+unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙体 gate
+复跑通过。真实多目标和旧客户端动画门槛仍需独立稳定夹具。
 
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。
