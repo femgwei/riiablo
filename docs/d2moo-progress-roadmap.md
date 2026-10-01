@@ -6009,6 +6009,11 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   给每枚权威 Multiple Shot 导弹安装真实 `MapWrapper`，让 `CollideType=3` 经过
   `FLAG_BLOCK_JUMP` barrier；导弹仍创建并消耗箭袋，但墙后目标保持满血。该测试锁定
   生产 swept map collision，尚不替代真实 MPQ 墙体夹具。
+- [x] 新增 `-PamazonBowWallGate=true` 真实 MPQ 墙体 gate：扫描当前 RoomEx 内真实
+  可行走但被 `FLAG_BLOCK_JUMP` 阻挡的点，创建墙后 durable target 并复核 owner→target
+  ray；Multiple Shot(12) 与 Strafe(26) 均保持开放目标掉血，同时墙后目标在 owner/
+  observer 两端不掉血。墙体目标不加入 Strafe 的可见目标流，避免把“未选中”误当成
+  “导弹穿墙后未命中”。
 
 验证命令：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
@@ -6016,8 +6021,12 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`、
   `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=25
   -PamazonBowMultiTarget=true --no-daemon`、
-  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
+ `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
   -PamazonBowMultiTarget=true --no-daemon`。
+真实 MPQ 墙体验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12
+  -PamazonBowTimeout=25 -PamazonBowWallGate=true --no-daemon`、
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
+  -PamazonBowWallGate=true --no-daemon`。
 纯 ECS 墙体验证：`:core:test --tests
 com.riiablo.engine.server.AmazonSkillSpecializationTest.multipleShotStopsAtNativeMapBarrierBeforeTarget
 --no-daemon`。

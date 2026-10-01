@@ -225,6 +225,10 @@ tasks.register('headlessAmazonBow', JavaExec) {
       && project.property('amazonBowMultiTarget').toString().toBoolean()) {
     args '--amazon-bow-multitarget'
   }
+  if (project.hasProperty('amazonBowWallGate')
+      && project.property('amazonBowWallGate').toString().toBoolean()) {
+    args '--amazon-bow-wall-gate'
+  }
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()

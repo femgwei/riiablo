@@ -2108,6 +2108,12 @@ public final class D2GSHeadlessClient {
       Set<Integer> multiOwnerDamaged = new HashSet<>();
       Set<Integer> multiPeerDamaged = new HashSet<>();
       boolean multiTargetPassed = !multiTargetGate;
+      boolean wallGate = config.amazonBowWallGate && (multipleShot || strafe);
+      int wallTargetId = Engine.INVALID_ENTITY;
+      float wallInitialLife = Float.NaN;
+      boolean wallOwnerDamaged = false;
+      boolean wallPeerDamaged = false;
+      int wallGateTicks = 0;
       multiTargetIds.add(targetId);
       multiInitialLives.put(targetId, ownerTarget.life);
       float initialLife = ownerTarget.life;
@@ -2165,6 +2171,45 @@ public final class D2GSHeadlessClient {
               + " peer=" + snapshotSummary(lanePeer));
         }
       }
+      if (wallGate) {
+        consumeOne(ownerInput, owner);
+        consumeOne(peerInput, peer);
+        // The target fixture is already known to be in the active RoomEx;
+        // scan from it, then verify the final owner-to-wall-target ray below.
+        // This avoids depending on a client-side player coordinate arriving in
+        // the same tick as the direct headless placement bridge.
+        float[] blockedPlacement = D2GS.headlessFindBlockedMonsterPlacement(targetId, 100f);
+        log("amazon_bow_wall_probe", "anchor=" + targetId + " placementLength="
+            + blockedPlacement.length);
+        wallTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+        if (blockedPlacement.length < 2) throw new IOException("Amazon bow wall probe found no blocked placement");
+        if (wallTargetId < 0) throw new IOException("Amazon bow wall target creation failed");
+        if (!D2GS.headlessDisableMonsterDynamicCollision(wallTargetId)) {
+          throw new IOException("Amazon bow wall target dynamic collision disable failed: target=" + wallTargetId);
+        }
+        if (!D2GS.headlessPlaceMonsterNear(wallTargetId, targetId,
+            blockedPlacement[0] - ownerTarget.x, blockedPlacement[1] - ownerTarget.y)) {
+          throw new IOException("Amazon bow wall target placement failed: target=" + wallTargetId);
+        }
+        if (!D2GS.headlessSetMonsterDefense(wallTargetId, 1)
+            || !D2GS.headlessSetMonsterBowDefense(wallTargetId)) {
+          throw new IOException("Amazon bow wall target defense setup failed: target=" + wallTargetId);
+        }
+        Snapshot wallOwner = awaitSpecificMonster(owner, ownerInput, wallTargetId, deadline());
+        Snapshot wallPeer = awaitSpecificMonster(peer, peerInput, wallTargetId, deadline());
+        if (!wallOwner.hasPosition || !wallPeer.hasPosition
+            || !D2GS.headlessMapRayBlocked(owner.playerId, wallTargetId)) {
+          throw new IOException("Amazon bow wall target did not pass the production blocked-ray gate: target="
+              + wallTargetId + " owner=" + snapshotSummary(wallOwner)
+              + " peer=" + snapshotSummary(wallPeer));
+        }
+        wallInitialLife = Math.max(wallOwner.life, wallPeer.life);
+        log("amazon_bow_wall_baseline", "skill=" + config.amazonBowSkillId
+            + " target=" + wallTargetId + " placement="
+            + String.format("(%.2f,%.2f)", blockedPlacement[0], blockedPlacement[1])
+            + " owner=" + snapshotSummary(wallOwner)
+            + " peer=" + snapshotSummary(wallPeer));
+      }
       log("amazon_bow_fixture_ray", "skill=" + config.amazonBowSkillId
           + " blocked=" + D2GS.headlessMapRayBlocked(owner.playerId, targetId));
       if (!D2GS.headlessSetAmazonAmmoReplenish(owner.playerId, 100)) {
@@ -2209,6 +2254,7 @@ public final class D2GSHeadlessClient {
                   config.amazonBowSkillId) < 2
               || volleyRequired && !sawVolleyShared
               || multiTargetGate && !multiTargetPassed
+              || wallGate && wallGateTicks < 20
               || coldRequired && !sawColdState
               || immolation && (!sawImmolationFireShared || !sawImmolationFireTick)); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
@@ -2234,6 +2280,7 @@ public final class D2GSHeadlessClient {
                     config.amazonBowSkillId) < 2
                 || volleyRequired && !sawVolleyShared
                 || multiTargetGate && !multiTargetPassed
+                || wallGate && wallGateTicks < 20
                 || coldRequired && !sawColdState
                 || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
           consumeOne(ownerInput, owner);
@@ -2289,6 +2336,21 @@ public final class D2GSHeadlessClient {
             sharedMultiDamaged.retainAll(multiPeerDamaged);
             multiTargetPassed = sharedMultiDamaged.size() >= 2;
           }
+          if (wallGate && wallTargetId >= 0) {
+            wallGateTicks++;
+            Snapshot wallCurrent = owner.monsters.get(wallTargetId);
+            Snapshot wallMirrored = peer.monsters.get(wallTargetId);
+            if (wallCurrent != null && wallMirrored != null
+                && wallCurrent.hasVitals && wallMirrored.hasVitals) {
+              float correctedWallBaseline = Math.max(wallCurrent.life, wallMirrored.life);
+              if (correctedWallBaseline > wallInitialLife + 0.001f) {
+                wallInitialLife = correctedWallBaseline;
+              } else {
+                wallOwnerDamaged |= wallCurrent.life < wallInitialLife - 0.001f;
+                wallPeerDamaged |= wallMirrored.life < wallInitialLife - 0.001f;
+              }
+            }
+          }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
           // A replenishing quiver can return to quantity=1 before the next
           // network tick is consumed.  Record the native decrement as an
@@ -2327,6 +2389,7 @@ public final class D2GSHeadlessClient {
                       config.amazonBowSkillId) < 2
                   || volleyRequired && !sawVolleyShared
                   || multiTargetGate && !multiTargetPassed
+                  || wallGate && wallGateTicks < 20
                   || coldRequired && !sawColdState
                   || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
             fallback = true;
@@ -2378,6 +2441,18 @@ public final class D2GSHeadlessClient {
         log("amazon_bow_multitarget_pass", "skill=" + config.amazonBowSkillId
             + " targets=" + multiTargetIds + " sharedDamaged=" + sharedMultiDamaged
             + " ownerDamaged=" + multiOwnerDamaged + " peerDamaged=" + multiPeerDamaged);
+      }
+      if (wallGate && (wallOwnerDamaged || wallPeerDamaged)) {
+        throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")
+            + " damaged a target behind a production map barrier: target=" + wallTargetId
+            + " ownerDamaged=" + wallOwnerDamaged + " peerDamaged=" + wallPeerDamaged
+            + " ownerTarget=" + snapshotSummary(owner.monsters.get(wallTargetId))
+            + " peerTarget=" + snapshotSummary(peer.monsters.get(wallTargetId)));
+      }
+      if (wallGate) {
+        log("amazon_bow_wall_pass", "skill=" + config.amazonBowSkillId
+            + " target=" + wallTargetId + " ownerDamaged=" + wallOwnerDamaged
+            + " peerDamaged=" + wallPeerDamaged + " baseline=" + wallInitialLife);
       }
       if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
           || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChild) {
@@ -11216,6 +11291,7 @@ public final class D2GSHeadlessClient {
     boolean requireAmazonBow;
     int amazonBowSkillId = SkillId.FIRE_ARROW;
     boolean amazonBowMultiTarget;
+    boolean amazonBowWallGate;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -11303,6 +11379,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-amazon-bow".equals(arg)) config.requireAmazonBow = true;
         else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
         else if ("--amazon-bow-multitarget".equals(arg)) config.amazonBowMultiTarget = true;
+        else if ("--amazon-bow-wall-gate".equals(arg)) config.amazonBowWallGate = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
@@ -11586,6 +11663,7 @@ public final class D2GSHeadlessClient {
            + " [--require-amazon-summon] [--amazon-summon-skill 28|32]"
            + " [--amazon-summon-skill-level 1..20]"
            + " [--amazon-bow-multitarget]"
+           + " [--amazon-bow-wall-gate]"
            + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"
