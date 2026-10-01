@@ -113,9 +113,19 @@ public class MissileLoader extends IteratingSystem {
         || "fireexplosion2".equalsIgnoreCase(entry.Missile))) {
       int frames = mAnimationWrapper.has(entityId)
           ? mAnimationWrapper.get(entityId).animation.getNumFramesPerDir() : 0;
+      Animation loaded = mAnimationWrapper.has(entityId)
+          ? mAnimationWrapper.get(entityId).animation : null;
+      int loadedBlend = loaded != null && loaded.getLayer(0) != null
+          ? loaded.getLayer(0).getBlendMode() : -1;
       Gdx.app.debug("MissileLoader", String.format(
-          "[MISSILE_ANIM_LOAD] entity=%d missile=%s loaded=%s frames=%d",
-          entityId, entry.Missile, mAnimationWrapper.has(entityId), frames));
+          "[MISSILE_ANIM_LOAD] entity=%d missile=%s loaded=%s frames=%d dirs=%d "
+              + "frame=%d dir=%d trans=%d blend=%d box=%s",
+          entityId, entry.Missile, loaded != null, frames,
+          loaded != null ? loaded.getNumDirections() : 0,
+          loaded != null ? loaded.getFrame() : -1,
+          loaded != null ? loaded.getDirection() : -1,
+          entry.Trans, loadedBlend,
+          loaded != null ? loaded.getBox() : null));
     }
   }
 
