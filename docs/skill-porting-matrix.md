@@ -447,6 +447,18 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   blocked ID 不在快照中，不使用假墙或“超过上限”冒充墙体证据。当前 MPQ 观测确认两行导弹均为
   `CollideType=3`、`Collision=false`、`LastCollide=true`。
 
+### 2026-10-01 Amazon Poison Javelin / Plague Javelin 真实毒云 gate
+
+- [x] D2MOO `MISSMODE_SrvHit02_PoisonJavelin_PlagueJavelin` 已与现有 ECS 对照：Poison
+  Javelin 命中创建 `poisonjavcloud`，Plague Javelin 创建 `plaguejavcloud`；两者均通过
+  持久区域导弹应用 `POISON(state=2)`，并保留各自原生 cast delay。
+- [x] `headlessAmazonMelee` 现接受技能 15/25。真实 1.10f MPQ 双客户端 gate 已分别通过：
+  两端观察到对应 native 云团、目标实际掉血、目标两端出现 POISON 状态，observer reconnect
+  后毒状态仍恢复；Plague 的多子云团由现有 `SrvHit02` fan-out 逻辑创建，未把 Poison 的
+  单云团行误当作 Plague 行。
+- [x] 本轮仅扩展验证入口和技能特定断言，没有覆盖用户已验证的 Amazon 伤害/持续时间公式；
+  公式、云团生命周期和 cast delay 仍以 D2MOO 1.10f / 当前 MPQ 数据为准。
+
 ## 参考入口
 
 - riiablo 技能 ID：`core/src/main/java/com/riiablo/engine/server/skill/SkillId.java`

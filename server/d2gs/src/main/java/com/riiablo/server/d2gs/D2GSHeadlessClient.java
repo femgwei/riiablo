@@ -1345,6 +1345,8 @@ public final class D2GSHeadlessClient {
 
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
       boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
+      boolean poisonJavelin = config.amazonMeleeSkillId == SkillId.POISON_JAVELIN
+          || config.amazonMeleeSkillId == SkillId.PLAGUE_JAVELIN;
       if (lightningFury && Riiablo.files != null && Riiablo.files.skills != null
           && Riiablo.files.Missiles != null) {
         Skills.Entry furySkillRow = Riiablo.files.skills.get("Lightning Fury");
@@ -1471,6 +1473,8 @@ public final class D2GSHeadlessClient {
       boolean furyThirdDamaged = false;
       boolean furyAllTargetsDamaged = false;
       boolean furyBlockedDamaged = false;
+      boolean poisonCloudShared = false;
+      boolean poisonStateShared = false;
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
       boolean sawFuryChildShared = false;
@@ -1630,6 +1634,30 @@ public final class D2GSHeadlessClient {
             + " peerThird=" + peer.monsters.get(furyThirdTargetId)
             + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles));
       }
+      if (poisonJavelin) {
+        String poisonCloudName = config.amazonMeleeSkillId == SkillId.PLAGUE_JAVELIN
+            ? "plaguejavcloud" : "poisonjavcloud";
+        long poisonDeadline = Math.min(deadline, System.currentTimeMillis() + 5_000L);
+        while (System.currentTimeMillis() < poisonDeadline
+            && (!poisonCloudShared || !poisonStateShared)) {
+          consumeOne(ownerInput, owner);
+          consumeOne(peerInput, peer);
+          poisonCloudShared = sharedMissileNameCount(owner, peer, poisonCloudName) > 0;
+          poisonStateShared = hasState(owner, targetId, com.riiablo.engine.server.state.StateId.POISON)
+              && hasState(peer, targetId, com.riiablo.engine.server.state.StateId.POISON);
+        }
+        if (!poisonCloudShared || !poisonStateShared) {
+          throw new IllegalStateException("Amazon poison javelin did not publish shared poison cloud/state: skill="
+              + config.amazonMeleeSkillId + " cloudShared=" + poisonCloudShared
+              + " stateShared=" + poisonStateShared + " target=" + targetId
+              + " ownerStates=" + owner.entityStateIds.get(targetId)
+              + " peerStates=" + peer.entityStateIds.get(targetId)
+              + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles));
+        }
+        log("amazon_poison_javelin_cloud_pass", "skill=" + config.amazonMeleeSkillId
+            + " target=" + targetId + " cloud=" + poisonCloudName
+            + " cloudShared=true poisonStateShared=true");
+      }
       if (config.amazonMeleeWallGate && furyBlockedDamaged) {
         throw new IllegalStateException("Amazon Lightning Fury wall target was damaged: target="
             + furyBlockedTargetId + " initial=" + initialFuryBlockedLife
@@ -1777,6 +1805,15 @@ public final class D2GSHeadlessClient {
             || (config.amazonMeleeExpectMiss
                 ? restored.life + 0.001f < ownerLife
                 : restored.life >= initialLife);
+        if (poisonJavelin) {
+          long poisonReconnectDeadline = Math.min(deadline, System.currentTimeMillis() + 5_000L);
+          while (System.currentTimeMillis() < poisonReconnectDeadline
+              && !hasState(reconnected, targetId, com.riiablo.engine.server.state.StateId.POISON)) {
+            consumeOne(reconnectInput, reconnected);
+          }
+          reconnectLifeInvalid |= !hasState(reconnected, targetId,
+              com.riiablo.engine.server.state.StateId.POISON);
+        }
         ArrayList<Snapshot> restoredFuryTargets = new ArrayList<>();
         if (lightningFury) {
           for (int auraTargetId : furyTargetIds) {
@@ -1850,6 +1887,7 @@ public final class D2GSHeadlessClient {
                 + " childShared=" + sawFuryChildShared + " childCount=" + furyChildCount
                 + " expectedChildCount=" + furyExpectedSharedChildCount
                 + " targetCount=" + furyTargetIds.size() : "")
+            + (poisonJavelin ? " poisonStateRestored=true" : "")
             + " stale=false");
       }
     }
@@ -11011,7 +11049,8 @@ public final class D2GSHeadlessClient {
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
-            + "Impale(19), Charged Strike(24), Fend(30), Lightning Strike(34), or Lightning Fury(35)");
+            + "Impale(19), Poison Javelin(15), Charged Strike(24), Plague Javelin(25), "
+            + "Fend(30), Lightning Strike(34), or Lightning Fury(35)");
       }
       if (config.requireAmazonMelee && (config.amazonMeleeSkillLevel < 1
           || config.amazonMeleeSkillLevel > 20)) {
@@ -11111,7 +11150,8 @@ public final class D2GSHeadlessClient {
 
     private static boolean isAmazonMeleeSkill(int skillId) {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
-          || skillId == SkillId.IMPALE || skillId == SkillId.CHARGED_STRIKE
+          || skillId == SkillId.IMPALE || skillId == SkillId.POISON_JAVELIN
+          || skillId == SkillId.CHARGED_STRIKE || skillId == SkillId.PLAGUE_JAVELIN
           || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE
           || skillId == SkillId.LIGHTNING_FURY;
     }

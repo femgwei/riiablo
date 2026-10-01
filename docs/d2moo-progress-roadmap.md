@@ -5999,3 +5999,17 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   实际实体 ray；生产快照只选择前 10 个无遮挡目标，墙后实体不掉血，observer reconnect
   保持其初始生命不变。gate 同时硬断言 blocked ID 不在选择快照中，未使用假墙或“超过上限”
   作为墙体替代证据。
+
+## 2026-10-01 Amazon Poison Javelin / Plague Javelin 真实毒云 gate
+
+- [x] 按 D2MOO `MISSMODE_SrvHit02_PoisonJavelin_PlagueJavelin` 核对两条原生云团链：
+  Poison Javelin 使用 `poisonjavcloud`，Plague Javelin 使用 `plaguejavcloud`；两者均由
+  持久区域导弹应用 `POISON(state=2)`，并保留 Skills.txt 的独立 cast delay。
+- [x] `headlessAmazonMelee` 已接受技能 15/25。真实 1.10f MPQ 双客户端分别通过：对应
+  云团在 owner/observer 共享，目标实际掉血，两端出现 POISON 状态，observer reconnect
+  后毒状态仍存在。Plague 的多子云团由现有 native fan-out 路径产生，测试不再把 Poison
+  的云团行当作 Plague 的实现。
+- [x] 未修改用户已验证的 Amazon 数值公式；本轮只增加真实 gate、云团名称和状态断言。
+
+验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
+`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。
