@@ -21,4 +21,6 @@ public interface BlendMode {
   int LUMINOSITY_FLICKER = 11;
   /** Native D2 PL2/Screen blend used by poison-cloud missiles. */
   int SCREEN           = 12;
+  /** Keep indexed palette RGB and derive opacity from the source index. */
+  int SOURCE_INDEX_ALPHA = 13;
 }

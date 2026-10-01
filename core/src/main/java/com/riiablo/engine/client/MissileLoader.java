@@ -81,13 +81,14 @@ public class MissileLoader extends IteratingSystem {
           : isGroundFire(entry) ? BlendMode.LUMINOSITY_FLICKER : BlendMode.LUMINOSITY; break;
       default: blendMode = BlendMode.ID; break;
     }
-    // IceArrowExplode.dcc is a fully-coloured impact sprite.  Its native
-    // Trans=1 row is intended for D2's separate luminosity-mask pipeline,
-    // but the indexed shader derives alpha from the decoded palette RGB and
-    // makes this blue effect effectively transparent. Keep the source palette
-    // alpha for this one-shot impact so the native 16-frame burst is visible.
+    // IceArrowExplode.dcc is a fully-coloured impact sprite. Its native
+    // Trans=1 row is intended for D2's separate luminosity-mask pipeline.
+    // That pipeline can discard this indexed sprite on the desktop shader
+    // path, so use the source-index alpha branch: it keeps the palette RGB
+    // while taking opacity from the source DCC index/tint instead of the
+    // derived luminosity mask.
     if ("iceexplode".equalsIgnoreCase(entry.Missile)) {
-      blendMode = BlendMode.ID;
+      blendMode = BlendMode.SOURCE_INDEX_ALPHA;
     }
 
     Animation animation = mAnimationWrapper.create(entityId).animation;

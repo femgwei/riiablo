@@ -18,6 +18,11 @@ varying vec4 tint;
 
 void main() {
   vec4 color = texture2D(u_texture, v_texCoord);
+  // Intensity/alpha indexed textures carry the DCC palette index in the
+  // source alpha channel. Keep it available after the palette lookup so a
+  // caller can use index-zero transparency without depending on the palette
+  // texture's own alpha channel.
+  float sourceIndex = color.a;
   if (colormapId > 0 && color.a > 0.0) {
     color.r = (float(colormapId) + 0.5) / 22.0;
     color = texture2D(ColorMap, color.ar);
@@ -55,6 +60,11 @@ void main() {
     if (color.a > 0.0) {
       color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0);
     }
+
+  // Indexed sprite alpha: index 0 is transparent, all other DCC indices
+  // retain the palette colour and use the caller tint alpha.
+  } else if (blendMode == 13) {
+    color.a = sourceIndex > 0.0 ? tint.a : 0.0;
 
   // Set alpha based on luminance and color to tint
   } else if (blendMode == 3) {
