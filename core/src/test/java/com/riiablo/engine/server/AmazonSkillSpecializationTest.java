@@ -178,6 +178,69 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void lightningBoltSweptCollisionAppliesSnapshotDamage() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 100);
+      owner.base().put(Stat.maxdamage, 100);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      // Place a small target between two fixed ticks.  A point-only check at
+      // either endpoint would miss it; the native swept segment must catch it.
+      int target = monster(world, 1.2f, 0);
+      world.getMapper(com.riiablo.engine.server.component.Size.class)
+          .create(target).size = com.riiablo.engine.server.component.Size.SMALL;
+      Attributes targetAttrs = attributes(1, 100);
+      targetAttrs.base().put(Stat.armorclass, 1);
+      targetAttrs.reset();
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+
+      Skills.Entry skill = Riiablo.files.skills.get("Lightning Bolt");
+      Missiles.Entry row = Riiablo.files.Missiles.get("lightningjavelin");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      Missile source = world.getMapper(Missile.class).get(sourceId);
+      assertTrue(MissileDamageResolver.initializeSkill(source, skill, owner, 20));
+      assertTrue(source.damageSnapshot);
+      assertTrue(source.damage.get(Stat.lightmindam).asInt() > 0);
+
+      float startX = world.getMapper(Position.class).get(sourceId).position.x;
+      boolean advanced = false;
+      // Use a half-frame so the first sample observes flight, while the
+      // second swept segment crosses the small target at x=1.2.
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION * 0.5f);
+      for (int i = 0; i < 8 && targetAttrs.get(Stat.hitpoints).asFixed() >= 100f; i++) {
+        if (world.getMapper(Position.class).has(sourceId)
+            && world.getMapper(Position.class).get(sourceId).position.x > startX) {
+          advanced = true;
+        }
+        world.process();
+        if (world.getMapper(Position.class).has(sourceId)
+            && world.getMapper(Position.class).get(sourceId).position.x > startX) {
+          advanced = true;
+        }
+      }
+
+      assertTrue(advanced,
+          "the authoritative lightning javelin must advance before collision resolution");
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 100f,
+          "the swept lightning javelin collision must apply its native damage snapshot");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void elementalArrowConversionUsesNativeBaseAtLevelOne() {
     Attributes owner = attributes(20, 200);
     owner.base().put(Stat.mindamage, 100);

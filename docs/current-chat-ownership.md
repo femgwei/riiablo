@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon Immolation/Guided Arrow 真实 MPQ gate）
+更新时间：2026-10-01（Amazon Lightning Bolt 纯 ECS 碰撞门槛）
 
 ## 唯一负责人
 
@@ -31,6 +31,19 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-01 Lightning Bolt 纯 ECS 接手摘要
+
+- 已新增 `AmazonSkillSpecializationTest.lightningBoltSweptCollisionAppliesSnapshotDamage`，
+  按 D2MOO `MISSMODE_SrvDmg12_LightningJavelin` 使用真实 `lightningjavelin` 行、
+  `MissileDamageResolver.initializeSkill` 快照和半帧 swept collision 验证实际掉血。
+- 定向测试及整组 `AmazonSkillSpecializationTest` 均通过；本轮没有修改生产碰撞、ToHit
+  或伤害公式。
+- 真实 `headlessAmazonMelee` Lightning Bolt gate 仍保持未完成：导弹创建成功但双方
+  目标没有掉血。后续应优先在 D2GS fixture 记录动态位置/地图碰撞/命中事件，不要把创建
+  导弹当作成功证据。
+- 本轮新增的测试文件属于当前 Chat；其他 agent 的 `ItemEntry.java`、`AssassinTrapSystem.java`
+  和 `StatFormatterTest.java` 以及未跟踪日志/截图均未纳入本轮提交。
 
 ### 2026-09-30 技能移植对照进度
 
