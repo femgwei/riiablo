@@ -1,6 +1,27 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Blade Fury SrvDo048 行为层）
+更新时间：2026-10-02（交接快照：Assassin Fire Trauma SrvHit36/SrvHit03/SrvHit44 行为层）
+
+## 2026-10-02 Assassin Fire Trauma（ID 251）行为增量
+
+- 按 D2MOO `MISSMODE_SrvHit36_MissileInAir` 对齐：`bomb in air`（本地
+  `pSrvHitFunc=36`）碰到单位时 fail-closed，不在飞行中直接造成伤害；只有墙体/地图的
+  null-hit 才通过 `HitSubMissile=bomb on ground` 转成地面炸弹。
+- 按 D2MOO `MISSMODE_SrvHit03_ExplosivePotion_BombOnGround` 与
+  `MISSMODE_SrvHit44_ExplodingJavelin` 对齐：`bomb on ground`（`pSrvHitFunc=3`、
+  `Vel=0`、`Range=5`）在原生寿命到期前忽略单位碰撞，到期时按技能
+  `aurarangecalc=par1`、本地 `Param1=5` 做一次中心范围火焰伤害，并生成一次
+  `ExplosionMissile=bomb explosion` 视觉子弹；source 随后删除，避免重复爆炸。
+- generic Fire Trauma 仍由 `ServerSkillSystem` 读取 `srvmissile=bomb in air`，由
+  `MissileDamageResolver.initializeSkill` 保留 `EType=fire`、`EMin/EMax`、
+  `EDmgSymPerCalc`（Shock Field/Death Sentry/Charged Bolt Sentry/Lightning Sentry/
+  Wake of Fire Sentry/Inferno Sentry）和施法时火焰快照；Fire Trauma 本身没有 `SrcDam`。
+- 新增 `AssassinSkillSpecializationTest` 两项回归：精确锁定 air/ground/explosion 行、
+  协同快照，以及地面炸弹单位接触不直伤、半径外目标不受伤、到期只爆炸一次。
+  `./gradlew.bat :core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest`
+  已通过（22 tests）。
+- 仍未标记为四层完成：真实 1.10f MPQ 墙体 null-hit、跨房间/重连、双客户端动画与伤害
+  观感尚未验收；本次只完成 D2MOO 对照和权威 ECS 行为层。
 
 ## 2026-10-02 Assassin Blade Fury (`SrvSt26`/`SrvDo048`) 行为增量
 

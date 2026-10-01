@@ -29,6 +29,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
@@ -105,6 +106,122 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       }
     }
     System.out.println("[ASSASSIN_SKILL_SUMMARY] rows=" + rows);
+  }
+
+  @Test
+  void fireTraumaUsesNativeAirGroundChainAndSkillSynergy() {
+    Skills.Entry fire = Riiablo.files.skills.get("Fire Trauma");
+    Missiles.Entry air = Riiablo.files.Missiles.get("bomb in air");
+    Missiles.Entry ground = Riiablo.files.Missiles.get("bomb on ground");
+    Missiles.Entry explosion = Riiablo.files.Missiles.get("bomb explosion");
+    assertNotNull(fire);
+    assertNotNull(air);
+    assertNotNull(ground);
+    assertNotNull(explosion);
+    assertEquals(251, fire.Id);
+    assertEquals(36, air.pSrvHitFunc,
+        "SrvHit36 must convert air contact into a ground child only on null-hit");
+    assertEquals("bomb on ground", air.HitSubMissile[0]);
+    assertEquals(3, ground.pSrvHitFunc,
+        "SrvHit03 ground row must defer damage until null-target expiry");
+    assertEquals("bomb explosion", ground.ExplosionMissile);
+    assertEquals(5, fire.Param[0], "Fire Trauma aurarangecalc=par1 radius");
+
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(false), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(fire.Id, 3);
+      for (String synergy : new String[] {"Shock Field", "Death Sentry", "Charged Bolt Sentry",
+          "Lightning Sentry", "Wake of Fire Sentry", "Inferno Sentry"}) {
+        Skills.Entry row = Riiablo.files.skills.get(synergy);
+        if (row != null) data.setSkillLevel(row.Id, 1);
+      }
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, fire.Id, Engine.INVALID_ENTITY, new Vector2(8, 0), fire.srvdofunc, fire.cltdofunc));
+      assertEquals(1, factory.missiles);
+      Missile projectile = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(projectile);
+      assertEquals("bomb in air", projectile.missile.Missile);
+      assertEquals(fire.Id, projectile.skillId);
+      assertEquals(3, projectile.damageLevel);
+      assertTrue(projectile.damageSnapshot);
+      assertTrue(projectile.damage.get(Stat.firemaxdam).asInt() >=
+          projectile.damage.get(Stat.firemindam).asInt());
+      int synergyPercent = com.riiablo.engine.server.skill.SkillFormula.evaluate(
+          fire.EDmgSymPerCalc, fire, 3,
+          name -> {
+            Skills.Entry row = Riiablo.files.skills.get(name);
+            return row != null ? data.getSkill(row.Id) : 0;
+          });
+      assertTrue(synergyPercent > 0, "Fire Trauma must evaluate sentry synergies");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fireTraumaGroundIgnoresUnitContactAndExplodesOnceAtSkillRadius() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      Skills.Entry fire = Riiablo.files.skills.get("Fire Trauma");
+      Missiles.Entry ground = Riiablo.files.Missiles.get("bomb on ground");
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(fire.Id, 1);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      Attributes ownerAttrs = attributes(1000);
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = ownerAttrs;
+
+      int near = world.create();
+      world.getMapper(Monster.class).create(near);
+      world.getMapper(Position.class).create(near).position.set(3, 0);
+      Attributes nearAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(near).attrs = nearAttrs;
+      int far = world.create();
+      world.getMapper(Monster.class).create(far);
+      world.getMapper(Position.class).create(far).position.set(8, 0);
+      Attributes farAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(far).attrs = farAttrs;
+
+      int groundId = factory.createMissile(ground.Id, Vector2.X, new Vector2(0, 0), owner);
+      Missile source = world.getMapper(Missile.class).get(groundId);
+      source.skillId = fire.Id;
+      source.damageLevel = 1;
+      MissileDamageResolver.initializeSkill(source, fire, ownerAttrs, 1,
+          name -> 0);
+      assertTrue(source.damageSnapshot);
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 4; i++) {
+        world.process();
+        assertEquals(1000f, nearAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+            "SrvHit03 must not damage a unit on contact before expiry");
+      }
+      world.process();
+      assertTrue(nearAttrs.get(Stat.hitpoints).asFixed() < 1000f,
+          "ground expiry must apply Fire Trauma's center AoE");
+      assertEquals(1000f, farAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "targets outside aurarangecalc=par1 remain untouched");
+      assertFalse(world.getEntityManager().isActive(groundId));
+      assertTrue(java.util.Collections.frequency(factory.missileNames, "bomb explosion") == 1,
+          "ground expiry emits one presentation explosion");
+      world.process();
+      assertTrue(java.util.Collections.frequency(factory.missileNames, "bomb explosion") == 1,
+          "expired ground source cannot explode twice");
+    } finally {
+      world.dispose();
+    }
   }
 
   /**

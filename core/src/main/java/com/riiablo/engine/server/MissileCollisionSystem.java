@@ -430,7 +430,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     // required.
     if (!hasNativeCollision(missile)) {
       if (missile.nativeLifetimeFrames > 0
-          && missile.nativeFrame >= missile.nativeLifetimeFrames) world.delete(entityId);
+          && missile.nativeFrame >= missile.nativeLifetimeFrames) {
+        if (isFireTraumaGround(missile)) {
+          resolveFireTraumaGround(entityId, missile, position.position);
+        } else {
+          world.delete(entityId);
+        }
+      }
       return;
     }
 
@@ -441,7 +447,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     // need a frame clock or they remain in the world forever when they miss.
     if (missile.nativeLifetimeFrames > 0
         && missile.nativeFrame >= missile.nativeLifetimeFrames) {
-      world.delete(entityId);
+      if (isFireTraumaGround(missile)) {
+        resolveFireTraumaGround(entityId, missile, position.position);
+      } else {
+        world.delete(entityId);
+      }
     }
   }
 
@@ -1441,6 +1451,15 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     if (distance <= collisionRadius) {
       int hitFunction = missile.missile != null ? missile.missile.pSrvHitFunc : 0;
+      // D2MOO MISSMODE_SrvHit36_MissileInAir and SrvHit03_BombOnGround
+      // deliberately ignore unit contacts.  The air row only creates its
+      // ground child on a null/map hit, while the ground row resolves its
+      // radius damage from the null-target expiry path below.  Keep the
+      // ordinary unit path fail-closed; the explicit AoE pass uses suppressed
+      // side effects so it can reuse the authoritative damage packet.
+      if (hitFunction == 36 || hitFunction == 3 && !suppressSideEffects) {
+        return false;
+      }
       if (hitFunction == 50) {
         // D2MOO MISSMODE_SrvHit50_PlagueVinesTrail is a timing gate only.
         // It accepts contacts during the first HitDelay frames and rejects
@@ -3093,6 +3112,69 @@ public class MissileCollisionSystem extends IteratingSystem {
       return Math.max(1, missile.missile.Size - 1);
     }
     return Math.max(0, arrayValue(missile.missile.sHitPar, 0));
+  }
+
+  /**
+   * Identifies the stationary Fire Trauma ground row without broadening the
+   * special case to unrelated explosive-potion missiles.  The hit function is
+   * the native discriminator; the row name protects custom data packs that
+   * reuse SrvHit03 for a different effect.
+   */
+  private static boolean isFireTraumaGround(Missile missile) {
+    return missile != null && missile.missile != null
+        && missile.missile.pSrvHitFunc == 3
+        && "bomb on ground".equalsIgnoreCase(missile.missile.Missile);
+  }
+
+  /**
+   * D2MOO MISSMODE_SrvHit44 reached from SrvHit03's null-target expiry.
+   * Fire Trauma's travelling row never damages a unit directly: it becomes a
+   * stationary ground row, waits for its native Range lifetime, then applies
+   * one skill-radius fire packet and emits the explosion presentation child.
+   */
+  private void resolveFireTraumaGround(int entityId, Missile source, Vector2 origin) {
+    if (source == null || origin == null || !world.getEntityManager().isActive(entityId)) {
+      return;
+    }
+
+    Skills.Entry skill = source.skillId >= 0
+        ? Riiablo.files.skills.get(source.skillId)
+        : Riiablo.files.skills.get("Fire Trauma");
+    int level = Math.max(1, source.damageLevel);
+    int radius = skill != null
+        ? SkillFormula.evaluate(skill.aurarangecalc, skill, level,
+            name -> baseSkillLevel(source.ownerId, name)) : 0;
+    // The shipped 1.10f row is aurarangecalc=par1 with Param1=5.  Keep the
+    // data-driven value authoritative, but retain a safe compatibility
+    // fallback for a stripped/custom Skills.txt row.
+    if (radius <= 0) radius = 5;
+    radius = Math.max(1, radius);
+
+    // Ground row's ExplosionMissile is the client-visible bomb explosion. It
+    // carries the source snapshot but has no authoritative server hit path.
+    spawnNativeMapExplosion(entityId, source, Engine.INVALID_ENTITY, origin);
+
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, radius);
+    int affected = 0;
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == source.ownerId || !mPosition.has(targetId)
+          || !mAttributesWrapper.has(targetId)
+          || (!mPlayer.has(targetId) && !mMonster.has(targetId))
+          || !isEnemy(source.ownerId, targetId) || !isAlive(targetId)) {
+        continue;
+      }
+      if (origin.dst2(mPosition.get(targetId).position) > radius * radius) continue;
+      if (checkCollisionWithEntity(entityId, source, origin, origin, targetId,
+          mPosition.get(targetId), radius, true)) {
+        affected++;
+      }
+    }
+    log.info("[ASSASSIN_FIRE_TRAUMA] phase=explode owner={} missileId={} skill={} "
+            + "level={} radius={} affected={} snapshot={}",
+        source.ownerId, entityId, source.skillId, level, radius, affected,
+        source.damageSnapshot);
+    world.delete(entityId);
   }
 
   /** D2MOO MISSMODE_SrvHit20_LightningFury. */
