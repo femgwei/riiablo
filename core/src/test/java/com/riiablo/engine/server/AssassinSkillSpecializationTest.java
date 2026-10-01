@@ -387,6 +387,49 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void shockFieldSrvDo043UsesProgressiveCountAndScattersAuthoritativeMissiles() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry shock = Riiablo.files.skills.get("Shock Field");
+      assertNotNull(shock);
+      data.setSkillLevel(shock.Id, 1);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, shock.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), shock.srvdofunc, 0));
+
+      assertEquals(6, factory.missiles,
+          "SrvDo043 uses par1 + lvl/par2 at level one when Fire Trauma is unskilled");
+      assertEquals(6, java.util.Collections.frequency(factory.missileNames, "shock field in air"));
+      boolean varied = false;
+      Vector2 first = factory.missileDirections.get(0);
+      for (Vector2 direction : factory.missileDirections) {
+        assertTrue(direction.len() > 0.99f && direction.len() < 1.01f);
+        if (Math.abs(direction.x - first.x) > 0.01f
+            || Math.abs(direction.y - first.y) > 0.01f) varied = true;
+      }
+      assertTrue(varied, "native Shock Field scatters each landing point independently");
+      for (int id : factory.missileEntityIds) {
+        Missile projectile = world.getMapper(Missile.class).get(id);
+        assertNotNull(projectile);
+        assertEquals(shock.Id, projectile.skillId);
+        assertEquals(1, projectile.damageLevel);
+        assertTrue(projectile.damageSnapshot,
+            "Shock Field missiles retain the authoritative lightning damage snapshot");
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeSentinelSrvDo044StartsAtCasterAndLaunchesTowardTarget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

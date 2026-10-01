@@ -541,6 +541,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 15 && event.srvdofunc != 16
         && event.srvdofunc != 18 && event.srvdofunc != 25
         && event.srvdofunc != 44 && event.srvdofunc != 45
+        && event.srvdofunc != 43
         && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
         && event.srvdofunc != 28
         && event.srvdofunc != 49 && event.srvdofunc != 54
@@ -581,6 +582,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
+        && skill.srvdofunc != 43
         && skill.srvdofunc != 22 && skill.srvdofunc != 23 && skill.srvdofunc != 24
         && skill.srvdofunc != 28
         && skill.srvdofunc != 49 && skill.srvdofunc != 54
@@ -767,6 +769,14 @@ public class ServerSkillSystem extends PassiveSystem {
         || event.srvdofunc == 45 || skill.srvdofunc == 45)
         && mPlayer.has(event.entityId)) {
       spawnAssassinTrap(event, skill, skillLevel, start);
+      return;
+    }
+    // D2MOO SrvDo043 evaluates the progressive count, then scatters the
+    // authoritative SrvMissileA row around the selected target point.  It is
+    // not a generic single projectile and must remain in the local-game
+    // authoritative path just like the owned trap callbacks above.
+    if (event.srvdofunc == 43 || skill.srvdofunc == 43) {
+      spawnAssassinShockField(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
@@ -2670,6 +2680,66 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[AMAZON_LIGHTNING_STRIKE] phase=spawn source={} initialTarget={} "
         + "firstTarget={} level={} range={} maxJumps={} created={} missile={}",
         event.entityId, event.targetId, next, skillLevel, range, maxJumps, created, missileName);
+  }
+
+  /** Native {@code SKILLS_SrvDo043_ShockField} progressive scatter. */
+  private void spawnAssassinShockField(SkillDoEvent event, Skills.Entry skill,
+      int skillLevel, Vector2 caster) {
+    if (skill == null) return;
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[ASSASSIN_SHOCK_FIELD] phase=reject source={} skill={} reason=missing_missile name={}",
+          event.entityId, skill.Id, missileName);
+      return;
+    }
+
+    int count = skill.prgcalc != null && skill.prgcalc.length > 0
+        ? SkillFormula.evaluate(skill.prgcalc[0], skill, skillLevel,
+            name -> getBaseSkillLevel(event.entityId, name), ServerSkillSystem::resolveSkill)
+        : 0;
+    int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name), ServerSkillSystem::resolveSkill);
+    if (count <= 0) {
+      log.info("[ASSASSIN_SHOCK_FIELD] phase=reject source={} skill={} level={} "
+              + "reason=non_positive_progressive_count formula={}",
+          event.entityId, skill.Id, skillLevel,
+          skill.prgcalc != null && skill.prgcalc.length > 0 ? skill.prgcalc[0] : "");
+      return;
+    }
+
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    int targetX = MathUtils.floor(target.x);
+    int targetY = MathUtils.floor(target.y);
+    int casterX = MathUtils.floor(caster.x);
+    int casterY = MathUtils.floor(caster.y);
+    NativeRng rng = new NativeRng(targetX);
+    int created = 0;
+    Vector2 direction = new Vector2();
+    int boundedRange = Math.max(0, Math.min(64, range));
+    for (int i = 0; i < count; i++) {
+      int landingX = targetX;
+      int landingY = targetY;
+      if (count > 1 && boundedRange >= 2) {
+        landingX += rng.nextInt(2 * boundedRange) - boundedRange;
+        landingY += rng.nextInt(2 * boundedRange) - boundedRange;
+      }
+      int dx = landingX - casterX;
+      int dy = landingY - casterY;
+      if (dx * dx + dy * dy < 4) continue;
+      direction.set(landingX - caster.x, landingY - caster.y);
+      if (direction.isZero(0.0001f)) continue;
+      int missileId = createMissile(missile, direction.nor(), caster, event.entityId,
+          null, skillLevel);
+      if (missileId < 0) continue;
+      initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      created++;
+    }
+    log.info("[ASSASSIN_SHOCK_FIELD] phase=create source={} skill={} level={} missile={} "
+            + "requested={} created={} range={} formula={} sharedHitGate=false",
+        event.entityId, skill.Id, skillLevel, missileName, count, created, range,
+        skill.prgcalc != null && skill.prgcalc.length > 0 ? skill.prgcalc[0] : "");
   }
 
   /** Native Amazon SrvDo015/SrvDo016: create an owned Decoy or Valkyrie. */

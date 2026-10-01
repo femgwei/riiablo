@@ -15,6 +15,18 @@
   Fire Trauma (`251`) 的落地伤害/协同，随后再做真实 1.10f MPQ gate。
 - 提交：`2f0634af test: lock Assassin dark-magic trap exact IDs`，已推送 `origin/master`。
 
+### 2026-10-02 Shock Field (`SrvDo043`) 行为增量
+
+- `ServerSkillSystem` 现在将 `SrvDo043` 从 local `monstersOnly` 过滤中放行，并按本地
+  1.10f `prgcalc1` 计算 progressive 导弹数量、按 `aurarangecalc` 计算散布半径；每枚
+  导弹只取 `srvmissilea=shock field in air`，保留 owner、技能等级和 lightning damage
+  snapshot。
+- 新增 `shockFieldSrvDo043UsesProgressiveCountAndScattersAuthoritativeMissiles`，验证
+  level 1 的 6 枚导弹、独立落点方向和伤害快照；完整
+  `AssassinSkillSpecializationTest` 已通过。
+- 这仍是纯 ECS/Native 行为层完成，不代表真实 MPQ 双客户端、墙体、重复命中和重连层已完成。
+- 提交：待本轮提交后补充。
+
 ## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
 
 - [x] 新增 `headlessAmazonSummon`，按 `Skills.txt` 的 `summon/pettype/petmax`
