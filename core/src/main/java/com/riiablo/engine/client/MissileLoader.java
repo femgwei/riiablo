@@ -39,6 +39,20 @@ public class MissileLoader extends IteratingSystem {
     // pixels even though the animation and bounds are valid).
     if (entry != null && "iceexplode".equalsIgnoreCase(entry.Missile)) {
       celFile.loadDirection(0);
+      com.badlogic.gdx.graphics.Pixmap pixmap = celFile.getPixmap(0, 0);
+      if (pixmap != null) {
+        int nonZero = 0;
+        for (int py = 0; py < pixmap.getHeight(); py++) {
+          for (int px = 0; px < pixmap.getWidth(); px++) {
+            if (pixmap.getPixel(px, py) != 0) nonZero++;
+          }
+        }
+        com.badlogic.gdx.graphics.g2d.TextureRegion region = celFile.getTexture(0, 0);
+        Gdx.app.debug("MissileLoader", String.format(
+            "[MISSILE_DCC] entity=%d size=%dx%d nonZero=%d texture=%s",
+            entityId, pixmap.getWidth(), pixmap.getHeight(), nonZero,
+            region != null ? region.getTexture().getTextureObjectHandle() : "null"));
+      }
     }
 
     int blendMode;
