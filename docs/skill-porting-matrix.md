@@ -10,9 +10,9 @@
   Blade Fury/Blade Shield 的服务端导弹行。
 - 1.10f 与 dark-magic 1.14d 的显示名不同（Fire Trauma/Fire Blast、Shock Field/Shock Web），
   测试以 exact-ID 和原生函数为权威，不复制 1.14d 数值或名称。
-- 本次只增加 Native 对照门槛，未把 10 条技能标记为四层完成；下一步仍是 Shock Field
-  (`SrvDo043`) 的 progressive scatter、Blade Fury (`SrvDo048`) 的资源/释放时序，及
-  Fire Trauma (`251`) 的落地伤害/协同，随后再做真实 1.10f MPQ gate。
+- 本次先增加 Native 对照门槛；Shock Field (`SrvDo043`) 已完成纯 ECS 行为层，10 条技能
+  仍未标记为四层完成。下一步是 Blade Fury (`SrvDo048`) 的资源/释放时序及 Fire Trauma
+  (`251`) 的落地伤害/协同，随后再做真实 1.10f MPQ gate。
 - 提交：`2f0634af test: lock Assassin dark-magic trap exact IDs`，已推送 `origin/master`。
 
 ### 2026-10-02 Shock Field (`SrvDo043`) 行为增量
