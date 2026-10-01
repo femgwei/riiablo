@@ -27,6 +27,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.state.StateId;
@@ -949,6 +950,12 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       int assassin = world.create();
       CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
       data.setSkillLevel(blade.Id, 1);
+      for (String prerequisite : new String[] {blade.reqskill1, blade.reqskill2, blade.reqskill3}) {
+        if (prerequisite != null && !prerequisite.isEmpty()) {
+          Skills.Entry required = Riiablo.files.skills.get(prerequisite);
+          if (required != null) data.setSkillLevel(required.Id, 1);
+        }
+      }
       world.getMapper(com.riiablo.engine.server.component.Player.class)
           .create(assassin).data = data;
       world.getMapper(Position.class).create(assassin).position.set(0, 0);
@@ -988,6 +995,55 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(2, factory.missiles, "held input may emit the next blade after Param4");
       assertTrue(attrs.get(Stat.mana).asFixed() < afterFirst,
           "each accepted blade consumes mana, not the cast-start event");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void bladeFuryUsesStartManaGateWithoutChargingAtCastSubmission() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Fury");
+      int assassin = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(blade.Id, 1);
+      for (String prerequisite : new String[] {blade.reqskill1, blade.reqskill2, blade.reqskill3}) {
+        if (prerequisite != null && !prerequisite.isEmpty()) {
+          Skills.Entry required = Riiablo.files.skills.get(prerequisite);
+          if (required != null) data.setSkillLevel(required.Id, 1);
+        }
+      }
+      world.getMapper(com.riiablo.engine.server.component.Player.class)
+          .create(assassin).data = data;
+      Attributes attrs = attributes(30);
+      attrs.base().put(Stat.level, 30);
+      attrs.base().put(Stat.mana, 5);
+      attrs.base().put(Stat.maxmana, 5);
+      attrs.reset();
+      world.getMapper(AttributesWrapper.class).create(assassin).attrs = attrs;
+
+      SkillCastEvent rejected = SkillCastEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2());
+      world.getSystem(EventSystem.class).dispatch(rejected);
+      assertFalse(rejected.accepted, "startmana rejects an underfunded initial cast");
+      assertEquals(5f, attrs.get(Stat.mana).asFixed());
+
+      attrs.base().put(Stat.mana, blade.startmana);
+      attrs.base().put(Stat.maxmana, blade.startmana);
+      attrs.reset();
+      SkillCastEvent accepted = SkillCastEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2());
+      world.getSystem(EventSystem.class).dispatch(accepted);
+      assertTrue(accepted.accepted, "resultCode=" + accepted.resultCode
+          + " mana=" + attrs.get(Stat.mana).asFixed()
+          + " start=" + blade.startmana);
+      assertEquals(0f, accepted.manaCost,
+          "usemanaondo defers the ordinary 8-mana cost until a blade is accepted");
+      assertEquals(blade.startmana, attrs.get(Stat.mana).asFixed());
     } finally {
       world.dispose();
     }

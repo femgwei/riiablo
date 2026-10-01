@@ -10,9 +10,9 @@
 - `MissileDamageResolver.initializeSkill` 继续负责 `SrcDam=96` 的武器伤害快照；导弹保留
   owner、技能 ID、技能等级和 `damageSnapshot`，不会落入 generic `SrvMissileA/B` 双发路径。
 - `Actioneer` 已实现 `SrvSt26` 的 `StateId.INFERNO` 生命周期：首次启动约 21 帧，持续输入刷新
-  到 7 帧；cast 入口使用 `startmana=3` 门槛，起始 cast 不提前扣除每刃 mana。
-- 新增 `AssassinSkillSpecializationTest.bladeFuryEmitsOneTimedWeaponBladeAndConsumesPerBladeMana`，
-  覆盖单枚发刃、`Param4` 节流、SrcDam 快照和逐刃资源消耗；定向
+  到 7 帧；cast 入口使用本地 1.10f `startmana` 门槛，起始 cast 不提前扣除每刃 mana。
+- 新增 `AssassinSkillSpecializationTest` 的 Blade Fury 回归，覆盖单枚发刃、`Param4` 节流、
+  SrcDam 快照、逐刃资源消耗及 start-mana 门槛；定向
   `AssassinSkillSpecializationTest` 已通过。
 - 仍未标记为四层完成：真实 1.10f MPQ 双客户端时序、SQ held-input 重入、墙体/碰撞、重连恢复、
   Blade Fury 两个 helper missile 的完整视觉/伤害差异仍需后续 gate。
