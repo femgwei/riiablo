@@ -101,16 +101,12 @@ public class MissileLoader extends IteratingSystem {
    */
   public void loadNow(int entityId) {
     if (!mMissile.has(entityId)) return;
-    // Entity ids are recycled by Artemis.  A client-only impact can therefore
-    // inherit an AnimationWrapper from the entity that previously occupied the
-    // id; treating that wrapper as proof that this missile is loaded leaves
-    // IceArrowExplode with the old animation (or an empty wrapper).  This is an
-    // explicit load request for a newly-created missile, so replace stale
-    // presentation components before running the normal loader path.
-    if (mAnimationWrapper.has(entityId)) {
-      mAnimationWrapper.remove(entityId);
-      if (mBBoxWrapper.has(entityId)) mBBoxWrapper.remove(entityId);
-    }
+    // Entity ids are recycled by Artemis. Rebuild an inherited wrapper in
+    // place instead of removing and recreating the component: RenderSystem is
+    // subscribed to AnimationWrapper and a same-tick remove/create can leave
+    // a recycled impact entity out of its render subscription. process()'
+    // Animation.Builder.reset() replaces the old DCC layer, so retaining the
+    // wrapper does not retain the previous missile's animation.
     process(entityId);
     Missiles.Entry entry = mMissile.get(entityId).missile;
     if (entry != null && ("iceexplode".equalsIgnoreCase(entry.Missile)
