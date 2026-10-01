@@ -441,9 +441,11 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   逐目标重连检查。生产排序已抽为最近距离优先 helper，并由纯 ECS 测试锁定；真实 MPQ
   gate 现在通过 D2GS 应用线程快照读取生产路径实际选中的目标 ID 和同 tick 距离，验证
   11 个目标唯一且按距离非递减排列。动态单位碰撞可能在后续 tick 重定位目标，因此不再
-  用事后客户端坐标推断生产顺序。墙后目标 gate 仍留待下一项。当前 MPQ 观测确认两行导弹均为
-  `CollideType=3`、`Collision=false`、`LastCollide=true`；此前候选点只是超过 11 枚上限，
-  尚未构成真实墙体样本。
+  用事后客户端坐标推断生产顺序。真实墙体 gate 也已通过：在 MPQ 地图中扫描可行走且被
+  `FLAG_BLOCK_JUMP` raycast 阻挡的点，放置第 11 个候选后重新验证实际实体 ray；生产快照只
+  选择前 10 个无遮挡目标，墙后目标不掉血，observer reconnect 保持初始生命。gate 硬断言
+  blocked ID 不在快照中，不使用假墙或“超过上限”冒充墙体证据。当前 MPQ 观测确认两行导弹均为
+  `CollideType=3`、`Collision=false`、`LastCollide=true`。
 
 ## 参考入口
 

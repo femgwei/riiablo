@@ -5994,4 +5994,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 真实 MPQ gate 通过 D2GS 应用线程桥接读取 `MissileCollisionSystem` 在生产瞬间发布的
   目标 ID/距离快照，验证 11 个唯一目标按同 tick 距离非递减选中；不依赖后续动态碰撞重定位
   后的客户端坐标，也不把创建 ID 当作排序证据。
-- [ ] 墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于完整 Lightning Fury 目标选择矩阵。
+- [x] 真实墙体 gate 已通过：`headlessAmazonMelee -PamazonMeleeWallGate=true` 在 MPQ
+  地图中扫描可行走且被 `FLAG_BLOCK_JUMP` raycast 阻挡的点，放置第 11 个候选后重新检查
+  实际实体 ray；生产快照只选择前 10 个无遮挡目标，墙后实体不掉血，observer reconnect
+  保持其初始生命不变。gate 同时硬断言 blocked ID 不在选择快照中，未使用假墙或“超过上限”
+  作为墙体替代证据。

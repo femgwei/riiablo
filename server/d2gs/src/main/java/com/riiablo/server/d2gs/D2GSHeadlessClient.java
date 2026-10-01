@@ -1326,6 +1326,10 @@ public final class D2GSHeadlessClient {
     byte[] peerD2s = createGeneratedObserverSave("AmazonMeleePeer", 0x414D454C);
     CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
     int room = D2GS.headlessNonAdjacentRoomPair(2)[0];
+    if (config.amazonMeleeWallProbe || config.amazonMeleeWallGate) {
+      int wallRoom = D2GS.headlessRoomWithBlockedPlacement(2, 25f);
+      if (wallRoom >= 0) room = wallRoom;
+    }
     try (Socket ownerSocket = owner.openSocket(); Socket peerSocket = peer.openSocket()) {
       DataInputStream ownerInput = input(ownerSocket), peerInput = input(peerSocket);
       OutputStream ownerOutput = output(ownerSocket), peerOutput = output(peerSocket);
@@ -1369,9 +1373,21 @@ public final class D2GSHeadlessClient {
       if (targetId < 0) throw new IOException("failed to create Amazon melee target");
       Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
       Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
+      if (config.amazonMeleeWallProbe && lightningFury) {
+        float[] blockedPlacement = D2GS.headlessFindBlockedMonsterPlacement(targetId, 25f);
+        if (blockedPlacement.length < 2) {
+          throw new IOException("Lightning Fury wall probe found no walkable target behind a real missile barrier");
+        }
+        log("amazon_fury_wall_probe_pass", "anchor=" + targetId
+            + " target=" + String.format("(%.2f,%.2f)", blockedPlacement[0], blockedPlacement[1])
+            + " impact=" + String.format("(%.2f,%.2f)", blockedPlacement[2], blockedPlacement[3]));
+        return;
+      }
       float initialLife = ownerTarget.life;
       int furyTargetId = Engine.INVALID_ENTITY;
       int furyThirdTargetId = Engine.INVALID_ENTITY;
+      int furyBlockedTargetId = Engine.INVALID_ENTITY;
+      float initialFuryBlockedLife = Float.NaN;
       float initialFuryLife = Float.NaN;
       float initialFuryThirdLife = Float.NaN;
       ArrayList<Integer> furyTargetIds = new ArrayList<>();
@@ -1379,6 +1395,7 @@ public final class D2GSHeadlessClient {
       ArrayList<Boolean> furyTargetDamaged = new ArrayList<>();
       float[] furyOffsets = {5f, 10f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f};
       int furyExpectedChildCount = 0;
+      int furyExpectedSharedChildCount = 0;
       if (lightningFury) {
         Skills.Entry furySkill = Riiablo.files != null && Riiablo.files.skills != null
             ? Riiablo.files.skills.get("Lightning Fury") : null;
@@ -1398,7 +1415,9 @@ public final class D2GSHeadlessClient {
         // Keep the first two offsets stable for the existing second/third-target
         // assertions, then fill the same visible vertical channel to the native
         // level-10 maximum of eleven targets.
-        for (int i = 0; i < furyExpectedChildCount; i++) {
+        furyExpectedSharedChildCount = config.amazonMeleeWallGate
+            ? Math.max(1, furyExpectedChildCount - 1) : furyExpectedChildCount;
+        for (int i = 0; i < furyExpectedSharedChildCount; i++) {
           int auraTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
           if (auraTargetId < 0
               || !D2GS.headlessPlaceMonsterNear(auraTargetId, targetId, 0f, furyOffsets[i])) {
@@ -1413,6 +1432,25 @@ public final class D2GSHeadlessClient {
           }
           initialFuryLives.add(ownerAura.life);
           furyTargetDamaged.add(false);
+        }
+        if (config.amazonMeleeWallGate) {
+          furyBlockedTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+          float[] blockedPlacement = D2GS.headlessFindBlockedMonsterPlacement(targetId, 25f);
+          if (furyBlockedTargetId < 0 || blockedPlacement.length < 2
+              || !D2GS.headlessPlaceMonsterNear(furyBlockedTargetId, targetId,
+                  blockedPlacement[0] - ownerTarget.x, blockedPlacement[1] - ownerTarget.y)) {
+            throw new IOException("failed to create/place Lightning Fury wall target");
+          }
+          Snapshot ownerBlocked = awaitSpecificMonster(owner, ownerInput, furyBlockedTargetId, deadline());
+          Snapshot peerBlocked = awaitSpecificMonster(peer, peerInput, furyBlockedTargetId, deadline());
+          if (!ownerBlocked.hasPosition || !peerBlocked.hasPosition) {
+            throw new IOException("Lightning Fury wall target did not receive both client baselines");
+          }
+          if (!D2GS.headlessMapRayBlocked(targetId, furyBlockedTargetId)) {
+            throw new IOException("Lightning Fury wall target placement is not blocked by the production map ray: target="
+                + furyBlockedTargetId + " owner=" + ownerBlocked + " peer=" + peerBlocked);
+          }
+          initialFuryBlockedLife = ownerBlocked.life;
         }
         furyTargetId = furyTargetIds.get(0);
         furyThirdTargetId = furyTargetIds.get(1);
@@ -1432,6 +1470,7 @@ public final class D2GSHeadlessClient {
       boolean furyDamaged = false;
       boolean furyThirdDamaged = false;
       boolean furyAllTargetsDamaged = false;
+      boolean furyBlockedDamaged = false;
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
       boolean sawFuryChildShared = false;
@@ -1450,7 +1489,7 @@ public final class D2GSHeadlessClient {
           && System.currentTimeMillis() < deadline
           && (!lightningFury || !sawLightningMissile)
           && (!damaged || (lightningFury && (!furyAllTargetsDamaged
-              || furyChildCount < furyExpectedChildCount))
+              || furyChildCount < furyExpectedSharedChildCount))
               || (impale && !impaleResourceObserved))
           && !targetDeathObserved; attempt++) {
         if (impale) fallback = false;
@@ -1475,7 +1514,7 @@ public final class D2GSHeadlessClient {
             + (impale ? 3000L : 1800L));
         while (System.currentTimeMillis() < attemptDeadline
             && (!damaged || (lightningFury && (!furyAllTargetsDamaged
-                || furyChildCount < furyExpectedChildCount))
+                || furyChildCount < furyExpectedSharedChildCount))
                 || (impale && !impaleResourceObserved))
             && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
@@ -1522,6 +1561,15 @@ public final class D2GSHeadlessClient {
             furyAllTargetsDamaged = !furyTargetDamaged.contains(Boolean.FALSE);
             furyDamaged = furyTargetDamaged.get(0);
             furyThirdDamaged = furyTargetDamaged.get(1);
+            if (config.amazonMeleeWallGate && furyBlockedTargetId >= 0) {
+              Snapshot blockedCurrent = owner.monsters.get(furyBlockedTargetId);
+              Snapshot blockedMirrored = peer.monsters.get(furyBlockedTargetId);
+              if (blockedCurrent != null && blockedMirrored != null
+                  && blockedCurrent.hasVitals && blockedMirrored.hasVitals) {
+                furyBlockedDamaged = blockedCurrent.life < initialFuryBlockedLife
+                    || blockedMirrored.life < initialFuryBlockedLife;
+              }
+            }
           }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
           if ((lightningStrike || lightningFury)
@@ -1536,7 +1584,7 @@ public final class D2GSHeadlessClient {
               && !targetDeathObserved
               && (!lightningFury || !sawLightningMissile)
               && (!damaged || (lightningFury && (!furyAllTargetsDamaged
-                  || furyChildCount < furyExpectedChildCount))
+                  || furyChildCount < furyExpectedSharedChildCount))
                   || (impale && !impaleResourceObserved))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
@@ -1567,13 +1615,13 @@ public final class D2GSHeadlessClient {
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
       }
-      if (lightningFury && (!sawFuryChildShared || furyChildCount != furyExpectedChildCount
+      if (lightningFury && (!sawFuryChildShared || furyChildCount != furyExpectedSharedChildCount
           || !furyAllTargetsDamaged)) {
         throw new IllegalStateException("Amazon Lightning Fury did not complete shared aura split: root="
             + targetId + " auraTarget=" + furyTargetId
             + " thirdTarget=" + furyThirdTargetId + " childShared=" + sawFuryChildShared
             + " childCount=" + furyChildCount + " auraDamaged=" + furyDamaged
-            + " expectedChildCount=" + furyExpectedChildCount
+            + " expectedChildCount=" + furyExpectedSharedChildCount
             + " thirdDamaged=" + furyThirdDamaged + " allTargetsDamaged=" + furyAllTargetsDamaged
             + " targetIds=" + furyTargetIds + " targetDamaged=" + furyTargetDamaged
             + " ownerAura=" + owner.monsters.get(furyTargetId)
@@ -1581,6 +1629,12 @@ public final class D2GSHeadlessClient {
             + " ownerThird=" + owner.monsters.get(furyThirdTargetId)
             + " peerThird=" + peer.monsters.get(furyThirdTargetId)
             + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles));
+      }
+      if (config.amazonMeleeWallGate && furyBlockedDamaged) {
+        throw new IllegalStateException("Amazon Lightning Fury wall target was damaged: target="
+            + furyBlockedTargetId + " initial=" + initialFuryBlockedLife
+            + " owner=" + owner.monsters.get(furyBlockedTargetId)
+            + " peer=" + peer.monsters.get(furyBlockedTargetId));
       }
       if (lightningFury) {
         long[] packedSelection = D2GS.headlessLightningFurySelection();
@@ -1597,6 +1651,10 @@ public final class D2GSHeadlessClient {
         }
         java.util.HashSet<Integer> selectedSet = new java.util.HashSet<>();
         for (int i = 0; i < actualSelection.length; i++) {
+          if (config.amazonMeleeWallGate && actualSelection[i] == furyBlockedTargetId) {
+            throw new IllegalStateException("Amazon Lightning Fury selection unexpectedly contains blocked target: id="
+                + furyBlockedTargetId + " ids=" + java.util.Arrays.toString(actualSelection));
+          }
           if (!furyTargetIds.contains(actualSelection[i]) || !selectedSet.add(actualSelection[i])) {
             throw new IllegalStateException("Amazon Lightning Fury selection contains an invalid or duplicate target: ids="
                 + java.util.Arrays.toString(actualSelection) + " fixture=" + furyTargetIds);
@@ -1610,6 +1668,10 @@ public final class D2GSHeadlessClient {
         log("amazon_fury_selection_order_pass", "targets="
             + java.util.Arrays.toString(actualSelection) + " distances="
             + java.util.Arrays.toString(actualDistances));
+        if (config.amazonMeleeWallGate) {
+          log("amazon_fury_wall_gate_pass", "blockedTarget=" + furyBlockedTargetId
+              + " rayBlocked=true selected=false blockedDamaged=false");
+        }
       }
       // The production child inherits the root projectile's shared hit set,
       // so a furylightning bolt cannot resolve the struck root at its spawn
@@ -1704,6 +1766,11 @@ public final class D2GSHeadlessClient {
                   + auraTargetId);
             }
           }
+          if (config.amazonMeleeWallGate && furyBlockedTargetId >= 0
+              && !D2GS.headlessSyncEntityTo(reconnected.playerId, furyBlockedTargetId)) {
+            throw new IOException("Amazon Lightning Fury observer reconnect could not prime wall target="
+                + furyBlockedTargetId);
+          }
         }
         Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
         boolean reconnectLifeInvalid = !restored.hasVitals || restored.life > ownerLife + 0.001f
@@ -1719,6 +1786,8 @@ public final class D2GSHeadlessClient {
         }
         Snapshot restoredFury = lightningFury ? restoredFuryTargets.get(0) : null;
         Snapshot restoredFuryThird = lightningFury ? restoredFuryTargets.get(1) : null;
+        Snapshot restoredFuryBlocked = config.amazonMeleeWallGate
+            ? awaitSpecificMonster(reconnected, reconnectInput, furyBlockedTargetId, deadline()) : null;
         if (lightningFury) {
           reconnectLifeInvalid |= !restoredFury.hasVitals
               || restoredFury.life > owner.monsters.get(furyTargetId).life + 0.001f
@@ -1734,6 +1803,13 @@ public final class D2GSHeadlessClient {
                 || restoredAura.life > ownerAura.life + 0.001f
                 || restoredAura.life >= initialFuryLives.get(i);
           }
+          if (config.amazonMeleeWallGate) {
+            Snapshot ownerBlocked = owner.monsters.get(furyBlockedTargetId);
+            reconnectLifeInvalid |= restoredFuryBlocked == null || !restoredFuryBlocked.hasVitals
+                || ownerBlocked == null
+                || Math.abs(restoredFuryBlocked.life - ownerBlocked.life) > 0.001f
+                || restoredFuryBlocked.life < initialFuryBlockedLife - 0.001f;
+          }
           if (!reconnectHasOnlyLiveFuryChildren(owner, reconnected)) {
             throw new IOException("Amazon Lightning Fury reconnect restored stale furylightning child: "
                 + areaMissileSummary(reconnected.areaMissiles));
@@ -1748,7 +1824,10 @@ public final class D2GSHeadlessClient {
                   + " auraRestored=" + restoredFury.life + " thirdTarget=" + furyThirdTargetId
                   + " thirdInitial=" + initialFuryThirdLife + " thirdOwner="
                   + owner.monsters.get(furyThirdTargetId).life + " thirdRestored="
-                  + restoredFuryThird.life : ""));
+                  + restoredFuryThird.life
+                  + (config.amazonMeleeWallGate ? " blockedTarget=" + furyBlockedTargetId
+                      + " blockedInitial=" + initialFuryBlockedLife
+                      + " blockedOwner=" + owner.monsters.get(furyBlockedTargetId).life : "") : ""));
         }
         if (impale && !config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss) {
           int[] restoredResources = D2GS.headlessAmazonWeaponStats(owner.playerId);
@@ -1769,7 +1848,7 @@ public final class D2GSHeadlessClient {
                 + " thirdOwnerLife=" + owner.monsters.get(furyThirdTargetId).life
                 + " thirdRestoredLife=" + restoredFuryThird.life
                 + " childShared=" + sawFuryChildShared + " childCount=" + furyChildCount
-                + " expectedChildCount=" + furyExpectedChildCount
+                + " expectedChildCount=" + furyExpectedSharedChildCount
                 + " targetCount=" + furyTargetIds.size() : "")
             + " stale=false");
       }
@@ -10796,6 +10875,8 @@ public final class D2GSHeadlessClient {
     String amazonMeleeWeaponCode = "jav";
     boolean amazonMeleeTargetDeath;
     boolean amazonMeleeExpectMiss;
+    boolean amazonMeleeWallProbe;
+    boolean amazonMeleeWallGate;
     boolean requireAmazonBow;
     int amazonBowSkillId = SkillId.FIRE_ARROW;
     boolean requireVineScenario;
@@ -10877,6 +10958,8 @@ public final class D2GSHeadlessClient {
         else if ("--amazon-melee-weapon".equals(arg)) config.amazonMeleeWeaponCode = value(args, ++i, arg);
         else if ("--amazon-melee-target-death".equals(arg)) config.amazonMeleeTargetDeath = true;
         else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
+        else if ("--amazon-melee-wall-probe".equals(arg)) config.amazonMeleeWallProbe = true;
+        else if ("--amazon-melee-wall-gate".equals(arg)) config.amazonMeleeWallGate = true;
         else if ("--require-amazon-bow".equals(arg)) config.requireAmazonBow = true;
         else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;

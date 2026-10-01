@@ -1950,6 +1950,60 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Finds a RoomEx whose center has a walkable point behind static missile geometry. */
+  static int headlessRoomWithBlockedPlacement(int levelId, float maxRange) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null || !zone.hasNativeRoomTopology()) return;
+        for (Map.RoomEx room : zone.getRoomsEx()) {
+          Vector2 anchor = findHeadlessRoomPosition(server, zone, room);
+          if (anchor == null) continue;
+          Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
+          Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
+          int limit = Math.max(3, (int) Math.floor(maxRange));
+          boolean found = false;
+          for (int radius = 3; radius <= limit && !found; radius++) {
+            for (int angle = 0; angle < 64; angle++) {
+              float radians = angle * MathUtils.PI2 / 64f;
+              float x = anchor.x + MathUtils.cos(radians) * radius;
+              float y = anchor.y + MathUtils.sin(radians) * radius;
+              if (server.map.getZone(x, y) != zone
+                  || (server.map.flags(Math.round(x), Math.round(y))
+                      & DT1.Tile.FLAG_BLOCK_WALK) != 0) continue;
+              ray.set(anchor, new Vector2(x, y));
+              if (server.map.castRay(ray, DT1.Tile.FLAG_BLOCK_JUMP, 0, collision)) {
+                found = true;
+                break;
+              }
+            }
+          }
+          if (found) {
+            result.set(room.id);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Test-only relocation to an exact native RoomEx for subscription lifecycle checks. */
   static boolean headlessMovePlayerToRoom(int playerId, int levelId, int roomId) {
     D2GS server = activeHeadlessInstance;
@@ -2701,6 +2755,86 @@ public class D2GS extends ApplicationAdapter {
     });
     try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && placed.get(); }
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /**
+   * Finds a walkable point in the anchor's RoomEx whose native missile ray is
+   * blocked by static map geometry. The returned pair is a real map coordinate,
+   * not a synthetic wall flag; callers can place a durable fixture there and
+   * re-check the same ray through the production aura filter.
+   */
+  static float[] headlessFindBlockedMonsterPlacement(int anchorId, float maxRange) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new float[0];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<float[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new float[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position anchor = server.world.getMapper(Position.class).get(anchorId);
+        if (anchor == null || maxRange <= 2f) return;
+        Map.Zone zone = server.map.getZone(anchor.position);
+        if (zone == null) return;
+        Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
+        Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
+        int limit = Math.max(3, (int) Math.floor(maxRange));
+        // Scan from near to far so a returned target remains inside the first
+        // eleven native AuraFilter candidates in the Fury fixture.
+        for (int radius = 3; radius <= limit && result.get().length == 0; radius++) {
+          for (int angle = 0; angle < 64; angle++) {
+            float radians = angle * MathUtils.PI2 / 64f;
+            float x = anchor.position.x + MathUtils.cos(radians) * radius;
+            float y = anchor.position.y + MathUtils.sin(radians) * radius;
+            if (server.map.getZone(x, y) != zone
+                || (server.map.flags(Math.round(x), Math.round(y)) & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+              continue;
+            }
+            ray.set(anchor.position, new Vector2(x, y));
+            if (server.map.castRay(ray, DT1.Tile.FLAG_BLOCK_JUMP, 0, collision)) {
+              result.set(new float[] {x, y, collision.point.x, collision.point.y});
+              break;
+            }
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new float[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new float[0];
+    }
+  }
+
+  /** Verifies the production missile ray between two live fixture entities. */
+  static boolean headlessMapRayBlocked(int anchorId, int targetId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean blocked = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position anchor = server.world.getMapper(Position.class).get(anchorId);
+        Position target = server.world.getMapper(Position.class).get(targetId);
+        if (anchor == null || target == null) return;
+        Ray<Vector2> ray = new Ray<>(anchor.position, target.position);
+        Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
+        blocked.set(server.map.castRay(ray, DT1.Tile.FLAG_BLOCK_JUMP, 0, collision));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && blocked.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
   }
 
   /** Test-only baseline bridge for a durable fixture after observer reconnect. */
