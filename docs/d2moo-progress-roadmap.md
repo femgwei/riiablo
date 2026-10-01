@@ -5998,11 +5998,22 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   动画阶段委派给权威 `SkillDoEvent`；本轮 Multiple Shot/Strafe 真实 gate 日志不再出现
   unsupported warning。headless fallback 仍只补齐缺失 COF 关键帧，完整多目标穿透和
   旧客户端观感仍需后续画面/资源门槛。
+- [x] 新增显式 `-PamazonBowMultiTarget=true` 真实双客户端 gate：在玩家完成定位后，
+  按 D2MOO Multiple Shot 的整数 lane 方向创建两个独立耐久目标，并先验证 owner/observer
+  baseline 与生产 ray 未被墙体阻挡；Multiple Shot(12) 的同一 21 箭 volley 实际命中
+  两个不同 lane，Strafe(26) 的连续 keyframe 目标流也实际命中两个不同目标，双方生命
+  下降集合一致。测试同时保留共享导弹、单次箭袋消耗和 reconnect 断言。
+- [x] 为稳定动态夹具，测试目标在定位后移除 `Size` footprint 并停用 Box2D body；
+  missile collision 仍通过 `Position/Monster` 的生产 swept 路径，未改变技能或伤害公式。
 
 验证命令：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
-`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`、
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=25
+  -PamazonBowMultiTarget=true --no-daemon`、
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
+  -PamazonBowMultiTarget=true --no-daemon`。
 
 ## 2026-10-01 Amazon Lightning Fury 真实分裂 gate
 
@@ -6047,19 +6058,19 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 未修改用户已验证的 Amazon 数值公式；本轮只增加真实 gate、云团名称和状态断言。
 - 2026-10-01 复跑确认：Poison Javelin(15) level 20 双端目标生命为
   `999998.75`，Plague Javelin(25) 为 `999994.0`；两项云团、POISON 状态和 observer
-  reconnect 均通过。Multiple Shot/Strafe 多目标夹具仍保持待办，未以不稳定的动态目标
-  夹具结果替代生产行为结论。
+  reconnect 均通过。Multiple Shot/Strafe 多目标已由独立显式 gate 完成，穿透、墙碰撞和
+  旧客户端动画仍单独保留待办。
 
-Multiple Shot/Strafe 的下一步先落在纯 ECS 证据：`ServerSkillSystemTest` 已锁定
+Multiple Shot/Strafe 的纯 ECS 证据：`ServerSkillSystemTest` 已锁定
 D2MOO `SrvDo008` 斜向整数 lane 方向，`MissileNativePolicyTest` 已锁定跨导弹共享命中
 集合的去重语义，并锁定 Amazon 箭行 `Collision=false + SrvDoFunc=1` 仍走 swept
 unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙体 gate
-复跑通过。真实多目标和旧客户端动画门槛仍需独立稳定夹具。
+复跑通过。真实多目标 gate 已完成，旧客户端动画门槛仍需独立稳定夹具。
 
 本轮新增 `MissileNativePolicyTest.multiLaneVolleyClaimsDistinctTargetsButDeduplicatesOverlap`：
 用三个独立 lane 导弹和一个共享 `IntSet` 证明不同 lane 可分别命中不同目标，重叠 lane
-不会重复命中同一目标，而同一 lane 的跨帧重复接触仍由 per-projectile 集合拦截。该测试
-只锁定 D2MOO 的跨导弹命中事务语义，不替代尚不稳定的真实动态多目标地图夹具。
+不会重复命中同一目标，而同一 lane 的跨帧重复接触仍由 per-projectile 集合拦截；该纯测
+试与本轮真实 `amazonBowMultiTarget` gate 共同覆盖多目标命中去重，不替代穿透/墙体门槛。
 
 本轮尝试扩展 Amazon `Lightning Bolt(20)` 真实双客户端 gate，并按 D2MOO
 `MISSMODE_SrvDmg12_LightningJavelin` 核对 `lightningjavelin` 导弹及其物理转闪电路径。

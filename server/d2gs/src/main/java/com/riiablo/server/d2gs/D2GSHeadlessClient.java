@@ -2100,6 +2100,16 @@ public final class D2GSHeadlessClient {
       if (targetId < 0) throw new IOException("failed to create Amazon bow target");
       Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());
       Snapshot peerTarget = awaitSpecificMonster(peer, peerInput, targetId, deadline());
+      boolean multipleShot = config.amazonBowSkillId == SkillId.MULTIPLE_SHOT;
+      boolean strafe = config.amazonBowSkillId == SkillId.STRAFE;
+      boolean multiTargetGate = config.amazonBowMultiTarget && (multipleShot || strafe);
+      ArrayList<Integer> multiTargetIds = new ArrayList<>();
+      Map<Integer, Float> multiInitialLives = new HashMap<>();
+      Set<Integer> multiOwnerDamaged = new HashSet<>();
+      Set<Integer> multiPeerDamaged = new HashSet<>();
+      boolean multiTargetPassed = !multiTargetGate;
+      multiTargetIds.add(targetId);
+      multiInitialLives.put(targetId, ownerTarget.life);
       float initialLife = ownerTarget.life;
       if (!D2GS.headlessSetMonsterDefense(targetId, 1)) {
         throw new IOException("failed to lower Amazon bow target defense");
@@ -2119,6 +2129,41 @@ public final class D2GSHeadlessClient {
       }
       if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId)) {
         throw new IOException("failed to install deterministic Amazon bow attack profile");
+      }
+      if (multiTargetGate) {
+        // The native Multiple Shot lane spacing for the fixture's horizontal
+        // caster-to-target ray is two world units.  Add lane targets only
+        // after the player is staged so the deterministic player position is
+        // not itself relocated by the temporary fixture bodies.
+        for (float laneOffset : new float[] {-4f, -8f}) {
+          int laneTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+          if (laneTargetId < 0 || !D2GS.headlessDisableMonsterDynamicCollision(laneTargetId)
+              || !D2GS.headlessPlaceMonsterNear(laneTargetId, targetId, 0f, laneOffset)) {
+            throw new IOException("failed to create/place Amazon multi-target lane offset="
+                + laneOffset);
+          }
+          if (!D2GS.headlessSetMonsterDefense(laneTargetId, 1)
+              || !D2GS.headlessSetMonsterBowDefense(laneTargetId)) {
+            throw new IOException("failed to configure Amazon multi-target lane target="
+                + laneTargetId);
+          }
+          Snapshot laneOwner = awaitSpecificMonster(owner, ownerInput, laneTargetId, deadline());
+          Snapshot lanePeer = awaitSpecificMonster(peer, peerInput, laneTargetId, deadline());
+          if (!laneOwner.hasPosition || !lanePeer.hasPosition) {
+            throw new IOException("Amazon multi-target lane did not receive both baselines: target="
+                + laneTargetId + " offset=" + laneOffset);
+          }
+          if (D2GS.headlessMapRayBlocked(owner.playerId, laneTargetId)) {
+            throw new IOException("Amazon multi-target lane is blocked by the production map ray: target="
+                + laneTargetId + " offset=" + laneOffset);
+          }
+          multiTargetIds.add(laneTargetId);
+          multiInitialLives.put(laneTargetId, laneOwner.life);
+          log("amazon_bow_multitarget_baseline", "skill=" + config.amazonBowSkillId
+              + " target=" + laneTargetId + " offset=" + laneOffset
+              + " owner=" + snapshotSummary(laneOwner)
+              + " peer=" + snapshotSummary(lanePeer));
+        }
       }
       log("amazon_bow_fixture_ray", "skill=" + config.amazonBowSkillId
           + " blocked=" + D2GS.headlessMapRayBlocked(owner.playerId, targetId));
@@ -2142,8 +2187,6 @@ public final class D2GSHeadlessClient {
       boolean sawImmolationFire = false;
       boolean sawImmolationFireShared = false;
       boolean sawImmolationFireTick = false;
-      boolean multipleShot = config.amazonBowSkillId == SkillId.MULTIPLE_SHOT;
-      boolean strafe = config.amazonBowSkillId == SkillId.STRAFE;
       boolean volleyRequired = multipleShot || strafe;
       int volleyMissilesBefore = owner.playerMissiles.size();
       boolean sawVolleyShared = false;
@@ -2165,6 +2208,7 @@ public final class D2GSHeadlessClient {
               || volleyRequired && ownedSkillMissileCount(owner,
                   config.amazonBowSkillId) < 2
               || volleyRequired && !sawVolleyShared
+              || multiTargetGate && !multiTargetPassed
               || coldRequired && !sawColdState
               || immolation && (!sawImmolationFireShared || !sawImmolationFireTick)); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
@@ -2189,6 +2233,7 @@ public final class D2GSHeadlessClient {
                 || volleyRequired && ownedSkillMissileCount(owner,
                     config.amazonBowSkillId) < 2
                 || volleyRequired && !sawVolleyShared
+                || multiTargetGate && !multiTargetPassed
                 || coldRequired && !sawColdState
                 || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
           consumeOne(ownerInput, owner);
@@ -2218,6 +2263,31 @@ public final class D2GSHeadlessClient {
                     com.riiablo.engine.server.state.StateId.FREEZE);
               }
             }
+          }
+          if (multiTargetGate) {
+            for (Integer laneTargetId : multiTargetIds) {
+              Snapshot laneCurrent = owner.monsters.get(laneTargetId);
+              Snapshot laneMirrored = peer.monsters.get(laneTargetId);
+              Float laneBaseline = multiInitialLives.get(laneTargetId);
+              if (laneCurrent != null && laneMirrored != null
+                  && laneCurrent.hasVitals && laneMirrored.hasVitals
+                  && laneBaseline != null) {
+                float correctedLaneBaseline = Math.max(laneCurrent.life, laneMirrored.life);
+                if (correctedLaneBaseline > laneBaseline + 0.001f) {
+                  multiInitialLives.put(laneTargetId, correctedLaneBaseline);
+                } else {
+                  if (laneCurrent.life < laneBaseline - 0.001f) {
+                    multiOwnerDamaged.add(laneTargetId);
+                  }
+                  if (laneMirrored.life < laneBaseline - 0.001f) {
+                    multiPeerDamaged.add(laneTargetId);
+                  }
+                }
+              }
+            }
+            Set<Integer> sharedMultiDamaged = new HashSet<>(multiOwnerDamaged);
+            sharedMultiDamaged.retainAll(multiPeerDamaged);
+            multiTargetPassed = sharedMultiDamaged.size() >= 2;
           }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
           // A replenishing quiver can return to quantity=1 before the next
@@ -2256,6 +2326,7 @@ public final class D2GSHeadlessClient {
                   || volleyRequired && ownedSkillMissileCount(owner,
                       config.amazonBowSkillId) < 2
                   || volleyRequired && !sawVolleyShared
+                  || multiTargetGate && !multiTargetPassed
                   || coldRequired && !sawColdState
                   || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
             fallback = true;
@@ -2293,6 +2364,20 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")
             + " volley was not shared by owner/observer: ownerMissiles="
             + owner.playerMissiles.size() + " observerEntities=" + peer.areaMissiles.size());
+      }
+      if (multiTargetGate) {
+        Set<Integer> sharedMultiDamaged = new HashSet<>(multiOwnerDamaged);
+        sharedMultiDamaged.retainAll(multiPeerDamaged);
+        if (sharedMultiDamaged.size() < 2) {
+          throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")
+              + " did not damage at least two distinct lane targets: targets=" + multiTargetIds
+              + " ownerDamaged=" + multiOwnerDamaged + " peerDamaged=" + multiPeerDamaged
+              + " ownerTargets=" + multiTargetSnapshotSummary(owner, multiTargetIds)
+              + " peerTargets=" + multiTargetSnapshotSummary(peer, multiTargetIds));
+        }
+        log("amazon_bow_multitarget_pass", "skill=" + config.amazonBowSkillId
+            + " targets=" + multiTargetIds + " sharedDamaged=" + sharedMultiDamaged
+            + " ownerDamaged=" + multiOwnerDamaged + " peerDamaged=" + multiPeerDamaged);
       }
       if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
           || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChild) {
@@ -2569,6 +2654,16 @@ public final class D2GSHeadlessClient {
         snapshot.hasPosition
             ? String.format("(%.2f,%.2f)", snapshot.x, snapshot.y) : "?",
         snapshot.deleted, snapshot.dead);
+  }
+
+  private static String multiTargetSnapshotSummary(D2GSHeadlessClient client,
+      ArrayList<Integer> targetIds) {
+    if (client == null || targetIds == null) return "[]";
+    ArrayList<String> summaries = new ArrayList<>();
+    for (Integer targetId : targetIds) {
+      summaries.add(targetId + "=" + snapshotSummary(client.monsters.get(targetId)));
+    }
+    return summaries.toString();
   }
 
   private static boolean impaleResourceChanged(int[] before, int[] after) {
@@ -11120,6 +11215,7 @@ public final class D2GSHeadlessClient {
     int amazonSummonSkillLevel = 7;
     boolean requireAmazonBow;
     int amazonBowSkillId = SkillId.FIRE_ARROW;
+    boolean amazonBowMultiTarget;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -11206,6 +11302,7 @@ public final class D2GSHeadlessClient {
         else if ("--amazon-summon-skill-level".equals(arg)) config.amazonSummonSkillLevel = integer(args, ++i, arg);
         else if ("--require-amazon-bow".equals(arg)) config.requireAmazonBow = true;
         else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
+        else if ("--amazon-bow-multitarget".equals(arg)) config.amazonBowMultiTarget = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
@@ -11488,6 +11585,7 @@ public final class D2GSHeadlessClient {
            + " [--amazon-melee-skill-level 1..20] [--amazon-melee-weapon jav|spr]"
            + " [--require-amazon-summon] [--amazon-summon-skill 28|32]"
            + " [--amazon-summon-skill-level 1..20]"
+           + " [--amazon-bow-multitarget]"
            + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"

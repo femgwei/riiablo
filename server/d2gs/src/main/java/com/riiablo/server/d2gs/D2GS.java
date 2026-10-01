@@ -2826,6 +2826,33 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Test-only placement escape hatch for several projectiles sharing narrow lanes. */
+  static boolean headlessDisableMonsterDynamicCollision(int monsterId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean disabled = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        // DynamicUnitCollisionSystem only indexes units carrying Size. Missile
+        // collision still uses Position/Monster and falls back to a small
+        // synthetic radius, which is exactly what this deterministic lane
+        // fixture needs without allowing bodies to push each other away.
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Size> sizes = server.world
+            .getMapper(com.riiablo.engine.server.component.Size.class);
+        if (sizes.has(monsterId)) sizes.remove(monsterId);
+        com.riiablo.engine.server.component.Box2DBody box = server.world.getMapper(
+            com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+        if (box != null && box.body != null) box.body.setActive(false);
+        disabled.set(!sizes.has(monsterId));
+      } finally {
+        done.countDown();
+      }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && disabled.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /**
    * Finds a walkable point in the anchor's RoomEx whose native missile ray is
    * blocked by static map geometry. The returned pair is a real map coordinate,

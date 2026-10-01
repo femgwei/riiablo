@@ -221,6 +221,10 @@ tasks.register('headlessAmazonBow', JavaExec) {
        (project.hasProperty('amazonBowSkill') ? project.property('amazonBowSkill').toString() : '7'),
        '--test-timeout',
        (project.hasProperty('amazonBowTimeout') ? project.property('amazonBowTimeout').toString() : '60')
+  if (project.hasProperty('amazonBowMultiTarget')
+      && project.property('amazonBowMultiTarget').toString().toBoolean()) {
+    args '--amazon-bow-multitarget'
+  }
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()

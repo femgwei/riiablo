@@ -1021,6 +1021,10 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] `headlessAmazonBow -PamazonBowSkill=26` 通过真实双客户端 Strafe 多箭目标流、
   单次箭袋消耗、共享实体、目标掉血和 reconnect；续发 keyframe 在零数量可恢复箭袋
   状态下不会再次触发通用“无弹药”拒绝。
+- [x] 新增 `-PamazonBowMultiTarget=true` 显式真实多目标 gate：Multiple Shot(12)
+  的 21 箭同一 volley 在两个不同 lane 目标上实际掉血；Strafe(26) 的连续 keyframe
+  目标流在两个不同目标上实际掉血；owner/observer 的掉血集合一致，并继续验证共享
+  导弹、单次箭袋消耗和 observer reconnect。目标 baseline 与生产 map ray 均先做硬断言。
 - [x] headless COF 缺少完整 Strafe 后续关键帧时，`headlessDispatchAmazonMelee`
   只重放剩余 `AnimDataKeyframeEvent`，仍进入 `ServerSkillSystem.spawnStrafe`，不伪造
   一次性整轮导弹。
@@ -1031,7 +1035,10 @@ incarnation，并继续检查跨区域实体基线恢复。
 验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=15 --no-daemon`、
-`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`。
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 --no-daemon`；
+  多目标：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=25
+  -PamazonBowMultiTarget=true --no-daemon`、`:server:d2gs:headlessAmazonBow
+  -PamazonBowSkill=26 -PamazonBowTimeout=30 -PamazonBowMultiTarget=true --no-daemon`。
 
 ### 2026-10-01 Amazon Lightning Bolt(20) gate 诊断记录
 
