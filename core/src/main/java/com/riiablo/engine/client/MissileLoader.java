@@ -32,6 +32,14 @@ public class MissileLoader extends IteratingSystem {
     DCC celFile = Riiablo.assets.get(missile.missileDescriptor);
 
     Missiles.Entry entry = missile.missile;
+    // One-shot impact DCCs are created and rendered in the same simulation
+    // tick.  Preload their sole direction here instead of relying on the
+    // lazy Layer.draw path, which can otherwise submit a region before the
+    // GL texture has been created (the entity then expires with no visible
+    // pixels even though the animation and bounds are valid).
+    if (entry != null && "iceexplode".equalsIgnoreCase(entry.Missile)) {
+      celFile.loadDirection(0);
+    }
 
     int blendMode;
     switch (entry.Trans) {
