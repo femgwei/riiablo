@@ -2032,6 +2032,19 @@ public final class D2GSHeadlessClient {
               + ".." + (bowMissile != null ? bowMissile.Emax : -1)
           + " hitSub=" + (bowMissile != null && bowMissile.HitSubMissile != null
               ? java.util.Arrays.toString(bowMissile.HitSubMissile) : "null"));
+      for (String missileName : new String[] {bowSkill.srvmissilea, bowSkill.srvmissileb,
+          bowSkill.srvmissilec, bowSkill.srvmissiled}) {
+        if (missileName == null || missileName.isEmpty()) continue;
+        com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+        if (row != null) {
+          log("amazon_bow_missile_row", "skill=" + bowSkill.skill + " missile=" + missileName
+              + " id=" + row.Id + " collision=" + row.Collision + " collideType=" + row.CollideType
+              + " collideKill=" + row.CollideKill + " srvDo=" + row.pSrvDoFunc
+              + " srvHit=" + row.pSrvHitFunc + " srvDmg=" + row.pSrvDmgFunc
+              + " srcDam=" + row.SrcDamage + " min=" + row.MinDamage + " max=" + row.MaxDamage
+              + " vel=" + row.Vel + " range=" + row.Range);
+        }
+      }
     }
     D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
     D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
@@ -2062,12 +2075,21 @@ public final class D2GSHeadlessClient {
       if (!D2GS.headlessSetMonsterBowDefense(targetId)) {
         throw new IOException("failed to clear Amazon bow target avoidance");
       }
-      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, 2f)) {
+      // Multiple Shot's native SrvDo008 lane fan is evaluated from an
+      // integer caster-to-target delta. Keep the target far enough away that
+      // the centre arrow has a real swept segment before it reaches the
+      // fixture; the close-range 2f placement is valid for Strafe but can
+      // spawn the Multiple Shot fan inside the target collision envelope.
+      float bowTargetOffset = config.amazonBowSkillId == SkillId.MULTIPLE_SHOT ? 4f : 2f;
+      float bowCastOffset = config.amazonBowSkillId == SkillId.MULTIPLE_SHOT ? 4f : 1.5f;
+      if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, bowTargetOffset)) {
         throw new IOException("failed to place Amazon bow player");
       }
       if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId)) {
         throw new IOException("failed to install deterministic Amazon bow attack profile");
       }
+      log("amazon_bow_fixture_ray", "skill=" + config.amazonBowSkillId
+          + " blocked=" + D2GS.headlessMapRayBlocked(owner.playerId, targetId));
       if (!D2GS.headlessSetAmazonAmmoReplenish(owner.playerId, 100)) {
         throw new IOException("failed to install in-memory replenishing quiver stat");
       }
@@ -2118,7 +2140,7 @@ public final class D2GSHeadlessClient {
         // Keep the short Fire Arrow segment inside the same open room tile;
         // the native CollideType=3 map ray otherwise can legitimately stop
         // the fixture's first arrow on a room boundary before unit collision.
-        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - 1.5f, ownerTarget.y));
+        send(ownerOutput, positionPacket(owner.playerId, ownerTarget.x - bowCastOffset, ownerTarget.y));
         // Let the authoritative movement packet land before deriving the
         // missile heading; melee gates can tolerate the old position, arrows
         // cannot when the target is several tiles away.
@@ -2221,6 +2243,14 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("Amazon bow did not create a shared missile: target="
             + targetId + " missilesBefore=" + missilesBefore
             + " missilesAfter=" + owner.playerMissiles.size());
+      }
+      if (!damaged) {
+        throw new IllegalStateException("Amazon bow projectile lifecycle passed without real target damage: skill="
+            + config.amazonBowSkillId + " target=" + targetId
+            + " ownerTarget=" + snapshotSummary(owner.monsters.get(targetId))
+            + " peerTarget=" + snapshotSummary(peer.monsters.get(targetId))
+            + " ownerMissiles=" + owner.playerMissiles.size()
+            + " ownerArea=" + areaMissileSummary(owner.areaMissiles));
       }
       if (volleyRequired && ownedSkillMissileCount(owner, config.amazonBowSkillId) < 2) {
         throw new IllegalStateException((multipleShot ? "Multiple Shot" : "Strafe")

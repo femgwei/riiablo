@@ -5942,8 +5942,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   伤害公式。验证命令：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=16 -PamazonBowTimeout=15`。
 
-下一项：继续 Freezing/Immolation/Multiple/Guided Arrow 的 D2MOO 行为与多目标/穿透
-门槛，再按职业顺序处理其他技能对照项。
+下一项：补齐 Multiple/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，再按职业顺序
+处理其他技能对照项。
 
 ## 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate
 
@@ -5966,7 +5966,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   delta、垂直 lane 和 `SrvMissileA/B` 武器选择，整轮导弹共享命中集合。
 - [x] `headlessAmazonBow -PamazonBowSkill=12` 真实双客户端通过：MPQ level-20
   Multiple Shot 创建 21 枚权威导弹，owner/observer 共享同一批实体，目标实际掉血，
-  箭袋只消耗一次，observer reconnect 后箭袋恢复一致。
+  箭袋只消耗一次，observer reconnect 后箭袋恢复一致。夹具使用 4f 开放直线距离，
+  并加入真实掉血硬断言；仅创建导弹而未命中目标时 gate 会失败。
 - [x] D2MOO `SKILLS_SrvSt08_Strafe`/`SKILLS_SrvDo012_Strafe` 已复核：初始箭数和
   `AuraRangeCalc` 在 SrvSt08 决定，SrvDo012 每个关键帧只创建一箭并递减 Param1，
   通过 Param2/Param3 继续找目标；riiablo 保留 per-keyframe target stream，且只在

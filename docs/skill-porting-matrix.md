@@ -429,15 +429,17 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `AmazonSkillSpecializationTest` 定向回归通过。Guided Arrow gate 仍会记录
   `Actioneer` 对 `SrvDoFunc=10` 的兼容日志，但权威 `ServerSkillSystem` 已完成导弹创建；
   该日志和旧客户端动画委派仍列为后续收尾项。
-- 当前下一项：Multiple Shot/Strafe 的多目标、穿透和命中去重真实 gate，随后继续
-  Lightning Fury、Plague Javelin/Poison Javelin、Decoy/Valkyrie 等 Amazon 行。
+- 当前下一项：补齐 Multiple Shot/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，
+  随后继续 Plague Javelin/Poison Javelin 及其他职业的 exact-ID 对照。
 
 ### 2026-10-01 Amazon Multiple Shot / Strafe 对照完成
 
 - `Multiple Shot(12)`：D2MOO `SrvDo008` 的 `Calc1/Calc3`、整数垂直 lane、
   `SrvMissileA/B` 选择和一次施法共享命中集合已与 `ServerSkillSystem` 对齐；真实
   MPQ gate 在 level 20 观察到 21 枚权威导弹，owner/observer 实体一致，目标掉血，
-  箭袋只扣一次并可重连恢复。
+  箭袋只扣一次并可重连恢复。夹具使用 caster-target 4f 的开放直线距离，避免 2f
+  近距离扇形起点落入目标碰撞包络，也避免 8f 在 gate 窗口内尚未到达；测试现已加入
+  “无真实目标掉血不得通过”的硬断言。
 - `Strafe(26)`：D2MOO `SrvSt08` 的初始目标/箭数与 `SrvDo012` 的 Param1/2/3
   续发语义已核对；riiablo 维持每个 keyframe 一箭、目标流按范围排序、首箭单次
   弹药扣除。真实双客户端 gate 已观察多箭共享、伤害和 reconnect 一致。
