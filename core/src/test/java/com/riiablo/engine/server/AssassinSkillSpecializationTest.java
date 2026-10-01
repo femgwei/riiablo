@@ -1291,6 +1291,35 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void bladeShieldStopsWhenItsStateIsRemovedBeforeTheNextPulse() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      int assassin = createBladeShieldPlayer(world, blade);
+      Attributes targetAttrs = attributes(1000);
+      createBladeShieldMonster(world, 2f, targetAttrs);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      UnitState state = world.getMapper(UnitStates.class).get(assassin)
+          .stateList.getState(StateId.BLADESHIELD);
+      assertNotNull(state);
+      state.periodicCountdownFrames = 0;
+      assertTrue(world.getMapper(UnitStates.class).get(assassin).stateList
+          .removeState(StateId.BLADESHIELD));
+      world.process();
+      assertEquals(1000f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "removing Blade Shield state cancels a pending periodic pulse");
+      assertFalse(world.getMapper(UnitStates.class).get(assassin).stateList
+          .hasState(StateId.BLADESHIELD));
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
   void bladeFuryEmitsOneTimedWeaponBladeAndConsumesPerBladeMana() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

@@ -19,7 +19,7 @@
 - 新增 `AssassinSkillSpecializationTest` 两项回归：精确锁定 air/ground/explosion 行、
   协同快照，以及地面炸弹单位接触不直伤、半径外目标不受伤、到期只爆炸一次。
   `./gradlew.bat :core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest`
-  已通过（27 tests）。
+  已通过（28 tests）。
 - 仍未标记为四层完成：真实 1.10f MPQ 墙体 null-hit、跨房间/重连、双客户端动画与伤害
   观感尚未验收；本次只完成 D2MOO 对照和权威 ECS 行为层。
 
@@ -34,7 +34,7 @@
   继承同一份 owner synergy snapshot；owner 仍由 maker 的 `damageOwnerId` 保留。
 - `AssassinSkillSpecializationTest.chargedBoltSentrySrvDo017EmitsNativeBoltBurst`
   新增参考快照比对，锁定 Charged Bolt 的 `lightmaxdam` 与带硬点协同的原生公式一致；
-  Assassin 专项测试目前 27 项全部通过。
+  Assassin 专项测试目前 28 项全部通过。
 - 该增量仍属于纯逻辑/ECS 层；真实 MPQ 双客户端的陷阱伤害、重连和动画观感仍需单独 gate。
 
 ## 2026-10-02 Assassin trap owner lifecycle / sentry retirement
@@ -52,7 +52,7 @@
   删除后飞行中的导弹丢失伤害关系。
 - 新增回归 `AssassinSkillSpecializationTest.sentryProjectileCompletesAfterTrapShotBudgetRetiresController`，
   覆盖“一发达到上限 → controller 删除 → 飞行导弹仍命中目标”；定向用例和完整
-  `AssassinSkillSpecializationTest` 均通过（27 tests）。
+  `AssassinSkillSpecializationTest` 均通过（28 tests）。
 - 新增回归 `AssassinSkillSpecializationTest.playerDepartureRemovesOwnedAssassinSentry`，
   移植 dark-magic `player_departure_removes_owned_sentries`：玩家删除采用 Artemis 延迟
   entity flush，下一 ECS tick 由 `SummonedPetSystem` 观察 owner 缺失并清理陷阱；该语义
@@ -60,6 +60,9 @@
 - 新增回归 `AssassinSkillSpecializationTest.bladeShieldStopsWhenThePlayerDiesBeforeTheNextPulse`，
   对照 dark-magic `player_death_interrupts_periodic_weapon_damage`：死亡玩家在下一个
   `perdelay` 到期点不再产生 Blade Shield 伤害，周期状态同时终止。
+- 新增回归 `AssassinSkillSpecializationTest.bladeShieldStopsWhenItsStateIsRemovedBeforeTheNextPulse`，
+  对照 dark-magic `state_removal_interrupts_periodic_weapon_damage`：外部移除
+  `BLADESHIELD` 状态后，不再产生待处理的周期伤害。
 - 新增回归 `AssassinSkillSpecializationTest.sentryRetargetsAfterTargetRemovalAndRetiresAtShotBudget`，
   移植 dark-magic `sentry_retargets_and_retires_after_its_shot_budget`：首个 hostile
   消失后重新选择替代目标，第二发消耗最后一个 shot，下一 tick 删除 sentry controller。
