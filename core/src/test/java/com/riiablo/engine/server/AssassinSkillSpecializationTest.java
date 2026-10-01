@@ -106,6 +106,60 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     System.out.println("[ASSASSIN_SKILL_SUMMARY] rows=" + rows);
   }
 
+  /**
+   * Locks the ten dark-magic trap-family IDs to their 1.10f Native rows.
+   *
+   * <p>The display names differ between the 1.14d dark-magic fixture and the
+   * 1.10f MPQ (for example Fire Blast/Fire Trauma and Shock Web/Shock Field),
+   * so this gate keys on the exact ID and native server dispatcher instead of
+   * copying expansion-era names or formulas.</p>
+   */
+  @Test
+  void auditDarkMagicTrapExactIdsAgainstLegacyRows() {
+    java.util.Map<Integer, String> expectedNames = new java.util.LinkedHashMap<>();
+    expectedNames.put(251, "Fire Trauma");
+    expectedNames.put(256, "Shock Field");
+    expectedNames.put(257, "Blade Sentinel");
+    expectedNames.put(261, "Charged Bolt Sentry");
+    expectedNames.put(262, "Wake of Fire Sentry");
+    expectedNames.put(266, "Blade Fury");
+    expectedNames.put(271, "Lightning Sentry");
+    expectedNames.put(272, "Inferno Sentry");
+    expectedNames.put(276, "Death Sentry");
+    expectedNames.put(277, "Blade Shield");
+
+    java.util.Map<Integer, Integer> expectedSrvDo = new java.util.LinkedHashMap<>();
+    expectedSrvDo.put(251, 0); // lobbed Fire Trauma uses the generic missile path.
+    expectedSrvDo.put(256, 43); // Shock Field progressive scatter.
+    expectedSrvDo.put(257, 44); // Blade Sentinel owned returning weapon.
+    expectedSrvDo.put(261, 45); // Charged Bolt Sentry owned trap.
+    expectedSrvDo.put(262, 45); // Wake of Fire Sentry owned trap.
+    expectedSrvDo.put(266, 48); // Blade Fury held-input missile release.
+    expectedSrvDo.put(271, 45); // Lightning Sentry owned trap.
+    expectedSrvDo.put(272, 45); // Inferno Sentry owned trap.
+    expectedSrvDo.put(276, 45); // Death Sentry owned trap/corpse transaction.
+    expectedSrvDo.put(277, 54); // Blade Shield periodic weapon state.
+
+    assertEquals(expectedNames.size(), expectedSrvDo.size());
+    for (Integer id : expectedNames.keySet()) {
+      Skills.Entry skill = Riiablo.files.skills.get(id);
+      assertNotNull(skill, "dark-magic trap exact-ID=" + id + " missing from 1.10f Skills.txt");
+      assertEquals(expectedNames.get(id), skill.skill,
+          "1.10f row name for dark-magic trap exact-ID=" + id);
+      assertEquals(expectedSrvDo.get(id), skill.srvdofunc,
+          "native SrvDoFunc for dark-magic trap exact-ID=" + id);
+    }
+
+    assertEquals("assassintrap", Riiablo.files.skills.get(257).pettype);
+    assertEquals("assassintrap", Riiablo.files.skills.get(261).pettype);
+    assertEquals("assassintrap", Riiablo.files.skills.get(262).pettype);
+    assertEquals("assassintrap", Riiablo.files.skills.get(271).pettype);
+    assertEquals("assassintrap", Riiablo.files.skills.get(272).pettype);
+    assertEquals("assassintrap", Riiablo.files.skills.get(276).pettype);
+    assertEquals("bladefragment1", Riiablo.files.skills.get(266).srvmissilea);
+    assertEquals("blade shield attachment", Riiablo.files.skills.get(277).srvmissilea);
+  }
+
   @Test
   void auditTrapSummonSkillInheritanceRows() {
     java.util.Map<String, String[]> expectedSumSkills = new java.util.LinkedHashMap<>();
