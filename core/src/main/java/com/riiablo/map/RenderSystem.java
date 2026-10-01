@@ -2,6 +2,7 @@ package com.riiablo.map;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import org.apache.commons.lang3.StringUtils;
 
 import com.artemis.Aspect;
@@ -285,12 +286,18 @@ public class RenderSystem extends BaseEntitySystem {
   // Wall reveal state is keyed by the native logical context rather than by
   // screen distance. Keeping the previous context lets walls in the old
   // group fade back while walls in the new group fade out over one transition.
-  private TileGrid wallTransitionGrid;
-  private int wallTransitionCurrentGroup = Integer.MIN_VALUE;
-  private int wallTransitionCurrentPop = -1;
-  private int wallTransitionFromGroup = Integer.MIN_VALUE;
-  private int wallTransitionFromPop = -1;
-  private long wallTransitionStartMs;
+  private static final class WallTransitionState {
+    int currentGroup = Integer.MIN_VALUE;
+    int currentPop = -1;
+    int fromGroup = Integer.MIN_VALUE;
+    int fromPop = -1;
+    long startMs;
+    boolean initialized;
+  }
+
+  /** Each visible native TileGrid has its own logical context state. */
+  private final IdentityHashMap<TileGrid, WallTransitionState> wallTransitions =
+      new IdentityHashMap<>();
 
   // pixel offset of tile in world-space
   float tpx, tpy;
@@ -1007,14 +1014,14 @@ public class RenderSystem extends BaseEntitySystem {
       }
     }
     int playerPop = nativePopIndexAt(grid, playerLocalX, playerLocalY);
-    updateWallTransition(grid, playerGroup, playerPop);
+    WallTransitionState transition = updateWallTransition(grid, playerGroup, playerPop);
     boolean current = wallContextOccludes(grid, wallGroup, playerGroup, playerPop, x, y);
-    if (wallTransitionStartMs == 0L) return current ? WALL_OCCLUDED_ALPHA : 1f;
-    long elapsed = Math.max(0L, System.currentTimeMillis() - wallTransitionStartMs);
+    if (transition.startMs == 0L) return current ? WALL_OCCLUDED_ALPHA : 1f;
+    long elapsed = Math.max(0L, System.currentTimeMillis() - transition.startMs);
     float progress = MathUtils.clamp((float) elapsed / WALL_FADE_MILLIS, 0f, 1f);
     if (progress >= 1f) return current ? WALL_OCCLUDED_ALPHA : 1f;
     boolean previous = wallContextOccludes(grid, wallGroup,
-        wallTransitionFromGroup, wallTransitionFromPop, x, y);
+        transition.fromGroup, transition.fromPop, x, y);
     if (previous == current) return current ? WALL_OCCLUDED_ALPHA : 1f;
     if (current) return 1f + (WALL_OCCLUDED_ALPHA - 1f) * progress;
     return WALL_OCCLUDED_ALPHA + (1f - WALL_OCCLUDED_ALPHA) * progress;
@@ -1025,38 +1032,39 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void resetWallTransition() {
-    wallTransitionGrid = null;
-    wallTransitionCurrentGroup = Integer.MIN_VALUE;
-    wallTransitionCurrentPop = -1;
-    wallTransitionFromGroup = Integer.MIN_VALUE;
-    wallTransitionFromPop = -1;
-    wallTransitionStartMs = 0L;
+    wallTransitions.clear();
   }
 
-  private void updateWallTransition(TileGrid grid, int playerGroup, int playerPop) {
-    if (wallTransitionGrid != grid) {
-      wallTransitionGrid = grid;
-      wallTransitionCurrentGroup = playerGroup;
-      wallTransitionCurrentPop = playerPop;
-      wallTransitionFromGroup = playerGroup;
-      wallTransitionFromPop = playerPop;
-      wallTransitionStartMs = 0L;
+  private WallTransitionState updateWallTransition(TileGrid grid, int playerGroup, int playerPop) {
+    WallTransitionState state = wallTransitions.get(grid);
+    if (state == null) {
+      state = new WallTransitionState();
+      wallTransitions.put(grid, state);
+    }
+    if (!state.initialized) {
+      state.currentGroup = playerGroup;
+      state.currentPop = playerPop;
+      state.fromGroup = playerGroup;
+      state.fromPop = playerPop;
+      state.startMs = 0L;
+      state.initialized = true;
       if (DEBUG_WALL_TRANSITIONS) {
         Gdx.app.log(TAG, "[WALL_TRANSITION] init group=" + playerGroup + " pop=" + playerPop);
       }
-      return;
+      return state;
     }
-    if (wallTransitionCurrentGroup == playerGroup && wallTransitionCurrentPop == playerPop) return;
-    wallTransitionFromGroup = wallTransitionCurrentGroup;
-    wallTransitionFromPop = wallTransitionCurrentPop;
-    wallTransitionCurrentGroup = playerGroup;
-    wallTransitionCurrentPop = playerPop;
-    wallTransitionStartMs = System.currentTimeMillis();
+    if (state.currentGroup == playerGroup && state.currentPop == playerPop) return state;
+    state.fromGroup = state.currentGroup;
+    state.fromPop = state.currentPop;
+    state.currentGroup = playerGroup;
+    state.currentPop = playerPop;
+    state.startMs = System.currentTimeMillis();
     if (DEBUG_WALL_TRANSITIONS) {
-      Gdx.app.log(TAG, "[WALL_TRANSITION] fromGroup=" + wallTransitionFromGroup
-          + " fromPop=" + wallTransitionFromPop
+      Gdx.app.log(TAG, "[WALL_TRANSITION] fromGroup=" + state.fromGroup
+          + " fromPop=" + state.fromPop
           + " toGroup=" + playerGroup + " toPop=" + playerPop);
     }
+    return state;
   }
 
   private static boolean wallContextOccludes(TileGrid grid, int wallGroup,
