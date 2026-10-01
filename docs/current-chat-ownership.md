@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon Lightning Bolt 纯 ECS 碰撞门槛）
+更新时间：2026-10-01（Amazon Lightning Bolt 真实 MPQ 双客户端 gate）
 
 ## 唯一负责人
 
@@ -32,16 +32,15 @@
 
 ## 当前基线
 
-### 2026-10-01 Lightning Bolt 纯 ECS 接手摘要
+### 2026-10-01 Lightning Bolt 真实 MPQ 接手摘要
 
-- 已新增 `AmazonSkillSpecializationTest.lightningBoltSweptCollisionAppliesSnapshotDamage`，
-  按 D2MOO `MISSMODE_SrvDmg12_LightningJavelin` 使用真实 `lightningjavelin` 行、
-  `MissileDamageResolver.initializeSkill` 快照和半帧 swept collision 验证实际掉血。
-- 定向测试及整组 `AmazonSkillSpecializationTest` 均通过；本轮没有修改生产碰撞、ToHit
-  或伤害公式。
-- 真实 `headlessAmazonMelee` Lightning Bolt gate 仍保持未完成：导弹创建成功但双方
-  目标没有掉血。后续应优先在 D2GS fixture 记录动态位置/地图碰撞/命中事件，不要把创建
-  导弹当作成功证据。
+- `headlessAmazonMelee` 已纳入 Lightning Bolt(20)，并记录 `lightningjavelin` 的
+  `Range/Vel/LastCollide/pSrvDmgFunc`；飞行技能使用足够的 swept path 观测窗口。
+- 真实 1.10f MPQ gate 已通过：owner/observer 目标生命 `1000000 -> 999781`，实体
+  `133 / missile=205` 创建并前进，observer 重连后仍恢复 `999781`。这次通过包含实际
+  掉血和重连证据，不仅是导弹创建。
+- 纯 ECS `lightningBoltSweptCollisionAppliesSnapshotDamage` 和整组
+  `AmazonSkillSpecializationTest` 均通过；未修改生产伤害公式。
 - 本轮新增的测试文件属于当前 Chat；其他 agent 的 `ItemEntry.java`、`AssassinTrapSystem.java`
   和 `StatFormatterTest.java` 以及未跟踪日志/截图均未纳入本轮提交。
 

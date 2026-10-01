@@ -1,20 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-01 Amazon Lightning Bolt 纯 ECS 碰撞门槛
+## 2026-10-01 Amazon Lightning Bolt 真实 MPQ 双客户端门槛
 
-- [x] 按 D2MOO `MISSMODE_SrvDmg12_LightningJavelin` 建立 `lightningjavelin` 的
-  纯 ECS 真实碰撞夹具：使用权威 Amazon、原生技能伤害快照和小体积目标，在半帧步长
-  下让导弹跨越目标，验证 swept segment 而不是端点重合才可命中。
-- [x] 回归确认导弹实际前进、`damageSnapshot` 携带 Lightning Bolt 的物理转闪电包，
-  并在命中后使目标生命值下降；专项测试为
-  `AmazonSkillSpecializationTest.lightningBoltSweptCollisionAppliesSnapshotDamage`。
-- [x] 验证命令：
+- [x] 在 `headlessAmazonMelee` 中加入 Lightning Bolt(20) exact-ID 支持，记录真实
+  `lightningjavelin` 行：`Collision=false`、`LastCollide=true`、`Range=25`、`Vel=30`、
+  `pSrvDmgFunc=12`，并把飞行型导弹的观测窗口延长到足以完成地图内 swept path。
+- [x] 真实 1.10f MPQ 双客户端通过：权威导弹 `entity=133 / missile=205` 创建并前进，
+  owner/observer 目标生命同步从 `1000000` 降到 `999781`；observer 重连后显式重放目标
+  实体，恢复生命仍为 `999781`。这与 D2MOO `MISSMODE_SrvDmg12_LightningJavelin`
+  的物理转闪电快照一致。
+- [x] 纯 ECS swept collision 回归仍保留，确认端点不重合时也能命中。验证命令：
   `./gradlew.bat :core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest.lightningBoltSweptCollisionAppliesSnapshotDamage --no-daemon`；
-  以及整组 `AmazonSkillSpecializationTest`，均 `BUILD SUCCESSFUL`。
-- [ ] 真实 `headlessAmazonMelee -PamazonMeleeSkill=20` 仍未通过实际掉血 gate：权威
-  `lightningjavelin` 已创建但双端目标未掉血。纯 ECS 已证明生产碰撞/伤害路径可用，
-  下一步应在 D2GS fixture 记录每帧 owner/target 位置、地图 barrier、导弹生命周期和
-  命中事件，区分动态坐标/地图碰撞/动画时序问题；不得仅凭导弹创建标记完成。
+  `./gradlew.bat :core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest --no-daemon`；
+  `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=20
+  -PamazonMeleeWeapon=jav -PamazonMeleeTimeout=20 --no-daemon`，均 `BUILD SUCCESSFUL`。
+- [ ] 下一步转入剩余 Amazon exact-ID 技能；Multiple Shot/Strafe 的多目标/穿透/旧客户端
+  动画仍需独立 gate，不能由 Lightning Bolt 的单目标通过结果代替。
 
 ## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
 

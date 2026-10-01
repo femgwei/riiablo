@@ -1350,8 +1350,10 @@ public final class D2GSHeadlessClient {
       }
       awaitAreaBaselines(owner, peer, ownerInput, peerInput);
 
+      boolean lightningBolt = config.amazonMeleeSkillId == SkillId.LIGHTNING_BOLT;
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
       boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
+      boolean requiresLightningMissile = lightningBolt || lightningStrike || lightningFury;
       boolean poisonJavelin = config.amazonMeleeSkillId == SkillId.POISON_JAVELIN
           || config.amazonMeleeSkillId == SkillId.PLAGUE_JAVELIN;
       if (lightningFury && Riiablo.files != null && Riiablo.files.skills != null
@@ -1377,6 +1379,26 @@ public final class D2GSHeadlessClient {
             + " childLastCollide=" + (furyChildRow != null && furyChildRow.LastCollide)
             + " childRange=" + (furyChildRow != null ? furyChildRow.Range : -1)
             + " childVel=" + (furyChildRow != null ? furyChildRow.Vel : -1));
+      }
+      if (lightningBolt && Riiablo.files != null && Riiablo.files.skills != null
+          && Riiablo.files.Missiles != null) {
+        Skills.Entry boltSkillRow = Riiablo.files.skills.get("Lightning Bolt");
+        com.riiablo.codec.excel.Missiles.Entry boltMissileRow = boltSkillRow != null
+            && boltSkillRow.srvmissile != null
+            ? Riiablo.files.Missiles.get(boltSkillRow.srvmissile) : null;
+        log("amazon_lightning_bolt_skill_row", "skill="
+            + (boltSkillRow != null ? boltSkillRow.skill : "null")
+            + " srv=" + (boltSkillRow != null ? boltSkillRow.srvmissile : "null")
+            + " missile=" + (boltMissileRow != null ? boltMissileRow.Missile : "null")
+            + " collision=" + (boltMissileRow != null && boltMissileRow.Collision)
+            + " collideType=" + (boltMissileRow != null ? boltMissileRow.CollideType : -1)
+            + " lastCollide=" + (boltMissileRow != null && boltMissileRow.LastCollide)
+            + " range=" + (boltMissileRow != null ? boltMissileRow.Range : -1)
+            + " vel=" + (boltMissileRow != null ? boltMissileRow.Vel : -1)
+            + " srvDo=" + (boltMissileRow != null ? boltMissileRow.pSrvDoFunc : -1)
+            + " srvHit=" + (boltMissileRow != null ? boltMissileRow.pSrvHitFunc : -1)
+            + " srvDmg=" + (boltMissileRow != null ? boltMissileRow.pSrvDmgFunc : -1)
+            + " toHit=" + (boltMissileRow != null && boltMissileRow.ToHit));
       }
       int targetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
       if (targetId < 0) throw new IOException("failed to create Amazon melee target");
@@ -1493,12 +1515,12 @@ public final class D2GSHeadlessClient {
       }
       int[] impaleResourceAfter = null;
       boolean impaleResourceObserved = false;
-      boolean sawLightningMissile = !lightningStrike && !lightningFury;
+      boolean sawLightningMissile = !requiresLightningMissile;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline
-          && (!lightningFury || !sawLightningMissile)
+          && (!requiresLightningMissile || !sawLightningMissile)
           && (!damaged || (lightningFury && (!furyAllTargetsDamaged
               || furyChildCount < furyExpectedSharedChildCount))
               || (impale && !impaleResourceObserved))
@@ -1521,8 +1543,11 @@ public final class D2GSHeadlessClient {
           throw new IOException("failed to kill Amazon melee target before keyframe");
         }
         long attemptStarted = System.currentTimeMillis();
+        // Thrown elemental javelins need to traverse the authoritative map
+        // before LastCollide/range cleanup; a short melee animation window can
+        // end before the final swept segment is published to both clients.
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis()
-            + (impale ? 3000L : 1800L));
+            + (requiresLightningMissile ? 5000L : impale ? 3000L : 1800L));
         while (System.currentTimeMillis() < attemptDeadline
             && (!damaged || (lightningFury && (!furyAllTargetsDamaged
                 || furyChildCount < furyExpectedSharedChildCount))
@@ -1583,7 +1608,7 @@ public final class D2GSHeadlessClient {
             }
           }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
-          if ((lightningStrike || lightningFury)
+          if (requiresLightningMissile
               && owner.playerMissiles.size() > missilesBefore) {
             sawLightningMissile = true;
           }
@@ -1593,7 +1618,7 @@ public final class D2GSHeadlessClient {
           }
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
               && !targetDeathObserved
-              && (!lightningFury || !sawLightningMissile)
+              && (!requiresLightningMissile || !sawLightningMissile)
               && (!damaged || (lightningFury && (!furyAllTargetsDamaged
                   || furyChildCount < furyExpectedSharedChildCount))
                   || (impale && !impaleResourceObserved))) {
@@ -1623,8 +1648,10 @@ public final class D2GSHeadlessClient {
       if (!config.amazonMeleeTargetDeath && !config.amazonMeleeExpectMiss && !damaged) {
         throw new IllegalStateException("Amazon melee did not damage shared target: skill="
             + config.amazonMeleeSkillId + " target=" + targetId
-            + " owner=" + owner.monsters.get(targetId)
-            + " peer=" + peer.monsters.get(targetId));
+            + " owner=" + snapshotSummary(owner.monsters.get(targetId))
+            + " peer=" + snapshotSummary(peer.monsters.get(targetId))
+            + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles)
+            + " peerMissiles=" + areaMissileSummary(peer.areaMissiles));
       }
       if (lightningFury && (!sawFuryChildShared || furyChildCount != furyExpectedSharedChildCount
           || !furyAllTargetsDamaged)) {
@@ -1737,7 +1764,7 @@ public final class D2GSHeadlessClient {
             + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
             + amazonWeaponStatsSummary(impaleResourceAfter));
       }
-      if ((lightningStrike || lightningFury) && !sawLightningMissile) {
+      if (requiresLightningMissile && !sawLightningMissile) {
         long missileDeadline = System.currentTimeMillis() + 1_000L;
         while (System.currentTimeMillis() < missileDeadline
             && !sawLightningMissile) {
@@ -1748,10 +1775,13 @@ public final class D2GSHeadlessClient {
       }
       if (!sawLightningMissile) {
         throw new IllegalStateException("Amazon "
-            + (lightningFury ? "Lightning Fury" : "Lightning Strike")
+            + (lightningBolt ? "Lightning Bolt"
+                : lightningFury ? "Lightning Fury" : "Lightning Strike")
             + " did not create its authoritative missile: target="
             + targetId + " missilesBefore=" + missilesBefore
-            + " missilesAfter=" + owner.playerMissiles.size());
+            + " missilesAfter=" + owner.playerMissiles.size()
+            + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles)
+            + " peerMissiles=" + areaMissileSummary(peer.areaMissiles));
       }
       float ownerLife = owner.monsters.get(targetId).life;
       float peerLife = peer.monsters.get(targetId).life;
@@ -1788,11 +1818,13 @@ public final class D2GSHeadlessClient {
         // Re-arm the native warped subscription after the fixture placement;
         // this is needed when a short-lived HitSubMissile is still present at
         // the moment the replacement client's first baseline is emitted.
-        if (lightningFury && !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
-          throw new IOException("Amazon Lightning Fury observer reconnect could not refresh room baseline");
+        if ((lightningFury || lightningBolt)
+            && !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
+          throw new IOException("Amazon elemental javelin observer reconnect could not refresh room baseline");
         }
-        if (lightningFury && !D2GS.headlessSyncEntityTo(reconnected.playerId, targetId)) {
-          throw new IOException("Amazon Lightning Fury observer reconnect could not prime durable target baselines");
+        if ((lightningFury || lightningBolt)
+            && !D2GS.headlessSyncEntityTo(reconnected.playerId, targetId)) {
+          throw new IOException("Amazon elemental javelin observer reconnect could not prime durable target baseline");
         }
         if (lightningFury) {
           for (int auraTargetId : furyTargetIds) {
@@ -11223,8 +11255,8 @@ public final class D2GSHeadlessClient {
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
-            + "Impale(19), Poison Javelin(15), Charged Strike(24), Plague Javelin(25), "
-            + "Fend(30), Lightning Strike(34), or Lightning Fury(35)");
+            + "Impale(19), Poison Javelin(15), Lightning Bolt(20), Charged Strike(24), "
+            + "Plague Javelin(25), Fend(30), Lightning Strike(34), or Lightning Fury(35)");
       }
       if (config.requireAmazonMelee && (config.amazonMeleeSkillLevel < 1
           || config.amazonMeleeSkillLevel > 20)) {
@@ -11334,7 +11366,8 @@ public final class D2GSHeadlessClient {
     private static boolean isAmazonMeleeSkill(int skillId) {
       return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.POISON_JAVELIN
-          || skillId == SkillId.CHARGED_STRIKE || skillId == SkillId.PLAGUE_JAVELIN
+          || skillId == SkillId.LIGHTNING_BOLT || skillId == SkillId.CHARGED_STRIKE
+          || skillId == SkillId.PLAGUE_JAVELIN
           || skillId == SkillId.FEND || skillId == SkillId.LIGHTNING_STRIKE
           || skillId == SkillId.LIGHTNING_FURY;
     }
