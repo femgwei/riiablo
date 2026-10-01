@@ -7,12 +7,15 @@ import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 
 @All(AnimationWrapper.class)
 public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   public AnimationStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -22,6 +25,15 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected void process(int entityId) {
     AnimationWrapper wrapper = mAnimationWrapper.get(entityId);
     if (wrapper == null || wrapper.animation == null) return;
+
+    UnitStates states = mUnitStates.get(entityId);
+    if (states != null && states.stateList != null
+        && states.stateList.hasState(StateId.FREEZE)) {
+      // The authoritative server freezes AnimData as well. Keep the client
+      // presentation on the current frame instead of continuing to animate
+      // a monster whose world position is already stationary.
+      return;
+    }
 
     Sequence sequence = mSequence.get(entityId);
     AnimData animData = mAnimData.get(entityId);
