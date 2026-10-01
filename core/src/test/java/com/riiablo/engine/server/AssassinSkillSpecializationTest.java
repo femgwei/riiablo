@@ -427,6 +427,50 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void sentryProjectileCompletesAfterTrapShotBudgetRetiresController() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new SummonedPetSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry sentry = Riiablo.files.skills.get("Lightning Sentry");
+      data.setSkillLevel(sentry.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, sentry.Id, Engine.INVALID_ENTITY, new Vector2(10, 0), sentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(14, 0);
+      Attributes targetAttrs = attributes(10000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.setDelta(1f / 25f);
+      world.process(); // fire the one permitted shot
+      assertEquals(1, factory.missiles);
+      world.process(); // retire the trap controller before the missile arrives
+      assertFalse(world.getEntityManager().isActive(factory.entityId));
+      for (int i = 0; i < 30 && targetAttrs.get(Stat.hitpoints).asFixed() >= 10000f; i++) {
+        world.process();
+      }
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "an in-flight sentry projectile must retain its owner after trap retirement");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void chargedBoltSentrySrvDo017EmitsNativeBoltBurst() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

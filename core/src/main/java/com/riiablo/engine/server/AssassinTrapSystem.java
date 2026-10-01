@@ -153,6 +153,7 @@ public class AssassinTrapSystem extends IteratingSystem {
           mAttributes.get(entityId).attrs,
           Math.max(1, trap.skillLevel),
           name -> resolveOwnerSkillLevel(trap.ownerId, name));
+      mMissile.get(missileId).damageOwnerId = trap.ownerId;
     }
     trap.shotsFired++;
     trap.attackCooldownFrames = attackInterval(monster);
@@ -217,6 +218,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       MissileDamageResolver.initializeSkill(
           bolt, resolveDamageSkill(missileRow, attackSkill, placement), attrs, bolt.damageLevel,
           name -> resolveOwnerSkillLevel(trap.ownerId, name));
+      bolt.damageOwnerId = trap.ownerId;
       created++;
     }
     log.debug("[CHARGED_BOLT_SENTRY] phase=burst entity={} owner={} target={} missile={} "
@@ -549,6 +551,7 @@ public class AssassinTrapSystem extends IteratingSystem {
         resolveDamageSkill(missileRow, attackSkill, placement), attrs,
         Math.max(1, trap.skillLevel),
         name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    missile.damageOwnerId = trap.ownerId;
     log.debug("[INFERNO_SENTRY] phase=pulse entity={} owner={} target={} missileId={} "
             + "remaining={} direction=({}, {})",
         entityId, trap.ownerId, trap.infernoTargetId, missileId,
@@ -677,6 +680,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     MissileDamageResolver.initializeSkill(blade, skill, ownerAttrs,
         Math.max(1, trap.skillLevel),
         name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    blade.damageOwnerId = trap.ownerId;
     trap.bladeMissileId = missileId;
     trap.shotsFired = 1;
     log.info("[BLADE_SENTINEL] phase=missile_create entity={} owner={} missileId={} "

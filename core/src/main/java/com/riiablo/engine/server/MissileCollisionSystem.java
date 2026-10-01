@@ -1323,7 +1323,8 @@ public class MissileCollisionSystem extends IteratingSystem {
    * 检查碰撞
    */
   private void checkCollisions(int missileId, Missile missile, Position missilePos, Vector2 lastPos) {
-    if (missile.ownerId < 0) {
+    int ownerId = missileCombatOwnerId(missile);
+    if (ownerId < 0) {
       log.debug("Missile {} has no owner (ownerId={}), skipping collision check", missileId, missile.ownerId);
       return; // 无拥有者，跳过碰撞检测
     }
@@ -1341,7 +1342,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     for (int i = 0; i < playerEntities.size(); i++) {
       int playerId = playerEntities.get(i);
-      if (playerId == missile.ownerId) {
+      if (playerId == ownerId) {
         log.trace("Missile {} skipping owner {}", missileId, playerId);
         continue; // 跳过拥有者
       }
@@ -1370,7 +1371,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     for (int i = 0; i < nearbyEntities.size; i++) {
       int targetId = nearbyEntities.get(i);
-      if (targetId == missileId || targetId == missile.ownerId) {
+      if (targetId == missileId || targetId == ownerId) {
         continue; // 跳过自己和自己
       }
       
@@ -1500,7 +1501,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         if (!holyBoltCanDamage(missile, targetId)) return false;
       }
       // 检查是否是敌人
-      if (!isEnemy(missile.ownerId, targetId)) {
+      int ownerId = missileCombatOwnerId(missile);
+      if (!isEnemy(ownerId, targetId)) {
         return false;
       }
       // D2MOO's SrvHit10 returns the special "wrong target" result when a
@@ -1569,7 +1571,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         if (!suppressSideEffects && !missile.attached) world.delete(missileId);
         return true;
       }
-      if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
+      if (mMercenary.has(ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
               + "distance={} radius={} position=({}, {}) traveled={} range={}",
@@ -1618,13 +1620,13 @@ public class MissileCollisionSystem extends IteratingSystem {
         spawnRoyalStrikeMeteorFire(missile, missilePos);
       }
 
-      if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
+      if (!mAttributesWrapper.has(ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
         if (!suppressSideEffects && !missile.attached) world.delete(missileId);
         return true;
       }
 
-      Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
+      Attributes ownerAttrs = mAttributesWrapper.get(ownerId).attrs;
       ensureFreezeChildSnapshot(missile, ownerAttrs);
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       Attributes attackAttrs = missile.damageSnapshot ? missile.damage : ownerAttrs;
@@ -1676,7 +1678,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
-          mPlayer.has(missile.ownerId),
+          mPlayer.has(ownerId),
           mPlayer.has(targetId),
           true,
           minOverride,
@@ -1684,8 +1686,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           arOverride,
           alwaysHit,
           null, null, 0, 0,
-          stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId),
-          missileMastery(missile), combatDifficulty(missile.ownerId, targetId),
+          stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
+          missileMastery(missile), combatDifficulty(ownerId, targetId),
           blessedHammerTargetBonusPercent(
               missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
@@ -1804,7 +1806,7 @@ public class MissileCollisionSystem extends IteratingSystem {
                   hitpoints.asFixed(), maxLife);
             }
           }
-          boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(missile.ownerId);
+          boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(ownerId);
           if (mercenaryDamage) {
             mercenaryDamageCount++;
             mercenaryLastDamageTarget = targetId;
@@ -2443,6 +2445,22 @@ public class MissileCollisionSystem extends IteratingSystem {
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
     StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
     return hp == null || hp.asFixed() > 0f;
+  }
+
+  /**
+   * Returns the player-side damage owner for a projectile whose monster-shaped
+   * trap controller may already have been removed.  Sentry missiles retain
+   * their trap as {@link Missile#ownerId} for native ownership/presentation,
+   * while {@link Missile#damageOwnerId} keeps hostility and combat snapshots
+   * valid after the trap reaches its shot budget.
+   */
+  private int missileCombatOwnerId(Missile missile) {
+    if (missile == null) return Engine.INVALID_ENTITY;
+    if (missile.damageOwnerId >= 0 && missile.ownerId >= 0
+        && !world.getEntityManager().isActive(missile.ownerId)) {
+      return missile.damageOwnerId;
+    }
+    return missile.ownerId;
   }
 
   private boolean isGuidedMissile(Missile missile) {

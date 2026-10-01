@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Fire Trauma SrvHit36/SrvHit03/SrvHit44 行为层）
+更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
 
 ## 2026-10-02 Assassin Fire Trauma（ID 251）行为增量
 
@@ -19,7 +19,7 @@
 - 新增 `AssassinSkillSpecializationTest` 两项回归：精确锁定 air/ground/explosion 行、
   协同快照，以及地面炸弹单位接触不直伤、半径外目标不受伤、到期只爆炸一次。
   `./gradlew.bat :core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest`
-  已通过（22 tests）。
+  已通过（23 tests）。
 - 仍未标记为四层完成：真实 1.10f MPQ 墙体 null-hit、跨房间/重连、双客户端动画与伤害
   观感尚未验收；本次只完成 D2MOO 对照和权威 ECS 行为层。
 
@@ -34,8 +34,27 @@
   继承同一份 owner synergy snapshot；owner 仍由 maker 的 `damageOwnerId` 保留。
 - `AssassinSkillSpecializationTest.chargedBoltSentrySrvDo017EmitsNativeBoltBurst`
   新增参考快照比对，锁定 Charged Bolt 的 `lightmaxdam` 与带硬点协同的原生公式一致；
-  Assassin 专项测试目前 22 项全部通过。
+  Assassin 专项测试目前 23 项全部通过。
 - 该增量仍属于纯逻辑/ECS 层；真实 MPQ 双客户端的陷阱伤害、重连和动画观感仍需单独 gate。
+
+## 2026-10-02 Assassin trap owner lifecycle / sentry retirement
+
+- 对照 dark-magic `trap_skill_real_test.go` 与 `trap_skill_test.lua` 的 sentry shot-budget
+  语义：陷阱达到 `maxShots` 后只删除 trap/controller；已经发出的 projectile 必须继续完成
+  移动、碰撞和伤害，不能因为 controller 被回收而变成无主导弹。
+- 对照 D2MOO `AITHINK_Fn101_AssassinSentry`、`AITHINK_Fn104_DeathSentry` 以及
+  `MISSILES` 命中路径，保留 trap entity 作为 `Missile.ownerId`（原生 ownership/表现），
+  同时记录施法者到 `Missile.damageOwnerId`。碰撞时若 trap 已 inactive，则回退到
+  `damageOwnerId` 进行敌我判断、属性/协同快照、难度和战斗结算；trap 仍存活时不改变原有
+  owner 行为。
+- `AssassinTrapSystem` 的普通陷阱、Charged Bolt、Inferno、Blade Sentinel 导弹均记录
+  `damageOwnerId`；`MissileCollisionSystem` 集中使用有效 combat owner，避免 sentry
+  删除后飞行中的导弹丢失伤害关系。
+- 新增回归 `AssassinSkillSpecializationTest.sentryProjectileCompletesAfterTrapShotBudgetRetiresController`，
+  覆盖“一发达到上限 → controller 删除 → 飞行导弹仍命中目标”；定向用例和完整
+  `AssassinSkillSpecializationTest` 均通过（23 tests）。
+- 当前仍未完成真实 1.10f MPQ 墙体/null-hit、跨房间/重连、双客户端动画与伤害观感 gate；
+  该项是 ECS/Native 行为层对照完成，不等于四层验收完成。
 
 ## 2026-10-02 Assassin Blade Fury (`SrvSt26`/`SrvDo048`) 行为增量
 
@@ -339,7 +358,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   不能直接采用静态 `Sk1lvl/Sk2lvl=1`。`AssassinSkillSpecializationTest.auditTrapSummonSkillInheritanceRows`
   现在锁定六类陷阱的完整继承映射和协同来源；现有 Death Sentry 等级 4 回归与该结论一致。
 - 2026-10-02 又锁定了 10 个 dark-magic exact-ID 到 1.10f Native 行的名称、函数和关键字段；
-  这只是数据层门槛，不代表 `trap.assassin-family` 已完成四层验收。
+  这只是数据层门槛，不代表 `trap.assassin-family` 已完成四层验收。陷阱射击协同与
+  owner 生命周期已有 ECS 回归；下一步仍是把真实 1.10f MPQ gate 接到同一组验收。
 
 ### Barbarian
 
