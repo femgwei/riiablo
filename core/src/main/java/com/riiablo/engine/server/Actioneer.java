@@ -1041,6 +1041,11 @@ public class Actioneer extends PassiveSystem {
         prepareImpale(entityId, targetId);
         break;
       }
+      case 8: // SKILLS_SrvSt08_Strafe/Multiple Shot: authoritative emission is
+              // driven by the animation keyframe's SkillDoEvent below.
+        log.debug("[AMAZON_BOW] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
+            entityId, targetId, srvstfunc);
+        break;
       case 9: { // SKILLS_SrvSt09_Fend: initialize the native target stream.
         prepareFend(entityId, targetId);
         break;
@@ -2355,6 +2360,7 @@ public class Actioneer extends PassiveSystem {
       // explicitly no-op so native projectile skills are not reported as
       // unsupported before their authoritative missile is created.
       case 8:  // MultipleShot/Teeth shock wave
+      case 12: // Strafe: one arrow per animation keyframe
       case 18: // DefensiveBuff; Venom state is applied by ServerSkillSystem
       case 22: // Nova/radial missile skill
       case 54: // Blade Shield periodic pulse is applied by StateUpdater

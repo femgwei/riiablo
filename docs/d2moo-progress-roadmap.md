@@ -5976,8 +5976,10 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   推进到多个箭实体，owner/observer 共享、目标实际掉血、箭袋单次消耗和 reconnect
   均一致。headless COF 缺少完整后续关键帧时，测试 fallback 只重放剩余 keyframe，
   不改生产技能为瞬发整轮。
-- [ ] Actioneer 对 `srvstfunc=8`、`srvdofunc=12` 的旧客户端动画日志仍有兼容 warning；
-  权威导弹/目标流已通过，但旧客户端动画委派和完整多目标穿透仍需后续画面/资源门槛。
+- [x] `Actioneer` 已显式接收 `srvstfunc=8`、`srvdofunc=12`，将 Multiple Shot/Strafe
+  动画阶段委派给权威 `SkillDoEvent`；本轮 Multiple Shot/Strafe 真实 gate 日志不再出现
+  unsupported warning。headless fallback 仍只补齐缺失 COF 关键帧，完整多目标穿透和
+  旧客户端观感仍需后续画面/资源门槛。
 
 验证命令：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、

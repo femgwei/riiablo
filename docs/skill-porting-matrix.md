@@ -452,9 +452,10 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   弹药扣除。真实双客户端 gate 已观察多箭共享、伤害和 reconnect 一致。
 - 这两项没有覆盖用户已验证 Amazon 数值公式；dark-magic 仅作为 exact-ID、事务和
   测试组织参考，数值/回调仍以 D2MOO 1.10f 和当前 MPQ 为准。
-- 限制：旧客户端 `Actioneer` 仍可能对 `srvstfunc=8` / `srvdofunc=12` 输出 warning；
-  headless fallback 仅用于补齐缺失 COF 关键帧，不代表画面动画已完全收尾。多目标
-  穿透、墙碰撞和旧客户端观感仍列为后续 gate。
+- `Actioneer` 现已显式接收 `srvstfunc=8` 与 `srvdofunc=12`，将 Multiple Shot/Strafe
+  动画阶段委派给权威 `SkillDoEvent`，本轮真实 gate 不再出现 unsupported warning；
+  headless fallback 仍只用于补齐缺失 COF 关键帧，不代表画面动画已完全收尾。多目标
+  穿透和旧客户端观感仍列为后续 gate。
 
 ### 2026-10-01 Amazon Lightning Fury 真实 gate
 
