@@ -6048,6 +6048,9 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 两次运行均能创建权威导弹（runtime missile id 205），但在目标防御降为 1 时仍未观察到
 双方目标掉血；因此该 gate 明确保持未完成，未修改生产碰撞、ToHit 或伤害公式。后续应先
 单独诊断 `lightningjavelin` 的 swept collision/命中判定/伤害快照，再决定是否加入真实门槛。
+纯逻辑新增 `AmazonSkillSpecializationTest.lightningBoltUsesNativeLightningJavelinDamageSnapshot`，
+已通过并确认 `SrvDmgFunc=12`、`DmgCalc1=dl12`、闪电伤害快照和 ToHit 标志均正确；当前
+证据将问题范围收窄到快照之后的 swept collision、命中判定或最终伤害结算。
 
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。

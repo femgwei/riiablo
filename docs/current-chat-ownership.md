@@ -1024,6 +1024,9 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [ ] 按 D2MOO `MISSMODE_SrvDmg12_LightningJavelin` 尝试接入真实双客户端门槛；两次运行
   均创建 `lightningjavelin` 权威导弹（runtime missile id 205），但目标防御降至 1 后
   仍无双方生命下降，因此不能标记完成。
+- [x] `AmazonSkillSpecializationTest.lightningBoltUsesNativeLightningJavelinDamageSnapshot`
+  已通过，确认 `SrvDmgFunc=12`、`DmgCalc1=dl12`、闪电伤害快照和 ToHit 标志均正确；
+  当前待诊断范围收窄到快照之后的 swept collision、命中判定或最终伤害结算。
 - [x] 已撤回这次未通过的 gate 扩展，没有改动生产碰撞、ToHit 或伤害公式；下一步先诊断
   `lightningjavelin` 的 swept collision、命中判定和伤害快照，再重新决定是否接入真实 gate。
 

@@ -150,6 +150,34 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void lightningBoltUsesNativeLightningJavelinDamageSnapshot() {
+    Attributes owner = attributes(20, 200);
+    owner.base().put(Stat.mindamage, 100);
+    owner.base().put(Stat.maxdamage, 100);
+    owner.base().put(Stat.tohit, 100);
+    owner.reset();
+
+    Skills.Entry skill = Riiablo.files.skills.get("Lightning Bolt");
+    Missiles.Entry row = Riiablo.files.Missiles.get("lightningjavelin");
+    assertNotNull(skill);
+    assertNotNull(row);
+    assertEquals(12, row.pSrvDmgFunc,
+        "D2MOO MISSMODE_SrvDmg12 owns Lightning Bolt's physical-to-lightning conversion");
+    assertEquals("dl12", row.DmgCalc1);
+
+    Missile projectile = new Missile().set(row, new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(projectile, skill, owner, 20));
+    assertTrue(projectile.damageSnapshot);
+    assertTrue(projectile.usesAttackRating,
+        "Lightning Bolt remains a thrown-javelin attack and must retain ToHit resolution");
+    assertTrue(projectile.damage.get(Stat.lightmindam).asInt() > 0);
+    assertTrue(projectile.damage.get(Stat.lightmaxdam).asInt()
+            >= projectile.damage.get(Stat.lightmindam).asInt());
+    assertTrue(projectile.damage.get(Stat.mindamage).asInt() < 100,
+        "SrvDmg12 must convert part of the source physical packet instead of leaving it untouched");
+  }
+
+  @Test
   void elementalArrowConversionUsesNativeBaseAtLevelOne() {
     Attributes owner = attributes(20, 200);
     owner.base().put(Stat.mindamage, 100);
