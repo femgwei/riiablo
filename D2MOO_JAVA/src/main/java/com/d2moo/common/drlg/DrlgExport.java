@@ -234,15 +234,22 @@ public final class DrlgExport {
     private static int wallLogicalGroup(D2DrlgRoom room, D2DrlgTileDataStrc tile,
             int roomBaseTx, int roomBaseTy) {
         int group = tile == null ? 0 : tile.getUnk0x10();
-        // DRLGLOGIC_SetCoordListForTiles is intentionally skipped for rooms
-        // without the logical-grid flag.  Native allocCoordLists still gives
-        // those rooms one coord-list (normally index 1), while tile unk0x10
-        // remains zero.  Normalize that representation before export so the
-        // renderer can match a player floor cell to its wall group.
-        if (group == 0 && room != null && room.getLogicalRoomInfo() != null
-                && room.getLogicalRoomInfo().hasCoordList()) {
+        // For rooms with an index grid, unk0x10 is the native grid entry
+        // (a pointer/identity value in C++, not the coord-list nIndex).  The
+        // renderer must receive the same resolved nIndex as floor cells, so
+        // resolve it through DRLGLOGIC_GetRoomCoordListIndex rather than
+        // exporting the opaque grid entry.  Rooms with HAS_COORD_LIST use the
+        // single room list; their wall field is zero and needs the same
+        // normalization.
+        if (room != null && room.getLogicalRoomInfo() != null) {
+            if (!room.getLogicalRoomInfo().hasCoordList()) {
+                return logicalGroup(room, roomBaseTx + tile.getNPosX(),
+                        roomBaseTy + tile.getNPosY());
+            }
+            if (group == 0) {
             group = logicalGroup(room, roomBaseTx + tile.getNPosX(),
                     roomBaseTy + tile.getNPosY());
+            }
         }
         return group;
     }
