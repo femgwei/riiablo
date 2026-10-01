@@ -25,7 +25,7 @@
   level 1 的 6 枚导弹、独立落点方向和伤害快照；完整
   `AssassinSkillSpecializationTest` 已通过。
 - 这仍是纯 ECS/Native 行为层完成，不代表真实 MPQ 双客户端、墙体、重复命中和重连层已完成。
-- 提交：待本轮提交后补充。
+- 提交：`d544b8b9 feat: port Assassin Shock Field scatter`，已推送 `origin/master`。
 
 ## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
 
