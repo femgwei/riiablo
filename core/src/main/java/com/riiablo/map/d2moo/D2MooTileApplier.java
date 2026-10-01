@@ -123,6 +123,14 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
             String sourceFile, int logicalGroupId, int nativeStateFlags,
             int nativeAlpha, int fadeTick) {
+        onTile(levelId, layer, tx, ty, tileId, flags, sourceFile, logicalGroupId,
+            nativeStateFlags, nativeAlpha, fadeTick, -1);
+    }
+
+    @Override
+    public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile, int logicalGroupId, int nativeStateFlags,
+            int nativeAlpha, int fadeTick, int tileType) {
         callbackCount++;
         if (layer < DrlgExport.LAYER_FLOOR || layer > DrlgExport.LAYER_SHADOW) {
             ignoredLayerCount++;
@@ -170,7 +178,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                             grid.boundaryWalls.add(new TileGrid.BoundaryWall(
                                 wallLayer, tx, ty, riiabloTileId, sourceIndex,
                                 (flags & DrlgTileExporter.FLAG_HIDDEN) != 0,
-                                logicalGroupId));
+                                logicalGroupId, flags, nativeStateFlags, tileType));
                             boundaryWallCount++;
                             uniqueWallIds.add(riiabloTileId);
                         }
@@ -195,7 +203,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 break;
             case DrlgExport.LAYER_WALL:
                 applyWall(grid, tx, ty, riiabloTileId, orientation, flags, sourceFile,
-                    logicalGroupId);
+                    logicalGroupId, nativeStateFlags, tileType);
                 break;
             case DrlgExport.LAYER_SHADOW:
                 applyShadow(grid, tx, ty, riiabloTileId, orientation, sourceFile);
@@ -219,7 +227,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     }
 
     private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation, int flags,
-            String sourceFile, int logicalGroupId) {
+            String sourceFile, int logicalGroupId, int nativeStateFlags, int tileType) {
         if (!isWallLayerOrientation(orientation)) nonWallOrientationCount++;
         byte sourceIndex = grid.registerSourceFile(sourceFile);
         // Adjacent native RoomEx grids share their boundary row/column and
@@ -233,6 +241,11 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 if (grid.wallLogicalGroups[slot][ty][tx] < 0) {
                     grid.wallLogicalGroups[slot][ty][tx] = logicalGroupId;
                 }
+                grid.wallNativeFlags[slot][ty][tx] |= flags;
+                grid.wallStateFlags[slot][ty][tx] |= nativeStateFlags;
+                if (grid.wallTileTypes[slot][ty][tx] < 0) {
+                    grid.wallTileTypes[slot][ty][tx] = tileType;
+                }
                 duplicateWallCount++;
                 return;
             }
@@ -242,6 +255,9 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 grid.wallIds[slot][ty][tx] = tileId;
                 grid.wallSourceFiles[slot][ty][tx] = sourceIndex;
                 grid.wallLogicalGroups[slot][ty][tx] = logicalGroupId;
+                grid.wallNativeFlags[slot][ty][tx] = flags;
+                grid.wallStateFlags[slot][ty][tx] = nativeStateFlags;
+                grid.wallTileTypes[slot][ty][tx] = tileType;
                 grid.hiddenWallCells[slot][ty][tx] =
                     (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 uniqueWallIds.add(tileId);
@@ -250,6 +266,23 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             }
         }
         wallLayerOverflowCount++;
+    }
+
+    @Override
+    public void onPop(int levelId, int x, int y, int width, int height,
+            int popPadSubtiles, int logicalIndex, int subIndex) {
+        TileGrid grid = levelIdToGrid.get(levelId);
+        if (grid == null) {
+            missingGridCount++;
+            return;
+        }
+        for (TileGrid.NativePop pop : grid.nativePops) {
+            if (pop.x == x && pop.y == y && pop.width == width
+                    && pop.height == height && pop.logicalIndex == logicalIndex
+                    && pop.subIndex == subIndex) return;
+        }
+        grid.nativePops.add(new TileGrid.NativePop(x, y, width, height,
+                popPadSubtiles, logicalIndex, subIndex));
     }
 
     private void applyShadow(TileGrid grid, int tx, int ty, int tileId, int orientation,

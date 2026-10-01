@@ -86,10 +86,31 @@ class D2MooTileApplierTest {
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 0, 0,
         pack(Orientation.FLOOR, 1, 1), 0, "floor.dt1", 7, 0, 255, 0);
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0,
-        pack(Orientation.LEFT_WALL, 2, 1), 0, "wall.dt1", 7, 0, 255, 0);
+        pack(Orientation.LEFT_WALL, 2, 1), 0, "wall.dt1", 7, 0x200, 255, 0, 1);
 
     assertEquals(7, grid.floorLogicalGroups[0][0]);
     assertEquals(7, grid.wallLogicalGroups[0][0][0]);
+    assertEquals(0, grid.wallNativeFlags[0][0][0]);
+    assertEquals(0x200, grid.wallStateFlags[0][0][0]);
+    assertEquals(1, grid.wallTileTypes[0][0][0]);
+  }
+
+  @Test
+  void retainsNativePopPadRectangle() {
+    TileGrid grid = new TileGrid(4, 4);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+
+    applier.onPop(LEVEL_ID, 1, 2, 3, 4, 5, 6, 7);
+    applier.onPop(LEVEL_ID, 1, 2, 3, 4, 5, 6, 7);
+
+    assertEquals(1, grid.nativePops.size());
+    TileGrid.NativePop pop = grid.nativePops.get(0);
+    assertEquals(1, pop.x);
+    assertEquals(2, pop.y);
+    assertEquals(5, pop.popPadSubtiles);
+    assertEquals(6, pop.logicalIndex);
+    assertEquals(7, pop.subIndex);
   }
 
   @Test

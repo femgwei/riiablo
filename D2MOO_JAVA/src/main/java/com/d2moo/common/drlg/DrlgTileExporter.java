@@ -44,4 +44,18 @@ public interface DrlgTileExporter {
             int nativeAlpha, int fadeTick) {
         onTile(levelId, layer, tx, ty, tileId, flags, sourceFile);
     }
+
+    /** Extended tile metadata retaining the native RoomTile type. */
+    default void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile, int logicalGroupId, int nativeStateFlags,
+            int nativeAlpha, int fadeTick, int tileType) {
+        onTile(levelId, layer, tx, ty, tileId, flags, sourceFile,
+                logicalGroupId, nativeStateFlags, nativeAlpha, fadeTick);
+    }
+
+    /** Native preset Pop/PopPad rectangle, in level-local tile coordinates. */
+    default void onPop(int levelId, int x, int y, int width, int height,
+            int popPadSubtiles, int logicalIndex, int subIndex) {
+        // Older consumers do not need native pop metadata.
+    }
 }

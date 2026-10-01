@@ -50,6 +50,7 @@ public final class DrlgExport {
                 initialized++;
             }
             exportRoomTiles(room, levelId, levelOriginX, levelOriginY, exporter, counts);
+            exportPresetPops(room, levelId, levelOriginX, levelOriginY, exporter);
             exportPresetSpecials(room, levelId, levelOriginX, levelOriginY, exporter, counts);
             rooms++;
             room = room.getDrlgRoomNext();
@@ -183,7 +184,7 @@ public final class DrlgExport {
                 exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId, t.getDwFlags(),
                         sourceFile(t), logicalGroup(room, roomBaseTx + t.getNPosX(),
                                 roomBaseTy + t.getNPosY()), t.getUnk0x24(),
-                        t.getNRed() & 0xFF, t.getUnk0x2C());
+                        t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
                 counts.floors++;
             }
         }
@@ -202,7 +203,7 @@ public final class DrlgExport {
                 exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags(),
                         sourceFile(t), wallLogicalGroup(room, t, roomBaseTx, roomBaseTy),
                         t.getUnk0x24(),
-                        t.getNRed() & 0xFF, t.getUnk0x2C());
+                        t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
                 counts.walls++;
             }
         }
@@ -219,9 +220,36 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId, t.getDwFlags(),
-                        sourceFile(t));
+                        sourceFile(t), -1, t.getUnk0x24(),
+                        t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
                 counts.shadows++;
             }
+        }
+    }
+
+    private static void exportPresetPops(D2DrlgRoom room, int levelId,
+            int levelOriginX, int levelOriginY, DrlgTileExporter exporter) {
+        if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) return;
+        D2DrlgMapStrc map = ((D2DrlgPresetRoomStrc) room.getMazeOrOutdoor()).getPMap();
+        if (map == null || map.getPLvlPrestTxtRecord() == null
+                || map.getPLvlPrestTxtRecord().getDwPops() <= 0) return;
+        DrlgPreset.initializePopsFromFile(map);
+        int count = Math.min(map.getNPops(), Math.min(
+                map.getPPopsLocation() == null ? 0 : map.getPPopsLocation().length,
+                Math.min(map.getPPopsIndex() == null ? 0 : map.getPPopsIndex().length,
+                        map.getPPopsSubIndex() == null ? 0 : map.getPPopsSubIndex().length)));
+        if (count > 0) {
+            D2Log.debug("DRLG_EXPORT_POPS level=%d room=(%d,%d) count=%d pad=%d",
+                    levelId, room.getNTileXPos(), room.getNTileYPos(), count,
+                    map.getPLvlPrestTxtRecord().getDwPopPad());
+        }
+        for (int i = 0; i < count; i++) {
+            D2DrlgCoord location = map.getPPopsLocation()[i];
+            if (location == null) continue;
+            exporter.onPop(levelId, location.getNPosX() - levelOriginX,
+                    location.getNPosY() - levelOriginY, location.getNWidth(),
+                    location.getNHeight(), map.getPLvlPrestTxtRecord().getDwPopPad(),
+                    map.getPPopsIndex()[i], map.getPPopsSubIndex()[i]);
         }
     }
 

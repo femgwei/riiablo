@@ -33,6 +33,12 @@ public class TileGrid {
   public final byte[][][] wallSourceFiles;
   /** Native logical coord-list index for each exported wall/roof layer. */
   public final int[][][] wallLogicalGroups;
+  /** Native D2MapTileFlags for each exported wall/roof layer. */
+  public final int[][][] wallNativeFlags;
+  /** Native mutable wall state flags (D2DrlgTileDataStrc::unk0x24). */
+  public final int[][][] wallStateFlags;
+  /** Native D2 tile type for each exported wall/roof layer. */
+  public final int[][][] wallTileTypes;
   /** DT1 source selected for the native shadow layer. */
   public final byte[][] shadowSourceFiles;
   private final List<String> sourceFiles = new ArrayList<>();
@@ -70,6 +76,26 @@ public class TileGrid {
    */
   public final List<BoundaryWall> boundaryWalls = new ArrayList<>();
 
+  /** Native preset Pop/PopPad rectangle used for independent wall fading. */
+  public final List<NativePop> nativePops = new ArrayList<>();
+
+  public static final class NativePop {
+    public final int x, y, width, height;
+    public final int popPadSubtiles;
+    public final int logicalIndex, subIndex;
+
+    public NativePop(int x, int y, int width, int height, int popPadSubtiles,
+        int logicalIndex, int subIndex) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.popPadSubtiles = popPadSubtiles;
+      this.logicalIndex = logicalIndex;
+      this.subIndex = subIndex;
+    }
+  }
+
   public static final class BoundaryWall {
     public final int layer;
     public final int x;
@@ -78,9 +104,13 @@ public class TileGrid {
     public final byte sourceFile;
     public final boolean hidden;
     public final int logicalGroupId;
+    public final int nativeFlags;
+    public final int stateFlags;
+    public final int tileType;
 
     public BoundaryWall(int layer, int x, int y, int tileId, byte sourceFile,
-        boolean hidden, int logicalGroupId) {
+        boolean hidden, int logicalGroupId, int nativeFlags, int stateFlags,
+        int tileType) {
       this.layer = layer;
       this.x = x;
       this.y = y;
@@ -88,6 +118,9 @@ public class TileGrid {
       this.sourceFile = sourceFile;
       this.hidden = hidden;
       this.logicalGroupId = logicalGroupId;
+      this.nativeFlags = nativeFlags;
+      this.stateFlags = stateFlags;
+      this.tileType = tileType;
     }
   }
 
@@ -105,6 +138,9 @@ public class TileGrid {
     this.floorLogicalGroups = new int[height][width];
     this.wallSourceFiles = new byte[MAX_WALL_LAYERS][height][width];
     this.wallLogicalGroups = new int[MAX_WALL_LAYERS][height][width];
+    this.wallNativeFlags = new int[MAX_WALL_LAYERS][height][width];
+    this.wallStateFlags = new int[MAX_WALL_LAYERS][height][width];
+    this.wallTileTypes = new int[MAX_WALL_LAYERS][height][width];
     this.shadowSourceFiles = new byte[height][width];
     this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
@@ -130,6 +166,7 @@ public class TileGrid {
   public void clearExportedTileIds() {
     sourceFiles.clear();
     boundaryWalls.clear();
+    nativePops.clear();
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
@@ -142,6 +179,9 @@ public class TileGrid {
           wallIds[layer][y][x] = -1;
           wallSourceFiles[layer][y][x] = 0;
           wallLogicalGroups[layer][y][x] = -1;
+          wallNativeFlags[layer][y][x] = 0;
+          wallStateFlags[layer][y][x] = 0;
+          wallTileTypes[layer][y][x] = -1;
           hiddenWallCells[layer][y][x] = false;
         }
       }

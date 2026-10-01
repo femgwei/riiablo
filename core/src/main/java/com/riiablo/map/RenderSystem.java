@@ -989,11 +989,40 @@ public class RenderSystem extends BaseEntitySystem {
         }
       }
     }
-    return playerGroup == wallGroup ? WALL_OCCLUDED_ALPHA : 1f;
+    if (playerGroup == wallGroup) return WALL_OCCLUDED_ALPHA;
+    // Native preset maps have a second, independent reveal mechanism.  D2MOO
+    // calls this Pop/PopPad state: the player selects a preset rectangle and
+    // the wall tiles in that rectangle (plus the native one-tile border) fade
+    // even when the logical coord-list index is not the same as the player's.
+    return nativePopOccludes(grid, player.x - zone.x, player.y - zone.y,
+        x, y) ? WALL_OCCLUDED_ALPHA : 1f;
   }
 
   private static int logicalGroupAt(TileGrid grid, int x, int y) {
     return grid.inBounds(x, y) ? grid.floorLogicalGroups[y][x] : -1;
+  }
+
+  private static boolean nativePopOccludes(TileGrid grid, float playerLocalX,
+      float playerLocalY, int wallX, int wallY) {
+    if (grid.nativePops.isEmpty()) return false;
+    int playerSubtileX = MathUtils.floor(playerLocalX);
+    int playerSubtileY = MathUtils.floor(playerLocalY);
+    for (TileGrid.NativePop pop : grid.nativePops) {
+      int popSubtileX = pop.x * Tile.SUBTILE_SIZE;
+      int popSubtileY = pop.y * Tile.SUBTILE_SIZE;
+      int popWidth = pop.width * Tile.SUBTILE_SIZE + pop.popPadSubtiles;
+      int popHeight = pop.height * Tile.SUBTILE_SIZE + pop.popPadSubtiles;
+      if (playerSubtileX < popSubtileX || playerSubtileY < popSubtileY
+          || playerSubtileX >= popSubtileX + popWidth
+          || playerSubtileY >= popSubtileY + popHeight) continue;
+
+      // DRLGPRESET_TogglePopsVisibility expands the native rectangle by one
+      // tile before matching wall tile positions.
+      if (wallX >= pop.x - 1 && wallY >= pop.y - 1
+          && wallX <= pop.x + pop.width
+          && wallY <= pop.y + pop.height) return true;
+    }
+    return false;
   }
 
   static boolean isDrawableWallOrientation(int orientation) {
