@@ -471,6 +471,63 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void sentryRetargetsAfterTargetRemovalAndRetiresAtShotBudget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new SummonedPetSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry sentry = Riiablo.files.skills.get("Lightning Sentry");
+      assertNotNull(sentry);
+      data.setSkillLevel(sentry.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, sentry.Id, Engine.INVALID_ENTITY, new Vector2(0, 0), sentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 2;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      int firstTarget = world.create();
+      world.getMapper(Monster.class).create(firstTarget);
+      world.getMapper(Position.class).create(firstTarget).position.set(4, 0);
+      world.getMapper(AttributesWrapper.class).create(firstTarget).attrs = attributes(10000);
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.missiles);
+      assertTrue(factory.missileDirections.get(0).x > 0,
+          "the first sentry shot must target the original hostile");
+      assertEquals(1, trap.shotsFired);
+
+      world.delete(firstTarget);
+      world.process(); // flush the removed target before the next search
+      int replacement = world.create();
+      world.getMapper(Monster.class).create(replacement);
+      world.getMapper(Position.class).create(replacement).position.set(-4, 0);
+      world.getMapper(AttributesWrapper.class).create(replacement).attrs = attributes(10000);
+      trap.attackCooldownFrames = 0;
+      world.process();
+      assertEquals(2, factory.missiles);
+      assertTrue(factory.missileDirections.get(1).x < 0,
+          "the second sentry shot must retarget the replacement hostile");
+      assertEquals(2, trap.shotsFired);
+
+      world.process();
+      assertFalse(world.getEntityManager().isActive(factory.entityId),
+          "the sentry controller retires after its native shot budget");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void playerDepartureRemovesOwnedAssassinSentry() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
