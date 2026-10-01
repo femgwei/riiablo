@@ -647,15 +647,6 @@ public class RenderSystem extends BaseEntitySystem {
         }
 
         cache[orderFlag].add(id);
-        if (isIceExplosion(id)) {
-          Animation animation = mAnimationWrapper.get(id).animation;
-          Gdx.app.log(TAG, String.format(
-              "[MISSILE_RENDER] phase=cache entity=%d bucket=%d pos=(%.3f,%.3f) "
-                  + "frame=%d dirs=%d frames=%d box=%s",
-              id, orderFlag, pos.x, pos.y, animation.getFrame(),
-              animation.getNumDirections(), animation.getNumFramesPerDir(),
-              animation.getBox()));
-        }
       }
     }
     cache[0].sort(SUBTILE_ORDER);
@@ -849,13 +840,6 @@ public class RenderSystem extends BaseEntitySystem {
       }
 
       Animation animation = mAnimationWrapper.get(entity).animation;
-      if (isIceExplosion(entity)) {
-        Gdx.app.log(TAG, String.format(
-            "[MISSILE_RENDER] phase=draw entity=%d pos=(%.3f,%.3f) "
-                + "screen=(%.3f,%.3f) frame=%d dir=%d box=%s",
-            entity, pos.x, pos.y, tmp.x, tmp.y, animation.getFrame(),
-            animation.getDirection(), animation.getBox()));
-      }
       animation.draw(batch, tmp.x, tmp.y);
 
       if (overlay != null && !overlay.entry.PreDraw) {
@@ -865,12 +849,6 @@ public class RenderSystem extends BaseEntitySystem {
 
   private boolean isPresentationMissile(int entity) {
     return mMissile.has(entity) && mMissile.get(entity).presentationOnly;
-  }
-
-  private boolean isIceExplosion(int entity) {
-    return mMissile.has(entity)
-        && mMissile.get(entity).missile != null
-        && "iceexplode".equalsIgnoreCase(mMissile.get(entity).missile.Missile);
   }
 
   void drawLowerWalls(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py) {
