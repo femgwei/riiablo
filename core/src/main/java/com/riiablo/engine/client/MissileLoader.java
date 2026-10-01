@@ -133,33 +133,15 @@ public class MissileLoader extends IteratingSystem {
           ? mAnimationWrapper.get(entityId).animation : null;
       int loadedBlend = loaded != null && loaded.getLayer(0) != null
           ? loaded.getLayer(0).getBlendMode() : -1;
-      String pixels = "n/a";
-      if ("iceexplode".equalsIgnoreCase(entry.Missile)) {
-        com.badlogic.gdx.graphics.Pixmap pixmap = celFile.getPixmap(0, 0);
-        if (pixmap != null) {
-          int nonZero = 0;
-          int first = pixmap.getPixel(0, 0);
-          for (int py = 0; py < pixmap.getHeight(); py++) {
-            for (int px = 0; px < pixmap.getWidth(); px++) {
-              if (pixmap.getPixel(px, py) != 0) nonZero++;
-            }
-          }
-          pixels = String.format("%dx%d nonZero=%d first=0x%08x texture=%s",
-              pixmap.getWidth(), pixmap.getHeight(), nonZero, first,
-              celFile.getTexture(0, 0) != null
-                  ? celFile.getTexture(0, 0).getTexture().getTextureObjectHandle()
-                  : "null");
-        }
-      }
       Gdx.app.debug("MissileLoader", String.format(
           "[MISSILE_ANIM_LOAD] entity=%d missile=%s loaded=%s frames=%d dirs=%d "
-              + "frame=%d dir=%d trans=%d blend=%d box=%s pixels=%s",
+              + "frame=%d dir=%d trans=%d blend=%d box=%s",
           entityId, entry.Missile, loaded != null, frames,
           loaded != null ? loaded.getNumDirections() : 0,
           loaded != null ? loaded.getFrame() : -1,
           loaded != null ? loaded.getDirection() : -1,
           entry.Trans, loadedBlend,
-          loaded != null ? loaded.getBox() : null, pixels));
+          loaded != null ? loaded.getBox() : null));
     }
   }
 
