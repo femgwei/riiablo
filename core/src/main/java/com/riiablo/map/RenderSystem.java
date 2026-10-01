@@ -976,9 +976,12 @@ public class RenderSystem extends BaseEntitySystem {
         }
       }
     }
-    if (wallGroup < 0) return 1f;
     if (src < 0 || !mPosition.has(src)) return 1f;
     Vector2 player = mPosition.get(src).position;
+    if (wallGroup < 0) {
+      return nativePopOccludes(grid, player.x - zone.x, player.y - zone.y,
+          x, y) ? WALL_OCCLUDED_ALPHA : 1f;
+    }
     int playerX = MathUtils.floor((player.x - zone.x) / Tile.SUBTILE_SIZE);
     int playerY = MathUtils.floor((player.y - zone.y) / Tile.SUBTILE_SIZE);
     int playerGroup = logicalGroupAt(grid, playerX, playerY);
