@@ -442,9 +442,13 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertNotNull(shockField);
       data.setSkillLevel(charged.Id, 3);
       data.setSkillLevel(shockField.Id, 6);
+      data.setSkillLevel(Riiablo.files.skills.get("Fire Trauma").Id, 3);
+      data.setSkillLevel(Riiablo.files.skills.get("Lightning Sentry").Id, 1);
+      data.setSkillLevel(Riiablo.files.skills.get("Death Sentry").Id, 2);
       world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
       world.getMapper(Position.class).create(owner).position.set(2, 3);
-      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      Attributes ownerAttrs = attributes(100);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = ownerAttrs;
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, charged.Id, Engine.INVALID_ENTITY, new Vector2(5, 3), charged.srvdofunc, 0));
 
@@ -492,7 +496,24 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
             "native Charged Bolt path length is capped at 77");
       }
 
+      // D2MOO evaluates the attack missile's Skills.txt damage expression at
+      // cast time.  The reference packet below must match the trap packet;
+      // omitting the owner hard-skill resolver silently drops Fire Trauma /
+      // Lightning Sentry / Death Sentry synergies.
       Missile firstBolt = world.getMapper(Missile.class).get(factory.missileEntityIds.get(0));
+      Skills.Entry boltSkill = firstBolt.missile.Skill != null
+          && !firstBolt.missile.Skill.isEmpty()
+          ? Riiablo.files.skills.get(firstBolt.missile.Skill) : charged;
+      Missile expected = new Missile().set(firstBolt.missile, Vector2.Zero, firstBolt.range);
+      MissileDamageResolver.initializeSkill(expected, boltSkill, ownerAttrs, trap.skillLevel,
+          name -> {
+            Skills.Entry row = Riiablo.files.skills.get(name);
+            return row != null ? data.getBaseSkillLevel(row.Id) : 0;
+          });
+      assertEquals(expected.damage.get(Stat.lightmaxdam).asInt(),
+          firstBolt.damage.get(Stat.lightmaxdam).asInt(),
+          "Charged Bolt trap packets retain localized hard-skill synergies");
+
       int initialSeed = firstBolt.chargedBoltSeedLow;
       world.delete(target);
       for (int i = 0; i < 5; i++) world.process();

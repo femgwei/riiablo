@@ -1209,7 +1209,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       child.skillId = maker.skillId;
       child.damageLevel = Math.max(1, maker.damageLevel);
       if (skill != null) {
-        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel);
+        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel,
+            name -> baseSkillLevel(damageOwnerId, name));
       }
       spawned++;
     }

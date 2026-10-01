@@ -151,7 +151,8 @@ public class AssassinTrapSystem extends IteratingSystem {
       MissileDamageResolver.initializeSkill(
           mMissile.get(missileId), resolveDamageSkill(missile, attackSkill, placementSkill),
           mAttributes.get(entityId).attrs,
-          Math.max(1, trap.skillLevel));
+          Math.max(1, trap.skillLevel),
+          name -> resolveOwnerSkillLevel(trap.ownerId, name));
     }
     trap.shotsFired++;
     trap.attackCooldownFrames = attackInterval(monster);
@@ -214,7 +215,8 @@ public class AssassinTrapSystem extends IteratingSystem {
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
       Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
       MissileDamageResolver.initializeSkill(
-          bolt, resolveDamageSkill(missileRow, attackSkill, placement), attrs, bolt.damageLevel);
+          bolt, resolveDamageSkill(missileRow, attackSkill, placement), attrs, bolt.damageLevel,
+          name -> resolveOwnerSkillLevel(trap.ownerId, name));
       created++;
     }
     log.debug("[CHARGED_BOLT_SENTRY] phase=burst entity={} owner={} target={} missile={} "
@@ -545,7 +547,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
     MissileDamageResolver.initializeSkill(missile,
         resolveDamageSkill(missileRow, attackSkill, placement), attrs,
-        Math.max(1, trap.skillLevel));
+        Math.max(1, trap.skillLevel),
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
     log.debug("[INFERNO_SENTRY] phase=pulse entity={} owner={} target={} missileId={} "
             + "remaining={} direction=({}, {})",
         entityId, trap.ownerId, trap.infernoTargetId, missileId,
@@ -672,7 +675,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     Attributes ownerAttrs = trap.ownerId >= 0 && mAttributes.has(trap.ownerId)
         ? mAttributes.get(trap.ownerId).attrs : null;
     MissileDamageResolver.initializeSkill(blade, skill, ownerAttrs,
-        Math.max(1, trap.skillLevel));
+        Math.max(1, trap.skillLevel),
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
     trap.bladeMissileId = missileId;
     trap.shotsFired = 1;
     log.info("[BLADE_SENTINEL] phase=missile_create entity={} owner={} missileId={} "

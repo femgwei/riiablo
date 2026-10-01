@@ -23,6 +23,20 @@
 - 仍未标记为四层完成：真实 1.10f MPQ 墙体 null-hit、跨房间/重连、双客户端动画与伤害
   观感尚未验收；本次只完成 D2MOO 对照和权威 ECS 行为层。
 
+## 2026-10-02 Assassin trap shot synergy snapshot
+
+- 对照 dark-magic `owned-target-records-and-localized-*-synergies-partial`，修正
+  `AssassinTrapSystem` 的普通陷阱射击、Charged Bolt Sentry、Inferno Sentry 和 Blade
+  Sentinel 初始化：现在把施法者硬点技能等级 resolver 传给
+  `MissileDamageResolver.initializeSkill`，不会在陷阱攻击阶段把 `EDmgSymPerCalc`
+  静默当成零。
+- Wake of Fire Sentry 的 `SrvDo125` maker 生成的两枚 `wake of destruction` 子导弹也
+  继承同一份 owner synergy snapshot；owner 仍由 maker 的 `damageOwnerId` 保留。
+- `AssassinSkillSpecializationTest.chargedBoltSentrySrvDo017EmitsNativeBoltBurst`
+  新增参考快照比对，锁定 Charged Bolt 的 `lightmaxdam` 与带硬点协同的原生公式一致；
+  Assassin 专项测试目前 22 项全部通过。
+- 该增量仍属于纯逻辑/ECS 层；真实 MPQ 双客户端的陷阱伤害、重连和动画观感仍需单独 gate。
+
 ## 2026-10-02 Assassin Blade Fury (`SrvSt26`/`SrvDo048`) 行为增量
 
 - `ServerSkillSystem` 已接入原生 Blade Fury 发刃路径：只读取本地 1.10f
@@ -46,9 +60,9 @@
   Blade Fury/Blade Shield 的服务端导弹行。
 - 1.10f 与 dark-magic 1.14d 的显示名不同（Fire Trauma/Fire Blast、Shock Field/Shock Web），
   测试以 exact-ID 和原生函数为权威，不复制 1.14d 数值或名称。
-- 本次先增加 Native 对照门槛；Shock Field (`SrvDo043`) 已完成纯 ECS 行为层，10 条技能
-  仍未标记为四层完成。下一步是 Blade Fury (`SrvDo048`) 的资源/释放时序及 Fire Trauma
-  (`251`) 的落地伤害/协同，随后再做真实 1.10f MPQ gate。
+- 本次先增加 Native 对照门槛；Shock Field (`SrvDo043`)、Blade Fury (`SrvDo048`) 和
+  Fire Trauma (`251`) 已完成纯 ECS 行为层，但 10 条技能仍未标记为四层完成。下一步是
+  把陷阱射击协同、owner 生命周期和真实 1.10f MPQ gate 接到同一组验收。
 - 提交：`2f0634af test: lock Assassin dark-magic trap exact IDs`，已推送 `origin/master`。
 
 ### 2026-10-02 Shock Field (`SrvDo043`) 行为增量
