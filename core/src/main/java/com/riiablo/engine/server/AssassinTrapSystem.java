@@ -74,6 +74,10 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (trap == null || trap.petType == null
         || !trap.petType.toLowerCase(java.util.Locale.ROOT).contains("assassintrap")) return;
     if (!mMonster.has(entityId) || !mPosition.has(entityId)) return;
+    // D2MOO's trap AI is room-activation scoped just like monster AI.  Keep
+    // the shot clock checkpointed while the trap's RoomEx is outside the
+    // owner's CLIENT_IN_SIGHT ring; it resumes when the room becomes active.
+    if (!isRoomActive(entityId)) return;
     if (trap.bladeSentinel) {
       processBladeSentinel(entityId, trap, mMonster.get(entityId));
       return;
@@ -740,6 +744,16 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   private static int aiParam(int[] values, int fallback) {
     return values != null && values.length > 0 && values[0] > 0 ? values[0] : fallback;
+  }
+
+  private boolean isRoomActive(int entityId) {
+    if (!mMapWrapper.has(entityId)) return true;
+    MapWrapper mapping = mMapWrapper.get(entityId);
+    if (mapping == null || mapping.zone == null
+        || !mapping.zone.hasNativeRoomTopology()
+        || !mapping.zone.isRoomActivationTracking()) return true;
+    Vector2 position = mPosition.get(entityId).position;
+    return mapping.zone.isRoomActiveForAI(position.x, position.y);
   }
 
   private int nearestHostile(int sourceId, Monster monster) {

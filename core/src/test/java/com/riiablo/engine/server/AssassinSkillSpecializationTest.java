@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
@@ -522,6 +523,56 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.process();
       assertFalse(world.getEntityManager().isActive(factory.entityId),
           "the sentry controller retires after its native shot budget");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void inactiveSentryPausesAndResumesItsCheckpointedSchedule() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    com.riiablo.map.Map.Zone zone = nativeThreeRoomZoneForTrap();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new RoomActivationSystem(), new ServerSkillSystem(true),
+            new AssassinTrapSystem(), new SummonedPetSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry sentry = Riiablo.files.skills.get("Lightning Sentry");
+      assertNotNull(sentry);
+      data.setSkillLevel(sentry.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(owner).set(map, zone);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, sentry.Id, Engine.INVALID_ENTITY, new Vector2(90, 10), sentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.attackCooldownFrames = 0;
+      world.getMapper(MapWrapper.class).create(factory.entityId).set(map, zone);
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(95, 10);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      world.setDelta(1f / 25f);
+
+      world.process(); // owner anchors room 0; trap in room 2 remains inactive
+      assertEquals(0, factory.missiles,
+          "an out-of-sight sentry must pause without consuming its shot schedule");
+      assertEquals(0, trap.shotsFired);
+
+      world.getMapper(Position.class).get(owner).position.set(50, 10);
+      world.process(); // room 1 activates its direct sight ring, including room 2
+      assertTrue(zone.isRoomActiveForAI(90, 10), "room 2 must be active from room 1 sight");
+      assertTrue(world.getEntityManager().isActive(factory.entityId));
+      assertEquals(1, factory.missiles,
+          "the sentry must resume and fire when its room becomes active");
+      assertEquals(1, trap.shotsFired);
     } finally {
       world.dispose();
     }
@@ -1377,6 +1428,17 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
     world.getMapper(UnitStates.class).create(id).init(id);
     return id;
+  }
+
+  private static com.riiablo.map.Map.Zone nativeThreeRoomZoneForTrap() {
+    com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+    com.riiablo.map.Map.RoomEx first = zone.addRoomEx(0, 0, 40, 40);
+    com.riiablo.map.Map.RoomEx second = zone.addRoomEx(40, 0, 40, 40);
+    com.riiablo.map.Map.RoomEx third = zone.addRoomEx(80, 0, 40, 40);
+    first.setAdjacentRoomIds(new int[] {second.id});
+    second.setAdjacentRoomIds(new int[] {first.id, third.id});
+    third.setAdjacentRoomIds(new int[] {second.id});
+    return zone;
   }
 
   private static final class TownMap extends com.riiablo.map.Map {
