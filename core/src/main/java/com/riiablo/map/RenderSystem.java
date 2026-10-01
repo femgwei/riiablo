@@ -75,6 +75,8 @@ public class RenderSystem extends BaseEntitySystem {
   private static final String TAG = "RenderSystem";
   /** First-pass approximation of the classic D2 wall reveal opacity. */
   static final float WALL_OCCLUDED_ALPHA = 0.55f;
+  /** Duration of the classic wall reveal/fade transition. */
+  private static final long WALL_FADE_MILLIS = 500L;
   // Debug overlays are opt-in.  Leaving the historical compile-time switch on
   // paints grid/special-cell geometry over the game world and can look like a
   // solid green chest-sized tile in normal gameplay.
@@ -278,6 +280,16 @@ public class RenderSystem extends BaseEntitySystem {
 
   // tile index in world-space
   int tx, ty;
+
+  // Wall reveal state is keyed by the native logical context rather than by
+  // screen distance. Keeping the previous context lets walls in the old
+  // group fade back while walls in the new group fade out over one transition.
+  private TileGrid wallTransitionGrid;
+  private int wallTransitionCurrentGroup = Integer.MIN_VALUE;
+  private int wallTransitionCurrentPop = -1;
+  private int wallTransitionFromGroup = Integer.MIN_VALUE;
+  private int wallTransitionFromPop = -1;
+  private long wallTransitionStartMs;
 
   // pixel offset of tile in world-space
   float tpx, tpy;
@@ -976,12 +988,13 @@ public class RenderSystem extends BaseEntitySystem {
         }
       }
     }
-    if (src < 0 || !mPosition.has(src)) return 1f;
-    Vector2 player = mPosition.get(src).position;
-    if (wallGroup < 0) {
-      return nativePopOccludes(grid, player.x - zone.x, player.y - zone.y,
-          x, y) ? WALL_OCCLUDED_ALPHA : 1f;
+    if (src < 0 || !mPosition.has(src)) {
+      resetWallTransition();
+      return 1f;
     }
+    Vector2 player = mPosition.get(src).position;
+    float playerLocalX = player.x - zone.x;
+    float playerLocalY = player.y - zone.y;
     int playerX = MathUtils.floor((player.x - zone.x) / Tile.SUBTILE_SIZE);
     int playerY = MathUtils.floor((player.y - zone.y) / Tile.SUBTILE_SIZE);
     int playerGroup = logicalGroupAt(grid, playerX, playerY);
@@ -992,25 +1005,64 @@ public class RenderSystem extends BaseEntitySystem {
         }
       }
     }
-    if (playerGroup == wallGroup) return WALL_OCCLUDED_ALPHA;
-    // Native preset maps have a second, independent reveal mechanism.  D2MOO
-    // calls this Pop/PopPad state: the player selects a preset rectangle and
-    // the wall tiles in that rectangle (plus the native one-tile border) fade
-    // even when the logical coord-list index is not the same as the player's.
-    return nativePopOccludes(grid, player.x - zone.x, player.y - zone.y,
-        x, y) ? WALL_OCCLUDED_ALPHA : 1f;
+    int playerPop = nativePopIndexAt(grid, playerLocalX, playerLocalY);
+    updateWallTransition(grid, playerGroup, playerPop);
+    boolean current = wallContextOccludes(grid, wallGroup, playerGroup, playerPop, x, y);
+    if (wallTransitionStartMs == 0L) return current ? WALL_OCCLUDED_ALPHA : 1f;
+    long elapsed = Math.max(0L, System.currentTimeMillis() - wallTransitionStartMs);
+    float progress = MathUtils.clamp((float) elapsed / WALL_FADE_MILLIS, 0f, 1f);
+    if (progress >= 1f) return current ? WALL_OCCLUDED_ALPHA : 1f;
+    boolean previous = wallContextOccludes(grid, wallGroup,
+        wallTransitionFromGroup, wallTransitionFromPop, x, y);
+    if (previous == current) return current ? WALL_OCCLUDED_ALPHA : 1f;
+    if (current) return 1f + (WALL_OCCLUDED_ALPHA - 1f) * progress;
+    return WALL_OCCLUDED_ALPHA + (1f - WALL_OCCLUDED_ALPHA) * progress;
   }
 
   private static int logicalGroupAt(TileGrid grid, int x, int y) {
     return grid.inBounds(x, y) ? grid.floorLogicalGroups[y][x] : -1;
   }
 
-  private static boolean nativePopOccludes(TileGrid grid, float playerLocalX,
-      float playerLocalY, int wallX, int wallY) {
-    if (grid.nativePops.isEmpty()) return false;
+  private void resetWallTransition() {
+    wallTransitionGrid = null;
+    wallTransitionCurrentGroup = Integer.MIN_VALUE;
+    wallTransitionCurrentPop = -1;
+    wallTransitionFromGroup = Integer.MIN_VALUE;
+    wallTransitionFromPop = -1;
+    wallTransitionStartMs = 0L;
+  }
+
+  private void updateWallTransition(TileGrid grid, int playerGroup, int playerPop) {
+    if (wallTransitionGrid != grid) {
+      wallTransitionGrid = grid;
+      wallTransitionCurrentGroup = playerGroup;
+      wallTransitionCurrentPop = playerPop;
+      wallTransitionFromGroup = playerGroup;
+      wallTransitionFromPop = playerPop;
+      wallTransitionStartMs = 0L;
+      return;
+    }
+    if (wallTransitionCurrentGroup == playerGroup && wallTransitionCurrentPop == playerPop) return;
+    wallTransitionFromGroup = wallTransitionCurrentGroup;
+    wallTransitionFromPop = wallTransitionCurrentPop;
+    wallTransitionCurrentGroup = playerGroup;
+    wallTransitionCurrentPop = playerPop;
+    wallTransitionStartMs = System.currentTimeMillis();
+  }
+
+  private static boolean wallContextOccludes(TileGrid grid, int wallGroup,
+      int playerGroup, int playerPop, int wallX, int wallY) {
+    if (playerGroup >= 0 && playerGroup == wallGroup) return true;
+    return nativePopContainsWall(grid, playerPop, wallX, wallY);
+  }
+
+  private static int nativePopIndexAt(TileGrid grid, float playerLocalX,
+      float playerLocalY) {
+    if (grid.nativePops.isEmpty()) return -1;
     int playerSubtileX = MathUtils.floor(playerLocalX);
     int playerSubtileY = MathUtils.floor(playerLocalY);
-    for (TileGrid.NativePop pop : grid.nativePops) {
+    for (int i = 0; i < grid.nativePops.size(); i++) {
+      TileGrid.NativePop pop = grid.nativePops.get(i);
       int popSubtileX = pop.x * Tile.SUBTILE_SIZE;
       int popSubtileY = pop.y * Tile.SUBTILE_SIZE;
       int popWidth = pop.width * Tile.SUBTILE_SIZE + pop.popPadSubtiles;
@@ -1019,13 +1071,18 @@ public class RenderSystem extends BaseEntitySystem {
           || playerSubtileX >= popSubtileX + popWidth
           || playerSubtileY >= popSubtileY + popHeight) continue;
 
-      // DRLGPRESET_TogglePopsVisibility expands the native rectangle by one
-      // tile before matching wall tile positions.
-      if (wallX >= pop.x - 1 && wallY >= pop.y - 1
-          && wallX <= pop.x + pop.width
-          && wallY <= pop.y + pop.height) return true;
+      return i;
     }
-    return false;
+    return -1;
+  }
+
+  private static boolean nativePopContainsWall(TileGrid grid, int popIndex,
+      int wallX, int wallY) {
+    if (popIndex < 0 || popIndex >= grid.nativePops.size()) return false;
+    TileGrid.NativePop pop = grid.nativePops.get(popIndex);
+    return wallX >= pop.x - 1 && wallY >= pop.y - 1
+        && wallX <= pop.x + pop.width
+        && wallY <= pop.y + pop.height;
   }
 
   static boolean isDrawableWallOrientation(int orientation) {
