@@ -5983,8 +5983,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   重连通过显式权威实体 baseline 验证两目标和短生命周期子导弹无陈旧恢复。
 - [x] 当前 level-20 gate 要求至少两枚 owner/observer 共享的 `furylightning`，并验证第二、
   第三目标实际掉血；第三目标放在根目标同一可见通道的 10 格纵向位置。
-- [x] `headlessAmazonMelee` 已增加 `-PamazonMeleeSkillLevel`，真实 MPQ gate 已在
-  Lightning Fury 等级 1、10、20 通过；由于夹具当前仅有两个分裂目标，等级 10 的 11 枚
-  最大数量仍由纯 ECS 公式测试覆盖，尚未做 11 个真实目标的实体矩阵。
-- [ ] 第三目标精确排序、2/11 最大分裂数量的完整等级矩阵和墙后目标的真实 MPQ gate
-  仍待后续，不能将本轮等同于完整 Lightning Fury 多目标矩阵。
+- [x] `headlessAmazonMelee` 已增加 `-PamazonMeleeSkillLevel`；真实 MPQ gate 按
+  `HitPar[1]/Calc1` 创建目标并在等级 1 精确验证 2 枚、等级 10/20 精确验证 11 枚共享
+  `furylightning`。每个分裂目标都要求 owner/observer 同步掉血，重连时逐目标核对权威生命。
+- [ ] 第三目标精确排序和墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于完整
+  Lightning Fury 目标选择矩阵。

@@ -1035,11 +1035,11 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] 当前 level-20 真实 gate 已覆盖根目标、第二目标和第三目标，并确认至少两枚共享
   `furylightning`；第三目标使用同一可见通道的 10 格纵向位置以避免地图静态阻挡。
 - [x] 真实 MPQ gate 已支持 `-PamazonMeleeSkillLevel`，并通过 Lightning Fury 等级 1、
-  10、20 三档；由于当前夹具只放置两个分裂目标，这三档验证的是等级生效、共享同步和
-  目标掉血，不宣称已在真实场景观察到 11 枚同时存活的子导弹。
-- [ ] 最大 2/11 枚分裂数量的完整等级矩阵、第三目标精确排序和墙后目标的真实 MPQ gate
-  仍待后续，不应将本轮等同于完整 Lightning Fury 多目标矩阵。其他 agent 的未提交修改
-  仍未动。
+  10、20 三档；夹具按原生 `HitPar[1]/Calc1` 创建目标，等级 1 精确要求 2 枚、等级 10/20
+  精确要求 11 枚共享 `furylightning`，且所有分裂目标在 owner/observer 两端掉血并通过
+  重连生命检查。
+- [ ] 第三目标精确排序和墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于完整
+  Lightning Fury 目标选择矩阵。其他 agent 的未提交修改仍未动。
 
 验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`；

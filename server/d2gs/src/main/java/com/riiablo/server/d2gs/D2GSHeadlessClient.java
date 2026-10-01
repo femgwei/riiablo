@@ -54,6 +54,7 @@ import com.riiablo.item.ItemWriter;
 import com.riiablo.item.Quality;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 
 import java.io.BufferedInputStream;
@@ -1349,27 +1350,50 @@ public final class D2GSHeadlessClient {
       int furyThirdTargetId = Engine.INVALID_ENTITY;
       float initialFuryLife = Float.NaN;
       float initialFuryThirdLife = Float.NaN;
+      ArrayList<Integer> furyTargetIds = new ArrayList<>();
+      ArrayList<Float> initialFuryLives = new ArrayList<>();
+      ArrayList<Boolean> furyTargetDamaged = new ArrayList<>();
+      int furyExpectedChildCount = 0;
       if (lightningFury) {
-        furyTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
-        if (furyTargetId < 0 || !D2GS.headlessPlaceMonsterNear(furyTargetId, targetId, 0f, 5f)) {
-          throw new IOException("failed to create and place Lightning Fury aura target");
+        Skills.Entry furySkill = Riiablo.files != null && Riiablo.files.skills != null
+            ? Riiablo.files.skills.get("Lightning Fury") : null;
+        com.riiablo.codec.excel.Missiles.Entry furyMissile = furySkill != null
+            && furySkill.srvmissile != null && Riiablo.files.Missiles != null
+            ? Riiablo.files.Missiles.get(furySkill.srvmissile) : null;
+        int configuredBoltCount = furyMissile != null && furyMissile.sHitPar != null
+            && furyMissile.sHitPar.length > 1 ? furyMissile.sHitPar[1] : 0;
+        int calculatedBoltCount = configuredBoltCount > 0 ? configuredBoltCount
+            : SkillFormula.evaluate(furySkill != null ? furySkill.calc1 : null,
+                furySkill, config.amazonMeleeSkillLevel);
+        furyExpectedChildCount = Math.min(11, Math.max(1, calculatedBoltCount));
+        if (furyExpectedChildCount < 2) {
+          throw new IOException("Lightning Fury fixture expected at least two aura targets: level="
+              + config.amazonMeleeSkillLevel + " expected=" + furyExpectedChildCount);
         }
-        furyThirdTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
-        if (furyThirdTargetId < 0
-            || !D2GS.headlessPlaceMonsterNear(furyThirdTargetId, targetId, 0f, 10f)) {
-          throw new IOException("failed to create and place Lightning Fury third aura target");
+        // Keep the first two offsets stable for the existing second/third-target
+        // assertions, then fill the same visible vertical channel to the native
+        // level-10 maximum of eleven targets.
+        float[] furyOffsets = {5f, 10f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f};
+        for (int i = 0; i < furyExpectedChildCount; i++) {
+          int auraTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+          if (auraTargetId < 0
+              || !D2GS.headlessPlaceMonsterNear(auraTargetId, targetId, 0f, furyOffsets[i])) {
+            throw new IOException("failed to create and place Lightning Fury aura target index=" + i);
+          }
+          furyTargetIds.add(auraTargetId);
+          Snapshot ownerAura = awaitSpecificMonster(owner, ownerInput, auraTargetId, deadline());
+          Snapshot peerAura = awaitSpecificMonster(peer, peerInput, auraTargetId, deadline());
+          if (!ownerAura.hasPosition || !peerAura.hasPosition) {
+            throw new IOException("Lightning Fury aura target did not receive both client baselines: index="
+                + i + " target=" + auraTargetId);
+          }
+          initialFuryLives.add(ownerAura.life);
+          furyTargetDamaged.add(false);
         }
-        Snapshot ownerFuryTarget = awaitSpecificMonster(owner, ownerInput, furyTargetId, deadline());
-        Snapshot peerFuryTarget = awaitSpecificMonster(peer, peerInput, furyTargetId, deadline());
-        Snapshot ownerFuryThirdTarget = awaitSpecificMonster(owner, ownerInput, furyThirdTargetId, deadline());
-        Snapshot peerFuryThirdTarget = awaitSpecificMonster(peer, peerInput, furyThirdTargetId, deadline());
-        initialFuryLife = ownerFuryTarget.life;
-        initialFuryThirdLife = ownerFuryThirdTarget.life;
-        if (!ownerFuryTarget.hasPosition || !peerFuryTarget.hasPosition
-            || !ownerFuryThirdTarget.hasPosition || !peerFuryThirdTarget.hasPosition) {
-          throw new IOException("Lightning Fury aura target did not receive both client baselines: target="
-              + furyTargetId + " third=" + furyThirdTargetId);
-        }
+        furyTargetId = furyTargetIds.get(0);
+        furyThirdTargetId = furyTargetIds.get(1);
+        initialFuryLife = initialFuryLives.get(0);
+        initialFuryThirdLife = initialFuryLives.get(1);
       }
       if (config.amazonMeleeExpectMiss
           && !D2GS.headlessSetMonsterDefense(targetId, 1_000_000)) {
@@ -1383,6 +1407,7 @@ public final class D2GSHeadlessClient {
       boolean damaged = false;
       boolean furyDamaged = false;
       boolean furyThirdDamaged = false;
+      boolean furyAllTargetsDamaged = false;
       boolean targetDeathObserved = false;
       boolean missAttackObserved = false;
       boolean sawFuryChildShared = false;
@@ -1400,8 +1425,8 @@ public final class D2GSHeadlessClient {
       for (int attempt = 1; attempt <= config.attempts
           && System.currentTimeMillis() < deadline
           && (!lightningFury || !sawLightningMissile)
-          && (!damaged || (lightningFury && (!furyDamaged || !furyThirdDamaged
-              || furyChildCount < 2))
+          && (!damaged || (lightningFury && (!furyAllTargetsDamaged
+              || furyChildCount < furyExpectedChildCount))
               || (impale && !impaleResourceObserved))
           && !targetDeathObserved; attempt++) {
         if (impale) fallback = false;
@@ -1425,18 +1450,14 @@ public final class D2GSHeadlessClient {
         long attemptDeadline = Math.min(deadline, System.currentTimeMillis()
             + (impale ? 3000L : 1800L));
         while (System.currentTimeMillis() < attemptDeadline
-            && (!damaged || (lightningFury && (!furyDamaged || !furyThirdDamaged
-                || furyChildCount < 2))
+            && (!damaged || (lightningFury && (!furyAllTargetsDamaged
+                || furyChildCount < furyExpectedChildCount))
                 || (impale && !impaleResourceObserved))
             && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
           Snapshot current = owner.monsters.get(targetId);
           Snapshot mirrored = peer.monsters.get(targetId);
-          Snapshot furyCurrent = lightningFury ? owner.monsters.get(furyTargetId) : null;
-          Snapshot furyMirrored = lightningFury ? peer.monsters.get(furyTargetId) : null;
-          Snapshot furyThirdCurrent = lightningFury ? owner.monsters.get(furyThirdTargetId) : null;
-          Snapshot furyThirdMirrored = lightningFury ? peer.monsters.get(furyThirdTargetId) : null;
           // The fixture mutation can race the first visibility baseline. If
           // that baseline is stale, absorb one upward correction before
           // requiring the authoritative post-hit life to decrease again.
@@ -1457,25 +1478,26 @@ public final class D2GSHeadlessClient {
                   impaleResourceBefore, impaleResourceAfter);
             }
           }
-          if (lightningFury && furyCurrent != null && furyCurrent.hasVitals
-              && furyMirrored != null && furyMirrored.hasVitals) {
-            float correctedFuryBaseline = Math.max(furyCurrent.life, furyMirrored.life);
-            if (correctedFuryBaseline > initialFuryLife + 0.001f) {
-              initialFuryLife = correctedFuryBaseline;
-            } else {
-              furyDamaged = furyCurrent.life < initialFuryLife
-                  && furyMirrored.life < initialFuryLife;
+          if (lightningFury) {
+            for (int i = 0; i < furyTargetIds.size(); i++) {
+              int auraTargetId = furyTargetIds.get(i);
+              Snapshot auraCurrent = owner.monsters.get(auraTargetId);
+              Snapshot auraMirrored = peer.monsters.get(auraTargetId);
+              if (auraCurrent == null || !auraCurrent.hasVitals
+                  || auraMirrored == null || !auraMirrored.hasVitals) continue;
+              float correctedBaseline = Math.max(auraCurrent.life, auraMirrored.life);
+              if (correctedBaseline > initialFuryLives.get(i) + 0.001f) {
+                initialFuryLives.set(i, correctedBaseline);
+                if (i == 0) initialFuryLife = correctedBaseline;
+                if (i == 1) initialFuryThirdLife = correctedBaseline;
+              } else if (auraCurrent.life < initialFuryLives.get(i)
+                  && auraMirrored.life < initialFuryLives.get(i)) {
+                furyTargetDamaged.set(i, true);
+              }
             }
-          }
-          if (lightningFury && furyThirdCurrent != null && furyThirdCurrent.hasVitals
-              && furyThirdMirrored != null && furyThirdMirrored.hasVitals) {
-            float correctedFuryThirdBaseline = Math.max(furyThirdCurrent.life, furyThirdMirrored.life);
-            if (correctedFuryThirdBaseline > initialFuryThirdLife + 0.001f) {
-              initialFuryThirdLife = correctedFuryThirdBaseline;
-            } else {
-              furyThirdDamaged = furyThirdCurrent.life < initialFuryThirdLife
-                  && furyThirdMirrored.life < initialFuryThirdLife;
-            }
+            furyAllTargetsDamaged = !furyTargetDamaged.contains(Boolean.FALSE);
+            furyDamaged = furyTargetDamaged.get(0);
+            furyThirdDamaged = furyTargetDamaged.get(1);
           }
           if (config.amazonMeleeExpectMiss && owner.sawAttackMode) missAttackObserved = true;
           if ((lightningStrike || lightningFury)
@@ -1489,8 +1511,8 @@ public final class D2GSHeadlessClient {
           if (!fallback && System.currentTimeMillis() - attemptStarted >= 500L
               && !targetDeathObserved
               && (!lightningFury || !sawLightningMissile)
-              && (!damaged || (lightningFury && (!furyDamaged || !furyThirdDamaged
-                  || furyChildCount < 2))
+              && (!damaged || (lightningFury && (!furyAllTargetsDamaged
+                  || furyChildCount < furyExpectedChildCount))
                   || (impale && !impaleResourceObserved))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
@@ -1521,13 +1543,15 @@ public final class D2GSHeadlessClient {
             + " owner=" + owner.monsters.get(targetId)
             + " peer=" + peer.monsters.get(targetId));
       }
-      if (lightningFury && (!sawFuryChildShared || furyChildCount < 2
-          || !furyDamaged || !furyThirdDamaged)) {
+      if (lightningFury && (!sawFuryChildShared || furyChildCount != furyExpectedChildCount
+          || !furyAllTargetsDamaged)) {
         throw new IllegalStateException("Amazon Lightning Fury did not complete shared aura split: root="
             + targetId + " auraTarget=" + furyTargetId
             + " thirdTarget=" + furyThirdTargetId + " childShared=" + sawFuryChildShared
             + " childCount=" + furyChildCount + " auraDamaged=" + furyDamaged
-            + " thirdDamaged=" + furyThirdDamaged
+            + " expectedChildCount=" + furyExpectedChildCount
+            + " thirdDamaged=" + furyThirdDamaged + " allTargetsDamaged=" + furyAllTargetsDamaged
+            + " targetIds=" + furyTargetIds + " targetDamaged=" + furyTargetDamaged
             + " ownerAura=" + owner.monsters.get(furyTargetId)
             + " peerAura=" + peer.monsters.get(furyTargetId)
             + " ownerThird=" + owner.monsters.get(furyThirdTargetId)
@@ -1617,21 +1641,31 @@ public final class D2GSHeadlessClient {
         if (lightningFury && !D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
           throw new IOException("Amazon Lightning Fury observer reconnect could not refresh room baseline");
         }
-        if (lightningFury
-            && (!D2GS.headlessSyncEntityTo(reconnected.playerId, targetId)
-                || !D2GS.headlessSyncEntityTo(reconnected.playerId, furyTargetId)
-                || !D2GS.headlessSyncEntityTo(reconnected.playerId, furyThirdTargetId))) {
+        if (lightningFury && !D2GS.headlessSyncEntityTo(reconnected.playerId, targetId)) {
           throw new IOException("Amazon Lightning Fury observer reconnect could not prime durable target baselines");
+        }
+        if (lightningFury) {
+          for (int auraTargetId : furyTargetIds) {
+            if (!D2GS.headlessSyncEntityTo(reconnected.playerId, auraTargetId)) {
+              throw new IOException("Amazon Lightning Fury observer reconnect could not prime aura target="
+                  + auraTargetId);
+            }
+          }
         }
         Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
         boolean reconnectLifeInvalid = !restored.hasVitals || restored.life > ownerLife + 0.001f
             || (config.amazonMeleeExpectMiss
                 ? restored.life + 0.001f < ownerLife
                 : restored.life >= initialLife);
-        Snapshot restoredFury = lightningFury
-            ? awaitSpecificMonster(reconnected, reconnectInput, furyTargetId, deadline()) : null;
-        Snapshot restoredFuryThird = lightningFury
-            ? awaitSpecificMonster(reconnected, reconnectInput, furyThirdTargetId, deadline()) : null;
+        ArrayList<Snapshot> restoredFuryTargets = new ArrayList<>();
+        if (lightningFury) {
+          for (int auraTargetId : furyTargetIds) {
+            restoredFuryTargets.add(awaitSpecificMonster(
+                reconnected, reconnectInput, auraTargetId, deadline()));
+          }
+        }
+        Snapshot restoredFury = lightningFury ? restoredFuryTargets.get(0) : null;
+        Snapshot restoredFuryThird = lightningFury ? restoredFuryTargets.get(1) : null;
         if (lightningFury) {
           reconnectLifeInvalid |= !restoredFury.hasVitals
               || restoredFury.life > owner.monsters.get(furyTargetId).life + 0.001f
@@ -1639,6 +1673,14 @@ public final class D2GSHeadlessClient {
           reconnectLifeInvalid |= !restoredFuryThird.hasVitals
               || restoredFuryThird.life > owner.monsters.get(furyThirdTargetId).life + 0.001f
               || restoredFuryThird.life >= initialFuryThirdLife;
+          for (int i = 0; i < restoredFuryTargets.size(); i++) {
+            Snapshot restoredAura = restoredFuryTargets.get(i);
+            Snapshot ownerAura = owner.monsters.get(furyTargetIds.get(i));
+            reconnectLifeInvalid |= !restoredAura.hasVitals
+                || ownerAura == null
+                || restoredAura.life > ownerAura.life + 0.001f
+                || restoredAura.life >= initialFuryLives.get(i);
+          }
           if (!reconnectHasOnlyLiveFuryChildren(owner, reconnected)) {
             throw new IOException("Amazon Lightning Fury reconnect restored stale furylightning child: "
                 + areaMissileSummary(reconnected.areaMissiles));
@@ -1673,7 +1715,9 @@ public final class D2GSHeadlessClient {
                 + restoredFury.life + " thirdTarget=" + furyThirdTargetId
                 + " thirdOwnerLife=" + owner.monsters.get(furyThirdTargetId).life
                 + " thirdRestoredLife=" + restoredFuryThird.life
-                + " childShared=" + sawFuryChildShared + " childCount=" + furyChildCount : "")
+                + " childShared=" + sawFuryChildShared + " childCount=" + furyChildCount
+                + " expectedChildCount=" + furyExpectedChildCount
+                + " targetCount=" + furyTargetIds.size() : "")
             + " stale=false");
       }
     }
