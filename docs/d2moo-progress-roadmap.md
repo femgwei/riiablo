@@ -5988,5 +5988,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   `furylightning`。每个分裂目标都要求 owner/observer 同步掉血，重连时逐目标核对权威生命。
 - [x] `MissileCollisionSystem` 的分裂目标排序抽为最近距离优先 helper，并由
   `AmazonSkillSpecializationTest` 覆盖最近/次近/最远顺序。
+- [x] 墙后 MPQ 候选点的探测结果已记录：目标筛选阶段被排除，但子导弹在断开前 settle
+  阶段仍可穿过并命中，故未宣称墙体 gate 通过；后续需按 `furylightning` 的原生
+  `CollideType` 继续核对地图碰撞。
 - [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于
   完整 Lightning Fury 目标选择矩阵。
