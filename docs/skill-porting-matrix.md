@@ -1,6 +1,19 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-01（交接快照：Amazon Decoy/Valkyrie gate）
+更新时间：2026-10-02（交接快照：Assassin trap exact-ID Native gate）
+
+## 2026-10-02 Assassin trap exact-ID Native gate
+
+- 新增 `AssassinSkillSpecializationTest.auditDarkMagicTrapExactIdsAgainstLegacyRows`，
+  按 dark-magic `trap.assassin-family` 的 10 个 exact-ID（251/256/257/261/262/266/
+  271/272/276/277）锁定本地 1.10f Skills.txt 名称、`SrvDoFunc`、陷阱 `pettype`，以及
+  Blade Fury/Blade Shield 的服务端导弹行。
+- 1.10f 与 dark-magic 1.14d 的显示名不同（Fire Trauma/Fire Blast、Shock Field/Shock Web），
+  测试以 exact-ID 和原生函数为权威，不复制 1.14d 数值或名称。
+- 本次只增加 Native 对照门槛，未把 10 条技能标记为四层完成；下一步仍是 Shock Field
+  (`SrvDo043`) 的 progressive scatter、Blade Fury (`SrvDo048`) 的资源/释放时序，及
+  Fire Trauma (`251`) 的落地伤害/协同，随后再做真实 1.10f MPQ gate。
+- 提交：`2f0634af test: lock Assassin dark-magic trap exact IDs`，已推送 `origin/master`。
 
 ## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
 
@@ -263,6 +276,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   （Death Sentry 的 `Skill1`/`Skill2` 也都是 `lvl`），所以运行时应保存放置技能等级快照，
   不能直接采用静态 `Sk1lvl/Sk2lvl=1`。`AssassinSkillSpecializationTest.auditTrapSummonSkillInheritanceRows`
   现在锁定六类陷阱的完整继承映射和协同来源；现有 Death Sentry 等级 4 回归与该结论一致。
+- 2026-10-02 又锁定了 10 个 dark-magic exact-ID 到 1.10f Native 行的名称、函数和关键字段；
+  这只是数据层门槛，不代表 `trap.assassin-family` 已完成四层验收。
 
 ### Barbarian
 
