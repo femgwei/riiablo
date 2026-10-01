@@ -284,7 +284,7 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonMeleeSave(config.amazonSummonSkillId,
             "jav", config.amazonSummonSkillLevel)
         : config.requireAmazonBow
-        ? createGeneratedAmazonBowSave(config.amazonBowSkillId)
+        ? createGeneratedAmazonBowSave(config.amazonBowSkillId, config.amazonBowPierceGate)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.requireVineScenario
@@ -2050,7 +2050,8 @@ public final class D2GSHeadlessClient {
           + " do=" + (bowMissile != null ? bowMissile.pSrvDoFunc : -1)
           + " hit=" + (bowMissile != null ? bowMissile.pSrvHitFunc : -1)
           + " dmg=" + (bowMissile != null ? bowMissile.pSrvDmgFunc : -1)
-          + " collision=" + (bowMissile != null && bowMissile.Collision)
+              + " collision=" + (bowMissile != null && bowMissile.Collision)
+          + " pierce=" + (bowMissile != null && bowMissile.Pierce)
           + " collideType=" + (bowMissile != null ? bowMissile.CollideType : -1)
           + " lastCollide=" + (bowMissile != null && bowMissile.LastCollide)
           + " alwaysExplode=" + (bowMissile != null && bowMissile.AlwaysExplode)
@@ -2071,6 +2072,7 @@ public final class D2GSHeadlessClient {
         if (row != null) {
           log("amazon_bow_missile_row", "skill=" + bowSkill.skill + " missile=" + missileName
               + " id=" + row.Id + " collision=" + row.Collision + " collideType=" + row.CollideType
+              + " pierce=" + row.Pierce
               + " collideKill=" + row.CollideKill + " srvDo=" + row.pSrvDoFunc
               + " srvHit=" + row.pSrvHitFunc + " srvDmg=" + row.pSrvDmgFunc
               + " srcDam=" + row.SrcDamage + " min=" + row.MinDamage + " max=" + row.MaxDamage
@@ -2114,6 +2116,13 @@ public final class D2GSHeadlessClient {
       boolean wallOwnerDamaged = false;
       boolean wallPeerDamaged = false;
       int wallGateTicks = 0;
+      boolean pierceGate = config.amazonBowPierceGate;
+      int pierceTargetId = Engine.INVALID_ENTITY;
+      float pierceInitialLife = Float.NaN;
+      boolean pierceOwnerDamaged = false;
+      boolean piercePeerDamaged = false;
+      boolean piercePairObserved = false;
+      int piercePairCountBefore = 0;
       multiTargetIds.add(targetId);
       multiInitialLives.put(targetId, ownerTarget.life);
       float initialLife = ownerTarget.life;
@@ -2135,6 +2144,53 @@ public final class D2GSHeadlessClient {
       }
       if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId)) {
         throw new IOException("failed to install deterministic Amazon bow attack profile");
+      }
+      if (pierceGate) {
+        // Keep two durable targets on the caster's +X ray. The first target
+        // must be crossed before the second; the production Pierce telemetry
+        // below rejects two independent arrows as a false positive.
+        if (multipleShot) {
+          // Multiple Shot's native fan is easiest to drive deterministically
+          // when its two adjacent lanes are occupied, as in the real-target
+          // gate. These support fixtures are not part of the Pierce assertion.
+          for (float laneOffset : new float[] {-4f, -8f}) {
+            int supportId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+            if (supportId < 0 || !D2GS.headlessDisableMonsterDynamicCollision(supportId)
+                || !D2GS.headlessPlaceMonsterNear(supportId, targetId, 0f, laneOffset)
+                || !D2GS.headlessSetMonsterDefense(supportId, 1)
+                || !D2GS.headlessSetMonsterBowDefense(supportId)) {
+              throw new IOException("failed to create/place Amazon Pierce support lane="
+                  + laneOffset);
+            }
+            awaitSpecificMonster(owner, ownerInput, supportId, deadline());
+            awaitSpecificMonster(peer, peerInput, supportId, deadline());
+          }
+        }
+        pierceTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
+        if (pierceTargetId < 0
+            || !D2GS.headlessDisableMonsterDynamicCollision(pierceTargetId)
+            || !D2GS.headlessPlaceMonsterNear(pierceTargetId, targetId, 2f, 0f)
+            || !D2GS.headlessSetMonsterDefense(pierceTargetId, 1)
+            || !D2GS.headlessSetMonsterBowDefense(pierceTargetId)) {
+          throw new IOException("failed to create/place Amazon Pierce second target");
+        }
+        Snapshot pierceOwner = awaitSpecificMonster(owner, ownerInput, pierceTargetId, deadline());
+        Snapshot piercePeer = awaitSpecificMonster(peer, peerInput, pierceTargetId, deadline());
+        if (!pierceOwner.hasPosition || !piercePeer.hasPosition
+            || D2GS.headlessMapRayBlocked(owner.playerId, pierceTargetId)) {
+          throw new IOException("Amazon Pierce second target did not pass the open production ray gate: target="
+              + pierceTargetId + " owner=" + snapshotSummary(pierceOwner)
+              + " peer=" + snapshotSummary(piercePeer));
+        }
+        pierceInitialLife = Math.max(pierceOwner.life, piercePeer.life);
+        int[] pierceState = D2GS.headlessAmazonPierceState(owner.playerId,
+            config.amazonBowSkillId);
+        piercePairCountBefore = pierceState.length > 0 ? pierceState[0] : 0;
+        log("amazon_bow_pierce_baseline", "skill=" + config.amazonBowSkillId
+            + " firstTarget=" + targetId + " secondTarget=" + pierceTargetId
+            + " pairCount=" + piercePairCountBefore
+            + " owner=" + snapshotSummary(pierceOwner)
+            + " peer=" + snapshotSummary(piercePeer));
       }
       if (multiTargetGate) {
         // The native Multiple Shot lane spacing for the fixture's horizontal
@@ -2255,6 +2311,8 @@ public final class D2GSHeadlessClient {
               || volleyRequired && !sawVolleyShared
               || multiTargetGate && !multiTargetPassed
               || wallGate && wallGateTicks < 20
+              || pierceGate && (!pierceOwnerDamaged || !piercePeerDamaged
+                  || !piercePairObserved)
               || coldRequired && !sawColdState
               || immolation && (!sawImmolationFireShared || !sawImmolationFireTick)); attempt++) {
         ownerTarget = owner.monsters.get(targetId);
@@ -2281,6 +2339,8 @@ public final class D2GSHeadlessClient {
                 || volleyRequired && !sawVolleyShared
                 || multiTargetGate && !multiTargetPassed
                 || wallGate && wallGateTicks < 20
+                || pierceGate && (!pierceOwnerDamaged || !piercePeerDamaged
+                    || !piercePairObserved)
                 || coldRequired && !sawColdState
                 || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
           consumeOne(ownerInput, owner);
@@ -2351,6 +2411,26 @@ public final class D2GSHeadlessClient {
               }
             }
           }
+          if (pierceGate && pierceTargetId >= 0) {
+            Snapshot pierceCurrent = owner.monsters.get(pierceTargetId);
+            Snapshot pierceMirrored = peer.monsters.get(pierceTargetId);
+            if (pierceCurrent != null && pierceMirrored != null
+                && pierceCurrent.hasVitals && pierceMirrored.hasVitals) {
+              float correctedPierceBaseline = Math.max(pierceCurrent.life, pierceMirrored.life);
+              if (correctedPierceBaseline > pierceInitialLife + 0.001f) {
+                pierceInitialLife = correctedPierceBaseline;
+              } else {
+                pierceOwnerDamaged |= pierceCurrent.life < pierceInitialLife - 0.001f;
+                piercePeerDamaged |= pierceMirrored.life < pierceInitialLife - 0.001f;
+              }
+            }
+            int[] pierceState = D2GS.headlessAmazonPierceState(owner.playerId,
+                config.amazonBowSkillId);
+            if (pierceState.length >= 6 && pierceState[0] > piercePairCountBefore
+                && pierceState[2] == targetId && pierceState[3] == pierceTargetId) {
+              piercePairObserved = true;
+            }
+          }
           int[] ammo = D2GS.headlessAmazonAmmoStats(owner.playerId);
           // A replenishing quiver can return to quantity=1 before the next
           // network tick is consumed.  Record the native decrement as an
@@ -2390,6 +2470,8 @@ public final class D2GSHeadlessClient {
                   || volleyRequired && !sawVolleyShared
                   || multiTargetGate && !multiTargetPassed
                   || wallGate && wallGateTicks < 20
+                  || pierceGate && (!pierceOwnerDamaged || !piercePeerDamaged
+                      || !piercePairObserved)
                   || coldRequired && !sawColdState
                   || immolation && (!sawImmolationFireShared || !sawImmolationFireTick))) {
             fallback = true;
@@ -2453,6 +2535,27 @@ public final class D2GSHeadlessClient {
         log("amazon_bow_wall_pass", "skill=" + config.amazonBowSkillId
             + " target=" + wallTargetId + " ownerDamaged=" + wallOwnerDamaged
             + " peerDamaged=" + wallPeerDamaged + " baseline=" + wallInitialLife);
+      }
+      if (pierceGate && (!pierceOwnerDamaged || !piercePeerDamaged || !piercePairObserved)) {
+        int[] pierceState = D2GS.headlessAmazonPierceState(owner.playerId,
+            config.amazonBowSkillId);
+        throw new IllegalStateException((multipleShot ? "Multiple Shot" : strafe
+            ? "Strafe" : "Amazon bow")
+            + " did not prove one projectile pierced both targets: firstTarget=" + targetId
+            + " secondTarget=" + pierceTargetId + " ownerDamaged=" + pierceOwnerDamaged
+            + " peerDamaged=" + piercePeerDamaged + " pairObserved=" + piercePairObserved
+            + " pairState=" + java.util.Arrays.toString(pierceState)
+            + " firstOwner=" + snapshotSummary(owner.monsters.get(targetId))
+            + " secondOwner=" + snapshotSummary(owner.monsters.get(pierceTargetId))
+            + " secondPeer=" + snapshotSummary(peer.monsters.get(pierceTargetId)));
+      }
+      if (pierceGate) {
+        int[] pierceState = D2GS.headlessAmazonPierceState(owner.playerId,
+            config.amazonBowSkillId);
+        log("amazon_bow_pierce_pass", "skill=" + config.amazonBowSkillId
+            + " firstTarget=" + targetId + " secondTarget=" + pierceTargetId
+            + " pairState=" + java.util.Arrays.toString(pierceState)
+            + " ownerDamaged=" + pierceOwnerDamaged + " peerDamaged=" + piercePeerDamaged);
       }
       if ((config.amazonBowSkillId == SkillId.EXPLODING_ARROW
           || config.amazonBowSkillId == SkillId.FREEZING_ARROW) && !sawExplosionChild) {
@@ -10758,7 +10861,7 @@ public final class D2GSHeadlessClient {
   }
 
   /** Deterministic level-30 Amazon fixture for native bow/ammunition gates. */
-  private static byte[] createGeneratedAmazonBowSave(int skillId) {
+  private static byte[] createGeneratedAmazonBowSave(int skillId, boolean pierceGate) {
     CharacterClass classData = CharacterClass.AMAZON;
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadAmaBow", Riiablo.AMAZON);
@@ -10794,6 +10897,7 @@ public final class D2GSHeadlessClient {
     bow.setBase(Riiablo.files.weapons.get("sbw"));
     if (bow.base == null) throw new IllegalArgumentException("native bow fixture unavailable");
     bow.quality = Quality.NORMAL;
+    if (pierceGate) bow.attrs.base().put(Stat.item_pierce, 100);
     bow.attrs.reset();
     character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(bow));
 
@@ -10808,6 +10912,9 @@ public final class D2GSHeadlessClient {
     character.getItems().equipItem(BodyLoc.LARM, character.getItems().add(arrows));
 
     seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
+    if (pierceGate && !character.setSkillLevel(SkillId.PIERCE, 20)) {
+      throw new IllegalStateException("could not seed Amazon Pierce skill for bow gate");
+    }
     if (!character.setSkillLevel(skillId, 20)) {
       throw new IllegalStateException("could not seed Amazon bow skill " + skillId);
     }
@@ -11292,6 +11399,7 @@ public final class D2GSHeadlessClient {
     int amazonBowSkillId = SkillId.FIRE_ARROW;
     boolean amazonBowMultiTarget;
     boolean amazonBowWallGate;
+    boolean amazonBowPierceGate;
     boolean requireVineScenario;
     int vineSkillId = SkillId.POISON_CREEPER;
     boolean requireSpiritAura;
@@ -11380,6 +11488,7 @@ public final class D2GSHeadlessClient {
         else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
         else if ("--amazon-bow-multitarget".equals(arg)) config.amazonBowMultiTarget = true;
         else if ("--amazon-bow-wall-gate".equals(arg)) config.amazonBowWallGate = true;
+        else if ("--amazon-bow-pierce-gate".equals(arg)) config.amazonBowPierceGate = true;
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
         else if ("--vine-skill".equals(arg)) config.vineSkillId = integer(args, ++i, arg);
         else if ("--require-spirit-aura".equals(arg)) config.requireSpiritAura = true;
@@ -11664,6 +11773,7 @@ public final class D2GSHeadlessClient {
            + " [--amazon-summon-skill-level 1..20]"
            + " [--amazon-bow-multitarget]"
            + " [--amazon-bow-wall-gate]"
+           + " [--amazon-bow-pierce-gate]"
            + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"

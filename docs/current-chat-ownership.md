@@ -1097,3 +1097,20 @@ incarnation，并继续检查跨区域实体基线恢复。
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`；
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=35 -PamazonMeleeWeapon=jav
 -PamazonMeleeTimeout=15 --no-daemon`。
+
+### 2026-10-01 Pierce gate handoff
+
+- [x] `amazonBowPierceGate` 已接入 Gradle/Headless client；测试弓只在该 gate 注入
+  `item_pierce=100`，避免把随机 Pierce 预滚误当作实现缺陷或成功证据。
+- [x] Strafe(26) 已通过真实 MPQ 双客户端严格 gate：同一导弹的生产遥测记录第一目标
+  `132`、第二目标 `133`，owner/observer 均看到第二目标实际掉血，箭袋、共享导弹和
+  reconnect 仍通过。
+- [ ] Multiple Shot(12) 暂不标记完成：level-20 fan volley 可以让两个目标掉血，但
+  当前由不同箭完成，严格同一导弹遥测为 `pairCount=0`。后续 agent 必须继续收敛 D2MOO
+  fan lane/目标排序夹具，不得将“两目标掉血”降级为 Pierce 成功。
+- 本轮新增生产只读桥接：`MissileCollisionSystem.headlessPierceState` 与
+  `D2GS.headlessAmazonPierceState`；仅服务 headless gate，不改变生产伤害/概率公式。
+
+验证命令：
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
+-PamazonBowPierceGate=true --no-daemon`。

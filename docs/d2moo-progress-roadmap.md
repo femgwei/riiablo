@@ -6099,3 +6099,20 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。
+
+### 2026-10-01 Amazon bow Pierce gate（Strafe 完成，Multiple Shot 待补）
+
+- [x] 新增 `-PamazonBowPierceGate=true`：生成的 bow fixture 额外学习 Amazon
+  `Pierce(20)`，并仅在该 gate 的测试弓上注入 `item_pierce=100`，把验证重点固定在
+  原生穿透路径而不是随机预滚概率；用户生产技能公式未改动。
+- [x] `MissileCollisionSystem` 发布只读 headless Pierce 遥测，记录同一权威导弹的两个
+  不同命中目标；客户端同时要求 owner/observer 两端第二目标实际掉血，不能只以导弹创建
+  或“两个目标分别受伤”判定成功。
+- [x] Strafe(26) 真实 MPQ 双客户端通过：同一导弹命中第一、第二个同一直线目标，两个
+  客户端均观察到第二目标掉血，并继续通过箭袋、共享实体和 reconnect 检查。
+- [ ] Multiple Shot(12) 尚未通过严格同一导弹断言：level-20 fan volley 中两个目标都可
+  实际掉血，但当前命中由不同箭完成，生产 Pierce 遥测 `pairCount` 仍为 0；这不是可接受
+  的穿透证据，下一步需继续按 D2MOO 的 fan lane/目标排序收敛夹具，不得放宽断言。
+
+验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26
+-PamazonBowTimeout=30 -PamazonBowPierceGate=true --no-daemon`。

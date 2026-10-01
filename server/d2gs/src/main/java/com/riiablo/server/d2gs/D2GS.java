@@ -5509,6 +5509,20 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Read-only same-projectile Pierce evidence for Amazon bow headless gates. */
+  static int[] headlessAmazonPierceState(int ownerId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null) {
+      return new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
+          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+    }
+    com.riiablo.engine.server.MissileCollisionSystem collisions = server.world
+        .getSystem(com.riiablo.engine.server.MissileCollisionSystem.class);
+    return collisions == null ? new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
+        Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY}
+        : collisions.headlessPierceState(ownerId, skillId);
+  }
+
   private static int[] emptyHeadlessMercenaryState() {
     return new int[] {0, Engine.INVALID_ENTITY, 0, 0, Engine.INVALID_ENTITY,
         0, 0, 0, 0, 0, 0, Engine.INVALID_ENTITY, 0, 0};

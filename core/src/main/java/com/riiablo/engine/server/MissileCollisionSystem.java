@@ -138,6 +138,13 @@ public class MissileCollisionSystem extends IteratingSystem {
   private volatile int mercenaryLastDamageTarget = Engine.INVALID_ENTITY;
   private volatile float mercenaryLastDamageBefore;
   private volatile float mercenaryLastDamageAfter;
+  /** Last real same-projectile Pierce pair, exposed only to headless gates. */
+  private volatile int headlessPierceOwner = Engine.INVALID_ENTITY;
+  private volatile int headlessPierceSkill = Engine.INVALID_ENTITY;
+  private volatile int headlessPierceMissile = Engine.INVALID_ENTITY;
+  private volatile int headlessPierceFirstTarget = Engine.INVALID_ENTITY;
+  private volatile int headlessPierceSecondTarget = Engine.INVALID_ENTITY;
+  private volatile int headlessPiercePairCount;
   
   @Override
   protected void process(int entityId) {
@@ -1659,6 +1666,25 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed);
       boolean damageHit = combat.hit && !combat.blocked;
+      if (damageHit && missile.pierceEnabled && missile.hitTargets.size >= 2) {
+        int firstTarget = Engine.INVALID_ENTITY;
+        for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = missile.hitTargets.iterator();
+            it.hasNext;) {
+          int candidate = it.next();
+          if (candidate != targetId) {
+            firstTarget = candidate;
+            break;
+          }
+        }
+        if (firstTarget != Engine.INVALID_ENTITY) {
+          headlessPierceOwner = missile.ownerId;
+          headlessPierceSkill = missile.skillId;
+          headlessPierceMissile = missileId;
+          headlessPierceFirstTarget = firstTarget;
+          headlessPierceSecondTarget = targetId;
+          headlessPiercePairCount++;
+        }
+      }
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss "
                 + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
@@ -3297,6 +3323,17 @@ public class MissileCollisionSystem extends IteratingSystem {
       StatusEffectApplier.INSTANCE.applyState(targetId, missile.onHitStateId,
           missile.onHitStateDuration, attackerId);
     }
+  }
+
+  /** Read-only same-projectile Pierce evidence for a headless combat gate. */
+  public int[] headlessPierceState(int ownerId, int skillId) {
+    if (headlessPierceOwner != ownerId || headlessPierceSkill != skillId) {
+      return new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
+          Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, 0};
+    }
+    return new int[] {headlessPiercePairCount, headlessPierceMissile,
+        headlessPierceFirstTarget, headlessPierceSecondTarget, headlessPierceSkill,
+        headlessPierceOwner};
   }
 
   /** Native AuraFilter ordering: nearest eligible unit wins each split slot. */
