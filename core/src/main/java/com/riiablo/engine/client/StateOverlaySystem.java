@@ -160,24 +160,15 @@ public class StateOverlaySystem extends IteratingSystem {
     boolean freezeActive = states.stateList.hasState(StateId.FREEZE);
     boolean poison = states.stateList.hasState(StateId.POISON);
     if (!cold && !freezeActive && !poison) return -1;
-    // Stock 1.10f States.txt uses ColorShift 108 for COLD/FREEZE and 104
-    // for POISON (the row also carries the native green flag).
-    // Keep the native fallback for headless tests or trimmed data packs.
-    int fallback = cold || freezeActive ? 108 : 104;
-    if (Riiablo.files == null || Riiablo.files.States == null) return fallback;
+    // The stock States.txt value 108 is a state-table color id, but the
+    // renderer consumes the corresponding HueVariations row from Pal.pl2.
+    // In the retail 1.10f palette row 108 is purple; row 100 is the native
+    // deep-blue cold/freeze tint.  Poison remains the native green row 104.
+    int fallback = cold || freezeActive ? 100 : 104;
+    if (cold || freezeActive || Riiablo.files == null || Riiablo.files.States == null) {
+      return fallback;
+    }
     States.Entry best = null;
-    if (cold) {
-      best = Riiablo.files.States.get("cold");
-    }
-    if (freezeActive) {
-      // Frozen uses the same blue palette shift as native COLD.  The stock
-      // freeze row can carry a purple colorshift in trimmed/custom data,
-      // but the in-game frozen/chilled presentation is blue.
-      States.Entry coldEntry = Riiablo.files.States.get("cold");
-      if (coldEntry != null && (best == null || coldEntry.colorPriority >= best.colorPriority)) {
-        best = coldEntry;
-      }
-    }
     if (poison) {
       States.Entry poisonEntry = Riiablo.files.States.get("poison");
       if (poisonEntry != null && (best == null || poisonEntry.colorPriority > best.colorPriority)) {
