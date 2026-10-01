@@ -95,6 +95,10 @@ public class PaletteIndexedBatch extends SpriteBatch {
     // 1 - source.rgb.
     if (blendMode == BlendMode.SCREEN) {
       super.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_COLOR);
+    } else if (blendMode == BlendMode.ADDITIVE) {
+      // D2 Trans=1 matches Unity's Legacy Particles/Additive (Soft):
+      // source alpha over the destination's inverse source colour.
+      super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_COLOR);
     } else {
       super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }

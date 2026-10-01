@@ -23,4 +23,6 @@ public interface BlendMode {
   int SCREEN           = 12;
   /** Keep indexed palette RGB and derive opacity from the source index. */
   int SOURCE_INDEX_ALPHA = 13;
+  /** Native missile Trans=1 soft-additive blend. */
+  int ADDITIVE           = 14;
 }

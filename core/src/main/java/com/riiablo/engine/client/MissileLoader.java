@@ -78,17 +78,16 @@ public class MissileLoader extends IteratingSystem {
       // Light/Flicker fields modulate that mask over time. Keep source
       // palette RGB values intact instead of recolouring the sprite.
       case 1:  blendMode = isPoisonMissile(entry) ? BlendMode.SCREEN
-          : isGroundFire(entry) ? BlendMode.LUMINOSITY_FLICKER : BlendMode.LUMINOSITY; break;
+          : isGroundFire(entry) ? BlendMode.LUMINOSITY_FLICKER : BlendMode.ADDITIVE; break;
       default: blendMode = BlendMode.ID; break;
     }
-    // IceArrowExplode.dcc is a fully-coloured impact sprite. Its native
-    // Trans=1 row is intended for D2's separate luminosity-mask pipeline.
-    // That pipeline can discard this indexed sprite on the desktop shader
-    // path, so use the source-index alpha branch: it keeps the palette RGB
-    // while taking opacity from the source DCC index/tint instead of the
-    // derived luminosity mask.
+    // IceArrowExplode.dcc is a fully-coloured impact sprite, but its native
+    // Trans=1 row still uses the same soft-additive missile compositing as
+    // FreezeExplodeCenter/Ejecta. Keep the explicit branch as documentation
+    // because this one-shot layer was previously forced through a different
+    // indexed-alpha fallback while diagnosing the missing animation.
     if ("iceexplode".equalsIgnoreCase(entry.Missile)) {
-      blendMode = BlendMode.SOURCE_INDEX_ALPHA;
+      blendMode = BlendMode.ADDITIVE;
     }
 
     Animation animation = mAnimationWrapper.create(entityId).animation;

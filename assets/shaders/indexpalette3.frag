@@ -66,6 +66,12 @@ void main() {
   } else if (blendMode == 13) {
     color.a = sourceIndex > 0.0 ? tint.a : 0.0;
 
+  // Native missile Trans=1 sprites use the palette colour as an additive
+  // source. Index zero remains transparent; the fixed-function batch state
+  // supplies the destination-preserving additive equation.
+  } else if (blendMode == 14) {
+    color.a = sourceIndex > 0.0 ? tint.a : 0.0;
+
   // Set alpha based on luminance and color to tint
   } else if (blendMode == 3) {
     if (color.a > 0.0) {

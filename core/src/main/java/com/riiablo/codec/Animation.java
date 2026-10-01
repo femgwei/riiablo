@@ -684,6 +684,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       // the black ellipses visible beneath PoisonSmokePuff frames.  Native
       // poison clouds never cast a separate ground shadow.
       shadow         = blendMode != BlendMode.SCREEN
+          && blendMode != BlendMode.ADDITIVE
           && blendMode != BlendMode.LUMINOSITY
           && blendMode != BlendMode.LUMINOSITY_TINT;
       return this;
