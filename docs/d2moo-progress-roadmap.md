@@ -5991,5 +5991,7 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] 运行时确认 `lightningfury`/`furylightning` 均为 `CollideType=3`、
   `Collision=false`、`LastCollide=true`，纯数据测试已锁定；此前候选点位于 11 个目标之后，
   是分裂上限排除而非墙体证据。
-- [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于
-  完整 Lightning Fury 目标选择矩阵。
+- [x] 真实 MPQ gate 通过 D2GS 应用线程桥接读取 `MissileCollisionSystem` 在生产瞬间发布的
+  目标 ID/距离快照，验证 11 个唯一目标按同 tick 距离非递减选中；不依赖后续动态碰撞重定位
+  后的客户端坐标，也不把创建 ID 当作排序证据。
+- [ ] 墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于完整 Lightning Fury 目标选择矩阵。

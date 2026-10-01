@@ -1042,8 +1042,10 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] 运行时已记录 `lightningfury`/`furylightning` 均为 `CollideType=3`、
   `Collision=false`、`LastCollide=true`，并由 Amazon 数据测试锁定；此前的墙后候选点实际
   位于 11 个目标之后，只证明了分裂上限排除，不能作为墙体 gate。
-- [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于
-  完整 Lightning Fury 目标选择矩阵。其他 agent 的未提交修改仍未动。
+- [x] 真实 MPQ gate 通过 D2GS 应用线程桥接读取生产瞬间的目标 ID/距离快照，确认 11 个
+  唯一目标按同 tick 距离非递减选中；动态碰撞后续重定位不再被误当成生产顺序证据。
+- [ ] 墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于完整 Lightning Fury 目标选择矩阵。
+  其他 agent 的未提交修改仍未动。
 
 验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`；

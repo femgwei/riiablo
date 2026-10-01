@@ -5150,6 +5150,40 @@ public class D2GS extends ApplicationAdapter {
             Float.floatToIntBits(collisions == null ? 0f : collisions.mercenaryLastDamageAfter())};
   }
 
+  /** Read-only production Lightning Fury selection order and same-tick distances. */
+  static long[] headlessLightningFurySelection() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new long[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<long[]> selection =
+        new java.util.concurrent.atomic.AtomicReference<>(new long[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.MissileCollisionSystem collisions = server.world
+            .getSystem(com.riiablo.engine.server.MissileCollisionSystem.class);
+        if (collisions != null) {
+          int[] targets = collisions.lightningFurySelectedTargets();
+          float[] distances = collisions.lightningFurySelectedTargetDistances();
+          long[] packed = new long[Math.min(targets.length, distances.length)];
+          for (int i = 0; i < packed.length; i++) {
+            packed[i] = ((long) targets[i] << 32)
+                | (Float.floatToIntBits(distances[i]) & 0xffffffffL);
+          }
+          selection.set(packed);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? selection.get() : new long[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new long[0];
+    }
+  }
+
   private static int[] emptyHeadlessMercenaryState() {
     return new int[] {0, Engine.INVALID_ENTITY, 0, 0, Engine.INVALID_ENTITY,
         0, 0, 0, 0, 0, 0, Engine.INVALID_ENTITY, 0, 0};

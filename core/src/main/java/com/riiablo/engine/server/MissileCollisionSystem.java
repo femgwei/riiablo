@@ -129,6 +129,10 @@ public class MissileCollisionSystem extends IteratingSystem {
   private final Ray<Vector2> wallRay = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> wallCollision =
       new Collision<>(new Vector2(), new Vector2());
+  /** Last native Lightning Fury fan-out order, published for headless gates. */
+  private volatile int[] lastLightningFurySelectedTargets = new int[0];
+  /** Squared distances captured at the same tick as the fan-out order. */
+  private volatile float[] lastLightningFurySelectedDistances = new float[0];
   private volatile int mercenaryCollisionCount;
   private volatile int mercenaryDamageCount;
   private volatile int mercenaryLastDamageTarget = Engine.INVALID_ENTITY;
@@ -3070,6 +3074,8 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, range);
     sortLightningFuryTargets(targets, origin, mPosition);
+    int[] selectedTargets = new int[Math.min(maximum, targets.size)];
+    float[] selectedDistances = new float[selectedTargets.length];
     int created = 0;
     for (int i = 0; i < targets.size && created < maximum; i++) {
       int targetId = targets.get(i);
@@ -3095,11 +3101,29 @@ public class MissileCollisionSystem extends IteratingSystem {
           MissileDamageResolver.initialize(bolt, ownerAttrs, ownerMonster, -1, level, 0);
         }
       }
+      selectedTargets[created] = targetId;
+      selectedDistances[created] = mPosition.get(targetId).position.dst2(origin);
       created++;
     }
+    if (created != selectedTargets.length) {
+      selectedTargets = java.util.Arrays.copyOf(selectedTargets, created);
+      selectedDistances = java.util.Arrays.copyOf(selectedDistances, created);
+    }
+    lastLightningFurySelectedTargets = selectedTargets;
+    lastLightningFurySelectedDistances = selectedDistances;
     log.info("[AMAZON_LIGHTNING_FURY] phase=split owner={} struckTarget={} level={} "
             + "range={} maximum={} created={} missile={}",
         source.ownerId, struckTarget, level, range, maximum, created, subMissileName);
+  }
+
+  /** Returns a copy of the most recent production fan-out order. */
+  public int[] lightningFurySelectedTargets() {
+    return lastLightningFurySelectedTargets.clone();
+  }
+
+  /** Returns distances captured with the most recent production fan-out order. */
+  public float[] lightningFurySelectedTargetDistances() {
+    return lastLightningFurySelectedDistances.clone();
   }
 
   /** D2MOO Lightning Fury AuraFilter 0xA783 plus the NoAura monster gate. */

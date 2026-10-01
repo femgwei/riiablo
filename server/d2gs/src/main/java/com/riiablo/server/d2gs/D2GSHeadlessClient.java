@@ -1377,6 +1377,7 @@ public final class D2GSHeadlessClient {
       ArrayList<Integer> furyTargetIds = new ArrayList<>();
       ArrayList<Float> initialFuryLives = new ArrayList<>();
       ArrayList<Boolean> furyTargetDamaged = new ArrayList<>();
+      float[] furyOffsets = {5f, 10f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f};
       int furyExpectedChildCount = 0;
       if (lightningFury) {
         Skills.Entry furySkill = Riiablo.files != null && Riiablo.files.skills != null
@@ -1397,7 +1398,6 @@ public final class D2GSHeadlessClient {
         // Keep the first two offsets stable for the existing second/third-target
         // assertions, then fill the same visible vertical channel to the native
         // level-10 maximum of eleven targets.
-        float[] furyOffsets = {5f, 10f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f};
         for (int i = 0; i < furyExpectedChildCount; i++) {
           int auraTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
           if (auraTargetId < 0
@@ -1581,6 +1581,35 @@ public final class D2GSHeadlessClient {
             + " ownerThird=" + owner.monsters.get(furyThirdTargetId)
             + " peerThird=" + peer.monsters.get(furyThirdTargetId)
             + " ownerMissiles=" + areaMissileSummary(owner.areaMissiles));
+      }
+      if (lightningFury) {
+        long[] packedSelection = D2GS.headlessLightningFurySelection();
+        int[] actualSelection = new int[packedSelection.length];
+        float[] actualDistances = new float[packedSelection.length];
+        for (int i = 0; i < packedSelection.length; i++) {
+          actualSelection[i] = (int) (packedSelection[i] >> 32);
+          actualDistances[i] = Float.intBitsToFloat((int) packedSelection[i]);
+        }
+        if (actualSelection.length != furyTargetIds.size()) {
+          throw new IllegalStateException("Amazon Lightning Fury selection snapshot size mismatch: expected="
+              + furyTargetIds.size() + " actualIds=" + java.util.Arrays.toString(actualSelection)
+              + " actualDistances=" + java.util.Arrays.toString(actualDistances));
+        }
+        java.util.HashSet<Integer> selectedSet = new java.util.HashSet<>();
+        for (int i = 0; i < actualSelection.length; i++) {
+          if (!furyTargetIds.contains(actualSelection[i]) || !selectedSet.add(actualSelection[i])) {
+            throw new IllegalStateException("Amazon Lightning Fury selection contains an invalid or duplicate target: ids="
+                + java.util.Arrays.toString(actualSelection) + " fixture=" + furyTargetIds);
+          }
+          if (i > 0 && actualDistances[i] + 0.0001f < actualDistances[i - 1]) {
+            throw new IllegalStateException("Amazon Lightning Fury selection distance order mismatch: ids="
+                + java.util.Arrays.toString(actualSelection) + " distances="
+                + java.util.Arrays.toString(actualDistances));
+          }
+        }
+        log("amazon_fury_selection_order_pass", "targets="
+            + java.util.Arrays.toString(actualSelection) + " distances="
+            + java.util.Arrays.toString(actualDistances));
       }
       // The production child inherits the root projectile's shared hit set,
       // so a furylightning bolt cannot resolve the struck root at its spawn
