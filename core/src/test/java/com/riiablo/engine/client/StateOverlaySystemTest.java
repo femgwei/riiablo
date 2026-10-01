@@ -55,7 +55,7 @@ class StateOverlaySystemTest extends RiiabloTest {
   }
 
   @Test
-  void coldAndFreezeStatesApplyNativeBlueTransformAndRestoreLayers() {
+  void coldAndFreezeStatesDoNotOverwriteBaseComponentTransforms() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
@@ -68,14 +68,11 @@ class StateOverlaySystemTest extends RiiabloTest {
       transforms.transform[COF.Component.HD] = originalBody;
       transforms.transform[COF.Component.RH] = originalWeapon;
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
-      byte blue = StateOverlaySystem.coldPackedTransform();
-      assertTrue(blue != CofTransforms.TRANSFORM_NULL,
-          "stock Colors.txt must contain the cblu transform");
 
       states.stateList.addState(StateId.COLD, 100, 1, entity);
       world.process();
-      assertEquals(blue, transforms.transform[COF.Component.HD]);
-      assertEquals(blue, transforms.transform[COF.Component.RH]);
+      assertEquals(originalBody, transforms.transform[COF.Component.HD]);
+      assertEquals(originalWeapon, transforms.transform[COF.Component.RH]);
 
       states.stateList.removeState(StateId.COLD);
       world.process();

@@ -43,7 +43,6 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntSet venomTransformActive = new IntSet();
   private final IntMap<byte[]> venomOriginalTransforms = new IntMap<>();
   private final IntSet coldTransformActive = new IntSet();
-  private final IntMap<byte[]> coldOriginalTransforms = new IntMap<>();
 
   @Override
   protected void process(int entityId) {
@@ -113,45 +112,22 @@ public class StateOverlaySystem extends IteratingSystem {
 
   /** Native elemental presentation: COLD/FREEZE blue or POISON green. */
   private void reconcileColdTransform(int entityId, int colorShift) {
-    if (!mCofTransforms.has(entityId)) return;
-    byte packedTransform = coldPackedTransform();
-    if (packedTransform == CofTransforms.TRANSFORM_NULL) return;
     boolean active = colorShift >= 0;
-
-    CofTransforms transforms = mCofTransforms.get(entityId);
     if (!active) {
       if (!coldTransformActive.remove(entityId)) return;
-      byte[] original = coldOriginalTransforms.remove(entityId);
-      if (original == null) return;
-      int flags = Dirty.NONE;
-      for (int component = 0; component < transforms.transform.length; component++) {
-        flags |= cofs.setTransform(entityId, component, original[component]);
-      }
-      cofs.updateTransform(entityId, flags);
-      restoreAnimationTransforms(entityId, original);
+      byte[] baseTransforms = mCofTransforms.has(entityId)
+          ? mCofTransforms.get(entityId).transform : null;
+      restoreAnimationTransforms(entityId, baseTransforms);
       return;
     }
 
-    byte[] original = coldOriginalTransforms.get(entityId);
-    if (original == null) {
-      original = transforms.transform.clone();
-      coldOriginalTransforms.put(entityId, original);
-    } else {
-      // Preserve equipment/composite changes made while the cold state is
-      // active, then reapply the native blue transform over those layers.
-      for (int component = 0; component < transforms.transform.length; component++) {
-        byte current = transforms.transform[component];
-        if (current != packedTransform && current != original[component]) {
-          original[component] = current;
-        }
-      }
-    }
+    // State colors are PL2 hue variations, not packed item transforms.
+    // Writing cblu into CofTransforms dispatches a TransformChangeEvent that
+    // can run after this system and replace the PL2 state tint with the
+    // unit's ordinary component colors.  Leave the authoritative component
+    // transforms untouched and apply the state palette only to rendered
+    // animation layers.
     coldTransformActive.add(entityId);
-    int flags = Dirty.NONE;
-    for (int component = 0; component < transforms.transform.length; component++) {
-      flags |= cofs.setTransform(entityId, component, packedTransform);
-    }
-    cofs.updateTransform(entityId, flags);
     applyAnimationTransform(entityId, colorShift);
   }
 
@@ -202,7 +178,11 @@ public class StateOverlaySystem extends IteratingSystem {
     for (int i = 0; i < cof.getNumLayers(); i++) {
       int component = cof.getLayer(i).component;
       Animation.Layer layer = animation.getLayer(component);
-      if (layer != null) layer.setTransform(original[component]);
+      if (layer != null) {
+        byte transform = original != null && component < original.length
+            ? original[component] : CofTransforms.TRANSFORM_NULL;
+        layer.setTransform(transform);
+      }
     }
   }
 
@@ -256,20 +236,11 @@ public class StateOverlaySystem extends IteratingSystem {
         ? (byte) color : CofTransforms.TRANSFORM_NULL;
   }
 
-  static byte coldPackedTransform() {
-    if (Riiablo.files == null || Riiablo.files.colors == null) {
-      return CofTransforms.TRANSFORM_NULL;
-    }
-    int color = Riiablo.files.colors.index("cblu") + 1;
-    return color > 0 && color < 32 ? (byte) color : CofTransforms.TRANSFORM_NULL;
-  }
-
   @Override
   protected void removed(int entityId) {
     venomTransformActive.remove(entityId);
     venomOriginalTransforms.remove(entityId);
     coldTransformActive.remove(entityId);
-    coldOriginalTransforms.remove(entityId);
   }
 
   private void reconcile(int entityId, int stateId, UnitState state) {
