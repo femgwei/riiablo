@@ -6025,6 +6025,10 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   后毒状态仍存在。Plague 的多子云团由现有 native fan-out 路径产生，测试不再把 Poison
   的云团行当作 Plague 的实现。
 - [x] 未修改用户已验证的 Amazon 数值公式；本轮只增加真实 gate、云团名称和状态断言。
+- 2026-10-01 复跑确认：Poison Javelin(15) level 20 双端目标生命为
+  `999998.75`，Plague Javelin(25) 为 `999994.0`；两项云团、POISON 状态和 observer
+  reconnect 均通过。Multiple Shot/Strafe 多目标夹具仍保持待办，未以不稳定的动态目标
+  夹具结果替代生产行为结论。
 
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。

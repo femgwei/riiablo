@@ -430,7 +430,7 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   `Actioneer` 对 `SrvDoFunc=10` 的兼容日志，但权威 `ServerSkillSystem` 已完成导弹创建；
   该日志和旧客户端动画委派仍列为后续收尾项。
 - 当前下一项：补齐 Multiple Shot/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，
-  随后继续 Plague Javelin/Poison Javelin 及其他职业的 exact-ID 对照。
+  随后继续其他职业的 exact-ID 对照。
 
 ### 2026-10-01 Amazon Multiple Shot / Strafe 对照完成
 
@@ -480,6 +480,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   单云团行误当作 Plague 行。
 - [x] 本轮仅扩展验证入口和技能特定断言，没有覆盖用户已验证的 Amazon 伤害/持续时间公式；
   公式、云团生命周期和 cast delay 仍以 D2MOO 1.10f / 当前 MPQ 数据为准。
+- 2026-10-01 复跑确认：Poison Javelin(15) level 20 的双端目标生命降至
+  `999998.75`，Plague Javelin(25) 降至 `999994.0`；两项均通过云团、POISON 状态及
+  observer reconnect 恢复门槛。Multiple Shot/Strafe 多目标夹具仍未纳入完成项。
 
 ## 参考入口
 
