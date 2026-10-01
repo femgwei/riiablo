@@ -200,7 +200,8 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags(),
-                        sourceFile(t), t.getUnk0x10(), t.getUnk0x24(),
+                        sourceFile(t), wallLogicalGroup(room, t, roomBaseTx, roomBaseTy),
+                        t.getUnk0x24(),
                         t.getNRed() & 0xFF, t.getUnk0x2C());
                 counts.walls++;
             }
@@ -228,6 +229,22 @@ public final class DrlgExport {
         // DrlgDrlgLogic takes subtile coordinates and performs the native
         // room-relative conversion (tile coordinate * 5).
         return DrlgDrlgLogic.getRoomCoordListIndex(room, tileX * 5, tileY * 5);
+    }
+
+    private static int wallLogicalGroup(D2DrlgRoom room, D2DrlgTileDataStrc tile,
+            int roomBaseTx, int roomBaseTy) {
+        int group = tile == null ? 0 : tile.getUnk0x10();
+        // DRLGLOGIC_SetCoordListForTiles is intentionally skipped for rooms
+        // without the logical-grid flag.  Native allocCoordLists still gives
+        // those rooms one coord-list (normally index 1), while tile unk0x10
+        // remains zero.  Normalize that representation before export so the
+        // renderer can match a player floor cell to its wall group.
+        if (group == 0 && room != null && room.getLogicalRoomInfo() != null
+                && room.getLogicalRoomInfo().hasCoordList()) {
+            group = logicalGroup(room, roomBaseTx + tile.getNPosX(),
+                    roomBaseTy + tile.getNPosY());
+        }
+        return group;
     }
 
     /**
