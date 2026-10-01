@@ -112,6 +112,8 @@ public class ServerSkillSystem extends PassiveSystem {
       new Collision<>(new Vector2(), new Vector2());
   /** Native Cast Delay survives removal of the transient Casting component. */
   private final IntIntMap poisonJavelinDelayFrames = new IntIntMap();
+  /** Native Blade Fury Param4 cadence survives removal of the transient cast. */
+  private final IntIntMap bladeFuryDelayFrames = new IntIntMap();
 
   public ServerSkillSystem() {
     this(false);
@@ -132,6 +134,13 @@ public class ServerSkillSystem extends PassiveSystem {
       if (remaining <= 0) poisonJavelinDelayFrames.remove(entry.key, 0);
       else poisonJavelinDelayFrames.put(entry.key, remaining);
     }
+    IntIntMap.Entries bladeEntries = bladeFuryDelayFrames.entries();
+    while (bladeEntries.hasNext) {
+      IntIntMap.Entry entry = bladeEntries.next();
+      int remaining = entry.value - elapsed;
+      if (remaining <= 0) bladeFuryDelayFrames.remove(entry.key, 0);
+      else bladeFuryDelayFrames.put(entry.key, remaining);
+    }
   }
 
   /**
@@ -141,7 +150,7 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   @Override
   protected boolean checkProcessing() {
-    return poisonJavelinDelayFrames.size > 0;
+    return poisonJavelinDelayFrames.size > 0 || bladeFuryDelayFrames.size > 0;
   }
 
   @Override
@@ -406,7 +415,8 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
-    float manaCost = NativeSkillResolver.manaCost(skill, skillLevel);
+    boolean bladeFury = isBladeFurySkill(skill);
+    float manaCost = bladeFury ? 0f : NativeSkillResolver.manaCost(skill, skillLevel);
     if (event.targetId == Engine.INVALID_ENTITY
         && NativeSkillResolver.isTargetableOnly(skill)) {
       // Shift-forced target-only attacks retain their presentation animation,
@@ -414,6 +424,11 @@ public class ServerSkillSystem extends PassiveSystem {
       manaCost = 0f;
     }
     event.manaCost = manaCost;
+    if (bladeFury && !bladeFuryStateActive(event.entityId)
+        && !NativeSkillResolver.hasEnoughMana(mana.asFixed(), Math.max(0, skill.startmana))) {
+      reject(event, 1, "not enough Blade Fury start mana");
+      return;
+    }
     if (!NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
       reject(event, 1, "not enough mana");
       return;
@@ -439,6 +454,18 @@ public class ServerSkillSystem extends PassiveSystem {
         Riiablo.files.NativeSkills.get(skill.Id);
     Integer delay = row == null ? null : row.integer("delay");
     return delay == null ? 0 : Math.max(0, delay);
+  }
+
+  static boolean isBladeFurySkill(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillId.BLADE_FURY
+        || "Blade Fury".equalsIgnoreCase(skill.skill)
+        || skill.srvstfunc == 26 && skill.srvdofunc == 48);
+  }
+
+  private boolean bladeFuryStateActive(int entityId) {
+    return mUnitStates.has(entityId)
+        && mUnitStates.get(entityId).stateList != null
+        && mUnitStates.get(entityId).stateList.hasState(StateId.INFERNO);
   }
 
   private static Item activeMeleeWeapon(ItemData items) {
@@ -542,6 +569,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 25
         && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 43
+        && event.srvdofunc != 48
         && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
         && event.srvdofunc != 28
         && event.srvdofunc != 49 && event.srvdofunc != 54
@@ -583,6 +611,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 43
+        && skill.srvdofunc != 48
         && skill.srvdofunc != 22 && skill.srvdofunc != 23 && skill.srvdofunc != 24
         && skill.srvdofunc != 28
         && skill.srvdofunc != 49 && skill.srvdofunc != 54
@@ -614,6 +643,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (isBladeFurySkill(skill) || event.srvdofunc == 48) {
+      spawnBladeFury(event, skill, skillLevel, start);
+      return;
+    }
     // D2MOO SKILLS_SrvDo029_ThunderStorm installs/refreshes the aura.  The
     // periodic strike itself is emitted by StateUpdater so it runs in the
     // authoritative fixed-tick phase instead of the render/cast callback.
@@ -2680,6 +2713,51 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[AMAZON_LIGHTNING_STRIKE] phase=spawn source={} initialTarget={} "
         + "firstTarget={} level={} range={} maxJumps={} created={} missile={}",
         event.entityId, event.targetId, next, skillLevel, range, maxJumps, created, missileName);
+  }
+
+  /** Native {@code SKILLS_SrvDo048_BladeFury}: one timed weapon blade. */
+  private void spawnBladeFury(SkillDoEvent event, Skills.Entry skill,
+      int skillLevel, Vector2 caster) {
+    if (skill == null || !hasText(skill.srvmissilea)) return;
+    int remaining = bladeFuryDelayFrames.get(event.entityId, 0);
+    if (remaining > 0) {
+      log.debug("[ASSASSIN_BLADE_FURY] phase=skip source={} remaining={}",
+          event.entityId, remaining);
+      return;
+    }
+    if (!mAttributesWrapper.has(event.entityId)) return;
+    Attributes attrs = mAttributesWrapper.get(event.entityId).attrs;
+    StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
+    float manaCost = NativeSkillResolver.manaCost(skill, skillLevel);
+    if (mana == null || !NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
+      log.info("[ASSASSIN_BLADE_FURY] phase=reject source={} level={} mana={} cost={} reason=mana",
+          event.entityId, skillLevel, mana != null ? mana.asFixed() : -1f, manaCost);
+      return;
+    }
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) {
+      log.warn("[ASSASSIN_BLADE_FURY] phase=reject source={} missile={} reason=missing_row",
+          event.entityId, skill.srvmissilea);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    Vector2 direction = target.sub(caster);
+    if (direction.isZero(0.0001f)) direction.set(1, 0);
+    int missileId = createMissile(row, direction.nor(), caster, event.entityId,
+        null, skillLevel);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+    int delay = skill.Param != null && skill.Param.length > 3
+        ? Math.max(1, skill.Param[3]) : 1;
+    bladeFuryDelayFrames.put(event.entityId, delay);
+    mana.sub(manaCost);
+    Missile projectile = mMissile.get(missileId);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = skillLevel;
+    log.info("[ASSASSIN_BLADE_FURY] phase=spawn source={} missileId={} level={} "
+        + "delay={} manaCost={} manaLeft={} srcDam={} snapshot={}",
+        event.entityId, missileId, skillLevel, delay, manaCost, mana.asFixed(),
+        skill.SrcDam, projectile.damageSnapshot);
   }
 
   /** Native {@code SKILLS_SrvDo043_ShockField} progressive scatter. */

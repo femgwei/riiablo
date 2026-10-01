@@ -1137,6 +1137,39 @@ public class Actioneer extends PassiveSystem {
             right != null ? right.code : "none", left != null ? left.code : "none");
         break;
       }
+      case 26: { // SKILLS_SrvSt26_BladeFury
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (casting == null || !ServerSkillSystem.isBladeFurySkill(skill)
+            || skill.srvmissilea == null || skill.srvmissilea.isEmpty()
+            || !mUnitStates.has(entityId)) {
+          log.info("[ASSASSIN_BLADE_FURY] phase=start_reject entity={} reason=missing_state_or_missile",
+              entityId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        UnitStates states = mUnitStates.get(entityId);
+        if (states.stateList == null) states.init(entityId);
+        int level = Math.max(1, skillLevel(entityId, casting.skillId));
+        UnitState inferno = states.stateList.getState(StateId.INFERNO);
+        if (inferno == null) {
+          inferno = states.stateList.addState(StateId.INFERNO, 21, level, entityId);
+        } else {
+          inferno.duration = 7;
+          inferno.initialDuration = Math.max(inferno.initialDuration, 7);
+          inferno.level = level;
+        }
+        if (inferno != null) {
+          inferno.sourceEntityId = entityId;
+          inferno.skillId = skill.Id;
+          inferno.needsSync = true;
+        }
+        log.info("[ASSASSIN_BLADE_FURY] phase=start entity={} skill={} level={} state={} duration={}",
+            entityId, skill.Id, level, inferno != null ? StateId.getName(inferno.stateId) : "none",
+            inferno != null ? inferno.duration : 0);
+        break;
+      }
       case 64: // SKILLS_SrvSt25_64_DragonClaw_MonFrenzy (MonFrenzy table entry)
         // The native shared start function only requires a live target.
         // MonFrenzy owns its alternating sequence state in SrvDo109 and must

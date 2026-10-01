@@ -938,6 +938,61 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void bladeFuryEmitsOneTimedWeaponBladeAndConsumesPerBladeMana() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Fury");
+      int assassin = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(blade.Id, 1);
+      world.getMapper(com.riiablo.engine.server.component.Player.class)
+          .create(assassin).data = data;
+      world.getMapper(Position.class).create(assassin).position.set(0, 0);
+      Attributes attrs = attributes(1000);
+      attrs.base().put(Stat.mindamage, 40);
+      attrs.base().put(Stat.maxdamage, 40);
+      attrs.base().put(Stat.mana, 30);
+      attrs.base().put(Stat.maxmana, 30);
+      attrs.reset();
+      world.getMapper(AttributesWrapper.class).create(assassin).attrs = attrs;
+      world.getMapper(UnitStates.class).create(assassin).init(assassin);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
+          blade.srvdofunc, blade.cltdofunc));
+      assertEquals(1, factory.missiles, "SrvDo048 creates one authoritative blade");
+      Missile first = world.getMapper(Missile.class).get(factory.missileEntityIds.get(0));
+      assertEquals(blade.Id, first.skillId);
+      assertEquals(1, first.damageLevel);
+      assertTrue(first.damageSnapshot, "Blade Fury keeps the SrcDam weapon snapshot");
+      assertEquals(38, first.damage.get(Stat.mindamage).asInt(),
+          "SrcDam=96 scales the 40 damage weapon and adds Blade Fury MinDam");
+      float afterFirst = attrs.get(Stat.mana).asFixed();
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
+          blade.srvdofunc, blade.cltdofunc));
+      assertEquals(1, factory.missiles, "Param4 blocks an early held-input blade");
+
+      for (int i = 0; i < 5; i++) {
+        world.setDelta(1f / 25f);
+        world.process();
+      }
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
+          blade.srvdofunc, blade.cltdofunc));
+      assertEquals(2, factory.missiles, "held input may emit the next blade after Param4");
+      assertTrue(attrs.get(Stat.mana).asFixed() < afterFirst,
+          "each accepted blade consumes mana, not the cast-start event");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static World bladeShieldWorld(RecordingFactory factory, com.riiablo.map.Map map) {
     return new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
