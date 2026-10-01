@@ -16,6 +16,7 @@
   -PamazonMeleeWeapon=jav -PamazonMeleeTimeout=20 --no-daemon`，均 `BUILD SUCCESSFUL`。
 - [ ] 下一步转入剩余 Amazon exact-ID 技能；Multiple Shot/Strafe 的多目标/穿透/旧客户端
   动画仍需独立 gate，不能由 Lightning Bolt 的单目标通过结果代替。
+- 本轮提交：`fc231fae`，已推送 `origin/master`；工作区其他 agent 修改和诊断日志仍未纳入。
 
 ## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
 

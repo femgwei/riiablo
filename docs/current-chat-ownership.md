@@ -41,6 +41,8 @@
   掉血和重连证据，不仅是导弹创建。
 - 纯 ECS `lightningBoltSweptCollisionAppliesSnapshotDamage` 和整组
   `AmazonSkillSpecializationTest` 均通过；未修改生产伤害公式。
+- 本轮提交 `fc231fae` 已推送到 `origin/master`；新增的 `lightning-bolt-current.log`
+  仍是未跟踪诊断产物，不属于提交。
 - 本轮新增的测试文件属于当前 Chat；其他 agent 的 `ItemEntry.java`、`AssassinTrapSystem.java`
   和 `StatFormatterTest.java` 以及未跟踪日志/截图均未纳入本轮提交。
 
