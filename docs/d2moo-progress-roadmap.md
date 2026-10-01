@@ -5960,8 +5960,8 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   伤害公式。验证命令：`:server:d2gs:compileJava`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=16 -PamazonBowTimeout=15`。
 
-下一项：补齐 Multiple/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，再按职业顺序
-处理其他技能对照项。
+下一项：补齐 Multiple/Strafe 的多目标穿透、真实 MPQ 墙碰撞和旧客户端动画门槛，再按
+职业顺序处理其他技能对照项。
 
 ## 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate
 
@@ -6005,6 +6005,10 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   下降集合一致。测试同时保留共享导弹、单次箭袋消耗和 reconnect 断言。
 - [x] 为稳定动态夹具，测试目标在定位后移除 `Size` footprint 并停用 Box2D body；
   missile collision 仍通过 `Position/Monster` 的生产 swept 路径，未改变技能或伤害公式。
+- [x] 新增纯 ECS `AmazonSkillSpecializationTest.multipleShotStopsAtNativeMapBarrierBeforeTarget`：
+  给每枚权威 Multiple Shot 导弹安装真实 `MapWrapper`，让 `CollideType=3` 经过
+  `FLAG_BLOCK_JUMP` barrier；导弹仍创建并消耗箭袋，但墙后目标保持满血。该测试锁定
+  生产 swept map collision，尚不替代真实 MPQ 墙体夹具。
 
 验证命令：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`、
@@ -6014,6 +6018,9 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   -PamazonBowMultiTarget=true --no-daemon`、
   `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
   -PamazonBowMultiTarget=true --no-daemon`。
+纯 ECS 墙体验证：`:core:test --tests
+com.riiablo.engine.server.AmazonSkillSpecializationTest.multipleShotStopsAtNativeMapBarrierBeforeTarget
+--no-daemon`。
 
 ## 2026-10-01 Amazon Lightning Fury 真实分裂 gate
 

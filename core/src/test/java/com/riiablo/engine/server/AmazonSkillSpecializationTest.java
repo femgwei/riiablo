@@ -992,6 +992,80 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void multipleShotStopsAtNativeMapBarrierBeforeTarget() {
+    com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+    com.riiablo.map.Map blocked = new com.riiablo.map.Map(0, 0) {
+      @Override public Zone getZone(float x, float y) { return zone; }
+      @Override public boolean castRay(
+          com.badlogic.gdx.ai.utils.Ray<Vector2> ray, int flags, int size,
+          com.badlogic.gdx.ai.utils.Collision<Vector2> collision) {
+        assertEquals(com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP, flags);
+        collision.point.set(ray.end);
+        return true;
+      }
+    };
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(false),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", blocked));
+    try {
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry multipleShot = Riiablo.files.skills.get("Multiple Shot");
+      data.setSkillLevel(multipleShot.Id, 1);
+      Item bow = new Item();
+      bow.reset();
+      bow.setBase(Riiablo.files.weapons.get("sbw"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+      Item arrows = new Item();
+      arrows.reset();
+      arrows.setBase(Riiablo.files.misc.get("aqv"));
+      arrows.attrs.base().put(Stat.quantity, 1);
+      arrows.attrs.reset();
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+      world.getMapper(UnitStates.class).create(amazon).init(amazon);
+
+      int target = monster(world, 8, 0);
+      Attributes targetAttrs = attributes(1, 1000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.getMapper(UnitStates.class).create(target).init(target);
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+          .create(amazon).set(blocked, zone);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, multipleShot.Id, target, null,
+          multipleShot.srvdofunc, multipleShot.cltdofunc));
+      assertTrue(!factory.created.isEmpty(), "Multiple Shot must create its lane missiles");
+      assertEquals(0, arrows.attrs.base().get(Stat.quantity).asInt());
+      // RecordingMissileFactory intentionally keeps entity creation minimal;
+      // install the same per-missile map wrapper that the server factory adds
+      // before advancing the authoritative collision system.
+      for (Integer missileId : factory.createdIds) {
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(missileId).set(blocked, zone);
+      }
+
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 12; i++) world.process();
+
+      assertEquals(1000f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.0001f,
+          "a native FLAG_BLOCK_JUMP barrier must stop Multiple Shot before the target");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void guidedArrowRejectsIncidentalHostileContact() {
     Missile guided = new Missile();
     guided.missile = Riiablo.files.Missiles.get("guidedarrow");

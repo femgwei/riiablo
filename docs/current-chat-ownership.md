@@ -1025,6 +1025,9 @@ incarnation，并继续检查跨区域实体基线恢复。
   的 21 箭同一 volley 在两个不同 lane 目标上实际掉血；Strafe(26) 的连续 keyframe
   目标流在两个不同目标上实际掉血；owner/observer 的掉血集合一致，并继续验证共享
   导弹、单次箭袋消耗和 observer reconnect。目标 baseline 与生产 map ray 均先做硬断言。
+- [x] 新增纯 ECS Multiple Shot 墙体门槛：每枚测试导弹安装真实 `MapWrapper` 后，
+  `CollideType=3` 的 swept 路径遇到 `FLAG_BLOCK_JUMP` 会停止，墙后目标不掉血；这
+  只确认生产 map collision，不宣称 MPQ 双客户端墙体 gate 已完成。
 - [x] headless COF 缺少完整 Strafe 后续关键帧时，`headlessDispatchAmazonMelee`
   只重放剩余 `AnimDataKeyframeEvent`，仍进入 `ServerSkillSystem.spawnStrafe`，不伪造
   一次性整轮导弹。
@@ -1039,6 +1042,9 @@ incarnation，并继续检查跨区域实体基线恢复。
   多目标：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=25
   -PamazonBowMultiTarget=true --no-daemon`、`:server:d2gs:headlessAmazonBow
   -PamazonBowSkill=26 -PamazonBowTimeout=30 -PamazonBowMultiTarget=true --no-daemon`。
+  纯 ECS 墙体：`:core:test --tests
+  com.riiablo.engine.server.AmazonSkillSpecializationTest.multipleShotStopsAtNativeMapBarrierBeforeTarget
+  --no-daemon`。
 
 ### 2026-10-01 Amazon Lightning Bolt(20) gate 诊断记录
 
