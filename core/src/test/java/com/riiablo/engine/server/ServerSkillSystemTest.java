@@ -88,6 +88,27 @@ public class ServerSkillSystemTest {
   }
 
   @Test
+  public void srvDo008UsesIntegerDeltaForDiagonalLaneTargets() {
+    Vector2 start = new Vector2(10, 10);
+    Vector2 target = new Vector2(14, 13);
+    Vector2 first = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 0, 5, new Vector2());
+    Vector2 centre = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 2, 5, new Vector2());
+    Vector2 last = ServerSkillSystem.nativeMultipleShotDirection(
+        start, target, 4, 5, new Vector2());
+
+    // D2MOO's SrvDo008 keeps the centre lane on the integer caster-to-target
+    // delta (4,3), then advances the perpendicular integer lane by (0,-1)
+    // after its native halving loop: outer lanes therefore target (14,15)
+    // and (14,11), not a floating-point angular fan around the caster.
+    assertEquals(0.8f, centre.x, EPSILON);
+    assertEquals(0.6f, centre.y, EPSILON);
+    assertTrue(first.y > centre.y);
+    assertTrue(last.y < centre.y);
+  }
+
+  @Test
   public void fireWallMakerRunsPerpendicularThroughTarget() {
     Vector2 direction = ServerSkillSystem.firewallDirection(
         new Vector2(2, 3), new Vector2(7, 3), new Vector2());

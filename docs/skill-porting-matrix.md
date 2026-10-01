@@ -431,6 +431,10 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   该日志和旧客户端动画委派仍列为后续收尾项。
 - 当前下一项：补齐 Multiple Shot/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，
   随后继续其他职业的 exact-ID 对照。
+- 本轮先补齐 `ServerSkillSystemTest.srvDo008UsesIntegerDeltaForDiagonalLaneTargets`：
+  用 D2MOO 的整数 caster→target delta 和垂直 lane halving 锁定斜向中心/外侧箭方向；
+  `MissileNativePolicyTest` 同时确认跨导弹共享命中集合不会重复命中同一目标。真实动态
+  多目标 gate 仍待稳定夹具，不将单位重定位实验计入完成度。
 
 ### 2026-10-01 Amazon Multiple Shot / Strafe 对照完成
 
