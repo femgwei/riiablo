@@ -6038,5 +6038,10 @@ D2MOO `SrvDo008` 斜向整数 lane 方向，`MissileNativePolicyTest` 已锁定�
 unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙体 gate
 复跑通过。真实多目标和旧客户端动画门槛仍需独立稳定夹具。
 
+本轮新增 `MissileNativePolicyTest.multiLaneVolleyClaimsDistinctTargetsButDeduplicatesOverlap`：
+用三个独立 lane 导弹和一个共享 `IntSet` 证明不同 lane 可分别命中不同目标，重叠 lane
+不会重复命中同一目标，而同一 lane 的跨帧重复接触仍由 per-projectile 集合拦截。该测试
+只锁定 D2MOO 的跨导弹命中事务语义，不替代尚不稳定的真实动态多目标地图夹具。
+
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。

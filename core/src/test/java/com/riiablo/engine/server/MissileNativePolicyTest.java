@@ -220,6 +220,33 @@ class MissileNativePolicyTest {
   }
 
   @Test
+  void multiLaneVolleyClaimsDistinctTargetsButDeduplicatesOverlap() {
+    // Multiple Shot and Strafe create independent swept lanes, but D2MOO
+    // carries one cast-wide hit set across the volley.  Keep the geometry
+    // represented by three lane-specific projectiles so this policy remains
+    // testable without a map, Box2D bodies, or DynamicUnitCollisionSystem.
+    IntSet shared = new IntSet();
+    Missile upperLane = new Missile().shareHitTargets(shared);
+    Missile centerLane = new Missile().shareHitTargets(shared);
+    Missile lowerLane = new Missile().shareHitTargets(shared);
+
+    // Each lane crosses a different target during its swept segment.
+    assertTrue(MissileCollisionSystem.claimTargetHit(upperLane, 101, null));
+    assertTrue(MissileCollisionSystem.claimTargetHit(centerLane, 102, null));
+    assertTrue(MissileCollisionSystem.claimTargetHit(lowerLane, 103, null));
+
+    // A second lane crossing the same unit must not apply a second packet,
+    // while a lane crossing another unit remains eligible.
+    Missile overlappingLane = new Missile().shareHitTargets(shared);
+    assertFalse(MissileCollisionSystem.claimTargetHit(overlappingLane, 102, null));
+    assertTrue(MissileCollisionSystem.claimTargetHit(overlappingLane, 104, null));
+
+    // The per-projectile set still protects against repeated contacts from
+    // one lane on consecutive simulation frames.
+    assertFalse(MissileCollisionSystem.claimTargetHit(overlappingLane, 104, null));
+  }
+
+  @Test
   void redirectedMonsterMissileTreatsItsTemporaryTargetAsHostile() {
     MissileCollisionSystem missiles = new MissileCollisionSystem();
     World world = new World(new WorldConfigurationBuilder()

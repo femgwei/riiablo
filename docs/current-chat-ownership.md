@@ -1010,7 +1010,8 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] headless COF 缺少完整 Strafe 后续关键帧时，`headlessDispatchAmazonMelee`
   只重放剩余 `AnimDataKeyframeEvent`，仍进入 `ServerSkillSystem.spawnStrafe`，不伪造
   一次性整轮导弹。
-- [ ] `Actioneer` 仍可能输出 `srvstfunc=8` / `srvdofunc=12` warning；旧客户端动画、
+- [x] `Actioneer` 已显式接收 `srvstfunc=8` / `srvdofunc=12` 并委派到权威
+  `SkillDoEvent`；本轮真实 gate 不再出现对应 unsupported warning。旧客户端动画、
   多目标穿透/墙碰撞的真实画面门槛仍待后续。当前工作区其他 agent 的未提交修改未动。
 
 验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
