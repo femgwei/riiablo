@@ -9,6 +9,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.riiablo.attributes.Attributes;
@@ -719,6 +720,30 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(15, MissileCollisionSystem.lightningFuryRange(missile, skill, 1));
     assertEquals(2, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 1));
     assertEquals(11, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 10));
+  }
+
+  @Test
+  void lightningFuryAuraTargetsUseNearestFirstOrdering() {
+    World world = new World(new WorldConfigurationBuilder().build());
+    try {
+      int nearest = world.create();
+      int middle = world.create();
+      int farthest = world.create();
+      world.getMapper(Position.class).create(nearest).position.set(1, 1);
+      world.getMapper(Position.class).create(middle).position.set(3, 4);
+      world.getMapper(Position.class).create(farthest).position.set(8, 0);
+      Array<Integer> targets = new Array<>();
+      targets.add(farthest, nearest, middle);
+
+      MissileCollisionSystem.sortLightningFuryTargets(
+          targets, new Vector2(0, 0), world.getMapper(Position.class));
+
+      assertEquals(nearest, targets.get(0));
+      assertEquals(middle, targets.get(1));
+      assertEquals(farthest, targets.get(2));
+    } finally {
+      world.dispose();
+    }
   }
 
   @Test

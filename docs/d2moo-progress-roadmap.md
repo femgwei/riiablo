@@ -5986,5 +5986,7 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] `headlessAmazonMelee` 已增加 `-PamazonMeleeSkillLevel`；真实 MPQ gate 按
   `HitPar[1]/Calc1` 创建目标并在等级 1 精确验证 2 枚、等级 10/20 精确验证 11 枚共享
   `furylightning`。每个分裂目标都要求 owner/observer 同步掉血，重连时逐目标核对权威生命。
-- [ ] 第三目标精确排序和墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于完整
-  Lightning Fury 目标选择矩阵。
+- [x] `MissileCollisionSystem` 的分裂目标排序抽为最近距离优先 helper，并由
+  `AmazonSkillSpecializationTest` 覆盖最近/次近/最远顺序。
+- [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不能将本轮等同于
+  完整 Lightning Fury 目标选择矩阵。

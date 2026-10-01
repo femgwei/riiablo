@@ -1038,8 +1038,9 @@ incarnation，并继续检查跨区域实体基线恢复。
   10、20 三档；夹具按原生 `HitPar[1]/Calc1` 创建目标，等级 1 精确要求 2 枚、等级 10/20
   精确要求 11 枚共享 `furylightning`，且所有分裂目标在 owner/observer 两端掉血并通过
   重连生命检查。
-- [ ] 第三目标精确排序和墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于完整
-  Lightning Fury 目标选择矩阵。其他 agent 的未提交修改仍未动。
+- [x] 分裂生产路径抽出最近距离优先排序 helper，并由 ECS 测试锁定最近、次近、最远顺序。
+- [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于
+  完整 Lightning Fury 目标选择矩阵。其他 agent 的未提交修改仍未动。
 
 验证：`:core:test --tests com.riiablo.engine.server.AmazonSkillSpecializationTest
 --tests com.riiablo.engine.server.NativeAmazonSkillMatrixTest --no-daemon`；

@@ -3069,8 +3069,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int maximum = lightningFuryBoltCount(source.missile, skill, level);
 
     Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, range);
-    targets.sort((left, right) -> Float.compare(
-        mPosition.get(left).position.dst2(origin), mPosition.get(right).position.dst2(origin)));
+    sortLightningFuryTargets(targets, origin, mPosition);
     int created = 0;
     for (int i = 0; i < targets.size && created < maximum; i++) {
       int targetId = targets.get(i);
@@ -3274,6 +3273,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       StatusEffectApplier.INSTANCE.applyState(targetId, missile.onHitStateId,
           missile.onHitStateDuration, attackerId);
     }
+  }
+
+  /** Native AuraFilter ordering: nearest eligible unit wins each split slot. */
+  static void sortLightningFuryTargets(Array<Integer> targets, Vector2 origin,
+      ComponentMapper<Position> positions) {
+    if (targets == null || origin == null || positions == null) return;
+    targets.sort((left, right) -> Float.compare(
+        positions.get(left).position.dst2(origin), positions.get(right).position.dst2(origin)));
   }
 
   private boolean hasColdPacket(Missile missile) {
