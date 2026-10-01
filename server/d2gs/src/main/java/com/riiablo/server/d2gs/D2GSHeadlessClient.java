@@ -280,6 +280,9 @@ public final class D2GSHeadlessClient {
         : config.requireAmazonMelee
         ? createGeneratedAmazonMeleeSave(config.amazonMeleeSkillId,
             config.amazonMeleeWeaponCode, config.amazonMeleeSkillLevel)
+        : config.requireAmazonSummon
+        ? createGeneratedAmazonMeleeSave(config.amazonSummonSkillId,
+            "jav", config.amazonSummonSkillLevel)
         : config.requireAmazonBow
         ? createGeneratedAmazonBowSave(config.amazonBowSkillId)
         : config.requireAreaSkillScenario
@@ -405,6 +408,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireAmazonMelee) {
       runAmazonMeleeDual(d2s, character);
+      return;
+    }
+    if (config.requireAmazonSummon) {
+      runAmazonSummonDual(d2s, character);
       return;
     }
     if (config.requireAmazonBow) {
@@ -1889,6 +1896,107 @@ public final class D2GSHeadlessClient {
                 + " targetCount=" + furyTargetIds.size() : "")
             + (poisonJavelin ? " poisonStateRestored=true" : "")
             + " stale=false");
+      }
+    }
+  }
+
+  /** Real 1.10f dual-client gate for Amazon Decoy/Dopplezon and Valkyrie. */
+  private void runAmazonSummonDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AmaSumPeer", 0x4153554D);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int room = D2GS.headlessNonAdjacentRoomPair(2)[0];
+    int skillId = config.amazonSummonSkillId;
+    boolean valkyrie = skillId == SkillId.VALKYRIE;
+    String expectedPetType = valkyrie ? "valkyrie" : "dopplezon";
+    Skills.Entry summonSkill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(skillId) : null;
+    log("amazon_summon_skill_row", "skill=" + skillId
+        + " name=" + (summonSkill != null ? summonSkill.skill : "null")
+        + " srvDo=" + (summonSkill != null ? summonSkill.srvdofunc : -1)
+        + " summon=" + (summonSkill != null ? summonSkill.summon : "null")
+        + " petType=" + (summonSkill != null ? summonSkill.pettype : "null"));
+    try (Socket ownerSocket = owner.openSocket(); Socket peerSocket = peer.openSocket()) {
+      DataInputStream ownerInput = input(ownerSocket), peerInput = input(peerSocket);
+      OutputStream ownerOutput = output(ownerSocket), peerOutput = output(peerSocket);
+      send(ownerOutput, connectionPacket(character, d2s));
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      owner.awaitConnection(ownerInput, deadline());
+      peer.awaitConnection(peerInput, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 2, room)
+          || !D2GS.headlessMovePlayerToRoom(peer.playerId, 2, room)) {
+        throw new IOException("failed to stage Amazon summon fixture");
+      }
+      awaitAreaBaselines(owner, peer, ownerInput, peerInput);
+
+      // Keep the requested summon point outside the caster's dynamic
+      // footprint; Dopplezon has a larger native footprint than Valkyrie.
+      float[] summonPlacement = D2GS.headlessSummonPlacement(2, room, skillId);
+      float targetX = summonPlacement.length >= 2 ? summonPlacement[0] : owner.playerX + 20f;
+      float targetY = summonPlacement.length >= 2 ? summonPlacement[1] : owner.playerY;
+      send(ownerOutput, owner.castPacket(skillId, Engine.INVALID_ENTITY, targetX, targetY));
+      log("amazon_summon_cast", "skill=" + skillId + " target=(" + targetX + ',' + targetY + ')');
+      PetSnapshot ownerPet;
+      try {
+        ownerPet = awaitAmazonSummon(owner, ownerInput, skillId, expectedPetType,
+            Math.min(deadline(), System.currentTimeMillis() + 1_000L));
+      } catch (IOException missingKeyframe) {
+        boolean dispatched = D2GS.headlessDispatchAmazonSummon(
+            owner.playerId, skillId, targetX, targetY);
+        int bridgePet = D2GS.headlessOwnedSummonForSkill(owner.playerId, skillId);
+        log("amazon_summon_animation_fallback", "skill=" + skillId
+            + " dispatched=" + dispatched + " bridgePet=" + bridgePet);
+        if (!dispatched) throw missingKeyframe;
+        ownerPet = awaitAmazonSummon(owner, ownerInput, skillId, expectedPetType, deadline());
+      }
+      PetSnapshot peerPet = awaitSpecificSummon(peer, peerInput, ownerPet.entityId,
+          owner.playerId, skillId, expectedPetType, deadline());
+      if (peerPet == null || ownerPet.ownerId != owner.playerId
+          || peerPet.ownerId != owner.playerId || ownerPet.entityType != 1
+          || peerPet.entityType != 1 || ownerPet.monsterComponent != peerPet.monsterComponent) {
+        throw new IllegalStateException("Amazon summon metadata diverged: owner="
+            + ownerPet + " peer=" + peerPet);
+      }
+      int[] nativeState = D2GS.headlessSummonState(ownerPet.entityId);
+      if (nativeState.length < 8 || nativeState[1] != owner.playerId
+          || nativeState[2] != skillId || nativeState[3] != config.amazonSummonSkillLevel
+          || nativeState[4] != (valkyrie ? 0 : 1)
+          || (!valkyrie && nativeState[5] <= 0)
+          || (valkyrie && nativeState[5] != 0)
+          || nativeState[7] != (valkyrie ? 1 : 0)) {
+        throw new IllegalStateException("Amazon summon native state mismatch: skill=" + skillId
+            + " entity=" + ownerPet.entityId + " state=" + java.util.Arrays.toString(nativeState));
+      }
+      log("amazon_summon_dual_pass", "skill=" + skillId + " entity=" + ownerPet.entityId
+          + " petType=" + expectedPetType + " owner=" + owner.playerId
+          + " skillLevel=" + nativeState[3] + " passive=" + (nativeState[4] == 1)
+          + " durationFrames=" + nativeState[5] + " valkyrieState=" + (nativeState[7] == 1));
+      peerSocket.close();
+      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < disconnectDeadline) consumeOne(ownerInput, owner);
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 2, room)) {
+          throw new IOException("Amazon summon observer reconnect could not return to room");
+        }
+        PetSnapshot restored = awaitSpecificSummon(reconnected, reconnectInput, ownerPet.entityId,
+            owner.playerId, skillId, expectedPetType, deadline());
+        int[] restoredState = D2GS.headlessSummonState(ownerPet.entityId);
+        if (restored == null || restored.deleted || restoredState.length < 8
+            || restoredState[1] != owner.playerId || restoredState[2] != skillId
+            || restoredState[7] != (valkyrie ? 1 : 0)) {
+          throw new IllegalStateException("Amazon summon reconnect lost native summon: entity="
+              + ownerPet.entityId + " restored=" + restored + " state="
+              + java.util.Arrays.toString(restoredState));
+        }
+        log("amazon_summon_reconnect_pass", "skill=" + skillId + " entity="
+            + ownerPet.entityId + " petType=" + expectedPetType + " owner=" + owner.playerId
+            + " restored=true stale=false");
       }
     }
   }
@@ -8576,6 +8684,36 @@ public final class D2GSHeadlessClient {
     throw new IOException("timed out waiting for summoned pet snapshot entity=" + entityId);
   }
 
+  private static PetSnapshot awaitAmazonSummon(D2GSHeadlessClient client,
+      DataInputStream input, int skillId, String petType, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      for (PetSnapshot pet : client.summonedPets.values()) {
+        if (pet != null && !pet.deleted && pet.ownerId == client.playerId
+            && pet.skillId == skillId && pet.petType.equalsIgnoreCase(petType)
+            && pet.monsterComponent && pet.entityType == 1) return pet;
+      }
+    }
+    throw new IOException("timed out waiting for Amazon summon skill=" + skillId
+        + " petType=" + petType + " pets=" + client.summonedPets.keySet());
+  }
+
+  private static PetSnapshot awaitSpecificSummon(D2GSHeadlessClient client,
+      DataInputStream input, int entityId, int ownerId, int skillId, String petType,
+      long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) client.consume(packet);
+      PetSnapshot pet = client.summonedPets.get(entityId);
+      if (pet != null && !pet.deleted && pet.ownerId == ownerId && pet.skillId == skillId
+          && pet.petType.equalsIgnoreCase(petType) && pet.monsterComponent
+          && pet.entityType == 1) return pet;
+    }
+    throw new IOException("timed out waiting for Amazon summon entity=" + entityId
+        + " skill=" + skillId + " petType=" + petType);
+  }
+
   private static void awaitDeleted(D2GSHeadlessClient client, DataInputStream input,
       int ownerId, int summonId, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
@@ -10915,6 +11053,9 @@ public final class D2GSHeadlessClient {
     boolean amazonMeleeExpectMiss;
     boolean amazonMeleeWallProbe;
     boolean amazonMeleeWallGate;
+    boolean requireAmazonSummon;
+    int amazonSummonSkillId = SkillId.VALKYRIE;
+    int amazonSummonSkillLevel = 7;
     boolean requireAmazonBow;
     int amazonBowSkillId = SkillId.FIRE_ARROW;
     boolean requireVineScenario;
@@ -10998,6 +11139,9 @@ public final class D2GSHeadlessClient {
         else if ("--amazon-melee-expect-miss".equals(arg)) config.amazonMeleeExpectMiss = true;
         else if ("--amazon-melee-wall-probe".equals(arg)) config.amazonMeleeWallProbe = true;
         else if ("--amazon-melee-wall-gate".equals(arg)) config.amazonMeleeWallGate = true;
+        else if ("--require-amazon-summon".equals(arg)) config.requireAmazonSummon = true;
+        else if ("--amazon-summon-skill".equals(arg)) config.amazonSummonSkillId = integer(args, ++i, arg);
+        else if ("--amazon-summon-skill-level".equals(arg)) config.amazonSummonSkillLevel = integer(args, ++i, arg);
         else if ("--require-amazon-bow".equals(arg)) config.requireAmazonBow = true;
         else if ("--amazon-bow-skill".equals(arg)) config.amazonBowSkillId = integer(args, ++i, arg);
         else if ("--require-vine".equals(arg)) config.requireVineScenario = true;
@@ -11059,6 +11203,13 @@ public final class D2GSHeadlessClient {
       if (config.requireAmazonMelee && !isAmazonMeleeWeapon(config.amazonMeleeWeaponCode)) {
         throw new IllegalArgumentException("--amazon-melee-weapon must be jav (stackable) or spr (non-stackable spear)");
       }
+      if (config.requireAmazonSummon && !isAmazonSummonSkill(config.amazonSummonSkillId)) {
+        throw new IllegalArgumentException("--amazon-summon-skill must be Decoy/Dopplezon(28) or Valkyrie(32)");
+      }
+      if (config.requireAmazonSummon && (config.amazonSummonSkillLevel < 1
+          || config.amazonSummonSkillLevel > 20)) {
+        throw new IllegalArgumentException("--amazon-summon-skill-level must be between 1 and 20");
+      }
       if (config.requireAmazonBow && !isAmazonBowSkill(config.amazonBowSkillId)) {
         throw new IllegalArgumentException("--amazon-bow-skill must be Fire Arrow(7), Cold Arrow(11), Exploding Arrow(16), Freezing Arrow(31), Ice Arrow(21), Immolation Arrow(27), or Guided Arrow(22)");
       }
@@ -11097,6 +11248,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireAmazonMelee
+          && !config.requireAmazonSummon
           && !config.requireAmazonBow
           && !config.requireVineScenario
           && !config.requirePaladinAura
@@ -11128,6 +11280,7 @@ public final class D2GSHeadlessClient {
           && !config.requireCrossAreaBaseline
           && !config.requireCrossAreaMissileState
           && !config.requireAmazonMelee
+          && !config.requireAmazonSummon
           && !config.requireAmazonBow
           && !config.requireVineScenario
           && !config.requirePaladinAura
@@ -11180,6 +11333,10 @@ public final class D2GSHeadlessClient {
 
     private static boolean isAmazonMeleeWeapon(String code) {
       return "jav".equalsIgnoreCase(code) || "spr".equalsIgnoreCase(code);
+    }
+
+    private static boolean isAmazonSummonSkill(int skillId) {
+      return skillId == 28 || skillId == SkillId.VALKYRIE;
     }
 
     private static boolean isVineSkill(int skillId) {
@@ -11266,6 +11423,8 @@ public final class D2GSHeadlessClient {
           + " [--require-andariel-quest]"
            + " [--require-amazon-melee] [--amazon-melee-skill 35]"
            + " [--amazon-melee-skill-level 1..20] [--amazon-melee-weapon jav|spr]"
+           + " [--require-amazon-summon] [--amazon-summon-skill 28|32]"
+           + " [--amazon-summon-skill-level 1..20]"
            + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"

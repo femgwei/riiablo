@@ -401,6 +401,75 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only keyframe fallback for Amazon Decoy/Valkyrie summon skills. */
+  static boolean headlessDispatchAmazonSummon(int playerId, int skillId, float x, float y) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null
+        || Riiablo.files == null || Riiablo.files.skills.get(skillId) == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean dispatched =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+        com.riiablo.engine.server.component.Player player = server.world.getMapper(
+            com.riiablo.engine.server.component.Player.class).get(playerId);
+        if (skill == null || player == null || player.data == null
+            || player.data.getSkill(skillId) <= 0) return;
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.SkillDoEvent.obtain(
+                playerId, skillId, Engine.INVALID_ENTITY, new Vector2(x, y),
+                skill.srvdofunc, skill.cltdofunc));
+        dispatched.set(true);
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && dispatched.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Finds the newest active Amazon summon after a test keyframe dispatch. */
+  static int headlessOwnedSummonForSkill(int ownerId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.SummonedPet> pets =
+            server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class);
+        long newest = Long.MIN_VALUE;
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager()
+            .get(com.artemis.Aspect.all(com.riiablo.engine.server.component.SummonedPet.class))
+            .getEntities();
+        for (int i = 0; i < entities.size(); i++) {
+          int entityId = entities.get(i);
+          com.riiablo.engine.server.component.SummonedPet pet = pets.get(entityId);
+          if (pet != null && pet.ownerId == ownerId && pet.skillId == skillId
+              && !pet.unsummonPending && pet.spawnOrder > newest) {
+            newest = pet.spawnOrder;
+            result.set(entityId);
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   static Vector2 headlessLevelPosition(int levelId) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
@@ -3122,6 +3191,47 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Read-only native summon projection used by Amazon Decoy/Valkyrie gates. */
+  static int[] headlessSummonState(int summonId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || summonId < 0) {
+      return new int[0];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        if (!server.world.getEntityManager().isActive(summonId)) return;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.SummonedPet> pets =
+            server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class);
+        com.riiablo.engine.server.component.SummonedPet pet = pets.get(summonId);
+        if (pet == null) return;
+        boolean valkyrieState = false;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.UnitStates> states =
+            server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class);
+        com.riiablo.engine.server.component.UnitStates unitStates = states.get(summonId);
+        if (unitStates != null && unitStates.stateList != null) {
+          valkyrieState = unitStates.stateList.hasState(
+              com.riiablo.engine.server.state.StateId.VALKYRIE);
+        }
+        result.set(new int[] {
+            1, pet.ownerId, pet.skillId, pet.skillLevel, pet.passive ? 1 : 0,
+            pet.durationFrames, Math.round(pet.elapsedFrames), valkyrieState ? 1 : 0
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
   /** Server-side persistence state after a summon owner disconnects/reconnects. */
   static int[] headlessReconnectPersistenceState(
       int oldOwnerId, int newOwnerId, int itemId, int objectId, int summonId) {
@@ -4429,6 +4539,60 @@ public class D2GS extends ApplicationAdapter {
       }
     }
     return null;
+  }
+
+  /** Finds a static-map-valid placement for a native summon footprint. */
+  static float[] headlessSummonPlacement(int levelId, int roomId, int skillId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null
+        || Riiablo.files.skills == null || Gdx.app == null) return new float[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<float[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new float[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+        com.riiablo.codec.excel.MonStats.Entry summon = skill == null || skill.summon == null
+            ? null : Riiablo.files.monstats.get(skill.summon);
+        com.riiablo.codec.excel.MonStats2.Entry stats2 = summon == null
+            ? null : Riiablo.files.monstats2.get(summon.MonStatsEx);
+        Vector2 anchor = findHeadlessRoomPosition(server, zone, room);
+        if (anchor == null || summon == null) return;
+        int footprint = stats2 == null ? 1 : Math.max(1, stats2.SizeX);
+        Vector2 candidate = new Vector2();
+        Vector2 resolved = new Vector2();
+        int limit = Math.max(room.width, room.height);
+        for (int radius = 0; radius <= limit && result.get().length == 0; radius++) {
+          for (int dy = -radius; dy <= radius && result.get().length == 0; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+              candidate.set(anchor.x + dx, anchor.y + dy);
+              if (!room.contains(Math.round(candidate.x), Math.round(candidate.y))
+                  || server.map.getZone(candidate.x, candidate.y) != zone
+                  || (server.map.flags(Math.round(candidate.x), Math.round(candidate.y))
+                      & DT1.Tile.FLAG_BLOCK_WALK) != 0) continue;
+              if (zone.findFreeCoordinates(candidate, footprint, 8, true, resolved)) {
+                result.set(new float[] {resolved.x, resolved.y});
+                break;
+              }
+            }
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new float[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new float[0];
+    }
   }
 
   private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
@@ -6264,7 +6428,12 @@ public class D2GS extends ApplicationAdapter {
       // character cannot inherit the old client's last-sent states.
       sync.clearClient(id);
 
-      world.delete(entityId);
+      // Client.run invokes Disconnect from the socket thread. Artemis entity
+      // mutation must happen on the D2GS application thread; deleting here
+      // races summon creation/relocation and can detach an unrelated pet when
+      // a reconnect reuses an entity slot in the same tick.
+      if (Gdx.app != null) Gdx.app.postRunnable(() -> world.delete(entityId));
+      else world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);
       lastSnapshotResyncRequest[id] = 0L;
       lastSnapshotBaselineId[id] = 0L;

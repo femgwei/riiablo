@@ -1,6 +1,26 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-01（交接快照：Amazon Immolation/Guided Arrow gate）
+更新时间：2026-10-01（交接快照：Amazon Decoy/Valkyrie gate）
+
+## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
+
+- [x] 新增 `headlessAmazonSummon`，按 `Skills.txt` 的 `summon/pettype/petmax`
+  验证 Decoy/Dopplezon(28) 与 Valkyrie(32) 的权威创建、owner、技能等级、被动标志、
+  持续时间及 `Valkyrie` 状态；owner/observer 初始快照和 observer 重连均保持同一
+  summon entityId。
+- [x] Decoy 使用真实 1.10f MPQ 双客户端 gate 通过：`durationFrames=750`、
+  `passive=true`；Valkyrie 使用 level 7 gate 通过：`durationFrames=0`、
+  `passive=false`、`valkyrieState=true`。
+- [x] 修复 headless COF fallback 与真实 CastSkillDoEvent 竞态：Decoy 的无 keyframe
+  回放等待窗口从 200ms 调整为 1s，避免同一次施法创建两个 Dopplezon，导致旧实体在
+  重连前被 PetMax 替换。网络实体快照同时改为每个 recipient 独立 ByteBuffer，避免
+  共享广播缓冲区在同帧重定位时造成观察者丢包；断线删除切回 D2GS 应用线程。
+- [x] 验证命令：
+  `./gradlew.bat :server:d2gs:headlessAmazonSummon -PamazonSummonSkill=28 -PamazonSummonSkillLevel=5 -PamazonSummonTimeout=20 --no-daemon`
+  与 `... -PamazonSummonSkill=32 -PamazonSummonSkillLevel=7 ...`，两次均为
+  `BUILD SUCCESSFUL`；核心 Amazon 三项定向回归同样通过。
+- [ ] 仍需把相同的真实 MPQ 双客户端门槛扩展到 Amazon 其余尚未覆盖的 exact-ID 行；
+  不以本 gate 覆盖用户已验证的 Amazon 伤害/公式。
 
 ## 目标与版本边界
 

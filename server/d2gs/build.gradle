@@ -65,6 +65,7 @@ tasks.register('headlessMovementIntent', JavaExec) {
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('amazonSummonVerbose')) args '--verbose'
 }
 
 tasks.register('headlessSnapshotOrder', JavaExec) {
@@ -191,6 +192,23 @@ tasks.register('headlessAmazonMelee', JavaExec) {
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
   if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
+tasks.register('headlessAmazonSummon', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real-MPQ Amazon Decoy/Valkyrie summon and reconnect gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-amazon-summon', '--amazon-summon-skill',
+       (project.hasProperty('amazonSummonSkill') ? project.property('amazonSummonSkill').toString() : '32'),
+       '--amazon-summon-skill-level',
+       (project.hasProperty('amazonSummonSkillLevel') ? project.property('amazonSummonSkillLevel').toString() : '7'),
+       '--test-timeout',
+       (project.hasProperty('amazonSummonTimeout') ? project.property('amazonSummonTimeout').toString() : '60')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
 tasks.register('headlessAmazonBow', JavaExec) {

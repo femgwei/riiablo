@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-01 Amazon Decoy / Valkyrie 真实 MPQ 召唤 gate
+
+- [x] 新增 `headlessAmazonSummon`，对 Decoy/Dopplezon(28) 与 Valkyrie(32) 执行真实
+  1.10f MPQ 双客户端创建、owner/observer 快照、原生技能等级/持续时间/状态及 observer
+  重连验证；Decoy level 5 和 Valkyrie level 7 均 `BUILD SUCCESSFUL`。
+- [x] 修复 Decoy COF fallback 的重复创建竞态：真实 keyframe 等待窗口提升到 1 秒，避免
+  fallback 与延迟的 `SkillDoEvent` 同时创建两个 `PetMax=1` 召唤体；网络同步改为每个
+  recipient 独立快照缓冲，断线实体删除改在 D2GS 应用线程执行。
+- [x] 回归：`AmazonSkillSpecializationTest`、`NativeAmazonSkillMatrixTest`、
+  `NativeAmazonPoisonJavelinDataTest` 通过；其余 Amazon 公式仍以用户已验证实现和
+  D2MOO/MPQ 对照为准，未被本 gate 覆盖。
+- [ ] 下一步继续 Amazon 尚未完成的 exact-ID 真实资源/行为 gate，再按同一标准推进其他
+  职业；不要把 dark-magic 的 1.14d 数值直接覆盖到 Amazon 1.10f 公式。
+
 ## 2026-10-01 Amazon Immolation/Guided Arrow 真实 MPQ 导弹 gate
 
 - [x] `headlessAmazonBow` 扩展支持 Immolation Arrow(27)：按 D2MOO

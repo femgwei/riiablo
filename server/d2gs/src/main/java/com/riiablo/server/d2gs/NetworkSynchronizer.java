@@ -131,12 +131,23 @@ public class NetworkSynchronizer extends BaseEntitySystem {
           + " recipients=0x" + Integer.toHexString(changedRecipients));
     }
     byte[] snapshot = serialize(entityId, true);
-    Packet packet = Packet.obtain(changedRecipients, ByteBuffer.wrap(snapshot));
-    boolean success = outPackets.offer(packet);
-    if (!success) {
-      // Do not suppress the next frame after a queue failure. Removing the
-      // cached value makes the authoritative snapshot eligible for retry.
-      removeSnapshots(entityId, changedRecipients);
+    // Keep one immutable payload per recipient.  A shared Packet/ByteBuffer
+    // is safe only while every Client.send() completes synchronously; a
+    // summon can be relocated and re-scoped in the same tick, leaving an
+    // observer with the packet position advanced by another socket thread.
+    // Independent buffers preserve the recipient-scoped cache contract and
+    // make the initial summon baseline deterministic for all observers.
+    boolean failed = false;
+    for (int clientId = 0; clientId < Integer.SIZE; clientId++) {
+      int recipient = 1 << clientId;
+      if ((changedRecipients & recipient) == 0) continue;
+      byte[] copy = java.util.Arrays.copyOf(snapshot, snapshot.length);
+      if (!outPackets.offer(Packet.obtain(recipient, ByteBuffer.wrap(copy)))) {
+        removeSnapshots(entityId, recipient);
+        failed = true;
+      }
+    }
+    if (failed) {
       Gdx.app.error(TAG, "[NET_SYNC] phase=runtime_drop entity=" + entityId
           + " reason=out_queue_full");
     }
