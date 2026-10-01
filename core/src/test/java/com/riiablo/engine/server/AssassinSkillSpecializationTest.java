@@ -471,6 +471,37 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void playerDepartureRemovesOwnedAssassinSentry() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new SummonedPetSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry sentry = Riiablo.files.skills.get("Lightning Sentry");
+      assertNotNull(sentry);
+      data.setSkillLevel(sentry.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, sentry.Id, Engine.INVALID_ENTITY, new Vector2(4, 0), sentry.srvdofunc, 0));
+
+      assertTrue(factory.entityId >= 0, "the skill must create an owned sentry before departure");
+      assertTrue(world.getEntityManager().isActive(factory.entityId));
+      world.delete(owner);
+      world.process(); // flush the player's deferred entity deletion
+      world.process(); // SummonedPetSystem observes the missing owner
+      assertFalse(world.getEntityManager().isActive(factory.entityId),
+          "owned sentries must be removed when their player leaves the world");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void chargedBoltSentrySrvDo017EmitsNativeBoltBurst() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
