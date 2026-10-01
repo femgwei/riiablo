@@ -3117,13 +3117,12 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
-    IntSet sharedHitTargets = total > 1 ? new IntSet() : null;
     Vector2 direction = new Vector2();
     int created = 0;
     for (int i = 0; i < total; i++) {
       nativeMultipleShotDirection(start, target, i, total, direction);
       int missileId = createMissile(missile, direction, start, event.entityId,
-          sharedHitTargets, skillLevel);
+          null, skillLevel);
       if (missileId >= 0) {
         initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
         created++;

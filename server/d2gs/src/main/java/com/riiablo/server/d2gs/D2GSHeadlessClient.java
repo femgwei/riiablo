@@ -2144,34 +2144,19 @@ public final class D2GSHeadlessClient {
       if (!D2GS.headlessPlacePlayerNear(owner.playerId, targetId, bowTargetOffset)) {
         throw new IOException("failed to place Amazon bow player");
       }
-      if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId)) {
+      if (!D2GS.headlessSetPlayerBowAttackProfile(owner.playerId, pierceGate)) {
         throw new IOException("failed to install deterministic Amazon bow attack profile");
       }
       if (pierceGate) {
         // Keep two durable targets on the caster's +X ray. The first target
         // must be crossed before the second; the production Pierce telemetry
         // below rejects two independent arrows as a false positive.
-        if (multipleShot) {
-          // Multiple Shot's native fan is easiest to drive deterministically
-          // when its two adjacent lanes are occupied, as in the real-target
-          // gate. These support fixtures are not part of the Pierce assertion.
-          for (float laneOffset : new float[] {-4f, -8f}) {
-            int supportId = D2GS.headlessCreateRoomMeleeFixture(2, room);
-            if (supportId < 0 || !D2GS.headlessDisableMonsterDynamicCollision(supportId)
-                || !D2GS.headlessPlaceMonsterNear(supportId, targetId, 0f, laneOffset)
-                || !D2GS.headlessSetMonsterDefense(supportId, 1)
-                || !D2GS.headlessSetMonsterBowDefense(supportId)) {
-              throw new IOException("failed to create/place Amazon Pierce support lane="
-                  + laneOffset);
-            }
-            awaitSpecificMonster(owner, ownerInput, supportId, deadline());
-            awaitSpecificMonster(peer, peerInput, supportId, deadline());
-          }
-        }
+        // Do not add adjacent support fixtures here: their NextHit/JUSTHIT
+        // state can legitimately suppress the center lane's second contact.
         pierceTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
         if (pierceTargetId < 0
             || !D2GS.headlessDisableMonsterDynamicCollision(pierceTargetId)
-            || !D2GS.headlessPlaceMonsterNear(pierceTargetId, targetId, 2f, 0f)
+            || !D2GS.headlessPlaceMonsterNear(pierceTargetId, targetId, 1f, 0f)
             || !D2GS.headlessSetMonsterDefense(pierceTargetId, 1)
             || !D2GS.headlessSetMonsterBowDefense(pierceTargetId)) {
           throw new IOException("failed to create/place Amazon Pierce second target");

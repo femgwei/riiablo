@@ -3087,6 +3087,8 @@ public class D2GS extends ApplicationAdapter {
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 1_000_000);
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxhp, 1_000_000);
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.armorclass, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.toblock, 0);
+          wrapper.attrs.base().put(com.riiablo.attributes.Stat.passive_weaponblock, 0);
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.level, 1);
           wrapper.attrs.reset();
         }
@@ -3104,6 +3106,9 @@ public class D2GS extends ApplicationAdapter {
           position.position.x += 3f;
           com.riiablo.engine.server.component.Box2DBody body = server.world
               .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+          com.riiablo.engine.server.component.Size size = server.world
+              .getMapper(com.riiablo.engine.server.component.Size.class).get(monsterId);
+          if (size != null) size.size = com.riiablo.engine.server.component.Size.SMALL;
           if (body != null && body.body != null) {
             body.body.setTransform(position.position, body.body.getAngle());
           }
@@ -4276,7 +4281,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   /** Test-only fixture: make the generated Amazon's bow attack deterministic. */
-  static boolean headlessSetPlayerBowAttackProfile(int playerId) {
+  static boolean headlessSetPlayerBowAttackProfile(int playerId, boolean pierceGate) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || Gdx.app == null) return false;
     java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
@@ -4290,6 +4295,9 @@ public class D2GS extends ApplicationAdapter {
           // Fire Arrow's native SrvDmg01 still performs the physical-to-fire
           // conversion, but the real bow must first pass the to-hit roll.
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.tohit, 100_000);
+          if (pierceGate) {
+            wrapper.attrs.base().put(com.riiablo.attributes.Stat.item_pierce, 100);
+          }
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.mindamage, 20);
           wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxdamage, 30);
           wrapper.attrs.reset();
@@ -5541,13 +5549,13 @@ public class D2GS extends ApplicationAdapter {
     if (server == null || server.world == null) {
       return new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
           Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
-          0, 0, 0, 0};
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     }
     com.riiablo.engine.server.MissileCollisionSystem collisions = server.world
         .getSystem(com.riiablo.engine.server.MissileCollisionSystem.class);
     return collisions == null ? new int[] {0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
         Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY,
-        0, 0, 0, 0}
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
         : collisions.headlessPierceState(ownerId, skillId);
   }
 
