@@ -668,6 +668,15 @@ public class RenderSystem extends BaseEntitySystem {
         }
 
         cache[orderFlag].add(id);
+        if (isIceExplosion(id)) {
+          Animation animation = mAnimationWrapper.get(id).animation;
+          Gdx.app.debug(TAG, String.format(
+              "[MISSILE_RENDER] phase=cache entity=%d bucket=%d pos=(%.3f,%.3f) "
+                  + "frame=%d dir=%d frames=%d box=%s",
+              id, orderFlag, pos.x, pos.y, animation.getFrame(),
+              animation.getDirection(), animation.getNumFramesPerDir(),
+              animation.getBox()));
+        }
       }
     }
     cache[0].sort(SUBTILE_ORDER);
@@ -861,6 +870,18 @@ public class RenderSystem extends BaseEntitySystem {
       }
 
       Animation animation = mAnimationWrapper.get(entity).animation;
+      if (isIceExplosion(entity)) {
+        Animation.Layer layer = animation.getLayer(0);
+        com.badlogic.gdx.graphics.g2d.TextureRegion region = layer == null
+            ? null : layer.getDC().getTexture(animation.getDirection(), animation.getFrame());
+        Gdx.app.debug(TAG, String.format(
+            "[MISSILE_RENDER] phase=draw entity=%d pos=(%.3f,%.3f) "
+                + "screen=(%.3f,%.3f) frame=%d dir=%d blend=%d texture=%s region=%s",
+            entity, pos.x, pos.y, tmp.x, tmp.y, animation.getFrame(),
+            animation.getDirection(), layer == null ? -1 : layer.getBlendMode(),
+            region == null ? "null" : region.getTexture().getTextureObjectHandle(),
+            region == null ? "null" : region.getRegionWidth() + "x" + region.getRegionHeight()));
+      }
       animation.draw(batch, tmp.x, tmp.y);
 
       if (overlay != null && !overlay.entry.PreDraw) {
@@ -870,6 +891,12 @@ public class RenderSystem extends BaseEntitySystem {
 
   private boolean isPresentationMissile(int entity) {
     return mMissile.has(entity) && mMissile.get(entity).presentationOnly;
+  }
+
+  private boolean isIceExplosion(int entity) {
+    return mMissile.has(entity)
+        && mMissile.get(entity).missile != null
+        && "iceexplode".equalsIgnoreCase(mMissile.get(entity).missile.Missile);
   }
 
   void drawLowerWalls(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py) {
