@@ -1049,7 +1049,10 @@ public class RenderSystem extends BaseEntitySystem {
       if (!Orientation.isRoof(tile.orientation)) continue;
       if (py + tile.roofHeight > renderMaxY) continue;
       if (py + tile.roofHeight + tile.texture.getRegionHeight() < renderMinY) continue;
+      float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
+      if (alpha != 1f) batch.setAlpha(alpha);
       batch.draw(tile.texture, px, py + tile.roofHeight);
+      if (alpha != 1f) batch.resetColor();
     }
   }
 
