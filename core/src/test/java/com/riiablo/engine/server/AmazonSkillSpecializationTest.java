@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.Riiablo;
@@ -717,6 +718,11 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertNotNull(missile);
     assertEquals(20, missile.pSrvHitFunc);
     assertEquals("furylightning", missile.HitSubMissile[0]);
+    Missiles.Entry child = Riiablo.files.Missiles.get("furylightning");
+    assertNotNull(child);
+    assertEquals(3, child.CollideType);
+    assertFalse(child.Collision);
+    assertTrue(child.LastCollide);
     assertEquals(15, MissileCollisionSystem.lightningFuryRange(missile, skill, 1));
     assertEquals(2, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 1));
     assertEquals(11, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 10));

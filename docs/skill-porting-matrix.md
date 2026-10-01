@@ -439,8 +439,9 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   测试。真实入口支持 `-PamazonMeleeSkillLevel`，按原生公式动态创建分裂目标；等级 1
   精确验证 2 枚、等级 10/20 精确验证 11 枚共享子导弹，所有目标均通过双客户端掉血与
   逐目标重连检查。生产排序已抽为最近距离优先 helper，并由纯 ECS 测试锁定；第三目标
-  排序的真实 MPQ 观测和墙后目标 gate 留待下一项。墙后候选点曾在筛选阶段被排除，但
-  settle 阶段仍发生穿透命中，当前不能把该现象记录为原生墙体行为。
+  排序的真实 MPQ 观测和墙后目标 gate 留待下一项。当前 MPQ 观测确认两行导弹均为
+  `CollideType=3`、`Collision=false`、`LastCollide=true`；此前候选点只是超过 11 枚上限，
+  尚未构成真实墙体样本。
 
 ## 参考入口
 

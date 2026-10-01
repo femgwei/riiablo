@@ -1341,6 +1341,30 @@ public final class D2GSHeadlessClient {
 
       boolean lightningStrike = config.amazonMeleeSkillId == SkillId.LIGHTNING_STRIKE;
       boolean lightningFury = config.amazonMeleeSkillId == SkillId.LIGHTNING_FURY;
+      if (lightningFury && Riiablo.files != null && Riiablo.files.skills != null
+          && Riiablo.files.Missiles != null) {
+        Skills.Entry furySkillRow = Riiablo.files.skills.get("Lightning Fury");
+        com.riiablo.codec.excel.Missiles.Entry furyMissileRow = furySkillRow != null
+            && furySkillRow.srvmissile != null
+            ? Riiablo.files.Missiles.get(furySkillRow.srvmissile) : null;
+        com.riiablo.codec.excel.Missiles.Entry furyChildRow = Riiablo.files.Missiles.get("furylightning");
+        log("amazon_fury_skill_row", "skill=" + (furySkillRow != null ? furySkillRow.skill : "null")
+            + " srv=" + (furySkillRow != null ? furySkillRow.srvmissile : "null")
+            + " missile=" + (furyMissileRow != null ? furyMissileRow.Missile : "null")
+            + " collision=" + (furyMissileRow != null && furyMissileRow.Collision)
+            + " collideType=" + (furyMissileRow != null ? furyMissileRow.CollideType : -1)
+            + " lastCollide=" + (furyMissileRow != null && furyMissileRow.LastCollide)
+            + " range=" + (furyMissileRow != null ? furyMissileRow.Range : -1)
+            + " vel=" + (furyMissileRow != null ? furyMissileRow.Vel : -1)
+            + " hit=" + (furyMissileRow != null ? furyMissileRow.pSrvHitFunc : -1)
+            + " hitSub=" + (furyMissileRow != null && furyMissileRow.HitSubMissile != null
+                ? java.util.Arrays.toString(furyMissileRow.HitSubMissile) : "null")
+            + " childCollision=" + (furyChildRow != null && furyChildRow.Collision)
+            + " childCollideType=" + (furyChildRow != null ? furyChildRow.CollideType : -1)
+            + " childLastCollide=" + (furyChildRow != null && furyChildRow.LastCollide)
+            + " childRange=" + (furyChildRow != null ? furyChildRow.Range : -1)
+            + " childVel=" + (furyChildRow != null ? furyChildRow.Vel : -1));
+      }
       int targetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
       if (targetId < 0) throw new IOException("failed to create Amazon melee target");
       Snapshot ownerTarget = awaitSpecificMonster(owner, ownerInput, targetId, deadline());

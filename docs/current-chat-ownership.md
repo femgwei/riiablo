@@ -1039,9 +1039,9 @@ incarnation，并继续检查跨区域实体基线恢复。
   精确要求 11 枚共享 `furylightning`，且所有分裂目标在 owner/observer 两端掉血并通过
   重连生命检查。
 - [x] 分裂生产路径抽出最近距离优先排序 helper，并由 ECS 测试锁定最近、次近、最远顺序。
-- [x] 已尝试 deterministic Blood Moor 墙后候选点：AuraFilter 初始未选中，但子导弹在
-  5 秒 settle 阶段仍穿过该位置造成后续掉血，因此没有接受为墙体 gate；需要继续核对
-  `furylightning` 的 `CollideType` 与真实墙体碰撞语义。
+- [x] 运行时已记录 `lightningfury`/`furylightning` 均为 `CollideType=3`、
+  `Collision=false`、`LastCollide=true`，并由 Amazon 数据测试锁定；此前的墙后候选点实际
+  位于 11 个目标之后，只证明了分裂上限排除，不能作为墙体 gate。
 - [ ] 第三目标排序的真实 MPQ 观测和墙后目标的真实 MPQ gate 仍待后续，不应将本轮等同于
   完整 Lightning Fury 目标选择矩阵。其他 agent 的未提交修改仍未动。
 
