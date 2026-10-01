@@ -450,8 +450,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         && Riiablo.audio != null) {
       Riiablo.audio.play(child.TravelSound, true);
     }
-    MissileLoader loader = world.getSystem(MissileLoader.class);
-    if (loader != null) loader.loadNow(id);
+    // ClientEntityFactory.createMissilePresentation() has already finished
+    // the DCC load and attached the AnimationWrapper synchronously.  Do not
+    // reload it here: removing and recreating the wrapper twice in one tick
+    // can leave RenderSystem's Artemis subscription one update behind for a
+    // recycled entity id (the impact exists, but never reaches drawEntity()).
     log.debug("[MISSILE_IMPACT] source={} sourceId={} child={} entity={} pos=({}, {})",
         source.Missile, event.missileEntityId, childName, id, event.x, event.y);
   }
