@@ -77,6 +77,7 @@ public class RenderSystem extends BaseEntitySystem {
   static final float WALL_OCCLUDED_ALPHA = 0.55f;
   /** Duration of the classic wall reveal/fade transition. */
   private static final long WALL_FADE_MILLIS = 500L;
+  private static final boolean DEBUG_WALL_TRANSITIONS = true;
   // Debug overlays are opt-in.  Leaving the historical compile-time switch on
   // paints grid/special-cell geometry over the game world and can look like a
   // solid green chest-sized tile in normal gameplay.
@@ -1040,6 +1041,9 @@ public class RenderSystem extends BaseEntitySystem {
       wallTransitionFromGroup = playerGroup;
       wallTransitionFromPop = playerPop;
       wallTransitionStartMs = 0L;
+      if (DEBUG_WALL_TRANSITIONS) {
+        Gdx.app.log(TAG, "[WALL_TRANSITION] init group=" + playerGroup + " pop=" + playerPop);
+      }
       return;
     }
     if (wallTransitionCurrentGroup == playerGroup && wallTransitionCurrentPop == playerPop) return;
@@ -1048,6 +1052,11 @@ public class RenderSystem extends BaseEntitySystem {
     wallTransitionCurrentGroup = playerGroup;
     wallTransitionCurrentPop = playerPop;
     wallTransitionStartMs = System.currentTimeMillis();
+    if (DEBUG_WALL_TRANSITIONS) {
+      Gdx.app.log(TAG, "[WALL_TRANSITION] fromGroup=" + wallTransitionFromGroup
+          + " fromPop=" + wallTransitionFromPop
+          + " toGroup=" + playerGroup + " toPop=" + playerPop);
+    }
   }
 
   private static boolean wallContextOccludes(TileGrid grid, int wallGroup,
