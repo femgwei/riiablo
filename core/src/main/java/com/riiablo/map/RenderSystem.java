@@ -78,7 +78,8 @@ public class RenderSystem extends BaseEntitySystem {
   static final float WALL_OCCLUDED_ALPHA = 0.55f;
   /** Duration of the classic wall reveal/fade transition. */
   private static final long WALL_FADE_MILLIS = 500L;
-  private static final boolean DEBUG_WALL_TRANSITIONS = true;
+  // Enable temporarily when diagnosing native wall context changes.
+  private static final boolean DEBUG_WALL_TRANSITIONS = false;
   // Debug overlays are opt-in.  Leaving the historical compile-time switch on
   // paints grid/special-cell geometry over the game world and can look like a
   // solid green chest-sized tile in normal gameplay.
