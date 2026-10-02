@@ -1158,3 +1158,5 @@ incarnation，并继续检查跨区域实体基线恢复。
   `animationFallback=false`。
 - gate 已输出 `area_skill_dual_pass` 后才出现一次 observer socket close 异步异常，
   归类为测试清理噪声，不作为技能失败；生产公式未修改。
+- Nova/Fire Ball/Native projectile 相关纯逻辑回归共 22 项全部通过；下一步转入
+  Assassin 真实 MPQ gate 或继续 Sorceress 尚未覆盖的表现链。

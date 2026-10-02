@@ -6,6 +6,8 @@
   `animationFallback=false`，确认真实 keyframe 委派。
 - [x] 按 D2MOO `SKILLS_SrvDo022_NovaAttack` 保持服务端创建和快照边界；不把
   dark-magic 1.14d 的数量公式当作 1.10f 结论。
+- [x] `SorceressNovaIntegrationTest`、`SorceressFireBallIntegrationTest` 与
+  `NativeSorceressProjectileDataTest` 共 22 项回归全部通过。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=48 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate

@@ -11,6 +11,8 @@
   生命周期；未用 dark-magic 的 1.14d 数值替换 1.10f 固定 64 路规则。
 - 进程结束时出现一次 observer socket close 的异步 `SocketException`，发生在 gate
   已输出 `area_skill_dual_pass` 之后，不影响验收结果，需保留为清理噪声而非技能失败。
+- 回归：`SorceressNovaIntegrationTest` 7 项、`SorceressFireBallIntegrationTest` 4 项、
+  `NativeSorceressProjectileDataTest` 11 项，共 22 项全部通过。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=48 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate
