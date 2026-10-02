@@ -1560,7 +1560,16 @@ public final class D2GSHeadlessClient {
         if (packet != null) reconnected.consume(packet);
         Set<Integer> ownerStates = areaStateIds(owner, ASSASSIN_BLADE_SHIELD);
         Set<Integer> restoredStates = areaStateIds(reconnected, ASSASSIN_BLADE_SHIELD);
-        if (before.containsAll(restoredStates) && ownerStates.containsAll(restoredStates)
+        // The caster's aura is long-lived (the native level-20 fixture lasts
+        // roughly 115 seconds), so an empty reconnect projection is not an
+        // acceptable subset: it would hide a missing StateP baseline.  Only
+        // accept an empty set when the authoritative owner has already
+        // expired the state during the disconnect window.
+        boolean ownerStillActive = !ownerStates.isEmpty();
+        boolean restoredStateValid = ownerStillActive
+            ? !restoredStates.isEmpty() && before.containsAll(restoredStates)
+            : restoredStates.isEmpty();
+        if (restoredStateValid && ownerStates.containsAll(restoredStates)
             && lifecycleWatermarksValid(owner, reconnected)) {
           log("area_skill_reconnect_pass", "skill=" + ASSASSIN_BLADE_SHIELD
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
