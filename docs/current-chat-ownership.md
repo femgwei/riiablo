@@ -39,7 +39,8 @@
   复刻这些门槛，只按 Monster/Position/HP 过滤。
 - 该差异是墙体/null-hit 的生产待办；本轮不修改仍有其他 agent 未提交内容的
   `AssassinTrapSystem.java`。下一步由其负责人接入 NativeUnitFlags/碰撞回归。
-- 本轮为文档静态对照更新，无编译；工作区其他未提交文件保持不动。
+- 本轮为文档静态对照更新，无编译；提交：`6224438a`（`docs: record Death Sentry target filter gap`），
+  已准备推送；工作区其他未提交文件保持不动。
 
 ### 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异定位
 
