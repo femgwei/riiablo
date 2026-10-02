@@ -78,9 +78,12 @@
   --no-daemon`，`BUILD SUCCESSFUL`；核心 AssassinSkillSpecializationTest 通过。
 - 新增可控 `--area-skill-level`/`--require-area-skill-expiry` 入口；level=1 真实 MPQ
   gate 初始 `duration=499` 帧，双端先恢复 `states=[158]`，随后同时观察到状态清除并输出
-  `area_skill_expiry_pass ... ownerStates=[] observerStates=[]`。
+  `area_skill_expiry_pass ... ownerStates=[] observerStates=[]`；状态清除后静默观察 1 秒，
+  两端目标生命没有继续下降。
 - 仍待：到期前最后一个周期是否产生且只产生一次命中，以及真实客户端视觉持续时间；下一步
   优先补这两个边界。
+- 静默窗口加固提交：`15017c2e`（`test: verify Blade Shield post-expiry silence`），已推送到
+  `origin/master`。
 - 该增量已在前一提交完成；当前工作区仍有其他 agent 的未提交代码
   `ItemEntry.java`、`AssassinTrapSystem.java`、`MissileCollisionSystem.java`、
   `StatFormatterTest.java`，以及未跟踪日志/dump，均不属于本轮，接手者不得覆盖或提交。

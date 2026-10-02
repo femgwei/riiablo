@@ -58,7 +58,8 @@
   owner 仍活动时恢复 `states=[158]`，不接受空集合假阳性。
 - [x] 新增可控 `--area-skill-level` 与 `--require-area-skill-expiry` 入口；level=1 真实
   MPQ gate 初始 `duration=499` 帧，重连恢复 `states=[158]` 后，owner/observer 均清除
-  `StateId=158` 并输出 `area_skill_expiry_pass`。
+  `StateId=158` 并输出 `area_skill_expiry_pass`；清除后静默观察 1 秒，两端目标生命没有
+  继续下降。
 - [ ] 到期前最后一个周期的唯一命中和真实客户端视觉持续时间仍待专项验收；下一步补这两个
   边界。
 - 验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
@@ -69,6 +70,8 @@
 - gate 加固提交：`cc808a7c`（`test: require Blade Shield reconnect state`），已推送到
   `origin/master`。
 - 到期 gate 提交：`c05a6890`（`test: add Blade Shield expiry gate`），已推送到
+  `origin/master`。
+- 静默窗口提交：`15017c2e`（`test: verify Blade Shield post-expiry silence`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin 行为层回归
