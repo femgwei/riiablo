@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
+
+- [x] D2MOO `UNITROOM_AddUnitToRoomEx` 在 `pUnitFirst` 头部插入新单位；
+  `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按房间链表扫描，
+  `sub_6FD15210` 直接返回第一个匹配尸体，而非最近距离。
+- [x] 当前 `AssassinTrapSystem.findDeathSentryCorpse` 使用 `bestDistance` 最小化
+  到 hostile 的距离，和原生候选优先级可能不同；由于该生产文件仍有其他 agent 未提交
+  修改，本轮只记录差异，不覆盖其工作区。
+- [ ] 下一步建立确定性同距/不同距尸体夹具，确认 ECS 候选顺序后再调整生产策略。
+
 ## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
 - [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` 无 hostile 分支：没有目标时保持 idle，

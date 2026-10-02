@@ -2,6 +2,17 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
+
+- [x] 静态核对 D2MOO：`UNITROOM_AddUnitToRoomEx` 将新单位插入 `pUnitFirst`，
+  `sub_6FD15210`/`UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 返回第一个匹配
+  尸体；原生并没有按到 hostile 的最短距离排序。
+- [x] 对照当前实现 `AssassinTrapSystem.findDeathSentryCorpse`：当前使用
+  `bestDistance` 选最近尸体，因此与 D2MOO 的房间链表优先级存在潜在差异；这不是本轮
+  直接改生产逻辑的结论，需在该文件其他 agent 修改合并后再落地。
+- [ ] 尚未加入会锁死错误顺序的回归；下一步应先建立“新尸体先入链表、同距/不同距均按
+  首个匹配返回”的确定性夹具，再决定是否替换最近距离策略。
+
 ## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
 - [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` 的无目标分支：没有 hostile target 时

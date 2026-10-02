@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry null-target fail-closed 收口）
+更新时间：2026-10-03（Death Sentry 多尸体候选顺序差异定位）
 
 ## 唯一负责人
 
@@ -31,6 +31,16 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异定位
+
+- D2MOO `UNITROOM_AddUnitToRoomEx` 把新单位插入 `pUnitFirst`，
+  `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按链表顺序扫描，
+  `sub_6FD15210` 返回首个匹配尸体；当前 `findDeathSentryCorpse` 却按 `bestDistance`
+  选择最近尸体，存在原生顺序偏差风险。
+- 本轮未修改 `AssassinTrapSystem.java`，因为该文件仍有其他 agent 的未提交内容；下一步
+  先做确定性顺序夹具，再由生产文件负责人合并策略调整。
+- 本轮为文档对照更新，无编译；工作区其他未提交文件保持不动。
 
 ### 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
