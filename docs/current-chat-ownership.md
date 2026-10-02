@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Shock Field 真实 MPQ gate）
+更新时间：2026-10-02（Assassin Blade Sentinel 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -52,6 +52,21 @@
   未放宽 Amazon 或 generic throw。`NativeSkillResolverTest` 定向回归通过。
 - 当前只完成原生创建、双端同步和重连；Shock Field 墙体/null-hit、伤害和高等级协同
   仍是后续工作。下一项优先 Blade Sentinel(257) 的 trap owner/回旋导弹 gate。
+
+### 2026-10-02 Assassin Blade Sentinel(257) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=257 -PareaTimeout=25` 已通过真实 1.10f MPQ 双客户端
+  gate：双方共享 `assassintrap` 控制实体（owner=施法者、skill=257）和附着的
+  `blade creeper` 导弹（skill=257、missile=392、damageLevel=20），且
+  `animationFallback=false`。
+- gate 同时检查控制实体与导弹不能只在客户端本地出现，并通过持久导弹的 observer
+  reconnect 子集/删除一致性检查；本次重连没有复活已删除实体。
+- 现有 `AssassinSkillSpecializationTest` 已覆盖 ECS 层起点→目标点→返回、附着跟随、
+  NextHit 去重和控制实体删除；本次补的是真实 MPQ/双客户端入口。运行日志仍有
+  `Actioneer Unsupported srvdofunc(44)` 警告，但原生 keyframe 已触发且未启用 fallback，
+  该警告后续需单独清理。
+- [ ] 墙体/不可行走终点、逐目标伤害与持续时间到期后的控制实体/导弹清理，仍需独立
+  真实场景验收；下一项优先 Charged Bolt Sentry(261)。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

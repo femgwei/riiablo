@@ -36,6 +36,20 @@
 - [ ] 墙体/null-hit、逐目标伤害和高等级协同仍未完成，不将本 gate 写成四层技能完成。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=256 -PareaTimeout=25 --no-daemon`。
 
+## 2026-10-02 Assassin Blade Sentinel(257) 真实 MPQ gate
+
+- [x] 真实 1.10f MPQ 双客户端通过：owner/observer 共享 `assassintrap` 控制实体，
+  owner/skill 元数据正确，并共享附着的 `blade creeper` 导弹（missile=392、skill=257、
+  damageLevel=20）；`animationFallback=false`。
+- [x] 导弹实体通过通用持久 area reconnect 子集/删除一致性检查，没有恢复已删除的
+  导弹；ECS 回归另已覆盖控制实体往返、附着跟随、NextHit 去重和删除清理。
+- [x] headless fixture 已接入精确 Skills.txt row 257 和 Assassin 存档，不复用
+  Amazon 或其他 trap 的角色夹具。
+- [ ] 真实墙体/不可行走终点、逐目标伤害、持续时间到期和控制实体重连仍未完成；日志
+  的 `Actioneer Unsupported srvdofunc(44)` 也应作为后续清理项，不能据此宣称四层技能
+  完成。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=257 -PareaTimeout=25 --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且

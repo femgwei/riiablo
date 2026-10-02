@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Shock Field real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Blade Sentinel real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -49,6 +49,20 @@
   逐目标伤害和更高等级协同仍需独立验收。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=256 -PareaTimeout=25 --no-daemon`；
   `:core:test --tests com.riiablo.engine.server.skill.NativeSkillResolverTest --no-daemon`。
+
+## 2026-10-02 Assassin Blade Sentinel(257) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=257` 已通过真实 1.10f MPQ 双客户端 gate；双方共享
+  `assassintrap` 控制实体（owner=施法者、skill=257）和附着 `blade creeper` 导弹
+  （missile=392、skill=257、damageLevel=20），且 `animationFallback=false`。
+- [x] gate 拒绝“只有导弹”或“只有控制实体”的假阳性：必须在 owner/observer 两端同时
+  观察到召唤体元数据和带位置的同一权威导弹；重连后通过活动实体子集/删除一致性检查。
+- [x] 现有 `AssassinSkillSpecializationTest` 已覆盖 D2MOO `AI Fn102` / `Missile SrvDo20`
+  的起点→目标点→返回、附着跟随、NextHit 去重和控制实体删除；本次只扩展真实 MPQ
+  入口与协议门槛，不替换本地 1.10f 数值。
+- [ ] 墙体/不可行走终点、逐目标伤害、持续时间到期及控制实体重连仍需补齐；运行日志的
+  `Actioneer Unsupported srvdofunc(44)` 需后续清理。下一项优先 Charged Bolt Sentry(261)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=257 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 

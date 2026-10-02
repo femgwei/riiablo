@@ -141,6 +141,9 @@ public final class D2GSHeadlessClient {
   // 1.10f Skills.txt exact row for Shock Field (dark-magic calls this
   // Shock Web); keep the table ID explicit for the same reason.
   private static final int ASSASSIN_SHOCK_FIELD = 256;
+  // 1.10f Skills.txt exact row for Blade Sentinel.  SkillId.BLADE_SENTINEL
+  // is reserved for the legacy missile id, so keep the table row explicit.
+  private static final int ASSASSIN_BLADE_SENTINEL = 257;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -966,6 +969,12 @@ public final class D2GSHeadlessClient {
         targetX = a.playerX + 8f;
         targetY = a.playerY;
       }
+      if (skillId == ASSASSIN_BLADE_SENTINEL) {
+        // SrvDo044 creates the controller at the caster and stores the cast
+        // endpoint for the Blade Creeper back-and-forth route.
+        targetX = a.playerX + 8f;
+        targetY = a.playerY;
+      }
       float traumaInitialLife = fireBallTarget != null ? fireBallTarget.life : Float.NaN;
       if (skillId == ASSASSIN_FIRE_TRAUMA && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
@@ -1010,6 +1019,11 @@ public final class D2GSHeadlessClient {
             + " owner=" + snapshotLife(a, targetId) + " peer=" + snapshotLife(b, targetId)
             + " missilesA=" + areaMissileSummary(a.areaMissiles)
             + " missilesB=" + areaMissileSummary(b.areaMissiles));
+      }
+      if (skillId == ASSASSIN_BLADE_SENTINEL
+          && !bladeSentinelSharedEvidence(a, b)) {
+        throw new IllegalStateException("Blade Sentinel controller/missile evidence missing: "
+            + areaEvidenceFailure(a, b, skillId));
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
@@ -1323,6 +1337,9 @@ public final class D2GSHeadlessClient {
     if (skillId == ASSASSIN_SHOCK_FIELD && !shockFieldSharedScatter(a, b, shared)) {
       return false;
     }
+    if (skillId == ASSASSIN_BLADE_SENTINEL && !bladeSentinelSharedEvidence(a, b)) {
+      return false;
+    }
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1375,6 +1392,50 @@ public final class D2GSHeadlessClient {
   }
 
   /**
+   * Blade Sentinel is a monster-shaped controller plus one attached SrvDo20
+   * missile.  Require both entities to be shared and verify that the missile
+   * has a real position on both clients; this catches a controller-only or a
+   * client-local visual implementation.
+   */
+  private static boolean bladeSentinelSharedEvidence(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer) {
+    Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
+    sharedPets.retainAll(observer.summonedPets.keySet());
+    boolean controller = false;
+    for (Integer entityId : sharedPets) {
+      PetSnapshot first = owner.summonedPets.get(entityId);
+      PetSnapshot second = observer.summonedPets.get(entityId);
+      if (first != null && second != null && !first.deleted && !second.deleted
+          && first.ownerId == owner.playerId && second.ownerId == owner.playerId
+          && first.skillId == ASSASSIN_BLADE_SENTINEL
+          && second.skillId == ASSASSIN_BLADE_SENTINEL
+          && first.monsterComponent && second.monsterComponent
+          && "assassintrap".equalsIgnoreCase(first.petType)
+          && first.petType.equalsIgnoreCase(second.petType)) {
+        controller = true;
+        break;
+      }
+    }
+    if (!controller) return false;
+    Set<Integer> sharedMissiles = new HashSet<>(owner.areaMissiles.keySet());
+    sharedMissiles.retainAll(observer.areaMissiles.keySet());
+    for (Integer entityId : sharedMissiles) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && !first.deleted && !second.deleted
+          && first.skillId == ASSASSIN_BLADE_SENTINEL
+          && second.skillId == ASSASSIN_BLADE_SENTINEL
+          && first.missileId > 0
+          && second.missileId == first.missileId
+          && first.hasPosition && second.hasPosition) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Blizzard, Frozen Orb and Meteor are controller skills: observing only the
    * root missile is insufficient. Their native SrvDo/SrvHit path must publish
    * at least one child missile to both clients before the gate passes.
@@ -1393,6 +1454,7 @@ public final class D2GSHeadlessClient {
     return (requiresAreaChild(skillId) && skillId != SkillId.FIRE_BALL
         && skillId != ASSASSIN_FIRE_TRAUMA)
         || skillId == ASSASSIN_SHOCK_FIELD
+        || skillId == ASSASSIN_BLADE_SENTINEL
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11302,7 +11364,8 @@ public final class D2GSHeadlessClient {
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
-    boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD;
+    boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
+        || skillId == ASSASSIN_BLADE_SENTINEL;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -11893,7 +11956,7 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
-          || skillId == ASSASSIN_SHOCK_FIELD;
+          || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {
