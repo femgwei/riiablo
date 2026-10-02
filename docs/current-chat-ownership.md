@@ -39,8 +39,8 @@
 - 测试不假设 ECS 实体顺序等同于 D2MOO 房间链表顺序，只锁定一次成功事务只能消费
   一个尸体的原生契约；`AssassinSkillSpecializationTest` 37 项通过。
 - 下一步：同距尸体的 D2MOO 候选顺序、Skill2 闪电逐目标伤害及墙体/null-hit。
-- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
-  不得 stage、覆盖或清理。
+- 本轮代码/测试提交：`09d26a1c`（`test: cover Death Sentry multi-corpse budget`）；
+  工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
 
