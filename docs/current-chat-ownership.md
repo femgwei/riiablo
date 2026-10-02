@@ -43,6 +43,8 @@
   未改动。
 - 未完成：逐目标伤害、波形参数、墙体/null-hit、shot budget、到期和
   `AssassinSentry` AI fallback；下一步 Inferno Sentry(272)。
+- 本轮提交/推送：`d99c5352`（`test: close Wake of Fire sentry keyframe gate`），
+  `origin/master` 已同步到该提交。
 
 ### 2026-10-03 Blade Shield RoomEx / target-filter 增量
 
@@ -50,9 +52,9 @@
   Map/Zone 的当前或直接相邻 RoomEx；没有完整 `MapWrapper`/拓扑的 detached 夹具保持兼容。
 - 墙体不作为额外射线阻断条件；Native 无效/null-hit 目标在伤害前拒绝。
 - 78 项 Assassin/Trap 定向回归通过；真实 277 MPQ gate 仍需后续合并复核。
-- 本轮待提交文件：`StateUpdater.java`、`AssassinSkillSpecializationTest.java`、
-  `skill-porting-matrix.md`、`d2moo-progress-roadmap.md`、本文件。其他 agent 的修改、
-  未跟踪日志和 dump 均不属于本轮。
+- 该增量已在前一提交完成；当前工作区仍有其他 agent 的未提交代码
+  `ItemEntry.java`、`AssassinTrapSystem.java`、`MissileCollisionSystem.java`、
+  `StatFormatterTest.java`，以及未跟踪日志/dump，均不属于本轮，接手者不得覆盖或提交。
 
 ### 2026-10-02 Assassin Fire Trauma(251) 真实 MPQ gate
 
