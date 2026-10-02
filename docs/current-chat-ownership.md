@@ -44,8 +44,8 @@
   `BUILD SUCCESSFUL`。
 - 未完成：正常 7 发预算下的多尸体选择顺序、Skill2 闪电逐目标伤害、墙体/null-hit
   和真实双客户端到期视觉。下一步为 Death Sentry 目标筛选/伤害边界。
-- 本轮代码/文档提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
-  不得 stage、覆盖或清理。
+- 本轮代码/文档提交：`68bbab9c`（`test: close Death Sentry shot budget gate`）；工作区
+  仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
 
