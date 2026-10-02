@@ -10,6 +10,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Skills;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -34,6 +35,8 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -1313,6 +1316,88 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "removing Blade Shield state cancels a pending periodic pulse");
       assertFalse(world.getMapper(UnitStates.class).get(assassin).stateList
           .hasState(StateId.BLADESHIELD));
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void bladeShieldPulseUsesNativeWeaponDurabilityPath() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      int assassin = createBladeShieldPlayer(world, blade);
+      CharData data = world.getMapper(com.riiablo.engine.server.component.Player.class)
+          .get(assassin).data;
+      Item weapon = new Item();
+      weapon.reset();
+      weapon.setBase(Riiablo.files.weapons.get("clw"));
+      assertNotNull(weapon.base, "native Assassin claw fixture is required");
+      weapon.attrs.base().put(Stat.durability, 20);
+      weapon.attrs.base().put(Stat.maxdurability, 20);
+      weapon.attrs.reset();
+      data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(weapon));
+
+      Attributes targetAttrs = attributes(1_000_000);
+      createBladeShieldMonster(world, 2f, targetAttrs);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      UnitState state = world.getMapper(UnitStates.class).get(assassin)
+          .stateList.getState(StateId.BLADESHIELD);
+      assertNotNull(state);
+      for (long seed = 1; seed <= 512 && weapon.attrs.get(Stat.durability).asInt() == 20; seed++) {
+        state.periodicCountdownFrames = 0;
+        MathUtils.random.setSeed(seed);
+        world.process();
+      }
+
+      assertEquals(19, weapon.attrs.get(Stat.durability).asInt(),
+          "a confirmed Blade Shield pulse drains one native weapon durability point");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void bladeShieldPulseUsesNativeTargetArmorDurabilityPath() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      int assassin = createBladeShieldPlayer(world, blade);
+      Attributes targetAttrs = attributes(1_000_000);
+      int target = createBladeShieldMonster(world, 2f, targetAttrs);
+      CharData targetData = CharData.createRemote("target", (byte) Riiablo.ASSASSIN);
+      Item armor = new Item();
+      armor.reset();
+      armor.setBase(Riiablo.files.armor.get("lbt"));
+      assertNotNull(armor.base, "native armor fixture is required");
+      armor.attrs.base().put(Stat.durability, 20);
+      armor.attrs.base().put(Stat.maxdurability, 20);
+      armor.attrs.reset();
+      targetData.getItems().equipItem(BodyLoc.FEET, targetData.getItems().add(armor));
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(target).data = targetData;
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      UnitState state = world.getMapper(UnitStates.class).get(assassin)
+          .stateList.getState(StateId.BLADESHIELD);
+      assertNotNull(state);
+      for (long seed = 1; seed <= 512 && armor.attrs.get(Stat.durability).asInt() == 20; seed++) {
+        state.periodicCountdownFrames = 0;
+        MathUtils.random.setSeed(seed);
+        world.process();
+      }
+
+      assertEquals(19, armor.attrs.get(Stat.durability).asInt(),
+          "a confirmed Blade Shield hit drains one native target armor durability point");
     } finally {
       world.dispose();
       com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);

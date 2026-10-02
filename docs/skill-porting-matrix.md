@@ -4,8 +4,8 @@
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
-- [x] `AssassinSkillSpecializationTest` 28 项、`AssassinMartialArtsTest` 37 项、
-  `NativeTrapSystemTest` 6 项及 `NativeTrapFireSystemTest` 2 项，共 73 项全部通过。
+- [x] `AssassinSkillSpecializationTest` 30 项、`AssassinMartialArtsTest` 37 项、
+  `NativeTrapSystemTest` 6 项及 `NativeTrapFireSystemTest` 2 项，共 75 项全部通过。
 - [x] 回归覆盖 Fire Trauma 的 air/ground/explosion 生命周期、陷阱 owner/damageOwner、
   shot budget、sentry retarget、Blade Fury/Blade Shield 周期和武术资源边界。
 - [x] 已建立 Assassin 专用真实 1.10f MPQ headless 入口；Fire Trauma(251) 已完成
@@ -134,10 +134,12 @@
   当作 Blade Shield 命中证据。
 - [x] observer reconnect 已单独验证：断线期间以 owner 当前权威状态为准，重连后只恢复
   仍活动的 `[158]`，`stale=false`，没有复活过期状态；`animationFallback=false`。
-- [ ] 本 gate 尚未替代完整技能验收：周期脉冲的逐目标规则、装备耐久/武器伤害交互、
-  墙体/null-hit、状态到期清理和真实客户端视觉持续时间仍需独立核对。下一步优先补
-  Blade Shield 的周期伤害/装备耐久矩阵，再回收 262/272/276 的 animation/keyframe
-  与 AssassinSentry AI fallback 待办。
+- [x] 新增 `AssassinSkillSpecializationTest` 耐久矩阵：确认每次真实命中沿
+  `ItemDurabilityManager` 原生 4% 武器耐久路径，受击方玩家护甲沿原生 10% 护甲路径；
+  只在确认命中后扣减，未把状态存在误当作耐久消耗。
+- [ ] 本 gate 尚未替代完整技能验收：周期脉冲的墙体/null-hit、状态到期清理和真实客户端
+  视觉持续时间仍需独立核对。下一步优先补这些边界，再回收 262/272/276 的
+  animation/keyframe 与 AssassinSentry AI fallback 待办。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate

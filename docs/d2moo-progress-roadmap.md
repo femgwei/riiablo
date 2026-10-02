@@ -2,8 +2,8 @@
 
 ## 2026-10-02 Assassin 行为层回归
 
-- [x] Assassin 专项 28 项、武术 37 项、NativeTrapSystem 6 项、NativeTrapFireSystem
-  2 项，共 73 项全部通过。
+- [x] Assassin 专项 30 项、武术 37 项、NativeTrapSystem 6 项、NativeTrapFireSystem
+  2 项，共 75 项全部通过。
 - [x] 这些回归锁定 dark-magic 对照的陷阱 owner 生命周期、发射预算、周期状态、
   Fire Trauma 父/地面/爆炸链和武术资源边界。
 - [x] 已建立 Assassin 专用真实 1.10f MPQ headless 存档/入口；Fire Trauma(251)
@@ -6290,8 +6290,9 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
   在两端实际掉血，排除仅状态广播或服务端 fallback 的假阳性。
 - [x] observer 断线重连通过：重连快照只恢复 owner 当前仍活动的状态 `[158]`，
   `stale=false`；本轮 `animationFallback=false`。
-- [ ] 仍待补周期脉冲的逐目标/伤害规则、装备耐久交互、墙体/null-hit、状态到期清理和
-  客户端视觉持续时间；并继续回收 Wake of Fire/Inferno/Death Sentry 的动画与 AI fallback
-  待办。
+- [x] `AssassinSkillSpecializationTest` 新增武器/受击方护甲耐久门槛并通过；确认命中后
+  分别沿 `ItemDurabilityManager` 的原生 4% weapon / 10% armor 概率路径扣减。
+- [ ] 仍待补周期脉冲的墙体/null-hit、状态到期清理和客户端视觉持续时间；并继续回收
+  Wake of Fire/Inferno/Death Sentry 的动画与 AI fallback 待办。
 
 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`。

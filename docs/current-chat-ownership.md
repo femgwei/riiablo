@@ -1260,10 +1260,12 @@ incarnation，并继续检查跨区域实体基线恢复。
 
 ### 2026-10-02 Assassin regression handoff
 
-- [x] Assassin 行为层回归共 73 项通过：专项 28、武术 37、NativeTrapSystem 6、
+- [x] Assassin 行为层回归共 75 项通过：专项 30、武术 37、NativeTrapSystem 6、
   NativeTrapFireSystem 2。
-- [ ] 当前没有 Assassin 专用真实 MPQ 双客户端入口；下一步应实现 trap fixture，
-  再验证 owner/observer、重连和真实动画，不得把纯逻辑通过当成四层完成。
+- [x] 已建立 Assassin 专用真实 MPQ 双客户端入口；Fire Trauma(251)、Shock Field(256)、
+  Blade Sentinel(257)、Charged Bolt Sentry(261)、Wake of Fire(262)、Inferno(272)、
+  Death Sentry(276) 与 Blade Shield(277) 已分别进入技能 gate，仍不得把纯逻辑通过当成
+  四层完成。
 
 ### 2026-10-02 Assassin Fire Trauma(251) air→ground gate
 
@@ -1284,6 +1286,8 @@ incarnation，并继续检查跨区域实体基线恢复。
   `state=158`，以及 `area_skill_reconnect_pass skill=277 ... states=[158] stale=false`。
 - [x] 结果：owner/observer 均观察到 `BLADESHIELD`，同一目标两端实际掉血检查通过，
   `animationFallback=false`；重连只恢复当前权威活动状态。
-- [ ] 尚未完成周期脉冲逐目标规则、装备耐久/武器伤害交互、墙体/null-hit、到期清理及
-  真实视觉持续时间。下一位 agent 应先补 Blade Shield 周期矩阵，然后处理 262/272/276
-  的动画/keyframe 和 `AssassinSentry` AI fallback。
+- [x] `AssassinSkillSpecializationTest` 新增并通过武器/受击方护甲耐久门槛；确认真实命中
+  后分别走 4% weapon 与 10% armor 原生概率路径。
+- [ ] 尚未完成周期脉冲墙体/null-hit、到期清理及真实视觉持续时间。下一位 agent 应先补
+  这些 Blade Shield 边界，然后处理 262/272/276 的动画/keyframe 和
+  `AssassinSentry` AI fallback。
