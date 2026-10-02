@@ -1,6 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
+
+- [x] `nearestHostile` 接入 D2MOO `sub_6FCF1A50`/`sub_6FCF1980` 的目标门槛：已知
+  `NativeUnitFlags` 必须同时满足 `TARGETABLE/CAN_BE_ATTACKED/IS_VALID_TARGET`，排除
+  Town，并在真实 map topology 下执行 `COLLIDE_MISSILE_BARRIER` 等价的
+  `FLAG_BLOCK_JUMP` 射线检查；已知不同 zone 的目标也不再被选中。
+- [x] 新增无效 flags、Town 和墙后目标 ECS 回归；两项新测试与完整
+  `AssassinSkillSpecializationTest` 41 项均 `BUILD SUCCESSFUL`。
+- [ ] 尚未完成真实 1.10f 双客户端 owner/observer/reconnect gate；无拓扑 headless
+  夹具仍按兼容策略放行，避免把缺失原生碰撞数据误判成墙命中。
+
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异（历史记录）
 
 - [x] D2MOO `sub_6FCF1A50` / `sub_6FCF1980` 明确要求存活 Player/Monster、非 Town、
   `UNITFLAG_CANBEATTACKED`，并检查 `COLLIDE_MISSILE_BARRIER`。

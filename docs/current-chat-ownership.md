@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry hostile target filter 差异定位）
+更新时间：2026-10-03（Death Sentry hostile target filter 回归完成）
 
 ## 唯一负责人
 
@@ -31,6 +31,23 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
+
+- `AssassinTrapSystem.nearestHostile` 已接入 D2MOO 的已知目标门槛：attached
+  `NativeUnitFlags` 必须可攻击且为有效目标，Town 与跨 zone 目标排除；真实 map topology
+  下执行 `FLAG_BLOCK_JUMP` missile-barrier 射线检查。
+- 新增无效 flags/Town 与墙后目标回归；完整 `AssassinSkillSpecializationTest` 41 项通过，
+  `BUILD SUCCESSFUL`。无拓扑 headless 夹具继续兼容放行，不把缺失地图数据当成墙体。
+- `./gradlew :core:test` 已执行但基线全量结果为 `2167 tests completed, 133 failed,
+  12 skipped`；失败集中在仓库缺失的 `test/*` 资源、外部 `G:\` MPQ 路径、未注册
+  `CofManager` 夹具及既有地图/战斗断言，未见本轮 Assassin 专项失败，不把该全量结果
+  标记为本次改动回归通过。
+- 下一步：真实双客户端 owner/observer/reconnect gate；随后处理 Death Sentry 尸体候选
+  的 D2MOO 房间链表优先级。工作区仍有其他 agent 的未提交文件，提交时只 stage 本轮
+  `AssassinTrapSystem.java`、`AssassinSkillSpecializationTest.java` 和三份文档。
+
+### 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异（历史记录）
 
 ### 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
 

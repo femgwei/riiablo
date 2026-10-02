@@ -4,6 +4,8 @@ import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
+import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.ai.utils.Ray;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
@@ -20,6 +22,8 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SummonedPet;
@@ -35,6 +39,8 @@ import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.map.DT1;
+import com.riiablo.map.Map;
 
 /**
  * Authoritative lifecycle for D2MOO SrvDo044/SrvDo045 assassin traps.
@@ -60,6 +66,7 @@ public class AssassinTrapSystem extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -67,6 +74,8 @@ public class AssassinTrapSystem extends IteratingSystem {
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   protected net.mostlyoriginal.api.event.common.EventSystem events;
+  private final Ray<Vector2> targetRay = new Ray<>(new Vector2(), new Vector2());
+  private final Collision<Vector2> targetCollision = new Collision<>(new Vector2(), new Vector2());
 
   @Override
   protected void process(int entityId) {
@@ -770,6 +779,17 @@ public class AssassinTrapSystem extends IteratingSystem {
       if (id == sourceId || !mPosition.has(id) || !mAttributes.has(id)) continue;
       SummonedPet other = mTrap.has(id) ? mTrap.get(id) : null;
       if (other != null) continue;
+      // D2MOO's sub_6FCF1A50 rejects units which are no longer attackable or
+      // valid combat targets.  Synthetic fixtures may omit NativeUnitFlags,
+      // so absence retains the historical permissive path; an attached flag
+      // component is authoritative and must satisfy all native target bits.
+      if (mNativeUnitFlags.has(id)) {
+        NativeUnitFlags flags = mNativeUnitFlags.get(id);
+        if (!NativeTargeting.canBeAttacked(flags)
+            || !NativeTargeting.isValidCombatTarget(flags)) continue;
+      }
+      if (isTownUnit(id) || !sameZoneWhenKnown(sourceId, id)
+          || !hasMissileBarrierLineOfSight(sourceId, id)) continue;
       float distance = origin.dst2(mPosition.get(id).position);
       Attributes attrs = mAttributes.get(id).attrs;
       com.riiablo.attributes.StatRef hp = attrs != null
@@ -779,6 +799,39 @@ public class AssassinTrapSystem extends IteratingSystem {
       best = id;
     }
     return best;
+  }
+
+  private boolean sameZoneWhenKnown(int first, int second) {
+    if (!mMapWrapper.has(first) || !mMapWrapper.has(second)) return true;
+    MapWrapper firstWrapper = mMapWrapper.get(first);
+    MapWrapper secondWrapper = mMapWrapper.get(second);
+    if (firstWrapper == null || secondWrapper == null
+        || firstWrapper.zone == null || secondWrapper.zone == null) return true;
+    return firstWrapper.zone == secondWrapper.zone;
+  }
+
+  private boolean isTownUnit(int entityId) {
+    if (!mMapWrapper.has(entityId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+  }
+
+  /** D2MOO target selection applies COLLIDE_MISSILE_BARRIER before firing. */
+  private boolean hasMissileBarrierLineOfSight(int sourceId, int targetId) {
+    if (!mPosition.has(sourceId) || !mPosition.has(targetId)) return false;
+    Map map = null;
+    if (mMapWrapper.has(sourceId) && mMapWrapper.get(sourceId) != null) {
+      map = mMapWrapper.get(sourceId).map;
+    }
+    if (map == null && mMapWrapper.has(targetId) && mMapWrapper.get(targetId) != null) {
+      map = mMapWrapper.get(targetId).map;
+    }
+    Vector2 origin = mPosition.get(sourceId).position;
+    // Headless fixtures without exported room topology have no native barrier
+    // query; production maps enter the castRay branch below.
+    if (map == null || map.getZone(origin) == null) return true;
+    targetRay.set(origin, mPosition.get(targetId).position);
+    return !map.castRay(targetRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, targetCollision);
   }
 
   static String resolveMissile(Skills.Entry skill, Monster monster) {

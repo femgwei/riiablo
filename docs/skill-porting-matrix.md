@@ -1,6 +1,21 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
+更新时间：2026-10-03（Death Sentry 目标过滤回归收口）
+
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
+
+- [x] `AssassinTrapSystem.nearestHostile` 现在对已附加 `NativeUnitFlags` 的单位要求
+  `TARGETABLE + CAN_BE_ATTACKED + IS_VALID_TARGET`，并排除 Town 单位；缺失 flags 的
+  旧 ECS 夹具仍保持兼容，生产实体由原生生成路径提供 flags。
+- [x] 当 source/target 的 `MapWrapper` 已知时要求同一 zone，并在有 RoomEx/map 拓扑时
+  用 `DT1.Tile.FLAG_BLOCK_JUMP` 执行 missile-barrier 射线检查；无拓扑的 headless 夹具
+  不伪造墙体命中。
+- [x] 新增 `deathSentryRejectsNativeInvalidAndTownTargetsBeforeSkill2` 与
+  `deathSentryRejectsHostileBehindMissileBarrier`，确认无效/Town/墙后目标不生成
+  Skill2、不消耗 shot；目标筛选通过后才创建权威导弹。
+- [x] `AssassinSkillSpecializationTest` 41 项通过，`BUILD SUCCESSFUL`。
+- [ ] 仍需真实 1.10f 双客户端验证 owner/observer/reconnect 的墙体和 null-hit 一致性；
+  尸体候选顺序仍保留单独的 D2MOO 链表优先级待办。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
 

@@ -1361,6 +1361,142 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void deathSentryRejectsNativeInvalidAndTownTargetsBeforeSkill2() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    com.riiablo.codec.excel.MonStats.Entry summon = null;
+    int[] originalAttackChance = null;
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      Monster sentry = world.getMapper(Monster.class).get(factory.entityId);
+      summon = sentry.monstats;
+      originalAttackChance = summon.aip3;
+      summon.aip3 = new int[] {100, 100, 100};
+
+      com.riiablo.codec.excel.MonStats.Entry fallen = Riiablo.files.monstats.get("fallen1");
+      assertNotNull(fallen);
+      int invalid = world.create();
+      world.getMapper(Monster.class).create(invalid).monstats = fallen;
+      world.getMapper(Position.class).create(invalid).position.set(10, 3);
+      Attributes invalidAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(invalid).attrs = invalidAttrs;
+      world.getMapper(NativeUnitFlags.class).create(invalid).reset();
+
+      int townTarget = world.create();
+      world.getMapper(Monster.class).create(townTarget).monstats = fallen;
+      world.getMapper(Position.class).create(townTarget).position.set(11, 3);
+      Attributes townAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(townTarget).attrs = townAttrs;
+      com.riiablo.map.Map.Zone town = new com.riiablo.map.Map.Zone() {
+        @Override public boolean isTown() { return true; }
+      };
+      world.getMapper(MapWrapper.class).create(townTarget).set(map, town);
+
+      int valid = world.create();
+      world.getMapper(Monster.class).create(valid).monstats = fallen;
+      world.getMapper(Position.class).create(valid).position.set(12, 3);
+      Attributes validAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(valid).attrs = validAttrs;
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1, factory.missiles,
+          "Death Sentry must continue to the next valid hostile target");
+      assertEquals(1000f, invalidAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "a target without CAN_BE_ATTACKED/IS_VALID_TARGET is a native null-hit");
+      assertEquals(1000f, townAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "Town units are excluded before the Skill2 fallback is fired");
+      assertEquals(1000f, validAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "the same-tick missile has not collided yet; creation proves the valid target was selected");
+    } finally {
+      if (summon != null) summon.aip3 = originalAttackChance;
+      world.dispose();
+    }
+  }
+
+  @Test
+  void deathSentryRejectsHostileBehindMissileBarrier() {
+    RecordingFactory factory = new RecordingFactory();
+    BarrierMap map = new BarrierMap();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    com.riiablo.codec.excel.MonStats.Entry summon = null;
+    int[] originalAttackChance = null;
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      world.getMapper(MapWrapper.class).create(factory.entityId).set(map, map.zone);
+      Monster sentry = world.getMapper(Monster.class).get(factory.entityId);
+      summon = sentry.monstats;
+      originalAttackChance = summon.aip3;
+      summon.aip3 = new int[] {100, 100, 100};
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target).monstats = Riiablo.files.monstats.get("fallen1");
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      Attributes targetAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.getMapper(MapWrapper.class).create(target).set(map, map.zone);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(0, factory.missiles,
+          "COLLIDE_MISSILE_BARRIER must prevent Death Sentry target acquisition");
+      assertEquals(0, trap.shotsFired,
+          "a wall-blocked target must not consume the trap shot budget");
+      assertEquals(1000f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.001f);
+    } finally {
+      if (summon != null) summon.aip3 = originalAttackChance;
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeShieldAndVenomExposeNativeSkillData() {
     Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
     assertNotNull(blade);
@@ -1988,6 +2124,19 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     TownMap() { super(0, 0); }
 
     @Override public Zone getZone(Vector2 point) { return town; }
+  }
+
+  private static final class BarrierMap extends com.riiablo.map.Map {
+    final Zone zone = new Zone();
+
+    BarrierMap() { super(0, 0); }
+
+    @Override public Zone getZone(Vector2 point) { return zone; }
+
+    @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+        int flags, int size, com.badlogic.gdx.ai.utils.Collision<Vector2> dst) {
+      return true;
+    }
   }
 
   private static final class RecordingFactory extends EntityFactory {
