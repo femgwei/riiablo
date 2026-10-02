@@ -1,6 +1,22 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（交接快照：Blade Shield RoomEx 范围与 null-hit 回归）
+更新时间：2026-10-03（交接快照：Wake of Fire Sentry 真实 keyframe gate）
+
+## 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
+
+- [x] 真实 1.10f MPQ 双客户端 gate 通过：客户端实际收到 `MIS` keyframe 并派发
+  `SrvDo045`，`animationFallback=false`；owner/observer 共享一个 `assassintrap`
+  控制实体和 maker→双 `wake of destruction` 链，样例实体为 `[133,134,135]`、类型
+  `[517,518]`。
+- [x] 修正 gate 证据竞态：陷阱控制实体本身已作为真实 keyframe evidence；子导弹尚未
+  出现时不再触发 2 秒 fallback 重复放置第二个陷阱。
+- [x] 修正夹具假失败：目标保留动态碰撞并放在落点外一格，避免控制器与目标重合导致
+  maker 方向为零；生产 `AssassinTrapSystem` 未改动。observer reconnect 通过，
+  `active=[134]`、`expiredDuringReconnect=2`、`stale=false`。
+- [ ] 逐目标伤害、两波方向/间隔/持续时间、墙体/null-hit、shot budget、控制实体到期及
+  `AssassinSentry` AI fallback 仍需专项验收；下一项继续 Inferno Sentry(272)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15
+  -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
 
 ## 2026-10-03 Assassin Blade Shield RoomEx / target-filter 对照
 

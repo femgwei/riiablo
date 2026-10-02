@@ -1,5 +1,20 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Wake of Fire Sentry(262) 真实 keyframe gate 收口
+
+- [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` keyframe → `SrvDo045`，
+  `animationFallback=false`；双方共享同一 `assassintrap` 控制实体、maker(517) 和
+  两枚 `wake of destruction` 波(518)，本次实体 `[133,134,135]`。
+- [x] fallback 证据改为接受首个权威控制实体，解决子导弹延迟造成的重复 dispatch；一次
+  cast 只创建一个陷阱。夹具保留目标动态碰撞并将目标放在落点外一格，避免零向量 maker，
+  不改变生产 `AssassinTrapSystem`。
+- [x] observer reconnect 通过：`active=[134]`、`expiredDuringReconnect=2`、
+  `stale=false`；构建结果 `BUILD SUCCESSFUL`。
+- [ ] 逐目标伤害、波形方向/间隔/持续时间、墙体/null-hit、shot budget、控制实体到期及
+  `AssassinSentry` AI fallback 仍待专项验收；下一步 Inferno Sentry(272)。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 -PareaVerbose
+  --no-daemon`。
+
 ## 2026-10-03 Assassin Blade Shield RoomEx / target-filter 对照
 
 - [x] 对照 D2MOO `SKILLS_SrvDo054_BladeShield`、`SKILLS_SrvDo142_Unused` 和

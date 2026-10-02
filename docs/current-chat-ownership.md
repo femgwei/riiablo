@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Blade Shield RoomEx 目标范围对照）
+更新时间：2026-10-03（Assassin Wake of Fire Sentry 真实 keyframe gate 收口）
 
 ## 唯一负责人
 
@@ -31,6 +31,18 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
+
+- 真实 MPQ 双客户端已实际触发 `MIS` keyframe 和 `SrvDo045`，
+  `animationFallback=false`；owner/observer 共享一个 `assassintrap` 控制实体和
+  maker(517)→双波(518)，重连结果为 `active=[134]`、`expiredDuringReconnect=2`、
+  `stale=false`。
+- fallback 证据现在接受首个权威控制实体，避免 maker/波延迟期间重复创建陷阱；夹具保留
+  目标动态碰撞并将目标放在落点外一格，零向量问题已消除。生产 `AssassinTrapSystem`
+  未改动。
+- 未完成：逐目标伤害、波形参数、墙体/null-hit、shot budget、到期和
+  `AssassinSentry` AI fallback；下一步 Inferno Sentry(272)。
 
 ### 2026-10-03 Blade Shield RoomEx / target-filter 增量
 

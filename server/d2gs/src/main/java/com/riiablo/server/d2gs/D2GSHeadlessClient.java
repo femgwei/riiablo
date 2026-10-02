@@ -1005,11 +1005,10 @@ public final class D2GSHeadlessClient {
           || skillId == ASSASSIN_INFERNO_SENTRY) {
         // SrvDo045 places the trap at the selected point.  Put a durable
         // hostile near the caster so the sentry can run SrvDo125 immediately.
-        // Keep it on the landing point: the peer player is also
-        // present in the fixture and must not win the sentry's nearest-hostile
-        // search before the intended monster is reached.  The monster has its
-        // dynamic footprint removed, so this still leaves the trap factory
-        // free to relocate the controller by one tile if needed.
+        // Keep the hostile close to, but not exactly on, the landing point:
+        // the native maker missile needs a non-zero travel vector when the
+        // controller acquires its first target. The peer player is also
+        // present in the fixture and must not win the nearest-hostile search.
         targetX = a.playerX;
         targetY = a.playerY + 4f;
       }
@@ -1030,8 +1029,8 @@ public final class D2GSHeadlessClient {
       }
       if ((skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
           || skillId == ASSASSIN_INFERNO_SENTRY) && targetId >= 0) {
-        float targetOffsetY = skillId == ASSASSIN_INFERNO_SENTRY ? 6f : 4f;
-        if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+        float targetOffsetY = skillId == ASSASSIN_INFERNO_SENTRY ? 6f : 5f;
+        if (!D2GS.headlessPlaceMonsterNear(
             targetId, a.playerId, 0f, targetOffsetY)) {
           throw new IOException("Assassin sentry fixture could not place durable target");
         }
@@ -1102,10 +1101,13 @@ public final class D2GSHeadlessClient {
         if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
             || skillId == ASSASSIN_INFERNO_SENTRY
             || skillId == ASSASSIN_DEATH_SENTRY) {
-          // The controller/first channel missile is visible before the full
-          // sentry sequence is complete. Do not dispatch a second placement
-          // merely because child snapshots are still travelling or late.
-          fallbackEvidence = sharedSkillMissile(a, b, skillId);
+          // The controller is the first authoritative result of the real
+          // placement keyframe; its child wave/channel/corpse missile may be
+          // delayed by the trap AI. Treat either as evidence that the client
+          // keyframe already ran, otherwise the timeout fallback dispatches a
+          // duplicate trap while the first controller is still arming.
+          fallbackEvidence = sharedAssassinTrapController(a, b, skillId)
+              || sharedSkillMissile(a, b, skillId);
         }
         if (!animationFallback && System.currentTimeMillis() - castStarted >= 2_000L
             && !fallbackEvidence) {
