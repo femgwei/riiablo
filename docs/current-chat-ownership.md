@@ -44,7 +44,7 @@
 - Death Sentry 的 Skill2 fallback 夹具保留控制器对象，控制器最终到期仍待独立门槛。
 - 前一轮代码提交/推送：`1c38059b`（`fix: register Assassin sentry AI implementations`）。
 - 本轮测试与文档提交/推送：`c9cf79d1`（`test: assert Assassin sentry shot budget retirement`），
-  `origin/master` 将在本轮同步。
+  `origin/master` 已同步。
 
 ### 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
 
