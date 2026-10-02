@@ -2,6 +2,18 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
+
+- [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` → `sub_6FD15210`：尸体候选先在
+  10-tile 搜索内筛选，再要求尸体到当前 hostile 的距离严格小于
+  `Param3 + (skillLevel - 1) * Param4` 的一半；新增回归锁定“恰好等于边界”不得消费。
+- [x] 夹具明确读取召唤体 `MonStats.Skill1 = "mon death sentry"` 的
+  `Param3/Param4`（而非放置技能 276 的 Param），避免把技能继承行和放置行混用。
+- [x] `AssassinSkillSpecializationTest` 36 项通过，验证命令同前：
+  `./gradlew :core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest`。
+- [ ] 正常 7 发预算下多尸体候选顺序、Skill2 闪电逐目标伤害、墙体/null-hit 及真实
+  双客户端边界仍待专项验收；下一步继续多尸体选择顺序。
+
 ## 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
 
 - [x] 纯 ECS 夹具将 Death Sentry 的原生 `maxShots` 临时收窄为 1，首次合法尸体爆炸

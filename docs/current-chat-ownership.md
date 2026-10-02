@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry shot budget 到期门槛收口）
+更新时间：2026-10-03（Death Sentry 尸体距离边界对照收口）
 
 ## 唯一负责人
 
@@ -31,6 +31,17 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
+
+- 对照 D2MOO `AITHINK_Fn104_DeathSentry` → `sub_6FD15210`，新增严格边界回归：
+  10-tile 候选搜索后，尸体到 hostile 必须严格小于召唤体攻击行
+  `Param3 + (skillLevel - 1) * Param4` 的一半，恰好边界不会被消费。
+- 测试读取 `MonStats.Skill1 = "mon death sentry"` 的参数，而不是放置技能 276 的
+  参数；`AssassinSkillSpecializationTest` 36 项通过。
+- 下一步：正常 7 发预算下多尸体候选顺序，再核对 Skill2 闪电逐目标伤害和墙体/null-hit。
+- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
+  不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
 

@@ -1099,6 +1099,79 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void deathSentrySrvDo055RejectsCorpseAtNativeDistanceBoundary() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      com.riiablo.codec.excel.MonStats.Entry fallen = Riiablo.files.monstats.get("fallen1");
+      assertNotNull(fallen);
+      int target = world.create();
+      world.getMapper(Monster.class).create(target).monstats = fallen;
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+
+      Skills.Entry corpseSkill = Riiablo.files.skills.get("mon death sentry");
+      assertNotNull(corpseSkill);
+      assertTrue(corpseSkill.Param != null && corpseSkill.Param.length >= 4,
+          "Death Sentry must expose native corpse-distance parameters");
+      int nativeRange = corpseSkill.Param[2] + (4 - 1) * corpseSkill.Param[3];
+      assertTrue(nativeRange > 0, "native corpse-distance range must be positive");
+      int corpseId = world.create();
+      Monster corpseMonster = world.getMapper(Monster.class).create(corpseId);
+      corpseMonster.monstats = fallen;
+      corpseMonster.monstats2 = Riiablo.files.monstats2.get(fallen.MonStatsEx);
+      assertNotNull(corpseMonster.monstats2);
+      assertTrue(corpseMonster.monstats2.corpseSel);
+      world.getMapper(Position.class).create(corpseId).position.set(
+          12f + nativeRange / 2f, 3f);
+      Attributes corpseAttrs = attributes(100);
+      corpseAttrs.get(Stat.hitpoints).set(0);
+      world.getMapper(AttributesWrapper.class).create(corpseId).attrs = corpseAttrs;
+      Corpse corpse = world.getMapper(Corpse.class).create(corpseId).reset(
+          Corpse.DEFAULT_DURATION, true);
+      world.getMapper(UnitStates.class).create(corpseId).init(corpseId);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertTrue(corpse.usable,
+          "Fn104 uses a strict '< nativeRange / 2' corpse-to-hostile gate");
+      assertEquals(0, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
+          "a corpse exactly on the native boundary must not trigger SrvDo055");
+      assertFalse(world.getMapper(UnitStates.class).get(corpseId).stateList
+          .hasState(StateId.CORPSE_NOSELECT));
+      assertFalse(world.getMapper(UnitStates.class).get(corpseId).stateList
+          .hasState(StateId.CORPSE_NODRAW));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeShieldAndVenomExposeNativeSkillData() {
     Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
     assertNotNull(blade);

@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
+
+- [x] 按 D2MOO `AITHINK_Fn104_DeathSentry` 和 `sub_6FD15210` 锁定两段式门槛：
+  先在 10-tile 搜索，再要求尸体到 hostile 严格小于
+  `Param3 + (skillLevel - 1) * Param4` 的半径；恰好位于边界的尸体不会被消费。
+- [x] 测试从召唤体 `MonStats.Skill1 = "mon death sentry"` 的攻击行读取距离参数，
+  不再误读放置技能 276 的 `Param`。`AssassinSkillSpecializationTest` 36 项通过。
+- [ ] 正常 7 发预算下多尸体候选顺序、Skill2 闪电逐目标伤害、墙体/null-hit 和真实
+  双客户端边界仍待专项验收；下一步为多尸体选择顺序。
+
 ## 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
 
 - [x] 纯 ECS 将 Death Sentry `maxShots` 收窄为 1，首次合法尸体爆炸后
