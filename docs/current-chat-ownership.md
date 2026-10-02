@@ -41,7 +41,7 @@
   均通过。
 - `AssassinSkillSpecializationTest` 35 项通过；shot budget、到期、墙体/null-hit 和逐目标
   伤害仍未宣称完成。本轮代码与测试提交/推送：`1c38059b`（`fix: register Assassin
-  sentry AI implementations`），`origin/master` 将在本轮同步。
+  sentry AI implementations`），`origin/master` 已同步。
 
 ### 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
 
