@@ -8,6 +8,8 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.AngleP;
@@ -1406,9 +1408,11 @@ public final class D2GSHeadlessClient {
 
   private static Set<Integer> activeAreaMissiles(D2GSHeadlessClient client, int skillId) {
     Set<Integer> active = new HashSet<>();
+    int effectiveSkillId = skillId == ASSASSIN_DEATH_SENTRY
+        ? deathSentryVisualSkillId() : skillId;
     for (Map.Entry<Integer, AreaMissile> entry : client.areaMissiles.entrySet()) {
       AreaMissile missile = entry.getValue();
-      if (missile.skillId == skillId && missile.everActive && !missile.deleted) {
+      if (missile.skillId == effectiveSkillId && missile.everActive && !missile.deleted) {
         active.add(entry.getKey());
       }
     }
@@ -1494,9 +1498,7 @@ public final class D2GSHeadlessClient {
     if (skillId == ASSASSIN_INFERNO_SENTRY && !infernoSentrySharedEvidence(a, b)) {
       return false;
     }
-    if (skillId == ASSASSIN_DEATH_SENTRY && !deathSentrySharedEvidence(a, b)) {
-      return false;
-    }
+    if (skillId == ASSASSIN_DEATH_SENTRY) return deathSentrySharedEvidence(a, b);
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1763,16 +1765,46 @@ public final class D2GSHeadlessClient {
     }
     Set<Integer> shared = new HashSet<>(owner.areaMissiles.keySet());
     shared.retainAll(observer.areaMissiles.keySet());
+    int expectedVisualSkill = deathSentryVisualSkillId();
+    int expectedVisualMissile = deathSentryVisualMissileId();
+    if (expectedVisualSkill < 0 || expectedVisualMissile < 0) return false;
     for (Integer entityId : shared) {
       AreaMissile first = owner.areaMissiles.get(entityId);
       AreaMissile second = observer.areaMissiles.get(entityId);
       if (first != null && second != null && first.everActive && second.everActive
-          && first.skillId == ASSASSIN_DEATH_SENTRY
-          && second.skillId == ASSASSIN_DEATH_SENTRY
-          && first.missileId > 0 && first.missileId == second.missileId
+          && first.skillId == expectedVisualSkill
+          && second.skillId == expectedVisualSkill
+          && first.missileId == expectedVisualMissile
+          && second.missileId == expectedVisualMissile
           && first.hasPosition && second.hasPosition) return true;
     }
     return false;
+  }
+
+  /** Resolve Death Sentry's corpse-explosion visual from the native summon row. */
+  private static int deathSentryVisualSkillId() {
+    if (Riiablo.files == null || Riiablo.files.skills == null
+        || Riiablo.files.monstats == null) return -1;
+    Skills.Entry placement = Riiablo.files.skills.get(ASSASSIN_DEATH_SENTRY);
+    if (placement == null || placement.summon == null || placement.summon.isEmpty()) return -1;
+    MonStats.Entry summon = Riiablo.files.monstats.get(placement.summon);
+    if (summon == null || summon.Skill1 == null || summon.Skill1.isEmpty()) return -1;
+    Skills.Entry attack = Riiablo.files.skills.get(summon.Skill1);
+    return attack != null ? attack.Id : -1;
+  }
+
+  /** Resolve the exact cltmissilea row used by Death Sentry's Skill1. */
+  private static int deathSentryVisualMissileId() {
+    if (Riiablo.files == null || Riiablo.files.skills == null
+        || Riiablo.files.monstats == null || Riiablo.files.Missiles == null) return -1;
+    Skills.Entry placement = Riiablo.files.skills.get(ASSASSIN_DEATH_SENTRY);
+    if (placement == null || placement.summon == null || placement.summon.isEmpty()) return -1;
+    MonStats.Entry summon = Riiablo.files.monstats.get(placement.summon);
+    if (summon == null || summon.Skill1 == null || summon.Skill1.isEmpty()) return -1;
+    Skills.Entry attack = Riiablo.files.skills.get(summon.Skill1);
+    if (attack == null || attack.cltmissilea == null || attack.cltmissilea.isEmpty()) return -1;
+    Missiles.Entry visual = Riiablo.files.Missiles.get(attack.cltmissilea);
+    return visual != null ? visual.Id : -1;
   }
 
   private static boolean bladeShieldSharedEvidence(D2GSHeadlessClient owner,

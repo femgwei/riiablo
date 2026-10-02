@@ -2,6 +2,22 @@
 
 更新时间：2026-10-03（交接快照：Wake of Fire Sentry 真实 keyframe gate）
 
+## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
+
+- [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；
+  双方共享 `assassintrap` 控制实体和尸体爆炸视觉。视觉行按真实召唤体
+  `MonStats.Skill1` 动态解析为 `Skill1=312 / missile=115`，不再错误要求放置技能 276
+  或硬编码 641。
+- [x] 两端确认同一原生尸体 `dead=true/life=0` 并带 `CORPSE_NOSELECT`；observer
+  reconnect 通过，持久视觉实体 `active=[135]`、`expiredDuringReconnect=0`、
+  `stale=false`。
+- [x] gate 的通用 area evidence 和 reconnect 集合均接受 Death Sentry 的 Skill1 视觉
+  行，同时仍要求控制器、尸体状态和双方同一带位置视觉实体，避免只验证落地陷阱。
+- [ ] 爆炸实际目标掉血/范围、重复尸体消费、墙体/null-hit、shot budget、控制实体到期及
+  `DeathSentry` AI fallback 仍需专项验收；下一步回收 Blade Shield(277) 边界。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15
+  -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
+
 ## 2026-10-03 Assassin Inferno Sentry(272) 真实 keyframe gate 收口
 
 - [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；

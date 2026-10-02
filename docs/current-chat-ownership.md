@@ -54,6 +54,15 @@
   `AssassinSentry` AI fallback 警告，通道参数、伤害、墙体/null-hit、shot budget 和
   到期清理尚未完成。下一步 Death Sentry(276)。
 
+### 2026-10-03 Assassin Death Sentry(276) gate 收口
+
+- 真实 MPQ 双客户端实际触发 `MIS`/`SrvDo045`，`animationFallback=false`；尸体事务和
+  视觉导弹均同步。视觉导弹按真实 `MonStats.Skill1` 解析为 `skill=312/missile=115`，
+  不再把放置技能 276 或旧的 641 当成视觉行。
+- 重连结果为 `active=[135]`、`expiredDuringReconnect=0`、`stale=false`；仍有
+  `DeathSentry` AI fallback 警告，爆炸伤害/范围、尸体重复消费、墙体/null-hit、shot
+  budget 和到期清理尚未完成。下一步回收 Blade Shield(277) 边界。
+
 ### 2026-10-03 Blade Shield RoomEx / target-filter 增量
 
 - `StateUpdater.processBladeShield` 已按 D2MOO aura 扫描语义限制完整地图实体到同一

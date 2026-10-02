@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
+
+- [x] 真实 MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；双方
+  共享 `assassintrap` 控制实体和尸体爆炸视觉。视觉行按召唤体 `MonStats.Skill1` 动态
+  解析为 `Skill1=312 / missile=115`，纠正旧 gate 对 276/641 的错误假设。
+- [x] 尸体状态在 owner/observer 两端一致（死亡、生命 0、`CORPSE_NOSELECT`）；重连
+  通过，`active=[135]`、`expiredDuringReconnect=0`、`stale=false`。
+- [x] 通用 area evidence/reconnect 已适配 Death Sentry 的 Skill1 视觉实体，同时保留
+  控制器与尸体事务断言。
+- [ ] 爆炸目标掉血/范围、重复尸体消费、墙体/null-hit、shot budget、到期和
+  `DeathSentry` AI fallback 仍待专项验收；下一步回收 Blade Shield(277) 边界。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 -PareaVerbose
+  --no-daemon`（通过，`BUILD SUCCESSFUL`）。
+
 ## 2026-10-03 Assassin Inferno Sentry(272) 真实 keyframe gate 收口
 
 - [x] 真实双客户端 MPQ gate 实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；
