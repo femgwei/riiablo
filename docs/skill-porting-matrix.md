@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（交接快照：Wake of Fire Sentry 真实 keyframe gate）
+更新时间：2026-10-03（交接快照：Assassin Sentry AI fallback 收口）
 
 ## 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
 
@@ -9,8 +9,10 @@
   不再把放置技能 `SrvDo045` 回退为攻击技能，避免陷阱递归创建或错误 helper missile。
 - [x] Death Sentry 在没有合法尸体时明确使用 `Skill2` 普通闪电攻击；缺失攻击行仍
   fail-closed。`AssassinSkillSpecializationTest` 共 34 项通过。
-- [ ] 真实双客户端日志中的 `AssassinSentry` AI fallback 警告、shot budget、到期清理、
-  墙体/null-hit 和逐目标伤害仍需专项验收；本项只完成攻击行解析层。
+- [x] 真实 1.10f MPQ 的 262/272/276 gate 均不再出现 `AI_FALLBACK ... GenericMonster`；
+  `animationFallback=false`，双端实体、重连和自然过期门槛继续通过。
+- [ ] shot budget、到期清理、墙体/null-hit 和逐目标伤害仍需专项验收；本项只收口
+  AI 注册与攻击行解析，不宣称完整陷阱行为完成。
 
 ## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
 
@@ -23,8 +25,8 @@
   `stale=false`。
 - [x] gate 的通用 area evidence 和 reconnect 集合均接受 Death Sentry 的 Skill1 视觉
   行，同时仍要求控制器、尸体状态和双方同一带位置视觉实体，避免只验证落地陷阱。
-- [ ] 爆炸实际目标掉血/范围、重复尸体消费、墙体/null-hit、shot budget、控制实体到期及
-  `DeathSentry` AI fallback 仍需专项验收；下一步回收 Blade Shield(277) 边界。
+- [ ] 爆炸实际目标掉血/范围、重复尸体消费、墙体/null-hit、shot budget 和控制实体到期
+  仍需专项验收；DeathSentry AI fallback 已由专用 AI 注册收口。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15
   -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
 - 代码/文档提交：`acc3ccca`（`test: close Death Sentry keyframe gate`），已推送到
@@ -37,8 +39,8 @@
   本次共享导弹为 `[133,134]`。
 - [x] observer reconnect 通过：通道导弹自然过期一枚，重连仅保留 `active=[133]`，
   `expiredDuringReconnect=1`、`stale=false`，没有复活已删除实体。
-- [ ] 通道 duration/pulse 间隔、方向追踪、逐目标伤害、墙体/null-hit、shot budget、
-  控制实体到期及 `AssassinSentry` AI fallback 仍需专项验收；下一项 Death Sentry(276)。
+- [ ] 通道 duration/pulse 间隔、方向追踪、逐目标伤害、墙体/null-hit、shot budget 和
+  控制实体到期仍需专项验收；AssassinSentry AI fallback 已由专用 AI 注册收口。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15
   -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
 
@@ -53,8 +55,8 @@
 - [x] 修正夹具假失败：目标保留动态碰撞并放在落点外一格，避免控制器与目标重合导致
   maker 方向为零；生产 `AssassinTrapSystem` 未改动。observer reconnect 通过，
   `active=[134]`、`expiredDuringReconnect=2`、`stale=false`。
-- [ ] 逐目标伤害、两波方向/间隔/持续时间、墙体/null-hit、shot budget、控制实体到期及
-  `AssassinSentry` AI fallback 仍需专项验收；下一项继续 Inferno Sentry(272)。
+- [ ] 逐目标伤害、两波方向/间隔/持续时间、墙体/null-hit、shot budget 和控制实体到期
+  仍需专项验收；AssassinSentry AI fallback 已由专用 AI 注册收口。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15
   -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
 

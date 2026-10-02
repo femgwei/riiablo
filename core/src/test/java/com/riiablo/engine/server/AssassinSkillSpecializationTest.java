@@ -385,6 +385,18 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void assassinSentryAiRowsDoNotUseGenericMonsterFallback() {
+    com.riiablo.engine.server.ai.AI wake =
+        com.riiablo.engine.server.ai.AI.findAI(101, "AssassinSentry");
+    com.riiablo.engine.server.ai.AI death =
+        com.riiablo.engine.server.ai.AI.findAI(102, "DeathSentry");
+    assertEquals("AssassinSentry", wake.getClass().getSimpleName());
+    assertEquals("DeathSentry", death.getClass().getSimpleName());
+    assertEquals("TRAP", wake.getState());
+    assertEquals("TRAP", death.getState());
+  }
+
+  @Test
   void shadowWarriorUsesNativeSrvDo049AndOwnedPetState() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

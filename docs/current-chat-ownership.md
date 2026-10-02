@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Blade Shield 静态 MPQ 资源门槛）
+更新时间：2026-10-03（Assassin Sentry AI fallback 收口）
 
 ## 唯一负责人
 
@@ -36,10 +36,11 @@
 
 - 新增 `sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills`，覆盖 Wake of Fire、
   Inferno、Death Sentry 的 `MonStats.Skill1/Skill2` 攻击行解析，禁止回退执行放置技能。
-- `AssassinSkillSpecializationTest` 34 项通过；真实 MPQ 的 `AssassinSentry` fallback 警告、
-  shot budget、到期和逐目标伤害仍未宣称完成。
-- 本轮测试提交/推送：`c2213d36`（`test: lock Assassin sentry attack skill resolution`），
-  `origin/master` 已同步。
+- 新增 `AssassinSentry`/`DeathSentry` 专用 AI，真实 262/272/276 gate 均未再出现
+  `AI_FALLBACK ... GenericMonster`；双端实体、重连、自然过期和 `animationFallback=false`
+  均通过。
+- `AssassinSkillSpecializationTest` 35 项通过；shot budget、到期、墙体/null-hit 和逐目标
+  伤害仍未宣称完成。本轮代码与测试提交 hash 将在推送后补入。
 
 ### 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
 
