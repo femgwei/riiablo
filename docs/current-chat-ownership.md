@@ -1167,3 +1167,10 @@ incarnation，并继续检查跨区域实体基线恢复。
   NativeTrapFireSystem 2。
 - [ ] 当前没有 Assassin 专用真实 MPQ 双客户端入口；下一步应实现 trap fixture，
   再验证 owner/observer、重连和真实动画，不得把纯逻辑通过当成四层完成。
+
+### 2026-10-02 Assassin Fire Trauma(251) 首个 MPQ gate
+
+- [x] 已接入最小 Assassin fixture；真实双客户端观察到共享 `bomb in air`（missile=385），
+  `animationFallback=false`。
+- [ ] 该 gate 仍是部分完成：下一步补 null-hit→ground、到期爆炸/范围伤害和 reconnect，
+  在这些门槛完成前不得宣称 Fire Trauma 已四层验收。

@@ -135,6 +135,9 @@ public final class D2GSHeadlessClient {
   // indices 474 (controller) and 475 (trail); these are table indices, not
   // the native enum values in D2MOO's MissilesIds.h.
   private static final int NATIVE_VINE_TRAIL_MISSILE = 475;
+  // 1.10f Skills.txt exact row; the legacy SkillId names do not expose this
+  // row as Fire Trauma, so keep the real table ID explicit for the gate.
+  private static final int ASSASSIN_FIRE_TRAUMA = 251;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -11128,16 +11131,19 @@ public final class D2GSHeadlessClient {
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
-    boolean sorceress = hydra || skillId == SkillId.METEOR
+    boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA;
+    boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
-        || skillId == SkillId.NOVA;
-    int characterClass = sorceress ? Riiablo.SORCERESS
+        || skillId == SkillId.NOVA);
+    int characterClass = assassin ? Riiablo.ASSASSIN : sorceress ? Riiablo.SORCERESS
         : necromancer ? Riiablo.NECROMANCER : Riiablo.DRUID;
-    CharacterClass classData = sorceress ? CharacterClass.SORCERESS
+    CharacterClass classData = assassin ? CharacterClass.ASSASSIN
+        : sorceress ? CharacterClass.SORCERESS
         : necromancer ? CharacterClass.NECROMANCER : CharacterClass.DRUID;
     String name = hydra ? "HeadlessHydra"
-        : sorceress ? "HeadlessSorc" : necromancer ? "HeadlessNecro" : "HeadlessArea";
+        : sorceress ? "HeadlessSorc" : assassin ? "HeadAssassin"
+        : necromancer ? "HeadlessNecro" : "HeadlessArea";
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, name, (byte) characterClass);
     // Keep the D2S header level consistent with the generated stat list.
@@ -11171,7 +11177,8 @@ public final class D2GSHeadlessClient {
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=" + name + " class="
-        + (sorceress ? "sorceress" : necromancer ? "necromancer" : "druid")
+        + (sorceress ? "sorceress" : assassin ? "assassin"
+            : necromancer ? "necromancer" : "druid")
         + " skill=" + skillId
         + " level=30 bytes=" + data.length);
     return data;
@@ -11605,7 +11612,7 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
-            + "FireBall(47), Nova(48), PoisonNova(92)");
+            + "FireBall(47), Nova(48), PoisonNova(92), Fire Trauma(251)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
@@ -11714,7 +11721,7 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
-          || skillId == SkillId.POISON_NOVA;
+          || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {
