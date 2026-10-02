@@ -1879,7 +1879,14 @@ public final class D2GSHeadlessClient {
   private static boolean bladeShieldSharedEvidence(D2GSHeadlessClient owner,
       D2GSHeadlessClient observer) {
     int state = com.riiablo.engine.server.state.StateId.BLADESHIELD;
-    return owner.areaStates.containsKey(state) && observer.areaStates.containsKey(state);
+    AreaState first = owner.areaStates.get(state);
+    AreaState second = observer.areaStates.get(state);
+    if (first == null || second == null || first.skillId != ASSASSIN_BLADE_SHIELD
+        || second.skillId != ASSASSIN_BLADE_SHIELD || first.level != second.level
+        || first.periodicDelayFrames != second.periodicDelayFrames) return false;
+    // StateP snapshots can straddle one simulation tick on the two TCP peers,
+    // but the advertised AuraLen must remain the same visual lifetime.
+    return Math.abs(first.duration - second.duration) <= 1;
   }
 
   private static boolean sharedAssassinTrapController(D2GSHeadlessClient owner,
