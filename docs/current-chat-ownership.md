@@ -1168,9 +1168,9 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [ ] 当前没有 Assassin 专用真实 MPQ 双客户端入口；下一步应实现 trap fixture，
   再验证 owner/observer、重连和真实动画，不得把纯逻辑通过当成四层完成。
 
-### 2026-10-02 Assassin Fire Trauma(251) 首个 MPQ gate
+### 2026-10-02 Assassin Fire Trauma(251) air→ground gate
 
-- [x] 已接入最小 Assassin fixture；真实双客户端观察到共享 `bomb in air`（missile=385），
-  `animationFallback=false`。
-- [ ] 该 gate 仍是部分完成：下一步补 null-hit→ground、到期爆炸/范围伤害和 reconnect，
-  在这些门槛完成前不得宣称 Fire Trauma 已四层验收。
+- [x] Assassin fixture 已通过严格双客户端 air→ground gate：共享 `bomb in air` (385)
+  和 `bomb on ground` (386)，`animationFallback=false`。
+- [x] reconnect 通过：已过期父实体不复活，活动地面实体正常恢复。
+- [ ] 仍需补地面到期爆炸/范围伤害及 owner 生命周期，尚不能宣称 Fire Trauma 四层验收。

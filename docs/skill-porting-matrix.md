@@ -11,15 +11,18 @@
 - [ ] Assassin 仍没有现成的真实 1.10f MPQ 双客户端入口；本轮没有把纯 ECS/Native
   通过结果标成四层完成。下一步应新增专用 headless trap fixture，再验证重连与动画。
 
-## 2026-10-02 Assassin Fire Trauma(251) 首个真实 MPQ gate
+## 2026-10-02 Assassin Fire Trauma(251) air→ground 真实 MPQ gate
 
 - [x] `headlessAreaSkill -PareaSkill=251` 已接入 Assassin 角色存档并通过真实
-  1.10f MPQ 双客户端 gate：`bomb in air` 权威导弹（missile=385）在 owner/observer
-  共享，skill=251、damageLevel=20 一致，且 `animationFallback=false`。
-- [x] 本轮只验证 D2MOO `MISSMODE_SrvHit36_MissileInAir` 的空中父导弹创建和多人
-  快照，不改变 Fire Trauma 的生产碰撞、伤害或地面爆炸逻辑。
-- [ ] 尚未标记四层完成：需要继续验证墙体 null-hit 转 `bomb on ground`、原生寿命到期
-  的一次性爆炸/范围伤害、陷阱 owner 生命周期和 observer reconnect。
+  1.10f MPQ 双客户端 gate：两端共享 `bomb in air`（missile=385）及其
+  `bomb on ground`（missile=386），skill=251、damageLevel=20 一致，且
+  `animationFallback=false`。
+- [x] 严格 gate 已通过 observer reconnect：断线期间空中父实体按原生生命周期过期，
+  重连只恢复仍活动的地面实体（`stale=false`），没有复活已删除实体。
+- [x] 本轮覆盖 D2MOO `MISSMODE_SrvHit36_MissileInAir` 的空中→地面转换和多人快照，
+  未改变 Fire Trauma 的生产碰撞、伤害或地面爆炸逻辑。
+- [ ] 尚未标记四层完成：需要继续验证地面行原生寿命到期的一次性爆炸/范围伤害及
+  陷阱 owner/damageOwner 生命周期。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate

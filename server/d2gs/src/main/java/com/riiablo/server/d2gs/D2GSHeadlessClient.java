@@ -1228,7 +1228,8 @@ public final class D2GSHeadlessClient {
    */
   private static boolean requiresAreaChild(int skillId) {
     return skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
-        || skillId == SkillId.METEOR || skillId == SkillId.FIRE_BALL;
+        || skillId == SkillId.METEOR || skillId == SkillId.FIRE_BALL
+        || skillId == ASSASSIN_FIRE_TRAUMA;
   }
 
   private static boolean requiresAreaReconnect(int skillId) {

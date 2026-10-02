@@ -9,14 +9,14 @@
 - [ ] 真实 1.10f MPQ 双客户端 trap gate 尚未建立；后续需新增 Assassin 专用 headless
   存档/入口，不能用 Sorceress area gate 替代。
 
-## 2026-10-02 Assassin Fire Trauma(251) 首个真实 gate
+## 2026-10-02 Assassin Fire Trauma(251) air→ground 真实 gate
 
-- [x] 新增 Assassin 真实 fixture，`headlessAreaSkill -PareaSkill=251` 通过：owner/
-  observer 共享 `bomb in air` 权威导弹（missile=385），`animationFallback=false`。
-- [x] 该门槛只覆盖 D2MOO `MISSMODE_SrvHit36_MissileInAir` 的父导弹创建/快照；未改动
-  生产碰撞或伤害公式。
-- [ ] 后续仍需专门 gate 覆盖墙体 null-hit、`bomb on ground` 到期爆炸、范围伤害、
-  owner/damageOwner 和重连恢复，当前不得标为 Fire Trauma 四层完成。
+- [x] Assassin fixture 通过严格双客户端 gate：owner/observer 共享 `bomb in air`
+  (385) 与 `bomb on ground` (386)，并确认 `animationFallback=false`。
+- [x] observer 重连只恢复仍活动的地面实体，已过期空中实体不复活；该结果符合原生
+  生命周期快照边界。
+- [ ] 后续仍需专门 gate 覆盖地面行到期爆炸、范围伤害和 owner/damageOwner；当前不得
+  标为 Fire Trauma 四层完成。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
