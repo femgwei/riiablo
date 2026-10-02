@@ -38,8 +38,8 @@
   `shotsFired` 不增加且控制器仍存在。
 - `AssassinSkillSpecializationTest` 39 项通过。下一步：同距尸体候选顺序、墙体阻断和
   真实双客户端 null-target/fallback。
-- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
-  不得 stage、覆盖或清理。
+- 本轮代码/测试提交：`b8e4c9c5`（`test: close Death Sentry null target gate`）；
+  工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
