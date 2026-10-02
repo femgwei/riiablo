@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Blade Shield expiry gate 收口）
+更新时间：2026-10-03（Assassin Blade Shield 静态 MPQ 资源门槛）
 
 ## 唯一负责人
 
@@ -86,7 +86,9 @@
   `finalPulseResets=1`；随后状态清除和 1 秒静默窗口继续通过。
 - 客户端 `StateOverlaySystemTest` 已确认 `bladeshield` Overlay 资源存在；StateP duration
   从 3 更新到 1 时 Overlay 保持，只有权威 `StateId=158` 移除后才清除。
-- 仍待：真实 MPQ 客户端渲染窗口的逐帧视觉持续时间；下一步接入实际渲染/截图核对。
+- 新增 `bladeShieldOverlayRowDeclaresNativeDccTiming`：确认 `Overlay.txt` 的文件名、帧数、
+  `AnimRate` 和四个 Blade Shield DCC（front/back/fade）均能从 1.10f MPQ 解析。
+- 仍待：真实 MPQ 客户端渲染窗口的逐帧视觉持续时间；静态资源存在不等价于窗口截图通过。
 - Overlay 生命周期提交：`12069ba0`（`test: verify Blade Shield overlay lifetime`），已推送到
   `origin/master`。
 - 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到

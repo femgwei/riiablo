@@ -66,6 +66,9 @@
   `finalPulseResets=1`；随后状态清除和 1 秒静默窗口继续通过。
 - [x] `StateOverlaySystemTest` 已确认 `bladeshield` Overlay 资源存在；StateP duration 从 3
   更新到 1 时 Overlay 保持，只有权威 `StateId=158` 移除后才清除。
+- [x] 静态 MPQ 资源门槛已补齐：`bladeShieldOverlayRowDeclaresNativeDccTiming` 检查
+  `Overlay.txt` 的 DCC 文件名、帧数、`AnimRate`，并确认 front/back 及两份 fade DCC
+  均能从 1.10f MPQ 解析；仍不把静态资源存在误记为真实窗口逐帧通过。
 - [ ] 真实 MPQ 客户端渲染窗口的逐帧视觉持续时间仍待专项验收；下一步接入实际渲染/截图
   核对。
 - [x] Blade Shield 双端 StateP gate 现在同步校验 skill、等级、`perdelay` 和 `AuraLen`，

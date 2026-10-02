@@ -86,6 +86,27 @@ class StateOverlaySystemTest extends RiiabloTest {
   }
 
   @Test
+  void bladeShieldOverlayRowDeclaresNativeDccTiming() {
+    com.riiablo.codec.excel.Overlay.Entry entry =
+        Riiablo.files.Overlay.get("bladeshield");
+    assertTrue(entry != null, "stock Overlay.txt must contain the Blade Shield row");
+    assertTrue(entry.Filename != null && !entry.Filename.isEmpty(),
+        "Blade Shield must resolve to a DCC filename");
+    assertTrue(entry.Frames > 0,
+        "Blade Shield overlay must declare at least one native frame");
+    assertTrue(entry.AnimRate > 0,
+        "Blade Shield overlay must declare a native AnimRate for client playback");
+    assertTrue(Riiablo.mpqs.contains("data\\global\\overlays\\Expansion\\bladeshield front.dcc"),
+        "Blade Shield front DCC must be present in the 1.10f MPQ set");
+    assertTrue(Riiablo.mpqs.contains("data\\global\\overlays\\Expansion\\bladeshield back.dcc"),
+        "Blade Shield back DCC must be present in the 1.10f MPQ set");
+    assertTrue(Riiablo.mpqs.contains("data\\global\\overlays\\Expansion\\bladeshieldfrontfade.dcc"),
+        "Blade Shield front fade DCC must be present in the 1.10f MPQ set");
+    assertTrue(Riiablo.mpqs.contains("data\\global\\overlays\\Expansion\\bladeshieldbackfade.dcc"),
+        "Blade Shield back fade DCC must be present in the 1.10f MPQ set");
+  }
+
+  @Test
   void coldAndFreezeStatesDoNotOverwriteBaseComponentTransforms() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
