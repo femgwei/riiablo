@@ -1169,7 +1169,7 @@ public final class D2GSHeadlessClient {
         verifyFireTraumaReconnect(a, b, inA, socketB, peerD2s, peerCharacter, targetId);
       } else if (requiresAreaReconnect(skillId)) {
         if (skillId == ASSASSIN_BLADE_SHIELD) {
-          verifyBladeShieldReconnect(a, b, inA, socketB, peerD2s, peerCharacter);
+          verifyBladeShieldReconnect(a, b, inA, socketB, peerD2s, peerCharacter, targetId);
         } else {
           verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
         }
@@ -1534,7 +1534,7 @@ public final class D2GSHeadlessClient {
 
   private void verifyBladeShieldReconnect(D2GSHeadlessClient owner,
       D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
-      byte[] observerD2s, CharacterHeader observerCharacter) throws Exception {
+      byte[] observerD2s, CharacterHeader observerCharacter, int targetId) throws Exception {
     Set<Integer> before = areaStateIds(owner, ASSASSIN_BLADE_SHIELD);
     if (before.isEmpty()) {
       throw new IllegalStateException("Blade Shield reconnect has no active state");
@@ -1588,7 +1588,7 @@ public final class D2GSHeadlessClient {
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
               + " states=" + restoredStates + " stale=false");
           if (config.requireAreaSkillExpiry) {
-            verifyBladeShieldExpiry(owner, ownerInput, reconnected, reconnectInput);
+            verifyBladeShieldExpiry(owner, ownerInput, reconnected, reconnectInput, targetId);
           }
           return;
         }
@@ -1601,7 +1601,7 @@ public final class D2GSHeadlessClient {
 
   private void verifyBladeShieldExpiry(D2GSHeadlessClient owner,
       DataInputStream ownerInput, D2GSHeadlessClient observer,
-      DataInputStream observerInput) throws Exception {
+      DataInputStream observerInput, int targetId) throws Exception {
     if (activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD).isEmpty()
         || activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD).isEmpty()) {
       throw new IllegalStateException("Blade Shield expiry gate started without two active states");
@@ -1615,9 +1615,26 @@ public final class D2GSHeadlessClient {
       Set<Integer> ownerActive = activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD);
       Set<Integer> observerActive = activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD);
       if (ownerActive.isEmpty() && observerActive.isEmpty()) {
+        float ownerLife = snapshotLife(owner, targetId);
+        float observerLife = snapshotLife(observer, targetId);
+        long quietDeadline = System.currentTimeMillis() + 1_000L;
+        while (System.currentTimeMillis() < quietDeadline) {
+          com.riiablo.net.packet.d2gs.D2GS quietPacket = readPacket(ownerInput);
+          if (quietPacket != null) owner.consume(quietPacket);
+          quietPacket = readPacket(observerInput);
+          if (quietPacket != null) observer.consume(quietPacket);
+          float nextOwnerLife = snapshotLife(owner, targetId);
+          float nextObserverLife = snapshotLife(observer, targetId);
+          if (Float.isFinite(ownerLife) && nextOwnerLife < ownerLife - 0.001f
+              || Float.isFinite(observerLife) && nextObserverLife < observerLife - 0.001f) {
+            throw new IllegalStateException("Blade Shield dealt damage after expiry: ownerLife="
+                + ownerLife + "->" + nextOwnerLife + " observerLife=" + observerLife
+                + "->" + nextObserverLife);
+          }
+        }
         log("area_skill_expiry_pass", "skill=" + ASSASSIN_BLADE_SHIELD
             + " ownerStates=" + ownerActive + " observerStates=" + observerActive
-            + " stale=false");
+            + " target=" + targetId + " quietMs=1000 stale=false");
         return;
       }
     }
