@@ -1,6 +1,21 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（Death Sentry 目标过滤回归收口）
+更新时间：2026-10-03（Death Sentry RoomEx 候选优先级回归）
+
+## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 优先级回归完成
+
+- [x] 静态核对 D2MOO `DrlgDrlgRoom.sub_6FD77BB0`：`pRoomsNear` 构造会把当前
+  `D2DrlgRoom` 纳入近房候选，再以 `sortRoomListByPosition` 稳定整理；riiablo 的
+  Act1/2/3/5 bridge 均按原生数组下标写入 `RoomEx.adjacentRoomIds`，没有改成距离排序。
+- [x] 新增 `deathSentryPrefersCurrentRoomBeforeNewerAdjacentCorpse`：同一 hostile
+  的当前 RoomEx 尸体和直接邻房尸体都满足 Fn104 严格距离门槛时，即使邻房尸体更新，
+  当前 RoomEx 尸体仍先被 `SrvDo055` 消费。
+- [x] 验证命令 `./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`：42 项通过，
+  `BUILD SUCCESSFUL`。
+- [ ] 该回归锁定“当前房间优先于 `pRoomsNear`”这一可验证契约；尚未在真实 MPQ
+  场景中证明多个邻房之间的具体顺序会影响 Death Sentry 尸体选择。下一项转入真实
+  墙体/null-hit 伤害 gate，并保留跨邻房顺序为独立证据项。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 

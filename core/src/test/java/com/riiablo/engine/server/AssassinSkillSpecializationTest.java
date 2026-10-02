@@ -1244,6 +1244,73 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void deathSentryPrefersCurrentRoomBeforeNewerAdjacentCorpse() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    com.riiablo.map.Map.Zone zone = nativeThreeRoomZoneForTrap();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(35, 3);
+      world.getMapper(MapWrapper.class).create(owner).set(map, zone).roomId = 0;
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(35, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      MapWrapper trapMap = world.getMapper(MapWrapper.class).create(factory.entityId).set(map, zone);
+      trapMap.roomId = 0;
+
+      com.riiablo.codec.excel.MonStats.Entry fallen = Riiablo.files.monstats.get("fallen1");
+      assertNotNull(fallen);
+      int hostile = world.create();
+      world.getMapper(Monster.class).create(hostile).monstats = fallen;
+      world.getMapper(Position.class).create(hostile).position.set(38, 3);
+      world.getMapper(AttributesWrapper.class).create(hostile).attrs = attributes(10000);
+      MapWrapper hostileMap = world.getMapper(MapWrapper.class).create(hostile).set(map, zone);
+      hostileMap.roomId = 0;
+
+      // The adjacent-room corpse is newer, but both corpses are inside the
+      // strict Fn104 corpse-to-hostile radius.  D2MOO scans the current room
+      // before its pRoomsNear entries, so room rank must beat insertion order.
+      int currentRoomCorpse = createSelectableFallenCorpse(world, fallen, 37, 3, 100);
+      MapWrapper currentMap = world.getMapper(MapWrapper.class).create(currentRoomCorpse).set(map, zone);
+      currentMap.roomId = 0;
+      int adjacentRoomCorpse = createSelectableFallenCorpse(world, fallen, 41, 3, 100);
+      MapWrapper adjacentMap = world.getMapper(MapWrapper.class).create(adjacentRoomCorpse).set(map, zone);
+      adjacentMap.roomId = 1;
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertFalse(world.getMapper(Corpse.class).get(currentRoomCorpse).usable,
+          "the current RoomEx corpse must be returned before pRoomsNear corpses");
+      assertTrue(world.getMapper(Corpse.class).get(adjacentRoomCorpse).usable,
+          "a newer adjacent-room corpse must not outrank the current RoomEx");
+      assertEquals(currentRoomCorpse, trap.deathLastCorpseId);
+      assertEquals(1, trap.shotsFired);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void deathSentryUsesSkill2LightningWhenNoCorpseIsInRange() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

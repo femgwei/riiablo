@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry hostile target filter 回归完成）
+更新时间：2026-10-03（Death Sentry RoomEx 候选优先级回归完成）
 
 ## 唯一负责人
 
@@ -31,6 +31,19 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Death Sentry 当前 RoomEx 尸体优先级回归完成
+
+- D2MOO `DrlgDrlgRoom.sub_6FD77BB0` 的近房数组包含当前房间，并经
+  `sortRoomListByPosition` 整理；riiablo Act1/2/3/5 bridge 保留该 native 数组顺序。
+- 新增 `deathSentryPrefersCurrentRoomBeforeNewerAdjacentCorpse`：当前 RoomEx 的旧尸体
+  先于直接邻房的更新尸体被 `SrvDo055` 消费，证明 `corpseRoomRank` 高于
+  `insertionOrder` 的层级契约。
+- `./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`：42 项通过，
+  `BUILD SUCCESSFUL`。
+- 真实 MPQ 尚未证明多个邻房之间的具体顺序会改变 Death Sentry 选择；下一步为真实
+  墙体/null-hit 伤害 gate。工作区其他 agent 的未提交文件仍不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 

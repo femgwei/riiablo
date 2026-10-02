@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 尸体优先级回归完成
+
+- [x] 静态证据：D2MOO `DrlgDrlgRoom.sub_6FD77BB0` 将当前房间也放入
+  `pRoomsNear`，随后调用 `sortRoomListByPosition`；Act1/2/3/5 的 riiablo bridge
+  目前按 native 数组顺序写入 `RoomEx.adjacentRoomIds`，未用几何最近距离重排。
+- [x] 新增 `deathSentryPrefersCurrentRoomBeforeNewerAdjacentCorpse`，确认当前
+  RoomEx 尸体的 rank 优先级高于更新但位于直接邻房的尸体；两者均满足严格 Fn104
+  距离门槛时，当前房间尸体先被 `SrvDo055` 消费。
+- [x] `./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`：42 项通过，
+  `BUILD SUCCESSFUL`。
+- [ ] 仍未宣称多个邻房之间的具体 `pRoomsNear` 顺序已经通过真实 MPQ 的
+  Death Sentry 场景验证；下一步执行真实墙体/null-hit 伤害 gate。
+
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 
 - [x] `nearestHostile` 接入 D2MOO `sub_6FCF1A50`/`sub_6FCF1980` 的目标门槛：已知
