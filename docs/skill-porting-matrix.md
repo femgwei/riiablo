@@ -26,10 +26,10 @@
 - [x] 真实 1.10f MPQ 的 262/272/276 gate 均不再出现 `AI_FALLBACK ... GenericMonster`；
   `animationFallback=false`，双端实体、重连和自然过期门槛继续通过。
 - [x] 纯 ECS 现在硬断言 Wake of Fire 单次 shot budget 后控制器退出，以及 Inferno
-  channel duration 结束并耗尽预算后控制器退出；Death Sentry 的 Skill2 fallback 测试
-  仍保留控制器对象，避免把攻击行解析和生命周期断言混在同一夹具。
-- [ ] shot budget、到期清理、墙体/null-hit 和逐目标伤害仍需专项验收；本项只收口
-  AI 注册与攻击行解析，不宣称完整陷阱行为完成。
+  channel duration 结束并耗尽预算后控制器退出；Death Sentry 已另有独立
+  one-shot corpse budget/到期门槛，避免把攻击行解析和生命周期断言混在同一夹具。
+- [ ] 除已收口的 one-shot budget 外，多发 shot budget、墙体/null-hit 和逐目标伤害
+  仍需专项验收；本项只收口 AI 注册与攻击行解析，不宣称完整陷阱行为完成。
 
 ## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
 

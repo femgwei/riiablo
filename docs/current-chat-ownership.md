@@ -56,7 +56,8 @@
   均通过。
 - `AssassinSkillSpecializationTest` 35 项通过；shot budget、到期、墙体/null-hit 和逐目标
   伤害仍未宣称完成；新增 Wake 单次预算退出和 Inferno channel+预算退出纯 ECS 断言。
-- Death Sentry 的 Skill2 fallback 夹具保留控制器对象，控制器最终到期仍待独立门槛。
+- Death Sentry 已新增独立 one-shot corpse budget/到期门槛；正常多发预算、墙体/null-hit
+  和逐目标伤害仍未宣称完成。
 - 前一轮代码提交/推送：`1c38059b`（`fix: register Assassin sentry AI implementations`）。
 - 本轮测试与文档提交/推送：`c9cf79d1`（`test: assert Assassin sentry shot budget retirement`），
   `origin/master` 已同步。
