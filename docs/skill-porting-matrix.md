@@ -1,6 +1,20 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（交接快照：Assassin Sentry AI fallback 收口）
+更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
+
+## 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
+
+- [x] 纯 ECS 夹具将 Death Sentry 的原生 `maxShots` 临时收窄为 1，首次合法尸体爆炸
+  使 `shotsFired` 从 0 增至 1；下一次系统 tick 删除 `SummonedPet` 控制实体，证明
+  尸体事务完成后不会继续保留陷阱控制器。
+- [x] 删除前仍解析并断言无合法尸体时使用召唤体 `Skill2 = "death sentry ltng"`，
+  且 fallback 行提供权威闪电 missile；删除后连续 tick 不再产生第二枚
+  `corpseexplosion`，避免把生命周期门槛误判为重复尸体消费。
+- [x] 验证命令：`./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest`（35 项通过，
+  `BUILD SUCCESSFUL`）。
+- [ ] 尚未宣称完成正常 7 发预算下的多尸体选择顺序、Skill2 闪电逐目标伤害、墙体/
+  null-hit 和真实双客户端到期视觉；下一步继续补 Death Sentry 的目标筛选/伤害边界。
 
 ## 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
 

@@ -1026,6 +1026,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertNotNull(trap);
       assertEquals(7, trap.maxShots,
           "calc4 includes one shot per three base Fire Blast levels");
+      trap.maxShots = 1;
       trap.attackCooldownFrames = 0;
       world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
 
@@ -1075,12 +1076,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
           "the consumed corpse creates one synchronized explosion visual");
 
-      for (int i = 0; i < 5; i++) {
-        trap.attackCooldownFrames = 0;
-        world.process();
-      }
-      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
-          "an already hidden corpse cannot be selected or exploded again");
       Skills.Entry fallback = AssassinTrapSystem.resolveAttackSkill(
           world.getMapper(Monster.class).get(factory.entityId), deathSentry);
       assertNotNull(fallback);
@@ -1089,6 +1084,15 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertTrue(hasText(fallback.srvmissile) || hasText(fallback.srvmissilea)
               || hasText(fallback.cltmissile) || hasText(fallback.cltmissilea),
           "the fallback row must provide an authoritative lightning missile");
+
+      for (int i = 0; i < 5; i++) {
+        trap.attackCooldownFrames = 0;
+        world.process();
+      }
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
+          "an already hidden corpse cannot be selected or exploded again");
+      assertFalse(world.getMapper(SummonedPet.class).has(factory.entityId),
+          "Death Sentry controller retires after its one-shot corpse budget");
     } finally {
       world.dispose();
     }

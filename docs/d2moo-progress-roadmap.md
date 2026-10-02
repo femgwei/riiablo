@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
+
+- [x] 纯 ECS 将 Death Sentry `maxShots` 收窄为 1，首次合法尸体爆炸后
+  `shotsFired=1`，下一次 tick 删除陷阱 `SummonedPet` 控制器；这是独立的
+  shot-budget/到期门槛，不改变生产 7 发预算。
+- [x] 在控制器删除前保留并验证无合法尸体时的 `Skill2 = "death sentry ltng"`
+  fallback 及其权威闪电 missile；随后连续 tick 没有重复 `corpseexplosion`。
+- [x] `./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest`：35 项通过，
+  `BUILD SUCCESSFUL`。
+- [ ] 正常 7 发预算下的多尸体事务、Skill2 闪电逐目标伤害、墙体/null-hit 以及真实
+  双客户端到期视觉仍待专项门槛；下一步进入 Death Sentry 目标筛选/伤害边界。
+
 ## 2026-10-03 Assassin Sentry AI fallback 收口
 
 - [x] 新增 `AssassinSentry` 与 `DeathSentry` 专用 AI 类；陷阱控制器继续由
