@@ -17,16 +17,13 @@
 - [ ] 仍需真实 1.10f 双客户端验证 owner/observer/reconnect 的墙体和 null-hit 一致性；
   尸体候选顺序仍保留单独的 D2MOO 链表优先级待办。
 
-## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异（历史记录）
 
 - [x] 对照 D2MOO `sub_6FCF1A50` / `sub_6FCF1980`：目标必须是存活的
   Player/Monster、非 Town，并带 `UNITFLAG_CANBEATTACKED`；候选还要通过
   `UNITS_TestCollisionWithUnit(..., COLLIDE_MISSILE_BARRIER)`。
-- [x] 当前 `AssassinTrapSystem.nearestHostile` 主要检查 Monster、Position、HP，
-  跳过陷阱实体但没有显式复刻 `CANBEATTACKED`、Town 和 missile-barrier 门槛；这属于
-  真实墙体/null-hit 风险，已定位但未在本轮覆盖其他 agent 的生产修改。
-- [ ] 下一步由生产文件负责人补 NativeUnitFlags/碰撞过滤回归，再验证无效目标不会触发
-  Skill2，墙体后的合法目标不会被错误穿透。
+- [x] 旧基线只检查 Monster、Position、HP，曾跳过 `CANBEATTACKED`、Town 和
+  missile-barrier 门槛；该差异已由上方回归条目补齐，保留本节作为迁移前证据。
 
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
 
