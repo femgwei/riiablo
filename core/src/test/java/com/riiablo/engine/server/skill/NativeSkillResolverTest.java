@@ -124,6 +124,17 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void assassinTrapPlacementDoesNotRequireThrowableWeapon() {
+    Skills.Entry shockField = new Skills.Entry();
+    shockField.Id = 256;
+    shockField.charclass = "ass";
+    shockField.srvdofunc = 43;
+    shockField.cltdofunc = 5;
+    assertFalse(NativeSkillResolver.isThrowableSkill(shockField));
+    assertFalse(NativeSkillResolver.requiresThrowableWeapon(shockField));
+  }
+
+  @Test
   public void manaUsesNativeFixedPointFormula() {
     Skills.Entry skill = new Skills.Entry();
     skill.mana = 12;

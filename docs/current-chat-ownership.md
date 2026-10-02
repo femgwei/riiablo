@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Fire Trauma 真实 MPQ reconnect gate）
+更新时间：2026-10-02（Assassin Shock Field 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -41,6 +41,17 @@
   已删除导弹；目标已死亡时允许重连基线不再包含该实体，但禁止恢复为存活目标。
 - 本轮只修改 `D2GSHeadlessClient` 的测试/验证断言和三份交接文档；没有改动 Fire Trauma
   生产碰撞、伤害、爆炸或 owner/damageOwner 逻辑。Assassin 其他 trap 技能仍需独立 gate。
+
+### 2026-10-02 Assassin Shock Field(256) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=256 -PareaTimeout=25` 已通过：双方共享 11 枚 native
+  `shock field in air`（388），`animationFallback=false`，并通过通用 area missile
+  reconnect 水位/子集检查。
+- 失败根因是 `cltdofunc=5` 被误当作投掷武器需求，导致真实 keyframe cast 被拒绝；已在
+  `NativeSkillResolver.isThrowableSkill` 中按 Assassin trap 的精确 `SrvDo` 白名单排除，
+  未放宽 Amazon 或 generic throw。`NativeSkillResolverTest` 定向回归通过。
+- 当前只完成原生创建、双端同步和重连；Shock Field 墙体/null-hit、伤害和高等级协同
+  仍是后续工作。下一项优先 Blade Sentinel(257) 的 trap owner/回旋导弹 gate。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

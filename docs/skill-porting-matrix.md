@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Fire Trauma reconnect gate）
+更新时间：2026-10-02（交接快照：Assassin Shock Field real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -31,6 +31,24 @@
 - [ ] Assassin 其余陷阱技能的 owner/damageOwner 生命周期、墙体/null-hit 和真实双端
   gate 仍需按技能逐项完成，不能由 Fire Trauma(251) 代替。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
+
+## 2026-10-02 Assassin Shock Field(256) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=256` 已通过真实 1.10f MPQ 双客户端 gate；owner/
+  observer 共享 11 枚 `shock field in air`（missile=388），每枚 `skill=256`、
+  `damageLevel=20` 一致，且 `animationFallback=false`。20 级夹具按本地行的
+  `par1 + lvl / par2 + skill('Fire Trauma'.blvl) / 3` 得到 11 枚；dark-magic 的
+  `Param1=6/Param2=4` 只作为行为和字段对照，不覆盖 1.10f 数据。
+- [x] 双端共享实体 ID、删除一致性及 observer reconnect 均通过；重连期间仍活动的
+  导弹只按 owner 当前权威集合恢复，没有复活未知/已删除导弹。
+- [x] 根因修复：`cltdofunc=5` 只是 Assassin 陷阱放置动画，不能沿用通用 throwable
+  weapon gate；`NativeSkillResolver` 现在仅对 Assassin trap `SrvDo043/044/045/048/054`
+  排除该误判，同时保留 Amazon 和通用投掷技能的武器要求。新增
+  `NativeSkillResolverTest.assassinTrapPlacementDoesNotRequireThrowableWeapon`。
+- [ ] 当前 gate 验证的是原生导弹创建、多人快照和重连；Shock Field 的墙体/null-hit、
+  逐目标伤害和更高等级协同仍需独立验收。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=256 -PareaTimeout=25 --no-daemon`；
+  `:core:test --tests com.riiablo.engine.server.skill.NativeSkillResolverTest --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 

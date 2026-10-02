@@ -254,6 +254,15 @@ public final class NativeSkillResolver {
    * Keep this aligned with Actioneer's native throw animation/keyframe paths.
    */
   public static boolean isThrowableSkill(Skills.Entry skill) {
+    // Assassin trap-family rows reuse client throw function 5 for their
+    // placement animation, but the native skills do not consume or require a
+    // throwable weapon. Keep Amazon/generic throw rows on the strict weapon
+    // path while excluding only the exact Assassin server callbacks.
+    if (skill != null && "ass".equalsIgnoreCase(skill.charclass)
+        && (skill.srvdofunc == 43 || skill.srvdofunc == 44 || skill.srvdofunc == 45
+            || skill.srvdofunc == 48 || skill.srvdofunc == 54)) {
+      return false;
+    }
     return skill != null && (skill.Id == SkillCodes.throw_
         || skill.Id == SkillCodes.left_hand_throw
         || skill.cltdofunc == 3 || skill.cltdofunc == 5

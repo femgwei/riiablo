@@ -138,6 +138,9 @@ public final class D2GSHeadlessClient {
   // 1.10f Skills.txt exact row; the legacy SkillId names do not expose this
   // row as Fire Trauma, so keep the real table ID explicit for the gate.
   private static final int ASSASSIN_FIRE_TRAUMA = 251;
+  // 1.10f Skills.txt exact row for Shock Field (dark-magic calls this
+  // Shock Web); keep the table ID explicit for the same reason.
+  private static final int ASSASSIN_SHOCK_FIELD = 256;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -956,6 +959,13 @@ public final class D2GSHeadlessClient {
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
+      if (skillId == ASSASSIN_SHOCK_FIELD) {
+        // SrvDo043 rejects landing points within two squares of the caster;
+        // use the same open six-square line as the native ECS regression so
+        // the progressive count is observable instead of clipped by range.
+        targetX = a.playerX + 8f;
+        targetY = a.playerY;
+      }
       float traumaInitialLife = fireBallTarget != null ? fireBallTarget.life : Float.NaN;
       if (skillId == ASSASSIN_FIRE_TRAUMA && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
@@ -1310,6 +1320,9 @@ public final class D2GSHeadlessClient {
     Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
     shared.retainAll(b.areaMissiles.keySet());
     if (!areaMissileDeletionConsistent(a, b, skillId)) return false;
+    if (skillId == ASSASSIN_SHOCK_FIELD && !shockFieldSharedScatter(a, b, shared)) {
+      return false;
+    }
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1331,6 +1344,37 @@ public final class D2GSHeadlessClient {
   }
 
   /**
+   * Native SrvDo043 emits six level-one Shock Field projectiles with distinct
+   * landing points. Require all six authoritative entities to be shared by
+   * both recipients and at least two positions to differ.
+   */
+  private static boolean shockFieldSharedScatter(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, Set<Integer> shared) {
+    int count = 0;
+    float firstX = Float.NaN;
+    float firstY = Float.NaN;
+    boolean varied = false;
+    for (Integer entityId : shared) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first == null || second == null || !first.everActive || !second.everActive
+          || first.deleted || second.deleted || first.skillId != ASSASSIN_SHOCK_FIELD
+          || second.skillId != ASSASSIN_SHOCK_FIELD || first.missileId != second.missileId
+          || first.damageLevel != second.damageLevel) continue;
+      count++;
+      if (!first.hasPosition || !second.hasPosition) continue;
+      if (!Float.isFinite(firstX)) {
+        firstX = first.x;
+        firstY = first.y;
+      } else if (Math.abs(first.x - firstX) > 0.01f
+          || Math.abs(first.y - firstY) > 0.01f) {
+        varied = true;
+      }
+    }
+    return count >= 6 && varied;
+  }
+
+  /**
    * Blizzard, Frozen Orb and Meteor are controller skills: observing only the
    * root missile is insufficient. Their native SrvDo/SrvHit path must publish
    * at least one child missile to both clients before the gate passes.
@@ -1348,6 +1392,7 @@ public final class D2GSHeadlessClient {
     // do not demand a stale reconnect snapshot for this one-shot effect.
     return (requiresAreaChild(skillId) && skillId != SkillId.FIRE_BALL
         && skillId != ASSASSIN_FIRE_TRAUMA)
+        || skillId == ASSASSIN_SHOCK_FIELD
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11257,7 +11302,7 @@ public final class D2GSHeadlessClient {
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
-    boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA;
+    boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -11847,7 +11892,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
-          || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA;
+          || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
+          || skillId == ASSASSIN_SHOCK_FIELD;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {

@@ -24,6 +24,18 @@
   验证，不能由 Fire Trauma(251) 的结果代替。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
+## 2026-10-02 Assassin Shock Field(256) 真实 gate
+
+- [x] 真实 1.10f MPQ 双客户端通过：owner/observer 共享 11 枚 `shock field in air`
+  （388），skill/damageLevel 一致，`animationFallback=false`；20 级数量符合本地
+  `par1 + lvl/par2 + Fire Trauma/3` 公式。
+- [x] observer reconnect 通过，重连只恢复断线期间仍属于当前权威集合的导弹；没有
+  未知实体复活，且跨客户端删除状态一致。
+- [x] 修正 Assassin trap 的 `cltdofunc=5` 误判：Shock Field 等 `SrvDo043/044/045/048/054`
+  不要求可投掷武器，Amazon/generic throw 仍保持原有 weapon gate；对应 resolver 回归已通过。
+- [ ] 墙体/null-hit、逐目标伤害和高等级协同仍未完成，不将本 gate 写成四层技能完成。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=256 -PareaTimeout=25 --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且
