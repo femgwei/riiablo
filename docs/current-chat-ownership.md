@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry 多尸体候选顺序差异定位）
+更新时间：2026-10-03（Death Sentry hostile target filter 差异定位）
 
 ## 唯一负责人
 
@@ -31,6 +31,15 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
+
+- D2MOO `sub_6FCF1A50` / `sub_6FCF1980` 要求目标存活、非 Town、具备
+  `CANBEATTACKED`，并通过 `COLLIDE_MISSILE_BARRIER`；当前 `nearestHostile` 未显式
+  复刻这些门槛，只按 Monster/Position/HP 过滤。
+- 该差异是墙体/null-hit 的生产待办；本轮不修改仍有其他 agent 未提交内容的
+  `AssassinTrapSystem.java`。下一步由其负责人接入 NativeUnitFlags/碰撞回归。
+- 本轮为文档静态对照更新，无编译；工作区其他未提交文件保持不动。
 
 ### 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异定位
 

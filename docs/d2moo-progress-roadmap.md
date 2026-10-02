@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
+
+- [x] D2MOO `sub_6FCF1A50` / `sub_6FCF1980` 明确要求存活 Player/Monster、非 Town、
+  `UNITFLAG_CANBEATTACKED`，并检查 `COLLIDE_MISSILE_BARRIER`。
+- [x] 当前 `nearestHostile` 只做 Monster/Position/HP 级筛选，尚未显式接入
+  NativeUnitFlags、Town 或 missile-barrier 判定；这与 D2MOO 存在潜在墙体/null-hit 偏差。
+  本轮不覆盖其他 agent 正在修改的 `AssassinTrapSystem.java`。
+- [ ] 下一步由生产文件负责人补目标过滤/碰撞回归，再进行真实双客户端验证。
+
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
 
 - [x] D2MOO `UNITROOM_AddUnitToRoomEx` 在 `pUnitFirst` 头部插入新单位；

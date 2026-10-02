@@ -2,6 +2,17 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异
+
+- [x] 对照 D2MOO `sub_6FCF1A50` / `sub_6FCF1980`：目标必须是存活的
+  Player/Monster、非 Town，并带 `UNITFLAG_CANBEATTACKED`；候选还要通过
+  `UNITS_TestCollisionWithUnit(..., COLLIDE_MISSILE_BARRIER)`。
+- [x] 当前 `AssassinTrapSystem.nearestHostile` 主要检查 Monster、Position、HP，
+  跳过陷阱实体但没有显式复刻 `CANBEATTACKED`、Town 和 missile-barrier 门槛；这属于
+  真实墙体/null-hit 风险，已定位但未在本轮覆盖其他 agent 的生产修改。
+- [ ] 下一步由生产文件负责人补 NativeUnitFlags/碰撞过滤回归，再验证无效目标不会触发
+  Skill2，墙体后的合法目标不会被错误穿透。
+
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
 
 - [x] 静态核对 D2MOO：`UNITROOM_AddUnitToRoomEx` 将新单位插入 `pUnitFirst`，
