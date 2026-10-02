@@ -56,14 +56,19 @@
 - [x] 真实 MPQ gate 已合并复核：两端 `BLADESHIELD`（`StateId=158`、level=20、
   `perdelay=25`）状态和同一目标掉血一致，`animationFallback=false`；严格重连断言要求
   owner 仍活动时恢复 `states=[158]`，不接受空集合假阳性。
-- [ ] 长时 `AuraLen` 到期、最后周期边界和真实客户端视觉持续时间仍待专项验收；下一步
-  增加可控短持续时间/到期夹具。
+- [x] 新增可控 `--area-skill-level` 与 `--require-area-skill-expiry` 入口；level=1 真实
+  MPQ gate 初始 `duration=499` 帧，重连恢复 `states=[158]` 后，owner/observer 均清除
+  `StateId=158` 并输出 `area_skill_expiry_pass`。
+- [ ] 到期前最后一个周期的唯一命中和真实客户端视觉持续时间仍待专项验收；下一步补这两个
+  边界。
 - 验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
   --tests com.riiablo.engine.server.AssassinMartialArtsTest
   --tests com.riiablo.engine.server.object.NativeTrapSystemTest
   --tests com.riiablo.engine.server.object.NativeTrapFireSystemTest --no-daemon --quiet`；另行
   验证 `:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`，均通过。
 - gate 加固提交：`cc808a7c`（`test: require Blade Shield reconnect state`），已推送到
+  `origin/master`。
+- 到期 gate 提交：`c05a6890`（`test: add Blade Shield expiry gate`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin 行为层回归

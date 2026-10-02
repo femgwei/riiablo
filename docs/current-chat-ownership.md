@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Blade Shield reconnect gate 加固）
+更新时间：2026-10-03（Assassin Blade Shield expiry gate 收口）
 
 ## 唯一负责人
 
@@ -76,8 +76,11 @@
   断言现在要求 owner 仍活动时恢复 `states=[158]`，不再把空状态集合判为通过。
 - 本轮 277 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15
   --no-daemon`，`BUILD SUCCESSFUL`；核心 AssassinSkillSpecializationTest 通过。
-- 仍待：长时运行到 `AuraLen` 到期、到期后的最后一个周期边界，以及真实客户端视觉持续
-  时间；下一步优先做可控短持续时间/到期专项夹具。
+- 新增可控 `--area-skill-level`/`--require-area-skill-expiry` 入口；level=1 真实 MPQ
+  gate 初始 `duration=499` 帧，双端先恢复 `states=[158]`，随后同时观察到状态清除并输出
+  `area_skill_expiry_pass ... ownerStates=[] observerStates=[]`。
+- 仍待：到期前最后一个周期是否产生且只产生一次命中，以及真实客户端视觉持续时间；下一步
+  优先补这两个边界。
 - 该增量已在前一提交完成；当前工作区仍有其他 agent 的未提交代码
   `ItemEntry.java`、`AssassinTrapSystem.java`、`MissileCollisionSystem.java`、
   `StatFormatterTest.java`，以及未跟踪日志/dump，均不属于本轮，接手者不得覆盖或提交。
