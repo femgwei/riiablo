@@ -41,7 +41,7 @@
   `sentry lightning` 直接比较 row 名；测试现在比较解析后的稳定 missile ID。
 - `AssassinSkillSpecializationTest` 38 项通过。下一步：同距尸体候选顺序、墙体/null-hit
   和真实双客户端 fallback。
-- 本轮代码/测试提交：`e2da5841`（`test: verify Death Sentry Skill2 fallback missile`）；
+- 本轮代码/测试提交：`49516d7f`（`test: verify Death Sentry lightning collision damage`）；
   工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
