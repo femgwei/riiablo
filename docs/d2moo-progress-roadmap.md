@@ -8,6 +8,8 @@
 - [x] 当前 `AssassinTrapSystem.findDeathSentryCorpse` 使用 `bestDistance` 最小化
   到 hostile 的距离，和原生候选优先级可能不同；由于该生产文件仍有其他 agent 未提交
   修改，本轮只记录差异，不覆盖其工作区。
+- [x] 两尸体同距夹具已锁定当前 ECS 首实体 tie-break，作为后续策略替换前的观测基线，
+  不宣称已经达到 D2MOO 新尸体优先级。
 - [ ] 下一步建立确定性同距/不同距尸体夹具，确认 ECS 候选顺序后再调整生产策略。
 
 ## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照

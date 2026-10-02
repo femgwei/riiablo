@@ -38,6 +38,8 @@
   `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按链表顺序扫描，
   `sub_6FD15210` 返回首个匹配尸体；当前 `findDeathSentryCorpse` 却按 `bestDistance`
   选择最近尸体，存在原生顺序偏差风险。
+- 两尸体同距回归已记录当前 ECS 首实体 tie-break，仅作为迁移前观测基线，不代表原生
+  新尸体优先级已完成。
 - 本轮未修改 `AssassinTrapSystem.java`，因为该文件仍有其他 agent 的未提交内容；下一步
   先做确定性顺序夹具，再由生产文件负责人合并策略调整。
 - 本轮为文档对照更新，无编译；提交：`4294e6cf`（`docs: record Death Sentry corpse order divergence`），
