@@ -88,6 +88,8 @@
   从 3 更新到 1 时 Overlay 保持，只有权威 `StateId=158` 移除后才清除。
 - 新增 `bladeShieldOverlayRowDeclaresNativeDccTiming`：确认 `Overlay.txt` 的文件名、帧数、
   `AnimRate` 和四个 Blade Shield DCC（front/back/fade）均能从 1.10f MPQ 解析。
+- 本轮提交/推送：`790140f0`（`test: verify Blade Shield MPQ overlay assets`），
+  `origin/master` 已同步。
 - 仍待：真实 MPQ 客户端渲染窗口的逐帧视觉持续时间；静态资源存在不等价于窗口截图通过。
 - Overlay 生命周期提交：`12069ba0`（`test: verify Blade Shield overlay lifetime`），已推送到
   `origin/master`。
