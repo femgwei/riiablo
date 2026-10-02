@@ -136,11 +136,12 @@ public class StateOverlaySystem extends IteratingSystem {
     boolean freezeActive = states.stateList.hasState(StateId.FREEZE);
     boolean poison = states.stateList.hasState(StateId.POISON);
     if (!cold && !freezeActive && !poison) return -1;
-    // The stock States.txt value 108 is a state-table color id, but the
-    // renderer consumes the corresponding HueVariations row from Pal.pl2.
-    // In the retail 1.10f palette row 108 is purple; row 100 is the native
-    // deep-blue cold/freeze tint.  Poison remains the native green row 104.
-    int fallback = cold || freezeActive ? 100 : 104;
+    // The stock COLD/FREEZE rows carry blue=1 and colorshift=108.  The
+    // renderer's HueVariations table is stored in the palette's BGR order;
+    // row 100 therefore produces the orange-brown tint seen in-game, while
+    // row 108 is purple.  Native unit blue state presentation uses the dark
+    // blue HueVariations row 107.  Poison remains the native green row 104.
+    int fallback = cold || freezeActive ? 107 : 104;
     if (cold || freezeActive || Riiablo.files == null || Riiablo.files.States == null) {
       return fallback;
     }
