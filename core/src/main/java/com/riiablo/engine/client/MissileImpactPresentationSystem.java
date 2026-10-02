@@ -106,6 +106,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
     if (visual.nativeLifetimeFrames > 0
         && visual.nativeFrame >= visual.nativeLifetimeFrames) {
+      processClientHitFunction(visual, mPosition.get(entityId).position);
       world.delete(entityId);
       return;
     }
@@ -118,8 +119,61 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (visual.nativeLifetimeFrames <= 0
         && !animation.animation.isLooping()
         && animation.animation.isFinished()) {
+      processClientHitFunction(visual, mPosition.get(entityId).position);
       world.delete(entityId);
     }
+  }
+
+  /**
+   * Native client hit callback 31 used by the icebreak death missiles.
+   *
+   * <p>The callback is not an impact child callback: the icebreak animation
+   * itself is the visible shatter, and the native client creates the melt
+   * missile only after that animation reaches its terminal frame.  The
+   * Missiles.txt rows do not carry a child name, so the two vanilla mappings
+   * are kept here exactly as in the 1.10f client:</p>
+   *
+   * <ul>
+   *   <li>icebreaksmall -> icebreaksmallmelt</li>
+   *   <li>icebreakmedium/icebreaklarge -> icebreaklargemelt</li>
+   * </ul>
+   */
+  private void processClientHitFunction(Missile visual, Vector2 position) {
+    if (visual == null || visual.missile == null || position == null
+        || visual.missile.pCltHitFunc != 31 || factory == null
+        || Riiablo.files == null || Riiablo.files.Missiles == null) return;
+    String childName = clientHit31Child(visual.missile.Missile);
+    if (childName == null) return;
+    Missiles.Entry child = Riiablo.files.Missiles.get(childName);
+    if (child == null) {
+      log.warn("[MISSILE_IMPACT_FUNC31] source={} missing child={}",
+          visual.missile.Missile, childName);
+      return;
+    }
+    int id;
+    if (factory instanceof ClientEntityFactory) {
+      id = ((ClientEntityFactory) factory).createMissilePresentation(
+          child, Vector2.X, new Vector2(position));
+    } else {
+      id = factory.createMissile(child, Vector2.X, new Vector2(position), -1);
+    }
+    if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
+    Missile melt = mMissile.get(id);
+    melt.authoritative = false;
+    melt.presentationOnly = true;
+    melt.ownerId = -1;
+    melt.persistent = false;
+    melt.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
+    log.info("[MISSILE_IMPACT_FUNC31] source={} child={} entity={} pos=({}, {})",
+        visual.missile.Missile, childName, id, position.x, position.y);
+  }
+
+  static String clientHit31Child(String sourceName) {
+    if (sourceName == null) return null;
+    if ("icebreaksmall".equalsIgnoreCase(sourceName)) return "icebreaksmallmelt";
+    if ("icebreakmedium".equalsIgnoreCase(sourceName)
+        || "icebreaklarge".equalsIgnoreCase(sourceName)) return "icebreaklargemelt";
+    return null;
   }
 
   private void processClientFlightFunction(int entityId, Missile visual,

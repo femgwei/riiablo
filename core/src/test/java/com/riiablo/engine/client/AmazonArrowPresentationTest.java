@@ -240,6 +240,17 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void icebreakHitFunction31UsesNativeMeltChild() {
+    assertEquals("icebreaksmallmelt",
+        MissileImpactPresentationSystem.clientHit31Child("icebreaksmall"));
+    assertEquals("icebreaklargemelt",
+        MissileImpactPresentationSystem.clientHit31Child("icebreakmedium"));
+    assertEquals("icebreaklargemelt",
+        MissileImpactPresentationSystem.clientHit31Child("icebreaklarge"));
+    assertNull(MissileImpactPresentationSystem.clientHit31Child("icebreaksmoke"));
+  }
+
+  @Test
   void circularClientCallbacksUseMissileDirectionCount() {
     Missiles.Entry frostNova = Riiablo.files.Missiles.get("frostnova");
     assertNotNull(frostNova);
