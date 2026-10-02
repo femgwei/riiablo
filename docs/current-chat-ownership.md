@@ -39,6 +39,11 @@
   下执行 `FLAG_BLOCK_JUMP` missile-barrier 射线检查。
 - 新增无效 flags/Town 与墙后目标回归；完整 `AssassinSkillSpecializationTest` 41 项通过，
   `BUILD SUCCESSFUL`。无拓扑 headless 夹具继续兼容放行，不把缺失地图数据当成墙体。
+- 真实 1.10f `:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15
+  -PareaVerbose --no-daemon` 已复跑通过：双端 `sharedMissiles=[135]`、
+  `states=[118,104,108]`、`animationFallback=false`；observer reconnect 为
+  `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。精简日志保留在本地
+  `death-sentry-target-gate-next.log`，不纳入提交。
 - `./gradlew :core:test` 已执行但基线全量结果为 `2167 tests completed, 133 failed,
   12 skipped`；失败集中在仓库缺失的 `test/*` 资源、外部 `G:\` MPQ 路径、未注册
   `CofManager` 夹具及既有地图/战斗断言，未见本轮 Assassin 专项失败，不把该全量结果

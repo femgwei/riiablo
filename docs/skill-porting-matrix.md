@@ -14,8 +14,11 @@
   `deathSentryRejectsHostileBehindMissileBarrier`，确认无效/Town/墙后目标不生成
   Skill2、不消耗 shot；目标筛选通过后才创建权威导弹。
 - [x] `AssassinSkillSpecializationTest` 41 项通过，`BUILD SUCCESSFUL`。
-- [ ] 仍需真实 1.10f 双客户端验证 owner/observer/reconnect 的墙体和 null-hit 一致性；
-  尸体候选顺序仍保留单独的 D2MOO 链表优先级待办。
+- [x] 真实 1.10f MPQ 双客户端 gate 已复跑通过：`area_skill_dual_pass` 记录
+  `sharedMissiles=[135]`、双方 `states=[118,104,108]`、`animationFallback=false`；
+  observer reconnect 记录 `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。
+- [ ] 本 gate 证明跨客户端实体/状态/重连一致性，但没有替代墙体布置专项和 null-hit
+  目标伤害 gate；尸体候选顺序仍保留单独的 D2MOO 链表优先级待办。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异（历史记录）
 

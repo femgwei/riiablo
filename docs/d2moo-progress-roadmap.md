@@ -8,8 +8,11 @@
   `FLAG_BLOCK_JUMP` 射线检查；已知不同 zone 的目标也不再被选中。
 - [x] 新增无效 flags、Town 和墙后目标 ECS 回归；两项新测试与完整
   `AssassinSkillSpecializationTest` 41 项均 `BUILD SUCCESSFUL`。
-- [ ] 尚未完成真实 1.10f 双客户端 owner/observer/reconnect gate；无拓扑 headless
-  夹具仍按兼容策略放行，避免把缺失原生碰撞数据误判成墙命中。
+- [x] 真实 1.10f MPQ 双客户端 gate 已通过：`sharedMissiles=[135]`，双方均观察到
+  `states=[118,104,108]`，且 `animationFallback=false`；observer reconnect 保持
+  `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。
+- [ ] 该 gate 尚未覆盖专门的真实墙体/null-hit 目标伤害场景；无拓扑 headless 夹具仍按
+  兼容策略放行，避免把缺失原生碰撞数据误判成墙命中。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 静态差异（历史记录）
 
