@@ -928,6 +928,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "the maker is consumed after spawning its waves");
       assertTrue(factory.missileEntityIds.get(1) != factory.missileEntityIds.get(2),
           "the two wave missiles are distinct authoritative entities");
+      assertFalse(world.getMapper(SummonedPet.class).has(factory.entityId),
+          "Wake of Fire controller retires after its one-shot budget");
     } finally {
       world.dispose();
     }
@@ -987,6 +989,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "SrvDo95 creates another missile on the calc3 animation event");
       assertTrue(factory.missileDirections.get(1).y > 0f,
           "each inferno pulse updates its direction toward the moving target");
+      for (int i = 0; i < 25 && world.getMapper(SummonedPet.class).has(factory.entityId); i++) {
+        world.process();
+      }
+      assertFalse(world.getMapper(SummonedPet.class).has(factory.entityId),
+          "Inferno controller retires after its native channel and shot budget");
     } finally {
       world.dispose();
     }
@@ -1074,7 +1081,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       }
       assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
           "an already hidden corpse cannot be selected or exploded again");
-
       Skills.Entry fallback = AssassinTrapSystem.resolveAttackSkill(
           world.getMapper(Monster.class).get(factory.entityId), deathSentry);
       assertNotNull(fallback);

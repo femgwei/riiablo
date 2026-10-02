@@ -6,6 +6,9 @@
   `AssassinTrapSystem` 驱动，GenericMonster 不再参与陷阱攻击。
 - [x] 真实 1.10f MPQ 262/272/276 gate 均通过，筛选输出未出现 `AI_FALLBACK`，且
   `animationFallback=false`；双端实体、重连和自然过期门槛保持通过。
+- [x] `AssassinSkillSpecializationTest` 新增 Wake 单次预算退出和 Inferno channel
+  duration+预算退出断言；Death Sentry 的 Skill2 fallback 夹具仍保留控制器，避免误把
+  fallback 解析测试当作生命周期删除证据。
 - [ ] 逐目标伤害、shot budget、到期清理、墙体/null-hit 和真实窗口视觉仍待专项验收。
 
 ## 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
