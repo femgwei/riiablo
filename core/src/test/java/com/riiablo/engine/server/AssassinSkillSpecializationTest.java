@@ -1172,6 +1172,72 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void deathSentrySrvDo055ConsumesDistinctCorpsesAcrossNormalShotBudget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 2;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      com.riiablo.codec.excel.MonStats.Entry fallen = Riiablo.files.monstats.get("fallen1");
+      assertNotNull(fallen);
+      int target = world.create();
+      world.getMapper(Monster.class).create(target).monstats = fallen;
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      int firstCorpse = createSelectableFallenCorpse(world, fallen, 11, 3, 100);
+      int secondCorpse = createSelectableFallenCorpse(world, fallen, 14, 3, 100);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      boolean firstConsumed = !world.getMapper(Corpse.class).get(firstCorpse).usable;
+      boolean secondConsumed = !world.getMapper(Corpse.class).get(secondCorpse).usable;
+      assertTrue(firstConsumed ^ secondConsumed,
+          "the first SrvDo055 transaction consumes exactly one of two legal corpses");
+      int firstSelected = firstConsumed ? firstCorpse : secondCorpse;
+      assertEquals(firstSelected, trap.deathLastCorpseId);
+      assertEquals(1, trap.shotsFired);
+
+      trap.attackCooldownFrames = 0;
+      world.process();
+
+      assertFalse(world.getMapper(Corpse.class).get(firstCorpse).usable);
+      assertFalse(world.getMapper(Corpse.class).get(secondCorpse).usable,
+          "the second shot must consume the other legal corpse");
+      assertEquals(2, trap.shotsFired);
+      assertEquals(2, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"));
+
+      world.process();
+      assertFalse(world.getMapper(SummonedPet.class).has(factory.entityId),
+          "the normal two-shot budget retires after both corpse transactions");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeShieldAndVenomExposeNativeSkillData() {
     Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
     assertNotNull(blade);
@@ -1871,6 +1937,23 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     attrs.base().put(Stat.tohit, 1000);
     attrs.reset();
     return attrs;
+  }
+
+  private static int createSelectableFallenCorpse(World world,
+      com.riiablo.codec.excel.MonStats.Entry fallen, float x, float y, float maxHp) {
+    int corpseId = world.create();
+    Monster corpseMonster = world.getMapper(Monster.class).create(corpseId);
+    corpseMonster.monstats = fallen;
+    corpseMonster.monstats2 = Riiablo.files.monstats2.get(fallen.MonStatsEx);
+    assertNotNull(corpseMonster.monstats2);
+    assertTrue(corpseMonster.monstats2.corpseSel);
+    world.getMapper(Position.class).create(corpseId).position.set(x, y);
+    Attributes corpseAttrs = attributes(maxHp);
+    corpseAttrs.get(Stat.hitpoints).set(0);
+    world.getMapper(AttributesWrapper.class).create(corpseId).attrs = corpseAttrs;
+    world.getMapper(Corpse.class).create(corpseId).reset(Corpse.DEFAULT_DURATION, true);
+    world.getMapper(UnitStates.class).create(corpseId).init(corpseId);
+    return corpseId;
   }
 
   private static boolean hasText(String value) {

@@ -2,6 +2,17 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
+
+- [x] 新增正常两发预算回归：两次 `SrvDo055` 事务各自原子消费一个合法尸体，第二次
+  不会重新使用第一次已隐藏的尸体；两次均生成 `corpseexplosion`，随后控制器按预算
+  退出。
+- [x] 测试不假设 ECS 实体顺序等同于 D2MOO 房间链表顺序，只锁定原生可观察契约：
+  每个成功尸体事务只能消费一个尸体，连续两次必须得到两个不同尸体。
+- [x] `AssassinSkillSpecializationTest` 37 项通过，`BUILD SUCCESSFUL`。
+- [ ] D2MOO 房间链表在多个同距尸体下的具体候选顺序、Skill2 闪电逐目标伤害、墙体/
+  null-hit 和真实双客户端多发预算仍待专项验收。
+
 ## 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
 
 - [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` → `sub_6FD15210`：尸体候选先在

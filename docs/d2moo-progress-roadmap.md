@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
+
+- [x] 新增正常两发预算回归：两个连续 `SrvDo055` 事务分别消费两个合法尸体，已消费
+  尸体不会被再次选择；两次爆炸表现均生成，之后控制器按 shot budget 退出。
+- [x] 夹具不把 ECS 实体顺序冒充 D2MOO 房间链表顺序，只验证原生事务契约中的
+  “一次成功施法、一次尸体消费、不可重复消费”。`AssassinSkillSpecializationTest`
+  37 项通过，`BUILD SUCCESSFUL`。
+- [ ] 多个同距尸体的 D2MOO 房间链表候选顺序、Skill2 闪电逐目标伤害、墙体/null-hit
+  和真实双客户端多发预算仍待专项验收。
+
 ## 2026-10-03 Assassin Death Sentry(276) 原生尸体距离边界对照
 
 - [x] 按 D2MOO `AITHINK_Fn104_DeathSentry` 和 `sub_6FD15210` 锁定两段式门槛：
