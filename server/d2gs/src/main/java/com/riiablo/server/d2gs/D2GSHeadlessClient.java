@@ -1607,11 +1607,34 @@ public final class D2GSHeadlessClient {
       throw new IllegalStateException("Blade Shield expiry gate started without two active states");
     }
     long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    boolean inFinalDelayTail = false;
+    float finalOwnerLife = Float.NaN;
+    float finalObserverLife = Float.NaN;
     while (System.currentTimeMillis() < deadline) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
       if (packet != null) owner.consume(packet);
       packet = readPacket(observerInput);
       if (packet != null) observer.consume(packet);
+      AreaState ownerProjection = owner.areaStates.get(
+          com.riiablo.engine.server.state.StateId.BLADESHIELD);
+      if (!inFinalDelayTail && ownerProjection != null
+          && ownerProjection.duration > 0
+          && ownerProjection.duration < ownerProjection.periodicDelayFrames) {
+        inFinalDelayTail = true;
+        finalOwnerLife = snapshotLife(owner, targetId);
+        finalObserverLife = snapshotLife(observer, targetId);
+      }
+      if (inFinalDelayTail) {
+        float currentOwnerLife = snapshotLife(owner, targetId);
+        float currentObserverLife = snapshotLife(observer, targetId);
+        if (Float.isFinite(finalOwnerLife) && currentOwnerLife < finalOwnerLife - 0.001f
+            || Float.isFinite(finalObserverLife)
+                && currentObserverLife < finalObserverLife - 0.001f) {
+          throw new IllegalStateException("Blade Shield pulse landed in final delay tail: "
+              + "ownerLife=" + finalOwnerLife + "->" + currentOwnerLife
+              + " observerLife=" + finalObserverLife + "->" + currentObserverLife);
+        }
+      }
       Set<Integer> ownerActive = activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD);
       Set<Integer> observerActive = activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD);
       if (ownerActive.isEmpty() && observerActive.isEmpty()) {
@@ -1634,7 +1657,8 @@ public final class D2GSHeadlessClient {
         }
         log("area_skill_expiry_pass", "skill=" + ASSASSIN_BLADE_SHIELD
             + " ownerStates=" + ownerActive + " observerStates=" + observerActive
-            + " target=" + targetId + " quietMs=1000 stale=false");
+            + " target=" + targetId + " finalDelayTail=" + inFinalDelayTail
+            + " quietMs=1000 stale=false");
         return;
       }
     }
