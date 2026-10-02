@@ -154,6 +154,8 @@ public final class D2GSHeadlessClient {
   private static final int ASSASSIN_INFERNO_SENTRY = 272;
   // 1.10f Skills.txt exact row for Death Sentry.
   private static final int ASSASSIN_DEATH_SENTRY = 276;
+  // 1.10f Skills.txt exact row for Blade Shield.
+  private static final int ASSASSIN_BLADE_SHIELD = 277;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -974,7 +976,8 @@ public final class D2GSHeadlessClient {
           || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
           || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
           || skillId == ASSASSIN_INFERNO_SENTRY
-          || skillId == ASSASSIN_DEATH_SENTRY ? a.nearestLiveMonster() : null;
+          || skillId == ASSASSIN_DEATH_SENTRY
+          || skillId == ASSASSIN_BLADE_SHIELD ? a.nearestLiveMonster() : null;
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
@@ -1064,6 +1067,19 @@ public final class D2GSHeadlessClient {
           }
         }
       }
+      if (skillId == ASSASSIN_BLADE_SHIELD && targetId >= 0) {
+        targetX = a.playerX;
+        targetY = a.playerY + 2f;
+        if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+            targetId, a.playerId, 0f, 2f)) {
+          throw new IOException("Blade Shield fixture could not place durable target");
+        }
+        for (Snapshot candidate : a.monsters.values()) {
+          if (candidate.entityId != targetId && !candidate.deleted) {
+            D2GS.headlessSetMonsterLife(candidate.entityId, 0f);
+          }
+        }
+      }
       send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
           + " targetId=" + targetId + " target=(" + targetX + ',' + targetY + ")");
@@ -1074,6 +1090,8 @@ public final class D2GSHeadlessClient {
       while (System.currentTimeMillis() < deadline
           && (!areaEvidenceShared(a, b, skillId)
               || skillId == ASSASSIN_FIRE_TRAUMA
+                  && !areaTargetDamaged(a, b, targetId, traumaInitialLife)
+              || skillId == ASSASSIN_BLADE_SHIELD
                   && !areaTargetDamaged(a, b, targetId, traumaInitialLife))) {
         consumeOne(inA, a);
         consumeOne(inB, b);
@@ -1134,12 +1152,22 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("Death Sentry corpse/controller evidence missing: "
             + areaEvidenceFailure(a, b, skillId));
       }
+      if (skillId == ASSASSIN_BLADE_SHIELD
+          && !areaTargetDamaged(a, b, targetId, traumaInitialLife)) {
+        throw new IllegalStateException("Blade Shield produced no shared target damage: target="
+            + targetId + " initialLife=" + traumaInitialLife + " owner="
+            + snapshotLife(a, targetId) + " peer=" + snapshotLife(b, targetId));
+      }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
       if (skillId == ASSASSIN_FIRE_TRAUMA) {
         verifyFireTraumaReconnect(a, b, inA, socketB, peerD2s, peerCharacter, targetId);
       } else if (requiresAreaReconnect(skillId)) {
-        verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
+        if (skillId == ASSASSIN_BLADE_SHIELD) {
+          verifyBladeShieldReconnect(a, b, inA, socketB, peerD2s, peerCharacter);
+        } else {
+          verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
+        }
       }
     }
   }
@@ -1399,6 +1427,8 @@ public final class D2GSHeadlessClient {
         com.riiablo.engine.server.state.StateId.HURRICANE);
     else if (skillId == SkillId.ARMAGEDDON) expected.add(
         com.riiablo.engine.server.state.StateId.ARMAGEDDON);
+    else if (skillId == ASSASSIN_BLADE_SHIELD) expected.add(
+        com.riiablo.engine.server.state.StateId.BLADESHIELD);
     expected.retainAll(client.areaStates.keySet());
     return expected;
   }
@@ -1440,6 +1470,9 @@ public final class D2GSHeadlessClient {
       if (shared.size() < 3 || !areaHydraDeletionConsistent(a, b)) return false;
       return true;
     }
+    if (skillId == ASSASSIN_BLADE_SHIELD) {
+      return bladeShieldSharedEvidence(a, b);
+    }
     Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
     shared.retainAll(b.areaMissiles.keySet());
     if (!areaMissileDeletionConsistent(a, b, skillId)) return false;
@@ -1480,6 +1513,61 @@ public final class D2GSHeadlessClient {
       }
     }
     return false;
+  }
+
+  private void verifyBladeShieldReconnect(D2GSHeadlessClient owner,
+      D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
+      byte[] observerD2s, CharacterHeader observerCharacter) throws Exception {
+    Set<Integer> before = areaStateIds(owner, ASSASSIN_BLADE_SHIELD);
+    if (before.isEmpty()) {
+      throw new IllegalStateException("Blade Shield reconnect has no active state");
+    }
+    int oldObserverId = oldObserver.playerId;
+    oldSocket.close();
+    long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+    while (System.currentTimeMillis() < disconnectDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      Visibility state = owner.visibility.get(oldObserverId);
+      if (state != null && state.deleted) break;
+    }
+    D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+    try (Socket reconnectSocket = reconnected.openSocket();
+         DataInputStream reconnectInput = input(reconnectSocket);
+         OutputStream reconnectOutput = output(reconnectSocket)) {
+      send(reconnectOutput, connectionPacket(observerCharacter, observerD2s));
+      reconnected.awaitConnection(reconnectInput, deadline());
+      if (!D2GS.headlessWarpPlayer(reconnected.playerId)) {
+        throw new IOException("Blade Shield reconnect could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline && reconnected.currentLevelId != 2) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+      }
+      if (reconnected.currentLevelId != 2) {
+        throw new IOException("Blade Shield reconnect did not receive Blood Moor baseline");
+      }
+      long reconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < reconnectDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+        if (packet != null) owner.consume(packet);
+        packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+        Set<Integer> ownerStates = areaStateIds(owner, ASSASSIN_BLADE_SHIELD);
+        Set<Integer> restoredStates = areaStateIds(reconnected, ASSASSIN_BLADE_SHIELD);
+        if (before.containsAll(restoredStates) && ownerStates.containsAll(restoredStates)
+            && lifecycleWatermarksValid(owner, reconnected)) {
+          log("area_skill_reconnect_pass", "skill=" + ASSASSIN_BLADE_SHIELD
+              + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
+              + " states=" + restoredStates + " stale=false");
+          return;
+        }
+      }
+      throw new IllegalStateException("Blade Shield reconnect snapshot mismatch: before=" + before
+          + " owner=" + areaStateIds(owner, ASSASSIN_BLADE_SHIELD)
+          + " restored=" + areaStateIds(reconnected, ASSASSIN_BLADE_SHIELD));
+    }
   }
 
   /**
@@ -1685,6 +1773,12 @@ public final class D2GSHeadlessClient {
     return false;
   }
 
+  private static boolean bladeShieldSharedEvidence(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer) {
+    int state = com.riiablo.engine.server.state.StateId.BLADESHIELD;
+    return owner.areaStates.containsKey(state) && observer.areaStates.containsKey(state);
+  }
+
   private static boolean sharedAssassinTrapController(D2GSHeadlessClient owner,
       D2GSHeadlessClient observer, int skillId) {
     Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
@@ -1740,6 +1834,7 @@ public final class D2GSHeadlessClient {
         || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
         || skillId == ASSASSIN_INFERNO_SENTRY
         || skillId == ASSASSIN_DEATH_SENTRY
+        || skillId == ASSASSIN_BLADE_SHIELD
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11652,7 +11747,7 @@ public final class D2GSHeadlessClient {
     boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
         || skillId == ASSASSIN_BLADE_SENTINEL || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
         || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY || skillId == ASSASSIN_INFERNO_SENTRY
-        || skillId == ASSASSIN_DEATH_SENTRY;
+        || skillId == ASSASSIN_DEATH_SENTRY || skillId == ASSASSIN_BLADE_SHIELD;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -12135,7 +12230,8 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
             + "FireBall(47), Nova(48), PoisonNova(92), Fire Trauma(251), "
             + "Shock Field(256), Blade Sentinel(257), Charged Bolt Sentry(261), "
-            + "Wake of Fire Sentry(262), Inferno Sentry(272), Death Sentry(276)");
+            + "Wake of Fire Sentry(262), Inferno Sentry(272), Death Sentry(276), "
+            + "Blade Shield(277)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
@@ -12247,7 +12343,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
           || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL
           || skillId == ASSASSIN_CHARGED_BOLT_SENTRY || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
-          || skillId == ASSASSIN_INFERNO_SENTRY || skillId == ASSASSIN_DEATH_SENTRY;
+          || skillId == ASSASSIN_INFERNO_SENTRY || skillId == ASSASSIN_DEATH_SENTRY
+          || skillId == ASSASSIN_BLADE_SHIELD;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {

@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Death Sentry real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Blade Shield real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -123,6 +123,22 @@
 - [ ] 爆炸实际目标伤害/范围、重复尸体消费、墙体/null-hit、shot budget 和控制实体到期
   尚未完成；下一项为 Blade Shield(277)。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 --no-daemon`。
+
+## 2026-10-02 Assassin Blade Shield(277) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=277 -PareaTimeout=15` 已通过真实 1.10f MPQ
+  双客户端 gate；owner/observer 两端都观察到 `BLADESHIELD`（`StateId=158`），施法
+  等级为 20，周期参数为 `perdelay=25`，持续时间快照一致。
+- [x] 夹具将一个可持续目标放置在施法者附近并清除其他 Blood Moor 预置怪；严格门槛
+  等待 owner/observer 两端同一目标实际掉血，避免把只有状态同步或服务端 fallback
+  当作 Blade Shield 命中证据。
+- [x] observer reconnect 已单独验证：断线期间以 owner 当前权威状态为准，重连后只恢复
+  仍活动的 `[158]`，`stale=false`，没有复活过期状态；`animationFallback=false`。
+- [ ] 本 gate 尚未替代完整技能验收：周期脉冲的逐目标规则、装备耐久/武器伤害交互、
+  墙体/null-hit、状态到期清理和真实客户端视觉持续时间仍需独立核对。下一步优先补
+  Blade Shield 的周期伤害/装备耐久矩阵，再回收 262/272/276 的 animation/keyframe
+  与 AssassinSentry AI fallback 待办。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 

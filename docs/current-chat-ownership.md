@@ -1273,3 +1273,17 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] 严格爆炸/伤害 gate 通过：双方历史类型集合均为 `[385,386,387]`，且目标生命
   在 owner/observer 两端均下降。
 - [ ] 仍需补一次性爆炸链的专用重连窗口及 owner 生命周期，尚不能宣称四层验收。
+
+### 2026-10-02 Assassin Blade Shield(277) gate 交接
+
+- [x] 已在 `server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`
+  增加 Blade Shield 专用真实 MPQ 双客户端入口、近身耐久目标夹具、状态同步、目标掉血
+  和 reconnect 断言；未改动其他 agent 的未提交文件。
+- [x] 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15
+  --no-daemon`；退出码 0，日志包含 `area_skill_dual_pass skill=277`、两端
+  `state=158`，以及 `area_skill_reconnect_pass skill=277 ... states=[158] stale=false`。
+- [x] 结果：owner/observer 均观察到 `BLADESHIELD`，同一目标两端实际掉血检查通过，
+  `animationFallback=false`；重连只恢复当前权威活动状态。
+- [ ] 尚未完成周期脉冲逐目标规则、装备耐久/武器伤害交互、墙体/null-hit、到期清理及
+  真实视觉持续时间。下一位 agent 应先补 Blade Shield 周期矩阵，然后处理 262/272/276
+  的动画/keyframe 和 `AssassinSentry` AI fallback。

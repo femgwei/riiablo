@@ -6280,3 +6280,18 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 -PamazonBowTimeout=20 -PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`、
 `:server:d2gs:headlessAmazonBow -PamazonBowSkill=26
 -PamazonBowTimeout=20 -PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`。
+
+## 2026-10-02 Assassin Blade Shield(277) 真实 MPQ gate（本轮完成）
+
+- [x] 按 1.10f `Skills.txt` row 277 接入 Assassin 存档和 `headlessAreaSkill` 入口；真实
+  双客户端 gate 在 owner/observer 两端确认 `BLADESHIELD`（`StateId=158`）状态、等级 20、
+  `perdelay=25`，持续时间快照一致。
+- [x] 夹具把单个耐久目标放在施法者近旁并清理其他 Blood Moor 预置怪；门槛等待同一目标
+  在两端实际掉血，排除仅状态广播或服务端 fallback 的假阳性。
+- [x] observer 断线重连通过：重连快照只恢复 owner 当前仍活动的状态 `[158]`，
+  `stale=false`；本轮 `animationFallback=false`。
+- [ ] 仍待补周期脉冲的逐目标/伤害规则、装备耐久交互、墙体/null-hit、状态到期清理和
+  客户端视觉持续时间；并继续回收 Wake of Fire/Inferno/Death Sentry 的动画与 AI fallback
+  待办。
+
+验证：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`。
