@@ -566,8 +566,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `AmazonSkillSpecializationTest` 定向回归通过。Guided Arrow gate 仍会记录
   `Actioneer` 对 `SrvDoFunc=10` 的兼容日志，但权威 `ServerSkillSystem` 已完成导弹创建；
   该日志和旧客户端动画委派仍列为后续收尾项。
-- 当前下一项：补齐 Multiple Shot/Strafe 的多目标穿透、墙碰撞和旧客户端动画门槛，
-  随后继续其他职业的 exact-ID 对照。
+- 当前下一项：补齐 Multiple Shot/Strafe 的旧客户端动画门槛并继续其他职业的
+  exact-ID 对照；多目标、穿透和墙碰撞的真实门槛已分别完成。
 - 本轮先补齐 `ServerSkillSystemTest.srvDo008UsesIntegerDeltaForDiagonalLaneTargets`：
   用 D2MOO 的整数 caster→target delta 和垂直 lane halving 锁定斜向中心/外侧箭方向；
   `MissileNativePolicyTest` 同时确认跨导弹共享命中集合不会重复命中同一目标。真实动态
@@ -592,7 +592,22 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `Actioneer` 现已显式接收 `srvstfunc=8` 与 `srvdofunc=12`，将 Multiple Shot/Strafe
   动画阶段委派给权威 `SkillDoEvent`，本轮真实 gate 不再出现 unsupported warning；
   headless fallback 仍只用于补齐缺失 COF 关键帧，不代表画面动画已完全收尾。多目标
-  穿透和旧客户端观感仍列为后续 gate。
+  穿透和墙体碰撞已由独立严格 gate 完成，旧客户端观感仍列为后续 gate。
+
+### 2026-10-02 Amazon Multiple Shot / Strafe 穿透 gate 完成
+
+- [x] `Multiple Shot(12)` 真实 1.10f MPQ 双客户端穿透 gate 已通过：同一权威导弹
+  记录第一目标 `132`、第二目标 `133`，owner/observer 均观察到第二目标实际掉血，
+  并通过共享实体、单次箭袋消耗和 observer reconnect 检查。
+- [x] `Strafe(26)` 同一导弹穿透 gate 已通过，生产遥测记录第一目标 `132`、第二目标
+  `133`，两端第二目标生命均下降；之前的多目标 gate 仍保持通过。
+- [x] 两项均使用仅测试夹具注入的 `item_pierce=100` 与 Pierce(20)，不改变生产技能
+  的随机穿透概率；断言要求同一导弹的两个命中目标，不能由不同箭分别掉血替代。
+- [x] 本轮没有调整生产碰撞半径、ToHit、伤害公式或用户已验证的 Amazon 数值；依据
+  D2MOO 的 `nNextHit`/`nPierceFlags` 路径核验后，仅完成真实 gate 证据闭环。
+- 回归：Multiple Shot 墙体、Strafe 目标筛选、Guided/Strafe 唯一目标及
+  `NativeAmazonSkillMatrixTest` 共 6 项通过；完整专项选择性运行仍有既有
+  `piercingAmazonProjectileSkipsCorpseAndReachesNextLiveTarget` 失败，未在本轮修改。
 
 ### 2026-10-01 Amazon Lightning Fury 真实 gate
 

@@ -1119,18 +1119,22 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] Strafe(26) 已通过真实 MPQ 双客户端严格 gate：同一导弹的生产遥测记录第一目标
   `132`、第二目标 `133`，owner/observer 均看到第二目标实际掉血，箭袋、共享导弹和
   reconnect 仍通过。
-- [ ] Multiple Shot(12) 暂不标记完成：level-20 fan volley 可以让两个目标掉血，但
-  当前由不同箭完成，严格同一导弹遥测为 `pairCount=0`。后续 agent 必须继续收敛 D2MOO
-  fan lane/目标排序夹具，不得将“两目标掉血”降级为 Pierce 成功。
+- [x] Multiple Shot(12) 已通过严格同一导弹门槛：生产遥测记录第一目标 `132`、第二
+  目标 `133`，owner/observer 两端均观察到第二目标实际掉血；`pairCount` 已非 0。
 - 本轮新增生产只读桥接：`MissileCollisionSystem.headlessPierceState` 与
   `D2GS.headlessAmazonPierceState`；仅服务 headless gate，不改变生产伤害/概率公式。
 - `headlessPierceState` 末字段现在明确表示该同一导弹命中第二目标时
-  `pierceEnabled` 是否为真；因此 Multiple Shot 的“两个目标分别掉血”仍不能替代同一
-  导弹 Pierce 证据。
+  `pierceEnabled` 是否为真；Multiple Shot 与 Strafe 均已满足同一导弹 Pierce 证据，
+  两目标分别掉血仍不能单独替代该断言。
+- 交接回归：排除既有 corpse-pierce 失败后，Multiple Shot 墙体、Strafe 目标筛选、
+  Guided/Strafe 唯一目标及 Native Amazon 矩阵共 6 项通过；不得将该既有失败归因于
+  本轮穿透 gate。
 
 验证命令：
-`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=30
--PamazonBowPierceGate=true --no-daemon`。
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=20
+-PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=20
+-PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`。
 
 ### 2026-10-01 Amazon 不可恢复箭袋耗尽 gate（本轮完成）
 

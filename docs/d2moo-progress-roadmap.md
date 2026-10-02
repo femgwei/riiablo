@@ -10,9 +10,9 @@
   造成的随机 gate 抖动。
 - [x] 真实双客户端 MPQ 通过：Multiple Shot(12) 和 Strafe(26) 的多目标 gate，均确认
   至少两个不同 lane 目标 owner/observer 同步掉血，并完成 observer 重连。
-- [ ] 仍待：Amazon Multiple Shot/Strafe 的穿透专门 gate、旧客户端动画无 fallback、
-  其余 Amazon exact-ID 行；核心 `AmazonSkillSpecializationTest` 的既有 corpse-pierce
-  用例失败不归因于本轮 gate。
+- [x] Amazon Multiple Shot/Strafe 的穿透专门 gate 已完成；仍待旧客户端动画无
+  fallback 和其余 Amazon exact-ID 行。核心 `AmazonSkillSpecializationTest` 的既有
+  corpse-pierce 用例失败不归因于本轮 gate。
 - 验证：
   `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=12 -PamazonBowMultiTarget=true --no-daemon`；
   `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 -PamazonBowMultiTarget=true --no-daemon`。
@@ -6130,7 +6130,7 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 验证命令：`:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=15`、
 `:server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=25`，以及 Amazon 专项 core tests。
 
-### 2026-10-01 Amazon bow Pierce gate（Strafe 完成，Multiple Shot 待补）
+### 2026-10-02 Amazon bow Pierce gate（Multiple Shot / Strafe 完成）
 
 - [x] 新增 `-PamazonBowPierceGate=true`：生成的 bow fixture 额外学习 Amazon
   `Pierce(20)`，并仅在该 gate 的测试弓上注入 `item_pierce=100`，把验证重点固定在
@@ -6140,9 +6140,14 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
   或“两个目标分别受伤”判定成功。
 - [x] Strafe(26) 真实 MPQ 双客户端通过：同一导弹命中第一、第二个同一直线目标，两个
   客户端均观察到第二目标掉血，并继续通过箭袋、共享实体和 reconnect 检查。
-- [ ] Multiple Shot(12) 尚未通过严格同一导弹断言：level-20 fan volley 中两个目标都可
-  实际掉血，但当前命中由不同箭完成，生产 Pierce 遥测 `pairCount` 仍为 0；这不是可接受
-  的穿透证据，下一步需继续按 D2MOO 的 fan lane/目标排序收敛夹具，不得放宽断言。
+- [x] Multiple Shot(12) 已通过严格同一导弹断言：真实 level-20 fan volley 的生产
+  遥测记录同一导弹第一目标 `132`、第二目标 `133`，owner/observer 均观察到第二
+  目标掉血；`pairCount` 不再为 0。
+- [x] 相关纯逻辑回归（墙体、Strafe 目标流、Guided/Strafe 唯一目标及
+  `NativeAmazonSkillMatrixTest`）共 6 项通过；既有 corpse-pierce 单测失败保持单独
+  记录，未被本轮改动掩盖。
 
-验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26
--PamazonBowTimeout=30 -PamazonBowPierceGate=true --no-daemon`。
+验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=12
+-PamazonBowTimeout=20 -PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`、
+`:server:d2gs:headlessAmazonBow -PamazonBowSkill=26
+-PamazonBowTimeout=20 -PamazonBowMultiTarget=true -PamazonBowPierceGate=true --no-daemon`。
