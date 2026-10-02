@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry 多尸体预算事务对照收口）
+更新时间：2026-10-03（Death Sentry Skill2 fallback 发射收口）
 
 ## 唯一负责人
 
@@ -31,6 +31,17 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
+
+- 新增无合法尸体的运行时回归：强制通过召唤体 `aip3` 后，实际生成 Skill2 的
+  authoritative lightning missile，并确认 `damageSnapshot=true`。
+- 发现并锁定 MPQ missile 别名链：逻辑字段为 `sentrylightningbolt2`，不能用显示别名
+  `sentry lightning` 直接比较 row 名；测试现在比较解析后的稳定 missile ID。
+- `AssassinSkillSpecializationTest` 38 项通过。下一步：Skill2 碰撞伤害、同距尸体候选
+  顺序和墙体/null-hit。
+- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
+  不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
 

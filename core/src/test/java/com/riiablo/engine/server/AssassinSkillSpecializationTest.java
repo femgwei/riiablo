@@ -1238,6 +1238,71 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void deathSentryUsesSkill2LightningWhenNoCorpseIsInRange() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    com.riiablo.codec.excel.MonStats.Entry summon = null;
+    int[] originalAttackChance = null;
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      Skills.Entry fallback = Riiablo.files.skills.get("death sentry ltng");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      assertNotNull(fallback);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      Monster sentry = world.getMapper(Monster.class).get(factory.entityId);
+      assertNotNull(sentry);
+      summon = sentry.monstats;
+      assertNotNull(summon);
+      originalAttackChance = summon.aip3;
+      summon.aip3 = new int[] {100, 100, 100};
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1, factory.missiles);
+      String resolvedMissile = AssassinTrapSystem.resolveMissile(fallback, sentry);
+      Missiles.Entry helper = Riiablo.files.Missiles.get(resolvedMissile);
+      assertNotNull(helper);
+      Missile lightning = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(lightning);
+      assertEquals(helper.Id, lightning.missile.Id,
+          "Death Sentry Skill2 must use the native lightning helper missile row");
+      assertTrue(lightning.damageSnapshot,
+          "Skill2 fallback must initialize an authoritative damage snapshot");
+      assertEquals(resolvedMissile, lightning.missile.Missile,
+          "fallback missile row remains sourced from Skill2");
+    } finally {
+      if (summon != null) summon.aip3 = originalAttackChance;
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeShieldAndVenomExposeNativeSkillData() {
     Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
     assertNotNull(blade);

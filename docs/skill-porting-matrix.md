@@ -2,6 +2,18 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
+
+- [x] 在无合法尸体场景强制通过召唤体 `aip3` 概率门槛，确认运行时实际走
+  `MonStats.Skill2 = "death sentry ltng"`，生成 authoritative lightning missile，
+  并初始化 `damageSnapshot`。
+- [x] 测试按 `AssassinTrapSystem.resolveMissile` 解码服务器 missile 字段，锁定 MPQ
+  别名 `sentrylightningbolt2` 的稳定导弹行 ID；不把显示/逻辑别名
+  `sentry lightning` 错当作最终 row 名。
+- [x] `AssassinSkillSpecializationTest` 38 项通过，`BUILD SUCCESSFUL`。
+- [ ] Skill2 闪电实际碰撞伤害、多个同距尸体的 D2MOO 房间链表候选顺序、墙体/null-hit
+  和真实双客户端 fallback 仍待专项验收。
+
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
 
 - [x] 新增正常两发预算回归：两次 `SrvDo055` 事务各自原子消费一个合法尸体，第二次
