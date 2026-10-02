@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Wake of Fire Sentry 真实 keyframe gate 收口）
+更新时间：2026-10-03（Assassin Death Sentry 真实 keyframe gate 收口）
 
 ## 唯一负责人
 
@@ -62,6 +62,8 @@
 - 重连结果为 `active=[135]`、`expiredDuringReconnect=0`、`stale=false`；仍有
   `DeathSentry` AI fallback 警告，爆炸伤害/范围、尸体重复消费、墙体/null-hit、shot
   budget 和到期清理尚未完成。下一步回收 Blade Shield(277) 边界。
+- 本轮代码/文档提交：`acc3ccca`（`test: close Death Sentry keyframe gate`），已推送到
+  `origin/master`；随后将补一个只更新交接 hash 的文档提交。
 
 ### 2026-10-03 Blade Shield RoomEx / target-filter 增量
 

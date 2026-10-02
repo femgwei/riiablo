@@ -13,6 +13,8 @@
   `DeathSentry` AI fallback 仍待专项验收；下一步回收 Blade Shield(277) 边界。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 -PareaVerbose
   --no-daemon`（通过，`BUILD SUCCESSFUL`）。
+- 提交/推送：`acc3ccca`（`test: close Death Sentry keyframe gate`），已推送到
+  `origin/master`。
 
 ## 2026-10-03 Assassin Inferno Sentry(272) 真实 keyframe gate 收口
 
