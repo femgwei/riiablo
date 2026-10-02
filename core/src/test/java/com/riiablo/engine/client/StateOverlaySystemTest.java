@@ -55,6 +55,37 @@ class StateOverlaySystemTest extends RiiabloTest {
   }
 
   @Test
+  void bladeShieldOverlayUsesStateLifetimeInsteadOfAClientTimer() {
+    assertTrue(Riiablo.files.Overlay.get("bladeshield") != null,
+        "stock Overlay.txt must contain the Blade Shield visual row");
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build());
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.stateList.addState(StateId.BLADESHIELD, 3, 1, entity);
+
+      world.process();
+      assertTrue(overlays.bladeShieldActive);
+      assertEquals("bladeshield", overlays.overlayId);
+
+      // A StateP duration update must not restart or clear the persistent
+      // visual. The authoritative state removal is the only stop signal.
+      states.stateList.getState(StateId.BLADESHIELD).duration = 1;
+      world.process();
+      assertTrue(overlays.bladeShieldActive);
+
+      states.stateList.removeState(StateId.BLADESHIELD);
+      world.process();
+      assertFalse(overlays.bladeShieldActive);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void coldAndFreezeStatesDoNotOverwriteBaseComponentTransforms() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
