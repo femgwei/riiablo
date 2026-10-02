@@ -162,12 +162,18 @@ tasks.register('headlessAreaSkill', JavaExec) {
   workingDir = rootProject.file('assets').path
   args '--require-area-skill', '--area-skill',
        (project.hasProperty('areaSkill') ? project.property('areaSkill').toString() : '244'),
+       '--area-skill-level',
+       (project.hasProperty('areaSkillLevel') ? project.property('areaSkillLevel').toString() : '20'),
        '--test-timeout',
        (project.hasProperty('areaTimeout') ? project.property('areaTimeout').toString() : '60')
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
   if (project.hasProperty('areaVerbose')) args '--verbose'
+  if (project.hasProperty('areaExpiry')
+      && project.property('areaExpiry').toString().toBoolean()) {
+    args '--require-area-skill-expiry'
+  }
 }
 
 tasks.register('headlessAmazonMelee', JavaExec) {

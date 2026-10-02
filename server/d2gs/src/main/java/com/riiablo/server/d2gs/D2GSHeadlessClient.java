@@ -74,6 +74,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -314,7 +315,7 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonBowSave(config.amazonBowSkillId,
             config.amazonBowPierceGate, config.amazonBowAmmoGate)
         : config.requireAreaSkillScenario
-        ? createGeneratedAreaSave(config.areaSkillId)
+        ? createGeneratedAreaSave(config.areaSkillId, config.areaSkillLevel)
         : config.requireVineScenario
         ? createGeneratedAreaSave(config.vineSkillId)
         : config.generatedAmazon
@@ -1439,6 +1440,18 @@ public final class D2GSHeadlessClient {
     return expected;
   }
 
+  /** Returns states present in the latest per-entity StateP projection. */
+  private static Set<Integer> activeAreaStateIds(D2GSHeadlessClient client, int skillId) {
+    Set<Integer> active = new HashSet<>();
+    for (Set<Integer> states : client.entityStateIds.values()) active.addAll(states);
+    if (skillId == ASSASSIN_BLADE_SHIELD) {
+      active.retainAll(Collections.singleton(com.riiablo.engine.server.state.StateId.BLADESHIELD));
+    } else {
+      active.clear();
+    }
+    return active;
+  }
+
   /** Ensures a reconnect never reintroduces a state from an older tick. */
   private static boolean lifecycleWatermarksValid(D2GSHeadlessClient owner,
       D2GSHeadlessClient reconnected) {
@@ -1574,6 +1587,9 @@ public final class D2GSHeadlessClient {
           log("area_skill_reconnect_pass", "skill=" + ASSASSIN_BLADE_SHIELD
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
               + " states=" + restoredStates + " stale=false");
+          if (config.requireAreaSkillExpiry) {
+            verifyBladeShieldExpiry(owner, ownerInput, reconnected, reconnectInput);
+          }
           return;
         }
       }
@@ -1581,6 +1597,33 @@ public final class D2GSHeadlessClient {
           + " owner=" + areaStateIds(owner, ASSASSIN_BLADE_SHIELD)
           + " restored=" + areaStateIds(reconnected, ASSASSIN_BLADE_SHIELD));
     }
+  }
+
+  private void verifyBladeShieldExpiry(D2GSHeadlessClient owner,
+      DataInputStream ownerInput, D2GSHeadlessClient observer,
+      DataInputStream observerInput) throws Exception {
+    if (activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD).isEmpty()
+        || activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD).isEmpty()) {
+      throw new IllegalStateException("Blade Shield expiry gate started without two active states");
+    }
+    long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      packet = readPacket(observerInput);
+      if (packet != null) observer.consume(packet);
+      Set<Integer> ownerActive = activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD);
+      Set<Integer> observerActive = activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD);
+      if (ownerActive.isEmpty() && observerActive.isEmpty()) {
+        log("area_skill_expiry_pass", "skill=" + ASSASSIN_BLADE_SHIELD
+            + " ownerStates=" + ownerActive + " observerStates=" + observerActive
+            + " stale=false");
+        return;
+      }
+    }
+    throw new IllegalStateException("Blade Shield expiry timeout: owner="
+        + activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD) + " observer="
+        + activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD));
   }
 
   /**
@@ -11785,6 +11828,11 @@ public final class D2GSHeadlessClient {
 
   /** Creates a deterministic level-30 caster fixture for native area skills. */
   private static byte[] createGeneratedAreaSave(int skillId) {
+    return createGeneratedAreaSave(skillId, 20);
+  }
+
+  /** Creates an area fixture with an explicit skill level for duration gates. */
+  private static byte[] createGeneratedAreaSave(int skillId, int skillLevel) {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
     boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
@@ -11831,7 +11879,7 @@ public final class D2GSHeadlessClient {
     character.mapSeed = 0x41524541; // "AREA", stable map fixture.
     character.initializeStartItems(stats);
     seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
-    if (!character.setSkillLevel(skillId, 20)) {
+    if (!character.setSkillLevel(skillId, skillLevel)) {
       throw new IllegalStateException("could not seed area skill " + skillId);
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
@@ -11839,7 +11887,7 @@ public final class D2GSHeadlessClient {
         + (sorceress ? "sorceress" : assassin ? "assassin"
             : necromancer ? "necromancer" : "druid")
         + " skill=" + skillId
-        + " level=30 bytes=" + data.length);
+        + " level=30 skillLevel=" + skillLevel + " bytes=" + data.length);
     return data;
   }
 
@@ -12119,6 +12167,8 @@ public final class D2GSHeadlessClient {
     boolean requireAndarielQuestScenario;
     boolean requireAreaSkillScenario;
     int areaSkillId = SkillId.VOLCANO;
+    int areaSkillLevel = 20;
+    boolean requireAreaSkillExpiry;
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
     int amazonMeleeSkillLevel = 20;
@@ -12209,6 +12259,8 @@ public final class D2GSHeadlessClient {
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
         else if ("--require-area-skill".equals(arg)) config.requireAreaSkillScenario = true;
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
+        else if ("--area-skill-level".equals(arg)) config.areaSkillLevel = integer(args, ++i, arg);
+        else if ("--require-area-skill-expiry".equals(arg)) config.requireAreaSkillExpiry = true;
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);
         else if ("--amazon-melee-skill-level".equals(arg)) config.amazonMeleeSkillLevel = integer(args, ++i, arg);
@@ -12275,6 +12327,14 @@ public final class D2GSHeadlessClient {
             + "Shock Field(256), Blade Sentinel(257), Charged Bolt Sentry(261), "
             + "Wake of Fire Sentry(262), Inferno Sentry(272), Death Sentry(276), "
             + "Blade Shield(277)");
+      }
+      if (config.requireAreaSkillScenario && (config.areaSkillLevel < 1
+          || config.areaSkillLevel > 20)) {
+        throw new IllegalArgumentException("--area-skill-level must be between 1 and 20");
+      }
+      if (config.requireAreaSkillExpiry && config.areaSkillId != ASSASSIN_BLADE_SHIELD) {
+        throw new IllegalArgumentException(
+            "--require-area-skill-expiry currently requires Blade Shield(277)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
@@ -12519,7 +12579,8 @@ public final class D2GSHeadlessClient {
            + " [--amazon-bow-wall-gate]"
            + " [--amazon-bow-pierce-gate]"
            + " [--amazon-bow-ammo-gate]"
-           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
+          + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
+          + " [--area-skill-level 1..20] [--require-area-skill-expiry]"
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"
           + " [--verbose]"
