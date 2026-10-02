@@ -70,6 +70,8 @@
   继续下降。
 - [ ] 到期前最后一个周期的唯一命中和真实客户端视觉持续时间仍待专项验收；下一步补这两个
   边界。
+- [x] Blade Shield 双端 StateP gate 现在同步校验 skill、等级、`perdelay` 和 `AuraLen`，
+  允许最多一帧网络快照偏差；level=20 真实 gate 通过。
 - 验证命令：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
   --tests com.riiablo.engine.server.AssassinMartialArtsTest
   --tests com.riiablo.engine.server.object.NativeTrapSystemTest
@@ -80,6 +82,8 @@
 - 到期 gate 提交：`c05a6890`（`test: add Blade Shield expiry gate`），已推送到
   `origin/master`。
 - 静默窗口提交：`15017c2e`（`test: verify Blade Shield post-expiry silence`），已推送到
+  `origin/master`。
+- 持续时间同步提交：`e58382b1`（`test: verify Blade Shield duration sync`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff

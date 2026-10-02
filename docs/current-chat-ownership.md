@@ -82,6 +82,10 @@
   两端目标生命没有继续下降。
 - 仍待：到期前最后一个周期是否产生且只产生一次命中，以及真实客户端视觉持续时间；下一步
   优先补这两个边界。
+- 双端 `StateP` 现在还必须同步 `skill=277`、等级、`perdelay` 和 `AuraLen`（允许最多一帧
+  网络快照偏差），本轮 level=20 gate 通过。
+- 持续时间同步提交：`e58382b1`（`test: verify Blade Shield duration sync`），已推送到
+  `origin/master`。
 - 静默窗口加固提交：`15017c2e`（`test: verify Blade Shield post-expiry silence`），已推送到
   `origin/master`。
 - 该增量已在前一提交完成；当前工作区仍有其他 agent 的未提交代码
