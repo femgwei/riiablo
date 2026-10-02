@@ -2,6 +2,15 @@
 
 更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
 
+## 2026-10-02 Assassin trap / martial-arts regression handoff
+
+- [x] `AssassinSkillSpecializationTest` 28 项、`AssassinMartialArtsTest` 37 项、
+  `NativeTrapSystemTest` 6 项及 `NativeTrapFireSystemTest` 2 项，共 73 项全部通过。
+- [x] 回归覆盖 Fire Trauma 的 air/ground/explosion 生命周期、陷阱 owner/damageOwner、
+  shot budget、sentry retarget、Blade Fury/Blade Shield 周期和武术资源边界。
+- [ ] Assassin 仍没有现成的真实 1.10f MPQ 双客户端入口；本轮没有把纯 ECS/Native
+  通过结果标成四层完成。下一步应新增专用 headless trap fixture，再验证重连与动画。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] `headlessAreaSkill -PareaSkill=48` 已通过真实 1.10f MPQ 双客户端 gate：Nova

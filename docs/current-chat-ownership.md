@@ -1160,3 +1160,10 @@ incarnation，并继续检查跨区域实体基线恢复。
   归类为测试清理噪声，不作为技能失败；生产公式未修改。
 - Nova/Fire Ball/Native projectile 相关纯逻辑回归共 22 项全部通过；下一步转入
   Assassin 真实 MPQ gate 或继续 Sorceress 尚未覆盖的表现链。
+
+### 2026-10-02 Assassin regression handoff
+
+- [x] Assassin 行为层回归共 73 项通过：专项 28、武术 37、NativeTrapSystem 6、
+  NativeTrapFireSystem 2。
+- [ ] 当前没有 Assassin 专用真实 MPQ 双客户端入口；下一步应实现 trap fixture，
+  再验证 owner/observer、重连和真实动画，不得把纯逻辑通过当成四层完成。

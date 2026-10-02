@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-02 Assassin 行为层回归
+
+- [x] Assassin 专项 28 项、武术 37 项、NativeTrapSystem 6 项、NativeTrapFireSystem
+  2 项，共 73 项全部通过。
+- [x] 这些回归锁定 dark-magic 对照的陷阱 owner 生命周期、发射预算、周期状态、
+  Fire Trauma 父/地面/爆炸链和武术资源边界。
+- [ ] 真实 1.10f MPQ 双客户端 trap gate 尚未建立；后续需新增 Assassin 专用 headless
+  存档/入口，不能用 Sorceress area gate 替代。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且
