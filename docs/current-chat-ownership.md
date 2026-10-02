@@ -35,11 +35,12 @@
 ### 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
 - 新增无合法尸体的运行时回归：强制通过召唤体 `aip3` 后，实际生成 Skill2 的
-  authoritative lightning missile，并确认 `damageSnapshot=true`。
+  authoritative lightning missile，确认 `damageSnapshot=true`，并在碰撞后实际降低
+  hostile 生命。
 - 发现并锁定 MPQ missile 别名链：逻辑字段为 `sentrylightningbolt2`，不能用显示别名
   `sentry lightning` 直接比较 row 名；测试现在比较解析后的稳定 missile ID。
-- `AssassinSkillSpecializationTest` 38 项通过。下一步：Skill2 碰撞伤害、同距尸体候选
-  顺序和墙体/null-hit。
+- `AssassinSkillSpecializationTest` 38 项通过。下一步：同距尸体候选顺序、墙体/null-hit
+  和真实双客户端 fallback。
 - 本轮代码/测试提交：`e2da5841`（`test: verify Death Sentry Skill2 fallback missile`）；
   工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 

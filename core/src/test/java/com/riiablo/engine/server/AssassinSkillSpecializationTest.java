@@ -1279,7 +1279,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       int target = world.create();
       world.getMapper(Monster.class).create(target);
       world.getMapper(Position.class).create(target).position.set(12, 3);
-      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      Attributes targetAttrs = attributes(10000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
 
       world.setDelta(1f / 25f);
       world.process();
@@ -1296,6 +1297,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "Skill2 fallback must initialize an authoritative damage snapshot");
       assertEquals(resolvedMissile, lightning.missile.Missile,
           "fallback missile row remains sourced from Skill2");
+      for (int i = 0; i < 30 && targetAttrs.get(Stat.hitpoints).asFixed() >= 10000f; i++) {
+        world.process();
+      }
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "Skill2 lightning must damage the hostile after authoritative collision");
     } finally {
       if (summon != null) summon.aip3 = originalAttackChance;
       world.dispose();

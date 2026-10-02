@@ -3,12 +3,12 @@
 ## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
 - [x] 无合法尸体时通过召唤体 `aip3` 门槛，实际执行 `MonStats.Skill2 = "death sentry ltng"`，
-  生成 authoritative lightning missile 并写入 `damageSnapshot`。
+  生成 authoritative lightning missile，写入 `damageSnapshot`，并在碰撞系统中实际降低
+  hostile 生命。
 - [x] 对照 `resolveMissile` 处理 MPQ 字段别名：最终稳定行名为
   `sentrylightningbolt2`，不能直接把 `sentry lightning` 显示别名当作 row 名。
   `AssassinSkillSpecializationTest` 38 项通过。
-- [ ] Skill2 闪电碰撞伤害、同距尸体候选顺序、墙体/null-hit 和真实双客户端 fallback
-  仍待专项验收。
+- [ ] 同距尸体候选顺序、墙体/null-hit 和真实双客户端 fallback 仍待专项验收。
 
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照
 
