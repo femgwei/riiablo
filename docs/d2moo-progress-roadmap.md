@@ -64,7 +64,10 @@
   到状态清除前两端目标生命均未下降。
 - [x] 最后一个可合法周期通过 `periodicCountdown` 重置计数严格收口：
   `finalPulseResets=1`；随后状态清除和 1 秒静默窗口继续通过。
-- [ ] 真实客户端视觉 Overlay 的实际持续时间仍待专项验收；下一步转入客户端表现核对。
+- [x] `StateOverlaySystemTest` 已确认 `bladeshield` Overlay 资源存在；StateP duration 从 3
+  更新到 1 时 Overlay 保持，只有权威 `StateId=158` 移除后才清除。
+- [ ] 真实 MPQ 客户端渲染窗口的逐帧视觉持续时间仍待专项验收；下一步接入实际渲染/截图
+  核对。
 - [x] Blade Shield 双端 StateP gate 现在同步校验 skill、等级、`perdelay` 和 `AuraLen`，
   允许最多一帧网络快照偏差；level=20 真实 gate 通过。
 - 验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
@@ -83,6 +86,8 @@
 - 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到
   `origin/master`。
 - 最后周期计数提交：`204d879f`（`test: count Blade Shield final pulse`），已推送到
+  `origin/master`。
+- Overlay 生命周期提交：`12069ba0`（`test: verify Blade Shield overlay lifetime`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin 行为层回归
