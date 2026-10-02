@@ -2,6 +2,27 @@
 
 更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
 
+## 2026-10-02 Amazon Multiple Shot / Strafe 真实 MPQ 多目标 gate
+
+- 对照本地 D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave` 与
+  `sub_6FD140D0/sub_6FD14120`，确认 riiablo 的整数 caster→target delta、垂直
+  lane 偏移和 21 枚 `multipleshotbolt` 创建路径一致；没有放宽生产碰撞半径或改命中公式。
+- 真实双客户端夹具原先会与 `DynamicUnitCollisionSystem` 初始化重建竞态：两个 lane
+  目标可能被重定位到同一坐标。新增原子“移除 Size/停用 Box2D/定位”辅助，并在首个网络
+  baseline 后再次稳定位置，最终服务器坐标为中心 `(253,-28)`、lane `(253,-32)`、
+  `(253,-36)`。
+- D2MOO 的 `NextHit` 行为会在接触时设置 `JUSTHIT`，即使该次 5..95% to-hit
+  结果是 miss；因此多目标 gate 若直接使用随机流会间歇性只命中中心 lane。夹具现在
+  仅在 cast 前固定一段通过 95% 命中率的 RNG 种子，不改变生产战斗规则。
+- 真实 gate 已通过：
+  `:server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=12 -PamazonBowMultiTarget=true --no-daemon`
+  （Multiple Shot，21 枚导弹，owner/observer 共享，至少中心+一个 lane 掉血，重连通过）；
+  `... -PamazonBowSkill=26 -PamazonBowTimeout=15 -PamazonBowMultiTarget=true ...`
+  （Strafe，2 枚导弹，中心+一个 lane 掉血）同样通过。
+- 本次只修改 headless gate fixture/helper；Amazon 生产技能实现没有被 dark-magic 或
+  其他版本数值覆盖。核心 Amazon 专项测试本轮仍有既有的 corpse-pierce 用例失败，见交接说明，
+  未将该无关失败标为本项回归通过。
+
 ## 2026-10-02 Assassin Fire Trauma（ID 251）行为增量
 
 - 按 D2MOO `MISSMODE_SrvHit36_MissileInAir` 对齐：`bomb in air`（本地

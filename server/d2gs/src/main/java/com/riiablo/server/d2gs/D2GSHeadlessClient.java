@@ -2181,13 +2181,14 @@ public final class D2GSHeadlessClient {
       }
       if (multiTargetGate) {
         // The native Multiple Shot lane spacing for the fixture's horizontal
-        // caster-to-target ray is two world units.  Add lane targets only
+        // caster-to-target ray is one world unit after D2MOO's integer
+        // perpendicular halving loop. Add lane targets only
         // after the player is staged so the deterministic player position is
         // not itself relocated by the temporary fixture bodies.
         for (float laneOffset : new float[] {-4f, -8f}) {
           int laneTargetId = D2GS.headlessCreateRoomMeleeFixture(2, room);
-          if (laneTargetId < 0 || !D2GS.headlessDisableMonsterDynamicCollision(laneTargetId)
-              || !D2GS.headlessPlaceMonsterNear(laneTargetId, targetId, 0f, laneOffset)) {
+          if (laneTargetId < 0 || !D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+              laneTargetId, targetId, 0f, laneOffset)) {
             throw new IOException("failed to create/place Amazon multi-target lane offset="
                 + laneOffset);
           }
@@ -2202,6 +2203,17 @@ public final class D2GSHeadlessClient {
             throw new IOException("Amazon multi-target lane did not receive both baselines: target="
                 + laneTargetId + " offset=" + laneOffset);
           }
+          // Fixture creation can race the first DynamicUnitCollisionSystem
+          // rebuild before the Size component removal is observed. Re-apply
+          // the non-dynamic placement after the initial network baseline so
+          // each lane retains its requested native offset.
+          if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+              laneTargetId, targetId, 0f, laneOffset)) {
+            throw new IOException("failed to stabilize Amazon multi-target lane offset="
+                + laneOffset);
+          }
+          laneOwner = awaitSpecificMonster(owner, ownerInput, laneTargetId, deadline());
+          lanePeer = awaitSpecificMonster(peer, peerInput, laneTargetId, deadline());
           if (D2GS.headlessMapRayBlocked(owner.playerId, laneTargetId)) {
             throw new IOException("Amazon multi-target lane is blocked by the production map ray: target="
                 + laneTargetId + " offset=" + laneOffset);
@@ -2313,6 +2325,7 @@ public final class D2GSHeadlessClient {
         // cannot when the target is several tiles away.
         consumeOne(ownerInput, owner);
         consumeOne(peerInput, peer);
+        if (multipleShot || strafe) D2GS.headlessSeedAmazonBowHitRolls();
         send(ownerOutput, owner.castPacket(config.amazonBowSkillId, targetId,
             ownerTarget.x, ownerTarget.y));
         log("amazon_bow_cast", "attempt=" + attempt + " skill="

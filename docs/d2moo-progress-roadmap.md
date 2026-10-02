@@ -1,5 +1,22 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-02 Amazon Multiple Shot / Strafe 多目标 gate
+
+- [x] 对照 D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave` 及
+  `sub_6FD140D0/sub_6FD14120`，确认当前生产 lane 几何与 1.10f 整数规则一致；未放宽
+  碰撞半径、未改命中公式。
+- [x] 修复 headless 多目标夹具与 `DynamicUnitCollisionSystem` 的初始化竞态，保证两个
+  lane 使用真实独立坐标；按 D2MOO `NextHit/JUSTHIT` 语义固定测试 RNG，消除 5% miss
+  造成的随机 gate 抖动。
+- [x] 真实双客户端 MPQ 通过：Multiple Shot(12) 和 Strafe(26) 的多目标 gate，均确认
+  至少两个不同 lane 目标 owner/observer 同步掉血，并完成 observer 重连。
+- [ ] 仍待：Amazon Multiple Shot/Strafe 的穿透专门 gate、旧客户端动画无 fallback、
+  其余 Amazon exact-ID 行；核心 `AmazonSkillSpecializationTest` 的既有 corpse-pierce
+  用例失败不归因于本轮 gate。
+- 验证：
+  `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=12 -PamazonBowTimeout=12 -PamazonBowMultiTarget=true --no-daemon`；
+  `./gradlew.bat :server:d2gs:headlessAmazonBow -PamazonBowSkill=26 -PamazonBowTimeout=15 -PamazonBowMultiTarget=true --no-daemon`。
+
 ## 2026-10-01 Amazon Lightning Bolt 真实 MPQ 双客户端门槛
 
 - [x] 在 `headlessAmazonMelee` 中加入 Lightning Bolt(20) exact-ID 支持，记录真实

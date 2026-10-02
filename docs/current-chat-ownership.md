@@ -32,6 +32,20 @@
 
 ## 当前基线
 
+### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
+
+- 已按本地 D2MOO `SKILLS_SrvDo008` 核对 Multiple Shot 的整数 lane 几何；本轮没有修改
+  `ServerSkillSystem` 或 `MissileCollisionSystem` 的生产行为。
+- 修复 headless fixture 的动态碰撞初始化竞态：lane 目标用原子去 `Size`/停用物理体/定位，
+  并在首个网络 baseline 后复核定位，避免两个 lane 重叠。
+- 为规避 D2MOO `NextHit` 接触即写入 `JUSTHIT` 与 5% miss 造成的随机 gate 抖动，cast 前
+  只固定测试 RNG 通过序列，不改变命中公式。
+- 已通过真实双客户端 MPQ：Multiple Shot(12) 多目标、Strafe(26) 多目标；两者均确认
+  owner/observer 共享多枚导弹并至少两个不同 lane 目标掉血。
+- 本轮提交范围为 `server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+  `D2GSHeadlessClient.java` 及本文件/技能矩阵；核心测试仍存在既有
+  `AmazonSkillSpecializationTest` corpse-pierce 失败，未把它归因于本轮 gate。
+
 ### 2026-10-01 Lightning Bolt 真实 MPQ 接手摘要
 
 - `headlessAmazonMelee` 已纳入 Lightning Bolt(20)，并记录 `lightningjavelin` 的

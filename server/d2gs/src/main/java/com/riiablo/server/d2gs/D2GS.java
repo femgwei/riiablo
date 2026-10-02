@@ -2853,6 +2853,42 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Test-only atomic lane placement: remove the dynamic footprint and move the
+   * monster in the same application-thread runnable so a rebuild cannot race
+   * between the two operations. */
+  static boolean headlessPlaceMonsterNearWithoutDynamicCollision(
+      int monsterId, int anchorId, float dx, float dy) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean placed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position monster = server.world.getMapper(Position.class).get(monsterId);
+        Position anchor = server.world.getMapper(Position.class).get(anchorId);
+        if (monster == null || anchor == null) return;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Size> sizes =
+            server.world.getMapper(com.riiablo.engine.server.component.Size.class);
+        if (sizes.has(monsterId)) sizes.remove(monsterId);
+        com.riiablo.engine.server.component.Box2DBody box = server.world.getMapper(
+            com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
+        if (box != null && box.body != null) box.body.setActive(false);
+        monster.position.set(anchor.position.x + dx, anchor.position.y + dy);
+        if (box != null && box.body != null) box.body.setTransform(monster.position, box.body.getAngle());
+        com.riiablo.engine.server.component.Velocity velocity = server.world.getMapper(
+            com.riiablo.engine.server.component.Velocity.class).get(monsterId);
+        if (velocity != null) velocity.velocity.setZero();
+        server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class)
+            .remove(monsterId);
+        placed.set(!sizes.has(monsterId));
+      } finally {
+        done.countDown();
+      }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && placed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /**
    * Finds a walkable point in the anchor's RoomEx whose native missile ray is
    * blocked by static map geometry. The returned pair is a real map coordinate,
@@ -3062,6 +3098,31 @@ public class D2GS extends ApplicationAdapter {
         return;
       }
     }
+  }
+
+  /**
+   * Keeps the real-MPQ bow lane gate reproducible without changing production
+   * hit rules. Multiple Shot rows use the native 5..95% to-hit roll; a fixture
+   * that asserts distinct lane damage must not occasionally fail because one
+   * of the few lane contacts consumed the 5% miss outcome.
+   */
+  static void headlessSeedAmazonBowHitRolls() {
+    final int passingRolls = 64;
+    for (long seed = 1L; seed < 1_000_000L; seed++) {
+      com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+      boolean passes = true;
+      for (int i = 0; i < passingRolls; i++) {
+        if (com.badlogic.gdx.math.MathUtils.random(99) >= 95) {
+          passes = false;
+          break;
+        }
+      }
+      if (passes) {
+        com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+        return;
+      }
+    }
+    throw new IllegalStateException("unable to seed deterministic Amazon bow hit rolls");
   }
 
   /** Creates one deterministic live hostile monster for aura target gates. */
