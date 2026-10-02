@@ -10,6 +10,8 @@
 - [x] `./gradlew :core:test --tests
   com.riiablo.engine.server.AssassinSkillSpecializationTest`：35 项通过，
   `BUILD SUCCESSFUL`。
+- 提交/推送：`68bbab9c`（代码/测试）、`91c512c8`（交接 hash）、`7063c1c6`（状态对齐），
+  均已推送到 `origin/master`。
 - [ ] 正常 7 发预算下的多尸体事务、Skill2 闪电逐目标伤害、墙体/null-hit 以及真实
   双客户端到期视觉仍待专项门槛；下一步进入 Death Sentry 目标筛选/伤害边界。
 
