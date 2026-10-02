@@ -42,8 +42,8 @@
   新尸体优先级已完成。
 - 本轮未修改 `AssassinTrapSystem.java`，因为该文件仍有其他 agent 的未提交内容；下一步
   先做确定性顺序夹具，再由生产文件负责人合并策略调整。
-- 本轮为文档对照更新，无编译；提交：`4294e6cf`（`docs: record Death Sentry corpse order divergence`），
-  已准备推送；工作区其他未提交文件保持不动。
+- 本轮测试/文档提交：`81963e7a`（`test: record Death Sentry tie break baseline`），已准备推送；
+  工作区其他未提交文件保持不动。
 
 ### 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
