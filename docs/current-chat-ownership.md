@@ -42,8 +42,8 @@
 - 真实 1.10f `:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15
   -PareaVerbose --no-daemon` 已复跑通过：双端 `sharedMissiles=[135]`、
   `states=[118,104,108]`、`animationFallback=false`；observer reconnect 为
-  `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。精简日志保留在本地
-  `death-sentry-target-gate-next.log`，不纳入提交。
+  `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。最终提交复跑的精简日志
+  保留在本地 `death-sentry-target-gate-final.log`，不纳入提交。
 - `./gradlew :core:test` 已执行但基线全量结果为 `2167 tests completed, 133 failed,
   12 skipped`；失败集中在仓库缺失的 `test/*` 资源、外部 `G:\` MPQ 路径、未注册
   `CofManager` 夹具及既有地图/战斗断言，未见本轮 Assassin 专项失败，不把该全量结果
