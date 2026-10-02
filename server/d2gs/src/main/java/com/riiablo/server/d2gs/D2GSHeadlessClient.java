@@ -1003,9 +1003,97 @@ public final class D2GSHeadlessClient {
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
-      if (requiresAreaReconnect(skillId)) {
+      if (skillId == ASSASSIN_FIRE_TRAUMA) {
+        verifyFireTraumaReconnect(a, b, inA, socketB, peerD2s, peerCharacter, targetId);
+      } else if (requiresAreaReconnect(skillId)) {
         verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
       }
+    }
+  }
+
+  /**
+   * Fire Trauma is a one-shot air -> ground -> explosion chain.  A reconnect
+   * may legitimately observe an empty set because the ground row or its
+   * presentation child expires during the disconnect window.  The invariant
+   * is subset/no-resurrection plus the target's authoritative life snapshot.
+   */
+  private void verifyFireTraumaReconnect(D2GSHeadlessClient owner,
+      D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
+      byte[] observerD2s, CharacterHeader observerCharacter, int targetId) throws Exception {
+    Set<Integer> before = new HashSet<>(activeAreaMissiles(owner, ASSASSIN_FIRE_TRAUMA));
+    float ownerLife = snapshotLife(owner, targetId);
+    float observerLife = snapshotLife(oldObserver, targetId);
+    int oldObserverId = oldObserver.playerId;
+    oldSocket.close();
+    long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+    while (System.currentTimeMillis() < disconnectDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      Visibility state = owner.visibility.get(oldObserverId);
+      if (state != null && state.deleted) break;
+    }
+
+    D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+    try (Socket reconnectSocket = reconnected.openSocket();
+         DataInputStream reconnectInput = input(reconnectSocket);
+         OutputStream reconnectOutput = output(reconnectSocket)) {
+      send(reconnectOutput, connectionPacket(observerCharacter, observerD2s));
+      reconnected.awaitConnection(reconnectInput, deadline());
+      if (!D2GS.headlessWarpPlayer(reconnected.playerId)) {
+        throw new IOException("Fire Trauma reconnect could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline && reconnected.currentLevelId != 2) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+      }
+      if (reconnected.currentLevelId != 2) {
+        throw new IOException("Fire Trauma reconnect did not receive Blood Moor baseline");
+      }
+      long reconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < reconnectDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+        if (packet != null) owner.consume(packet);
+        packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+        Set<Integer> ownerActive = activeAreaMissiles(owner, ASSASSIN_FIRE_TRAUMA);
+        Set<Integer> restoredActive = activeAreaMissiles(reconnected, ASSASSIN_FIRE_TRAUMA);
+        boolean noResurrection = before.containsAll(restoredActive)
+            && ownerActive.containsAll(restoredActive);
+        Snapshot restoredTarget = reconnected.monsters.get(targetId);
+        boolean targetWasDead = (Float.isFinite(ownerLife) && ownerLife <= 0f)
+            || (Float.isFinite(observerLife) && observerLife <= 0f);
+        // Fire Trauma can finish the target before the observer disconnects.
+        // In that case the native stream is allowed to omit the corpse on the
+        // reconnect baseline, but it must never resurrect it as a live monster.
+        boolean lifeValid;
+        if (targetWasDead) {
+          lifeValid = restoredTarget == null || restoredTarget.deleted
+              || (restoredTarget.hasVitals
+                  && (restoredTarget.dead || restoredTarget.life <= 0f));
+        } else {
+          lifeValid = restoredTarget != null && restoredTarget.hasVitals
+              && (!Float.isFinite(ownerLife)
+                  || Math.abs(restoredTarget.life - ownerLife) <= 0.001f)
+              && (!Float.isFinite(observerLife)
+                  || Math.abs(restoredTarget.life - observerLife) <= 0.001f);
+        }
+        if (noResurrection && lifeValid && lifecycleWatermarksValid(owner, reconnected)) {
+          log("area_skill_reconnect_pass", "skill=" + ASSASSIN_FIRE_TRAUMA
+              + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
+              + " active=" + restoredActive + " ownerActive=" + ownerActive
+              + " expiredDuringReconnect=" + (before.size() - restoredActive.size())
+              + " target=" + targetId + " life="
+              + (restoredTarget != null ? restoredTarget.life : Float.NaN)
+              + " targetWasDead=" + targetWasDead + " stale=false");
+          return;
+        }
+      }
+      throw new IllegalStateException("Fire Trauma reconnect snapshot mismatch: before=" + before
+          + " owner=" + activeAreaMissiles(owner, ASSASSIN_FIRE_TRAUMA)
+          + " restored=" + activeAreaMissiles(reconnected, ASSASSIN_FIRE_TRAUMA)
+          + " target=" + targetId + " ownerLife=" + ownerLife
+          + " observerLife=" + observerLife + " restoredLife=" + snapshotLife(reconnected, targetId));
     }
   }
 

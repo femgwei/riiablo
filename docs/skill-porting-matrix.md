@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
+更新时间：2026-10-02（交接快照：Assassin Fire Trauma reconnect gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -8,8 +8,9 @@
   `NativeTrapSystemTest` 6 项及 `NativeTrapFireSystemTest` 2 项，共 73 项全部通过。
 - [x] 回归覆盖 Fire Trauma 的 air/ground/explosion 生命周期、陷阱 owner/damageOwner、
   shot budget、sentry retarget、Blade Fury/Blade Shield 周期和武术资源边界。
-- [ ] Assassin 仍没有现成的真实 1.10f MPQ 双客户端入口；本轮没有把纯 ECS/Native
-  通过结果标成四层完成。下一步应新增专用 headless trap fixture，再验证重连与动画。
+- [x] 已建立 Assassin 专用真实 1.10f MPQ headless 入口；Fire Trauma(251) 已完成
+  双客户端、动画、伤害和一次性效果重连边界。其余陷阱技能仍按各自 gate 单独验收，
+  不能由 251 的通过结果代替。
 
 ## 2026-10-02 Assassin Fire Trauma(251) air→ground 真实 MPQ gate
 
@@ -18,13 +19,17 @@
   `bomb on ground`（missile=386），skill=251、damageLevel=20 一致，且
   `animationFallback=false`。
 - [x] 严格 gate 已通过 observer reconnect：断线期间空中父实体按原生生命周期过期，
-  重连只恢复仍活动的地面实体（`stale=false`），没有复活已删除实体。
+  重连只恢复仍活动的实体（`stale=false`），没有复活已删除实体。此次爆炸已将目标
+  击杀（owner/observer life=0）；重连基线允许目标缺失，但若仍同步目标必须保持
+  `dead/deleted/life<=0`，禁止以存活状态复活。
 - [x] 本轮覆盖 D2MOO `MISSMODE_SrvHit36_MissileInAir` 的空中→地面转换和多人快照，
   未改变 Fire Trauma 的生产碰撞、伤害或地面爆炸逻辑。
 - [x] 严格表现/伤害 gate 通过：两端历史原生 missile 类型均为 `[385,386,387]`
   （空中、地面、爆炸表现），并硬断言爆炸范围内目标在 owner/observer 两端均掉血。
-- [ ] 尚未标记四层完成：短寿命爆炸链的专用重连边界及陷阱 owner/damageOwner 生命周期
-  仍需单独验证；通用持久控制器 reconnect 不适用于该一次性效果。
+- [x] 短寿命爆炸链的专用重连边界已单独验证；通用持久控制器 reconnect 没有被套用到
+  该一次性效果。日志证据为 `area_skill_reconnect_pass ... targetWasDead=true`。
+- [ ] Assassin 其余陷阱技能的 owner/damageOwner 生命周期、墙体/null-hit 和真实双端
+  gate 仍需按技能逐项完成，不能由 Fire Trauma(251) 代替。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate

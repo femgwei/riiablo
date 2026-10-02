@@ -6,19 +6,22 @@
   2 项，共 73 项全部通过。
 - [x] 这些回归锁定 dark-magic 对照的陷阱 owner 生命周期、发射预算、周期状态、
   Fire Trauma 父/地面/爆炸链和武术资源边界。
-- [ ] 真实 1.10f MPQ 双客户端 trap gate 尚未建立；后续需新增 Assassin 专用 headless
-  存档/入口，不能用 Sorceress area gate 替代。
+- [x] 已建立 Assassin 专用真实 1.10f MPQ headless 存档/入口；Fire Trauma(251)
+  已通过双客户端、动画、伤害与一次性重连 gate。其余 trap exact-ID 仍需独立验收。
 
 ## 2026-10-02 Assassin Fire Trauma(251) air→ground 真实 gate
 
 - [x] Assassin fixture 通过严格双客户端 gate：owner/observer 共享 `bomb in air`
   (385) 与 `bomb on ground` (386)，并确认 `animationFallback=false`。
-- [x] observer 重连只恢复仍活动的地面实体，已过期空中实体不复活；该结果符合原生
-  生命周期快照边界。
+- [x] observer 重连只恢复仍活动的实体，已过期空中实体不复活；本次爆炸已将目标击杀，
+  重连后目标缺失是合法结果，若目标仍出现则必须保持死亡/删除状态，禁止复活。
 - [x] 严格表现 gate 记录双方历史 missile 类型 `[385,386,387]`，并要求爆炸范围内
   目标在两端实际掉血；未用“出现导弹”替代伤害证据。
-- [ ] 后续仍需专门处理一次性爆炸链的重连窗口及 owner/damageOwner 生命周期；当前
-  不得标为 Fire Trauma 四层完成。
+- [x] 一次性爆炸链的专用重连窗口已通过，日志包含
+  `area_skill_reconnect_pass ... targetWasDead=true`；没有把持久控制器规则套用到
+  短寿命导弹。
+- [ ] Assassin 其他 trap 技能的 owner/damageOwner 生命周期和真实 MPQ gate 仍待逐项
+  验证，不能由 Fire Trauma(251) 的结果代替。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate

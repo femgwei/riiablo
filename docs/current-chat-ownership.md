@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-01（Amazon Lightning Bolt 真实 MPQ 双客户端 gate）
+更新时间：2026-10-02（Assassin Fire Trauma 真实 MPQ reconnect gate）
 
 ## 唯一负责人
 
@@ -31,6 +31,16 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-02 Assassin Fire Trauma(251) 真实 MPQ gate
+
+- `:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`
+  已通过真实 1.10f MPQ 双客户端 gate；owner/observer 共享 `bomb in air`(385)、
+  `bomb on ground`(386) 及爆炸表现(387)，并确认两端目标实际掉血至死亡。
+- observer reconnect 已通过一次性效果专用规则：断线期间短寿命实体自然过期，重连不恢复
+  已删除导弹；目标已死亡时允许重连基线不再包含该实体，但禁止恢复为存活目标。
+- 本轮只修改 `D2GSHeadlessClient` 的测试/验证断言和三份交接文档；没有改动 Fire Trauma
+  生产碰撞、伤害、爆炸或 owner/damageOwner 逻辑。Assassin 其他 trap 技能仍需独立 gate。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 
