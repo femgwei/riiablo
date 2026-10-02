@@ -350,6 +350,41 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills() {
+    for (String placementName : new String[] {
+        "Wake of Fire Sentry", "Inferno Sentry", "Death Sentry"}) {
+      Skills.Entry placement = Riiablo.files.skills.get(placementName);
+      assertNotNull(placement, placementName);
+      assertTrue(placement.summon != null && !placement.summon.isEmpty(),
+          placementName + " must declare its native summon row");
+
+      com.riiablo.codec.excel.MonStats.Entry summon =
+          Riiablo.files.monstats.get(placement.summon);
+      assertNotNull(summon, placementName + " summon=" + placement.summon);
+      assertTrue(summon.Skill1 != null && !summon.Skill1.isEmpty(),
+          placementName + " must provide MonStats.Skill1 for sentry AI");
+      Skills.Entry skill1 = Riiablo.files.skills.get(summon.Skill1);
+      assertNotNull(skill1, placementName + " Skill1=" + summon.Skill1);
+
+      Monster monster = new Monster();
+      monster.monstats = summon;
+      Skills.Entry resolved = AssassinTrapSystem.resolveAttackSkill(monster, placement);
+      assertNotNull(resolved, placementName + " must resolve an attack skill");
+      assertTrue(placement.Id != resolved.Id,
+          placementName + " must not recursively execute its placement row");
+
+      if ("Death Sentry".equals(placementName)
+          && summon.Skill2 != null && !summon.Skill2.isEmpty()) {
+        assertEquals(summon.Skill2, resolved.skill,
+            "Death Sentry uses Skill2 for its ordinary lightning fallback");
+      } else {
+        assertEquals(summon.Skill1, resolved.skill,
+            placementName + " uses MonStats.Skill1 for its attack AI");
+      }
+    }
+  }
+
+  @Test
   void shadowWarriorUsesNativeSrvDo049AndOwnedPetState() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

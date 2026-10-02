@@ -32,6 +32,15 @@
 
 ## 当前基线
 
+### 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
+
+- 新增 `sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills`，覆盖 Wake of Fire、
+  Inferno、Death Sentry 的 `MonStats.Skill1/Skill2` 攻击行解析，禁止回退执行放置技能。
+- `AssassinSkillSpecializationTest` 34 项通过；真实 MPQ 的 `AssassinSentry` fallback 警告、
+  shot budget、到期和逐目标伤害仍未宣称完成。
+- 本轮提交/推送：`1984f886`（`test: lock Assassin sentry attack skill resolution`），
+  `origin/master` 将同步到该提交。
+
 ### 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
 
 - 真实 MPQ 双客户端已实际触发 `MIS` keyframe 和 `SrvDo045`，

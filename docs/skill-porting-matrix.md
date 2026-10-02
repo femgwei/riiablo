@@ -2,6 +2,16 @@
 
 更新时间：2026-10-03（交接快照：Wake of Fire Sentry 真实 keyframe gate）
 
+## 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
+
+- [x] 新增 `sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills`：Wake of Fire、
+  Inferno、Death Sentry 的召唤体必须从原生 `MonStats.Skill1/Skill2` 解析攻击技能；
+  不再把放置技能 `SrvDo045` 回退为攻击技能，避免陷阱递归创建或错误 helper missile。
+- [x] Death Sentry 在没有合法尸体时明确使用 `Skill2` 普通闪电攻击；缺失攻击行仍
+  fail-closed。`AssassinSkillSpecializationTest` 共 34 项通过。
+- [ ] 真实双客户端日志中的 `AssassinSentry` AI fallback 警告、shot budget、到期清理、
+  墙体/null-hit 和逐目标伤害仍需专项验收；本项只完成攻击行解析层。
+
 ## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
 
 - [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；

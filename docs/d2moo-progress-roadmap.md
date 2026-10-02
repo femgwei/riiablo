@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Sentry AI attack-row fail-closed 对照
+
+- [x] 纯逻辑回归 `sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills` 已覆盖
+  Wake of Fire、Inferno、Death Sentry：攻击技能来自召唤体 `MonStats.Skill1/Skill2`，
+  不回退到放置行 `SrvDo045`，避免递归陷阱或错误 helper missile。
+- [x] Death Sentry 无合法尸体时使用 `Skill2` 普通闪电行；召唤体缺少攻击技能时保持
+  fail-closed。`AssassinSkillSpecializationTest` 34 项通过。
+- [ ] 这不是完整 AI 验收；真实 MPQ 的 fallback 警告、shot budget、到期、墙体/null-hit
+  和逐目标伤害仍待下一轮专项门槛。
+
 ## 2026-10-03 Assassin Death Sentry(276) 真实 keyframe gate 收口
 
 - [x] 真实 MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；双方
