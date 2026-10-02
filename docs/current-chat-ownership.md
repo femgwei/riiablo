@@ -40,8 +40,8 @@
 - 测试读取 `MonStats.Skill1 = "mon death sentry"` 的参数，而不是放置技能 276 的
   参数；`AssassinSkillSpecializationTest` 36 项通过。
 - 下一步：正常 7 发预算下多尸体候选顺序，再核对 Skill2 闪电逐目标伤害和墙体/null-hit。
-- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
-  不得 stage、覆盖或清理。
+- 本轮代码/测试提交：`62710d25`（`test: lock Death Sentry corpse range boundary`）；
+  工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
 
 ### 2026-10-03 Assassin Death Sentry(276) shot budget / 到期独立门槛
 
