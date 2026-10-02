@@ -46,6 +46,14 @@
 - 本轮提交/推送：`d99c5352`（`test: close Wake of Fire sentry keyframe gate`），
   `origin/master` 已同步到该提交。
 
+### 2026-10-03 Assassin Inferno Sentry(272) gate 收口
+
+- 真实 MPQ 双客户端实际触发 `MIS`/`SrvDo045`，`animationFallback=false`；双方共享
+  `assassintrap` 控制实体和至少两枚 missile=523 通道导弹。
+- 重连结果为 `active=[133]`、`expiredDuringReconnect=1`、`stale=false`；仍有
+  `AssassinSentry` AI fallback 警告，通道参数、伤害、墙体/null-hit、shot budget 和
+  到期清理尚未完成。下一步 Death Sentry(276)。
+
 ### 2026-10-03 Blade Shield RoomEx / target-filter 增量
 
 - `StateUpdater.processBladeShield` 已按 D2MOO aura 扫描语义限制完整地图实体到同一

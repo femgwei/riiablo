@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Inferno Sentry(272) 真实 keyframe gate 收口
+
+- [x] 真实双客户端 MPQ gate 实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；
+  双方共享 `assassintrap` 控制实体和至少两枚 `SrvDo095` 通道导弹（missile=523），
+  本次共享 `[133,134]`。
+- [x] observer reconnect 通过：`active=[133]`、`expiredDuringReconnect=1`、
+  `stale=false`；短寿命通道导弹没有在重连时复活。
+- [ ] 通道 duration/pulse cadence、方向追踪、逐目标伤害、墙体/null-hit、shot budget、
+  控制实体到期及 `AssassinSentry` AI fallback 仍待专项验收；下一步 Death Sentry(276)。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 -PareaVerbose
+  --no-daemon`（通过，`BUILD SUCCESSFUL`）。
+
 ## 2026-10-03 Assassin Wake of Fire Sentry(262) 真实 keyframe gate 收口
 
 - [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` keyframe → `SrvDo045`，

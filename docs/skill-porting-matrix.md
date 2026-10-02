@@ -2,6 +2,18 @@
 
 更新时间：2026-10-03（交接快照：Wake of Fire Sentry 真实 keyframe gate）
 
+## 2026-10-03 Assassin Inferno Sentry(272) 真实 keyframe gate 收口
+
+- [x] 真实 1.10f MPQ 双客户端实际触发 `MIS` → `SrvDo045`，`animationFallback=false`；
+  双方共享 `assassintrap` 控制实体和至少两枚 `SrvDo095` 通道导弹（missile=523），
+  本次共享导弹为 `[133,134]`。
+- [x] observer reconnect 通过：通道导弹自然过期一枚，重连仅保留 `active=[133]`，
+  `expiredDuringReconnect=1`、`stale=false`，没有复活已删除实体。
+- [ ] 通道 duration/pulse 间隔、方向追踪、逐目标伤害、墙体/null-hit、shot budget、
+  控制实体到期及 `AssassinSentry` AI fallback 仍需专项验收；下一项 Death Sentry(276)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15
+  -PareaVerbose --no-daemon`（通过，`BUILD SUCCESSFUL`）。
+
 ## 2026-10-03 Assassin Wake of Fire Sentry(262) gate 收口
 
 - [x] 真实 1.10f MPQ 双客户端 gate 通过：客户端实际收到 `MIS` keyframe 并派发
