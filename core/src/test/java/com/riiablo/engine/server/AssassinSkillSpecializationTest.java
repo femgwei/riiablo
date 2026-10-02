@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
@@ -1220,6 +1221,100 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void bladeShieldAuraCrossesAdjacentRoomWithoutWallRaycast() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    World world = bladeShieldWorld(factory, map);
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      com.riiablo.map.Map.Zone zone = bladeShieldThreeRoomZone(4);
+      int assassin = createBladeShieldPlayer(world, blade);
+      world.getMapper(Position.class).get(assassin).position.set(3f, 0f);
+      world.getMapper(MapWrapper.class).create(assassin).set(map, zone);
+      Attributes targetAttrs = attributes(1000);
+      int target = createBladeShieldMonster(world, 4.5f, targetAttrs);
+      world.getMapper(MapWrapper.class).create(target).set(map, zone);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 1000f,
+          "D2MOO scans the current RoomEx and its direct neighbors; walls do not add a raycast gate");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void bladeShieldSkipsNonAdjacentRoomsAndDifferentZones() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+    World world = bladeShieldWorld(factory, map);
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      com.riiablo.map.Map.Zone zone = bladeShieldThreeRoomZone(4);
+      com.riiablo.map.Map.Zone otherZone = bladeShieldThreeRoomZone(4);
+      int assassin = createBladeShieldPlayer(world, blade);
+      world.getMapper(Position.class).get(assassin).position.set(3f, 0f);
+      world.getMapper(MapWrapper.class).create(assassin).set(map, zone);
+
+      Attributes nonAdjacentAttrs = attributes(1000);
+      int nonAdjacent = createBladeShieldMonster(world, 8.5f, nonAdjacentAttrs);
+      world.getMapper(MapWrapper.class).create(nonAdjacent).set(map, zone);
+      Attributes otherZoneAttrs = attributes(1000);
+      int otherZoneTarget = createBladeShieldMonster(world, 3.5f, otherZoneAttrs);
+      world.getMapper(MapWrapper.class).create(otherZoneTarget).set(map, otherZone);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1000f, nonAdjacentAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "a coordinate-overlapping aura must not cross a non-adjacent RoomEx");
+      assertEquals(1000f, otherZoneAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "a complete MapWrapper must reject targets in another zone");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void bladeShieldSkipsNativeInvalidAndNullHitTargets() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      int assassin = createBladeShieldPlayer(world, blade);
+      Attributes invalidAttrs = attributes(1000);
+      int invalid = createBladeShieldMonster(world, 2f, invalidAttrs);
+      world.getMapper(NativeUnitFlags.class).create(invalid).reset();
+      Attributes validAttrs = attributes(1000);
+      createBladeShieldMonster(world, 2.5f, validAttrs);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1000f, invalidAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "D2MOO target filtering rejects null/invalid combat flags before damage");
+      assertTrue(validAttrs.get(Stat.hitpoints).asFixed() < 1000f,
+          "a valid hostile target remains eligible");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
   void bladeShieldStopsWhenTheStateExpiresOrTheSkillIsLost() {
     RecordingFactory factory = new RecordingFactory();
     World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
@@ -1549,6 +1644,17 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     com.riiablo.map.Map.RoomEx first = zone.addRoomEx(0, 0, 40, 40);
     com.riiablo.map.Map.RoomEx second = zone.addRoomEx(40, 0, 40, 40);
     com.riiablo.map.Map.RoomEx third = zone.addRoomEx(80, 0, 40, 40);
+    first.setAdjacentRoomIds(new int[] {second.id});
+    second.setAdjacentRoomIds(new int[] {first.id, third.id});
+    third.setAdjacentRoomIds(new int[] {second.id});
+    return zone;
+  }
+
+  private static com.riiablo.map.Map.Zone bladeShieldThreeRoomZone(int roomWidth) {
+    com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+    com.riiablo.map.Map.RoomEx first = zone.addRoomEx(0, 0, roomWidth, roomWidth);
+    com.riiablo.map.Map.RoomEx second = zone.addRoomEx(roomWidth, 0, roomWidth, roomWidth);
+    com.riiablo.map.Map.RoomEx third = zone.addRoomEx(roomWidth * 2, 0, roomWidth, roomWidth);
     first.setAdjacentRoomIds(new int[] {second.id});
     second.setAdjacentRoomIds(new int[] {first.id, third.id});
     third.setAdjacentRoomIds(new int[] {second.id});

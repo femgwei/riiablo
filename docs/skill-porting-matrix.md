@@ -1,6 +1,26 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Blade Shield real MPQ gate）
+更新时间：2026-10-03（交接快照：Blade Shield RoomEx 范围与 null-hit 回归）
+
+## 2026-10-03 Assassin Blade Shield RoomEx / target-filter 对照
+
+- [x] 按 D2MOO `SKILLS_SrvDo054_BladeShield → SKILLS_SrvDo142_Unused →
+  sub_6FD0FE80` 核对目标扫描：服务端现在在双方拥有完整 `MapWrapper` 时要求同一
+  `Map`/`Zone`，并只允许当前 RoomEx 或直接相邻 RoomEx；没有完整地图拓扑的 detached
+  ECS 夹具仍保持坐标范围兼容。
+- [x] 明确没有加入墙体射线检查。D2MOO 该路径只按 RoomEx、距离、`AuraFilter` 和目标
+  状态筛选；新增回归证明相邻房间目标可命中，墙体不会额外阻断 aura。
+- [x] 新增 `bladeShieldSkipsNonAdjacentRoomsAndDifferentZones`，覆盖坐标重叠但非相邻
+  RoomEx、跨 Zone 目标；新增 `bladeShieldSkipsNativeInvalidAndNullHitTargets`，覆盖
+  `NativeUnitFlags` 缺失有效 combat bits 的目标。
+- [x] `AssassinSkillSpecializationTest` 33 项、`AssassinMartialArtsTest` 37 项、
+  `NativeTrapSystemTest` 6 项、`NativeTrapFireSystemTest` 2 项全部通过，共 78 项。
+- [ ] 仍未宣称 Blade Shield 四层完成：真实 MPQ 墙体/目标掉血、双客户端重连和动画
+  gate 仍需与现有 277 gate 结果合并复核；本轮只改 ECS 目标范围与回归。
+- 验证命令：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
+  --tests com.riiablo.engine.server.AssassinMartialArtsTest
+  --tests com.riiablo.engine.server.object.NativeTrapSystemTest
+  --tests com.riiablo.engine.server.object.NativeTrapFireSystemTest --no-daemon --quiet`。
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 

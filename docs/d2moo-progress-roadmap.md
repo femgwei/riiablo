@@ -1,5 +1,22 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Blade Shield RoomEx / target-filter 对照
+
+- [x] 对照 D2MOO `SKILLS_SrvDo054_BladeShield`、`SKILLS_SrvDo142_Unused` 和
+  `sub_6FD0FE80`：Blade Shield 现在在完整 `MapWrapper` 下限制为同一 Map/Zone 的
+  当前 RoomEx 与直接相邻 RoomEx；没有完整拓扑的 detached 测试保持旧坐标范围行为。
+- [x] 不加入墙体射线阻断。D2MOO aura 回调没有 missile collision/raycast 检查；回归已
+  证明相邻房间目标可命中，非相邻 RoomEx 和跨 Zone 坐标重叠目标不会被误伤。
+- [x] Native 无效/null-hit 目标在 Blade Shield 伤害前被过滤；`AssassinSkillSpecializationTest`
+  33 项、`AssassinMartialArtsTest` 37 项、`NativeTrapSystemTest` 6 项、
+  `NativeTrapFireSystemTest` 2 项全部通过，共 78 项。
+- [ ] Blade Shield(277) 真实 MPQ 的墙体、目标掉血、双客户端重连和动画 gate 仍待把本轮
+  ECS 过滤结果并入既有 277 gate；不能仅凭本轮单元回归宣布四层完成。
+- 验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
+  --tests com.riiablo.engine.server.AssassinMartialArtsTest
+  --tests com.riiablo.engine.server.object.NativeTrapSystemTest
+  --tests com.riiablo.engine.server.object.NativeTrapFireSystemTest --no-daemon --quiet`。
+
 ## 2026-10-02 Assassin 行为层回归
 
 - [x] Assassin 专项 30 项、武术 37 项、NativeTrapSystem 6 项、NativeTrapFireSystem

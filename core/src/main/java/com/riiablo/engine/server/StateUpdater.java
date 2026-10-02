@@ -1513,7 +1513,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           || origin.dst2(mPosition.get(targetId).position) > range2
           || !isHostile(entityId, targetId)
           || mNativeUnitFlags.has(targetId)
-              && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
+              && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))
+          || !isBladeShieldTargetInScope(entityId, targetId, origin)) continue;
       Attributes target = mAttributesWrapper.get(targetId).attrs;
       StateList targetStates = null;
       if (mUnitStates.has(targetId)) {
@@ -1568,6 +1569,31 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             + "damage={}..{} srcDam={} affected={}",
         entityId, skill.Id, level, range, skillDamage[0], skillDamage[1],
         skill.SrcDam, affected);
+  }
+
+  /**
+   * Mirrors D2MOO's {@code sub_6FD0FE80}: Blade Shield scans the caster's
+   * current RoomEx and its directly adjacent rooms, not every ECS unit whose
+   * world coordinates happen to fall inside the aura radius.  Detached unit
+   * fixtures intentionally keep the old coordinate-only behavior until both
+   * units carry a complete MapWrapper.
+   */
+  private boolean isBladeShieldTargetInScope(int sourceId, int targetId, Vector2 origin) {
+    if (mMapWrapper == null || !mMapWrapper.has(sourceId) || !mMapWrapper.has(targetId)) {
+      return true;
+    }
+    MapWrapper source = mMapWrapper.get(sourceId);
+    MapWrapper target = mMapWrapper.get(targetId);
+    if (source == null || target == null || source.map == null || target.map == null
+        || source.zone == null || target.zone == null) {
+      return true;
+    }
+    if (source.map != target.map || source.zone != target.zone) return false;
+    Map.Zone zone = source.zone;
+    if (!zone.hasNativeRoomTopology()) return true;
+    if (!mPosition.has(targetId)) return false;
+    Vector2 targetPosition = mPosition.get(targetId).position;
+    return zone.areRoomsAdjacent(origin.x, origin.y, targetPosition.x, targetPosition.y);
   }
 
   private boolean stillOwnsSkill(int entityId, int skillId) {

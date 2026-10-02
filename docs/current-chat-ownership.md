@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Death Sentry 真实 MPQ gate）
+更新时间：2026-10-03（Assassin Blade Shield RoomEx 目标范围对照）
 
 ## 唯一负责人
 
@@ -31,6 +31,16 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Blade Shield RoomEx / target-filter 增量
+
+- `StateUpdater.processBladeShield` 已按 D2MOO aura 扫描语义限制完整地图实体到同一
+  Map/Zone 的当前或直接相邻 RoomEx；没有完整 `MapWrapper`/拓扑的 detached 夹具保持兼容。
+- 墙体不作为额外射线阻断条件；Native 无效/null-hit 目标在伤害前拒绝。
+- 78 项 Assassin/Trap 定向回归通过；真实 277 MPQ gate 仍需后续合并复核。
+- 本轮待提交文件：`StateUpdater.java`、`AssassinSkillSpecializationTest.java`、
+  `skill-porting-matrix.md`、`d2moo-progress-roadmap.md`、本文件。其他 agent 的修改、
+  未跟踪日志和 dump 均不属于本轮。
 
 ### 2026-10-02 Assassin Fire Trauma(251) 真实 MPQ gate
 
