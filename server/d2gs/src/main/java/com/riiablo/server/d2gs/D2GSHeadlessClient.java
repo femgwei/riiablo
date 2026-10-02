@@ -1610,6 +1610,9 @@ public final class D2GSHeadlessClient {
     boolean inFinalDelayTail = false;
     float finalOwnerLife = Float.NaN;
     float finalObserverLife = Float.NaN;
+    int finalPulseResets = 0;
+    int previousDuration = -1;
+    int previousCountdown = -1;
     while (System.currentTimeMillis() < deadline) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
       if (packet != null) owner.consume(packet);
@@ -1617,12 +1620,25 @@ public final class D2GSHeadlessClient {
       if (packet != null) observer.consume(packet);
       AreaState ownerProjection = owner.areaStates.get(
           com.riiablo.engine.server.state.StateId.BLADESHIELD);
-      if (!inFinalDelayTail && ownerProjection != null
-          && ownerProjection.duration > 0
-          && ownerProjection.duration < ownerProjection.periodicDelayFrames) {
-        inFinalDelayTail = true;
-        finalOwnerLife = snapshotLife(owner, targetId);
-        finalObserverLife = snapshotLife(observer, targetId);
+      if (ownerProjection != null) {
+        boolean pulseReset = previousDuration > ownerProjection.duration
+            && previousCountdown >= 0 && previousCountdown <= 1
+            && ownerProjection.periodicCountdownFrames
+                >= ownerProjection.periodicDelayFrames - 1
+            && ownerProjection.duration > 0
+            && ownerProjection.duration < ownerProjection.periodicDelayFrames;
+        if (pulseReset) {
+          finalPulseResets++;
+          if (finalPulseResets > 1) {
+            throw new IllegalStateException("Blade Shield emitted multiple final pulses: "
+                + "count=" + finalPulseResets + " duration=" + ownerProjection.duration);
+          }
+          inFinalDelayTail = true;
+          finalOwnerLife = snapshotLife(owner, targetId);
+          finalObserverLife = snapshotLife(observer, targetId);
+        }
+        previousDuration = ownerProjection.duration;
+        previousCountdown = ownerProjection.periodicCountdownFrames;
       }
       if (inFinalDelayTail) {
         float currentOwnerLife = snapshotLife(owner, targetId);
@@ -1638,6 +1654,10 @@ public final class D2GSHeadlessClient {
       Set<Integer> ownerActive = activeAreaStateIds(owner, ASSASSIN_BLADE_SHIELD);
       Set<Integer> observerActive = activeAreaStateIds(observer, ASSASSIN_BLADE_SHIELD);
       if (ownerActive.isEmpty() && observerActive.isEmpty()) {
+        if (finalPulseResets != 1) {
+          throw new IllegalStateException("Blade Shield final pulse count mismatch: "
+              + finalPulseResets);
+        }
         float ownerLife = snapshotLife(owner, targetId);
         float observerLife = snapshotLife(observer, targetId);
         long quietDeadline = System.currentTimeMillis() + 1_000L;
@@ -1658,6 +1678,7 @@ public final class D2GSHeadlessClient {
         log("area_skill_expiry_pass", "skill=" + ASSASSIN_BLADE_SHIELD
             + " ownerStates=" + ownerActive + " observerStates=" + observerActive
             + " target=" + targetId + " finalDelayTail=" + inFinalDelayTail
+            + " finalPulseResets=" + finalPulseResets
             + " quietMs=1000 stale=false");
         return;
       }
