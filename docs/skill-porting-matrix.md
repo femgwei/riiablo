@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Inferno Sentry real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Death Sentry real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -109,6 +109,20 @@
 - [ ] 通道 duration、pulse 间隔/方向追踪、逐目标伤害、墙体/null-hit、shot budget、trap
   到期及 AI fallback 尚未完成；下一项为 Death Sentry(276)。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 --no-daemon`。
+
+## 2026-10-02 Assassin Death Sentry(276) 真实 MPQ gate
+
+- [x] 两端共享 `assassintrap` 控制实体（skill=276）和 `corpseexplosion` 视觉导弹
+  （missile=641、skill=276、damageLevel=20）。
+- [x] 新增 Blood Moor 原生尸体 fixture；双方都确认该尸体死亡、`life=0` 且带
+  `CORPSE_NOSELECT`，将 SrvDo055 尸体事务纳入技能 gate。
+- [x] observer reconnect 保留持久视觉实体 `active=[136]`，`expiredDuringReconnect=0`、
+  `stale=false`。
+- [ ] `animationFallback=true`：276 仍未通过旧客户端真实 keyframe；同时存在两个
+  `DeathSentry` AI fallback 警告，需清理后再做动画层验收。
+- [ ] 爆炸实际目标伤害/范围、重复尸体消费、墙体/null-hit、shot budget 和控制实体到期
+  尚未完成；下一项为 Blade Shield(277)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 

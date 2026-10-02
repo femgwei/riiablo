@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Inferno Sentry 真实 MPQ gate）
+更新时间：2026-10-02（Assassin Death Sentry 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -113,6 +113,21 @@
   自动派发 SkillDoEvent，当前 gate 使用同一服务端 dispatch 验证真实导弹/同步/重连路径。
 - [ ] 通道持续时间、pulse 间隔/方向、逐目标火焰伤害、墙体/null-hit、shot budget、控制
   实体到期和 AI fallback 仍需专项验收；下一项进入 Death Sentry(276)。
+
+### 2026-10-02 Assassin Death Sentry(276) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 --no-daemon` 已通过真实 1.10f MPQ
+  双客户端 gate：双方共享 `assassintrap` 控制实体（skill=276）和 `corpseexplosion`
+  视觉导弹（missile=641、skill=276、damageLevel=20）。
+- 夹具创建 Blood Moor 原生尸体并将其置于陷阱附近；gate 明确检查 owner/observer 两端
+  尸体均为死亡、生命为 0 且带 `CORPSE_NOSELECT`，因此不是只生成一个落地陷阱的假阳性。
+- observer reconnect 通过：corpseexplosion 视觉实体为持久效果，重连仍保留活动实体
+  `active=[136]`，`expiredDuringReconnect=0`，`stale=false`。
+- 本次运行 `animationFallback=true`；旧客户端 COF/keyframe 未在窗口内自动派发 276 的
+  `SkillDoEvent`，后半段使用同一服务端 dispatch 验证真实尸体事务/导弹同步/重连路径。
+- 日志仍有两个 `DeathSentry ... AI_FALLBACK -> GenericMonster` 警告，需单独清理；[ ]
+  corpse explosion 实际目标掉血范围、重复尸体消费、墙体/null-hit、shot budget 和控制实体
+  到期仍需专项验收。下一项：Blade Shield(277)。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

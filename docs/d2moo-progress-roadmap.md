@@ -97,6 +97,20 @@
   控制实体到期和 `AssassinSentry` AI fallback 尚未完成。下一项：Death Sentry(276)。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 --no-daemon`。
 
+## 2026-10-02 Assassin Death Sentry(276) 真实 MPQ gate
+
+- [x] 真实双客户端 MPQ gate 通过：双方共享 `assassintrap` 控制实体（skill=276）和
+  `corpseexplosion` 视觉导弹（missile=641、skill=276、damageLevel=20）。
+- [x] 新增原生 Blood Moor 尸体夹具；owner/observer 两端均确认尸体 `life=0/dead` 并带
+  `CORPSE_NOSELECT`，证明 SrvDo055 已预留/消费尸体，而不是只有 SrvDo045 落地。
+- [x] observer reconnect 通过持久视觉实体规则（`active=[136]`、`expiredDuringReconnect=0`、
+  `stale=false`），没有复活未知实体。
+- [ ] `animationFallback=true`：旧客户端 COF 未自动派发 276 SkillDoEvent，真实 keyframe
+  仍待补齐；日志中的两个 `DeathSentry` AI fallback 也需清理。
+- [ ] corpse explosion 实际目标掉血范围、重复尸体消费、墙体/null-hit、shot budget 和控制
+  实体到期尚未完成。下一项：Blade Shield(277)。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=276 -PareaTimeout=15 --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且
