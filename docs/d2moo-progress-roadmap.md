@@ -53,12 +53,18 @@
 - [x] Native 无效/null-hit 目标在 Blade Shield 伤害前被过滤；`AssassinSkillSpecializationTest`
   33 项、`AssassinMartialArtsTest` 37 项、`NativeTrapSystemTest` 6 项、
   `NativeTrapFireSystemTest` 2 项全部通过，共 78 项。
-- [ ] Blade Shield(277) 真实 MPQ 的墙体、目标掉血、双客户端重连和动画 gate 仍待把本轮
-  ECS 过滤结果并入既有 277 gate；不能仅凭本轮单元回归宣布四层完成。
+- [x] 真实 MPQ gate 已合并复核：两端 `BLADESHIELD`（`StateId=158`、level=20、
+  `perdelay=25`）状态和同一目标掉血一致，`animationFallback=false`；严格重连断言要求
+  owner 仍活动时恢复 `states=[158]`，不接受空集合假阳性。
+- [ ] 长时 `AuraLen` 到期、最后周期边界和真实客户端视觉持续时间仍待专项验收；下一步
+  增加可控短持续时间/到期夹具。
 - 验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
   --tests com.riiablo.engine.server.AssassinMartialArtsTest
   --tests com.riiablo.engine.server.object.NativeTrapSystemTest
-  --tests com.riiablo.engine.server.object.NativeTrapFireSystemTest --no-daemon --quiet`。
+  --tests com.riiablo.engine.server.object.NativeTrapFireSystemTest --no-daemon --quiet`；另行
+  验证 `:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`，均通过。
+- gate 加固提交：`cc808a7c`（`test: require Blade Shield reconnect state`），已推送到
+  `origin/master`。
 
 ## 2026-10-02 Assassin 行为层回归
 

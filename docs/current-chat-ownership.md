@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Assassin Death Sentry 真实 keyframe gate 收口）
+更新时间：2026-10-03（Assassin Blade Shield reconnect gate 加固）
 
 ## 唯一负责人
 
@@ -71,6 +71,13 @@
   Map/Zone 的当前或直接相邻 RoomEx；没有完整 `MapWrapper`/拓扑的 detached 夹具保持兼容。
 - 墙体不作为额外射线阻断条件；Native 无效/null-hit 目标在伤害前拒绝。
 - 78 项 Assassin/Trap 定向回归通过；真实 277 MPQ gate 仍需后续合并复核。
+- 真实 277 MPQ gate 已复核：owner/observer 均收到 `BLADESHIELD`（`StateId=158`、
+  level=20、`perdelay=25`），目标两端实际掉血，`animationFallback=false`；严格重连
+  断言现在要求 owner 仍活动时恢复 `states=[158]`，不再把空状态集合判为通过。
+- 本轮 277 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15
+  --no-daemon`，`BUILD SUCCESSFUL`；核心 AssassinSkillSpecializationTest 通过。
+- 仍待：长时运行到 `AuraLen` 到期、到期后的最后一个周期边界，以及真实客户端视觉持续
+  时间；下一步优先做可控短持续时间/到期专项夹具。
 - 该增量已在前一提交完成；当前工作区仍有其他 agent 的未提交代码
   `ItemEntry.java`、`AssassinTrapSystem.java`、`MissileCollisionSystem.java`、
   `StatFormatterTest.java`，以及未跟踪日志/dump，均不属于本轮，接手者不得覆盖或提交。
