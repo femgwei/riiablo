@@ -1173,4 +1173,6 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [x] Assassin fixture 已通过严格双客户端 air→ground gate：共享 `bomb in air` (385)
   和 `bomb on ground` (386)，`animationFallback=false`。
 - [x] reconnect 通过：已过期父实体不复活，活动地面实体正常恢复。
-- [ ] 仍需补地面到期爆炸/范围伤害及 owner 生命周期，尚不能宣称 Fire Trauma 四层验收。
+- [x] 严格爆炸/伤害 gate 通过：双方历史类型集合均为 `[385,386,387]`，且目标生命
+  在 owner/observer 两端均下降。
+- [ ] 仍需补一次性爆炸链的专用重连窗口及 owner 生命周期，尚不能宣称四层验收。

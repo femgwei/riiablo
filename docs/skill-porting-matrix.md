@@ -21,8 +21,10 @@
   重连只恢复仍活动的地面实体（`stale=false`），没有复活已删除实体。
 - [x] 本轮覆盖 D2MOO `MISSMODE_SrvHit36_MissileInAir` 的空中→地面转换和多人快照，
   未改变 Fire Trauma 的生产碰撞、伤害或地面爆炸逻辑。
-- [ ] 尚未标记四层完成：需要继续验证地面行原生寿命到期的一次性爆炸/范围伤害及
-  陷阱 owner/damageOwner 生命周期。
+- [x] 严格表现/伤害 gate 通过：两端历史原生 missile 类型均为 `[385,386,387]`
+  （空中、地面、爆炸表现），并硬断言爆炸范围内目标在 owner/observer 两端均掉血。
+- [ ] 尚未标记四层完成：短寿命爆炸链的专用重连边界及陷阱 owner/damageOwner 生命周期
+  仍需单独验证；通用持久控制器 reconnect 不适用于该一次性效果。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate

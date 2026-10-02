@@ -157,6 +157,8 @@ public final class D2GSHeadlessClient {
   private final Map<Integer, Integer> missileOwners = new HashMap<>();
   /** Area-skill entities observed on this protocol client. */
   private final Map<Integer, AreaMissile> areaMissiles = new HashMap<>();
+  /** Native missile rows observed over the whole cast, including expired rows. */
+  private final Map<Integer, Set<Integer>> observedAreaMissileTypes = new HashMap<>();
   private final Set<Integer> areaHydraMonsters = new HashSet<>();
   private final Set<Integer> areaHydraDeletes = new HashSet<>();
   private final Set<Integer> observedMonsterClasses = new HashSet<>();
@@ -950,10 +952,19 @@ public final class D2GSHeadlessClient {
       // the travelling parent and its explodingarrowexp impact child.  Other
       // area skills retain the point-target fixture used by their native path.
       Snapshot fireBallTarget = skillId == SkillId.FIRE_BALL
-          ? a.nearestLiveMonster() : null;
+          || skillId == ASSASSIN_FIRE_TRAUMA ? a.nearestLiveMonster() : null;
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
+      float traumaInitialLife = fireBallTarget != null ? fireBallTarget.life : Float.NaN;
+      if (skillId == ASSASSIN_FIRE_TRAUMA && targetId >= 0) {
+        if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+            targetId, a.playerId, 0.5f, 0f)) {
+          throw new IOException("Fire Trauma fixture could not place durable target near caster");
+        }
+        targetX = a.playerX + 0.5f;
+        targetY = a.playerY;
+      }
       send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
           + " targetId=" + targetId + " target=(" + targetX + ',' + targetY + ")");
@@ -962,7 +973,9 @@ public final class D2GSHeadlessClient {
       long castStarted = System.currentTimeMillis();
       boolean animationFallback = false;
       while (System.currentTimeMillis() < deadline
-          && !areaEvidenceShared(a, b, skillId)) {
+          && (!areaEvidenceShared(a, b, skillId)
+              || skillId == ASSASSIN_FIRE_TRAUMA
+                  && !areaTargetDamaged(a, b, targetId, traumaInitialLife))) {
         consumeOne(inA, a);
         consumeOne(inB, b);
         // Some headless COF tables have no usable Druid/Sorceress keyframe.
@@ -979,6 +992,14 @@ public final class D2GSHeadlessClient {
       }
       if (!areaEvidenceShared(a, b, skillId)) {
         throw new IllegalStateException(areaEvidenceFailure(a, b, skillId));
+      }
+      if (skillId == ASSASSIN_FIRE_TRAUMA
+          && !areaTargetDamaged(a, b, targetId, traumaInitialLife)) {
+        throw new IllegalStateException("Fire Trauma explosion produced no shared target damage: "
+            + "target=" + targetId + " initialLife=" + traumaInitialLife
+            + " owner=" + snapshotLife(a, targetId) + " peer=" + snapshotLife(b, targetId)
+            + " missilesA=" + areaMissileSummary(a.areaMissiles)
+            + " missilesB=" + areaMissileSummary(b.areaMissiles));
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
@@ -1237,7 +1258,8 @@ public final class D2GSHeadlessClient {
     // short lifetime; unlike controller skills it is not expected to survive
     // an observer reconnect.  Keep its parent/child evidence gate above, but
     // do not demand a stale reconnect snapshot for this one-shot effect.
-    return (requiresAreaChild(skillId) && skillId != SkillId.FIRE_BALL)
+    return (requiresAreaChild(skillId) && skillId != SkillId.FIRE_BALL
+        && skillId != ASSASSIN_FIRE_TRAUMA)
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -1245,19 +1267,30 @@ public final class D2GSHeadlessClient {
 
   private static boolean sharedAreaChildObserved(D2GSHeadlessClient a,
       D2GSHeadlessClient b, Set<Integer> shared, int skillId) {
-    Set<Integer> aTypes = new HashSet<>();
-    Set<Integer> bTypes = new HashSet<>();
-    for (Integer entityId : shared) {
-      AreaMissile first = a.areaMissiles.get(entityId);
-      AreaMissile second = b.areaMissiles.get(entityId);
-      if (first == null || second == null || !first.everActive || !second.everActive
-          || first.skillId != skillId || second.skillId != skillId) continue;
-      aTypes.add(first.missileId);
-      bTypes.add(second.missileId);
-    }
+    Set<Integer> aTypes = new HashSet<>(a.observedAreaMissileTypes
+        .getOrDefault(skillId, java.util.Collections.emptySet()));
+    Set<Integer> bTypes = new HashSet<>(b.observedAreaMissileTypes
+        .getOrDefault(skillId, java.util.Collections.emptySet()));
+    aTypes.retainAll(bTypes);
+    bTypes.retainAll(aTypes);
     // Root and child rows use distinct native missile IDs in 1.10f. Keep the
     // comparison symmetric so one client cannot pass with a stale child.
-    return aTypes.size() >= 2 && aTypes.equals(bTypes);
+    int requiredTypes = skillId == ASSASSIN_FIRE_TRAUMA ? 3 : 2;
+    return aTypes.size() >= requiredTypes && aTypes.equals(bTypes);
+  }
+
+  private static boolean areaTargetDamaged(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int targetId, float initialLife) {
+    if (targetId < 0 || !Float.isFinite(initialLife)) return false;
+    Snapshot owner = a.monsters.get(targetId);
+    Snapshot peer = b.monsters.get(targetId);
+    return owner != null && peer != null && owner.hasVitals && peer.hasVitals
+        && owner.life < initialLife - 0.001f && peer.life < initialLife - 0.001f;
+  }
+
+  private static float snapshotLife(D2GSHeadlessClient client, int entityId) {
+    Snapshot snapshot = client.monsters.get(entityId);
+    return snapshot != null ? snapshot.life : Float.NaN;
   }
 
   private static boolean areaMissileDeletionConsistent(D2GSHeadlessClient a,
@@ -1309,6 +1342,8 @@ public final class D2GSHeadlessClient {
     Set<Integer> hydra = new HashSet<>(a.areaHydraMonsters);
     hydra.retainAll(b.areaHydraMonsters);
     return "skill=" + skillId + " sharedMissiles=" + shared
+        + " observedTypesA=" + a.observedAreaMissileTypes.get(skillId)
+        + " observedTypesB=" + b.observedAreaMissileTypes.get(skillId)
         + " sharedHydra=" + hydra + " statesA=" + a.areaStates.keySet()
         + " statesB=" + b.areaStates.keySet() + " deletesA=" + a.areaHydraDeletes
         + " deletesB=" + b.areaHydraDeletes;
@@ -10527,6 +10562,8 @@ public final class D2GSHeadlessClient {
         }
         area.missileId = missile.missileId();
         area.skillId = missile.skillId();
+        observedAreaMissileTypes.computeIfAbsent(area.skillId, ignored -> new HashSet<>())
+            .add(area.missileId);
         area.damageLevel = missile.damageLevel();
         int positionIndex = findComponent(sync, ComponentP.PositionP);
         if (positionIndex >= 0) {

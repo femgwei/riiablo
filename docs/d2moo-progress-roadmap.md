@@ -15,8 +15,10 @@
   (385) 与 `bomb on ground` (386)，并确认 `animationFallback=false`。
 - [x] observer 重连只恢复仍活动的地面实体，已过期空中实体不复活；该结果符合原生
   生命周期快照边界。
-- [ ] 后续仍需专门 gate 覆盖地面行到期爆炸、范围伤害和 owner/damageOwner；当前不得
-  标为 Fire Trauma 四层完成。
+- [x] 严格表现 gate 记录双方历史 missile 类型 `[385,386,387]`，并要求爆炸范围内
+  目标在两端实际掉血；未用“出现导弹”替代伤害证据。
+- [ ] 后续仍需专门处理一次性爆炸链的重连窗口及 owner/damageOwner 生命周期；当前
+  不得标为 Fire Trauma 四层完成。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=251 -PareaTimeout=25 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
