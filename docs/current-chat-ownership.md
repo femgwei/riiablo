@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Wake of Fire Sentry 真实 MPQ gate）
+更新时间：2026-10-02（Assassin Inferno Sentry 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -98,6 +98,21 @@
   该 fallback 仍是后续动画门槛，不能宣称客户端 keyframe 已完成。
 - [ ] 逐目标火焰伤害、两波间隔/方向/持续时间、墙体/null-hit、陷阱 shot budget、控制实体
   到期及 `AssassinSentry` AI fallback 仍需独立验收；下一项进入 Inferno Sentry(272)。
+
+### 2026-10-02 Assassin Inferno Sentry(272) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 --no-daemon` 已通过真实 1.10f
+  MPQ 双客户端 gate：双方共享 `assassintrap` 控制实体（skill=272）和至少两枚
+  `inferno sentry` channel 导弹（missile=523、skill=272、damageLevel=20），本次共享
+  实体为 `[134,135]`。
+- 目标被放在陷阱前方，测试夹具清除其他 Blood Moor 预置怪，确保 SrvDo095 的持续通道
+  锁定同一目标；这只影响 headless 准备，不改变生产 AI 或伤害逻辑。
+- observer reconnect 通过：断线期间一枚短寿命通道导弹过期，重连只保留活动实体
+  `active=[134]`，`expiredDuringReconnect=1`，`stale=false`。
+- 本次运行 `animationFallback=true`；262/272 的旧客户端 COF/keyframe 仍未在观察窗口内
+  自动派发 SkillDoEvent，当前 gate 使用同一服务端 dispatch 验证真实导弹/同步/重连路径。
+- [ ] 通道持续时间、pulse 间隔/方向、逐目标火焰伤害、墙体/null-hit、shot budget、控制
+  实体到期和 AI fallback 仍需专项验收；下一项进入 Death Sentry(276)。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

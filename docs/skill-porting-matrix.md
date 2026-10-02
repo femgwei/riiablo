@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Wake of Fire Sentry real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Inferno Sentry real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -96,6 +96,19 @@
   `AssassinSentry` AI fallback 尚未完成；下一项为 Inferno Sentry(272)。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 --no-daemon`；
   `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
+
+## 2026-10-02 Assassin Inferno Sentry(272) 真实 MPQ gate
+
+- [x] 两端共享 `assassintrap` 控制实体（skill=272）和至少两枚 SrvDo095 通道导弹
+  （missile=523、skill=272、damageLevel=20），共享实体为 `[134,135]`；目标沿 trap 前方
+  放置，证明重复通道发射而非只有落地实体。
+- [x] observer reconnect 通过活动集合子集/删除检查：断线期间一个短寿命导弹过期，重连
+  只保留 `active=[134]`，`expiredDuringReconnect=1`，`stale=false`。
+- [ ] `animationFallback=true`：262/272 当前旧客户端 COF/keyframe 尚未在窗口内自动触发
+  SkillDoEvent，后续需要补真实动画门槛；本 gate 不把服务端 fallback 写成动画完成。
+- [ ] 通道 duration、pulse 间隔/方向追踪、逐目标伤害、墙体/null-hit、shot budget、trap
+  到期及 AI fallback 尚未完成；下一项为 Death Sentry(276)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 

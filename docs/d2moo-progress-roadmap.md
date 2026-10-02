@@ -83,6 +83,20 @@
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 --no-daemon`；
   `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
 
+## 2026-10-02 Assassin Inferno Sentry(272) 真实 MPQ gate
+
+- [x] 真实双客户端 MPQ gate 通过：两端共享 `assassintrap` 控制实体（skill=272）及至少
+  两枚 SrvDo095 `inferno sentry` 通道导弹（missile=523、skill=272、damageLevel=20），
+  本次共享实体为 `[134,135]`。
+- [x] 夹具清除其他 Blood Moor 预置怪并将唯一目标置于 trap 前方，验证通道重复发射而非
+  只有 SrvDo045 陷阱落地；observer reconnect 通过（`active=[134]`、
+  `expiredDuringReconnect=1`、`stale=false`）。
+- [ ] `animationFallback=true`：旧客户端 COF 在窗口内未自动派发 272 的 SkillDoEvent，
+  当前只证明服务端通道导弹、双端同步和重连生命周期；真实 keyframe 仍需补齐。
+- [ ] 通道 duration/pulse cadence、方向追踪、逐目标伤害、墙体/null-hit、shot budget、
+  控制实体到期和 `AssassinSentry` AI fallback 尚未完成。下一项：Death Sentry(276)。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=272 -PareaTimeout=15 --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且

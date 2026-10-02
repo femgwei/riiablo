@@ -150,6 +150,8 @@ public final class D2GSHeadlessClient {
   private static final int ASSASSIN_CHARGED_BOLT_SENTRY = 261;
   // 1.10f Skills.txt exact row for Wake of Fire Sentry.
   private static final int ASSASSIN_WAKE_OF_FIRE_SENTRY = 262;
+  // 1.10f Skills.txt exact row for Inferno Sentry.
+  private static final int ASSASSIN_INFERNO_SENTRY = 272;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -966,7 +968,8 @@ public final class D2GSHeadlessClient {
       Snapshot fireBallTarget = skillId == SkillId.FIRE_BALL
           || skillId == ASSASSIN_FIRE_TRAUMA
           || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
-          || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY ? a.nearestLiveMonster() : null;
+          || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+          || skillId == ASSASSIN_INFERNO_SENTRY ? a.nearestLiveMonster() : null;
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
@@ -990,7 +993,8 @@ public final class D2GSHeadlessClient {
         targetX = a.playerX + 8f;
         targetY = a.playerY;
       }
-      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY) {
+      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+          || skillId == ASSASSIN_INFERNO_SENTRY) {
         // SrvDo045 places the trap at the selected point.  Put a durable
         // hostile near the caster so the sentry can run SrvDo125 immediately.
         // Keep it on the landing point: the peer player is also
@@ -1016,10 +1020,12 @@ public final class D2GSHeadlessClient {
           throw new IOException("Charged Bolt Sentry fixture could not place durable target");
         }
       }
-      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY && targetId >= 0) {
+      if ((skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+          || skillId == ASSASSIN_INFERNO_SENTRY) && targetId >= 0) {
+        float targetOffsetY = skillId == ASSASSIN_INFERNO_SENTRY ? 6f : 4f;
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-            targetId, a.playerId, 0f, 4f)) {
-          throw new IOException("Wake of Fire Sentry fixture could not place durable target");
+            targetId, a.playerId, 0f, targetOffsetY)) {
+          throw new IOException("Assassin sentry fixture could not place durable target");
         }
         // Blood Moor contains several preset monsters.  The native trap AI
         // chooses the nearest hostile by room order; retire every other
@@ -1052,11 +1058,12 @@ public final class D2GSHeadlessClient {
         // Preserve the real network request above, then dispatch the same
         // server SkillDoEvent once if the animation callback has not fired.
         boolean fallbackEvidence = areaEvidenceShared(a, b, skillId);
-        if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY) {
-          // The maker missile is visible before SrvDo31 emits both waves. Do
-          // not dispatch a second placement merely because the child chain is
-          // still travelling toward its endpoint or its pet snapshot is late.
-          fallbackEvidence = sharedSkillMissile(a, b, ASSASSIN_WAKE_OF_FIRE_SENTRY);
+        if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+            || skillId == ASSASSIN_INFERNO_SENTRY) {
+          // The controller/first channel missile is visible before the full
+          // sentry sequence is complete. Do not dispatch a second placement
+          // merely because child snapshots are still travelling or late.
+          fallbackEvidence = sharedSkillMissile(a, b, skillId);
         }
         if (!animationFallback && System.currentTimeMillis() - castStarted >= 2_000L
             && !fallbackEvidence) {
@@ -1091,6 +1098,11 @@ public final class D2GSHeadlessClient {
       if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
           && !wakeOfFireSharedEvidence(a, b)) {
         throw new IllegalStateException("Wake of Fire maker/wave evidence missing: "
+            + areaEvidenceFailure(a, b, skillId));
+      }
+      if (skillId == ASSASSIN_INFERNO_SENTRY
+          && !infernoSentrySharedEvidence(a, b)) {
+        throw new IllegalStateException("Inferno Sentry controller/channel evidence missing: "
             + areaEvidenceFailure(a, b, skillId));
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
@@ -1415,6 +1427,9 @@ public final class D2GSHeadlessClient {
     if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY && !wakeOfFireSharedEvidence(a, b)) {
       return false;
     }
+    if (skillId == ASSASSIN_INFERNO_SENTRY && !infernoSentrySharedEvidence(a, b)) {
+      return false;
+    }
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1577,6 +1592,33 @@ public final class D2GSHeadlessClient {
     return positioned >= 3 && varied;
   }
 
+  /** Inferno Sentry keeps one trap controller while SrvDo095 emits repeated
+   * path missiles toward its current target. Require at least two common,
+   * positioned channel missiles in addition to the controller; rows may be
+   * short-lived, so history entries are accepted after both clients observed
+   * the same authoritative entity.
+   */
+  private static boolean infernoSentrySharedEvidence(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer) {
+    if (!sharedAssassinTrapController(owner, observer, ASSASSIN_INFERNO_SENTRY)) {
+      return false;
+    }
+    Set<Integer> shared = new HashSet<>(owner.areaMissiles.keySet());
+    shared.retainAll(observer.areaMissiles.keySet());
+    int positioned = 0;
+    Set<Integer> missileTypes = new HashSet<>();
+    for (Integer entityId : shared) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first == null || second == null || !first.everActive || !second.everActive
+          || first.missileId <= 0 || first.missileId != second.missileId
+          || !first.hasPosition || !second.hasPosition) continue;
+      positioned++;
+      missileTypes.add(first.missileId);
+    }
+    return positioned >= 2 && !missileTypes.isEmpty();
+  }
+
   private static boolean sharedAssassinTrapController(D2GSHeadlessClient owner,
       D2GSHeadlessClient observer, int skillId) {
     Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
@@ -1630,6 +1672,7 @@ public final class D2GSHeadlessClient {
         || skillId == ASSASSIN_BLADE_SENTINEL
         || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
         || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+        || skillId == ASSASSIN_INFERNO_SENTRY
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11541,7 +11584,7 @@ public final class D2GSHeadlessClient {
     boolean necromancer = skillId == SkillId.POISON_NOVA;
     boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
         || skillId == ASSASSIN_BLADE_SENTINEL || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
-        || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY;
+        || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY || skillId == ASSASSIN_INFERNO_SENTRY;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -12023,7 +12066,8 @@ public final class D2GSHeadlessClient {
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
             + "FireBall(47), Nova(48), PoisonNova(92), Fire Trauma(251), "
-            + "Shock Field(256), Blade Sentinel(257), Charged Bolt Sentry(261)");
+            + "Shock Field(256), Blade Sentinel(257), Charged Bolt Sentry(261), "
+            + "Wake of Fire Sentry(262), Inferno Sentry(272)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
@@ -12134,7 +12178,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
           || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL
-          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY;
+          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+          || skillId == ASSASSIN_INFERNO_SENTRY;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {
