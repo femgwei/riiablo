@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Charged Bolt Sentry 真实 MPQ gate）
+更新时间：2026-10-02（Assassin Wake of Fire Sentry 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -80,6 +80,24 @@
   `Unsupported srvdofunc`，但 AssassinSentry 的 AI fallback 警告仍需后续清理。
 - [ ] 逐目标伤害、完整 `calc1` burst 数量/路径、墙体/null-hit、陷阱射击预算和控制实体
   到期清理仍需独立验收；下一项优先 Wake of Fire Sentry(262)。
+
+### 2026-10-02 Assassin Wake of Fire Sentry(262) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 --no-daemon` 已通过真实 1.10f
+  MPQ 双客户端 gate：owner/observer 共享 `assassintrap` 控制实体（skill=262、owner=施法者），
+  以及同一权威 maker（missile=517）和两枚 `wake of destruction` 子导弹（missile=518），
+  共享导弹实体为 `[134,135,136]`，双方历史类型为 `[517,518]`。
+- gate 要求 maker 到达目标后确实生成两条不同位置的火焰波，而不是只看到陷阱落地；
+  observer reconnect 通过活动导弹子集/删除一致性检查（重连时仅保留活动实体，两个短寿命波
+  已过期，`stale=false`）。
+- Blood Moor 夹具把目标放到陷阱落点并移除动态碰撞 footprint，同时清除其他预置怪，避免
+  `AssassinTrapSystem` 的 nearest-hostile 竞争和静态阻挡把 gate 误判为技能失败；这是测试夹具
+  约束，不改变生产技能行为。
+- 本次运行 `animationFallback=true`：当前旧客户端 COF 没有在 2 秒窗口内触发 262 的
+  `SkillDoEvent`，测试随后调用同一服务端 dispatch 继续验证真实 MPQ 导弹/同步/重连路径；
+  该 fallback 仍是后续动画门槛，不能宣称客户端 keyframe 已完成。
+- [ ] 逐目标火焰伤害、两波间隔/方向/持续时间、墙体/null-hit、陷阱 shot budget、控制实体
+  到期及 `AssassinSentry` AI fallback 仍需独立验收；下一项进入 Inferno Sentry(272)。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

@@ -148,6 +148,8 @@ public final class D2GSHeadlessClient {
   // SkillId constants use this numeric slot for Fire Blast, so keep the
   // native table row explicit here.
   private static final int ASSASSIN_CHARGED_BOLT_SENTRY = 261;
+  // 1.10f Skills.txt exact row for Wake of Fire Sentry.
+  private static final int ASSASSIN_WAKE_OF_FIRE_SENTRY = 262;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -963,7 +965,8 @@ public final class D2GSHeadlessClient {
       // area skills retain the point-target fixture used by their native path.
       Snapshot fireBallTarget = skillId == SkillId.FIRE_BALL
           || skillId == ASSASSIN_FIRE_TRAUMA
-          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY ? a.nearestLiveMonster() : null;
+          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
+          || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY ? a.nearestLiveMonster() : null;
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
@@ -987,6 +990,17 @@ public final class D2GSHeadlessClient {
         targetX = a.playerX + 8f;
         targetY = a.playerY;
       }
+      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY) {
+        // SrvDo045 places the trap at the selected point.  Put a durable
+        // hostile near the caster so the sentry can run SrvDo125 immediately.
+        // Keep it on the landing point: the peer player is also
+        // present in the fixture and must not win the sentry's nearest-hostile
+        // search before the intended monster is reached.  The monster has its
+        // dynamic footprint removed, so this still leaves the trap factory
+        // free to relocate the controller by one tile if needed.
+        targetX = a.playerX;
+        targetY = a.playerY + 4f;
+      }
       float traumaInitialLife = fireBallTarget != null ? fireBallTarget.life : Float.NaN;
       if (skillId == ASSASSIN_FIRE_TRAUMA && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
@@ -998,9 +1012,28 @@ public final class D2GSHeadlessClient {
       }
       if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-            targetId, a.playerId, 4f, 0f)) {
+            targetId, a.playerId, 0f, 4f)) {
           throw new IOException("Charged Bolt Sentry fixture could not place durable target");
         }
+      }
+      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY && targetId >= 0) {
+        if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+            targetId, a.playerId, 0f, 4f)) {
+          throw new IOException("Wake of Fire Sentry fixture could not place durable target");
+        }
+        // Blood Moor contains several preset monsters.  The native trap AI
+        // chooses the nearest hostile by room order; retire every other
+        // preset so this fixture's durable target is deterministic.
+        for (Snapshot candidate : a.monsters.values()) {
+          if (candidate.entityId != targetId && !candidate.deleted) {
+            D2GS.headlessSetMonsterLife(candidate.entityId, 0f);
+          }
+        }
+        // Keep the entity target in the packet now that the target's dynamic
+        // footprint has been removed.  This lets the normal animation path
+        // dispatch SrvDo045 (and preserves the target identity for the trap
+        // AI) while still allowing the controller to occupy the same fixture
+        // point.
       }
       send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
@@ -1018,8 +1051,15 @@ public final class D2GSHeadlessClient {
         // Some headless COF tables have no usable Druid/Sorceress keyframe.
         // Preserve the real network request above, then dispatch the same
         // server SkillDoEvent once if the animation callback has not fired.
+        boolean fallbackEvidence = areaEvidenceShared(a, b, skillId);
+        if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY) {
+          // The maker missile is visible before SrvDo31 emits both waves. Do
+          // not dispatch a second placement merely because the child chain is
+          // still travelling toward its endpoint or its pet snapshot is late.
+          fallbackEvidence = sharedSkillMissile(a, b, ASSASSIN_WAKE_OF_FIRE_SENTRY);
+        }
         if (!animationFallback && System.currentTimeMillis() - castStarted >= 2_000L
-            && !areaEvidenceShared(a, b, skillId)) {
+            && !fallbackEvidence) {
           animationFallback = true;
           boolean dispatched = D2GS.headlessDispatchAreaSkill(
               a.playerId, skillId, targetX, targetY);
@@ -1046,6 +1086,11 @@ public final class D2GSHeadlessClient {
       if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY
           && !assassinSentrySharedEvidence(a, b, ASSASSIN_CHARGED_BOLT_SENTRY)) {
         throw new IllegalStateException("Charged Bolt Sentry controller/burst evidence missing: "
+            + areaEvidenceFailure(a, b, skillId));
+      }
+      if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
+          && !wakeOfFireSharedEvidence(a, b)) {
+        throw new IllegalStateException("Wake of Fire maker/wave evidence missing: "
             + areaEvidenceFailure(a, b, skillId));
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
@@ -1367,6 +1412,9 @@ public final class D2GSHeadlessClient {
         && !assassinSentrySharedEvidence(a, b, ASSASSIN_CHARGED_BOLT_SENTRY)) {
       return false;
     }
+    if (skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY && !wakeOfFireSharedEvidence(a, b)) {
+      return false;
+    }
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1470,23 +1518,7 @@ public final class D2GSHeadlessClient {
    */
   private static boolean assassinSentrySharedEvidence(D2GSHeadlessClient owner,
       D2GSHeadlessClient observer, int skillId) {
-    Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
-    sharedPets.retainAll(observer.summonedPets.keySet());
-    boolean controller = false;
-    for (Integer entityId : sharedPets) {
-      PetSnapshot first = owner.summonedPets.get(entityId);
-      PetSnapshot second = observer.summonedPets.get(entityId);
-      if (first != null && second != null && !first.deleted && !second.deleted
-          && first.ownerId == owner.playerId && second.ownerId == owner.playerId
-          && first.skillId == skillId && second.skillId == skillId
-          && first.monsterComponent && second.monsterComponent
-          && "assassintrap".equalsIgnoreCase(first.petType)
-          && first.petType.equalsIgnoreCase(second.petType)) {
-        controller = true;
-        break;
-      }
-    }
-    if (!controller) return false;
+    if (!sharedAssassinTrapController(owner, observer, skillId)) return false;
     Set<Integer> sharedMissiles = new HashSet<>(owner.areaMissiles.keySet());
     sharedMissiles.retainAll(observer.areaMissiles.keySet());
     int matching = 0;
@@ -1501,6 +1533,79 @@ public final class D2GSHeadlessClient {
       }
     }
     return matching >= 2;
+  }
+
+  /**
+   * Wake of Fire publishes a SrvDo125 maker followed by two SrvDo31 waves.
+   * The attack row owns the missile metadata, so validate the exact trap
+   * controller plus at least two common missile types rather than assuming
+   * the placement row is also the attack row.
+   */
+  private static boolean wakeOfFireSharedEvidence(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer) {
+    if (!sharedAssassinTrapController(owner, observer, ASSASSIN_WAKE_OF_FIRE_SENTRY)) {
+      return false;
+    }
+    Set<Integer> sharedTypes = new HashSet<>();
+    for (Set<Integer> types : owner.observedAreaMissileTypes.values()) sharedTypes.addAll(types);
+    Set<Integer> observerTypes = new HashSet<>();
+    for (Set<Integer> types : observer.observedAreaMissileTypes.values()) observerTypes.addAll(types);
+    sharedTypes.retainAll(observerTypes);
+    if (sharedTypes.isEmpty()) return false;
+    Set<Integer> sharedMissiles = new HashSet<>(owner.areaMissiles.keySet());
+    sharedMissiles.retainAll(observer.areaMissiles.keySet());
+    int positioned = 0;
+    float firstX = Float.NaN;
+    float firstY = Float.NaN;
+    boolean varied = false;
+    for (Integer entityId : sharedMissiles) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.missileId > 0 && first.missileId == second.missileId
+          && first.hasPosition && second.hasPosition) {
+        positioned++;
+        if (!Float.isFinite(firstX)) {
+          firstX = first.x;
+          firstY = first.y;
+        } else if (Math.abs(first.x - firstX) > 0.01f
+            || Math.abs(first.y - firstY) > 0.01f) {
+          varied = true;
+        }
+      }
+    }
+    return positioned >= 3 && varied;
+  }
+
+  private static boolean sharedAssassinTrapController(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, int skillId) {
+    Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
+    sharedPets.retainAll(observer.summonedPets.keySet());
+    for (Integer entityId : sharedPets) {
+      PetSnapshot first = owner.summonedPets.get(entityId);
+      PetSnapshot second = observer.summonedPets.get(entityId);
+      if (first != null && second != null && !first.deleted && !second.deleted
+          && first.ownerId == owner.playerId && second.ownerId == owner.playerId
+          && first.skillId == skillId && second.skillId == skillId
+          && first.monsterComponent && second.monsterComponent
+          && "assassintrap".equalsIgnoreCase(first.petType)
+          && first.petType.equalsIgnoreCase(second.petType)) return true;
+    }
+    return false;
+  }
+
+  private static boolean sharedSkillMissile(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, int skillId) {
+    Set<Integer> shared = new HashSet<>(owner.areaMissiles.keySet());
+    shared.retainAll(observer.areaMissiles.keySet());
+    for (Integer entityId : shared) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.skillId == skillId && second.skillId == skillId
+          && first.missileId == second.missileId) return true;
+    }
+    return false;
   }
 
   /**
@@ -1524,6 +1629,7 @@ public final class D2GSHeadlessClient {
         || skillId == ASSASSIN_SHOCK_FIELD
         || skillId == ASSASSIN_BLADE_SENTINEL
         || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
+        || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11434,7 +11540,8 @@ public final class D2GSHeadlessClient {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
     boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
-        || skillId == ASSASSIN_BLADE_SENTINEL || skillId == ASSASSIN_CHARGED_BOLT_SENTRY;
+        || skillId == ASSASSIN_BLADE_SENTINEL || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
+        || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -12027,7 +12134,7 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
           || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL
-          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY;
+          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY || skillId == ASSASSIN_WAKE_OF_FIRE_SENTRY;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {

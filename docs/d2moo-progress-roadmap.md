@@ -65,6 +65,24 @@
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=261 -PareaTimeout=25 --no-daemon`；
   `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
 
+## 2026-10-02 Assassin Wake of Fire Sentry(262) 真实 MPQ gate
+
+- [x] 真实 1.10f MPQ 双客户端通过：两端共享 `assassintrap` 控制实体、SrvDo125 maker
+  （missile=517）及两枚 SrvDo31 `wake of destruction` 子导弹（missile=518），共享实体
+  `[134,135,136]`，且 maker/两波的位置证据均来自网络快照。
+- [x] gate 通过 observer reconnect：断线期间两枚短寿命火焰波自然过期，重连仅保留仍活动
+  的 maker（`active=[134]`、`expiredDuringReconnect=2`、`stale=false`），没有复活旧导弹。
+- [x] headless fixture 将目标固定在 trap 落点、移除其动态碰撞 footprint，并清除其他 Blood
+  Moor 预置怪，避免 nearest-hostile 竞争和静态路径阻挡导致的假失败；这只改变测试准备，
+  不改变生产 `AssassinTrapSystem`/`MissileCollisionSystem`。
+- [ ] 本次 `animationFallback=true`，说明当前旧客户端 COF 在观察窗口内没有触发 262 的
+  `SkillDoEvent`，仍需补真实 keyframe/动画门槛；当前 gate 只证明服务端原生 maker→双波、
+  多客户端同步和重连生命周期。
+- [ ] 两波方向/间隔/持续时间、逐目标火焰伤害、墙体/null-hit、trap shot budget、控制实体
+  到期及 `AssassinSentry` AI fallback 尚未完成。下一项：Inferno Sentry(272)。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 --no-daemon`；
+  `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且

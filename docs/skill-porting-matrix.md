@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Charged Bolt Sentry real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Wake of Fire Sentry real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -79,6 +79,22 @@
 - [ ] `calc1` 完整数量/路径、逐目标伤害、墙体/null-hit、shot budget、陷阱到期及
   AssassinSentry AI fallback 仍需独立验收。下一项优先 Wake of Fire Sentry(262)。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=261 -PareaTimeout=25 --no-daemon`；
+  `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
+
+## 2026-10-02 Assassin Wake of Fire Sentry(262) 真实 MPQ gate
+
+- [x] 两端共享 `assassintrap` 控制实体（skill=262）和完整的 maker→双波链：maker
+  `missile=517`，两枚 `wake of destruction` 子导弹 `missile=518`，共享实体为
+  `[134,135,136]`，双方均观察到位置变化。
+- [x] observer reconnect 通过活动集合子集/删除检查；两枚短寿命子波在断线期间过期，重连
+  不复活旧实体，结果为 `active=[134]`、`expiredDuringReconnect=2`、`stale=false`。
+- [x] 夹具按真实 MPQ row 262 使用 Assassin 存档，把目标放到 trap 落点并清除其他预置怪，
+  只为稳定 nearest-hostile 和静态碰撞条件，不把该准备逻辑写入生产技能。
+- [ ] `animationFallback=true`：真实客户端 COF/keyframe 仍未在窗口内派发 262 的
+  `SkillDoEvent`，当前仅用同一服务端 dispatch 完成后半段验证；因此不能标记动画层完成。
+- [ ] 火焰两波的逐目标伤害、方向/间隔/持续时间、墙体/null-hit、shot budget、trap 到期和
+  `AssassinSentry` AI fallback 尚未完成；下一项为 Inferno Sentry(272)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=262 -PareaTimeout=15 --no-daemon`；
   `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
