@@ -44,6 +44,8 @@
   `BUILD SUCCESSFUL`。
 - 真实 MPQ 尚未证明多个邻房之间的具体顺序会改变 Death Sentry 选择；下一步为真实
   墙体/null-hit 伤害 gate。工作区其他 agent 的未提交文件仍不得 stage、覆盖或清理。
+- 本轮测试与文档提交 `2157811b` 已推送到 `origin/master`；当前工作区仍只保留
+  其他 agent 的未提交文件及本地日志/dump。
 
 ### 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 

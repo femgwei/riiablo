@@ -13,6 +13,8 @@
   `BUILD SUCCESSFUL`。
 - [ ] 仍未宣称多个邻房之间的具体 `pRoomsNear` 顺序已经通过真实 MPQ 的
   Death Sentry 场景验证；下一步执行真实墙体/null-hit 伤害 gate。
+- 本轮提交 `2157811b` 已推送到 `origin/master`；工作区其他 agent 的修改和未跟踪
+  日志/dump 保持原样，未纳入提交。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 

@@ -16,6 +16,8 @@
 - [ ] 该回归锁定“当前房间优先于 `pRoomsNear`”这一可验证契约；尚未在真实 MPQ
   场景中证明多个邻房之间的具体顺序会影响 Death Sentry 尸体选择。下一项转入真实
   墙体/null-hit 伤害 gate，并保留跨邻房顺序为独立证据项。
+- 本轮测试/文档提交 `2157811b` 已推送到 `origin/master`；其他 agent 的未提交文件
+  未纳入本次提交。
 
 ## 2026-10-03 Assassin Death Sentry(276) hostile target filter 回归完成
 
