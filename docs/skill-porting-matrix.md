@@ -68,8 +68,10 @@
   MPQ gate 初始 `duration=499` 帧，重连恢复 `states=[158]` 后，owner/observer 均清除
   `StateId=158` 并输出 `area_skill_expiry_pass`；清除后静默观察 1 秒，两端目标生命没有
   继续下降。
-- [ ] 到期前最后一个周期的唯一命中和真实客户端视觉持续时间仍待专项验收；下一步补这两个
-  边界。
+- [x] 到期 gate 增加 `duration < perdelay` 最后延迟尾窗断言；本轮 `finalDelayTail=true`，
+  到状态清除前两端目标生命均未下降。
+- [ ] 最后一个可合法周期边界是否只产生一次命中，以及真实客户端视觉持续时间仍待专项
+  验收；下一步补这两个边界。
 - [x] Blade Shield 双端 StateP gate 现在同步校验 skill、等级、`perdelay` 和 `AuraLen`，
   允许最多一帧网络快照偏差；level=20 真实 gate 通过。
 - 验证命令：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
@@ -84,6 +86,8 @@
 - 静默窗口提交：`15017c2e`（`test: verify Blade Shield post-expiry silence`），已推送到
   `origin/master`。
 - 持续时间同步提交：`e58382b1`（`test: verify Blade Shield duration sync`），已推送到
+  `origin/master`。
+- 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff

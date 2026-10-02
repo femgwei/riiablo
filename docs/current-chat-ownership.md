@@ -80,8 +80,12 @@
   gate 初始 `duration=499` 帧，双端先恢复 `states=[158]`，随后同时观察到状态清除并输出
   `area_skill_expiry_pass ... ownerStates=[] observerStates=[]`；状态清除后静默观察 1 秒，
   两端目标生命没有继续下降。
-- 仍待：到期前最后一个周期是否产生且只产生一次命中，以及真实客户端视觉持续时间；下一步
+- 到期 gate 现在还检查 `duration < perdelay` 的最后延迟尾窗；本轮 `finalDelayTail=true`，
+  尾窗到状态清除前两端目标生命均未下降。
+- 仍待：最后一个可合法周期边界是否只产生一次命中，以及真实客户端视觉持续时间；下一步
   优先补这两个边界。
+- 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到
+  `origin/master`。
 - 双端 `StateP` 现在还必须同步 `skill=277`、等级、`perdelay` 和 `AuraLen`（允许最多一帧
   网络快照偏差），本轮 level=20 gate 通过。
 - 持续时间同步提交：`e58382b1`（`test: verify Blade Shield duration sync`），已推送到
