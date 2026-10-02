@@ -82,9 +82,12 @@
   两端目标生命没有继续下降。
 - 到期 gate 现在还检查 `duration < perdelay` 的最后延迟尾窗；本轮 `finalDelayTail=true`，
   尾窗到状态清除前两端目标生命均未下降。
-- 仍待：最后一个可合法周期边界是否只产生一次命中，以及真实客户端视觉持续时间；下一步
-  优先补这两个边界。
+- 最后一个可合法周期通过 `periodicCountdown` 重置计数严格收口：
+  `finalPulseResets=1`；随后状态清除和 1 秒静默窗口继续通过。
+- 仍待：真实客户端视觉 Overlay 的实际持续时间；下一步转入客户端表现核对。
 - 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到
+  `origin/master`。
+- 最后周期计数提交：`204d879f`（`test: count Blade Shield final pulse`），已推送到
   `origin/master`。
 - 双端 `StateP` 现在还必须同步 `skill=277`、等级、`perdelay` 和 `AuraLen`（允许最多一帧
   网络快照偏差），本轮 level=20 gate 通过。

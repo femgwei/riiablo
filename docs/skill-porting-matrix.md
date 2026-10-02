@@ -70,8 +70,9 @@
   继续下降。
 - [x] 到期 gate 增加 `duration < perdelay` 最后延迟尾窗断言；本轮 `finalDelayTail=true`，
   到状态清除前两端目标生命均未下降。
-- [ ] 最后一个可合法周期边界是否只产生一次命中，以及真实客户端视觉持续时间仍待专项
-  验收；下一步补这两个边界。
+- [x] 最后一个可合法周期通过 `periodicCountdown` 重置计数严格收口：
+  `finalPulseResets=1`；随后状态清除和 1 秒静默窗口继续通过。
+- [ ] 真实客户端视觉 Overlay 的实际持续时间仍待专项验收；下一步转入客户端表现核对。
 - [x] Blade Shield 双端 StateP gate 现在同步校验 skill、等级、`perdelay` 和 `AuraLen`，
   允许最多一帧网络快照偏差；level=20 真实 gate 通过。
 - 验证命令：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest
@@ -88,6 +89,8 @@
 - 持续时间同步提交：`e58382b1`（`test: verify Blade Shield duration sync`），已推送到
   `origin/master`。
 - 最后延迟尾窗提交：`ee74ad02`（`test: assert Blade Shield final delay tail`），已推送到
+  `origin/master`。
+- 最后周期计数提交：`204d879f`（`test: count Blade Shield final pulse`），已推送到
   `origin/master`。
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
