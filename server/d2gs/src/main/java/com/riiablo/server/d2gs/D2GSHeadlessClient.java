@@ -144,6 +144,10 @@ public final class D2GSHeadlessClient {
   // 1.10f Skills.txt exact row for Blade Sentinel.  SkillId.BLADE_SENTINEL
   // is reserved for the legacy missile id, so keep the table row explicit.
   private static final int ASSASSIN_BLADE_SENTINEL = 257;
+  // 1.10f Skills.txt exact row for Charged Bolt Sentry.  The legacy
+  // SkillId constants use this numeric slot for Fire Blast, so keep the
+  // native table row explicit here.
+  private static final int ASSASSIN_CHARGED_BOLT_SENTRY = 261;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -958,7 +962,8 @@ public final class D2GSHeadlessClient {
       // the travelling parent and its explodingarrowexp impact child.  Other
       // area skills retain the point-target fixture used by their native path.
       Snapshot fireBallTarget = skillId == SkillId.FIRE_BALL
-          || skillId == ASSASSIN_FIRE_TRAUMA ? a.nearestLiveMonster() : null;
+          || skillId == ASSASSIN_FIRE_TRAUMA
+          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY ? a.nearestLiveMonster() : null;
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
@@ -975,6 +980,13 @@ public final class D2GSHeadlessClient {
         targetX = a.playerX + 8f;
         targetY = a.playerY;
       }
+      if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY) {
+        // SrvDo045 places the sentry at the selected point.  Keep it in the
+        // same open line as the native ECS fixture so its first target search
+        // can emit a complete Charged Bolt burst.
+        targetX = a.playerX + 8f;
+        targetY = a.playerY;
+      }
       float traumaInitialLife = fireBallTarget != null ? fireBallTarget.life : Float.NaN;
       if (skillId == ASSASSIN_FIRE_TRAUMA && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
@@ -983,6 +995,12 @@ public final class D2GSHeadlessClient {
         }
         targetX = a.playerX + 0.5f;
         targetY = a.playerY;
+      }
+      if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY && targetId >= 0) {
+        if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
+            targetId, a.playerId, 4f, 0f)) {
+          throw new IOException("Charged Bolt Sentry fixture could not place durable target");
+        }
       }
       send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
@@ -1023,6 +1041,11 @@ public final class D2GSHeadlessClient {
       if (skillId == ASSASSIN_BLADE_SENTINEL
           && !bladeSentinelSharedEvidence(a, b)) {
         throw new IllegalStateException("Blade Sentinel controller/missile evidence missing: "
+            + areaEvidenceFailure(a, b, skillId));
+      }
+      if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY
+          && !assassinSentrySharedEvidence(a, b, ASSASSIN_CHARGED_BOLT_SENTRY)) {
+        throw new IllegalStateException("Charged Bolt Sentry controller/burst evidence missing: "
             + areaEvidenceFailure(a, b, skillId));
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
@@ -1340,6 +1363,10 @@ public final class D2GSHeadlessClient {
     if (skillId == ASSASSIN_BLADE_SENTINEL && !bladeSentinelSharedEvidence(a, b)) {
       return false;
     }
+    if (skillId == ASSASSIN_CHARGED_BOLT_SENTRY
+        && !assassinSentrySharedEvidence(a, b, ASSASSIN_CHARGED_BOLT_SENTRY)) {
+      return false;
+    }
     if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
       return false;
     }
@@ -1436,6 +1463,47 @@ public final class D2GSHeadlessClient {
   }
 
   /**
+   * Sentry traps are monster-shaped controllers whose attack skill emits a
+   * burst of independent missiles.  Require the owned controller and at
+   * least two matching, positioned missiles on both recipients so a single
+   * client-local visual or a controller-only snapshot cannot pass.
+   */
+  private static boolean assassinSentrySharedEvidence(D2GSHeadlessClient owner,
+      D2GSHeadlessClient observer, int skillId) {
+    Set<Integer> sharedPets = new HashSet<>(owner.summonedPets.keySet());
+    sharedPets.retainAll(observer.summonedPets.keySet());
+    boolean controller = false;
+    for (Integer entityId : sharedPets) {
+      PetSnapshot first = owner.summonedPets.get(entityId);
+      PetSnapshot second = observer.summonedPets.get(entityId);
+      if (first != null && second != null && !first.deleted && !second.deleted
+          && first.ownerId == owner.playerId && second.ownerId == owner.playerId
+          && first.skillId == skillId && second.skillId == skillId
+          && first.monsterComponent && second.monsterComponent
+          && "assassintrap".equalsIgnoreCase(first.petType)
+          && first.petType.equalsIgnoreCase(second.petType)) {
+        controller = true;
+        break;
+      }
+    }
+    if (!controller) return false;
+    Set<Integer> sharedMissiles = new HashSet<>(owner.areaMissiles.keySet());
+    sharedMissiles.retainAll(observer.areaMissiles.keySet());
+    int matching = 0;
+    for (Integer entityId : sharedMissiles) {
+      AreaMissile first = owner.areaMissiles.get(entityId);
+      AreaMissile second = observer.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && !first.deleted && !second.deleted && first.skillId == skillId
+          && second.skillId == skillId && first.missileId > 0
+          && second.missileId == first.missileId && first.hasPosition && second.hasPosition) {
+        matching++;
+      }
+    }
+    return matching >= 2;
+  }
+
+  /**
    * Blizzard, Frozen Orb and Meteor are controller skills: observing only the
    * root missile is insufficient. Their native SrvDo/SrvHit path must publish
    * at least one child missile to both clients before the gate passes.
@@ -1455,6 +1523,7 @@ public final class D2GSHeadlessClient {
         && skillId != ASSASSIN_FIRE_TRAUMA)
         || skillId == ASSASSIN_SHOCK_FIELD
         || skillId == ASSASSIN_BLADE_SENTINEL
+        || skillId == ASSASSIN_CHARGED_BOLT_SENTRY
         || skillId == SkillId.HYDRA
         || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
         || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
@@ -11365,7 +11434,7 @@ public final class D2GSHeadlessClient {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean necromancer = skillId == SkillId.POISON_NOVA;
     boolean assassin = skillId == ASSASSIN_FIRE_TRAUMA || skillId == ASSASSIN_SHOCK_FIELD
-        || skillId == ASSASSIN_BLADE_SENTINEL;
+        || skillId == ASSASSIN_BLADE_SENTINEL || skillId == ASSASSIN_CHARGED_BOLT_SENTRY;
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
@@ -11846,7 +11915,8 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64), "
-            + "FireBall(47), Nova(48), PoisonNova(92), Fire Trauma(251)");
+            + "FireBall(47), Nova(48), PoisonNova(92), Fire Trauma(251), "
+            + "Shock Field(256), Blade Sentinel(257), Charged Bolt Sentry(261)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
         throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
@@ -11956,7 +12026,8 @@ public final class D2GSHeadlessClient {
           || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
           || skillId == SkillId.FIRE_BALL || skillId == SkillId.NOVA
           || skillId == SkillId.POISON_NOVA || skillId == ASSASSIN_FIRE_TRAUMA
-          || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL;
+          || skillId == ASSASSIN_SHOCK_FIELD || skillId == ASSASSIN_BLADE_SENTINEL
+          || skillId == ASSASSIN_CHARGED_BOLT_SENTRY;
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {

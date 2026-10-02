@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-02（Assassin Blade Sentinel 真实 MPQ gate）
+更新时间：2026-10-02（Assassin Charged Bolt Sentry 真实 MPQ gate）
 
 ## 唯一负责人
 
@@ -67,6 +67,19 @@
   该警告后续需单独清理。
 - [ ] 墙体/不可行走终点、逐目标伤害与持续时间到期后的控制实体/导弹清理，仍需独立
   真实场景验收；下一项优先 Charged Bolt Sentry(261)。
+
+### 2026-10-02 Assassin Charged Bolt Sentry(261) 真实 MPQ gate
+
+- `headlessAreaSkill -PareaSkill=261 -PareaTimeout=25` 已通过真实 1.10f MPQ 双客户端
+  gate：双方共享 `assassintrap` 控制实体（owner=施法者、skill=261），并共享至少两枚
+  带位置的 `sentrychargedbolt` burst 导弹（missile=495、skill=261、damageLevel=20）。
+- `animationFallback=false`；observer reconnect 通过活动导弹子集/删除一致性检查，短寿命
+  charged-bolt 在断线期间自然过期时没有复活旧实体。
+- 夹具现在把真实 Blood Moor 怪物放到 sentry 搜索半径内，避免“陷阱已创建但没有目标”
+  的假失败；Actioneer 已把合法 SrvDo044/045 放置/攻击回调列为 no-op，不再输出
+  `Unsupported srvdofunc`，但 AssassinSentry 的 AI fallback 警告仍需后续清理。
+- [ ] 逐目标伤害、完整 `calc1` burst 数量/路径、墙体/null-hit、陷阱射击预算和控制实体
+  到期清理仍需独立验收；下一项优先 Wake of Fire Sentry(262)。
 
 ### 2026-10-02 Multiple Shot / Strafe 真实多目标 gate
 

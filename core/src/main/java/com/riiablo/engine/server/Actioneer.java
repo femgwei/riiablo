@@ -2394,6 +2394,8 @@ public class Actioneer extends PassiveSystem {
       // unsupported before their authoritative missile is created.
       case 8:  // MultipleShot/Teeth shock wave
       case 12: // Strafe: one arrow per animation keyframe
+      case 44: // Assassin Blade Sentinel trap placement
+      case 45: // Assassin Sentry trap placement/attack callback
       case 18: // DefensiveBuff; Venom state is applied by ServerSkillSystem
       case 22: // Nova/radial missile skill
       case 54: // Blade Shield periodic pulse is applied by StateUpdater

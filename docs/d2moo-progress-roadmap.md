@@ -50,6 +50,21 @@
   完成。
 - 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=257 -PareaTimeout=25 --no-daemon`。
 
+## 2026-10-02 Assassin Charged Bolt Sentry(261) 真实 MPQ gate
+
+- [x] 真实 1.10f MPQ 双客户端通过：owner/observer 共享 `assassintrap` 控制实体，且共享
+  至少两枚带位置的 `sentrychargedbolt` 独立 burst 导弹（missile=495、skill=261、
+  damageLevel=20）；`animationFallback=false`。
+- [x] observer reconnect 通过活动导弹子集/删除一致性检查；短寿命导弹在断线期间过期时
+  不会被重连快照复活。
+- [x] headless fixture 使用真实 Assassin 存档，并将 Blood Moor 怪物放入陷阱搜索半径，
+  验证 SrvDo017 射击路径而不是仅验证 SrvDo045 落地。Actioneer 合法 SrvDo044/045
+  回调已列入 no-op 分支。
+- [ ] `calc1` 完整 burst 数量和每两子格转向路径、逐目标伤害、墙体/null-hit、shot
+  budget 和陷阱到期清理仍未完成；AssassinSentry AI fallback 仍需清理。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=261 -PareaTimeout=25 --no-daemon`；
+  `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
+
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且

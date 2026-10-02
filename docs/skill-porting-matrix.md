@@ -1,6 +1,6 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-02（交接快照：Assassin Blade Sentinel real MPQ gate）
+更新时间：2026-10-02（交接快照：Assassin Charged Bolt Sentry real MPQ gate）
 
 ## 2026-10-02 Assassin trap / martial-arts regression handoff
 
@@ -63,6 +63,23 @@
 - [ ] 墙体/不可行走终点、逐目标伤害、持续时间到期及控制实体重连仍需补齐；运行日志的
   `Actioneer Unsupported srvdofunc(44)` 需后续清理。下一项优先 Charged Bolt Sentry(261)。
 - 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=257 -PareaTimeout=25 --no-daemon`。
+
+## 2026-10-02 Assassin Charged Bolt Sentry(261) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=261` 已通过真实 1.10f MPQ 双客户端 gate；两端共享
+  `assassintrap` 控制实体（owner=施法者、skill=261）和至少两枚独立
+  `sentrychargedbolt` 导弹（missile=495、skill=261、damageLevel=20），且
+  `animationFallback=false`。
+- [x] gate 同时要求控制实体及 burst 导弹在 owner/observer 出现，避免把 SrvDo045 落地
+  或单枚客户端本地表现误判为 SrvDo017；reconnect 允许短寿命导弹自然过期，但禁止旧
+  entity 复活。
+- [x] 夹具按真实 1.10f Skills.txt row 261 生成 Assassin 存档，并把目标放进陷阱搜索
+  半径；Actioneer 对合法 SrvDo044/045 已改为显式 no-op。专项 `AssassinSkillSpecializationTest`
+  通过，继续保留 D2MOO `PATH_ComputePathChargedBolt` 的本地 ECS 回归。
+- [ ] `calc1` 完整数量/路径、逐目标伤害、墙体/null-hit、shot budget、陷阱到期及
+  AssassinSentry AI fallback 仍需独立验收。下一项优先 Wake of Fire Sentry(262)。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=261 -PareaTimeout=25 --no-daemon`；
+  `:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`。
 
 ## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
 
