@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
+
+- [x] 真实双客户端 gate 通过：Nova 权威导弹在 owner/observer 共享，且
+  `animationFallback=false`，确认真实 keyframe 委派。
+- [x] 按 D2MOO `SKILLS_SrvDo022_NovaAttack` 保持服务端创建和快照边界；不把
+  dark-magic 1.14d 的数量公式当作 1.10f 结论。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=48 -PareaTimeout=25 --no-daemon`。
+
 ## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate
 
 - [x] 真实双客户端 gate 已通过：Fire Ball 父导弹和爆炸表现子导弹在 owner/observer

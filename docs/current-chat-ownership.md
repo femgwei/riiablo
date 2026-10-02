@@ -1151,3 +1151,10 @@ incarnation，并继续检查跨区域实体基线恢复。
   共享 Fire Ball 父/爆炸子导弹实体，日志确认 `animationFallback=false`。
 - 未改动 Sorceress 生产伤害或范围公式；本项只确认 D2MOO 父/子导弹生命周期和多人
   快照一致性。后续继续 Sorceress 复杂导弹或 Assassin 真实 MPQ gate。
+
+### 2026-10-02 Sorceress Nova(48) gate handoff
+
+- [x] 真实 1.10f MPQ 双客户端 Nova gate 通过，owner/observer 共享权威导弹，
+  `animationFallback=false`。
+- gate 已输出 `area_skill_dual_pass` 后才出现一次 observer socket close 异步异常，
+  归类为测试清理噪声，不作为技能失败；生产公式未修改。

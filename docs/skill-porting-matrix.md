@@ -2,6 +2,17 @@
 
 更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
 
+## 2026-10-02 Sorceress Nova(48) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=48` 已通过真实 1.10f MPQ 双客户端 gate：Nova
+  权威导弹在 owner/observer 两端共享，且真实客户端 keyframe 触发，日志为
+  `animationFallback=false`。
+- [x] 本轮仅确认 D2MOO `SKILLS_SrvDo022_NovaAttack` 的服务端创建/快照与多人实体
+  生命周期；未用 dark-magic 的 1.14d 数值替换 1.10f 固定 64 路规则。
+- 进程结束时出现一次 observer socket close 的异步 `SocketException`，发生在 gate
+  已输出 `area_skill_dual_pass` 之后，不影响验收结果，需保留为清理噪声而非技能失败。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=48 -PareaTimeout=25 --no-daemon`。
+
 ## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate
 
 - [x] `headlessAreaSkill -PareaSkill=47` 已通过真实 1.10f MPQ 双客户端门槛：父级
