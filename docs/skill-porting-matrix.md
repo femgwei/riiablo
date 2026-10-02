@@ -28,18 +28,18 @@
 - [x] 旧基线只检查 Monster、Position、HP，曾跳过 `CANBEATTACKED`、Town 和
   missile-barrier 门槛；该差异已由上方回归条目补齐，保留本节作为迁移前证据。
 
-## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
+## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序迁移完成
 
 - [x] 静态核对 D2MOO：`UNITROOM_AddUnitToRoomEx` 将新单位插入 `pUnitFirst`，
   `sub_6FD15210`/`UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 返回第一个匹配
   尸体；原生并没有按到 hostile 的最短距离排序。
-- [x] 对照当前实现 `AssassinTrapSystem.findDeathSentryCorpse`：当前使用
-  `bestDistance` 选最近尸体，因此与 D2MOO 的房间链表优先级存在潜在差异；这不是本轮
-  直接改生产逻辑的结论，需在该文件其他 agent 修改合并后再落地。
-- [x] 多尸体夹具已将两个尸体放在同距位置，记录当前 ECS tie-break 为首个实体；该断言
-  只是迁移前观测基线，不代表 D2MOO 的新尸体优先级已经移植。
-- [ ] 尚未加入会锁死错误顺序的回归；下一步应先建立“新尸体先入链表、同距/不同距均按
-  首个匹配返回”的确定性夹具，再决定是否替换最近距离策略。
+- [x] `Corpse.insertionOrder` 记录尸体生命周期的单调插入序号，
+  `findDeathSentryCorpse` 按当前 RoomEx/邻接层级及新插入优先选择；尸体距离只作为
+  `Fn104` 合法性门槛，不再作为候选排序键。
+- [x] 回归改为“旧尸体更近、新尸体更远但仍在门槛内”，确认新尸体先消费；随后第二发
+  消费另一尸体，shot budget 和原子消费约束仍保持。
+- [ ] 邻接 RoomEx 的原生 `pRoomsNear` 数组顺序仍需真实地图 gate 进一步核验；当前
+  代码已区分当前房间、直接邻房和未知拓扑，不把几何最近距离当作原生顺序。
 
 ## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
@@ -47,7 +47,8 @@
   保持 idle，不执行 Skill2，不消耗 shot budget；新增 ECS 回归确认无 missile、
   `shotsFired` 不变且控制器仍存在。
 - [x] `AssassinSkillSpecializationTest` 39 项通过，`BUILD SUCCESSFUL`。
-- [ ] 墙体阻断、同距尸体候选顺序和真实双客户端 null-target/fallback 仍待专项验收。
+- [ ] 墙体阻断和真实双客户端 null-target/fallback 仍待专项验收；尸体候选排序的 ECS
+  回归已完成，邻接房间数组顺序保留为独立核验项。
 
 ## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 

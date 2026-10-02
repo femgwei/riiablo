@@ -336,8 +336,10 @@ public class AssassinTrapSystem extends IteratingSystem {
     // sub_6FD15210 first performs a radius-10 unit search; Fn104 then applies
     // the tighter skill-specific corpse-to-hostile distance gate.
     float maximum = Math.min(10f, Math.max(1f, nativeRange / 2f));
-    float bestDistance = maximum * maximum;
+    float maximumDistance = maximum * maximum;
     int best = Engine.INVALID_ENTITY;
+    int bestRoomRank = Integer.MAX_VALUE;
+    long bestInsertionOrder = Long.MIN_VALUE;
     IntBag corpses = world.getAspectSubscriptionManager()
         .get(Aspect.all(Corpse.class, Monster.class, Position.class, AttributesWrapper.class))
         .getEntities();
@@ -349,11 +351,37 @@ public class AssassinTrapSystem extends IteratingSystem {
           && mMapWrapper.get(corpseId).zone != null
           && mMapWrapper.get(sentryId).zone != mMapWrapper.get(corpseId).zone) continue;
       float distance = target.dst2(mPosition.get(corpseId).position);
-      if (distance >= bestDistance) continue;
-      bestDistance = distance;
+      if (distance >= maximumDistance) continue;
+      int roomRank = corpseRoomRank(hostileId, corpseId);
+      Corpse corpse = mCorpse.get(corpseId);
+      long insertionOrder = corpse != null ? corpse.insertionOrder : Long.MIN_VALUE;
+      // D2MOO's unit finder returns the first matching unit in the current
+      // RoomEx/near-room scan. New units are inserted at pUnitFirst, so a
+      // newer corpse wins within the same room rank; distance is only a
+      // validity gate, never a ranking criterion.
+      if (roomRank > bestRoomRank
+          || (roomRank == bestRoomRank && insertionOrder <= bestInsertionOrder)) continue;
+      bestRoomRank = roomRank;
+      bestInsertionOrder = insertionOrder;
       best = corpseId;
     }
     return best;
+  }
+
+  private int corpseRoomRank(int hostileId, int corpseId) {
+    if (!mMapWrapper.has(hostileId) || !mMapWrapper.has(corpseId)) return 0;
+    MapWrapper hostile = mMapWrapper.get(hostileId);
+    MapWrapper corpse = mMapWrapper.get(corpseId);
+    if (hostile == null || corpse == null || hostile.zone == null || corpse.zone == null
+        || hostile.roomId < 0 || corpse.roomId < 0) return 0;
+    if (hostile.roomId == corpse.roomId) return 0;
+    if (hostile.zone.hasNativeRoomTopology()
+        && hostile.roomId < hostile.zone.getRoomsEx().size
+        && hostile.zone.getRoomsEx().get(hostile.roomId).isAdjacentTo(corpse.roomId)) return 1;
+    if (hostile.map != null && hostile.zone.areRoomsAdjacent(
+        mPosition.get(hostileId).position.x, mPosition.get(hostileId).position.y,
+        mPosition.get(corpseId).position.x, mPosition.get(corpseId).position.y)) return 1;
+    return 2;
   }
 
   /** D2COMMON_11021 / SKILLS_CanUnitCorpseBeSelected. */

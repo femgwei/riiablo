@@ -23,24 +23,26 @@
   本轮不覆盖其他 agent 正在修改的 `AssassinTrapSystem.java`。
 - [ ] 下一步由生产文件负责人补目标过滤/碰撞回归，再进行真实双客户端验证。
 
-## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异已定位
+## 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序迁移完成
 
 - [x] D2MOO `UNITROOM_AddUnitToRoomEx` 在 `pUnitFirst` 头部插入新单位；
   `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按房间链表扫描，
   `sub_6FD15210` 直接返回第一个匹配尸体，而非最近距离。
-- [x] 当前 `AssassinTrapSystem.findDeathSentryCorpse` 使用 `bestDistance` 最小化
-  到 hostile 的距离，和原生候选优先级可能不同；由于该生产文件仍有其他 agent 未提交
-  修改，本轮只记录差异，不覆盖其工作区。
-- [x] 两尸体同距夹具已锁定当前 ECS 首实体 tie-break，作为后续策略替换前的观测基线，
-  不宣称已经达到 D2MOO 新尸体优先级。
-- [ ] 下一步建立确定性同距/不同距尸体夹具，确认 ECS 候选顺序后再调整生产策略。
+- [x] `Corpse.insertionOrder` 模拟 `UNITROOM_AddUnitToRoomEx` 的头插入顺序；
+  `findDeathSentryCorpse` 先按当前 RoomEx/直接邻房层级，再按新插入序号选择，距离只
+  负责 `Fn104` 合法性过滤。
+- [x] 新增确定性近/远尸体夹具：更近的旧尸体与更远的新尸体均合法时，新尸体先被消费，
+  第二次事务再消费旧尸体；完整 `AssassinSkillSpecializationTest` 41 项通过。
+- [ ] 真实地图的 `pRoomsNear` 数组顺序尚未通过 MPQ 专项确认；当前实现不再把最近距离
+  当作原生候选顺序。
 
 ## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 
 - [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` 无 hostile 分支：没有目标时保持 idle，
   不执行 Skill2、不生成 missile、不消耗 shot budget；ECS 回归已锁定控制器仍存活。
 - [x] `AssassinSkillSpecializationTest` 39 项通过，`BUILD SUCCESSFUL`。
-- [ ] 墙体阻断、同距尸体候选顺序和真实双客户端 null-target/fallback 仍待专项验收。
+- [ ] 墙体阻断和真实双客户端 null-target/fallback 仍待专项验收；尸体排序的邻接房间
+  数组顺序仍是独立待办。
 
 ## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 

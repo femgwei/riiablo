@@ -1172,7 +1172,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
-  void deathSentrySrvDo055ConsumesDistinctCorpsesAcrossNormalShotBudget() {
+  void deathSentrySrvDo055UsesNativeCorpseInsertionOrderAcrossNormalShotBudget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
@@ -1207,7 +1207,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(target).position.set(12, 3);
       world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
       int firstCorpse = createSelectableFallenCorpse(world, fallen, 11, 3, 100);
-      int secondCorpse = createSelectableFallenCorpse(world, fallen, 13, 3, 100);
+      // The newer corpse is farther from the hostile but still inside the
+      // native corpse-to-hostile gate. D2MOO returns it first because the
+      // RoomEx unit list inserts new units at pUnitFirst; distance is not a
+      // ranking criterion.
+      int secondCorpse = createSelectableFallenCorpse(world, fallen, 14, 3, 100);
 
       world.setDelta(1f / 25f);
       world.process();
@@ -1218,8 +1222,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "the first SrvDo055 transaction consumes exactly one of two legal corpses");
       int firstSelected = firstConsumed ? firstCorpse : secondCorpse;
       assertEquals(firstSelected, trap.deathLastCorpseId);
-      assertEquals(firstCorpse, firstSelected,
-          "current ECS tie-break is recorded before native room-list parity is migrated");
+      assertEquals(secondCorpse, firstSelected,
+          "native room-list insertion order beats corpse distance within one RoomEx");
       assertEquals(1, trap.shotsFired);
 
       trap.attackCooldownFrames = 0;

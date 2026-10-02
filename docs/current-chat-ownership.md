@@ -64,18 +64,16 @@
 - 本轮为文档静态对照更新，无编译；提交：`6224438a`（`docs: record Death Sentry target filter gap`），
   已准备推送；工作区其他未提交文件保持不动。
 
-### 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序差异定位
+### 2026-10-03 Assassin Death Sentry(276) 多尸体候选顺序迁移完成
 
-- D2MOO `UNITROOM_AddUnitToRoomEx` 把新单位插入 `pUnitFirst`，
-  `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按链表顺序扫描，
-  `sub_6FD15210` 返回首个匹配尸体；当前 `findDeathSentryCorpse` 却按 `bestDistance`
-  选择最近尸体，存在原生顺序偏差风险。
-- 两尸体同距回归已记录当前 ECS 首实体 tie-break，仅作为迁移前观测基线，不代表原生
-  新尸体优先级已完成。
-- 本轮未修改 `AssassinTrapSystem.java`，因为该文件仍有其他 agent 的未提交内容；下一步
-  先做确定性顺序夹具，再由生产文件负责人合并策略调整。
-- 本轮测试/文档提交：`81963e7a`（`test: record Death Sentry tie break baseline`），已准备推送；
-  工作区其他未提交文件保持不动。
+- D2MOO `UNITROOM_AddUnitToRoomEx` 将新单位插入 `pUnitFirst`，
+  `UNITFINDS_FindAllMatchingUnitsInNeighboredRooms` 按 RoomEx 链表扫描，
+  `sub_6FD15210` 返回首个匹配尸体；当前实现已用 `Corpse.insertionOrder` 记录该头插入
+  语义，并按当前房间/直接邻房层级优先。
+- 回归使用更近的旧尸体和更远的新尸体，确认新尸体先被消费，第二发再消费旧尸体；
+  `AssassinSkillSpecializationTest` 41 项通过。
+- 真实 MPQ 仍需核验 `pRoomsNear` 邻接数组的具体顺序；在此之前不宣称跨邻房的最终
+  顺序已经完全等同原生。工作区其他 agent 未提交文件仍保持不动。
 
 ### 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
 

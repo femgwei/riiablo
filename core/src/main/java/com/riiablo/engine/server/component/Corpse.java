@@ -8,6 +8,8 @@ import com.artemis.annotations.PooledWeaver;
  */
 @PooledWeaver
 public class Corpse extends Component {
+  private static long nextInsertionOrder;
+
   /**
    * Native monster corpses remain server units while their RoomEx is active;
    * D2MOO does not apply the old port's fixed ten-second removal timer.
@@ -39,12 +41,20 @@ public class Corpse extends Component {
    */
   public float fadeTime = 0f;
 
+  /**
+   * Monotonic approximation of D2UnitStrc room-list insertion order. Native
+   * room lists insert a newly created unit at pUnitFirst, so corpse searches
+   * observe newer corpses before older corpses in the same RoomEx.
+   */
+  public long insertionOrder;
+
   /** Fully initializes a pooled corpse marker for a new lifecycle. */
   public Corpse reset(float duration, boolean usable) {
     timeRemaining = duration;
     this.usable = usable;
     fading = false;
     fadeTime = 0f;
+    insertionOrder = ++nextInsertionOrder;
     return this;
   }
 
