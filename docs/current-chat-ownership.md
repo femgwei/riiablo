@@ -1145,3 +1145,9 @@ incarnation，并继续检查跨区域实体基线恢复。
   被误计入重试；observer 断开并重连后权威箭袋仍为空。
 - 验证：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=7
   -PamazonBowTimeout=15 -PamazonBowAmmoGate=true --no-daemon`。
+### 2026-10-02 Sorceress Fire Ball(47) gate handoff
+
+- [x] `headlessAreaSkill -PareaSkill=47` 真实 1.10f MPQ 双客户端通过：owner/observer
+  共享 Fire Ball 父/爆炸子导弹实体，日志确认 `animationFallback=false`。
+- 未改动 Sorceress 生产伤害或范围公式；本项只确认 D2MOO 父/子导弹生命周期和多人
+  快照一致性。后续继续 Sorceress 复杂导弹或 Assassin 真实 MPQ gate。

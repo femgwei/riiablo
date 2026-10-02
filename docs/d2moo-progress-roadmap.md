@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate
+
+- [x] 真实双客户端 gate 已通过：Fire Ball 父导弹和爆炸表现子导弹在 owner/observer
+  两端共享同一权威实体集合，`animationFallback=false`。
+- [x] 按 D2MOO `MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion`
+  保持父导弹命中链与子导弹表现链分离；本轮没有覆盖或修改 1.10f 数值公式。
+- 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=47 -PareaTimeout=20 --no-daemon`。
+
 ## 2026-10-02 Amazon Multiple Shot / Strafe 多目标 gate
 
 - [x] 对照 D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave` 及

@@ -2,6 +2,16 @@
 
 更新时间：2026-10-02（交接快照：Assassin trap owner lifecycle / projectile completion）
 
+## 2026-10-02 Sorceress Fire Ball(47) 真实 MPQ gate
+
+- [x] `headlessAreaSkill -PareaSkill=47` 已通过真实 1.10f MPQ 双客户端门槛：父级
+  `fireball` 与原生爆炸表现子导弹均在 owner/observer 共享，权威实体 ID 一致。
+- [x] 本次运行 `animationFallback=false`；证明真实客户端 keyframe 已触发服务端
+  `SkillDoEvent`，没有用 headless fallback 冒充动画完成。
+- [x] 该 gate 只验证 D2MOO `MISSMODE_SrvHit01` 的父/子导弹生命周期、多人快照和
+  重连前的实体一致性，不改动 1.10f 火焰伤害、范围或协同公式。
+- 验证命令：`:server:d2gs:headlessAreaSkill -PareaSkill=47 -PareaTimeout=20 --no-daemon`。
+
 ## 2026-10-02 Amazon Multiple Shot / Strafe 真实 MPQ 多目标 gate
 
 - 对照本地 D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave` 与
