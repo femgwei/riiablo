@@ -2,6 +2,14 @@
 
 更新时间：2026-10-03（交接快照：Death Sentry shot budget 到期门槛收口）
 
+## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
+
+- [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` 的无目标分支：没有 hostile target 时
+  保持 idle，不执行 Skill2，不消耗 shot budget；新增 ECS 回归确认无 missile、
+  `shotsFired` 不变且控制器仍存在。
+- [x] `AssassinSkillSpecializationTest` 39 项通过，`BUILD SUCCESSFUL`。
+- [ ] 墙体阻断、同距尸体候选顺序和真实双客户端 null-target/fallback 仍待专项验收。
+
 ## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
 - [x] 在无合法尸体场景强制通过召唤体 `aip3` 概率门槛，确认运行时实际走
@@ -10,7 +18,7 @@
 - [x] 测试按 `AssassinTrapSystem.resolveMissile` 解码服务器 missile 字段，锁定 MPQ
   别名 `sentrylightningbolt2` 的稳定导弹行 ID；不把显示/逻辑别名
   `sentry lightning` 错当作最终 row 名。
-- [x] `AssassinSkillSpecializationTest` 38 项通过，`BUILD SUCCESSFUL`。
+- [x] `AssassinSkillSpecializationTest` 39 项通过，`BUILD SUCCESSFUL`。
 - [ ] 多个同距尸体的 D2MOO 房间链表候选顺序、墙体/null-hit 和真实双客户端 fallback
   仍待专项验收。
 

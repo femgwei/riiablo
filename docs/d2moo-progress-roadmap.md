@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
+
+- [x] 对照 D2MOO `AITHINK_Fn104_DeathSentry` 无 hostile 分支：没有目标时保持 idle，
+  不执行 Skill2、不生成 missile、不消耗 shot budget；ECS 回归已锁定控制器仍存活。
+- [x] `AssassinSkillSpecializationTest` 39 项通过，`BUILD SUCCESSFUL`。
+- [ ] 墙体阻断、同距尸体候选顺序和真实双客户端 null-target/fallback 仍待专项验收。
+
 ## 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
 - [x] 无合法尸体时通过召唤体 `aip3` 门槛，实际执行 `MonStats.Skill2 = "death sentry ltng"`，
@@ -7,7 +14,7 @@
   hostile 生命。
 - [x] 对照 `resolveMissile` 处理 MPQ 字段别名：最终稳定行名为
   `sentrylightningbolt2`，不能直接把 `sentry lightning` 显示别名当作 row 名。
-  `AssassinSkillSpecializationTest` 38 项通过。
+  `AssassinSkillSpecializationTest` 39 项通过。
 - [ ] 同距尸体候选顺序、墙体/null-hit 和真实双客户端 fallback 仍待专项验收。
 
 ## 2026-10-03 Assassin Death Sentry(276) 多尸体预算事务对照

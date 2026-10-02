@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry Skill2 fallback 发射收口）
+更新时间：2026-10-03（Death Sentry null-target fail-closed 收口）
 
 ## 唯一负责人
 
@@ -32,6 +32,15 @@
 
 ## 当前基线
 
+### 2026-10-03 Assassin Death Sentry(276) null-target fail-closed 对照
+
+- 新增无 hostile target 回归：Death Sentry 保持 idle，不生成 Skill2 missile，
+  `shotsFired` 不增加且控制器仍存在。
+- `AssassinSkillSpecializationTest` 39 项通过。下一步：同距尸体候选顺序、墙体阻断和
+  真实双客户端 null-target/fallback。
+- 本轮代码/测试提交 hash 将在提交后补记；工作区仍保留其他 agent 的未提交文件，
+  不得 stage、覆盖或清理。
+
 ### 2026-10-03 Assassin Death Sentry(276) Skill2 闪电 fallback 实际发射
 
 - 新增无合法尸体的运行时回归：强制通过召唤体 `aip3` 后，实际生成 Skill2 的
@@ -39,7 +48,7 @@
   hostile 生命。
 - 发现并锁定 MPQ missile 别名链：逻辑字段为 `sentrylightningbolt2`，不能用显示别名
   `sentry lightning` 直接比较 row 名；测试现在比较解析后的稳定 missile ID。
-- `AssassinSkillSpecializationTest` 38 项通过。下一步：同距尸体候选顺序、墙体/null-hit
+- `AssassinSkillSpecializationTest` 39 项通过。下一步：同距尸体候选顺序、墙体/null-hit
   和真实双客户端 fallback。
 - 本轮代码/测试提交：`49516d7f`（`test: verify Death Sentry lightning collision damage`）；
   工作区仍保留其他 agent 的未提交文件，不得 stage、覆盖或清理。
