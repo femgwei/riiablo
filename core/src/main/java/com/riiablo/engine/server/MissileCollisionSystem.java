@@ -3554,13 +3554,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     boolean coldKillingHit = combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0;
     boolean frozen = states.hasState(StateId.FREEZE);
     boolean chilled = states.hasState(StateId.COLD);
-    boolean shatter = coldKillingHit && states.hasState(StateId.SHATTER);
-    // D2MOO's SUNITDMG_ApplyColdState owns the shatter roll while the cold
-    // packet is applied.  A freeze packet (Freezing/Ice Arrow) then calls
-    // ApplyFreezeState and must not manufacture a guaranteed SHATTER at the
-    // DeathEvent boundary.  Preserve the already-projected marker instead of
-    // rolling a second time here; this is what keeps ordinary Freezing Arrow
-    // lethal hits frozen but non-shattering when deadCol is unset.
+    boolean shatter = coldKillingHit
+        && (frozen || states.hasState(StateId.SHATTER));
+    // D2MOO's SUNITDMG_ApplyColdState owns the probabilistic SHATTER marker
+    // for ordinary chill packets.  Freeze packets instead arrive with
+    // dwColdLen cleared, so ApplyFreezeState installs FREEZE without touching
+    // STATE_SHATTER.  The native death presentation treats an actually frozen
+    // monster as a guaranteed ice death; project that decision to SHATTER at
+    // the lethal boundary so the corpse path can select icebreak.
 
     if (shatter) {
       mMonster.get(targetId).shatteredAtDeath = true;

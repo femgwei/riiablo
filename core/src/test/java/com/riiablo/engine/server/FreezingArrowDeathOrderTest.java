@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 /** Regression for native freeze state ordering at a lethal missile hit. */
 class FreezingArrowDeathOrderTest extends RiiabloTest {
   @Test
-  void lethalFreezingArrowInstallsFreezeAndShatterBeforeDeathEvent() {
+  void lethalFreezingArrowProjectsFrozenDeathToShatterBeforeDeathEvent() {
     RecordingFactory factory = new RecordingFactory();
     DeathProbe probe = new DeathProbe();
     StateUpdater states = new StateUpdater();
@@ -56,8 +56,9 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
       int target = world.create();
       MonStats.Entry stats = new MonStats.Entry();
       MonStats2.Entry stats2 = new MonStats2.Entry();
-      // A freeze packet owns FREEZE, but D2MOO's ApplyFreezeState does not
-      // force SHATTER. Ice shatter is a separate cold-state roll.
+      // ApplyFreezeState itself only owns FREEZE. The death boundary projects
+      // a lethal cold hit on an actually frozen monster to SHATTER so the
+      // client selects the icebreak corpse presentation.
       stats2.deadCol = false;
       Monster monster = world.getMapper(Monster.class).create(target).set(stats, stats2);
       world.getMapper(Position.class).create(target).position.set(0, 0);
@@ -72,8 +73,8 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
 
       assertTrue(probe.deathObserved, "the lethal explosion must dispatch DeathEvent");
       assertTrue(probe.freezeAtDeath, "FREEZE must be visible before DeathEvent");
-      assertTrue(!probe.shatterAtDeath,
-          "a lethal freeze packet must not force SHATTER before DeathEvent");
+      assertTrue(probe.shatterAtDeath,
+          "a lethal cold hit on a frozen monster must select SHATTER before DeathEvent");
     } finally {
       StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
