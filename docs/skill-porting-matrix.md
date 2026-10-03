@@ -1,6 +1,18 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（Death Sentry 真实墙体/null-hit gate 完成）
+更新时间：2026-10-03（Death Sentry 邻接 RoomEx 顺序回归完成）
+
+## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
+
+- [x] `corpseRoomRank` 现在读取 native bridge 导出的 `adjacentRoomIds` 顺序，将首个
+  `pRoomsNear` 邻房排在后续邻房之前；当前 RoomEx 仍优先于全部邻房。
+- [x] 新增回归 `deathSentryPreservesNativeAdjacentRoomOrderBeforeInsertionOrder`：后插入
+  的首项邻房尸体先于早插入的后续邻房尸体被消费，证明候选排序不再只依赖
+  `Corpse.insertionOrder`。
+- [x] 验证命令：`./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`，43 项通过。
+- [ ] 尚未在真实 MPQ 中稳定构造两个邻房尸体并观察顺序；下一项继续真实地图夹具，
+  不覆盖用户已验证的 Amazon 技能实现。
 
 ## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 

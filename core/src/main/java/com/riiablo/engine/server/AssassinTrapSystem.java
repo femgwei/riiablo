@@ -376,8 +376,17 @@ public class AssassinTrapSystem extends IteratingSystem {
         || hostile.roomId < 0 || corpse.roomId < 0) return 0;
     if (hostile.roomId == corpse.roomId) return 0;
     if (hostile.zone.hasNativeRoomTopology()
-        && hostile.roomId < hostile.zone.getRoomsEx().size
-        && hostile.zone.getRoomsEx().get(hostile.roomId).isAdjacentTo(corpse.roomId)) return 1;
+        && hostile.roomId < hostile.zone.getRoomsEx().size) {
+      // The native pRoomsNear array is already ordered by D2MOO's
+      // sortRoomListByPosition result. RoomEx projection deliberately omits
+      // the current room, so preserve the exported neighbor index as the
+      // candidate rank instead of collapsing every adjacent room to rank 1.
+      int[] near = hostile.zone.getRoomsEx().get(hostile.roomId).getAdjacentRoomIds();
+      for (int i = 0; i < near.length; i++) {
+        if (near[i] == corpse.roomId) return i + 1;
+      }
+      return Integer.MAX_VALUE;
+    }
     if (hostile.map != null && hostile.zone.areRoomsAdjacent(
         mPosition.get(hostileId).position.x, mPosition.get(hostileId).position.y,
         mPosition.get(corpseId).position.x, mPosition.get(corpseId).position.y)) return 1;

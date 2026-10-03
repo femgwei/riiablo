@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry 真实墙体/null-hit gate 完成）
+更新时间：2026-10-03（Death Sentry 邻接 RoomEx 顺序回归完成）
 
 ## 唯一负责人
 
@@ -31,6 +31,18 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Death Sentry 邻接 RoomEx 顺序回归完成
+
+- [x] `AssassinTrapSystem.corpseRoomRank` 现在按 `RoomEx.getAdjacentRoomIds()` 的
+  导出顺序分配 rank，保留 D2MOO `pRoomsNear` 的顺序；当前房间仍为最高优先级，
+  非邻接房间在 native topology 下不会被误判为直接邻房。
+- [x] 新增 `deathSentryPreservesNativeAdjacentRoomOrderBeforeInsertionOrder`：让后插入
+  的尸体位于 `pRoomsNear` 首项，验证首项尸体先于更早插入的后续邻房尸体被消费；
+  `AssassinSkillSpecializationTest` 43 项通过。
+- [ ] 目前是 D2MOO topology 注入的确定性 ECS 回归，尚未在真实 MPQ 中同时布置两个
+  邻房尸体并观察选择顺序；下一步是构造真实跨邻房尸体场景或记录无法稳定构造的原因。
+- 本轮提交尚未创建；提交后需同步远端 hash。
 
 ### 2026-10-03 Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 

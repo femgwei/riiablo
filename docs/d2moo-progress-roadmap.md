@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
+
+- [x] `corpseRoomRank` 采用 `RoomEx.getAdjacentRoomIds()` 的原生导出下标作为邻房
+  rank，保留 D2MOO `pRoomsNear` 顺序；不再将所有直接邻房合并为 rank 1。
+- [x] 新增 `deathSentryPreservesNativeAdjacentRoomOrderBeforeInsertionOrder`，以
+  “尸体插入顺序与 pRoomsNear 顺序相反”的夹具锁定候选选择；专项测试 43 项通过。
+- [ ] 真实 MPQ 双邻房尸体布置尚未完成；当前证据证明的是 topology 映射和选择算法，
+  不是完整真实地图场景。下一步继续尝试真实跨邻房尸体 gate。
+
 ## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 
 - [x] `D2GS.headlessFindBlockedMonsterPlacement` 支持指定扫描原点、最小半径和最大
