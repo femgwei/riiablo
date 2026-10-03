@@ -12,6 +12,7 @@
 - [x] `AssassinSkillSpecializationTest` 43 项通过。
 - [ ] 该专项 gate 不重复 reconnect（普通 276 gate 已通过 reconnect）；下一项可继续
   检查更多地图/难度下的 `pRoomsNear` 顺序稳定性。
+- 本轮提交 `ab7e7de2` 已推送到 `origin/master`。
 
 ## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
 

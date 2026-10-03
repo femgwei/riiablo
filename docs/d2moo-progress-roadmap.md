@@ -9,7 +9,7 @@
   `animationFallback=false`。
 - [x] 普通 276 gate 和 43 项 `AssassinSkillSpecializationTest` 继续通过。
 - [ ] 该专项为顺序 gate，复用了普通 gate 已验证的 reconnect 证据，不重复执行 reconnect。
-- 本轮提交尚未创建；提交后需同步远端 hash。
+- 本轮提交 `ab7e7de2` 已推送到 `origin/master`。
 
 ## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
 

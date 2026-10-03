@@ -43,7 +43,7 @@
 - [x] 使用服务端 `SummonedPet.deathLastCorpseId` 判定消费结果，不再把所有死亡尸体
   都携带的 `CORPSE_NOSELECT` 状态误当作消费证据。
 - [ ] 该专项 gate 跳过重复 reconnect；普通 276 gate 已独立覆盖 reconnect。
-- 本轮提交尚未创建；提交后需同步远端 hash。
+- 本轮提交 `ab7e7de2` 已推送到 `origin/master`。
 
 ### 2026-10-03 Death Sentry 邻接 RoomEx 顺序回归完成
 
