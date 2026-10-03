@@ -2928,6 +2928,29 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns whether the entity's zone has complete native pRoomsNear data. */
+  static boolean headlessEntityHasNativeRoomTopology(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean result = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+        result.set(wrapper != null && wrapper.zone != null && wrapper.zone.hasNativeRoomTopology());
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && result.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Pins a fixture's MapWrapper to a native RoomEx after test-only relocation. */
   static boolean headlessSetEntityRoom(int entityId, int roomId) {
     D2GS server = activeHeadlessInstance;
@@ -2940,6 +2963,7 @@ public class D2GS extends ApplicationAdapter {
             .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
         if (wrapper == null || wrapper.zone == null || roomId >= wrapper.zone.getRoomsEx().size) return;
         wrapper.roomId = roomId;
+        wrapper.roomIdPinned = true;
         updated.set(true);
       } finally {
         done.countDown();

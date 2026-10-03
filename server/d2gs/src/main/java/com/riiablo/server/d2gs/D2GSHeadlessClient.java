@@ -1062,16 +1062,20 @@ public final class D2GSHeadlessClient {
         // point.
       }
       if (skillId == ASSASSIN_DEATH_SENTRY && targetId >= 0) {
+        float targetOffsetY = deathSentryWallGate ? 10f : deathSentryOrderGate ? 0f : 4f;
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-            targetId, a.playerId, 0f, deathSentryWallGate ? 10f : 4f)) {
+            targetId, a.playerId, 0f, targetOffsetY)) {
           throw new IOException("Death Sentry fixture could not place durable target");
         }
-        if (deathSentryWallGate) {
+        if (deathSentryWallGate || deathSentryOrderGate) {
           targetX = a.playerX;
           targetY = a.playerY;
         }
         int corpseId;
         if (deathSentryOrderGate) {
+          if (!D2GS.headlessEntityHasNativeRoomTopology(targetId)) {
+            throw new IOException("Death Sentry adjacent-room gate requires complete native pRoomsNear topology");
+          }
           int[] roomContext = D2GS.headlessEntityRoomContext(targetId);
           if (roomContext.length < 3) {
             throw new IOException("Death Sentry adjacent-room gate requires two native pRoomsNear entries: "
@@ -1079,16 +1083,20 @@ public final class D2GSHeadlessClient {
           }
           int firstRoom = roomContext[1];
           int secondRoom = roomContext[2];
+          if (!D2GS.headlessSetEntityRoom(targetId, roomContext[0])) {
+            throw new IOException("Death Sentry adjacent-room target room pin failed: room="
+                + roomContext[0]);
+          }
           corpseId = D2GS.headlessCreateRoomDeadMonsterFixture(a.playerId, 2, firstRoom);
           deathSentrySecondaryCorpseId = D2GS.headlessCreateRoomDeadMonsterFixture(
               a.playerId, 2, secondRoom);
           boolean firstPlaced = corpseId >= 0
               && D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-                  corpseId, a.playerId, 0f, 3f)
+                  corpseId, a.playerId, 0f, 1.5f)
               && D2GS.headlessSetEntityRoom(corpseId, firstRoom);
           boolean secondPlaced = deathSentrySecondaryCorpseId >= 0
               && D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-                  deathSentrySecondaryCorpseId, a.playerId, 0f, 2f)
+                  deathSentrySecondaryCorpseId, a.playerId, 0f, 1f)
               && D2GS.headlessSetEntityRoom(deathSentrySecondaryCorpseId, secondRoom);
           if (!firstPlaced || !secondPlaced) {
             throw new IOException("Death Sentry adjacent-room corpse setup failed: targetRoom="
@@ -1099,7 +1107,7 @@ public final class D2GSHeadlessClient {
           log("death_sentry_adjacent_room_baseline", "target=" + targetId
               + " targetRoom=" + roomContext[0] + " firstRoom=" + firstRoom
               + " secondRoom=" + secondRoom + " firstCorpse=" + corpseId
-              + " secondCorpse=" + deathSentrySecondaryCorpseId);
+              + " secondCorpse=" + deathSentrySecondaryCorpseId + " nativeTopology=true");
         } else {
           corpseId = D2GS.headlessCreateRoomDeadMonsterFixture(a.playerId, 2, -1);
           if (corpseId < 0 || !D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
@@ -1979,16 +1987,23 @@ public final class D2GSHeadlessClient {
   /** Death Sentry must publish its trap controller and corpse-explosion visual. */
   private static boolean deathSentrySharedEvidence(D2GSHeadlessClient owner,
       D2GSHeadlessClient observer) {
-    if (!sharedAssassinTrapController(owner, observer, ASSASSIN_DEATH_SENTRY)) {
+    int trapId = sharedAssassinTrapControllerId(owner, observer, ASSASSIN_DEATH_SENTRY);
+    if (trapId < 0) {
       return false;
     }
-    if (owner.areaDeathCorpseId < 0 || observer.areaDeathCorpseId != owner.areaDeathCorpseId) {
+    // The adjacent-room gate deliberately creates two candidate corpses. Use
+    // the authoritative transaction marker when it is available instead of
+    // assuming the fixture's first id was consumed; the dedicated order
+    // assertion below then reports which candidate actually won.
+    int consumedCorpseId = D2GS.headlessDeathSentryLastCorpseId(trapId);
+    int corpseId = consumedCorpseId >= 0 ? consumedCorpseId : owner.areaDeathCorpseId;
+    if (corpseId < 0) {
       return false;
     }
-    Snapshot corpseA = owner.monsters.get(owner.areaDeathCorpseId);
-    Snapshot corpseB = observer.monsters.get(observer.areaDeathCorpseId);
-    Set<Integer> corpseStatesA = owner.entityStateIds.get(owner.areaDeathCorpseId);
-    Set<Integer> corpseStatesB = observer.entityStateIds.get(observer.areaDeathCorpseId);
+    Snapshot corpseA = owner.monsters.get(corpseId);
+    Snapshot corpseB = observer.monsters.get(corpseId);
+    Set<Integer> corpseStatesA = owner.entityStateIds.get(corpseId);
+    Set<Integer> corpseStatesB = observer.entityStateIds.get(corpseId);
     if (corpseA == null || corpseB == null || !corpseA.dead || !corpseB.dead
         || corpseA.life > 0f || corpseB.life > 0f
         || corpseStatesA == null || corpseStatesB == null

@@ -6552,3 +6552,16 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
   Wake of Fire/Inferno/Death Sentry 的动画与 AI fallback 待办。
 
 验证：`:server:d2gs:headlessAreaSkill -PareaSkill=277 -PareaTimeout=15 --no-daemon`。
+
+### 2026-10-03 Death Sentry(276) D2MOO 邻房顺序核对
+
+- [x] 保持 `corpseRoomRank` 对原生 `RoomEx.getAdjacentRoomIds()`/`pRoomsNear` 顺序的
+  解释；新增 `MapWrapper.roomIdPinned` 仅供 headless 原生房间夹具固定测试实体房间，
+  普通实体仍由 `RoomEntityTrackingSystem` 自动跟踪。
+- [x] 真实 1.10f MPQ 双客户端 gate 在 seed=1/2/3、difficulty=0 全部通过。证据为
+  `death_sentry_adjacent_room_gate_pass`：第一邻房尸体 consumed=true、第二尸体
+  consumed=false，并且 owner/observer 共享 skill=312 / missile=115 视觉。
+- [x] 三个 seed 的原生邻接顺序分别为 `6 -> 1`、`8 -> 1`、`13 -> 1`；夹具硬断言
+  `nativeTopology=true`，不把缺失 `pRoomsNear` 的 fallback 邻接推断当作 D2MOO 证据。
+- [ ] 后续补 difficulty=1/2、动画 keyframe 和 Death Sentry AI fallback；当前 gate 的
+  `animationFallback=true` 只用于无 COF 关键帧的 headless 环境。

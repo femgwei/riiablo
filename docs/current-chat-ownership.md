@@ -1542,3 +1542,15 @@ incarnation，并继续检查跨区域实体基线恢复。
 - [ ] 尚未完成周期脉冲墙体/null-hit、到期清理及真实视觉持续时间。下一位 agent 应先补
   这些 Blade Shield 边界，然后处理 262/272/276 的动画/keyframe 和
   `AssassinSentry` AI fallback。
+
+### 2026-10-03 Death Sentry(276) 邻房顺序 gate（本轮完成）
+
+- [x] `AssassinTrapSystem` 的 `corpseRoomRank` 继续使用 D2MOO 导出的 `pRoomsNear`
+  顺序；headless 夹具新增 RoomEx pin，避免测试尸体被房间跟踪系统按近距离坐标改回当前房。
+- [x] 真实 MPQ 双客户端 gate 在 seed=1、2、3 / difficulty=0 均通过：首项邻房尸体消费，
+  第二具未消费；owner/observer 共享 Death Sentry 视觉。seed=1 邻房 `6 -> 1`，seed=2
+  为 `8 -> 1`，seed=3 为 `13 -> 1`，均记录 `nativeTopology=true`。
+- [x] 相关验证：`:core:test --tests com.riiablo.engine.server.AssassinSkillSpecializationTest`
+  通过；`:server:d2gs:compileJava` 与三次真实 gate 均 BUILD SUCCESSFUL。
+- [ ] 仍需继续 Death Sentry 的动画/keyframe、AI fallback 和 difficulty>0 地图覆盖；本轮
+  `animationFallback=true` 仅表示 headless COF 缺关键帧，不作为视觉完成证据。

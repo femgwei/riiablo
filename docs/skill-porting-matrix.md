@@ -1085,3 +1085,15 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - dark-magic 行为说明：`F:/3rd_src/dark-magic/internal/content/d2legacy/lua/d2legacy/README.md`
 - dark-magic 研究和证据：`F:/3rd_src/dark-magic/docs/research/SKILLS_STATES_AND_MISSILES.md`
 - D2MOO 基线：`F:/3rd_src/D2MOO/source/D2Game/src/SKILLS`
+
+### 2026-10-03 Assassin Death Sentry(276) 邻房顺序对照
+
+- D2MOO 依据：Death Sentry corpse finder 先扫当前 RoomEx，再按导出的 `pRoomsNear`
+  顺序检查邻房；同一房间内才使用单位链插入顺序，距离只作为尸体可达性门槛。
+- riiablo 对照：`AssassinTrapSystem.corpseRoomRank` 已按 `getAdjacentRoomIds()` 返回的
+  稳定索引排序；本轮没有改动用户已验证的 Amazon 技能或 Death Sentry 数值公式。
+- 真实 MPQ 结果：seed=1 `6 -> 1`、seed=2 `8 -> 1`、seed=3 `13 -> 1` 均通过首尸体
+  消费/次尸体未消费、双端视觉共享和原生拓扑断言；此前 seed=2/3 的误失败是测试夹具
+  `RoomEntityTrackingSystem` 把合成近尸体重归当前房，已由 pin 机制修正。
+- 当前状态：顺序与尸体事务证据完成；动画 keyframe/AI fallback、难度覆盖及真实客户端
+  视觉仍未完成，不能据此宣称 Death Sentry 四层验收。

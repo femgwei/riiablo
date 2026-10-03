@@ -164,6 +164,10 @@ tasks.register('headlessAreaSkill', JavaExec) {
        (project.hasProperty('areaSkill') ? project.property('areaSkill').toString() : '244'),
        '--area-skill-level',
        (project.hasProperty('areaSkillLevel') ? project.property('areaSkillLevel').toString() : '20'),
+       '--seed',
+       (project.hasProperty('areaSeed') ? project.property('areaSeed').toString() : '12345'),
+       '--difficulty',
+       (project.hasProperty('areaDifficulty') ? project.property('areaDifficulty').toString() : '0'),
        '--test-timeout',
        (project.hasProperty('areaTimeout') ? project.property('areaTimeout').toString() : '60')
 

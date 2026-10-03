@@ -22,6 +22,7 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
   protected void process(int entityId) {
     MapWrapper wrapper = mMapWrapper.get(entityId);
     if (wrapper == null || wrapper.map == null) return;
+    if (wrapper.roomIdPinned) return;
     Vector2 position = mPosition.get(entityId).position;
     Map.Zone oldZone = wrapper.zone;
     int oldRoomId = wrapper.roomId;
