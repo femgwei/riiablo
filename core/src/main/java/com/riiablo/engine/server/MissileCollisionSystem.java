@@ -3502,12 +3502,6 @@ public class MissileCollisionSystem extends IteratingSystem {
     // damage child must not add the generic weapon FireExplode overlay on top
     // of that native explosion presentation.
     String missileName = missile.missile.Missile;
-    if ("icearrow".equalsIgnoreCase(missileName)
-        && missile.missile.ExplosionMissile != null
-        && !missile.missile.ExplosionMissile.isEmpty()
-        && Riiablo.files.Missiles.get(missile.missile.ExplosionMissile) != null) {
-      return true;
-    }
     if ("explodingarrow".equalsIgnoreCase(missileName)
         || "explodingarrowexp".equalsIgnoreCase(missileName)
         || "explodingarrowexp2".equalsIgnoreCase(missileName)) return true;

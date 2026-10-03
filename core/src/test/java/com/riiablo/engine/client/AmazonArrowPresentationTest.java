@@ -89,6 +89,13 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void iceArrowDoesNotRenderExplosionOnCollision() {
+    Missiles.Entry ice = Riiablo.files.Missiles.get("icearrow");
+    assertNotNull(ice);
+    assertTrue(MissileImpactPresentationSystem.isImpactVisualSuppressed(ice));
+  }
+
+  @Test
   void nativeMissileHitClassSoundMappingKeepsArrowTargetRule() {
     assertEquals("impact_fire_1",
         MissileImpactPresentationSystem.hitClassSound(32, Engine.INVALID_ENTITY));
