@@ -232,6 +232,9 @@ public class DT1 implements Disposable {
     public static final int FLAG_BLOCK_UNKNOWN2    = 1 << 6;
     public static final int FLAG_BLOCK_UNKNOWN3    = 1 << 7;
 
+    /** DT1 material flag used by D2Common for lava/fire animation tiles. */
+    public static final int MATERIAL_LAVA = 0x0100;
+
     public int   direction;
     public short roofHeight;
     public byte  soundIndex;
@@ -329,6 +332,20 @@ public class DT1 implements Disposable {
     public boolean isWall()    { return Orientation.isWall(orientation); }
     public boolean isRoof()    { return Orientation.isRoof(orientation); }
     public boolean isSpecial() { return Orientation.isSpecial(orientation); }
+
+    /**
+     * Returns the 16-bit material flags stored at DT1 header offset 0x06.
+     * The legacy reader exposes this field as two bytes ({@code soundIndex}
+     * and {@code animated}); D2CMP treats them as one little-endian value.
+     */
+    public int materialFlags() {
+      return (soundIndex & 0xff) | ((animated & 0xff) << 8);
+    }
+
+    /** True for the special lava/fire tiles that D2Common animates. */
+    public boolean isAnimatedMaterial() {
+      return (materialFlags() & MATERIAL_LAVA) != 0;
+    }
 
     /**
      * FIXME: rewrite eventually -- I don't think any of absWidth absHeight, y_add are really needed

@@ -93,6 +93,49 @@ public class DT1s {
     return sibling != null ? sibling : get(id);
   }
 
+  /**
+   * Looks up an animated DT1 frame without applying the normal rarity
+   * weighting used for random terrain selection. For lava tiles, D2Common
+   * defines rarity as the animation frame index (0, 1, ...), and all frames
+   * share the same tile id and DT1 source.
+   */
+  public DT1.Tile getAnimationFrame(DT1.Tile tile, int frame) {
+    if (tile == null || !tile.isAnimatedMaterial() || frame < 0) return tile;
+    Array<DT1.Tile> variants = null;
+    String source = tileSources.get(tile);
+    if (source != null) {
+      IntMap<Array<DT1.Tile>> indexed = sourceTiles.get(source);
+      if (indexed != null) variants = indexed.get(tile.id);
+    }
+    if (variants == null) variants = tiles.get(tile.id);
+    if (variants == null) return tile;
+    for (DT1.Tile candidate : variants) {
+      if (candidate != null && candidate.rarity == frame
+          && candidate.isAnimatedMaterial()) return candidate;
+    }
+    return tile;
+  }
+
+  /** Number of animation frames available for an animated tile. */
+  public int getAnimationFrameCount(DT1.Tile tile) {
+    if (tile == null || !tile.isAnimatedMaterial()) return 1;
+    Array<DT1.Tile> variants = null;
+    String source = tileSources.get(tile);
+    if (source != null) {
+      IntMap<Array<DT1.Tile>> indexed = sourceTiles.get(source);
+      if (indexed != null) variants = indexed.get(tile.id);
+    }
+    if (variants == null) variants = tiles.get(tile.id);
+    if (variants == null) return 1;
+    int count = 1;
+    for (DT1.Tile candidate : variants) {
+      if (candidate != null && candidate.isAnimatedMaterial()) {
+        count = Math.max(count, candidate.rarity + 1);
+      }
+    }
+    return count;
+  }
+
   private DT1.Tile next(int id, Array<DT1.Tile> tiles) {
     if (tiles == null) return null;
     int sum = prob.get(id, 0);

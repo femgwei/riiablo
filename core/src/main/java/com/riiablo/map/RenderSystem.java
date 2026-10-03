@@ -74,6 +74,9 @@ import com.riiablo.util.DebugUtils;
 @All(AnimationWrapper.class)
 public class RenderSystem extends BaseEntitySystem {
   private static final String TAG = "RenderSystem";
+  /** D2Common's default DRLG animation speed: 80 fixed-point units/tick. */
+  private static final float MAP_ANIMATION_FRAMES_PER_SECOND =
+      Animation.FRAMES_PER_SECOND * 80f / 256f;
   /** First-pass approximation of the classic D2 wall reveal opacity. */
   static final float WALL_OCCLUDED_ALPHA = 0.55f;
   /** Duration of the classic wall reveal/fade transition. */
@@ -318,6 +321,9 @@ public class RenderSystem extends BaseEntitySystem {
   int renderMaxX, renderMaxY;
 
   float radius;
+
+  /** Global phase keeps animated tiles in adjacent rooms synchronized. */
+  private float mapAnimationTime;
 
   // DT1 mainIndexes to not draw
   final Bits popped = new Bits();
@@ -581,6 +587,8 @@ public class RenderSystem extends BaseEntitySystem {
    * renders map
    */
   public void draw(float delta) {
+    mapAnimationTime += Math.max(0f, delta);
+    if (mapAnimationTime > 1024f) mapAnimationTime %= 1024f;
     prepareBatch();
     buildCaches();
     drawBackground();
@@ -852,6 +860,21 @@ public class RenderSystem extends BaseEntitySystem {
     }
   }
 
+  private Tile animatedTile(Map.Zone zone, Tile tile) {
+    if (zone == null || tile == null || zone.dt1s == null || !tile.isAnimatedMaterial()) {
+      return tile;
+    }
+    int frames = zone.dt1s.getAnimationFrameCount(tile);
+    if (frames <= 1) return tile;
+    int frame = ((int) (mapAnimationTime * MAP_ANIMATION_FRAMES_PER_SECOND)) % frames;
+    return zone.dt1s.getAnimationFrame(tile, frame);
+  }
+
+  private TextureRegion tileTexture(Map.Zone zone, Tile tile) {
+    Tile frame = animatedTile(zone, tile);
+    return frame == null ? null : frame.texture;
+  }
+
   private void drawEntity(Array<Integer>[] cache, int entity) {
 //      if (!entity.target().isZero() && !entity.position().epsilonEquals(entity.target())) {
 //        entity.angle(angle(entity.position(), entity.target()));
@@ -909,7 +932,7 @@ public class RenderSystem extends BaseEntitySystem {
         case Orientation.LOWER_RIGHT_WALL:
         case Orientation.LOWER_NORTH_CORNER_WALL:
         case Orientation.LOWER_SOUTH_CORNER_WALL:
-          batch.draw(tile.texture, px, py + tile.height + Tile.WALL_HEIGHT);
+          batch.draw(tileTexture(zone, tile), px, py + tile.height + Tile.WALL_HEIGHT);
           // fall-through to continue
         default:
       }
@@ -926,9 +949,9 @@ public class RenderSystem extends BaseEntitySystem {
       int subst = map.warpSubsts.get(tile.id, -1);
       if (subst != -1) { // TODO: Performance can be improved if the reference is updated to below subst
         Tile replacement = zone.dt1s.getSibling(tile, subst);
-        texture = replacement == null ? tile.texture : replacement.texture;
+        texture = replacement == null ? tileTexture(zone, tile) : tileTexture(zone, replacement);
       } else {
-        texture = tile.texture;
+        texture = tileTexture(zone, tile);
       }
       //if (texture.getTexture().getTextureObjectHandle() == 0) return;
       batch.draw(texture, px, py);
@@ -941,7 +964,7 @@ public class RenderSystem extends BaseEntitySystem {
       Tile tile = zone.get(i, tx, ty);
       if (tile == null) continue;
       if (px > renderMaxX || px + Tile.WIDTH  < renderMinX) continue;
-      TextureRegion texture = tile.texture;
+      TextureRegion texture = tileTexture(zone, tile);
       if (py > renderMaxY || py + texture.getRegionHeight() < renderMinY) continue;
       batch.draw(texture, px, py);
     }
@@ -988,14 +1011,15 @@ public class RenderSystem extends BaseEntitySystem {
       if (tile == null) continue;
       if (isPoppedPopPad(popped, tile)) continue;
       if (!isDrawableWallOrientation(tile.orientation)) continue;
-      if (py + tile.texture.getRegionHeight() < renderMinY) continue;
+      TextureRegion texture = tileTexture(zone, tile);
+      if (texture == null || py + texture.getRegionHeight() < renderMinY) continue;
       float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
       if (alpha != 1f) batch.setAlpha(alpha);
-      batch.draw(tile.texture, px, py);
+      batch.draw(texture, px, py);
       if (tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
         Tile sibling = zone.dt1s.get(
             Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
-        if (sibling != null) batch.draw(sibling.texture, px, py);
+        if (sibling != null) batch.draw(tileTexture(zone, sibling), px, py);
       }
       if (alpha != 1f) batch.resetColor();
     }
@@ -1182,10 +1206,11 @@ public class RenderSystem extends BaseEntitySystem {
       if (isPoppedPopPad(popped, tile)) continue;
       if (!Orientation.isRoof(tile.orientation)) continue;
       if (py + tile.roofHeight > renderMaxY) continue;
-      if (py + tile.roofHeight + tile.texture.getRegionHeight() < renderMinY) continue;
+      TextureRegion texture = tileTexture(zone, tile);
+      if (texture == null || py + tile.roofHeight + texture.getRegionHeight() < renderMinY) continue;
       float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
       if (alpha != 1f) batch.setAlpha(alpha);
-      batch.draw(tile.texture, px, py + tile.roofHeight);
+      batch.draw(texture, px, py + tile.roofHeight);
       if (alpha != 1f) batch.resetColor();
     }
   }
