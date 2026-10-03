@@ -859,6 +859,31 @@ public class Map implements Disposable {
   }
 
   /**
+   * Returns whether two logical zones share a geometric edge in this map.
+   *
+   * <p>Native Act I exports keep connected outdoor/monastery areas as
+   * separate level zones, even though the compatibility map places their
+   * rectangles directly against one another.  Movement and AI must be able
+   * to cross such a seam; treating every different Zone as a hard boundary
+   * makes monsters stop at the former black-edge location.  The collision
+   * grid remains authoritative for whether a particular tile on the shared
+   * edge is actually traversable.</p>
+   */
+  public boolean areZonesAdjacent(Zone first, Zone second) {
+    if (first == null || second == null) return false;
+    if (first == second) return true;
+
+    long firstRight = (long) first.x + first.width;
+    long firstBottom = (long) first.y + first.height;
+    long secondRight = (long) second.x + second.width;
+    long secondBottom = (long) second.y + second.height;
+    long overlapX = Math.min(firstRight, secondRight) - Math.max(first.x, second.x);
+    long overlapY = Math.min(firstBottom, secondBottom) - Math.max(first.y, second.y);
+    return (overlapX > 0 && (firstBottom == second.y || secondBottom == first.y))
+        || (overlapY > 0 && (firstRight == second.x || secondRight == first.x));
+  }
+
+  /**
    * Resolves the owning Zone for a native Warp marker.
    *
    * <p>Act I's detached dungeon zones deliberately share rectangular world

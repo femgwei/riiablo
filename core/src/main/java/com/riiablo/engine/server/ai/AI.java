@@ -32,6 +32,7 @@ import com.riiablo.engine.server.combat.NativeMeleeDistance;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.map.Map;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeTargeting;
@@ -820,6 +821,13 @@ public abstract class AI implements Interactable.Interactor {
         || mSummonedPet.has(entityId) || !mPosition.has(targetId)) return true;
     Position targetPosition = mPosition.get(targetId);
     if (monster.spawnZone != null && monster.spawnZone.hasNativeRoomTopology()) {
+      if (mMapWrapper.has(entityId)) {
+        MapWrapper wrapper = mMapWrapper.get(entityId);
+        Map.Zone targetZone = wrapper != null && wrapper.map != null
+            ? wrapper.map.getZone(targetPosition.position) : null;
+        if (targetZone != null && targetZone != monster.spawnZone
+            && wrapper.map.areZonesAdjacent(monster.spawnZone, targetZone)) return true;
+      }
       return monster.spawnZone.areRoomsAdjacent(
           monster.spawnX, monster.spawnY,
           targetPosition.position.x, targetPosition.position.y);
@@ -910,8 +918,14 @@ public abstract class AI implements Interactable.Interactor {
       MapWrapper target = mMapWrapper.get(targetId);
       if (source.map != null && target.map != null && source.map != target.map) return false;
       if (sourcePet == null && monster != null && monster.spawnZone != null
-          && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)) return false;
-      if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
+          && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)
+          && (source.map == null
+              || !source.map.areZonesAdjacent(monster.spawnZone, source.zone)
+              || !source.map.areZonesAdjacent(monster.spawnZone, target.zone))) return false;
+      if (source.zone != null && target.zone != null && source.zone != target.zone
+          && (source.map == null || !source.map.areZonesAdjacent(source.zone, target.zone))) {
+        return false;
+      }
       if (source.zone != null && target.zone == source.zone
           && !source.zone.areRoomsAdjacent(
               mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,

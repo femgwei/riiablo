@@ -521,6 +521,9 @@ public class Pathfinder extends IteratingSystem {
     if (!mMonster.has(src) || !mMapWrapper.has(src)) return true;
     MapWrapper wrapper = mMapWrapper.get(src);
     if (wrapper == null || wrapper.zone == null) return true;
+    Map.Zone targetZone = map != null ? map.getZone(target) : null;
+    if (targetZone != null && targetZone != wrapper.zone
+        && map != null && map.areZonesAdjacent(wrapper.zone, targetZone)) return true;
     return isRoomPathAllowed(wrapper.zone, source, target);
   }
 
@@ -534,6 +537,11 @@ public class Pathfinder extends IteratingSystem {
     if (sourceRoom == null) return false;
     for (int i = 0; i < path.getCount(); i++) {
       Vector2 point = path.getNodePosition(i);
+      Map.Zone pointZone = map != null ? map.getZone(point) : zone;
+      if (pointZone != null && pointZone != zone) {
+        if (map.areZonesAdjacent(zone, pointZone)) continue;
+        return false;
+      }
       Map.RoomEx room = zone.findRoomEx(point.x, point.y);
       if (room == null || (room != sourceRoom && !sourceRoom.isAdjacentTo(room.id))) return false;
     }

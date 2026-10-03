@@ -76,9 +76,12 @@ public class AIStepper extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Monster monster = mMonster.get(entityId);
-    if (monster.spawnZone != null && mMapWrapper.has(entityId)
-        && mMapWrapper.get(entityId).zone != null
-        && mMapWrapper.get(entityId).zone != monster.spawnZone) {
+    MapWrapper entityMap = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    if (monster.spawnZone != null && entityMap != null
+        && entityMap.zone != null
+        && entityMap.zone != monster.spawnZone
+        && (entityMap.map == null
+            || !entityMap.map.areZonesAdjacent(monster.spawnZone, entityMap.zone))) {
       // Native AI is room/activation scoped. Once a path accidentally crosses
       // a generated level seam, stop the authoritative movement immediately;
       // do not allow the monster to continue toward town or another level.
@@ -88,8 +91,7 @@ public class AIStepper extends IteratingSystem {
       log.debug("[MONSTER_BOUNDARY] entity={} monster={} spawnZone={} currentZone={} action=halt",
           entityId, monster.monstats != null ? monster.monstats.Id : "unknown",
           monster.spawnZone.level != null ? monster.spawnZone.level.Id : -1,
-          mMapWrapper.get(entityId).zone.level != null
-              ? mMapWrapper.get(entityId).zone.level.Id : -1);
+          entityMap.zone.level != null ? entityMap.zone.level.Id : -1);
       return;
     }
     if (!isInClientRoomOrSight(entityId)) {
@@ -173,8 +175,19 @@ public class AIStepper extends IteratingSystem {
     MapWrapper source = mMapWrapper.get(entityId);
     if (source.zone == null || !source.zone.hasNativeRoomTopology()) return true;
     if (source.zone.isRoomActivationTracking()) {
-      return source.zone.isRoomActiveForAI(
-          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
+      if (source.zone.isRoomActiveForAI(
+          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y)) return true;
+      // Connected level zones share a physical seam in the compatibility map.
+      // A player in the adjacent zone keeps monsters at that seam active even
+      // though the native room reference counter belongs to the other Zone.
+      IntBag entities = players.getEntities();
+      int[] data = entities.getData();
+      for (int i = 0, size = entities.size(); i < size; i++) {
+        MapWrapper target = mMapWrapper.get(data[i]);
+        if (target == null || target.map != source.map || target.zone == null) continue;
+        if (source.map.areZonesAdjacent(source.zone, target.zone)) return true;
+      }
+      return false;
     }
 
     IntBag entities = players.getEntities();
