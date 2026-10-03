@@ -14,6 +14,7 @@
   `animationFallback=false`），`AssassinSkillSpecializationTest` 42 项通过。
 - [ ] 真实 MPQ 尚未覆盖多个邻接 RoomEx 的 `pRoomsNear` 具体排序；下一项为跨邻房
   尸体候选顺序 gate，不覆盖用户已验证的 Amazon 技能实现。
+- 本轮提交 `53a706f6` 已推送到 `origin/master`。
 
 ## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 优先级回归完成
 

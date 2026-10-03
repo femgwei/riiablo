@@ -47,6 +47,7 @@
   com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`：42 项通过。
 - [ ] 多个邻接 RoomEx 之间的 `pRoomsNear` 具体顺序仍未由真实 MPQ Death Sentry
   场景单独证明；下一步继续做跨邻房尸体候选顺序的可观测 gate。
+- 本轮提交 `53a706f6` 已推送到 `origin/master`。
 - 本轮修改仅涉及 `server/d2gs` gate/fixture 与三份进度文档；其他 agent 的
   `ItemEntry.java`、`MissileCollisionSystem.java`、`StatFormatterTest.java` 及日志/dump
   不得 stage、覆盖或清理。

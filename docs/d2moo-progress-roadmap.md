@@ -12,7 +12,7 @@
   `AssassinSkillSpecializationTest` 42 项通过。
 - [ ] 尚未证明多个邻接 RoomEx 的 `pRoomsNear` 具体顺序会改变尸体候选选择；下一步
   继续跨邻房尸体顺序的真实 MPQ 可观测验证。
-- 本轮代码和文档提交后需确认远端 hash；其他 agent 未提交修改保持不动。
+- 本轮提交 `53a706f6` 已推送到 `origin/master`；其他 agent 未提交修改保持不动。
 
 ## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 尸体优先级回归完成
 
