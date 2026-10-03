@@ -19,6 +19,7 @@
 - [ ] **DM-NV-02（10%）Death Sentry 完整非视觉行为**
   - difficulty=1/2、多个地图 seed、多尸体/多发预算、爆炸范围、物理/火焰拆分。
   - Skill2 fallback、null-target 重选、多 trap/PetMax、重连期间不重复消费或复活。
+  - 2026-10-04 调查：`areaSkill=276` 的 seed=12345、seed=2（difficulty=0）可通过；seed=1、seed=3（difficulty=0）及 seed=1（difficulty=1）未生成可观测权威 trap/missile，暂不计入完成率。该差异优先排查 RoomEx 激活/尸体候选确定性，不能用单个通过 seed 代替多 seed 证据。
 - [ ] **DM-NV-03（8%）Wake of Fire Sentry 行为收口**
   - maker→wave 数量、两波方向/间隔、逐目标伤害、墙体/null-hit、预算和控制器到期。
 - [ ] **DM-NV-04（8%）Inferno Sentry 行为收口**
