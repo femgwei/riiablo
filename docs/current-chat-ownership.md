@@ -42,7 +42,7 @@
   `AssassinSkillSpecializationTest` 43 项通过。
 - [ ] 目前是 D2MOO topology 注入的确定性 ECS 回归，尚未在真实 MPQ 中同时布置两个
   邻房尸体并观察选择顺序；下一步是构造真实跨邻房尸体场景或记录无法稳定构造的原因。
-- 本轮提交尚未创建；提交后需同步远端 hash。
+- 本轮提交 `fd642ec4` 已推送到 `origin/master`。
 
 ### 2026-10-03 Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 

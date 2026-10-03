@@ -13,6 +13,7 @@
   com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`，43 项通过。
 - [ ] 尚未在真实 MPQ 中稳定构造两个邻房尸体并观察顺序；下一项继续真实地图夹具，
   不覆盖用户已验证的 Amazon 技能实现。
+- 本轮提交 `fd642ec4` 已推送到 `origin/master`。
 
 ## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 

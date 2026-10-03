@@ -8,6 +8,7 @@
   “尸体插入顺序与 pRoomsNear 顺序相反”的夹具锁定候选选择；专项测试 43 项通过。
 - [ ] 真实 MPQ 双邻房尸体布置尚未完成；当前证据证明的是 topology 映射和选择算法，
   不是完整真实地图场景。下一步继续尝试真实跨邻房尸体 gate。
+- 本轮提交 `fd642ec4` 已推送到 `origin/master`。
 
 ## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
 
