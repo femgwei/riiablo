@@ -632,7 +632,7 @@ public class RenderSystem extends BaseEntitySystem {
       int sty = ty * Tile.SUBTILE_SIZE;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+        Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) buildCache(cache[y][x], zone, stx, sty);
         tx++;
         stx += Tile.SUBTILE_SIZE;
@@ -707,7 +707,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+        Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) {
           drawLowerWalls(batch, zone, tx, ty, px, py);
           drawFloors(batch, zone, tx, ty, px, py);
@@ -742,7 +742,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+        Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) {
           //buildCaches(zone, stx, sty);
           drawShadows(batch, zone, tx, ty, px, py, cache[y][x]);
@@ -780,7 +780,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+        Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) {
           //buildCaches(zone, stx, sty);
           Array<Integer>[] cache = this.cache[y][x];
@@ -823,7 +823,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+        Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) {
           drawRoofs(batch, zone, tx, ty, px, py);
         }
@@ -1371,7 +1371,7 @@ public class RenderSystem extends BaseEntitySystem {
           float py = startPy2;
           int size = viewBuffer[y];
           for (x = 0; x < size; x++) {
-            Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+            Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
             if (zone != null) {
               int localTX = zone.getLocalTX(tx);
               int modX = localTX < 0
@@ -1467,7 +1467,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+        Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
         if (zone != null) {
           if (RENDER_DEBUG_WALKABLE == 1) {
             for (int sty = 0, t = 0; sty < Tile.SUBTILE_SIZE; sty++) {
@@ -1601,7 +1601,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+        Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
         if (zone != null) {
           if (RENDER_DEBUG_MATERIAL == 1) {
             Material type = zone.material(tx, ty);
@@ -1685,7 +1685,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(stx, sty);
+          Map.Zone zone = map.getRenderZone(stx, sty);
         if (zone != null) {
           Map.Preset preset = zone.getGrid(tx, ty);
           if (preset != null) {
@@ -1770,7 +1770,7 @@ public class RenderSystem extends BaseEntitySystem {
         float py = startPy2;
         int size = viewBuffer[y];
         for (x = 0; x < size; x++) {
-          Map.Zone zone = map.getZone(stx, sty);
+          Map.Zone zone = map.getRenderZone(stx, sty);
           if (zone != null) {
             DS1.Cell cell = zone.getCell(i, tx, ty);
             if (cell != null) {
@@ -2214,7 +2214,7 @@ public class RenderSystem extends BaseEntitySystem {
       int size = viewBuffer[y];
       
       for (int x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+        Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
         if (zone != null) {
           // 遍历所有墙层
           for (int layer = Map.WALL_OFFSET; layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
@@ -2312,7 +2312,7 @@ public class RenderSystem extends BaseEntitySystem {
         int size = viewBuffer[y];
         
         for (int x = 0; x < size; x++) {
-          Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+          Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
           if (zone != null) {
             // 遍历所有墙层
             for (int layer = Map.WALL_OFFSET; layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
@@ -2651,7 +2651,7 @@ public class RenderSystem extends BaseEntitySystem {
         }
         
         // 获取该瓷砖的zone
-        Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+        Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
         if (zone == null) continue;
         
         // 遍历所有墙层，绘制线条
@@ -2907,7 +2907,7 @@ public class RenderSystem extends BaseEntitySystem {
       int size = viewBuffer[y];
 
       for (int x = 0; x < size; x++) {
-        Map.Zone zone = map.getZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
+        Map.Zone zone = map.getRenderZone(tx * Tile.SUBTILE_SIZE, ty * Tile.SUBTILE_SIZE);
         if (zone != null) {
           // 渲染墙壁精灵
           drawAutomapWallsSpriteForZone(zone, tx, ty, px, py);

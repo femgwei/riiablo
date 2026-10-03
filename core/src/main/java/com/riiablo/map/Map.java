@@ -847,6 +847,18 @@ public class Map implements Disposable {
   }
 
   /**
+   * Resolves the tile owner used by the renderer. Native wall graphics may be
+   * anchored on a Zone's exclusive edge; those graphics must remain visible
+   * even when the same coordinate belongs to an adjacent logical Zone.
+   */
+  public Zone getRenderZone(int x, int y) {
+    for (Zone zone : zones) {
+      if (zone.containsBoundaryWall(x, y)) return zone;
+    }
+    return getZone(x, y);
+  }
+
+  /**
    * Resolves the owning Zone for a native Warp marker.
    *
    * <p>Act I's detached dungeon zones deliberately share rectangular world
