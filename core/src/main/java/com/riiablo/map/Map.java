@@ -773,7 +773,7 @@ public class Map implements Disposable {
   }
 
   public int flags(int x, int y) {
-    Zone zone = getCollisionZone(x, y);
+    Zone zone = getZone(x, y);
     if (zone == null) return 0xFF;
     return zone.flags(x - zone.x, y - zone.y);
   }
@@ -787,7 +787,7 @@ public class Map implements Disposable {
    * pieces of terrain merely because they were closed during map loading.</p>
    */
   public int staticFlags(int x, int y) {
-    Zone zone = getCollisionZone(x, y);
+    Zone zone = getZone(x, y);
     if (zone == null) return 0xFF;
     return zone.staticFlags(x - zone.x, y - zone.y);
   }
@@ -800,26 +800,9 @@ public class Map implements Disposable {
    * into walk collision and must not block a melee ray.</p>
    */
   public int playerFlyingFlags(int x, int y) {
-    Zone zone = getCollisionZone(x, y);
+    Zone zone = getZone(x, y);
     if (zone == null) return DT1.Tile.FLAG_BLOCK_JUMP;
     return zone.playerFlyingFlags(x - zone.x, y - zone.y);
-  }
-
-  /**
-   * Resolves collision against the normal rectangular owner first.  A native
-   * boundary wall can own a render coordinate on an exclusive zone edge, but
-   * that same coordinate may also be inside the adjacent level's collision
-   * grid.  Letting the boundary-wall render owner win here turns the whole
-   * shared edge into an artificial 0xFF blocked strip.
-   */
-  private Zone getCollisionZone(int x, int y) {
-    for (Zone zone : zones) {
-      if (zone.contains(x, y)) return zone;
-    }
-    for (Zone zone : zones) {
-      if (zone.containsBoundaryWall(x, y)) return zone;
-    }
-    return null;
   }
 
   void or(Vector2 position, int width, int height, int flags) {
@@ -857,16 +840,8 @@ public class Map implements Disposable {
   }
 
   public Zone getZone(int x, int y) {
-    // Native RoomEx wall graphics may be anchored on a zone's exclusive
-    // right/bottom edge.  Act I's compatibility layout places the adjacent
-    // level immediately beyond that edge, so a plain contains() match can
-    // claim the coordinate before the owning zone gets a chance to resolve
-    // its boundary wall.  Prefer an explicit boundary-wall owner first.
     for (Zone zone : zones) {
-      if (zone.containsBoundaryWall(x, y)) return zone;
-    }
-    for (Zone zone : zones) {
-      if (zone.contains(x, y)) return zone;
+      if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
     }
     return null;
   }
@@ -1475,12 +1450,6 @@ public class Map implements Disposable {
     }
 
     public int flags(int x, int y) {
-      // Boundary-wall graphics may intentionally live on the exclusive
-      // right/bottom edge of a Zone.  Map#getZone() returns that owning Zone
-      // so the wall can render, but its collision arrays do not contain the
-      // out-of-range local cell. Treat it as fully blocked instead of
-      // indexing past the generated flag grid.
-      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       int index = index(width, x, y);
       int value = flags[index] & 0xFF;
       if (objectBlockWalkRefs != null && objectBlockWalkRefs[index] > 0) {
@@ -1491,7 +1460,6 @@ public class Map implements Disposable {
 
     /** Returns collision supplied by the generated map, excluding units. */
     public int staticFlags(int x, int y) {
-      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       return flags[index(width, x, y)] & 0xFF;
     }
 

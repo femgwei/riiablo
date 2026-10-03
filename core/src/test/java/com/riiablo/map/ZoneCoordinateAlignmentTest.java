@@ -24,7 +24,7 @@ public class ZoneCoordinateAlignmentTest {
   }
 
   @Test
-  public void boundaryWallOwnerWinsOverAdjacentZoneAtSharedEdge() throws IOException {
+  public void adjacentZoneWinsOverBoundaryWallAtSharedEdge() throws IOException {
     Map map = new Map(0, 0);
     Map.Zone adjacent = new Map.Zone();
     adjacent.setPosition(10760, -560);
@@ -48,7 +48,7 @@ public class ZoneCoordinateAlignmentTest {
     map.zones.add(adjacent);
     map.zones.add(nativeZone);
 
-    assertSame(nativeZone, map.getZone(10760 + 32 * 5, -760 + 40 * 5));
+    assertSame(adjacent, map.getZone(10760 + 32 * 5, -760 + 40 * 5));
     assertEquals(Orientation.LEFT_WALL,
         nativeZone.get(Map.WALL_OFFSET, nativeZone.tx + 32, nativeZone.ty + 40).orientation);
     assertEquals(0, map.flags(10760 + 32 * 5, -760 + 40 * 5));
