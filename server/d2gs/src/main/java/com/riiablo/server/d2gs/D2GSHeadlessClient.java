@@ -970,6 +970,8 @@ public final class D2GSHeadlessClient {
       }
 
       int skillId = config.areaSkillId;
+      boolean deathSentryWallGate = skillId == ASSASSIN_DEATH_SENTRY
+          && config.areaDeathSentryWallGate;
       // Fire Ball's native SrvHit01 child is emitted on unit contact.  Aim at
       // the nearest live Blood Moor monster so the real-MPQ gate observes both
       // the travelling parent and its explodingarrowexp impact child.  Other
@@ -984,6 +986,8 @@ public final class D2GSHeadlessClient {
       int targetId = fireBallTarget != null ? fireBallTarget.entityId : Engine.INVALID_ENTITY;
       float targetX = fireBallTarget != null ? fireBallTarget.x : a.playerX + 1.5f;
       float targetY = fireBallTarget != null ? fireBallTarget.y : a.playerY;
+      int deathSentryWallTargetId = Engine.INVALID_ENTITY;
+      float deathSentryWallInitialLife = Float.NaN;
       if (skillId == ASSASSIN_SHOCK_FIELD) {
         // SrvDo043 rejects landing points within two squares of the caster;
         // use the same open six-square line as the native ECS regression so
@@ -1053,18 +1057,61 @@ public final class D2GSHeadlessClient {
       }
       if (skillId == ASSASSIN_DEATH_SENTRY && targetId >= 0) {
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-            targetId, a.playerId, 0f, 4f)) {
+            targetId, a.playerId, 0f, deathSentryWallGate ? 10f : 4f)) {
           throw new IOException("Death Sentry fixture could not place durable target");
+        }
+        if (deathSentryWallGate) {
+          targetX = a.playerX;
+          targetY = a.playerY;
         }
         int corpseId = D2GS.headlessCreateRoomDeadMonsterFixture(a.playerId, 2, -1);
         if (corpseId < 0 || !D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-            corpseId, a.playerId, 0f, 3f)) {
+            corpseId, a.playerId, 0f, deathSentryWallGate ? 9f : 3f)) {
           throw new IOException("Death Sentry fixture could not create nearby corpse");
         }
         a.areaDeathCorpseId = corpseId;
         b.areaDeathCorpseId = corpseId;
+        if (deathSentryWallGate) {
+          float[] blockedPlacement = D2GS.headlessFindBlockedMonsterPlacement(
+              a.playerId, 0f, 0f, 100f, 3f);
+          // The room-fixture factory requires a concrete RoomEx index; the
+          // later placement bridge moves the target to the scanned blocked
+          // coordinate in the caster's active room.
+          deathSentryWallTargetId = D2GS.headlessCreateRoomMonsterFixture(2, 0);
+          boolean wallCreated = deathSentryWallTargetId >= 0;
+          boolean wallCollisionDisabled = wallCreated
+              && D2GS.headlessDisableMonsterDynamicCollision(deathSentryWallTargetId);
+          boolean wallPlaced = wallCollisionDisabled && blockedPlacement.length >= 2
+              && D2GS.headlessPlaceMonsterNear(deathSentryWallTargetId, a.playerId,
+                  blockedPlacement[0] - a.playerX, blockedPlacement[1] - a.playerY);
+          boolean wallLifeSet = wallPlaced
+              && D2GS.headlessSetMonsterLife(deathSentryWallTargetId, 100_000f);
+          if (!wallLifeSet) {
+            throw new IOException("Death Sentry wall target setup failed: placement="
+                + (blockedPlacement.length >= 2
+                    ? String.format("(%.2f,%.2f)", blockedPlacement[0], blockedPlacement[1])
+                    : "none")
+                + " created=" + wallCreated + " collisionDisabled=" + wallCollisionDisabled
+                + " placed=" + wallPlaced + " lifeSet=" + wallLifeSet
+                + " player=" + String.format("(%.2f,%.2f)", a.playerX, a.playerY));
+          }
+          Snapshot wallOwner = awaitSpecificMonster(a, inA, deathSentryWallTargetId, deadline());
+          Snapshot wallPeer = awaitSpecificMonster(b, inB, deathSentryWallTargetId, deadline());
+          if (!wallOwner.hasPosition || !wallPeer.hasPosition
+              || !D2GS.headlessMapRayBlocked(a.playerId, deathSentryWallTargetId)) {
+            throw new IOException("Death Sentry wall target is not behind a real missile barrier: target="
+                + deathSentryWallTargetId + " owner=" + snapshotSummary(wallOwner)
+                + " peer=" + snapshotSummary(wallPeer));
+          }
+          deathSentryWallInitialLife = wallOwner.life;
+          log("death_sentry_wall_baseline", "target=" + deathSentryWallTargetId
+              + " placement=" + String.format("(%.2f,%.2f)", blockedPlacement[0], blockedPlacement[1])
+              + " owner=" + snapshotSummary(wallOwner)
+              + " peer=" + snapshotSummary(wallPeer));
+        }
         for (Snapshot candidate : a.monsters.values()) {
-          if (candidate.entityId != targetId && !candidate.deleted) {
+          if (candidate.entityId != targetId && candidate.entityId != deathSentryWallTargetId
+              && !candidate.deleted) {
             D2GS.headlessSetMonsterLife(candidate.entityId, 0f);
           }
         }
@@ -1094,7 +1141,11 @@ public final class D2GSHeadlessClient {
               || skillId == ASSASSIN_FIRE_TRAUMA
                   && !areaTargetDamaged(a, b, targetId, traumaInitialLife)
               || skillId == ASSASSIN_BLADE_SHIELD
-                  && !areaTargetDamaged(a, b, targetId, traumaInitialLife))) {
+                  && !areaTargetDamaged(a, b, targetId, traumaInitialLife)
+              || deathSentryWallGate
+                  && (!areaTargetDamaged(a, b, targetId, traumaInitialLife)
+                      || !areaTargetUnchanged(a, b, deathSentryWallTargetId,
+                          deathSentryWallInitialLife)))) {
         consumeOne(inA, a);
         consumeOne(inB, b);
         // Some headless COF tables have no usable Druid/Sorceress keyframe.
@@ -1156,6 +1207,24 @@ public final class D2GSHeadlessClient {
           && !deathSentrySharedEvidence(a, b)) {
         throw new IllegalStateException("Death Sentry corpse/controller evidence missing: "
             + areaEvidenceFailure(a, b, skillId));
+      }
+      if (deathSentryWallGate) {
+        if (!areaTargetDamaged(a, b, targetId, traumaInitialLife)) {
+          throw new IllegalStateException("Death Sentry visible target was not damaged: target="
+              + targetId + " initialLife=" + traumaInitialLife + " owner="
+              + snapshotLife(a, targetId) + " peer=" + snapshotLife(b, targetId));
+        }
+        if (!areaTargetUnchanged(a, b, deathSentryWallTargetId, deathSentryWallInitialLife)) {
+          throw new IllegalStateException("Death Sentry wall target was damaged: target="
+              + deathSentryWallTargetId + " initialLife=" + deathSentryWallInitialLife
+              + " owner=" + snapshotLife(a, deathSentryWallTargetId)
+              + " peer=" + snapshotLife(b, deathSentryWallTargetId));
+        }
+        log("death_sentry_wall_gate_pass", "skill=" + skillId
+            + " visibleTarget=" + targetId + " visibleLife=" + snapshotLife(a, targetId)
+            + " blockedTarget=" + deathSentryWallTargetId
+            + " blockedLife=" + snapshotLife(a, deathSentryWallTargetId)
+            + " blocked=true");
       }
       if (skillId == ASSASSIN_BLADE_SHIELD
           && !areaTargetDamaged(a, b, targetId, traumaInitialLife)) {
@@ -2016,6 +2085,15 @@ public final class D2GSHeadlessClient {
     Snapshot peer = b.monsters.get(targetId);
     return owner != null && peer != null && owner.hasVitals && peer.hasVitals
         && owner.life < initialLife - 0.001f && peer.life < initialLife - 0.001f;
+  }
+
+  private static boolean areaTargetUnchanged(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int targetId, float initialLife) {
+    if (targetId < 0 || !Float.isFinite(initialLife)) return false;
+    Snapshot owner = a.monsters.get(targetId);
+    Snapshot peer = b.monsters.get(targetId);
+    return owner != null && peer != null && owner.hasVitals && peer.hasVitals
+        && owner.life >= initialLife - 0.001f && peer.life >= initialLife - 0.001f;
   }
 
   private static float snapshotLife(D2GSHeadlessClient client, int entityId) {
@@ -12237,6 +12315,7 @@ public final class D2GSHeadlessClient {
     boolean requireAreaSkillScenario;
     int areaSkillId = SkillId.VOLCANO;
     int areaSkillLevel = 20;
+    boolean areaDeathSentryWallGate;
     boolean requireAreaSkillExpiry;
     boolean requireAmazonMelee;
     int amazonMeleeSkillId = SkillId.JAB;
@@ -12329,6 +12408,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-area-skill".equals(arg)) config.requireAreaSkillScenario = true;
         else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--area-skill-level".equals(arg)) config.areaSkillLevel = integer(args, ++i, arg);
+        else if ("--area-death-sentry-wall-gate".equals(arg)) config.areaDeathSentryWallGate = true;
         else if ("--require-area-skill-expiry".equals(arg)) config.requireAreaSkillExpiry = true;
         else if ("--require-amazon-melee".equals(arg)) config.requireAmazonMelee = true;
         else if ("--amazon-melee-skill".equals(arg)) config.amazonMeleeSkillId = integer(args, ++i, arg);

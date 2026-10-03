@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry RoomEx 候选优先级回归完成）
+更新时间：2026-10-03（Death Sentry 真实墙体/null-hit gate 完成）
 
 ## 唯一负责人
 
@@ -31,6 +31,25 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
+
+- [x] 新增真实 MPQ 双客户端 gate 选项：`-PareaDeathSentryWallGate=true` /
+  `--area-death-sentry-wall-gate`。夹具通过生产地图 `FLAG_BLOCK_JUMP` 射线扫描，
+  在 Blood Moor 生成墙后目标，并在放置后再次用生产射线确认阻挡。
+- [x] gate 同时验证可见目标实际掉血、墙后目标生命不变、owner/observer 结果一致；
+  本次结果为 `visibleLife=9.0`、`blockedLife=100000.0`、`blocked=true`，并通过
+  observer reconnect（`active=[137]`、`expiredDuringReconnect=0`、`stale=false`）。
+- [x] 普通 276 gate 复跑通过：`sharedMissiles=[135]`、双方
+  `states=[118,104,108]`、`animationFallback=false`，重连保持
+  `active=[135]`、`expiredDuringReconnect=0`、`stale=false`。
+- [x] `./gradlew :core:test --tests
+  com.riiablo.engine.server.AssassinSkillSpecializationTest --no-daemon`：42 项通过。
+- [ ] 多个邻接 RoomEx 之间的 `pRoomsNear` 具体顺序仍未由真实 MPQ Death Sentry
+  场景单独证明；下一步继续做跨邻房尸体候选顺序的可观测 gate。
+- 本轮修改仅涉及 `server/d2gs` gate/fixture 与三份进度文档；其他 agent 的
+  `ItemEntry.java`、`MissileCollisionSystem.java`、`StatFormatterTest.java` 及日志/dump
+  不得 stage、覆盖或清理。
 
 ### 2026-10-03 Death Sentry 当前 RoomEx 尸体优先级回归完成
 

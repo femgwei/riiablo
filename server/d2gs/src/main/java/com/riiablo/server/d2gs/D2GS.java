@@ -2896,6 +2896,13 @@ public class D2GS extends ApplicationAdapter {
    * re-check the same ray through the production aura filter.
    */
   static float[] headlessFindBlockedMonsterPlacement(int anchorId, float maxRange) {
+    return headlessFindBlockedMonsterPlacement(anchorId, 0f, 0f, maxRange, 3f);
+  }
+
+  /** Variant used by area-skill gates whose authoritative source is offset
+   * from the player anchor (for example a trap placed four subtiles ahead). */
+  static float[] headlessFindBlockedMonsterPlacement(int anchorId,
+      float originDx, float originDy, float maxRange, float minRange) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || server.map == null || Gdx.app == null) {
       return new float[0];
@@ -2907,23 +2914,26 @@ public class D2GS extends ApplicationAdapter {
       try {
         Position anchor = server.world.getMapper(Position.class).get(anchorId);
         if (anchor == null || maxRange <= 2f) return;
-        Map.Zone zone = server.map.getZone(anchor.position);
+        Vector2 origin = new Vector2(anchor.position.x + originDx,
+            anchor.position.y + originDy);
+        Map.Zone zone = server.map.getZone(origin);
         if (zone == null) return;
         Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
         Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
         int limit = Math.max(3, (int) Math.floor(maxRange));
+        int firstRadius = Math.max(3, (int) Math.ceil(minRange));
         // Scan from near to far so a returned target remains inside the first
         // eleven native AuraFilter candidates in the Fury fixture.
-        for (int radius = 3; radius <= limit && result.get().length == 0; radius++) {
+        for (int radius = firstRadius; radius <= limit && result.get().length == 0; radius++) {
           for (int angle = 0; angle < 64; angle++) {
             float radians = angle * MathUtils.PI2 / 64f;
-            float x = anchor.position.x + MathUtils.cos(radians) * radius;
-            float y = anchor.position.y + MathUtils.sin(radians) * radius;
+            float x = origin.x + MathUtils.cos(radians) * radius;
+            float y = origin.y + MathUtils.sin(radians) * radius;
             if (server.map.getZone(x, y) != zone
                 || (server.map.flags(Math.round(x), Math.round(y)) & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
               continue;
             }
-            ray.set(anchor.position, new Vector2(x, y));
+            ray.set(origin, new Vector2(x, y));
             if (server.map.castRay(ray, DT1.Tile.FLAG_BLOCK_JUMP, 0, collision)) {
               result.set(new float[] {x, y, collision.point.x, collision.point.y});
               break;

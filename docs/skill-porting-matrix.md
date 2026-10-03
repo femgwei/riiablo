@@ -1,6 +1,19 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（Death Sentry RoomEx 候选优先级回归）
+更新时间：2026-10-03（Death Sentry 真实墙体/null-hit gate 完成）
+
+## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
+
+- [x] 新增可选真实 MPQ gate：`./gradlew :server:d2gs:headlessAreaSkill
+  -PareaSkill=276 -PareaTimeout=25 -PareaDeathSentryWallGate=true --no-daemon`。
+  墙后目标由生产地图射线扫描得到，禁止使用 synthetic wall 标志。
+- [x] gate 通过：可见目标实际掉血（`visibleLife=9.0`），墙后目标生命保持
+  `100000.0`，`blocked=true`；owner/observer 结果一致，重连后
+  `active=[137]`、`expiredDuringReconnect=0`、`stale=false`。
+- [x] 普通 276 gate 复跑通过（`sharedMissiles=[135]`、`states=[118,104,108]`、
+  `animationFallback=false`），`AssassinSkillSpecializationTest` 42 项通过。
+- [ ] 真实 MPQ 尚未覆盖多个邻接 RoomEx 的 `pRoomsNear` 具体排序；下一项为跨邻房
+  尸体候选顺序 gate，不覆盖用户已验证的 Amazon 技能实现。
 
 ## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 优先级回归完成
 

@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry(276) 真实墙体/null-hit 伤害 gate 完成
+
+- [x] `D2GS.headlessFindBlockedMonsterPlacement` 支持指定扫描原点、最小半径和最大
+  半径；Death Sentry gate 在真实 Blood Moor MPQ 中扫描可行走点，并以生产
+  `FLAG_BLOCK_JUMP` 射线确认墙体阻断。
+- [x] 双客户端 gate 通过：可见目标生命 `15 -> 9`，墙后目标保持
+  `100000 -> 100000`；owner/observer 均收到一致结果，日志包含
+  `death_sentry_wall_baseline` / `death_sentry_wall_gate_pass`。
+- [x] 普通 276 gate 与 reconnect 复跑通过，`animationFallback=false`；专项
+  `AssassinSkillSpecializationTest` 42 项通过。
+- [ ] 尚未证明多个邻接 RoomEx 的 `pRoomsNear` 具体顺序会改变尸体候选选择；下一步
+  继续跨邻房尸体顺序的真实 MPQ 可观测验证。
+- 本轮代码和文档提交后需确认远端 hash；其他 agent 未提交修改保持不动。
+
 ## 2026-10-03 Assassin Death Sentry(276) 当前 RoomEx 尸体优先级回归完成
 
 - [x] 静态证据：D2MOO `DrlgDrlgRoom.sub_6FD77BB0` 将当前房间也放入
