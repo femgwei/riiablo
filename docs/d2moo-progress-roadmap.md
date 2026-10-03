@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Assassin Death Sentry 真实邻接 RoomEx 顺序 gate 完成
+
+- [x] 新增 `-PareaDeathSentryAdjacentRoomGate=true` 真实 MPQ 双客户端场景；从当前
+  hostile 的 native `pRoomsNear` 中选择两个邻房，并为两个尸体固定各自的 RoomEx。
+- [x] gate 通过：`targetRoom=0`、邻房顺序 `13 -> 1`；服务端权威
+  `deathLastCorpseId` 指向首项邻房尸体，第二具尸体未被消费；双方共享 trap/视觉，
+  `animationFallback=false`。
+- [x] 普通 276 gate 和 43 项 `AssassinSkillSpecializationTest` 继续通过。
+- [ ] 该专项为顺序 gate，复用了普通 gate 已验证的 reconnect 证据，不重复执行 reconnect。
+- 本轮提交尚未创建；提交后需同步远端 hash。
+
 ## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
 
 - [x] `corpseRoomRank` 采用 `RoomEx.getAdjacentRoomIds()` 的原生导出下标作为邻房

@@ -178,6 +178,10 @@ tasks.register('headlessAreaSkill', JavaExec) {
       && project.property('areaDeathSentryWallGate').toString().toBoolean()) {
     args '--area-death-sentry-wall-gate'
   }
+  if (project.hasProperty('areaDeathSentryAdjacentRoomGate')
+      && project.property('areaDeathSentryAdjacentRoomGate').toString().toBoolean()) {
+    args '--area-death-sentry-adjacent-room-gate'
+  }
 }
 
 tasks.register('headlessAmazonMelee', JavaExec) {

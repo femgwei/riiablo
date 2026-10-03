@@ -1,6 +1,17 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（Death Sentry 邻接 RoomEx 顺序回归完成）
+更新时间：2026-10-03（Death Sentry 真实邻接 RoomEx 顺序 gate 完成）
+
+## 2026-10-03 Assassin Death Sentry 真实邻接 RoomEx 顺序 gate 完成
+
+- [x] 验证命令：`./gradlew :server:d2gs:headlessAreaSkill -PareaSkill=276
+  -PareaTimeout=25 -PareaDeathSentryAdjacentRoomGate=true --no-daemon`。
+- [x] 真实 MPQ 输出：`targetRoom=0`、`firstRoom=13`、`secondRoom=1`；服务端
+  `deathLastCorpseId` 选择首个邻房尸体，第二尸体保持未消费；双客户端共享
+  `sharedMissiles=[136]`，`animationFallback=false`。
+- [x] `AssassinSkillSpecializationTest` 43 项通过。
+- [ ] 该专项 gate 不重复 reconnect（普通 276 gate 已通过 reconnect）；下一项可继续
+  检查更多地图/难度下的 `pRoomsNear` 顺序稳定性。
 
 ## 2026-10-03 Assassin Death Sentry 邻接 RoomEx 顺序回归完成
 

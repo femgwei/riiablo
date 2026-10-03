@@ -2889,6 +2889,97 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Returns the authoritative RoomEx id followed by its native pRoomsNear ids. */
+  static int[] headlessEntityRoomContext(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[0];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+        Position position = server.world.getMapper(Position.class).get(entityId);
+        if (wrapper == null || wrapper.zone == null || position == null) return;
+        int roomId = wrapper.roomId;
+        if (roomId < 0) {
+          Map.RoomEx room = wrapper.zone.findRoomEx(position.position.x, position.position.y);
+          roomId = room == null ? -1 : room.id;
+        }
+        if (roomId < 0 || roomId >= wrapper.zone.getRoomsEx().size) return;
+        int[] near = wrapper.zone.getRoomsEx().get(roomId).getAdjacentRoomIds();
+        int[] context = new int[near.length + 1];
+        context[0] = roomId;
+        System.arraycopy(near, 0, context, 1, near.length);
+        result.set(context);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
+  /** Pins a fixture's MapWrapper to a native RoomEx after test-only relocation. */
+  static boolean headlessSetEntityRoom(int entityId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || roomId < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+        if (wrapper == null || wrapper.zone == null || roomId >= wrapper.zone.getRoomsEx().size) return;
+        wrapper.roomId = roomId;
+        updated.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Reads the authoritative Death Sentry corpse transaction result. */
+  static int headlessDeathSentryLastCorpseId(int sentryId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || sentryId < 0) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.SummonedPet pet = server.world
+            .getMapper(com.riiablo.engine.server.component.SummonedPet.class).get(sentryId);
+        if (pet != null) result.set(pet.deathLastCorpseId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /**
    * Finds a walkable point in the anchor's RoomEx whose native missile ray is
    * blocked by static map geometry. The returned pair is a real map coordinate,

@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry 邻接 RoomEx 顺序回归完成）
+更新时间：2026-10-03（Death Sentry 真实邻接 RoomEx 顺序 gate 完成）
 
 ## 唯一负责人
 
@@ -31,6 +31,19 @@
 或覆盖已有修改。
 
 ## 当前基线
+
+### 2026-10-03 Death Sentry 真实邻接 RoomEx 顺序 gate 完成
+
+- [x] 新增 `-PareaDeathSentryAdjacentRoomGate=true`，从真实 MPQ 当前 hostile 的
+  `pRoomsNear` 导出顺序选取两个邻房，创建两个不同 RoomEx 的死亡目标，并保留各自
+  的 authoritative `MapWrapper.roomId`。
+- [x] 真实双客户端 gate 通过：`targetRoom=0`、首个邻房 `13`、第二个邻房 `1`；
+  服务端 `deathLastCorpseId=132` 与首个 `pRoomsNear` 尸体一致，第二具尸体未被消费，
+  owner/observer 共享 Death Sentry 视觉，`animationFallback=false`。
+- [x] 使用服务端 `SummonedPet.deathLastCorpseId` 判定消费结果，不再把所有死亡尸体
+  都携带的 `CORPSE_NOSELECT` 状态误当作消费证据。
+- [ ] 该专项 gate 跳过重复 reconnect；普通 276 gate 已独立覆盖 reconnect。
+- 本轮提交尚未创建；提交后需同步远端 hash。
 
 ### 2026-10-03 Death Sentry 邻接 RoomEx 顺序回归完成
 
