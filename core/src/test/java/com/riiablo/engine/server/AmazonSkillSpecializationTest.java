@@ -178,6 +178,36 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void lightningBoltSnapshotHonorsMonsterResistanceAndImmunity() {
+    Attributes owner = attributes(20, 200);
+    owner.base().put(Stat.mindamage, 100);
+    owner.base().put(Stat.maxdamage, 100);
+    owner.reset();
+    Skills.Entry skill = Riiablo.files.skills.get("Lightning Bolt");
+    Missiles.Entry row = Riiablo.files.Missiles.get("lightningjavelin");
+    Missile projectile = new Missile().set(row, new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(projectile, skill, owner, 20));
+    int rawLightning = projectile.damage.get(Stat.lightmindam).asInt();
+    assertTrue(rawLightning > 0);
+
+    Attributes resistant = attributes(1, 100);
+    resistant.base().put(Stat.lightresist, 50);
+    resistant.reset();
+    CombatSystem.CombatResult halved = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        resistant, false, true, CombatSystem.DAMAGE_LIGHTNING, rawLightning, 0, null, 0);
+    assertTrue(halved.totalDamage > 0 && halved.totalDamage < rawLightning,
+        "Lightning Bolt must apply monster lightning resistance to its snapshot");
+
+    Attributes immune = attributes(1, 100);
+    immune.base().put(Stat.lightresist, 100);
+    immune.reset();
+    CombatSystem.CombatResult blocked = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        immune, false, true, CombatSystem.DAMAGE_LIGHTNING, rawLightning, 0, null, 0);
+    assertEquals(0, blocked.totalDamage,
+        "100% monster lightning resistance must preserve native immunity");
+  }
+
+  @Test
   void lightningBoltSweptCollisionAppliesSnapshotDamage() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     MissileCollisionSystem collisions = new MissileCollisionSystem();

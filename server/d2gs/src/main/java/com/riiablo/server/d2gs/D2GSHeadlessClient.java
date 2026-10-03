@@ -2285,6 +2285,7 @@ public final class D2GSHeadlessClient {
       boolean requiresLightningMissile = lightningBolt || lightningStrike || lightningFury;
       boolean poisonJavelin = config.amazonMeleeSkillId == SkillId.POISON_JAVELIN
           || config.amazonMeleeSkillId == SkillId.PLAGUE_JAVELIN;
+      boolean javelinQuantitySkill = lightningBolt || lightningFury || poisonJavelin;
       if (lightningFury && Riiablo.files != null && Riiablo.files.skills != null
           && Riiablo.files.Missiles != null) {
         Skills.Entry furySkillRow = Riiablo.files.skills.get("Lightning Fury");
@@ -2444,6 +2445,13 @@ public final class D2GSHeadlessClient {
       }
       int[] impaleResourceAfter = null;
       boolean impaleResourceObserved = false;
+      int[] javelinResourceBefore = javelinQuantitySkill
+          ? D2GS.headlessAmazonWeaponStats(owner.playerId) : null;
+      if (javelinQuantitySkill && !validAmazonWeaponStats(javelinResourceBefore)) {
+        throw new IOException("failed to read authoritative javelin resources before cast");
+      }
+      int[] javelinResourceAfter = null;
+      boolean javelinResourceObserved = false;
       boolean sawLightningMissile = !requiresLightningMissile;
       int missilesBefore = owner.playerMissiles.size();
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
@@ -2452,7 +2460,8 @@ public final class D2GSHeadlessClient {
           && (!requiresLightningMissile || !sawLightningMissile)
           && (!damaged || (lightningFury && (!furyAllTargetsDamaged
               || furyChildCount < furyExpectedSharedChildCount))
-              || (impale && !impaleResourceObserved))
+              || (impale && !impaleResourceObserved)
+              || (javelinQuantitySkill && !javelinResourceObserved))
           && !targetDeathObserved; attempt++) {
         if (impale) fallback = false;
         ownerTarget = owner.monsters.get(targetId);
@@ -2480,7 +2489,8 @@ public final class D2GSHeadlessClient {
         while (System.currentTimeMillis() < attemptDeadline
             && (!damaged || (lightningFury && (!furyAllTargetsDamaged
                 || furyChildCount < furyExpectedSharedChildCount))
-                || (impale && !impaleResourceObserved))
+                || (impale && !impaleResourceObserved)
+                || (javelinQuantitySkill && !javelinResourceObserved))
             && !targetDeathObserved) {
           consumeOne(ownerInput, owner);
           consumeOne(peerInput, peer);
@@ -2504,6 +2514,11 @@ public final class D2GSHeadlessClient {
               impaleResourceAfter = D2GS.headlessAmazonWeaponStats(owner.playerId);
               impaleResourceObserved = impaleResourceChanged(
                   impaleResourceBefore, impaleResourceAfter);
+            }
+            if (javelinQuantitySkill && damaged && !javelinResourceObserved) {
+              javelinResourceAfter = D2GS.headlessAmazonWeaponStats(owner.playerId);
+              javelinResourceObserved = validAmazonWeaponStats(javelinResourceAfter)
+                  && javelinResourceAfter[0] == javelinResourceBefore[0] - 1;
             }
           }
           if (lightningFury) {
@@ -2550,7 +2565,8 @@ public final class D2GSHeadlessClient {
               && (!requiresLightningMissile || !sawLightningMissile)
               && (!damaged || (lightningFury && (!furyAllTargetsDamaged
                   || furyChildCount < furyExpectedSharedChildCount))
-                  || (impale && !impaleResourceObserved))) {
+                  || (impale && !impaleResourceObserved)
+                  || (javelinQuantitySkill && !javelinResourceObserved))) {
             fallback = true;
             boolean dispatched = D2GS.headlessDispatchAmazonMelee(
                 owner.playerId, config.amazonMeleeSkillId);
@@ -2692,6 +2708,17 @@ public final class D2GSHeadlessClient {
         log("amazon_impale_resource_pass", "before="
             + amazonWeaponStatsSummary(impaleResourceBefore) + " after="
             + amazonWeaponStatsSummary(impaleResourceAfter));
+      }
+      if (javelinQuantitySkill && !config.amazonMeleeTargetDeath
+          && !config.amazonMeleeExpectMiss) {
+        if (!javelinResourceObserved) {
+          throw new IllegalStateException("Amazon javelin skill did not consume quantity: before="
+              + amazonWeaponStatsSummary(javelinResourceBefore) + " after="
+              + amazonWeaponStatsSummary(javelinResourceAfter));
+        }
+        log("amazon_javelin_quantity_pass", "skill=" + config.amazonMeleeSkillId
+            + " before=" + amazonWeaponStatsSummary(javelinResourceBefore)
+            + " after=" + amazonWeaponStatsSummary(javelinResourceAfter));
       }
       if (requiresLightningMissile && !sawLightningMissile) {
         long missileDeadline = System.currentTimeMillis() + 1_000L;
@@ -2842,6 +2869,17 @@ public final class D2GSHeadlessClient {
                 + amazonWeaponStatsSummary(restoredResources));
           }
           log("amazon_impale_resource_reconnect_pass", "resources="
+              + amazonWeaponStatsSummary(restoredResources) + " stale=false");
+        }
+        if (javelinQuantitySkill && !config.amazonMeleeTargetDeath
+            && !config.amazonMeleeExpectMiss) {
+          int[] restoredResources = D2GS.headlessAmazonWeaponStats(owner.playerId);
+          if (!sameAmazonWeaponStats(javelinResourceAfter, restoredResources)) {
+            throw new IOException("Amazon javelin quantity changed after observer reconnect: before="
+                + amazonWeaponStatsSummary(javelinResourceAfter) + " restored="
+                + amazonWeaponStatsSummary(restoredResources));
+          }
+          log("amazon_javelin_quantity_reconnect_pass", "resources="
               + amazonWeaponStatsSummary(restoredResources) + " stale=false");
         }
         log("amazon_melee_reconnect_pass", "skill=" + config.amazonMeleeSkillId

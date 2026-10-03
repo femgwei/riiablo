@@ -6,14 +6,14 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**0%**。
-- 当前执行项：**DM-NV-01 Amazon Lightning Bolt(20) 真实命中/伤害链**。
+- 当前清单完成率：**8%**。
+- 当前执行项：**DM-NV-02 Death Sentry 完整非视觉行为**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
 ## 任务列表
 
-- [ ] **DM-NV-01（8%）Amazon Lightning Bolt(20) 真实命中/伤害链**
+- [x] **DM-NV-01（8%）Amazon Lightning Bolt(20) 真实命中/伤害链**
   - 定位 `lightningjavelin` 从 swept collision、ToHit 到 `SrvDmgFunc=12` 的中断点。
   - owner/observer 均观察同一目标实际掉血，并验证抗性、免疫、弹药和 reconnect。
 - [ ] **DM-NV-02（10%）Death Sentry 完整非视觉行为**
@@ -48,4 +48,13 @@
 
 ## 完成记录
 
-暂无。每完成一项，在此记录日期、证据命令、提交 hash 和新的累计完成率。
+### 2026-10-04：DM-NV-01 完成
+
+- D2MOO/MPQ 数据依据：`Lightning Bolt -> lightningjavelin`，`LastCollide=true`、`Vel=30`、`Range=25`、`SrvDmgFunc=12`；`DmgCalc1=dl12` 的物理转闪电快照由 `AmazonSkillSpecializationTest` 锁定。
+- ECS 证据：`lightningBoltUsesNativeLightningJavelinDamageSnapshot`、`lightningBoltSnapshotHonorsMonsterResistanceAndImmunity`、`lightningBoltSweptCollisionAppliesSnapshotDamage` 均通过；新增测试确认 50% 闪电抗性降低伤害、100% 怪物闪电抗性保持免疫。
+- MPQ 双客户端证据：
+  `./gradlew.bat :server:d2gs:headlessAmazonMelee -PamazonMeleeSkill=20 -PamazonMeleeTimeout=25 --no-daemon`
+  通过；owner/observer 目标生命 `1000000 -> 999799`，权威导弹 `entity=133 / missile=205`，标枪数量 `16 -> 15`，observer 重连后数量仍为 `15`、目标生命仍为 `999799`。
+- 相关矩阵证据：`NativeAmazonSkillMatrixTest` 的 Lightning Bolt `decquant=true` 与 `NativeAmazonAmmoPolicyTest` 的 javelin ammo policy 均通过。
+- 代码只扩展 gate 的标枪数量快照/重连断言和 Lightning Bolt 抗性单测，没有覆盖或改写用户已验证的 Amazon 伤害公式。
+- 本项完成后累计完成率：**8%**。下一项切换为 **DM-NV-02 Death Sentry 完整非视觉行为**。
