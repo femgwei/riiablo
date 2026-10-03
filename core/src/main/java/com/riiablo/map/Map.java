@@ -773,7 +773,7 @@ public class Map implements Disposable {
   }
 
   public int flags(int x, int y) {
-    Zone zone = getZone(x, y);
+    Zone zone = getCollisionZone(x, y);
     if (zone == null) return 0xFF;
     return zone.flags(x - zone.x, y - zone.y);
   }
@@ -787,7 +787,7 @@ public class Map implements Disposable {
    * pieces of terrain merely because they were closed during map loading.</p>
    */
   public int staticFlags(int x, int y) {
-    Zone zone = getZone(x, y);
+    Zone zone = getCollisionZone(x, y);
     if (zone == null) return 0xFF;
     return zone.staticFlags(x - zone.x, y - zone.y);
   }
@@ -800,9 +800,26 @@ public class Map implements Disposable {
    * into walk collision and must not block a melee ray.</p>
    */
   public int playerFlyingFlags(int x, int y) {
-    Zone zone = getZone(x, y);
+    Zone zone = getCollisionZone(x, y);
     if (zone == null) return DT1.Tile.FLAG_BLOCK_JUMP;
     return zone.playerFlyingFlags(x - zone.x, y - zone.y);
+  }
+
+  /**
+   * Resolves collision against the normal rectangular owner first.  A native
+   * boundary wall can own a render coordinate on an exclusive zone edge, but
+   * that same coordinate may also be inside the adjacent level's collision
+   * grid.  Letting the boundary-wall render owner win here turns the whole
+   * shared edge into an artificial 0xFF blocked strip.
+   */
+  private Zone getCollisionZone(int x, int y) {
+    for (Zone zone : zones) {
+      if (zone.contains(x, y)) return zone;
+    }
+    for (Zone zone : zones) {
+      if (zone.containsBoundaryWall(x, y)) return zone;
+    }
+    return null;
   }
 
   void or(Vector2 position, int width, int height, int flags) {

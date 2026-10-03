@@ -41,6 +41,7 @@ public class ZoneCoordinateAlignmentTest {
     nativeZone.tilesY = 40;
     nativeZone.putBoundaryWall(Map.WALL_OFFSET, 32, 40,
         tile(Orientation.LEFT_WALL, 4, 0));
+    adjacent.flags = new byte[adjacent.width * adjacent.height];
 
     // The adjacent zone is deliberately inserted first, matching the Act I
     // layout where Monastery Gate follows Outer Cloister's bottom edge.
@@ -50,6 +51,7 @@ public class ZoneCoordinateAlignmentTest {
     assertSame(nativeZone, map.getZone(10760 + 32 * 5, -760 + 40 * 5));
     assertEquals(Orientation.LEFT_WALL,
         nativeZone.get(Map.WALL_OFFSET, nativeZone.tx + 32, nativeZone.ty + 40).orientation);
+    assertEquals(0, map.flags(10760 + 32 * 5, -760 + 40 * 5));
   }
 
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex)
