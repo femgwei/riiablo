@@ -24,6 +24,7 @@
   - Death Sentry reconnect 对短生命周期/RoomEx 可见性允许空替换快照，但额外校验同一 trap 的同一尸体事务标记，拒绝重复消费或复活。
 - [ ] **DM-NV-03（8%）Wake of Fire Sentry 行为收口**
   - maker→wave 数量、两波方向/间隔、逐目标伤害、墙体/null-hit、预算和控制器到期。
+  - 2026-10-04 增量：真实 MPQ 双客户端 maker(517)→双波(518)/reconnect gate 复跑通过；新增 ECS 逐路径伤害快照、正交波方向、off-axis 不命中、null-target 不消耗 shot budget 回归并通过。墙体专用双端场景仍待补齐，完成率暂不增加。
 - [ ] **DM-NV-04（8%）Inferno Sentry 行为收口**
   - 通道 duration/pulse、方向追踪、逐目标伤害、抗性/免疫、墙体和 reconnect 生命周期。
 - [ ] **DM-NV-05（5%）Fire Trauma 一次性链收口**
@@ -70,3 +71,10 @@
 - 专项 gate：相邻 RoomEx 双尸体顺序 gate 通过；wall gate 通过，墙前目标生命降为 `0`，墙后目标保持 `100000`。
 - ECS `AssassinSkillSpecializationTest` 全类通过（包括 `SrvDo055` 的尸体事务、物理/火焰半径拆分、Skill2 fallback、null-target、目标过滤、插入顺序、shot budget 和控制器回收）。
 - 本项完成后累计完成率：**18%**。下一项切换为 **DM-NV-03 Wake of Fire Sentry 行为收口**。
+
+### 2026-10-04：DM-NV-03 增量核对
+
+- 真实 MPQ gate：`areaSkill=262` 通过，owner/observer 共享 `assassintrap`、maker `517` 和两枚 `518` 波导弹；reconnect 不复活已过期导弹。
+- ECS 新增并通过 `wakeOfFireWavesCarryNativeDamageAndHitOnlyAlongTheirPaths`：两枚波导弹均携带原生伤害快照，正向路径目标掉血，偏轴目标不受伤。
+- ECS 新增并通过 `wakeOfFireDoesNotConsumeShotBudgetWithoutAHostileTarget`：null-target 不创建 maker、不消耗 shot budget，控制器保留。
+- 仍待：Wake 专用墙体/不可见目标双端 gate，以及墙体命中后的 null-hit/波导弹回收证据；DM-NV-03 暂不计入完成率。

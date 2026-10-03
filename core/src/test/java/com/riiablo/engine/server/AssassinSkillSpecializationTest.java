@@ -936,6 +936,102 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void wakeOfFireWavesCarryNativeDamageAndHitOnlyAlongTheirPaths() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry wake = Riiablo.files.skills.get("Wake of Fire Sentry");
+      assertNotNull(wake);
+      data.setSkillLevel(wake.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, wake.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), wake.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      world.getMapper(SummonedPet.class).get(factory.entityId).maxShots = 1;
+
+      // The first hostile drives the maker to its endpoint. The second sits
+      // on the positive wave path; an off-axis unit must remain untouched by
+      // the two SrvDo31 child missiles.
+      int guide = world.create();
+      world.getMapper(Monster.class).create(guide);
+      world.getMapper(Position.class).create(guide).position.set(14, 3);
+      world.getMapper(AttributesWrapper.class).create(guide).attrs = attributes(10_000);
+      int pathTarget = world.create();
+      world.getMapper(Monster.class).create(pathTarget);
+      world.getMapper(Position.class).create(pathTarget).position.set(14, 6);
+      Attributes pathAttrs = attributes(10_000);
+      world.getMapper(AttributesWrapper.class).create(pathTarget).attrs = pathAttrs;
+      int offAxis = world.create();
+      world.getMapper(Monster.class).create(offAxis);
+      world.getMapper(Position.class).create(offAxis).position.set(17, 3);
+      Attributes offAxisAttrs = attributes(10_000);
+      world.getMapper(AttributesWrapper.class).create(offAxis).attrs = offAxisAttrs;
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 60; i++) world.process();
+
+      assertEquals(3, factory.missileNames.size(),
+          "one maker and two authoritative fire waves must be emitted");
+      Missile positive = world.getMapper(Missile.class).get(factory.missileEntityIds.get(1));
+      Missile negative = world.getMapper(Missile.class).get(factory.missileEntityIds.get(2));
+      assertNotNull(positive);
+      assertNotNull(negative);
+      assertTrue(positive.damageSnapshot && negative.damageSnapshot,
+          "SrvDo31 waves must snapshot the native Wake of Fire damage row");
+      assertEquals(owner, positive.ownerId);
+      assertEquals(owner, negative.ownerId);
+      assertTrue(pathAttrs.get(Stat.hitpoints).asFixed() < 10_000f,
+          "a target on a wave path must receive authoritative fire damage");
+      assertEquals(10_000f, offAxisAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "an off-axis target must not receive a Wake wave hit");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void wakeOfFireDoesNotConsumeShotBudgetWithoutAHostileTarget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry wake = Riiablo.files.skills.get("Wake of Fire Sentry");
+      assertNotNull(wake);
+      data.setSkillLevel(wake.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, wake.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), wake.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 10; i++) world.process();
+      assertEquals(0, factory.missiles,
+          "a null-target Wake trap must not create a maker or consume its shot");
+      assertEquals(0, trap.shotsFired,
+          "null-target retry must preserve the native shot budget");
+      assertTrue(world.getMapper(SummonedPet.class).has(factory.entityId));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void infernoSentrySrvDo095RepeatsMissilesAndTracksTarget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
