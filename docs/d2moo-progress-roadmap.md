@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-03 Amazon 标枪 `decquant` 数量消耗修正
+
+- [x] 对照 D2MOO `SKILLS_SrvDo` 的 `decquant -> sub_6FD118C0 -> sub_6FD11340`，为
+  Poison Javelin、Lightning Bolt、Plague Javelin、Lightning Fury 接入导弹成功创建后的
+  单次标枪数量扣减；数量为 0 时客户端和服务端均拒绝施放，保留 0 数量物品以兼容原生
+  replenish-quantity 行为。
+- [x] Jab、Power Strike、Impale、Charged Strike、Fend、Lightning Strike 等近战技能不
+  走该路径；弓箭/弩仍由独立的 quiver 消耗路径处理。
+- [x] 验证：`./gradlew.bat :core:compileJava --no-daemon` 通过；仅有既有
+  `WinRegistry` 弃用 API 警告。
+- 本轮代码提交后推送到 `origin/master`，工作区中其他已有修改和诊断日志不纳入本轮。
+
 ## 2026-10-03 Assassin Death Sentry 真实邻接 RoomEx 顺序 gate 完成
 
 - [x] 新增 `-PareaDeathSentryAdjacentRoomGate=true` 真实 MPQ 双客户端场景；从当前

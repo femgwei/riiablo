@@ -373,6 +373,13 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, skill.skill);
       return;
     }
+    if (NativeSkillResolver.consumesJavelinQuantity(skill)
+        && !hasQuantity(items.getEquippedThrowableWeapon())) {
+      reject(event, 9, "Amazon javelin quantity is empty");
+      log.info("[JAVELIN_AMMO] phase=cast_reject entity={} skill={} reason=empty_quantity",
+          event.entityId, skill.skill);
+      return;
+    }
     if (NecromancerSkills.isPoisonDagger(skill)) {
       Item weapon = activeMeleeWeapon(items);
       if (!NecromancerSkills.isPoisonDaggerWeapon(weapon)) {
@@ -548,6 +555,12 @@ public class ServerSkillSystem extends PassiveSystem {
           && !strafeContinuation) {
         log.info("[RANGED_AMMO] phase=do_reject entity={} skill={} weapon={} reason=missing_or_empty",
             event.entityId, event.skillId, weapon != null ? weapon.code : "none");
+        return;
+      }
+      if (NativeSkillResolver.consumesJavelinQuantity(skill)
+          && !hasQuantity(items.getEquippedThrowableWeapon())) {
+        log.info("[JAVELIN_AMMO] phase=do_reject entity={} skill={} reason=empty_quantity",
+            event.entityId, skill.skill);
         return;
       }
     }
@@ -1113,7 +1126,10 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       ordinal++;
     }
-    if (created > 0) consumeRangedAmmoForSkill(event, skill);
+    if (created > 0) {
+      consumeJavelinQuantityForSkill(event, skill);
+      consumeRangedAmmoForSkill(event, skill);
+    }
   }
 
   /** Native SKILLS_SrvDo029: create or refresh the self Thunder Storm aura. */
@@ -4773,6 +4789,26 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[RANGED_AMMO] phase=consume weapon={} ammo={} itemId={} before={} after={}",
         weapon.code, ammo.code, ammo.id, before, before - 1);
     return true;
+  }
+
+  /** Native sub_6FD118C0/sub_6FD11340 for decquant Amazon javelin missiles. */
+  private void consumeJavelinQuantityForSkill(SkillDoEvent event, Skills.Entry skill) {
+    if (!mPlayer.has(event.entityId) || !NativeSkillResolver.consumesJavelinQuantity(skill)) {
+      return;
+    }
+    Player player = mPlayer.get(event.entityId);
+    if (player.data == null || player.data.getItems() == null) return;
+    ItemData items = player.data.getItems();
+    Item weapon = items.getEquippedThrowableWeapon();
+    if (!hasQuantity(weapon)) return;
+    StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+    int before = quantity.asInt();
+    int after = Math.max(0, before - 1);
+    weapon.attrs.base().put(Stat.quantity, after);
+    StatRef aggregate = weapon.attrs.aggregate().get(Stat.quantity);
+    if (aggregate != null) aggregate.set(after);
+    log.info("[JAVELIN_AMMO] phase=consume entity={} skill={} weapon={} itemId={} before={} after={}",
+        event.entityId, skill.skill, weapon.code, weapon.id, before, after);
   }
 
   private void consumeRangedAmmoForSkill(SkillDoEvent event, Skills.Entry skill) {

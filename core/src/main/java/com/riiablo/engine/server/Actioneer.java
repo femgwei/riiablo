@@ -370,6 +370,12 @@ public class Actioneer extends PassiveSystem {
             entityId, skillId);
         return;
       }
+      if (NativeSkillResolver.consumesJavelinQuantity(skill)
+          && !hasPositiveQuantity(items.getEquippedThrowableWeapon())) {
+        log.info("[JAVELIN_AMMO] phase=cast_reject entity={} skill={} reason=empty_quantity",
+            entityId, skillId);
+        return;
+      }
     }
 
     if (skill != null && skill.srvdofunc == 9 && !hasTwoFrenzyWeapons(entityId)) {
@@ -4259,6 +4265,12 @@ public class Actioneer extends PassiveSystem {
     // Legacy local tests may construct a player without the Player component.
     return Riiablo.charData == null ? null
         : Riiablo.charData.getItems().getEquippedThrowableWeapon();
+  }
+
+  private static boolean hasPositiveQuantity(Item item) {
+    if (item == null || item.attrs == null) return false;
+    StatRef quantity = item.attrs.base().get(Stat.quantity, StatRef.obtain());
+    return quantity != null && quantity.asInt() > 0;
   }
 
   private boolean isPlayerRangedNormalAttack(int entityId) {

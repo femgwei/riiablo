@@ -239,6 +239,11 @@ public final class NativeSkillResolver {
     return isThrowableSkill(skill) || isAmazonJavelinSkill(skill);
   }
 
+  /** Native decquant rows that consume one Amazon javelin after launch. */
+  public static boolean consumesJavelinQuantity(Skills.Entry skill) {
+    return skill != null && skill.decquant && isAmazonJavelinSkill(skill);
+  }
+
   /** Whether this skill consumes the quiver paired with the equipped ranged weapon. */
   public static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
     if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;
