@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**18%**。
-- 当前执行项：**DM-NV-03 Wake of Fire Sentry 行为收口**。
+- 当前清单完成率：**26%**。
+- 当前执行项：**DM-NV-04 Inferno Sentry 行为收口**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -22,9 +22,9 @@
   - 2026-10-04 完成：修正 headless MPQ 夹具在不同 seed 下将陷阱落入非活动 RoomEx 的问题，并固定目标/尸体的 native RoomEx 上下文；difficulty=0 的 seed=1/2/3、difficulty=1/2 的 seed=1 均通过双客户端权威导弹、尸体消费和 reconnect gate。
   - 相邻 RoomEx 双尸体顺序 gate 通过（第一候选消费、第二候选保留）；墙体 gate 通过（可见目标掉血、墙后目标保持 `100000`）；ECS `AssassinSkillSpecializationTest` 通过，覆盖物理/火焰拆分、爆炸内外半径、Skill2 fallback、null-target、非法/城镇/墙后目标过滤、尸体插入顺序、shot budget 与 controller 回收。
   - Death Sentry reconnect 对短生命周期/RoomEx 可见性允许空替换快照，但额外校验同一 trap 的同一尸体事务标记，拒绝重复消费或复活。
-- [ ] **DM-NV-03（8%）Wake of Fire Sentry 行为收口**
+- [x] **DM-NV-03（8%）Wake of Fire Sentry 行为收口**
   - maker→wave 数量、两波方向/间隔、逐目标伤害、墙体/null-hit、预算和控制器到期。
-  - 2026-10-04 增量：真实 MPQ 双客户端 maker(517)→双波(518)/reconnect gate 复跑通过；新增 ECS 逐路径伤害快照、正交波方向、off-axis 不命中、null-target 不消耗 shot budget 回归并通过。墙体专用双端场景仍待补齐，完成率暂不增加。
+  - 2026-10-04 完成：真实 MPQ 双客户端 maker(517)→双波(518)/reconnect gate 通过；ECS 覆盖逐路径伤害快照、正交波方向、off-axis 不命中、null-target 不消耗 shot budget、控制器预算回收，以及方向性静态墙体触发 null-hit 和双波回收。
 - [ ] **DM-NV-04（8%）Inferno Sentry 行为收口**
   - 通道 duration/pulse、方向追踪、逐目标伤害、抗性/免疫、墙体和 reconnect 生命周期。
 - [ ] **DM-NV-05（5%）Fire Trauma 一次性链收口**
@@ -72,9 +72,10 @@
 - ECS `AssassinSkillSpecializationTest` 全类通过（包括 `SrvDo055` 的尸体事务、物理/火焰半径拆分、Skill2 fallback、null-target、目标过滤、插入顺序、shot budget 和控制器回收）。
 - 本项完成后累计完成率：**18%**。下一项切换为 **DM-NV-03 Wake of Fire Sentry 行为收口**。
 
-### 2026-10-04：DM-NV-03 增量核对
+### 2026-10-04：DM-NV-03 完成
 
 - 真实 MPQ gate：`areaSkill=262` 通过，owner/observer 共享 `assassintrap`、maker `517` 和两枚 `518` 波导弹；reconnect 不复活已过期导弹。
 - ECS 新增并通过 `wakeOfFireWavesCarryNativeDamageAndHitOnlyAlongTheirPaths`：两枚波导弹均携带原生伤害快照，正向路径目标掉血，偏轴目标不受伤。
 - ECS 新增并通过 `wakeOfFireDoesNotConsumeShotBudgetWithoutAHostileTarget`：null-target 不创建 maker、不消耗 shot budget，控制器保留。
-- 仍待：Wake 专用墙体/不可见目标双端 gate，以及墙体命中后的 null-hit/波导弹回收证据；DM-NV-03 暂不计入完成率。
+- ECS 新增并通过 `wakeOfFireWavesRespectAStaticBarrierOnTheirTravelDirection`：maker 水平移动仍能到达端点，波导弹在原生碰撞方向遇墙后触发 null-hit，墙后目标不掉血且波导弹被权威删除。
+- `AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**26%**。下一项切换为 **DM-NV-04 Inferno Sentry 行为收口**。

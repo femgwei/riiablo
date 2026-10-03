@@ -1032,6 +1032,57 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void wakeOfFireWavesRespectAStaticBarrierOnTheirTravelDirection() {
+    WakeDirectionalBarrierMap map = new WakeDirectionalBarrierMap();
+    RecordingFactory factory = new RecordingFactory();
+    factory.missileMap = map;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry wake = Riiablo.files.skills.get("Wake of Fire Sentry");
+      assertNotNull(wake);
+      data.setSkillLevel(wake.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, wake.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), wake.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      world.getMapper(MapWrapper.class).create(factory.entityId).set(map, map.zone);
+      world.getMapper(SummonedPet.class).get(factory.entityId).maxShots = 1;
+
+      int guide = world.create();
+      world.getMapper(Monster.class).create(guide);
+      world.getMapper(Position.class).create(guide).position.set(14, 3);
+      world.getMapper(AttributesWrapper.class).create(guide).attrs = attributes(10_000);
+      world.getMapper(MapWrapper.class).create(guide).set(map, map.zone);
+      int blocked = world.create();
+      world.getMapper(Monster.class).create(blocked);
+      world.getMapper(Position.class).create(blocked).position.set(14, 6);
+      Attributes blockedAttrs = attributes(10_000);
+      world.getMapper(AttributesWrapper.class).create(blocked).attrs = blockedAttrs;
+      world.getMapper(MapWrapper.class).create(blocked).set(map, map.zone);
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 60; i++) world.process();
+
+      assertEquals(3, factory.missileNames.size(),
+          "the directional barrier must still allow maker creation and both wave spawns");
+      assertEquals(10_000f, blockedAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "a barrier on the wave travel ray must trigger null-hit before damage");
+      assertFalse(world.getEntityManager().isActive(factory.missileEntityIds.get(1))
+          || world.getEntityManager().isActive(factory.missileEntityIds.get(2)),
+          "barrier-consumed waves must be removed authoritatively");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void infernoSentrySrvDo095RepeatsMissilesAndTracksTarget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
@@ -2371,6 +2422,25 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     }
   }
 
+  private static final class WakeDirectionalBarrierMap extends com.riiablo.map.Map {
+    final Zone zone = new Zone();
+
+    WakeDirectionalBarrierMap() { super(0, 0); }
+
+    @Override public Zone getZone(Vector2 point) { return zone; }
+
+    @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+        int flags, int size, com.badlogic.gdx.ai.utils.Collision<Vector2> dst) {
+      // Trap acquisition and the maker travel horizontally. The two SrvDo31
+      // waves travel vertically from the endpoint and encounter the barrier.
+      float dx = ray.end.x - ray.start.x;
+      float dy = ray.end.y - ray.start.y;
+      if (Math.abs(dy) <= Math.abs(dx)) return false;
+      if (dst != null && dst.point != null) dst.point.set(ray.start);
+      return true;
+    }
+  }
+
   private static final class RecordingFactory extends EntityFactory {
     int created;
     int entityId = Engine.INVALID_ENTITY;
@@ -2384,6 +2454,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     final java.util.ArrayList<String> missileNames = new java.util.ArrayList<>();
     final java.util.ArrayList<Vector2> missileDirections = new java.util.ArrayList<>();
     final java.util.ArrayList<Integer> missileEntityIds = new java.util.ArrayList<>();
+    com.riiablo.map.Map missileMap;
 
     @Override
     public int createSummonedPet(int ownerId, com.riiablo.codec.excel.MonStats.Entry summon,
@@ -2411,6 +2482,10 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Missile.class).create(missileId)
           .set(row, position, row.Range).setOwner(ownerId);
       world.getMapper(Position.class).create(missileId).position.set(position);
+      if (missileMap != null) {
+        world.getMapper(MapWrapper.class).create(missileId)
+            .set(missileMap, missileMap.getZone(position));
+      }
       world.getMapper(Velocity.class).create(missileId).velocity.set(angle).setLength(row.Vel);
       missiles++;
       missileName = row.Missile;
