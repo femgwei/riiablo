@@ -1097,3 +1097,4 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   `RoomEntityTrackingSystem` 把合成近尸体重归当前房，已由 pin 机制修正。
 - 当前状态：顺序与尸体事务证据完成；动画 keyframe/AI fallback、难度覆盖及真实客户端
   视觉仍未完成，不能据此宣称 Death Sentry 四层验收。
+- 实现提交：`82616717`。

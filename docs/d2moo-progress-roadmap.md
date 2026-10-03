@@ -6565,3 +6565,4 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
   `nativeTopology=true`，不把缺失 `pRoomsNear` 的 fallback 邻接推断当作 D2MOO 证据。
 - [ ] 后续补 difficulty=1/2、动画 keyframe 和 Death Sentry AI fallback；当前 gate 的
   `animationFallback=true` 只用于无 COF 关键帧的 headless 环境。
+- 实现提交：`82616717`。

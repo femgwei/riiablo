@@ -1554,3 +1554,4 @@ incarnation，并继续检查跨区域实体基线恢复。
   通过；`:server:d2gs:compileJava` 与三次真实 gate 均 BUILD SUCCESSFUL。
 - [ ] 仍需继续 Death Sentry 的动画/keyframe、AI fallback 和 difficulty>0 地图覆盖；本轮
   `animationFallback=true` 仅表示 headless COF 缺关键帧，不作为视觉完成证据。
+- 实现提交：`82616717`。
