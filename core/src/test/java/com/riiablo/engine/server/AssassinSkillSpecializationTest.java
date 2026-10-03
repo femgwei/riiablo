@@ -1147,6 +1147,181 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void infernoSentryChannelCarriesFireDamageToTrackedTarget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry inferno = Riiablo.files.skills.get("Inferno Sentry");
+      assertNotNull(inferno);
+      data.setSkillLevel(inferno.Id, 8);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, inferno.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), inferno.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      Attributes targetAttrs = attributes(10_000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.missiles);
+      Missile first = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(first);
+      assertTrue(first.damageSnapshot,
+          "each SrvDo095 stream must snapshot the native Inferno fire packet");
+      assertTrue(first.damage.get(Stat.firemaxdam).asInt() > 0,
+          "Inferno Sentry must carry fire damage, not a visual-only stream");
+      for (int i = 0; i < 30; i++) world.process();
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10_000f,
+          "a target on the tracked Inferno ray must take fire damage");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void infernoSentryChannelHonorsFullFireImmunity() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry inferno = Riiablo.files.skills.get("Inferno Sentry");
+      assertNotNull(inferno);
+      data.setSkillLevel(inferno.Id, 8);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, inferno.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), inferno.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      Attributes immuneAttrs = attributes(10_000);
+      immuneAttrs.base().put(Stat.fireresist, 100);
+      immuneAttrs.reset();
+      world.getMapper(AttributesWrapper.class).create(target).attrs = immuneAttrs;
+
+      world.setDelta(1f / 25f);
+      world.process();
+      Missile first = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(first);
+      assertTrue(first.damageSnapshot && first.damage.get(Stat.firemaxdam).asInt() > 0);
+      for (int i = 0; i < 30; i++) world.process();
+      assertEquals(10_000f, immuneAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "100% fire resistance must preserve native Inferno immunity");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void infernoSentryDoesNotConsumeShotBudgetWithoutAHostileTarget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry inferno = Riiablo.files.skills.get("Inferno Sentry");
+      assertNotNull(inferno);
+      data.setSkillLevel(inferno.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, inferno.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), inferno.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 12; i++) world.process();
+      assertEquals(0, factory.missiles,
+          "a null-target Inferno trap must not create a stream");
+      assertEquals(0, trap.shotsFired,
+          "null-target retries must preserve the native shot budget");
+      assertTrue(world.getMapper(SummonedPet.class).has(factory.entityId));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void infernoSentryStreamStopsAtAStaticBarrierBeforeDamagingBehindTarget() {
+    InfernoBarrierMap map = new InfernoBarrierMap();
+    RecordingFactory factory = new RecordingFactory();
+    factory.missileMap = map;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry inferno = Riiablo.files.skills.get("Inferno Sentry");
+      assertNotNull(inferno);
+      data.setSkillLevel(inferno.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, inferno.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), inferno.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      world.getMapper(MapWrapper.class).create(factory.entityId).set(map, map.zone);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      Attributes targetAttrs = attributes(10_000);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.getMapper(MapWrapper.class).create(target).set(map, map.zone);
+
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 12; i++) world.process();
+      assertTrue(factory.missiles > 0, "Inferno must still emit its first stream");
+      assertEquals(10_000f, targetAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "a static barrier must null-hit the stream before the target behind it");
+      for (int id : factory.missileEntityIds) {
+        assertFalse(world.getEntityManager().isActive(id),
+            "barrier-consumed Inferno streams must be removed authoritatively");
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void deathSentrySrvDo055ConsumesOneCorpseAndDamagesNearbyEnemies() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
@@ -2436,6 +2611,24 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       float dx = ray.end.x - ray.start.x;
       float dy = ray.end.y - ray.start.y;
       if (Math.abs(dy) <= Math.abs(dx)) return false;
+      if (dst != null && dst.point != null) dst.point.set(ray.start);
+      return true;
+    }
+  }
+
+  private static final class InfernoBarrierMap extends com.riiablo.map.Map {
+    final Zone zone = new Zone();
+
+    InfernoBarrierMap() { super(0, 0); }
+
+    @Override public Zone getZone(Vector2 point) { return zone; }
+
+    @Override public boolean castRay(com.badlogic.gdx.ai.utils.Ray<Vector2> ray,
+        int flags, int size, com.badlogic.gdx.ai.utils.Collision<Vector2> dst) {
+      // Let the trap acquire the hostile at its placement point, then place a
+      // static missile barrier immediately after the first stream step.
+      if (Math.abs(ray.end.x - ray.start.x) > Math.abs(ray.end.y - ray.start.y)
+          && ray.start.x <= 8.01f) return false;
       if (dst != null && dst.point != null) dst.point.set(ray.start);
       return true;
     }

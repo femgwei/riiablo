@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**26%**。
-- 当前执行项：**DM-NV-04 Inferno Sentry 行为收口**。
+- 当前清单完成率：**34%**。
+- 当前执行项：**DM-NV-05 Fire Trauma 一次性链收口**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -25,7 +25,7 @@
 - [x] **DM-NV-03（8%）Wake of Fire Sentry 行为收口**
   - maker→wave 数量、两波方向/间隔、逐目标伤害、墙体/null-hit、预算和控制器到期。
   - 2026-10-04 完成：真实 MPQ 双客户端 maker(517)→双波(518)/reconnect gate 通过；ECS 覆盖逐路径伤害快照、正交波方向、off-axis 不命中、null-target 不消耗 shot budget、控制器预算回收，以及方向性静态墙体触发 null-hit 和双波回收。
-- [ ] **DM-NV-04（8%）Inferno Sentry 行为收口**
+- [x] **DM-NV-04（8%）Inferno Sentry 行为收口**
   - 通道 duration/pulse、方向追踪、逐目标伤害、抗性/免疫、墙体和 reconnect 生命周期。
 - [ ] **DM-NV-05（5%）Fire Trauma 一次性链收口**
   - air→ground→explosion 的一次命中、范围、共享命中集合和 reconnect 不复活父实体。
@@ -79,3 +79,12 @@
 - ECS 新增并通过 `wakeOfFireDoesNotConsumeShotBudgetWithoutAHostileTarget`：null-target 不创建 maker、不消耗 shot budget，控制器保留。
 - ECS 新增并通过 `wakeOfFireWavesRespectAStaticBarrierOnTheirTravelDirection`：maker 水平移动仍能到达端点，波导弹在原生碰撞方向遇墙后触发 null-hit，墙后目标不掉血且波导弹被权威删除。
 - `AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**26%**。下一项切换为 **DM-NV-04 Inferno Sentry 行为收口**。
+
+### 2026-10-04：DM-NV-04 完成
+
+- 真实 MPQ gate：`areaSkill=272` 通过；owner/observer 共享 Inferno 陷阱控制器和 `523` 通道导弹，重连期间短生命周期导弹正常过期，`stale=false`，未出现 `AssassinSentry` AI fallback 警告。
+- ECS 新增并通过 `infernoSentryChannelCarriesFireDamageToTrackedTarget`：SrvDo095 通道导弹保存原生火焰伤害快照，目标在追踪射线上实际掉血。
+- ECS 新增并通过 `infernoSentryChannelHonorsFullFireImmunity`：100% 火焰抗性目标保持满血，确认伤害快照经过原生抗性/免疫链。
+- ECS 新增并通过 `infernoSentryDoesNotConsumeShotBudgetWithoutAHostileTarget`：null-target 不发射通道、不消耗 trap shot budget，控制器保留。
+- ECS 新增并通过 `infernoSentryStreamStopsAtAStaticBarrierBeforeDamagingBehindTarget`：静态障碍在通道导弹首段之后触发 null-hit，墙后目标不掉血，导弹权威删除。
+- `AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**34%**。下一项切换为 **DM-NV-05 Fire Trauma 一次性链收口**。
