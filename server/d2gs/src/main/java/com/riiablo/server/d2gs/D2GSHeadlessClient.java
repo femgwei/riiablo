@@ -1062,12 +1062,30 @@ public final class D2GSHeadlessClient {
         // point.
       }
       if (skillId == ASSASSIN_DEATH_SENTRY && targetId >= 0) {
-        float targetOffsetY = deathSentryWallGate ? 10f : deathSentryOrderGate ? 0f : 4f;
+        // Retire competing preset monsters before relocating the durable
+        // target. Leaving their dynamic footprints in the spawn room can
+        // trigger a player relocation between fixture setup and cast packet,
+        // making the landing point seed-dependent.
+        for (Snapshot candidate : a.monsters.values()) {
+          if (candidate.entityId != targetId && candidate.entityId != deathSentryWallTargetId
+              && !candidate.deleted) {
+            D2GS.headlessSetMonsterLife(candidate.entityId, 0f);
+          }
+        }
+        float targetOffsetY = 0f;
         if (!D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
             targetId, a.playerId, 0f, targetOffsetY)) {
           throw new IOException("Death Sentry fixture could not place durable target");
         }
         if (deathSentryWallGate || deathSentryOrderGate) {
+          targetX = a.playerX;
+          targetY = a.playerY;
+        } else {
+          // The durable target is relocated beside the caster so the corpse
+          // fixture and trap remain in the active RoomEx on every map seed.
+          // Keep the cast landing point aligned with that relocation; using
+          // the pre-relocation preset-monster coordinate makes the trap land
+          // in an inactive room for seeds whose nearest monster is remote.
           targetX = a.playerX;
           targetY = a.playerY;
         }
@@ -1109,14 +1127,37 @@ public final class D2GSHeadlessClient {
               + " secondRoom=" + secondRoom + " firstCorpse=" + corpseId
               + " secondCorpse=" + deathSentrySecondaryCorpseId + " nativeTopology=true");
         } else {
-          corpseId = D2GS.headlessCreateRoomDeadMonsterFixture(a.playerId, 2, -1);
+          int[] casterRoomContext = D2GS.headlessEntityRoomContext(a.playerId);
+          int casterRoom = casterRoomContext.length > 0 ? casterRoomContext[0] : -1;
+          int corpseRoom = casterRoomContext.length > 1 ? casterRoomContext[1] : casterRoom;
+          corpseId = D2GS.headlessCreateRoomDeadMonsterFixture(a.playerId, 2, corpseRoom);
           if (corpseId < 0 || !D2GS.headlessPlaceMonsterNearWithoutDynamicCollision(
-              corpseId, a.playerId, 0f, deathSentryWallGate ? 9f : 3f)) {
+              corpseId, a.playerId, 0f, 1.5f)) {
             throw new IOException("Death Sentry fixture could not create nearby corpse");
+          }
+          // Relocation is test-only and bypasses the normal movement tracker;
+          // pin both live target and corpse to the caster's active native room
+          // so RoomEx activation and corpse ranking see the same topology on
+          // every seed.
+          if (casterRoomContext.length == 0
+              || !D2GS.headlessSetEntityRoom(targetId, casterRoomContext[0])
+              || !D2GS.headlessSetEntityRoom(corpseId, corpseRoom)) {
+            throw new IOException("Death Sentry fixture room pin failed: context="
+                + java.util.Arrays.toString(casterRoomContext)
+                + " target=" + targetId + " corpse=" + corpseId);
           }
         }
         a.areaDeathCorpseId = corpseId;
         b.areaDeathCorpseId = corpseId;
+        if (!deathSentryWallGate && !deathSentryOrderGate) {
+          log("death_sentry_fixture", "casterRoom="
+              + java.util.Arrays.toString(D2GS.headlessEntityRoomContext(a.playerId))
+              + " target=" + targetId + " targetRoom="
+              + java.util.Arrays.toString(D2GS.headlessEntityRoomContext(targetId))
+              + " corpse=" + corpseId + " corpseRoom="
+              + java.util.Arrays.toString(D2GS.headlessEntityRoomContext(corpseId))
+              + " landing=(" + targetX + ',' + targetY + ')');
+        }
         if (deathSentryWallGate) {
           float[] blockedPlacement = D2GS.headlessFindBlockedMonsterPlacement(
               a.playerId, 0f, 0f, 100f, 3f);
@@ -1174,6 +1215,18 @@ public final class D2GSHeadlessClient {
             D2GS.headlessSetMonsterLife(candidate.entityId, 0f);
           }
         }
+      }
+      if (skillId == ASSASSIN_DEATH_SENTRY && !deathSentryWallGate && !deathSentryOrderGate) {
+        // Fixture helpers run on the server application thread and may cause
+        // a dynamic-spawn relocation packet before the cast is sent. Drain
+        // that packet so the landing point follows the authoritative caster,
+        // not the stale pre-relocation client coordinate.
+        for (int i = 0; i < 4; i++) {
+          consumeOne(inA, a);
+          consumeOne(inB, b);
+        }
+        targetX = a.playerX;
+        targetY = a.playerY;
       }
       send(outA, a.castPacket(skillId, targetId, targetX, targetY));
       log("area_cast", "skill=" + skillId + " player=" + a.playerId
@@ -1408,6 +1461,12 @@ public final class D2GSHeadlessClient {
       throw new IllegalStateException("area-skill reconnect has no active missiles: skill="
           + skillId + " missiles=" + areaMissileSummary(owner.areaMissiles));
     }
+    int deathSentryTrapId = skillId == ASSASSIN_DEATH_SENTRY
+        ? sharedAssassinTrapControllerId(owner, oldObserver, ASSASSIN_DEATH_SENTRY)
+        : Engine.INVALID_ENTITY;
+    int deathSentryCorpseBefore = deathSentryTrapId >= 0
+        ? D2GS.headlessDeathSentryLastCorpseId(deathSentryTrapId)
+        : Engine.INVALID_ENTITY;
     int oldObserverId = oldObserver.playerId;
     oldSocket.close();
     long disconnectDeadline = System.currentTimeMillis() + 5_000L;
@@ -1461,7 +1520,18 @@ public final class D2GSHeadlessClient {
         // any deleted or unknown entity.
         boolean fullyExpired = ownerActive.isEmpty() && ownerStates.isEmpty()
             && reconnectActive.isEmpty() && reconnectStates.isEmpty();
-        if ((fullyExpired || !reconnectActive.isEmpty() || !reconnectStates.isEmpty())
+        // Death Sentry's corpse-explosion visual is room-scoped and may still
+        // be authoritative for the owner while a replacement observer's
+        // baseline legitimately contains no missile. Accept that visibility
+        // gap only when the same trap still owns the same consumed corpse;
+        // an empty replacement set can never resurrect or duplicate it.
+        boolean deathSentryVisibilityGap = skillId == ASSASSIN_DEATH_SENTRY
+            && reconnectActive.isEmpty() && !ownerActive.isEmpty()
+            && deathSentryTrapId >= 0 && deathSentryCorpseBefore >= 0
+            && D2GS.headlessDeathSentryLastCorpseId(deathSentryTrapId)
+                == deathSentryCorpseBefore;
+        if ((fullyExpired || !reconnectActive.isEmpty() || !reconnectStates.isEmpty()
+            || deathSentryVisibilityGap)
             && missileSnapshotValid && stateSnapshotValid && stateWatermarkValid) {
           log("area_skill_reconnect_pass", "skill=" + skillId
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
