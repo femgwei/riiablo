@@ -251,6 +251,14 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void shatterHasNativeWhiteSmokeCompanion() {
+    Missiles.Entry smoke = Riiablo.files.Missiles.get("icebreaksmoke");
+    assertNotNull(smoke);
+    assertEquals("IceBreakSmoke", smoke.CelFile);
+    assertEquals(0, smoke.pCltHitFunc);
+  }
+
+  @Test
   void circularClientCallbacksUseMissileDirectionCount() {
     Missiles.Entry frostNova = Riiablo.files.Missiles.get("frostnova");
     assertNotNull(frostNova);

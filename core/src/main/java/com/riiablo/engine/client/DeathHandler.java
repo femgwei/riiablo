@@ -347,14 +347,25 @@ public class DeathHandler extends PassiveSystem {
     String name = shatterMissileName(size);
     com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get(name);
     if (row == null) return;
+    Vector2 position = new Vector2(mPosition.get(entityId).position);
+    // The native ice-death presentation is a layered pair: the size-specific
+    // icebreak DCC supplies the blue fragments, while icebreaksmoke supplies
+    // the large white flash visible behind them. The latter is a separate
+    // missile row and is not emitted by pCltHitFunc=31.
+    int smokeId = -1;
+    com.riiablo.codec.excel.Missiles.Entry smoke = Riiablo.files.Missiles.get("icebreaksmoke");
+    if (smoke != null) {
+      smokeId = ((ClientEntityFactory) factory).createMissilePresentation(smoke,
+          new Vector2(1f, 0f), position);
+    }
     int visualId = ((ClientEntityFactory) factory).createMissilePresentation(row,
-        new Vector2(1f, 0f), new Vector2(mPosition.get(entityId).position));
+        new Vector2(1f, 0f), position);
     if (Riiablo.audio != null && row.TravelSound != null && !row.TravelSound.isEmpty()) {
       Riiablo.audio.play(row.TravelSound, true);
     }
-    log.info("[MONSTER_SHATTER] entity={} size={} missile={} visualId={} position=({}, {})",
-        entityId, size, name, visualId,
-        mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
+    log.info("[MONSTER_SHATTER] entity={} size={} smoke=icebreaksmoke smokeId={} "
+            + "missile={} visualId={} position=({}, {})",
+        entityId, size, smokeId, name, visualId, position.x, position.y);
   }
 
   static String shatterMissileName(int size) {
