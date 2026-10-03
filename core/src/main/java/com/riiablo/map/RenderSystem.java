@@ -632,7 +632,7 @@ public class RenderSystem extends BaseEntitySystem {
       int sty = ty * Tile.SUBTILE_SIZE;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getRenderZone(stx, sty);
+        Map.Zone zone = map.getZone(stx, sty);
         if (zone != null) buildCache(cache[y][x], zone, stx, sty);
         tx++;
         stx += Tile.SUBTILE_SIZE;
@@ -707,10 +707,13 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getRenderZone(stx, sty);
-        if (zone != null) {
-          drawLowerWalls(batch, zone, tx, ty, px, py);
-          drawFloors(batch, zone, tx, ty, px, py);
+        Map.Zone floorZone = map.getZone(stx, sty);
+        if (floorZone != null) {
+          drawFloors(batch, floorZone, tx, ty, px, py);
+        }
+        Map.Zone wallZone = map.getRenderZone(stx, sty);
+        if (wallZone != null) {
+          drawLowerWalls(batch, wallZone, tx, ty, px, py);
         }
 
         tx++;
@@ -742,7 +745,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getRenderZone(stx, sty);
+        Map.Zone zone = map.getZone(stx, sty);
         if (zone != null) {
           //buildCaches(zone, stx, sty);
           drawShadows(batch, zone, tx, ty, px, py, cache[y][x]);
@@ -780,13 +783,14 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getRenderZone(stx, sty);
+        Map.Zone zone = map.getZone(stx, sty);
         if (zone != null) {
           //buildCaches(zone, stx, sty);
           Array<Integer>[] cache = this.cache[y][x];
           drawEntities(cache, 1); // floors
           drawEntities(cache, 2); // walls/doors
-          drawWalls(batch, zone, tx, ty, px, py);
+          Map.Zone wallZone = map.getRenderZone(stx, sty);
+          if (wallZone != null) drawWalls(batch, wallZone, tx, ty, px, py);
           //drawWalls (trees and maybe columns?)
           drawEntities(cache, 0); // objects
         }
@@ -823,7 +827,7 @@ public class RenderSystem extends BaseEntitySystem {
       float py = startPy2;
       int size = viewBuffer[y];
       for (x = 0; x < size; x++) {
-        Map.Zone zone = map.getRenderZone(stx, sty);
+        Map.Zone zone = map.getZone(stx, sty);
         if (zone != null) {
           drawRoofs(batch, zone, tx, ty, px, py);
         }
