@@ -1,11 +1,12 @@
 # dark-magic 技能视觉验收清单
 
-更新时间：2026-10-04
+更新时间：2026-10-05
 
 ## 当前状态
 
 - 非视觉核对清单：**100%**。
 - 技能移植严格总进度：约 **97%**；剩余项目必须在真实客户端渲染窗口中逐帧确认。
+- dark-magic Assassin exact-ID 视觉验收：**0/10**；捕获/批量比较工具已就绪，但尚无可计入的双端真实窗口帧。
 - 本清单只记录尚未被 ECS、真实双客户端实体 gate 或静态资源检查替代的画面验收，不会覆盖用户已验证的 Amazon 数值实现。
 - `animationFallback=false`、共享实体和伤害结果只能证明权威行为，不等价于旧版客户端画面、关键帧时序和视觉持续时间一致。
 
@@ -26,6 +27,7 @@
 - [ ] **Blade Fury (266)**：held-input 重入、每次 keyframe 发刃间隔、`bladefragment1` 与 helper missile 的资源/方向/碰撞视觉差异、墙体和重连。
 - [ ] **Fire Trauma (251)**：air→ground→explosion 三段出现顺序、null-hit 后子对象、爆炸范围和一次性消失。
 - [ ] **Shock Field (256)、Blade Sentinel (257)、Charged Bolt Sentry (261)**：放置视觉、目标锁定/导弹方向、墙体/null-hit、控制器到期和重连。
+- [ ] **Lightning Sentry (271)**：放置视觉、目标锁定、闪电路径与命中时序、墙体阻挡、shot budget、到期和重连。
 - [ ] **其他职业区域/状态技能**：仅在对应矩阵记录仍标记 `visual pending` 时执行；优先检查 Overlay/DCC 帧数、动画速率、首末关键帧和状态移除后的残留画面。
 
 ## 每个场景的记录格式
@@ -64,6 +66,18 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 报告帧缺失、尺寸不一致、像素变化比例，并在命令输出中给出帧数、帧率、估算时长和尺寸摘要。
 可用 `-FrameRate 25` 覆盖默认帧率。`different` 只表示像素发生变化，不能单独证明技能语义、
 伤害或关键帧正确；仍需按本清单逐帧记录首帧、pulse、碰撞、到期和重连结果。
+
+10 个 exact-ID 的目录、优先级和场景定义见
+[`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)。将截图放入
+`captures/dark-magic/original/<slug>` 与 `captures/dark-magic/riiablo/<slug>` 后，可批量生成报告：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\compare-skill-visual-capture-set.ps1
+```
+
+批量结果中的 `awaiting-human-review` 只表示两套帧可比较，不代表视觉验收通过。需要在另一台电脑上
+强制检查所有捕获齐全时追加 `-RequireComparableCaptures`；任何缺帧、尺寸不一致或比较失败都会使命令失败。
 
 ## 完成门槛
 
