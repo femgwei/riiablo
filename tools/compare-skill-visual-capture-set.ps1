@@ -3,6 +3,7 @@ param(
   [string] $CaptureRoot = (Join-Path (Get-Location) 'captures\dark-magic'),
   [string] $SummaryPath = (Join-Path (Get-Location) 'captures\dark-magic\reports\summary.tsv'),
   [string] $CompareScript = (Join-Path $PSScriptRoot 'compare-skill-visual-frames.ps1'),
+  [int[]] $ExpectedSkillIds = @(251, 256, 257, 261, 262, 266, 271, 272, 276, 277),
   [switch] $RequireComparableCaptures
 )
 
@@ -34,9 +35,13 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
   $skillId = [int]$entry.skill_id
   $slug = [string]$entry.slug
   $frameRate = [double]$entry.frame_rate
+  $mapSeed = [int]$entry.map_seed
+  $skillLevel = [int]$entry.skill_level
   if ($ids.ContainsKey($skillId)) { throw "Duplicate skill_id in capture plan: $skillId" }
   if ($slugs.ContainsKey($slug)) { throw "Duplicate slug in capture plan: $slug" }
   if ($frameRate -le 0) { throw "Invalid frame_rate for skill_id=$skillId" }
+  if ($mapSeed -lt 0) { throw "Invalid map_seed for skill_id=$skillId" }
+  if ($skillLevel -le 0) { throw "Invalid skill_level for skill_id=$skillId" }
   $ids[$skillId] = $true
   $slugs[$slug] = $true
 
@@ -105,6 +110,12 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
     report = if (Test-Path -LiteralPath $reportPath -PathType Leaf) { $reportPath } else { '' }
     note = $note
   })
+}
+
+$expectedKey = @($ExpectedSkillIds | Sort-Object) -join ','
+$actualKey = @($ids.Keys | ForEach-Object { [int]$_ } | Sort-Object) -join ','
+if ($actualKey -ne $expectedKey) {
+  throw "Capture plan exact-ID set mismatch: expected=$expectedKey actual=$actualKey"
 }
 
 $summaryParent = Split-Path -Parent $SummaryPath
