@@ -152,4 +152,5 @@
 - 新增 `NativeClientSkillEvidenceTest`，以 dark-magic `skill-behavior-coverage.v1.json` 的 43 个 exact-ID 为输入，逐项核对 1.10f 无损 `Skills.txt` 与解码后的 `Skills.Entry`：`cltstfunc`、`cltdofunc`、`cltmissile`、`cltmissilea/b/c/d` 均必须完全一致，并要求保留原始行号。
 - 这层只证明数据字段没有在导入/转换时丢失，不能把客户端 callback 数字直接解释为 `d2client.dll` 的函数语义；测试注释已明确禁止用 Skills.txt 行替代二进制反汇编证据。
 - 已建立 [d2client-static-skill-evidence.tsv](d2client-static-skill-evidence.tsv) 作为 43 行回填入口；每行必须同时有匹配的 1.10f DLL hash、函数地址、caller/xref 和 keyframe 证据，状态才可从 `pending-binary` 改为完成态。
+- 新增 `tools/verify-d2client-evidence.ps1`：默认检查 43 个 ID、版本和重复项；另一 agent 回填后使用 `-RequireComplete`，会强制验证每行的 hash、函数地址、caller/xref 与 keyframe 字段均非空。
 - 当前 `D2_HOME` 未提供可读取的 `d2client.dll`，因此静态地址、调用者/xref、keyframe 消费点仍待另一 agent 的二进制检查结果回填；DM-NV-12 尚未计入完成率，当前仍为 **80%**。
