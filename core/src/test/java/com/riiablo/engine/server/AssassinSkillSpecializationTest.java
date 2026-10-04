@@ -2268,6 +2268,45 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void bladeShieldSkipsPlayersAndSummonedPetsAsFriendlyTargets() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    try {
+      Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
+      int assassin = createBladeShieldPlayer(world, blade);
+
+      int friendlyPlayer = world.create();
+      world.getMapper(com.riiablo.engine.server.component.Player.class)
+          .create(friendlyPlayer).data = CharData.createRemote("ally", (byte) Riiablo.ASSASSIN);
+      world.getMapper(Position.class).create(friendlyPlayer).position.set(2f, 0f);
+      Attributes friendlyPlayerAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(friendlyPlayer).attrs = friendlyPlayerAttrs;
+
+      int friendlyPet = world.create();
+      world.getMapper(Monster.class).create(friendlyPet);
+      world.getMapper(Position.class).create(friendlyPet).position.set(2.5f, 0f);
+      Attributes friendlyPetAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(friendlyPet).attrs = friendlyPetAttrs;
+      world.getMapper(SummonedPet.class).create(friendlyPet)
+          .set(friendlyPlayer, "assassintrap", blade.Id, 1, false, 0);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),
+          blade.srvdofunc, blade.cltdofunc));
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1000f, friendlyPlayerAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "Blade Shield must not damage another player without PvP hostility");
+      assertEquals(1000f, friendlyPetAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
+          "Blade Shield must not damage a friendly summoned pet");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
   void bladeShieldStopsWhenTheStateExpiresOrTheSkillIsLost() {
     RecordingFactory factory = new RecordingFactory();
     World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));

@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**39%**。
-- 当前执行项：**DM-NV-06 Blade Shield 非视觉边界**。
+- 当前清单完成率：**44%**。
+- 当前执行项：**DM-NV-07 Sorceress 完整技能树行为审计**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -29,7 +29,7 @@
   - 通道 duration/pulse、方向追踪、逐目标伤害、抗性/免疫、墙体和 reconnect 生命周期。
 - [x] **DM-NV-05（5%）Fire Trauma 一次性链收口**
   - air→ground→explosion 的一次命中、范围、共享命中集合和 reconnect 不复活父实体。
-- [ ] **DM-NV-06（5%）Blade Shield 非视觉边界**
+- [x] **DM-NV-06（5%）Blade Shield 非视觉边界**
   - 多目标、最后 pulse、到期静默、owner 死亡/离区、武器切换、PvP/Party/召唤过滤。
 - [ ] **DM-NV-07（10%）Sorceress 完整技能树行为审计**
   - 剩余 exact-ID、公式、状态、父子导弹、Hydra/区域技能及双客户端/reconnect 门槛。
@@ -95,3 +95,10 @@
 - ECS 新增并通过 `fireTraumaAirNullHitCreatesOneGroundChildAndOneExplosion`：静态障碍触发 air 导弹 null-hit，严格生成一个 authoritative ground child，再由 ground 到期生成一个 explosion presentation child。
 - `fireTraumaGroundIgnoresUnitContactAndExplodesOnceAtSkillRadius` 扩展为双目标半径断言：ground 在到期前不因单位接触提前爆炸，到期时同一伤害包对半径内多个敌对目标各命中一次，半径外目标不受伤，且不会重复生成 explosion。
 - 原有 `fireTraumaUsesNativeAirGroundChainAndSkillSynergy`、`AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**39%**。下一项切换为 **DM-NV-06 Blade Shield 非视觉边界**。
+
+### 2026-10-04：DM-NV-06 完成
+
+- 真实 MPQ gate：`areaSkill=277` 通过；owner/observer 同步 `StateId.BLADESHIELD=158` 的持续状态和周期计数，reconnect 后状态仍为 `[158]`、`stale=false`。
+- 现有 ECS 覆盖并通过：多目标与 25 帧 cadence、AuraRangeCalc 范围、town 静默、当前/相邻 RoomEx 扫描、非相邻/跨 zone 过滤、NativeUnitFlags 无效目标、状态到期/技能丢失、owner 死亡、武器耐久和目标护甲耐久。
+- 新增并通过 `bladeShieldSkipsPlayersAndSummonedPetsAsFriendlyTargets`：无 PvP hostility 的其他玩家和友方召唤宠物均保持满血，确认目标过滤不会被普通坐标范围绕过。
+- `AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**44%**。下一项切换为 **DM-NV-07 Sorceress 完整技能树行为审计**。
