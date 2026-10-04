@@ -7,7 +7,7 @@
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
 - 当前清单完成率：**85%**。
-- 当前执行项：**DM-NV-12 d2client.dll 静态证据并入技能矩阵**。
+- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Paladin 第一批）**；DM-NV-12 继续等待二进制证据。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -161,3 +161,10 @@
 - 现有回归已覆盖其余迁移模式：`AuraManagerPulseTest`/`AuraEcsScenarioTest`（priority、付费 pulse、stale source layer）、Necromancer summon/golem/revive 与 `BarbarianCorpseSkillTest`（原子回滚、所有权、尸体事务）、Assassin trap、Druid summon 以及多项 reconnect/stale 测试（生命周期和重连快照）。
 - 集中回归通过：`FistOfHeavensIntegrationTest`、`AuraManagerPulseTest`、`AuraEcsScenarioTest`、`AssassinSkillSpecializationTest`、`NecromancerExplosionIntegrationTest`、`NecromancerGolemReviveIntegrationTest`、`NecromancerSummonIntegrationTest`、`DruidSummonIntegrationTest`。
 - 本项只增加行为回归测试，没有覆盖或重写用户已验证的 Amazon 技能实现；DM-NV-12 仍因缺少真实 `d2client.dll` 静态地址/xref/keyframe 证据保持未完成。累计完成率：**85%**。
+
+### 2026-10-04：DM-NV-14 exact-ID 行为注册框架（Paladin 第一批）
+
+- 扩展 `NativeSkillBehaviorRegistry` 的 exact-ID 注册分区，新增 Paladin 5 行：Blessed Hammer(112)、Holy Freeze(114)、Conversion(116)、Holy Shield(117)、Fist of the Heavens(121)。每行同时锁定 D2MOO 对应 `SrvSt/SrvDo`，并为 Blessed Hammer/Fist of the Heavens 保留 Skills.txt 导弹链证据。
+- `NativeSkillResolver.resolve` 现在按 Amazon → Sorceress → Paladin 的显式分区解析；未知 ID 或 callback 不匹配仍返回空行为，不按技能显示名推断。
+- 新增 `NativePaladinSkillMatrixTest`，覆盖 exact-ID、职业字段、callback、导弹链存在性和 callback 篡改 fail-closed；Paladin 数据/集成回归全部通过。
+- 本记录只完成 DM-NV-14 的第一批注册，尚未计入 4% 总权重；下一批继续覆盖 Necromancer/Barbarian/Druid/Assassin 的未注册 exact-ID 行。总体完成率保持 **85%**。

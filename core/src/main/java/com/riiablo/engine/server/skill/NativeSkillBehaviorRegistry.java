@@ -16,6 +16,7 @@ public final class NativeSkillBehaviorRegistry {
   private static final String EVIDENCE = "d2moo-1.10f-row-and-srv-dispatch";
   private static final IntMap<NativeSkillBehavior> AMAZON = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> SORCERESS = new IntMap<>();
+  private static final IntMap<NativeSkillBehavior> PALADIN = new IntMap<>();
 
   static {
     // Amazon 6..35.  Callback numbers are the D2MOO SkillAma dispatch table;
@@ -86,6 +87,15 @@ public final class NativeSkillBehaviorRegistry {
     addSorceress(63, "passive.stat-list",               0,   0);
     addSorceress(64, "missile.controller-split",         0,   0,  "frozenorb");
     addSorceress(65, "passive.stat-list",               0,   0);
+
+    // Paladin rows admitted by the existing native data and ECS contracts.
+    // Keep this registration intentionally small until each remaining row has
+    // an exact D2MOO dispatch and focused behavior evidence.
+    addPaladin(112, "missile.blessed-hammer", 0, 73, "blessedhammer");
+    addPaladin(114, "aura.holy-freeze",       0, 81);
+    addPaladin(116, "state.conversion",      32, 79);
+    addPaladin(117, "state.holy-shield",      36, 18);
+    addPaladin(121, "missile.fist-of-heavens", 0, 80, "fistoftheheavensdelay");
   }
 
   private NativeSkillBehaviorRegistry() {}
@@ -99,6 +109,11 @@ public final class NativeSkillBehaviorRegistry {
     SORCERESS.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
   }
 
+  private static void addPaladin(int id, String family, int start, int done,
+      String... missiles) {
+    PALADIN.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
+  }
+
   /** Returns the exact Amazon declaration, or {@code null} for unknown rows. */
   public static NativeSkillBehavior resolveAmazon(Skills.Entry skill) {
     if (skill == null) return null;
@@ -110,7 +125,9 @@ public final class NativeSkillBehaviorRegistry {
   public static NativeSkillBehavior resolve(Skills.Entry skill) {
     NativeSkillBehavior behavior = resolveAmazon(skill);
     if (behavior != null) return behavior;
-    return resolveSorceress(skill);
+    behavior = resolveSorceress(skill);
+    if (behavior != null) return behavior;
+    return resolvePaladin(skill);
   }
 
   /** Returns the exact Sorceress declaration, or {@code null} for unknown rows. */
@@ -125,4 +142,14 @@ public final class NativeSkillBehaviorRegistry {
 
   /** Number of exact Sorceress rows currently covered by the registry. */
   public static int sorceressSize() { return SORCERESS.size; }
+
+  /** Returns the exact Paladin declaration, or {@code null} for unknown rows. */
+  public static NativeSkillBehavior resolvePaladin(Skills.Entry skill) {
+    if (skill == null) return null;
+    NativeSkillBehavior behavior = PALADIN.get(skill.Id);
+    return behavior != null && behavior.matches(skill) ? behavior : null;
+  }
+
+  /** Number of exact Paladin rows currently covered by the registry. */
+  public static int paladinSize() { return PALADIN.size; }
 }
