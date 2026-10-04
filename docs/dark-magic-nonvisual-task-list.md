@@ -6,7 +6,7 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**80%**。
+- 当前清单完成率：**85%**。
 - 当前执行项：**DM-NV-12 d2client.dll 静态证据并入技能矩阵**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
@@ -43,7 +43,7 @@
   - 战吼覆盖刷新、尸体竞争、武器 exact-ID、多段攻击和目标失效处理。
 - [ ] **DM-NV-12（8%）d2client.dll 静态证据并入技能矩阵**
   - 为每项技能记录 keyframe、SrvSt/SrvDo/SrvHit/SrvDmg、目标过滤和客户端函数证据。
-- [ ] **DM-NV-13（5%）dark-magic 行为测试模式迁移**
+- [x] **DM-NV-13（5%）dark-magic 行为测试模式迁移**
   - effect-time revalidation、原子回滚、aura priority、所有权、尸体事务、stale/reconnect。
 - [ ] **DM-NV-14（4%）扩展 exact-ID 行为注册框架**
   - 将非 Amazon 的目标、资源、状态、导弹链和生命周期逐步注册；未知行为 fail-closed。
@@ -154,3 +154,10 @@
 - 已建立 [d2client-static-skill-evidence.tsv](d2client-static-skill-evidence.tsv) 作为 43 行回填入口；每行必须同时有匹配的 1.10f DLL hash、函数地址、caller/xref 和 keyframe 证据，状态才可从 `pending-binary` 改为完成态。
 - 新增 `tools/verify-d2client-evidence.ps1`：默认检查 43 个 ID、版本和重复项；另一 agent 回填后使用 `-RequireComplete`，会强制验证每行的 hash、函数地址、caller/xref 与 keyframe 字段均非空。
 - 当前 `D2_HOME` 未提供可读取的 `d2client.dll`，因此静态地址、调用者/xref、keyframe 消费点仍待另一 agent 的二进制检查结果回填；DM-NV-12 尚未计入完成率，当前仍为 **80%**。
+
+### 2026-10-04：DM-NV-13 dark-magic 行为测试模式迁移完成
+
+- 以 dark-magic 的行为测试原则和 D2MOO `MISSMODE_SrvHit22_FistOfTheHeavensDelay` 为依据，补充 `FistOfHeavensIntegrationTest.delayedImpactRevalidatesHostilityBeforeApplyingOrSplitting`：延迟效果发生时重新验证目标敌我关系；施法后转为己方召唤物的原目标不接受陈旧主命中，仍敌对且符合 AuraFilter 的亡灵目标才可获得分裂导弹。
+- 现有回归已覆盖其余迁移模式：`AuraManagerPulseTest`/`AuraEcsScenarioTest`（priority、付费 pulse、stale source layer）、Necromancer summon/golem/revive 与 `BarbarianCorpseSkillTest`（原子回滚、所有权、尸体事务）、Assassin trap、Druid summon 以及多项 reconnect/stale 测试（生命周期和重连快照）。
+- 集中回归通过：`FistOfHeavensIntegrationTest`、`AuraManagerPulseTest`、`AuraEcsScenarioTest`、`AssassinSkillSpecializationTest`、`NecromancerExplosionIntegrationTest`、`NecromancerGolemReviveIntegrationTest`、`NecromancerSummonIntegrationTest`、`DruidSummonIntegrationTest`。
+- 本项只增加行为回归测试，没有覆盖或重写用户已验证的 Amazon 技能实现；DM-NV-12 仍因缺少真实 `d2client.dll` 静态地址/xref/keyframe 证据保持未完成。累计完成率：**85%**。

@@ -182,6 +182,47 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void delayedImpactRevalidatesHostilityBeforeApplyingOrSplitting() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory, new ServerSkillSystem(), new MissileCollisionSystem());
+    try {
+      int paladin = createPlayer(world, 0, 0);
+      int primary = createMonster(world, 10, 0, false, false, false);
+      int secondaryUndead = createMonster(world, 12, 0, true, false, false);
+      float primaryLife = life(world, primary);
+      Skills.Entry fist = Riiablo.files.skills.get(SkillId.FIST_OF_THE_HEAVENS);
+
+      // D2MOO's SrvHit22 resolves the saved point only after the native delay,
+      // then applies AuraFilter/hostility to the current world. A target that
+      // becomes our summon after cast must not receive stale primary damage;
+      // a still-hostile eligible undead may remain a valid split target.
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          paladin, fist.Id, primary, new Vector2(10, 0),
+          fist.srvdofunc, fist.cltdofunc));
+      world.getMapper(SummonedPet.class).create(primary)
+          .set(paladin, "test", fist.Id, 1, false, 0);
+
+      world.setDelta(1f / 25f);
+      for (int frame = 0; frame < 10; frame++) world.process();
+
+      assertEquals(primaryLife, life(world, primary), EPSILON,
+          "effect-time hostility revalidation must reject the now-friendly primary");
+      assertTrue(factory.count("fistoftheheavensbolt") >= 1,
+          "the delayed aura may still split to a currently hostile eligible target");
+      boolean splitLockedToSecondary = false;
+      for (int i = 0; i < factory.createdIds.size(); i++) {
+        if (!"fistoftheheavensbolt".equals(factory.names.get(i))) continue;
+        Missile bolt = world.getMapper(Missile.class).get(factory.createdIds.get(i));
+        splitLockedToSecondary |= bolt.targetId == secondaryUndead;
+      }
+      assertTrue(splitLockedToSecondary,
+          "the hostile undead split target must be selected at effect time");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void srvHit07HealsOwnedPetsAndClampsAtMaximumLife() {
     RecordingFactory factory = new RecordingFactory();
     World world = world(factory, new MissileCollisionSystem());
