@@ -10,6 +10,16 @@
 - 本清单只记录尚未被 ECS、真实双客户端实体 gate 或静态资源检查替代的画面验收，不会覆盖用户已验证的 Amazon 数值实现。
 - `animationFallback=false`、共享实体和伤害结果只能证明权威行为，不等价于旧版客户端画面、关键帧时序和视觉持续时间一致。
 
+## 当前素材审计
+
+截至 2026-10-05，工作区中发现的相关 PNG 均不能作为双端视觉验收输入：
+
+- `build/video-analysis/2026-10-04_21-29-33/contact-4fps.png`、`decay-8fps.png`、`impact-12fps.png` 是单套视频 contact sheet，没有原版/riiablo来源、技能 ID、地图 seed、技能等级或 MPQ 版本元数据。
+- 根目录 `iceexplode-*` 与 `skill-viewer-window-*` 是 sprite/window 调试素材，不是同条件原版/riiablo帧对。
+- `screenshots/` 下的项目截图没有对应的技能场景标识和另一端配对帧。
+
+这些素材可以用于调试资源或动画，但当前统一排除在 `pass` 和 10 项视觉完成数之外；拿到另一台电脑的真实窗口捕获后，必须按捕获计划重新归档。
+
 ## 验收原则
 
 1. 原版与 riiablo 使用同一 1.10f MPQ、同一地图 seed、同一技能等级、同一装备和同一目标布置。
