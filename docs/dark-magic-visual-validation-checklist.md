@@ -89,7 +89,8 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 批量结果中的 `awaiting-human-review` 只表示两套帧可比较，不代表视觉验收通过。需要在另一台电脑上
 强制检查所有捕获齐全时追加 `-RequireComparableCaptures`；任何缺帧、尺寸不一致或比较失败都会使命令失败。
 批量工具默认还会校验计划是否完整包含 251、256、257、261、262、266、271、272、276、277，
-以及每项的正数技能等级、非负地图 seed 和正数帧率；若要测试自定义子集，显式传入 `-ExpectedSkillIds`。
+以及每项的正数技能等级、非负地图 seed、正数帧率和非空 `expected_resources`；资源链也会写入汇总报告。
+若要测试自定义子集，显式传入 `-ExpectedSkillIds`。
 若要同时强制校验两端采集条件，在每个场景目录放置 `capture.json`（模板见
 [`dark-magic-visual-capture-metadata.example.json`](dark-magic-visual-capture-metadata.example.json)），
 并追加 `-RequireMetadata`。工具会拒绝来源、MPQ、技能等级、地图 seed、帧率、分辨率或缩放不一致的帧集。

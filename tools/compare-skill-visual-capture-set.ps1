@@ -22,7 +22,7 @@ if ($plan.Count -eq 0) {
 
 $requiredColumns = @(
   'skill_id', 'skill_name', 'slug', 'priority', 'frame_rate', 'map_seed',
-  'skill_level', 'original_dir', 'riiablo_dir', 'scenarios')
+  'skill_level', 'original_dir', 'riiablo_dir', 'scenarios', 'expected_resources')
 foreach ($column in $requiredColumns) {
   if ($column -notin $plan[0].PSObject.Properties.Name) {
     throw "Capture plan is missing column '$column': $PlanPath"
@@ -95,11 +95,13 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
   $frameRate = [double]$entry.frame_rate
   $mapSeed = [int]$entry.map_seed
   $skillLevel = [int]$entry.skill_level
+  $expectedResources = [string]$entry.expected_resources
   if ($ids.ContainsKey($skillId)) { throw "Duplicate skill_id in capture plan: $skillId" }
   if ($slugs.ContainsKey($slug)) { throw "Duplicate slug in capture plan: $slug" }
   if ($frameRate -le 0) { throw "Invalid frame_rate for skill_id=$skillId" }
   if ($mapSeed -lt 0) { throw "Invalid map_seed for skill_id=$skillId" }
   if ($skillLevel -le 0) { throw "Invalid skill_level for skill_id=$skillId" }
+  if ([string]::IsNullOrWhiteSpace($expectedResources)) { throw "Missing expected_resources for skill_id=$skillId" }
   $ids[$skillId] = $true
   $slugs[$slug] = $true
 
@@ -189,6 +191,7 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
     dimension_mismatch = $dimensionMismatch
     different_frames = $different
     metadata_status = $metadataStatus
+    expected_resources = $expectedResources
     status = $status
     report = if (Test-Path -LiteralPath $reportPath -PathType Leaf) { $reportPath } else { '' }
     note = $note
