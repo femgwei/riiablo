@@ -19,6 +19,7 @@ public final class NativeSkillBehaviorRegistry {
   private static final IntMap<NativeSkillBehavior> PALADIN = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> NECROMANCER = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> BARBARIAN = new IntMap<>();
+  private static final IntMap<NativeSkillBehavior> DRUID = new IntMap<>();
 
   static {
     // Amazon 6..35.  Callback numbers are the D2MOO SkillAma dispatch table;
@@ -124,6 +125,23 @@ public final class NativeSkillBehaviorRegistry {
     addBarbarian(152, "melee.berserk",          39, 2);
     addBarbarian(154, "warcry.war-cry",         0, 68);
     addBarbarian(155, "warcry.battle-command",  0, 68);
+
+    // Druid rows covered by the shape, melee and elemental-area contracts.
+    addDruid(223, "state.werewolf",       0, 116);
+    addDruid(225, "missile.firestorm",    0, 117);
+    addDruid(228, "state.werebear",       0, 116);
+    addDruid(229, "missile.molten-boulder", 0, 0);
+    addDruid(232, "melee.feral-rage",    56, 120);
+    addDruid(233, "melee.maul",          56, 120);
+    addDruid(234, "missile.fissure",      0, 28);
+    addDruid(238, "melee.rabies",        57, 121, "rabiesplague");
+    addDruid(239, "melee.fire-claws",    58, 2);
+    addDruid(242, "melee.hunger",         0, 122);
+    addDruid(243, "missile.shock-wave",   0, 8, "shockwave");
+    addDruid(244, "missile.volcano",      0, 123);
+    addDruid(248, "melee.fury",          37, 13);
+    addDruid(249, "state.armageddon",     0, 124);
+    addDruid(250, "state.hurricane",      0, 124);
   }
 
   private NativeSkillBehaviorRegistry() {}
@@ -152,6 +170,11 @@ public final class NativeSkillBehaviorRegistry {
     BARBARIAN.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
   }
 
+  private static void addDruid(int id, String family, int start, int done,
+      String... missiles) {
+    DRUID.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
+  }
+
   /** Returns the exact Amazon declaration, or {@code null} for unknown rows. */
   public static NativeSkillBehavior resolveAmazon(Skills.Entry skill) {
     if (skill == null) return null;
@@ -169,7 +192,9 @@ public final class NativeSkillBehaviorRegistry {
     if (behavior != null) return behavior;
     behavior = resolveNecromancer(skill);
     if (behavior != null) return behavior;
-    return resolveBarbarian(skill);
+    behavior = resolveBarbarian(skill);
+    if (behavior != null) return behavior;
+    return resolveDruid(skill);
   }
 
   /** Returns the exact Sorceress declaration, or {@code null} for unknown rows. */
@@ -214,4 +239,14 @@ public final class NativeSkillBehaviorRegistry {
 
   /** Number of exact Barbarian rows currently covered by the registry. */
   public static int barbarianSize() { return BARBARIAN.size; }
+
+  /** Returns the exact Druid declaration, or {@code null} for unknown rows. */
+  public static NativeSkillBehavior resolveDruid(Skills.Entry skill) {
+    if (skill == null) return null;
+    NativeSkillBehavior behavior = DRUID.get(skill.Id);
+    return behavior != null && behavior.matches(skill) ? behavior : null;
+  }
+
+  /** Number of exact Druid rows currently covered by the registry. */
+  public static int druidSize() { return DRUID.size; }
 }
