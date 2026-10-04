@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**92%**。
-- 当前执行项：**DM-NV-12 d2client.dll 静态证据并入技能矩阵**；DM-NV-14/15 已完成，等待真实二进制证据继续推进。
+- 当前清单完成率：**100%**。
+- 当前执行项：非视觉核对清单已完成；后续只剩视觉验收和按需回归维护。DM-NV-14/15、DM-NV-12 均已收口。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -41,7 +41,7 @@
   - 多来源稳定选择、目标范围、离区撤销、付费 pulse、Conversion 到期恢复。
 - [x] **DM-NV-11（5%）Barbarian 战吼/尸体/精通边界**
   - 战吼覆盖刷新、尸体竞争、武器 exact-ID、多段攻击和目标失效处理。
-- [ ] **DM-NV-12（8%）d2client.dll 静态证据并入技能矩阵**
+- [x] **DM-NV-12（8%）d2client.dll 静态证据并入技能矩阵**
   - 为每项技能记录 keyframe、SrvSt/SrvDo/SrvHit/SrvDmg、目标过滤和客户端函数证据。
 - [x] **DM-NV-13（5%）dark-magic 行为测试模式迁移**
   - effect-time revalidation、原子回滚、aura priority、所有权、尸体事务、stale/reconnect。
@@ -217,3 +217,11 @@
 - 已记录到 [d2client-static-skill-evidence.tsv](d2client-static-skill-evidence.tsv)：文件大小 `1,085,505` 字节，SHA-256 `94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282`。
 - PE 基线已由 `dumpbin /headers` 复核：x86 PE32、5 sections、image base `0x6FAA0000`、entry point RVA `0xC1C1D`（VA `0x6FB61C1D`）、PE timestamp `0x3F7CB8BE`（2003-10-03 07:46:06）。导出表只有 COM/初始化导出，不能把导出名当作技能回调地址。
 - 43 行仍保持 `pending-binary`：本轮只回填了真实 DLL hash，未凭 `Skills.txt` 或字符串猜测函数地址、caller/xref、keyframe；下一步需在该精确 DLL 上完成反汇编/交叉引用和客户端 keyframe 消费点记录。
+
+### 2026-10-04：DM-NV-12 1.10F 客户端技能分派证据完成
+
+- 在 hash `94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282` 对应的 `D2Client.dll` 中，通过 PE `.data` 指针表和 `.text` 间接调用确认：`cltstfunc` 表基址 `0x6FB77488`、计数 `DWORD[0x6FB775A0]=70`；`cltdofunc` 表基址 `0x6FB775A8`、计数 `DWORD[0x6FB777B0]=130`。
+- 反汇编确认 `SkillsTxt+0xF2`（cltstfunc）在 `0x6FABC3FC` 读取并以 `table[index]` 间接调用；`SkillsTxt+0xF4`（cltdofunc）在 `0x6FABC6F6` 和 `0x6FABC8D0` 读取并以 `table[index]` 间接调用。未将 Skills.txt 数字直接当作地址。
+- 客户端动画/keyframe 路径的 caller 已确认：`0x6FABA787` 与 `0x6FABCA66` 调用 `0x6FABC6B0`，后者执行 `cltdofunc` 分派；43 个 exact-ID 的非空回调和显式 NULL 表项均已逐行写入 `d2client-static-skill-evidence.tsv`。
+- `verify-d2client-evidence.ps1 -BinaryPath ... -RequireComplete` 通过：`rows=43 verified=43 pending=0`；`verify-skill-coverage.ps1 -RequireRegistered -RequireMatrixTests` 继续通过。DM-NV-12 本轮计入 **8%**，非视觉清单完成率由 **92%** 更新为 **100%**。
+- 本轮只更新静态证据文档，没有改写 Amazon 或其他技能运行时代码；后续若二进制版本变化，必须重新校验 hash、表基址、调用点和 keyframe caller，禁止复用 1.10F 地址。
