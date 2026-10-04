@@ -1,0 +1,56 @@
+# dark-magic 技能视觉验收清单
+
+更新时间：2026-10-04
+
+## 当前状态
+
+- 非视觉核对清单：**100%**。
+- 技能移植严格总进度：约 **97%**；剩余项目必须在真实客户端渲染窗口中逐帧确认。
+- 本清单只记录尚未被 ECS、真实双客户端实体 gate 或静态资源检查替代的画面验收，不会覆盖用户已验证的 Amazon 数值实现。
+- `animationFallback=false`、共享实体和伤害结果只能证明权威行为，不等价于旧版客户端画面、关键帧时序和视觉持续时间一致。
+
+## 验收原则
+
+1. 原版与 riiablo 使用同一 1.10f MPQ、同一地图 seed、同一技能等级、同一装备和同一目标布置。
+2. 固定分辨率、缩放、帧率和录制速度；每个场景至少录制施法前 30 帧、技能全生命周期和结束后 30 帧。
+3. 逐帧比较：施法起始帧、首个视觉对象出现帧、每次 pulse/波次间隔、碰撞/爆炸帧、消失帧、重连恢复帧。
+4. 记录 owner 与 observer 两端；若只有 ECS/日志而没有客户端窗口截图，状态只能记为 `auto-only`。
+5. 发现差异时先保存原版/riiablo截图和日志，再定位 COF/keyframe、Overlay、客户端 missile 行或渲染资源；不要直接改 Amazon 生产公式。
+
+## 待验收场景
+
+- [ ] **Wake of Fire Sentry (262)**：陷阱出现、两波方向、波次间隔、逐帧墙体停止、波次结束和陷阱消失。
+- [ ] **Inferno Sentry (272)**：通道起始帧、持续时间、pulse cadence、方向追踪、墙前停止、目标后方不显示伤害视觉、到期回收。
+- [ ] **Death Sentry (276)**：尸体爆炸起始/范围视觉、Skill2 闪电 fallback、墙体阻挡、重复尸体不复活、重连后的剩余视觉生命周期。
+- [ ] **Blade Shield (277)**：前/后 Overlay 对齐、首次 pulse、`perdelay` cadence、最后 pulse、到期 fade、owner 离区/死亡后的清理。
+- [ ] **Blade Fury (266)**：held-input 重入、每次 keyframe 发刃间隔、`bladefragment1` 与 helper missile 的资源/方向/碰撞视觉差异、墙体和重连。
+- [ ] **Fire Trauma (251)**：air→ground→explosion 三段出现顺序、null-hit 后子对象、爆炸范围和一次性消失。
+- [ ] **Shock Field (256)、Blade Sentinel (257)、Charged Bolt Sentry (261)**：放置视觉、目标锁定/导弹方向、墙体/null-hit、控制器到期和重连。
+- [ ] **其他职业区域/状态技能**：仅在对应矩阵记录仍标记 `visual pending` 时执行；优先检查 Overlay/DCC 帧数、动画速率、首末关键帧和状态移除后的残留画面。
+
+## 每个场景的记录格式
+
+```text
+skill=<id/name>
+mpq=1.10f
+seed=<map seed>
+level=<skill level>
+original_capture=<path>
+riiablo_capture=<path>
+start_frame=<n>
+first_visual_frame=<n>/<n>
+pulse_or_wave_frames=<original>/<riiablo>
+collision_or_explosion_frame=<original>/<riiablo>
+expiry_frame=<original>/<riiablo>
+owner_observer_match=<yes/no>
+reconnect_match=<yes/no/not-applicable>
+result=<pass/fail/auto-only>
+notes=<resource/keyframe difference>
+```
+
+## 完成门槛
+
+- `pass`：原版与 riiablo 的关键帧、持续时间、波次/pulse 间隔、墙体/null-hit 视觉和重连生命周期均一致。
+- `fail`：任一关键帧偏移、视觉持续时间不一致、墙后出现错误视觉、到期残留或重连复活。
+- `auto-only`：所有非视觉 gate 通过，但尚未取得真实窗口截图；不能计入最后 3%。
+
