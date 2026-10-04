@@ -17,6 +17,7 @@ public final class NativeSkillBehaviorRegistry {
   private static final IntMap<NativeSkillBehavior> AMAZON = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> SORCERESS = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> PALADIN = new IntMap<>();
+  private static final IntMap<NativeSkillBehavior> NECROMANCER = new IntMap<>();
 
   static {
     // Amazon 6..35.  Callback numbers are the D2MOO SkillAma dispatch table;
@@ -96,6 +97,18 @@ public final class NativeSkillBehaviorRegistry {
     addPaladin(116, "state.conversion",      32, 79);
     addPaladin(117, "state.holy-shield",      36, 18);
     addPaladin(121, "missile.fist-of-heavens", 0, 80, "fistoftheheavensdelay");
+
+    // Necromancer rows admitted by the corpse, summon, curse and poison
+    // contracts.  The remaining rows stay unregistered until their native
+    // callback and lifecycle evidence receives the same focused audit.
+    addNecromancer(66, "curse.area",                  0, 30);
+    addNecromancer(70, "summon.skeleton",            15, 31);
+    addNecromancer(73, "melee.poison-dagger",        16, 32);
+    addNecromancer(74, "corpse.explosion",           17, 55);
+    addNecromancer(80, "summon.skeletal-mage",       15, 31);
+    addNecromancer(83, "corpse.poison-explosion",    17, 63,
+        "poisonexplosioncloud");
+    addNecromancer(92, "missile.poison-nova",         0, 22, "poisonnova");
   }
 
   private NativeSkillBehaviorRegistry() {}
@@ -114,6 +127,11 @@ public final class NativeSkillBehaviorRegistry {
     PALADIN.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
   }
 
+  private static void addNecromancer(int id, String family, int start, int done,
+      String... missiles) {
+    NECROMANCER.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
+  }
+
   /** Returns the exact Amazon declaration, or {@code null} for unknown rows. */
   public static NativeSkillBehavior resolveAmazon(Skills.Entry skill) {
     if (skill == null) return null;
@@ -127,7 +145,9 @@ public final class NativeSkillBehaviorRegistry {
     if (behavior != null) return behavior;
     behavior = resolveSorceress(skill);
     if (behavior != null) return behavior;
-    return resolvePaladin(skill);
+    behavior = resolvePaladin(skill);
+    if (behavior != null) return behavior;
+    return resolveNecromancer(skill);
   }
 
   /** Returns the exact Sorceress declaration, or {@code null} for unknown rows. */
@@ -152,4 +172,14 @@ public final class NativeSkillBehaviorRegistry {
 
   /** Number of exact Paladin rows currently covered by the registry. */
   public static int paladinSize() { return PALADIN.size; }
+
+  /** Returns the exact Necromancer declaration, or {@code null} for unknown rows. */
+  public static NativeSkillBehavior resolveNecromancer(Skills.Entry skill) {
+    if (skill == null) return null;
+    NativeSkillBehavior behavior = NECROMANCER.get(skill.Id);
+    return behavior != null && behavior.matches(skill) ? behavior : null;
+  }
+
+  /** Number of exact Necromancer rows currently covered by the registry. */
+  public static int necromancerSize() { return NECROMANCER.size; }
 }

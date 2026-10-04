@@ -7,7 +7,7 @@
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
 - 当前清单完成率：**85%**。
-- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Paladin 第一批）**；DM-NV-12 继续等待二进制证据。
+- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Necromancer 第二批）**；DM-NV-12 继续等待二进制证据。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -168,3 +168,10 @@
 - `NativeSkillResolver.resolve` 现在按 Amazon → Sorceress → Paladin 的显式分区解析；未知 ID 或 callback 不匹配仍返回空行为，不按技能显示名推断。
 - 新增 `NativePaladinSkillMatrixTest`，覆盖 exact-ID、职业字段、callback、导弹链存在性和 callback 篡改 fail-closed；Paladin 数据/集成回归全部通过。
 - 本记录只完成 DM-NV-14 的第一批注册，尚未计入 4% 总权重；下一批继续覆盖 Necromancer/Barbarian/Druid/Assassin 的未注册 exact-ID 行。总体完成率保持 **85%**。
+
+### 2026-10-04：DM-NV-14 exact-ID 行为注册框架（Necromancer 第二批）
+
+- 新增 Necromancer 7 个 exact-ID：Amplify Damage(66)、Raise Skeleton(70)、Poison Dagger(73)、Corpse Explosion(74)、Raise Skeletal Mage(80)、Poison Explosion(83)、Poison Nova(92)。分别覆盖 curse、召唤、近战毒素、尸体爆炸、毒素区域和导弹链族。
+- 每行锁定 D2MOO/1.10f `SrvSt/SrvDo`；Poison Explosion/Poison Nova 额外锁定 `poisonexplosioncloud`/`poisonnova` server missile。callback 篡改仍 fail-closed。
+- 新增 `NativeNecromancerSkillMatrixTest`；并通过 Necromancer summon、corpse/poison explosion、poison dagger/nova、curse 与 golem/revive 集中回归。
+- 本记录仍属于 DM-NV-14 增量，尚未计入 4% 总权重；下一步继续处理 Barbarian/Druid/Assassin 注册。总体完成率保持 **85%**。
