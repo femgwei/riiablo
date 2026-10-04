@@ -7,7 +7,7 @@
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
 - 当前清单完成率：**85%**。
-- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Necromancer 第二批）**；DM-NV-12 继续等待二进制证据。
+- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Barbarian 第三批）**；DM-NV-12 继续等待二进制证据。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -175,3 +175,10 @@
 - 每行锁定 D2MOO/1.10f `SrvSt/SrvDo`；Poison Explosion/Poison Nova 额外锁定 `poisonexplosioncloud`/`poisonnova` server missile。callback 篡改仍 fail-closed。
 - 新增 `NativeNecromancerSkillMatrixTest`；并通过 Necromancer summon、corpse/poison explosion、poison dagger/nova、curse 与 golem/revive 集中回归。
 - 本记录仍属于 DM-NV-14 增量，尚未计入 4% 总权重；下一步继续处理 Barbarian/Druid/Assassin 注册。总体完成率保持 **85%**。
+
+### 2026-10-04：DM-NV-14 exact-ID 行为注册框架（Barbarian 第三批）
+
+- 新增 Barbarian 12 个 exact-ID：Howl(130)、Find Potion(131)、Taunt(137)、Shout(138)、Find Item(142)、Battle Cry(146)、Battle Orders(149)、Grim Ward(150)、Whirlwind(151)、Berserk(152)、War Cry(154)、Battle Command(155)。覆盖战吼、尸体事务和多段/持续近战族。
+- 对照 D2MOO `SrvSt33/34`、`SrvSt38/39` 及 `SrvDo068/069/071/072/075/076` 等 dispatch；Find Potion/Grim Ward 的 `SrvSt33` 与 Find Item 的 `SrvSt34` 已由 exact-ID 测试锁定。
+- 新增 `NativeBarbarianSkillMatrixTest`；战吼、尸体技能、Frenzy、Whirlwind、Berserk 专项回归全部通过。
+- 本记录仍属于 DM-NV-14 增量，尚未计入 4% 总权重；下一步继续处理 Druid/Assassin 注册。总体完成率保持 **85%**。

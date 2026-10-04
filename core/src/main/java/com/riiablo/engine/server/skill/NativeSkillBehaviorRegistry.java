@@ -18,6 +18,7 @@ public final class NativeSkillBehaviorRegistry {
   private static final IntMap<NativeSkillBehavior> SORCERESS = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> PALADIN = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> NECROMANCER = new IntMap<>();
+  private static final IntMap<NativeSkillBehavior> BARBARIAN = new IntMap<>();
 
   static {
     // Amazon 6..35.  Callback numbers are the D2MOO SkillAma dispatch table;
@@ -109,6 +110,20 @@ public final class NativeSkillBehaviorRegistry {
     addNecromancer(83, "corpse.poison-explosion",    17, 63,
         "poisonexplosioncloud");
     addNecromancer(92, "missile.poison-nova",         0, 22, "poisonnova");
+
+    // Barbarian rows covered by the war-cry, corpse and core combat audits.
+    addBarbarian(130, "warcry.howl",            0, 22);
+    addBarbarian(131, "corpse.find-potion",     33, 69);
+    addBarbarian(137, "warcry.taunt",           0, 71);
+    addBarbarian(138, "warcry.shout",           0, 68);
+    addBarbarian(142, "corpse.find-item",       34, 72);
+    addBarbarian(146, "warcry.battle-cry",      0, 68);
+    addBarbarian(149, "warcry.battle-orders",   0, 68);
+    addBarbarian(150, "corpse.grim-ward",       33, 75);
+    addBarbarian(151, "melee.whirlwind",        38, 76);
+    addBarbarian(152, "melee.berserk",          39, 2);
+    addBarbarian(154, "warcry.war-cry",         0, 68);
+    addBarbarian(155, "warcry.battle-command",  0, 68);
   }
 
   private NativeSkillBehaviorRegistry() {}
@@ -132,6 +147,11 @@ public final class NativeSkillBehaviorRegistry {
     NECROMANCER.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
   }
 
+  private static void addBarbarian(int id, String family, int start, int done,
+      String... missiles) {
+    BARBARIAN.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
+  }
+
   /** Returns the exact Amazon declaration, or {@code null} for unknown rows. */
   public static NativeSkillBehavior resolveAmazon(Skills.Entry skill) {
     if (skill == null) return null;
@@ -147,7 +167,9 @@ public final class NativeSkillBehaviorRegistry {
     if (behavior != null) return behavior;
     behavior = resolvePaladin(skill);
     if (behavior != null) return behavior;
-    return resolveNecromancer(skill);
+    behavior = resolveNecromancer(skill);
+    if (behavior != null) return behavior;
+    return resolveBarbarian(skill);
   }
 
   /** Returns the exact Sorceress declaration, or {@code null} for unknown rows. */
@@ -182,4 +204,14 @@ public final class NativeSkillBehaviorRegistry {
 
   /** Number of exact Necromancer rows currently covered by the registry. */
   public static int necromancerSize() { return NECROMANCER.size; }
+
+  /** Returns the exact Barbarian declaration, or {@code null} for unknown rows. */
+  public static NativeSkillBehavior resolveBarbarian(Skills.Entry skill) {
+    if (skill == null) return null;
+    NativeSkillBehavior behavior = BARBARIAN.get(skill.Id);
+    return behavior != null && behavior.matches(skill) ? behavior : null;
+  }
+
+  /** Number of exact Barbarian rows currently covered by the registry. */
+  public static int barbarianSize() { return BARBARIAN.size; }
 }
