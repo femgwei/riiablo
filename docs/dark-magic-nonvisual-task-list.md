@@ -146,3 +146,9 @@
 - 修复 `ServerMonsterCorpseSystemTest` 的测试夹具：注册缺失的 `CofManager`，使 hireling、普通死亡和 Holy Freeze shatter 三条原生 DT/DD 路径可完整回归；三项不再因 `CofManager not registered with world` 失败。
 - 回归通过：`BarbarianCorpseSkillTest`、`BarbarianFrenzyTest`、`BarbarianWarCryTest`、`BarbarianWhirlwindTest`、`BarbarianBerserkTest`、`NativeBarbarianWarCryDataTest`、`NativeBarbarianPassiveDataTest`、`NativeBerserkDataTest`、`NativeFrenzyDataTest`、`NativeWhirlwindDataTest`、`AIWarCryControlTest` 和 `ServerMonsterCorpseSystemTest`。
 - 本项完成后累计完成率：**80%**。下一项切换为 **DM-NV-12 d2client.dll 静态证据并入技能矩阵**。
+
+### 2026-10-04：DM-NV-12 d2client.dll 静态证据并入技能矩阵（第一层）
+
+- 新增 `NativeClientSkillEvidenceTest`，以 dark-magic `skill-behavior-coverage.v1.json` 的 43 个 exact-ID 为输入，逐项核对 1.10f 无损 `Skills.txt` 与解码后的 `Skills.Entry`：`cltstfunc`、`cltdofunc`、`cltmissile`、`cltmissilea/b/c/d` 均必须完全一致，并要求保留原始行号。
+- 这层只证明数据字段没有在导入/转换时丢失，不能把客户端 callback 数字直接解释为 `d2client.dll` 的函数语义；测试注释已明确禁止用 Skills.txt 行替代二进制反汇编证据。
+- 当前 `D2_HOME` 未提供可读取的 `d2client.dll`，因此静态地址、调用者/xref、keyframe 消费点仍待另一 agent 的二进制检查结果回填；DM-NV-12 尚未计入完成率，当前仍为 **80%**。
