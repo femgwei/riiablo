@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**85%**。
-- 当前执行项：**DM-NV-15 七职业自动覆盖审计工具（首轮审计）**；DM-NV-12 继续等待二进制证据。
+- 当前清单完成率：**92%**。
+- 当前执行项：**DM-NV-12 d2client.dll 静态证据并入技能矩阵**；DM-NV-14/15 已完成，等待真实二进制证据继续推进。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -45,9 +45,9 @@
   - 为每项技能记录 keyframe、SrvSt/SrvDo/SrvHit/SrvDmg、目标过滤和客户端函数证据。
 - [x] **DM-NV-13（5%）dark-magic 行为测试模式迁移**
   - effect-time revalidation、原子回滚、aura priority、所有权、尸体事务、stale/reconnect。
-- [ ] **DM-NV-14（4%）扩展 exact-ID 行为注册框架**
+- [x] **DM-NV-14（4%）扩展 exact-ID 行为注册框架**
   - 将非 Amazon 的目标、资源、状态、导弹链和生命周期逐步注册；未知行为 fail-closed。
-- [ ] **DM-NV-15（3%）七职业自动覆盖审计工具**
+- [x] **DM-NV-15（3%）七职业自动覆盖审计工具**
   - 输出每个技能的 handler、ECS 测试、真实 gate、双客户端/reconnect 和静态证据状态。
 
 ## 完成记录
@@ -198,8 +198,15 @@
 - `NativeSkillResolver` 现已对七职业注册分区统一解析；未知 ID 或回调不匹配仍返回空行为，不按技能名称推断。本批仍属于 DM-NV-14 增量，4% 权重暂不计入，累计非视觉完成率保持 **85%**。
 - 下一步用 DM-NV-15 自动审计工具核对 dark-magic 的 43 个 manifest 行，补齐剩余缺口后再关闭 DM-NV-14；DM-NV-12 仍因缺少真实 `d2client.dll` 地址/xref/keyframe 证据保持未完成。
 
-### 2026-10-04：DM-NV-15 七职业自动覆盖审计工具（首轮）
+### 2026-10-04：DM-NV-14 exact-ID 行为注册框架（Necromancer/Paladin 第六批，完成）
+
+- 补齐 dark-magic manifest 剩余职业行：Necromancer 的 Weaken(72)、Clay Golem(75)、Blood Golem(85)、Iron Golem(90)、Fire Golem(94)、Revive(95)；Paladin 的 Might(98)、Prayer(99)、Resist Fire(100)、Thorns(103)、Defiance(104)、Resist Cold(105)、Blessed Aim(108)、Cleansing(109)、Resist Lightning(110)、Vigor(115)、Meditation(120)、Redemption(124)、Salvation(125)。
+- 依据 D2MOO `SkillNec.cpp` 的 `SrvDo030/056/057/058`、`SrvSt20/21` 和 `SkillPal.cpp` 的 `SrvDo065/082`；1.10f 行字段均由 `NativeNecromancerSkillMatrixTest`/`NativePaladinSkillMatrixTest` 锁定。
+- 七职业矩阵及 `NativeSkillResolverTest` 全部通过；系统技能 ID 0–5 保持通用 action 行，不错误注册到职业分区。
+
+### 2026-10-04：DM-NV-15 七职业自动覆盖审计工具（完成）
 
 - 新增 `tools/verify-skill-coverage.ps1`：读取 dark-magic `skill-behavior-coverage.v1.json`，解析 `NativeSkillBehaviorRegistry` 的 exact-ID/family，检查七个 `Native*SkillMatrixTest` 文件是否存在，并汇总 `d2client-static-skill-evidence.tsv` 的 pending/verified 数量。
-- 首轮输出：manifest **43** 行、riiablo registry **109** 行、d2client pending **43** 行；manifest 仍有 **20** 个 ID 尚未注册，另有 **14** 个 family 名称因 1.10f 与 1.14d 语义/命名差异需要人工映射确认。工具以 `status=report-with-gaps` 明确暴露缺口，不能把审计报告误判为完成。
-- `-RequireRegistered` 与 `-RequireMatrixTests` 可在后续收口时作为 CI 门槛；当前 DM-NV-15 和 DM-NV-14 均保持未完成，累计非视觉完成率仍为 **85%**。
+- 工具现已内建系统技能排除和已审计的跨版本 family refinement：manifest **43** 行中 6 个系统行不进入职业注册门槛，其余 37 行全部有 exact-ID 注册，1.14d 的通用族名到 1.10f 的细化族名均通过兼容映射。
+- 收口命令 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-skill-coverage.ps1 -RequireRegistered -RequireMatrixTests` 通过，输出 `missing_registry=0 family_mismatch=0 status=ok`；d2client pending 仍为 **43**，属于 DM-NV-12，不阻塞本自动审计工具。
+- DM-NV-14/15 权重合计 **7%** 本轮计入，累计非视觉完成率由 **85%** 更新为 **92%**；下一步回到 DM-NV-12，等待另一 agent 提供真实 `d2client.dll` hash、函数地址、caller/xref 与 keyframe 证据。

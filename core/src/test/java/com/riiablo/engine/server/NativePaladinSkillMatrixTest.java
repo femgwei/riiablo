@@ -22,6 +22,19 @@ class NativePaladinSkillMatrixTest extends RiiabloTest {
       row(117, "Holy Shield", 36, 18, "state.holy-shield"),
       row(121, "Fist of the Heavens", 0, 80,
           "missile.fist-of-heavens", "fistoftheheavensdelay"),
+      row(98, "Might", 0, 65, "aura.selected-party-stat"),
+      row(99, "Prayer", 0, 65, "aura.selected-party-periodic"),
+      row(100, "Resist Fire", 0, 65, "aura.selected-party-stat"),
+      row(103, "Thorns", 0, 65, "aura.selected-party-stat"),
+      row(104, "Defiance", 0, 65, "aura.selected-party-stat"),
+      row(105, "Resist Cold", 0, 65, "aura.selected-party-stat"),
+      row(108, "Blessed Aim", 0, 65, "aura.selected-party-stat"),
+      row(109, "Cleansing", 0, 65, "aura.selected-party-periodic"),
+      row(110, "Resist Lightning", 0, 65, "aura.selected-party-stat"),
+      row(115, "Vigor", 0, 65, "aura.selected-party-stat"),
+      row(120, "Meditation", 0, 65, "aura.selected-party-periodic"),
+      row(124, "Redemption", 0, 82, "aura.selected-corpse-periodic"),
+      row(125, "Salvation", 0, 65, "aura.selected-party-stat"),
   };
 
   @Test

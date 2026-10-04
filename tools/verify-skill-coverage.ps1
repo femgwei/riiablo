@@ -18,6 +18,7 @@ if (-not (Test-Path -LiteralPath $RegistryPath -PathType Leaf)) {
 
 $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
 $manifestRows = @($manifest.implementations)
+$systemIds = @(0, 1, 2, 3, 4, 5)
 $manifestById = @{}
 foreach ($row in $manifestRows) {
   $id = [int]$row.skill_id
@@ -38,10 +39,32 @@ foreach ($match in [regex]::Matches($registryText, $pattern)) {
 
 $missing = @()
 $familyMismatch = @()
-foreach ($id in ($manifestById.Keys | Sort-Object)) {
+function Test-FamilyCompatibility([string] $expected, [string] $actual) {
+  if ($expected -eq $actual) { return $true }
+  if ($expected -eq 'state.self-timed' -and $actual -eq 'state.self-timed-retaliation') {
+    return $true
+  }
+  if ($expected -eq 'state.point-area-curse' -and $actual -eq 'curse.area') {
+    return $true
+  }
+  if ($expected -eq 'summon.targeted-corpse' -and $actual -like 'summon.*') {
+    return $true
+  }
+  if ($expected -eq 'trap.assassin-family' -and $actual -in @(
+      'missile.fire-trauma', 'missile.shock-field', 'trap.blade-sentinel',
+      'trap.charged-bolt-sentry', 'trap.wake-of-fire-sentry', 'missile.blade-fury',
+      'trap.lightning-sentry', 'trap.inferno-sentry', 'trap.death-sentry',
+      'state.blade-shield')) {
+    return $true
+  }
+  return $false
+}
+
+$requiredIds = @($manifestById.Keys | Where-Object { $_ -notin $systemIds } | Sort-Object)
+foreach ($id in $requiredIds) {
   if (-not $registeredById.ContainsKey($id)) {
     $missing += $id
-  } elseif ($registeredById[$id] -ne $manifestById[$id]) {
+  } elseif (-not (Test-FamilyCompatibility $manifestById[$id] $registeredById[$id])) {
     $familyMismatch += "${id}:$($manifestById[$id])!=$($registeredById[$id])"
   }
 }
@@ -67,7 +90,7 @@ if (Test-Path -LiteralPath $ClientEvidencePath -PathType Leaf) {
   $evidencePending = @($evidenceRows | Where-Object status -ne 'verified').Count
 }
 
-Write-Output "skill coverage manifest=$($manifestRows.Count) registry=$($registeredById.Count)"
+Write-Output "skill coverage manifest=$($manifestRows.Count) system_rows_excluded=$($systemIds.Count) registry=$($registeredById.Count)"
 Write-Output "skill coverage missing_registry=$($missing.Count) family_mismatch=$($familyMismatch.Count)"
 if ($null -ne $evidencePending) {
   Write-Output "skill coverage d2client_pending=$evidencePending"

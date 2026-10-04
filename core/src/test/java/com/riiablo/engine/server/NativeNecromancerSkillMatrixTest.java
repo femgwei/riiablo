@@ -24,6 +24,12 @@ class NativeNecromancerSkillMatrixTest extends RiiabloTest {
       row(83, "Poison Explosion", 17, 63, "corpse.poison-explosion",
           "poisonexplosioncloud"),
       row(92, "Poison Nova", 0, 22, "missile.poison-nova", "poisonnova"),
+      row(72, "Weaken", 0, 30, "state.point-area-curse"),
+      row(75, "Clay Golem", 0, 56, "summon.golem"),
+      row(85, "BloodGolem", 0, 56, "summon.golem"),
+      row(90, "IronGolem", 20, 57, "summon.golem"),
+      row(94, "FireGolem", 0, 56, "summon.golem"),
+      row(95, "Revive", 21, 58, "summon.targeted-corpse"),
   };
 
   @Test

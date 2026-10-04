@@ -100,6 +100,19 @@ public final class NativeSkillBehaviorRegistry {
     addPaladin(116, "state.conversion",      32, 79);
     addPaladin(117, "state.holy-shield",      36, 18);
     addPaladin(121, "missile.fist-of-heavens", 0, 80, "fistoftheheavensdelay");
+    addPaladin(98,  "aura.selected-party-stat",      0, 65);
+    addPaladin(99,  "aura.selected-party-periodic",  0, 65);
+    addPaladin(100, "aura.selected-party-stat",      0, 65);
+    addPaladin(103, "aura.selected-party-stat",      0, 65);
+    addPaladin(104, "aura.selected-party-stat",      0, 65);
+    addPaladin(105, "aura.selected-party-stat",      0, 65);
+    addPaladin(108, "aura.selected-party-stat",      0, 65);
+    addPaladin(109, "aura.selected-party-periodic",  0, 65);
+    addPaladin(110, "aura.selected-party-stat",      0, 65);
+    addPaladin(115, "aura.selected-party-stat",      0, 65);
+    addPaladin(120, "aura.selected-party-periodic",  0, 65);
+    addPaladin(124, "aura.selected-corpse-periodic", 0, 82);
+    addPaladin(125, "aura.selected-party-stat",      0, 65);
 
     // Necromancer rows admitted by the corpse, summon, curse and poison
     // contracts.  The remaining rows stay unregistered until their native
@@ -112,6 +125,12 @@ public final class NativeSkillBehaviorRegistry {
     addNecromancer(83, "corpse.poison-explosion",    17, 63,
         "poisonexplosioncloud");
     addNecromancer(92, "missile.poison-nova",         0, 22, "poisonnova");
+    addNecromancer(72, "state.point-area-curse",      0, 30);
+    addNecromancer(75, "summon.golem",                0, 56);
+    addNecromancer(85, "summon.golem",                0, 56);
+    addNecromancer(90, "summon.golem",               20, 57);
+    addNecromancer(94, "summon.golem",                0, 56);
+    addNecromancer(95, "summon.targeted-corpse",     21, 58);
 
     // Barbarian rows covered by the war-cry, corpse and core combat audits.
     addBarbarian(130, "warcry.howl",            0, 22);
