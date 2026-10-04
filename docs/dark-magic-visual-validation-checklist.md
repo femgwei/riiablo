@@ -48,9 +48,24 @@ result=<pass/fail/auto-only>
 notes=<resource/keyframe difference>
 ```
 
+## 自动差异报告
+
+取得两套同条件 PNG 帧后，可先运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\compare-skill-visual-frames.ps1 `
+  -OriginalDir .\captures\original\wake-of-fire `
+  -RiiabloDir .\captures\riiablo\wake-of-fire `
+  -OutputPath .\captures\reports\wake-of-fire.tsv
+```
+
+工具按帧序配对，报告帧缺失、尺寸不一致、像素变化比例和完全相同的帧。`different` 只表示
+像素发生变化，不能单独证明技能语义、伤害或关键帧正确；仍需按本清单逐帧记录首帧、pulse、
+碰撞、到期和重连结果。
+
 ## 完成门槛
 
 - `pass`：原版与 riiablo 的关键帧、持续时间、波次/pulse 间隔、墙体/null-hit 视觉和重连生命周期均一致。
 - `fail`：任一关键帧偏移、视觉持续时间不一致、墙后出现错误视觉、到期残留或重连复活。
 - `auto-only`：所有非视觉 gate 通过，但尚未取得真实窗口截图；不能计入最后 3%。
-
