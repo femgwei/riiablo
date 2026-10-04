@@ -1,6 +1,14 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-03（Death Sentry 真实邻接 RoomEx 顺序 gate 完成）
+更新时间：2026-10-05（当前状态索引；下方保留历史交接记录）
+
+> 当前技能移植基线：非视觉核对清单 **100%**，严格总进度约 **97%**。dark-magic 的七职业
+> exact-ID、行为 gate、测试模式、覆盖审计及 1.10F `d2client.dll` 静态分派证据均已收口；
+> 剩余只是真实 1.10f 客户端窗口的 10 项 Assassin exact-ID 逐帧视觉验收（当前 **0/10**）。
+> 接手者应先阅读 [`dark-magic-nonvisual-task-list.md`](dark-magic-nonvisual-task-list.md)、
+> [`dark-magic-visual-validation-checklist.md`](dark-magic-visual-validation-checklist.md) 和
+> [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
+> 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
 ## 唯一负责人
 
