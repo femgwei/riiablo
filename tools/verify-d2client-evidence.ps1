@@ -1,6 +1,7 @@
 param(
   [string] $Path = (Join-Path $PSScriptRoot '..\docs\d2client-static-skill-evidence.tsv'),
-  [switch] $RequireComplete
+  [switch] $RequireComplete,
+  [string] $BinaryPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,6 +49,24 @@ foreach ($row in $rows) {
       }
     }
   }
+}
+
+if ($BinaryPath) {
+  if (-not (Test-Path -LiteralPath $BinaryPath -PathType Leaf)) {
+    throw "Binary not found: $BinaryPath"
+  }
+  $actualHash = (Get-FileHash -LiteralPath $BinaryPath -Algorithm SHA256).Hash
+  $wrongHash = @($rows | Where-Object {
+    $_.dll_sha256 -and $_.dll_sha256.ToUpperInvariant() -ne $actualHash
+  })
+  if ($wrongHash.Count -gt 0) {
+    throw "Evidence hash mismatch for skill IDs: $($wrongHash.skill_id -join ',')"
+  }
+  $missingHash = @($rows | Where-Object { [string]::IsNullOrWhiteSpace($_.dll_sha256) })
+  if ($missingHash.Count -gt 0) {
+    throw "Evidence rows missing the supplied binary hash: $($missingHash.skill_id -join ',')"
+  }
+  Write-Output "d2client binary sha256=$actualHash path=$BinaryPath"
 }
 
 $verified = @($rows | Where-Object status -eq 'verified').Count

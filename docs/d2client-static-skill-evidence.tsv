@@ -1,48 +1,50 @@
-# DM-NV-12 input template.  One row per dark-magic exact-ID manifest entry.
-# Fill only from a matching 1.10f d2client.dll disassembly; do not infer an
-# address or keyframe from Skills.txt.  status remains pending-binary until
-# address, caller/xref and keyframe evidence are independently recorded.
+# DM-NV-12 input template. One row per dark-magic exact-ID manifest entry.
+# Binary baseline captured from G:\\BaiduNetdiskDownload\\Diablo II 1.10F\\D2Client.dll.
+# SHA-256=94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282
+# Hash/path are verified facts; do not infer function addresses, xrefs or keyframes
+# from Skills.txt. status remains pending-binary until those fields are independently
+# recorded from a disassembly of this exact DLL.
 skill_id	family	dll_version	dll_sha256	client_role	function_address	caller_xrefs	keyframe_evidence	status	notes
-0	action.melee	1.10f						pending-binary	
-36	missile.straight	1.10f						pending-binary	
-40	state.self-timed	1.10f						pending-binary	
-50	state.self-timed	1.10f						pending-binary	
-60	state.self-timed	1.10f						pending-binary	
-45	missile.straight-freeze	1.10f						pending-binary	
-47	missile.straight-impact-area	1.10f						pending-binary	
-54	movement.point-relocate	1.10f						pending-binary	
-55	missile.straight-impact-area-freeze	1.10f						pending-binary	
-48	missile.radial	1.10f						pending-binary	
-52	state.targeted-timed	1.10f						pending-binary	
-66	state.point-area-curse	1.10f						pending-binary	
-70	summon.targeted-corpse	1.10f						pending-binary	
-75	summon.golem	1.10f						pending-binary	
-80	summon.targeted-corpse	1.10f						pending-binary	
-85	summon.golem	1.10f						pending-binary	
-90	summon.golem	1.10f						pending-binary	
-94	summon.golem	1.10f						pending-binary	
-95	summon.targeted-corpse	1.10f						pending-binary	
-72	state.point-area-curse	1.10f						pending-binary	
-98	aura.selected-party-stat	1.10f						pending-binary	
-99	aura.selected-party-periodic	1.10f						pending-binary	
-100	aura.selected-party-stat	1.10f						pending-binary	
-103	aura.selected-party-stat	1.10f						pending-binary	
-104	aura.selected-party-stat	1.10f						pending-binary	
-105	aura.selected-party-stat	1.10f						pending-binary	
-108	aura.selected-party-stat	1.10f						pending-binary	
-109	aura.selected-party-periodic	1.10f						pending-binary	
-110	aura.selected-party-stat	1.10f						pending-binary	
-115	aura.selected-party-stat	1.10f						pending-binary	
-120	aura.selected-party-periodic	1.10f						pending-binary	
-124	aura.selected-corpse-periodic	1.10f						pending-binary	
-125	aura.selected-party-stat	1.10f						pending-binary	
-251	trap.assassin-family	1.10f						pending-binary	
-256	trap.assassin-family	1.10f						pending-binary	
-257	trap.assassin-family	1.10f						pending-binary	
-261	trap.assassin-family	1.10f						pending-binary	
-262	trap.assassin-family	1.10f						pending-binary	
-266	trap.assassin-family	1.10f						pending-binary	
-271	trap.assassin-family	1.10f						pending-binary	
-272	trap.assassin-family	1.10f						pending-binary	
-276	trap.assassin-family	1.10f						pending-binary	
-277	trap.assassin-family	1.10f						pending-binary	
+0	action.melee	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+36	missile.straight	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+40	state.self-timed	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+50	state.self-timed	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+60	state.self-timed	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+45	missile.straight-freeze	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+47	missile.straight-impact-area	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+54	movement.point-relocate	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+55	missile.straight-impact-area-freeze	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+48	missile.radial	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+52	state.targeted-timed	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+66	state.point-area-curse	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+70	summon.targeted-corpse	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+75	summon.golem	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+80	summon.targeted-corpse	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+85	summon.golem	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+90	summon.golem	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+94	summon.golem	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+95	summon.targeted-corpse	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+72	state.point-area-curse	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+98	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+99	aura.selected-party-periodic	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+100	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+103	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+104	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+105	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+108	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+109	aura.selected-party-periodic	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+110	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+115	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+120	aura.selected-party-periodic	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+124	aura.selected-corpse-periodic	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+125	aura.selected-party-stat	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+251	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+256	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+257	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+261	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+262	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+266	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+271	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+272	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+276	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending
+277	trap.assassin-family	1.10f	94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282					pending-binary	binary located; disassembly fields pending

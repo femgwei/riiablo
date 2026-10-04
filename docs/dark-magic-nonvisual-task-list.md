@@ -210,3 +210,10 @@
 - 工具现已内建系统技能排除和已审计的跨版本 family refinement：manifest **43** 行中 6 个系统行不进入职业注册门槛，其余 37 行全部有 exact-ID 注册，1.14d 的通用族名到 1.10f 的细化族名均通过兼容映射。
 - 收口命令 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-skill-coverage.ps1 -RequireRegistered -RequireMatrixTests` 通过，输出 `missing_registry=0 family_mismatch=0 status=ok`；d2client pending 仍为 **43**，属于 DM-NV-12，不阻塞本自动审计工具。
 - DM-NV-14/15 权重合计 **7%** 本轮计入，累计非视觉完成率由 **85%** 更新为 **92%**；下一步回到 DM-NV-12，等待另一 agent 提供真实 `d2client.dll` hash、函数地址、caller/xref 与 keyframe 证据。
+
+### 2026-10-04：DM-NV-12 真实 1.10F D2Client.dll 基线发现
+
+- 当前 `D2_HOME`（`G:\BaiduNetdiskDownload\Diablo II`）是 1.14.0.64 的合并式 `Game.exe`，目录中没有独立 `d2client.dll`；经过只读搜索，在 `G:\BaiduNetdiskDownload\Diablo II 1.10F\D2Client.dll` 找到匹配目标二进制。
+- 已记录到 [d2client-static-skill-evidence.tsv](d2client-static-skill-evidence.tsv)：文件大小 `1,085,505` 字节，SHA-256 `94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282`。
+- PE 基线已由 `dumpbin /headers` 复核：x86 PE32、5 sections、image base `0x6FAA0000`、entry point RVA `0xC1C1D`（VA `0x6FB61C1D`）、PE timestamp `0x3F7CB8BE`（2003-10-03 07:46:06）。导出表只有 COM/初始化导出，不能把导出名当作技能回调地址。
+- 43 行仍保持 `pending-binary`：本轮只回填了真实 DLL hash，未凭 `Skills.txt` 或字符串猜测函数地址、caller/xref、keyframe；下一步需在该精确 DLL 上完成反汇编/交叉引用和客户端 keyframe 消费点记录。
