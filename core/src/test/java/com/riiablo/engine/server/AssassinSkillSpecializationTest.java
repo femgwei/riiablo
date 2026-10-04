@@ -194,6 +194,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(near).position.set(3, 0);
       Attributes nearAttrs = attributes(1000);
       world.getMapper(AttributesWrapper.class).create(near).attrs = nearAttrs;
+      int nearSecond = world.create();
+      world.getMapper(Monster.class).create(nearSecond);
+      world.getMapper(Position.class).create(nearSecond).position.set(0, 3);
+      Attributes nearSecondAttrs = attributes(1000);
+      world.getMapper(AttributesWrapper.class).create(nearSecond).attrs = nearSecondAttrs;
       int far = world.create();
       world.getMapper(Monster.class).create(far);
       world.getMapper(Position.class).create(far).position.set(8, 0);
@@ -216,6 +221,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.process();
       assertTrue(nearAttrs.get(Stat.hitpoints).asFixed() < 1000f,
           "ground expiry must apply Fire Trauma's center AoE");
+      assertTrue(nearSecondAttrs.get(Stat.hitpoints).asFixed() < 1000f,
+          "the same explosion packet must apply once to every hostile in radius");
       assertEquals(1000f, farAttrs.get(Stat.hitpoints).asFixed(), 0.001f,
           "targets outside aurarangecalc=par1 remain untouched");
       assertFalse(world.getEntityManager().isActive(groundId));
@@ -224,6 +231,39 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.process();
       assertTrue(java.util.Collections.frequency(factory.missileNames, "bomb explosion") == 1,
           "expired ground source cannot explode twice");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fireTraumaAirNullHitCreatesOneGroundChildAndOneExplosion() {
+    BarrierMap map = new BarrierMap();
+    RecordingFactory factory = new RecordingFactory();
+    factory.missileMap = map;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(false), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      Skills.Entry fire = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(fire);
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(fire.Id, 4);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, fire.Id, Engine.INVALID_ENTITY, new Vector2(100, 0), fire.srvdofunc, 0));
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "bomb in air"));
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 30; i++) world.process();
+
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "bomb on ground"),
+          "the air row must null-hit into exactly one authoritative ground row");
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "bomb explosion"),
+          "the ground row must expire into exactly one presentation explosion");
     } finally {
       world.dispose();
     }
