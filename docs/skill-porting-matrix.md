@@ -1,6 +1,17 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
-更新时间：2026-10-03（Death Sentry 真实邻接 RoomEx 顺序 gate 完成）
+更新时间：2026-10-05（当前状态索引；下方保留历史增量记录）
+
+> 当前状态（以 2026-10-05 为准）：非视觉核对清单已完成 **100%**，包括七职业
+> exact-ID 注册、ECS/真实双客户端行为 gate、dark-magic 行为测试模式迁移、七职业覆盖审计，
+> 以及 1.10F `d2client.dll` 静态分派证据。技能移植严格总进度约 **97%**，剩余仅为真实客户端
+> 窗口的逐帧视觉验收；请以 [`dark-magic-nonvisual-task-list.md`](dark-magic-nonvisual-task-list.md)、
+> [`dark-magic-visual-validation-checklist.md`](dark-magic-visual-validation-checklist.md) 和
+> [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv) 为当前执行入口。
+>
+> 本文件下面的 `[ ]` 多数属于当时阶段记录中的“下一步”标记，不应覆盖上述当前状态；只有拿到
+> 原版/riiablo 同条件真实窗口帧并完成逐帧记录后，才能把视觉项目改为完成。不要将 ECS、headless、
+> 静态资源或单套调试 PNG 当作视觉通过。
 
 ## 2026-10-03 Assassin Death Sentry 真实邻接 RoomEx 顺序 gate 完成
 
