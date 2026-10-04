@@ -93,6 +93,16 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 若要同时强制校验两端采集条件，在每个场景目录放置 `capture.json`（模板见
 [`dark-magic-visual-capture-metadata.example.json`](dark-magic-visual-capture-metadata.example.json)），
 并追加 `-RequireMetadata`。工具会拒绝来源、MPQ、技能等级、地图 seed、帧率、分辨率或缩放不一致的帧集。
+也可以用初始化脚本按计划创建目录和元数据（不会覆盖已有 `capture.json`）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\new-skill-visual-capture.ps1 `
+  -SkillId 262 -Source original-1.10f -MapSeed 1 -SkillLevel 20
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\new-skill-visual-capture.ps1 `
+  -SkillId 262 -Source riiablo -MapSeed 1 -SkillLevel 20
+```
 
 ## 完成门槛
 
