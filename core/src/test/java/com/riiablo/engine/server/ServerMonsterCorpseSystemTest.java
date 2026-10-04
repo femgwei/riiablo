@@ -38,7 +38,7 @@ class ServerMonsterCorpseSystemTest {
   void hirelingWithoutHostileAiStillEntersNativeDeathSequence() {
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, new ServerMonsterCorpseSystem())
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem())
         .build());
     try {
       int mercenaryId = world.create();
@@ -61,7 +61,7 @@ class ServerMonsterCorpseSystemTest {
   void deathEventKillsAiAndDeadModeCreatesUsableCorpse() {
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, new ServerMonsterCorpseSystem())
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem())
         .build());
     try {
       int monsterId = world.create();
@@ -112,7 +112,7 @@ class ServerMonsterCorpseSystemTest {
   void holyFreezeShatterDeathDoesNotCreateUsableCorpse() {
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, new ServerMonsterCorpseSystem())
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem())
         .build());
     try {
       int monsterId = world.create();

@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**75%**。
-- 当前执行项：**DM-NV-11 Barbarian 战吼/尸体/精通边界**。
+- 当前清单完成率：**80%**。
+- 当前执行项：**DM-NV-12 d2client.dll 静态证据并入技能矩阵**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -39,7 +39,7 @@
   - 尸体原子预留、召唤失败回滚、Golem/Revive、毒素、Bone Armor、Curse 来源优先级。
 - [x] **DM-NV-10（5%）Paladin Aura/Conversion 边界**
   - 多来源稳定选择、目标范围、离区撤销、付费 pulse、Conversion 到期恢复。
-- [ ] **DM-NV-11（5%）Barbarian 战吼/尸体/精通边界**
+- [x] **DM-NV-11（5%）Barbarian 战吼/尸体/精通边界**
   - 战吼覆盖刷新、尸体竞争、武器 exact-ID、多段攻击和目标失效处理。
 - [ ] **DM-NV-12（8%）d2client.dll 静态证据并入技能矩阵**
   - 为每项技能记录 keyframe、SrvSt/SrvDo/SrvHit/SrvDmg、目标过滤和客户端函数证据。
@@ -138,3 +138,11 @@
 - 既有 Aura 证据保持通过：同技能强度选择及稳定 caster tie-break、不同 Aura 叠加、范围/相邻 RoomEx、NoAura/hostile filter、town/离区撤销、付费 pulse 延迟扣蓝、重连 source layer，以及 Conversion 的成功/失败、目标过滤、所有权、到期恢复原始等级/生命比例和 owner/zone 失效收口。
 - 证据来源：D2MOO `SrvDo066/073/079/080/081`、`SrvHit22`、`AuraFilter`/`AuraRangeCalc` 与 1.10f Skills/Missiles/States 数据；本轮未覆盖或重写 Amazon 实现。
 - 本项完成后累计完成率：**75%**。下一项切换为 **DM-NV-11 Barbarian 战吼/尸体/精通边界**。
+
+### 2026-10-04：DM-NV-11 Barbarian 战吼/尸体/精通边界完成
+
+- 对照 D2MOO `SkillBar.cpp` 的 `SrvSt33_FindPotion_GrimWard`、`SrvDo069_FindPotion`、`SrvSt34_FindItem`、`SrvDo072_FindItem` 和 `SrvDo075_GrimWard`，确认 Find Potion/Find Item 在成功率判定前先设置 `CORPSE_NOSELECT`，失败也不会允许同一尸体再次执行；Grim Ward 按 `MonStats2` small/large 选择 `SrvMissileB/C`，并同步 `CORPSE_NOSELECT/NODRAW`。
+- 新增 `BarbarianCorpseSkillTest` ECS 关键帧覆盖：失败率前置预留、重复 keyframe 拒绝、`CorpseSel=0`/shattered/fading 尸体拒绝、Grim Ward 单次 size-specific missile 和尸体坐标事务。
+- 修复 `ServerMonsterCorpseSystemTest` 的测试夹具：注册缺失的 `CofManager`，使 hireling、普通死亡和 Holy Freeze shatter 三条原生 DT/DD 路径可完整回归；三项不再因 `CofManager not registered with world` 失败。
+- 回归通过：`BarbarianCorpseSkillTest`、`BarbarianFrenzyTest`、`BarbarianWarCryTest`、`BarbarianWhirlwindTest`、`BarbarianBerserkTest`、`NativeBarbarianWarCryDataTest`、`NativeBarbarianPassiveDataTest`、`NativeBerserkDataTest`、`NativeFrenzyDataTest`、`NativeWhirlwindDataTest`、`AIWarCryControlTest` 和 `ServerMonsterCorpseSystemTest`。
+- 本项完成后累计完成率：**80%**。下一项切换为 **DM-NV-12 d2client.dll 静态证据并入技能矩阵**。
