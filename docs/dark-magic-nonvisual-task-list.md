@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**54%**。
-- 当前执行项：**DM-NV-08 Druid Vine/召唤/持续区域收口**。
+- 当前清单完成率：**62%**。
+- 当前执行项：**DM-NV-09 Necromancer 行为边界收口**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -33,7 +33,7 @@
   - 多目标、最后 pulse、到期静默、owner 死亡/离区、武器切换、PvP/Party/召唤过滤。
 - [x] **DM-NV-07（10%）Sorceress 完整技能树行为审计**
   - 剩余 exact-ID、公式、状态、父子导弹、Hydra/区域技能及双客户端/reconnect 门槛。
-- [ ] **DM-NV-08（8%）Druid Vine/召唤/持续区域收口**
+- [x] **DM-NV-08（8%）Druid Vine/召唤/持续区域收口**
   - Vine Hit50 窗口、跨区跟随、召唤所有权/PetMax、持续区域命中去重和重连。
 - [ ] **DM-NV-09（8%）Necromancer 行为边界收口**
   - 尸体原子预留、召唤失败回滚、Golem/Revive、毒素、Bone Armor、Curse 来源优先级。
@@ -111,3 +111,12 @@
 - 新增 `NativeSorceressSkillMatrixTest`：遍历 30 个 Sorceress 行，验证表中每个 ID 都有精确声明并与实际 `SrvSt/SrvDo` 一致；另验证篡改 Hydra 回调后 fail-closed。
 - 验证：`./gradlew.bat :core:test --tests com.riiablo.engine.server.NativeSorceressSkillMatrixTest --no-daemon` 通过；既有 Sorceress 投射物、区域、状态、Blizzard/Frozen Orb/Meteor/Nova/Thunder Storm/Static Field 专项用例作为本轮对照证据保持通过。
 - 本项完成后累计完成率：**54%**。下一项切换为 **DM-NV-08 Druid Vine/召唤/持续区域收口**。
+
+### 2026-10-04：DM-NV-08 Druid Vine/召唤/持续区域收口完成
+
+- 对照 D2MOO `SrvDo114/115/119`、`SrvSt63_Corpse_VineCycler`、`SrvDo130_VineAttack` 和 `MISSMODE_SrvHit50_PlagueVinesTrail`，复核三种 Vine 的 SumSkill 等级传递、`VINE_BEAST` 状态、所有权/PetMax、尸体预留、防重复施放和 trail 生命周期。
+- `DruidVineCorpseCyclerTest` 已锁定 `CORPSE_NOSELECT`、owner missile、尸体坐标/技能等级、47 帧 recycler delay，以及 `HitDelay=15` 的 `SrvHit50` 窗口；该回调只负责时间门控，不直接造成毒伤，也不复用 `SrvHit16` 减速状态。
+- 新增 `SummonedPetSystemTest.druidVineFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata`，验证 Vine 跨 zone 跟随 owner 后仍保留 owner、PetType、来源 skillId 和 skillLevel 元数据；与既有 spirit aura 的跨区撤销规则分离。
+- 真实 1.10f MPQ 双客户端门槛复跑通过：`./gradlew.bat :server:d2gs:headlessVine -PvineSkill=222 -PvineTimeout=90 --no-daemon`；结果包含 `vine_dual_pass` 和 `vine_reconnect_pass`，owner/observer 共享 Vine、`VINE_BEAST`、Vine Attack 根导弹和 trail，重连 `stale=false`。
+- 定向回归通过：`DruidVineCorpseCyclerTest`、`DruidSummonIntegrationTest`、`SummonedPetSystemTest`、`NativeDruidSummonDataTest`、Druid Firestorm/Fissure/Storm 专项。
+- 本项完成后累计完成率：**62%**。下一项切换为 **DM-NV-09 Necromancer 行为边界收口**。

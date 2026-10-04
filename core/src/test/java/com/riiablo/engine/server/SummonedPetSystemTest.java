@@ -191,6 +191,32 @@ class SummonedPetSystemTest {
   }
 
   @Test
+  void druidVineFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new SummonedPetSystem()).build());
+    try {
+      OpenZone oldZone = new OpenZone();
+      OpenZone ownerZone = new OpenZone();
+      int owner = createOwner(world, ownerZone, 60f, 60f);
+      int vine = createPet(world, owner, oldZone, 2f, 3f, "vine");
+      SummonedPet source = world.getMapper(SummonedPet.class).get(vine)
+          .set(owner, "vine", com.riiablo.engine.server.skill.SkillId.POISON_CREEPER,
+              8, false, 0);
+
+      world.process();
+
+      assertTrue(world.getEntityManager().isActive(vine));
+      assertSame(ownerZone, world.getMapper(MapWrapper.class).get(vine).zone);
+      assertEquals(owner, source.ownerId);
+      assertEquals("vine", source.petType);
+      assertEquals(com.riiablo.engine.server.skill.SkillId.POISON_CREEPER, source.skillId);
+      assertEquals(8, source.skillLevel);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void crossZoneWarpClearsOldMovementCombatAndAiIntent() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new SummonedPetSystem()).build());
