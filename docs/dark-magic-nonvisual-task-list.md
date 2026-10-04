@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**44%**。
-- 当前执行项：**DM-NV-07 Sorceress 完整技能树行为审计**。
+- 当前清单完成率：**54%**。
+- 当前执行项：**DM-NV-08 Druid Vine/召唤/持续区域收口**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -31,7 +31,7 @@
   - air→ground→explosion 的一次命中、范围、共享命中集合和 reconnect 不复活父实体。
 - [x] **DM-NV-06（5%）Blade Shield 非视觉边界**
   - 多目标、最后 pulse、到期静默、owner 死亡/离区、武器切换、PvP/Party/召唤过滤。
-- [ ] **DM-NV-07（10%）Sorceress 完整技能树行为审计**
+- [x] **DM-NV-07（10%）Sorceress 完整技能树行为审计**
   - 剩余 exact-ID、公式、状态、父子导弹、Hydra/区域技能及双客户端/reconnect 门槛。
 - [ ] **DM-NV-08（8%）Druid Vine/召唤/持续区域收口**
   - Vine Hit50 窗口、跨区跟随、召唤所有权/PetMax、持续区域命中去重和重连。
@@ -102,3 +102,12 @@
 - 现有 ECS 覆盖并通过：多目标与 25 帧 cadence、AuraRangeCalc 范围、town 静默、当前/相邻 RoomEx 扫描、非相邻/跨 zone 过滤、NativeUnitFlags 无效目标、状态到期/技能丢失、owner 死亡、武器耐久和目标护甲耐久。
 - 新增并通过 `bladeShieldSkipsPlayersAndSummonedPetsAsFriendlyTargets`：无 PvP hostility 的其他玩家和友方召唤宠物均保持满血，确认目标过滤不会被普通坐标范围绕过。
 - `AssassinSkillSpecializationTest` 全类回归通过；本项完成后累计完成率：**44%**。下一项切换为 **DM-NV-07 Sorceress 完整技能树行为审计**。
+
+### 2026-10-04：DM-NV-07 Sorceress 完整技能树行为审计完成
+
+- 对照 D2MOO/1.10f `Skills.txt` 和 `SkillSor` dispatch，将 Sorceress 技能 ID 36–65 全部纳入 `NativeSkillBehaviorRegistry` 的 exact-ID 声明；每行同时锁定 `SrvStFunc/SrvDoFunc`，未知或回调不一致时返回 `null`，不会按显示名误判。
+- 审计中确认的关键原生回调包括：Inferno `SrvSt11/SrvDo19`、Telekinesis `SrvSt12/SrvDo21`、Chain Lightning `SrvDo26`、Energy Shield `SrvDo23`、Thunder Storm `SrvSt13/SrvDo29`、Hydra `SrvSt14/SrvDo144`；Blizzard/Meteor 共用 `SrvDo28`，Nova/Frost Nova 共用 `SrvDo22`，三种冰甲共用 `SrvDo18` 但按 exact ID 保持不同状态族。
+- 登记了直线/多弹/径向/冻结/范围/持续区域/状态/被动/传送/Hydra 等行为族及其 1.10f 导弹名证据；没有改写用户已验证的 Amazon 技能公式或实现。
+- 新增 `NativeSorceressSkillMatrixTest`：遍历 30 个 Sorceress 行，验证表中每个 ID 都有精确声明并与实际 `SrvSt/SrvDo` 一致；另验证篡改 Hydra 回调后 fail-closed。
+- 验证：`./gradlew.bat :core:test --tests com.riiablo.engine.server.NativeSorceressSkillMatrixTest --no-daemon` 通过；既有 Sorceress 投射物、区域、状态、Blizzard/Frozen Orb/Meteor/Nova/Thunder Storm/Static Field 专项用例作为本轮对照证据保持通过。
+- 本项完成后累计完成率：**54%**。下一项切换为 **DM-NV-08 Druid Vine/召唤/持续区域收口**。
