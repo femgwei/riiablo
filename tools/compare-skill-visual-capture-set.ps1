@@ -4,6 +4,7 @@ param(
   [string] $SummaryPath = (Join-Path (Get-Location) 'captures\dark-magic\reports\summary.tsv'),
   [string] $CompareScript = (Join-Path $PSScriptRoot 'compare-skill-visual-frames.ps1'),
   [int[]] $ExpectedSkillIds = @(251, 256, 257, 261, 262, 266, 271, 272, 276, 277),
+  [switch] $RequireMetadata,
   [switch] $RequireComparableCaptures
 )
 
@@ -25,6 +26,63 @@ $requiredColumns = @(
 foreach ($column in $requiredColumns) {
   if ($column -notin $plan[0].PSObject.Properties.Name) {
     throw "Capture plan is missing column '$column': $PlanPath"
+  }
+}
+
+function Test-CaptureMetadata {
+  param(
+    [string] $Directory,
+    [string] $ExpectedSource,
+    [int] $ExpectedSkillId,
+    [int] $ExpectedSkillLevel,
+    [int] $ExpectedMapSeed,
+    [double] $ExpectedFrameRate
+  )
+
+  $metadataPath = Join-Path $Directory 'capture.json'
+  if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
+    return [pscustomobject]@{
+      Valid = $false
+      Status = 'missing'
+      Message = "Missing metadata: $metadataPath"
+    }
+  }
+  try {
+    $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+    $required = @('source', 'mpq', 'skill_id', 'skill_level', 'map_seed', 'frame_rate', 'resolution', 'scale')
+    foreach ($field in $required) {
+      if ($field -notin $metadata.PSObject.Properties.Name) {
+        return [pscustomobject]@{
+          Valid = $false
+          Status = 'invalid'
+          Message = "Metadata missing '$field': $metadataPath"
+        }
+      }
+    }
+    if ([string]$metadata.source -ne $ExpectedSource) {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "source mismatch in $metadataPath" }
+    }
+    if ([string]$metadata.mpq -ne '1.10f') {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "mpq must be 1.10f in $metadataPath" }
+    }
+    if ([int]$metadata.skill_id -ne $ExpectedSkillId) {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "skill_id mismatch in $metadataPath" }
+    }
+    if ([int]$metadata.skill_level -ne $ExpectedSkillLevel) {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "skill_level mismatch in $metadataPath" }
+    }
+    if ([int]$metadata.map_seed -ne $ExpectedMapSeed) {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "map_seed mismatch in $metadataPath" }
+    }
+    if ([Math]::Abs([double]$metadata.frame_rate - $ExpectedFrameRate) -gt 0.001) {
+      return [pscustomobject]@{ Valid = $false; Status = 'mismatch'; Message = "frame_rate mismatch in $metadataPath" }
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$metadata.resolution) -or [double]$metadata.scale -le 0) {
+      return [pscustomobject]@{ Valid = $false; Status = 'invalid'; Message = "resolution/scale invalid in $metadataPath" }
+    }
+    return [pscustomobject]@{ Valid = $true; Status = 'valid'; Message = '' }
+  } catch {
+    return [pscustomobject]@{ Valid = $false; Status = 'invalid'; Message = $_.Exception.Message }
   }
 }
 
@@ -55,13 +113,37 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
     @(Get-ChildItem -LiteralPath $riiabloPath -File -Filter '*.png').Count
   } else { 0 }
 
+  if ($RequireMetadata) {
+    $originalMetadata = [pscustomobject]@{ Valid = $false; Status = 'missing'; Message = "Missing capture directory: $originalPath" }
+    $riiabloMetadata = [pscustomobject]@{ Valid = $false; Status = 'missing'; Message = "Missing capture directory: $riiabloPath" }
+    if (Test-Path -LiteralPath $originalPath -PathType Container) {
+      $originalMetadata = Test-CaptureMetadata $originalPath 'original-1.10f' $skillId $skillLevel $mapSeed $frameRate
+    }
+    if (Test-Path -LiteralPath $riiabloPath -PathType Container) {
+      $riiabloMetadata = Test-CaptureMetadata $riiabloPath 'riiablo' $skillId $skillLevel $mapSeed $frameRate
+    }
+  } else {
+    $originalMetadata = [pscustomobject]@{ Valid = $true; Status = 'not-required'; Message = '' }
+    $riiabloMetadata = [pscustomobject]@{ Valid = $true; Status = 'not-required'; Message = '' }
+  }
+
   $status = 'capture-pending'
   $paired = 0
   $missing = 0
   $dimensionMismatch = 0
   $different = 0
   $note = ''
-  if ($originalFrames -gt 0 -and $riiabloFrames -gt 0) {
+  $metadataStatus = if (-not $RequireMetadata) {
+    'not-required'
+  } elseif (-not $originalMetadata.Valid -or -not $riiabloMetadata.Valid) {
+    if ($originalMetadata.Status -eq 'missing' -or $riiabloMetadata.Status -eq 'missing') { 'missing' } else { 'invalid-or-mismatch' }
+  } else { 'valid' }
+  $metadataMessages = @($originalMetadata.Message, $riiabloMetadata.Message) |
+    Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+  if ($RequireMetadata -and $originalFrames -gt 0 -and $riiabloFrames -gt 0 -and $metadataStatus -ne 'valid') {
+    $status = 'metadata-pending'
+    $note = ($metadataMessages -join ' ')
+  } elseif ($originalFrames -gt 0 -and $riiabloFrames -gt 0) {
     $reportParent = Split-Path -Parent $reportPath
     New-Item -ItemType Directory -Force -Path $reportParent | Out-Null
     try {
@@ -106,6 +188,7 @@ foreach ($entry in ($plan | Sort-Object { [int]$_.priority })) {
     missing_frames = $missing
     dimension_mismatch = $dimensionMismatch
     different_frames = $different
+    metadata_status = $metadataStatus
     status = $status
     report = if (Test-Path -LiteralPath $reportPath -PathType Leaf) { $reportPath } else { '' }
     note = $note
@@ -125,12 +208,13 @@ if ($summaryParent) {
 $summary | Export-Csv -LiteralPath $SummaryPath -Delimiter "`t" -NoTypeInformation -Encoding UTF8
 
 $pending = @($summary | Where-Object { $_.status -eq 'capture-pending' }).Count
+$metadataPending = @($summary | Where-Object { $_.status -eq 'metadata-pending' }).Count
 $mismatch = @($summary | Where-Object { $_.status -eq 'capture-mismatch' }).Count
 $failed = @($summary | Where-Object { $_.status -eq 'comparison-failed' }).Count
 $reviewable = @($summary | Where-Object { $_.status -eq 'awaiting-human-review' }).Count
-Write-Output "visual capture set skills=$($summary.Count) reviewable=$reviewable pending=$pending mismatch=$mismatch failed=$failed summary=$SummaryPath"
+Write-Output "visual capture set skills=$($summary.Count) reviewable=$reviewable pending=$pending metadata_pending=$metadataPending mismatch=$mismatch failed=$failed summary=$SummaryPath"
 Write-Output 'Reviewable means the frame sets can be compared; it does not mean visual semantics passed.'
 
-if ($RequireComparableCaptures -and ($pending -gt 0 -or $mismatch -gt 0 -or $failed -gt 0)) {
-  throw "Visual captures are incomplete: pending=$pending mismatch=$mismatch failed=$failed"
+if ($RequireComparableCaptures -and ($pending -gt 0 -or $metadataPending -gt 0 -or $mismatch -gt 0 -or $failed -gt 0)) {
+  throw "Visual captures are incomplete: pending=$pending metadata_pending=$metadataPending mismatch=$mismatch failed=$failed"
 }

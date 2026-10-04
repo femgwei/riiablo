@@ -1,0 +1,13 @@
+{
+  "source": "original-1.10f",
+  "mpq": "1.10f",
+  "skill_id": 262,
+  "skill_level": 20,
+  "map_seed": 1,
+  "frame_rate": 25,
+  "resolution": "800x600",
+  "scale": 1,
+  "frame_prefix": "frame-",
+  "recorded_at": "2026-10-05T00:00:00+08:00",
+  "notes": "Replace source and scenario-specific values before capture."
+}
