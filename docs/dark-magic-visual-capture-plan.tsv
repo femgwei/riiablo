@@ -1,11 +1,11 @@
-skill_id	skill_name	slug	priority	frame_rate	map_seed	skill_level	original_dir	riiablo_dir	scenarios
-262	Wake of Fire Sentry	wake-of-fire-262	1	25	1	20	original/wake-of-fire-262	riiablo/wake-of-fire-262	cast;two-wave-direction;wall;expiry;reconnect
-272	Inferno Sentry	inferno-sentry-272	2	25	1	20	original/inferno-sentry-272	riiablo/inferno-sentry-272	cast;channel-cadence;tracking;wall;expiry;reconnect
-276	Death Sentry	death-sentry-276	3	25	1	20	original/death-sentry-276	riiablo/death-sentry-276	corpse-explosion;lightning-fallback;wall;corpse-once;reconnect
-277	Blade Shield	blade-shield-277	4	25	1	20	original/blade-shield-277	riiablo/blade-shield-277	overlay;first-pulse;cadence;last-pulse;expiry;owner-cleanup
-266	Blade Fury	blade-fury-266	5	25	1	20	original/blade-fury-266	riiablo/blade-fury-266	held-input;keyframe-cadence;missile-resource;wall;reconnect
-251	Fire Trauma	fire-trauma-251	6	25	1	20	original/fire-trauma-251	riiablo/fire-trauma-251	air-ground-explosion;null-hit;radius;single-expiry
-256	Shock Field	shock-field-256	7	25	1	20	original/shock-field-256	riiablo/shock-field-256	placement;missile-direction;wall;null-hit;expiry;reconnect
-257	Blade Sentinel	blade-sentinel-257	8	25	1	20	original/blade-sentinel-257	riiablo/blade-sentinel-257	placement;tracking;missile-direction;wall;expiry;reconnect
-261	Charged Bolt Sentry	charged-bolt-sentry-261	9	25	1	20	original/charged-bolt-sentry-261	riiablo/charged-bolt-sentry-261	placement;target-lock;missile-direction;wall;expiry;reconnect
-271	Lightning Sentry	lightning-sentry-271	10	25	1	20	original/lightning-sentry-271	riiablo/lightning-sentry-271	placement;target-lock;lightning-path;wall;shot-budget;expiry;reconnect
+skill_id	skill_name	slug	priority	frame_rate	map_seed	skill_level	original_dir	riiablo_dir	scenarios	expected_resources
+262	Wake of Fire Sentry	wake-of-fire-262	1	25	1	20	original/wake-of-fire-262	riiablo/wake-of-fire-262	cast;two-wave-direction;wall;expiry;reconnect	wake of destruction maker;wake of destruction
+272	Inferno Sentry	inferno-sentry-272	2	25	1	20	original/inferno-sentry-272	riiablo/inferno-sentry-272	cast;channel-cadence;tracking;wall;expiry;reconnect	inferno sentry 1
+276	Death Sentry	death-sentry-276	3	25	1	20	original/death-sentry-276	riiablo/death-sentry-276	corpse-explosion;lightning-fallback;wall;corpse-once;reconnect	corpseexplosion;death sentry ltng
+277	Blade Shield	blade-shield-277	4	25	1	20	original/blade-shield-277	riiablo/blade-shield-277	overlay;first-pulse;cadence;last-pulse;expiry;owner-cleanup	bladeshield;blade shield attachment
+266	Blade Fury	blade-fury-266	5	25	1	20	original/blade-fury-266	riiablo/blade-fury-266	held-input;keyframe-cadence;missile-resource;wall;reconnect	bladefragment1;bladefragment2
+251	Fire Trauma	fire-trauma-251	6	25	1	20	original/fire-trauma-251	riiablo/fire-trauma-251	air-ground-explosion;null-hit;radius;single-expiry	bomb in air;bomb on ground;bomb explosion
+256	Shock Field	shock-field-256	7	25	1	20	original/shock-field-256	riiablo/shock-field-256	placement;missile-direction;wall;null-hit;expiry;reconnect	shock field in air
+257	Blade Sentinel	blade-sentinel-257	8	25	1	20	original/blade-sentinel-257	riiablo/blade-sentinel-257	placement;tracking;missile-direction;wall;expiry;reconnect	blade creeper
+261	Charged Bolt Sentry	charged-bolt-sentry-261	9	25	1	20	original/charged-bolt-sentry-261	riiablo/charged-bolt-sentry-261	placement;target-lock;missile-direction;wall;expiry;reconnect	sentrychargedbolt
+271	Lightning Sentry	lightning-sentry-271	10	25	1	20	original/lightning-sentry-271	riiablo/lightning-sentry-271	placement;target-lock;lightning-path;wall;shot-budget;expiry;reconnect	sentry lightning

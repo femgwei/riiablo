@@ -77,7 +77,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 可用 `-FrameRate 25` 覆盖默认帧率。`different` 只表示像素发生变化，不能单独证明技能语义、
 伤害或关键帧正确；仍需按本清单逐帧记录首帧、pulse、碰撞、到期和重连结果。
 
-10 个 exact-ID 的目录、优先级和场景定义见
+10 个 exact-ID 的目录、优先级、场景和已核对的预期资源链见
 [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)。将截图放入
 `captures/dark-magic/original/<slug>` 与 `captures/dark-magic/riiablo/<slug>` 后，可批量生成报告：
 
