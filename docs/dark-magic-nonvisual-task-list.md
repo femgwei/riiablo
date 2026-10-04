@@ -153,7 +153,7 @@
 - 这层只证明数据字段没有在导入/转换时丢失，不能把客户端 callback 数字直接解释为 `d2client.dll` 的函数语义；测试注释已明确禁止用 Skills.txt 行替代二进制反汇编证据。
 - 已建立 [d2client-static-skill-evidence.tsv](d2client-static-skill-evidence.tsv) 作为 43 行回填入口；每行必须同时有匹配的 1.10f DLL hash、函数地址、caller/xref 和 keyframe 证据，状态才可从 `pending-binary` 改为完成态。
 - 新增 `tools/verify-d2client-evidence.ps1`：默认检查 43 个 ID、版本和重复项；另一 agent 回填后使用 `-RequireComplete`，会强制验证每行的 hash、函数地址、caller/xref 与 keyframe 字段均非空。
-- 当前 `D2_HOME` 未提供可读取的 `d2client.dll`，因此静态地址、调用者/xref、keyframe 消费点仍待另一 agent 的二进制检查结果回填；DM-NV-12 尚未计入完成率，当前仍为 **80%**。
+- 当前 `D2_HOME` 未提供可读取的 `d2client.dll`，因此静态地址、调用者/xref、keyframe 消费点仍待另一 agent 的二进制检查结果回填；DM-NV-12 尚未计入完成率，当前仍为 **85%**。
 
 ### 2026-10-04：DM-NV-13 dark-magic 行为测试模式迁移完成
 
