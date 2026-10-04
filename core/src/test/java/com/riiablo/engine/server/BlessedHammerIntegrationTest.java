@@ -26,6 +26,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -213,19 +214,27 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
       world.getMapper(Position.class).create(paladin).position.setZero();
       world.getMapper(AttributesWrapper.class).create(paladin).attrs = attributes(1, 1000);
       world.getMapper(UnitStates.class).create(paladin).init(paladin);
-      int first = createMonster(world, 0.5f, 0.1f);
-      int second = createMonster(world, 1.5f, 0.1f);
+      Vector2 firstPoint = MissileCollisionSystem.blessedHammerPathPoint(
+          Vector2.Zero, 4, new Vector2());
+      Vector2 secondPoint = MissileCollisionSystem.blessedHammerPathPoint(
+          Vector2.Zero, 8, new Vector2());
+      int first = createMonster(world, firstPoint.x, firstPoint.y);
+      int second = createMonster(world, secondPoint.x, secondPoint.y);
 
       Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLESSED_HAMMER);
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           paladin, skill.Id, Engine.INVALID_ENTITY, new Vector2(-20, 0),
           skill.srvdofunc, skill.cltdofunc));
       world.setDelta(1f / 25f);
-      world.process();
+      // Advance through both path points before taking the shared hit
+      // snapshot. The targets are placed on the native spiral itself, so the
+      // assertion is independent of a straight-line approximation.
+      for (int i = 0; i < 5; i++) world.process();
       float firstAfterHit = life(world, first);
       float secondAfterHit = life(world, second);
       assertTrue(firstAfterHit >= 984f && firstAfterHit <= 988f);
-      assertTrue(secondAfterHit >= 984f && secondAfterHit <= 988f);
+      assertTrue(secondAfterHit >= 984f && secondAfterHit <= 988f,
+          "second target hp=" + secondAfterHit);
 
       for (int i = 0; i < 10; i++) world.process();
       assertEquals(firstAfterHit, life(world, first), EPSILON);
@@ -243,6 +252,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
     int id = world.create();
     world.getMapper(Monster.class).create(id).set(row, new MonStats2.Entry());
     world.getMapper(Position.class).create(id).position.set(x, y);
+    world.getMapper(Size.class).create(id).size = Size.MEDIUM;
     world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(1, 1000);
     world.getMapper(UnitStates.class).create(id).init(id);
     return id;

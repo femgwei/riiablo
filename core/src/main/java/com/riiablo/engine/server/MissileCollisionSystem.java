@@ -1590,6 +1590,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           spawnNativeMapExplosion(missileId, missile, targetId, missilePos);
         }
       } else if (!suppressSideEffects && missile.missile != null
+          && !missile.fistOfHeavensDelay
           && (missile.missile.Explosion != 0
               || hasMissileName(missile.missile.ExplosionMissile))) {
         // Rows that do not use SrvHit04 still route their unit impact through

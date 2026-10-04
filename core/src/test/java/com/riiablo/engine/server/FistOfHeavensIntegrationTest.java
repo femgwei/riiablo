@@ -137,6 +137,7 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
       assertEquals(20f, factory.origins.get(0).y, EPSILON);
       assertEquals(160, delay.damage.get(Stat.lightmindam).asInt());
       assertEquals(214, delay.damage.get(Stat.lightmaxdam).asInt());
+      int delayLevel = Math.max(1, delay.damageLevel);
 
       world.setDelta(1f / 25f);
       for (int frame = 0; frame < 9; frame++) world.process();
@@ -145,7 +146,9 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
 
       world.process();
       assertTrue(life(world, primary) >= 786f && life(world, primary) <= 840f);
-      assertEquals(6, factory.count("fistoftheheavensbolt"));
+      int expectedBolts = PaladinSkills.getFistOfHeavensBoltCount(
+          Riiablo.files.Missiles.get(fist.srvmissilea), fist, delayLevel);
+      assertEquals(expectedBolts, factory.count("fistoftheheavensbolt"));
       for (int i = 0; i < factory.createdIds.size(); i++) {
         if (!"fistoftheheavensbolt".equals(factory.names.get(i))) continue;
         Missile bolt = world.getMapper(Missile.class).get(factory.createdIds.get(i));

@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**70%**。
-- 当前执行项：**DM-NV-10 Paladin Aura/Conversion 边界**。
+- 当前清单完成率：**75%**。
+- 当前执行项：**DM-NV-11 Barbarian 战吼/尸体/精通边界**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -37,7 +37,7 @@
   - Vine Hit50 窗口、跨区跟随、召唤所有权/PetMax、持续区域命中去重和重连。
 - [x] **DM-NV-09（8%）Necromancer 行为边界收口**
   - 尸体原子预留、召唤失败回滚、Golem/Revive、毒素、Bone Armor、Curse 来源优先级。
-- [ ] **DM-NV-10（5%）Paladin Aura/Conversion 边界**
+- [x] **DM-NV-10（5%）Paladin Aura/Conversion 边界**
   - 多来源稳定选择、目标范围、离区撤销、付费 pulse、Conversion 到期恢复。
 - [ ] **DM-NV-11（5%）Barbarian 战吼/尸体/精通边界**
   - 战吼覆盖刷新、尸体竞争、武器 exact-ID、多段攻击和目标失效处理。
@@ -129,3 +129,12 @@
 - 保持 Golem/Revive 所有权、PetMax、Iron Golem 物品来源属性、Fire Golem Holy Fire、Bone Armor、Curse group/source 优先级和 Poison owner/source、抗性、持续时间及重连契约不变。
 - 证据来源：D2MOO `SrvDo031/055/056/057/058/063`、`SKILLS_CanUnitCorpseBeSelected` 与 1.10f `MonStats2.CorpseSel/Revive` 字段；本轮没有覆盖或重写 Amazon 已验证实现。
 - 本项完成后累计完成率：**70%**。下一项切换为 **DM-NV-10 Paladin Aura/Conversion 边界**。
+
+### 2026-10-04：DM-NV-10 Paladin Aura/Conversion 边界完成
+
+- Paladin 定向回归 77 项通过，覆盖 `AuraManagerPulseTest`、`AuraEcsScenarioTest`、Blessed Hammer、Fist of the Heavens、支持/抗性/特殊/资源 Aura、Holy Shield、Conversion 以及全部 `NativePaladin*DataTest` 契约。
+- 修正 FoH 延迟导弹的原生命中链：`SrvHit22` 主目标命中时不再落入通用 `ExplosionMissile` 分支，避免额外生成一枚 Holy Bolt；分裂数量重新严格服从 `HitPar2/Calc4` 上限，主目标、亡灵过滤和 6 枚 level-1 上限回归通过。
+- Blessed Hammer 回归夹具改为按真实 77 点螺旋路径布置目标并使用 `Size.MEDIUM` 原生 footprint，验证多个目标各命中一次且后续帧不重复伤害；没有改变用户已验证的 Amazon 代码。
+- 既有 Aura 证据保持通过：同技能强度选择及稳定 caster tie-break、不同 Aura 叠加、范围/相邻 RoomEx、NoAura/hostile filter、town/离区撤销、付费 pulse 延迟扣蓝、重连 source layer，以及 Conversion 的成功/失败、目标过滤、所有权、到期恢复原始等级/生命比例和 owner/zone 失效收口。
+- 证据来源：D2MOO `SrvDo066/073/079/080/081`、`SrvHit22`、`AuraFilter`/`AuraRangeCalc` 与 1.10f Skills/Missiles/States 数据；本轮未覆盖或重写 Amazon 实现。
+- 本项完成后累计完成率：**75%**。下一项切换为 **DM-NV-11 Barbarian 战吼/尸体/精通边界**。
