@@ -7,7 +7,7 @@
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
 - 当前清单完成率：**85%**。
-- 当前执行项：**DM-NV-14 exact-ID 行为注册框架（Druid 第四批）**；DM-NV-12 继续等待二进制证据。
+- 当前执行项：**DM-NV-15 七职业自动覆盖审计工具（首轮审计）**；DM-NV-12 继续等待二进制证据。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -189,3 +189,17 @@
 - 对照 D2MOO `SrvDo116–124` 与现有 Skills/Missiles 数据；Molten Boulder 保留其实际 `SrvDo=0`，没有按相似导弹错误归入 `SrvDo118`。
 - Rabies、Shock Wave 导弹链证据已纳入 exact-ID 测试；新增 `NativeDruidSkillMatrixTest` 并通过 Druid 形态、召唤、Vine、元素区域、Rabies/Fury 等集中回归。
 - 本记录仍属于 DM-NV-14 增量，尚未计入 4% 总权重；下一步继续处理 Assassin 注册。总体完成率保持 **85%**。
+
+### 2026-10-04：DM-NV-14 exact-ID 行为注册框架（Assassin 第五批）
+
+- 新增 Assassin 十个 dark-magic 对照 exact-ID：Fire Trauma(251)、Shock Field(256)、Blade Sentinel(257)、Charged Bolt Sentry(261)、Wake of Fire Sentry(262)、Blade Fury(266)、Lightning Sentry(271)、Inferno Sentry(272)、Death Sentry(276)、Blade Shield(277)。
+- 以本地 D2MOO `SkillAss.cpp` 的 `SrvSt26/28`、`SrvDo043/044/045/048/054` 和 1.10f `Skills.txt` 为依据；六个陷阱行的 `pettype=assassintrap`/`petmax=5`、Blade Fury 的 server/client 导弹分离、Blade Shield 的 `AuraLenCalc=ln12` 均由矩阵测试锁定。
+- 新增 `NativeAssassinSkillMatrixTest`，覆盖 exact ID、`charclass`、`SrvSt/SrvDo`、server missile 链、陷阱生命周期字段和 callback mismatch fail-closed；`AssassinSkillSpecializationTest`、`AssassinMartialArtsTest` 与矩阵测试全部通过。
+- `NativeSkillResolver` 现已对七职业注册分区统一解析；未知 ID 或回调不匹配仍返回空行为，不按技能名称推断。本批仍属于 DM-NV-14 增量，4% 权重暂不计入，累计非视觉完成率保持 **85%**。
+- 下一步用 DM-NV-15 自动审计工具核对 dark-magic 的 43 个 manifest 行，补齐剩余缺口后再关闭 DM-NV-14；DM-NV-12 仍因缺少真实 `d2client.dll` 地址/xref/keyframe 证据保持未完成。
+
+### 2026-10-04：DM-NV-15 七职业自动覆盖审计工具（首轮）
+
+- 新增 `tools/verify-skill-coverage.ps1`：读取 dark-magic `skill-behavior-coverage.v1.json`，解析 `NativeSkillBehaviorRegistry` 的 exact-ID/family，检查七个 `Native*SkillMatrixTest` 文件是否存在，并汇总 `d2client-static-skill-evidence.tsv` 的 pending/verified 数量。
+- 首轮输出：manifest **43** 行、riiablo registry **109** 行、d2client pending **43** 行；manifest 仍有 **20** 个 ID 尚未注册，另有 **14** 个 family 名称因 1.10f 与 1.14d 语义/命名差异需要人工映射确认。工具以 `status=report-with-gaps` 明确暴露缺口，不能把审计报告误判为完成。
+- `-RequireRegistered` 与 `-RequireMatrixTests` 可在后续收口时作为 CI 门槛；当前 DM-NV-15 和 DM-NV-14 均保持未完成，累计非视觉完成率仍为 **85%**。

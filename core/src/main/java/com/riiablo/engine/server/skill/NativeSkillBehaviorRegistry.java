@@ -20,6 +20,7 @@ public final class NativeSkillBehaviorRegistry {
   private static final IntMap<NativeSkillBehavior> NECROMANCER = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> BARBARIAN = new IntMap<>();
   private static final IntMap<NativeSkillBehavior> DRUID = new IntMap<>();
+  private static final IntMap<NativeSkillBehavior> ASSASSIN = new IntMap<>();
 
   static {
     // Amazon 6..35.  Callback numbers are the D2MOO SkillAma dispatch table;
@@ -142,6 +143,22 @@ public final class NativeSkillBehaviorRegistry {
     addDruid(248, "melee.fury",          37, 13);
     addDruid(249, "state.armageddon",     0, 124);
     addDruid(250, "state.hurricane",      0, 124);
+
+    // Assassin 251..277 rows admitted by the dark-magic trap-family audit.
+    // The 1.10f display names intentionally remain data-backed (Fire Trauma
+    // and Shock Field differ from the expansion-era dark-magic names).  Trap
+    // rows share SrvDo45, so exact IDs are required to keep their pet/lifecycle
+    // contracts separate; a callback match alone must never infer a family.
+    addAssassin(251, "missile.fire-trauma",       0,  0, "bomb in air");
+    addAssassin(256, "missile.shock-field",       0, 43, "shock field in air");
+    addAssassin(257, "trap.blade-sentinel",       0, 44, "blade creeper");
+    addAssassin(261, "trap.charged-bolt-sentry",  0, 45);
+    addAssassin(262, "trap.wake-of-fire-sentry",  0, 45);
+    addAssassin(266, "missile.blade-fury",       26, 48, "bladefragment1");
+    addAssassin(271, "trap.lightning-sentry",     0, 45);
+    addAssassin(272, "trap.inferno-sentry",       0, 45);
+    addAssassin(276, "trap.death-sentry",         0, 45);
+    addAssassin(277, "state.blade-shield",       28, 54, "blade shield attachment");
   }
 
   private NativeSkillBehaviorRegistry() {}
@@ -175,6 +192,11 @@ public final class NativeSkillBehaviorRegistry {
     DRUID.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
   }
 
+  private static void addAssassin(int id, String family, int start, int done,
+      String... missiles) {
+    ASSASSIN.put(id, new NativeSkillBehavior(id, family, start, done, EVIDENCE, missiles));
+  }
+
   /** Returns the exact Amazon declaration, or {@code null} for unknown rows. */
   public static NativeSkillBehavior resolveAmazon(Skills.Entry skill) {
     if (skill == null) return null;
@@ -194,7 +216,9 @@ public final class NativeSkillBehaviorRegistry {
     if (behavior != null) return behavior;
     behavior = resolveBarbarian(skill);
     if (behavior != null) return behavior;
-    return resolveDruid(skill);
+    behavior = resolveDruid(skill);
+    if (behavior != null) return behavior;
+    return resolveAssassin(skill);
   }
 
   /** Returns the exact Sorceress declaration, or {@code null} for unknown rows. */
@@ -249,4 +273,14 @@ public final class NativeSkillBehaviorRegistry {
 
   /** Number of exact Druid rows currently covered by the registry. */
   public static int druidSize() { return DRUID.size; }
+
+  /** Returns the exact Assassin declaration, or {@code null} for unknown rows. */
+  public static NativeSkillBehavior resolveAssassin(Skills.Entry skill) {
+    if (skill == null) return null;
+    NativeSkillBehavior behavior = ASSASSIN.get(skill.Id);
+    return behavior != null && behavior.matches(skill) ? behavior : null;
+  }
+
+  /** Number of exact Assassin rows currently covered by the registry. */
+  public static int assassinSize() { return ASSASSIN.size; }
 }
