@@ -4391,7 +4391,8 @@ public class ServerSkillSystem extends PassiveSystem {
   private void reviveNecromancerMonster(SkillDoEvent event, Skills.Entry skill, int level) {
     int corpseId = event.targetId;
     if (!mPlayer.has(event.entityId) || !isReviveableMonster(corpseId)
-        || !mCorpse.has(corpseId) || hasCorpseNoSelect(corpseId) || isTownCorpse(corpseId)
+        || !mCorpse.has(corpseId) || !selectableCorpse(corpseId)
+        || hasCorpseNoSelect(corpseId) || isTownCorpse(corpseId)
         || factory == null) {
       log.info("[NECRO_REVIVE] phase=reject source={} corpse={} reason=corpse_eligibility",
           event.entityId, corpseId);

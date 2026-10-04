@@ -98,6 +98,49 @@ class NecromancerSummonIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void reviveRejectsRevivableButNonSelectableCorpseWithoutMutation() {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.codec.excel.MonStats.Entry row = null;
+    com.riiablo.codec.excel.MonStats2.Entry row2 = null;
+    for (com.riiablo.codec.excel.MonStats.Entry candidate : Riiablo.files.monstats) {
+      com.riiablo.codec.excel.MonStats2.Entry candidate2 =
+          Riiablo.files.monstats2.get(candidate.MonStatsEx);
+      if (candidate2 != null && candidate2.revive) {
+        row = candidate;
+        row2 = candidate2;
+        break;
+      }
+    }
+    assertNotNull(row, "1.10f contains no reviveable monster row");
+    assertNotNull(row2);
+    boolean originalCorpseSelectable = row2.corpseSel;
+    row2.corpseSel = false;
+    World world = world(factory);
+    try {
+      int owner = owner(world, SkillId.REVIVE);
+      int corpse = world.create();
+      Monster monster = world.getMapper(Monster.class).create(corpse);
+      monster.monstats = row;
+      monster.monstats2 = row2;
+      world.getMapper(Position.class).create(corpse).position.set(12, 10);
+      world.getMapper(AttributesWrapper.class).create(corpse).attrs = attributes(3, 0);
+      world.getMapper(UnitStates.class).create(corpse).init(corpse);
+      world.getMapper(Corpse.class).create(corpse).reset(Corpse.DEFAULT_DURATION, true);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, SkillId.REVIVE, corpse, new Vector2(12, 10), 58, 0));
+
+      assertTrue(world.getMapper(Corpse.class).has(corpse));
+      assertTrue(world.getMapper(Corpse.class).get(corpse).usable,
+          "CorpseSel rejection must not reserve or consume the corpse");
+      assertFalse(world.getMapper(SummonedPet.class).has(corpse));
+    } finally {
+      row2.corpseSel = originalCorpseSelectable;
+      world.dispose();
+    }
+  }
+
+  @Test
   void ironGolemRollsBackGroundItemReservationWhenPetCreationFails() {
     RecordingFactory factory = new RecordingFactory();
     factory.failSummon = true;

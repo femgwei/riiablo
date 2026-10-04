@@ -6,8 +6,8 @@
 
 - 本清单只统计不需要用户人眼对比原版画面的工作。
 - 清单完成率按固定权重计算：`已完成权重 / 100`。
-- 当前清单完成率：**62%**。
-- 当前执行项：**DM-NV-09 Necromancer 行为边界收口**。
+- 当前清单完成率：**70%**。
+- 当前执行项：**DM-NV-10 Paladin Aura/Conversion 边界**。
 - 原技能移植严格总进度仍记为约 **97%**；视觉验收单独保留，不会因本清单完成而自动记为 100%。
 - 每项只有在源码依据、自动测试、真实 MPQ gate（适用时）、提交和推送全部完成后才计入百分比。
 
@@ -35,7 +35,7 @@
   - 剩余 exact-ID、公式、状态、父子导弹、Hydra/区域技能及双客户端/reconnect 门槛。
 - [x] **DM-NV-08（8%）Druid Vine/召唤/持续区域收口**
   - Vine Hit50 窗口、跨区跟随、召唤所有权/PetMax、持续区域命中去重和重连。
-- [ ] **DM-NV-09（8%）Necromancer 行为边界收口**
+- [x] **DM-NV-09（8%）Necromancer 行为边界收口**
   - 尸体原子预留、召唤失败回滚、Golem/Revive、毒素、Bone Armor、Curse 来源优先级。
 - [ ] **DM-NV-10（5%）Paladin Aura/Conversion 边界**
   - 多来源稳定选择、目标范围、离区撤销、付费 pulse、Conversion 到期恢复。
@@ -120,3 +120,12 @@
 - 真实 1.10f MPQ 双客户端门槛复跑通过：`./gradlew.bat :server:d2gs:headlessVine -PvineSkill=222 -PvineTimeout=90 --no-daemon`；结果包含 `vine_dual_pass` 和 `vine_reconnect_pass`，owner/observer 共享 Vine、`VINE_BEAST`、Vine Attack 根导弹和 trail，重连 `stale=false`。
 - 定向回归通过：`DruidVineCorpseCyclerTest`、`DruidSummonIntegrationTest`、`SummonedPetSystemTest`、`NativeDruidSummonDataTest`、Druid Firestorm/Fissure/Storm 专项。
 - 本项完成后累计完成率：**62%**。下一项切换为 **DM-NV-09 Necromancer 行为边界收口**。
+
+### 2026-10-04：DM-NV-09 Necromancer 行为边界收口完成
+
+- 定向回归覆盖并通过 `NecromancerSummonIntegrationTest`、`NecromancerExplosionIntegrationTest`、`NecromancerGolemReviveIntegrationTest`、`NecromancerGolemSideEffectTest`、Bone Armor/Wall、Curse、Poison Nova/Dagger 以及全部 `NativeNecromancer*DataTest` 契约。
+- 复核尸体事务：Raise Skeleton、Corpse/Poison Explosion 和 Iron Golem 均在副作用前原子预留，召唤失败会释放 `usable`、`CORPSE_NOSELECT` 和 `CORPSE_NODRAW`；重复 keyframe 与二次消费保持拒绝。
+- 补齐 Revive 的原生尸体可选边界：`SrvDo058` 现在统一经过 `CorpseConsumption.selectable`，不可选（`CorpseSel=0`）、fading、shattered、城镇或已预留尸体均在恢复前拒绝；新增回归确保尸体不被修改。
+- 保持 Golem/Revive 所有权、PetMax、Iron Golem 物品来源属性、Fire Golem Holy Fire、Bone Armor、Curse group/source 优先级和 Poison owner/source、抗性、持续时间及重连契约不变。
+- 证据来源：D2MOO `SrvDo031/055/056/057/058/063`、`SKILLS_CanUnitCorpseBeSelected` 与 1.10f `MonStats2.CorpseSel/Revive` 字段；本轮没有覆盖或重写 Amazon 已验证实现。
+- 本项完成后累计完成率：**70%**。下一项切换为 **DM-NV-10 Paladin Aura/Conversion 边界**。
