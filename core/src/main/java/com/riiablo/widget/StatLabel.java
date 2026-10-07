@@ -100,10 +100,10 @@ public class StatLabel extends Label {
           if (maximum != null && value >= maximum.asInt()) return Riiablo.colors.gold;
         }
 
-        StatRef base = attrs.base().get(stat.id(), StatRef.obtain());
-        return base != null && base.encodedValues() != stat.encodedValues()
-            ? Riiablo.colors.blue
-            : Riiablo.colors.white;
+        // The native character screen does not use the generic "modified"
+        // blue for resistances. Only negative and capped values are special;
+        // an ordinary positive resistance remains white.
+        return Riiablo.colors.white;
       }
     };
 

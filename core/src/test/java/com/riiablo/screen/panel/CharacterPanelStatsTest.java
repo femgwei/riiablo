@@ -13,6 +13,12 @@ class CharacterPanelStatsTest {
   void attackRatingUsesNativePlayerFormula() {
     assertEquals(95, CharacterPanel.calculateAttackRating(25, 0, 5));
     assertEquals(65, CharacterPanel.calculateAttackRating(20, 0, 0));
+    int equippedBase = CharacterPanel.calculateAttackRating(236, 29, 5);
+    assertEquals(1179, equippedBase);
+    assertEquals(1591,
+        CharacterPanel.calculateSkillAttackRating(equippedBase, 35, 0));
+    assertEquals(2688,
+        CharacterPanel.calculateSkillAttackRating(equippedBase, 35, 93));
   }
 
   @Test
@@ -21,6 +27,13 @@ class CharacterPanelStatsTest {
         CharacterPanel.calculateDamageRange(1, 5, 20, 25, 0, 80, 0));
     assertArrayEquals(new int[] {2, 7},
         CharacterPanel.calculateDamageRange(2, 6, 20, 0, 100, 0, 0));
+  }
+
+  @Test
+  void damageRangeUsesNativeFlatPercentAndSourceDamageOrder() {
+    assertArrayEquals(new int[] {6, 13}, CharacterPanel.calculateDamageRange(
+        4, 9, 100, 0, 100, 0,
+        20, 1, 10, 30, 25, 64));
   }
 
   @Test
@@ -38,6 +51,8 @@ class CharacterPanelStatsTest {
     weaponSkill.LevToHit = 5;
     assertTrue(CharacterPanel.skillUsesAttackRating(weaponSkill));
     assertEquals(130, CharacterPanel.calculateSkillAttackRating(100, weaponSkill, 3));
+    assertEquals(150,
+        CharacterPanel.calculateSkillAttackRating(100, 20, 30));
 
     Skills.Entry spell = new Skills.Entry();
     spell.Id = 200;
@@ -58,5 +73,18 @@ class CharacterPanelStatsTest {
         CharacterPanel.formatCombatLabel(nativeFormat, "Multiple Shot", true));
     assertEquals("Attack Rating (AR)",
         CharacterPanel.formatCombatLabel(nativeFormat, "", false));
+  }
+
+
+  @Test
+  void damageRowsKeepWeaponAndSkillElementalRangesSeparate() {
+    assertArrayEquals(new int[] {3, 13},
+        CharacterPanel.calculateDamageRange(1, 4, 100, 236, 0, 100, 0));
+    assertEquals("4-19\n106-123", CharacterPanel.formatDamageRange(
+        new int[] {4, 19}, new int[] {106, 123}));
+    assertEquals("4-19", CharacterPanel.formatDamageRange(
+        new int[] {4, 19}, new int[] {0, 0}));
+    assertEquals("106-123", CharacterPanel.formatDamageRange(
+        new int[] {0, 0}, new int[] {106, 123}));
   }
 }

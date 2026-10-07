@@ -10,6 +10,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
 import java.nio.file.Files;
@@ -58,6 +59,26 @@ class D2SRealSaveIntegrationTest extends RiiabloTest {
     }
     assertEquals(decoded.corpse.items.size, roundTrip.corpse.items.size);
     assertEquals(decoded.merc.seed, roundTrip.merc.seed);
+  }
+
+  @Test
+  void preservesCurrentLifeWhenLoadingRealSave() throws Exception {
+    String configured = System.getProperty("d2realSave");
+    if (configured == null || configured.isEmpty()) configured = System.getenv("D2_REAL_SAVE");
+    assumeTrue(configured != null && !configured.isEmpty(),
+        "set -Dd2realSave=<path> or D2_REAL_SAVE to enable the real-save gate");
+
+    Path path = Paths.get(configured);
+    assumeTrue(Files.isRegularFile(path), "real save does not exist: " + path);
+    D2S decoded = D2SReader.INSTANCE.readComplete(
+        Files.readAllBytes(path), new StatListReader(), new ItemReader());
+    float savedLife = decoded.stats.attrs.base().get(Stat.hitpoints).asFixed();
+
+    CharData loaded = CharData.loadFromD2S(0, decoded);
+
+    assertEquals(savedLife,
+        loaded.getStats().aggregate().get(Stat.hitpoints).asFixed(), 0.001f,
+        "loading equipment must preserve the saved current life");
   }
 
   private static void assertMatrixEquals(byte[][] expected, byte[][] actual) {

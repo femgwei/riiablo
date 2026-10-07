@@ -469,6 +469,11 @@ public class D2SReader96 {
     }
 
     data.statData.base().addAll(d2s.stats.attrs.base());
+    // Seed the live aggregate from the just-read D2S values before equipped
+    // items rebuild it. ItemData preserves current resources from aggregate(),
+    // so leaving the soft-reset zeroes here turns a saved wound into a refill
+    // (or zero life, depending on the later spawn path).
+    data.statData.reset();
 
     CharacterClass classId = data.classId;
     for (int spellId = classId.firstSpell, s = classId.lastSpell, i = 0; spellId < s; spellId++, i++) {

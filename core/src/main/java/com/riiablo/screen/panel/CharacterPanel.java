@@ -26,8 +26,15 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.NativeSkills;
+import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.BodyLoc;
@@ -50,6 +57,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       new AssetDescriptor<>("data\\global\\ui\\PANEL\\level.DC6", DC6.class);
   Button btnExit;
   private Label statPoints;
+  private WidgetGroup statPointsGroup;
   private Label levelValue;
   private Label experienceValue;
   private Label nextLevelValue;
@@ -94,24 +102,28 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     // The stat-point balance belongs to the lower-left "Stat Points" row.
     // It used to be attached to the top "Next Level" box, which made the
     // number appear as an extra value after the next-level experience.
+    statPointsGroup = new WidgetGroup();
+    statPointsGroup.setSize(getWidth(), getHeight());
+    addActor(statPointsGroup);
+
     Table statPointsRow = new Table();
     statPointsRow.setBackground(new BorderedPaletteIndexedDrawable());
     statPointsRow.setPosition(8, getHeight() - 379);
     statPointsRow.setSize(150, 24);
-    addActor(statPointsRow);
+    statPointsGroup.addActor(statPointsRow);
 
     Label statPointsLabel = new Label(statPointsRemainingText(), Riiablo.fonts.ReallyTheLastSucker);
     statPointsLabel.setPosition(11, getHeight() - 373);
     statPointsLabel.setSize(108, 16);
     statPointsLabel.setAlignment(Align.center);
-    addActor(statPointsLabel);
+    statPointsGroup.addActor(statPointsLabel);
 
     // Keep the caption and the remaining value as separate labels, with the
     // native-style divider between their two cells.
     Image statPointsDivider = new Image(new PaletteIndexedColorDrawable(Riiablo.colors.gold));
     statPointsDivider.setPosition(119, getHeight() - 373);
     statPointsDivider.setSize(1, 16);
-    addActor(statPointsDivider);
+    statPointsGroup.addActor(statPointsDivider);
 
     statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
     statPoints.setAutoSize(false);
@@ -120,7 +132,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     statPoints.setPosition(120, getHeight() - 375);
     statPoints.setSize(36, 16);
     statPoints.setAlignment(Align.center);
-    addActor(statPoints);
+    statPointsGroup.addActor(statPoints);
 
     Label name = new Label(Riiablo.charData.name, Riiablo.fonts.font16);
     name.setPosition(12, getHeight() - 24);
@@ -217,15 +229,15 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     staminaLabel.setAlignment(Align.center);
     addActor(staminaLabel);
 
-    Label stamina = createStatLabel(Stat.stamina);
-    stamina.setPosition(235, getHeight() - 248);
-    stamina.setSize(36, 16);
-    addActor(stamina);
-
     Label maxstamina = createStatLabel(Stat.maxstamina);
-    maxstamina.setPosition(275, getHeight() - 248);
+    maxstamina.setPosition(235, getHeight() - 248);
     maxstamina.setSize(36, 16);
     addActor(maxstamina);
+
+    Label stamina = createStatLabel(Stat.stamina);
+    stamina.setPosition(275, getHeight() - 248);
+    stamina.setSize(36, 16);
+    addActor(stamina);
 
     Label lifeLabel = Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker);
     lifeLabel.setPosition(165, getHeight() - 272);
@@ -233,15 +245,15 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     lifeLabel.setAlignment(Align.center);
     addActor(lifeLabel);
 
-    Label hitpoints = createStatLabel(Stat.hitpoints);
-    hitpoints.setPosition(235, getHeight() - 272);
-    hitpoints.setSize(36, 16);
-    addActor(hitpoints);
-
     Label maxhp = createStatLabel(Stat.maxhp);
-    maxhp.setPosition(275, getHeight() - 272);
+    maxhp.setPosition(235, getHeight() - 272);
     maxhp.setSize(36, 16);
     addActor(maxhp);
+
+    Label hitpoints = createStatLabel(Stat.hitpoints);
+    hitpoints.setPosition(275, getHeight() - 272);
+    hitpoints.setSize(36, 16);
+    addActor(hitpoints);
 
     Label eneLabel = new Label(4069, Riiablo.fonts.ReallyTheLastSucker);
     eneLabel.setPosition(11, getHeight() - 310);
@@ -261,15 +273,15 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     manaLabel.setAlignment(Align.center);
     addActor(manaLabel);
 
-    Label mana = createStatLabel(Stat.mana);
-    mana.setPosition(235, getHeight() - 310);
-    mana.setSize(36, 16);
-    addActor(mana);
-
     Label maxmana = createStatLabel(Stat.maxmana);
-    maxmana.setPosition(275, getHeight() - 310);
+    maxmana.setPosition(235, getHeight() - 310);
     maxmana.setSize(36, 16);
     addActor(maxmana);
+
+    Label mana = createStatLabel(Stat.mana);
+    mana.setPosition(275, getHeight() - 310);
+    mana.setSize(36, 16);
+    addActor(mana);
 
     Label fireResLabel = new Label(4071, Riiablo.fonts.ReallyTheLastSucker);
     fireResLabel.setPosition(175, getHeight() - 349);
@@ -438,10 +450,46 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
         && (skill.Id == SkillCodes.attack || skill.Id == SkillCodes.left_hand_swing);
   }
 
+  static boolean skillUsesWeaponDamage(Skills.Entry skill) {
+    if (skill == null) return false;
+    switch (skill.Id) {
+      case SkillCodes.attack:
+      case SkillCodes.kick:
+      case SkillCodes.throw_:
+      case SkillCodes.left_hand_throw:
+      case SkillCodes.left_hand_swing:
+        return true;
+      default:
+        return skill.SrcDam > 0;
+    }
+  }
+
   static int calculateSkillAttackRating(int baseAttackRating, Skills.Entry skill, int level) {
     if (!skillUsesAttackRating(skill)) return 0;
     int bonus = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
-    return Math.max(0, baseAttackRating + baseAttackRating * bonus / 100);
+    return calculateSkillAttackRating(baseAttackRating, 0, bonus);
+  }
+
+  static int calculateSkillAttackRating(
+      int baseAttackRating, int itemPercent, int skillPercent) {
+    long percent = Math.max(-100L, (long) itemPercent + skillPercent);
+    long result = baseAttackRating + (long) baseAttackRating * percent / 100L;
+    return Math.max(0, (int) Math.min(Integer.MAX_VALUE, result));
+  }
+
+  private int skillToHitFactor(Skills.Entry skill, int level) {
+    if (skill == null) return 0;
+    if (Riiablo.files != null && Riiablo.files.NativeSkills != null) {
+      NativeSkills.Entry nativeSkill = Riiablo.files.NativeSkills.get(skill.Id);
+      if (nativeSkill != null) {
+        String expression = nativeSkill.string("tohitcalc");
+        if (expression != null && !expression.trim().isEmpty()
+            && !"-1".equals(expression.trim())) {
+          return evaluateSkillFormula(expression, skill, level);
+        }
+      }
+    }
+    return skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
   }
 
   private void addStatButton(final int statType, float centerX, float centerY) {
@@ -478,30 +526,47 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     if (nextLevelValue != null) {
       int level = statInt(Stat.level);
       long threshold = level >= ExperienceTable.MAX_LEVEL
-          ? statLong(Stat.experience)
+          ? 0L
           : ExperienceTable.getInstance().getExperienceForNextLevel(
               level, Riiablo.charData.classId.id);
       setNumber(nextLevelValue, threshold);
     }
 
-    int[] damage = displayedPhysicalDamage();
-    Color damageColor = displayedDamageColor();
-    String damageText = damage[0] + "-" + damage[1];
-    for (Label label : damageValues) {
-      if (label == null) continue;
-      setCompactText(label, damageText);
-      label.setColor(damageColor);
+    int[] buttons = {Input.Buttons.LEFT, Input.Buttons.RIGHT};
+    for (int i = 0; i < buttons.length; i++) {
+      Skills.Entry skill = selectedSkill(buttons[i]);
+      Label name = damageNames[i];
+      Label value = damageValues[i];
+      if (skill == null) {
+        if (name != null) name.setText("");
+        if (value != null) setCompactText(value, "");
+        continue;
+      }
+
+      int skillLevel = Math.max(1, Riiablo.charData.getSkill(skill.Id));
+      boolean weaponDamage = skillUsesWeaponDamage(skill);
+      int[] weapon = weaponDamage
+          ? displayedWeaponDamage(skill, skillLevel) : new int[] {0, 0};
+      int[] elemental = displayedSkillElementalDamage(skill, skillLevel);
+      if (name != null) {
+        boolean special = !isNormalAttack(skill);
+        name.setFont(special ? Riiablo.fonts.font8 : Riiablo.fonts.ReallyTheLastSucker);
+        name.setText(combatLabel(4061, selectedSkillName(buttons[i]), true));
+      }
+      if (value != null) {
+        setCompactText(value, formatDamageRange(weapon, elemental));
+        value.setColor(displayedDamageColor(skill, elemental));
+      }
     }
 
-    String skillName = selectedSkillName();
-    if (damageNames[0] != null) {
-      damageNames[0].setText(combatLabel(4061, skillName, false));
-    }
-    if (damageNames[1] != null) {
-      damageNames[1].setText(combatLabel(4061, skillName, true));
-    }
     int baseAttackRating = displayedAttackRating();
-    int[] buttons = {Input.Buttons.LEFT, Input.Buttons.RIGHT};
+    int itemAttackRatingPercent = statIntIncludingRemaining(Stat.item_tohit_percent);
+    StateList states = playerStates();
+    if (states != null) {
+      itemAttackRatingPercent += states.getTotalAttackModifier();
+      itemAttackRatingPercent += states.getWeaponMastery(
+          activeWeapon(), false, new StateList.WeaponMasteryBonus()).attackRatingPercent;
+    }
     for (int i = 0; i < buttons.length; i++) {
       Skills.Entry skill = selectedSkill(buttons[i]);
       Label name = attackRatingNames[i];
@@ -525,8 +590,13 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       }
       if (value != null) {
         int skillLevel = Math.max(1, Riiablo.charData.getSkill(skill.Id));
-        setNumber(value, calculateSkillAttackRating(baseAttackRating, skill, skillLevel));
+        int skillFactor = skillToHitFactor(skill, skillLevel);
+        setNumber(value, calculateSkillAttackRating(
+            baseAttackRating, itemAttackRatingPercent, skillFactor));
       }
+    }
+    if (statPointsGroup != null) {
+      statPointsGroup.setVisible(isVisible() && available > 0);
     }
     for (Button button : statButtons) {
       if (button != null) button.setVisible(isVisible() && available > 0);
@@ -536,6 +606,38 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private int statInt(short stat) {
     StatRef value = Riiablo.charData.getStats().get(stat, StatRef.obtain());
     return value == null ? 0 : value.asInt();
+  }
+
+  /**
+   * Equipment op=0 stats whose ids are absent from the persistent character
+   * list remain in Attributes.remaining(). D2 still treats them as unit stats
+   * for the character screen and combat calculations.
+   */
+  private int statIntIncludingRemaining(short stat) {
+    Attributes attrs = Riiablo.charData.getStats();
+    long value = (long) statValue(attrs.aggregate(), stat)
+        + statValue(attrs.remaining(), stat);
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, value));
+  }
+
+  /** Prefers the resolved aggregate when ItemData also retained its source stat. */
+  private int statIntResolved(short stat) {
+    Attributes attrs = Riiablo.charData.getStats();
+    StatRef aggregate = attrs.aggregate().get(stat, StatRef.obtain());
+    return aggregate != null ? aggregate.asInt() : statValue(attrs.remaining(), stat);
+  }
+
+  private StateList playerStates() {
+    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return null;
+    try {
+      com.artemis.ComponentMapper<UnitStates> mapper =
+          Riiablo.engine.getMapper(UnitStates.class);
+      if (mapper == null || !mapper.has(Riiablo.game.player)) return null;
+      UnitStates component = mapper.get(Riiablo.game.player);
+      return component == null ? null : component.stateList;
+    } catch (RuntimeException ignored) {
+      return null;
+    }
   }
 
   private long statLong(short stat) {
@@ -563,7 +665,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   int displayedAttackRating() {
     int dexterity = statInt(Stat.dexterity);
-    int toHit = statInt(Stat.tohit);
+    int toHit = statIntIncludingRemaining(Stat.tohit);
     CharStats.Entry charStats = Riiablo.charData.classId.entry();
     int classFactor = charStats == null ? 0 : charStats.ToHitFactor;
     return calculateAttackRating(dexterity, toHit, classFactor);
@@ -574,10 +676,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   }
 
   int[] displayedPhysicalDamage() {
-    int minimum = statInt(Stat.mindamage);
-    int maximum = statInt(Stat.maxdamage);
-    int secondaryMinimum = statInt(Stat.secondary_mindamage);
-    int secondaryMaximum = statInt(Stat.secondary_maxdamage);
+    return displayedPhysicalDamage(selectedSkill(Input.Buttons.LEFT), 1);
+  }
+
+  private int[] displayedPhysicalDamage(Skills.Entry skill, int skillLevel) {
+    int minimum = statIntIncludingRemaining(Stat.mindamage);
+    int maximum = statIntIncludingRemaining(Stat.maxdamage);
+    int secondaryMinimum = statIntIncludingRemaining(Stat.secondary_mindamage);
+    int secondaryMaximum = statIntIncludingRemaining(Stat.secondary_maxdamage);
     if (secondaryMinimum > 0 && secondaryMaximum > 0) {
       minimum = secondaryMinimum;
       maximum = secondaryMaximum;
@@ -596,21 +702,185 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       strengthBonus = record.StrBonus;
       dexterityBonus = record.DexBonus;
     }
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    int stateDamagePercent = 0;
+    StateList states = playerStates();
+    if (states != null) {
+      stateDamagePercent = states.getTotalDamageModifier();
+      stateDamagePercent += states.getWeaponMastery(
+          weapon, false, new StateList.WeaponMasteryBonus()).damagePercent;
+    }
     return calculateDamageRange(minimum, maximum, statInt(Stat.strength),
         statInt(Stat.dexterity), strengthBonus, dexterityBonus,
-        statInt(Stat.damagepercent));
+        statIntIncludingRemaining(Stat.damagepercent) + stateDamagePercent,
+        statIntIncludingRemaining(Stat.item_normaldamage),
+        statIntIncludingRemaining(Stat.item_mindamage_percent),
+        statIntIncludingRemaining(Stat.item_maxdamage_percent),
+        skillPhysicalDamagePercent(skill, skillLevel), sourceDamage);
   }
 
   static int[] calculateDamageRange(int minimum, int maximum, int strength, int dexterity,
       int strengthBonus, int dexterityBonus, int damagePercent) {
-    int bonus = damagePercent
+    return calculateDamageRange(minimum, maximum, strength, dexterity,
+        strengthBonus, dexterityBonus, damagePercent, 0, 0, 0, 0, 128);
+  }
+
+  static int[] calculateDamageRange(int minimum, int maximum, int strength, int dexterity,
+      int strengthBonus, int dexterityBonus, int damagePercent, int normalDamage,
+      int minimumDamagePercent, int maximumDamagePercent, int skillDamagePercent,
+      int sourceDamage) {
+    minimum = Math.max(1, minimum + normalDamage);
+    maximum = Math.max(minimum + 1, maximum + normalDamage);
+    int bonus = damagePercent + skillDamagePercent
         + strengthBonus * strength / 100
         + dexterityBonus * dexterity / 100;
     bonus = Math.max(-90, bonus);
+    long scaledMinimum = minimum + (long) minimum * (bonus + minimumDamagePercent) / 100L;
+    long scaledMaximum = maximum + (long) maximum * (bonus + maximumDamagePercent) / 100L;
+    int source = Math.max(0, sourceDamage);
     return new int[] {
-        Math.max(0, minimum + minimum * bonus / 100),
-        Math.max(0, maximum + maximum * bonus / 100)
+        Math.max(0, (int) Math.min(Integer.MAX_VALUE, scaledMinimum * source / 128L)),
+        Math.max(0, (int) Math.min(Integer.MAX_VALUE, scaledMaximum * source / 128L))
     };
+  }
+
+  private int[] displayedWeaponDamage(Skills.Entry skill, int skillLevel) {
+    int[] physical = displayedPhysicalDamage(skill, skillLevel);
+    int[] elemental = displayedItemElementalDamage();
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    int elementalMinimum = scaleSource(elemental[0], sourceDamage);
+    int elementalMaximum = scaleSource(elemental[1], sourceDamage);
+    return new int[] {
+        saturatedAdd(physical[0], elementalMinimum),
+        saturatedAdd(physical[1], elementalMaximum)
+    };
+  }
+
+  private int[] displayedItemElementalDamage() {
+    int minimum = 0;
+    int maximum = 0;
+    short[] minimumStats = {
+        Stat.firemindam, Stat.lightmindam, Stat.coldmindam, Stat.magicmindam
+    };
+    short[] maximumStats = {
+        Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam, Stat.magicmaxdam
+    };
+    for (int i = 0; i < minimumStats.length; i++) {
+      minimum = saturatedAdd(minimum, Math.max(0, statIntResolved(minimumStats[i])));
+      maximum = saturatedAdd(maximum, Math.max(0, statIntResolved(maximumStats[i])));
+    }
+
+    // Native poison stats are damage per frame in 8.8 fixed-point. The
+    // character screen displays their total over the resolved poison length.
+    int poisonLength = Math.max(0, statIntResolved(Stat.poisonlength));
+    minimum = saturatedAdd(minimum,
+        scaleFixedDuration(Math.max(0, statIntResolved(Stat.poisonmindam)), poisonLength));
+    maximum = saturatedAdd(maximum,
+        scaleFixedDuration(Math.max(0, statIntResolved(Stat.poisonmaxdam)), poisonLength));
+    return new int[] {minimum, Math.max(minimum, maximum)};
+  }
+
+  private int[] displayedSkillElementalDamage(Skills.Entry skill, int level) {
+    if (skill == null || level <= 0) return new int[] {0, 0};
+    int minimum = MissileDamageResolver.skillElementalDamage(
+        skill, level, true, this::hardSkillLevel);
+    int maximum = MissileDamageResolver.skillElementalDamage(
+        skill, level, false, this::hardSkillLevel);
+    String element = skill.EType;
+
+    if (minimum <= 0 && maximum <= 0) {
+      Missiles.Entry missile = descriptionMissile(skill);
+      if (missile != null) {
+        minimum = MissileDamageResolver.missileElementalDamageFixed(missile, level, true) >> 8;
+        maximum = MissileDamageResolver.missileElementalDamageFixed(missile, level, false) >> 8;
+        int synergy = Math.max(0,
+            evaluateSkillFormula(missile.EDmgSymPerCalc, skill, level));
+        minimum += minimum * synergy / 100;
+        maximum += maximum * synergy / 100;
+        element = missile.EType;
+      }
+    }
+
+    int mastery = elementalMastery(element);
+    minimum += minimum * mastery / 100;
+    maximum += maximum * mastery / 100;
+    minimum = Math.max(0, minimum);
+    return new int[] {minimum, Math.max(minimum, maximum)};
+  }
+
+  static String formatDamageRange(int[] weapon, int[] elemental) {
+    boolean hasWeapon = weapon != null && weapon.length >= 2 && weapon[1] > 0;
+    boolean hasElemental = elemental != null && elemental.length >= 2 && elemental[1] > 0;
+    if (!hasWeapon && !hasElemental) return "";
+    String weaponText = hasWeapon ? weapon[0] + "-" + weapon[1] : "";
+    String elementalText = hasElemental ? elemental[0] + "-" + elemental[1] : "";
+    return hasWeapon && hasElemental ? weaponText + "\n" + elementalText
+        : hasWeapon ? weaponText : elementalText;
+  }
+
+  private int skillPhysicalDamagePercent(Skills.Entry skill, int level) {
+    if (skill == null || isNormalAttack(skill) || !skillUsesWeaponDamage(skill)) return 0;
+    String expression = skill.calc1;
+    if (Riiablo.files != null && Riiablo.files.NativeSkills != null) {
+      NativeSkills.Entry nativeSkill = Riiablo.files.NativeSkills.get(skill.Id);
+      if (nativeSkill != null) expression = nativeSkill.string("calc1");
+    }
+    return evaluateSkillFormula(expression, skill, level);
+  }
+
+  private int evaluateSkillFormula(String expression, Skills.Entry skill, int level) {
+    return SkillFormula.evaluate(expression, skill, Math.max(1, level),
+        this::hardSkillLevel, SkillNameResolver::entry);
+  }
+
+  private int hardSkillLevel(String internalName) {
+    Skills.Entry referenced = SkillNameResolver.entry(internalName);
+    return referenced == null || Riiablo.charData == null
+        ? 0 : Math.max(0, Riiablo.charData.getBaseSkillLevel(referenced.Id));
+  }
+
+  private Missiles.Entry descriptionMissile(Skills.Entry skill) {
+    if (Riiablo.files == null || Riiablo.files.Missiles == null) return null;
+    SkillDesc.Entry description = SkillNameResolver.description(skill);
+    return description == null || description.descmissile1 == null
+        || description.descmissile1.isEmpty()
+        ? null : Riiablo.files.Missiles.get(description.descmissile1);
+  }
+
+  private int elementalMastery(String element) {
+    if (element == null) return 0;
+    if ("fire".equalsIgnoreCase(element)) {
+      return statIntIncludingRemaining(Stat.passive_fire_mastery);
+    }
+    if ("ltng".equalsIgnoreCase(element) || "lightning".equalsIgnoreCase(element)) {
+      return statIntIncludingRemaining(Stat.passive_ltng_mastery);
+    }
+    if ("cold".equalsIgnoreCase(element) || "freeze".equalsIgnoreCase(element)
+        || "frze".equalsIgnoreCase(element)) {
+      return statIntIncludingRemaining(Stat.passive_cold_mastery);
+    }
+    if ("pois".equalsIgnoreCase(element) || "poison".equalsIgnoreCase(element)) {
+      return statIntIncludingRemaining(Stat.passive_pois_mastery);
+    }
+    if ("mag".equalsIgnoreCase(element) || "magic".equalsIgnoreCase(element)) {
+      return statIntIncludingRemaining(Stat.passive_mag_mastery);
+    }
+    return 0;
+  }
+
+  private static int scaleSource(int value, int source) {
+    return Math.max(0, (int) Math.min(Integer.MAX_VALUE,
+        (long) Math.max(0, value) * Math.max(0, source) / 128L));
+  }
+
+  private static int scaleFixedDuration(int value, int frames) {
+    return Math.max(0, (int) Math.min(Integer.MAX_VALUE,
+        (long) Math.max(0, value) * Math.max(0, frames) / 256L));
+  }
+
+  private static int saturatedAdd(int left, int right) {
+    return (int) Math.min(Integer.MAX_VALUE,
+        (long) Math.max(0, left) + Math.max(0, right));
   }
 
   private Item activeWeapon() {
@@ -620,7 +890,17 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     return left != null && left.base instanceof Weapons.Entry ? left : null;
   }
 
-  private Color displayedDamageColor() {
+  private Color displayedDamageColor(Skills.Entry skill, int[] elemental) {
+    if (elemental != null && elemental.length >= 2 && elemental[1] > 0) {
+      String element = skill == null ? null : skill.EType;
+      if (element == null || element.isEmpty()) {
+        Missiles.Entry missile = descriptionMissile(skill);
+        element = missile == null ? null : missile.EType;
+      }
+      Color color = elementalColor(element);
+      if (color != null) return color;
+    }
+
     Attributes attrs = Riiablo.charData.getStats();
     if (hasPositiveDamage(attrs, Stat.poisonmindam, Stat.poisonmaxdam)) {
       return Riiablo.colors.green;
@@ -634,6 +914,18 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     if (hasPositiveDamage(attrs, Stat.lightmindam, Stat.lightmaxdam)) {
       return Riiablo.colors.yellow;
     }
+    return Riiablo.colors.white;
+  }
+
+  private static Color elementalColor(String element) {
+    if (element == null) return null;
+    if ("fire".equalsIgnoreCase(element)) return Riiablo.colors.red;
+    if ("ltng".equalsIgnoreCase(element)
+        || "lightning".equalsIgnoreCase(element)) return Riiablo.colors.yellow;
+    if ("cold".equalsIgnoreCase(element) || "freeze".equalsIgnoreCase(element)
+        || "frze".equalsIgnoreCase(element)) return Riiablo.colors.blue;
+    if ("pois".equalsIgnoreCase(element)
+        || "poison".equalsIgnoreCase(element)) return Riiablo.colors.green;
     return Riiablo.colors.white;
   }
 

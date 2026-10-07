@@ -6623,3 +6623,23 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 - [ ] 后续补 difficulty=1/2、动画 keyframe 和 Death Sentry AI fallback；当前 gate 的
   `animationFallback=true` 只用于无 COF 关键帧的 headless 环境。
 - 实现提交：`82616717`。
+
+## 2026-10-07 原版角色属性面板对齐
+
+- [x] 对照原版 1.14d 截图和 D2MOO `UNITS_GetAttackRate`、
+  `SUNITDMG_ApplyDamageBonuses` 修正角色面板：99 级下一等级经验显示 `0`，无剩余属性点时
+  隐藏整行提示，耐力/生命/法力恢复为“左最大、右当前”，普通抗性保持白色。
+- [x] 左右键伤害和命中率改为分别读取各自动作。伤害合并装备元素包，并在技能行追加
+  Skills.txt/SkillDesc-Missiles.txt 元素范围；物理范围纳入 `item_normaldamage`、最小/最大
+  伤害百分比、技能 Calc1、SrcDam、状态伤害和武器精通。
+- [x] 命中率按 D2MOO 顺序合并平面 `tohit`、敏捷、职业因子、装备/状态百分比、武器精通和
+  `tohitcalc`。真实 `aaa.d2s` 数据验证：装备 `tohit=29` 与 Penetrate 状态 `+35%` 合并后，
+  普通攻击为 `1591`；爆炸箭技能因子加入后为 `2688`。装备火焰 `1-6` 与武器
+  `3-13` 合并为 `4-19`。
+- [x] D2S 复制完成后先用存档基础列表初始化 aggregate，再进行装备刷新，避免当前生命被
+  soft-reset 的零值覆盖或随后被错误补满。真实存档门槛确认载入后保留保存的当前生命。
+
+验证：`:core:test --tests com.riiablo.screen.panel.CharacterPanelStatsTest
+--tests com.riiablo.save.ItemDataResourceRefreshTest
+--tests com.riiablo.save.D2SRealSaveIntegrationTest.preservesCurrentLifeWhenLoadingRealSave
+--no-daemon`（真实存档门槛设置 `D2_REAL_SAVE`），以及 `:core:compileJava --no-daemon`。
