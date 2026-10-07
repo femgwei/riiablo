@@ -1489,7 +1489,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     Riiablo.music.stop();
     Riiablo.assets.get(windowopenDescriptor).play();
 
-    if (socket == null) mapManager.createEntities();
+    if (socket == null) {
+      mapManager.createEntities();
+    } else {
+      // D2Common creates river water and its ambient markers only in the
+      // client DRLG. They have no D2Game entity to arrive over the socket.
+      mapManager.createClientPresentationEntities();
+    }
 
     engine.getSystem(Box2DPhysics.class).createBodies();
 

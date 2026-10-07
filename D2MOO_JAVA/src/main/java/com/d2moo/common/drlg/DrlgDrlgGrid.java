@@ -386,32 +386,37 @@ public class DrlgDrlgGrid {
      */
     public static void assignCellsOffsetsAndFlags(D2DrlgGridStrc pDrlgGrid, int[] pCellPos, 
             D2DrlgCoord pDrlgCoord, int width, int[] pCellFlags) {
-        if (pDrlgGrid == null || pDrlgCoord == null) {
+        if (pDrlgGrid == null || pDrlgCoord == null || pCellPos == null || width <= 0) {
             return;
         }
         
         int nHeight = pDrlgCoord.getNHeight();
         int nWidth = pDrlgCoord.getNWidth();
-        
-        // 初始化行偏移
-        int[] pRowOffsets = new int[nHeight];
-        for (int i = 0; i < nHeight; ++i) {
-            pRowOffsets[i] = i * width;
+        if (nWidth < 0 || nHeight < 0) return;
+
+        // Native stores an offset view into the DS1 layer. Java arrays cannot
+        // express that view, so preserve the source stride while copying the
+        // requested rectangle into compact storage. pCellFlags is native
+        // caller-owned row-offset scratch, not the source cell data.
+        int startIndex = pDrlgCoord.getNPosX() + width * pDrlgCoord.getNPosY();
+        int lastRowStart = startIndex + Math.max(0, nHeight - 1) * width;
+        if (startIndex < 0 || lastRowStart < 0
+                || lastRowStart > pCellPos.length - nWidth) return;
+
+        int[] pFlags = new int[Math.multiplyExact(nWidth, nHeight)];
+        for (int y = 0; y < nHeight; y++) {
+            System.arraycopy(pCellPos, startIndex + y * width,
+                    pFlags, y * nWidth, nWidth);
         }
-        
-        // 分配单元格标志数组
-        int[] pFlags = new int[width * nHeight];
-        
-        // 复制单元格标志
-        if (pCellFlags != null) {
-            int copySize = Math.min(pCellFlags.length, pFlags.length);
-            System.arraycopy(pCellFlags, 0, pFlags, 0, copySize);
-        }
+        int[] pRowOffsets = pCellFlags != null && pCellFlags.length >= nHeight
+                ? pCellFlags : new int[nHeight];
+        for (int i = 0; i < nHeight; ++i) pRowOffsets[i] = i * nWidth;
         
         pDrlgGrid.setPCellsFlags(pFlags);
         pDrlgGrid.setPCellsRowOffsets(pRowOffsets);
-        pDrlgGrid.setNWidth(width);
+        pDrlgGrid.setNWidth(nWidth);
         pDrlgGrid.setNHeight(nHeight);
+        pDrlgGrid.setUnk0x10(1);
     }
     
     /**

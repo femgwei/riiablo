@@ -253,7 +253,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
 
     // 完全采用 D2MOO_JAVA createLevelConnections 生成布局；失败时使用 Levels.txt 的简单回退布局
-    LayoutAndDrlg layoutAndDrlg = Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, diff, burialGroundsId);
+    boolean clientPresentation =
+        factory instanceof com.riiablo.engine.client.ClientEntityFactory;
+    LayoutAndDrlg layoutAndDrlg = Act1D2MOOLayoutBridge.getLayoutAndDrlg(
+        seed, diff, burialGroundsId, clientPresentation);
     Act1LayoutResult result;
     D2DrlgStrc drlg;
     if (layoutAndDrlg == null) {

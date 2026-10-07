@@ -135,6 +135,16 @@ public final class Act1D2MOOLayoutBridge {
      * @return 成功时返回 LayoutAndDrlg（含 result 与 drlg），失败时返回 null
      */
     public static LayoutAndDrlg getLayoutAndDrlg(int seed, int diff, int burialGroundsId) {
+        return getLayoutAndDrlg(seed, diff, burialGroundsId, false);
+    }
+
+    /**
+     * Builds either the authoritative server DRLG or its client presentation
+     * counterpart. Native client generation adds hardcoded river water and
+     * ambience preset units which are intentionally absent on the server.
+     */
+    public static LayoutAndDrlg getLayoutAndDrlg(
+            int seed, int diff, int burialGroundsId, boolean clientPresentation) {
         D2DrlgStrc drlg = null;
         try {
             D2LevelDefBin[] cache = buildLevelDefCache(diff, burialGroundsId);
@@ -164,7 +174,7 @@ public final class Act1D2MOOLayoutBridge {
                 archive,
                 seed,
                 D2LevelIds.LEVEL_ROGUEENCAMPMENT,
-                0,
+                clientPresentation ? com.d2moo.common.drlg.D2DrlgFlags.ONCLIENT : 0,
                 null,
                 (byte) diff,
                 null,

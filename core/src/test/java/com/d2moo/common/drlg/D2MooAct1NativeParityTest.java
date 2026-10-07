@@ -303,6 +303,54 @@ class D2MooAct1NativeParityTest {
   }
 
   @Test
+  void assignedGridReadsDs1CellsInsteadOfRowOffsetScratch() {
+    int[] source = {
+        0, 1, 2, 3, 4,
+        5, 6, 7, 8, 9,
+        10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19,
+    };
+    int[] rowOffsetScratch = new int[8];
+    D2DrlgCoord region = coord(1, 1, 2, 2);
+    D2DrlgGridStrc grid = new D2DrlgGridStrc();
+
+    DrlgDrlgGrid.assignCellsOffsetsAndFlags(
+        grid, source, region, 5, rowOffsetScratch);
+
+    assertArrayEquals(new int[] {6, 7, 11, 12}, grid.getPCellsFlags());
+    assertSame(rowOffsetScratch, grid.getPCellsRowOffsets());
+    assertArrayEquals(new int[] {0, 2},
+        java.util.Arrays.copyOf(rowOffsetScratch, 2));
+    assertEquals(12, grid.getFlag(1, 1));
+  }
+
+  @Test
+  void lowerRiverCreatesNativeWaterStripAndSoundMarker() {
+    D2DrlgMapStrc map = new D2DrlgMapStrc();
+    map.setPDrlgCoord(coord(10, 20, 5, 4));
+    D2DrlgFileStrc file = new D2DrlgFileStrc();
+    file.setNHeight(4);
+    map.setPFile(file);
+
+    D2DrlgGridStrc floor = new D2DrlgGridStrc();
+    DrlgDrlgGrid.fillGrid(
+        floor, 5, 4, new int[20], new int[] {0, 5, 10, 15});
+    DrlgPreset.spawnRiver(map, map.getPDrlgCoord(), null, floor, -1);
+
+    int[] counts = new int[67];
+    for (D2PresetUnit unit = map.getPPresetUnit(); unit != null; unit = unit.getPNext()) {
+      assertTrue(unit.isBSpawned());
+      if (unit.getNIndex() >= 0 && unit.getNIndex() < counts.length) {
+        counts[unit.getNIndex()]++;
+      }
+    }
+    assertEquals(4, counts[D2ObjectIds.OBJECT_RIVER1]);
+    assertEquals(12, counts[D2ObjectIds.OBJECT_RIVER2]);
+    assertEquals(4, counts[D2ObjectIds.OBJECT_RIVER3]);
+    assertEquals(1, counts[D2ObjectIds.OBJECT_INVISIBLE_RIVER_SOUND1]);
+  }
+
+  @Test
   void nativeDirtPathDirectionUsesD2CardinalOrdering() {
     assertEquals(0, DrlgOutPlace.nativeCardinalDirection(0, 0, 5, 0));
     assertEquals(1, DrlgOutPlace.nativeCardinalDirection(0, 0, 0, 5));

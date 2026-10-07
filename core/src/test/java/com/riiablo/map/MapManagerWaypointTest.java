@@ -78,4 +78,19 @@ class MapManagerWaypointTest {
     assertTrue(MapManager.isWaypointOwnedByZone(requested, requested));
     assertFalse(MapManager.isWaypointOwnedByZone(town, requested));
   }
+
+  @Test
+  void clientRiverObjectsSurviveNativeSpawnedFilter() {
+    assertTrue(MapManager.isClientRiverObject(40));
+    assertTrue(MapManager.isClientRiverObject(41));
+    assertTrue(MapManager.isClientRiverObject(42));
+    assertTrue(MapManager.isClientRiverObject(65));
+    assertTrue(MapManager.isClientRiverObject(66));
+    assertFalse(MapManager.isClientRiverObject(39));
+    assertFalse(MapManager.isClientRiverObject(43));
+    assertTrue(MapManager.shouldMaterializeSpawnedObject(40, true, true));
+    assertFalse(MapManager.shouldMaterializeSpawnedObject(40, false, true));
+    assertFalse(MapManager.shouldMaterializeSpawnedObject(40, true, false));
+    assertFalse(MapManager.shouldMaterializeSpawnedObject(39, true, true));
+  }
 }

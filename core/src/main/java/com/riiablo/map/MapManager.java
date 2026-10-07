@@ -44,6 +44,13 @@ public class MapManager extends PassiveSystem {
     }
   }
 
+  /** Creates map-owned presentation objects which are never synchronized by D2Game. */
+  public void createClientPresentationEntities() {
+    for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
+      createNativeObjects(zone, null, false, true);
+    }
+  }
+
   private void createWarps(Map.Zone zone) {
     IntMap<DS1.Cell> specials = zone.specials;
     IntSet act3WarpSlots = zone.level != null && zone.level.Id >= 75 && zone.level.Id <= 102
@@ -176,13 +183,13 @@ public class MapManager extends PassiveSystem {
   }
 
   public void createNativeObjects(Map.Zone zone) {
-    createNativeObjects(zone, null, false);
+    createNativeObjects(zone, null, false, false);
   }
 
   /** D2Game SUNIT_SpawnPresetUnitsInRoom equivalent for one activated RoomEx. */
   public void createNativeObjects(Map.Zone zone, Map.RoomEx onlyRoom) {
     if (zone == null || onlyRoom == null || onlyRoom.isPresetUnitsSpawned()) return;
-    createNativeObjects(zone, onlyRoom, false);
+    createNativeObjects(zone, onlyRoom, false, false);
     // The native flag records that the room was processed, including rooms
     // which contained no preset objects.
     onlyRoom.markPresetUnitsSpawned();
@@ -190,6 +197,12 @@ public class MapManager extends PassiveSystem {
 
   private void createNativeObjects(
       Map.Zone zone, Map.RoomEx onlyRoom, boolean outsideRoomsOnly) {
+    createNativeObjects(zone, onlyRoom, outsideRoomsOnly, false);
+  }
+
+  private void createNativeObjects(
+      Map.Zone zone, Map.RoomEx onlyRoom, boolean outsideRoomsOnly,
+      boolean clientPresentationOnly) {
     // Objects.txt is split by act. Native DS1 exports carry the zero-based
     // Levels.txt act, while the table loader uses the original one-based
     // section (Act I = 1).
@@ -218,20 +231,33 @@ public class MapManager extends PassiveSystem {
       Map.RoomEx room = zone.findRoomEx(worldX, worldY);
       if (outsideRoomsOnly && room != null) continue;
       if (!outsideRoomsOnly && onlyRoom != null && room != onlyRoom) continue;
-      if (object.spawned) {
-        // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
-        // as spawned. Creating them again would duplicate generated objects.
-        skipped++;
-        object.creationStatus = "skipped_spawned";
-        continue;
-      }
-
       // DS1 stores Act as zero-based in the file and riiablo's loader exposes
       // it as one-based. Act I therefore uses table section 1 here. Units
       // generated after DS1 loading carry a direct Objects.txt class id.
       int objectId = object.ds1Raw
           ? resolveDs1ObjectId(objectAct, object.presetIndex)
           : object.presetIndex;
+      boolean clientRiverPresentation = shouldMaterializeSpawnedObject(objectId,
+          object.spawned,
+          factory instanceof com.riiablo.engine.client.ClientEntityFactory);
+      if (clientPresentationOnly && !clientRiverPresentation) {
+        // Network clients receive ordinary objects from D2Game. Leave their
+        // status untouched so this presentation pass cannot claim or suppress
+        // an authoritative server replica.
+        skipped++;
+        continue;
+      }
+      if (object.spawned && !clientRiverPresentation) {
+        // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
+        // as spawned. River visuals and sound markers are the exception:
+        // D2Common creates them only in a client DRLG and marks them spawned
+        // precisely so D2Game does not create server units for them. riiablo's
+        // shared bridge must materialize those client-only presentation units.
+        skipped++;
+        object.creationStatus = "skipped_spawned";
+        continue;
+      }
+
       NativePresetObjectResolver.Resolution resolution =
           NativePresetObjectResolver.resolve(objectAct, zone.level.Id, objectId,
               map.seed, object.x, object.y);
@@ -341,6 +367,15 @@ public class MapManager extends PassiveSystem {
   private static int resolveDs1ObjectId(int act, int presetIndex) {
     if (presetIndex < 0 || presetIndex >= Riiablo.files.obj.getSize(act)) return 573;
     return Riiablo.files.obj.getObjectId(act, presetIndex);
+  }
+
+  static boolean isClientRiverObject(int objectId) {
+    return objectId >= 40 && objectId <= 42 || objectId == 65 || objectId == 66;
+  }
+
+  static boolean shouldMaterializeSpawnedObject(
+      int objectId, boolean spawned, boolean clientPresentation) {
+    return spawned && clientPresentation && isClientRiverObject(objectId);
   }
 
   /** Backwards-compatible test hook for D2Game native object resolution. */

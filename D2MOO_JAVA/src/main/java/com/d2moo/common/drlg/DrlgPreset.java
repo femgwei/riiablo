@@ -109,9 +109,16 @@ public class DrlgPreset {
                     tDrlgCoord.setNWidth(mazeMap.getPDrlgCoord().getNWidth());
                     tDrlgCoord.setNHeight(mazeMap.getPDrlgCoord().getNHeight());
                     
-                    // 注意：D2DrlgFileStrc 结构已实现，可以通过 pFile 访问 pFloorLayer
-                    // 当前实现使用临时网格对象，实际使用时可以从 pFile 获取层数据
                     D2DrlgGridStrc tDrlgGrid = new D2DrlgGridStrc();
+                    Object floorLayer = mazeMap.getPFile().getPFloorLayer(0);
+                    if (floorLayer instanceof int[]) {
+                        DrlgDrlgGrid.assignCellsOffsetsAndFlags(tDrlgGrid,
+                            (int[]) floorLayer, tDrlgCoord,
+                            mazeMap.getPDrlgCoord().getNWidth() + 1,
+                            new int[Math.max(256, tDrlgCoord.getNHeight())]);
+                    } else {
+                        D2Log.warning("DRLGPRESET_SpawnHardcodedPresetUnits: Missing floor layer for river scan");
+                    }
                     
                     // 设置实际坐标
                     tDrlgCoord.setNPosX(mazeMap.getPDrlgCoord().getNPosX());
