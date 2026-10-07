@@ -81,6 +81,58 @@ class WeatherRenderSystemTest {
     }
   }
 
+  @Test
+  void nativeWeatherCycleFadesThenAlternatesRainAndDryPeriods() {
+    WeatherRenderSystem.WeatherCycle cycle =
+        new WeatherRenderSystem.WeatherCycle(5L);
+    cycle.configure(WeatherRenderSystem.Mode.RAIN);
+
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.FADE_IN, cycle.phase);
+    assertEquals(0f, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
+    assertTrue(cycle.phaseTicks >= 250 && cycle.phaseTicks < 500);
+    assertTrue(cycle.peakIntensity >= 32f / WeatherRenderSystem.PARTICLE_COUNT);
+    assertTrue(cycle.peakIntensity <= 255f / WeatherRenderSystem.PARTICLE_COUNT);
+
+    cycle.advanceTicks(cycle.phaseTicks);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.STEADY, cycle.phase);
+    assertEquals(cycle.peakIntensity, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
+    assertTrue(cycle.phaseTicks >= 3000 && cycle.phaseTicks < 6000);
+
+    cycle.advanceTicks(cycle.phaseTicks);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.FADE_OUT, cycle.phase);
+    assertEquals(cycle.peakIntensity, cycle.intensity);
+    assertTrue(cycle.phaseTicks >= 125 && cycle.phaseTicks < 175);
+
+    cycle.advanceTicks(cycle.phaseTicks);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.DRY, cycle.phase);
+    assertEquals(0f, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
+    assertTrue(cycle.phaseTicks >= 7500 && cycle.phaseTicks < 15000);
+  }
+
+  @Test
+  void unsupportedLevelPausesAndResumesTheWeatherCycle() {
+    WeatherRenderSystem.WeatherCycle cycle =
+        new WeatherRenderSystem.WeatherCycle(6L);
+    cycle.configure(WeatherRenderSystem.Mode.RAIN);
+    cycle.advanceTicks(20);
+    int remainingTicks = cycle.remainingTicks;
+    float intensity = cycle.intensity;
+
+    cycle.configure(WeatherRenderSystem.Mode.NONE);
+    cycle.advanceTicks(100);
+    assertEquals(remainingTicks, cycle.remainingTicks);
+    assertEquals(intensity, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
+
+    cycle.configure(WeatherRenderSystem.Mode.RAIN);
+    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
+    cycle.advanceTicks(1);
+    assertEquals(remainingTicks - 1, cycle.remainingTicks);
+  }
+
   private static WeatherRenderSystem.ParticleField field(
       long seed, WeatherRenderSystem.Mode mode) {
     WeatherRenderSystem.ParticleField particles =

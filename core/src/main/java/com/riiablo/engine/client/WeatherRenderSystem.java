@@ -29,6 +29,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int SNOW_SEGMENTS_PER_PARTICLE = 2;
   private static final int MAX_CATCH_UP_STEPS = 4;
   private static final long RANDOM_SEED = 0xD2C11E17L;
+  private static final long WEATHER_CYCLE_SEED = 0x6FAA7940L;
 
   enum Mode {
     NONE,
@@ -56,6 +57,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
+  private final WeatherCycle weatherCycle = new WeatherCycle(WEATHER_CYCLE_SEED);
   private ControlMode controlMode = ControlMode.AUTO;
 
   @Override
@@ -65,17 +67,28 @@ public final class WeatherRenderSystem extends BaseSystem {
     if (zone == null && src >= 0 && mPosition.has(src)) {
       zone = map.getZone(mPosition.get(src).position);
     }
-    Mode mode = controlledModeFor(zone == null ? null : zone.level);
+    Mode eligibleMode = modeFor(zone == null ? null : zone.level);
+    Mode mode;
+    float intensity;
+    if (controlMode == ControlMode.AUTO) {
+      weatherCycle.configure(eligibleMode);
+      weatherCycle.advance(world.getDelta());
+      mode = weatherCycle.visibleMode();
+      intensity = weatherCycle.intensity;
+    } else {
+      mode = controlledModeFor(eligibleMode);
+      intensity = mode == Mode.NONE ? 0f : 1f;
+    }
     float width = iso.viewportWidth * iso.zoom;
     float height = iso.viewportHeight * iso.zoom;
     particles.configure(mode, width, height);
     if (mode == Mode.NONE || width <= 0f || height <= 0f) return;
 
     particles.advance(world.getDelta());
-    draw(width, height);
+    draw(width, height, intensity);
   }
 
-  private void draw(float width, float height) {
+  private void draw(float width, float height, float intensity) {
     projection.setToOrtho2D(0f, 0f, width, height);
     shapes.identity();
     shapes.setProjectionMatrix(projection);
@@ -86,18 +99,19 @@ public final class WeatherRenderSystem extends BaseSystem {
     shapes.begin(ShapeRenderer.ShapeType.Line);
     if (particles.mode == Mode.RAIN) {
       shapes.setColor(0.55f, 0.63f, 0.72f, 0.52f);
-      drawRain();
+      drawRain(intensity);
     } else {
       shapes.setColor(0.88f, 0.91f, 0.94f, 0.78f);
-      drawSnow();
+      drawSnow(intensity);
     }
     shapes.end();
     Gdx.gl.glDisable(GL20.GL_BLEND);
   }
 
-  private void drawRain() {
+  private void drawRain(float intensity) {
     float alpha = particles.alpha();
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
+    int activeParticles = activeParticles(intensity);
+    for (int i = 0; i < activeParticles; i++) {
       float x = MathUtils.lerp(particles.previousX[i], particles.x[i], alpha);
       float y = MathUtils.lerp(particles.previousY[i], particles.y[i], alpha);
       float length = particles.size[i];
@@ -105,9 +119,10 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
   }
 
-  private void drawSnow() {
+  private void drawSnow(float intensity) {
     float alpha = particles.alpha();
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
+    int activeParticles = activeParticles(intensity);
+    for (int i = 0; i < activeParticles; i++) {
       float x = MathUtils.lerp(particles.previousX[i], particles.x[i], alpha);
       float y = MathUtils.lerp(particles.previousY[i], particles.y[i], alpha);
       float scale = particles.size[i];
@@ -121,17 +136,21 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
   }
 
+  private static int activeParticles(float intensity) {
+    return MathUtils.clamp(MathUtils.ceil(PARTICLE_COUNT * intensity), 0, PARTICLE_COUNT);
+  }
+
   static Mode modeFor(Levels.Entry level) {
     if (level == null || !level.Rain || level.IsInside) return Mode.NONE;
     return level.Act == 4 ? Mode.SNOW : Mode.RAIN;
   }
 
-  private Mode controlledModeFor(Levels.Entry level) {
+  private Mode controlledModeFor(Mode automaticMode) {
     switch (controlMode) {
       case OFF:  return Mode.NONE;
       case RAIN: return Mode.RAIN;
       case SNOW: return Mode.SNOW;
-      default:   return modeFor(level);
+      default:   return automaticMode;
     }
   }
 
@@ -142,6 +161,94 @@ public final class WeatherRenderSystem extends BaseSystem {
   public void setControlMode(ControlMode controlMode) {
     if (controlMode == null) throw new NullPointerException("controlMode");
     this.controlMode = controlMode;
+  }
+
+  /** Native four-stage weather timing from D2Client's Env.cpp state machine. */
+  static final class WeatherCycle {
+    enum Phase {
+      DRY(7500, 7500),
+      FADE_IN(250, 250),
+      STEADY(3000, 3000),
+      FADE_OUT(125, 50);
+
+      final int baseTicks;
+      final int randomTicks;
+
+      Phase(int baseTicks, int randomTicks) {
+        this.baseTicks = baseTicks;
+        this.randomTicks = randomTicks;
+      }
+    }
+
+    private final FixedStepAccumulator accumulator =
+        new FixedStepAccumulator(SimulationClock.STEP_SECONDS, MAX_CATCH_UP_STEPS);
+    private final Random random;
+    private Mode eligibleMode = Mode.NONE;
+    Phase phase;
+    int phaseTicks;
+    int remainingTicks;
+    float peakIntensity;
+    float intensity;
+
+    WeatherCycle(long seed) {
+      random = new Random(seed);
+    }
+
+    void configure(Mode nextEligibleMode) {
+      eligibleMode = nextEligibleMode;
+      if (nextEligibleMode == Mode.NONE || phase != null) return;
+
+      // Native zero-initialized state advances directly into phase 1.
+      begin(Phase.FADE_IN);
+      intensity = 0f;
+    }
+
+    int advance(float delta) {
+      if (eligibleMode == Mode.NONE || phase == null) return 0;
+      return accumulator.advance(delta, ignored -> step());
+    }
+
+    void advanceTicks(int ticks) {
+      for (int i = 0; i < ticks; i++) step();
+    }
+
+    private void step() {
+      if (eligibleMode == Mode.NONE || phase == null) return;
+
+      if (--remainingTicks <= 0) {
+        begin(next(phase));
+      } else if (phase == Phase.FADE_IN) {
+        intensity = peakIntensity * (1f - remainingTicks / (float) phaseTicks);
+      } else if (phase == Phase.FADE_OUT) {
+        intensity = peakIntensity * remainingTicks / (float) phaseTicks;
+      }
+    }
+
+    private void begin(Phase nextPhase) {
+      phase = nextPhase;
+      phaseTicks = nextPhase.baseTicks + random.nextInt(nextPhase.randomTicks);
+      remainingTicks = phaseTicks;
+      if (nextPhase == Phase.FADE_IN) {
+        // Env.cpp chooses a per-storm particle target in the inclusive 32..255 range.
+        peakIntensity = (32 + random.nextInt(224)) / (float) PARTICLE_COUNT;
+      }
+      intensity = nextPhase == Phase.STEADY || nextPhase == Phase.FADE_OUT
+          ? peakIntensity
+          : 0f;
+    }
+
+    private static Phase next(Phase phase) {
+      switch (phase) {
+        case DRY:     return Phase.FADE_IN;
+        case FADE_IN: return Phase.STEADY;
+        case STEADY:  return Phase.FADE_OUT;
+        default:      return Phase.DRY;
+      }
+    }
+
+    Mode visibleMode() {
+      return eligibleMode != Mode.NONE && intensity > 0f ? eligibleMode : Mode.NONE;
+    }
   }
 
   /** Two short line segments for each of the eight native snow shape slots. */
