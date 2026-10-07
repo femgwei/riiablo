@@ -33,6 +33,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Bits;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.ScreenUtils;
 
@@ -263,6 +264,7 @@ public class RenderSystem extends BaseEntitySystem {
   Map                 map;
   int                 viewBuffer[];
   Array<Integer>      cache[][][];
+  private final RenderSpatialIndex spatialIndex = new RenderSpatialIndex();
   int                 src = -1;
   boolean             dirty;
   final Vector2       currentPos = new Vector2();
@@ -612,16 +614,8 @@ public class RenderSystem extends BaseEntitySystem {
     }
   }
 
-  /**
-   * TODO: This is still a fairly expensive calculation because it needs to read all entities
-   *       viewbuffer size times -- this can be sped up using some kind of cache within entities
-   *       themselves (so each time position changes, update viewbuffer cache position) or by
-   *       storing the entity at its position in array within the zone (similar to how the collision
-   *       map works -- this may very well be how the actual game works, but some spaces might allow
-   *       more than 1 entity, e.g., player + item, or monsters that don't have collision -- I'll
-   *       look into this more when I add entity collision detection.
-   */
   private void buildCaches() {
+    rebuildSpatialIndex();
     int x, y;
     int startX2 = startX;
     int startY2 = startY;
@@ -647,44 +641,54 @@ public class RenderSystem extends BaseEntitySystem {
     }
   }
 
+  /** Indexes the render subscription once before the visible tile buffer is traversed. */
+  private void rebuildSpatialIndex() {
+    spatialIndex.beginFrame();
+    IntBag entities = getEntityIds();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      Position position = mPosition.get(id);
+      if (position == null) continue;
+      spatialIndex.add(id, position.position.x, position.position.y);
+    }
+  }
+
   private void buildCache(Array<Integer>[] cache, Map.Zone zone, int stx, int sty) {
     cache[0].size = cache[1].size = cache[2].size = 0;
+    IntArray entities = spatialIndex.entitiesAtSubtile(stx, sty);
+    if (entities == null) return;
     int orderFlag;
-    IntBag entitites = getEntityIds();
-    for (int i = 0, size = entitites.size(); i < size; i++) {
-      int id = entitites.get(i);
+    for (int i = 0, size = entities.size; i < size; i++) {
+      int id = entities.get(i);
       Vector2 pos = mPosition.get(id).position;
-      if ((stx <= pos.x && pos.x < stx + Tile.SUBTILE_SIZE)
-       && (sty <= pos.y && pos.y < sty + Tile.SUBTILE_SIZE)) {
-        Object objectComponent = mObject.get(id);
-        if (objectComponent != null) {
-          CofReference reference = mCofReference.get(id);
-          orderFlag = entityOrderFlag(true,
-              objectComponent.base.OrderFlag[reference.mode], false);
-        } else if (mItem.has(id)) {
-          // Ground items belong to the floor layer.  Drawing them in the
-          // ordinary object/unit layer lets a coin dropped on the player's
-          // tile be submitted after the player and cover the character.
-          orderFlag = entityOrderFlag(false, 0, true);
-        } else {
-          // Units are drawn after walls.  The old tile-boundary heuristic
-          // placed a unit in cache[2] whenever its position happened to be
-          // exactly on a tile edge; cache[2] is rendered before drawWalls(),
-          // so the wall then covered the unit's upper body.  Wall occlusion
-          // must not be decided from floating-point tile-edge coincidence.
-          orderFlag = entityOrderFlag(false, 0, false);
-        }
+      Object objectComponent = mObject.get(id);
+      if (objectComponent != null) {
+        CofReference reference = mCofReference.get(id);
+        orderFlag = entityOrderFlag(true,
+            objectComponent.base.OrderFlag[reference.mode], false);
+      } else if (mItem.has(id)) {
+        // Ground items belong to the floor layer.  Drawing them in the
+        // ordinary object/unit layer lets a coin dropped on the player's
+        // tile be submitted after the player and cover the character.
+        orderFlag = entityOrderFlag(false, 0, true);
+      } else {
+        // Units are drawn after walls.  The old tile-boundary heuristic
+        // placed a unit in cache[2] whenever its position happened to be
+        // exactly on a tile edge; cache[2] is rendered before drawWalls(),
+        // so the wall then covered the unit's upper body.  Wall occlusion
+        // must not be decided from floating-point tile-edge coincidence.
+        orderFlag = entityOrderFlag(false, 0, false);
+      }
 
-        cache[orderFlag].add(id);
-        if (isIceExplosion(id)) {
-          Animation animation = mAnimationWrapper.get(id).animation;
-          Gdx.app.debug(TAG, String.format(
-              "[MISSILE_RENDER] phase=cache entity=%d bucket=%d pos=(%.3f,%.3f) "
-                  + "frame=%d dir=%d frames=%d box=%s",
-              id, orderFlag, pos.x, pos.y, animation.getFrame(),
-              animation.getDirection(), animation.getNumFramesPerDir(),
-              animation.getBox()));
-        }
+      cache[orderFlag].add(id);
+      if (isIceExplosion(id)) {
+        Animation animation = mAnimationWrapper.get(id).animation;
+        Gdx.app.debug(TAG, String.format(
+            "[MISSILE_RENDER] phase=cache entity=%d bucket=%d pos=(%.3f,%.3f) "
+                + "frame=%d dir=%d frames=%d box=%s",
+            id, orderFlag, pos.x, pos.y, animation.getFrame(),
+            animation.getDirection(), animation.getNumFramesPerDir(),
+            animation.getBox()));
       }
     }
     cache[0].sort(SUBTILE_ORDER);

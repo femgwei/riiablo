@@ -1,5 +1,27 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-07 D2R-3D 审计与渲染改进路线
+
+- [x] 第一步：为 `RenderSystem` 增加可复用的帧内 `RenderSpatialIndex`。每帧只遍历一次
+  渲染实体并按 5x5 subtile 地图格建立索引，后续可见格不再逐格扫描完整实体订阅；原有
+  地面物品、墙前对象、墙后单位三类 bucket 和格内排序保持不变。
+- [x] 空间索引覆盖正坐标、负坐标 floor division、帧间陈旧成员清理和非有限坐标拒绝；
+  `RenderSpatialIndexTest` 与 `RenderSystemOrderingTest` 定向测试通过。
+- [ ] 第二步：补充 zoom 1x/2x/5x 的渲染统计，记录可见格、索引实体、占用格和
+  `buildCaches` 耗时，建立扩大视野前的性能基线。
+- [ ] 第三步：在不改变绘制顺序的前提下，把帧内索引升级为由实体移动事件维护的增量索引，
+  避免静止实体每帧重复入桶。
+- [ ] 第四步：新增独立 `RenderInterest`，按相机覆盖的 RoomEx 做 BFS；它只控制表现资源和
+  客户端物化，不得修改 `CLIENT_IN_SIGHT`、AI 更新资格或战斗模拟。
+- [ ] 第五步：为 RenderInterest 加入每帧预热预算和两圈释放滞回，并分别验证本地和 D2GS
+  场景；联网远端动态单位需先建立服务端兴趣快照协议。
+- [ ] 第六步：仅在具备真正 3D 地面/模型资产方案后评估透视相机和射线拾取；经典 DT1/DCC
+  固定视角位图不直接照搬 D2R-3D 的 yaw/pitch、reverse-Z 或阴影射线代码。
+- D2R-3D 根目录没有项目级许可证，本轮只借鉴空间组织思想，未复制其源码。
+- 验证：`./gradlew.bat :core:test --tests com.riiablo.map.RenderSpatialIndexTest --tests
+  com.riiablo.map.RenderSystemOrderingTest --no-daemon`：`BUILD SUCCESSFUL`。
+- 本轮提交后推送到 `origin/master`；工作区已有 `StatFormatterTest` 修改和诊断日志不纳入提交。
+
 ## 2026-10-03 Amazon 标枪 `decquant` 数量消耗修正
 
 - [x] 对照 D2MOO `SKILLS_SrvDo` 的 `decquant -> sub_6FD118C0 -> sub_6FD11340`，为
