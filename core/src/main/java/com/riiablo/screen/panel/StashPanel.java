@@ -111,9 +111,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
       public void submitted(String text) {
         try {
           int amount = Integer.parseInt(text.trim());
-          if (itemController == null || amount == 0) return;
-          if (amount > 0) itemController.depositGold(amount);
-          else itemController.withdrawGold(-amount);
+          if (itemController != null && amount > 0) itemController.withdrawGold(amount);
         } catch (NumberFormatException ignored) {
           // The native dialog filters digits; retain defensive parsing.
         }
@@ -121,9 +119,9 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
       @Override
       public void canceled() {}
-        }, true);
+        });
     goldDialog.setMaximumProvider(negative -> {
-      StatRef gold = Riiablo.charData.getStats().get(negative ? Stat.goldbank : Stat.gold);
+      StatRef gold = Riiablo.charData.getStats().get(Stat.goldbank);
       return gold == null ? 0 : gold.asInt();
     });
     addActor(goldDialog);

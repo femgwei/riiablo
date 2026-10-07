@@ -239,6 +239,10 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     this.listener = listener;
   }
 
+  public void setTitle(String titleText) {
+    title.setText(titleText);
+  }
+
   public void setMaximumProvider(MaximumProvider maximumProvider) {
     this.maximumProvider = maximumProvider;
   }

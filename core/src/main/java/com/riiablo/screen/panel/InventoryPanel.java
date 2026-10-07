@@ -62,6 +62,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   Button btnDropGold;
   Label invgold;
   GoldAmountDialog goldDialog;
+  boolean depositGoldToStash;
 
   final AssetDescriptor<DC6> inv_armorDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_armor.DC6", DC6.class);
   final AssetDescriptor<DC6> inv_beltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_belt.DC6", DC6.class);
@@ -308,6 +309,11 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     btnDropGold.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        depositGoldToStash = Riiablo.game != null
+            && Riiablo.game.stashPanel != null
+            && Riiablo.game.stashPanel.isVisible();
+        goldDialog.setTitle(Riiablo.bundle.get(
+            depositGoldToStash ? "stash_gold_prompt" : "drop_gold_prompt"));
         goldDialog.open();
       }
     });
@@ -319,7 +325,10 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       public void submitted(String text) {
         try {
           int amount = Integer.parseInt(text.trim());
-          if (amount > 0 && itemController != null) itemController.dropGold(amount);
+          if (amount > 0 && itemController != null) {
+            if (depositGoldToStash) itemController.depositGold(amount);
+            else itemController.dropGold(amount);
+          }
         } catch (NumberFormatException ignored) {
           // The native dialog filters digits; retain defensive parsing.
         }
