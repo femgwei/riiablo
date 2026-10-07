@@ -38,10 +38,26 @@ class InventoryWarningTest {
   }
 
   @Test
-  void ammunitionKeepsYellowUntilTheStackIsEmpty() {
-    assertEquals(0, InventoryWarning.quantitySeverity(10, 10));
-    assertEquals(0, InventoryWarning.quantitySeverity(1, 10));
-    assertEquals(2, InventoryWarning.quantitySeverity(0, 10));
+  void ammunitionUsesNativeQuantityWarningRecords() {
+    assertEquals(50, InventoryWarning.quantityThreshold(1));
+    assertEquals(15, InventoryWarning.quantityThreshold(2));
+    assertEquals(5, InventoryWarning.quantityThreshold(3));
+    assertEquals(15, InventoryWarning.quantityThreshold(4));
+    assertEquals(5, InventoryWarning.quantityThreshold(5));
+    assertEquals(0, InventoryWarning.quantityThreshold(0));
+
+    assertEquals(0, InventoryWarning.quantitySeverity(50, 1));
+    assertEquals(1, InventoryWarning.quantitySeverity(25, 1));
+    assertEquals(2, InventoryWarning.quantitySeverity(10, 1));
+  }
+
+  @Test
+  void quantityWarningIdsSelectTheirNativeFrameGroups() {
+    assertEquals(0, InventoryWarning.quantityGroup(1));
+    assertEquals(1, InventoryWarning.quantityGroup(2));
+    assertEquals(2, InventoryWarning.quantityGroup(3));
+    assertEquals(3, InventoryWarning.quantityGroup(4));
+    assertEquals(4, InventoryWarning.quantityGroup(5));
   }
 
   @Test

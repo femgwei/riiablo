@@ -17,6 +17,18 @@ final class InventoryWarning {
   static final int FRAME_GROUPS = 8;
   static final int COLORS_PER_GROUP = 3;
 
+  /**
+   * Native D2Client quantity warning records, indexed by Items.txt qntwarning - 1.
+   * Each row contains the yellow, orange, and red upper bounds respectively.
+   */
+  private static final int[][] QUANTITY_WARNING_THRESHOLDS = {
+      {50, 25, 10}, // arrows and bolts
+      {15, 10, 5},  // javelins
+      {5, 4, 2},    // throwing potions
+      {15, 10, 5},  // throwing knives
+      {5, 4, 2},    // throwing axes
+  };
+
   enum Kind { QUANTITY, DURABILITY }
 
   static final class Entry {
@@ -62,19 +74,20 @@ final class InventoryWarning {
   private static void add(List<Entry> result, Set<Integer> seen, Item item) {
     if (item == null || !seen.add(item.id) || item.base == null || item.attrs == null) return;
 
-    int quantityThreshold = Math.max(0, item.base.qntwarning);
+    int quantityWarningId = Math.max(0, item.base.qntwarning);
+    int quantityThreshold = quantityThreshold(quantityWarningId);
     int quantity = value(item, Stat.quantity, 0);
     if (supportsQuantityWarning(item)
         && quantityThreshold > 0
         && quantity <= quantityThreshold) {
-      int group = quantityGroup(item);
+      int group = quantityGroup(quantityWarningId);
       result.add(new Entry(
           Kind.QUANTITY,
           item,
           quantity,
           quantityThreshold,
           group,
-          frame(group, quantitySeverity(quantity, quantityThreshold))));
+          frame(group, quantitySeverity(quantity, quantityWarningId))));
     }
 
     int durabilityThreshold = Math.max(0, item.base.durwarning);
@@ -114,9 +127,21 @@ final class InventoryWarning {
     return safeGroup * COLORS_PER_GROUP + safeSeverity;
   }
 
-  /** Native ammunition warning colors: yellow for 1..threshold, red at zero. */
-  static int quantitySeverity(int current, int threshold) {
-    return current <= 0 ? 2 : 0;
+  static int quantityThreshold(int warningId) {
+    int index = warningId - 1;
+    return index >= 0 && index < QUANTITY_WARNING_THRESHOLDS.length
+        ? QUANTITY_WARNING_THRESHOLDS[index][0]
+        : 0;
+  }
+
+  /** Native ammunition warning colors selected from the qntwarning record. */
+  static int quantitySeverity(int current, int warningId) {
+    int index = warningId - 1;
+    if (index < 0 || index >= QUANTITY_WARNING_THRESHOLDS.length) return 0;
+    int[] thresholds = QUANTITY_WARNING_THRESHOLDS[index];
+    if (current <= thresholds[2]) return 2;
+    if (current <= thresholds[1]) return 1;
+    return 0;
   }
 
   /** Native durability colors: yellow while low, red only when broken. */
@@ -169,15 +194,8 @@ final class InventoryWarning {
         && !supportsQuantityWarning(item);
   }
 
-  private static int quantityGroup(Item item) {
-    if (item.type != null) {
-      if (item.type.is(Type.BOWQ)) return 0;
-      if (item.type.is(Type.XBOQ)) return 1;
-      if (item.type.is(Type.TPOT)) return 2;
-      if (item.type.is(Type.JAVE) || item.type.is(Type.TKNI)) return 3;
-      if (item.type.is(Type.TAXE)) return 4;
-    }
-    return 3;
+  static int quantityGroup(int warningId) {
+    return Math.max(0, Math.min(QUANTITY_WARNING_THRESHOLDS.length - 1, warningId - 1));
   }
 
   /** Durability warning icon classes: weapon, shield, armor, helmet. */
