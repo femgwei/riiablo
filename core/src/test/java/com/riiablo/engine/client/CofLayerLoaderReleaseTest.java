@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
@@ -68,5 +69,37 @@ class CofLayerLoaderReleaseTest {
     base.Start[Engine.Object.MODE_NU] = 7;
     assertEquals(3, CofLayerLoader.objectAnimationStartFrame(
         base, Engine.Object.MODE_NU, 4));
+  }
+
+  @Test
+  void synchronizedObjectUsesExactObjectsTxtFrameDelta() {
+    Objects.Entry base = new Objects.Entry();
+    base.Sync = true;
+    base.FrameDelta = new int[8];
+    base.FrameDelta[Engine.Object.MODE_ON] = 256;
+
+    assertEquals(256, CofLayerLoader.objectAnimationRate(
+        base, Engine.Object.MODE_ON, 100, 7));
+  }
+
+  @Test
+  void unsynchronizedFlamesReceiveStablePerObjectRateVariation() {
+    Objects.Entry fire = new Objects.Entry();
+    fire.Sync = false;
+    fire.FrameDelta = new int[8];
+    fire.FrameDelta[Engine.Object.MODE_ON] = 256;
+
+    boolean foundDifferentRate = false;
+    int first = CofLayerLoader.objectAnimationRate(
+        fire, Engine.Object.MODE_ON, 100, 1);
+    assertEquals(first, CofLayerLoader.objectAnimationRate(
+        fire, Engine.Object.MODE_ON, 100, 1));
+    for (int seed = 2; seed <= 32; seed++) {
+      int rate = CofLayerLoader.objectAnimationRate(
+          fire, Engine.Object.MODE_ON, 100, seed);
+      assertTrue(rate >= 240 && rate <= 271);
+      foundDifferentRate |= rate != first;
+    }
+    assertTrue(foundDifferentRate);
   }
 }

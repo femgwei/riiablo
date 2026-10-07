@@ -307,6 +307,33 @@ public class CofLayerLoader extends IteratingSystem {
     return Math.min(cofFrameCount, base.FrameCnt[mode]);
   }
 
+  /**
+   * Mirrors D2Common's object animation-rate initialization. Objects.txt is
+   * authoritative for FrameDelta; non-synchronized objects receive a small
+   * per-unit rate variation so adjacent flames do not pulse in lockstep.
+   */
+  static int objectAnimationRate(Objects.Entry base, byte mode, int fallback, int unitSeed) {
+    if (base == null || base.FrameDelta == null
+        || mode < 0 || mode >= base.FrameDelta.length || base.FrameDelta[mode] <= 0) {
+      return fallback;
+    }
+    int frameDelta = base.FrameDelta[mode];
+    if (base.Sync) return frameDelta;
+    int spread = frameDelta / 8;
+    if (spread <= 0) return frameDelta;
+    int random = Math.floorMod(mixObjectAnimationSeed(unitSeed), spread);
+    return Math.max(0, Math.min(0x7FFF,
+        random + frameDelta - frameDelta / 16));
+  }
+
+  private static int mixObjectAnimationSeed(int value) {
+    value ^= value >>> 16;
+    value *= 0x7feb352d;
+    value ^= value >>> 15;
+    value *= 0x846ca68b;
+    return value ^ value >>> 16;
+  }
+
   private Animation.Mode objectAnimationMode(int entityId, byte mode) {
     com.riiablo.engine.server.component.Object object = mObject.get(entityId);
     return objectAnimationMode(object == null ? null : object.base, mode);

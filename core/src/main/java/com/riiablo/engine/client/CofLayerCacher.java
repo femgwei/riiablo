@@ -60,7 +60,7 @@ public class CofLayerCacher extends IteratingSystem {
         ? mAnimationWrapper.get(entityId) : null;
     AnimData currentAnim = mAnimData.get(entityId);
     if (wrapper != null && wrapper.animation != null && currentAnim != null) {
-      int expectedRate = currentAnim.override >= 0 ? currentAnim.override : currentAnim.speed;
+      int expectedRate = animationRate(entityId, currentAnim);
       if (expectedRate > 0 && wrapper.animation.getFrameDelta() != expectedRate) {
         wrapper.animation.setFrameDelta(expectedRate);
       }
@@ -118,11 +118,7 @@ public class CofLayerCacher extends IteratingSystem {
     }
     if (newCof) {
       AnimData animData = mAnimData.get(entityId);
-      if (animData.override >= 0) {
-        animation.setFrameDelta(animData.override);
-      } else {
-        animation.setFrameDelta(animData.speed);
-      }
+      animation.setFrameDelta(animationRate(entityId, animData));
 //      if (animData.factor > 0) {
 //        System.out.println("setFrameDelta 0 " + animData.factor);
 //        animation.setFrameDelta(animData.factor);
@@ -245,5 +241,19 @@ public class CofLayerCacher extends IteratingSystem {
     }
     if (DEBUG) Gdx.app.debug(TAG, "Remaining layers: " + Dirty.toString(flags));
     return flags;
+  }
+
+  private int animationRate(int entityId, AnimData animData) {
+    int fallback = animData.override >= 0 ? animData.override : animData.speed;
+    if (!mObject.has(entityId)) return fallback;
+    com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+    CofReference reference = mCofReference.get(entityId);
+    if (object == null || object.base == null || reference == null) return fallback;
+    byte mode = reference.mode;
+    if (mode != Engine.Object.MODE_OP && object.mode >= Engine.Object.MODE_NU
+        && object.mode <= Engine.Object.MODE_S5) {
+      mode = object.mode;
+    }
+    return CofLayerLoader.objectAnimationRate(object.base, mode, fallback, entityId);
   }
 }
