@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-08 原版武器攻速描述
+
+- [x] 对照 D2MOO `ITEMS_GetWeaponAttackSpeed`，物品说明现在按当前职业的 A1 武器动画、
+  `Weapons.txt` 基础速度和武器自身/镶嵌物的 IAS 计算原生攻击动画长度，不再显示遗留的
+  硬编码 `0`。
+- [x] 按 1.10f D2Client 的职业及弓/弩分组查表，恢复 `Very Fast`、`Fast`、`Normal`、
+  `Slow`、`Very Slow` 等本地化攻速档位；动画资料缺失时沿用 D2MOO 的 45 帧回退。
+- [x] 新增计算公式、边界、职业差异和弓/弩动画分组回归测试。
+- 验证：`./gradlew.bat :core:test --tests com.riiablo.item.ItemLabelerTest --no-daemon`：
+  `BUILD SUCCESSFUL`。
+
 ## 2026-10-07 职业专属装备 StaffMods 生成修正
 
 - [x] 对照 D2MOO `ITEMS_GetStaffMods`、`sub_6FC52410` 与 `sub_6FC52650`，把

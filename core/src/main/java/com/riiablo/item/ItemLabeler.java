@@ -317,7 +317,11 @@ public class ItemLabeler {
       if ((prop = attrs.get(Stat.quantity)) != null)
         table.add(new Label(Riiablo.string.lookup("ItemStats1i") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
       if (item.type.is(Type.WEAP)) {
-        table.add(new Label(Riiablo.string.lookup(WEAPON_DESC.get(item.base.type)) + " - " + 0, font, Riiablo.colors.white)).center().space(SPACING).row();
+        String weaponDescription = Riiablo.string.lookup(WEAPON_DESC.get(item.base.type));
+        String speedDescription = Riiablo.string.lookup(
+            NativeWeaponSpeed.descriptionKey(item, Riiablo.charData.classId));
+        table.add(new Label(weaponDescription + " - " + speedDescription,
+            font, Riiablo.colors.white)).center().space(SPACING).row();
       }
     //}
 
