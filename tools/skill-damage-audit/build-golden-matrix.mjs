@@ -11,7 +11,8 @@ const font = "Arial";
 const taskRows = [
   ["DMG-01", "口径、版本、等级域和场景", 0.05, 1, null, "COMPLETE", "1.10f；基础场景为硬点 1–20、无装备、无协同", ""],
   ["DMG-02", "210 技能清册和路径提示", 0.10, 1, null, "COMPLETE", "7×30×20=4,200 行；源字段自动导出", ""],
-  ["DMG-03", "Skills/Missiles/D2MOO 语义对齐", 0.15, 0, null, "NOT_STARTED", "确认所有者、定点数、分段和取整", "先完成通用 D2MOO 公式证据"],
+  ["DMG-03A", "D2MOO 通用伤害公式与取整", 0.03, 1, null, "COMPLETE", "五段曲线、HitShift、协同及长度顺序有源码证据和边界测试", ""],
+  ["DMG-03B", "逐技能 Skills/Missiles/D2MOO 语义对齐", 0.12, 0, null, "NOT_STARTED", "逐技能确认伤害所有者、调用参数和特殊路径", "从非 Amazon 职业开始逐项解析"],
   ["DMG-04", "1–20 级基础黄金值", 0.20, 0, null, "NOT_STARTED", "4,200 行 expected_* 全部得到结论", "等待 DMG-03"],
   ["DMG-05", "全部硬点协同组合", 0.15, 0, null, "NOT_STARTED", "协同读取和组合用例完整", "等待 DMG-04"],
   ["DMG-06", "武器、SrcDam、ToHit、多段", 0.10, 0, null, "NOT_STARTED", "武器包和多次命中语义完整", "等待 DMG-03"],
@@ -89,13 +90,13 @@ summary.getRange("A4:B10").values = [
   ["待 D2MOO 证据行", null],
 ];
 styleHeader(summary.getRange("A4:B4"));
-summary.getRange("B6").formulas = [["=SUM('Task List'!E2:E11)"]];
+summary.getRange("B6").formulas = [[`=SUM('Task List'!E2:E${taskRows.length + 1})`]];
 summary.getRange("B9").formulas = [[`=COUNTIF('Golden Matrix'!J2:J${rows.length + 1},"GOLDEN_APPROVED")`]];
 summary.getRange("B10").formulas = [[`=COUNTIF('Golden Matrix'!J2:J${rows.length + 1},"PENDING_D2MOO_REFERENCE")`]];
 summary.getRange("B6").format.numberFormat = "0%";
 summary.getRange("A12:F16").values = [
   ["关键限制", null, null, null, null, null],
-  ["当前 15% 只代表口径和源清册完成，不代表已有 15% 技能伤害正确。", null, null, null, null, null],
+  ["当前 18% 只代表口径、源清册和通用公式证据完成，不代表已有 18% 技能伤害正确。", null, null, null, null, null],
   ["source_curve_* 是未应用 HitShift、导弹归属、协同、武器包和最终结算的源表曲线。", null, null, null, null, null],
   ["expected_* 与 riiablo_actual_* 在获得独立证据前必须保持空白。", null, null, null, null, null],
   ["Amazon 只做证据核对和回归保护，未经差异证据不覆盖用户已验证实现。", null, null, null, null, null],
@@ -179,7 +180,7 @@ await fs.mkdir(previewDir, { recursive: true });
 if (process.env.SKILL_DAMAGE_AUDIT_RENDER === "true") {
   for (const [sheetName, range] of [
     ["Summary", "A1:F16"],
-    ["Task List", "A1:H11"],
+    ["Task List", `A1:H${taskRows.length + 1}`],
     ["Golden Matrix", "A1:L25"],
     ["Field Dictionary", "A1:C14"],
   ]) {
