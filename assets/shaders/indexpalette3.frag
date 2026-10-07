@@ -12,9 +12,15 @@ uniform mat4 u_projTrans;
 uniform int blendMode;
 uniform int colormapId;
 uniform float gamma;
+uniform int lightingEnabled;
+uniform vec3 ambientLight;
+uniform int lightCount;
+uniform vec4 localLights[8]; // centre x/y, radius x/y in isometric pixels
+uniform vec3 localLightColors[8];
 
 varying vec2 v_texCoord;
 varying vec4 tint;
+varying vec2 worldPosition;
 
 void main() {
   vec4 color = texture2D(u_texture, v_texCoord);
@@ -140,6 +146,21 @@ void main() {
   colorRGB -= 0.5;
   colorRGB *= 1.20;
   colorRGB += 0.60;
+
+  // D2 composes the outdoor environment with unit/object light radii. Keep
+  // this after the legacy palette contrast pass so darkness is not raised by
+  // its hard-coded brightness offset. The fixed-size loop is GLES2-safe.
+  if (lightingEnabled != 0) {
+    vec3 light = ambientLight;
+    for (int i = 0; i < 8; i++) {
+      if (i >= lightCount) break;
+      vec4 source = localLights[i];
+      vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
+      float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
+      light = max(light, localLightColors[i] * falloff);
+    }
+    colorRGB *= clamp(light, 0.0, 1.0);
+  }
 
   gl_FragColor = vec4(colorRGB, color.a);
 }

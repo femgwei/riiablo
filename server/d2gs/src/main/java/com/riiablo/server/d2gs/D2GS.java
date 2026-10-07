@@ -5896,6 +5896,8 @@ public class D2GS extends ApplicationAdapter {
   final StatPointRequestCache statPointRequestCache = new StatPointRequestCache();
   final PartyRequestCache partyRequestCache = new PartyRequestCache();
   final QuestRequestCache questRequestCache = new QuestRequestCache();
+  final com.riiablo.map.EnvironmentCycle environment =
+      new com.riiablo.map.EnvironmentCycle();
 
   private static final class DelayedDeletion {
     final Packet packet;
@@ -6008,7 +6010,9 @@ public class D2GS extends ApplicationAdapter {
         .with(itemManager)
         .with(new ItemGenerator())
         .with(new CofManager())
+        .with(new com.riiablo.engine.server.EnvironmentSystem())
         .with(new ObjectInitializer())
+        .with(new com.riiablo.engine.server.EnvironmentObjectSystem())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new NativeObjectDropSystem())
         .with(new Act2HoradricStaffDropSystem())
@@ -6079,6 +6083,7 @@ public class D2GS extends ApplicationAdapter {
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("townPortalRegistry", townPortalRegistry)
+        .register("environment", environment)
         ;
     Riiablo.engine = world = new World(config);
 
@@ -6561,7 +6566,8 @@ public class D2GS extends ApplicationAdapter {
     int waypointOffset = SnapshotBaseline.createWaypointMasksVector(builder, waypointMasks);
     int marker = SnapshotBaseline.createSnapshotBaseline(builder, requestId, baselineId,
         tick, serverTime, phase, success, reasonOffset, count, waypointOffset, difficulty,
-        inventoryRevision, questRevision);
+        inventoryRevision, questRevision, environment.cycleIndex(), environment.ticks(),
+        environment.eclipse());
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
         D2GSData.SnapshotBaseline, marker);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

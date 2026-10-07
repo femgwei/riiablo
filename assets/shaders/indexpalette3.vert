@@ -6,9 +6,11 @@ uniform mat4 u_projTrans;
 
 varying vec2 v_texCoord;
 varying vec4 tint;
+varying vec2 worldPosition;
 
 void main() {
   tint = a_color;
   v_texCoord = a_texCoord0;
+  worldPosition = a_position.xy;
   gl_Position = u_projTrans * a_position;
 }

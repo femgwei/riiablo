@@ -34,6 +34,9 @@ public final class SnapshotBaseline extends Table {
   public int difficulty() { int o = __offset(22); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public long inventoryRevision() { int o = __offset(24); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public long questRevision() { int o = __offset(26); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int environmentCycle() { int o = __offset(28); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 2; }
+  public long environmentTicks() { int o = __offset(30); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public boolean environmentEclipse() { int o = __offset(32); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createSnapshotBaseline(FlatBufferBuilder builder,
       long requestId,
@@ -47,24 +50,30 @@ public final class SnapshotBaseline extends Table {
       int waypointMasksOffset,
       int difficulty,
       long inventoryRevision,
-      long questRevision) {
-    builder.startTable(12);
+      long questRevision,
+      int environmentCycle,
+      long environmentTicks,
+      boolean environmentEclipse) {
+    builder.startTable(15);
     SnapshotBaseline.addQuestRevision(builder, questRevision);
     SnapshotBaseline.addInventoryRevision(builder, inventoryRevision);
     SnapshotBaseline.addServerTimeMillis(builder, serverTimeMillis);
     SnapshotBaseline.addServerTick(builder, serverTick);
     SnapshotBaseline.addBaselineId(builder, baselineId);
     SnapshotBaseline.addRequestId(builder, requestId);
+    SnapshotBaseline.addEnvironmentTicks(builder, environmentTicks);
     SnapshotBaseline.addWaypointMasks(builder, waypointMasksOffset);
     SnapshotBaseline.addEntityCount(builder, entityCount);
     SnapshotBaseline.addReason(builder, reasonOffset);
+    SnapshotBaseline.addEnvironmentEclipse(builder, environmentEclipse);
+    SnapshotBaseline.addEnvironmentCycle(builder, environmentCycle);
     SnapshotBaseline.addDifficulty(builder, difficulty);
     SnapshotBaseline.addSuccess(builder, success);
     SnapshotBaseline.addPhase(builder, phase);
     return SnapshotBaseline.endSnapshotBaseline(builder);
   }
 
-  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(12); }
+  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(15); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addLong(0, requestId, 0L); }
   public static void addBaselineId(FlatBufferBuilder builder, long baselineId) { builder.addLong(1, baselineId, 0L); }
   public static void addServerTick(FlatBufferBuilder builder, long serverTick) { builder.addLong(2, serverTick, 0L); }
@@ -79,6 +88,9 @@ public final class SnapshotBaseline extends Table {
   public static void addDifficulty(FlatBufferBuilder builder, int difficulty) { builder.addByte(9, (byte)difficulty, (byte)0); }
   public static void addInventoryRevision(FlatBufferBuilder builder, long inventoryRevision) { builder.addLong(10, inventoryRevision, 0L); }
   public static void addQuestRevision(FlatBufferBuilder builder, long questRevision) { builder.addLong(11, questRevision, 0L); }
+  public static void addEnvironmentCycle(FlatBufferBuilder builder, int environmentCycle) { builder.addByte(12, (byte)environmentCycle, (byte)2); }
+  public static void addEnvironmentTicks(FlatBufferBuilder builder, long environmentTicks) { builder.addInt(13, (int)environmentTicks, (int)0L); }
+  public static void addEnvironmentEclipse(FlatBufferBuilder builder, boolean environmentEclipse) { builder.addBoolean(14, environmentEclipse, false); }
   public static int endSnapshotBaseline(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

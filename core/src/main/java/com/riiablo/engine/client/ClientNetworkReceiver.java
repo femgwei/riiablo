@@ -54,6 +54,7 @@ import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
+import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.AngleP;
 import com.riiablo.net.packet.d2gs.BeltToCursor;
@@ -146,6 +147,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected EventSystem events;
   protected AuthoritativeInterpolationSystem interpolation;
   protected ClientNetworkSynchronizer networkSynchronizer;
+
+  @Wire(name = "environment")
+  protected EnvironmentCycle environment;
 
   @Wire(name="client.socket")
   protected Socket socket;
@@ -1185,6 +1189,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void SnapshotBaseline(D2GS packet) {
     SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+    if (environment != null) {
+      environment.initialize(marker.environmentCycle(), (int) marker.environmentTicks(),
+          marker.environmentEclipse());
+    }
     if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
       if (!marker.success()) {
         Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=begin success=false request="

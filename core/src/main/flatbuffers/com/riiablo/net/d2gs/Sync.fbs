@@ -29,6 +29,11 @@ table SnapshotBaseline {
   // This lets a reconnecting client distinguish a valid zero-progress quest
   // state from a stale baseline even before the PlayerP frame is applied.
   questRevision:ulong;
+  // D2Game packet 0x53 state. Clients advance the same deterministic 25 Hz
+  // clock after applying a login/reconnect baseline.
+  environmentCycle:ubyte = 2;
+  environmentTicks:uint32;
+  environmentEclipse:bool;
 }
 
 union ComponentP {

@@ -39,7 +39,7 @@ class SnapshotResyncProtocolTest {
     int masks = SnapshotBaseline.createWaypointMasksVector(builder, new int[] {1, 2, 4, 8, 16});
     int payload = SnapshotBaseline.createSnapshotBaseline(builder, 7L, 3L,
         99L, 1234L, SnapshotBaselinePhase.END, true, reason, 12L, masks, 0, 17L,
-        0x1122334455667788L);
+        0x1122334455667788L, 5, 34567L, true);
     int root = D2GS.createD2GS(builder, D2GSData.SnapshotBaseline, payload);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer frame = builder.dataBuffer();
@@ -55,6 +55,9 @@ class SnapshotResyncProtocolTest {
     assertEquals(4, marker.waypointMasks(2));
     assertEquals(17L, marker.inventoryRevision());
     assertEquals(0x1122334455667788L, marker.questRevision());
+    assertEquals(5, marker.environmentCycle());
+    assertEquals(34567L, marker.environmentTicks());
+    assertTrue(marker.environmentEclipse());
   }
 
   @Test

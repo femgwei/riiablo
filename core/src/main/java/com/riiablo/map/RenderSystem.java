@@ -10,6 +10,7 @@ import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
@@ -80,6 +81,9 @@ public class RenderSystem extends BaseEntitySystem {
   /** D2Common's default DRLG animation speed: 80 fixed-point units/tick. */
   private static final float MAP_ANIMATION_FRAMES_PER_SECOND =
       Animation.FRAMES_PER_SECOND * 80f / 256f;
+  /** Phrozen Keep 1.14d code-edit reference: the native player base is 13. */
+  static final int PLAYER_BASE_LIGHT_RADIUS = 13;
+  static final int PLAYER_MAX_LIGHT_RADIUS = 18;
   /** First-pass approximation of the classic D2 wall reveal opacity. */
   static final float WALL_OCCLUDED_ALPHA = 0.55f;
   /** Duration of the classic wall reveal/fade transition. */
@@ -260,7 +264,15 @@ public class RenderSystem extends BaseEntitySystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Corpse> mCorpse;
   protected EntitySubscription debugEntitites;
 
+  @Wire(name = "environment")
+  protected EnvironmentCycle environment;
+
   private final Vector2 tmpVec2 = new Vector2();
+  private final Color ambientLight = new Color(Color.WHITE);
+  private final float[] localLights =
+      new float[PaletteIndexedBatch.MAX_LOCAL_LIGHTS * 4];
+  private final float[] localLightColors =
+      new float[PaletteIndexedBatch.MAX_LOCAL_LIGHTS * 3];
 
   PaletteIndexedBatch batch;
   IsometricCamera     iso;
@@ -609,6 +621,7 @@ public class RenderSystem extends BaseEntitySystem {
 
   @Override
   protected void end() {
+    batch.resetLighting();
     Riiablo.batch.end();
   }
 
@@ -637,6 +650,119 @@ public class RenderSystem extends BaseEntitySystem {
   private void prepareBatch() {
     batch.setPalette(getPalette());
     batch.setProjectionMatrix(iso.combined);
+    prepareLighting();
+  }
+
+  private void prepareLighting() {
+    Map.Zone zone = src >= 0 && mMapWrapper.has(src) ? mMapWrapper.get(src).zone : null;
+    if (zone == null && src >= 0 && mPosition.has(src)) {
+      zone = map.getZone(mPosition.get(src).position);
+    }
+    if (environment == null || zone == null || zone.level == null || zone.level.IsInside) {
+      batch.resetLighting();
+      return;
+    }
+
+    int act = zone.level.Act;
+    int levelId = zone.level.Id;
+    float intensity = environment.intensity(levelId, act) / 255f;
+    ambientLight.set(
+        environment.red(levelId, act) / 255f * intensity,
+        environment.green(levelId, act) / 255f * intensity,
+        environment.blue(levelId, act) / 255f * intensity,
+        1f);
+
+    int count = 0;
+    float focusX = 0f;
+    float focusY = 0f;
+    if (src >= 0 && mPosition.has(src)) {
+      Vector2 player = iso.toScreen(tmpVec2.set(mPosition.get(src).position));
+      focusX = player.x;
+      focusY = player.y;
+      int radius = playerLightRadius(lightRadiusModifier(src));
+      count = addLight(count, player.x, player.y, radius, 1f, 1f, 1f);
+    }
+
+    IntBag entities = getEntityIds();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      if (!mObject.has(id) || !mPosition.has(id) || !mCofReference.has(id)) continue;
+      MapWrapper mapping = mMapWrapper.get(id);
+      if (mapping != null && mapping.zone != null && mapping.zone != zone) continue;
+      Object object = mObject.get(id);
+      int mode = mCofReference.get(id).mode;
+      if (object == null || object.base == null || object.base.Lit == null
+          || mode < 0 || mode >= object.base.Lit.length) continue;
+      int radius = object.base.Lit[mode];
+      if (radius <= 0) continue;
+      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      float radiusX = radius * Tile.SUBTILE_WIDTH;
+      float radiusY = radius * Tile.SUBTILE_HEIGHT;
+      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+      count = addNearestObjectLight(count, light.x, light.y, radius,
+          object.base.Red / 255f, object.base.Green / 255f, object.base.Blue / 255f,
+          focusX, focusY);
+    }
+    batch.setLighting(ambientLight, count, localLights, localLightColors);
+  }
+
+  private int lightRadiusModifier(int entityId) {
+    AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
+    Attributes attrs = wrapper == null ? null : wrapper.attrs;
+    return attrs == null ? 0 : attrs.aggregate().getValue(Stat.item_lightradius, 0);
+  }
+
+  static int playerLightRadius(int modifier) {
+    return MathUtils.clamp(PLAYER_BASE_LIGHT_RADIUS + modifier, 1, PLAYER_MAX_LIGHT_RADIUS);
+  }
+
+  private int addLight(int count, float x, float y, int radius,
+      float red, float green, float blue) {
+    if (count >= PaletteIndexedBatch.MAX_LOCAL_LIGHTS) return count;
+    setLight(count, x, y, radius, red, green, blue);
+    return count + 1;
+  }
+
+  /** Keeps the closest visible object lights when a zone has more than the shader limit. */
+  private int addNearestObjectLight(int count, float x, float y, int radius,
+      float red, float green, float blue, float focusX, float focusY) {
+    if (count < PaletteIndexedBatch.MAX_LOCAL_LIGHTS) {
+      return addLight(count, x, y, radius, red, green, blue);
+    }
+
+    // Slot zero is the player's native light and is never displaced.
+    int farthest = 1;
+    float farthestDistance = -1f;
+    for (int i = 1; i < count; i++) {
+      int light = i * 4;
+      float dx = localLights[light] - focusX;
+      float dy = localLights[light + 1] - focusY;
+      float distance = dx * dx + dy * dy;
+      if (distance > farthestDistance) {
+        farthestDistance = distance;
+        farthest = i;
+      }
+    }
+    float dx = x - focusX;
+    float dy = y - focusY;
+    if (dx * dx + dy * dy < farthestDistance) {
+      setLight(farthest, x, y, radius, red, green, blue);
+    }
+    return count;
+  }
+
+  private void setLight(int index, float x, float y, int radius,
+      float red, float green, float blue) {
+    int light = index * 4;
+    localLights[light] = x;
+    localLights[light + 1] = y;
+    localLights[light + 2] = radius * Tile.SUBTILE_WIDTH;
+    localLights[light + 3] = radius * Tile.SUBTILE_HEIGHT;
+    int color = index * 3;
+    localLightColors[color] = MathUtils.clamp(red, 0f, 1f);
+    localLightColors[color + 1] = MathUtils.clamp(green, 0f, 1f);
+    localLightColors[color + 2] = MathUtils.clamp(blue, 0f, 1f);
   }
 
   private Texture getPalette() {

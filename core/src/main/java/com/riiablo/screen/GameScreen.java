@@ -180,6 +180,7 @@ import com.riiablo.key.MappedKeyStateAdapter;
 import com.riiablo.map.Act1MapBuilder;
 import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Box2DPhysics;
+import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.map.RenderSystem;
@@ -798,6 +799,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     scaledStage = new Stage(new ScreenViewport(iso), Riiablo.batch);
     factory = new ClientEntityFactory();
     TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
+    EnvironmentCycle environment = new EnvironmentCycle();
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -813,6 +815,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
+        .register("environment", environment)
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)
@@ -883,6 +886,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(mapManager)
         .with(itemController, new ItemManager())
         .with(new CofManager())
+        .with(new com.riiablo.engine.server.EnvironmentSystem())
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new MenuManager(), new DialogManager())
@@ -926,6 +930,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
       builder.with(new Act1QuestDialogController(), new ActTransitionSystem());
+      builder.with(new com.riiablo.engine.server.EnvironmentObjectSystem());
       builder.with(new Act1QuestSystem());
       builder.with(new Act2QuestSystem());
       builder.with(new Act3QuestSystem());
