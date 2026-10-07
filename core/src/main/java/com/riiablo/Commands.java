@@ -26,6 +26,7 @@ import com.riiablo.command.Parameter;
 import com.riiablo.command.ParameterException;
 import com.riiablo.console.Console;
 import com.riiablo.cvar.Cvar;
+import com.riiablo.engine.client.WeatherRenderSystem;
 import com.riiablo.key.MappedKey;
 import com.riiablo.logger.Level;
 import com.riiablo.logger.Logger;
@@ -349,6 +350,29 @@ public class Commands {
       })
       .build();
 
+  public static final Command weather = Command.builder()
+      .alias("weather")
+      .description("Prints or overrides client weather: auto, off, rain, snow")
+      .params(OptionalParameter.of(String.class))
+      .action(new Action() {
+        @Override
+        public void onExecuted(Command.Instance instance) {
+          WeatherRenderSystem weather = weatherSystem();
+          if (instance.numArgs() == 1) {
+            String value = instance.getArg(0);
+            try {
+              weather.setControlMode(
+                  WeatherRenderSystem.ControlMode.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+              throw new ParameterException("Expected auto, off, rain, or snow");
+            }
+          }
+          Riiablo.console.out.format("Weather: %s%n",
+              weather.getControlMode().name().toLowerCase(java.util.Locale.ROOT));
+        }
+      })
+      .build();
+
   public static final Command connect = Command.builder()
       .alias("connect")
       .description("Connects to specified server")
@@ -479,6 +503,17 @@ public class Commands {
       throw new ParameterException("EnvironmentCycle is not available");
     }
     return access.environment;
+  }
+
+  private static WeatherRenderSystem weatherSystem() {
+    if (Riiablo.engine == null) {
+      throw new ParameterException("Weather command is only available in game");
+    }
+    WeatherRenderSystem weather = Riiablo.engine.getSystem(WeatherRenderSystem.class);
+    if (weather == null) {
+      throw new ParameterException("WeatherRenderSystem is not available");
+    }
+    return weather;
   }
 
   private static final class EnvironmentAccess {

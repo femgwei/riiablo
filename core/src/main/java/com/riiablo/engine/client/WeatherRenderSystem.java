@@ -36,6 +36,13 @@ public final class WeatherRenderSystem extends BaseSystem {
     SNOW
   }
 
+  public enum ControlMode {
+    AUTO,
+    OFF,
+    RAIN,
+    SNOW
+  }
+
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected RenderSystem renderer;
@@ -49,6 +56,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
+  private ControlMode controlMode = ControlMode.AUTO;
 
   @Override
   protected void processSystem() {
@@ -57,7 +65,7 @@ public final class WeatherRenderSystem extends BaseSystem {
     if (zone == null && src >= 0 && mPosition.has(src)) {
       zone = map.getZone(mPosition.get(src).position);
     }
-    Mode mode = modeFor(zone == null ? null : zone.level);
+    Mode mode = controlledModeFor(zone == null ? null : zone.level);
     float width = iso.viewportWidth * iso.zoom;
     float height = iso.viewportHeight * iso.zoom;
     particles.configure(mode, width, height);
@@ -116,6 +124,24 @@ public final class WeatherRenderSystem extends BaseSystem {
   static Mode modeFor(Levels.Entry level) {
     if (level == null || !level.Rain || level.IsInside) return Mode.NONE;
     return level.Act == 4 ? Mode.SNOW : Mode.RAIN;
+  }
+
+  private Mode controlledModeFor(Levels.Entry level) {
+    switch (controlMode) {
+      case OFF:  return Mode.NONE;
+      case RAIN: return Mode.RAIN;
+      case SNOW: return Mode.SNOW;
+      default:   return modeFor(level);
+    }
+  }
+
+  public ControlMode getControlMode() {
+    return controlMode;
+  }
+
+  public void setControlMode(ControlMode controlMode) {
+    if (controlMode == null) throw new NullPointerException("controlMode");
+    this.controlMode = controlMode;
   }
 
   /** Two short line segments for each of the eight native snow shape slots. */
