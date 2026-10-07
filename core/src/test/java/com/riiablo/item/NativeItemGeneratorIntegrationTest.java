@@ -2,11 +2,17 @@ package com.riiablo.item;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.Skills;
 import org.junit.jupiter.api.Test;
 
 /** Real Excel/MPQ half of the native item-generation test gate. */
@@ -48,5 +54,37 @@ class NativeItemGeneratorIntegrationTest extends RiiabloTest {
     RareQualityData secondRare = (RareQualityData) second.qualityData;
     assertArrayEquals(firstRare.prefixes, secondRare.prefixes);
     assertArrayEquals(firstRare.suffixes, secondRare.suffixes);
+  }
+
+  @Test
+  void eagleOrbReceivesNativeSorceressStaffMods() {
+    ItemGenerator generator = new ItemGenerator();
+    Item orb = null;
+    Set<Integer> skillIds = new HashSet<>();
+    for (int seed = 1; seed <= 128 && skillIds.isEmpty(); seed++) {
+      Item candidate = generator.generateLootItem("ob1", 12, Quality.NORMAL, seed, 0);
+      for (StatRef stat : candidate.attrs.list(0)) {
+        if (stat.id() != Stat.item_singleskill) continue;
+        assertTrue(skillIds.add(stat.encodedParams()), "staffmods must be distinct");
+        assertTrue(stat.asInt() >= 1 && stat.asInt() <= 3);
+      }
+      if (!skillIds.isEmpty()) orb = candidate;
+    }
+
+    assertNotNull(orb, "a StaffMods=sor Eagle Orb must be able to roll staffmods");
+    assertEquals("sor", orb.typeEntry.StaffMods);
+    for (int skillId : skillIds) {
+      Skills.Entry skill = com.riiablo.Riiablo.files.skills.get(skillId);
+      assertNotNull(skill);
+      assertEquals("sor", skill.charclass);
+    }
+  }
+
+  @Test
+  void ordinarySwordNeverReceivesStaffMods() {
+    Item sword = new ItemGenerator().generateLootItem(
+        "ssd", 12, Quality.NORMAL, 7, 0);
+    assertTrue(sword.typeEntry.StaffMods == null || sword.typeEntry.StaffMods.isEmpty());
+    assertFalse(sword.attrs.list(0).containsAny(Stat.item_singleskill));
   }
 }

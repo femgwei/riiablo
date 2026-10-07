@@ -106,6 +106,9 @@ public class Skills extends Excel<Skills.Entry> {
     /** Native Skills.txt ammunition flags used by bow/crossbow attacks. */
     @Column public boolean noammo;
     @Column public boolean decquant;
+    /** Native weapon-type gates used when rolling class-specific staffmods. */
+    @Column(startIndex = 1, endIndex = 4)
+    public String  itypea[];
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
     /** Native progressive release callbacks and per-stage formulas. */

@@ -22,6 +22,41 @@ class NativeItemGenerationTest extends RiiabloTest {
   }
 
   @Test
+  void staffModCountMatchesNativeThresholds() {
+    assertEquals(0, NativeItemGeneration.staffModCount(30, 0));
+    assertEquals(1, NativeItemGeneration.staffModCount(31, 0));
+    assertEquals(1, NativeItemGeneration.staffModCount(70, 0));
+    assertEquals(2, NativeItemGeneration.staffModCount(71, 0));
+    assertEquals(2, NativeItemGeneration.staffModCount(90, 0));
+    assertEquals(3, NativeItemGeneration.staffModCount(91, 0));
+    assertEquals(1, NativeItemGeneration.staffModCount(0, 1));
+  }
+
+  @Test
+  void staffModTierAndValueMatchNativeBranches() {
+    assertEquals(1, NativeItemGeneration.staffModBaseTier(11));
+    assertEquals(2, NativeItemGeneration.staffModBaseTier(12));
+    assertEquals(5, NativeItemGeneration.staffModBaseTier(37));
+    assertEquals(3, NativeItemGeneration.staffModTier(5, 5, false));
+    assertEquals(4, NativeItemGeneration.staffModTier(5, 20, false));
+    assertEquals(5, NativeItemGeneration.staffModTier(5, 50, false));
+    assertEquals(6, NativeItemGeneration.staffModTier(5, 81, false));
+    assertEquals(4, NativeItemGeneration.staffModTier(5, 81, true));
+    assertEquals(1, NativeItemGeneration.staffModValue(59, 0));
+    assertEquals(2, NativeItemGeneration.staffModValue(60, 0));
+    assertEquals(3, NativeItemGeneration.staffModValue(90, 0));
+  }
+
+  @Test
+  void uniqueAndSetItemsDoNotRollRandomStaffMods() {
+    assertTrue(NativeItemGeneration.canRollStaffMods(Quality.NORMAL));
+    assertTrue(NativeItemGeneration.canRollStaffMods(Quality.MAGIC));
+    assertTrue(NativeItemGeneration.canRollStaffMods(Quality.RARE));
+    assertFalse(NativeItemGeneration.canRollStaffMods(Quality.SET));
+    assertFalse(NativeItemGeneration.canRollStaffMods(Quality.UNIQUE));
+  }
+
+  @Test
   void socketLimitUsesItemLevelTypeBaseAndDifficulty() {
     Item item = armor(6, 1, 1, 24);
     item.typeEntry.MaxSock = new int[] {2, 4, 6};

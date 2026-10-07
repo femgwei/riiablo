@@ -373,6 +373,7 @@ public class ItemGenerator extends PassiveSystem {
 
   private static void applyNativeTraits(Item item, Quality quality, int itemLevel,
       int difficulty, int seed, NativeRng rng) {
+    NativeItemGeneration.rollStaffMods(item, itemLevel, 0, Riiablo.files.skills, rng::nextInt);
     NativeItemGeneration.rollEthereal(item, quality, rng::nextInt);
     NativeItemGeneration.rollSockets(item, quality, itemLevel, difficulty,
         seed, rng::nextInt);

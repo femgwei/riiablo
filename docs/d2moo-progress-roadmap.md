@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-07 职业专属装备 StaffMods 生成修正
+
+- [x] 对照 D2MOO `ITEMS_GetStaffMods`、`sub_6FC52410` 与 `sub_6FC52650`，把
+  `ItemTypes.txt` 的 `StaffMods` 接入掉落物品生成；法师法杖/法珠、死灵法杖/头颅、
+  圣骑士权杖及其他职业专属类型现在可生成原生 `item_singleskill` 加成。
+- [x] 按原生规则实现 31% 无技能、40% 一项、20% 两项、9% 三项，以及每项
+  60% `+1`、30% `+2`、10% `+3`；技能层级受物品等级约束，低品质装备保留原生
+  层级和数值限制，技能的 `itypea1` 武器类型限制与重复技能重投也已接入。
+- [x] 随机 StaffMods 仅用于 LOW/NORMAL/HIGH/MAGIC/RARE/CRAFTED，SET/UNIQUE
+  继续使用其固定属性，不额外生成随机职业技能。
+- [x] 新增鹰之法珠 `ob1` 真实数据生成回归、普通短剑反例，以及数量阈值、技能层级、
+  技能数值和品质边界单元测试。
+- 验证：`./gradlew.bat :core:test --tests com.riiablo.item.NativeItemGenerationTest
+  --tests com.riiablo.item.NativeItemGeneratorIntegrationTest --no-daemon`：
+  `BUILD SUCCESSFUL`。
+
 ## 2026-10-07 玩家装备耐久与 NPC 修理闭环
 
 - [x] 对照 D2MOO `SUNITDMG_DrainItemDurability` 与 `ITEMS_UpdateDurability`，将普通

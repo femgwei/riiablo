@@ -1,10 +1,13 @@
 package com.riiablo.item;
 
 import com.badlogic.gdx.utils.Array;
+import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
 
 /** Data-only D2Game item initialization and trait rules. */
@@ -118,6 +121,116 @@ public final class NativeItemGeneration {
     if (!canBeEthereal(item, quality) || random.nextInt(100) >= 5) return false;
     applyEthereal(item);
     return true;
+  }
+
+  /**
+   * Rolls the class-specific single-skill bonuses assigned by
+   * {@code D2Game::sub_6FC52410/sub_6FC52650}.
+   *
+   * <p>The primary {@code ItemTypes.txt} row selects the player class through
+   * {@code StaffMods}. The native 1.10 path then rolls zero to three distinct
+   * skills from five-skill level tiers and stores them as
+   * {@link Stat#item_singleskill} entries in the ordinary item property list.</p>
+   *
+   * @param itemDropLevel native forced-drop bonus; ordinary monster drops use zero
+   * @return number of skill entries assigned
+   */
+  public static int rollStaffMods(Item item, int itemLevel, int itemDropLevel,
+      Skills skills, RandomSource random) {
+    if (item == null || item.typeEntry == null || item.attrs == null
+        || skills == null || random == null || !canRollStaffMods(item.quality)) return 0;
+
+    String staffMods = item.typeEntry.StaffMods;
+    if (staffMods == null || staffMods.isEmpty()) return 0;
+    int classId = Skills.getClassId(staffMods);
+    if (classId < 0) return 0;
+    CharacterClass characterClass = CharacterClass.get(classId);
+    int firstSkill = characterClass.firstSpell;
+    int skillCount = characterClass.lastSpell - firstSkill;
+    if (skillCount <= 0) return 0;
+
+    int count = staffModCount(random.nextInt(100), itemDropLevel);
+    if (count == 0) return 0;
+    boolean inferior = item.quality == Quality.LOW;
+    int baseTier = staffModBaseTier(itemLevel);
+    int[] selected = {-1, -1, -1};
+    StatListRef properties = item.attrs.list().numLists() == 0
+        ? item.attrs.buildList() : item.attrs.list(0);
+    int assigned = 0;
+
+    for (int slot = 0; slot < count; slot++) {
+      int tier = staffModTier(baseTier, random.nextInt(100), inferior);
+      int tierFirstSkill = firstSkill + 5 * (tier - 1);
+      int skillId = -1;
+      // D2Game makes at most six attempts to avoid an incompatible or
+      // duplicate skill in the selected five-skill tier.
+      for (int attempt = 0; attempt < 6; attempt++) {
+        int candidate = tierFirstSkill + random.nextInt(5);
+        if (candidate < firstSkill || candidate >= firstSkill + skillCount
+            || contains(selected, candidate)) continue;
+        Skills.Entry skill = skills.get(candidate);
+        if (!supportsStaffMod(item, skill)) continue;
+        skillId = candidate;
+        break;
+      }
+      if (skillId < 0) continue;
+
+      selected[slot] = skillId;
+      int value = inferior ? 1 : staffModValue(random.nextInt(100), itemDropLevel);
+      properties.putEncoded(Stat.item_singleskill, skillId, value);
+      assigned++;
+    }
+
+    return assigned;
+  }
+
+  static boolean canRollStaffMods(Quality quality) {
+    return quality == Quality.LOW || quality == Quality.NORMAL || quality == Quality.HIGH
+        || quality == Quality.MAGIC || quality == Quality.RARE || quality == Quality.CRAFTED;
+  }
+
+  static int staffModCount(int roll, int itemDropLevel) {
+    int adjusted = Math.max(0, itemDropLevel) + Math.floorMod(roll, 100);
+    if (adjusted > 90) return 3;
+    if (adjusted > 70) return 2;
+    if (adjusted > 30 || itemDropLevel != 0) return 1;
+    return 0;
+  }
+
+  static int staffModBaseTier(int itemLevel) {
+    if (itemLevel > 36) return 5;
+    if (itemLevel > 24) return 4;
+    if (itemLevel > 18) return 3;
+    if (itemLevel > 11) return 2;
+    return 1;
+  }
+
+  static int staffModTier(int baseTier, int roll, boolean inferior) {
+    int value = Math.floorMod(roll, 100);
+    int tier = value > 80 ? baseTier + 1
+        : value > 30 ? baseTier
+        : value > 10 ? baseTier - 1 : baseTier - 2;
+    tier = Math.max(1, tier);
+    return inferior && tier >= 4 ? 4 : tier;
+  }
+
+  static int staffModValue(int roll, int itemDropLevel) {
+    int adjusted = Math.max(0, itemDropLevel) / 2 + Math.floorMod(roll, 100);
+    if (adjusted >= 90) return 3;
+    if (adjusted >= 60) return 2;
+    return 1;
+  }
+
+  private static boolean supportsStaffMod(Item item, Skills.Entry skill) {
+    if (skill == null) return false;
+    if (skill.itypea == null || skill.itypea.length == 0
+        || skill.itypea[0] == null || skill.itypea[0].isEmpty()) return true;
+    return item.typeEntry.is(skill.itypea[0]);
+  }
+
+  private static boolean contains(int[] values, int value) {
+    for (int candidate : values) if (candidate == value) return true;
+    return false;
   }
 
   public static boolean canBeEthereal(Item item, Quality quality) {
