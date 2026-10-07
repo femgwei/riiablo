@@ -1057,7 +1057,7 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private Tile animatedTile(Map.Zone zone, Tile tile) {
-    if (zone == null || tile == null || zone.dt1s == null || !tile.isAnimatedMaterial()) {
+    if (zone == null || tile == null || zone.dt1s == null || !zone.dt1s.isAnimated(tile)) {
       return tile;
     }
     int frames = zone.dt1s.getAnimationFrameCount(tile);

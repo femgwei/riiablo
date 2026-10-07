@@ -96,44 +96,40 @@ public class DT1s {
   /**
    * Looks up an animated DT1 frame without applying the normal rarity
    * weighting used for random terrain selection. For lava tiles, D2Common
-   * defines rarity as the animation frame index (0, 1, ...), and all frames
-   * share the same tile id and DT1 source.
+   * defines rarity as the animation frame index (0, 1, ...). D2CMP searches
+   * every loaded tile library for the matching orientation/style/sequence;
+   * it does not require every individual frame to repeat the lava flag.
    */
   public DT1.Tile getAnimationFrame(DT1.Tile tile, int frame) {
-    if (tile == null || !tile.isAnimatedMaterial() || frame < 0) return tile;
-    Array<DT1.Tile> variants = null;
-    String source = tileSources.get(tile);
-    if (source != null) {
-      IntMap<Array<DT1.Tile>> indexed = sourceTiles.get(source);
-      if (indexed != null) variants = indexed.get(tile.id);
-    }
-    if (variants == null) variants = tiles.get(tile.id);
+    if (tile == null || frame < 0) return tile;
+    Array<DT1.Tile> variants = tiles.get(tile.id);
     if (variants == null) return tile;
     for (DT1.Tile candidate : variants) {
-      if (candidate != null && candidate.rarity == frame
-          && candidate.isAnimatedMaterial()) return candidate;
+      if (candidate != null && candidate.rarity == frame) return candidate;
     }
-    return tile;
+    return variants.size == 0 ? tile : variants.first();
+  }
+
+  /**
+   * D2Common classifies the whole orientation/style/sequence group from its
+   * animated candidate. The tile selected for a map cell may itself be a
+   * different frame, so test the complete group rather than that one record.
+   */
+  public boolean isAnimated(DT1.Tile tile) {
+    if (tile == null) return false;
+    Array<DT1.Tile> variants = tiles.get(tile.id);
+    if (variants == null) return tile.isAnimatedMaterial();
+    for (DT1.Tile candidate : variants) {
+      if (candidate != null && candidate.isAnimatedMaterial()) return true;
+    }
+    return false;
   }
 
   /** Number of animation frames available for an animated tile. */
   public int getAnimationFrameCount(DT1.Tile tile) {
-    if (tile == null || !tile.isAnimatedMaterial()) return 1;
-    Array<DT1.Tile> variants = null;
-    String source = tileSources.get(tile);
-    if (source != null) {
-      IntMap<Array<DT1.Tile>> indexed = sourceTiles.get(source);
-      if (indexed != null) variants = indexed.get(tile.id);
-    }
-    if (variants == null) variants = tiles.get(tile.id);
-    if (variants == null) return 1;
-    int count = 1;
-    for (DT1.Tile candidate : variants) {
-      if (candidate != null && candidate.isAnimatedMaterial()) {
-        count = Math.max(count, candidate.rarity + 1);
-      }
-    }
-    return count;
+    if (!isAnimated(tile)) return 1;
+    Array<DT1.Tile> variants = tiles.get(tile.id);
+    return variants == null ? 1 : Math.max(1, variants.size);
   }
 
   private DT1.Tile next(int id, Array<DT1.Tile> tiles) {
