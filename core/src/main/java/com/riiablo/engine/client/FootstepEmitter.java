@@ -8,6 +8,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
+import com.riiablo.audio.Audio;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -68,7 +69,8 @@ public class FootstepEmitter extends BaseEntitySystem {
     // Network clients render the authoritative mode snapshot, which can trail
     // local movement input by a tick. Prefer RN, then use actual velocity as a
     // fallback while the snapshot still reports WL/TW.
-    boolean running = isRunning(mode, velocityComponent.velocity.len(),
+    float speed = velocityComponent.velocity.len();
+    boolean running = isRunning(mode, speed,
         velocityComponent.walkSpeed, velocityComponent.runSpeed);
     if (mode != previousMode || previousFrame < 0) {
       previousMode = mode;
@@ -84,7 +86,16 @@ public class FootstepEmitter extends BaseEntitySystem {
       Vector2 position = mPosition.get(entityId).position;
       Material material = map.material(position);
       if (DEBUG_MATERIAL) Gdx.app.debug(TAG, "Material: " + material);
-      Riiablo.audio.play(sound(running, material), true);
+      String sound = sound(running, material);
+      Audio.Instance playback = Riiablo.audio.play(sound, true);
+      Gdx.app.log(TAG, String.format(java.util.Locale.ROOT,
+          "[PLAYER_FOOTSTEP] entity=%d mode=%s running=%s speed=%.3f "
+              + "walkSpeed=%.3f runSpeed=%.3f frame=%d/%d material=%s sound=%s "
+              + "accepted=%s loaded=%s",
+          entityId, movementModeName(mode), running, speed,
+          velocityComponent.walkSpeed, velocityComponent.runSpeed,
+          frame, frameCount, material, sound,
+          playback != null, playback != null && playback.isLoaded()));
     }
     previousFrame = frame;
   }
@@ -98,6 +109,13 @@ public class FootstepEmitter extends BaseEntitySystem {
     return mode == Engine.Player.MODE_RN
         || mode == Engine.Player.MODE_WL
         || mode == Engine.Player.MODE_TW;
+  }
+
+  private static String movementModeName(byte mode) {
+    if (mode == Engine.Player.MODE_RN) return "RN";
+    if (mode == Engine.Player.MODE_WL) return "WL";
+    if (mode == Engine.Player.MODE_TW) return "TW";
+    return Byte.toString(mode);
   }
 
   static boolean isRunning(byte mode, float speed, float walkSpeed, float runSpeed) {
