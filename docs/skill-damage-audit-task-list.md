@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 代码基线：`4687ee81`
-当前加权完成度：**24.0%**
+当前加权完成度：**25.5%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -22,8 +22,8 @@
   写入 1.10f 黄金矩阵；本次基线纠正不增加完成百分比。
 - 已完成 D2MOO 通用伤害公式证据和边界回归（DMG-03A，3%）：五段等级曲线、
   `HitShift`、物理/元素协同取整顺序、最小元素伤害的原版协同门槛以及元素持续时间。
-- DMG-03B 已完成 Sorceress、Paladin、Necromancer、Barbarian 各 30/30 个技能的
-  伤害所有者和原版调用路径（累计 120/210，6.0%）：明细见各职业的
+- DMG-03B 已完成 Sorceress、Paladin、Necromancer、Barbarian、Druid 各 30/30 个技能的
+  伤害所有者和原版调用路径（累计 150/210，7.5%）：明细见各职业的
   `skill-damage-*-ownership.tsv` 与 `skill-damage-*-ownership.md`。
   审计确认 Telekinesis、Energy Shield、Lightning Mastery、Cold Mastery 存在 riiablo
   执行/被动同步缺口；Inferno、Lightning、Hydra 仍缺少聚焦伤害测试。
@@ -37,10 +37,13 @@
   Leap Attack、Concentrate 共 7 个实现缺口，Taunt 和 Battle Cry 另缺最终伤害消费的
   聚焦测试。Frenzy、Whirlwind、Berserk、War Cry、六项武器专精和尸体技能已有生产
   路径与专项测试证据。
+- Druid 审计确认 30 项所有者；Molten Boulder、Arctic Blast、Cyclone Armor、Twister、
+  Shock Wave、Tornado、Spirit of Barbs 共 7 个实现缺口；Raven、Plague Poppy、Spirit Wolf、
+  Heart of Wolverine、Fenris、Hunger、Grizzly 另缺最终伤害消费的聚焦测试。
 - 4,200 行目前全部为 `PENDING_D2MOO_REFERENCE`；`expected_*`、`riiablo_actual_*` 和
   `delta_*` 保持空白，**尚无任何一行可以称为黄金伤害值**。
-- 当前 24.0% 只表示审计基础设施、源清册、通用公式证据和
-  Sorceress/Paladin/Necromancer/Barbarian 所有者审计完成，不表示伤害正确率为 24.0%。
+- 当前 25.5% 只表示审计基础设施、源清册、通用公式证据和
+  Sorceress/Paladin/Necromancer/Barbarian/Druid 所有者审计完成，不表示伤害正确率为 25.5%。
 
 ## 加权任务
 
@@ -63,8 +66,8 @@
   - 为每个技能确认实际伤害所有者：技能表、导弹表、武器包、召唤物、状态周期或专用回调。
   - 核对五段每级增量、`HitShift`、`SrcDam`、协同公式、元素长度和取整时机。
   - 每个结论必须填写具体 D2MOO 函数或源码位置；不清楚时再查 The Phrozen Keep。
-  - 子项进度：Sorceress、Paladin、Necromancer、Barbarian 各 30/30 已完成（累计
-    6.0% / 本项 12%，本项完成比例 50.0%）；其余三职业和跨职业完整性复核待完成。
+  - 子项进度：Sorceress、Paladin、Necromancer、Barbarian、Druid 各 30/30 已完成
+    （累计 7.5% / 本项 12%，本项完成比例 62.5%）；其余两职业和跨职业完整性复核待完成。
 
 - [ ] **DMG-04（20%）1–20 级无装备、无协同基础黄金值**
   - 为 4,200 行填写有证据的 `expected_*`，非伤害技能必须标记明确的 N/A 原因，
@@ -133,6 +136,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-03B，下一职业审计 Druid 的 30 个技能伤害所有者。先保留已发现的
-Sorceress、Paladin、Necromancer 和 Barbarian 缺口，等所有者证据稳定后再进入实现
+继续 DMG-03B，下一职业审计 Assassin 的 30 个技能伤害所有者。先保留已发现的
+Sorceress、Paladin、Necromancer、Barbarian 和 Druid 缺口，等所有者证据稳定后再进入实现
 修复和黄金值生成。Amazon 只做证据核对和回归保护，未经明确差异证据不改写其现有实现。
