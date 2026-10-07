@@ -89,6 +89,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `IceBoltGoldenDamageTest`（DMG-04 第二批：技能 39，等级 1–20）
 - `FireBallGoldenDamageTest`（DMG-04 第三批：技能 47，等级 1–20）
 - `IceBlastGoldenDamageTest`（DMG-04 第四批：技能 45，等级 1–20）
+- `GlacialSpikeGoldenDamageTest`（DMG-04 第五批：技能 55，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -131,3 +132,16 @@ Frozen Orb 协同且无 Cold Mastery 的基础场景中，等级 1 的定点范�
 `MISSMODE_SrvDmg04_IceBlast` 会把 cold length 转为 freeze length，但不改变本批核对的
 一次命中伤害范围。因此矩阵的 `expected_total` 保持空白，冻结状态、持续时间和最终抗性
 结算延后到 DMG-07。
+
+## DMG-04 第五个逐级实例：Glacial Spike
+
+Glacial Spike 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=7`。无 Ice Bolt、Ice
+Blast、Frozen Orb 协同且无 Cold Mastery 的基础场景中，等级 1 的定点范围为
+4096–6144、整数范围为 16–24；等级 20 的定点范围为 57600–62080、整数范围为
+225–242。riiablo 实际值从 `glacialspike` 导弹的
+`MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的
+`coldmindam/coldmaxdam` 差异均为 0。
+
+`MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown` 负责命中点范围投递和冻结语义，不改变
+每个目标收到的一次伤害包。因此矩阵只批准单目标一次命中范围，`expected_total` 保持空白；
+范围目标数量、冻结长度和整次施法累计延后到 DMG-07。

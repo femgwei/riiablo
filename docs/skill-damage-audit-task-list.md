@@ -83,8 +83,8 @@
   - 为 4,200 行填写有证据的 `expected_*`，非伤害技能必须标记明确的 N/A 原因，
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
-  - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast 等级 1–20 共 80/4,200 行
-    （本项 1.9048%，加权贡献 0.3810 个百分点）；DMG-04 状态为进行中。
+  - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike 等级 1–20 共
+    100/4,200 行（本项 2.3810%，加权贡献 0.4762 个百分点）；DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
   - 逐技能列出有效协同、硬点读取规则、上限、取整顺序及组合用例。
@@ -105,7 +105,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 30.3810%（展示时四舍五入为 30.4%）。
+当前总加权完成度为 30.4762%（展示时四舍五入为 30.5%）。
 
 ## 黄金值准入规则
 
@@ -153,6 +153,11 @@
   `MissileDamageResolver.initializeSkill` 的 `coldmindam/coldmaxdam` 生产快照。
 - `MISSMODE_SrvDmg04_IceBlast` 只用于确认该导弹会把 cold length 转为 freeze length；
   冻结状态、持续时间及抗性结算不进入本批黄金伤害，明确延后到 DMG-07。
+- Glacial Spike（技能 55）等级 1–20 已按“每个目标一次命中”批准。等级 1 为 16–24，
+  等级 20 为 225–242，20 个等级的 `delta_min/max` 均为 0；riiablo 实际值来自
+  `MissileDamageResolver.initializeSkill` 的 `coldmindam/coldmaxdam` 生产快照。
+- `MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown` 的范围扇出、冻结长度和整次施法多目标
+  累计不进入本批固定总伤害，明确延后到 DMG-07。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -161,7 +166,9 @@
   `FireBallGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
   `SorceressFireBallIntegrationTest#impactFansOutToNearbyTargetsButDoesNotRedamageTheCenter`、
   `IceBlastGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
-  `SorceressIceBlastIntegrationTest#iceBlastCreatesFreezeWithoutASecondColdStateAndHitsOnce`。
+  `SorceressIceBlastIntegrationTest#iceBlastCreatesFreezeWithoutASecondColdStateAndHitsOnce`、
+  `GlacialSpikeGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `SorceressIceBlastIntegrationTest#glacialSpikeAppliesOneFreezePacketToEachTargetInImpactRadius`。
 
 ## 可复现命令
 
@@ -183,6 +190,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04 的同类基础黄金值，下一项优先审核 Glacial Spike。只批准单个目标的一次
-命中范围，范围扇出、冻结持续时间和状态效果留给 DMG-07；仍须先生成 D2MOO 独立期望值，
-再从 riiablo 生产路径采集实际值并计算差异，不得把 `source_curve_*` 直接改名为黄金值。
+继续 DMG-04 的同类基础黄金值，下一项优先审核 Lightning。只批准单个目标的一次命中
+范围，多目标或穿透路径留给后续对应任务；仍须先生成 D2MOO 独立期望值，再从 riiablo
+生产路径采集实际值并计算差异，不得把 `source_curve_*` 直接改名为黄金值。
