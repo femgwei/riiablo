@@ -1,5 +1,6 @@
 package com.riiablo.engine.server;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -59,6 +61,8 @@ class SkillDamageAuditMatrixTest extends RiiabloTest {
 
   @Test
   void exportsCompleteSevenClassLevelOneToTwentySourceMatrix() throws IOException {
+    assertDiablo110fDataBaseline();
+
     List<String[]> rows = new ArrayList<>(EXPECTED_ROWS);
     Set<Integer> skillIds = new LinkedHashSet<>();
     Set<String> rowKeys = new LinkedHashSet<>();
@@ -94,6 +98,33 @@ class SkillDamageAuditMatrixTest extends RiiabloTest {
       System.out.println("[SKILL_DAMAGE_AUDIT_EXPORT] path=" + output
           + " skills=" + skillIds.size() + " rows=" + rows.size());
     }
+  }
+
+  /**
+   * Fails closed when InstallationFinder (or D2_HOME) resolves a later install.
+   * Patch 1.14 keeps the same broad formula shape but changes these source values,
+   * so a workbook built from that data cannot be labelled as a 1.10f baseline.
+   */
+  private static void assertDiablo110fDataBaseline() {
+    Skills.Entry immolationArrow = Riiablo.files.skills.get("Immolation Arrow");
+    assertNotNull(immolationArrow, "missing Skills.txt row: Immolation Arrow");
+    assertEquals(10, immolationArrow.EMin, "D2_HOME is not Diablo II 1.10f: EMin sentinel");
+    assertEquals(20, immolationArrow.EMax, "D2_HOME is not Diablo II 1.10f: EMax sentinel");
+    assertArrayEquals(new int[] {10, 20, 30, 32, 34}, immolationArrow.EMinLev,
+        "D2_HOME is not Diablo II 1.10f: EMinLev sentinel");
+    assertArrayEquals(new int[] {10, 20, 30, 32, 34}, immolationArrow.EMaxLev,
+        "D2_HOME is not Diablo II 1.10f: EMaxLev sentinel");
+
+    Missiles.Entry immolationFire = Riiablo.files.Missiles.get("immolationfire");
+    assertNotNull(immolationFire, "missing Missiles.txt row: immolationfire");
+    assertEquals(75, immolationFire.Range,
+        "D2_HOME is not Diablo II 1.10f: immolationfire Range sentinel");
+    assertEquals(7, immolationFire.EMin,
+        "D2_HOME is not Diablo II 1.10f: immolationfire EMin sentinel");
+    assertEquals(9, immolationFire.Emax,
+        "D2_HOME is not Diablo II 1.10f: immolationfire EMax sentinel");
+    assertEquals("skill('Fire Arrow'.blvl) * 5", immolationFire.EDmgSymPerCalc,
+        "D2_HOME is not Diablo II 1.10f: immolationfire synergy sentinel");
   }
 
   private static String[] row(CharacterClass characterClass, Skills.Entry skill, int level) {

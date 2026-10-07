@@ -4,7 +4,7 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`938afe5a`
+代码基线：`5a42a60e`
 当前加权完成度：**15%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
@@ -16,6 +16,10 @@
 - 已完成审计口径和验收规则（DMG-01，5%）。
 - 已从真实 1.10f `Skills.txt` 自动导出七职业 210 个技能、每技能 1–20 级的完整清册，
   并生成 4,200 行源数据矩阵（DMG-02，10%）。
+- 生成入口现以 Immolation Arrow 和 `immolationfire` 的 1.10f 特征值作版本哨兵；若
+  `D2_HOME` 指向 1.14 数据，测试会直接失败，禁止把跨版本数据标成 1.10f 黄金基线。
+- 1.14 截图只作为跨版本辅助证据。技能公式结构可能相近，但 1.14 的数据表数值不能直接
+  写入 1.10f 黄金矩阵；本次基线纠正不增加完成百分比。
 - 4,200 行目前全部为 `PENDING_D2MOO_REFERENCE`；`expected_*`、`riiablo_actual_*` 和
   `delta_*` 保持空白，**尚无任何一行可以称为黄金伤害值**。
 - 当前 15% 只表示审计基础设施与源清册完成，不表示伤害正确率为 15%。
@@ -89,10 +93,15 @@
 在仓库根目录设置输出路径后运行：
 
 ```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
 $env:SKILL_DAMAGE_AUDIT_TSV = 'F:\3rd_src\riiablo\docs\skill-damage-golden-matrix.tsv'
 $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 .\gradlew.bat :core:test --tests com.riiablo.engine.server.SkillDamageAuditMatrixTest --no-daemon
 ```
+
+`D2_HOME` 必须显式指向未经修改的 1.10f 安装。测试中的版本哨兵要求 Immolation Arrow
+为 `EMin=10`、`EMax=20`、五段增量 `10|20|30|32|34`，并要求
+`immolationfire.Range=75`；1.14 的对应值不同，不能通过该门禁。
 
 随后运行 `tools/skill-damage-audit/build-golden-matrix.mjs` 重新生成 XLSX。构建器只把 TSV
 和本清单的当前状态整理成工作簿，不会自行批准任何黄金值。
