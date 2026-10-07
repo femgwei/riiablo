@@ -9,9 +9,9 @@
 ## 结论
 
 - 30/30 项均已确认原版所有者和 D2MOO 路径。
-- 18 项会直接产生或修改伤害：7 个武器/投掷主动技能、6 个武器专精、Taunt、Shout、
+- 19 项会直接产生或修改伤害：6 个基础武器/投掷主动技能、6 个武器专精、Taunt、Shout、
   Battle Cry、Frenzy、Whirlwind、Berserk 和 War Cry（部分技能同时属于这些类别）。
-- 12 项没有独立伤害包；其中 Leap 虽无伤害值，仍有玩家落地击退的实现缺口。
+- 11 项没有独立伤害包；其中 Leap 虽无伤害值，仍有玩家落地击退的实现缺口。
 - 7 项为确认的 riiablo 实现缺口：Bash、Leap、Double Swing、Stun、Double Throw、
   Leap Attack、Concentrate。
 - 2 项为聚焦测试缺口：Taunt、Battle Cry 的负 `damagepercent` 状态已正确构建，尚无
