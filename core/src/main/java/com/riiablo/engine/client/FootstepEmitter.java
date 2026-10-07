@@ -9,7 +9,9 @@ import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -17,7 +19,8 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.map.Map;
 import com.riiablo.map.Material;
 
-@All({Player.class, AnimationWrapper.class, Velocity.class, Position.class, MapWrapper.class})
+@All({Player.class, AnimationWrapper.class, Velocity.class, Position.class, MapWrapper.class,
+    CofReference.class})
 public class FootstepEmitter extends BaseEntitySystem {
   private static final String TAG = "FootstepEmitter";
 
@@ -29,6 +32,7 @@ public class FootstepEmitter extends BaseEntitySystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<CofReference> mCofReference;
 
   protected Map map;
 
@@ -64,7 +68,25 @@ public class FootstepEmitter extends BaseEntitySystem {
       Vector2 position = mPosition.get(entityId).position;
       Material material = map.material(position);
       if (DEBUG_MATERIAL) Gdx.app.debug(TAG, "Material: " + material);
-      Riiablo.audio.play("light_run_" + material + "_1", true);
+      String sound = sound(mCofReference.get(entityId).mode, material);
+      if (sound != null) Riiablo.audio.play(sound, true);
     }
+  }
+
+  /** Selects the distinct native walk/run group for the current player COF mode. */
+  static String sound(byte mode, Material material) {
+    final String gait;
+    switch (mode) {
+      case Engine.Player.MODE_RN:
+        gait = "run";
+        break;
+      case Engine.Player.MODE_WL:
+      case Engine.Player.MODE_TW:
+        gait = "walk";
+        break;
+      default:
+        return null;
+    }
+    return "light_" + gait + "_" + material + "_1";
   }
 }

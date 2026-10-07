@@ -193,6 +193,10 @@ public class DesktopLauncher {
     config.addIcon("ic_launcher_16.png",  Files.FileType.Internal);
     config.resizable = false;
     config.allowSoftwareMode = cmd != null && cmd.hasOption("allow-software-mode");
+    // LWJGL2 only dispatches ApplicationListener.pause()/resume() for an
+    // Alt+Tab focus change when this flag is enabled. Client uses those
+    // callbacks to suspend all audio while the game is in the background.
+    config.pauseWhenBackground = true;
 
     int width = 854, height = 480;
     if (cmd != null && cmd.hasOption("viewport")) {
