@@ -121,7 +121,17 @@ public class ObjectInitializer extends BaseEntitySystem {
   private void syncSnapshotState(int entityId, NativeObjectState state) {
     Object object = mObject.get(entityId);
     if (object == null) return;
-    object.mode = state == null ? Engine.Object.MODE_NU : state.currentMode;
+    // InitFn may change the live object mode after the persistent map state
+    // was attached. D2Game's InitFunction08_Torch, for example, changes NU to
+    // ON so the flame animation is visible. Mirror that resolved live mode
+    // into ObjectP; otherwise the client COF loader prefers stale NU and draws
+    // the unlit torch even though CofReference is already ON.
+    CofReference reference = mCofReference.get(entityId);
+    object.mode = reference != null
+        && reference.mode >= Engine.Object.MODE_NU
+        && reference.mode <= Engine.Object.MODE_S5
+        ? reference.mode
+        : state == null ? Engine.Object.MODE_NU : state.currentMode;
     byte flags = 0;
     if (state != null && state.opened) flags |= Object.STATE_OPENED;
     if (state != null && state.activated) flags |= Object.STATE_ACTIVATED;

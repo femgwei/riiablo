@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-07 地图火把火焰模式修正
+
+- [x] 对照 D2MOO `OBJECTS_InitFunction08_Torch`，确认火把初始化必须从 `NU` 切换到
+  `OBJMODE_OPENED/ON`；riiablo 已执行该 InitFn，但随后把 `Object.mode` 快照写回旧的
+  `NativeObjectState.currentMode=NU`，COF 加载器因优先读取快照而继续显示无火焰外观。
+- [x] `ObjectInitializer` 现在把 InitFn 执行后的实时 `CofReference.mode` 同步到
+  `Object.mode`，确保本地和 D2GS 客户端都加载 ON 火焰动画；没有有效 COF 模式时仍回退
+  到持久化对象状态。
+- [x] 新增火把原生模式回归；`ObjectInitializerNativeStateTest` 定向测试通过。
+
 ## 2026-10-07 D2R-3D 审计与渲染改进路线
 
 - [x] 第一步：为 `RenderSystem` 增加可复用的帧内 `RenderSpatialIndex`。每帧只遍历一次
