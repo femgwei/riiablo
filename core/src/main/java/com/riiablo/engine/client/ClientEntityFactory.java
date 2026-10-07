@@ -715,17 +715,15 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
     AssetDescriptor<DCC> descriptor = mMissile.get(id).missileDescriptor;
     Riiablo.assets.load(descriptor);
-    // Impact/trail children are independent, short-lived missiles. Finish
-    // zero-velocity DCCs before returning so the loader can attach their
-    // animation in the same impact tick; otherwise a client-only child can
-    // expire with no AnimationWrapper and never reach RenderSystem.
-    if (missile.Vel == 0
-        || "fireexplosion2".equalsIgnoreCase(missile.Missile)
-        || "iceexplode".equalsIgnoreCase(missile.Missile)) {
-      Riiablo.assets.finishLoadingAsset(descriptor);
-    }
+    // Never finish a newly queued DCC synchronously from an impact/death
+    // callback. Icebreak effects can otherwise block the render thread while
+    // AssetManager waits for decode/texture upload, leaving the window marked
+    // unresponsive immediately after a frozen monster shatters. The
+    // presentation system does not advance lifetime until AnimationWrapper
+    // exists, so an uncached effect can safely wait for MissileLoader's next
+    // pass. Preserve same-tick presentation only for an already cached DCC.
     MissileLoader loader = world.getSystem(MissileLoader.class);
-    if (loader != null) loader.loadNow(id);
+    if (loader != null && Riiablo.assets.isLoaded(descriptor)) loader.loadNow(id);
     return id;
   }
 
