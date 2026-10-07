@@ -86,6 +86,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 
 - `SkillDamageFormulaParityTest`
 - `FireBoltGoldenDamageTest`（DMG-04 首批：技能 36，等级 1–20）
+- `IceBoltGoldenDamageTest`（DMG-04 第二批：技能 39，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -97,3 +98,11 @@ Meteor 硬点和 Fire Mastery 均为 0，因此等级曲线左移 7 位后没有
 
 riiablo 实际值通过 `MissileDamageResolver.initializeSkill` 建立 `firemindam/firemaxdam`
 生产快照后读取，未使用期望值公式回填。等级 1–20 的最小值和最大值差异均为 0。
+
+## DMG-04 第二个逐级实例：Ice Bolt
+
+Ice Bolt 同样由 `Skills.txt` 拥有伤害，`SrcDam=0`、`HitShift=7`。无协同、无 Cold
+Mastery 场景中，等级 1 的定点范围为 768–1280、整数范围为 3–5；等级 20 的定点范围
+为 9728–12672、整数范围为 38–49。riiablo 实际值从
+`MissileDamageResolver.initializeSkill` 建立的 `coldmindam/coldmaxdam` 快照读取，等级
+1–20 的差异均为 0。`cold length` 保留为独立语义，延后到 DMG-07 审核。

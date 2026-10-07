@@ -83,8 +83,8 @@
   - 为 4,200 行填写有证据的 `expected_*`，非伤害技能必须标记明确的 N/A 原因，
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
-  - 已批准 Fire Bolt 等级 1–20 共 20/4,200 行（本项 0.4762%，加权贡献
-    0.0952 个百分点）；DMG-04 状态为进行中。
+  - 已批准 Fire Bolt、Ice Bolt 等级 1–20 共 40/4,200 行（本项 0.9524%，加权贡献
+    0.1905 个百分点）；DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
   - 逐技能列出有效协同、硬点读取规则、上限、取整顺序及组合用例。
@@ -105,7 +105,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 30.0952%（展示时四舍五入为 30.1%）。
+当前总加权完成度为 30.1905%（展示时四舍五入为 30.2%）。
 
 ## 黄金值准入规则
 
@@ -131,17 +131,23 @@
 `source_curve_*` 只是 `Skills.txt` 基值加五段等级增量后的未移位源数值。它们没有应用
 `HitShift`、导弹归属、协同、主修、武器包、周期或最终结算，因此不能当作黄金值使用。
 
-## DMG-04 第一批结果
+## DMG-04 已批准结果
 
 - Fire Bolt（技能 36）等级 1–20 已通过黄金准入：D2MOO 原生 8.8 定点中间值、
   右移 8 位后的单枚单目标整数范围，以及 riiablo `MissileDamageResolver.initializeSkill`
   生产快照逐级一致。
 - 基础场景明确排除装备、协同、Fire Mastery、抗性和最终生命结算；等级 1 为 3–6，
   等级 20 为 45–60，20 个等级的 `delta_min/max` 均为 0。
+- Ice Bolt（技能 39）沿用相同的 D2MOO 技能导弹路径；基础场景排除装备、协同、
+  Cold Mastery、抗性和最终生命结算。等级 1 为 3–5，等级 20 为 38–49，20 个等级的
+  `delta_min/max` 均为 0。
+- Ice Bolt 的 `cold length` 不属于本批伤害范围，矩阵只保留源字段并明确标为待 DMG-07，
+  不用持续时间扩大或替代单次命中伤害。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
-  `FireBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`。
+  `FireBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `IceBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`。
 
 ## 可复现命令
 
@@ -163,6 +169,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04 的同类基础黄金值，优先审核 Ice Bolt。伤害和 cold length 必须分开：本项只批准
-单枚命中的伤害范围，持续时间留给 DMG-07；仍须先生成 D2MOO 独立期望值，再从 riiablo
-生产路径采集实际值并计算差异，不得把 `source_curve_*` 直接改名为黄金值。
+继续 DMG-04 的同类基础黄金值，下一项优先审核 Fire Ball。只批准单个目标的一次命中范围，
+爆炸范围和多目标累计留给 DMG-07；仍须先生成 D2MOO 独立期望值，再从 riiablo 生产路径
+采集实际值并计算差异，不得把 `source_curve_*` 直接改名为黄金值。
