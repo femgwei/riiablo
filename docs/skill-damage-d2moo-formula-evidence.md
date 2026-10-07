@@ -92,6 +92,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `GlacialSpikeGoldenDamageTest`（DMG-04 第五批：技能 55，等级 1–20）
 - `LightningGoldenDamageTest`（DMG-04 第六批：技能 49，等级 1–20）
 - `NovaGoldenDamageTest`（DMG-04 第七批：技能 48，等级 1–20）
+- `FrostNovaGoldenDamageTest`（DMG-04 第八批：技能 44，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -174,3 +175,17 @@ D2MOO `SKILLS_SrvDo022_NovaAttack` 调用 `sub_6FD14170` 固定创建 64 路技�
 `lightmindam/lightmaxdam` 差异均为 0。`SorceressNovaIntegrationTest` 另行锁定同一次
 施法共享目标命中门禁；矩阵仍只批准每个目标一次收到的伤害包，64 路投递、多目标和
 cast-wide total 延后到 DMG-07，抗性与免疫结算延后到 DMG-08。
+
+## DMG-04 第八个逐级实例：Frost Nova
+
+Frost Nova 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=7`。无 Blizzard、Frozen
+Orb 协同且无 Cold Mastery 的基础场景中，最小值五段增量为 `4/6/8/10/12`，最大值
+五段增量为 `5/7/9/11/13`。等级 1 的定点范围为 512–1024、整数范围为 2–4；
+等级 20 的定点范围为 14336–17280、整数范围为 56–67。
+
+D2MOO `SKILLS_SrvDo022_NovaAttack` 和 `sub_6FD14170` 固定创建 64 路技能导弹，
+`MISSILE_CalculateDamageData` 为每路安装 Skills.txt 冷伤害。riiablo 实际值从
+`frostnova` 导弹的 `MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的
+`coldmindam/coldmaxdam` 差异均为 0。`ELen=200`、三级长度增量均为 25 的冷缓持续
+时间保留在源矩阵，但不计入本批基础伤害；冷缓长度、64 路投递、多目标和 cast-wide
+total 延后到 DMG-07，抗性、免疫与 Cold Mastery 穿透结算延后到 DMG-08。
