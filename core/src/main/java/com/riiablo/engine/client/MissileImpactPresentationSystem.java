@@ -404,16 +404,22 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
           first(source.CltHitSubMissile, 1), event.x, event.y, event.dx, event.dy);
     }
 
-    // Ice Arrow is a single-target AR skill.  Unlike Exploding Arrow and
-    // Freezing Arrow, a collision is not an explosion trigger; its
-    // ExplosionMissile field is data-only and must not be rendered here.
-    if (isImpactVisualSuppressed(source)) {
+    // Ice Arrow uses ExplosionMissile as its cold hit flash when it reaches a
+    // unit.  Suppress that flash only for wall/range termination, where there
+    // is no target; suppressing the whole row also removes the native unit-hit
+    // effect and leaves only the separate frozen-corpse shatter animation.
+    if (isImpactVisualSuppressed(source, event.targetEntityId)) {
       log.debug("[MISSILE_IMPACT] source={} action=no_client_impact_visual",
           source.Missile);
       return;
     }
 
     String[] children = source.CltHitSubMissile;
+    if (isIceArrow(source)
+        && source.ExplosionMissile != null && !source.ExplosionMissile.isEmpty()
+        && Riiablo.files.Missiles.get(source.ExplosionMissile) != null) {
+      children = new String[] {source.ExplosionMissile};
+    }
     // Exploding Arrow's native ExplosionMissile is the authoritative client
     // burst (ExpArrowExplode.dcc).  CltHitSubMissile=fireexplosion2 is only a
     // legacy fallback used by data packs that omit ExplosionMissile.
@@ -466,7 +472,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     for (String child : children) createVisual(source, child, event, baseAngle);
   }
 
-  static boolean isImpactVisualSuppressed(Missiles.Entry source) {
+  static boolean isImpactVisualSuppressed(Missiles.Entry source, int targetEntityId) {
+    return isIceArrow(source) && targetEntityId < 0;
+  }
+
+  private static boolean isIceArrow(Missiles.Entry source) {
     return source != null && "icearrow".equalsIgnoreCase(source.Missile);
   }
 
