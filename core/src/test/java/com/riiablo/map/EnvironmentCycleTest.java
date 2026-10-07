@@ -64,4 +64,23 @@ public class EnvironmentCycleTest {
     assertEquals(270 * EnvironmentCycle.NORMAL_TIME_RATE, environment.ticks());
     assertEquals("night", EnvironmentCycle.periodName(environment.periodOfDay()));
   }
+
+  @Test
+  public void dawnWrapSnapsToNoonWithoutCyclingEveryTick() {
+    EnvironmentCycle environment = new EnvironmentCycle();
+    environment.initialize(EnvironmentCycle.CYCLE_SUNRISE,
+        340 * EnvironmentCycle.NORMAL_TIME_RATE, false);
+
+    assertTrue(environment.advance(0));
+    assertEquals(EnvironmentCycle.CYCLE_MORNING, environment.cycleIndex());
+    assertEquals(340 * EnvironmentCycle.NORMAL_TIME_RATE, environment.ticks());
+
+    assertTrue(environment.advance(0));
+    assertEquals(EnvironmentCycle.CYCLE_NOON, environment.cycleIndex());
+    assertEquals(0, environment.ticks());
+
+    assertFalse(environment.advance(0));
+    assertEquals(EnvironmentCycle.CYCLE_NOON, environment.cycleIndex());
+    assertEquals(1, environment.ticks());
+  }
 }

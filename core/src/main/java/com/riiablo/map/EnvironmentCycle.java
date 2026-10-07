@@ -143,7 +143,15 @@ public final class EnvironmentCycle {
 
     int next = (cycleIndex + 1) % NUM_CYCLES;
     Cycle nextCycle = cycles(act)[next];
-    if (ticks > rate * nextCycle.begin) cycleIndex = next;
+    if (ticks > rate * nextCycle.begin) {
+      cycleIndex = next;
+      // D2Common snaps the clock to the new cycle boundary. This is
+      // essential when morning wraps from 340 degrees back to noon at 0:
+      // retaining the old high tick value would satisfy every subsequent
+      // boundary and make the environment cycle once per simulation tick.
+      Cycle nativeCycle = eclipse ? ECLIPSE[cycleIndex] : NORMAL[cycleIndex];
+      ticks = rate * nativeCycle.begin;
+    }
     return previousPeriod != periodOfDay() || previousCycle != cycleIndex;
   }
 
