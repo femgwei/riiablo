@@ -44,6 +44,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.Animation;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.Engine;
@@ -658,18 +659,30 @@ public class RenderSystem extends BaseEntitySystem {
     if (zone == null && src >= 0 && mPosition.has(src)) {
       zone = map.getZone(mPosition.get(src).position);
     }
-    if (environment == null || zone == null || zone.level == null || zone.level.IsInside) {
+    if (zone == null || zone.level == null) {
       batch.resetLighting();
       return;
     }
 
     int act = zone.level.Act;
     int levelId = zone.level.Id;
-    setAmbientLight(ambientLight,
-        environment.intensity(levelId, act),
-        environment.red(levelId, act),
-        environment.green(levelId, act),
-        environment.blue(levelId, act));
+    if (zone.level.IsInside) {
+      // D2Common DRLGROOM_GetRGB_IntensityFromRoomEx returns these static
+      // Levels.txt values for indoor rooms. Most dungeons intentionally use
+      // zero ambient intensity and rely on unit/object/missile light radii.
+      setAmbientLight(ambientLight, zone.level.Intensity,
+          zone.level.Red, zone.level.Green, zone.level.Blue);
+    } else {
+      if (environment == null) {
+        batch.resetLighting();
+        return;
+      }
+      setAmbientLight(ambientLight,
+          environment.intensity(levelId, act),
+          environment.red(levelId, act),
+          environment.green(levelId, act),
+          environment.blue(levelId, act));
+    }
 
     int count = 0;
     float focusX = 0f;
@@ -681,13 +694,13 @@ public class RenderSystem extends BaseEntitySystem {
       int radius = playerLightRadius(lightRadiusModifier(src));
       count = addLight(count, player.x, player.y, radius, 1f, 1f, 1f);
     }
+    int protectedLights = count;
 
     IntBag entities = getEntityIds();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int id = entities.get(i);
       if (!mObject.has(id) || !mPosition.has(id) || !mCofReference.has(id)) continue;
-      MapWrapper mapping = mMapWrapper.get(id);
-      if (mapping != null && mapping.zone != null && mapping.zone != zone) continue;
+      if (!isInLightingZone(id, zone)) continue;
       Object object = mObject.get(id);
       int mode = mCofReference.get(id).mode;
       if (object == null || object.base == null || object.base.Lit == null
@@ -699,11 +712,39 @@ public class RenderSystem extends BaseEntitySystem {
       float radiusY = radius * Tile.SUBTILE_HEIGHT;
       if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
           || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
-      count = addNearestObjectLight(count, light.x, light.y, radius,
+      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
           object.base.Red / 255f, object.base.Green / 255f, object.base.Blue / 255f,
           focusX, focusY);
     }
+
+    int nativeFrame = Math.max(0,
+        (int) (mapAnimationTime * Animation.FRAMES_PER_SECOND));
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      if (!mMissile.has(id) || !mPosition.has(id) || !isInLightingZone(id, zone)) continue;
+      com.riiablo.engine.server.component.Missile missile = mMissile.get(id);
+      Missiles.Entry entry = missile == null ? null : missile.missile;
+      if (entry == null || entry.Light <= 0) continue;
+      int lightSeed = entry.Id * 0x9E3779B9
+          ^ Math.round(missile.start.x * 16f) * 0x45D9F3B
+          ^ Math.round(missile.start.y * 16f) * 0x27D4EB2D;
+      float radius = missileLightRadius(
+          entry.Light, entry.Flicker, nativeFrame, lightSeed);
+      if (radius <= 0f) continue;
+      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      float radiusX = radius * Tile.SUBTILE_WIDTH;
+      float radiusY = radius * Tile.SUBTILE_HEIGHT;
+      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
+          entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
+    }
     batch.setLighting(ambientLight, count, localLights, localLightColors);
+  }
+
+  private boolean isInLightingZone(int entityId, Map.Zone zone) {
+    MapWrapper mapping = mMapWrapper.get(entityId);
+    return mapping == null || mapping.zone == null || mapping.zone == zone;
   }
 
   /**
@@ -739,6 +780,24 @@ public class RenderSystem extends BaseEntitySystem {
     return Math.max(0, diameter) * 0.5f;
   }
 
+  /**
+   * Converts Missiles.txt's maximum light diameter to a radius. Flicker is a
+   * random downward diameter variation, so it never expands beyond Light.
+   */
+  static float missileLightRadius(int diameter, int flicker, int frame, int seed) {
+    int maximum = Math.max(0, diameter);
+    if (maximum == 0) return 0f;
+    int variation = Math.min(Math.max(0, flicker), maximum - 1);
+    if (variation == 0) return maximum * 0.5f;
+
+    int hash = seed ^ frame * 0x9E3779B9;
+    hash ^= hash >>> 16;
+    hash *= 0x7FEB352D;
+    hash ^= hash >>> 15;
+    int currentDiameter = maximum - Math.floorMod(hash, variation + 1);
+    return currentDiameter * 0.5f;
+  }
+
   private int addLight(int count, float x, float y, float radius,
       float red, float green, float blue) {
     if (count >= PaletteIndexedBatch.MAX_LOCAL_LIGHTS) return count;
@@ -746,17 +805,19 @@ public class RenderSystem extends BaseEntitySystem {
     return count + 1;
   }
 
-  /** Keeps the closest visible object lights when a zone has more than the shader limit. */
-  private int addNearestObjectLight(int count, float x, float y, float radius,
+  /** Keeps the closest visible lights when a zone has more than the shader limit. */
+  private int addNearestLocalLight(int count, int protectedLights,
+      float x, float y, float radius,
       float red, float green, float blue, float focusX, float focusY) {
     if (count < PaletteIndexedBatch.MAX_LOCAL_LIGHTS) {
       return addLight(count, x, y, radius, red, green, blue);
     }
 
-    // Slot zero is the player's native light and is never displaced.
-    int farthest = 1;
+    // Player light is protected; object and missile lights compete by distance.
+    if (protectedLights >= count) return count;
+    int farthest = protectedLights;
     float farthestDistance = -1f;
-    for (int i = 1; i < count; i++) {
+    for (int i = protectedLights; i < count; i++) {
       int light = i * 4;
       float dx = localLights[light] - focusX;
       float dy = localLights[light + 1] - focusY;

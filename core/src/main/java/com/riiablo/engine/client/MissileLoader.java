@@ -74,11 +74,10 @@ public class MissileLoader extends IteratingSystem {
     int blendMode;
     switch (entry.Trans) {
       case 0:  blendMode = BlendMode.ID; break;
-      // Ground-fire DCCs use the native luminosity mask, but their
-      // Light/Flicker fields modulate that mask over time. Keep source
-      // palette RGB values intact instead of recolouring the sprite.
+      // Ground-fire DCCs use the native luminosity mask. Missiles.txt
+      // Light/Flicker describe the spatial light radius, not sprite alpha.
       case 1:  blendMode = isPoisonMissile(entry) ? BlendMode.SCREEN
-          : isGroundFire(entry) ? BlendMode.LUMINOSITY_FLICKER : BlendMode.ADDITIVE; break;
+          : isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE; break;
       default: blendMode = BlendMode.ID; break;
     }
     // IceArrowExplode.dcc is a fully-coloured impact sprite, but its native

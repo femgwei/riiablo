@@ -23,6 +23,23 @@ public class RenderLightingTest {
   }
 
   @Test
+  public void missileLightConvertsDiameterAndFlickersWithinItsMaximum() {
+    assertEquals(3.5f, RenderSystem.missileLightRadius(7, 0, 0, 0), 0f);
+    assertEquals(0f, RenderSystem.missileLightRadius(0, 4, 0, 0), 0f);
+
+    boolean changed = false;
+    float first = RenderSystem.missileLightRadius(5, 4, 0, 1234);
+    for (int frame = 0; frame < 64; frame++) {
+      float radius = RenderSystem.missileLightRadius(5, 4, frame, 1234);
+      assertTrue(radius >= 0.5f);
+      assertTrue(radius <= 2.5f);
+      changed |= radius != first;
+    }
+    assertTrue(changed);
+    assertEquals(first, RenderSystem.missileLightRadius(5, 4, 0, 1234), 0f);
+  }
+
+  @Test
   public void nightIntensityUsesDisplaySpacePaletteApproximation() {
     Color ambient = RenderSystem.setAmbientLight(new Color(), 64, 125, 144, 243);
 
