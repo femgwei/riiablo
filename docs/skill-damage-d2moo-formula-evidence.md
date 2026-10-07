@@ -91,6 +91,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `IceBlastGoldenDamageTest`（DMG-04 第四批：技能 45，等级 1–20）
 - `GlacialSpikeGoldenDamageTest`（DMG-04 第五批：技能 55，等级 1–20）
 - `LightningGoldenDamageTest`（DMG-04 第六批：技能 49，等级 1–20）
+- `NovaGoldenDamageTest`（DMG-04 第七批：技能 48，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -159,3 +160,17 @@ riiablo 实际值从 `lightningbolt` 导弹的 `MissileDamageResolver.initialize
 `MISSILE_CalculateDamageData` 负责把技能伤害安装到导弹；本批只批准一个伤害包对一个
 目标的一次结算。穿透、多目标或重复接触和整次施法累计延后到 DMG-06/07，抗性与免疫
 结算延后到 DMG-08，因此 `expected_total` 保持空白。
+
+## DMG-04 第七个逐级实例：Nova
+
+Nova 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=8`，且没有伤害协同公式。基础
+场景中最小值五段增量为 `6/7/8/9/10`，最大值五段增量为 `8/9/10/11/12`。等级 1
+的定点范围为 256–5120、整数范围为 1–20；等级 20 的定点范围为 33536–48128、
+整数范围为 131–188。
+
+D2MOO `SKILLS_SrvDo022_NovaAttack` 调用 `sub_6FD14170` 固定创建 64 路技能导弹，
+`MISSILE_CalculateDamageData` 为每路安装 Skills.txt 伤害。riiablo 实际值从 `nova`
+导弹的 `MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的
+`lightmindam/lightmaxdam` 差异均为 0。`SorceressNovaIntegrationTest` 另行锁定同一次
+施法共享目标命中门禁；矩阵仍只批准每个目标一次收到的伤害包，64 路投递、多目标和
+cast-wide total 延后到 DMG-07，抗性与免疫结算延后到 DMG-08。
