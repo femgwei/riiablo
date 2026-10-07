@@ -17,23 +17,41 @@ import com.riiablo.camera.IsometricCamera;
  */
 final class RenderInterest {
   static final int DEFAULT_ADJACENT_RINGS = 1;
+  static final int DEFAULT_PREWARM_BUDGET = 16;
+  static final int DEFAULT_RELEASE_HYSTERESIS_RINGS = 2;
 
   private final int adjacentRings;
+  private final int prewarmBudget;
+  private final int releaseHysteresisRings;
   private final ObjectMap<Map.Zone, ZoneState> states = new ObjectMap<>();
   private final ObjectSet<Map.Zone> nativeZones = new ObjectSet<>();
   private final Array<Map.Zone> staleZones = new Array<>(false, 8);
   private final Vector2 projected = new Vector2();
   private boolean initialized;
   private int seedRoomCount;
+  private int desiredRoomCount;
   private int interestedRoomCount;
+  private int prewarmedRoomCount;
+  private int releasedRoomCount;
 
   RenderInterest() {
-    this(DEFAULT_ADJACENT_RINGS);
+    this(DEFAULT_ADJACENT_RINGS, DEFAULT_PREWARM_BUDGET,
+        DEFAULT_RELEASE_HYSTERESIS_RINGS);
   }
 
   RenderInterest(int adjacentRings) {
+    this(adjacentRings, DEFAULT_PREWARM_BUDGET, DEFAULT_RELEASE_HYSTERESIS_RINGS);
+  }
+
+  RenderInterest(int adjacentRings, int prewarmBudget, int releaseHysteresisRings) {
     if (adjacentRings < 0) throw new IllegalArgumentException("adjacentRings < 0");
+    if (prewarmBudget < 0) throw new IllegalArgumentException("prewarmBudget < 0");
+    if (releaseHysteresisRings < 0) {
+      throw new IllegalArgumentException("releaseHysteresisRings < 0");
+    }
     this.adjacentRings = adjacentRings;
+    this.prewarmBudget = prewarmBudget;
+    this.releaseHysteresisRings = releaseHysteresisRings;
   }
 
   void update(Map map, Map.Zone anchor, IsometricCamera camera,
@@ -63,7 +81,10 @@ final class RenderInterest {
     for (ZoneState state : states.values()) state.used = false;
     nativeZones.clear();
     seedRoomCount = 0;
+    desiredRoomCount = 0;
     interestedRoomCount = 0;
+    prewarmedRoomCount = 0;
+    releasedRoomCount = 0;
   }
 
   void seed(Map.Zone zone, int roomId) {
@@ -83,15 +104,44 @@ final class RenderInterest {
   }
 
   void endUpdate() {
+    int remainingBudget = prewarmBudget;
     staleZones.clear();
     for (ObjectMap.Entry<Map.Zone, ZoneState> entry : states.entries()) {
-      if (!entry.value.used) {
+      ZoneState state = entry.value;
+      if (!state.used) {
+        releasedRoomCount += count(state.resident);
         staleZones.add(entry.key);
         continue;
       }
-      entry.value.expand(entry.key, adjacentRings);
-      seedRoomCount += count(entry.value.seeds);
-      interestedRoomCount += count(entry.value.interested);
+
+      state.expand(entry.key, adjacentRings, releaseHysteresisRings);
+      seedRoomCount += count(state.seeds);
+      desiredRoomCount += count(state.desired);
+
+      for (int roomId = state.seeds.nextSetBit(0); roomId >= 0;
+          roomId = state.seeds.nextSetBit(roomId + 1)) {
+        state.resident.set(roomId);
+      }
+
+      for (int i = 0; i < state.queue.size && remainingBudget > 0; i++) {
+        int roomId = state.queue.get(i);
+        if (state.seeds.get(roomId)
+            || !state.desired.get(roomId)
+            || state.resident.get(roomId)) continue;
+        state.resident.set(roomId);
+        remainingBudget--;
+        prewarmedRoomCount++;
+      }
+
+      for (int roomId = state.resident.nextSetBit(0); roomId >= 0;) {
+        int nextRoomId = state.resident.nextSetBit(roomId + 1);
+        if (!state.retained.get(roomId)) {
+          state.resident.clear(roomId);
+          releasedRoomCount++;
+        }
+        roomId = nextRoomId;
+      }
+      interestedRoomCount += count(state.resident);
     }
     for (int i = 0; i < staleZones.size; i++) states.remove(staleZones.get(i));
     initialized = true;
@@ -101,7 +151,7 @@ final class RenderInterest {
     if (!initialized || zone == null || !nativeZones.contains(zone)) return true;
     if (roomId < 0 || roomId >= zone.getRoomsEx().size) return true;
     ZoneState state = states.get(zone);
-    return state != null && state.interested.get(roomId);
+    return state != null && state.resident.get(roomId);
   }
 
   boolean contains(Map.Zone zone, float worldX, float worldY) {
@@ -114,12 +164,32 @@ final class RenderInterest {
     return adjacentRings;
   }
 
+  int prewarmBudget() {
+    return prewarmBudget;
+  }
+
+  int releaseHysteresisRings() {
+    return releaseHysteresisRings;
+  }
+
   int seedRoomCount() {
     return seedRoomCount;
   }
 
+  int desiredRoomCount() {
+    return desiredRoomCount;
+  }
+
   int interestedRoomCount() {
     return interestedRoomCount;
+  }
+
+  int prewarmedRoomCount() {
+    return prewarmedRoomCount;
+  }
+
+  int releasedRoomCount() {
+    return releasedRoomCount;
   }
 
   static boolean intersectsCamera(Map.RoomEx room, IsometricCamera camera,
@@ -165,41 +235,49 @@ final class RenderInterest {
 
   private static final class ZoneState {
     final Bits seeds = new Bits();
-    final Bits interested = new Bits();
+    final Bits desired = new Bits();
+    final Bits retained = new Bits();
+    final Bits resident = new Bits();
     final IntArray queue = new IntArray(false, 16);
     int[] depths = new int[0];
     boolean used;
 
     void prepare(int roomCount) {
       seeds.clear();
-      interested.clear();
+      desired.clear();
+      retained.clear();
       queue.clear();
       if (depths.length < roomCount) depths = new int[roomCount];
     }
 
-    void expand(Map.Zone zone, int adjacentRings) {
-      interested.clear();
+    void expand(Map.Zone zone, int adjacentRings, int releaseHysteresisRings) {
+      desired.clear();
+      retained.clear();
       queue.clear();
       int roomCount = zone.getRoomsEx().size;
       for (int i = 0; i < roomCount; i++) depths[i] = -1;
       for (int roomId = seeds.nextSetBit(0); roomId >= 0;
           roomId = seeds.nextSetBit(roomId + 1)) {
         depths[roomId] = 0;
-        interested.set(roomId);
+        desired.set(roomId);
+        retained.set(roomId);
         queue.add(roomId);
       }
 
+      int retainedRings = adjacentRings + releaseHysteresisRings;
       for (int i = 0; i < queue.size; i++) {
         int roomId = queue.get(i);
         int depth = depths[roomId];
-        if (depth >= adjacentRings) continue;
+        if (depth >= retainedRings) continue;
         Map.RoomEx room = zone.getRoomsEx().get(roomId);
         int[] adjacent = room.adjacentRoomIds();
         if (adjacent == null) continue;
         for (int adjacentId : adjacent) {
           if (adjacentId < 0 || adjacentId >= roomCount || depths[adjacentId] >= 0) continue;
-          depths[adjacentId] = depth + 1;
-          interested.set(adjacentId);
+          int adjacentDepth = depth + 1;
+          depths[adjacentId] = adjacentDepth;
+          if (adjacentDepth <= adjacentRings) desired.set(adjacentId);
+          retained.set(adjacentId);
           queue.add(adjacentId);
         }
       }

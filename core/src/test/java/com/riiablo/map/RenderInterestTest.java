@@ -45,6 +45,104 @@ class RenderInterestTest {
   }
 
   @Test
+  void visibleSeedsBypassPrewarmBudget() {
+    Map.Zone zone = lineZone(4);
+    RenderInterest interest = new RenderInterest(1, 0, 2);
+
+    interest.beginUpdate();
+    interest.seed(zone, 1);
+    interest.endUpdate();
+
+    assertFalse(interest.contains(zone, 0));
+    assertTrue(interest.contains(zone, 1));
+    assertFalse(interest.contains(zone, 2));
+    assertEquals(3, interest.desiredRoomCount());
+    assertEquals(1, interest.interestedRoomCount());
+    assertEquals(0, interest.prewarmedRoomCount());
+  }
+
+  @Test
+  void prewarmBudgetLimitsAdjacentAdmissionsPerFrame() {
+    Map.Zone zone = lineZone(5);
+    RenderInterest interest = new RenderInterest(2, 1, 2);
+
+    interest.beginUpdate();
+    interest.seed(zone, 2);
+    interest.endUpdate();
+    assertEquals(1, interest.prewarmedRoomCount());
+    assertEquals(2, interest.interestedRoomCount());
+
+    interest.beginUpdate();
+    interest.seed(zone, 2);
+    interest.endUpdate();
+    assertEquals(1, interest.prewarmedRoomCount());
+    assertEquals(3, interest.interestedRoomCount());
+
+    interest.beginUpdate();
+    interest.seed(zone, 2);
+    interest.endUpdate();
+    assertEquals(1, interest.prewarmedRoomCount());
+    assertEquals(4, interest.interestedRoomCount());
+  }
+
+  @Test
+  void sharesPrewarmBudgetAcrossZones() {
+    Map.Zone first = lineZone(2);
+    Map.Zone second = lineZone(2);
+    RenderInterest interest = new RenderInterest(1, 1, 2);
+
+    interest.beginUpdate();
+    interest.seed(first, 0);
+    interest.seed(second, 0);
+    interest.endUpdate();
+
+    assertEquals(2, interest.seedRoomCount());
+    assertEquals(4, interest.desiredRoomCount());
+    assertEquals(1, interest.prewarmedRoomCount());
+    assertEquals(3, interest.interestedRoomCount());
+  }
+
+  @Test
+  void retainsPreviousResidentsWithinTwoHysteresisRings() {
+    Map.Zone zone = lineZone(4);
+    RenderInterest interest = new RenderInterest(0, 0, 2);
+    interest.beginUpdate();
+    interest.seed(zone, 0);
+    interest.endUpdate();
+
+    interest.beginUpdate();
+    interest.seed(zone, 2);
+    interest.endUpdate();
+
+    assertTrue(interest.contains(zone, 0));
+    assertTrue(interest.contains(zone, 2));
+    assertEquals(0, interest.releasedRoomCount());
+  }
+
+  @Test
+  void releasesResidentsBeyondHysteresisRing() {
+    Map.Zone zone = lineZone(4);
+    RenderInterest interest = new RenderInterest(0, 0, 2);
+    interest.beginUpdate();
+    interest.seed(zone, 0);
+    interest.endUpdate();
+
+    interest.beginUpdate();
+    interest.seed(zone, 3);
+    interest.endUpdate();
+
+    assertFalse(interest.contains(zone, 0));
+    assertTrue(interest.contains(zone, 3));
+    assertEquals(1, interest.releasedRoomCount());
+    for (Map.RoomEx room : zone.getRoomsEx()) {
+      assertEquals(0, room.getClientInRoomRefs());
+      assertEquals(0, room.getClientInSightRefs());
+      assertEquals(0, room.getClientOutOfSightRefs());
+      assertEquals(0, room.getUntileRefs());
+    }
+  }
+
+  @Test
   void replacesInterestOnTheNextCameraUpdate() {
     Map.Zone zone = lineZone(4);
     RenderInterest interest = new RenderInterest(0);

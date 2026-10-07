@@ -438,8 +438,13 @@ public class RenderSystem extends BaseEntitySystem {
   public String cacheMetricsReport() {
     return cacheMetrics.report() + System.lineSeparator()
         + "Render interest seeds=" + renderInterest.seedRoomCount()
-        + " rooms=" + renderInterest.interestedRoomCount()
-        + " adjacentRings=" + renderInterest.adjacentRings();
+        + " desired=" + renderInterest.desiredRoomCount()
+        + " resident=" + renderInterest.interestedRoomCount()
+        + " prewarmed=" + renderInterest.prewarmedRoomCount()
+        + " released=" + renderInterest.releasedRoomCount()
+        + " budget=" + renderInterest.prewarmBudget()
+        + " adjacentRings=" + renderInterest.adjacentRings()
+        + " hysteresisRings=" + renderInterest.releaseHysteresisRings();
   }
 
   /** Clears every zoom baseline without changing the current camera zoom. */
