@@ -93,6 +93,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `LightningGoldenDamageTest`（DMG-04 第六批：技能 49，等级 1–20）
 - `NovaGoldenDamageTest`（DMG-04 第七批：技能 48，等级 1–20）
 - `FrostNovaGoldenDamageTest`（DMG-04 第八批：技能 44，等级 1–20）
+- `ChargedBoltGoldenDamageTest`（DMG-04 第九批：技能 38，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -189,3 +190,18 @@ D2MOO `SKILLS_SrvDo022_NovaAttack` 和 `sub_6FD14170` 固定创建 64 路技能�
 `coldmindam/coldmaxdam` 差异均为 0。`ELen=200`、三级长度增量均为 25 的冷缓持续
 时间保留在源矩阵，但不计入本批基础伤害；冷缓长度、64 路投递、多目标和 cast-wide
 total 延后到 DMG-07，抗性、免疫与 Cold Mastery 穿透结算延后到 DMG-08。
+
+## DMG-04 第九个逐级实例：Charged Bolt
+
+Charged Bolt 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=7`。无 Lightning 协同且
+无 Lightning Mastery 的基础场景中，最小值和最大值的五段增量均为 `1/1/2/3/4`。
+等级 1 的定点范围为 512–1024、整数范围为 2–4；等级 20 的定点范围为
+3456–3968、整数范围为 13–15。
+
+D2MOO `SKILLS_SrvDo017_ChargedBolt_BoltSentry` 读取 `calc1` 并为每枚弹丸调用原生
+Charged Bolt 路径初始化；`MISSILE_CalculateDamageData` 再从技能 38 安装 Skills.txt
+闪电伤害。riiablo 实际值从 `chargedbolt` 导弹的
+`MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的
+`lightmindam/lightmaxdam` 差异均为 0。矩阵只批准单枚导弹对单个目标的一次伤害包；
+弹丸数量、确定性种子、77 帧路径、重复/多目标接触和 cast-wide total 延后到 DMG-07，
+抗性、免疫及 Lightning Mastery 结算延后到 DMG-08。

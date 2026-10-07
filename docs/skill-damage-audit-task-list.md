@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`f76cc261`
-当前加权完成度：**30.8%**
+代码基线：`3f77498a`
+当前加权完成度：**30.9%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -49,11 +49,11 @@
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 116 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 38 项。185 个唯一测试引用均可追溯。
-- 4,200 行中已有 160 行 `GOLDEN_APPROVED`，其余 4,040 行仍为
+- 4,200 行中已有 180 行 `GOLDEN_APPROVED`，其余 4,020 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 30.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 160 个逐级黄金行；不表示技能伤害正确率为 30.8%。
+- 当前 30.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 180 个逐级黄金行；不表示技能伤害正确率为 30.9%。
 
 ## 加权任务
 
@@ -85,7 +85,8 @@
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
-    Frost Nova 等级 1–20 共 160/4,200 行（本项 3.8095%，加权贡献 0.7619 个百分点）；
+    Frost Nova、Charged Bolt 等级 1–20 共 180/4,200 行（本项 4.2857%，加权贡献
+    0.8571 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -107,7 +108,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 30.7619%（展示时四舍五入为 30.8%）。
+当前总加权完成度为 30.8571%（展示时四舍五入为 30.9%）。
 
 ## 黄金值准入规则
 
@@ -178,6 +179,13 @@
 - Frost Nova 与 Nova 共用 D2MOO `SrvDo022` 的 64 路投递，但使用 `HitShift=7` 的冷伤害
   曲线。基础场景不含 Blizzard/Frozen Orb 协同和 Cold Mastery；冷缓持续时间、64 路
   多目标累计及整次施法总伤害延后到 DMG-07，抗性结算延后到 DMG-08。
+- Charged Bolt（技能 38）等级 1–20 已按“单枚导弹对单个目标一次命中”批准。等级 1
+  为 2–4，等级 20 为 13–15，20 个等级的 `delta_min/max` 均为 0；riiablo 实际值来自
+  `chargedbolt` 导弹的 `MissileDamageResolver.initializeSkill` 生产快照。
+- D2MOO `SKILLS_SrvDo017_ChargedBolt_BoltSentry` 按 `calc1` 创建多枚技能导弹，但不改变
+  每枚导弹的 Skills.txt 伤害曲线。基础场景不含 Lightning 协同和 Lightning Mastery；
+  弹丸数量、确定性种子、77 帧路径、重复/多目标接触和整次施法累计延后到 DMG-07，
+  抗性与免疫结算延后到 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -194,7 +202,10 @@
   `SorceressNovaIntegrationTest#oneCastDamagesEachCrossedTargetOnlyOnce`、
   `FrostNovaGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
   `SorceressFrostNovaIntegrationTest#createsExactNativeRingWithSkillDamageAndColdMasterySnapshot`、
-  `SorceressFrostNovaIntegrationTest#collisionAppliesResistedColdDurationAndNativeImmunityItemGates`。
+  `SorceressFrostNovaIntegrationTest#collisionAppliesResistedColdDurationAndNativeImmunityItemGates`、
+  `ChargedBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `NativeSorceressProjectileDataTest#chargedBoltUsesSrvDo17AndCalc1Burst`、
+  `NativeSorceressProjectileDataTest#chargedBoltInitialDirectionRemainsTargetAligned`。
 
 ## 可复现命令
 
@@ -216,7 +227,7 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04 的同类基础黄金值，下一项优先审核 Charged Bolt。只批准单枚导弹对单个
-目标的一次命中范围，弹丸数量、路径、多目标或重复接触留给后续对应任务；仍须先生成
-D2MOO 独立期望值，再从 riiablo 生产路径采集实际值并计算差异，不得把
-`source_curve_*` 直接改名为黄金值。
+继续 DMG-04 的同类基础黄金值，下一项优先审核 Chain Lightning。只批准每次有效接触
+对单个目标安装的一次伤害包，跳跃次数、目标选择、重复接触和整次施法累计留给后续
+对应任务；仍须先生成 D2MOO 独立期望值，再从 riiablo 生产路径采集实际值并计算差异，
+不得把 `source_curve_*` 直接改名为黄金值。
