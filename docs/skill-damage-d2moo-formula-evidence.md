@@ -95,6 +95,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `FrostNovaGoldenDamageTest`（DMG-04 第八批：技能 44，等级 1–20）
 - `ChargedBoltGoldenDamageTest`（DMG-04 第九批：技能 38，等级 1–20）
 - `ChainLightningGoldenDamageTest`（DMG-04 第十批：技能 53，等级 1–20）
+- `ThunderStormGoldenDamageTest`（DMG-04 第十一批：技能 57，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -224,3 +225,21 @@ ID 和技能等级并递减预算。`MISSILE_CalculateDamageData` 为每个链�
 并断言 SrvHit12 创建的每个后续链段继续持有 1–40 的一级伤害快照。矩阵只批准每个链段
 对单个目标的一次伤害；跳跃目标选择、多目标累计和 cast-wide total 延后到 DMG-07，
 抗性、免疫及 Lightning Mastery 结算延后到 DMG-08。
+
+## DMG-04 第十一个逐级实例：Thunder Storm
+
+Thunder Storm 由 `Skills.txt` 持有每次雷击伤害，`SrcDam=0`、`HitShift=8`，没有伤害
+协同公式。基础场景中最小值和最大值的五段增量均为 `10/10/11/11/11`。等级 1 的
+定点范围为 256–25600、整数范围为 1–100；等级 20 的定点范围为 49920–75264、
+整数范围为 195–294。
+
+D2MOO `SKILLS_SrvSt13_ThunderStorm` 初始化上次目标和首次执行标志；
+`SKILLS_SrvDo029_ThunderStorm` 首次建立带技能 ID/等级的状态，后续周期选择目标并创建
+`thunderstorm1`，随后通过 `MISSMODE_SrvDmgHitHandler` 立即结算一次命中。
+`MISSILE_CalculateDamageData` 从技能 57 安装 Skills.txt 闪电伤害。riiablo 的
+`StateUpdater.processThunderStorm` 同样为每次周期雷击调用
+`MissileDamageResolver.initializeSkill`；等级 1–20 的 `lightmindam/lightmaxdam` 与独立
+黄金数组一致，集成测试另行确认实际周期导弹携带技能 57、等级 1 和 1–100 权威快照。
+矩阵只批准每次雷击对单目标的一次伤害包；状态持续时间、雷击间隔、目标选择、雷击次数
+和 full-aura total 延后到 DMG-07，抗性、免疫、吸收、PvP 与 Lightning Mastery 结算
+延后到 DMG-08。

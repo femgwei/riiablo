@@ -107,6 +107,13 @@ class SorceressThunderStormIntegrationTest extends RiiabloTest {
       for (int i = 0; i < delay; i++) world.process();
       assertEquals(1, factory.count("thunderstorm1"),
           "one native strike is emitted at the first periodic deadline");
+      Missile strike = factory.missiles.get(factory.missiles.size() - 1);
+      assertEquals(skill.Id, strike.skillId);
+      assertEquals(1, strike.damageLevel);
+      assertTrue(strike.damageSnapshot,
+          "the periodic carrier must snapshot the Thunder Storm skill packet");
+      assertEquals(1, strike.damage.get(Stat.lightmindam).asInt());
+      assertEquals(100, strike.damage.get(Stat.lightmaxdam).asInt());
       assertTrue(world.getMapper(AttributesWrapper.class).get(target).attrs
           .get(Stat.hitpoints).asFixed() < 200f,
           "the strike resolves through the ordinary elemental damage path");

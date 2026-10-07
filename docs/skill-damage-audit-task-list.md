@@ -4,7 +4,7 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`913b9b0d`
+代码基线：`e24607fe`
 当前加权完成度：**31.0%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
@@ -49,11 +49,11 @@
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 116 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 38 项。185 个唯一测试引用均可追溯。
-- 4,200 行中已有 200 行 `GOLDEN_APPROVED`，其余 4,000 行仍为
+- 4,200 行中已有 220 行 `GOLDEN_APPROVED`，其余 3,980 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
 - 当前 31.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 200 个逐级黄金行；不表示技能伤害正确率为 31.0%。
+  对齐，以及 220 个逐级黄金行；不表示技能伤害正确率为 31.0%。
 
 ## 加权任务
 
@@ -85,8 +85,8 @@
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
-    Frost Nova、Charged Bolt、Chain Lightning 等级 1–20 共 200/4,200 行（本项
-    4.7619%，加权贡献 0.9524 个百分点）；
+    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm 等级 1–20 共
+    220/4,200 行（本项 5.2381%，加权贡献 1.0476 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -108,7 +108,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 30.9524%（展示时四舍五入为 31.0%）。
+当前总加权完成度为 31.0476%（展示时四舍五入为 31.0%）。
 
 ## 黄金值准入规则
 
@@ -193,6 +193,14 @@
   `MISSMODE_SrvHit12_ChainLightning_LightningStrike` 创建且继承相同技能 ID 和技能等级。
   本次修复了根导弹及技能 53 续链导弹缺失 Skills.txt 伤害快照的问题；跳跃目标选择、
   多目标累计和整次施法总伤害延后到 DMG-07，抗性与免疫结算延后到 DMG-08。
+- Thunder Storm（技能 57）等级 1–20 已按“每次周期雷击对单个目标的一次命中”批准。
+  等级 1 为 1–100，等级 20 为 195–294，20 个等级的 `delta_min/max` 均为 0；riiablo
+  实际值来自周期创建的 `thunderstorm1` 导弹 `MissileDamageResolver.initializeSkill`
+  生产快照。
+- D2MOO `SKILLS_SrvSt13_ThunderStorm` 初始化技能参数，`SKILLS_SrvDo029_ThunderStorm`
+  建立状态并在周期回调中选择目标、创建技能导弹、立即结算一次命中。状态持续时间、
+  雷击间隔、目标选择、总雷击次数和整段状态总伤害延后到 DMG-07，抗性与免疫结算延后
+  到 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -215,7 +223,9 @@
   `NativeSorceressProjectileDataTest#chargedBoltInitialDirectionRemainsTargetAligned`、
   `ChainLightningGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
   `ChainLightningGoldenDamageTest#continuationSegmentKeepsTheAuthoritativeSkillSnapshot`、
-  `SpecialSkillEcsScenarioTest#chainLightningCreatesOneAuthoritativeSegmentPerHostileJump`。
+  `SpecialSkillEcsScenarioTest#chainLightningCreatesOneAuthoritativeSegmentPerHostileJump`、
+  `ThunderStormGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `SorceressThunderStormIntegrationTest#castInstallsAuraAndEmitsOneAuthoritativeStrikePerPeriod`。
 
 ## 可复现命令
 
@@ -237,6 +247,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04 的同类基础黄金值，下一项优先审核 Thunder Storm。仍须先生成 D2MOO
-独立期望值，再从 riiablo 生产路径采集实际值并计算差异；周期触发次数和整段状态总伤害
-留给 DMG-07，不得把 `source_curve_*` 直接改名为黄金值。
+继续 DMG-04，下一项优先审核 Static Field 的“当前生命百分比、难度/PvP 下限”非固定
+伤害语义。不得把它伪装成普通 min/max 等级曲线；必须先固定输入生命值和结算边界，再
+从 D2MOO 与 riiablo 生产路径分别采集结果。
