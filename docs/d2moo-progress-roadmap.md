@@ -11,8 +11,10 @@
   `buildCaches` 平均/峰值耗时。控制台用 `render.stats reset` 清零，依次执行
   `render.zoom 1`、`render.zoom 2`、`render.zoom 5` 采样，再用 `render.stats` 输出基线；
   非目标 zoom 不混入统计。
-- [ ] 第三步：在不改变绘制顺序的前提下，把帧内索引升级为由实体移动事件维护的增量索引，
-  避免静止实体每帧重复入桶。
+- [x] 第三步：在不改变绘制顺序的前提下，把帧内索引升级为增量索引。实体加入/删除通过
+  ECS 生命周期钩子维护；由于现有 `Position.position` 是多系统直接写入的可变 `Vector2`，
+  渲染前仍做轻量格坐标核对以覆盖移动、传送和网络插值，但静止或格内移动实体不再重复入桶，
+  仅跨越 5x5 subtile 格边界时移动成员；空格、成员记录均循环复用。
 - [ ] 第四步：新增独立 `RenderInterest`，按相机覆盖的 RoomEx 做 BFS；它只控制表现资源和
   客户端物化，不得修改 `CLIENT_IN_SIGHT`、AI 更新资格或战斗模拟。
 - [ ] 第五步：为 RenderInterest 加入每帧预热预算和两圈释放滞回，并分别验证本地和 D2GS

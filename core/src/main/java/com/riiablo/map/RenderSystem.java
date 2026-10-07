@@ -377,7 +377,18 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   @Override
+  protected void inserted(int entityId) {
+    syncSpatialIndex(entityId);
+  }
+
+  @Override
+  protected void removed(int entityId) {
+    spatialIndex.remove(entityId);
+  }
+
+  @Override
   protected void dispose() {
+    spatialIndex.clear();
     debugEntitites = null;
   }
 
@@ -630,7 +641,7 @@ public class RenderSystem extends BaseEntitySystem {
 
   private void buildCaches() {
     long startNanos = TimeUtils.nanoTime();
-    rebuildSpatialIndex();
+    syncSpatialIndex();
     int x, y;
     int startX2 = startX;
     int startY2 = startY;
@@ -658,15 +669,20 @@ public class RenderSystem extends BaseEntitySystem {
         spatialIndex.activeCellCount(), TimeUtils.nanoTime() - startNanos);
   }
 
-  /** Indexes the render subscription once before the visible tile buffer is traversed. */
-  private void rebuildSpatialIndex() {
-    spatialIndex.beginFrame();
+  /** Reconciles direct Position writes while preserving unchanged cell membership. */
+  private void syncSpatialIndex() {
     IntBag entities = getEntityIds();
     for (int i = 0, size = entities.size(); i < size; i++) {
-      int id = entities.get(i);
-      Position position = mPosition.get(id);
-      if (position == null) continue;
-      spatialIndex.add(id, position.position.x, position.position.y);
+      syncSpatialIndex(entities.get(i));
+    }
+  }
+
+  private void syncSpatialIndex(int entityId) {
+    Position position = mPosition.get(entityId);
+    if (position == null) {
+      spatialIndex.remove(entityId);
+    } else {
+      spatialIndex.update(entityId, position.position.x, position.position.y);
     }
   }
 

@@ -3,42 +3,66 @@ package com.riiablo.map;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.LongMap;
 import com.riiablo.map.DT1.Tile;
 
-/**
- * Reusable per-frame index from world tile coordinates to renderable entity ids.
- *
- * <p>The renderer walks the visible isometric tile buffer several times. Keeping
- * the entity subscription in one spatial pass avoids rescanning every entity for
- * every visible tile while preserving the existing per-tile draw ordering.</p>
- */
+/** Incremental index from world coordinates to renderable entity ids. */
 final class RenderSpatialIndex {
   private static final int INITIAL_CELL_CAPACITY = 64;
 
   private final LongMap<Cell> cells = new LongMap<>(INITIAL_CELL_CAPACITY);
-  private final Array<Cell> storage = new Array<>(false, INITIAL_CELL_CAPACITY);
-  private int activeCellCount;
-  private int entityCount;
+  private final IntMap<Membership> memberships = new IntMap<>();
+  private final Array<Cell> freeCells = new Array<>(false, INITIAL_CELL_CAPACITY);
+  private final Array<Membership> freeMemberships = new Array<>(false, INITIAL_CELL_CAPACITY);
 
-  void beginFrame() {
-    cells.clear();
-    activeCellCount = 0;
-    entityCount = 0;
-  }
+  /**
+   * Adds an entity or moves it between map cells.
+   *
+   * @return true only when index membership changed
+   */
+  boolean update(int entityId, float worldX, float worldY) {
+    if (!Float.isFinite(worldX) || !Float.isFinite(worldY)) return remove(entityId);
 
-  void add(int entityId, float worldX, float worldY) {
-    if (!Float.isFinite(worldX) || !Float.isFinite(worldY)) return;
-    int tileX = worldToTile(worldX);
-    int tileY = worldToTile(worldY);
-    long key = key(tileX, tileY);
+    long key = key(worldToTile(worldX), worldToTile(worldY));
+    Membership membership = memberships.get(entityId);
+    if (membership != null && membership.cellKey == key) return false;
+
+    if (membership == null) {
+      membership = obtainMembership();
+      memberships.put(entityId, membership);
+    } else {
+      removeFromCell(entityId, membership.cellKey);
+    }
+
     Cell cell = cells.get(key);
     if (cell == null) {
       cell = obtainCell();
       cells.put(key, cell);
     }
     cell.entities.add(entityId);
-    entityCount++;
+    membership.cellKey = key;
+    return true;
+  }
+
+  /** Removes an entity and releases an empty cell for reuse. */
+  boolean remove(int entityId) {
+    Membership membership = memberships.remove(entityId);
+    if (membership == null) return false;
+    removeFromCell(entityId, membership.cellKey);
+    freeMemberships.add(membership);
+    return true;
+  }
+
+  /** Clears all membership while retaining allocated cells and records for reuse. */
+  void clear() {
+    for (Cell cell : cells.values()) {
+      cell.entities.clear();
+      freeCells.add(cell);
+    }
+    cells.clear();
+    for (Membership membership : memberships.values()) freeMemberships.add(membership);
+    memberships.clear();
   }
 
   IntArray entitiesAtSubtile(int subtileX, int subtileY) {
@@ -53,24 +77,30 @@ final class RenderSpatialIndex {
   }
 
   int activeCellCount() {
-    return activeCellCount;
+    return cells.size;
   }
 
   int entityCount() {
-    return entityCount;
+    return memberships.size;
+  }
+
+  private void removeFromCell(int entityId, long cellKey) {
+    Cell cell = cells.get(cellKey);
+    if (cell == null || !cell.entities.removeValue(entityId)) return;
+    if (cell.entities.size == 0) {
+      cells.remove(cellKey);
+      freeCells.add(cell);
+    }
   }
 
   private Cell obtainCell() {
-    Cell cell;
-    if (activeCellCount < storage.size) {
-      cell = storage.get(activeCellCount);
-      cell.entities.clear();
-    } else {
-      cell = new Cell();
-      storage.add(cell);
-    }
-    activeCellCount++;
+    Cell cell = freeCells.size == 0 ? new Cell() : freeCells.pop();
+    cell.entities.clear();
     return cell;
+  }
+
+  private Membership obtainMembership() {
+    return freeMemberships.size == 0 ? new Membership() : freeMemberships.pop();
   }
 
   private static int worldToTile(float worldCoordinate) {
@@ -83,5 +113,9 @@ final class RenderSpatialIndex {
 
   private static final class Cell {
     final IntArray entities = new IntArray(false, 4);
+  }
+
+  private static final class Membership {
+    long cellKey;
   }
 }
