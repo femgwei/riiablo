@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`4687ee81`
-当前加权完成度：**28.5%**
+代码基线：`0e207a78`
+当前加权完成度：**30.0%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -46,10 +46,13 @@
 - Amazon 审计确认 30 项所有者；Inner Sight、Jab、Guided Arrow、Dopplezon、Valkyrie 共
   5 个明确实现差异。前 3 项分别是分段公式和合法零值 fallback 问题；后 2 项缺原版召唤
   被动属性、技能、装备等初始化链。Amazon 生产逻辑本轮未改写。
+- 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
+  `IMPLEMENTED_TESTED` 116 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 38 项。185 个唯一测试引用均可追溯。
 - 4,200 行目前全部为 `PENDING_D2MOO_REFERENCE`；`expected_*`、`riiablo_actual_*` 和
   `delta_*` 保持空白，**尚无任何一行可以称为黄金伤害值**。
-- 当前 28.5% 只表示审计基础设施、源清册、通用公式证据和七职业 210/210 项所有者审计
-  完成，不表示伤害正确率为 28.5%。
+- 当前 30.0% 只表示审计基础设施、源清册、通用公式证据和七职业 210/210 项所有者语义
+  对齐完整完成，不表示伤害正确率为 30.0%。
 
 ## 加权任务
 
@@ -68,12 +71,13 @@
   - 边界测试覆盖等级 1/8/9/16/17/22/23/28/29、`HitShift` 显示截断，以及
     `SKILLS_GetMinElemDamage` 与最大值路径不同的协同门槛。
 
-- [ ] **DMG-03B（12%）Skills.txt / Missiles.txt / D2MOO 逐技能解释语义对齐**
+- [x] **DMG-03B（12%）Skills.txt / Missiles.txt / D2MOO 逐技能解释语义对齐**
   - 为每个技能确认实际伤害所有者：技能表、导弹表、武器包、召唤物、状态周期或专用回调。
   - 核对五段每级增量、`HitShift`、`SrcDam`、协同公式、元素长度和取整时机。
   - 每个结论必须填写具体 D2MOO 函数或源码位置；不清楚时再查 The Phrozen Keep。
-  - 子项进度：七职业各 30/30 已完成（累计 10.5% / 本项 12%，本项完成比例 87.5%）；
-    跨职业完整性复核待完成。
+  - 七职业各 30/30 和跨职业完整性复核均已完成（累计 12.0% / 本项 12%，本项完成比例
+    100.0%）；总门禁见 `SkillDamageOwnershipAuditTest`，复核报告见
+    `skill-damage-ownership-cross-class-review.md`。
 
 - [ ] **DMG-04（20%）1–20 级无装备、无协同基础黄金值**
   - 为 4,200 行填写有证据的 `expected_*`，非伤害技能必须标记明确的 N/A 原因，
@@ -118,6 +122,8 @@
 - `skill-damage-golden-matrix.xlsx`：浏览、筛选和交接用工作簿；包含 Summary、Task List、
   Golden Matrix 和 Field Dictionary。
 - `SkillDamageAuditMatrixTest`：从真实 1.10f MPQ 重建源清册，并硬性检查 7×30×20 的完整性。
+- `SkillDamageOwnershipAuditTest`：复核七份所有者清单的 210 个唯一技能、统一状态分类、
+  D2MOO 位置和测试引用可追溯性。
 
 `source_curve_*` 只是 `Skills.txt` 基值加五段等级增量后的未移位源数值。它们没有应用
 `HitShift`、导弹归属、协同、主修、武器包、周期或最终结算，因此不能当作黄金值使用。
@@ -142,6 +148,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-03B 的跨职业完整性复核：统一七份所有者清单的状态分类，检查 210 项无遗漏、
-重复或职业范围错误，并确认每个 `RIIABLO_GAP`、`TEST_GAP` 和测试引用都可追溯。复核通过后
-才把 DMG-03B 标记为 100%，再进入实现修复和逐等级黄金值生成。
+开始 DMG-04 的第一批基础黄金值。先选择由 `Skills.txt` 直接拥有、无武器包、无周期、
+无召唤继承的技能，依据具体 D2MOO 公式生成等级 1–20 独立期望值；随后从 riiablo 生产路径
+采集实际值并计算差异。不得把现有 `source_curve_*` 直接改名为黄金值。
