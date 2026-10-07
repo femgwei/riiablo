@@ -16,6 +16,7 @@ import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.reflect.ClassReflection;
 import com.badlogic.gdx.utils.reflect.Field;
+import com.artemis.annotations.Wire;
 
 import com.riiablo.command.Action;
 import com.riiablo.command.Command;
@@ -30,6 +31,7 @@ import com.riiablo.logger.Level;
 import com.riiablo.logger.Logger;
 import com.riiablo.logger.LoggerRegistry;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.screen.SelectCharacterScreen3;
 import com.riiablo.serializer.SerializeException;
 import com.riiablo.serializer.StringSerializer;
@@ -316,6 +318,37 @@ public class Commands {
       })
       .build();
 
+  public static final Command environmentTime = Command.builder()
+      .alias("env.time")
+      .description("Prints or sets local environment time: day, dusk, night, dawn")
+      .params(OptionalParameter.of(String.class))
+      .action(new Action() {
+        @Override
+        public void onExecuted(Command.Instance instance) {
+          EnvironmentCycle environment = environmentCycle();
+          if (instance.numArgs() == 1) {
+            String value = instance.getArg(0);
+            int period;
+            if ("day".equalsIgnoreCase(value)) {
+              period = EnvironmentCycle.PERIOD_DAY;
+            } else if ("dusk".equalsIgnoreCase(value)) {
+              period = EnvironmentCycle.PERIOD_DUSK;
+            } else if ("night".equalsIgnoreCase(value)) {
+              period = EnvironmentCycle.PERIOD_NIGHT;
+            } else if ("dawn".equalsIgnoreCase(value)) {
+              period = EnvironmentCycle.PERIOD_DAWN;
+            } else {
+              throw new ParameterException("Expected day, dusk, night, or dawn");
+            }
+            environment.setPeriodOfDay(period);
+          }
+          Riiablo.console.out.format("Environment: cycle=%d period=%s ticks=%d eclipse=%s%n",
+              environment.cycleIndex(), EnvironmentCycle.periodName(environment.periodOfDay()),
+              environment.ticks(), environment.eclipse());
+        }
+      })
+      .build();
+
   public static final Command connect = Command.builder()
       .alias("connect")
       .description("Connects to specified server")
@@ -434,5 +467,22 @@ public class Commands {
       throw new ParameterException("RenderSystem is not available");
     }
     return renderer;
+  }
+
+  private static EnvironmentCycle environmentCycle() {
+    if (Riiablo.engine == null) {
+      throw new ParameterException("Environment commands are only available in game");
+    }
+    EnvironmentAccess access = new EnvironmentAccess();
+    Riiablo.engine.inject(access);
+    if (access.environment == null) {
+      throw new ParameterException("EnvironmentCycle is not available");
+    }
+    return access.environment;
+  }
+
+  private static final class EnvironmentAccess {
+    @Wire(name = "environment")
+    EnvironmentCycle environment;
   }
 }

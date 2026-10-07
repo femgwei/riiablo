@@ -54,4 +54,14 @@ public class EnvironmentCycleTest {
     assertEquals(144, environment.green(1, 0));
     assertEquals(243, environment.blue(1, 0));
   }
+
+  @Test
+  public void verificationPresetCanJumpDirectlyToNight() {
+    EnvironmentCycle environment = new EnvironmentCycle();
+    environment.setPeriodOfDay(EnvironmentCycle.PERIOD_NIGHT);
+    assertEquals(EnvironmentCycle.CYCLE_NIGHT, environment.cycleIndex());
+    assertEquals(EnvironmentCycle.PERIOD_NIGHT, environment.periodOfDay());
+    assertEquals(270 * EnvironmentCycle.NORMAL_TIME_RATE, environment.ticks());
+    assertEquals("night", EnvironmentCycle.periodName(environment.periodOfDay()));
+  }
 }

@@ -84,6 +84,36 @@ public final class EnvironmentCycle {
     return periodOfDay() == PERIOD_DAY;
   }
 
+  /** Sets a representative point in a normal cycle for visual verification. */
+  public void setPeriodOfDay(int period) {
+    switch (period) {
+      case PERIOD_DAY:
+        initialize(CYCLE_NOON, 90 * NORMAL_TIME_RATE, false);
+        break;
+      case PERIOD_DUSK:
+        initialize(CYCLE_SUNSET, 190 * NORMAL_TIME_RATE, false);
+        break;
+      case PERIOD_NIGHT:
+        initialize(CYCLE_NIGHT, 270 * NORMAL_TIME_RATE, false);
+        break;
+      case PERIOD_DAWN:
+        initialize(CYCLE_SUNRISE, 330 * NORMAL_TIME_RATE, false);
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown environment period: " + period);
+    }
+  }
+
+  public static String periodName(int period) {
+    switch (period) {
+      case PERIOD_DAY: return "day";
+      case PERIOD_DUSK: return "dusk";
+      case PERIOD_NIGHT: return "night";
+      case PERIOD_DAWN: return "dawn";
+      default: return "unknown";
+    }
+  }
+
   /** Applies the state carried by D2GS packet 0x53 / the riiablo baseline. */
   public void initialize(int cycleIndex, int ticks, boolean eclipse) {
     if (cycleIndex < 0 || cycleIndex >= NUM_CYCLES) cycleIndex = CYCLE_NOON;
