@@ -1,6 +1,6 @@
 # D2MOO 1.10f 技能伤害通用公式证据
 
-更新时间：2026-10-07
+更新时间：2026-10-08
 
 证据版本：The Phrozen Keep D2MOO `8322494ed1f715ad51552f169df76cf600fabc71`
 
@@ -90,6 +90,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `FireBallGoldenDamageTest`（DMG-04 第三批：技能 47，等级 1–20）
 - `IceBlastGoldenDamageTest`（DMG-04 第四批：技能 45，等级 1–20）
 - `GlacialSpikeGoldenDamageTest`（DMG-04 第五批：技能 55，等级 1–20）
+- `LightningGoldenDamageTest`（DMG-04 第六批：技能 49，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -145,3 +146,16 @@ Blast、Frozen Orb 协同且无 Cold Mastery 的基础场景中，等级 1 的�
 `MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown` 负责命中点范围投递和冻结语义，不改变
 每个目标收到的一次伤害包。因此矩阵只批准单目标一次命中范围，`expected_total` 保持空白；
 范围目标数量、冻结长度和整次施法累计延后到 DMG-07。
+
+## DMG-04 第六个逐级实例：Lightning
+
+Lightning 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=8`。无 Charged Bolt、Chain
+Lightning、Nova 协同且无 Lightning Mastery 的基础场景中，最小值五段增量全为 0，
+最大值五段增量为 `8/12/20/28/36`。等级 1 的定点范围为 256–10240、整数范围为
+1–40；等级 20 的定点范围为 256–69632、整数范围为 1–272。
+
+riiablo 实际值从 `lightningbolt` 导弹的 `MissileDamageResolver.initializeSkill` 快照
+读取，等级 1–20 的 `lightmindam/lightmaxdam` 差异均为 0。D2MOO
+`MISSILE_CalculateDamageData` 负责把技能伤害安装到导弹；本批只批准一个伤害包对一个
+目标的一次结算。穿透、多目标或重复接触和整次施法累计延后到 DMG-06/07，抗性与免疫
+结算延后到 DMG-08，因此 `expected_total` 保持空白。
