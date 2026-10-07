@@ -283,17 +283,17 @@ public class ItemData {
    */
   public Item getEquippedThrowableWeapon() {
     Item right = getEquipped(BodyLoc.RARM);
-    if (isThrowableWeapon(right)) return right;
+    if (isActive(right) && isThrowableWeapon(right)) return right;
     Item left = getEquipped(BodyLoc.LARM);
-    return isThrowableWeapon(left) ? left : null;
+    return isActive(left) && isThrowableWeapon(left) ? left : null;
   }
 
   /** Returns the active Amazon javelin/spear weapon, from the current set only. */
   public Item getEquippedJavelinWeapon() {
     Item right = getEquipped(BodyLoc.RARM);
-    if (isJavelinWeapon(right)) return right;
+    if (isActive(right) && isJavelinWeapon(right)) return right;
     Item left = getEquipped(BodyLoc.LARM);
-    return isJavelinWeapon(left) ? left : null;
+    return isActive(left) && isJavelinWeapon(left) ? left : null;
   }
 
   /** Javelin and spear are the weapon classes used by Amazon's Javelin tree. */
@@ -305,9 +305,9 @@ public class ItemData {
   /** Returns the active bow/crossbow, independent of which hand owns it. */
   public Item getEquippedRangedWeapon() {
     Item right = getEquipped(BodyLoc.RARM);
-    if (isRangedWeapon(right)) return right;
+    if (isActive(right) && isRangedWeapon(right)) return right;
     Item left = getEquipped(BodyLoc.LARM);
-    return isRangedWeapon(left) ? left : null;
+    return isActive(left) && isRangedWeapon(left) ? left : null;
   }
 
   /** Returns whether the item is a bow or crossbow using ItemTypes ancestry. */
@@ -353,7 +353,8 @@ public class ItemData {
 
   public boolean isActive(Item item) {
     if (item == null) return false;
-    return item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);
+    return !item.hasFlag(Item.ITEMFLAG_BROKEN)
+        && item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);
   }
 
   public int getAlternate() {

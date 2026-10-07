@@ -52,6 +52,7 @@ public final class NpcRepairService {
     // All validation and the wallet mutation completed before durability is
     // changed, so a rejected request can never leave a partially repaired item.
     ItemDurabilityManager.INSTANCE.restoreDurability(item);
+    items.updateStats();
     return accepted(cost, item.id);
   }
 
@@ -75,6 +76,7 @@ public final class NpcRepairService {
       return rejected("INSUFFICIENT_GOLD");
     }
     for (Item item : repairable) ItemDurabilityManager.INSTANCE.restoreDurability(item);
+    character.getItems().updateStats();
     return accepted(cost, 0);
   }
 

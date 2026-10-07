@@ -44,6 +44,7 @@ import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceStock;
 import com.riiablo.net.packet.d2gs.NpcServiceType;
 import com.riiablo.engine.server.item.ItemDurabilityManager;
+import com.riiablo.engine.server.npc.NpcRepairService;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
@@ -655,7 +656,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         }
       } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
         Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
-        if (repaired != null) ItemDurabilityManager.INSTANCE.restoreDurability(repaired);
+        if (repaired != null && ItemDurabilityManager.INSTANCE.restoreDurability(repaired)) {
+          Riiablo.charData.getItems().updateStats();
+        }
       } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ALL) {
         applyRepairAllResult();
       }
@@ -767,11 +770,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingItemIndex = itemIndex;
       return false;
     }
-    int cost = ItemDurabilityManager.INSTANCE.calculateRepairCost(item);
-    if (cost <= 0 || !VendorPricing.chargeGold(Riiablo.charData, cost)) return false;
-    ItemDurabilityManager.INSTANCE.repairItem(item, cost);
+    NpcRepairService.Result result = NpcRepairService.repairItem(
+        Riiablo.charData, localPricing, itemIndex, item.id);
+    if (!result.success) return false;
     refreshGold();
-    Gdx.app.debug(TAG, "Repaired " + item.code + " for " + cost + " gold");
+    Gdx.app.debug(TAG, "Repaired " + item.code + " for " + result.cost + " gold");
     return true;
   }
 
@@ -787,14 +790,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingItemIndex = -1;
       return;
     }
-    int available = VendorPricing.availableGold(Riiablo.charData);
-    int cost = ItemDurabilityManager.INSTANCE.repairAllEquipment(Riiablo.charData.getItems(), available);
-    if (cost > 0) {
-      // repairAllEquipment mutates durability but does not own the wallet.
-      VendorPricing.chargeGold(Riiablo.charData, cost);
-      refreshGold();
-      Gdx.app.debug(TAG, "Repaired all equipment for " + cost + " gold");
-    }
+    NpcRepairService.Result result = NpcRepairService.repairAll(
+        Riiablo.charData, localPricing);
+    if (!result.success) return;
+    refreshGold();
+    Gdx.app.debug(TAG, "Repaired all equipment for " + result.cost + " gold");
   }
 
   private Item findOwnedItem(int itemId, int fallbackIndex) {
@@ -808,11 +808,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   private void applyRepairAllResult() {
     if (Riiablo.charData == null) return;
+    boolean changed = false;
     for (Item item : Riiablo.charData.getItems().getItems()) {
       if (item != null && item.location == com.riiablo.item.Location.EQUIPPED) {
-        ItemDurabilityManager.INSTANCE.restoreDurability(item);
+        changed |= ItemDurabilityManager.INSTANCE.restoreDurability(item);
       }
     }
+    if (changed) Riiablo.charData.getItems().updateStats();
   }
 
   /** Called by the inventory grid when the Sell mode is active. */

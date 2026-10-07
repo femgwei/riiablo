@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-07 玩家装备耐久与 NPC 修理闭环
+
+- [x] 对照 D2MOO `SUNITDMG_DrainItemDurability` 与 `ITEMS_UpdateDurability`，将普通
+  Attack 接入成功近战命中后的共享耐久路径：玩家攻击者按原生 4% 概率损耗当前武器，
+  玩家防守者按头盔/甲/手部/腰带/鞋/手套权重选择护甲后按 10% 概率损耗；怪物和佣兵
+  不处理自身装备耐久，未命中或格挡不损耗。
+- [x] 合并共享近战技能的重复耐久调用，确保每个成功战斗记录只结算一次；原生
+  `WeapSel=4` 的踢击不再错误损耗鞋子耐久，但仍可损耗玩家防守方护甲。
+- [x] 耐久降为零时装备标记为 broken 并停止贡献角色属性；破损投掷、弓和弩不再被
+  解析为有效攻击武器。修理清除 broken 后重建装备属性。
+- [x] 本地商人修理改用与 D2GS 相同的 `NpcRepairService` 原子路径，统一原生费用、金币
+  扣除、单件/全部修理和属性刷新；无形装备继续不可修理且不会扣款。
+- [x] 定向测试通过：`CombatPipelineIntegrationTest`、`NpcRepairServiceTest`、
+  `ItemDurabilityNativeTest`、`AmazonMeleeSkillLifecycleTest`、`BarbarianFrenzyTest`、
+  `BarbarianBerserkTest`、`AssassinMartialArtsTest`。
+
 ## 2026-10-07 Ice Arrow 命中表现修正
 
 - [x] 修正 `icearrow` 客户端命中特效被整体禁用的问题：无目标的墙体/射程结束仍不生成

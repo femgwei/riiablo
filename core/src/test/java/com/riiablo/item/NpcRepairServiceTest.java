@@ -101,6 +101,45 @@ class NpcRepairServiceTest extends RiiabloTest {
         javelin.attrs.base().get(Stat.quantity).asInt());
   }
 
+  @Test void etherealEquipmentCannotBeRepairedOrCharged() {
+    CharData character = characterWithGold(100);
+    Item item = damagedItem(0xE7E, 100, 10, 0);
+    item.flags |= Item.ITEMFLAG_ETHEREAL | Item.ITEMFLAG_BROKEN;
+    assertTrue(character.getItems().addToInventory(item));
+    int index = character.getItems().indexOf(item);
+
+    NpcRepairService.Result result = NpcRepairService.repairItem(
+        character, new Npc.Entry(), index, item.id);
+
+    assertFalse(result.success);
+    assertEquals("NOTHING_TO_REPAIR", result.reason);
+    assertEquals(0, item.attrs.base().get(Stat.durability).asInt());
+    assertTrue(item.hasFlag(Item.ITEMFLAG_BROKEN));
+    assertEquals(100, character.getStats().get(Stat.gold).asInt());
+  }
+
+  @Test void repairingBrokenEquipmentReactivatesItsStats() {
+    CharData character = characterWithGold(1000);
+    Item item = damagedItem(0xB00, 100, 10, 1);
+    assertTrue(character.getItems().addToInventory(item));
+    character.getItems().equipItem(BodyLoc.HEAD, item);
+    assertTrue(character.getItems().isActive(item));
+
+    assertTrue(com.riiablo.engine.server.item.ItemDurabilityManager.INSTANCE
+        .drainDurability(item, 1));
+    character.getItems().updateStats();
+    assertFalse(character.getItems().isActive(item));
+
+    int index = character.getItems().indexOf(item);
+    NpcRepairService.Result result = NpcRepairService.repairItem(
+        character, new Npc.Entry(), index, item.id);
+
+    assertTrue(result.success);
+    assertEquals(10, item.attrs.base().get(Stat.durability).asInt());
+    assertFalse(item.hasFlag(Item.ITEMFLAG_BROKEN));
+    assertTrue(character.getItems().isActive(item));
+  }
+
   private static CharData characterWithGold(int gold) {
     CharData character = CharData.obtain().clear().set(
         Riiablo.NORMAL, false, "RepairHero", Riiablo.AMAZON);

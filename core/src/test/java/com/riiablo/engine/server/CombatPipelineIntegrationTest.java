@@ -23,6 +23,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -81,6 +82,70 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
           + " damage=" + harness.probe.damageEvents + " death="
           + harness.probe.deathEvents + " targetHp="
           + hitpoints(harness.attributes(monster)));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void ordinaryPlayerMeleeHitsDrainWeaponDurability() {
+    MathUtils.random.setSeed(0x44555241L);
+    CharData data = newCharacter(CharacterClass.BARBARIAN);
+    Item weapon = data.getItems().getEquipped(BodyLoc.RARM);
+    if (weapon == null) weapon = data.getItems().getEquipped(BodyLoc.LARM);
+    assertNotNull(weapon);
+    weapon.attrs.base().put(Stat.maxdurability, 100);
+    weapon.attrs.base().put(Stat.durability, 100);
+    weapon.attrs.reset();
+
+    Harness harness = new Harness(false);
+    try {
+      int player = harness.createPlayer(data, 10, 10,
+          combatAttributes(1000, 1, 1, 10_000));
+      int monster = harness.createMonster(12, 10,
+          combatAttributes(1_000_000, 1, 1, 1));
+      harness.actioneer.cast(player, SkillCodes.attack, monster, new Vector2(12, 10));
+      for (int i = 0; i < 256
+          && weapon.attrs.base().get(Stat.durability).asInt() == 100; i++) {
+        harness.world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_ATK));
+      }
+
+      assertTrue(weapon.attrs.base().get(Stat.durability).asInt() < 100,
+          "ordinary successful Attack hits must enter the native 4% weapon durability path");
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void ordinaryMonsterMeleeHitsDrainPlayerArmorDurability() {
+    MathUtils.random.setSeed(0x41524D52L);
+    CharData data = newCharacter(CharacterClass.AMAZON);
+    Item armor = new Item();
+    armor.reset();
+    armor.setBase(Riiablo.files.armor.get("cap"));
+    armor.attrs.base().put(Stat.maxdurability, 100);
+    armor.attrs.base().put(Stat.durability, 100);
+    armor.attrs.reset();
+    data.getItems().equipItem(BodyLoc.HEAD, data.getItems().add(armor));
+
+    Harness harness = new Harness(false);
+    try {
+      int player = harness.createPlayer(data, 12, 10,
+          combatAttributes(1_000_000, 1, 1, 1));
+      int monster = harness.createMonster(10, 10,
+          combatAttributes(1000, 1, 1, 10_000));
+      harness.world.getMapper(Casting.class).create(monster).set(
+          SkillCodes.attack, player, new Vector2(12, 10));
+      for (int i = 0; i < 256
+          && armor.attrs.base().get(Stat.durability).asInt() == 100; i++) {
+        harness.world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(monster, Engine.KEYFRAME_ATK));
+      }
+
+      assertTrue(armor.attrs.base().get(Stat.durability).asInt() < 100,
+          "ordinary successful monster hits must enter the native 10% armor durability path");
     } finally {
       harness.dispose();
     }
@@ -304,7 +369,7 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
           // combat harness does not simulate movement, but it still needs the
           // service registered so Artemis can wire the real production system.
           .with(new EventSystem(), probe, actioneer, new DynamicUnitCollisionSystem(false),
-              new Pathfinder(), new AnimStepper());
+              new Pathfinder(), new CofManager(), new AnimStepper());
       if (missiles) builder.with(new ServerSkillSystem(monstersOnly), factory, new MissileCollisionSystem());
       else builder.with(factory);
       world = new World(builder.build()

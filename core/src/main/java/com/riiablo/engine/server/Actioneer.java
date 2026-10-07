@@ -86,6 +86,7 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.save.ItemData;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
@@ -2153,19 +2154,22 @@ public class Actioneer extends PassiveSystem {
 
         if (frenzyAttack) {
           mFrenzyRuntime.create(entityId).set(activeCasting.skillId, true);
-          if (frenzyWeapon != null) drainFrenzyDurability(frenzyWeapon, targetId);
         }
-        if (berserk && berserkWeapon != null) {
-          drainFrenzyDurability(berserkWeapon, targetId);
+
+        // D2MOO SUNITDMG_DrainItemDurability is shared by ordinary Attack and
+        // native melee skills.  Resolve it exactly once after a successful,
+        // unblocked combat record: players may wear down the active weapon,
+        // and only player defenders may wear down armor.  Hireling equipment
+        // deliberately stays outside this player-only durability path.
+        Item durabilityWeapon = frenzyWeapon != null ? frenzyWeapon
+            : berserkWeapon != null ? berserkWeapon
+            : dragonClawWeapon != null ? dragonClawWeapon
+            : activeAttackWeapon(entityId);
+        if (dragonTalon || dragonFlight || dragonTail) {
+          // Native WeapSel=4 resolves no equipped weapon for kick skills.
+          durabilityWeapon = null;
         }
-        if (jab) {
-          drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
-        }
-        if (AmazonSkills.usesNativeMeleeDurability(activeSkill)) {
-          // D2MOO Power Strike (SrvDo002) and Charged Strike (SrvDo011)
-          // both call SUNITDMG_DrainItemDurability after a successful hit.
-          drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
-        }
+        drainSharedMeleeDurability(entityId, durabilityWeapon, targetId);
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
         if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)
@@ -2197,11 +2201,6 @@ public class Actioneer extends PassiveSystem {
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
         if (dragonTalon) activeCasting.dragonTalonSuccessfulKicks++;
-        if (dragonTalon) drainDragonTalonDurability(entityId, targetId);
-        if (dragonFlight) drainDragonTalonDurability(entityId, targetId);
-        if (dragonClaw) drainDragonClawDurability(dragonClawWeapon, targetId);
-        if (dragonTail) drainDragonTalonDurability(entityId, targetId);
-
         // D2MOO SrvDo034/SrvDo035 adds a progressive state only after the
         // shared combat record reports a successful, unblocked hit. The
         // state stores its originating skill and caps the charge stat at 3.
@@ -2751,7 +2750,7 @@ public class Actioneer extends PassiveSystem {
     casting.fendCurrentTargetId = target;
     casting.targetId = target;
     events.dispatch(MeleeAttackEvent.obtain(entityId, target, combat.hit, combat.blocked));
-    if (weapon != null) drainFrenzyDurability(weapon, target);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, target);
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp != null ? hp.asFixed() : 0f;
     float applied = 0f;
@@ -2898,7 +2897,7 @@ public class Actioneer extends PassiveSystem {
     }
 
     // SUNITDMG_DrainItemDurability updates both sides only for a successful hit.
-    drainFrenzyDurability(weapon, targetId);
+    drainPlayerMeleeDurability(entityId, weapon, targetId);
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
@@ -3013,7 +3012,7 @@ public class Actioneer extends PassiveSystem {
     }
 
     // Native SrvDo079 performs this cleanup regardless of the conversion roll.
-    drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
+    drainPlayerMeleeDurability(entityId, activeAttackWeapon(entityId), targetId);
     if (!success) {
       log.info("[PALADIN_CONVERSION] phase=fail source={} target={} skill={} level={} "
               + "chance={} roll={} reason={}",
@@ -3158,7 +3157,7 @@ public class Actioneer extends PassiveSystem {
     casting.feralMaulStunFrames = 0;
     // Native SrvDo120 calls SUNITDMG_DrainItemDurability before Param1.
     Item weapon = activeAttackWeapon(entityId);
-    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, targetId);
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked || !mAttributesWrapper.has(targetId)) {
       log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} result={} blocked={}",
@@ -3461,7 +3460,7 @@ public class Actioneer extends PassiveSystem {
     casting.furyRemainingStrikes--;
     casting.furyStrikeProcessed = true;
     events.dispatch(MeleeAttackEvent.obtain(entityId, current, combat.hit, combat.blocked));
-    if (weapon != null) drainFrenzyDurability(weapon, current);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, current);
 
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp != null ? hp.asFixed() : 0f;
@@ -3559,7 +3558,7 @@ public class Actioneer extends PassiveSystem {
         physical * lifePct / 100f);
     float mana = restoreUpToMaximum(attacker, Stat.mana, Stat.maxmana,
         physical * manaPct / 100f);
-    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, targetId);
     applyCombatStates(entityId, targetId, combat);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
     if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
@@ -3579,7 +3578,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     Item weapon = activeAttackWeapon(sourceId);
-    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    if (weapon != null) drainPlayerMeleeDurability(sourceId, weapon, targetId);
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
@@ -4034,7 +4033,7 @@ public class Actioneer extends PassiveSystem {
       queueHitReaction(targetId, combat);
       return;
     }
-    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, targetId);
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
     float before = hp.asFixed();
@@ -4138,12 +4137,22 @@ public class Actioneer extends PassiveSystem {
         (strikeIndex & 1) == 0 ? BodyLoc.RARM : BodyLoc.LARM);
   }
 
-  private void drainFrenzyDurability(Item weapon, int targetId) {
-    ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true);
-    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
-      ItemDurabilityManager.INSTANCE.drainArmorDurability(
-          mPlayer.get(targetId).data.getItems());
+  private void drainPlayerMeleeDurability(int attackerId, Item weapon, int targetId) {
+    if (mPlayer.has(attackerId) && mPlayer.get(attackerId).data != null
+        && ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true)) {
+      mPlayer.get(attackerId).data.getItems().updateStats();
     }
+    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
+      ItemData items = mPlayer.get(targetId).data.getItems();
+      if (ItemDurabilityManager.INSTANCE.drainArmorDurability(items) != null) {
+        items.updateStats();
+      }
+    }
+  }
+
+  /** Player-only shared SUNITDMG_DrainItemDurability boundary. */
+  private void drainSharedMeleeDurability(int attackerId, Item weapon, int targetId) {
+    drainPlayerMeleeDurability(attackerId, weapon, targetId);
   }
 
   /** D2MOO sub_6FD107F0: next GUID in melee+4 range, wrapping to the first. */
@@ -4186,26 +4195,6 @@ public class Actioneer extends PassiveSystem {
     Item left = equippedClaw(entityId, BodyLoc.LARM);
     if (strikeIndex <= 0) return right != null ? right : left;
     return left != null ? left : right;
-  }
-
-  private void drainDragonClawDurability(Item weapon, int targetId) {
-    ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true);
-    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
-      ItemDurabilityManager.INSTANCE.drainArmorDurability(
-          mPlayer.get(targetId).data.getItems());
-    }
-  }
-
-  /** One native durability resolution for each successful kick combat record. */
-  private void drainDragonTalonDurability(int attackerId, int targetId) {
-    if (mPlayer.has(attackerId) && mPlayer.get(attackerId).data != null) {
-      Item boots = mPlayer.get(attackerId).data.getItems().getEquipped(BodyLoc.FEET);
-      ItemDurabilityManager.INSTANCE.drainWeaponDurability(boots, true);
-    }
-    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
-      ItemDurabilityManager.INSTANCE.drainArmorDurability(
-          mPlayer.get(targetId).data.getItems());
-    }
   }
 
   private boolean shouldDragonTalonKnockback(
@@ -4318,13 +4307,16 @@ public class Actioneer extends PassiveSystem {
   /** Resolves the concrete hand whose weapon supplies this melee packet. */
   private Item activeAttackWeapon(int entityId) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    ItemData items = mPlayer.get(entityId).data.getItems();
     int skillId = mCasting.has(entityId) ? mCasting.get(entityId).skillId : SkillCodes.attack;
     BodyLoc preferred = skillId == SkillCodes.left_hand_swing
         || skillId == SkillCodes.left_hand_throw ? BodyLoc.LARM : BodyLoc.RARM;
-    Item weapon = mPlayer.get(entityId).data.getItems().getEquipped(preferred);
+    Item weapon = items.getEquipped(preferred);
+    if (!items.isActive(weapon)) weapon = null;
     if (weapon == null) {
       BodyLoc alternate = preferred == BodyLoc.RARM ? BodyLoc.LARM : BodyLoc.RARM;
-      weapon = mPlayer.get(entityId).data.getItems().getEquipped(alternate);
+      weapon = items.getEquipped(alternate);
+      if (!items.isActive(weapon)) weapon = null;
     }
     return weapon != null && weapon.base instanceof Weapons.Entry ? weapon : null;
   }
@@ -5631,7 +5623,7 @@ public class Actioneer extends PassiveSystem {
     hp.sub(applied);
     if (hp.asFixed() < 0f) hp.set(0f);
     Item weapon = activeAttackWeapon(entityId);
-    if (weapon != null) drainFrenzyDurability(weapon, resolvedTarget);
+    if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, resolvedTarget);
     applyElementalAbsorb(defender, combat, 1f);
     applyCombatStates(entityId, resolvedTarget, combat);
     casting.vengeanceElementType = (casting.vengeanceElementType + 1) % 3;
