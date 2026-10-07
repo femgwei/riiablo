@@ -50,8 +50,19 @@ public class PaletteIndexedBatch extends SpriteBatch {
     LIGHTING_ENABLED_LOCATION = shader.getUniformLocation("lightingEnabled");
     AMBIENT_LIGHT_LOCATION = shader.getUniformLocation("ambientLight");
     LIGHT_COUNT_LOCATION = shader.getUniformLocation("lightCount");
-    LOCAL_LIGHTS_LOCATION = shader.getUniformLocation("localLights");
-    LOCAL_LIGHT_COLORS_LOCATION = shader.getUniformLocation("localLightColors");
+    // OpenGL reports array uniforms using their first element's name. libGDX
+    // 1.10 caches that exact spelling, so querying the bare array name returns
+    // -1 and silently drops every local-light upload.
+    LOCAL_LIGHTS_LOCATION = requireUniform(shader, "localLights[0]");
+    LOCAL_LIGHT_COLORS_LOCATION = requireUniform(shader, "localLightColors[0]");
+  }
+
+  private static int requireUniform(ShaderProgram shader, String name) {
+    int location = shader.getUniformLocation(name);
+    if (location < 0) {
+      throw new IllegalArgumentException("No uniform with name '" + name + "' in palette shader");
+    }
+    return location;
   }
 
   public void setPalette(Texture palette) {

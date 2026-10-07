@@ -19,9 +19,9 @@ public class RenderLightingTest {
   public void nightIntensityUsesDisplaySpacePaletteApproximation() {
     Color ambient = RenderSystem.setAmbientLight(new Color(), 64, 125, 144, 243);
 
-    assertEquals(0.2456f, ambient.r, 0.001f);
-    assertEquals(0.2829f, ambient.g, 0.001f);
-    assertEquals(0.4774f, ambient.b, 0.001f);
+    assertEquals(0.2615f, ambient.r, 0.001f);
+    assertEquals(0.3013f, ambient.g, 0.001f);
+    assertEquals(0.5084f, ambient.b, 0.001f);
     // Regression: the old linear product produced only 0.123 red at night.
     assertTrue(ambient.r > 0.24f);
   }

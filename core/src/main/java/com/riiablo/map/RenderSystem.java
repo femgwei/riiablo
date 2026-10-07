@@ -713,7 +713,11 @@ public class RenderSystem extends BaseEntitySystem {
    * roughly twice as dark as the native renderer.
    */
   static Color setAmbientLight(Color out, int intensity, int red, int green, int blue) {
-    float displayIntensity = (float) Math.sqrt(MathUtils.clamp(intensity, 0, 255) / 255f);
+    // The palette and final shader colour are display encoded. Convert D2's
+    // linear intensity with the conventional 2.2 display gamma before
+    // applying its independently interpolated RGB tint.
+    float displayIntensity = (float) Math.pow(
+        MathUtils.clamp(intensity, 0, 255) / 255f, 1.0 / 2.2);
     return out.set(
         MathUtils.clamp(red, 0, 255) / 255f * displayIntensity,
         MathUtils.clamp(green, 0, 255) / 255f * displayIntensity,
