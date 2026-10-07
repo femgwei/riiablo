@@ -17,7 +17,9 @@ import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.client.component.Label;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.GpuSystem;
@@ -26,8 +28,10 @@ import com.riiablo.profiler.GpuSystem;
 @All({Label.class, Position.class})
 public class LabelManager extends IteratingSystem {
   protected ComponentMapper<Hovered> mHovered;
+  protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Item> mItem;
+  protected ComponentMapper<Object> mObject;
   protected ComponentMapper<Position> mPosition;
 
   protected RenderSystem renderer;
@@ -71,7 +75,8 @@ public class LabelManager extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    if (!shouldDisplayLabel(mHovered.has(entityId), mItem.has(entityId), showGroundItems)) {
+    if (!shouldDisplayLabel(mHovered.has(entityId), mItem.has(entityId), showGroundItems,
+        mObject.has(entityId), mInteractable.has(entityId))) {
       return;
     }
 
@@ -92,7 +97,8 @@ public class LabelManager extends IteratingSystem {
   }
 
   static boolean shouldDisplayLabel(boolean hovered, boolean groundItem,
-      boolean showGroundItems) {
-    return hovered || groundItem && showGroundItems;
+      boolean showGroundItems, boolean object, boolean interactable) {
+    if (groundItem) return hovered || showGroundItems;
+    return hovered && (!object || interactable);
   }
 }
