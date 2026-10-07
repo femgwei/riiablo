@@ -122,6 +122,10 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
       @Override
       public void canceled() {}
         }, true);
+    goldDialog.setMaximumProvider(negative -> {
+      StatRef gold = Riiablo.charData.getStats().get(negative ? Stat.goldbank : Stat.gold);
+      return gold == null ? 0 : gold.asInt();
+    });
     addActor(goldDialog);
 
     //setDebug(true, true);

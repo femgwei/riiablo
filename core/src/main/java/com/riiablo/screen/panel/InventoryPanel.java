@@ -328,6 +328,10 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       @Override
       public void canceled() {}
         });
+    goldDialog.setMaximumProvider(negative -> {
+      StatRef carriedGold = Riiablo.charData.getStats().get(Stat.gold);
+      return carriedGold == null ? 0 : carriedGold.asInt();
+    });
     addActor(goldDialog);
 
     //setDebug(true, true);

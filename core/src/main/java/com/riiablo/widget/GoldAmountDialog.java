@@ -46,6 +46,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   private final TextField amount;
   private final boolean allowNegative;
   private Listener listener;
+  private MaximumProvider maximumProvider;
   private float dialogX;
   private float dialogY;
 
@@ -184,6 +185,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     amount.setMaxLength(9);
     amount.setTextFieldFilter((textField, c) -> Character.isDigit(c)
         || allowNegative && c == '-' && textField.getText().isEmpty());
+    amount.setTextFieldListener((textField, c) -> clampAmount());
     amount.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
       public boolean keyDown(InputEvent event, int keycode) {
@@ -237,6 +239,10 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     this.listener = listener;
   }
 
+  public void setMaximumProvider(MaximumProvider maximumProvider) {
+    this.maximumProvider = maximumProvider;
+  }
+
   private void placeButton(Button button, float x, float y) {
     float width = button.getStyle().up.getMinWidth();
     float height = button.getStyle().up.getMinHeight();
@@ -261,6 +267,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
 
   private void submit() {
     if (!isVisible()) return;
+    clampAmount();
     String value = amount.getText().trim();
     if (value.isEmpty()) return;
     close();
@@ -280,7 +287,24 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     // available by typing a negative value when allowNegative is enabled.
     if (next < 0) next = 0;
     amount.setText(Long.toString(next));
+    clampAmount();
     if (getStage() != null) getStage().setKeyboardFocus(amount);
+  }
+
+  private void clampAmount() {
+    if (maximumProvider == null) return;
+    String text = amount.getText().trim();
+    if (text.isEmpty() || "-".equals(text)) return;
+    try {
+      long value = Long.parseLong(text);
+      boolean negative = value < 0;
+      int maximum = Math.max(0, maximumProvider.maximum(negative));
+      if ((!negative && value <= maximum) || (negative && -value <= maximum)) return;
+      amount.setText(negative && maximum > 0 ? "-" + maximum : Integer.toString(maximum));
+      amount.setCursorPosition(amount.getText().length());
+    } catch (NumberFormatException ignored) {
+      // The field length and digit filter normally make overflow impossible.
+    }
   }
 
   private void cancel() {
@@ -313,5 +337,9 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   public interface Listener {
     void submitted(String text);
     default void canceled() {}
+  }
+
+  public interface MaximumProvider {
+    int maximum(boolean negative);
   }
 }
