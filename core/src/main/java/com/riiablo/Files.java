@@ -59,6 +59,7 @@ import com.riiablo.codec.excel.SetItems;
 import com.riiablo.codec.excel.Sets;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.SoundEnviron;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.codec.excel.Speech;
 import com.riiablo.codec.excel.Shrines;
@@ -145,6 +146,8 @@ public class Files {
   public final SetItems         SetItems;
   public final Skills           skills;
   public final SkillDesc        skilldesc;
+  /** Area music, day/night ambience, and ambient-event definitions. */
+  public final SoundEnviron     SoundEnviron;
   public final Sounds           Sounds;
   public final Shrines          Shrines;
   /** Lossless 1.10f States.txt projection; runtime migration is intentionally incremental. */
@@ -226,6 +229,7 @@ public class Files {
     SetItems         = load(SetItems.class, Excel.EXPANSION);
     skills           = load(Skills.class);
     skilldesc        = load(SkillDesc.class);
+    SoundEnviron     = load(SoundEnviron.class);
     Sounds           = load(Sounds.class);
     Shrines          = load(Shrines.class);
     States           = com.riiablo.codec.excel.States.load(
