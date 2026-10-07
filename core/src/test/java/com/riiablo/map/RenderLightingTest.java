@@ -16,6 +16,13 @@ public class RenderLightingTest {
   }
 
   @Test
+  public void objectLightConvertsNativeDiameterToRadius() {
+    assertEquals(5f, RenderSystem.objectLightRadius(10), 0f);
+    assertEquals(4.5f, RenderSystem.objectLightRadius(9), 0f);
+    assertEquals(0f, RenderSystem.objectLightRadius(0), 0f);
+  }
+
+  @Test
   public void nightIntensityUsesDisplaySpacePaletteApproximation() {
     Color ambient = RenderSystem.setAmbientLight(new Color(), 64, 125, 144, 243);
 

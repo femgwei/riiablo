@@ -692,7 +692,7 @@ public class RenderSystem extends BaseEntitySystem {
       int mode = mCofReference.get(id).mode;
       if (object == null || object.base == null || object.base.Lit == null
           || mode < 0 || mode >= object.base.Lit.length) continue;
-      int radius = object.base.Lit[mode];
+      float radius = objectLightRadius(object.base.Lit[mode]);
       if (radius <= 0) continue;
       Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
       float radiusX = radius * Tile.SUBTILE_WIDTH;
@@ -735,7 +735,11 @@ public class RenderSystem extends BaseEntitySystem {
     return MathUtils.clamp(PLAYER_BASE_LIGHT_RADIUS + modifier, 1, PLAYER_MAX_LIGHT_RADIUS);
   }
 
-  private int addLight(int count, float x, float y, int radius,
+  static float objectLightRadius(int diameter) {
+    return Math.max(0, diameter) * 0.5f;
+  }
+
+  private int addLight(int count, float x, float y, float radius,
       float red, float green, float blue) {
     if (count >= PaletteIndexedBatch.MAX_LOCAL_LIGHTS) return count;
     setLight(count, x, y, radius, red, green, blue);
@@ -743,7 +747,7 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   /** Keeps the closest visible object lights when a zone has more than the shader limit. */
-  private int addNearestObjectLight(int count, float x, float y, int radius,
+  private int addNearestObjectLight(int count, float x, float y, float radius,
       float red, float green, float blue, float focusX, float focusY) {
     if (count < PaletteIndexedBatch.MAX_LOCAL_LIGHTS) {
       return addLight(count, x, y, radius, red, green, blue);
@@ -770,7 +774,7 @@ public class RenderSystem extends BaseEntitySystem {
     return count;
   }
 
-  private void setLight(int index, float x, float y, int radius,
+  private void setLight(int index, float x, float y, float radius,
       float red, float green, float blue) {
     int light = index * 4;
     localLights[light] = x;
