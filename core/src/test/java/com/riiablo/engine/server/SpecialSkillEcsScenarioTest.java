@@ -48,6 +48,7 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       world.getMapper(Player.class).create(caster);
       world.getMapper(Class.class).create(caster).type = Class.Type.PLR;
       world.getMapper(Position.class).create(caster).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(caster).attrs = Attributes.obtainStandard();
       int first = monster(world, 5, 0);
       monster(world, 8, 1);
       monster(world, 11, 0);
@@ -57,7 +58,11 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
 
       assertEquals(1, factory.created,
           "native chain lightning creates one root missile; SrvHit12 creates continuations");
-      assertEquals(5, world.getMapper(Missile.class).get(factory.lastMissileId).chainHitsRemaining);
+      Missile root = world.getMapper(Missile.class).get(factory.lastMissileId);
+      assertEquals(5, root.chainHitsRemaining);
+      assertTrue(root.damageSnapshot, "root segment must snapshot Skills.txt damage");
+      assertEquals(1, root.damage.get(Stat.lightmindam).asInt());
+      assertEquals(40, root.damage.get(Stat.lightmaxdam).asInt());
       System.out.println("[CHAIN_LIGHTNING_ECS] caster=" + caster + " initialTarget=" + first
           + " rootMissiles=" + factory.created + " jumps=5 status=PASS");
     } finally {

@@ -94,6 +94,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `NovaGoldenDamageTest`（DMG-04 第七批：技能 48，等级 1–20）
 - `FrostNovaGoldenDamageTest`（DMG-04 第八批：技能 44，等级 1–20）
 - `ChargedBoltGoldenDamageTest`（DMG-04 第九批：技能 38，等级 1–20）
+- `ChainLightningGoldenDamageTest`（DMG-04 第十批：技能 53，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -204,4 +205,22 @@ Charged Bolt 路径初始化；`MISSILE_CalculateDamageData` 再从技能 38 安
 `MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的
 `lightmindam/lightmaxdam` 差异均为 0。矩阵只批准单枚导弹对单个目标的一次伤害包；
 弹丸数量、确定性种子、77 帧路径、重复/多目标接触和 cast-wide total 延后到 DMG-07，
+抗性、免疫及 Lightning Mastery 结算延后到 DMG-08。
+
+## DMG-04 第十个逐级实例：Chain Lightning
+
+Chain Lightning 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=8`。无 Charged Bolt、
+Lightning、Nova 协同且无 Lightning Mastery 的基础场景中，最小值五段增量全为 0，
+最大值五段增量为 `11/13/15/15/15`。等级 1 的定点范围为 256–10240、整数范围为
+1–40；等级 20 的定点范围为 256–71936、整数范围为 1–281。
+
+D2MOO `SKILLS_SrvDo026_ChainLightning` 只创建一枚根导弹，并把 `calc1` 结果作为链预算；
+`MISSMODE_SrvHit12_ChainLightning_LightningStrike` 每次命中创建下一链段，继承相同技能
+ID 和技能等级并递减预算。`MISSILE_CalculateDamageData` 为每个链段安装同一 Skills.txt
+伤害包。审计发现 riiablo 的根导弹和续链导弹此前只走通用 Missiles.txt 初始化，技能
+拥有的 `chainlightning` 因而没有权威伤害快照；现已在根段和技能 53 续链段调用
+`MissileDamageResolver.initializeSkill`，等级 1–20 的 `lightmindam/lightmaxdam` 与独立
+黄金数组一致；`continuationSegmentKeepsTheAuthoritativeSkillSnapshot` 另行让根段实际命中，
+并断言 SrvHit12 创建的每个后续链段继续持有 1–40 的一级伤害快照。矩阵只批准每个链段
+对单个目标的一次伤害；跳跃目标选择、多目标累计和 cast-wide total 延后到 DMG-07，
 抗性、免疫及 Lightning Mastery 结算延后到 DMG-08。

@@ -2832,6 +2832,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
     child.skillId = source.skillId;
     child.damageLevel = level;
+    boolean chainLightning = skill != null
+        && skill.Id == com.riiablo.engine.server.skill.SkillId.CHAIN_LIGHTNING;
+    if (chainLightning) {
+      MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, level,
+          name -> baseSkillLevel(source.ownerId, name), stateList(source.ownerId));
+    }
     child.chainHitsRemaining = source.chainHitsRemaining - 1;
     child.shareHitTargets(source.sharedHitTargets != null
         ? source.sharedHitTargets : new com.badlogic.gdx.utils.IntSet());

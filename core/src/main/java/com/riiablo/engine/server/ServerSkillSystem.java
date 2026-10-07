@@ -2609,6 +2609,7 @@ public class ServerSkillSystem extends PassiveSystem {
       projectile.chainHitsRemaining = maxHits;
       projectile.skillId = skill.Id;
       projectile.damageLevel = level;
+      initializeSkillDamage(missileId, skill, event.entityId, level);
       log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} missile={} "
               + "missileId={} jumps={} status=PASS",
           event.entityId, initialTarget, missileName, missileId, maxHits);
