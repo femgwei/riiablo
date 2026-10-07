@@ -87,6 +87,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `SkillDamageFormulaParityTest`
 - `FireBoltGoldenDamageTest`（DMG-04 首批：技能 36，等级 1–20）
 - `IceBoltGoldenDamageTest`（DMG-04 第二批：技能 39，等级 1–20）
+- `FireBallGoldenDamageTest`（DMG-04 第三批：技能 47，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -106,3 +107,14 @@ Mastery 场景中，等级 1 的定点范围为 768–1280、整数范围为 3�
 为 9728–12672、整数范围为 38–49。riiablo 实际值从
 `MissileDamageResolver.initializeSkill` 建立的 `coldmindam/coldmaxdam` 快照读取，等级
 1–20 的差异均为 0。`cold length` 保留为独立语义，延后到 DMG-07 审核。
+
+## DMG-04 第三个逐级实例：Fire Ball
+
+Fire Ball 由 `Skills.txt` 持有伤害，`SrcDam=0`、`HitShift=7`。无协同、无 Fire
+Mastery 场景中，等级 1 的定点范围为 1536–3584、整数范围为 6–14；等级 20 的定点
+范围为 51072–57984、整数范围为 199–226。riiablo 实际值从父导弹 `fireball` 的
+`MissileDamageResolver.initializeSkill` 快照读取，等级 1–20 的差异均为 0。
+
+`MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion` 负责命中后的范围扇出；
+展示子导弹继承父伤害包，中心目标通过共享命中门禁只结算一次。因此矩阵保存“每个目标
+一次命中”的范围，不为整次施法填写固定总伤害；多目标数量与累计值延后到 DMG-07。

@@ -83,8 +83,8 @@
   - 为 4,200 行填写有证据的 `expected_*`，非伤害技能必须标记明确的 N/A 原因，
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
-  - 已批准 Fire Bolt、Ice Bolt 等级 1–20 共 40/4,200 行（本项 0.9524%，加权贡献
-    0.1905 个百分点）；DMG-04 状态为进行中。
+  - 已批准 Fire Bolt、Ice Bolt、Fire Ball 等级 1–20 共 60/4,200 行（本项 1.4286%，
+    加权贡献 0.2857 个百分点）；DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
   - 逐技能列出有效协同、硬点读取规则、上限、取整顺序及组合用例。
@@ -105,7 +105,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 30.1905%（展示时四舍五入为 30.2%）。
+当前总加权完成度为 30.2857%（展示时四舍五入为 30.3%）。
 
 ## 黄金值准入规则
 
@@ -143,11 +143,18 @@
   `delta_min/max` 均为 0。
 - Ice Bolt 的 `cold length` 不属于本批伤害范围，矩阵只保留源字段并明确标为待 DMG-07，
   不用持续时间扩大或替代单次命中伤害。
+- Fire Ball（技能 47）等级 1–20 已按“每个目标一次命中”批准。等级 1 为 6–14，等级
+  20 为 199–226，20 个等级的 `delta_min/max` 均为 0。`SrvHit01` 的中心目标去重和附近
+  目标扇出由独立集成测试锁定。
+- Fire Ball 的 `expected_total` 不代表整次施法对所有目标的累计值；范围内目标数量和
+  cast-wide total 留给 DMG-07，避免把单目标黄金值误乘为固定总量。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
   `FireBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
-  `IceBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`。
+  `IceBoltGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `FireBallGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
+  `SorceressFireBallIntegrationTest#impactFansOutToNearbyTargetsButDoesNotRedamageTheCenter`。
 
 ## 可复现命令
 
@@ -169,6 +176,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04 的同类基础黄金值，下一项优先审核 Fire Ball。只批准单个目标的一次命中范围，
-爆炸范围和多目标累计留给 DMG-07；仍须先生成 D2MOO 独立期望值，再从 riiablo 生产路径
+继续 DMG-04 的同类基础黄金值，下一项优先审核 Ice Blast。只批准单个目标的一次命中范围，
+冻结持续时间和状态效果留给 DMG-07；仍须先生成 D2MOO 独立期望值，再从 riiablo 生产路径
 采集实际值并计算差异，不得把 `source_curve_*` 直接改名为黄金值。
