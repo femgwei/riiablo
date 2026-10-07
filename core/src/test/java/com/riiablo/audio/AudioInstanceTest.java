@@ -86,6 +86,25 @@ class AudioInstanceTest {
   }
 
   @Test
+  void fadeInStartsSilentAndRestoresAuthoredVolume() {
+    AssetManager assets = loadedAssets();
+    Sound sound = mock(Sound.class);
+    doReturn(sound).when(assets).get(any(AssetDescriptor.class));
+    when(sound.loop(anyFloat())).thenReturn(43L);
+    Audio audio = new Audio(assets);
+    Sounds.Entry entry = sound("loop.wav", 128, true, false);
+
+    Audio.Instance instance = audio.play(entry, true, Audio.Channel.ENVIRONMENT);
+    instance.fadeIn(2f);
+    verify(sound).setVolume(43L, 0f);
+
+    audio.update(1f);
+    verify(sound).setVolume(43L, (128f / 255f) * 0.5f);
+    audio.update(1f);
+    verify(sound).setVolume(43L, 128f / 255f);
+  }
+
+  @Test
   void backgroundStopsOneShotsAndDoesNotReplayThem() {
     AssetManager assets = loadedAssets();
     Sound sound = mock(Sound.class);

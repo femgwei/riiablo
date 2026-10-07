@@ -97,6 +97,7 @@ import com.riiablo.engine.client.OverlayStepper;
 import com.riiablo.engine.client.SelectableManager;
 import com.riiablo.engine.client.SkillCastHandler;
 import com.riiablo.engine.client.SoundEmitterHandler;
+import com.riiablo.engine.client.SoundEnvironmentSystem;
 import com.riiablo.engine.client.WarpSubstManager;
 import com.riiablo.engine.client.ZoneChangeTracker;
 import com.riiablo.engine.client.ZoneEntryDisplayer;
@@ -1032,6 +1033,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem())
         .with(new ZoneEntryDisplayer())
 
+        .with(new SoundEnvironmentSystem())
         .with(new FootstepEmitter())
         .with(new MonsterSoundEmitter())
 

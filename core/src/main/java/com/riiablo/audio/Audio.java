@@ -455,6 +455,14 @@ public class Audio {
       }
     }
 
+    /** Starts this instance silently and fades it to its authored volume. */
+    public void fadeIn(float seconds) {
+      if (stopped) return;
+      fadeVolume = 0f;
+      applyVolume();
+      fadeTo(1f, seconds);
+    }
+
     public void fadeOutAndStop(float seconds) {
       fadeTo(0f, seconds);
       stopAfterFade = true;
