@@ -303,6 +303,7 @@ public class ServerEntityFactory extends EntityFactory {
     if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
         || base.Id == 60) return 5f;
     if (isWaypointObject(base)) return base.OperateRange > 0 ? base.OperateRange : 5f;
+    if (!supportsObjectInteraction(base)) return 0;
     if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
       return base.OperateRange;
     }
@@ -314,6 +315,23 @@ public class ServerEntityFactory extends EntityFactory {
     // conservative fallback only for drawable objects with an operate fn.
     if (base.Draw && base.OperateFn > 0 && base.OperateFn != 23) return 3f;
     return 0;
+  }
+
+  /**
+   * Only exposes operations that currently have an authoritative Java path.
+   * D2MOO implements torch functions 11/13, but the corresponding Java
+   * branches are still no-ops; treating every nonzero OperateFn as usable
+   * gives those scenery objects a name label and makes clicks walk to them.
+   */
+  static boolean supportsObjectInteraction(Objects.Entry base) {
+    if (base == null) return false;
+    if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || base.Id == 60
+        || isWaypointObject(base)
+        || base.OperateFn == 32) return true;
+    return com.riiablo.engine.server.object.NativeObjectOperateTable.resolve(
+        base, com.riiablo.map.NativePresetObjectResolver.Kind.ORDINARY)
+        != com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.NONE;
   }
 
   @Override

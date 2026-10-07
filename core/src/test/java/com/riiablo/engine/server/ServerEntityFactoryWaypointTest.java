@@ -22,12 +22,26 @@ class ServerEntityFactoryWaypointTest {
   @Test
   void ordinaryObjectStillRequiresAnOperableSelectableMode() {
     Objects.Entry object = new Objects.Entry();
+    object.OperateFn = 4;
     object.Selectable = new boolean[8];
     object.OperateRange = 7;
 
     assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(object));
     object.Selectable[Engine.Object.MODE_NU] = true;
     assertEquals(7f, ServerEntityFactory.resolveObjectInteractionRange(object));
+  }
+
+  @Test
+  void unimplementedTorchOperationDoesNotCreateFakeInteraction() {
+    Objects.Entry torch = new Objects.Entry();
+    torch.Draw = true;
+    torch.InitFn = 8;
+    torch.OperateFn = 13;
+    torch.OperateRange = 3;
+    torch.Selectable = new boolean[8];
+    torch.Selectable[Engine.Object.MODE_ON] = true;
+
+    assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(torch));
   }
 
   @Test
