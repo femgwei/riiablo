@@ -85,3 +85,15 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 对应回归测试：
 
 - `SkillDamageFormulaParityTest`
+- `FireBoltGoldenDamageTest`（DMG-04 首批：技能 36，等级 1–20）
+
+## DMG-04 首个逐级实例：Fire Bolt
+
+Fire Bolt 由 `Skills.txt` 拥有伤害，`SrcDam=0`、`HitShift=7`。基础场景中 Fire Ball、
+Meteor 硬点和 Fire Mastery 均为 0，因此等级曲线左移 7 位后没有额外百分比修正。
+矩阵 `expected_min/max` 保存原生定点值 `>> 8` 后的单枚单目标整数伤害；测试另行断言
+未截断的 8.8 定点中间值。等级 1 的定点范围为 768–1536、整数范围为 3–6；
+等级 20 的定点范围为 11648–15488、整数范围为 45–60。
+
+riiablo 实际值通过 `MissileDamageResolver.initializeSkill` 建立 `firemindam/firemaxdam`
+生产快照后读取，未使用期望值公式回填。等级 1–20 的最小值和最大值差异均为 0。
