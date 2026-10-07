@@ -29,6 +29,7 @@ import com.riiablo.key.MappedKey;
 import com.riiablo.logger.Level;
 import com.riiablo.logger.Logger;
 import com.riiablo.logger.LoggerRegistry;
+import com.riiablo.map.RenderSystem;
 import com.riiablo.screen.SelectCharacterScreen3;
 import com.riiablo.serializer.SerializeException;
 import com.riiablo.serializer.StringSerializer;
@@ -273,6 +274,48 @@ public class Commands {
       })
       .build();
 
+  public static final Command renderZoom = Command.builder()
+      .alias("render.zoom")
+      .description("Sets an exact render profiling zoom: 1, 2, or 5")
+      .params(Parameter.of(String.class))
+      .action(new Action() {
+        @Override
+        public void onExecuted(Command.Instance instance) {
+          float zoom = NumberUtils.toFloat(instance.getArg(0), Float.NaN);
+          if (zoom != 1f && zoom != 2f && zoom != 5f) {
+            throw new ParameterException("Render profiling zoom must be 1, 2, or 5");
+          }
+
+          RenderSystem renderer = renderSystem();
+          renderer.zoom(zoom, true);
+          Riiablo.console.out.format("Render profiling zoom set to %.0fx%n", zoom);
+        }
+      })
+      .build();
+
+  public static final Command renderStats = Command.builder()
+      .alias("render.stats")
+      .description("Prints 1x/2x/5x render cache metrics; optional argument: reset")
+      .params(OptionalParameter.of(String.class))
+      .action(new Action() {
+        @Override
+        public void onExecuted(Command.Instance instance) {
+          RenderSystem renderer = renderSystem();
+          if (instance.numArgs() == 1) {
+            String action = instance.getArg(0);
+            if (!"reset".equalsIgnoreCase(action)) {
+              throw new ParameterException("Expected reset or no argument");
+            }
+            renderer.resetCacheMetrics();
+            Riiablo.console.out.println("Render cache metrics reset");
+            return;
+          }
+
+          Riiablo.console.out.println(renderer.cacheMetricsReport());
+        }
+      })
+      .build();
+
   public static final Command connect = Command.builder()
       .alias("connect")
       .description("Connects to specified server")
@@ -381,4 +424,15 @@ public class Commands {
         }
       })
       .build();
+
+  private static RenderSystem renderSystem() {
+    if (Riiablo.engine == null) {
+      throw new ParameterException("Render commands are only available in game");
+    }
+    RenderSystem renderer = Riiablo.engine.getSystem(RenderSystem.class);
+    if (renderer == null) {
+      throw new ParameterException("RenderSystem is not available");
+    }
+    return renderer;
+  }
 }

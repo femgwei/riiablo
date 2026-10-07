@@ -36,6 +36,7 @@ import com.badlogic.gdx.utils.Bits;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -265,6 +266,8 @@ public class RenderSystem extends BaseEntitySystem {
   int                 viewBuffer[];
   Array<Integer>      cache[][][];
   private final RenderSpatialIndex spatialIndex = new RenderSpatialIndex();
+  private final RenderCacheMetrics cacheMetrics = new RenderCacheMetrics();
+  private int visibleCellCount;
   int                 src = -1;
   boolean             dirty;
   final Vector2       currentPos = new Vector2();
@@ -413,8 +416,18 @@ public class RenderSystem extends BaseEntitySystem {
     if (iso.zoom != amt) {
       iso.zoom = amt;
       updatePosition(true);
-      if (resize) resize();
     }
+    if (resize) resize();
+  }
+
+  /** Returns cumulative cache-build statistics for the 1x, 2x, and 5x zoom baselines. */
+  public String cacheMetricsReport() {
+    return cacheMetrics.report();
+  }
+
+  /** Clears every zoom baseline without changing the current camera zoom. */
+  public void resetCacheMetrics() {
+    cacheMetrics.reset();
   }
 
   /**
@@ -430,10 +443,11 @@ public class RenderSystem extends BaseEntitySystem {
       viewBuffer[x] = viewBuffer[viewBufferLen - 1 - x] = y;
     while (viewBuffer[x] == 0)
       viewBuffer[x++] = viewBufferMax;
+    visibleCellCount = 0;
+    for (int size : viewBuffer) visibleCellCount += size;
     if (DEBUG_BUFFER) {
-      int len = 0;
-      for (int i : viewBuffer) len += i;
-      Gdx.app.debug(TAG, "viewBuffer[" + len + "]=" + Arrays.toString(viewBuffer));
+      Gdx.app.debug(TAG,
+          "viewBuffer[" + visibleCellCount + "]=" + Arrays.toString(viewBuffer));
     }
     dirty = true;
 
@@ -615,6 +629,7 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void buildCaches() {
+    long startNanos = TimeUtils.nanoTime();
     rebuildSpatialIndex();
     int x, y;
     int startX2 = startX;
@@ -639,6 +654,8 @@ public class RenderSystem extends BaseEntitySystem {
         startX2--;
       }
     }
+    cacheMetrics.record(iso.zoom, visibleCellCount, spatialIndex.entityCount(),
+        spatialIndex.activeCellCount(), TimeUtils.nanoTime() - startNanos);
   }
 
   /** Indexes the render subscription once before the visible tile buffer is traversed. */
