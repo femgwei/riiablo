@@ -73,7 +73,8 @@ public class NpcDialogBox extends Table implements Disposable {
     pack();
 
     scrollPane.setScrollY(-scrollPane.getScrollHeight() + textArea.getStyle().font.getLineHeight() / 2);
-    audio = speech == null ? null : Riiablo.audio.play(sound, false);
+    audio = speech == null ? null
+        : Riiablo.audio.play(sound, false, Audio.Channel.SPEECH);
   }
 
   @Override

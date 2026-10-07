@@ -507,7 +507,7 @@ public class Client extends Game {
     Gdx.gl.glClearColor(glClearColor.r, glClearColor.g, glClearColor.b, glClearColor.a);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-    audio.update();
+    audio.update(Gdx.graphics.getDeltaTime());
 
     Camera camera = viewport.getCamera();
     camera.update();
@@ -610,6 +610,8 @@ public class Client extends Game {
 
   @Override
   public void pause() {
+    audio.pauseForBackground();
+    music.pauseForBackground();
     super.pause();
   }
 
@@ -648,6 +650,8 @@ public class Client extends Game {
     Riiablo.charData = charData;
     Riiablo.anim = anim;
     Riiablo.metrics = metrics;
+    audio.resumeFromBackground();
+    music.resumeFromBackground();
     super.resume();
   }
 

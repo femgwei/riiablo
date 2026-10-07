@@ -95,7 +95,7 @@ public class DialogScroller extends Table implements Disposable {
     scrollPane.layout();
 
     scrollPane.setScrollY(-scrollPane.getScrollHeight() + textArea.getStyle().font.getLineHeight() / 2);
-    audio = Riiablo.audio.play(dialog, false);
+    audio = Riiablo.audio.play(dialog, false, Audio.Channel.SPEECH);
   }
 
   @Override

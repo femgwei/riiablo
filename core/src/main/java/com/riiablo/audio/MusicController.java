@@ -30,6 +30,10 @@ public class MusicController implements Music.OnCompletionListener {
   @Nullable
   private String asset;
 
+  private boolean background;
+  private boolean resumeAfterBackground;
+  private boolean advanceAfterBackground;
+
   public MusicController(@NonNull AssetManager assetManager) {
     this.ASSETS = Validate.notNull(assetManager, "The AssetManager cannot be null");
     this.PLAYLIST = new LinkedList<>();
@@ -37,7 +41,7 @@ public class MusicController implements Music.OnCompletionListener {
 
   public void enqueue(String asset) {
     PLAYLIST.add(asset);
-    if (!isPlaying()) {
+    if (!background && !isPlaying()) {
       next();
     }
   }
@@ -52,9 +56,15 @@ public class MusicController implements Music.OnCompletionListener {
       return;
     }
 
-    // assert asset != null;
-    if (ASSETS.isLoaded(asset)) ASSETS.unload(asset);
-    track.dispose();
+    final String asset = this.asset;
+    this.track = null;
+    this.asset = null;
+    resumeAfterBackground = false;
+    if (asset != null && ASSETS.isLoaded(asset)) {
+      ASSETS.unload(asset);
+    } else {
+      track.dispose();
+    }
   }
 
   public boolean isPlaying() {
@@ -76,6 +86,10 @@ public class MusicController implements Music.OnCompletionListener {
   }
 
   public void next() {
+    if (background) {
+      advanceAfterBackground = true;
+      return;
+    }
     stop();
     // Music entries are data-driven and may legitimately be absent from a
     // particular game version/MPQ set (1.10f does not ship every expansion
@@ -116,6 +130,31 @@ public class MusicController implements Music.OnCompletionListener {
       }
     }
     this.asset = null;
+  }
+
+  public boolean isBackgroundPaused() {
+    return background;
+  }
+
+  public void pauseForBackground() {
+    if (background) return;
+    background = true;
+    resumeAfterBackground = track != null && track.isPlaying();
+    if (resumeAfterBackground) track.pause();
+  }
+
+  public void resumeFromBackground() {
+    if (!background) return;
+    background = false;
+    if (advanceAfterBackground) {
+      advanceAfterBackground = false;
+      next();
+    } else if (resumeAfterBackground && track != null) {
+      track.play();
+    } else if (track == null && !PLAYLIST.isEmpty()) {
+      next();
+    }
+    resumeAfterBackground = false;
   }
 
   static boolean isMissingMusicFailure(Throwable failure) {

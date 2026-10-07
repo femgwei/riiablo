@@ -14,12 +14,27 @@ public class ServerAudio extends Audio {
   }
 
   @Override
+  public Instance play(int id, boolean global, Channel channel) {
+    return null;
+  }
+
+  @Override
   public Instance play(String id, boolean global) {
     return null;
   }
 
   @Override
+  public Instance play(String id, boolean global, Channel channel) {
+    return null;
+  }
+
+  @Override
   public synchronized Instance play(Sounds.Entry sound, boolean global) {
+    return null;
+  }
+
+  @Override
+  public synchronized Instance play(Sounds.Entry sound, boolean global, Channel channel) {
     return null;
   }
 }
