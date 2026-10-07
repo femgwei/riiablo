@@ -81,6 +81,7 @@ import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.DirectionResolver;
 import com.riiablo.engine.client.FootstepEmitter;
 import com.riiablo.engine.client.GroundItemGleamSystem;
+import com.riiablo.engine.client.WeatherRenderSystem;
 import com.riiablo.engine.client.HoveredManager;
 import com.riiablo.engine.client.ItemEffectManager;
 import com.riiablo.engine.client.ItemLoader;
@@ -1054,6 +1055,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new DirectionResolver())
 
         .with(renderer)
+        // Levels.txt Rain drives native precipitation: rain in Acts I-IV and
+        // the dedicated snow presentation in Act V.
+        .with(new WeatherRenderSystem())
         // Native D2 flashes dropped ground items with Gleam.dcc periodically;
         // the item itself remains absent from the Automap entity layer.
         .with(new GroundItemGleamSystem())
