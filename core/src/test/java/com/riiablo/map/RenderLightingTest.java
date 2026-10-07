@@ -40,6 +40,15 @@ public class RenderLightingTest {
   }
 
   @Test
+  public void overlayLightExpandsToItsNativeMaximum() {
+    assertEquals(1f, RenderSystem.overlayLightRadius(1, 9, 0), 0f);
+    assertEquals(5f, RenderSystem.overlayLightRadius(1, 9, 4), 0f);
+    assertEquals(9f, RenderSystem.overlayLightRadius(1, 9, 20), 0f);
+    assertEquals(14f, RenderSystem.overlayLightRadius(14, 14, 0), 0f);
+    assertEquals(0f, RenderSystem.overlayLightRadius(0, 14, 0), 0f);
+  }
+
+  @Test
   public void nightIntensityUsesDisplaySpacePaletteApproximation() {
     Color ambient = RenderSystem.setAmbientLight(new Color(), 64, 125, 144, 243);
 

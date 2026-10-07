@@ -15,8 +15,8 @@ uniform float gamma;
 uniform int lightingEnabled;
 uniform vec3 ambientLight;
 uniform int lightCount;
-uniform vec4 localLights[8]; // centre x/y, radius x/y in isometric pixels
-uniform vec3 localLightColors[8];
+uniform vec4 localLights[16]; // centre x/y, radius x/y in isometric pixels
+uniform vec3 localLightColors[16];
 
 varying vec2 v_texCoord;
 varying vec4 tint;
@@ -150,9 +150,13 @@ void main() {
   // D2 composes the outdoor environment with unit/object light radii. Keep
   // this after the legacy palette contrast pass so darkness is not raised by
   // its hard-coded brightness offset. The fixed-size loop is GLES2-safe.
-  if (lightingEnabled != 0) {
+  // Native luminosity/additive effects and mouse highlights are rendered at
+  // full brightness. Their surroundings are lit by the local-light list.
+  bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
+      || blendMode == 12 || blendMode == 14;
+  if (lightingEnabled != 0 && !selfLit) {
     vec3 light = ambientLight;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 16; i++) {
       if (i >= lightCount) break;
       vec4 source = localLights[i];
       vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));

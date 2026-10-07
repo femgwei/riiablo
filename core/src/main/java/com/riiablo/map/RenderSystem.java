@@ -694,29 +694,8 @@ public class RenderSystem extends BaseEntitySystem {
       int radius = playerLightRadius(lightRadiusModifier(src));
       count = addLight(count, player.x, player.y, radius, 1f, 1f, 1f);
     }
-    int protectedLights = count;
-
     IntBag entities = getEntityIds();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int id = entities.get(i);
-      if (!mObject.has(id) || !mPosition.has(id) || !mCofReference.has(id)) continue;
-      if (!isInLightingZone(id, zone)) continue;
-      Object object = mObject.get(id);
-      int mode = mCofReference.get(id).mode;
-      if (object == null || object.base == null || object.base.Lit == null
-          || mode < 0 || mode >= object.base.Lit.length) continue;
-      float radius = objectLightRadius(object.base.Lit[mode]);
-      if (radius <= 0) continue;
-      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
-      float radiusX = radius * Tile.SUBTILE_WIDTH;
-      float radiusY = radius * Tile.SUBTILE_HEIGHT;
-      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
-          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
-      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
-          object.base.Red / 255f, object.base.Green / 255f, object.base.Blue / 255f,
-          focusX, focusY);
-    }
-
+    int protectedLights = count;
     int nativeFrame = Math.max(0,
         (int) (mapAnimationTime * Animation.FRAMES_PER_SECOND));
     for (int i = 0, size = entities.size(); i < size; i++) {
@@ -738,6 +717,51 @@ public class RenderSystem extends BaseEntitySystem {
           || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
       count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
           entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
+    }
+
+    // Overlay.txt owns the expanding light flashes for generic elemental
+    // hits and many cast effects. D2Common exposes InitRadius/Radius/RGB as a
+    // single light record, independently from Missiles.txt.
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      if (!mOverlay.has(id) || !mPosition.has(id) || !isInLightingZone(id, zone)) continue;
+      Overlay overlay = mOverlay.get(id);
+      com.riiablo.codec.excel.Overlay.Entry entry = overlay == null ? null : overlay.entry;
+      if (entry == null || !overlay.isLoaded) continue;
+      float radius = overlayLightRadius(
+          entry.InitRadius, entry.Radius, overlay.animation.getFrame());
+      if (radius <= 0f) continue;
+      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      float radiusX = radius * Tile.SUBTILE_WIDTH;
+      float radiusY = radius * Tile.SUBTILE_HEIGHT;
+      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
+          entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
+    }
+
+    // Transient missile/overlay lights take priority over static map lights.
+    // This prevents a torch-heavy scene from consuming every shader slot
+    // before a fireball or hit flash is considered.
+    protectedLights = count;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      if (!mObject.has(id) || !mPosition.has(id) || !mCofReference.has(id)) continue;
+      if (!isInLightingZone(id, zone)) continue;
+      Object object = mObject.get(id);
+      int mode = mCofReference.get(id).mode;
+      if (object == null || object.base == null || object.base.Lit == null
+          || mode < 0 || mode >= object.base.Lit.length) continue;
+      float radius = objectLightRadius(object.base.Lit[mode]);
+      if (radius <= 0) continue;
+      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      float radiusX = radius * Tile.SUBTILE_WIDTH;
+      float radiusY = radius * Tile.SUBTILE_HEIGHT;
+      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
+          object.base.Red / 255f, object.base.Green / 255f, object.base.Blue / 255f,
+          focusX, focusY);
     }
     batch.setLighting(ambientLight, count, localLights, localLightColors);
   }
@@ -798,6 +822,15 @@ public class RenderSystem extends BaseEntitySystem {
     return currentDiameter * 0.5f;
   }
 
+  /** Overlay.txt expands by InitRadius each animation frame up to Radius. */
+  static float overlayLightRadius(int increment, int maximum, int frame) {
+    int step = Math.max(0, increment);
+    int limit = Math.max(0, maximum);
+    if (step == 0 || limit == 0) return 0f;
+    long radius = (long) step * (Math.max(0, frame) + 1L);
+    return Math.min(limit, radius);
+  }
+
   private int addLight(int count, float x, float y, float radius,
       float red, float green, float blue) {
     if (count >= PaletteIndexedBatch.MAX_LOCAL_LIGHTS) return count;
@@ -813,7 +846,8 @@ public class RenderSystem extends BaseEntitySystem {
       return addLight(count, x, y, radius, red, green, blue);
     }
 
-    // Player light is protected; object and missile lights compete by distance.
+    // Earlier priority groups are protected; lights in the current group
+    // compete by distance from the player.
     if (protectedLights >= count) return count;
     int farthest = protectedLights;
     float farthestDistance = -1f;

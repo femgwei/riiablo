@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.riiablo.codec.Index;
 
 public class PaletteIndexedBatch extends SpriteBatch {
-  public static final int MAX_LOCAL_LIGHTS = 8;
+  public static final int MAX_LOCAL_LIGHTS = 16;
   private static final int PALETTE_TEXTURE_ID  = 1;
   private static final int COLORMAP_TEXTURE_ID = 2;
 
