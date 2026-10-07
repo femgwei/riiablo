@@ -80,7 +80,21 @@ public class ObjectInitializer extends BaseEntitySystem {
         cofs.setMode(entityId, active ? Engine.Object.MODE_ON : Engine.Object.MODE_NU);
         break;
       case 18:
-      case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27: case 28:
+      case 19: case 20: case 21:
+        break;
+      case 22: // fire
+        // D2Game OBJECTS_InitFunction22_Fire promotes a neutral preset to ON
+        // when the object supplies an ON animation but no NU animation. The
+        // cottage fire objects (160..162) are authored exactly this way; if
+        // they remain NU, the client displays the fallback frame forever.
+        if (mCofReference.has(entityId)
+            && mCofReference.get(entityId).mode == Engine.Object.MODE_NU
+            && hasMode(base, Engine.Object.MODE_ON)
+            && !hasMode(base, Engine.Object.MODE_NU)) {
+          cofs.setMode(entityId, Engine.Object.MODE_ON);
+        }
+        break;
+      case 23: case 24: case 25: case 26: case 27: case 28:
       case 29: case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37: case 38:
       case 39: case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47: case 48:
       case 49: case 50: case 51: case 52: case 53: case 54: case 55: case 56: case 57: case 58:
@@ -137,6 +151,11 @@ public class ObjectInitializer extends BaseEntitySystem {
     if (state != null && state.activated) flags |= Object.STATE_ACTIVATED;
     if (mInteractable.has(entityId)) flags |= Object.STATE_INTERACTABLE;
     object.stateFlags = flags;
+  }
+
+  private static boolean hasMode(Objects.Entry base, int mode) {
+    return base != null && base.Mode != null
+        && mode >= 0 && mode < base.Mode.length && base.Mode[mode];
   }
 
   private void initializeInteractType(int entityId, Objects.Entry base,

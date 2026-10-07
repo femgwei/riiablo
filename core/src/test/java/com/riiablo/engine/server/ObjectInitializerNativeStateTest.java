@@ -21,6 +21,40 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 
 class ObjectInitializerNativeStateTest extends RiiabloTest {
   @Test
+  void fireInitPromotesMissingNeutralAnimationToLoopingOnMode() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), new ObjectInitializer())
+        .build()
+        .register("map", new Map(7, 0)));
+    try {
+      int entityId = world.create();
+      Objects.Entry fire = new Objects.Entry();
+      fire.Id = 162;
+      fire.Token = "FZ";
+      fire.InitFn = 22;
+      fire.Mode = new boolean[8];
+      fire.Mode[Engine.Object.MODE_ON] = true;
+      fire.CycleAnim = new boolean[8];
+      fire.CycleAnim[Engine.Object.MODE_ON] = true;
+      world.getMapper(Object.class).create(entityId).base = fire;
+      world.getMapper(CofReference.class).create(entityId)
+          .set(fire.Token, Engine.Object.MODE_NU);
+      world.getMapper(NativeObjectState.class).create(entityId)
+          .set(1, fire.Id, fire.Id, Engine.Object.MODE_NU, true, false,
+              NativePresetObjectResolver.Kind.ORDINARY);
+
+      world.process();
+
+      assertEquals(Engine.Object.MODE_ON,
+          world.getMapper(CofReference.class).get(entityId).mode);
+      assertEquals(Engine.Object.MODE_ON,
+          world.getMapper(Object.class).get(entityId).mode);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void torchInitMirrorsNativeOnModeIntoRenderableSnapshot() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), new ObjectInitializer())
