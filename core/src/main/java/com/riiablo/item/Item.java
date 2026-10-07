@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntIntMap;
 
+import com.riiablo.D2Language;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.AttributesUpdater;
@@ -602,9 +603,12 @@ public class Item {
       case MAGIC:
         prefix = qualityId &   MAGIC_AFFIX_MASK;
         suffix = qualityId >>> MAGIC_AFFIX_SIZE;
-        if ((affix = Riiablo.files.MagicPrefix.get(prefix)) != null) name.append(Riiablo.string.lookup(affix.name)).append(' ');
-        name.append(Riiablo.string.lookup(base.namestr));
-        if ((affix = Riiablo.files.MagicSuffix.get(suffix)) != null) name.append(' ').append(Riiablo.string.lookup(affix.name));
+        String prefixName = (affix = Riiablo.files.MagicPrefix.get(prefix)) == null
+            ? null : Riiablo.string.lookup(affix.name);
+        String suffixName = (affix = Riiablo.files.MagicSuffix.get(suffix)) == null
+            ? null : Riiablo.string.lookup(affix.name);
+        name.append(formatMagicName(
+            Riiablo.language, prefixName, Riiablo.string.lookup(base.namestr), suffixName));
         break;
 
       case RARE:
@@ -637,6 +641,33 @@ public class Item {
     }
 
     this.name = name.toString();
+  }
+
+  static String formatMagicName(
+      D2Language language, String prefix, String base, String suffix) {
+    StringBuilder name = new StringBuilder(64);
+    appendNamePart(name, prefix, language == D2Language.CHINESE);
+    if (language == D2Language.CHINESE) {
+      appendNamePart(name, suffix, true);
+      appendNamePart(name, base, false);
+    } else {
+      appendNamePart(name, base, false);
+      appendNamePart(name, suffix, false);
+    }
+    return name.toString();
+  }
+
+  private static void appendNamePart(StringBuilder name, String part, boolean trimChineseComma) {
+    if (part == null) return;
+    part = part.trim();
+    if (trimChineseComma) {
+      while (!part.isEmpty() && (part.charAt(0) == '，' || part.charAt(0) == ',')) {
+        part = part.substring(1).trim();
+      }
+    }
+    if (part.isEmpty()) return;
+    if (name.length() > 0) name.append(' ');
+    name.append(part);
   }
 
   // TODO: support width/height also to check full collision rect

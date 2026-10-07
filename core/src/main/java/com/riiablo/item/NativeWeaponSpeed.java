@@ -1,7 +1,5 @@
 package com.riiablo.item;
 
-import java.util.Locale;
-
 import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
@@ -31,20 +29,20 @@ final class NativeWeaponSpeed {
       {1, 1, 1, 1, 1}, // 10
       {1, 1, 1, 1, 1}, // 11
       {1, 1, 1, 1, 1}, // 12
-      {1, 1, 1, 1, 1}, // 13
-      {1, 2, 1, 1, 2}, // 14
-      {1, 2, 2, 1, 2}, // 15
-      {1, 2, 2, 2, 2}, // 16
-      {2, 2, 2, 2, 3}, // 17
-      {2, 2, 3, 2, 3}, // 18
-      {3, 2, 3, 2, 3}, // 19
-      {3, 3, 3, 3, 2}, // 20
-      {4, 3, 3, 4, 3}, // 21
-      {4, 4, 3, 4, 3}, // 22
-      {4, 4, 4, 4, 3}, // 23
-      {5, 4, 4, 5, 4}, // 24
-      {5, 5, 4, 5, 4}, // 25
-      {5, 5, 5, 5, 4}, // 26
+      {1, 1, 2, 1, 1}, // 13
+      {2, 1, 2, 2, 1}, // 14
+      {2, 1, 2, 2, 2}, // 15
+      {2, 2, 3, 2, 2}, // 16
+      {3, 2, 3, 3, 2}, // 17
+      {3, 2, 3, 3, 3}, // 18
+      {3, 2, 4, 3, 3}, // 19
+      {4, 3, 4, 4, 3}, // 20
+      {4, 3, 4, 4, 4}, // 21
+      {4, 3, 5, 4, 4}, // 22
+      {5, 4, 5, 5, 4}, // 23
+      {5, 4, 5, 5, 5}, // 24
+      {5, 4, 5, 5, 5}, // 25
+      {5, 5, 5, 5, 5}, // 26
       {5, 5, 5, 5, 5}, // 27
   };
 
@@ -68,8 +66,11 @@ final class NativeWeaponSpeed {
     Weapons.Entry weapon = item.getBase();
     int attackLength = 45;
     if (Riiablo.anim != null && weapon.wclass != null) {
-      String cof = characterClass.shortName.toUpperCase(Locale.ROOT)
-          + "A1" + weapon.wclass.toUpperCase(Locale.ROOT);
+      com.riiablo.codec.excel.PlrType.Entry playerType = Riiablo.files == null
+          || Riiablo.files.PlrType == null ? null : Riiablo.files.PlrType.get(characterClass.id);
+      String token = playerType == null ? characterClass.shortName : playerType.Token;
+      String cof = token.toUpperCase(java.util.Locale.ROOT)
+          + "A1" + weapon.wclass.toUpperCase(java.util.Locale.ROOT);
       D2.Entry animation = Riiablo.anim.getEntry(cof);
       if (animation != null) {
         StatRef fasterAttackRate = item.attrs.get(Stat.item_fasterattackrate);

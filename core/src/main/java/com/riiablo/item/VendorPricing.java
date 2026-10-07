@@ -2,9 +2,12 @@ package com.riiablo.item;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
+import com.riiablo.codec.excel.ItemStatCost;
+import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.save.CharData;
 import com.riiablo.save.ItemData;
@@ -85,6 +88,7 @@ public final class VendorPricing {
       cost = safeMultiply(cost, quantity);
     }
     cost = applyQuality(cost, item);
+    cost = safeAdd(cost, socketableCost(item));
     // Native nBuyCost is the amount paid by an NPC to the player.
     if (item.hasFlag(Item.ITEMFLAG_ETHEREAL) && transaction == Transaction.SELL) cost /= 4;
 
@@ -170,7 +174,78 @@ public final class VendorPricing {
         break;
       default: break;
     }
-    return Math.max(1, safeMultiply(cost, positiveOrDefault(mult)) / MULTIPLIER_SCALE + add);
+    int qualityCost = Math.max(1,
+        safeMultiply(cost, positiveOrDefault(mult)) / MULTIPLIER_SCALE + add);
+    switch (item.quality) {
+      case MAGIC:
+      case RARE:
+      case CRAFTED:
+      case HIGH:
+        return Math.max(1, safeAdd(qualityCost, additionalBonusCost(cost, item)));
+      default:
+        return qualityCost;
+    }
+  }
+
+  /** Mirrors D2Common's ITEMS_CalculateAdditionalCostsForBonusStats. */
+  static int additionalBonusCost(int baseCost, Item item) {
+    if (item == null || item.attrs == null) return 0;
+    long additional = 0;
+    for (int i = 0; i < item.attrs.list().numLists(); i++) {
+      StatListRef list = item.attrs.list(i);
+      for (StatRef stat : list) {
+        ItemStatCost.Entry entry = stat.entry();
+        if (entry == null || stat.encodedValues() == 0) continue;
+
+        int value;
+        int add = entry.Add;
+        int multiply = entry.Multiply;
+        switch (entry.Encode) {
+          case 1: {
+            NativeSkills.Entry skill = nativeSkill(stat.param0());
+            if (skill == null) continue;
+            value = stat.encodedValues() >> entry.ValShift;
+            add = skill.nativeInteger("cost add");
+            multiply = skill.nativeInteger("cost mult");
+            break;
+          }
+          case 2:
+          case 3: {
+            NativeSkills.Entry skill = nativeSkill(stat.param1());
+            if (skill == null) continue;
+            value = stat.param0();
+            add = skill.nativeInteger("cost add");
+            multiply = skill.nativeInteger("cost mult");
+            break;
+          }
+          case 4:
+            value = ((stat.value1() - 256) + (stat.value2() - 256)) / 2;
+            break;
+          default:
+            value = stat.encodedValues() >> entry.ValShift;
+            break;
+        }
+        additional += add + (long) value * baseCost * multiply / MULTIPLIER_SCALE;
+      }
+    }
+    if (additional > Integer.MAX_VALUE) return Integer.MAX_VALUE;
+    if (additional < Integer.MIN_VALUE) return Integer.MIN_VALUE;
+    return (int) additional;
+  }
+
+  private static NativeSkills.Entry nativeSkill(int skillId) {
+    return Riiablo.files == null || Riiablo.files.NativeSkills == null
+        ? null : Riiablo.files.NativeSkills.get(skillId);
+  }
+
+  private static int socketableCost(Item item) {
+    int cost = 0;
+    for (Item socket : item.sockets) {
+      if (socket != null && socket.base != null) {
+        cost = safeAdd(cost, baseCost(socket.base) / 2);
+      }
+    }
+    return cost;
   }
 
   private static int quantity(Item item) { return Math.max(1, Math.min(511, stat(item, Stat.quantity, 1))); }

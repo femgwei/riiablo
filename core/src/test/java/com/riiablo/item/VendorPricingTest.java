@@ -174,6 +174,22 @@ class VendorPricingTest extends RiiabloTest {
   }
 
   @Test
+  void magicBonusStatsContributeToNativeSellPrice() {
+    Item item = item("sbw", 2, 3);
+    item.base.cost = 100;
+    item.quality = Quality.MAGIC;
+    item.flags |= Item.ITEMFLAG_IDENTIFIED;
+    item.attrs.buildList().put(Stat.tohit, 12);
+    item.attrs.list(0).put(Stat.firemindam, 1);
+    item.attrs.list(0).put(Stat.firemaxdam, 6);
+
+    Npc.Entry npc = new Npc.Entry();
+    npc.buyMult = 512;
+    assertEquals(80, VendorPricing.transactionCost(
+        item, npc, VendorPricing.Transaction.SELL, 0));
+  }
+
+  @Test
   void quiverUsesNativeFractionalStackCost() {
     Item item = item("cqv", 1, 1);
     item.base.cost = 80;

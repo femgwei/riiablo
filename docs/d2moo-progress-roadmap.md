@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-08 原版物品说明与售价对齐
+
+- [x] 从 1.10f `D2Client.dll` 重新核对 18x5 武器攻速描述表，修正短弓等武器的
+  `快速` / `急速` 档位；玩家动画 token 改用 `PlrType.txt`，包含刺客的原版 `AI`。
+- [x] 魔法物品名称按资源语言排列：英文保持“前缀 + 基础名 + 后缀”，中文改为
+  “前缀 + 后缀 + 基础名”，并清理旧中文后缀自带的前导逗号。
+- [x] 对照 D2MOO `ITEMS_GetRequiredLevel`，需求等级现在汇总基础物品、魔法/稀有/手工
+  词缀、套装/暗金、镶嵌物和附加技能，物品说明与装备判定共用同一结果。
+- [x] 对照 D2MOO `ITEMS_CalculateAdditionalCostsForBonusStats`，售价加入实际属性数值的
+  `ItemStatCost.txt` `Add/Multiply/ValShift/Encode` 计价和镶嵌物基础成本。
+- 验证：`ItemLabelerTest`、`ItemRequirementsTest`、`VendorPricingTest` 定向测试通过，
+  包含截图短弓的 80 金币售价回归。
+
 ## 2026-10-08 原版武器攻速描述
 
 - [x] 对照 D2MOO `ITEMS_GetWeaponAttackSpeed`，物品说明现在按当前职业的 A1 武器动画、

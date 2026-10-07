@@ -1,8 +1,14 @@
 package com.riiablo.item;
 
 import com.riiablo.CharacterClass;
+import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.MagicAffix;
+import com.riiablo.codec.excel.SetItems;
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.UniqueItems;
 import com.riiablo.save.CharData;
 
 /**
@@ -50,7 +56,7 @@ public final class ItemRequirements {
       dexterity = character.getStats().aggregate().getValue(Stat.dexterity, 0);
     }
 
-    int requiredLevel = value(item, Stat.item_levelreq, item.base == null ? 0 : item.base.levelreq);
+    int requiredLevel = requiredLevel(item, character == null ? null : character.classId);
     int requiredStrength = value(item, Stat.reqstr, 0);
     int requiredDexterity = value(item, Stat.reqdex, 0);
     return new Result(
@@ -61,6 +67,110 @@ public final class ItemRequirements {
         strength >= requiredStrength,
         dexterity >= requiredDexterity,
         classMatches(item, character));
+  }
+
+  /** Mirrors D2Common's ITEMS_GetRequiredLevel for item data represented by {@link Item}. */
+  static int requiredLevel(Item item, CharacterClass characterClass) {
+    if (item == null) return 0;
+
+    int required = qualityRequiredLevel(item, characterClass);
+    if (item.base != null) required = Math.max(required, item.base.levelreq);
+    for (Item socket : item.sockets) {
+      required = Math.max(required, requiredLevel(socket, characterClass));
+    }
+    required = Math.max(required, skillRequiredLevel(item, characterClass));
+
+    // Riiablo keeps Items.txt's levelreq in the base stat list for legacy UI
+    // consumers. Native STAT_ITEM_LEVELREQ is only the serialized modifier,
+    // so read it from property lists instead of adding that base copy twice.
+    required += serializedLevelAdjustment(item);
+    return Math.max(0, required);
+  }
+
+  private static int qualityRequiredLevel(Item item, CharacterClass characterClass) {
+    if (item.quality == null || Riiablo.files == null) return 0;
+    switch (item.quality) {
+      case MAGIC:
+        return Math.max(
+            affixRequiredLevel(Riiablo.files.MagicPrefix.get(
+                item.qualityId & Item.MAGIC_AFFIX_MASK), characterClass),
+            affixRequiredLevel(Riiablo.files.MagicSuffix.get(
+                item.qualityId >>> Item.MAGIC_AFFIX_SIZE), characterClass));
+      case RARE:
+      case CRAFTED:
+        if (!(item.qualityData instanceof RareQualityData)) return 0;
+        RareQualityData rare = (RareQualityData) item.qualityData;
+        int required = 0;
+        int craftBonus = item.quality == Quality.CRAFTED ? 10 : 0;
+        for (int i = 0; i < RareQualityData.NUM_AFFIXES; i++) {
+          MagicAffix prefix = Riiablo.files.MagicPrefix.get(rare.prefixes[i]);
+          MagicAffix suffix = Riiablo.files.MagicSuffix.get(rare.suffixes[i]);
+          if (prefix != null) {
+            required = Math.max(required, affixRequiredLevel(prefix, characterClass));
+            if (item.quality == Quality.CRAFTED) craftBonus += 3;
+          }
+          if (suffix != null) {
+            required = Math.max(required, affixRequiredLevel(suffix, characterClass));
+            if (item.quality == Quality.CRAFTED) craftBonus += 3;
+          }
+        }
+        return item.quality == Quality.CRAFTED
+            ? Math.min(98, required + craftBonus) : required;
+      case UNIQUE:
+        return item.qualityData instanceof UniqueItems.Entry
+            ? Math.max(0, ((UniqueItems.Entry) item.qualityData).lvl_req) : 0;
+      case SET:
+        return item.qualityData instanceof SetItems.Entry
+            ? Math.max(0, ((SetItems.Entry) item.qualityData).lvl_req) : 0;
+      default:
+        return 0;
+    }
+  }
+
+  private static int affixRequiredLevel(MagicAffix affix, CharacterClass characterClass) {
+    if (affix == null) return 0;
+    if (characterClass != null && affix._class != null && !affix._class.isEmpty()) {
+      try {
+        if (CharacterClass.get(affix._class.toLowerCase()).id == characterClass.id) {
+          return Math.max(0, affix.classlevelreq);
+        }
+      } catch (RuntimeException ignored) {
+        // Invalid class data falls back to the general affix requirement.
+      }
+    }
+    return Math.max(0, affix.levelreq);
+  }
+
+  private static int skillRequiredLevel(Item item, CharacterClass characterClass) {
+    if (item.attrs == null || Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    int required = 0;
+    for (int i = 0; i < item.attrs.list().numLists(); i++) {
+      StatListRef list = item.attrs.list(i);
+      for (StatRef stat : list) {
+        if (stat.id() != Stat.item_singleskill && stat.id() != Stat.item_nonclassskill) continue;
+        Skills.Entry skill = Riiablo.files.skills.get(stat.param0());
+        if (skill == null) continue;
+        int skillRequirement = skill.reqlevel;
+        if (stat.id() == Stat.item_nonclassskill
+            && (characterClass == null
+                || Skills.getClassId(skill.charclass) != characterClass.id)) {
+          skillRequirement += 6;
+        }
+        required = Math.max(required, skillRequirement);
+      }
+    }
+    return required;
+  }
+
+  private static int serializedLevelAdjustment(Item item) {
+    if (item.attrs == null) return 0;
+    int adjustment = 0;
+    for (int i = 0; i < item.attrs.list().numLists(); i++) {
+      for (StatRef stat : item.attrs.list(i)) {
+        if (stat.id() == Stat.item_levelreq) adjustment += stat.asInt();
+      }
+    }
+    return adjustment;
   }
 
   private static int value(Item item, short stat, int fallback) {

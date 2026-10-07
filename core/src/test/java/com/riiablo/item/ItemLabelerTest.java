@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.riiablo.D2Language;
+
 class ItemLabelerTest {
   @Test
   void goldHeaderIncludesGroundQuantity() {
@@ -46,7 +48,17 @@ class ItemLabelerTest {
         NativeWeaponSpeed.descriptionKey(1, false, 19));
     assertEquals("WeaponAttackNormal",
         NativeWeaponSpeed.descriptionKey(1, false, 20));
-    assertEquals("WeaponAttackFast",
+    assertEquals("WeaponAttackNormal",
         NativeWeaponSpeed.descriptionKey(1, true, 20));
+    assertEquals("WeaponAttackFast",
+        NativeWeaponSpeed.descriptionKey(0, true, 14));
+  }
+
+  @Test
+  void magicItemNameOrderDependsOnResourceLanguage() {
+    assertEquals("Bronze Short Bow of Flame",
+        Item.formatMagicName(D2Language.ENGLISH, "Bronze", "Short Bow", "of Flame"));
+    assertEquals("青铜之 火焰的 短弓",
+        Item.formatMagicName(D2Language.CHINESE, "青铜之", "短弓", "，火焰的"));
   }
 }

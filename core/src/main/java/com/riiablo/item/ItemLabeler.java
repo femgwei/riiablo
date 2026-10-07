@@ -311,8 +311,8 @@ public class ItemLabeler {
       if ((prop = attrs.get(Stat.reqstr)) != null && prop.asInt() > 0)
         table.add(new Label(Riiablo.string.lookup("ItemStats1e") + " " + prop.asString(), font,
             requirements.strengthMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
-      if ((prop = attrs.get(Stat.item_levelreq)) != null && prop.asInt() > 0)
-        table.add(new Label(Riiablo.string.lookup("ItemStats1p") + " " + prop.asString(), font,
+      if (requirements.requiredLevel > 0)
+        table.add(new Label(Riiablo.string.lookup("ItemStats1p") + " " + requirements.requiredLevel, font,
             requirements.levelMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
       if ((prop = attrs.get(Stat.quantity)) != null)
         table.add(new Label(Riiablo.string.lookup("ItemStats1i") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
