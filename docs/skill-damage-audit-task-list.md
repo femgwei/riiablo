@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 代码基线：`e24607fe`
-当前加权完成度：**31.0%**
+当前加权完成度：**31.1%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -49,11 +49,11 @@
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 116 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 38 项。185 个唯一测试引用均可追溯。
-- 4,200 行中已有 220 行 `GOLDEN_APPROVED`，其余 3,980 行仍为
+- 4,200 行中已有 240 行 `GOLDEN_APPROVED`，其余 3,960 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 220 个逐级黄金行；不表示技能伤害正确率为 31.0%。
+- 当前 31.1% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 240 个逐级黄金行；不表示技能伤害正确率为 31.1%。
 
 ## 加权任务
 
@@ -85,8 +85,8 @@
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
-    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm 等级 1–20 共
-    220/4,200 行（本项 5.2381%，加权贡献 1.0476 个百分点）；
+    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field 等级 1–20 共
+    240/4,200 行（本项 5.7143%，加权贡献 1.1429 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -108,7 +108,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.0476%（展示时四舍五入为 31.0%）。
+当前总加权完成度为 31.1429%（展示时四舍五入为 31.1%）。
 
 ## 黄金值准入规则
 
@@ -201,6 +201,15 @@
   建立状态并在周期回调中选择目标、创建技能导弹、立即结算一次命中。状态持续时间、
   雷击间隔、目标选择、总雷击次数和整段状态总伤害延后到 DMG-07，抗性与免疫结算延后
   到 DMG-08。
+- Static Field（技能 42）等级 1–20 已按固定输入场景批准：单个 100/100 生命怪物、
+  Normal Expansion、0 闪电抗性、无装备。`calc1=par4=25`，`calc2=par3=0`，因此每一级
+  的原始及最终单目标伤害均为 25，20 个等级的 `delta_min/max` 均为 0；技能等级只改变
+  `AuraRangeCalc=ln12` 的作用半径，不改变伤害百分比。
+- D2MOO `SKILLS_SrvDo020_StaticField` 读取当前生命百分比、最小 8.8 定点伤害和难度生命
+  下限；`SKILLS_AuraCallback_StaticField` 先用整数当前生命计算百分比，再保留最后 1 点
+  生命并应用最小伤害。Expansion 的 `StaticFieldMin` 是施法资格门禁，不是命中后的生命
+  夹紧。Nightmare/Hell 下限、抗性、免疫、吸收和 PvP 结算由专项集成测试锁定，归入
+  DMG-08；多目标及重复施法总伤害归入 DMG-07。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -225,7 +234,12 @@
   `ChainLightningGoldenDamageTest#continuationSegmentKeepsTheAuthoritativeSkillSnapshot`、
   `SpecialSkillEcsScenarioTest#chainLightningCreatesOneAuthoritativeSegmentPerHostileJump`、
   `ThunderStormGoldenDamageTest#levelOneToTwentyMatchesD2mooFixedPointFormula`、
-  `SorceressThunderStormIntegrationTest#castInstallsAuraAndEmitsOneAuthoritativeStrikePerPeriod`。
+  `SorceressThunderStormIntegrationTest#castInstallsAuraAndEmitsOneAuthoritativeStrikePerPeriod`、
+  `StaticFieldGoldenDamageTest#levelOneToTwentyMatchesD2mooCurrentLifeFormula`、
+  `StaticFieldGoldenDamageTest#nativeFloorAndLastLifeBoundariesMatchD2mooOrder`、
+  `SorceressStaticFieldIntegrationTest#normalHitsEveryValidTargetAndUsesResistanceAbsorbAndNoMissiles`、
+  `SorceressStaticFieldIntegrationTest#expansionDifficultyThresholdIsAnEligibilityGate`、
+  `SorceressStaticFieldIntegrationTest#hostilePlayerReceivesNativePvpScalarWhileNeutralPlayerIsIgnored`。
 
 ## 可复现命令
 
@@ -247,6 +261,5 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Static Field 的“当前生命百分比、难度/PvP 下限”非固定
-伤害语义。不得把它伪装成普通 min/max 等级曲线；必须先固定输入生命值和结算边界，再
-从 D2MOO 与 riiablo 生产路径分别采集结果。
+继续 DMG-04，下一项优先审核 Telekinesis（技能 43）的等级 1–20 基础闪电伤害，并核对
+`SKILLS_SrvSt12_Telekinesis` / `SKILLS_SrvDo021_Telekinesis` 与 riiablo 当前执行路径。

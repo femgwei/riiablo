@@ -243,3 +243,27 @@ D2MOO `SKILLS_SrvSt13_ThunderStorm` 初始化上次目标和首次执行标志�
 矩阵只批准每次雷击对单目标的一次伤害包；状态持续时间、雷击间隔、目标选择、雷击次数
 和 full-aura total 延后到 DMG-07，抗性、免疫、吸收、PvP 与 Lightning Mastery 结算
 延后到 DMG-08。
+
+## DMG-04 第十二个逐级实例：Static Field
+
+Static Field 不使用普通 Skills.txt 最小/最大伤害曲线。D2MOO
+`SKILLS_SrvDo020_StaticField` 以 `calc1=par4` 取得当前生命伤害百分比，以 `calc2=par3`
+取得最小 signed 8.8 定点伤害，并在 Expansion 游戏中读取
+`DifficultyLevels.txt.StaticFieldMin`。1.10f 数据在等级 1–20 均为 `calc1=25`、`calc2=0`；
+等级只通过 `AuraRangeCalc=ln12` 改变半径。
+
+`SKILLS_AuraCallback_StaticField` 先把目标当前生命右移 8 位为整数生命。若 Expansion
+难度生命下限启用且当前生命不高于 `maxLife * StaticFieldMin / 100`，本次目标直接跳过；
+这个判断是命中资格门禁，不是命中后生命夹紧。随后原版按
+`currentIntegerLife * damagePct / 100` 截断，并把结果限制为最多 `currentLife - 1`，左移
+8 位后再与 `calc2` 最小定点伤害取最大值。负抗性在普通元素结算前被反向补偿，因此不会
+放大 Static Field，正抗、免疫、吸收和 PvP 缩放仍由后续结算路径处理。
+
+DMG-04 为这一非固定伤害技能锁定可复现输入：单个 100/100 生命怪物、Normal Expansion、
+0 闪电抗性、无装备。独立 D2MOO 转录在等级 1–20 都得到 `25 << 8`，riiablo
+`SorceressSkills.calculateStaticFieldRawDamageFixed` 同样得到 25 点，故 20 行
+`expected_min/max` 与 `riiablo_actual_min/max` 均为 25，`delta_min/max=0`。
+`StaticFieldGoldenDamageTest` 还锁定 1/100、34/100@33%、33/100@33%、51/100@50% 和
+50/100@50% 五个边界；完整 ECS 测试继续覆盖难度门槛、负抗补偿、正抗、免疫、吸收、
+PvP、目标过滤和无导弹语义。多目标及重复施法总量延后到 DMG-07，最终结算场景延后到
+DMG-08。
