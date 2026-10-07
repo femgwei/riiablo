@@ -15,6 +15,7 @@ public final class NativeObjectOperateTable {
     QUEST_OBJECT,
     TAINTED_SUN_ALTAR,
     STAFF_ORIFICE,
+    TORCH,
     TOGGLE_DOOR,
     ONE_WAY_DOOR
   }
@@ -57,6 +58,7 @@ public final class NativeObjectOperateTable {
     }
 
     if (operateFn == 7) return Lifecycle.TRAP;
+    if (operateFn == 11 || operateFn == 13) return Lifecycle.TORCH;
     if (operateFn == 24) return Lifecycle.TAINTED_SUN_ALTAR;
     if (operateFn == 25) return Lifecycle.STAFF_ORIFICE;
 

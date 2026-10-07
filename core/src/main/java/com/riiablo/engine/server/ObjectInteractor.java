@@ -292,6 +292,26 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return InteractionResult.HANDLED_CHANGED;
     }
 
+    if (lifecycle == Lifecycle.TORCH) {
+      int previousMode = cof.mode;
+      int nextMode = torchModeAfterOperation(operateFn, previousMode);
+      if (nextMode == previousMode) return InteractionResult.HANDLED_UNCHANGED;
+      if (state != null) state.persistMode((byte) nextMode);
+      cofs.setMode(entityId, (byte) nextMode);
+      // OBJECTS_OperateFunction11_Torch explicitly clears UNITFLAG_TARGETABLE
+      // when lighting a neutral torch. Mirror that server-authoritative state;
+      // Function13_TorchTiki relies only on its mode-specific table flags.
+      if (operateFn == 11
+          && previousMode == Engine.Object.MODE_NU
+          && nextMode == Engine.Object.MODE_OP) {
+        mInteractable.remove(entityId);
+      }
+      Gdx.app.log(TAG, "Native torch toggled: entity=" + entityId
+          + " object=" + base.Id + " operateFn=" + operateFn
+          + " mode=" + previousMode + "->" + nextMode);
+      return InteractionResult.HANDLED_CHANGED;
+    }
+
     if (lifecycle == Lifecycle.SHRINE) {
       if (state != null && state.activated) return InteractionResult.HANDLED_UNCHANGED;
       if (state != null) {
@@ -416,6 +436,20 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       if (x >= minX && x <= maxX && y >= minY && y <= maxY) return true;
     }
     return false;
+  }
+
+  /** Exact mode branches from D2MOO's OperateFunction11/13. */
+  static int torchModeAfterOperation(int operateFn, int mode) {
+    switch (operateFn) {
+      case 11:
+        if (mode == Engine.Object.MODE_NU) return Engine.Object.MODE_OP;
+        return mode <= Engine.Object.MODE_ON ? Engine.Object.MODE_NU : mode;
+      case 13:
+        if (mode == Engine.Object.MODE_NU) return Engine.Object.MODE_OP;
+        return mode == Engine.Object.MODE_OP ? Engine.Object.MODE_NU : mode;
+      default:
+        return mode;
+    }
   }
 
   private boolean operate(int src, int entityId, int operateFn) {

@@ -32,16 +32,18 @@ class ServerEntityFactoryWaypointTest {
   }
 
   @Test
-  void unimplementedTorchOperationDoesNotCreateFakeInteraction() {
+  void initializedTorchRequiresOnModeSelectionInsteadOfFallbackInteraction() {
     Objects.Entry torch = new Objects.Entry();
     torch.Draw = true;
     torch.InitFn = 8;
     torch.OperateFn = 13;
     torch.OperateRange = 3;
     torch.Selectable = new boolean[8];
-    torch.Selectable[Engine.Object.MODE_ON] = true;
+    torch.Selectable[Engine.Object.MODE_NU] = true;
 
     assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(torch));
+    torch.Selectable[Engine.Object.MODE_ON] = true;
+    assertEquals(3f, ServerEntityFactory.resolveObjectInteractionRange(torch));
   }
 
   @Test

@@ -38,4 +38,18 @@ class ClientEntityFactoryWaypointTest {
 
     assertTrue(ClientEntityFactory.isInitiallySelectable(chest));
   }
+
+  @Test
+  void initializedTorchUsesItsNativeOnModeSelectableFlag() {
+    Objects.Entry torch = new Objects.Entry();
+    torch.Draw = true;
+    torch.InitFn = 8;
+    torch.OperateFn = 13;
+    torch.Selectable = new boolean[8];
+    torch.Selectable[Engine.Object.MODE_NU] = true;
+
+    assertFalse(ClientEntityFactory.isInitiallySelectable(torch));
+    torch.Selectable[Engine.Object.MODE_ON] = true;
+    assertTrue(ClientEntityFactory.isInitiallySelectable(torch));
+  }
 }

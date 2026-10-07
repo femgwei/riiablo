@@ -9,6 +9,7 @@ import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycl
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.STAFF_ORIFICE;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TOGGLE_DOOR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TRAP;
+import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TORCH;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.WELL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -41,6 +42,12 @@ class NativeObjectOperateTableTest {
   @Test
   void classifiesNativeWellOperateFunctionSeparately() {
     assertEquals(WELL, resolve(22));
+  }
+
+  @Test
+  void classifiesBothNativeTorchOperateFunctions() {
+    assertEquals(TORCH, resolve(11));
+    assertEquals(TORCH, resolve(13));
   }
 
   @Test

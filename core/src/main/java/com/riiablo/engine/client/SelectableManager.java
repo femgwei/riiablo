@@ -58,6 +58,11 @@ public class SelectableManager extends PassiveSystem {
         && mode < base.Selectable.length
         && base.Selectable[mode]) return true;
 
+    // Torch functions 11/13 have native mode-dependent targetability. In
+    // particular InitFunction08 starts them in ON, which is commonly scenery.
+    // Never let the converted-table fallback manufacture a mouse target.
+    if (base.OperateFn == 11 || base.OperateFn == 13) return false;
+
     // Keep converted native doors/chests/shrines targetable when their table
     // omitted mode-specific Selectable flags. The operation mode remains a
     // valid target; the object interactor enforces one-shot chest state.

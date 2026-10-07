@@ -44,4 +44,17 @@ class SelectableManagerWaypointTest {
     assertTrue(SelectableManager.isSelectable(chest, Engine.Object.MODE_ON));
     assertFalse(SelectableManager.isSelectable(chest, Engine.Object.MODE_OP));
   }
+
+  @Test
+  void torchNeverUsesTheGenericSelectableFallback() {
+    Objects.Entry torch = new Objects.Entry();
+    torch.Draw = true;
+    torch.OperateFn = 13;
+    torch.Selectable = new boolean[8];
+
+    assertFalse(SelectableManager.isSelectable(torch, Engine.Object.MODE_NU));
+    assertFalse(SelectableManager.isSelectable(torch, Engine.Object.MODE_ON));
+    torch.Selectable[Engine.Object.MODE_NU] = true;
+    assertTrue(SelectableManager.isSelectable(torch, Engine.Object.MODE_NU));
+  }
 }

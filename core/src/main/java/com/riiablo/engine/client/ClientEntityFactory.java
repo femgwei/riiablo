@@ -259,6 +259,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
     if (base == null) return false;
     if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
         || base.Id == 60) return true;
+    if (base.OperateFn == 11 || base.OperateFn == 13) {
+      int mode = base.InitFn == 8 ? Engine.Object.MODE_ON : Engine.Object.MODE_NU;
+      return base.Selectable != null
+          && mode < base.Selectable.length
+          && base.Selectable[mode];
+    }
     if (base.Selectable != null
         && Engine.Object.MODE_NU < base.Selectable.length
         && base.Selectable[Engine.Object.MODE_NU]) return true;

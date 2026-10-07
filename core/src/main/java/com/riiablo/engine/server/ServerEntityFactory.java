@@ -304,6 +304,16 @@ public class ServerEntityFactory extends EntityFactory {
         || base.Id == 60) return 5f;
     if (isWaypointObject(base)) return base.OperateRange > 0 ? base.OperateRange : 5f;
     if (!supportsObjectInteraction(base)) return 0;
+    if (base.OperateFn == 11 || base.OperateFn == 13) {
+      // D2Game applies InitFunction08 before nSelectable and leaves these
+      // torches in ON. Do not use the incomplete-table fallback below: the
+      // current mode must explicitly be selectable or the torch is scenery.
+      int mode = base.InitFn == 8 ? Engine.Object.MODE_ON : Engine.Object.MODE_NU;
+      return base.OperateRange > 0
+          && base.Selectable != null
+          && mode < base.Selectable.length
+          && base.Selectable[mode] ? base.OperateRange : 0f;
+    }
     if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
       return base.OperateRange;
     }
@@ -319,9 +329,8 @@ public class ServerEntityFactory extends EntityFactory {
 
   /**
    * Only exposes operations that currently have an authoritative Java path.
-   * D2MOO implements torch functions 11/13, but the corresponding Java
-   * branches are still no-ops; treating every nonzero OperateFn as usable
-   * gives those scenery objects a name label and makes clicks walk to them.
+   * Treating every nonzero OperateFn as usable gives unsupported scenery
+   * objects a name label and makes clicks walk to them without an effect.
    */
   static boolean supportsObjectInteraction(Objects.Entry base) {
     if (base == null) return false;
