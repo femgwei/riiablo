@@ -32,6 +32,7 @@ public class D2ObjectIds {
     public static final int OBJECT_HARROGATH_TOWN_MAIN_GATE = 449;
     
     // 其他对象
+    public static final int OBJECT_ROGUEBONFIRE = 39;
     public static final int OBJECT_RIVER1 = 40;
     public static final int OBJECT_RIVER2 = 41;
     public static final int OBJECT_RIVER3 = 42;

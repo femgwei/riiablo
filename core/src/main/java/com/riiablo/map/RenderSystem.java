@@ -665,12 +665,11 @@ public class RenderSystem extends BaseEntitySystem {
 
     int act = zone.level.Act;
     int levelId = zone.level.Id;
-    float intensity = environment.intensity(levelId, act) / 255f;
-    ambientLight.set(
-        environment.red(levelId, act) / 255f * intensity,
-        environment.green(levelId, act) / 255f * intensity,
-        environment.blue(levelId, act) / 255f * intensity,
-        1f);
+    setAmbientLight(ambientLight,
+        environment.intensity(levelId, act),
+        environment.red(levelId, act),
+        environment.green(levelId, act),
+        environment.blue(levelId, act));
 
     int count = 0;
     float focusX = 0f;
@@ -705,6 +704,21 @@ public class RenderSystem extends BaseEntitySystem {
           focusX, focusY);
     }
     batch.setLighting(ambientLight, count, localLights, localLightColors);
+  }
+
+  /**
+   * Approximates D2's palette light rows in the shader's display-colour path.
+   * D2 keeps light intensity and RGB tint as independent fields; applying the
+   * linear intensity directly to already gamma-encoded palette RGB made night
+   * roughly twice as dark as the native renderer.
+   */
+  static Color setAmbientLight(Color out, int intensity, int red, int green, int blue) {
+    float displayIntensity = (float) Math.sqrt(MathUtils.clamp(intensity, 0, 255) / 255f);
+    return out.set(
+        MathUtils.clamp(red, 0, 255) / 255f * displayIntensity,
+        MathUtils.clamp(green, 0, 255) / 255f * displayIntensity,
+        MathUtils.clamp(blue, 0, 255) / 255f * displayIntensity,
+        1f);
   }
 
   private int lightRadiusModifier(int entityId) {
