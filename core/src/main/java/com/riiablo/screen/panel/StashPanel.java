@@ -171,4 +171,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
     }
   }
+
+  public boolean isGoldDialogOpen() {
+    return goldDialog != null && goldDialog.isOpen();
+  }
 }

@@ -558,6 +558,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     mappedKeyStateListener = new MappedKeyStateAdapter() {
       @Override
       public void onPressed(MappedKey key, int keycode) {
+        if (inventoryPanel.isGoldDialogOpen() || stashPanel.isGoldDialogOpen()) {
+          return;
+        }
+
         if (input.isVisible() && (key != Keys.Enter && key != Keys.Esc)) {
           return;
         }

@@ -361,6 +361,10 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     super.setVisible(visible);
   }
 
+  public boolean isGoldDialogOpen() {
+    return goldDialog != null && goldDialog.isOpen();
+  }
+
   @Override
   public void draw(Batch batch, float a) {
     StatRef gold = Riiablo.charData.getStats().get(Stat.gold);
