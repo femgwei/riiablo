@@ -2299,6 +2299,11 @@ public class Map implements Disposable {
       return adjacentRoomIds == null ? new int[0] : adjacentRoomIds.clone();
     }
 
+    /** Internal read-only adjacency view for allocation-free render-interest traversal. */
+    int[] adjacentRoomIds() {
+      return adjacentRoomIds;
+    }
+
     public int getActivationStatus() {
       return activationStatus;
     }

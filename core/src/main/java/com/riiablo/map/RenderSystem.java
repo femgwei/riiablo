@@ -61,6 +61,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Classname;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Item;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Object;
@@ -250,6 +251,7 @@ public class RenderSystem extends BaseEntitySystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Item> mItem;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Warp> mWarp;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<com.riiablo.engine.server.component.Interactable> mInteractable;
@@ -267,6 +269,7 @@ public class RenderSystem extends BaseEntitySystem {
   Array<Integer>      cache[][][];
   private final RenderSpatialIndex spatialIndex = new RenderSpatialIndex();
   private final RenderCacheMetrics cacheMetrics = new RenderCacheMetrics();
+  private final RenderInterest renderInterest = new RenderInterest();
   private int visibleCellCount;
   int                 src = -1;
   boolean             dirty;
@@ -433,7 +436,10 @@ public class RenderSystem extends BaseEntitySystem {
 
   /** Returns cumulative cache-build statistics for the 1x, 2x, and 5x zoom baselines. */
   public String cacheMetricsReport() {
-    return cacheMetrics.report();
+    return cacheMetrics.report() + System.lineSeparator()
+        + "Render interest seeds=" + renderInterest.seedRoomCount()
+        + " rooms=" + renderInterest.interestedRoomCount()
+        + " adjacentRings=" + renderInterest.adjacentRings();
   }
 
   /** Clears every zoom baseline without changing the current camera zoom. */
@@ -641,6 +647,10 @@ public class RenderSystem extends BaseEntitySystem {
 
   private void buildCaches() {
     long startNanos = TimeUtils.nanoTime();
+    Map.Zone anchor = null;
+    if (src >= 0 && mMapWrapper.has(src)) anchor = mMapWrapper.get(src).zone;
+    renderInterest.update(map, anchor, iso,
+        renderMinX, renderMinY, renderMaxX, renderMaxY);
     syncSpatialIndex();
     int x, y;
     int startX2 = startX;
@@ -681,8 +691,22 @@ public class RenderSystem extends BaseEntitySystem {
     Position position = mPosition.get(entityId);
     if (position == null) {
       spatialIndex.remove(entityId);
-    } else {
+      return;
+    }
+
+    MapWrapper mapping = mMapWrapper.get(entityId);
+    if (mapping != null && mapping.map != null && mapping.map != map) {
+      spatialIndex.remove(entityId);
+      return;
+    }
+    Map.Zone zone = mapping != null ? mapping.zone : map.getZone(position.position);
+    boolean interested = mapping != null && mapping.roomId >= 0
+        ? renderInterest.contains(zone, mapping.roomId)
+        : renderInterest.contains(zone, position.position.x, position.position.y);
+    if (interested) {
       spatialIndex.update(entityId, position.position.x, position.position.y);
+    } else {
+      spatialIndex.remove(entityId);
     }
   }
 

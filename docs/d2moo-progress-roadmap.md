@@ -15,15 +15,19 @@
   ECS 生命周期钩子维护；由于现有 `Position.position` 是多系统直接写入的可变 `Vector2`，
   渲染前仍做轻量格坐标核对以覆盖移动、传送和网络插值，但静止或格内移动实体不再重复入桶，
   仅跨越 5x5 subtile 格边界时移动成员；空格、成员记录均循环复用。
-- [ ] 第四步：新增独立 `RenderInterest`，按相机覆盖的 RoomEx 做 BFS；它只控制表现资源和
-  客户端物化，不得修改 `CLIENT_IN_SIGHT`、AI 更新资格或战斗模拟。
+- [x] 第四步：新增独立 `RenderInterest`。它用 RoomEx 四角的等距投影与相机边界求覆盖种子，
+  再沿原生 `pRoomsNear` 做一圈 BFS 预取；`RenderSystem` 仅把兴趣集合内实体放入渲染空间
+  索引，`render.stats` 同时输出种子/兴趣房间数。该路径不调用 `enterClientRoom`/
+  `leaveClientRoom`，不修改 `CLIENT_IN_SIGHT`、AI 更新资格、碰撞或战斗模拟；无原生拓扑、
+  RoomEx 未知及尚未初始化时均 fail-open，避免旧地图或网络基线出现实体丢失。
 - [ ] 第五步：为 RenderInterest 加入每帧预热预算和两圈释放滞回，并分别验证本地和 D2GS
   场景；联网远端动态单位需先建立服务端兴趣快照协议。
 - [ ] 第六步：仅在具备真正 3D 地面/模型资产方案后评估透视相机和射线拾取；经典 DT1/DCC
   固定视角位图不直接照搬 D2R-3D 的 yaw/pitch、reverse-Z 或阴影射线代码。
 - D2R-3D 根目录没有项目级许可证，本轮只借鉴空间组织思想，未复制其源码。
-- 验证：`./gradlew.bat :core:test --tests com.riiablo.map.RenderCacheMetricsTest --tests
-  com.riiablo.map.RenderSpatialIndexTest --tests com.riiablo.map.RenderSystemOrderingTest
+- 验证：`./gradlew.bat :core:test --tests com.riiablo.map.RenderInterestTest --tests
+  com.riiablo.map.RenderCacheMetricsTest --tests com.riiablo.map.RenderSpatialIndexTest --tests
+  com.riiablo.map.RenderSystemOrderingTest --tests com.riiablo.map.RoomExAdjacencyTest
   --no-daemon`：`BUILD SUCCESSFUL`。
 - 本轮提交后推送到 `origin/master`；工作区已有 `StatFormatterTest` 修改和诊断日志不纳入提交。
 
