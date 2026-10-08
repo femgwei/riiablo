@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`36bab1ef9ad6054411a11a982ae9560a3982347d`
-当前加权完成度：**32.2%**
+最近完成技能提交：`e83230bfaa0fac0535196bcd50e0f096f1ca9534`
+当前加权完成度：**32.3%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -49,13 +49,13 @@
   初始化链。Inner Sight 的分段公式和 Jab 的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 119 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Jab 测试引用已纳入自动解析
-  门禁。
-- 4,200 行中已有 460 行 `GOLDEN_APPROVED`，其余 3,740 行仍为
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Cold Arrow 测试引用已纳入
+  自动解析门禁。
+- 4,200 行中已有 480 行 `GOLDEN_APPROVED`，其余 3,720 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 32.2% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 460 个逐级黄金行；不表示技能伤害正确率为 32.2%。
+- 当前 32.3% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 480 个逐级黄金行；不表示技能伤害正确率为 32.3%。
 
 ## 加权任务
 
@@ -89,8 +89,8 @@
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
-    Inner Sight、Critical Strike、Jab 等级 1–20 共 460/4,200 行（本项 10.9524%，加权贡献
-    2.1905 个百分点）；
+    Inner Sight、Critical Strike、Jab、Cold Arrow 等级 1–20 共 480/4,200 行（本项
+    11.4286%，加权贡献 2.2857 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -112,7 +112,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 32.1905%（展示时为 32.2%）。
+当前总加权完成度为 32.2857%（展示时为 32.3%）。
 
 ## 黄金值准入规则
 
@@ -293,6 +293,11 @@
   `candidate_unit` 明确标记 N/A。原生 `Calc1=ln34` 的武器物理加成为 `-15%`–`42%`，
   等级 6 的 `0%` 是合法公式结果。生产现仅在公式字段缺失时使用兼容 fallback，不再把
   合法零值替换为 `+48%`。固定武器包、每段实际值和三段施法总量留给 DMG-06。
+- Cold Arrow（技能 11）等级 1–20 已按“无装备、owner 武器伤害为 0、Ice Arrow 硬点为
+  0、单箭单目标、抗性前冷伤”批准。`HitShift=7` 把源表等级 1 的 `6–8` 转为 `3–4`，
+  等级 20 的 `106–112` 转为 `53–56`；20 个等级的 `delta_min/max` 均为 0。
+  `SrvDmg01` 的 `dl12=3%+(level-1)*2%` 在本场景只转换零物理包。固定武器转换和分通道
+  定点精度留给 DMG-06；100–670 帧 chill length 留给 DMG-07，最终结算留给 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -354,6 +359,8 @@
   `AmazonMeleeSkillLifecycleTest#jabCompletesRemainingThrustsAfterTheFirstStrikeKillsTarget`、
   `NativeJabSequenceTest#oneHandThrustUsesTheNativeEighteenPointSequence`、
   `NativeJabSequenceTest#twoHandThrustUsesTheNativeTwentyOnePointSequence`、
+  `ColdArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooColdCurveWithoutWeaponOrSynergy`、
+  `AmazonSkillSpecializationTest#elementalArrowsCaptureNativeSkillDamageAndFreezeSemantics`、
   `NativeBarbarianPassiveDataTest#selectedMasteryChangesAuthoritativeDamageHitChanceAndCriticalRoll`。
 
 ## 可复现命令
@@ -376,6 +383,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Cold Arrow（技能 11）等级 1–20。需区分技能冷伤曲线、
-`SrcDam=128` 武器包与 `SrvDmg01` 的物理转冰冷比例，并记录原生 chill length；固定武器包
-和分通道定点精度属于 DMG-06，持续时间与最终结算分别属于 DMG-07/08。
+继续 DMG-04，下一项优先审核 Multiple Shot（技能 12）等级 1–20。需区分 `Calc1` 箭数、
+`Calc2` 物理加成、`Calc3` 中央命中子集与每枚 `SrcDam=96` 武器导弹；固定武器包、每枚
+命中值、中央命中语义和整次施法总量属于 DMG-06。

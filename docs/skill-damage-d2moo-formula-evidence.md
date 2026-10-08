@@ -543,3 +543,30 @@ riiablo 原 `getPhysicalDamagePercent` 把公式求值为 0 当作“公式缺�
 零值。`JabGoldenDamageTest` 用独立常量锁定 20 级曲线及无固定伤害字段；
 `AmazonMeleeSkillLifecycleTest` 与 `NativeJabSequenceTest` 分别锁定三次关键帧消费和原生
 动画序列。
+
+## DMG-04 第二十四个逐级实例：Cold Arrow
+
+1.10f `Skills.txt#11` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=coldarrow`、
+`SrcDam=128`、`HitShift=7`、`ToHit=10` 和 `LevToHit=9`。冷伤基值为 `6–8`，五段每级
+增量分别为最小值 `4/5/8/16/42`、最大值 `4/5/9/17/44`；
+`EDmgSymPerCalc=(skill('Ice Arrow'.blvl))*par8`。本批把 Ice Arrow 硬点固定为 0。
+
+D2MOO `D2GAME_SKILLS_Handler_6FD12BA0` 对 `SrvDoFunc=0` 的技能创建 `coldarrow`，
+`MISSILE_CalculateDamageData` 读取 `SKILLS_GetMinElemDamage`、`SKILLS_GetMaxElemDamage` 和
+`SKILLS_GetElementalLength`，同时按 `SrcDam=128` 继承完整武器包。元素 getter 先计算
+五段源表曲线，再左移 `HitShift=7` 形成 8.8 定点值，因此等级 1 的 `6–8` 对应整数
+`3–4`，等级 20 的 `106–112` 对应整数 `53–56`。等级 1–20 的抗性前单目标冷伤范围为：
+
+`3–4,5–6,7–8,9–10,11–12,13–14,15–16,17–18,19–20,22–23,`
+`24–25,27–28,29–30,32–33,34–35,37–38,41–42,45–47,49–51,53–56`。
+
+`coldarrow` 的 `SrvDmgFunc=1` 进入
+`MISSMODE_SrvDmg01_FireArrow_MagicArrow_ColdArrow`。其 `DmgCalc1=dl12`、
+`dParam1=3`、`dParam2=2`，把等级 1–20 的 3%–41% 物理通道移入冷通道，总 8.8 伤害
+不变。本批 owner 武器伤害为 0，因此该转换不改变上面的技能冷伤；固定武器包与分通道
+精度留给 DMG-06。
+
+原生 chill length 由 `ELen=100`、`ELevLen=30/30/30` 产生 100–670 帧。Cold Arrow
+使用 cold 而非 freeze 路径；持续时间、减速状态、抗性缩短及死亡碎裂语义属于 DMG-07/08。
+`ColdArrowGoldenDamageTest` 用独立常量锁定全部 20 级冷伤与长度，并逐级对比
+`MissileDamageResolver.initializeSkill` 的生产快照；当前无需生产修复。
