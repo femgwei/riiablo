@@ -40,7 +40,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
   static final int RAIN_SHADE_COUNT = 12;
-  private static final int RAIN_THICK_SHADE_SLOTS = 3;
+  private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
   private static final int RAIN_GREEN_BIAS = 25;

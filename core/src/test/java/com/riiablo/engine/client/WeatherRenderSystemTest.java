@@ -105,9 +105,9 @@ class WeatherRenderSystemTest {
     assertEquals(2f, WeatherRenderSystem.rainWidth(
         WeatherRenderSystem.ParticleField.rainShade(0)));
     assertEquals(2f, WeatherRenderSystem.rainWidth(
-        WeatherRenderSystem.ParticleField.rainShade(2)));
+        WeatherRenderSystem.ParticleField.rainShade(1)));
     assertEquals(1f, WeatherRenderSystem.rainWidth(
-        WeatherRenderSystem.ParticleField.rainShade(3)));
+        WeatherRenderSystem.ParticleField.rainShade(2)));
     assertEquals(1f, WeatherRenderSystem.rainWidth(
         WeatherRenderSystem.ParticleField.rainShade(
             WeatherRenderSystem.RAIN_SHADE_COUNT - 1)));
