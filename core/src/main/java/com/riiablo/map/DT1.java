@@ -232,8 +232,17 @@ public class DT1 implements Disposable {
     public static final int FLAG_BLOCK_UNKNOWN2    = 1 << 6;
     public static final int FLAG_BLOCK_UNKNOWN3    = 1 << 7;
 
-    /** DT1 material flag used by D2Common for lava/fire animation tiles. */
-    public static final int MATERIAL_LAVA = 0x0100;
+    /** D2CMP material flags stored in the 16-bit DT1 field at header offset {@code 0x06}. */
+    public static final int MATERIAL_OTHER       = 0x0001;
+    public static final int MATERIAL_WATER       = 0x0002;
+    public static final int MATERIAL_WOOD_OBJECT = 0x0004;
+    public static final int MATERIAL_ISTONE      = 0x0008;
+    public static final int MATERIAL_OSTONE      = 0x0010;
+    public static final int MATERIAL_DIRT        = 0x0020;
+    public static final int MATERIAL_SAND        = 0x0040;
+    public static final int MATERIAL_WOOD        = 0x0080;
+    public static final int MATERIAL_LAVA        = 0x0100;
+    public static final int MATERIAL_SNOW        = 0x0400;
 
     public int   direction;
     public short roofHeight;

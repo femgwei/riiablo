@@ -3,7 +3,9 @@ package com.riiablo.map;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.SoundEnviron;
 
 public enum Material {
   DIRT(new Color(0x4F7942FF)),
@@ -36,46 +38,36 @@ public enum Material {
     return name;
   }
 
-  /**
-   * PORTED FROM OLD ENGINE
-   *
-   * best guess:
-   *
-   * level type determines table
-   * soundIndex determines which sound to pull from table
-   * NOT ALWAYS POWER OF 2 -- some tiles in act 2 town are 1,17,65,129
-   * it's possible they are flags to represent random, i.e., 17 = random 1 or 16
-   */
+  /** Selects the native footstep material from SoundEnviron and the DT1 material flags. */
   public static Material getMaterial(Levels.Entry level, DT1.Tile tile) {
-    if (tile == null) return Material.DIRT;
-    int soundIndex = tile.soundIndex & 0xFF;
-    switch (level.LevelType) {
-      case 1:  return getType1(soundIndex);
-      case 2:  return getType2(soundIndex);
-      case 3:  return getType3(soundIndex);
-      default: return Material.DIRT;
-    }
+    return getMaterial(defaultMaterialId(level), tile == null ? 0 : tile.materialFlags());
   }
 
-  private static Material getType1(int soundIndex) {
-    switch (soundIndex) {
-      case 0:  return Material.DIRT;
-      default: return Material.DIRT;
-    }
+  private static int defaultMaterialId(Levels.Entry level) {
+    if (level == null || Riiablo.files == null || Riiablo.files.SoundEnviron == null) return 1;
+    SoundEnviron.Entry environment = Riiablo.files.SoundEnviron.get(level.SoundEnv);
+    return environment == null ? 1 : environment.Material_1;
   }
 
-  private static Material getType2(int soundIndex) {
-    switch (soundIndex) {
-      case 0:   return Material.DIRT;
-      case 128: return Material.WOOD;
-      default:  return Material.DIRT;
-    }
+  /** Mirrors D2Client's material-bit priority; unrecognized flags use Material 1. */
+  static Material getMaterial(int defaultMaterialId, int flags) {
+    if ((flags & DT1.Tile.MATERIAL_DIRT) != 0) return DIRT;
+    if ((flags & DT1.Tile.MATERIAL_ISTONE) != 0) return ISTONE;
+    if ((flags & DT1.Tile.MATERIAL_OSTONE) != 0) return OSTONE;
+    if ((flags & DT1.Tile.MATERIAL_SAND) != 0) return SAND;
+    if ((flags & DT1.Tile.MATERIAL_WOOD) != 0) return WOOD;
+    if ((flags & DT1.Tile.MATERIAL_SNOW) != 0) return SNOW;
+    return fromId(defaultMaterialId);
   }
 
-  private static Material getType3(int soundIndex) {
-    switch (soundIndex) {
-      case 0:   return Material.DIRT;
-      default:  return Material.DIRT;
+  private static Material fromId(int id) {
+    switch (id) {
+      case 2:  return ISTONE;
+      case 3:  return OSTONE;
+      case 4:  return SAND;
+      case 5:  return SNOW;
+      case 6:  return WOOD;
+      default: return DIRT;
     }
   }
 }
