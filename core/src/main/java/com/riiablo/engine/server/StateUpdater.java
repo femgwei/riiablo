@@ -1301,10 +1301,38 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
-  /** Keeps Fire Mastery's native permanent passive stat list current. */
+  /** Keeps the Sorceress native permanent passive stat lists current. */
   private void synchronizeSorceressPassives(int entityId, StateList states) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
         || mPlayer.get(entityId).data.classId != CharacterClass.SORCERESS) return;
+    synchronizeSorceressWarmth(entityId, states);
+    synchronizeSorceressFireMastery(entityId, states);
+  }
+
+  private void synchronizeSorceressWarmth(int entityId, StateList states) {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.WARMTH);
+    int ownedLevel = skill != null
+        ? Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.WARMTH)) : 0;
+    int level = ownedLevel > 0 ? ownedLevel + states.getTotalSkillModifier() : 0;
+    UnitState current = states.getState(StateId.WARMTH);
+    if (level <= 0 || skill == null || !skill.passive) {
+      if (current != null) {
+        states.removeState(StateId.WARMTH);
+        log.info("[SORCERESS_WARMTH] phase=remove entity={}", entityId);
+      }
+      return;
+    }
+    if (current != null && current.level == level && !current.expired) return;
+    UnitState applied = SorceressSkills.applyWarmthState(
+        states, skill, level, entityId);
+    if (applied != null) {
+      log.info("[SORCERESS_WARMTH] phase=refresh entity={} level={} percent={}",
+          entityId, level,
+          applied.getStatContributionValue(Stat.manarecoverybonus));
+    }
+  }
+
+  private void synchronizeSorceressFireMastery(int entityId, StateList states) {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
     int ownedLevel = skill != null
         ? Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.FIRE_MASTERY)) : 0;

@@ -54,8 +54,8 @@ public final class SorceressSkills {
    * @return 法力恢复加成百分比
    */
   public static int calculateWarmthManaRegen(int skillLevel) {
-    // 每级 +30% 法力恢复
-    return 30 * skillLevel;
+    if (skillLevel <= 0) return 0;
+    return 30 + (skillLevel - 1) * 12;
   }
 
   /**
@@ -269,6 +269,38 @@ public final class SorceressSkills {
     state.setStatContribution(Stat.item_tohit_percent, 0,
         NativeStatResolver.Operation.ADD, attackRating);
     state.runtimeValue = damage[0];
+    state.needsSync = true;
+    return state;
+  }
+
+  /** Warmth's mana-recovery value from the native passive formula. */
+  public static int getWarmthManaRecoveryBonus(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.WARMTH || skillLevel <= 0) return 0;
+    int count = Math.min(skill.passivestat != null ? skill.passivestat.length : 0,
+        skill.passivecalc != null ? skill.passivecalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.passivestat[i];
+      if (stat != null && Stat.index(stat) == Stat.manarecoverybonus) {
+        return Math.max(0, SkillFormula.evaluate(
+            skill.passivecalc[i], skill, Math.max(1, skillLevel)));
+      }
+    }
+    return 0;
+  }
+
+  /** Warmth's permanent passive state/stat list. */
+  public static UnitState applyWarmthState(
+      StateList states, Skills.Entry skill, int skillLevel, int sourceEntityId) {
+    if (states == null || skill == null || skill.Id != SkillId.WARMTH
+        || !skill.passive || skillLevel <= 0) return null;
+    int level = Math.max(1, skillLevel);
+    int value = getWarmthManaRecoveryBonus(skill, level);
+    states.removeState(StateId.WARMTH);
+    UnitState state = states.addStateLayer(
+        StateId.WARMTH, 0, level, sourceEntityId, skill.Id);
+    if (state == null) return null;
+    state.setStatContribution(Stat.manarecoverybonus, 0,
+        NativeStatResolver.Operation.ADD, value);
     state.needsSync = true;
     return state;
   }

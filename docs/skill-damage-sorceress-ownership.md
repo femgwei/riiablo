@@ -1,6 +1,6 @@
 # Sorceress 技能伤害所有者审计
 
-更新时间：2026-10-08
+更新时间：2026-10-09
 审计基线：Diablo II 1.10f  
 范围：DMG-03B 的 Sorceress 子项，技能 ID 36–65
 
@@ -21,7 +21,7 @@
 ## 已确认的 riiablo 缺口
 
 - Energy Shield：存在 `DefenseCalculator.applyEnergyShield`，但没有找到 SrvDo023 把技能状态安装到角色的路径。
-- Lightning Mastery：导弹伤害解析器会读取 `passive_ltng_mastery`，但 `StateUpdater.synchronizeSorceressPassives` 只同步 Fire Mastery。
+- Lightning Mastery：导弹伤害解析器会读取 `passive_ltng_mastery`，但 `StateUpdater.synchronizeSorceressPassives` 目前只同步 Warmth 和 Fire Mastery。
 - Cold Mastery：伤害结算会读取 `passive_cold_pierce`，现有测试也能人工注入该值，但没有从角色技能等级同步被动状态。
 
 这些缺口不在本子项中直接修复。它们会进入 DMG-04/DMG-05 前的实现修复队列，否则无法用生产路径生成可信的 `riiablo_actual_*`。
@@ -56,6 +56,12 @@ Chilling Armor 的 DMG-04 等级 1–20 基础范围已经批准：等级 1 为 
 `39–50`，cold 长度为 100–400 帧。`EventFunc01` 只响应带 `ReturnFire` 标志的入射导弹，
 返回弹继承技能 60 和护甲等级，并从 Skills.txt 获取伤害；返回弹本身不带 `ReturnFire`。
 原版导弹随机不包含最大 getter 端点，riiablo 的通用导弹结算已同步修正。
+
+Warmth 的 DMG-04 等级 1–20 已按明确 N/A 批准。它不创建导弹或战斗伤害包；
+1.10f `PassiveCalc=ln12`、`Param1=30`、`Param2=12`，在永久 `warmth` 状态上写入
+`manarecoverybonus=30%..258%`。D2MOO `EVENTS_ManaRegen` 将该百分比与基础恢复相乘，
+不是对目标生命或法力造成伤害。riiablo 现已按表公式安装状态并由
+`ManaRecoverySystem` 消费；伤害 expected/actual/delta 字段保持空白。
 
 ## 可复现验证
 

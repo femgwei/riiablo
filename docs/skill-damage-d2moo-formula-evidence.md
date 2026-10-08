@@ -1153,3 +1153,23 @@ D2MOO `MISSMODE_SrvHit20_LightningFury`（`MissMode.cpp:3056`）在根标枪命�
 筛选和数量创建子弹。`LightningFuryGoldenDamageTest` 锁定全部 20 级根/子闪电快照、
 零协同、15 格范围及 2–21 枚预算。武器值、随机样本、合格目标数、碰撞与施法总量留给
 DMG-06/07；抗性和最终结算留给 DMG-08。
+
+## DMG-04 第五十个逐级实例：Warmth
+
+Warmth 不拥有输出伤害包。1.10f `Skills.txt#37` 使用 `SrvStFunc=0`、
+`SrvDoFunc=0`、`SrcDam=0`，所有物理与元素伤害字段均为 0，也没有 server
+missile。它是永久被动：`PassiveState=warmth`、`PassiveStat=manarecoverybonus`、
+`PassiveCalc=ln12`，`Param1=30`、`Param2=12`，因而等级 1–20 分别产生
+`30, 42, …, 258%` 的法力恢复加成。
+
+D2MOO `SKILLS_RefreshSkill` 评估 `PassiveCalc` 并把结果写入 Warmth 状态的
+`STAT_MANARECOVERYBONUS`；`SKILLS_RefreshPassiveSkills`（`D2Skills.cpp:603`）在被动技能刷新时
+重用该路径。`EVENTS_ManaRegen`（`PlrModes.cpp:1190`）先按角色 `ManaRegen` 得到每帧
+基础恢复，再乘 `(manarecoverybonus + 100) / 100`，最后叠加平面
+`manarecovery`。该路径只改变资源恢复，不生成 combat record。
+
+riiablo 的 `getWarmthManaRecoveryBonus`、`applyWarmthState`与
+`StateUpdater.synchronizeSorceressPassives` 现按同一表公式刷新永久状态，
+`ManaRecoverySystem` 消费聚合后的法力恢复加成。`WarmthGoldenDamageTest` 锁定零伤害
+字段、全部 20 级曲线、状态贡献和每帧恢复消费。矩阵 expected/actual/delta
+保持空白，明确表示伤害 N/A，不伪造 `0–0` 伤害。

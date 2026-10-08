@@ -63,6 +63,11 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
       assertNotNull(mastery);
       assertEquals(30,
           mastery.getStatContributionValue(Stat.passive_fire_mastery));
+      UnitState warmth = states(world, caster).getState(StateId.WARMTH);
+      assertNotNull(warmth);
+      assertEquals(30,
+          warmth.getStatContributionValue(Stat.manarecoverybonus));
+      assertEquals(30, states(world, caster).getTotalManaRecoveryModifier());
 
       dispatch(world, caster, ally, SkillId.ENCHANT);
       UnitState alliedEnchant = states(world, ally).getState(StateId.ENCHANT);
