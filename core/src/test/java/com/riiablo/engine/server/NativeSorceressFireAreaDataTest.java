@@ -75,6 +75,7 @@ class NativeSorceressFireAreaDataTest extends RiiabloTest {
     assertEquals(3, fire.pSrvDmgFunc);
     assertEquals(90, fire.Range);
     assertEquals(41, fire.DamageRate);
+    assertEquals(19, fire.dParam[0]);
     assertTrue(fire.Collision);
     assertFalse(fire.CollideKill);
   }

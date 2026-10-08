@@ -99,6 +99,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `StaticFieldGoldenDamageTest`（DMG-04 第十二批：技能 42，等级 1–20）
 - `TelekinesisGoldenDamageTest`（DMG-04 第十三批：技能 43，等级 1–20）
 - `BlazeGoldenDamageTest`（DMG-04 第十四批：技能 46，等级 1–20）
+- `FireWallGoldenDamageTest`（DMG-04 第十五批：技能 51，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -320,3 +321,29 @@ riiablo `StateUpdater.processBlazeTrail` 已按实际移动生成 `tickInterval=
 `BlazeGoldenDamageTest` 比较 20 级独立常量与生产快照；专项数据和 ECS 测试同时锁定
 `DamageRate=0`、逐帧碰撞和首帧实际扣血。多个 trail 重叠、导弹生命周期、整段状态
 总伤害归入 DMG-07，抗性、吸收和 PvP 归入 DMG-08。
+
+## DMG-04 第十五个逐级实例：Fire Wall
+
+Fire Wall 的黄金单位是“单个 `firewall` 段对单个目标在单个游戏帧内的 8.8 定点火焰
+伤害率”。1.10f `Skills.txt` 为 `HitShift=4`、`EMin=15`、`EMax=20`，最小值和最大值
+五段增量均为 `9/14/21/21/21`。基础场景把所有协同和 Fire Mastery 固定为 0。等级 1
+定点范围为 `240–320`，即 0.9375–1.25 生命/帧；等级 20 为 `4384–4464`，即
+17.125–17.4375 生命/帧。矩阵保存未截断的 8.8 定点值。
+
+D2MOO `SKILLS_SrvDo024_FireWall` 在非城镇目标点创建两条相反方向的 `firewallmaker`，
+并创建一个中心 `firewall` 段。`MISSMODE_SrvDo06_MoltenBoulder_FireWallMaker` 沿 maker
+移动路径创建 `SubMissile1`，把 maker 的技能 ID 和技能等级原样写入子段。
+`MISSILE_CalculateDamageData` 因此继续从 Fire Wall 的 Skills.txt 曲线取得伤害并应用
+Fire Mastery，而不是从 maker 或子段的 Missiles.txt 伤害列替代技能曲线。
+
+中心段和子段均由 `MISSMODE_SrvDo05_FireWall_ImmolationFire_MeteorFire` 每个游戏帧执行
+碰撞。Fire Wall 的 `DamageRate=41` 通过 `STAT_DAMAGE_FRAMERATE` 进入伤害包，最终只把
+平面 DR/MDR 按 `41/1024` 缩放；它不是 41 帧攻击间隔。`SrvDmg03` 的 `dParam1/128`
+仍只控制受击反应概率。
+
+riiablo `ServerSkillSystem.spawnFireWall` 已建立两条 maker 和中心段，
+`MissileCollisionSystem.processFireWallMaker` 创建继承技能 51/等级的子段；所有实际火段
+均保存 `tickInterval=1`、逐级 8.8 火焰率与 `DamageRate=41`，并在第一个模拟帧即可扣血。
+`FireWallGoldenDamageTest` 比较 20 级独立常量与生产快照。多段重叠、墙体长度、生命周期
+和整次施法总伤害归入 DMG-07，协同/Fire Mastery 归入 DMG-05，抗性、吸收和 PvP
+归入 DMG-08。

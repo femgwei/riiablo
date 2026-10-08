@@ -121,17 +121,31 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       ArrayList<Vector2> makerDirections = factory.directions("firewallmaker");
       assertEquals(2, makerDirections.size());
       assertEquals(-1f, makerDirections.get(0).dot(makerDirections.get(1)), 0.0001f);
+      for (Missile missile : factory.missiles) {
+        if (missile.missile != null
+            && "firewallmaker".equalsIgnoreCase(missile.missile.Missile)) {
+          assertEquals(skill.Id, missile.skillId);
+          assertEquals(1, missile.damageLevel);
+        }
+      }
 
+      float before = life(world, target);
       world.setDelta(1f / 25f);
       world.process();
       assertEquals(3, factory.count("firewall"),
           "each maker emits one child after its first movement step");
-      assertTrue(life(world, target) < 100f,
-          "the centre and child segments must use authoritative fractional fire damage");
+      float applied = before - life(world, target);
+      assertTrue(applied >= 240f / 256f,
+          "the first simulation frame must apply at least one 240..319 fixed roll");
       for (Missile missile : factory.missiles) {
         if (missile.missile != null && "firewall".equalsIgnoreCase(missile.missile.Missile)) {
           assertTrue(missile.persistent);
           assertTrue(missile.fixedElementalRate);
+          assertEquals(skill.Id, missile.skillId);
+          assertEquals(1, missile.damageLevel);
+          assertEquals(1, missile.tickInterval);
+          assertEquals(240, missile.elementalMinRateFixed);
+          assertEquals(320, missile.elementalMaxRateFixed);
           assertEquals(41, missile.elementalDamageRate);
         }
       }
