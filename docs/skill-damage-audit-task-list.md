@@ -4,7 +4,7 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`abe94561`
+最近完成技能提交：`2216933ced28bfaae67e48f9f10ecd471630b290`
 当前加权完成度：**31.8%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
@@ -127,6 +127,8 @@
 
 ## 矩阵文件
 
+- `skill-damage-audit-handoff-2026-10-08.md`：新会话接手入口，记录当前 Git 基线、下一项
+  Fire Arrow、测试命令、XLSX 生成注意事项和已知既有失败。
 - `skill-damage-golden-matrix.tsv`：版本控制友好的机器可读真源，共 60 列、4,200 行数据。
 - `skill-damage-golden-matrix.xlsx`：浏览、筛选和交接用工作簿；包含 Summary、Task List、
   Golden Matrix 和 Field Dictionary。
