@@ -1881,7 +1881,9 @@ public class CombatSystem {
     if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;
     // 随机伤害值
     int minDamage = Math.max(0, Math.min(attacker.minDamage, attacker.maxDamage));
-    int damage = MathUtils.random(minDamage, attacker.maxDamage);
+    int damage = attacker.isMissile
+        ? rollNativeMissileDamage(minDamage, attacker.maxDamage)
+        : MathUtils.random(minDamage, attacker.maxDamage);
 
     // 力量加成（仅近战）
     if (!attacker.isMissile) {
@@ -1916,7 +1918,20 @@ public class CombatSystem {
       return 0;
     }
 
-    return MathUtils.random(minDmg, maxDmg);
+    return attacker.isMissile
+        ? rollNativeMissileDamage(minDmg, maxDmg)
+        : MathUtils.random(minDmg, maxDmg);
+  }
+
+  /**
+   * D2Game {@code MISSMODE_RollDamageValue} passes {@code max - min} to
+   * {@code ITEMS_RollLimitedRandomNumber}; the canonical getter maximum is
+   * therefore excluded from missile damage rolls.
+   */
+  public static int rollNativeMissileDamage(int minimum, int maximum) {
+    int min = Math.max(0, minimum);
+    int max = Math.max(min, maximum);
+    return max > min ? MathUtils.random(min, max - 1) : min;
   }
 
   /**

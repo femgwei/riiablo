@@ -13,7 +13,7 @@ const taskRows = [
   ["DMG-02", "210 技能清册和路径提示", 0.10, 1, null, "COMPLETE", "7×30×20=4,200 行；源字段自动导出", ""],
   ["DMG-03A", "D2MOO 通用伤害公式与取整", 0.03, 1, null, "COMPLETE", "五段曲线、HitShift、协同及长度顺序有源码证据和边界测试", ""],
   ["DMG-03B", "逐技能 Skills/Missiles/D2MOO 语义对齐", 0.12, 1, null, "COMPLETE", "逐技能确认伤害所有者、调用参数和特殊路径", ""],
-  ["DMG-04", "1–20 级基础黄金值", 0.20, 340 / 4200, null, "IN_PROGRESS", "4,200 行 expected_* 全部得到结论", "Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor 共 340/4,200 行已批准；下一步审核 Chilling Armor"],
+  ["DMG-04", "1–20 级基础黄金值", 0.20, 360 / 4200, null, "IN_PROGRESS", "4,200 行 expected_* 全部得到结论", "Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor 共 360/4,200 行已批准；下一步审核 Blizzard"],
   ["DMG-05", "全部硬点协同组合", 0.15, 0, null, "NOT_STARTED", "协同读取和组合用例完整", "等待 DMG-04"],
   ["DMG-06", "武器、SrcDam、ToHit、多段", 0.10, 0, null, "NOT_STARTED", "武器包和多次命中语义完整", "在基础曲线后补充武器和多段场景"],
   ["DMG-07", "毒素、周期、区域、父子导弹、召唤", 0.10, 0, null, "NOT_STARTED", "rate/duration/total 和继承链完整", "在基础曲线后补充周期和召唤场景"],
@@ -96,7 +96,7 @@ summary.getRange("B10").formulas = [[`=COUNTIF('Golden Matrix'!J2:J${rows.length
 summary.getRange("B6").format.numberFormat = "0.0%";
 summary.getRange("A12:F16").values = [
   ["关键限制", null, null, null, null, null],
-  ["当前 31.6% 包含口径、源清册、通用公式证据、七职业 210/210 项所有者语义对齐，以及 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor 共 340 个逐级黄金行；不代表已有 31.6% 技能伤害正确。", null, null, null, null, null],
+  ["当前 31.7% 包含口径、源清册、通用公式证据、七职业 210/210 项所有者语义对齐，以及 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor 共 360 个逐级黄金行；不代表已有 31.7% 技能伤害正确。", null, null, null, null, null],
   ["source_curve_* 是未应用 HitShift、导弹归属、协同、武器包和最终结算的源表曲线。", null, null, null, null, null],
   ["expected_* 与 riiablo_actual_* 在获得独立证据前必须保持空白。", null, null, null, null, null],
   ["Amazon 只做证据核对和回归保护，未经差异证据不覆盖用户已验证实现。", null, null, null, null, null],
@@ -239,6 +239,8 @@ for (const range of ["A742:J742", "AT742:BB742", "BF742:BH742",
   "A721:J721", "AT721:BB721", "BF721:BH721",
   "A882:J882", "AT882:BB882", "BF882:BH882",
   "A901:J901", "AT901:BB901", "BF901:BH901",
+  "A1082:J1082", "AT1082:BB1082", "BF1082:BH1082",
+  "A1101:J1101", "AT1101:BB1101", "BF1101:BH1101",
   "A902:J902", "AT902:BB902", "BF902:BH902",
   "A921:J921", "AT921:BB921", "BF921:BH921"]) {
   const savedCheck = await savedWorkbook.inspect({

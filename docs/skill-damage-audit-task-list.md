@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`3ebfd608`
-当前加权完成度：**31.6%**
+代码基线：`962de41f`
+当前加权完成度：**31.7%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 340 行 `GOLDEN_APPROVED`，其余 3,860 行仍为
+- 4,200 行中已有 360 行 `GOLDEN_APPROVED`，其余 3,840 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.6% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 340 个逐级黄金行；不表示技能伤害正确率为 31.6%。
+- 当前 31.7% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 360 个逐级黄金行；不表示技能伤害正确率为 31.7%。
 
 ## 加权任务
 
@@ -88,8 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall、Inferno、Shiver Armor 等级 1–20 共 340/4,200 行（本项
-    8.0952%，加权贡献 1.6190 个百分点）；
+    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor 等级 1–20 共 360/4,200 行
+    （本项 8.5714%，加权贡献 1.7143 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.6190%（展示时四舍五入为 31.6%）。
+当前总加权完成度为 31.7143%（展示时四舍五入为 31.7%）。
 
 ## 黄金值准入规则
 
@@ -253,6 +253,16 @@
   审计发现 riiablo Shiver Armor 原实现使用了包含最大值的随机区间，并把 `dwColdLen`
   误施加为冻结；现已改为原版上界排除和普通减速状态。协同组合归入 DMG-05，抗性、
   Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
+- Chilling Armor（技能 60）等级 1–20 已按“合法 `HITBYMISSILE` 事件触发的一枚
+  `chillingarmorbolt` 返回弹命中”批准。无装备、Frozen Armor/Shiver Armor 协同为 0；
+  等级 1 的规范 getter 范围为 `4–6` 生命，等级 20 为 `39–50` 生命，20 个等级的
+  `delta_min/max` 均为 0。对应 cold 长度从 100 帧增长到 400 帧。
+- D2MOO `EventFunc01` 只在入射导弹具有 `ReturnFire` 标志时创建回击弹，并把护甲技能 ID
+  和等级写入导弹；`MISSILE_CalculateDamageData` 因此从 Skills.txt#60 而非导弹自身曲线
+  取得冷伤害。`chillingarmorbolt` 本身不含 `ReturnFire`，不会递归触发。审计还发现
+  riiablo 通用导弹随机包含最大端点，现已把导弹物理和元素随机同步为 D2MOO
+  `MISSMODE_RollDamageValue` 的排除上界；近战随机语义保持不变。协同组合归入 DMG-05，
+  抗性、Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -301,6 +311,8 @@
   `SorceressFireAreaIntegrationTest#infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile`、
   `ShiverArmorGoldenDamageTest#levelOneToTwentyMatchesD2mooDirectEventFormula`、
   `ShiverArmorGoldenDamageTest#nativeLimitedRandomRollTreatsGetterMaximumAsExclusive`、
+  `ChillingArmorGoldenDamageTest#levelOneToTwentyMatchesD2mooReturnMissileFormula`、
+  `ChillingArmorGoldenDamageTest#nativeMissileRollTreatsGetterMaximumAsExclusive`、
   `NativeSorceressDefenseDataTest#shiverAndChillingArmorRetainDistinctNativeReactions`、
   `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`。
 
@@ -324,6 +336,7 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Chilling Armor（技能 60）的等级 1–20 返回冰弹伤害，核对
-`SrvDo018/EventFunc01` 的命中事件、`chillingarmorbolt` 技能 ID/等级继承、Skills.txt
-冷伤害与冷长度及 riiablo 当前生产路径。
+继续 DMG-04，下一项优先审核 Blizzard（技能 59）的等级 1–20 单枚落冰伤害，核对
+`SrvDo028` 中心控制器、`MISSMODE_SrvDo10_BlizzardCenter` 子弹生成、技能 ID/等级继承、
+Skills.txt 冷伤害与 cold 长度及 riiablo 当前生产路径。落冰数量、命中频率和整次施法总量
+保留在 DMG-07。

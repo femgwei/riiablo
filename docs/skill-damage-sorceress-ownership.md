@@ -52,6 +52,11 @@ Shiver Armor 的 DMG-04 等级 1–20 基础范围已经批准：等级 1 为 `6
 端点，且 `EventFunc03` 写入普通 cold 长度而不是 freeze 长度；riiablo 的反击随机和
 状态路径均已同步修正。
 
+Chilling Armor 的 DMG-04 等级 1–20 基础范围已经批准：等级 1 为 `4–6`，等级 20 为
+`39–50`，cold 长度为 100–400 帧。`EventFunc01` 只响应带 `ReturnFire` 标志的入射导弹，
+返回弹继承技能 60 和护甲等级，并从 Skills.txt 获取伤害；返回弹本身不带 `ReturnFire`。
+原版导弹随机不包含最大 getter 端点，riiablo 的通用导弹结算已同步修正。
+
 ## 可复现验证
 
 ```powershell

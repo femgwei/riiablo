@@ -136,6 +136,12 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
       assertEquals(sorceress, bolt.ownerId);
       assertEquals(attacker, bolt.targetId);
       assertTrue(bolt.damageSnapshot);
+      assertEquals(SkillId.CHILLING_ARMOR, bolt.skillId);
+      assertEquals(1, bolt.damageLevel);
+      assertEquals(4, bolt.damage.get(Stat.coldmindam).asInt(),
+          "the fixed-point synergy bonus is truncated after multiplication");
+      assertEquals(6, bolt.damage.get(Stat.coldmaxdam).asInt());
+      assertEquals(100, bolt.damage.get(Stat.coldlength).asInt());
     } finally {
       world.dispose();
     }

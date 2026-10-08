@@ -396,3 +396,28 @@ riiablo 的 `SorceressSkills.getArmorColdDamage/getArmorColdLength` 与 20 级�
 `dwColdLen` 误施加为冻结状态。现在它使用与 D2MOO 相同的排除上界和普通 cold 减速，并用
 聚焦随机边界测试及实际近战事件集成测试保护。Frozen Armor/Chilling Armor 协同归入
 DMG-05；抗性、Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
+
+## DMG-04 第十八个逐级实例：Chilling Armor
+
+Chilling Armor 的基础黄金单位是“`UNITEVENT_HITBYMISSILE` 触发的一枚
+`chillingarmorbolt` 返回弹对入射攻击者的一次冷伤害命中”。1.10f `Skills.txt` 为
+`HitShift=7`、`EMin=8`、`EMax=12`，最小值五段增量为 `2/4/6/8/10`，最大值为
+`3/5/7/9/11`。基础场景把 Frozen Armor 与 Shiver Armor 硬点协同固定为 0。
+
+D2MOO `SKILLS_SrvDo018_DefensiveBuff` 把技能 ID/等级保存在状态表并注册 `EventFunc01`。
+回调先验证攻击者、护甲持有者与敌对关系，再检查入射导弹的 `ReturnFire` 标志；只有满足
+条件时才创建 `SrvMissileA`，并把护甲技能 ID/等级传给导弹。返回弹自身没有
+`ReturnFire`，所以不会递归触发。`MISSILE_CalculateDamageData` 识别技能所属导弹后，从
+Skills.txt#60 调用 `SKILLS_GetMin/MaxElemDamage` 和 `SKILLS_GetElementalLength`，不使用
+Missiles.txt 的基础元素曲线。
+
+矩阵保存规范 getter 范围：等级 1 为 `4–6` 生命，等级 20 为 `39–50` 生命；cold 长度
+从 100 帧增长到 400 帧。实际命中由 `MISSMODE_RollDamageValue` 以 `max-min` 调用有限
+随机数，所以运行时区间分别是 `[4,6)` 与 `[39,50)`。
+
+riiablo 的 `StateUpdater.launchChillingArmorBolt` 已按 `ReturnFire` 门禁创建以护甲持有者
+为 owner、入射攻击者为 target 的返回弹，并用 `MissileDamageResolver.initializeSkill`
+保留技能 ID、等级、Skills.txt 冷伤害与 cold 长度。审计发现通用导弹结算原先包含最大
+端点；`CombatSystem` 现仅对导弹物理和元素包采用原版排除上界，近战随机保持原语义。
+Frozen Armor/Shiver Armor 协同归入 DMG-05；返回弹最终抗性、Cold Mastery 穿透、吸收
+和 PvP 归入 DMG-08。
