@@ -761,3 +761,40 @@ riiablo `AmazonSkills.getAvoidChance` 和 `applyPassiveState` 使用同一 Skill
 每级状态贡献；现有 `AmazonSkillSpecializationTest.passiveDodgeAvoidEvadeUseNativeAttackContext`
 锁定静止远程攻击上下文。随机样本、盾牌/Weapon Block/Evade 优先级、动画与最终来袭伤害
 结算属于 DMG-08。
+
+## DMG-04 第三十二个逐级实例：Impale
+
+Impale 不拥有脱离武器的固定伤害包。1.10f `Skills.txt#19` 使用 `SrvStFunc=7`、
+`SrvDoFunc=2`、`SrcDam=128`、`HitShift=8`，没有 server missile，物理和元素伤害曲线均为
+0，`EType` 为空。因此 DMG-04 的等级 1–20 行把三组 `expected_*`、
+`riiablo_actual_*` 和 `delta_*` 明确标记为 N/A 并保持空白；武器基础值和最终范围属于
+DMG-06。
+
+原生行声明 `Calc1=ln12`、`Param1=300`、`Param2=25`，等级 1–20 的武器伤害百分比为：
+
+`300,325,350,375,400,425,450,475,500,525,550,575,600,625,650,675,700,725,750,775`。
+
+额外物品损耗使用 `Calc2=par6-dm34`，其中 `Param3=0`、`Param4=30`、`Param6=50`。
+`dm34` 按 `a + 110 * level * (b - a) / (100 * (level + 6))` 进行整数计算，再从 Param6
+减去结果，等级 1–20 的概率为：
+
+`46,42,39,37,35,34,33,32,31,30,29,28,28,27,27,26,26,26,25,25`。
+
+`Calc3=par5`、`Param5=1`，所以非堆叠武器每次触发固定损失 1 点耐久；堆叠武器触发时
+改为扣除 1 个数量。
+
+D2MOO `SKILLS_SrvSt07_Impale`（`SkillAma.cpp:117–189`）先用 `ToHit=100`、
+`LevToHit=25` 求一次命中。成功后，它把 Calc1 交给
+`SUNITDMG_ApplyDamageBonuses`（`SUnitDmg.cpp:147–230`），读取当前武器、属性与
+`SrcDam` 构造一次物理伤害记录并设置预填充标志，避免通用路径重复填充。相同成功命中
+分支随后求值 Calc2/Calc3：堆叠武器扣数量，非堆叠耐久武器扣 Calc3。记录由
+`SKILLS_SrvDo002_Kick_PowerStrike_MonIceSpear_Impale_Bash_Stun_Concentrate_BearSmite_Vengeance_Berserk_FireClaws`
+（`Skills.cpp:2094–2204`）在关键帧消费；该通用消费者另有普通武器耐久路径。
+
+riiablo `AmazonSkills.getPhysicalDamagePercent` 直接求值 Calc1，`calculateWeaponDamage`
+把结果合入武器包；`Actioneer.prepareImpale` 预计算一次记录，`resolveImpale` 幂等消费，
+`drainImpaleDurability` 按 Calc2/Calc3 选择数量或耐久路径。
+`ImpaleGoldenDamageTest` 用独立常量锁定全部 20 级百分比、资源概率、固定损耗量、原版表
+字段和无固定伤害字段；现有 `AmazonMeleeSkillLifecycleTest` 锁定一次性记录、命中门槛及
+两种资源路径。固定武器数值、SrcDam、实际命中、普通耐久和最终伤害范围属于 DMG-06；
+抗性、格挡、PvP 与生命结算属于 DMG-08。
