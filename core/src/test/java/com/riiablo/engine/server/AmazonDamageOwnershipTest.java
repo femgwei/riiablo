@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Amazon damage-owner audit. */
 class AmazonDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-amazon-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(10, 22, 28, 32);
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(22, 28, 32);
 
   @Test
   void everyAmazonSkillHasOneEvidenceBackedOwnerDecision() throws IOException {
@@ -132,8 +132,8 @@ class AmazonDamageOwnershipTest extends RiiabloTest {
 
     Skills.Entry jab = Riiablo.files.skills.get("Jab");
     assertEquals(0, SkillFormula.evaluate(jab.calc1, jab, 6));
-    assertEquals(48, AmazonSkills.getPhysicalDamagePercent(jab, 6),
-        "known gap: a legitimate zero formula result must not enter the fallback");
+    assertEquals(0, AmazonSkills.getPhysicalDamagePercent(jab, 6),
+        "a legitimate zero formula result must not enter the fallback");
 
     Skills.Entry guidedArrow = Riiablo.files.skills.get("Guided Arrow");
     assertEquals(0, SkillFormula.evaluate(guidedArrow.calc1, guidedArrow, 1));

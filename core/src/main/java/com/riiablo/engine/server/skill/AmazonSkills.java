@@ -94,8 +94,9 @@ public final class AmazonSkills {
   public static int getPhysicalDamagePercent(Skills.Entry skill, int skillLevel) {
     if (skill == null) return 0;
     String formula = skill.Id == SkillId.FEND ? skill.calc2 : skill.calc1;
-    int value = SkillFormula.evaluate(formula, skill, Math.max(1, skillLevel));
-    if (value != 0) return value;
+    if (formula != null && !formula.trim().isEmpty()) {
+      return SkillFormula.evaluate(formula, skill, Math.max(1, skillLevel));
+    }
     switch (skill.Id) {
       case SkillId.JAB: return calculateJabDamageBonus(skillLevel);
       case SkillId.IMPALE: return calculateImpaleDamageBonus(skillLevel);

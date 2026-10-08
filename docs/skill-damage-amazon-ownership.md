@@ -11,12 +11,12 @@
 ## 结论
 
 - 30/30 项均已确认原版所有者和 D2MOO 路径。
-- 26 项已有生产实现和聚焦测试证据。
-- 4 项仍存在明确的 riiablo 差异：Jab、Guided Arrow、Dopplezon、Valkyrie。
+- 27 项已有生产实现和聚焦测试证据。
+- 3 项仍存在明确的 riiablo 差异：Guided Arrow、Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
-- Magic Arrow、Fire Arrow、Inner Sight 与 Critical Strike 已完成等级 1–20 基础审计；
-  80/600 个 Amazon
+- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike 与 Jab 已完成等级 1–20 基础审计；
+  100/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -55,13 +55,11 @@ Decoy 虽然不攻击，其生命/防御语义也不能只靠一个 owner-HP 百
 
 ## 已确认的 riiablo 差异
 
-1. **Jab（10）**：原生 `Calc1=ln34` 在等级 6 合法得到 `0%`；当前
-   `getPhysicalDamagePercent` 把零当成“公式缺失”，fallback 成 `+48%`。
-2. **Guided Arrow（22）**：原生 `Calc1=ln34` 在等级 1 为 `0%`；当前
+1. **Guided Arrow（22）**：原生 `Calc1=ln34` 在等级 1 为 `0%`；当前
    `spawnGuidedArrow` 对非正值启用手写 fallback，错误变成 `+5%`。
-3. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
+2. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
    额外 `Calc1` 最大生命、召唤技能/装备、UMod 和 Overlay 初始化。
-4. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
+3. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
    物品等级生成的装备；这些缺失会直接改变女武神攻击伤害。
 
 这些剩余差异继续由完整性测试锁定，不在不相关技能审计中改写。
@@ -98,4 +96,11 @@ Critical Strike（9）等级 1–20 已按“永久被动暴击概率，不拥�
 `passive_critical_strike` 状态属性；`Param1=5`、`Param2=80` 产生 16%–68% 的等级 1–20
 概率曲线。近战伤害路径读取该属性，成功时只把既有物理伤害翻倍；导弹武器包也复制并消费
 该属性。随机边界、与武器专精/Deadly Strike 的优先级、双倍物理包和最终结算留给
-DMG-06/08。下一项优先审核 Jab（10）。
+DMG-06/08。
+
+Jab（10）等级 1–20 已按“技能本身不拥有固定伤害包，三个 SQ keyframe 各创建一份独立
+武器记录”批准；三组伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持
+空白。1.10f `Calc1=ln34` 产生 `-15%`–`42%` 的武器物理加成，等级 6 的 `0%` 是合法
+公式结果。审计修复了生产路径把零误判为公式缺失并 fallback 到 `+48%` 的差异：现在只有
+公式字段为空时才使用兼容 fallback。固定武器包、每段实际值和三段施法总量留给 DMG-06。
+下一项优先审核 Cold Arrow（11）。

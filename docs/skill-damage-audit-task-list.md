@@ -1,11 +1,11 @@
 # 七职业逐等级伤害审计任务清单
 
-更新时间：2026-10-08
+更新时间：2026-10-09
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`47002b8152a693e535886fbd82b3fec18bb87256`
-当前加权完成度：**32.1%**
+最近完成技能提交：`36bab1ef9ad6054411a11a982ae9560a3982347d`
+当前加权完成度：**32.2%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -44,18 +44,18 @@
 - Assassin 审计确认 30 项所有者；Claw Mastery、Psychic Hammer、Quickness、Weapon Block、
   Cloak of Shadows、Fade、Shadow Warrior、Mind Blast、Shadow Master 共 9 个实现缺口；
   Shock Field、Blade Sentinel、Charged Bolt Sentry、Blade Fury 另缺最终伤害消费的聚焦测试。
-- Amazon 审计确认 30 项所有者；Jab、Guided Arrow、Dopplezon、Valkyrie 仍有 4 个明确
-  实现差异。前 2 项是合法零值 fallback 问题；后 2 项缺原版召唤被动属性、技能、装备等
-  初始化链。Inner Sight 的分段公式差异已在本轮修复。
+- Amazon 审计确认 30 项所有者；Guided Arrow、Dopplezon、Valkyrie 仍有 3 个明确实现
+  差异。Guided Arrow 是合法零值 fallback 问题；后 2 项缺原版召唤被动属性、技能、装备等
+  初始化链。Inner Sight 的分段公式和 Jab 的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
-  `IMPLEMENTED_TESTED` 118 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 36 项。新增 Critical Strike 测试引用已纳入
-  自动解析门禁。
-- 4,200 行中已有 440 行 `GOLDEN_APPROVED`，其余 3,760 行仍为
+  `IMPLEMENTED_TESTED` 119 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Jab 测试引用已纳入自动解析
+  门禁。
+- 4,200 行中已有 460 行 `GOLDEN_APPROVED`，其余 3,740 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 32.1% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 440 个逐级黄金行；不表示技能伤害正确率为 32.1%。
+- 当前 32.2% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 460 个逐级黄金行；不表示技能伤害正确率为 32.2%。
 
 ## 加权任务
 
@@ -89,8 +89,8 @@
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
-    Inner Sight、Critical Strike 等级 1–20 共 440/4,200 行（本项 10.4762%，加权贡献
-    2.0952 个百分点）；
+    Inner Sight、Critical Strike、Jab 等级 1–20 共 460/4,200 行（本项 10.9524%，加权贡献
+    2.1905 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -112,7 +112,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 32.0952%（展示时为 32.1%）。
+当前总加权完成度为 32.1905%（展示时为 32.2%）。
 
 ## 黄金值准入规则
 
@@ -288,6 +288,11 @@
   D2MOO 被动刷新计算 `PassiveCalc=dm12`，把 16%–68% 写入永久
   `passive_critical_strike` 状态；近战和导弹消费者只在已有物理伤害记录上读取该概率。
   随机边界、物理翻倍、与武器专精/Deadly Strike 的优先级及最终结算留给 DMG-06/08。
+- Jab（技能 10）等级 1–20 已按“技能本身不拥有固定伤害包，三个 SQ keyframe 各创建
+  一份独立武器记录”批准；三组伤害 expected/actual/delta 字段全部保持空白，并在
+  `candidate_unit` 明确标记 N/A。原生 `Calc1=ln34` 的武器物理加成为 `-15%`–`42%`，
+  等级 6 的 `0%` 是合法公式结果。生产现仅在公式字段缺失时使用兼容 fallback，不再把
+  合法零值替换为 `+48%`。固定武器包、每段实际值和三段施法总量留给 DMG-06。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -344,6 +349,11 @@
   `FireArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooFireCurveWithoutWeaponOrSynergy`、
   `InnerSightGoldenDamageTest#levelOneToTwentyAreNondamagingNativeDefenseDebuffs`、
   `CriticalStrikeGoldenDamageTest#levelOneToTwentyAreNondamagingNativeCriticalChances`、
+  `JabGoldenDamageTest#levelOneToTwentyUseNativeWeaponPercentWithoutOwningFixedDamage`、
+  `AmazonMeleeSkillLifecycleTest#jabConsumesExactlyThreeAttackKeyframesAndStopsAfterTheThird`、
+  `AmazonMeleeSkillLifecycleTest#jabCompletesRemainingThrustsAfterTheFirstStrikeKillsTarget`、
+  `NativeJabSequenceTest#oneHandThrustUsesTheNativeEighteenPointSequence`、
+  `NativeJabSequenceTest#twoHandThrustUsesTheNativeTwentyOnePointSequence`、
   `NativeBarbarianPassiveDataTest#selectedMasteryChangesAuthoritativeDamageHitChanceAndCriticalRoll`。
 
 ## 可复现命令
@@ -366,6 +376,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Jab（技能 10）等级 1–20。需拆分三个 SQ keyframe 的
-逐次武器记录，核对 `SrcDam=128`、`Calc1=ln34`、合法 0% 物理加成及当前 riiablo
-非正值 fallback 差异；武器基础包和三段整次施法总量属于 DMG-06。
+继续 DMG-04，下一项优先审核 Cold Arrow（技能 11）等级 1–20。需区分技能冷伤曲线、
+`SrcDam=128` 武器包与 `SrvDmg01` 的物理转冰冷比例，并记录原生 chill length；固定武器包
+和分通道定点精度属于 DMG-06，持续时间与最终结算分别属于 DMG-07/08。

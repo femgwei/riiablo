@@ -19,10 +19,10 @@ D2MOO 证据位置和测试引用的完整性，不把源表曲线升级为逐�
 
 ## 统一状态分类
 
-- `IMPLEMENTED_TESTED`：118 项。生产路径存在，并已有与所有者语义对应的聚焦测试。
+- `IMPLEMENTED_TESTED`：119 项。生产路径存在，并已有与所有者语义对应的聚焦测试。
 - `IMPLEMENTED_TEST_GAP`：27 项。生产路径存在，但缺最终伤害消费或完整端到端断言。
 - `OUT_OF_SCOPE_NO_DAMAGE`：29 项。技能不拥有输出伤害，清单明确记录 N/A 原因。
-- `RIIABLO_GAP`：36 项。已有 D2MOO/1.10f 证据支持的实现或语义差异。
+- `RIIABLO_GAP`：35 项。已有 D2MOO/1.10f 证据支持的实现或语义差异。
 
 四类合计 210 项。各职业测试继续锁定具体缺口 ID；新增
 `SkillDamageOwnershipAuditTest` 负责跨职业表头、ID、状态总数、证据非空、无伤害语义和测试引用

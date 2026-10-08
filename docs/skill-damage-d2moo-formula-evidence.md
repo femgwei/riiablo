@@ -517,3 +517,29 @@ riiablo `AmazonSkills.getCriticalStrikeChance` 和 `applyPassiveState` 已从同
 公式建立永久状态，`StateUpdater` 负责刷新，`CombatSystem` 与导弹快照路径消费
 `passive_critical_strike`。`CriticalStrikeGoldenDamageTest` 用独立常量锁定全部 20 级、
 原版表字段、无伤害列和每级状态贡献；现有战斗测试另锁定成功暴击只翻倍物理伤害。
+
+## DMG-04 第二十三个逐级实例：Jab
+
+Jab 的技能行不拥有固定伤害包。1.10f `Skills.txt#10` 使用 `SrvStFunc=5`、
+`SrvDoFunc=7`、`SrcDam=128`、`HitShift=8`、`ToHit=10`、`LevToHit=9` 和
+`Calc1=ln34`；`Param3=-15`、`Param4=3`。该行没有 server missile，物理和元素技能伤害
+字段均为 0，`EType` 为空。因此 DMG-04 的等级 1–20 行把三组
+`expected_*`、`riiablo_actual_*` 和 `delta_*` 明确标记为 N/A 并保持空白；固定武器包、
+每段实际值和三段施法总量属于 DMG-06。
+
+`ln34` 产生等级 1–20 的武器物理加成：
+`-15,-12,-9,-6,-3,0,3,6,9,12,15,18,21,24,27,30,33,36,39,42`。
+等级 6 的 `0%` 是有效公式值，不表示公式缺失。
+
+D2MOO `SKILLS_SrvSt05_Jab`（`SkillAma.cpp:69–76`）只验证目标仍然有效。
+`SKILLS_SrvDo007_Jab`（`SkillAma.cpp:427–472`）在每个 SQ keyframe 独立计算 ToHit 和
+命中判定；成功后直接把 `Calc1` 结果写入本次武器包，再附加技能元素包。`SrcDam=0` 时
+才 fallback 到 128，而 Jab 已显式声明 128。函数随后为这一个 keyframe 分配一份 combat
+record 并执行一次耐久损耗。三次动画关键帧因此拥有三份独立记录，不能把总量预先折叠成
+一个技能伤害值。
+
+riiablo 原 `getPhysicalDamagePercent` 把公式求值为 0 当作“公式缺失”，使等级 6 错误进入
+旧手写 fallback 并得到 `+48%`。生产现按公式字段是否为空决定 fallback，保留负值和合法
+零值。`JabGoldenDamageTest` 用独立常量锁定 20 级曲线及无固定伤害字段；
+`AmazonMeleeSkillLifecycleTest` 与 `NativeJabSequenceTest` 分别锁定三次关键帧消费和原生
+动画序列。

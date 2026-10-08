@@ -13,7 +13,7 @@ const taskRows = [
   ["DMG-02", "210 技能清册和路径提示", 0.10, 1, null, "COMPLETE", "7×30×20=4,200 行；源字段自动导出", ""],
   ["DMG-03A", "D2MOO 通用伤害公式与取整", 0.03, 1, null, "COMPLETE", "五段曲线、HitShift、协同及长度顺序有源码证据和边界测试", ""],
   ["DMG-03B", "逐技能 Skills/Missiles/D2MOO 语义对齐", 0.12, 1, null, "COMPLETE", "逐技能确认伤害所有者、调用参数和特殊路径", ""],
-  ["DMG-04", "1–20 级基础黄金值", 0.20, 440 / 4200, null, "IN_PROGRESS", "4,200 行 expected_* 全部得到结论", "Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、Inner Sight、Critical Strike 共 440/4,200 行已批准；Amazon 优先，下一步审核 Jab"],
+  ["DMG-04", "1–20 级基础黄金值", 0.20, 460 / 4200, null, "IN_PROGRESS", "4,200 行 expected_* 全部得到结论", "Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab 共 460/4,200 行已批准；Amazon 优先，下一步审核 Cold Arrow"],
   ["DMG-05", "全部硬点协同组合", 0.15, 0, null, "NOT_STARTED", "协同读取和组合用例完整", "等待 DMG-04"],
   ["DMG-06", "武器、SrcDam、ToHit、多段", 0.10, 0, null, "NOT_STARTED", "武器包和多次命中语义完整", "在基础曲线后补充武器和多段场景"],
   ["DMG-07", "毒素、周期、区域、父子导弹、召唤", 0.10, 0, null, "NOT_STARTED", "rate/duration/total 和继承链完整", "在基础曲线后补充周期和召唤场景"],
@@ -96,7 +96,7 @@ summary.getRange("B10").formulas = [[`=COUNTIF('Golden Matrix'!J2:J${rows.length
 summary.getRange("B6").format.numberFormat = "0.0%";
 summary.getRange("A12:F16").values = [
   ["关键限制", null, null, null, null, null],
-  ["当前 32.1% 包含口径、源清册、通用公式证据、七职业 210/210 项所有者语义对齐，以及 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、Inner Sight、Critical Strike 共 440 个逐级黄金行；不代表已有 32.1% 技能伤害正确。", null, null, null, null, null],
+  ["当前 32.2% 包含口径、源清册、通用公式证据、七职业 210/210 项所有者语义对齐，以及 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab 共 460 个逐级黄金行；不代表已有 32.2% 技能伤害正确。", null, null, null, null, null],
   ["source_curve_* 是未应用 HitShift、导弹归属、协同、武器包和最终结算的源表曲线。", null, null, null, null, null],
   ["expected_* 与 riiablo_actual_* 在获得独立证据前必须保持空白。", null, null, null, null, null],
   ["Amazon 只做证据核对和回归保护，未经差异证据不覆盖用户已验证实现。", null, null, null, null, null],
@@ -250,7 +250,9 @@ for (const range of ["A2:J2", "AT2:BB2", "BF2:BH2",
   "A1082:J1082", "AT1082:BB1082", "BF1082:BH1082",
   "A1101:J1101", "AT1101:BB1101", "BF1101:BH1101",
   "A902:J902", "AT902:BB902", "BF902:BH902",
-  "A921:J921", "AT921:BB921", "BF921:BH921"]) {
+  "A921:J921", "AT921:BB921", "BF921:BH921",
+  "A82:J82", "AT82:BB82", "BF82:BH82",
+  "A101:J101", "AT101:BB101", "BF101:BH101"]) {
   const savedCheck = await savedWorkbook.inspect({
     kind: "table",
     sheetId: "Golden Matrix",
