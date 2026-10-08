@@ -47,7 +47,6 @@ public final class WeatherRenderSystem extends BaseSystem {
   private static final int RAIN_GREEN_BIAS = 25;
   private static final int MAX_CATCH_UP_STEPS = 4;
   private static final int RAIN_AMBIENCE_ID = 64;
-  private static final float AREA_WEATHER_FADE_SECONDS = 0.5f;
   private static final long RANDOM_SEED = 0xD2C11E17L;
   private static final long WEATHER_CYCLE_SEED = 0x6FAA7940L;
 
@@ -76,7 +75,6 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
-  private final WeatherTransition weatherTransition = new WeatherTransition();
   private WeatherCycles weatherCycles;
   private ControlMode controlMode = ControlMode.AUTO;
   private Audio.Instance rainAmbience;
@@ -91,8 +89,8 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
     Levels.Entry level = zone == null ? null : zone.level;
     Mode eligibleMode = modeFor(level);
-    Mode targetMode;
-    float targetIntensity;
+    Mode mode;
+    float intensity;
     if (controlMode == ControlMode.AUTO) {
       if (weatherCycles == null) {
         weatherCycles = new WeatherCycles(
@@ -100,19 +98,17 @@ public final class WeatherRenderSystem extends BaseSystem {
       }
       WeatherCycle weatherCycle = weatherCycles.forLevel(level, eligibleMode);
       if (weatherCycle == null) {
-        targetMode = Mode.NONE;
-        targetIntensity = 0f;
+        mode = Mode.NONE;
+        intensity = 0f;
       } else {
         weatherCycle.advance(world.getDelta());
-        targetMode = weatherCycle.visibleMode();
-        targetIntensity = weatherCycle.intensity;
+        mode = weatherCycle.visibleMode();
+        intensity = weatherCycle.intensity;
       }
     } else {
-      targetMode = controlledModeFor(eligibleMode);
-      targetIntensity = targetMode == Mode.NONE ? 0f : 1f;
+      mode = controlledModeFor(eligibleMode);
+      intensity = mode == Mode.NONE ? 0f : 1f;
     }
-    Mode mode = weatherTransition.update(targetMode, targetIntensity, world.getDelta());
-    float intensity = weatherTransition.intensity;
     updateRainAmbience(mode, intensity);
     float width = iso.viewportWidth * iso.zoom;
     float height = iso.viewportHeight * iso.zoom;
@@ -149,66 +145,6 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   static float rainVolume(Mode mode, float intensity) {
     return mode == Mode.RAIN ? MathUtils.clamp(intensity, 0f, 1f) : 0f;
-  }
-
-  /** Smooths precipitation only when the active area changes weather eligibility. */
-  static final class WeatherTransition {
-    Mode mode = Mode.NONE;
-    float intensity;
-    private boolean transitioning;
-
-    Mode update(Mode targetMode, float targetIntensity, float delta) {
-      targetIntensity = MathUtils.clamp(targetIntensity, 0f, 1f);
-      float step = Math.max(0f, delta) / AREA_WEATHER_FADE_SECONDS;
-
-      if (targetMode == Mode.NONE) {
-        if (mode != Mode.NONE) {
-          transitioning = true;
-          intensity = moveToward(intensity, 0f, step);
-          if (intensity <= 0f) {
-            intensity = 0f;
-            mode = Mode.NONE;
-            transitioning = false;
-          }
-        }
-        return mode;
-      }
-
-      if (mode == Mode.NONE) {
-        // A weather cycle may still be in its dry phase. Do not create a hidden
-        // particle field until there is visible precipitation to fade in.
-        if (targetIntensity <= 0f) return mode;
-        mode = targetMode;
-        transitioning = true;
-      } else if (mode != targetMode) {
-        // Rain and snow use different particle fields. Fade the old field out
-        // before switching modes, then let the next update fade the new field in.
-        transitioning = true;
-        intensity = moveToward(intensity, 0f, step);
-        if (intensity <= 0f) {
-          intensity = 0f;
-          mode = targetMode;
-        }
-        return mode;
-      }
-
-      if (transitioning) {
-        intensity = moveToward(intensity, targetIntensity, step);
-        if (MathUtils.isEqual(intensity, targetIntensity, 0.0001f)) {
-          intensity = targetIntensity;
-          transitioning = false;
-        }
-      } else {
-        intensity = targetIntensity;
-      }
-      return mode;
-    }
-
-    private static float moveToward(float current, float target, float step) {
-      if (current < target) return Math.min(target, current + step);
-      if (current > target) return Math.max(target, current - step);
-      return target;
-    }
   }
 
   private void draw(float width, float height, float intensity) {

@@ -53,41 +53,6 @@ class WeatherRenderSystemTest {
   }
 
   @Test
-  void areaWeatherTransitionFadesRainOutAndBackIn() {
-    WeatherRenderSystem.WeatherTransition transition =
-        new WeatherRenderSystem.WeatherTransition();
-
-    assertEquals(WeatherRenderSystem.Mode.RAIN,
-        transition.update(WeatherRenderSystem.Mode.RAIN, 1f, 0.5f));
-    assertEquals(1f, transition.intensity, 0.0001f);
-
-    assertEquals(WeatherRenderSystem.Mode.RAIN,
-        transition.update(WeatherRenderSystem.Mode.NONE, 0f, 0.25f));
-    assertEquals(0.5f, transition.intensity, 0.0001f);
-
-    assertEquals(WeatherRenderSystem.Mode.NONE,
-        transition.update(WeatherRenderSystem.Mode.NONE, 0f, 0.25f));
-    assertEquals(0f, transition.intensity, 0.0001f);
-
-    assertEquals(WeatherRenderSystem.Mode.RAIN,
-        transition.update(WeatherRenderSystem.Mode.RAIN, 1f, 0.25f));
-    assertEquals(0.5f, transition.intensity, 0.0001f);
-    assertEquals(WeatherRenderSystem.Mode.RAIN,
-        transition.update(WeatherRenderSystem.Mode.RAIN, 1f, 0.25f));
-    assertEquals(1f, transition.intensity, 0.0001f);
-  }
-
-  @Test
-  void dryWeatherCycleDoesNotCreateAHiddenParticleField() {
-    WeatherRenderSystem.WeatherTransition transition =
-        new WeatherRenderSystem.WeatherTransition();
-
-    assertEquals(WeatherRenderSystem.Mode.NONE,
-        transition.update(WeatherRenderSystem.Mode.RAIN, 0f, 0.25f));
-    assertEquals(0f, transition.intensity, 0.0001f);
-  }
-
-  @Test
   void initializationIsDeterministicForTheSameSeed() {
     WeatherRenderSystem.ParticleField first = field(1234L, WeatherRenderSystem.Mode.RAIN);
     WeatherRenderSystem.ParticleField second = field(1234L, WeatherRenderSystem.Mode.RAIN);
