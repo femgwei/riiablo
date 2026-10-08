@@ -17,7 +17,7 @@
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
-  Lightning Bolt、Ice Arrow、Guided Arrow 与 Penetrate 已完成等级 1–20 基础审计；380/600 个 Amazon
+  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate 与 Charged Strike 已完成等级 1–20 基础审计；400/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -225,4 +225,17 @@ D2MOO `SKILLS_RefreshSkill`（`D2Common/src/D2Skills.cpp:603`）读取 `nPassive
 `dwPassiveCalc`，把 `ln12` 结果写入永久被动状态的 `STAT_ITEM_TOHIT_PERCENT`；
 `SUNITDMG` 命中路径（`D2Game/src/UNIT/SUnitDmg.cpp:2439–2511`）读取该属性并加入攻击
 命中率计算。Penetrate 不创建伤害记录、导弹或新伤害值；最终命中率消费留给 DMG-06，
-抗性和最终生命结算留给 DMG-08。下一项优先审核 Charged Strike（24）。
+抗性和最终生命结算留给 DMG-08。
+
+Charged Strike（24）等级 1–20 已按“单枚 `chargedstrikebolt` 对单个目标的技能闪电
+分量”批准；每枚闪电弹的抗性前范围从 `1–30` 增长到 `1–322`，三组 total 字段明确留空，
+因为一次施法的总量取决于实际碰撞的闪电弹数量。1.10f `SrvStFunc=6`、`SrvDoFunc=11`、
+`Calc1=par1+lvl/par2`，`Param1=3`、`Param2=5`，所以等级 1–20 释放 3–7 枚闪电弹；
+物理字段和 `SrcDam` 均为 0，四项闪电硬点协同在本批固定为 0。
+
+D2MOO `SKILLS_SrvSt06_PowerStrike_ChargedStrike`（`SkillAma.cpp:80`）先为近战目标
+预计算一次独立记录并调用 `D2GAME_RollElementalDamage_6FD14DD0`；
+`SKILLS_SrvDo011_ChargedStrike`（`SkillAma.cpp:657`）消耗耐久并从命中目标创建每枚独立的
+`chargedstrikebolt`。通用 `MISSILE_CalculateDamageData` 读取 `SKILLS_GetMin/MaxElemDamage`
+的 Charged Strike 曲线，因此近战记录和闪电弹不能合并为一个伤害包。武器近战记录、弹数、
+碰撞数和最终结算留给 DMG-06/07/08。下一项优先审核 Plague Javelin（25）。

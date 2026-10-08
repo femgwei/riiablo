@@ -889,3 +889,25 @@ D2MOO `SKILLS_RefreshSkill`（`D2Common/src/D2Skills.cpp:603`）读取技能的
 `PenetrateGoldenDamageTest` 独立锁定 `Skills.txt` 字段、`ln12` 曲线、`penetrate` 状态和
 `item_tohit_percent` 属性，并由 `SkillDamageAuditMatrixTest` 校验 20 行全部为
 `GOLDEN_APPROVED`、伤害列保持 N/A。
+
+## DMG-04 第三十七个逐级实例：Charged Strike
+
+1.10f `Skills.txt#24` 使用 `SrvStFunc=6`、`SrvDoFunc=11`、`SrcDam=0`、`HitShift=8`，
+元素类型为 `ltng`，技能闪电基值为 `1–30`，五段最大值增量为 `12/16/20/24/28`。
+`EDmgSymPerCalc` 读取 Lightning Strike、Lightning Bolt、Power Strike、Lightning Fury
+硬点并乘 `par8`；本批四项硬点固定为 0。`Calc1=par1+lvl/par2`，`Param1=3`、`Param2=5`，
+产生等级 1–20 每次施法 `3,3,3,3,4,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7` 枚闪电弹。
+
+D2MOO `SKILLS_SrvSt06_PowerStrike_ChargedStrike`（`SkillAma.cpp:80`）先对近战目标
+分配一次 `D2DamageStrc`，成功命中时调用 `D2GAME_RollElementalDamage_6FD14DD0`；
+`SKILLS_SrvDo011_ChargedStrike`（`SkillAma.cpp:657`）随后消耗耐久，并从命中目标创建
+每枚独立的 `chargedstrikebolt`。这些导弹由 `MISSILE_CalculateDamageData`
+（`D2Common/src/Units/Missile.cpp:467`）走技能导弹分支，调用
+`SKILLS_GetMinElemDamage`/`SKILLS_GetMaxElemDamage`（`D2Skills.cpp:2623/2685`）读取
+Charged Strike 的技能闪电曲线；导弹表自身不拥有伤害字段。
+
+因此 DMG-04 矩阵把候选单位固定为“一枚闪电弹对单个目标的抗性前闪电分量”：等级 1–20
+从 `1–30` 增长到 `1–322`，`expected_min/max` 与独立生产快照逐级一致，三组 `*_total`
+留空以避免把碰撞数量压成一个值。`ChargedStrikeGoldenDamageTest` 锁定 Skills.txt
+字段、Calc1 弹数、零协同曲线和 `chargedstrikebolt` 生产快照；近战记录、弹数/碰撞数、
+抗性和最终结算留给 DMG-06/07/08。
