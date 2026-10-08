@@ -1004,7 +1004,26 @@ riiablo 的 `AmazonSkills.getEvadeChance`、`applyPassiveState`、`DefenseCalcul
 锁定全部 20 级、原版字段、无伤害列和每级 `passive_evade` 状态贡献；随机边界、动画、
 静止上下文优先级和最终来袭伤害结算留给 DMG-08。
 
-## DMG-04 第四十三个逐级实例：Dopplezon
+## DMG-04 第四十三个逐级实例：Fend
+
+Fend 不拥有固定技能伤害包。1.10f `Skills.txt#30` 使用 `SrvStFunc=9`、`SrvDoFunc=13`、
+`SrcDam=128`、`HitShift=8`、`ToHit=40`、`LevToHit=10`，物理/元素固定伤害字段均为 0，
+`Calc1=12`、`Calc2=ln34`、`Param1=70`、`Param2=10`。因此等级 1–20 的 `Calc2` 曲线为
+`70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250,260`%，
+矩阵行 482–501 把三组 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确留空为 N/A。
+
+D2MOO `SKILLS_SrvSt09_Fend`（`SkillAma.cpp:258`）在技能开始时以 `Calc1` 限制近战范围内
+的目标流，并把首目标类型/ID写入技能参数。`SKILLS_SrvDo013_Fend_Zeal_Fury`
+（`SkillAma.cpp:795`）每个攻击关键帧只处理一个当前目标：成功命中时把 `Calc2` 写入
+`dwEnDmgPct`，再用 `SrcDam=128` 分配一条武器战斗记录并扣除耐久，随后选择下一个目标。
+目标数量和一条施法的总伤害不是单个技能伤害包，不能压入 DMG-04 的固定 `expected_*`。
+
+riiablo 的 `AmazonSkills.getFendHitCount`、`getPhysicalDamagePercent` 与
+`Actioneer.prepareFend/resolveFend` 复用原生 12 目标上限、70%–260% 增强曲线和独立目标流。
+`FendGoldenDamageTest` 锁定全部 20 级、原版字段、无固定伤害列和每级增强百分比；目标
+选择、命中随机、武器值、耐久和整次施法总量留给 DMG-06/07/08。
+
+## DMG-04 第四十四个逐级实例：Dopplezon
 
 1.10f `Skills.txt#28` 使用 `SrvStFunc=0`、`SrvDoFunc=15`、`Summon=dopplezon`、
 `PetType=dopplezon`、`PetMax=1` 和 `Summode=NU`。`SrcDam`、物理/元素伤害字段、

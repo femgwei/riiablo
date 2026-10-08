@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe、Immolation Arrow、Dopplezon 与 Evade 已完成等级 1–20 基础审计；500/600 个 Amazon
+  Strafe、Immolation Arrow、Dopplezon、Evade 与 Fend 已完成等级 1–20 基础审计；520/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -289,6 +289,20 @@ D2MOO 被动刷新把结果写入永久状态。移动单位进入 `SUNITDMG_App
 Weapon Block 和 Avoid 等适用分支。riiablo `StateUpdater`、`DefenseCalculator` 与
 `CombatSystem` 使用同一 `passive_evade` 状态和移动攻击上下文。随机边界、动画及最终
 来袭伤害结算属于 DMG-08。
+
+Fend（30）等级 1–20 已按“每个选定目标一条独立增强武器记录，不拥有固定技能伤害包”批准；
+三组 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`Calc1=12` 将目标流上限固定为 12，`Calc2=ln34` 以 `Param1=70`、`Param2=10` 产生
+70%–260% 的等级增强，`SrcDam=128` 仍由每条武器记录继承。
+
+D2MOO `SKILLS_SrvSt09_Fend` 先扫描近战范围内的不同目标并写入 `Param1/2/3`；
+`SKILLS_SrvDo013_Fend_Zeal_Fury` 每个关键帧只为当前目标调用一次命中判定、写入
+`dwEnDmgPct=Calc2`、分配一条武器战斗记录并扣除耐久，然后推进到下一个目标。Fend 不是
+一个把多目标伤害合并的范围包。riiablo `Actioneer.prepareFend/resolveFend` 和
+`AmazonSkills.getFendHitCount/getPhysicalDamagePercent` 已复用相同上限、增强曲线和目标流。
+武器数值、命中随机、目标数量、耐久与整次施法总量留给 DMG-06/07/08。
+
+下一项优先审核 Freezing Arrow（技能 31）。
 
 ## Dopplezon（技能 28）DMG-04
 
