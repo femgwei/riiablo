@@ -1,6 +1,6 @@
 # Sorceress 技能伤害所有者审计
 
-更新时间：2026-10-07  
+更新时间：2026-10-08
 审计基线：Diablo II 1.10f  
 范围：DMG-03B 的 Sorceress 子项，技能 ID 36–65
 
@@ -11,7 +11,8 @@
 - 30/30 个技能已逐项分类，ID 连续且无重复。
 - 20 个技能产生直接固定/随机伤害，1 个 Static Field 使用当前生命百分比，1 个 Hydra 通过召唤物间接造成伤害，4 个技能只修改其他伤害，4 个技能没有对外伤害。
 - 普通法术导弹的基准伤害通常由 `Skills.txt` 拥有。`Missiles.txt` 主要拥有飞行、碰撞、范围、父子导弹、周期与命中回调。D2MOO 的 `MISSILE_CalculateDamageData` 根据 missile 的 Skill/MissileSkill 选择技能表曲线，不能仅看导弹名判断数值所有者。
-- Blaze、Fire Wall、Meteor 的持续火焰必须保留 8.8 rate 与 `DamageRate` 语义：
+- Inferno、Blaze、Fire Wall、Meteor 的火焰流/持续火焰必须保留 8.8 rate 与
+  `DamageRate` 语义：
   `SrvDo05` 每个游戏帧执行碰撞，`DamageRate` 只按 `value / 1024` 缩放平面 DR/MDR，
   不是攻击间隔；Meteor 的撞击和地面火焰要在后续黄金值中拆成不同场景。
 - Static Field 不属于普通逐等级 min/max 曲线。它以 `calc1` 计算当前生命百分比，以 `calc2` 提供最小固定伤害，并受难度生命下限约束。
@@ -32,7 +33,9 @@ Skills.txt 物理/元素伤害并应用 Lightning Mastery、抗性、免疫、�
 
 ## 已实现但测试仍不足的路径
 
-- Inferno：生产路径能建立 Inferno 状态并创建技能导弹，但缺少法师专用的流持续时间、脉冲伤害和障碍截断集成测试。
+- Inferno：`SrvDo019` 已改为每次只创建一个 `SrvMissileA`，按 `calc1` 设置射程并保留
+  8.8 定点脉冲伤害；等级 1–20 和单次实际命中已有测试。`SrvSt11` 状态刷新、耗蓝、
+  重复脉冲及障碍截断仍属于 DMG-07 行为缺口。
 - Lightning：通用技能导弹路径已存在，但缺少法师 Lightning 的生产伤害集成测试。
 - Hydra：三只召唤物的创建、归属和偏移已有测试；仍缺少 Hydra 单枚火球继承技能等级与伤害的断言。
 

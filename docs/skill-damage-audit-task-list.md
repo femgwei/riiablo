@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`db34dd64`
-当前加权完成度：**31.4%**
+代码基线：`0ebe2337`
+当前加权完成度：**31.5%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 300 行 `GOLDEN_APPROVED`，其余 3,900 行仍为
+- 4,200 行中已有 320 行 `GOLDEN_APPROVED`，其余 3,880 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.4% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 300 个逐级黄金行；不表示技能伤害正确率为 31.4%。
+- 当前 31.5% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 320 个逐级黄金行；不表示技能伤害正确率为 31.5%。
 
 ## 加权任务
 
@@ -88,7 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall 等级 1–20 共 300/4,200 行（本项 7.1429%，加权贡献 1.4286 个百分点）；
+    Blaze、Fire Wall、Inferno 等级 1–20 共 320/4,200 行（本项 7.6190%，加权贡献
+    1.5238 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -110,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.4286%（展示时四舍五入为 31.4%）。
+当前总加权完成度为 31.5238%（展示时四舍五入为 31.5%）。
 
 ## 黄金值准入规则
 
@@ -234,6 +235,15 @@
   `SrvDo06` 创建的子段继承技能 ID/等级，`SrvDo05` 每帧碰撞。`DamageRate=41` 只把平面
   DR/MDR 按 `41/1024` 缩放，不是 41 帧伤害间隔。多段重叠、墙体长度、生命周期和整次
   施法总伤害延后到 DMG-07；协同/Fire Mastery 与最终抗性结算分别延后到 DMG-05/08。
+- Inferno（技能 41）等级 1–20 已按“单个 `SrvDo019` 创建的一个 `infernoflame1`
+  流导弹对单个目标的一次 8.8 定点命中”批准。等级 1 为 `128–256` fixed
+  （0.5–1.0 生命/脉冲），等级 20 为 `2080–2256` fixed（8.125–8.8125 生命/脉冲）；
+  20 个等级的 `delta_min/max` 均为 0。
+- D2MOO `SKILLS_DoInferno` 只消费 `SrvMissileA`，写入技能 ID/等级，并以 `calc1` 结果
+  覆盖流导弹射程。审计发现 riiablo 原通用分支会把相同的 A/B/C 三列都创建出来，且
+  普通整数快照会截断低等级的小数脉冲；现已用专用 `spawnSorceressInferno` 改为一枚
+  导弹并保存 8.8 定点伤害。`SrvSt11` 状态刷新、耗蓝、重复脉冲、障碍截断和整次施法
+  总伤害延后到 DMG-07，协同/Fire Mastery 与最终抗性结算分别延后到 DMG-05/08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -276,7 +286,10 @@
   `FireWallGoldenDamageTest#levelOneToTwentyMatchesD2mooPerFrameFixedPointFormula`、
   `NativeSorceressFireAreaDataTest#fireWallUsesTwoMakersAndOnePersistentCentreSegment`、
   `SorceressFireAreaIntegrationTest#fireWallCreatesOpposedMakersCentreAndDamagingChildSegments`、
-  `CombatSystemTest#fixedFireRatePreservesFractionAndScalesMdrByDamageRate`。
+  `CombatSystemTest#fixedFireRatePreservesFractionAndScalesMdrByDamageRate`、
+  `InfernoGoldenDamageTest#levelOneToTwentyMatchesD2mooPerStreamMissileFixedPointFormula`、
+  `NativeSorceressFireAreaDataTest#infernoUsesOneFractionalSkillOwnedStreamMissile`、
+  `SorceressFireAreaIntegrationTest#infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile`。
 
 ## 可复现命令
 
@@ -298,5 +311,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Inferno（技能 41）的等级 1–20 火焰流伤害，核对
-`SrvSt11/SrvDo019` 状态持续、流导弹技能等级继承、逐帧/脉冲单位及 riiablo 当前生产路径。
+继续 DMG-04，下一项优先审核 Shiver Armor（技能 50）的等级 1–20 受击反伤，核对
+`SrvDo018/EventFunc03` 的触发事件、Skills.txt 冷伤害、冷长度、技能等级继承及 riiablo
+当前生产路径。Inferno 的完整通道生命周期继续保留在 DMG-07。

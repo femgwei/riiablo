@@ -871,6 +871,10 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnLightningStrike(event, skill);
       return;
     }
+    if (event.skillId == SkillId.INFERNO || skill.Id == SkillId.INFERNO) {
+      spawnSorceressInferno(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 15 || skill.srvdofunc == 15) {
       spawnAmazonSummon(event, skill, start, false);
       return;
@@ -2889,6 +2893,41 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[AMAZON_LIGHTNING_STRIKE] phase=spawn source={} initialTarget={} "
         + "firstTarget={} level={} range={} maxJumps={} created={} missile={}",
         event.entityId, event.targetId, next, skillLevel, range, maxJumps, created, missileName);
+  }
+
+  /** Native SrvDo019: one skill-linked Inferno stream missile per do callback. */
+  private void spawnSorceressInferno(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
+    String missileName = hasText(skill.srvmissilea) ? skill.srvmissilea : skill.srvmissile;
+    Missiles.Entry row = hasText(missileName) ? Riiablo.files.Missiles.get(missileName) : null;
+    if (row == null) {
+      log.warn("[SORCERESS_INFERNO] phase=reject source={} reason=missing_missile name={}",
+          event.entityId, missileName);
+      return;
+    }
+
+    Vector2 target = resolveTargetPoint(event, start, new Vector2());
+    Vector2 direction = target.sub(start);
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    int missileId = createMissile(
+        row, direction.nor(), start, event.entityId, null, skillLevel);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+
+    Missile projectile = mMissile.get(missileId);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = Math.max(1, skillLevel);
+    projectile.range = Math.max(1, SkillFormula.evaluate(
+        skill.calc1, skill, skillLevel, name -> getBaseSkillLevel(event.entityId, name)));
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializeSorceressFireArea(
+        projectile, skill, ownerAttrs, mPlayer.has(event.entityId), skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
+    log.info("[SORCERESS_INFERNO] phase=stream source={} skill={} level={} missile={} "
+            + "missileId={} range={} fixed={}..{} damageRate={}",
+        event.entityId, skill.Id, skillLevel, row.Missile, missileId, projectile.range,
+        projectile.elementalMinRateFixed, projectile.elementalMaxRateFixed,
+        projectile.elementalDamageRate);
   }
 
   /** Native {@code SKILLS_SrvDo048_BladeFury}: one timed weapon blade. */

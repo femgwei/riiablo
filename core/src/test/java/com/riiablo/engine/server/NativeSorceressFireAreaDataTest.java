@@ -17,8 +17,35 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SorceressSkills;
 import org.junit.jupiter.api.Test;
 
-/** Executable 1.10f data contract for Blaze and Fire Wall. */
+/** Executable 1.10f data contract for Inferno, Blaze, and Fire Wall. */
 class NativeSorceressFireAreaDataTest extends RiiabloTest {
+  @Test
+  void infernoUsesOneFractionalSkillOwnedStreamMissile() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.INFERNO);
+    assertNotNull(skill);
+    assertEquals("Inferno", skill.skill);
+    assertEquals(11, skill.srvstfunc);
+    assertEquals(19, skill.srvdofunc);
+    assertEquals("infernoflame1", skill.srvmissilea);
+    assertEquals("infernoflame1", skill.srvmissileb);
+    assertEquals("infernoflame1", skill.srvmissilec);
+    assertEquals(2, skill.HitShift);
+    assertEquals(32, skill.EMin);
+    assertEquals(64, skill.EMax);
+
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    assertNotNull(row);
+    assertEquals("infernoflame1", row.Missile);
+    Missile missile = new Missile();
+    missile.missile = row;
+    assertTrue(MissileDamageResolver.initializeSorceressFireArea(
+        missile, skill, Attributes.obtainStandard(), true, 1, name -> 0));
+    assertEquals(128, missile.elementalMinRateFixed);
+    assertEquals(256, missile.elementalMaxRateFixed);
+    assertEquals(row.DamageRate, missile.elementalDamageRate);
+    assertTrue(missile.fixedElementalRate);
+  }
+
   @Test
   void blazeUsesTimedStateAndFractionalGroundMissile() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLAZE);

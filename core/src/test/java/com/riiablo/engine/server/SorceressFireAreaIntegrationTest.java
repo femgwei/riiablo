@@ -27,6 +27,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
@@ -37,6 +38,39 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authoritative SrvDo023/SrvDo024 and SrvDo05/SrvDo06 contract. */
 class SorceressFireAreaIntegrationTest extends RiiabloTest {
+  @Test
+  void infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, SkillId.INFERNO, 1, 0f, 0f);
+      int target = monster(world, 0.4f, 0f);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.INFERNO);
+      cast(world, caster, skill, new Vector2(2f, 0f));
+
+      assertEquals(1, factory.count("infernoflame1"),
+          "D2MOO SrvDo019 consumes SrvMissileA once; duplicate B/C columns are not extra streams");
+      Missile stream = factory.first("infernoflame1");
+      assertNotNull(stream);
+      assertEquals(skill.Id, stream.skillId);
+      assertEquals(1, stream.damageLevel);
+      assertTrue(stream.fixedElementalRate);
+      assertEquals(128, stream.elementalMinRateFixed);
+      assertEquals(256, stream.elementalMaxRateFixed);
+      assertEquals(Math.max(1, SkillFormula.evaluate(skill.calc1, skill, 1)), stream.range);
+
+      float before = life(world, target);
+      world.setDelta(1f / 25f);
+      world.process();
+      float applied = before - life(world, target);
+      assertTrue(applied >= 0.5f && applied < 1f,
+          "one level-1 Inferno stream hit must preserve its 128..255 fixed roll");
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
   @Test
   void blazeStateEmitsOnlyAfterActualMovementAndKeepsFractionalDamage() {
     RecordingFactory factory = new RecordingFactory();

@@ -100,6 +100,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `TelekinesisGoldenDamageTest`（DMG-04 第十三批：技能 43，等级 1–20）
 - `BlazeGoldenDamageTest`（DMG-04 第十四批：技能 46，等级 1–20）
 - `FireWallGoldenDamageTest`（DMG-04 第十五批：技能 51，等级 1–20）
+- `InfernoGoldenDamageTest`（DMG-04 第十六批：技能 41，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -347,3 +348,29 @@ riiablo `ServerSkillSystem.spawnFireWall` 已建立两条 maker 和中心段，
 `FireWallGoldenDamageTest` 比较 20 级独立常量与生产快照。多段重叠、墙体长度、生命周期
 和整次施法总伤害归入 DMG-07，协同/Fire Mastery 归入 DMG-05，抗性、吸收和 PvP
 归入 DMG-08。
+
+## DMG-04 第十六个逐级实例：Inferno
+
+Inferno 的基础黄金单位是“单个 `SrvDo019` 创建的一个 `infernoflame1` 流导弹对单个
+目标的一次 8.8 定点火焰命中”。1.10f `Skills.txt` 为 `HitShift=2`、`EMin=32`、
+`EMax=64`，最小值五段增量为 `24/26/28/32/36`，最大值为
+`24/27/29/33/37`。基础场景把 Warmth 协同和 Fire Mastery 固定为 0。等级 1 的定点
+范围为 `128–256`，即 0.5–1.0 生命/脉冲；等级 20 为 `2080–2256`，即
+8.125–8.8125 生命/脉冲。矩阵保存未截断的 8.8 定点值。
+
+D2MOO `SKILLS_SrvSt11_Inferno_ArcticBlast` 校验起始法力并调用 `SKILLS_StartInferno`。
+第一次启动只建立 20 帧 `STATE_INFERNO`，把技能参数清零，不创建流导弹；已有状态会刷新
+为 6 帧并调用 `SKILLS_DoInferno`。后续 `SKILLS_SrvDo019_Inferno_ArcticBlast` 调用
+`SKILLS_DoInferno`，每次只读取 `SrvMissileA`，把 `calc1` 结果作为射程，并把技能 ID 与
+技能等级写入新导弹。`MISSILE_CalculateDamageData` 再从技能 41 取得 8.8 火焰范围并应用
+Fire Mastery。这里的定点范围属于每枚流导弹的一次伤害包；通道的事件频率决定每秒总量。
+
+审计发现 riiablo 原通用服务器导弹分支会把 Inferno 表中相同的 A/B/C 三列全部创建，
+并通过普通整数 `initializeSkill` 把低等级的亚整数伤害截断。现在
+`ServerSkillSystem.spawnSorceressInferno` 每个 `SrvDo019` 只创建一枚 `SrvMissileA`，按
+`calc1` 设置射程，并用 `MissileDamageResolver.initializeSorceressFireArea` 保留 8.8
+伤害；一级实际命中测试确认一次扣除 0.5 至小于 1.0 生命。`InfernoGoldenDamageTest`
+比较等级 1–20 的独立常量与生产快照，全部差异为 0。
+
+`SrvSt11` 状态刷新、耗蓝、动画事件频率、重复脉冲、障碍截断和整次通道总伤害归入
+DMG-07；Warmth 协同与 Fire Mastery 归入 DMG-05，抗性、吸收和 PvP 归入 DMG-08。

@@ -323,7 +323,8 @@ public final class MissileDamageResolver {
   }
 
   /**
-   * Captures the native 8.8 per-frame fire packet used by Blaze/Fire Wall.
+   * Captures the native 8.8 fire packet used by Inferno pulses and the
+   * per-frame Blaze/Fire Wall ground missiles.
    * D2Common's skill-owned missile path always applies elemental mastery;
    * {@code Missiles.ApplyMastery} only gates table-owned missile damage.
    */
