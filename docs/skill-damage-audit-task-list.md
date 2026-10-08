@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`962de41f`
-当前加权完成度：**31.7%**
+代码基线：`abe94561`
+当前加权完成度：**31.8%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 360 行 `GOLDEN_APPROVED`，其余 3,840 行仍为
+- 4,200 行中已有 380 行 `GOLDEN_APPROVED`，其余 3,820 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.7% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 360 个逐级黄金行；不表示技能伤害正确率为 31.7%。
+- 当前 31.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 380 个逐级黄金行；不表示技能伤害正确率为 31.8%。
 
 ## 加权任务
 
@@ -88,8 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor 等级 1–20 共 360/4,200 行
-    （本项 8.5714%，加权贡献 1.7143 个百分点）；
+    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow 等级 1–20 共
+    380/4,200 行（本项 9.0476%，加权贡献 1.8095 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.7143%（展示时四舍五入为 31.7%）。
+当前总加权完成度为 31.8095%（展示时四舍五入为 31.8%）。
 
 ## 黄金值准入规则
 

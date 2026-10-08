@@ -421,3 +421,29 @@ riiablo 的 `StateUpdater.launchChillingArmorBolt` 已按 `ReturnFire` 门禁创
 端点；`CombatSystem` 现仅对导弹物理和元素包采用原版排除上界，近战随机保持原语义。
 Frozen Armor/Shiver Armor 协同归入 DMG-05；返回弹最终抗性、Cold Mastery 穿透、吸收
 和 PvP 归入 DMG-08。
+
+## DMG-04 第十九个逐级实例：Magic Arrow
+
+Magic Arrow 的基础黄金单位是“一枚 `magicarrow` 对单个目标在抗性前造成的总整数伤害”，
+场景固定为无装备、owner 武器最小/最大伤害均为 0、无协同。1.10f `Skills.txt#6` 为
+`SrcDam=128`、`HitShift=8`、`MinDam=MaxDam=1`，物理最小/最大五段增量均为
+`1/1/1/1/1`，所以 `SKILLS_GetMinPhysDamage` 和 `SKILLS_GetMaxPhysDamage` 在等级 1–20
+返回完全相同的 8.8 定点曲线 `256, 512, ..., 5120`，即 1–20 点整数总伤害。
+
+`MISSILE_CalculateDamageData` 先把技能物理曲线与 `SrcDam` 武器包组合。基础场景的武器包
+为 0，因此只留下上述技能曲线。命中时 `magicarrow` 的 `SrvDmgFunc=1` 进入
+`MISSMODE_SrvDmg01_FireArrow_MagicArrow_ColdArrow`；`DmgCalc1=dl12` 以
+`dParam1 + (level - 1) * dParam2` 求转换百分比，Magic Arrow 的参数为 `1/1`，即等级
+1–20 分别转换 1%–20%。回调从 `dwPhysDamage` 减去同一份定点数并加到导弹的 magic
+元素通道，因此只重新分配通道，不改变总定点伤害。
+
+riiablo `MissileDamageResolver.initializeSkill` 同样组合技能曲线与武器源包，并用
+`damageConversionPercent` 执行 `dl12` 转换。当前运行时伤害通道以整数保存：等级 1–20
+的物理通道为 `1,2,3,4,5,6,7,8,9,9,10,11,12,13,13,14,15,15,16,16`，魔法通道为
+`0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2,2,3,3,4`，两者之和仍严格为 1–20。
+`MagicArrowGoldenDamageTest` 同时锁定原版表字段、20 级定点总量守恒和生产通道之和。
+
+本批只批准抗性前总整数范围，不能把 `delta=0` 解释为分通道小数完全一致。D2MOO 在
+物理转魔法时仍保留 8.8 小数，而 riiablo 的整数通道会延后不足 1 点的转换；固定武器包
+及该精度差异归入 DMG-06，物理/魔法抗性、穿透、吸收和 PvP 对分通道小数的影响归入
+DMG-08。
