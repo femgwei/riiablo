@@ -622,6 +622,21 @@ public final class MissileDamageResolver {
     projectile.damageLevel = level;
     writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
+    // D2MOO SKILLS_SrvDo012_Strafe installs SKILLS_AddDamagePercentBonus on
+    // every strafearrow/strafebolt before MISSILE_CalculateDamageData runs.
+    // Keep that per-arrow Calc2 bonus in the launch snapshot; it is not an
+    // arrow-count multiplier and must be applied independently to each lane.
+    if (skill.Id == 26) {
+      int strafePercent = Math.max(0,
+          SkillFormula.evaluate(skill.calc2, skill, level, baseSkillLevel));
+      if (strafePercent != 0) {
+        StatListRef base = projectile.damage.base();
+        StatRef existingRef = projectile.damage.get(Stat.damagepercent, StatRef.obtain());
+        int existing = existingRef == null ? 0 : existingRef.asInt();
+        base.put(Stat.damagepercent, existing + strafePercent);
+        projectile.damage.reset();
+      }
+    }
     if (includeSource) {
       int skillToHit = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
       if (skillToHit != 0) {

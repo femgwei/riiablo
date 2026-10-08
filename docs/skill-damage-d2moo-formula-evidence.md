@@ -936,3 +936,24 @@ D2Common `SKILLS_GetMinElemDamage` / `SKILLS_GetMaxElemDamage` 先计算等级�
 `PlagueJavelinGoldenDamageTest` 锁定 Skills/Missiles 字段、23 云的原生 fan-out、8.8
 rate、游戏帧持续时间、完整持续期整数范围和零协同生产快照。根武器包、云数量/轨迹/覆盖/
 重叠/刷新留给 DMG-06/07；毒抗、毒长减免、Pierce、PvP 和最终生命结算留给 DMG-08。
+
+## DMG-04 第三十九个逐级实例：Strafe
+
+1.10f `Skills.txt#26` 使用 `SrvStFunc=8`、`SrvDoFunc=12`、`SrvMissileA=strafearrow`、
+`SrvMissileB=strafebolt`、`SrcDam=96`、`HitShift=8`。`Calc1="min(par3 + lvl - 1, par4)"`
+决定一次施法的箭数上限，`Calc3=2+lvl/4` 是最小目标数；两者属于释放/目标调度，
+不是伤害乘数。`Calc2=ln12` 使用 `Param1=5`、`Param2=5`，所以等级 1–20 每枚箭分别
+携带 `5,10,...,100%` 的技能物理加成。
+
+D2MOO `SKILLS_SrvDo012_Strafe`（`SkillAma.cpp:711`）每个动画关键帧创建一枚
+`strafearrow` 或 `strafebolt`，并在导弹初始化前调用
+`SKILLS_AddDamagePercentBonus`（`SkillAma.cpp:648`）。随后
+`MISSILE_CalculateDamageData`（`D2Common/src/Units/Missile.cpp:467`）读取该导弹的
+`STAT_DAMAGEPERCENT`，把 `SrcDam=96` 的独立武器包和 Calc2 加成保留在每枚箭上；
+不会把箭数合并成一次施法的单一伤害记录。
+
+因此 DMG-04 矩阵把候选单位固定为“单枚 Strafe 箭对单个目标的技能拥有加成”，
+`expected_min/max/total` 明确保持 N/A；武器基础值、SrcDam、ToHit、箭数/目标选择、
+Pierce、碰撞和整次施法总量分别留给 DMG-06/07，抗性和最终生命结算留给 DMG-08。
+`StrafeGoldenDamageTest` 逐级锁定 Skills/Missiles 字段、Calc2 5%→100% 曲线以及
+riiablo 每箭快照中的 `STAT_DAMAGEPERCENT`。

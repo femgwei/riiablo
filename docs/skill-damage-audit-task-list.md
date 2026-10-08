@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`90cf269fd07288e29710b3eac504f34b112e6ec5`
-当前加权完成度：**33.6%**
+最近完成技能提交：`2720adce9fabbd74a504da95eb2a846a441ba2c9`
+当前加权完成度：**33.7%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,7 +51,7 @@
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 760 行 `GOLDEN_APPROVED`，其余 3,440 行仍为
+- 4,200 行中已有 780 行 `GOLDEN_APPROVED`，其余 3,420 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
 - 当前 33.6% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
@@ -91,7 +91,7 @@
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
     Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge、Power Strike、
     Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、Lightning Bolt、Ice Arrow、
-    Guided Arrow、Penetrate、Charged Strike、Plague Javelin 等级 1–20 共 760/4,200 行（本项 18.0952%，加权贡献 3.6190 个百分点）；
+    Guided Arrow、Penetrate、Charged Strike、Plague Javelin、Strafe 等级 1–20 共 780/4,200 行（本项 18.5714%，加权贡献 3.7143 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -113,7 +113,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 33.6190%（展示时为 33.6%）。
+当前总加权完成度为 33.7143%（展示时为 33.7%）。
 
 ## 黄金值准入规则
 
@@ -438,4 +438,18 @@ Pierce、PvP 和最终结算留给 DMG-08。
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Strafe（技能 26）等级 1–20。
+## Strafe（技能 26）
+
+Strafe 等级 1–20 已按“单枚 strafearrow/strafebolt 对单个目标的抗性前武器伤害记录，
+零装备、零协同”批准。1.10f `Skills.txt#26` 使用 `SrvStFunc=8`、`SrvDoFunc=12`、
+`SrvMissileA/B=strafearrow/strafebolt`、`SrcDam=96`、`HitShift=8`；`Calc2=ln12`、
+`Param1=5`、`Param2=5` 产生逐级 `5%..100%` 的每箭技能加成。D2MOO
+`SKILLS_SrvDo012_Strafe` 在每个动画关键帧创建一枚导弹，并以
+`SKILLS_AddDamagePercentBonus` 把 Calc2 写入该导弹；箭数、目标选择、穿透和整次施法总量
+留给 DMG-06/07，武器值、SrcDam、命中率和最终结算留给 DMG-08。
+
+`StrafeGoldenDamageTest` 锁定两个服务回调、两种导弹行、SrcDam96、Calc2 曲线与生产快照。
+矩阵的 `expected_*` 保持 N/A，因为本批隔离的是每箭技能拥有的加成，而不是假设一个无装备
+武器包或把一次施法的多枚箭压成单一伤害值。
+
+继续 DMG-04，下一项优先审核 Immolation Arrow（技能 27）等级 1–20。

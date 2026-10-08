@@ -17,7 +17,7 @@
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
-  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike 与 Plague Javelin 已完成等级 1–20 基础审计；420/600 个 Amazon
+  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin 与 Strafe 已完成等级 1–20 基础审计；440/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -255,4 +255,10 @@ D2MOO 的通用 `D2GAME_SKILLS_Handler_6FD12BA0` 创建 `plaguejavelin` 根导�
 `MISSILE_CalculateDamageData` 负责把技能元素快照安装到导弹。根标枪武器命中属于 DMG-06，
 23 云的轨迹、覆盖、重叠和刷新属于 DMG-07，毒抗和最终结算属于 DMG-08。
 
-下一项优先审核 Strafe（26）。
+Strafe（26）等级 1–20 已按“单枚 `strafearrow/strafebolt` 对单个目标的技能拥有加成”批准。
+`SrcDam=96`、`HitShift=8`，`Calc2=ln12` 且 `Param1/2=5/5`，所以每个动画关键帧的独立
+武器导弹携带 5%–100% 的逐级加成。D2MOO `SKILLS_SrvDo012_Strafe` 通过
+`SKILLS_AddDamagePercentBonus` 写入每枚导弹；箭数、目标流、Pierce 和整次施法总量不属于
+本批单箭黄金值，riiablo 生产快照已逐级保存该 `STAT_DAMAGEPERCENT`。
+
+下一项优先审核 Immolation Arrow（27）。
