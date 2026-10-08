@@ -17,12 +17,16 @@
 
 ## 已确认的 riiablo 缺口
 
-- Telekinesis：D2MOO `SKILLS_SrvDo021_Telekinesis` 直接滚动物理和元素伤害；riiablo 没有对应的 Actioneer/ServerSkillSystem 执行路径。
 - Energy Shield：存在 `DefenseCalculator.applyEnergyShield`，但没有找到 SrvDo023 把技能状态安装到角色的路径。
 - Lightning Mastery：导弹伤害解析器会读取 `passive_ltng_mastery`，但 `StateUpdater.synchronizeSorceressPassives` 只同步 Fire Mastery。
 - Cold Mastery：伤害结算会读取 `passive_cold_pierce`，现有测试也能人工注入该值，但没有从角色技能等级同步被动状态。
 
 这些缺口不在本子项中直接修复。它们会进入 DMG-04/DMG-05 前的实现修复队列，否则无法用生产路径生成可信的 `riiablo_actual_*`。
+
+Telekinesis 缺口已在 DMG-04 审核中关闭：`ServerSkillSystem.applyTelekinesis` 现在按
+`SrvSt12/SrvDo021` 验证玩家施法者、单位目标、敌对关系、城镇和距离，直接结算
+Skills.txt 物理/元素伤害并应用 Lightning Mastery、抗性、免疫、吸收及 PvP 缩放，且
+不会创建导弹实体。物品/对象交互与击退概率仍属于行为审计，不冒充本次伤害黄金值。
 
 ## 已实现但测试仍不足的路径
 

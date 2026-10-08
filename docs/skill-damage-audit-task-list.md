@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 代码基线：`e24607fe`
-当前加权完成度：**31.1%**
+当前加权完成度：**31.2%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -25,8 +25,9 @@
 - DMG-03B 已完成七职业各 30/30 个技能的伤害所有者和原版调用路径
   （累计 210/210，10.5%）：明细见各职业的
   `skill-damage-*-ownership.tsv` 与 `skill-damage-*-ownership.md`。
-  审计确认 Telekinesis、Energy Shield、Lightning Mastery、Cold Mastery 存在 riiablo
-  执行/被动同步缺口；Inferno、Lightning、Hydra 仍缺少聚焦伤害测试。
+  审计确认 Energy Shield、Lightning Mastery、Cold Mastery 仍存在 riiablo 执行/被动
+  同步缺口；Telekinesis 的单位目标伤害路径已在本步补齐，Inferno、Lightning、Hydra
+  仍缺少聚焦伤害测试。
 - Paladin 审计确认 Sacrifice、Smite、Zeal、Charge、Holy Shield 共 5 个伤害语义缺口；
   Conversion 和 Conviction 生产路径存在但仍缺聚焦测试。缺口只登记，尚未计入黄金值。
 - Necromancer 审计确认 30 项所有者；Teeth、Skeleton Mastery、Raise Skeleton、Weaken、
@@ -47,13 +48,14 @@
   5 个明确实现差异。前 3 项分别是分段公式和合法零值 fallback 问题；后 2 项缺原版召唤
   被动属性、技能、装备等初始化链。Amazon 生产逻辑本轮未改写。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
-  `IMPLEMENTED_TESTED` 116 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 38 项。185 个唯一测试引用均可追溯。
-- 4,200 行中已有 240 行 `GOLDEN_APPROVED`，其余 3,960 行仍为
+  `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
+  自动解析门禁。
+- 4,200 行中已有 260 行 `GOLDEN_APPROVED`，其余 3,940 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.1% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 240 个逐级黄金行；不表示技能伤害正确率为 31.1%。
+- 当前 31.2% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 260 个逐级黄金行；不表示技能伤害正确率为 31.2%。
 
 ## 加权任务
 
@@ -85,8 +87,8 @@
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
-    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field 等级 1–20 共
-    240/4,200 行（本项 5.7143%，加权贡献 1.1429 个百分点）；
+    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis
+    等级 1–20 共 260/4,200 行（本项 6.1905%，加权贡献 1.2381 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -108,7 +110,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.1429%（展示时四舍五入为 31.1%）。
+当前总加权完成度为 31.2381%（展示时四舍五入为 31.2%）。
 
 ## 黄金值准入规则
 
@@ -210,6 +212,14 @@
   生命并应用最小伤害。Expansion 的 `StaticFieldMin` 是施法资格门禁，不是命中后的生命
   夹紧。Nightmare/Hell 下限、抗性、免疫、吸收和 PvP 结算由专项集成测试锁定，归入
   DMG-08；多目标及重复施法总伤害归入 DMG-07。
+- Telekinesis（技能 43）等级 1–20 已按“单个合法单位目标的一次直接命中”批准。无装备、
+  无协同、无 Lightning Mastery 时，等级 1 为 1–2，等级 20 为 20–21；20 个等级的
+  `delta_min/max` 均为 0。D2MOO `D2GAME_RollElementalDamage` 使用
+  `SKILLS_GetMin/MaxElemDamage(..., a4=1)`，因此生产路径会应用 Lightning Mastery。
+- D2MOO 的 limited RNG 接收 `max-min`，运行时上端点按原生约定不参与抽取；黄金矩阵仍
+  记录 `SKILLS_GetMin/MaxElemDamage` 的规范范围。riiablo 新增 `SrvDo021` 单位目标路径，
+  覆盖敌对、距离、城镇、抗性、免疫、吸收、PvP 和无导弹语义。击退概率与物品/对象
+  交互是行为边界，不计入本批 DMG-04 黄金伤害。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -239,7 +249,12 @@
   `StaticFieldGoldenDamageTest#nativeFloorAndLastLifeBoundariesMatchD2mooOrder`、
   `SorceressStaticFieldIntegrationTest#normalHitsEveryValidTargetAndUsesResistanceAbsorbAndNoMissiles`、
   `SorceressStaticFieldIntegrationTest#expansionDifficultyThresholdIsAnEligibilityGate`、
-  `SorceressStaticFieldIntegrationTest#hostilePlayerReceivesNativePvpScalarWhileNeutralPlayerIsIgnored`。
+  `SorceressStaticFieldIntegrationTest#hostilePlayerReceivesNativePvpScalarWhileNeutralPlayerIsIgnored`、
+  `TelekinesisGoldenDamageTest#levelOneToTwentyMatchesD2mooElementalFormula`、
+  `TelekinesisGoldenDamageTest#nativeLimitedRandomRollTreatsMaximumAsExclusive`、
+  `SorceressTelekinesisIntegrationTest#monsterDamageUsesLightningMasteryAndCreatesNoMissile`、
+  `SorceressTelekinesisIntegrationTest#resistanceImmunityAndAbsorbUseTheNativeElementalPipeline`、
+  `SorceressTelekinesisIntegrationTest#hostilePlayerUsesPvpScalarWhileInvalidTargetsAreSkipped`。
 
 ## 可复现命令
 
@@ -261,5 +276,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Telekinesis（技能 43）的等级 1–20 基础闪电伤害，并核对
-`SKILLS_SrvSt12_Telekinesis` / `SKILLS_SrvDo021_Telekinesis` 与 riiablo 当前执行路径。
+继续 DMG-04，下一项优先审核 Blaze（技能 46）的等级 1–20 每帧火焰伤害，严格区分
+8.8 rate、`DamageRate`、单帧伤害与整段持续伤害，并核对 `SKILLS_SrvDo023` 状态安装、
+Blaze trail missile 的技能等级继承及 riiablo 当前生产路径。

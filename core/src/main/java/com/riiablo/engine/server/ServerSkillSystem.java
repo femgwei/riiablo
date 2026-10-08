@@ -591,7 +591,8 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
-        && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
+        && event.srvdofunc != 20 && event.srvdofunc != 21
+        && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 29
         && event.srvdofunc != 6
         && event.srvdofunc != 117
@@ -633,7 +634,8 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
-        && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
+        && skill.srvdofunc != 20 && skill.srvdofunc != 21
+        && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 29
         && skill.srvdofunc != 6
         && skill.srvdofunc != 117
@@ -680,6 +682,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 20 || skill.srvdofunc == 20) {
       applyStaticField(event, skill, skillLevel, start);
+      return;
+    }
+    if (event.srvdofunc == 21 || skill.srvdofunc == 21) {
+      applyTelekinesis(event, skill, skillLevel);
       return;
     }
     if (event.srvdofunc == 80 || skill.srvdofunc == 80) {
@@ -1686,6 +1692,159 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
             + "defense={} affected={} status=PASS",
         event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  /** D2MOO SrvDo021: direct unit-target damage without creating a missile entity. */
+  private void applyTelekinesis(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    int sourceId = event.entityId;
+    int targetId = event.targetId;
+    if (!SorceressSkills.isTelekinesis(skill) || !mPlayer.has(sourceId)
+        || targetId < 0 || (!mPlayer.has(targetId) && !mMonster.has(targetId))
+        || !mPosition.has(sourceId) || !mPosition.has(targetId)
+        || !mAttributesWrapper.has(sourceId) || !mAttributesWrapper.has(targetId)
+        || sourceId == targetId || mCorpse.has(targetId)
+        || !sameZone(sourceId, targetId) || isTownUnit(sourceId) || isTownUnit(targetId)
+        || !isHostile(sourceId, targetId) || !mNativeUnitFlagsValid(targetId)
+        || !hasPositiveLife(targetId)) {
+      log.info("[TELEKINESIS] phase=reject source={} target={} skill={} reason=invalid_unit_target",
+          sourceId, targetId, event.skillId);
+      return;
+    }
+    int range = Math.max(0,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel,
+            name -> getBaseSkillLevel(sourceId, name)));
+    if (mPosition.get(sourceId).position.dst2(mPosition.get(targetId).position)
+        > (float) range * range) {
+      log.info("[TELEKINESIS] phase=reject source={} target={} skill={} range={} reason=range",
+          sourceId, targetId, event.skillId, range);
+      return;
+    }
+
+    Attributes source = mAttributesWrapper.get(sourceId).attrs;
+    Attributes target = mAttributesWrapper.get(targetId).attrs;
+    StateList sourceStates = mUnitStates.has(sourceId)
+        ? mUnitStates.get(sourceId).stateList : null;
+    StateList targetStates = mUnitStates.has(targetId)
+        ? mUnitStates.get(targetId).stateList : null;
+    java.util.function.ToIntFunction<String> levels =
+        name -> getBaseSkillLevel(sourceId, name);
+    int physicalMin = MissileDamageResolver.skillPhysicalDamage(
+        skill, skillLevel, true, levels);
+    int physicalMax = MissileDamageResolver.skillPhysicalDamage(
+        skill, skillLevel, false, levels);
+    int physicalRaw = rollNativeDamage(physicalMin, physicalMax);
+
+    int elementalMin = MissileDamageResolver.skillElementalDamage(
+        skill, skillLevel, true, levels);
+    int elementalMax = MissileDamageResolver.skillElementalDamage(
+        skill, skillLevel, false, levels);
+    short masteryStat = elementalMasteryStat(skill.EType);
+    int mastery = masteryStat == 0 ? 0 : Math.max(0, statInt(source, masteryStat)
+        + (sourceStates != null ? sourceStates.getTotalStatContribution(masteryStat) : 0));
+    elementalMin = saturatedScale(elementalMin, 100 + mastery, 100);
+    elementalMax = saturatedScale(elementalMax, 100 + mastery, 100);
+    int elementalRaw = rollNativeDamage(elementalMin, elementalMax);
+    int damageType = elementalDamageType(skill.EType);
+    int pierce = elementalPierce(source, sourceStates, damageType);
+
+    boolean sourcePlayer = true;
+    boolean targetPlayer = mPlayer.has(targetId);
+    CombatSystem.CombatResult physical =
+        CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+            target, targetPlayer, sourcePlayer, physicalRaw, targetStates);
+    CombatSystem.CombatResult elemental =
+        CombatSystem.INSTANCE.calculateFixedElementalDamage(
+            target, targetPlayer, sourcePlayer, damageType, elementalRaw,
+            pierce, targetStates, combatDifficulty(sourceId, targetId));
+    StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
+    StatRef maxHp = target.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null) return;
+    if (elemental.absorbedLife > 0 && maxHp != null) {
+      hp.add(Math.max(0f,
+          Math.min((float) elemental.absorbedLife, maxHp.asFixed() - hp.asFixed())));
+    }
+    int resolved = physical.totalDamage + elemental.totalDamage;
+    if (resolved <= 0) {
+      log.info("[TELEKINESIS] phase=immune source={} target={} skill={} level={} raw={}..{}",
+          sourceId, targetId, event.skillId, skillLevel, elementalMin, elementalMax);
+      return;
+    }
+    DamageEvent damage = DamageEvent.obtainMissile(
+        sourceId, targetId, resolved, physical.physicalDamage, null, elemental);
+    if (events != null) events.dispatch(damage);
+    hp.sub(Math.max(0f, damage.damage));
+    if (hp.asFixed() <= 0f) {
+      hp.set(0f);
+      if (events != null) events.dispatch(DeathEvent.obtain(sourceId, targetId));
+    }
+    log.info("[TELEKINESIS] phase=damage source={} target={} skill={} level={} range={} "
+            + "physical={} elemental={} mastery={} pierce={} resolved={}",
+        sourceId, targetId, event.skillId, skillLevel, range, physicalRaw,
+        elementalRaw, mastery, pierce, resolved);
+  }
+
+  /** ITEMS_RollLimitedRandomNumber(seed, max-min) uses an exclusive upper bound. */
+  static int rollNativeDamage(int minimum, int maximum) {
+    int min = Math.max(0, minimum);
+    int max = Math.max(min, maximum);
+    long span = (long) max - min;
+    if (span <= 1) return min;
+    int offset = MathUtils.random((int) Math.min(Integer.MAX_VALUE, span - 1));
+    return (int) Math.min(Integer.MAX_VALUE, (long) min + offset);
+  }
+
+  private static int elementalDamageType(String element) {
+    if ("fire".equalsIgnoreCase(element)) return CombatSystem.DAMAGE_FIRE;
+    if ("cold".equalsIgnoreCase(element) || "frze".equalsIgnoreCase(element)) {
+      return CombatSystem.DAMAGE_COLD;
+    }
+    if ("pois".equalsIgnoreCase(element) || "poison".equalsIgnoreCase(element)) {
+      return CombatSystem.DAMAGE_POISON;
+    }
+    if ("mag".equalsIgnoreCase(element) || "magic".equalsIgnoreCase(element)) {
+      return CombatSystem.DAMAGE_MAGIC;
+    }
+    return CombatSystem.DAMAGE_LIGHTNING;
+  }
+
+  private static short elementalMasteryStat(String element) {
+    if ("fire".equalsIgnoreCase(element)) return Stat.passive_fire_mastery;
+    if ("ltng".equalsIgnoreCase(element) || "lightning".equalsIgnoreCase(element)) {
+      return Stat.passive_ltng_mastery;
+    }
+    return 0;
+  }
+
+  private static int elementalPierce(
+      Attributes source, StateList sourceStates, int damageType) {
+    short itemStat;
+    short passiveStat;
+    switch (damageType) {
+      case CombatSystem.DAMAGE_FIRE:
+        itemStat = Stat.item_pierce_fire;
+        passiveStat = Stat.passive_fire_pierce;
+        break;
+      case CombatSystem.DAMAGE_COLD:
+        itemStat = Stat.item_pierce_cold;
+        passiveStat = Stat.passive_cold_pierce;
+        break;
+      case CombatSystem.DAMAGE_POISON:
+        itemStat = Stat.item_pierce_pois;
+        passiveStat = Stat.passive_pois_pierce;
+        break;
+      case CombatSystem.DAMAGE_LIGHTNING:
+        itemStat = Stat.item_pierce_ltng;
+        passiveStat = Stat.passive_ltng_pierce;
+        break;
+      default:
+        return 0;
+    }
+    int pierce = statInt(source, itemStat) + statInt(source, passiveStat);
+    if (sourceStates != null) {
+      pierce += sourceStates.getTotalStatContribution(itemStat);
+      pierce += sourceStates.getTotalStatContribution(passiveStat);
+    }
+    return Math.max(0, pierce);
   }
 
   /**

@@ -366,6 +366,13 @@ public final class SorceressSkills {
         && "Static Field".equalsIgnoreCase(skill.skill);
   }
 
+  /** D2MOO {@code SKILLS_SrvDo021_Telekinesis}. */
+  public static boolean isTelekinesis(Skills.Entry skill) {
+    return skill != null && skill.Id == SkillId.TELEKINESIS
+        && skill.srvstfunc == 12 && skill.srvdofunc == 21
+        && "Telekinesis".equalsIgnoreCase(skill.skill);
+  }
+
   /** Native {@code SKILLS_SrvDo023_Blaze_EnergyShield_SpiderLay} Blaze row. */
   public static boolean isBlaze(Skills.Entry skill) {
     return skill != null && skill.srvdofunc == 23

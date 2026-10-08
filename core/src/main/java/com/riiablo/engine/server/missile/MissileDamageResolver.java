@@ -922,6 +922,23 @@ public final class MissileDamageResolver {
     return skillElementalDamageFixed(skill, Math.max(1, level), minimum, baseSkillLevel) >> 8;
   }
 
+  /** Native integer damage returned by SKILLS_GetMin/MaxPhysDamage without SrcDam. */
+  public static int skillPhysicalDamage(Skills.Entry skill, int level,
+      boolean minimum, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null) return 0;
+    level = Math.max(1, level);
+    int base = minimum ? skill.MinDam : skill.MaxDam;
+    int[] perLevel = minimum ? skill.MinLevDam : skill.MaxLevDam;
+    long damage = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.DmgSymPerCalc, skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    damage += damage * synergy / 100L;
+    damage <<= Math.max(0, Math.min(30, skill.HitShift));
+    int fixed = damage >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) damage;
+    return fixed >> 8;
+  }
+
   private static int percentage(int value, int percent) {
     long result = (long) Math.max(0, value) * Math.max(0, percent) / 100L;
     return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;

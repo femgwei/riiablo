@@ -267,3 +267,26 @@ DMG-04 为这一非固定伤害技能锁定可复现输入：单个 100/100 生�
 50/100@50% 五个边界；完整 ECS 测试继续覆盖难度门槛、负抗补偿、正抗、免疫、吸收、
 PvP、目标过滤和无导弹语义。多目标及重复施法总量延后到 DMG-07，最终结算场景延后到
 DMG-08。
+
+## DMG-04 第十三个逐级实例：Telekinesis
+
+Telekinesis 由 `Skills.txt` 持有直接命中伤害。1.10f 行为为 `SrvStFunc=12`、
+`SrvDoFunc=21`、`HitShift=8`、`EType=ltng`，物理基值和五段增量均为 0；元素基值为
+1–2，最小值与最大值的五段增量均为 `1/1/1/1/1`，且没有伤害协同公式。无装备、无
+协同、无 Lightning Mastery 的基础场景中，等级 1 的定点范围为 256–512、整数范围为
+1–2；等级 20 的定点范围为 5120–5376、整数范围为 20–21。
+
+D2MOO `SKILLS_SrvSt12_Telekinesis_DragonFlight` 先要求目标存在、距离不超过
+`AuraRangeCalc`，并对玩家/怪物目标检查敌对关系和双方城镇限制。
+`SKILLS_SrvDo021_Telekinesis` 仅允许玩家施法者；对玩家或怪物目标先调用
+`D2GAME_RollPhysicalDamage_6FD14EC0`，再调用 `D2GAME_RollElementalDamage_6FD14DD0`，
+随后合并 Skills.txt 的 `ResultFlags`、`HitFlags`、`HitClass` 与 `Param[1]` 击退概率，最后
+走普通 missile-style 命中结算。元素滚动调用 `SKILLS_GetMin/MaxElemDamage(..., a4=1)`，
+因此 Lightning Mastery 属于生产伤害包；基础黄金场景明确把它固定为 0。
+
+`D2GAME_RollElementalDamage_6FD14DD0` 把 `max-min` 传给 limited RNG，因此原生运行时的
+上端点遵循排他约定；黄金矩阵仍记录两个 D2Common getter 返回的规范最小/最大范围。
+riiablo `ServerSkillSystem.applyTelekinesis` 现在复现单位目标门禁、物理/元素范围、
+Lightning Mastery、抗性/免疫/吸收、PvP、生命扣减与死亡事件，并发出带闪电通道的
+missile-style `DamageEvent`，但不创建导弹实体。等级 1–20 的生产范围与独立黄金数组完全
+一致。物品拾取/移动、对象操作以及击退位移属于行为审计，不计入本次 DMG-04 数值批准。

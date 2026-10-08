@@ -12,17 +12,17 @@ D2MOO 证据位置和测试引用的完整性，不把源表曲线升级为逐�
   Assassin 251–280；技能名称与 1.10f `Skills.txt` 一致。
 - `damage_role`、`damage_owner`、`owner_record`、原版路径、D2MOO 位置、riiablo 路径、
   测试引用、状态和说明均无空值。每个 D2MOO 引用都包含源码位置。
-- 185 个唯一测试引用均能解析到现有测试类/方法，或明确标注的 headless 场景。
+- 189 个唯一测试引用均能解析到现有测试类/方法，或明确标注的 headless 场景。
 - 40 项技能不拥有输出伤害；其中 29 项标记 `OUT_OF_SCOPE_NO_DAMAGE`，另有 9 项因防御、
   召唤或行为语义差异保留为 `RIIABLO_GAP`，2 项相关行为已实现并测试。无输出伤害不等于
   整个技能无需审计。
 
 ## 统一状态分类
 
-- `IMPLEMENTED_TESTED`：116 项。生产路径存在，并已有与所有者语义对应的聚焦测试。
+- `IMPLEMENTED_TESTED`：117 项。生产路径存在，并已有与所有者语义对应的聚焦测试。
 - `IMPLEMENTED_TEST_GAP`：27 项。生产路径存在，但缺最终伤害消费或完整端到端断言。
 - `OUT_OF_SCOPE_NO_DAMAGE`：29 项。技能不拥有输出伤害，清单明确记录 N/A 原因。
-- `RIIABLO_GAP`：38 项。已有 D2MOO/1.10f 证据支持的实现或语义差异。
+- `RIIABLO_GAP`：37 项。已有 D2MOO/1.10f 证据支持的实现或语义差异。
 
 四类合计 210 项。各职业测试继续锁定具体缺口 ID；新增
 `SkillDamageOwnershipAuditTest` 负责跨职业表头、ID、状态总数、证据非空、无伤害语义和测试引用
