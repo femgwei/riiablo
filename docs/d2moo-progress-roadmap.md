@@ -6705,3 +6705,42 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 --tests com.riiablo.save.ItemDataResourceRefreshTest
 --tests com.riiablo.save.D2SRealSaveIntegrationTest.preservesCurrentLifeWhenLoadingRealSave
 --no-daemon`（真实存档门槛设置 `D2_REAL_SAVE`），以及 `:core:compileJava --no-daemon`。
+
+## 2026-10-09 邪恶洞穴 Corpsefire / SuperUnique 原生强化恢复
+
+- [x] 根因定位为延迟 RoomEx 生成路径只传递 `SUPER_UNIQUE` rank，却丢弃
+  `SuperUniques.txt` 的固定 `Mod1..3`；同时 `ServerEntityFactory` 未执行基础
+  Unique UMod 生命倍率，`MonsterP` 也只同步基础 `monsterId`，客户端因此把
+  Corpsefire 显示成普通 Zombie。
+- [x] 按 D2MOO `MonsterUnique.cpp` 的 `MONSTERUNIQUE_UMod2_HealthBonus` / UMod4
+  恢复 rank 数值：Unique/SuperUnique 生命在普通/噩梦/地狱为 `4x/3x/2x`，
+  等级 `+3`，经验 `x5`，HP regen 归零；Champion 和 minion 也使用对应难度行。
+- [x] Corpsefire `hcIdx=40` 的固定 UMod 27（Spectral Hit）已从
+  `SuperUniques.Mod` 转为运行时 affix：出生时冰/火/电抗性各 `+20`，每次
+  权威普通近战按怪物当前等级的 `MonLvl.LDM[difficulty]` 随机附加火/电/
+  魔法/冰/毒之一，最小 `66%`、最大 `100%`，冰/毒长度 `+40`。随机数
+  消耗怪物独立 `NativeRng`，不扰动全局 RNG。
+- [x] 固定 UMod 出生属性已补齐 Extra Strong/Fast、Stone Skin、Magic Resistant、
+  四种元素强化、Mana Burn 和 Spectral Hit 的攻击/命中/速度/防御/抗性初始化；
+  Baal 固定仆从复用同一 `MonUMod -> affix` 映射。
+- [x] FlatBuffers `MonsterP` 追加 `rank/affixes/championType/uniqueId`，创建和后续
+  snapshot 都恢复权威精英身份；客户端按 `SuperUniques.Name` 显示金色
+  Corpsefire 专名，Champion 使用蓝色。
+- [x] 定向验证通过：`MonsterStatsCalculatorNativeTest`、
+  `NativeShrineEffectSystemTest`、`MonsterSerializerTest`、`MonsterNameResolverTest`、
+  `MonsterRoomActivationTest.deferredSuperUniqueSpawnRetainsNativeIdentityAndRank`和
+  `Act5BaalWaveStateTest.mapsFixedBaalSubjectModsToRuntimeAffixes`，Gradle 结果为
+  `BUILD SUCCESSFUL`。
+- [x] 怪物近战回归共 19 项，17 项通过；`MonsterMeleeAnimationRegressionTest`
+  两项在进入被测攻击逻辑前失败，原因是既有测试 World 未注册 `CofManager`，
+  报错 `Failed to inject CofManager into AnimStepper`；该失败与本次精英数值和
+  Spectral Hit 结算无关，未做掩盖。
+- [x] 代码提交 `42cc9c2a`（`Restore native super unique monster bonuses`）已成功
+  推送到 `origin/master`（`f15fbe5a..42cc9c2a`）。
+- [x] 代码推送后工作区仅剩本节路线图记录待提交，没有夹带天气、地图或日志等
+  无关文件。
+- [ ] 后续完整 UMod 范围：Aura Enchanted 光环分配、元素强化死亡/受击效果、
+  噩梦/地狱随机追加 UMod，以及普通 Unique/怪物神殿的随机专名。
+
+当前下一项：用另一台电脑从 `origin/master` 拉取后进入邪恶洞穴，实机核对
+Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
