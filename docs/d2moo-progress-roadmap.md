@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-09 河流水面原生调色板光照
+
+- [x] 对照 D2MOO `D2WinPalette.cpp`，确认 `Pal.pl2` 首段是 32 行 Shadow
+  colormap，而不是普通 RGB 亮度表；每个 Act 现在加载并上传自己的 32x256 索引映射。
+- [x] 静态核对 1.10f `D2DDraw.dll` 普通 CEL 绘制路径：光照字节为 `255` 时跳过映射，
+  其余值用 `intensity >> 3` 选择 Shadow 行。shader 现在先在调色板索引空间应用该映射，
+  再查 Act 调色板，不再只对已经转换的 RGB 做强度乘法。
+- [x] 环境 RGB 色调与强度分离；玩家、物件、导弹和 Overlay 的局部光源先参与像素光强，
+  再选择 Shadow 行。自发光、Screen 和 additive 表现继续绕过环境暗化。
+- [x] 河流 COF `overrideTransLvl=1/newTransLvl=0` 已确认仍由现有动画加载器应用 75%
+  透明度；本轮没有按河流对象 ID、`Objects.Trans=7` 或固定青绿色做特判。
+- 验证：`RenderLightingTest` 与 Rogue Encampment 河流生成定向测试通过；真实 MPQ
+  `desktop:offscreenCamp` 通过并完成 shader 编译。最终白天/夜晚水面亮度仍需客户端截图验收。
+
 ## 2026-10-08 原版物品说明与售价对齐
 
 - [x] 从 1.10f `D2Client.dll` 重新核对 18x5 武器攻速描述表，修正短弓等武器的

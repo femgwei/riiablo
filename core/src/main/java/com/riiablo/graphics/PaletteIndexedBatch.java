@@ -13,6 +13,7 @@ public class PaletteIndexedBatch extends SpriteBatch {
   public static final int MAX_LOCAL_LIGHTS = 16;
   private static final int PALETTE_TEXTURE_ID  = 1;
   private static final int COLORMAP_TEXTURE_ID = 2;
+  private static final int LIGHTMAP_TEXTURE_ID = 3;
 
   private final int PALETTE_LOCATION;
   private final int BLENDMODE_LOCATION;
@@ -20,6 +21,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
   private final int COLORMAPID_LOCATION;
   private final int GAMMA_LOCATION;
   private final int LIGHTING_ENABLED_LOCATION;
+  private final int LIGHTMAP_LOCATION;
+  private final int AMBIENT_INTENSITY_LOCATION;
   private final int AMBIENT_LIGHT_LOCATION;
   private final int LIGHT_COUNT_LOCATION;
   private final int LOCAL_LIGHTS_LOCATION;
@@ -34,6 +37,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
   private float gamma = 1.0f;
   private boolean disabled = false;
   private boolean lightingEnabled;
+  private Texture lightmap;
+  private float ambientIntensity = 1f;
   private final Color ambientLight = Color.WHITE.cpy();
   private int lightCount;
   private final float[] localLights = new float[MAX_LOCAL_LIGHTS * 4];
@@ -48,6 +53,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
     COLORMAPID_LOCATION = shader.getUniformLocation("colormapId");
     GAMMA_LOCATION      = shader.getUniformLocation("gamma");
     LIGHTING_ENABLED_LOCATION = shader.getUniformLocation("lightingEnabled");
+    LIGHTMAP_LOCATION = requireUniform(shader, "LightMap");
+    AMBIENT_INTENSITY_LOCATION = requireUniform(shader, "ambientIntensity");
     AMBIENT_LIGHT_LOCATION = shader.getUniformLocation("ambientLight");
     LIGHT_COUNT_LOCATION = shader.getUniformLocation("lightCount");
     // OpenGL reports array uniforms using their first element's name. libGDX
@@ -167,13 +174,17 @@ public class PaletteIndexedBatch extends SpriteBatch {
   }
 
   /**
-   * Applies outdoor ambient light and world-space elliptical local lights.
+   * Applies the act's native PL2 shadow map, outdoor ambient light, and
+   * world-space elliptical local lights.
    * Every light occupies four floats (centre x/y and radius x/y); colours use
    * three floats. Arrays are copied because RenderSystem reuses its buffers.
    */
-  public void setLighting(Color ambient, int count, float[] lights, float[] colors) {
+  public void setLighting(Texture lightmap, int intensity, Color ambient,
+      int count, float[] lights, float[] colors) {
     if (isDrawing()) flush();
-    lightingEnabled = true;
+    this.lightmap = lightmap;
+    lightingEnabled = lightmap != null;
+    ambientIntensity = Math.max(0, Math.min(255, intensity)) / 255f;
     ambientLight.set(ambient);
     lightCount = Math.max(0, Math.min(MAX_LOCAL_LIGHTS, count));
     if (lightCount > 0) {
@@ -186,6 +197,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
   public void resetLighting() {
     if (isDrawing()) flush();
     lightingEnabled = false;
+    lightmap = null;
+    ambientIntensity = 1f;
     ambientLight.set(Color.WHITE);
     lightCount = 0;
     applyLighting();
@@ -232,6 +245,12 @@ public class PaletteIndexedBatch extends SpriteBatch {
 
   private void applyLighting() {
     shader.setUniformi(LIGHTING_ENABLED_LOCATION, lightingEnabled ? 1 : 0);
+    if (lightingEnabled && lightmap != null) {
+      lightmap.bind(LIGHTMAP_TEXTURE_ID);
+      shader.setUniformi(LIGHTMAP_LOCATION, LIGHTMAP_TEXTURE_ID);
+      Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
+    }
+    shader.setUniformf(AMBIENT_INTENSITY_LOCATION, ambientIntensity);
     shader.setUniformf(AMBIENT_LIGHT_LOCATION,
         ambientLight.r, ambientLight.g, ambientLight.b);
     shader.setUniformi(LIGHT_COUNT_LOCATION, lightCount);

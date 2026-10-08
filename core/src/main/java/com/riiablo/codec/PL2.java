@@ -3,8 +3,10 @@ package com.riiablo.codec;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.glutils.PixmapTextureData;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.StreamUtils;
+import com.riiablo.graphics.PaletteIndexedPixmap;
 
 import org.apache.commons.io.IOUtils;
 
@@ -19,8 +21,11 @@ public class PL2 {
   private static final int TINTS     = 13;
   private static final int TINT_SIZE = 3 + Palette.COLORS;
 
-  // PL2 sections before HueVariations: light(32), inverse(16), selected(1),
-  // alpha(3*256), additive(256), multiplicative(256).
+  /** Native shadow rows selected by {@code lightIntensity >> 3}. */
+  public static final int SHADOW_COLORMAPS = 32;
+
+  // PL2 sections before HueVariations: shadow(32), light(16), gamma(1),
+  // alpha(3*256), additive/screen(256), multiplicative/luminance(256).
   private static final int HUE_VARIATIONS_OFFSET = 1329;
   private static final int HUE_VARIATIONS = 111;
 
@@ -54,6 +59,21 @@ public class PL2 {
     return colormaps[index];
   }
 
+  public byte[] getShadowColormap(int row) {
+    if (row < 0 || row >= SHADOW_COLORMAPS) return null;
+    return colormaps[row];
+  }
+
+  /**
+   * Mirrors the software renderer's normal-CEL lookup in D2DDraw 1.10f:
+   * intensity 255 bypasses the table; every other value selects row
+   * {@code intensity >> 3} from the first 32 Pal.pl2 colormaps.
+   */
+  public static int shadowRow(int intensity) {
+    int clamped = Math.max(0, Math.min(255, intensity));
+    return clamped == 255 ? -1 : clamped >>> 3;
+  }
+
   /** Returns the native PL2 hue-variation row used by States.txt colorshift. */
   public byte[] getHueVariation(int colorShift) {
     if (colorShift < 0 || colorShift >= HUE_VARIATIONS) return null;
@@ -79,6 +99,23 @@ public class PL2 {
     //texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
     pl2Pixmap.dispose();
+    return texture;
+  }
+
+  /** Uploads the 32 native shadow rows as palette-index mappings. */
+  public Texture renderShadows() {
+    PaletteIndexedPixmap pixmap =
+        new PaletteIndexedPixmap(Palette.COLORS, SHADOW_COLORMAPS);
+    ByteBuffer buffer = pixmap.getPixels();
+    for (int row = 0; row < SHADOW_COLORMAPS; row++) {
+      buffer.put(colormaps[row]);
+    }
+    buffer.rewind();
+    Texture texture = new Texture(
+        new PixmapTextureData(pixmap, null, false, false, false));
+    texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+    texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
+    pixmap.dispose();
     return texture;
   }
 

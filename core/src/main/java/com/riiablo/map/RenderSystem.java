@@ -270,6 +270,7 @@ public class RenderSystem extends BaseEntitySystem {
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Color ambientLight = new Color(Color.WHITE);
+  private int ambientIntensity = 255;
   private final float[] localLights =
       new float[PaletteIndexedBatch.MAX_LOCAL_LIGHTS * 4];
   private final float[] localLightColors =
@@ -670,16 +671,15 @@ public class RenderSystem extends BaseEntitySystem {
       // D2Common DRLGROOM_GetRGB_IntensityFromRoomEx returns these static
       // Levels.txt values for indoor rooms. Most dungeons intentionally use
       // zero ambient intensity and rely on unit/object/missile light radii.
-      setAmbientLight(ambientLight, zone.level.Intensity,
-          zone.level.Red, zone.level.Green, zone.level.Blue);
+      ambientIntensity = MathUtils.clamp(zone.level.Intensity, 0, 255);
+      setAmbientLight(ambientLight, zone.level.Red, zone.level.Green, zone.level.Blue);
     } else {
       if (environment == null) {
         batch.resetLighting();
         return;
       }
-      setAmbientLight(ambientLight,
-          environment.intensity(levelId, act),
-          environment.red(levelId, act),
+      ambientIntensity = MathUtils.clamp(environment.intensity(levelId, act), 0, 255);
+      setAmbientLight(ambientLight, environment.red(levelId, act),
           environment.green(levelId, act),
           environment.blue(levelId, act));
     }
@@ -763,7 +763,8 @@ public class RenderSystem extends BaseEntitySystem {
           object.base.Red / 255f, object.base.Green / 255f, object.base.Blue / 255f,
           focusX, focusY);
     }
-    batch.setLighting(ambientLight, count, localLights, localLightColors);
+    batch.setLighting(getShadowMap(), ambientIntensity,
+        ambientLight, count, localLights, localLightColors);
   }
 
   private boolean isInLightingZone(int entityId, Map.Zone zone) {
@@ -772,21 +773,14 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   /**
-   * Approximates D2's palette light rows in the shader's display-colour path.
-   * D2 keeps light intensity and RGB tint as independent fields; applying the
-   * linear intensity directly to already gamma-encoded palette RGB made night
-   * roughly twice as dark as the native renderer.
+   * Keeps the independently interpolated RGB tint separate from intensity.
+   * Intensity selects a native Pal.pl2 shadow row in PaletteIndexedBatch.
    */
-  static Color setAmbientLight(Color out, int intensity, int red, int green, int blue) {
-    // The palette and final shader colour are display encoded. Convert D2's
-    // linear intensity with the conventional 2.2 display gamma before
-    // applying its independently interpolated RGB tint.
-    float displayIntensity = (float) Math.pow(
-        MathUtils.clamp(intensity, 0, 255) / 255f, 1.0 / 2.2);
+  static Color setAmbientLight(Color out, int red, int green, int blue) {
     return out.set(
-        MathUtils.clamp(red, 0, 255) / 255f * displayIntensity,
-        MathUtils.clamp(green, 0, 255) / 255f * displayIntensity,
-        MathUtils.clamp(blue, 0, 255) / 255f * displayIntensity,
+        MathUtils.clamp(red, 0, 255) / 255f,
+        MathUtils.clamp(green, 0, 255) / 255f,
+        MathUtils.clamp(blue, 0, 255) / 255f,
         1f);
   }
 
@@ -925,6 +919,17 @@ public class RenderSystem extends BaseEntitySystem {
     }
     cacheMetrics.record(iso.zoom, visibleCellCount, spatialIndex.entityCount(),
         spatialIndex.activeCellCount(), TimeUtils.nanoTime() - startNanos);
+  }
+
+  private Texture getShadowMap() {
+    switch (map.getAct()) {
+      case 0:  return Riiablo.palettes.act1Shadows;
+      case 1:  return Riiablo.palettes.act2Shadows;
+      case 2:  return Riiablo.palettes.act3Shadows;
+      case 3:  return Riiablo.palettes.act4Shadows;
+      case 4:  return Riiablo.palettes.act5Shadows;
+      default: return Riiablo.palettes.act1Shadows;
+    }
   }
 
   /** Reconciles direct Position writes while preserving unchanged cell membership. */

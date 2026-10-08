@@ -5,6 +5,7 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Disposable;
 
+import com.riiablo.codec.PL2;
 import com.riiablo.codec.Palette;
 
 public class Palettes implements Disposable {
@@ -28,6 +29,7 @@ public class Palettes implements Disposable {
   public static final String UNITS     = "data\\global\\palette\\UNITS\\pal.dat";
 
   public final Texture act1, act2, act3, act4, act5;
+  public final Texture act1Shadows, act2Shadows, act3Shadows, act4Shadows, act5Shadows;
   public final Texture endgame, endgame2;
   public final Texture fechar;
   public final Texture loading;
@@ -40,6 +42,11 @@ public class Palettes implements Disposable {
     act3      = load(assets, "ACT3").render();
     act4      = load(assets, "ACT4").render();
     act5      = load(assets, "ACT5").render();
+    act1Shadows = loadShadows("ACT1");
+    act2Shadows = loadShadows("ACT2");
+    act3Shadows = loadShadows("ACT3");
+    act4Shadows = loadShadows("ACT4");
+    act5Shadows = loadShadows("ACT5");
     endgame   = load(assets, "ENDGAME").render();
     endgame2  = load(assets, "ENDGAME2").render();
     fechar    = load(assets, "FECHAR").render();
@@ -62,6 +69,11 @@ public class Palettes implements Disposable {
     return assets.get(descriptor);
   }
 
+  private Texture loadShadows(String paletteName) {
+    return PL2.loadFromFile(Riiablo.mpqs.resolve(
+        "data\\global\\palette\\" + paletteName + "\\Pal.pl2")).renderShadows();
+  }
+
   private static AssetDescriptor<Palette> getDescriptor(String paletteName) {
     return new AssetDescriptor<>("data\\global\\palette\\" + paletteName + "\\pal.dat", Palette.class);
   }
@@ -73,6 +85,11 @@ public class Palettes implements Disposable {
     act3.dispose();
     act4.dispose();
     act5.dispose();
+    act1Shadows.dispose();
+    act2Shadows.dispose();
+    act3Shadows.dispose();
+    act4Shadows.dispose();
+    act5Shadows.dispose();
     endgame.dispose();
     endgame2.dispose();
     fechar.dispose();

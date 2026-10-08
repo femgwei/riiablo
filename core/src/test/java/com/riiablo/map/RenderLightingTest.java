@@ -1,6 +1,7 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.graphics.Color;
+import com.riiablo.codec.PL2;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,19 +50,29 @@ public class RenderLightingTest {
   }
 
   @Test
-  public void nightIntensityUsesDisplaySpacePaletteApproximation() {
-    Color ambient = RenderSystem.setAmbientLight(new Color(), 64, 125, 144, 243);
+  public void ambientTintRemainsIndependentFromPaletteIntensity() {
+    Color ambient = RenderSystem.setAmbientLight(new Color(), 125, 144, 243);
 
-    assertEquals(0.2615f, ambient.r, 0.001f);
-    assertEquals(0.3013f, ambient.g, 0.001f);
-    assertEquals(0.5084f, ambient.b, 0.001f);
-    // Regression: the old linear product produced only 0.123 red at night.
-    assertTrue(ambient.r > 0.24f);
+    assertEquals(125f / 255f, ambient.r, 0.001f);
+    assertEquals(144f / 255f, ambient.g, 0.001f);
+    assertEquals(243f / 255f, ambient.b, 0.001f);
   }
 
   @Test
   public void fullDaylightRemainsWhite() {
     assertEquals(Color.WHITE,
-        RenderSystem.setAmbientLight(new Color(), 255, 255, 255, 255));
+        RenderSystem.setAmbientLight(new Color(), 255, 255, 255));
+  }
+
+  @Test
+  public void nativeCelIntensitySelectsPl2ShadowRows() {
+    assertEquals(0, PL2.shadowRow(0));
+    assertEquals(0, PL2.shadowRow(7));
+    assertEquals(1, PL2.shadowRow(8));
+    assertEquals(8, PL2.shadowRow(64));
+    assertEquals(31, PL2.shadowRow(254));
+    assertEquals(-1, PL2.shadowRow(255));
+    assertEquals(0, PL2.shadowRow(-1));
+    assertEquals(-1, PL2.shadowRow(256));
   }
 }

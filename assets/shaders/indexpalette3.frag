@@ -7,12 +7,14 @@
 
 uniform sampler2D ColorTable; //256 x 1  pixels
 uniform sampler2D ColorMap;   //256 x 22 pixels
+uniform sampler2D LightMap;   //256 x 32 native Pal.pl2 shadow rows
 uniform sampler2D u_texture;
 uniform mat4 u_projTrans;
 uniform int blendMode;
 uniform int colormapId;
 uniform float gamma;
 uniform int lightingEnabled;
+uniform float ambientIntensity;
 uniform vec3 ambientLight;
 uniform int lightCount;
 uniform vec4 localLights[16]; // centre x/y, radius x/y in isometric pixels
@@ -34,8 +36,36 @@ void main() {
     color = texture2D(ColorMap, color.ar);
   }
 
+  // D2DDraw 1.10f selects the normal-CEL shadow colormap with
+  // (lightIntensity >> 3), while byte value 255 bypasses the table. Combine
+  // local light radii before that indexed lookup so bright cyan palette
+  // entries collapse into the same authored night colours as the native
+  // renderer instead of remaining saturated after an RGB multiplication.
+  bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
+      || blendMode == 12 || blendMode == 14;
+  vec3 light = vec3(1.0);
+  if (lightingEnabled != 0 && !selfLit) {
+    float intensity = ambientIntensity;
+    light = ambientLight;
+    for (int i = 0; i < 16; i++) {
+      if (i >= lightCount) break;
+      vec4 source = localLights[i];
+      vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
+      float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
+      vec3 localLight = localLightColors[i] * falloff;
+      intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));
+      light = max(light, localLight);
+    }
+    float lightByte = floor(clamp(intensity, 0.0, 1.0) * 255.0 + 0.5);
+    if (lightByte < 255.0 && color.a > 0.0) {
+      float row = floor(lightByte / 8.0);
+      color.r = (row + 0.5) / 32.0;
+      color = texture2D(LightMap, color.ar);
+    }
+  }
+
   // workaround for https://github.com/collinsmith/riiablo/issues/139
-  else if (color.a == 0.99609375) { // index 255 == float(255 / 256)
+  if (color.a == 0.99609375) { // index 255 == float(255 / 256)
     color.a = color.a - 0.00390625; // index 255 -> 254 by subtracting float(1 / 256)
   }
 
@@ -147,22 +177,9 @@ void main() {
   colorRGB *= 1.20;
   colorRGB += 0.60;
 
-  // D2 composes the outdoor environment with unit/object light radii. Keep
-  // this after the legacy palette contrast pass so darkness is not raised by
-  // its hard-coded brightness offset. The fixed-size loop is GLES2-safe.
-  // Native luminosity/additive effects and mouse highlights are rendered at
-  // full brightness. Their surroundings are lit by the local-light list.
-  bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
-      || blendMode == 12 || blendMode == 14;
+  // Keep RGB tint after the legacy palette contrast pass. Intensity itself
+  // has already been applied in palette-index space above.
   if (lightingEnabled != 0 && !selfLit) {
-    vec3 light = ambientLight;
-    for (int i = 0; i < 16; i++) {
-      if (i >= lightCount) break;
-      vec4 source = localLights[i];
-      vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
-      float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
-      light = max(light, localLightColors[i] * falloff);
-    }
     colorRGB *= clamp(light, 0.0, 1.0);
   }
 
