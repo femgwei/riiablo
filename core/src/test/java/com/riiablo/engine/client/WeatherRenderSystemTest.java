@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -98,6 +99,19 @@ class WeatherRenderSystemTest {
       }
       assertTrue(nativeShade);
     }
+  }
+
+  @Test
+  void onlyBrightRainGetsTheNativeRasterFringe() {
+    assertTrue(WeatherRenderSystem.hasRainFringe(
+        WeatherRenderSystem.ParticleField.rainShade(0)));
+    assertTrue(WeatherRenderSystem.hasRainFringe(
+        WeatherRenderSystem.ParticleField.rainShade(2)));
+    assertFalse(WeatherRenderSystem.hasRainFringe(
+        WeatherRenderSystem.ParticleField.rainShade(3)));
+    assertFalse(WeatherRenderSystem.hasRainFringe(
+        WeatherRenderSystem.ParticleField.rainShade(
+            WeatherRenderSystem.RAIN_SHADE_COUNT - 1)));
   }
 
   @Test

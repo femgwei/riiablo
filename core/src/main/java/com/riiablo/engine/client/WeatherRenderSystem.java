@@ -40,6 +40,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
   static final int RAIN_SHADE_COUNT = 12;
+  private static final int RAIN_FRINGE_SHADE_SLOTS = 3;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
   private static final int RAIN_GREEN_BIAS = 25;
@@ -175,11 +176,25 @@ public final class WeatherRenderSystem extends BaseSystem {
       float greenShade = (shade * RAIN_SHADE_BASE + RAIN_GREEN_BIAS)
           / (RAIN_SHADE_BASE + RAIN_GREEN_BIAS);
       shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.50f);
-      shapes.line(
-          x, y,
-          x + particles.windX * length,
-          y + particles.windY * length);
+      // Native D2Gfx receives integer endpoints and has no line-width argument. Quantizing the
+      // vector reproduces its stepped silhouettes; a faint adjacent column on the brightest
+      // palette slots emulates their heavier indexed-software-raster appearance in OpenGL.
+      float deltaX = (int) (particles.windX * length);
+      float deltaY = (int) (particles.windY * length);
+      shapes.line(x, y, x + deltaX, y + deltaY);
+      if (hasRainFringe(shade)) {
+        float offsetX = -particles.windY;
+        float offsetY = particles.windX;
+        shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.30f);
+        shapes.line(
+            x + offsetX, y + offsetY,
+            x + deltaX + offsetX, y + deltaY + offsetY);
+      }
     }
+  }
+
+  static boolean hasRainFringe(float shade) {
+    return shade >= ParticleField.rainShade(RAIN_FRINGE_SHADE_SLOTS - 1);
   }
 
   private void drawSnow(float intensity) {
