@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`1019b62290ee462f5b5a52507cba728b8d3ba5a7`
-当前加权完成度：**32.0%**
+最近完成技能提交：`47002b8152a693e535886fbd82b3fec18bb87256`
+当前加权完成度：**32.1%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -49,13 +49,13 @@
   初始化链。Inner Sight 的分段公式差异已在本轮修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 118 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 36 项。新增 Inner Sight 测试引用已纳入
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 36 项。新增 Critical Strike 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 420 行 `GOLDEN_APPROVED`，其余 3,780 行仍为
+- 4,200 行中已有 440 行 `GOLDEN_APPROVED`，其余 3,760 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 32.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 420 个逐级黄金行；不表示技能伤害正确率为 32.0%。
+- 当前 32.1% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 440 个逐级黄金行；不表示技能伤害正确率为 32.1%。
 
 ## 加权任务
 
@@ -89,7 +89,8 @@
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
-    Inner Sight 等级 1–20 共 420/4,200 行（本项 10.0000%，加权贡献 2.0000 个百分点）；
+    Inner Sight、Critical Strike 等级 1–20 共 440/4,200 行（本项 10.4762%，加权贡献
+    2.0952 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +112,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 32.0000%（展示时为 32.0%）。
+当前总加权完成度为 32.0952%（展示时为 32.1%）。
 
 ## 黄金值准入规则
 
@@ -282,6 +283,11 @@
 - 审计修复了 riiablo 原手写线性 fallback：`SkillFormula` 现在支持未移位的 `edmn/edmx`
   token，`applyInnerSight` 使用原生分段曲线，等级 2 从错误的 `-60` 修正为 `-65`。持续
   时间、范围、过滤和最终命中率影响留给后续行为与结算审计。
+- Critical Strike（技能 9）等级 1–20 已按“永久被动暴击概率，不拥有独立伤害包”批准；
+  三组伤害 expected/actual/delta 字段全部保持空白，并在 `candidate_unit` 明确标记 N/A。
+  D2MOO 被动刷新计算 `PassiveCalc=dm12`，把 16%–68% 写入永久
+  `passive_critical_strike` 状态；近战和导弹消费者只在已有物理伤害记录上读取该概率。
+  随机边界、物理翻倍、与武器专精/Deadly Strike 的优先级及最终结算留给 DMG-06/08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -336,7 +342,9 @@
   `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`、
   `MagicArrowGoldenDamageTest#levelOneToTwentyPreservesD2mooTotalAcrossMagicConversion`、
   `FireArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooFireCurveWithoutWeaponOrSynergy`、
-  `InnerSightGoldenDamageTest#levelOneToTwentyAreNondamagingNativeDefenseDebuffs`。
+  `InnerSightGoldenDamageTest#levelOneToTwentyAreNondamagingNativeDefenseDebuffs`、
+  `CriticalStrikeGoldenDamageTest#levelOneToTwentyAreNondamagingNativeCriticalChances`、
+  `NativeBarbarianPassiveDataTest#selectedMasteryChangesAuthoritativeDamageHitChanceAndCriticalRoll`。
 
 ## 可复现命令
 
@@ -358,6 +366,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Critical Strike（技能 9）等级 1–20。它不创建独立伤害包，
-需按准入规则明确记录 N/A，并核对 `PassiveState=criticalstrike`、`PassiveStat`、`dm12`
-概率曲线及物理伤害消费者；暴击随机、双倍物理伤害与最终结算留给 DMG-06/08。
+继续 DMG-04，下一项优先审核 Jab（技能 10）等级 1–20。需拆分三个 SQ keyframe 的
+逐次武器记录，核对 `SrcDam=128`、`Calc1=ln34`、合法 0% 物理加成及当前 riiablo
+非正值 fallback 差异；武器基础包和三段整次施法总量属于 DMG-06。

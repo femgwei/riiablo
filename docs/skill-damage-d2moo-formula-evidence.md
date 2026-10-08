@@ -491,3 +491,29 @@ D2MOO `SKILLS_SrvDo006_InnerSight_SlowMissiles` 计算 `AuraLenCalc`、`AuraRang
 `InnerSightGoldenDamageTest` 以独立常量锁定全部 20 级，集成测试确认等级 2 状态值为
 `-65` 且仍是平面防御修正。持续时间、范围、目标过滤和最终命中率影响不属于 DMG-04
 伤害黄金值，留给后续行为与结算审计。
+
+## DMG-04 第二十二个逐级实例：Critical Strike
+
+Critical Strike 不拥有直接伤害。1.10f `Skills.txt#9` 的 `SrcDam=0`、`SrvDoFunc=0`，没有
+server missile，所有物理和元素伤害字段均为 0。该行声明
+`PassiveState=criticalstrike`、`PassiveStat=passive_critical_strike`、
+`PassiveCalc=dm12`，并使用 `Param1=5`、`Param2=80`。因此等级 1–20 的
+`expected_*`、`riiablo_actual_*` 和 `delta_*` 全部明确为 N/A 并保持空白，不能把 0
+写成技能伤害。
+
+`dm12` 按 `a + 110 * level * (b - a) / (100 * (level + 6))` 计算整数概率。代入 5 和 80
+后，等级 1–20 为
+`16,25,32,38,42,46,49,52,54,56,58,60,61,62,63,65,65,66,67,68`。
+D2MOO `SKILLS_RefreshPassiveSkills` 在技能等级变化时调用 `SKILLS_EvaluateSkillFormula`，
+随后把结果写入技能声明的 PassiveStat 状态表；该阶段不会建立伤害记录。
+
+D2MOO `SUnitDmg.cpp` 的物理伤害路径读取 `STAT_PASSIVE_CRITICAL_STRIKE`，随机成功时设置
+critical flag 并把既有 `dwPhysDamage` 乘 2；失败后才检查 Deadly Strike。导弹武器包的
+`MISSILE_HasBonusStats` 同样先读取 Critical Strike，再检查 Deadly Strike 和武器专精。
+这些消费者证明技能只拥有概率状态，不拥有独立伤害包；随机边界、翻倍物理值和三类暴击
+来源的优先级属于 DMG-06/08，而不是本批 N/A 黄金值。
+
+riiablo `AmazonSkills.getCriticalStrikeChance` 和 `applyPassiveState` 已从同一条 `dm12`
+公式建立永久状态，`StateUpdater` 负责刷新，`CombatSystem` 与导弹快照路径消费
+`passive_critical_strike`。`CriticalStrikeGoldenDamageTest` 用独立常量锁定全部 20 级、
+原版表字段、无伤害列和每级状态贡献；现有战斗测试另锁定成功暴击只翻倍物理伤害。

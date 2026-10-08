@@ -15,7 +15,8 @@
 - 4 项仍存在明确的 riiablo 差异：Jab、Guided Arrow、Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
-- Magic Arrow、Fire Arrow 与 Inner Sight 已完成等级 1–20 基础审计；60/600 个 Amazon
+- Magic Arrow、Fire Arrow、Inner Sight 与 Critical Strike 已完成等级 1–20 基础审计；
+  80/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -89,4 +90,12 @@ Inner Sight（8）等级 1–20 已按“无直接伤害，`expected_*`/`riiablo
 `armorclass` 定时负值，不创建导弹或伤害记录。分段防御削减从等级 1 的 `-40` 增长到
 等级 20 的 `-815`。审计补齐 `SkillFormula` 的未移位 `edmn/edmx` token，并把生产路径从
 手写线性值改为原生分段曲线；等级 2 现为 `-65`。持续时间、范围、目标过滤和最终命中率
-影响不属于 DMG-04 伤害值，留给后续行为与结算审计。下一项优先审核 Critical Strike（9）。
+影响不属于 DMG-04 伤害值，留给后续行为与结算审计。
+
+Critical Strike（9）等级 1–20 已按“永久被动暴击概率，不拥有独立伤害包”批准；三组伤害
+`expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。D2MOO
+`SKILLS_RefreshPassiveSkills` 计算 `PassiveCalc=dm12`，把结果写入
+`passive_critical_strike` 状态属性；`Param1=5`、`Param2=80` 产生 16%–68% 的等级 1–20
+概率曲线。近战伤害路径读取该属性，成功时只把既有物理伤害翻倍；导弹武器包也复制并消费
+该属性。随机边界、与武器专精/Deadly Strike 的优先级、双倍物理包和最终结算留给
+DMG-06/08。下一项优先审核 Jab（10）。
