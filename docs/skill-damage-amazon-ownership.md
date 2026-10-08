@@ -11,12 +11,13 @@
 ## 结论
 
 - 30/30 项均已确认原版所有者和 D2MOO 路径。
-- 27 项已有生产实现和聚焦测试证据。
-- 3 项仍存在明确的 riiablo 差异：Guided Arrow、Dopplezon、Valkyrie。
+- 28 项已有生产实现和聚焦测试证据。
+- 2 项仍存在明确的 riiablo 差异：Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
-  Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid 与 Impale 已完成等级 1–20 基础审计；280/600 个 Amazon
+  Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
+  Lightning Bolt、Ice Arrow 与 Guided Arrow 已完成等级 1–20 基础审计；360/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -55,11 +56,9 @@ Decoy 虽然不攻击，其生命/防御语义也不能只靠一个 owner-HP 百
 
 ## 已确认的 riiablo 差异
 
-1. **Guided Arrow（22）**：原生 `Calc1=ln34` 在等级 1 为 `0%`；当前
-   `spawnGuidedArrow` 对非正值启用手写 fallback，错误变成 `+5%`。
-2. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
+1. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
    额外 `Calc1` 最大生命、召唤技能/装备、UMod 和 Overlay 初始化。
-3. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
+2. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
    物品等级生成的装备；这些缺失会直接改变女武神攻击伤害。
 
 这些剩余差异继续由完整性测试锁定，不在不相关技能审计中改写。
@@ -205,3 +204,14 @@ D2MOO `MISSMODE_SrvDmg02_IceArrow_RoyalStrikeChaos` 把导弹 `coldlength` 的
 `FREEZE` 元数据保存同一转换。固定武器包、命中率与整份命中记录留给 DMG-06，冻结状态、
 Boss/Unique/Hireling 回退为 chill、抗性缩时和碎冰死亡留给 DMG-07/08。下一项优先审核
 Guided Arrow（22）。
+
+Guided Arrow（22）等级 1–20 已按“单枚锁定目标的 `guidedarrow` 武器记录、无装备、
+owner 武器伤害为 0”批准为明确 N/A：Skills.txt 的物理和元素固定伤害字段全部为 0，
+技能不拥有可填入 `expected_min/max/total` 的独立伤害包。`Calc1=ln34` 只向
+`SrcDam=128` 武器快照附加等级 1–20 的 `0%–95%` `damagepercent`。
+
+D2MOO `SKILLS_SrvDo010_GuidedArrow_BoneSpirit` 只有在 `Calc1` 结果非零时才安装
+`SKILLS_AddDamagePercentBonus`，所以等级 1 必须保留合法的 `0%`。riiablo 已移除把该零值
+替换为 `+5%` 的 fallback，等级 1 导弹倍率现为 1.00；逐级公式和生产创建路径都有回归。
+固定武器值、`SrcDam` 缩放、箭袋消耗与完整命中总量留给 DMG-06，抗性和最终结算留给
+DMG-08。下一项优先审核 Penetrate（23）。

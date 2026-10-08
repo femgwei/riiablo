@@ -944,6 +944,16 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(amazon).position.set(0, 0);
       world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(20, 200);
       int target = monster(world, 3, 0);
+
+      data.setSkillLevel(SkillId.GUIDED_ARROW, 1);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, SkillId.GUIDED_ARROW, target, null, 10, 0));
+      assertEquals(1, factory.created.size());
+      assertEquals(1f, factory.created.get(0).damageMultiplier,
+          "native Calc1=ln34 keeps Guided Arrow level one at zero percent bonus");
+
+      factory.created.clear();
+      data.setSkillLevel(SkillId.GUIDED_ARROW, 5);
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           amazon, SkillId.GUIDED_ARROW, target, null, 10, 0));
       assertEquals(1, factory.created.size());

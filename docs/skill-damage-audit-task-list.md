@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`d03d2d9c4a5727733aa787830a7302ca060d0722`
-当前加权完成度：**33.2%**
+最近完成技能提交：`a063f23b6a55c776821b2a94aee550be88db5ff0`
+当前加权完成度：**33.3%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -44,18 +44,18 @@
 - Assassin 审计确认 30 项所有者；Claw Mastery、Psychic Hammer、Quickness、Weapon Block、
   Cloak of Shadows、Fade、Shadow Warrior、Mind Blast、Shadow Master 共 9 个实现缺口；
   Shock Field、Blade Sentinel、Charged Bolt Sentry、Blade Fury 另缺最终伤害消费的聚焦测试。
-- Amazon 审计确认 30 项所有者；Guided Arrow、Dopplezon、Valkyrie 仍有 3 个明确实现
-  差异。Guided Arrow 是合法零值 fallback 问题；后 2 项缺原版召唤被动属性、技能、装备等
-  初始化链。Inner Sight 的分段公式和 Jab 的合法零值差异均已在 DMG-04 中修复。
+- Amazon 审计确认 30 项所有者；Dopplezon、Valkyrie 仍有 2 个明确实现差异，均缺原版
+  召唤被动属性、技能、装备等初始化链。Inner Sight 的分段公式，以及 Jab、Guided Arrow
+  的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
-  `IMPLEMENTED_TESTED` 119 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Power Strike 测试引用已纳入
+  `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 680 行 `GOLDEN_APPROVED`，其余 3,520 行仍为
+- 4,200 行中已有 700 行 `GOLDEN_APPROVED`，其余 3,500 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 33.2% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 680 个逐级黄金行；不表示技能伤害正确率为 33.2%。
+- 当前 33.3% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 700 个逐级黄金行；不表示技能伤害正确率为 33.3%。
 
 ## 加权任务
 
@@ -90,7 +90,8 @@
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
     Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge、Power Strike、
-    Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、Lightning Bolt、Ice Arrow 等级 1–20 共 680/4,200 行（本项 16.1905%，加权贡献 3.2381 个百分点）；
+    Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、Lightning Bolt、Ice Arrow、
+    Guided Arrow 等级 1–20 共 700/4,200 行（本项 16.6667%，加权贡献 3.3333 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -112,7 +113,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 33.2381%（展示时为 33.2%）。
+当前总加权完成度为 33.3333%（展示时为 33.3%）。
 
 ## 黄金值准入规则
 
@@ -421,5 +422,5 @@ D2MOO `SrvDo02` 只负责根标枪发出 `poisonjavcloud`，`SrvDo03` 每原生�
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Guided Arrow（技能 22）等级 1–20，确认其是否拥有固定
-技能伤害，并把 `Calc1` 武器增强百分比与 `SrcDam=128` 武器包留在 DMG-06。
+继续 DMG-04，下一项优先审核 Penetrate（技能 23）等级 1–20，确认其被动命中率状态不
+拥有直接伤害，并把最终命中率消费语义留在 DMG-06。

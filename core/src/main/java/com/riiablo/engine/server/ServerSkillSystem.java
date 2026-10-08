@@ -3555,9 +3555,6 @@ public class ServerSkillSystem extends PassiveSystem {
       projectile.targetId = targetId;
       projectile.homing = targetId >= 0 && mPosition.has(targetId);
       int bonus = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
-      if (bonus <= 0 && !NecromancerSkills.isBoneSpirit(skill)) {
-        bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
-      }
       projectile.damageMultiplier = 1f + Math.max(0, bonus) / 100f;
       consumeRangedAmmoForSkill(event, skill);
       log.info("[GUIDED_ARROW] phase=create entity={} missileId={} target={} homing={} "

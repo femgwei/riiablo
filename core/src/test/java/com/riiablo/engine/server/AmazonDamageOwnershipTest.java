@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Amazon damage-owner audit. */
 class AmazonDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-amazon-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(22, 28, 32);
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(28, 32);
 
   @Test
   void everyAmazonSkillHasOneEvidenceBackedOwnerDecision() throws IOException {
@@ -137,8 +137,8 @@ class AmazonDamageOwnershipTest extends RiiabloTest {
 
     Skills.Entry guidedArrow = Riiablo.files.skills.get("Guided Arrow");
     assertEquals(0, SkillFormula.evaluate(guidedArrow.calc1, guidedArrow, 1));
-    assertEquals(5, AmazonSkills.calculateGuidedArrowDamageBonus(1),
-        "known gap: level one must retain the native zero-percent bonus");
+    assertEquals(0, AmazonSkills.calculateGuidedArrowDamageBonus(1),
+        "level one must retain the native zero-percent bonus");
   }
 
   private static String value(String[] values, Map<String, Integer> columns, String name) {

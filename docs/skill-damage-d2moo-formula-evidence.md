@@ -850,3 +850,24 @@ D2MOO `MISSMODE_RollDamageValue`（`MissMode.cpp:281`）向有限随机数传入
 原生运行时上限排除 canonical getter 最大值；矩阵仍保存 getter 范围。固定武器包、
 ToHit 和整份命中记录留给 DMG-06；冻结状态、Boss/Unique/Hireling 回退、抗性缩时、
 碎冰死亡和最终结算留给 DMG-07/08。范围型单目标伤害的三个 `*_total` 字段保持空白。
+
+## DMG-04 第三十五个逐级实例：Guided Arrow
+
+1.10f `Skills.txt#22` 使用 `SrvStFunc=4`、`SrvDoFunc=10`、三个 server missile 字段均为
+`guidedarrow`、`SrcDam=128`、`HitShift=8`，`ToHit` 和 `LevToHit` 均为 0。技能物理与
+元素伤害基值和五段增量全部为 0；`Calc1=ln34` 配合 `Param3=0`、`Param4=5`，产生
+等级 1–20 的 `0/5/10/.../95%` 武器伤害增强。
+
+D2MOO `SKILLS_SrvDo010_GuidedArrow_BoneSpirit`（`SkillAma.cpp:570`）选择弓弩导弹并创建
+一枚带目标的 `guidedarrow`。它只在 `Calc1` 结果非零时安装
+`SKILLS_AddDamagePercentBonus`（`SkillAma.cpp:653`），后者把该值加到导弹
+`STAT_DAMAGEPERCENT`；因此等级 1 的合法 0 不得触发替代公式。`MISSMODE_SrvDo07`
+（`MissMode.cpp:882`）负责追踪转向，`MISSMODE_SrvHit10`（`MissMode.cpp:2431`）限制锁定
+目标命中，这两条路径不创建额外固定伤害包。
+
+零装备、owner 武器伤害为 0 时，等级 1–20 均没有可记录的固定技能伤害；矩阵把
+`expected_min/max/total`、`riiablo_actual_*` 和 `delta_*` 保持空白，并用明确 N/A 口径
+批准。`GuidedArrowGoldenDamageTest` 锁定 1.10f 表字段、`0%–95%` 曲线以及零武器源
+不会生成伤害快照；生产创建回归另确认等级 1 倍率为 1.00，修复了旧的 `+5%` fallback。
+固定武器值、`SrcDam` 缩放、箭袋和完整命中总量留给 DMG-06；抗性与最终结算留给
+DMG-08。

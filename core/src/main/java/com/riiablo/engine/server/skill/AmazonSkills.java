@@ -540,8 +540,8 @@ public final class AmazonSkills {
    * @return 伤害加成百分比
    */
   public static int calculateGuidedArrowDamageBonus(int skillLevel) {
-    // 每级 +5%
-    return 5 * skillLevel;
+    // Native Skills.txt Calc1=ln34: 0% at level 1, then +5% per level.
+    return 5 * (Math.max(1, skillLevel) - 1);
   }
 
   /**
