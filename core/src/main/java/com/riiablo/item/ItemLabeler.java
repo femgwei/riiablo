@@ -208,11 +208,11 @@ public class ItemLabeler {
 
     if (item.type.is(Type.GEM) || item.type.is(Type.RUNE)) {
       table.add().height(font.getLineHeight()).space(SPACING).row();
-      table.add(new Label(Riiablo.string.lookup("GemXp3") + " " + labelFormatter.createLabel(item.attrs.list(StatListFlags.GEM_WEAPON_LIST), null), font, Riiablo.colors.white)).center().space(SPACING).row();
-      CharSequence tmp = labelFormatter.createLabel(item.attrs.list(StatListFlags.GEM_ARMOR_LIST), null);
+      table.add(new Label(Riiablo.string.lookup("GemXp3") + " " + labelFormatter.createLabel(gemList(item.attrs, StatListFlags.GEM_WEAPON_LIST), null), font, Riiablo.colors.white)).center().space(SPACING).row();
+      CharSequence tmp = labelFormatter.createLabel(gemList(item.attrs, StatListFlags.GEM_ARMOR_LIST), null);
       table.add(new Label(Riiablo.string.lookup("GemXp4") + " " + tmp, font, Riiablo.colors.white)).center().space(SPACING).row();
       table.add(new Label(Riiablo.string.lookup("GemXp1") + " " + tmp, font, Riiablo.colors.white)).center().space(SPACING).row();
-      table.add(new Label(Riiablo.string.lookup("GemXp2") + " " + labelFormatter.createLabel(item.attrs.list(StatListFlags.GEM_SHIELD_LIST), null), font, Riiablo.colors.white)).center().space(SPACING).row();
+      table.add(new Label(Riiablo.string.lookup("GemXp2") + " " + labelFormatter.createLabel(gemList(item.attrs, StatListFlags.GEM_SHIELD_LIST), null), font, Riiablo.colors.white)).center().space(SPACING).row();
       table.add().height(font.getLineHeight()).space(SPACING).row();
     }
 
@@ -415,6 +415,14 @@ public class ItemLabeler {
 
     table.pack();
     return table;
+  }
+
+  /** Returns an empty list for legacy/malformed compact items missing gem data. */
+  private static StatListRef gemList(Attributes attrs, int list) {
+    if (attrs == null || attrs.list() == null || !attrs.list().contains(list)) {
+      return StatList.obtain();
+    }
+    return attrs.list(list);
   }
 
   static String formatSellPrice(int price) {

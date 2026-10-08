@@ -9,6 +9,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListRef;
+import com.riiablo.attributes.GemGenerator;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.Misc;
@@ -75,6 +76,14 @@ public class ItemGenerator extends PassiveSystem {
     item.quality = requested == null ? Quality.NORMAL : requested;
     NativeItemGeneration.initializeBaseStats(item, rng::nextInt);
     PropertiesGenerator properties = properties(rng);
+    // Compact gems/runes carry three serialized property lists even when they
+    // are generated as ground loot rather than read from a D2S file.  The
+    // reader already rebuilds these through GemGenerator; do the same here so
+    // the client tooltip and later socketing paths see the native properties.
+    if ((item.type.is(Type.GEM) || item.type.is(Type.RUNE))
+        && item.attrs.list().numLists() == 0) {
+      new GemGenerator(properties).set(item.attrs, item.code);
+    }
     if (item.quality == Quality.UNIQUE) {
       UniqueItems.Entry entry = findUnique(code, itemLevel, rng);
       if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
