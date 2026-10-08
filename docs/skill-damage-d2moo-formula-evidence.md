@@ -597,3 +597,32 @@ riiablo `ServerSkillSystem.spawnMultipleShotTeethShockWave` 按同一 `Calc1/Cal
 `SrcDam=96` 建立独立武器快照。`MultipleShotGoldenDamageTest` 用独立常量锁定全部 20 级
 lane 数、1 帧激活值、两条中央 lane 及无固定伤害字段；现有 SrvDo008 几何和墙体碰撞测试
 覆盖生产 fan 路径。本轮无需生产修复。
+
+## DMG-04 第二十六个逐级实例：Dodge
+
+Dodge 不拥有输出伤害包。1.10f `Skills.txt#13` 使用 `SrvDoFunc=0`、`SrcDam=0`，没有
+server missile，物理和元素伤害字段均为 0，`EType` 为空。该行声明
+`PassiveState=dodge`、`PassiveStat=passive_dodge`、`PassiveCalc=dm12`，并使用
+`Param1=10`、`Param2=65`。因此 DMG-04 的等级 1–20 行把三组 `expected_*`、
+`riiablo_actual_*` 和 `delta_*` 明确标记为 N/A 并保持空白；概率不是输出伤害值。
+
+`dm12` 按 `a + 110 * level * (b - a) / (100 * (level + 6))` 计算整数概率。代入 10 和 65
+后，等级 1–20 为
+`18,25,30,34,37,40,42,44,46,47,49,50,51,52,53,54,54,55,55,56`。
+D2MOO `D2Common/src/D2Skills.cpp` 的被动技能刷新先调用 `SKILLS_EvaluateSkillFormula`，再把
+结果写入技能声明的 PassiveStat，记录技能 ID/等级并启用永久状态；该阶段不创建 damage
+record 或 missile。
+
+D2MOO `SUnitDmg.cpp` 的 `SUNITDMG_GetResultFlags` 在近战命中成功后调用
+`SUNITDMG_ApplyBlockOrDodge(..., bAvoid=0, bBlock=1)`。盾牌格挡失败后，
+`SUNITDMG_ApplyDodge` 在非移动分支读取 `STAT_PASSIVE_DODGE`，以 `% 100` 的随机值判定；
+成功时返回 `BLOCKFLAG_DODGE` 并清除 successful-hit。随后 `SUNITDMG_AllocCombat` 只有在
+没有 Dodge/Avoid/Evade/Weapon Block 且仍是成功命中时，才填充并汇总伤害。因此 Dodge
+拥有“近战伤害预防概率”，不拥有一份独立的输出伤害。
+
+riiablo `AmazonSkills.getDodgeChance` 与 `applyPassiveState` 使用同一 `dm12` 数据行建立永久
+状态，`StateUpdater` 负责刷新，`CombatSystem` 在伤害结算前通过
+`DefenseCalculator.checkPassiveDefense` 消费 `passive_dodge`。
+`DodgeGoldenDamageTest` 用独立常量锁定全部 20 级、原版表字段、无伤害列和每级状态贡献；
+`AmazonSkillSpecializationTest.passiveDodgeAvoidEvadeUseNativeAttackContext` 另锁定 Dodge
+只处理站立近战上下文。随机边界、格挡优先级和最终来袭伤害结算属于 DMG-08。

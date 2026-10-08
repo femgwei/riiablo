@@ -15,8 +15,8 @@
 - 3 项仍存在明确的 riiablo 差异：Guided Arrow、Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
-- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow 与 Multiple Shot
-  已完成等级 1–20 基础审计；140/600 个 Amazon
+- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot 与
+  Dodge 已完成等级 1–20 基础审计；160/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -117,4 +117,10 @@ N/A 并保持空白。1.10f `Calc1="min(24,ln12)"` 产生 2–21 条 lane，`Cal
 1 帧激活值，`Calc3=2` 固定中央两条 lane。D2MOO `SrvDo008` 为每条 lane 独立调用
 `MISSILES_CreateMissileFromParams`，其伤害快照由通用导弹链按 96/128 武器份额建立。
 固定武器值、中央/外侧 lane 标志的消费语义、碰撞目标集合和整次施法总量留给 DMG-06。
-下一项优先审核 Dodge（13）。
+
+Dodge（13）等级 1–20 已按“永久被动近战规避概率，不拥有独立输出伤害包”批准；三组伤害
+`expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`PassiveCalc=dm12` 使用 `Param1=10`、`Param2=65`，产生 18%–56% 的概率曲线。
+D2MOO 被动刷新把结果写入永久 `dodge` 状态的 `passive_dodge` 属性；近战命中路径在填充、
+汇总和执行伤害前读取该值，成功时将命中改为 Dodge。随机边界、盾牌/武器格挡优先级、
+动作状态与最终来袭伤害结算留给 DMG-08。下一项优先审核 Power Strike（14）。

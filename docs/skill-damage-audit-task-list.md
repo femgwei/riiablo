@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`71bf0abb323ac0fd3bf90125c00bfec6bfb26d11`
-当前加权完成度：**32.4%**
+最近完成技能提交：`a31830e7da47c29efb161553d3259802745c2388`
+当前加权完成度：**32.5%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -49,13 +49,13 @@
   初始化链。Inner Sight 的分段公式和 Jab 的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 119 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Multiple Shot 测试引用已纳入
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Dodge 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 500 行 `GOLDEN_APPROVED`，其余 3,700 行仍为
+- 4,200 行中已有 520 行 `GOLDEN_APPROVED`，其余 3,680 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 32.4% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 500 个逐级黄金行；不表示技能伤害正确率为 32.4%。
+- 当前 32.5% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 520 个逐级黄金行；不表示技能伤害正确率为 32.5%。
 
 ## 加权任务
 
@@ -89,8 +89,8 @@
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
-    Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot 等级 1–20 共
-    500/4,200 行（本项 11.9048%，加权贡献 2.3810 个百分点）；
+    Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge 等级 1–20 共
+    520/4,200 行（本项 12.3810%，加权贡献 2.4762 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -112,7 +112,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 32.3810%（展示时为 32.4%）。
+当前总加权完成度为 32.4762%（展示时为 32.5%）。
 
 ## 黄金值准入规则
 
@@ -303,6 +303,11 @@
   `candidate_unit` 明确标记 N/A。1.10f `Calc1="min(24,ln12)"` 产生 2–21 枚导弹，
   `Calc2=par3` 固定为 1 帧激活值，`Calc3=2` 固定中央两条 lane。固定武器包、每枚命中值、
   中央/外侧 lane 标志的消费语义及整次施法总量留给 DMG-06。
+- Dodge（技能 13）等级 1–20 已按“永久被动近战规避概率，不拥有独立输出伤害包”批准；
+  三组伤害 expected/actual/delta 字段全部保持空白，并在 `candidate_unit` 明确标记 N/A。
+  D2MOO 被动刷新计算 `PassiveCalc=dm12`，把 18%–56% 写入永久 `passive_dodge` 状态；
+  近战命中路径在建立和结算伤害记录前读取该概率，成功时清除 successful-hit 标志。
+  随机边界、盾牌/武器格挡优先级、动作状态和最终来袭伤害结算留给 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -370,6 +375,10 @@
   `ServerSkillSystemTest#srvDo008UsesNativeCountAndCentreFormulas`、
   `ServerSkillSystemTest#srvDo008UsesNativePerpendicularLaneSpacing`、
   `AmazonSkillSpecializationTest#multipleShotStopsAtNativeMapBarrierBeforeTarget`、
+  `DodgeGoldenDamageTest#levelOneToTwentyAreNondamagingNativeMeleeAvoidanceChances`、
+  `NativeAmazonPassiveDataTest#nativePassiveFormulasMatchAtRepresentativeLevels`、
+  `NativeAmazonPassiveDataTest#passiveStateBridgeUsesNativeStatsAndStateIds`、
+  `AmazonSkillSpecializationTest#passiveDodgeAvoidEvadeUseNativeAttackContext`、
   `NativeBarbarianPassiveDataTest#selectedMasteryChangesAuthoritativeDamageHitChanceAndCriticalRoll`。
 
 ## 可复现命令
@@ -392,6 +401,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Dodge（技能 13）等级 1–20。需确认被动刷新写入的
-`passive_dodge` 概率曲线，并把“无独立输出伤害包”的 DMG-04 N/A 与 DMG-08 的来袭近战
-伤害规避随机判定分开。
+继续 DMG-04，下一项优先审核 Power Strike（技能 14）等级 1–20。需分开记录近战武器包、
+技能闪电曲线和协同为 0 的基础场景，并确认 D2MOO `SrvDo002` 建立的单次 combat record
+与耐久消耗语义。
