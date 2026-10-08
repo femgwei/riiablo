@@ -17,7 +17,7 @@
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
-  Lightning Bolt、Ice Arrow 与 Guided Arrow 已完成等级 1–20 基础审计；360/600 个 Amazon
+  Lightning Bolt、Ice Arrow、Guided Arrow 与 Penetrate 已完成等级 1–20 基础审计；380/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -214,4 +214,15 @@ D2MOO `SKILLS_SrvDo010_GuidedArrow_BoneSpirit` 只有在 `Calc1` 结果非零时
 `SKILLS_AddDamagePercentBonus`，所以等级 1 必须保留合法的 `0%`。riiablo 已移除把该零值
 替换为 `+5%` 的 fallback，等级 1 导弹倍率现为 1.00；逐级公式和生产创建路径都有回归。
 固定武器值、`SrcDam` 缩放、箭袋消耗与完整命中总量留给 DMG-06，抗性和最终结算留给
-DMG-08。下一项优先审核 Penetrate（23）。
+DMG-08。
+
+Penetrate（23）等级 1–20 已按“永久攻击命中率状态，不拥有独立输出伤害包”批准；三组
+伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`PassiveState=penetrate`、`PassiveStat=item_tohit_percent`、`PassiveCalc=ln12`，
+`Param1=35`、`Param2=10` 产生等级 1–20 的 `35%–225%` 命中率加成，每级增加 10%。
+
+D2MOO `SKILLS_RefreshSkill`（`D2Common/src/D2Skills.cpp:603`）读取 `nPassiveStat` 和
+`dwPassiveCalc`，把 `ln12` 结果写入永久被动状态的 `STAT_ITEM_TOHIT_PERCENT`；
+`SUNITDMG` 命中路径（`D2Game/src/UNIT/SUnitDmg.cpp:2439–2511`）读取该属性并加入攻击
+命中率计算。Penetrate 不创建伤害记录、导弹或新伤害值；最终命中率消费留给 DMG-06，
+抗性和最终生命结算留给 DMG-08。下一项优先审核 Charged Strike（24）。

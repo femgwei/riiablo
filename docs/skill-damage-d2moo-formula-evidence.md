@@ -871,3 +871,21 @@ D2MOO `SKILLS_SrvDo010_GuidedArrow_BoneSpirit`（`SkillAma.cpp:570`）选择弓�
 不会生成伤害快照；生产创建回归另确认等级 1 倍率为 1.00，修复了旧的 `+5%` fallback。
 固定武器值、`SrcDam` 缩放、箭袋和完整命中总量留给 DMG-06；抗性与最终结算留给
 DMG-08。
+
+## DMG-04 第三十六个逐级实例：Penetrate
+
+1.10f `Skills.txt#23` 是纯被动技能：`SrvStFunc=0`、`SrvDoFunc=0`、物理和元素伤害
+字段均为 0，`PassiveState=penetrate`、`PassiveStat=item_tohit_percent`、
+`PassiveCalc=ln12`，`Param1=35`、`Param2=10`。因此等级 1–20 的命中率状态加成是
+`35,45,55,65,75,85,95,105,115,125,135,145,155,165,175,185,195,205,215,225`；
+它不拥有可填入 `expected_min/max/total` 的独立伤害包，矩阵对应字段明确保持 N/A 空白。
+
+D2MOO `SKILLS_RefreshSkill`（`D2Common/src/D2Skills.cpp:603`）读取技能的
+`nPassiveStat` 和 `dwPassiveCalc`，并在 `D2Common/src/D2Skills.cpp:617–638` 将公式结果
+写入永久被动状态 stat-list。`D2Game/src/UNIT/SUnitDmg.cpp:2439–2511` 的攻击命中率
+路径读取 `STAT_ITEM_TOHIT_PERCENT` 并将其加入攻击命中率计算。该状态刷新不创建伤害
+记录、导弹或新的伤害值；最终命中率消费留给 DMG-06，抗性和生命结算留给 DMG-08。
+
+`PenetrateGoldenDamageTest` 独立锁定 `Skills.txt` 字段、`ln12` 曲线、`penetrate` 状态和
+`item_tohit_percent` 属性，并由 `SkillDamageAuditMatrixTest` 校验 20 行全部为
+`GOLDEN_APPROVED`、伤害列保持 N/A。
