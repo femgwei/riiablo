@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`4813a514ac3e50676f83b39cd569e843762ac41f`
-当前加权完成度：**33.9%**
+最近完成技能提交：`6125874fb6b4ed83e687c3b1330adb2890424ea4`
+当前加权完成度：**34.4%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -46,17 +46,17 @@
   Shock Field、Blade Sentinel、Charged Bolt Sentry、Blade Fury 另缺最终伤害消费的聚焦测试。
 - Amazon 审计确认 30 项所有者；Dopplezon、Valkyrie 仍有 2 个明确实现差异，均缺原版
   召唤被动属性、技能、装备等初始化链。Dopplezon 已确认无独立伤害输出，DMG-04
-  逐级行按 N/A 批准；Inner Sight 的分段公式，以及 Jab、Guided Arrow
+  逐级行按 N/A 批准；Valkyrie 也已确认召唤技能自身无独立伤害输出并按 N/A 批准；Inner Sight 的分段公式，以及 Jab、Guided Arrow
   的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 820 行 `GOLDEN_APPROVED`，其余 3,380 行仍为
+- 4,200 行中已有 900 行 `GOLDEN_APPROVED`，其余 3,300 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前约 33.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 820 个逐级黄金行；不表示技能伤害正确率为 33.9%。
+- 当前约 34.4% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 900 个逐级黄金行；不表示技能伤害正确率为 34.4%。
 
 ## 加权任务
 
@@ -496,4 +496,4 @@ Decoy 后先按 `Calc3=par3` 替换为 owner 最大生命的 50%，再调用
 `par3` owner HP 百分比、无伤害字段和 `summon.decoy` 行为注册。矩阵第 442–461 行获批
 为 N/A；召唤被动继承、UMod/Overlay、装备和完整生命周期留给 DMG-07。
 
-下一项优先审核 Evade（技能 29）。
+当前 Amazon 的 DMG-04 基础行已完成 560/600；下一项审核 Pierce（技能 33）。

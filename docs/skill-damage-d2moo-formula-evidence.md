@@ -1,6 +1,6 @@
 # D2MOO 1.10f 技能伤害通用公式证据
 
-更新时间：2026-10-08
+更新时间：2026-10-09
 
 证据版本：The Phrozen Keep D2MOO `8322494ed1f715ad51552f169df76cf600fabc71`
 
@@ -1042,3 +1042,47 @@ Dopplezon 技能伤害。
 生命百分比、无伤害字段和 `summon.decoy` 行为注册。riiablo 当前只覆盖创建实体、等级、
 owner-relative HP 和时限，缺失的召唤被动/技能/装备、Calc1、UMod、Overlay 和完整
 生命周期继续归入 DMG-07，不在 DMG-04 伪造零伤害黄金值。
+
+## DMG-04 第四十五个逐级实例：Freezing Arrow
+
+Freezing Arrow 的固定技能冷伤由爆炸子导弹拥有。1.10f `Skills.txt#31` 使用
+`SrvStFunc=4`、`SrvMissile=freezingarrow`、`SrcDam=128`、`HitShift=8`，元素类型为
+`cold`，`EMin/EMax=40–50`，五段增量为 `10/15/20/22/24`，`EDmgSymPerCalc` 读取
+Cold Arrow 硬点并乘 `par8`；本批协同固定为 0。`freezingarrow` 的 `SrvHitFunc=4`
+不在根箭快照中保留技能冷伤，`HitSubMissile[0]=freezingarrowexp3` 子导弹的
+`SrvHitFunc=1` 才拥有冷伤包。等级 1–20 的单目标抗性前冷伤为 `40–50` 至 `310–320`，
+`coldlength` 固定为 50 帧；矩阵行 502–521 的 expected/actual 冷伤与 delta=0 已明确记录。
+
+D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter`
+（`MissMode.cpp:2673`）创建子导弹并继承原技能、等级和 owner；
+`MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion`
+（`MissMode.cpp:2087`）读取子导弹技能快照，把冷伤包应用到半径内每个目标。根箭的武器
+命中、爆炸范围目标集合、Boss/Unique/Hireling 冻结回退和整次施法总量不属于本批单个
+子导弹黄金值。
+
+riiablo `MissileDamageResolver.initializeSkill` 保留根箭武器快照，
+`initializeSkillArea` 为 `freezingarrowexp3` 写入冷伤和 50 帧冻结元数据；
+`FreezingArrowGoldenDamageTest` 锁定全部 20 级、父子所有权、生产冷伤快照和冻结长度。
+范围覆盖、死亡顺序和最终抗性/结算留给 DMG-06/07/08。
+
+## DMG-04 第四十六个逐级实例：Valkyrie
+
+Valkyrie（技能 32）本身只负责创建召唤物，不拥有可独立填入 DMG-04 的伤害包。
+1.10f `Skills.txt#32` 使用 `SrvDoFunc=16`、`Summon=valkyrie`、`PetType=valkyrie`、
+`PetMax=1` 和 `Summode=NU`；`SrcDam=0`，物理/元素伤害字段、元素长度及五段增量均为
+0，且没有 `SrvMissile`。`Calc1=par1 * (lvl - 1) + skill('Dopplezon'.blvl) * par8`
+用于原生召唤初始化的等级/属性链，`Calc2=ln56` 用于女武神的生成装备等级，均不是技能
+自身的 outgoing damage。矩阵行 522–541 因此把 `expected_min/max/total`、
+`riiablo_actual_*` 和 `delta_*` 明确留空为 N/A。
+
+D2MOO `SKILLS_SrvDo016_Valkyrie`（`D2Game/src/SKILLS/SkillAma.cpp:979–1022`）创建
+`valkyrie` 召唤物，调用 `D2GAME_SKILLS_SetSummonBaseStats_6FD0CB10` 和
+`D2GAME_SetSummonPassiveStats_6FD0C530`，再安装 AI 事件与 `STATE_VALKYRIE`。后续
+女武神攻击记录由召唤物的 `MonStats.txt`、`SumSkill`、被动属性和生成装备共同拥有，
+不能倒灌为 Valkyrie 技能的固定伤害值；这些继承、装备、命中和整次召唤生命周期留给
+DMG-07/08。
+
+riiablo 的 `NativeSkillBehaviorRegistry` 注册 `summon.valkyrie` 且不生成 server
+missile；`ValkyrieGoldenDamageTest` 锁定全部 20 级的召唤字段、零伤害字段和
+`Calc2=ln56` 原生初始化公式。当前生产路径已覆盖实体、owner、等级和 Valkyrie 状态，
+但被动属性、SumSkill 与生成装备差异仍按所有权清单保留为 DMG-07 缺口。
