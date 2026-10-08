@@ -239,7 +239,8 @@ public class MapManager extends PassiveSystem {
           : object.presetIndex;
       boolean clientRiverPresentation = shouldMaterializeSpawnedObject(objectId,
           object.spawned,
-          factory instanceof com.riiablo.engine.client.ClientEntityFactory);
+          clientPresentationOnly
+              || factory instanceof com.riiablo.engine.client.ClientEntityFactory);
       if (clientPresentationOnly && !clientRiverPresentation) {
         // Network clients receive ordinary objects from D2Game. Leave their
         // status untouched so this presentation pass cannot claim or suppress
