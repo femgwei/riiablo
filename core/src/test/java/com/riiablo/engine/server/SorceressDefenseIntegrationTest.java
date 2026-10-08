@@ -113,10 +113,13 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
       float hpBefore = hp(world, attacker);
       world.getSystem(EventSystem.class).dispatch(
           MeleeAttackEvent.obtain(attacker, sorceress, false, false));
-      assertTrue(hp(world, attacker) < hpBefore,
-          "Shiver Armor must resolve its cold retaliation packet");
-      assertTrue(states(world, attacker).hasState(StateId.FREEZE)
-              || states(world, attacker).hasState(StateId.COLD));
+      float retaliation = hpBefore - hp(world, attacker);
+      assertTrue(retaliation >= 7f && retaliation < 9f,
+          "level-1 Shiver Armor with both level-1 synergies must use the native "
+              + "7..9 getter range with an exclusive random upper endpoint");
+      assertTrue(states(world, attacker).hasState(StateId.COLD));
+      assertFalse(states(world, attacker).hasState(StateId.FREEZE),
+          "EventFunc03 stores dwColdLen, not dwFrzLen");
 
       dispatch(world, sorceress, Engine.INVALID_ENTITY, SkillId.CHILLING_ARMOR);
       assertFalse(states(world, sorceress).hasState(StateId.SHIVERARMOR));

@@ -240,7 +240,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         skill, armor.level, name -> baseSkillLevel(victimId, name));
     NativeRng rng = new NativeRng(Riiablo.gameSeed
         ^ victimId * 0x45D9F3B ^ attackerId * 31 ^ armor.duration);
-    int raw = range[0] + rng.nextInt(Math.max(1, range[1] - range[0] + 1));
+    int raw = rollNativeDamage(rng, range[0], range[1]);
     Attributes attacker = mAttributesWrapper.get(attackerId).attrs;
     StateList attackerStates = mUnitStates.has(attackerId)
         ? mUnitStates.get(attackerId).stateList : null;
@@ -267,12 +267,20 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         skill, armor.level, name -> baseSkillLevel(victimId, name));
     int duration = resolveArmorColdDuration(victimId, attackerId, coldLength);
     if (duration > 0 && isAlive(attackerId)) {
-      StatusEffectApplier.INSTANCE.applyFreeze(attackerId, duration, victimId);
+      StatusEffectApplier.INSTANCE.applyCold(attackerId, duration, victimId);
     }
     log.info("[SORCERESS_SHIVER_ARMOR] phase=retaliate source={} attacker={} skill={} "
-            + "level={} raw={} applied={} hp={} -> {} freeze={}",
+            + "level={} raw={} applied={} hp={} -> {} cold={}",
         victimId, attackerId, skill.Id, armor.level, raw, applied,
         before, life != null ? life.asFixed() : before, duration);
+  }
+
+  /** ITEMS_RollLimitedRandomNumber(seed, max-min) keeps the getter maximum exclusive. */
+  static int rollNativeDamage(NativeRng rng, int minimum, int maximum) {
+    int min = Math.max(0, minimum);
+    int max = Math.max(min, maximum);
+    int span = max - min;
+    return min + (span > 1 && rng != null ? rng.nextInt(span) : 0);
   }
 
   /** D2Game EventFunc01: fire Chilling Armor's authoritative return missile. */

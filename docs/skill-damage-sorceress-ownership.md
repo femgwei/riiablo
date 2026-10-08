@@ -47,6 +47,11 @@ Skills.txt 物理/元素伤害并应用 Lightning Mastery、抗性、免疫、�
 4. Static Field 需要生命值、难度和抗性场景矩阵；不存在一组脱离目标生命的固定 min/max 黄金值。
 5. 被动和无伤害技能用明确 N/A 理由收口，不填数值 0。
 
+Shiver Armor 的 DMG-04 等级 1–20 基础范围已经批准：等级 1 为 `6–8`，等级 20 为
+`60–71`，冷长度为 100–500 帧。矩阵保存规范 getter 范围；原版有限随机数不包含最大
+端点，且 `EventFunc03` 写入普通 cold 长度而不是 freeze 长度；riiablo 的反击随机和
+状态路径均已同步修正。
+
 ## 可复现验证
 
 ```powershell

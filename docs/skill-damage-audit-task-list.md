@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`0ebe2337`
-当前加权完成度：**31.5%**
+代码基线：`3ebfd608`
+当前加权完成度：**31.6%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -26,8 +26,8 @@
   （累计 210/210，10.5%）：明细见各职业的
   `skill-damage-*-ownership.tsv` 与 `skill-damage-*-ownership.md`。
   审计确认 Energy Shield、Lightning Mastery、Cold Mastery 仍存在 riiablo 执行/被动
-  同步缺口；Telekinesis 的单位目标伤害路径已在本步补齐，Inferno、Lightning、Hydra
-  仍缺少聚焦伤害测试。
+  同步缺口；Telekinesis 的单位目标伤害路径和 Inferno 的单脉冲路径已补齐，Lightning、
+  Hydra 仍缺少聚焦伤害测试，Inferno 完整通道生命周期保留在 DMG-07。
 - Paladin 审计确认 Sacrifice、Smite、Zeal、Charge、Holy Shield 共 5 个伤害语义缺口；
   Conversion 和 Conviction 生产路径存在但仍缺聚焦测试。缺口只登记，尚未计入黄金值。
 - Necromancer 审计确认 30 项所有者；Teeth、Skeleton Mastery、Raise Skeleton、Weaken、
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 320 行 `GOLDEN_APPROVED`，其余 3,880 行仍为
+- 4,200 行中已有 340 行 `GOLDEN_APPROVED`，其余 3,860 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.5% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 320 个逐级黄金行；不表示技能伤害正确率为 31.5%。
+- 当前 31.6% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 340 个逐级黄金行；不表示技能伤害正确率为 31.6%。
 
 ## 加权任务
 
@@ -88,8 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall、Inferno 等级 1–20 共 320/4,200 行（本项 7.6190%，加权贡献
-    1.5238 个百分点）；
+    Blaze、Fire Wall、Inferno、Shiver Armor 等级 1–20 共 340/4,200 行（本项
+    8.0952%，加权贡献 1.6190 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.5238%（展示时四舍五入为 31.5%）。
+当前总加权完成度为 31.6190%（展示时四舍五入为 31.6%）。
 
 ## 黄金值准入规则
 
@@ -244,6 +244,15 @@
   普通整数快照会截断低等级的小数脉冲；现已用专用 `spawnSorceressInferno` 改为一枚
   导弹并保存 8.8 定点伤害。`SrvSt11` 状态刷新、耗蓝、重复脉冲、障碍截断和整次施法
   总伤害延后到 DMG-07，协同/Fire Mastery 与最终抗性结算分别延后到 DMG-05/08。
+- Shiver Armor（技能 50）等级 1–20 已按“`UNITEVENT_ATTACKEDINMELEE` 触发的一次
+  `EventFunc03` 直接冷伤害反击”批准。无装备、Frozen Armor/Chilling Armor 协同为 0；
+  等级 1 的规范 getter 范围为 `6–8` 生命，等级 20 为 `60–71` 生命，20 个等级的
+  `delta_min/max` 均为 0。对应冷长度从 100 帧增长到 500 帧。
+- D2MOO `D2GAME_RollElementalDamage_6FD14DD0` 以 `max-min` 调用有限随机数，因此运行时
+  最大端点不包含在随机结果中；矩阵仍像 Telekinesis 一样保存规范 getter 的 min/max。
+  审计发现 riiablo Shiver Armor 原实现使用了包含最大值的随机区间，并把 `dwColdLen`
+  误施加为冻结；现已改为原版上界排除和普通减速状态。协同组合归入 DMG-05，抗性、
+  Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -289,7 +298,11 @@
   `CombatSystemTest#fixedFireRatePreservesFractionAndScalesMdrByDamageRate`、
   `InfernoGoldenDamageTest#levelOneToTwentyMatchesD2mooPerStreamMissileFixedPointFormula`、
   `NativeSorceressFireAreaDataTest#infernoUsesOneFractionalSkillOwnedStreamMissile`、
-  `SorceressFireAreaIntegrationTest#infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile`。
+  `SorceressFireAreaIntegrationTest#infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile`、
+  `ShiverArmorGoldenDamageTest#levelOneToTwentyMatchesD2mooDirectEventFormula`、
+  `ShiverArmorGoldenDamageTest#nativeLimitedRandomRollTreatsGetterMaximumAsExclusive`、
+  `NativeSorceressDefenseDataTest#shiverAndChillingArmorRetainDistinctNativeReactions`、
+  `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`。
 
 ## 可复现命令
 
@@ -311,6 +324,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Shiver Armor（技能 50）的等级 1–20 受击反伤，核对
-`SrvDo018/EventFunc03` 的触发事件、Skills.txt 冷伤害、冷长度、技能等级继承及 riiablo
-当前生产路径。Inferno 的完整通道生命周期继续保留在 DMG-07。
+继续 DMG-04，下一项优先审核 Chilling Armor（技能 60）的等级 1–20 返回冰弹伤害，核对
+`SrvDo018/EventFunc01` 的命中事件、`chillingarmorbolt` 技能 ID/等级继承、Skills.txt
+冷伤害与冷长度及 riiablo 当前生产路径。

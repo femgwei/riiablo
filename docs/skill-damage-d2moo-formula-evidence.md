@@ -101,6 +101,7 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `BlazeGoldenDamageTest`（DMG-04 第十四批：技能 46，等级 1–20）
 - `FireWallGoldenDamageTest`（DMG-04 第十五批：技能 51，等级 1–20）
 - `InfernoGoldenDamageTest`（DMG-04 第十六批：技能 41，等级 1–20）
+- `ShiverArmorGoldenDamageTest`（DMG-04 第十七批：技能 50，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -374,3 +375,24 @@ Fire Mastery。这里的定点范围属于每枚流导弹的一次伤害包；�
 
 `SrvSt11` 状态刷新、耗蓝、动画事件频率、重复脉冲、障碍截断和整次通道总伤害归入
 DMG-07；Warmth 协同与 Fire Mastery 归入 DMG-05，抗性、吸收和 PvP 归入 DMG-08。
+
+## DMG-04 第十七个逐级实例：Shiver Armor
+
+Shiver Armor 的基础黄金单位是“`UNITEVENT_ATTACKEDINMELEE` 触发的一次 `EventFunc03`
+直接冷伤害反击”。它不创建导弹，也不要求原近战攻击命中。1.10f `Skills.txt` 为
+`HitShift=7`、`EMin=12`、`EMax=16`，最小值五段增量为 `4/6/8/10/12`，最大值为
+`5/7/9/11/13`。基础场景把 Frozen Armor 与 Chilling Armor 硬点协同固定为 0。
+
+D2MOO `SKILLS_SrvDo018_DefensiveBuff` 把技能 ID/等级保存在状态表，并注册
+`EventFunc03`。回调用状态中的等级调用 `D2GAME_RollElementalDamage_6FD14DD0`；后者先按
+`SKILLS_GetMinElemDamage/SKILLS_GetMaxElemDamage` 取得 8.8 值，再以 `max-min` 调用
+`ITEMS_RollLimitedRandomNumber`，所以规范 getter 最大值是运行时排除端点。矩阵保留 getter
+范围：等级 1 为 `6–8` 生命，等级 20 为 `60–71` 生命；实际随机结果分别是 `[6,8)` 与
+`[60,71)`。`SKILLS_GetElementalLength` 给出的冷长度从等级 1 的 100 帧增长到等级 20 的
+500 帧。
+
+riiablo 的 `SorceressSkills.getArmorColdDamage/getArmorColdLength` 与 20 级独立常量一致。
+审计同时发现 `StateUpdater.applyShiverArmor` 原先把最大值包含在随机区间中，并把
+`dwColdLen` 误施加为冻结状态。现在它使用与 D2MOO 相同的排除上界和普通 cold 减速，并用
+聚焦随机边界测试及实际近战事件集成测试保护。Frozen Armor/Chilling Armor 协同归入
+DMG-05；抗性、Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
