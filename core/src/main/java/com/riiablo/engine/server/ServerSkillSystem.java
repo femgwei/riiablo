@@ -1911,7 +1911,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (range <= 0) range = 13 + Math.max(0, skillLevel - 1);
     duration = Math.max(1, duration);
     range = Math.max(1, Math.min(128, range));
-    int defenseReduction = -AmazonSkills.calculateInnerSightDefenseReduce(skillLevel);
+    int defenseReduction = -AmazonSkills.calculateInnerSightDefenseReduce(skill, skillLevel);
     int affected = 0;
     IntBag entities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();

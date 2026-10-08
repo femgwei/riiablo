@@ -11,11 +11,11 @@
 ## 结论
 
 - 30/30 项均已确认原版所有者和 D2MOO 路径。
-- 25 项已有生产实现和聚焦测试证据。
-- 5 项存在明确的 riiablo 差异：Inner Sight、Jab、Guided Arrow、Dopplezon、Valkyrie。
-- 没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑；本轮只登记有
-  1.10f 数据和 D2MOO 调用链支持的差异。
-- Magic Arrow 与 Fire Arrow 已完成等级 1–20 基础伤害审计；40/600 个 Amazon
+- 26 项已有生产实现和聚焦测试证据。
+- 4 项仍存在明确的 riiablo 差异：Jab、Guided Arrow、Dopplezon、Valkyrie。
+- Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
+  没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
+- Magic Arrow、Fire Arrow 与 Inner Sight 已完成等级 1–20 基础审计；60/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -54,18 +54,16 @@ Decoy 虽然不攻击，其生命/防御语义也不能只靠一个 owner-HP 百
 
 ## 已确认的 riiablo 差异
 
-1. **Inner Sight（8）**：1.10f `AuraStatCalc` 使用分段曲线，等级 2 为 `-65`；当前
-   `calculateInnerSightDefenseReduce` 线性计算为 `-60`，等级越高偏差越大。
-2. **Jab（10）**：原生 `Calc1=ln34` 在等级 6 合法得到 `0%`；当前
+1. **Jab（10）**：原生 `Calc1=ln34` 在等级 6 合法得到 `0%`；当前
    `getPhysicalDamagePercent` 把零当成“公式缺失”，fallback 成 `+48%`。
-3. **Guided Arrow（22）**：原生 `Calc1=ln34` 在等级 1 为 `0%`；当前
+2. **Guided Arrow（22）**：原生 `Calc1=ln34` 在等级 1 为 `0%`；当前
    `spawnGuidedArrow` 对非正值启用手写 fallback，错误变成 `+5%`。
-4. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
+3. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
    额外 `Calc1` 最大生命、召唤技能/装备、UMod 和 Overlay 初始化。
-5. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
+4. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
    物品等级生成的装备；这些缺失会直接改变女武神攻击伤害。
 
-这些差异本轮只登记并用完整性测试锁定，没有在逐等级黄金值建立前改写 Amazon 生产逻辑。
+这些剩余差异继续由完整性测试锁定，不在不相关技能审计中改写。
 
 ## DMG-04 当前进度
 
@@ -84,5 +82,11 @@ Fire Arrow（7）等级 1–20 已按“无装备、owner 武器伤害为 0、Ex
 riiablo 生产快照的物理与魔法通道当前按整数保存，因此 Magic Arrow 基础矩阵只批准与
 D2MOO 一致的抗性前总整数范围；原版 8.8 小数通道分配、固定武器包，以及 Fire Arrow
 固定武器包的物理转火焰分别留给 DMG-06。物理/魔法/火焰抗性、穿透、吸收和 PvP 留给
-DMG-08，不能从本批 `delta=0` 推断分通道最终结算已经完全等价。下一项优先审核
-Inner Sight（8）。
+DMG-08，不能从本批 `delta=0` 推断分通道最终结算已经完全等价。
+
+Inner Sight（8）等级 1–20 已按“无直接伤害，`expected_*`/`riiablo_actual_*`/`delta_*`
+明确 N/A”批准。D2MOO `SrvDo006` 计算 `AuraStatCalc=-edmn`，回调只向敌对目标安装
+`armorclass` 定时负值，不创建导弹或伤害记录。分段防御削减从等级 1 的 `-40` 增长到
+等级 20 的 `-815`。审计补齐 `SkillFormula` 的未移位 `edmn/edmx` token，并把生产路径从
+手写线性值改为原生分段曲线；等级 2 现为 `-65`。持续时间、范围、目标过滤和最终命中率
+影响不属于 DMG-04 伤害值，留给后续行为与结算审计。下一项优先审核 Critical Strike（9）。

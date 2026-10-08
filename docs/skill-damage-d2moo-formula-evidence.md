@@ -470,3 +470,24 @@ riiablo `MissileDamageResolver.initializeSkill` 从技能 7 的元素曲线建�
 `FireArrowGoldenDamageTest` 锁定 1.10f 字段、`SrvDmgFunc=1`、`dl12` 参数、20 级独立
 常量、零物理通道和生产快照。等级 1 为 1–4，等级 20 为 63–70，全部 20 个等级的
 `delta_min/max` 均为 0。抗性、穿透、吸收和 PvP 最终结算不进入本批，保留在 DMG-08。
+
+## DMG-04 第二十一个逐级实例：Inner Sight
+
+Inner Sight 不拥有直接伤害。1.10f `Skills.txt#8` 的 `SrcDam=0`，没有 server missile，
+物理伤害列均为 0，`SrvDoFunc=6`。表中的 `EMin=40` 与五段 `EMinLev=25/45/60/80/100`
+不是元素伤害包，而是 `AuraStatCalc=-edmn` 借用的分段输入；因此本技能等级 1–20 的
+`expected_*`、`riiablo_actual_*` 和 `delta_*` 全部明确为 N/A 并保持空白，不能填写 0。
+
+D2MOO `SKILLS_SrvDo006_InnerSight_SlowMissiles` 计算 `AuraLenCalc`、`AuraRangeCalc` 与
+`AuraStatCalc`，然后按原生 aura filter 扫描目标。`SKILLS_AuraCallback_InnerSight_SlowMissiles`
+只建立 curse/stat list，把计算值写入 `armorclass` 并安装 Inner Sight 目标状态；该路径
+不分配 combat damage record，也不创建导弹。`-edmn` 的等级 1–20 结果为
+`-40,-65,-90,-115,-140,-165,-190,-215,-260,-305,-350,-395,-440,-485,-530,-575,`
+`-635,-695,-755,-815`。
+
+审计复现了 riiablo 已登记的差异：原 `calculateInnerSightDefenseReduce` 使用
+`40+(level-1)*20`，等级 2 错为 `-60`。`SkillFormula` 现在支持 SkillCalc 未移位的
+`edmn/edmx` token，生产 `applyInnerSight` 使用原生 `-edmn` 分段曲线；
+`InnerSightGoldenDamageTest` 以独立常量锁定全部 20 级，集成测试确认等级 2 状态值为
+`-65` 且仍是平面防御修正。持续时间、范围、目标过滤和最终命中率影响不属于 DMG-04
+伤害黄金值，留给后续行为与结算审计。

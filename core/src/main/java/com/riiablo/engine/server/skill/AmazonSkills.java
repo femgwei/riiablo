@@ -277,8 +277,18 @@ public final class AmazonSkills {
    * @return 防御降低量
    */
   public static int calculateInnerSightDefenseReduce(int skillLevel) {
-    // 基础 -40，每级 -20
-    return 40 + (skillLevel - 1) * 20;
+    Skills.Entry skill = Riiablo.files == null ? null : Riiablo.files.skills.get("Inner Sight");
+    return calculateInnerSightDefenseReduce(skill, skillLevel);
+  }
+
+  /** Evaluates Inner Sight's native {@code -edmn} segmented armor penalty. */
+  public static int calculateInnerSightDefenseReduce(Skills.Entry skill, int skillLevel) {
+    if (skill != null && skill.aurastatcalc != null && skill.aurastatcalc.length > 0) {
+      int value = SkillFormula.evaluate(skill.aurastatcalc[0], skill, skillLevel);
+      if (value < 0) return -value;
+    }
+    // Guard for stripped/modded rows that omit AuraStatCalc.
+    return 40 + Math.max(0, skillLevel - 1) * 20;
   }
 
   /**

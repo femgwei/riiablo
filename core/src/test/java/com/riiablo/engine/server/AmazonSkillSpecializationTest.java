@@ -1208,7 +1208,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertNotNull(state);
       assertEquals(-AmazonSkills.calculateInnerSightDefenseReduce(2),
           state.getStatContributionValue(Stat.armorclass));
-      assertEquals(-60, world.getMapper(UnitStates.class).get(target)
+      assertEquals(-65, world.getMapper(UnitStates.class).get(target)
           .stateList.getTotalFlatDefenseModifier());
       assertEquals(0, world.getMapper(UnitStates.class).get(target)
           .stateList.getTotalDefenseModifier(),

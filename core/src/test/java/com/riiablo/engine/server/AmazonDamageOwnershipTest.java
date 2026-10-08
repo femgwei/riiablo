@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Amazon damage-owner audit. */
 class AmazonDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-amazon-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(8, 10, 22, 28, 32);
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(10, 22, 28, 32);
 
   @Test
   void everyAmazonSkillHasOneEvidenceBackedOwnerDecision() throws IOException {
@@ -127,8 +127,8 @@ class AmazonDamageOwnershipTest extends RiiabloTest {
     assertEquals(25, innerSight.EMinLev[0]);
     assertEquals(-65, -(innerSight.EMin + innerSight.EMinLev[0]),
         "native -edmn uses the segmented elemental-minimum curve at level two");
-    assertEquals(60, AmazonSkills.calculateInnerSightDefenseReduce(2),
-        "known gap: the handwritten linear helper does not follow the native curve");
+    assertEquals(65, AmazonSkills.calculateInnerSightDefenseReduce(innerSight, 2),
+        "production must evaluate the native segmented curve");
 
     Skills.Entry jab = Riiablo.files.skills.get("Jab");
     assertEquals(0, SkillFormula.evaluate(jab.calc1, jab, 6));

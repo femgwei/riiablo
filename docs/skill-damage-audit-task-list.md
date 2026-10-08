@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`2216933ced28bfaae67e48f9f10ecd471630b290`
-当前加权完成度：**31.9%**
+最近完成技能提交：`1019b62290ee462f5b5a52507cba728b8d3ba5a7`
+当前加权完成度：**32.0%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -44,18 +44,18 @@
 - Assassin 审计确认 30 项所有者；Claw Mastery、Psychic Hammer、Quickness、Weapon Block、
   Cloak of Shadows、Fade、Shadow Warrior、Mind Blast、Shadow Master 共 9 个实现缺口；
   Shock Field、Blade Sentinel、Charged Bolt Sentry、Blade Fury 另缺最终伤害消费的聚焦测试。
-- Amazon 审计确认 30 项所有者；Inner Sight、Jab、Guided Arrow、Dopplezon、Valkyrie 共
-  5 个明确实现差异。前 3 项分别是分段公式和合法零值 fallback 问题；后 2 项缺原版召唤
-  被动属性、技能、装备等初始化链。Amazon 生产逻辑本轮未改写。
+- Amazon 审计确认 30 项所有者；Jab、Guided Arrow、Dopplezon、Valkyrie 仍有 4 个明确
+  实现差异。前 2 项是合法零值 fallback 问题；后 2 项缺原版召唤被动属性、技能、装备等
+  初始化链。Inner Sight 的分段公式差异已在本轮修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
-  `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
+  `IMPLEMENTED_TESTED` 118 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 36 项。新增 Inner Sight 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 400 行 `GOLDEN_APPROVED`，其余 3,800 行仍为
+- 4,200 行中已有 420 行 `GOLDEN_APPROVED`，其余 3,780 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 400 个逐级黄金行；不表示技能伤害正确率为 31.9%。
+- 当前 32.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 420 个逐级黄金行；不表示技能伤害正确率为 32.0%。
 
 ## 加权任务
 
@@ -88,8 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow
-    等级 1–20 共 400/4,200 行（本项 9.5238%，加权贡献 1.9048 个百分点）；
+    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
+    Inner Sight 等级 1–20 共 420/4,200 行（本项 10.0000%，加权贡献 2.0000 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.9048%（展示时四舍五入为 31.9%）。
+当前总加权完成度为 32.0000%（展示时为 32.0%）。
 
 ## 黄金值准入规则
 
@@ -127,8 +127,8 @@
 
 ## 矩阵文件
 
-- `skill-damage-audit-handoff-2026-10-08.md`：新会话接手入口，记录当前 Git 基线、下一项
-  Fire Arrow、测试命令、XLSX 生成注意事项和已知既有失败。
+- `skill-damage-audit-handoff-2026-10-08.md`：Fire Arrow 审计前的接手快照，记录当时 Git
+  基线、测试命令、XLSX 生成注意事项和已知既有失败；当前进度以本清单为准。
 - `skill-damage-golden-matrix.tsv`：版本控制友好的机器可读真源，共 60 列、4,200 行数据。
 - `skill-damage-golden-matrix.xlsx`：浏览、筛选和交接用工作簿；包含 Summary、Task List、
   Golden Matrix 和 Field Dictionary。
@@ -275,6 +275,13 @@
   1–4，等级 20 为 63–70；20 个等级的 `delta_min/max` 均为 0。`SrvDmg01` 的
   `dl12=3%+(level-1)*2%` 在本场景只会转换零物理包，因此不改变技能自身火焰曲线。
   固定武器包的物理转火焰归入 DMG-06，抗性、穿透、吸收和 PvP 归入 DMG-08。
+- Inner Sight（技能 8）等级 1–20 已按“无直接伤害”批准；三组伤害 expected/actual/delta
+  字段全部保持空白，并在 `candidate_unit` 明确标记 N/A，禁止用 0 伪装伤害。D2MOO
+  `SrvDo006` 只计算 `AuraStatCalc=-edmn` 并由回调安装定时 `armorclass` 负值，不创建导弹
+  或伤害记录。防御削减从等级 1 的 `-40` 增长到等级 20 的 `-815`。
+- 审计修复了 riiablo 原手写线性 fallback：`SkillFormula` 现在支持未移位的 `edmn/edmx`
+  token，`applyInnerSight` 使用原生分段曲线，等级 2 从错误的 `-60` 修正为 `-65`。持续
+  时间、范围、过滤和最终命中率影响留给后续行为与结算审计。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -328,7 +335,8 @@
   `NativeSorceressDefenseDataTest#shiverAndChillingArmorRetainDistinctNativeReactions`、
   `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`、
   `MagicArrowGoldenDamageTest#levelOneToTwentyPreservesD2mooTotalAcrossMagicConversion`、
-  `FireArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooFireCurveWithoutWeaponOrSynergy`。
+  `FireArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooFireCurveWithoutWeaponOrSynergy`、
+  `InnerSightGoldenDamageTest#levelOneToTwentyAreNondamagingNativeDefenseDebuffs`。
 
 ## 可复现命令
 
@@ -350,7 +358,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Inner Sight（技能 8）等级 1–20。它不产生直接伤害，需按
-准入规则明确记录 N/A，并核对 `SrvDo006`、目标状态、`AuraStatCalc` 分段防御削减曲线与
-riiablo 已登记的线性 fallback 差异；状态持续时间、范围和最终命中率影响分别留给后续
-行为与最终结算审计。
+继续 DMG-04，下一项优先审核 Critical Strike（技能 9）等级 1–20。它不创建独立伤害包，
+需按准入规则明确记录 N/A，并核对 `PassiveState=criticalstrike`、`PassiveStat`、`dm12`
+概率曲线及物理伤害消费者；暴击随机、双倍物理伤害与最终结算留给 DMG-06/08。

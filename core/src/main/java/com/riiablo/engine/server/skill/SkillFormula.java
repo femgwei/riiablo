@@ -156,6 +156,12 @@ public final class SkillFormula {
           || "exms".equalsIgnoreCase(identifier)) {
         return elementalDamageFixed(false);
       }
+      // SkillCalc's edmn/edmx tokens expose the segmented elemental curve
+      // without applying HitShift. Inner Sight stores its flat armor penalty
+      // in EMin/EMinLev and evaluates `-edmn`, so treating this as an 8.8
+      // damage token would inflate the state value by 256.
+      if ("edmn".equalsIgnoreCase(identifier)) return elementalDamageValue(true);
+      if ("edmx".equalsIgnoreCase(identifier)) return elementalDamageValue(false);
       if (identifier.regionMatches(true, 0, "par", 0, 3)) {
         // The 1.10f Bone Wall row uses the otherwise unique `par34`
         // shorthand for the Param3/Param4 linear pair.  Blizzard's calc
@@ -199,6 +205,14 @@ public final class SkillFormula {
       int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;
       long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
       value <<= Math.min(Math.max(0, skill.HitShift), 30);
+      return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+    }
+
+    private int elementalDamageValue(boolean minimum) {
+      if (skill == null) return 0;
+      int base = minimum ? skill.EMin : skill.EMax;
+      int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;
+      long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
       return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
 
@@ -260,6 +274,12 @@ public final class SkillFormula {
           || "exms".equalsIgnoreCase(special)) {
         return elementalDamageFixed(referencedSkill, referencedLevel, false);
       }
+      if ("edmn".equalsIgnoreCase(special)) {
+        return elementalDamageValue(referencedSkill, referencedLevel, true);
+      }
+      if ("edmx".equalsIgnoreCase(special)) {
+        return elementalDamageValue(referencedSkill, referencedLevel, false);
+      }
       return 0;
     }
 
@@ -270,6 +290,15 @@ public final class SkillFormula {
       int[] perLevel = minimum ? referenced.EMinLev : referenced.EMaxLev;
       long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
       value <<= Math.min(Math.max(0, referenced.HitShift), 30);
+      return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+    }
+
+    private static int elementalDamageValue(Skills.Entry referenced, int level,
+        boolean minimum) {
+      if (referenced == null) return 0;
+      int base = minimum ? referenced.EMin : referenced.EMax;
+      int[] perLevel = minimum ? referenced.EMinLev : referenced.EMaxLev;
+      long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
       return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
 
