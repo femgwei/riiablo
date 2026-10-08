@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow 与 Valkyrie 已完成等级 1–20 基础审计；560/600 个 Amazon
+  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow、Valkyrie 与 Pierce 已完成等级 1–20 基础审计；580/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -316,7 +316,12 @@ D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter` �
 Valkyrie（32）等级 1–20 已按“召唤创建本身不拥有 outgoing damage”批准；矩阵保留所有
 伤害三元组为空，女武神后续攻击的 MonStats、SumSkill、被动属性和生成装备留给 DMG-07。
 
-当前 Amazon 的 DMG-04 基础行已完成 560/600；下一项审核 Pierce（技能 33）。
+Pierce（33）等级 1–20 已按“永久投射物穿透状态、不拥有直接伤害包”批准。
+`PassiveCalc=dm12`（`Param1=10`、`Param2=100`）产生 24%–86% 穿透概率；只有
+`Missiles.txt` 标记为 Pierce 的投射物才读取该状态并预掷最多 4 次继续命中机会。
+原导弹的伤害包、后续目标集合和整次施法总量留给 DMG-06/07。
+
+当前 Amazon 的 DMG-04 基础行已完成 580/600；下一项审核 Lightning Strike（技能 34）。
 
 ## Dopplezon（技能 28）DMG-04
 

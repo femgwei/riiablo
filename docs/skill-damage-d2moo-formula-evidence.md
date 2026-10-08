@@ -1086,3 +1086,24 @@ riiablo 的 `NativeSkillBehaviorRegistry` 注册 `summon.valkyrie` 且不生成 
 missile；`ValkyrieGoldenDamageTest` 锁定全部 20 级的召唤字段、零伤害字段和
 `Calc2=ln56` 原生初始化公式。当前生产路径已覆盖实体、owner、等级和 Valkyrie 状态，
 但被动属性、SumSkill 与生成装备差异仍按所有权清单保留为 DMG-07 缺口。
+
+## DMG-04 第四十七个逐级实例：Pierce
+
+Pierce 不拥有输出伤害包。1.10f `Skills.txt#33` 使用 `SrvStFunc=0`、`SrvDoFunc=0`、
+`SrcDam=0`，没有物理/元素固定伤害、server missile 或元素长度；`PassiveState=pierce`、
+`PassiveStat=skill_pierce`、`PassiveCalc=dm12`，`Param1=10`、`Param2=100`。原生递减公式
+`a + 110 * level * (b-a) / (100 * (level+6))` 在等级 1–20 产生
+`24,34,43,49,55,59,63,66,69,71,74,76,77,79,80,82,83,84,85,86`%。矩阵行
+542–561 的 `expected_*`、`riiablo_actual_*` 和 `delta_*` 全部明确留空为 N/A。
+
+D2MOO `SKILLS_RefreshPassiveSkills`（`D2Common/src/D2Skills.cpp:603`）刷新永久 Pierce
+状态。创建带 `Missiles.txt.Pierce` 标记的投射物时，`Missiles.cpp:321–337` 合并
+`STAT_ITEM_PIERCE` 与 `STAT_SKILL_PIERCE`，按概率预掷最多 4 次继续机会并写入
+`STAT_PIERCE_IDX`；`MissMode.cpp:5037–5045` 在成功碰撞后消耗该计数，使同一导弹及其
+原始伤害快照继续飞向后续目标。Pierce 不复制或修改单目标伤害值。
+
+riiablo 的 `AmazonSkills.getPierceChance` 与永久状态桥接复用同一 `dm12` 公式，
+`ServerSkillSystem.configurePierce` 仅为原生可穿透导弹预掷继续次数，
+`MissileCollisionSystem` 维护同一导弹的已命中目标集合并逐次消耗计数。
+`PierceGoldenDamageTest` 锁定全部 20 级概率、零伤害字段和永久 `skill_pierce` 状态；
+命中随机、导弹原始伤害、后续目标数量和整次施法总量留给 DMG-06/07/08。
