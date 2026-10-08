@@ -7,15 +7,55 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.engine.Engine;
 
 class ObjectAmbientSoundSystemTest {
   @Test
   void resolvesNativeInvisibleRiverMarkers() {
     assertEquals(ObjectAmbientSoundSystem.RIVER_SOUND,
-        ObjectAmbientSoundSystem.soundId(ObjectAmbientSoundSystem.INVISIBLE_RIVER_SOUND_1));
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.INVISIBLE_RIVER_SOUND_1, Engine.Object.MODE_NU));
     assertEquals(ObjectAmbientSoundSystem.RIVER_SOUND,
-        ObjectAmbientSoundSystem.soundId(ObjectAmbientSoundSystem.INVISIBLE_RIVER_SOUND_2));
-    assertEquals(-1, ObjectAmbientSoundSystem.soundId(39));
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.INVISIBLE_RIVER_SOUND_2, Engine.Object.MODE_NU));
+    assertEquals(-1, ObjectAmbientSoundSystem.soundId(39, Engine.Object.MODE_ON));
+  }
+
+  @Test
+  void resolvesLitNativeTorchesAndBraziers() {
+    assertEquals(ObjectAmbientSoundSystem.TORCH_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.TORCH_TIKI, Engine.Object.MODE_ON));
+    assertEquals(ObjectAmbientSoundSystem.TORCH_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.TORCH_WALL, Engine.Object.MODE_OP));
+    assertEquals(ObjectAmbientSoundSystem.TORCH_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.JUNGLE_TORCH, Engine.Object.MODE_ON));
+    assertEquals(ObjectAmbientSoundSystem.BRAZIER_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.BRAZIER, Engine.Object.MODE_ON));
+    assertEquals(ObjectAmbientSoundSystem.BRAZIER_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.BRAZIER_3, Engine.Object.MODE_OP));
+    assertEquals(ObjectAmbientSoundSystem.BRAZIER_SOUND,
+        ObjectAmbientSoundSystem.soundId(
+            ObjectAmbientSoundSystem.FLOOR_BRAZIER, Engine.Object.MODE_ON));
+  }
+
+  @Test
+  void stopsFireLoopsWhenNativeObjectsAreExtinguished() {
+    assertFalse(ObjectAmbientSoundSystem.isBurningMode(Engine.Object.MODE_NU));
+    assertTrue(ObjectAmbientSoundSystem.isBurningMode(Engine.Object.MODE_OP));
+    assertTrue(ObjectAmbientSoundSystem.isBurningMode(Engine.Object.MODE_ON));
+    assertFalse(ObjectAmbientSoundSystem.isBurningMode(Engine.Object.MODE_S1));
+    assertEquals(-1, ObjectAmbientSoundSystem.soundId(
+        ObjectAmbientSoundSystem.TORCH_TIKI, Engine.Object.MODE_NU));
+    assertEquals(-1, ObjectAmbientSoundSystem.soundId(
+        ObjectAmbientSoundSystem.BRAZIER, Engine.Object.MODE_NU));
+    assertTrue(ObjectAmbientSoundSystem.isAmbientSource(
+        ObjectAmbientSoundSystem.TORCH_TIKI));
+    assertFalse(ObjectAmbientSoundSystem.isAmbientSource(39));
   }
 
   @Test

@@ -25,6 +25,16 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   // D2MOO ObjectsIds.h: OBJECT_INVISIBLE_RIVER_SOUND1/2.
   static final int INVISIBLE_RIVER_SOUND_1 = 65;
   static final int INVISIBLE_RIVER_SOUND_2 = 66;
+  // Native Objects.txt rows initialized as interactive torches/braziers.
+  static final int BRAZIER = 29;
+  static final int TORCH_TIKI = 37;
+  static final int TORCH_WALL = 38;
+  static final int BRAZIER_3 = 101;
+  static final int FLOOR_BRAZIER = 102;
+  static final int JUNGLE_TORCH = 117;
+  // Native Sounds.txt loops for the matching object families.
+  static final int BRAZIER_SOUND = 2574;
+  static final int TORCH_SOUND = 2578;
   // Native Sounds.txt: object_river / ESOUND_OBJECT_RIVER.
   static final int RIVER_SOUND = 2599;
 
@@ -36,28 +46,35 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<SoundEmitter> mSoundEmitter;
 
-  private boolean markerAudible;
+  private boolean riverMarkerAudible;
   private boolean missingRiverSoundLogged;
   private Audio.Instance terrainRiver;
 
   @Override
   protected void begin() {
-    markerAudible = false;
+    riverMarkerAudible = false;
   }
 
   @Override
   protected void process(int entityId) {
     com.riiablo.engine.server.component.Object object = mObject.get(entityId);
-    int soundId = object == null || object.base == null ? -1 : soundId(object.base.Id);
-    if (soundId < 0) return;
+    if (object == null || object.base == null || !isAmbientSource(object.base.Id)) return;
 
     SoundEmitter emitter = mSoundEmitter.has(entityId) ? mSoundEmitter.get(entityId) : null;
+    int soundId = soundId(object.base.Id, object.mode);
+    if (soundId < 0) {
+      // A native torch operation switches a burning OP/ON object back to NU.
+      // Only remove emitters for object classes owned by this system so other
+      // object audio (portals, quest effects, and so on) remains untouched.
+      if (emitter != null) mSoundEmitter.remove(entityId);
+      return;
+    }
     boolean audible = isAudible(entityId, emitter == null ? AUDIBLE_RADIUS : STOP_RADIUS);
     if (!audible) {
       if (emitter != null) mSoundEmitter.remove(entityId);
       return;
     }
-    markerAudible = true;
+    if (soundId == RIVER_SOUND) riverMarkerAudible = true;
     if (emitter != null || Riiablo.audio == null || Riiablo.audio.isBackgroundPaused()
         || Riiablo.files == null || Riiablo.files.Sounds == null) return;
 
@@ -75,9 +92,10 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     mSoundEmitter.create(entityId).set(
         instance, Interpolation.linear, AUDIBLE_RADIUS, true);
     Vector2 source = mPosition.get(entityId).position;
+    String event = soundId == RIVER_SOUND ? "RIVER_AMBIENCE" : "FIRE_AMBIENCE";
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
-        "[RIVER_AMBIENCE] phase=start source=object entity=%d object=%d position=(%.2f,%.2f)",
-        entityId, object.base.Id, source.x, source.y));
+        "[%s] phase=start source=object entity=%d object=%d sound=%d position=(%.2f,%.2f)",
+        event, entityId, object.base.Id, soundId, source.x, source.y));
   }
 
   @Override
@@ -88,7 +106,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     // ECS marker exists for the object-based path above. Use those native
     // floor cells as a single continuous positional source rather than
     // starting one overlapping loop per generated river object.
-    if (markerAudible) {
+    if (riverMarkerAudible) {
       stopTerrainRiver();
       return;
     }
@@ -172,14 +190,44 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     return withinRadius(source.dst2(listener), radius);
   }
 
-  static int soundId(int objectId) {
+  static int soundId(int objectId, int mode) {
     switch (objectId) {
       case INVISIBLE_RIVER_SOUND_1:
       case INVISIBLE_RIVER_SOUND_2:
         return RIVER_SOUND;
+      case TORCH_TIKI:
+      case TORCH_WALL:
+      case JUNGLE_TORCH:
+        return isBurningMode(mode) ? TORCH_SOUND : -1;
+      case BRAZIER:
+      case BRAZIER_3:
+      case FLOOR_BRAZIER:
+        return isBurningMode(mode) ? BRAZIER_SOUND : -1;
       default:
         return -1;
     }
+  }
+
+  static boolean isAmbientSource(int objectId) {
+    switch (objectId) {
+      case INVISIBLE_RIVER_SOUND_1:
+      case INVISIBLE_RIVER_SOUND_2:
+      case TORCH_TIKI:
+      case TORCH_WALL:
+      case JUNGLE_TORCH:
+      case BRAZIER:
+      case BRAZIER_3:
+      case FLOOR_BRAZIER:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static boolean isBurningMode(int mode) {
+    // D2MOO InitFunction08_Torch starts these objects in ON. Its native
+    // operate functions use OP while lighting and NU after extinguishing.
+    return mode == Engine.Object.MODE_OP || mode == Engine.Object.MODE_ON;
   }
 
   static boolean withinRadius(float distance2, float radius) {
