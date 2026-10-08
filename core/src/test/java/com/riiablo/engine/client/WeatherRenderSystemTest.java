@@ -46,6 +46,13 @@ class WeatherRenderSystemTest {
   }
 
   @Test
+  void rainDensityKeepsTheLegacyScreenFromFillingWithStreaks() {
+    assertEquals(192, WeatherRenderSystem.activeRainParticles(1f));
+    assertEquals(96, WeatherRenderSystem.activeRainParticles(0.5f));
+    assertEquals(0, WeatherRenderSystem.activeRainParticles(0f));
+  }
+
+  @Test
   void areaWeatherTransitionFadesRainOutAndBackIn() {
     WeatherRenderSystem.WeatherTransition transition =
         new WeatherRenderSystem.WeatherTransition();

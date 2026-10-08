@@ -40,6 +40,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
   static final int RAIN_SHADE_COUNT = 12;
+  static final float RAIN_DENSITY_SCALE = 0.75f;
   private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
@@ -232,7 +233,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private void drawRain(float intensity) {
     float alpha = particles.alpha();
-    int activeParticles = activeParticles(intensity);
+    int activeParticles = activeRainParticles(intensity);
     for (int i = 0; i < activeParticles; i++) {
       float x = MathUtils.lerp(particles.previousX[i], particles.x[i], alpha);
       float y = MathUtils.lerp(particles.previousY[i], particles.y[i], alpha);
@@ -273,6 +274,13 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private static int activeParticles(float intensity) {
     return MathUtils.clamp(MathUtils.ceil(PARTICLE_COUNT * intensity), 0, PARTICLE_COUNT);
+  }
+
+  static int activeRainParticles(float intensity) {
+    // The native client uses a hard-coded screen-space particle system. Keep
+    // its 32..255 weather-strength cycle, but calibrate the OpenGL streak count
+    // to the visibly lighter 640x480 legacy presentation.
+    return activeParticles(intensity * RAIN_DENSITY_SCALE);
   }
 
   static Mode modeFor(Levels.Entry level) {
