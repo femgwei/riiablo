@@ -12,6 +12,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 
+import com.riiablo.Riiablo;
+import com.riiablo.audio.Audio;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.SimulationClock;
@@ -28,6 +30,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int SNOW_SHAPE_COUNT = 8;
   static final int SNOW_SEGMENTS_PER_PARTICLE = 2;
   private static final int MAX_CATCH_UP_STEPS = 4;
+  private static final int RAIN_AMBIENCE_ID = 64;
   private static final long RANDOM_SEED = 0xD2C11E17L;
   private static final long WEATHER_CYCLE_SEED = 0x6FAA7940L;
 
@@ -59,6 +62,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
   private final WeatherCycle weatherCycle = new WeatherCycle(WEATHER_CYCLE_SEED);
   private ControlMode controlMode = ControlMode.AUTO;
+  private Audio.Instance rainAmbience;
 
   @Override
   protected void processSystem() {
@@ -79,6 +83,7 @@ public final class WeatherRenderSystem extends BaseSystem {
       mode = controlledModeFor(eligibleMode);
       intensity = mode == Mode.NONE ? 0f : 1f;
     }
+    updateRainAmbience(mode, intensity);
     float width = iso.viewportWidth * iso.zoom;
     float height = iso.viewportHeight * iso.zoom;
     particles.configure(mode, width, height);
@@ -86,6 +91,34 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     particles.advance(world.getDelta());
     draw(width, height, intensity);
+  }
+
+  private void updateRainAmbience(Mode mode, float intensity) {
+    Audio audio = Riiablo.audio;
+    if (audio == null || audio.isBackgroundPaused()) return;
+
+    float volume = rainVolume(mode, intensity);
+    if (volume <= 0f) {
+      stopRainAmbience();
+      return;
+    }
+
+    if (rainAmbience == null) {
+      // D2Client's weather sound controller hard-codes Sounds.txt ID 64
+      // (scene_rain), independently of the level's base SoundEnv ambience.
+      rainAmbience = audio.play(RAIN_AMBIENCE_ID, true, Audio.Channel.ENVIRONMENT);
+    }
+    if (rainAmbience != null) rainAmbience.setVolume(volume);
+  }
+
+  private void stopRainAmbience() {
+    if (rainAmbience == null) return;
+    rainAmbience.stop();
+    rainAmbience = null;
+  }
+
+  static float rainVolume(Mode mode, float intensity) {
+    return mode == Mode.RAIN ? MathUtils.clamp(intensity, 0f, 1f) : 0f;
   }
 
   private void draw(float width, float height, float intensity) {
@@ -161,6 +194,11 @@ public final class WeatherRenderSystem extends BaseSystem {
   public void setControlMode(ControlMode controlMode) {
     if (controlMode == null) throw new NullPointerException("controlMode");
     this.controlMode = controlMode;
+  }
+
+  @Override
+  protected void dispose() {
+    stopRainAmbience();
   }
 
   /** Native four-stage weather timing from D2Client's Env.cpp state machine. */

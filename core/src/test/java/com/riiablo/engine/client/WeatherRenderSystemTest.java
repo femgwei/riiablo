@@ -30,6 +30,20 @@ class WeatherRenderSystemTest {
   }
 
   @Test
+  void rainAmbienceTracksOnlyVisibleRainIntensity() {
+    assertEquals(0f,
+        WeatherRenderSystem.rainVolume(WeatherRenderSystem.Mode.RAIN, 0f));
+    assertEquals(0.5f,
+        WeatherRenderSystem.rainVolume(WeatherRenderSystem.Mode.RAIN, 0.5f));
+    assertEquals(1f,
+        WeatherRenderSystem.rainVolume(WeatherRenderSystem.Mode.RAIN, 2f));
+    assertEquals(0f,
+        WeatherRenderSystem.rainVolume(WeatherRenderSystem.Mode.SNOW, 1f));
+    assertEquals(0f,
+        WeatherRenderSystem.rainVolume(WeatherRenderSystem.Mode.NONE, 1f));
+  }
+
+  @Test
   void initializationIsDeterministicForTheSameSeed() {
     WeatherRenderSystem.ParticleField first = field(1234L, WeatherRenderSystem.Mode.RAIN);
     WeatherRenderSystem.ParticleField second = field(1234L, WeatherRenderSystem.Mode.RAIN);
