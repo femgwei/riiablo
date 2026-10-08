@@ -39,6 +39,7 @@ import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -131,6 +132,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
@@ -499,11 +501,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
                 + (position == null ? "missing_position" : "missing_monster"));
             return Engine.INVALID_ENTITY;
           }
-          int created = factory.createMonster(monster.monsterId(), position.x(), position.y());
+          int created = factory.createMonster(monster.monsterId(), position.x(), position.y(),
+              monster.rank(), monster.affixes(), monster.championType(), monster.uniqueId());
           Gdx.app.log(TAG, String.format(
               "[ENTITY_SYNC] phase=monster_create serverEntity=%d localEntity=%d "
-                  + "monsterId=%d position=(%.2f,%.2f) source=monster_p",
-              sync.entityId(), created, monster.monsterId(), position.x(), position.y()));
+                  + "monsterId=%d rank=%d uniqueId=%d position=(%.2f,%.2f) source=monster_p",
+              sync.entityId(), created, monster.monsterId(), monster.rank(), monster.uniqueId(),
+              position.x(), position.y()));
           return created;
         }
       }
@@ -749,6 +753,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   public ClientPartyState partyState() {
     return partyState;
+  }
+
+  private void applyMonsterSnapshot(int entityId, MonsterP data) {
+    if (data == null || !mMonster.has(entityId)) return;
+    mMonster.get(entityId).setRank(
+        data.rank(), data.affixes(), data.championType(), data.uniqueId());
   }
 
   private void TradeResult(D2GS packet) {
@@ -1053,7 +1063,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
         }
         case ComponentP.DS1ObjectWrapperP:
         case ComponentP.WarpP:
-        case ComponentP.MonsterP:
+          break;
+        case ComponentP.MonsterP: {
+          MonsterP data = (MonsterP) entityData.component(new MonsterP(), i);
+          applyMonsterSnapshot(entityId, data);
+          break;
+        }
         case ComponentP.ItemP: {
           if (entityType == Class.Type.ITM && mItem.has(entityId)) {
             ItemP data = (ItemP) entityData.component(new ItemP(), i);

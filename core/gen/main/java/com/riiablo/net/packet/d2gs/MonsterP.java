@@ -16,16 +16,32 @@ public final class MonsterP extends Table {
   public MonsterP __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
   public int monsterId() { int o = __offset(4); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
+  public int rank() { int o = __offset(6); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
+  public long affixes() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public short championType() { int o = __offset(10); return o != 0 ? bb.getShort(o + bb_pos) : -1; }
+  public int uniqueId() { int o = __offset(12); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
 
   public static int createMonsterP(FlatBufferBuilder builder,
-      int monsterId) {
-    builder.startTable(1);
+      int monsterId,
+      int rank,
+      long affixes,
+      short championType,
+      int uniqueId) {
+    builder.startTable(5);
+    MonsterP.addAffixes(builder, affixes);
+    MonsterP.addUniqueId(builder, uniqueId);
+    MonsterP.addChampionType(builder, championType);
     MonsterP.addMonsterId(builder, monsterId);
+    MonsterP.addRank(builder, rank);
     return MonsterP.endMonsterP(builder);
   }
 
-  public static void startMonsterP(FlatBufferBuilder builder) { builder.startTable(1); }
+  public static void startMonsterP(FlatBufferBuilder builder) { builder.startTable(5); }
   public static void addMonsterId(FlatBufferBuilder builder, int monsterId) { builder.addShort(0, (short)monsterId, (short)0); }
+  public static void addRank(FlatBufferBuilder builder, int rank) { builder.addByte(1, (byte)rank, (byte)0); }
+  public static void addAffixes(FlatBufferBuilder builder, long affixes) { builder.addLong(2, affixes, 0L); }
+  public static void addChampionType(FlatBufferBuilder builder, short championType) { builder.addShort(3, championType, -1); }
+  public static void addUniqueId(FlatBufferBuilder builder, int uniqueId) { builder.addInt(4, uniqueId, -1); }
   public static int endMonsterP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

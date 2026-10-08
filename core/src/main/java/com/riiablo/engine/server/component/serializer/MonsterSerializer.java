@@ -17,7 +17,8 @@ public class MonsterSerializer implements FlatBuffersSerializer<Monster, Monster
 
   @Override
   public int putData(FlatBufferBuilder builder, Monster c) {
-    return MonsterP.createMonsterP(builder, c.monstats.hcIdx);
+    return MonsterP.createMonsterP(builder, c.monstats.hcIdx, c.rank,
+        c.affixes, (short) c.championType, c.uniqueId);
   }
 
   @Override

@@ -165,7 +165,7 @@ class MonsterRoomActivationTest {
     Map.Zone zone = nativeThreeRoomZone();
     zone.map = map;
     Map.RoomEx room = zone.getRoomsEx().get(0);
-    room.addMonsterSpawn(7, 10, 10, -1, false, 42, "Blood Raven");
+    room.addMonsterSpawn(7, 10, 10, -1, false, 40, "Corpsefire");
 
     RecordingFactory factory = new RecordingFactory();
     RoomActivationSystem activation = new RoomActivationSystem();
@@ -181,9 +181,9 @@ class MonsterRoomActivationTest {
 
       assertEquals(1, factory.monstersCreated);
       assertEquals(MonsterRank.SUPER_UNIQUE, factory.lastRank);
-      assertEquals(42, factory.lastUniqueId);
-      assertEquals(42, world.getMapper(SuperUnique.class).get(factory.lastMonsterId).id);
-      assertEquals("Blood Raven",
+      assertEquals(40, factory.lastUniqueId);
+      assertEquals(40, world.getMapper(SuperUnique.class).get(factory.lastMonsterId).id);
+      assertEquals("Corpsefire",
           world.getMapper(SuperUnique.class).get(factory.lastMonsterId).key);
       assertTrue(room.isMonsterPopulationSpawned());
     } finally {

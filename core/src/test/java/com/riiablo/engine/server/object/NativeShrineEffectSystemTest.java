@@ -16,6 +16,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
@@ -25,10 +26,40 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.monster.MonsterRank;
 
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 class NativeShrineEffectSystemTest extends RiiabloTest {
+  @Test
+  void monsterShrinePromotesNearestNormalMonsterWithNativeLifeBonus() {
+    World world = effectWorld();
+    try {
+      Map.Zone zone = mock(Map.Zone.class);
+      Map map = new Map(0, 0);
+      int player = createUnit(world, 100, 100);
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(player).set(map, zone);
+
+      int monster = createUnit(world, 25, 25);
+      world.getMapper(Monster.class).create(monster).set(null, null)
+          .setRank(MonsterRank.NORMAL, 0L, -1, -1);
+      world.getMapper(Position.class).create(monster).position.set(12, 10);
+      world.getMapper(MapWrapper.class).create(monster).set(map, zone);
+      world.process();
+
+      world.getSystem(EventSystem.class).dispatch(ShrineInteractionEvent.obtain(
+          player, player, 0, 20, 0, 0, 0, 0, false));
+
+      assertEquals(MonsterRank.UNIQUE, world.getMapper(Monster.class).get(monster).rank);
+      assertEquals(100f, value(world, monster, Stat.maxhp));
+      assertEquals(100f, value(world, monster, Stat.hitpoints));
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void stormUsesNativeDirectLifePercentAndIgnoresLightningDefense() {
     World world = effectWorld();

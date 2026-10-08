@@ -803,6 +803,25 @@ public class CombatSystem {
     return scaleMonsterColdDuration(duration, !defenderPlayer, difficulty);
   }
 
+  /** Regular attack carrying a per-swing monster unique elemental packet. */
+  public CombatResult calculateAttackAgainstMonsterType(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, int difficulty) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false,
+        0, DAMAGE_PHYSICAL, mastery, difficulty, 0, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed);
+  }
+
   /**
    * Applies Diablo II's monster cold-length penalty after resistance and
    * Cannot Be Frozen/Half Freeze checks. Normal, Nightmare and Hell monsters

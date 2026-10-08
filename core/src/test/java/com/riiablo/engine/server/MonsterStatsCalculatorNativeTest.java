@@ -9,6 +9,12 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.engine.server.monster.MonsterAffix;
+import com.riiablo.engine.server.monster.MonsterUniqueModifiers;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
 import org.junit.jupiter.api.Test;
 
@@ -70,6 +76,53 @@ class MonsterStatsCalculatorNativeTest extends RiiabloTest {
     assertEquals(3, MonsterStatsCalculator.nativeRankLevelBonus(MonsterRank.UNIQUE));
     assertEquals(300, MonsterStatsCalculator.nativeRankExperience(100, MonsterRank.CHAMPION));
     assertEquals(500, MonsterStatsCalculator.nativeRankExperience(100, MonsterRank.UNIQUE));
+    assertEquals(400, MonsterStatsCalculator.nativeRankHitpoints(100, MonsterRank.UNIQUE, 0));
+    assertEquals(300, MonsterStatsCalculator.nativeRankHitpoints(100, MonsterRank.UNIQUE, 1));
+    assertEquals(200, MonsterStatsCalculator.nativeRankHitpoints(100, MonsterRank.UNIQUE, 2));
+    assertEquals(300, MonsterStatsCalculator.nativeRankHitpoints(100, MonsterRank.CHAMPION, 0));
+    assertEquals(200, MonsterStatsCalculator.nativeRankHitpoints(100, MonsterRank.MINION, 0));
+  }
+
+  @Test
+  void appliesCorpsefireSpectralHitResistancesAndFixedCombatAffixes() {
+    MonStats.Entry zombie = Riiablo.files.monstats.get("zombie1");
+    assertNotNull(zombie);
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().put(Stat.armorclass, 12);
+    attrs.base().put(Stat.fireresist, 0);
+    attrs.base().put(Stat.lightresist, 0);
+    attrs.base().put(Stat.coldresist, 0);
+    MonsterStatsCalculator.applyNativeAffixStats(attrs.base(), zombie, 0,
+        MonsterAffix.SPECTRAL_HIT | MonsterAffix.EXTRA_STRONG | MonsterAffix.STONE_SKIN);
+
+    assertEquals(20, attrs.base().getValue(Stat.fireresist, 0));
+    assertEquals(20, attrs.base().getValue(Stat.lightresist, 0));
+    assertEquals(20, attrs.base().getValue(Stat.coldresist, 0));
+    assertEquals(24, attrs.base().getValue(Stat.armorclass, 0));
+    assertEquals(50, attrs.base().getValue(Stat.damageresist, 0));
+    assertTrue(attrs.base().getValue(Stat.damagepercent, 0) > 0);
+    assertTrue(attrs.base().getValue(Stat.item_tohit_percent, 0) > 0);
+  }
+
+  @Test
+  void rollsCorpsefireSpectralHitElementForEachAuthoritativeAttack() {
+    MonStats.Entry zombie = Riiablo.files.monstats.get("zombie1");
+    Monster monster = new Monster().set(zombie, null)
+        .setRank(MonsterRank.SUPER_UNIQUE, MonsterAffix.SPECTRAL_HIT, -1, 40);
+    monster.rngState = 0xC0FFEE;
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().put(Stat.level, Math.max(1, zombie.Level[0] + 3));
+    attrs.reset();
+    int before = monster.rngState;
+
+    MonsterUniqueModifiers.ElementalAttack attack =
+        MonsterUniqueModifiers.rollSpectralHit(monster, attrs, 0);
+    assertNotNull(attack);
+    assertTrue(attack.selectedType >= CombatSystem.DAMAGE_FIRE);
+    assertTrue(attack.selectedType < CombatSystem.DAMAGE_TYPE_COUNT);
+    assertTrue(attack.max[attack.selectedType] > 0);
+    assertTrue(attack.min[attack.selectedType] > 0);
+    assertTrue(monster.rngState != before);
   }
 
   @Test

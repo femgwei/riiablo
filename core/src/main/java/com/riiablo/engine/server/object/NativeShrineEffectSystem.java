@@ -296,8 +296,12 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
     Monster monster = mMonster.get(nearest);
     monster.setRank(MonsterRank.UNIQUE, monster.affixes, monster.championType, monster.uniqueId);
     Attributes attrs = mAttributesWrapper.get(nearest).attrs;
-    scale(attrs, Stat.maxhp, MonsterRank.UNIQUE_HP_MULTIPLIER);
-    scale(attrs, Stat.hitpoints, MonsterRank.UNIQUE_HP_MULTIPLIER);
+    int difficulty = playerMap.map == null ? 0 : playerMap.map.getDifficulty();
+    float hpMultiplier = MonsterRank.getHpMultiplier(MonsterRank.UNIQUE, difficulty);
+    scale(attrs, Stat.maxhp, hpMultiplier);
+    scale(attrs, Stat.hitpoints, hpMultiplier);
+    attrs.base().put(Stat.hpregen, 0);
+    attrs.aggregate().put(Stat.hpregen, 0);
     scale(attrs, Stat.experience, MonsterRank.UNIQUE_EXP_MULTIPLIER);
     log.info("[SHRINE_SPECIAL] monster upgraded player={} monster={} rank={}",
         event.playerId, nearest, MonsterRank.getName(monster.rank));

@@ -158,6 +158,10 @@ table WarpP {
 
 table MonsterP {
   monsterId:uint16;
+  rank:uint8;
+  affixes:uint64;
+  championType:int16 = -1;
+  uniqueId:int32 = -1;
 }
 
 // Player-owned summon metadata is separate from MonsterP so old clients can

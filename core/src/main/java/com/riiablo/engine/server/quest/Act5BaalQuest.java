@@ -81,27 +81,7 @@ public final class Act5BaalQuest {
   }
 
   static long nativeSuperUniqueAffixes(int[] mods) {
-    if (mods == null) return 0L;
-    long affixes = 0L;
-    for (int mod : mods) {
-      switch (mod) {
-        case 5: affixes |= com.riiablo.engine.server.monster.MonsterAffix.EXTRA_STRONG; break;
-        case 6: affixes |= com.riiablo.engine.server.monster.MonsterAffix.EXTRA_FAST; break;
-        case 7: affixes |= com.riiablo.engine.server.monster.MonsterAffix.CURSED; break;
-        case 8: affixes |= com.riiablo.engine.server.monster.MonsterAffix.MAGIC_RESISTANT; break;
-        case 9: affixes |= com.riiablo.engine.server.monster.MonsterAffix.FIRE_ENCHANTED; break;
-        case 17: affixes |= com.riiablo.engine.server.monster.MonsterAffix.LIGHTNING_ENCHANTED; break;
-        case 18: affixes |= com.riiablo.engine.server.monster.MonsterAffix.COLD_ENCHANTED; break;
-        case 23: affixes |= com.riiablo.engine.server.monster.MonsterAffix.POISON_ENCHANTED; break;
-        case 25: affixes |= com.riiablo.engine.server.monster.MonsterAffix.MANA_BURN; break;
-        case 27: affixes |= com.riiablo.engine.server.monster.MonsterAffix.SPECTRAL_HIT; break;
-        case 28: affixes |= com.riiablo.engine.server.monster.MonsterAffix.STONE_SKIN; break;
-        case 29: affixes |= com.riiablo.engine.server.monster.MonsterAffix.MULTISHOT; break;
-        case 30: affixes |= com.riiablo.engine.server.monster.MonsterAffix.AURA_ENCHANTED; break;
-        default: break;
-      }
-    }
-    return affixes;
+    return com.riiablo.engine.server.monster.MonsterAffix.fromUniqueMods(mods);
   }
 
   public static short start(short record) {

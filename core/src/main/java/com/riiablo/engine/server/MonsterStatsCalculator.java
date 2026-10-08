@@ -2,9 +2,12 @@ package com.riiablo.engine.server;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.engine.server.monster.MonsterAffix;
 
 /** Native monster level/stat rules used by D2Common and D2Game. */
 public class MonsterStatsCalculator {
@@ -184,6 +187,80 @@ public class MonsterStatsCalculator {
       return experience * 5;
     }
     return experience;
+  }
+
+  /** Applies D2Game's base MonUMod 2 health bonus, including integer truncation. */
+  static int nativeRankHitpoints(int hitpoints, int rank, int difficulty) {
+    if (hitpoints <= 0) return Math.max(0, hitpoints);
+    float multiplier = com.riiablo.engine.server.monster.MonsterRank
+        .getHpMultiplier(rank, difficulty);
+    return Math.min((int) (hitpoints * multiplier), (1 << 23) - 1);
+  }
+
+  /** Applies the spawn-time portion of D2Game's fixed SuperUnique UMods. */
+  static void applyNativeAffixStats(
+      StatListRef base, MonStats.Entry monster, int difficulty, long affixes) {
+    if (base == null || affixes == MonsterAffix.NONE) return;
+    difficulty = NativeDataTables.difficulty(difficulty);
+
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.EXTRA_STRONG)) {
+      int difficultyBonus = new int[] {90, 75, 66}[difficulty];
+      if (Riiablo.files != null && Riiablo.files.DifficultyLevels != null
+          && Riiablo.files.DifficultyLevels.get(difficulty) != null) {
+        difficultyBonus = Riiablo.files.DifficultyLevels.get(difficulty).UniqueDamageBonus;
+      }
+      base.put(Stat.damagepercent,
+          base.getValue(Stat.damagepercent, 0) + 150 * difficultyBonus / 100);
+      base.put(Stat.item_tohit_percent,
+          base.getValue(Stat.item_tohit_percent, 0) + 100 * difficultyBonus / 100);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.EXTRA_FAST)
+        && monster != null && monster.Velocity > 0) {
+      int velocity = MathUtils.clamp(2048 / monster.Velocity - 128, 10, 100);
+      base.put(Stat.velocitypercent,
+          base.getValue(Stat.velocitypercent, 0) + velocity);
+    }
+
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.STONE_SKIN)) {
+      base.put(Stat.armorclass, 2 * base.getValue(Stat.armorclass, 0));
+      base.put(Stat.damageresist, base.getValue(Stat.damageresist, 0) + 50);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.MAGIC_RESISTANT)) {
+      addElementalResistance(base, 40, false);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.FIRE_ENCHANTED)) {
+      base.put(Stat.fireresist, base.getValue(Stat.fireresist, 0) + 75);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.COLD_ENCHANTED)) {
+      base.put(Stat.coldresist, base.getValue(Stat.coldresist, 0) + 75);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.LIGHTNING_ENCHANTED)) {
+      base.put(Stat.lightresist, base.getValue(Stat.lightresist, 0) + 75);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.POISON_ENCHANTED)) {
+      base.put(Stat.poisonresist, base.getValue(Stat.poisonresist, 0) + 75);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.MANA_BURN)) {
+      base.put(Stat.magicresist, base.getValue(Stat.magicresist, 0) + 20);
+    }
+    if (MonsterAffix.hasAffix(affixes, MonsterAffix.SPECTRAL_HIT)) {
+      addElementalResistance(base, 20, true);
+    }
+  }
+
+  private static void addElementalResistance(StatListRef base, int amount, boolean below75Only) {
+    short[] stats = {Stat.coldresist, Stat.fireresist, Stat.lightresist};
+    int immunities = 0;
+    short[] immunityStats = {Stat.fireresist, Stat.lightresist, Stat.coldresist,
+        Stat.poisonresist, Stat.damageresist, Stat.magicresist};
+    for (short stat : immunityStats) if (base.getValue(stat, 0) >= 100) immunities++;
+    if (immunities >= 2) return;
+    for (short stat : stats) {
+      int value = base.getValue(stat, 0);
+      if (below75Only && value >= 75 || value >= 100) continue;
+      base.put(stat, value + amount);
+      if (value + amount >= 100 && ++immunities >= 2) return;
+    }
   }
 
   private static int scaled(boolean noRatio, int[] raw, int[] multiplier, int difficulty) {

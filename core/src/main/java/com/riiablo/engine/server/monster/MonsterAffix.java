@@ -177,6 +177,31 @@ public final class MonsterAffix {
     return affixes | affix;
   }
 
+  /** Converts SuperUniques.txt MonUMod ids to the runtime affix mask. */
+  public static long fromUniqueMods(int[] mods) {
+    if (mods == null) return NONE;
+    long affixes = NONE;
+    for (int mod : mods) {
+      switch (mod) {
+        case 5: affixes |= EXTRA_STRONG; break;
+        case 6: affixes |= EXTRA_FAST; break;
+        case 7: affixes |= CURSED; break;
+        case 8: affixes |= MAGIC_RESISTANT; break;
+        case 9: affixes |= FIRE_ENCHANTED; break;
+        case 17: affixes |= LIGHTNING_ENCHANTED; break;
+        case 18: affixes |= COLD_ENCHANTED; break;
+        case 23: affixes |= POISON_ENCHANTED; break;
+        case 25: affixes |= MANA_BURN; break;
+        case 27: affixes |= SPECTRAL_HIT; break;
+        case 28: affixes |= STONE_SKIN; break;
+        case 29: affixes |= MULTISHOT; break;
+        case 30: affixes |= AURA_ENCHANTED; break;
+        default: break;
+      }
+    }
+    return affixes;
+  }
+
   /**
    * 移除词缀
    */

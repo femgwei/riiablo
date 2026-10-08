@@ -413,6 +413,7 @@ public class ServerEntityFactory extends EntityFactory {
     int baseHp = minHp == maxHp ? minHp : MathUtils.random(minHp, maxHp);
     int hitpoints = Math.min(
         baseHp + percentage(baseHp, hpBonus, 100), (1 << 23) - 1);
+    hitpoints = MonsterStatsCalculator.nativeRankHitpoints(hitpoints, rank, difficulty);
     int experience = statsInit.Exp + percentage(statsInit.Exp, expBonus, 100);
     experience = MonsterStatsCalculator.nativeRankExperience(experience, rank);
     int monsterLevel = baseMonsterLevel
@@ -450,6 +451,13 @@ public class ServerEntityFactory extends EntityFactory {
     base.put(Stat.tohit, attack1Init.TH);
     base.put(Stat.mindamage, attack1Init.A1MinD);
     base.put(Stat.maxdamage, attack1Init.A1MaxD);
+    if (rank == com.riiablo.engine.server.monster.MonsterRank.CHAMPION
+        || com.riiablo.engine.server.monster.MonsterRank.isUnique(rank)) {
+      // MONSTERUNIQUE_UMod2_HealthBonus disables regeneration on the unique
+      // leader after replacing its maximum/current life.
+      base.put(Stat.hpregen, 0);
+    }
+    MonsterStatsCalculator.applyNativeAffixStats(base, monstats, difficulty, affixes);
     attrs.reset();
     mAttributesWrapper.create(id).attrs = attrs;
     mUnitStates.create(id).init(id);

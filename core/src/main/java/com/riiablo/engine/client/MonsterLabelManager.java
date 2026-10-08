@@ -22,6 +22,7 @@ import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
@@ -104,8 +105,9 @@ public class MonsterLabelManager extends BaseEntitySystem {
     }
 
     float set(int entityId) {
-      MonStats.Entry monstats = mMonster.get(entityId).monstats;
-      String displayName = monstats != null ? Riiablo.string.lookup(monstats.NameStr) : "";
+      Monster monster = mMonster.get(entityId);
+      MonStats.Entry monstats = monster.monstats;
+      String displayName = MonsterNameResolver.displayName(monster);
       if (mSummonedPet.has(entityId)) {
         SummonedPet pet = mSummonedPet.get(entityId);
         // Monster rows such as skeleton1 and druidbear use generic native
@@ -116,6 +118,9 @@ public class MonsterLabelManager extends BaseEntitySystem {
             && summonName != null && !summonName.isEmpty()) displayName = summonName;
       }
       name.setText(displayName);
+      name.setColor(monster.rank == MonsterRank.CHAMPION
+          ? Riiablo.colors.blue
+          : MonsterRank.isUnique(monster.rank) ? Riiablo.colors.gold : Riiablo.colors.white);
 
       AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
       if (wrapper == null || wrapper.attrs == null) return 0f;

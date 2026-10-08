@@ -72,6 +72,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.engine.server.monster.MonsterUniqueModifiers;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
@@ -2098,19 +2099,29 @@ public class Actioneer extends PassiveSystem {
               conversionPercent, combat.hitChance);
         } else {
           Item attackWeapon = activeAttackWeapon(entityId);
-          combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
-              attackerAttrs,
-              attrs,
-              attackerPlayer,
-              targetPlayer,
-              false,
-              monsterAttackMinDamage(entityId),
-              monsterAttackMaxDamage(entityId),
-              monsterAttackRating(entityId),
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, attackWeapon, false),
-              isDemonTarget(targetId), isUndeadTarget(targetId),
-              ignoreTargetDefenseAllowed);
+          MonsterUniqueModifiers.ElementalAttack uniqueAttack = attackingMonster == null
+              ? null : MonsterUniqueModifiers.rollSpectralHit(
+                  attackingMonster, attackerAttrs, combatDifficulty());
+          if (uniqueAttack == null) {
+            combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
+                attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
+                monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
+                monsterAttackRating(entityId),
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+                weaponMastery(entityId, attackWeapon, false),
+                isDemonTarget(targetId), isUndeadTarget(targetId),
+                ignoreTargetDefenseAllowed);
+          } else {
+            combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
+                attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
+                monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
+                monsterAttackRating(entityId), uniqueAttack.min, uniqueAttack.max,
+                uniqueAttack.coldLength, uniqueAttack.poisonLength,
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+                weaponMastery(entityId, attackWeapon, false),
+                isDemonTarget(targetId), isUndeadTarget(targetId),
+                ignoreTargetDefenseAllowed, combatDifficulty());
+          }
         }
         // D2Game UNITEVENT_ATTACKEDINMELEE is emitted for every valid melee
         // attack roll, before miss/block stops the damage path. Shiver Armor

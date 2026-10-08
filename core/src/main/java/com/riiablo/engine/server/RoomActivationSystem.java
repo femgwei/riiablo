@@ -14,6 +14,9 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.component.Warp;
+import com.riiablo.engine.server.monster.MonsterAffix;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.engine.Engine;
@@ -355,10 +358,25 @@ public class RoomActivationSystem extends IteratingSystem {
       int spawned = 0;
       for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
         boolean superUnique = spawn.superUniqueId >= 0;
+        SuperUniques.Entry superUniqueRow = !superUnique || spawn.superUniqueKey == null
+            || Riiablo.files == null
+            || Riiablo.files.SuperUniques == null ? null
+            : Riiablo.files.SuperUniques.get(spawn.superUniqueKey);
+        if (superUnique && superUniqueRow == null && Riiablo.files != null
+            && Riiablo.files.SuperUniques != null) {
+          for (SuperUniques.Entry candidate : Riiablo.files.SuperUniques) {
+            if (candidate != null && candidate.hcIdx == spawn.superUniqueId) {
+              superUniqueRow = candidate;
+              break;
+            }
+          }
+        }
+        long affixes = superUniqueRow == null
+            ? MonsterAffix.NONE : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
         int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
             superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
                 : com.riiablo.engine.server.monster.MonsterRank.NORMAL,
-            0L, -1, superUnique ? spawn.superUniqueId : -1);
+            affixes, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         mMapWrapper.create(monsterId).set(zone.map, zone);
         if (mMonster.has(monsterId)) {

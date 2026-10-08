@@ -64,7 +64,7 @@ public final class MonsterRank {
   public static final float UNIQUE_HP_MULTIPLIER = 4.0f;
 
   /** 超级暗金生命倍率 */
-  public static final float SUPER_UNIQUE_HP_MULTIPLIER = 5.0f;
+  public static final float SUPER_UNIQUE_HP_MULTIPLIER = 4.0f;
 
   /** 冠军经验倍率 */
   public static final float CHAMPION_EXP_MULTIPLIER = 3.0f;
@@ -73,7 +73,11 @@ public final class MonsterRank {
   public static final float UNIQUE_EXP_MULTIPLIER = 5.0f;
 
   /** 随从生命倍率 */
-  public static final float MINION_HP_MULTIPLIER = 1.5f;
+  public static final float MINION_HP_MULTIPLIER = 2.0f;
+
+  private static final float[] CHAMPION_HP_MULTIPLIERS = {3.0f, 2.5f, 2.0f};
+  private static final float[] UNIQUE_HP_MULTIPLIERS = {4.0f, 3.0f, 2.0f};
+  private static final float[] MINION_HP_MULTIPLIERS = {2.0f, 1.75f, 1.5f};
 
   //==========================================================================
   // 辅助方法
@@ -97,16 +101,27 @@ public final class MonsterRank {
    * 获取生命倍率
    */
   public static float getHpMultiplier(int rank) {
+    return getHpMultiplier(rank, 0);
+  }
+
+  /**
+   * Returns the native MonUMod health multiplier for the selected difficulty.
+   *
+   * <p>D2MOO {@code MONSTERUNIQUE_UMod2_HealthBonus} reads rows 4..9 of
+   * MonUMod.txt: champions gain 200/150/100 percent and uniques gain
+   * 300/200/100 percent in Normal/Nightmare/Hell. Unique-pack minions use
+   * rows 1..3 (100/75/50 percent). The returned value includes base life.</p>
+   */
+  public static float getHpMultiplier(int rank, int difficulty) {
+    difficulty = Math.max(0, Math.min(2, difficulty));
     switch (rank) {
       case CHAMPION:
-        return CHAMPION_HP_MULTIPLIER;
+        return CHAMPION_HP_MULTIPLIERS[difficulty];
       case UNIQUE:
-        return UNIQUE_HP_MULTIPLIER;
       case SUPER_UNIQUE:
-      case BOSS:
-        return SUPER_UNIQUE_HP_MULTIPLIER;
+        return UNIQUE_HP_MULTIPLIERS[difficulty];
       case MINION:
-        return MINION_HP_MULTIPLIER;
+        return MINION_HP_MULTIPLIERS[difficulty];
       default:
         return 1.0f;
     }
