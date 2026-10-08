@@ -40,7 +40,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
   static final int RAIN_SHADE_COUNT = 12;
-  private static final int RAIN_FRINGE_SHADE_SLOTS = 3;
+  private static final int RAIN_THICK_SHADE_SLOTS = 3;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
   private static final int RAIN_GREEN_BIAS = 25;
@@ -154,10 +154,11 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     Gdx.gl.glEnable(GL20.GL_BLEND);
     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-    shapes.begin(ShapeRenderer.ShapeType.Line);
     if (particles.mode == Mode.RAIN) {
+      shapes.begin(ShapeRenderer.ShapeType.Filled);
       drawRain(intensity);
     } else {
+      shapes.begin(ShapeRenderer.ShapeType.Line);
       shapes.setColor(0.88f, 0.91f, 0.94f, 0.78f);
       drawSnow(intensity);
     }
@@ -177,24 +178,16 @@ public final class WeatherRenderSystem extends BaseSystem {
           / (RAIN_SHADE_BASE + RAIN_GREEN_BIAS);
       shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.50f);
       // Native D2Gfx receives integer endpoints and has no line-width argument. Quantizing the
-      // vector reproduces its stepped silhouettes; a faint adjacent column on the brightest
-      // palette slots emulates their heavier indexed-software-raster appearance in OpenGL.
+      // vector reproduces its stepped silhouettes; solid one- and two-pixel quads reproduce the
+      // apparent thin and heavy footprints of its indexed software rasterizer without a gap.
       float deltaX = (int) (particles.windX * length);
       float deltaY = (int) (particles.windY * length);
-      shapes.line(x, y, x + deltaX, y + deltaY);
-      if (hasRainFringe(shade)) {
-        float offsetX = -particles.windY;
-        float offsetY = particles.windX;
-        shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.50f);
-        shapes.line(
-            x + offsetX, y + offsetY,
-            x + deltaX + offsetX, y + deltaY + offsetY);
-      }
+      shapes.rectLine(x, y, x + deltaX, y + deltaY, rainWidth(shade));
     }
   }
 
-  static boolean hasRainFringe(float shade) {
-    return shade >= ParticleField.rainShade(RAIN_FRINGE_SHADE_SLOTS - 1);
+  static float rainWidth(float shade) {
+    return shade >= ParticleField.rainShade(RAIN_THICK_SHADE_SLOTS - 1) ? 2f : 1f;
   }
 
   private void drawSnow(float intensity) {
