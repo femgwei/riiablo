@@ -18,6 +18,7 @@ import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgVertexStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2LvlPrestIds;
+import com.d2moo.common.drlg.D2ObjectIds;
 import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
@@ -287,6 +288,56 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       }
     } finally {
       map.dispose();
+    }
+  }
+
+  @Test
+  public void rogueEncampmentExportsNativeRiverPresentationUnits() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    int burialId = findLevelId("Burial Grounds");
+    Act1D2MOOLayoutBridge.LayoutAndDrlg generated =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(
+            seed, DEFAULT_DIFFICULTY, burialId, true);
+    assertNotNull(generated, "D2MOO Act1 layout failed");
+    try {
+      int[] counts = new int[67];
+      int[] riverStats = new int[2];
+      D2DrlgLevel town = DrlgDrlg.getLevel(
+          generated.drlg, D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+      assertNotNull(town, "Rogue Encampment native level is missing");
+      int width = town.getLevelCoords().getNWidth() * 5;
+      int height = town.getLevelCoords().getNHeight() * 5;
+      DrlgExport.exportLevelPresetUnits(generated.drlg,
+          D2LevelIds.LEVEL_ROGUEENCAMPMENT,
+          (levelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+              externalEntity, sourceFile) -> {
+            if (unitType == D2UnitTypes.UNIT_OBJECT && !ds1Raw && spawned
+                && externalEntity && index >= 0 && index < counts.length) {
+              counts[index]++;
+              if ((index >= D2ObjectIds.OBJECT_RIVER1
+                  && index <= D2ObjectIds.OBJECT_RIVER3)
+                  || index == D2ObjectIds.OBJECT_INVISIBLE_RIVER_SOUND1) {
+                riverStats[0]++;
+                if (x < 0 || y < 0 || x >= width || y >= height) riverStats[1]++;
+              }
+            }
+          });
+
+      assertEquals(205, riverStats[0],
+          "Rogue Encampment must export one complete native water strip");
+      assertEquals(0, riverStats[1],
+          "Rogue Encampment river units must use level-local coordinates");
+      assertTrue(counts[D2ObjectIds.OBJECT_RIVER1] > 0,
+          "Rogue Encampment is missing the left river cap");
+      assertTrue(counts[D2ObjectIds.OBJECT_RIVER2] > 0,
+          "Rogue Encampment is missing the river body");
+      assertTrue(counts[D2ObjectIds.OBJECT_RIVER3] > 0,
+          "Rogue Encampment is missing the right river cap");
+      assertTrue(counts[D2ObjectIds.OBJECT_INVISIBLE_RIVER_SOUND1] > 0,
+          "Rogue Encampment is missing its river sound marker");
+    } finally {
+      DrlgDrlg.freeDrlg(generated.drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
     }
   }
 
