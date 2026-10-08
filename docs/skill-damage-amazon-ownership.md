@@ -15,8 +15,8 @@
 - 3 项仍存在明确的 riiablo 差异：Guided Arrow、Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
-- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab 与 Cold Arrow 已完成等级
-  1–20 基础审计；120/600 个 Amazon
+- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow 与 Multiple Shot
+  已完成等级 1–20 基础审计；140/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -109,4 +109,12 @@ Cold Arrow（11）等级 1–20 已按“无装备、owner 武器伤害为 0、I
 等级 20 的 `106–112` 对应 `53–56`；生产快照逐级一致。`coldarrow` 的
 `SrvDmgFunc=1`、`DmgCalc1=dl12` 和 `dParam=3/2` 会把物理包的 3%–41% 转为冷伤，
 但本批武器物理包为 0。固定武器转换留给 DMG-06；100–670 帧 chill length 与最终
-状态/结算留给 DMG-07/08。下一项优先审核 Multiple Shot（12）。
+状态/结算留给 DMG-07/08。
+
+Multiple Shot（12）等级 1–20 已按“技能本身不拥有固定伤害包，每条 lane 各自持有一枚
+`SrcDam=96` 武器导弹”批准；三组伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确
+N/A 并保持空白。1.10f `Calc1="min(24,ln12)"` 产生 2–21 条 lane，`Calc2=par3` 固定为
+1 帧激活值，`Calc3=2` 固定中央两条 lane。D2MOO `SrvDo008` 为每条 lane 独立调用
+`MISSILES_CreateMissileFromParams`，其伤害快照由通用导弹链按 96/128 武器份额建立。
+固定武器值、中央/外侧 lane 标志的消费语义、碰撞目标集合和整次施法总量留给 DMG-06。
+下一项优先审核 Dodge（13）。

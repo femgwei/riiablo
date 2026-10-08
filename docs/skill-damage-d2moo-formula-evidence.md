@@ -570,3 +570,30 @@ D2MOO `D2GAME_SKILLS_Handler_6FD12BA0` 对 `SrvDoFunc=0` 的技能创建 `coldar
 使用 cold 而非 freeze 路径；持续时间、减速状态、抗性缩短及死亡碎裂语义属于 DMG-07/08。
 `ColdArrowGoldenDamageTest` 用独立常量锁定全部 20 级冷伤与长度，并逐级对比
 `MissileDamageResolver.initializeSkill` 的生产快照；当前无需生产修复。
+
+## DMG-04 第二十五个逐级实例：Multiple Shot
+
+Multiple Shot 的技能行不拥有固定技能伤害包。1.10f `Skills.txt#12` 使用
+`SrvStFunc=4`、`SrvDoFunc=8`、`SrcDam=96`、`HitShift=8`，`ToHit/LevToHit` 均为 0；
+`SrvMissileA=multipleshotarrow`、`SrvMissileB=multipleshotbolt`。物理和元素技能伤害字段
+均为 0，`EType` 为空。因此 DMG-04 的等级 1–20 行把三组 `expected_*`、
+`riiablo_actual_*` 和 `delta_*` 明确标记为 N/A 并保持空白；固定武器包、每枚实际命中值
+和整次施法总量属于 DMG-06。
+
+三个公式各自拥有不同语义：`Calc1="min(24,ln12)"`，`Param1=2`、`Param2=1`，产生
+等级 1–20 的 lane 总数 `2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21`；
+`Calc2=par3` 且 `Param3=1`，设置导弹激活帧；`Calc3=2` 固定中央组为两条 lane。现有任务
+清单曾把 `Calc2` 误写成物理加成，本次按真实 1.10f 数据和 D2MOO 调用位置纠正。
+
+D2MOO `SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave`（`SkillAma.cpp:476–567`）先求值
+`Calc1`，根据武器类别选择 A/B 导弹，再把 `Calc2` 写入 `nActivateFrame`。随后按
+`Calc3` 把 fan 分成左侧、中央和右侧三组，对每条 lane 独立调用
+`MISSILES_CreateMissileFromParams`；外侧组和中央组的创建标志不同，具体命中/触发消费语义
+留给 DMG-06。通用创建链为每枚导弹调用 `MISSILE_CalculateDamageData`，因此 `SrcDam=96`
+表示每枚导弹各自继承 96/128 武器包，不是把一次施法的武器伤害先乘以箭数。
+
+riiablo `ServerSkillSystem.spawnMultipleShotTeethShockWave` 按同一 `Calc1/Calc3` 拆分 lane，
+每次 `createMissile` 后都调用 `initializeSkillDamage`，由 `MissileDamageResolver` 使用
+`SrcDam=96` 建立独立武器快照。`MultipleShotGoldenDamageTest` 用独立常量锁定全部 20 级
+lane 数、1 帧激活值、两条中央 lane 及无固定伤害字段；现有 SrvDo008 几何和墙体碰撞测试
+覆盖生产 fan 路径。本轮无需生产修复。
