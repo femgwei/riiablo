@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-09 河流水面 COF 透明度修正
+
+- [x] 对照 D2MOO `DrawMode.h` 与 Phrozen Keep 的 COF/PL2 说明，确认
+  `newTransLvl=0` 的 `TRANS75` 表示 **75% transparency**，即 25% 源图不透明度；
+  `newTransLvl=2` 的 `TRANS25` 则表示 75% 源图不透明度。
+- [x] 修正 riiablo 颠倒的 `trans25`/`trans75` alpha。河流对象 40–42 继续完全由
+  原生 COF `overrideTransLvl=1/newTransLvl=0` 驱动，不增加对象 ID 特判。
+- 依据：Phrozen Keep `some stats on .cof` 的原始说明为
+  `00 = 75% transparency (colormaps 561-816 in a .pl2)`；这同时解释了此前白天与
+  夜晚水面都约亮三倍、单独接入 Shadow colormap 仍改善不明显的现象。
+
 ## 2026-10-09 河流水面原生调色板光照
 
 - [x] 对照 D2MOO `D2WinPalette.cpp`，确认 `Pal.pl2` 首段是 32 行 Shadow
@@ -9,8 +20,9 @@
   再查 Act 调色板，不再只对已经转换的 RGB 做强度乘法。
 - [x] 环境 RGB 色调与强度分离；玩家、物件、导弹和 Overlay 的局部光源先参与像素光强，
   再选择 Shadow 行。自发光、Screen 和 additive 表现继续绕过环境暗化。
-- [x] 河流 COF `overrideTransLvl=1/newTransLvl=0` 已确认仍由现有动画加载器应用 75%
-  透明度；本轮没有按河流对象 ID、`Objects.Trans=7` 或固定青绿色做特判。
+- [x] 河流 COF `overrideTransLvl=1/newTransLvl=0` 已确认仍由现有动画加载器应用
+  `TRANS75`；后续核实其含义是 75% 透明（25% 不透明），并已在上节修正此前反向的 alpha。
+  本轮没有按河流对象 ID、`Objects.Trans=7` 或固定青绿色做特判。
 - 验证：`RenderLightingTest` 与 Rogue Encampment 河流生成定向测试通过；真实 MPQ
   `desktop:offscreenCamp` 通过并完成 shader 编译。最终白天/夜晚水面亮度仍需客户端截图验收。
 

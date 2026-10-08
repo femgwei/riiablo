@@ -46,9 +46,12 @@ public class Colors {
   public Color modal50 = new Color(0, 0, 0, 0.50f);
   public Color modal75 = new Color(0, 0, 0, 0.75f);
 
-  public Color trans25 = new Color(1, 1, 1, 0.25f);
+  // D2's TRANSxx names describe transparency, not opacity.  COF transform 0
+  // is therefore 75% transparent (25% source opacity), while transform 2 is
+  // 25% transparent (75% source opacity).
+  public Color trans25 = new Color(1, 1, 1, 0.75f);
   public Color trans50 = new Color(1, 1, 1, 0.50f);
-  public Color trans75 = new Color(1, 1, 1, 0.75f);
+  public Color trans75 = new Color(1, 1, 1, 0.25f);
 
   public Color darkRed = new Color(0.33f, 0.0f, 0.0f, 0.75f);
 
