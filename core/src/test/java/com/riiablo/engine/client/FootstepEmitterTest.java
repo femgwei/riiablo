@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.riiablo.CharacterClass;
 import com.riiablo.engine.Engine;
 import com.riiablo.map.Material;
 import org.junit.jupiter.api.Test;
@@ -12,15 +13,33 @@ class FootstepEmitterTest {
   @Test
   void walkModesUseWalkSoundGroup() {
     assertEquals("light_walk_dirt_1",
-        FootstepEmitter.sound(false, Material.DIRT));
-    assertEquals("light_walk_wood_1",
-        FootstepEmitter.sound(false, Material.WOOD));
+        FootstepEmitter.sound(CharacterClass.SORCERESS, false, Material.DIRT));
+    assertEquals("medium_walk_wood_1",
+        FootstepEmitter.sound(CharacterClass.PALADIN, false, Material.WOOD));
   }
 
   @Test
   void runModeUsesIndependentRunSoundGroup() {
-    assertEquals("light_run_snow_1",
-        FootstepEmitter.sound(true, Material.SNOW));
+    assertEquals("heavy_run_snow_1",
+        FootstepEmitter.sound(CharacterClass.BARBARIAN, true, Material.SNOW));
+  }
+
+  @Test
+  void originalClientClassMappingSelectsWeightGroup() {
+    assertEquals("medium_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.AMAZON, false, Material.DIRT));
+    assertEquals("light_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.SORCERESS, false, Material.DIRT));
+    assertEquals("light_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.NECROMANCER, false, Material.DIRT));
+    assertEquals("medium_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.PALADIN, false, Material.DIRT));
+    assertEquals("heavy_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.BARBARIAN, false, Material.DIRT));
+    assertEquals("light_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.DRUID, false, Material.DIRT));
+    assertEquals("light_walk_dirt_1",
+        FootstepEmitter.sound(CharacterClass.ASSASSIN, false, Material.DIRT));
   }
 
   @Test

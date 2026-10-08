@@ -7,6 +7,7 @@ import com.artemis.annotations.All;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 
+import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.Animation;
@@ -30,6 +31,7 @@ public class FootstepEmitter extends BaseEntitySystem {
   private static final boolean DEBUG_MATERIAL = DEBUG && true;
 
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -86,7 +88,9 @@ public class FootstepEmitter extends BaseEntitySystem {
       Vector2 position = mPosition.get(entityId).position;
       Material material = map.material(position);
       if (DEBUG_MATERIAL) Gdx.app.debug(TAG, "Material: " + material);
-      String sound = sound(running, material);
+      Player player = mPlayer.get(entityId);
+      CharacterClass characterClass = player.data == null ? null : player.data.classId;
+      String sound = sound(characterClass, running, material);
       Audio.Instance playback = Riiablo.audio.play(sound, true);
       Gdx.app.log(TAG, String.format(java.util.Locale.ROOT,
           "[PLAYER_FOOTSTEP] entity=%d mode=%s running=%s speed=%.3f "
@@ -137,8 +141,16 @@ public class FootstepEmitter extends BaseEntitySystem {
     return false;
   }
 
-  /** Selects the distinct native walk/run sound group. */
-  static String sound(boolean running, Material material) {
-    return "light_" + (running ? "run" : "walk") + "_" + material + "_1";
+  /** Selects the native class-weight, walk/run, and terrain sound group. */
+  static String sound(CharacterClass characterClass, boolean running, Material material) {
+    String weight;
+    if (characterClass == CharacterClass.AMAZON || characterClass == CharacterClass.PALADIN) {
+      weight = "medium";
+    } else if (characterClass == CharacterClass.BARBARIAN) {
+      weight = "heavy";
+    } else {
+      weight = "light";
+    }
+    return weight + "_" + (running ? "run" : "walk") + "_" + material + "_1";
   }
 }
