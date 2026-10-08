@@ -1,5 +1,6 @@
 package com.riiablo.engine.client;
 
+import java.util.HashMap;
 import java.util.Random;
 
 import com.artemis.BaseSystem;
@@ -73,7 +74,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
-  private final WeatherCycle weatherCycle = new WeatherCycle(WEATHER_CYCLE_SEED);
+  private WeatherCycles weatherCycles;
   private ControlMode controlMode = ControlMode.AUTO;
   private Audio.Instance rainAmbience;
 
@@ -84,14 +85,23 @@ public final class WeatherRenderSystem extends BaseSystem {
     if (zone == null && src >= 0 && mPosition.has(src)) {
       zone = map.getZone(mPosition.get(src).position);
     }
-    Mode eligibleMode = modeFor(zone == null ? null : zone.level);
+    Levels.Entry level = zone == null ? null : zone.level;
+    Mode eligibleMode = modeFor(level);
     Mode mode;
     float intensity;
     if (controlMode == ControlMode.AUTO) {
-      weatherCycle.configure(eligibleMode);
-      weatherCycle.advance(world.getDelta());
-      mode = weatherCycle.visibleMode();
-      intensity = weatherCycle.intensity;
+      if (weatherCycles == null) {
+        weatherCycles = new WeatherCycles(WEATHER_CYCLE_SEED ^ map.seed());
+      }
+      WeatherCycle weatherCycle = weatherCycles.forLevel(level, eligibleMode);
+      if (weatherCycle == null) {
+        mode = Mode.NONE;
+        intensity = 0f;
+      } else {
+        weatherCycle.advance(world.getDelta());
+        mode = weatherCycle.visibleMode();
+        intensity = weatherCycle.intensity;
+      }
     } else {
       mode = controlledModeFor(eligibleMode);
       intensity = mode == Mode.NONE ? 0f : 1f;
@@ -220,6 +230,32 @@ public final class WeatherRenderSystem extends BaseSystem {
     stopRainAmbience();
   }
 
+  /** Retains an independent, paused-while-away weather cycle for each level. */
+  static final class WeatherCycles {
+    private final long seed;
+    private final HashMap<Integer, WeatherCycle> cycles = new HashMap<>();
+
+    WeatherCycles(long seed) {
+      this.seed = seed;
+    }
+
+    WeatherCycle forLevel(Levels.Entry level, Mode eligibleMode) {
+      if (level == null || eligibleMode == Mode.NONE) return null;
+
+      WeatherCycle cycle = cycles.get(level.Id);
+      if (cycle == null) {
+        cycle = new WeatherCycle(seedForLevel(seed, level.Id));
+        cycle.configure(eligibleMode);
+        cycles.put(level.Id, cycle);
+      }
+      return cycle;
+    }
+
+    static long seedForLevel(long seed, int levelId) {
+      return seed ^ (levelId * 0x9E3779B97F4A7C15L);
+    }
+  }
+
   /** Native four-stage weather timing from D2Client's Env.cpp state machine. */
   static final class WeatherCycle {
     enum Phase {
@@ -255,15 +291,12 @@ public final class WeatherRenderSystem extends BaseSystem {
       Mode previousEligibleMode = eligibleMode;
       eligibleMode = nextEligibleMode;
       if (nextEligibleMode == Mode.NONE) {
-        // Native D2Client clears the visible precipitation when the current level has no
-        // weather, but leaves the global phase and its remaining ticks paused.
+        // Hide precipitation without discarding this level's saved phase.
         intensity = 0f;
         return;
       }
       if (phase != null) {
-        // The timer keeps running globally while an unsupported level is active,
-        // but the precipitation is only hidden for that level. Restore the
-        // current phase's visible intensity when returning outdoors.
+        // Restore the saved visible intensity when this level becomes eligible again.
         if (previousEligibleMode == Mode.NONE) restoreIntensity();
         return;
       }

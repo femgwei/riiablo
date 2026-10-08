@@ -3,6 +3,8 @@ package com.riiablo.engine.client;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -189,6 +191,33 @@ class WeatherRenderSystemTest {
   }
 
   @Test
+  void levelsKeepIndependentWeatherCyclesWhileAway() {
+    WeatherRenderSystem.WeatherCycles cycles =
+        new WeatherRenderSystem.WeatherCycles(10L);
+    Levels.Entry town = rainyLevel(1);
+    Levels.Entry stonyField = rainyLevel(4);
+
+    WeatherRenderSystem.WeatherCycle townCycle =
+        cycles.forLevel(town, WeatherRenderSystem.Mode.RAIN);
+    WeatherRenderSystem.WeatherCycle fieldCycle =
+        cycles.forLevel(stonyField, WeatherRenderSystem.Mode.RAIN);
+    assertNotSame(townCycle, fieldCycle);
+    assertNotEquals(
+        WeatherRenderSystem.WeatherCycles.seedForLevel(10L, town.Id),
+        WeatherRenderSystem.WeatherCycles.seedForLevel(10L, stonyField.Id));
+
+    int fieldTicks = fieldCycle.remainingTicks;
+    townCycle.advanceTicks(townCycle.remainingTicks + 1);
+
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.FADE_IN, townCycle.phase);
+    assertTrue(townCycle.intensity > 0f);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.DRY, fieldCycle.phase);
+    assertEquals(fieldTicks, fieldCycle.remainingTicks);
+    assertEquals(0f, fieldCycle.intensity);
+    assertSame(townCycle, cycles.forLevel(town, WeatherRenderSystem.Mode.RAIN));
+  }
+
+  @Test
   void unsupportedLevelClearsVisibleWeatherButPausesTheCycle() {
     WeatherRenderSystem.WeatherCycle cycle =
         new WeatherRenderSystem.WeatherCycle(6L);
@@ -234,5 +263,12 @@ class WeatherRenderSystemTest {
         new WeatherRenderSystem.ParticleField(seed);
     particles.configure(mode, 640f, 480f);
     return particles;
+  }
+
+  private static Levels.Entry rainyLevel(int id) {
+    Levels.Entry level = new Levels.Entry();
+    level.Id = id;
+    level.Rain = true;
+    return level;
   }
 }
