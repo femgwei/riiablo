@@ -76,6 +76,29 @@ class WeatherRenderSystemTest {
   }
 
   @Test
+  void rainUsesTheNativeActOneTwelveShadeRamp() {
+    float brightest = WeatherRenderSystem.ParticleField.rainShade(0);
+    float darkest = WeatherRenderSystem.ParticleField.rainShade(
+        WeatherRenderSystem.RAIN_SHADE_COUNT - 1);
+
+    assertEquals(1f, brightest);
+    assertTrue(darkest < 0.3f);
+    assertTrue(brightest / darkest > 3f);
+
+    WeatherRenderSystem.ParticleField particles = field(10L, WeatherRenderSystem.Mode.RAIN);
+    for (float shade : particles.shade) {
+      boolean nativeShade = false;
+      for (int slot = 0; slot < WeatherRenderSystem.RAIN_SHADE_COUNT; slot++) {
+        if (shade == WeatherRenderSystem.ParticleField.rainShade(slot)) {
+          nativeShade = true;
+          break;
+        }
+      }
+      assertTrue(nativeShade);
+    }
+  }
+
+  @Test
   void rainWindChangesDirectionGradually() {
     WeatherRenderSystem.ParticleField particles = field(9L, WeatherRenderSystem.Mode.RAIN);
     particles.windAngle = WeatherRenderSystem.RAIN_MIN_ANGLE;

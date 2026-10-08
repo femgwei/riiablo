@@ -38,6 +38,10 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MAX_SPEED_PER_TICK = 30;
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
+  static final int RAIN_SHADE_COUNT = 12;
+  private static final int RAIN_SHADE_BASE = 98;
+  private static final int RAIN_SHADE_RANGE = 80;
+  private static final int RAIN_GREEN_BIAS = 25;
   private static final int MAX_CATCH_UP_STEPS = 4;
   private static final int RAIN_AMBIENCE_ID = 64;
   private static final long RANDOM_SEED = 0xD2C11E17L;
@@ -157,7 +161,9 @@ public final class WeatherRenderSystem extends BaseSystem {
       float y = MathUtils.lerp(particles.previousY[i], particles.y[i], alpha);
       float length = particles.size[i];
       float shade = particles.shade[i];
-      shapes.setColor(0.70f * shade, 0.72f * shade, 0.74f * shade, 0.58f);
+      float greenShade = (shade * RAIN_SHADE_BASE + RAIN_GREEN_BIAS)
+          / (RAIN_SHADE_BASE + RAIN_GREEN_BIAS);
+      shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.50f);
       shapes.line(
           x, y,
           x + particles.windX * length,
@@ -447,7 +453,7 @@ public final class WeatherRenderSystem extends BaseSystem {
         fallSpeed[i] = speedPerTick / SimulationClock.STEP_SECONDS;
         velocityY[i] = windY * fallSpeed[i];
         velocityX[i] = windX * fallSpeed[i];
-        shade[i] = 0.78f + random.nextFloat() * 0.22f;
+        shade[i] = rainShade(random.nextInt(RAIN_SHADE_COUNT));
       } else {
         velocityX[i] = -8f + random.nextFloat() * 16f;
         velocityY[i] = -42f - random.nextFloat() * 45f;
@@ -489,6 +495,11 @@ public final class WeatherRenderSystem extends BaseSystem {
     private int randomWindTicks() {
       return RAIN_MIN_WIND_TICKS
           + random.nextInt(RAIN_MAX_WIND_TICKS - RAIN_MIN_WIND_TICKS + 1);
+    }
+
+    static float rainShade(int slot) {
+      int nativeValue = RAIN_SHADE_BASE - RAIN_SHADE_RANGE * slot / RAIN_SHADE_COUNT;
+      return nativeValue / (float) RAIN_SHADE_BASE;
     }
 
     private void updateWindVector() {
