@@ -306,6 +306,29 @@ public final class MissileDamageResolver {
     return initialized || projectile.poisonMaxRateFixed > 0;
   }
 
+  /** Captures one native Immolation Fire ground missile's 8.8 fire rate. */
+  public static boolean initializeImmolationFireArea(Missile projectile,
+      Attributes ownerAttrs, boolean attackerPlayer, int level) {
+    if (projectile == null || projectile.missile == null
+        || !"fire".equalsIgnoreCase(projectile.missile.EType)) return false;
+    level = Math.max(1, level);
+    int min = missileElementalDamageFixed(projectile.missile, level, true);
+    int max = Math.max(min, missileElementalDamageFixed(projectile.missile, level, false));
+    if (max <= 0) return false;
+    projectile.damageLevel = level;
+    projectile.damageSnapshot = true;
+    projectile.fixedElementalRate = true;
+    projectile.fixedElementalType = com.riiablo.engine.server.combat.CombatSystem.DAMAGE_FIRE;
+    projectile.elementalMinRateFixed = min;
+    projectile.elementalMaxRateFixed = max;
+    projectile.elementalDamageRate = Math.max(0, projectile.missile.DamageRate);
+    projectile.elementalAttackerPlayer = attackerPlayer;
+    projectile.elementalPiercePercent = ownerAttrs == null ? 0
+        : statInt(ownerAttrs, Stat.item_pierce_fire)
+            + statInt(ownerAttrs, Stat.passive_fire_pierce);
+    return true;
+  }
+
   /** Elemental-only explosion snapshot including the owner's passive stat lists. */
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,

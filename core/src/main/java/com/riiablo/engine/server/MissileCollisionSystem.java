@@ -2896,7 +2896,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         int id = factory.createMissile(row, new Vector2(1f, 0f), position, source.ownerId);
         if (id < 0 || !mMissile.has(id)) continue;
         Missile fire = mMissile.get(id);
-        MissileDamageResolver.initialize(fire, ownerAttrs, null, -1, level, 0);
+        MissileDamageResolver.initializeImmolationFireArea(
+            fire, ownerAttrs, mPlayer.has(source.ownerId), level);
         fire.skillId = source.skillId;
         fire.damageLevel = level;
         fire.persistent = true;
@@ -2907,18 +2908,6 @@ public class MissileCollisionSystem extends IteratingSystem {
         fire.tickInterval = 1;
         fire.pierceEnabled = true;
         fire.pierceRemaining = -1;
-        fire.fixedElementalRate = true;
-        fire.fixedElementalType = CombatSystem.DAMAGE_FIRE;
-        fire.elementalMinRateFixed = MissileDamageResolver.missileElementalDamageFixed(
-            row, level, true);
-        fire.elementalMaxRateFixed = Math.max(fire.elementalMinRateFixed,
-            MissileDamageResolver.missileElementalDamageFixed(row, level, false));
-        fire.elementalDamageRate = Math.max(0, row.DamageRate);
-        fire.elementalAttackerPlayer = mPlayer.has(source.ownerId);
-        fire.elementalPiercePercent = ownerAttrs == null ? 0
-            : statInt(ownerAttrs, Stat.item_pierce_fire)
-                + statInt(ownerAttrs, Stat.passive_fire_pierce);
-        fire.damageSnapshot = true;
         spawned++;
       }
     }

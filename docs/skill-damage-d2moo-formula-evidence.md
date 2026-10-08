@@ -957,3 +957,31 @@ D2MOO `SKILLS_SrvDo012_Strafe`（`SkillAma.cpp:711`）每个动画关键帧创�
 Pierce、碰撞和整次施法总量分别留给 DMG-06/07，抗性和最终生命结算留给 DMG-08。
 `StrafeGoldenDamageTest` 逐级锁定 Skills/Missiles 字段、Calc2 5%→100% 曲线以及
 riiablo 每箭快照中的 `STAT_DAMAGEPERCENT`。
+
+## DMG-04 第四十个逐级实例：Immolation Arrow
+
+1.10f `Skills.txt#27` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=immolationarrow`、
+`SrcDam=128`、`HitShift=8`，元素类型为 `fire`，技能火焰基值为 `10–20`，五段等级增量为
+`10/20/30/32/34`。`EDmgSymPerCalc=(skill('Exploding Arrow'.blvl)) * par8`；本批
+Exploding Arrow 硬点固定为 0，因此等级 1–20 的即时技能包为 `10–20` 至 `360–370`。
+
+D2MOO 通用技能处理器先创建 `immolationarrow` 父导弹。其
+`MISSMODE_SrvHit09_ImmolationArrow`（`D2Game/src/MISSILES/MissMode.cpp:2377`）在命中时
+读取 `HitPar[0]`/`Calc1` 的火场半径和 `HitCalc`/`Calc2` 的持续参数，创建
+`immolationfire` 子导弹，然后用 `sub_6FD10200` 在即时范围内分发父箭技能/武器命中记录。
+父箭的 `SrcDam=128` 武器包和子导弹的即时技能包是不同所有者；DMG-04 矩阵只批准单个
+目标的即时技能火焰包，武器命中、半径内目标集合和整次施法总量留给 DMG-06/07。
+
+`immolationfire` 的 `pSrvDoFunc=5` 由
+`MISSMODE_SrvDo05_FireWall_ImmolationFire_MeteorFire_MoltenBoulderFirePath` 每游戏帧进入
+碰撞，`pSrvDmgFunc=3` 的
+`MISSMODE_SrvDmg03_Blaze_FireWall_ImmolationFire_MeteorFire`（`MissMode.cpp:4387`）只
+处理 soft-hit 结果标志。1.10f 导弹行固定 `HitShift=2`、`EMin/EMax=7–9`、每级增量
+`5/5/5/5/5`、`DamageRate=41`、`Range=75` 帧，另有
+`EDmgSymPerCalc=skill('Fire Arrow'.blvl) * 5`；本批 Fire Arrow 硬点固定为 0。生产路径
+`MissileDamageResolver.initializeImmolationFireArea` 直接保存 8.8 fixed-point 速率，专项
+测试同时锁定即时父包和周期子包；周期 cadence、覆盖、重叠和完整持续期结算仍属于 DMG-07。
+
+因此矩阵第 422–441 行将候选单位固定为“单个即时范围目标的抗性前技能火焰包”，
+`expected_min/max` 与生产快照逐级一致，`expected_total` 留空以避免把一次施法的范围目标
+集合压成单一总值。

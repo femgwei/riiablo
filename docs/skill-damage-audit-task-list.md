@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 最近完成技能提交：`2720adce9fabbd74a504da95eb2a846a441ba2c9`
-当前加权完成度：**33.7%**
+当前加权完成度：**33.8%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 780 行 `GOLDEN_APPROVED`，其余 3,420 行仍为
+- 4,200 行中已有 800 行 `GOLDEN_APPROVED`，其余 3,400 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 33.6% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 760 个逐级黄金行；不表示技能伤害正确率为 33.6%。
+- 当前 33.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 800 个逐级黄金行；不表示技能伤害正确率为 33.8%。
 
 ## 加权任务
 
@@ -91,7 +91,7 @@
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
     Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge、Power Strike、
     Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、Lightning Bolt、Ice Arrow、
-    Guided Arrow、Penetrate、Charged Strike、Plague Javelin、Strafe 等级 1–20 共 780/4,200 行（本项 18.5714%，加权贡献 3.7143 个百分点）；
+  Guided Arrow、Penetrate、Charged Strike、Plague Javelin、Strafe、Immolation Arrow 等级 1–20 共 800/4,200 行（本项 19.0476%，加权贡献 3.8095 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -452,4 +452,26 @@ Strafe 等级 1–20 已按“单枚 strafearrow/strafebolt 对单个目标的�
 矩阵的 `expected_*` 保持 N/A，因为本批隔离的是每箭技能拥有的加成，而不是假设一个无装备
 武器包或把一次施法的多枚箭压成单一伤害值。
 
-继续 DMG-04，下一项优先审核 Immolation Arrow（技能 27）等级 1–20。
+## Immolation Arrow（技能 27）
+
+Immolation Arrow 等级 1–20 已按“单个命中目标的即时范围技能火焰包，零装备、零协同、
+抗性前”批准。1.10f `Skills.txt#27` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、
+`SrvMissile=immolationarrow`、`SrcDam=128`、`HitShift=8`，元素曲线从 `10–20` 增长到
+`360–370`；`EDmgSymPerCalc=(skill('Exploding Arrow'.blvl)) * par8` 在本批固定为 0。
+
+D2MOO 的 `SrvHit09`（`MissMode.cpp:2377`）在父箭命中后创建 `immolationfire` 子导弹，
+并用父箭技能快照向半径 4 的敌人分发即时火焰包。父箭仍保留 `SrcDam=128` 的武器命中，
+所以矩阵只批准即时技能火焰范围；武器值、范围目标集合和整次施法总量留给 DMG-06/07，
+抗性、免疫、吸收和 PvP 留给 DMG-08。
+
+`immolationfire` 是独立的周期所有者：`HitShift=2`、`EMin/EMax=7–9`、每级增量均为 5、
+`DamageRate=41`、`Range=75` 帧，`SrvDo05` 每游戏帧处理碰撞，`SrvDmg03` 只接收 soft-hit
+标志。其每帧 8.8 速率与完整 75 帧总量已由专项测试锁定，但周期 cadence、覆盖、重叠和
+完整持续期结算保留给 DMG-07。
+
+`ImmolationArrowGoldenDamageTest` 锁定 Skills/Missiles 字段、父箭即时曲线、
+`immolationfire` fixed-point 速率、DamageRate 与生命周期；Amazon 专项测试锁定火场生成、
+即时半径伤害和持续火焰生命扣减。矩阵第 422–441 行的 `expected_*` 与生产即时技能包逐级
+一致，`delta_min/max` 全为 0。
+
+下一项优先审核 Dopplezon（技能 28）。

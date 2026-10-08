@@ -320,7 +320,9 @@ public final class SkillDetails extends Table {
     int max = missile.Emax + missileDamageBonus(level, missile.MaxELev);
     min = Math.max(0, min);
     max = Math.max(min, max);
-    return label + min + "-" + max;
+    String prefix = "immolationfire".equalsIgnoreCase(missile.Missile)
+        ? "Continuous Fire Damage: " : label;
+    return prefix + min + "-" + max;
   }
 
   private static String formatMissileDurationLine(Skills.Entry skill, int level, String label) {

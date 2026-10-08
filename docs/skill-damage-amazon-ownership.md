@@ -17,7 +17,8 @@
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
-  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin 与 Strafe 已完成等级 1–20 基础审计；440/600 个 Amazon
+  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
+  Strafe 与 Immolation Arrow 已完成等级 1–20 基础审计；460/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -261,4 +262,20 @@ Strafe（26）等级 1–20 已按“单枚 `strafearrow/strafebolt` 对单个�
 `SKILLS_AddDamagePercentBonus` 写入每枚导弹；箭数、目标流、Pierce 和整次施法总量不属于
 本批单箭黄金值，riiablo 生产快照已逐级保存该 `STAT_DAMAGEPERCENT`。
 
-下一项优先审核 Immolation Arrow（27）。
+Immolation Arrow（27）等级 1–20 已按“单个命中目标的即时范围技能火焰包，零装备、零
+Exploding Arrow 硬点协同、抗性前”批准。`Skills.txt#27` 的 `EMin/EMax=10–20`、
+`HitShift=8` 和五段增量产生等级 1 的 `10–20`，等级 20 的 `360–370`；父箭仍保留
+`SrcDam=128` 武器命中，不能把武器包并入本批黄金值。
+
+D2MOO `MISSMODE_SrvHit09_ImmolationArrow`（`MissMode.cpp:2377`）在父箭命中后创建
+`immolationfire`，并用父箭技能快照对半径 4 内目标分发即时火焰包。该即时包与后续周期
+火场是两个所有者，矩阵只批准前者；武器值、范围目标集合、整次施法总量和最终结算留给
+DMG-06/07/08。
+
+`immolationfire` 使用 `SrvDo05` 每帧碰撞和 `SrvDmg03` soft-hit 路径，`HitShift=2`、
+`EMin/EMax=7–9`、每级增量 5、`DamageRate=41`、`Range=75` 帧。生产快照现在由
+`MissileDamageResolver.initializeImmolationFireArea` 直接读取 `Missiles.txt` 的 8.8
+速率；`ImmolationArrowGoldenDamageTest` 同时锁定即时曲线和周期速率，周期完整持续期与
+覆盖/重叠仍留在 DMG-07。
+
+下一项优先审核 Dopplezon（技能 28）。

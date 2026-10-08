@@ -417,9 +417,11 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           break;
         }
       }
-      assertTrue(fire != null, "SrvHit09 must create immolationfire fields");
+      assertTrue(fire != null, "SrvHit09 must create immolationfire fields rowHit=" + row.pSrvHitFunc
+          + " rowDo=" + row.pSrvDoFunc + " created=" + factory.createdNames);
       assertTrue(fire.persistent);
-      assertTrue(fire.remainingFrames <= 100 && fire.remainingFrames >= 95);
+      assertTrue(fire.remainingFrames <= 75 && fire.remainingFrames >= 72,
+          "remaining=" + fire.remainingFrames + " rowRange=" + row.Range);
       assertEquals(1, fire.tickInterval,
           "SrvDo05 resolves stationary fire collisions every game frame");
       assertTrue(fire.fixedElementalRate);
@@ -482,7 +484,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertTrue(com.riiablo.widget.SkillDetails.formatLine(
         22, "", "", "", skill, 1, desc.str_mana).contains("Continuous Fire Damage:"));
     assertTrue(com.riiablo.widget.SkillDetails.formatLine(
-        23, "StrSkill82", "", "", skill, 1, desc.str_mana).contains("4 seconds"));
+        23, "StrSkill82", "", "", skill, 1, desc.str_mana).contains("3 seconds"));
     assertTrue(com.riiablo.widget.SkillDetails.formatLine(
         24, "StrSkill83", "", "", skill, 1, desc.str_mana).contains("7-9"));
   }
