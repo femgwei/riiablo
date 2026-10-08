@@ -824,3 +824,29 @@ D2MOO `MISSMODE_RollDamageValue`（`MissMode.cpp:281`）向有限随机数传入
 原生运行时上限排除 canonical getter 最大值；矩阵与其他技能一致保存 getter 范围。
 固定武器包、`dl12` 转换和完整命中记录留给 DMG-06；抗性、免疫、吸收、PvP 与最终结算
 留给 DMG-08。范围型单目标伤害的三个 `*_total` 字段保持空白。
+
+## DMG-04 第三十四个逐级实例：Ice Arrow
+
+1.10f `Skills.txt#21` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=icearrow`、
+`SrcDam=128`、`HitShift=8`、`ToHit=20`、`LevToHit=9`，元素类型为 `cold`。冷伤基值为
+`6–10`，五段等级增量为 `6/12/18/26/36` 和 `6/13/19/27/38`；
+`EDmgSymPerCalc=(skill('Cold Arrow'.blvl))*par8`，本批把 Cold Arrow 硬点固定为 0。
+
+D2MOO `SKILLS_SrvSt04_Arrow_Bolt`（`SkillAma.cpp:56`）完成弓弩起手检查，随后
+`D2GAME_SKILLS_Handler_6FD12BA0`（`Skills.cpp:2445`）创建 `icearrow`。通用导弹初始化把
+技能冷伤、50 帧基础 cold length、每级 5 帧增量和完整 `SrcDam=128` 武器包写入同一快照。
+命中时 `MISSMODE_SrvDmg02_IceArrow_RoyalStrikeChaos`（`MissMode.cpp:4370`）读取
+Missiles.txt `dParam1=100`，把 `coldlength * 100 / 100` 写入 freeze length，并把 cold
+length 清零；它不修改物理或冷伤数值。
+
+零装备、零 Cold Arrow 硬点协同时，单枚箭对单个目标的一次抗性前技能冷伤 getter 范围
+从等级 1 的 `6–10` 增长到等级 20 的 `216–232`。riiablo
+`MissileDamageResolver.initializeSkill` 逐级输出相同范围，物理通道保持 0；50–145 帧的
+预转换 cold length 以 `freezesTarget` 和 `FREEZE` 元数据进入碰撞状态链。20 个等级的
+`delta_min/max` 均为 0。`IceArrowGoldenDamageTest` 用独立常量锁定表字段、导弹行、伤害、
+长度和状态元数据。
+
+D2MOO `MISSMODE_RollDamageValue`（`MissMode.cpp:281`）向有限随机数传入 `max-min`，所以
+原生运行时上限排除 canonical getter 最大值；矩阵仍保存 getter 范围。固定武器包、
+ToHit 和整份命中记录留给 DMG-06；冻结状态、Boss/Unique/Hireling 回退、抗性缩时、
+碎冰死亡和最终结算留给 DMG-07/08。范围型单目标伤害的三个 `*_total` 字段保持空白。

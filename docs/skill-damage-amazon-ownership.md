@@ -191,4 +191,17 @@ D2MOO 通用技能处理器创建 `lightningjavelin`，导弹伤害初始化把 
 `DmgCalc=dl12`，最多把物理包的 100% 转入导弹元素通道。原版
 `MISSMODE_RollDamageValue` 对 `max-min` 调用有限随机数，因此运行时不会取到 canonical
 最大值；矩阵仍记录 getter 范围。固定武器包、转换比例和整份命中记录留给 DMG-06，
-抗性、免疫、吸收、PvP 与最终生命扣减留给 DMG-08。下一项优先审核 Ice Arrow（21）。
+抗性、免疫、吸收、PvP 与最终生命扣减留给 DMG-08。
+
+Ice Arrow（21）等级 1–20 已按“单枚 `icearrow` 的技能自带冷伤分量、零武器包、零
+Cold Arrow 硬点协同、抗性前 canonical getter 范围”批准。1.10f `EMin=6`、
+`EMax=10`，五段等级增量产生等级 1 的 `6–10` 到等级 20 的 `216–232`；生产
+`MissileDamageResolver.initializeSkill` 在 owner 武器伤害为 0 时逐级输出相同范围，物理
+通道保持 0。
+
+D2MOO `MISSMODE_SrvDmg02_IceArrow_RoyalStrikeChaos` 把导弹 `coldlength` 的
+`dParam1=100%` 写入命中记录的 freeze length，并清空 cold length；因此等级 1–20 的
+50–145 帧长度数值不变，但状态语义从 chill 转为 freeze。riiablo 用 `freezesTarget` 和
+`FREEZE` 元数据保存同一转换。固定武器包、命中率与整份命中记录留给 DMG-06，冻结状态、
+Boss/Unique/Hireling 回退为 chill、抗性缩时和碎冰死亡留给 DMG-07/08。下一项优先审核
+Guided Arrow（22）。
