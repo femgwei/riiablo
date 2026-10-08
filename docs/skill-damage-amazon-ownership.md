@@ -16,7 +16,7 @@
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
-  Dodge、Power Strike、Poison Javelin、Exploding Arrow 与 Slow Missiles 已完成等级 1–20 基础审计；240/600 个 Amazon
+  Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles 与 Avoid 已完成等级 1–20 基础审计；260/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -156,4 +156,15 @@ Slow Missiles（17）等级 1–20 已按“定时投射物速度状态，不拥
 D2MOO `SrvDo006` 把这些字段原样交给通用诅咒状态回调；`Missiles.cpp` 只在新建、声明
 `CanSlow` 的怪物投射物时读取状态并乘速度，不创建 combat damage record。riiablo 的状态
 安装与新投射物速度消费者均已覆盖。目标过滤、状态刷新/覆盖和实际轨迹属于 DMG-07，
-最终来袭伤害结果属于 DMG-08。下一项优先审核 Avoid（18）。
+最终来袭伤害结果属于 DMG-08。
+
+Avoid（18）等级 1–20 已按“永久被动远程规避概率，不拥有独立输出伤害包”批准；三组
+伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`PassiveState=avoid`、`PassiveStat=passive_avoid`、`PassiveCalc=dm12`，`Param1=15`、
+`Param2=75` 产生 24%–65% 的等级曲线。
+
+D2MOO 被动刷新把结果写入永久状态。导弹命中路径以 `bAvoid=1` 调用
+`SUNITDMG_ApplyBlockOrDodge`；移动单位只检查 Evade，静止单位依次处理适用的盾牌格挡、
+Weapon Block 和 Avoid。Avoid 成功后清除 successful-hit，阻止后续伤害填充。riiablo
+`StateUpdater`、`DefenseCalculator` 与 `CombatSystem` 使用同一状态和攻击上下文。随机边界、
+防御优先级及最终来袭伤害结算属于 DMG-08。下一项优先审核 Impale（19）。

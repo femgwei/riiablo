@@ -732,3 +732,32 @@ riiablo `ServerSkillSystem.applySlowMissiles` 求值同一组原生公式并安�
 `AmazonSkillSpecializationTest.slowMissilesAppliesNativeStateAndVelocityStatInsteadOfInnerSight`
 锁定实际状态安装。目标过滤、状态刷新/覆盖及飞行轨迹属于 DMG-07，最终来袭伤害结算
 属于 DMG-08。
+
+## DMG-04 第三十一个逐级实例：Avoid
+
+Avoid 不拥有输出伤害包。1.10f `Skills.txt#18` 使用 `SrvDoFunc=0`、`SrcDam=0`，没有
+server missile，物理和元素伤害字段均为 0，`EType` 为空。因此 DMG-04 的等级 1–20 行
+把三组 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确标记为 N/A 并保持空白；
+规避概率不是输出伤害值。
+
+原生行声明 `PassiveState=avoid`、`PassiveStat1=passive_avoid`、
+`PassiveCalc1=dm12`，并使用 `Param1=15`、`Param2=75`。`dm12` 按
+`a + 110 * level * (b - a) / (100 * (level + 6))` 进行整数计算，等级 1–20 的概率为：
+
+`24,31,37,41,45,48,50,52,54,56,57,59,60,61,62,63,63,64,65,65`。
+
+D2MOO `SKILLS_RefreshSkill`（`D2Skills.cpp:512–600`）求值 PassiveCalc，并把结果写入
+技能声明的 PassiveStat 永久状态。导弹碰撞路径在 `MissMode.cpp:4707` 以 `bAvoid=1`
+调用 `SUNITDMG_ApplyBlockOrDodge`；物理导弹允许盾牌格挡先判定，失败后进入通用被动防御。
+`SUNITDMG_ApplyDodge`（`SUnitDmg.cpp:2719–2772`）对移动单位只读取
+`STAT_PASSIVE_EVADE`，对静止单位先检查 Weapon Block，再读取 `STAT_PASSIVE_AVOID`，以
+`random % 100 < chance` 判定。成功时返回 `BLOCKFLAG_AVOID`；导弹路径设置 Avoid 标志并
+清除 successful-hit，因此不会继续执行该命中伤害。
+
+riiablo `AmazonSkills.getAvoidChance` 和 `applyPassiveState` 使用同一 Skills.txt 行，
+`StateUpdater` 安装永久 `avoid/passive_avoid` 状态，`CombatSystem` 把导弹标记为 ranged，
+并由 `DefenseCalculator.checkPassiveDefense` 按移动、Weapon Block、Avoid 的原生上下文顺序
+消费概率。`AvoidGoldenDamageTest` 用独立常量锁定全部 20 级、原版表字段、无伤害列和
+每级状态贡献；现有 `AmazonSkillSpecializationTest.passiveDodgeAvoidEvadeUseNativeAttackContext`
+锁定静止远程攻击上下文。随机样本、盾牌/Weapon Block/Evade 优先级、动画与最终来袭伤害
+结算属于 DMG-08。
