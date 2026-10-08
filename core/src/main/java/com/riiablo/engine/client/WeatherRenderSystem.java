@@ -196,7 +196,13 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     void configure(Mode nextEligibleMode) {
       eligibleMode = nextEligibleMode;
-      if (nextEligibleMode == Mode.NONE || phase != null) return;
+      if (nextEligibleMode == Mode.NONE) {
+        // Native D2Client clears the visible precipitation when the current level has no
+        // weather, but leaves the global phase and its remaining ticks paused.
+        intensity = 0f;
+        return;
+      }
+      if (phase != null) return;
 
       // Native zero-initialized state advances directly into phase 1.
       begin(Phase.FADE_IN);

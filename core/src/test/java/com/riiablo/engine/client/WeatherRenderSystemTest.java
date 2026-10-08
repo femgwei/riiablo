@@ -113,24 +113,45 @@ class WeatherRenderSystemTest {
   }
 
   @Test
-  void unsupportedLevelPausesAndResumesTheWeatherCycle() {
+  void unsupportedLevelClearsVisibleWeatherButPausesTheCycle() {
     WeatherRenderSystem.WeatherCycle cycle =
         new WeatherRenderSystem.WeatherCycle(6L);
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
     cycle.advanceTicks(20);
     int remainingTicks = cycle.remainingTicks;
-    float intensity = cycle.intensity;
 
     cycle.configure(WeatherRenderSystem.Mode.NONE);
     cycle.advanceTicks(100);
     assertEquals(remainingTicks, cycle.remainingTicks);
-    assertEquals(intensity, cycle.intensity);
+    assertEquals(0f, cycle.intensity);
     assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
 
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
-    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
     cycle.advanceTicks(1);
     assertEquals(remainingTicks - 1, cycle.remainingTicks);
+    assertTrue(cycle.intensity > 0f);
+    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
+  }
+
+  @Test
+  void steadyRainDoesNotReappearImmediatelyAfterUnsupportedLevel() {
+    WeatherRenderSystem.WeatherCycle cycle =
+        new WeatherRenderSystem.WeatherCycle(7L);
+    cycle.configure(WeatherRenderSystem.Mode.RAIN);
+    cycle.advanceTicks(cycle.phaseTicks);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.STEADY, cycle.phase);
+    assertTrue(cycle.intensity > 0f);
+
+    cycle.configure(WeatherRenderSystem.Mode.NONE);
+    int remainingTicks = cycle.remainingTicks;
+    cycle.configure(WeatherRenderSystem.Mode.RAIN);
+    cycle.advanceTicks(1);
+
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.STEADY, cycle.phase);
+    assertEquals(remainingTicks - 1, cycle.remainingTicks);
+    assertEquals(0f, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
   }
 
   private static WeatherRenderSystem.ParticleField field(
