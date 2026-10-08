@@ -798,3 +798,29 @@ riiablo `AmazonSkills.getPhysicalDamagePercent` 直接求值 Calc1，`calculateW
 字段和无固定伤害字段；现有 `AmazonMeleeSkillLifecycleTest` 锁定一次性记录、命中门槛及
 两种资源路径。固定武器数值、SrcDam、实际命中、普通耐久和最终伤害范围属于 DMG-06；
 抗性、格挡、PvP 与生命结算属于 DMG-08。
+
+## DMG-04 第三十三个逐级实例：Lightning Bolt
+
+1.10f `Skills.txt#20` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、
+`SrvMissile=lightningjavelin`、`SrcDam=96`、`HitShift=8`，元素类型为 `ltng`。闪电基值为
+`1–40`，最小值五段等级增量全为 0，最大值五段等级增量为 `12/18/28/48/88`；
+`EDmgSymPerCalc` 读取 Lightning Strike、Power Strike、Charged Strike、Lightning Fury
+硬点并乘 `par8`，本批固定协同为 0。
+
+D2MOO `D2GAME_SKILLS_Handler_6FD12BA0`（`Skills.cpp:2445`）创建技能声明的
+`lightningjavelin`。导弹初始化把技能闪电曲线与 96/128 武器包写入同一快照；
+`MISSMODE_SrvDmg12_LightningJavelin`（`MissMode.cpp:4342`）在命中时求值 Missiles.txt
+`DmgCalc=dl12`，把结果限制到 100%，从当前物理包取对应份额并与已有元素伤害相加，随后
+按导弹元素类型重写命中记录。该转换不改变技能自带闪电曲线的所有权。
+
+零装备、零四项硬点协同时，单枚标枪对单个目标的一次抗性前技能闪电 getter 范围从等级 1
+的 `1–40` 增长到等级 20 的 `1–380`。riiablo
+`MissileDamageResolver.initializeSkill` 使用同一五段曲线；owner 武器伤害为 0 时，
+`SrcDam=96` 和 `SrvDmg12` 转换均不产生额外值，物理通道保持 0，20 个等级的
+`delta_min/max` 均为 0。`LightningBoltGoldenDamageTest` 用独立常量逐级锁定表字段、
+导弹行和生产快照。
+
+D2MOO `MISSMODE_RollDamageValue`（`MissMode.cpp:281`）向有限随机数传入 `max-min`，所以
+原生运行时上限排除 canonical getter 最大值；矩阵与其他技能一致保存 getter 范围。
+固定武器包、`dl12` 转换和完整命中记录留给 DMG-06；抗性、免疫、吸收、PvP 与最终结算
+留给 DMG-08。范围型单目标伤害的三个 `*_total` 字段保持空白。

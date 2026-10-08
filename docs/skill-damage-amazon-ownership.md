@@ -178,5 +178,17 @@ D2MOO `SrvSt07` 只在成功命中后调用 `SUNITDMG_ApplyDamageBonuses` 构造
 并立即按 Calc2 随机决定堆叠武器扣一数量，或非堆叠武器扣 Calc3 耐久。随后
 `SrvDo002` 消费已分配的记录。riiablo `prepareImpale`、`resolveImpale` 与
 `drainImpaleDurability` 使用同一公式和生命周期。固定武器值、SrcDam、实际命中与普通
-武器耐久消耗留在 DMG-06，最终抗性和生命结算留在 DMG-08。下一项优先审核
-Lightning Bolt（20）。
+武器耐久消耗留在 DMG-06，最终抗性和生命结算留在 DMG-08。
+
+Lightning Bolt（20）等级 1–20 已按“单枚 `lightningjavelin` 的技能自带闪电分量、
+零武器包、零硬点协同、抗性前 canonical getter 范围”批准。1.10f `EMin=1`、
+`EMax=40`，最大值五段增量为 `12/18/28/48/88`，产生等级 1 的 `1–40` 到等级 20 的
+`1–380`；生产 `MissileDamageResolver.initializeSkill` 在 owner 武器伤害为 0 时逐级输出
+相同范围，并保留物理通道为 0。
+
+D2MOO 通用技能处理器创建 `lightningjavelin`，导弹伤害初始化把 `Skills.txt` 闪电曲线与
+`SrcDam=96` 武器包放入同一快照；`MISSMODE_SrvDmg12_LightningJavelin` 在命中时求值
+`DmgCalc=dl12`，最多把物理包的 100% 转入导弹元素通道。原版
+`MISSMODE_RollDamageValue` 对 `max-min` 调用有限随机数，因此运行时不会取到 canonical
+最大值；矩阵仍记录 getter 范围。固定武器包、转换比例和整份命中记录留给 DMG-06，
+抗性、免疫、吸收、PvP 与最终生命扣减留给 DMG-08。下一项优先审核 Ice Arrow（21）。
