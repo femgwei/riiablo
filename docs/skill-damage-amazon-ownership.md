@@ -15,8 +15,8 @@
 - 3 项仍存在明确的 riiablo 差异：Guided Arrow、Dopplezon、Valkyrie。
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
-- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot 与
-  Dodge 已完成等级 1–20 基础审计；160/600 个 Amazon
+- Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
+  Dodge 与 Power Strike 已完成等级 1–20 基础审计；180/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -123,4 +123,12 @@ Dodge（13）等级 1–20 已按“永久被动近战规避概率，不拥有�
 `PassiveCalc=dm12` 使用 `Param1=10`、`Param2=65`，产生 18%–56% 的概率曲线。
 D2MOO 被动刷新把结果写入永久 `dodge` 状态的 `passive_dodge` 属性；近战命中路径在填充、
 汇总和执行伤害前读取该值，成功时将命中改为 Dodge。随机边界、盾牌/武器格挡优先级、
-动作状态与最终来袭伤害结算留给 DMG-08。下一项优先审核 Power Strike（14）。
+动作状态与最终来袭伤害结算留给 DMG-08。
+
+Power Strike（14）等级 1–20 已按“单次成功近战记录中的技能闪电分量、零武器包、零协同、
+抗性前 canonical getter 范围”批准。1.10f `EMin=1`、`EMax=16`，最大值五段增量为
+`18/36/54/72/90`，产生等级 1 的 `1–16` 到等级 20 的 `1–646`；生产元素 resolver
+逐级一致。D2MOO `SrvSt06` 只在命中成功后调用元素伤害 roll，并把结果保存在按
+`SrcDam=128` 建立的同一 combat record；`SrvDo002` 在关键帧消费该记录并扣耐久。
+武器物理包、`Calc1` 增强物理、运行时排除 canonical 最大值的随机结果和整份记录总量留给
+DMG-06，最终元素结算留给 DMG-08。下一项优先审核 Poison Javelin（15）。

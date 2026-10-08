@@ -626,3 +626,34 @@ riiablo `AmazonSkills.getDodgeChance` 与 `applyPassiveState` 使用同一 `dm12
 `DodgeGoldenDamageTest` 用独立常量锁定全部 20 级、原版表字段、无伤害列和每级状态贡献；
 `AmazonSkillSpecializationTest.passiveDodgeAvoidEvadeUseNativeAttackContext` 另锁定 Dodge
 只处理站立近战上下文。随机边界、格挡优先级和最终来袭伤害结算属于 DMG-08。
+
+## DMG-04 第二十七个逐级实例：Power Strike
+
+1.10f `Skills.txt#14` 使用 `SrvStFunc=6`、`SrvDoFunc=2`、`SrcDam=128`、`HitShift=8`、
+`ToHit=20` 和 `LevToHit=12`。技能没有 server missile；固定物理伤害字段为 0，元素类型为
+`ltng`。闪电最小值为 1 且五段增量全为 0；最大值基值为 16，五段增量为
+`18/36/54/72/90`。`EDmgSymPerCalc` 读取 Lightning Strike、Lightning Bolt、
+Charged Strike 和 Lightning Fury 的硬点并乘 `par8`，本批把四项硬点固定为 0。
+
+D2MOO `SKILLS_SrvSt06_PowerStrike_ChargedStrike`（`SkillAma.cpp:80–114`）先调用
+`SUNITDMG_GetResultFlags`。只有成功命中才求值 `Calc1` 写入 enhanced-damage percentage，
+再调用 `D2GAME_RollElementalDamage_6FD14DD0` 把技能闪电值写入 damage 结构；随后
+`SUNITDMG_AllocCombat` 按 `SrcDam=128` 保存这一份近战记录。`SKILLS_SrvDo002` 在动画关键帧
+消费同一记录并处理武器耐久，不会重新掷一次技能闪电或创建第二份伤害包。
+
+通用元素 getter 先按五段曲线和 `HitShift=8` 建立 8.8 定点值，再应用硬点协同。本批零协同
+下，等级 1–20 的 canonical 闪电范围为：
+
+`1–16,1–34,1–52,1–70,1–88,1–106,1–124,1–142,1–178,1–214,`
+`1–250,1–286,1–322,1–358,1–394,1–430,1–484,1–538,1–592,1–646`。
+
+`D2GAME_RollElementalDamage_6FD14DD0` 把 `max-min` 传给 limited RNG，因此运行时随机上界
+排除 canonical getter 最大值；矩阵沿用其他直接元素技能的口径保存 getter 范围。固定武器
+物理包、`Calc1` 增强物理、随机样本和整份近战记录总量属于 DMG-06；抗性、吸收、PvP 与
+最终生命扣减属于 DMG-08。
+
+riiablo `Actioneer.prepareAmazonElementalStrike` 使用
+`MissileDamageResolver.skillElementalDamage` 逐级建立同一闪电范围，再把它交给预计算近战
+记录；关键帧只消费一次。`PowerStrikeGoldenDamageTest` 用独立常量锁定全部 20 级、原版
+表字段、零协同和生产 resolver 输出，`AmazonMeleeSkillLifecycleTest` 锁定单记录消费与成功
+命中后才扣耐久。本轮无需生产修复。
