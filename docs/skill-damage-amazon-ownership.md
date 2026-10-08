@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe 与 Immolation Arrow 已完成等级 1–20 基础审计；460/600 个 Amazon
+  Strafe、Immolation Arrow 与 Dopplezon 已完成等级 1–20 基础审计；480/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -57,8 +57,9 @@ Decoy 虽然不攻击，其生命/防御语义也不能只靠一个 owner-HP 百
 
 ## 已确认的 riiablo 差异
 
-1. **Dopplezon（28）**：已创建实体、等级、owner-relative HP 和时限，但缺原版被动属性、
-   额外 `Calc1` 最大生命、召唤技能/装备、UMod 和 Overlay 初始化。
+1. **Dopplezon（28）**：DMG-04 已确认无独立伤害输出并按 N/A 批准；生产路径已创建实体、
+   等级、owner-relative HP 和时限，但缺原版被动属性、额外 `Calc1` 最大生命、召唤技能/
+   装备、UMod 和 Overlay 初始化。
 2. **Valkyrie（32）**：已创建实体和 Valkyrie 状态，但缺被动属性、SumSkill 和按 `Calc2`
    物品等级生成的装备；这些缺失会直接改变女武神攻击伤害。
 
@@ -278,4 +279,20 @@ DMG-06/07/08。
 速率；`ImmolationArrowGoldenDamageTest` 同时锁定即时曲线和周期速率，周期完整持续期与
 覆盖/重叠仍留在 DMG-07。
 
-下一项优先审核 Dopplezon（技能 28）。
+下一项优先审核 Evade（技能 29）。
+
+## Dopplezon（技能 28）DMG-04
+
+`Skills.txt#28` 的 `SrvDoFunc=15` 只创建 `dopplezon` 召唤，`SrcDam`、物理/元素伤害、
+server missile 和 `ELen` 均为空或 0；因此矩阵 442–461 行的伤害三元组全部明确为 N/A，
+不能把召唤物的 MonStats 近战值误记为 Dopplezon 技能自身伤害。
+
+D2MOO `SKILLS_SrvDo015_Dopplezon`（`SkillAma.cpp:922–974`）创建 Decoy 后依次设置
+owner 最大生命的 `Calc3=par3` 百分比、召唤基础等级和 `SetSummonPassiveStats`。后者
+读取 `AuraStat` 抗性，应用 `Calc1=lvl*par4` 最大生命增量，安装 `SumSkill`、UMod、
+Overlay 并生成召唤装备；到期事件和 AI 更新也在同一原生链中。riiablo 当前只覆盖
+实体/等级/owner HP/时限，差异登记为召唤完整性缺口，不为 DMG-04 伤害矩阵扩大修复。
+
+`DopplezonGoldenDamageTest` 锁定 Skills.txt 字段、`ln12` 时限、`par3` HP 百分比、无
+伤害字段和 `summon.decoy` 行为注册。召唤被动继承、UMod/Overlay、装备和完整生命周期
+留给 DMG-07。

@@ -985,3 +985,23 @@ D2MOO 通用技能处理器先创建 `immolationarrow` 父导弹。其
 因此矩阵第 422–441 行将候选单位固定为“单个即时范围目标的抗性前技能火焰包”，
 `expected_min/max` 与生产快照逐级一致，`expected_total` 留空以避免把一次施法的范围目标
 集合压成单一总值。
+
+## DMG-04 第四十一个逐级实例：Dopplezon
+
+1.10f `Skills.txt#28` 使用 `SrvStFunc=0`、`SrvDoFunc=15`、`Summon=dopplezon`、
+`PetType=dopplezon`、`PetMax=1` 和 `Summode=NU`。`SrcDam`、物理/元素伤害字段、
+`SrvMissile` 和 `ELen` 均为空或 0；因此 Dopplezon 技能本身不拥有可填入 DMG-04
+`expected_min/max/total` 的独立伤害记录，矩阵 442–461 行明确写 N/A 空白。
+
+D2MOO `SKILLS_SrvDo015_Dopplezon`（`D2Game/src/SKILLS/SkillAma.cpp:922–974`）创建
+召唤后以 `Calc3=par3` 将生命替换为 owner 最大生命的百分比，再调用
+`D2GAME_SKILLS_SetSummonBaseStats_6FD0CB10` 和
+`D2GAME_SetSummonPassiveStats_6FD0C530`。后者读取 `AuraStat` 抗性，应用
+`Calc1=lvl*par4` 的额外最大生命，安装 `SumSkill`、UMod、Overlay 和召唤装备；到期事件
+与 AI 更新同样由该原生链完成。Decoy 不执行攻击，召唤物的 MonStats 近战值不能倒灌为
+Dopplezon 技能伤害。
+
+`DopplezonGoldenDamageTest` 锁定 `ln12` 时限 `250 + 125/级`、`par3=50` 的 owner
+生命百分比、无伤害字段和 `summon.decoy` 行为注册。riiablo 当前只覆盖创建实体、等级、
+owner-relative HP 和时限，缺失的召唤被动/技能/装备、Calc1、UMod、Overlay 和完整
+生命周期继续归入 DMG-07，不在 DMG-04 伪造零伤害黄金值。

@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`f35d09a100513f1cc8158344715e7c9dcd42829d`
-当前加权完成度：**33.8%**
+最近完成技能提交：`4813a514ac3e50676f83b39cd569e843762ac41f`
+当前加权完成度：**33.9%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -45,17 +45,18 @@
   Cloak of Shadows、Fade、Shadow Warrior、Mind Blast、Shadow Master 共 9 个实现缺口；
   Shock Field、Blade Sentinel、Charged Bolt Sentry、Blade Fury 另缺最终伤害消费的聚焦测试。
 - Amazon 审计确认 30 项所有者；Dopplezon、Valkyrie 仍有 2 个明确实现差异，均缺原版
-  召唤被动属性、技能、装备等初始化链。Inner Sight 的分段公式，以及 Jab、Guided Arrow
+  召唤被动属性、技能、装备等初始化链。Dopplezon 已确认无独立伤害输出，DMG-04
+  逐级行按 N/A 批准；Inner Sight 的分段公式，以及 Jab、Guided Arrow
   的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 800 行 `GOLDEN_APPROVED`，其余 3,400 行仍为
+- 4,200 行中已有 820 行 `GOLDEN_APPROVED`，其余 3,380 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 33.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 800 个逐级黄金行；不表示技能伤害正确率为 33.8%。
+- 当前约 33.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 820 个逐级黄金行；不表示技能伤害正确率为 33.9%。
 
 ## 加权任务
 
@@ -91,7 +92,8 @@
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
     Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge、Power Strike、
     Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、Lightning Bolt、Ice Arrow、
-  Guided Arrow、Penetrate、Charged Strike、Plague Javelin、Strafe、Immolation Arrow 等级 1–20 共 800/4,200 行（本项 19.0476%，加权贡献 3.8095 个百分点）；
+    Guided Arrow、Penetrate、Charged Strike、Plague Javelin、Strafe、Immolation Arrow、
+    Dopplezon 等级 1–20 共 820/4,200 行（本项 19.5238%，加权贡献 3.9048 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -474,4 +476,24 @@ D2MOO 的 `SrvHit09`（`MissMode.cpp:2377`）在父箭命中后创建 `immolatio
 即时半径伤害和持续火焰生命扣减。矩阵第 422–441 行的 `expected_*` 与生产即时技能包逐级
 一致，`delta_min/max` 全为 0。
 
-下一项优先审核 Dopplezon（技能 28）。
+## Dopplezon（技能 28）
+
+Dopplezon 等级 1–20 已按“原版召唤行为、无独立伤害输出”批准。1.10f
+`Skills.txt#28` 使用 `SrvStFunc=0`、`SrvDoFunc=15`、`Summon=dopplezon`、
+`PetType=dopplezon`、`PetMax=1` 和 `Summode=NU`；物理/元素伤害字段、server missile
+字段和 `ELen` 均为空或 0，因此 DMG-04 的 `expected_*`、`riiablo_actual_*` 与 `delta_*`
+明确保持 N/A 空白，而不是写入伪造的 0 伤害。
+
+D2MOO `SKILLS_SrvDo015_Dopplezon`（`D2Game/src/SKILLS/SkillAma.cpp:922–974`）创建
+Decoy 后先按 `Calc3=par3` 替换为 owner 最大生命的 50%，再调用
+`D2GAME_SKILLS_SetSummonBaseStats_6FD0CB10` 与 `D2GAME_SetSummonPassiveStats_6FD0C530`。
+后者还处理 `AuraStat` 抗性、`Calc1=lvl*par4` 的额外最大生命、`SumSkill`、UMod、Overlay
+和召唤装备，并注册到期事件与 AI 更新；这些是召唤完整性语义，不能被 DMG-04 的伤害列
+代替。riiablo 当前生产路径已锁定创建实体、等级、owner-relative HP 和时限，但仍登记
+上述初始化差异，暂不为无伤害矩阵强行扩大修复范围。
+
+`DopplezonGoldenDamageTest` 锁定 1.10f Skills.txt 行、`ln12` 时限（250 + 125/级）、
+`par3` owner HP 百分比、无伤害字段和 `summon.decoy` 行为注册。矩阵第 442–461 行获批
+为 N/A；召唤被动继承、UMod/Overlay、装备和完整生命周期留给 DMG-07。
+
+下一项优先审核 Evade（技能 29）。
