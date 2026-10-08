@@ -704,3 +704,31 @@ D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter` �
 固定武器命中留给 DMG-06；爆炸半径、目标数、多目标累计和整次施法总量留给 DMG-07；
 Fire Mastery、抗性、穿透、吸收、PvP 和最终生命扣减留给 DMG-08。范围型单目标伤害的
 三个 `*_total` 字段保持空白。
+
+## DMG-04 第三十个逐级实例：Slow Missiles
+
+Slow Missiles 不拥有输出伤害包。1.10f `Skills.txt#17` 使用 `SrvStFunc=0`、
+`SrvDoFunc=6`、`SrcDam=0`，没有 server missile，物理和元素伤害字段均为 0，`EType`
+为空。因此 DMG-04 的等级 1–20 行把三组 `expected_*`、`riiablo_actual_*` 和
+`delta_*` 明确标记为 N/A 并保持空白；投射物速度百分比不是伤害值。
+
+原生行声明 `AuraTargetState=slowmissiles`、`AuraStat1=skill_handofathena` 和
+`AuraStatCalc1=ln12`。`Param1=33`、`Param2=0` 使等级 1–20 的状态属性均为 33；该值
+表示投射物保留正常速度的 33%，不是只减少 33%。`AuraLenCalc=ln34` 配合
+`Param3=300`、`Param4=150`，产生 300、450、…、3150 帧的持续时间；
+`AuraRangeCalc=ln56` 配合 `Param5=20`、`Param6=0`，使范围在全部等级固定为 20。
+
+D2MOO `SKILLS_SrvDo006_InnerSight_SlowMissiles`（`SkillAma.cpp:384–403`）直接求值上述
+持续时间、范围和状态属性，再由
+`SKILLS_AuraCallback_InnerSight_SlowMissiles`（`SkillAma.cpp:406–425`）调用通用诅咒
+状态安装函数；该链不分配 combat damage record，也不创建 missile。D2MOO
+`Missiles.cpp:134–143` 在怪物新建、且 Missiles.txt 声明 `CanSlow` 的投射物时检查
+`STATE_SLOWMISSILES`，读取 `STAT_SKILL_HANDOFATHENA` 并把初始速度乘以该百分比。
+
+riiablo `ServerSkillSystem.applySlowMissiles` 求值同一组原生公式并安装
+`SLOWMISSILES/skill_handofathena` 状态；`ServerEntityFactory.slowMissileVelocityPercent`
+在新建可减速怪物投射物时消费该状态。`SlowMissilesGoldenDamageTest` 用独立常量锁定
+全部 20 级速度百分比、持续时间、固定范围和无伤害字段，现有
+`AmazonSkillSpecializationTest.slowMissilesAppliesNativeStateAndVelocityStatInsteadOfInnerSight`
+锁定实际状态安装。目标过滤、状态刷新/覆盖及飞行轨迹属于 DMG-07，最终来袭伤害结算
+属于 DMG-08。

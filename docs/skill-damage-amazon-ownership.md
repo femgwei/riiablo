@@ -16,7 +16,7 @@
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
-  Dodge、Power Strike、Poison Javelin 与 Exploding Arrow 已完成等级 1–20 基础审计；220/600 个 Amazon
+  Dodge、Power Strike、Poison Javelin、Exploding Arrow 与 Slow Missiles 已完成等级 1–20 基础审计；240/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -146,4 +146,14 @@ Exploding Arrow（16）等级 1–20 已按“单个 `explodingarrowexp2` 对单
 `129–149`，20 个等级的 `delta_min/max` 均为 0。D2MOO `SrvHit04` 从根箭创建子导弹，
 `SrvHit01` 用子导弹快照向半径内目标分发火焰包；根箭只保留 `SrcDam=128` 武器命中。
 武器值留给 DMG-06，范围目标数和施法总量留给 DMG-07，最终元素结算留给 DMG-08。
-下一项优先审核 Slow Missiles（17）。
+
+Slow Missiles（17）等级 1–20 已按“定时投射物速度状态，不拥有独立输出伤害包”批准；
+三组伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`AuraTargetState=slowmissiles`、`AuraStat=skill_handofathena`、`AuraStatCalc=ln12`，
+`Param1=33`、`Param2=0` 使全部等级都把可减速投射物速度设为正常值的 33%。持续时间
+`ln34` 从 300 增长到 3150 帧，范围 `ln56` 固定为 20。
+
+D2MOO `SrvDo006` 把这些字段原样交给通用诅咒状态回调；`Missiles.cpp` 只在新建、声明
+`CanSlow` 的怪物投射物时读取状态并乘速度，不创建 combat damage record。riiablo 的状态
+安装与新投射物速度消费者均已覆盖。目标过滤、状态刷新/覆盖和实际轨迹属于 DMG-07，
+最终来袭伤害结果属于 DMG-08。下一项优先审核 Avoid（18）。
