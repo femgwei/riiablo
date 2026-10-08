@@ -134,6 +134,12 @@ class WeatherRenderSystemTest {
         new WeatherRenderSystem.WeatherCycle(5L);
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
 
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.DRY, cycle.phase);
+    assertEquals(0f, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
+    assertTrue(cycle.phaseTicks >= 7500 && cycle.phaseTicks < 15000);
+
+    cycle.advanceTicks(cycle.phaseTicks);
     assertEquals(WeatherRenderSystem.WeatherCycle.Phase.FADE_IN, cycle.phase);
     assertEquals(0f, cycle.intensity);
     assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
@@ -175,17 +181,16 @@ class WeatherRenderSystemTest {
 
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
     assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
-    cycle.advanceTicks(1);
-    assertEquals(remainingTicks - 1, cycle.remainingTicks);
-    assertTrue(cycle.intensity > 0f);
-    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
+    assertEquals(remainingTicks, cycle.remainingTicks);
+    assertEquals(0f, cycle.intensity);
   }
 
   @Test
-  void steadyRainDoesNotReappearImmediatelyAfterUnsupportedLevel() {
+  void steadyRainRestoresImmediatelyAfterUnsupportedLevel() {
     WeatherRenderSystem.WeatherCycle cycle =
         new WeatherRenderSystem.WeatherCycle(7L);
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
+    cycle.advanceTicks(cycle.phaseTicks);
     cycle.advanceTicks(cycle.phaseTicks);
     assertEquals(WeatherRenderSystem.WeatherCycle.Phase.STEADY, cycle.phase);
     assertTrue(cycle.intensity > 0f);
@@ -193,12 +198,11 @@ class WeatherRenderSystemTest {
     cycle.configure(WeatherRenderSystem.Mode.NONE);
     int remainingTicks = cycle.remainingTicks;
     cycle.configure(WeatherRenderSystem.Mode.RAIN);
-    cycle.advanceTicks(1);
 
     assertEquals(WeatherRenderSystem.WeatherCycle.Phase.STEADY, cycle.phase);
-    assertEquals(remainingTicks - 1, cycle.remainingTicks);
-    assertEquals(0f, cycle.intensity);
-    assertEquals(WeatherRenderSystem.Mode.NONE, cycle.visibleMode());
+    assertEquals(remainingTicks, cycle.remainingTicks);
+    assertEquals(cycle.peakIntensity, cycle.intensity);
+    assertEquals(WeatherRenderSystem.Mode.RAIN, cycle.visibleMode());
   }
 
   private static WeatherRenderSystem.ParticleField field(

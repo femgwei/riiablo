@@ -246,6 +246,7 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
 
     void configure(Mode nextEligibleMode) {
+      Mode previousEligibleMode = eligibleMode;
       eligibleMode = nextEligibleMode;
       if (nextEligibleMode == Mode.NONE) {
         // Native D2Client clears the visible precipitation when the current level has no
@@ -253,11 +254,36 @@ public final class WeatherRenderSystem extends BaseSystem {
         intensity = 0f;
         return;
       }
-      if (phase != null) return;
+      if (phase != null) {
+        // The timer keeps running globally while an unsupported level is active,
+        // but the precipitation is only hidden for that level. Restore the
+        // current phase's visible intensity when returning outdoors.
+        if (previousEligibleMode == Mode.NONE) restoreIntensity();
+        return;
+      }
 
-      // Native zero-initialized state advances directly into phase 1.
-      begin(Phase.FADE_IN);
+      // A newly created weather controller starts in its dry interval. Rain is
+      // selected only when that interval expires, so entering a Rain-enabled
+      // level does not guarantee an immediate storm.
+      begin(Phase.DRY);
       intensity = 0f;
+    }
+
+    private void restoreIntensity() {
+      switch (phase) {
+        case FADE_IN:
+          intensity = peakIntensity * (1f - remainingTicks / (float) phaseTicks);
+          break;
+        case STEADY:
+          intensity = peakIntensity;
+          break;
+        case FADE_OUT:
+          intensity = peakIntensity * remainingTicks / (float) phaseTicks;
+          break;
+        default:
+          intensity = 0f;
+          break;
+      }
     }
 
     int advance(float delta) {
