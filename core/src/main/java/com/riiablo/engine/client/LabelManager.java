@@ -8,6 +8,7 @@ import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Align;
@@ -42,7 +43,24 @@ public class LabelManager extends IteratingSystem {
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Array<Actor> labels = new Array<>();
+  private final Array<GroundLabel> groundLabels = new Array<>();
+  private final Array<Rectangle> occupiedLabels = new Array<>();
   private boolean showGroundItems;
+
+  private static final float LABEL_GAP = 2f;
+  private static final int MAX_LABEL_RING = 12;
+
+  private static final class GroundLabel {
+    final Actor actor;
+    final float desiredX;
+    final float desiredY;
+
+    GroundLabel(Actor actor) {
+      this.actor = actor;
+      desiredX = actor.getX();
+      desiredY = actor.getY();
+    }
+  }
 
   @Override
   protected boolean checkProcessing() {
@@ -52,12 +70,15 @@ public class LabelManager extends IteratingSystem {
   @Override
   protected void begin() {
     labels.clear();
+    groundLabels.clear();
+    occupiedLabels.clear();
     showGroundItems = Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT)
         || Gdx.input.isKeyPressed(Input.Keys.ALT_RIGHT);
   }
 
   @Override
   protected void end() {
+    layoutGroundLabels();
     for (Actor label : labels) {
       tmpVec2.x = label.getX();
       tmpVec2.y = label.getY();
@@ -94,6 +115,107 @@ public class LabelManager extends IteratingSystem {
     Actor actor = label.actor;
     actor.setPosition(tmpVec2.x, tmpVec2.y, Align.center | Align.bottom);
     labels.add(actor);
+    if (mItem.has(entityId)) groundLabels.add(new GroundLabel(actor));
+  }
+
+  /**
+   * Arranges visible ground-item labels like the native client: keep the
+   * preferred position when possible, then stack conflicting labels vertically
+   * and expand the cluster horizontally only when necessary. Non-item labels
+   * remain fixed and act as obstacles for item labels.
+   */
+  private void layoutGroundLabels() {
+    if (groundLabels.size == 0) return;
+
+    for (Actor label : labels) {
+      if (containsGroundLabel(label)) continue;
+      clampLabel(label);
+      occupiedLabels.add(new Rectangle(label.getX(), label.getY(),
+          label.getWidth(), label.getHeight()));
+    }
+
+    groundLabels.sort((a, b) -> {
+      int y = Float.compare(a.desiredY, b.desiredY);
+      return y != 0 ? y : Float.compare(a.desiredX, b.desiredX);
+    });
+
+    for (GroundLabel groundLabel : groundLabels) {
+      Actor actor = groundLabel.actor;
+      Rectangle placed = findGroundLabelPosition(
+          groundLabel.desiredX, groundLabel.desiredY,
+          actor.getWidth(), actor.getHeight(), occupiedLabels,
+          renderer.getMinX(), renderer.getMinY(), renderer.getMaxX(), renderer.getMaxY());
+      actor.setPosition(placed.x, placed.y);
+      occupiedLabels.add(placed);
+    }
+  }
+
+  private boolean containsGroundLabel(Actor actor) {
+    for (GroundLabel groundLabel : groundLabels) {
+      if (groundLabel.actor == actor) return true;
+    }
+    return false;
+  }
+
+  private void clampLabel(Actor label) {
+    tmpVec2.x = MathUtils.clamp(label.getX(), renderer.getMinX(),
+        renderer.getMaxX() - label.getWidth());
+    tmpVec2.y = MathUtils.clamp(label.getY(), renderer.getMinY(),
+        renderer.getMaxY() - label.getHeight());
+    label.setPosition(tmpVec2.x, tmpVec2.y);
+  }
+
+  /** Package-private for deterministic layout tests without an ECS world. */
+  static Rectangle findGroundLabelPosition(
+      float desiredX, float desiredY, float width, float height,
+      Array<Rectangle> occupied, float minX, float minY, float maxX, float maxY) {
+    Rectangle best = null;
+    float bestDistance = Float.POSITIVE_INFINITY;
+    float verticalStep = Math.max(1f, height + LABEL_GAP);
+    float horizontalStep = Math.max(1f, width + LABEL_GAP);
+
+    for (int ring = 0; ring <= MAX_LABEL_RING; ring++) {
+      for (int row = -ring; row <= ring; row++) {
+        for (int column = -ring; column <= ring; column++) {
+          if (ring != 0 && Math.abs(row) != ring && Math.abs(column) != ring) continue;
+          // Prefer the native-looking vertical stack before moving sideways.
+          if (ring > 0 && column != 0 && Math.abs(row) != ring) continue;
+
+          float x = MathUtils.clamp(desiredX + column * horizontalStep,
+              minX, Math.max(minX, maxX - width));
+          float y = MathUtils.clamp(desiredY + row * verticalStep,
+              minY, Math.max(minY, maxY - height));
+          Rectangle candidate = new Rectangle(x, y, width, height);
+          if (overlapsAny(candidate, occupied)) continue;
+
+          float distance = Math.abs(x - desiredX) + Math.abs(y - desiredY);
+          if (distance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+      }
+      if (best != null) return best;
+    }
+
+    // Extremely dense drops can exhaust the search radius. Pick the nearest
+    // bounded location rather than hiding a label or allowing an unbounded UI.
+    return new Rectangle(
+        MathUtils.clamp(desiredX, minX, Math.max(minX, maxX - width)),
+        MathUtils.clamp(desiredY, minY, Math.max(minY, maxY - height)),
+        width, height);
+  }
+
+  private static boolean overlapsAny(Rectangle candidate, Array<Rectangle> occupied) {
+    for (Rectangle rectangle : occupied) {
+      if (candidate.x < rectangle.x + rectangle.width + LABEL_GAP
+          && candidate.x + candidate.width + LABEL_GAP > rectangle.x
+          && candidate.y < rectangle.y + rectangle.height + LABEL_GAP
+          && candidate.y + candidate.height + LABEL_GAP > rectangle.y) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static boolean shouldDisplayLabel(boolean hovered, boolean groundItem,
