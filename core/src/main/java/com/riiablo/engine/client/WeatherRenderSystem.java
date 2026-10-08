@@ -29,6 +29,15 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int PARTICLE_COUNT = 256;
   static final int SNOW_SHAPE_COUNT = 8;
   static final int SNOW_SEGMENTS_PER_PARTICLE = 2;
+  static final int RAIN_ANGLE_UNITS = 512;
+  static final int RAIN_MIN_ANGLE = 92;
+  static final int RAIN_MAX_ANGLE = 162;
+  static final int RAIN_MIN_LENGTH = 4;
+  static final int RAIN_MAX_LENGTH = 12;
+  static final int RAIN_MIN_SPEED_PER_TICK = 15;
+  static final int RAIN_MAX_SPEED_PER_TICK = 30;
+  static final int RAIN_MIN_WIND_TICKS = 125;
+  static final int RAIN_MAX_WIND_TICKS = 499;
   private static final int MAX_CATCH_UP_STEPS = 4;
   private static final int RAIN_AMBIENCE_ID = 64;
   private static final long RANDOM_SEED = 0xD2C11E17L;
@@ -131,7 +140,6 @@ public final class WeatherRenderSystem extends BaseSystem {
     Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     shapes.begin(ShapeRenderer.ShapeType.Line);
     if (particles.mode == Mode.RAIN) {
-      shapes.setColor(0.55f, 0.63f, 0.72f, 0.52f);
       drawRain(intensity);
     } else {
       shapes.setColor(0.88f, 0.91f, 0.94f, 0.78f);
@@ -148,7 +156,12 @@ public final class WeatherRenderSystem extends BaseSystem {
       float x = MathUtils.lerp(particles.previousX[i], particles.x[i], alpha);
       float y = MathUtils.lerp(particles.previousY[i], particles.y[i], alpha);
       float length = particles.size[i];
-      shapes.line(x, y, x + length * 0.34f, y + length);
+      float shade = particles.shade[i];
+      shapes.setColor(0.70f * shade, 0.72f * shade, 0.74f * shade, 0.58f);
+      shapes.line(
+          x, y,
+          x + particles.windX * length,
+          y + particles.windY * length);
     }
   }
 
@@ -314,7 +327,9 @@ public final class WeatherRenderSystem extends BaseSystem {
     final float[] y = new float[PARTICLE_COUNT];
     final float[] velocityX = new float[PARTICLE_COUNT];
     final float[] velocityY = new float[PARTICLE_COUNT];
+    final float[] fallSpeed = new float[PARTICLE_COUNT];
     final float[] size = new float[PARTICLE_COUNT];
+    final float[] shade = new float[PARTICLE_COUNT];
     final float[] phase = new float[PARTICLE_COUNT];
     final float[] phaseSpeed = new float[PARTICLE_COUNT];
     final int[] shape = new int[PARTICLE_COUNT];
@@ -326,6 +341,11 @@ public final class WeatherRenderSystem extends BaseSystem {
     private Mode mode = Mode.NONE;
     private float width;
     private float height;
+    int windAngle;
+    int targetWindAngle;
+    int windTicks;
+    float windX;
+    float windY;
 
     ParticleField(long seed) {
       this.seed = seed;
@@ -343,6 +363,12 @@ public final class WeatherRenderSystem extends BaseSystem {
       if (mode == Mode.NONE || width == 0f || height == 0f) return;
 
       random = new Random(seed ^ (mode.ordinal() * 0x9E3779B97F4A7C15L));
+      if (mode == Mode.RAIN) {
+        windAngle = randomRainAngle();
+        targetWindAngle = windAngle;
+        windTicks = randomWindTicks();
+        updateWindVector();
+      }
       for (int i = 0; i < PARTICLE_COUNT; i++) initialize(i, true);
     }
 
@@ -356,10 +382,13 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
 
     void step() {
+      if (mode == Mode.RAIN) advanceWind();
       for (int i = 0; i < PARTICLE_COUNT; i++) {
         previousX[i] = x[i];
         previousY[i] = y[i];
         if (mode == Mode.RAIN) {
+          velocityX[i] = windX * fallSpeed[i];
+          velocityY[i] = windY * fallSpeed[i];
           x[i] += velocityX[i] * SimulationClock.STEP_SECONDS;
           y[i] += velocityY[i] * SimulationClock.STEP_SECONDS;
           if (x[i] < -48f || y[i] < -48f) respawnAtTop(i);
@@ -382,9 +411,17 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     private void initialize(int i, boolean anywhere) {
       if (mode == Mode.RAIN) {
-        velocityX[i] = -70f - random.nextFloat() * 55f;
-        velocityY[i] = -430f - random.nextFloat() * 210f;
-        size[i] = 12f + random.nextFloat() * 13f;
+        // Native rain assigns a shared direction but a per-drop perspective depth.
+        // That depth correlates its 4..12 pixel streak with its 15..30 pixel/tick fall speed.
+        float depth = random.nextFloat();
+        size[i] = RAIN_MIN_LENGTH
+            + MathUtils.floor(depth * (RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1));
+        float speedPerTick = MathUtils.lerp(
+            RAIN_MIN_SPEED_PER_TICK, RAIN_MAX_SPEED_PER_TICK, depth);
+        fallSpeed[i] = speedPerTick / SimulationClock.STEP_SECONDS;
+        velocityY[i] = windY * fallSpeed[i];
+        velocityX[i] = windX * fallSpeed[i];
+        shade[i] = 0.78f + random.nextFloat() * 0.22f;
       } else {
         velocityX[i] = -8f + random.nextFloat() * 16f;
         velocityY[i] = -42f - random.nextFloat() * 45f;
@@ -403,6 +440,35 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     private void respawnAtTop(int i) {
       initialize(i, false);
+    }
+
+    private void advanceWind() {
+      if (--windTicks <= 0) {
+        targetWindAngle = randomRainAngle();
+        windTicks = randomWindTicks();
+      }
+
+      if (windAngle < targetWindAngle) {
+        windAngle = Math.min(windAngle + 2, targetWindAngle);
+      } else if (windAngle > targetWindAngle) {
+        windAngle = Math.max(windAngle - 2, targetWindAngle);
+      }
+      updateWindVector();
+    }
+
+    private int randomRainAngle() {
+      return RAIN_MIN_ANGLE + random.nextInt(RAIN_MAX_ANGLE - RAIN_MIN_ANGLE + 1);
+    }
+
+    private int randomWindTicks() {
+      return RAIN_MIN_WIND_TICKS
+          + random.nextInt(RAIN_MAX_WIND_TICKS - RAIN_MIN_WIND_TICKS + 1);
+    }
+
+    private void updateWindVector() {
+      float radians = windAngle * MathUtils.PI2 / RAIN_ANGLE_UNITS;
+      windX = MathUtils.cos(radians);
+      windY = -MathUtils.sin(radians);
     }
   }
 }

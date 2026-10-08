@@ -52,6 +52,39 @@ class WeatherRenderSystemTest {
     assertArrayEquals(first.y, second.y);
     assertArrayEquals(first.velocityX, second.velocityX);
     assertArrayEquals(first.velocityY, second.velocityY);
+    assertArrayEquals(first.fallSpeed, second.fallSpeed);
+    assertArrayEquals(first.size, second.size);
+    assertArrayEquals(first.shade, second.shade);
+  }
+
+  @Test
+  void rainUsesNativeStreakLengthSpeedAndWindRanges() {
+    WeatherRenderSystem.ParticleField particles = field(8L, WeatherRenderSystem.Mode.RAIN);
+
+    assertTrue(particles.windAngle >= WeatherRenderSystem.RAIN_MIN_ANGLE);
+    assertTrue(particles.windAngle <= WeatherRenderSystem.RAIN_MAX_ANGLE);
+    assertTrue(particles.windTicks >= WeatherRenderSystem.RAIN_MIN_WIND_TICKS);
+    assertTrue(particles.windTicks <= WeatherRenderSystem.RAIN_MAX_WIND_TICKS);
+    assertTrue(particles.windY < 0f);
+    for (int i = 0; i < WeatherRenderSystem.PARTICLE_COUNT; i++) {
+      assertTrue(particles.size[i] >= WeatherRenderSystem.RAIN_MIN_LENGTH);
+      assertTrue(particles.size[i] <= WeatherRenderSystem.RAIN_MAX_LENGTH);
+      float speedPerTick = particles.fallSpeed[i] * SimulationClock.STEP_SECONDS;
+      assertTrue(speedPerTick >= WeatherRenderSystem.RAIN_MIN_SPEED_PER_TICK - 0.001f);
+      assertTrue(speedPerTick <= WeatherRenderSystem.RAIN_MAX_SPEED_PER_TICK + 0.001f);
+    }
+  }
+
+  @Test
+  void rainWindChangesDirectionGradually() {
+    WeatherRenderSystem.ParticleField particles = field(9L, WeatherRenderSystem.Mode.RAIN);
+    particles.windAngle = WeatherRenderSystem.RAIN_MIN_ANGLE;
+    particles.targetWindAngle = WeatherRenderSystem.RAIN_MAX_ANGLE;
+    particles.windTicks = 10;
+
+    particles.step();
+
+    assertEquals(WeatherRenderSystem.RAIN_MIN_ANGLE + 2, particles.windAngle);
   }
 
   @Test
