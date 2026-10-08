@@ -16,7 +16,7 @@
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
-  Dodge、Power Strike 与 Poison Javelin 已完成等级 1–20 基础审计；200/600 个 Amazon
+  Dodge、Power Strike、Poison Javelin 与 Exploding Arrow 已完成等级 1–20 基础审计；220/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -139,4 +139,11 @@ Poison Javelin（15）等级 1–20 已按“单个 `poisonjavcloud` 对单个�
 持续时间从 200 增长到 1150 帧，完整持续期整数总量从 `25–37` 增长到 `2659–2946`，
 20 个等级的 `delta_min/max` 均为 0。`SrvDo02` 发出移动 `poisonjavcloud`，`SrvDo03`
 每原生帧碰撞；根标枪武器命中、云数量/覆盖/重叠/刷新留给 DMG-06/07，毒抗和最终结算
-留给 DMG-08。下一项优先审核 Exploding Arrow（16）。
+留给 DMG-08。
+
+Exploding Arrow（16）等级 1–20 已按“单个 `explodingarrowexp2` 对单个目标的一次技能
+火焰命中、零装备、零 Fire Arrow 硬点、抗性前”批准。等级 1 为 `2–6`，等级 20 为
+`129–149`，20 个等级的 `delta_min/max` 均为 0。D2MOO `SrvHit04` 从根箭创建子导弹，
+`SrvHit01` 用子导弹快照向半径内目标分发火焰包；根箭只保留 `SrcDam=128` 武器命中。
+武器值留给 DMG-06，范围目标数和施法总量留给 DMG-07，最终元素结算留给 DMG-08。
+下一项优先审核 Slow Missiles（17）。

@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 最近完成技能提交：`5836e727e8cacae2403c0c3ea187b9e28249b2af`
-当前加权完成度：**32.7%**
+当前加权完成度：**32.8%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 119 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 35 项。新增 Power Strike 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 560 行 `GOLDEN_APPROVED`，其余 3,640 行仍为
+- 4,200 行中已有 580 行 `GOLDEN_APPROVED`，其余 3,620 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 32.7% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 560 个逐级黄金行；不表示技能伤害正确率为 32.7%。
+- 当前 32.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 580 个逐级黄金行；不表示技能伤害正确率为 32.8%。
 
 ## 加权任务
 
@@ -90,7 +90,7 @@
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
     Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow、
     Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、Dodge、Power Strike、
-    Poison Javelin 等级 1–20 共 560/4,200 行（本项 13.3333%，加权贡献 2.6667 个百分点）；
+    Poison Javelin、Exploding Arrow 等级 1–20 共 580/4,200 行（本项 13.8095%，加权贡献 2.7619 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -112,7 +112,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 32.6667%（展示时为 32.7%）。
+当前总加权完成度为 32.7619%（展示时为 32.8%）。
 
 ## 黄金值准入规则
 
@@ -421,6 +421,5 @@ D2MOO `SrvDo02` 只负责根标枪发出 `poisonjavcloud`，`SrvDo03` 每原生�
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Exploding Arrow（技能 16）等级 1–20。需把根箭武器命中与
-爆炸子导弹的技能火焰包分开，按 D2MOO `SrvHit04/SrvHit01` 核对单目标一次命中和范围
-累计的所有权。
+继续 DMG-04，下一项优先审核 Slow Missiles（技能 17）等级 1–20，确认其无直接伤害并
+锁定原生状态/投射物速度修改公式。

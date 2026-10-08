@@ -681,3 +681,26 @@ D2MOO `MISSMODE_SrvDo02_PlagueJavelin_PoisonJavelin_PoisonTrap` 在根标枪移�
 毒抗穿透、毒长减免、PvP 与最终生命结算属于 DMG-08。本批矩阵的
 `expected_min/max` 与 `riiablo_actual_min/max` 记录完整持续期整数范围，三个 `*_total`
 字段保持空白，因为这里仍是一个范围而非单一总数。
+
+## DMG-04 第二十九个逐级实例：Exploding Arrow
+
+1.10f `Skills.txt#16` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=explodingarrow`、
+`SrcDam=128`、`HitShift=8`，元素类型为 `fire`。火焰基值为 `2–6`，五段等级增量为
+`5/7/9/12/20` 和 `5/8/11/14/23`；`EDmgSymPerCalc` 读取 Fire Arrow 硬点并乘
+`par8`，本批固定协同为 0。
+
+D2MOO `MISSMODE_SrvHit04_ExplodingArrow_FreezingArrow_RoyalStrikeMeteorCenter` 在根箭命中时
+创建 `HitSubMissile[0]=explodingarrowexp2`，并把原技能 ID、等级和 owner 传给子导弹。
+`explodingarrowexp2` 使用
+`MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion`，从子导弹快照取得技能
+火焰包，再对半径内目标分发。根 `explodingarrow` 的 `SrcDam=128` 武器命中与子导弹技能
+火焰包是两个所有者，不能合并成一个 DMG-04 数值。
+
+零装备、零 Fire Arrow 硬点时，单个爆炸子导弹对单个目标的一次抗性前火焰范围从等级 1
+的 `2–6` 增长到等级 20 的 `129–149`。riiablo 根导弹初始化会因 `pSrvHitFunc=4` 排除技能
+元素包，`MissileDamageResolver.initializeSkillArea` 再为 `explodingarrowexp2` 建立纯火焰
+快照；`ExplodingArrowGoldenDamageTest` 用独立常量逐级锁定两段所有权和生产输出。
+
+固定武器命中留给 DMG-06；爆炸半径、目标数、多目标累计和整次施法总量留给 DMG-07；
+Fire Mastery、抗性、穿透、吸收、PvP 和最终生命扣减留给 DMG-08。范围型单目标伤害的
+三个 `*_total` 字段保持空白。
