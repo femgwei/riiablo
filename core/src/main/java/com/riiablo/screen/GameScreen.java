@@ -1491,11 +1491,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     if (socket == null) {
       mapManager.createEntities();
-    } else {
-      // D2Common creates river water and its ambient markers only in the
-      // client DRLG. They have no D2Game entity to arrive over the socket.
-      mapManager.createClientPresentationEntities();
     }
+    // D2Common creates river water and its ambient markers only in the
+    // client DRLG. They have no D2Game entity to arrive over the socket, and
+    // must not wait for the server-style RoomEx preset-unit activation used
+    // by local games. Materialize them eagerly for both local and network
+    // clients; per-object creationStatus keeps the local pass idempotent.
+    mapManager.createClientPresentationEntities();
 
     engine.getSystem(Box2DPhysics.class).createBodies();
 
