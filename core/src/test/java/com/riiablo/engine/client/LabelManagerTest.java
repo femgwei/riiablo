@@ -23,6 +23,13 @@ class LabelManagerTest {
   }
 
   @Test
+  void groundLabelLayoutOnlyRunsForAltOverlayWithMultipleItems() {
+    assertFalse(LabelManager.shouldLayoutGroundLabels(false, 2));
+    assertFalse(LabelManager.shouldLayoutGroundLabels(true, 1));
+    assertTrue(LabelManager.shouldLayoutGroundLabels(true, 2));
+  }
+
+  @Test
   void hoveredDecorativeObjectsDoNotShowNames() {
     assertFalse(LabelManager.shouldDisplayLabel(true, false, false, true, false));
     assertTrue(LabelManager.shouldDisplayLabel(true, false, false, true, true));
@@ -47,5 +54,26 @@ class LabelManagerTest {
 
     assertFalse(placed.overlaps(occupied.first()));
     assertEquals(14, Math.abs(placed.y - occupied.first().y));
+  }
+
+  @Test
+  void denseGroundLabelsKeepSeparatingBeyondTheInitialSearchRings() {
+    Array<Rectangle> occupied = new Array<>();
+    for (int i = 0; i < 18; i++) {
+      Rectangle placed = LabelManager.findGroundLabelPosition(
+          160, 100, 40, 12, occupied, 0, 0, 320, 200);
+      for (Rectangle previous : occupied) {
+        assertFalse(overlapsWithGap(placed, previous),
+            "label " + i + " overlaps a previously placed label");
+      }
+      occupied.add(placed);
+    }
+  }
+
+  private static boolean overlapsWithGap(Rectangle a, Rectangle b) {
+    return a.x < b.x + b.width + 2
+        && a.x + a.width + 2 > b.x
+        && a.y < b.y + b.height + 2
+        && a.y + a.height + 2 > b.y;
   }
 }

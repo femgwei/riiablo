@@ -125,7 +125,11 @@ public class LabelManager extends IteratingSystem {
    * remain fixed and act as obstacles for item labels.
    */
   private void layoutGroundLabels() {
-    if (groundLabels.size == 0) return;
+    // A hovered item is intentionally left at its native position.  Native
+    // Diablo II only resolves collisions for the Alt overlay, where several
+    // ground labels are shown at once; moving a single hovered label makes the
+    // tooltip appear to drift away from the item under the cursor.
+    if (!shouldLayoutGroundLabels(showGroundItems, groundLabels.size)) return;
 
     for (Actor label : labels) {
       if (containsGroundLabel(label)) continue;
@@ -174,7 +178,17 @@ public class LabelManager extends IteratingSystem {
     float verticalStep = Math.max(1f, height + LABEL_GAP);
     float horizontalStep = Math.max(1f, width + LABEL_GAP);
 
-    for (int ring = 0; ring <= MAX_LABEL_RING; ring++) {
+    // Twelve rings is enough for the usual drop cluster, but it is not enough
+    // when the labels are wide or the anchor is near a screen edge.  Extend
+    // the search to cover the whole viewport so a dense Alt overlay does not
+    // fall through to the overlapping fallback merely because the fixed ring
+    // limit was reached.
+    int viewportRings = (int) Math.ceil(
+        Math.max(maxX - minX, maxY - minY) / Math.max(1f, Math.min(horizontalStep, verticalStep)));
+    int maxRing = Math.max(MAX_LABEL_RING, viewportRings + occupied.size + 1);
+    float lastX = Float.NaN;
+    float lastY = Float.NaN;
+    for (int ring = 0; ring <= maxRing; ring++) {
       for (int row = -ring; row <= ring; row++) {
         for (int column = -ring; column <= ring; column++) {
           if (ring != 0 && Math.abs(row) != ring && Math.abs(column) != ring) continue;
@@ -185,6 +199,12 @@ public class LabelManager extends IteratingSystem {
               minX, Math.max(minX, maxX - width));
           float y = MathUtils.clamp(desiredY + row * verticalStep,
               minY, Math.max(minY, maxY - height));
+          // Clamping can collapse many ring coordinates to the same edge
+          // position.  Skip those duplicates instead of repeatedly testing
+          // the same blocked rectangle.
+          if (x == lastX && y == lastY) continue;
+          lastX = x;
+          lastY = y;
           Rectangle candidate = new Rectangle(x, y, width, height);
           if (overlapsAny(candidate, occupied)) continue;
 
@@ -222,5 +242,9 @@ public class LabelManager extends IteratingSystem {
       boolean showGroundItems, boolean object, boolean interactable) {
     if (groundItem) return hovered || showGroundItems;
     return hovered && (!object || interactable);
+  }
+
+  static boolean shouldLayoutGroundLabels(boolean showGroundItems, int groundLabelCount) {
+    return showGroundItems && groundLabelCount > 1;
   }
 }

@@ -264,6 +264,19 @@ public class CursorMovementSystem extends BaseSystem {
       return true;
     }
 
+    // A held item changes the meaning of a world click from "interact with
+    // whatever is under the cursor" to "drop this item here".  Consume that
+    // action before HoveredManager can resolve a ground item at the same point;
+    // otherwise one click first picks up the old item and then drops the held
+    // item, which is not how the native client behaves.
+    if (shouldDropHeldItemOnWorldClick(
+        Riiablo.cursor != null && Riiablo.cursor.getItem() != null,
+        hit1 != null || hit2 != null)) {
+      itemController.cursorToGround();
+      requireRelease = true;
+      return true;
+    }
+
     long age = Math.max(0L, TimeUtils.millis() - click.capturedAtMillis);
     long consumedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
     long tickDelay = inputTickDelay(click.observedTick, consumedTick);
@@ -373,6 +386,10 @@ public class CursorMovementSystem extends BaseSystem {
   static long inputTickDelay(long capturedTick, long consumedTick) {
     if (capturedTick <= 0L || consumedTick <= 0L) return -1L;
     return Math.max(0L, consumedTick - capturedTick);
+  }
+
+  static boolean shouldDropHeldItemOnWorldClick(boolean cursorHasItem, boolean stageHit) {
+    return cursorHasItem && !stageHit;
   }
 
   private void updateLeft() {

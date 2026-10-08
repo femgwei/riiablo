@@ -63,6 +63,13 @@ class CursorMovementSystemTest {
   }
 
   @Test
+  void heldItemDropWinsOnlyForWorldClicks() {
+    assertTrue(CursorMovementSystem.shouldDropHeldItemOnWorldClick(true, false));
+    assertFalse(CursorMovementSystem.shouldDropHeldItemOnWorldClick(true, true));
+    assertFalse(CursorMovementSystem.shouldDropHeldItemOnWorldClick(false, false));
+  }
+
+  @Test
   void explicitThrowIsNotLimitedByMeleeRangeAdder() {
     assertTrue(CursorMovementSystem.canStartExplicitThrow(true, true, 60));
     assertFalse(CursorMovementSystem.canStartExplicitThrow(false, true, 60));
