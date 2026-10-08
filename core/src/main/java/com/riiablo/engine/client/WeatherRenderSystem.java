@@ -64,7 +64,6 @@ public final class WeatherRenderSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected RenderSystem renderer;
-  protected Map map;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -80,10 +79,11 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
+    Map worldMap = renderer.getMap();
     int src = renderer.getSrc();
     Map.Zone zone = src >= 0 && mMapWrapper.has(src) ? mMapWrapper.get(src).zone : null;
-    if (zone == null && src >= 0 && mPosition.has(src)) {
-      zone = map.getZone(mPosition.get(src).position);
+    if (zone == null && worldMap != null && src >= 0 && mPosition.has(src)) {
+      zone = worldMap.getZone(mPosition.get(src).position);
     }
     Levels.Entry level = zone == null ? null : zone.level;
     Mode eligibleMode = modeFor(level);
@@ -91,7 +91,8 @@ public final class WeatherRenderSystem extends BaseSystem {
     float intensity;
     if (controlMode == ControlMode.AUTO) {
       if (weatherCycles == null) {
-        weatherCycles = new WeatherCycles(WEATHER_CYCLE_SEED ^ map.seed());
+        weatherCycles = new WeatherCycles(
+            WEATHER_CYCLE_SEED ^ (worldMap == null ? 0L : worldMap.seed()));
       }
       WeatherCycle weatherCycle = weatherCycles.forLevel(level, eligibleMode);
       if (weatherCycle == null) {
