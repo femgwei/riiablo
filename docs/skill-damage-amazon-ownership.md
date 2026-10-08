@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow、Valkyrie、Pierce 与 Lightning Strike 已完成等级 1–20 基础审计；580/600 个 Amazon
+  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow、Valkyrie、Pierce、Lightning Strike 与 Lightning Fury 已完成等级 1–20 基础审计；600/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -326,7 +326,13 @@ Lightning Strike（34）等级 1–20 已按“首个近战目标或任一链段
 `1–295`；原版有限随机不含上界。`Calc1=20` 同时作为近战增强物理百分比和链搜索范围，
 `Calc2=ln34` 产生 2–21 的链跳预算，但目标数量不能乘入单目标黄金值。
 
-当前 Amazon 的 DMG-04 基础行已完成 580/600；下一项审核 Lightning Fury（技能 35）。
+Lightning Fury（35）等级 1–20 已按“根标枪的技能闪电分量或任一 `furylightning`
+子弹对单个目标的一份技能闪电包，零武器伤害、零硬点协同、抗性前”批准。规范 getter
+范围从 `1–40` 增长到 `1–580`；`Calc1=ln12` 产生 2–21 枚分裂弹预算，
+`AuraRange=par3` 固定为 15 格。根标枪武器包、合格目标数与整次施法总量留给
+DMG-06/07/08。
+
+Amazon 的 DMG-04 基础行已完成 600/600；下一项回到 Sorceress 的 Warmth（技能 37）。
 
 ## Dopplezon（技能 28）DMG-04
 

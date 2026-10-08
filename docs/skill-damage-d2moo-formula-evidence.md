@@ -1130,3 +1130,26 @@ riiablo 的近战路径通过 `MissileDamageResolver.skillElementalDamage` 取�
 `MissileCollisionSystem` 为每个链段保存相同技能快照。`LightningStrikeGoldenDamageTest`
 锁定全部 20 级规范范围、零协同、20 格范围及 2–21 跳预算。完整武器包、20% 增强物理、
 命中随机、链路目标集合与施法总量留给 DMG-06/07；抗性和最终结算留给 DMG-08。
+
+## DMG-04 第四十九个逐级实例：Lightning Fury
+
+Lightning Fury 的根标枪技能闪电分量和每个 `furylightning` 子弹使用相同技能曲线。
+1.10f `Skills.txt#35` 使用 `SrvStFunc=4`、`SrcDam=128`、`SrvMissile=lightningfury`、
+`HitShift=8`，元素类型为 `ltng`，`EMin/EMax=1–40`，最大值五段增量为
+`20/30/40/50/50`；`EDmgSymPerCalc` 读取 Charged Strike、Lightning Bolt、Power Strike、
+Lightning Strike 硬点并乘 `par8`，本批协同固定为 0。等级 1–20 单个技能闪电包的规范
+getter 范围为 `1–40` 至 `1–580`，矩阵行 582–601 的 expected/actual 与 delta=0 已记录。
+
+D2MOO `MISSMODE_SrvHit20_LightningFury`（`MissMode.cpp:3056`）在根标枪命中后读取
+`HitSubMissile[0]=furylightning`。若 `HitPar[0/1]` 为 0，则分别使用
+`AuraRange=par3` 的 15 格范围和 `Calc1=ln12` 的 2–21 枚上限；随后
+`MISSMODE_LightningFury_AuraCallback` 为每个合格目标创建继承 owner、技能 ID 和等级的
+子弹。1.10f 实际 `AuraFilter` 字段为 `0xA583`；源码中的 `0xA783` 只是在数据字段为 0
+时使用的回退值，不能反过来覆盖真实表值。
+
+根 `lightningfury` 通过 `SrcDam=128` 同时拥有完整武器包和技能闪电，子
+`furylightning` 只快照技能元素包。riiablo 的 `initializeSkill` 与
+`initializeSkillArea` 分别覆盖这两个所有者，`MissileCollisionSystem` 再按原生范围、
+筛选和数量创建子弹。`LightningFuryGoldenDamageTest` 锁定全部 20 级根/子闪电快照、
+零协同、15 格范围及 2–21 枚预算。武器值、随机样本、合格目标数、碰撞与施法总量留给
+DMG-06/07；抗性和最终结算留给 DMG-08。
