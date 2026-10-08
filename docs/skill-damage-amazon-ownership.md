@@ -16,7 +16,7 @@
 - Inner Sight 原有的线性防御削减差异已在 DMG-04 中按 1.10f 数据与 D2MOO 调用链修复；
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
-  Dodge 与 Power Strike 已完成等级 1–20 基础审计；180/600 个 Amazon
+  Dodge、Power Strike 与 Poison Javelin 已完成等级 1–20 基础审计；200/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -131,4 +131,12 @@ Power Strike（14）等级 1–20 已按“单次成功近战记录中的技能�
 逐级一致。D2MOO `SrvSt06` 只在命中成功后调用元素伤害 roll，并把结果保存在按
 `SrcDam=128` 建立的同一 combat record；`SrvDo002` 在关键帧消费该记录并扣耐久。
 武器物理包、`Calc1` 增强物理、运行时排除 canonical 最大值的随机结果和整份记录总量留给
-DMG-06，最终元素结算留给 DMG-08。下一项优先审核 Poison Javelin（15）。
+DMG-06，最终元素结算留给 DMG-08。
+
+Poison Javelin（15）等级 1–20 已按“单个 `poisonjavcloud` 对单个目标的完整持续期毒伤、
+零装备、零 Plague Javelin 硬点、抗性前”批准。1.10f 的 `HitShift=0` 使 `Skills.txt`
+元素 getter 直接成为 8.8 每帧 fixed rate：等级 1 为 `32–48`，等级 20 为 `592–656`；
+持续时间从 200 增长到 1150 帧，完整持续期整数总量从 `25–37` 增长到 `2659–2946`，
+20 个等级的 `delta_min/max` 均为 0。`SrvDo02` 发出移动 `poisonjavcloud`，`SrvDo03`
+每原生帧碰撞；根标枪武器命中、云数量/覆盖/重叠/刷新留给 DMG-06/07，毒抗和最终结算
+留给 DMG-08。下一项优先审核 Exploding Arrow（16）。

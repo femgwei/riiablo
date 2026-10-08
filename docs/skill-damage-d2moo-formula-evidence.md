@@ -657,3 +657,27 @@ riiablo `Actioneer.prepareAmazonElementalStrike` 使用
 记录；关键帧只消费一次。`PowerStrikeGoldenDamageTest` 用独立常量锁定全部 20 级、原版
 表字段、零协同和生产 resolver 输出，`AmazonMeleeSkillLifecycleTest` 锁定单记录消费与成功
 命中后才扣耐久。本轮无需生产修复。
+
+## DMG-04 第二十八个逐级实例：Poison Javelin
+
+1.10f `Skills.txt#15` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=poisonjav`、
+`SrcDam=128`、`HitShift=0`，元素类型为 `pois`。毒素基值为 `32–48`，五段等级增量为
+`16/32/48/64/96` 和 `16/36/52/68/84`；长度基值为 200 帧，`ELevLen=50|50|50`。
+`EDmgSymPerCalc` 只读取 Plague Javelin 硬点，本批固定为 0。
+
+D2MOO `MISSMODE_SrvDo02_PlagueJavelin_PoisonJavelin_PoisonTrap` 在根标枪移动期间按
+`SrvCalc` 创建 `poisonjavcloud` 子导弹；`MISSMODE_SrvDo03_PoisonCloud_Blizzard_ThunderStorm_HandOfGod`
+再把子导弹交给通用碰撞路径。子导弹自身 `pSrvDoFunc=3`，因此每个原生游戏帧执行碰撞，
+而不是把 `DamageRate=0` 当作 tick 间隔。毒云的根标枪武器命中不并入本批总量。
+
+由于 `HitShift=0`，D2Common 的元素 getter 结果就是原生 8.8 每帧固定速率。等级 1–20
+的最小/最大速率固定值分别为 `32..592` 与 `48..656`；持续时间为 `200..1150` 帧。
+单个 `poisonjavcloud` 对单个目标完整持续期的整数总伤害按
+`floor(rateFixed * durationFrames / 256)`，范围从等级 1 的 `25–37` 到等级 20 的
+`2659–2946`。`PoisonJavelinGoldenDamageTest` 同时锁定 Skills/Missiles 字段、速率、
+持续时间、生产 `fixedPoisonRate` 快照和独立总量常量。
+
+毒云数量、轨迹覆盖、重叠目标、重复施法刷新/覆盖和根标枪武器包属于 DMG-06/07；毒抗、
+毒抗穿透、毒长减免、PvP 与最终生命结算属于 DMG-08。本批矩阵的
+`expected_min/max` 与 `riiablo_actual_min/max` 记录完整持续期整数范围，三个 `*_total`
+字段保持空白，因为这里仍是一个范围而非单一总数。
