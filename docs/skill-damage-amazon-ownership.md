@@ -17,7 +17,7 @@
   没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑。
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
-  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate 与 Charged Strike 已完成等级 1–20 基础审计；400/600 个 Amazon
+  Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike 与 Plague Javelin 已完成等级 1–20 基础审计；420/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -238,4 +238,21 @@ D2MOO `SKILLS_SrvSt06_PowerStrike_ChargedStrike`（`SkillAma.cpp:80`）先为近
 `SKILLS_SrvDo011_ChargedStrike`（`SkillAma.cpp:657`）消耗耐久并从命中目标创建每枚独立的
 `chargedstrikebolt`。通用 `MISSILE_CalculateDamageData` 读取 `SKILLS_GetMin/MaxElemDamage`
 的 Charged Strike 曲线，因此近战记录和闪电弹不能合并为一个伤害包。武器近战记录、弹数、
-碰撞数和最终结算留给 DMG-06/07/08。下一项优先审核 Plague Javelin（25）。
+碰撞数和最终结算留给 DMG-06/07/08。
+
+Plague Javelin（25）等级 1–20 已按“单个 `plaguejavcloud` 对单个目标的完整持续期毒伤、
+零装备、零 Poison Javelin 硬点、抗性前”批准。`HitShift=3` 使原生 8.8 fixed/frame 速率从
+`80–128` 增长到 `1824–1872`，持续时间从 75 增长到 265 游戏帧，完整持续期整数总量从
+`23–37` 增长到 `1888–1937`，20 个等级的 `delta_min/max` 均为 0；三个 `*_total` 字段保持
+空白，因为最小/最大范围不是一个单一总值。
+
+D2MOO 的通用 `D2GAME_SKILLS_Handler_6FD12BA0` 创建 `plaguejavelin` 根导弹；
+`MISSMODE_SrvHit02_PlagueJavelin_PoisonPotion` 读取 `HitSubMissile[0]` 和
+`HitPar[0..2]=1,2,3`，由 `MISSMODE_CreatePoisonCloudHitSubmissiles` 发出 8 个主环与 15 个
+交错子云，共 23 个 `plaguejavcloud`。每个云由
+`MISSMODE_SrvDo03_PoisonCloud_Blizzard_ThunderStorm_HandOfGod` 每原生帧进入通用碰撞路径；
+`SKILLS_GetMin/MaxElemDamage` 和 `SKILLS_GetElementalLength` 决定每云的 rate/duration，
+`MISSILE_CalculateDamageData` 负责把技能元素快照安装到导弹。根标枪武器命中属于 DMG-06，
+23 云的轨迹、覆盖、重叠和刷新属于 DMG-07，毒抗和最终结算属于 DMG-08。
+
+下一项优先审核 Strafe（26）。

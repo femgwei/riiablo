@@ -911,3 +911,28 @@ Charged Strike 的技能闪电曲线；导弹表自身不拥有伤害字段。
 留空以避免把碰撞数量压成一个值。`ChargedStrikeGoldenDamageTest` 锁定 Skills.txt
 字段、Calc1 弹数、零协同曲线和 `chargedstrikebolt` 生产快照；近战记录、弹数/碰撞数、
 抗性和最终结算留给 DMG-06/07/08。
+
+## DMG-04 第三十八个逐级实例：Plague Javelin
+
+1.10f `Skills.txt#25` 使用 `SrvStFunc=4`、`SrvDoFunc=0`、`SrvMissile=plaguejavelin`、
+`SrcDam=128`、`HitShift=3`、`ToHit=30`、`LevToHit=9`，元素类型为 `pois`。毒素基值为
+`10–16`，五段等级增量均为 `6/12/20/40/60`；长度基值为 75 帧，`ELevLen=10|10|10`；
+`EDmgSymPerCalc=(skill('Poison Javelin'.blvl))*par8`，本批把 Poison Javelin 硬点固定为 0。
+
+D2MOO `D2GAME_SKILLS_Handler_6FD12BA0` 创建根 `plaguejavelin`。根导弹的
+`MISSMODE_SrvHit02_PlagueJavelin_PoisonPotion` 读取 `HitSubMissile[0]=plaguejavcloud`
+和 `HitPar[0..2]=1,2,3`，调用 `MISSMODE_CreatePoisonCloudHitSubmissiles`：`HitPar[1]=2`
+按 16 项原生环偏移发出 8 个主云，`HitPar[0]=1` 再发出 15 个交错云，共 23 个移动子云。
+每个子云随后由 `MISSMODE_SrvDo03_PoisonCloud_Blizzard_ThunderStorm_HandOfGod` 每原生帧
+进入通用碰撞路径；云的 `DamageRate=0` 不是 tick 间隔。
+
+D2Common `SKILLS_GetMinElemDamage` / `SKILLS_GetMaxElemDamage` 先计算等级曲线，再按
+`HitShift=3` 左移得到原生 8.8 fixed/frame 速率。等级 1–20 的最小/最大速率为
+`80..1824` 与 `128..1872`，长度为 `75..265` 游戏帧。单个 `plaguejavcloud` 对单个目标
+完整持续期的整数总量按 `floor(rateFixed * durationFrames / 256)`，范围从 `23–37` 到
+`1888–1937`。`MISSILE_CalculateDamageData` 负责技能导弹分支的快照组合，但根标枪的
+`SrcDam=128` 武器命中不属于本批云总量。
+
+`PlagueJavelinGoldenDamageTest` 锁定 Skills/Missiles 字段、23 云的原生 fan-out、8.8
+rate、游戏帧持续时间、完整持续期整数范围和零协同生产快照。根武器包、云数量/轨迹/覆盖/
+重叠/刷新留给 DMG-06/07；毒抗、毒长减免、Pierce、PvP 和最终生命结算留给 DMG-08。
