@@ -185,7 +185,7 @@ public final class WeatherRenderSystem extends BaseSystem {
       if (hasRainFringe(shade)) {
         float offsetX = -particles.windY;
         float offsetY = particles.windX;
-        shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.30f);
+        shapes.setColor(0.70f * shade, 0.72f * greenShade, 0.74f * shade, 0.50f);
         shapes.line(
             x + offsetX, y + offsetY,
             x + deltaX + offsetX, y + deltaY + offsetY);
