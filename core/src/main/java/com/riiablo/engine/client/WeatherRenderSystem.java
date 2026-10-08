@@ -247,7 +247,7 @@ public final class WeatherRenderSystem extends BaseSystem {
     stopRainAmbience();
   }
 
-  /** Retains an independent, paused-while-away weather cycle for each level. */
+  /** Shares one weather cycle across every Rain-enabled level in an act. */
   static final class WeatherCycles {
     private final long seed;
     private final HashMap<Integer, WeatherCycle> cycles = new HashMap<>();
@@ -259,17 +259,17 @@ public final class WeatherRenderSystem extends BaseSystem {
     WeatherCycle forLevel(Levels.Entry level, Mode eligibleMode) {
       if (level == null || eligibleMode == Mode.NONE) return null;
 
-      WeatherCycle cycle = cycles.get(level.Id);
+      WeatherCycle cycle = cycles.get(level.Act);
       if (cycle == null) {
-        cycle = new WeatherCycle(seedForLevel(seed, level.Id));
+        cycle = new WeatherCycle(seedForAct(seed, level.Act));
         cycle.configure(eligibleMode);
-        cycles.put(level.Id, cycle);
+        cycles.put(level.Act, cycle);
       }
       return cycle;
     }
 
-    static long seedForLevel(long seed, int levelId) {
-      return seed ^ (levelId * 0x9E3779B97F4A7C15L);
+    static long seedForAct(long seed, int act) {
+      return seed ^ (act * 0x9E3779B97F4A7C15L);
     }
   }
 

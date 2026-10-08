@@ -211,29 +211,34 @@ class WeatherRenderSystemTest {
   }
 
   @Test
-  void levelsKeepIndependentWeatherCyclesWhileAway() {
+  void rainEnabledLevelsInTheSameActShareOneWeatherCycle() {
     WeatherRenderSystem.WeatherCycles cycles =
         new WeatherRenderSystem.WeatherCycles(10L);
     Levels.Entry town = rainyLevel(1);
     Levels.Entry stonyField = rainyLevel(4);
+    Levels.Entry desert = rainyLevel(40);
+    desert.Act = 1;
 
     WeatherRenderSystem.WeatherCycle townCycle =
         cycles.forLevel(town, WeatherRenderSystem.Mode.RAIN);
     WeatherRenderSystem.WeatherCycle fieldCycle =
         cycles.forLevel(stonyField, WeatherRenderSystem.Mode.RAIN);
-    assertNotSame(townCycle, fieldCycle);
+    WeatherRenderSystem.WeatherCycle desertCycle =
+        cycles.forLevel(desert, WeatherRenderSystem.Mode.RAIN);
+    assertSame(townCycle, fieldCycle);
+    assertNotSame(townCycle, desertCycle);
     assertNotEquals(
-        WeatherRenderSystem.WeatherCycles.seedForLevel(10L, town.Id),
-        WeatherRenderSystem.WeatherCycles.seedForLevel(10L, stonyField.Id));
+        WeatherRenderSystem.WeatherCycles.seedForAct(10L, town.Act),
+        WeatherRenderSystem.WeatherCycles.seedForAct(10L, desert.Act));
 
-    int fieldTicks = fieldCycle.remainingTicks;
     townCycle.advanceTicks(townCycle.remainingTicks + 1);
 
     assertEquals(WeatherRenderSystem.WeatherCycle.Phase.FADE_IN, townCycle.phase);
     assertTrue(townCycle.intensity > 0f);
-    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.DRY, fieldCycle.phase);
-    assertEquals(fieldTicks, fieldCycle.remainingTicks);
-    assertEquals(0f, fieldCycle.intensity);
+    assertEquals(townCycle.phase, fieldCycle.phase);
+    assertEquals(townCycle.remainingTicks, fieldCycle.remainingTicks);
+    assertEquals(townCycle.intensity, fieldCycle.intensity);
+    assertEquals(WeatherRenderSystem.WeatherCycle.Phase.DRY, desertCycle.phase);
     assertSame(townCycle, cycles.forLevel(town, WeatherRenderSystem.Mode.RAIN));
   }
 
