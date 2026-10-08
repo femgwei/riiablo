@@ -986,7 +986,25 @@ D2MOO 通用技能处理器先创建 `immolationarrow` 父导弹。其
 `expected_min/max` 与生产快照逐级一致，`expected_total` 留空以避免把一次施法的范围目标
 集合压成单一总值。
 
-## DMG-04 第四十一个逐级实例：Dopplezon
+## DMG-04 第四十二个逐级实例：Evade
+
+Evade 不拥有输出伤害包。1.10f `Skills.txt#29` 使用 `SrvDoFunc=0`、`SrcDam=0`，没有
+物理/元素固定伤害、导弹或元素长度；`PassiveState=evade`、`PassiveStat=passive_evade`、
+`PassiveCalc=dm12`，`Param1=10`、`Param2=65`，所以等级 1–20 的原生曲线为
+`18,25,30,34,37,40,42,44,46,47,49,50,51,52,53,54,54,55,55,56`%。矩阵行 462–481
+把三组 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确留空为 N/A。
+
+D2MOO 的被动刷新通过 `SKILLS_RefreshSkill` 读取 `dm12` 并把结果写入永久 `evade` 状态。
+`SUNITDMG_ApplyBlockOrDodge` 在移动单位的 incoming hit 上优先检查 Evade，成功后清除
+successful-hit，后续伤害不会填充；静止单位则继续适用盾牌格挡、Weapon Block 和 Avoid
+分支。Evade 不是攻击者的伤害修正，而是防御者的移动规避状态。
+
+riiablo 的 `AmazonSkills.getEvadeChance`、`applyPassiveState`、`DefenseCalculator` 和
+`CombatSystem` 复用同一 Skills.txt 状态/公式及移动攻击上下文。`EvadeGoldenDamageTest`
+锁定全部 20 级、原版字段、无伤害列和每级 `passive_evade` 状态贡献；随机边界、动画、
+静止上下文优先级和最终来袭伤害结算留给 DMG-08。
+
+## DMG-04 第四十三个逐级实例：Dopplezon
 
 1.10f `Skills.txt#28` 使用 `SrvStFunc=0`、`SrvDoFunc=15`、`Summon=dopplezon`、
 `PetType=dopplezon`、`PetMax=1` 和 `Summode=NU`。`SrcDam`、物理/元素伤害字段、

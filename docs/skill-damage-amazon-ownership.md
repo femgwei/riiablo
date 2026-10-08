@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe、Immolation Arrow 与 Dopplezon 已完成等级 1–20 基础审计；480/600 个 Amazon
+  Strafe、Immolation Arrow、Dopplezon 与 Evade 已完成等级 1–20 基础审计；500/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -279,7 +279,16 @@ DMG-06/07/08。
 速率；`ImmolationArrowGoldenDamageTest` 同时锁定即时曲线和周期速率，周期完整持续期与
 覆盖/重叠仍留在 DMG-07。
 
-下一项优先审核 Evade（技能 29）。
+Evade（29）等级 1–20 已按“永久被动移动规避概率，不拥有独立输出伤害包”批准；三组
+伤害 `expected_*`、`riiablo_actual_*` 和 `delta_*` 明确 N/A 并保持空白。1.10f
+`PassiveState=evade`、`PassiveStat=passive_evade`、`PassiveCalc=dm12`，`Param1=10`、
+`Param2=65` 产生 18%–56% 的等级曲线。
+
+D2MOO 被动刷新把结果写入永久状态。移动单位进入 `SUNITDMG_ApplyBlockOrDodge` 时优先
+检查 Evade；成功后清除 successful-hit，阻止后续伤害填充，静止单位则继续使用盾牌、
+Weapon Block 和 Avoid 等适用分支。riiablo `StateUpdater`、`DefenseCalculator` 与
+`CombatSystem` 使用同一 `passive_evade` 状态和移动攻击上下文。随机边界、动画及最终
+来袭伤害结算属于 DMG-08。
 
 ## Dopplezon（技能 28）DMG-04
 
