@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 最近完成技能提交：`2216933ced28bfaae67e48f9f10ecd471630b290`
-当前加权完成度：**31.8%**
+当前加权完成度：**31.9%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 380 行 `GOLDEN_APPROVED`，其余 3,820 行仍为
+- 4,200 行中已有 400 行 `GOLDEN_APPROVED`，其余 3,800 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.8% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 380 个逐级黄金行；不表示技能伤害正确率为 31.8%。
+- 当前 31.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 400 个逐级黄金行；不表示技能伤害正确率为 31.9%。
 
 ## 加权任务
 
@@ -88,8 +88,8 @@
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
     Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
-    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow 等级 1–20 共
-    380/4,200 行（本项 9.0476%，加权贡献 1.8095 个百分点）；
+    Blaze、Fire Wall、Inferno、Shiver Armor、Chilling Armor、Magic Arrow、Fire Arrow
+    等级 1–20 共 400/4,200 行（本项 9.5238%，加权贡献 1.9048 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -111,7 +111,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.8095%（展示时四舍五入为 31.8%）。
+当前总加权完成度为 31.9048%（展示时四舍五入为 31.9%）。
 
 ## 黄金值准入规则
 
@@ -265,6 +265,16 @@
   riiablo 通用导弹随机包含最大端点，现已把导弹物理和元素随机同步为 D2MOO
   `MISSMODE_RollDamageValue` 的排除上界；近战随机语义保持不变。协同组合归入 DMG-05，
   抗性、Cold Mastery 穿透、吸收和 PvP 归入 DMG-08。
+- Magic Arrow（技能 6）等级 1–20 已按“一枚 `magicarrow` 对单个目标的抗性前总整数
+  伤害”批准。无装备且 owner 武器伤害为 0 时，等级 1 为 1，等级 20 为 20；20 个等级的
+  `delta_min/max` 均为 0。`SrvDmg01` 的 `dl12=1%+(level-1)*1%` 只把物理通道的一部分
+  转为魔法，不改变本场景的总伤害。固定武器包与分通道定点精度归入 DMG-06，最终结算
+  归入 DMG-08。
+- Fire Arrow（技能 7）等级 1–20 已按“一枚 `firearrow` 对单个目标的一次抗性前火焰
+  命中”批准。无装备、owner 武器伤害为 0、Exploding Arrow 硬点为 0 时，等级 1 为
+  1–4，等级 20 为 63–70；20 个等级的 `delta_min/max` 均为 0。`SrvDmg01` 的
+  `dl12=3%+(level-1)*2%` 在本场景只会转换零物理包，因此不改变技能自身火焰曲线。
+  固定武器包的物理转火焰归入 DMG-06，抗性、穿透、吸收和 PvP 归入 DMG-08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -316,7 +326,9 @@
   `ChillingArmorGoldenDamageTest#levelOneToTwentyMatchesD2mooReturnMissileFormula`、
   `ChillingArmorGoldenDamageTest#nativeMissileRollTreatsGetterMaximumAsExclusive`、
   `NativeSorceressDefenseDataTest#shiverAndChillingArmorRetainDistinctNativeReactions`、
-  `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`。
+  `SorceressDefenseIntegrationTest#armorFamilyIsExclusiveAndDispatchesItsThreeNativeEvents`、
+  `MagicArrowGoldenDamageTest#levelOneToTwentyPreservesD2mooTotalAcrossMagicConversion`、
+  `FireArrowGoldenDamageTest#levelOneToTwentyMatchesD2mooFireCurveWithoutWeaponOrSynergy`。
 
 ## 可复现命令
 
@@ -338,7 +350,7 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Blizzard（技能 59）的等级 1–20 单枚落冰伤害，核对
-`SrvDo028` 中心控制器、`MISSMODE_SrvDo10_BlizzardCenter` 子弹生成、技能 ID/等级继承、
-Skills.txt 冷伤害与 cold 长度及 riiablo 当前生产路径。落冰数量、命中频率和整次施法总量
-保留在 DMG-07。
+继续 DMG-04，下一项优先审核 Inner Sight（技能 8）等级 1–20。它不产生直接伤害，需按
+准入规则明确记录 N/A，并核对 `SrvDo006`、目标状态、`AuraStatCalc` 分段防御削减曲线与
+riiablo 已登记的线性 fallback 差异；状态持续时间、范围和最终命中率影响分别留给后续
+行为与最终结算审计。

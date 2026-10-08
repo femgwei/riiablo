@@ -447,3 +447,26 @@ riiablo `MissileDamageResolver.initializeSkill` 同样组合技能曲线与武�
 物理转魔法时仍保留 8.8 小数，而 riiablo 的整数通道会延后不足 1 点的转换；固定武器包
 及该精度差异归入 DMG-06，物理/魔法抗性、穿透、吸收和 PvP 对分通道小数的影响归入
 DMG-08。
+
+## DMG-04 第二十个逐级实例：Fire Arrow
+
+Fire Arrow 的基础黄金单位是“一枚 `firearrow` 对单个目标的一次抗性前火焰命中”，场景
+固定为无装备、owner 武器最小/最大伤害均为 0，并且 Exploding Arrow 硬点为 0。1.10f
+`Skills.txt#7` 为 `SrcDam=128`、`HitShift=8`、`EType=fire`、`EMin=1`、`EMax=4`；
+最小值五段增量为 `2/3/6/12/24`，最大值为 `2/3/7/14/27`。协同公式为
+`(skill('Exploding Arrow'.blvl)) * par8`，本场景的协同输入为 0。按
+`SKILLS_GetMinElemDamage` 与 `SKILLS_GetMaxElemDamage` 的 8.8 定点曲线右移后，等级
+1–20 最小值为 `1,3,5,7,9,11,13,15,18,21,24,27,30,33,36,39,45,51,57,63`，
+最大值为 `4,6,8,10,12,14,16,18,21,24,27,30,33,36,39,42,49,56,63,70`。
+
+`MISSILE_CalculateDamageData` 先把技能火焰曲线与 `SrcDam=128` 的武器源包组合。命中时，
+`firearrow` 的 `SrvDmgFunc=1` 进入
+`MISSMODE_SrvDmg01_FireArrow_MagicArrow_ColdArrow`；其 `DmgCalc1=dl12`，参数为
+`dParam1=3`、`dParam2=2`，所以等级 1–20 会把 `3%+(level-1)*2%` 的物理伤害转入
+火焰通道。当前基础场景的武器物理包为 0，转换输入也为 0，因此不会改变技能自身的
+火焰范围。固定武器包下的转换值和定点精度属于 DMG-06。
+
+riiablo `MissileDamageResolver.initializeSkill` 从技能 7 的元素曲线建立同一份火焰快照；
+`FireArrowGoldenDamageTest` 锁定 1.10f 字段、`SrvDmgFunc=1`、`dl12` 参数、20 级独立
+常量、零物理通道和生产快照。等级 1 为 1–4，等级 20 为 63–70，全部 20 个等级的
+`delta_min/max` 均为 0。抗性、穿透、吸收和 PvP 最终结算不进入本批，保留在 DMG-08。

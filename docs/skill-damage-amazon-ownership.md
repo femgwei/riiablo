@@ -15,7 +15,8 @@
 - 5 项存在明确的 riiablo 差异：Inner Sight、Jab、Guided Arrow、Dopplezon、Valkyrie。
 - 没有用 dark-magic 或 1.14 数值覆盖用户已经验证的 Amazon 生产逻辑；本轮只登记有
   1.10f 数据和 D2MOO 调用链支持的差异。
-- Magic Arrow 已完成等级 1–20 基础总伤害审计；20/600 个 Amazon 技能—等级行获批。
+- Magic Arrow 与 Fire Arrow 已完成等级 1–20 基础伤害审计；40/600 个 Amazon
+  技能—等级行获批。
 
 ## 关键原版语义
 
@@ -74,7 +75,14 @@ Magic Arrow（6）等级 1–20 已按“无装备、owner 武器伤害为 0、�
 `DmgCalc1=dl12`、`dParam1=1`、`dParam2=1` 把 1%–20% 的物理伤害重新分配为魔法伤害，
 不会改变 8.8 定点总量。
 
-riiablo 生产快照的物理与魔法通道当前按整数保存，因此基础矩阵只批准与 D2MOO 一致的
-抗性前总整数范围；原版 8.8 小数通道分配、固定武器包、物理/魔法抗性及穿透分别留给
-DMG-06/08，不能从本批 `delta=0` 推断分通道最终结算已经完全等价。下一项优先审核
-Fire Arrow（7）。
+Fire Arrow（7）等级 1–20 已按“无装备、owner 武器伤害为 0、Exploding Arrow 硬点为
+0、单箭单目标、抗性前火焰伤害”批准。1.10f 的火焰曲线从等级 1 的 1–4 增长到等级
+20 的 63–70，20 个等级均与 `MissileDamageResolver.initializeSkill` 的生产快照一致。
+`firearrow` 同样使用 `SrvDmgFunc=1`；其 `DmgCalc1=dl12`、`dParam1=3`、`dParam2=2`
+会把 3%–41% 的物理包转换为火焰，但本批武器物理包为 0，所以不会改变上述结果。
+
+riiablo 生产快照的物理与魔法通道当前按整数保存，因此 Magic Arrow 基础矩阵只批准与
+D2MOO 一致的抗性前总整数范围；原版 8.8 小数通道分配、固定武器包，以及 Fire Arrow
+固定武器包的物理转火焰分别留给 DMG-06。物理/魔法/火焰抗性、穿透、吸收和 PvP 留给
+DMG-08，不能从本批 `delta=0` 推断分通道最终结算已经完全等价。下一项优先审核
+Inner Sight（8）。
