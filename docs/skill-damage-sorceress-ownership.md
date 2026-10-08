@@ -11,7 +11,9 @@
 - 30/30 个技能已逐项分类，ID 连续且无重复。
 - 20 个技能产生直接固定/随机伤害，1 个 Static Field 使用当前生命百分比，1 个 Hydra 通过召唤物间接造成伤害，4 个技能只修改其他伤害，4 个技能没有对外伤害。
 - 普通法术导弹的基准伤害通常由 `Skills.txt` 拥有。`Missiles.txt` 主要拥有飞行、碰撞、范围、父子导弹、周期与命中回调。D2MOO 的 `MISSILE_CalculateDamageData` 根据 missile 的 Skill/MissileSkill 选择技能表曲线，不能仅看导弹名判断数值所有者。
-- Blaze、Fire Wall、Meteor 的持续火焰必须保留 8.8 rate 与 `DamageRate` 语义；Meteor 的撞击和地面火焰要在后续黄金值中拆成不同场景。
+- Blaze、Fire Wall、Meteor 的持续火焰必须保留 8.8 rate 与 `DamageRate` 语义：
+  `SrvDo05` 每个游戏帧执行碰撞，`DamageRate` 只按 `value / 1024` 缩放平面 DR/MDR，
+  不是攻击间隔；Meteor 的撞击和地面火焰要在后续黄金值中拆成不同场景。
 - Static Field 不属于普通逐等级 min/max 曲线。它以 `calc1` 计算当前生命百分比，以 `calc2` 提供最小固定伤害，并受难度生命下限约束。
 - Enchant、Fire/Lightning/Cold Mastery 没有独立命中包。它们通过状态或被动属性改变后续伤害，因此后续黄金矩阵不能把它们伪装成 0–0 伤害技能。
 

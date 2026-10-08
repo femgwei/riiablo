@@ -96,6 +96,9 @@ D2MOO `D2Skills.cpp:2719` 的 `SKILLS_GetElementalLength` 只使用三个持续�
 - `ChargedBoltGoldenDamageTest`（DMG-04 第九批：技能 38，等级 1–20）
 - `ChainLightningGoldenDamageTest`（DMG-04 第十批：技能 53，等级 1–20）
 - `ThunderStormGoldenDamageTest`（DMG-04 第十一批：技能 57，等级 1–20）
+- `StaticFieldGoldenDamageTest`（DMG-04 第十二批：技能 42，等级 1–20）
+- `TelekinesisGoldenDamageTest`（DMG-04 第十三批：技能 43，等级 1–20）
+- `BlazeGoldenDamageTest`（DMG-04 第十四批：技能 46，等级 1–20）
 
 ## DMG-04 首个逐级实例：Fire Bolt
 
@@ -290,3 +293,30 @@ riiablo `ServerSkillSystem.applyTelekinesis` 现在复现单位目标门禁、�
 Lightning Mastery、抗性/免疫/吸收、PvP、生命扣减与死亡事件，并发出带闪电通道的
 missile-style `DamageEvent`，但不创建导弹实体。等级 1–20 的生产范围与独立黄金数组完全
 一致。物品拾取/移动、对象操作以及击退位移属于行为审计，不计入本次 DMG-04 数值批准。
+
+## DMG-04 第十四个逐级实例：Blaze
+
+Blaze 的黄金单位是“单个 `blaze` 地面导弹对单个目标在单个游戏帧内的 8.8 定点火焰
+伤害率”。1.10f `Skills.txt` 为 `HitShift=4`、`EMin=4`、`EMax=8`，最小值和最大值的
+五段增量均为 `2/3/4/6/9`，没有伤害协同。等级 1 的定点范围为 `64–128`，即
+0.25–0.5 生命/帧；等级 20 为 `928–992`，即 3.625–3.875 生命/帧。矩阵直接保存 8.8
+定点值，避免把小于 1 点的每帧伤害截断为 0。
+
+D2MOO `SKILLS_SrvDo023_Blaze_EnergyShield_SpiderLay` 安装 `STATE_BLAZE` 并保存技能 ID、
+等级和持续时间；`SKILLS_CreateBlazeMissile` 只在角色实际移动且不在城镇时创建地面导弹，
+并把技能 ID/等级传给导弹伤害计算。`MISSILE_CalculateDamageData` 对技能拥有的伤害调用
+`SKILLS_GetMin/MaxElemDamage(..., a4=1)`，因此 Fire Mastery 属于生产快照，但本批基础
+场景固定为 0，留到 DMG-05 单独审核。
+
+`MISSMODE_SrvDo05_FireWall_ImmolationFire_MeteorFire` 每个游戏帧执行碰撞，不读取
+`DamageRate` 作为等待帧数。`Missiles.cpp` 把该字段存入 `STAT_DAMAGE_FRAMERATE`，
+`MissMode.cpp` 再复制到伤害包的 `dwPiercePct`，最后 `SUnitDmg.cpp` 以
+`DamageRate / 1024` 缩放平面 DR/MDR。Blaze 的 1.10f `DamageRate=0`。`SrvDmg03` 的
+`dParam1 / 128` 只控制受击反应概率，也不改变碰撞频率。
+
+riiablo `StateUpdater.processBlazeTrail` 已按实际移动生成 `tickInterval=1` 的地面导弹，
+`MissileDamageResolver.initializeSorceressFireArea` 保存逐级 8.8 火焰率，
+`MissileCollisionSystem.resolveFixedElementalRate` 在首个游戏帧即可对重叠目标结算。
+`BlazeGoldenDamageTest` 比较 20 级独立常量与生产快照；专项数据和 ECS 测试同时锁定
+`DamageRate=0`、逐帧碰撞和首帧实际扣血。多个 trail 重叠、导弹生命周期、整段状态
+总伤害归入 DMG-07，抗性、吸收和 PvP 归入 DMG-08。

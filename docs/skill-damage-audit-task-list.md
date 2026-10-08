@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-代码基线：`e24607fe`
-当前加权完成度：**31.2%**
+代码基线：`161feb56`
+当前加权完成度：**31.3%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -51,11 +51,11 @@
   `IMPLEMENTED_TESTED` 117 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 37 项。新增 Telekinesis 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 260 行 `GOLDEN_APPROVED`，其余 3,940 行仍为
+- 4,200 行中已有 280 行 `GOLDEN_APPROVED`，其余 3,920 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前 31.2% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 260 个逐级黄金行；不表示技能伤害正确率为 31.2%。
+- 当前 31.3% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 280 个逐级黄金行；不表示技能伤害正确率为 31.3%。
 
 ## 加权任务
 
@@ -87,8 +87,8 @@
     不能用零伪装成“不适用”。
   - 毒素必须同时记录 rate、duration 和 total；多段技能必须区分单段和整次施法总量。
   - 已批准 Fire Bolt、Ice Bolt、Fire Ball、Ice Blast、Glacial Spike、Lightning、Nova、
-    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis
-    等级 1–20 共 260/4,200 行（本项 6.1905%，加权贡献 1.2381 个百分点）；
+    Frost Nova、Charged Bolt、Chain Lightning、Thunder Storm、Static Field、Telekinesis、
+    Blaze 等级 1–20 共 280/4,200 行（本项 6.6667%，加权贡献 1.3333 个百分点）；
     DMG-04 状态为进行中。
 
 - [ ] **DMG-05（15%）全部硬点协同组合**
@@ -110,7 +110,7 @@
   - 校验 210 技能、所有已定义等级/场景、证据链接、测试引用和未决项均可追溯。
 
 完成度按各项中已达到准入规则的最小可核查单元累计；未达到准入规则的草稿不计入。
-当前总加权完成度为 31.2381%（展示时四舍五入为 31.2%）。
+当前总加权完成度为 31.3333%（展示时四舍五入为 31.3%）。
 
 ## 黄金值准入规则
 
@@ -220,6 +220,13 @@
   记录 `SKILLS_GetMin/MaxElemDamage` 的规范范围。riiablo 新增 `SrvDo021` 单位目标路径，
   覆盖敌对、距离、城镇、抗性、免疫、吸收、PvP 和无导弹语义。击退概率与物品/对象
   交互是行为边界，不计入本批 DMG-04 黄金伤害。
+- Blaze（技能 46）等级 1–20 已按“单个地面导弹、单个目标、单个游戏帧的 8.8 火焰
+  伤害率”批准。等级 1 为 `64–128` fixed（0.25–0.5 生命/帧），等级 20 为
+  `928–992` fixed（3.625–3.875 生命/帧）；20 个等级的 `delta_min/max` 均为 0。
+- D2MOO `SrvDo023` 安装 Blaze 状态，实际移动时创建继承技能 ID/等级的 `blaze`；
+  `SrvDo05` 每个游戏帧执行碰撞。`DamageRate` 写入 `STAT_DAMAGE_FRAMERATE` 并最终按
+  `DamageRate / 1024` 缩放平面 DR/MDR，不控制伤害间隔。Fire Mastery、抗性、吸收、
+  PvP、多个 trail 重叠、生命周期和整段总伤害分别延后到 DMG-05/07/08。
 - `expected_total` 对单次命中的范围型伤害不适用，保持空白并在 `candidate_unit` 中标明
   N/A；禁止把最小值、最大值或二者之和伪装成“总伤害”。
 - 自动化证据：
@@ -254,7 +261,11 @@
   `TelekinesisGoldenDamageTest#nativeLimitedRandomRollTreatsMaximumAsExclusive`、
   `SorceressTelekinesisIntegrationTest#monsterDamageUsesLightningMasteryAndCreatesNoMissile`、
   `SorceressTelekinesisIntegrationTest#resistanceImmunityAndAbsorbUseTheNativeElementalPipeline`、
-  `SorceressTelekinesisIntegrationTest#hostilePlayerUsesPvpScalarWhileInvalidTargetsAreSkipped`。
+  `SorceressTelekinesisIntegrationTest#hostilePlayerUsesPvpScalarWhileInvalidTargetsAreSkipped`、
+  `BlazeGoldenDamageTest#levelOneToTwentyMatchesD2mooPerFrameFixedPointFormula`、
+  `NativeSorceressFireAreaDataTest#blazeUsesTimedStateAndFractionalGroundMissile`、
+  `SorceressFireAreaIntegrationTest#blazeStateEmitsOnlyAfterActualMovementAndKeepsFractionalDamage`、
+  `SorceressFireAreaIntegrationTest#blazeTrailDamagesAnOverlappingTargetOnItsFirstGameFrame`。
 
 ## 可复现命令
 
@@ -276,6 +287,6 @@ $env:SKILL_DAMAGE_AUDIT_COMMIT = (git rev-parse --short HEAD)
 
 ## 下一执行项
 
-继续 DMG-04，下一项优先审核 Blaze（技能 46）的等级 1–20 每帧火焰伤害，严格区分
-8.8 rate、`DamageRate`、单帧伤害与整段持续伤害，并核对 `SKILLS_SrvDo023` 状态安装、
-Blaze trail missile 的技能等级继承及 riiablo 当前生产路径。
+继续 DMG-04，下一项优先审核 Fire Wall（技能 51）的等级 1–20 每帧火焰伤害，沿用
+Blaze 已确认的 8.8 rate 与 `DamageRate` 平面减伤缩放语义，并核对 `SrvDo024` 双 maker、
+中心段、子段技能等级继承及 riiablo 当前生产路径。

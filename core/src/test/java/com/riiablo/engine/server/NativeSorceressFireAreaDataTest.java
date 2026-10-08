@@ -42,6 +42,8 @@ class NativeSorceressFireAreaDataTest extends RiiabloTest {
     assertEquals(90, row.Range);
     assertEquals(25, row.LevRange);
     assertEquals(0, row.Vel);
+    assertEquals(0, row.DamageRate,
+        "Blaze resolves collision every frame; DamageRate only scales flat DR/MDR");
     assertEquals(19, row.dParam[0]);
   }
 

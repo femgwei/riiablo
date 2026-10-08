@@ -12,7 +12,7 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillId;
 import org.junit.jupiter.api.Test;
 
-/** Twelfth DMG-04 conventional min/max audit: D2MOO SrvDo021 Telekinesis. */
+/** Thirteenth DMG-04 conventional min/max audit: D2MOO SrvDo021 Telekinesis. */
 class TelekinesisGoldenDamageTest extends RiiabloTest {
   private static final int[] D2MOO_INTEGER_MIN = {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10,

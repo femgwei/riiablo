@@ -59,6 +59,8 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       assertNotNull(first);
       assertTrue(first.persistent);
       assertTrue(first.fixedElementalRate);
+      assertEquals(1, first.tickInterval);
+      assertEquals(0, first.elementalDamageRate);
       assertEquals(64, first.elementalMinRateFixed);
       assertEquals(128, first.elementalMaxRateFixed);
       assertEquals(115, first.remainingFrames + 1,
@@ -70,6 +72,34 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       world.getMapper(Position.class).get(caster).position.x += 0.25f;
       world.process();
       assertEquals(2, factory.count("blaze"));
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void blazeTrailDamagesAnOverlappingTargetOnItsFirstGameFrame() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, SkillId.BLAZE, 1, 0f, 0f);
+      int target = monster(world, 0f, 0f);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLAZE);
+      cast(world, caster, skill, new Vector2(1f, 0f));
+      world.getMapper(Velocity.class).get(caster).velocity.set(4f, 0f);
+      float before = life(world, target);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      Missile trail = factory.first("blaze");
+      assertNotNull(trail);
+      assertEquals(1, trail.tickInterval);
+      assertEquals(0, trail.elementalDamageRate);
+      float applied = before - life(world, target);
+      assertTrue(applied >= 0.25f && applied < 0.5f,
+          "one level-1 Blaze frame must apply its 64..127 fixed roll immediately");
     } finally {
       world.dispose();
       StatusEffectApplier.INSTANCE.setStateSink(null);
