@@ -1107,3 +1107,26 @@ riiablo 的 `AmazonSkills.getPierceChance` 与永久状态桥接复用同一 `dm
 `MissileCollisionSystem` 维护同一导弹的已命中目标集合并逐次消耗计数。
 `PierceGoldenDamageTest` 锁定全部 20 级概率、零伤害字段和永久 `skill_pierce` 状态；
 命中随机、导弹原始伤害、后续目标数量和整次施法总量留给 DMG-06/07/08。
+
+## DMG-04 第四十八个逐级实例：Lightning Strike
+
+Lightning Strike 的首个近战目标与后续链段目标各拥有一份相同技能曲线的闪电包。
+1.10f `Skills.txt#34` 使用 `SrvStFunc=10`、`SrvDoFunc=14`、`HitShift=8`，元素类型为
+`ltng`，`EMin/EMax=1–25`，最大值五段增量为 `10/15/20/25/30`；
+`EDmgSymPerCalc` 读取 Charged Strike、Lightning Bolt、Power Strike、Lightning Fury
+硬点并乘 `par8`，本批协同固定为 0。等级 1–20 的单目标规范 getter 范围为 `1–25`
+至 `1–295`，矩阵行 562–581 的 expected/actual 与 delta=0 已明确记录；total 保持 N/A。
+
+D2MOO `SKILLS_SrvSt10_LightningStrike`（`SkillAma.cpp:339`）在成功近战命中时把技能
+闪电范围写入战斗记录，并以 `Calc1=20` 设置增强物理百分比；`SrcDam=0` 在该回调中按
+原版回退为 128，因此完整近战记录还包含武器包。`SKILLS_SrvDo014_LightningStrike`
+（`SkillAma.cpp:870`）从首个受击者附近选择另一目标，创建继承技能 ID/等级的
+`lightningstrike` 导弹，并以 `Calc2=ln34` 写入 2–21 的链跳预算。
+`MISSMODE_SrvHit12_ChainLightning_LightningStrike`（`MissMode.cpp:2522`）每次命中再创建
+一个同技能、同等级的子链段并递减预算。因此链段数量不能乘进一个目标的黄金伤害。
+
+riiablo 的近战路径通过 `MissileDamageResolver.skillElementalDamage` 取得相同曲线并写入
+`calculateLightningStrikeAttack`，链式路径则由 `spawnLightningStrike` 与
+`MissileCollisionSystem` 为每个链段保存相同技能快照。`LightningStrikeGoldenDamageTest`
+锁定全部 20 级规范范围、零协同、20 格范围及 2–21 跳预算。完整武器包、20% 增强物理、
+命中随机、链路目标集合与施法总量留给 DMG-06/07；抗性和最终结算留给 DMG-08。

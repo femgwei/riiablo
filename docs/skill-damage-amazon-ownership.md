@@ -18,7 +18,7 @@
 - Magic Arrow、Fire Arrow、Inner Sight、Critical Strike、Jab、Cold Arrow、Multiple Shot、
   Dodge、Power Strike、Poison Javelin、Exploding Arrow、Slow Missiles、Avoid、Impale、
   Lightning Bolt、Ice Arrow、Guided Arrow、Penetrate、Charged Strike、Plague Javelin、
-  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow、Valkyrie 与 Pierce 已完成等级 1–20 基础审计；580/600 个 Amazon
+  Strafe、Immolation Arrow、Dopplezon、Evade、Fend、Freezing Arrow、Valkyrie、Pierce 与 Lightning Strike 已完成等级 1–20 基础审计；580/600 个 Amazon
   技能—等级行获批。
 
 ## 关键原版语义
@@ -321,7 +321,12 @@ Pierce（33）等级 1–20 已按“永久投射物穿透状态、不拥有直�
 `Missiles.txt` 标记为 Pierce 的投射物才读取该状态并预掷最多 4 次继续命中机会。
 原导弹的伤害包、后续目标集合和整次施法总量留给 DMG-06/07。
 
-当前 Amazon 的 DMG-04 基础行已完成 580/600；下一项审核 Lightning Strike（技能 34）。
+Lightning Strike（34）等级 1–20 已按“首个近战目标或任一链段目标各自的一份技能闪电
+包，零武器伤害、零硬点协同、抗性前”批准。每目标的规范 getter 范围从 `1–25` 增长到
+`1–295`；原版有限随机不含上界。`Calc1=20` 同时作为近战增强物理百分比和链搜索范围，
+`Calc2=ln34` 产生 2–21 的链跳预算，但目标数量不能乘入单目标黄金值。
+
+当前 Amazon 的 DMG-04 基础行已完成 580/600；下一项审核 Lightning Fury（技能 35）。
 
 ## Dopplezon（技能 28）DMG-04
 
