@@ -238,7 +238,22 @@ public class DrlgOutWild {
         if ((outdoors.getDwFlags() & (DrlgOutdoors.OUTDOOR_BRIDGE
                 | DrlgOutdoors.OUTDOOR_RIVER_OTHER)) != 0) {
             int riverX = outdoors.getNGridWidth() - 2;
-            if (testSpawnRiver(level, riverX)) spawnRiver(level, riverX);
+            boolean valid = testSpawnRiver(level, riverX);
+            D2Log.debug("DRLG_OUTWILD river-test level=%d flags=0x%X x=%d valid=%s",
+                    level.getLevelId(), outdoors.getDwFlags(), riverX, valid);
+            // The native border pass can leave the outer edge cell marked with
+            // bHasDirection even though it is the edge immediately beside the
+            // river strip.  A bridge flag is authoritative: without the river
+            // strip the bridge can never be materialized (and the client sees
+            // a dry crossing).  Keep the native validity check for ordinary
+            // river-other layouts, but allow bridge layouts to proceed.
+            if (valid || (outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_BRIDGE) != 0) {
+                if (!valid) {
+                    D2Log.debug("DRLG_OUTWILD river-test override bridge level=%d x=%d",
+                            level.getLevelId(), riverX);
+                }
+                spawnRiver(level, riverX);
+            }
         }
 
         if ((outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_CLIFFS) != 0
@@ -376,9 +391,13 @@ public class DrlgOutWild {
             D2DrlgOutdoorPackedGrid2InfoStrc packedInfo2 = DrlgOutdoors.getPackedGrid2Info(pOutdoors, x + 1, nY);
             
             if (packedInfo1 != null && packedInfo1.isBHasDirection()) {
+                D2Log.debug("DRLG_OUTWILD river-test-block level=%d x=%d y=%d side=0 packed=0x%X",
+                        level.getLevelId(), x, nY, packedInfo1.getNPackedValue());
                 return false;
             }
             if (packedInfo2 != null && packedInfo2.isBHasDirection()) {
+                D2Log.debug("DRLG_OUTWILD river-test-block level=%d x=%d y=%d side=1 packed=0x%X",
+                        level.getLevelId(), x, nY, packedInfo2.getNPackedValue());
                 return false;
             }
         }
