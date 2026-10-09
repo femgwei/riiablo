@@ -8,6 +8,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -416,7 +417,11 @@ public final class WeatherRenderSystem extends BaseSystem {
     private static final int FIRST_CLASS_ID = 67;
     private static final int RIPPLE_VARIANTS = 4;
     private static final int MAX_RIPPLES = 12;
-    private static final int RIPPLE_LIFETIME_TICKS = 18;
+    // WeatherRenderSystem is a GPU/render system and receives real frame
+    // deltas, not the fixed 25 Hz simulation tick.  The old integer countdown
+    // therefore expired a ripple in roughly 18/60 seconds, often before its
+    // COF/DCC could finish loading on the first rain frame.
+    private static final float RIPPLE_LIFETIME_SECONDS = 0.9f;
     private static final int WATER_SAMPLE_ATTEMPTS = 80;
 
     private final Random random;
@@ -439,7 +444,8 @@ public final class WeatherRenderSystem extends BaseSystem {
 
       for (int i = active.size - 1; i >= 0; i--) {
         Ripple ripple = active.get(i);
-        if (--ripple.remainingTicks <= 0) {
+        ripple.remainingSeconds -= Math.max(0f, delta);
+        if (ripple.remainingSeconds <= 0f) {
           delete(ripple.entityId);
           active.removeIndex(i);
         }
@@ -466,7 +472,7 @@ public final class WeatherRenderSystem extends BaseSystem {
         int classId = FIRST_CLASS_ID + random.nextInt(RIPPLE_VARIANTS);
         int entityId = factory.createStaticObjectByClassId(classId, x, y);
         if (entityId == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
-        active.add(new Ripple(entityId, RIPPLE_LIFETIME_TICKS));
+        active.add(new Ripple(entityId, RIPPLE_LIFETIME_SECONDS));
         return true;
       }
       return false;
@@ -481,11 +487,23 @@ public final class WeatherRenderSystem extends BaseSystem {
         com.riiablo.codec.excel.Objects.Entry object =
             Riiablo.files.objects.get(FIRST_CLASS_ID + i);
         if (object == null || object.Token == null || object.Token.isEmpty()) continue;
+        String cofPath = "data\\global\\objects\\" + object.Token + "\\COF\\"
+            + object.Token + "NUHTH.cof";
         String path = "data\\global\\objects\\" + object.Token + "\\TR\\"
             + object.Token + "TRLITNUHTH.dcc";
         if (Riiablo.mpqs.contains(path)) {
           resourcesAvailable = true;
-          break;
+          // Queue the native ripple resources before the first object is
+          // created.  CofLayerLoader still owns the per-entity references;
+          // this only removes the first-frame async loading race.
+          if (Riiablo.assets != null) {
+            if (Riiablo.mpqs.contains(cofPath)) {
+              Riiablo.assets.load(new AssetDescriptor<>(cofPath,
+                  com.riiablo.codec.COF.class));
+            }
+            Riiablo.assets.load(new AssetDescriptor<>(path,
+                com.riiablo.codec.DCC.class));
+          }
         }
       }
       return resourcesAvailable;
@@ -506,11 +524,11 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   static final class Ripple {
     final int entityId;
-    int remainingTicks;
+    float remainingSeconds;
 
-    Ripple(int entityId, int remainingTicks) {
+    Ripple(int entityId, float remainingSeconds) {
       this.entityId = entityId;
-      this.remainingTicks = remainingTicks;
+      this.remainingSeconds = remainingSeconds;
     }
   }
 
