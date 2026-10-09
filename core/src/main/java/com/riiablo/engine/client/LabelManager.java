@@ -241,7 +241,8 @@ public class LabelManager extends IteratingSystem {
     // be able to sit immediately beside a short one instead of jumping by
     // its own full width. Try the four edges of each occupied label, while
     // keeping the same small local search radius used above.
-    for (Rectangle rectangle : occupied) {
+    for (int i = 0; i < occupied.size; i++) {
+      Rectangle rectangle = occupied.get(i);
       float maxCompactX = MAX_LABEL_RING
           * Math.max(horizontalStep, rectangle.width + LABEL_GAP);
       float maxCompactY = MAX_LABEL_RING
