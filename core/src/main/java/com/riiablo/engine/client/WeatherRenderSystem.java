@@ -49,9 +49,9 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_DEPTH_BUCKET_COUNT = RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1;
   static final float RAIN_DENSITY_SCALE = 0.75f;
   // Keep one stable conversion between visible rain streaks and water
-  // impacts. At full rain this is 25 ripple spawns/sec for 192 streaks.
+  // impacts. At full rain this is 50 ripple spawns/sec for 192 streaks.
   private static final float RIPPLE_RATE_PER_RAIN_PARTICLE =
-      25f / activeRainParticles(1f);
+      50f / activeRainParticles(1f);
   private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
