@@ -46,13 +46,14 @@ public class Colors {
   public Color modal50 = new Color(0, 0, 0, 0.50f);
   public Color modal75 = new Color(0, 0, 0, 0.75f);
 
-  // D2's TRANSxx modes are backed by the PL2 blend tables, whose source-index
-  // rows contribute approximately the named percentage of source colour.
-  // (For example ACT1 Pal.pl2 rows 561-816, TRANS75, retain ~75% of a river
-  // pixel over a dark background.)
-  public Color trans25 = new Color(1, 1, 1, 0.25f);
+  // D2's TRANSxx names describe transparency, not source opacity.  The COF
+  // transform value 0 selects TRANS75 (75% transparent = 25% source), while
+  // value 2 selects TRANS25 (25% transparent = 75% source).  The PL2 table is
+  // a source/destination palette lookup; treating its first 256-byte block as
+  // source rows reverses this relationship.
+  public Color trans25 = new Color(1, 1, 1, 0.75f);
   public Color trans50 = new Color(1, 1, 1, 0.50f);
-  public Color trans75 = new Color(1, 1, 1, 0.75f);
+  public Color trans75 = new Color(1, 1, 1, 0.25f);
 
   public Color darkRed = new Color(0.33f, 0.0f, 0.0f, 0.75f);
 
