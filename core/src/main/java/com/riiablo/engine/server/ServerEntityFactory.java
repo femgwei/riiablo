@@ -224,6 +224,13 @@ public class ServerEntityFactory extends EntityFactory {
     Objects.Entry base = Riiablo.files.objects.get(objectId);
     if (base == null) return Engine.INVALID_ENTITY;
 
+    // Objects.txt's ClientFn=2 is the native client-side rain-ripple
+    // callback.  Retail marks the four 1R..4R dummy rows themselves, while
+    // map exports can carry the actual pool/river surface rows.  Give those
+    // surface objects the same callback so the client can use their SizeX/Y
+    // rectangle as the local ripple emission area.
+    configureRainRippleClientFunction(base);
+
     int id = super.createEntity(Class.Type.OBJ, base.Description);
     Object object = mObject.create(id);
     object.base = base;
@@ -1179,6 +1186,21 @@ public class ServerEntityFactory extends EntityFactory {
         id, ownerId, missile.Range, position.x, position.y, 
         missileComponent.missileDescriptor != null ? missileComponent.missileDescriptor.fileName : "null");
     return id;
+  }
+
+  static void configureRainRippleClientFunction(Objects.Entry base) {
+    if (base == null || base.ClientFn == 2) return;
+    // 1R..4R are visual products and must retain their table value.  The
+    // ordinary Act-I river rows and finite pool rows are the surface emitters
+    // when a map places them as objects.  Blood pools are deliberately not
+    // water, despite sharing the word "pool" in their description.
+    if (base.Id >= 40 && base.Id <= 44
+        || base.Id == 65 || base.Id == 66
+        || (base.Description != null
+            && base.Description.toLowerCase(java.util.Locale.ROOT).contains("pool")
+            && !base.Description.toLowerCase(java.util.Locale.ROOT).contains("blood"))) {
+      base.ClientFn = 2;
+    }
   }
 
   /**

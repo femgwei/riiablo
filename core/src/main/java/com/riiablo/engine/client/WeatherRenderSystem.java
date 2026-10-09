@@ -5,7 +5,9 @@ import java.util.Random;
 
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
+import com.artemis.Aspect;
 import com.artemis.annotations.Wire;
+import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
@@ -21,6 +23,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
@@ -69,6 +72,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Object> mObject;
   protected RenderSystem renderer;
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -430,6 +434,8 @@ public final class WeatherRenderSystem extends BaseSystem {
     private float spawnBudget;
     private boolean resourcesChecked;
     private boolean resourcesAvailable;
+    /** One native ripple DCC is selected for the lifetime of a rain episode. */
+    private int stormVariant = -1;
 
     RainRippleField(long seed) {
       random = new Random(seed);
@@ -462,6 +468,13 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
 
     private boolean spawn(Map map, Map.Zone expectedZone) {
+      // D2Client's ClientFn=2 is attached to a water-surface object.  Prefer
+      // that object's rectangle so pools and other finite water objects do not
+      // emit ripples across the whole viewport.  River objects have zero-sized
+      // bounds in Objects.txt, so the material sampler remains a deliberate
+      // compatibility fallback for those legacy entries.
+      if (spawnFromClientFunctionObject(map, expectedZone)) return true;
+
       float radius = Math.max(32f, Math.max(iso.viewportWidth, iso.viewportHeight)
           * iso.zoom / (DT1.Tile.SUBTILE_WIDTH * 2f));
       for (int attempt = 0; attempt < WATER_SAMPLE_ATTEMPTS; attempt++) {
@@ -469,13 +482,65 @@ public final class WeatherRenderSystem extends BaseSystem {
         int y = MathUtils.round(player.y + (random.nextFloat() * 2f - 1f) * radius);
         if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
 
-        int classId = FIRST_CLASS_ID + random.nextInt(RIPPLE_VARIANTS);
+        int classId = FIRST_CLASS_ID + selectedStormVariant();
         int entityId = factory.createStaticObjectByClassId(classId, x, y);
         if (entityId == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
         active.add(new Ripple(entityId, RIPPLE_LIFETIME_SECONDS));
         return true;
       }
       return false;
+    }
+
+    private boolean spawnFromClientFunctionObject(Map map, Map.Zone expectedZone) {
+      if (world == null || mObject == null || mPosition == null) return false;
+      com.artemis.EntitySubscription subscription = world.getAspectSubscriptionManager().get(
+          Aspect.all(Object.class, Position.class));
+      IntBag entities = subscription.getEntities();
+      if (entities.size() == 0) return false;
+
+      // Start at a deterministic random entity to avoid favoring the first
+      // room's object when several pools are visible at once.
+      int start = random.nextInt(entities.size());
+      float visibleRadius = Math.max(32f, Math.max(iso.viewportWidth, iso.viewportHeight)
+          * iso.zoom / (DT1.Tile.SUBTILE_WIDTH * 2f));
+      for (int offset = 0; offset < entities.size(); offset++) {
+        int entityId = entities.get((start + offset) % entities.size());
+        Object object = mObject.get(entityId);
+        Position position = mPosition.get(entityId);
+        if (object == null || position == null || object.base == null
+            || !isClientRainRippleEmitter(object.base)
+            || mMapWrapper == null || !mMapWrapper.has(entityId)
+            || mMapWrapper.get(entityId).zone != expectedZone) continue;
+        if (Math.abs(position.position.x - player.x) > visibleRadius
+            || Math.abs(position.position.y - player.y) > visibleRadius) continue;
+
+        com.riiablo.codec.excel.Objects.Entry base = object.base;
+        float halfWidth = base.SizeX > 0 ? base.SizeX * 0.5f : 0f;
+        float halfHeight = base.SizeY > 0 ? base.SizeY * 0.5f : 0f;
+        // A zero-sized river marker is only a semantic emitter. Let the
+        // material fallback locate a real water tile rather than placing the
+        // ripple on the invisible marker itself.
+        if (halfWidth <= 0f || halfHeight <= 0f) continue;
+        for (int attempt = 0; attempt < 8; attempt++) {
+          int x = MathUtils.round(position.position.x
+              + (random.nextFloat() * 2f - 1f) * halfWidth);
+          int y = MathUtils.round(position.position.y
+              + (random.nextFloat() * 2f - 1f) * halfHeight);
+          if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
+
+          int entity = factory.createStaticObjectByClassId(
+              FIRST_CLASS_ID + selectedStormVariant(), x, y);
+          if (entity == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
+          active.add(new Ripple(entity, RIPPLE_LIFETIME_SECONDS));
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private int selectedStormVariant() {
+      if (stormVariant < 0) stormVariant = random.nextInt(RIPPLE_VARIANTS);
+      return stormVariant;
     }
 
     private boolean hasResources() {
@@ -513,6 +578,7 @@ public final class WeatherRenderSystem extends BaseSystem {
       for (int i = 0; i < active.size; i++) delete(active.get(i).entityId);
       active.clear();
       spawnBudget = 0f;
+      stormVariant = -1;
     }
 
     private void delete(int entityId) {
@@ -520,6 +586,17 @@ public final class WeatherRenderSystem extends BaseSystem {
         world.delete(entityId);
       }
     }
+  }
+
+  /**
+   * Returns whether an Objects.txt row is a client-side water ripple emitter.
+   * Ripple rows (67..70) are the visual products, not emitters themselves;
+   * treating them as emitters would recursively multiply every spawned ripple.
+   */
+  static boolean isClientRainRippleEmitter(com.riiablo.codec.excel.Objects.Entry base) {
+    return base != null && base.ClientFn == 2
+        && (base.Id < RainRippleField.FIRST_CLASS_ID
+            || base.Id >= RainRippleField.FIRST_CLASS_ID + RainRippleField.RIPPLE_VARIANTS);
   }
 
   static final class Ripple {

@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.SimulationClock;
 
 class WeatherRenderSystemTest {
@@ -50,6 +52,19 @@ class WeatherRenderSystemTest {
     assertEquals(192, WeatherRenderSystem.activeRainParticles(1f));
     assertEquals(96, WeatherRenderSystem.activeRainParticles(0.5f));
     assertEquals(0, WeatherRenderSystem.activeRainParticles(0f));
+  }
+
+  @Test
+  void clientRainRippleFunctionDoesNotTreatRippleProductsAsEmitters() {
+    Objects.Entry pool = new Objects.Entry();
+    pool.Id = 130;
+    pool.ClientFn = 2;
+    assertTrue(WeatherRenderSystem.isClientRainRippleEmitter(pool));
+
+    Objects.Entry ripple = new Objects.Entry();
+    ripple.Id = 67;
+    ripple.ClientFn = 2;
+    assertFalse(WeatherRenderSystem.isClientRainRippleEmitter(ripple));
   }
 
   @Test
