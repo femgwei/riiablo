@@ -556,7 +556,9 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     int   numDirections;
     int   numFrames;
     int   blendMode;
-    Color tint;
+    final Color tint = new Color(Color.WHITE);
+    float blendAlpha = 1f;
+    float alpha = 1f;
     Index transform;
     int   transformColor;
     boolean shadow;
@@ -582,7 +584,9 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     Layer set(Dc dc, int blendMode) {
       this.dc        = dc;
       this.blendMode = blendMode;
-      tint           = Color.WHITE;
+      tint.set(Color.WHITE);
+      blendAlpha     = 1f;
+      alpha          = 1f;
       numDirections  = dc.numDirections();
       numFrames      = dc.numFrames();
       transform      = null;
@@ -603,14 +607,17 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     }
 
     public Layer setBlendMode(int blendMode, Color tint) {
+      float blendAlpha = tint.a;
       this.blendMode = blendMode;
-      this.tint      = tint;
+      this.blendAlpha = blendAlpha;
+      this.tint.set(tint);
+      this.tint.a = blendAlpha * alpha;
       return this;
     }
 
     public Layer setAlpha(float a) {
-      if (tint == Color.WHITE) tint = tint.cpy();
-      tint.a = a;
+      alpha = a;
+      tint.a = blendAlpha * a;
       return this;
     }
 

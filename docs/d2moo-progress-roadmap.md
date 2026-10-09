@@ -45,6 +45,9 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
   驱动，不增加对象 ID 特判。
 - [x] 恢复 riiablo 的 `trans25`/`trans75` alpha，使 COF 的 TRANS 名称与原版透明度
   语义一致；环境 Shadow colormap 仍在透明混合前按原版光照强度选择。
+- [x] 修正 `CofAlphaHandler` 的运行时 alpha 覆盖：网络组件的默认 `1.0` 现在与 COF
+  原生 TRANS opacity 相乘，不再把 `TRANS75` 恢复成不透明；动画层也不再修改共享的
+  `Riiablo.colors.trans75` 颜色实例。最新对比图中高饱和绿色水纹实际来自这次覆盖。
 
 ## 2026-10-09 河流水面原生调色板光照
 
