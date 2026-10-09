@@ -50,6 +50,8 @@ public class LabelManager extends IteratingSystem {
   private boolean showGroundItems;
 
   private static final float LABEL_GAP = 2f;
+  /** Ground labels can share their vertical edge; the native stack is compact. */
+  private static final float VERTICAL_LABEL_GAP = 0f;
   /** Native Alt overlay only exposes the first 32 ground-item names. */
   private static final int MAX_GROUND_LABELS = 32;
   /** D2 does a small local nudge, not an unbounded collision-free layout. */
@@ -211,7 +213,7 @@ public class LabelManager extends IteratingSystem {
       Array<Rectangle> occupied, float minX, float minY, float maxX, float maxY) {
     Rectangle best = null;
     float bestDistance = Float.POSITIVE_INFINITY;
-    float verticalStep = Math.max(1f, height + LABEL_GAP);
+    float verticalStep = Math.max(1f, height + VERTICAL_LABEL_GAP);
     float horizontalStep = Math.max(1f, width + LABEL_GAP);
 
     for (int ring = 0; ring <= MAX_LABEL_RING && best == null; ring++) {
@@ -246,7 +248,7 @@ public class LabelManager extends IteratingSystem {
       float maxCompactX = MAX_LABEL_RING
           * Math.max(horizontalStep, rectangle.width + LABEL_GAP);
       float maxCompactY = MAX_LABEL_RING
-          * Math.max(verticalStep, rectangle.height + LABEL_GAP);
+          * Math.max(verticalStep, rectangle.height + VERTICAL_LABEL_GAP);
       float[] candidateX = {
           rectangle.x - width - LABEL_GAP,
           rectangle.x + rectangle.width + LABEL_GAP
@@ -300,8 +302,8 @@ public class LabelManager extends IteratingSystem {
     for (Rectangle rectangle : occupied) {
       if (candidate.x < rectangle.x + rectangle.width + LABEL_GAP
           && candidate.x + candidate.width + LABEL_GAP > rectangle.x
-          && candidate.y < rectangle.y + rectangle.height + LABEL_GAP
-          && candidate.y + candidate.height + LABEL_GAP > rectangle.y) {
+          && candidate.y < rectangle.y + rectangle.height + VERTICAL_LABEL_GAP
+          && candidate.y + candidate.height + VERTICAL_LABEL_GAP > rectangle.y) {
         return true;
       }
     }

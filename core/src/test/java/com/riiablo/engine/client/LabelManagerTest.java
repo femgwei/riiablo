@@ -53,7 +53,7 @@ class LabelManagerTest {
         100, 80, 40, 12, occupied, 0, 0, 320, 200);
 
     assertFalse(placed.overlaps(occupied.first()));
-    assertEquals(14, Math.abs(placed.y - occupied.first().y));
+    assertEquals(12, Math.abs(placed.y - occupied.first().y));
   }
 
   @Test
