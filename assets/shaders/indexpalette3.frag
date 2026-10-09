@@ -46,7 +46,11 @@ void main() {
   vec3 light = vec3(1.0);
   bool hasLocalLight = false;
   if (lightingEnabled != 0 && !selfLit) {
-    float intensity = ambientIntensity;
+    // The native environment intensity is a display-space light level. A
+    // linear 0..255-to-PL2 lookup makes the deepest outdoor night (64) land
+    // on Shadow[8], where low-contrast units disappear. Apply the display
+    // lift before combining local lights; full daylight (255) is unchanged.
+    float intensity = sqrt(clamp(ambientIntensity, 0.0, 1.0));
     light = ambientLight;
     for (int i = 0; i < 16; i++) {
       if (i >= lightCount) break;
