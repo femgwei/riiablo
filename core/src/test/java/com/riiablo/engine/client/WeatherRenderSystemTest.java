@@ -108,6 +108,27 @@ class WeatherRenderSystemTest {
   }
 
   @Test
+  void visibleRainPrefixKeepsEveryShadeAndDepthFamilyRepresented() {
+    WeatherRenderSystem.ParticleField particles = field(12L, WeatherRenderSystem.Mode.RAIN);
+    int visible = WeatherRenderSystem.activeRainParticles(32f / WeatherRenderSystem.PARTICLE_COUNT);
+    boolean[] shades = new boolean[WeatherRenderSystem.RAIN_SHADE_COUNT];
+    boolean[] depths = new boolean[WeatherRenderSystem.RAIN_DEPTH_BUCKET_COUNT];
+
+    for (int i = 0; i < visible; i++) {
+      for (int shade = 0; shade < shades.length; shade++) {
+        if (particles.shade[i] == WeatherRenderSystem.ParticleField.rainShade(shade)) {
+          shades[shade] = true;
+          break;
+        }
+      }
+      depths[(int) particles.size[i] - WeatherRenderSystem.RAIN_MIN_LENGTH] = true;
+    }
+
+    for (boolean represented : shades) assertTrue(represented);
+    for (boolean represented : depths) assertTrue(represented);
+  }
+
+  @Test
   void onlyBrightRainUsesTheHeavyRasterWidth() {
     assertEquals(2f, WeatherRenderSystem.rainWidth(
         WeatherRenderSystem.ParticleField.rainShade(0)));

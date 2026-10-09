@@ -40,6 +40,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_MIN_WIND_TICKS = 125;
   static final int RAIN_MAX_WIND_TICKS = 499;
   static final int RAIN_SHADE_COUNT = 12;
+  static final int RAIN_DEPTH_BUCKET_COUNT = RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1;
   static final float RAIN_DENSITY_SCALE = 0.75f;
   private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
@@ -426,6 +427,8 @@ public final class WeatherRenderSystem extends BaseSystem {
     int windAngle;
     int targetWindAngle;
     int windTicks;
+    int rainShadeOffset;
+    int rainDepthOffset;
     float windX;
     float windY;
 
@@ -446,6 +449,13 @@ public final class WeatherRenderSystem extends BaseSystem {
 
       random = new Random(seed ^ (mode.ordinal() * 0x9E3779B97F4A7C15L));
       if (mode == Mode.RAIN) {
+        // The renderer exposes only the first active particles. Stratify the
+        // two native-looking rain families across that prefix so a light storm
+        // does not randomly collapse into only the darkest/brightest streaks.
+        // The offsets keep the ordering from looking fixed while preserving a
+        // balanced sample for every active count.
+        rainShadeOffset = random.nextInt(RAIN_SHADE_COUNT);
+        rainDepthOffset = random.nextInt(RAIN_DEPTH_BUCKET_COUNT);
         windAngle = randomRainAngle();
         targetWindAngle = windAngle;
         windTicks = randomWindTicks();
@@ -495,15 +505,17 @@ public final class WeatherRenderSystem extends BaseSystem {
       if (mode == Mode.RAIN) {
         // Native rain assigns a shared direction but a per-drop perspective depth.
         // That depth correlates its 4..12 pixel streak with its 15..30 pixel/tick fall speed.
-        float depth = random.nextFloat();
+        int depthSlot = (i + rainDepthOffset) % RAIN_DEPTH_BUCKET_COUNT;
+        float depth = (depthSlot + random.nextFloat()) / RAIN_DEPTH_BUCKET_COUNT;
         size[i] = RAIN_MIN_LENGTH
-            + MathUtils.floor(depth * (RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1));
+            + depthSlot;
         float speedPerTick = MathUtils.lerp(
             RAIN_MIN_SPEED_PER_TICK, RAIN_MAX_SPEED_PER_TICK, depth);
         fallSpeed[i] = speedPerTick / SimulationClock.STEP_SECONDS;
         velocityY[i] = windY * fallSpeed[i];
         velocityX[i] = windX * fallSpeed[i];
-        shade[i] = rainShade(random.nextInt(RAIN_SHADE_COUNT));
+        int shadeSlot = (i + rainShadeOffset) % RAIN_SHADE_COUNT;
+        shade[i] = rainShade(shadeSlot);
       } else {
         velocityX[i] = -8f + random.nextFloat() * 16f;
         velocityY[i] = -42f - random.nextFloat() * 45f;
