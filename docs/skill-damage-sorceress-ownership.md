@@ -63,6 +63,12 @@ Warmth 的 DMG-04 等级 1–20 已按明确 N/A 批准。它不创建导弹或�
 不是对目标生命或法力造成伤害。riiablo 现已按表公式安装状态并由
 `ManaRecoverySystem` 消费；伤害 expected/actual/delta 字段保持空白。
 
+Frozen Armor 的 DMG-04 等级 1–20 也按明确 N/A 批准。`SrvDo018` 安装互斥的
+`frozenarmor` 状态：零 Shiver Armor/Chilling Armor 硬点协同时，防御加成为
+30%–125%，持续 3000–8700 帧。`EventFunc02` 只在近战物理受伤后写入
+30–87 帧 `dwFrzLen`；它不写物理/元素伤害，也不创建导弹。riiablo 的状态安装、
+护甲互斥和受击冻结路径已由逐级黄金测试与集成测试锁定。
+
 ## 可复现验证
 
 ```powershell

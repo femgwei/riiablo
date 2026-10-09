@@ -1173,3 +1173,28 @@ riiablo 的 `getWarmthManaRecoveryBonus`、`applyWarmthState`与
 `ManaRecoverySystem` 消费聚合后的法力恢复加成。`WarmthGoldenDamageTest` 锁定零伤害
 字段、全部 20 级曲线、状态贡献和每帧恢复消费。矩阵 expected/actual/delta
 保持空白，明确表示伤害 N/A，不伪造 `0–0` 伤害。
+
+## DMG-04 第五十一个逐级实例：Frozen Armor
+
+Frozen Armor 不拥有输出伤害包。1.10f `Skills.txt#40` 使用 `SrvDoFunc=18`、
+`SrcDam=0`，没有 server missile，物理与元素伤害曲线均为 0。状态字段为
+`AuraState=frozenarmor`、`AuraEvent=damagedinmelee`、`AuraEventFunc=2`。
+`AuraStatCalc=ln12` 在 `Param1=30`、`Param2=5` 下产生等级 1–20 的
+30%–125% `skill_armor_percent`。
+
+`AuraLenCalc=ln34+(Shiver Armor.blvl+Chilling Armor.blvl)*par7`，`Param3=3000`、
+`Param4=300`、`Param7=250`。基础场景把两项协同固定为 0，因此状态持续时间从
+3000 帧增长到 8700 帧。`Calc1=ln56*(100+(Shiver Armor.blvl+
+Chilling Armor.blvl)*par8)/100`，`Param5=30`、`Param6=3`、`Param8=5`，
+零协同冻结长度从 30 帧增长到 87 帧。
+
+D2MOO `SKILLS_SrvDo018_DefensiveBuff`（`SkillSor.cpp:338`）在施法者上安装带技能 ID/
+等级、持续时间和防御统计的状态。`SKILLS_EventFunc02_FrozenArmor`（`SkillSor.cpp:1226`）
+仅在存在攻击者、目标有效且物理伤害大于 0 时，新建一个临时 `D2DamageStrc`，
+只设置冻结 result flag 与 `dwFrzLen`后执行事件。它没有填充任何伤害通道。
+
+riiablo 的 `applyDefensiveArmorState`、`getDefensiveArmorDefensePercent`、
+`getDefensiveArmorDuration` 和 `getFrozenArmorFreezeLength` 复用同一表公式；
+`StateUpdater.applyFrozenArmor` 只向合格近战攻击者安装冻结。`FrozenArmorGoldenDamageTest`
+锁定 20 级的三条状态曲线和零伤害字段；`SorceressDefenseIntegrationTest` 锁定
+护甲互斥及实际近战反应。矩阵伤害 expected/actual/delta 明确保持 N/A。
