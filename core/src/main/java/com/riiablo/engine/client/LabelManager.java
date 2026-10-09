@@ -48,6 +48,7 @@ public class LabelManager extends IteratingSystem {
   private final Array<Actor> labels = new Array<>();
   private final Array<GroundLabel> groundLabels = new Array<>();
   private final Array<Rectangle> occupiedLabels = new Array<>();
+  private final Vector2 labelPointer = new Vector2();
   private boolean showGroundItems;
 
   private static final float LABEL_GAP = 2f;
@@ -108,6 +109,7 @@ public class LabelManager extends IteratingSystem {
       tmpVec2.y = MathUtils.clamp(tmpVec2.y, renderer.getMinY(), renderer.getMaxY() - label.getHeight());
       label.setPosition(tmpVec2.x, tmpVec2.y);
     }
+    updateHoveredGroundLabelBackgrounds();
 
     Riiablo.batch.begin();
     for (Actor label : labels) {
@@ -132,12 +134,10 @@ public class LabelManager extends IteratingSystem {
     if (mItem.has(entityId)) {
       label.actor = mItem.get(entityId).item.header();
       // The same cached header Table is also used by the inventory loader.
-      // Keep its normal modal-black panel, and use the blue variant only
-      // while the ground item is hovered.
+      // Keep its normal modal-black panel. The Alt-only label hit test below
+      // applies the blue variant after collision layout has finalized bounds.
       if (label.actor instanceof Table) {
-        ((Table) label.actor).setBackground(mHovered.has(entityId)
-            ? hoveredGroundLabelBackground
-            : PaletteIndexedColorDrawable.MODAL_FONT16);
+        ((Table) label.actor).setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
       }
     }
     tmpVec2.add(label.offset);
@@ -149,6 +149,25 @@ public class LabelManager extends IteratingSystem {
     if (actor instanceof Table) ((Table) actor).validate();
     labels.add(actor);
     if (mItem.has(entityId)) groundLabels.add(new GroundLabel(actor));
+  }
+
+  private void updateHoveredGroundLabelBackgrounds() {
+    labelPointer.set(Gdx.input.getX(), Gdx.input.getY());
+    iso.unproject(labelPointer);
+    for (GroundLabel groundLabel : groundLabels) {
+      if (!(groundLabel.actor instanceof Table)) continue;
+      Table table = (Table) groundLabel.actor;
+      boolean hovered = showGroundItems
+          && containsLabelPoint(table, labelPointer);
+      table.setBackground(hovered
+          ? hoveredGroundLabelBackground
+          : PaletteIndexedColorDrawable.MODAL_FONT16);
+    }
+  }
+
+  private static boolean containsLabelPoint(Actor actor, Vector2 pointer) {
+    return actor.getX() <= pointer.x && pointer.x <= actor.getX() + actor.getWidth()
+        && actor.getY() <= pointer.y && pointer.y <= actor.getY() + actor.getHeight();
   }
 
   /**

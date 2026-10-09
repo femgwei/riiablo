@@ -96,6 +96,7 @@ public class HoveredManager extends IteratingSystem {
     boolean selectedInteractable = false;
     float selectedDst2 = Float.POSITIVE_INFINITY;
     IntBag selectable = selectableSubscriber.getEntities();
+    boolean altDown = isAltDown();
     for (int i = 0, size = selectable.size(); i < size; i++) {
       int candidate = selectable.get(i);
       if (candidate == sourceId) continue;
@@ -105,14 +106,17 @@ public class HoveredManager extends IteratingSystem {
       if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
 
       iso.toScreen(hitEntityScreen.set(candidatePosition.position));
-      boolean hitAnimation = containsScreenPoint(boxWrapper.box, hitEntityScreen, hitCoords,
-          hitPaddingX(candidate), hitPaddingY(candidate));
+      // While Alt is held, native D2 selects ground items through their
+      // labels only. The item sprite itself must not win the click.
+      boolean hitAnimation = !(mItem.has(candidate) && altDown)
+          && containsScreenPoint(boxWrapper.box, hitEntityScreen, hitCoords,
+              hitPaddingX(candidate), hitPaddingY(candidate));
       // Ground-item names are drawn directly by LabelManager instead of being
       // attached to a Scene2D stage, so stage.hit() cannot select them. Treat
       // the visible label bounds as an additional pickup hit area. The label
       // is only eligible while it is actually shown (Alt or normal hover),
       // which avoids leaving a stale, invisible actor clickable.
-      boolean hitLabel = isVisibleItemLabel(candidate) && mLabel.has(candidate)
+      boolean hitLabel = altDown && isVisibleItemLabel(candidate) && mLabel.has(candidate)
           && mLabel.get(candidate).actor != null
           && containsLabelPoint(mLabel.get(candidate).actor, hitCoords);
       if (!hitAnimation && !hitLabel) continue;
@@ -142,8 +146,10 @@ public class HoveredManager extends IteratingSystem {
   }
 
   private boolean isVisibleItemLabel(int entityId) {
-    if (!mItem.has(entityId)) return false;
-    if (mHovered.has(entityId)) return true;
+    return mItem.has(entityId) && isAltDown();
+  }
+
+  private boolean isAltDown() {
     return Gdx.input != null
         && (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.ALT_LEFT)
             || Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.ALT_RIGHT));
