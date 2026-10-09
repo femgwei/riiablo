@@ -67,6 +67,19 @@ class ObjectAmbientSoundSystemTest {
   }
 
   @Test
+  void usesNativeAmbientFalloffRangeForRiverSound() {
+    assertEquals(12.5f, ObjectAmbientSoundSystem.RIVER_MIN_RADIUS, 0.0001f);
+    assertEquals(46.875f, ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS, 0.0001f);
+    assertTrue(ObjectAmbientSoundSystem.withinRadius(
+        ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS * ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS
+            - 0.01f,
+        ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS));
+    assertFalse(ObjectAmbientSoundSystem.withinRadius(
+        ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS * ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS,
+        ObjectAmbientSoundSystem.RIVER_AUDIBLE_RADIUS));
+  }
+
+  @Test
   void recognizesNativeRiverTileSources() {
     assertTrue(ObjectAmbientSoundSystem.isRiverSource(
         "DATA\\GLOBAL\\Tiles\\Act1\\Outdoors\\River.dt1"));

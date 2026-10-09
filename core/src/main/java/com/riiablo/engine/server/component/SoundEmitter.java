@@ -13,6 +13,8 @@ public class SoundEmitter extends PooledComponent {
 
   public Audio.Instance sound;
   public Interpolation interpolator = Interpolation.linear;
+  /** Distance at which an emitter starts attenuating, in world subtiles. */
+  public float minRadius;
   public float radius = DEFAULT_RADIUS;
   public boolean sameZoneOnly;
 
@@ -21,6 +23,7 @@ public class SoundEmitter extends PooledComponent {
     if (sound != null) sound.stop();
     sound = null;
     interpolator = Interpolation.linear;
+    minRadius = 0f;
     radius = DEFAULT_RADIUS;
     sameZoneOnly = false;
   }
@@ -31,9 +34,15 @@ public class SoundEmitter extends PooledComponent {
 
   public SoundEmitter set(Audio.Instance sound, Interpolation interpolator,
       float radius, boolean sameZoneOnly) {
+    return set(sound, interpolator, radius, sameZoneOnly, 0f);
+  }
+
+  public SoundEmitter set(Audio.Instance sound, Interpolation interpolator,
+      float radius, boolean sameZoneOnly, float minRadius) {
     this.sound = sound;
     this.interpolator = interpolator;
     this.radius = Math.max(0f, radius);
+    this.minRadius = Math.min(this.radius, Math.max(0f, minRadius));
     this.sameZoneOnly = sameZoneOnly;
     return this;
   }

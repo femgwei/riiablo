@@ -21,4 +21,14 @@ class SoundEmitterHandlerTest {
     assertEquals(0.25f,
         SoundEmitterHandler.spatialGain(10f, 20f, Interpolation.pow2In), EPSILON);
   }
+
+  @Test
+  void keepsAmbientSoundsAtFullVolumeBeforeNativeFalloffStarts() {
+    assertEquals(1f,
+        SoundEmitterHandler.spatialGain(12.5f, 12.5f, 46.875f, Interpolation.linear), EPSILON);
+    assertEquals(0.5f,
+        SoundEmitterHandler.spatialGain(29.6875f, 12.5f, 46.875f, Interpolation.linear), EPSILON);
+    assertEquals(0f,
+        SoundEmitterHandler.spatialGain(46.875f, 12.5f, 46.875f, Interpolation.linear), EPSILON);
+  }
 }

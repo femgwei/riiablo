@@ -40,7 +40,8 @@ public class SoundEmitterHandler extends IteratingSystem {
     Vector2 src = mPosition.get(player).position;
     boolean sameZone = !soundEmitter.sameZoneOnly || sameZone(entityId, player);
     float volume = sameZone
-        ? spatialGain(src.dst(position), soundEmitter.radius, soundEmitter.interpolator)
+        ? spatialGain(src.dst(position), soundEmitter.minRadius, soundEmitter.radius,
+            soundEmitter.interpolator)
         : 0f;
     soundEmitter.sound.setVolume(volume);
   }
@@ -62,8 +63,15 @@ public class SoundEmitterHandler extends IteratingSystem {
   }
 
   static float spatialGain(float distance, float radius, Interpolation interpolation) {
+    return spatialGain(distance, 0f, radius, interpolation);
+  }
+
+  static float spatialGain(float distance, float minRadius, float radius,
+      Interpolation interpolation) {
     if (radius <= 0f || distance >= radius) return 0f;
-    float gain = MathUtils.clamp(1f - Math.max(0f, distance) / radius, 0f, 1f);
+    float start = MathUtils.clamp(minRadius, 0f, radius);
+    if (distance <= start) return 1f;
+    float gain = MathUtils.clamp(1f - (distance - start) / (radius - start), 0f, 1f);
     return interpolation == null ? gain : interpolation.apply(gain);
   }
 }

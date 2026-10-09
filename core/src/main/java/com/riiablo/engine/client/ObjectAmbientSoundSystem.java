@@ -40,6 +40,12 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
 
   static final float AUDIBLE_RADIUS = SoundEmitter.DEFAULT_RADIUS;
   static final float STOP_RADIUS = AUDIBLE_RADIUS + 2f;
+  // Sounds.txt Falloff=3 (Ambient): 400..1500 authored pixels. A DT1
+  // subtile is 32 pixels in the renderer, so keep river ambience audible
+  // across the native 12.5..46.875 subtile range.
+  static final float RIVER_MIN_RADIUS = 400f / DT1.Tile.SUBTILE_WIDTH;
+  static final float RIVER_AUDIBLE_RADIUS = 1500f / DT1.Tile.SUBTILE_WIDTH;
+  static final float RIVER_STOP_RADIUS = RIVER_AUDIBLE_RADIUS + 2f;
 
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<Position> mPosition;
@@ -69,7 +75,9 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
       if (emitter != null) mSoundEmitter.remove(entityId);
       return;
     }
-    boolean audible = isAudible(entityId, emitter == null ? AUDIBLE_RADIUS : STOP_RADIUS);
+    float audibleRadius = soundId == RIVER_SOUND ? RIVER_AUDIBLE_RADIUS : AUDIBLE_RADIUS;
+    float stopRadius = soundId == RIVER_SOUND ? RIVER_STOP_RADIUS : STOP_RADIUS;
+    boolean audible = isAudible(entityId, emitter == null ? audibleRadius : stopRadius);
     if (!audible) {
       if (emitter != null) mSoundEmitter.remove(entityId);
       return;
@@ -90,7 +98,8 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
       instance.setVolume(0f);
     }
     mSoundEmitter.create(entityId).set(
-        instance, Interpolation.linear, AUDIBLE_RADIUS, true);
+        instance, Interpolation.linear, audibleRadius, true,
+        soundId == RIVER_SOUND ? RIVER_MIN_RADIUS : 0f);
     Vector2 source = mPosition.get(entityId).position;
     String event = soundId == RIVER_SOUND ? "RIVER_AMBIENCE" : "FIRE_AMBIENCE";
     com.badlogic.gdx.Gdx.app.log(TAG, String.format(
@@ -119,7 +128,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
 
     TileGrid grid = listenerMap.zone.nativeTileGrid();
     Vector2 listener = mPosition.get(Riiablo.game.player).position;
-    float radius = terrainRiver == null ? AUDIBLE_RADIUS : STOP_RADIUS;
+    float radius = terrainRiver == null ? RIVER_AUDIBLE_RADIUS : RIVER_STOP_RADIUS;
     float distance2 = nearestRiverDistance2(
         grid, listener.x - listenerMap.zone.x(), listener.y - listenerMap.zone.y(), radius);
     if (!withinRadius(distance2, radius)) {
@@ -130,7 +139,8 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     if (terrainRiver == null) startTerrainRiver(listenerMap.zone, listener, distance2);
     if (terrainRiver != null) {
       terrainRiver.setVolume(SoundEmitterHandler.spatialGain(
-          (float) Math.sqrt(distance2), AUDIBLE_RADIUS, Interpolation.linear));
+          (float) Math.sqrt(distance2), RIVER_MIN_RADIUS, RIVER_AUDIBLE_RADIUS,
+          Interpolation.linear));
     }
   }
 
