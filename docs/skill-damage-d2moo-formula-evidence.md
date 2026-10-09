@@ -1243,3 +1243,31 @@ riiablo 的 `Actioneer.resolveTeleport` 对应执行关卡、同 Zone、飞行�
 全部零伤害/零 server missile 字段、1–20 级法力曲线，并以生产位移方法确认成功施法
 创建 0 枚导弹、发出 0 个 `DamageEvent`。矩阵第 962–981 行把三组 `expected_*`、
 `riiablo_actual_*` 和 `delta_*` 明确留空为 N/A，不能用 `0–0` 冒充伤害。
+
+## DMG-04 第五十四个逐级实例：Meteor
+
+Meteor 的坠落撞击由 `Skills.txt#56` 持有伤害，`SrcDam=0`、`HitShift=8`，基础火焰值
+为 `80–100`，五段等级增量分别为 `23/39/79/81/83` 与 `25/41/81/83/85`。
+`EDmgSymPerCalc=(Fire Bolt.blvl + Fire Ball.blvl) * par8`；本批固定两个协同硬点和
+Fire Mastery 为 0，因此等级 1–20 的单目标撞击为 `80–100` 到 `869–927`。
+
+D2MOO `SKILLS_SrvDo028_Meteor_Blizzard_Eruption_BaalTaunt_Catapult`
+（`SkillSor.cpp:896`）创建 `SrvMissileA=meteorcenter` 并保留技能 ID/等级。
+`MISSMODE_SrvHit14_MeteorCenter_CatapultMeteor_RoyalStrikeMeteor`
+（`MissMode.cpp:2746`）先用中心导弹的技能伤害包分发范围撞击，再按 18 个固定偏移创建
+`HitSubMissile[0]=meteorfire`（`MissMode.cpp:2811`）。矩阵只批准一次撞击对单个目标的包；
+范围目标集合和整次施法总量留给 DMG-07。
+
+`meteorfire` 与中心的伤害所有权不同：其 `Skill` 为空且 `MissileSkill=false`，所以
+`MISSILE_CalculateDamageData`（`D2Common/src/Units/Missile.cpp:505`）读取 `Missiles.txt`
+自身的 `HitShift=3`、`EMin/EMax=15/25` 和五段增量 `4/5/6/6/6`，得到等级 1
+`120–200`、等级 20 `856–936` 的 8.8 fixed/frame rate；`ApplyMastery=true` 才使这份
+表拥有的伤害应用 Fire Mastery。`SrvDo05` 每帧碰撞，`DamageRate=41` 仍只缩放平面
+DR/MDR，`SrvDmg03 dParam1=19` 只控制受击恢复概率。持续时间由技能 `Param3=30`、
+`Param4=15` 产生 30–315 帧。
+
+riiablo 原先错误地用 `initializeSorceressFireArea` 把技能撞击曲线复制到所有 18 个地火，
+使一级 rate 变成 `20480–25600`。现由 `initializeMeteorFireArea` 保存表拥有的曲线，并按
+`ApplyMastery` 应用精通；`MeteorGoldenDamageTest` 锁定两条 1–20 曲线、持续时间和精通，
+`SorceressMeteorIntegrationTest` 锁定中心 `20480–25600` fixed 撞击快照与每个地火
+`120–200` fixed rate。

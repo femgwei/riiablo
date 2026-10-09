@@ -2678,8 +2678,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    // SrvHit14 uses the skill's elemental packet for the immediate impact;
-    // the meteorfire children use the same snapshot for their periodic field.
+    // SrvHit14 uses the skill-owned elemental packet for the immediate impact.
+    // Its meteorfire children instead own a separate Missiles.txt rate curve.
     MissileDamageResolver.initializeSorceressFireArea(center, skill, ownerAttrs,
         mPlayer.has(event.entityId), level,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));

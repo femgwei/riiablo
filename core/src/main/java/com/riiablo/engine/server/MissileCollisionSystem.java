@@ -882,9 +882,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       fire.tickInterval = 1;
       fire.range = 0f;
       if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
-      MissileDamageResolver.initializeSorceressFireArea(fire, skill, ownerAttrs,
-          mPlayer.has(center.ownerId), level,
-          key -> baseSkillLevel(center.ownerId, key), stateList(center.ownerId));
+      MissileDamageResolver.initializeMeteorFireArea(fire, ownerAttrs,
+          mPlayer.has(center.ownerId), level, stateList(center.ownerId));
       created++;
     }
     return created;

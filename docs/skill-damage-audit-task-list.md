@@ -52,11 +52,11 @@
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 1,040 行 `GOLDEN_APPROVED`，其余 3,160 行仍为
+- 4,200 行中已有 1,060 行 `GOLDEN_APPROVED`，其余 3,140 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
 - 当前约 35.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 1,040 个逐级黄金行；不表示技能伤害正确率为 35.0%。
+  对齐，以及 1,060 个逐级黄金行；不表示技能伤害正确率为 35.0%。
 
 ## 加权任务
 
@@ -540,4 +540,11 @@ Teleport 等级 1–20 已按“只移动施法者，不拥有输出伤害包”
 962–981 行的 expected/actual/delta 全部明确保持 N/A；riiablo 生产路径成功位移时
 不会创建导弹或发出 `DamageEvent`。
 
-下一项审核 Sorceress Meteor（技能 56）。
+Meteor 等级 1–20 已按“一次坠落撞击对单个目标的技能火焰包”批准。基础场景固定
+Fire Bolt/Fire Ball 硬点和 Fire Mastery 为 0；撞击从 `80–100` 增长到 `869–927`，
+矩阵第 1002–1021 行的 expected/actual 与 delta=0。审核同时发现并修正地火所有权：
+`meteorfire` 的 `Skill` 为空且 `MissileSkill=false`，应读取自身 `Missiles.txt` 曲线，
+而不是复用 Meteor 撞击曲线。专项测试锁定地火 8.8 rate 从 `120–200` 增长到
+`856–936`、持续时间从 30 增长到 315 帧；18 段覆盖、重叠和总量留给 DMG-07。
+
+下一项审核 Sorceress Energy Shield（技能 58）。

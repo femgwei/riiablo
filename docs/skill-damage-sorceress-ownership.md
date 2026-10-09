@@ -81,6 +81,14 @@ Teleport 的 DMG-04 等级 1–20 已按明确 N/A 批准。1.10f `Skills.txt#54
 riiablo 的 `Actioneer.resolveTeleport` 对应执行同一位移链，专项测试确认成功位移不会创建
 导弹或发出 `DamageEvent`；矩阵伤害 expected/actual/delta 字段保持空白。
 
+Meteor 的 DMG-04 等级 1–20 已按“一次坠落撞击对单个目标的技能火焰包”批准。
+`meteorcenter` 保留技能 ID/等级，因此撞击读取 `Skills.txt#56`：零 Fire Bolt/Fire Ball
+硬点、零 Fire Mastery 时从 `80–100` 增长到 `869–927`。`SrvHit14` 随后在 18 个固定偏移
+创建 `meteorfire`；该行 `Skill` 为空且 `MissileSkill=false`，原版因此改读其自身
+`Missiles.txt` 8.8 rate（等级 1 为 `120–200` fixed/frame，等级 20 为 `856–936`），
+并仅在 `ApplyMastery=true` 时应用 Fire Mastery。riiablo 已拆分两种初始化路径；地火覆盖、
+重叠、逐帧累计和完整施法总量留给 DMG-07。
+
 ## 可复现验证
 
 ```powershell

@@ -72,6 +72,8 @@ class SorceressMeteorIntegrationTest extends RiiabloTest {
       assertNotNull(center);
       assertTrue(center.meteorCenter);
       assertEquals(60, center.nativeLifetimeFrames);
+      assertEquals(20480, center.elementalMinRateFixed);
+      assertEquals(25600, center.elementalMaxRateFixed);
 
       world.setDelta(1f / 25f);
       for (int i = 0; i < 59; i++) world.process();
@@ -85,6 +87,9 @@ class SorceressMeteorIntegrationTest extends RiiabloTest {
       for (Missile fire : factory.named("meteorfire")) {
         assertTrue(fire.persistent);
         assertTrue(fire.damageSnapshot);
+        assertTrue(fire.fixedElementalRate);
+        assertEquals(120, fire.elementalMinRateFixed);
+        assertEquals(200, fire.elementalMaxRateFixed);
         assertEquals(30, fire.remainingFrames);
       }
     } finally {

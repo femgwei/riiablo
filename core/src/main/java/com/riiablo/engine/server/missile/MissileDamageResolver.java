@@ -329,6 +329,49 @@ public final class MissileDamageResolver {
     return true;
   }
 
+  /**
+   * Captures one native Meteor ground fire missile's table-owned 8.8 fire rate.
+   * Unlike the impact center, meteorfire has no Skills.txt owner; ApplyMastery
+   * explicitly opts its Missiles.txt packet into Fire Mastery.
+   */
+  public static boolean initializeMeteorFireArea(Missile projectile,
+      Attributes ownerAttrs, boolean attackerPlayer, int level, StateList ownerStates) {
+    if (projectile == null || projectile.missile == null
+        || !"fire".equalsIgnoreCase(projectile.missile.EType)) return false;
+    level = Math.max(1, level);
+    int min = missileElementalDamageFixed(projectile.missile, level, true);
+    int max = Math.max(min, missileElementalDamageFixed(projectile.missile, level, false));
+    int mastery = 0;
+    if (projectile.missile.ApplyMastery) {
+      mastery = Math.max(0, statInt(ownerAttrs, Stat.passive_fire_mastery));
+      if (ownerStates != null) {
+        mastery += Math.max(0,
+            ownerStates.getTotalStatContribution(Stat.passive_fire_mastery));
+      }
+      min = percentage(min, 100 + mastery);
+      max = percentage(max, 100 + mastery);
+    }
+    if (max <= 0) return false;
+
+    projectile.damageLevel = level;
+    projectile.damageSnapshot = true;
+    projectile.fixedElementalRate = true;
+    projectile.fixedElementalType = com.riiablo.engine.server.combat.CombatSystem.DAMAGE_FIRE;
+    projectile.elementalMinRateFixed = Math.max(0, min);
+    projectile.elementalMaxRateFixed = Math.max(projectile.elementalMinRateFixed, max);
+    projectile.elementalDamageRate = Math.max(0, projectile.missile.DamageRate);
+    projectile.elementalAttackerPlayer = attackerPlayer;
+    projectile.elementalPiercePercent = ownerAttrs == null ? 0
+        : statInt(ownerAttrs, Stat.item_pierce_fire)
+            + statInt(ownerAttrs, Stat.passive_fire_pierce);
+    log.info("[METEOR_FIRE_DAMAGE] missile={} level={} rawFixed={}..{} mastery={} "
+            + "pierce={} damageRate={}",
+        projectile.missile.Missile, level,
+        projectile.elementalMinRateFixed, projectile.elementalMaxRateFixed,
+        mastery, projectile.elementalPiercePercent, projectile.elementalDamageRate);
+    return true;
+  }
+
   /** Elemental-only explosion snapshot including the owner's passive stat lists. */
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
