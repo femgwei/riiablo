@@ -13,6 +13,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +30,7 @@ import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.utils.BitVector;
+import com.artemis.utils.IntBag;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 import com.badlogic.gdx.Application;
@@ -96,6 +99,7 @@ import com.riiablo.engine.server.ServerItemManager;
 import com.riiablo.engine.server.item.AuthoritativeItemMoveService;
 import com.riiablo.engine.server.item.ItemMoveIntent;
 import com.riiablo.engine.server.item.ItemMoveRequestCache;
+import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.engine.server.player.SkillPointRequestCache;
 import com.riiablo.engine.server.player.StatPointRequestCache;
@@ -8731,7 +8735,8 @@ public class D2GS extends ApplicationAdapter {
           ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
       outcome = authoritativeItems.drop(playerEntityId, character, intent, item -> {
         if (position == null) return false;
-        int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
+        Vector2 dropPosition = findFreeGroundDropPosition(playerEntityId, position.position);
+        int droppedEntity = factory.createItem(item, dropPosition.x, dropPosition.y);
         if (droppedEntity < 0) return false;
         com.riiablo.engine.server.component.Item dropped = mItemSafe(droppedEntity);
         com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(dropped,
@@ -8856,6 +8861,36 @@ public class D2GS extends ApplicationAdapter {
       case 5: return 109; // Harrogath
       default: return 1;  // Rogue Encampment
     }
+  }
+
+  /** Finds a free logical item subtile while preserving native sprite overlap. */
+  private Vector2 findFreeGroundDropPosition(int playerEntityId, Vector2 origin) {
+    Set<Long> occupied = new HashSet<>();
+    com.riiablo.engine.server.component.MapWrapper playerMap =
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerEntityId);
+    if (playerMap != null && playerMap.map != null) {
+      IntBag itemEntities = world.getAspectSubscriptionManager().get(
+          Aspect.all(com.riiablo.engine.server.component.Item.class,
+              com.riiablo.engine.server.component.Position.class,
+              com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+      ComponentMapper<com.riiablo.engine.server.component.Item> items =
+          world.getMapper(com.riiablo.engine.server.component.Item.class);
+      ComponentMapper<com.riiablo.engine.server.component.MapWrapper> maps =
+          world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+      ComponentMapper<com.riiablo.engine.server.component.Position> positions =
+          world.getMapper(com.riiablo.engine.server.component.Position.class);
+      for (int i = 0; i < itemEntities.size(); i++) {
+        int entityId = itemEntities.get(i);
+        com.riiablo.engine.server.component.MapWrapper itemMap = maps.get(entityId);
+        com.riiablo.engine.server.component.Item item = items.get(entityId);
+        com.riiablo.engine.server.component.Position itemPosition = positions.get(entityId);
+        if (itemMap == null || itemMap.map != playerMap.map || item == null
+            || item.item == null || itemPosition == null) continue;
+        occupied.add(GroundDropPosition.key(Math.round(itemPosition.position.x),
+            Math.round(itemPosition.position.y)));
+      }
+    }
+    return GroundDropPosition.findFree(origin.x, origin.y, occupied, 8, new Vector2());
   }
 
   private com.riiablo.engine.server.component.Item mItemSafe(int entityId) {

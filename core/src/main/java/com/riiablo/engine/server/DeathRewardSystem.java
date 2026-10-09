@@ -1,10 +1,15 @@
 package com.riiablo.engine.server;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
+import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
@@ -22,6 +27,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.item.ItemQuality;
 import com.riiablo.engine.server.item.LootManager;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
@@ -169,21 +175,25 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     LootManager.LootResult result = lootManager.calculateLoot(config);
+    Set<Long> occupiedDropCells = collectGroundDropCells(
+        mMapWrapper.has(event.victim) ? mMapWrapper.get(event.victim).zone : null);
     int createdItems = 0;
     for (int i = 0; i < result.getItemCount(); i++) {
       String code = result.itemCodes.get(i);
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
       int itemSeed = config.rngSeed ^ ((i + 1) * 0x9E3779B9);
+      Vector2 drop = nextDropPosition(position.position, occupiedDropCells);
       int itemId = createItem(code, quality, itemLevel, itemSeed, difficulty,
-          position.position.x, position.position.y, ownerId);
+          drop.x, drop.y, ownerId);
       if (itemId >= 0) createdItems++;
       log.debug("[DEATH_REWARD] item: killer={}, victim={}, code={}, rolledQuality={}, "
               + "ilvl={}, entity={}", event.killer, event.victim, code, quality, itemLevel, itemId);
     }
 
+    Vector2 goldDrop = nextDropPosition(position.position, occupiedDropCells);
     int goldEntity = createGold(result.goldAmount, monsterLevel,
-        position.position.x, position.position.y, ownerId);
+        goldDrop.x, goldDrop.y, ownerId);
     log.info("[DEATH_REWARD] killer={}, victim={}, monster={}, rank={}, tc={}, level={}, "
             + "difficulty={}, players={}, partyInLevel={}, monsterPlayers={}, "
             + "effectivePlayers={}, boss={}, gold={}, goldEntity={}, itemsRolled={}, itemsCreated={}",
@@ -195,6 +205,36 @@ public class DeathRewardSystem extends PassiveSystem {
             config.playerCount, config.partyMembersInLevel,
             config.monsterPlayerCount).effectivePlayerCount(),
         config.isBoss, result.goldAmount, goldEntity, result.getItemCount(), createdItems);
+  }
+
+  private Vector2 nextDropPosition(Vector2 origin, Set<Long> occupied) {
+    Vector2 result = GroundDropPosition.findFree(origin.x, origin.y, occupied, 2,
+        new Vector2());
+    occupied.add(GroundDropPosition.key(Math.round(result.x), Math.round(result.y)));
+    return result;
+  }
+
+  private Set<Long> collectGroundDropCells(com.riiablo.map.Map.Zone zone) {
+    Set<Long> occupied = new HashSet<>();
+    if (zone == null) return occupied;
+    IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Item.class,
+            Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+        .getEntities();
+    ComponentMapper<com.riiablo.engine.server.component.Item> items =
+        world.getMapper(com.riiablo.engine.server.component.Item.class);
+    ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = entities.get(i);
+      com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+      Position itemPosition = mPosition.get(entityId);
+      if (wrapper == null || wrapper.zone != zone || itemPosition == null
+          || items.get(entityId) == null || items.get(entityId).item == null) continue;
+      occupied.add(GroundDropPosition.key(Math.round(itemPosition.position.x),
+          Math.round(itemPosition.position.y)));
+    }
+    return occupied;
   }
 
   static boolean isEliteRank(int rank) {
@@ -240,8 +280,7 @@ public class DeathRewardSystem extends PassiveSystem {
       Quality quality = safeQuality(rolledQuality);
       Item item = itemGenerator.generateLootItem(code, itemLevel, quality,
           itemSeed, difficulty);
-      int entityId = factory.createItem(item, x + MathUtils.random(-2f, 2f),
-          y + MathUtils.random(-2f, 2f));
+      int entityId = factory.createItem(item, x, y);
       markDrop(entityId, ownerId, dropPartyId(ownerId),
           10_000L, 10_000L, "gld".equalsIgnoreCase(item.code));
       GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),
@@ -266,8 +305,7 @@ public class DeathRewardSystem extends PassiveSystem {
       gold.quality = Quality.NORMAL;
       gold.flags |= Item.ITEMFLAG_IDENTIFIED;
       gold.attrs.base().put(Stat.quantity, amount);
-      int entityId = factory.createItem(gold, x + MathUtils.random(-1f, 1f),
-          y + MathUtils.random(-1f, 1f));
+      int entityId = factory.createItem(gold, x, y);
       markDrop(entityId, ownerId, dropPartyId(ownerId),
           10_000L, 10_000L, true);
       GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),

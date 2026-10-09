@@ -53,7 +53,6 @@ public class LabelManager extends IteratingSystem {
   private static final int MAX_GROUND_LABELS = 32;
   /** D2 does a small local nudge, not an unbounded collision-free layout. */
   private static final int MAX_LABEL_RING = 2;
-  private static final float SAME_DROP_ANCHOR_EPSILON = 1f;
 
   private static final class GroundLabel {
     final Actor actor;
@@ -157,14 +156,13 @@ public class LabelManager extends IteratingSystem {
       Actor actor = groundLabel.actor;
       Array<Rectangle> localOccupied = new Array<>();
       localOccupied.addAll(occupiedLabels);
-      // Adjacent subtiles are allowed to overlap visually in native D2. Only
-      // labels sharing the same (or effectively same) drop anchor participate
-      // in this small label nudge.
+      // Use the actual label rectangles, including long names. The bounded
+      // search below still permits overlap once a dense cluster exhausts its
+      // local candidates, matching native D2 rather than forcing a global UI
+      // layout.
       for (GroundLabel previous : placedGroundLabels) {
-        if (sameDropAnchor(groundLabel, previous)) {
-          localOccupied.add(new Rectangle(previous.actor.getX(), previous.actor.getY(),
-              previous.actor.getWidth(), previous.actor.getHeight()));
-        }
+        localOccupied.add(new Rectangle(previous.actor.getX(), previous.actor.getY(),
+            previous.actor.getWidth(), previous.actor.getHeight()));
       }
       Rectangle placed = findGroundLabelPosition(
           groundLabel.desiredX, groundLabel.desiredY,
@@ -185,11 +183,6 @@ public class LabelManager extends IteratingSystem {
       labels.removeValue(groundLabels.get(i).actor, true);
     }
     groundLabels.truncate(MAX_GROUND_LABELS);
-  }
-
-  private static boolean sameDropAnchor(GroundLabel first, GroundLabel second) {
-    return Math.abs(first.desiredX - second.desiredX) <= SAME_DROP_ANCHOR_EPSILON
-        && Math.abs(first.desiredY - second.desiredY) <= SAME_DROP_ANCHOR_EPSILON;
   }
 
   private boolean containsGroundLabel(Actor actor) {

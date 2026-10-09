@@ -57,6 +57,17 @@ class LabelManagerTest {
   }
 
   @Test
+  void longGroundLabelUsesItsFullWidthWhenAvoidingAnotherLabel() {
+    Array<Rectangle> occupied = new Array<>();
+    occupied.add(new Rectangle(100, 80, 180, 12));
+
+    Rectangle placed = LabelManager.findGroundLabelPosition(
+        100, 80, 180, 12, occupied, 0, 0, 640, 360);
+
+    assertFalse(overlapsWithGap(placed, occupied.first()));
+  }
+
+  @Test
   void denseGroundLabelsKeepSeparatingBeyondTheInitialSearchRings() {
     Array<Rectangle> occupied = new Array<>();
     boolean overlapObserved = false;

@@ -1,6 +1,8 @@
 package com.riiablo.engine.server.item;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
@@ -422,11 +424,18 @@ public class LootManager {
       return entities;
     }
 
+    // Reserve logical subtiles for this drop batch.  The renderer may still
+    // show neighbouring sprites on top of one another, but two items from the
+    // same drop should not receive the exact same native cell.
+    Set<Long> occupiedCells = new HashSet<>();
+
     // 创建金币
     if (result.goldAmount > 0) {
-      // 金币散落到周围
-      float goldX = posX + MathUtils.random(-1f, 1f);
-      float goldY = posY + MathUtils.random(-1f, 1f);
+      com.badlogic.gdx.math.Vector2 drop = GroundDropPosition.findFree(
+          posX, posY, occupiedCells, 2, new com.badlogic.gdx.math.Vector2());
+      occupiedCells.add(GroundDropPosition.key(Math.round(drop.x), Math.round(drop.y)));
+      float goldX = drop.x;
+      float goldY = drop.y;
       int entityId = createCallback.onGoldCreate(result.goldAmount, goldX, goldY);
       if (entityId >= 0) {
         entities.add(entityId);
@@ -439,9 +448,11 @@ public class LootManager {
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
 
-      // 物品散落到周围
-      float itemX = posX + MathUtils.random(-2f, 2f);
-      float itemY = posY + MathUtils.random(-2f, 2f);
+      com.badlogic.gdx.math.Vector2 drop = GroundDropPosition.findFree(
+          posX, posY, occupiedCells, 2, new com.badlogic.gdx.math.Vector2());
+      occupiedCells.add(GroundDropPosition.key(Math.round(drop.x), Math.round(drop.y)));
+      float itemX = drop.x;
+      float itemY = drop.y;
 
       int entityId = createCallback.onItemCreate(code, quality, itemLevel, itemX, itemY);
       if (entityId >= 0) {

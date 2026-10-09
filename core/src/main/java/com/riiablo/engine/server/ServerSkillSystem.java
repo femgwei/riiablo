@@ -1,5 +1,8 @@
 package com.riiablo.engine.server;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.artemis.ComponentMapper;
 import com.artemis.Aspect;
 import com.artemis.utils.IntBag;
@@ -43,6 +46,7 @@ import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
 import com.riiablo.engine.server.item.LootManager;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
@@ -4883,8 +4887,9 @@ public class ServerSkillSystem extends PassiveSystem {
     try {
       com.riiablo.item.Item item = itemGenerator.generateLootItem(code, Math.max(1, level), quality,
           rng.nextInt(Integer.MAX_VALUE), mPlayer.get(source).data != null ? mPlayer.get(source).data.diff : 0);
-      int id = factory.createItem(item, mPosition.get(corpseId).position.x,
-          mPosition.get(corpseId).position.y);
+      Vector2 dropPosition = findFreeGroundDropPosition(corpseId,
+          mPosition.get(corpseId).position);
+      int id = factory.createItem(item, dropPosition.x, dropPosition.y);
       if (id >= 0) {
         item.id = id;
         GroundDropOwnership.register(id, source, (short) -1, 10_000L, 10_000L, false);
@@ -4900,8 +4905,9 @@ public class ServerSkillSystem extends PassiveSystem {
       gold.quality = Quality.NORMAL;
       gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
       gold.attrs.base().put(Stat.quantity, amount);
-      int id = factory.createItem(gold, mPosition.get(corpseId).position.x,
-          mPosition.get(corpseId).position.y);
+      Vector2 dropPosition = findFreeGroundDropPosition(corpseId,
+          mPosition.get(corpseId).position);
+      int id = factory.createItem(gold, dropPosition.x, dropPosition.y);
       if (id >= 0) {
         gold.id = id;
         GroundDropOwnership.register(id, source, -1, 10_000L, 10_000L, true);
@@ -5007,6 +5013,27 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[RANGED_AMMO] phase=consume weapon={} ammo={} itemId={} before={} after={}",
         weapon.code, ammo.code, ammo.id, before, before - 1);
     return true;
+  }
+
+  private Vector2 findFreeGroundDropPosition(int originEntityId, Vector2 origin) {
+    Set<Long> occupied = new HashSet<>();
+    MapWrapper originMap = mMapWrapper.has(originEntityId) ? mMapWrapper.get(originEntityId) : null;
+    if (originMap != null && originMap.map != null) {
+      com.artemis.utils.IntBag itemEntities = world.getAspectSubscriptionManager().get(
+          Aspect.all(com.riiablo.engine.server.component.Item.class,
+              Position.class, MapWrapper.class)).getEntities();
+      for (int i = 0; i < itemEntities.size(); i++) {
+        int entityId = itemEntities.get(i);
+        MapWrapper itemMap = mMapWrapper.get(entityId);
+        com.riiablo.engine.server.component.Item item = mItem.get(entityId);
+        Position position = mPosition.get(entityId);
+        if (itemMap == null || itemMap.map != originMap.map || item == null
+            || item.item == null || position == null) continue;
+        occupied.add(GroundDropPosition.key(Math.round(position.position.x),
+            Math.round(position.position.y)));
+      }
+    }
+    return GroundDropPosition.findFree(origin.x, origin.y, occupied, 8, new Vector2());
   }
 
   /** Native sub_6FD118C0/sub_6FD11340 for decquant Amazon javelin missiles. */
