@@ -75,6 +75,12 @@ Enchant 的 DMG-04 等级 1–20 已按目标状态的一份火焰伤害贡献�
 `SrvDo025` 不立即结算攻击，而是把这些统计安装到友方目标；后续武器命中消费该状态。
 riiablo 已修正为在协同和精通计算完成前保留原生 8.8 定点精度。
 
+Teleport 的 DMG-04 等级 1–20 已按明确 N/A 批准。1.10f `Skills.txt#54` 的物理、
+元素和 server missile 字段均为空或 0；`SrvDo027` 只读取目标坐标，检查当前关卡的
+`Levels.Teleport` 与飞行碰撞，再调用 `sub_6FCBDFE0` 搜索安全落点并移动单位。
+riiablo 的 `Actioneer.resolveTeleport` 对应执行同一位移链，专项测试确认成功位移不会创建
+导弹或发出 `DamageEvent`；矩阵伤害 expected/actual/delta 字段保持空白。
+
 ## 可复现验证
 
 ```powershell

@@ -5,7 +5,7 @@
 审计基线：Diablo II 1.10f
 
 最近完成技能提交：`e828f7d187e93d396a842e85ce53b277fb4bfa44`
-当前加权完成度：**34.9%**
+当前加权完成度：**35.0%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -52,11 +52,11 @@
   `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
   `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 1,020 行 `GOLDEN_APPROVED`，其余 3,180 行仍为
+- 4,200 行中已有 1,040 行 `GOLDEN_APPROVED`，其余 3,160 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前约 34.9% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 1,020 个逐级黄金行；不表示技能伤害正确率为 34.9%。
+- 当前约 35.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 1,040 个逐级黄金行；不表示技能伤害正确率为 35.0%。
 
 ## 加权任务
 
@@ -533,4 +533,11 @@ Warmth 硬点与 Fire Mastery 为 0；`enma/exma` 保留 8.8 定点精度后返�
 `8–10` 到 `68–89`，`AuraLenCalc=ln12` 产生 3600–15000 帧持续时间，
 `toht` 产生 20%–191% 命中率。矩阵第 922–941 行记录状态火焰贡献的
 expected/actual 与 delta=0；武器包、协同、精通和最终攻击结算留给 DMG-05/06/08。
-下一项审核 Sorceress Teleport（技能 54）。
+
+Teleport 等级 1–20 已按“只移动施法者，不拥有输出伤害包”批准。1.10f
+`Skills.txt#54` 的物理、元素和 server missile 字段均为空或 0；D2MOO `SrvDo027`
+只校验 `Levels.Teleport`、飞行碰撞和安全落点，再调用通用单位位移函数。矩阵第
+962–981 行的 expected/actual/delta 全部明确保持 N/A；riiablo 生产路径成功位移时
+不会创建导弹或发出 `DamageEvent`。
+
+下一项审核 Sorceress Meteor（技能 56）。

@@ -1223,3 +1223,23 @@ riiablo 的 `getEnchantDamage` 已改为在协同和精通应用完成前保留 
 `EnchantGoldenDamageTest` 锁定零协同/零精通的 20 级曲线、持续时间、命中率、实际状态
 贡献及该取整边界；矩阵记录状态拥有的一份火焰包，武器基础包和最终命中结算留给
 DMG-06/08。
+
+## DMG-04 第五十三个逐级实例：Teleport
+
+Teleport 不拥有输出伤害包。1.10f `Skills.txt#54` 使用 `SrvStFunc=0`、
+`SrvDoFunc=27`、`SrcDam=0`；物理与元素基础值、全部等级增量、元素长度和五个 server
+missile 字段均为空或 0。等级只改变法力消耗：等级 1–20 从 24 递减到 5，不产生可填入
+伤害矩阵的数值。
+
+D2MOO `SKILLS_SrvDo027_Teleport`（`SkillSor.cpp:874`）取得目标坐标和当前房间，读取
+`Levels.txt` 的 `Teleport` 标志；值为 0 时拒绝，值为 2 时还以
+`COLLIDE_MASK_PLAYER_FLYING` 检查落点。通过后只调用 `sub_6FCBDFE0`。
+该通用位移函数（`SUnit.cpp:2147`）搜索适合单位 footprint 的空闲坐标、更新动态路径与
+房间、设置 `UNITFLAGEX_TELEPORTED` 并发送玩家位置同步；整条路径不读取技能伤害曲线，
+也不创建 missile 或 `D2DamageStrc`。
+
+riiablo 的 `Actioneer.resolveTeleport` 对应执行关卡、同 Zone、飞行碰撞和安全落点检查，
+成功后更新位置、清理旧移动意图并安装 `SYNC_WARPED`。`TeleportGoldenDamageTest` 锁定
+全部零伤害/零 server missile 字段、1–20 级法力曲线，并以生产位移方法确认成功施法
+创建 0 枚导弹、发出 0 个 `DamageEvent`。矩阵第 962–981 行把三组 `expected_*`、
+`riiablo_actual_*` 和 `delta_*` 明确留空为 N/A，不能用 `0–0` 冒充伤害。
