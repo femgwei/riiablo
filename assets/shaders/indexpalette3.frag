@@ -53,7 +53,13 @@ void main() {
       vec3 localLight = localLightColors[i] * falloff;
       intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));
     }
-    float lightByte = floor(clamp(intensity, 0.0, 1.0) * 255.0 + 0.5);
+    // The native PL2 rows leave deep-night outdoor units too subdued on the
+    // modern display path. Apply a restrained display-space lift in indexed
+    // light space only: daylight remains unchanged, while ambient 64 moves
+    // to about 89 (Shadow[8] -> Shadow[11]). Keep this before the PL2 lookup
+    // so the local-light boundary cannot acquire an RGB dark ring.
+    intensity = pow(clamp(intensity, 0.0, 1.0), 0.85);
+    float lightByte = floor(intensity * 255.0 + 0.5);
     if (lightByte < 255.0 && color.a > 0.0) {
       float row = floor(lightByte / 8.0);
       color.r = (row + 0.5) / 32.0;
