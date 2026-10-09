@@ -50,7 +50,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
         || !mMonster.has(event.entityId)) return;
     MonSounds.Entry bank = soundBank(mMonster.get(event.entityId));
     if (bank != null && hasSound(bank.DeathSound) && Riiablo.audio != null) {
-      Riiablo.audio.play(bank.DeathSound, true);
+      play(event.entityId, bank.DeathSound);
     }
   }
 
@@ -69,7 +69,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
       states.put(entityId, state = new State());
       // MonSounds.Init is emitted once when the monster enters the client,
       // just as D2 emits the bank's initialization vocalization on spawn.
-      play(bank.Init);
+      play(entityId, bank.Init);
     }
 
     int frame = animation.getFrame();
@@ -83,7 +83,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
       // Taunt is a one-shot encounter vocalization.  The authoritative AI
       // decides when pursuit begins; the first visible transition to WL/RN is
       // the client-side equivalent and avoids repeating it every repath.
-      play(bank.Taunt);
+      play(entityId, bank.Taunt);
       state.tauntPlayed = true;
     }
 
@@ -94,12 +94,12 @@ public class MonsterSoundEmitter extends IteratingSystem {
       if (state.neutralRemaining <= 0f) state.neutralRemaining = seededDelay(bank);
     }
 
-    if (moving) playFootsteps(bank, state, frame, frameCount);
+    if (moving) playFootsteps(entityId, bank, state, frame, frameCount);
 
     if (vocalMode && hasSound(bank.Neutral)) {
       state.neutralRemaining -= com.riiablo.engine.SimulationClock.STEP_SECONDS;
       if (state.neutralRemaining <= 0f) {
-        play(bank.Neutral);
+        play(entityId, bank.Neutral);
         state.neutralRemaining = neutralDelay(bank);
       }
     } else if (!vocalMode) {
@@ -109,7 +109,8 @@ public class MonsterSoundEmitter extends IteratingSystem {
     state.previousFrame = frame;
   }
 
-  private void playFootsteps(MonSounds.Entry bank, State state, int frame, int frameCount) {
+  private void playFootsteps(int entityId, MonSounds.Entry bank, State state,
+      int frame, int frameCount) {
     if (!hasSound(bank.Footstep) && !hasSound(bank.FootstepLayer)) return;
     int count = Math.max(1, bank.FsCnt);
     int interval = Math.max(1, frameCount / count);
@@ -117,8 +118,8 @@ public class MonsterSoundEmitter extends IteratingSystem {
     if (!crossed(state.previousFrame, frame, offset, frameCount, interval)) return;
     int probability = bank.FsPrb <= 0 ? 100 : Math.min(100, bank.FsPrb);
     if (com.badlogic.gdx.math.MathUtils.random(99) >= probability) return;
-    play(bank.Footstep);
-    if (hasSound(bank.FootstepLayer)) play(bank.FootstepLayer);
+    play(entityId, bank.Footstep);
+    if (hasSound(bank.FootstepLayer)) play(entityId, bank.FootstepLayer);
   }
 
   private static boolean crossed(int previous, int current, int offset,
@@ -164,8 +165,8 @@ public class MonsterSoundEmitter extends IteratingSystem {
     return sound != null && !sound.isEmpty() && !"none".equalsIgnoreCase(sound);
   }
 
-  private static void play(String sound) {
-    if (hasSound(sound)) Riiablo.audio.play(sound, true);
+  private static void play(int entityId, String sound) {
+    if (hasSound(sound)) MonsterAudio.play(entityId, sound, true);
   }
 
   private static final class State {

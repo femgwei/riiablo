@@ -22,10 +22,14 @@ public final class MonsterAudio {
 
   /** Compatibility overload for legacy AI call sites that passed {@code global}. */
   public static Audio.Instance play(int entityId, String sound, boolean global) {
-    if (!isAudible(entityId) || sound == null || sound.isEmpty() || Riiablo.audio == null) {
+    if (sound == null || sound.isEmpty() || Riiablo.audio == null) {
       return null;
     }
-    return Riiablo.audio.play(sound, global);
+    float gain = spatialGain(entityId);
+    if (gain <= 0f) return null;
+    Audio.Instance instance = Riiablo.audio.play(sound, global);
+    if (instance != null) instance.setVolume(gain);
+    return instance;
   }
 
   /** Applies the same local-player, Zone and distance policy to all callers. */
@@ -50,5 +54,37 @@ public final class MonsterAudio {
   /** Pure predicate kept small enough for deterministic unit tests. */
   public static boolean isAudible(float distance2, boolean sameZone) {
     return sameZone && distance2 >= 0f && distance2 <= AUDIBLE_RADIUS2;
+  }
+
+  /**
+   * Returns the same linear distance gain used by positional loop emitters.
+   * One-shot monster sounds must apply this after starting playback as well;
+   * filtering only by radius makes them play at full volume until they vanish
+   * at the boundary.
+   */
+  public static float spatialGain(float distance2, boolean sameZone) {
+    if (!isAudible(distance2, sameZone)) return 0f;
+    return Math.max(0f, 1f - (float) Math.sqrt(distance2) / AUDIBLE_RADIUS);
+  }
+
+  /** Returns the listener-relative gain for a monster, or zero when inaudible. */
+  public static float spatialGain(int entityId) {
+    if (Riiablo.game == null || Riiablo.game.player < 0 || Riiablo.engine == null) return 0f;
+    ComponentMapper<Position> positions = Riiablo.engine.getMapper(Position.class);
+    if (!positions.has(Riiablo.game.player) || !positions.has(entityId)) return 0f;
+
+    ComponentMapper<MapWrapper> maps = Riiablo.engine.getMapper(MapWrapper.class);
+    boolean sameZone = true;
+    if (maps.has(Riiablo.game.player) && maps.has(entityId)) {
+      MapWrapper listener = maps.get(Riiablo.game.player);
+      MapWrapper emitter = maps.get(entityId);
+      if (listener != null && emitter != null && listener.zone != null
+          && emitter.zone != null) {
+        sameZone = listener.zone == emitter.zone;
+      }
+    }
+    Vector2 listener = positions.get(Riiablo.game.player).position;
+    Vector2 emitter = positions.get(entityId).position;
+    return spatialGain(listener.dst2(emitter), sameZone);
   }
 }
