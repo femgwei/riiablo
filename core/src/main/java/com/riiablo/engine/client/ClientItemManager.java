@@ -338,7 +338,8 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
     gold.attrs.base().put(Stat.quantity, amount);
     gold.attrs.aggregate().put(Stat.quantity, amount);
-    int entityId = factory.createItem(gold, position.position.x, position.position.y);
+    Vector2 dropPosition = freeGroundPosition(Riiablo.game.player, position.position);
+    int entityId = factory.createItem(gold, dropPosition);
     if (entityId >= 0) {
       VendorPricing.dropCarriedGold(Riiablo.charData, amount);
     }

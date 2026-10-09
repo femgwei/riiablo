@@ -8585,7 +8585,8 @@ public class D2GS extends ApplicationAdapter {
             dropped.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
             dropped.attrs.base().put(com.riiablo.attributes.Stat.quantity, amount);
             dropped.attrs.aggregate().put(com.riiablo.attributes.Stat.quantity, amount);
-            groundEntityId = factory.createItem(dropped, position.position.x, position.position.y);
+            Vector2 dropPosition = findFreeGroundDropPosition(playerEntityId, position.position);
+            groundEntityId = factory.createItem(dropped, dropPosition.x, dropPosition.y);
             if (groundEntityId >= 0) {
               com.riiablo.engine.server.component.Item item = mItemSafe(groundEntityId);
               com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(item,
