@@ -1271,3 +1271,28 @@ riiablo 原先错误地用 `initializeSorceressFireArea` 把技能撞击曲线�
 `ApplyMastery` 应用精通；`MeteorGoldenDamageTest` 锁定两条 1–20 曲线、持续时间和精通，
 `SorceressMeteorIntegrationTest` 锁定中心 `20480–25600` fixed 撞击快照与每个地火
 `120–200` fixed rate。
+
+## DMG-04 第五十五个逐级实例：Energy Shield
+
+Energy Shield 不拥有输出伤害包。1.10f `Skills.txt#58` 使用 `SrvDoFunc=23`、
+`AuraState=energyshield`、`AuraLenCalc=ln12`、`AuraEvent=absorbdamage` 和
+`AuraEventFunc=24`，没有 AuraStat。元素源曲线 `EMin=20`、五段增量
+`5/2/1/1/1` 只由 `calc1=min(edmn,95)` 读取为吸收百分比，因此等级 1–20 为
+`20,25,30,35,40,45,50,55,57,59,61,63,65,67,69,71,72,73,74,75`%。
+`Param1=3600`、`Param2=1500` 使状态持续 3600–32100 帧。
+
+D2MOO `SKILLS_SrvDo023_Blaze_EnergyShield_SpiderLay`（`SkillSor.cpp:604`）在施法者
+自身创建状态 stat-list，保存技能 ID/等级、按 `AuraLenCalc` 安排到期事件，并注册
+`absorbdamage/EventFunc24`。`SKILLS_EventFunc24_EnergyShield`（`SkillSor.cpp:980`）依次
+处理 physical、fire、lightning、cold、magic，玩家还会继续处理三类 leech；poison
+不在吸收列表中。每个通道都在原生 8.8 fixed 中计算
+`absorb=channel*calc1/100`，再受 `mana*16/calc2` 限制，消耗
+`absorb*calc2/16` 法力。所有通道共享剩余法力；法力归零时移除状态。
+
+`calc2=par5-skill('Telekinesis'.blvl)`，`Param5=32`。基础场景 Telekinesis 硬点为 0，
+所以每吸收 1 点伤害消耗 2 点法力；20 硬点时 divisor 为 12，比例为 0.75。
+riiablo 的 `ServerSkillSystem.applyEnergyShieldState` 和
+`StateUpdater.applyEnergyShield` 现复现状态安装、通道顺序、8.8 截断、法力共享及耗尽
+移除；`DamageEvent` 同时补齐 magic 通道。`EnergyShieldGoldenDamageTest` 锁定 20 级
+公式，`SorceressDefenseIntegrationTest` 锁定生产状态、多通道、耗尽和 Telekinesis 场景。
+矩阵第 1042–1061 行将伤害三元组明确保持 N/A；抗性先后与最终伤害留给 DMG-08。

@@ -20,7 +20,8 @@
 
 ## 已确认的 riiablo 缺口
 
-- Energy Shield：存在 `DefenseCalculator.applyEnergyShield`，但没有找到 SrvDo023 把技能状态安装到角色的路径。
+- Energy Shield 的缺口已在 DMG-04 关闭：`SrvDo023` 安装状态，受击前的
+  `EventFunc24` 路径按原生通道顺序消耗法力，并读取 Telekinesis 硬点。
 - Lightning Mastery：导弹伤害解析器会读取 `passive_ltng_mastery`，但 `StateUpdater.synchronizeSorceressPassives` 目前只同步 Warmth 和 Fire Mastery。
 - Cold Mastery：伤害结算会读取 `passive_cold_pierce`，现有测试也能人工注入该值，但没有从角色技能等级同步被动状态。
 
@@ -88,6 +89,13 @@ Meteor 的 DMG-04 等级 1–20 已按“一次坠落撞击对单个目标的技
 `Missiles.txt` 8.8 rate（等级 1 为 `120–200` fixed/frame，等级 20 为 `856–936`），
 并仅在 `ApplyMastery=true` 时应用 Fire Mastery。riiablo 已拆分两种初始化路径；地火覆盖、
 重叠、逐帧累计和完整施法总量留给 DMG-07。
+
+Energy Shield 的 DMG-04 等级 1–20 已按明确 N/A 批准。它不产生对外伤害；
+`calc1=min(edmn,95)` 产生 20%–75% 吸收，`AuraLenCalc=ln12` 产生
+3600–32100 帧持续时间。零 Telekinesis 硬点时 `calc2=32`，每吸收 1 点伤害消耗
+2 点法力；20 硬点时 `calc2=12`，比例降为 0.75。D2MOO `EventFunc24` 按物理、火、
+电、冰、魔法顺序共享剩余法力且不吸收毒素。riiablo 已补齐状态安装、逐通道 8.8
+定点吸收、法力耗尽移除状态和 magic 通道元数据；抗性先后与最终结算留给 DMG-08。
 
 ## 可复现验证
 

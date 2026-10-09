@@ -791,6 +791,10 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 23 || skill.srvdofunc == 23) {
+      if (event.skillId == SkillId.ENERGY_SHIELD) {
+        applyEnergyShieldState(event, skill, skillLevel);
+        return;
+      }
       if (SorceressSkills.isBlaze(skill)) {
         applyBlazeState(event, skill, skillLevel);
         return;
@@ -1351,6 +1355,23 @@ public class ServerSkillSystem extends PassiveSystem {
     if (state == null) return;
     state.needsSync = true;
     log.info("[SORCERESS_BLAZE] phase=state source={} skill={} level={} duration={}",
+        event.entityId, skill.Id, skillLevel, duration);
+  }
+
+  /** D2MOO SrvDo023: Energy Shield installs its timed EventFunc24 self state. */
+  private void applyEnergyShieldState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) {
+      mUnitStates.create(event.entityId).init(event.entityId);
+    }
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    int duration = Math.max(1,
+        SkillFormula.evaluate(skill.auralencalc, skill, Math.max(1, skillLevel)));
+    UnitState state = states.stateList.addStateLayer(
+        StateId.ENERGYSHIELD, duration, skillLevel, event.entityId, skill.Id);
+    if (state == null) return;
+    state.needsSync = true;
+    log.info("[SORCERESS_ENERGY_SHIELD] phase=state source={} skill={} level={} duration={}",
         event.entityId, skill.Id, skillLevel, duration);
   }
 

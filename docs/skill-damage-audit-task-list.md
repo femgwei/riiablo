@@ -4,8 +4,8 @@
 
 审计基线：Diablo II 1.10f
 
-最近完成技能提交：`e828f7d187e93d396a842e85ce53b277fb4bfa44`
-当前加权完成度：**35.0%**
+最近完成技能提交：`cb9c7434`
+当前加权完成度：**35.1%**
 
 > 本清单独立于 dark-magic 技能移植清单。此前的 dark-magic 非视觉任务完成率不代表
 > 七职业逐等级伤害已经核对。本审计共有 210 个职业技能，第一阶段覆盖硬点等级
@@ -25,8 +25,8 @@
 - DMG-03B 已完成七职业各 30/30 个技能的伤害所有者和原版调用路径
   （累计 210/210，10.5%）：明细见各职业的
   `skill-damage-*-ownership.tsv` 与 `skill-damage-*-ownership.md`。
-  审计确认 Energy Shield、Lightning Mastery、Cold Mastery 仍存在 riiablo 执行/被动
-  同步缺口；Telekinesis 的单位目标伤害路径和 Inferno 的单脉冲路径已补齐，Lightning、
+  审计确认 Lightning Mastery、Cold Mastery 仍存在 riiablo 被动同步缺口；Energy Shield、
+  Telekinesis 的生产路径和 Inferno 的单脉冲路径已补齐，Lightning、
   Hydra 仍缺少聚焦伤害测试，Inferno 完整通道生命周期保留在 DMG-07。
 - Paladin 审计确认 Sacrifice、Smite、Zeal、Charge、Holy Shield 共 5 个伤害语义缺口；
   Conversion 和 Conviction 生产路径存在但仍缺聚焦测试。缺口只登记，尚未计入黄金值。
@@ -49,14 +49,14 @@
   逐级行按 N/A 批准；Valkyrie 也已确认召唤技能自身无独立伤害输出并按 N/A 批准；Inner Sight 的分段公式，以及 Jab、Guided Arrow
   的合法零值差异均已在 DMG-04 中修复。
 - 跨职业完整性复核已通过：七份清单共 210 个唯一技能、统一 12 列且无空证据；状态分布为
-  `IMPLEMENTED_TESTED` 120 项、`IMPLEMENTED_TEST_GAP` 27 项、
-  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 34 项。新增 Guided Arrow 测试引用已纳入
+  `IMPLEMENTED_TESTED` 121 项、`IMPLEMENTED_TEST_GAP` 27 项、
+  `OUT_OF_SCOPE_NO_DAMAGE` 29 项、`RIIABLO_GAP` 33 项。新增 Guided Arrow 测试引用已纳入
   自动解析门禁。
-- 4,200 行中已有 1,060 行 `GOLDEN_APPROVED`，其余 3,140 行仍为
+- 4,200 行中已有 1,080 行 `GOLDEN_APPROVED`，其余 3,120 行仍为
   `PENDING_D2MOO_REFERENCE`；未批准行的 `expected_*`、`riiablo_actual_*` 和
   `delta_*` 必须保持空白。
-- 当前约 35.0% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
-  对齐，以及 1,060 个逐级黄金行；不表示技能伤害正确率为 35.0%。
+- 当前约 35.1% 包含审计基础设施、源清册、通用公式证据、七职业 210/210 项所有者语义
+  对齐，以及 1,080 个逐级黄金行；不表示技能伤害正确率为 35.1%。
 
 ## 加权任务
 
@@ -547,4 +547,11 @@ Fire Bolt/Fire Ball 硬点和 Fire Mastery 为 0；撞击从 `80–100` 增长�
 而不是复用 Meteor 撞击曲线。专项测试锁定地火 8.8 rate 从 `120–200` 增长到
 `856–936`、持续时间从 30 增长到 315 帧；18 段覆盖、重叠和总量留给 DMG-07。
 
-下一项审核 Sorceress Energy Shield（技能 58）。
+Energy Shield 等级 1–20 已按“无对外伤害的受击转法力状态”批准。`calc1` 的吸收比例
+从 20% 增长到 75%，`AuraLenCalc` 从 3600 增长到 32100 帧；基础场景固定
+Telekinesis 硬点为 0，`calc2=32`，即每吸收 1 点伤害消耗 2 点法力。D2MOO
+`EventFunc24` 按物理、火、闪电、冰、魔法顺序共享法力且不吸收毒素。矩阵第
+1042–1061 行的 expected/actual/delta 全部保持 N/A；riiablo 已补齐 SrvDo023 状态、
+逐通道吸收、Telekinesis 比例和法力耗尽移除状态。抗性先后与最终结算留给 DMG-08。
+
+下一项审核 Sorceress Blizzard（技能 59）。

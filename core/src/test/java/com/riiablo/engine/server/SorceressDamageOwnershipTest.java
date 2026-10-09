@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Sorceress damage-owner audit. */
 class SorceressDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-sorceress-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(58, 63, 65);
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(63, 65);
 
   @Test
   void everySorceressSkillHasOneEvidenceBackedOwnerDecision() throws IOException {

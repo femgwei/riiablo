@@ -154,6 +154,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (victimStates == null) return;
 
     applySorceressArmorReaction(event, victimStates);
+    applyEnergyShield(event, victimStates);
     if (event.physicalDamage <= 0f || !mAttributesWrapper.has(event.victim)) return;
 
     applyNativeGolemHitEffects(event);
@@ -341,6 +342,86 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     Skills.Entry skill = Riiablo.files.skills.get(name);
     return skill != null
         ? Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id)) : 0;
+  }
+
+  /** D2MOO EventFunc24: redirect direct damage channels to mana in native order. */
+  private void applyEnergyShield(DamageEvent event, StateList victimStates) {
+    if (event.kind == DamageEvent.DAMAGE_OVER_TIME || !mAttributesWrapper.has(event.victim)) {
+      return;
+    }
+    UnitState shield = victimStates.getState(StateId.ENERGYSHIELD);
+    if (shield == null) return;
+    Skills.Entry skill = Riiablo.files.skills.get(
+        shield.skillId >= 0 ? shield.skillId : SkillId.ENERGY_SHIELD);
+    if (skill == null) return;
+    int level = Math.max(1, shield.level);
+    int multiplier = Math.max(0, SkillFormula.evaluate(
+        skill.calc1, skill, level, name -> baseSkillLevel(event.victim, name)));
+    int divisor = Math.max(1, SkillFormula.evaluate(
+        skill.calc2, skill, level, name -> baseSkillLevel(event.victim, name)));
+    Attributes attributes = mAttributesWrapper.get(event.victim).attrs;
+    StatRef mana = attributes != null ? attributes.get(Stat.mana, StatRef.obtain()) : null;
+    if (mana == null) return;
+
+    int manaFixed = toFixed8(mana.asFixed());
+    int totalFixed = toFixed8(event.damage);
+    int poisonFixed = Math.min(totalFixed, toFixed8(event.poisonDamage));
+    int absorbBudget = Math.max(0, totalFixed - poisonFixed);
+    int[] pool = {manaFixed, 0, absorbBudget};
+    event.physicalDamage = absorbEnergyShieldChannel(
+        event.physicalDamage, multiplier, divisor, pool);
+    event.fireDamage = absorbEnergyShieldChannel(event.fireDamage, multiplier, divisor, pool);
+    event.lightningDamage = absorbEnergyShieldChannel(
+        event.lightningDamage, multiplier, divisor, pool);
+    event.coldDamage = absorbEnergyShieldChannel(event.coldDamage, multiplier, divisor, pool);
+    event.magicDamage = absorbEnergyShieldChannel(event.magicDamage, multiplier, divisor, pool);
+
+    int describedFixed = toFixed8(event.physicalDamage) + toFixed8(event.fireDamage)
+        + toFixed8(event.lightningDamage) + toFixed8(event.coldDamage)
+        + toFixed8(event.magicDamage) + poisonFixed + pool[1];
+    int residualFixed = Math.max(0, totalFixed - describedFixed);
+    absorbEnergyShieldFixed(residualFixed, multiplier, divisor, pool);
+
+    mana.set(pool[0] / 256f);
+    event.damage = Math.max(0f, event.damage - pool[1] / 256f);
+    if (pool[0] <= 0) {
+      victimStates.removeStateLayer(
+          StateId.ENERGYSHIELD, shield.sourceEntityId, shield.skillId);
+    }
+    if (pool[1] > 0) {
+      log.info("[SORCERESS_ENERGY_SHIELD] phase=absorb victim={} skill={} level={} "
+              + "absorbed={} mana={} multiplier={} divisor={}",
+          event.victim, skill.Id, level, pool[1] / 256f, pool[0] / 256f,
+          multiplier, divisor);
+    }
+  }
+
+  private static float absorbEnergyShieldChannel(
+      float damage, int multiplier, int divisor, int[] pool) {
+    int damageFixed = toFixed8(damage);
+    int absorbed = absorbEnergyShieldFixed(damageFixed, multiplier, divisor, pool);
+    return Math.max(0f, (damageFixed - absorbed) / 256f);
+  }
+
+  private static int absorbEnergyShieldFixed(
+      int damageFixed, int multiplier, int divisor, int[] pool) {
+    if (damageFixed <= 0 || multiplier <= 0 || pool[0] <= 0 || pool[2] <= 0) return 0;
+    int requested = (int) Math.min(Integer.MAX_VALUE,
+        (long) damageFixed * multiplier / 100L);
+    int manaLimited = (int) Math.min(Integer.MAX_VALUE, (long) pool[0] * 16L / divisor);
+    int absorbed = Math.min(Math.min(requested, manaLimited), pool[2]);
+    if (absorbed <= 0) return 0;
+    int manaCost = (int) Math.min(pool[0], (long) absorbed * divisor / 16L);
+    pool[0] -= manaCost;
+    pool[1] += absorbed;
+    pool[2] -= absorbed;
+    return absorbed;
+  }
+
+  private static int toFixed8(float value) {
+    if (!(value > 0f)) return 0;
+    double fixed = Math.floor(value * 256d);
+    return fixed >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fixed;
   }
 
   /** Death removes Conversion allegiance without applying the living-unit HP restore callback. */

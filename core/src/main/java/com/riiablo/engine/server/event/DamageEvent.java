@@ -23,6 +23,7 @@ public class DamageEvent implements Event {
   public float fireDamage;
   public float lightningDamage;
   public float coldDamage;
+  public float magicDamage;
   public float poisonDamage;
   /** Native hit path. Reactive curses only consume MELEE/MISSILE packets. */
   public byte kind;
@@ -46,6 +47,7 @@ public class DamageEvent implements Event {
     event.fireDamage = 0f;
     event.lightningDamage = 0f;
     event.coldDamage = 0f;
+    event.magicDamage = 0f;
     event.poisonDamage = 0f;
     event.kind = DIRECT;
     event.hitSound = hitSound;
@@ -106,6 +108,7 @@ public class DamageEvent implements Event {
     lightningDamage = Math.max(0f,
         result.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] * appliedScale);
     coldDamage = Math.max(0f, result.elementalDamage[CombatSystem.DAMAGE_COLD] * appliedScale);
+    magicDamage = Math.max(0f, result.elementalDamage[CombatSystem.DAMAGE_MAGIC] * appliedScale);
     poisonDamage = Math.max(0f,
         result.elementalDamage[CombatSystem.DAMAGE_POISON] * appliedScale);
     return this;

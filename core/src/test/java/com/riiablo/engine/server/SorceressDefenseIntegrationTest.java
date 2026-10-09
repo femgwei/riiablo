@@ -191,6 +191,75 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
         remoteArmor.getStatContributionValue(Stat.skill_armor_percent));
   }
 
+  @Test
+  void energyShieldInstallsStateAndAbsorbsNativeChannelsThroughMana() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int sorceress = player(world, "shield", 0, 0);
+      CharData data = world.getMapper(Player.class).get(sorceress).data;
+      data.setSkillLevel(SkillId.ENERGY_SHIELD, 1);
+
+      dispatch(world, sorceress, Engine.INVALID_ENTITY, SkillId.ENERGY_SHIELD);
+      UnitState shield = states(world, sorceress).getState(StateId.ENERGYSHIELD);
+      assertNotNull(shield);
+      assertEquals(SkillId.ENERGY_SHIELD, shield.skillId);
+      assertEquals(1, shield.level);
+      assertEquals(3600, shield.duration);
+
+      DamageEvent packet = DamageEvent.obtain(Engine.INVALID_ENTITY, sorceress, 100);
+      packet.physicalDamage = 20;
+      packet.fireDamage = 20;
+      packet.lightningDamage = 20;
+      packet.coldDamage = 20;
+      packet.magicDamage = 20;
+      world.getSystem(EventSystem.class).dispatch(packet);
+      assertEquals(80f, packet.damage, 0.0001f);
+      assertEquals(16f, packet.physicalDamage, 0.0001f);
+      assertEquals(16f, packet.fireDamage, 0.0001f);
+      assertEquals(16f, packet.lightningDamage, 0.0001f);
+      assertEquals(16f, packet.coldDamage, 0.0001f);
+      assertEquals(16f, packet.magicDamage, 0.0001f);
+      assertEquals(60f, mana(world, sorceress), 0.0001f);
+      assertNotNull(states(world, sorceress).getState(StateId.ENERGYSHIELD));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void energyShieldExhaustionRemovesStateAndTelekinesisReducesManaCost() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int sorceress = player(world, "shield", 0, 0);
+      CharData data = world.getMapper(Player.class).get(sorceress).data;
+      data.setSkillLevel(SkillId.ENERGY_SHIELD, 1);
+      dispatch(world, sorceress, Engine.INVALID_ENTITY, SkillId.ENERGY_SHIELD);
+      setMana(world, sorceress, 10);
+
+      DamageEvent exhausted = DamageEvent.obtain(Engine.INVALID_ENTITY, sorceress, 100);
+      exhausted.physicalDamage = 100;
+      world.getSystem(EventSystem.class).dispatch(exhausted);
+      assertEquals(95f, exhausted.damage, 0.0001f);
+      assertEquals(95f, exhausted.physicalDamage, 0.0001f);
+      assertEquals(0f, mana(world, sorceress), 0.0001f);
+      assertFalse(states(world, sorceress).hasState(StateId.ENERGYSHIELD));
+
+      data.setSkillLevel(SkillId.TELEKINESIS, 20);
+      dispatch(world, sorceress, Engine.INVALID_ENTITY, SkillId.ENERGY_SHIELD);
+      setMana(world, sorceress, 100);
+      DamageEvent synergized = DamageEvent.obtain(Engine.INVALID_ENTITY, sorceress, 100);
+      synergized.physicalDamage = 100;
+      world.getSystem(EventSystem.class).dispatch(synergized);
+      assertEquals(80f, synergized.damage, 0.0001f);
+      assertEquals(85f, mana(world, sorceress), 0.0001f,
+          "20 hard points in Telekinesis use divisor 12, or 0.75 mana per damage");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static World world(RecordingFactory factory) {
     return new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
@@ -233,11 +302,22 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
         .get(Stat.hitpoints).asFixed();
   }
 
+  private static float mana(World world, int entityId) {
+    return world.getMapper(AttributesWrapper.class).get(entityId).attrs
+        .get(Stat.mana).asFixed();
+  }
+
+  private static void setMana(World world, int entityId, float mana) {
+    world.getMapper(AttributesWrapper.class).get(entityId).attrs.get(Stat.mana).set(mana);
+  }
+
   private static Attributes attributes(float hp) {
     Attributes attrs = Attributes.obtainStandard();
     attrs.base().put(Stat.level, 30);
     attrs.base().put(Stat.hitpoints, hp);
     attrs.base().put(Stat.maxhp, hp);
+    attrs.base().put(Stat.mana, 100);
+    attrs.base().put(Stat.maxmana, 100);
     attrs.base().put(Stat.tohit, 1000);
     attrs.base().put(Stat.mindamage, 1);
     attrs.base().put(Stat.maxdamage, 2);

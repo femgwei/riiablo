@@ -114,10 +114,10 @@ class SkillDamageOwnershipAuditTest extends RiiabloTest {
 
     assertEquals(210, globalIds.size());
     assertEquals(40, noOutgoingDamage);
-    assertEquals(120, count(statusCounts, "IMPLEMENTED_TESTED"));
+    assertEquals(121, count(statusCounts, "IMPLEMENTED_TESTED"));
     assertEquals(27, count(statusCounts, "IMPLEMENTED_TEST_GAP"));
     assertEquals(29, count(statusCounts, "OUT_OF_SCOPE_NO_DAMAGE"));
-    assertEquals(34, count(statusCounts, "RIIABLO_GAP"));
+    assertEquals(33, count(statusCounts, "RIIABLO_GAP"));
   }
 
   @Test
