@@ -77,7 +77,8 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     }
     float audibleRadius = soundId == RIVER_SOUND ? RIVER_AUDIBLE_RADIUS : AUDIBLE_RADIUS;
     float stopRadius = soundId == RIVER_SOUND ? RIVER_STOP_RADIUS : STOP_RADIUS;
-    boolean audible = isAudible(entityId, emitter == null ? audibleRadius : stopRadius);
+    boolean audible = isAudible(entityId, emitter == null ? audibleRadius : stopRadius,
+        soundId == RIVER_SOUND);
     if (!audible) {
       if (emitter != null) mSoundEmitter.remove(entityId);
       return;
@@ -126,11 +127,9 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
       return;
     }
 
-    TileGrid grid = listenerMap.zone.nativeTileGrid();
     Vector2 listener = mPosition.get(Riiablo.game.player).position;
     float radius = terrainRiver == null ? RIVER_AUDIBLE_RADIUS : RIVER_STOP_RADIUS;
-    float distance2 = nearestRiverDistance2(
-        grid, listener.x - listenerMap.zone.x(), listener.y - listenerMap.zone.y(), radius);
+    float distance2 = nearestRiverDistance2(listenerMap.map, listenerMap.zone, listener, radius);
     if (!withinRadius(distance2, radius)) {
       stopTerrainRiver();
       return;
@@ -184,7 +183,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     terrainRiver = null;
   }
 
-  private boolean isAudible(int entityId, float radius) {
+  private boolean isAudible(int entityId, float radius, boolean allowAdjacentZones) {
     if (Riiablo.game == null) return false;
     int player = Riiablo.game.player;
     if (player == Engine.INVALID_ENTITY || !mPosition.has(player)
@@ -193,7 +192,10 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     MapWrapper sourceMap = mMapWrapper.get(entityId);
     MapWrapper listenerMap = mMapWrapper.get(player);
     if (sourceMap == null || listenerMap == null || sourceMap.map != listenerMap.map
-        || sourceMap.zone == null || sourceMap.zone != listenerMap.zone) return false;
+        || sourceMap.zone == null || listenerMap.zone == null) return false;
+    if (sourceMap.zone != listenerMap.zone
+        && (!allowAdjacentZones
+            || !sourceMap.map.areZonesAdjacent(sourceMap.zone, listenerMap.zone))) return false;
 
     Vector2 source = mPosition.get(entityId).position;
     Vector2 listener = mPosition.get(player).position;
@@ -263,6 +265,25 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
         float dy = axisDistance(localY, y * tileSize, (y + 1) * tileSize);
         nearest = Math.min(nearest, dx * dx + dy * dy);
       }
+    }
+    return nearest;
+  }
+
+  /** Finds river floor cells in the listener Zone and directly adjacent Zones. */
+  static float nearestRiverDistance2(
+      com.riiablo.map.Map map, com.riiablo.map.Map.Zone listenerZone,
+      Vector2 listener, float radius) {
+    if (map == null || listenerZone == null || listener == null || radius <= 0f) {
+      return Float.POSITIVE_INFINITY;
+    }
+    float nearest = Float.POSITIVE_INFINITY;
+    for (com.riiablo.map.Map.Zone sourceZone : map.getZones()) {
+      if (sourceZone == null || sourceZone.nativeTileGrid() == null
+          || (sourceZone != listenerZone && !map.areZonesAdjacent(listenerZone, sourceZone))) {
+        continue;
+      }
+      nearest = Math.min(nearest, nearestRiverDistance2(sourceZone.nativeTileGrid(),
+          listener.x - sourceZone.x(), listener.y - sourceZone.y(), radius));
     }
     return nearest;
   }

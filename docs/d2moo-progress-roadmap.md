@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-10 城镇出口跨 Zone 河流水声
+
+- [x] 修正城镇与野外边界的河流声源不能跨 Zone 保持空间衰减的问题。河流对象声源
+  现在允许同一 `Map` 中直接相邻的 Town/Outdoor Zone 继续参与距离增益计算；地形
+  `River.dt1` 声源也会扫描监听 Zone 及其相邻 Zone，不再在玩家跨过出口边界时立即卸载。
+- [x] 非相邻 Zone 或不同 `Map` 仍保持静音，避免不同关卡/重叠兼容布局产生串音；河流在
+  46.875 格听觉半径内继续按原有线性曲线衰减。
+- 验证：`ObjectAmbientSoundSystemTest`、`SoundEmitterHandlerTest` 定向测试通过。
+
 ## 2026-10-10 夜晚牛场显示亮度微调
 
 - [x] 在 `indexpalette3.frag` 的 PL2 Shadow 行选择前加入温和的显示空间曲线

@@ -59,7 +59,12 @@ public class SoundEmitterHandler extends IteratingSystem {
     return sourceMap != null && listenerMap != null
         && sourceMap.map == listenerMap.map
         && sourceMap.zone != null
-        && sourceMap.zone == listenerMap.zone;
+        && listenerMap.zone != null
+        && (sourceMap.zone == listenerMap.zone
+            // A river marker can live in the outdoor Zone immediately beyond
+            // a town exit. Keep it spatially audible across that seam instead
+            // of treating the Zone identity change as an audio hard cut.
+            || sourceMap.map.areZonesAdjacent(sourceMap.zone, listenerMap.zone));
   }
 
   static float spatialGain(float distance, float radius, Interpolation interpolation) {
