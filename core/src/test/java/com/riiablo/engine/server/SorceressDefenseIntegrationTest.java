@@ -73,8 +73,8 @@ class SorceressDefenseIntegrationTest extends RiiabloTest {
       UnitState alliedEnchant = states(world, ally).getState(StateId.ENCHANT);
       assertNotNull(alliedEnchant);
       assertEquals(caster, alliedEnchant.sourceEntityId);
-      assertEquals(10, alliedEnchant.getStatContributionValue(Stat.firemindam));
-      assertEquals(13, alliedEnchant.getStatContributionValue(Stat.firemaxdam));
+      assertEquals(11, alliedEnchant.getStatContributionValue(Stat.firemindam));
+      assertEquals(14, alliedEnchant.getStatContributionValue(Stat.firemaxdam));
       assertEquals(20,
           alliedEnchant.getStatContributionValue(Stat.item_tohit_percent));
 

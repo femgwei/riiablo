@@ -1198,3 +1198,28 @@ riiablo 的 `applyDefensiveArmorState`、`getDefensiveArmorDefensePercent`、
 `StateUpdater.applyFrozenArmor` 只向合格近战攻击者安装冻结。`FrozenArmorGoldenDamageTest`
 锁定 20 级的三条状态曲线和零伤害字段；`SorceressDefenseIntegrationTest` 锁定
 护甲互斥及实际近战反应。矩阵伤害 expected/actual/delta 明确保持 N/A。
+
+## DMG-04 第五十二个逐级实例：Enchant
+
+Enchant 不立即创建伤害记录。1.10f `Skills.txt#52` 使用 `SrvDoFunc=25`、
+`AuraState=enchant`，并以 `AuraStatCalc=enma/exma/toht` 写入 `firemindam`、
+`firemaxdam` 与 `item_tohit_percent`。元素曲线为 `EMin=16`、`EMax=20`，
+五段增量分别为 `3/7/11/15/19` 与 `5/9/13/17/21`，`HitShift=7`；
+`EDmgSymPerCalc=(skill('Warmth'.blvl))*par8`，`Param8=9`。
+
+D2Common `SKILLS_GetSpecialParamValue` 的 `enma/exma` 分支调用
+`SKILLS_GetMinElemDamage`/`SKILLS_GetMaxElemDamage` 并启用 mastery。两个 getter 先把
+源曲线左移 `HitShift`，再依次应用 Warmth 协同和 Fire Mastery，最后由公式操作码右移
+8 位返回整数。基础场景把 Warmth 硬点和 Fire Mastery 固定为 0，因此等级 1–20 的
+单份状态火焰贡献为 `8–10` 到 `68–89`。
+
+`AuraLenCalc=ln12` 在 `Param1=3600`、`Param2=600` 下产生 3600–15000 帧；
+`toht` 在 `ToHit=20`、`LevToHit=9` 下产生 20%–191% 命中率。D2MOO
+`SKILLS_SrvDo025_Enchant`（`SkillSor.cpp:766`）把非友方/无效目标回退为施法者，创建
+目标 stat-list，然后逐项评估并写入这三项统计。
+
+riiablo 的 `getEnchantDamage` 已改为在协同和精通应用完成前保留 8.8 定点精度；这修复了
+等级 1、Warmth 1、Fire Mastery 30% 时原先 `10–13`、原版应为 `11–14` 的过早截断。
+`EnchantGoldenDamageTest` 锁定零协同/零精通的 20 级曲线、持续时间、命中率、实际状态
+贡献及该取整边界；矩阵记录状态拥有的一份火焰包，武器基础包和最终命中结算留给
+DMG-06/08。

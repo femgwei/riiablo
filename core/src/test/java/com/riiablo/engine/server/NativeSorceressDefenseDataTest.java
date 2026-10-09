@@ -85,8 +85,8 @@ class NativeSorceressDefenseDataTest extends RiiabloTest {
     assertEquals(20, SorceressSkills.getEnchantAttackRatingPercent(enchant, 1));
     int[] damage = SorceressSkills.getEnchantDamage(
         enchant, 1, name -> "Warmth".equals(name) ? 1 : 0, 30);
-    assertEquals(10, damage[0]);
-    assertEquals(13, damage[1]);
+    assertEquals(11, damage[0]);
+    assertEquals(14, damage[1]);
 
     Skills.Entry mastery = skill(SkillId.FIRE_MASTERY);
     assertEquals(0, mastery.srvdofunc);

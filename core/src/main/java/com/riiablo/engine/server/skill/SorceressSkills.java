@@ -211,13 +211,11 @@ public final class SorceressSkills {
     int level = Math.max(1, skillLevel);
     int synergy = Math.max(0, SkillFormula.evaluate(skill.EDmgSymPerCalc, skill,
         level, baseSkillLevel == null ? name -> 0 : baseSkillLevel));
-    int min = scaleElementalDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
-    int max = scaleElementalDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
-    min += min * synergy / 100;
-    max += max * synergy / 100;
     int mastery = Math.max(0, fireMasteryPercent);
-    min += min * mastery / 100;
-    max += max * mastery / 100;
+    int min = scaleMasteredElementalDamage(
+        skill.EMin, skill.EMinLev, level, skill.HitShift, synergy, mastery);
+    int max = scaleMasteredElementalDamage(
+        skill.EMax, skill.EMaxLev, level, skill.HitShift, synergy, mastery);
     return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
   }
 
@@ -343,6 +341,18 @@ public final class SorceressSkills {
     int shift = hitShift - 8;
     if (shift > 0) value <<= Math.min(shift, 30);
     else if (shift < 0) value >>= Math.min(-shift, 30);
+    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+  }
+
+  /** D2Common enma/exma: retain native fixed-point precision through both bonuses. */
+  private static int scaleMasteredElementalDamage(
+      int base, int[] perLevel, int level, int hitShift, int synergy, int mastery) {
+    long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    int shift = Math.min(Math.max(0, hitShift), 30);
+    value <<= shift;
+    value += value * Math.max(0, synergy) / 100;
+    value += value * Math.max(0, mastery) / 100;
+    value >>= 8;
     return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
   }
 
