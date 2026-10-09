@@ -254,8 +254,8 @@ public class LabelManager extends IteratingSystem {
           rectangle.x + rectangle.width + LABEL_GAP
       };
       float[] candidateY = {
-          rectangle.y - height - LABEL_GAP,
-          rectangle.y + rectangle.height + LABEL_GAP
+          rectangle.y - height - VERTICAL_LABEL_GAP,
+          rectangle.y + rectangle.height + VERTICAL_LABEL_GAP
       };
       for (float x : candidateX) {
         if (Math.abs(x - desiredX) > maxCompactX) continue;
