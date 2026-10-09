@@ -746,12 +746,13 @@ public class RenderSystem extends BaseEntitySystem {
     protectedLights = count;
     for (int i = 0, size = entities.size(); i < size; i++) {
       int id = entities.get(i);
-      if (!mObject.has(id) || !mPosition.has(id) || !mCofReference.has(id)) continue;
+      if (!mObject.has(id) || !mPosition.has(id)) continue;
       if (!isInLightingZone(id, zone)) continue;
       Object object = mObject.get(id);
-      int mode = mCofReference.get(id).mode;
-      if (object == null || object.base == null || object.base.Lit == null
-          || mode < 0 || mode >= object.base.Lit.length) continue;
+      if (object == null || object.base == null || object.base.Lit == null) continue;
+      int mode = object.mode;
+      if (mCofReference.has(id)) mode = mCofReference.get(id).mode;
+      if (mode < 0 || mode >= object.base.Lit.length) mode = 0;
       float radius = objectLightRadius(object.base.Lit[mode]);
       if (radius <= 0) continue;
       Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));

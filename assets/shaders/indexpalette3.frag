@@ -43,24 +43,15 @@ void main() {
   // renderer instead of remaining saturated after an RGB multiplication.
   bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
       || blendMode == 12 || blendMode == 14;
-  vec3 light = vec3(1.0);
-  bool hasLocalLight = false;
   if (lightingEnabled != 0 && !selfLit) {
-    // The native environment intensity is a display-space light level. A
-    // linear 0..255-to-PL2 lookup makes the deepest outdoor night (64) land
-    // on Shadow[8], where low-contrast units disappear. Apply the display
-    // lift before combining local lights; full daylight (255) is unchanged.
-    float intensity = sqrt(clamp(ambientIntensity, 0.0, 1.0));
-    light = ambientLight;
+    float intensity = ambientIntensity;
     for (int i = 0; i < 16; i++) {
       if (i >= lightCount) break;
       vec4 source = localLights[i];
       vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
       float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
       vec3 localLight = localLightColors[i] * falloff;
-      if (falloff > 0.0) hasLocalLight = true;
       intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));
-      light = max(light, localLight);
     }
     float lightByte = floor(clamp(intensity, 0.0, 1.0) * 255.0 + 0.5);
     if (lightByte < 255.0 && color.a > 0.0) {
@@ -181,15 +172,10 @@ void main() {
   // multiplication makes riiablo's outdoor lighting visibly harsher.
   vec3 colorRGB = pow(color.rgb, vec3(1.0 / gamma));
 
-  // Keep RGB tint after the legacy palette contrast pass. Intensity itself
-  // has already been applied in palette-index space above.
-  // D2MOO confirms that ambient intensity selects the native PL2 Shadow row,
-  // but the original D2DDraw ambient-RGB composition is not open source.
-  // Do not multiply pixels outside every local-light radius by that RGB a
-  // second time: the PL2 row already contains their environment darkness.
-  if (lightingEnabled != 0 && !selfLit && hasLocalLight) {
-    colorRGB *= clamp(light, 0.0, 1.0);
-  }
+  // Intensity and local-light colours have already been applied in palette
+  // index space above. Do not multiply the resulting RGB by an ambient tint:
+  // that creates a dark ring at the local-light falloff boundary and hides
+  // low-contrast units outside the player's light radius.
 
   gl_FragColor = vec4(colorRGB, color.a);
 }
