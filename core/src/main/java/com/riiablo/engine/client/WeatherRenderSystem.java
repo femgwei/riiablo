@@ -48,6 +48,10 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_SHADE_COUNT = 12;
   static final int RAIN_DEPTH_BUCKET_COUNT = RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1;
   static final float RAIN_DENSITY_SCALE = 0.75f;
+  // Keep one stable conversion between visible rain streaks and water
+  // impacts. At full rain this is 25 ripple spawns/sec for 192 streaks.
+  private static final float RIPPLE_RATE_PER_RAIN_PARTICLE =
+      25f / activeRainParticles(1f);
   private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
@@ -425,10 +429,6 @@ public final class WeatherRenderSystem extends BaseSystem {
     // small rings.  These are an empirical ClientFn=2 approximation; the
     // retail branch is hard-coded in D2Client rather than Objects.txt.
     private static final int RIPPLE_VARIANT_ROLL = 100;
-    // Keep one stable conversion between visible rain streaks and water
-    // impacts.  At full rain this is 25 ripple spawns/sec for 192 streaks.
-    private static final float RIPPLE_RATE_PER_RAIN_PARTICLE =
-        25f / WeatherRenderSystem.activeRainParticles(1f);
     // WeatherRenderSystem is a GPU/render system and receives real frame
     // deltas, not the fixed 25 Hz simulation tick.  The old integer countdown
     // therefore expired a ripple in roughly 18/60 seconds, often before its
