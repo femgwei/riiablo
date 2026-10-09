@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.GpuSystem;
 
@@ -52,6 +53,8 @@ public class LabelManager extends IteratingSystem {
   private static final float LABEL_GAP = 2f;
   /** Ground labels can share their vertical edge; the native stack is compact. */
   private static final float VERTICAL_LABEL_GAP = 0f;
+  /** Native item labels keep the modal black panel and tint it blue on hover. */
+  private Drawable hoveredGroundLabelBackground;
   /** Native Alt overlay only exposes the first 32 ground-item names. */
   private static final int MAX_GROUND_LABELS = 32;
   /** D2 does a small local nudge, not an unbounded collision-free layout. */
@@ -67,6 +70,17 @@ public class LabelManager extends IteratingSystem {
       desiredX = actor.getX();
       desiredY = actor.getY();
     }
+  }
+
+  @Override
+  protected void initialize() {
+    hoveredGroundLabelBackground = new PaletteIndexedColorDrawable(Riiablo.colors.invBlue) {{
+      final float PADDING = 6;
+      setLeftWidth(PADDING);
+      setTopHeight(PADDING - 2);
+      setRightWidth(PADDING);
+      setBottomHeight(PADDING);
+    }};
   }
 
   @Override
@@ -117,10 +131,14 @@ public class LabelManager extends IteratingSystem {
     // Refresh the cached header so the displayed amount follows quantity.
     if (mItem.has(entityId)) {
       label.actor = mItem.get(entityId).item.header();
-      // Ground labels in the native client are text-only. The same cached
-      // header Table is also used by the inventory loader, so remove its
-      // panel background only at the point where it is used as a world label.
-      if (label.actor instanceof Table) ((Table) label.actor).setBackground((Drawable) null);
+      // The same cached header Table is also used by the inventory loader.
+      // Keep its normal modal-black panel, and use the blue variant only
+      // while the ground item is hovered.
+      if (label.actor instanceof Table) {
+        ((Table) label.actor).setBackground(mHovered.has(entityId)
+            ? hoveredGroundLabelBackground
+            : PaletteIndexedColorDrawable.MODAL_FONT16);
+      }
     }
     tmpVec2.add(label.offset);
 
