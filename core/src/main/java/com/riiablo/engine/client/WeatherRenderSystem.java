@@ -491,7 +491,7 @@ public final class WeatherRenderSystem extends BaseSystem {
         int y = MathUtils.round(player.y + (random.nextFloat() * 2f - 1f) * radius);
         if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
 
-        int classId = FIRST_CLASS_ID + randomRippleVariant();
+        int classId = FIRST_CLASS_ID + randomRippleVariant(expectedZone.level);
         int entityId = factory.createStaticObjectByClassId(classId, x, y);
         if (entityId == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
         active.add(new Ripple(entityId, RIPPLE_LIFETIME_SECONDS));
@@ -538,7 +538,7 @@ public final class WeatherRenderSystem extends BaseSystem {
           if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
 
           int entity = factory.createStaticObjectByClassId(
-              FIRST_CLASS_ID + randomRippleVariant(), x, y);
+              FIRST_CLASS_ID + randomRippleVariant(expectedZone.level), x, y);
           if (entity == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
           active.add(new Ripple(entity, RIPPLE_LIFETIME_SECONDS));
           return true;
@@ -547,10 +547,25 @@ public final class WeatherRenderSystem extends BaseSystem {
       return false;
     }
 
-    private int randomRippleVariant() {
-      // 1R=10%, 2R=20%, 3R=30%, 4R=40%.  The exact retail intervals are
-      // embedded in D2Client; this follows the available long-run captures.
+    private int randomRippleVariant(Levels.Entry level) {
       int roll = random.nextInt(RIPPLE_VARIANT_ROLL);
+      // Levels.txt uses zero-based acts: Act I is 0 and Act III is 2.
+      // Act I water has no large 1R ripples: 4R=45%, 3R=35%, 2R=20%.
+      if (level != null && level.Act == 0) {
+        if (roll < 45) return 3;
+        if (roll < 80) return 2;
+        return 1;
+      }
+      // Act III swamp water keeps the rare large 1R ripple: 4R=42%,
+      // 3R=33%, 2R=22%, 1R=3%.
+      if (level != null && level.Act == 2) {
+        if (roll < 42) return 3;
+        if (roll < 75) return 2;
+        if (roll < 97) return 1;
+        return 0;
+      }
+      // Preserve the existing fallback distribution for any future
+      // Rain-enabled acts whose water rules have not been audited yet.
       if (roll < 10) return 0;
       if (roll < 30) return 1;
       if (roll < 60) return 2;
