@@ -214,7 +214,7 @@ public class LabelManager extends IteratingSystem {
     float verticalStep = Math.max(1f, height + LABEL_GAP);
     float horizontalStep = Math.max(1f, width + LABEL_GAP);
 
-    for (int ring = 0; ring <= MAX_LABEL_RING; ring++) {
+    for (int ring = 0; ring <= MAX_LABEL_RING && best == null; ring++) {
       for (int row = -ring; row <= ring; row++) {
         for (int column = -ring; column <= ring; column++) {
           if (ring != 0 && Math.abs(row) != ring && Math.abs(column) != ring) continue;
@@ -235,8 +235,57 @@ public class LabelManager extends IteratingSystem {
           }
         }
       }
-      if (best != null) return best;
     }
+
+    // Native D2 keeps mixed-width labels close together. A long label should
+    // be able to sit immediately beside a short one instead of jumping by
+    // its own full width. Try the four edges of each occupied label, while
+    // keeping the same small local search radius used above.
+    for (Rectangle rectangle : occupied) {
+      float maxCompactX = MAX_LABEL_RING
+          * Math.max(horizontalStep, rectangle.width + LABEL_GAP);
+      float maxCompactY = MAX_LABEL_RING
+          * Math.max(verticalStep, rectangle.height + LABEL_GAP);
+      float[] candidateX = {
+          rectangle.x - width - LABEL_GAP,
+          rectangle.x + rectangle.width + LABEL_GAP
+      };
+      float[] candidateY = {
+          rectangle.y - height - LABEL_GAP,
+          rectangle.y + rectangle.height + LABEL_GAP
+      };
+      for (float x : candidateX) {
+        if (Math.abs(x - desiredX) > maxCompactX) continue;
+        float clampedX = MathUtils.clamp(x, minX, Math.max(minX, maxX - width));
+        Rectangle candidate = new Rectangle(clampedX,
+            MathUtils.clamp(desiredY, minY, Math.max(minY, maxY - height)), width, height);
+        if (!overlapsAny(candidate, occupied)) {
+          float distance = Math.abs(candidate.x - desiredX)
+              + Math.abs(candidate.y - desiredY);
+          if (distance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+      }
+      for (float y : candidateY) {
+        if (Math.abs(y - desiredY) > maxCompactY) continue;
+        float clampedY = MathUtils.clamp(y, minY, Math.max(minY, maxY - height));
+        Rectangle candidate = new Rectangle(
+            MathUtils.clamp(desiredX, minX, Math.max(minX, maxX - width)), clampedY,
+            width, height);
+        if (!overlapsAny(candidate, occupied)) {
+          float distance = Math.abs(candidate.x - desiredX)
+              + Math.abs(candidate.y - desiredY);
+          if (distance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+      }
+    }
+
+    if (best != null) return best;
 
     // Extremely dense drops can exhaust the search radius. Pick the nearest
     // bounded location rather than hiding a label or allowing an unbounded UI.
