@@ -23,6 +23,12 @@ class Act1QuestMessageValidatorTest {
         false, Act1DenOfEvilQuest.MESSAGE_SUCCESS));
     assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.AKARA, data, 1,
         false, Act1CainQuest.MESSAGE_REWARD));
+
+    data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = Act1CainQuest.start((short) 0);
+    assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.AKARA, data, 1,
+        false, Act1CainQuest.MESSAGE_INIT));
+    assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.AKARA, data, 1,
+        false, Act1CainQuest.MESSAGE_EARLY));
   }
 
   @Test

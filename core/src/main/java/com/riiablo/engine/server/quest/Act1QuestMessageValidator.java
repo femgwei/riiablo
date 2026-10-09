@@ -54,11 +54,13 @@ public final class Act1QuestMessageValidator {
       return messageIndex == Act1DenOfEvilQuest.selectAkaraMessage(den);
     }
     short cain = act1[Act1CainQuest.RECORD];
-    int expected = NativeQuestRecord.has(cain, NativeQuestRecord.REWARD_PENDING)
-        ? Act1CainQuest.MESSAGE_REWARD
-        : NativeQuestRecord.has(cain, NativeQuestRecord.STARTED)
-            ? Act1CainQuest.MESSAGE_EARLY : Act1CainQuest.MESSAGE_INIT;
-    return messageIndex == expected;
+    if (NativeQuestRecord.has(cain, NativeQuestRecord.REWARD_PENDING)) {
+      return messageIndex == Act1CainQuest.MESSAGE_REWARD;
+    }
+    // Once A1Q4 has been accepted, its STARTED/LEFT_TOWN/ENTERED_AREA flags
+    // do not keep Akara's introductory speech active.  The native active
+    // filter only reopens this branch for the scroll or a pending reward.
+    return cain == 0 && messageIndex == Act1CainQuest.MESSAGE_INIT;
   }
 
   private static boolean isQuestComplete(short record) {

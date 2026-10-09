@@ -56,14 +56,29 @@ public class Act1QuestDialogController extends PassiveSystem {
       short record = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
       short cainRecord = data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
       if (Act1QuestPresentation.isComplete(record)) {
-        messageIndex = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
-            ? Act1CainQuest.MESSAGE_REWARD
-            : NativeQuestRecord.has(cainRecord, NativeQuestRecord.STARTED)
-                ? Act1CainQuest.MESSAGE_EARLY : Act1CainQuest.MESSAGE_INIT;
-        speech = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
-            ? "akara_act1_q4_success"
-            : NativeQuestRecord.has(cainRecord, NativeQuestRecord.STARTED)
-                ? "akara_act1_q4_early" : "akara_act1_q4_init";
+        boolean hasBarkScroll = data.getItems() != null
+            && data.getItems().containsItemCode(Act1CainQuest.BARK_SCROLL_CODE);
+        boolean hasDecipheredScroll = data.getItems() != null
+            && data.getItems().containsItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE);
+        if (NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)) {
+          messageIndex = Act1CainQuest.MESSAGE_REWARD;
+          speech = "akara_act1_q4_success";
+        } else if (Act1CainQuest.canDecipherScroll(
+            cainRecord, hasBarkScroll, hasDecipheredScroll)) {
+          messageIndex = Act1CainQuest.MESSAGE_DECIPHER_SCROLL;
+          speech = "akara_act1_q4_after_scroll";
+        } else if (NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_GRANTED)
+            || NativeQuestRecord.has(cainRecord, NativeQuestRecord.COMPLETED_BEFORE)
+            || cainRecord != 0) {
+          // D2MOO only activates the A1Q4 Akara speech for a new intro,
+          // Scroll of Inifuss decoding, or a pending reward.  A started
+          // quest therefore falls through to the ordinary NPC dialog instead
+          // of repeating "rescue Cain" on every interaction.
+          return false;
+        } else {
+          messageIndex = Act1CainQuest.MESSAGE_INIT;
+          speech = "akara_act1_q4_init";
+        }
       } else {
         messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
         speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
