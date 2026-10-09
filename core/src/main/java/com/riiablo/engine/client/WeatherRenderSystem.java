@@ -420,7 +420,15 @@ public final class WeatherRenderSystem extends BaseSystem {
     // Objects.txt table is keyed by the concrete rows 67..70 (1R..4R).
     private static final int FIRST_CLASS_ID = 67;
     private static final int RIPPLE_VARIANTS = 4;
-    private static final int MAX_RIPPLES = 12;
+    private static final int MAX_RIPPLES = 48;
+    // Community captures consistently show large ripples less often than the
+    // small rings.  These are an empirical ClientFn=2 approximation; the
+    // retail branch is hard-coded in D2Client rather than Objects.txt.
+    private static final int RIPPLE_VARIANT_ROLL = 100;
+    // Keep one stable conversion between visible rain streaks and water
+    // impacts.  At full rain this is 25 ripple spawns/sec for 192 streaks.
+    private static final float RIPPLE_RATE_PER_RAIN_PARTICLE =
+        25f / WeatherRenderSystem.activeRainParticles(1f);
     // WeatherRenderSystem is a GPU/render system and receives real frame
     // deltas, not the fixed 25 Hz simulation tick.  The old integer countdown
     // therefore expired a ripple in roughly 18/60 seconds, often before its
@@ -434,8 +442,6 @@ public final class WeatherRenderSystem extends BaseSystem {
     private float spawnBudget;
     private boolean resourcesChecked;
     private boolean resourcesAvailable;
-    /** One native ripple DCC is selected for the lifetime of a rain episode. */
-    private int stormVariant = -1;
 
     RainRippleField(long seed) {
       random = new Random(seed);
@@ -459,8 +465,11 @@ public final class WeatherRenderSystem extends BaseSystem {
 
       player.set(mPosition.get(source).position);
       // Keep the native-looking emission deterministic at the 25 Hz clock.
-      spawnBudget += Math.max(0f, delta) * SimulationClock.TICKS_PER_SECOND
-          * MathUtils.clamp(intensity, 0f, 1f) * 0.24f;
+      // ClientFn=2 runs considerably denser than the old material sampler,
+      // but its density remains in a fixed ratio to the actual screen rain.
+      // This keeps light rain visibly sparse and heavy rain visibly crowded.
+      spawnBudget += Math.max(0f, delta) * activeRainParticles(intensity)
+          * RIPPLE_RATE_PER_RAIN_PARTICLE;
       while (spawnBudget >= 1f && active.size < MAX_RIPPLES) {
         spawnBudget -= 1f;
         if (!spawn(map, zone)) break;
@@ -482,7 +491,7 @@ public final class WeatherRenderSystem extends BaseSystem {
         int y = MathUtils.round(player.y + (random.nextFloat() * 2f - 1f) * radius);
         if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
 
-        int classId = FIRST_CLASS_ID + selectedStormVariant();
+        int classId = FIRST_CLASS_ID + randomRippleVariant();
         int entityId = factory.createStaticObjectByClassId(classId, x, y);
         if (entityId == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
         active.add(new Ripple(entityId, RIPPLE_LIFETIME_SECONDS));
@@ -529,7 +538,7 @@ public final class WeatherRenderSystem extends BaseSystem {
           if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
 
           int entity = factory.createStaticObjectByClassId(
-              FIRST_CLASS_ID + selectedStormVariant(), x, y);
+              FIRST_CLASS_ID + randomRippleVariant(), x, y);
           if (entity == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
           active.add(new Ripple(entity, RIPPLE_LIFETIME_SECONDS));
           return true;
@@ -538,9 +547,14 @@ public final class WeatherRenderSystem extends BaseSystem {
       return false;
     }
 
-    private int selectedStormVariant() {
-      if (stormVariant < 0) stormVariant = random.nextInt(RIPPLE_VARIANTS);
-      return stormVariant;
+    private int randomRippleVariant() {
+      // 1R=10%, 2R=20%, 3R=30%, 4R=40%.  The exact retail intervals are
+      // embedded in D2Client; this follows the available long-run captures.
+      int roll = random.nextInt(RIPPLE_VARIANT_ROLL);
+      if (roll < 10) return 0;
+      if (roll < 30) return 1;
+      if (roll < 60) return 2;
+      return 3;
     }
 
     private boolean hasResources() {
@@ -578,7 +592,6 @@ public final class WeatherRenderSystem extends BaseSystem {
       for (int i = 0; i < active.size; i++) delete(active.get(i).entityId);
       active.clear();
       spawnBudget = 0f;
-      stormVariant = -1;
     }
 
     private void delete(int entityId) {
