@@ -169,13 +169,11 @@ void main() {
     }
   }
 
+  // The palette and native PL2 shadow map already contain D2's authored
+  // display colours. Do not apply the old global 1.20 contrast lift here:
+  // D2MOO/D2DDraw presents the PL2-mapped palette directly, and the extra
+  // multiplication makes riiablo's outdoor lighting visibly harsher.
   vec3 colorRGB = pow(color.rgb, vec3(1.0 / gamma));
-
-  // TODO: Move this effect and gamma effect to a separate shader
-  // TODO: Add configs to this effect for contrast + brightness
-  colorRGB -= 0.5;
-  colorRGB *= 1.20;
-  colorRGB += 0.60;
 
   // Keep RGB tint after the legacy palette contrast pass. Intensity itself
   // has already been applied in palette-index space above.

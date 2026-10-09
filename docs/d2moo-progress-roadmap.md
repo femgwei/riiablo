@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-09 原版/Riiablo 光照对比修正
+
+- [x] 对照 `D2MOO/source/D2Win/src/D2WinPalette.cpp` 与原版 `Pal.pl2` 光照路径，移除
+  `indexpalette3.frag` 中历史遗留的全局 `RGB × 1.20` 提亮。原版在 Shadow colormap
+  映射后直接使用调色板颜色；额外乘法会使 Riiablo 的亮部饱和、明暗对比偏强。
+- [x] 保留 `gamma`、环境强度、局部光源和原生 PL2 Shadow 行选择；本次只去除二次全局
+  对比度提升，等待用户用同一场景截图复核。
+
 ## 2026-10-09 Clover 项目对照后的后续改进方向
 
 已审阅 `F:/3rd_src/clover-project-diablo2`（Unity/Clover，单机 Act I 垂直切片）。该项目
