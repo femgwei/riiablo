@@ -44,6 +44,7 @@ void main() {
   bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
       || blendMode == 12 || blendMode == 14;
   vec3 light = vec3(1.0);
+  bool hasLocalLight = false;
   if (lightingEnabled != 0 && !selfLit) {
     float intensity = ambientIntensity;
     light = ambientLight;
@@ -53,6 +54,7 @@ void main() {
       vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
       float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
       vec3 localLight = localLightColors[i] * falloff;
+      if (falloff > 0.0) hasLocalLight = true;
       intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));
       light = max(light, localLight);
     }
@@ -177,7 +179,11 @@ void main() {
 
   // Keep RGB tint after the legacy palette contrast pass. Intensity itself
   // has already been applied in palette-index space above.
-  if (lightingEnabled != 0 && !selfLit) {
+  // D2MOO confirms that ambient intensity selects the native PL2 Shadow row,
+  // but the original D2DDraw ambient-RGB composition is not open source.
+  // Do not multiply pixels outside every local-light radius by that RGB a
+  // second time: the PL2 row already contains their environment darkness.
+  if (lightingEnabled != 0 && !selfLit && hasLocalLight) {
     colorRGB *= clamp(light, 0.0, 1.0);
   }
 

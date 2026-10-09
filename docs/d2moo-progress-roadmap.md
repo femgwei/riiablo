@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-09 夜间环境光照暗部修正
+
+- [x] 根据 D2MOO `D2Common` 的环境强度计算和 `D2WinPalette.cpp` 的 `Pal.pl2` Shadow
+  行路径，确认远离局部光源的像素已经由原生强度索引完成环境暗化。
+- [x] 查阅 The Phrozen Keep《Colormaps Explained》：资料确认的是索引色表映射，未公开
+  D2DDraw 内部 `D2GFX_SetAmbientColor` 的最终 RGB 合成；因此不凭经验重建该 DLL 公式。
+- [x] 修正 `indexpalette3.frag`：只有确实落入局部光源半径的像素才应用环境 RGB/局部光源
+  乘数；照亮范围之外只保留 PL2 Shadow 行，避免夜间环境 RGB 被二次压暗。局部火把、
+  导弹和 Overlay 光源仍保留原有颜色影响。
+- [ ] 待用户在另一台电脑拉取后，用与 P3/P4 相同的夜晚牛场机位复核；若色调仍有差异，
+  需要原版 D2DDraw 像素合成证据，而不是继续猜测常量。
+
 ## 2026-10-09 原版/Riiablo 光照对比修正
 
 - [x] 对照 `D2MOO/source/D2Win/src/D2WinPalette.cpp` 与原版 `Pal.pl2` 光照路径，移除
