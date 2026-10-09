@@ -2,14 +2,15 @@
 
 ## 2026-10-09 河流水面 COF 透明度修正
 
-- [x] 对照 D2MOO `DrawMode.h` 与 Phrozen Keep 的 COF/PL2 说明，确认
-  `newTransLvl=0` 的 `TRANS75` 表示 **75% transparency**，即 25% 源图不透明度；
-  `newTransLvl=2` 的 `TRANS25` 则表示 75% 源图不透明度。
-- [x] 修正 riiablo 颠倒的 `trans25`/`trans75` alpha。河流对象 40–42 继续完全由
-  原生 COF `overrideTransLvl=1/newTransLvl=0` 驱动，不增加对象 ID 特判。
-- 依据：Phrozen Keep `some stats on .cof` 的原始说明为
-  `00 = 75% transparency (colormaps 561-816 in a .pl2)`；这同时解释了此前白天与
-  夜晚水面都约亮三倍、单独接入 Shadow colormap 仍改善不明显的现象。
+- [x] 对照 D2MOO `DrawMode.h`、Phrozen Keep 的 COF/PL2 说明，并直接读取 ACT1
+  `Pal.pl2` 的 561–816 段：`newTransLvl=0` 的 `TRANS75` 名称虽写作
+  “75% transparency”，但原版二维混色表的源索引行在暗色背景上实际保留约 75% 源色；
+  `TRANS25` 对应约 25% 源色。
+- [x] 按 ACT1 原版混色表的实际贡献恢复 riiablo 的 `trans25`/`trans75` alpha。
+  河流对象 40–42 继续完全由原生 `overrideTransLvl=1/newTransLvl=0` 驱动，不增加
+  对象 ID 特判。
+- 证据样本：河水常用索引 113 `(16,36,4)` 在 TRANS75 表中叠加黑色背景仍输出
+  `(16,36,4)`，叠加深蓝背景输出约 `(8,20,16)`，与约 75% 源色贡献一致。
 
 ## 2026-10-09 河流水面原生调色板光照
 
@@ -21,8 +22,8 @@
 - [x] 环境 RGB 色调与强度分离；玩家、物件、导弹和 Overlay 的局部光源先参与像素光强，
   再选择 Shadow 行。自发光、Screen 和 additive 表现继续绕过环境暗化。
 - [x] 河流 COF `overrideTransLvl=1/newTransLvl=0` 已确认仍由现有动画加载器应用
-  `TRANS75`；后续核实其含义是 75% 透明（25% 不透明），并已在上节修正此前反向的 alpha。
-  本轮没有按河流对象 ID、`Objects.Trans=7` 或固定青绿色做特判。
+  `TRANS75`；其 alpha 近似按原版 PL2 混色表的 75% 源色贡献处理。本轮没有按河流
+  对象 ID、`Objects.Trans=7` 或固定青绿色做特判。
 - 验证：`RenderLightingTest` 与 Rogue Encampment 河流生成定向测试通过；真实 MPQ
   `desktop:offscreenCamp` 通过并完成 shader 编译。最终白天/夜晚水面亮度仍需客户端截图验收。
 
