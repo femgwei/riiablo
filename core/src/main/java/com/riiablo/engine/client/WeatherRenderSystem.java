@@ -17,11 +17,13 @@ import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.map.DT1;
 import com.riiablo.profiler.GpuSystem;
 
 /** Draws the native screen-space rain and Act V snow precipitation layer. */
@@ -67,6 +69,8 @@ public final class WeatherRenderSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected RenderSystem renderer;
+  @Wire(name = "factory")
+  protected EntityFactory factory;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -76,6 +80,7 @@ public final class WeatherRenderSystem extends BaseSystem {
 
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
+  private final RainRippleField ripples = new RainRippleField(RANDOM_SEED ^ 0x4D2A7B19L);
   private WeatherCycles weatherCycles;
   private ControlMode controlMode = ControlMode.AUTO;
   private Audio.Instance rainAmbience;
@@ -114,9 +119,17 @@ public final class WeatherRenderSystem extends BaseSystem {
     float width = iso.viewportWidth * iso.zoom;
     float height = iso.viewportHeight * iso.zoom;
     particles.configure(mode, width, height);
-    if (mode == Mode.NONE || width <= 0f || height <= 0f) return;
+    if (mode == Mode.NONE || width <= 0f || height <= 0f) {
+      ripples.clear();
+      return;
+    }
 
     particles.advance(world.getDelta());
+    if (mode == Mode.RAIN) {
+      ripples.advance(world.getDelta(), worldMap, zone, src, intensity);
+    } else {
+      ripples.clear();
+    }
     draw(width, height, intensity);
   }
 
@@ -246,6 +259,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   @Override
   protected void dispose() {
     stopRainAmbience();
+    ripples.clear();
   }
 
   /** Shares one weather cycle across every Rain-enabled level in an act. */
@@ -388,6 +402,115 @@ public final class WeatherRenderSystem extends BaseSystem {
 
     Mode visibleMode() {
       return eligibleMode != Mode.NONE && intensity > 0f ? eligibleMode : Mode.NONE;
+    }
+  }
+
+  /**
+   * Client-only native water-impact presentation. D2Client creates one of the
+   * four Objects.txt Dummy-ripple rows (tokens 1R..4R), whose TR layer is the
+   * animated {@code *TRLITNUHTH.dcc}; the server never receives these units.
+   */
+  final class RainRippleField {
+    // OpenDiablo2 calls the same lookup records 217..220, but riiablo's
+    // Objects.txt table is keyed by the concrete rows 67..70 (1R..4R).
+    private static final int FIRST_CLASS_ID = 67;
+    private static final int RIPPLE_VARIANTS = 4;
+    private static final int MAX_RIPPLES = 12;
+    private static final int RIPPLE_LIFETIME_TICKS = 18;
+    private static final int WATER_SAMPLE_ATTEMPTS = 80;
+
+    private final Random random;
+    private final com.badlogic.gdx.utils.Array<Ripple> active = new com.badlogic.gdx.utils.Array<>();
+    private final com.badlogic.gdx.math.Vector2 player = new com.badlogic.gdx.math.Vector2();
+    private float spawnBudget;
+    private boolean resourcesChecked;
+    private boolean resourcesAvailable;
+
+    RainRippleField(long seed) {
+      random = new Random(seed);
+    }
+
+    void advance(float delta, Map map, Map.Zone zone, int source, float intensity) {
+      if (map == null || zone == null || source < 0 || !mPosition.has(source)
+          || !(factory instanceof ClientEntityFactory) || !hasResources()) {
+        clear();
+        return;
+      }
+
+      for (int i = active.size - 1; i >= 0; i--) {
+        Ripple ripple = active.get(i);
+        if (--ripple.remainingTicks <= 0) {
+          delete(ripple.entityId);
+          active.removeIndex(i);
+        }
+      }
+
+      player.set(mPosition.get(source).position);
+      // Keep the native-looking emission deterministic at the 25 Hz clock.
+      spawnBudget += Math.max(0f, delta) * SimulationClock.TICKS_PER_SECOND
+          * MathUtils.clamp(intensity, 0f, 1f) * 0.24f;
+      while (spawnBudget >= 1f && active.size < MAX_RIPPLES) {
+        spawnBudget -= 1f;
+        if (!spawn(map, zone)) break;
+      }
+    }
+
+    private boolean spawn(Map map, Map.Zone expectedZone) {
+      float radius = Math.max(32f, Math.max(iso.viewportWidth, iso.viewportHeight)
+          * iso.zoom / (DT1.Tile.SUBTILE_WIDTH * 2f));
+      for (int attempt = 0; attempt < WATER_SAMPLE_ATTEMPTS; attempt++) {
+        int x = MathUtils.round(player.x + (random.nextFloat() * 2f - 1f) * radius);
+        int y = MathUtils.round(player.y + (random.nextFloat() * 2f - 1f) * radius);
+        if (map.getZone(x, y) != expectedZone || !map.isWater(x, y)) continue;
+
+        int classId = FIRST_CLASS_ID + random.nextInt(RIPPLE_VARIANTS);
+        int entityId = factory.createStaticObjectByClassId(classId, x, y);
+        if (entityId == com.riiablo.engine.Engine.INVALID_ENTITY) continue;
+        active.add(new Ripple(entityId, RIPPLE_LIFETIME_TICKS));
+        return true;
+      }
+      return false;
+    }
+
+    private boolean hasResources() {
+      if (resourcesChecked) return resourcesAvailable;
+      resourcesChecked = true;
+      resourcesAvailable = false;
+      if (Riiablo.files == null || Riiablo.files.objects == null || Riiablo.mpqs == null) return false;
+      for (int i = 0; i < RIPPLE_VARIANTS; i++) {
+        com.riiablo.codec.excel.Objects.Entry object =
+            Riiablo.files.objects.get(FIRST_CLASS_ID + i);
+        if (object == null || object.Token == null || object.Token.isEmpty()) continue;
+        String path = "data\\global\\objects\\" + object.Token + "\\TR\\"
+            + object.Token + "TRLITNUHTH.dcc";
+        if (Riiablo.mpqs.contains(path)) {
+          resourcesAvailable = true;
+          break;
+        }
+      }
+      return resourcesAvailable;
+    }
+
+    void clear() {
+      for (int i = 0; i < active.size; i++) delete(active.get(i).entityId);
+      active.clear();
+      spawnBudget = 0f;
+    }
+
+    private void delete(int entityId) {
+      if (entityId >= 0 && world != null && world.getEntityManager().isActive(entityId)) {
+        world.delete(entityId);
+      }
+    }
+  }
+
+  static final class Ripple {
+    final int entityId;
+    int remainingTicks;
+
+    Ripple(int entityId, int remainingTicks) {
+      this.entityId = entityId;
+      this.remainingTicks = remainingTicks;
     }
   }
 

@@ -831,6 +831,12 @@ public class Map implements Disposable {
     return zone.material(tx + zone.tx, ty + zone.ty);
   }
 
+  /** Returns whether the floor DT1 tile at a world position is native water. */
+  public boolean isWater(int x, int y) {
+    Zone zone = getZone(x, y);
+    return zone != null && zone.isWater(x, y);
+  }
+
   public Zone getZone(Vector2 vec) {
     return getZone(vec.x, vec.y);
   }
@@ -1686,6 +1692,19 @@ public class Map implements Disposable {
 
     public Material material(int tx, int ty) {
       return Material.getMaterial(level, get(FLOOR_OFFSET, tx, ty));
+    }
+
+    /** Checks the floor material at world-subtile coordinates without applying
+     * the footstep-material fallback (water is intentionally not a footstep
+     * material in {@link Material}). */
+    public boolean isWater(int worldX, int worldY) {
+      int localX = Math.floorDiv(worldX - x, DT1.Tile.SUBTILE_SIZE);
+      int localY = Math.floorDiv(worldY - y, DT1.Tile.SUBTILE_SIZE);
+      if (localX < 0 || localY < 0 || localX >= tilesX || localY >= tilesY) {
+        return false;
+      }
+      DT1.Tile tile = get(FLOOR_OFFSET, tx + localX, ty + localY);
+      return tile != null && (tile.materialFlags() & DT1.Tile.MATERIAL_WATER) != 0;
     }
 
     /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */
