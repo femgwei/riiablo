@@ -1,6 +1,11 @@
 package com.riiablo.engine.client;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
+import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
@@ -11,6 +16,7 @@ import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
@@ -127,8 +133,31 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     com.riiablo.item.Item item = Riiablo.charData.getItems().getCursor();
     Riiablo.charData.cursorToGround();
 
-    Vector2 position = mPosition.get(Riiablo.game.player).position;
+    Vector2 position = freeGroundPosition(Riiablo.game.player, mPosition.get(Riiablo.game.player).position);
     factory.createItem(item, position);
+  }
+
+  private Vector2 freeGroundPosition(int playerId, Vector2 origin) {
+    Set<Long> occupied = new HashSet<>();
+    MapWrapper playerMap = mMapWrapper.has(playerId) ? mMapWrapper.get(playerId) : null;
+    if (playerMap != null && playerMap.map != null) {
+      IntBag entities = world.getAspectSubscriptionManager().get(
+          Aspect.all(Item.class, Position.class, MapWrapper.class)).getEntities();
+      ComponentMapper<Item> items = mItem;
+      ComponentMapper<Position> positions = mPosition;
+      ComponentMapper<MapWrapper> maps = mMapWrapper;
+      for (int i = 0; i < entities.size(); i++) {
+        int id = entities.get(i);
+        Item item = items.get(id);
+        Position position = positions.get(id);
+        MapWrapper map = maps.get(id);
+        if (item == null || item.item == null || position == null || map == null
+            || map.map != playerMap.map) continue;
+        occupied.add(GroundDropPosition.key(Math.round(position.position.x),
+            Math.round(position.position.y)));
+      }
+    }
+    return GroundDropPosition.findFree(origin.x, origin.y, occupied, 8, new Vector2());
   }
 
   @Override
