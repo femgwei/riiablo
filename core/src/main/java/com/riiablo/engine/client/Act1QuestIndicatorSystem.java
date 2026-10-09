@@ -137,6 +137,14 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
           return false;
         }
         record = quests[Act1BloodRavenQuest.RECORD];
+        // D2MOO's ACT1Q2_ActiveFilterCallback disables Kashya's quest state
+        // after the Blood Raven reward has been granted.  The intermediate
+        // STARTED flag is reset at that point, so checking only "not started"
+        // would incorrectly recreate the exclamation mark on every visit.
+        if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+            || NativeQuestRecord.has(record, NativeQuestRecord.COMPLETED_BEFORE)) {
+          return false;
+        }
         return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.CHARSI:

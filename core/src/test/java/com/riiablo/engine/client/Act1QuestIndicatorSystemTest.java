@@ -73,5 +73,10 @@ class Act1QuestIndicatorSystemTest extends RiiabloTest {
     data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
         Act1BloodRavenQuest.start((short) 0);
     assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
+
+    data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
+        Act1BloodRavenQuest.claimReward(
+            Act1BloodRavenQuest.completeObjective((short) 0));
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
   }
 }
