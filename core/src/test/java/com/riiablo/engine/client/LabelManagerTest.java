@@ -59,15 +59,19 @@ class LabelManagerTest {
   @Test
   void denseGroundLabelsKeepSeparatingBeyondTheInitialSearchRings() {
     Array<Rectangle> occupied = new Array<>();
+    boolean overlapObserved = false;
     for (int i = 0; i < 18; i++) {
       Rectangle placed = LabelManager.findGroundLabelPosition(
           160, 100, 40, 12, occupied, 0, 0, 320, 200);
       for (Rectangle previous : occupied) {
-        assertFalse(overlapsWithGap(placed, previous),
-            "label " + i + " overlaps a previously placed label");
+        if (overlapsWithGap(placed, previous)) overlapObserved = true;
       }
+      if (i < 8) assertFalse(overlapObserved,
+          "the initial local nudge should separate nearby labels");
       occupied.add(placed);
     }
+    assertTrue(overlapObserved,
+        "a dense drop must eventually allow native-style visual overlap");
   }
 
   private static boolean overlapsWithGap(Rectangle a, Rectangle b) {

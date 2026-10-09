@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 
@@ -48,7 +49,11 @@ public class LabelManager extends IteratingSystem {
   private boolean showGroundItems;
 
   private static final float LABEL_GAP = 2f;
-  private static final int MAX_LABEL_RING = 12;
+  /** Native Alt overlay only exposes the first 32 ground-item names. */
+  private static final int MAX_GROUND_LABELS = 32;
+  /** D2 does a small local nudge, not an unbounded collision-free layout. */
+  private static final int MAX_LABEL_RING = 2;
+  private static final float SAME_DROP_ANCHOR_EPSILON = 1f;
 
   private static final class GroundLabel {
     final Actor actor;
@@ -78,6 +83,7 @@ public class LabelManager extends IteratingSystem {
 
   @Override
   protected void end() {
+    limitGroundLabels();
     layoutGroundLabels();
     for (Actor label : labels) {
       tmpVec2.x = label.getX();
@@ -114,6 +120,9 @@ public class LabelManager extends IteratingSystem {
 
     Actor actor = label.actor;
     actor.setPosition(tmpVec2.x, tmpVec2.y, Align.center | Align.bottom);
+    // Tables calculate their preferred size lazily. Resolve it before the Alt
+    // overlay measures labels, otherwise new labels can look zero-sized.
+    if (actor instanceof Table) ((Table) actor).validate();
     labels.add(actor);
     if (mItem.has(entityId)) groundLabels.add(new GroundLabel(actor));
   }
@@ -143,15 +152,44 @@ public class LabelManager extends IteratingSystem {
       return y != 0 ? y : Float.compare(a.desiredX, b.desiredX);
     });
 
+    Array<GroundLabel> placedGroundLabels = new Array<>();
     for (GroundLabel groundLabel : groundLabels) {
       Actor actor = groundLabel.actor;
+      Array<Rectangle> localOccupied = new Array<>();
+      localOccupied.addAll(occupiedLabels);
+      // Adjacent subtiles are allowed to overlap visually in native D2. Only
+      // labels sharing the same (or effectively same) drop anchor participate
+      // in this small label nudge.
+      for (GroundLabel previous : placedGroundLabels) {
+        if (sameDropAnchor(groundLabel, previous)) {
+          localOccupied.add(new Rectangle(previous.actor.getX(), previous.actor.getY(),
+              previous.actor.getWidth(), previous.actor.getHeight()));
+        }
+      }
       Rectangle placed = findGroundLabelPosition(
           groundLabel.desiredX, groundLabel.desiredY,
-          actor.getWidth(), actor.getHeight(), occupiedLabels,
+          actor.getWidth(), actor.getHeight(), localOccupied,
           renderer.getMinX(), renderer.getMinY(), renderer.getMaxX(), renderer.getMaxY());
       actor.setPosition(placed.x, placed.y);
-      occupiedLabels.add(placed);
+      placedGroundLabels.add(groundLabel);
     }
+  }
+
+  private void limitGroundLabels() {
+    if (!showGroundItems || groundLabels.size <= MAX_GROUND_LABELS) return;
+    groundLabels.sort((a, b) -> {
+      int y = Float.compare(a.desiredY, b.desiredY);
+      return y != 0 ? y : Float.compare(a.desiredX, b.desiredX);
+    });
+    for (int i = groundLabels.size - 1; i >= MAX_GROUND_LABELS; i--) {
+      labels.removeValue(groundLabels.get(i).actor, true);
+    }
+    groundLabels.truncate(MAX_GROUND_LABELS);
+  }
+
+  private static boolean sameDropAnchor(GroundLabel first, GroundLabel second) {
+    return Math.abs(first.desiredX - second.desiredX) <= SAME_DROP_ANCHOR_EPSILON
+        && Math.abs(first.desiredY - second.desiredY) <= SAME_DROP_ANCHOR_EPSILON;
   }
 
   private boolean containsGroundLabel(Actor actor) {
@@ -178,17 +216,7 @@ public class LabelManager extends IteratingSystem {
     float verticalStep = Math.max(1f, height + LABEL_GAP);
     float horizontalStep = Math.max(1f, width + LABEL_GAP);
 
-    // Twelve rings is enough for the usual drop cluster, but it is not enough
-    // when the labels are wide or the anchor is near a screen edge.  Extend
-    // the search to cover the whole viewport so a dense Alt overlay does not
-    // fall through to the overlapping fallback merely because the fixed ring
-    // limit was reached.
-    int viewportRings = (int) Math.ceil(
-        Math.max(maxX - minX, maxY - minY) / Math.max(1f, Math.min(horizontalStep, verticalStep)));
-    int maxRing = Math.max(MAX_LABEL_RING, viewportRings + occupied.size + 1);
-    float lastX = Float.NaN;
-    float lastY = Float.NaN;
-    for (int ring = 0; ring <= maxRing; ring++) {
+    for (int ring = 0; ring <= MAX_LABEL_RING; ring++) {
       for (int row = -ring; row <= ring; row++) {
         for (int column = -ring; column <= ring; column++) {
           if (ring != 0 && Math.abs(row) != ring && Math.abs(column) != ring) continue;
@@ -199,12 +227,6 @@ public class LabelManager extends IteratingSystem {
               minX, Math.max(minX, maxX - width));
           float y = MathUtils.clamp(desiredY + row * verticalStep,
               minY, Math.max(minY, maxY - height));
-          // Clamping can collapse many ring coordinates to the same edge
-          // position.  Skip those duplicates instead of repeatedly testing
-          // the same blocked rectangle.
-          if (x == lastX && y == lastY) continue;
-          lastX = x;
-          lastY = y;
           Rectangle candidate = new Rectangle(x, y, width, height);
           if (overlapsAny(candidate, occupied)) continue;
 
