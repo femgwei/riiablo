@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 
@@ -114,6 +115,10 @@ public class LabelManager extends IteratingSystem {
     // Refresh the cached header so the displayed amount follows quantity.
     if (mItem.has(entityId)) {
       label.actor = mItem.get(entityId).item.header();
+      // Ground labels in the native client are text-only. The same cached
+      // header Table is also used by the inventory loader, so remove its
+      // panel background only at the point where it is used as a world label.
+      if (label.actor instanceof Table) ((Table) label.actor).setBackground((Drawable) null);
     }
     tmpVec2.add(label.offset);
 

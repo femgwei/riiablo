@@ -1,9 +1,19 @@
 package com.riiablo.engine.server;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import com.artemis.Aspect;
+import com.artemis.ComponentMapper;
+import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.save.CharData;
 import com.riiablo.item.VendorPricing;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.item.GroundDropPosition;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.Party;
 import com.artemis.annotations.Wire;
@@ -65,7 +75,7 @@ public class ServerItemManager extends ItemManager {
     com.riiablo.item.Item item = charData.getItems().getCursor();
     super.cursorToGround(entityId);
 
-    Vector2 position = mPosition.get(entityId).position;
+    Vector2 position = freeGroundPosition(entityId, mPosition.get(entityId).position);
     int droppedEntity = factory.createItem(item, position);
     // The ground component keeps the same Item instance that was removed
     // from the cursor.  Replace its inventory id with the authoritative ECS
@@ -77,5 +87,28 @@ public class ServerItemManager extends ItemManager {
           10_000L, 0L, false);
       GroundDropOwnership.register(droppedEntity, entityId, 10_000L);
     }
+  }
+
+  private Vector2 freeGroundPosition(int playerId, Vector2 origin) {
+    Set<Long> occupied = new HashSet<>();
+    MapWrapper playerMap = world.getMapper(MapWrapper.class).get(playerId);
+    if (playerMap != null && playerMap.map != null) {
+      IntBag entities = world.getAspectSubscriptionManager().get(
+          Aspect.all(Item.class, Position.class, MapWrapper.class)).getEntities();
+      ComponentMapper<Item> items = world.getMapper(Item.class);
+      ComponentMapper<Position> positions = world.getMapper(Position.class);
+      ComponentMapper<MapWrapper> maps = world.getMapper(MapWrapper.class);
+      for (int i = 0; i < entities.size(); i++) {
+        int id = entities.get(i);
+        Item item = items.get(id);
+        Position position = positions.get(id);
+        MapWrapper map = maps.get(id);
+        if (item == null || item.item == null || position == null || map == null
+            || map.map != playerMap.map) continue;
+        occupied.add(GroundDropPosition.key(Math.round(position.position.x),
+            Math.round(position.position.y)));
+      }
+    }
+    return GroundDropPosition.findFree(origin.x, origin.y, occupied, 8, new Vector2());
   }
 }
