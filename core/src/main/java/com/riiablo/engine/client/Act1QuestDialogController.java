@@ -15,6 +15,7 @@ import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.engine.server.quest.Act1AndarielQuest;
 import com.riiablo.engine.server.quest.Act1CainQuest;
+import com.riiablo.engine.server.quest.Act1NaviQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
@@ -124,6 +125,10 @@ public class Act1QuestDialogController extends PassiveSystem {
       messageIndex = Act1CainQuest.MESSAGE_CAIN_TOWN;
       speech = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
           ? "cain_act1_q4_success" : "cain_act1_q4_rescued_hero";
+    } else if (npc.monstats.hcIdx == MonsterType.NAVI) {
+      short denRecord = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
+      messageIndex = Act1NaviQuest.select(denRecord, playerId ^ npcId);
+      speech = Act1NaviQuest.speech(messageIndex);
     } else {
       return false;
     }
@@ -132,7 +137,11 @@ public class Act1QuestDialogController extends PassiveSystem {
     log.info("[ACT1_QUEST_DIALOG] player={} npc={} message={} speech={}",
         playerId, npc.monstats.Id, messageIndex, speech);
     submitMessage(playerId, npcId, messageIndex);
-    dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
+    String fallback = npc.monstats.hcIdx == MonsterType.NAVI
+        ? Riiablo.bundle.get(
+            messageIndex < Act1NaviQuest.MESSAGE_AFTER_0
+                ? "flavie_a1q1_warning" : "flavie_a1q1_after") : null;
+    dialogManager.setDialog(new NpcDialogBox(speech, fallback, dialog -> {
       dialogManager.setDialog(null);
     }));
     return true;

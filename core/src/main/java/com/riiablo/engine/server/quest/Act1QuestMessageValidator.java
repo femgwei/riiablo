@@ -36,6 +36,8 @@ public final class Act1QuestMessageValidator {
       case MonsterType.DECKARDCAIN:
       case MonsterType.DECKARDCAIN_TOWN:
         return messageIndex == Act1CainQuest.MESSAGE_CAIN_TOWN;
+      case MonsterType.NAVI:
+        return Act1NaviQuest.isAllowed(act1[Act1DenOfEvilQuest.RECORD], messageIndex);
       default:
         return false;
     }

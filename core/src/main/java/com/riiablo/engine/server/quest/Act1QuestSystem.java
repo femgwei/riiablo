@@ -192,6 +192,7 @@ public class Act1QuestSystem extends PassiveSystem {
       onWarrivMessage(event, player);
       return;
     }
+    if (npc.monstats.hcIdx == MonsterType.NAVI) return;
     if (npc.monstats.hcIdx != MonsterType.AKARA) return;
 
     if (event.messageIndex == Act1CainQuest.MESSAGE_DECIPHER_SCROLL) {

@@ -25,6 +25,10 @@ public class NpcDialogBox extends Table implements Disposable {
   Audio.Instance audio;
 
   public NpcDialogBox(String sound, DialogCompletionListener listener) {
+    this(sound, null, listener);
+  }
+
+  public NpcDialogBox(String sound, String fallbackText, DialogCompletionListener listener) {
     this.listener = listener;
     setBackground(new BorderedPaletteIndexedDrawable());
     setTouchable(Touchable.disabled);
@@ -42,7 +46,7 @@ public class NpcDialogBox extends Table implements Disposable {
     }
     String text = speech != null && speech.soundstr != null
         ? Riiablo.string.lookup(speech.soundstr)
-        : Riiablo.bundle.get("unknown");
+        : fallbackText != null ? fallbackText : Riiablo.bundle.get("unknown");
     String[] parts = text.split("\n", 2);
     String body = parts.length > 1 ? parts[1] : parts[0];
     scrollSpeed = parts.length > 1
