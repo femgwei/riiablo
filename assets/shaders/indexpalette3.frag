@@ -151,7 +151,7 @@ void main() {
       // Keep the BRIGHTEN look while deriving alpha from the authored glow,
       // so the dark palette border remains transparent.
       // The native speech balloon is a translucent glow, not an opaque disk.
-      color.a = min(0.85, (0.299*color.r + 0.587*color.g + 0.114*color.b));
+      color.a = min(0.92, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 1.5);
       color.rgb -= 0.5;
       color.rgb *= 1.5;
       color.rgb += 0.5;
