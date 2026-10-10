@@ -954,9 +954,20 @@ public class RenderSystem extends BaseEntitySystem {
       return;
     }
     Map.Zone zone = mapping != null ? mapping.zone : map.getZone(position.position);
-    boolean interested = mapping != null && mapping.roomId >= 0
-        ? renderInterest.contains(zone, mapping.roomId)
-        : renderInterest.contains(zone, position.position.x, position.position.y);
+    // Monster AI and combat may continue while RoomEntityTrackingSystem is
+    // catching up with a room transition.  Using the replicated roomId in
+    // that window can remove the monster from the render cache even though
+    // its current position is inside the camera's interested RoomEx.  For
+    // monsters, resolve visibility from the current position; objects and
+    // other units retain their room-id based behavior.
+    boolean interested;
+    if (mMonster.has(entityId)) {
+      interested = renderInterest.contains(zone, position.position.x, position.position.y);
+    } else {
+      interested = mapping != null && mapping.roomId >= 0
+          ? renderInterest.contains(zone, mapping.roomId)
+          : renderInterest.contains(zone, position.position.x, position.position.y);
+    }
     if (interested) {
       spatialIndex.update(entityId, position.position.x, position.position.y);
     } else {
