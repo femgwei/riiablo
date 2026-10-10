@@ -11,6 +11,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.attributes.Stat;
 
 public class VendorGenerator extends PassiveSystem {
   private static final int FIRST_VENDOR_ITEM_ID = 0x60000000;
@@ -112,6 +113,9 @@ public class VendorGenerator extends PassiveSystem {
     item.quality = Quality.NORMAL;
     item.flags |= Item.ITEMFLAG_IDENTIFIED;
     item.flags2 |= Item.ITEMFLAG2_INSTORE;
+    // Native vendors stock arrow and bolt quivers at the full max stack
+    // (ITEMS_GetTotalMaxStack), even when Misc.txt spawnstack is smaller.
+    fillVendorQuiver(item);
     NativeRng rng = new NativeRng(id);
     NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
     if (rollSockets) {
@@ -121,6 +125,11 @@ public class VendorGenerator extends PassiveSystem {
     item.attrs.reset();
     loadClientAssets(item);
     return item;
+  }
+
+  private static void fillVendorQuiver(Item item) {
+    if (!VendorPricing.isQuiver(item) || item.base == null || item.base.maxstack <= 0) return;
+    item.attrs.base().put(Stat.quantity, item.base.maxstack);
   }
 
   /** Creates an independent replacement for native infinite vendor stock. */
