@@ -347,6 +347,17 @@ public class ClientEntityFactory extends ServerEntityFactory {
     if (monstats2.isSel || (monstats.npc && monstats.interact)) mSelectable.create(id);
 
     AI ai = mAIWrapper.get(id).ai;
+    // ServerEntityFactory intentionally uses the shared IDLE AI for native
+    // NPCs so headless worlds do not depend on client UI services. The local
+    // client still needs Npc.interact() to build the menu and dispatch the
+    // quest-dialog event when the player clicks an NPC.
+    if (monstats.npc && monstats.interact && !(ai instanceof com.riiablo.engine.server.ai.Npc)) {
+      ai = new com.riiablo.engine.server.ai.Npc(id);
+      mAIWrapper.get(id).ai = ai;
+      world.getInjector().inject(ai);
+      ai.initialize();
+      mInteractable.create(id).set(mSize.get(id).size, ai);
+    }
     if (ai instanceof Npc) {
       ((Npc) ai).createMenu(menuManager, dialogManager);
     }
