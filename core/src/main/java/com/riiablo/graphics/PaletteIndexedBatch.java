@@ -133,6 +133,11 @@ public class PaletteIndexedBatch extends SpriteBatch {
       // D2 Trans=1 matches Unity's Legacy Particles/Additive (Soft):
       // source alpha over the destination's inverse source colour.
       super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_COLOR);
+    } else if (blendMode == BlendMode.BRIGHTEN_LUMINOSITY) {
+      // Quest speech balloons are self-lit overlays: keep their luminance
+      // alpha for shape, but add the bright RGB without making the background
+      // opaque.
+      super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE);
     } else {
       super.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }
