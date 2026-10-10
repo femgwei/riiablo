@@ -427,7 +427,11 @@ public class ServerEntityFactory extends EntityFactory {
         + MonsterStatsCalculator.nativeRankLevelBonus(rank);
 
     int id = super.createEntity(Class.Type.MON, monstats.Id);
-    mNativeUnitFlags.create(id).reset().set(NativeUnitFlags.MONSTER_TARGET);
+    // D2MOO stores town/transition NPCs in UNIT_MONSTER, but the native
+    // MonStats NPC flag keeps them out of the monster faction and combat AI.
+    // Flavie at the Blood Moor -> Cold Plains transition is the visible case.
+    NativeUnitFlags nativeFlags = mNativeUnitFlags.create(id).reset();
+    if (!monstats.npc) nativeFlags.set(NativeUnitFlags.MONSTER_TARGET);
     Monster monster = mMonster.create(id).set(monstats, monstats2)
         .setRank(rank, affixes, championType, uniqueId);
     monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
@@ -524,7 +528,9 @@ public class ServerEntityFactory extends EntityFactory {
     mMovementModes.create(id).set(Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
 
     float size = mSize.create(id).size = monstats2.SizeX; // FIXME: SizeX and SizeY appear to always be equal -- is this method sufficient?
-    AI ai = mAIWrapper.create(id).findAI(id, monstats.AI).ai;
+    AIWrapper aiWrapper = mAIWrapper.create(id);
+    AI ai = monstats.npc ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
+    if (monstats.npc) aiWrapper.ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
     if (monstats.interact) {
