@@ -376,7 +376,6 @@ public class AutomapRenderer extends BaseSystem {
     // saving the previous automap.
     if (playerId == Engine.INVALID_ENTITY
         || world == null
-        || !world.getEntityManager().isActive(playerId)
         || !mPosition.has(playerId)) return;
     Position position = mPosition.get(playerId);
     if (position == null || position.position == null) return;
