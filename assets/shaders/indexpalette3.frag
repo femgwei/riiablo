@@ -42,6 +42,7 @@ void main() {
   // entries collapse into the same authored night colours as the native
   // renderer instead of remaining saturated after an RGB multiplication.
   bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
+      || blendMode == 15
       || blendMode == 12 || blendMode == 14;
   if (lightingEnabled != 0 && !selfLit) {
     float intensity = ambientIntensity;
@@ -145,6 +146,16 @@ void main() {
     }
 
   // Same as 1, except adds contrast and brightness
+  } else if (blendMode == 15) {
+    if (color.a > 0.0) {
+      // Keep the BRIGHTEN look while deriving alpha from the authored glow,
+      // so the dark palette border remains transparent.
+      color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0);
+      color.rgb -= 0.5;
+      color.rgb *= 1.5;
+      color.rgb += 0.5;
+      color.rgb += 0.3;
+    }
   } else if (blendMode == 8) {
     if (color.a > 0.0) {
       // Apply contrast

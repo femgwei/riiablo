@@ -115,7 +115,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     // Keep the native overlay self-lit. BRIGHTEN preserves the authored glow
     // in dark outdoor scenes where a luminosity-only alpha makes the marker
     // appear gray and noticeably dimmer than the original client.
-    questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.BRIGHTEN).build();
+    questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.BRIGHTEN_LUMINOSITY).build();
     questMarkerAnimation.setMode(Animation.Mode.LOOP);
   }
 

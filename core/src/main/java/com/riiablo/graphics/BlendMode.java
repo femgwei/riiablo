@@ -25,4 +25,6 @@ public interface BlendMode {
   int SOURCE_INDEX_ALPHA = 13;
   /** Native missile Trans=1 soft-additive blend. */
   int ADDITIVE           = 14;
+  /** Brightened indexed sprite with luminance-derived transparency. */
+  int BRIGHTEN_LUMINOSITY = 15;
 }
