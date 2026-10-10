@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,6 +26,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.NativeItemGeneration;
 import com.riiablo.item.Quality;
 import com.riiablo.item.Type;
 import com.riiablo.item.VendorGenerator;
@@ -259,6 +261,35 @@ class LootDropProbeTest extends RiiabloTest {
     }
     assertTrue(generated.size >= 8,
         "data-table probe should generate the common equipment and consumable categories");
+  }
+
+  @Test
+  void magicSocketPrefixesArePresentInDataTables() {
+    int rows = 0;
+    for (com.riiablo.codec.excel.MagicPrefix.Entry entry : Riiablo.files.MagicPrefix) {
+      if (!"sock".equalsIgnoreCase(entry.mod1code)) continue;
+      rows++;
+      System.out.println("[LOOT_PROBE] magicSocketPrefix name=" + entry.name
+          + " min=" + entry.mod1min + " max=" + entry.mod1max);
+    }
+    assertTrue(rows > 0, "MagicPrefix.txt must contain socket prefixes");
+  }
+
+  @Test
+  void magicSocketPrefixMaterializesBaseMaximumSockets() {
+    ItemGenerator generator = new ItemGenerator();
+    int checked = 0;
+    for (int seed = 1; seed <= 20_000 && checked == 0; seed++) {
+      Item item = generator.generateLootItem("cap", 85, Quality.MAGIC, seed, Riiablo.HELL);
+      int prefixId = item.qualityId & 0x7FF;
+      com.riiablo.codec.excel.MagicPrefix.Entry prefix = Riiablo.files.MagicPrefix.get(prefixId);
+      if (prefix == null || !("Artificer's".equalsIgnoreCase(prefix.name)
+          || "Jeweler's".equalsIgnoreCase(prefix.name))) continue;
+      checked++;
+      assertTrue(item.hasFlag(Item.ITEMFLAG_SOCKETED));
+      assertEquals(NativeItemGeneration.maxSockets(item, item.ilvl, Riiablo.HELL), sockets(item));
+    }
+    assertTrue(checked > 0, "seeded magic cap generation should find a socket prefix");
   }
 
   @Test

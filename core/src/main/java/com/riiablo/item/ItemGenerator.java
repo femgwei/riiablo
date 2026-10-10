@@ -64,6 +64,9 @@ public class ItemGenerator extends PassiveSystem {
     NativeRng rng = new NativeRng(seed);
     if (requested == Quality.MAGIC || requested == Quality.RARE) {
       Item item = generateQuestReward(code, itemLevel, requested, seed, rng);
+      if (requested == Quality.MAGIC && item.attrs.list().numLists() > 0) {
+        applyMagicSocketAffix(item, item.attrs.list(0), itemLevel, difficulty);
+      }
       applyNativeTraits(item, requested, itemLevel, difficulty, seed, rng);
       item.attrs.reset();
       return item;
@@ -192,9 +195,11 @@ public class ItemGenerator extends PassiveSystem {
 
     if (quality == Quality.MAGIC) {
       int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel, rng);
+      MagicPrefix.Entry prefixEntry = Riiablo.files.MagicPrefix.get(prefix);
+      addMagicAffix(magic, prefixEntry, properties);
+      applyMagicSocketAffix(item, magic, itemLevel, Riiablo.NORMAL);
       int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel, rng);
       item.qualityId = prefix | (suffix << Item.MAGIC_AFFIX_SIZE);
-      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix), properties);
       addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix), properties);
     } else if (quality == Quality.RARE) {
       int rarePrefix = findRareAffix(Riiablo.files.RarePrefix, item, rng);
@@ -211,6 +216,23 @@ public class ItemGenerator extends PassiveSystem {
     }
     item.attrs.reset();
     return item;
+  }
+
+  /** Materializes the native {@code sock} magic-prefix property on the item. */
+  private static void applyMagicSocketAffix(Item item, StatListRef magic,
+      int itemLevel, int difficulty) {
+    if (item == null || item.quality != Quality.MAGIC || magic == null) return;
+    StatRef socketStat = magic.get(Stat.item_numsockets);
+    if (socketStat == null) return;
+    int max = NativeItemGeneration.maxSockets(item, itemLevel, difficulty);
+    if (max <= 0) return;
+    // Artificer's/Jeweler's use the native sock property with a zero range;
+    // property function 14 resolves that form to the base's maximum sockets.
+    int requested = socketStat.asInt();
+    int sockets = requested <= 0 ? max : Math.min(max, requested);
+    item.flags |= Item.ITEMFLAG_SOCKETED;
+    item.attrs.base().put(Stat.item_numsockets, sockets);
+    item.sockets = new Array<>(sockets);
   }
 
   /** Creates Charsi's rare replacement while preserving native item traits. */
