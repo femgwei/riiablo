@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
@@ -122,6 +123,100 @@ class LootDropProbeTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void a1FallenAverageDropsAcrossDifficulties() {
+    int kills = probeKills();
+    MonStats.Entry fallen = findA1Fallen();
+    assertNotNull(fallen, "MonStats.txt must contain a normal Fallen row");
+    for (int difficulty = Riiablo.NORMAL; difficulty <= Riiablo.HELL; difficulty++) {
+      probeFallenDifficulty(fallen, difficulty, kills);
+    }
+  }
+
+  private static void probeFallenDifficulty(MonStats.Entry fallen, int difficulty, int kills) {
+    MathUtils.random.setSeed(0x46414C4C454E0000L + difficulty);
+    Riiablo.gameSeed = 0x51000000 + difficulty;
+    DropFactory factory = new DropFactory();
+    EventSystem events = new EventSystem();
+    ExperienceManager experience = new ExperienceManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, experience, new DeathRewardSystem(), new ItemGenerator(), factory)
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      CharData data = characterAtLevelOne(difficulty);
+      int player = world.create();
+      world.getMapper(Player.class).create(player).data = data;
+      world.getMapper(AttributesWrapper.class).create(player).attrs = data.getStats();
+      int monsterLevel = levelAt(fallen, difficulty);
+      ObjectMap<String, Integer> categories = new ObjectMap<>();
+      int itemDrops = 0;
+      int emptyDrops = 0;
+      int goldOnlyDrops = 0;
+      for (int i = 0; i < kills; i++) {
+        int monster = world.create();
+        world.getMapper(Monster.class).create(monster).set(fallen, new MonStats2.Entry());
+        world.getMapper(Position.class).create(monster).position.set(20, 30);
+        Attributes attrs = Attributes.obtainStandard();
+        attrs.base().put(Stat.level, monsterLevel);
+        attrs.base().put(Stat.experience, 0);
+        attrs.reset();
+        world.getMapper(AttributesWrapper.class).create(monster).attrs = attrs;
+        int before = factory.items.size();
+        events.dispatch(DeathEvent.obtain(player, monster));
+        int added = factory.items.size() - before;
+        int nonGold = 0;
+        for (int index = before; index < factory.items.size(); index++) {
+          Item item = factory.items.get(index);
+          if (item.type.is(Type.GOLD)) continue;
+          nonGold++;
+          String category = category(item);
+          categories.put(category, get(categories, category) + 1);
+        }
+        itemDrops += nonGold;
+        if (nonGold == 0) {
+          if (added > 0) goldOnlyDrops++;
+          else emptyDrops++;
+        }
+      }
+      double average = (double) itemDrops / kills;
+      int noItemDrops = emptyDrops + goldOnlyDrops;
+      double itemDropRate = (double) (kills - noItemDrops) / kills;
+      String difficultyName = difficulty == Riiablo.NORMAL ? "normal"
+          : difficulty == Riiablo.NIGHTMARE ? "nightmare" : "hell";
+      String tc = fallen.TreasureClass1[difficulty];
+      System.out.printf(Locale.ROOT,
+          "[LOOT_PROBE] phase=a1-fallen difficulty=%s monster=%s level=%d tc=%s "
+              + "kills=%d itemDrops=%d empty=%d goldOnly=%d noItem=%d "
+              + "itemDropRate=%.4f avgItems=%.4f%n",
+          difficultyName, fallen.Id, monsterLevel, tc, kills, itemDrops,
+          emptyDrops, goldOnlyDrops, noItemDrops, itemDropRate, average);
+      printMap("a1Category." + difficultyName, categories);
+      assertTrue(itemDrops >= 0, "Fallen probe must complete without item-generation errors");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static MonStats.Entry findA1Fallen() {
+    MonStats.Entry fallback = null;
+    for (MonStats.Entry entry : Riiablo.files.monstats) {
+      if (entry == null || entry.Id == null || !entry.Id.toLowerCase(Locale.ROOT).contains("fallen")
+          || entry.boss || entry.TreasureClass1 == null
+          || entry.TreasureClass1.length == 0 || entry.TreasureClass1[0] == null
+          || entry.TreasureClass1[0].trim().isEmpty()) continue;
+      if ("fallen1".equalsIgnoreCase(entry.Id) || "fallen".equalsIgnoreCase(entry.Id)) return entry;
+      if (fallback == null) fallback = entry;
+    }
+    return fallback;
+  }
+
+  private static int levelAt(MonStats.Entry entry, int difficulty) {
+    if (entry.Level == null || entry.Level.length == 0) return 1;
+    return Math.max(1, entry.Level[Math.min(difficulty, entry.Level.length - 1)]);
   }
 
   @Test
@@ -278,7 +373,11 @@ class LootDropProbeTest extends RiiabloTest {
   }
 
   private static CharData characterAtLevelOne() {
-    CharData data = CharData.obtain().clear().set(Riiablo.HELL, false,
+    return characterAtLevelOne(Riiablo.HELL);
+  }
+
+  private static CharData characterAtLevelOne(int difficulty) {
+    CharData data = CharData.obtain().clear().set(difficulty, false,
         "LootProbe", Riiablo.AMAZON);
     data.getStats().base().put(Stat.level, 1);
     data.getStats().base().put(Stat.experience, 0);
