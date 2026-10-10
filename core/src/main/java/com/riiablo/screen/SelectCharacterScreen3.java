@@ -144,7 +144,7 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
     Table box = new Table();
     box.setBackground(Label.MODAL);
 
-    Label label = new Label(1878, Riiablo.fonts.font16);
+    Label label = new Label(Riiablo.bundle.get("delete_character_confirm"), Riiablo.fonts.font16);
     label.setWrap(true);
     label.setAlignment(Align.center);
 

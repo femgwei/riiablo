@@ -134,7 +134,7 @@ public class SelectCharacterScreen extends ScreenAdapter {
     Table box = new Table();
     box.setBackground(Label.MODAL);
 
-    Label label = new Label(1878, Riiablo.fonts.font16); // "Are you sure you want to delete this character?"
+    Label label = new Label(Riiablo.bundle.get("delete_character_confirm"), Riiablo.fonts.font16);
     label.setWrap(true);
     label.setAlignment(Align.center);
 
