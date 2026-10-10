@@ -112,9 +112,10 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     if (!Riiablo.assets.isLoaded(QUEST_MARKER_DESCRIPTOR)) return;
 
     DCC dcc = Riiablo.assets.get(QUEST_MARKER_DESCRIPTOR);
-    // The native overlay uses luminance-derived alpha.  Using the default ID
-    // blend makes the DCC's glow background opaque instead of translucent.
-    questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.LUMINOSITY).build();
+    // Keep the native overlay self-lit. BRIGHTEN preserves the authored glow
+    // in dark outdoor scenes where a luminosity-only alpha makes the marker
+    // appear gray and noticeably dimmer than the original client.
+    questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.BRIGHTEN).build();
     questMarkerAnimation.setMode(Animation.Mode.LOOP);
   }
 
