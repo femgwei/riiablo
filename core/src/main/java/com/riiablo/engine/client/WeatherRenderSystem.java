@@ -49,9 +49,9 @@ public final class WeatherRenderSystem extends BaseSystem {
   static final int RAIN_DEPTH_BUCKET_COUNT = RAIN_MAX_LENGTH - RAIN_MIN_LENGTH + 1;
   static final float RAIN_DENSITY_SCALE = 0.75f;
   // Keep one stable conversion between visible rain streaks and water
-  // impacts. At full rain this is 50 ripple spawns/sec for 192 streaks.
+  // impacts. At full rain this is 100 ripple spawns/sec for 192 streaks.
   private static final float RIPPLE_RATE_PER_RAIN_PARTICLE =
-      50f / activeRainParticles(1f);
+      100f / activeRainParticles(1f);
   private static final int RAIN_THICK_SHADE_SLOTS = 2;
   private static final int RAIN_SHADE_BASE = 98;
   private static final int RAIN_SHADE_RANGE = 80;
@@ -433,7 +433,7 @@ public final class WeatherRenderSystem extends BaseSystem {
     // Objects.txt table is keyed by the concrete rows 67..70 (1R..4R).
     private static final int FIRST_CLASS_ID = 67;
     private static final int RIPPLE_VARIANTS = 4;
-    private static final int MAX_RIPPLES = 48;
+    private static final int MAX_RIPPLES = 96;
     // Community captures consistently show large ripples less often than the
     // small rings.  These are an empirical ClientFn=2 approximation; the
     // retail branch is hard-coded in D2Client rather than Objects.txt.
