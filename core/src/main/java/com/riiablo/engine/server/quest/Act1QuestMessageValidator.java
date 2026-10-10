@@ -30,6 +30,8 @@ public final class Act1QuestMessageValidator {
         return messageIndex == Act1BloodRavenQuest.selectKashyaMessage(
             act1[Act1BloodRavenQuest.RECORD]);
       case MonsterType.WARRIV:
+        if (Act1WarrivIntroQuest.isAllowed(
+            act1[Act1WarrivIntroQuest.RECORD], messageIndex)) return true;
         return NativeQuestRecord.has(act1[Act1AndarielQuest.RECORD],
             NativeQuestRecord.REWARD_PENDING)
             && messageIndex == Act1AndarielQuest.MESSAGE_WARRIV_REWARD;

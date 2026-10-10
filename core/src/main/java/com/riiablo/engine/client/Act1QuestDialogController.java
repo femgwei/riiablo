@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.riiablo.Riiablo;
+import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
@@ -17,6 +18,7 @@ import com.riiablo.engine.server.quest.Act1AndarielQuest;
 import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.Act1NaviQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
+import com.riiablo.engine.server.quest.Act1WarrivIntroQuest;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -104,20 +106,18 @@ public class Act1QuestDialogController extends PassiveSystem {
       messageIndex = Act1BloodRavenQuest.selectKashyaMessage(record);
       speech = Act1BloodRavenQuest.getKashyaSpeech(messageIndex);
     } else if (npc.monstats.hcIdx == MonsterType.WARRIV) {
-      short record = data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
-      if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
+      short introRecord = data.getQuests(Riiablo.ACT1)[Act1WarrivIntroQuest.RECORD];
+      if (Act1WarrivIntroQuest.isActive(introRecord)) {
+        messageIndex = data.classId == CharacterClass.PALADIN
+            ? Act1WarrivIntroQuest.MESSAGE_PALADIN
+            : Act1WarrivIntroQuest.MESSAGE_NORMAL;
+        speech = messageIndex == Act1WarrivIntroQuest.MESSAGE_PALADIN
+            ? "warriv_act1_intro_pal" : "warriv_act1_intro";
+      } else {
+        short record = data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
+        if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return false;
         messageIndex = Act1AndarielQuest.MESSAGE_WARRIV_REWARD;
         speech = "warriv_act1_q6_success";
-      } else if (isFreshAct1(data.getQuests(Riiablo.ACT1))) {
-        // The initial Warriv conversation is Act I's intro gossip, not an
-        // A1Q6 quest message.  It still has a quest marker in the native UI,
-        // so consume the interaction here instead of falling through to the
-        // generic NPC menu.  -1 is presentation-only and is not sent to the
-        // quest authority.
-        messageIndex = -1;
-        speech = "warriv_act1_intro";
-      } else {
-        return false;
       }
     } else if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN
         || npc.monstats.hcIdx == MonsterType.DECKARDCAIN_TOWN) {
@@ -160,9 +160,4 @@ public class Act1QuestDialogController extends PassiveSystem {
     }
   }
 
-  private static boolean isFreshAct1(short[] quests) {
-    if (quests == null) return false;
-    for (short quest : quests) if (quest != 0) return false;
-    return true;
-  }
 }

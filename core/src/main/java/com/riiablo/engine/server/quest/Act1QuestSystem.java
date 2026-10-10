@@ -251,6 +251,15 @@ public class Act1QuestSystem extends PassiveSystem {
   }
 
   private void onWarrivMessage(NpcQuestMessageEvent message, Player player) {
+    short introRecord = player.data.getQuests(Riiablo.ACT1)[Act1WarrivIntroQuest.RECORD];
+    if (Act1WarrivIntroQuest.isAllowed(introRecord, message.messageIndex)) {
+      player.data.getQuests(Riiablo.ACT1)[Act1WarrivIntroQuest.RECORD] =
+          Act1WarrivIntroQuest.claim(introRecord);
+      persist(player.data);
+      log.info("[A1Q0] Warriv introduction acknowledged: player={} message={}",
+          message.entityId, message.messageIndex);
+      return;
+    }
     if (message.messageIndex != Act1AndarielQuest.MESSAGE_WARRIV_REWARD) return;
     short record = getAndarielRecord(player.data);
     if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
