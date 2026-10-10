@@ -98,7 +98,8 @@ void main() {
   // RGB and its luminance-driven intensity.
   } else if (blendMode == 12) {
     if (color.a > 0.0) {
-      color.a = min(1.0, (0.299*color.r + 0.587*color.g + 0.114*color.b) * 2.0);
+      // The native speech balloon is a translucent glow, not an opaque disk.
+      color.a = min(0.85, (0.299*color.r + 0.587*color.g + 0.114*color.b));
     }
 
   // Indexed sprite alpha: index 0 is transparent, all other DCC indices
