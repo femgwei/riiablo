@@ -99,7 +99,7 @@ public class VendorGenerator extends PassiveSystem {
     NativeRng rng = new NativeRng(id);
     NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
     item.attrs.reset();
-    item.load();
+    loadClientAssets(item);
     return item;
   }
 
@@ -119,7 +119,7 @@ public class VendorGenerator extends PassiveSystem {
       NativeRng rng = new NativeRng(id);
       NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
       item.attrs.reset();
-      item.load();
+      loadClientAssets(item);
       return item;
     } catch (RuntimeException ignored) {
       // Some vendor-table rows have no valid affix at their configured level.
@@ -133,5 +133,10 @@ public class VendorGenerator extends PassiveSystem {
 
   private synchronized int nextId() {
     return nextItemId++;
+  }
+
+  /** Server-side inventory generation does not have client artwork assets. */
+  private static void loadClientAssets(Item item) {
+    if (Riiablo.assets != null && Riiablo.colormaps != null) item.load();
   }
 }
