@@ -17,12 +17,23 @@ public class VendorGenerator extends PassiveSystem {
 
   protected ItemGenerator generator;
   private int nextItemId = FIRST_VENDOR_ITEM_ID;
+  private int generationDifficulty = Riiablo.NORMAL;
 
   public Array<Item> generate(String vendor) throws Exception {
+    return generate(vendor, generationDifficulty);
+  }
+
+  /** Selects the difficulty used by the legacy no-argument vendor API. */
+  public void setDifficulty(int difficulty) {
+    generationDifficulty = Math.max(Riiablo.NORMAL, Math.min(Riiablo.HELL, difficulty));
+  }
+
+  public Array<Item> generate(String vendor, int difficulty) throws Exception {
+    difficulty = Math.max(Riiablo.NORMAL, Math.min(Riiablo.HELL, difficulty));
     Array<Item> items = new Array<>(true, 64, Item.class);
-    generate(vendor, items, Riiablo.files.armor);
-    generate(vendor, items, Riiablo.files.weapons);
-    generate(vendor, items, Riiablo.files.misc);
+    generate(vendor, items, Riiablo.files.armor, difficulty);
+    generate(vendor, items, Riiablo.files.weapons, difficulty);
+    generate(vendor, items, Riiablo.files.misc, difficulty);
     return items;
   }
 
@@ -42,12 +53,12 @@ public class VendorGenerator extends PassiveSystem {
         try {
           item = generator.generateQuestReward(base.code, Math.max(1, base.level), Quality.RARE, nextId());
         } catch (RuntimeException ignored) {
-          item = createNormal(base);
+          item = createNormal(base, Riiablo.NORMAL, false);
         }
       } else if (roll < 35) {
-        item = createMagic(base, Math.max(1, base.level));
+        item = createMagic(base, Math.max(1, base.level), Riiablo.NORMAL, false);
       } else {
-        item = createNormal(base);
+        item = createNormal(base, Riiablo.NORMAL, false);
       }
       item.flags2 |= Item.ITEMFLAG2_INSTORE;
       items.add(item);
@@ -66,6 +77,11 @@ public class VendorGenerator extends PassiveSystem {
   }
 
   public void generate(String vendor, Array<Item> items, Excel<? extends ItemEntry> excel) throws Exception {
+    generate(vendor, items, excel, Riiablo.NORMAL);
+  }
+
+  public void generate(String vendor, Array<Item> items, Excel<? extends ItemEntry> excel,
+      int difficulty) throws Exception {
     Class<? extends ItemEntry> entryClass = excel.getEntryClass();
     Field field = entryClass.getField(vendor);
     for (ItemEntry base : excel) {
@@ -73,21 +89,21 @@ public class VendorGenerator extends PassiveSystem {
       if (vendorData[1] > 0) {
         int count = base.PermStoreItem ? 1 : MathUtils.random(vendorData[0], vendorData[1]);
         for (int i = 0; i < count; i++) {
-          Item item = createNormal(base);
+          Item item = createNormal(base, difficulty, true);
           items.add(item);
         }
       }
       if (vendorData[3] > 0 && vendorData[4] != 0xFF) {
         int count = base.PermStoreItem ? 1 : MathUtils.random(vendorData[2], vendorData[3]);
         for (int i = 0; i < count; i++) {
-          Item item = createMagic(base, vendorData[4]);
+          Item item = createMagic(base, vendorData[4], difficulty, true);
           items.add(item);
         }
       }
     }
   }
 
-  private Item createNormal(ItemEntry base) {
+  private Item createNormal(ItemEntry base, int difficulty, boolean rollSockets) {
     int id = nextId();
     Item item = generator.generate(base);
     item.id = id;
@@ -98,6 +114,10 @@ public class VendorGenerator extends PassiveSystem {
     item.flags2 |= Item.ITEMFLAG2_INSTORE;
     NativeRng rng = new NativeRng(id);
     NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
+    if (rollSockets) {
+      NativeItemGeneration.rollSockets(item, item.quality, item.ilvl,
+          difficulty, id, rng::nextInt);
+    }
     item.attrs.reset();
     loadClientAssets(item);
     return item;
@@ -105,12 +125,17 @@ public class VendorGenerator extends PassiveSystem {
 
   /** Creates an independent replacement for native infinite vendor stock. */
   public Item restock(Item purchased) {
-    if (purchased == null || purchased.base == null
-        || !VendorPricing.isInfiniteStockItem(purchased)) return null;
-    return createNormal(purchased.base);
+    return restock(purchased, generationDifficulty);
   }
 
-  private Item createMagic(ItemEntry base, int magicLevel) {
+  public Item restock(Item purchased, int difficulty) {
+    if (purchased == null || purchased.base == null
+        || !VendorPricing.isInfiniteStockItem(purchased)) return null;
+    return createNormal(purchased.base, difficulty, true);
+  }
+
+  private Item createMagic(ItemEntry base, int magicLevel, int difficulty,
+      boolean rollSocketsOnFallback) {
     int id = nextId();
     try {
       Item item = generator.generateQuestReward(
@@ -125,7 +150,7 @@ public class VendorGenerator extends PassiveSystem {
       // Some vendor-table rows have no valid affix at their configured level.
       // Native D2 falls back to a usable stock entry instead of aborting the
       // entire NPC inventory.
-      Item item = createNormal(base);
+      Item item = createNormal(base, difficulty, rollSocketsOnFallback);
       item.id = id;
       return item;
     }

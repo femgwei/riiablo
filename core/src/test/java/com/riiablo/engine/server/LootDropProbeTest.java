@@ -266,17 +266,19 @@ class LootDropProbeTest extends RiiabloTest {
     ItemGenerator generator = new ItemGenerator();
     ProbeVendorGenerator vendors = new ProbeVendorGenerator();
     vendors.setGenerator(generator);
-    vendors.generate("charsi");
+    com.badlogic.gdx.utils.Array<Item> stock = vendors.generate("charsi", Riiablo.HELL);
     int equipment = 0;
     int socketed = 0;
-    for (Item item : vendors.items) {
+    for (Item item : stock) {
       if (!item.type.is(Type.WEAP) && !item.type.is(Type.ARMO)) continue;
       equipment++;
       if (item.hasFlag(Item.ITEMFLAG_SOCKETED)) socketed++;
     }
-    System.out.println("[LOOT_PROBE] phase=vendor vendor=charsi items=" + vendors.items.size
+    System.out.println("[LOOT_PROBE] phase=vendor vendor=charsi items=" + stock.size
         + " equipment=" + equipment + " socketed=" + socketed);
-    assertTrue(vendors.items.size > 0, "vendor probe must produce inventory");
+    assertTrue(stock.size > 0, "vendor probe must produce inventory");
+    assertTrue(socketed > 0,
+        "normal vendor equipment should occasionally receive native sockets");
   }
 
   private static void collectRepresentatives(ObjectMap<String, String> out,
@@ -420,12 +422,6 @@ class LootDropProbeTest extends RiiabloTest {
   }
 
   private static final class ProbeVendorGenerator extends VendorGenerator {
-    final com.badlogic.gdx.utils.Array<Item> items = new com.badlogic.gdx.utils.Array<>();
     void setGenerator(ItemGenerator generator) { this.generator = generator; }
-    @Override public void generate(String vendor, com.badlogic.gdx.utils.Array<Item> output,
-        com.riiablo.codec.excel.Excel<? extends ItemEntry> excel) throws Exception {
-      super.generate(vendor, output, excel);
-      for (Item item : output) if (!items.contains(item, true)) items.add(item);
-    }
   }
 }

@@ -940,7 +940,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       if (localStock != null) {
         int stockIndex = localStock.indexOf(item, true);
         Item replacement = !isGambling() && VendorPricing.isInfiniteStockItem(item)
-            && localVendorGenerator != null ? localVendorGenerator.restock(item) : null;
+            && localVendorGenerator != null ? localVendorGenerator.restock(item,
+                Riiablo.charData == null ? Riiablo.NORMAL : Riiablo.charData.diff) : null;
         if (replacement != null && stockIndex >= 0) localStock.set(stockIndex, replacement);
         else localStock.removeValue(item, true);
         config(configuredFlags, localStock, localPricing, serviceType, localVendorGenerator);

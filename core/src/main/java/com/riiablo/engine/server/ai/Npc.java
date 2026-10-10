@@ -375,7 +375,8 @@ public class Npc extends AI {
         items = vendors.generateGamble();
       } else {
         if (vendorStock == null || !monstats.Id.equals(vendorStockType)) {
-          vendorStock = vendors.generate(monstats.Id);
+          int difficulty = Riiablo.charData == null ? Riiablo.NORMAL : Riiablo.charData.diff;
+          vendorStock = vendors.generate(monstats.Id, difficulty);
           vendorStockType = monstats.Id;
         }
         if (!VENDOR_NPCS.contains(this, true)) VENDOR_NPCS.add(this);

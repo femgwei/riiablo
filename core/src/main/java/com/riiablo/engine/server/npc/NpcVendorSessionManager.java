@@ -94,6 +94,7 @@ public final class NpcVendorSessionManager {
     }
     session = new Session(npcEntityId, npcType, gamble, pricing, difficulty, generator);
     if (generator != null) {
+      if (!gamble) generator.setDifficulty(difficulty);
       Array<Item> generated = gamble ? generator.generateGamble() : generator.generate(npcType);
       session.stock.addAll(generated);
     }
@@ -136,7 +137,7 @@ public final class NpcVendorSessionManager {
     Item item = find(session, itemId);
     if (item == null || player == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return 0;
     Item replacement = !session.isGamble() && VendorPricing.isInfiniteStockItem(item)
-        && session.generator != null ? session.generator.restock(item) : null;
+        && session.generator != null ? restock(session, item) : null;
     int price = price(session, item, player);
     boolean purchased = session.isGamble()
         ? (toCursor ? VendorPricing.gambleToCursor(player, item)
@@ -149,6 +150,11 @@ public final class NpcVendorSessionManager {
     else session.stock.removeValue(item, true);
     session.revision++;
     return price;
+  }
+
+  private static Item restock(Session session, Item item) {
+    session.generator.setDifficulty(session.difficulty);
+    return session.generator.restock(item);
   }
 
   public int price(Session session, Item item, CharData player) {
