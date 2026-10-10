@@ -215,12 +215,12 @@ public final class WeatherRenderSystem extends BaseSystem {
   }
 
   static float rainWidth(float shade, float viewportWidth) {
-    if (shade < ParticleField.rainShade(RAIN_THICK_SHADE_SLOTS - 1)) return 1f;
-    // The software renderer's thickest rain footprint grows with the logical
-    // viewport: 1 px at 800 wide, 3 px at 1600 wide. Keep the thin shades at
-    // one pixel so the additional resolution does not turn every streak into
-    // a solid band.
-    return Math.max(1f, Math.round(viewportWidth / 800f * 2f - 1f));
+    // Scale the thinnest footprint with the logical viewport, then make the
+    // thickest footprint floor(thin * 1.5): 800 wide -> 1/1 px, 1600 wide ->
+    // 2/3 px. This follows the indexed rasterizer's integer quantization.
+    float thin = Math.max(1f, (float) Math.floor(viewportWidth / 800f));
+    if (shade < ParticleField.rainShade(RAIN_THICK_SHADE_SLOTS - 1)) return thin;
+    return Math.max(1f, (float) Math.floor(thin * 1.5f));
   }
 
   private void drawSnow(float intensity) {
