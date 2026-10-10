@@ -206,12 +206,21 @@ public final class WeatherRenderSystem extends BaseSystem {
       // apparent thin and heavy footprints of its indexed software rasterizer without a gap.
       float deltaX = (int) (particles.windX * length);
       float deltaY = (int) (particles.windY * length);
-      shapes.rectLine(x, y, x + deltaX, y + deltaY, rainWidth(shade));
+      shapes.rectLine(x, y, x + deltaX, y + deltaY, rainWidth(shade, particles.width));
     }
   }
 
   static float rainWidth(float shade) {
     return shade >= ParticleField.rainShade(RAIN_THICK_SHADE_SLOTS - 1) ? 2f : 1f;
+  }
+
+  static float rainWidth(float shade, float viewportWidth) {
+    if (shade < ParticleField.rainShade(RAIN_THICK_SHADE_SLOTS - 1)) return 1f;
+    // The software renderer's thickest rain footprint grows with the logical
+    // viewport: 1 px at 800 wide, 3 px at 1600 wide. Keep the thin shades at
+    // one pixel so the additional resolution does not turn every streak into
+    // a solid band.
+    return Math.max(1f, Math.round(viewportWidth / 800f * 2f - 1f));
   }
 
   private void drawSnow(float intensity) {
