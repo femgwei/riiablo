@@ -374,9 +374,15 @@ public class AutomapRenderer extends BaseSystem {
     // indexes its backing bag directly, so validate world membership first
     // instead of allowing a stale id to cause an out-of-bounds crash while
     // saving the previous automap.
-    if (playerId == Engine.INVALID_ENTITY
-        || world == null
-        || !mPosition.has(playerId)) return;
+    if (playerId == Engine.INVALID_ENTITY || world == null) return;
+    // During a screen transition Riiablo.game.player can still refer to the
+    // previous world's entity. Artemis' component bags throw for such an ID,
+    // so treat the stale snapshot as unavailable until the new world is ready.
+    try {
+      if (!mPosition.has(playerId)) return;
+    } catch (ArrayIndexOutOfBoundsException ignored) {
+      return;
+    }
     Position position = mPosition.get(playerId);
     if (position == null || position.position == null) return;
     Map.Zone zone = map.getZone(position.position.x, position.position.y);
