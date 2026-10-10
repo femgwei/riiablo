@@ -507,13 +507,14 @@ public final class WeatherRenderSystem extends BaseSystem {
       IntBag entities = subscription.getEntities();
       if (entities.size() == 0) return false;
 
-      // Start at a deterministic random entity to avoid favoring the first
-      // room's object when several pools are visible at once.
-      int start = random.nextInt(entities.size());
+      // Reservoir-sample eligible water objects so ECS insertion order and
+      // unrelated entities cannot bias which pool receives the next ripple.
+      int selected = com.riiablo.engine.Engine.INVALID_ENTITY;
+      int candidates = 0;
       float visibleRadius = Math.max(32f, Math.max(iso.viewportWidth, iso.viewportHeight)
           * iso.zoom / (DT1.Tile.SUBTILE_WIDTH * 2f));
       for (int offset = 0; offset < entities.size(); offset++) {
-        int entityId = entities.get((start + offset) % entities.size());
+        int entityId = entities.get(offset);
         Object object = mObject.get(entityId);
         Position position = mPosition.get(entityId);
         if (object == null || position == null || object.base == null
@@ -530,6 +531,14 @@ public final class WeatherRenderSystem extends BaseSystem {
         // material fallback locate a real water tile rather than placing the
         // ripple on the invisible marker itself.
         if (halfWidth <= 0f || halfHeight <= 0f) continue;
+        if (random.nextInt(++candidates) == 0) selected = entityId;
+      }
+      if (selected == com.riiablo.engine.Engine.INVALID_ENTITY) return false;
+      {
+        Position position = mPosition.get(selected);
+        com.riiablo.codec.excel.Objects.Entry base = mObject.get(selected).base;
+        float halfWidth = base.SizeX * 0.5f;
+        float halfHeight = base.SizeY * 0.5f;
         for (int attempt = 0; attempt < 8; attempt++) {
           int x = MathUtils.round(position.position.x
               + (random.nextFloat() * 2f - 1f) * halfWidth);
@@ -550,11 +559,9 @@ public final class WeatherRenderSystem extends BaseSystem {
     private int randomRippleVariant(Levels.Entry level) {
       int roll = random.nextInt(RIPPLE_VARIANT_ROLL);
       // Levels.txt uses zero-based acts: Act I is 0 and Act III is 2.
-      // Act I water has no large 1R ripples: 4R=45%, 3R=35%, 2R=20%.
+      // Act I uses independent random draws: 4R=67%, 3R=33%.
       if (level != null && level.Act == 0) {
-        if (roll < 45) return 3;
-        if (roll < 80) return 2;
-        return 1;
+        return roll < 67 ? 3 : 2;
       }
       // Act III swamp water keeps the rare large 1R ripple: 4R=42%,
       // 3R=33%, 2R=22%, 1R=3%.
