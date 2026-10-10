@@ -138,6 +138,9 @@ public final class MonsterType {
   // NPC
   //==========================================================================
 
+  /** Flavie, the Act I wilderness guide at the Blood Moor border. */
+  public static final int NAVI = 266;
+
   /** 雅克修 (Act 1) */
   public static final int AKARA = 148;
   /** 查西 (Act 1) */

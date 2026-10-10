@@ -62,6 +62,7 @@ import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.state.StateId;
@@ -529,8 +530,10 @@ public class ServerEntityFactory extends EntityFactory {
 
     float size = mSize.create(id).size = monstats2.SizeX; // FIXME: SizeX and SizeY appear to always be equal -- is this method sufficient?
     AIWrapper aiWrapper = mAIWrapper.create(id);
-    AI ai = monstats.npc ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
-    if (monstats.npc) aiWrapper.ai = ai;
+    boolean wildernessGuide = monstats.hcIdx == MonsterType.NAVI;
+    AI ai = monstats.npc && !wildernessGuide
+        ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
+    if (monstats.npc && !wildernessGuide) aiWrapper.ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
     if (monstats.interact) {

@@ -35,6 +35,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.NativeUnitFlags;
@@ -886,12 +887,17 @@ public abstract class AI implements Interactable.Interactor {
         && !candidate.converted
         && candidate.monstats.killable && !candidate.monstats.npc
         && !candidate.monstats.inTown;
+    boolean wildernessGuide = monster != null && monster.monstats != null
+        && monster.monstats.hcIdx == MonsterType.NAVI;
+    // Flavie is friendly to players but uses the native Navi AI to defend the
+    // Blood Moor border against nearby evil monsters.
+    if (wildernessGuide && !targetHostileMonster) return false;
     // A converted monster is player-aligned and only seeks ordinary evil
     // monsters.  It must never reacquire the caster or another converted unit.
     if (sourceConverted && !targetHostileMonster) return false;
     boolean targetHostilePlayerUnit = sourcePet != null && targetFriendly
         && arePlayerOwnersHostile(sourcePet.ownerId, alignmentOwner(targetId));
-    if (!sourceConverted) {
+    if (!sourceConverted && !wildernessGuide) {
       if (sourcePet != null
           ? !(targetHostileMonster || targetHostilePlayerUnit)
           : !(targetFriendly || candidate != null && candidate.converted)) return false;
