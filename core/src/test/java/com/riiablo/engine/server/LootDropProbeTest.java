@@ -153,6 +153,9 @@ class LootDropProbeTest extends RiiabloTest {
       world.getMapper(AttributesWrapper.class).create(player).attrs = data.getStats();
       int monsterLevel = levelAt(fallen, difficulty);
       ObjectMap<String, Integer> categories = new ObjectMap<>();
+      ObjectMap<Integer, Integer> itemLevels = new ObjectMap<>();
+      ObjectMap<String, Integer> itemQualities = new ObjectMap<>();
+      ObjectMap<Integer, Integer> itemSockets = new ObjectMap<>();
       int itemDrops = 0;
       int emptyDrops = 0;
       int goldOnlyDrops = 0;
@@ -175,6 +178,12 @@ class LootDropProbeTest extends RiiabloTest {
           nonGold++;
           String category = category(item);
           categories.put(category, get(categories, category) + 1);
+          itemLevels.put((int) item.ilvl, get(itemLevels, (int) item.ilvl) + 1);
+          String quality = String.valueOf(item.quality);
+          itemQualities.put(quality, get(itemQualities, quality) + 1);
+          if (item.hasFlag(Item.ITEMFLAG_SOCKETED)) {
+            itemSockets.put(sockets(item), get(itemSockets, sockets(item)) + 1);
+          }
         }
         itemDrops += nonGold;
         if (nonGold == 0) {
@@ -195,6 +204,9 @@ class LootDropProbeTest extends RiiabloTest {
           difficultyName, fallen.Id, monsterLevel, tc, kills, itemDrops,
           emptyDrops, goldOnlyDrops, noItemDrops, itemDropRate, average);
       printMap("a1Category." + difficultyName, categories);
+      printMap("a1Quality." + difficultyName, itemQualities);
+      printMap("a1ItemLevel." + difficultyName, itemLevels);
+      printMap("a1Sockets." + difficultyName, itemSockets);
       assertTrue(itemDrops >= 0, "Fallen probe must complete without item-generation errors");
     } finally {
       world.dispose();
