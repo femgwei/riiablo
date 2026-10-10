@@ -33,6 +33,8 @@ public class DamageEvent implements Event {
   public boolean returnFire;
   /** Missile row already owns an elemental pCltHit presentation. */
   public boolean suppressElementalPresentation;
+  /** Periodic area missiles do not emit a monster pain voice on every tick. */
+  public boolean suppressMonsterHitSound;
 
   public static DamageEvent obtain(int attacker, int victim, float damage) {
     return obtain(attacker, victim, damage, null);
@@ -53,6 +55,7 @@ public class DamageEvent implements Event {
     event.hitSound = hitSound;
     event.returnFire = false;
     event.suppressElementalPresentation = false;
+    event.suppressMonsterHitSound = false;
     return event;
   }
 
@@ -97,6 +100,11 @@ public class DamageEvent implements Event {
 
   public DamageEvent suppressElementalPresentation(boolean suppress) {
     suppressElementalPresentation = suppress;
+    return this;
+  }
+
+  public DamageEvent suppressMonsterHitSound(boolean suppress) {
+    suppressMonsterHitSound = suppress;
     return this;
   }
 

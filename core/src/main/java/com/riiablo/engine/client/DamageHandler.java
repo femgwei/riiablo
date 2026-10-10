@@ -104,7 +104,8 @@ public class DamageHandler extends PassiveSystem {
     
     // Trigger hit reaction for entities with AI (monsters, NPCs, etc.)
     // Players don't have AI components, so we need to check first
-    if (event.kind != DamageEvent.DAMAGE_OVER_TIME && mAIWrapper.has(event.victim)) {
+    if (event.kind != DamageEvent.DAMAGE_OVER_TIME
+        && !event.suppressMonsterHitSound && mAIWrapper.has(event.victim)) {
       AIWrapper aiWrapper = mAIWrapper.get(event.victim);
       if (aiWrapper != null && aiWrapper.ai != null) {
         aiWrapper.ai.hit();

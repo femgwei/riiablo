@@ -2070,6 +2070,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         missile.ownerId, targetId, damage, 0f,
         missile.impactSound != null ? missile.impactSound
             : missile.missile != null ? missile.missile.HitSound : null)
+        // Native persistent fire-area missiles damage every game frame, but
+        // their periodic ticks do not replay the monster pain voice each
+        // frame. One-shot elemental impacts retain normal hit feedback.
+        .suppressMonsterHitSound(missile.persistent)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
