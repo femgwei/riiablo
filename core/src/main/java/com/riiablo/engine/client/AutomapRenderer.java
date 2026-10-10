@@ -369,7 +369,15 @@ public class AutomapRenderer extends BaseSystem {
   private void updateExplorationFromPlayer() {
     if (mPosition == null || map == null || Riiablo.game == null) return;
     int playerId = Riiablo.game.player;
-    if (playerId == Engine.INVALID_ENTITY || !mPosition.has(playerId)) return;
+    // Scene transitions can briefly retain the previous player's entity id
+    // while the new Artemis world is already active. ComponentMapper.has()
+    // indexes its backing bag directly, so validate world membership first
+    // instead of allowing a stale id to cause an out-of-bounds crash while
+    // saving the previous automap.
+    if (playerId == Engine.INVALID_ENTITY
+        || world == null
+        || !world.getEntityManager().isActive(playerId)
+        || !mPosition.has(playerId)) return;
     Position position = mPosition.get(playerId);
     if (position == null || position.position == null) return;
     Map.Zone zone = map.getZone(position.position.x, position.position.y);
