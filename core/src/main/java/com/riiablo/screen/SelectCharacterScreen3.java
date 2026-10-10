@@ -43,6 +43,7 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
   private Button btnOK;
   private Button btnCreateNewCharacter;
   private Button btnDeleteCharacter;
+  private Table actionPanel;
 
   private CharacterSelectButton        selected;
   private Array<CharacterSelectButton> characters;
@@ -102,14 +103,14 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
     btnDeleteCharacter.setDisabled(true);
     btnCreateNewCharacter = new TextButton(StringTBL.EXPANSION_OFFSET + 2743, tallButtonStyle);
     btnCreateNewCharacter.addListener(clickListener);
-    Table panel = new Table() {{
+    actionPanel = new Table() {{
       final float SPACING = 4;
       add(btnDeleteCharacter).space(SPACING);
       add(btnCreateNewCharacter).space(SPACING);
       pack();
     }};
-    panel.setPosition(stage.getWidth() / 2, 20, Align.bottom | Align.center);
-    stage.addActor(panel);
+    actionPanel.setPosition(stage.getWidth() / 2, 20, Align.bottom | Align.center);
+    stage.addActor(actionPanel);
 
     TextButton.TextButtonStyle mediumButtonStyle = new TextButton.TextButtonStyle() {{
       Riiablo.assets.finishLoadingAsset(MediumButtonBlankDescriptor);
@@ -163,6 +164,7 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
 
   private void toggleDeleteCharacterDialog(boolean show) {
     deleteConfirm.setVisible(show);
+    if (show) deleteConfirm.toFront();
     btnOK.setDisabled(show || selected == null);
     btnDeleteCharacter.setDisabled(show || selected == null);
     btnCreateNewCharacter.setDisabled(show);
@@ -234,6 +236,9 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
     }
 
     boolean hasChars = characters.size > 0;
+    actionPanel.toFront();
+    btnExit.toFront();
+    btnOK.toFront();
     btnOK.setDisabled(!hasChars);
     btnDeleteCharacter.setDisabled(!hasChars);
   }
