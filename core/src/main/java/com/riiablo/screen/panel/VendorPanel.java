@@ -320,9 +320,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
     StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
     goldLabel = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
-    goldLabel.setSize(goldbankLabel.getWidth(), goldbankLabel.getHeight());
-    goldLabel.setPosition(goldbankLabel.getX(), goldbankLabel.getY());
-    goldLabel.setAlignment(Align.right);
+    goldLabel.setAutoSize(false);
+    goldLabel.setSize(goldLabel.getPrefWidth(), goldbankLabel.getHeight());
+    goldLabel.setPosition(
+        goldbankLabel.getX() + goldbankLabel.getWidth() - goldLabel.getWidth(),
+        goldbankLabel.getY());
     addActor(goldLabel);
 
     inventory = Riiablo.files.inventory.get("Monster");
@@ -963,6 +965,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private void refreshGold() {
     if (goldLabel != null && Riiablo.charData != null) {
       goldLabel.setText(Integer.toString(VendorPricing.availableGold(Riiablo.charData)));
+      goldLabel.setWidth(goldLabel.getPrefWidth());
+      goldLabel.setX(20 + 180 - goldLabel.getWidth());
     }
   }
 
