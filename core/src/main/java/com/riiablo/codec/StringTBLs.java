@@ -11,12 +11,17 @@ public class StringTBLs {
   private static final boolean DEBUG = false;
 
   public final StringTBL string, expansionstring, patchstring;
+  private final StringTBLs fallback;
 
   public StringTBLs(MPQFileHandleResolver resolver) {
     this(resolver, D2Language.ENGLISH);
   }
 
   public StringTBLs(MPQFileHandleResolver resolver, D2Language language) {
+    this(resolver, language, language != D2Language.ENGLISH);
+  }
+
+  private StringTBLs(MPQFileHandleResolver resolver, D2Language language, boolean loadFallback) {
     String root = "data\\local\\lng\\" + language.resourceCode + "\\";
     Charset valueCharset = language == D2Language.CHINESE
         ? StandardCharsets.UTF_8
@@ -32,6 +37,13 @@ public class StringTBLs {
     duplicates += patch(StringTBL.CLASSIC_OFFSET, string, StringTBL.PATCH_OFFSET, patchstring);
     duplicates += patch(StringTBL.EXPANSION_OFFSET, expansionstring, StringTBL.PATCH_OFFSET, patchstring);
     if (DEBUG) Gdx.app.debug(TAG, "Duplicates Found: " + duplicates);
+
+    fallback = loadFallback
+        && resolver.contains("data\\local\\lng\\eng\\string.tbl")
+        && resolver.contains("data\\local\\lng\\eng\\expansionstring.tbl")
+        && resolver.contains("data\\local\\lng\\eng\\patchstring.tbl")
+        ? new StringTBLs(resolver, D2Language.ENGLISH, false)
+        : null;
   }
 
   private int patch(short offset1, StringTBL strings, short offset, StringTBL patch) {
@@ -77,11 +89,18 @@ public class StringTBLs {
   }
 
   public String lookup(String key) {
+    String str = lookupRaw(key);
+    if (str != null) return str;
+    if (fallback != null && (str = fallback.lookupRaw(key)) != null) return str;
+    return "ERROR: " + key;
+  }
+
+  private String lookupRaw(String key) {
     String str;
     if ((str = patchstring.lookup(key)) != null) return str;
     if ((str = expansionstring.lookup(key)) != null) return str;
     if ((str = string.lookup(key)) != null) return str;
-    return "ERROR: " + key;
+    return null;
   }
 
   public String format(int index, Object... args) {
