@@ -477,9 +477,13 @@ public class AutomapManager implements Disposable {
     // Native D2 towns are fully revealed from the moment the level opens;
     // exploration fog only applies to outdoor/dungeon levels.  Reveal the
     // whole town footprint before building cells so its NPCs, waypoints and
-    // exits are visible immediately.
+    // exits are visible immediately. Native town fence tiles can be authored
+    // on the exclusive right/bottom Zone edge; include one DT1 tile of margin
+    // so those boundary-wall origins are not filtered by isExplored().
     if (zone != null && zone.isTown()) {
-      layer.revealRect(zone.x(), zone.y(), zone.width(), zone.height());
+      int margin = DT1.Tile.SUBTILE_SIZE;
+      layer.revealRect(zone.x() - margin, zone.y() - margin,
+          zone.width() + margin * 2, zone.height() + margin * 2);
     } else {
       layer.updateRoomExploration(zone, playerX, playerY);
     }
