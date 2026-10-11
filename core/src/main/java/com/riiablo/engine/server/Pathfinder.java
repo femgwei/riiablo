@@ -440,7 +440,7 @@ public class Pathfinder extends IteratingSystem {
     }
     if (raycast) {
       ray.set(position, target);
-      success = map.castRay(ray, flags, size, collision);
+      success = map.castRay(ray, flags, size, collision, canOpenDoors(src));
       if (success) {
         success = findPath(src, position, collision.point, flags, size, path,
             targetEntityId, true);
@@ -611,7 +611,7 @@ public class Pathfinder extends IteratingSystem {
                 ignoredDynamicTarget(targetEntityId, x, y),
                 x, y, footprint);
     boolean success = map.findPath(srcPos, targetPos, flags, size, path, obstacle,
-        src, targetEntityId);
+        src, targetEntityId, canOpenDoors(src));
     if (success) {
       if (!pathWithinNativeMonsterRooms(src, path)) {
         path.clear();
@@ -622,7 +622,8 @@ public class Pathfinder extends IteratingSystem {
       // Keep dynamic-unit avoidance while still removing unnecessary grid
       // corners. A raw A* path makes units alternate between neighboring
       // directions, which is especially visible in the walk/run animation.
-      smoothPathWithDynamicCollision(src, targetEntityId, flags, size, path);
+      smoothPathWithDynamicCollision(src, targetEntityId, flags, size, path,
+          canOpenDoors(src));
       mPathfind.create(src).set(path);
     }
 
@@ -672,7 +673,8 @@ public class Pathfinder extends IteratingSystem {
    * map raycaster; dynamic collision is sampled at half-cell intervals.
    */
   private void smoothPathWithDynamicCollision(
-      int moverId, int targetId, int flags, int size, GraphPath path) {
+      int moverId, int targetId, int flags, int size, GraphPath path,
+      boolean canOpenDoors) {
     int length = path.getCount();
     if (length <= 2) return;
 
@@ -684,7 +686,7 @@ public class Pathfinder extends IteratingSystem {
       smoothRay.start.set(smoothStart);
       smoothRay.end.set(smoothEnd);
 
-      boolean blocked = map.castRay(smoothRay, flags, size, collision);
+      boolean blocked = map.castRay(smoothRay, flags, size, collision, canOpenDoors);
       if (!blocked && isDynamicSegmentFree(moverId, targetId, size,
           smoothStart, smoothEnd)) {
         inId++;
@@ -717,6 +719,14 @@ public class Pathfinder extends IteratingSystem {
       }
     }
     return true;
+  }
+
+  /** Mirrors PATH_AllocDynamicPath's non-flying open-door branch. */
+  private boolean canOpenDoors(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    return monster != null && monster.monstats != null
+        && monster.monstats.opendoors && !monster.monstats.flying;
   }
 
   static boolean isRoomPathAllowed(Map.Zone zone, Vector2 source, Vector2 target) {

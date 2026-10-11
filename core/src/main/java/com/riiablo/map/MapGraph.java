@@ -17,6 +17,7 @@ public class MapGraph {
 
   final Point2 tmpPoint = new Point2();
   final ObjectSet<Point2> identity = new ObjectSet<>();
+  private boolean canOpenDoors;
 
   public MapGraph(Map map) {
     this.map = map;
@@ -59,13 +60,26 @@ public class MapGraph {
   public boolean searchNodePath(PathFinder pathFinder, Vector2 src, Vector2 dst,
       int flags, int size, GraphPath<Point2> outPath, Obstacle obstacle,
       int moverId, int targetId) {
+    return searchNodePath(pathFinder, src, dst, flags, size, outPath,
+        obstacle, moverId, targetId, false);
+  }
+
+  public boolean searchNodePath(PathFinder pathFinder, Vector2 src, Vector2 dst,
+      int flags, int size, GraphPath<Point2> outPath, Obstacle obstacle,
+      int moverId, int targetId, boolean canOpenDoors) {
     outPath.clear();
     if (dst == null) return false;
-    if (!isWalkable(Map.round(dst.x), Map.round(dst.y), flags, size,
-        obstacle, moverId, targetId)) return false;
-    Point2 srcP = getOrCreate(src);
-    Point2 dstP = getOrCreate(dst);
-    return searchNodePath(pathFinder, srcP, dstP, flags, size, outPath, obstacle);
+    boolean previousCanOpenDoors = this.canOpenDoors;
+    this.canOpenDoors = canOpenDoors;
+    try {
+      if (!isWalkable(Map.round(dst.x), Map.round(dst.y), flags, size,
+          obstacle, moverId, targetId)) return false;
+      Point2 srcP = getOrCreate(src);
+      Point2 dstP = getOrCreate(dst);
+      return searchNodePath(pathFinder, srcP, dstP, flags, size, outPath, obstacle);
+    } finally {
+      this.canOpenDoors = previousCanOpenDoors;
+    }
   }
 
   boolean searchNodePath(PathFinder pathFinder, Point2 src, Point2 dst, int flags, int size, GraphPath<Point2> outPath) {
@@ -123,7 +137,7 @@ public class MapGraph {
       for (int dx = -radius; dx <= radius; dx++) {
         int cellX = x + dx;
         int cellY = y + dy;
-        if ((map.flags(cellX, cellY) & flags) != 0) return false;
+        if (map.isBlockedForPath(cellX, cellY, flags, canOpenDoors)) return false;
       }
     }
     return obstacle == null || obstacle.isFree(moverId, targetId, x, y, size);

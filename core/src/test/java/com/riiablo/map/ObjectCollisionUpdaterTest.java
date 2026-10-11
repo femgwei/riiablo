@@ -1,6 +1,8 @@
 package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -114,6 +116,27 @@ class ObjectCollisionUpdaterTest {
       fixture.world.process();
       assertEquals(0,
           fixture.map.playerFlyingFlags(3, 3) & DT1.Tile.FLAG_BLOCK_JUMP);
+    } finally {
+      fixture.dispose();
+    }
+  }
+
+  @Test
+  void openingMonsterIgnoresDoorButNotOrdinaryDynamicObject() {
+    Fixture fixture = new Fixture();
+    try {
+      Objects.Entry door = object(1, 1, true, false, false);
+      door.IsDoor = true;
+      fixture.create(door, 3, 3, Engine.Object.MODE_NU);
+      fixture.create(object(1, 1, true, false, false), 7, 7, Engine.Object.MODE_NU);
+      fixture.world.process();
+
+      assertTrue(fixture.map.isBlockedForPath(3, 3,
+          DT1.Tile.FLAG_BLOCK_WALK, false));
+      assertFalse(fixture.map.isBlockedForPath(3, 3,
+          DT1.Tile.FLAG_BLOCK_WALK, true));
+      assertTrue(fixture.map.isBlockedForPath(7, 7,
+          DT1.Tile.FLAG_BLOCK_WALK, true));
     } finally {
       fixture.dispose();
     }

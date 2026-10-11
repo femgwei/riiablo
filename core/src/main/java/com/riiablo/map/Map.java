@@ -681,6 +681,13 @@ public class Map implements Disposable {
         obstacle, moverId, targetId);
   }
 
+  public boolean findPath(Vector2 src, Vector2 dst, int flags, int size,
+      GraphPath<Point2> path, MapGraph.Obstacle obstacle,
+      int moverId, int targetId, boolean canOpenDoors) {
+    return mapGraph.searchNodePath(pathFinder, src, dst, flags, size, path,
+        obstacle, moverId, targetId, canOpenDoors);
+  }
+
   public void smoothPath(SmoothableGraphPath<Point2, Vector2> path) {
     smoothPath(DT1.Tile.FLAG_BLOCK_WALK, 0, path);
   }
@@ -691,6 +698,11 @@ public class Map implements Disposable {
 
   public boolean castRay(Ray<Vector2> ray, int flags, int size, Collision<Vector2> dst) {
     return mapGraph.raycaster.findCollision(ray, flags, size, dst);
+  }
+
+  public boolean castRay(Ray<Vector2> ray, int flags, int size,
+      Collision<Vector2> dst, boolean canOpenDoors) {
+    return mapGraph.raycaster.findCollision(ray, flags, size, dst, canOpenDoors);
   }
 
   /**
@@ -776,6 +788,34 @@ public class Map implements Disposable {
     Zone zone = getZone(x, y);
     if (zone == null) return 0xFF;
     return zone.flags(x - zone.x, y - zone.y);
+  }
+
+  /** Tests a path cell using the native dynamic door distinction. */
+  public boolean isBlockedForPath(int x, int y, int flags, boolean canOpenDoors) {
+    Zone zone = getZone(x, y);
+    if (zone == null) return true;
+    int localX = x - zone.x;
+    int localY = y - zone.y;
+    if ((zone.staticFlags(localX, localY) & flags) != 0) return true;
+    if (!canOpenDoors || (flags & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+      return (zone.flags(localX, localY) & flags) != 0;
+    }
+    int objects = zone.objectCollisionReferences(x, y);
+    int doors = zone.doorCollisionReferences(x, y);
+    // An opening-capable monster may pass only when every dynamic object
+    // contributing BLOCK_WALK at this cell is a door.
+    return objects > doors;
+  }
+
+  public boolean isBlockedForPath(int x, int y, int flags, int size,
+      boolean canOpenDoors) {
+    int radius = Math.max(0, size - 1);
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        if (isBlockedForPath(x + dx, y + dy, flags, canOpenDoors)) return true;
+      }
+    }
+    return false;
   }
 
   /**

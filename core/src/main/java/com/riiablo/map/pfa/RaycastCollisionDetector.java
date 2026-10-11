@@ -42,6 +42,11 @@ public class RaycastCollisionDetector {
 
 
   public boolean findCollision(Ray<Vector2> ray, int flags, int size, Collision<Vector2> collision) {
+    return findCollision(ray, flags, size, collision, false);
+  }
+
+  public boolean findCollision(Ray<Vector2> ray, int flags, int size,
+      Collision<Vector2> collision, boolean canOpenDoors) {
     Vector2 start = ray.start;
     Vector2 end = ray.end;
 
@@ -55,11 +60,16 @@ public class RaycastCollisionDetector {
       // Use the caller's native collision mask here as well.  In particular,
       // a missile ray must ignore FLAG_BLOCK_WALK while still stopping on
       // FLAG_BLOCK_JUMP (walls/explicit missile barriers).
-      if ((map.flags(sample) & flags) != 0 || graph.getOrCreate(sample).clearance < size) {
+      boolean blocked = canOpenDoors
+          ? map.isBlockedForPath(Map.round(sample.x), Map.round(sample.y), flags, size, true)
+          : (map.flags(sample) & flags) != 0 || graph.getOrCreate(sample).clearance < size;
+      if (blocked) {
         return true;
       }
     }
 
-    return (map.flags(end) & flags) != 0;
+    return canOpenDoors
+        ? map.isBlockedForPath(Map.round(end.x), Map.round(end.y), flags, size, true)
+        : (map.flags(end) & flags) != 0;
   }
 }
