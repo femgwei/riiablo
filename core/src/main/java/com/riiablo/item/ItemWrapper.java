@@ -21,6 +21,9 @@ public class ItemWrapper extends Actor implements Disposable {
   AssetDescriptor<DC6> invFileDescriptor;
   public DC6   invFile;
 
+  private AssetDescriptor<DC6> socketDescriptor;
+  private DC6 socketFile;
+
   public Index invColormap;
   public int   invColorIndex;
 
@@ -62,7 +65,12 @@ public class ItemWrapper extends Actor implements Disposable {
     String charColor = item.getCharColor();
     charColorIndex   = charColor != null ? Riiablo.files.colors.index(charColor) + 1 : 0;
 
-    // TODO: load images of socketed items
+    if (getSocketCount() > 0) {
+      socketDescriptor = new AssetDescriptor<>(
+          "data\\global\\ui\\PANEL\\gemsocket.dc6", DC6.class);
+      Riiablo.assets.load(socketDescriptor);
+      checkSocketLoaded();
+    }
   }
 
   public boolean checkLoaded() {
@@ -75,6 +83,13 @@ public class ItemWrapper extends Actor implements Disposable {
     return b;
   }
 
+  private boolean checkSocketLoaded() {
+    if (socketDescriptor == null) return false;
+    boolean loaded = Riiablo.assets.isLoaded(socketDescriptor);
+    if (loaded && socketFile == null) socketFile = Riiablo.assets.get(socketDescriptor);
+    return loaded;
+  }
+
   @Override
   public void draw(Batch batch, float a) {
     if (invFile == null && !checkLoaded()) return;
@@ -84,9 +99,37 @@ public class ItemWrapper extends Actor implements Disposable {
     if (invColormap != null) b.setColormap(invColormap, invColorIndex);
     invFile.draw(b, getX(), getY());
     if (invColormap != null) b.resetColormap();
+    drawSockets(b);
     if (ethereal) b.resetColor();
 
     drawQuantity(b);
+  }
+
+  /** Draws the native 28x28 empty-socket overlay over the item footprint. */
+  private void drawSockets(PaletteIndexedBatch b) {
+    int socketCount = getSocketCount();
+    if (socketCount <= 0 || !checkSocketLoaded() || socketFile == null || item.base == null) return;
+
+    int columns = Math.max(1, item.base.invwidth);
+    int rows = Math.max(1, item.base.invheight);
+    float cellWidth = getWidth() / columns;
+    float cellHeight = getHeight() / rows;
+    int filled = Math.min(socketCount, Math.max(0, item.socketsFilled));
+
+    // Socket fillers occupy the first socket positions in the native item
+    // representation.  Leave those positions for their filler icon; render
+    // the overlay only for the remaining empty sockets.
+    for (int i = filled; i < socketCount; i++) {
+      int column = i % columns;
+      int row = i / columns;
+      socketFile.draw(b, getX() + column * cellWidth, getY() + row * cellHeight);
+    }
+  }
+
+  private int getSocketCount() {
+    if (!item.hasFlag(Item.ITEMFLAG_SOCKETED) || item.attrs == null) return 0;
+    StatRef sockets = item.attrs.base().get(Stat.item_numsockets);
+    return sockets == null ? 0 : Math.max(0, sockets.asInt());
   }
 
   /** Draws the stack count used by throwing weapons and other stackable items. */
@@ -124,11 +167,16 @@ public class ItemWrapper extends Actor implements Disposable {
 
   @Override
   public void dispose() {
-    if (invFileDescriptor == null || Riiablo.assets == null) return;
-    if (Riiablo.assets.contains(invFileDescriptor.fileName)) {
+    if (Riiablo.assets == null) return;
+    if (invFileDescriptor != null && Riiablo.assets.contains(invFileDescriptor.fileName)) {
       Riiablo.assets.unload(invFileDescriptor.fileName);
+    }
+    if (socketDescriptor != null && Riiablo.assets.contains(socketDescriptor.fileName)) {
+      Riiablo.assets.unload(socketDescriptor.fileName);
     }
     invFileDescriptor = null;
     invFile = null;
+    socketDescriptor = null;
+    socketFile = null;
   }
 }
