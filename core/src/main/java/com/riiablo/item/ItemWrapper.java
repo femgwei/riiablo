@@ -187,11 +187,11 @@ public class ItemWrapper extends Actor implements Disposable {
   /** Adds a top-to-bottom row pattern, centered in the item footprint. */
   private static void addPattern(Array<SocketPosition> positions,
       int columns, int rows, int[] rowCounts) {
-    int firstRow = Math.max(0, (rows - rowCounts.length) / 2);
+    float firstRow = Math.max(0f, (rows - rowCounts.length) / 2f);
     for (int row = 0; row < rowCounts.length; row++) {
       int inRow = Math.min(columns, rowCounts[row]);
-      int firstColumn = Math.max(0, (columns - inRow) / 2);
-      int y = rows - 1 - (firstRow + row);
+      float firstColumn = Math.max(0f, (columns - inRow) / 2f);
+      float y = rows - 1f - (firstRow + row);
       for (int column = 0; column < inRow; column++) {
         positions.add(new SocketPosition(firstColumn + column, y));
       }
@@ -199,10 +199,10 @@ public class ItemWrapper extends Actor implements Disposable {
   }
 
   private static final class SocketPosition {
-    final int column;
-    final int row;
+    final float column;
+    final float row;
 
-    SocketPosition(int column, int row) {
+    SocketPosition(float column, float row) {
       this.column = column;
       this.row = row;
     }
