@@ -1993,6 +1993,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     MapWrapper mapWrapper = engine.getMapper(MapWrapper.class).get(player);
     mapWrapper.set(map, zone);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
+    if (Riiablo.audio != null) Riiablo.audio.play("object_teleportpad", true);
 
     setLeftPanel(null);
     renderer.updatePosition(true);

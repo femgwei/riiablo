@@ -39,6 +39,7 @@ class NativeItemGeneratorIntegrationTest extends RiiabloTest {
         "cap", 30, Quality.MAGIC, 0x34567812, 1);
     assertEquals(Quality.MAGIC, item.quality);
     assertTrue(item.qualityId != 0);
+    assertFalse(item.isIdentified());
     assertNotNull(item.attrs.list());
     assertTrue(item.attrs.list().numLists() > 0);
   }
@@ -50,6 +51,7 @@ class NativeItemGeneratorIntegrationTest extends RiiabloTest {
     Item second = generator.generateLootItem("cap", 35, Quality.RARE, 0x45678123, 1);
     assertEquals(first.qualityId, second.qualityId);
     assertTrue(first.qualityData instanceof RareQualityData);
+    assertFalse(first.isIdentified());
     RareQualityData firstRare = (RareQualityData) first.qualityData;
     RareQualityData secondRare = (RareQualityData) second.qualityData;
     assertArrayEquals(firstRare.prefixes, secondRare.prefixes);

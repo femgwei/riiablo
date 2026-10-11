@@ -68,6 +68,10 @@ public class ItemGenerator extends PassiveSystem {
         applyMagicSocketAffix(item, item.attrs.list(0), itemLevel, difficulty);
       }
       applyNativeTraits(item, requested, itemLevel, difficulty, seed, rng);
+      // Items created for a ground drop remain unidentified until the player
+      // uses a Scroll/Tome of Identify.  Quest rewards use generateQuestReward
+      // directly and keep its native identified flag.
+      item.flags &= ~Item.ITEMFLAG_IDENTIFIED;
       item.attrs.reset();
       return item;
     }
@@ -75,7 +79,6 @@ public class ItemGenerator extends PassiveSystem {
     item.id = seed;
     item.version = Item.VERSION_110;
     item.ilvl = (byte) Math.max(1, Math.min(99, itemLevel));
-    item.flags |= Item.ITEMFLAG_IDENTIFIED;
     item.quality = requested == null ? Quality.NORMAL : requested;
     NativeItemGeneration.initializeBaseStats(item, rng::nextInt);
     PropertiesGenerator properties = properties(rng);

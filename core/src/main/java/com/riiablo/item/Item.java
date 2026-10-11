@@ -567,6 +567,16 @@ public class Item {
     StringBuilder name = new StringBuilder();
     int prefix, suffix;
     MagicAffix affix;
+    // Native ground drops keep their quality/affix data while unidentified,
+    // but the client only reveals the base item name until identification.
+    // Low/high quality and socketed names remain visible because those are
+    // inherent properties rather than hidden magical identity.
+    if (!isIdentified() && (quality == Quality.MAGIC || quality == Quality.RARE
+        || quality == Quality.CRAFTED || quality == Quality.SET
+        || quality == Quality.UNIQUE)) {
+      this.name = Riiablo.string.lookup(base.namestr);
+      return;
+    }
     switch (quality) {
       case LOW:
       case NORMAL:

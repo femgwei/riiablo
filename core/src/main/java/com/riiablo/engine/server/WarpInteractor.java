@@ -233,6 +233,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     }
     commitTransition(src, destination, tmpVec2);
     actioneer.moveTo(src, tmpVec2);
+    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_enter", true);
     Gdx.app.log(TAG, "Town portal interaction: player=" + src
         + " source=" + (source.level == null ? -1 : source.level.Id)
         + " destination=" + (destination.level == null ? -1 : destination.level.Id)

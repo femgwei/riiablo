@@ -412,15 +412,19 @@ public class Npc extends AI {
         || !mAttributesWrapper.has(playerId)) return;
     Attributes attrs = mAttributesWrapper.get(playerId).attrs;
     if (attrs == null || attrs.aggregate() == null || attrs.base() == null) return;
-    restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
-    restoreResource(attrs, Stat.mana, Stat.maxmana);
-    restoreResource(attrs, Stat.stamina, Stat.maxstamina);
+    boolean changed = restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
+    changed |= restoreResource(attrs, Stat.mana, Stat.maxmana);
+    changed |= restoreResource(attrs, Stat.stamina, Stat.maxstamina);
     int restoredMercenaries = healMercenaries(playerId);
     if (mUnitStates.has(playerId)) {
       com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
       if (states != null && states.stateList != null) {
-        states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
+        changed |= states.stateList.removeNegativeEffects(
+            Riiablo.files == null ? null : Riiablo.files.States) > 0;
       }
+    }
+    if (changed || restoredMercenaries > 0) {
+      if (Riiablo.audio != null) Riiablo.audio.play("cursor_convert_ready", true);
     }
     log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina mercenaries={}",
         monstats.hcIdx, playerId, restoredMercenaries);
@@ -452,14 +456,18 @@ public class Npc extends AI {
 
       // A dead hireling must be revived through the hireling resurrection
       // service, not by talking to a town healer.
+      boolean changed = needsRestore(mercenaryAttrs, Stat.hitpoints, Stat.maxhp)
+          || needsRestore(mercenaryAttrs, Stat.mana, Stat.maxmana)
+          || needsRestore(mercenaryAttrs, Stat.stamina, Stat.maxstamina);
       if (!restoreLivingMercenary(mercenaryAttrs)) continue;
       if (mUnitStates.has(mercenaryId)) {
         com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(mercenaryId);
         if (states != null && states.stateList != null) {
-          states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
+          changed |= states.stateList.removeNegativeEffects(
+              Riiablo.files == null ? null : Riiablo.files.States) > 0;
         }
       }
-      restored++;
+      if (changed) restored++;
     }
     return restored;
   }
@@ -475,10 +483,17 @@ public class Npc extends AI {
     return true;
   }
 
-  private static void restoreResource(Attributes attrs, short resource, short maximum) {
+  private static boolean restoreResource(Attributes attrs, short resource, short maximum) {
     float value = attrs.aggregate().getValue(maximum, 0f);
+    float current = attrs.aggregate().getValue(resource, 0f);
     attrs.base().put(resource, value);
     attrs.aggregate().put(resource, value);
+    return current != value;
+  }
+
+  private static boolean needsRestore(Attributes attrs, short resource, short maximum) {
+    return attrs.aggregate().getValue(resource, 0f)
+        != attrs.aggregate().getValue(maximum, 0f);
   }
 
   @Override

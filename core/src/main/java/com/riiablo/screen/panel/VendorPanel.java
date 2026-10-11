@@ -660,9 +660,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
         if (repaired != null && ItemDurabilityManager.INSTANCE.restoreDurability(repaired)) {
           Riiablo.charData.getItems().updateStats();
+          playRepairSound();
         }
       } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ALL) {
-        applyRepairAllResult();
+        if (applyRepairAllResult()) playRepairSound();
       }
       if (pendingOperation == NpcServiceOperation.SELL) {
         Gdx.app.log(TAG, "[VENDOR_SELL] phase=result request=" + result.requestId()
@@ -776,6 +777,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         Riiablo.charData, localPricing, itemIndex, item.id);
     if (!result.success) return false;
     refreshGold();
+    playRepairSound();
     Gdx.app.debug(TAG, "Repaired " + item.code + " for " + result.cost + " gold");
     return true;
   }
@@ -796,6 +798,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         Riiablo.charData, localPricing);
     if (!result.success) return;
     refreshGold();
+    playRepairSound();
     Gdx.app.debug(TAG, "Repaired all equipment for " + result.cost + " gold");
   }
 
@@ -808,8 +811,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return fallbackIndex >= 0 && fallbackIndex < items.size ? items.get(fallbackIndex) : null;
   }
 
-  private void applyRepairAllResult() {
-    if (Riiablo.charData == null) return;
+  private boolean applyRepairAllResult() {
+    if (Riiablo.charData == null) return false;
     boolean changed = false;
     for (Item item : Riiablo.charData.getItems().getItems()) {
       if (item != null && item.location == com.riiablo.item.Location.EQUIPPED) {
@@ -817,6 +820,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
     }
     if (changed) Riiablo.charData.getItems().updateStats();
+    return changed;
+  }
+
+  private static void playRepairSound() {
+    if (Riiablo.audio != null) Riiablo.audio.play("cursor_repair_item", true);
   }
 
   /** Called by the inventory grid when the Sell mode is active. */
