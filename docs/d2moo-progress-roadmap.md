@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-11 Blood Moor 河流边界方向状态修正
+
+- [x] 对照 1.10f `D2Common.dll` 的 `DRLGOUTPLACE_PlaceAct1245OutdoorBorders`：每条边开始时重建 `nUnkb00/bHasDirection`，角点在当前、下一顶点方向均为 0 时清除方向位；修正方向状态从上一条边粘滞到河流首格的问题。
+- [x] 移除上次对 `DRLG_OUTWILD` 河流有效性检查的强制覆盖，恢复原生 `testSpawnRiver` 门槛。
+- [x] CC4/seed `0x288DB933` 复跑后 `river-test level=2 x=10 valid=true`，上下河流预设连续导出；`D2MooAct1NativeParityTest` 通过。
+- [ ] 待另一台电脑拉取远程提交后，用原存档确认 automap 与原版河段完全一致。
+
 ## 2026-10-11 动态单位寻路回归修正
 
 - [x] 根据 `C:\Users\DELL\Desktop\game.log` 核对实体 866/867：它们在狭窄通道中持续收到

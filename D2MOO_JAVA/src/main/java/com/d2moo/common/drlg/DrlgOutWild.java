@@ -241,18 +241,7 @@ public class DrlgOutWild {
             boolean valid = testSpawnRiver(level, riverX);
             D2Log.debug("DRLG_OUTWILD river-test level=%d flags=0x%X x=%d valid=%s",
                     level.getLevelId(), outdoors.getDwFlags(), riverX, valid);
-            // Act I river layouts are selected by RIVER_OTHER/BRIDGE.  The
-            // retail client materializes the strip even when the outer edge
-            // border contributes bHasDirection to the adjacent cell; keeping
-            // the test as a hard veto drops the whole river for those seeds.
-            // Preserve the diagnostic, but let the level's river flags be
-            // authoritative for placement.
-            if (valid || (outdoors.getDwFlags()
-                    & (DrlgOutdoors.OUTDOOR_BRIDGE | DrlgOutdoors.OUTDOOR_RIVER_OTHER)) != 0) {
-                if (!valid) {
-                    D2Log.debug("DRLG_OUTWILD river-test override flagged level=%d x=%d",
-                            level.getLevelId(), riverX);
-                }
+            if (valid) {
                 spawnRiver(level, riverX);
             }
         }

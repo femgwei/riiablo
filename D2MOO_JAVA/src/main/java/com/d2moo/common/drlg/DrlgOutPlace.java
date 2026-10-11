@@ -904,13 +904,17 @@ public class DrlgOutPlace {
         byte nAct = DrlgDrlg.getActNoFromLevelId(level.getLevelId());
         int nLevelType = level.getLevelType();
         
-        // 初始化打包信息
+        // The native routine rebuilds the packed border state at the start of
+        // every edge.  Keeping one state from the previous edge makes a zero
+        // direction corner inherit the preceding edge's direction and blocks
+        // the adjacent river column.
         D2DrlgOutdoorPackedGrid2InfoStrc tLvlPrestPackedInfo = new D2DrlgOutdoorPackedGrid2InfoStrc(0);
-        tLvlPrestPackedInfo.setNUnkb00(true);
-        tLvlPrestPackedInfo.setBHasDirection(pDrlgVertex.getNDirection() != 0);
         
         // 遍历顶点链表
         do {
+            tLvlPrestPackedInfo.setNUnkb00(true);
+            tLvlPrestPackedInfo.setBHasDirection(pDrlgVertex.getNDirection() != 0);
+
             int[] pCurrentDiffX = new int[1];
             int[] pCurrentDiffY = new int[1];
             int[] pNextDiffX = new int[1];
@@ -1058,7 +1062,9 @@ public class DrlgOutPlace {
                 tLvlPrestPackedInfo.setBHasDirection(true);
             } else {
                 nDirection = pNextVertex.getNDirection();
-                tLvlPrestPackedInfo.setBHasDirection(true);
+                // At a corner with two zero directions the native packed
+                // value remains clear; do not leave the previous edge's bit.
+                tLvlPrestPackedInfo.setBHasDirection(nDirection != 0);
             }
             
             // 根据关卡类型确定 v41
