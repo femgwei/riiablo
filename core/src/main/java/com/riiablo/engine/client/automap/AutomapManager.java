@@ -148,6 +148,7 @@ public class AutomapManager implements Disposable {
   private AutomapTileRenderer tileRenderer;
 
   private int nativeTerrainDrawCount;
+  private int nativeWallDrawCount;
   private String lastNativeRenderDiagnostic;
   private int nativeEntityDrawCount;
   private int geometricFallbackDrawCount;
@@ -509,6 +510,10 @@ public class AutomapManager implements Disposable {
     int added = 0;
     int tileCount = 0;
     int lookupMisses = 0;
+    int wallTiles = 0;
+    int wallCells = 0;
+    int wallLookupMisses = 0;
+    StringBuilder wallMissSamples = new StringBuilder();
     String firstTile = null;
     String firstTileName = null;
     int firstTileStyle = 0;
@@ -531,8 +536,13 @@ public class AutomapManager implements Disposable {
           DT1.Tile tile = zone.get(l, tx, ty);
           if (tile == null) continue;
           tileCount++;
+          boolean wallTile = Orientation.isWall(tile.orientation);
+          if (wallTile) wallTiles++;
           String tileName = AutomapTileRenderer.tileNameForOrientation(tile.orientation);
-          if (tileName == null) continue;
+          if (tileName == null) {
+            if (wallTile) wallLookupMisses++;
+            continue;
+          }
           if (firstTile == null) {
             firstTile = tileName + "/" + tile.mainIndex + "/" + tile.subIndex
                 + " orientation=" + tile.orientation;
@@ -545,6 +555,15 @@ public class AutomapManager implements Disposable {
               tile.mainIndex, tile.subIndex, cellSeed);
           if (cell < 0) {
             lookupMisses++;
+            if (wallTile) {
+              wallLookupMisses++;
+              if (wallMissSamples.length() < 512) {
+                if (wallMissSamples.length() > 0) wallMissSamples.append(';');
+                wallMissSamples.append(tileName).append('/').append(tile.mainIndex)
+                    .append('/').append(tile.subIndex).append("@").append(tx).append(',')
+                    .append(ty);
+              }
+            }
             continue;
           }
           if (Orientation.isFloor(tile.orientation)) {
@@ -565,7 +584,10 @@ public class AutomapManager implements Disposable {
               }
             }
           }
-          else if (Orientation.isWall(tile.orientation)) layer.addWall(cell, worldX, worldY);
+          else if (wallTile) {
+            layer.addWall(cell, worldX, worldY);
+            wallCells++;
+          }
           else layer.addObject(cell, worldX, worldY);
           added++;
         }
@@ -573,8 +595,11 @@ public class AutomapManager implements Disposable {
     }
     if (Gdx.app != null) {
       Gdx.app.log(TAG, String.format(
-          "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d first=%s",
+          "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d "
+              + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallMissSamples=%s first=%s",
           zone.levelId(), automapLevelName, tileCount, added, lookupMisses,
+          wallTiles, wallCells, wallLookupMisses,
+          wallMissSamples.length() == 0 ? "none" : wallMissSamples,
           firstTile == null ? "none" : firstTile));
       if (added == 0 && firstTile != null) {
         Gdx.app.log(TAG, "[AUTOMAP_LOOKUP] "
@@ -1006,8 +1031,12 @@ public class AutomapManager implements Disposable {
             .append(layer == null ? 0 : layer.walls.size).append('/')
             .append(layer == null ? 0 : layer.objects.size).append('/')
             .append(layer == null ? 0 : layer.extras.size).append(';')
-            .append(layer == null ? 0 : layer.getExploredCount()).append(')');
+            .append(layer == null ? 0 : layer.getExploredCount()).append(';');
+        int terrainBefore = nativeTerrainDrawCount;
+        nativeWallDrawCount = 0;
         renderNativeLayer(batch, layers.get(levelId), alpha);
+        diagnostic.append("draw=").append(nativeTerrainDrawCount - terrainBefore)
+            .append(" wallDraw=").append(nativeWallDrawCount).append(')');
       }
       String diagnosticText = diagnostic.toString();
       if (!diagnosticText.equals(lastNativeRenderDiagnostic) && Gdx.app != null) {
@@ -1044,11 +1073,12 @@ public class AutomapManager implements Disposable {
     if (layer == null) return;
     // Outdoor floors contain only explicitly retained features (rivers and
     // bridges); indoor/town floors additionally contain their path cells.
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.roads, layer, alpha);
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.objects, layer, alpha);
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.extras, layer, alpha);
+    int floorDraw = renderNativeCells(batch, layer.floors, layer, alpha);
+    int roadDraw = renderNativeCells(batch, layer.roads, layer, alpha);
+    nativeWallDrawCount = renderNativeCells(batch, layer.walls, layer, alpha);
+    int objectDraw = renderNativeCells(batch, layer.objects, layer, alpha);
+    int extraDraw = renderNativeCells(batch, layer.extras, layer, alpha);
+    nativeTerrainDrawCount += floorDraw + roadDraw + nativeWallDrawCount + objectDraw + extraDraw;
   }
 
   /**
