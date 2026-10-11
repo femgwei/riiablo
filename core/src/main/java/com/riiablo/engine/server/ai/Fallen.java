@@ -457,11 +457,20 @@ public class Fallen extends AI {
     if (targetDistance < 15f && isLeader() && MathUtils.randomBoolean(params[0] / 100f)) {
       commandMinions(targetId);
       aiParam0 = true;
-      lookAt(targetId);
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_S2, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      time = MathUtils.random(1f, 2);
-      return;
+      // The native command also tells the leader's pack to approach.  It must
+      // not turn into an attack animation merely because the target is inside
+      // the command radius: a target can still be several subtiles away from
+      // the leader's actual melee footprint (the common narrow-passage case).
+      // Only enter the attack sequence once the footprint-aware combat check
+      // says the leader can really hit; otherwise fall through to the normal
+      // approach code and create a movement path.
+      if (bCombat) {
+        lookAt(targetId);
+        mSequence.create(entityId).sequence(Engine.Monster.MODE_S2, Engine.Monster.MODE_NU);
+        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+        time = MathUtils.random(1f, 2);
+        return;
+      }
     }
 
     // D2MOD: If not in combat

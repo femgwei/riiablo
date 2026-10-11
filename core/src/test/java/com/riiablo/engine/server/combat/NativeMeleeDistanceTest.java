@@ -27,4 +27,12 @@ class NativeMeleeDistanceTest {
     assertFalse(NativeMeleeDistance.isInRange(0, 0, 2, 6, 0, 2, 0, 3));
     assertTrue(NativeMeleeDistance.isInRange(0, 0, 2, 0, 0, 2, 0, 0));
   }
+
+  @Test
+  void commandRadiusDoesNotCountAsMeleeRange() {
+    // Fallen's 15-subtile group-command radius is not an attack range.  At
+    // this narrow-passage spacing the leader must keep an approach path.
+    assertFalse(NativeMeleeDistance.isInRange(
+        182, 279, 2, 187, 280, 2, 0, 0));
+  }
 }
