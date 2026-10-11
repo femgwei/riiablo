@@ -21,6 +21,7 @@ import com.riiablo.engine.server.quest.Act1NaviQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.engine.server.quest.Act1WarrivIntroQuest;
 import com.riiablo.save.CharData;
+import com.riiablo.save.D2SWriter;
 import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -38,9 +39,10 @@ public class Act1QuestDialogController extends PassiveSystem {
   protected EventSystem events;
   protected ClientNetworkSynchronizer network;
 
-  // D2MOO's A1Q1 NPC activation advances through a runtime speech state. Keep
-  // the early-return reminder one-shot for each player in this game session;
-  // the persisted quest record remains the authority for actual progression.
+  // D2MOO has no persisted A1Q1 message-71 acknowledgement. Keep the marker
+  // in an unused high bit of the native 01 77 NPC-return data so it survives
+  // the normal D2S save/load cycle without changing quest progression flags.
+  private static final int DEN_EARLY_RETURN_PERSISTED_FLAG = 63;
   private final IntSet denEarlyReturnShown = new IntSet();
 
   @Subscribe
@@ -90,9 +92,17 @@ public class Act1QuestDialogController extends PassiveSystem {
         }
       } else {
         messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
-        if (messageIndex == Act1DenOfEvilQuest.MESSAGE_EARLY_RETURN
-            && !denEarlyReturnShown.add(playerId)) {
-          return false;
+        if (messageIndex == Act1DenOfEvilQuest.MESSAGE_EARLY_RETURN) {
+          if (data.hasNpcReturnFlag(DEN_EARLY_RETURN_PERSISTED_FLAG)
+              || !denEarlyReturnShown.add(playerId)) {
+            return false;
+          }
+          data.setNpcReturnFlag(DEN_EARLY_RETURN_PERSISTED_FLAG);
+          if (data.managed && Riiablo.saves != null
+              && !D2SWriter.INSTANCE.save(data)) {
+            log.warn("[ACT1_QUEST_DIALOG] failed to persist A1Q1 early-return marker for {}",
+                data.name);
+          }
         }
         speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
       }

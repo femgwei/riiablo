@@ -464,6 +464,22 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return npcReturnData[diff];
   }
 
+  /** Returns a persisted bit from the native 01 77 NPC-return data. */
+  public boolean hasNpcReturnFlag(int bit) {
+    if (bit < 0 || bit >= Long.SIZE) {
+      throw new IllegalArgumentException("Invalid NPC return flag: " + bit);
+    }
+    return (npcReturnData[diff] & (1L << bit)) != 0;
+  }
+
+  /** Sets a persisted bit in the native 01 77 NPC-return data. */
+  public void setNpcReturnFlag(int bit) {
+    if (bit < 0 || bit >= Long.SIZE) {
+      throw new IllegalArgumentException("Invalid NPC return flag: " + bit);
+    }
+    npcReturnData[diff] |= 1L << bit;
+  }
+
   public boolean hasGolemItem() {
     return golemItemData != null;
   }

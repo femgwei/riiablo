@@ -16,10 +16,13 @@
 
 ## 2026-10-11 A1Q1 阿卡拉 Early Return 对话
 
-- [x] A1Q1 处于 `STARTED + LEFT_TOWN` 时，阿卡拉的“洞窟尚未清空”提示按本次游戏会话
-  对每名玩家只显示一次；任务记录仍由持久化 quest flags 驱动，完成和领奖流程不变。
-- 依据 D2MOO `ACT1Q1_Callback00_NpcActivate` 的消息 71 分支修正重复触发；本次为极小
-  客户端对话门控修改，按当前约定未运行编译。
+- [x] A1Q1 处于 `STARTED + LEFT_TOWN` 时，阿卡拉的“洞窟尚未清空”提示按每名玩家只显示一次，
+  并将确认位写入 D2S `01 77` NPC-return 区的未占用高位，退出重进后仍保持；任务记录仍由
+  持久化 quest flags 驱动，完成和领奖流程不变。
+- 核对 D2MOO `ACT1Q1_Callback00_NpcActivate` 与 `ACT1Q1_Callback13_PlayerStartedGame`：
+  原生只恢复任务运行时状态，没有为 message 71 保存 acknowledgement，因此 Riiablo 使用独立
+  持久化位实现用户观察到的跨重启行为，不改写原生 quest flags 或 Akara 初始介绍位。
+- 本次为极小修改，按当前约定未运行编译。
 
 ## 2026-10-10 城镇出口跨 Zone 河流水声
 
