@@ -367,6 +367,7 @@ public class ItemGrid extends Group {
 
       ItemEntry entry = item.base;
       setSize(entry.invwidth * boxWidth, entry.invheight * boxHeight);
+      item.wrapper.setSocketGridSize(boxWidth, boxHeight);
       addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
@@ -451,6 +452,7 @@ public class ItemGrid extends Group {
       b.setBlendMode(BlendMode.SOLID, background);
       b.draw(fill, getX(), getY(), getWidth(), getHeight());
       b.resetBlendMode();
+      item.wrapper.setHovered(clickListener.isOver());
       item.draw(b, 1);
       if (clickListener.isOver() && itemData.getCursor() == null) {
         Actor details = item.details(updater);

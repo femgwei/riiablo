@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
@@ -24,6 +25,11 @@ public class ItemWrapper extends Actor implements Disposable {
   private AssetDescriptor<DC6> socketDescriptor;
   private DC6 socketFile;
 
+  /** Inventory grid cell size used by the native 28x28 socket overlay. */
+  private float socketCellWidth = 28f;
+  private float socketCellHeight = 28f;
+  private boolean hovered;
+
   public Index invColormap;
   public int   invColorIndex;
 
@@ -35,6 +41,17 @@ public class ItemWrapper extends Actor implements Disposable {
 
   ItemWrapper(Item item) {
     this.item = item;
+  }
+
+  /** Sets the inventory cell size used when placing socket overlays. */
+  public void setSocketGridSize(float cellWidth, float cellHeight) {
+    if (cellWidth > 0) socketCellWidth = cellWidth;
+    if (cellHeight > 0) socketCellHeight = cellHeight;
+  }
+
+  /** Socket overlays are shown by the native client only while the item is hovered. */
+  public void setHovered(boolean hovered) {
+    this.hovered = hovered;
   }
 
   @Override
@@ -108,21 +125,48 @@ public class ItemWrapper extends Actor implements Disposable {
   /** Draws the native 28x28 empty-socket overlay over the item footprint. */
   private void drawSockets(PaletteIndexedBatch b) {
     int socketCount = getSocketCount();
-    if (socketCount <= 0 || !checkSocketLoaded() || socketFile == null || item.base == null) return;
+    if (!hovered || socketCount <= 0 || !checkSocketLoaded() || socketFile == null || item.base == null) return;
 
     int columns = Math.max(1, item.base.invwidth);
     int rows = Math.max(1, item.base.invheight);
-    float cellWidth = getWidth() / columns;
-    float cellHeight = getHeight() / rows;
     int filled = Math.min(socketCount, Math.max(0, item.socketsFilled));
 
-    // Socket fillers occupy the first socket positions in the native item
-    // representation.  Leave those positions for their filler icon; render
-    // the overlay only for the remaining empty sockets.
-    for (int i = filled; i < socketCount; i++) {
-      int column = i % columns;
-      int row = i / columns;
-      socketFile.draw(b, getX() + column * cellWidth, getY() + row * cellHeight);
+    // The native client lays sockets out in the inventory footprint, not in
+    // the rendered DC6 image's bounding box.  Center the final, possibly
+    // partial row so 1/3/4 socket items do not look pinned to one corner.
+    Array<SocketPosition> positions = socketPositions(socketCount, columns, rows);
+    for (int i = filled; i < positions.size; i++) {
+      SocketPosition position = positions.get(i);
+      socketFile.draw(b,
+          getX() + position.column * socketCellWidth,
+          getY() + position.row * socketCellHeight);
+    }
+  }
+
+  private static Array<SocketPosition> socketPositions(int count, int columns, int rows) {
+    Array<SocketPosition> positions = new Array<>(count);
+    int rowCount = Math.min(rows, (count + columns - 1) / columns);
+    int firstRow = Math.max(0, (rows - rowCount) / 2);
+    int remaining = count;
+    for (int row = 0; row < rowCount && remaining > 0; row++) {
+      int inRow = Math.min(columns, remaining);
+      int firstColumn = Math.max(0, (columns - inRow) / 2);
+      int y = rows - 1 - (firstRow + row);
+      for (int column = 0; column < inRow; column++) {
+        positions.add(new SocketPosition(firstColumn + column, y));
+      }
+      remaining -= inRow;
+    }
+    return positions;
+  }
+
+  private static final class SocketPosition {
+    final int column;
+    final int row;
+
+    SocketPosition(int column, int row) {
+      this.column = column;
+      this.row = row;
     }
   }
 
