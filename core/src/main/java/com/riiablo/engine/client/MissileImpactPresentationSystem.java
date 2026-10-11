@@ -12,6 +12,7 @@ import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.audio.MonsterAudio;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.map.DT1.Tile;
@@ -379,11 +380,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (hitSound != null && !hitSound.isEmpty() && Riiablo.audio != null) {
       // An empty native HitSound means silence.  Do not substitute a generic
       // impact sound: that changes the observable Missiles.txt behavior.
-      Riiablo.audio.play(hitSound, true);
+      playImpactSound(event, hitSound);
     }
     String hitClassSound = hitClassSound(source.HitClass, event.targetEntityId);
     if (hitClassSound != null && Riiablo.audio != null) {
-      Riiablo.audio.play(hitClassSound, true);
+      playImpactSound(event, hitClassSound);
     }
 
     // SrvHit22 creates the Holy Bolt authoritatively when the delay missile
@@ -470,6 +471,24 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
     float baseAngle = MathUtils.atan2(event.dy, event.dx);
     for (String child : children) createVisual(source, child, event, baseAngle);
+  }
+
+  /** Plays impact audio through the same listener/zone attenuation as monster sounds. */
+  private void playImpactSound(MissileImpactEvent event, String sound) {
+    if (event == null || sound == null || sound.isEmpty() || Riiablo.audio == null) return;
+    if (event.targetEntityId < 0) {
+      // Wall/range impacts have no target entity.  Keep them local to the
+      // listener instead of turning them into global sounds.
+      if (Riiablo.game == null || Riiablo.game.player < 0 || Riiablo.engine == null
+          || !mPosition.has(Riiablo.game.player)) return;
+      com.badlogic.gdx.math.Vector2 listener = mPosition.get(Riiablo.game.player).position;
+      float gain = MonsterAudio.spatialGain(listener.dst2(event.x, event.y), true);
+      if (gain <= 0f) return;
+      com.riiablo.audio.Audio.Instance instance = Riiablo.audio.play(sound, true);
+      if (instance != null) instance.setVolume(gain);
+      return;
+    }
+    MonsterAudio.play(event.targetEntityId, sound, true);
   }
 
   static boolean isImpactVisualSuppressed(Missiles.Entry source, int targetEntityId) {
