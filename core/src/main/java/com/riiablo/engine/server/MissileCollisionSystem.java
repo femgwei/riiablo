@@ -48,6 +48,7 @@ import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
@@ -3697,6 +3698,24 @@ public class MissileCollisionSystem extends IteratingSystem {
         || mSummonedPet.has(entityId2);
     boolean sourceMonster = mMonster.has(entityId1);
     boolean targetMonster = mMonster.has(entityId2);
+    // Flavie is represented by the native Navi monster row, so she keeps the
+    // Monster component even though she is player-aligned.  Ordinary
+    // monsters must remain unable to damage one another, but Navi's defensive
+    // arrows are allowed to hit the same evil, killable monsters selected by
+    // her AI.  This mirrors D2MOO's Navi alignment exception without making
+    // every monster-vs-monster missile hostile.
+    if (sourceMonster && targetMonster) {
+      Monster source = mMonster.get(entityId1);
+      Monster target = mMonster.get(entityId2);
+      if (source != null && source.monstats != null
+          && source.monstats.hcIdx == MonsterType.NAVI) {
+        return target != null && target.monstats != null
+            && target.monstats.Align == 0
+            && !target.converted
+            && target.monstats.killable
+            && !target.monstats.npc;
+      }
+    }
     if (sourceMonster && mMonster.get(entityId1).converted) {
       return targetMonster && !mMonster.get(entityId2).converted;
     }
