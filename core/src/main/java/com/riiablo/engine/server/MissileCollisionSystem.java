@@ -2350,9 +2350,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
     if (blocked) {
-      // D2MOO's block branch changes the defender to BL even when it was
-      // attacking.  Clear the interrupted action so SequenceHandler cannot
-      // resume a multi-stage skill after the block animation finishes.
+      // D2MOO's PLRMODES_First applies Skills.txt:interrupt to missile hits
+      // too. Jab/other rows with interrupt=0 keep their active sequence; the
+      // shield roll still succeeds and suppresses damage.
+      if (mCasting.has(victimId)) {
+        Casting casting = mCasting.get(victimId);
+        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+            ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (!Actioneer.blockReactionMayInterrupt(skill)) {
+          log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={} source=missile",
+              victimId, skill == null ? null : skill.skill, casting.skillId);
+          return;
+        }
+      }
+      // Clear the interrupted action so SequenceHandler cannot resume a
+      // multi-stage skill after the block animation finishes.
       boolean interruptedCasting = mCasting.has(victimId);
       boolean interruptedSequence = mSequence.has(victimId);
       if (interruptedCasting) mCasting.remove(victimId);
