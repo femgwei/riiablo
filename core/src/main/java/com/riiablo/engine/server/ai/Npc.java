@@ -412,19 +412,15 @@ public class Npc extends AI {
         || !mAttributesWrapper.has(playerId)) return;
     Attributes attrs = mAttributesWrapper.get(playerId).attrs;
     if (attrs == null || attrs.aggregate() == null || attrs.base() == null) return;
-    boolean changed = restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
-    changed |= restoreResource(attrs, Stat.mana, Stat.maxmana);
-    changed |= restoreResource(attrs, Stat.stamina, Stat.maxstamina);
+    restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
+    restoreResource(attrs, Stat.mana, Stat.maxmana);
+    restoreResource(attrs, Stat.stamina, Stat.maxstamina);
     int restoredMercenaries = healMercenaries(playerId);
     if (mUnitStates.has(playerId)) {
       com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
       if (states != null && states.stateList != null) {
-        changed |= states.stateList.removeNegativeEffects(
-            Riiablo.files == null ? null : Riiablo.files.States) > 0;
+        states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
       }
-    }
-    if (changed || restoredMercenaries > 0) {
-      if (Riiablo.audio != null) Riiablo.audio.play("cursor_convert_ready", true);
     }
     log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina mercenaries={}",
         monstats.hcIdx, playerId, restoredMercenaries);
@@ -501,6 +497,13 @@ public class Npc extends AI {
     pathfinder.findPath(entityId, null);
     lookAt(src);
     healPlayer(src);
+    // D2 attaches sound index 10 to the healer NPC interaction.  Keep this
+    // client-side trigger unconditional for healer NPCs: the authoritative
+    // stat update may already be reflected in the client snapshot by the time
+    // this interaction callback runs.
+    if (isHealer(monstats == null ? -1 : monstats.hcIdx) && Riiablo.audio != null) {
+      Riiablo.audio.play("cursor_convert_ready", true);
+    }
 
     // TODO: need some kind of static method that can take in some state params, e.g., character
     //       class, player mode and spit out the proper file index.

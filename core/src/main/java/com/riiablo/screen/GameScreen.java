@@ -1999,7 +1999,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     MapWrapper mapWrapper = engine.getMapper(MapWrapper.class).get(player);
     mapWrapper.set(map, zone);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
-    if (Riiablo.audio != null) Riiablo.audio.play("object_teleportpad", true);
+    // Waypoint travel uses the same one-shot transition sound as entering a
+    // town portal.  The waypoint pad ambience is a looping object sound and
+    // is not the travel confirmation effect.
+    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_enter", true);
 
     setLeftPanel(null);
     renderer.updatePosition(true);
