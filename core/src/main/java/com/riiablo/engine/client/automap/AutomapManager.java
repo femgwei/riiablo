@@ -538,10 +538,16 @@ public class AutomapManager implements Disposable {
           if (tile == null) continue;
           tileCount++;
           boolean wallTile = Orientation.isWall(tile.orientation);
+          // Orientation.isWall also includes pillars and trees because those
+          // DT1 categories share the legacy wall bucket.  They are not
+          // boundary-wall cells for lookup diagnostics, though: only the
+          // wall/door/corner orientations (1-11 and 16-19) should identify a
+          // missing native wall mapping.
+          boolean boundaryWallTile = isAutomapBoundaryWall(tile.orientation);
           if (wallTile) wallTiles++;
           String tileName = AutomapTileRenderer.tileNameForOrientation(tile.orientation);
           if (tileName == null) {
-            if (wallTile) wallLookupMisses++;
+            if (boundaryWallTile) wallLookupMisses++;
             continue;
           }
           if (firstTile == null) {
@@ -556,7 +562,7 @@ public class AutomapManager implements Disposable {
               tile.mainIndex, tile.subIndex, cellSeed);
           if (cell < 0) {
             lookupMisses++;
-            if (wallTile) {
+            if (boundaryWallTile) {
               wallLookupMisses++;
               if (wallMissSamples.length() < 512) {
                 if (wallMissSamples.length() > 0) wallMissSamples.append(';');
@@ -620,6 +626,13 @@ public class AutomapManager implements Disposable {
       }
     }
     return added;
+  }
+
+  private static boolean isAutomapBoundaryWall(int orientation) {
+    return (orientation >= Orientation.LEFT_WALL
+        && orientation <= Orientation.SPECIAL_11)
+        || (orientation >= Orientation.LOWER_LEFT_WALL
+        && orientation <= Orientation.LOWER_SOUTH_CORNER_WALL);
   }
   
   // ==================== 实体标记 ====================
