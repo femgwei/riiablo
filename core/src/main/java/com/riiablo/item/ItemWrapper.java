@@ -14,6 +14,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.Index;
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.codec.util.BBox;
+import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 
 public class ItemWrapper extends Actor implements Disposable {
@@ -135,29 +136,66 @@ public class ItemWrapper extends Actor implements Disposable {
     // the rendered DC6 image's bounding box.  Center the final, possibly
     // partial row so 1/3/4 socket items do not look pinned to one corner.
     Array<SocketPosition> positions = socketPositions(socketCount, columns, rows);
+    b.setBlendMode(BlendMode.SOURCE_INDEX_ALPHA, Riiablo.colors.trans50);
     for (int i = filled; i < positions.size; i++) {
       SocketPosition position = positions.get(i);
       socketFile.draw(b,
           getX() + position.column * socketCellWidth,
           getY() + position.row * socketCellHeight);
     }
+    b.resetBlendMode();
   }
 
   private static Array<SocketPosition> socketPositions(int count, int columns, int rows) {
     Array<SocketPosition> positions = new Array<>(count);
-    int rowCount = Math.min(rows, (count + columns - 1) / columns);
-    int firstRow = Math.max(0, (rows - rowCount) / 2);
-    int remaining = count;
-    for (int row = 0; row < rowCount && remaining > 0; row++) {
-      int inRow = Math.min(columns, remaining);
+    if (count <= 0) return positions;
+
+    // Native socket layouts: 1/2 are always a centered vertical row; 3 and
+    // 4 use that row when it fits, otherwise the familiar stepped/square
+    // layouts. Five is a 2-1-2 flower, while six and eight are two columns.
+    if ((count == 1 || count == 2 || count == 3 || count == 4) && rows >= count) {
+      addPattern(positions, columns, rows, repeat(1, count));
+    } else if (count == 3) {
+      addPattern(positions, columns, rows, new int[] {1, 2}); // 品
+    } else if (count == 4) {
+      addPattern(positions, columns, rows, new int[] {2, 2});
+    } else if (count == 5) {
+      addPattern(positions, columns, rows, new int[] {2, 1, 2});
+    } else if (count == 6) {
+      addPattern(positions, columns, rows, new int[] {2, 2, 2});
+    } else if (count == 8) {
+      addPattern(positions, columns, rows, new int[] {2, 2, 2, 2});
+    } else {
+      int rowCount = Math.min(rows, (count + columns - 1) / columns);
+      int remaining = count;
+      int[] pattern = new int[rowCount];
+      for (int i = 0; i < rowCount; i++) {
+        pattern[i] = Math.min(columns, remaining);
+        remaining -= pattern[i];
+      }
+      addPattern(positions, columns, rows, pattern);
+    }
+    return positions;
+  }
+
+  private static int[] repeat(int value, int count) {
+    int[] result = new int[count];
+    java.util.Arrays.fill(result, value);
+    return result;
+  }
+
+  /** Adds a top-to-bottom row pattern, centered in the item footprint. */
+  private static void addPattern(Array<SocketPosition> positions,
+      int columns, int rows, int[] rowCounts) {
+    int firstRow = Math.max(0, (rows - rowCounts.length) / 2);
+    for (int row = 0; row < rowCounts.length; row++) {
+      int inRow = Math.min(columns, rowCounts[row]);
       int firstColumn = Math.max(0, (columns - inRow) / 2);
       int y = rows - 1 - (firstRow + row);
       for (int column = 0; column < inRow; column++) {
         positions.add(new SocketPosition(firstColumn + column, y));
       }
-      remaining -= inRow;
     }
-    return positions;
   }
 
   private static final class SocketPosition {
