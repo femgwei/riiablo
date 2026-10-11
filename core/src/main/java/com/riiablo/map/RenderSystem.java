@@ -230,6 +230,16 @@ public class RenderSystem extends BaseEntitySystem {
   private final Comparator<Integer> SUBTILE_ORDER = new Comparator<Integer>() {
     @Override
     public int compare(Integer e1, Integer e2) {
+      // Native D2 keeps a corpse in the unit render pass, but submits dead
+      // units before living units occupying the same map cell.  Fallen's
+      // composite DD sprite is much wider than its ground anchor; sorting it
+      // only by position lets the red death sprite cover a live monster that
+      // shares the cell.  Keep the corpse in the normal unit layer so walls
+      // still occlude it, while making the dead-before-live tie-break explicit.
+      boolean corpse1 = mCorpse != null && mCorpse.has(e1);
+      boolean corpse2 = mCorpse != null && mCorpse.has(e2);
+      if (corpse1 != corpse2) return corpse1 ? -1 : 1;
+
       Vector2 pos1 = mPosition.get(e1).position;
       Vector2 pos2 = mPosition.get(e2).position;
       int i = Float.compare(pos1.y, pos2.y);
