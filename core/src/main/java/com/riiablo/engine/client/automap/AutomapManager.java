@@ -1040,35 +1040,32 @@ public class AutomapManager implements Disposable {
     // 设置透明度
     batch.setColor(1f, 1f, 1f, alpha);
 
-    // D2's Automap layer is selected by the active level.  Map#getZones()
-    // contains the town and adjacent wilderness levels at the same local
-    // coordinate origin, so drawing every generated layer here overlays
-    // unrelated walls (and turns a single outdoor boundary into two lines).
-    // Keep the other layers in memory for persistence/level transitions, but
-    // render only the layer selected by updatePlayerPosition().
+    // Draw every generated zone belonging to the current map. Town and its
+    // adjacent wilderness are separate native layers, but D2 keeps both at
+    // the same brightness while crossing their boundary.
     if (map != null) {
       prepareRestoredNativeCells(map);
       renderedNativeLayers.clear();
       StringBuilder diagnostic = new StringBuilder(160);
-      int levelId = activeLayerId;
-      AutomapLayer layer = levelId < 0 ? null : layers.get(levelId);
-      if (layer != null && nativeCellsBuilt.containsKey(levelId)) {
+      diagnostic.append("alpha=").append(alpha).append(" zones=");
+      for (Map.Zone zone : map.getZones()) {
+        int levelId = zone.levelId();
+        if (renderedNativeLayers.containsKey(levelId)
+            || !nativeCellsBuilt.containsKey(levelId)) continue;
         renderedNativeLayers.put(levelId, Boolean.TRUE);
-        diagnostic.append("alpha=").append(alpha).append(" active=")
-            .append(levelId).append('(')
-            .append(layer.floors.size).append('/')
-            .append(layer.roads.size).append('/')
-            .append(layer.walls.size).append('/')
-            .append(layer.objects.size).append('/')
-            .append(layer.extras.size).append(';')
-            .append(layer.getExploredCount()).append(';');
+        AutomapLayer layer = layers.get(levelId);
+        diagnostic.append(levelId).append('(')
+            .append(layer == null ? 0 : layer.floors.size).append('/')
+            .append(layer == null ? 0 : layer.roads.size).append('/')
+            .append(layer == null ? 0 : layer.walls.size).append('/')
+            .append(layer == null ? 0 : layer.objects.size).append('/')
+            .append(layer == null ? 0 : layer.extras.size).append(';')
+            .append(layer == null ? 0 : layer.getExploredCount()).append(';');
         int terrainBefore = nativeTerrainDrawCount;
         nativeWallDrawCount = 0;
-        renderNativeLayer(batch, layer, alpha);
+        renderNativeLayer(batch, layers.get(levelId), alpha);
         diagnostic.append("draw=").append(nativeTerrainDrawCount - terrainBefore)
             .append(" wallDraw=").append(nativeWallDrawCount).append(')');
-      } else {
-        diagnostic.append("alpha=").append(alpha).append(" active=none");
       }
       String diagnosticText = diagnostic.toString();
       if (!diagnosticText.equals(lastNativeRenderDiagnostic) && Gdx.app != null) {
