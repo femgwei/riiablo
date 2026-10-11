@@ -63,6 +63,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected Actioneer actioneer;
+  @Wire(failOnNull = false)
+  protected DynamicUnitCollisionSystem dynamicCollision;
   @Wire(name = "combatPositionHistory", failOnNull = false)
   protected CombatPositionHistory positionHistory;
 
@@ -114,7 +116,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (!isDead(entityId) && footprintsOverlap(ownerPosition,
         mercenaryPosition, ownerFootprint, mercenaryFootprint)) {
       if (findLanding(map, ownerZone, ownerPosition, mercenaryFootprint,
-          ownerFootprint, landing)) {
+          ownerFootprint, landing, dynamicCollision)) {
         if (actioneer != null && actioneer.canInterrupt(entityId)
             && actioneer.tryRunTo(entityId, landing, 60)) {
           repathCooldown.put(entityId, REPATH_SECONDS);
@@ -154,7 +156,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (motion == MOTION_TELEPORT) {
       int footprint = footprint(entityId);
       if (!findLanding(map, ownerZone, ownerPosition, footprint,
-          footprint(ownerId), landing)) {
+          footprint(ownerId), landing, dynamicCollision)) {
         log.warn("[MERC_FOLLOW] phase=teleport_reject merc={} owner={} level={} "
                 + "ownerPos=({}, {}) reason=no_walkable_landing",
             entityId, ownerId, ownerZone.level != null ? ownerZone.level.Id : -1,
@@ -193,14 +195,14 @@ public final class MercenaryFollowSystem extends IteratingSystem {
         if (!pathStarted) {
           int mercFootprint = footprint(entityId);
           if (findLanding(map, ownerZone, ownerPosition, mercFootprint,
-              footprint(ownerId), landing)) {
+              footprint(ownerId), landing, dynamicCollision)) {
             pathStarted = run
                 ? actioneer.tryRunTo(entityId, landing, 60)
                 : actioneer.tryMoveTo(entityId, landing);
           }
           if (!pathStarted) {
             if (findLanding(map, ownerZone, ownerPosition, mercFootprint,
-                footprint(ownerId), landing)) {
+                footprint(ownerId), landing, dynamicCollision)) {
               teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
             } else {
               log.debug("[MERC_FOLLOW] phase=path_failed_no_landing merc={} owner={} distance={}",
@@ -363,6 +365,12 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   /** Finds a static-walkable hireling landing point outside both unit footprints. */
   public static boolean findLanding(Map map, Map.Zone zone, Vector2 owner,
       int footprint, int ownerFootprint, Vector2 out) {
+    return findLanding(map, zone, owner, footprint, ownerFootprint, out, null);
+  }
+
+  private static boolean findLanding(Map map, Map.Zone zone, Vector2 owner,
+      int footprint, int ownerFootprint, Vector2 out,
+      DynamicUnitCollisionSystem dynamicCollision) {
     if (map == null || zone == null || owner == null || out == null) return false;
     return findLanding(owner, out, (x, y) -> {
       if (map.getZone(x, y) != zone) return false;
@@ -373,6 +381,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
           if ((map.flags(x + dx, y + dy) & DT1.Tile.FLAG_BLOCK_WALK) != 0) return false;
         }
       }
+      if (dynamicCollision != null
+          && !dynamicCollision.isFreeForLanding(-1, x, y, footprint)) return false;
       return true;
     }, Math.max(2, Math.max(1, footprint) + Math.max(1, ownerFootprint) - 1));
   }

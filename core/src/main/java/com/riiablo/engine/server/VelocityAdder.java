@@ -9,6 +9,7 @@ import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
@@ -24,9 +25,11 @@ public class VelocityAdder extends IteratingSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Size> mSize;
 
+  @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
 
   @Wire(name = "map", failOnNull = false)
@@ -119,7 +122,8 @@ public class VelocityAdder extends IteratingSystem {
     }
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
-    if (map.castRay(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision)) return false;
+    int flags = NativeGroundPathProfile.forUnit(mPlayer.has(entityId)).terrainFlags;
+    if (map.castRay(ray, flags, size, collision)) return false;
     return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
   }
 }

@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.Pools;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
@@ -54,6 +55,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -414,7 +416,7 @@ public class Pathfinder extends IteratingSystem {
     }
 
     Vector2 position = mPosition.get(src).position;
-    int flags = DT1.Tile.FLAG_BLOCK_WALK;
+    int flags = groundPathFlags(src);
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
     // D2Common's dynamic path carries nMoveTestCollisionMask into A*.
@@ -582,7 +584,7 @@ public class Pathfinder extends IteratingSystem {
   private boolean findPathWithDynamicObstacles(
       int src, Vector2 targetPos, int targetEntityId) {
     if (targetPos == null || !mPosition.has(src) || !mVelocity.has(src)) return false;
-    int flags = DT1.Tile.FLAG_BLOCK_WALK;
+    int flags = groundPathFlags(src);
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
     boolean success = findPath(src, mPosition.get(src).position, targetPos,
@@ -722,6 +724,10 @@ public class Pathfinder extends IteratingSystem {
   }
 
   /** Mirrors PATH_AllocDynamicPath's non-flying open-door branch. */
+  private int groundPathFlags(int entityId) {
+    return NativeGroundPathProfile.forUnit(mPlayer.has(entityId)).terrainFlags;
+  }
+
   private boolean canOpenDoors(int entityId) {
     if (!mMonster.has(entityId)) return false;
     Monster monster = mMonster.get(entityId);

@@ -153,6 +153,12 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         blockerFor(moverId));
   }
 
+  /** Landing/placement query: every indexed unit blocks, including the owner. */
+  public boolean isFreeForLanding(int moverId, int x, int y, int size) {
+    return !enabled || grid.isFree(moverId, Engine.INVALID_ENTITY, x, y, size,
+        entityId -> true);
+  }
+
   /** Transfers a unit to a destination without pushing another unit. */
   public boolean tryMove(int entityId, Vector2 destination) {
     if (!enabled || destination == null || !hasPresence(entityId)) return true;

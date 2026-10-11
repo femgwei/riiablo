@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -13,6 +14,10 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.map.DT1;
+import com.riiablo.map.Map;
+import com.badlogic.gdx.ai.utils.Ray;
+import com.badlogic.gdx.ai.utils.Collision;
 
 @All({Box2DBody.class, Position.class})
 public class Box2DSynchronizerPost extends IteratingSystem {
@@ -27,6 +32,11 @@ public class Box2DSynchronizerPost extends IteratingSystem {
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Size> mSize;
   protected DynamicUnitCollisionSystem dynamicCollision;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
+  private final Ray<Vector2> playerRay = new Ray<>(new Vector2(), new Vector2());
+  private final Collision<Vector2> playerCollision =
+      new Collision<>(new Vector2(), new Vector2());
 
   @Override
   protected void process(int entityId) {
@@ -40,6 +50,20 @@ public class Box2DSynchronizerPost extends IteratingSystem {
     boolean blockedByDynamic = false;
     float resolvedX = current.x;
     float resolvedY = current.y;
+    // Box2D's terrain bodies cover ordinary walk blockers. Normal player
+    // paths must also respect D2's NOPLAYER terrain bit on every step.
+    if (map != null && mPathfind.has(entityId) && mClass.has(entityId)
+        && mClass.get(entityId).type == Class.Type.PLR && mSize.has(entityId)
+        && map.getZone(previous) != null && !previous.epsilonEquals(current, 0.0001f)) {
+      playerRay.set(previous, current);
+      if (map.castRay(playerRay, DT1.Tile.FLAG_BLOCK_PLAYER_WALK,
+          mSize.get(entityId).size, playerCollision)) {
+        resolvedX = oldX;
+        resolvedY = oldY;
+        body.setTransform(resolvedX, resolvedY, body.getAngle());
+        current = body.getPosition();
+      }
+    }
     if (dynamicCollision != null && isCollidableUnit(entityId)
         && !dynamicCollision.tryMove(entityId, resolvedX, resolvedY)) {
       blockedByDynamic = true;
