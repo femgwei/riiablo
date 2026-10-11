@@ -66,6 +66,16 @@ class PathfinderTest {
   }
 
   @Test
+  void overlappingDynamicTargetStopsApproach() {
+    assertTrue(Pathfinder.footprintsOverlap(
+        new Vector2(80.05f, 260f), 2,
+        new Vector2(80f, 261f), 2));
+    assertFalse(Pathfinder.footprintsOverlap(
+        new Vector2(80f, 260f), 2,
+        new Vector2(83f, 260f), 2));
+  }
+
+  @Test
   void blockedRaycastFallbackStopsInsteadOfMovingDirectlyToTarget() {
     Velocity velocity = new Velocity();
     velocity.velocity.set(30f, -20f);

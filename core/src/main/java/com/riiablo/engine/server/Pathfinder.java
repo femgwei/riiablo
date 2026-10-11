@@ -41,6 +41,7 @@ public class Pathfinder extends IteratingSystem {
   static final int MOVEMENT_DIRECTIONS = 16;
   static final int ADJACENT_DIRECTION_STABLE_FRAMES = 3;
   static final float DYNAMIC_BLOCK_REPATH_TIME = 0.25f;
+  static final int DYNAMIC_DETOUR_RADIUS = 4;
   static final float IMMEDIATE_TURN_COS = MathUtils.cosDeg(45f);
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
@@ -101,6 +102,7 @@ public class Pathfinder extends IteratingSystem {
           && mPosition.has(targetEntityId)
           ? mPosition.get(targetEntityId).position
           : pathfind.destination;
+      float stalledTime = pathfind.stalledTime;
       boolean success = repathPreservingMovementIntent(
           entityId, repathTarget, targetEntityId);
       Monster monster = mMonster.get(entityId);
@@ -108,7 +110,7 @@ public class Pathfinder extends IteratingSystem {
               + "blockedByDynamic=true action={}",
           entityId,
           monster.monstats != null ? monster.monstats.Id : "unknown",
-          pathfind.stalledTime,
+          stalledTime,
           success ? "repath" : "stop");
       if (!success) findPath(entityId, null);
       return;
@@ -125,6 +127,16 @@ public class Pathfinder extends IteratingSystem {
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       Vector2 targetPos = mPosition.get(targetId).position;
       boolean dynamicTarget = mVelocity.has(targetId);
+      if (dynamicTarget && footprintsOverlap(
+          position0, mSize.get(entityId).size, targetPos,
+          mSize.has(targetId) ? mSize.get(targetId).size : Size.MEDIUM)) {
+        // The authoritative collision grid has already allowed the bodies to
+        // touch (or a legacy save spawned them in the same footprint).  Do
+        // not keep feeding a walk velocity into a physically blocked target;
+        // let the AI's next tick select its melee action.
+        findPath(entityId, null);
+        return;
+      }
       if (dynamicTarget) {
         float moveDistance = pathfind.lastTargetPosition.dst(targetPos);
         if (moveDistance > 0.5f) {
@@ -466,12 +478,88 @@ public class Pathfinder extends IteratingSystem {
     Velocity velocity = mVelocity.get(entityId);
     float bonus = velocity.modeSpeedBonusMultiplier;
     boolean running = mRunning.has(entityId);
-    boolean success = findPath(entityId, target, false, targetEntityId);
+    Vector2 source = mPosition.get(entityId).position;
+    boolean success = findPath(entityId, target, false, targetEntityId)
+        && hasUsableMovementPath(entityId, source);
+    if (!success) {
+      // A* may legitimately reach the exact target while the first segment is
+      // unusable: the target can be surrounded by monsters, or the smoothed
+      // segment can cross a footprint between two free grid nodes.  Give the
+      // mover a nearby, dynamically free approach point so it can make local
+      // progress and let the next AI tick finish the attack positioning.
+      findPath(entityId, null);
+      success = findDynamicApproachPath(entityId, target, targetEntityId, source);
+    }
     if (success) {
       velocity.modeSpeedBonusMultiplier = bonus;
       if (running) mRunning.create(entityId);
     }
     return success;
+  }
+
+  private boolean findDynamicApproachPath(
+      int entityId, Vector2 target, int targetEntityId, Vector2 source) {
+    if (target == null || targetEntityId == Engine.INVALID_ENTITY) {
+      return false;
+    }
+
+    int size = mSize.get(entityId).size;
+    for (int radius = 1; radius <= DYNAMIC_DETOUR_RADIUS; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+          detourTarget.set(target.x + dx, target.y + dy);
+          int x = Map.round(detourTarget.x);
+          int y = Map.round(detourTarget.y);
+          if (dynamicCollision != null
+              && !dynamicCollision.isFreeForPath(
+                  entityId, Engine.INVALID_ENTITY, x, y, size)) {
+            continue;
+          }
+          if (!findPath(entityId, detourTarget, false, targetEntityId)) continue;
+          if (hasUsableMovementPath(entityId, source)) return true;
+          findPath(entityId, null);
+        }
+      }
+    }
+    return false;
+  }
+
+  private final Vector2 detourTarget = new Vector2();
+
+  private boolean hasUsableMovementPath(int entityId, Vector2 source) {
+    if (!mPathfind.has(entityId)) return false;
+    Pathfind pathfind = mPathfind.get(entityId);
+    if (pathfind.path == null || pathfind.path.getCount() < 2
+        || pathfind.target.epsilonEquals(source, 0.1f)) {
+      return false;
+    }
+
+    int size = mSize.get(entityId).size;
+    int targetX = Map.round(pathfind.target.x);
+    int targetY = Map.round(pathfind.target.y);
+    if (dynamicCollision != null
+        && !dynamicCollision.isFreeForPath(entityId, Engine.INVALID_ENTITY,
+            targetX, targetY, size)) {
+      return false;
+    }
+
+    // The A* graph validates node footprints.  Validate the actual first
+    // movement segment as well; a diagonal/long smoothed segment can still
+    // cross a dynamic footprint even when both endpoint nodes are free.
+    if (dynamicCollision != null
+        && !isDynamicSegmentFree(entityId, Engine.INVALID_ENTITY, size,
+            source, pathfind.target)) {
+      return false;
+    }
+    if (map != null) {
+      smoothRay.start.set(source);
+      smoothRay.end.set(pathfind.target);
+      if (map.castRay(smoothRay, DT1.Tile.FLAG_BLOCK_WALK, size, collision)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos, int flags, int size, GraphPath path) {
@@ -492,7 +580,9 @@ public class Pathfinder extends IteratingSystem {
     com.riiablo.map.MapGraph.Obstacle obstacle = dynamicCollision == null
         ? null
         : (moverId, ignoredTargetId, x, y, footprint) ->
-            dynamicCollision.isFreeForPath(src, targetEntityId, x, y, footprint);
+            dynamicCollision.isFreeForPath(src,
+                ignoredDynamicTarget(targetEntityId, x, y),
+                x, y, footprint);
     boolean success = map.findPath(srcPos, targetPos, flags, size, path, obstacle,
         src, targetEntityId);
     if (success) {
@@ -510,6 +600,34 @@ public class Pathfinder extends IteratingSystem {
     }
 
     return success;
+  }
+
+  /**
+   * The target unit is allowed only at its exact final node.  Passing the
+   * target id through the whole A* search made the player disappear from every
+   * candidate node; a later movement step then hit the player/dynamic grid
+   * and looked like a permanently stalled path.
+   */
+  private int ignoredDynamicTarget(int targetEntityId, int x, int y) {
+    if (targetEntityId == Engine.INVALID_ENTITY || !mPosition.has(targetEntityId)) {
+      return Engine.INVALID_ENTITY;
+    }
+    Vector2 targetPosition = mPosition.get(targetEntityId).position;
+    int targetX = Map.round(targetPosition.x);
+    int targetY = Map.round(targetPosition.y);
+    return x == targetX && y == targetY
+        ? targetEntityId : Engine.INVALID_ENTITY;
+  }
+
+  static boolean footprintsOverlap(
+      Vector2 first, int firstSize, Vector2 second, int secondSize) {
+    if (first == null || second == null) return false;
+    int firstRadius = Math.max(0, Math.max(1, firstSize) - 1);
+    int secondRadius = Math.max(0, Math.max(1, secondSize) - 1);
+    return Math.abs(Map.round(first.x) - Map.round(second.x))
+        <= firstRadius + secondRadius
+        && Math.abs(Map.round(first.y) - Map.round(second.y))
+        <= firstRadius + secondRadius;
   }
 
   /**
