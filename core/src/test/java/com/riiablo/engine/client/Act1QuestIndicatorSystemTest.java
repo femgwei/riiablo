@@ -79,4 +79,16 @@ class Act1QuestIndicatorSystemTest extends RiiabloTest {
             Act1BloodRavenQuest.completeObjective((short) 0));
     assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
   }
+
+  @Test
+  void flavieMarkerFollowsDenOfEvilCompletion() {
+    CharData data = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "FlavieMarker", Riiablo.AMAZON);
+
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.NAVI, data));
+    data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+        Act1DenOfEvilQuest.claimReward(
+            Act1DenOfEvilQuest.completeObjective((short) 0));
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.NAVI, data));
+  }
 }

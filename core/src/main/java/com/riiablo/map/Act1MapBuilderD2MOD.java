@@ -1480,6 +1480,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 }
                 nativeMonsters.add(new Map.NativeMonster(roomId, monster.hcIdx, mode,
                     x, y, superUniqueId, superUniqueKey, false));
+                if (monster.hcIdx == com.riiablo.engine.server.monster.MonsterType.NAVI) {
+                  Gdx.app.log(TAG, String.format(
+                      "[NAVI_PRESET] level=%d room=%d position=(%d,%d) queued=true",
+                      exportLevelId, roomId, x, y));
+                }
                 return;
               }
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;

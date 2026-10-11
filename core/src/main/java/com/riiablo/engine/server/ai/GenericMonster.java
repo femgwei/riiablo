@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.monster.MonsterType;
 
 /**
  * Safe fallback for a native monster AI that has not been ported yet.
@@ -77,7 +78,11 @@ public class GenericMonster extends AI {
     Vector2 target = mPosition.get(targetId).position;
     float distance = outDistance[0];
     int skillSlot = resolveProjectileSkillSlot();
-    boolean stationary = monster.monstats != null && monster.monstats.Velocity <= 0;
+    // Navi's native row is a stationary NPC, but its AI is still allowed to
+    // defend the Blood Moor border.  Do not return before the melee branch
+    // can fire when an evil monster is already within attack distance.
+    boolean stationary = monster.monstats != null && monster.monstats.Velocity <= 0
+        && monster.monstats.hcIdx != MonsterType.NAVI;
     float skillRange = skillSlot >= 0 ? resolveSkillRange(skillSlot) : 0f;
     if (skillSlot >= 0 && skillRange > 0f && distance <= skillRange) {
       stopMovement();

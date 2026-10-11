@@ -378,6 +378,10 @@ public class RoomActivationSystem extends IteratingSystem {
                 : com.riiablo.engine.server.monster.MonsterRank.NORMAL,
             affixes, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
+        if (spawn.monsterId == com.riiablo.engine.server.monster.MonsterType.NAVI) {
+          log.info("[NAVI_SPAWN] level={} room={} entity={} position=({}, {})",
+              levelId(zone), room.id, monsterId, spawn.x, spawn.y);
+        }
         mMapWrapper.create(monsterId).set(zone.map, zone);
         if (mMonster.has(monsterId)) {
           mMonster.get(monsterId).setSpawnAnchor(zone, spawn.x, spawn.y);

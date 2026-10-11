@@ -157,10 +157,21 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
             || (level >= Act1MalusQuest.MINIMUM_LEVEL
                 && data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE));
       case MonsterType.WARRIV:
+        short denRecord = quests[Act1DenOfEvilQuest.RECORD];
+        if (NativeQuestRecord.has(denRecord, NativeQuestRecord.STARTED)
+            && !Act1DenOfEvilQuest.isFinished(denRecord)) {
+          return false;
+        }
         record = quests[Act1WarrivIntroQuest.RECORD];
         if (Act1WarrivIntroQuest.isActive(record)) return true;
         record = quests[Act1AndarielQuest.RECORD];
         return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+      case MonsterType.NAVI:
+        // D2MOO's A1Q7 active filter is tied to the Den of Evil state.  Flavie
+        // warns the player while A1Q1 is still open, but stops advertising
+        // that branch once the objective/reward has been resolved.
+        record = quests[Act1DenOfEvilQuest.RECORD];
+        return !Act1DenOfEvilQuest.isFinished(record);
       case MonsterType.DECKARDCAIN:
       case MonsterType.DECKARDCAIN_TOWN:
         return false;
