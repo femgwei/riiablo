@@ -31,4 +31,12 @@ class DynamicUnitCollisionSystemTest {
     assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, true, true, true));
     assertFalse(DynamicUnitCollisionSystem.isPetPresence(false, true, true, false));
   }
+
+  @Test
+  void nativeNoPathMarkerPreventsOrdinaryMonstersFromOverlapping() {
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(true, false));
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(true, true));
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(false, false));
+    assertFalse(DynamicUnitCollisionSystem.blocksNativePath(false, true));
+  }
 }

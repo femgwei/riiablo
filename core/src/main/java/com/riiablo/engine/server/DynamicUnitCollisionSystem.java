@@ -211,12 +211,19 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
    */
   private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
     // D2Common's COLLIDE_MASK_MONSTER_PATH contains COLLIDE_PET, but not
-    // COLLIDE_MONSTER or COLLIDE_PLAYER.  Ordinary monsters can therefore
-    // share a route, while revive/small pet-presence units (Fallen included)
-    // remain spacing obstacles for monster movement and A*.
-    if (!mMonster.has(moverId)) return entityId -> false;
+    // COLLIDE_MONSTER or COLLIDE_PLAYER.  Normal presence patterns still put
+    // COLLIDE_NO_PATH at their center, so they remain blockers; pet-presence
+    // patterns replace that center marker with COLLIDE_PET.
+    boolean monsterMover = mMonster.has(moverId);
     int ownerId = ownedCompanionOwner(moverId);
-    return entityId -> entityId != ownerId && isPetPresence(entityId);
+    return entityId -> entityId != ownerId
+        && blocksNativePath(monsterMover, isPetPresence(entityId));
+  }
+
+  static boolean blocksNativePath(boolean monsterMover, boolean petPresence) {
+    // MONSTER_PATH tests both NO_PATH and PET. PLAYER_PATH tests NO_PATH but
+    // deliberately omits PET, allowing player-owned/town-compatible pets.
+    return monsterMover || !petPresence;
   }
 
   /** Mirrors D2Common_11281_CollisionPatternFromSize for monster units. */

@@ -7,8 +7,8 @@ import com.badlogic.gdx.utils.LongMap;
  * Small dynamic footprint grid used by authoritative movement.
  *
  * <p>D2 does not rely on a physics engine to push monsters apart.  It writes
- * each unit footprint into the room collision grid and atomically transfers
- * that footprint when a step succeeds.  This class is the in-memory
+ * each unit's path-marker footprint into the room collision grid and
+ * atomically transfers that marker when a step succeeds.  This class is the in-memory
  * equivalent for the server and the single-player local simulation.</p>
  */
 public final class UnitCollisionGrid {
@@ -33,13 +33,13 @@ public final class UnitCollisionGrid {
     footprint.y = y;
     footprint.size = Math.max(1, size);
     units.put(entityId, footprint);
-    forEachCell(footprint, (cellX, cellY) -> increment(key(cellX, cellY)));
+    forEachPathMarkerCell(footprint, (cellX, cellY) -> increment(key(cellX, cellY)));
   }
 
   public void remove(int entityId) {
     Footprint footprint = units.remove(entityId);
     if (footprint == null) return;
-    forEachCell(footprint, (cellX, cellY) -> decrement(key(cellX, cellY)));
+    forEachPathMarkerCell(footprint, (cellX, cellY) -> decrement(key(cellX, cellY)));
   }
 
   /** Returns whether a footprint can occupy the destination. */
@@ -56,7 +56,7 @@ public final class UnitCollisionGrid {
     candidate.y = y;
     candidate.size = Math.max(1, size);
     final boolean[] free = {true};
-    forEachCell(candidate, (cellX, cellY) -> {
+    forEachCollisionPatternCell(candidate, (cellX, cellY) -> {
       Integer occupants = cells.get(key(cellX, cellY));
       if (occupants != null && occupants > 0) {
         // A cell count alone is sufficient for the fast path.  The mover is
@@ -102,7 +102,7 @@ public final class UnitCollisionGrid {
       if (entry.key == moverId || entry.key == ignoredEntityId) continue;
       if (blocker != null && !blocker.blocks(entry.key)) continue;
       Footprint footprint = entry.value;
-      if (contains(footprint, cellX, cellY)) return true;
+      if (pathMarkerContains(footprint, cellX, cellY)) return true;
     }
     return false;
   }
@@ -111,16 +111,9 @@ public final class UnitCollisionGrid {
     boolean blocks(int entityId);
   }
 
-  private static boolean contains(Footprint footprint, int x, int y) {
-    int radius = Math.max(0, footprint.size - 1);
-    // D2's size-2 collision patterns are a center cell plus its four
-    // cardinal neighbours, not a filled 3x3 square.  Keeping that shape is
-    // important in one-subtile corridors where a diagonal detour is legal.
-    if (radius == 1) {
-      return Math.abs(x - footprint.x) + Math.abs(y - footprint.y) <= 1;
-    }
-    return x >= footprint.x - radius && x <= footprint.x + radius
-        && y >= footprint.y - radius && y <= footprint.y + radius;
+  private static boolean pathMarkerContains(Footprint footprint, int x, int y) {
+    if (footprint.size < 3) return x == footprint.x && y == footprint.y;
+    return Math.abs(x - footprint.x) + Math.abs(y - footprint.y) <= 1;
   }
 
   private void increment(long cell) {
@@ -142,19 +135,31 @@ public final class UnitCollisionGrid {
     void accept(int x, int y);
   }
 
-  private static void forEachCell(Footprint footprint, CellConsumer consumer) {
-    int radius = Math.max(0, footprint.size - 1);
-    if (radius == 1) {
+  /** NO_PATH/PET markers written by D2's presence patterns. */
+  private static void forEachPathMarkerCell(Footprint footprint, CellConsumer consumer) {
+    consumer.accept(footprint.x, footprint.y);
+    if (footprint.size >= 3) {
+      consumer.accept(footprint.x - 1, footprint.y);
+      consumer.accept(footprint.x + 1, footprint.y);
+      consumer.accept(footprint.x, footprint.y - 1);
+      consumer.accept(footprint.x, footprint.y + 1);
+    }
+  }
+
+  /** Pattern used to test a mover against the path-marker layer. */
+  private static void forEachCollisionPatternCell(
+      Footprint footprint, CellConsumer consumer) {
+    if (footprint.size < 3) {
       consumer.accept(footprint.x, footprint.y);
       consumer.accept(footprint.x - 1, footprint.y);
       consumer.accept(footprint.x + 1, footprint.y);
       consumer.accept(footprint.x, footprint.y - 1);
       consumer.accept(footprint.x, footprint.y + 1);
-      return;
-    }
-    for (int y = footprint.y - radius; y <= footprint.y + radius; y++) {
-      for (int x = footprint.x - radius; x <= footprint.x + radius; x++) {
-        consumer.accept(x, y);
+    } else {
+      for (int y = footprint.y - 1; y <= footprint.y + 1; y++) {
+        for (int x = footprint.x - 1; x <= footprint.x + 1; x++) {
+          consumer.accept(x, y);
+        }
       }
     }
   }

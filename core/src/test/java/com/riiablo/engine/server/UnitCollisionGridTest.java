@@ -36,8 +36,8 @@ class UnitCollisionGridTest {
 
     // The path query and authoritative step must agree about the front unit.
     assertFalse(grid.isFree(2, -1, 10, 10, 1));
-    assertTrue(grid.isFree(2, -1, 10, 11, 1));
-    assertTrue(grid.move(2, -1, 10, 11, 1));
+    assertTrue(grid.isFree(2, -1, 11, 11, 1));
+    assertTrue(grid.move(2, -1, 11, 11, 1));
   }
 
   @Test
@@ -49,5 +49,16 @@ class UnitCollisionGridTest {
     assertFalse(grid.isFree(2, -1, 11, 10, 1));
     assertFalse(grid.isFree(2, -1, 10, 11, 1));
     assertTrue(grid.isFree(2, -1, 11, 11, 1));
+  }
+
+  @Test
+  void ordinarySizeTwoUnitsCannotConvergeOnTheSameCenter() {
+    UnitCollisionGrid grid = new UnitCollisionGrid();
+    grid.put(1, 133, 234, 2);
+    grid.put(2, 135, 234, 2);
+
+    assertFalse(grid.move(2, -1, 133, 234, 2));
+    assertFalse(grid.move(2, -1, 134, 234, 2));
+    assertTrue(grid.move(2, -1, 134, 235, 2));
   }
 }
