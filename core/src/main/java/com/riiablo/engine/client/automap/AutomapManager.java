@@ -514,6 +514,7 @@ public class AutomapManager implements Disposable {
     int wallCells = 0;
     int wallLookupMisses = 0;
     StringBuilder wallMissSamples = new StringBuilder();
+    StringBuilder wallMissDiagnostics = new StringBuilder();
     String firstTile = null;
     String firstTileName = null;
     int firstTileStyle = 0;
@@ -563,6 +564,14 @@ public class AutomapManager implements Disposable {
                     .append('/').append(tile.subIndex).append("@").append(tx).append(',')
                     .append(ty);
               }
+              if (wallMissDiagnostics.length() < 2048) {
+                if (wallMissDiagnostics.length() > 0) wallMissDiagnostics.append(';');
+                wallMissDiagnostics.append(tileName).append('/').append(tile.mainIndex)
+                    .append('/').append(tile.subIndex).append("@").append(tx).append(',')
+                    .append(ty).append('[')
+                    .append(tileRenderer.diagnostic(automapLevelName, tileName,
+                        tile.mainIndex, tile.subIndex)).append(']');
+              }
             }
             continue;
           }
@@ -601,6 +610,9 @@ public class AutomapManager implements Disposable {
           wallTiles, wallCells, wallLookupMisses,
           wallMissSamples.length() == 0 ? "none" : wallMissSamples,
           firstTile == null ? "none" : firstTile));
+      if (wallMissDiagnostics.length() > 0) {
+        Gdx.app.log(TAG, "[AUTOMAP_WALL_LOOKUP] " + wallMissDiagnostics);
+      }
       if (added == 0 && firstTile != null) {
         Gdx.app.log(TAG, "[AUTOMAP_LOOKUP] "
             + tileRenderer.diagnostic(automapLevelName, firstTileName,
