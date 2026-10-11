@@ -1344,6 +1344,7 @@ public class ItemData {
     int equippedPoisonMin = 0;
     int equippedPoisonMax = 0;
     int equippedPoisonLength = 0;
+    int equippedBlockChance = 0;
     final UpdateSequence update = updater.update(stats, charStats);
     int[] cache = equipped.values();
     for (int i = 0, s = cache.length, j; i < s; i++) {
@@ -1417,6 +1418,14 @@ public class ItemData {
           // item's fully-updated defense into the character once.
           equippedArmorClass += stat.asInt();
         }
+
+        // Shield ToBlock is a base item stat, so it lives in the item's
+        // aggregate rather than remaining().  Character base stats do not
+        // declare ToBlock, which means the normal remaining-stat merge would
+        // otherwise drop the equipped shield's native block value entirely.
+        if (item.type.is(Type.SHLD)) {
+          equippedBlockChance += itemStatValue(item, Stat.toblock);
+        }
       }
     }
 
@@ -1456,6 +1465,9 @@ public class ItemData {
 
     if (equippedArmorClass != 0) {
       stats.aggregate().add(Stat.armorclass, equippedArmorClass);
+    }
+    if (equippedBlockChance != 0) {
+      stats.aggregate().add(Stat.toblock, equippedBlockChance);
     }
     
     // After update.apply(), add throwable weapon damage to aggregate
