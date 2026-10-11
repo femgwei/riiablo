@@ -52,4 +52,12 @@ class AutomapLayerTest {
     assertEquals(61, layer.walls.first().cellNo);
     assertEquals(1, layer.floors.size);
   }
+
+  @Test void nativeWallsKeepDistinctCellsAtOnePosition() {
+    AutomapLayer layer = new AutomapLayer(2);
+    layer.addNativeWall(61, -93, -58);
+    layer.addNativeWall(14, -93, -58);
+    layer.addNativeWall(61, -93, -58);
+    assertEquals(2, layer.walls.size);
+  }
 }
