@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-11 Fallen 装备火把的局部光源
+
+- [x] 对照 D2MOO `MONSTERS_GetMaximalLightRadius`，确认怪物光照来自组件装备的
+  `Items.txt:lightradius` 最大值；原有 `RenderSystem` 只处理玩家、导弹、Overlay 和地图物件，
+  未处理怪物组件光源。
+- [x] `ItemEntry` 解析 `lightradius`，`RenderSystem` 按 `CofComponents` 解析怪物组件对应的
+  `CompCode`/物品记录，并将最大装备光照半径加入当前 Zone 的局部光源集合；因此 Fallen 携带
+  火把时会照亮自身周围区域，光源颜色沿 `MonStats2.light-r/g/b` 使用。
+- 验证：`./gradlew.bat :core:compileJava --no-daemon`：`BUILD SUCCESSFUL`。
+
 ## 2026-10-11 盾牌格挡、奔跑修正、FBR 与格挡音效
 
 - [x] 对照 D2MOO `UNITS_GetBlockRate` 和 `SUNITDMG_ApplyBlockOrDodge`，玩家格挡现在

@@ -62,6 +62,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Classname;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Networked;
@@ -239,6 +240,7 @@ public class RenderSystem extends BaseEntitySystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<Overlay> mOverlay;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<CofComponents> mCofComponents;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Object> mObject;
 //  private final Family family = Family.all(AnimationComponent.class, PositionComponent.class).get();
@@ -719,6 +721,33 @@ public class RenderSystem extends BaseEntitySystem {
           entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
     }
 
+    // D2Common MONSTERS_GetMaximalLightRadius derives a monster's light from
+    // the LightRadius of its equipped component items. Fallen carry a torch
+    // through this path; it is not a missile or an object light.
+    protectedLights = count;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int id = entities.get(i);
+      if (!mMonster.has(id) || !mCofComponents.has(id) || !mPosition.has(id)
+          || !isInLightingZone(id, zone)) continue;
+      com.riiablo.engine.server.component.Monster monster = mMonster.get(id);
+      int diameter = monsterLightRadius(mCofComponents.get(id).component);
+      if (diameter <= 0) continue;
+      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      float radius = objectLightRadius(diameter);
+      float radiusX = radius * Tile.SUBTILE_WIDTH;
+      float radiusY = radius * Tile.SUBTILE_HEIGHT;
+      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
+          monster.monstats2 == null || monster.monstats2.light == null
+              ? 1f : monster.monstats2.light[0] / 255f,
+          monster.monstats2 == null || monster.monstats2.light == null
+              ? 1f : monster.monstats2.light[1] / 255f,
+          monster.monstats2 == null || monster.monstats2.light == null
+              ? 1f : monster.monstats2.light[2] / 255f,
+          focusX, focusY);
+    }
+
     // Overlay.txt owns the expanding light flashes for generic elemental
     // hits and many cast effects. D2Common exposes InitRadius/Radius/RGB as a
     // single light record, independently from Missiles.txt.
@@ -797,6 +826,21 @@ public class RenderSystem extends BaseEntitySystem {
 
   static float objectLightRadius(int diameter) {
     return Math.max(0, diameter) * 0.5f;
+  }
+
+  static int monsterLightRadius(int[] components) {
+    if (components == null || Riiablo.files == null || Riiablo.files.compcode == null) return 0;
+    int maximum = 0;
+    for (int component : components) {
+      if (component <= 0) continue;
+      com.riiablo.codec.excel.CompCode.Entry comp = Riiablo.files.compcode.get(component);
+      if (comp == null || comp.code == null || comp.code.isEmpty()) continue;
+      com.riiablo.codec.excel.ItemEntry item = Riiablo.files.armor.get(comp.code);
+      if (item == null) item = Riiablo.files.weapons.get(comp.code);
+      if (item == null) item = Riiablo.files.misc.get(comp.code);
+      if (item != null) maximum = Math.max(maximum, item.lightradius);
+    }
+    return maximum;
   }
 
   /**

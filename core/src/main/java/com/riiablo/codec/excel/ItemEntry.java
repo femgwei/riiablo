@@ -29,6 +29,8 @@ public class ItemEntry extends Excel.Entry {
   @Column public int     invheight;
   @Column public String  dropsound;
   @Column public int     dropsfxframe;
+  /** Native Items.txt light diameter used by monster equipment light sources. */
+  @Column public int     lightradius;
   @Column public boolean stackable;
   @Column public int     minstack;
   @Column public int     maxstack;
