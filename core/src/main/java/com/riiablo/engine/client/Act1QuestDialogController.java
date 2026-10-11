@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
@@ -36,6 +37,11 @@ public class Act1QuestDialogController extends PassiveSystem {
   protected DialogManager dialogManager;
   protected EventSystem events;
   protected ClientNetworkSynchronizer network;
+
+  // D2MOO's A1Q1 NPC activation advances through a runtime speech state. Keep
+  // the early-return reminder one-shot for each player in this game session;
+  // the persisted quest record remains the authority for actual progression.
+  private final IntSet denEarlyReturnShown = new IntSet();
 
   @Subscribe
   public void onNpcInteraction(NpcInteractionEvent event) {
@@ -84,6 +90,10 @@ public class Act1QuestDialogController extends PassiveSystem {
         }
       } else {
         messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
+        if (messageIndex == Act1DenOfEvilQuest.MESSAGE_EARLY_RETURN
+            && !denEarlyReturnShown.add(playerId)) {
+          return false;
+        }
         speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
       }
     } else if (npc.monstats.hcIdx == MonsterType.CHARSI) {
