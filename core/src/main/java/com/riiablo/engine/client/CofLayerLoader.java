@@ -157,10 +157,13 @@ public class CofLayerLoader extends IteratingSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
-    // Town portals have no neutral visual in the shipped MPQ.  Their
+    // REGRESSION GUARD: Town portals have no neutral visual in the shipped
+    // MPQ. Their
     // authoritative ObjectP mode can transiently lag the ON CofReference
     // while a portal endpoint is restored, so keep both resolution and layer
-    // loading on the real open portal asset.
+    // loading on the real open portal asset. Keep this in sync with
+    // CofResolver; removing either guard makes the portal interactable but
+    // invisible when a transient NU ObjectP snapshot arrives.
     boolean townPortal = false;
     if (logicalType == Class.Type.OBJ && mObject.has(entityId)) {
       com.riiablo.engine.server.component.Object object = mObject.get(entityId);

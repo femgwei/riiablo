@@ -48,10 +48,12 @@ public class CofResolver extends PassiveSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
-    // Town portals are spawned already open and the 1.10 asset set does not
-    // contain a TPTRLITNUhth layer.  A late ObjectP snapshot may briefly carry
-    // NU while the linked warp/visual pair is being restored; never resolve
-    // that transient gameplay state into the nonexistent neutral portal COF.
+    // REGRESSION GUARD: Town portals are spawned already open. The 1.10 asset
+    // set has no TPTRLITNUhth layer. A late ObjectP snapshot may briefly carry
+    // NU while the linked warp/visual pair is being restored. Do not remove
+    // this special case or let the generic Object.mode reconciliation below
+    // override it: that transient state must never resolve to the nonexistent
+    // neutral portal COF.
     if (logicalType == Class.Type.OBJ && mObject.has(entityId)) {
       com.riiablo.engine.server.component.Object object = mObject.get(entityId);
       if (object != null && object.base != null
