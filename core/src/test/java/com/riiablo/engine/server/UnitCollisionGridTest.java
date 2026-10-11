@@ -27,4 +27,16 @@ class UnitCollisionGridTest {
     grid.remove(1);
     assertTrue(grid.move(2, -1, 10, 10, 1));
   }
+
+  @Test
+  void rearUnitCanRouteAroundFrontUnitButCannotFollowItsBlockedCell() {
+    UnitCollisionGrid grid = new UnitCollisionGrid();
+    grid.put(1, 10, 10, 1);
+    grid.put(2, 8, 10, 1);
+
+    // The path query and authoritative step must agree about the front unit.
+    assertFalse(grid.isFree(2, -1, 10, 10, 1));
+    assertTrue(grid.isFree(2, -1, 10, 11, 1));
+    assertTrue(grid.move(2, -1, 10, 11, 1));
+  }
 }
