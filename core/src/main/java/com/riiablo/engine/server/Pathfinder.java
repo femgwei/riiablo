@@ -561,13 +561,6 @@ public class Pathfinder extends IteratingSystem {
             source, pathfind.target)) {
       return false;
     }
-    if (map != null) {
-      smoothRay.start.set(source);
-      smoothRay.end.set(pathfind.target);
-      if (map.castRay(smoothRay, DT1.Tile.FLAG_BLOCK_WALK, size, collision)) {
-        return false;
-      }
-    }
     return true;
   }
 
