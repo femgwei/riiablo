@@ -118,6 +118,11 @@ public class VendorGenerator extends PassiveSystem {
     fillVendorQuiver(item);
     NativeRng rng = new NativeRng(id);
     NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
+    // D2GAME_CreateItemUnit routes normal NPC stock through the native
+    // StaffMods assignment path as well as the magic-item path.  Keep the
+    // skill roll before sockets, matching sub_6FC4D900's ordering.
+    NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, Riiablo.files.skills,
+        rng::nextInt);
     if (rollSockets) {
       NativeItemGeneration.rollSockets(item, item.quality, item.ilvl,
           difficulty, id, rng::nextInt);
@@ -152,6 +157,10 @@ public class VendorGenerator extends PassiveSystem {
       item.flags2 |= Item.ITEMFLAG2_INSTORE;
       NativeRng rng = new NativeRng(id);
       NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
+      // Magic vendor stock receives the same native StaffMods roll after its
+      // prefix/suffix properties have been assigned.
+      NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, Riiablo.files.skills,
+          rng::nextInt);
       item.attrs.reset();
       loadClientAssets(item);
       return item;
