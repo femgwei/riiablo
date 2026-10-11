@@ -464,6 +464,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
         if (object != null && position != null) {
           int created = factory.createStaticObjectByClassId(
               object.objectId(), position.x(), position.y());
+          // Quest-created objects (including town portals) can be placed on a
+          // room boundary or on a coordinate that is not yet indexed by the
+          // client map.  The authoritative level in EntitySync is more
+          // reliable than a coordinate-only lookup; attach that zone before
+          // RenderSystem builds its spatial index.
+          attachNetworkZone(created, sync.levelId());
           applyObjectSnapshot(created, object);
           return created;
         }
@@ -539,10 +545,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
       case WRP: {
         WarpP warp = findTable(sync, ComponentP.WarpP, new WarpP());
         PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
-        int entityId = factory.createWarp(warp.index(), position.x(), position.y());
+        Map.Zone sourceZoneHint = zoneForLevel(sync.levelId());
+        int entityId = factory.createWarp(sourceZoneHint, warp.index(),
+            position.x(), position.y());
         if (entityId == Engine.INVALID_ENTITY || !mMapWrapper.has(entityId)) {
           return Engine.INVALID_ENTITY;
         }
+        attachNetworkZone(entityId, sync.levelId());
         Map.Zone zone = mMapWrapper.get(entityId).zone;
         if (zone == null) return Engine.INVALID_ENTITY;
         zone.addWarp(entityId);
@@ -574,6 +583,19 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
   }
 
+  private Map.Zone zoneForLevel(int levelId) {
+    if (map == null || levelId < 0 || Riiablo.files == null || Riiablo.files.Levels == null) {
+      return null;
+    }
+    return map.findZone(Riiablo.files.Levels.get(levelId));
+  }
+
+  private void attachNetworkZone(int entityId, int levelId) {
+    if (entityId == Engine.INVALID_ENTITY || !mMapWrapper.has(entityId)) return;
+    Map.Zone zone = zoneForLevel(levelId);
+    if (zone != null) mMapWrapper.get(entityId).set(map, zone);
+  }
+
 
 
   /**
@@ -581,6 +603,26 @@ public class ClientNetworkReceiver extends IntervalSystem {
    * PlayerP is also sent for remote players, but their progression must never
    * overwrite this client's character file.
    */
+  private boolean isTownPortalSync(EntitySync sync) {
+    if (sync == null) return false;
+    Class.Type type = Class.Type.valueOf(sync.type());
+    if (type == Class.Type.OBJ) {
+      com.riiablo.net.packet.d2gs.ObjectP object = findTable(
+          sync, ComponentP.ObjectP, new com.riiablo.net.packet.d2gs.ObjectP());
+      return object != null && (object.objectId()
+          == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+          || object.objectId() == 60);
+    }
+    if (type != Class.Type.WRP) return false;
+    WarpP warp = findTable(sync, ComponentP.WarpP, new WarpP());
+    if (warp == null || !com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(warp.index())) {
+      return false;
+    }
+    int destination = com.riiablo.engine.server.quest.QuestWarp.destinationLevelId(warp.index());
+    return destination == 1 || destination == 40 || destination == 75
+        || destination == 103 || destination == 109;
+  }
+
   private void applyPlayerSnapshot(int entityId, PlayerP data) {
     if (Riiablo.charData == null || Riiablo.game == null
         || entityId != Riiablo.game.player) {
@@ -969,7 +1011,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (entityId == Engine.INVALID_ENTITY) {
       entityId = createEntity(entityData);
       if (entityId == Engine.INVALID_ENTITY) {
-        deferredServerEntities.add(entityData.entityId());
+        if (isTownPortalSync(entityData)) {
+          // Portal endpoints are static for their whole lifetime. If their
+          // first packet arrived while the destination zone was still being
+          // built, suppressing this server id would lose the portal forever
+          // because no incremental component update is guaranteed to follow.
+          // A baseline retries creation once the map is ready.
+          requestSnapshotResync(entityData.tick(), "town_portal_deferred");
+        } else {
+          deferredServerEntities.add(entityData.entityId());
+        }
         Gdx.app.log(TAG, "[ENTITY_SYNC] phase=skip serverEntity=" + entityData.entityId()
             + " type=" + entityData.type() + " reason=client_factory_rejected");
         return;

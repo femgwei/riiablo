@@ -1016,7 +1016,17 @@ public class RenderSystem extends BaseEntitySystem {
     // drawing to the camera footprint, so retaining the monster in the index
     // does not draw off-screen units.
     boolean interested;
-    if (mMonster.has(entityId)) {
+    if (isPortalObject(entityId)) {
+      // A town portal is a persistent endpoint, not room-owned scenery. Its
+      // anchor can be outside the camera-seeded RoomEx (the Rogue
+      // Encampment gate is the common case), so room interest would drop the
+      // visual even though the authoritative entity is valid. Keep it only
+      // for the player's currently rendered zone; the tile cache still
+      // limits drawing to the camera footprint.
+      Map.Zone anchor = src >= 0 && mMapWrapper.has(src)
+          ? mMapWrapper.get(src).zone : null;
+      interested = zone != null && (anchor == null || zone == anchor);
+    } else if (mMonster.has(entityId)) {
       interested = true;
     } else {
       interested = mapping != null && mapping.roomId >= 0
