@@ -60,7 +60,8 @@ public class RaycastCollisionDetector {
       // Use the caller's native collision mask here as well.  In particular,
       // a missile ray must ignore FLAG_BLOCK_WALK while still stopping on
       // FLAG_BLOCK_JUMP (walls/explicit missile barriers).
-      boolean blocked = canOpenDoors || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
+      boolean blocked = canOpenDoors || flags == com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP
+          || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
           ? map.isBlockedForPath(Map.round(sample.x), Map.round(sample.y), flags, size, canOpenDoors)
           : (map.flags(sample) & flags) != 0 || graph.getOrCreate(sample).clearance < size;
       if (blocked) {
@@ -68,7 +69,8 @@ public class RaycastCollisionDetector {
       }
     }
 
-    return canOpenDoors || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
+    return canOpenDoors || flags == com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP
+        || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
         ? map.isBlockedForPath(Map.round(end.x), Map.round(end.y), flags, size, canOpenDoors)
         : (map.flags(end) & flags) != 0;
   }

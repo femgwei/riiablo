@@ -6,6 +6,7 @@ import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.engine.server.NativeGroundPathProfile;
+import com.riiablo.codec.excel.MonStats;
 import org.junit.jupiter.api.Test;
 
 class PlayerGroundPathTest {
@@ -32,6 +33,21 @@ class PlayerGroundPathTest {
         NativeGroundPathProfile.MONSTER.terrainFlags, false));
     assertTrue(map.castRay(new Ray<>(new Vector2(3, 5), new Vector2(9, 7)),
         flags, 1, collision));
+  }
+
+  @Test
+  void flyingMonsterUsesMissileBarrierProfile() {
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.flying = true;
+    assertEquals(DT1.Tile.FLAG_BLOCK_JUMP,
+        NativeGroundPathProfile.forUnit(false, stats).terrainFlags);
+  }
+
+  @Test
+  void nativeSpecialBasesHaveNoDynamicPresence() {
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.BaseId = "Wraith1";
+    assertTrue(NativeGroundPathProfile.hasNoPresence(stats));
   }
 
 }

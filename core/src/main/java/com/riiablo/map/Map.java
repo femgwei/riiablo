@@ -797,6 +797,10 @@ public class Map implements Disposable {
     int localX = x - zone.x;
     int localY = y - zone.y;
     if ((zone.staticFlags(localX, localY) & flags) != 0) return true;
+    // Flying paths test missile barriers and doors, but omit ordinary objects.
+    if (flags == DT1.Tile.FLAG_BLOCK_JUMP) {
+      return zone.doorCollisionReferences(x, y) > 0;
+    }
     if (!canOpenDoors || (flags & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
       return (zone.flags(localX, localY) & flags) != 0;
     }

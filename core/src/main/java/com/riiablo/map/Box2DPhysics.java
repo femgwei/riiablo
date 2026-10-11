@@ -29,6 +29,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.Monster;
 
 @All({Class.class, Position.class, Size.class, Box2DBody.class})
 public class Box2DPhysics extends IntervalSystem {
@@ -44,6 +45,7 @@ public class Box2DPhysics extends IntervalSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<Monster> mMonster;
 
   @Wire(name = "map")
   protected Map map;
@@ -163,6 +165,15 @@ public class Box2DPhysics extends IntervalSystem {
             filter.maskBits = CATEGORY_WORLD;
             filter.groupIndex = 0;
             fixture.setFilterData(filter);
+            // Native flying units use MISSILE_BARRIER/DOOR path masks and do
+            // not collide with ordinary ground wall fixtures. Their movement
+            // ray is resolved by VelocityAdder/Pathfinder.
+            if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null
+                && com.riiablo.engine.server.NativeGroundPathProfile.forUnit(
+                    false, mMonster.get(entityId).monstats)
+                    == com.riiablo.engine.server.NativeGroundPathProfile.FLYING) {
+              fixture.setSensor(true);
+            }
           } shape.dispose();
         }
         break;

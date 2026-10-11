@@ -33,6 +33,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<com.riiablo.engine.server.component.NativeUnitFlags> mNativeUnitFlags;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private EntitySubscription units;
@@ -188,9 +189,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         String base = stats.BaseId == null ? "" : stats.BaseId.toLowerCase(java.util.Locale.ROOT);
         String id = stats.Id == null ? "" : stats.Id.toLowerCase(java.util.Locale.ROOT);
         // D2 gives flying/wraith-like units the no-presence pattern.
-        if (base.startsWith("wraith") || base.startsWith("bird")
-            || base.startsWith("parrot") || id.startsWith("wraith")
-            || id.startsWith("bird") || id.startsWith("parrot")) return false;
+        if (NativeGroundPathProfile.hasNoPresence(stats)) return false;
       }
     }
     return true;
@@ -290,7 +289,9 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     return isPetPresence(true,
         stats != null && stats.npc,
         stats != null && stats.inTown,
-        monster.resurrected,
+        mNativeUnitFlags != null && mNativeUnitFlags.has(entityId)
+            && mNativeUnitFlags.get(entityId).has(
+                com.riiablo.engine.server.component.NativeUnitFlags.IS_REVIVE),
         stats != null && stats.interact);
   }
 

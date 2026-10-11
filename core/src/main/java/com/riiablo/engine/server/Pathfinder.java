@@ -725,14 +725,18 @@ public class Pathfinder extends IteratingSystem {
 
   /** Mirrors PATH_AllocDynamicPath's non-flying open-door branch. */
   private int groundPathFlags(int entityId) {
-    return NativeGroundPathProfile.forUnit(mPlayer.has(entityId)).terrainFlags;
+    Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    return NativeGroundPathProfile.forUnit(mPlayer.has(entityId),
+        monster == null ? null : monster.monstats).terrainFlags;
   }
 
   private boolean canOpenDoors(int entityId) {
     if (!mMonster.has(entityId)) return false;
     Monster monster = mMonster.get(entityId);
     return monster != null && monster.monstats != null
-        && monster.monstats.opendoors && !monster.monstats.flying;
+        && monster.monstats.opendoors
+        && NativeGroundPathProfile.forUnit(false, monster.monstats)
+            != NativeGroundPathProfile.FLYING;
   }
 
   static boolean isRoomPathAllowed(Map.Zone zone, Vector2 source, Vector2 target) {
