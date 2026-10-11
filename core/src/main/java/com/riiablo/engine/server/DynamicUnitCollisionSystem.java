@@ -56,11 +56,18 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    rebuildNow();
+    // A normal frame only refreshes the index.  Spawn/warp relocation is a
+    // one-shot repair and must not run here, otherwise an overlapping Fallen
+    // is teleported back to the same nearby cell every frame.
+    rebuildNow(false);
   }
 
   /** Rebuilds the dynamic footprint index after a warp preloads a room. */
   public void rebuildNow() {
+    rebuildNow(true);
+  }
+
+  private void rebuildNow(boolean relocateOverlaps) {
     if (!enabled || units == null) return;
     grid.clear();
     IntBag entities = units.getEntities();
@@ -68,11 +75,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     // top of an arrival point.  Insert players first, then relocate monsters
     // which would otherwise make the player's source cell dynamically
     // occupied and leave pathfinding with no valid first step.
-    insertUnits(entities, true);
-    insertUnits(entities, false);
+    insertUnits(entities, true, relocateOverlaps);
+    insertUnits(entities, false, relocateOverlaps);
   }
 
-  private void insertUnits(IntBag entities, boolean players) {
+  private void insertUnits(IntBag entities, boolean players, boolean relocateOverlaps) {
     for (int i = 0; i < entities.size(); i++) {
       int entityId = entities.get(i);
       if (!hasPresence(entityId) || isPlayer(entityId) != players) continue;
@@ -87,7 +94,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         // will install a native Escape path; changing the coordinate here
         // produces a visible one-cell teleport when the player approaches.
         grid.put(entityId, x, y, size);
-      } else if (!relocateOverlappingUnit(entityId, x, y, size)) {
+      } else if (!relocateOverlaps || !relocateOverlappingUnit(entityId, x, y, size)) {
         // Keep a deterministic footprint even when a malformed/reduced map
         // has no walkable relocation candidate; later ticks can retry after
         // the room topology finishes loading.
