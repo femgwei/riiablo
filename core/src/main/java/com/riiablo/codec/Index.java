@@ -52,6 +52,36 @@ public class Index implements Disposable {
     return new Index(name, indexes);
   }
 
+  /**
+   * Creates a monster palette-shift table. Monster {@code palshift.dat}
+   * files contain one identity row followed by up to seven 256-byte colour
+   * mappings, unlike item .dat files which contain the full 22-row format.
+   */
+  public static Index fromPalshift(String name, byte[] data) {
+    if (data == null || data.length == 0 || data.length % Palette.COLORS != 0) {
+      throw new IllegalArgumentException("palshift data must contain complete 256-byte rows");
+    }
+    int rowCount = data.length / Palette.COLORS;
+    if (rowCount > INDEXES) {
+      throw new IllegalArgumentException("palshift contains too many rows: " + rowCount);
+    }
+    byte[][] rows = new byte[INDEXES][Palette.COLORS];
+    for (int row = 0; row < INDEXES; row++) {
+      for (int color = 0; color < Palette.COLORS; color++) {
+        rows[row][color] = (byte) color;
+      }
+    }
+    for (int row = 0; row < rowCount; row++) {
+      System.arraycopy(data, row * Palette.COLORS, rows[row], 0, Palette.COLORS);
+    }
+    return fromColormaps(name, rows);
+  }
+
+  public static Index loadPalshiftFromFile(FileHandle file) {
+    if (file == null) throw new IllegalArgumentException("palshift file is null");
+    return fromPalshift(file.toString(), file.readBytes());
+  }
+
   @Override
   public void dispose() {
     if (texture != null) texture.dispose();

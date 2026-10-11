@@ -36,6 +36,7 @@ public class StateOverlaySystem extends IteratingSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<CofTransforms> mCofTransforms;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
 
@@ -182,7 +183,8 @@ public class StateOverlaySystem extends IteratingSystem {
       if (layer != null) {
         byte transform = original != null && component < original.length
             ? original[component] : CofTransforms.TRANSFORM_NULL;
-        layer.setTransform(transform);
+        MonsterTransform.apply(layer,
+            mMonster.has(entityId) ? mMonster.get(entityId) : null, transform);
       }
     }
   }

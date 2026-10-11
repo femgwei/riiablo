@@ -19,6 +19,7 @@ public class CofTransformHandler extends PassiveSystem {
 
   protected ComponentMapper<CofTransforms> mCofTransforms;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
 
   @Subscribe
   public void onTransformChanged(TransformChangeEvent event) {
@@ -35,7 +36,10 @@ public class CofTransformHandler extends PassiveSystem {
       int c = cof.getLayer(l).component;
       if (!Dirty.isDirty(flags, c)) continue;
       Animation.Layer layer = animation.getLayer(c);
-      if (layer != null) layer.setTransform(transform[c]);
+      if (layer != null) {
+        MonsterTransform.apply(layer, mMonster.has(entityId) ? mMonster.get(entityId) : null,
+            transform[c]);
+      }
     }
   }
 }

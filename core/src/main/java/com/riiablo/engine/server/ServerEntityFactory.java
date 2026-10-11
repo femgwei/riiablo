@@ -535,7 +535,16 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     mCofAlphas.create(id);
-    mCofTransforms.create(id);
+    CofTransforms transforms = mCofTransforms.create(id);
+    // MonStats variants share a Code/model and select their native colours
+    // through TransLvl and the matching monster palshift.dat. Preserve the
+    // level in the synchronized transform component; the client resolves the
+    // actual Code-specific palette when its COF layers are ready.
+    if (monstats.TransLvl > 0 && monstats.TransLvl < 32) {
+      for (int c = 0; c < transforms.transform.length; c++) {
+        transforms.transform[c] = (byte) monstats.TransLvl;
+      }
+    }
 
     mMovementModes.create(id).set(Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
 

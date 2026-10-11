@@ -9,12 +9,20 @@ import com.riiablo.codec.Index;
 import com.riiablo.codec.PL2;
 import com.riiablo.codec.Palette;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
 public class Colormaps implements Disposable {
   public final Index brown, gold;
   public final Index grey, grey2, greybrown;
   public final Index invgrey, invgrey2, invgreybrown;
 
   private final Index[] stateTransforms = new Index[111];
+  private final Map<String, Index> monsterTransforms = new HashMap<>();
+  private final Set<String> missingMonsterTransforms = new HashSet<>();
   private PL2 statePalette;
   private boolean statePaletteAttempted;
 
@@ -49,6 +57,32 @@ public class Colormaps implements Disposable {
 
   public String toString(int index) {
     return get(index).name;
+  }
+
+  /** Loads the native per-monster palette shifts for a two-letter unit code. */
+  public Index getMonsterTransform(String code) {
+    if (code == null || code.trim().isEmpty() || Riiablo.mpqs == null) return null;
+    String key = code.trim().toUpperCase(Locale.ROOT);
+    Index cached = monsterTransforms.get(key);
+    if (cached != null) return cached;
+    if (missingMonsterTransforms.contains(key)) return null;
+
+    try {
+      String path = "data\\global\\monsters\\" + key + "\\cof\\palshift.dat";
+      com.badlogic.gdx.files.FileHandle file = Riiablo.mpqs.resolve(path);
+      if (!file.exists()) {
+        missingMonsterTransforms.add(key);
+        return null;
+      }
+      Index transform = Index.loadPalshiftFromFile(file).render();
+      monsterTransforms.put(key, transform);
+      return transform;
+    } catch (Throwable ignored) {
+      // Some expansion/special rows have no palshift asset. Keep those units
+      // on the normal palette rather than failing the entire presentation.
+      missingMonsterTransforms.add(key);
+      return null;
+    }
   }
 
   /**
@@ -108,6 +142,11 @@ public class Colormaps implements Disposable {
     invgrey.dispose();
     invgrey2.dispose();
     invgreybrown.dispose();
+    for (Index transform : monsterTransforms.values()) {
+      if (transform != null) transform.dispose();
+    }
+    monsterTransforms.clear();
+    missingMonsterTransforms.clear();
     for (Index transform : stateTransforms) {
       if (transform != null) transform.dispose();
     }
