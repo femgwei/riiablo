@@ -24,12 +24,22 @@ class DynamicUnitCollisionSystemTest {
   }
 
   @Test
-  void nativeMonsterPathOnlyTreatsReviveOrSmallUnitsAsPetPresence() {
-    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, true, false, false));
-    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, false, true, false));
-    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, false, false, false));
-    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, true, true, true));
-    assertFalse(DynamicUnitCollisionSystem.isPetPresence(false, true, true, false));
+  void nativeCollisionUsesCanBeInTownAndExcludesInteractables() {
+    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, true, false, false, false));
+    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, false, true, false, false));
+    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, false, false, true, false));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, false, false, false, false));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, true, false, false, true));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(false, true, true, true, false));
+  }
+
+  @Test
+  void tableOnlyCollisionHelperKeepsReviveAndSmallParity() {
+    assertTrue(DynamicUnitCollisionSystem.isTablePetPresence(true, true, false, false));
+    assertTrue(DynamicUnitCollisionSystem.isTablePetPresence(true, false, true, false));
+    assertFalse(DynamicUnitCollisionSystem.isTablePetPresence(true, false, false, false));
+    assertFalse(DynamicUnitCollisionSystem.isTablePetPresence(true, true, true, true));
+    assertFalse(DynamicUnitCollisionSystem.isTablePetPresence(false, true, true, false));
   }
 
   @Test

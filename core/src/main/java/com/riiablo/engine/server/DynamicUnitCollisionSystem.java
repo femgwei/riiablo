@@ -261,8 +261,23 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         ? NativePathProfile.MONSTER : NativePathProfile.PLAYER, petPresence);
   }
 
-  /** Mirrors D2Common_11281_CollisionPatternFromSize for monster units. */
-  static boolean isPetPresence(boolean monster, boolean revive,
+  /**
+   * Mirrors the live-unit branch of D2Common_11281_CollisionPatternFromSize.
+   *
+   * <p>The native routine does not use MonStats2.revive as a blanket pet
+   * marker.  It first asks MONSTERS_CanBeInTown, which is true for NPC rows,
+   * rows marked inTown, or a unit carrying the runtime ISREVIVE flag.  The
+   * MonStats2 revive/small bits belong to the unused table-only helper
+   * (11282), and treating them as runtime state makes ordinary revive-capable
+   * monsters disappear from monster path collision.</p>
+   */
+  static boolean isPetPresence(boolean monster, boolean npc, boolean inTown,
+      boolean resurrected, boolean interact) {
+    return monster && !interact && (npc || inTown || resurrected);
+  }
+
+  /** Compatibility probe for the unused table-only native helper (11282). */
+  static boolean isTablePetPresence(boolean monster, boolean revive,
       boolean small, boolean isAtt) {
     return monster && (revive || small) && !isAtt;
   }
@@ -271,8 +286,12 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (!mMonster.has(entityId)) return false;
     Monster monster = mMonster.get(entityId);
     if (monster == null || monster.monstats2 == null) return false;
-    return isPetPresence(true, monster.monstats2.revive,
-        monster.monstats2.small, monster.monstats2.isAtt);
+    MonStats.Entry stats = monster.monstats;
+    return isPetPresence(true,
+        stats != null && stats.npc,
+        stats != null && stats.inTown,
+        monster.resurrected,
+        stats != null && stats.interact);
   }
 
   private int ownedCompanionOwner(int entityId) {
