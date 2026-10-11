@@ -12,7 +12,7 @@
   `./gradlew.bat :core:test --tests com.riiablo.engine.server.PathfinderTest --tests
   com.riiablo.engine.server.DynamicUnitCollisionSystemTest --tests
   com.riiablo.engine.server.UnitCollisionGridTest --no-daemon`（`BUILD SUCCESSFUL`）。
-- [x] 本轮代码/测试提交 `c417000e`（含前置修正 `5afad7a3`）；待推送后在另一台电脑拉取
+- [x] 本轮代码/测试提交 `d65943ca`（含前置修正 `5afad7a3`）；待推送后在另一台电脑拉取
   `origin/master` 验证同一 Fallen pack 场景。
 - [ ] 仍待另一台电脑确认多个普通怪物连续追击时的绕行、堆叠和完全堵死时的停步表现；这不等价于
   已证实的 Fallen 局部动态重寻路实现。
