@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.monster.MonsterAffix;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.map.Map;
@@ -47,6 +48,7 @@ public class RoomActivationSystem extends IteratingSystem {
   private final IntMap<ClientRoom> clients = new IntMap<>();
   private final IntSet prewarmedTownLevels = new IntSet();
   private final IntSet prewarmedOutdoorTransitions = new IntSet();
+  private final IntSet prewarmedNaviLevels = new IntSet();
 
   @Override
   protected void process(int entityId) {
@@ -56,6 +58,7 @@ public class RoomActivationSystem extends IteratingSystem {
     Position playerPosition = mPosition.get(entityId);
     prewarmTownExitIfNeeded(zone);
     prewarmNearbyOutdoorExit(zone, playerPosition.position.x, playerPosition.position.y);
+    prewarmNaviAtBloodMoor(zone);
     Map.RoomEx room = zone != null
         ? zone.findRoomEx(playerPosition.position.x, playerPosition.position.y)
         : null;
@@ -108,6 +111,36 @@ public class RoomActivationSystem extends IteratingSystem {
     int townLevel = levelId(zone);
     if (townLevel < 0 || prewarmedTownLevels.contains(townLevel)) return;
     if (prewarmTownExit(zone)) prewarmedTownLevels.add(townLevel);
+  }
+
+  /**
+   * Flavie is a hard-coded Navi unit in the Blood Moor border preset.  The
+   * native preset is queued in its boundary room, which is normally outside
+   * the first client sight ring; that made the NPC appear only after the
+   * player had already walked toward the Cold Plains.  D2 activates this
+   * special NPC with the Blood Moor level, so prewarm just her owning room
+   * when the level first becomes active.  Ordinary monster populations keep
+   * their normal room-scoped lazy spawning.
+   */
+  private void prewarmNaviAtBloodMoor(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != com.d2moo.common.drlg.D2LevelIds.LEVEL_BLOODMOOR
+        || !zone.hasNativeRoomTopology()) return;
+    int level = levelId(zone);
+    if (prewarmedNaviLevels.contains(level)) return;
+
+    for (int roomIndex = 0; roomIndex < zone.getRoomsEx().size; roomIndex++) {
+      Map.RoomEx room = zone.getRoomsEx().get(roomIndex);
+      for (int spawnIndex = 0; spawnIndex < room.getPendingMonsterSpawns().size; spawnIndex++) {
+        Map.MonsterSpawn spawn = room.getPendingMonsterSpawns().get(spawnIndex);
+        if (spawn.monsterId != MonsterType.NAVI) continue;
+        int spawned = prewarmZoneAt(zone, spawn.x, spawn.y);
+        prewarmedNaviLevels.add(level);
+        log.info("[NAVI_PREWARM] level={} room={} position=({}, {}) spawnedRooms={} action=complete",
+            level, room.id, spawn.x, spawn.y, spawned);
+        return;
+      }
+    }
   }
 
   /**
