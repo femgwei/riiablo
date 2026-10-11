@@ -98,6 +98,17 @@ public class Pathfinder extends IteratingSystem {
     // issue a fresh approach request on the next think tick.
     if (mMonster.has(entityId) && shouldRepathAfterDynamicBlock(pathfind)) {
       int targetEntityId = pathfind.targetEntityId;
+      if (isOverlappingDynamicTarget(entityId, targetEntityId)) {
+        float stalledTime = pathfind.stalledTime;
+        findPath(entityId, null);
+        Monster monster = mMonster.get(entityId);
+        log.debug("[MONSTER_PATH_STALLED] entity={} monster={} stalledTime={} "
+                + "blockedByDynamic=true action=stop_target_overlap",
+            entityId,
+            monster.monstats != null ? monster.monstats.Id : "unknown",
+            stalledTime);
+        return;
+      }
       Vector2 repathTarget = targetEntityId != Engine.INVALID_ENTITY
           && mPosition.has(targetEntityId)
           ? mPosition.get(targetEntityId).position
@@ -127,9 +138,7 @@ public class Pathfinder extends IteratingSystem {
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       Vector2 targetPos = mPosition.get(targetId).position;
       boolean dynamicTarget = mVelocity.has(targetId);
-      if (dynamicTarget && footprintsOverlap(
-          position0, mSize.get(entityId).size, targetPos,
-          mSize.has(targetId) ? mSize.get(targetId).size : Size.MEDIUM)) {
+      if (dynamicTarget && isOverlappingDynamicTarget(entityId, targetId)) {
         // The authoritative collision grid has already allowed the bodies to
         // touch (or a legacy save spawned them in the same footprint).  Do
         // not keep feeding a walk velocity into a physically blocked target;
@@ -628,6 +637,15 @@ public class Pathfinder extends IteratingSystem {
         <= firstRadius + secondRadius
         && Math.abs(Map.round(first.y) - Map.round(second.y))
         <= firstRadius + secondRadius;
+  }
+
+  private boolean isOverlappingDynamicTarget(int entityId, int targetId) {
+    return targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+        && mVelocity.has(targetId)
+        && footprintsOverlap(
+            mPosition.get(entityId).position, mSize.get(entityId).size,
+            mPosition.get(targetId).position,
+            mSize.has(targetId) ? mSize.get(targetId).size : Size.MEDIUM);
   }
 
   /**
