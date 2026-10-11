@@ -64,16 +64,6 @@ public class AutomapLayer {
   public void addWall(int cellNo, int x, int y) {
     addUnique(walls, cellNo, x, y);
   }
-
-  /**
-   * Adds a wall produced by the native DT1 automap path.  D2Client's
-   * AddAutomapCell keeps same-position wall nodes when their native cell
-   * weights differ; the ordinary addWall API retains its historical
-   * coordinate-only de-duplication for callers that do not have that context.
-   */
-  public void addNativeWall(int cellNo, int x, int y) {
-    addUniqueCell(walls, cellNo, x, y);
-  }
   
   /**
    * 添加物体单元格
@@ -96,14 +86,6 @@ public class AutomapLayer {
       // category tree.  Category trees remain independent, so a floor and a
       // wall may coexist while a later wall at the same position is ignored.
       if (existing.xPixel == x && existing.yPixel == y) return;
-    }
-    cells.add(new AutomapCell(cellNo, x, y));
-  }
-
-  private static void addUniqueCell(Array<AutomapCell> cells, int cellNo, int x, int y) {
-    for (int i = 0, n = cells.size; i < n; i++) {
-      AutomapCell existing = cells.get(i);
-      if (existing.cellNo == cellNo && existing.xPixel == x && existing.yPixel == y) return;
     }
     cells.add(new AutomapCell(cellNo, x, y));
   }

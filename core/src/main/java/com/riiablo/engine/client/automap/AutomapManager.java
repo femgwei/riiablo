@@ -604,10 +604,7 @@ public class AutomapManager implements Disposable {
             }
           }
           else if (wallTile) {
-            // Native D2Client compares the cell's native weight before
-            // discarding a same-position wall. Distinct weighted cells may
-            // coexist at one coordinate (for example town fence overlays).
-            layer.addNativeWall(cell, worldX, worldY);
+            layer.addWall(cell, worldX, worldY);
             wallCells++;
           }
           else layer.addObject(cell, worldX, worldY);
