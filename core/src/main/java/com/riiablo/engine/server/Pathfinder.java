@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
+import com.riiablo.engine.server.combat.NativeMeleeDistance;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.DT1;
@@ -121,7 +122,12 @@ public class Pathfinder extends IteratingSystem {
       // The player's +3 server hit allowance belongs to keyframe validation;
       // using it here stops the path before the client may begin attacking.
       boolean inMeleeApproachRange = isInMeleeApproachRange(
-          actioneer, entityId, targetId);
+          actioneer, entityId, targetId)
+          // D2MOO's AI evaluates the live unit coordinates.  The combat
+          // history can lag behind a newly blocked monster path by one tick;
+          // use the same footprint-aware live check so the unit stops walking
+          // and AIStepper can select its melee mode.
+          || isInCurrentMeleeApproachRange(entityId, targetId);
       float meleeRangeThreshold = actioneer.getMeleeRange(entityId) + 1f;
       
       // Check ranged attack range (if monster has ranged attack capability)
@@ -260,6 +266,19 @@ public class Pathfinder extends IteratingSystem {
   static boolean isInMeleeApproachRange(
       Actioneer actioneer, int attackerId, int targetId) {
     return actioneer.isInMeleeRange(attackerId, targetId, 0);
+  }
+
+  private boolean isInCurrentMeleeApproachRange(int attackerId, int targetId) {
+    if (!mPosition.has(attackerId) || !mPosition.has(targetId)) return false;
+    int attackerSize = mSize.has(attackerId) ? mSize.get(attackerId).size : Size.INSIGNIFICANT;
+    int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : Size.INSIGNIFICANT;
+    int meleeRange = actioneer.getMeleeRange(attackerId);
+    Position attacker = mPosition.get(attackerId);
+    Position target = mPosition.get(targetId);
+    return NativeMeleeDistance.isInRange(
+        Math.round(attacker.position.x), Math.round(attacker.position.y), attackerSize,
+        Math.round(target.position.x), Math.round(target.position.y), targetSize,
+        meleeRange, 0);
   }
 
   static boolean isMercenaryOwnerTarget(Mercenary mercenary, int targetId) {
