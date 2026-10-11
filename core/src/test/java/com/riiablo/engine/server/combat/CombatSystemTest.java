@@ -190,6 +190,33 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void playerAttackDoesNotShieldBlockAMonsterWithoutShieldContext() {
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        return blockChance > 0;
+      }
+    };
+    Attributes player = attrs(100, 10, 0, 20, 20, 1000);
+    Attributes monster = attrs(100, 10, 0, 1, 1, 1);
+    monster.base().put(Stat.toblock, 75);
+    monster.reset();
+
+    CombatSystem.CombatResult result = deterministicBlock.calculateAttack(
+        player, monster, true, false, false, 20, 20, 1000, true);
+    assertTrue(result.hit);
+    assertTrue(!result.blocked,
+        "a monster ToBlock value must not imply a shield without native shield context");
+    assertTrue(result.totalDamage > 0);
+
+    monster.setCombatBlockContext(true, 0);
+    CombatSystem.CombatResult shieldedMonster = deterministicBlock.calculateAttack(
+        player, monster, true, false, false, 20, 20, 1000, true);
+    assertTrue(shieldedMonster.blocked,
+        "explicit monster shield context still permits native monster blocking");
+  }
+
+  @Test
   public void amazonPassiveDefenseKeepsTypeAndNoDamage() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.alwaysHit = true;

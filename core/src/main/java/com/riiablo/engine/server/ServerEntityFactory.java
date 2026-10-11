@@ -463,6 +463,16 @@ public class ServerEntityFactory extends EntityFactory {
     base.put(Stat.tohit, attack1Init.TH);
     base.put(Stat.mindamage, attack1Init.A1MinD);
     base.put(Stat.maxdamage, attack1Init.A1MaxD);
+    // Monster ToBlock is only eligible for the native shield branch when the
+    // monster presentation actually carries a shield (or the native row
+    // explicitly opts out of the no-shield gate).  Do not let a bare ToBlock
+    // value make every monster block player attacks and emit a BL sound.
+    boolean monsterShield = monstats.NoShldBlock;
+    if (!monsterShield && monstats2 != null && monstats2.ComponentV != null
+        && monstats2.ComponentV.length > 7) {
+      String shieldComponent = monstats2.ComponentV[7];
+      monsterShield = shieldComponent != null && !shieldComponent.trim().isEmpty();
+    }
     if (rank == com.riiablo.engine.server.monster.MonsterRank.CHAMPION
         || com.riiablo.engine.server.monster.MonsterRank.isUnique(rank)) {
       // MONSTERUNIQUE_UMod2_HealthBonus disables regeneration on the unique
@@ -471,6 +481,7 @@ public class ServerEntityFactory extends EntityFactory {
     }
     MonsterStatsCalculator.applyNativeAffixStats(base, monstats, difficulty, affixes);
     attrs.reset();
+    attrs.setCombatBlockContext(monsterShield, 0);
     mAttributesWrapper.create(id).attrs = attrs;
     mUnitStates.create(id).init(id);
     log.debug("[MONSTER_NATIVE_STATS] entity={} monster={} level={} baseLevel={} "

@@ -1520,8 +1520,14 @@ public class CombatSystem {
     // D2MOO MissMode passes bBlock when the missile carries physical damage.
     // Shield block is therefore not melee-only; eligibility is finalized from
     // the attack packet in calculateAttack(AttackerData, DefenderData).
-    d.hasEquippedShield = !defenderPlayer || !defender.hasCombatShieldContext()
-        || defender.combatHasShield();
+    // A player can only shield-block when the runtime equipment context says
+    // an active shield is equipped.  Monsters use the same context when their
+    // native MonStats/MonStats2 presentation actually supplies a shield;
+    // treating every monster as shielded makes a player's attacks produce a
+    // monster BL reaction and block sound even for monsters with only a
+    // non-zero ToBlock row.
+    d.hasEquippedShield = defender.hasCombatShieldContext()
+        ? defender.combatHasShield() : defenderPlayer;
     d.blockFactor = defenderPlayer && defender.hasCombatShieldContext()
         ? defender.combatBlockFactor() : 0;
     d.isRunning = defender.hasCombatRunningContext()
