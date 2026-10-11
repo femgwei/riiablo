@@ -241,15 +241,16 @@ public class DrlgOutWild {
             boolean valid = testSpawnRiver(level, riverX);
             D2Log.debug("DRLG_OUTWILD river-test level=%d flags=0x%X x=%d valid=%s",
                     level.getLevelId(), outdoors.getDwFlags(), riverX, valid);
-            // The native border pass can leave the outer edge cell marked with
-            // bHasDirection even though it is the edge immediately beside the
-            // river strip.  A bridge flag is authoritative: without the river
-            // strip the bridge can never be materialized (and the client sees
-            // a dry crossing).  Keep the native validity check for ordinary
-            // river-other layouts, but allow bridge layouts to proceed.
-            if (valid || (outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_BRIDGE) != 0) {
+            // Act I river layouts are selected by RIVER_OTHER/BRIDGE.  The
+            // retail client materializes the strip even when the outer edge
+            // border contributes bHasDirection to the adjacent cell; keeping
+            // the test as a hard veto drops the whole river for those seeds.
+            // Preserve the diagnostic, but let the level's river flags be
+            // authoritative for placement.
+            if (valid || (outdoors.getDwFlags()
+                    & (DrlgOutdoors.OUTDOOR_BRIDGE | DrlgOutdoors.OUTDOOR_RIVER_OTHER)) != 0) {
                 if (!valid) {
-                    D2Log.debug("DRLG_OUTWILD river-test override bridge level=%d x=%d",
+                    D2Log.debug("DRLG_OUTWILD river-test override flagged level=%d x=%d",
                             level.getLevelId(), riverX);
                 }
                 spawnRiver(level, riverX);
