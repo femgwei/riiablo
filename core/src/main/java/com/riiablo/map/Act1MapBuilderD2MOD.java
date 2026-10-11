@@ -24,6 +24,7 @@ import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2ObjectIds;
+import com.d2moo.common.drlg.D2MonsterIds;
 import com.d2moo.common.drlg.D2UnitTypes;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -1440,9 +1441,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                     // created after DS1 expansion.
                   }
                 }
-                MonStats.Entry monster = placement == null
-                    ? Riiablo.files.monstats.get(index)
-                    : Riiablo.files.monstats.get(placement);
+                MonStats.Entry monster = resolveD2MooPresetMonster(index, placement);
                 int superUniqueId = -1;
                 String superUniqueKey = null;
                 SuperUniques.Entry superUnique = placement == null
@@ -1471,6 +1470,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                       "D2MOO preset monster unresolved: level=%d room=%d index=%d mode=%d",
                       exportLevelId, roomId, index, mode));
                   return;
+                }
+                if (index == D2MonsterIds.MONSTER_NAVI) {
+                  Gdx.app.log(TAG, String.format(
+                      "[NAVI_RESOLVE] level=%d room=%d d2mooIndex=%d id=%s hcIdx=%d npc=%s ai=%s",
+                      exportLevelId, roomId, index, monster.Id, monster.hcIdx,
+                      monster.npc, monster.AI));
                 }
                 if (superUnique != null) {
                   Gdx.app.log(TAG, String.format(
@@ -1750,6 +1755,32 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       Gdx.app.debug(TAG, "=== Act1 Map Generation Completed ===");
       Gdx.app.debug(TAG, "NOTE: addSecondaryBorder will be called after Map.generate() completes");
     }
+  }
+
+  /**
+   * Resolves a D2MOO UNIT_MONSTER class id to the local MonStats row.
+   *
+   * <p>D2MOO's hard-coded MONSTER_NAVI value is the native class id (272),
+   * while the riiablo MonStats table is keyed by its serialized row index and
+   * reports Flavie as {@code Id=navi}, {@code hcIdx=266}.  Treating 272 as a
+   * local row silently creates a different monster, which prevents both the
+   * quest marker and Navi's defensive AI from ever being installed.</p>
+   */
+  public static MonStats.Entry resolveD2MooPresetMonster(int index, String placement) {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    if (index == D2MonsterIds.MONSTER_NAVI) {
+      MonStats.Entry navi = Riiablo.files.monstats.get("navi");
+      if (navi != null) return navi;
+      for (MonStats.Entry candidate : Riiablo.files.monstats) {
+        if (candidate != null
+            && candidate.hcIdx == com.riiablo.engine.server.monster.MonsterType.NAVI) {
+          return candidate;
+        }
+      }
+    }
+    return placement == null
+        ? Riiablo.files.monstats.get(index)
+        : Riiablo.files.monstats.get(placement);
   }
 
   static int toLocalGridCoordinate(int localTileCoordinate, int gridSize) {

@@ -18,6 +18,7 @@ import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgVertexStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2LvlPrestIds;
+import com.d2moo.common.drlg.D2MonsterIds;
 import com.d2moo.common.drlg.D2ObjectIds;
 import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2UnitTypes;
@@ -27,16 +28,27 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.monster.MonsterType;
 
 /** Fixed-seed DRLG smoke test and diagnostic report for the Act1 bridge. */
 public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   private static final int DEFAULT_DIFFICULTY = 0;
   /** Reproduction seed from the town-exit black-map game log. */
   private static final String DEFAULT_SEED = "0x171A6100";
+
+  @Test
+  public void d2mooNaviClassIdResolvesToFlavieRow() {
+    MonStats.Entry navi = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(
+        D2MonsterIds.MONSTER_NAVI, null);
+    assertNotNull(navi, "D2MOO MONSTER_NAVI must resolve to a local MonStats row");
+    assertEquals("navi", navi.Id);
+    assertEquals(MonsterType.NAVI, navi.hcIdx);
+  }
 
   @Test
   public void rogueEncampmentWaypointDefinitionIsRenderable() {

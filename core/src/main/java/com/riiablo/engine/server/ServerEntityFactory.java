@@ -531,8 +531,13 @@ public class ServerEntityFactory extends EntityFactory {
     float size = mSize.create(id).size = monstats2.SizeX; // FIXME: SizeX and SizeY appear to always be equal -- is this method sufficient?
     AIWrapper aiWrapper = mAIWrapper.create(id);
     boolean wildernessGuide = monstats.hcIdx == MonsterType.NAVI;
-    AI ai = monstats.npc && !wildernessGuide
-        ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
+    // Flavie is an NPC for faction/dialogue purposes, but D2Game assigns her
+    // a defensive wilderness AI. The table's generic Npc AI only patrols and
+    // never acquires hostile monsters, so use the dedicated bridge here.
+    AI ai = wildernessGuide
+        ? new com.riiablo.engine.server.ai.Navi(id)
+        : monstats.npc ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
+    if (wildernessGuide) aiWrapper.ai = ai;
     if (monstats.npc && !wildernessGuide) aiWrapper.ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
