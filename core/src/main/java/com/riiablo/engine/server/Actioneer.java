@@ -4380,13 +4380,30 @@ public class Actioneer extends PassiveSystem {
         || !mAnimData.has(victimId)) return;
     Class.Type type = mClass.get(victimId).type;
     if (type != Class.Type.PLR && type != Class.Type.MON) return;
-    // Do not interrupt a native death or an already-running multi-stage skill.
+    // Do not interrupt a native death.  D2MOO changes the defender to BL even
+    // while it is in another attack/skill sequence; the block reaction is the
+    // higher-priority presentation and must not be hidden by the defender's
+    // current Casting component.
     byte current = mCofReference.get(victimId).mode;
     if (type == Class.Type.PLR
         && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
-    if (mCasting.has(victimId)) return;
+    if (blocked) {
+      boolean interruptedCasting = mCasting.has(victimId);
+      boolean interruptedSequence = mSequence.has(victimId);
+      if (interruptedCasting) mCasting.remove(victimId);
+      if (interruptedSequence) mSequence.remove(victimId);
+      if (interruptedCasting || interruptedSequence) {
+        log.debug("[HIT_REACTION] victim={} interruptedCasting={} interruptedSequence={}",
+            victimId, interruptedCasting, interruptedSequence);
+      }
+    } else if (mCasting.has(victimId)) {
+      // Preserve the existing soft GH behavior for a unit that is actively
+      // casting; only a real shield BL is authoritative enough to interrupt it.
+      log.debug("[HIT_REACTION] victim={} skipped=active_casting blocked={}", victimId, blocked);
+      return;
+    }
     byte reaction = type == Class.Type.PLR
         ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
         : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);

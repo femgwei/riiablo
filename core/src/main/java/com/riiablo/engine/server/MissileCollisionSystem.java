@@ -35,6 +35,7 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
@@ -111,6 +112,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Sequence> mSequence;
 
   @com.artemis.annotations.Wire(failOnNull = false)
@@ -2347,9 +2349,22 @@ public class MissileCollisionSystem extends IteratingSystem {
         && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
-    // Preserve an in-progress native skill sequence; Actioneer will restore
-    // the reaction for idle victims only, matching D2MOO's soft-hit behavior.
-    if (mSequence.has(victimId) && mSequence.get(victimId).started) return;
+    if (blocked) {
+      // D2MOO's block branch changes the defender to BL even when it was
+      // attacking.  Clear the interrupted action so SequenceHandler cannot
+      // resume a multi-stage skill after the block animation finishes.
+      boolean interruptedCasting = mCasting.has(victimId);
+      boolean interruptedSequence = mSequence.has(victimId);
+      if (interruptedCasting) mCasting.remove(victimId);
+      if (interruptedSequence) mSequence.remove(victimId);
+      if (interruptedCasting || interruptedSequence) {
+        log.debug("[HIT_REACTION] victim={} interruptedCasting={} interruptedSequence={} source=missile",
+            victimId, interruptedCasting, interruptedSequence);
+      }
+    } else if (mSequence.has(victimId) && mSequence.get(victimId).started) {
+      // Preserve an in-progress native skill sequence for ordinary soft GH.
+      return;
+    }
     byte reaction = type == Class.Type.PLR
         ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
         : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);

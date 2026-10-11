@@ -11,6 +11,9 @@
 - [x] 权威 BL 模式现在由客户端播放原版 `block_weapon_1..3` 格挡音效；声音只随服务端
   确认的格挡动作触发，不会因客户端自行重算格挡而重复播放。
 - [x] 新增战斗单测覆盖无盾、职业因子、奔跑三分之一修正和 FBR 帧门控。
+- [x] 修正格挡表现优先级：对照 D2MOO `SUNITDMG_ExecuteDamage`，真正的盾牌格挡会
+  打断目标当前攻击/多段技能并切换 BL；死亡模式和 FBR 节流仍不会误播。近战与导弹路径
+  均清理被打断的 `Casting/Sequence`，避免声音已触发但动画被旧动作覆盖。
 - 验证：`./gradlew.bat :core:compileJava :core:test --tests
   com.riiablo.engine.server.combat.CombatSystemTest --no-daemon`：`BUILD SUCCESSFUL`。
 
