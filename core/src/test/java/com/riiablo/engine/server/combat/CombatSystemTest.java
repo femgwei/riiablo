@@ -68,6 +68,49 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void playerBlockUsesShieldAndClassBlockFactorAndRunningPenalty() {
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.isPlayer = true;
+    defender.level = 10;
+    defender.dexterity = 35;
+    defender.blockChance = 50;
+    defender.blockFactor = 20;
+    defender.canBlock = true;
+    defender.hasEquippedShield = true;
+    assertEquals(70, combat.calculateBlockChance(defender));
+
+    defender.isRunning = true;
+    assertEquals(23, combat.calculateBlockChance(defender));
+
+    defender.hasEquippedShield = false;
+    assertEquals(0, combat.calculateBlockChance(defender));
+  }
+
+  @Test
+  public void blockAnimationHonorsFasterBlockRateFrameGate() {
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        return blockChance > 0;
+      }
+    };
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.alwaysHit = true;
+    attacker.minDamage = attacker.maxDamage = 1;
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.canBlock = true;
+    defender.blockChance = 75;
+    defender.currentFrame = 100;
+    CombatSystem.CombatResult first = deterministicBlock.calculateAttack(attacker, defender);
+    assertTrue(first.blocked);
+    assertTrue(first.blockAnimationAllowed);
+    defender.currentFrame = 101;
+    CombatSystem.CombatResult second = deterministicBlock.calculateAttack(attacker, defender);
+    assertTrue(second.blocked);
+    assertTrue(!second.blockAnimationAllowed);
+  }
+
+  @Test
   public void shieldBlockAcceptsPhysicalMissilesButNotElementalOnlyMissiles() {
     CombatSystem deterministicBlock = new CombatSystem() {
       @Override

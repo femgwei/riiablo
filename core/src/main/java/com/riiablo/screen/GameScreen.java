@@ -80,6 +80,7 @@ import com.riiablo.engine.client.CorpseManager;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.DirectionResolver;
 import com.riiablo.engine.client.FootstepEmitter;
+import com.riiablo.engine.client.BlockSoundEmitter;
 import com.riiablo.engine.client.GroundItemGleamSystem;
 import com.riiablo.engine.client.WeatherRenderSystem;
 import com.riiablo.engine.client.HoveredManager;
@@ -1039,6 +1040,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new SoundEnvironmentSystem())
         .with(new FootstepEmitter())
         .with(new MonsterSoundEmitter())
+        .with(new BlockSoundEmitter())
 
         .with(new WarpSubstManager())
         ;

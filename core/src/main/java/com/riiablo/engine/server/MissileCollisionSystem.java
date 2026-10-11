@@ -31,6 +31,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AnimData;
@@ -96,6 +97,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<com.riiablo.engine.server.component.Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
@@ -1675,6 +1677,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       boolean alwaysHit = missile.damageSnapshot && missile.missile != null
           && !missile.missile.ToHit && !missile.usesAttackRating;
       boolean ignoreTargetDefenseAllowed = isIgnoreTargetDefenseAllowed(targetId);
+      if (mPlayer.has(targetId)) {
+        targetAttrs.setCombatRunning(mRunning.has(targetId));
+      }
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
@@ -2326,7 +2331,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           victimId, combat.defenseType);
       return;
     }
-    queueHitReaction(victimId, combat != null && combat.blocked);
+    queueHitReaction(victimId, combat != null && combat.blocked
+        && combat.blockAnimationAllowed);
   }
 
   /** Replicate native player/monster GH and BL reactions through CofReference. */

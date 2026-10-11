@@ -127,6 +127,13 @@ public final class Attributes implements Iterable<StatRef> {
   /** Changes only when the permanent/equipment aggregate is rebuilt from base. */
   private long aggregateRevision;
 
+  /** Runtime-only native combat context; never serialized with the stat list. */
+  private boolean combatShieldKnown;
+  private boolean combatHasShield = true;
+  private int combatBlockFactor;
+  private boolean combatRunningKnown;
+  private boolean combatRunning;
+
   Attributes() {}
 
   Attributes reset(Type type) {
@@ -135,7 +142,47 @@ public final class Attributes implements Iterable<StatRef> {
     base = null;
     agg = null;
     rem = null;
+    combatShieldKnown = false;
+    combatHasShield = true;
+    combatBlockFactor = 0;
+    combatRunningKnown = false;
+    combatRunning = false;
     return this;
+  }
+
+  /** Sets the runtime shield/class context used by the native block formula. */
+  public Attributes setCombatBlockContext(boolean hasShield, int blockFactor) {
+    combatShieldKnown = true;
+    combatHasShield = hasShield;
+    combatBlockFactor = Math.max(0, blockFactor);
+    return this;
+  }
+
+  public boolean hasCombatShieldContext() {
+    return combatShieldKnown;
+  }
+
+  public boolean combatHasShield() {
+    return combatHasShield;
+  }
+
+  public int combatBlockFactor() {
+    return combatBlockFactor;
+  }
+
+  /** Updates the transient movement mode used by block-rate calculation. */
+  public Attributes setCombatRunning(boolean running) {
+    combatRunningKnown = true;
+    combatRunning = running;
+    return this;
+  }
+
+  public boolean hasCombatRunningContext() {
+    return combatRunningKnown;
+  }
+
+  public boolean combatRunning() {
+    return combatRunning;
   }
 
   public boolean isType(Type type) {

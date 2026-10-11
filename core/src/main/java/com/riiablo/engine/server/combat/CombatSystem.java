@@ -5,6 +5,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.engine.server.AuthoritativeSimulation;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.state.StateList;
@@ -260,6 +262,18 @@ public class CombatSystem {
 
     /** 是否正在格挡（持盾） */
     public boolean canBlock;
+    /** The defender has an actual active shield equipped. */
+    public boolean hasEquippedShield = true;
+    /** CharStats.txt BlockFactor, kept separate from item ToBlock. */
+    public int blockFactor;
+    /** Native movement mode: running lowers shield block chance to one third. */
+    public boolean isRunning;
+    /** Native item_fasterblockrate and lastblockframe snapshots. */
+    public int fasterBlockRate;
+    public int lastBlockFrame;
+    public int currentFrame;
+    /** Runtime stat list used to persist native lastblockframe after BL. */
+    Attributes combatAttributes;
 
     /** Native passive-defense context. Callers may set isMoving for Evade. */
     public int attackType = DefenseCalculator.ATTACK_MELEE;
@@ -314,6 +328,9 @@ public class CombatSystem {
 
     /** 是否被格挡 */
     public boolean blocked;
+
+    /** Whether the native block reaction may enter the BL animation this frame. */
+    public boolean blockAnimationAllowed;
 
     /**
      * Native defense result retained separately from the aggregate blocked flag.
@@ -381,6 +398,7 @@ public class CombatSystem {
     public void reset() {
       hit = false;
       blocked = false;
+      blockAnimationAllowed = false;
       defenseType = DefenseCalculator.DEFENSE_NONE;
       critical = false;
       deadlyStrike = false;
@@ -1502,7 +1520,20 @@ public class CombatSystem {
     // D2MOO MissMode passes bBlock when the missile carries physical damage.
     // Shield block is therefore not melee-only; eligibility is finalized from
     // the attack packet in calculateAttack(AttackerData, DefenderData).
-    d.canBlock = d.blockChance > 0;
+    d.hasEquippedShield = !defenderPlayer || !defender.hasCombatShieldContext()
+        || defender.combatHasShield();
+    d.blockFactor = defenderPlayer && defender.hasCombatShieldContext()
+        ? defender.combatBlockFactor() : 0;
+    d.isRunning = defender.hasCombatRunningContext()
+        ? defender.combatRunning() : (defenderPlayer && defenderMoving);
+    d.fasterBlockRate = Math.max(0, statInt(defender, Stat.item_fasterblockrate, 0));
+    d.lastBlockFrame = statInt(defender, Stat.lastblockframe, 0);
+    d.combatAttributes = defender;
+    AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+    long frame = simulation != null ? simulation.tickNumber()
+        : System.nanoTime() / (SimulationClock.STEP_MILLIS * 1_000_000L);
+    d.currentFrame = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, frame));
+    d.canBlock = d.hasEquippedShield && d.blockChance > 0;
     d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
     d.isMoving = defenderMoving;
     d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
@@ -1619,6 +1650,7 @@ public class CombatSystem {
 
       if (result.blocked) {
         result.defenseType = DefenseCalculator.DEFENSE_BLOCK;
+        result.blockAnimationAllowed = canPlayBlockAnimation(defender);
         log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
         return result;
       }
@@ -1865,11 +1897,12 @@ public class CombatSystem {
    * </pre>
    */
   public int calculateBlockChance(DefenderData defender) {
-    if (!defender.canBlock) {
+    if (!defender.canBlock || (defender.isPlayer && !defender.hasEquippedShield)) {
       return 0;
     }
 
-    int blockChance = defender.blockChance;
+    int blockChance = defender.isPlayer
+        ? defender.blockFactor + defender.blockChance : defender.blockChance;
 
     // D2Common UNITS_GetBlockRate applies the expansion player formula to
     // the combined class+shield block value. Monster ToBlock is already the
@@ -1880,10 +1913,26 @@ public class CombatSystem {
           / (BLOCK_DEXTERITY_FACTOR * Math.max(1, defender.level));
     }
 
+    // D2Game/SUNITDMG_ApplyBlockOrDodge reduces a running player's final
+    // shield chance to one third.  This is applied before the 75% cap.
+    if (defender.isPlayer && defender.isRunning) blockChance /= 3;
+
     // 限制范围
     blockChance = Math.max(MIN_BLOCK_CHANCE, Math.min(MAX_BLOCK_CHANCE, blockChance));
 
     return blockChance;
+  }
+
+  /** Native lastblockframe gate: block still succeeds, but BL is throttled. */
+  private boolean canPlayBlockAnimation(DefenderData defender) {
+    int interval = Math.max(0, defender.fasterBlockRate) / 8 + 15;
+    long elapsed = (long) defender.currentFrame - defender.lastBlockFrame;
+    boolean allowed = elapsed > interval;
+    if (allowed) defender.lastBlockFrame = defender.currentFrame;
+    if (allowed && defender.combatAttributes != null) {
+      defender.combatAttributes.aggregate().put(Stat.lastblockframe, defender.currentFrame);
+    }
+    return allowed;
   }
 
   //==========================================================================

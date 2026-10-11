@@ -650,6 +650,20 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
       return;
     }
 
+    // D2Common UNITS_GetBlockRate receives the class BlockFactor separately
+    // from the shield's ToBlock stat.  Keep the equipment check in this
+    // runtime-only context so swapping either hand immediately changes block
+    // eligibility without inventing a serialized stat.
+    int blockFactor = classId != null && classId.entry() != null
+        ? Math.max(0, classId.entry().BlockFactor) : 0;
+    Item leftArm = itemData.getEquipped(BodyLoc.LARM);
+    Item rightArm = itemData.getEquipped(BodyLoc.RARM);
+    boolean hasShield = (leftArm != null && itemData.isActive(leftArm)
+        && leftArm.type != null && leftArm.type.is(com.riiablo.item.Type.SHLD))
+        || (rightArm != null && itemData.isActive(rightArm)
+        && rightArm.type != null && rightArm.type.is(com.riiablo.item.Type.SHLD));
+    statData.setCombatBlockContext(hasShield, blockFactor);
+
     // This appears to be hard-coded in the original client
     int dex = statData.get(Stat.dexterity).asInt();
     StatRef armorclass = statData.get(Stat.armorclass);

@@ -649,12 +649,22 @@ public class Actioneer extends PassiveSystem {
     return combatPositionHistory == null ? 0L : combatPositionHistory.latestTick();
   }
 
+  /** Keeps the transient combat movement mode aligned with the authoritative ECS component. */
+  private void syncCombatDefenderContext(int entityId) {
+    if (entityId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)) return;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    if (attrs != null) attrs.setCombatRunning(mRunning.has(entityId));
+  }
+
   @Subscribe
   public void onAnimDataKeyframe(AnimDataKeyframeEvent event) {
     if (!mCasting.has(event.entityId)) return;
     log.traceEntry("onAnimDataKeyframe(entityId: {}, keyframe: {} ({}))",
         event.entityId, event.keyframe, Engine.getKeyframe(event.keyframe));
     final Casting casting = mCasting.get(event.entityId);
+    if (casting.targetId != Engine.INVALID_ENTITY) {
+      syncCombatDefenderContext(casting.targetId);
+    }
     byte mode = mCofReference.has(event.entityId) ? mCofReference.get(event.entityId).mode : -1;
     int frame = mAnimData.has(event.entityId) ? mAnimData.get(event.entityId).frame : -1;
     log.info("[ATTACK_ANIM] keyframe entity={} skill={} target={} keyframe={} mode={} frame={}",
@@ -1910,6 +1920,7 @@ public class Actioneer extends PassiveSystem {
         }
 
         Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+        syncCombatDefenderContext(targetId);
         // 使用 get(stat, dst) 接口避免重用问题
         StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
         if (hitpoints == null) {
@@ -4352,7 +4363,8 @@ public class Actioneer extends PassiveSystem {
           victimId, combat.defenseType);
       return;
     }
-    queueHitReaction(victimId, combat != null && combat.blocked);
+    queueHitReaction(victimId, combat != null && combat.blocked
+        && combat.blockAnimationAllowed);
   }
 
   /**

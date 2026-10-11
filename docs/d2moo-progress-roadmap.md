@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-11 盾牌格挡、奔跑修正、FBR 与格挡音效
+
+- [x] 对照 D2MOO `UNITS_GetBlockRate` 和 `SUNITDMG_ApplyBlockOrDodge`，玩家格挡现在
+  只在主/副手实际装备有效盾牌时启用，并使用 `CharStats.BlockFactor + ToBlock` 的资料片
+  公式，最终限制为 75%；奔跑时最终格挡率按原版降为三分之一。
+- [x] 对照 `STAT_LASTBLOCKFRAME` 与 `STAT_ITEM_FASTERBLOCKRATE`，格挡判定和格挡动画
+  分离：格挡仍会完全免除该次伤害，但 BL 动作按 `FBR / 8 + 15` 的原生帧间隔节流，
+  并把最新帧写回权威属性。
+- [x] 权威 BL 模式现在由客户端播放原版 `block_weapon_1..3` 格挡音效；声音只随服务端
+  确认的格挡动作触发，不会因客户端自行重算格挡而重复播放。
+- [x] 新增战斗单测覆盖无盾、职业因子、奔跑三分之一修正和 FBR 帧门控。
+- 验证：`./gradlew.bat :core:compileJava :core:test --tests
+  com.riiablo.engine.server.combat.CombatSystemTest --no-daemon`：`BUILD SUCCESSFUL`。
+
 ## 2026-10-11 A1Q1 阿卡拉 Early Return 对话
 
 - [x] A1Q1 处于 `STARTED + LEFT_TOWN` 时，阿卡拉的“洞窟尚未清空”提示按本次游戏会话
