@@ -72,6 +72,22 @@
 - 验证：`./gradlew.bat :core:compileJava :core:test --tests
   com.riiablo.engine.server.combat.CombatSystemTest --no-daemon`：`BUILD SUCCESSFUL`。
 
+### 2026-10-11 盾牌格挡回归修正（Buckler ToBlock=0）
+
+- [x] 对照 D2MOO `UNITS_GetBlockRate` 确认玩家格挡资格由“装备盾牌”决定，不能用盾牌
+  `ToBlock > 0` 作为前置条件；Amazon 初始 Buckler 的 `ToBlock=0` 仍应使用职业
+  `BlockFactor=25` 参与资料片格挡公式。
+- [x] 修正 `CombatSystem`：装备有效盾牌即可进入格挡计算，先按原版 75% 上限，再在奔跑
+  状态应用三分之一惩罚，避免初始盾牌完全失去格挡。
+- [x] 新增真实 Amazon 初始装备回归和零 `ToBlock` 抽象回归；验证怪物攻击得到
+  `DEFENSE_BLOCK`、伤害为 0，无盾时不格挡。
+- 验证：`./gradlew.bat :core:test --tests
+  "com.riiablo.engine.server.combat.CombatSystemTest" --tests
+  "com.riiablo.engine.server.ActioneerTest" --tests
+  "com.riiablo.engine.server.Act1MonsterCombatAuditTest.matchesNativeAmazonDefenseAndMonsterHitChance" --tests
+  "com.riiablo.engine.server.Act1MonsterCombatAuditTest.realAmazonStarterShieldEntersMonsterBlockResolution" --no-daemon`：`BUILD SUCCESSFUL`。
+- 提交 `98a3eca8` 已推送到 `origin/master`；工作区其余修改属于其他任务，未纳入本次提交。
+
 ## 2026-10-11 A1Q1 阿卡拉 Early Return 对话
 
 - [x] A1Q1 处于 `STARTED + LEFT_TOWN` 时，阿卡拉的“洞窟尚未清空”提示按每名玩家只显示一次，
