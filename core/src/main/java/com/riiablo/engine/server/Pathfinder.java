@@ -417,11 +417,12 @@ public class Pathfinder extends IteratingSystem {
     int flags = DT1.Tile.FLAG_BLOCK_WALK;
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
-    // The first query follows the native two-stage model: static terrain is
-    // used for the initial route, while dynamic units are handled by the
-    // movement collision step and only added during a stalled repath.
+    // D2Common's dynamic path carries nMoveTestCollisionMask into A*.
+    // Dynamic footprints are therefore part of the initial search as well as
+    // any later recovery search; DynamicUnitCollisionSystem applies the
+    // native MONSTER_PATH/PET filtering for the footprint layer.
     boolean success = findPath(src, position, target, flags, size, path,
-        targetEntityId, false);
+        targetEntityId, true);
     if (success) {
       // Store target entity ID in Pathfind component for dynamic repathing
       if (mPathfind.has(src)) {
@@ -442,7 +443,7 @@ public class Pathfinder extends IteratingSystem {
       success = map.castRay(ray, flags, size, collision);
       if (success) {
         success = findPath(src, position, collision.point, flags, size, path,
-            targetEntityId, false);
+            targetEntityId, true);
         if (!success || path.getCount() <= 1) {
           // The ray ended at the blocking boundary and there is no usable
           // path to its last clear point. Moving directly toward the original

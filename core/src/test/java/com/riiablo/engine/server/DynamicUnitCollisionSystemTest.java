@@ -22,4 +22,13 @@ class DynamicUnitCollisionSystemTest {
 
     assertTrue(DynamicUnitCollisionSystem.isDynamicObstacle(monster));
   }
+
+  @Test
+  void nativeMonsterPathOnlyTreatsReviveOrSmallUnitsAsPetPresence() {
+    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, true, false, false));
+    assertTrue(DynamicUnitCollisionSystem.isPetPresence(true, false, true, false));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, false, false, false));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(true, true, true, true));
+    assertFalse(DynamicUnitCollisionSystem.isPetPresence(false, true, true, false));
+  }
 }

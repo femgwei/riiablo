@@ -39,4 +39,15 @@ class UnitCollisionGridTest {
     assertTrue(grid.isFree(2, -1, 10, 11, 1));
     assertTrue(grid.move(2, -1, 10, 11, 1));
   }
+
+  @Test
+  void sizeTwoFootprintUsesNativeCrossInsteadOfFilledSquare() {
+    UnitCollisionGrid grid = new UnitCollisionGrid();
+    grid.put(1, 10, 10, 2);
+
+    assertFalse(grid.isFree(2, -1, 10, 10, 1));
+    assertFalse(grid.isFree(2, -1, 11, 10, 1));
+    assertFalse(grid.isFree(2, -1, 10, 11, 1));
+    assertTrue(grid.isFree(2, -1, 11, 11, 1));
+  }
 }

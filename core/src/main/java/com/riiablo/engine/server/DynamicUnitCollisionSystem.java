@@ -198,20 +198,32 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   /**
-   * D2's player path mask contains no monster/pet bit.  Keep ordinary unit
-   * collision intact for the rest of this legacy grid, but do not let the
-   * owner's own hireling/Valkyrie block player path planning or authoritative
-   * steps. Monster movers still see the companion, matching COLLIDE_PET.
+   * Applies the unit-type portion of D2's path masks to the authoritative
+   * footprint grid. Player paths contain neither MONSTER nor PET; monster
+   * paths contain PET but not ordinary MONSTER footprints.
    */
   private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
-    if (isPlayer(moverId)) {
-      return entityId -> ownedCompanionOwner(entityId) != moverId;
-    }
+    // D2Common's COLLIDE_MASK_MONSTER_PATH contains COLLIDE_PET, but not
+    // COLLIDE_MONSTER or COLLIDE_PLAYER.  Ordinary monsters can therefore
+    // share a route, while revive/small pet-presence units (Fallen included)
+    // remain spacing obstacles for monster movement and A*.
+    if (!mMonster.has(moverId)) return entityId -> false;
     int ownerId = ownedCompanionOwner(moverId);
-    if (ownerId != Engine.INVALID_ENTITY) {
-      return entityId -> entityId != ownerId;
-    }
-    return null;
+    return entityId -> entityId != ownerId && isPetPresence(entityId);
+  }
+
+  /** Mirrors D2Common_11281_CollisionPatternFromSize for monster units. */
+  static boolean isPetPresence(boolean monster, boolean revive,
+      boolean small, boolean isAtt) {
+    return monster && (revive || small) && !isAtt;
+  }
+
+  private boolean isPetPresence(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats2 == null) return false;
+    return isPetPresence(true, monster.monstats2.revive,
+        monster.monstats2.small, monster.monstats2.isAtt);
   }
 
   private int ownedCompanionOwner(int entityId) {

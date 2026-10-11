@@ -113,6 +113,12 @@ public final class UnitCollisionGrid {
 
   private static boolean contains(Footprint footprint, int x, int y) {
     int radius = Math.max(0, footprint.size - 1);
+    // D2's size-2 collision patterns are a center cell plus its four
+    // cardinal neighbours, not a filled 3x3 square.  Keeping that shape is
+    // important in one-subtile corridors where a diagonal detour is legal.
+    if (radius == 1) {
+      return Math.abs(x - footprint.x) + Math.abs(y - footprint.y) <= 1;
+    }
     return x >= footprint.x - radius && x <= footprint.x + radius
         && y >= footprint.y - radius && y <= footprint.y + radius;
   }
@@ -138,6 +144,14 @@ public final class UnitCollisionGrid {
 
   private static void forEachCell(Footprint footprint, CellConsumer consumer) {
     int radius = Math.max(0, footprint.size - 1);
+    if (radius == 1) {
+      consumer.accept(footprint.x, footprint.y);
+      consumer.accept(footprint.x - 1, footprint.y);
+      consumer.accept(footprint.x + 1, footprint.y);
+      consumer.accept(footprint.x, footprint.y - 1);
+      consumer.accept(footprint.x, footprint.y + 1);
+      return;
+    }
     for (int y = footprint.y - radius; y <= footprint.y + radius; y++) {
       for (int x = footprint.x - radius; x <= footprint.x + radius; x++) {
         consumer.accept(x, y);
