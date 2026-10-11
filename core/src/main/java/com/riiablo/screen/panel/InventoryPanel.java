@@ -445,6 +445,12 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public boolean onUse(Item item) {
+    // Right-click starts a normal item action. Cancel any vendor mode first
+    // so repair/sell/buy cannot consume or block that action.
+    if (Riiablo.game != null && Riiablo.game.vendorPanel != null
+        && Riiablo.game.vendorPanel.isVisible()) {
+      Riiablo.game.vendorPanel.cancelTradeMode();
+    }
     // Selling is intentionally not handled here. Native D2 sells by dragging
     // an item from the inventory onto the vendor area; right-click remains the
     // use action for consumables and does nothing for equipment.

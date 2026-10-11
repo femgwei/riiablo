@@ -328,6 +328,10 @@ public class CursorMovementSystem extends BaseSystem {
     PointerClickQueue.Click click = pendingRightClicks.poll();
     if (click == null) return false;
 
+    // Right-click starts a new action even when it lands on the world. Clear
+    // any vendor cursor mode before the UI/world handler processes that action.
+    if (Riiablo.game != null) Riiablo.game.cancelVendorTradeMode();
+
     stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
     if (Riiablo.game != null && Riiablo.game.mercenaryHud != null
         && Riiablo.game.mercenaryHud.isVisible()

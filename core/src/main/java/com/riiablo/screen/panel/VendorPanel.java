@@ -522,14 +522,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       hidePurchasePrompt();
       networkFlags = 0;
       clearPendingRequest();
-      boolean hadTradeMode = selling || repairing
-          || buttonGroup != null && buttonGroup.getCheckedIndex() >= 0;
-      selling = false;
-      repairing = false;
-      if (buttonGroup != null) buttonGroup.uncheckAll();
-      if (hadTradeMode && Riiablo.cursor != null && Riiablo.cursor.getItem() == null) {
-        Riiablo.cursor.resetCursor();
-      }
+      cancelTradeMode();
     }
   }
 
@@ -742,6 +735,18 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return isVisible() && (repairing || btnRepair.isChecked());
   }
 
+  /** Clears the active Buy/Sell/Repair cursor mode without closing the vendor. */
+  public void cancelTradeMode() {
+    boolean hadTradeMode = selling || repairing
+        || buttonGroup != null && buttonGroup.getCheckedIndex() >= 0;
+    selling = false;
+    repairing = false;
+    if (buttonGroup != null) buttonGroup.uncheckAll();
+    if (hadTradeMode && Riiablo.cursor != null && Riiablo.cursor.getItem() == null) {
+      Riiablo.cursor.resetCursor();
+    }
+  }
+
   /** The trade window accepts native right-click selling without selecting Sell first. */
   public boolean canSellItems() {
     return isVisible() && (configuredFlags & SELL) != 0;
@@ -922,6 +927,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       showPurchasePrompt(item);
       return false;
     }
+    // A right-click is a new action. Leave Buy/Sell/Repair mode before
+    // allowing the normal direct-purchase path to run.
+    cancelTradeMode();
     return purchaseNow(item, true);
   }
 

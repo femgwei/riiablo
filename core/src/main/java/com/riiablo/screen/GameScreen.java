@@ -1801,6 +1801,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     setRightPanel(null);
   }
 
+  /** Cancels a vendor Buy/Sell/Repair mode while preserving the open panels. */
+  public void cancelVendorTradeMode() {
+    if (vendorPanel != null && vendorPanel.isVisible()) vendorPanel.cancelTradeMode();
+  }
+
   /** Opens the network trade window after an invitation or accepted request. */
   public void openTradePanel() {
     setLeftPanel(tradePanel);
