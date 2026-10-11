@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
@@ -50,6 +51,8 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected ComponentMapper<Flags> mFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<Warp> mWarp;
   /**
    * Each connection needs its own last-sent state. A baseline sent to a newly
    * connected client must never suppress an incremental update still pending
@@ -214,6 +217,20 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       }
       return mask;
     }
+    // Town portal endpoints are persistent cross-room objects.  The town-side
+    // endpoint is commonly placed at the gate while the player enters through
+    // a different RoomEx, so normal room-ring visibility can suppress it before
+    // the client ever receives the visual/warp pair.  Keep portal entities
+    // scoped to their level, but allow every player in that level to receive
+    // them; ordinary monsters, objects and items retain room visibility.
+    if (isTownPortalEntity(entityId)) {
+      int mask = 0;
+      for (IntIntMap.Entry entry : players.entries()) {
+        MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
+        if (sameLevel(source, target)) mask |= 1 << entry.key;
+      }
+      return mask;
+    }
     int mask = 0;
     if (!mPosition.has(entityId)) return 0xFFFFFFFF;
     for (IntIntMap.Entry entry : players.entries()) {
@@ -227,6 +244,20 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       }
     }
     return mask;
+  }
+
+  private boolean isTownPortalEntity(int entityId) {
+    if (mObject != null && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      if (object != null && object.base != null
+          && (object.base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+              || object.base.Id == 60)) return true;
+    }
+    if (mWarp != null && mWarp.has(entityId)) {
+      Warp warp = mWarp.get(entityId);
+      return warp != null && warp.linkedTownPortal != Engine.INVALID_ENTITY;
+    }
+    return false;
   }
 
   /** Sends one complete authoritative baseline to a newly connected client. */
