@@ -157,11 +157,23 @@ public class CofLayerLoader extends IteratingSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
+    // Town portals have no neutral visual in the shipped MPQ.  Their
+    // authoritative ObjectP mode can transiently lag the ON CofReference
+    // while a portal endpoint is restored, so keep both resolution and layer
+    // loading on the real open portal asset.
+    boolean townPortal = false;
+    if (logicalType == Class.Type.OBJ && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      townPortal = object != null && object.base != null
+          && (object.base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+              || object.base.Id == 60);
+      if (townPortal) mode = Engine.Object.MODE_ON;
+    }
     // Object.mode is the persistent authoritative state mirrored in ObjectP.
     // CofReference can briefly retain OP/ON from a previous transition while
     // a room snapshot restores NU; use the persistent state for idle visuals,
     // but never replace an active OP transition.
-    if (logicalType == Class.Type.OBJ && mode != Engine.Object.MODE_OP
+    if (!townPortal && logicalType == Class.Type.OBJ && mode != Engine.Object.MODE_OP
         && mObject.has(entityId)) {
       com.riiablo.engine.server.component.Object object = mObject.get(entityId);
       if (object != null && object.mode >= Engine.Object.MODE_NU

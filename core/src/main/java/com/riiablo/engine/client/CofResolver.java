@@ -48,6 +48,18 @@ public class CofResolver extends PassiveSystem {
     Class.Type type = reference.effectiveType(logicalType);
     String token = reference.effectiveToken();
     byte mode = reference.effectiveMode(logicalType);
+    // Town portals are spawned already open and the 1.10 asset set does not
+    // contain a TPTRLITNUhth layer.  A late ObjectP snapshot may briefly carry
+    // NU while the linked warp/visual pair is being restored; never resolve
+    // that transient gameplay state into the nonexistent neutral portal COF.
+    if (logicalType == Class.Type.OBJ && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      if (object != null && object.base != null
+          && (object.base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+              || object.base.Id == 60)) {
+        mode = Engine.Object.MODE_ON;
+      }
+    }
     // Native objects have two replicated mode fields: Object.mode is the
     // persistent gameplay state, while CofReference.mode can briefly retain
     // OP/ON while a room/object snapshot is being applied.  Resolve the COF
