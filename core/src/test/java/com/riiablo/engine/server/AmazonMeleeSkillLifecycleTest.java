@@ -38,6 +38,14 @@ import org.junit.jupiter.api.Test;
 /** Native SrvSt/SrvDo lifecycle checks for Amazon melee behavior families. */
 class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
   @Test
+  void nativeJabRowDoesNotAllowBlockToInterruptItsSequence() {
+    Skills.Entry jab = Riiablo.files.skills.get("Jab");
+    assertNotNull(jab);
+    assertFalse(jab.interrupt);
+    assertFalse(Actioneer.blockReactionMayInterrupt(jab));
+  }
+
+  @Test
   void jabConsumesExactlyThreeAttackKeyframesAndStopsAfterTheThird() {
     World world = world();
     try {

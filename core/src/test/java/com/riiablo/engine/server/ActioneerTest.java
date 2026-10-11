@@ -41,6 +41,20 @@ class ActioneerTest {
   }
 
   @Test
+  void shieldBlockHonorsSkillsInterruptFlag() {
+    Skills.Entry jab = new Skills.Entry();
+    jab.skill = "Jab";
+    jab.interrupt = false;
+    assertFalse(Actioneer.blockReactionMayInterrupt(jab),
+        "Jab-style skills must keep their active sequence when a block is rolled");
+
+    Skills.Entry interruptible = new Skills.Entry();
+    interruptible.interrupt = true;
+    assertTrue(Actioneer.blockReactionMayInterrupt(interruptible),
+        "interruptible skills may transition to the block reaction");
+  }
+
+  @Test
   void activeMeleeCastUsesItsFrozenPositionTick() {
     CombatPositionHistory history = new CombatPositionHistory();
     World world = new World(new WorldConfigurationBuilder().build());

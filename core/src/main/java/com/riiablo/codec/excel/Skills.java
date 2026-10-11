@@ -111,6 +111,12 @@ public class Skills extends Excel<Skills.Entry> {
     public String  itypea[];
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
+    /**
+     * Native Skills.txt flag checked before a unit is forced into the block
+     * reaction.  A zero value means that a shield block absorbs the damage but
+     * must not interrupt the current attack/skill animation.
+     */
+    @Column public boolean interrupt;
     /** Native progressive release callbacks and per-stage formulas. */
     @Column public boolean prgstack;
     @Column public int     prgdam;

@@ -4347,6 +4347,13 @@ public class Actioneer extends PassiveSystem {
     return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
   }
 
+  /** Returns whether the native BL transition may interrupt the active skill. */
+  static boolean blockReactionMayInterrupt(Skills.Entry skill) {
+    // Unknown rows are kept interruptible as a compatibility fallback for
+    // synthetic/headless entities; every loaded vanilla row has the flag.
+    return skill == null || skill.interrupt;
+  }
+
   /**
    * Queues a normal GH/BL reaction for damage results that need one.
    *
@@ -4390,6 +4397,20 @@ public class Actioneer extends PassiveSystem {
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
     if (blocked) {
+      // D2MOO's PLRMODES_First refuses the BL transition when the active
+      // Skills.txt row has interrupt=0.  The shield roll has already
+      // succeeded, so damage remains blocked; only the reaction presentation
+      // is suppressed and the current skill/sequence continues.
+      if (mCasting.has(victimId)) {
+        Casting casting = mCasting.get(victimId);
+        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+            ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (!blockReactionMayInterrupt(skill)) {
+          log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={}",
+              victimId, skill.skill, casting.skillId);
+          return;
+        }
+      }
       boolean interruptedCasting = mCasting.has(victimId);
       boolean interruptedSequence = mSequence.has(victimId);
       if (interruptedCasting) mCasting.remove(victimId);
