@@ -6076,6 +6076,9 @@ public class Actioneer extends PassiveSystem {
       // SkillDoEvent. MissA1/MissA2 belong only to the native basic attack.
       return false;
     }
+    if (mCasting.has(entityId) && mCasting.get(entityId).monsterMissileCreated) {
+      return true;
+    }
 
     Monster monster = mMonster.get(entityId);
     if (monster.monstats == null) return false;
@@ -6110,6 +6113,7 @@ public class Actioneer extends PassiveSystem {
       MissileDamageResolver.applySourceAttackProfile(projectile,
           monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit);
     }
+    if (mCasting.has(entityId)) mCasting.get(entityId).monsterMissileCreated = true;
     log.info("[MONSTER_MISSILE] created entity={} target={} mode={} missileId={} missile={} "
             + "speed={} range={} damage={}..{} ar={} start=({}, {}) direction=({}, {})",
         entityId, targetId, attack2 ? "A2" : "A1", missileId, missile.Missile,

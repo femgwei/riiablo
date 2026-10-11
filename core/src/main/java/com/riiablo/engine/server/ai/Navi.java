@@ -38,11 +38,46 @@ public final class Navi extends Npc {
 
     Vector2 target = mPosition.get(targetId).position;
     lookAt(targetId);
+    com.riiablo.engine.server.component.Casting casting = mCasting.create(entityId)
+        .set(SkillCodes.attack, targetId, target);
+    // Flavie's native row is a ranged basic attack. Some converted Navi COFs
+    // expose the A1 animation without an ATK/MIS callback, so create the
+    // authoritative arrow at cast start as a safe fallback. Actioneer marks
+    // the cast and will not emit a duplicate if a later keyframe is present.
+    if (createNativeArrow(targetId, target)) casting.monsterMissileCreated = true;
     mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-    mCasting.create(entityId).set(SkillCodes.attack, targetId, target);
     com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
     log.info("[NAVI_COMBAT] entity={} target={} distance={} range={} action=attack",
         entityId, targetId, distance[0], attackRange);
+  }
+
+  private boolean createNativeArrow(int targetId, Vector2 target) {
+    if (factory == null || monster == null || monster.monstats == null
+        || Riiablo.files == null || Riiablo.files.Missiles == null
+        || !mPosition.has(entityId)) return false;
+    String missileName = monster.monstats.MissA1;
+    if (missileName == null || missileName.isEmpty()) missileName = monster.monstats.MissA2;
+    if (missileName == null || missileName.isEmpty()) {
+      log.warn("[NAVI_MISSILE] entity={} reason=missing_monstats_missile", entityId);
+      return false;
+    }
+    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missile == null) {
+      log.warn("[NAVI_MISSILE] entity={} missile={} reason=lookup_failed", entityId, missileName);
+      return false;
+    }
+    Vector2 origin = mPosition.get(entityId).position;
+    Vector2 direction = new Vector2(target).sub(origin);
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    direction.nor();
+    int missileId = factory.createMissile(missile, direction, origin, entityId);
+    if (missileId == Engine.INVALID_ENTITY) {
+      log.warn("[NAVI_MISSILE] entity={} missile={} reason=create_failed", entityId, missileName);
+      return false;
+    }
+    log.info("[NAVI_MISSILE] entity={} target={} missileId={} missile={} direction=({}, {})",
+        entityId, targetId, missileId, missile.Missile, direction.x, direction.y);
+    return true;
   }
 
   private float nativeAttackRange() {

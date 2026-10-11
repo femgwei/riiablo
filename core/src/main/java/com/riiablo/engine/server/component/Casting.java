@@ -75,6 +75,8 @@ public class Casting extends PooledComponent {
   public int strafeRemainingArrows;
   public int strafeArrowIndex;
   public final IntArray strafeTargetIds = new IntArray(false, 24);
+  /** Prevents a native monster basic projectile from being emitted twice. */
+  public boolean monsterMissileCreated;
   /** Native Paladin Zeal SrvSt37/SrvDo013 sequence state. */
   public boolean zealInitialized;
   public boolean zealStrikeProcessed;
@@ -168,6 +170,7 @@ public class Casting extends PooledComponent {
     strafeRemainingArrows = 0;
     strafeArrowIndex = 0;
     strafeTargetIds.clear();
+    monsterMissileCreated = false;
     zealInitialized = false;
     zealStrikeProcessed = false;
     zealRemainingStrikes = 0;
