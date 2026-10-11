@@ -39,4 +39,20 @@ class DynamicUnitCollisionSystemTest {
     assertTrue(DynamicUnitCollisionSystem.blocksNativePath(false, false));
     assertFalse(DynamicUnitCollisionSystem.blocksNativePath(false, true));
   }
+
+  @Test
+  void nativeFlyingPathIgnoresPetPresenceButStillSeesNoPath() {
+    assertFalse(DynamicUnitCollisionSystem.blocksNativePath(
+        DynamicUnitCollisionSystem.NativePathProfile.FLYING, true));
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(
+        DynamicUnitCollisionSystem.NativePathProfile.FLYING, false));
+  }
+
+  @Test
+  void nativeDoorOpeningMonsterUsesOrdinaryDynamicUnitMask() {
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(
+        DynamicUnitCollisionSystem.NativePathProfile.MONSTER_CAN_OPEN_DOORS, true));
+    assertTrue(DynamicUnitCollisionSystem.blocksNativePath(
+        DynamicUnitCollisionSystem.NativePathProfile.MONSTER_CAN_OPEN_DOORS, false));
+  }
 }

@@ -214,16 +214,45 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     // COLLIDE_MONSTER or COLLIDE_PLAYER.  Normal presence patterns still put
     // COLLIDE_NO_PATH at their center, so they remain blockers; pet-presence
     // patterns replace that center marker with COLLIDE_PET.
-    boolean monsterMover = mMonster.has(moverId);
+    NativePathProfile profile = nativePathProfile(moverId);
     int ownerId = ownedCompanionOwner(moverId);
     return entityId -> entityId != ownerId
-        && blocksNativePath(monsterMover, isPetPresence(entityId));
+        && blocksNativePath(profile, isPetPresence(entityId));
+  }
+
+  /** The dynamic part of D2Common's nMoveTestCollisionMask. */
+  enum NativePathProfile {
+    PLAYER,
+    MONSTER,
+    MONSTER_CAN_OPEN_DOORS,
+    FLYING
+  }
+
+  private NativePathProfile nativePathProfile(int moverId) {
+    if (!mMonster.has(moverId)) return NativePathProfile.PLAYER;
+    Monster monster = mMonster.get(moverId);
+    MonStats.Entry stats = monster == null ? null : monster.monstats;
+    if (stats != null && stats.flying) return NativePathProfile.FLYING;
+    if (stats != null && stats.opendoors) {
+      return NativePathProfile.MONSTER_CAN_OPEN_DOORS;
+    }
+    return NativePathProfile.MONSTER;
+  }
+
+  static boolean blocksNativePath(NativePathProfile profile, boolean petPresence) {
+    // COLLIDE_MASK_FLYING_UNIT contains NO_PATH but deliberately omits PET.
+    // Ordinary and door-opening monster masks contain both NO_PATH and PET;
+    // PLAYER_PATH contains NO_PATH and also omits PET.
+    if (profile == NativePathProfile.MONSTER
+        || profile == NativePathProfile.MONSTER_CAN_OPEN_DOORS) return true;
+    return !petPresence;
   }
 
   static boolean blocksNativePath(boolean monsterMover, boolean petPresence) {
     // MONSTER_PATH tests both NO_PATH and PET. PLAYER_PATH tests NO_PATH but
     // deliberately omits PET, allowing player-owned/town-compatible pets.
-    return monsterMover || !petPresence;
+    return blocksNativePath(monsterMover
+        ? NativePathProfile.MONSTER : NativePathProfile.PLAYER, petPresence);
   }
 
   /** Mirrors D2Common_11281_CollisionPatternFromSize for monster units. */
