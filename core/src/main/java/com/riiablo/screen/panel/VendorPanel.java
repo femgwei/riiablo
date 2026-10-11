@@ -303,7 +303,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        setVisible(false);
+        if (Riiablo.game != null) Riiablo.game.closeVendorTradePanels();
+        else setVisible(false);
       }
     });
     btnExit.setVisible(false);
@@ -521,7 +522,12 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       hidePurchasePrompt();
       networkFlags = 0;
       clearPendingRequest();
-      if (buttonGroup != null && buttonGroup.getCheckedIndex() >= 0) {
+      boolean hadTradeMode = selling || repairing
+          || buttonGroup != null && buttonGroup.getCheckedIndex() >= 0;
+      selling = false;
+      repairing = false;
+      if (buttonGroup != null) buttonGroup.uncheckAll();
+      if (hadTradeMode && Riiablo.cursor != null && Riiablo.cursor.getItem() == null) {
         Riiablo.cursor.resetCursor();
       }
     }

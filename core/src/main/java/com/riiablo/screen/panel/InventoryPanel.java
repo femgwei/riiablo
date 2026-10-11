@@ -117,7 +117,14 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        setVisible(false);
+        if (Riiablo.game != null && Riiablo.game.vendorPanel != null
+            && Riiablo.game.vendorPanel.isVisible()) {
+          Riiablo.game.closeVendorTradePanels();
+        } else if (Riiablo.game != null) {
+          Riiablo.game.setRightPanel(null);
+        } else {
+          setVisible(false);
+        }
       }
     });
     addActor(btnExit);

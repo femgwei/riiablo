@@ -1795,6 +1795,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     return true;
   }
 
+  /** Closes both halves of the vendor interaction and clears its active mode. */
+  public void closeVendorTradePanels() {
+    setLeftPanel(null);
+    setRightPanel(null);
+  }
+
   /** Opens the network trade window after an invitation or accepted request. */
   public void openTradePanel() {
     setLeftPanel(tradePanel);
