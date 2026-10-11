@@ -1,5 +1,24 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-11 D2MOO 动态单位寻路 mask 与 Fallen AI 核实
+
+- [x] 对照 D2MOO `D2Common/src/Path/Path.cpp`、`AStar.cpp`、`IDAStar.cpp` 和
+  `Step.cpp`，确认动态单位 footprint 会写入运行时碰撞网格，A* 与实际步进都会读取碰撞
+  网格；因此“全局寻路永远只看静态 DT1、完全不读取动态单位”的说法不成立。
+- [x] 确认普通怪物初始化的 `COLLIDE_MASK_MONSTER_PATH` 包含 `COLLIDE_PET`，不包含
+  `COLLIDE_MONSTER`。riiablo 的怪物路径查询现在过滤普通怪物 footprint，仅保留
+  mercenary、非被动召唤物、复活单位和 D2MOO `CanBeInTown && !interact` 对应的 pet 类
+  footprint；实际移动步进仍使用现有动态碰撞解析。
+- [x] 对照 D2MOO `AITHINK_Fn006_Fallen`，确认 Fallen 只有尸体触发逃跑、通用追击和
+  领队命令逻辑，没有可据此实现的 Fallen 专属局部 A*、临时动态障碍网格或同伴排斥分支。
+  The Phrozen Keep 的 Fallen 主题资料也只支持逃跑/复活/命令行为，未提供该局部寻路实现
+  的可复核证据；因此没有给 `Fallen.java` 增加未经证实的特殊算法。
+- [x] 定向验证：`./gradlew.bat :core:test --tests
+  com.riiablo.engine.server.DynamicUnitCollisionSystemTest --tests
+  com.riiablo.engine.server.UnitCollisionGridTest --no-daemon`，`BUILD SUCCESSFUL`。
+- [ ] 仍待另一台电脑从远程分支拉取后，在实际 Fallen pack 场景观察普通怪物堆叠、pet
+  阻挡和尸体逃跑行为；这属于运行时表现验证，不作为 Fallen 专属局部重寻路已证实的依据。
+
 ## 2026-10-11 Fallen 装备火把的局部光源
 
 - [x] 对照 D2MOO `MONSTERS_GetMaximalLightRadius`，确认怪物光照来自组件装备的

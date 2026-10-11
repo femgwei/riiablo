@@ -143,7 +143,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   public boolean isFreeForPath(int moverId, int targetId,
       int x, int y, int size) {
     return !enabled || grid.isFree(moverId, targetId, x, y, size,
-        blockerFor(moverId));
+        pathBlockerFor(moverId));
   }
 
   /** Transfers a unit to a destination without pushing another unit. */
@@ -212,6 +212,40 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       return entityId -> entityId != ownerId;
     }
     return null;
+  }
+
+  /**
+   * Mirrors the native monster path mask.  D2MOO initializes ordinary monster
+   * paths with COLLIDE_MASK_MONSTER_PATH, which contains COLLIDE_PET but not
+   * COLLIDE_MONSTER.  The dynamic grid still records every living unit; only
+   * the path query filters ordinary monster footprints out.  Authoritative
+   * movement continues to use {@link #blockerFor(int)} so a blocked step is
+   * resolved separately from A* path construction.
+   */
+  private UnitCollisionGrid.UnitBlocker pathBlockerFor(int moverId) {
+    if (!mMonster.has(moverId)) return blockerFor(moverId);
+    return this::isPetCollisionEntity;
+  }
+
+  private boolean isPetCollisionEntity(int entityId) {
+    if (mMercenary != null && mMercenary.has(entityId)) return true;
+    if (mSummonedPet != null && mSummonedPet.has(entityId)) {
+      SummonedPet pet = mSummonedPet.get(entityId);
+      return pet != null && !pet.passive && !pet.boneWall;
+    }
+    return mMonster.has(entityId)
+        && isPetCollisionMonster(mMonster.get(entityId));
+  }
+
+  /** D2Common's pet footprint condition for a monster-backed unit. */
+  static boolean isPetCollisionMonster(Monster monster) {
+    if (monster == null) return false;
+    // MONSTERS_CanBeInTown also treats a revived monster as a pet.  The
+    // runtime projection records that native unit flag in these fields.
+    if (monster.resurrected || monster.playerRevive) return true;
+    MonStats.Entry stats = monster.monstats;
+    return stats != null && (stats.npc || stats.inTown)
+        && (monster.monstats2 == null || !monster.monstats2.isAtt);
   }
 
   private int ownedCompanionOwner(int entityId) {
