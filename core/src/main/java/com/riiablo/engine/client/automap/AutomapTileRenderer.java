@@ -404,11 +404,17 @@ public class AutomapTileRenderer implements Disposable {
       case com.riiablo.map.Orientation.RIGHT_WALL: return "wr";
       case com.riiablo.map.Orientation.RIGHT_NORTH_CORNER_WALL: return "wtlr";
       case com.riiablo.map.Orientation.LEFT_NORTH_CORNER_WALL: return "wtll";
-      case com.riiablo.map.Orientation.LEFT_END_WALL: return "wle";
-      case com.riiablo.map.Orientation.RIGHT_END_WALL: return "wre";
+      // DT1 orientations 5/6 are the top-right and bottom-left corner
+      // pieces.  The exit-wall cells are orientations 10/11; keeping these
+      // numeric identities aligned with D2CMP is important because the
+      // AutoMap.txt lookup is keyed by the tile name.
+      case com.riiablo.map.Orientation.LEFT_END_WALL: return "wtr";
+      case com.riiablo.map.Orientation.RIGHT_END_WALL: return "wbl";
       case com.riiablo.map.Orientation.SOUTH_CORNER_WALL: return "wbr";
       case com.riiablo.map.Orientation.LEFT_WALL_DOOR: return "wld";
       case com.riiablo.map.Orientation.RIGHT_WALL_DOOR: return "wrd";
+      case com.riiablo.map.Orientation.SPECIAL_10: return "wle";
+      case com.riiablo.map.Orientation.SPECIAL_11: return "wre";
       case com.riiablo.map.Orientation.PILLAR: return "co";
       case com.riiablo.map.Orientation.SHADOW: return "sh";
       case com.riiablo.map.Orientation.TREE: return "tr";

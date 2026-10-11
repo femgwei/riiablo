@@ -65,7 +65,11 @@ class AutomapTileRendererTest {
   @Test void orientationNamesMatchD2MooVocabulary() {
     assertEquals("fl", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.FLOOR));
     assertEquals("wtlr", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.RIGHT_NORTH_CORNER_WALL));
+    assertEquals("wtr", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.LEFT_END_WALL));
+    assertEquals("wbl", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.RIGHT_END_WALL));
     assertEquals("wld", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.LEFT_WALL_DOOR));
+    assertEquals("wle", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.SPECIAL_10));
+    assertEquals("wre", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.SPECIAL_11));
     assertEquals("rf", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.ROOF));
   }
 
