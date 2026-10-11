@@ -1008,15 +1008,16 @@ public class RenderSystem extends BaseEntitySystem {
       return;
     }
     Map.Zone zone = mapping != null ? mapping.zone : map.getZone(position.position);
-    // Monster AI and combat may continue while RoomEntityTrackingSystem is
-    // catching up with a room transition.  Using the replicated roomId in
-    // that window can remove the monster from the render cache even though
-    // its current position is inside the camera's interested RoomEx.  For
-    // monsters, resolve visibility from the current position; objects and
-    // other units retain their room-id based behavior.
+    // RoomEx interest is a useful streaming hint for map objects, but it must
+    // not be a hard visibility gate for live monsters.  AI/combat can cross a
+    // RoomEx boundary before the native near-room list and camera interest
+    // agree; removing the monster here makes it attack audibly while its
+    // sprite is absent.  The tile-based cache built below still limits actual
+    // drawing to the camera footprint, so retaining the monster in the index
+    // does not draw off-screen units.
     boolean interested;
     if (mMonster.has(entityId)) {
-      interested = renderInterest.contains(zone, position.position.x, position.position.y);
+      interested = true;
     } else {
       interested = mapping != null && mapping.roomId >= 0
           ? renderInterest.contains(zone, mapping.roomId)
