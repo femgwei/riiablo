@@ -147,6 +147,49 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void monsterAttackUsesShieldContextAcrossMovementAndHolyShieldStates() {
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        return blockChance > 0;
+      }
+    };
+    Attributes monster = attrs(100, 10, 0, 20, 20, 1000);
+    Attributes player = attrs(100, 10, 0, 1, 1, 1);
+    player.base().put(Stat.dexterity, 35);
+    player.base().put(Stat.toblock, 50);
+    player.reset();
+    player.setCombatBlockContext(true, 20);
+
+    StateList holyShield = new StateList(2);
+    holyShield.addState(StateId.HOLYSHIELD, 0)
+        .setNativeModifier(Stat.toblock, 14);
+
+    player.setCombatRunning(false);
+    CombatSystem.CombatResult stationary = deterministicBlock.calculateAttack(
+        monster, player, false, true, false, 20, 20, 1000, true,
+        null, null, 0, 0, null, holyShield);
+    assertTrue(stationary.hit);
+    assertTrue(stationary.blocked, "a stationary shielded player must block a physical monster hit");
+    assertEquals(DefenseCalculator.DEFENSE_BLOCK, stationary.defenseType);
+    assertEquals(0, stationary.totalDamage);
+
+    player.setCombatRunning(true);
+    CombatSystem.CombatResult running = deterministicBlock.calculateAttack(
+        monster, player, false, true, false, 20, 20, 1000, true,
+        null, null, 0, 0, null, holyShield);
+    assertTrue(running.blocked, "running still permits shield block, with the native one-third penalty");
+    assertEquals(0, running.totalDamage);
+
+    player.setCombatBlockContext(false, 20);
+    CombatSystem.CombatResult noShield = deterministicBlock.calculateAttack(
+        monster, player, false, true, false, 20, 20, 1000, true,
+        null, null, 0, 0, null, holyShield);
+    assertTrue(!noShield.blocked, "the same player without an equipped shield must not shield-block");
+    assertTrue(noShield.totalDamage > 0);
+  }
+
+  @Test
   public void amazonPassiveDefenseKeepsTypeAndNoDamage() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.alwaysHit = true;

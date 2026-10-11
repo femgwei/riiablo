@@ -4364,7 +4364,7 @@ public class Actioneer extends PassiveSystem {
    * transition, but matches riiablo's current no-special-animation policy and
    * avoids the original sequence interruption bug.</p>
    */
-  private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
+  void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
     if (combat != null && combat.isAmazonPassiveDefense()) {
       log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={}",
           victimId, combat.defenseType);
