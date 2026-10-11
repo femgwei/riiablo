@@ -5,6 +5,7 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.CofDescriptor;
 import com.riiablo.engine.client.component.CofWrapper;
@@ -29,6 +30,24 @@ public class CofResolver extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+
+  protected void inserted(int entityId) {
+    // Block reactions are short-lived.  Queue the player's BL COF when the
+    // entity is created so the first authoritative block does not spend its
+    // entire presentation window waiting for the asynchronous COF load.
+    Class.Type logicalType = mClass.get(entityId).type;
+    if (logicalType != Class.Type.PLR) return;
+    CofReference reference = mCofReference.get(entityId);
+    String token = reference.effectiveToken();
+    byte wclass = reference.effectiveWClass();
+    String name = token + logicalType.getMode(Engine.Player.MODE_BL)
+        + Engine.getWClass(wclass);
+    AssetDescriptor<COF> descriptor =
+        new AssetDescriptor<>(formatCofPath(logicalType, token, name), COF.class);
+    if (!Riiablo.assets.contains(descriptor.fileName)) {
+      Riiablo.assets.load(descriptor);
+    }
+  }
 
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
