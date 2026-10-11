@@ -105,4 +105,4 @@
 - 暗黑设定不清楚时优先查 D2MOO，仍不清楚再查 The Phrozen Keep。
 - 代码修改完成后提交 Git 并推送，供另一台电脑验证。
 - 后续极小修改可以不编译，直接推送；寻路逻辑修改应运行针对性测试。
-- 不覆盖用户已有未提交修改；当前工作区另有用户修改：`core/src/main/java/com/riiablo/engine/client/automap/AutomapManager.java`，不要纳入寻路提交。
+- `core/src/main/java/com/riiablo/engine/client/automap/AutomapManager.java` 的原有修改已在提交 `9e1267f9 Render only the active automap level` 中纳入；当前工作区已恢复干净，后续寻路修改仍不要回退或覆盖该提交。
