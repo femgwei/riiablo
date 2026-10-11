@@ -5,6 +5,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.map.DT1;
 
 /** Pure classification and distant-pointer rules for enhanced Automap markers. */
@@ -39,7 +40,17 @@ public final class AutomapMarkerPolicy {
 
   /** Native Automap only lists town NPCs which actually expose interaction. */
   public static boolean shouldDisplayNpc(MonStats.Entry monster, boolean interactable) {
-    return monster != null && monster.npc && interactable;
+    if (!isNpc(monster)) return false;
+    // Navi/Flavie is a wilderness guide rather than a normal town vendor.
+    // Her native row is also used by the defensive AI, so it may not carry
+    // the ordinary MonStats NPC/interaction flags; D2 still shows her marker
+    // on the automap like Warriv and the other friendly NPCs.
+    return interactable || monster.hcIdx == MonsterType.NAVI;
+  }
+
+  /** Includes special friendly NPC rows whose native NPC flag is absent. */
+  public static boolean isNpc(MonStats.Entry monster) {
+    return monster != null && (monster.npc || monster.hcIdx == MonsterType.NAVI);
   }
 
   /** Limits NPC markers to roughly one normal gameplay viewport. */

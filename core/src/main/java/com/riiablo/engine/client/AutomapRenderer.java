@@ -460,11 +460,11 @@ public class AutomapRenderer extends BaseSystem {
       } else if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
-        if (monster.monstats.npc && Riiablo.string != null) {
+        boolean npc = AutomapMarkerPolicy.isNpc(monster.monstats);
+        if (npc && Riiablo.string != null) {
           name = Riiablo.string.lookup(name);
         }
         boolean interactable = mInteractable != null && mInteractable.has(id);
-        boolean npc = monster.monstats.npc;
         if (npc && (!AutomapMarkerPolicy.shouldDisplayNpc(monster.monstats, interactable)
             || !isNpcWithinRange(position.position.x, position.position.y))) continue;
         if (!AutomapMarkerPolicy.shouldDisplayMonster(
