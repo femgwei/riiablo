@@ -18,6 +18,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.DefenseCalculator;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -157,6 +158,44 @@ class Act1MonsterCombatAuditTest extends RiiabloTest {
     // dexterity / 4 would be added repeatedly to the previous aggregate.
     player.update();
     assertEquals(expectedNativeDefense, statInt(player.getStats(), Stat.armorclass));
+  }
+
+  @Test
+  void realAmazonStarterShieldEntersMonsterBlockResolution() {
+    CharacterClass clazz = CharacterClass.AMAZON;
+    CharData player = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "BlockAudit", (byte) clazz.id);
+    com.riiablo.codec.excel.CharStats.Entry start = clazz.entry();
+    player.getStats().base().put(Stat.dexterity, start.dex);
+    player.getStats().base().put(Stat.level, PLAYER_LEVEL);
+    player.getStats().reset();
+    player.initializeStartItems(start);
+    player.update();
+
+    Item shield = player.getItems().getSlot(BodyLoc.LARM);
+    assertNotNull(shield);
+    int shieldBaseBlock = statInt(shield.attrs, Stat.toblock);
+    int playerBlock = statInt(player.getStats(), Stat.toblock);
+    assertEquals("buc", shield.code);
+    assertEquals(0, shieldBaseBlock, "native Buckler relies on class BlockFactor");
+    assertEquals(shieldBaseBlock, playerBlock);
+    assertEquals(25, player.getStats().combatBlockFactor());
+    assertTrue(player.getStats().hasCombatShieldContext());
+    assertTrue(player.getStats().combatHasShield());
+
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        return blockChance > 0;
+      }
+    };
+    Attributes monster = combatAttributes(100, 1, 0, 20, 20, 1000);
+    CombatSystem.CombatResult result = deterministicBlock.calculateAttack(
+        monster, player.getStats(), false, true, false, 20, 20, 1000, true);
+    assertTrue(result.hit);
+    assertTrue(result.blocked, "a monster attack must be resolved as a shield block");
+    assertEquals(DefenseCalculator.DEFENSE_BLOCK, result.defenseType);
+    assertEquals(0, result.totalDamage);
   }
 
   @Test

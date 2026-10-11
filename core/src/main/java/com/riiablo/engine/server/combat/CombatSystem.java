@@ -1539,7 +1539,10 @@ public class CombatSystem {
     long frame = simulation != null ? simulation.tickNumber()
         : System.nanoTime() / (SimulationClock.STEP_MILLIS * 1_000_000L);
     d.currentFrame = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, frame));
-    d.canBlock = d.hasEquippedShield && d.blockChance > 0;
+    // A Buckler has native ToBlock=0: the player's class BlockFactor still
+    // grants a block chance. D2MOO checks the equipped shield, then computes
+    // class + unit ToBlock; never reject the raw unit stat before that sum.
+    d.canBlock = d.hasEquippedShield;
     d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
     d.isMoving = defenderMoving;
     if (defenderPlayer) {
@@ -1905,7 +1908,7 @@ public class CombatSystem {
    * 
    * <p>格挡公式：
    * <pre>
-   * Block% = (Dexterity - 15) / (clvl * 2) + BaseBlock
+   * Block% = (ClassBlockFactor + ToBlock) * (Dexterity - 15) / (clvl * 2)
    * 限制在 0-75% 之间
    * </pre>
    */
@@ -1926,12 +1929,10 @@ public class CombatSystem {
           / (BLOCK_DEXTERITY_FACTOR * Math.max(1, defender.level));
     }
 
-    // D2Game/SUNITDMG_ApplyBlockOrDodge reduces a running player's final
-    // shield chance to one third.  This is applied before the 75% cap.
-    if (defender.isPlayer && defender.isRunning) blockChance /= 3;
-
-    // 限制范围
+    // UNITS_GetBlockRate caps at 75 before SUNITDMG_ApplyBlockOrDodge
+    // applies the running penalty, so running block can never exceed 25%.
     blockChance = Math.max(MIN_BLOCK_CHANCE, Math.min(MAX_BLOCK_CHANCE, blockChance));
+    if (defender.isPlayer && defender.isRunning) blockChance /= 3;
 
     return blockChance;
   }

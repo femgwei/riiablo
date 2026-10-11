@@ -82,6 +82,10 @@ public class CombatSystemTest extends RiiabloTest {
     defender.isRunning = true;
     assertEquals(23, combat.calculateBlockChance(defender));
 
+    defender.dexterity = 100;
+    assertEquals(25, combat.calculateBlockChance(defender),
+        "native 75% cap is applied before the one-third running penalty");
+
     defender.hasEquippedShield = false;
     assertEquals(0, combat.calculateBlockChance(defender));
   }
@@ -187,6 +191,37 @@ public class CombatSystemTest extends RiiabloTest {
         null, null, 0, 0, null, holyShield);
     assertTrue(!noShield.blocked, "the same player without an equipped shield must not shield-block");
     assertTrue(noShield.totalDamage > 0);
+  }
+
+  @Test
+  public void zeroToBlockShieldStillUsesPlayerClassBlockFactor() {
+    final int[] rolledChance = {0};
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        rolledChance[0] = blockChance;
+        return blockChance > 0;
+      }
+    };
+    Attributes monster = attrs(100, 1, 0, 20, 20, 1000);
+    Attributes player = attrs(100, 2, 0, 1, 1, 1);
+    player.base().put(Stat.dexterity, 25);
+    player.reset();
+    player.setCombatBlockContext(true, 25);
+    for (boolean running : new boolean[] {false, true}) {
+      player.setCombatRunning(running);
+      CombatSystem.CombatResult result = deterministicBlock.calculateAttack(
+          monster, player, false, true, false, 20, 20, 1000, true);
+      assertTrue(result.blocked, "ToBlock=0 must not disable an equipped Buckler");
+      assertEquals(running ? 20 : 62, rolledChance[0]);
+      assertEquals(DefenseCalculator.DEFENSE_BLOCK, result.defenseType);
+      assertEquals(0, result.totalDamage);
+    }
+    player.setCombatBlockContext(false, 25);
+    CombatSystem.CombatResult unshielded = deterministicBlock.calculateAttack(
+        monster, player, false, true, false, 20, 20, 1000, true);
+    assertTrue(!unshielded.blocked, "class factor alone cannot block without a shield");
+    assertTrue(unshielded.totalDamage > 0);
   }
 
   @Test
