@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
+import com.riiablo.audio.MonsterAudio;
 import com.riiablo.codec.DCC;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.ai.Npc;
@@ -705,7 +706,15 @@ public class ClientEntityFactory extends ServerEntityFactory {
       if (Riiablo.audio != null && mSoundEmitter != null) {
         Audio.Instance travel = Riiablo.audio.play(missile.TravelSound, true);
         if (travel != null) {
-          mSoundEmitter.create(id).set(travel, Interpolation.pow2OutInverse);
+          // Start at the listener-relative gain immediately.  Waiting for
+          // SoundEmitterHandler's first tick briefly played every arrow at
+          // full volume, producing a sudden shot instead of a near-to-far
+          // spatial fade.  Missile travel audio is also room-local, like
+          // monster/NPC sounds, so town cannot hear Flavie's arrows across
+          // the Blood Moor boundary.
+          travel.setVolume(MonsterAudio.spatialGain(id));
+          mSoundEmitter.create(id).set(travel, Interpolation.pow2OutInverse,
+              SoundEmitter.DEFAULT_RADIUS, true);
         }
       }
       com.badlogic.gdx.Gdx.app.log(TAG, String.format(
