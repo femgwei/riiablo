@@ -110,54 +110,43 @@ public class VendorGrid extends ItemGrid {
 
   // y isn't used -- just for posterity in case it will be needed
   private boolean placeItem(GridPoint2 coords, Item item, Array<Item> placed) {
-    boolean contains = false;
-    final Item[] items = placed.items;
-    int x = coords.x;
-    int y = coords.y;
-TopLevelSort:
-    for (; x < width; x++) {
-      for (y = 0; y < height; y++) {
-        for (int i = 0, s = placed.size; i < s; i++) {
-          Item placedItem = items[i];
-          if (contains = placedItem.contains(x, y)) {
-            y += (placedItem.base.invheight - 1);
-            break;
-          }
+    for (int x = coords.x; x + item.base.invwidth <= width; x++) {
+      for (int y = 0; y + item.base.invheight <= height; y++) {
+        if (canPlaceAt(item, x, y, placed)) {
+          coords.set(x, y);
+          return true;
         }
-
-        if (!contains && y + item.base.invheight - 1 < height) break TopLevelSort;
       }
     }
-
-    coords.set(x, y);
-    if (contains) return false;
-    return x + item.base.invwidth  - 1 < width
-        && y + item.base.invheight - 1 < height;
+    return false;
   }
 
   private boolean placeMultibuyItem(GridPoint2 coords, Item item, Array<Item> placed) {
-    boolean contains = false;
-    final Item[] items = placed.items;
-    int x = coords.x;
-    int y = coords.y;
-TopLevelSort:
-    for (x = width - 1; x >= 0; x--) {
-      for (y = 0; y < height; y++) {
-        for (int i = 0, s = placed.size; i < s; i++) {
-          Item placedItem = items[i];
-          if (contains = placedItem.contains(x, y)) {
-            y += (placedItem.base.invheight - 1);
-            break;
-          }
+    for (int x = width - item.base.invwidth; x >= 0; x--) {
+      for (int y = 0; y + item.base.invheight <= height; y++) {
+        if (canPlaceAt(item, x, y, placed)) {
+          coords.set(x, y);
+          return true;
         }
-
-        if (!contains && y + item.base.invheight - 1 < height) break TopLevelSort;
       }
     }
+    return false;
+  }
 
-    coords.set(x, y);
-    if (contains) return false;
-    return x + item.base.invwidth  - 1 < width
-        && y + item.base.invheight - 1 < height;
+  /** Checks the complete item footprint, not just the candidate's top-left cell. */
+  private static boolean canPlaceAt(Item item, int x, int y, Array<Item> placed) {
+    int width = item.base.invwidth;
+    int height = item.base.invheight;
+    for (Item placedItem : placed) {
+      int placedX = placedItem.gridX;
+      int placedY = placedItem.gridY;
+      if (x < placedX + placedItem.base.invwidth
+          && x + width > placedX
+          && y < placedY + placedItem.base.invheight
+          && y + height > placedY) {
+        return false;
+      }
+    }
+    return true;
   }
 }
