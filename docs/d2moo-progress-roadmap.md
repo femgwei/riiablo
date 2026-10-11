@@ -1,14 +1,33 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-11 动态单位寻路回归修正
+
+- [x] 根据 `C:\Users\DELL\Desktop\game.log` 核对实体 866/867：它们在狭窄通道中持续收到
+  `MONSTER_MOVE`、方向/行走动画同步，但第一只到位攻击后，后两只的旧路径被动态 footprint
+  连续拒绝；问题是缺少“动态阻挡后的重寻路”，不是首次静态路径规划失败。
+- [x] `DynamicUnitCollisionSystem.isFreeForPath` 恢复使用与 `tryMove` 相同的 `blockerFor`；
+-  普通怪物重新作为路径动态障碍；`Pathfinder` 在动态碰撞连续拒绝 0.25 秒后从当前位置重算，
+  成功则绕行，失败则清除旧路径停止假走。未根据未经证实的 Fallen 专属算法增加额外分支。
+- [x] 新增后排单位绕过前排单位的 `UnitCollisionGrid` 回归，以及动态阻挡重算门槛回归，并通过：
+  `./gradlew.bat :core:test --tests com.riiablo.engine.server.PathfinderTest --tests
+  com.riiablo.engine.server.DynamicUnitCollisionSystemTest --tests
+  com.riiablo.engine.server.UnitCollisionGridTest --no-daemon`（`BUILD SUCCESSFUL`）。
+- [x] 本轮代码/测试提交 `c417000e`（含前置修正 `5afad7a3`）；待推送后在另一台电脑拉取
+  `origin/master` 验证同一 Fallen pack 场景。
+- [ ] 仍待另一台电脑确认多个普通怪物连续追击时的绕行、堆叠和完全堵死时的停步表现；这不等价于
+  已证实的 Fallen 局部动态重寻路实现。
+
 ## 2026-10-11 D2MOO 动态单位寻路 mask 与 Fallen AI 核实
 
-- [x] 对照 D2MOO `D2Common/src/Path/Path.cpp`、`AStar.cpp`、`IDAStar.cpp` 和
+- [x] ~~对照 D2MOO `D2Common/src/Path/Path.cpp`、`AStar.cpp`、`IDAStar.cpp` 和
   `Step.cpp`，确认动态单位 footprint 会写入运行时碰撞网格，A* 与实际步进都会读取碰撞
-  网格；因此“全局寻路永远只看静态 DT1、完全不读取动态单位”的说法不成立。
-- [x] 确认普通怪物初始化的 `COLLIDE_MASK_MONSTER_PATH` 包含 `COLLIDE_PET`，不包含
+  网格；因此“全局寻路永远只看静态 DT1、完全不读取动态单位”的说法不成立。~~（该轮资料核对
+  仍保留，但其 mask 不能直接映射到 riiablo 当前独立的步进碰撞规则。）
+- [x] ~~确认普通怪物初始化的 `COLLIDE_MASK_MONSTER_PATH` 包含 `COLLIDE_PET`，不包含
   `COLLIDE_MONSTER`。riiablo 的怪物路径查询现在过滤普通怪物 footprint，仅保留
   mercenary、非被动召唤物、复活单位和 D2MOO `CanBeInTown && !interact` 对应的 pet 类
-  footprint；实际移动步进仍使用现有动态碰撞解析。
+  footprint；实际移动步进仍使用现有动态碰撞解析。~~（已由上方回归修正撤回，避免规划/步进
+  阻挡语义不一致。）
 - [x] 对照 D2MOO `AITHINK_Fn006_Fallen`，确认 Fallen 只有尸体触发逃跑、通用追击和
   领队命令逻辑，没有可据此实现的 Fallen 专属局部 A*、临时动态障碍网格或同伴排斥分支。
   The Phrozen Keep 的 Fallen 主题资料也只支持逃跑/复活/命令行为，未提供该局部寻路实现

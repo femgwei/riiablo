@@ -52,6 +52,20 @@ class PathfinderTest {
   }
 
   @Test
+  void dynamicBlockTriggersRepathOnlyAfterARealStall() {
+    Pathfind pathfind = new Pathfind();
+
+    pathfind.recordMovement(true, 0f, 0.1f, true);
+    assertFalse(Pathfinder.shouldRepathAfterDynamicBlock(pathfind));
+
+    pathfind.recordMovement(true, 0f, 0.15f, true);
+    assertTrue(Pathfinder.shouldRepathAfterDynamicBlock(pathfind));
+
+    pathfind.recordMovement(true, 0.01f, 0.1f, false);
+    assertFalse(Pathfinder.shouldRepathAfterDynamicBlock(pathfind));
+  }
+
+  @Test
   void blockedRaycastFallbackStopsInsteadOfMovingDirectlyToTarget() {
     Velocity velocity = new Velocity();
     velocity.velocity.set(30f, -20f);

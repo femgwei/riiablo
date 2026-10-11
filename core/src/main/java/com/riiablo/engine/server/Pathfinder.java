@@ -40,6 +40,7 @@ public class Pathfinder extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(Pathfinder.class);
   static final int MOVEMENT_DIRECTIONS = 16;
   static final int ADJACENT_DIRECTION_STABLE_FRAMES = 3;
+  static final float DYNAMIC_BLOCK_REPATH_TIME = 0.25f;
   static final float IMMEDIATE_TURN_COS = MathUtils.cosDeg(45f);
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
@@ -85,6 +86,34 @@ public class Pathfinder extends IteratingSystem {
     Vector2 position0 = mPosition.get(entityId).position;
     tmpVec2.set(position0);
     Pathfind pathfind = mPathfind.get(entityId);
+
+    // A path is computed before other units move.  If a unit then occupies a
+    // later waypoint (for example, the first Fallen reaches the player and
+    // starts attacking in a narrow passage), the old path keeps requesting a
+    // direction that the authoritative collision step rejects.  Rebuild from
+    // the current position after a short, observable stall so a free side
+    // route can be selected.  If no route exists, clear the stale path so the
+    // monster stops instead of playing walk animation in place; its AI can
+    // issue a fresh approach request on the next think tick.
+    if (mMonster.has(entityId) && shouldRepathAfterDynamicBlock(pathfind)) {
+      int targetEntityId = pathfind.targetEntityId;
+      Vector2 repathTarget = targetEntityId != Engine.INVALID_ENTITY
+          && mPosition.has(targetEntityId)
+          ? mPosition.get(targetEntityId).position
+          : pathfind.destination;
+      boolean success = repathPreservingMovementIntent(
+          entityId, repathTarget, targetEntityId);
+      Monster monster = mMonster.get(entityId);
+      log.debug("[MONSTER_PATH_STALLED] entity={} monster={} stalledTime={} "
+              + "blockedByDynamic=true action={}",
+          entityId,
+          monster.monstats != null ? monster.monstats.Id : "unknown",
+          pathfind.stalledTime,
+          success ? "repath" : "stop");
+      if (!success) findPath(entityId, null);
+      return;
+    }
+
     Vector2 target = pathfind.target;
     Iterator<Vector2> targets = pathfind.targets;
     
@@ -425,6 +454,11 @@ public class Pathfinder extends IteratingSystem {
 
   static void stopBlockedMovement(Velocity velocity) {
     if (velocity != null) velocity.velocity.setZero();
+  }
+
+  static boolean shouldRepathAfterDynamicBlock(Pathfind pathfind) {
+    return pathfind != null && pathfind.blockedByDynamic
+        && pathfind.stalledTime >= DYNAMIC_BLOCK_REPATH_TIME;
   }
 
   private boolean repathPreservingMovementIntent(
