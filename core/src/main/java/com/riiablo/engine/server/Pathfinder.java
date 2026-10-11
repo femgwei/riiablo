@@ -417,7 +417,11 @@ public class Pathfinder extends IteratingSystem {
     int flags = DT1.Tile.FLAG_BLOCK_WALK;
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
-    boolean success = findPath(src, position, target, flags, size, path, targetEntityId);
+    // The first query follows the native two-stage model: static terrain is
+    // used for the initial route, while dynamic units are handled by the
+    // movement collision step and only added during a stalled repath.
+    boolean success = findPath(src, position, target, flags, size, path,
+        targetEntityId, false);
     if (success) {
       // Store target entity ID in Pathfind component for dynamic repathing
       if (mPathfind.has(src)) {
@@ -437,7 +441,8 @@ public class Pathfinder extends IteratingSystem {
       ray.set(position, target);
       success = map.castRay(ray, flags, size, collision);
       if (success) {
-        success = findPath(src, position, collision.point, flags, size, path, targetEntityId);
+        success = findPath(src, position, collision.point, flags, size, path,
+            targetEntityId, false);
         if (!success || path.getCount() <= 1) {
           // The ray ended at the blocking boundary and there is no usable
           // path to its last clear point. Moving directly toward the original
@@ -488,7 +493,7 @@ public class Pathfinder extends IteratingSystem {
     float bonus = velocity.modeSpeedBonusMultiplier;
     boolean running = mRunning.has(entityId);
     Vector2 source = mPosition.get(entityId).position;
-    boolean success = findPath(entityId, target, false, targetEntityId)
+    boolean success = findPathWithDynamicObstacles(entityId, target, targetEntityId)
         && hasUsableMovementPath(entityId, source);
     if (!success) {
       // A* may legitimately reach the exact target while the first segment is
@@ -525,7 +530,7 @@ public class Pathfinder extends IteratingSystem {
                   entityId, Engine.INVALID_ENTITY, x, y, size)) {
             continue;
           }
-          if (!findPath(entityId, detourTarget, false, targetEntityId)) continue;
+          if (!findPathWithDynamicObstacles(entityId, detourTarget, targetEntityId)) continue;
           if (hasUsableMovementPath(entityId, source)) return true;
           findPath(entityId, null);
         }
@@ -570,6 +575,24 @@ public class Pathfinder extends IteratingSystem {
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos,
       int flags, int size, GraphPath path, int targetEntityId) {
+    return findPath(src, srcPos, targetPos, flags, size, path, targetEntityId, false);
+  }
+
+  private boolean findPathWithDynamicObstacles(
+      int src, Vector2 targetPos, int targetEntityId) {
+    if (targetPos == null || !mPosition.has(src) || !mVelocity.has(src)) return false;
+    int flags = DT1.Tile.FLAG_BLOCK_WALK;
+    int size = mSize.get(src).size;
+    GraphPath path = Pools.obtain(GraphPath.class);
+    boolean success = findPath(src, mPosition.get(src).position, targetPos,
+        flags, size, path, targetEntityId, true);
+    if (!success) Pools.free(path);
+    return success;
+  }
+
+  private boolean findPath(int src, Vector2 srcPos, Vector2 targetPos,
+      int flags, int size, GraphPath path, int targetEntityId,
+      boolean includeDynamicObstacles) {
     if (!isNativeMonsterRoomPathAllowed(src, srcPos, targetPos)) {
       if (mMonster.has(src)) {
         Monster monster = mMonster.get(src);
@@ -579,7 +602,8 @@ public class Pathfinder extends IteratingSystem {
       }
       return false;
     }
-    com.riiablo.map.MapGraph.Obstacle obstacle = dynamicCollision == null
+    com.riiablo.map.MapGraph.Obstacle obstacle = !includeDynamicObstacles
+        || dynamicCollision == null
         ? null
         : (moverId, ignoredTargetId, x, y, footprint) ->
             dynamicCollision.isFreeForPath(src,
