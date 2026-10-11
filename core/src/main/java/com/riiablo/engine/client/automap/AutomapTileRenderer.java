@@ -261,6 +261,14 @@ public class AutomapTileRenderer implements Disposable {
   public int getAutomapCellId(String levelName, String tileName, int tileStyle, int tileSequence,
       long automapSeed) {
     int[] frames = getFrameIndices(levelName, tileName, tileStyle, tileSequence);
+    if (frames == null && isTownBoundaryWallCompatibility(levelName, tileName, tileStyle,
+        tileSequence)) {
+      // Act-I town's outer fence is emitted by the native Floor.dt1 as wl/5/0,
+      // but 1.10f AutoMap.txt has no corresponding wl style-5 row.  The
+      // original town wall uses the generic wl cells (61/71), so keep this
+      // compatibility path narrow rather than weakening all style matching.
+      frames = getFrameIndices(levelName, tileName, 0, tileSequence);
+    }
     if (frames == null && allowsAnyStyleFallback(levelName)) {
       // Some 1.10f Jungle/Kurast terrain rows are generated with the base
       // style (0) while AutoMap.txt only lists the visual style variants.
@@ -269,6 +277,14 @@ public class AutomapTileRenderer implements Disposable {
       frames = getFrameIndicesAnyStyle(levelName, tileName);
     }
     return selectCellId(frames, automapSeed);
+  }
+
+  static boolean isTownBoundaryWallCompatibility(String levelName, String tileName,
+      int tileStyle, int tileSequence) {
+    return levelName != null && tileName != null
+        && levelName.trim().equalsIgnoreCase("1 Town")
+        && tileName.trim().equalsIgnoreCase("wl")
+        && tileStyle == 5 && tileSequence == 0;
   }
 
   static boolean allowsAnyStyleFallback(String levelName) {

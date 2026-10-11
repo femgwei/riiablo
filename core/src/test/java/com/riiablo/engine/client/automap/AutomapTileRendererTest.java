@@ -79,4 +79,11 @@ class AutomapTileRendererTest {
     assertTrue(AutomapTileRenderer.allowsAnyStyleFallback("3 Jungle"));
     assertTrue(AutomapTileRenderer.allowsAnyStyleFallback("3 Kurast"));
   }
+
+  @Test void townBoundaryCompatibilityIsNarrowlyScoped() {
+    assertTrue(AutomapTileRenderer.isTownBoundaryWallCompatibility("1 Town", "wl", 5, 0));
+    assertFalse(AutomapTileRenderer.isTownBoundaryWallCompatibility("1 Town", "wr", 5, 0));
+    assertFalse(AutomapTileRenderer.isTownBoundaryWallCompatibility("1 Town", "wl", 5, 1));
+    assertFalse(AutomapTileRenderer.isTownBoundaryWallCompatibility("1 Wilderness", "wl", 5, 0));
+  }
 }
