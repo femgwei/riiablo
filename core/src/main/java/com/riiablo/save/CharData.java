@@ -675,9 +675,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     Item leftArm = itemData.getEquipped(BodyLoc.LARM);
     Item rightArm = itemData.getEquipped(BodyLoc.RARM);
     boolean hasShield = (leftArm != null && itemData.isActive(leftArm)
-        && leftArm.type != null && leftArm.type.is(com.riiablo.item.Type.SHLD))
+        && isShieldType(leftArm))
         || (rightArm != null && itemData.isActive(rightArm)
-        && rightArm.type != null && rightArm.type.is(com.riiablo.item.Type.SHLD));
+        && isShieldType(rightArm));
     statData.setCombatBlockContext(hasShield, blockFactor);
 
     // This appears to be hard-coded in the original client
@@ -730,6 +730,13 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
       }
     }
     notifySkillChanged(skills, chargedSkills);
+  }
+
+  /** D2 uses both the concrete {@code shie} and aggregate {@code shld} item types. */
+  private static boolean isShieldType(Item item) {
+    return item != null && item.type != null
+        && (item.type.is(com.riiablo.item.Type.SHLD)
+            || item.type.is(com.riiablo.item.Type.SHIE));
   }
 
   public int getSkill(int skill) {

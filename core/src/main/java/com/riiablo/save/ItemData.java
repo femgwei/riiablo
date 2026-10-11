@@ -1423,7 +1423,7 @@ public class ItemData {
         // aggregate rather than remaining().  Character base stats do not
         // declare ToBlock, which means the normal remaining-stat merge would
         // otherwise drop the equipped shield's native block value entirely.
-        if (item.type.is(Type.SHLD)) {
+        if (item.type.is(Type.SHLD) || item.type.is(Type.SHIE)) {
           equippedBlockChance += itemStatValue(item, Stat.toblock);
         }
       }

@@ -1536,6 +1536,13 @@ public class CombatSystem {
     d.canBlock = d.hasEquippedShield && d.blockChance > 0;
     d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
     d.isMoving = defenderMoving;
+    if (defenderPlayer) {
+      log.debug("[COMBAT_BLOCK_CHECK] shieldContext={} hasShield={} toBlock={} blockFactor={} "
+              + "dexterity={} level={} running={} canBlock={} attackType={} missile={}",
+          defender.hasCombatShieldContext(), d.hasEquippedShield, d.blockChance,
+          d.blockFactor, d.dexterity, d.level, d.isRunning, d.canBlock,
+          d.attackType, missile);
+    }
     d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
     d.passiveAvoid = statInt(defender, Stat.passive_avoid, 0);
     d.passiveEvade = statInt(defender, Stat.passive_evade, 0);
