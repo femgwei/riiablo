@@ -127,7 +127,15 @@ public class VelocityAdder extends IteratingSystem {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
     int flags = NativeGroundPathProfile.forUnit(mPlayer.has(entityId),
         monster == null ? null : monster.monstats).terrainFlags;
-    if (map.castRay(ray, flags, size, collision)) return false;
+    // Keep the authoritative movement ray consistent with Pathfinder: native
+    // door-opening monsters may traverse a door even though the world fixture
+    // is present. Flying units use the missile-barrier profile and never open
+    // doors.
+    boolean canOpenDoors = monster != null && monster.monstats != null
+        && monster.monstats.opendoors
+        && NativeGroundPathProfile.forUnit(false, monster.monstats)
+            != NativeGroundPathProfile.FLYING;
+    if (map.castRay(ray, flags, size, collision, canOpenDoors)) return false;
     return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
   }
 }
