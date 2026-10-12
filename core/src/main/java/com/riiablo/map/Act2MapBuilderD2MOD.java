@@ -34,6 +34,17 @@ import java.util.Set;
 public enum Act2MapBuilderD2MOD implements MapBuilder {
   INSTANCE;
 
+  /** Reject records from another act when the loaded LvlPrest table is mismatched. */
+  private static boolean isAct2DesertPreset(LvlPrest.Entry preset) {
+    if (preset == null || preset.File == null) return false;
+    for (String file : preset.File) {
+      if (file == null || file.isEmpty()) continue;
+      String normalized = file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+      return normalized.startsWith("act2/") && normalized.contains("desert/");
+    }
+    return false;
+  }
+
   private static final String TAG = "Act2MapBuilderD2MOD";
   private static final boolean DEBUG = true;
   private static final boolean DEBUG_BUILD = DEBUG && true;
@@ -475,7 +486,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       int def = entry[0], gx = entry[1], gy = entry[2], file = entry[3];
       if (gx < 0 || gy < 0 || gx >= zone.gridsX || gy >= zone.gridsY) continue;
       LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
-      if (preset == null || preset.File == null) continue;
+      if (!isAct2DesertPreset(preset)) continue;
       int[] files = new int[6];
       int count = Preset.getPresets(preset, files);
       if (count <= 0) continue;
@@ -505,7 +516,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int def = desertExitPresetDef(zone.level.Id);
     if (def < 0 || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
     LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
-    if (preset == null || preset.File == null || zone.gridsX < 3 || zone.gridsY < 3) return;
+    if (!isAct2DesertPreset(preset) || zone.gridsX < 3 || zone.gridsY < 3) return;
 
     int[] fileIds = new int[6];
     int fileCount = Preset.getPresets(preset, fileIds);
@@ -532,7 +543,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int[] defs = {505, 504};
     for (int def : defs) {
       LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
-      if (p == null || p.File == null) continue;
+      if (!isAct2DesertPreset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count <= 0) continue;
       if (zone.presets[0][0] == null) zone.presets[0][0] = Preset.of(p, files[0]);
@@ -592,7 +603,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       int gx = e[2], gy = e[3];
       if (zone.presets[gx][gy] != null) continue;
       LvlPrest.Entry p = Riiablo.files.LvlPrest.get(e[0]);
-      if (p == null || p.File == null) continue;
+      if (!isAct2DesertPreset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[e[1] >= 0 && e[1] < count ? e[1] : 0]);
     }
