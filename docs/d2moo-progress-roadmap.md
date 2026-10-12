@@ -7014,3 +7014,10 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   Spider、Temple、Dungeon treasure Def 回归校验。
 - [x] 限制通用户外边界只作用于丛林与 Kurast 城区；Causeway 和 Travincal 保留
   专用 Bridge/六边缘预设，避免兼容边界重复覆盖。
+- [x] 对照 D2MOO `DRLGMAZE_PlaceAct3DungeonStuff`、
+  `DRLGMAZE_PlaceAct3SewerStuff`、`DRLGMAZE_PlaceAct3MephistoStuff`，补齐 Java
+  迷宫生成器的 Dungeon Prev/Next、Sewer 1 四入口 Prev、Drain/Chest，以及
+  Durance Prev/Waypoint/Next 动态房间；特殊房间会在 native RoomEx 投影时保留
+  原生 `LvlPrest.Def`/picked file。
+- [x] 按 `assets/data/ds1types.txt` 与 D2MOO `LevelsIds.h` 固定 1.10f 的 665--795
+  动态 Def 映射，并增加 A3 地图自动回归校验；真实 MPQ/客户端验证仍留到全部地图完成后。

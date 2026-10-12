@@ -115,6 +115,51 @@ class Act3MapBuilderD2MODTest {
   }
 
   @Test
+  void uses110fDungeonSewerAndDuranceTransitionDefs() {
+    assertArrayEquals(new int[] {665, 666, 668, 672, 695, 696, 697, 698, 699, 700, 701, 702},
+        new int[] {
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_N,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_PREV_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_PREV_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_PREV_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_PREV_N,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_NEXT_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_NEXT_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_NEXT_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_NEXT_N
+        });
+    assertArrayEquals(new int[] {739, 740, 741, 742, 743, 744, 745, 746},
+        new int[] {
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_DRAIN_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_DRAIN_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_DRAIN_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_DRAIN_N,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_CHEST_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_CHEST_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_CHEST_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SEWER_CHEST_N
+        });
+    assertArrayEquals(new int[] {784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795},
+        new int[] {
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_PREV_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_PREV_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_PREV_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_PREV_N,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_NEXT_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_NEXT_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_NEXT_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_NEXT_N,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_WAYPOINT_W,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_WAYPOINT_E,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_WAYPOINT_S,
+          com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_WAYPOINT_N
+        });
+  }
+
+  @Test
   void excludesDedicatedCausewayAndTravincalFromGenericBorders() {
     assertEquals(true, Act3MapBuilderD2MOD.usesGenericOutdoorBorders(
         D2LevelIds.LEVEL_SPIDERFOREST));

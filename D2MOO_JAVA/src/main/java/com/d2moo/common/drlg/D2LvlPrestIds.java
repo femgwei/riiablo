@@ -652,6 +652,59 @@ public class D2LvlPrestIds {
     public static final int LVLPREST_ACT3_SPIDER_NE = 662;
     public static final int LVLPREST_ACT3_SPIDER_CHEST_NW = 663;
     public static final int LVLPREST_ACT3_SPIDER_CHEST_NE = 664;
+    // Act 3 Flayer/Swampy dungeon maze records (1.10f LvlPrest Defs).
+    public static final int LVLPREST_ACT3_DUNGEON_W = 665;
+    public static final int LVLPREST_ACT3_DUNGEON_E = 666;
+    public static final int LVLPREST_ACT3_DUNGEON_S = 668;
+    public static final int LVLPREST_ACT3_DUNGEON_N = 672;
+    public static final int LVLPREST_ACT3_DUNGEON_PREV_W = 695;
+    public static final int LVLPREST_ACT3_DUNGEON_PREV_E = 696;
+    public static final int LVLPREST_ACT3_DUNGEON_PREV_S = 697;
+    public static final int LVLPREST_ACT3_DUNGEON_PREV_N = 698;
+    public static final int LVLPREST_ACT3_DUNGEON_NEXT_W = 699;
+    public static final int LVLPREST_ACT3_DUNGEON_NEXT_E = 700;
+    public static final int LVLPREST_ACT3_DUNGEON_NEXT_S = 701;
+    public static final int LVLPREST_ACT3_DUNGEON_NEXT_N = 702;
+
+    // Act 3 Kurast sewer maze records and dynamic drain/chest rooms.
+    public static final int LVLPREST_ACT3_SEWER_W = 705;
+    public static final int LVLPREST_ACT3_SEWER_E = 706;
+    public static final int LVLPREST_ACT3_SEWER_S = 708;
+    public static final int LVLPREST_ACT3_SEWER_N = 712;
+    public static final int LVLPREST_ACT3_SEWER_SW = 709;
+    public static final int LVLPREST_ACT3_SEWER_SE = 710;
+    public static final int LVLPREST_ACT3_SEWER_NW = 713;
+    public static final int LVLPREST_ACT3_SEWER_NE = 714;
+    public static final int LVLPREST_ACT3_SEWER_PREV_SW = 735;
+    public static final int LVLPREST_ACT3_SEWER_PREV_SE = 736;
+    public static final int LVLPREST_ACT3_SEWER_PREV_NW = 737;
+    public static final int LVLPREST_ACT3_SEWER_PREV_NE = 738;
+    public static final int LVLPREST_ACT3_SEWER_DRAIN_W = 739;
+    public static final int LVLPREST_ACT3_SEWER_DRAIN_E = 740;
+    public static final int LVLPREST_ACT3_SEWER_DRAIN_S = 741;
+    public static final int LVLPREST_ACT3_SEWER_DRAIN_N = 742;
+    public static final int LVLPREST_ACT3_SEWER_CHEST_W = 743;
+    public static final int LVLPREST_ACT3_SEWER_CHEST_E = 744;
+    public static final int LVLPREST_ACT3_SEWER_CHEST_S = 745;
+    public static final int LVLPREST_ACT3_SEWER_CHEST_N = 746;
+
+    // Act 3 Durance/Mephisto maze records.
+    public static final int LVLPREST_ACT3_MEPHISTO_W = 754;
+    public static final int LVLPREST_ACT3_MEPHISTO_E = 755;
+    public static final int LVLPREST_ACT3_MEPHISTO_S = 757;
+    public static final int LVLPREST_ACT3_MEPHISTO_N = 761;
+    public static final int LVLPREST_ACT3_MEPHISTO_PREV_W = 784;
+    public static final int LVLPREST_ACT3_MEPHISTO_PREV_E = 785;
+    public static final int LVLPREST_ACT3_MEPHISTO_PREV_S = 786;
+    public static final int LVLPREST_ACT3_MEPHISTO_PREV_N = 787;
+    public static final int LVLPREST_ACT3_MEPHISTO_NEXT_W = 788;
+    public static final int LVLPREST_ACT3_MEPHISTO_NEXT_E = 789;
+    public static final int LVLPREST_ACT3_MEPHISTO_NEXT_S = 790;
+    public static final int LVLPREST_ACT3_MEPHISTO_NEXT_N = 791;
+    public static final int LVLPREST_ACT3_MEPHISTO_WAYPOINT_W = 792;
+    public static final int LVLPREST_ACT3_MEPHISTO_WAYPOINT_E = 793;
+    public static final int LVLPREST_ACT3_MEPHISTO_WAYPOINT_S = 794;
+    public static final int LVLPREST_ACT3_MEPHISTO_WAYPOINT_N = 795;
     
     // Act 4 迷宫预设
     public static final int LVLPREST_ACT4_LAVA_X = 941; // 与 MESA_BORDER_1 相同
