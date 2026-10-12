@@ -551,6 +551,12 @@ public class Npc extends AI {
     }
     if (pathfind == null) {
       PathWrapper pathWrapper = mPathWrapper.get(entityId);
+      if (pathWrapper == null || pathWrapper.path == null || pathWrapper.path.numPoints <= 0) {
+        // Some map-spawned NPCs have no DS1 path component. They remain idle
+        // until a valid path is attached instead of crashing the simulation.
+        state = "IDLE";
+        return;
+      }
       DS1.Path path = pathWrapper.path;
       if (targetId == NULL_TARGET) {
         targetId = 0;
