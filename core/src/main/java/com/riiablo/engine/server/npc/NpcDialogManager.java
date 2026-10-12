@@ -553,6 +553,7 @@ public class NpcDialogManager {
     registerNpc(155, "Warriv", 1, NPC_TYPE_TRAVEL, false, false, false, false, true);
 
     // 第二幕 NPC
+    registerNpc(175, "Warriv", 2, NPC_TYPE_TRAVEL, false, false, false, false, true);
     registerNpc(176, "Atma", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
     registerNpc(177, "Drognan", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(178, "Fara", 2, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
