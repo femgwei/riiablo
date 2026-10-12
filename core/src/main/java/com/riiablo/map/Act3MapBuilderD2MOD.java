@@ -547,7 +547,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   /** Places the native jungle chain's head/tail transition preset anchors. */
   static void placeNativeJungleTransition(Zone zone) {
     if (zone == null || zone.presets == null || zone.level == null
-        || zone.gridsX < 1 || zone.gridsY < 1) return;
+        || zone.nativeTileGrid() != null || zone.gridsX < 1 || zone.gridsY < 1) return;
     int def;
     int gx;
     int gy;

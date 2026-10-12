@@ -2,8 +2,11 @@ package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.d2moo.common.drlg.D2LevelIds;
+import com.riiablo.codec.excel.Levels;
+import com.riiablo.drlg.TileGrid;
 import org.junit.jupiter.api.Test;
 
 class Act3MapBuilderD2MODTest {
@@ -74,6 +77,22 @@ class Act3MapBuilderD2MODTest {
   void uses110fJungleTransitionPresetDefValues() {
     assertEquals(715, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD);
     assertEquals(716, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL);
+  }
+
+  @Test
+  void nativeSpiderForestDoesNotReceiveCompatibilityJungleHead() {
+    Map.Zone zone = new Map.Zone();
+    zone.level = new Levels.Entry();
+    zone.level.Id = D2LevelIds.LEVEL_SPIDERFOREST;
+    zone.gridsX = 2;
+    zone.gridsY = 2;
+    zone.presets = new Map.Preset[zone.gridsX][zone.gridsY];
+    zone.setNativeTileGrid(new TileGrid(16, 16), 0);
+
+    Act3MapBuilderD2MOD.placeNativeJungleTransition(zone);
+
+    assertNull(zone.presets[0][zone.gridsY - 1],
+        "native jungle RoomEx export must own the Spider Forest head");
   }
 
   @Test
