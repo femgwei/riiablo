@@ -2755,7 +2755,9 @@ public class DrlgMaze {
                 D2LvlPrestIds.LVLPREST_ACT3_MEPHISTO_NEXT_W, -1, 2)
         };
         int direction = (int) (Seed.rollRandomNumber(level.getSeed()) & 3);
-        replaceOrAttachAct3MephistoPreset(level, prev[direction], false);
+        // Native InitRoomFixedPreset receives bUseInitPreset=1 here; this
+        // re-picks the parent room before attaching the Prev transition.
+        replaceOrAttachAct3MephistoPreset(level, prev[direction], true);
         int branch = (direction + 1) & 3;
         if (level.getLevelId() == D2LevelIds.LEVEL_DURANCEOFHATELEVEL2) {
             replaceOrAddAct3Preset(level, waypoint[branch]);
