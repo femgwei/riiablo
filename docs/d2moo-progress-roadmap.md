@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 Act V 城镇 NPC 原生 hcIdx 修正
+
+- [x] 对照 D2MOO `D2Common/include/DataTbls/MonsterIds.h` 与 `D2Game/src/UNIT/SUnitProxy.cpp`，
+  将 Larzuk/Drehya(Anya)/Malah/Nihlathak/Qual-Kehk 对齐到原生 `hcIdx` 512--516；补齐
+  Nihlathak 注册，并修正 Anya、Malah、Qual-Kehk 的服务映射。
+- [x] 佣兵、治疗、交易和赌博服务集合改用原生常量；城镇 NPC 注册回归现在同时检查
+  名称、类型、赌博和雇佣能力，避免“只存在定义但 ID 指向错误 NPC”。
+- [x] 验证：`:core:mapRegression`（102 项）及受影响的 `NpcHealerTest`、
+  `MercenaryManagerTest` 通过；真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
+
 ## 2026-10-13 Act IV 原生 RoomEx/TileGrid 桥接（本轮完成代码修复）
 
 - [x] 对照 D2MOO `DrlgOutPlace.createLevelConnections`，新增资源门控的

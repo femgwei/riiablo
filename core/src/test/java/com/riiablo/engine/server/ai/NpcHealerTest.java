@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.RiiabloTest;
@@ -19,7 +20,7 @@ class NpcHealerTest extends RiiabloTest {
     assertTrue(Npc.isHealer(178)); // Fara
     assertTrue(Npc.isHealer(255)); // Ormus
     assertTrue(Npc.isHealer(406)); // Jamella
-    assertTrue(Npc.isHealer(513)); // Malah
+    assertTrue(Npc.isHealer(MonsterType.MALAH)); // Malah
     assertFalse(Npc.isHealer(154)); // Charsi
   }
 

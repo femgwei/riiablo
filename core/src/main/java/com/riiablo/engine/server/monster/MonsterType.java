@@ -196,6 +196,14 @@ public final class MonsterType {
   /** Gidbinn's unique Fetish guardian (D2MOO MONSTER_FETISH11). */
   public static final int FETISH11 = 407;
 
+  // Act V town NPCs use the native D2MOO MonsterIds.h values.  Drehya is the
+  // internal MonStats id for the NPC displayed to players as Anya.
+  public static final int LARZUK = 512;
+  public static final int DREHYA = 513;
+  public static final int MALAH = 514;
+  public static final int NIHLATHAK = 515;
+  public static final int QUAL_KEHK = 516;
+
   //==========================================================================
   // 召唤物
   //==========================================================================

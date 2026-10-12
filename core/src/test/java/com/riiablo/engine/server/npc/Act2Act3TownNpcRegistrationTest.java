@@ -1,8 +1,12 @@
 package com.riiablo.engine.server.npc;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+
+import com.riiablo.engine.server.monster.MonsterType;
 
 class Act2Act3TownNpcRegistrationTest {
   @Test void registersAct2TownNpcIds() {
@@ -25,7 +29,27 @@ class Act2Act3TownNpcRegistrationTest {
 
   @Test void registersAct5TownNpcIds() {
     NpcDialogManager manager = new NpcDialogManager();
-    int[] ids = {511, 512, 513, 514};
+    int[] ids = {
+        MonsterType.LARZUK,
+        MonsterType.DREHYA,
+        MonsterType.MALAH,
+        MonsterType.NIHLATHAK,
+        MonsterType.QUAL_KEHK
+    };
     for (int id : ids) assertNotNull(manager.getNpcDefinition(id), "missing A5 NPC " + id);
+
+    NpcDialogManager.NpcDefinition anya = manager.getNpcDefinition(MonsterType.DREHYA);
+    assertEquals("Anya", anya.name);
+    assertTrue(anya.isVendor);
+    assertTrue(anya.canGamble);
+
+    NpcDialogManager.NpcDefinition nihlathak = manager.getNpcDefinition(MonsterType.NIHLATHAK);
+    assertEquals("Nihlathak", nihlathak.name);
+    assertEquals(NpcDialogManager.NPC_TYPE_GAMBLER, nihlathak.npcType);
+    assertTrue(nihlathak.canGamble);
+
+    NpcDialogManager.NpcDefinition qualKehk = manager.getNpcDefinition(MonsterType.QUAL_KEHK);
+    assertEquals(NpcDialogManager.NPC_TYPE_HIRELING, qualKehk.npcType);
+    assertTrue(qualKehk.canHire);
   }
 }

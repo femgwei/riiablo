@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.monster.MonsterType;
 
 /**
  * NPC 对话管理器 - 基于 D2MOD SUnitProxy.cpp 和 SUnitNpc.cpp 移植
@@ -580,11 +581,18 @@ public class NpcDialogManager {
     registerNpc(406, "Jamella", 4, NPC_TYPE_GAMBLER, true, true, false, false, false);
     registerNpc(257, "Tyrael", 4, NPC_TYPE_NORMAL, false, false, false, false, false);
 
-    // 第五幕 NPC
-    registerNpc(512, "Larzuk", 5, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
-    registerNpc(513, "Malah", 5, NPC_TYPE_VENDOR, true, false, false, false, false);
-    registerNpc(514, "Anya", 5, NPC_TYPE_VENDOR, true, true, false, false, false);
-    registerNpc(511, "Qual-Kehk", 5, NPC_TYPE_HIRELING, false, false, false, true, false);
+    // 第五幕 NPC。D2MOO MonsterIds.h uses 512..516; the MonStats row named
+    // Drehya is the NPC displayed in-game as Anya.
+    registerNpc(MonsterType.LARZUK, "Larzuk", 5, NPC_TYPE_BLACKSMITH,
+        true, false, true, false, false);
+    registerNpc(MonsterType.DREHYA, "Anya", 5, NPC_TYPE_VENDOR,
+        true, true, false, false, false);
+    registerNpc(MonsterType.MALAH, "Malah", 5, NPC_TYPE_VENDOR,
+        true, false, false, false, false);
+    registerNpc(MonsterType.NIHLATHAK, "Nihlathak", 5, NPC_TYPE_GAMBLER,
+        false, true, false, false, false);
+    registerNpc(MonsterType.QUAL_KEHK, "Qual-Kehk", 5, NPC_TYPE_HIRELING,
+        false, false, false, true, false);
     // D2MOO MONSTER_TYRAEL3 (hcIdx 522), spawned in the Worldstone Chamber
     // after Baal.  It is dialogue-only; the A5Q6 quest system owns the final
     // portal transition and reward gating.

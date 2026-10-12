@@ -75,7 +75,8 @@ public class Npc extends AI {
     // authoritative mercenary service via the NPC's native hcIdx.
     HIRERERS.addAll(MercenaryManager.NPC_KASHYA, MercenaryManager.NPC_GREIZ,
         MercenaryManager.NPC_ASHEARA, MercenaryManager.NPC_QUAL_KEHK);
-    HEALERS.addAll(MonsterType.AKARA, MonsterType.FARA, MonsterType.ORMUS, 406, 513);
+    HEALERS.addAll(MonsterType.AKARA, MonsterType.FARA, MonsterType.ORMUS, 406,
+        MonsterType.MALAH);
 
     // Act 2
     TALKERS.addAll();
@@ -101,8 +102,8 @@ public class Npc extends AI {
     // Act 5
     TALKERS.addAll();
     REPAIRERS.addAll();
-    TRADERS.addAll(514);
-    GAMBLERS.addAll(514);
+    TRADERS.addAll(MonsterType.DREHYA);
+    GAMBLERS.addAll(MonsterType.DREHYA, MonsterType.NIHLATHAK);
     HIRERERS.addAll();
   }
 

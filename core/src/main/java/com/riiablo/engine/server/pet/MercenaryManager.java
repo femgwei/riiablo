@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.NativeHirelingExperienceTable;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -78,7 +79,7 @@ public class MercenaryManager {
   public static final int NPC_ASHEARA = 252;
 
   /** 夸坎克（第五幕雇佣兵 NPC） */
-  public static final int NPC_QUAL_KEHK = 511;
+  public static final int NPC_QUAL_KEHK = MonsterType.QUAL_KEHK;
 
   //==========================================================================
   // 内部类
