@@ -15,6 +15,16 @@
   com.riiablo.map.d2moo.Act4D2MOOLayoutBridgeTest --no-daemon` 通过；尚未进行另一台电脑
   的真实 1.10f 客户端验证，按约定留待 A2–A5 地图工作完成后统一验证。
 
+## 2026-10-13 Act IV 原生 UNIT_TILE Warp 标记（本轮完成代码修复）
+
+- [x] 对照 D2MOO `DrlgRoomTile` 的 `LvlWarp.txt` 出口生成，将 Act IV 原生
+  `UNIT_TILE` 按 `Levels.Vis/Warp` 槽转换为 Zone 的逻辑 Warp marker；不再只导出地形而
+  丢失 River of Flame、Chaos Sanctuary 等入口的原生位置。
+- [x] 保留现有运行时 first-empty-slot 覆盖和兼容 marker 回退；缺少原生 UNIT_TILE 时仍由
+  `Act4MapBuilderD2MOD` 在 Zone 生成后补齐入口，避免精简资源测试退化。
+- [x] 验证：`:core:compileJava` 与 Act IV 定向测试通过；真实客户端入口移动仍按计划延后到
+  A2–A5 地图统一验收。
+
 
 ## 2026-10-12 Act II 地图首轮真实资源验证
 

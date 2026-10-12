@@ -108,9 +108,26 @@ public final class Act4D2MOOLayoutBridge {
 
         projectRooms(level, zone);
         int[] objectCounts = {0, 0};
+        int[] nativeWarpUnits = {0, 0};
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
+              if (unitType == D2UnitTypes.UNIT_TILE) {
+                // D2MOO emits logical exits as UNIT_TILE records.  The index
+                // is the destination LevelId; the corresponding Vis/Warp
+                // slot is what MapManager uses for the interaction marker.
+                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
+                  for (int slot = 0; slot < 8; slot++) {
+                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
+                      zone.addNativeWarpMarker(slot, x, y);
+                      nativeWarpUnits[0]++;
+                      break;
+                    }
+                  }
+                }
+                nativeWarpUnits[1]++;
+                return;
+              }
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;
               objectCounts[0]++;
               if (x < 0 || y < 0
@@ -128,7 +145,8 @@ public final class Act4D2MOOLayoutBridge {
             "A4 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X objects=%d invalid=%d",
             levelId, level.getRooms(), width, height, floors,
             applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask,
-            presetUnits, objectCounts[1]));
+            presetUnits, objectCounts[1])
+            + String.format(" unitTileWarp=%d/%d", nativeWarpUnits[0], nativeWarpUnits[1]));
         D2Log.debug("ACT4_BRIDGE exported level=%d floors=%d rooms=%d objects=%d",
             levelId, floors, level.getRooms(), presetUnits);
         applier.resetLastExportedFloorCount();
