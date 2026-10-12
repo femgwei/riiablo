@@ -351,6 +351,12 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       placeKurastBorder(zone, presets, base + 3, 0, y);
       placeKurastBorder(zone, presets, base + 2, zone.gridsX - 1, y);
     }
+    // D2MOO selects one interlink-dependent gate slot. Compatibility maps do
+    // not expose bJungleInterlink, so keep a stable center gate fallback.
+    int gateNorth = base + 8;
+    int gateSouth = base + 9;
+    placeKurastBorder(zone, presets, gateNorth, zone.gridsX / 2, 0);
+    placeKurastBorder(zone, presets, gateSouth, zone.gridsX / 2, zone.gridsY - 1);
   }
 
   private static void placeKurastBorder(Zone zone,

@@ -84,6 +84,8 @@ class Act3KurastBorderTest {
           assertNull(zone.presets[x][y], "interior must remain available");
           continue;
         }
+        if (y == 0 && x == zone.gridsX / 2) offset = 8;
+        if (y == lastY && x == zone.gridsX / 2) offset = 9;
         assertEquals(base + offset, zone.presets[x][y].preset.Def,
             "level=" + levelId + " grid=(" + x + "," + y + ")");
       }
