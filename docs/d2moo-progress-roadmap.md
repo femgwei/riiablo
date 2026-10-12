@@ -28,6 +28,14 @@
 - [x] 新增 A3 城镇源匹配/动态对象去重回归；A3 原生导出和 `:core:mapRegression`
   均通过。真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
 
+## 2026-10-13 Act IV/V 城镇 NPC 同源去重
+
+- [x] A4 Pandemonium Fortress 与 A5 Harrogath 原生桥接同步记录城镇 `UNIT_MONSTER`
+  的来源文件；仅在来源与当前城镇 preset 匹配时抑制兼容 DS1 动态 NPC，静态对象、来源
+  不一致或资源不完整时继续走兼容回退。
+- [x] A4/A5 城镇投影回归及 `:core:mapRegression` 通过；真实客户端验证仍按约定留待
+  A2--A5 地图全部完成后统一进行。
+
 ## 2026-10-13 Act IV 城镇 NPC 实体投影回归
 
 - [x] 新增 A4 城镇 `UNIT_MONSTER` 投影测试，覆盖 Halbu/Jamella/Tyrael2 的原生

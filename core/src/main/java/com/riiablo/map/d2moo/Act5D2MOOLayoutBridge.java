@@ -119,6 +119,8 @@ public final class Act5D2MOOLayoutBridge {
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
             new com.badlogic.gdx.utils.Array<>();
+        String[] townMonsterSource = {null};
+        boolean[] townMonsterSourcesMatch = {true};
         int[] monsterCounts = {0, 0};
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
@@ -138,6 +140,15 @@ public final class Act5D2MOOLayoutBridge {
               }
               if (unitType == D2UnitTypes.UNIT_MONSTER) {
                 monsterCounts[0]++;
+                if (zone.isTown() && externalEntity) {
+                  if (sourceFile == null || sourceFile.isEmpty()) {
+                    townMonsterSourcesMatch[0] = false;
+                  } else if (townMonsterSource[0] == null) {
+                    townMonsterSource[0] = sourceFile;
+                  } else if (!sameSource(townMonsterSource[0], sourceFile)) {
+                    townMonsterSourcesMatch[0] = false;
+                  }
+                }
                 if (spawned || x < 0 || y < 0
                     || x >= width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                     || y >= height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
@@ -175,6 +186,11 @@ public final class Act5D2MOOLayoutBridge {
                 nativeWarpUnits[1], monsterCounts[0], monsterCounts[1]));
         queueNativeMonsters(zone, exportedMonsters);
         zone.getNativeMonsters().addAll(exportedMonsters);
+        if (zone.isTown() && !exportedMonsters.isEmpty()
+            && townMonsterSourcesMatch[0] && townMonsterSource[0] != null
+            && sameSource(zone.presetSourceFile(), townMonsterSource[0])) {
+          zone.replaceNativeTownMonsters(townMonsterSource[0], exportedMonsters);
+        }
         D2Log.debug("ACT5_BRIDGE exported level=%d floors=%d rooms=%d",
             levelId, floors, level.getRooms());
         applier.resetLastExportedFloorCount();
@@ -197,6 +213,17 @@ public final class Act5D2MOOLayoutBridge {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
     }
     return null;
+  }
+
+  private static boolean sameSource(String a, String b) {
+    if (a == null || b == null) return false;
+    return normalizeSource(a).equals(normalizeSource(b));
+  }
+
+  private static String normalizeSource(String source) {
+    String normalized = source.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+    String root = "data/global/tiles/";
+    return normalized.startsWith(root) ? normalized.substring(root.length()) : normalized;
   }
 
   private static void projectRooms(D2DrlgLevel level, Zone zone) {
