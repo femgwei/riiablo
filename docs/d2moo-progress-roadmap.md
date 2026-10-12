@@ -6982,3 +6982,10 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   maze 生成入口；本轮先以现有 Warp/Zone 回归作为基线。
 - [x] 对照 D2MOO `DrlgOutJung.cpp`，确认 A3 丛林与蜘蛛洞穴属于动态 jungle/maze
   生成链；固定入口预设不应覆盖原生 `SpiderForest` jungle block 选择。
+
+## 2026-10-12 A2-A5 城镇 NPC 注册校验
+
+- [x] 修正 A2 NPC ID 映射并补齐 Warriv2、Atma、Geglash、Jerhyn、Act II Cain；
+  A3/A4/A5 城镇 NPC 注册表已纳入自动测试。
+- [x] 明确实体生成边界：NPC 实体来自城镇 DS1/LvlPrest 单位数据，注册表测试只能
+  证明定义可解析，不能替代真实资源中的 DS1 单位加载验证。
