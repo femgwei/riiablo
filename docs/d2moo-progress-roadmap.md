@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 Act II/III 城镇 NPC 实体投影回归
+
+- [x] 新增 A2 11 名、A3 7 名城镇 NPC 的原生 `UNIT_MONSTER` 投影回归，验证完整
+  `hcIdx` 集合、Zone 原点偏移及连续创建时实体列表不串区；补齐 A2 `Greiz=198`
+  原生常量并用于 NPC 注册。
+- [x] 验证：`:core:mapRegression`（105 项）全部通过。A2 兼容地图目前尚未接入完整
+  MPQ 原生城镇 DRLG 导出，真实坐标验证和原生桥接仍单独留待后续步骤。
+
 ## 2026-10-13 Act IV 城镇 NPC 实体投影回归
 
 - [x] 新增 A4 城镇 `UNIT_MONSTER` 投影测试，覆盖 Halbu/Jamella/Tyrael2 的原生

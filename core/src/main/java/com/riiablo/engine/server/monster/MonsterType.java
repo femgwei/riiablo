@@ -171,6 +171,8 @@ public final class MonsterType {
   public static final int FARA = 178;
   /** 艾尔兹克 (Act 2). */
   public static final int ELZIX = 199;
+  /** 格瑞兹 (Act 2 mercenary captain). */
+  public static final int GREIZ = 198;
   /** 格格什 (Act 2). */
   public static final int GEGLASH = 200;
   /** 杰海因 (Act 2). */

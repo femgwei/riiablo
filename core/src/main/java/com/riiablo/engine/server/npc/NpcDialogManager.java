@@ -559,7 +559,8 @@ public class NpcDialogManager {
     registerNpc(177, "Drognan", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(178, "Fara", 2, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
     registerNpc(199, "Elzix", 2, NPC_TYPE_GAMBLER, true, true, false, false, false);
-    registerNpc(198, "Greiz", 2, NPC_TYPE_HIRELING, false, false, false, true, false);
+    registerNpc(MonsterType.GREIZ, "Greiz", 2, NPC_TYPE_HIRELING,
+        false, false, false, true, false);
     registerNpc(202, "Lysander", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(200, "Geglash", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
     registerNpc(201, "Jerhyn", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
