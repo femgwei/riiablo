@@ -105,4 +105,12 @@ class Act3MapBuilderD2MODTest {
     assertEquals(777, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_16X16);
     assertEquals(793, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_16X16);
   }
+
+  @Test
+  void preservesNativeAct3MazeSpecialDefValues() {
+    assertEquals(647, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TEMPLE_6);
+    assertEquals(704, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_TREASURE_2);
+    assertEquals(659, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_SW);
+    assertEquals(664, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_CHEST_NE);
+  }
 }

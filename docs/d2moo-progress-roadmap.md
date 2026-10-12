@@ -7009,3 +7009,6 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   （760/777/793）的稳定兼容回退，并按 2x2 网格占用避免填充互相重叠。
 - [x] 继续补齐 D2MOO 的 08x16、16x08、08x08 小块填充预设；资源缺失或空间不足
   时安全跳过，原生导出布局优先。
+- [x] 核对 A3 地下迷宫入口：Spider/Flayer/Swampy Pit/Kurast Sewers 由
+  `DRLGMAZE` 的 RoomEx 动态 preset 替换负责，不能用普通户外固定坐标覆盖；补充
+  Spider、Temple、Dungeon treasure Def 回归校验。
