@@ -7081,3 +7081,15 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   与 D2MOO `MonStatsCount + SuperUniquesCount + hcIdx` 编码，并将固定暗金的
   `hcIdx/ Superunique` 传入延迟 RoomEx 生成；新增普通怪、placement 暗金和编码暗金
   三条路径的自动回归。
+
+## 2026-10-13 Act V 原生怪物与 SuperUnique 延迟生成
+
+- [x] 在 A5 原生 `UNIT_MONSTER` 导出中保留 `roomId/mode/坐标`，按 Act V
+  `MonPreset` placement 解析本地 `MonStats.hcIdx`；普通怪和无法解析的直接 class id
+  均保留安全回退，避免精简资源导致整张地图丢失怪物。
+- [x] 支持 D2MOO 的 `MonStatsCount + SuperUniquesCount + hcIdx` 编码，并把固定暗金的
+  `Superunique/hcIdx` 元数据传入 RoomEx 延迟生成队列；`bSpawned` 单位不会重复生成，
+  城镇单位继续由原生城镇实体路径处理。
+- [x] 新增 A5 怪物投影回归，覆盖有效 RoomEx、坐标回退、SuperUnique 元数据和已生成
+  单位跳过；A4/A5 地图桥接、Warp marker 和布局回归通过。
+- [x] 真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后统一进行。
