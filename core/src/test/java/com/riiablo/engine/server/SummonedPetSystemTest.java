@@ -31,6 +31,57 @@ import org.junit.jupiter.api.Test;
 
 class SummonedPetSystemTest {
   @Test
+  void wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup() {
+    for (boolean crossingZone : new boolean[] {true, false}) {
+      DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+      World world = new World(new WorldConfigurationBuilder()
+          .with(collision, new SummonedPetSystem()).build());
+      try {
+        OpenZone zone = new OpenZone();
+        int owner = createOwner(world, zone, 60f, 60f);
+        addCollisionUnit(world, owner, true);
+        // An unrelated monster occupies the first static landing candidate.
+        int blocker = world.create();
+        world.getMapper(Position.class).create(blocker).position.set(57f, 57f);
+        addCollisionUnit(world, blocker, false);
+        int[] wolves = new int[3];
+        Map.Zone source = crossingZone ? new OpenZone() : zone;
+        for (int i = 0; i < wolves.length; i++) {
+          wolves[i] = createPet(world, owner, source, 5f + 4f * i, 5f, "fenris");
+          addCollisionUnit(world, wolves[i], false);
+        }
+        world.process();
+        // Refreshing after relocation must preserve the same collision-free
+        // result; otherwise reservations were not reflected in ECS positions.
+        collision.refreshNow();
+        for (int wolf : wolves) {
+          Vector2 position = world.getMapper(Position.class).get(wolf).position;
+          assertSame(zone, world.getMapper(MapWrapper.class).get(wolf).zone);
+          assertTrue(position.dst(new Vector2(60f, 60f)) <= 12f);
+          assertTrue(collision.isFreeForLanding(wolf,
+              Map.round(position.x), Map.round(position.y), 2));
+          assertNotEquals(new Vector2(57f, 57f), position);
+          for (int other : wolves) {
+            if (other != wolf) {
+              assertNotEquals(world.getMapper(Position.class).get(other).position, position);
+            }
+          }
+        }
+      } finally {
+        world.dispose();
+      }
+    }
+  }
+
+  private static void addCollisionUnit(World world, int id, boolean player) {
+    world.getMapper(com.riiablo.engine.server.component.Class.class).create(id).type =
+        player ? com.riiablo.engine.server.component.Class.Type.PLR
+            : com.riiablo.engine.server.component.Class.Type.MON;
+    world.getMapper(Size.class).create(id).size = 2;
+    world.getMapper(Velocity.class).create(id);
+  }
+
+  @Test
   void timedPetExpiresInNativeFrames() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new SummonedPetSystem()).build());

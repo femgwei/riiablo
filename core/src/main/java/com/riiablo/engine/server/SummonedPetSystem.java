@@ -61,9 +61,21 @@ public class SummonedPetSystem extends IteratingSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Interactable> mInteractable;
+  private Object dynamicCollision;
   private final Vector2 warpPosition = new Vector2();
   private final Vector2 landingProbe = new Vector2();
   private final IntMap<Float> regroupRetry = new IntMap<>();
+
+  @Override
+  protected void initialize() {
+    dynamicCollision = world.getSystem(DynamicUnitCollisionSystem.class);
+  }
+
+  @Override
+  protected void begin() {
+    DynamicUnitCollisionSystem collision = collisionSystem();
+    if (collision != null) collision.refreshNow();
+  }
 
   @Override
   protected void process(int entityId) {
@@ -159,7 +171,8 @@ public class SummonedPetSystem extends IteratingSystem {
                   isMobileFollower(pet));
           if (regroup && readyToRegroup(entityId, !sameZone)) {
             if (findOwnerLanding(ownerMap.zone, ownerPosition, footprint,
-                warpPosition, landingProbe)) {
+                warpPosition, landingProbe, (x, y) -> collisionSystem() == null
+                    || collisionSystem().tryLand(entityId, x, y, footprint))) {
               relocate(entityId, pet, petMap, ownerMap, warpPosition, distance,
                   sameZone ? "regroup" : "warp");
             } else if (!sameZone) {
@@ -341,6 +354,20 @@ public class SummonedPetSystem extends IteratingSystem {
    */
   static boolean findOwnerLanding(com.riiablo.map.Map.Zone zone, Vector2 owner,
       int footprint, Vector2 out, Vector2 probe) {
+    return findOwnerLanding(zone, owner, footprint, out, probe, (x, y) -> true);
+  }
+
+  interface LandingReservation {
+    boolean reserve(int x, int y);
+  }
+
+  private DynamicUnitCollisionSystem collisionSystem() {
+    return dynamicCollision instanceof DynamicUnitCollisionSystem
+        ? (DynamicUnitCollisionSystem) dynamicCollision : null;
+  }
+
+  static boolean findOwnerLanding(com.riiablo.map.Map.Zone zone, Vector2 owner,
+      int footprint, Vector2 out, Vector2 probe, LandingReservation reservation) {
     if (zone == null || owner == null || out == null || probe == null) return false;
     int centerX = Math.round(owner.x), centerY = Math.round(owner.y);
     int minimumRadius = Math.max(2, footprint + 1);
@@ -352,7 +379,9 @@ public class SummonedPetSystem extends IteratingSystem {
           for (int dx = -radius; dx <= radius; dx++) {
             if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
             probe.set(centerX + dx, centerY + dy);
-            if (zone.findFreeCoordinates(probe, footprint, 0, true, out)) return true;
+            if (zone.findFreeCoordinates(probe, footprint, 0, true, out)
+                && reservation.reserve(com.riiablo.map.Map.round(out.x),
+                    com.riiablo.map.Map.round(out.y))) return true;
           }
         }
       }

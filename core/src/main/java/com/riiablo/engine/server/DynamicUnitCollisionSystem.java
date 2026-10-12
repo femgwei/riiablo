@@ -68,6 +68,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     rebuildNow(true);
   }
 
+  /** Refreshes current positions without relocating overlapping units. */
+  public void refreshNow() {
+    rebuildNow(false);
+  }
+
   private void rebuildNow(boolean relocateOverlaps) {
     if (!enabled || units == null) return;
     grid.clear();
@@ -158,6 +163,12 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   public boolean isFreeForLanding(int moverId, int x, int y, int size) {
     return !enabled || grid.isFree(moverId, Engine.INVALID_ENTITY, x, y, size,
         entityId -> true);
+  }
+
+  /** Reserves a landing immediately so later pets in this tick see it. */
+  public boolean tryLand(int moverId, int x, int y, int size) {
+    if (!enabled || !hasPresence(moverId)) return true;
+    return grid.move(moverId, Engine.INVALID_ENTITY, x, y, size, entityId -> true);
   }
 
   /** Transfers a unit to a destination without pushing another unit. */
