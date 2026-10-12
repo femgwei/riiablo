@@ -302,6 +302,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     // 参考 D2MOD: DRLGOUTPLACE_InitAct3OutdoorLevel
     for (Zone zone : map.zones) {
       if (!zone.town) {
+        placeNativeJungleTransition(zone);
         placeNativeKurastBorders(zone);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 2);
@@ -337,6 +338,32 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       int x = cells[i][0], y = cells[i][1];
       if (count > 0 && zone.presets[x][y] == null) zone.presets[x][y] = Preset.of(p, files[0]);
     }
+  }
+
+  /** Places the native jungle chain's head/tail transition preset anchors. */
+  static void placeNativeJungleTransition(Zone zone) {
+    if (zone == null || zone.presets == null || zone.level == null
+        || zone.gridsX < 1 || zone.gridsY < 1) return;
+    int def;
+    int gx;
+    int gy;
+    if (zone.level.Id == LEVEL_SPIDERFOREST) {
+      def = 715;
+      gx = 0;
+      gy = zone.gridsY - 1;
+    } else if (zone.level.Id == LEVEL_FLAYERJUNGLE) {
+      def = 716;
+      gx = 0;
+      gy = 0;
+    } else {
+      return;
+    }
+    if (zone.presets[gx][gy] != null || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+    if (p == null || p.File == null) return;
+    int[] files = new int[6];
+    int count = Preset.getPresets(p, files);
+    if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[0]);
   }
 
   /**
