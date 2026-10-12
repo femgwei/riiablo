@@ -7003,3 +7003,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 按 `DrlgOutPlace_BuildKurast` 增加 Bazaar/Upper Kurast 的 Sewer、Temple、
   Waypoint 兼容预设锚点；Lower Kurast 保留 Waypoint 锚点。原生 TileGrid 存在时
   不注入兼容预设，避免与原生特殊入口重复。
+- [x] 接入 Kurast Causeway 的 Bridge（794）以及 Travincal 六个边缘预设
+  （795--800）；兼容布局使用 D2MOO 固定网格坐标，原生导出优先。

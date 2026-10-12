@@ -84,4 +84,15 @@ class Act3MapBuilderD2MODTest {
     assertEquals(788, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_SEWER);
     assertEquals(789, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METROTEMPLE);
   }
+
+  @Test
+  void uses110fCausewayAndTravincalPresetDefValues() {
+    assertEquals(794, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BRIDGE);
+    assertEquals(795, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NW);
+    assertEquals(796, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_N);
+    assertEquals(797, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NE);
+    assertEquals(798, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SW);
+    assertEquals(799, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_S);
+    assertEquals(800, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SE);
+  }
 }

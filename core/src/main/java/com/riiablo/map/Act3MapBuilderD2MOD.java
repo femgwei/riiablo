@@ -305,6 +305,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         placeNativeJungleTransition(zone);
         placeNativeKurastBorders(zone);
         placeNativeKurastSpecials(zone);
+        placeNativeCausewayBridge(zone);
+        placeNativeTravincalEdges(zone);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 2);
         
@@ -393,6 +395,28 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     if (sewer >= 0) placeKurastSpecial(zone, sewer, sx, sy);
     if (temple >= 0) placeKurastSpecial(zone, temple, cx, cy);
     placeKurastSpecial(zone, waypoint, Math.max(1, cx - 1), Math.max(1, cy - 1));
+  }
+
+  static void placeNativeCausewayBridge(Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != LEVEL_KURASTCAUSEWAY || zone.nativeTileGrid() != null
+        || zone.presets == null || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    placeKurastSpecial(zone, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BRIDGE, 0, 0);
+  }
+
+  static void placeNativeTravincalEdges(Zone zone) {
+    if (zone == null || zone.level == null || zone.level.Id != LEVEL_TRAVINCAL
+        || zone.nativeTileGrid() != null || zone.presets == null
+        || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    int[][] entries = {
+        {795, 0, 0}, {796, 2, 0}, {797, 6, 0},
+        {798, 0, 4}, {799, 2, 4}, {800, 6, 4}
+    };
+    for (int[] entry : entries) {
+      if (entry[1] < zone.gridsX && entry[2] < zone.gridsY) {
+        placeKurastSpecial(zone, entry[0], entry[1], entry[2]);
+      }
+    }
   }
 
   private static void placeKurastSpecial(Zone zone, int def, int gx, int gy) {
