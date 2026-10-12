@@ -15,10 +15,12 @@ import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2MemoryPool;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.drlg.TileGrid;
-import com.riiablo.codec.excel.MonStats;
 
 import java.util.IdentityHashMap;
 
@@ -166,9 +168,10 @@ public final class Act3D2MOOLayoutBridge {
                 if (externalEntity && x >= 0 && y >= 0
                     && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                     && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
+                  NativeMonsterResolution resolved = resolveNativeMonster(index);
                   exportedMonsters.add(new Map.NativeMonster(
-                      roomId, resolveNativeMonsterId(index), mode, x, y,
-                      -1, null, spawned));
+                      roomId, resolved.monsterId, mode, x, y,
+                      resolved.superUniqueId, resolved.superUniqueKey, spawned));
                 }
                 return;
               }
@@ -306,20 +309,56 @@ public final class Act3D2MOOLayoutBridge {
     return queued;
   }
 
-  private static int resolveNativeMonsterId(int index) {
-    if (com.riiablo.Riiablo.files == null
-        || com.riiablo.Riiablo.files.monstats == null) return index;
+  /**
+   * Resolves an Act III UNIT_MONSTER class id and preserves native
+   * SuperUniques identity.  D2MOO emits both MonPreset placement ids and the
+   * encoded {@code monstatsCount + superUniquesCount + hcIdx} form; the latter
+   * is used by preset bosses that have no MonPreset row at the exported site.
+   */
+  static NativeMonsterResolution resolveNativeMonster(int index) {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+      return new NativeMonsterResolution(index, -1, null);
+    }
     String placement = null;
-    if (com.riiablo.Riiablo.files.MonPreset != null) {
+    if (Riiablo.files.MonPreset != null) {
       try {
-        placement = com.riiablo.Riiablo.files.MonPreset.getPlace(3, index);
+        placement = Riiablo.files.MonPreset.getPlace(3, index);
       } catch (RuntimeException ignored) {
         // Keep the direct class-id lookup for native units without a MonPreset row.
       }
     }
     MonStats.Entry monster = com.riiablo.map.Act1MapBuilderD2MOD
         .resolveD2MooPresetMonster(index, placement);
-    return monster == null ? index : monster.hcIdx;
+    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
+        ? null : Riiablo.files.SuperUniques.get(placement);
+    if (monster == null && superUnique != null) {
+      monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    }
+    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
+      // D2MOO encodes preset SuperUniques as
+      // MonStatsCount + SuperUniquesCount + hcIdx.
+      int suIndex = index - Riiablo.files.monstats.size()
+          - Riiablo.files.SuperUniques.size();
+      superUnique = Riiablo.files.SuperUniques.get(suIndex);
+      if (superUnique != null) {
+        monster = Riiablo.files.monstats.get(superUnique.MonClass);
+      }
+    }
+    return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
+        superUnique == null ? -1 : superUnique.hcIdx,
+        superUnique == null ? null : superUnique.Superunique);
+  }
+
+  static final class NativeMonsterResolution {
+    final int monsterId;
+    final int superUniqueId;
+    final String superUniqueKey;
+
+    NativeMonsterResolution(int monsterId, int superUniqueId, String superUniqueKey) {
+      this.monsterId = monsterId;
+      this.superUniqueId = superUniqueId;
+      this.superUniqueKey = superUniqueKey;
+    }
   }
 
   private static final class RiiabloAccess {
