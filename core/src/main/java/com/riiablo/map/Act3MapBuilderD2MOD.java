@@ -338,6 +338,23 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       int x = cells[i][0], y = cells[i][1];
       if (count > 0 && zone.presets[x][y] == null) zone.presets[x][y] = Preset.of(p, files[0]);
     }
+    for (int x = 1; x < zone.gridsX - 1; x++) {
+      placeKurastBorder(zone, base, base + 1, x, 0);
+      placeKurastBorder(zone, base, base + 1, x, zone.gridsY - 1);
+    }
+    for (int y = 1; y < zone.gridsY - 1; y++) {
+      placeKurastBorder(zone, base, base + 3, 0, y);
+      placeKurastBorder(zone, base, base + 2, zone.gridsX - 1, y);
+    }
+  }
+
+  private static void placeKurastBorder(Zone zone, int base, int offset, int gx, int gy) {
+    if (zone.presets[gx][gy] != null) return;
+    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(offset);
+    if (p == null || p.File == null) return;
+    int[] files = new int[6];
+    int count = Preset.getPresets(p, files);
+    if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[0]);
   }
 
   /** Places the native jungle chain's head/tail transition preset anchors. */
