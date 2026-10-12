@@ -1119,6 +1119,7 @@ public class Map implements Disposable {
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
     /** Native wall graphics whose render origin is on the exclusive zone edge. */
     IntMap<DT1.Tile> boundaryWalls = new IntMap<>();
+    IntIntMap boundaryWallTileTypes = new IntIntMap();
 
     static final Generator EMPTY_GENERATOR = new Generator() {
       @Override public void init(Zone zone) {}
@@ -1300,6 +1301,7 @@ public class Map implements Disposable {
       generator = EMPTY_GENERATOR;
       specials = EMPTY_INT_CELL_MAP;
       boundaryWalls.clear();
+      boundaryWallTileTypes.clear();
     }
 
     @Override
@@ -1517,12 +1519,31 @@ public class Map implements Disposable {
       return tiles[layer] == null ? null : tiles[layer][tileIndex(localX, localY)];
     }
 
+    /** Returns D2MOO's logical wall type for a world tile, or -1 if unavailable. */
+    public int nativeWallTileType(int layer, int tx, int ty) {
+      if (layer < 0 || layer >= Map.MAX_WALLS || nativeTileGrid == null) return -1;
+      int localX = tx - this.tx;
+      int localY = ty - this.ty;
+      if (nativeTileGrid.inBounds(localX, localY)) {
+        return nativeTileGrid.wallTileTypes[layer][localY][localX];
+      }
+      return boundaryWallTileTypes.get(tileHashCode(Map.WALL_OFFSET + layer, localX, localY), -1);
+    }
+
     void clearBoundaryWalls() {
       boundaryWalls.clear();
+      boundaryWallTileTypes.clear();
     }
 
     void putBoundaryWall(int layer, int tx, int ty, DT1.Tile tile) {
       if (tile != null) boundaryWalls.put(tileHashCode(layer, tx, ty), tile);
+    }
+
+    public void putBoundaryWall(int layer, int tx, int ty, DT1.Tile tile, int tileType) {
+      if (tile == null) return;
+      int key = tileHashCode(layer, tx, ty);
+      boundaryWalls.put(key, tile);
+      boundaryWallTileTypes.put(key, tileType);
     }
 
     boolean containsBoundaryWall(int worldX, int worldY) {

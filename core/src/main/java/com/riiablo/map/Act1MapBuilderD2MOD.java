@@ -3525,7 +3525,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       if (tile == null) tile = zone.dt1s.get(boundary.tileId);
       if (tile == null) continue;
       zone.putBoundaryWall(Map.WALL_OFFSET + boundary.layer,
-          boundary.x, boundary.y, tile);
+          boundary.x, boundary.y, tile, boundary.tileType);
       applied++;
     }
     if (applied > 0 && Gdx.app != null) {

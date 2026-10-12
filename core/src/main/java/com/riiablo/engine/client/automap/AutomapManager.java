@@ -518,6 +518,7 @@ public class AutomapManager implements Disposable {
     int wallCells = 0;
     int wallLookupMisses = 0;
     int wallRemaps = 0;
+    int nativeWallTypeOverrides = 0;
     StringBuilder wallMissSamples = new StringBuilder();
     StringBuilder wallMissDiagnostics = new StringBuilder();
     String firstTile = null;
@@ -550,8 +551,12 @@ public class AutomapManager implements Disposable {
           // missing native wall mapping.
           boolean boundaryWallTile = isAutomapBoundaryWall(tile.orientation);
           if (wallTile) wallTiles++;
-          int automapOrientation = tile.orientation;
-          if (AutomapWallRemap.isRemappable(tile.orientation)) {
+          int nativeWallType = wallTile
+              ? zone.nativeWallTileType(l - Map.WALL_OFFSET, tx, ty) : -1;
+          int automapOrientation = nativeAutomapOrientation(tile.orientation, nativeWallType);
+          if (automapOrientation != tile.orientation) {
+            nativeWallTypeOverrides++;
+          } else if (AutomapWallRemap.isRemappable(tile.orientation)) {
             for (int linkedLayer = 0; linkedLayer < Map.MAX_LAYERS; linkedLayer++) {
               if (linkedLayer == l) continue;
               DT1.Tile linked = zone.get(linkedLayer, tx, ty);
@@ -640,9 +645,9 @@ public class AutomapManager implements Disposable {
     if (Gdx.app != null) {
       Gdx.app.log(TAG, String.format(
           "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d "
-          + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallRemaps=%d wallMissSamples=%s first=%s",
+          + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallRemaps=%d nativeWallTypeOverrides=%d wallMissSamples=%s first=%s",
           zone.levelId(), automapLevelName, tileCount, added, lookupMisses,
-          wallTiles, wallCells, wallLookupMisses, wallRemaps,
+          wallTiles, wallCells, wallLookupMisses, wallRemaps, nativeWallTypeOverrides,
           wallMissSamples.length() == 0 ? "none" : wallMissSamples,
           firstTile == null ? "none" : firstTile));
       if (wallMissDiagnostics.length() > 0) {
@@ -662,6 +667,12 @@ public class AutomapManager implements Disposable {
         && orientation <= Orientation.SPECIAL_11)
         || (orientation >= Orientation.LOWER_LEFT_WALL
         && orientation <= Orientation.LOWER_SOUTH_CORNER_WALL);
+  }
+
+  static int nativeAutomapOrientation(int tileOrientation, int nativeWallType) {
+    return nativeWallType >= Orientation.LEFT_WALL
+        && nativeWallType <= Orientation.LOWER_SOUTH_CORNER_WALL
+        ? nativeWallType : tileOrientation;
   }
   
   // ==================== 实体标记 ====================
