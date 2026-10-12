@@ -19,6 +19,13 @@ import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
   @Test
+  void ordinaryMonstersCannotUseTownAsPathDestination() {
+    assertFalse(Pathfinder.isTownDestinationAllowed(false, false, false));
+    assertTrue(Pathfinder.isTownDestinationAllowed(true, false, false));
+    assertTrue(Pathfinder.isTownDestinationAllowed(false, true, false));
+    assertTrue(Pathfinder.isTownDestinationAllowed(false, false, true));
+  }
+  @Test
   void pathfindRetainsFinalDestinationIndependentlyOfCurrentWaypoint() {
     GraphPath path = new GraphPath();
     path.add(new Point2(1, 2));

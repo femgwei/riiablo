@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.combat.NativeMeleeDistance;
@@ -59,6 +60,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   /**
    * Optional for focused headless tests and legacy worlds.  The movement
    * queries below already treat a missing dynamic-collision service as an
@@ -596,6 +598,10 @@ public class Pathfinder extends IteratingSystem {
   private boolean findPath(int src, Vector2 srcPos, Vector2 targetPos,
       int flags, int size, GraphPath path, int targetEntityId,
       boolean includeDynamicObstacles) {
+    if (mMonster.has(src) && !isMonsterTargetDestinationAllowed(src, targetPos)) {
+      path.clear();
+      return false;
+    }
     if (!isNativeMonsterRoomPathAllowed(src, srcPos, targetPos)) {
       if (mMonster.has(src)) {
         Monster monster = mMonster.get(src);
@@ -630,6 +636,22 @@ public class Pathfinder extends IteratingSystem {
     }
 
     return success;
+  }
+
+  /** Mirrors PATH_IsTargetDestinationAllowed for monster ground paths. */
+  private boolean isMonsterTargetDestinationAllowed(int entityId, Vector2 target) {
+    if (target == null || map == null) return true;
+    Map.Zone targetZone = map.getZone(target);
+    if (targetZone == null || !targetZone.isTown()) return true;
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats == null) return true;
+    boolean revived = mNativeUnitFlags != null && mNativeUnitFlags.has(entityId)
+        && mNativeUnitFlags.get(entityId).has(NativeUnitFlags.IS_REVIVE);
+    return isTownDestinationAllowed(monster.monstats.npc, monster.monstats.inTown, revived);
+  }
+
+  static boolean isTownDestinationAllowed(boolean npc, boolean inTown, boolean revived) {
+    return npc || inTown || revived;
   }
 
   /**
