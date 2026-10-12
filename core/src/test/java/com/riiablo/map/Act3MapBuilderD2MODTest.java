@@ -69,4 +69,10 @@ class Act3MapBuilderD2MODTest {
     assertEquals(663, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_CHEST_NW);
     assertEquals(664, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_CHEST_NE);
   }
+
+  @Test
+  void uses110fJungleTransitionPresetDefValues() {
+    assertEquals(715, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD);
+    assertEquals(716, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL);
+  }
 }
