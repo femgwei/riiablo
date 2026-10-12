@@ -528,6 +528,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int[] defs;
     int repeats;
     switch (zone.level.Id) {
+      case LEVEL_ROCKYWASTE:
+        defs = new int[] { 537, 553, 543, 544, 539, 545, 541 }; repeats = 1; break;
+      case LEVEL_DRYHILLS:
+        defs = new int[] { 537, 553, 540, 545 }; repeats = 2; break;
       case LEVEL_FAROASIS:
         defs = new int[] { 551, 543, 545, 537 }; repeats = 2; break;
       case LEVEL_LOSTCITY:
