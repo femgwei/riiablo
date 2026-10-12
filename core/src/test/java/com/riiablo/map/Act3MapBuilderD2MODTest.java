@@ -75,4 +75,13 @@ class Act3MapBuilderD2MODTest {
     assertEquals(715, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD);
     assertEquals(716, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL);
   }
+
+  @Test
+  void uses110fKurastSpecialPresetDefValues() {
+    assertEquals(771, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_SEWER);
+    assertEquals(772, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_TEMPLE);
+    assertEquals(773, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_WAYPOINT);
+    assertEquals(788, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_SEWER);
+    assertEquals(789, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METROTEMPLE);
+  }
 }

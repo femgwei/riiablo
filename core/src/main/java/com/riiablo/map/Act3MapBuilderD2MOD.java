@@ -304,6 +304,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       if (!zone.town) {
         placeNativeJungleTransition(zone);
         placeNativeKurastBorders(zone);
+        placeNativeKurastSpecials(zone);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 2);
         
@@ -363,6 +364,41 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       java.util.function.IntFunction<LvlPrest.Entry> presets, int def, int gx, int gy) {
     if (zone.presets[gx][gy] != null) return;
     LvlPrest.Entry p = presets.apply(def);
+    if (p == null || p.File == null) return;
+    int[] files = new int[6];
+    int count = Preset.getPresets(p, files);
+    if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[0]);
+  }
+
+  /** Compatibility anchors for Kurast sewer/temple/waypoint presets. */
+  static void placeNativeKurastSpecials(Zone zone) {
+    if (zone == null || zone.presets == null || zone.level == null
+        || zone.nativeTileGrid() != null || Riiablo.files == null
+        || Riiablo.files.LvlPrest == null || zone.gridsX < 5 || zone.gridsY < 5) return;
+    int sewer = -1;
+    int temple = -1;
+    int waypoint = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_WAYPOINT;
+    int sx = 3, sy = 3;
+    if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR) {
+      sewer = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_SEWER;
+      temple = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_TEMPLE;
+    } else if (zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST) {
+      sewer = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_SEWER;
+      temple = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METROTEMPLE;
+      sy = zone.gridsY - 4;
+    } else if (zone.level.Id != D2LevelIds.LEVEL_LOWERKURAST) {
+      return;
+    }
+    int cx = zone.gridsX / 2, cy = zone.gridsY / 2;
+    if (sewer >= 0) placeKurastSpecial(zone, sewer, sx, sy);
+    if (temple >= 0) placeKurastSpecial(zone, temple, cx, cy);
+    placeKurastSpecial(zone, waypoint, Math.max(1, cx - 1), Math.max(1, cy - 1));
+  }
+
+  private static void placeKurastSpecial(Zone zone, int def, int gx, int gy) {
+    if (gx < 0 || gy < 0 || gx >= zone.gridsX || gy >= zone.gridsY
+        || zone.presets[gx][gy] != null) return;
+    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
     if (p == null || p.File == null) return;
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
