@@ -199,7 +199,11 @@ public class Files {
     AutoMap          = load(AutoMap.class);
     LowQualityItems  = load(LowQualityItems.class);
     LvlMaze          = load(LvlMaze.class);
-    LvlPrest         = load(LvlPrest.class);
+    // LvlPrest is keyed by Def, and the bundled bin can become stale when the
+    // source table changes. Always read the authoritative MPQ TXT so Def 537
+    // cannot silently resolve to an unrelated row (for example Act3/Jungle).
+    LvlPrest         = Excel.load(LvlPrest.class,
+        Riiablo.mpqs.resolve(EXCEL_PATH + "LvlPrest.txt"));
     LvlTypes         = load(LvlTypes.class);
     LvlWarp          = load(LvlWarp.class, Excel.EXPANSION);
     LvlSub           = load(LvlSub.class);
