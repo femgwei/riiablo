@@ -831,7 +831,8 @@ public class ServerEntityFactory extends EntityFactory {
       mLifecycle.get(monsterId).revive();
     }
     mRunning.remove(monsterId);
-    mVelocity.create(monsterId).setMonster(monster.monstats.Velocity);
+    mVelocity.create(monsterId).setMonster(monster.monstats.Velocity)
+        .stateMovementLocked = false;
     mMovementModes.create(monsterId).set(
         Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
 

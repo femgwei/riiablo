@@ -155,12 +155,14 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       if (mCorpse.has(entityId)) mCorpse.remove(entityId);
       log.info("[MONSTER_CORPSE] phase=shattered entity={} usable=false", entityId);
     } else if (!mCorpse.has(entityId)) {
-      mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
       Monster monster = mMonster.get(entityId);
+      boolean deadCollision = monster != null && monster.monstats2 != null
+          && monster.monstats2.deadCol;
+      mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, !deadCollision);
       log.info("[MONSTER_CORPSE] phase=created entity={} monster={} usable={} duration={}",
           entityId,
           monster != null && monster.monstats != null ? monster.monstats.Id : "unknown",
-          true, Corpse.DEFAULT_DURATION);
+          !deadCollision, Corpse.DEFAULT_DURATION);
     } else {
       // A repeated MODE_DD event must not extend or reset a corpse that a
       // shaman is already using.
@@ -169,7 +171,18 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
 
     // Dead monsters must not keep participating in movement, targeting, or a
     // stale skill cast while they remain as selectable resurrection targets.
-    if (mVelocity.has(entityId)) mVelocity.remove(entityId);
+    Monster deadMonster = mMonster.get(entityId);
+    boolean retainDeadCollision = deadMonster != null && deadMonster.monstats2 != null
+        && deadMonster.monstats2.deadCol;
+    if (retainDeadCollision && mVelocity.has(entityId)) {
+      // D2 keeps the monster footprint for deadCol rows. Freeze the retained
+      // velocity component so the dynamic grid still blocks movement while
+      // the corpse remains in the room.
+      mVelocity.get(entityId).velocity.setZero();
+      mVelocity.get(entityId).stateMovementLocked = true;
+    } else if (mVelocity.has(entityId)) {
+      mVelocity.remove(entityId);
+    }
     if (mMovementModes.has(entityId)) mMovementModes.remove(entityId);
     if (mPathfind.has(entityId)) mPathfind.remove(entityId);
     if (mCasting.has(entityId)) mCasting.remove(entityId);

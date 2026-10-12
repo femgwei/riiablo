@@ -131,6 +131,33 @@ class ServerMonsterCorpseSystemTest {
     }
   }
 
+  @Test
+  void deadCollisionMonsterRetainsFrozenFootprintAndCannotBeConsumed() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem())
+        .build());
+    try {
+      int monsterId = world.create();
+      MonStats2.Entry stats2 = new MonStats2.Entry();
+      stats2.deadCol = true;
+      world.getMapper(Monster.class).create(monsterId)
+          .set(new MonStats.Entry(), stats2);
+      Velocity velocity = world.getMapper(Velocity.class).create(monsterId);
+
+      events.dispatch(DeathEvent.obtain(7, monsterId));
+      events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
+
+      assertTrue(world.getMapper(Corpse.class).has(monsterId));
+      assertFalse(world.getMapper(Corpse.class).get(monsterId).usable);
+      assertTrue(world.getMapper(Velocity.class).has(monsterId));
+      assertTrue(velocity.stateMovementLocked);
+      assertTrue(velocity.velocity.isZero());
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static final class ProbeAI extends AI {
     boolean killed;
     ProbeAI(int entityId) { super(entityId); }
