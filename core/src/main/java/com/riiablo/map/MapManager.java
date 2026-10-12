@@ -163,12 +163,25 @@ public class MapManager extends PassiveSystem {
   /** Materializes native UNIT_MONSTER entries exported for town NPCs. */
   private void createNativeTownMonsters(Map.Zone zone) {
     if (zone == null || !zone.town || zone.getNativeMonsters().size == 0) return;
+    int skipped = 0;
+    int created = 0;
     for (Map.NativeMonster nativeMonster : zone.getNativeMonsters()) {
-      if (nativeMonster.spawned || nativeMonster.monsterId < 0) continue;
+      if (nativeMonster.spawned || nativeMonster.monsterId < 0) {
+        skipped++;
+        continue;
+      }
       int id = factory.createMonster(nativeMonster.monsterId,
           zone.x() + nativeMonster.x, zone.y() + nativeMonster.y);
-      if (id != Engine.INVALID_ENTITY) zone.entities.add(id);
+      if (id != Engine.INVALID_ENTITY) {
+        zone.entities.add(id);
+        created++;
+      } else {
+        skipped++;
+      }
     }
+    if (Gdx.app != null) Gdx.app.log(TAG, String.format(
+        "Native town monster units: level=%d exported=%d created=%d skipped=%d",
+        zone.levelId(), zone.getNativeMonsters().size, created, skipped));
   }
 
   private void createPresetEntities(Map.Zone zone, boolean waypointsOnly) {
