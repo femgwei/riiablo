@@ -7110,5 +7110,6 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   依据 `Levels.txt` 的 Vis/Warp slot 投影。
 - [x] Act II `MonPreset` placement 与 D2MOO 编码 SuperUnique 均解析到本地
   `MonStats.hcIdx`，非城镇怪物按 RoomEx 延迟生成，已生成单位不会重复创建。
-- [x] 新增 Arcane 原生怪物投影回归；Arcane 拓扑、地形、A2 Warp 及 A3--A5 地图回归
- 通过。真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后统一进行。
+- [x] 新增 Arcane 原生怪物投影与 MonPreset/SuperUnique 解析回归；Arcane 拓扑、地形、
+  A2 Warp 及 A3--A5 地图回归通过。真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后
+  统一进行。
