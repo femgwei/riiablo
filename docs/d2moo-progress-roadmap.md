@@ -6978,3 +6978,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] A2 非需求测试项暂不阻塞后续开发，转入 A3 地图完善。
 - [ ] 下一阶段优先核对 Spider Forest 的 Spider Cave/Spider Cavern 原生入口预设，
   再处理 Flayer Jungle/Dungeon、Kurast Sewers 与 Travincal 的地图细节。
+- [x] 已确认现有 A3 生成器会为 Spider Cave/Cavern 建立兼容 Zone，并保留 D2MOO
+  maze 生成入口；本轮先以现有 Warp/Zone 回归作为基线。
