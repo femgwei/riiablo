@@ -517,6 +517,7 @@ public class AutomapManager implements Disposable {
     int wallTiles = 0;
     int wallCells = 0;
     int wallLookupMisses = 0;
+    int wallRemaps = 0;
     StringBuilder wallMissSamples = new StringBuilder();
     StringBuilder wallMissDiagnostics = new StringBuilder();
     String firstTile = null;
@@ -549,7 +550,22 @@ public class AutomapManager implements Disposable {
           // missing native wall mapping.
           boolean boundaryWallTile = isAutomapBoundaryWall(tile.orientation);
           if (wallTile) wallTiles++;
-          String tileName = AutomapTileRenderer.tileNameForOrientation(tile.orientation);
+          int automapOrientation = tile.orientation;
+          if (AutomapWallRemap.isRemappable(tile.orientation)) {
+            for (int linkedLayer = 0; linkedLayer < Map.MAX_LAYERS; linkedLayer++) {
+              if (linkedLayer == l) continue;
+              DT1.Tile linked = zone.get(linkedLayer, tx, ty);
+              if (linked == null || (!AutomapWallRemap.isRemappable(linked.orientation)
+                  && linked.orientation != Orientation.LEFT_NORTH_CORNER_WALL)) continue;
+              int remapped = AutomapWallRemap.remap(tile.orientation, linked.orientation);
+              if (remapped != tile.orientation) {
+                automapOrientation = remapped;
+                wallRemaps++;
+              }
+              break;
+            }
+          }
+          String tileName = AutomapTileRenderer.tileNameForOrientation(automapOrientation);
           if (tileName == null) {
             if (boundaryWallTile) wallLookupMisses++;
             continue;
@@ -624,9 +640,9 @@ public class AutomapManager implements Disposable {
     if (Gdx.app != null) {
       Gdx.app.log(TAG, String.format(
           "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d "
-              + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallMissSamples=%s first=%s",
+          + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallRemaps=%d wallMissSamples=%s first=%s",
           zone.levelId(), automapLevelName, tileCount, added, lookupMisses,
-          wallTiles, wallCells, wallLookupMisses,
+          wallTiles, wallCells, wallLookupMisses, wallRemaps,
           wallMissSamples.length() == 0 ? "none" : wallMissSamples,
           firstTile == null ? "none" : firstTile));
       if (wallMissDiagnostics.length() > 0) {
