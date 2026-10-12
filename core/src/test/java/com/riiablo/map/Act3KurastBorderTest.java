@@ -105,6 +105,14 @@ class Act3KurastBorderTest {
         : interlink != 0 ? lastX - 1 : 1;
     for (int x = 0; x <= lastX; x++) {
       for (int y = 0; y <= lastY; y++) {
+        boolean doubleGateFollower = (levelId == D2LevelIds.LEVEL_LOWERKURAST
+            && y == lastY && x == south + 1)
+            || (levelId == D2LevelIds.LEVEL_UPPERKURAST
+                && y == 0 && x == north + 1);
+        if (doubleGateFollower) {
+          assertNull(zone.presets[x][y], "double-width gate follower must remain unfilled");
+          continue;
+        }
         int offset;
         if (x == 0 && y == 0) offset = 5;
         else if (x == lastX && y == 0) offset = 4;

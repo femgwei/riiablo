@@ -392,8 +392,15 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     }
     int gateNorth = base + 8;
     int gateSouth = base + 9;
-    for (int x = 1; x < zone.gridsX - 1; x++) {
+    // Upper Kurast uses the same double-width advance on its north gate.
+    for (int x = 1; x < zone.gridsX - 1;
+        x += zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST && x == gateNorthX ? 2 : 1) {
       placeKurastBorder(zone, presets, x == gateNorthX ? gateNorth : base, x, 0);
+    }
+    // D2MOO advances one extra grid after the Lower Kurast south gate; the
+    // 16x8 gate owns that adjacent cell and must not be filled by a border.
+    for (int x = 1; x < zone.gridsX - 1;
+        x += zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST && x == gateSouthX ? 2 : 1) {
       placeKurastBorder(zone, presets, x == gateSouthX ? gateSouth : base + 1,
           x, zone.gridsY - 1);
     }

@@ -7001,8 +7001,8 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 兼容 Kurast 门位已按 D2MOO `DRLG_AllocDrlg` 的前两次种子滚动计算
   `bJungleInterlink`，三城区南北门位分别遵循 `DrlgOutJung.cpp` 的公式；新增
   两种互连布局与多种种子的自动回归，不消耗全局 RNG。
-- [ ] 双格门的占用/生成保护仍待完善；完整资源下该行为由现有 D2MOO 原生
-  bridge 负责，本节不宣称兼容布局完全复刻。
+- [x] Lower Kurast 南门与 Upper Kurast 北门按 D2MOO 原生 16x8 预设步进跳过
+  相邻网格，避免兼容边界再次填充双格门占用区；其余门预设保持原生单格步进。
 - [x] 按 `DrlgOutPlace_BuildKurast` 增加 Bazaar/Upper Kurast 的 Sewer、Temple、
   Waypoint 兼容预设锚点；Lower Kurast 保留 Waypoint 锚点。原生 TileGrid 存在时
   不注入兼容预设，避免与原生特殊入口重复。
