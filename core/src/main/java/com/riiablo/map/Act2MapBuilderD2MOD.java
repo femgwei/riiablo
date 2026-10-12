@@ -437,6 +437,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
         // entrance preset before waypoints and shrines are spawned.
         placeDesertExit(zone, seed);
+        placeNativeDesertCliffs(zone, seed);
         placeNativeDesertFills(zone, seed);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 1);
@@ -545,6 +546,30 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         int[] files = new int[6]; int count = Preset.getPresets(p, files);
         if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
       }
+    }
+  }
+
+  /** Places the five-piece cliff ring selected by D2Common's PlaceCliffs. */
+  static void placeNativeDesertCliffs(Zone zone, int seed) {
+    if (zone == null || zone.presets == null || zone.gridsX < 9 || zone.gridsY < 9) return;
+    int[][][] variants = {
+      {{518,1,0,4},{520,-1,2,4},{519,-1,4,4},{519,-1,6,4},{518,2,8,4}},
+      {{518,1,0,4},{519,-1,2,4},{520,-1,4,4},{519,-1,6,4},{518,2,8,4}},
+      {{518,1,0,4},{519,-1,2,4},{519,-1,4,4},{520,-1,6,4},{518,2,8,4}},
+      {{518,2,8,4},{519,-1,6,4},{524,-1,4,4},{523,-1,4,6},{521,2,4,8}},
+      {{518,2,8,4},{520,-1,6,4},{524,-1,4,4},{522,-1,4,6},{521,2,4,8}},
+      {{521,1,4,0},{523,-1,4,2},{522,-1,4,4},{522,-1,4,6},{521,2,4,8}},
+      {{521,1,4,0},{522,-1,4,2},{523,-1,4,4},{522,-1,4,6},{521,2,4,8}},
+      {{521,1,4,0},{522,-1,4,2},{522,-1,4,4},{523,-1,4,6},{521,2,4,8}}
+    };
+    int[][] selected = variants[Math.abs(seed) & 7];
+    for (int[] e : selected) {
+      int gx = e[2], gy = e[3];
+      if (zone.presets[gx][gy] != null) continue;
+      LvlPrest.Entry p = Riiablo.files.LvlPrest.get(e[0]);
+      if (p == null || p.File == null) continue;
+      int[] files = new int[6]; int count = Preset.getPresets(p, files);
+      if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[e[1] >= 0 && e[1] < count ? e[1] : 0]);
     }
   }
 
