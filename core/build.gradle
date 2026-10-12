@@ -153,6 +153,37 @@ test {
   }
 }
 
+// Map-only regression gate for the Act II–V layout work.  Keep this separate
+// from the full core test task so a second machine can verify map topology,
+// Warp links, native RoomEx projection, DT1 export, and preset-unit queues
+// without running the unrelated combat/UI suites.
+task mapRegression(type: Test) {
+  group = 'verification'
+  description = 'Runs the automated Act II–V map and D2MOO bridge regression tests.'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    // Keep the gate focused on map generation/topology.  Generic physics and
+    // object-collision tests live in the normal :core:test task and are not
+    // part of the Act II–V map completion gate.
+    includeTestsMatching 'com.riiablo.map.Act2*'
+    includeTestsMatching 'com.riiablo.map.Act3*'
+    includeTestsMatching 'com.riiablo.map.Act4*'
+    includeTestsMatching 'com.riiablo.map.Act5*'
+    includeTestsMatching 'com.riiablo.map.NativeLevelSeedTest'
+    includeTestsMatching 'com.riiablo.map.RoomExAdjacencyTest'
+    includeTestsMatching 'com.riiablo.map.ZoneCoordinateAlignmentTest'
+    includeTestsMatching 'com.riiablo.map.CaveEntranceDs1VisibilityTest'
+    includeTestsMatching 'com.riiablo.map.AutomapRoomProjectionIntegrationTest'
+    includeTestsMatching 'com.riiablo.map.d2moo.*'
+    excludeTestsMatching 'com.riiablo.map.d2moo.Act1*'
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+}
+
 //weave {
 //  classesDir = sourceSets.main.java.classesDirectory.get().getAsFile()
 //  enableArtemisPlugin = true
