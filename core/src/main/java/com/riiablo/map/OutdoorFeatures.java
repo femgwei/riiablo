@@ -20,6 +20,17 @@ public class OutdoorFeatures {
   private static final String TAG = "OutdoorFeatures";
   private static final boolean DEBUG = true;
 
+  /** Prevent a stale/mismatched LvlSub entry from selecting another act's DS1. */
+  private static boolean isPresetCompatibleWithZone(LvlPrest.Entry preset, Zone zone) {
+    if (preset == null || preset.File == null || zone == null || zone.level == null) return false;
+    String actPrefix = ("act" + (zone.level.Act + 1) + "/").toLowerCase(java.util.Locale.ROOT);
+    for (String file : preset.File) {
+      if (file == null || file.isEmpty()) continue;
+      return file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT).startsWith(actPrefix);
+    }
+    return false;
+  }
+
   /**
    * 在区域中放置传送点（Waypoint）
    * 参考 D2MOD: DRLGOUTDOORS_SpawnAct12Waypoint
@@ -331,6 +342,7 @@ public class OutdoorFeatures {
 
     // 在 LvlPrest 中查找包含该 ds1 的记录
     for (LvlPrest.Entry preset : Riiablo.files.LvlPrest) {
+      if (!isPresetCompatibleWithZone(preset, zone)) continue;
       // 仅考虑同一 Act 或同一 LevelType 的记录，粗略过滤
       if (preset.LevelId != 0 && preset.LevelId != zone.level.Id) {
         continue;
@@ -385,6 +397,7 @@ public class OutdoorFeatures {
     // 第二轮：放宽到 LevelId==0 或其它关卡（同 Act 的资源往往复用）
     if (best == null) {
       for (LvlPrest.Entry preset : Riiablo.files.LvlPrest) {
+        if (!isPresetCompatibleWithZone(preset, zone)) continue;
         if (preset.File == null) continue;
         for (int i = 0; i < preset.File.length; i++) {
           String file = preset.File[i];
