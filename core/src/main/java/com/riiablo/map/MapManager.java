@@ -173,7 +173,10 @@ public class MapManager extends PassiveSystem {
       int id = factory.createMonster(nativeMonster.monsterId,
           zone.x() + nativeMonster.x, zone.y() + nativeMonster.y);
       if (id != Engine.INVALID_ENTITY) {
-        zone.entities.add(id);
+        // Zone starts with a shared immutable-empty backing array. Use the
+        // copy-on-write helper so one town's native NPCs cannot leak into the
+        // next Zone created in the same test or game process.
+        zone.addEntity(id);
         created++;
       } else {
         skipped++;

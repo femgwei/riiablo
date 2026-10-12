@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 Act IV 城镇 NPC 实体投影回归
+
+- [x] 新增 A4 城镇 `UNIT_MONSTER` 投影测试，覆盖 Halbu/Jamella/Tyrael2 的原生
+  `hcIdx`、Zone 原点偏移和 ECS 实体数量；该测试自动纳入 `:core:mapRegression`。
+- [x] 验证：A4 投影回归与完整 Act II--V 地图回归通过；真实客户端验证仍按约定留待
+  全部地图工作完成后统一进行。
+
 ## 2026-10-13 Act IV 城镇 NPC 原生 hcIdx 修正
 
 - [x] 对照 D2MOO `MonsterIds.h` 与 `SUnitProxy.cpp`，修正 Halbu/Jamella/Tyrael2 的
@@ -17,7 +24,7 @@
   名称、类型、赌博和雇佣能力，避免“只存在定义但 ID 指向错误 NPC”。
 - [x] 新增 A5 城镇原生 `UNIT_MONSTER` 投影回归，验证五名 NPC 均按 Zone 原点偏移物化为
   ECS 实体；这补足了注册定义测试无法覆盖的 DS1/LvlPrest 实体加载路径。
-- [x] 验证：`:core:mapRegression`（103 项）及受影响的 `NpcHealerTest`、
+- [x] 验证：`:core:mapRegression`（104 项）及受影响的 `NpcHealerTest`、
   `MercenaryManagerTest` 通过；真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
 
 ## 2026-10-13 Act IV 原生 RoomEx/TileGrid 桥接（本轮完成代码修复）
