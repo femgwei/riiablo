@@ -6972,3 +6972,9 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   八种 D2MOO 悬崖环排列，按固定网格坐标和预设文件索引放置。
 - [x] Rocky Waste 增加 Lut Gholein 城镇过渡预设（Transition_N/W），精简资源下
   自动选择可用 Def 并安全回退。
+
+## 2026-10-12 Act III 地图完善启动
+
+- [x] A2 非需求测试项暂不阻塞后续开发，转入 A3 地图完善。
+- [ ] 下一阶段优先核对 Spider Forest 的 Spider Cave/Spider Cavern 原生入口预设，
+  再处理 Flayer Jungle/Dungeon、Kurast Sewers 与 Travincal 的地图细节。
