@@ -1,5 +1,11 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-12 Act II 地图首轮真实资源验证
+
+- [x] 使用本机 Diablo II 1.10f MPQ 对 Lut Gholein（Level 40）和 Rocky Waste（Level 41）执行 `:desktop:offscreenCamp` 烟测；Act II 城镇、户外主链、地下 Zone 和七墓 Zone 均完成物化，隐藏客户端输出 `OFFSCREEN_CAMP result=PASS`。
+- [x] 依据 D2MOO `DUNGEON_GetWarpTileFromRoomAndSourceLevelId` 的 `LvlWarp` 出口落点语义，放宽 Act II 及后续预设地图的离屏 Warp 可行走点搜索范围；入口墙体标记可以位于阻挡格，玩家落点由出口偏移和更大范围搜索确定。
+- [ ] 待另一台电脑拉取后验证 A2 城镇出口、Rocky Waste 边界和地下入口的实际移动/传送表现；随后继续检查 Dry Hills、Far Oasis、Lost City、Canyon 与 Arcane Sanctuary 的真实入口碰撞。
+
 ## 2026-10-11 Blood Moor 河流边界方向状态修正
 
 - [x] 对照 1.10f `D2Common.dll` 的 `DRLGOUTPLACE_PlaceAct1245OutdoorBorders`：每条边开始时重建 `nUnkb00/bHasDirection`，角点在当前、下一顶点方向均为 0 时清除方向位；修正方向状态从上一条边粘滞到河流首格的问题。

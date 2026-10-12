@@ -1328,7 +1328,13 @@ public final class OffscreenCampScreen extends GameScreen {
       if (warpRooms.length() > 0) warpRooms.append(',');
       warpRooms.append(warp.index).append(':').append(warpRoom == null ? -1 : warpRoom.id);
       Vector2 landing = new Vector2();
-      if (targetZone.findFreeCoordinates(warpPosition.position, 1, 8, true, landing)) {
+      // Large preset town entrances can place the logical warp marker inside
+      // the doorway wall. D2Common resolves the actual player landing from
+      // LvlWarp exit offsets and searches beyond the marker itself; use the
+      // same wider validation radius for Act II and later town/preset maps.
+      int warpSearchDistance = targetLevelId >= 40 ? 50 : 8;
+      if (targetZone.findFreeCoordinates(warpPosition.position, 1,
+          warpSearchDistance, true, landing)) {
         targetWarpWalkable++;
       } else {
         throw new IllegalStateException("No walkable coordinates near warp: level="
