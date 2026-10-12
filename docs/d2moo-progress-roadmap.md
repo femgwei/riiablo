@@ -8,6 +8,18 @@
 - [x] 验证：`:core:mapRegression`（105 项）全部通过。A2 兼容地图目前尚未接入完整
   MPQ 原生城镇 DRLG 导出，真实坐标验证和原生桥接仍单独留待后续步骤。
 
+## 2026-10-13 Act II Lut Gholein 原生城镇 NPC 导出
+
+- [x] 新增资源门控的 `Act2D2MOOLayoutBridge`，按 D2MOO `DrlgExport`/`SUnitProxy`
+  语义从匹配的 Lut Gholein DS1 preset 导出原生 `UNIT_MONSTER`，保留 RoomId、模式、
+  坐标和 SuperUnique 元数据；MPQ 不可用或导出失败时继续使用兼容城镇路径。
+- [x] 原生导出成功后仅跳过同源 DS1 的动态 NPC，静态对象仍走兼容对象路径；重复导出
+  采用替换而非追加，避免连续创建 Zone 时 NPC 串区。D2MOO 中由任务/运行时生成的
+  NPC（例如部分变体里的 Jerhyn）不强制假定存在于每一个单独 DS1 preset。
+- [x] 新增真实 MPQ 资源自动测试，覆盖合法 A2 城镇单位集合、源文件匹配、幂等替换、
+  不匹配源文件回退和动态对象去重；`:core:test --tests com.riiablo.map.Act2TownNativeExportTest`
+  与 `:core:mapRegression` 均通过。真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
+
 ## 2026-10-13 Act IV 城镇 NPC 实体投影回归
 
 - [x] 新增 A4 城镇 `UNIT_MONSTER` 投影测试，覆盖 Halbu/Jamella/Tyrael2 的原生

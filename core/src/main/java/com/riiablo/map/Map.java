@@ -1110,6 +1110,8 @@ public class Map implements Disposable {
     final Array<NativeObject> nativeObjectAudit = new Array<>();
     /** Native preset monsters exported by D2MOO and materialized on room activation. */
     final Array<NativeMonster> nativeMonsters = new Array<>();
+    /** DS1 replaced by a validated NPC-only export; static units stay compatible. */
+    private String nativeTownMonsterSource;
     /** Native D2MOO RoomEx rectangles in world subtiles. */
     final Array<RoomEx> roomsEx = new Array<>();
     private boolean roomActivationTracking;
@@ -1298,6 +1300,7 @@ public class Map implements Disposable {
       nativeObjects.clear();
       nativeObjectAudit.clear();
       nativeMonsters.clear();
+      nativeTownMonsterSource = null;
       roomsEx.clear();
       roomActivationTracking = false;
 
@@ -1366,6 +1369,15 @@ public class Map implements Disposable {
 
     public Array<NativeMonster> getNativeMonsters() {
       return nativeMonsters;
+    }
+
+    public String nativeTownMonsterSource() { return nativeTownMonsterSource; }
+
+    /** Commits a complete, source-matched NPC-only export before ECS creation. */
+    public void replaceNativeTownMonsters(String source, Array<NativeMonster> monsters) {
+      nativeMonsters.clear();
+      nativeMonsters.addAll(monsters);
+      nativeTownMonsterSource = source;
     }
 
     /** Entity IDs created for this zone, including native warps. */

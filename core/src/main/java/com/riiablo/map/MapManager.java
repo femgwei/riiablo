@@ -420,13 +420,21 @@ public class MapManager extends PassiveSystem {
     DS1 ds1 = preset.ds1;
     for (int i = 0, size = ds1.numObjects; i < size; i++) {
       DS1.Object object = ds1.objects[i];
+      if (!shouldCreateCompatibilityPresetUnit(zone, ds1.fileName, object.type)) continue;
       if (waypointsOnly && !isWaypoint(ds1, object)) continue;
       int id = factory.createObject(preset, object, x + object.x, y + object.y);
       if (id != Engine.INVALID_ENTITY) {
         prepareWaypointInitialState(id, zone);
-        zone.entities.add(id);
+        zone.addEntity(id);
       }
     }
+  }
+
+  static boolean shouldCreateCompatibilityPresetUnit(Map.Zone zone, String source, int type) {
+    return type != DS1.Object.DYNAMIC_TYPE || !zone.isTown()
+        || zone.nativeTownMonsterSource() == null
+        || !com.riiablo.map.d2moo.Act2D2MOOLayoutBridge.sameSource(
+            zone.nativeTownMonsterSource(), source);
   }
 
   /**

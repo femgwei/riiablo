@@ -16,6 +16,7 @@ import com.riiablo.engine.server.quest.Act2TombSelection;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.map.d2moo.Act2ArcaneD2MOOLayoutBridge;
+import com.riiablo.map.d2moo.Act2D2MOOLayoutBridge;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -275,6 +276,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     
     // 创建区域：先创建城镇
     Zone townZone = null;
+    String townSourceFile = null;
     for (int i = 0; i < act2Links.length && act2Links[i] != null; i++) {
       if (act2Links[i].level == LEVEL_LUTGHOLEIN) {
         Levels.Entry level = Riiablo.files.Levels.get(act2Links[i].level);
@@ -321,6 +323,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           }
 
           townZone = base.createZoneWithPreset(map, level, preset, select, finalX, finalY, true);
+          townSourceFile = preset.File[select];
         }
         break;
       }
@@ -444,6 +447,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // here before Warp entities are emitted; otherwise an entrance can be
     // rendered while its destination Zone is missing (black/void map).
     createAct2LinkedDungeonZones(map, diff, seed);
+
+    // Export Lut Gholein's native UNIT_MONSTER records when the 1.10f MPQs
+    // are available. Compatibility terrain remains the fallback if the
+    // resource-gated native town export cannot be built.
+    Act2D2MOOLayoutBridge.populateTown(seed, diff, townZone, townSourceFile);
 
     // Configure the runtime slots before MapManager creates Warp entities.
     // Native D2Common performs this after layout placement via
