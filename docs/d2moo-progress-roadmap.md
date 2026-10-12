@@ -6970,3 +6970,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 仅运行自动化验证；真实 MPQ/客户端验证留待 A2 全部完成后统一执行。
 - [x] 接入 Rocky Waste、Dry Hills、Far Oasis、Lost City、Valley of Snakes 的
   八种 D2MOO 悬崖环排列，按固定网格坐标和预设文件索引放置。
+- [x] Rocky Waste 增加 Lut Gholein 城镇过渡预设（Transition_N/W），精简资源下
+  自动选择可用 Def 并安全回退。
