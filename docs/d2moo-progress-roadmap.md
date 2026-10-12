@@ -7093,3 +7093,12 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 新增 A5 怪物投影回归，覆盖有效 RoomEx、坐标回退、SuperUnique 元数据和已生成
   单位跳过；A4/A5 地图桥接、Warp marker 和布局回归通过。
 - [x] 真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后统一进行。
+
+## 2026-10-13 Act IV 原生怪物与 SuperUnique 延迟生成
+
+- [x] A4 原生桥接现在导出 `UNIT_MONSTER`，按 Act IV `MonPreset` placement 或直接
+  class id 解析本地 `MonStats.hcIdx`，并保留 D2MOO 编码 SuperUnique 的固定身份。
+- [x] 非城镇怪物按原生 `roomId/坐标` 延迟排入 RoomEx，城镇单位继续交给城镇实体
+  创建路径；`bSpawned`、越界和无效 RoomEx 均不会重复或越界生成。
+- [x] 新增 A4 怪物投影自动回归；A4/A5 原生桥接定向编译与测试通过，真实客户端验证
+  仍留到 A2--A5 地图全部完成后统一进行。

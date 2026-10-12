@@ -15,7 +15,11 @@ import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2MemoryPool;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
 
@@ -109,6 +113,9 @@ public final class Act4D2MOOLayoutBridge {
         projectRooms(level, zone);
         int[] objectCounts = {0, 0};
         int[] nativeWarpUnits = {0, 0};
+        com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
+            new com.badlogic.gdx.utils.Array<>();
+        int[] monsterCounts = {0, 0};
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
@@ -128,6 +135,23 @@ public final class Act4D2MOOLayoutBridge {
                 nativeWarpUnits[1]++;
                 return;
               }
+              if (unitType == D2UnitTypes.UNIT_MONSTER) {
+                monsterCounts[0]++;
+                if (!externalEntity || x < 0 || y < 0
+                    || x >= width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
+                    || y >= height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
+                  if (x < 0 || y < 0
+                      || x >= width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
+                      || y >= height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
+                    monsterCounts[1]++;
+                  }
+                  return;
+                }
+                NativeMonsterResolution resolved = resolveNativeMonster(index, ds1Raw);
+                exportedMonsters.add(new Map.NativeMonster(roomId, resolved.monsterId, mode,
+                    x, y, resolved.superUniqueId, resolved.superUniqueKey, spawned));
+                return;
+              }
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;
               objectCounts[0]++;
               if (x < 0 || y < 0
@@ -140,13 +164,17 @@ public final class Act4D2MOOLayoutBridge {
                   ds1Raw, spawned, sourceFile, externalEntity));
             });
         zone.setNativeTileGrid(grid, dt1Mask);
+        int queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
+        zone.getNativeMonsters().addAll(exportedMonsters);
         exportedLevels++;
         if (Gdx.app != null) Gdx.app.log(TAG, String.format(
             "A4 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X objects=%d invalid=%d",
             levelId, level.getRooms(), width, height, floors,
             applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask,
             presetUnits, objectCounts[1])
-            + String.format(" unitTileWarp=%d/%d", nativeWarpUnits[0], nativeWarpUnits[1]));
+            + String.format(" unitTileWarp=%d/%d monsters=%d/%d queuedMonsters=%d",
+                nativeWarpUnits[0], nativeWarpUnits[1], monsterCounts[0], monsterCounts[1],
+                queuedMonsters));
         D2Log.debug("ACT4_BRIDGE exported level=%d floors=%d rooms=%d objects=%d",
             levelId, floors, level.getRooms(), presetUnits);
         applier.resetLastExportedFloorCount();
@@ -209,6 +237,61 @@ public final class Act4D2MOOLayoutBridge {
         if (id != null && id != i) adjacent.add(id);
       }
       zone.getRoomsEx().get(i).setAdjacentRoomIds(adjacent.toArray());
+    }
+  }
+
+  static int queueNativeMonsters(Zone zone,
+      com.badlogic.gdx.utils.Array<Map.NativeMonster> monsters) {
+    if (zone == null || zone.isTown() || monsters == null) return 0;
+    int queued = 0;
+    for (Map.NativeMonster monster : monsters) {
+      if (monster == null || monster.spawned || monster.monsterId < 0) continue;
+      Map.RoomEx room = monster.roomId >= 0 && monster.roomId < zone.getRoomsEx().size
+          ? zone.getRoomsEx().get(monster.roomId) : null;
+      float worldX = zone.x() + monster.x;
+      float worldY = zone.y() + monster.y;
+      if (room == null || !room.contains(worldX, worldY)) room = zone.findRoomEx(worldX, worldY);
+      if (room == null) continue;
+      room.addMonsterSpawn(monster.monsterId, worldX, worldY, -1, false,
+          monster.superUniqueId, monster.superUniqueKey);
+      queued++;
+    }
+    return queued;
+  }
+
+  /** Resolves Act IV MonPreset indices and encoded SuperUnique ids. */
+  static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+      return new NativeMonsterResolution(index, -1, null);
+    }
+    String placement = null;
+    if (ds1Raw && Riiablo.files.MonPreset != null) {
+      try {
+        placement = Riiablo.files.MonPreset.getPlace(4, index);
+      } catch (RuntimeException ignored) {}
+    }
+    MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
+    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
+        ? null : Riiablo.files.SuperUniques.get(placement);
+    if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
+      int suIndex = index - Riiablo.files.monstats.size() - Riiablo.files.SuperUniques.size();
+      superUnique = Riiablo.files.SuperUniques.get(suIndex);
+      if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    }
+    return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
+        superUnique == null ? -1 : superUnique.hcIdx,
+        superUnique == null ? null : superUnique.Superunique);
+  }
+
+  static final class NativeMonsterResolution {
+    final int monsterId;
+    final int superUniqueId;
+    final String superUniqueKey;
+    NativeMonsterResolution(int monsterId, int superUniqueId, String superUniqueKey) {
+      this.monsterId = monsterId;
+      this.superUniqueId = superUniqueId;
+      this.superUniqueKey = superUniqueKey;
     }
   }
 
