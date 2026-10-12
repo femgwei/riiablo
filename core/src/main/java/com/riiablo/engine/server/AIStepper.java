@@ -7,6 +7,7 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AnimData;
@@ -43,6 +44,8 @@ public class AIStepper extends IteratingSystem {
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  @Wire(failOnNull = false)
+  protected Pathfinder pathfinder;
 
   private EntitySubscription players;
   private final IntSet dormant = new IntSet();
@@ -109,6 +112,25 @@ public class AIStepper extends IteratingSystem {
     boolean hadCasting = mCasting.has(entityId);
     int previousSkill = hadCasting ? mCasting.get(entityId).skillId : -1;
     int previousTarget = hadCasting ? mCasting.get(entityId).targetId : -1;
+
+    // Native AI periodically reissues a toward path when a static wall or a
+    // stale room seam invalidates the previous step.  Most monster classes
+    // do not have the NPC-specific retry loop, so apply the same recovery at
+    // the shared AI boundary once a real movement stall is observed.
+    if (pathfinder != null && mPathfind.has(entityId)) {
+      Pathfind path = mPathfind.get(entityId);
+      if (path.stalledTime >= 0.5f && !path.blockedByDynamic) {
+        int targetId = path.targetEntityId;
+        Vector2 destination = targetId >= 0 && mPosition.has(targetId)
+            ? mPosition.get(targetId).position : path.destination;
+        if (destination != null && !destination.isZero()) {
+          boolean recovered = pathfinder.findPath(entityId, destination, true, targetId);
+          log.debug("[MONSTER_PATH_STALLED] entity={} monster={} blockedByDynamic=false action={}",
+              entityId, monster.monstats != null ? monster.monstats.Id : "unknown",
+              recovered ? "static_repath" : "static_retry_failed");
+        }
+      }
+    }
 
     AIWrapper wrapper = mAIWrapper.get(entityId);
     if (!wrapper.ai.updateSpecialAiControl(world.delta)) wrapper.ai.update(world.delta);
