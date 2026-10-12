@@ -7005,3 +7005,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   不注入兼容预设，避免与原生特殊入口重复。
 - [x] 接入 Kurast Causeway 的 Bridge（794）以及 Travincal 六个边缘预设
   （795--800）；兼容布局使用 D2MOO 固定网格坐标，原生导出优先。
+- [x] 为 Lower Kurast、Kurast Bazaar、Upper Kurast 增加 16x16 城区填充预设
+  （760/777/793）的稳定兼容回退，并按 2x2 网格占用避免填充互相重叠。

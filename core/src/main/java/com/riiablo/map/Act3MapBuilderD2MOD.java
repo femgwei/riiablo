@@ -305,6 +305,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         placeNativeJungleTransition(zone);
         placeNativeKurastBorders(zone);
         placeNativeKurastSpecials(zone);
+        placeNativeKurastFills(zone);
         placeNativeCausewayBridge(zone);
         placeNativeTravincalEdges(zone);
         // 放置边界
@@ -427,6 +428,37 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
     if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[0]);
+  }
+
+  /** Stable compatibility fallback for D2MOO's four 16x16 Kurast fills. */
+  static void placeNativeKurastFills(Zone zone) {
+    if (zone == null || zone.level == null || zone.presets == null
+        || zone.nativeTileGrid() != null || zone.gridsX < 5 || zone.gridsY < 5
+        || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    int def;
+    if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) def = 760;
+    else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR) def = 777;
+    else if (zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST) def = 793;
+    else return;
+    int placed = 0;
+    boolean[][] occupied = new boolean[zone.gridsX][zone.gridsY];
+    for (int gy = 1; gy < zone.gridsY - 1 && placed < 4; gy++) {
+      for (int gx = 1; gx < zone.gridsX - 1 && placed < 4; gx++) {
+        if (occupied[gx][gy] || zone.presets[gx][gy] != null
+            || gx + 1 >= zone.gridsX || gy + 1 >= zone.gridsY
+            || zone.presets[gx + 1][gy] != null || zone.presets[gx][gy + 1] != null
+            || zone.presets[gx + 1][gy + 1] != null) continue;
+        LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+        if (p == null || p.File == null) return;
+        int[] files = new int[6];
+        int count = Preset.getPresets(p, files);
+        if (count == 0) return;
+        zone.presets[gx][gy] = Preset.of(p, files[0]);
+        occupied[gx][gy] = occupied[gx + 1][gy] =
+            occupied[gx][gy + 1] = occupied[gx + 1][gy + 1] = true;
+        placed++;
+      }
+    }
   }
 
   /** Places the native jungle chain's head/tail transition preset anchors. */
