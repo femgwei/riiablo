@@ -165,13 +165,16 @@ public class Box2DPhysics extends IntervalSystem {
             filter.maskBits = CATEGORY_WORLD;
             filter.groupIndex = 0;
             fixture.setFilterData(filter);
-            // Native flying units use MISSILE_BARRIER/DOOR path masks and do
-            // not collide with ordinary ground wall fixtures. Their movement
-            // ray is resolved by VelocityAdder/Pathfinder.
+            // Native flying and door-opening units use path masks which do
+            // not match the single Box2D WORLD category. Their authoritative
+            // movement ray resolves walls, doors and missile barriers before
+            // this body is synchronized, so a solid fixture here would undo
+            // the native mask decision during the physics step.
             if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null
-                && com.riiablo.engine.server.NativeGroundPathProfile.forUnit(
+                && (com.riiablo.engine.server.NativeGroundPathProfile.forUnit(
                     false, mMonster.get(entityId).monstats)
-                    == com.riiablo.engine.server.NativeGroundPathProfile.FLYING) {
+                    == com.riiablo.engine.server.NativeGroundPathProfile.FLYING
+                    || mMonster.get(entityId).monstats.opendoors)) {
               fixture.setSensor(true);
             }
           } shape.dispose();
