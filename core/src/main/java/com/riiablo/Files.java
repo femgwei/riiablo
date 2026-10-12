@@ -196,7 +196,11 @@ public class Files {
     ItemTypes        = load(ItemTypes.class);
     Levels           = load(Levels.class, Excel.EXPANSION);
     // 加载 AutoMap.txt（不区分是否为资料片，使用原始表即可）
-    AutoMap          = load(AutoMap.class);
+    // AutoMap is keyed by string fields (LevelName/TileName).  Do not use a
+    // stale generated bin here: its rows can retain old tile-name mappings
+    // and make every native automap lookup miss.
+    AutoMap          = Excel.load(AutoMap.class,
+        Riiablo.mpqs.resolve(EXCEL_PATH + "AutoMap.txt"));
     LowQualityItems  = load(LowQualityItems.class);
     LvlMaze          = load(LvlMaze.class);
     // LvlPrest is keyed by Def, and the bundled bin can become stale when the

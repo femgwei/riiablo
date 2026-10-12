@@ -510,7 +510,10 @@ public class AutomapManager implements Disposable {
     // orientation-0 tile paints the entire wilderness (and town) as a solid
     // floor, unlike D2 where only roads, boundaries, and markers are shown.
     // Keep floor cells available for indoor maps, but suppress them outdoors.
-    layer.renderFloorCells = zone.level != null && zone.level.IsInside;
+    // Towns use the same floor automap cells as indoor levels.  Treating a
+    // town as outdoor suppresses almost every floor cell and leaves only a
+    // handful of markers visible (or an apparently blank automap).
+    layer.renderFloorCells = zone.isTown() || (zone.level != null && zone.level.IsInside);
     int added = 0;
     int tileCount = 0;
     int lookupMisses = 0;

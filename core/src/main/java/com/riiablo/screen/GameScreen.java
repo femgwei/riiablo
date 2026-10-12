@@ -1431,7 +1431,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   @Override
   public void show() {
     if (map.getAct() == -1) {
-      setAct(0);
+      int savedAct = charData == null ? 0 : (charData.towns[charData.diff] & 0x7);
+      if (savedAct < 0 || savedAct >= Riiablo.NUM_ACTS) savedAct = 0;
+      setAct(savedAct);
       return;
     }
 
@@ -1952,6 +1954,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   public void setAct(int act) {
+    if (charData != null && act >= 0 && act < Riiablo.NUM_ACTS) {
+      // D2S stores the character's current town/act in the low three bits;
+      // preserve the expansion/active flag in bit 7.
+      charData.towns[charData.diff] = (byte) ((charData.towns[charData.diff] & 0xF8) | act);
+    }
     player = Engine.INVALID_ENTITY;
     IntBag entities = engine.getAspectSubscriptionManager().get(Aspect.all()).getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {

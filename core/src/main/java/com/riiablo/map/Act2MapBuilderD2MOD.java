@@ -35,12 +35,21 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   INSTANCE;
 
   /** Reject records from another act when the loaded LvlPrest table is mismatched. */
-  private static boolean isAct2DesertPreset(LvlPrest.Entry preset) {
+  private static boolean isAct2Preset(LvlPrest.Entry preset) {
     if (preset == null || preset.File == null) return false;
     for (String file : preset.File) {
       if (file == null || file.isEmpty()) continue;
       String normalized = file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
-      return normalized.startsWith("act2/") && normalized.contains("desert/");
+      return normalized.startsWith("act2/");
+    }
+    return false;
+  }
+
+  private static boolean isAct2DesertPreset(LvlPrest.Entry preset) {
+    if (!isAct2Preset(preset)) return false;
+    for (String file : preset.File) {
+      if (file == null || file.isEmpty()) continue;
+      return file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT).contains("act2/desert/");
     }
     return false;
   }
@@ -543,7 +552,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int[] defs = {505, 504};
     for (int def : defs) {
       LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
-      if (!isAct2DesertPreset(p)) continue;
+      if (!isAct2Preset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count <= 0) continue;
       if (zone.presets[0][0] == null) zone.presets[0][0] = Preset.of(p, files[0]);
