@@ -2598,6 +2598,16 @@ public class Map implements Disposable {
     }
 
     void copyTo(Zone zone, int tx, int ty) {
+      if (ds1 != null && (tx < 0 || ty < 0
+          || tx + ds1.width > zone.tilesX
+          || ty + ds1.height > zone.tilesY)) {
+        Gdx.app.error(TAG, String.format(
+            "Preset copy out of bounds: level=%s(%d) zone=(%dx%d) origin=(%d,%d) "
+                + "ds1=%s size=(%dx%d)",
+            zone.level == null ? "?" : zone.level.LevelName,
+            zone.level == null ? -1 : zone.level.Id,
+            zone.tilesX, zone.tilesY, tx, ty, ds1Path, ds1.width, ds1.height));
+      }
       copyFloors (zone, Map.FLOOR_OFFSET,  tx, ty);
       copyWalls  (zone, Map.WALL_OFFSET,   tx, ty);
       copyShadows(zone, Map.SHADOW_OFFSET, tx, ty);
