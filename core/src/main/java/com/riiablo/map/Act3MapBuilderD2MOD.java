@@ -16,6 +16,8 @@ import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.map.d2moo.Act3D2MOOLayoutBridge;
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 
 /**
  * Act3 地图生成器 - 完全复刻 D2MOD 实现
@@ -303,7 +305,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     for (Zone zone : map.zones) {
       if (!zone.town) {
         placeNativeJungleTransition(zone);
-        placeNativeKurastBorders(zone);
+        placeNativeKurastBorders(zone, jungleInterlink(seed));
         placeNativeKurastSpecials(zone);
         placeNativeKurastFills(zone);
         placeNativeCausewayBridge(zone);
@@ -327,8 +329,12 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   }
 
   static void placeNativeKurastBorders(Zone zone) {
+    placeNativeKurastBorders(zone, 0);
+  }
+
+  static void placeNativeKurastBorders(Zone zone, int jungleInterlink) {
     if (Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
-    placeNativeKurastBorders(zone, Riiablo.files.LvlPrest::get);
+    placeNativeKurastBorders(zone, Riiablo.files.LvlPrest::get, jungleInterlink);
   }
 
   static boolean usesGenericOutdoorBorders(int levelId) {
@@ -339,6 +345,17 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   /** Compatibility border pass; native exports already own their gates and borders. */
   static void placeNativeKurastBorders(Zone zone,
       java.util.function.IntFunction<LvlPrest.Entry> presets) {
+    placeNativeKurastBorders(zone, presets, 0);
+  }
+
+  /**
+   * Compatibility equivalent of D2MOO's {@code bJungleInterlink}-dependent
+   * Kurast gate placement.  The native bridge owns this choice when a full
+   * MPQ export is available; this overload keeps reduced-resource maps seed
+   * deterministic as well.
+   */
+  static void placeNativeKurastBorders(Zone zone,
+      java.util.function.IntFunction<LvlPrest.Entry> presets, int jungleInterlink) {
     if (zone == null || zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3
         || zone.level == null || zone.nativeTileGrid() != null || presets == null) return;
     int base;
@@ -355,20 +372,46 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     placeKurastBorder(zone, presets, base + 4, zone.gridsX - 1, 0);
     placeKurastBorder(zone, presets, base + 7, 0, zone.gridsY - 1);
     placeKurastBorder(zone, presets, base + 6, zone.gridsX - 1, zone.gridsY - 1);
+    int lastX = zone.gridsX - 1;
+    int gateNorthX;
+    int gateSouthX;
+    if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) {
+      // Native lower Kurast: north gate follows the interlink, south gate is
+      // centered (v10 = 1/last-1, v5 = nWidth/2).
+      gateNorthX = jungleInterlink != 0 ? 1 : lastX - 1;
+      gateSouthX = lastX / 2;
+    } else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR) {
+      // Native bazaar: the two gates are opposite sides of the interlink.
+      gateNorthX = jungleInterlink != 0 ? lastX - 1 : 1;
+      gateSouthX = jungleInterlink != 0 ? 1 : lastX - 1;
+    } else {
+      // Native upper Kurast: north gate is centered, south gate follows the
+      // interlink (v8 = last-1/1).
+      gateNorthX = lastX / 2;
+      gateSouthX = jungleInterlink != 0 ? lastX - 1 : 1;
+    }
     int gateNorth = base + 8;
     int gateSouth = base + 9;
-    placeKurastBorder(zone, presets, gateNorth, zone.gridsX / 2, 0);
-    placeKurastBorder(zone, presets, gateSouth, zone.gridsX / 2, zone.gridsY - 1);
     for (int x = 1; x < zone.gridsX - 1; x++) {
-      placeKurastBorder(zone, presets, base, x, 0);
-      placeKurastBorder(zone, presets, base + 1, x, zone.gridsY - 1);
+      placeKurastBorder(zone, presets, x == gateNorthX ? gateNorth : base, x, 0);
+      placeKurastBorder(zone, presets, x == gateSouthX ? gateSouth : base + 1,
+          x, zone.gridsY - 1);
     }
     for (int y = 1; y < zone.gridsY - 1; y++) {
       placeKurastBorder(zone, presets, base + 3, 0, y);
       placeKurastBorder(zone, presets, base + 2, zone.gridsX - 1, y);
     }
-    // D2MOO selects one interlink-dependent gate slot. Compatibility maps do
-    // not expose bJungleInterlink, so the stable center gate above is used.
+    // Compatibility maps do not expose the native room graph, so only gate
+    // coordinates are
+    // mirrored; native TileGrid exports remain authoritative when present.
+  }
+
+  /** Mirrors D2MOO's two initial DRLG rolls before bJungleInterlink. */
+  static int jungleInterlink(int gameSeed) {
+    D2Seed seed = new D2Seed();
+    Seed.initLowSeed(seed, gameSeed);
+    Seed.rollRandomNumber(seed); // drlg.startSeed
+    return (int) (Seed.rollRandomNumber(seed) & 1L);
   }
 
   private static void placeKurastBorder(Zone zone,

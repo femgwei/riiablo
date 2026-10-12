@@ -6998,8 +6998,11 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   TileGrid 时不额外注入兼容边界，避免与原生门和对象重叠。
 - [x] 新增逐格布局回归，覆盖三个城区、内部空格、已有预设、文件空洞、缺失
   资源与原生导出保护；真实客户端验收仍留到最后统一进行。
-- [ ] 兼容布局尚未接入 `bJungleInterlink` 的门位置选择与双格门占用；完整资源
-  下这些行为由现有 D2MOO 原生 bridge 负责，本节不宣称兼容布局完全复刻。
+- [x] 兼容 Kurast 门位已按 D2MOO `DRLG_AllocDrlg` 的前两次种子滚动计算
+  `bJungleInterlink`，三城区南北门位分别遵循 `DrlgOutJung.cpp` 的公式；新增
+  两种互连布局与多种种子的自动回归，不消耗全局 RNG。
+- [ ] 双格门的占用/生成保护仍待完善；完整资源下该行为由现有 D2MOO 原生
+  bridge 负责，本节不宣称兼容布局完全复刻。
 - [x] 按 `DrlgOutPlace_BuildKurast` 增加 Bazaar/Upper Kurast 的 Sewer、Temple、
   Waypoint 兼容预设锚点；Lower Kurast 保留 Waypoint 锚点。原生 TileGrid 存在时
   不注入兼容预设，避免与原生特殊入口重复。

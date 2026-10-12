@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.drlg.TileGrid;
@@ -21,6 +23,27 @@ class Act3KurastBorderTest {
 
   @Test void upperKurastUsesMetroNotBazaarPresets() {
     assertBorders(D2LevelIds.LEVEL_UPPERKURAST, 778);
+  }
+
+  @Test void gatesFollowBothNativeInterlinkLayouts() {
+    for (int interlink = 0; interlink <= 1; interlink++) {
+      for (int levelId : new int[] {D2LevelIds.LEVEL_LOWERKURAST,
+          D2LevelIds.LEVEL_KURASTBAZAAR, D2LevelIds.LEVEL_UPPERKURAST}) {
+        assertBorders(levelId, levelId == D2LevelIds.LEVEL_LOWERKURAST ? 747
+            : levelId == D2LevelIds.LEVEL_KURASTBAZAAR ? 761 : 778, interlink);
+      }
+    }
+  }
+
+  @Test void interlinkReplaysNativeDrlgSeedRollsWithoutGlobalRandomState() {
+    for (int gameSeed : new int[] {0, 1, 2, 3, 0x171A6100, -1, Integer.MIN_VALUE}) {
+      D2Seed nativeSeed = new D2Seed();
+      Seed.initLowSeed(nativeSeed, gameSeed);
+      Seed.rollRandomNumber(nativeSeed); // dwStartSeed
+      int expected = (int) (Seed.rollRandomNumber(nativeSeed) & 1L);
+      assertEquals(expected, Act3MapBuilderD2MOD.jungleInterlink(gameSeed));
+      assertEquals(expected, Act3MapBuilderD2MOD.jungleInterlink(gameSeed));
+    }
   }
 
   @Test void preservesExistingPresetsAndUsesActualValidFileIndex() {
@@ -66,9 +89,20 @@ class Act3KurastBorderTest {
   }
 
   private static void assertBorders(int levelId, int base) {
+    assertBorders(levelId, base, 0);
+  }
+
+  private static void assertBorders(int levelId, int base, int interlink) {
     Map.Zone zone = zone(levelId);
-    Act3MapBuilderD2MOD.placeNativeKurastBorders(zone, Act3KurastBorderTest::preset);
+    Act3MapBuilderD2MOD.placeNativeKurastBorders(zone, Act3KurastBorderTest::preset,
+        interlink);
     int lastX = zone.gridsX - 1, lastY = zone.gridsY - 1;
+    int north = levelId == D2LevelIds.LEVEL_LOWERKURAST ? (interlink != 0 ? 1 : lastX - 1)
+        : levelId == D2LevelIds.LEVEL_KURASTBAZAAR ? (interlink != 0 ? lastX - 1 : 1)
+        : lastX / 2;
+    int south = levelId == D2LevelIds.LEVEL_LOWERKURAST ? lastX / 2
+        : levelId == D2LevelIds.LEVEL_KURASTBAZAAR ? (interlink != 0 ? 1 : lastX - 1)
+        : interlink != 0 ? lastX - 1 : 1;
     for (int x = 0; x <= lastX; x++) {
       for (int y = 0; y <= lastY; y++) {
         int offset;
@@ -84,8 +118,8 @@ class Act3KurastBorderTest {
           assertNull(zone.presets[x][y], "interior must remain available");
           continue;
         }
-        if (y == 0 && x == zone.gridsX / 2) offset = 8;
-        if (y == lastY && x == zone.gridsX / 2) offset = 9;
+        if (y == 0 && x == north) offset = 8;
+        if (y == lastY && x == south) offset = 9;
         assertEquals(base + offset, zone.presets[x][y].preset.Def,
             "level=" + levelId + " grid=(" + x + "," + y + ")");
       }
