@@ -2607,6 +2607,9 @@ public class Map implements Disposable {
             zone.level == null ? "?" : zone.level.LevelName,
             zone.level == null ? -1 : zone.level.Id,
             zone.tilesX, zone.tilesY, tx, ty, ds1Path, ds1.width, ds1.height));
+        // A malformed LvlPrest/LvlSub link must not corrupt the zone tile array.
+        // Keep generation alive so the offending record can be diagnosed from the log.
+        return;
       }
       copyFloors (zone, Map.FLOOR_OFFSET,  tx, ty);
       copyWalls  (zone, Map.WALL_OFFSET,   tx, ty);
