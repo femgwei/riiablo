@@ -555,7 +555,7 @@ public class AutomapManager implements Disposable {
           boolean boundaryWallTile = isAutomapBoundaryWall(tile.orientation);
           if (wallTile) wallTiles++;
           int nativeWallType = wallTile
-              ? zone.nativeWallTileType(l - Map.WALL_OFFSET, tx, ty) : -1;
+              ? zone.nativeWallTileType(l - Map.WALL_OFFSET, tx, ty, tile) : -1;
           int automapOrientation = nativeAutomapOrientation(tile.orientation, nativeWallType);
           if (automapOrientation != tile.orientation) {
             nativeWallTypeOverrides++;

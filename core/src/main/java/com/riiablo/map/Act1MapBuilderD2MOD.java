@@ -15,6 +15,7 @@ import java.util.IdentityHashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.DrlgTileExporter;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
 import com.d2moo.common.drlg.DrlgDrlgWarp;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
@@ -1401,6 +1402,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (drlg != null) {
       D2MooTileApplier applier = new D2MooTileApplier();
       exportNativeTownRiverObjects(drlg, townZone);
+      exportNativeTownWallTypes(drlg, townZone);
       for (int levelId : result.levelIds) {
         if (levelId == LEVEL_ROGUEENCAMPMENT) continue;
         DrlgLevel target = drlgLevels.get(levelId);
@@ -1754,6 +1756,37 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, "=== Act1 Map Generation Completed ===");
       Gdx.app.debug(TAG, "NOTE: addSecondaryBorder will be called after Map.generate() completes");
+    }
+  }
+
+  /** Retains D2MOO's logical wall type without replacing the town's DS1 graphics. */
+  private static void exportNativeTownWallTypes(D2DrlgStrc drlg, Zone townZone) {
+    if (drlg == null || townZone == null) return;
+    townZone.clearNativeWallTileTypes();
+    final int[] counts = {0, 0}; // exported, retained by coordinate and tile id
+    DrlgExport.exportLevelTiles(drlg, LEVEL_ROGUEENCAMPMENT, new DrlgTileExporter() {
+      @Override public void onTile(int levelId, int layer, int tx, int ty, int tileId) {}
+
+      @Override public void onTile(int levelId, int layer, int tx, int ty, int tileId,
+          int flags, String sourceFile, int logicalGroupId, int nativeStateFlags,
+          int nativeAlpha, int fadeTick, int tileType) {
+        if (layer != DrlgExport.LAYER_WALL || tileType < Orientation.LEFT_WALL
+            || tileType > Orientation.LOWER_SOUTH_CORNER_WALL) return;
+        counts[0]++;
+        int riiabloTileId = D2MooTileApplier.toRiiabloTileIndex(tileId);
+        // Keep the native record independently of the DS1 wall slot.  The
+        // preset graphics are copied later by Zone.generate(), and several
+        // native walls can share one coordinate while occupying different
+        // slots.  Matching by coordinate plus tile id preserves all records
+        // without depending on generation order or world-zone offsets.
+        townZone.putNativeWallTileTypeByTile(tx, ty, riiabloTileId, tileType);
+        counts[1]++;
+      }
+    });
+    if (Gdx.app != null) {
+      Gdx.app.log(TAG, String.format(
+          "[AUTOMAP_TOWN_TYPES] exported=%d retained=%d",
+          counts[0], counts[1]));
     }
   }
 

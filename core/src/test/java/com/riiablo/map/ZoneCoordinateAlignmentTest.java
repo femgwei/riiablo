@@ -11,6 +11,8 @@ import java.nio.ByteOrder;
 
 import org.junit.jupiter.api.Test;
 
+import com.riiablo.drlg.TileGrid;
+
 /** Signed native coordinates must align with automap tile projection. */
 public class ZoneCoordinateAlignmentTest {
   @Test
@@ -55,6 +57,44 @@ public class ZoneCoordinateAlignmentTest {
     assertEquals(Orientation.LEFT_WALL,
         nativeZone.get(Map.WALL_OFFSET, nativeZone.tx + 32, nativeZone.ty + 40).orientation);
     assertEquals(0, map.flags(10760 + 32 * 5, -760 + 40 * 5));
+  }
+
+  @Test
+  public void nativeWallTypeUsesWorldCoordinatesAndExactTileFallback() throws IOException {
+    Map.Zone zone = new Map.Zone();
+    zone.setPosition(100, 200);
+
+    TileGrid grid = new TileGrid(4, 4);
+    grid.wallTileTypes[1][2][3] = Orientation.RIGHT_WALL;
+    zone.setNativeTileGrid(grid, 0);
+
+    assertEquals(Orientation.RIGHT_WALL,
+        zone.nativeWallTileType(1, zone.tx + 3, zone.ty + 2));
+
+    DT1.Tile tile = tile(Orientation.LEFT_WALL, 8, 3);
+    int tileId = DT1.Tile.Index.create(tile.orientation, tile.mainIndex, tile.subIndex);
+    zone.putNativeWallTileTypeByTile(1, 2, tileId, Orientation.LEFT_WALL_DOOR);
+    assertEquals(Orientation.LEFT_WALL_DOOR,
+        zone.nativeWallTileType(0, zone.tx + 1, zone.ty + 2, tile));
+
+    // Town DS1 graphics may use a different tile identity than the native
+    // export.  A single native wall at the coordinate must still provide its
+    // logical type when the exact tile-id match is unavailable.
+    Map.Zone fallback = new Map.Zone();
+    fallback.setPosition(100, 200);
+    fallback.putNativeWallTileTypeByTile(1, 2, tileId, Orientation.RIGHT_WALL_DOOR);
+    DT1.Tile differentTile = tile(Orientation.LEFT_WALL, 9, 4);
+    assertEquals(Orientation.RIGHT_WALL_DOOR,
+        fallback.nativeWallTileType(0, fallback.tx + 1, fallback.ty + 2, differentTile));
+
+    Map.Zone sparse = new Map.Zone();
+    sparse.setPosition(100, 200);
+    sparse.putNativeWallTileType(2, 1, 2, Orientation.LOWER_RIGHT_WALL);
+    assertEquals(Orientation.LOWER_RIGHT_WALL,
+        sparse.nativeWallTileType(2, sparse.tx + 1, sparse.ty + 2));
+
+    sparse.clearNativeWallTileTypes();
+    assertEquals(-1, sparse.nativeWallTileType(2, sparse.tx + 1, sparse.ty + 2));
   }
 
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex)

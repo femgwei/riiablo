@@ -1120,6 +1120,12 @@ public class Map implements Disposable {
     /** Native wall graphics whose render origin is on the exclusive zone edge. */
     IntMap<DT1.Tile> boundaryWalls = new IntMap<>();
     IntIntMap boundaryWallTileTypes = new IntIntMap();
+    /** Native logical wall types retained for Automap when graphics use DS1 fallback. */
+    IntIntMap nativeWallTileTypes = new IntIntMap();
+    /** Native logical wall types keyed by local coordinate and the rendered tile id. */
+    IntMap<IntIntMap> nativeWallTileTypesByTile = new IntMap<>();
+    /** Native wall type order at a coordinate, used when DS1 graphics differ. */
+    IntMap<IntArray> nativeWallTileTypesByCoord = new IntMap<>();
 
     static final Generator EMPTY_GENERATOR = new Generator() {
       @Override public void init(Zone zone) {}
@@ -1218,6 +1224,9 @@ public class Map implements Disposable {
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.nativeTileGrid = null;
       this.nativeDt1Mask = 0;
+      this.nativeWallTileTypes.clear();
+      this.nativeWallTileTypesByTile.clear();
+      this.nativeWallTileTypesByCoord.clear();
       this.syntheticArena = false;
       this.townPortalSpawn = null;
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
@@ -1302,6 +1311,9 @@ public class Map implements Disposable {
       specials = EMPTY_INT_CELL_MAP;
       boundaryWalls.clear();
       boundaryWallTileTypes.clear();
+      nativeWallTileTypes.clear();
+      nativeWallTileTypesByTile.clear();
+      nativeWallTileTypesByCoord.clear();
     }
 
     @Override
@@ -1521,18 +1533,79 @@ public class Map implements Disposable {
 
     /** Returns D2MOO's logical wall type for a world tile, or -1 if unavailable. */
     public int nativeWallTileType(int layer, int tx, int ty) {
-      if (layer < 0 || layer >= Map.MAX_WALLS || nativeTileGrid == null) return -1;
+      if (layer < 0 || layer >= Map.MAX_WALLS) return -1;
       int localX = tx - this.tx;
       int localY = ty - this.ty;
-      if (nativeTileGrid.inBounds(localX, localY)) {
-        return nativeTileGrid.wallTileTypes[layer][localY][localX];
+      if (nativeTileGrid != null && nativeTileGrid.inBounds(localX, localY)) {
+        int nativeType = nativeTileGrid.wallTileTypes[layer][localY][localX];
+        if (nativeType >= 0) return nativeType;
       }
-      return boundaryWallTileTypes.get(tileHashCode(Map.WALL_OFFSET + layer, localX, localY), -1);
+      int key = tileHashCode(Map.WALL_OFFSET + layer, localX, localY);
+      int boundaryType = boundaryWallTileTypes.get(key, -1);
+      if (boundaryType >= 0) return boundaryType;
+      return nativeWallTileTypes.get(key, -1);
+    }
+
+    /** Returns the native logical type associated with the rendered tile at this cell. */
+    public int nativeWallTileType(int layer, int tx, int ty, DT1.Tile tile) {
+      if (layer < 0 || layer >= Map.MAX_WALLS || tile == null) return -1;
+      int localX = tx - this.tx;
+      int localY = ty - this.ty;
+      IntIntMap byTile = nativeWallTileTypesByTile.get(tileHashCode(Map.WALL_OFFSET, localX, localY));
+      if (byTile != null) {
+        int tileId = DT1.Tile.Index.create(tile.orientation, tile.mainIndex, tile.subIndex);
+        int nativeType = byTile.get(tileId, -1);
+        if (nativeType >= 0) return nativeType;
+      }
+      IntArray byCoord = nativeWallTileTypesByCoord.get(
+          tileHashCode(Map.WALL_OFFSET, localX, localY));
+      if (byCoord != null) {
+        if (byCoord.size == 1) return byCoord.first();
+        if (layer < byCoord.size) return byCoord.get(layer);
+      }
+      return nativeWallTileType(layer, tx, ty);
+    }
+
+    /** Stores a D2MOO logical wall type using zone-local tile coordinates. */
+    public void putNativeWallTileType(int layer, int localX, int localY, int tileType) {
+      if (layer < 0 || layer >= Map.MAX_WALLS || tileType < Orientation.LEFT_WALL
+          || tileType > Orientation.LOWER_SOUTH_CORNER_WALL) return;
+      nativeWallTileTypes.put(tileHashCode(Map.WALL_OFFSET + layer, localX, localY), tileType);
+    }
+
+    /** Stores a native logical type using the exact rendered tile identity. */
+    public void putNativeWallTileTypeByTile(int localX, int localY, int tileId, int tileType) {
+      if (tileId < 0 || tileType < Orientation.LEFT_WALL
+          || tileType > Orientation.LOWER_SOUTH_CORNER_WALL) return;
+      int key = tileHashCode(Map.WALL_OFFSET, localX, localY);
+      IntIntMap byTile = nativeWallTileTypesByTile.get(key);
+      if (byTile == null) {
+        byTile = new IntIntMap();
+        nativeWallTileTypesByTile.put(key, byTile);
+      }
+      if (!byTile.containsKey(tileId)) {
+        IntArray byCoord = nativeWallTileTypesByCoord.get(key);
+        if (byCoord == null) {
+          byCoord = new IntArray();
+          nativeWallTileTypesByCoord.put(key, byCoord);
+        }
+        byCoord.add(tileType);
+      }
+      byTile.put(tileId, tileType);
+    }
+
+    public void clearNativeWallTileTypes() {
+      nativeWallTileTypes.clear();
+      nativeWallTileTypesByTile.clear();
+      nativeWallTileTypesByCoord.clear();
     }
 
     void clearBoundaryWalls() {
       boundaryWalls.clear();
       boundaryWallTileTypes.clear();
+      nativeWallTileTypes.clear();
+      nativeWallTileTypesByTile.clear();
+      nativeWallTileTypesByCoord.clear();
     }
 
     void putBoundaryWall(int layer, int tx, int ty, DT1.Tile tile) {
