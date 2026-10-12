@@ -553,11 +553,15 @@ public class NpcDialogManager {
     registerNpc(155, "Warriv", 1, NPC_TYPE_TRAVEL, false, false, false, false, true);
 
     // 第二幕 NPC
-    registerNpc(177, "Fara", 2, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
-    registerNpc(175, "Drognan", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
+    registerNpc(176, "Atma", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
+    registerNpc(177, "Drognan", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
+    registerNpc(178, "Fara", 2, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
     registerNpc(199, "Elzix", 2, NPC_TYPE_GAMBLER, true, true, false, false, false);
     registerNpc(198, "Greiz", 2, NPC_TYPE_HIRELING, false, false, false, true, false);
-    registerNpc(176, "Lysander", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
+    registerNpc(202, "Lysander", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
+    registerNpc(200, "Geglash", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
+    registerNpc(201, "Jerhyn", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
+    registerNpc(244, "Deckard Cain", 2, NPC_TYPE_NORMAL, false, false, false, false, false);
     registerNpc(210, "Meshif", 2, NPC_TYPE_TRAVEL, false, false, false, false, true);
 
     // 第三幕 NPC
