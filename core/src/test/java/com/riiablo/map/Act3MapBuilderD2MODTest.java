@@ -113,4 +113,16 @@ class Act3MapBuilderD2MODTest {
     assertEquals(659, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_SW);
     assertEquals(664, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_CHEST_NE);
   }
+
+  @Test
+  void excludesDedicatedCausewayAndTravincalFromGenericBorders() {
+    assertEquals(true, Act3MapBuilderD2MOD.usesGenericOutdoorBorders(
+        D2LevelIds.LEVEL_SPIDERFOREST));
+    assertEquals(true, Act3MapBuilderD2MOD.usesGenericOutdoorBorders(
+        D2LevelIds.LEVEL_UPPERKURAST));
+    assertEquals(false, Act3MapBuilderD2MOD.usesGenericOutdoorBorders(
+        D2LevelIds.LEVEL_KURASTCAUSEWAY));
+    assertEquals(false, Act3MapBuilderD2MOD.usesGenericOutdoorBorders(
+        D2LevelIds.LEVEL_TRAVINCAL));
+  }
 }

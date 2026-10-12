@@ -7012,3 +7012,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 核对 A3 地下迷宫入口：Spider/Flayer/Swampy Pit/Kurast Sewers 由
   `DRLGMAZE` 的 RoomEx 动态 preset 替换负责，不能用普通户外固定坐标覆盖；补充
   Spider、Temple、Dungeon treasure Def 回归校验。
+- [x] 限制通用户外边界只作用于丛林与 Kurast 城区；Causeway 和 Travincal 保留
+  专用 Bridge/六边缘预设，避免兼容边界重复覆盖。
