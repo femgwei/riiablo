@@ -99,6 +99,9 @@ class Act3MapBuilderD2MODTest {
   @Test
   void uses110fKurastFillPresetDefValues() {
     assertEquals(760, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X16);
+    assertEquals(758, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X16);
+    assertEquals(759, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X08);
+    assertEquals(757, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X08);
     assertEquals(777, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_16X16);
     assertEquals(793, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_16X16);
   }
