@@ -7102,3 +7102,13 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   创建路径；`bSpawned`、越界和无效 RoomEx 均不会重复或越界生成。
 - [x] 新增 A4 怪物投影自动回归；A4/A5 原生桥接定向编译与测试通过，真实客户端验证
   仍留到 A2--A5 地图全部完成后统一进行。
+
+## 2026-10-13 Act II Arcane Sanctuary 原生单位导出
+
+- [x] Arcane Sanctuary 原生 RoomEx/Tiles 桥现在同步导出 `UNIT_OBJECT`、`UNIT_TILE` 和
+  `UNIT_MONSTER`；对象保留 DS1 来源、`bSpawned` 与 `externalEntity`，Warp marker
+  依据 `Levels.txt` 的 Vis/Warp slot 投影。
+- [x] Act II `MonPreset` placement 与 D2MOO 编码 SuperUnique 均解析到本地
+  `MonStats.hcIdx`，非城镇怪物按 RoomEx 延迟生成，已生成单位不会重复创建。
+- [x] 新增 Arcane 原生怪物投影回归；Arcane 拓扑、地形、A2 Warp 及 A3--A5 地图回归
+ 通过。真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后统一进行。
