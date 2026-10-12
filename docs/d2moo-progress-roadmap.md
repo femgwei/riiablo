@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 Act IV 城镇 NPC 原生 hcIdx 修正
+
+- [x] 对照 D2MOO `MonsterIds.h` 与 `SUnitProxy.cpp`，修正 Halbu/Jamella/Tyrael2 的
+  原生 `hcIdx` 为 257/405/367；同步 NPC 注册、治疗、交易和赌博服务集合，消除旧的
+  405/406/257 偏移映射。
+- [x] A4 城镇注册回归增加名称断言，并继续通过 A2--A5 地图回归；真实客户端验证按约定
+  留待全部地图完成后统一进行。
+
 ## 2026-10-13 Act V 城镇 NPC 原生 hcIdx 修正
 
 - [x] 对照 D2MOO `D2Common/include/DataTbls/MonsterIds.h` 与 `D2Game/src/UNIT/SUnitProxy.cpp`，

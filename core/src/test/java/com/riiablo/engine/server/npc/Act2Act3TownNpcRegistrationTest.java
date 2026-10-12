@@ -23,8 +23,12 @@ class Act2Act3TownNpcRegistrationTest {
 
   @Test void registersAct4TownNpcIds() {
     NpcDialogManager manager = new NpcDialogManager();
-    int[] ids = {257, 405, 406};
+    int[] ids = {MonsterType.HALBU, MonsterType.JAMELLA, MonsterType.TYRAEL2};
     for (int id : ids) assertNotNull(manager.getNpcDefinition(id), "missing A4 NPC " + id);
+
+    assertEquals("Halbu", manager.getNpcDefinition(MonsterType.HALBU).name);
+    assertEquals("Jamella", manager.getNpcDefinition(MonsterType.JAMELLA).name);
+    assertEquals("Tyrael", manager.getNpcDefinition(MonsterType.TYRAEL2).name);
   }
 
   @Test void registersAct5TownNpcIds() {

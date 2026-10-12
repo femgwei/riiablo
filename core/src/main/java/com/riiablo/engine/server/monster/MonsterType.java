@@ -196,6 +196,11 @@ public final class MonsterType {
   /** Gidbinn's unique Fetish guardian (D2MOO MONSTER_FETISH11). */
   public static final int FETISH11 = 407;
 
+  /** Halbu (Act IV town blacksmith, D2MOO MONSTER_HALBU). */
+  public static final int HALBU = 257;
+  /** Jamella (Act IV town healer/gambler, D2MOO MONSTER_JAMELLA). */
+  public static final int JAMELLA = 405;
+
   // Act V town NPCs use the native D2MOO MonsterIds.h values.  Drehya is the
   // internal MonStats id for the NPC displayed to players as Anya.
   public static final int LARZUK = 512;

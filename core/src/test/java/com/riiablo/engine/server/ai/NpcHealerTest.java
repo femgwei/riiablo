@@ -19,7 +19,7 @@ class NpcHealerTest extends RiiabloTest {
     assertTrue(Npc.isHealer(148)); // Akara
     assertTrue(Npc.isHealer(178)); // Fara
     assertTrue(Npc.isHealer(255)); // Ormus
-    assertTrue(Npc.isHealer(406)); // Jamella
+    assertTrue(Npc.isHealer(MonsterType.JAMELLA)); // Jamella
     assertTrue(Npc.isHealer(MonsterType.MALAH)); // Malah
     assertFalse(Npc.isHealer(154)); // Charsi
   }

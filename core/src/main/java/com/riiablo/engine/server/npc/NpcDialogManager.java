@@ -576,10 +576,14 @@ public class NpcDialogManager {
     registerNpc(264, "Meshif", 3, NPC_TYPE_TRAVEL, false, false, false, false, true);
     registerNpc(297, "Natalya", 3, NPC_TYPE_NORMAL, false, false, false, false, false);
 
-    // 第四幕 NPC
-    registerNpc(405, "Halbu", 4, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
-    registerNpc(406, "Jamella", 4, NPC_TYPE_GAMBLER, true, true, false, false, false);
-    registerNpc(257, "Tyrael", 4, NPC_TYPE_NORMAL, false, false, false, false, false);
+    // 第四幕 NPC。D2MOO MonsterIds.h: Halbu=257, Jamella=405,
+    // Tyrael2=367.
+    registerNpc(MonsterType.HALBU, "Halbu", 4, NPC_TYPE_BLACKSMITH,
+        true, false, true, false, false);
+    registerNpc(MonsterType.JAMELLA, "Jamella", 4, NPC_TYPE_GAMBLER,
+        true, true, false, false, false);
+    registerNpc(MonsterType.TYRAEL2, "Tyrael", 4, NPC_TYPE_NORMAL,
+        false, false, false, false, false);
 
     // 第五幕 NPC。D2MOO MonsterIds.h uses 512..516; the MonStats row named
     // Drehya is the NPC displayed in-game as Anya.
