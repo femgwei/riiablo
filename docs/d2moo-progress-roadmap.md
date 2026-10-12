@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 Act IV 原生 RoomEx/TileGrid 桥接（本轮完成代码修复）
+
+- [x] 对照 D2MOO `DrlgOutPlace.createLevelConnections`，新增资源门控的
+  `Act4D2MOOLayoutBridge`：按 Pandemonium Fortress、Outer Steppes、Plains of Despair、
+  City of the Damned、River of Flame、Chaos Sanctuary 的原生 LevelId 导出 RoomEx、
+  floor/wall/shadow、DT1 mask 和碰撞数据。
+- [x] 导出原生 DS1 preset object（包括 Chaos Sanctuary 封印等任务对象）到现有 Zone；
+  兼容地图生成器仍负责无 MPQ/不完整资源时的可玩回退，不修改任务、战斗或网络协议。
+- [x] 明确 River of Flame（107）是主进度中的迷宫关卡，Chaos Sanctuary（108）由 D2MOO
+  独立链接生成；两者都纳入地形导出，但不把 River 当作普通 Act IV 户外边界区域。
+- [x] 验证：`./gradlew.bat :core:test --tests
+  com.riiablo.map.Act4MapBuilderD2MODTest --tests
+  com.riiablo.map.d2moo.Act4D2MOOLayoutBridgeTest --no-daemon` 通过；尚未进行另一台电脑
+  的真实 1.10f 客户端验证，按约定留待 A2–A5 地图工作完成后统一验证。
+
+
 ## 2026-10-12 Act II 地图首轮真实资源验证
 
 - [x] 使用本机 Diablo II 1.10f MPQ 对 Lut Gholein（Level 40）和 Rocky Waste（Level 41）执行 `:desktop:offscreenCamp` 烟测；Act II 城镇、户外主链、地下 Zone 和七墓 Zone 均完成物化，隐藏客户端输出 `OFFSCREEN_CAMP result=PASS`。

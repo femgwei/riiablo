@@ -11,6 +11,7 @@ import com.riiablo.engine.EntityFactory;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
+import com.riiablo.map.d2moo.Act4D2MOOLayoutBridge;
 
 /**
  * Act4 地图生成器 - 完全复刻 D2MOD 实现
@@ -245,6 +246,12 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     // Keep a playable fallback when a reduced MPQ export omits one of the
     // Act IV presets. Native D2GS still materializes the level record.
     ensureAct4ChainZones(map, diff, base);
+
+    // When the 1.10f MPQ set is available, replace compatibility terrain with
+    // D2MOO's native RoomEx/TileGrid export and retain native preset objects
+    // (seals, quest objects, etc.).  The bridge is resource-gated and leaves
+    // all compatibility Zones intact when an export is unavailable.
+    Act4D2MOOLayoutBridge.populateZones(seed, diff, map);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTPLACE_InitAct4OutdoorLevel
