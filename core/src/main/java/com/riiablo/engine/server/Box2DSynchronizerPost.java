@@ -6,6 +6,7 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Angle;
@@ -40,7 +41,12 @@ public class Box2DSynchronizerPost extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    Body body = mBox2DBody.get(entityId).body;
+    Box2DBody box2d = mBox2DBody.get(entityId);
+    Body body = box2d == null ? null : box2d.body;
+    // Preloaded/off-screen entities may retain a component while their body
+    // is inactive. Static bodies also cannot produce authoritative movement;
+    // avoid doing per-tick synchronization work for either case.
+    if (body == null || !body.isActive() || body.getType() != BodyDef.BodyType.DynamicBody) return;
     Vector2 previous = mPosition.get(entityId).position;
     Vector2 current = body.getPosition();
     float oldX = previous.x;
