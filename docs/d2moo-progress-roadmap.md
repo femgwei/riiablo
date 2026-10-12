@@ -20,6 +20,14 @@
   不匹配源文件回退和动态对象去重；`:core:test --tests com.riiablo.map.Act2TownNativeExportTest`
   与 `:core:mapRegression` 均通过。真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
 
+## 2026-10-13 Act III Kurast Docktown 城镇 NPC 去重
+
+- [x] A3 原生 RoomEx/TileGrid 导出现在记录城镇 `UNIT_MONSTER` 的 DS1 来源；仅当导出
+  来源与当前选中的 Kurast Docktown preset 一致时，替换 Zone 的原生 NPC 列表并跳过同源
+  DS1 动态对象，静态对象和来源不匹配的兼容对象继续保留。
+- [x] 新增 A3 城镇源匹配/动态对象去重回归；A3 原生导出和 `:core:mapRegression`
+  均通过。真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
+
 ## 2026-10-13 Act IV 城镇 NPC 实体投影回归
 
 - [x] 新增 A4 城镇 `UNIT_MONSTER` 投影测试，覆盖 Halbu/Jamella/Tyrael2 的原生

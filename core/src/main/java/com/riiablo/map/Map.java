@@ -1371,6 +1371,14 @@ public class Map implements Disposable {
       return nativeMonsters;
     }
 
+    /** Selected DS1 source for a preset-backed zone, when one is available. */
+    public String presetSourceFile() {
+      if (presets == null || presets.length == 0 || presets[0] == null
+          || presets[0].length == 0 || presets[0][0] == null
+          || presets[0][0].ds1 == null) return null;
+      return presets[0][0].ds1.fileName;
+    }
+
     public String nativeTownMonsterSource() { return nativeTownMonsterSource; }
 
     /** Commits a complete, source-matched NPC-only export before ECS creation. */

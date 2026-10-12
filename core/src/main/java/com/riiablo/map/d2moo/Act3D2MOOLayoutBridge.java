@@ -145,6 +145,8 @@ public final class Act3D2MOOLayoutBridge {
             new com.badlogic.gdx.utils.Array<>();
         com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
             new com.badlogic.gdx.utils.Array<>();
+        String[] townMonsterSource = {null};
+        boolean[] townMonsterSourcesMatch = {true};
         int queuedMonsters = 0;
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
@@ -165,6 +167,15 @@ public final class Act3D2MOOLayoutBridge {
                 return;
               }
               if (unitType == D2UnitTypes.UNIT_MONSTER) {
+                if (zone.isTown() && externalEntity) {
+                  if (sourceFile == null || sourceFile.isEmpty()) {
+                    townMonsterSourcesMatch[0] = false;
+                  } else if (townMonsterSource[0] == null) {
+                    townMonsterSource[0] = sourceFile;
+                  } else if (!sameSource(townMonsterSource[0], sourceFile)) {
+                    townMonsterSourcesMatch[0] = false;
+                  }
+                }
                 if (externalEntity && x >= 0 && y >= 0
                     && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                     && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
@@ -192,6 +203,14 @@ public final class Act3D2MOOLayoutBridge {
           queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
           zone.getNativeObjects().addAll(exportedObjects);
           zone.getNativeMonsters().addAll(exportedMonsters);
+          if (zone.isTown() && !exportedMonsters.isEmpty()
+              && townMonsterSourcesMatch[0] && townMonsterSource[0] != null
+              && sameSource(zone.presetSourceFile(), townMonsterSource[0])) {
+            // The native town export owns dynamic NPCs from this exact DS1;
+            // keep static objects on the compatibility path, but do not create
+            // a second copy of the native UNIT_MONSTER entries.
+            zone.replaceNativeTownMonsters(townMonsterSource[0], exportedMonsters);
+          }
           zone.setNativeTileGrid(grid, dt1Mask);
           exportedLevels++;
         } else {
@@ -240,6 +259,18 @@ public final class Act3D2MOOLayoutBridge {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
     }
     return null;
+  }
+
+  /** MPQ file names are case-insensitive and may include the tile-root prefix. */
+  private static boolean sameSource(String a, String b) {
+    if (a == null || b == null) return false;
+    return normalizeSource(a).equals(normalizeSource(b));
+  }
+
+  private static String normalizeSource(String source) {
+    String normalized = source.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+    String root = "data/global/tiles/";
+    return normalized.startsWith(root) ? normalized.substring(root.length()) : normalized;
   }
 
   private static void projectRooms(D2DrlgLevel level, Zone zone) {

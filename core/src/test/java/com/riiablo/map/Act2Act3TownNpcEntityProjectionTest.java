@@ -15,9 +15,7 @@ import org.junit.jupiter.api.Test;
  * Verifies the native town UNIT_MONSTER projection for Acts II and III.
  *
  * <p>The test supplies the records that D2MOO's town export emits and checks
- * the shared MapManager path. Resource-backed Act II native DRLG export is a
- * separate bridge task; this still protects the ECS projection contract used
- * by both the Act III bridge and a future Act II town bridge.</p>
+ * the shared MapManager path used by both the Act II and Act III bridges.</p>
  */
 class Act2Act3TownNpcEntityProjectionTest {
   private static final int[] ACT2_NPCS = {
@@ -63,6 +61,26 @@ class Act2Act3TownNpcEntityProjectionTest {
     }
     assertEquals(112f, factory.x()[0]);
     assertEquals(630f, factory.y()[factory.y().length - 1]);
+  }
+
+  @Test
+  void nativeAct3TownExportSuppressesOnlyMatchingDynamicPresetUnits() {
+    Map.Zone town = new Map.Zone();
+    town.town = true;
+    town.replaceNativeTownMonsters("Act3/Town/KurastTown.ds1",
+        new com.badlogic.gdx.utils.Array<Map.NativeMonster>() {{
+          add(new Map.NativeMonster(0, MonsterType.ASHEARA, 0, 10, 12, -1, null, false));
+        }});
+
+    assertEquals(1, town.getNativeMonsters().size);
+    assertEquals("Act3/Town/KurastTown.ds1", town.nativeTownMonsterSource());
+    assertEquals(false, MapManager.shouldCreateCompatibilityPresetUnit(
+        town, "data\\global\\tiles\\act3\\town\\kurasttown.ds1",
+        DS1.Object.DYNAMIC_TYPE));
+    assertEquals(true, MapManager.shouldCreateCompatibilityPresetUnit(
+        town, "Act3/Town/KurastTown.ds1", DS1.Object.STATIC_TYPE));
+    assertEquals(true, MapManager.shouldCreateCompatibilityPresetUnit(
+        town, "Act3/Town/other.ds1", DS1.Object.DYNAMIC_TYPE));
   }
 
   private static Map.Zone town(int x, int y, int[] npcIds) {
