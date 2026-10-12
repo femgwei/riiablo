@@ -25,7 +25,7 @@ import java.util.IdentityHashMap;
 public final class Act5D2MOOLayoutBridge {
   private static final String TAG = "Act5D2MOOLayoutBridge";
   private static final int TOWN = D2LevelIds.LEVEL_HARROGATH;
-  /** Main progression; the independent Nihlathak branch remains compatibility-backed. */
+  /** Main progression followed by the independent Nihlathak quest branch. */
   static final int[] LEVELS = {
       TOWN,
       D2LevelIds.LEVEL_BLOODYFOOTHILLS,
@@ -41,13 +41,18 @@ public final class Act5D2MOOLayoutBridge {
       D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2,
       D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3,
       D2LevelIds.LEVEL_THRONEOFDESTRUCTION,
-      D2LevelIds.LEVEL_WORLDSTONECHAMBER
+      D2LevelIds.LEVEL_WORLDSTONECHAMBER,
+      D2LevelIds.LEVEL_NIHLATHAKSTEMPLE,
+      D2LevelIds.LEVEL_HALLSOFANGUISH,
+      D2LevelIds.LEVEL_HALLSOFPAIN,
+      D2LevelIds.LEVEL_HALLSOFVAUGHT
   };
 
   private Act5D2MOOLayoutBridge() {}
 
   /**
-   * Projects native RoomEx/TileGrid data into already-created Act V Zones.
+   * Projects native RoomEx/TileGrid data into already-created Act V Zones,
+   * including the independent Nihlathak quest branch.
    * A missing or partial archive leaves the compatibility builder untouched.
    */
   public static boolean populateZones(int gameSeed, int diff, Map map) {

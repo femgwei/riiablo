@@ -36,6 +36,16 @@
 - [x] 验证：`:core:compileJava`、Act V 主链及桥接定向测试通过；真实 1.10f 客户端验证仍
   按约定延后到 A2–A5 地图统一验收。
 
+## 2026-10-13 Act V Nihlathak 支线原生地图桥接（本轮完成代码修复）
+
+- [x] 将 Nihlathak Temple、Halls of Anguish、Halls of Pain、Halls of Vaught 纳入
+  `Act5D2MOOLayoutBridge`；支线现在与主链一样尝试导出原生 RoomEx、地形碰撞、DT1 mask、
+  DS1 preset object 和 `UNIT_TILE` Warp marker。
+- [x] 保留 A5Q4 独立任务 Warp/坐标布局与资源缺失回退；原生桥失败时仍使用现有兼容 Zone，
+  不改变任务状态或奖励逻辑。
+- [x] 验证：`:core:compileJava`、Act V 主链/支线定向测试通过；真实客户端入口和碰撞验证
+  继续留待 A2–A5 统一验收。
+
 
 ## 2026-10-12 Act II 地图首轮真实资源验证
 
