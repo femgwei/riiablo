@@ -18,6 +18,7 @@ import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.codec.excel.MonStats;
 
 import java.util.IdentityHashMap;
 
@@ -142,6 +143,7 @@ public final class Act3D2MOOLayoutBridge {
             new com.badlogic.gdx.utils.Array<>();
         com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
             new com.badlogic.gdx.utils.Array<>();
+        int queuedMonsters = 0;
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
@@ -165,7 +167,8 @@ public final class Act3D2MOOLayoutBridge {
                     && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                     && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
                   exportedMonsters.add(new Map.NativeMonster(
-                      roomId, index, mode, x, y, -1, null, spawned));
+                      roomId, resolveNativeMonsterId(index), mode, x, y,
+                      -1, null, spawned));
                 }
                 return;
               }
@@ -183,6 +186,7 @@ public final class Act3D2MOOLayoutBridge {
         int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         if (floors > 0) {
           projectRooms(level, zone);
+          queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
           zone.getNativeObjects().addAll(exportedObjects);
           zone.getNativeMonsters().addAll(exportedMonsters);
           zone.setNativeTileGrid(grid, dt1Mask);
@@ -201,7 +205,8 @@ public final class Act3D2MOOLayoutBridge {
               applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask)
               + String.format(" objects=%d/%d invalidObjectPos=%d unitTileWarp=%d/%d",
                   presetUnits, rawObjects[0], rawObjects[1],
-                  nativeWarpUnits[0], nativeWarpUnits[1]));
+                  nativeWarpUnits[0], nativeWarpUnits[1])
+              + String.format(" queuedMonsters=%d", queuedMonsters));
         }
         D2Log.debug("ACT3_BRIDGE exported level=%d floors=%d rooms=%d objects=%d nativeObjects=%d",
             levelId, floors, level.getRooms(), rawObjects[0], zone.getNativeObjects().size);
@@ -268,6 +273,53 @@ public final class Act3D2MOOLayoutBridge {
       }
       zone.getRoomsEx().get(i).setAdjacentRoomIds(adjacent.toArray());
     }
+  }
+
+  /**
+   * Native D2Game queues preset monsters when their RoomEx enters the client
+   * ring. Act III used to retain the audit list but never attached those units
+   * to a projected RoomEx, so every non-town native monster silently vanished.
+   */
+  static int queueNativeMonsters(Zone zone,
+      com.badlogic.gdx.utils.Array<Map.NativeMonster> monsters) {
+    if (zone == null || zone.isTown() || monsters == null) return 0;
+    int queued = 0;
+    for (Map.NativeMonster monster : monsters) {
+      if (monster == null || monster.spawned) continue;
+      Map.RoomEx room = monster.roomId >= 0 && monster.roomId < zone.getRoomsEx().size
+          ? zone.getRoomsEx().get(monster.roomId) : null;
+      float worldX = zone.x() + monster.x;
+      float worldY = zone.y() + monster.y;
+      if (room == null || !room.contains(worldX, worldY)) {
+        room = zone.findRoomEx(worldX, worldY);
+      }
+      if (room == null) {
+        if (Gdx.app != null) Gdx.app.error(TAG, String.format(
+            "Act3 native monster has no RoomEx: level=%d room=%d monster=%d pos=(%.1f,%.1f)",
+            zone.levelId(), monster.roomId, monster.monsterId, monster.x, monster.y));
+        continue;
+      }
+      room.addMonsterSpawn(monster.monsterId, worldX, worldY, -1, false,
+          monster.superUniqueId, monster.superUniqueKey);
+      queued++;
+    }
+    return queued;
+  }
+
+  private static int resolveNativeMonsterId(int index) {
+    if (com.riiablo.Riiablo.files == null
+        || com.riiablo.Riiablo.files.monstats == null) return index;
+    String placement = null;
+    if (com.riiablo.Riiablo.files.MonPreset != null) {
+      try {
+        placement = com.riiablo.Riiablo.files.MonPreset.getPlace(3, index);
+      } catch (RuntimeException ignored) {
+        // Keep the direct class-id lookup for native units without a MonPreset row.
+      }
+    }
+    MonStats.Entry monster = com.riiablo.map.Act1MapBuilderD2MOD
+        .resolveD2MooPresetMonster(index, placement);
+    return monster == null ? index : monster.hcIdx;
   }
 
   private static final class RiiabloAccess {
