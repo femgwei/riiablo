@@ -551,7 +551,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       case LEVEL_DRYHILLS:
         defs = new int[] { 537, 553, 540, 545 }; repeats = 2; break;
       case LEVEL_FAROASIS:
-        defs = new int[] { 551, 543, 545, 537 }; repeats = 2; break;
+        defs = new int[] { 538, 539, 551, 543, 545, 537 }; repeats = 3; break;
       case LEVEL_LOSTCITY:
         defs = new int[] { 539, 550, 551, 546, 547, 553 }; repeats = 2; break;
       case LEVEL_CANYONOFTHEMAGI:
