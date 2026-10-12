@@ -437,7 +437,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
         // entrance preset before waypoints and shrines are spawned.
         placeDesertExit(zone, seed);
-        placeNativeDesertCliffs(zone, seed);
+        if (zone.level.Id == LEVEL_ROCKYWASTE || zone.level.Id == LEVEL_DRYHILLS
+            || zone.level.Id == LEVEL_FAROASIS || zone.level.Id == LEVEL_LOSTCITY) {
+          placeNativeDesertCliffs(zone, seed);
+        }
         placeNativeDesertFills(zone, seed);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 1);
