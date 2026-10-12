@@ -6,6 +6,12 @@
 - [x] 依据 D2MOO `DUNGEON_GetWarpTileFromRoomAndSourceLevelId` 的 `LvlWarp` 出口落点语义，放宽 Act II 及后续预设地图的离屏 Warp 可行走点搜索范围；入口墙体标记可以位于阻挡格，玩家落点由出口偏移和更大范围搜索确定。
 - [ ] 待另一台电脑拉取后验证 A2 城镇出口、Rocky Waste 边界和地下入口的实际移动/传送表现；随后继续检查 Dry Hills、Far Oasis、Lost City、Canyon 与 Arcane Sanctuary 的真实入口碰撞。
 
+## 2026-10-12 Act II 沙漠出口预设接入
+
+- [x] 对照 1.10f `DrlgOutDesr.cpp` 的 `DRLGOUTDESR_AddExits`，为 Rocky Waste、Dry Hills、Far Oasis、Lost City 和 Valley of Snakes 接入对应的原生 `LvlPrest` 出口预设定义（530、530、532、554、531）。出口预设在边界、Waypoint 和 Shrine 之前按稳定种子放入内部网格空位。
+- [x] 新增 `Act2MapBuilderD2MooWarpTest` 覆盖五个区域到原生预设定义的映射；A2 地图 Warp/Arcane 现有自动测试继续通过。
+- [ ] Canyon of the Magi 的七墓入口排列、沙漠悬崖链和 Far Oasis/Lost City 的填充预设仍待下一段接入；真实 MPQ 验证统一延后到 A2 地图阶段完成后。
+
 ## 2026-10-11 Blood Moor 河流边界方向状态修正
 
 - [x] 对照 1.10f `D2Common.dll` 的 `DRLGOUTPLACE_PlaceAct1245OutdoorBorders`：每条边开始时重建 `nUnkb00/bHasDirection`，角点在当前、下一顶点方向均为 0 时清除方向位；修正方向状态从上一条边粘滞到河流首格的问题。

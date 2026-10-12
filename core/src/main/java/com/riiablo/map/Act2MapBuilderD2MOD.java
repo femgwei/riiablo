@@ -431,6 +431,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // 参考 D2MOD: DRLGOUTDESR_InitAct2OutdoorLevel
     for (Zone zone : map.zones) {
       if (!zone.town && isAct2OutdoorLevel(zone.level.Id)) {
+        // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
+        // entrance preset before waypoints and shrines are spawned.
+        placeDesertExit(zone, seed);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 1);
         
@@ -447,6 +450,45 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           OutdoorFeatures.placeShrines(zone, seed, 5);
         }
       }
+    }
+  }
+
+  /** Returns the native desert entrance preset used by AddExits, or -1. */
+  static int desertExitPresetDef(int levelId) {
+    switch (levelId) {
+      case LEVEL_ROCKYWASTE:
+      case LEVEL_DRYHILLS:
+        return 530; // LVLPREST_ACT2_DESERT_TOMB_1
+      case LEVEL_FAROASIS:
+        return 532; // LVLPREST_ACT2_DESERT_LAIR_1
+      case LEVEL_LOSTCITY:
+        return 554; // LVLPREST_ACT2_DESERT_RUINS_SEWER
+      case LEVEL_VALLEYOFSNAKES:
+        return 531; // LVLPREST_ACT2_DESERT_TOMB_2
+      default:
+        return -1;
+    }
+  }
+
+  private static void placeDesertExit(Zone zone, int seed) {
+    int def = desertExitPresetDef(zone.level.Id);
+    if (def < 0 || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
+    if (preset == null || preset.File == null || zone.gridsX < 3 || zone.gridsY < 3) return;
+
+    int[] fileIds = new int[6];
+    int fileCount = Preset.getPresets(preset, fileIds);
+    if (fileCount == 0) return;
+    MathUtils.random.setSeed(seed * 31 + zone.level.Id * 17);
+    int start = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+    for (int i = 0; i < zone.gridsX * zone.gridsY; i++) {
+      int slot = (start + i) % (zone.gridsX * zone.gridsY);
+      int gx = slot % zone.gridsX;
+      int gy = slot / zone.gridsX;
+      if (gx == 0 || gy == 0 || gx == zone.gridsX - 1 || gy == zone.gridsY - 1) continue;
+      if (zone.presets[gx][gy] != null) continue;
+      zone.presets[gx][gy] = Preset.of(preset, fileIds[MathUtils.random(fileCount - 1)]);
+      return;
     }
   }
 

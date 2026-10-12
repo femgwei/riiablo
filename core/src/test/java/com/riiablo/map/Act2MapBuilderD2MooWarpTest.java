@@ -94,6 +94,16 @@ class Act2MapBuilderD2MooWarpTest {
   }
 
   @Test
+  void usesNativeDesertExitPresetForEachOutdoorLevel() {
+    assertEquals(530, Act2MapBuilderD2MOD.desertExitPresetDef(41));
+    assertEquals(530, Act2MapBuilderD2MOD.desertExitPresetDef(42));
+    assertEquals(532, Act2MapBuilderD2MOD.desertExitPresetDef(43));
+    assertEquals(554, Act2MapBuilderD2MOD.desertExitPresetDef(44));
+    assertEquals(531, Act2MapBuilderD2MOD.desertExitPresetDef(45));
+    assertEquals(-1, Act2MapBuilderD2MOD.desertExitPresetDef(46));
+  }
+
+  @Test
   void topologyReportFlagsMissingGeneratedDungeonAndReverseRoute() {
     Levels.Entry rocky = level(41, new int[] {63}, new int[] {0});
     Levels.Entry maggot = level(63, new int[] {41}, new int[] {0});
