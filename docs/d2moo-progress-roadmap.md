@@ -25,6 +25,17 @@
 - [x] 验证：`:core:compileJava` 与 Act IV 定向测试通过；真实客户端入口移动仍按计划延后到
   A2–A5 地图统一验收。
 
+## 2026-10-13 Act V 主链原生 RoomEx/TileGrid 桥接（本轮完成代码修复）
+
+- [x] 扩展 `Act5D2MOOLayoutBridge` 从仅 Worldstone 尾段到 Harrogath、Bloody Foothills、
+  Frigid Highlands、Arreat Plateau、Crystalline Passage、Frozen River、Glacial Trail、
+  Frozen Tundra、Ancients' Way、Arreat Summit 及 Worldstone Keep/Throne/Chamber 全主链。
+- [x] 对每个可导出的主链区域接入原生 RoomEx、floor/wall/shadow、DT1 mask、碰撞和 DS1
+  preset object；原生 `UNIT_TILE` 同时转换为 `Vis/Warp` 槽 marker。
+- [x] Nihlathak Temple 支线继续保持独立兼容布局，避免把任务支线误套入 Act V 主链坐标。
+- [x] 验证：`:core:compileJava`、Act V 主链及桥接定向测试通过；真实 1.10f 客户端验证仍
+  按约定延后到 A2–A5 地图统一验收。
+
 
 ## 2026-10-12 Act II 地图首轮真实资源验证
 

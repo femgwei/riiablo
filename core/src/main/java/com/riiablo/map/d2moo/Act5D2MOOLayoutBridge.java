@@ -21,11 +21,22 @@ import com.riiablo.map.Map.Zone;
 
 import java.util.IdentityHashMap;
 
-/** Resource-gated D2MOO DRLG bridge for the Act V Worldstone tail. */
+/** Resource-gated D2MOO DRLG bridge for the Act V main progression. */
 public final class Act5D2MOOLayoutBridge {
   private static final String TAG = "Act5D2MOOLayoutBridge";
   private static final int TOWN = D2LevelIds.LEVEL_HARROGATH;
-  private static final int[] LEVELS = {
+  /** Main progression; the independent Nihlathak branch remains compatibility-backed. */
+  static final int[] LEVELS = {
+      TOWN,
+      D2LevelIds.LEVEL_BLOODYFOOTHILLS,
+      D2LevelIds.LEVEL_FRIGIDHIGHLANDS,
+      D2LevelIds.LEVEL_ARREATPLATEAU,
+      D2LevelIds.LEVEL_CRYSTALLINEPASSAGE,
+      D2LevelIds.LEVEL_FROZENRIVER,
+      D2LevelIds.LEVEL_GLACIALTRAIL,
+      D2LevelIds.LEVEL_FROZENTUNDRA,
+      D2LevelIds.LEVEL_ANCIENTSWAY,
+      D2LevelIds.LEVEL_ARREATSUMMIT,
       D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1,
       D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2,
       D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3,
@@ -96,9 +107,23 @@ public final class Act5D2MOOLayoutBridge {
         projectRooms(level, zone);
         zone.setNativeTileGrid(grid, dt1Mask);
         int[] objectCounts = {0, 0};
+        int[] nativeWarpUnits = {0, 0};
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
+              if (unitType == D2UnitTypes.UNIT_TILE) {
+                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
+                  for (int slot = 0; slot < 8; slot++) {
+                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
+                      zone.addNativeWarpMarker(slot, x, y);
+                      nativeWarpUnits[0]++;
+                      break;
+                    }
+                  }
+                }
+                nativeWarpUnits[1]++;
+                return;
+              }
               if (unitType == D2UnitTypes.UNIT_OBJECT) objectCounts[0]++;
               if (unitType == D2UnitTypes.UNIT_OBJECT && x >= 0 && y >= 0
                   && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
@@ -112,17 +137,18 @@ public final class Act5D2MOOLayoutBridge {
             "A5 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X objects=%d/%d invalid=%d",
             levelId, level.getRooms(), width, height, floors,
             applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask,
-            presetUnits, objectCounts[0], objectCounts[1]));
+            presetUnits, objectCounts[0], objectCounts[1])
+            + String.format(" unitTileWarp=%d/%d", nativeWarpUnits[0], nativeWarpUnits[1]));
         D2Log.debug("ACT5_BRIDGE exported level=%d floors=%d rooms=%d",
             levelId, floors, level.getRooms());
         applier.resetLastExportedFloorCount();
       }
-      if (Gdx.app != null) Gdx.app.log(TAG, "A5 native Worldstone summary levels="
+      if (Gdx.app != null) Gdx.app.log(TAG, "A5 native main-chain summary levels="
           + exportedLevels + "/" + LEVELS.length);
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,
-          "Native Act V Worldstone export unavailable; keeping compatibility Zones", t);
+          "Native Act V export unavailable; keeping compatibility Zones", t);
       return false;
     } finally {
       if (drlg != null) DrlgDrlg.freeDrlg(drlg);
