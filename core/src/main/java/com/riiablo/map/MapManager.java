@@ -132,6 +132,7 @@ public class MapManager extends PassiveSystem {
   }
 
   public void createEntities(Map.Zone zone) {
+    createNativeTownMonsters(zone);
     if (shouldCreateNativeObjectsImmediately(zone)) {
       createNativeObjects(zone);
     } else {
@@ -157,6 +158,17 @@ public class MapManager extends PassiveSystem {
     }
 
     createPresetEntities(zone, false);
+  }
+
+  /** Materializes native UNIT_MONSTER entries exported for town NPCs. */
+  private void createNativeTownMonsters(Map.Zone zone) {
+    if (zone == null || !zone.town || zone.getNativeMonsters().size == 0) return;
+    for (Map.NativeMonster nativeMonster : zone.getNativeMonsters()) {
+      if (nativeMonster.spawned || nativeMonster.monsterId < 0) continue;
+      int id = factory.createMonster(nativeMonster.monsterId,
+          zone.x() + nativeMonster.x, zone.y() + nativeMonster.y);
+      if (id != Engine.INVALID_ENTITY) zone.entities.add(id);
+    }
   }
 
   private void createPresetEntities(Map.Zone zone, boolean waypointsOnly) {

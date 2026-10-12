@@ -140,6 +140,8 @@ public final class Act3D2MOOLayoutBridge {
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =
             new com.badlogic.gdx.utils.Array<>();
+        com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
+            new com.badlogic.gdx.utils.Array<>();
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
@@ -158,6 +160,15 @@ public final class Act3D2MOOLayoutBridge {
                 nativeWarpUnits[1]++;
                 return;
               }
+              if (unitType == D2UnitTypes.UNIT_MONSTER) {
+                if (externalEntity && x >= 0 && y >= 0
+                    && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
+                    && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
+                  exportedMonsters.add(new Map.NativeMonster(
+                      roomId, index, mode, x, y, -1, null, spawned));
+                }
+                return;
+              }
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;
               rawObjects[0]++;
               if (x < 0 || y < 0
@@ -173,6 +184,7 @@ public final class Act3D2MOOLayoutBridge {
         if (floors > 0) {
           projectRooms(level, zone);
           zone.getNativeObjects().addAll(exportedObjects);
+          zone.getNativeMonsters().addAll(exportedMonsters);
           zone.setNativeTileGrid(grid, dt1Mask);
           exportedLevels++;
         } else {
