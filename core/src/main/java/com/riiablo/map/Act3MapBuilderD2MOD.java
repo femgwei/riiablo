@@ -302,6 +302,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     // 参考 D2MOD: DRLGOUTPLACE_InitAct3OutdoorLevel
     for (Zone zone : map.zones) {
       if (!zone.town) {
+        placeNativeKurastBorders(zone);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 2);
         
@@ -314,6 +315,27 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
           OutdoorFeatures.placeShrines(zone, seed, 3);
         }
       }
+    }
+  }
+
+  static void placeNativeKurastBorders(Zone zone) {
+    if (zone == null || zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3
+        || zone.level == null) return;
+    int base;
+    if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) base = 747;
+    else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR
+        || zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST) base = 761;
+    else return;
+    int[] defs = {base + 5, base, base + 4, base + 1, base + 3, base + 2,
+        base + 6, base + 7};
+    int[][] cells = {{0,0},{zone.gridsX-1,0},{0,zone.gridsY-1},{zone.gridsX-1,zone.gridsY-1},
+        {zone.gridsX/2,0},{zone.gridsX/2,zone.gridsY-1},{0,zone.gridsY/2},{zone.gridsX-1,zone.gridsY/2}};
+    for (int i = 0; i < defs.length; i++) {
+      LvlPrest.Entry p = Riiablo.files.LvlPrest.get(defs[i]);
+      if (p == null || p.File == null) continue;
+      int[] files = new int[6]; int count = Preset.getPresets(p, files);
+      int x = cells[i][0], y = cells[i][1];
+      if (count > 0 && zone.presets[x][y] == null) zone.presets[x][y] = Preset.of(p, files[0]);
     }
   }
 
