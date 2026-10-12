@@ -178,6 +178,7 @@ task mapRegression(type: Test) {
     includeTestsMatching 'com.riiablo.map.AutomapRoomProjectionIntegrationTest'
     includeTestsMatching 'com.riiablo.map.d2moo.*'
     excludeTestsMatching 'com.riiablo.map.d2moo.Act1*'
+    includeTestsMatching 'com.riiablo.engine.server.npc.Act2Act3TownNpcRegistrationTest'
   }
   maxHeapSize = test.maxHeapSize
   systemProperty 'java.awt.headless', 'true'

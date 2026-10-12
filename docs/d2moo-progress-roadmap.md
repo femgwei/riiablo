@@ -7117,7 +7117,8 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 ## 2026-10-13 A2--A5 地图自动回归入口
 
 - [x] 新增 Gradle `:core:mapRegression` 任务，集中运行 Act II--V 地图链、Warp、
-  RoomEx、D2MOO 原生桥接、DT1/DS1 导出和原生怪物投影测试；当前共 96 项通过。
+  RoomEx、D2MOO 原生桥接、DT1/DS1 导出、原生怪物投影和 A2--A5 城镇 NPC 注册测试；
+  当前共 100 项通过。
 - [x] 该任务排除通用 Box2D/对象碰撞和 Act I 资源实验测试，避免把非地图完成门槛的
   环境依赖混入 A2--A5 地图回归；完整 `:core:test` 仍保留给全量验证。
 - [x] 另一台电脑可直接执行：`./gradlew.bat :core:mapRegression --no-daemon`。
