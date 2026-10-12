@@ -6980,3 +6980,5 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   再处理 Flayer Jungle/Dungeon、Kurast Sewers 与 Travincal 的地图细节。
 - [x] 已确认现有 A3 生成器会为 Spider Cave/Cavern 建立兼容 Zone，并保留 D2MOO
   maze 生成入口；本轮先以现有 Warp/Zone 回归作为基线。
+- [x] 对照 D2MOO `DrlgOutJung.cpp`，确认 A3 丛林与蜘蛛洞穴属于动态 jungle/maze
+  生成链；固定入口预设不应覆盖原生 `SpiderForest` jungle block 选择。
