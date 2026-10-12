@@ -606,12 +606,12 @@ public class AutomapManager implements Disposable {
           else if (wallTile) {
             // D2Client's RevealAutomapRoom adds 0x18 automap pixels to the
             // y coordinate of the four lower-wall tile types (16..19).
-            // AutomapProjection uses world subtiles, where 96 subtiles map
-            // to the same 24 automap pixels on the y axis.
+            // AutomapProjection uses 4 pixels per 5 world subtiles, so the
+            // native +0x18 (24 pixel) offset corresponds to -30 world units.
             int automapWorldY = worldY;
             if (tile.orientation >= Orientation.LOWER_LEFT_WALL
                 && tile.orientation <= Orientation.LOWER_SOUTH_CORNER_WALL) {
-              automapWorldY -= 96;
+              automapWorldY -= 30;
             }
             layer.addWall(cell, worldX, automapWorldY);
             wallCells++;
