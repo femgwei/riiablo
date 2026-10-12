@@ -7,7 +7,9 @@
   Nihlathak 注册，并修正 Anya、Malah、Qual-Kehk 的服务映射。
 - [x] 佣兵、治疗、交易和赌博服务集合改用原生常量；城镇 NPC 注册回归现在同时检查
   名称、类型、赌博和雇佣能力，避免“只存在定义但 ID 指向错误 NPC”。
-- [x] 验证：`:core:mapRegression`（102 项）及受影响的 `NpcHealerTest`、
+- [x] 新增 A5 城镇原生 `UNIT_MONSTER` 投影回归，验证五名 NPC 均按 Zone 原点偏移物化为
+  ECS 实体；这补足了注册定义测试无法覆盖的 DS1/LvlPrest 实体加载路径。
+- [x] 验证：`:core:mapRegression`（103 项）及受影响的 `NpcHealerTest`、
   `MercenaryManagerTest` 通过；真实客户端验证仍按约定留待 A2--A5 地图完成后统一进行。
 
 ## 2026-10-13 Act IV 原生 RoomEx/TileGrid 桥接（本轮完成代码修复）
