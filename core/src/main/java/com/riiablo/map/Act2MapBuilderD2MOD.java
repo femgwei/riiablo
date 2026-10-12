@@ -406,7 +406,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           }
           Zone canyonZone = base.createZoneWithPreset(map, canyonLevel, canyonPreset,
               select, canyonX, canyonY, false);
-          if (canyonZone != null) canyonZone.generator = base.createMonsterGenerator(socket);
+          if (canyonZone != null) {
+            canyonZone.generator = base.createMonsterGenerator(socket);
+            placeCanyonTombEntries(canyonZone);
+          }
 
           Gdx.app.log(TAG, String.format(
               "Act2 native canyon placement: valley=(%d,%d) canyon=(%d,%d) fallback=%s",
@@ -450,6 +453,28 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           OutdoorFeatures.placeShrines(zone, seed, 5);
         }
       }
+    }
+  }
+
+  /** Places the fixed Canyon of the Magi tomb-entry ring from D2Common. */
+  static void placeCanyonTombEntries(Zone zone) {
+    if (zone == null || Riiablo.files == null || Riiablo.files.LvlPrest == null
+        || zone.presets == null) return;
+    final int[][] entries = {
+        {526, 8, 0, 0}, {525, 6, 0, 2}, {525, 4, 0, 1}, {525, 2, 0, 0},
+        {529, 0, 0, 0}, {527, 0, 2, 0}, {527, 0, 4, 1}, {527, 0, 6, 2},
+        {528, 0, 8, 0}, {536, 4, 4, -1}
+    };
+    for (int[] entry : entries) {
+      int def = entry[0], gx = entry[1], gy = entry[2], file = entry[3];
+      if (gx < 0 || gy < 0 || gx >= zone.gridsX || gy >= zone.gridsY) continue;
+      LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
+      if (preset == null || preset.File == null) continue;
+      int[] files = new int[6];
+      int count = Preset.getPresets(preset, files);
+      if (count <= 0) continue;
+      int selected = file >= 0 && file < count ? files[file] : files[0];
+      if (zone.presets[gx][gy] == null) zone.presets[gx][gy] = Preset.of(preset, selected);
     }
   }
 

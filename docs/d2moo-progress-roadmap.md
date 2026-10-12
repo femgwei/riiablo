@@ -6960,3 +6960,11 @@ unit collision、`CollideType=3` 走 missile-barrier mask；Lightning Fury 墙�
 
 当前下一项：用另一台电脑从 `origin/master` 拉取后进入邪恶洞穴，实机核对
 Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
+
+## 2026-10-12 Act II Canyon of the Magi 七墓入口
+
+- [x] 按 D2MOO `DRLGOUTDESR_PlaceTombEntriesInCanyon` 接入 Canyon 的九个原生
+  `LvlPrest` 预设：七墓入口/端点使用 525--529，Valley of Snakes 入口使用 536。
+- [x] 保留精简资源安全回退：缺失预设、文件或越界网格时跳过单项，不影响已有
+  Canyon/Tomb runtime Warp 和地图生成。
+- [x] 仅运行自动化验证；真实 MPQ/客户端验证留待 A2 全部完成后统一执行。
