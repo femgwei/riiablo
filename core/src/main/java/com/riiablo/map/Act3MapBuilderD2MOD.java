@@ -320,37 +320,43 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   }
 
   static void placeNativeKurastBorders(Zone zone) {
+    if (Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+    placeNativeKurastBorders(zone, Riiablo.files.LvlPrest::get);
+  }
+
+  /** Compatibility border pass; native exports already own their gates and borders. */
+  static void placeNativeKurastBorders(Zone zone,
+      java.util.function.IntFunction<LvlPrest.Entry> presets) {
     if (zone == null || zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3
-        || zone.level == null) return;
+        || zone.level == null || zone.nativeTileGrid() != null || presets == null) return;
     int base;
-    if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) base = 747;
-    else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR
-        || zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST) base = 761;
-    else return;
-    int[] defs = {base + 5, base, base + 4, base + 1, base + 3, base + 2,
-        base + 6, base + 7};
-    int[][] cells = {{0,0},{zone.gridsX-1,0},{0,zone.gridsY-1},{zone.gridsX-1,zone.gridsY-1},
-        {zone.gridsX/2,0},{zone.gridsX/2,zone.gridsY-1},{0,zone.gridsY/2},{zone.gridsX-1,zone.gridsY/2}};
-    for (int i = 0; i < defs.length; i++) {
-      LvlPrest.Entry p = Riiablo.files.LvlPrest.get(defs[i]);
-      if (p == null || p.File == null) continue;
-      int[] files = new int[6]; int count = Preset.getPresets(p, files);
-      int x = cells[i][0], y = cells[i][1];
-      if (count > 0 && zone.presets[x][y] == null) zone.presets[x][y] = Preset.of(p, files[0]);
+    if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) {
+      base = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_BORDER_N;
+    } else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR) {
+      base = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_BORDER_N;
+    } else if (zone.level.Id == D2LevelIds.LEVEL_UPPERKURAST) {
+      base = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_BORDER_N;
     }
+    else return;
+    // DrlgOutJung.cpp: N, S, E, W, NE, NW, SE, SW are consecutive Defs.
+    placeKurastBorder(zone, presets, base + 5, 0, 0);
+    placeKurastBorder(zone, presets, base + 4, zone.gridsX - 1, 0);
+    placeKurastBorder(zone, presets, base + 7, 0, zone.gridsY - 1);
+    placeKurastBorder(zone, presets, base + 6, zone.gridsX - 1, zone.gridsY - 1);
     for (int x = 1; x < zone.gridsX - 1; x++) {
-      placeKurastBorder(zone, base, base + 1, x, 0);
-      placeKurastBorder(zone, base, base + 1, x, zone.gridsY - 1);
+      placeKurastBorder(zone, presets, base, x, 0);
+      placeKurastBorder(zone, presets, base + 1, x, zone.gridsY - 1);
     }
     for (int y = 1; y < zone.gridsY - 1; y++) {
-      placeKurastBorder(zone, base, base + 3, 0, y);
-      placeKurastBorder(zone, base, base + 2, zone.gridsX - 1, y);
+      placeKurastBorder(zone, presets, base + 3, 0, y);
+      placeKurastBorder(zone, presets, base + 2, zone.gridsX - 1, y);
     }
   }
 
-  private static void placeKurastBorder(Zone zone, int base, int offset, int gx, int gy) {
+  private static void placeKurastBorder(Zone zone,
+      java.util.function.IntFunction<LvlPrest.Entry> presets, int def, int gx, int gy) {
     if (zone.presets[gx][gy] != null) return;
-    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(offset);
+    LvlPrest.Entry p = presets.apply(def);
     if (p == null || p.File == null) return;
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
