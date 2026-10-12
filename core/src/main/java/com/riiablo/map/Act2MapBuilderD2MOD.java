@@ -437,6 +437,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
         // entrance preset before waypoints and shrines are spawned.
         placeDesertExit(zone, seed);
+        placeNativeDesertFills(zone, seed);
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 1);
         
@@ -514,6 +515,36 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       if (zone.presets[gx][gy] != null) continue;
       zone.presets[gx][gy] = Preset.of(preset, fileIds[MathUtils.random(fileCount - 1)]);
       return;
+    }
+  }
+
+  /** Deterministic approximation of D2Common's level-specific desert fill pass. */
+  static void placeNativeDesertFills(Zone zone, int seed) {
+    if (zone == null) return;
+    int[] defs;
+    int repeats;
+    switch (zone.level.Id) {
+      case LEVEL_FAROASIS:
+        defs = new int[] { 551, 543, 545, 537 }; repeats = 2; break;
+      case LEVEL_LOSTCITY:
+        defs = new int[] { 539, 550, 551, 546, 547, 553 }; repeats = 2; break;
+      case LEVEL_CANYONOFTHEMAGI:
+        defs = new int[] { 543, 544, 548, 549, 541, 542 }; repeats = 2; break;
+      default: return;
+    }
+    if (zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3) return;
+    MathUtils.random.setSeed(seed * 131 + zone.level.Id * 17);
+    for (int pass = 0; pass < repeats; pass++) {
+      for (int attempt = 0; attempt < zone.gridsX * zone.gridsY; attempt++) {
+        int slot = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+        int gx = slot % zone.gridsX, gy = slot / zone.gridsX;
+        if (gx == 0 || gy == 0 || gx == zone.gridsX - 1 || gy == zone.gridsY - 1
+            || zone.presets[gx][gy] != null) continue;
+        LvlPrest.Entry p = Riiablo.files.LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
+        if (p == null || p.File == null) continue;
+        int[] files = new int[6]; int count = Preset.getPresets(p, files);
+        if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
+      }
     }
   }
 
