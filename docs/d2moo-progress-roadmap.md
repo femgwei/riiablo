@@ -1,5 +1,23 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-14 A5 大量生成告警与错误出城传送
+
+- `game2.log`、seed=127897359：Harrogath(109) 出口被作为 Warp，传到
+  Bloody Foothills(110) 的合成位置(-604,114)，不是连续步行。
+- D2MOO `DrlgOutPlace.cpp::sub_6FD826D0` 在原生共享边界插入 Vis/Warp=-1 步行连接；
+  A5 桥现保留该证据作为 native seam。只接受明确原生步行链接及严格共享边界，
+  不把任意相邻/重叠矩形当成连接。MapManager 不创建该连接的交互 Warp，
+  WarpInteractor 也拒绝旧普通出口标记传送，真正的配对城镇传送门与任务入口保持原逻辑。
+- 原日志2943条 Invalid style0 与765条 style48/sequence63 告警，源于 A5攻城边界
+  错用 LvlSub type2（A1 BorderCorner）；依据 D2MOO `LevelsIds.h`，
+  `LVLSUB_ACT5_BARRICADE` 实际为12。改为12后该批3708条告警消失，
+  同种子原先0/3的任务监狱放置不足告警也不再出现；没有降低日志级别来遮盖问题。
+- 1.10F MPQ 专项扩展到 A5：size2/mask9双向寻路、碰撞射线，普通 VelocityAdder
+  移动和 RoomEntityTracking 区域切换，以及残留出口标记不得传送的回归。
+  A2/A3/A4/A5 可跨位置分别33/5/2/28；mapRegression 162项通过、0失败。
+- 五种子长巡游仍暂停；本轮不宣称全部A5玩法验收，日志中的 Catapult/NpcBarb/
+  Overseer 等 AI_FALLBACK 仍是独立未完成项。城门外观与实际通行等待真机复测。
+
 ## 2026-10-13 石制古墓入口图形
 
 - 真机 seed=127897359 日志已发生 Rocky Waste(41) ↔ Stony Tomb Level1(55) 交互，

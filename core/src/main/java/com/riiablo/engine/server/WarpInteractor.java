@@ -109,6 +109,10 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     if (warp.linkedTownPortal != Engine.INVALID_ENTITY && mWarp.has(warp.linkedTownPortal)) {
       return warpToLinkedTownPortal(src, entity, source, warp.linkedTownPortal);
     }
+    if (!QuestWarp.isQuestWarp(warp.index) && map.isNativeSeamConnection(source, dst)) {
+      Gdx.app.log(TAG, "Warp interaction rejected: player=" + src + " reason=NATIVE_WALK_SEAM");
+      return false;
+    }
     if (QuestWarp.isQuestWarp(warp.index)) {
       Player player = mPlayer == null ? null : mPlayer.get(src);
       String rejection = QuestWarpPolicy.rejectionReason(

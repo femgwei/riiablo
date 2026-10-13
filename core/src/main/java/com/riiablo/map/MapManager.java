@@ -62,6 +62,9 @@ public class MapManager extends PassiveSystem {
         int mainIndex = DT1.Tile.Index.mainIndex(cell.id);
         int destinationOverride = zone.level == null ? -1
             : map.getWarpDestinationOverride(zone.level.Id, mainIndex);
+        Map.Zone destination = destinationOverride > 0
+            ? map.findZone(Riiablo.files.Levels.get(destinationOverride)) : null;
+        if (map.isNativeSeamConnection(zone, destination)) continue;
         if (!hasWarpDestination(zone.level, mainIndex, destinationOverride)) {
           Gdx.app.debug(TAG, String.format(
               "Skipping unbound warp marker level=%s(%d) mainIndex=%d special=0x%08X",

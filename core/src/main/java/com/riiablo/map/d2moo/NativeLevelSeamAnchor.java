@@ -37,6 +37,27 @@ public final class NativeLevelSeamAnchor {
         if (left <= right && top <= bottom) return local(source, (left + right) / 2, (top + bottom) / 2);
       }
     }
+    // Act V installs town/outdoor Vis links with Warp=-1 in
+    // DrlgOutPlace::sub_6FD826D0; RoomEx orths need not survive export.
+    // Require that native walk link as well as an exact shared edge.
+    for (D2DrlgLevel owner : new D2DrlgLevel[] {source, destination}) {
+      D2DrlgLevel target = owner == source ? destination : source;
+      if (owner.getDrlg() == null) continue;
+      int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(owner.getDrlg(), owner.getLevelId());
+      int[] warps = DrlgDrlgWarp.getWarpIdArrayFromLevelId(owner.getDrlg(), owner.getLevelId());
+      for (int slot = 0; vis != null && warps != null && slot < Math.min(vis.length, warps.length); slot++) {
+        if (vis[slot] != target.getLevelId() || warps[slot] != -1) continue;
+        D2DrlgCoord a = source.getLevelCoords(), b = destination.getLevelCoords();
+        if (b == null) return null;
+        int left = Math.max(a.getNPosX(), b.getNPosX());
+        int right = Math.min(a.getNPosX() + a.getNWidth(), b.getNPosX() + b.getNWidth());
+        int top = Math.max(a.getNPosY(), b.getNPosY());
+        int bottom = Math.min(a.getNPosY() + a.getNHeight(), b.getNPosY() + b.getNHeight());
+        if ((left == right && top < bottom) || (top == bottom && left < right)) {
+          return local(source, (left + right) / 2, (top + bottom) / 2);
+        }
+      }
+    }
     return null;
   }
 

@@ -413,7 +413,7 @@ public class DrlgOutSiege {
      * 功能：
      * 1. 构造 D2UnkOutdoorStrc 结构
      * 2. 调用 DrlgTileSub.addSecondaryBorder 添加次要边界
-     * 3. 使用 Act5 的 LvlSubId（LVLSUB_ACT5_BARRICADE = 2）
+     * 3. 使用 Act5 的 LvlSubId（LVLSUB_ACT5_BARRICADE = 12）
      * 
      * 注意：Act5 不使用 nLevelPrestId，而是使用回调函数 sub_6FD84820 和 sub_6FD84780
      */
@@ -442,9 +442,10 @@ public class DrlgOutSiege {
         a1.setPGrid2(outdoors.getPGrid(2));
         // Act5 不使用 nLevelPrestId，设置为 -1
         a1.setField_14(-1);
-        // Act5 次要边界的 LvlSubId（LVLSUB_ACT5_BARRICADE = 2，从枚举值计算）
-        // LVLSUB_ACT5_BARRICADE 是第 3 个值（从 0 开始），所以是 2
-        a1.setNLvlSubId(2); // LVLSUB_ACT5_BARRICADE
+        // LevelsIds.h: LVLSUB_ACT5_BARRICADE is 12, not the Act I
+        // border-corner type (2). The latter feeds styles 0/sequence 63
+        // into the Act V style-48/49 callback and corrupts substitutions.
+        a1.setNLvlSubId(12); // LVLSUB_ACT5_BARRICADE
         // 使用 Act5 特定的回调函数
         a1.setField_24(DrlgOutSiege::sub_6FD84820);
         a1.setField_28(DrlgOutSiege::sub_6FD84780);

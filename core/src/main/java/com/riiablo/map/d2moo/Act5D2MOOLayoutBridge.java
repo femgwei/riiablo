@@ -198,6 +198,7 @@ public final class Act5D2MOOLayoutBridge {
             levelId, floors, level.getRooms());
         applier.resetLastExportedFloorCount();
       }
+      NativeTownExit.capture(map, drlg, TOWN);
       if (Gdx.app != null) Gdx.app.log(TAG, "A5 native main-chain summary levels="
           + exportedLevels + "/" + LEVELS.length);
       return exportedLevels > 0;

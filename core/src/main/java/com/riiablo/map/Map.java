@@ -955,6 +955,12 @@ public class Map implements Disposable {
     return false;
   }
 
+  /** A continuous native level boundary must be walked, never teleported. */
+  public boolean isNativeSeamConnection(Zone source, Zone destination) {
+    return source != destination && areZonesAdjacent(source, destination)
+        && (hasNativeSeam(source, destination) || hasNativeSeam(destination, source));
+  }
+
   /**
    * Resolves the tile owner used by the renderer. Native wall graphics may be
    * anchored on a Zone's exclusive edge; those graphics must remain visible
