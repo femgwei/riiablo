@@ -18,9 +18,9 @@ import com.riiablo.graphics.PaletteIndexedBatch;
  * 使用 MaxiMap.dc6 等资源渲染小地图的墙壁、边界和图标
  * 
  * 资源说明:
- * - MaxiMap.dc6 / MaxiMapS.dc6 - 主要小地图瓷砖精灵（包含所有瓷砖类型）
- * - Act2Map.dc6 / Act4Map.dc6 - 特定章节的地图资源
- * - ExTnMap.dc6 - 扩展城镇地图
+ * - MaxiMap.dc6 / MaxiMapS.dc6 - 普通小地图瓷砖和实体图标
+ * - Act2Map.dc6 / Act4Map.dc6 - 第二、四幕城镇专用图块
+ * - ExTnMap.dc6 - 第五幕城镇专用图块
  * 
  * AutoMap.txt 定义了瓷砖类型到精灵帧的映射关系:
  * - LevelName: 关卡名称（如 "1 Barracks"）
@@ -95,6 +95,10 @@ public class AutomapTileRenderer implements Disposable {
   
   /** 主小地图精灵 */
   private DC6 maxiMap;
+
+  private boolean ownsMaxiMap;
+  private final ObjectMap<String, DC6> townSprites = new ObjectMap<>();
+  private final ObjectMap<String, Boolean> failedTownSprites = new ObjectMap<>();
   
   /** 小尺寸小地图精灵 */
   private DC6 maxiMapSmall;
@@ -186,6 +190,7 @@ public class AutomapTileRenderer implements Disposable {
         // switching to geometric markers.
         maxiMap = DC6.loadFromFile(Riiablo.mpqs.resolve(PATH_MAXIMAP));
         if (maxiMap != null) {
+          ownsMaxiMap = true;
           maxiMap.loadDirection(0);
           currentSprite = maxiMap;
           Gdx.app.log(TAG, "Loaded native MaxiMap.dc6 directly from MPQ");
@@ -468,15 +473,43 @@ public class AutomapTileRenderer implements Disposable {
    */
   public boolean renderTile(PaletteIndexedBatch batch, int frameIndex, float x, float y) {
     if (!ensureSpriteLoaded() || frameIndex < 0) return false;
-    
+    return renderSprite(batch, currentSprite, frameIndex, x, y);
+  }
+
+  /** Town cells never select frames from MaxiMap, including entity icons. */
+  public boolean renderTownTile(PaletteIndexedBatch batch, int levelId, int frameIndex,
+      float x, float y) {
+    String path = NativeTownAutomap.spritePath(levelId);
+    if (path == null || Riiablo.mpqs == null || failedTownSprites.containsKey(path)) return false;
+    DC6 sprite = townSprites.get(path);
+    if (sprite == null) {
+      try {
+        sprite = DC6.loadFromFile(Riiablo.mpqs.resolve(path));
+        sprite.loadDirection(0, false);
+      } catch (RuntimeException e) {
+        if (sprite != null) sprite.dispose();
+        failedTownSprites.put(path, Boolean.TRUE);
+        Gdx.app.error(TAG, "Failed to load native town Automap " + path, e);
+        return false;
+      }
+      townSprites.put(path, sprite);
+      Gdx.app.log(TAG, "Loaded native town Automap " + path
+          + " frames=" + sprite.getNumFramesPerDir());
+    }
+    return renderSprite(batch, sprite, frameIndex, x, y);
+  }
+
+  private boolean renderSprite(PaletteIndexedBatch batch, DC6 sprite, int frameIndex,
+      float x, float y) {
+    if (frameIndex < 0 || frameIndex >= sprite.getNumFramesPerDir()) return false;
     try {
       // 获取纹理区域
-      TextureRegion region = currentSprite.getTexture(0, frameIndex);
+      TextureRegion region = sprite.getTexture(0, frameIndex);
       if (region != null) {
         // DC6 frame offsets are relative to the cell origin. Ignoring the
         // frame box makes native Automap strokes drift by the frame size and
         // disconnects adjacent walls.
-        BBox box = currentSprite.getBox(0, frameIndex);
+        BBox box = sprite.getBox(0, frameIndex);
         if (box == null) return false;
         batch.draw(region, x + box.xMin, y - box.yMax);
         return true;
@@ -553,7 +586,11 @@ public class AutomapTileRenderer implements Disposable {
   
   @Override
   public void dispose() {
-    // DC6 资源由 AssetManager 管理，这里不需要手动释放
+    for (DC6 sprite : townSprites.values()) sprite.dispose();
+    townSprites.clear();
+    failedTownSprites.clear();
+    if (ownsMaxiMap && maxiMap != null) maxiMap.dispose();
+    ownsMaxiMap = false;
     maxiMap = null;
     maxiMapSmall = null;
     currentSprite = null;

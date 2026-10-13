@@ -1530,6 +1530,19 @@ public class Map implements Disposable {
           : selected.ds1Path == null ? null : TILES_PATH + selected.ds1Path;
     }
 
+    /** File variant consumed by the native town Automap callback. */
+    public int presetFileIndex() {
+      if (presets == null || presets.length == 0 || presets[0] == null
+          || presets[0].length == 0 || presets[0][0] == null) return -1;
+      Preset selected = presets[0][0];
+      if (selected.preset == null || selected.preset.File == null) return -1;
+      for (int i = 0; i < selected.preset.File.length; i++) {
+        if (selected.ds1Path != null
+            && selected.ds1Path.equalsIgnoreCase(selected.preset.File[i])) return i;
+      }
+      return -1;
+    }
+
     /** Keep compatibility entities/spawn markers on the native town variant. */
     public void selectNativeTownPreset(int def, int file) {
       if (!town || presets == null || presets.length == 0 || presets[0].length == 0) return;

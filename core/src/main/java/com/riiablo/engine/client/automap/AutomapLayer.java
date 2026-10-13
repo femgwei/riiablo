@@ -35,6 +35,9 @@ public class AutomapLayer {
   
   /** 额外单元格列表（特殊标记等） */
   public final Array<AutomapCell> extras = new Array<>();
+
+  /** Native town bitmap pieces use their own DC6 and pixel coordinates. */
+  public final Array<AutomapExplorationStore.Cell> townCells = new Array<>();
   
   /** 已探索的子瓷砖位置 (key = x << 16 | y) */
   private final IntMap<Boolean> exploredTiles = new IntMap<>();
@@ -194,6 +197,7 @@ public class AutomapLayer {
     walls.clear();
     objects.clear();
     extras.clear();
+    townCells.clear();
     renderFloorCells = true;
   }
   

@@ -148,6 +148,7 @@ public class AutomapManager implements Disposable {
   private AutomapTileRenderer tileRenderer;
 
   private int nativeTerrainDrawCount;
+  private int nativeTownDrawCount;
   private int nativeWallDrawCount;
   private String lastNativeRenderDiagnostic;
   private int nativeEntityDrawCount;
@@ -364,7 +365,12 @@ public class AutomapManager implements Disposable {
       restoreNativeCells(layer, nativeLayer.floors);
       restoreNativeCells(layer, nativeLayer.walls);
       restoreNativeCells(layer, nativeLayer.objects);
-      restoreNativeCells(layer, nativeLayer.extras);
+      if (NativeTownAutomap.spritePath(level.Id) != null) {
+        layer.townCells.clear();
+        layer.townCells.addAll(nativeLayer.extras);
+      } else {
+        restoreNativeCells(layer, nativeLayer.extras);
+      }
     }
   }
 
@@ -387,7 +393,8 @@ public class AutomapManager implements Disposable {
       AutomapLayer source = entry.value;
       if (source == null) continue;
       boolean hasCells = source.floors.size > 0 || source.roads.size > 0
-          || source.walls.size > 0 || source.objects.size > 0 || source.extras.size > 0;
+          || source.walls.size > 0 || source.objects.size > 0 || source.extras.size > 0
+          || source.townCells.size > 0;
       if (!Boolean.TRUE.equals(nativeCellsBuilt.get(levelId)) && !hasCells) continue;
       Levels.Entry level = Riiablo.files.Levels.get(levelId);
       int index = nativeLayerIndex(level);
@@ -401,6 +408,12 @@ public class AutomapManager implements Disposable {
       copyNativeCells(source.walls, source, nativeLayer.walls);
       copyNativeCells(source.objects, source, nativeLayer.objects);
       copyNativeCells(source.extras, source, nativeLayer.extras);
+      if (source.townCells.size > 0) {
+        // Layer +0x14 is the town bitmap tree in D2Client, serialized as extras.
+        nativeLayer.extras.clear();
+        nativeLayer.extras.addAll(source.townCells);
+        nativeLayer.unknown = levelId == 40 ? 1 : levelId == 103 ? 2 : 3;
+      }
       result.layers[index] = nativeLayer;
     }
     return result;
@@ -506,6 +519,18 @@ public class AutomapManager implements Disposable {
     if (zone == null || automapLevelName == null || tileRenderer == null) return 0;
     AutomapLayer layer = getOrCreateLayer(zone.levelId());
     layer.clearCells();
+    if (NativeTownAutomap.spritePath(zone.levelId()) != null) {
+      layer.townCells.addAll(NativeTownAutomap.cells(zone.levelId(), zone.presetFileIndex(),
+          Math.floorDiv(zone.x(), DT1.Tile.SUBTILE_SIZE)
+              + zone.width() / DT1.Tile.SUBTILE_SIZE / 2,
+          Math.floorDiv(zone.y(), DT1.Tile.SUBTILE_SIZE)
+              + zone.height() / DT1.Tile.SUBTILE_SIZE / 2));
+      if (Gdx.app != null) {
+        Gdx.app.log(TAG, "[AUTOMAP_TOWN] level=" + zone.levelId()
+            + " file=" + zone.presetFileIndex() + " cells=" + layer.townCells.size
+            + " sprite=" + NativeTownAutomap.spritePath(zone.levelId()));
+      }
+    }
     // The native outdoor automap is line/road based.  Rendering every DT1
     // orientation-0 tile paints the entire wilderness (and town) as a solid
     // floor, unlike D2 where only roads, boundaries, and markers are shown.
@@ -514,7 +539,7 @@ public class AutomapManager implements Disposable {
     // town as outdoor suppresses almost every floor cell and leaves only a
     // handful of markers visible (or an apparently blank automap).
     layer.renderFloorCells = zone.isTown() || (zone.level != null && zone.level.IsInside);
-    int added = 0;
+    int added = layer.townCells.size;
     int tileCount = 0;
     int lookupMisses = 0;
     int wallTiles = 0;
@@ -648,9 +673,9 @@ public class AutomapManager implements Disposable {
     if (Gdx.app != null) {
       Gdx.app.log(TAG, String.format(
           "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d "
-          + "wallTiles=%d wallCells=%d wallLookupMisses=%d wallRemaps=%d nativeWallTypeOverrides=%d wallMissSamples=%s first=%s",
+          + "wallTiles=%d wallCells=%d townCells=%d wallLookupMisses=%d wallRemaps=%d nativeWallTypeOverrides=%d wallMissSamples=%s first=%s",
           zone.levelId(), automapLevelName, tileCount, added, lookupMisses,
-          wallTiles, wallCells, wallLookupMisses, wallRemaps, nativeWallTypeOverrides,
+          wallTiles, wallCells, layer.townCells.size, wallLookupMisses, wallRemaps, nativeWallTypeOverrides,
           wallMissSamples.length() == 0 ? "none" : wallMissSamples,
           firstTile == null ? "none" : firstTile));
       if (wallMissDiagnostics.length() > 0) {
@@ -692,6 +717,7 @@ public class AutomapManager implements Disposable {
   }
 
   public int getNativeTerrainDrawCount() { return nativeTerrainDrawCount; }
+  public int getNativeTownDrawCount() { return nativeTownDrawCount; }
   public int getNativeEntityDrawCount() { return nativeEntityDrawCount; }
   public int getGeometricFallbackDrawCount() { return geometricFallbackDrawCount; }
 
@@ -1072,6 +1098,7 @@ public class AutomapManager implements Disposable {
                                 int viewWidth, int viewHeight,
                                 float screenCenterX, float screenCenterY) {
     nativeTerrainDrawCount = 0;
+    nativeTownDrawCount = 0;
     if (!isVisible() || !tileRenderer.hasSprite()) return 0;
     
     float alpha = opacity;
@@ -1099,12 +1126,15 @@ public class AutomapManager implements Disposable {
             .append(layer == null ? 0 : layer.walls.size).append('/')
             .append(layer == null ? 0 : layer.objects.size).append('/')
             .append(layer == null ? 0 : layer.extras.size).append(';')
+            .append("town=").append(layer == null ? 0 : layer.townCells.size).append(';')
             .append(layer == null ? 0 : layer.getExploredCount()).append(';');
         int terrainBefore = nativeTerrainDrawCount;
+        int townBefore = nativeTownDrawCount;
         nativeWallDrawCount = 0;
         renderNativeLayer(batch, layers.get(levelId), alpha);
         diagnostic.append("draw=").append(nativeTerrainDrawCount - terrainBefore)
-            .append(" wallDraw=").append(nativeWallDrawCount).append(')');
+            .append(" wallDraw=").append(nativeWallDrawCount)
+            .append(" townDraw=").append(nativeTownDrawCount - townBefore).append(')');
       }
       String diagnosticText = diagnostic.toString();
       if (!diagnosticText.equals(lastNativeRenderDiagnostic) && Gdx.app != null) {
@@ -1127,8 +1157,8 @@ public class AutomapManager implements Disposable {
       int levelId = zone.levelId();
       if (nativeCellsBuilt.containsKey(levelId)) continue;
       AutomapLayer layer = layers.get(levelId);
-      if (layer == null || !layer.hasExplorationInRect(
-          zone.x(), zone.y(), zone.width(), zone.height())) continue;
+      if (layer == null || (layer.townCells.size == 0 && !layer.hasExplorationInRect(
+          zone.x(), zone.y(), zone.width(), zone.height()))) continue;
       String nativeName = zone.automapLevelName();
       if (nativeName == null) continue;
       rebuildNativeCells(zone, nativeName, levelId);
@@ -1146,7 +1176,14 @@ public class AutomapManager implements Disposable {
     nativeWallDrawCount = renderNativeCells(batch, layer.walls, layer, alpha);
     int objectDraw = renderNativeCells(batch, layer.objects, layer, alpha);
     int extraDraw = renderNativeCells(batch, layer.extras, layer, alpha);
-    nativeTerrainDrawCount += floorDraw + roadDraw + nativeWallDrawCount + objectDraw + extraDraw;
+    int townDraw = 0;
+    for (AutomapExplorationStore.Cell cell : layer.townCells) {
+      // The town callback reveals the entire bitmap. Its origins need not
+      // fall inside an explored DT1 tile and must not be rounded to one.
+      if (tileRenderer.renderTownTile(batch, layer.layerId, cell.cellNo, cell.x, -cell.y)) townDraw++;
+    }
+    nativeTownDrawCount += townDraw;
+    nativeTerrainDrawCount += floorDraw + roadDraw + nativeWallDrawCount + objectDraw + extraDraw + townDraw;
   }
 
   /**

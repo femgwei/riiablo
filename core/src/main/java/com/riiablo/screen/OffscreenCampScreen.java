@@ -438,13 +438,19 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     exportAutomapEntityMarkers(manager);
     int visiblePixels = captureNativeAutomap(manager);
+    AutomapLayer targetLayer = manager.getLayer(targetLevelId);
+    if (com.riiablo.engine.client.automap.NativeTownAutomap.spritePath(targetLevelId) != null
+        && (targetLayer == null || targetLayer.townCells.size == 0
+            || manager.getNativeTownDrawCount() < targetLayer.townCells.size)) {
+      throw new IllegalStateException("Native town Automap bitmap pieces were not rendered");
+    }
     if (visiblePixels < 100) {
       throw new IllegalStateException("Native Automap DC6 cells were drawn outside the visible viewport"
           + ": terrain=" + terrain + " visiblePixels=" + visiblePixels);
     }
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP_DC6] terrain=" + terrain
         + " entities=" + entities + " fallback=" + fallback
-        + " visiblePixels=" + visiblePixels);
+        + " town=" + manager.getNativeTownDrawCount() + " visiblePixels=" + visiblePixels);
   }
 
   /**
@@ -1278,6 +1284,26 @@ public final class OffscreenCampScreen extends GameScreen {
     this.targetZone = targetZone;
     Vector2 destination = new Vector2(targetZone.x() + targetZone.width() / 2f,
         targetZone.y() + targetZone.height() / 2f);
+    if (!targetZone.isTown() && targetZone.hasNativeRoomTopology()) {
+      Vector2 center = new Vector2(destination);
+      Vector2 landing = new Vector2();
+      float closest = Float.MAX_VALUE;
+      for (int roomIndex = 0; roomIndex < targetZone.getRoomsEx().size; roomIndex++) {
+        Map.RoomEx room = targetZone.getRoomsEx().get(roomIndex);
+        Vector2 roomCenter = new Vector2(room.x + room.width / 2f, room.y + room.height / 2f);
+        if (!targetZone.findFreeCoordinates(roomCenter, 2, 50,
+            com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags,
+            false, landing)) continue;
+        float distance = landing.dst2(center);
+        if (distance < closest) {
+          closest = distance;
+          destination.set(landing);
+        }
+      }
+      if (closest == Float.MAX_VALUE) {
+        throw new IllegalStateException("No walkable native room for offscreen target " + targetLevelId);
+      }
+    }
     Position position = engine.getMapper(Position.class).get(player);
     position.position.set(destination);
     Box2DBody body = engine.getMapper(Box2DBody.class).get(player);
@@ -1394,7 +1420,7 @@ public final class OffscreenCampScreen extends GameScreen {
       throw new IllegalStateException("Automap layer missing for target level=" + targetLevelId);
     }
     targetNativeCells = layer.floors.size + layer.roads.size + layer.walls.size
-        + layer.objects.size + layer.extras.size;
+        + layer.objects.size + layer.extras.size + layer.townCells.size;
     targetRoadCells = layer.roads.size;
     targetCellAudit = AutomapCellAudit.audit(layer);
     exportAutomapCells(layer, manager);
@@ -1432,13 +1458,18 @@ public final class OffscreenCampScreen extends GameScreen {
     appendAutomapCells(csv, "walls", layer.walls, manager);
     appendAutomapCells(csv, "objects", layer.objects, manager);
     appendAutomapCells(csv, "extras", layer.extras, manager);
+    for (com.riiablo.engine.client.automap.AutomapExplorationStore.Cell cell : layer.townCells) {
+      // Town origins are native pixels, not world-subtile centers.
+      csv.append("town,").append(cell.cellNo).append(",,,")
+          .append(cell.x).append(',').append(cell.y).append(",,,,,\n");
+    }
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
     output.mkdirs();
     output.child("automap-cells-level-" + targetLevelId + ".csv")
         .writeString(csv.toString(), false, "UTF-8");
     Gdx.app.log("OffscreenCampScreen", "[AUTOMAP_CELL_EXPORT] path=" + output.path()
         + " cells=" + (layer.floors.size + layer.roads.size + layer.walls.size
-        + layer.objects.size + layer.extras.size));
+        + layer.objects.size + layer.extras.size + layer.townCells.size));
   }
 
   private void appendAutomapCells(StringBuilder csv, String category,
