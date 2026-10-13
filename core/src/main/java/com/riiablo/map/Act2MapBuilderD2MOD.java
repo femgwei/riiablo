@@ -468,11 +468,15 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTDESR_InitAct2OutdoorLevel
     for (Zone zone : map.zones) {
+      // Lut Gholein is a town zone, so it is intentionally excluded from the
+      // outdoor branch below; its exit preset must be installed separately.
+      if (zone.town && zone.level.Id == LEVEL_LUTGHOLEIN) {
+        placeDesertTownTransition(zone);
+      }
       if (!zone.town && isAct2OutdoorLevel(zone.level.Id)) {
         // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
         // entrance preset before waypoints and shrines are spawned.
         placeDesertExit(zone, seed);
-        if (zone.level.Id == LEVEL_LUTGHOLEIN) placeDesertTownTransition(zone);
         if (zone.level.Id == LEVEL_ROCKYWASTE || zone.level.Id == LEVEL_DRYHILLS
             || zone.level.Id == LEVEL_FAROASIS || zone.level.Id == LEVEL_LOSTCITY) {
           placeNativeDesertCliffs(zone, seed);
@@ -570,7 +574,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       if (!isAct2Preset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count <= 0) continue;
-      if (zone.presets[0][0] == null) zone.presets[0][0] = Preset.of(p, files[0]);
+      if (zone.presets[0][0] == null) {
+        zone.presets[0][0] = Preset.of(p, files[0]);
+        Gdx.app.log(TAG, "Act2 town exit preset: town=" + zone.level.Id
+            + " def=" + def + " file=" + files[0] + " grid=(0,0)");
+      }
       return;
     }
   }
