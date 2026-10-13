@@ -19,6 +19,8 @@ uniform vec3 ambientLight;
 uniform int lightCount;
 uniform vec4 localLights[16]; // centre x/y, radius x/y in isometric pixels
 uniform vec3 localLightColors[16];
+uniform int lightAnchorEnabled;
+uniform vec2 lightAnchor;
 
 varying vec2 v_texCoord;
 varying vec4 tint;
@@ -49,7 +51,8 @@ void main() {
     for (int i = 0; i < 16; i++) {
       if (i >= lightCount) break;
       vec4 source = localLights[i];
-      vec2 delta = (worldPosition - source.xy) / max(source.zw, vec2(1.0));
+      vec2 samplePosition = lightAnchorEnabled != 0 ? lightAnchor : worldPosition;
+      vec2 delta = (samplePosition - source.xy) / max(source.zw, vec2(1.0));
       float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
       vec3 localLight = localLightColors[i] * falloff;
       intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));

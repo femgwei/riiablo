@@ -1411,6 +1411,9 @@ public class RenderSystem extends BaseEntitySystem {
       if (!isDrawableWallOrientation(tile.orientation)) continue;
       TextureRegion texture = tileTexture(zone, tile);
       if (texture == null || py + texture.getRegionHeight() < renderMinY) continue;
+      // Tall DT1 trees/walls must use their ground tile for local lighting;
+      // using every sprite pixel makes the canopy appear outside the light.
+      batch.setLightAnchor(px + Tile.WIDTH50, py + Tile.HEIGHT);
       float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
       if (alpha != 1f) batch.setAlpha(alpha);
       batch.draw(texture, px, py);
@@ -1421,6 +1424,7 @@ public class RenderSystem extends BaseEntitySystem {
       }
       if (alpha != 1f) batch.resetColor();
     }
+    batch.resetLightAnchor();
   }
 
   /**

@@ -27,6 +27,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
   private final int LIGHT_COUNT_LOCATION;
   private final int LOCAL_LIGHTS_LOCATION;
   private final int LOCAL_LIGHT_COLORS_LOCATION;
+  private final int LIGHT_ANCHOR_ENABLED_LOCATION;
+  private final int LIGHT_ANCHOR_LOCATION;
   private final ShaderProgram shader;
 
   private Texture palette;
@@ -62,6 +64,8 @@ public class PaletteIndexedBatch extends SpriteBatch {
     // -1 and silently drops every local-light upload.
     LOCAL_LIGHTS_LOCATION = requireUniform(shader, "localLights[0]");
     LOCAL_LIGHT_COLORS_LOCATION = requireUniform(shader, "localLightColors[0]");
+    LIGHT_ANCHOR_ENABLED_LOCATION = shader.getUniformLocation("lightAnchorEnabled");
+    LIGHT_ANCHOR_LOCATION = shader.getUniformLocation("lightAnchor");
   }
 
   private static int requireUniform(ShaderProgram shader, String name) {
@@ -207,6 +211,21 @@ public class PaletteIndexedBatch extends SpriteBatch {
     ambientLight.set(Color.WHITE);
     lightCount = 0;
     applyLighting();
+    resetLightAnchor();
+  }
+
+  /** Uses the tile ground point for local-light lookup while drawing tall walls. */
+  public void setLightAnchor(float x, float y) {
+    if (LIGHT_ANCHOR_ENABLED_LOCATION < 0 || LIGHT_ANCHOR_LOCATION < 0) return;
+    if (isDrawing()) flush();
+    shader.setUniformi(LIGHT_ANCHOR_ENABLED_LOCATION, 1);
+    shader.setUniformf(LIGHT_ANCHOR_LOCATION, x, y);
+  }
+
+  public void resetLightAnchor() {
+    if (LIGHT_ANCHOR_ENABLED_LOCATION < 0) return;
+    if (isDrawing()) flush();
+    shader.setUniformi(LIGHT_ANCHOR_ENABLED_LOCATION, 0);
   }
 
   @Override
@@ -223,6 +242,7 @@ public class PaletteIndexedBatch extends SpriteBatch {
     applyPalette();
     applyGamma();
     applyLighting();
+    resetLightAnchor();
   }
 
   public void begin(Texture palette) {

@@ -18,10 +18,12 @@
 
 - 修正阴影透明掩码：地图/单位阴影使用独立 `BlendMode.SHADOW`，依据原始纹理
   索引决定透明度，避免 PL2 光照映射改变零索引/非零索引后的阴影轮廓。
+- 修正高大墙体/树木的局部光照锚点：树冠像素不再以自身屏幕高度参与半径计算，
+  而是使用 DT1 tile 底部地面点，避免阴影边缘把树冠错误压成黑色剪影。
 - 依据 D2MOO `D2Gfx/src/Tile.cpp` 的 `TILE_ShadowTileDraw` 与
   `D2Gfx/src/Texture.cpp` 的 `TEXTURE_CelDrawShadow` 独立入口；这些入口没有普通
   TileDrawLit 的光照参数。当前保留既有黑色 75% alpha，原版 DLL 的具体混色仍未验收。
-- 本次局部修改按用户约定不编译；diff 检查后提交推送，P7/P8 同机位视觉复核待完成。
+- 本次修改已通过 `:core:compileJava`；P7/P8 同机位视觉复核待完成。
 
 ## 2026-10-13 真机反馈：A2/A3 城镇出口、A4 火盆及楼梯
 
