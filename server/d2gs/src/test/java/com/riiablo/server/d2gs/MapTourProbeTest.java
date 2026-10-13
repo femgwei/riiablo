@@ -130,6 +130,9 @@ public class MapTourProbeTest {
       world.getMapper(com.riiablo.engine.server.component.Position.class).create(doorId).position.set(35, 2);
       world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).create(doorId).set(map, zone);
       world.process();
+      org.junit.Assert.assertNull("a dynamic route blockage must not select an unrelated closed door",
+          MapTourProbe.door(world, map, player, new com.badlogic.gdx.math.Vector2(38, 2)));
+      flags[2 * 40 + 35] = 1; // materialized closed door severs the static corridor
       MapTourProbe.Sample doorApproach = MapTourProbe.door(world, map, player, new com.badlogic.gdx.math.Vector2(38, 2));
       org.junit.Assert.assertNotNull("a distant monster may not hide the static door frontier", doorApproach);
       assertEquals(doorId, doorApproach.warp);

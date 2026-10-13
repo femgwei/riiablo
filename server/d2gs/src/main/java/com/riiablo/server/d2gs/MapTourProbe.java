@@ -543,6 +543,14 @@ final class MapTourProbe {
     // hide that frontier; route() will stop at the occupied prefix and use
     // real combat. Every approach cell still obeys terrain/object collision.
     java.util.BitSet connected = reachable(world, map, playerId, zone, origin, size, false);
+    if (destination != null && zone.contains(Math.round(destination.x), Math.round(destination.y))) {
+      int goal = (Math.round(destination.y) - zone.y()) * zone.width()
+          + Math.round(destination.x) - zone.x();
+      // If terrain and current doors already connect the destination, an
+      // empty live prefix means unit blockage. Opening unrelated side-room
+      // doors is not progress on this route and can wake avoidable packs.
+      if (connected.get(goal)) return null;
+    }
     candidates.sort(java.util.Comparator.comparingDouble(id ->
         world.getMapper(Position.class).get(id).position.dst2(destination == null ? origin : destination)));
     for (int id : candidates) {
