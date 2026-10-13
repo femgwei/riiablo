@@ -32,6 +32,9 @@ public class TileGrid {
 
   /** DT1 source selected by native DRLG, encoded as an index into sourceFiles. */
   public final byte[][] floorSourceFiles;
+  /** DS1 floor layer 1; must not overwrite the base floor at the same cell. */
+  public final int[][] floorOverlayIds;
+  public final byte[][] floorOverlaySourceFiles;
   /** Native logical coord-list index for each exported floor cell. */
   public final int[][] floorLogicalGroups;
   /** DT1 source selected for each native wall/roof layer. */
@@ -140,6 +143,8 @@ public class TileGrid {
     this.height = height;
     this.floorIds = new int[height][width];
     this.floorSourceFiles = new byte[height][width];
+    this.floorOverlayIds = new int[height][width];
+    this.floorOverlaySourceFiles = new byte[height][width];
     this.floorLogicalGroups = new int[height][width];
     this.wallSourceFiles = new byte[MAX_WALL_LAYERS][height][width];
     this.wallLogicalGroups = new int[MAX_WALL_LAYERS][height][width];
@@ -160,6 +165,8 @@ public class TileGrid {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        floorOverlayIds[y][x] = -1;
+        floorOverlaySourceFiles[y][x] = 0;
         floorSourceFiles[y][x] = 0;
         floorLogicalGroups[y][x] = -1;
         exportedFloorCells[y][x] = false;
@@ -175,6 +182,8 @@ public class TileGrid {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        floorOverlayIds[y][x] = -1;
+        floorOverlaySourceFiles[y][x] = 0;
         floorSourceFiles[y][x] = 0;
         floorLogicalGroups[y][x] = -1;
         exportedFloorCells[y][x] = false;

@@ -11,6 +11,25 @@ import com.riiablo.map.DT1;
 import com.riiablo.map.Orientation;
 
 class D2MooTileApplierTest {
+  @Test void hiddenNativeBlankFillerDoesNotBecomeVisibleFloor() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(103, grid);
+    applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0,
+        pack(Orientation.FLOOR, 30, 0), DrlgTileExporter.FLAG_HIDDEN | (1 << 14));
+    assertEquals(-1, grid.floorIds[0][0]);
+  }
+  @Test void nativeFloorLayersDoNotOverwriteEachOther() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(103, grid);
+    int stairs = pack(Orientation.FLOOR, 7, 1);
+    int overlay = pack(Orientation.FLOOR, 0, 0);
+    applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0, stairs, 1 << 14);
+    applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0, overlay, 2 << 14);
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 7, 1), grid.floorIds[0][0]);
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 0, 0), grid.floorOverlayIds[0][0]);
+  }
   private static final int LEVEL_ID = 2;
 
   @Test void nativeCollisionUsesSelectedEntryAndD2CollisionExtraFlags() {

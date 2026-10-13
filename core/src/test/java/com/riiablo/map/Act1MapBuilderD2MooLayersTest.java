@@ -39,6 +39,21 @@ import com.riiablo.save.CharData;
 import com.riiablo.engine.server.component.NativeObjectState;
 
 class Act1MapBuilderD2MooLayersTest {
+  @Test void installsBothNativeFloorLayers() throws IOException {
+    TileGrid grid = new TileGrid(1, 1);
+    DT1.Tile base = tile(Orientation.FLOOR, 7, 1);
+    DT1.Tile overlay = tile(Orientation.FLOOR, 8, 1);
+    DT1s library = new DT1s();
+    library.add(base);
+    library.add(overlay);
+    grid.floorIds[0][0] = base.id;
+    grid.floorOverlayIds[0][0] = overlay.id;
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.FLOOR_OFFSET] = new DT1.Tile[1];
+    Act1MapBuilderD2MOD.applyTileGridLayers(grid, library, layers, 1, 1, 1, null);
+    assertSame(base, layers[Map.FLOOR_OFFSET][0]);
+    assertSame(overlay, layers[Map.FLOOR_OFFSET + 1][0]);
+  }
   @Test void selectedNativeWallCollisionTakesPrecedenceOverMissingFloorGraphic() {
     TileGrid grid = new TileGrid(2, 1);
     com.riiablo.map.d2moo.D2MooTileApplier applier = new com.riiablo.map.d2moo.D2MooTileApplier();

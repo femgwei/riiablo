@@ -198,8 +198,14 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         int orientation = DT1.Tile.Index.orientation(riiabloTileId);
         switch (layer) {
             case DrlgExport.LAYER_FLOOR:
+                // DRLGROOMTILE_LoadTiles creates hidden style-30 filler for
+                // cells with no DS1 floor. It is collision bookkeeping, not
+                // a visible floor (and must not erase a staircase layer).
+                // Ordinary hidden/reveal cave floors are not style 30.
+                if ((flags & DrlgTileExporter.FLAG_HIDDEN) != 0
+                        && DT1.Tile.Index.mainIndex(riiabloTileId) == 30) return;
                 applyFloor(grid, tx, ty, riiabloTileId, orientation, sourceFile,
-                    logicalGroupId);
+                    logicalGroupId, flags);
                 break;
             case DrlgExport.LAYER_WALL:
                 applyWall(grid, tx, ty, riiabloTileId, orientation, flags, sourceFile,
@@ -214,8 +220,21 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     }
 
     private void applyFloor(TileGrid grid, int tx, int ty, int tileId, int orientation,
-            String sourceFile, int logicalGroupId) {
+            String sourceFile, int logicalGroupId, int flags) {
         if (orientation != Orientation.FLOOR) nonFloorOrientationCount++;
+        // DRLGROOMTILE_InitTileDataFlags encodes (DS1 layer + 1) in bits
+        // 14..16 for floors as well as walls. Flattening both floor layers
+        // lets a blank/decorative overlay erase the fortress stairs/bridges.
+        int floorLayer = ((flags >>> 14) & 7) - 1;
+        if (floorLayer == 1) {
+            if (grid.floorOverlayIds[ty][tx] != -1) duplicatePositionCount++;
+            grid.floorOverlayIds[ty][tx] = tileId;
+            grid.floorOverlaySourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
+            grid.exportedFloorCells[ty][tx] = true;
+            uniqueFloorIds.add(tileId);
+            exportedFloorCount++;
+            return;
+        }
         if (grid.floorIds[ty][tx] != -1) duplicatePositionCount++;
         if (tileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = tileId;

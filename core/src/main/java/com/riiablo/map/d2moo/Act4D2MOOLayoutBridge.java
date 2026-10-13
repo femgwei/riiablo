@@ -124,6 +124,13 @@ public final class Act4D2MOOLayoutBridge {
         }
 
         zone.setNativeTileGrid(grid, dt1Mask);
+        if (zone.isTown()) {
+          Object preset = level.getFirstRoomEx().getMazeOrOutdoor();
+          if (preset instanceof D2DrlgPresetRoomStrc) {
+            D2DrlgPresetRoomStrc selected = (D2DrlgPresetRoomStrc) preset;
+            zone.selectNativeTownPreset(selected.getNLevelPrest(), selected.getNPickedFile());
+          }
+        }
         projectRooms(level, zone);
         if (actId == D2C_Acts.ACT_IV) {
           int[] vis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);

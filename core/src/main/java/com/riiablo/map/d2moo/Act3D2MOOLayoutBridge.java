@@ -140,7 +140,16 @@ public final class Act3D2MOOLayoutBridge {
         applier.putGrid(levelId, grid);
         int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
-        if (floors > 0) zone.setNativeTileGrid(grid, dt1Mask);
+        if (floors > 0) {
+          zone.setNativeTileGrid(grid, dt1Mask);
+          if (zone.isTown()) {
+            Object preset = level.getFirstRoomEx().getMazeOrOutdoor();
+            if (preset instanceof D2DrlgPresetRoomStrc) {
+              D2DrlgPresetRoomStrc selected = (D2DrlgPresetRoomStrc) preset;
+              zone.selectNativeTownPreset(selected.getNLevelPrest(), selected.getNPickedFile());
+            }
+          }
+        }
         int[] rawObjects = {0, 0};
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =

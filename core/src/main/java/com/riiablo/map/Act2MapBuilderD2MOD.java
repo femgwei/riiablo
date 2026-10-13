@@ -455,8 +455,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // resource-gated native town export cannot be built.
     Act2D2MOOLayoutBridge.populateTown(seed, diff, townZone, townSourceFile);
     // All A2 sublevels must use MPQ-backed RoomEx/tiles, not empty compatibility floors.
-    int[] nativeLevels = new int[ACT2_LEVEL_LAST - 40];
-    for (int i = 0; i < nativeLevels.length; i++) nativeLevels[i] = 41 + i;
+    // Town and desert must come from the same DRLG. A compatibility LutW
+    // preset cannot be joined to a native Rocky Waste placed north of town.
+    int[] nativeLevels = new int[ACT2_LEVEL_LAST - 39];
+    for (int i = 0; i < nativeLevels.length; i++) nativeLevels[i] = 40 + i;
     com.riiablo.map.d2moo.Act4D2MOOLayoutBridge.populateZones(seed, diff, map,
         com.d2moo.common.drlg.D2C_Acts.ACT_II, 40, nativeLevels);
 

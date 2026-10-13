@@ -1502,6 +1502,16 @@ public class Map implements Disposable {
           : selected.ds1Path == null ? null : TILES_PATH + selected.ds1Path;
     }
 
+    /** Keep compatibility entities/spawn markers on the native town variant. */
+    public void selectNativeTownPreset(int def, int file) {
+      if (!town || presets == null || presets.length == 0 || presets[0].length == 0) return;
+      LvlPrest.Entry entry = Riiablo.files.LvlPrest.get(def);
+      if (entry == null || entry.LevelId != levelId() || entry.File == null
+          || file < 0 || file >= entry.File.length || entry.File[file] == null
+          || entry.File[file].isEmpty() || entry.File[file].equals("0")) return;
+      presets[0][0] = Preset.of(entry, file);
+    }
+
     public String nativeTownMonsterSource() { return nativeTownMonsterSource; }
 
     /** Commits a complete, source-matched NPC-only export before ECS creation. */

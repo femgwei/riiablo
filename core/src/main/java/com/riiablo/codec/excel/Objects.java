@@ -2,6 +2,16 @@ package com.riiablo.codec.excel;
 
 @Excel.Binned
 public class Objects extends Excel<Objects.Entry> {
+  @Override
+  protected void put(int id, Entry value) {
+    // Native DATATBLS_GetObjectsTxtRecord indexes the physical row. The Id
+    // column contains duplicate legacy values in the expansion rows and is
+    // not a primary key (408/409 otherwise overwrite the fortress braziers).
+    value.Id = id;
+    super.put(id, value);
+  }
+
+  @Excel.Index
   public static class Entry extends Excel.Entry {
     @Override
     public String toString() {

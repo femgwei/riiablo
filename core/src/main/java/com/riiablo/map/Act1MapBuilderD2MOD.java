@@ -3557,6 +3557,23 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
         }
 
+        int overlayId = grid.floorOverlayIds[y][x];
+        if (overlayId != -1) {
+          DT1.Tile overlay = dt1s.get(grid.sourceFile(grid.floorOverlaySourceFiles[y][x]), overlayId);
+          if (overlay == null) overlay = dt1s.get(overlayId);
+          if (overlay != null) {
+            if (layers[Map.FLOOR_OFFSET + 1] == null) {
+              layers[Map.FLOOR_OFFSET + 1] = Zone.obtainTileArray(layerSize);
+            }
+            layers[Map.FLOOR_OFFSET + 1][tileIndex] = overlay;
+            counts.floors++;
+          } else {
+            counts.failedResolve++;
+            counts.failedFloors++;
+            counts.failedFloorIds.add(overlayId);
+          }
+        }
+
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && slot < Map.MAX_WALLS; slot++) {
           int wallId = grid.wallIds[slot][y][x];
           if (wallId == -1) continue;
