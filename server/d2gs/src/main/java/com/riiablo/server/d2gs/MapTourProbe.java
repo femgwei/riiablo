@@ -200,9 +200,15 @@ final class MapTourProbe {
         : map.findZone(Riiablo.files.Levels.get(nextLevel));
     boolean vis = false;
     if (zone.level.Vis != null) for (int id : zone.level.Vis) if (id == nextLevel) vis = true;
-    // The authoritative protocol represents level changes as Warp transactions,
-    // even at touching outdoor seams. Prefer the real Warp over a cross-zone
-    // location intent, which production correctly rejects.
+    if (next != null && map.isNativeSeamConnection(zone, next)) {
+      sample.transition = "MISSING_WALK_SEAM";
+      planBoundaryWalk(world, map, playerId, zone, next, sample, size);
+      return sample; // never recover a failed walk seam with a Warp
+    }
+    if (MapTourPlan.requiresTownExit(zone.level.Id, nextLevel)) {
+      sample.transition = "MISSING_TOWN_WALK";
+      return sample; // town exits must not pass via staging/teleport
+    }
     com.artemis.utils.IntBag warps = world.getAspectSubscriptionManager()
         .get(Aspect.all(Warp.class, Position.class, MapWrapper.class)).getEntities();
     java.util.BitSet reachable = null;
@@ -244,6 +250,38 @@ final class MapTourProbe {
       sample.transition = "MISSING_BOUNDARY_WARP";
     }
     return sample;
+  }
+
+  private static void planBoundaryWalk(World world, Map map, int playerId,
+      Map.Zone source, Map.Zone destination, Sample sample, int size) {
+    java.util.BitSet connected = reachable(world, map, playerId, source, sample.position, size, false);
+    float best = Float.MAX_VALUE;
+    com.badlogic.gdx.ai.utils.Collision<Vector2> hit =
+        new com.badlogic.gdx.ai.utils.Collision<>(new Vector2(), new Vector2());
+    for (int y = source.y(); y < source.y() + source.height(); y++) {
+      for (int x = source.x(); x < source.x() + source.width(); x++) {
+        if (x != source.x() && x != source.x() + source.width() - 1
+            && y != source.y() && y != source.y() + source.height() - 1) continue;
+        if (!connected.get((y - source.y()) * source.width() + x - source.x())) continue;
+        for (int[] step : new int[][] {{-1,0},{1,0},{0,-1},{0,1}}) {
+          if (!destination.contains(x + step[0], y + step[1])) continue;
+          Vector2 approach = new Vector2(x, y);
+          // At least three cells inside the destination, beyond the normal
+          // stop-click tolerance. An edge-only touch is not a level crossing.
+          Vector2 goal = new Vector2(x + 3 * step[0], y + 3 * step[1]);
+          if (!clear(map, source, x, y, size) || !clear(map, destination, goal.x, goal.y, size)
+              || map.castRay(source, new com.badlogic.gdx.ai.utils.Ray<>(approach, goal),
+                  com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags,
+                  size, hit, false)) continue;
+          float distance = sample.position.dst2(approach);
+          if (distance >= best) continue;
+          best = distance;
+          sample.target = approach;
+          sample.destination = goal;
+          sample.transition = "BOUNDARY_WALK";
+        }
+      }
+    }
   }
 
   // Network movement treats clicks within one tile as stop. Leave that entire
@@ -595,6 +633,19 @@ final class MapTourProbe {
     if (cells <= 0 || cells > 4_000_000L) throw new IllegalStateException("Tour route footprint too large: " + cells);
     int sx = Math.round(position.position.x) - zone.x(), sy = Math.round(position.position.y) - zone.y();
     int tx = Math.round(target.x) - zone.x(), ty = Math.round(target.y) - zone.y();
+    if (!zone.contains(Math.round(target.x), Math.round(target.y))) {
+      Map.Zone destination = map.getZone(target);
+      if (!map.isNativeSeamConnection(zone, destination) || position.position.dst2(target) > 8 * 8) {
+        return java.util.Collections.emptyList();
+      }
+      com.badlogic.gdx.ai.utils.Collision<Vector2> hit =
+          new com.badlogic.gdx.ai.utils.Collision<>(new Vector2(), new Vector2());
+      if (map.castRay(zone, new com.badlogic.gdx.ai.utils.Ray<>(position.position, target),
+          com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags, size, hit, false)) {
+        return java.util.Collections.emptyList();
+      }
+      return java.util.Collections.singletonList(new Vector2(target));
+    }
     if (sx < 0 || sy < 0 || sx >= width || sy >= height || tx < 0 || ty < 0 || tx >= width || ty >= height) {
       return java.util.Collections.emptyList();
     }

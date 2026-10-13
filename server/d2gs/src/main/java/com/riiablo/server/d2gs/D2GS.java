@@ -7031,15 +7031,17 @@ public class D2GS extends ApplicationAdapter {
         && sourceWrapper.zone.contains(Map.round(input.x), Map.round(input.y))
         ? sourceWrapper.zone : map.getZone(input.x, input.y);
     if (targetZone == null) return "target_outside_map";
-    // Adjacent generated levels may share an edge (and some native layouts
-    // intentionally reuse coordinate ranges).  A movement intent must never
-    // cross into another Zone: level changes are authoritative Warp
-    // transactions, not ordinary walking.  Without this check a one-cell
-    // probe at the edge of River of Flame could step into the touching City
-    // of the Damned zone and bypass its Warp.
-    if (sourceWrapper != null && sourceWrapper.zone != null
-        && sourceWrapper.zone != targetZone) return "target_cross_zone";
+    if (!allowsMovementZone(map, sourceWrapper == null ? null : sourceWrapper.zone, targetZone)) {
+      return "target_cross_zone";
+    }
     return null;
+  }
+
+  static boolean allowsMovementZone(Map map, Map.Zone source, Map.Zone target) {
+    // Geometry alone is insufficient: detached dungeon rectangles may touch
+    // or overlap. Only native walk-link evidence allows a normal cross-level
+    // intent; production pathing and collision still validate every step.
+    return source == null || source == target || map.isNativeSeamConnection(source, target);
   }
 
   private void Ping(Packet packet) {

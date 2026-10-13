@@ -5061,6 +5061,7 @@ public final class D2GSHeadlessClient {
       DataInputStream input = input(socket);
       OutputStream output = output(socket);
       tourLog(report, "BEGIN", "seed=" + config.seed + " difficulty=" + config.difficulty
+          + " contract=2"
           + " tickStepSeconds=0.04 ticksPerWallSecond=" + config.tourRate
           + " acts=" + config.tourFirstAct + "-" + config.tourLastAct
           + " coverage=" + (config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
@@ -5139,9 +5140,15 @@ public final class D2GSHeadlessClient {
           if (exit.target == null) throw new IOException("No reachable exit candidate "
               + level + "->" + next + " mode=" + exit.transition);
           sequence = routeTour(input, output, exit.target,
-              "BOUNDARY_WALK".equals(exit.transition) ? next : level,
+              level,
               sequence, report, exit.transition, exit, next);
           walks++;
+          if ("BOUNDARY_WALK".equals(exit.transition)) {
+            if (exit.destination == null) throw new IOException("Missing walk seam destination");
+            sequence = routeTour(input, output, exit.destination, next,
+                sequence, report, exit.transition, exit, next);
+            walks++;
+          }
           if ("WARP_WALK".equals(exit.transition)) {
             long request = 100_000L + index;
             send(output, questRequestPacket(request, QuestOperation.WARP_INTERACTION, exit.warp, -1));
@@ -5156,7 +5163,9 @@ public final class D2GSHeadlessClient {
           }
           transitions++;
           arrived = true;
-          tourLog(report, "TRANSITION_PASS", "from=" + level + " to=" + next + " mode=" + exit.transition);
+          tourLog(report, "TRANSITION_PASS", "from=" + level + " to=" + next + " mode=" + exit.transition
+              + " warpRequests=" + ("WARP_WALK".equals(exit.transition) ? 1 : 0)
+              + " movement=PRODUCTION_TCP");
         } catch (Exception e) {
           failures++;
           arrived = false;

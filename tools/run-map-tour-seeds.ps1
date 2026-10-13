@@ -5,6 +5,7 @@ param(
   [string]$Output = 'server/d2gs/build/map-tour/five-seeds'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'map-acceptance-audit.ps1')
 $repo = Split-Path -Parent $PSScriptRoot
 if (-not (Test-Path -LiteralPath $D2Home -PathType Container)) { throw 'D2Home directory missing' }
 if ($Seeds.Count -eq 0 -or @($Seeds | Sort-Object -Unique).Count -ne $Seeds.Count) {
@@ -12,7 +13,7 @@ if ($Seeds.Count -eq 0 -or @($Seeds | Sort-Object -Unique).Count -ne $Seeds.Coun
 }
 Push-Location $repo
 try {
-  $sourcePaths = @('core', 'server', 'D2MOO_JAVA', 'table', 'assets',
+  $sourcePaths = @('core', 'server', 'D2MOO_JAVA', 'table', 'assets', 'tools',
       'build.gradle', 'gradle.properties', 'settings.gradle')
   $baseline = (& git ls-tree HEAD -- @sourcePaths) -join "`n"
   $revision = & git rev-parse HEAD
@@ -33,6 +34,9 @@ try {
     & .\gradlew.bat :server:d2gs:headlessMapTour "-Pd2Home=$D2Home" "-PtourSeed=$seed" `
       "-PtourRate=$Rate" "-PtourOutput=$destination" --no-daemon --max-workers=1 *> $console
     $result = $LASTEXITCODE
+    $issues = @(Get-MapLogIssues -Lines (Get-Content -LiteralPath $console))
+    ConvertTo-Json -InputObject $issues -Depth 4 |
+      Set-Content -LiteralPath (Join-Path $absolute 'log-issues.json') -Encoding UTF8
     if (((& git ls-tree HEAD -- @sourcePaths) -join "`n") -ne $baseline `
         -or (& git status --porcelain -- @sourcePaths)) {
       throw "Source baseline changed while seed=$seed ran; preserve logs but rerun on a fixed baseline"
@@ -56,14 +60,8 @@ try {
         -or @(1..132 | Where-Object { $_ -notin $loads -or $_ -notin $local }).Count -gt 0) {
       throw "Incomplete load/local movement coverage seed=$seed"
     }
-    foreach ($edge in @('1 to=2', '40 to=41', '75 to=76', '103 to=104', '109 to=110')) {
-      if (-not ($lines -match "^\[MAP_TOUR\] TRANSITION_PASS from=$edge mode=")) {
-        throw "Missing mandatory town exit $edge seed=$seed"
-      }
-    }
-    if (Select-String -LiteralPath $console -Pattern '^ERROR|Exception|OutOfMemoryError|StackOverflowError|Animating tiles missing') {
-      throw "Runtime error in seed=$seed; inspect $console"
-    }
+    Assert-MapTourEvidence -Lines $lines
+    if ($issues.Count) { throw "Unresolved log issues seed=${seed}: $($issues.Count); inspect log-issues.json" }
     Write-Host "PASS seed=${seed}: 132 maps and all five town exits audited"
   }
   Write-Host "PASS: all $($Seeds.Count) seed runs passed at rate=$Rate"

@@ -195,6 +195,25 @@ task mapRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
 }
 
+// Short resource/installation gates, not the suspended long TCP tour.
+task mapResourceAcceptance(type: Test) {
+  group = 'verification'
+  description = 'Audits real MPQ tile installation across A2-A5 and known visual regressions.'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    includeTestsMatching 'com.riiablo.map.MapResourceAuditTest'
+    includeTestsMatching 'com.riiablo.map.ActTownSeamResourceTest'
+    includeTestsMatching 'com.riiablo.map.Act2TombEntranceResourceTest'
+    includeTestsMatching 'com.riiablo.map.Act4FortressResourceTest'
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'map.audit.seeds', project.findProperty('mapAuditSeeds') ?: '127897359'
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+}
+
 //weave {
 //  classesDir = sourceSets.main.java.classesDirectory.get().getAsFile()
 //  enableArtemisPlugin = true
