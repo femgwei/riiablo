@@ -238,6 +238,7 @@ public final class Act4D2MOOLayoutBridge {
       }
       if (Gdx.app != null) Gdx.app.log(TAG, "A" + (actId + 1) + " native terrain summary levels="
           + exportedLevels + "/" + levelIds.length);
+      if (actId == D2C_Acts.ACT_II) NativeTownExit.capture(map, drlg, townId);
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,

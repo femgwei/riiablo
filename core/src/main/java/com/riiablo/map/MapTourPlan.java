@@ -9,6 +9,22 @@ import java.util.TreeMap;
 public final class MapTourPlan {
   private MapTourPlan() {}
 
+  /** Native town-to-first-outdoor progression must never be staged. */
+  public static int townOutdoorDestination(int level) {
+    switch (level) {
+      case 1: return 2;
+      case 40: return 41;
+      case 75: return 76;
+      case 103: return 104;
+      case 109: return 110;
+      default: return -1;
+    }
+  }
+
+  public static boolean requiresTownExit(int from, int to) {
+    return townOutdoorDestination(from) == to && to > 0;
+  }
+
   /** Explicit, ordered reproduction only; callers label this as partial coverage. */
   public static List<Integer> focusedLevels(List<Integer> complete, String selection) {
     if (selection == null) return complete;
@@ -49,7 +65,12 @@ public final class MapTourPlan {
     Levels.Entry previous = null;
     while (!remaining.isEmpty()) {
       Integer next = null;
-      if (previous != null && previous.Vis != null) {
+      if (previous != null) {
+        int outdoor = townOutdoorDestination(previous.Id);
+        Levels.Entry candidate = remaining.get(outdoor);
+        if (candidate != null && candidate.Act == previous.Act) next = outdoor;
+      }
+      if (next == null && previous != null && previous.Vis != null) {
         for (int id : previous.Vis) {
           Levels.Entry candidate = remaining.get(id);
           if (candidate != null && candidate.Act == previous.Act

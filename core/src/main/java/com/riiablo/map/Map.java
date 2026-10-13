@@ -437,6 +437,7 @@ public class Map implements Disposable {
           // Special orientation 10/11 cells are now present in every native
           // Zone, so pair their source/destination ids before MapManager
           // creates the Warp entities.
+          com.riiablo.map.d2moo.NativeTownExit.materialize(this);
           Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
         } catch (Throwable t) {
           Gdx.app.error(TAG, "Error during D2MOD post-generation processing", t);
@@ -459,6 +460,7 @@ public class Map implements Disposable {
       if (useD2MOD) {
         try {
           Act2MapBuilderD2MOD.INSTANCE.configureAct2OutdoorWarps(this);
+          com.riiablo.map.d2moo.NativeTownExit.materialize(this);
           Act2MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
         } catch (Throwable t) {
           Gdx.app.error(TAG, "Error during Act2 native warp post-generation processing", t);
@@ -479,6 +481,7 @@ public class Map implements Disposable {
       if (useD2MOD) {
         try {
           Act3MapBuilderD2MOD.INSTANCE.configureAct3OutdoorWarps(this);
+          com.riiablo.map.d2moo.NativeTownExit.materialize(this);
           Act3MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
         } catch (Throwable t) {
           Gdx.app.error(TAG, "Error during Act3 native warp post-generation processing", t);
@@ -1244,6 +1247,13 @@ public class Map implements Disposable {
     }
 
     public Vector2 nativeSeamAnchor(int slot) { return nativeSeamAnchors.get(slot); }
+
+    public boolean hasWarpMarker(int slot) {
+      for (DS1.Cell cell : specials.values()) {
+        if (ID.isWarp(cell.id) && cell.mainIndex == slot) return true;
+      }
+      return false;
+    }
 
     /** Exact native UNIT_TILE position, already including LvlWarp offsets. */
     public Vector2 nativeWarpPosition(int mainIndex, Vector2 out) {

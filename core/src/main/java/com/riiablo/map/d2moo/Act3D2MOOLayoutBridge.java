@@ -234,6 +234,7 @@ public final class Act3D2MOOLayoutBridge {
       if (Gdx.app != null) Gdx.app.log(TAG,
           String.format("Act3 native terrain summary: levels=%d/%d", exportedLevels,
               NATIVE_LEVELS.length));
+      NativeTownExit.capture(map, drlg, FIRST_LEVEL);
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,

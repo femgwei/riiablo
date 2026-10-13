@@ -5121,7 +5121,9 @@ public final class D2GSHeadlessClient {
             loaded = D2GS.headlessMapTourSample(playerId, next, true);
           }
           for (int combat = 0; loaded.target == null && combat < 8; combat++) {
-            if (!clearTourBlocker(input, output, level, loaded.position, report)) break;
+            clearTourBlocker(input, output, level, loaded.position, report);
+            // A target can stop blocking before its TCP death is observed.
+            // Always resample the live route, including unconfirmed combat.
             loaded = D2GS.headlessMapTourSample(playerId, next, true);
           }
           if (loaded.target == null) throw new IOException("No local movement target level=" + level);
@@ -5350,14 +5352,29 @@ public final class D2GSHeadlessClient {
             + " casts=" + casts + " life=" + current.life + " confirmed=TCP_DEATH resume=REPLAN");
         return true;
       }
-      if (current != null && current.deleted) break; // deletion alone is not death evidence
+      if (current != null && current.deleted) {
+        // A recipient-scoped visibility delete can precede the authoritative
+        // death/vitals frame at normal tick rate.  Deletion alone is not
+        // death evidence; keep consuming TCP snapshots until the death frame
+        // arrives (or the finite combat deadline expires).
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+        if (packet != null) consume(packet);
+        continue;
+      }
       if (System.currentTimeMillis() >= castAt) {
         MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
         Vector2 position = current != null && current.hasPosition
             ? new Vector2(current.x, current.y) : blocker.position;
         if (state.level != blocker.level || state.position.dst2(position) > 36f) break;
         MapTourProbe.Sample liveBlocker = D2GS.headlessMapTourBlocker(playerId, destination, blocker.warp);
-        if (liveBlocker == null) break;
+        if (liveBlocker == null) {
+          // The live-only probe excludes a just-killed target before its
+          // death snapshot reaches this socket. Do not attack or count a
+          // kill without evidence; drain TCP under the existing deadline.
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+          if (packet != null) consume(packet);
+          continue;
+        }
         if (!liveBlocker.meleeReady) {
           // The authoritative action snapshot can lag one or two ticks after
           // a movement stop. Do not spend a cast on a guaranteed range

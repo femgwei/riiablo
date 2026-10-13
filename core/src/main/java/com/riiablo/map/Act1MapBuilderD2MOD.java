@@ -1610,6 +1610,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       // those slots authoritative and synthesize only the missing endpoint
       // marker so MapManager can create the same interactive Warp entity.
       installNativeWarpLinks(map, drlg);
+      com.riiablo.map.d2moo.NativeTownExit.capture(map, drlg, 1);
       DrlgDrlg.freeDrlg(drlg);
       Act1D2MOOLayoutBridge.releaseDataTables();
     }

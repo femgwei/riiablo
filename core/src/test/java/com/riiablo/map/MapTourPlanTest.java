@@ -9,6 +9,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapTourPlanTest {
+  @Test void allTownExitsAreMandatoryAndOutdoorPrecedesTownSideDungeon() {
+    int[] towns = {1, 40, 75, 103, 109};
+    int[] outdoors = {2, 41, 76, 104, 110};
+    for (int act = 0; act < towns.length; act++) {
+      assertTrue(MapTourPlan.requiresTownExit(towns[act], outdoors[act]));
+      assertFalse(MapTourPlan.requiresTownExit(towns[act], 47));
+      assertEquals(Arrays.asList(towns[act], outdoors[act]), MapTourPlan.levels(
+          Arrays.asList(row(towns[act], act), row(outdoors[act], act)), act + 1, act + 1));
+    }
+    assertEquals(Arrays.asList(40, 41, 47), MapTourPlan.levels(Arrays.asList(
+        row(40, 1, 47, 41), row(47, 1), row(41, 1)), 2, 2));
+    assertFalse(MapTourPlan.requiresTownExit(2, -1));
+  }
   @Test void focusedDiagnosticsAreExplicitOrderedSubsetsAndRejectUnknownOrRepeatedMaps() {
     List<Integer> complete = Arrays.asList(1, 2, 3, 4);
     assertSame(complete, MapTourPlan.focusedLevels(complete, null));
@@ -18,8 +31,8 @@ class MapTourPlanTest {
     assertThrows(IllegalArgumentException.class, () -> MapTourPlan.focusedLevels(complete, ""));
   }
   @Test void followsLinksInsteadOfRawRowOrder() {
-    assertEquals(Arrays.asList(1, 3, 2), MapTourPlan.levels(Arrays.asList(
-        row(2, 0), row(3, 0), row(1, 0, 3)), 1, 5));
+    assertEquals(Arrays.asList(2, 4, 3), MapTourPlan.levels(Arrays.asList(
+        row(3, 0), row(4, 0), row(2, 0, 4)), 1, 5));
   }
   @Test void disconnectedBranchesAreNotLostAndCyclesDoNotRepeat() {
     List<Integer> tour = MapTourPlan.levels(Arrays.asList(

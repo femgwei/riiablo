@@ -1,0 +1,57 @@
+param(
+  [string]$D2Home = 'G:\BaiduNetdiskDownload\Diablo II 1.10F',
+  [int[]]$Seeds = @(1, 2, 3, 12345, 54321),
+  [ValidateSet(25, 100)][int]$Rate = 25,
+  [string]$Output = 'server/d2gs/build/map-tour/five-seeds'
+)
+$ErrorActionPreference = 'Stop'
+$repo = Split-Path -Parent $PSScriptRoot
+if (-not (Test-Path -LiteralPath $D2Home -PathType Container)) { throw 'D2Home directory missing' }
+if ($Seeds.Count -eq 0 -or @($Seeds | Sort-Object -Unique).Count -ne $Seeds.Count) {
+  throw 'Seeds must be nonempty and unique'
+}
+Push-Location $repo
+try {
+  foreach ($seed in $Seeds) {
+    $destination = Join-Path $Output "seed-$seed-rate-$Rate"
+    $absolute = [IO.Path]::GetFullPath((Join-Path $repo $destination))
+    if (Test-Path -LiteralPath $absolute) { throw "Refusing to overwrite existing run: $absolute" }
+    New-Item -ItemType Directory -Path $absolute -Force | Out-Null
+    $console = Join-Path $absolute 'console.log'
+    Write-Host "Starting complete A1-A5 tour seed=$seed rate=$Rate"
+    & .\gradlew.bat :server:d2gs:headlessMapTour "-Pd2Home=$D2Home" "-PtourSeed=$seed" `
+      "-PtourRate=$Rate" "-PtourOutput=$destination" --no-daemon --max-workers=1 *> $console
+    $result = $LASTEXITCODE
+    $report = Join-Path $absolute 'map-tour.log'
+    if ($result -ne 0 -or -not (Test-Path -LiteralPath $report)) {
+      throw "Tour failed seed=$seed exit=$result; inspect $console"
+    }
+    $lines = Get-Content -LiteralPath $report
+    if (@($lines | Where-Object { $_ -match '^\[MAP_TOUR\] (FAIL|DIAGNOSTIC_FAIL|DEATH_RECOVERY) ' }).Count -gt 0 `
+        -or -not ($lines -match '^\[MAP_TOUR\] SUMMARY planned=132 visited=132 .*failures=0 result=PASS$')) {
+      throw "Invalid tour summary seed=$seed; inspect $report"
+    }
+    $loads = @($lines | ForEach-Object {
+      if ($_ -match '^\[MAP_TOUR\] LOAD level=(\d+) ') { [int]$Matches[1] }
+    })
+    $local = @($lines | ForEach-Object {
+      if ($_ -match '^\[MAP_TOUR\] WALK_PASS .*mode=LOCAL_WALK level=(\d+) ') { [int]$Matches[1] }
+    })
+    if ($loads.Count -ne 132 -or @($loads | Sort-Object -Unique).Count -ne 132 `
+        -or @(1..132 | Where-Object { $_ -notin $loads -or $_ -notin $local }).Count -gt 0) {
+      throw "Incomplete load/local movement coverage seed=$seed"
+    }
+    foreach ($edge in @('1 to=2', '40 to=41', '75 to=76', '103 to=104', '109 to=110')) {
+      if (-not ($lines -match "^\[MAP_TOUR\] TRANSITION_PASS from=$edge mode=")) {
+        throw "Missing mandatory town exit $edge seed=$seed"
+      }
+    }
+    if (Select-String -LiteralPath $console -Pattern '^ERROR|Exception|OutOfMemoryError|StackOverflowError|Animating tiles missing') {
+      throw "Runtime error in seed=$seed; inspect $console"
+    }
+    Write-Host "PASS seed=${seed}: 132 maps and all five town exits audited"
+  }
+  Write-Host "PASS: all $($Seeds.Count) seed runs passed at rate=$Rate"
+} finally {
+  Pop-Location
+}

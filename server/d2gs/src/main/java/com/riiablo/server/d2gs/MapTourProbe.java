@@ -238,7 +238,8 @@ final class MapTourProbe {
     }
     if (foundWarp) return sample;
     // A declared static Warp disappearing is a failure, never a successful jump.
-    if (MapTourPlan.declaresWarp(zone.level, nextLevel)) sample.transition = "MISSING_WARP";
+    if (MapTourPlan.requiresTownExit(zone.level.Id, nextLevel)) sample.transition = "MISSING_TOWN_EXIT";
+    else if (MapTourPlan.declaresWarp(zone.level, nextLevel)) sample.transition = "MISSING_WARP";
     else if (next != null && vis && map.areZonesAdjacent(zone, next)) {
       sample.transition = "MISSING_BOUNDARY_WARP";
     }
