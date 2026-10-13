@@ -930,7 +930,8 @@ public class Map implements Disposable {
       // Native collision queries can resolve an adjacent room across a level
       // seam. Keep the source first: detached levels may overlap its bounds.
       if (collisionZone.contains(x, y)) return collisionZone;
-      for (Zone zone : zones) {
+      for (int i = 0; i < zones.size; i++) {
+        Zone zone = zones.get(i);
         if (zone.contains(x, y) && areZonesAdjacent(collisionZone, zone)
             && (hasNativeSeam(collisionZone, zone) || hasNativeSeam(zone, collisionZone))) {
           return zone;

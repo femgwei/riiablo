@@ -3578,26 +3578,23 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           int wallId = grid.wallIds[slot][y][x];
           if (wallId == -1) continue;
           boolean warpWall = Map.ID.WARPS.contains(wallId);
-          // Orientation 10/11 cells are logical DS1 markers.  The legacy
-          // Preset.copyWalls path stores them only in Zone.specials and never
-          // resolves them into zone.tiles.  Rendering a native-exported
-          // marker through the global DT1 fallback produces a bogus full
-          // diamond (for example Blood Moor ID._59 at the cottage pop-pad).
-          // Keep the ID in TileGrid for registerSpecialWalls, but never put it
-          // into a visible wall layer.
+          String sourceFile = grid.sourceFile(grid.wallSourceFiles[slot][y][x]);
+          DT1.Tile tile = dt1s.get(sourceFile, wallId);
+          // Native wall exits (10/11) can be real entrance artwork, not
+          // merely DS1 markers. Only use their explicit native library;
+          // global fallback can select a debug diamond from Warp.dt1.
           if (Orientation.isSpecial(DT1.Tile.Index.orientation(wallId))) {
-            counts.specialMarkerWalls++;
-            if (warpWall && grid.hiddenWallCells[slot][y][x]) {
-              counts.hiddenWarpWalls++;
+            if (grid.hiddenWallCells[slot][y][x] || tile == null
+                || sourceFile.replace('\\', '/').toLowerCase(java.util.Locale.ROOT).endsWith("/warp.dt1")) {
+              counts.specialMarkerWalls++;
+              if (warpWall && grid.hiddenWallCells[slot][y][x]) counts.hiddenWarpWalls++;
+              continue;
             }
-            continue;
           }
           if (warpWall && grid.hiddenWallCells[slot][y][x]) {
             counts.hiddenWarpWalls++;
             continue;
           }
-          String sourceFile = grid.sourceFile(grid.wallSourceFiles[slot][y][x]);
-          DT1.Tile tile = dt1s.get(sourceFile, wallId);
           if (tile == null) tile = dt1s.get(wallId);
           if (tile == null) {
             counts.failedResolve++;

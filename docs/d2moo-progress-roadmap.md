@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 石制古墓入口图形
+
+- 真机 seed=127897359 日志已发生 Rocky Waste(41) ↔ Stony Tomb Level1(55) 交互，
+  入口不是缺少 Warp 链接；截图缺少的是入口画面。
+- 原版 MPQ 同种子导出入口为 `Act2/Outdoors/TombEnt.dt1`、orientation10、tile(14,13)。
+  旧铺图代码把所有 orientation10/11 无条件过滤，连原生入口图形一起丢弃。
+- 对照 D2MOO `DrlgRoomTile.cpp::DRLGROOMTILE_LoadWallWarpTiles`：墙出口瓦片有真实
+  图形链与隐藏的 lit alternate，不是全部不可见。现在仅保留明确原生资源来源的可见出口，
+  隐藏标记、无来源合成标记及 `Warp.dt1` 调试菱形仍过滤，不使用全局资源回退绘制出口。
+- 日志另有 `NativeTownExit.materialize` 的嵌套 Array iterator 异常，源于上一轮 scoped
+  collision 枚举 zones 破坏调用方迭代器；改用索引遍历，补调用方遍历中碰撞查询回归。
+- 新 MPQ 专项核对实际入口瓦片安装及隐藏状态过滤；五种子巡游仍暂停，入口画面待真机复测。
+- 指定1.10F mapRegression 162项通过、0失败，原生瓦片铺设专项39项通过。
+
 ## 2026-10-13 A2 出城真实通行
 
 - 新真机日志角色仍停留 level40；方向修正不等于可以通行。定位 scoped collision

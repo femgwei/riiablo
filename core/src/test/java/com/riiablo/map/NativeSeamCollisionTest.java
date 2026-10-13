@@ -15,6 +15,10 @@ class NativeSeamCollisionTest extends RiiabloTest {
     map.addWarpDestinationOverride(40, 0, 41);
     assertTrue(map.isBlockedForPath(town, 12, 6, 9, 2, false), "warp alone is not a seam");
     town.setNativeSeamAnchor(0, 11, 6);
+    for (Map.Zone ignored : map.getZones()) {
+      assertFalse(map.isBlockedForPath(town, 12, 6, 9, 2, false),
+          "seam queries must not invalidate a caller's Zone iterator");
+    }
     assertFalse(map.isBlockedForPath(town, 12, 6, 9, 2, false));
     assertFalse(map.isBlockedForPath(outdoor, 11, 6, 9, 2, false), "reverse traversal");
     outdoor.flags[6 * outdoor.width + 1] = (byte) DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
