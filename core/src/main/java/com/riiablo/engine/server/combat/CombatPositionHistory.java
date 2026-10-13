@@ -149,10 +149,16 @@ public final class CombatPositionHistory {
 
   /** D2Common UNITS_TestCollision endpoint projection + PLAYER_FLYING ray mask. */
   boolean hasPlayerFlyingBarrier(Snapshot attacker, Snapshot target) {
+    return hasPlayerFlyingBarrier(map, attacker.x, attacker.y, attacker.size,
+        target.x, target.y, target.size);
+  }
+
+  /** Shared native unit-endpoint ray, also used by read-only map-tour probes. */
+  public static boolean hasPlayerFlyingBarrier(Map map,
+      int x1, int y1, int attackerSize, int x2, int y2, int targetSize) {
     if (map == null) return false;
-    int x1 = attacker.x, y1 = attacker.y, x2 = target.x, y2 = target.y;
-    int size1 = Math.min(attacker.size, 2);
-    int size2 = Math.min(target.size, 2);
+    int size1 = Math.min(attackerSize, 2);
+    int size2 = Math.min(targetSize, 2);
     int dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
     if (dx + dy < size1 + size2) return false;
     if (size1 != 0 || size2 != 0) {

@@ -13,6 +13,20 @@ import org.junit.jupiter.api.Test;
 
 class CombatPositionHistoryTest {
   @Test
+  void sharedMeleeRayTrimsNativeEndpointsAndDoesNotUseWalkingFlags() {
+    Map map = new Map(0, 0) {
+      @Override public int playerFlyingFlags(int x, int y) {
+        return x == 0 || x == 6 ? DT1.Tile.FLAG_BLOCK_JUMP : 0;
+      }
+      @Override public int flags(int x, int y) { return DT1.Tile.FLAG_BLOCK_WALK; }
+    };
+    org.junit.jupiter.api.Assertions.assertFalse(CombatPositionHistory.hasPlayerFlyingBarrier(
+        map, 0, 0, 2, 6, 0, 2));
+    org.junit.jupiter.api.Assertions.assertTrue(CombatPositionHistory.hasPlayerFlyingBarrier(
+        map, 0, 0, 0, 6, 0, 0));
+  }
+
+  @Test
   void laterMovementCannotMutateAnEarlierAttackFrame() {
     World world = new World(new WorldConfigurationBuilder().build());
     try {

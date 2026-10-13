@@ -5308,6 +5308,21 @@ public final class D2GSHeadlessClient {
         + " authoritativeLife=" + blocker.authoritativeLife + " meleeReady=" + blocker.meleeReady
         + " snapshotDeleted=" + (before != null && before.deleted)
         + " mode=REAL_TCP_NO_POSITION_PACKET");
+    if (!blocker.meleeReady && blocker.target != null) {
+      java.util.List<Vector2> approach = D2GS.headlessMapTourRoute(playerId, blocker.target);
+      tourLog(report, "COMBAT_APPROACH", "level=" + level + " entity=" + blocker.warp
+          + " target=" + blocker.target + " waypoints=" + approach.size());
+      try {
+        // No routeTour recursion: a failed combat approach simply replans.
+        for (Vector2 waypoint : approach) {
+          walkTour(input, output, waypoint, level, mapTourMovementSequence++, report, "COMBAT_APPROACH");
+        }
+      } catch (TourMovementBlock e) {
+        tourLog(report, "COMBAT_APPROACH_BLOCKED", "level=" + level + " entity=" + blocker.warp
+            + " reason=" + e.getMessage() + " noTeleport=true");
+        return false;
+      }
+    }
     long end = System.currentTimeMillis() + 12_000;
     long castAt = 0;
     float lastLife = before != null && before.hasVitals ? before.life : Float.NaN;
@@ -5341,8 +5356,9 @@ public final class D2GSHeadlessClient {
         Vector2 position = current != null && current.hasPosition
             ? new Vector2(current.x, current.y) : blocker.position;
         if (state.level != blocker.level || state.position.dst2(position) > 36f) break;
-        MapTourProbe.Sample liveBlocker = D2GS.headlessMapTourBlocker(playerId, destination);
-        if (liveBlocker != null && !liveBlocker.meleeReady) {
+        MapTourProbe.Sample liveBlocker = D2GS.headlessMapTourBlocker(playerId, destination, blocker.warp);
+        if (liveBlocker == null) break;
+        if (!liveBlocker.meleeReady) {
           // The authoritative action snapshot can lag one or two ticks after
           // a movement stop. Do not spend a cast on a guaranteed range
           // rejection; consume TCP state until the native range gate opens.

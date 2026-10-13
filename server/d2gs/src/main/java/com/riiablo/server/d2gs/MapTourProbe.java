@@ -37,6 +37,10 @@ final class MapTourProbe {
 
   /** Only nearby hostile blockers, never town NPCs, pets or units across walls. */
   static Sample blocker(World world, Map map, int playerId, Vector2 destination) {
+    return blocker(world, map, playerId, destination, Engine.INVALID_ENTITY);
+  }
+
+  static Sample blocker(World world, Map map, int playerId, Vector2 destination, int targetId) {
     MapWrapper owner = world.getMapper(MapWrapper.class).get(playerId);
     Position player = world.getMapper(Position.class).get(playerId);
     if (owner == null || owner.zone == null || owner.zone.isTown() || player == null) return null;
@@ -47,6 +51,7 @@ final class MapTourProbe {
     float nearest = Float.MAX_VALUE;
     for (int i = 0; i < units.size(); i++) {
       int id = units.get(i);
+      if (targetId != Engine.INVALID_ENTITY && id != targetId) continue;
       if (world.getMapper(MapWrapper.class).get(id).zone != owner.zone) continue;
       com.riiablo.engine.server.component.Monster monster = world.getMapper(
           com.riiablo.engine.server.component.Monster.class).get(id);
@@ -60,25 +65,23 @@ final class MapTourProbe {
       if (life == null || life.asFixed() <= 0f) continue;
       Vector2 position = world.getMapper(Position.class).get(id).position;
       float distance = player.position.dst2(position);
-      if (distance > 25f || distance >= nearest) continue;
-      // A short static ray using the same ground mask; casting does not get
-      // permission to attack through a wall simply because BFS is blocked.
-      boolean visible = true;
-      int steps = Math.max(1, (int) Math.ceil(Math.sqrt(distance) * 2));
-      for (int step = 1; step <= steps; step++) {
-        float t = (float) step / steps;
-        if (!clear(map, owner.zone, player.position.x + (position.x - player.position.x) * t,
-            player.position.y + (position.y - player.position.y) * t, 1)) {
-          visible = false;
-          break;
-        }
-      }
-      if (!visible) continue;
+      if (distance > 25f) continue;
+      // UNITS_IsInMeleeRange tests PLAYER_FLYING (door | missile barrier),
+      // not PLAYER_PATH. Use the production endpoint projection: ordinary
+      // walk-only objects cannot conceal a legitimate melee blocker.
+      if (meleeBarrier(world, map, playerId, id)) continue;
       // Restrict to the intended direction, except immediate neighbours that
       // occupy the player's escape footprint in a narrow passage.
       if (destination != null && distance > 9f
           && new Vector2(position).sub(player.position).dot(
               new Vector2(destination).sub(player.position)) < 0f) continue;
+      com.riiablo.engine.server.Actioneer actioneer = world.getSystem(
+          com.riiablo.engine.server.Actioneer.class);
+      boolean meleeReady = actioneer != null && actioneer.isInMeleeRange(playerId, id, 0);
+      // A closer but out-of-range neighbour may not indefinitely conceal a
+      // different blocker that production can actually attack now.
+      if (best != null && (best.meleeReady && !meleeReady
+          || best.meleeReady == meleeReady && distance >= nearest)) continue;
       nearest = distance;
       best = new Sample();
       best.level = owner.zone.level.Id;
@@ -89,11 +92,52 @@ final class MapTourProbe {
           com.riiablo.engine.server.component.Size.class).get(id);
       best.unitSize = size == null ? 0 : size.size;
       best.authoritativeLife = life.asFixed();
-      com.riiablo.engine.server.Actioneer actioneer = world.getSystem(
-          com.riiablo.engine.server.Actioneer.class);
-      best.meleeReady = actioneer != null && actioneer.isInMeleeRange(playerId, id, 0);
+      best.meleeReady = meleeReady;
+    }
+    com.riiablo.engine.server.Actioneer actioneer = world.getSystem(
+        com.riiablo.engine.server.Actioneer.class);
+    if (best != null && !best.meleeReady && actioneer != null) {
+      best.target = meleeApproach(world, map, playerId, best.warp, actioneer.getMeleeRange(playerId));
     }
     return best;
+  }
+
+  /** Find a real walking approach, never relocate the player or release collision. */
+  static Vector2 meleeApproach(World world, Map map, int playerId, int targetId, int meleeRange) {
+    Map.Zone zone = world.getMapper(MapWrapper.class).get(playerId).zone;
+    Vector2 origin = world.getMapper(Position.class).get(playerId).position;
+    Vector2 target = world.getMapper(Position.class).get(targetId).position;
+    int size = world.getMapper(com.riiablo.engine.server.component.Size.class).get(playerId).size;
+    int targetSize = world.getMapper(com.riiablo.engine.server.component.Size.class).get(targetId).size;
+    java.util.BitSet connected = reachable(world, map, playerId, zone, origin, size);
+    Vector2 best = null;
+    float nearest = Float.POSITIVE_INFINITY;
+    int tx = Math.round(target.x), ty = Math.round(target.y);
+    for (int y = ty - 6; y <= ty + 6; y++) for (int x = tx - 6; x <= tx + 6; x++) {
+      if (!zone.contains(x, y) || !connected.get((y - zone.y()) * zone.width() + x - zone.x())
+          || !clear(map, zone, x, y, size) || !dynamicallyFree(world, playerId, zone, x, y, size)
+          || !com.riiablo.engine.server.combat.NativeMeleeDistance.isInRange(
+              x, y, size, tx, ty, targetSize, meleeRange, 0)
+          || com.riiablo.engine.server.combat.CombatPositionHistory.hasPlayerFlyingBarrier(
+              map, x, y, size, tx, ty, targetSize)) continue;
+      float distance = origin.dst2(x, y);
+      if (distance <= 1f || distance >= nearest) continue;
+      nearest = distance;
+      best = new Vector2(x, y);
+    }
+    return best;
+  }
+
+  static boolean meleeBarrier(World world, Map map, int playerId, int targetId) {
+    Vector2 player = world.getMapper(Position.class).get(playerId).position;
+    Vector2 target = world.getMapper(Position.class).get(targetId).position;
+    com.riiablo.engine.server.component.Size playerSize = world.getMapper(
+        com.riiablo.engine.server.component.Size.class).get(playerId);
+    com.riiablo.engine.server.component.Size targetSize = world.getMapper(
+        com.riiablo.engine.server.component.Size.class).get(targetId);
+    return com.riiablo.engine.server.combat.CombatPositionHistory.hasPlayerFlyingBarrier(map,
+        Math.round(player.x), Math.round(player.y), playerSize == null ? 0 : playerSize.size,
+        Math.round(target.x), Math.round(target.y), targetSize == null ? 0 : targetSize.size);
   }
 
   static boolean hostileBlocker(com.riiablo.engine.server.component.Monster monster) {
@@ -408,6 +452,23 @@ final class MapTourProbe {
       com.riiablo.engine.server.component.Object object = world.getMapper(com.riiablo.engine.server.component.Object.class).get(id);
       if (warp != null || object != null || p.dst2(state.position) < 48 * 48) {
         out.append("entity=").append(id).append(" pos=").append(p);
+        com.riiablo.engine.server.component.Monster monster = world.getMapper(
+            com.riiablo.engine.server.component.Monster.class).get(id);
+        if (monster != null) {
+          com.riiablo.engine.server.component.AttributesWrapper attributes = world.getMapper(
+              com.riiablo.engine.server.component.AttributesWrapper.class).get(id);
+          com.riiablo.attributes.StatRef life = attributes == null || attributes.attrs == null ? null
+              : attributes.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+                  com.riiablo.attributes.StatRef.obtain());
+          com.riiablo.engine.server.Actioneer actioneer = world.getSystem(
+              com.riiablo.engine.server.Actioneer.class);
+          out.append(" monsterClass=").append(monster.monstats == null ? -1 : monster.monstats.hcIdx)
+              .append(" life=").append(life == null ? Float.NaN : life.asFixed())
+              .append(" hostile=").append(hostileBlocker(monster))
+              .append(" meleeBarrier=").append(meleeBarrier(world, map, playerId, id))
+              .append(" meleeReady=").append(actioneer != null && actioneer.isInMeleeRange(playerId, id, 0))
+              .append(" groundCenterClear=").append(clear(map, zone, p.x, p.y, 1));
+        }
         if (warp != null) {
           Interactable interaction = world.getMapper(Interactable.class).get(id);
           out.append(" warpDst=").append(warp.dstLevel == null ? -1 : warp.dstLevel.Id)

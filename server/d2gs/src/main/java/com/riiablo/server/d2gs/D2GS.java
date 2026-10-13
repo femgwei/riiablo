@@ -525,10 +525,14 @@ public class D2GS extends ApplicationAdapter {
   }
 
   static MapTourProbe.Sample headlessMapTourBlocker(int playerId, Vector2 target) {
+    return headlessMapTourBlocker(playerId, target, Engine.INVALID_ENTITY);
+  }
+
+  static MapTourProbe.Sample headlessMapTourBlocker(int playerId, Vector2 target, int targetId) {
     D2GS server = activeHeadlessInstance;
     java.util.concurrent.CompletableFuture<MapTourProbe.Sample> result = new java.util.concurrent.CompletableFuture<>();
     Gdx.app.postRunnable(() -> {
-      try { result.complete(MapTourProbe.blocker(server.world, server.map, playerId, target)); }
+      try { result.complete(MapTourProbe.blocker(server.world, server.map, playerId, target, targetId)); }
       catch (RuntimeException e) { result.completeExceptionally(e); }
     });
     try { return result.get(5, TimeUnit.SECONDS); }

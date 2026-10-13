@@ -6,6 +6,17 @@
   pass37的18图专项18/18进入、11次连续入口、5次真实TCP击杀、0失败PASS；其中
   105→106→107→108为真实连续入图，非直接staging107。完整132图100Hz正在重跑，
   正常25Hz最终验收仍待执行，不能将专项PASS标为全图完成。
+- pass37-all仅进入28/132图，level23通行失败，军营28后段陷入复活/攻击无效循环。
+  确认同一萨满2173始终`meleeReady=false`却累计多次施法，旧客户端错误地用另一只
+  最近怪物的近战状态放行；沉沦魔2166死亡后多次恢复生命，没有实际推进。
+  已停止失效巡游并保留日志，记为INTERRUPTED/未完成，不能算完整132图验收。
+- pass38待验证：清障探针对照Units.cpp `UNITS_IsInMeleeRange/UNITS_TestCollision`，
+  复用生产历史碰撞的单位边沿射线和`COLLIDE_MASK_PLAYER_FLYING`（door|missile barrier），
+  不再用ground walk mask误拒walk-only障碍；重新检查精确攻击目标，优先可近战单位。
+  超出近战范围时只允许生产真实移动到动态可达的合法攻击点，失败不递归、不跳图；
+  失败快照补怪物class/HP/敌对/近战屏障诊断。指定1.10F单worker自动回归147 + 9 + 9项
+  全通过（0失败/错误/跳过）；16图连续链重测进行中。本次代码检查点提交并推送master，
+  Git日志为准确hash来源；全图和25Hz仍未完成。
 - 新增 `:server:d2gs:headlessMapTour`，独立校验 1.10f LevelId 1–132（含所有支线），
   模拟客户端执行真实移动、普通门对象交互和 Warp；不连续段显式 staging。
   失败后继续覆盖其余图，但失败保持计数且进程非零退出，不将跳图计为入口通过。

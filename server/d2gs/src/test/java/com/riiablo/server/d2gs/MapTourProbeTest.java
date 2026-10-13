@@ -6,6 +6,64 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class MapTourProbeTest {
+  @Test public void meleeProbeUsesNativeBarrierAndSelectedTargetInsteadOfGroundWalkRay() throws Exception {
+    com.badlogic.gdx.Application previousApp = com.badlogic.gdx.Gdx.app;
+    com.riiablo.Files previousFiles = com.riiablo.Riiablo.files;
+    com.badlogic.gdx.files.FileHandle previousHome = com.riiablo.Riiablo.home;
+    com.riiablo.mpq.MPQFileHandleResolver previousMpqs = com.riiablo.Riiablo.mpqs;
+    com.badlogic.gdx.backends.headless.HeadlessApplication app = new com.badlogic.gdx.backends.headless.HeadlessApplication(
+        new com.badlogic.gdx.ApplicationAdapter() {});
+    final boolean[] barrier = {false};
+    com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0) {
+      @Override public int playerFlyingFlags(int x, int y) {
+        return barrier[0] && x == 5 ? com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP : 0;
+      }
+      @Override public int flags(int x, int y) {
+        return com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK;
+      }
+    };
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().build());
+    try {
+      com.riiablo.Riiablo.home = com.riiablo.util.InstallationFinder.getInstance().defaultHomeDir();
+      com.riiablo.Riiablo.mpqs = new com.riiablo.mpq.MPQFileHandleResolver();
+      com.riiablo.Riiablo.files = new com.riiablo.Files();
+      com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
+      zone.level = new com.riiablo.codec.excel.Levels.Entry();
+      zone.level.Id = 23;
+      int player = world.create(), nearest = world.create(), selected = world.create();
+      for (int id : new int[] {player, nearest, selected}) {
+        world.getMapper(com.riiablo.engine.server.component.Position.class).create(id).position
+            .set(id == player ? 2 : id == nearest ? 4 : 7, 2);
+        world.getMapper(com.riiablo.engine.server.component.Size.class).create(id).size = 1;
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).create(id).set(map, zone);
+        if (id == player) continue;
+        com.riiablo.engine.server.component.Monster monster = world.getMapper(
+            com.riiablo.engine.server.component.Monster.class).create(id);
+        monster.monstats = new com.riiablo.codec.excel.MonStats.Entry();
+        monster.monstats.killable = true;
+        com.riiablo.attributes.Attributes attrs = com.riiablo.attributes.Attributes.obtainStandard();
+        attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 10f);
+        attrs.reset();
+        world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).create(id).attrs = attrs;
+      }
+      world.process();
+      assertEquals(nearest, MapTourProbe.blocker(world, map, player, null).warp);
+      assertEquals("recheck the selected target even when another monster is closer", selected,
+          MapTourProbe.blocker(world, map, player, null, selected).warp);
+      barrier[0] = true;
+      org.junit.Assert.assertNull("missile barrier still rejects an otherwise reachable target",
+          MapTourProbe.blocker(world, map, player, null, selected));
+      assertEquals(nearest, MapTourProbe.blocker(world, map, player, null).warp);
+    } finally {
+      world.dispose();
+      app.exit();
+      com.badlogic.gdx.Gdx.app = previousApp;
+      com.riiablo.Riiablo.files = previousFiles;
+      com.riiablo.Riiablo.home = previousHome;
+      com.riiablo.Riiablo.mpqs = previousMpqs;
+    }
+  }
+
   @Test public void blockedDoorApproachCannotRecursivelySelectTheSameDoor() {
     assertTrue(MapTourProbe.mayPlanDoor("WARP_WALK", 0));
     org.junit.Assert.assertFalse(MapTourProbe.mayPlanDoor("DOOR_APPROACH", 0));
@@ -53,6 +111,10 @@ public class MapTourProbeTest {
       world.process();
       collision.refreshNow();
       org.junit.Assert.assertFalse(collision.isFreeForPath(zone, player, -1, 14, 2, 1));
+      com.badlogic.gdx.math.Vector2 meleeApproach = MapTourProbe.meleeApproach(world, map, player, blocker, 0);
+      org.junit.Assert.assertNotNull("an out-of-range blocker needs a real walking approach", meleeApproach);
+      assertTrue(meleeApproach.x > 2 && meleeApproach.x < 14);
+      assertTrue(collision.isFreeForPath(zone, player, -1, (int) meleeApproach.x, (int) meleeApproach.y, 1));
       java.util.List<com.badlogic.gdx.math.Vector2> approach = MapTourProbe.route(world, map, player,
           new com.badlogic.gdx.math.Vector2(35, 2));
       assertTrue(!approach.isEmpty());
@@ -76,6 +138,9 @@ public class MapTourProbeTest {
       flags[2 * 40 + 25] = 1;
       assertTrue("static fallback may never cross a terrain wall", MapTourProbe.route(world, map, player,
           new com.badlogic.gdx.math.Vector2(35, 2)).isEmpty());
+      flags[2 * 40 + 8] = 1;
+      org.junit.Assert.assertNull("a combat approach cannot jump a terrain wall",
+          MapTourProbe.meleeApproach(world, map, player, blocker, 0));
     } finally { world.dispose(); }
   }
   @Test public void combatClearingRejectsFriendlyNpcAndConvertedUnits() {
