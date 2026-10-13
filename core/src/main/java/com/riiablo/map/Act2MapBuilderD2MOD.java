@@ -472,7 +472,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         // D2Common DRLGOUTDESR_AddExits installs the level-specific desert
         // entrance preset before waypoints and shrines are spawned.
         placeDesertExit(zone, seed);
-        if (zone.level.Id == LEVEL_ROCKYWASTE) placeDesertTownTransition(zone);
+        if (zone.level.Id == LEVEL_LUTGHOLEIN) placeDesertTownTransition(zone);
         if (zone.level.Id == LEVEL_ROCKYWASTE || zone.level.Id == LEVEL_DRYHILLS
             || zone.level.Id == LEVEL_FAROASIS || zone.level.Id == LEVEL_LOSTCITY) {
           placeNativeDesertCliffs(zone, seed);
@@ -560,7 +560,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
 
   /** Adds Rocky Waste's native Lut Gholein transition preset when resources provide it. */
   static void placeDesertTownTransition(Zone zone) {
-    if (zone == null || zone.presets == null || zone.gridsX < 2 || zone.gridsY < 2
+    if (zone == null || zone.presets == null || zone.gridsX < 1 || zone.gridsY < 1
         || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
     // The native direction is selected from the town link; without room-link metadata,
     // use the north transition at the north-west edge as a deterministic fallback.
