@@ -57,8 +57,8 @@ public class PantherWoman extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private static EntitySubscription enemyEntities;
-  private static EntitySubscription monsterEntities;  // All monsters to find pack members
+  private EntitySubscription enemyEntities;
+  private EntitySubscription monsterEntities;  // All monsters to find pack members
 
   final Vector2 tmpVec2 = new Vector2();
 
