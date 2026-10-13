@@ -230,6 +230,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             if (grid.floorOverlayIds[ty][tx] != -1) duplicatePositionCount++;
             grid.floorOverlayIds[ty][tx] = tileId;
             grid.floorOverlaySourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
+            grid.floorOverlayNativeFlags[ty][tx] = flags;
             grid.exportedFloorCells[ty][tx] = true;
             uniqueFloorIds.add(tileId);
             exportedFloorCount++;
@@ -239,6 +240,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         if (tileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = tileId;
         grid.floorSourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
+        grid.floorNativeFlags[ty][tx] = flags;
         grid.floorLogicalGroups[ty][tx] = logicalGroupId;
         grid.exportedFloorCells[ty][tx] = true;
         uniqueFloorIds.add(tileId);

@@ -52,3 +52,7 @@
 2026-10-14 短回归结果：seed=127897359、25Hz，五城十个方向真实 TCP 步行通过；181 项地图回归、4 项资源审计、10 项服务端测试通过。完整日志仍有 33 条未解决告警，独立审计判为失败，不宣称无错：优先查 A3 丛林尺寸警告，再依据 D2MOO 补齐 ThornHulk/FetishBlowgun、DoomKnight/VileMother/Regurgitator、CatapultSpotter/NpcBarb/Overseer 的缺失 AI；同时追查 Attributes 空 base 重置及两条生成位置调整。五种子短通行矩阵、连续位移断言与真机显示验证仍待完成。
 
 2026-10-14 瓦片告警修复：按 D2MOO `DrlgOutPlace.cpp::sub_6FD83970` 的 unsigned nTemp 修正四个符号校正右移，侧向丛林偏移不再多出两格。182 项地图回归通过；A1–A5 六种子真实资源审计通过，failedResolve 均为零，未复现 Invalid style 或丛林尺寸 WARNING。A1 预设关卡另检查真实原生 DS1 导出，不跳过城镇/地下地图。按用户新授权恢复五种子 25Hz 长巡游，使用隔离的提交版本避免混入另一任务工作区；严格总验收仍会因非瓦片未解决告警失败。
+
+2026-10-14 真机 A5 蓝色碰撞网格：原生 floor 的 MAPTILE_HIDDEN 标记在 D2MooTileApplier → TileGrid → 渲染安装过程中丢失，导致 Expansion/town/collision.dt1 的辅助图形被绘制。保留两层地板原生 flags，安装时不绘制隐藏地板，同时保留 bRevealHidden 的 0x200 语义及原生碰撞数组。依据 D2MOO DrlgRoomTile.cpp::DRLGROOMTILE_InitTileDataFlags。新增 Act5TownHiddenFloorResourceTest，以真实 1.10f 资源断言 collision.dt1 的隐藏标记、未安装到可见层和碰撞仍存在；纳入 mapResourceAcceptance。无 GL 测试不能替代用户真机截图确认。
+
+该修复验证：55 项定向测试、184 项地图回归、6 项资源审计方法（A1–A5 六种子、792 个地图实例）通过。

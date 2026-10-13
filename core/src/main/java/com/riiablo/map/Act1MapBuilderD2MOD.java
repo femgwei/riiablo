@@ -3540,7 +3540,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         int tileIndex = Zone.index(zoneTilesX, x, y);
         if (tileIndex < 0 || tileIndex >= layerSize) continue;
         int floorId = grid.floorIds[y][x];
-        if (floorId != -1) {
+        if (floorId != -1 && isNativeFloorVisible(grid.floorNativeFlags[y][x])) {
           String sourceFile = grid.sourceFile(grid.floorSourceFiles[y][x]);
           DT1.Tile tile = dt1s.get(sourceFile, floorId);
           if (tile == null) tile = dt1s.get(floorId);
@@ -3558,7 +3558,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         }
 
         int overlayId = grid.floorOverlayIds[y][x];
-        if (overlayId != -1) {
+        if (overlayId != -1 && isNativeFloorVisible(grid.floorOverlayNativeFlags[y][x])) {
           DT1.Tile overlay = dt1s.get(grid.sourceFile(grid.floorOverlaySourceFiles[y][x]), overlayId);
           if (overlay == null) overlay = dt1s.get(overlayId);
           if (overlay != null) {
@@ -3636,6 +3636,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       }
     }
     return counts;
+  }
+
+  static boolean isNativeFloorVisible(int flags) {
+    // DrlgRoomTile.cpp::DRLGROOMTILE_InitTileDataFlags: bHidden sets 0x8,
+    // bRevealHidden additionally sets 0x200 (retain revealable cave artwork).
+    return (flags & 0x8) == 0 || (flags & 0x200) != 0;
   }
 
   static int applyBoundaryWalls(Zone zone, TileGrid grid) {

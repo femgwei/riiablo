@@ -210,6 +210,7 @@ task mapResourceAcceptance(type: Test) {
     includeTestsMatching 'com.riiablo.map.ActTownSeamResourceTest'
     includeTestsMatching 'com.riiablo.map.Act2TombEntranceResourceTest'
     includeTestsMatching 'com.riiablo.map.Act4FortressResourceTest'
+    includeTestsMatching 'com.riiablo.map.Act5TownHiddenFloorResourceTest'
   }
   maxHeapSize = test.maxHeapSize
   systemProperty 'map.audit.seeds', project.findProperty('mapAuditSeeds') ?: '127897359'

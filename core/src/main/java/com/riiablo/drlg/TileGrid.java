@@ -37,6 +37,9 @@ public class TileGrid {
   public final byte[][] floorOverlaySourceFiles;
   /** Native logical coord-list index for each exported floor cell. */
   public final int[][] floorLogicalGroups;
+  /** Native visibility flags; collision-only floors must not become artwork. */
+  public final int[][] floorNativeFlags;
+  public final int[][] floorOverlayNativeFlags;
   /** DT1 source selected for each native wall/roof layer. */
   public final byte[][][] wallSourceFiles;
   /** Native logical coord-list index for each exported wall/roof layer. */
@@ -146,6 +149,8 @@ public class TileGrid {
     this.floorOverlayIds = new int[height][width];
     this.floorOverlaySourceFiles = new byte[height][width];
     this.floorLogicalGroups = new int[height][width];
+    this.floorNativeFlags = new int[height][width];
+    this.floorOverlayNativeFlags = new int[height][width];
     this.wallSourceFiles = new byte[MAX_WALL_LAYERS][height][width];
     this.wallLogicalGroups = new int[MAX_WALL_LAYERS][height][width];
     this.wallNativeFlags = new int[MAX_WALL_LAYERS][height][width];
@@ -169,6 +174,8 @@ public class TileGrid {
         floorOverlaySourceFiles[y][x] = 0;
         floorSourceFiles[y][x] = 0;
         floorLogicalGroups[y][x] = -1;
+        floorNativeFlags[y][x] = 0;
+        floorOverlayNativeFlags[y][x] = 0;
         exportedFloorCells[y][x] = false;
       }
     }
@@ -186,6 +193,8 @@ public class TileGrid {
         floorOverlaySourceFiles[y][x] = 0;
         floorSourceFiles[y][x] = 0;
         floorLogicalGroups[y][x] = -1;
+        floorNativeFlags[y][x] = 0;
+        floorOverlayNativeFlags[y][x] = 0;
         exportedFloorCells[y][x] = false;
         shadowIds[y][x] = -1;
         shadowSourceFiles[y][x] = 0;
