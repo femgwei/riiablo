@@ -75,8 +75,8 @@ class Act3MapBuilderD2MODTest {
 
   @Test
   void uses110fJungleTransitionPresetDefValues() {
-    assertEquals(715, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD);
-    assertEquals(716, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL);
+    assertEquals(573, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD);
+    assertEquals(574, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL);
   }
 
   @Test
@@ -97,37 +97,37 @@ class Act3MapBuilderD2MODTest {
 
   @Test
   void uses110fKurastSpecialPresetDefValues() {
-    assertEquals(771, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_SEWER);
-    assertEquals(772, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_TEMPLE);
-    assertEquals(773, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_WAYPOINT);
-    assertEquals(788, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_SEWER);
-    assertEquals(789, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METROTEMPLE);
+    assertEquals(629, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_SEWER);
+    assertEquals(630, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_TEMPLE);
+    assertEquals(631, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_WAYPOINT);
+    assertEquals(646, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_SEWER);
+    assertEquals(647, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METROTEMPLE);
   }
 
   @Test
   void uses110fCausewayAndTravincalPresetDefValues() {
-    assertEquals(794, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BRIDGE);
-    assertEquals(795, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NW);
-    assertEquals(796, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_N);
-    assertEquals(797, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NE);
-    assertEquals(798, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SW);
-    assertEquals(799, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_S);
-    assertEquals(800, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SE);
+    assertEquals(652, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BRIDGE);
+    assertEquals(653, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NW);
+    assertEquals(654, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_N);
+    assertEquals(655, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_NE);
+    assertEquals(656, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SW);
+    assertEquals(657, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_S);
+    assertEquals(658, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TRAVINCAL_SE);
   }
 
   @Test
   void uses110fKurastFillPresetDefValues() {
-    assertEquals(760, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X16);
-    assertEquals(758, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X16);
-    assertEquals(759, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X08);
-    assertEquals(757, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X08);
-    assertEquals(777, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_16X16);
-    assertEquals(793, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_16X16);
+    assertEquals(618, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X16);
+    assertEquals(616, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X16);
+    assertEquals(617, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_16X08);
+    assertEquals(615, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SLUMS_08X08);
+    assertEquals(635, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_16X16);
+    assertEquals(651, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_METRO_16X16);
   }
 
   @Test
   void preservesNativeAct3MazeSpecialDefValues() {
-    assertEquals(647, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TEMPLE_6);
+    assertEquals(753, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_TEMPLE_6);
     assertEquals(704, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_DUNGEON_TREASURE_2);
     assertEquals(659, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_SW);
     assertEquals(664, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_CHEST_NE);

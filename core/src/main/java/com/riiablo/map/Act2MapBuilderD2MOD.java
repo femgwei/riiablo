@@ -17,6 +17,7 @@ import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.map.d2moo.Act2ArcaneD2MOOLayoutBridge;
 import com.riiablo.map.d2moo.Act2D2MOOLayoutBridge;
+import com.d2moo.common.drlg.D2LvlPrestIds;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +40,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private static boolean isAct2Preset(LvlPrest.Entry preset) {
     if (preset == null || preset.File == null) return false;
     for (String file : preset.File) {
-      if (file == null || file.isEmpty()) continue;
+      if (file == null || file.isEmpty() || "0".equals(file)) continue;
       String normalized = file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
       return normalized.startsWith("act2/");
     }
@@ -49,8 +50,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private static boolean isAct2DesertPreset(LvlPrest.Entry preset) {
     if (!isAct2Preset(preset)) return false;
     for (String file : preset.File) {
-      if (file == null || file.isEmpty()) continue;
-      return file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT).contains("act2/desert/");
+      if (file == null || file.isEmpty() || "0".equals(file)) continue;
+      String path = file.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+      return path.contains("act2/outdoors/") || path.contains("act2/desert/");
     }
     return false;
   }
@@ -67,8 +69,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_LOSTCITY = 44;
   private static final int LEVEL_VALLEYOFSNAKES = 45;
   private static final int LEVEL_CANYONOFTHEMAGI = 46;
-  private static final int LEVEL_DURIELSLAIR = 74;
-  private static final int LEVEL_ARCANESANCTUARY = 75;
+  private static final int LEVEL_DURIELSLAIR = 73;
+  private static final int LEVEL_ARCANESANCTUARY = 74;
   private static final int ACT2_LEVEL_FIRST = LEVEL_LUTGHOLEIN;
   private static final int ACT2_LEVEL_LAST = LEVEL_ARCANESANCTUARY;
   private static final int DUNGEON_PLACEMENT_GAP = 10 * DT1.Tile.SUBTILE_SIZE;
@@ -452,6 +454,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // are available. Compatibility terrain remains the fallback if the
     // resource-gated native town export cannot be built.
     Act2D2MOOLayoutBridge.populateTown(seed, diff, townZone, townSourceFile);
+    // All A2 sublevels must use MPQ-backed RoomEx/tiles, not empty compatibility floors.
+    int[] nativeLevels = new int[ACT2_LEVEL_LAST - 40];
+    for (int i = 0; i < nativeLevels.length; i++) nativeLevels[i] = 41 + i;
+    com.riiablo.map.d2moo.Act4D2MOOLayoutBridge.populateZones(seed, diff, map,
+        com.d2moo.common.drlg.D2C_Acts.ACT_II, 40, nativeLevels);
 
     // Configure the runtime slots before MapManager creates Warp entities.
     // Native D2Common performs this after layout placement via
@@ -495,9 +502,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     if (zone == null || Riiablo.files == null || Riiablo.files.LvlPrest == null
         || zone.presets == null) return;
     final int[][] entries = {
-        {526, 8, 0, 0}, {525, 6, 0, 2}, {525, 4, 0, 1}, {525, 2, 0, 0},
-        {529, 0, 0, 0}, {527, 0, 2, 0}, {527, 0, 4, 1}, {527, 0, 6, 2},
-        {528, 0, 8, 0}, {536, 4, 4, -1}
+        {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_ENDS, 8, 0, 0}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 6, 0, 2}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 4, 0, 1}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 2, 0, 0},
+        {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_TOP_KING_TOMB, 0, 0, 0}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_KING_TOMB, 0, 2, 0}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_KING_TOMB, 0, 4, 1}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_KING_TOMB, 0, 6, 2},
+        {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_KING_ENDS, 0, 8, 0}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_VALLEY_WARP, 4, 4, -1}
     };
     for (int[] entry : entries) {
       int def = entry[0], gx = entry[1], gy = entry[2], file = entry[3];
@@ -517,13 +524,13 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     switch (levelId) {
       case LEVEL_ROCKYWASTE:
       case LEVEL_DRYHILLS:
-        return 530; // LVLPREST_ACT2_DESERT_TOMB_1
+        return D2LvlPrestIds.LVLPREST_ACT2_DESERT_TOMB_1; // LVLPREST_ACT2_DESERT_TOMB_1
       case LEVEL_FAROASIS:
-        return 532; // LVLPREST_ACT2_DESERT_LAIR_1
+        return D2LvlPrestIds.LVLPREST_ACT2_DESERT_LAIR_1; // LVLPREST_ACT2_DESERT_LAIR_1
       case LEVEL_LOSTCITY:
-        return 554; // LVLPREST_ACT2_DESERT_RUINS_SEWER
+        return D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_SEWER; // LVLPREST_ACT2_DESERT_RUINS_SEWER
       case LEVEL_VALLEYOFSNAKES:
-        return 531; // LVLPREST_ACT2_DESERT_TOMB_2
+        return D2LvlPrestIds.LVLPREST_ACT2_DESERT_TOMB_2; // LVLPREST_ACT2_DESERT_TOMB_2
       default:
         return -1;
     }
@@ -557,7 +564,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
     // The native direction is selected from the town link; without room-link metadata,
     // use the north transition at the north-west edge as a deterministic fallback.
-    int[] defs = {505, 504};
+    int[] defs = {D2LvlPrestIds.LVLPREST_ACT2_DESERT_TRANSITION_N, D2LvlPrestIds.LVLPREST_ACT2_DESERT_TRANSITION_W};
     for (int def : defs) {
       LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
       if (!isAct2Preset(p)) continue;
@@ -575,15 +582,15 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int repeats;
     switch (zone.level.Id) {
       case LEVEL_ROCKYWASTE:
-        defs = new int[] { 537, 553, 543, 544, 539, 545, 541 }; repeats = 1; break;
+        defs = new int[] { D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_08X08, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BONE_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BONE_2, D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_3, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_WAGON_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_HEAD_1 }; repeats = 1; break;
       case LEVEL_DRYHILLS:
-        defs = new int[] { 537, 553, 540, 545 }; repeats = 2; break;
+        defs = new int[] { D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_08X08, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_MESA_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_WAGON_1 }; repeats = 2; break;
       case LEVEL_FAROASIS:
-        defs = new int[] { 538, 539, 551, 543, 545, 537 }; repeats = 3; break;
+        defs = new int[] { D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_2, D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_3, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_16X08, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BONE_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_WAGON_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_1 }; repeats = 3; break;
       case LEVEL_LOSTCITY:
-        defs = new int[] { 539, 550, 551, 546, 547, 553 }; repeats = 2; break;
+        defs = new int[] { D2LvlPrestIds.LVLPREST_ACT2_DESERT_OASIS_3, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_16X16, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_16X08, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BERMS_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BERMS_2, D2LvlPrestIds.LVLPREST_ACT2_DESERT_RUINS_08X08 }; repeats = 2; break;
       case LEVEL_CANYONOFTHEMAGI:
-        defs = new int[] { 543, 544, 548, 549, 541, 542 }; repeats = 2; break;
+        defs = new int[] { D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BONE_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BONE_2, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BERMS_3, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_BERMS_4, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_HEAD_1, D2LvlPrestIds.LVLPREST_ACT2_DESERT_FILL_HEAD_2 }; repeats = 2; break;
       default: return;
     }
     if (zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3) return;
@@ -606,14 +613,14 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   static void placeNativeDesertCliffs(Zone zone, int seed) {
     if (zone == null || zone.presets == null || zone.gridsX < 9 || zone.gridsY < 9) return;
     int[][][] variants = {
-      {{518,1,0,4},{520,-1,2,4},{519,-1,4,4},{519,-1,6,4},{518,2,8,4}},
-      {{518,1,0,4},{519,-1,2,4},{520,-1,4,4},{519,-1,6,4},{518,2,8,4}},
-      {{518,1,0,4},{519,-1,2,4},{519,-1,4,4},{520,-1,6,4},{518,2,8,4}},
-      {{518,2,8,4},{519,-1,6,4},{524,-1,4,4},{523,-1,4,6},{521,2,4,8}},
-      {{518,2,8,4},{520,-1,6,4},{524,-1,4,4},{522,-1,4,6},{521,2,4,8}},
-      {{521,1,4,0},{523,-1,4,2},{522,-1,4,4},{522,-1,4,6},{521,2,4,8}},
-      {{521,1,4,0},{522,-1,4,2},{523,-1,4,4},{522,-1,4,6},{521,2,4,8}},
-      {{521,1,4,0},{522,-1,4,2},{522,-1,4,4},{523,-1,4,6},{521,2,4,8}}
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,1,0,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_PATH,-1,2,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,6,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,2,8,4}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,1,0,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,2,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_PATH,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,6,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,2,8,4}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,1,0,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,2,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_PATH,-1,6,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,2,8,4}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,2,8,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_WALL,-1,6,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_TOP,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_PATH,-1,4,6},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,2,4,8}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_ENDS,2,8,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_PATH,-1,6,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_TOP,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,6},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,2,4,8}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,1,4,0},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_PATH,-1,4,2},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,6},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,2,4,8}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,1,4,0},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,2},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_PATH,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,6},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,2,4,8}},
+      {{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,1,4,0},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,2},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_WALL,-1,4,4},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_PATH,-1,4,6},{D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_LEFT_ENDS,2,4,8}}
     };
     int[][] selected = variants[Math.abs(seed) & 7];
     for (int[] e : selected) {
@@ -749,13 +756,17 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       // six remain ordinary playable dungeons (one is the boss tomb).  The
       // previous bridge materialized only staff/boss, which made five valid
       // Canyon entrances resolve to an empty/missing Zone.
+      // Arcane Sanctuary is also reached by a runtime quest portal (Palace
+      // Cellar), not an ordinary Vis/Warp edge. Keep its Zone allocated even
+      // when static-edge discovery never visits it.
       int[] requiredDungeons = new int[Act2TombSelection.LAST_TOMB_LEVEL
-          - Act2TombSelection.FIRST_TOMB_LEVEL + 2];
+          - Act2TombSelection.FIRST_TOMB_LEVEL + 3];
       for (int i = 0; i <= Act2TombSelection.LAST_TOMB_LEVEL
           - Act2TombSelection.FIRST_TOMB_LEVEL; i++) {
         requiredDungeons[i] = Act2TombSelection.FIRST_TOMB_LEVEL + i;
       }
-      requiredDungeons[requiredDungeons.length - 1] = LEVEL_DURIELSLAIR;
+      requiredDungeons[requiredDungeons.length - 2] = LEVEL_DURIELSLAIR;
+      requiredDungeons[requiredDungeons.length - 1] = LEVEL_ARCANESANCTUARY;
       for (int tombId : requiredDungeons) {
         if (generated.contains(tombId)) continue;
         Levels.Entry tomb = levelsById.get(tombId);
@@ -768,6 +779,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
+        if (tombId == LEVEL_ARCANESANCTUARY) {
+          Act2ArcaneD2MOOLayoutBridge.populateZone(seed, diff, zone);
+        }
         generated.add(tombId);
         queue.add(tombId);
         created++;
@@ -1211,7 +1225,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     }
     int tileX = Math.max(1, Math.min(zone.tilesX - 2, 2 + (mainIndex % 4) * 3));
     int tileY = Math.max(1, Math.min(zone.tilesY - 2, 2 + (mainIndex / 4) * 3));
-    zone.addNativeWarpMarker(mainIndex, tileX * DT1.Tile.SUBTILE_SIZE + 2,
+    // This is compatibility metadata, not an exported UNIT_TILE position.
+    // Native DS1 exit walls must be allowed to replace it during projection.
+    zone.addRuntimeWarpMarker(mainIndex, tileX * DT1.Tile.SUBTILE_SIZE + 2,
         tileY * DT1.Tile.SUBTILE_SIZE + 2);
   }
 

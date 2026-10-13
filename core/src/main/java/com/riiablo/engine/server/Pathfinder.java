@@ -276,26 +276,12 @@ public class Pathfinder extends IteratingSystem {
       velocity.velocity.setZero();
       return;
     }
-    float distance = speed * world.delta;
-    float traveled = 0;
-    while (traveled < distance) {
-      float targetLen = tmpVec2.dst(target);
-      float part = Math.min(distance - traveled, targetLen);
-      if (part == 0) break;
-      tmpVec2.lerp(target, part / targetLen);
-      traveled += part;
-      if (MathUtils.isEqual(part, targetLen, 0.1f)) {
-        if (targets.hasNext()) {
-          target.set(targets.next());
-        } else {
-          // No more path points, stop movement
-          findPath(entityId, null);
-          return;
-        }
-      }
-    }
-
-    tmpVec2.sub(position0);
+    // Consume waypoints only after authoritative position reaches them.
+    // Advancing the iterator using a hypothetical multi-segment step cuts
+    // corners, then discards the very waypoint needed to escape a wall.
+    tmpVec2.set(target).sub(position0);
+    speed = limitWaypointSpeed(speed, world.delta
+        * velocity.stateSpeedMultiplier, tmpVec2.len());
 
     Angle angle = mAngle.get(entityId);
     int oldDirection = Direction.radiansToDirection(
@@ -315,6 +301,10 @@ public class Pathfinder extends IteratingSystem {
     }
 
     velocity.velocity.set(tmpVec2).setLength(speed);
+  }
+
+  static float limitWaypointSpeed(float speed, float delta, float distance) {
+    return delta > 0f ? Math.min(speed, distance / delta) : 0f;
   }
 
   static boolean isInMeleeApproachRange(
@@ -444,7 +434,9 @@ public class Pathfinder extends IteratingSystem {
     }
     if (raycast) {
       ray.set(position, target);
-      success = map.castRay(ray, flags, size, collision, canOpenDoors(src));
+      MapWrapper owner = mMapWrapper.has(src) ? mMapWrapper.get(src) : null;
+      success = map.castRay(owner == null ? null : owner.zone,
+          ray, flags, size, collision, canOpenDoors(src));
       if (success) {
         success = findPath(src, position, collision.point, flags, size, path,
             targetEntityId, true);
@@ -618,7 +610,9 @@ public class Pathfinder extends IteratingSystem {
             dynamicCollision.isFreeForPath(src,
                 ignoredDynamicTarget(targetEntityId, x, y),
                 x, y, footprint);
-    boolean success = map.findPath(srcPos, targetPos, flags, size, path, obstacle,
+    MapWrapper owner = mMapWrapper.has(src) ? mMapWrapper.get(src) : null;
+    boolean success = map.findPath(owner == null ? null : owner.zone,
+        srcPos, targetPos, flags, size, path, obstacle,
         src, targetEntityId, canOpenDoors(src));
     if (success) {
       if (!pathWithinNativeMonsterRooms(src, path)) {
@@ -710,7 +704,9 @@ public class Pathfinder extends IteratingSystem {
       smoothRay.start.set(smoothStart);
       smoothRay.end.set(smoothEnd);
 
-      boolean blocked = map.castRay(smoothRay, flags, size, collision, canOpenDoors);
+      MapWrapper owner = mMapWrapper.has(moverId) ? mMapWrapper.get(moverId) : null;
+      boolean blocked = map.castRay(owner == null ? null : owner.zone,
+          smoothRay, flags, size, collision, canOpenDoors);
       if (!blocked && isDynamicSegmentFree(moverId, targetId, size,
           smoothStart, smoothEnd)) {
         inId++;

@@ -139,6 +139,8 @@ public final class Act3D2MOOLayoutBridge {
         TileGrid grid = new TileGrid(width, height);
         applier.putGrid(levelId, grid);
         int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+        int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
+        if (floors > 0) zone.setNativeTileGrid(grid, dt1Mask);
         int[] rawObjects = {0, 0};
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =
@@ -148,20 +150,17 @@ public final class Act3D2MOOLayoutBridge {
         String[] townMonsterSource = {null};
         boolean[] townMonsterSourcesMatch = {true};
         int queuedMonsters = 0;
+        int[] exportedVis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+        int[] exportedWarps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
               if (unitType == D2UnitTypes.UNIT_TILE) {
-                // Floor/room exits are emitted as UNIT_TILE and carry the
-                // destination LevelId instead of a DS1 wall style.
-                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
-                  for (int slot = 0; slot < 8; slot++) {
-                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
-                      zone.addNativeWarpMarker(slot, x, y);
-                      nativeWarpUnits[0]++;
-                      break;
-                    }
-                  }
+                // AddWarp exports the LvlWarp definition Id, not VisN.
+                int slot = NativeWarpSlotResolver.resolve(level, exportedVis, exportedWarps, roomId, index);
+                if (slot >= 0) {
+                  zone.addNativeWarpMarker(slot, x, y);
+                  nativeWarpUnits[0]++;
                 }
                 nativeWarpUnits[1]++;
                 return;
@@ -197,7 +196,6 @@ public final class Act3D2MOOLayoutBridge {
               exportedObjects.add(new Map.NativeObject(
                   roomId, index, mode, x, y, ds1Raw, spawned, sourceFile, externalEntity));
             });
-        int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         if (floors > 0) {
           projectRooms(level, zone);
           queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
@@ -211,7 +209,6 @@ public final class Act3D2MOOLayoutBridge {
             // a second copy of the native UNIT_MONSTER entries.
             zone.replaceNativeTownMonsters(townMonsterSource[0], exportedMonsters);
           }
-          zone.setNativeTileGrid(grid, dt1Mask);
           exportedLevels++;
         } else {
           // Do not leave a partial native topology behind when a resource
@@ -367,9 +364,8 @@ public final class Act3D2MOOLayoutBridge {
     }
     if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
       // D2MOO encodes preset SuperUniques as
-      // MonStatsCount + SuperUniquesCount + hcIdx.
-      int suIndex = index - Riiablo.files.monstats.size()
-          - Riiablo.files.SuperUniques.size();
+      // MonStatsCount + hcIdx.
+      int suIndex = index - Riiablo.files.monstats.size();
       superUnique = Riiablo.files.SuperUniques.get(suIndex);
       if (superUnique != null) {
         monster = Riiablo.files.monstats.get(superUnique.MonClass);

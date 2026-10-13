@@ -95,11 +95,11 @@ class Act2MapBuilderD2MooWarpTest {
 
   @Test
   void usesNativeDesertExitPresetForEachOutdoorLevel() {
-    assertEquals(530, Act2MapBuilderD2MOD.desertExitPresetDef(41));
-    assertEquals(530, Act2MapBuilderD2MOD.desertExitPresetDef(42));
-    assertEquals(532, Act2MapBuilderD2MOD.desertExitPresetDef(43));
-    assertEquals(554, Act2MapBuilderD2MOD.desertExitPresetDef(44));
-    assertEquals(531, Act2MapBuilderD2MOD.desertExitPresetDef(45));
+    assertEquals(388, Act2MapBuilderD2MOD.desertExitPresetDef(41));
+    assertEquals(388, Act2MapBuilderD2MOD.desertExitPresetDef(42));
+    assertEquals(390, Act2MapBuilderD2MOD.desertExitPresetDef(43));
+    assertEquals(412, Act2MapBuilderD2MOD.desertExitPresetDef(44));
+    assertEquals(389, Act2MapBuilderD2MOD.desertExitPresetDef(45));
     assertEquals(-1, Act2MapBuilderD2MOD.desertExitPresetDef(46));
   }
 
@@ -124,13 +124,13 @@ class Act2MapBuilderD2MooWarpTest {
         id <= com.riiablo.engine.server.quest.Act2TombSelection.LAST_TOMB_LEVEL; id++) {
       levels.add(level(id, new int[] {46}, new int[] {0}));
     }
-    // A static 74 edge is invalid; Duriel's Lair is opened only by Orifice.
+    // A static 73 edge is invalid; Duriel's Lair is opened only by Orifice.
     Levels.Entry invalid = levels.get(0);
-    invalid.Vis = new int[] {74};
+    invalid.Vis = new int[] {73};
     invalid.Warp = new int[] {0};
     Act2MapBuilderD2MOD.TombTopologyReport report =
         Act2MapBuilderD2MOD.validateAct2TombTopology(levels,
-            new HashSet<>(java.util.Arrays.asList(67, 68, 69, 70, 71, 72, 73)));
+            new HashSet<>(java.util.Arrays.asList(66, 67, 68, 69, 70, 71, 72)));
     assertEquals(7, report.presentLevels);
     assertEquals(7, report.expectedLevels);
     assertEquals(6, report.tombEdges);

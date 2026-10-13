@@ -18,17 +18,18 @@ public class D2ObjectIds {
     public static final int OBJECT_DOORCATHEDRALLEFT = 62;
     public static final int OBJECT_DOORCATHEDRALRIGHT = 63;
     public static final int OBJECT_DOORWOODENLEFT2 = 64;
-    public static final int OBJECT_ANDARIELS_DOOR = 66; // 需要确认实际值
-    public static final int OBJECT_IRONGRATEDOORRIGHT = 67; // 需要确认实际值
-    public static final int OBJECT_IRONGRATEDOORLEFT = 68; // 需要确认实际值
-    public static final int OBJECT_WOODENGRATEDOORRIGHT = 69; // 需要确认实际值
-    public static final int OBJECT_WOODENGRATEDOORLEFT = 70; // 需要确认实际值
-    public static final int OBJECT_WOODENDOORRIGHT = 71; // 需要确认实际值
-    public static final int OBJECT_WOODENDOORLEFT = 72; // 需要确认实际值
-    public static final int OBJECT_TOMBDOORRIGHT = 73; // 需要确认实际值
-    public static final int OBJECT_TOMBDOORLEFT = 74; // 需要确认实际值
-    public static final int OBJECT_SLIMEDOOR1 = 75; // 需要确认实际值
-    public static final int OBJECT_SLIMEDOOR2 = 76; // 需要确认实际值
+    // D2MOO DataTbls/ObjectsIds.h; these are class ids, not Obj.txt placement ids.
+    public static final int OBJECT_ANDARIELS_DOOR = 47;
+    public static final int OBJECT_IRONGRATEDOORRIGHT = 291;
+    public static final int OBJECT_IRONGRATEDOORLEFT = 290;
+    public static final int OBJECT_WOODENGRATEDOORRIGHT = 293;
+    public static final int OBJECT_WOODENGRATEDOORLEFT = 292;
+    public static final int OBJECT_WOODENDOORRIGHT = 295;
+    public static final int OBJECT_WOODENDOORLEFT = 294;
+    public static final int OBJECT_TOMBDOORRIGHT = 92;
+    public static final int OBJECT_TOMBDOORLEFT = 91;
+    public static final int OBJECT_SLIMEDOOR1 = 229;
+    public static final int OBJECT_SLIMEDOOR2 = 230;
     public static final int OBJECT_HARROGATH_TOWN_MAIN_GATE = 449;
     
     // 其他对象

@@ -375,7 +375,7 @@ public class RoomActivationSystem extends IteratingSystem {
             ? MonsterAffix.NONE : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
         int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
             superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
-                : com.riiablo.engine.server.monster.MonsterRank.NORMAL,
+                : spawn.rank,
             affixes, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         if (spawn.monsterId == com.riiablo.engine.server.monster.MonsterType.NAVI) {

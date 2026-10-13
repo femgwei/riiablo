@@ -49,7 +49,12 @@ public final class Act5D2MOOLayoutBridge {
       D2LevelIds.LEVEL_NIHLATHAKSTEMPLE,
       D2LevelIds.LEVEL_HALLSOFANGUISH,
       D2LevelIds.LEVEL_HALLSOFPAIN,
-      D2LevelIds.LEVEL_HALLSOFVAUGHT
+      D2LevelIds.LEVEL_HALLSOFVAUGHT,
+      D2LevelIds.LEVEL_DRIFTERSCAVERN,
+      D2LevelIds.LEVEL_ICYCELLAR,
+      D2LevelIds.LEVEL_ABADDON,
+      D2LevelIds.LEVEL_PITOFACHERON,
+      D2LevelIds.LEVEL_INFERNALPIT
   };
 
   private Act5D2MOOLayoutBridge() {}
@@ -122,18 +127,16 @@ public final class Act5D2MOOLayoutBridge {
         String[] townMonsterSource = {null};
         boolean[] townMonsterSourcesMatch = {true};
         int[] monsterCounts = {0, 0};
+        int[] exportedVis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+        int[] exportedWarps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
               if (unitType == D2UnitTypes.UNIT_TILE) {
-                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
-                  for (int slot = 0; slot < 8; slot++) {
-                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
-                      zone.addNativeWarpMarker(slot, x, y);
-                      nativeWarpUnits[0]++;
-                      break;
-                    }
-                  }
+                int slot = NativeWarpSlotResolver.resolve(level, exportedVis, exportedWarps, roomId, index);
+                if (slot >= 0) {
+                  zone.addNativeWarpMarker(slot, x, y);
+                  nativeWarpUnits[0]++;
                 }
                 nativeWarpUnits[1]++;
                 return;
@@ -297,7 +300,7 @@ public final class Act5D2MOOLayoutBridge {
         ? null : Riiablo.files.SuperUniques.get(placement);
     if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size() - Riiablo.files.SuperUniques.size();
+      int suIndex = index - Riiablo.files.monstats.size();
       superUnique = Riiablo.files.SuperUniques.get(suIndex);
       if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     }

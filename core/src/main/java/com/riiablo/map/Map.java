@@ -660,6 +660,36 @@ public class Map implements Disposable {
 
   private MapGraph        mapGraph   = new MapGraph(this);
   private AStarPathFinder pathFinder = new AStarPathFinder(mapGraph, true);
+  // Like native COLLISION_* queries, ECS movement carries its owning room/
+  // level. Detached levels may legitimately reuse world-coordinate rectangles.
+  // Scoped only for synchronous graph/ray calls on the simulation thread.
+  private Zone collisionZone;
+
+  public boolean findPath(Zone zone, Vector2 src, Vector2 dst, int flags, int size,
+      GraphPath<Point2> path, MapGraph.Obstacle obstacle,
+      int moverId, int targetId, boolean canOpenDoors) {
+    Zone previous = collisionZone;
+    collisionZone = zone;
+    try {
+      return findPath(src, dst, flags, size, path, obstacle, moverId, targetId, canOpenDoors);
+    } finally { collisionZone = previous; }
+  }
+
+  public boolean castRay(Zone zone, Ray<Vector2> ray, int flags, int size,
+      Collision<Vector2> dst, boolean canOpenDoors) {
+    Zone previous = collisionZone;
+    collisionZone = zone;
+    try { return castRay(ray, flags, size, dst, canOpenDoors); }
+    finally { collisionZone = previous; }
+  }
+
+  public boolean isBlockedForPath(Zone zone, int x, int y, int flags, int size,
+      boolean canOpenDoors) {
+    Zone previous = collisionZone;
+    collisionZone = zone;
+    try { return isBlockedForPath(x, y, flags, size, canOpenDoors); }
+    finally { collisionZone = previous; }
+  }
 
   public boolean findPath(Vector2 src, Vector2 dst, GraphPath<Point2> path) {
     return findPath(src, dst, DT1.Tile.FLAG_BLOCK_WALK, 0, path);
@@ -813,9 +843,12 @@ public class Map implements Disposable {
 
   public boolean isBlockedForPath(int x, int y, int flags, int size,
       boolean canOpenDoors) {
-    int radius = Math.max(0, size - 1);
+    // D2Common COLLISION_CheckMaskWithSize: SMALL is a five-cell cross,
+    // BIG a 3x3 square. Size is not a radius.
+    int radius = size >= 2 ? 1 : 0;
     for (int dy = -radius; dy <= radius; dy++) {
       for (int dx = -radius; dx <= radius; dx++) {
+        if (size == 2 && dx != 0 && dy != 0) continue;
         if (isBlockedForPath(x + dx, y + dy, flags, canOpenDoors)) return true;
       }
     }
@@ -890,6 +923,7 @@ public class Map implements Disposable {
   }
 
   public Zone getZone(int x, int y) {
+    if (collisionZone != null) return collisionZone.contains(x, y) ? collisionZone : null;
     for (Zone zone : zones) {
       if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
     }
@@ -1032,7 +1066,7 @@ public class Map implements Disposable {
     static void free(DT1.Tile[] layer) {
       if (layer == null) return;
       for (int i = 0; i < sizes.length; i++) {
-        if (layer.length <= sizes[i]) {
+        if (layer.length == sizes[i]) {
           tilePools[i].free(layer);
           return;
         }
@@ -1052,8 +1086,9 @@ public class Map implements Disposable {
       return new byte[size];
     }
     static void free(byte[] b) {
+      if (b == null) return;
       for (int i = 0; i < sizes.length; i++) {
-        if (b.length <= sizes[i] * DT1.Tile.NUM_SUBTILES) {
+        if (b.length == sizes[i] * DT1.Tile.NUM_SUBTILES) {
           bytePools[i].free(b);
           return;
         }
@@ -1066,7 +1101,7 @@ public class Map implements Disposable {
     private int levelSeed;
     /** Native Act spawn coordinate used for ordinary town portals, world subtiles. */
     private Vector2 townPortalSpawn;
-    /** Optional native Arcane Sanctuary graph; populated only for level 75. */
+    /** Optional native Arcane Sanctuary graph; populated only for level 74. */
     private Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology;
     /** Native exported tile layers kept until Zone.generate applies them. */
     private TileGrid nativeTileGrid;
@@ -1158,6 +1193,26 @@ public class Map implements Disposable {
     public int nativeDt1Mask() { return nativeDt1Mask; }
 
     public void setNativeTileGrid(TileGrid grid, int dt1Mask) {
+      if (grid != null && flags != null && (tilesX != grid.width || tilesY != grid.height)) {
+        // Maze bounds come from generated rooms, not the compatibility
+        // Levels-size rectangle. Truncating them loses floors and side exits.
+        tilesX = grid.width; tilesY = grid.height;
+        width = tilesX * DT1.Tile.SUBTILE_SIZE;
+        height = tilesY * DT1.Tile.SUBTILE_SIZE;
+        free(flags); flags = obtainByteArray(width * height);
+        objectBlockWalkRefs = objectDoorRefs = null;
+        for (DT1.Tile[] layer : tiles) free(layer);
+        Arrays.fill(tiles, null);
+        if (gridSizeX <= 0) gridSizeX = Math.max(1, tilesX);
+        if (gridSizeY <= 0) gridSizeY = Math.max(1, tilesY);
+        int newGridsX = (tilesX + gridSizeX - 1) / gridSizeX;
+        int newGridsY = (tilesY + gridSizeY - 1) / gridSizeY;
+        Preset[][] resized = new Preset[newGridsX][newGridsY];
+        for (int gx = 0; presets != null && gx < Math.min(gridsX, newGridsX); gx++) {
+          System.arraycopy(presets[gx], 0, resized[gx], 0, Math.min(gridsY, newGridsY));
+        }
+        gridsX = newGridsX; gridsY = newGridsY; presets = resized;
+      }
       nativeTileGrid = grid;
       nativeDt1Mask = dt1Mask;
     }
@@ -1171,6 +1226,58 @@ public class Map implements Disposable {
      */
     public void addNativeWarpMarker(int mainIndex, int subtileX, int subtileY) {
       if (level == null || mainIndex < 0 || mainIndex >= 8) return;
+      for (int i = 0; i < nativeWarpMarkers.size; i += 3) {
+        if (nativeWarpMarkers.get(i) == mainIndex && nativeWarpMarkers.get(i + 1) == subtileX
+            && nativeWarpMarkers.get(i + 2) == subtileY) return;
+      }
+      nativeWarpMarkers.add(mainIndex);
+      nativeWarpMarkers.add(subtileX);
+      nativeWarpMarkers.add(subtileY);
+      putNativeWarpMarker(mainIndex, subtileX, subtileY);
+    }
+
+    private final IntArray nativeWarpMarkers = new IntArray();
+    private final IntMap<Vector2> nativeSeamAnchors = new IntMap<>();
+
+    public void setNativeSeamAnchor(int slot, int subtileX, int subtileY) {
+      nativeSeamAnchors.put(slot, new Vector2(subtileX, subtileY));
+    }
+
+    public Vector2 nativeSeamAnchor(int slot) { return nativeSeamAnchors.get(slot); }
+
+    /** Exact native UNIT_TILE position, already including LvlWarp offsets. */
+    public Vector2 nativeWarpPosition(int mainIndex, Vector2 out) {
+      for (int i = 0; i < nativeWarpMarkers.size; i += 3) {
+        if (nativeWarpMarkers.get(i) == mainIndex) {
+          return out.set(x() + nativeWarpMarkers.get(i + 1),
+              y() + nativeWarpMarkers.get(i + 2));
+        }
+      }
+      return null;
+    }
+
+    /** Runtime seamless links are re-anchored after collision export, unlike
+     * genuine UNIT_TILE coordinates which must survive unchanged. */
+    public void addRuntimeWarpMarker(int mainIndex, int subtileX, int subtileY) {
+      if (mainIndex >= 0 && mainIndex < 8) putNativeWarpMarker(mainIndex, subtileX, subtileY);
+    }
+
+    /** Reapply genuine UNIT_TILE exits after replacing the terrain specials. */
+    public void restoreNativeWarpMarkers() {
+      for (int i = 0; i < nativeWarpMarkers.size; i += 3) {
+        int slot = nativeWarpMarkers.get(i);
+        boolean present = false;
+        for (DS1.Cell cell : specials.values()) {
+          if (cell.mainIndex == slot && Map.ID.isWarp(cell.id)) {
+            present = true;
+            break;
+          }
+        }
+        if (!present) putNativeWarpMarker(slot, nativeWarpMarkers.get(i + 1), nativeWarpMarkers.get(i + 2));
+      }
+    }
+
+    private void putNativeWarpMarker(int mainIndex, int subtileX, int subtileY) {
       int tx = Math.max(0, Math.min(tilesX - 1, subtileX / DT1.Tile.SUBTILE_SIZE));
       int ty = Math.max(0, Math.min(tilesY - 1, subtileY / DT1.Tile.SUBTILE_SIZE));
       if (specials == EMPTY_INT_CELL_MAP) specials = new IntMap<>();
@@ -1222,7 +1329,8 @@ public class Map implements Disposable {
       this.level     = level;
       this.diff      = diff;
       this.levelSeed = level == null ? 0 : NativeLevelSeed.forLevel(map.seed, level.Id);
-      this.arcaneSanctuaryTopology = level != null && level.Id == 75
+      this.arcaneSanctuaryTopology = level != null
+          && level.Id == com.d2moo.common.drlg.D2LevelIds.LEVEL_ARCANESANCTUARY
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.nativeTileGrid = null;
       this.nativeDt1Mask = 0;
@@ -1300,6 +1408,8 @@ public class Map implements Disposable {
       nativeObjects.clear();
       nativeObjectAudit.clear();
       nativeMonsters.clear();
+      nativeWarpMarkers.clear();
+      nativeSeamAnchors.clear();
       nativeTownMonsterSource = null;
       roomsEx.clear();
       roomActivationTracking = false;
@@ -1374,9 +1484,12 @@ public class Map implements Disposable {
     /** Selected DS1 source for a preset-backed zone, when one is available. */
     public String presetSourceFile() {
       if (presets == null || presets.length == 0 || presets[0] == null
-          || presets[0].length == 0 || presets[0][0] == null
-          || presets[0][0].ds1 == null) return null;
-      return presets[0][0].ds1.fileName;
+          || presets[0].length == 0 || presets[0][0] == null) return null;
+      Preset selected = presets[0][0];
+      // Native bridges run before the asynchronous asset-loading pass.
+      // The selected file is already authoritative even while ds1 is null.
+      return selected.ds1 != null ? selected.ds1.fileName
+          : selected.ds1Path == null ? null : TILES_PATH + selected.ds1Path;
     }
 
     public String nativeTownMonsterSource() { return nativeTownMonsterSource; }
@@ -1651,6 +1764,9 @@ public class Map implements Disposable {
     }
 
     public int flags(int x, int y) {
+      // A render-only boundary wall can own getZone() just outside the
+      // rectangular collision footprint. Such cells are not walkable.
+      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       int index = index(width, x, y);
       int value = flags[index] & 0xFF;
       if (objectBlockWalkRefs != null && objectBlockWalkRefs[index] > 0) {
@@ -1661,6 +1777,7 @@ public class Map implements Disposable {
 
     /** Returns collision supplied by the generated map, excluding units. */
     public int staticFlags(int x, int y) {
+      if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
       return flags[index(width, x, y)] & 0xFF;
     }
 
@@ -1819,12 +1936,11 @@ public class Map implements Disposable {
         }
       }
 
-      // Size.MEDIUM (the native player size) occupies a 3x3 subtile square.
-      // The existing server movement systems use the same size-to-radius
-      // projection, so landing and subsequent path checks agree.
-      int radius = Math.max(0, unitSize - 1);
+      // Same native footprint used by pathfinding and authoritative movement.
+      int radius = unitSize >= 2 ? 1 : 0;
       for (int dy = -radius; dy <= radius; dy++) {
         for (int dx = -radius; dx <= radius; dx++) {
+          if (unitSize == 2 && dx != 0 && dy != 0) continue;
           int x = worldX + dx;
           int y = worldY + dy;
           if (!contains(x, y)) return false;
@@ -2137,7 +2253,9 @@ public class Map implements Disposable {
           }
 
           preset.finishLoading();
-          preset.copyTo(this, gridX, gridY);
+          // Native non-town layers/units are exported below; copying the
+          // old compatibility DS1 here overlays a different room layout.
+          if (nativeTileGrid == null || town) preset.copyTo(this, gridX, gridY);
           
           // 对于非城镇区域，即使有preset也要生成怪物
           // 因为preset只包含地形，不包含怪物
@@ -2221,6 +2339,7 @@ public class Map implements Disposable {
               + (level == null ? "<unknown>" : level.LevelName));
         }
       }
+      generator.finish(this);
     }
 
     private static DT1.Tile firstFloorTile(DT1s source) {
@@ -2275,6 +2394,7 @@ public class Map implements Disposable {
     interface Generator {
       void init(Zone zone);
       void generate(Zone zone, DT1s dt1s, int tx, int ty);
+      default void finish(Zone zone) {}
     }
   }
 
@@ -2415,9 +2535,16 @@ public class Map implements Disposable {
     public final int superUniqueId;
     public final String superUniqueKey;
     public final boolean spawned;
+    public final int rank;
 
     public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
         int superUniqueId, String superUniqueKey, boolean spawned) {
+      this(roomId, monsterId, mode, x, y, superUniqueId, superUniqueKey, spawned,
+          com.riiablo.engine.server.monster.MonsterRank.NORMAL);
+    }
+
+    public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
+        int superUniqueId, String superUniqueKey, boolean spawned, int rank) {
       this.roomId = roomId;
       this.monsterId = monsterId;
       this.mode = mode;
@@ -2426,6 +2553,7 @@ public class Map implements Disposable {
       this.superUniqueId = superUniqueId;
       this.superUniqueKey = superUniqueKey;
       this.spawned = spawned;
+      this.rank = rank;
     }
   }
 
@@ -2525,9 +2653,15 @@ public class Map implements Disposable {
     /** Adds a deferred spawn while preserving a native SuperUniques identity. */
     public void addMonsterSpawn(int monsterId, float worldX, float worldY,
         int packId, boolean minion, int superUniqueId, String superUniqueKey) {
+      addMonsterSpawn(monsterId, worldX, worldY, packId, minion, superUniqueId, superUniqueKey,
+          com.riiablo.engine.server.monster.MonsterRank.NORMAL);
+    }
+
+    public void addMonsterSpawn(int monsterId, float worldX, float worldY,
+        int packId, boolean minion, int superUniqueId, String superUniqueKey, int rank) {
       if (!monsterPopulationSpawned) {
         pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY,
-            packId, minion, superUniqueId, superUniqueKey));
+            packId, minion, superUniqueId, superUniqueKey, rank));
       }
     }
 
@@ -2602,6 +2736,7 @@ public class Map implements Disposable {
     public final int superUniqueId;
     /** SuperUniques.txt key, retained for diagnostics and marker identity. */
     public final String superUniqueKey;
+    public final int rank;
 
     MonsterSpawn(int monsterId, float x, float y) {
       this(monsterId, x, y, -1, false);
@@ -2613,6 +2748,12 @@ public class Map implements Disposable {
 
     MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
         int superUniqueId, String superUniqueKey) {
+      this(monsterId, x, y, packId, minion, superUniqueId, superUniqueKey,
+          com.riiablo.engine.server.monster.MonsterRank.NORMAL);
+    }
+
+    MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
+        int superUniqueId, String superUniqueKey, int rank) {
       this.monsterId = monsterId;
       this.x = x;
       this.y = y;
@@ -2620,6 +2761,7 @@ public class Map implements Disposable {
       this.minion = minion;
       this.superUniqueId = superUniqueId;
       this.superUniqueKey = superUniqueKey;
+      this.rank = rank;
     }
   }
 

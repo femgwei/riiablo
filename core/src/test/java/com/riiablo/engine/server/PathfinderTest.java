@@ -18,6 +18,11 @@ import com.riiablo.map.pfa.GraphPath;
 import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
+  @Test void movementStopsAtTheCurrentWaypointInsteadOfCuttingTheNextCorner() {
+    assertEquals(2.5f, Pathfinder.limitWaypointSpeed(12f, 0.04f, 0.1f), 0.0001f);
+    assertEquals(12f, Pathfinder.limitWaypointSpeed(12f, 0.04f, 4f), 0.0001f);
+    assertEquals(0f, Pathfinder.limitWaypointSpeed(12f, 0f, 4f));
+  }
   @Test
   void ordinaryMonstersCannotUseTownAsPathDestination() {
     assertFalse(Pathfinder.isTownDestinationAllowed(false, false, false));

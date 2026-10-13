@@ -1,5 +1,128 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 A1–A5 全 132 图 TCP 巡游与日志修复（进行中，未通过验收）
+
+- 新增 `:server:d2gs:headlessMapTour`，独立校验 1.10f LevelId 1–132（含所有支线），
+  模拟客户端执行真实移动、普通门对象交互和 Warp；不连续段显式 staging。
+  失败后继续覆盖其余图，但失败保持计数且进程非零退出，不将跳图计为入口通过。
+  夹具生命 1000000，仅隔离地图移动与战斗平衡，怪物和碰撞保持启用。
+- 累计修复：A2–A5 原生 Level/LevelType/LvlPrest 常量、遗漏 Zone/地形导出，
+  native 网格尺寸替换与数组池容量污染，重叠 Zone 的 owner-scoped 地面寻路，
+  size2 十字/size3 方形及对角不切墙角，Pathfinder 提前消费路径点、动态单位碰撞与
+  新插入单位放置，地面施法无实体目标的 AI 日志崩溃，普通门真实交互和 deferred population。
+- 对照 D2MOO `DrlgMaze.cpp` 恢复 A5 六张冰洞的专用出口/支线/waypoint 分支：
+  114/116/119 采用原版 river/pool 单房间，113/115/118 执行 IceStuff；真实 MPQ 回归通过。
+- 修复 `D2Cmp` DT1 哈希引用链只保留首尾帧及碰撞桶遗漏，完整保留交错动画帧；
+  pass16/pass17 未再出现 `Animating tiles missing`，未采用删告警或伪造动画帧的规避。
+- 修复异步 DS1 尚未加载时城镇 preset source 不可用，恢复 A2–A5 NPC 同源去重；
+  同源城镇 raw 静态对象由兼容路径唯一创建，避免重复对象碰撞。
+- pass17（seed12345、100Hz 加速诊断）完整结束：`planned=132 visited=131 walks=183
+  transitions=57 detachedJumps=51 failures=23 result=FAIL`。未分配的 74 神秘避难所已
+  增加任务传送门目标的必需 Zone 分配；其余失败涉及动态堵路、A1 monastery seamless
+  marker、101→102 接近点与 58/85 玩家落点。不能称作全图完成或正常速率验收通过。
+- pass18 新修复：测试器对齐服务端 1 格内点击停止契约，并为 Warp 接近点留 1.5 格余量；
+  动态目标重新采样、对角动态足迹一致化和有限重试；玩家 Warp 落点加入 player-only
+  terrain mask，并预加载候选房间后重新检查；失败诊断增加 Vis/Warp/override/入口局部网格。
+- 验证命令：`:core:mapRegression`、`:core:test` 定向 AIStepper/DynamicUnitCollisionSystem/
+  Pathfinder/VelocityAdder/WarpArrivalCollision/NativeMonPlace/PlayerGroundPath/
+  NativeObjectOperateTable 与 native monastery metadata，以及 `:server:d2gs:test
+  --tests com.riiablo.server.d2gs.MapTourProbeTest --no-daemon`：129 + 41 + 2 项，
+  0 失败、0 错误、0 跳过，`BUILD SUCCESSFUL`。
+- pass18 完整结束：`planned=132 visited=132 walks=189 transitions=60 detachedJumps=52
+  failures=19 result=FAIL`；74 神秘避难所实际入图和移动通过，仍不是无错验收。
+- pass19 已通过自动回归 134 + 27 + 4 项：保留静态 Warp/Object 所属 Zone，A1 seamless marker 采用原生 Orth
+  连接房边沿锚点；预热创建对象即时同步碰撞；A3 接近点按玩家 size2/真实交互范围检查。
+  长路线仅采样近处动态占位、逐段使用生产碰撞；新增 focus 模式并显式标记非全图验收。
+- 用户授权真实 TCP 战斗清障：巡游角色使用原生 spear、增强自身命中/物理伤害的移动夹具，
+  不改怪物生命、碰撞或死亡/掉落流程，不发送角色位置包；仅附近敌对可击杀怪物，拒绝
+  NPC/宠物/转换单位/隔墙目标，日志分别记堵路、生命变化、TCP死亡确认及寻路恢复。
+- pass19 focus：10 入图、3 失败（26/85/109），27→28、32→33、101→102 通过，
+  真实 TCP 确认 1 次堵路怪死亡；pass20 focus：19 入图、5 失败（26/109/12/55/60），
+  85 落点通过、110→111 通过、4 次真实战斗清障。两者均仅为定向诊断，不算完整验收。
+- pass20 修复门接近点/点击停止容差；A3 兼容任务对象在落点选择前创建并即时登记碰撞，
+  优先保留 deferred 原生任务箱，首次 subscription 前也不重复创建。Harrogath runtime
+  出口锚定 DrlgRoomTile.cpp 生成的主门对象，不再使用全城矩形中心。
+- pass21 已验证：依 D2Collision.cpp `sub_6FD413E0` 导出生成时实际选中的 DT1 5×5
+  flags 及 native PRESET/WALL/MISSILE_BARRIER 标志，避免渲染层重抽变体污染碰撞；
+  真实近战死亡后等待生产 action-lock 结束，再发送新的移动请求。
+- pass21 focus：11 入图、2 失败（26/55）；109→110、110→111、12→16 真实入口通过。
+  自动回归 136 + 38 + 4 项全部通过。
+- pass22 全图：`planned=132 visited=132 coverage=COMPLETE_ACT_RANGE walks=194
+  transitions=62 detachedJumps=53 combatKills=35 failures=16 result=FAIL`。失败为
+  26/28/35/36/55/56/57/58/46/76/87/104/105/107/113/117，尚未达到无错要求。
+- pass23 修复：DrlgMaze.cpp 的 MergeMazeRooms 使用双向 RoomEx orth，修正误接到
+  整个 Level box；保留无 floor 图像但有原生 wall/roof 碰撞的精确 mask，只有完全无导出
+  数据的格子才保持 void 阻挡。普通门留一格点击停止余量；26 的最近静态连通接近点
+  距离大门约 36 格，并非扩大交互范围可解决。长路线允许以静态规划接近动态堵路，但实际移动仍走生产
+  碰撞；清障/实际前进重置连续失败次数，另设 128 次恢复上限。
+- pass22 暴露巡游存档 HP 字段无法保存百万生命夹具，后段多次真实死亡；pass23 改为
+  D2S 加载后设置玩家 HP/maxHP，并打印/断言实际浮点 HP，不改变怪物伤害或死亡流程。
+  新增真实 MPQ preset/map 一致性与碰撞诊断回归，排除旧 PMap 猜测。
+- pass23 focus：20 入图、8 失败、4 次真实 TCP 清障；pass24 focus：17 入图、8 失败、
+  14 次清障。pass25 focus：17 入图、8 失败、35 次清障；失败仍为 26/28/55/57/58/76/105/107。
+- 已用真实 MPQ 复现 level 60 首次导出与邻房初始化后的第二次导出碰撞不一致；
+  `DrlgExport` 改为先初始化全部 RoomEx、再导出，快照一致性回归通过。55 不存在该差异，
+  不把时序问题误称为所有断路的根因。pass25 自动回归 139 + 40 + 6 项通过。
+- 对照 D2MOO `ObjectsIds.h`，修正墓穴门 91/92、安达利尔门 47、宫殿门 290–295、
+  蛆虫门 229/230 的错误 Java 常量。55 走廊先前生成了 74 活板门而非普通墓穴门，
+  对象碰撞堵住原生三格开口，无法通过普通门操作清障。
+- 对照 `DRLGROOMTILE_LinkedTileDataManager`，普通地板不再因邻房链接重抽 DT1，
+  只替换 style=30/sequence=0 占位地板；新增回归先复现失败、修复后通过。
+- pass26 完整结果：`planned=132 visited=132 walks=202 transitions=70 detachedJumps=53
+  combatKills=83 failures=8 result=FAIL`；失败为 26/28/29/31/63/76/105/107。
+  55→59、57→60 连续入口通过，58 落点不再 blocked，A5 全段本轮未报失败。
+  修复前回归 141 + 4 + 6 项通过，尚不宣称无错。
+  后续待验证：26 采用原版 Tamoe 道路 +(27,13) tiles 的分段入口；保留 UNIT_TILE 的精确
+  子格坐标，避免取整后重复应用 LvlWarp offset；门规划不被远处怪物隐藏；A4 seamless
+  出口按原生 RoomEx orth/户外共享边沿建立，原生地形不再用矩形中心伪造出口。
+- 运行期间另对照 `DrlgDrlgWarp.cpp` 确认历史命名
+  `GetWarpDestinationFromArray` 返回 `WarpN`（LvlWarp.Id），并非 `VisN`（目标 LevelId）；
+  已修复 Java 查询及 A2–A5 UNIT_TILE 映射，补充 seamless Warp=-1 不占入口中心槽的回归。
+  堵路战斗增加权威怪物 class/size/HP/近战范围及快照删除状态诊断，并等待活动 TCP baseline，
+  避免旧地图的 recycled entity id 删除快照取消新怪战斗或误算死亡；上述修改尚未编译验证。
+- pass27 回归显式使用 `D2_HOME=G:\BaiduNetdiskDownload\Diablo II 1.10F`；机器默认
+  `Diablo II` 目录的 patch_d2.mpq 不同，之前回归计数不能单独视为指定 1.10F 资源验收。
+  pass26 TCP 巡游已通过 d2Home 参数使用指定 1.10F；新增 seam 测试的 byte 类型错误已修复。
+- pass27 指定 1.10F 自动回归 145 + 59 + 7 项通过（0失败/错误/跳过）。真实 A4 orth
+  双向世界坐标一致性通过：105→106 source=[160,0]、reverse=[160,320]；107→108
+  source=[300,0]、reverse=[300,600]。15图 focus TCP 巡游已启动，结果待定。
+- pass27 focus 已实际确认26→27、27→28及军营真实开门/击杀；随后因测试器在
+  DOOR_APPROACH路径为空时递归重选同门而StackOverflowError退出，未完成15图，不作为通过。
+  修复为门接近段直接进入有界战斗/重规划，新增禁止递归选择的回归；同时禁止原生Warp
+  失败后改落地图中心，删除A5未检查碰撞的原点回退。这两项尚待pass28验证。
+- 后续 focus：pass28 15/15进入、4失败（28/31/63/107），27次真实击杀；pass31 13/13
+  进入、2失败（31/107），7次击杀；pass32 4/4进入、1失败（31），107→108通过；
+  pass33 31→32专项2/2进入、0失败、3次击杀，仍不替代完整132图验收。
+- 新修复：A2/A5兼容入口不再写入精确native UNIT_TILE坐标，避免恢复兼容标记覆盖真实
+  DS1入口；门接近途中激活新房间时回到外层有界重新选门；连续恢复上限32、总恢复128，
+  允许真实击杀房间pack。A4 seam优先在原生边沿内两tile的free footprint选点，避免边缘lip。
+  combat循环等权威近战范围就绪后出手；不改变伤害公式、不删怪、不关闭碰撞。
+- pass34全套回归通过，但完整100Hz巡游最终为132/132进入、205次移动、71次入口通过、
+  75次真实TCP击杀、7失败（28/40/47/48/44/76/107），尚未验收。31→32通过；
+  106→107后落点仅静态连通43格，不能以pass32直接staging107后通过替代连续入口验证。
+- pass35对照D2MOO `LevelsTbls.cpp` 恢复LvlWarp direction=b的双向通配和首行匹配；
+  原先请求l/r时漏掉b记录，导致真实UNIT_TILE缺失。重复LvlWarp.Id通过RoomEx的
+  HAS_WARP slot flags消歧，不再全部绑定首个Vis槽；新增自动回归。
+  sample探针等待从5秒改30秒并保留异常链，Zone回收清理seam元数据。
+- pass35指定1.10F自动回归已通过；真实MPQ蛆虫48/49入口单位已重新导出。
+  24图连续链focus验证进行中；最终全132图100Hz/25Hz验收仍待执行。
+- pass35 focus最终24/24进入、7次入口通过、4次真实击杀、5失败（40/47/48/44/107）；
+  28→29、31→32通过，A4连续106入107仍失败。
+- pass36恢复工作：死机前回归没有结束，不能算通过；源码完整保留。重启后单worker
+  真实MPQ定向3项通过，A2新增DrlgMaze.cpp下水道入口/下一层/waypoint/Radament和古代通道
+  宝箱房分支，47/48/49/65全部声明入口的UNIT_TILE导出断言通过。
+- A4真实WarpMesa楼梯UNIT_TILE已定位；D2MOO `AStar.cpp:211`只检查候选完整pattern，
+  Java额外侧向完整footprint扩大了阻挡。真实MPQ复现原生候选规则42305格连通、旧规则43格，
+  正与连续入口失败一致。修正生产MapGraph和巡游BFS，保持目标完整footprint和生产移动碰撞，
+  新增窄斜通道/桥端连通回归；完整回归和连续链TCP验证待完成。
+- pass36指定1.10F单worker完整地图回归147项、定向寻路/碰撞/Warp/MPQ测试41项、
+  服务端8项全部通过（0失败/错误/跳过）；18图focus连续链巡游进行中，不能算全图验收。
+- 下一步：逐项修复重测，直到 132 图及其实际移动/入口全部通过；
+  最终另跑 25Hz 正常速率和另一台电脑渲染验证。加载记录包含怪物队列、已生成怪物/
+  对象/地面物品计数，但目前不能证明完整原版 population、pack/minion 或宝箱掉落正确。
+- 提交/推送状态：累计工作从 `20b0c587` 建立地图巡游修复检查点，准备commit/push；
+  build 日志保留本地、不纳入 Git。所有巡游停止后再编译，禁止覆盖运行中的 runtime JAR。
+
 ## 2026-10-13 Act II/III 城镇 NPC 实体投影回归
 
 - [x] 新增 A2 11 名、A3 7 名城镇 NPC 的原生 `UNIT_MONSTER` 投影回归，验证完整

@@ -5,6 +5,11 @@ import com.riiablo.codec.excel.Objects;
 
 /** Stateful lifecycle categories from D2Game's {@code gpObjOperateFnTable}. */
 public final class NativeObjectOperateTable {
+  /** Ordinary doors alter shared collision and must be operated by the server. */
+  public static boolean isNetworkDoor(com.riiablo.codec.excel.Objects.Entry base) {
+    Lifecycle lifecycle = resolve(base, null);
+    return lifecycle == Lifecycle.TOGGLE_DOOR || lifecycle == Lifecycle.ONE_WAY_DOOR;
+  }
   public enum Lifecycle {
     NONE,
     ANIMATED_CONTAINER,

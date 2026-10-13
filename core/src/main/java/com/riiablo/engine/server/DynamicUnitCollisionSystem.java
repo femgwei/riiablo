@@ -36,6 +36,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.NativeUnitFlags> mNativeUnitFlags;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
+  private final com.badlogic.gdx.utils.IntSet newUnits = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription units;
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
@@ -53,6 +54,14 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected void initialize() {
     units = world.getAspectSubscriptionManager().get(
         Aspect.all(Class.class, Position.class, Size.class, Velocity.class));
+    units.addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
+      @Override public void inserted(IntBag entities) {
+        for (int i = 0; i < entities.size(); i++) newUnits.add(entities.get(i));
+      }
+      @Override public void removed(IntBag entities) {
+        for (int i = 0; i < entities.size(); i++) newUnits.remove(entities.get(i));
+      }
+    });
   }
 
   @Override
@@ -83,6 +92,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     // occupied and leave pathfinding with no valid first step.
     insertUnits(entities, true, relocateOverlaps);
     insertUnits(entities, false, relocateOverlaps);
+    newUnits.clear();
   }
 
   private void insertUnits(IntBag entities, boolean players, boolean relocateOverlaps) {
@@ -93,14 +103,15 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int x = Map.round(position.position.x);
       int y = Map.round(position.position.y);
       int size = footprint(entityId);
-      if (grid.isFree(entityId, -1, x, y, size)) {
+      if (grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) {
         grid.put(entityId, x, y, size);
       } else if (isOwnedCompanionOverlappingOwner(entityId)) {
         // Keep the real position in the collision index. MercenaryFollowSystem
         // will install a native Escape path; changing the coordinate here
         // produces a visible one-cell teleport when the player approaches.
         grid.put(entityId, x, y, size);
-      } else if (!relocateOverlaps || !relocateOverlappingUnit(entityId, x, y, size)) {
+      } else if ((!relocateOverlaps && !newUnits.contains(entityId))
+          || !relocateOverlappingUnit(entityId, x, y, size)) {
         // Keep a deterministic footprint even when a malformed/reduced map
         // has no walkable relocation candidate; later ticks can retry after
         // the room topology finishes loading.
@@ -128,7 +139,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           int x = originX + dx;
           int y = originY + dy;
           if (!staticWalkable(zone, x, y, size)) continue;
-          if (!grid.isFree(entityId, -1, x, y, size)) continue;
+          if (!grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) continue;
           position.position.set(x, y);
           if (mBox2DBody != null && mBox2DBody.has(entityId)
               && mBox2DBody.get(entityId).body != null) {
@@ -159,16 +170,26 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         blockerFor(moverId));
   }
 
+  /** Warp/staging queries must test the destination, before changing the wrapper. */
+  public boolean isFreeForPath(Map.Zone destination, int moverId, int targetId,
+      int x, int y, int size) {
+    NativePathProfile profile = nativePathProfile(moverId);
+    int ownerId = ownedCompanionOwner(moverId);
+    return !enabled || grid.isFree(moverId, targetId, x, y, size, entityId ->
+        entityId != ownerId && sharesCollisionSpace(destination, entityId)
+            && blocksNativePath(profile, isPetPresence(entityId)));
+  }
+
   /** Landing/placement query: every indexed unit blocks, including the owner. */
   public boolean isFreeForLanding(int moverId, int x, int y, int size) {
     return !enabled || grid.isFree(moverId, Engine.INVALID_ENTITY, x, y, size,
-        entityId -> true);
+        sameSpaceBlocker(moverId));
   }
 
   /** Reserves a landing immediately so later pets in this tick see it. */
   public boolean tryLand(int moverId, int x, int y, int size) {
     if (!enabled || !hasPresence(moverId)) return true;
-    return grid.move(moverId, Engine.INVALID_ENTITY, x, y, size, entityId -> true);
+    return grid.move(moverId, Engine.INVALID_ENTITY, x, y, size, sameSpaceBlocker(moverId));
   }
 
   /** Transfers a unit to a destination without pushing another unit. */
@@ -233,7 +254,28 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     NativePathProfile profile = nativePathProfile(moverId);
     int ownerId = ownedCompanionOwner(moverId);
     return entityId -> entityId != ownerId
+        && sharesCollisionSpace(moverId, entityId)
         && blocksNativePath(profile, isPetPresence(entityId));
+  }
+
+  private UnitCollisionGrid.UnitBlocker sameSpaceBlocker(int moverId) {
+    return entityId -> sharesCollisionSpace(moverId, entityId);
+  }
+
+  private boolean sharesCollisionSpace(int firstId, int secondId) {
+    MapWrapper first = mMapWrapper.get(firstId), second = mMapWrapper.get(secondId);
+    if (first == null || first.zone == null || second == null || second.zone == null) return true;
+    if (first.map != second.map) return false;
+    return first.zone == second.zone || first.map != null
+        && first.map.areZonesAdjacent(first.zone, second.zone);
+  }
+
+  private boolean sharesCollisionSpace(Map.Zone destination, int entityId) {
+    MapWrapper other = mMapWrapper.get(entityId);
+    if (destination == null || other == null || other.zone == null) return true;
+    if (destination == other.zone) return true;
+    return other.map != null && other.map.getZones().contains(destination, true)
+        && other.map.areZonesAdjacent(destination, other.zone);
   }
 
   /** The dynamic part of D2Common's nMoveTestCollisionMask. */

@@ -12,7 +12,8 @@ class Act2ArcaneSanctuaryTopologyTest {
   @Test
   void nativeRoomCountAndBranchForksArePreserved() {
     Act2ArcaneSanctuaryTopology topology =
-        Act2ArcaneSanctuaryTopology.generate(NativeLevelSeed.forLevel(123, 75));
+        Act2ArcaneSanctuaryTopology.generate(NativeLevelSeed.forLevel(123,
+            com.d2moo.common.drlg.D2LevelIds.LEVEL_ARCANESANCTUARY));
     assertEquals(1 + 4 * 15, topology.rooms().size());
     assertEquals(4 * 15, topology.edges().size());
     Set<Integer> roomIds = new HashSet<>();

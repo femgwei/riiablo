@@ -107,10 +107,13 @@ public class MapGraph {
     tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x    , src.y + 1);
     tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x + 1, src.y    );
 
-    tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x - 1, src.y - 1);
-    tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x - 1, src.y + 1);
-    tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x + 1, src.y - 1);
-    tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x + 1, src.y + 1);
+    for (int dy : new int[] {-1, 1}) for (int dx : new int[] {-1, 1}) {
+      // D2MOO AStar.cpp PATH_AStar_ExploreChildren tests the complete
+      // collision pattern at the candidate only. Testing that pattern at
+      // both orthogonal centres as well expands SMALL's cross into an
+      // unintended swept square and disconnects the River's diagonal stairs.
+      tryNeighbor(neighbors, flags, size, obstacle, moverId, targetId, src.x + dx, src.y + dy);
+    }
     return neighbors;
   }
 
@@ -132,14 +135,7 @@ public class MapGraph {
 
   public boolean isWalkable(int x, int y, int flags, int size,
       Obstacle obstacle, int moverId, int targetId) {
-    int radius = Math.max(0, size - 1);
-    for (int dy = -radius; dy <= radius; dy++) {
-      for (int dx = -radius; dx <= radius; dx++) {
-        int cellX = x + dx;
-        int cellY = y + dy;
-        if (map.isBlockedForPath(cellX, cellY, flags, canOpenDoors)) return false;
-      }
-    }
+    if (map.isBlockedForPath(x, y, flags, size, canOpenDoors)) return false;
     return obstacle == null || obstacle.isFree(moverId, targetId, x, y, size);
   }
 

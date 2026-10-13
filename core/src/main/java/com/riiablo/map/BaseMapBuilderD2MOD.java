@@ -9,6 +9,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
@@ -288,6 +289,9 @@ public class BaseMapBuilderD2MOD {
 
       @Override
       public void generate(Zone zone, DT1s dt1s, int tx, int ty) {
+        // Native terrain and collision replace compatibility layers later.
+        // Do not create live monsters against a floor that will be discarded.
+        if (zone.nativeTileGrid() != null) return;
         if (DEBUG_BUILD && dt1s == null) {
           Gdx.app.error(TAG, String.format("generate: dt1s is null for zone %s (LevelType=%d)", 
               zone.level.LevelName, zone.level.LevelType));
@@ -367,6 +371,37 @@ public class BaseMapBuilderD2MOD {
         }
       }
       
+      @Override
+      public void finish(Zone zone) {
+        if (zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()
+            || zone.isTown() || finalSocket != null || monsters == null || monsters.length == 0) return;
+        java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
+        for (Map.RoomEx room : zone.getRoomsEx()) {
+          // D2GAME_PopulateRoom samples one population cell per 3x3 subtiles.
+          for (int y = room.y + 1; y < room.y + room.height - 1; y += 3) {
+            for (int x = room.x + 1; x < room.x + room.width - 1; x += 3) {
+              if (!NativeMonsterRegion.densityRoll(NativeMonsterRegion.density(zone.level, zone.diff),
+                  rng.nextInt(100000))) continue;
+              MonStats.Entry monster = monsters[rng.nextInt(monsters.length)];
+              if (monster == null || !NativeMonsterRegion.sparsePopulationRoll(
+                  monster.sparsePopulate, rng.nextInt(100))) continue;
+              int min = NativeDataTables.minGroup(monster), max = NativeDataTables.maxGroup(monster);
+              if (NativeMonsterRegion.isSingleMemberNormalGroup(monster.BaseId, monster.Id)) min = max = 1;
+              int count = min == max ? max : min + rng.nextInt(max - min + 1);
+              MonStats2.Entry stats = Riiablo.files.monstats2.get(monster.MonStatsEx);
+              int size = stats == null ? 2 : Math.max(1, stats.SizeX);
+              for (int member = 0; member < count; member++) {
+                int px = x + rng.nextInt(5) - 2, py = y + rng.nextInt(5) - 2;
+                if (!room.contains(px, py) || zone.map.isBlockedForPath(zone, px, py,
+                    com.riiablo.engine.server.NativeGroundPathProfile.forUnit(false, monster).terrainFlags,
+                    size, monster.opendoors)) continue;
+                room.addMonsterSpawn(monster.hcIdx, px, py);
+              }
+            }
+          }
+        }
+      }
+
       /**
        * 根据网格位置和 Dt1Mask 选择地形瓦片
        * 参考 D2MOD: DRLGOUTPLACE_CreateOutdoorRoomEx

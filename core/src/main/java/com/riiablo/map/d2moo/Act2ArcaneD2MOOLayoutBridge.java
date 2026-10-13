@@ -32,7 +32,7 @@ public final class Act2ArcaneD2MOOLayoutBridge {
   private Act2ArcaneD2MOOLayoutBridge() {}
 
   /**
-   * Generates only Level 75 with D2MOO's maze code and projects its native
+   * Generates only Level 74 with D2MOO's maze code and projects its native
    * RoomEx rectangles/preset ids into an existing Zone.  Tile rendering keeps
    * the current Zone pipeline until the exported DS1 tile bridge is enabled.
    */
@@ -72,24 +72,23 @@ public final class Act2ArcaneD2MOOLayoutBridge {
           drlg, LEVEL_ARCANE, applier);
       int dt1Mask = com.d2moo.common.drlg.DrlgExport.collectLevelDt1Mask(
           drlg, LEVEL_ARCANE);
+      if (exportedFloors > 0) zone.setNativeTileGrid(grid, dt1Mask);
       com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
           new com.badlogic.gdx.utils.Array<>();
       int[] nativeWarpUnits = {0, 0};
       int[] objectCounts = {0, 0};
       int[] monsterCounts = {0, 0};
+      int[] exportedVis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, LEVEL_ARCANE);
+      int[] exportedWarps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, LEVEL_ARCANE);
       int presetUnits = com.d2moo.common.drlg.DrlgExport.exportLevelPresetUnits(
           drlg, LEVEL_ARCANE,
           (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
               externalEntity, sourceFile) -> {
             if (unitType == D2UnitTypes.UNIT_TILE) {
-              if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
-                for (int slot = 0; slot < 8; slot++) {
-                  if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
-                    zone.addNativeWarpMarker(slot, x, y);
-                    nativeWarpUnits[0]++;
-                    break;
-                  }
-                }
+              int slot = NativeWarpSlotResolver.resolve(level, exportedVis, exportedWarps, roomId, index);
+              if (slot >= 0) {
+                zone.addNativeWarpMarker(slot, x, y);
+                nativeWarpUnits[0]++;
               }
               nativeWarpUnits[1]++;
               return;
@@ -123,7 +122,6 @@ public final class Act2ArcaneD2MOOLayoutBridge {
                 ds1Raw, spawned, sourceFile, externalEntity));
           });
       if (exportedFloors > 0) {
-        zone.setNativeTileGrid(grid, dt1Mask);
         queueNativeMonsters(zone, exportedMonsters);
         zone.getNativeMonsters().addAll(exportedMonsters);
       }
@@ -218,7 +216,7 @@ public final class Act2ArcaneD2MOOLayoutBridge {
         ? null : Riiablo.files.SuperUniques.get(placement);
     if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size() - Riiablo.files.SuperUniques.size();
+      int suIndex = index - Riiablo.files.monstats.size();
       superUnique = Riiablo.files.SuperUniques.get(suIndex);
       if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     }

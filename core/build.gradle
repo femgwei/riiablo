@@ -168,10 +168,16 @@ task mapRegression(type: Test) {
     // object-collision tests live in the normal :core:test task and are not
     // part of the Act II–V map completion gate.
     includeTestsMatching 'com.riiablo.map.Act2*'
+    includeTestsMatching 'com.riiablo.map.Act1NativeOrthAnchorTest'
+    includeTestsMatching 'com.d2moo.common.drlg.DrlgMazeMergeTest'
+    includeTestsMatching 'com.d2moo.common.drlg.DrlgLinkedFloorTest'
+    includeTestsMatching 'com.riiablo.map.NativeDoorIdsTest'
     includeTestsMatching 'com.riiablo.map.Act3*'
     includeTestsMatching 'com.riiablo.map.Act4*'
     includeTestsMatching 'com.riiablo.map.Act5*'
     includeTestsMatching 'com.riiablo.map.NativeLevelSeedTest'
+    includeTestsMatching 'com.riiablo.map.MapTourPlanTest'
+    includeTestsMatching 'com.riiablo.map.NativeExpansionIdsTest'
     includeTestsMatching 'com.riiablo.map.RoomExAdjacencyTest'
     includeTestsMatching 'com.riiablo.map.ZoneCoordinateAlignmentTest'
     includeTestsMatching 'com.riiablo.map.CaveEntranceDs1VisibilityTest'

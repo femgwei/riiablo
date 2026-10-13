@@ -150,12 +150,14 @@ public class AIStepper extends IteratingSystem {
     String marker = melee ? "[MONSTER_MELEE]"
         : casting.skillId == SkillCodes.attack ? "[MONSTER_ACTION]" : "[MONSTER_SKILL]";
     Position sourcePosition = mPosition.get(entityId);
-    Position targetPosition = mPosition.has(casting.targetId) ? mPosition.get(casting.targetId) : null;
+    Position targetPosition = casting.targetId >= 0 && mPosition.has(casting.targetId)
+        ? mPosition.get(casting.targetId) : null;
     float dx = targetPosition != null ? targetPosition.position.x - sourcePosition.position.x : Float.NaN;
     float dy = targetPosition != null ? targetPosition.position.y - sourcePosition.position.y : Float.NaN;
     float distance = targetPosition != null ? sourcePosition.position.dst(targetPosition.position) : Float.NaN;
     int sourceSize = mSize.has(entityId) ? mSize.get(entityId).size : -1;
-    int targetSize = mSize.has(casting.targetId) ? mSize.get(casting.targetId).size : -1;
+    int targetSize = casting.targetId >= 0 && mSize.has(casting.targetId)
+        ? mSize.get(casting.targetId).size : -1;
     int meleeRange = monster.monstats2 != null ? monster.monstats2.MeleeRng : -1;
     log.info("{} phase=decision entity={} monster={} ai={} skill={} currentMode={} "
             + "requestedMode={} target={} replaced={} resurrected={} resurrectedBy={} playerRevive={} "

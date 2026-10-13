@@ -23,6 +23,28 @@ run {
   setIgnoreExitValue(true)
 }
 
+tasks.register('headlessMapTour', JavaExec) {
+  group = 'verification'
+  description = 'Walks a simulated protocol player through all 1.10f Act I-V levels and side areas.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--map-tour', '--test-timeout', '60',
+       '--tour-first-act', project.findProperty('tourFirstAct') ?: '1',
+       '--tour-last-act', project.findProperty('tourLastAct') ?: '5',
+       '--tour-walk-seconds', project.findProperty('tourWalkSeconds') ?: '45',
+       '--tour-rate', project.findProperty('tourRate') ?: '25',
+       '--tour-output', rootProject.file(project.findProperty('tourOutput')
+           ?: 'server/d2gs/build/map-tour').absolutePath
+  def home = project.findProperty('d2Home') ?: System.getenv('D2_HOME')
+  if (home) args '--home', home
+  if (project.hasProperty('tourSeed')) args '--seed', project.property('tourSeed')
+  if (project.hasProperty('tourDifficulty')) args '--difficulty', project.property('tourDifficulty')
+  if (project.hasProperty('tourLevels')) args '--tour-levels', project.property('tourLevels')
+  if (project.hasProperty('tourVerbose')) args '--verbose'
+  ignoreExitValue = false
+}
+
 tasks.register('headlessCombat', JavaExec) {
   group = 'verification'
   description = 'Runs a windowless D2GS plus one real protocol client combat smoke test.'

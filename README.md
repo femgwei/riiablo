@@ -103,6 +103,37 @@ while `F12` can be used in-game to disable the debug UI.
 - Environment variables `D2_HOME` and `D2_SAVE` can be used if you are a pluggy
 user.
 
+# Automated map tour (Diablo II 1.10f)
+
+Run the map regression tests and a resource-backed Act I–V protocol tour on
+Windows with your own original MPQ files:
+
+```powershell
+.\gradlew.bat :core:mapRegression --no-daemon
+.\gradlew.bat :server:d2gs:headlessMapTour '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' '-PtourOutput=server/d2gs/build/map-tour/verification' --no-daemon
+```
+
+The itinerary independently requires all 132 playable 1.10f levels, including
+side dungeons. A simulated client sends real movement, door and Warp requests;
+disconnected segments are staged explicitly. A failed map remains a failure
+even when staging allows subsequent maps to run. The task exits nonzero on
+failures or incomplete coverage. Inspect `map-tour.log`, per-level collision
+dumps and the console log; `visited` alone does not mean every map passed.
+
+Use `-PtourFirstAct=2 -PtourLastAct=5` for a partial diagnostic. Default speed
+is 25 fixed simulation ticks per wall-clock second. `-PtourRate=100` accelerates
+diagnosis but does not replace a normal-rate acceptance run. The fixture has
+extra life and a boosted melee profile to isolate map movement from combat
+balance; monsters remain active. Nearby hostile blockers can be cleared with
+real TCP attacks. Combat logs require observed life/death evidence; recovery
+never deletes monsters or teleports the player. NPCs and pets are excluded.
+Use `-PtourLevels=26,27,28` for an ordered focused diagnostic. Its log is marked
+`FOCUSED_DIAGNOSTIC` and is not full-Act acceptance, even when it passes.
+Load records include native terrain, monster queues, spawned monsters/objects
+and ground-item counts. These are current observations, not a complete
+monster-population or loot correctness audit. This headless tour also does not
+replace rendered-client verification on another computer.
+
 # Tools
 Aside from the main tools below, other tools are contained within `:tools`. To
 view all available tools, use `gradlew :tools:projects -q`. `--help` is your

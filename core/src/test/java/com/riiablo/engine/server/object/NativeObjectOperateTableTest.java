@@ -17,6 +17,16 @@ import com.riiablo.map.NativePresetObjectResolver;
 import org.junit.jupiter.api.Test;
 
 class NativeObjectOperateTableTest {
+  @Test void ordinaryDoorsUseAuthoritativeNetworkInteraction() {
+    com.riiablo.codec.excel.Objects.Entry door = new com.riiablo.codec.excel.Objects.Entry();
+    door.OperateFn = 8;
+    org.junit.jupiter.api.Assertions.assertTrue(NativeObjectOperateTable.isNetworkDoor(door));
+    door.OperateFn = 18;
+    org.junit.jupiter.api.Assertions.assertTrue(NativeObjectOperateTable.isNetworkDoor(door));
+    door.OperateFn = 1;
+    org.junit.jupiter.api.Assertions.assertFalse(NativeObjectOperateTable.isNetworkDoor(door));
+    org.junit.jupiter.api.Assertions.assertFalse(NativeObjectOperateTable.isNetworkDoor(null));
+  }
   @Test
   void classifiesAct1ContainersFromTheNativeOperateTable() {
     int[] animated = {1, 3, 4, 5, 6, 14, 30, 33};

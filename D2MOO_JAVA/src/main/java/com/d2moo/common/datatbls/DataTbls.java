@@ -102,9 +102,18 @@ public class DataTbls {
      * @return 传送点文本记录，如果不存在返回 null
      */
     public static D2LvlWarpTxt getLvlWarpTxtRecordFromLevelIdAndDirection(int nLevelId, char szDirection) {
-        return lvlWarpByLevelAndDirection == null
-                ? null
-                : lvlWarpByLevelAndDirection.get(warpKey(nLevelId, szDirection));
+        // LevelsTbls.cpp 0x6FD61DE0: either the requested direction or the
+        // record's direction may be 'b'. Preserve the first matching TXT row,
+        // rather than preferring a later exact match over a bidirectional row.
+        if (lvlWarpTxtCache == null) return null;
+        for (D2LvlWarpTxt record : lvlWarpTxtCache) {
+            if (record == null || record.getDwLevelId() != nLevelId) continue;
+            String direction = record.getSzDirection();
+            if (direction != null && !direction.isEmpty()
+                    && (szDirection == 'b' || direction.charAt(0) == 'b'
+                        || direction.charAt(0) == szDirection)) return record;
+        }
+        return null;
     }
     
     /**

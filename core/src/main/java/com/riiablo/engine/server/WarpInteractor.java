@@ -167,20 +167,15 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
     prewarmDestination(dst, dstWarpPos);
     if (!findArrivalAvoidingUnits(src, dst, dstWarpPos, unitSize, 50, tmpVec2)) {
-      // Synthetic A5 markers may inherit a LvlWarp offset that places the
-      // entity just outside a zero-padded/reduced Zone export. Retry from the
-      // Zone interior so the authoritative transition remains usable.
+      // Only reduced compatibility terrain may recover from a synthetic
+      // marker at its interior. A native reverse endpoint must remain the
+      // arrival anchor: otherwise a broken entrance becomes a silent jump.
       int centerX = dst.x() + Math.max(1, dst.width() / 2);
       int centerY = dst.y() + Math.max(1, dst.height() / 2);
       Vector2 interior = new Vector2(centerX, centerY);
-      if (dst.contains(centerX, centerY)
+      if (allowsCompatibilityArrivalFallback(dst) && dst.contains(centerX, centerY)
           && findArrivalAvoidingUnits(src, dst, interior, unitSize, 0, tmpVec2)) {
         dstWarpPos = tmpVec2;
-      } else if (dst.level != null && dst.level.Id >= 109 && dst.level.Id <= 132) {
-        // Native A5 barricade exports can be metadata-only (zero-sized
-        // collision grid). Keep the level transition authoritative and place
-        // the player at its origin rather than rejecting the Warp outright.
-        dstWarpPos = tmpVec2.set(dst.x(), dst.y());
       } else {
       Gdx.app.error(TAG, "Warp destination has no free coordinates: source="
           + source.level.LevelName + "(" + source.level.Id + ")"
@@ -208,6 +203,10 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     tmpVec2.set(arrivalX, arrivalY).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
     actioneer.moveTo(src, tmpVec2);
     return true;
+  }
+
+  static boolean allowsCompatibilityArrivalFallback(Map.Zone destination) {
+    return destination != null && destination.nativeTileGrid() == null;
   }
 
   /** Uses the exact paired endpoint registered for an ordinary player TP. */
@@ -360,16 +359,30 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         && destination.hasNativeRoomTopology()) {
       roomActivation.prewarmZoneAt(destination, anchor.x, anchor.y);
     }
+    com.riiablo.engine.server.quest.Act3QuestSystem quests = world.getSystem(
+        com.riiablo.engine.server.quest.Act3QuestSystem.class);
+    if (quests != null) quests.prepareZoneQuestObjects(destination);
     if (dynamicCollision != null) dynamicCollision.rebuildNow();
   }
 
   private boolean isArrivalFree(int moverId, Map.Zone destination, int x, int y,
       int unitSize, Vector2 result) {
+    int mask = arrivalCollisionMask(mPlayer != null && mPlayer.has(moverId));
     if (!destination.findFreeCoordinates(tmpVec2.set(x, y), unitSize, 0,
-        true, result)) return false;
+        mask, true, result)) return false;
+    // A fallback coordinate can belong to a different room from the reverse
+    // Warp. Materialize its sight ring before committing, not one tick after
+    // the player has been placed inside a newly created stair/chest footprint.
+    prewarmDestination(destination, result);
+    if (!destination.findFreeCoordinates(tmpVec2.set(x, y), unitSize, 0,
+        mask, true, result)) return false;
     if (dynamicCollision != null
-        && !dynamicCollision.isFreeForPath(moverId, -1,
+        && !dynamicCollision.isFreeForPath(destination, moverId, -1,
             Map.round(result.x), Map.round(result.y), unitSize)) return false;
     return true;
+  }
+
+  static int arrivalCollisionMask(boolean player) {
+    return (player ? NativeGroundPathProfile.PLAYER : NativeGroundPathProfile.MONSTER).terrainFlags;
   }
 }

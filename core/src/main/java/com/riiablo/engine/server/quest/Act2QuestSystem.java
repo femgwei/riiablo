@@ -42,12 +42,8 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 @Wire(failOnNull = false)
 public class Act2QuestSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Act2QuestSystem.class);
-  /**
-   * Project-facing 1.10f level id. The imported D2LevelIds table historically
-   * aliases Arcane Sanctuary to Duriel's Lair (74), while Levels.txt and the
-   * Java map builders correctly use 75.
-   */
-  static final int ARCANE_SANCTUARY_LEVEL = 75;
+  /** Native 1.10f LevelsIds.h ordinal; Kurast Docks starts at 75. */
+  static final int ARCANE_SANCTUARY_LEVEL = D2LevelIds.LEVEL_ARCANESANCTUARY;
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -105,9 +101,7 @@ public class Act2QuestSystem extends PassiveSystem {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.HORADRIC_ORIFICE, "Horadric Orifice", 42);
     }
-    // Riiablo's level table keeps Arcane Sanctuary at 75 (Act III starts at
-    // 76). Preserve that project-facing convention rather than using the
-    // legacy D2MOO alias which shares the Duriel id.
+    // Native Arcane ordinal; 75 is Kurast Docks, not an Act II quest map.
     if (levelId == ARCANE_SANCTUARY_LEVEL) {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.ARCANE_SANCTUARY_TOME, "Arcane Sanctuary Tome", 42);

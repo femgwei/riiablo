@@ -474,6 +474,84 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  static MapTourProbe.Sample headlessMapTourSample(int playerId, int nextLevel, boolean local) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) return null;
+    java.util.concurrent.CompletableFuture<MapTourProbe.Sample> result =
+        new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        result.complete(MapTourProbe.inspect(server.world, server.map, playerId, nextLevel, local));
+      } catch (RuntimeException e) {
+        result.completeExceptionally(e);
+      }
+    });
+    try {
+      return result.get(30, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Map tour probe interrupted", e);
+    } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Map tour probe unavailable: " + e, e);
+    }
+  }
+
+  static java.util.List<Vector2> headlessMapTourRoute(int playerId, Vector2 target) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<java.util.List<Vector2>> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try { result.complete(MapTourProbe.route(server.world, server.map, playerId, target)); }
+      catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour route planning failed", e);
+    }
+  }
+
+  static MapTourProbe.Sample headlessMapTourDoor(int playerId, Vector2 target) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<MapTourProbe.Sample> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try { result.complete(MapTourProbe.door(server.world, server.map, playerId, target)); }
+      catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour door planning failed", e);
+    }
+  }
+
+  static MapTourProbe.Sample headlessMapTourBlocker(int playerId, Vector2 target) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<MapTourProbe.Sample> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try { result.complete(MapTourProbe.blocker(server.world, server.map, playerId, target)); }
+      catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(5, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour blocker inspection failed", e);
+    }
+  }
+
+  static String headlessMapTourDiagnosis(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<String> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try { result.complete(MapTourProbe.diagnose(server.world, server.map, playerId)); }
+      catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour diagnostic failed", e);
+    }
+  }
+
   static Vector2 headlessLevelPosition(int levelId) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
@@ -600,6 +678,18 @@ public class D2GS extends ApplicationAdapter {
         // The warp/zone event already carries the authoritative target Zone.
         Map.Zone zone = server.map.findZone(level);
         if (zone == null || zone.level == null || zone.level.Id != levelId) return;
+        if (Boolean.getBoolean("riiablo.d2gs.mapTour")) {
+          // Inspect the final object collision, not an empty pre-activation
+          // grid that can place the test player inside a newly created chest.
+          if (server.mapManager != null) server.mapManager.createNativeObjects(zone);
+          com.riiablo.engine.server.quest.Act3QuestSystem quests = server.world.getSystem(
+              com.riiablo.engine.server.quest.Act3QuestSystem.class);
+          if (quests != null) quests.prepareZoneQuestObjects(zone);
+          server.world.process();
+          destination = MapTourProbe.spawn(server.world, server.map, playerId, zone, destination);
+          if (destination == null) return;
+          server.world.getSystem(com.riiablo.engine.server.Pathfinder.class).findPath(playerId, null);
+        }
         position.position.set(destination);
         wrapper.set(server.map, zone);
         com.riiablo.engine.server.component.Box2DBody body = server.world
@@ -700,7 +790,8 @@ public class D2GS extends ApplicationAdapter {
       }
     });
     try {
-      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && entered.get();
+      return done.await(Boolean.getBoolean("riiablo.d2gs.mapTour") ? 120 : 5,
+          java.util.concurrent.TimeUnit.SECONDS) && entered.get();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
@@ -941,6 +1032,10 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private static int headlessAct(int levelId) {
+    if (Riiablo.files != null && Riiablo.files.Levels != null) {
+      com.riiablo.codec.excel.Levels.Entry row = Riiablo.files.Levels.get(levelId);
+      if (row != null) return row.Act;
+    }
     if (levelId <= 39) return 0;
     if (levelId <= 74) return 1;
     if (levelId <= 102) return 2;
@@ -4470,6 +4565,43 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only player profile for real combat recovery during map traversal. */
+  static boolean headlessSetMapTourCombatProfile(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CompletableFuture<Boolean> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world.getMapper(
+            com.riiablo.engine.server.component.AttributesWrapper.class).get(playerId);
+        if (wrapper == null || wrapper.attrs == null) { result.complete(false); return; }
+        // This is a movement fixture, not a combat balance test. Only the
+        // player's profile is boosted; native targets, hit rolls, damage,
+        // death, collision release and drops all use production code.
+        wrapper.attrs.base().put(com.riiablo.attributes.Stat.tohit, 100_000);
+        wrapper.attrs.base().put(com.riiablo.attributes.Stat.mindamage, 5000);
+        wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxdamage, 5000);
+        // Apply after reading D2S: its limited-width fixed-point saved HP
+        // field cannot preserve the million-life movement fixture.
+        wrapper.attrs.base().put(com.riiablo.attributes.Stat.maxhp, 1_000_000f);
+        wrapper.attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 1_000_000f);
+        wrapper.attrs.reset();
+        if (wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).asFixed() < 999_999f) {
+          throw new IllegalStateException("Tour player HP fixture was truncated");
+        }
+        System.out.println("[MAP_TOUR_FIXTURE] player=" + playerId + " actualLife="
+            + wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).asFixed()
+            + " actualMaxLife=" + wrapper.attrs.get(com.riiablo.attributes.Stat.maxhp).asFixed());
+        result.complete(true);
+      } catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(5, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour combat fixture unavailable", e);
+    }
+  }
+
   /** Test-only fixture: make the generated Amazon's bow attack deterministic. */
   static boolean headlessSetPlayerBowAttackProfile(int playerId, boolean pierceGate) {
     D2GS server = activeHeadlessInstance;
@@ -5818,6 +5950,13 @@ public class D2GS extends ApplicationAdapter {
 
     HeadlessApplicationConfiguration config = new HeadlessApplicationConfiguration();
     config.updatesPerSecond = AuthoritativeSimulation.TICKS_PER_SECOND;
+    // Optional diagnostic time compression: keep exactly the same 0.04s ECS
+    // step, movement speed and collision checks. This is NOT a network timing
+    // acceptance gate and cannot change the production server's loop rate.
+    if (Boolean.getBoolean("riiablo.d2gs.mapTour")) {
+      config.updatesPerSecond = Math.max(25, Math.min(250,
+          Integer.getInteger("riiablo.d2gs.mapTourRate", 25)));
+    }
     new HeadlessApplication(new D2GS(home, seed, diff), config);
   }
 
@@ -6882,7 +7021,11 @@ public class D2GS extends ApplicationAdapter {
     float dy = input.y - source.position.y;
     if (Math.abs(dx) > 50f || Math.abs(dy) > 50f) return "target_out_of_range";
     if (map == null) return "target_outside_map";
-    Map.Zone targetZone = map.getZone(input.x, input.y);
+    com.riiablo.engine.server.component.MapWrapper sourceWrapper = world
+        .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+    Map.Zone targetZone = sourceWrapper != null && sourceWrapper.zone != null
+        && sourceWrapper.zone.contains(Map.round(input.x), Map.round(input.y))
+        ? sourceWrapper.zone : map.getZone(input.x, input.y);
     if (targetZone == null) return "target_outside_map";
     // Adjacent generated levels may share an edge (and some native layouts
     // intentionally reuse coordinate ranges).  A movement intent must never
@@ -6890,8 +7033,6 @@ public class D2GS extends ApplicationAdapter {
     // transactions, not ordinary walking.  Without this check a one-cell
     // probe at the edge of River of Flame could step into the touching City
     // of the Damned zone and bypass its Warp.
-    com.riiablo.engine.server.component.MapWrapper sourceWrapper = world
-        .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
     if (sourceWrapper != null && sourceWrapper.zone != null
         && sourceWrapper.zone != targetZone) return "target_cross_zone";
     return null;
@@ -8174,7 +8315,8 @@ public class D2GS extends ApplicationAdapter {
     boolean networkPreset = nativeState != null
         && com.riiablo.map.NativePresetObjectResolver.isNetworkObject(nativeState.kind);
     if (object == null || object.base == null
-        || (!isNetworkQuestObject(questType) && !networkPreset)) {
+        || (!isNetworkQuestObject(questType) && !networkPreset
+            && !com.riiablo.engine.server.object.NativeObjectOperateTable.isNetworkDoor(object.base))) {
       return "QUEST_OBJECT_NOT_FOUND";
     }
     if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(objectId)) {

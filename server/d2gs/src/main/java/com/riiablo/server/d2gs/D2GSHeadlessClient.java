@@ -106,8 +106,8 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_TOWERCELLARLVL5 = 25;
   private static final int LEVEL_LUTGHOLEIN = 40;
   private static final int LEVEL_CLAWVIPERTEMPLELVL2 = 61;
-  private static final int LEVEL_ARCANESANCTUARY = 75;
-  private static final int LEVEL_DURIELSLAIR = 74;
+  private static final int LEVEL_ARCANESANCTUARY = 74;
+  private static final int LEVEL_DURIELSLAIR = 73;
   private static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
   private static final int LEVEL_SPIDERCAVERN = 85;
   private static final int LEVEL_FLAYERJUNGLE = 78;
@@ -206,6 +206,8 @@ public final class D2GSHeadlessClient {
   private int wrongLevelDrops;
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
+  private long mapTourMovementSequence = 1;
+  private int mapTourCombatKills;
   private long playerQuestRevision = -1L;
   private long baselineInventoryRevision = -1L;
   private long baselineQuestRevision = -1L;
@@ -216,6 +218,10 @@ public final class D2GSHeadlessClient {
 
   public static void main(String[] args) throws Exception {
     Config config = Config.parse(args);
+    if (config.mapTour) {
+      System.setProperty("riiablo.d2gs.mapTour", "true");
+      System.setProperty("riiablo.d2gs.mapTourRate", Integer.toString(config.tourRate));
+    }
     boolean startedServer = config.home != null;
     if (startedServer) {
       if (!config.verbose) {
@@ -226,7 +232,7 @@ public final class D2GSHeadlessClient {
       // A few older combat fixtures deliberately place actors next to a
       // deterministic target. Production D2GS leaves this bridge disabled.
       if (!config.requireSnapshotOrder && !config.requireSnapshotResync
-          && !config.requireSimulationTick && !config.requireMovementIntent) {
+          && !config.requireSimulationTick && !config.requireMovementIntent && !config.mapTour) {
         System.setProperty("riiablo.d2gs.allowLegacyEntitySync", "true");
       }
       log("server_start", "home=" + config.home + " seed=" + config.seed);
@@ -257,7 +263,9 @@ public final class D2GSHeadlessClient {
       log("vine_skill_resolve", "requested=" + requestedVineSkill
           + " resolved=" + config.vineSkillId);
     }
-    byte[] d2s = config.requireSummonReconnect
+    byte[] d2s = config.mapTour
+        ? createGeneratedAmazonMeleeSave(SkillId.JAB, "spr", 1, true)
+        : config.requireSummonReconnect
         ? createGeneratedNecromancerSave()
         : config.requireSpiritAura
         ? createGeneratedAreaSave(config.spiritSkillId)
@@ -330,6 +338,11 @@ public final class D2GSHeadlessClient {
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
         + " character=" + character.name + " class=" + character.charClass);
+
+    if (config.mapTour) {
+      runMapTour(d2s, character);
+      return;
+    }
 
     if (config.requireFallenScenario) {
       runFallenDual(d2s, character);
@@ -5031,6 +5044,416 @@ public final class D2GSHeadlessClient {
         + " writerThreadId=" + after[1]);
   }
 
+  /** Full resource-backed map traversal, not a synthetic collision arena. */
+  private void runMapTour(byte[] d2s, CharacterHeader character) throws Exception {
+    if (config.home == null) throw new IllegalArgumentException("Map tour requires an embedded --home server");
+    java.nio.file.Path directory = config.tourOutput.toPath();
+    Files.createDirectories(directory);
+    java.util.List<Integer> itinerary = com.riiablo.map.MapTourPlan.levels(
+        Riiablo.files.Levels, config.tourFirstAct, config.tourLastAct);
+    com.riiablo.map.MapTourPlan.requireCoverage(itinerary, config.tourFirstAct, config.tourLastAct);
+    itinerary = com.riiablo.map.MapTourPlan.focusedLevels(itinerary, config.tourLevels);
+    int visited = 0, failures = 0, walks = 0, jumps = 0, transitions = 0;
+    long sequence = 1;
+    try (java.io.PrintWriter report = new java.io.PrintWriter(
+            Files.newBufferedWriter(directory.resolve("map-tour.log"), StandardCharsets.UTF_8));
+         Socket socket = openSocket()) {
+      DataInputStream input = input(socket);
+      OutputStream output = output(socket);
+      tourLog(report, "BEGIN", "seed=" + config.seed + " difficulty=" + config.difficulty
+          + " tickStepSeconds=0.04 ticksPerWallSecond=" + config.tourRate
+          + " acts=" + config.tourFirstAct + "-" + config.tourLastAct
+          + " coverage=" + (config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
+          + " planned=" + itinerary.size() + " itinerary=" + itinerary);
+      send(output, connectionPacket(character, d2s));
+      awaitConnection(input, deadline());
+      if (!D2GS.headlessSetPlayerLife(playerId, 1_000_000f)
+          || !D2GS.headlessSetMapTourCombatProfile(playerId)) {
+        throw new IOException("Unable to initialize durable map-tour fixture");
+      }
+      tourLog(report, "FIXTURE", "player=" + playerId
+          + " life=1000000 weapon=spr attackRating=100000 physicalDamage=5000-5000"
+          + " combat=REAL_TCP_BLOCKER_CLEARING mode=MAP_MOVEMENT_NOT_COMBAT_BALANCE");
+      boolean arrived = false;
+      for (int index = 0; index < itinerary.size(); index++) {
+        int level = itinerary.get(index);
+        int next = index + 1 < itinerary.size() ? itinerary.get(index + 1) : -1;
+        try {
+          if (!arrived) {
+            tourLog(report, "ENTER", "level=" + level + " mode=JUMP_SEGMENT_START");
+            if (!D2GS.headlessEnterLevel(playerId, level)) {
+              tourLog(report, "LOAD_DIAGNOSTIC", "level=" + level + " diagnostics="
+                  + java.util.Arrays.toString(D2GS.headlessZoneDiagnostics(level)));
+              throw new IOException("Level load/staging unavailable: " + level);
+            }
+            awaitLevel(this, input, level, deadline());
+          }
+          arrived = false;
+          MapTourProbe.Sample loaded = D2GS.headlessMapTourSample(playerId, next, true);
+          if (loaded == null || loaded.level != level) throw new IOException("Wrong authoritative level");
+          visited++;
+          tourLog(report, "LOAD", "level=" + level + " name=" + loaded.name
+              + " diagnostics=" + java.util.Arrays.toString(loaded.diagnostics)
+              + " nativeObjects=" + loaded.objects + " nativeMonsters=" + loaded.monsters
+              + " entities=" + loaded.entities + " synthetic=" + loaded.synthetic
+              + " nativeTerrain=" + loaded.nativeTerrain
+              + " pendingMonsters=" + loaded.pendingMonsters + " spawnedMonsters=" + loaded.spawnedMonsters
+              + " spawnedObjects=" + loaded.spawnedObjects + " groundItems=" + loaded.groundItems
+              + " position=" + loaded.position + " blocked=" + loaded.blocked);
+          if (loaded.synthetic || !loaded.nativeTerrain || loaded.blocked || loaded.diagnostics.length < 14
+              || loaded.diagnostics[8] == 0 || loaded.diagnostics[10] == 0) {
+            throw new IOException("Missing terrain/collision or blocked entry level=" + level);
+          }
+          for (int doorCount = 0; loaded.target == null && doorCount < 32; doorCount++) {
+            MapTourProbe.Sample door = D2GS.headlessMapTourDoor(playerId, loaded.position);
+            if (door == null) break;
+            sequence = openTourDoor(input, output, door, level, sequence, report);
+            loaded = D2GS.headlessMapTourSample(playerId, next, true);
+          }
+          for (int wait = 0; loaded.target == null && wait < 10; wait++) {
+            // Warp ExitWalk and moving units can temporarily cover the landing
+            // footprint. Observe normal ticks before declaring it enclosed.
+            long until = System.currentTimeMillis() + 200;
+            while (System.currentTimeMillis() < until) {
+              com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+              if (packet != null) consume(packet);
+            }
+            loaded = D2GS.headlessMapTourSample(playerId, next, true);
+          }
+          for (int combat = 0; loaded.target == null && combat < 8; combat++) {
+            if (!clearTourBlocker(input, output, level, loaded.position, report)) break;
+            loaded = D2GS.headlessMapTourSample(playerId, next, true);
+          }
+          if (loaded.target == null) throw new IOException("No local movement target level=" + level);
+          sequence = routeTour(input, output, loaded.target, level, sequence, report, "LOCAL_WALK");
+          walks++;
+          if (next < 0) continue;
+          MapTourProbe.Sample exit = D2GS.headlessMapTourSample(playerId, next, false);
+          if ("JUMP_DETACHED".equals(exit.transition)) {
+            jumps++;
+            tourLog(report, "TRANSITION", "from=" + level + " to=" + next + " mode=JUMP_DETACHED");
+            continue;
+          }
+          if (exit.target == null) throw new IOException("No reachable exit candidate "
+              + level + "->" + next + " mode=" + exit.transition);
+          sequence = routeTour(input, output, exit.target,
+              "BOUNDARY_WALK".equals(exit.transition) ? next : level,
+              sequence, report, exit.transition, exit, next);
+          walks++;
+          if ("WARP_WALK".equals(exit.transition)) {
+            long request = 100_000L + index;
+            send(output, questRequestPacket(request, QuestOperation.WARP_INTERACTION, exit.warp, -1));
+            QuestResult result = awaitQuestResult(input, request, deadline());
+            if (result == null || !result.success()) throw new IOException("Warp interaction rejected " + level + "->" + next
+                + " reason=" + (result == null ? "missing_result" : result.reason()));
+            awaitLevel(this, input, next, deadline());
+          }
+          MapTourProbe.Sample destination = D2GS.headlessMapTourSample(playerId, -1, true);
+          if (destination == null || destination.level != next || destination.blocked) {
+            throw new IOException("Invalid transition landing " + level + "->" + next);
+          }
+          transitions++;
+          arrived = true;
+          tourLog(report, "TRANSITION_PASS", "from=" + level + " to=" + next + " mode=" + exit.transition);
+        } catch (Exception e) {
+          failures++;
+          arrived = false;
+          tourLog(report, "FAIL", "level=" + level + " type=" + e.getClass().getSimpleName()
+              + " reason=" + e.getMessage());
+          e.printStackTrace(report);
+          report.flush();
+          try {
+            Files.write(directory.resolve("failure-level-" + level + ".txt"),
+                D2GS.headlessMapTourDiagnosis(playerId).getBytes(StandardCharsets.UTF_8));
+          } catch (RuntimeException diagnosticFailure) {
+            tourLog(report, "DIAGNOSTIC_FAIL", "level=" + level + " reason=" + diagnosticFailure.getMessage());
+          }
+          float[] lifecycle = D2GS.headlessPlayerLifecycleState(playerId);
+          if (lifecycle.length >= 2 && lifecycle[0] != 0f) {
+            // A death remains a failed map; normal protocol recovery lets
+            // subsequent sublevels still execute their own movement checks.
+            awaitRespawnable(playerId);
+            long request = 300_000L + index;
+            send(output, playerLifecyclePacket(request, PlayerLifecycleOperation.RESPAWN));
+            PlayerLifecycleResult respawn = awaitPlayerLifecycleResult(input, request, deadline());
+            if (!respawn.success()) throw new IOException("Tour death recovery rejected: " + respawn.reason());
+            tourLog(report, "DEATH_RECOVERY", "failedLevel=" + level + " mode=PROTOCOL_RESPAWN countedFailure=true");
+          }
+          // Continue to each side map even after a path/entry fails. Recovery
+          // is logged and counted as a failure, never as a passed transition.
+        }
+      }
+      tourLog(report, "SUMMARY", "planned=" + itinerary.size() + " visited=" + visited
+          + " coverage=" + (config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
+          + " walks=" + walks + " transitions=" + transitions + " detachedJumps=" + jumps
+          + " combatKills=" + mapTourCombatKills
+          + " failures=" + failures + " result=" + (failures == 0 && visited == itinerary.size() ? "PASS" : "FAIL"));
+    }
+    if (failures != 0 || visited != itinerary.size()) {
+      throw new IOException("Map tour failed: visited=" + visited + "/" + itinerary.size()
+          + " failures=" + failures + " report=" + directory.resolve("map-tour.log"));
+    }
+  }
+
+  private long routeTour(DataInputStream input, OutputStream output, Vector2 target,
+      int level, long sequence, java.io.PrintWriter report, String mode) throws Exception {
+    return routeTour(input, output, target, level, sequence, report, mode, null, -1);
+  }
+
+  private long routeTour(DataInputStream input, OutputStream output, Vector2 target,
+      int level, long sequence, java.io.PrintWriter report, String mode,
+      MapTourProbe.Sample exit, int nextLevel) throws Exception {
+    int doors = 0;
+    // Limit consecutive non-progress, not the number of legitimate fights
+    // along an entire level. Keep a separate finite recovery budget.
+    // Eight attempts was enough for a single blocker, but a native room can
+    // legitimately wake a full pack behind one door. Keep the bound finite
+    // while allowing real TCP combat to clear that pack one unit at a time.
+    for (int attempt = 0, recoveries = 0; attempt < 32 && recoveries < 128; attempt++, recoveries++) {
+      Vector2 recoveryStart = D2GS.headlessMapTourSample(playerId, -1, true).position;
+      if (exit != null && "WARP_WALK".equals(mode)) {
+        MapTourProbe.Sample refreshed = D2GS.headlessMapTourSample(playerId, nextLevel, false);
+        if (refreshed.target != null && "WARP_WALK".equals(refreshed.transition)) {
+          target = refreshed.target;
+          exit.target = target;
+          exit.warp = refreshed.warp;
+        }
+      } else if ("LOCAL_WALK".equals(mode) && attempt > 0) {
+        // This is a local movement smoke target, not a fixed level exit.
+        // A moving monster may occupy the sampled cell before the click.
+        MapTourProbe.Sample refreshed = D2GS.headlessMapTourSample(playerId, -1, true);
+        if (refreshed.target != null) target = refreshed.target;
+      }
+      java.util.List<Vector2> route = D2GS.headlessMapTourRoute(playerId, target);
+      tourLog(report, "ROUTE", "level=" + level + " mode=" + mode + " waypoints=" + route.size() + " target=" + target);
+      if (route.isEmpty()) {
+        // The approach to a door cannot recursively select that same door
+        // again when a monster blocks its path. Fight/replan this approach
+        // under the existing finite recovery budget instead.
+        MapTourProbe.Sample door = MapTourProbe.mayPlanDoor(mode, doors)
+            ? D2GS.headlessMapTourDoor(playerId, target) : null;
+        if (door == null) {
+          if (clearTourBlocker(input, output, level, target, report)) {
+            attempt = -1;
+            continue;
+          }
+          // Dynamic occupancy is a snapshot, not proof of a disconnected
+          // terrain component. Retry with live candidates, never teleport.
+          tourLog(report, "ROUTE_RETRY", "level=" + level + " attempt=" + (attempt + 1));
+          long until = System.currentTimeMillis() + 200;
+          while (System.currentTimeMillis() < until) {
+            com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+            if (packet != null) consume(packet);
+          }
+          continue;
+        }
+        try {
+          sequence = openTourDoor(input, output, door, level, sequence, report);
+          doors++;
+          attempt--;
+        } catch (IOException e) {
+          // Moving toward this frontier activates further rooms and their
+          // closed doors. The previously reachable approach may now lie
+          // behind a newly materialized door; let the outer, bounded route
+          // select that nearer frontier, without recursive self-selection.
+          MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
+          tourLog(report, "DOOR_FRONTIER_REPLAN", "level=" + level + " entity=" + door.warp
+              + " position=" + state.position + " reason=" + e.getMessage());
+          if (recoveryStart.dst2(state.position) >= 4 * 4) attempt = -1;
+        }
+        continue;
+      }
+      try {
+        for (Vector2 waypoint : route) walkTour(input, output, waypoint, level, sequence++, report, mode);
+        MapTourProbe.Sample reached = D2GS.headlessMapTourSample(playerId, -1, true);
+        if (reached.position.dst2(target) > MapTourProbe.arrivalToleranceSquared(mode)) {
+          tourLog(report, "FRONTIER_REPLAN", "level=" + level + " final=" + reached.position
+              + " target=" + target + " destinationNotReached=true");
+          if (recoveryStart.dst2(reached.position) >= 4 * 4) attempt = -1;
+          clearTourBlocker(input, output, level, target, report);
+          continue;
+        }
+        return mapTourMovementSequence;
+      } catch (TourMovementBlock e) {
+        tourLog(report, "BLOCKED_REPLAN", "level=" + level + " attempt=" + (attempt + 1) + " reason=" + e.getMessage());
+        MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
+        // Mimic releasing the held click and issuing a new ground command.
+        // A failed route is never recovered by teleporting the player.
+        send(output, movementIntentPacket(state.position.x, state.position.y,
+            mapTourMovementSequence++, 0L, 0L));
+        boolean killed = clearTourBlocker(input, output, level, target, report);
+        if (killed || recoveryStart.dst2(state.position) >= 4 * 4) {
+          tourLog(report, "RECOVERY_PROGRESS", "level=" + level + " combatKill=" + killed
+              + " displacement=" + recoveryStart.dst(state.position) + " resetConsecutiveStalls=true");
+          attempt = -1;
+        }
+        long until = System.currentTimeMillis() + 200;
+        while (System.currentTimeMillis() < until) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+          if (packet != null) consume(packet);
+        }
+      }
+    }
+    throw new IOException("Movement/route blockage did not resolve level=" + level + " target=" + target);
+  }
+
+  private boolean clearTourBlocker(DataInputStream input, OutputStream output, int level,
+      Vector2 destination, java.io.PrintWriter report) throws Exception {
+    MapTourProbe.Sample blocker = D2GS.headlessMapTourBlocker(playerId, destination);
+    if (blocker == null) return false;
+    Snapshot before = monsters.get(blocker.warp);
+    tourLog(report, "COMBAT_BLOCKER", "level=" + level + " entity=" + blocker.warp
+        + " position=" + blocker.position + " life=" + (before == null ? "pending" : before.life)
+        + " class=" + blocker.monsterClass + " size=" + blocker.unitSize
+        + " authoritativeLife=" + blocker.authoritativeLife + " meleeReady=" + blocker.meleeReady
+        + " snapshotDeleted=" + (before != null && before.deleted)
+        + " mode=REAL_TCP_NO_POSITION_PACKET");
+    long end = System.currentTimeMillis() + 12_000;
+    long castAt = 0;
+    float lastLife = before != null && before.hasVitals ? before.life : Float.NaN;
+    boolean activeBaseline = false;
+    int casts = 0;
+    for (; System.currentTimeMillis() < end && casts < 32;) {
+      Snapshot current = monsters.get(blocker.warp);
+      if (!activeBaseline) {
+        // A recycled ECS id may still have the previous map's deleted TCP
+        // snapshot. Wait for the living authoritative blocker's baseline;
+        // stale vitals must neither cancel combat nor count as a new kill.
+        activeBaseline = current != null && !current.deleted && current.hasVitals
+            && current.hasPosition && current.monsterClass == blocker.monsterClass
+            && blocker.position.dst2(current.x, current.y) <= 36f
+            && !current.dead && current.life > 0f;
+        if (!activeBaseline) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+          if (packet != null) consume(packet);
+          continue;
+        }
+      }
+      if (current != null && !current.deleted && current.hasVitals && (current.dead || current.life <= 0f)) {
+        mapTourCombatKills++;
+        tourLog(report, "COMBAT_PASS", "level=" + level + " entity=" + blocker.warp
+            + " casts=" + casts + " life=" + current.life + " confirmed=TCP_DEATH resume=REPLAN");
+        return true;
+      }
+      if (current != null && current.deleted) break; // deletion alone is not death evidence
+      if (System.currentTimeMillis() >= castAt) {
+        MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
+        Vector2 position = current != null && current.hasPosition
+            ? new Vector2(current.x, current.y) : blocker.position;
+        if (state.level != blocker.level || state.position.dst2(position) > 36f) break;
+        MapTourProbe.Sample liveBlocker = D2GS.headlessMapTourBlocker(playerId, destination);
+        if (liveBlocker != null && !liveBlocker.meleeReady) {
+          // The authoritative action snapshot can lag one or two ticks after
+          // a movement stop. Do not spend a cast on a guaranteed range
+          // rejection; consume TCP state until the native range gate opens.
+          castAt = System.currentTimeMillis() + 100;
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+          if (packet != null) consume(packet);
+          continue;
+        }
+        send(output, castPacket(SkillCodes.attack, blocker.warp, position.x, position.y));
+        casts++;
+        castAt = System.currentTimeMillis() + 400;
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+      current = monsters.get(blocker.warp);
+      if (current != null && current.hasVitals && current.life != lastLife) {
+        tourLog(report, "COMBAT_PROGRESS", "level=" + level + " entity=" + blocker.warp
+            + " life=" + current.life + " previous=" + lastLife);
+        lastLife = current.life;
+      }
+    }
+    tourLog(report, "COMBAT_UNRESOLVED", "level=" + level + " entity=" + blocker.warp
+        + " casts=" + casts + " activeBaseline=" + activeBaseline
+        + " resume=REPLAN noTeleport=true");
+    return false;
+  }
+
+  private static final class TourMovementBlock extends IOException {
+    TourMovementBlock(String reason) { super(reason); }
+  }
+
+  private long openTourDoor(DataInputStream input, OutputStream output, MapTourProbe.Sample door,
+      int level, long sequence, java.io.PrintWriter report) throws Exception {
+    sequence = routeTour(input, output, door.target, level, sequence, report, "DOOR_APPROACH");
+    long request = 200_000L + mapTourMovementSequence++;
+    send(output, questRequestPacket(request, QuestOperation.OBJECT_INTERACTION, door.warp, -1));
+    QuestResult result = awaitQuestResult(input, request, deadline());
+    if (result == null || !result.success()) throw new IOException("Door operation rejected entity=" + door.warp
+        + " reason=" + (result == null ? "missing_result" : result.reason()));
+    tourLog(report, "DOOR_PASS", "level=" + level + " entity=" + door.warp);
+    return sequence;
+  }
+
+  private void walkTour(DataInputStream input, OutputStream output, Vector2 target,
+      int expectedLevel, long sequence, java.io.PrintWriter report, String mode) throws Exception {
+    sequence = mapTourMovementSequence++;
+    MapTourProbe.Sample start = D2GS.headlessMapTourSample(playerId, -1, true);
+    long readyUntil = System.currentTimeMillis() + 3000;
+    while (!start.actionReady && System.currentTimeMillis() < readyUntil) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+      start = D2GS.headlessMapTourSample(playerId, -1, true);
+    }
+    if (!start.actionReady) throw new TourMovementBlock("Native action remains locked after combat");
+    tourLog(report, "WALK", "sequence=" + sequence + " mode=" + mode + " level=" + start.level
+        + " from=" + start.position + " target=" + target);
+    send(output, movementIntentPacket(target.x, target.y, sequence, 0L, 0L));
+    long end = System.currentTimeMillis() + config.tourWalkMillis;
+    long sampleAt = 0;
+    float furthest = 0;
+    float arrivalTolerance2 = MapTourProbe.arrivalToleranceSquared(mode);
+    MapTourProbe.Sample state = start;
+    while (System.currentTimeMillis() < end) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+      if (lastRejectedMovementSequence == sequence) throw new IOException("Movement rejected sequence=" + sequence
+          + " lifecycle=" + java.util.Arrays.toString(D2GS.headlessPlayerLifecycleState(playerId)));
+      if (System.currentTimeMillis() < sampleAt) continue;
+      sampleAt = System.currentTimeMillis() + 200;
+      state = D2GS.headlessMapTourSample(playerId, -1, true);
+      if (state == null || state.position == null) throw new IOException("Player disappeared");
+      furthest = Math.max(furthest, start.position.dst(state.position));
+      if (lastMovementAcknowledgement >= sequence && state.level == expectedLevel
+          && state.position.dst2(target) <= arrivalTolerance2 && !state.blocked
+          && currentLevelId == expectedLevel && Float.isFinite(playerX)
+          && new Vector2(playerX, playerY).dst2(target) <= 4f) {
+        tourLog(report, "WALK_PASS", "sequence=" + sequence + " mode=" + mode
+            + " level=" + state.level + " final=" + state.position + " displacement=" + furthest
+            + " snapshot=(" + playerX + "," + playerY + ")");
+        return;
+      }
+      if (lastMovementAcknowledgement >= sequence && state.blockedByDynamic && state.stalledTime >= 0.5f) {
+        throw new TourMovementBlock("sequence=" + sequence + " final=" + state.position
+            + " target=" + target + " stalled=" + state.stalledTime);
+      }
+      if (lastMovementAcknowledgement >= sequence && !state.walking
+          && state.position.dst2(target) > arrivalTolerance2) {
+        throw new TourMovementBlock("Path absent/stopped sequence=" + sequence + " final=" + state.position
+            + " target=" + target + " displacement=" + furthest);
+      }
+      if (lastMovementAcknowledgement >= sequence && state.stalledTime >= 0.5f) {
+        throw new TourMovementBlock("sequence=" + sequence + " final=" + state.position
+            + " target=" + target + " blockReason=" + state.movementBlockReason
+            + " pathTarget=" + state.pathTarget + " destination=" + state.destination);
+      }
+    }
+    throw new IOException("Walk timeout sequence=" + sequence + " final=" + state.position
+        + " target=" + target + " walking=" + state.walking + " ack=" + lastMovementAcknowledgement
+        + " level=" + state.level + " snapshotLevel=" + currentLevelId
+        + " blockedByDynamic=" + state.blockedByDynamic + " stalled=" + state.stalledTime
+        + " blockReason=" + state.movementBlockReason + " pathTarget=" + state.pathTarget
+        + " destination=" + state.destination);
+  }
+
+  private static void tourLog(java.io.PrintWriter report, String phase, String details) {
+    String line = "[MAP_TOUR] " + phase + " " + details;
+    report.println(line);
+    report.flush();
+    System.out.println(line);
+  }
+
   /** Real-protocol gate for client targetTick -> authoritative apply/ACK timing. */
   private void verifyMovementIntentScheduling(
       DataInputStream input, OutputStream output) throws Exception {
@@ -7576,7 +7999,7 @@ public final class D2GSHeadlessClient {
     byte[] peerD2s = createGeneratedObserverSave("A2DungeonPeer", 0x41324450);
     CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
     // Keep this table in native ordinal order; these are not D2LevelIds.java
-    // aliases (that file historically carried an Arcane=74 typo).  Arcane
+    // aliases (the imported aliases historically contained shifted ordinals). Arcane
     // Sanctuary is opened by the quest portal rather than a static Levels.txt
     // edge and remains covered by the A2 object/quest fixture.
     int[][] pairs = {{42, 56}, {43, 62}, {45, 58}};
@@ -12033,10 +12456,15 @@ public final class D2GSHeadlessClient {
 
   private static byte[] createGeneratedAmazonMeleeSave(
       int skillId, String weaponCode, int skillLevel) {
+    return createGeneratedAmazonMeleeSave(skillId, weaponCode, skillLevel, false);
+  }
+
+  private static byte[] createGeneratedAmazonMeleeSave(
+      int skillId, String weaponCode, int skillLevel, boolean mapTour) {
     CharacterClass classData = CharacterClass.AMAZON;
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadAmaMelee", Riiablo.AMAZON);
-    character.level = 30;
+    character.level = (byte) (mapTour ? 80 : 30);
     com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
     StatListRef base = character.getStats().base();
     base.put(Stat.strength, stats.str);
@@ -12051,7 +12479,7 @@ public final class D2GSHeadlessClient {
     base.put(Stat.maxmana, 10_000);
     base.put(Stat.stamina, 10_000);
     base.put(Stat.maxstamina, 10_000);
-    base.put(Stat.level, 30);
+    base.put(Stat.level, character.level);
     base.put(Stat.experience, 0);
     base.put(Stat.gold, 0);
     base.put(Stat.goldbank, 0);
@@ -12073,8 +12501,8 @@ public final class D2GSHeadlessClient {
     }
     weapon.quality = Quality.NORMAL;
     if (weapon.base.stackable) weapon.attrs.base().put(Stat.quantity, 16);
-    weapon.attrs.base().put(Stat.durability, 20);
-    weapon.attrs.base().put(Stat.maxdurability, 20);
+    weapon.attrs.base().put(Stat.durability, mapTour ? 255 : 20);
+    weapon.attrs.base().put(Stat.maxdurability, mapTour ? 255 : 20);
     weapon.attrs.reset();
     character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(weapon));
     seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
@@ -12084,7 +12512,7 @@ public final class D2GSHeadlessClient {
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=HeadAmaMelee class=amazon skill="
         + skillId + " skillLevel=" + skillLevel + " weapon=" + weaponCode
-        + " level=30 bytes=" + data.length);
+        + " level=" + character.level + " bytes=" + data.length);
     return data;
   }
 
@@ -12469,6 +12897,12 @@ public final class D2GSHeadlessClient {
     boolean requireMonsterMovement;
     boolean requireSimulationTick;
     boolean requireMovementIntent;
+    boolean mapTour;
+    int tourFirstAct = 1, tourLastAct = 5;
+    String tourLevels;
+    int tourWalkMillis = 45_000;
+    int tourRate = 25;
+    File tourOutput = new File("build/map-tour");
     boolean requireSnapshotOrder;
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
@@ -12563,6 +12997,13 @@ public final class D2GSHeadlessClient {
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;
         else if ("--require-movement-intent".equals(arg)) config.requireMovementIntent = true;
+        else if ("--map-tour".equals(arg)) config.mapTour = true;
+        else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
+        else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
+        else if ("--tour-levels".equals(arg)) config.tourLevels = value(args, ++i, arg);
+        else if ("--tour-walk-seconds".equals(arg)) config.tourWalkMillis = integer(args, ++i, arg) * 1000;
+        else if ("--tour-output".equals(arg)) config.tourOutput = new File(value(args, ++i, arg));
+        else if ("--tour-rate".equals(arg)) config.tourRate = integer(args, ++i, arg);
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
@@ -12650,6 +13091,11 @@ public final class D2GSHeadlessClient {
         }
       }
 
+      if (config.mapTour && (config.tourFirstAct < 1 || config.tourLastAct > 5
+          || config.tourFirstAct > config.tourLastAct || config.tourWalkMillis <= 0
+          || config.tourRate < 25 || config.tourRate > 250)) {
+        throw new IllegalArgumentException("Map tour requires valid Acts 1..5 and a positive walk timeout");
+      }
       if (config.home == null) {
         String env = System.getenv("D2_HOME");
         if (env != null && !env.isEmpty()) config.home = new File(env);

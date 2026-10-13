@@ -17,6 +17,8 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Warp> mWarp;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   @Override
   protected void process(int entityId) {
@@ -47,7 +49,13 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
         && oldZone.level.Id >= 109 && oldZone.level.Id <= 132
         && (!oldZone.hasNativeRoomTopology() || oldZone.width() <= 0
             || oldZone.height() <= 0);
-    if (room == null && !insideOldZone && !syntheticA5) {
+    // DS1 triggers can sit on the exclusive edge, and LvlWarp offsets can
+    // put their visual position in the next rectangle. They still belong to
+    // the exporting level: reclassifying a 26->27 trigger as level 27 turns
+    // it into a self-warp and removes level 26's only exit. Static map objects
+    // likewise keep their preset owner; mobile units remain position-tracked.
+    boolean mapOwned = mWarp.has(entityId) || mObject.has(entityId);
+    if (room == null && !insideOldZone && !syntheticA5 && !mapOwned) {
       zone = wrapper.map.getZone(position);
       room = zone != null ? zone.findRoomEx(position.x, position.y) : null;
     }

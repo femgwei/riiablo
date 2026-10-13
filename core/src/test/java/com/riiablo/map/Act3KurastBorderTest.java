@@ -14,23 +14,23 @@ import org.junit.jupiter.api.Test;
 
 class Act3KurastBorderTest {
   @Test void placesAllLowerKurastEdgesAndCorners() {
-    assertBorders(D2LevelIds.LEVEL_LOWERKURAST, 747);
+    assertBorders(D2LevelIds.LEVEL_LOWERKURAST, 605);
   }
 
   @Test void placesAllBazaarEdgesAndCorners() {
-    assertBorders(D2LevelIds.LEVEL_KURASTBAZAAR, 761);
+    assertBorders(D2LevelIds.LEVEL_KURASTBAZAAR, 619);
   }
 
   @Test void upperKurastUsesMetroNotBazaarPresets() {
-    assertBorders(D2LevelIds.LEVEL_UPPERKURAST, 778);
+    assertBorders(D2LevelIds.LEVEL_UPPERKURAST, 636);
   }
 
   @Test void gatesFollowBothNativeInterlinkLayouts() {
     for (int interlink = 0; interlink <= 1; interlink++) {
       for (int levelId : new int[] {D2LevelIds.LEVEL_LOWERKURAST,
           D2LevelIds.LEVEL_KURASTBAZAAR, D2LevelIds.LEVEL_UPPERKURAST}) {
-        assertBorders(levelId, levelId == D2LevelIds.LEVEL_LOWERKURAST ? 747
-            : levelId == D2LevelIds.LEVEL_KURASTBAZAAR ? 761 : 778, interlink);
+        assertBorders(levelId, levelId == D2LevelIds.LEVEL_LOWERKURAST ? 605
+            : levelId == D2LevelIds.LEVEL_KURASTBAZAAR ? 619 : 636, interlink);
       }
     }
   }
@@ -65,14 +65,14 @@ class Act3KurastBorderTest {
   @Test void skipsMissingRowsAndFilesWithoutStoppingOtherEdges() {
     Map.Zone zone = zone(D2LevelIds.LEVEL_LOWERKURAST);
     Act3MapBuilderD2MOD.placeNativeKurastBorders(zone, def -> {
-      if (def == 747) return null;
+      if (def == 605) return null;
       LvlPrest.Entry entry = preset(def);
-      if (def == 748) entry.File = new String[] {null, "0", ""};
+      if (def == 606) entry.File = new String[] {null, "0", ""};
       return entry;
     });
     assertNull(zone.presets[1][0]);
     assertNull(zone.presets[1][zone.gridsY - 1]);
-    assertEquals(752, zone.presets[0][0].preset.Def);
+    assertEquals(610, zone.presets[0][0].preset.Def);
   }
 
   @Test void leavesNativeTerrainAndUnrelatedLevelsUntouched() {

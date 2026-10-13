@@ -12,6 +12,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.logger.LogManager;
@@ -30,6 +31,7 @@ public class VelocityAdder extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Size> mSize;
+  protected ComponentMapper<Pathfind> mPathfind;
 
   @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
@@ -42,6 +44,7 @@ public class VelocityAdder extends IteratingSystem {
   private final Vector2 start = new Vector2();
   private final Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
+  private String blockReason;
 
   @Override
   protected void process(int entityId) {
@@ -53,10 +56,13 @@ public class VelocityAdder extends IteratingSystem {
 
     Position position = mPosition.get(entityId);
     start.set(position.position);
+    boolean requested = !velocity.velocity.isZero(0.001f);
+    blockReason = "none";
     float scale = world.delta * velocity.stateSpeedMultiplier;
     desired.set(position.position).mulAdd(velocity.velocity, scale);
     if (canMove(entityId, position.position, desired)) {
       position.position.set(desired);
+      recordMovement(entityId, requested);
       return;
     }
 
@@ -89,9 +95,24 @@ public class VelocityAdder extends IteratingSystem {
       }
     }
     if (!moved) velocity.velocity.setZero();
+    recordMovement(entityId, requested);
     log.debug("[MOVEMENT_COLLISION] entity={} from=({}, {}) desired=({}, {}) result=({}, {}) slid={} blocked={}",
         entityId, start.x, start.y, desired.x, desired.y,
         position.position.x, position.position.y, moved, !moved);
+  }
+
+  private void recordMovement(int entityId, boolean requested) {
+    if (!mPathfind.has(entityId)) return;
+    Pathfind path = mPathfind.get(entityId);
+    path.recordMovement(requested, start.dst2(mPosition.get(entityId).position),
+        world.delta, "dynamic".equals(blockReason));
+    path.movementBlockReason = path.stalledTime > 0f ? blockReason : "none";
+  }
+
+  private boolean dynamicMove(int entityId, Vector2 to) {
+    if (dynamicCollision == null || dynamicCollision.tryMove(entityId, to)) return true;
+    blockReason = "dynamic";
+    return false;
   }
 
   private boolean canMove(int entityId, Vector2 from, Vector2 to) {
@@ -107,6 +128,7 @@ public class VelocityAdder extends IteratingSystem {
           && !wrapper.zone.areRoomsAdjacent(from.x, from.y, to.x, to.y)) {
         log.debug("[ROOM_MOVEMENT_BOUNDARY] entity={} fromRoom={} toRoom={} action=reject",
             entityId, source.id, target.id);
+        blockReason = "room:" + source.id + "->" + target.id;
         return false;
       }
     }
@@ -114,13 +136,13 @@ public class VelocityAdder extends IteratingSystem {
     // the legacy velocity behaviour there; generated maps use the authoritative
     // collision grid below.
     if (map == null || map.getZone(from) == null) {
-      return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
+      return dynamicMove(entityId, to);
     }
     // Synthetic skill-viewer arenas intentionally have no DT1 collision map;
     // their zeroed walk grid is fully traversable. Do not let the empty
     // raycaster reject every movement step.
     if (wrapper != null && wrapper.zone != null && wrapper.zone.isSyntheticArena()) {
-      return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
+      return dynamicMove(entityId, to);
     }
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
@@ -135,7 +157,11 @@ public class VelocityAdder extends IteratingSystem {
         && monster.monstats.opendoors
         && NativeGroundPathProfile.forUnit(false, monster.monstats)
             != NativeGroundPathProfile.FLYING;
-    if (map.castRay(ray, flags, size, collision, canOpenDoors)) return false;
-    return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
+    if (map.castRay(wrapper == null ? null : wrapper.zone,
+        ray, flags, size, collision, canOpenDoors)) {
+      blockReason = "terrain";
+      return false;
+    }
+    return dynamicMove(entityId, to);
   }
 }

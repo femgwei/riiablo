@@ -13,6 +13,23 @@ import org.junit.jupiter.api.Test;
 class DrlgDrlgWarpStateTest {
   private static final int MAPTILE_HIDDEN = 0x000008;
 
+  @Test void bidirectionalWarpDefinitionsFollowTheNativeFirstMatchingRowContract() {
+    D2LvlWarpTxt both = new D2LvlWarpTxt();
+    both.setDwLevelId(70); both.setSzDirection("b");
+    D2LvlWarpTxt left = new D2LvlWarpTxt();
+    left.setDwLevelId(70); left.setSzDirection("l");
+    try {
+      com.d2moo.common.datatbls.DataTbls.setLvlWarpTxtCache(new D2LvlWarpTxt[] {both, left});
+      assertSame(both, com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(70, 'l'));
+      assertSame(both, com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(70, 'r'));
+      com.d2moo.common.datatbls.DataTbls.setLvlWarpTxtCache(new D2LvlWarpTxt[] {left, both});
+      assertSame(left, com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(70, 'b'));
+      assertSame(left, com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(70, 'l'));
+      assertSame(both, com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(70, 'r'));
+      assertNull(com.d2moo.common.datatbls.DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(71, 'l'));
+    } finally { com.d2moo.common.datatbls.DataTbls.unloadLvlWarpTxt(); }
+  }
+
   @Test
   void selectAndDeselectToggleEveryTileInMatchingWarpChains() {
     D2DrlgTileDataStrc inactiveTail = tile(MAPTILE_HIDDEN | 0x40);
@@ -115,7 +132,7 @@ class DrlgDrlgWarpStateTest {
   }
 
   @Test
-  void warpDestinationReadsVisibleLevelNotWarpTileType() {
+  void nativeWarpDefinitionQueryReadsWarpNotVisDespiteItsHistoricalName() {
     D2DrlgStrc drlg = new D2DrlgStrc();
     D2DrlgLevel level = new D2DrlgLevel();
     level.setDrlg(drlg);
@@ -128,7 +145,10 @@ class DrlgDrlgWarpStateTest {
     warp.getNWarp()[3] = 0;
     drlg.setWarp(warp);
 
-    assertEquals(10, DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) 3));
+    assertEquals(0, DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) 3));
+    warp.getNWarp()[3] = -1;
+    assertEquals(-1, DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) 3));
+    assertEquals(10, DrlgDrlgRoom.getVisArrayFromLevelId(drlg, 4)[3]);
   }
 
   @Test
@@ -141,6 +161,7 @@ class DrlgDrlgWarpStateTest {
     D2DrlgWarp warp = new D2DrlgWarp();
     warp.setNLevel(4);
     warp.getNVis()[0] = 10;
+    warp.getNWarp()[0] = 0;
     drlg.setWarp(warp);
     D2DrlgRoom first = null;
     D2DrlgRoom previous = null;
@@ -162,6 +183,25 @@ class DrlgDrlgWarpStateTest {
     assertEquals(9, level.getNRoomCenterWarpX().length);
     assertEquals(9, level.getNRoomCenterWarpY().length);
     assertEquals(9, level.getNRoomCoords());
+  }
+
+  @Test
+  void seamlessVisLinksDoNotConsumeWarpCoordinateSlots() {
+    D2DrlgStrc drlg = new D2DrlgStrc();
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setDrlg(drlg);
+    level.setLevelId(104);
+    drlg.setLevel(level);
+    D2DrlgWarp warp = new D2DrlgWarp();
+    warp.setNLevel(104);
+    java.util.Arrays.fill(warp.getNWarp(), -1);
+    warp.getNVis()[0] = 105;
+    drlg.setWarp(warp);
+    D2DrlgRoom room = new D2DrlgRoom();
+    room.setFlags(D2DrlgRoomFlags.HAS_WARP_0);
+    level.setFirstRoomEx(room);
+    DrlgDrlg.computeLevelWarpInfo(level);
+    assertEquals(0, level.getNRoomCoords());
   }
 
   private static D2RoomTile warp(int levelId, D2DrlgTileDataStrc inactive,

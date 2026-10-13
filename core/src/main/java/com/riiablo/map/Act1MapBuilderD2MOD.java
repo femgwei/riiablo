@@ -89,6 +89,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private final IntSet levelsWithNativeDirtPaths = new IntSet();
   /** D2MOO 实际生成房间所引用的 DT1 mask（包含 outdoor preset/LvlSub 扩展位）。 */
   private final IntMap<Integer> d2MooDt1Masks = new IntMap<>();
+  private final IntMap<int[]> runtimeWarpAnchors = new IntMap<>();
   private static final int LEVEL_DARKWOOD = 5;
   private static final int LEVEL_BLACKMARSH = 6;
   private static final int LEVEL_TAMOEHIGHLAND = 7;
@@ -241,6 +242,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     levelsFilledByExport.clear();
     levelsWithNativeDirtPaths.clear();
     d2MooDt1Masks.clear();
+    runtimeWarpAnchors.clear();
     pendingMonsterSpawns.clear();
     nextMonsterPackId = 1;
     questBossSpawned.clear();
@@ -1443,6 +1445,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                     // created after DS1 expansion.
                   }
                 }
+                if (isNativeNonSpawningPlacement(placement)) return;
+                if ("place_unique_pack".equals(placement) || "place_champion".equals(placement)) {
+                  queuePresetPack(nativeMonsters, exportLevelId, roomId, mode, x, y, placement);
+                  return;
+                }
+                placement = resolveActOnePlacement(placement, exportLevelId);
                 MonStats.Entry monster = resolveD2MooPresetMonster(index, placement);
                 int superUniqueId = -1;
                 String superUniqueKey = null;
@@ -1457,9 +1465,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 if (monster == null && superUnique == null
                     && Riiablo.files.SuperUniques != null) {
                   // D2MOO encodes preset SuperUniques as
-                  // MonStatsCount + SuperUniquesCount + hcIdx.
-                  int suIndex = index - Riiablo.files.monstats.size()
-                      - Riiablo.files.SuperUniques.size();
+                  // MonStatsCount + hcIdx (MonPlace follows SuperUniques).
+                  int suIndex = index - Riiablo.files.monstats.size();
                   superUnique = Riiablo.files.SuperUniques.get(suIndex);
                   if (superUnique != null) {
                     monster = Riiablo.files.monstats.get(superUnique.MonClass);
@@ -1469,8 +1476,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 }
                 if (monster == null) {
                   Gdx.app.error(TAG, String.format(
-                      "D2MOO preset monster unresolved: level=%d room=%d index=%d mode=%d",
-                      exportLevelId, roomId, index, mode));
+                      "D2MOO preset monster unresolved: level=%d room=%d index=%d mode=%d placement=%s",
+                      exportLevelId, roomId, index, mode, placement));
                   return;
                 }
                 if (index == D2MonsterIds.MONSTER_NAVI) {
@@ -1542,7 +1549,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               }
               room.addMonsterSpawn(nativeMonster.monsterId,
                   nativeZone.x + nativeMonster.x, nativeZone.y + nativeMonster.y,
-                  -1, false, nativeMonster.superUniqueId, nativeMonster.superUniqueKey);
+                  -1, false, nativeMonster.superUniqueId, nativeMonster.superUniqueKey, nativeMonster.rank);
             }
             nativeZone.nativeMonsters.addAll(nativeMonsters);
             DrlgLevel nativeTarget = drlgLevels.get(levelId);
@@ -1654,10 +1661,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           else if (overlapX || overlapY) {
             hasPartialOverlap = true;
             String axis = overlapX ? "X" : "Y";
-            Gdx.app.error(TAG, String.format("PARTIAL OVERLAP (%s-axis): %s (id=%d) overlaps with %s (id=%d)", 
+            // An intersection on just one axis is alignment, not a 2D overlap.
+            Gdx.app.debug(TAG, String.format("AXIS ALIGNMENT (%s-axis): %s (id=%d) is separated from %s (id=%d)",
                 axis, zone1.level.LevelName, zone1.level.Id, zone2.level.LevelName, zone2.level.Id));
-            Gdx.app.error(TAG, String.format("  Zone1: X[%d, %d] Y[%d, %d]", minX1, maxX1, minY1, maxY1));
-            Gdx.app.error(TAG, String.format("  Zone2: X[%d, %d] Y[%d, %d]", minX2, maxX2, minY2, maxY2));
+            Gdx.app.debug(TAG, String.format("  Zone1: X[%d, %d] Y[%d, %d]", minX1, maxX1, minY1, maxY1));
+            Gdx.app.debug(TAG, String.format("  Zone2: X[%d, %d] Y[%d, %d]", minX2, maxX2, minY2, maxY2));
           }
           // 检查是否相邻（边界相接）
           else {
@@ -1677,7 +1685,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       if (!hasOverlap && !hasPartialOverlap) {
         Gdx.app.debug(TAG, "No overlaps detected - all zones are properly separated");
       } else if (hasPartialOverlap && !hasOverlap) {
-        Gdx.app.debug(TAG, "Partial overlaps detected (single axis) - zones may need adjustment");
+        Gdx.app.debug(TAG, "Single-axis alignment only - zone rectangles do not overlap");
       }
       Gdx.app.debug(TAG, "=== End Zone Bounds Summary ===");
     }
@@ -1814,6 +1822,68 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return placement == null
         ? Riiablo.files.monstats.get(index)
         : Riiablo.files.monstats.get(placement);
+  }
+
+  /** MonsterRegion.cpp's MonPlace switch has no spawn handler for these rows. */
+  static boolean isNativeNonSpawningPlacement(String placement) {
+    if (placement == null) return false;
+    switch (placement) {
+      case "place_nothing": case "place_npc_pack":
+      case "place_fallennest": case "place_fetishnest":
+      case "place_talkingrogue": case "place_talkingguard": case "place_dumbguard":
+      case "place_maggot": case "place_maggotegg": case "place_mosquitonest":
+      case "place_imp": case "place_minion": case "place_bloodlord":
+      case "place_group25": case "place_group50": case "place_group75": case "place_group100":
+        return true;
+      default: return false;
+    }
+  }
+
+  static String resolveActOnePlacement(String placement, int levelId) {
+    if (placement == null) return null;
+    switch (placement) {
+      case "place_fallen": return levelId == 6 ? "fallen2"
+          : levelId == 7 || levelId == 12 || levelId == 16 ? "fallen3" : "fallen1";
+      case "place_fallenshaman": return levelId == 6 || levelId == 7 ? "fallenshaman2"
+          : levelId == 12 || levelId == 16 ? "fallenshaman3" : "fallenshaman1";
+      case "place_bloodraven": return "bloodraven";
+      case "place_rogue_warner": return "navi";
+      default: return placement;
+    }
+  }
+
+  private void queuePresetPack(Array<Map.NativeMonster> output, int levelId, int roomId,
+      int mode, int x, int y, String placement) {
+    Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Array<MonStats.Entry> candidates = new Array<>();
+    for (String key : NativeMonsterRegion.monsterColumns(level, drlgContext.diff)) {
+      MonStats.Entry monster = key == null ? null : Riiablo.files.monstats.get(key);
+      if (monster != null && monster.isSpawn && monster.Rarity > 0) candidates.add(monster);
+    }
+    if (candidates.isEmpty()) {
+      Gdx.app.error(TAG, "No region monster for " + placement + " level=" + levelId);
+      return;
+    }
+    java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(drlgContext.seed, levelId)
+        ^ (roomId * 31L + x * 17L + y));
+    int weight = 0;
+    for (MonStats.Entry monster : candidates) weight += monster.Rarity;
+    int roll = rng.nextInt(weight);
+    MonStats.Entry chosen = candidates.first();
+    for (MonStats.Entry monster : candidates) {
+      roll -= monster.Rarity;
+      if (roll < 0) { chosen = monster; break; }
+    }
+    boolean champion = "place_champion".equals(placement);
+    // Native champion leader + 1..3 peers, unique leader + 3..6 minions.
+    int count = champion ? 2 + rng.nextInt(3) : 4 + rng.nextInt(4);
+    for (int member = 0; member < count; member++) {
+      int rank = champion ? com.riiablo.engine.server.monster.MonsterRank.CHAMPION
+          : member == 0 ? com.riiablo.engine.server.monster.MonsterRank.UNIQUE
+          : com.riiablo.engine.server.monster.MonsterRank.MINION;
+      output.add(new Map.NativeMonster(roomId, chosen.hcIdx, mode,
+          x + (member % 3) * 2, y + (member / 3) * 2, -1, null, false, rank));
+    }
   }
 
   static int toLocalGridCoordinate(int localTileCoordinate, int gridSize) {
@@ -1958,6 +2028,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (bloodRaven == null) {
       Gdx.app.error(TAG, "[BLOODRAVEN_SPAWN] phase=failed reason=missing_monstats row=bloodraven");
       return;
+    }
+    for (Map.NativeMonster monster : zone.nativeMonsters) {
+      if (monster.monsterId == bloodRaven.hcIdx) return;
     }
 
     int preferredX = zone.width() / 2;
@@ -3234,6 +3307,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   /** Connects native special-wall markers after every exported Zone has been applied. */
   public void linkNativeWarpSpecials(Map map) {
     if (map == null) return;
+    // Applying the native TileGrid clears/rebuilds specials after the DRLG
+    // lifetime ends. Re-materialize runtime-only links from the retained
+    // destination overrides, otherwise monastery entrances disappear.
+    restoreRuntimeWarpMarkers(map);
     int linked = 0;
     int missingZone = 0;
     int missingReverse = 0;
@@ -3387,6 +3464,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
     SpecialApplyCounts specialCounts = registerSpecialWalls(
         grid, zone.specials, width, height);
+    zone.restoreNativeWarpMarkers();
     CollisionApplyCounts collisionCounts = new CollisionApplyCounts();
     if (counts.floors > 0 || counts.walls > 0) {
       TileGrid exportedFootprint = levelsFilledByExport.contains(zone.level.Id) ? grid : null;
@@ -3576,7 +3654,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    * on Levels.txt/DS1 markers therefore creates the zone rectangles but leaves
    * no usable transition (and consequently no room activation/monster spawn).
    */
-  private static void installNativeWarpLinks(Map map, D2DrlgStrc drlg) {
+  private void installNativeWarpLinks(Map map, D2DrlgStrc drlg) {
     if (map == null || drlg == null) return;
     int links = 0;
     for (Zone source : new Array.ArrayIterator<>(map.zones)) {
@@ -3584,6 +3662,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, source.level.Id);
       int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, source.level.Id);
       if (vis == null || warp == null) continue;
+      if (Boolean.getBoolean("riiablo.d2gs.mapTour")
+          && (source.level.Id == 26 || source.level.Id == 27 || source.level.Id == 28
+              || source.level.Id == 32 || source.level.Id == 33)) {
+        System.out.println("[MAP_LINK] level=" + source.level.Id + " vis="
+            + Arrays.toString(vis) + " warp=" + Arrays.toString(warp));
+      }
       int slots = Math.min(8, Math.min(vis.length, warp.length));
       for (int slot = 0; slot < slots; slot++) {
         // D2MOO stores the destination level in nVis. nWarp is the selected
@@ -3597,14 +3681,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
         map.addWarpDestinationOverride(source.level.Id, slot, destinationLevelId);
         if (!hasWarpMarker(source, slot)) {
-          source.addNativeWarpMarker(slot, nativeWarpX(source, destination),
-              nativeWarpY(source, destination));
+          int[] anchor = nativeOrthAnchor(DrlgDrlg.getLevel(drlg, source.level.Id),
+              DrlgDrlg.getLevel(drlg, destinationLevelId));
+          runtimeWarpAnchors.put((source.level.Id << 8) | slot, anchor != null ? anchor
+              : new int[] {nativeWarpX(source, destination), nativeWarpY(source, destination)});
         }
         int reverseSlot = findNativeReverseSlot(drlg, destination.level.Id, source.level.Id);
         if (reverseSlot >= 0 && !hasWarpMarker(destination, reverseSlot)) {
           map.addWarpDestinationOverride(destination.level.Id, reverseSlot, source.level.Id);
-          destination.addNativeWarpMarker(reverseSlot,
-              nativeWarpX(destination, source), nativeWarpY(destination, source));
+          int[] anchor = nativeOrthAnchor(DrlgDrlg.getLevel(drlg, destinationLevelId),
+              DrlgDrlg.getLevel(drlg, source.level.Id));
+          runtimeWarpAnchors.put((destinationLevelId << 8) | reverseSlot, anchor != null ? anchor
+              : new int[] {nativeWarpX(destination, source), nativeWarpY(destination, source)});
         }
         links++;
       }
@@ -3626,9 +3714,70 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   }
 
   private static boolean isMonasteryRuntimeLink(int sourceLevelId, int destinationLevelId) {
-    return (sourceLevelId == 26 || sourceLevelId == 27 || sourceLevelId == 28)
+    return (sourceLevelId == 32 && destinationLevelId == 33)
+        || (sourceLevelId == 33 && destinationLevelId == 32)
+        || (sourceLevelId == 26 || sourceLevelId == 27 || sourceLevelId == 28)
         && (destinationLevelId == 26 || destinationLevelId == 27 || destinationLevelId == 28)
         && sourceLevelId != destinationLevelId;
+  }
+
+  void restoreRuntimeWarpMarkers(Map map) {
+    for (Zone source : new Array.ArrayIterator<>(map.zones)) {
+      if (source.level == null) continue;
+      for (int slot = 0; slot < 8; slot++) {
+        int target = map.getWarpDestinationOverride(source.level.Id, slot);
+        if (!isMonasteryRuntimeLink(source.level.Id, target) || hasWarpMarker(source, slot)) continue;
+        Zone destination = findZoneByLevelId(map, target);
+        if (destination == null) continue;
+        int[] anchor = runtimeWarpAnchors.get((source.level.Id << 8) | slot);
+        int preferredX = anchor == null ? nativeWarpX(source, destination) : anchor[0];
+        int preferredY = anchor == null ? nativeWarpY(source, destination) : anchor[1];
+        int bestX = -1, bestY = -1;
+        long bestDistance = Long.MAX_VALUE;
+        int mask = com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags;
+        // Marker coordinates are tiled; inspect the exact serialized anchor
+        // with a player footprint instead of flooring a free cell into a wall.
+        for (int y = 0; y < source.height(); y += 5) for (int x = 0; x < source.width(); x += 5) {
+          if (map.isBlockedForPath(source, source.x() + x, source.y() + y, mask, 2, false)) continue;
+          long distance = (long) (x - preferredX) * (x - preferredX)
+              + (long) (y - preferredY) * (y - preferredY);
+          // Stay in the native entrance RoomEx-sized neighborhood. An
+          // unrelated free pocket elsewhere in the level is not an exit.
+          if (distance > 40L * 40L) continue;
+          if (distance < bestDistance) { bestDistance = distance; bestX = x; bestY = y; }
+        }
+        if (bestX >= 0) source.addRuntimeWarpMarker(slot, bestX, bestY);
+      }
+    }
+  }
+
+  /** DrlgMaze.cpp: Barracks court connector is linked by DRLGROOM_AddOrth,
+   * not by a LvlWarp marker at the center of the whole Zone rectangle. */
+  static int[] nativeOrthAnchor(D2DrlgLevel source, D2DrlgLevel destination) {
+    if (source == null || destination == null || source.getLevelCoords() == null) return null;
+    for (D2DrlgLevel owner : new D2DrlgLevel[] {source, destination}) {
+      D2DrlgLevel target = owner == source ? destination : source;
+      for (D2DrlgRoom room = owner.getFirstRoomEx(); room != null; room = room.getDrlgRoomNext()) {
+        for (com.d2moo.common.drlg.D2DrlgOrth orth = room.getDrlgOrth();
+            orth != null; orth = orth.getPNext()) {
+          D2DrlgLevel neighbor = orth.getPLevel();
+          if (neighbor == null && orth.getPDrlgRoom() != null) neighbor = orth.getPDrlgRoom().getLevel();
+          if (neighbor != target) continue;
+          int x = room.getNTileXPos(), y = room.getNTileYPos();
+          int direction = orth.getNDirection();
+          if (direction == 0 || direction == 2) {
+            x += direction == 2 ? room.getNTileWidth() : 0;
+            y += room.getNTileHeight() / 2;
+          } else if (direction == 1 || direction == 3) {
+            x += room.getNTileWidth() / 2;
+            y += direction == 3 ? room.getNTileHeight() : 0;
+          } else continue;
+          return new int[] {(x - source.getLevelCoords().getNPosX()) * 5,
+              (y - source.getLevelCoords().getNPosY()) * 5};
+        }
+      }
+    }
+    return null;
   }
 
   private static boolean hasWarpMarker(Zone zone, int mainIndex) {
@@ -3698,6 +3847,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
     else zone.specials.clear();
     registerSpecialWalls(grid, zone.specials, width, height);
+    zone.restoreNativeWarpMarkers();
     rebuildTileCollisionFlags(grid, zone.tiles, zone.dt1s, zone.flags,
         zone.tilesX, zone.tilesY, width, height);
     if (Gdx.app != null) {
@@ -3827,6 +3977,21 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
+        if (exportedFootprint != null && exportedFootprint.nativeCollisionCells != null
+            && exportedFootprint.inBounds(x, y)
+            && exportedFootprint.nativeCollisionCells[y][x]) {
+          // D2Collision allocates from floor, wall AND roof tiles. A doorway
+          // or warp tile can have selected collision without a floor graphic;
+          // lack of a rendered floor must not override that native mask.
+          int nativeWidth = exportedFootprint.width * 5;
+          for (int sy = 0; sy < 5; sy++) {
+            System.arraycopy(exportedFootprint.nativeCollisionFlags,
+                (y * 5 + sy) * nativeWidth + x * 5, flags,
+                (y * 5 + sy) * subtileWidth + x * 5, 5);
+          }
+          counts.tiles++;
+          continue;
+        }
         if (exportedFootprint != null
             && (!exportedFootprint.inBounds(x, y)
                 || !exportedFootprint.exportedFloorCells[y][x])) {

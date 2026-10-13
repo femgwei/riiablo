@@ -298,13 +298,17 @@ public class DrlgMaze {
                 break;
 
             case LVLTYPE_ACT2_SEWER:
+                initBasicMazeLayout(level, 2);
+                buildBasicMaze(level);
+                scanReplaceSpecialAct2SewersPresets(level);
+                break;
+
             case LVLTYPE_ACT2_HAREM:
             case LVLTYPE_ACT2_BASEMENT:
             case LVLTYPE_ACT3_SPIDER:
             case LVLTYPE_ACT3_KURAST:
             case LVLTYPE_ACT3_DUNGEON:
             case LVLTYPE_ACT3_SEWER:
-            case LVLTYPE_ACT5_ICE_CAVES:
             case LVLTYPE_ACT5_TEMPLE:
                 // 需要初始化基础布局的关卡
                 if (nLevelType == LVLTYPE_ACT3_SEWER
@@ -325,8 +329,7 @@ public class DrlgMaze {
                 // 对于需要构建基础迷宫的关卡
                 if (nLevelType == LVLTYPE_ACT3_KURAST 
                         || nLevelType == LVLTYPE_ACT3_DUNGEON 
-                        || nLevelType == LVLTYPE_ACT3_SEWER
-                        || nLevelType == LVLTYPE_ACT5_ICE_CAVES) {
+                        || nLevelType == LVLTYPE_ACT3_SEWER) {
                     buildBasicMaze(level);
                 }
                 if (nLevelType == LVLTYPE_ACT3_KURAST) {
@@ -338,6 +341,32 @@ public class DrlgMaze {
                 }
                 break;
                 
+            case LVLTYPE_ACT5_ICE_CAVES:
+                // DrlgMaze.cpp: single-room branches use complete river/pool
+                // DS1s, not the directional basic maze presets.
+                switch (level.getLevelId()) {
+                    case D2LevelIds.LEVEL_CELLAROFPITY:
+                        setPickedFileAndPresetId(levelFirstRoomEx,
+                            Seed.rollLimitedRandomNumber(level.getSeed(), 2) != 0
+                                ? D2LvlPrestIds.LVLPREST_ACT5_ICE_RIVER_A
+                                : D2LvlPrestIds.LVLPREST_ACT5_ICE_RIVER_B, -1, false);
+                        break;
+                    case D2LevelIds.LEVEL_ECHOCHAMBER:
+                        setPickedFileAndPresetId(levelFirstRoomEx,
+                            D2LvlPrestIds.LVLPREST_ACT5_ICE_POOL_A, -1, false);
+                        break;
+                    case D2LevelIds.LEVEL_GLACIALCAVESLEV2:
+                        setPickedFileAndPresetId(levelFirstRoomEx,
+                            D2LvlPrestIds.LVLPREST_ACT5_ICE_POOL_B, -1, false);
+                        break;
+                    default:
+                        initBasicMazeLayout(level, 2);
+                        buildBasicMaze(level);
+                        placeAct5IceStuff(level);
+                        break;
+                }
+                break;
+
             case LVLTYPE_ACT1_CATACOMBS:
                 // Act1 地下墓穴：特殊处理第一个房间
                 if (level.getLevelId() == D2LevelIds.LEVEL_CATACOMBSLEV1) {
@@ -479,6 +508,93 @@ public class DrlgMaze {
         // BuildArea operation is a one-room mapping and can retain the
         // existing RoomEx/orth topology here.
         materializeBasicPresetMaps(level);
+    }
+
+    private static D2MazeLevelIdStrc[] act2SewerIds(int north, int east, int south, int west) {
+        return new D2MazeLevelIdStrc[] {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT2_SEWER_N, north, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT2_SEWER_E, east, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT2_SEWER_S, south, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT2_SEWER_W, west, -1, 2)
+        };
+    }
+
+    /** DrlgMaze.cpp DRLGMAZE_ScanReplaceSpecialAct2SewersPresets, 0x6FD7B330. */
+    public static void scanReplaceSpecialAct2SewersPresets(D2DrlgLevel level) {
+        int direction = (2 * (int) (Seed.rollRandomNumber(level.getSeed()) & 1)) | 1;
+        int[] random = {(int) (Seed.rollRandomNumber(level.getSeed()) & 3)};
+        D2MazeLevelIdStrc[] prev = act2SewerIds(
+            D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_N, D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_E,
+            D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_S, D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_W);
+        D2MazeLevelIdStrc[] next = act2SewerIds(
+            D2LvlPrestIds.LVLPREST_ACT2_SEWER_NEXT_N, D2LvlPrestIds.LVLPREST_ACT2_SEWER_NEXT_E,
+            D2LvlPrestIds.LVLPREST_ACT2_SEWER_NEXT_S, D2LvlPrestIds.LVLPREST_ACT2_SEWER_NEXT_W);
+        switch (level.getLevelId()) {
+            case D2LevelIds.LEVEL_SEWERSLVL1ACT2: {
+                D2DrlgRoom north = getFreeLocationForRoomSouth(level);
+                D2DrlgRoom extension = extendSewerEntrance(north, 1, true);
+                extension = extendSewerEntrance(extension, 1, true);
+                extendSewerEntrancePreset(extension, 0, D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_E);
+                D2DrlgRoom east = getFreeLocationForRoomWest(level);
+                extension = extendSewerEntrance(east, 2, true);
+                extension = extendSewerEntrance(extension, 2, true);
+                D2DrlgRoom entrance = extendSewerEntrancePreset(extension, direction,
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_PREV_NS);
+                D2DrlgRoom beyond = addAdjacentMazeRoom(entrance, direction, false);
+                if (beyond != null) pickRoomPreset(beyond, true);
+                replaceOrAddSpecialPreset(level, next[random[0]]);
+                break;
+            }
+            case D2LevelIds.LEVEL_SEWERSLVL2ACT2:
+                replaceOrAddSpecialPreset(level, prev[random[0]]);
+                random[0] = (random[0] + 1) % 4;
+                D2MazeLevelIdStrc[] waypoint = act2SewerIds(
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_WAYPOINT_N, D2LvlPrestIds.LVLPREST_ACT2_SEWER_WAYPOINT_E,
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_WAYPOINT_S, D2LvlPrestIds.LVLPREST_ACT2_SEWER_WAYPOINT_W);
+                scanReplaceSpecialPreset(level, waypoint[random[0]], random);
+                scanReplaceSpecialPreset(level, next[random[0]], random);
+                break;
+            case D2LevelIds.LEVEL_SEWERSLVL3ACT2:
+                scanReplaceSpecialPreset(level, prev[random[0]], random);
+                D2MazeLevelIdStrc[] radament = act2SewerIds(
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_RADAMENTS_LAIR_N, D2LvlPrestIds.LVLPREST_ACT2_SEWER_RADAMENTS_LAIR_E,
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_RADAMENTS_LAIR_S, D2LvlPrestIds.LVLPREST_ACT2_SEWER_RADAMENTS_LAIR_W);
+                scanReplaceSpecialPreset(level, radament[random[0]], random);
+                break;
+            case D2LevelIds.LEVEL_ANCIENTTUNNELS:
+                scanReplaceSpecialPreset(level, prev[random[0]], random);
+                D2MazeLevelIdStrc[] chest = act2SewerIds(
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_CHEST_N, D2LvlPrestIds.LVLPREST_ACT2_SEWER_CHEST_E,
+                    D2LvlPrestIds.LVLPREST_ACT2_SEWER_CHEST_S, D2LvlPrestIds.LVLPREST_ACT2_SEWER_CHEST_W);
+                scanReplaceSpecialPreset(level, chest[random[0]], random);
+                break;
+            default: break;
+        }
+    }
+
+    private static void replaceOrAddSpecialPreset(D2DrlgLevel level, D2MazeLevelIdStrc mapping) {
+        if (replaceRoomPreset(level, mapping.nLevelPrestId1, mapping.nLevelPrestId2,
+                mapping.nPickedFile, false) == null) {
+            addSpecialPreset(level, mapping.nDirection, mapping.nLevelPrestId2, mapping.nPickedFile);
+        }
+    }
+
+    private static D2DrlgRoom extendSewerEntrance(D2DrlgRoom parent, int direction, boolean merge) {
+        D2DrlgRoom child = addAdjacentMazeRoom(parent, direction, merge);
+        if (child != null) {
+            pickRoomPreset(parent, true);
+            pickRoomPreset(child, true);
+        }
+        return child;
+    }
+
+    private static D2DrlgRoom extendSewerEntrancePreset(D2DrlgRoom parent, int direction, int preset) {
+        D2DrlgRoom child = addAdjacentMazeRoom(parent, direction, false);
+        if (child != null) {
+            pickRoomPreset(parent, true);
+            setPickedFileAndPresetId(child, preset, 0, false);
+        }
+        return child;
     }
 
     private static void materializeBasicPresetMaps(D2DrlgLevel level) {
@@ -1732,6 +1848,54 @@ public class DrlgMaze {
         level.getLevelCoords().setNHeight(tileMaxY[0] - tileMinY[0]);
     }
     
+    private static D2MazeLevelIdStrc[] act5IceIds(int north, int east, int south, int west) {
+        return new D2MazeLevelIdStrc[] {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_ICE_N, north, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_ICE_E, east, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_ICE_S, south, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_ICE_W, west, -1, 2),
+        };
+    }
+
+    /** D2Common.0x6FD7CCB0: native entry, exit, branch, theme and waypoint order. */
+    public static void placeAct5IceStuff(D2DrlgLevel level) {
+        int direction = (int) (Seed.rollRandomNumber(level.getSeed()) & 3);
+        D2MazeLevelIdStrc[][] transitions = {
+            act5IceIds(D2LvlPrestIds.LVLPREST_ACT5_ICE_PREV_N,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_PREV_E,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_PREV_S,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_PREV_W),
+            act5IceIds(D2LvlPrestIds.LVLPREST_ACT5_ICE_NEXT_N,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_NEXT_E,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_NEXT_S,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_NEXT_W),
+            act5IceIds(D2LvlPrestIds.LVLPREST_ACT5_ICE_DOWN_N,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_DOWN_E,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_DOWN_S,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_DOWN_W),
+        };
+        for (D2MazeLevelIdStrc[] transition : transitions) {
+            replaceOrAddAct3Preset(level, transition[direction]);
+            direction = (direction + 1) & 3;
+        }
+        if (level.getLevelId() == D2LevelIds.LEVEL_CRYSTALIZEDCAVERNLEV2) {
+            replaceOrAddAct3Preset(level, act5IceIds(
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_THEME_N,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_THEME_E,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_THEME_S,
+                D2LvlPrestIds.LVLPREST_ACT5_ICE_THEME_W)[direction]);
+            direction = (direction + 1) & 3;
+        } else if (level.getLevelId() != D2LevelIds.LEVEL_CRYSTALIZEDCAVERNLEV1
+                && level.getLevelId() != D2LevelIds.LEVEL_GLACIALCAVESLEV1) {
+            return;
+        }
+        replaceOrAddAct3Preset(level, act5IceIds(
+            D2LvlPrestIds.LVLPREST_ACT5_ICE_WAYPOINT_N,
+            D2LvlPrestIds.LVLPREST_ACT5_ICE_WAYPOINT_E,
+            D2LvlPrestIds.LVLPREST_ACT5_ICE_WAYPOINT_S,
+            D2LvlPrestIds.LVLPREST_ACT5_ICE_WAYPOINT_W)[direction]);
+    }
+
     /**
      * D2Common.0x6FD7CA40
      * 放置 Act4 熔岩
@@ -2043,11 +2207,9 @@ public class DrlgMaze {
                                 int nDirection = DrlgDrlg.getDirectionFromCoordinates(
                                         i.getDrlgCoord(), drlgRoom.getDrlgCoord());
                                 if (nDirection != -1) { // DIRECTION_INVALID
-                                    // 创建链接
-                                    D2DrlgOrth[] ppDrlgOrth = new D2DrlgOrth[1];
-                                    ppDrlgOrth[0] = i.getDrlgOrth();
-                                    DrlgDrlgRoom.addOrth(ppDrlgOrth, drlgRoom.getLevel(), nDirection, true);
-                                    i.setDrlgOrth(ppDrlgOrth[0]);
+                                    // DrlgMaze.cpp MergeMazeRooms uses reciprocal RoomEx
+                                    // orths, not an orth against the whole level box.
+                                    allocDrlgOrthsForRooms(i, drlgRoom, nDirection);
                                     pickRoomPreset(i, true);
                                 }
                             }

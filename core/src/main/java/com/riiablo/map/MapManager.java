@@ -53,6 +53,7 @@ public class MapManager extends PassiveSystem {
 
   private void createWarps(Map.Zone zone) {
     IntMap<DS1.Cell> specials = zone.specials;
+    IntSet nativeWarpSlots = new IntSet();
     IntSet act3WarpSlots = zone.level != null && zone.level.Id >= 75 && zone.level.Id <= 102
         ? new IntSet() : null;
     for (IntMap.Entry<DS1.Cell> entry : specials.entries()) {
@@ -77,6 +78,22 @@ public class MapManager extends PassiveSystem {
         int hash = entry.key;
         int x = zone.x + (Map.Zone.tileHashX(hash) * DT1.Tile.SUBTILE_SIZE);
         int y = zone.y + (Map.Zone.tileHashY(hash) * DT1.Tile.SUBTILE_SIZE);
+        Vector2 nativePosition = zone.nativeWarpPosition(mainIndex, new Vector2());
+        if (nativePosition != null) {
+          if (!nativeWarpSlots.add(mainIndex)) continue;
+          com.riiablo.codec.excel.LvlWarp.Entry bounds = zone.level.Warp == null
+              || mainIndex >= zone.level.Warp.length ? null
+              : Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+          if (bounds != null) {
+            // DrlgRoomTile.cpp AddWarp applies these offsets before exporting
+            // UNIT_TILE. Undo them only for the factory's tile-origin API;
+            // flooring the position to a DS1 cell and adding them again loses
+            // signed/non-multiple-of-five coordinates and can move an exit
+            // into a wall. Decorative wall components are not extra Warps.
+            x = Math.round(nativePosition.x) - bounds.OffsetX;
+            y = Math.round(nativePosition.y) - bounds.OffsetY;
+          }
+        }
         int id = factory.createWarp(zone, cell.id, x, y);
         // Native wall markers may be authored on the exclusive outer edge of
         // a Zone. Keep the owning Zone hint on every retry; only the visual
@@ -239,6 +256,13 @@ public class MapManager extends PassiveSystem {
     int failed = 0;
     int skipped = 0;
     for (Map.NativeObject object : zone.nativeObjects) {
+      if (isCompatibilityTownStaticObject(zone, object)) {
+        // Town DS1 static units are already created by createPresetEntities.
+        // Keeping both copies doubles blocking doors and other fixtures.
+        object.creationStatus = "skipped_compatibility_town_source";
+        skipped++;
+        continue;
+      }
       if (!object.externalEntity) {
         object.creationStatus = "skipped_external_entity_false";
         skipped++;
@@ -365,6 +389,9 @@ public class MapManager extends PassiveSystem {
         }
         prepareWaypointInitialState(id, zone);
         zone.addEntity(id);
+        com.riiablo.engine.server.ObjectCollisionUpdater collision =
+            world.getSystem(com.riiablo.engine.server.ObjectCollisionUpdater.class);
+        if (collision != null) collision.synchronizeCreatedObject(id);
         created++;
       }
     }
@@ -386,6 +413,12 @@ public class MapManager extends PassiveSystem {
             zone.level.LevelName, zone.level.Id, skipped));
       }
     }
+  }
+
+  static boolean isCompatibilityTownStaticObject(Map.Zone zone, Map.NativeObject object) {
+    return zone != null && zone.isTown() && object != null && object.ds1Raw
+        && com.riiablo.map.d2moo.Act2D2MOOLayoutBridge.sameSource(
+            zone.presetSourceFile(), object.sourceFile);
   }
 
   private static com.riiablo.codec.excel.Objects.Entry nativeBaseFor(int objectId) {

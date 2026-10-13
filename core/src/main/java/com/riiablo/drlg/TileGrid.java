@@ -19,6 +19,11 @@ public class TileGrid {
   /** 高度（tile 数） */
   public final int height;
 
+  /** Exact selected native DT1 collision, row-flipped into world subtiles. */
+  public byte[] nativeCollisionFlags;
+  /** Cells with native callbacks; fallback cells use normal DT1 lookup. */
+  public boolean[][] nativeCollisionCells;
+
   /**
    * floorIds[y][x] 存储一个“地形类型 ID”，目前直接用 dt1 的 mainIndex 或自定义类型。
    * -1 表示尚未写入（空）。

@@ -42,6 +42,42 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   private static final String DEFAULT_SEED = "0x171A6100";
 
   @Test
+  public void tourSeedPreservesNativeMonasteryLinkMetadata() {
+    Act1D2MOOLayoutBridge.LayoutAndDrlg generated =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(12345, 0, findLevelId("Burial Grounds"));
+    assertNotNull(generated);
+    try {
+      for (int id : new int[] {26, 27, 28, 32, 33}) {
+        D2DrlgLevel level = DrlgDrlg.getLevel(generated.drlg, id);
+        assertNotNull(level.getFirstRoomEx(), "native rooms level=" + id);
+        System.out.println("[MONASTERY_LINK] level=" + id + " vis="
+            + java.util.Arrays.toString(com.d2moo.common.drlg.DrlgDrlgRoom
+                .getVisArrayFromLevelId(generated.drlg, id)) + " warp="
+            + java.util.Arrays.toString(com.d2moo.common.drlg.DrlgDrlgWarp
+                .getWarpIdArrayFromLevelId(generated.drlg, id)));
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+            room = room.getDrlgRoomNext()) {
+          for (com.d2moo.common.drlg.D2DrlgOrth orth = room.getDrlgOrth();
+              orth != null; orth = orth.getPNext()) {
+            D2DrlgLevel neighbor = orth.getPLevel();
+            if (neighbor == null && orth.getPDrlgRoom() != null) {
+              neighbor = orth.getPDrlgRoom().getLevel();
+            }
+            if (neighbor != null && neighbor.getLevelId() != id) {
+              System.out.println("[MONASTERY_ORTH] source=" + id + " destination="
+                  + neighbor.getLevelId() + " room=" + room.getNTileXPos() + ","
+                  + room.getNTileYPos() + " direction=" + orth.getNDirection());
+            }
+          }
+        }
+      }
+    } finally {
+      DrlgDrlg.freeDrlg(generated.drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
+    }
+  }
+
+  @Test
   public void d2mooNaviClassIdResolvesToFlavieRow() {
     MonStats.Entry navi = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(
         D2MonsterIds.MONSTER_NAVI, null);

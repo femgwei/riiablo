@@ -53,6 +53,12 @@ public final class Act4D2MOOLayoutBridge {
    * so headless/reduced-resource tests remain playable.
    */
   public static boolean populateZones(int gameSeed, int diff, Map map) {
+    return populateZones(gameSeed, diff, map, D2C_Acts.ACT_IV, TOWN, LEVELS);
+  }
+
+  /** Shared native terrain export; coordinates remain relative to the act's town. */
+  public static boolean populateZones(int gameSeed, int diff, Map map,
+      byte actId, int townId, int[] levelIds) {
     if (map == null || RiiabloAccess.mpqsMissing()) return false;
     D2DrlgStrc drlg = null;
     try {
@@ -65,15 +71,15 @@ public final class Act4D2MOOLayoutBridge {
       DataTbls.loadLvlWarpTxt(archive);
 
       D2DrlgAct act = new D2DrlgAct();
-      act.setAct(D2C_Acts.ACT_IV);
-      act.setTownId(TOWN);
+      act.setAct(actId);
+      act.setTownId(townId);
       act.setPMemPool(new D2MemoryPool());
-      drlg = DrlgDrlg.allocDrlg(act, D2C_Acts.ACT_IV, archive, gameSeed,
-          TOWN, 0, null, (byte) diff, null, null);
+      drlg = DrlgDrlg.allocDrlg(act, actId, archive, gameSeed,
+          townId, 0, null, (byte) diff, null, null);
       if (drlg == null) return false;
 
-      Zone town = findZone(map, TOWN);
-      D2DrlgLevel nativeTown = DrlgDrlg.getLevel(drlg, TOWN);
+      Zone town = findZone(map, townId);
+      D2DrlgLevel nativeTown = DrlgDrlg.getLevel(drlg, townId);
       int townX = nativeTown != null && nativeTown.getLevelCoords() != null
           ? nativeTown.getLevelCoords().getNPosX() : 0;
       int townY = nativeTown != null && nativeTown.getLevelCoords() != null
@@ -83,7 +89,14 @@ public final class Act4D2MOOLayoutBridge {
       D2MooTileApplier applier = new D2MooTileApplier();
       int exportedLevels = 0;
 
-      for (int levelId : LEVELS) {
+      // Resolve every level before projecting coordinates/orths: the lava
+      // maze places its final bridge relative to the independent Chaos level.
+      for (int levelId : levelIds) {
+        D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        if (level != null && level.getFirstRoomEx() == null) DrlgDrlg.initLevel(level);
+      }
+
+      for (int levelId : levelIds) {
         Zone zone = findZone(map, levelId);
         D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
         if (zone == null || level == null) {
@@ -106,11 +119,43 @@ public final class Act4D2MOOLayoutBridge {
         int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         if (floors <= 0) {
           if (Gdx.app != null) Gdx.app.log(TAG,
-              "A4 native level=" + levelId + " has no floor; keeping compatibility Zone");
+              "A" + (actId + 1) + " native level=" + levelId + " has no floor; keeping compatibility Zone");
           continue;
         }
 
+        zone.setNativeTileGrid(grid, dt1Mask);
         projectRooms(level, zone);
+        if (actId == D2C_Acts.ACT_IV) {
+          int[] vis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+          int[] warps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
+          for (int slot = 0; vis != null && warps != null
+              && slot < Math.min(8, Math.min(vis.length, warps.length)); slot++) {
+            if (vis[slot] <= 0) continue;
+            map.addWarpDestinationOverride(levelId, slot, vis[slot]);
+            if (warps[slot] != -1) continue;
+            int[] anchor = NativeLevelSeamAnchor.resolve(level, DrlgDrlg.getLevel(drlg, vis[slot]));
+            if (anchor != null) zone.setNativeSeamAnchor(slot, anchor[0], anchor[1]);
+          }
+          // The River's bridge is a RoomEx orth, not a UNIT_TILE. Its reverse
+          // link on the independent Chaos preset is likewise seamless.
+          for (int destinationId : levelIds) {
+            if (destinationId == levelId) continue;
+            int[] anchor = NativeLevelSeamAnchor.resolve(level, DrlgDrlg.getLevel(drlg, destinationId));
+            if (anchor == null) continue;
+            int chosen = -1;
+            for (int slot = 0; slot < 8; slot++) {
+              if (map.getWarpDestinationOverride(levelId, slot) == destinationId) { chosen = slot; break; }
+            }
+            if (chosen < 0) for (int slot = 0; slot < 8; slot++) {
+              if ((vis == null || slot >= vis.length || vis[slot] == 0)
+                  && map.getWarpDestinationOverride(levelId, slot) <= 0) { chosen = slot; break; }
+            }
+            if (chosen >= 0) {
+              map.addWarpDestinationOverride(levelId, chosen, destinationId);
+              zone.setNativeSeamAnchor(chosen, anchor[0], anchor[1]);
+            }
+          }
+        }
         int[] objectCounts = {0, 0};
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
@@ -118,21 +163,18 @@ public final class Act4D2MOOLayoutBridge {
         String[] townMonsterSource = {null};
         boolean[] townMonsterSourcesMatch = {true};
         int[] monsterCounts = {0, 0};
+        int[] exportedVis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+        int[] exportedWarps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
               if (unitType == D2UnitTypes.UNIT_TILE) {
-                // D2MOO emits logical exits as UNIT_TILE records.  The index
-                // is the destination LevelId; the corresponding Vis/Warp
-                // slot is what MapManager uses for the interaction marker.
-                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
-                  for (int slot = 0; slot < 8; slot++) {
-                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
-                      zone.addNativeWarpMarker(slot, x, y);
-                      nativeWarpUnits[0]++;
-                      break;
-                    }
-                  }
+                // UNIT_TILE class index is LvlWarp.Id (DrlgRoomTile.cpp
+                // AddWarp), while VisN independently names the destination.
+                int slot = NativeWarpSlotResolver.resolve(level, exportedVis, exportedWarps, roomId, index);
+                if (slot >= 0) {
+                  zone.addNativeWarpMarker(slot, x, y);
+                  nativeWarpUnits[0]++;
                 }
                 nativeWarpUnits[1]++;
                 return;
@@ -158,7 +200,7 @@ public final class Act4D2MOOLayoutBridge {
                   }
                   return;
                 }
-                NativeMonsterResolution resolved = resolveNativeMonster(index, ds1Raw);
+                NativeMonsterResolution resolved = resolveNativeMonster(index, ds1Raw, actId + 1);
                 exportedMonsters.add(new Map.NativeMonster(roomId, resolved.monsterId, mode,
                     x, y, resolved.superUniqueId, resolved.superUniqueKey, spawned));
                 return;
@@ -174,7 +216,6 @@ public final class Act4D2MOOLayoutBridge {
               zone.getNativeObjects().add(new Map.NativeObject(roomId, index, mode, x, y,
                   ds1Raw, spawned, sourceFile, externalEntity));
             });
-        zone.setNativeTileGrid(grid, dt1Mask);
         int queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
         zone.getNativeMonsters().addAll(exportedMonsters);
         if (zone.isTown() && !exportedMonsters.isEmpty()
@@ -184,8 +225,8 @@ public final class Act4D2MOOLayoutBridge {
         }
         exportedLevels++;
         if (Gdx.app != null) Gdx.app.log(TAG, String.format(
-            "A4 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X objects=%d invalid=%d",
-            levelId, level.getRooms(), width, height, floors,
+            "A%d native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X objects=%d invalid=%d",
+            actId + 1, levelId, level.getRooms(), width, height, floors,
             applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask,
             presetUnits, objectCounts[1])
             + String.format(" unitTileWarp=%d/%d monsters=%d/%d queuedMonsters=%d",
@@ -195,12 +236,12 @@ public final class Act4D2MOOLayoutBridge {
             levelId, floors, level.getRooms(), presetUnits);
         applier.resetLastExportedFloorCount();
       }
-      if (Gdx.app != null) Gdx.app.log(TAG, "A4 native terrain summary levels="
-          + exportedLevels + "/" + LEVELS.length);
+      if (Gdx.app != null) Gdx.app.log(TAG, "A" + (actId + 1) + " native terrain summary levels="
+          + exportedLevels + "/" + levelIds.length);
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,
-          "Native Act IV export unavailable; keeping compatibility Zones", t);
+          "Native Act " + (actId + 1) + " export unavailable; keeping compatibility Zones", t);
       return false;
     } finally {
       if (drlg != null) DrlgDrlg.freeDrlg(drlg);
@@ -288,13 +329,17 @@ public final class Act4D2MOOLayoutBridge {
 
   /** Resolves Act IV MonPreset indices and encoded SuperUnique ids. */
   static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
+    return resolveNativeMonster(index, ds1Raw, 4);
+  }
+
+  private static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw, int act) {
     if (Riiablo.files == null || Riiablo.files.monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
     if (ds1Raw && Riiablo.files.MonPreset != null) {
       try {
-        placement = Riiablo.files.MonPreset.getPlace(4, index);
+        placement = Riiablo.files.MonPreset.getPlace(act, index);
       } catch (RuntimeException ignored) {}
     }
     MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
@@ -302,7 +347,7 @@ public final class Act4D2MOOLayoutBridge {
         ? null : Riiablo.files.SuperUniques.get(placement);
     if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size() - Riiablo.files.SuperUniques.size();
+      int suIndex = index - Riiablo.files.monstats.size();
       superUnique = Riiablo.files.SuperUniques.get(suIndex);
       if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
     }

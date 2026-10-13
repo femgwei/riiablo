@@ -33,6 +33,7 @@ public class Pathfind extends PooledComponent {
   public float stalledTime;
   /** Whether the most recent stalled tick was rejected by dynamic-unit collision. */
   public boolean blockedByDynamic;
+  public String movementBlockReason = "none";
 
   public void reset() {
     path = null;
@@ -46,6 +47,7 @@ public class Pathfind extends PooledComponent {
     pendingDirectionFrames = 0;
     stalledTime = 0f;
     blockedByDynamic = false;
+    movementBlockReason = "none";
   }
 
   public Pathfind set(GraphPath path) {
@@ -56,6 +58,7 @@ public class Pathfind extends PooledComponent {
     destination.set(path.getNodePosition(path.getCount() - 1));
     stalledTime = 0f;
     blockedByDynamic = false;
+    movementBlockReason = "none";
     return this;
   }
 

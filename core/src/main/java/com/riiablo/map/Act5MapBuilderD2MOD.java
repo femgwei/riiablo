@@ -71,7 +71,6 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       LEVEL_FRIGIDHIGHLANDS,
       LEVEL_ARREATPLATEAU,
       LEVEL_CRYSTALLINEPASSAGE,
-      LEVEL_FROZENRIVER,
       LEVEL_GLACIALTRAIL,
       LEVEL_FROZENTUNDRA,
       LEVEL_ANCIENTSWAY,
@@ -88,8 +87,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       {LEVEL_BLOODYFOOTHILLS, LEVEL_FRIGIDHIGHLANDS},
       {LEVEL_FRIGIDHIGHLANDS, LEVEL_ARREATPLATEAU},
       {LEVEL_ARREATPLATEAU, LEVEL_CRYSTALLINEPASSAGE},
-      {LEVEL_CRYSTALLINEPASSAGE, LEVEL_FROZENRIVER},
-      {LEVEL_FROZENRIVER, LEVEL_GLACIALTRAIL},
+      {LEVEL_CRYSTALLINEPASSAGE, LEVEL_GLACIALTRAIL},
       {LEVEL_GLACIALTRAIL, LEVEL_FROZENTUNDRA},
       {LEVEL_FROZENTUNDRA, LEVEL_ANCIENTSWAY},
       {LEVEL_ANCIENTSWAY, LEVEL_ARREATSUMMIT},
@@ -236,6 +234,17 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     // causing its zones to overlap the town and making coordinate-based Warp
     // resolution select Nihlathak Temple for Harrogath markers.
     createNihlathakQuestZones(map, diff, base);
+    // The outdoor link table does not contain the independent cave/portal
+    // branches. They still need Zones before the native DRLG projection.
+    int branchX = 32;
+    for (Zone existing : map.zones) branchX = Math.max(branchX, existing.x() + existing.width() + 32);
+    for (int levelId = 109; levelId <= 132; levelId++) {
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level == null || map.findZone(level) != null) continue;
+      Zone branch = base.createZoneWithGenerator(map, level, diff, branchX, 0);
+      branch.generator = base.createMonsterGenerator(socket);
+      branchX += branch.width() + 32;
+    }
 
     // When the complete 1.10f MPQ set is available, replace the synthetic
     // Worldstone tail with D2MOO's native RoomEx/TileGrid export.  The bridge
@@ -459,8 +468,19 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       }
     }
     Vector2 marker = new Vector2();
+    if (levelId == LEVEL_HARROGATH) {
+      // DrlgRoomTile.cpp creates OBJECT_HARROGATH_TOWN_MAIN_GATE at the
+      // authored exit, not at the middle of the town rectangle.
+      for (Map.NativeObject object : zone.getNativeObjects()) {
+        if (object.presetIndex != 449 || object.ds1Raw) continue;
+        if (resolveWarpMarkerNear(zone, object.x, object.y, 12, marker)) {
+          zone.addRuntimeWarpMarker(mainIndex, (int) marker.x, (int) marker.y);
+          return;
+        }
+      }
+    }
     if (resolveWarpMarkerPosition(zone, mainIndex, marker)) {
-      zone.addNativeWarpMarker(mainIndex, (int) marker.x, (int) marker.y);
+      zone.addRuntimeWarpMarker(mainIndex, (int) marker.x, (int) marker.y);
       return;
     }
 
@@ -475,7 +495,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
           "No walkable synthetic Warp marker: level=%d mainIndex=%d fallbackTile=(%d,%d)",
           levelId, mainIndex, tx, ty));
     }
-    zone.addNativeWarpMarker(mainIndex,
+    zone.addRuntimeWarpMarker(mainIndex,
         tx * DT1.Tile.SUBTILE_SIZE,
         ty * DT1.Tile.SUBTILE_SIZE);
   }
@@ -484,7 +504,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
    * Resolves a synthetic UNIT_TILE warp to a walkable, in-bounds tile.
    *
    * <p>{@link Zone#findFreeCoordinates} uses world-subtile coordinates while
-   * {@link Zone#addNativeWarpMarker} accepts level-local coordinates.  Keep
+   * {@link Zone#addRuntimeWarpMarker} accepts level-local coordinates.  Keep
    * that conversion here so synthetic A5Q4 portals cannot accidentally land
    * in the rectangular level void or on a blocked wall footprint.</p>
    *
@@ -516,7 +536,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
           zone.y + ty * DT1.Tile.SUBTILE_SIZE);
       if (!zone.findFreeCoordinates(candidate, 1, 48, true, free)) continue;
 
-      // addNativeWarpMarker floors to a tile. Validate that exact tile after
+      // addRuntimeWarpMarker floors to a tile. Validate that exact tile after
       // converting back to the level-local coordinate space; otherwise a free
       // subtile near a tile edge could still place the marker on a wall.
       int localX = MathUtils.clamp(
@@ -531,6 +551,24 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       return true;
     }
     return false;
+  }
+
+  static boolean resolveWarpMarkerNear(Zone zone, int anchorX, int anchorY,
+      int radius, Vector2 result) {
+    Vector2 candidate = new Vector2(), free = new Vector2();
+    long nearest = Long.MAX_VALUE;
+    boolean found = false;
+    int mask = com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags;
+    for (int y = 0; y < zone.height(); y += 5) for (int x = 0; x < zone.width(); x += 5) {
+      long distance = (long) (x - anchorX) * (x - anchorX) + (long) (y - anchorY) * (y - anchorY);
+      if (distance > (long) radius * radius || distance >= nearest) continue;
+      if (!zone.findFreeCoordinates(candidate.set(zone.x() + x, zone.y() + y),
+          2, 0, mask, false, free)) continue;
+      result.set(x, y);
+      nearest = distance;
+      found = true;
+    }
+    return found;
   }
 
   private static final class RuntimeWarpState {

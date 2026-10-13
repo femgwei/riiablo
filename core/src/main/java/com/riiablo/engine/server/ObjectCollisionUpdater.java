@@ -31,6 +31,12 @@ public class ObjectCollisionUpdater extends IteratingSystem {
 
   private final IntMap<Footprint> footprints = new IntMap<>();
 
+  /** Preset prewarming runs inside a Warp transaction, before the next ECS
+   * subscription pass. Its collision must exist before selecting arrival. */
+  public void synchronizeCreatedObject(int entityId) {
+    if (mObject.has(entityId) && mPosition.has(entityId)) process(entityId);
+  }
+
   private void setBox2DCollision(int entityId, boolean enabled) {
     Box2DBody bodyWrapper = mBox2DBody.get(entityId);
     // Object entities can enter the ECS one frame before Box2DPhysics creates

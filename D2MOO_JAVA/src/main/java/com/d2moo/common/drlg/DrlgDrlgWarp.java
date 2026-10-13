@@ -205,32 +205,19 @@ public class DrlgDrlgWarp {
      * 功能：
      * 1. 遍历 Drlg 的传送门链表
      * 2. 查找匹配关卡ID的传送门记录
-     * 3. 从传送门数组中获取指定索引的目标关卡ID
+     * 3. 返回 WarpN 定义 ID（名称沿用原生 API；目标关卡应读取 VisN）
      */
     public static int getWarpDestinationFromArray(D2DrlgLevel level, byte arrayId) {
         if (level == null || level.getDrlg() == null) {
             return -1;
         }
         
-        D2DrlgWarp warp = level.getDrlg().getWarp();
-        while (warp != null) {
-            if (warp.getNLevel() == level.getLevelId()) {
-                if (arrayId >= 0 && arrayId < 8) {
-                    // Levels.txt stores the destination level in VisN. The
-                    // parallel WarpN array is the LvlWarp tile/type id, not
-                    // the destination. Returning WarpN makes outdoor exit
-                    // styles (for example style 3 -> level 10) resolve to a
-                    // bogus level such as 0.
-                    int[] nVisArray = warp.getNVis();
-                    if (nVisArray != null && arrayId < nVisArray.length) {
-                        return nVisArray[arrayId];
-                    }
-                }
-            }
-            warp = warp.getPNext();
-        }
-        
-        return -1;
+        // DrlgDrlgWarp.cpp 0x6FD78D10 returns GetWarpIdArray()[slot],
+        // despite the historical "Destination" name. LvlWarp.dwLevelId is
+        // its Id column, not the destination level. Seamless links use -1.
+        int[] warps = getWarpIdArrayFromLevelId(level.getDrlg(), level.getLevelId());
+        return arrayId >= 0 && arrayId < 8 && warps != null && arrayId < warps.length
+                ? warps[arrayId] : -1;
     }
     
     /**

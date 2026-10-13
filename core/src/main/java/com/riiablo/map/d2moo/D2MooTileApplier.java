@@ -285,6 +285,27 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 popPadSubtiles, logicalIndex, subIndex));
     }
 
+    @Override
+    public void onTileCollision(int levelId, int tx, int ty, byte[] subtileFlags, int nativeFlags) {
+        TileGrid grid = levelIdToGrid.get(levelId);
+        if (grid == null || !grid.inBounds(tx, ty) || subtileFlags == null || subtileFlags.length < 25) return;
+        if (grid.nativeCollisionFlags == null) {
+            grid.nativeCollisionFlags = new byte[grid.width * grid.height * 25];
+            grid.nativeCollisionCells = new boolean[grid.height][grid.width];
+        }
+        grid.nativeCollisionCells[ty][tx] = true;
+        // D2Collision.cpp sub_6FD413E0: selected DT1 flags plus native
+        // PRESET/WALL/MISSILE_BARRIER bits, for floors, walls and roofs.
+        int extra = ((nativeFlags & 2) != 0 ? 0x10 : 0)
+                | ((nativeFlags & 0x40) != 0 ? 1 : 0)
+                | ((nativeFlags & 0x80) != 0 ? 4 : 0);
+        int width = grid.width * 5;
+        for (int y = 0; y < 5; y++) for (int x = 0; x < 5; x++) {
+            int target = (ty * 5 + 4 - y) * width + tx * 5 + x;
+            grid.nativeCollisionFlags[target] |= (byte) (subtileFlags[y * 5 + x] | extra);
+        }
+    }
+
     private void applyShadow(TileGrid grid, int tx, int ty, int tileId, int orientation,
             String sourceFile) {
         if (orientation != Orientation.SHADOW) {

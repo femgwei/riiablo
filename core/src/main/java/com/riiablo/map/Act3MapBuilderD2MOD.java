@@ -35,8 +35,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
 
   // Act3 区域定义
   // Keep these ids sourced from the same table used by the native D2MOO
-  // bridge.  Arcane Sanctuary is 75; Act III starts at 76 in the current
-  // project data tables. Keep these ids sourced from D2MOO's Java bridge.
+  // bridge: Arcane Sanctuary is 74 and Act III starts at Kurast Docks (75).
   static final int LEVEL_KURASTDOCKTOWN = D2LevelIds.LEVEL_KURASTDOCKTOWN;
   static final int LEVEL_SPIDERFOREST = D2LevelIds.LEVEL_SPIDERFOREST;
   static final int LEVEL_GREATMARSH = D2LevelIds.LEVEL_GREATMARSH;
@@ -944,10 +943,9 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     int oldTy = Zone.tileHashY(oldKey);
     int offsetX = warpOffsetX(zone, cell.mainIndex);
     int offsetY = warpOffsetY(zone, cell.mainIndex);
-    Vector2 landing = new Vector2();
     int worldX = zone.x() + oldTx * DT1.Tile.SUBTILE_SIZE + offsetX;
     int worldY = zone.y() + oldTy * DT1.Tile.SUBTILE_SIZE + offsetY;
-    if (zone.findFreeCoordinates(new Vector2(worldX, worldY), 1, 8, true, landing)) return;
+    if (hasPlayerWarpApproach(zone, worldX, worldY)) return;
     int bestTx = oldTx;
     int bestTy = oldTy;
     int bestDistance = Integer.MAX_VALUE;
@@ -960,7 +958,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         if (key != oldKey && zone.specials.containsKey(key)) continue;
         int candidateX = zone.x() + tx * DT1.Tile.SUBTILE_SIZE + offsetX;
         int candidateY = zone.y() + ty * DT1.Tile.SUBTILE_SIZE + offsetY;
-        if (!zone.findFreeCoordinates(new Vector2(candidateX, candidateY), 1, 8, true, landing)) continue;
+        if (!hasPlayerWarpApproach(zone, candidateX, candidateY)) continue;
         int distance = Math.abs(tx - oldTx) + Math.abs(ty - oldTy);
         if (distance < bestDistance) {
           bestDistance = distance;
@@ -975,6 +973,19 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     Gdx.app.log(TAG, String.format(
         "Act3 warp marker relocated to walkable tile: level=%d mainIndex=%d from=(%d,%d) to=(%d,%d)",
         zone.level.Id, (int) cell.mainIndex, oldTx, oldTy, bestTx, bestTy));
+  }
+
+  static boolean hasPlayerWarpApproach(Zone zone, int anchorX, int anchorY) {
+    Vector2 free = new Vector2();
+    int mask = com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags;
+    for (int dy = -3; dy <= 3; dy++) for (int dx = -3; dx <= 3; dx++) {
+      // Warp range is 3+2. Leave 1.5 tiles for the real network stop-click
+      // allowance; a size-one tile eight cells away is not an approach.
+      if (dx * dx + dy * dy > 3.5f * 3.5f) continue;
+      if (zone.findFreeCoordinates(new Vector2(anchorX + dx, anchorY + dy),
+          2, 0, mask, true, free)) return true;
+    }
+    return false;
   }
 
   private static int warpOffsetX(Zone zone, int mainIndex) {

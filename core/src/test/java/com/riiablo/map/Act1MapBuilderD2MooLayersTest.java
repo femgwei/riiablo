@@ -39,6 +39,39 @@ import com.riiablo.save.CharData;
 import com.riiablo.engine.server.component.NativeObjectState;
 
 class Act1MapBuilderD2MooLayersTest {
+  @Test void selectedNativeWallCollisionTakesPrecedenceOverMissingFloorGraphic() {
+    TileGrid grid = new TileGrid(2, 1);
+    com.riiablo.map.d2moo.D2MooTileApplier applier = new com.riiablo.map.d2moo.D2MooTileApplier();
+    applier.putGrid(55, grid);
+    byte[] selected = new byte[25];
+    selected[0] = (byte) DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+    applier.onTileCollision(55, 0, 0, selected, 0);
+    byte[] actual = new byte[50];
+    Act1MapBuilderD2MOD.rebuildTileCollisionFlags(grid, new DT1.Tile[Map.MAX_LAYERS][],
+        null, actual, 2, 1, 2, 1);
+    assertEquals(DT1.Tile.FLAG_BLOCK_PLAYER_WALK, actual[40]);
+    assertEquals(0, actual[0]);
+    assertEquals(DT1.Tile.FLAG_BLOCK_WALK, actual[5], "truly unexported space stays blocked");
+  }
+
+  @Test void collisionRebuildDoesNotRerollTheNativeSelectedDt1Variant() throws IOException {
+    TileGrid grid = new TileGrid(1, 1);
+    grid.exportedFloorCells[0][0] = true;
+    com.riiablo.map.d2moo.D2MooTileApplier applier = new com.riiablo.map.d2moo.D2MooTileApplier();
+    applier.putGrid(2, grid);
+    byte[] selected = new byte[25];
+    selected[0] = (byte) DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+    applier.onTileCollision(2, 0, 0, selected, 0);
+    DT1.Tile rerolled = tile(Orientation.FLOOR, 1, 1);
+    rerolled.flags = new byte[25];
+    java.util.Arrays.fill(rerolled.flags, (byte) DT1.Tile.FLAG_BLOCK_WALK);
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.FLOOR_OFFSET] = new DT1.Tile[] {rerolled};
+    byte[] actual = new byte[25];
+    Act1MapBuilderD2MOD.rebuildTileCollisionFlags(grid, layers, null, actual, 1, 1, 1, 1);
+    assertEquals(DT1.Tile.FLAG_BLOCK_PLAYER_WALK, actual[20]);
+    assertEquals(0, actual[0]);
+  }
 
   @Test
   void acceptsNativeDirtPathOnlyAfterRoomFloorRasterization() {
@@ -522,9 +555,15 @@ class Act1MapBuilderD2MooLayersTest {
     room.setPresetUnits(unit);
 
     int[] exported = new int[8];
+    int[] auditOnly = {0};
     int count = DrlgExport.exportLevelPresetUnits(drlg, 4,
         (levelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
             externalEntity, sourceFile) -> {
+          if (!externalEntity) {
+            assertEquals(43, index);
+            auditOnly[0]++;
+            return;
+          }
           exported[0] = levelId;
           exported[1] = unitType;
           exported[2] = index;
@@ -535,7 +574,8 @@ class Act1MapBuilderD2MooLayersTest {
           exported[7] = spawned ? 1 : 0;
         });
 
-    assertEquals(1, count);
+    assertEquals(2, count); // export includes audit-only LvlSub units, not two gameplay entities
+    assertEquals(1, auditOnly[0]);
     assertEquals(4, exported[0]);
     assertEquals(D2UnitTypes.UNIT_OBJECT, exported[1]);
     assertEquals(12, exported[2]);

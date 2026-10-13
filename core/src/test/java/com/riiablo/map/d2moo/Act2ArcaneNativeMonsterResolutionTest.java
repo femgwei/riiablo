@@ -68,7 +68,7 @@ class Act2ArcaneNativeMonsterResolutionTest extends RiiabloTest {
       if (unique == null || unique.hcIdx < 0) continue;
       MonStats.Entry base = Riiablo.files.monstats.get(unique.MonClass);
       int candidate = Riiablo.files.monstats.size()
-          + Riiablo.files.SuperUniques.size() + unique.hcIdx;
+          + unique.hcIdx;
       if (base != null && Riiablo.files.monstats.get(candidate) == null) {
         expectedUnique = unique;
         expectedBase = base;

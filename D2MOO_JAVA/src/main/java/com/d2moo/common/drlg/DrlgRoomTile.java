@@ -1887,14 +1887,11 @@ public class DrlgRoomTile {
         // 如果瓦片类型不匹配，或者需要更新瓦片缓存
         if (nTileType != pTileData.getNTileType() 
                 || (pTileData.getNTileType() == TILETYPE_FLOOR 
-                        && pTileData.getPTile() != null)) {
-            // 使用 D2CMP 函数获取瓦片风格和序列（如果需要检查）
-            Object pCurrentTile = pTileData.getPTile();
-            if (pCurrentTile != null) {
-                int nCurrentStyle = D2Cmp.getTileStyle(pCurrentTile);
-                int nCurrentSequence = D2Cmp.getTileSequence(pCurrentTile);
-                // 可以在这里添加风格和序列的检查逻辑
-            }
+                        && D2Cmp.getTileStyle(pTileData.getPTile()) == 30
+                        && D2Cmp.getTileSequence(pTileData.getPTile()) == 0)) {
+            // DrlgRoomTile.cpp only replaces the style-30/sequence-0
+            // placeholder floor. Ordinary selected entries must not reroll
+            // when a neighbour links this boundary tile.
             
             // 如果类型不匹配，更新瓦片缓存
             Object pTileCache = getTileCache(drlgRoom2, nTileType, nPackedTileInformation);

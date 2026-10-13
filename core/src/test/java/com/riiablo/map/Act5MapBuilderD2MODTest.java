@@ -9,6 +9,22 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2LvlPrestIds;
 
 class Act5MapBuilderD2MODTest {
+  @Test void gateMarkerUsesNearbyAlignedPlayerFootprintNotDistantPocket() {
+    Map.Zone zone = new Map.Zone();
+    zone.width = zone.height = 25;
+    zone.tilesX = zone.tilesY = 5;
+    zone.setPosition(-100, -200);
+    zone.flags = new byte[625];
+    java.util.Arrays.fill(zone.flags, (byte) DT1.Tile.FLAG_BLOCK_WALK);
+    for (int[] offset : new int[][] {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+      zone.flags[(10 + offset[1]) * 25 + 10 + offset[0]] = 0;
+    }
+    com.badlogic.gdx.math.Vector2 result = new com.badlogic.gdx.math.Vector2();
+    assertTrue(Act5MapBuilderD2MOD.resolveWarpMarkerNear(zone, 11, 10, 2, result));
+    assertEquals(new com.badlogic.gdx.math.Vector2(10, 10), result);
+    org.junit.jupiter.api.Assertions.assertFalse(
+        Act5MapBuilderD2MOD.resolveWarpMarkerNear(zone, 20, 20, 2, result));
+  }
   @Test
   void mainChainUsesAct5LevelsInNativeProgressionOrder() {
     assertEquals(D2LevelIds.LEVEL_HARROGATH,
@@ -18,17 +34,17 @@ class Act5MapBuilderD2MODTest {
     assertEquals(D2LevelIds.LEVEL_FRIGIDHIGHLANDS,
         Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[2]);
     assertEquals(D2LevelIds.LEVEL_ARREATSUMMIT,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[9]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[8]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[10]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[9]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[11]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[10]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[12]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[11]);
     assertEquals(D2LevelIds.LEVEL_THRONEOFDESTRUCTION,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[13]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[12]);
     assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
-        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[14]);
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[13]);
     assertEquals(Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN.length - 1,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS.length);
   }

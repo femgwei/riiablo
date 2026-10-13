@@ -280,10 +280,12 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
       Levels.Entry destinationLevel = Riiablo.files.Levels.get(destinationId);
       Zone source = findZone(map, sourceId), destination = findZone(map, destinationId);
       if (sourceLevel == null || destinationLevel == null || source == null || destination == null) continue;
-      int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationId);
+      int sourceSlot = configuredSlot(map, sourceId, destinationId);
+      if (sourceSlot < 0) sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationId);
       if (sourceSlot >= 0 && conflictingOverride(map, sourceId, sourceSlot, destinationId)) sourceSlot = -1;
       if (sourceSlot < 0) sourceSlot = firstAvailableWarpSlot(map, sourceId, source);
-      int destinationSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp, sourceId);
+      int destinationSlot = configuredSlot(map, destinationId, sourceId);
+      if (destinationSlot < 0) destinationSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp, sourceId);
       if (destinationSlot >= 0 && conflictingOverride(map, destinationId, destinationSlot, sourceId)) destinationSlot = -1;
       if (destinationSlot < 0) destinationSlot = firstAvailableWarpSlot(map, destinationId, destination);
       if (sourceSlot < 0 || destinationSlot < 0) {
@@ -429,6 +431,15 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
       DS1.Cell cell = entry.value;
       if (cell != null && Map.ID.WARPS.contains(cell.id) && cell.mainIndex == mainIndex) return;
     }
+    com.badlogic.gdx.math.Vector2 nativeAnchor = zone.nativeSeamAnchor(mainIndex);
+    if (nativeAnchor != null) {
+      int[] point = nativeSeamMarker(zone, nativeAnchor);
+      if (point != null) zone.addRuntimeWarpMarker(mainIndex, point[0], point[1]);
+      return;
+    }
+    // A native level must not invent a portal at its rectangle centre when
+    // its actual seam metadata is missing. Leave that failure visible.
+    if (zone.nativeTileGrid() != null) return;
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new com.badlogic.gdx.utils.IntMap<>();
     int tx = Math.max(1, Math.min(zone.tilesX - 2, zone.tilesX / 2 + mainIndex % 3));
     int ty = Math.max(1, Math.min(zone.tilesY - 2, zone.tilesY / 2));
@@ -439,6 +450,26 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     cell.orientation = (short) Orientation.SPECIAL_10;
     cell.value = (mainIndex & 0x3F) << 20;
     zone.putCell(Map.WALL_OFFSET, tx, ty, cell);
+  }
+
+  static int[] nativeSeamMarker(Zone zone, com.badlogic.gdx.math.Vector2 anchor) {
+    int[] best = null;
+    float score = Float.MAX_VALUE;
+    int mask = com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags;
+    for (int y = 0; y < zone.height(); y += 5) for (int x = 0; x < zone.width(); x += 5) {
+      float d = anchor.dst2(x, y);
+      if (d > 40 * 40 || zone.map.isBlockedForPath(zone, zone.x() + x, zone.y() + y, mask, 2, false)) continue;
+      // An orth anchor lies on the exclusive room edge.  The nearest free
+      // subtile can still be an edge-only one-cell lip that a size-2 player
+      // cannot approach. Prefer a walkable point at least two tiles inside
+      // the owning room, while retaining the native anchor when no interior
+      // candidate exists in the reduced export.
+      float interiorPenalty = d < 10 * 10 ? 100000f : 0f;
+      float candidateScore = interiorPenalty + d;
+      if (candidateScore >= score) continue;
+      best = new int[] {x, y}; score = candidateScore;
+    }
+    return best;
   }
 
   private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {

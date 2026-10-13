@@ -53,6 +53,10 @@ public interface DrlgTileExporter {
                 logicalGroupId, nativeStateFlags, nativeAlpha, fadeTick);
     }
 
+    /** Selected DT1 entry's collision; consumers must not reroll its variant. */
+    default void onTileCollision(int levelId, int tx, int ty, byte[] subtileFlags, int nativeFlags) {
+    }
+
     /** Native preset Pop/PopPad rectangle, in level-local tile coordinates. */
     default void onPop(int levelId, int x, int y, int width, int height,
             int popPadSubtiles, int logicalIndex, int subIndex) {

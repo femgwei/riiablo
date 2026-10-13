@@ -49,11 +49,17 @@ public final class DrlgExport {
                 DrlgActivate.initializeRoomEx(room);
                 initialized++;
             }
+            room = room.getDrlgRoomNext();
+        }
+        // DrlgRoomTile.cpp LinkedTileDataManager can change tiles owned by
+        // an earlier room while its neighbour is initialized. Export only
+        // after the entire level has finished linking; OR-ed snapshots cannot
+        // remove a stale wall/flag captured before that remapping.
+        for (room = level.getFirstRoomEx(); room != null; room = room.getDrlgRoomNext()) {
             exportRoomTiles(room, levelId, levelOriginX, levelOriginY, exporter, counts);
             exportPresetPops(room, levelId, levelOriginX, levelOriginY, exporter);
             exportPresetSpecials(room, levelId, levelOriginX, levelOriginY, exporter, counts);
             rooms++;
-            room = room.getDrlgRoomNext();
         }
         D2Log.debug("DRLG_EXPORT level=%d origin=(%d,%d) rooms=%d initialized=%d"
                         + " floorTiles=%d wallTiles=%d shadowTiles=%d"
@@ -185,6 +191,8 @@ public final class DrlgExport {
                         sourceFile(t), logicalGroup(room, roomBaseTx + t.getNPosX(),
                                 roomBaseTy + t.getNPosY()), t.getUnk0x24(),
                         t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
+                exporter.onTileCollision(levelId, tx, ty,
+                        com.d2moo.common.d2cmp.D2Cmp.getTileFlagArray(t.getPTile()), t.getDwFlags());
                 counts.floors++;
             }
         }
@@ -204,6 +212,8 @@ public final class DrlgExport {
                         sourceFile(t), wallLogicalGroup(room, t, roomBaseTx, roomBaseTy),
                         t.getUnk0x24(),
                         t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
+                exporter.onTileCollision(levelId, tx, ty,
+                        com.d2moo.common.d2cmp.D2Cmp.getTileFlagArray(t.getPTile()), t.getDwFlags());
                 counts.walls++;
             }
         }
@@ -222,6 +232,8 @@ public final class DrlgExport {
                 exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId, t.getDwFlags(),
                         sourceFile(t), -1, t.getUnk0x24(),
                         t.getNRed() & 0xFF, t.getUnk0x2C(), t.getNTileType());
+                exporter.onTileCollision(levelId, tx, ty,
+                        com.d2moo.common.d2cmp.D2Cmp.getTileFlagArray(t.getPTile()), t.getDwFlags());
                 counts.shadows++;
             }
         }

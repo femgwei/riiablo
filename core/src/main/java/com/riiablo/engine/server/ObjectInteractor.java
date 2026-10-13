@@ -126,7 +126,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     // them through the same authoritative request as quest objects so all
     // clients observe one open and one shared drop set.
     if (clientNetwork != null && (isNetworkQuestObject(networkQuest)
-        || NativePresetObjectResolver.isNetworkObject(kind))
+        || NativePresetObjectResolver.isNetworkObject(kind)
+        || NativeObjectOperateTable.isNetworkDoor(object.base))
         && clientNetwork.requestQuest(
             com.riiablo.net.packet.d2gs.QuestOperation.OBJECT_INTERACTION,
             entityId, -1) != 0) {

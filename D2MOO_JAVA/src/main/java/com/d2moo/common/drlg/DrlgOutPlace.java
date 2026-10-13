@@ -849,13 +849,13 @@ public class DrlgOutPlace {
     
     // 关卡类型常量（对应 C++ D2C_LvlTypes 枚举）
     private static final int LVLTYPE_ACT1_WILDERNESS = 2;
-    private static final int LVLTYPE_ACT2_DESERT = 5;
+    private static final int LVLTYPE_ACT2_DESERT = D2LevelTypes.LVLTYPE_ACT2_DESERT;
     // 1.10f LvlTypes.txt ids (not the old zero-based port values).
     private static final int LVLTYPE_ACT3_JUNGLE = 21;
     private static final int LVLTYPE_ACT3_KURAST = 22;
-    private static final int LVLTYPE_ACT4_MESA = 10;
-    private static final int LVLTYPE_ACT4_LAVA = 11;
-    private static final int LVLTYPE_ACT5_BARRICADE = 12;
+    private static final int LVLTYPE_ACT4_MESA = D2LevelTypes.LVLTYPE_ACT4_MESA;
+    private static final int LVLTYPE_ACT4_LAVA = D2LevelTypes.LVLTYPE_ACT4_LAVA;
+    private static final int LVLTYPE_ACT5_BARRICADE = D2LevelTypes.LVLTYPE_ACT5_BARRICADE;
     
     // Act 常量（对应 C++ D2C_Acts 枚举）
     private static final byte ACT_I = 0;

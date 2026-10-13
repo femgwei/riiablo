@@ -43,9 +43,20 @@ public class D2Cmp {
             return;
         }
         
-        // 计算文件名哈希以找到合适的槽位
-        int hash = fileName.hashCode();
-        int slot = Math.abs(hash) % tiles.length;
+        String cacheKey = fileName.replace('/', '\\').toLowerCase(java.util.Locale.ROOT);
+        // MPQ names are case-insensitive. A hash collision can move an
+        // existing library away from its first slot; search the whole table
+        // before appending it again. Duplicate libraries inflate animation
+        // frame counts (two copies of rarity 0 falsely require rarity 1).
+        for (Object value : tiles) {
+            if (value instanceof D2TileLibraryHashStrc) {
+                String existingName = ((D2TileLibraryHashStrc) value).getFileName();
+                if (existingName != null && cacheKey.equals(existingName.replace('/', '\\')
+                        .toLowerCase(java.util.Locale.ROOT))) return;
+            }
+        }
+        if (tiles.length == 0) return;
+        int slot = Math.floorMod(cacheKey.hashCode(), tiles.length);
         
         // 检查该槽位是否已加载相同的文件
         if (tiles[slot] != null) {
@@ -68,7 +79,10 @@ public class D2Cmp {
             }
         }
 
-        String cacheKey = fileName.replace('/', '\\').toLowerCase(java.util.Locale.ROOT);
+        if (tiles[slot] != null) {
+            D2Log.warning("D2CMP_10087_LoadTileLibrarySlot: Tile library table full: " + fileName);
+            return;
+        }
         D2TileLibraryHashStrc cachedLibrary = namedTileLibraryCache.get(cacheKey);
         if (cachedLibrary != null) {
             tiles[slot] = cachedLibrary;
@@ -658,9 +672,7 @@ public class D2Cmp {
                     matchingNode = currentNode;
                     break;
                 }
-                // 移动到下一个节点（如果有链表）
-                // 注意：当前实现中节点没有 pNext 字段，需要根据实际结构调整
-                break; // 临时：避免无限循环
+                currentNode = currentNode.getPPrev();
             }
             
             // 如果没有找到匹配的节点，创建新节点
@@ -689,14 +701,10 @@ public class D2Cmp {
                 D2TileLibraryHashRefStrc newRef = new D2TileLibraryHashRefStrc();
                 newRef.setPTile(tile);
                 
-                // 将新引用添加到引用链表的末尾
-                D2TileLibraryHashRefStrc lastRef = matchingNode.getPRef();
-                while (lastRef != null && lastRef.getPPrev() != null) {
-                    lastRef = lastRef.getPPrev();
-                }
-                if (lastRef != null) {
-                    newRef.setPPrev(lastRef);
-                }
+                // Preserve every variant/frame. Linking to the tail dropped
+                // all intermediate references: lava then had frames 0 and 9
+                // only, yet animation requested frame 1 from a count of two.
+                newRef.setPPrev(matchingNode.getPRef());
                 matchingNode.setPRef(newRef);
             }
         }

@@ -97,19 +97,26 @@ public class Act3QuestSystem extends PassiveSystem {
         ? Act3GidbinnQuest.enterArea(gidbinnPrevious) : gidbinnPrevious;
     if (gidbinnNext != gidbinnPrevious) updateGidbinnRecord(player.data, gidbinnNext,
         "entered-flayer-jungle");
+    prepareZoneQuestObjects(event.zone);
+  }
+
+  /** Materialize compatibility quest fixtures before an arrival is chosen,
+   * not on the next ZoneChange after placing a player on their footprint. */
+  public void prepareZoneQuestObjects(Map.Zone zone) {
+    if (zone == null || zone.level == null) return;
     // D2Game's quest initialization owns these special object placements.
     // Some old DS1 exports omit the quest unit, so retain the native class
     // and lifecycle by materializing the missing object on first area entry.
-    if (event.zone.level.Id == D2LevelIds.LEVEL_FLAYERJUNGLE) {
-      ensureAct3QuestObject(event.zone, Act3GidbinnQuest.GIDBINN_DECOY_OBJECT);
-    } else if (event.zone.level.Id == D2LevelIds.LEVEL_SPIDERCAVERN) {
-      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST2);
-    } else if (event.zone.level.Id == D2LevelIds.LEVEL_FLAYERDUNGEONLVL3) {
-      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST1);
-    } else if (event.zone.level.Id == D2LevelIds.LEVEL_SEWERSA3LEV2) {
-      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST3);
-    } else if (event.zone.level.Id == D2LevelIds.LEVEL_TRAVINCAL) {
-      ensureAct3QuestObject(event.zone, Act3KhalimQuest.COMPELLING_ORB);
+    if (zone.level.Id == D2LevelIds.LEVEL_FLAYERJUNGLE) {
+      ensureAct3QuestObject(zone, Act3GidbinnQuest.GIDBINN_DECOY_OBJECT);
+    } else if (zone.level.Id == D2LevelIds.LEVEL_SPIDERCAVERN) {
+      ensureAct3QuestObject(zone, Act3KhalimQuest.KHALIM_CHEST2);
+    } else if (zone.level.Id == D2LevelIds.LEVEL_FLAYERDUNGEONLVL3) {
+      ensureAct3QuestObject(zone, Act3KhalimQuest.KHALIM_CHEST1);
+    } else if (zone.level.Id == D2LevelIds.LEVEL_SEWERSA3LEV2) {
+      ensureAct3QuestObject(zone, Act3KhalimQuest.KHALIM_CHEST3);
+    } else if (zone.level.Id == D2LevelIds.LEVEL_TRAVINCAL) {
+      ensureAct3QuestObject(zone, Act3KhalimQuest.COMPELLING_ORB);
     }
   }
 
@@ -127,6 +134,10 @@ public class Act3QuestSystem extends PassiveSystem {
         false, false, NativePresetObjectResolver.Kind.ORDINARY);
     state.source = new Map.NativeObject(classId, com.riiablo.engine.Engine.Object.MODE_NU,
         (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+    zone.getEntities().add(entity);
+    com.riiablo.engine.server.ObjectCollisionUpdater collision = world.getSystem(
+        com.riiablo.engine.server.ObjectCollisionUpdater.class);
+    if (collision != null) collision.synchronizeCreatedObject(entity);
     log.info("[A3] materialized missing native quest object: level={} class={} entity={}",
         zone.level == null ? -1 : zone.level.Id, classId, entity);
   }
@@ -134,6 +145,28 @@ public class Act3QuestSystem extends PassiveSystem {
   private boolean hasQuestObject(Map.Zone zone, int classId) {
     if (zone == null) return false;
     if (mObject == null || mMapWrapper == null) return false;
+    // A genuine preset may still be deferred in an inactive room. Native
+    // A3Q2 object operators consume that preset; a room-center compatibility
+    // duplicate is not a substitute for the authored quest chest.
+    for (Map.NativeObject preset : zone.getNativeObjects()) {
+      if (!preset.externalEntity || preset.spawned) continue;
+      int id = preset.presetIndex;
+      if (preset.ds1Raw) {
+        if (Riiablo.files == null || Riiablo.files.obj == null || zone.level == null) continue;
+        int act = zone.level.Act + 1;
+        if (id < 0 || id >= Riiablo.files.obj.getSize(act)) continue;
+        id = Riiablo.files.obj.getObjectId(act, id);
+      }
+      if (id == classId) return true;
+    }
+    // Prewarming creates entities before Artemis publishes its subscriptions.
+    // The zone-owned list is already complete at this transaction boundary.
+    for (int i = 0; i < zone.getEntities().size; i++) {
+      int id = zone.getEntities().get(i);
+      Object object = mObject.get(id);
+      if (object != null && object.base != null && object.base.Id == classId
+          && mMapWrapper.has(id) && mMapWrapper.get(id).zone == zone) return true;
+    }
     com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager().get(
         com.artemis.Aspect.all(Object.class, MapWrapper.class)).getEntities();
     int[] ids = entities.getData();

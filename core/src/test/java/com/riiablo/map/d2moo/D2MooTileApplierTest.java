@@ -13,6 +13,23 @@ import com.riiablo.map.Orientation;
 class D2MooTileApplierTest {
   private static final int LEVEL_ID = 2;
 
+  @Test void nativeCollisionUsesSelectedEntryAndD2CollisionExtraFlags() {
+    TileGrid grid = new TileGrid(2, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+    byte[] flags = new byte[25];
+    flags[0] = 8;
+    applier.onTileCollision(LEVEL_ID, 0, 0, flags, 2 | 0x80);
+    assertEquals(8 | 0x10 | 4, grid.nativeCollisionFlags[4 * 10] & 0xff);
+    assertEquals(0x10 | 4, grid.nativeCollisionFlags[0] & 0xff);
+    assertEquals(true, grid.nativeCollisionCells[0][0]);
+    assertEquals(false, grid.nativeCollisionCells[0][1]);
+    applier.onTileCollision(LEVEL_ID, 0, 0, new byte[25], 0x40);
+    assertEquals(8 | 0x10 | 4 | 1, grid.nativeCollisionFlags[4 * 10] & 0xff);
+    applier.onTileCollision(LEVEL_ID, 2, 0, flags, 0x40);
+    assertEquals(50, grid.nativeCollisionFlags.length);
+  }
+
   @Test
   void storesFloorWallsAndShadowInRiiabloLayerLayout() {
     TileGrid grid = new TileGrid(3, 2);
