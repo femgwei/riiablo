@@ -7448,6 +7448,18 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   A2 Warp 及 A3--A5 地图回归通过。真实 MPQ/客户端验证仍留到 A2--A5 地图全部完成后
   统一进行。
 
+## 2026-10-14 城镇 TCP 双向通行与失败定位
+
+- [x] 新增 `:server:d2gs:headlessTownSeams`，城镇初始化后必须真实 TCP 出城并返回；闭门通过真实对象交互打开，失败不初始化野外绕过，原始日志拒绝覆盖。
+- [x] 修复 Objects 表带制表符的 Expansion 元数据行占用编号：D2MOO 的 Harrogath 主城门 449 曾被误读为石堆，真实门错移到 450；原版表回归要求 449 Token=2v / OperateFn=61，补齐该回调的权威开关门分类。
+- [x] 补齐普通步行切区的 ZoneChangeEvent；出城/返城各一次，验证城镇动作模式切换，RoomEx 内部移动不重复触发。
+- [x] 动态单位碰撞必须有原生连续连接，不能仅凭矩形相邻混入其他 ACT 的单位；新增反例，保留真实相邻单位碰撞。
+- [x] A5 返回故障进一步定位为选择了单位脚下的落点；出口规划优先选择未占据的可通行边界，所有候选都占据时仍保留真实战斗清障路径，不删除单位或放宽碰撞。
+- [x] 独立短测试审计拒绝缺少返回、Warp 和野外 staging；`tools/audit-town-seams.ps1` 同时保存未审查日志项，移动通过不等于完整验收通过。
+- [x] seed=127897359 / 25Hz 五城十个方向均通过真实 TCP 步行，零 Warp、零野外 staging、零战斗击杀；地图回归 181 项、真实资源审计 4 项、服务端定向测试 10 项通过。
+- [ ] 独立完整日志审计仍拒绝验收：33 条待处理项（26 条 AI_FALLBACK、4 条 Attributes 空 base 重置、1 条 A3 丛林尺寸、2 条动态生成位置调整），保存在 `server/d2gs/build/map-town-tcp/five-towns-final/log-issues.json`。
+- [ ] 已发现 Attributes 空 base 重置及未实现 AI 的 fallback 告警，仍阻止无错验收；五种子长巡游继续暂停，下一阶段处理告警并扩大短测试种子矩阵。
+
 ## 2026-10-14 地图分层验收加固
 
 - [x] 方案见 `docs/map-acceptance-plan.md`，区分生成、资源安装、实体运行、真实 TCP 通行和显示，旧巡图 PASS 不再等价于全地图正确。

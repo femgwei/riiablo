@@ -226,7 +226,9 @@ public class Files {
     RarePrefix       = load(RarePrefix.class, Excel.EXPANSION);
     RareSuffix       = load(RareSuffix.class, Excel.EXPANSION);
     Runes            = load(Runes.class);
-    objects          = load(Objects.class);
+    // The tab-padded Expansion separator is metadata, not a native object
+    // record. Counting it shifts every expansion class (449 gate -> debris).
+    objects          = load(Objects.class, Excel.EXPANSION);
     ObjMode          = load(ObjMode.class);
     Overlay          = load(Overlay.class, Excel.EXPANSION);
     PlrMode          = load(PlrMode.class);

@@ -25,6 +25,17 @@ public final class MapTourPlan {
     return townOutdoorDestination(from) == to && to > 0;
   }
 
+  public static void requireTownPairs(List<Integer> itinerary) {
+    if (itinerary.isEmpty() || itinerary.size() % 2 != 0) {
+      throw new IllegalArgumentException("Town diagnostic requires nonempty town,outdoor pairs");
+    }
+    for (int i = 0; i < itinerary.size(); i += 2) {
+      if (!requiresTownExit(itinerary.get(i), itinerary.get(i + 1))) {
+        throw new IllegalArgumentException("Not a town exit pair at index " + i);
+      }
+    }
+  }
+
   /** Explicit, ordered reproduction only; callers label this as partial coverage. */
   public static List<Integer> focusedLevels(List<Integer> complete, String selection) {
     if (selection == null) return complete;

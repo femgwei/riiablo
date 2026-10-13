@@ -19,6 +19,7 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Warp> mWarp;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<com.riiablo.engine.server.component.Player> mPlayer;
 
   @Override
   protected void process(int entityId) {
@@ -63,6 +64,13 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
     if (zone != oldZone || nextRoomId != wrapper.roomId) {
       wrapper.zone = zone;
       wrapper.roomId = nextRoomId;
+      // WarpInteractor already publishes its transaction. Here only ordinary
+      // walking changes the zone; room-only movement must not replay entry.
+      if (zone != oldZone && mPlayer.has(entityId)) {
+        net.mostlyoriginal.api.event.common.EventSystem events = world.getSystem(
+            net.mostlyoriginal.api.event.common.EventSystem.class);
+        if (events != null) events.dispatch(com.riiablo.engine.server.event.ZoneChangeEvent.obtain(entityId, zone));
+      }
       log.debug("[ROOM_ENTITY] entity={} level={} fromZone={} fromRoom={} toZone={} toRoom={} pos=({}, {})",
           entityId,
           zone != null && zone.level != null ? zone.level.Id : -1,

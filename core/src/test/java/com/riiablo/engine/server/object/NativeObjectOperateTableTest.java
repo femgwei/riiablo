@@ -23,6 +23,8 @@ class NativeObjectOperateTableTest {
     org.junit.jupiter.api.Assertions.assertTrue(NativeObjectOperateTable.isNetworkDoor(door));
     door.OperateFn = 18;
     org.junit.jupiter.api.Assertions.assertTrue(NativeObjectOperateTable.isNetworkDoor(door));
+    door.OperateFn = 61;
+    org.junit.jupiter.api.Assertions.assertTrue(NativeObjectOperateTable.isNetworkDoor(door));
     door.OperateFn = 1;
     org.junit.jupiter.api.Assertions.assertFalse(NativeObjectOperateTable.isNetworkDoor(door));
     org.junit.jupiter.api.Assertions.assertFalse(NativeObjectOperateTable.isNetworkDoor(null));
@@ -45,6 +47,7 @@ class NativeObjectOperateTableTest {
   void keepsSecretDoorOneWayAndOrdinaryDoorReversible() {
     assertEquals(ONE_WAY_DOOR, resolve(18));
     assertEquals(TOGGLE_DOOR, resolve(8));
+    assertEquals(TOGGLE_DOOR, resolve(61));
     assertEquals(TOGGLE_DOOR, NativeObjectOperateTable.resolve(
         0, true, NativePresetObjectResolver.Kind.ORDINARY));
   }

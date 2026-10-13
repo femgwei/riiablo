@@ -18,17 +18,25 @@ public class MapTourWalkingTest {
     com.riiablo.mpq.MPQFileHandleResolver previousMpqs = Riiablo.mpqs;
     com.badlogic.gdx.backends.headless.HeadlessApplication app = new com.badlogic.gdx.backends.headless.HeadlessApplication(
         new com.badlogic.gdx.ApplicationAdapter() {});
-    World world = new World(new WorldConfigurationBuilder().build());
+    com.riiablo.engine.server.DynamicUnitCollisionSystem collision =
+        new com.riiablo.engine.server.DynamicUnitCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder().with(collision).build());
     try {
       Riiablo.home = com.riiablo.util.InstallationFinder.getInstance().defaultHomeDir();
       Riiablo.mpqs = new com.riiablo.mpq.MPQFileHandleResolver();
       Riiablo.files = new com.riiablo.Files();
+      assertEquals("Native Harrogath gate must not resolve to debris", 61,
+          Riiablo.files.objects.get(449).OperateFn);
+      assertEquals("2v", Riiablo.files.objects.get(449).Token);
       Map map = new Map(0, 0);
       Map.Zone town = zone(map, 40, 0), outdoor = zone(map, 41, 20);
       assertFalse(D2GS.allowsMovementZone(map, town, outdoor));
       int player = world.create();
       world.getMapper(Position.class).create(player).position.set(10, 10);
       world.getMapper(Size.class).create(player).size = 2;
+      world.getMapper(Velocity.class).create(player);
+      world.getMapper(com.riiablo.engine.server.component.Class.class).create(player).type =
+          com.riiablo.engine.server.component.Class.Type.PLR;
       world.getMapper(MapWrapper.class).create(player).set(map, town);
       int fakeWarp = world.create();
       world.getMapper(Position.class).create(fakeWarp).position.set(10, 10);
@@ -48,6 +56,20 @@ public class MapTourWalkingTest {
       assertNotNull(walk.target);
       assertTrue(town.contains(Math.round(walk.target.x), Math.round(walk.target.y)));
       assertTrue(outdoor.contains(Math.round(walk.destination.x), Math.round(walk.destination.y)));
+      int occupant = world.create();
+      world.getMapper(Position.class).create(occupant).position.set(walk.destination);
+      world.getMapper(Size.class).create(occupant).size = 2;
+      world.getMapper(Velocity.class).create(occupant);
+      world.getMapper(com.riiablo.engine.server.component.Class.class).create(occupant).type =
+          com.riiablo.engine.server.component.Class.Type.PLR;
+      world.getMapper(MapWrapper.class).create(occupant).set(map, outdoor);
+      world.process(); collision.refreshNow();
+      MapTourProbe.Sample alternate = MapTourProbe.inspect(world, map, player, 41, false);
+      assertEquals("BOUNDARY_WALK", alternate.transition);
+      assertFalse("Do not click into an occupied seam landing", walk.destination.equals(alternate.destination));
+      assertTrue(collision.isFreeForPath(outdoor, player, -1,
+          Math.round(alternate.destination.x), Math.round(alternate.destination.y), 2));
+      walk = alternate;
       world.getMapper(Position.class).get(player).position.set(walk.target);
       assertFalse(MapTourProbe.route(world, map, player, walk.destination).isEmpty());
       Map.Zone detached = zone(map, 55, 0);

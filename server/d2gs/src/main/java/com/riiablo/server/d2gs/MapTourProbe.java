@@ -7,6 +7,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Warp;
@@ -256,32 +257,51 @@ final class MapTourProbe {
       Map.Zone source, Map.Zone destination, Sample sample, int size) {
     java.util.BitSet connected = reachable(world, map, playerId, source, sample.position, size, false);
     float best = Float.MAX_VALUE;
+    boolean bestLive = false;
+    int adjacent = 0, connectedEdges = 0, clearEdges = 0, clearGoals = 0;
     com.badlogic.gdx.ai.utils.Collision<Vector2> hit =
         new com.badlogic.gdx.ai.utils.Collision<>(new Vector2(), new Vector2());
     for (int y = source.y(); y < source.y() + source.height(); y++) {
       for (int x = source.x(); x < source.x() + source.width(); x++) {
         if (x != source.x() && x != source.x() + source.width() - 1
             && y != source.y() && y != source.y() + source.height() - 1) continue;
-        if (!connected.get((y - source.y()) * source.width() + x - source.x())) continue;
         for (int[] step : new int[][] {{-1,0},{1,0},{0,-1},{0,1}}) {
           if (!destination.contains(x + step[0], y + step[1])) continue;
+          adjacent++;
+          if (!connected.get((y - source.y()) * source.width() + x - source.x())) continue;
+          connectedEdges++;
           Vector2 approach = new Vector2(x, y);
           // At least three cells inside the destination, beyond the normal
           // stop-click tolerance. An edge-only touch is not a level crossing.
           Vector2 goal = new Vector2(x + 3 * step[0], y + 3 * step[1]);
-          if (!clear(map, source, x, y, size) || !clear(map, destination, goal.x, goal.y, size)
-              || map.castRay(source, new com.badlogic.gdx.ai.utils.Ray<>(approach, goal),
+          if (!clear(map, source, x, y, size)) continue;
+          clearEdges++;
+          if (!clear(map, destination, goal.x, goal.y, size)) continue;
+          clearGoals++;
+          if (map.castRay(source, new com.badlogic.gdx.ai.utils.Ray<>(approach, goal),
                   com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags,
                   size, hit, false)) continue;
           float distance = sample.position.dst2(approach);
-          if (distance >= best) continue;
+          boolean live = dynamicallyFree(world, playerId, source, x, y, size);
+          for (int offset = 1; live && offset <= 3; offset++) {
+            live = dynamicallyFree(world, playerId, destination,
+                x + offset * step[0], y + offset * step[1], size);
+          }
+          // Prefer an actually unoccupied crossing, not the nearest static
+          // endpoint inside an NPC/monster footprint. Keep static fallback
+          // when all crossings are occupied so genuine combat can clear it.
+          if (bestLive && !live || bestLive == live && distance >= best) continue;
           best = distance;
+          bestLive = live;
           sample.target = approach;
           sample.destination = goal;
           sample.transition = "BOUNDARY_WALK";
         }
       }
     }
+    if (sample.target == null) System.out.println("[MAP_SEAM_DIAG] from=" + source.levelId()
+        + " to=" + destination.levelId() + " adjacent=" + adjacent + " reachableEdges=" + connectedEdges
+        + " clearEdges=" + clearEdges + " clearGoals=" + clearGoals + " playerSize=" + size);
   }
 
   // Network movement treats clicks within one tile as stop. Leave that entire
@@ -643,6 +663,36 @@ final class MapTourProbe {
       if (map.castRay(zone, new com.badlogic.gdx.ai.utils.Ray<>(position.position, target),
           com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags, size, hit, false)) {
         return java.util.Collections.emptyList();
+      }
+      com.badlogic.gdx.ai.pfa.DefaultGraphPath<com.riiablo.map.pfa.Point2> proof =
+          new com.badlogic.gdx.ai.pfa.DefaultGraphPath<>();
+      int pathMask = com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags;
+      boolean staticPath = map.findPath(zone, position.position, target, pathMask, size, proof,
+          null, playerId, -1, false);
+      boolean dynamicPath = map.findPath(zone, position.position, target, pathMask, size, proof,
+          (mover, ignored, x, y, footprint) -> dynamicallyFree(world, playerId, x, y, footprint),
+          playerId, -1, false);
+      System.out.println("[MAP_SEAM_PATH] from=" + zone.levelId() + " to=" + destination.levelId()
+          + " position=" + position.position + " target=" + target
+          + " staticPath=" + staticPath + " dynamicPath=" + dynamicPath);
+      com.riiablo.engine.server.DynamicUnitCollisionSystem units = world.getSystem(
+          com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
+      if (!dynamicPath && units != null) {
+        for (int i = 0; i <= 4; i++) {
+          Vector2 point = new Vector2(position.position).lerp(target, i / 4f);
+          com.badlogic.gdx.utils.IntArray owners = units.pathBlockers(playerId,
+              Math.round(point.x), Math.round(point.y), size);
+          for (int j = 0; j < owners.size; j++) {
+            int id = owners.get(j);
+            MapWrapper owner = world.getMapper(MapWrapper.class).get(id);
+            Monster monster = world.getMapper(Monster.class).get(id);
+            System.out.println("[MAP_SEAM_BLOCKER] cell=" + point + " entity=" + id
+                + " level=" + (owner == null || owner.zone == null ? -1 : owner.zone.levelId())
+                + " position=" + world.getMapper(Position.class).get(id).position
+                + " monster=" + (monster == null || monster.monstats == null ? "none" : monster.monstats.Id)
+                + " hostile=" + (monster != null && hostileBlocker(monster)));
+          }
+        }
       }
       return java.util.Collections.singletonList(new Vector2(target));
     }

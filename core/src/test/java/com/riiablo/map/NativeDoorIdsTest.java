@@ -22,5 +22,9 @@ class NativeDoorIdsTest extends RiiabloTest {
     }
     assertFalse(NativeObjectOperateTable.isNetworkDoor(Riiablo.files.objects.get(74)),
         "trap door is not an ordinary tomb door");
+    assertEquals(61, Riiablo.files.objects.get(D2ObjectIds.OBJECT_HARROGATH_TOWN_MAIN_GATE).OperateFn);
+    assertEquals("2v", Riiablo.files.objects.get(D2ObjectIds.OBJECT_HARROGATH_TOWN_MAIN_GATE).Token);
+    assertTrue(NativeObjectOperateTable.isNetworkDoor(
+        Riiablo.files.objects.get(D2ObjectIds.OBJECT_HARROGATH_TOWN_MAIN_GATE)));
   }
 }

@@ -5048,11 +5048,15 @@ public final class D2GSHeadlessClient {
   private void runMapTour(byte[] d2s, CharacterHeader character) throws Exception {
     if (config.home == null) throw new IllegalArgumentException("Map tour requires an embedded --home server");
     java.nio.file.Path directory = config.tourOutput.toPath();
+    if (config.tourTownRoundTrip && Files.exists(directory.resolve("map-tour.log"))) {
+      throw new IOException("Refusing to overwrite town diagnostic: " + directory);
+    }
     Files.createDirectories(directory);
     java.util.List<Integer> itinerary = com.riiablo.map.MapTourPlan.levels(
         Riiablo.files.Levels, config.tourFirstAct, config.tourLastAct);
     com.riiablo.map.MapTourPlan.requireCoverage(itinerary, config.tourFirstAct, config.tourLastAct);
     itinerary = com.riiablo.map.MapTourPlan.focusedLevels(itinerary, config.tourLevels);
+    if (config.tourTownRoundTrip) com.riiablo.map.MapTourPlan.requireTownPairs(itinerary);
     int visited = 0, failures = 0, walks = 0, jumps = 0, transitions = 0;
     long sequence = 1;
     try (java.io.PrintWriter report = new java.io.PrintWriter(
@@ -5132,6 +5136,13 @@ public final class D2GSHeadlessClient {
           walks++;
           if (next < 0) continue;
           MapTourProbe.Sample exit = D2GS.headlessMapTourSample(playerId, next, false);
+          for (int doorCount = 0; exit.target == null && "MISSING_WALK_SEAM".equals(exit.transition)
+              && doorCount < 32; doorCount++) {
+            MapTourProbe.Sample door = D2GS.headlessMapTourDoor(playerId, null);
+            if (door == null) break;
+            sequence = openTourDoor(input, output, door, level, sequence, report);
+            exit = D2GS.headlessMapTourSample(playerId, next, false);
+          }
           if ("JUMP_DETACHED".equals(exit.transition)) {
             jumps++;
             tourLog(report, "TRANSITION", "from=" + level + " to=" + next + " mode=JUMP_DETACHED");
@@ -5166,6 +5177,26 @@ public final class D2GSHeadlessClient {
           tourLog(report, "TRANSITION_PASS", "from=" + level + " to=" + next + " mode=" + exit.transition
               + " warpRequests=" + ("WARP_WALK".equals(exit.transition) ? 1 : 0)
               + " movement=PRODUCTION_TCP");
+          if (config.tourTownRoundTrip) {
+            if (!com.riiablo.map.MapTourPlan.requiresTownExit(level, next)
+                || !"BOUNDARY_WALK".equals(exit.transition)) {
+              throw new IOException("Round-trip requires a genuine town seam");
+            }
+            MapTourProbe.Sample back = D2GS.headlessMapTourSample(playerId, level, false);
+            if (back == null || !"BOUNDARY_WALK".equals(back.transition)
+                || back.target == null || back.destination == null) {
+              throw new IOException("Missing return seam " + next + "->" + level);
+            }
+            sequence = routeTour(input, output, back.target, next, sequence, report, "BOUNDARY_WALK");
+            sequence = routeTour(input, output, back.destination, level, sequence, report, "BOUNDARY_WALK");
+            walks += 2;
+            visited++; // Outdoor was reached by production TCP, not segment staging.
+            index++; // Each diagnostic pair is town,outdoor; do not stage outdoors again.
+            arrived = false;
+            tourLog(report, "TRANSITION_PASS", "from=" + next + " to=" + level
+                + " mode=BOUNDARY_WALK warpRequests=0 movement=PRODUCTION_TCP");
+            tourLog(report, "TOWN_ROUND_TRIP_PASS", "town=" + level + " outdoor=" + next);
+          }
         } catch (Exception e) {
           failures++;
           arrived = false;
@@ -5192,6 +5223,9 @@ public final class D2GSHeadlessClient {
           }
           // Continue to each side map even after a path/entry fails. Recovery
           // is logged and counted as a failure, never as a passed transition.
+          if (config.tourTownRoundTrip && com.riiablo.map.MapTourPlan.townOutdoorDestination(level) > 0) {
+            index++; // Do not stage outdoors after a failed exit diagnostic.
+          }
         }
       }
       tourLog(report, "SUMMARY", "planned=" + itinerary.size() + " visited=" + visited
@@ -12940,6 +12974,7 @@ public final class D2GSHeadlessClient {
     boolean requireSimulationTick;
     boolean requireMovementIntent;
     boolean mapTour;
+    boolean tourTownRoundTrip;
     int tourFirstAct = 1, tourLastAct = 5;
     String tourLevels;
     int tourWalkMillis = 45_000;
@@ -13040,6 +13075,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;
         else if ("--require-movement-intent".equals(arg)) config.requireMovementIntent = true;
         else if ("--map-tour".equals(arg)) config.mapTour = true;
+        else if ("--tour-town-round-trip".equals(arg)) config.tourTownRoundTrip = true;
         else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
         else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
         else if ("--tour-levels".equals(arg)) config.tourLevels = value(args, ++i, arg);

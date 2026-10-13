@@ -170,6 +170,10 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         blockerFor(moverId));
   }
 
+  public com.badlogic.gdx.utils.IntArray pathBlockers(int moverId, int x, int y, int size) {
+    return grid.blockers(moverId, Engine.INVALID_ENTITY, x, y, size, blockerFor(moverId));
+  }
+
   /** Warp/staging queries must test the destination, before changing the wrapper. */
   public boolean isFreeForPath(Map.Zone destination, int moverId, int targetId,
       int x, int y, int size) {
@@ -270,7 +274,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (first == null || first.zone == null || second == null || second.zone == null) return true;
     if (first.map != second.map) return false;
     return first.zone == second.zone || first.map != null
-        && first.map.areZonesAdjacent(first.zone, second.zone);
+        && first.map.isNativeSeamConnection(first.zone, second.zone);
   }
 
   private boolean sharesCollisionSpace(Map.Zone destination, int entityId) {
@@ -278,7 +282,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (destination == null || other == null || other.zone == null) return true;
     if (destination == other.zone) return true;
     return other.map != null && other.map.getZones().contains(destination, true)
-        && other.map.areZonesAdjacent(destination, other.zone);
+        && other.map.isNativeSeamConnection(destination, other.zone);
   }
 
   /** The dynamic part of D2Common's nMoveTestCollisionMask. */

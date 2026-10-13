@@ -8,6 +8,49 @@ import com.riiablo.engine.server.component.Monster;
 import org.junit.jupiter.api.Test;
 
 class DynamicUnitCollisionSystemTest {
+  @Test void touchingUnrelatedActRectanglesDoNotBlockNativeSeamMovement() throws Exception {
+    com.badlogic.gdx.Application previousApp = com.badlogic.gdx.Gdx.app;
+    com.badlogic.gdx.Gdx.app = (com.badlogic.gdx.Application) java.lang.reflect.Proxy.newProxyInstance(
+        getClass().getClassLoader(), new java.lang.Class[] {com.badlogic.gdx.Application.class},
+        (proxy, method, arguments) -> null);
+    DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().with(collision).build());
+    try {
+      com.riiablo.map.Map map = new com.riiablo.map.Map(1, 0);
+      com.riiablo.map.Map.Zone outdoor = new com.riiablo.map.Map.Zone(), town = new com.riiablo.map.Map.Zone();
+      outdoor.level = new com.riiablo.codec.excel.Levels.Entry(); outdoor.level.Id = 110;
+      town.level = new com.riiablo.codec.excel.Levels.Entry(); town.level.Id = 1;
+      java.lang.reflect.Field flags = com.riiablo.map.Map.Zone.class.getDeclaredField("flags");
+      flags.setAccessible(true); flags.set(outdoor,new byte[0]); flags.set(town,new byte[0]);
+      outdoor.setNativeTileGrid(new com.riiablo.drlg.TileGrid(2,2), 0);
+      town.setNativeTileGrid(new com.riiablo.drlg.TileGrid(2,2), 0);
+      outdoor.setPosition(-10,0);
+      map.getZones().add(outdoor); map.getZones().add(town);
+      int a = world.create(), b = world.create();
+      for (int id : new int[] {a,b}) {
+        world.getMapper(com.riiablo.engine.server.component.Position.class).create(id).position.set(id == a ? -1 : 0, 5);
+        world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+        world.getMapper(com.riiablo.engine.server.component.Size.class).create(id).size = 2;
+        world.getMapper(com.riiablo.engine.server.component.Class.class).create(id).type = com.riiablo.engine.server.component.Class.Type.PLR;
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).create(id).set(map, id == a ? outdoor : town);
+      }
+      world.process();
+      // Keep a deliberately overlapping diagnostic position; normal initial
+      // spawn relocation must not erase the cross-ACT collision counterexample.
+      world.getMapper(com.riiablo.engine.server.component.Position.class).get(b).position.set(0,5);
+      collision.refreshNow();
+      assertTrue(map.areZonesAdjacent(outdoor,town));
+      assertTrue(collision.isFreeForPath(a,-1,0,5,2), "An A1 unit must not block an unrelated A5 rectangle");
+      assertTrue(collision.isFreeForPath(outdoor,a,-1,0,5,2));
+      assertTrue(collision.pathBlockers(a,0,5,2).size == 0);
+      town.level.Id = 109;
+      map.addWarpDestinationOverride(109,0,110); town.setNativeSeamAnchor(0,0,5);
+      assertFalse(collision.isFreeForPath(a,-1,0,5,2), "Real native neighbors retain unit collision");
+      assertFalse(collision.isFreeForPath(outdoor,a,-1,0,5,2));
+      assertTrue(collision.pathBlockers(a,0,5,2).contains(b));
+    } finally { world.dispose(); com.badlogic.gdx.Gdx.app = previousApp; }
+  }
+
   @Test void overlappingDetachedLevelsDoNotShareUnitCollision() {
     DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()

@@ -111,6 +111,24 @@ public final class UnitCollisionGrid {
     boolean blocks(int entityId);
   }
 
+  /** Diagnostic owners of the same NO_PATH markers used by isFree. */
+  public com.badlogic.gdx.utils.IntArray blockers(int moverId, int ignoredEntityId,
+      int x, int y, int size, UnitBlocker blocker) {
+    com.badlogic.gdx.utils.IntArray result = new com.badlogic.gdx.utils.IntArray();
+    Footprint candidate = new Footprint();
+    candidate.x = x; candidate.y = y; candidate.size = Math.max(1, size);
+    for (IntMap.Entry<Footprint> entry : units.entries()) {
+      if (entry.key == moverId || entry.key == ignoredEntityId
+          || blocker != null && !blocker.blocks(entry.key)) continue;
+      boolean[] overlaps = {false};
+      forEachCollisionPatternCell(candidate, (cx, cy) -> {
+        if (pathMarkerContains(entry.value, cx, cy)) overlaps[0] = true;
+      });
+      if (overlaps[0]) result.add(entry.key);
+    }
+    return result;
+  }
+
   private static boolean pathMarkerContains(Footprint footprint, int x, int y) {
     if (footprint.size < 3) return x == footprint.x && y == footprint.y;
     return Math.abs(x - footprint.x) + Math.abs(y - footprint.y) <= 1;

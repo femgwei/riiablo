@@ -38,3 +38,15 @@
 全有向边巡游、双向 TCP 连续位移断言、全部运行时实体资源审计、三难度矩阵、A1 通用资源安装审计及 GL 自动截图对照仍待实施。本轮没有运行新 contract 的真实 TCP 长巡游，单元测试不等于端到端通过。
 
 长巡游按用户要求保持暂停；恢复前应完成短城镇 TCP 双向回归。真机问题未闭环前，不报告“全 ACT 无错”。
+
+## 短 TCP 双向入口
+
+执行 `:server:d2gs:headlessTownSeams -PtourSeed=127897359 -PtourOutput=server/d2gs/build/map-town-tcp/新目录`，默认只走五个城镇出口并返回；可用 `-PtourLevels=109,110` 定位单个城镇。输出目录已有日志时拒绝覆盖。它是局部诊断，不是 132 图全覆盖。
+
+每段仅在城镇初始化；野外必须靠真实 TCP 移动到达，再靠同一路径返回。闭门先进行真实协议交互，失败不改用传送或野外 staging。`Assert-TownRoundTripEvidence` 独立检查每个方向恰好一条步行证据、零 Warp 请求及无野外 staging；完整日志仍需 `Get-MapLogIssues`，通行成功不免除 AI/资源告警。
+
+运行后执行 `tools/audit-town-seams.ps1 -Directory 输出目录 -Console 完整控制台日志`；单城测试加 `-Towns 109`。脚本先保存 `log-issues.json`，再独立验收通行证据及告警，任一层失败则退出失败。
+
+新增步行切区事件回归：出城和返回各通知一次，并验证角色城镇/野外动作模式，单纯换 RoomEx 不重复通知。城门编号回归依据 D2MOO `ObjectsIds.h` 的 class 449 及 `ObjMode.cpp::OBJECTS_OperateFunction61_HarrogathMainGate`，同时检查真实 1.10f Objects 表的 Token=2v / OperateFn=61；Expansion 元数据行不得占用原生对象编号。
+
+2026-10-14 短回归结果：seed=127897359、25Hz，五城十个方向真实 TCP 步行通过；181 项地图回归、4 项资源审计、10 项服务端测试通过。完整日志仍有 33 条未解决告警，独立审计判为失败，不宣称无错：优先查 A3 丛林尺寸警告，再依据 D2MOO 补齐 ThornHulk/FetishBlowgun、DoomKnight/VileMother/Regurgitator、CatapultSpotter/NpcBarb/Overseer 的缺失 AI；同时追查 Attributes 空 base 重置及两条生成位置调整。五种子短通行矩阵、连续位移断言与真机显示验证仍待完成。

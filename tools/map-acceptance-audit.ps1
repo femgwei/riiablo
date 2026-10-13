@@ -27,6 +27,31 @@ function Get-MapLogIssues {
   }
 }
 
+function Assert-TownRoundTripEvidence {
+  param([string[]]$Lines, [int[]]$Towns = @(1,40,75,103,109))
+  if (-not ($Lines -match '^\[MAP_TOUR\] BEGIN .* contract=2(?: |$)') `
+      -or ($Lines -match '^\[MAP_TOUR\] (FAIL|DIAGNOSTIC_FAIL|DEATH_RECOVERY) ')) {
+    throw 'Missing contract or failed town diagnostic'
+  }
+  foreach ($town in $Towns) {
+    $outdoor = $town + 1
+    foreach ($edge in @("$town to=$outdoor", "$outdoor to=$town")) {
+      if (@($Lines -match "^\[MAP_TOUR\] TRANSITION_PASS from=$edge mode=BOUNDARY_WALK warpRequests=0 movement=PRODUCTION_TCP$").Count -ne 1) {
+        throw "Missing unique genuine walking evidence $edge"
+      }
+    }
+    if (-not ($Lines -match "^\[MAP_TOUR\] TOWN_ROUND_TRIP_PASS town=$town outdoor=$outdoor$")) {
+      throw "Missing round trip $town"
+    }
+    if ($Lines -match "^\[MAP_TOUR\] ENTER level=$outdoor ") {
+      throw "Outdoor staging cannot count as a town round trip $town"
+    }
+  }
+  if (-not ($Lines -match '^\[MAP_TOUR\] SUMMARY .*failures=0 result=PASS$')) {
+    throw 'Missing successful short summary'
+  }
+}
+
 function Assert-MapTourEvidence {
   param([string[]]$Lines)
   if (-not ($Lines -match '^\[MAP_TOUR\] BEGIN .* contract=2(?: |$)')) {

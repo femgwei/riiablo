@@ -35,3 +35,17 @@ $overflow = @(Get-MapLogIssues @(
     '[D2Log][WARNING] Memory pool not provided; using Java fallback allocation (object)'))
 if ($overflow.Count -ne 1) { throw 'Expected-warning count budget must be enforced' }
 Write-Output 'PASS acceptance-audit: valid evidence accepted; teleport, stale contract, coverage gaps and unreviewed diagnostics rejected'
+$roundTrip = @('[MAP_TOUR] BEGIN seed=1 contract=2 planned=2',
+  '[MAP_TOUR] TRANSITION_PASS from=40 to=41 mode=BOUNDARY_WALK warpRequests=0 movement=PRODUCTION_TCP',
+  '[MAP_TOUR] TRANSITION_PASS from=41 to=40 mode=BOUNDARY_WALK warpRequests=0 movement=PRODUCTION_TCP',
+  '[MAP_TOUR] TOWN_ROUND_TRIP_PASS town=40 outdoor=41',
+  '[MAP_TOUR] SUMMARY planned=2 visited=2 failures=0 result=PASS')
+Assert-TownRoundTripEvidence $roundTrip @(40)
+foreach ($invalid in @(@($roundTrip | Where-Object { $_ -notmatch 'from=41 ' }),
+    @($roundTrip + '[MAP_TOUR] ENTER level=41 mode=JUMP_SEGMENT_START'),
+    @($roundTrip -replace 'warpRequests=0', 'warpRequests=1'))) {
+  $rejected = $false
+  try { Assert-TownRoundTripEvidence $invalid @(40) } catch { $rejected = $true }
+  if (-not $rejected) { throw 'False PASS: town return/staging/warp fixture accepted' }
+}
+Write-Output 'PASS town-round-trip audit: missing return, outdoor staging and Warp are rejected'

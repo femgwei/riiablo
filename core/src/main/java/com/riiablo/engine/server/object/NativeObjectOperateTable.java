@@ -82,7 +82,7 @@ public final class NativeObjectOperateTable {
         return Lifecycle.ONE_WAY_DOOR;
       case 22:
         return Lifecycle.WELL;
-      case 8: case 29:
+      case 8: case 29: case 61: // ObjMode.cpp: Harrogath main gate toggles NU/OP/ON.
         return Lifecycle.TOGGLE_DOOR;
       default:
         return tableDoor ? Lifecycle.TOGGLE_DOOR : Lifecycle.NONE;

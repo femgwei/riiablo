@@ -74,6 +74,13 @@ class MapTourPlanTest {
     assertThrows(IllegalStateException.class, () -> MapTourPlan.requireCoverage(tour, 1, 5));
     assertThrows(IllegalArgumentException.class, () -> MapTourPlan.levels(rows, 5, 1));
   }
+  @Test void townRoundTripsRejectIncompleteReversedAndUnrelatedPairs() {
+    assertDoesNotThrow(() -> MapTourPlan.requireTownPairs(Arrays.asList(1,2,40,41,75,76,103,104,109,110)));
+    assertThrows(IllegalArgumentException.class, () -> MapTourPlan.requireTownPairs(Collections.emptyList()));
+    assertThrows(IllegalArgumentException.class, () -> MapTourPlan.requireTownPairs(Arrays.asList(40)));
+    assertThrows(IllegalArgumentException.class, () -> MapTourPlan.requireTownPairs(Arrays.asList(41,40)));
+    assertThrows(IllegalArgumentException.class, () -> MapTourPlan.requireTownPairs(Arrays.asList(40,42)));
+  }
   private static Levels.Entry row(int id, int act, int... vis) {
     Levels.Entry row = new Levels.Entry(); row.Id = id; row.Act = act; row.Vis = vis;
     return row;

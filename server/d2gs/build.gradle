@@ -44,6 +44,25 @@ tasks.register('headlessMapTour', JavaExec) {
   if (project.hasProperty('tourDifficulty')) args '--difficulty', project.property('tourDifficulty')
   if (project.hasProperty('tourLevels')) args '--tour-levels', project.property('tourLevels')
   if (project.hasProperty('tourVerbose')) args '--verbose'
+  if (project.hasProperty('tourTownRoundTrip')) args '--tour-town-round-trip'
+  ignoreExitValue = false
+}
+
+tasks.register('headlessTownSeams', JavaExec) {
+  group = 'verification'
+  description = 'Short genuine TCP town/outdoor round trips; not a full map tour.'
+  maxHeapSize = '2g'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--map-tour', '--tour-town-round-trip',
+       '--test-timeout', '60', '--tour-walk-seconds', '15', '--tour-rate', '25',
+       '--tour-levels', project.findProperty('tourLevels') ?: '1,2,40,41,75,76,103,104,109,110',
+       '--tour-output', rootProject.file(project.findProperty('tourOutput')
+           ?: 'server/d2gs/build/map-town-tcp').absolutePath
+  def home = project.findProperty('d2Home') ?: System.getenv('D2_HOME')
+  if (home) args '--home', home
+  if (project.hasProperty('tourSeed')) args '--seed', project.property('tourSeed')
   ignoreExitValue = false
 }
 
