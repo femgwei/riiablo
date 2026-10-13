@@ -12,16 +12,31 @@ if ($Seeds.Count -eq 0 -or @($Seeds | Sort-Object -Unique).Count -ne $Seeds.Coun
 }
 Push-Location $repo
 try {
+  $sourcePaths = @('core', 'server', 'D2MOO_JAVA', 'table', 'assets',
+      'build.gradle', 'gradle.properties', 'settings.gradle')
+  $baseline = (& git ls-tree HEAD -- @sourcePaths) -join "`n"
+  $revision = & git rev-parse HEAD
+  if (& git status --porcelain -- @sourcePaths) { throw 'Commit source changes before the seed batch' }
   foreach ($seed in $Seeds) {
+    if (((& git ls-tree HEAD -- @sourcePaths) -join "`n") -ne $baseline `
+        -or (& git status --porcelain -- @sourcePaths)) {
+      throw 'Source baseline changed during batch; do not mix revisions in one acceptance result'
+    }
     $destination = Join-Path $Output "seed-$seed-rate-$Rate"
     $absolute = [IO.Path]::GetFullPath((Join-Path $repo $destination))
     if (Test-Path -LiteralPath $absolute) { throw "Refusing to overwrite existing run: $absolute" }
     New-Item -ItemType Directory -Path $absolute -Force | Out-Null
     $console = Join-Path $absolute 'console.log'
+    "revision=$revision`nseed=$seed`nrate=$Rate`nhome=$D2Home" |
+      Set-Content -LiteralPath (Join-Path $absolute 'run-baseline.txt') -Encoding UTF8
     Write-Host "Starting complete A1-A5 tour seed=$seed rate=$Rate"
     & .\gradlew.bat :server:d2gs:headlessMapTour "-Pd2Home=$D2Home" "-PtourSeed=$seed" `
       "-PtourRate=$Rate" "-PtourOutput=$destination" --no-daemon --max-workers=1 *> $console
     $result = $LASTEXITCODE
+    if (((& git ls-tree HEAD -- @sourcePaths) -join "`n") -ne $baseline `
+        -or (& git status --porcelain -- @sourcePaths)) {
+      throw "Source baseline changed while seed=$seed ran; preserve logs but rerun on a fixed baseline"
+    }
     $report = Join-Path $absolute 'map-tour.log'
     if ($result -ne 0 -or -not (Test-Path -LiteralPath $report)) {
       throw "Tour failed seed=$seed exit=$result; inspect $console"
