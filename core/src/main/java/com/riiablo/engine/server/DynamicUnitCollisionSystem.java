@@ -263,6 +263,9 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   private boolean sharesCollisionSpace(int firstId, int secondId) {
+    // Landing probes may use INVALID_ENTITY (-1) as a temporary mover id.
+    // ComponentMapper/Bags cannot be indexed with that sentinel.
+    if (firstId < 0 || secondId < 0) return true;
     MapWrapper first = mMapWrapper.get(firstId), second = mMapWrapper.get(secondId);
     if (first == null || first.zone == null || second == null || second.zone == null) return true;
     if (first.map != second.map) return false;
