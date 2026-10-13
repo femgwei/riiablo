@@ -253,9 +253,13 @@ public class VelocityModeChanger extends IteratingSystem {
     return deriveVariantAnimationSpeed(rawBaseSpeed, currentReference, baseReference);
   }
 
-  private static int lookupBaseAnimationSpeed(
+  static int lookupBaseAnimationSpeed(
       MonStats.Entry base, byte mode, CofReference cof, int fallback) {
-    if (Riiablo.anim == null || base == null || base.Code == null || base.Code.isEmpty()) {
+    if (Riiablo.anim == null || base == null || base.Code == null || base.Code.isEmpty()
+        || cof == null || cof.wclass < Engine.WEAPON_NIL || cof.wclass > Engine.WEAPON_HT2) {
+      // Reduced/unknown BaseW records may leave an unset COF class. The
+      // already resolved AnimData rate is the existing missing-key fallback;
+      // an absent class must not index Engine's compact table with -1.
       return fallback;
     }
 

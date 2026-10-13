@@ -75,6 +75,13 @@ import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ServerEntityFactory extends EntityFactory {
+  static byte nativeMonsterWeaponClass(int resolvedClass) {
+    // D2Composit.cpp COMPOSIT_GetWeaponClassIdFromCode returns native
+    // class 0 (HTH) for an unknown code; riiablo's HTH index is 1.
+    return resolvedClass >= Engine.WEAPON_NIL && resolvedClass <= Engine.WEAPON_HT2
+        ? (byte) resolvedClass : Engine.WEAPON_HTH;
+  }
+
   private static final String TAG = "ServerEntityFactory";
   private static final Logger log = LogManager.getLogger(ServerEntityFactory.class);
 
@@ -510,7 +517,12 @@ public class ServerEntityFactory extends EntityFactory {
     // D2 COF table uses MonStats.Code (abbreviation like "FA"), not Id (full name like "fallen1")
     reference.token  = monstats.Code;
     reference.mode   = monstats.spawnmode.isEmpty() ? Engine.Monster.MODE_NU : (byte) Riiablo.files.MonMode.index(monstats.spawnmode);
-    reference.wclass = (byte) Riiablo.files.WeaponClass.index(monstats2.BaseW);
+    int weaponClass = Riiablo.files.WeaponClass.index(monstats2.BaseW);
+    reference.wclass = nativeMonsterWeaponClass(weaponClass);
+    if (weaponClass < Engine.WEAPON_NIL || weaponClass > Engine.WEAPON_HT2) {
+      log.info("[MONSTER_ANIMATION] monster={} BaseW={} resolved=HTH reason=unknown_base_weapon",
+          monstats.Id, monstats2.BaseW);
+    }
     int[] component = mCofComponents.create(id).component;
     boolean hasComponentValue = false;
     for (byte i = 0; i < monstats2.ComponentV.length; i++) {

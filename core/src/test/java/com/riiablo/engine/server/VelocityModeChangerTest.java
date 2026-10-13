@@ -8,6 +8,34 @@ import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
 
 class VelocityModeChangerTest {
+  @Test void unsetMonsterWeaponClassCannotCrashBaseAnimationLookup() {
+    com.riiablo.codec.D2 saved = com.riiablo.Riiablo.anim;
+    try {
+      // Valid empty AnimData table ensures this exercises the invalid-class
+      // guard, not the null-table guard.
+      com.riiablo.Riiablo.anim = com.riiablo.codec.D2.loadFromStream(
+          new java.io.ByteArrayInputStream(new byte[256 * 4]));
+      com.riiablo.codec.excel.MonStats.Entry base = new com.riiablo.codec.excel.MonStats.Entry();
+      base.Code = "FA";
+      com.riiablo.engine.server.component.CofReference cof = new com.riiablo.engine.server.component.CofReference();
+      for (byte invalid : new byte[] {-1, 15, 127}) {
+        cof.wclass = invalid;
+        assertEquals(200, VelocityModeChanger.lookupBaseAnimationSpeed(
+            base, com.riiablo.engine.Engine.Monster.MODE_WL, cof, 200));
+      }
+      assertEquals(200, VelocityModeChanger.lookupBaseAnimationSpeed(
+          base, com.riiablo.engine.Engine.Monster.MODE_WL, null, 200));
+    } finally { com.riiablo.Riiablo.anim = saved; }
+  }
+
+  @Test void unknownNativeBaseWeaponUsesHthRatherThanNegativeArrayIndex() {
+    assertEquals(com.riiablo.engine.Engine.WEAPON_HTH, ServerEntityFactory.nativeMonsterWeaponClass(-1));
+    assertEquals(com.riiablo.engine.Engine.WEAPON_HTH, ServerEntityFactory.nativeMonsterWeaponClass(15));
+    assertEquals(com.riiablo.engine.Engine.WEAPON_2HS,
+        ServerEntityFactory.nativeMonsterWeaponClass(com.riiablo.engine.Engine.WEAPON_2HS));
+    assertEquals(com.riiablo.engine.Engine.WEAPON_NIL, ServerEntityFactory.nativeMonsterWeaponClass(0));
+  }
+
   @Test
   void temporaryRunCombinesWithPersistentPreferenceWithoutChangingIt() {
     assertFalse(VelocityModeChanger.isRunRequested(false, false));

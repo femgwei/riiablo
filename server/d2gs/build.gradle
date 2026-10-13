@@ -26,6 +26,8 @@ run {
 tasks.register('headlessMapTour', JavaExec) {
   group = 'verification'
   description = 'Walks a simulated protocol player through all 1.10f Act I-V levels and side areas.'
+  // Keep long all-act diagnostics bounded on the shared desktop host.
+  maxHeapSize = '2g'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
   workingDir = rootProject.file('assets').path
