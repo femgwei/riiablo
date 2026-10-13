@@ -85,6 +85,10 @@ class ServerMonsterCorpseSystemTest {
 
       events.dispatch(DeathEvent.obtain(1, monsterId));
       assertTrue(ai.killed, "server death event must transition the monster AI");
+      assertFalse(world.getMapper(Velocity.class).has(monsterId),
+          "native deadCol=false releases live collision at death, before DD");
+      assertFalse(world.getMapper(Pathfind.class).has(monsterId));
+      assertFalse(world.getMapper(Casting.class).has(monsterId));
 
       events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
       assertEquals(NativeUnitFlags.NO_RESURRECTION_REWARD, nativeFlags.flags(),
@@ -146,6 +150,8 @@ class ServerMonsterCorpseSystemTest {
       Velocity velocity = world.getMapper(Velocity.class).create(monsterId);
 
       events.dispatch(DeathEvent.obtain(7, monsterId));
+      assertTrue(world.getMapper(Velocity.class).has(monsterId));
+      assertTrue(velocity.stateMovementLocked, "deadCol=true retains a frozen footprint at death");
       events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
 
       assertTrue(world.getMapper(Corpse.class).has(monsterId));

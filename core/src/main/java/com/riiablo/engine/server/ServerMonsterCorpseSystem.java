@@ -136,6 +136,9 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       log.debug("[MONSTER_CORPSE] phase=death_event entity={} killer={} ai=missing",
           event.victim, event.killer);
     }
+    // MonsterMode.cpp releases live collision at death, not at DD. Missing
+    // death animation data must not leave a deadCol=false corridor blocker.
+    releaseDeadMovement(event.victim);
   }
 
   @Subscribe
@@ -169,26 +172,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       log.debug("[MONSTER_CORPSE] phase=duplicate_mode entity={} corpseExisting=true", entityId);
     }
 
-    // Dead monsters must not keep participating in movement, targeting, or a
-    // stale skill cast while they remain as selectable resurrection targets.
-    Monster deadMonster = mMonster.get(entityId);
-    boolean retainDeadCollision = deadMonster != null && deadMonster.monstats2 != null
-        && deadMonster.monstats2.deadCol;
-    if (retainDeadCollision && mVelocity.has(entityId)) {
-      // D2 keeps the monster footprint for deadCol rows. Freeze the retained
-      // velocity component so the dynamic grid still blocks movement while
-      // the corpse remains in the room.
-      mVelocity.get(entityId).velocity.setZero();
-      mVelocity.get(entityId).stateMovementLocked = true;
-    } else if (mVelocity.has(entityId)) {
-      mVelocity.remove(entityId);
-    }
-    if (mMovementModes.has(entityId)) mMovementModes.remove(entityId);
-    if (mPathfind.has(entityId)) mPathfind.remove(entityId);
-    if (mCasting.has(entityId)) mCasting.remove(entityId);
-    if (mRunning.has(entityId)) mRunning.remove(entityId);
-    if (mTarget.has(entityId)) mTarget.remove(entityId);
-    if (mInteractable.has(entityId)) mInteractable.remove(entityId);
+    releaseDeadMovement(entityId);
 
     // A shattered monster has no corpse entity in the native world.  Keeping
     // the dead monster around after removing Corpse leaves its MODE_DD sprite
@@ -200,5 +184,23 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       world.delete(entityId);
       log.info("[MONSTER_CORPSE] phase=removed_after_shatter entity={}", entityId);
     }
+  }
+
+  /** Native death collision boundary, independent of DT/DD presentation. */
+  private void releaseDeadMovement(int entityId) {
+    Monster monster = mMonster.get(entityId);
+    boolean retainDeadCollision = monster != null && monster.monstats2 != null && monster.monstats2.deadCol;
+    if (retainDeadCollision && mVelocity.has(entityId)) {
+      mVelocity.get(entityId).velocity.setZero();
+      mVelocity.get(entityId).stateMovementLocked = true;
+    } else if (mVelocity.has(entityId)) {
+      mVelocity.remove(entityId);
+    }
+    if (mMovementModes.has(entityId)) mMovementModes.remove(entityId);
+    if (mPathfind.has(entityId)) mPathfind.remove(entityId);
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mRunning.has(entityId)) mRunning.remove(entityId);
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    if (mInteractable.has(entityId)) mInteractable.remove(entityId);
   }
 }

@@ -18,6 +18,17 @@ import com.riiablo.map.pfa.GraphPath;
 import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
+  @Test void offCentreStartKeepsTheSourceWaypointWithoutConsumingTheNextNode() {
+    GraphPath path = new GraphPath();
+    path.add(new Point2(5, 5));
+    path.add(new Point2(4, 4));
+    path.add(new Point2(3, 3));
+    Pathfind centered = new Pathfind().set(path, true);
+    assertEquals(new Vector2(5, 5), centered.target);
+    assertEquals(new Vector2(4, 4), centered.targets.next());
+    assertEquals(new Vector2(3, 3), centered.destination);
+  }
+
   @Test void movementStopsAtTheCurrentWaypointInsteadOfCuttingTheNextCorner() {
     assertEquals(2.5f, Pathfinder.limitWaypointSpeed(12f, 0.04f, 0.1f), 0.0001f);
     assertEquals(12f, Pathfinder.limitWaypointSpeed(12f, 0.04f, 4f), 0.0001f);

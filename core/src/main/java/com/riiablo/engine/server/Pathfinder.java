@@ -626,7 +626,20 @@ public class Pathfinder extends IteratingSystem {
       // directions, which is especially visible in the walk/run animation.
       smoothPathWithDynamicCollision(src, targetEntityId, flags, size, path,
           canOpenDoors(src));
-      mPathfind.create(src).set(path);
+      boolean startAtSource = false;
+      if (path.getCount() >= 2 && !srcPos.epsilonEquals(path.getNodePosition(0), 0.1f)) {
+        ray.set(srcPos, path.getNodePosition(1));
+        if (map.castRay(owner == null ? null : owner.zone, ray, flags, size, collision, canOpenDoors(src))) {
+          ray.set(srcPos, path.getNodePosition(0));
+          // Re-centre by ordinary movement within the already occupied cell,
+          // never snap coordinates or relax the swept collision. An off-centre
+          // start can otherwise enter a forbidden side cross before the legal
+          // native diagonal node and repeat the same terrain stall forever.
+          startAtSource = !map.castRay(owner == null ? null : owner.zone,
+              ray, flags, size, collision, canOpenDoors(src));
+        }
+      }
+      mPathfind.create(src).set(path, startAtSource);
     }
 
     return success;

@@ -11,6 +11,69 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Actual selected MPQ collision diagnostics for the tour's disconnected tomb. */
 class NativeMazeConnectivityTest extends RiiabloTest {
+  @Test void spiderForestNativeHeadConnectsTownArrivalToDungeonEntrances() {
+    D2DrlgStrc drlg = null;
+    try {
+      DataTbls.setLevelDefBinCache(Act1D2MOOLayoutBridge.buildLevelDefCache(0, -1));
+      DataTbls.setLevelTypesTxtCache(Act1D2MOOLayoutBridge.buildLevelTypesCache());
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+      DataTbls.loadLvlPrestTxt(archive, 0);
+      DataTbls.loadLvlSubTxt(archive);
+      DataTbls.loadLvlMazeTxt(archive);
+      DataTbls.loadLvlWarpTxt(archive);
+      D2DrlgAct act = new D2DrlgAct();
+      act.setAct(D2C_Acts.ACT_III);
+      act.setTownId(75);
+      act.setPMemPool(new D2MemoryPool());
+      drlg = DrlgDrlg.allocDrlg(act, D2C_Acts.ACT_III, archive, 12345, 75, 0, null, (byte) 0, null, null);
+      for (int id = 75; id <= 76; id++) DrlgDrlg.initLevel(DrlgDrlg.getLevel(drlg, id));
+      D2DrlgLevel forest = DrlgDrlg.getLevel(drlg, 76);
+      TileGrid grid = new TileGrid(forest.getLevelCoords().getNWidth(), forest.getLevelCoords().getNHeight());
+      D2MooTileApplier applier = new D2MooTileApplier();
+      applier.putGrid(76, grid);
+      DrlgExport.exportLevelTiles(drlg, 76, applier);
+      java.util.List<int[]> entrances = new java.util.ArrayList<>();
+      DrlgExport.exportLevelPresetUnits(drlg, 76,
+          (levelId, roomId, type, index, mode, x, y, raw, spawned, external, source) -> {
+            if (type == D2UnitTypes.UNIT_TILE) entrances.add(new int[] {(int) x, (int) y});
+          });
+      assertEquals(2, entrances.size());
+      java.util.BitSet connected = null;
+      for (int[] entrance : entrances) {
+        boolean reachable = false;
+        for (int y = entrance[1] - 4; y <= entrance[1] + 4; y++)
+          for (int x = entrance[0] - 4; x <= entrance[0] + 4; x++) {
+            int dx = x - entrance[0], dy = y - entrance[1];
+            if (dx * dx + dy * dy > 3.5f * 3.5f || !riverFree(grid, x, y)) continue;
+            if (connected == null) connected = riverComponent(grid, x, y, false);
+            if (connected.get(y * grid.width * 5 + x)) reachable = true;
+          }
+        assertTrue(reachable, "both native spider dungeon entrances must share a walkable component");
+      }
+      System.out.println("[FOREST_NATIVE_CONNECTIVITY] dungeonCells=" + connected.cardinality()
+          + " defs=" + java.util.Arrays.toString(forest.getPJungleDefs()));
+      boolean headConnected = false;
+      for (D2DrlgRoom room = forest.getFirstRoomEx(); room != null; room = room.getDrlgRoomNext()) {
+        D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+        if (preset.getNLevelPrest() == D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD) {
+          System.out.println("[FOREST_HEAD_FILE] picked=" + preset.getNPickedFile());
+          int[] defs = forest.getPJungleDefs();
+          assertEquals(defs[defs.length - 1] == 0 ? 1 : 0, preset.getNPickedFile(),
+              "DrlgOutJung.cpp passes the boolean comparison as a concrete file index");
+          int rx = (room.getNTileXPos() - forest.getLevelCoords().getNPosX()) * 5;
+          int ry = (room.getNTileYPos() - forest.getLevelCoords().getNPosY()) * 5;
+          for (int y = ry; y < ry + room.getNTileHeight() * 5; y++)
+            for (int x = rx; x < rx + room.getNTileWidth() * 5; x++)
+              if (riverFree(grid, x, y) && connected.get(y * grid.width * 5 + x)) headConnected = true;
+        }
+      }
+      assertTrue(headConnected, "native jungle head must connect to both dungeon entrances");
+    } finally {
+      if (drlg != null) DrlgDrlg.freeDrlg(drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
+    }
+  }
+
   @Test void act4ProgressionSeamsComeFromNativeOrthMetadata() {
     D2DrlgStrc drlg = null;
     try {

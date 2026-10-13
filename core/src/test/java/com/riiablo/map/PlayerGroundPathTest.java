@@ -10,6 +10,22 @@ import com.riiablo.codec.excel.MonStats;
 import org.junit.jupiter.api.Test;
 
 class PlayerGroundPathTest {
+  @Test void fractionalCornerStartCanWalkToItsCentreThenTakeTheNativeDiagonal() {
+    Map map = map();
+    Map.Zone zone = map.zones.first();
+    java.util.Arrays.fill(zone.flags, (byte) DT1.Tile.FLAG_BLOCK_WALK);
+    for (int center : new int[] {4, 5}) for (int[] offset : new int[][] {{0,0},{-1,0},{1,0},{0,-1},{0,1}})
+      zone.flags[(center + offset[1]) * zone.width + center + offset[0]] = 0;
+    int flags = NativeGroundPathProfile.PLAYER.terrainFlags;
+    Vector2 start = new Vector2(4.69f, 4.535f);
+    Vector2 sourceCentre = new Vector2(5, 5), next = new Vector2(4, 4);
+    Collision<Vector2> hit = new Collision<>(new Vector2(), new Vector2());
+    assertTrue(map.castRay(new Ray<>(start, next), flags, 2, hit));
+    assertFalse(map.castRay(new Ray<>(start, sourceCentre), flags, 2, hit));
+    assertFalse(map.castRay(new Ray<>(sourceCentre, next), flags, 2, hit));
+    assertTrue(map.isBlockedForPath(5, 4, flags, 2, false), "do not exempt the forbidden side footprint");
+  }
+
   @Test void nativeDiagonalChecksTheTargetCrossWithoutExpandingItIntoSideSquares() {
     Map map = map();
     Map.Zone zone = map.zones.first();

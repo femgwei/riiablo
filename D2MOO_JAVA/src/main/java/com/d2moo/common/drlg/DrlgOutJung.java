@@ -62,14 +62,14 @@ public class DrlgOutJung {
                 int nJungleDef = level.getPJungleDefs()[nSizeX * nSizeY - 1];
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, 0, 4 * i, 
                     D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_HEAD, 
-                    nJungleDef == 0 ? 0 : -1, false);
+                    nJungleDef == 0 ? 1 : 0, false);
                 nDefId += 2;
             } else if (level.getLevelId() == D2LevelIds.LEVEL_FLAYERJUNGLE && i == 0) {
                 // 剥皮丛林的第一行：生成 JUNGLE_TAIL
                 int nJungleDef = level.getPJungleDefs()[1];
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, 0, 0, 
                     D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_TAIL, 
-                    nJungleDef == 0 ? 0 : -1, false);
+                    nJungleDef == 0 ? 1 : 0, false);
                 nDefId += 2;
             } else {
                 // 正常处理每一行

@@ -51,10 +51,15 @@ public class Pathfind extends PooledComponent {
   }
 
   public Pathfind set(GraphPath path) {
+    return set(path, false);
+  }
+
+  /** Retain the source centre when a fractional start cannot sweep to node two. */
+  public Pathfind set(GraphPath path, boolean startAtSource) {
     this.path = path;
     targets = path.vectorIterator();
     Vector2 position = targets.next();
-    target.set(targets.hasNext() ? targets.next() : position);
+    target.set(!startAtSource && targets.hasNext() ? targets.next() : position);
     destination.set(path.getNodePosition(path.getCount() - 1));
     stalledTime = 0f;
     blockedByDynamic = false;

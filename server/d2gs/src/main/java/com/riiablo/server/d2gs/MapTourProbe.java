@@ -72,12 +72,12 @@ final class MapTourProbe {
       if (meleeBarrier(world, map, playerId, id)) continue;
       // Restrict to the intended direction, except immediate neighbours that
       // occupy the player's escape footprint in a narrow passage.
-      if (destination != null && distance > 9f
-          && new Vector2(position).sub(player.position).dot(
-              new Vector2(destination).sub(player.position)) < 0f) continue;
       com.riiablo.engine.server.Actioneer actioneer = world.getSystem(
           com.riiablo.engine.server.Actioneer.class);
       boolean meleeReady = actioneer != null && actioneer.isInMeleeRange(playerId, id, 0);
+      if (!meleeReady && targetId == Engine.INVALID_ENTITY && destination != null && distance > 9f
+          && new Vector2(position).sub(player.position).dot(
+              new Vector2(destination).sub(player.position)) < 0f) continue;
       // A closer but out-of-range neighbour may not indefinitely conceal a
       // different blocker that production can actually attack now.
       if (best != null && (best.meleeReady && !meleeReady
@@ -467,6 +467,9 @@ final class MapTourProbe {
               .append(" hostile=").append(hostileBlocker(monster))
               .append(" meleeBarrier=").append(meleeBarrier(world, map, playerId, id))
               .append(" meleeReady=").append(actioneer != null && actioneer.isInMeleeRange(playerId, id, 0))
+              .append(" deadCol=").append(monster.monstats2 != null && monster.monstats2.deadCol)
+              .append(" velocity=").append(world.getMapper(com.riiablo.engine.server.component.Velocity.class).has(id))
+              .append(" corpse=").append(world.getMapper(com.riiablo.engine.server.component.Corpse.class).has(id))
               .append(" groundCenterClear=").append(clear(map, zone, p.x, p.y, 1));
         }
         if (warp != null) {
