@@ -56,3 +56,5 @@
 2026-10-14 真机 A5 蓝色碰撞网格：原生 floor 的 MAPTILE_HIDDEN 标记在 D2MooTileApplier → TileGrid → 渲染安装过程中丢失，导致 Expansion/town/collision.dt1 的辅助图形被绘制。保留两层地板原生 flags，安装时不绘制隐藏地板，同时保留 bRevealHidden 的 0x200 语义及原生碰撞数组。依据 D2MOO DrlgRoomTile.cpp::DRLGROOMTILE_InitTileDataFlags。新增 Act5TownHiddenFloorResourceTest，以真实 1.10f 资源断言 collision.dt1 的隐藏标记、未安装到可见层和碰撞仍存在；纳入 mapResourceAcceptance。无 GL 测试不能替代用户真机截图确认。
 
 该修复验证：55 项定向测试、184 项地图回归、6 项资源审计方法（A1–A5 六种子、792 个地图实例）通过。
+
+2026-10-14 A5 出城旁边出现不可攻击督军：game2.log 中 A5Q1 在玩家旁三格生成 entity=87，然后 RoomEntityTracking 将其归入 level=109。移除 ZoneChangeEvent 的玩家相对 Boss 补生成，只追踪原生 RoomEx 生成的申克。D2MOO A5Q1.cpp::ACT5Q1_OnSiegeBossActivated 处理既有的 SUPERUNIQUE_SIEGE_BOSS，不在出城事件中把 Boss 生到玩家旁边。新增真实资源唯一申克预设/野外归属检查及反复出城不得额外生成 Boss 的 ECS 回归。p4.png/game2.log 的文件时间 07:04 早于地板隐藏修复提交 92812e5a 的 07:06，黑块是否仍在修复后复现需新截图，不据旧图宣称已验证解决。

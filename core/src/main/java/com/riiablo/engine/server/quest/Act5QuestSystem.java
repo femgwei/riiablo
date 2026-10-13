@@ -168,7 +168,7 @@ public class Act5QuestSystem extends BaseSystem {
     syncBaalChangedLevel(event, player);
     if (event.zone.level.Id == D2LevelIds.LEVEL_BLOODYFOOTHILLS) {
       updateRecord(player.data, Act5ShenkQuest::start, "entered-bloody-foothills");
-      spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
+      trackNativeShenkIfPresent(event.entityId, event.zone.level.Id);
     } else if (event.zone.level.Id == Act5RescueQuest.FRIGID_HIGHLANDS) {
       updateRescueRecord(player.data, Act5RescueQuest::start, "entered-frigid-highlands");
       ensureRescueQuestObjects(event.zone);
@@ -635,8 +635,8 @@ public class Act5QuestSystem extends BaseSystem {
     }
   }
 
-  private void spawnShenkIfNeeded(int playerId, int levelId) {
-    if (spawnedShenkLevels.contains(levelId) || factory == null || mPosition == null) return;
+  private void trackNativeShenkIfPresent(int playerId, int levelId) {
+    if (spawnedShenkLevels.contains(levelId)) return;
     if (!mPlayer.has(playerId)) return;
     Player player = mPlayer.get(playerId);
     if (player == null || player.data == null
@@ -656,19 +656,12 @@ public class Act5QuestSystem extends BaseSystem {
         return;
       }
     }
-    MonStats.Entry stats = resolveShenkStats();
-    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
-    if (stats == null || origin == null) return;
-    int entity = factory.createMonster(stats, origin.position.x + 3f, origin.position.y);
-    if (entity < 0) return;
-    if (mSuperUnique != null) {
-      SuperUniques.Entry entry = resolveShenkSuperUnique();
-      mSuperUnique.create(entity).set(
-          entry == null ? Act5ShenkQuest.SUPERUNIQUE_SIEGE_BOSS : entry.hcIdx,
-          entry == null ? "Siege Boss" : entry.Superunique);
-    }
-    spawnedShenkLevels.add(levelId);
-    log.info("[A5Q1] Shenk spawned: player={} entity={} level={}", playerId, entity, levelId);
+    // Shenk is a native DS1 superunique placement, instantiated by MapManager
+    // when its RoomEx activates. A level-change callback is not a spawn point:
+    // player + 3 can still be inside Harrogath at the walking seam, creating
+    // an extra town-owned boss that combat correctly refuses to damage.
+    log.debug("[A5Q1] Awaiting native Shenk RoomEx activation: player={} level={}",
+        playerId, levelId);
   }
 
   /** Reconciles transient ECS object ids with the persistent native object
@@ -2239,26 +2232,6 @@ public class Act5QuestSystem extends BaseSystem {
       if (unique != null && unique.id == Act5ShenkQuest.SUPERUNIQUE_SIEGE_BOSS) return true;
     }
     return false;
-  }
-
-  private static MonStats.Entry resolveShenkStats() {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
-    SuperUniques.Entry unique = resolveShenkSuperUnique();
-    if (unique != null) {
-      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
-      if (stats != null) return stats;
-    }
-    return Riiablo.files.monstats.get("DeathMauler1");
-  }
-
-  private static SuperUniques.Entry resolveShenkSuperUnique() {
-    if (Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
-    SuperUniques.Entry indexed = Riiablo.files.SuperUniques.get("Siege Boss");
-    if (indexed != null) return indexed;
-    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
-      if (entry != null && entry.hcIdx == D2SuperUniques.SUPERUNIQUE_SIEGE_BOSS) return entry;
-    }
-    return null;
   }
 
   private boolean isLarzuk(MonStats.Entry stats) {

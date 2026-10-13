@@ -14,6 +14,19 @@ class Act5TownHiddenFloorResourceTest extends RiiabloTest {
     for (Map.Zone zone : map.getZones()) if (zone.levelId() == 109) town = zone;
     assertNotNull(town);
     TileGrid grid = town.nativeTileGrid();
+    int shenk = 0;
+    for (Map.Zone zone : map.getZones()) if (zone.levelId() == 110) {
+      for (Map.NativeMonster monster : zone.getNativeMonsters()) {
+        if (monster.superUniqueId == 42) {
+          shenk++;
+          int wx = (int) Math.floor(zone.x() + monster.x);
+          int wy = (int) Math.floor(zone.y() + monster.y);
+          assertTrue(zone.contains(wx, wy));
+          assertFalse(town.contains(wx, wy));
+        }
+      }
+    }
+    assertEquals(1, shenk, "native siege preset owns exactly one Shenk placement");
     DT1s library = new DT1s();
     for (int i = 1; i <= 255; i++) {
       String source = grid.sourceFile((byte) i);
