@@ -28,16 +28,16 @@
 
 ## 本轮落地
 
-- `:core:mapResourceAcceptance`：A2–A5 所有生成 zone 的真实 DT1 安装与入口可见性审计，加城镇边界、古墓入口、A4 火盆专项回归。短矩阵参数：`-PmapAuditSeeds=1,2,3,12345,54321,127897359`。
+- `:core:mapResourceAcceptance`：A1–A5 所有生成 zone 的真实 DT1 安装与入口可见性审计（A1 城镇另走原生 DS1 导出），加城镇边界、古墓入口、A4 火盆专项回归。短矩阵参数：`-PmapAuditSeeds=1,2,3,12345,54321,127897359`。
 - `MapTourWalkingTest`：生产移动校验和出口规划反例，修复 TCP 无条件拒绝跨 zone 的遗漏；仅原生 seam 放行，不放行普通相邻或重叠地图。
 - 巡图 contract=2：城镇出口先到边界，再 TCP 步行跨界，不回退 Warp。独立日志审计拒绝旧 PASS、缺图、错误模式及未审查告警，保存 `log-issues.json`。
 - `tools/test-map-acceptance-audit.ps1`：验证审计本身能拒绝故障样本。
 
 ## 尚未完成
 
-全有向边巡游、双向 TCP 连续位移断言、全部运行时实体资源审计、三难度矩阵、A1 通用资源安装审计及 GL 自动截图对照仍待实施。本轮没有运行新 contract 的真实 TCP 长巡游，单元测试不等于端到端通过。
+全有向边巡游、双向 TCP 连续位移断言、全部运行时实体资源审计、三难度矩阵及 GL 自动截图对照仍待实施。单元测试不等于端到端通过。
 
-长巡游按用户要求保持暂停；恢复前应完成短城镇 TCP 双向回归。真机问题未闭环前，不报告“全 ACT 无错”。
+2026-10-14 用户授权瓦片告警修复后恢复长巡游；恢复前应完成资源矩阵与短城镇 TCP 双向回归。真机问题未闭环前，不报告“全 ACT 无错”。
 
 ## 短 TCP 双向入口
 
@@ -50,3 +50,5 @@
 新增步行切区事件回归：出城和返回各通知一次，并验证角色城镇/野外动作模式，单纯换 RoomEx 不重复通知。城门编号回归依据 D2MOO `ObjectsIds.h` 的 class 449 及 `ObjMode.cpp::OBJECTS_OperateFunction61_HarrogathMainGate`，同时检查真实 1.10f Objects 表的 Token=2v / OperateFn=61；Expansion 元数据行不得占用原生对象编号。
 
 2026-10-14 短回归结果：seed=127897359、25Hz，五城十个方向真实 TCP 步行通过；181 项地图回归、4 项资源审计、10 项服务端测试通过。完整日志仍有 33 条未解决告警，独立审计判为失败，不宣称无错：优先查 A3 丛林尺寸警告，再依据 D2MOO 补齐 ThornHulk/FetishBlowgun、DoomKnight/VileMother/Regurgitator、CatapultSpotter/NpcBarb/Overseer 的缺失 AI；同时追查 Attributes 空 base 重置及两条生成位置调整。五种子短通行矩阵、连续位移断言与真机显示验证仍待完成。
+
+2026-10-14 瓦片告警修复：按 D2MOO `DrlgOutPlace.cpp::sub_6FD83970` 的 unsigned nTemp 修正四个符号校正右移，侧向丛林偏移不再多出两格。182 项地图回归通过；A1–A5 六种子真实资源审计通过，failedResolve 均为零，未复现 Invalid style 或丛林尺寸 WARNING。A1 预设关卡另检查真实原生 DS1 导出，不跳过城镇/地下地图。按用户新授权恢复五种子 25Hz 长巡游，使用隔离的提交版本避免混入另一任务工作区；严格总验收仍会因非瓦片未解决告警失败。

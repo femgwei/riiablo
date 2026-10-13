@@ -13,14 +13,32 @@ class MapResourceAuditTest extends RiiabloTest {
       int seed = Integer.parseInt(seedText.trim());
       DT1s library = new DT1s();
       java.util.Set<String> loaded = new java.util.HashSet<>();
-      for (int act = 1; act <= 4; act++) {
+      for (int act = 0; act <= 4; act++) {
         Map map = new Map(seed, 0);
+        if (act == 0) Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
         if (act == 1) Act2MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
         if (act == 2) Act3MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
         if (act == 3) Act4MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
         if (act == 4) Act5MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
         for (Map.Zone zone : map.getZones()) {
           TileGrid grid = zone.nativeTileGrid();
+          if (act == 0 && grid == null) {
+            // A1 preset zones use the DS1 renderer, not the outdoor native-grid field.
+            // Audit their real native export as well; do not skip preset levels.
+            com.riiablo.map.d2moo.Act1D2MOOLayoutBridge.LayoutAndDrlg layout =
+                com.riiablo.map.d2moo.Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, 0, 17);
+            assertNotNull(layout);
+            try {
+              com.d2moo.common.drlg.D2DrlgLevel town =
+                  com.d2moo.common.drlg.DrlgDrlg.getLevel(layout.drlg, zone.levelId());
+              grid = new TileGrid(town.getLevelCoords().getNWidth(), town.getLevelCoords().getNHeight());
+              com.riiablo.map.d2moo.D2MooTileApplier applier = new com.riiablo.map.d2moo.D2MooTileApplier();
+              applier.putGrid(zone.levelId(), grid);
+              assertTrue(com.d2moo.common.drlg.DrlgExport.exportLevelTiles(layout.drlg, zone.levelId(), applier) > 0);
+            } finally {
+              com.riiablo.map.d2moo.Act1D2MOOLayoutBridge.releaseLayout(layout);
+            }
+          }
           assertNotNull(grid, "missing native export seed=" + seed + " level=" + zone.levelId());
           for (int index = 1; index <= 255; index++) {
             String source = grid.sourceFile((byte) index);

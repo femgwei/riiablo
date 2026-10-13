@@ -2263,7 +2263,7 @@ public class DrlgOutPlace {
                 // 计算 nY = nSizeY / 3（使用固定点乘法模拟）
                 long temp1 = ((long)nSizeY * 0x55555555L) >>> 32;
                 int nTemp = (int)((temp1 - nSizeY) >> 1);
-                nY = (nTemp >> 31) + nTemp; // 符号扩展
+                nY = (nTemp >>> 31) + nTemp; // Native nTemp is unsigned.
                 break;
             
             case 2:
@@ -2272,7 +2272,7 @@ public class DrlgOutPlace {
                 // 计算 nY = nSizeY / 3（使用固定点乘法模拟）
                 long temp2 = ((long)nSizeY * 0x55555555L) >>> 32;
                 int nTemp2 = (int)((temp2 - nSizeY) >> 1);
-                nY = (nTemp2 >> 31) + nTemp2; // 符号扩展
+                nY = (nTemp2 >>> 31) + nTemp2;
                 break;
             
             case 3:
@@ -2281,7 +2281,7 @@ public class DrlgOutPlace {
                 // 计算 nY = -nSizeY / 3（使用固定点乘法模拟）
                 long temp3 = (0xFFFFFFFF55555554L * (long)nSizeY) >>> 32;
                 int nTemp3 = (int)temp3;
-                nY = (nTemp3 >> 31) + nTemp3; // 符号扩展
+                nY = (nTemp3 >>> 31) + nTemp3;
                 break;
             
             case 4:
@@ -2290,7 +2290,7 @@ public class DrlgOutPlace {
                 // 计算 nY = -nSizeY / 3（使用固定点乘法模拟）
                 long temp4 = (0xFFFFFFFF55555554L * (long)nSizeY) >>> 32;
                 int nTemp4 = (int)temp4;
-                nY = (nTemp4 >> 31) + nTemp4; // 符号扩展
+                nY = (nTemp4 >>> 31) + nTemp4;
                 break;
             
             default:
