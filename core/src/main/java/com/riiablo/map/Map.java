@@ -926,11 +926,32 @@ public class Map implements Disposable {
   }
 
   public Zone getZone(int x, int y) {
-    if (collisionZone != null) return collisionZone.contains(x, y) ? collisionZone : null;
+    if (collisionZone != null) {
+      // Native collision queries can resolve an adjacent room across a level
+      // seam. Keep the source first: detached levels may overlap its bounds.
+      if (collisionZone.contains(x, y)) return collisionZone;
+      for (Zone zone : zones) {
+        if (zone.contains(x, y) && areZonesAdjacent(collisionZone, zone)
+            && (hasNativeSeam(collisionZone, zone) || hasNativeSeam(zone, collisionZone))) {
+          return zone;
+        }
+      }
+      return null;
+    }
     for (Zone zone : zones) {
       if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
     }
     return null;
+  }
+
+  private boolean hasNativeSeam(Zone source, Zone destination) {
+    if (source.levelId() < 0 || destination.levelId() < 0) return false;
+    for (IntMap.Entry<Vector2> anchor : source.nativeSeamAnchors.entries()) {
+      if (getWarpDestinationOverride(source.levelId(), anchor.key) == destination.levelId()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

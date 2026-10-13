@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-13 A2 出城真实通行
+
+- 新真机日志角色仍停留 level40；方向修正不等于可以通行。定位 scoped collision
+  将源 Zone 外全部当障碍，导致寻路、移动射线及角色体积无法跨城镇边界。
+- 保留源 Zone 优先和重叠地下地图隔离；仅允许几何共享边界、且有 native seam anchor
+  与目标 level override 共同证明的相邻地图参与碰撞查询，支持双向通行。不取消地形/物体碰撞。
+- 对照 D2MOO `D2Collision.cpp::COLLISION_GetRoomBySubTileCoordinates` 与
+  `D2Dungeon.h::DUNGEON_GetRoomAtPosition` 的源房间优先、相邻房间查询。
+- 真机 seed=127897359、1.10F MPQ：size2/mask9 角色实际 scoped 寻路及双向射线
+  验证 A2/A3/A4 城镇出口分别33/5/2个跨界位置；不再仅依赖单格原生碰撞。
+- 增加未连接边界、仅 warp 无 seam、重叠地下地图隔离、邻图障碍和角色体积回归，
+  纳入 mapRegression。五种子长巡游仍暂停，真机通行及 A2 缺失柱式火炬仍待验收。
+- 指定1.10F专项9项通过；更新后的 mapRegression 161项通过、0失败。
+
 ## 2026-10-13 P7/P8 树影与光照掩码
 
 - 修正阴影透明掩码：地图/单位阴影使用独立 `BlendMode.SHADOW`，依据原始纹理

@@ -34,6 +34,31 @@ class ActTownSeamResourceTest extends RiiabloTest {
       System.out.println("NATIVE_TOWN_SEAM " + townId + "->" + (townId + 1)
           + " preset=" + town.presetSourceFile() + " open=" + crossings);
       assertTrue(crossings > 0, "walkable native seam " + townId);
+      for (Map.Zone zone : new Map.Zone[] {town, outdoor}) {
+        zone.flags = zone.nativeTileGrid().nativeCollisionFlags.clone();
+      }
+      int playerCrossings = 0;
+      for (int y = town.y(); y < town.y() + town.height(); y++) {
+        for (int x = town.x(); x < town.x() + town.width(); x++) {
+          for (int[] step : new int[][] {{-1,0},{1,0},{0,-1},{0,1}}) {
+            int tx = x + step[0], ty = y + step[1];
+            if (!outdoor.contains(tx, ty)
+                || map.isBlockedForPath(town, x, y, 9, 2, false)
+                || map.isBlockedForPath(town, tx, ty, 9, 2, false)) continue;
+            com.badlogic.gdx.math.Vector2 src = new com.badlogic.gdx.math.Vector2(x, y);
+            com.badlogic.gdx.math.Vector2 dst = new com.badlogic.gdx.math.Vector2(tx, ty);
+            com.badlogic.gdx.ai.utils.Collision<com.badlogic.gdx.math.Vector2> hit =
+                new com.badlogic.gdx.ai.utils.Collision<>(new com.badlogic.gdx.math.Vector2(), new com.badlogic.gdx.math.Vector2());
+            assertFalse(map.castRay(town, new com.badlogic.gdx.ai.utils.Ray<>(src, dst), 9, 2, hit, false));
+            assertFalse(map.castRay(outdoor, new com.badlogic.gdx.ai.utils.Ray<>(dst, src), 9, 2, hit, false));
+            assertTrue(map.findPath(town, src, dst, 9, 2,
+                new com.badlogic.gdx.ai.pfa.DefaultGraphPath<>(), null, -1, -1, false));
+            playerCrossings++;
+          }
+        }
+      }
+      assertTrue(playerCrossings > 0, "size-two scoped player path crosses seam " + townId);
+      System.out.println("PLAYER_TOWN_SEAM " + townId + " crossings=" + playerCrossings);
       if (townId == 103) {
         TileGrid grid = town.nativeTileGrid();
         int overlays = 0, stairs = 0;
