@@ -43,7 +43,7 @@ void main() {
   // renderer instead of remaining saturated after an RGB multiplication.
   bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
       || blendMode == 15
-      || blendMode == 12 || blendMode == 14;
+      || blendMode == 12 || blendMode == 14 || blendMode == 16;
   if (lightingEnabled != 0 && !selfLit) {
     float intensity = ambientIntensity;
     for (int i = 0; i < 16; i++) {
@@ -157,6 +157,13 @@ void main() {
       color.rgb += 0.5;
       color.rgb += 0.3;
     }
+  } else if (blendMode == 16) {
+    // D2GFX exposes separate ShadowTileDraw/CelDrawShadow entries without
+    // the ordinary tile lighting parameters. Preserve our shadow mask from
+    // the source index rather than a PL2-mapped palette alpha. The native
+    // DLL's exact destination-colour blending is still a separate audit.
+    if (sourceIndex > 0.0) color = tint;
+    else color.a = 0.0;
   } else if (blendMode == 8) {
     if (color.a > 0.0) {
       // Apply contrast

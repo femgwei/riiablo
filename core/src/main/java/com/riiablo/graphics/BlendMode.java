@@ -27,4 +27,6 @@ public interface BlendMode {
   int ADDITIVE           = 14;
   /** Brightened indexed sprite with luminance-derived transparency. */
   int BRIGHTEN_LUMINOSITY = 15;
+  /** Native ground/unit shadow draw; bypasses world light accumulation. */
+  int SHADOW             = 16;
 }

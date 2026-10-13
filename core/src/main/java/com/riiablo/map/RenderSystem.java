@@ -1354,7 +1354,10 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   void drawShadows(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py, Array<Integer>[] cache) {
-    batch.setBlendMode(BlendMode.SOLID, Riiablo.colors.modal75);
+    // D2MOO submits map/unit shadows through ShadowTileDraw/CelDrawShadow,
+    // which is separate from the ordinary lit tile path. Keep the authored
+    // shadow alpha/silhouette and do not feed it through local light radii.
+    batch.setBlendMode(BlendMode.SHADOW, Riiablo.colors.modal75);
     for (int i = Map.SHADOW_OFFSET; i < Map.SHADOW_OFFSET + Map.MAX_SHADOWS; i++) {
       Tile tile = zone.get(i, tx, ty);
       if (tile == null) continue;
