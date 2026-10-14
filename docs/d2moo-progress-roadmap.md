@@ -1,5 +1,30 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-14 ca4d724 后 A5 地形消失回归
+
+- 用户 p3.png / Desktop/game.log（20:51）：Harrogath 的 20 个 DT1 槽位全部为空，
+  生产依赖只加载 Blank/InvisWal/Warp 三个默认文件，随后触发 deterministic floor
+  fallback，显示绿色菱形网格。不是原生地图导出缺失：同日志 DRLG 已读取正确的城镇 DT1。
+- `ca4d724` 将 LvlTypes 改为源行索引，但 Files 加载入口没有排除带制表符的
+  Expansion 分隔行。真实 1.10f 资源回归在修改前失败：type29 预期 Act 5 - Town / Id29，
+  实际得到 Expansion / Id0；之后的 A5 类型整体偏移一行。
+- 保留 D2MOO `LevelsTbls.cpp::DATATBLS_GetLevelTypesTxtRecord` 的编译行索引规则；
+  Files 直接加载 MPQ LvlTypes.txt 并排除 Expansion 元数据，同时避开可能保留旧分隔行
+  的缓存 BIN。没有回退原生行索引，也没有改动地板隐藏/碰撞规则。
+- 新增带制表符分隔行的纯数据反例，以及 NativeLevelTypesResourceTest：核对全部真实
+  类型记录，并经 Zone.getDependencies 的生产路径加载 A5 DT1 后执行实际地形安装。
+  旧资源审计直接从导出 sourceFile 加载库，会绕过错误的 Zone 依赖选择；新回归已加入
+  mapResourceAcceptance。
+- 验证：`:core:test --tests com.riiablo.map.NativeLevelTypesResourceTest
+  --tests com.riiablo.codec.excel.NativeTableIdentityTest
+  --tests com.riiablo.map.Act5TownHiddenFloorResourceTest`，10 项通过；
+  `:core:mapResourceAcceptance -PmapAuditSeeds=127897359`，8 项通过，覆盖 A1–A5
+  的 132 地图及 A5 生产依赖安装。`:desktop:offscreenCamp -PoffscreenLevel=109
+  -Pd2Version=1.10f` 使用本机合法 1.10f MPQ，manifest 为 result=PASS、act=5、
+  targetLevel=109、renderedFrames=6。输出在
+  `desktop/build/visual-tests/lvltypes-regression-20261014`；1x1 烟测确认客户端加载/渲染
+  不崩溃，完整画面仍由用户另一台电脑实测确认。该模块随后独立提交推送 origin/master。
+
 ## 2026-10-14 A5 大量生成告警与错误出城传送
 
 - `game2.log`、seed=127897359：Harrogath(109) 出口被作为 Warp，传到

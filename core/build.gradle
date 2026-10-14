@@ -208,6 +208,7 @@ task mapResourceAcceptance(type: Test) {
   useJUnitPlatform()
   filter {
     includeTestsMatching 'com.riiablo.map.MapResourceAuditTest'
+    includeTestsMatching 'com.riiablo.map.NativeLevelTypesResourceTest'
     includeTestsMatching 'com.riiablo.map.ActTownSeamResourceTest'
     includeTestsMatching 'com.riiablo.map.Act2TombEntranceResourceTest'
     includeTestsMatching 'com.riiablo.map.Act4FortressResourceTest'

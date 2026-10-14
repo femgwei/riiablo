@@ -14,6 +14,11 @@ import org.junit.jupiter.api.Test;
 
 class NativeTableIdentityTest {
   private static <T extends Excel> T load(Class<T> table, String contents) {
+    return load(table, contents, Excel.<String>emptySet());
+  }
+
+  private static <T extends Excel> T load(Class<T> table, String contents,
+      com.badlogic.gdx.utils.ObjectSet<String> ignore) {
     Application previous = Gdx.app;
     Gdx.app = (Application) Proxy.newProxyInstance(Application.class.getClassLoader(),
         new Class<?>[] {Application.class}, (proxy, method, args) -> null);
@@ -22,7 +27,7 @@ class NativeTableIdentityTest {
         @Override public InputStream read() {
           return new ByteArrayInputStream(contents.getBytes(StandardCharsets.US_ASCII));
         }
-      });
+      }, ignore);
     } finally {
       Gdx.app = previous;
     }
@@ -39,6 +44,22 @@ class NativeTableIdentityTest {
     assertEquals("outdoor.dt1", table.get(2).File[0]);
     assertEquals("wrong-row.dt1", table.get(1).File[0]);
     assertNull(table.get(9));
+  }
+
+  @Test
+  void levelTypesDoNotCountTabPaddedExpansionMetadataAsATileLibrary() {
+    LvlTypes table = load(LvlTypes.class,
+        "Name\tId\tFile 1\n"
+        + "none\t0\t\n"
+        + "classic\t9\tclassic.dt1\n"
+        + "Expansion\t\t\n"
+        + "town\t29\tExpansion/town/blacksmith.dt1\n"
+        + "siege\t30\tExpansion/siege/ground.dt1\n", Excel.EXPANSION);
+    assertEquals(4, table.size());
+    assertEquals(29, table.get(2).Id);
+    assertEquals("Expansion/town/blacksmith.dt1", table.get(2).File[0]);
+    assertEquals(30, table.get(3).Id);
+    assertNull(table.get(4));
   }
 
   @Test

@@ -208,7 +208,11 @@ public class Files {
     // cannot silently resolve to an unrelated row (for example Act3/Jungle).
     LvlPrest         = Excel.load(LvlPrest.class,
         Riiablo.mpqs.resolve(EXCEL_PATH + "LvlPrest.txt"));
-    LvlTypes         = load(LvlTypes.class);
+    // Native type numbers index compiled rows, excluding the tab-padded
+    // Expansion separator. Read MPQ TXT so an old bin cannot retain that
+    // metadata row and shift every Act V tile-library lookup by one.
+    LvlTypes         = Excel.load(LvlTypes.class,
+        Riiablo.mpqs.resolve(EXCEL_PATH + "LvlTypes.txt"), Excel.EXPANSION);
     LvlWarp          = load(LvlWarp.class, Excel.EXPANSION);
     LvlSub           = load(LvlSub.class);
     misc             = load(Misc.class, Excel.EXPANSION);

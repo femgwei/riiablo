@@ -62,6 +62,10 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    直接查询源行数组。riiablo 的 Map/OutdoorGrid 使用 Levels.LevelType 查询，
    已将 LvlTypes.Entry 改为 Excel.Index，并同步新版 table schema 的 indexed
    标记；旧 codec 的 TXT/BIN 两条加载路径均按位置建索引。
+   2026-10-14 真机回归补正：原版 TXT 带制表符的 Expansion 分隔行必须先排除，
+   否则 type29 查询到空分隔行、A5 整体错位。Files 现直接读取原版 MPQ TXT 并排除
+   该行，避开旧 BIN；新增真实表及 Zone 生产 DT1 依赖安装测试。此前纯数据无分隔行
+   夹具不足以验证生产加载正确。
    新增真实 TXT 加载夹具，Id=2 位于行1、Id=9 位于行2，确认查询2得到行2。
    MonPreset 已独立维护每幕位置，补充交错幕夹具锁定现有扩展行为；D2MOO
    `DATATBLS_LoadMonPresetTxt` 按连续幕分段，不把交错幕支持宣称为原生规则。
