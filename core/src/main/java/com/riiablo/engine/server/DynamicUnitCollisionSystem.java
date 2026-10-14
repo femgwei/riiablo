@@ -29,6 +29,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<com.riiablo.engine.server.component.WhirlwindRuntime> mWhirlwindRuntime;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -200,7 +201,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   public boolean tryMove(int entityId, Vector2 destination) {
     if (!enabled || destination == null || !hasPresence(entityId)) return true;
     return grid.move(entityId, -1, Map.round(destination.x),
-        Map.round(destination.y), footprint(entityId), blockerFor(entityId));
+        Map.round(destination.y), footprint(entityId),
+        mWhirlwindRuntime.has(entityId) ? other -> false : blockerFor(entityId));
   }
 
   public boolean tryMove(int entityId, float x, float y) {

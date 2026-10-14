@@ -8,6 +8,31 @@ import com.riiablo.engine.server.component.Monster;
 import org.junit.jupiter.api.Test;
 
 class DynamicUnitCollisionSystemTest {
+  @Test void whirlwindPassesThroughUnitPresenceAndRestoresOrdinaryBlocking() {
+    DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()
+        .with(collision).build());
+    try {
+      int mover = world.create(), blocker = world.create();
+      for (int id : new int[] {mover, blocker}) {
+        world.getMapper(com.riiablo.engine.server.component.Position.class).create(id)
+            .position.set(id == mover ? 0 : 10, 0);
+        world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+        world.getMapper(com.riiablo.engine.server.component.Size.class).create(id).size = 1;
+        world.getMapper(com.riiablo.engine.server.component.Class.class).create(id)
+            .type = com.riiablo.engine.server.component.Class.Type.PLR;
+      }
+      world.process();
+      assertFalse(collision.tryMove(mover, new com.badlogic.gdx.math.Vector2(10, 0)));
+      world.getMapper(com.riiablo.engine.server.component.WhirlwindRuntime.class).create(mover);
+      assertTrue(collision.tryMove(mover, new com.badlogic.gdx.math.Vector2(10, 0)));
+      // Occupancy is updated, not skipped: another ordinary mover sees the WW footprint.
+      assertFalse(collision.isFreeForPath(blocker, -1, 10, 0, 1));
+      world.getMapper(com.riiablo.engine.server.component.WhirlwindRuntime.class).remove(mover);
+      assertFalse(collision.tryMove(mover, new com.badlogic.gdx.math.Vector2(10, 0)));
+    } finally { world.dispose(); }
+  }
+
   @Test void touchingUnrelatedActRectanglesDoNotBlockNativeSeamMovement() throws Exception {
     com.badlogic.gdx.Application previousApp = com.badlogic.gdx.Gdx.app;
     com.badlogic.gdx.Gdx.app = (com.badlogic.gdx.Application) java.lang.reflect.Proxy.newProxyInstance(

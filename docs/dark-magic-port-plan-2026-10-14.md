@@ -234,3 +234,16 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   此批是已证实的基速选择与内部链路修复，不宣称已确认原生旋风期间全部FRW、
   状态刷新或定点规则。D2Common按动画模式/技能标记选择velocity更新分支，
   该条件链仍须追踪；旋风专用碰撞掩码、动态单位穿越和Box2D实机验收仍待完成。
+- 旋风动态碰撞：D2Collision.h 的 COLLIDE_MASK_PLAYER_WW 只有 WALL/OBJECT/DOOR；
+  SkillBar.cpp 在路径建立后进一步使用 WALL/MISSILE_BARRIER/BLANK/NO_PATH，
+  不包含 PLAYER/MONSTER/PET。riiablo 普通动态占位把单位中心视为路径阻挡，
+  因此旋风积分不能复用这一普通单位阻挡。DynamicUnitCollisionSystem.tryMove
+  现仅在 WhirlwindRuntime 存在时忽略其他单位，仍通过 grid.move 更新自身占位；
+  不改变落点探测、普通寻路、其他单位对旋风施法者的阻挡或静态地形检查。
+  新增穿过占位、占位更新、技能结束立即恢复普通阻挡的回归。
+  状态移除审计：原生 CurseStateCallback_Whirlwind 注销事件、关闭状态、刷新
+  动画速度并调用 sub_6FD14C30；当前 finish 清理状态/施法/序列/运行时，StateUpdater
+  每帧重算倍率。回调完整事件与动画刷新语义尚未移植，不能宣称等价。
+  静态碰撞仍保留待办：当前地图合并 OBJECT/DOOR 到 BLOCK_WALK，不能直接把
+  原生16位掩码套在DT1字节标志上；路径建立和运行阶段的差异需要原生标志查询层。
+  本批不改变Box2D实体接触行为，实机穿越验收仍待进行。
