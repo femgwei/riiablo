@@ -21,8 +21,9 @@ final class MapObjectLoadAudit {
 
   static List<String> inspect(World world, Map.Zone zone) {
     List<String> lines = new ArrayList<>();
-    int failures = 0, created = 0, skipped = 0, pending = 0, runtime = 0;
+    int failures = 0, created = 0, skipped = 0, pending = 0, runtime = 0, population = 0, populationRooms = 0;
     for (Map.NativeObject source : zone.getNativeObjects()) {
+      if (source.sourceFile.startsWith("ObjGroup/")) population++;
       String error = "none";
       if ("created".equals(source.creationStatus)) {
         created++;
@@ -95,9 +96,16 @@ final class MapObjectLoadAudit {
           + " mode=" + object.mode + " position=" + (position == null ? "null" : position.position)
           + " resources=" + resource + " error=" + error);
     }
+    if (!zone.isTown() && zone.hasNativeRoomTopology()) {
+      for (int i = 0; i < zone.getRoomsEx().size; i++) {
+        if (zone.getRoomsEx().get(i).isObjectPopulationSpawned()) populationRooms++;
+        else failures++;
+      }
+    }
     lines.add("OBJECT_AUDIT level=" + zone.levelId() + " exported=" + zone.getNativeObjects().size
         + " created=" + created + " skipped=" + skipped + " pending=" + pending
-        + " runtime=" + runtime + " failures=" + failures + " result=" + (failures == 0 ? "PASS" : "FAIL"));
+        + " runtime=" + runtime + " population=" + population + " populationRooms=" + populationRooms
+        + " failures=" + failures + " result=" + (failures == 0 ? "PASS" : "FAIL"));
     return lines;
   }
 

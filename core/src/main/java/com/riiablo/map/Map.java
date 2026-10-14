@@ -2646,6 +2646,27 @@ public class Map implements Disposable {
     private final Array<MonsterSpawn> pendingMonsterSpawns = new Array<>();
     private boolean monsterPopulationSpawned;
     private boolean presetUnitsSpawned;
+    private boolean objectPopulationSpawned;
+    private int populationFlags;
+    private int populationSeed;
+    private int populationSeedHigh = 666;
+
+    public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
+      populationFlags = room.getFlags();
+      if (room.getSeed() != null) {
+        populationSeed = room.getSeed().getNLowSeed();
+        populationSeedHigh = room.getSeed().getNHighSeed();
+      }
+    }
+    public boolean claimObjectPopulation() {
+      if (objectPopulationSpawned) return false;
+      objectPopulationSpawned = true;
+      return true;
+    }
+    public boolean isObjectPopulationSpawned() { return objectPopulationSpawned; }
+    public int populationFlags() { return populationFlags; }
+    public int populationSeed() { return populationSeed; }
+    public int populationSeedHigh() { return populationSeedHigh; }
 
     RoomEx(int id, int x, int y, int width, int height) {
       this.id = id;

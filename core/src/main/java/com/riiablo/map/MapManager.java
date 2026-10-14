@@ -24,6 +24,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 public class MapManager extends PassiveSystem {
   private static final String TAG = "MapManager";
+  private final NativeObjectPopulation nativeObjectPopulation = new NativeObjectPopulation();
 
   @Wire(name = "map")
   protected Map map;
@@ -405,7 +406,17 @@ public class MapManager extends PassiveSystem {
       // initial room snapshot.
       onlyRoom.markPresetUnitsSpawned();
     }
-    if (zone.nativeObjects.size > 0 && (onlyRoom == null || created + failed + skipped > 0)) {
+    int populated = outsideRoomsOnly || clientPresentationOnly
+        ? 0 : nativeObjectPopulation.populate(zone, onlyRoom);
+    if (populated > 0) {
+      Gdx.app.log(TAG, String.format("D2MOO object population: level=%s(%d) room=%d created=%d",
+          zone.level.LevelName, zone.level.Id, onlyRoom == null ? -1 : onlyRoom.id, populated));
+      // New population records must use the same factory/state/collision path
+      // as native presets on this activation, rather than remain PENDING until
+      // a room which is already marked spawned happens to be visited again.
+      createNativeObjects(zone, onlyRoom, false, false);
+    }
+    if (zone.nativeObjects.size > 0 && (onlyRoom == null || created + failed + skipped + populated > 0)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO native objects: level=%s(%d) room=%d exported=%d created=%d failed=%d",
           zone.level.LevelName, zone.level.Id, onlyRoom != null ? onlyRoom.id : -1,

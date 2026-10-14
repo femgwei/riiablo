@@ -3392,11 +3392,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       nativeRooms.add(room);
       int localTileX = room.getNTileXPos() - levelX;
       int localTileY = room.getNTileYPos() - levelY;
-      zone.addRoomEx(
+      Map.RoomEx projected = zone.addRoomEx(
           zone.x + localTileX * DT1.Tile.SUBTILE_SIZE,
           zone.y + localTileY * DT1.Tile.SUBTILE_SIZE,
           room.getNTileWidth() * DT1.Tile.SUBTILE_SIZE,
           room.getNTileHeight() * DT1.Tile.SUBTILE_SIZE);
+      projected.setNativePopulationMetadata(room);
     }
     int links = 0;
     for (int i = 0; i < nativeRooms.size; i++) {

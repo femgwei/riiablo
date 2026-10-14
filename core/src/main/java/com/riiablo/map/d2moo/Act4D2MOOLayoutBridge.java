@@ -301,6 +301,7 @@ public final class Act4D2MOOLayoutBridge {
               * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
           room.getNTileWidth() * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
           room.getNTileHeight() * com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+      projected.setNativePopulationMetadata(room);
       Object maze = room.getMazeOrOutdoor();
       if (maze instanceof D2DrlgPresetRoomStrc) {
         D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) maze;
