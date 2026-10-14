@@ -83,3 +83,5 @@ Waypoint 目的地均能定位到原生 RoomEx，延迟房间物化和重复查�
 2026-10-15 附属物复测：修正主题人口分派把 one-based theme id 与候选数量比较的错误；主题 2 的桶网格现在按 D2Game 表索引执行，并在主题成功时停止重复 ObjGrp 分派。新增主题桶回归测试和 `OBJECT_AUDIT themes=` 诊断字段。`NativeObjectPopulationResourceTest`、`NativeSeamNetworkVisibilityTest` 均通过。
 
 seed=1、25Hz 的 A1–A2 对象加载巡游（6 个关卡，独立输出目录）全部 `OBJECT_LOAD_PASS`；每个已导出对象均 `created=exported`，资源/碰撞审计 failures=0。该批关卡真实 `themes=0`，所以桶数量没有因主题修复变化；松动石头、桶、宝箱、陷阱、瓦罐仍不能据此宣布达到原版数量，必须继续按 D2MOO 的 ObjGroup density budget 与原版生成统计逐类对照。提交已合并推送至 `origin/master`（当前 `632f0333`）。
+
+随后以同一修复版本执行 seed=1、25Hz、Act I–V 132 图对象加载巡游；132/132 个 `OBJECT_AUDIT` 和 `OBJECT_LOAD_PASS` 通过，`failures=0`，最终 `SUMMARY ... failures=0 result=PASS`。实现侧类别基线为 loose rock 78、barrel/exploding barrel 336、large chest 175、urn 444、floor trap 129、trapped soul 69；这些仍是加载实现的计数，尚未与原版逐房间 roll 结果建立等价证明。
