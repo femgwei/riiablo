@@ -64,4 +64,17 @@ class NativeAiDecisionTest {
     assertEquals(2, Andariel.PARAM_FIRE_OR_ENGAGE_CHANCE);
     assertEquals(3, Andariel.PARAM_SPRAY_FROM_DISTANCE_CHANCE);
   }
+
+  @Test
+  void remainingAct1ParamSlotsMatchNativeEnums() {
+    assertEquals(0, Arach.PARAM_ATTACK_CHANCE);
+    assertEquals(1, Arach.PARAM_CIRCLE_IN_MELEE_CHANCE);
+    assertEquals(2, Arach.PARAM_ENGAGE_CHANCE);
+    assertEquals(3, Arach.PARAM_RUN_DISTANCE);
+    assertEquals(4, Arach.PARAM_HURT_PCT);
+    assertEquals(0, GargoyleTrap.PARAM_SHOOT_DISTANCE);
+    assertEquals(1, GargoyleTrap.PARAM_SHOOT_CHANCE);
+    assertEquals(2, GargoyleTrap.PARAM_FIRE_RECOVERY);
+    assertEquals(3, GargoyleTrap.PARAM_STALL_DURATION);
+  }
 }

@@ -17,9 +17,18 @@
   偷换成普通攻击。
 - [x] 新增纯数据 RNG/难度边界测试和真实 1.10f 表驱动 ECS 决策测试；AI 包及技能矩阵
   定向回归通过（当前批次 14 项 + 既有 AI/技能矩阵通过）。
-- [ ] A1 仍缺 `Arach`、`GargoyleTrap`；Andariel/Smith/Griswold 的画面动作、真实
-  客户端战斗效果尚未由另一台电脑验收。A2--A5 专用 AI 与完整单位 `pSeed` 继续保持
-  未完成，不能据此提高全 Acts 移植百分比。
+
+## 2026-10-15 A1 Arach 与 GargoyleTrap
+
+- [x] 新增 `Arach`：按 D2MOO 的 `aiParam[0..2]` 状态、攻击/接近/绕行/逃跑、受伤
+  技能分支接入统一移动与技能施法生命周期。
+- [x] 新增 `GargoyleTrap`：固定单位目标、轴向邻近判定、射程/射击概率、施法恢复和
+  停顿参数；不会再落入 `GenericMonster` 追击或普通近战攻击。
+- [x] 真实 1.10f 表驱动的 Arach 攻击、GargoyleTrap 技能恢复与专用类解析回归通过；
+  AI 包及技能矩阵、`desktop:offscreenCamp` 均通过。
+- [ ] GargoyleTrap 的原版 64 方向离散朝向表、Arach 的特殊 AI 状态回调尚未完全
+  复刻；A1 入口覆盖已达 24/24，但仍不能宣称行为逐分支等同原版。A2--A5 专用 AI
+  与完整单位 `pSeed` 继续保持未完成。
 
 ## 2026-10-14 ca4d724 后 A5 地形消失回归
 

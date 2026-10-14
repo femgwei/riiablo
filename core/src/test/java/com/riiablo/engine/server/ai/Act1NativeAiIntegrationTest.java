@@ -35,12 +35,35 @@ import org.junit.jupiter.api.Test;
 class Act1NativeAiIntegrationTest extends RiiabloTest {
   @Test
   void nativeRowsMustResolveToDedicatedAiNotFallback() {
-    for (String rowId : new String[] {"andariel", "smith", "griswold"}) {
+    for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap"}) {
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);
       assertNotNull(row, rowId);
       AI ai = AI.findAI(12, row.AI);
-      assertTrue(ai instanceof NativeDecisionAI, rowId + " must not use GenericMonster");
+      assertFalse(ai instanceof GenericMonster, rowId + " must not use GenericMonster");
       assertEquals(row.AI, ai.getClass().getSimpleName());
+    }
+  }
+
+  @Test
+  void arachUsesNativeAttackDecisionAndGargoyleTrapUsesSkillRecovery() {
+    try (Fixture f = new Fixture("arach3", 0, 1f)) {
+      f.ai.params[Arach.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("ATTACK", f.ai.getState());
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("gargoyletrap", 0, 5f)) {
+      f.ai.params[GargoyleTrap.PARAM_SHOOT_DISTANCE] = 20;
+      f.ai.params[GargoyleTrap.PARAM_SHOOT_CHANCE] = 100;
+      f.ai.params[GargoyleTrap.PARAM_FIRE_RECOVERY] = 7;
+      f.ai.params[GargoyleTrap.PARAM_STALL_DURATION] = 1;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("CAST", f.ai.getState());
+      assertNotNull(f.world.getMapper(Target.class).get(f.actor));
+      assertEquals(f.target, f.world.getMapper(Target.class).get(f.actor).target);
+      assertTrue(f.world.getMapper(Casting.class).has(f.actor));
+      f.ai.update(6 * Animation.FRAME_DURATION);
+      assertTrue(f.world.getMapper(Casting.class).has(f.actor));
     }
   }
 
