@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A2 ElementalBeast AI
+
+- [x] 新增 `ElementalBeast`：按 D2MOO 三阶段状态机实现激活距离、Skill1 二次施放、
+  接近/停顿概率，以及第二次动作完成后的原生自毁。
+- [x] 真实 1.10f MonStats 动态查找覆盖该 AI 行，两个施法阶段和死亡转移回归通过。
+- [ ] 原生 `sub_6FCF2E70` 激活回调、贴近 8 格路径和单位 `pSeed`/MonSeq 细节仍待接入。
+
 ## 2026-10-15 A2 FlyingScimitar AI
 
 - [x] 新增 `FlyingScimitar`：按 D2MOO `AITHINK_Fn047_FlyingScimitar` 保留战斗时

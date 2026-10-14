@@ -110,6 +110,15 @@ abstract class NativeDecisionAI extends AI {
     }
   }
 
+  /** Starts a native mode-only action for MonStats rows without a Skills.txt entry. */
+  protected final void startMode(int mode, int targetId) {
+    stopMovement();
+    lookAt(targetId);
+    state = "CAST";
+    mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
+    nextThink = 0f;
+  }
+
   @Override
   public void kill() {
     if (dead) return;

@@ -291,6 +291,27 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void elementalBeastCastsTwiceThenSelfDestructs() {
+    String rowId = rowIdForAi("ElementalBeast");
+    try (Fixture f = new Fixture(rowId, 0, 1f)) {
+      f.ai.params[ElementalBeast.PARAM_ACTIVATION_DISTANCE] = 4;
+      f.ai.params[ElementalBeast.PARAM_APPROACH_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("CAST", f.ai.getState());
+      assertEquals(Engine.Monster.MODE_S1, f.sequence().mode1);
+
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("CAST", f.ai.getState());
+      assertEquals(Engine.Monster.MODE_S1, f.sequence().mode1);
+
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("DEAD", f.ai.getState());
+    }
+  }
+
+  @Test
   void smithSpeedsUpWhenHurtAndUsesOrdinaryAttackInMelee() {
     try (Fixture f = new Fixture("smith", 0, 30f)) {
       f.health(50f, 100f);
