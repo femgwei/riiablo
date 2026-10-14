@@ -37,6 +37,34 @@ import org.junit.jupiter.api.Test;
 
 class NativeBarbarianPassiveDataTest extends RiiabloTest {
   @Test
+  void skillMoveRemovalRefreshesPassivesWithoutTickingOtherStates() {
+    NoopFactory factory = new NoopFactory();
+    StateUpdater updater = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), updater, factory).build()
+        .register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      CharData data = CharData.obtain().clear().set(
+          Riiablo.NORMAL, false, "RefreshBarbarian", Riiablo.BARBARIAN);
+      int id = world.create();
+      world.getMapper(Player.class).create(id).data = data;
+      world.getMapper(AttributesWrapper.class).create(id).attrs = attributes();
+      UnitStates states = world.getMapper(UnitStates.class).create(id).init(id);
+      Velocity velocity = world.getMapper(Velocity.class).create(id).setPlayer(6, 9);
+      world.setDelta(1f / 25f);
+      world.process();
+      UnitState timed = states.stateList.addState(StateId.SLOWED, 30, 1, id);
+      timed.setNativeModifier(Stat.velocitypercent, -10);
+      data.setSkillLevel(148, 2);
+      updater.refreshAfterSkillMove(id);
+      assertEquals(30, timed.duration, "refresh must not advance another simulation tick");
+      assertNotNull(states.stateList.getState(StateId.INCREASEDSPEED));
+      assertEquals(8f, velocity.nativePlayerVelocityBonus, 0.001f);
+      assertEquals(1.08f, velocity.stateSpeedMultiplier, 0.001f);
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void nativePassiveColumnsAndDiminishingFormulasAreLoaded() {
     assertPassive("Increased Stamina", 141, "increasedstamina", "skill_passive_staminapercent", 30, 45);
     assertPassive("Iron Skin", 145, "ironskin", "skill_armor_percent", 30, 40);

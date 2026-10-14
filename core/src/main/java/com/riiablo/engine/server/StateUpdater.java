@@ -1055,6 +1055,19 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
+  /** Refreshes derived skill-move stats without advancing state durations, DOT, or aura timers. */
+  void refreshAfterSkillMove(int entityId) {
+    UnitStates states = mUnitStates.get(entityId);
+    if (states == null || states.stateList == null) return;
+    if (!states.snapshotOnly) {
+      synchronizeBarbarianPassives(entityId, states.stateList);
+      synchronizePaladinHardPointPassives(entityId, states.stateList);
+      synchronizeAmazonPassives(entityId, states.stateList);
+      synchronizeSorceressPassives(entityId, states.stateList);
+    }
+    if (mVelocity.has(entityId)) applyVelocityModifiers(entityId, states.stateList);
+  }
+
   //==========================================================================
   // 状态效果应用
   //==========================================================================

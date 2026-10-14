@@ -43,6 +43,7 @@ public class WhirlwindSystem extends IteratingSystem {
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Size> mSize;
+  protected ComponentMapper<com.riiablo.engine.server.component.AnimData> mAnimData;
 
   protected Actioneer actioneer;
 
@@ -185,6 +186,13 @@ public class WhirlwindSystem extends IteratingSystem {
     if (mCasting.has(entityId)) mCasting.remove(entityId);
     if (mSequence.has(entityId)) mSequence.remove(entityId);
     if (mWhirlwindRuntime.has(entityId)) mWhirlwindRuntime.remove(entityId);
+    // Native removal refreshes passive skills and animation velocity immediately.
+    // Do not tick the entire StateUpdater again or disturb a death animation.
+    if (isAlive(entityId)) {
+      StateUpdater updater = world.getSystem(StateUpdater.class);
+      if (updater != null) updater.refreshAfterSkillMove(entityId);
+      if (mAnimData.has(entityId)) mAnimData.get(entityId).override = -1;
+    }
     log.info("[WHIRLWIND] phase=finish entity={} reason={} destination=({}, {}) strikes={}",
         entityId, reason, destinationX, destinationY, strikes);
   }

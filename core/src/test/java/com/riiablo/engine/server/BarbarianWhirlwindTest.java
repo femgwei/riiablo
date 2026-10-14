@@ -160,14 +160,17 @@ class BarbarianWhirlwindTest extends RiiabloTest {
       world.process();
       WhirlwindRuntime runtime = world.getMapper(WhirlwindRuntime.class).get(id);
       assertEquals(1, runtime.strikeIndex);
+      assertEquals(1, runtime.handIndex);
       assertEquals(5f, runtime.nextAttackFrame);
       world.getMapper(Position.class).get(id).position.x = 0.2f;
       world.setDelta(1f);
       world.process();
       assertEquals(2, runtime.strikeIndex, "one callback must not replay a backlog of windows");
+      assertEquals(2, runtime.handIndex);
       assertEquals(36f, runtime.nextAttackFrame, "overdue timer restarts from current frame");
       Velocity velocity = world.getMapper(Velocity.class).get(id);
       velocity.setModeSpeedBonusPercent(30);
+      world.getMapper(com.riiablo.engine.server.component.AnimData.class).create(id).override = 500;
       world.getMapper(UnitStates.class).get(id).stateList.removeState(StateId.WHIRLWIND);
       world.process();
       assertFalse(world.getMapper(WhirlwindRuntime.class).has(id));
@@ -175,6 +178,32 @@ class BarbarianWhirlwindTest extends RiiabloTest {
       assertTrue(velocity.velocity.isZero());
       assertFalse(velocity.movementRunning);
       assertEquals(0f, velocity.modeSpeedBonusMultiplier);
+      assertEquals(-1, world.getMapper(com.riiablo.engine.server.component.AnimData.class).get(id).override);
+    } finally { world.dispose(); }
+  }
+
+  @Test
+  void targetlessWindowsToggleHandWithoutInventingStrikes() {
+    Actioneer actioneer = new Actioneer();
+    World world = world(actioneer, new DummyFactory());
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get("Whirlwind");
+      int id = player(world, 0, 0, attributes(1000, 1, 1, 100000));
+      int target = monster(world, 50, 0, attributes(100000, 0, 0, 0));
+      world.getMapper(Casting.class).create(id)
+          .set(skill.Id, Engine.INVALID_ENTITY, new Vector2(100, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(id, skill.Id, Engine.INVALID_ENTITY,
+          new Vector2(100, 0), skill.srvstfunc, skill.cltstfunc));
+      world.setDelta(1f / 25f);
+      world.process();
+      WhirlwindRuntime runtime = world.getMapper(WhirlwindRuntime.class).get(id);
+      assertEquals(0, runtime.strikeIndex);
+      assertEquals(1, runtime.handIndex);
+      assertEquals(Engine.INVALID_ENTITY, runtime.previousTargetId);
+      world.getMapper(Position.class).get(target).position.set(1, 0);
+      actioneer.resolveWhirlwindPulse(id, runtime);
+      assertEquals(1, runtime.strikeIndex);
+      assertEquals(2, runtime.handIndex);
     } finally { world.dispose(); }
   }
 

@@ -4023,21 +4023,22 @@ public class Actioneer extends PassiveSystem {
     if (skill == null) return;
     int count = !initialWindow && hasTwoWhirlwindWeapons(entityId) ? 2 : 1;
     for (int i = 0; i < count; i++) {
+      int hand = runtime.handIndex++;
       int targetId = findNextWhirlwindTarget(entityId, runtime.previousTargetId);
       if (targetId == Engine.INVALID_ENTITY) {
         runtime.previousTargetId = Engine.INVALID_ENTITY;
         break;
       }
       runtime.previousTargetId = targetId;
-      Item weapon = whirlwindWeapon(entityId, runtime.strikeIndex);
+      Item weapon = whirlwindWeapon(entityId, hand);
       int strike = ++runtime.strikeIndex;
-      resolveWhirlwindStrike(entityId, targetId, skill, runtime.skillLevel, weapon, strike);
+      resolveWhirlwindStrike(entityId, targetId, skill, runtime.skillLevel, weapon, strike, hand);
     }
   }
 
   private void resolveWhirlwindStrike(
       int entityId, int targetId, Skills.Entry skill, int level,
-      Item weapon, int strike) {
+      Item weapon, int strike, int hand) {
     if (!mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
         || !isAlive(entityId) || !isAlive(targetId)) return;
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
@@ -4056,12 +4057,12 @@ public class Actioneer extends PassiveSystem {
     if (!combat.hit) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
               + "result=miss chance={}",
-          entityId, targetId, strike, whirlwindHand(entityId, strike - 1), combat.hitChance);
+          entityId, targetId, strike, whirlwindHand(entityId, hand), combat.hitChance);
       return;
     }
     if (combat.blocked) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} result=blocked",
-          entityId, targetId, strike, whirlwindHand(entityId, strike - 1));
+          entityId, targetId, strike, whirlwindHand(entityId, hand));
       queueHitReaction(targetId, combat);
       return;
     }
@@ -4080,14 +4081,16 @@ public class Actioneer extends PassiveSystem {
     applyCombatStates(entityId, targetId, combat);
     log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
             + "weapon={} result=hit damage={} hp={} -> {} chance={}",
-        entityId, targetId, strike, whirlwindHand(entityId, strike - 1),
+        entityId, targetId, strike, whirlwindHand(entityId, hand),
         weapon != null ? weapon.code : "unarmed", applied, before, hp.asFixed(),
         combat.hitChance);
     if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
   }
 
   int whirlwindAttackInterval(int entityId) {
-    Item weapon = whirlwindPrimaryWeapon(entityId);
+    WhirlwindRuntime runtime = mWhirlwindRuntime.get(entityId);
+    Item weapon = runtime != null ? whirlwindWeapon(entityId, runtime.handIndex)
+        : whirlwindPrimaryWeapon(entityId);
     if (weapon == null) return 10;
     int nativeAttackSpeed = 45;
     if (Riiablo.anim != null && mCofReference.has(entityId)) {

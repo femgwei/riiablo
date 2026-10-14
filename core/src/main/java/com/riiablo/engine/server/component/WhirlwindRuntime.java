@@ -18,6 +18,8 @@ public class WhirlwindRuntime extends PooledComponent {
   public boolean attackTimerInitialized;
   public int previousTargetId = Engine.INVALID_ENTITY;
   public int strikeIndex;
+  /** Native skill flag 0x2000 toggles even when the attack search finds no target. */
+  public int handIndex;
   public int stalledFrames;
 
   public WhirlwindRuntime set(
@@ -32,6 +34,7 @@ public class WhirlwindRuntime extends PooledComponent {
     attackTimerInitialized = false;
     previousTargetId = Engine.INVALID_ENTITY;
     strikeIndex = 0;
+    handIndex = 0;
     stalledFrames = 0;
     return this;
   }
@@ -48,6 +51,7 @@ public class WhirlwindRuntime extends PooledComponent {
     attackTimerInitialized = false;
     previousTargetId = Engine.INVALID_ENTITY;
     strikeIndex = 0;
+    handIndex = 0;
     stalledFrames = 0;
   }
 }
