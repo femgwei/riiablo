@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 BaalTentacle AI
+
+- [x] 新增 `BaalTentacle`，依据 D2MOO `AITHINK_Fn139_BaalTentacle` 接入主人存活门槛、
+  `stay-alive` 随机寿命、战斗攻击概率与停顿参数；寿命计时在施法/序列期间仍推进，
+  主人死亡或寿命到期进入死亡生命周期，不回退到普通玩家目标战斗。
+- [x] 真实 1.10f `BaalTentacle` MonStats 行已解析到专用类，新增 3 项回归覆盖专用
+  入口、主人/寿命门控和攻击分支。
+- [ ] D2MOO 原生 owner 指针、完整 `pSeed` 消耗、波次实体清理与 RoomEx/MonSeq 网络
+  帧仍待对齐；当前不宣称与原版触手生成、碰撞遮罩及客户端动画逐帧等同。下一项继续
+  A5 Baal 相关 AI 链。
+
 ## 2026-10-15 A5 BaalMinion AI
 
 - [x] 新增 `BaalMinion`，依据 D2MOO `AITHINK_Fn141_BaalMinion` 接入攻击概率、近战
