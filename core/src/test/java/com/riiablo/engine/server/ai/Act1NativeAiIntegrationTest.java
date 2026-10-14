@@ -36,7 +36,8 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
   @Test
   void nativeRowsMustResolveToDedicatedAiNotFallback() {
     for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap",
-        "duriel", "summoner", "sarcophagus", "lightningspire", "turret1"}) {
+        "duriel", "summoner", "sarcophagus", "lightningspire", "turret1",
+        "maggotegg1", "slinger1", "maggotqueen1"}) {
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);
       assertNotNull(row, rowId);
       AI ai = AI.findAI(12, row.AI);
@@ -245,6 +246,28 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       f.finishAction();
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals(Riiablo.files.skills.get("DesertTurret").Id, f.casting().skillId);
+    }
+  }
+
+  @Test
+  void maggotEggHatchesThenDiesAndPantherJavelinUsesNativeMissA1Attack() {
+    try (Fixture f = new Fixture("maggotegg1", 0, 10f)) {
+      f.ai.params[MaggotEgg.PARAM_HATCH_CHANCE] = 100;
+      f.ai.params[MaggotEgg.PARAM_STALL_DURATION] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("MaggotEgg").Id, f.casting().skillId);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("DEAD", f.ai.getState());
+    }
+    try (Fixture f = new Fixture("slinger1", 0, 10f)) {
+      f.ai.params[PantherJavelin.PARAM_THROW_CHANCE] = 100;
+      f.ai.params[PantherJavelin.PARAM_THROW_DISTANCE] = 20;
+      f.ai.params[PantherJavelin.PARAM_WALK_AWAY_CHANCE] = 0;
+      f.ai.params[PantherJavelin.PARAM_APPROACH_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+      assertEquals(Engine.Monster.MODE_A1, f.sequence().mode1);
     }
   }
 

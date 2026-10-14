@@ -26,6 +26,18 @@
 - [ ] DesertTurret 的原生动态单位路径目标绑定、碰撞可施法检查，以及三个 AI 的
   完整单位 `pSeed`/MonSeq 帧级行为仍待后续对齐。
 
+## 2026-10-15 A2 Maggot 与 Panther AI
+
+- [x] 新增 `MaggotEgg`：按孵化概率调用 `MaggotEgg` 技能，动作完成后按原生逻辑
+  清除自身；未孵化时保持参数停顿。
+- [x] 新增 `PantherJavelin`：近身逃离、远距离接近、投掷距离与概率，以及普通 A1
+  序列承载的 `MissA1` 原生投掷路径。
+- [x] 新增 `SandMaggotQueen`：按 MonStats `minion1`、最大生成数和延迟调用服务端
+  怪物工厂生成幼体。
+- [x] 真实 1.10f 表驱动 ECS 回归覆盖新增入口与关键动作分支。
+- [ ] SandMaggotQueen 的原生埋地/钻出动画、生成点碰撞检查和无 XP 标志仍待接入；
+  Panther 的跨单位组队目标搜索也仍是近似实现。
+
 ## 2026-10-15 A1 怪物 AI 基础与专用决策首批
 
 - [x] `AI.initialize()` 按地图 Normal/Nightmare/Hell 难度读取 `aip1..aip8` 与
