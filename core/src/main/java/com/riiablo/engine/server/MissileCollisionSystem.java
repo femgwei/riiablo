@@ -166,6 +166,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Position position = mPosition.get(entityId);
     Velocity velocity = mVelocity.get(entityId);
     int elapsedFrames = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
+    int callbackFrame = missile.nativeFrame;
     missile.nativeFrame += elapsedFrames;
 
     if (missile.rabiesController) {
@@ -184,16 +185,16 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     if (missile.blizzardCenter) {
-      processBlizzardCenter(entityId, missile, position, elapsedFrames);
+      processBlizzardCenter(entityId, missile, position, elapsedFrames, callbackFrame);
       return;
     }
 
     if (missile.frozenOrbController) {
-      processFrozenOrbController(entityId, missile, position, elapsedFrames);
+      processFrozenOrbController(entityId, missile, position, callbackFrame);
       if (!world.getEntityManager().isActive(entityId)) return;
     }
     if (missile.frozenOrbNova) {
-      processFrozenOrbNova(missile, position, velocity);
+      processFrozenOrbNova(missile, velocity, callbackFrame);
     }
     if (missile.meteorCenter) {
       processMeteorCenter(entityId, missile, position);
@@ -249,18 +250,17 @@ public class MissileCollisionSystem extends IteratingSystem {
             entityId, missile.ownerId, acquired, position.position.x, position.position.y);
       }
     }
-    // Keep the initial heading until the native retarget frame.  Guided Arrow
-    // Param1 is five frames in the shipped Missiles.txt; D2MOO evaluates the
-    // path correction only at those intervals, which produces the familiar
-    // short straight segment followed by a turn toward the target.
+    // SrvDo07 tests CurrentFrame (countdown) BEFORE the collision decrement.
+    // A lifetime not divisible by Param1 must not shift this into an elapsed
+    // interval schedule starting from the first callback.
     if (missile.homing && missile.targetId >= 0 && mPosition.has(missile.targetId)) {
       Attributes targetAttrs = mAttributesWrapper.has(missile.targetId)
           ? mAttributesWrapper.get(missile.targetId).attrs : null;
       boolean alive = targetAttrs == null || targetAttrs.get(Stat.hitpoints) == null
           || targetAttrs.get(Stat.hitpoints).asFixed() > 0f;
       int interval = guidedRetargetInterval(missile);
-      if (missile.homingNextTurnFrame <= 0) missile.homingNextTurnFrame = interval;
-      if (alive && missile.nativeFrame >= missile.homingNextTurnFrame) {
+      int currentFrame = missile.nativeLifetimeFrames - callbackFrame;
+      if (alive && currentFrame % interval == 0) {
         tmpVec.set(mPosition.get(missile.targetId).position).sub(position.position);
         float distance = tmpVec.len();
         // MISSMODE_SrvDo07 only bends a live target path in the native
@@ -272,9 +272,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity).nor();
           }
         }
-        while (missile.homingNextTurnFrame <= missile.nativeFrame) {
-          missile.homingNextTurnFrame += interval;
-        }
+        missile.homingNextTurnFrame = callbackFrame + interval;
       }
     }
 
@@ -295,34 +293,47 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (mAngle.has(entityId)) mAngle.get(entityId).target.set(tmpVec);
     }
 
-    if (missile.chaosIcePath && !missile.attached
-        && missile.nativeFrame >= missile.chaosIceNextTurnFrame) {
+    if (missile.chaosIcePath && !missile.attached) {
       int interval = Math.max(1, missile.missile != null
           && missile.missile.Param != null && missile.missile.Param.length > 0
           ? missile.missile.Param[0] : 1);
-      while (missile.nativeFrame >= missile.chaosIceNextTurnFrame) {
-        NativeRng rng = new NativeRng(missile.chaosIceSeed);
+      if (callbackFrame % interval == 0) {
+        // SrvDo35 calls SEED_InitLowSeed, resetting the high word to 666.
+        long rolled = AssassinTrapSystem.chargedBoltRoll(missile.chaosIceSeed, 666);
         int xParam = missile.chaosIceX;
         int yParam = missile.chaosIceY;
-        if ((rng.nextInt() & 1) != 0) xParam = -xParam;
+        if ((rolled & 1) != 0) xParam = -xParam;
         else yParam = -yParam;
         int nextX = (yParam + 4 * missile.chaosIceX) / 4;
         int nextY = (xParam + 4 * missile.chaosIceY) / 4;
         if (nextX == 0) nextX = 1;
         if (nextY == 0) nextY = 1;
-        missile.chaosIceSeed = rng.state();
+        missile.chaosIceSeed = (int) rolled;
         missile.chaosIceX = nextX;
         missile.chaosIceY = nextY;
-        missile.chaosIceNextTurnFrame += interval;
+        missile.chaosIceNextTurnFrame = callbackFrame + interval;
+        float speed = velocity.velocity.len();
+        velocity.velocity.set(missile.chaosIceX, missile.chaosIceY).nor().setLength(speed);
+        if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity);
       }
-      float speed = velocity.velocity.len();
-      velocity.velocity.set(missile.chaosIceX, missile.chaosIceY).nor().setLength(speed);
-      if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity);
     }
 
     if (missile.blessedHammerPath && !missile.attached) {
       processBlessedHammerPath(entityId, missile, position, velocity);
       return;
+    }
+
+    // Native SrvDo callbacks run before HandleMissileCollision moves the path
+    // and decrements CurrentFrame. Trail children use the pre-step position.
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 2) {
+      spawnPoisonCloud(missile, position.position);
+    }
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 26) {
+      processPlagueVinesMaker(missile, position.position, callbackFrame);
+    }
+    if (missile.fireWallMaker) {
+      processFireWallMaker(entityId, missile, position);
+      if (!world.getEntityManager().isActive(entityId)) return;
     }
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
@@ -333,6 +344,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+      if (missile.wakeMaker && position.position.dst2(missile.wakeTargetX,
+          missile.wakeTargetY) <= moveDistance * moveDistance) {
+        next.set(missile.wakeTargetX, missile.wakeTargetY);
+        moveDistance = position.position.dst(next);
+      }
       if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
       position.position.set(next);
     }
@@ -347,34 +363,17 @@ public class MissileCollisionSystem extends IteratingSystem {
       configurePersistentPoisonCloud(missile, null);
     }
 
-    if (missile.missile != null && missile.missile.pSrvDoFunc == 2) {
-      // Native SrvDo02 emits a cloud child at every missile update, producing
-      // the Poison Javelin trail rather than a single impact puff.
-      spawnPoisonCloud(missile, position.position);
-    }
-
-    if (missile.missile != null && missile.missile.pSrvDoFunc == 26) {
-      // D2MOO SrvDo26 (Vines/Plague Vines) lays one stationary trail missile
-      // at the moving controller's current tile on the native Param[0] tick.
-      // The trail, not the controller, owns SrvHit16 and applies the skill's
-      // aura target state when it overlaps a hostile unit.
-      processPlagueVinesMaker(missile, position.position);
-    }
-    
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
-
-    // D2MOO SrvDo06: each moving maker lays one Fire Wall child. The maker
-    // itself is only a control path and never enters unit collision.
-    if (missile.fireWallMaker) {
-      processFireWallMaker(entityId, missile, position, velocity);
-      if (!world.getEntityManager().isActive(entityId)) return;
-    }
 
     // Wake maker movement is ordinary path travel; SrvDo31 is evaluated
     // after the step so it can detect arrival at the configured endpoint.
     if (missile.wakeMaker) {
-      processWakeMaker(entityId, missile, position, velocity);
+      processWakeMaker(entityId, missile, position);
+      if (world.getEntityManager().isActive(entityId) && frameLifetimeExpired(missile)) {
+        triggerNativeNullHit(entityId, missile, position.position);
+        world.delete(entityId);
+      }
       return;
     }
 
@@ -391,24 +390,18 @@ public class MissileCollisionSystem extends IteratingSystem {
       missile.hitTargets.clear();
     }
     
-    boolean basicFramePolicy = missile.missile != null
-        && (missile.missile.pSrvDoFunc == 1 || missile.chargedBoltPath)
-        && missile.nativeLifetimeFrames > 0;
-    boolean frameExpiry = basicFramePolicy
-        && missile.nativeFrame >= missile.nativeLifetimeFrames;
-    // Frame-limited basic missiles must not also expire at a distance equal
-    // to Range. Legacy/specialized distance policies remain separate.
-    boolean distanceExpiry = !basicFramePolicy
+    boolean framePolicy = usesFrameLifetime(missile);
+    boolean frameExpiry = frameLifetimeExpired(missile);
+    // Attached 20/21 refresh CurrentFrame to 10 on every native callback.
+    // Persistent fields own remainingFrames; neither uses distance expiry.
+    boolean distanceExpiry = !framePolicy && !missile.attached && !missile.persistent
         && missile.range > 0 && missile.distanceTraveled >= missile.range;
     if (frameExpiry || distanceExpiry) {
-    // Native LastCollide performs one final unit lookup at expiration
-    // before the missile is removed.  This matters for fast arrows whose
-    // final segment ends inside a target's hitbox.
+      // LastCollide performs one final unit lookup before removal.
       if (shouldResolveLastCollide(missile, true)) {
         if (distanceExpiry && !missile.attached && moveDistance > 0f
             && missile.distanceTraveled > missile.range) {
-          // A native range check resolves at the exact endpoint, not at the
-          // overshot position produced by a large single-frame velocity.
+          // Only synthetic/legacy distance-limited rows clamp this endpoint.
           clampToRangeEndpoint(lastPos, position.position,
               missile.distanceTraveled - moveDistance, moveDistance, missile.range, tmpVec);
           position.position.set(tmpVec);
@@ -417,9 +410,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         missile.lastCollideResolved = true;
         checkCollisions(entityId, missile, position, lastPos);
         if (!world.getEntityManager().isActive(entityId)) return;
-        triggerNativeNullHit(entityId, missile, position.position);
-        if (!world.getEntityManager().isActive(entityId)) return;
       }
+      // Expiration calls SrvDmgHitHandler(null, 1) regardless of LastCollide.
+      // LastCollide controls only the final unit lookup, not the hit callback.
+      if (isFireTraumaGround(missile)) {
+        resolveFireTraumaGround(entityId, missile, position.position);
+        return;
+      }
+      triggerNativeNullHit(entityId, missile, position.position);
+      if (!world.getEntityManager().isActive(entityId)) return;
       // Missiles.txt AlwaysExplode is a client-visible destruction callback,
       // not a successful-hit flag.  Exploding Arrow must still show its
       // fireexplosion2 child (and resolve the area child) when it reaches max
@@ -431,8 +430,9 @@ public class MissileCollisionSystem extends IteratingSystem {
           spawnAmazonExplosion(missile, position.position, Engine.INVALID_ENTITY);
         }
       }
-      log.debug("Missile {} reached max range ({}), disposing. ownerId={}, pos=({}, {})", 
-          entityId, missile.range, missile.ownerId, position.position.x, position.position.y);
+      log.debug("Missile {} expired: frame={}/{} distance={}/{}, owner={}, pos=({}, {})",
+          entityId, missile.nativeFrame, missile.nativeLifetimeFrames, missile.distanceTraveled,
+          missile.range, missile.ownerId, position.position.x, position.position.y);
       world.delete(entityId);
       return;
     }
@@ -442,31 +442,20 @@ public class MissileCollisionSystem extends IteratingSystem {
     // 1.10f rows leave Collision=0 while providing a server hit function; in
     // that case the hit function is the native indication that collision is
     // required.
-    if (!hasNativeCollision(missile)) {
-      if (missile.nativeLifetimeFrames > 0
-          && missile.nativeFrame >= missile.nativeLifetimeFrames) {
-        if (isFireTraumaGround(missile)) {
-          resolveFireTraumaGround(entityId, missile, position.position);
-        } else {
-          world.delete(entityId);
-        }
-      }
-      return;
-    }
+    if (!hasNativeCollision(missile)) return;
 
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
-    // Stationary specialized rows also retain their existing frame clock.
-    // Basic rows have already resolved expiration (including LastCollide)
-    // above; other moving handlers still await per-handler range migration.
-    if (missile.nativeLifetimeFrames > 0
-        && missile.nativeFrame >= missile.nativeLifetimeFrames) {
-      if (isFireTraumaGround(missile)) {
-        resolveFireTraumaGround(entityId, missile, position.position);
-      } else {
-        world.delete(entityId);
-      }
-    }
+  }
+
+  static boolean usesFrameLifetime(Missile missile) {
+    return missile != null && !missile.attached && !missile.persistent
+        && (Missile.hasNativeFrameLifetime(missile.missile)
+            || missile.nativeLifetimeFrames > 0 || missile.chargedBoltPath);
+  }
+
+  static boolean frameLifetimeExpired(Missile missile) {
+    return usesFrameLifetime(missile) && missile.nativeFrame >= missile.nativeLifetimeFrames;
   }
 
   /**
@@ -500,7 +489,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     float dx = ((rng.nextInt() & 15) - 7.5f) * 0.35f;
     float dy = ((rng.nextInt() & 15) - 7.5f) * 0.35f;
     Vector2 origin = tmpVec.set(position.position).add(dx, dy);
-    int childId = factory.createMissile(row, Vector2.X, origin, controller.ownerId);
+    int childId = factory.createMissile(row, Vector2.X, origin, controller.ownerId,
+        Math.max(1, controller.damageLevel));
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile vent = mMissile.get(childId);
     vent.skillId = controller.skillId;
@@ -559,7 +549,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     float dx = ((rng.nextInt() & 7) - 3.5f) * 0.5f;
     float dy = ((rng.nextInt() & 7) - 3.5f) * 0.5f;
     Vector2 origin = tmpVec.set(position.position).add(dx, dy);
-    int childId = factory.createMissile(row, Vector2.Y, origin, controller.ownerId);
+    int childId = factory.createMissile(row, Vector2.Y, origin, controller.ownerId,
+        Math.max(1, controller.damageLevel));
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile eruption = mMissile.get(childId);
     eruption.skillId = controller.skillId;
@@ -714,7 +705,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Native MISSMODE_SrvDo10_BlizzardCenter. */
   private void processBlizzardCenter(
-      int entityId, Missile center, Position position, int elapsedFrames) {
+      int entityId, Missile center, Position position, int elapsedFrames, int callbackFrame) {
     if (factory == null || center.missile == null) {
       world.delete(entityId);
       return;
@@ -734,10 +725,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     int level = Math.max(1, center.damageLevel);
     int interval = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, level));
     int radius = Math.max(1, SkillFormula.evaluate(skill.calc1, skill, level));
-    // Native SrvDo10 tests RemainingFrames % nFrames before creating the
-    // child. Preserve that phase instead of using a variable wall-clock timer.
-    if (center.remainingFrames > 0 && center.remainingFrames % interval == 0) {
-      spawnBlizzardChild(entityId, center, position, skill, childRow, radius);
+    // GetRemainingFrames is TotalFrames - CurrentFrame (elapsed, not left).
+    if (callbackFrame % interval == 0) {
+      spawnBlizzardChild(entityId, center, position, skill, childRow, radius, callbackFrame);
     }
     center.remainingFrames -= Math.max(1, elapsedFrames);
     if (center.remainingFrames <= 0) {
@@ -749,7 +739,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Native MISSMODE_SrvDo15_FrozenOrb: emit one bolt on each table cadence. */
   private void processFrozenOrbController(
-      int entityId, Missile orb, Position position, int elapsedFrames) {
+      int entityId, Missile orb, Position position, int callbackFrame) {
     if (factory == null || orb.missile == null) {
       world.delete(entityId);
       return;
@@ -766,15 +756,16 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
     int interval = Math.max(1, arrayValue(orb.missile.Param, 0));
-    if (orb.nativeFrame % interval == 0) {
-      int index = Math.floorMod(orb.frozenOrbTargetPhase, FROZEN_ORB_X.length);
+    if (callbackFrame % interval == 0) {
+      int index = Math.abs(orb.frozenOrbTargetPhase % FROZEN_ORB_X.length);
       Vector2 direction = tmpVec.set(FROZEN_ORB_X[index], FROZEN_ORB_Y[index]);
       if (direction.isZero(0.0001f)) {
         direction.set(mVelocity.get(entityId).velocity);
         if (direction.isZero(0.0001f)) direction.set(Vector2.X);
       }
       direction.nor();
-      int childId = factory.createMissile(shard, direction, position.position, orb.ownerId);
+      int childId = factory.createMissile(shard, direction, position.position, orb.ownerId,
+          Math.max(1, orb.damageLevel));
       if (childId >= 0 && mMissile.has(childId)) {
         Missile child = mMissile.get(childId);
         child.skillId = orb.skillId;
@@ -789,25 +780,25 @@ public class MissileCollisionSystem extends IteratingSystem {
             child.damageSnapshot);
       }
       int step = arrayValue(orb.missile.Param, 1);
-      orb.frozenOrbTargetPhase = Math.floorMod(index + (step == 0 ? 1 : step),
-          FROZEN_ORB_X.length);
+      orb.frozenOrbTargetPhase = (index + step) % FROZEN_ORB_X.length;
     }
   }
 
-  /** Native MISSMODE_SrvDo16_FrozenOrbNova late-path steering adjustment. */
-  private void processFrozenOrbNova(Missile nova, Position position, Velocity velocity) {
-    if (nova.missile == null || nova.nativeLifetimeFrames <= 0) return;
-    int remaining = nova.nativeLifetimeFrames - nova.nativeFrame;
+  /** Native SrvDo16 rotates the stored integer offset during its initial window. */
+  static void processFrozenOrbNova(Missile nova, Velocity velocity, int callbackFrame) {
+    if (nova.missile == null) return;
     int turnWindow = Math.max(0, arrayValue(nova.missile.Param, 0));
     int turnInterval = Math.max(1, arrayValue(nova.missile.Param, 1));
-    if (remaining < turnWindow && remaining >= 0 && remaining % turnInterval == 0) {
-      int dx = nova.frozenOrbTargetX - nova.frozenOrbTargetY;
-      int dy = nova.frozenOrbTargetX + nova.frozenOrbTargetY;
-      tmpVec.set(nova.frozenOrbOrigin.x + dx * 0.5f,
-          nova.frozenOrbOrigin.y + dy * 0.5f).sub(position.position);
-      if (!tmpVec.isZero(0.0001f)) velocity.velocity.set(tmpVec).setLength(nova.missile.Vel);
-      log.debug("[SORCERESS_FROZEN_ORB] phase=nova_turn missile={} remaining={} target=({}, {})",
-          nova.missile.Missile, remaining, nova.frozenOrbTargetX, nova.frozenOrbTargetY);
+    if (callbackFrame < turnWindow && callbackFrame >= 0 && callbackFrame % turnInterval == 0) {
+      int dx = (nova.frozenOrbTargetX - nova.frozenOrbTargetY) / 2;
+      int dy = (nova.frozenOrbTargetX + nova.frozenOrbTargetY) / 2;
+      // Path target is current position + offset, never the spawn origin.
+      // Preserve the current speed, including the Slow Missiles modifier.
+      float speed = velocity.velocity.len();
+      velocity.velocity.set(dx, dy);
+      if (dx != 0 || dy != 0) velocity.velocity.setLength(speed);
+      nova.frozenOrbTargetX = dx;
+      nova.frozenOrbTargetY = dy;
     }
   }
 
@@ -827,7 +818,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     for (int i = 0; i < FROZEN_ORB_X.length; i += step) {
       Vector2 direction = tmpVec.set(FROZEN_ORB_X[i], FROZEN_ORB_Y[i]);
       if (direction.isZero(0.0001f)) direction.set(Vector2.X);
-      int childId = factory.createMissile(row, direction.nor(), origin, source.ownerId);
+      int childId = factory.createMissile(row, direction.nor(), origin, source.ownerId, level);
       if (childId < 0 || !mMissile.has(childId)) continue;
       Missile nova = mMissile.get(childId);
       nova.skillId = source.skillId;
@@ -837,7 +828,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       nova.frozenOrbTargetX = FROZEN_ORB_X[i];
       nova.frozenOrbTargetY = FROZEN_ORB_Y[i];
       nova.range = 0f;
-      nova.nativeLifetimeFrames = Math.max(1, row.Range);
+      nova.nativeLifetimeFrames = Missile.nativeRangeFrames(row, level);
       MissileDamageResolver.initializeSkill(nova, skill, ownerAttrs, level,
           key -> baseSkillLevel(source.ownerId, key), stateList(source.ownerId));
       created++;
@@ -886,7 +877,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int created = 0;
     for (int i = 0; i < METEOR_X.length; i += step) {
       int childId = factory.createMissile(row, Vector2.X,
-          new Vector2(origin).add(METEOR_X[i], METEOR_Y[i]), center.ownerId);
+          new Vector2(origin).add(METEOR_X[i], METEOR_Y[i]), center.ownerId, level);
       if (childId < 0 || !mMissile.has(childId)) continue;
       Missile fire = mMissile.get(childId);
       fire.skillId = center.skillId;
@@ -910,12 +901,21 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private void spawnBlizzardChild(
       int centerId, Missile center, Position centerPosition,
-      Skills.Entry skill, Missiles.Entry childRow, int radius) {
+      Skills.Entry skill, Missiles.Entry childRow, int radius, int callbackFrame) {
     int maxRange = Math.max(0, radius - 1);
-    NativeRng rng = new NativeRng(center.blizzardSeed);
-    int offsetX = maxRange == 0 ? 0 : rng.nextInt(2 * maxRange) - maxRange;
-    int offsetY = maxRange == 0 ? 0 : rng.nextInt(2 * maxRange) - maxRange;
-    center.blizzardSeed = rng.state();
+    // SEED_InitLowSeed fixes high=666; bounded rolls use unsigned low words,
+    // carrying the high word into the second roll. Do not use the generic LCG.
+    int low = (int) centerPosition.position.x + callbackFrame;
+    int offsetX = 0;
+    int offsetY = 0;
+    if (maxRange > 0) {
+      long rolled = AssassinTrapSystem.chargedBoltRoll(low, 666);
+      offsetX = (int) (Integer.toUnsignedLong((int) rolled) % (2 * maxRange)) - maxRange;
+      rolled = AssassinTrapSystem.chargedBoltRoll((int) rolled, (int) (rolled >>> 32));
+      offsetY = (int) (Integer.toUnsignedLong((int) rolled) % (2 * maxRange)) - maxRange;
+      low = (int) rolled;
+    }
+    center.blizzardSeed = low;
     // The center's position is authoritative; avoid using a shared temporary
     // vector because child creation may synchronously publish the entity.
     Vector2 origin = new Vector2(centerPosition.position);
@@ -929,13 +929,14 @@ public class MissileCollisionSystem extends IteratingSystem {
           center.ownerId, origin.x, origin.y);
       return;
     }
-    int childId = factory.createMissile(childRow, Vector2.X, origin, center.ownerId);
+    int childId = factory.createMissile(childRow, Vector2.X, origin, center.ownerId,
+        Math.max(1, center.damageLevel));
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
     child.skillId = center.skillId;
     child.damageLevel = Math.max(1, center.damageLevel);
     child.range = 0f;
-    child.nativeLifetimeFrames = Math.max(1, childRow.Range);
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(childRow, child.damageLevel);
     child.damageMultiplier = center.damageMultiplier;
     Attributes ownerAttrs = mAttributesWrapper.has(center.ownerId)
         ? mAttributesWrapper.get(center.ownerId).attrs : null;
@@ -984,7 +985,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
       if (direction.isZero(0.0001f)) direction.set(1f, 1f);
       int boltId = factory.createMissile(
-          boltRow, direction.nor(), origin, delay.ownerId);
+          boltRow, direction.nor(), origin, delay.ownerId, level);
       if (boltId < 0 || !mMissile.has(boltId)) continue;
       Missile bolt = mMissile.get(boltId);
       bolt.skillId = delay.skillId;
@@ -1139,7 +1140,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (row == null) return;
     Vector2 direction = new Vector2(target).sub(origin);
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
-    int id = factory.createMissile(row, direction.nor(), origin, controller.rabiesSourceId);
+    int id = factory.createMissile(row, direction.nor(), origin, controller.rabiesSourceId,
+        Math.max(1, controller.damageLevel));
     if (id < 0 || !mMissile.has(id)) return;
     Missile visual = mMissile.get(id);
     visual.skillId = controller.skillId;
@@ -1158,7 +1160,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
     int id = factory.createMissile(parent.missile, Vector2.X,
-        mPosition.get(infectedId).position, parent.rabiesSourceId);
+        mPosition.get(infectedId).position, parent.rabiesSourceId,
+        Math.max(1, parent.damageLevel));
     if (id < 0 || !mMissile.has(id)) return;
     Missile child = mMissile.get(id);
     child.skillId = parent.skillId;
@@ -1181,14 +1184,12 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** D2MOO MISSMODE_SrvDo31: a maker reaching its path end emits two waves. */
-  private void processWakeMaker(int entityId, Missile maker, Position position,
-      Velocity velocity) {
+  private void processWakeMaker(int entityId, Missile maker, Position position) {
     if (maker.wakeSpawned) return;
     float dx = maker.wakeTargetX - position.position.x;
     float dy = maker.wakeTargetY - position.position.y;
     float distance = (float) Math.sqrt(dx * dx + dy * dy);
-    float step = velocity.velocity.len() * Math.max(0f, world.delta);
-    if (distance > Math.max(0.35f, step)) return;
+    if (distance > 0.0001f) return;
     maker.wakeSpawned = true;
     if (factory == null || maker.missile == null
         || maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0) {
@@ -1216,7 +1217,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         ? mAttributesWrapper.get(damageOwnerId).attrs : null;
     for (int sign : new int[] {1, -1}) {
       int childId = factory.createMissile(wave,
-          new Vector2(direction).scl(sign), position.position, damageOwnerId);
+          new Vector2(direction).scl(sign), position.position, damageOwnerId,
+          Math.max(1, maker.damageLevel));
       if (childId < 0 || !mMissile.has(childId)) continue;
       Missile child = mMissile.get(childId);
       child.skillId = maker.skillId;
@@ -1556,6 +1558,9 @@ public class MissileCollisionSystem extends IteratingSystem {
             missileId, missile.ownerId, targetId);
         return false;
       }
+      // Frozen Orb's SrvHit29 returns 2 while CurrentFrame != 0: no burst
+      // or destruction on a live unit. Its root has no direct damage packet.
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 29) return false;
       if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
       // Impact presentation is independent from damage.  A blocked, absorbed,
       // or zero-damage hit still consumes the native HitSound/CltHitSubMissile
@@ -1573,17 +1578,6 @@ public class MissileCollisionSystem extends IteratingSystem {
         resolveGlacialSpikeAreaDamage(missileId, missile, missilePos, targetId);
       }
 
-      // Native MISSMODE_SrvHit29 does not apply the root row as damage.  It
-      // fans out the authoritative frozen-orb nova shards; each shard then
-      // resolves the Frozen Orb cold packet independently.
-      if (missile.missile != null && missile.missile.pSrvHitFunc == 29) {
-        spawnFrozenOrbNova(missile, missilePos);
-        log.info("[SORCERESS_FROZEN_ORB] phase=root_hit missileId={} owner={} target={} "
-                + "position=({}, {})", missileId, missile.ownerId, targetId,
-            missilePos.x, missilePos.y);
-        if (!suppressSideEffects && !missile.attached) world.delete(missileId);
-        return true;
-      }
       if (mMercenary.has(ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
@@ -2002,12 +1996,12 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** Native SrvDo26 controller tick for Plague Vines/Vines. */
-  private void processPlagueVinesMaker(Missile maker, Vector2 origin) {
+  private void processPlagueVinesMaker(Missile maker, Vector2 origin, int callbackFrame) {
     if (maker == null || maker.missile == null || origin == null || factory == null
         || maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0) return;
     int interval = maker.missile.Param != null && maker.missile.Param.length > 0
         ? Math.max(1, maker.missile.Param[0]) : 1;
-    if (maker.nativeFrame <= 0 || maker.nativeFrame % interval != 0) return;
+    if (callbackFrame % interval != 0) return;
     String childName = maker.missile.SubMissile[0];
     if (childName == null || childName.isEmpty()) return;
     Missiles.Entry childRow = Riiablo.files.Missiles.get(childName);
@@ -2018,12 +2012,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missile child = mMissile.get(childId);
     child.skillId = maker.skillId;
     child.damageLevel = Math.max(1, maker.damageLevel);
-    // MISSILES_CreateMissileFromParams uses Range + skillLevel * LevRange
-    // for default trail lifetime; the generic factory only has the base row
-    // range, so restore the native total-frame value here.
+    // Carry the same skill-level lifetime in alternative/test factories too.
     child.range = nativeMissileRange(childRow, child.damageLevel);
-    child.nativeLifetimeFrames = childRow.Vel == 0
-        ? Math.max(1, Math.round(child.range)) : 0;
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(childRow, child.damageLevel);
     // The native helper assigns the player as owner.  The current server vine
     // controller already carries that ownership relation, so preserve it on
     // the trail for alignment, state source, and reconnect snapshots.
@@ -2116,8 +2107,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** Native MISSMODE_SrvDo06 FireWallMaker child emission. */
-  private void processFireWallMaker(int entityId, Missile maker, Position position,
-      Velocity velocity) {
+  private void processFireWallMaker(int entityId, Missile maker, Position position) {
     if (factory == null || maker.missile == null || maker.missile.SubMissile == null
         || maker.missile.SubMissile.length == 0) {
       world.delete(entityId);
@@ -2135,16 +2125,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     Vector2 origin = new Vector2(position.position);
-    if (maker.range > 0f && maker.distanceTraveled > maker.range
-        && !velocity.velocity.isZero(0.0001f)) {
-      origin.mulAdd(new Vector2(velocity.velocity).nor(),
-          -(maker.distanceTraveled - maker.range));
-    }
     int owner = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
-    int childId = factory.createMissile(childRow, Vector2.X, origin, owner);
+    int level = Math.max(1, maker.damageLevel);
+    int childId = factory.createMissile(childRow, Vector2.X, origin, owner, level);
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
-    int level = Math.max(1, maker.damageLevel);
     child.persistent = true;
     child.remainingFrames = nativeMissileRange(childRow, level);
     child.tickInterval = 1;
@@ -2163,9 +2148,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private static int nativeMissileRange(Missiles.Entry row, int level) {
-    if (row == null) return 0;
-    long range = (long) row.Range + (long) Math.max(1, level) * row.LevRange;
-    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, range));
+    return Missile.nativeRangeFrames(row, Math.max(1, level));
   }
 
   /**
@@ -2636,7 +2619,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (name == null || name.isEmpty()) continue;
       Missiles.Entry row = Riiablo.files.Missiles.get(name);
       if (row == null) continue;
-      int childId = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId);
+      int childId = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId,
+          Math.max(1, source.damageLevel));
       if (childId < 0 || !mMissile.has(childId)) continue;
       spawned++;
       Missile child = mMissile.get(childId);
@@ -2724,7 +2708,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     if (factory == null) return;
-    int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId);
+    int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId,
+        Math.max(1, source.damageLevel));
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
     if (source.missile.pSrvHitFunc == 1) {
@@ -2781,7 +2766,14 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Native SrvDmgHitHandler(null target) path used by walls and LastCollide. */
   private void triggerNativeNullHit(int sourceId, Missile source, Vector2 origin) {
     if (source == null || source.missile == null || origin == null
-        || source.hitFunctionTriggered || source.missile.pSrvHitFunc != 2) return;
+        || source.hitFunctionTriggered) return;
+    if (source.missile.pSrvHitFunc == 29 && source.nativeLifetimeFrames > 0
+        && frameLifetimeExpired(source)) {
+      source.hitFunctionTriggered = true;
+      spawnFrozenOrbNova(source, origin);
+      return;
+    }
+    if (source.missile.pSrvHitFunc != 2) return;
     source.hitFunctionTriggered = true;
     spawnPoisonCloudHitSubmissiles(source, origin);
     log.debug("[AMAZON_PLAGUE_JAVELIN] phase=null_target_hit source={} missile={} origin=({}, {})",
@@ -2810,7 +2802,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int created = 0;
     for (int i = 0; i < xs.length; i += step) {
       int id = factory.createMissile(row, Vector2.X,
-          new Vector2(origin).add(xs[i], ys[i]), source.ownerId);
+          new Vector2(origin).add(xs[i], ys[i]), source.ownerId, level);
       if (id < 0 || !mMissile.has(id)) continue;
       Missile fire = mMissile.get(id);
       MissileDamageResolver.initialize(fire, ownerAttrs, null, -1, level, 0);
@@ -2945,7 +2937,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         if (x * x + y * y > radius * radius) continue;
         Vector2 position = new Vector2(origin).add(x, y);
         if (!isImmolationFirePointAllowed(map, originZone, x, y, position)) continue;
-        int id = factory.createMissile(row, new Vector2(1f, 0f), position, source.ownerId);
+        int id = factory.createMissile(row, new Vector2(1f, 0f), position, source.ownerId,
+            Math.max(1, source.damageLevel));
         if (id < 0 || !mMissile.has(id)) continue;
         Missile fire = mMissile.get(id);
         MissileDamageResolver.initializeImmolationFireArea(
@@ -2999,7 +2992,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (name == null || name.isEmpty()) return;
     Missiles.Entry row = Riiablo.files.Missiles.get(name);
     if (row == null) return;
-    int id = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId);
+    int id = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId,
+        Math.max(1, source.damageLevel));
     if (id < 0 || !mMissile.has(id)) return;
     Missile cloud = mMissile.get(id);
     cloud.skillId = source.skillId;
@@ -3061,7 +3055,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       Skills.Entry skill, Attributes ownerAttrs, Vector2 origin,
       int offsetX, int offsetY, int loops, boolean subRing) {
     int id = factory.createMissile(row, Vector2.X,
-        new Vector2(origin).add(offsetX, offsetY), source.ownerId);
+        new Vector2(origin).add(offsetX, offsetY), source.ownerId,
+        Math.max(1, source.damageLevel));
     if (id < 0 || !mMissile.has(id)) return 0;
     Missile cloud = mMissile.get(id);
     cloud.skillId = source.skillId;
@@ -3274,7 +3269,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (!isLightningFuryAuraTarget(source.ownerId, targetId, struckTarget, origin)) continue;
       Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
       if (direction.isZero(0.0001f)) continue;
-      int boltId = factory.createMissile(subMissile, direction.nor(), origin, source.ownerId);
+      int boltId = factory.createMissile(subMissile, direction.nor(), origin, source.ownerId, level);
       if (boltId < 0) continue;
       if (mMissile.has(boltId)) {
         Missile bolt = mMissile.get(boltId);

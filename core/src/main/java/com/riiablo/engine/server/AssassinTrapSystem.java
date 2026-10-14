@@ -150,7 +150,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     Vector2 destination = mPosition.get(target).position;
     Vector2 direction = new Vector2(destination).sub(origin);
     if (direction.isZero(0.0001f)) return;
-    int missileId = factory.createMissile(missile, direction.nor(), origin, entityId);
+    int missileId = factory.createMissile(missile, direction.nor(), origin, entityId,
+        Math.max(1, trap.skillLevel));
     if (missileId >= 0 && attackSkill != null && mAttributes.has(entityId)
         && mMissile.has(missileId)) {
       if (attackSkill.srvdofunc == 125) {
@@ -215,7 +216,8 @@ public class AssassinTrapSystem extends IteratingSystem {
       seedHigh = (int) (rolled >>> 32);
       int directionIndex = chargedBoltDirection(mainDirection, seedLow);
       Vector2 direction = chargedBoltVector(directionIndex, new Vector2());
-      int missileId = factory.createMissile(missileRow, direction, origin, entityId);
+      int missileId = factory.createMissile(missileRow, direction, origin, entityId,
+          Math.max(1, trap.skillLevel));
       if (missileId < 0 || !mMissile.has(missileId)) continue;
       Missile bolt = mMissile.get(missileId);
       bolt.skillId = attackSkill.Id;
@@ -594,7 +596,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     Vector2 origin = mPosition.get(entityId).position;
     Vector2 direction = new Vector2(mPosition.get(trap.infernoTargetId).position).sub(origin);
     if (direction.isZero(0.0001f)) return;
-    int missileId = factory.createMissile(missileRow, direction.nor(), origin, entityId);
+    int missileId = factory.createMissile(missileRow, direction.nor(), origin, entityId,
+        Math.max(1, trap.skillLevel));
     if (missileId < 0 || !mMissile.has(missileId)) return;
     Missile missile = mMissile.get(missileId);
     configureInfernoMissile(missile, attackSkill, trap);
@@ -652,6 +655,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     maker.damageOwnerId = trap.ownerId;
     maker.skillId = attackSkill.Id;
     maker.damageLevel = Math.max(1, trap.skillLevel);
+    maker.nativeLifetimeFrames = Missile.nativeRangeFrames(maker.missile, maker.damageLevel);
     log.info("[WAKE_OF_FIRE] phase=maker_create entity={} owner={} missile={} target=({}, {}) "
             + "waveDirection=({}, {}) skill={} status=PASS",
         entityId, trap.ownerId, maker.missile != null ? maker.missile.Missile : "unknown",
@@ -711,7 +715,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     }
     Vector2 direction = new Vector2(trap.trapTargetX, trap.trapTargetY).sub(origin);
     if (direction.isZero(0.0001f)) direction.set(Vector2.X);
-    int missileId = factory.createMissile(missileRow, direction.nor(), origin, trap.ownerId);
+    int missileId = factory.createMissile(missileRow, direction.nor(), origin, trap.ownerId,
+        Math.max(1, trap.skillLevel));
     if (missileId < 0 || !mMissile.has(missileId)) return;
 
     Missile blade = mMissile.get(missileId);

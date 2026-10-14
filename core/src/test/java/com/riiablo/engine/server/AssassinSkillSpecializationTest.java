@@ -1017,7 +1017,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.getMapper(AttributesWrapper.class).create(offAxis).attrs = offAxisAttrs;
 
       world.setDelta(1f / 25f);
-      for (int i = 0; i < 60; i++) world.process();
+      for (int i = 0; i < 60 && factory.missileNames.size() < 3; i++) world.process();
 
       assertEquals(3, factory.missileNames.size(),
           "one maker and two authoritative fire waves must be emitted");
@@ -1029,6 +1029,10 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "SrvDo31 waves must snapshot the native Wake of Fire damage row");
       assertEquals(owner, positive.ownerId);
       assertEquals(owner, negative.ownerId);
+      for (int i = 0; i < 60; i++) world.process();
+      assertFalse(world.getEntityManager().isActive(factory.missileEntityIds.get(1)));
+      assertFalse(world.getEntityManager().isActive(factory.missileEntityIds.get(2)),
+          "waves expire by native frames instead of travelling Range world units");
       assertTrue(pathAttrs.get(Stat.hitpoints).asFixed() < 10_000f,
           "a target on a wave path must receive authoritative fire damage");
       assertEquals(10_000f, offAxisAttrs.get(Stat.hitpoints).asFixed(), 0.001f,

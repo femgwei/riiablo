@@ -130,7 +130,7 @@ public class Missile extends PooledComponent {
   public boolean clientRecyclerVineSpawned;
   /** Native client pCltDoFunc=51 recycler-delay explosion child gate. */
   public boolean clientRecyclerExplosionSpawned;
-  /** Frame lifetime for zero-velocity one-shot missiles such as Blades of Ice cubes. */
+  /** Native TotalFrames, independent of velocity; explicit skill overrides are allowed. */
   public int nativeLifetimeFrames;
   public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
       new com.badlogic.gdx.utils.IntIntMap();
@@ -378,15 +378,20 @@ public class Missile extends PooledComponent {
     this.missile = missile;
     this.start.set(start);
     this.range = range;
-    // Native basic missiles count Range in frames regardless of velocity.
-    // Specialized moving controllers retain their existing policy pending
-    // per-handler migration; stationary rows already use the frame clock.
+    // MissMode.cpp's live SrvDo table delegates to HandleMissileCollision.
+    // Zero is a valid native lifetime: it expires on the first update.
     this.nativeLifetimeFrames = missile != null
-        && (missile.Vel == 0 || missile.pSrvDoFunc == 1) && range > 0
-        ? Math.max(1, Math.round(range))
+        && (hasNativeFrameLifetime(missile) || missile.Vel == 0) && range >= 0
+        ? Math.max(0, Math.round(range))
         : 0;
     this.missileDescriptor = new AssetDescriptor<>(Class.Type.MIS.PATH + '\\' + missile.CelFile + ".dcc", DCC.class);
     return this;
+  }
+
+  /** 1.10f live server callbacks (4 is null); 20/21 refresh while attached. */
+  public static boolean hasNativeFrameLifetime(Missiles.Entry row) {
+    return row != null && row.pSrvDoFunc >= 1 && row.pSrvDoFunc <= 37
+        && row.pSrvDoFunc != 4;
   }
 
   public static int nativeRangeFrames(Missiles.Entry row, int skillLevel) {

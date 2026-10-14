@@ -59,14 +59,14 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
   }
 
   @Test
-  void castEmitsAuthoritativeBoltsAndImpactFansSixteenNovaShards() {
+  void castEmitsBoltsAndOnlyLifetimeExpiryFansSixteenNovaShards() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(),
             new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new Map(0, 0)));
     try {
-      int caster = player(world, 1);
+      int caster = player(world, 3);
       int target = monster(world, 0.4f, 0f);
       Skills.Entry skill = Riiablo.files.skills.get(SkillId.FROZEN_ORB);
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
@@ -76,6 +76,7 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
       Missile root = factory.first("frozenorb");
       assertNotNull(root);
       assertTrue(root.frozenOrbController);
+      int lifetime = root.nativeLifetimeFrames;
 
       world.setDelta(1f / 25f);
       world.process();
@@ -83,13 +84,88 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
           "SrvDo15 emits one bolt on the native one-frame cadence");
       assertTrue(factory.first("frozenorbbolt").damageSnapshot,
           "Frozen Orb bolt receives the skill cold packet at spawn");
+      assertEquals(0, factory.count("frozenorbnova"),
+          "contact with a unit must not burst the live root");
+      for (int frame = 2; frame < lifetime; frame++) {
+        world.process();
+        assertEquals(0, factory.count("frozenorbnova"));
+      }
+      world.process();
+      assertEquals(lifetime, factory.count("frozenorbbolt"));
       assertEquals(16, factory.count("frozenorbnova"),
-          "SrvHit29 emits one nova every four entries in the native 64-point ring");
+          "SrvHit29 fans the native ring on CurrentFrame == 0 without a target");
+      assertEquals(3, factory.lastSkillLevel.get("frozenorbbolt").intValue());
+      assertEquals(3, factory.lastSkillLevel.get("frozenorbnova").intValue());
       for (Missile nova : factory.named("frozenorbnova")) {
         assertTrue(nova.frozenOrbNova);
         assertTrue(nova.damageSnapshot);
         assertEquals(25, nova.nativeLifetimeFrames);
       }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void zeroLifetimeRootDoesNotInventANovaAtNegativeCurrentFrame() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int id = world.create();
+      Missile root = world.getMapper(Missile.class).create(id)
+          .set(Riiablo.files.Missiles.get("frozenorb"), Vector2.Zero, 0);
+      root.ownerId = player(world, 1);
+      root.skillId = SkillId.FROZEN_ORB;
+      root.damageLevel = 1;
+      root.frozenOrbController = true;
+      world.getMapper(Position.class).create(id);
+      world.getMapper(Velocity.class).create(id);
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.count("frozenorbbolt"), "callback still runs before decrement");
+      assertEquals(0, factory.count("frozenorbnova"), "SrvHit29 requires CurrentFrame == 0");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void controllerEmitsAtElapsedZeroAndPreservesZeroPhaseStep() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = player(world, 3);
+      int id = world.create();
+      Missiles.Entry row = new Missiles.Entry();
+      row.pSrvDoFunc = 15;
+      row.Range = 5;
+      row.Vel = 1000;
+      row.Param = new int[] {3, 0};
+      row.SubMissile = new String[] {"frozenorbbolt"};
+      Missile root = world.getMapper(Missile.class).create(id).set(row, Vector2.Zero, 5);
+      root.ownerId = caster;
+      root.skillId = SkillId.FROZEN_ORB;
+      root.damageLevel = 3;
+      root.frozenOrbController = true;
+      root.frozenOrbTargetPhase = -19;
+      world.getMapper(Position.class).create(id);
+      world.getMapper(Velocity.class).create(id).velocity.set(1000, 0);
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.count("frozenorbbolt"));
+      assertEquals(19, root.frozenOrbTargetPhase, "native abs(TargetX % 64), zero step stays zero");
+      assertEquals(Vector2.Zero, factory.firstOrigin.get("frozenorbbolt"),
+          "SrvDo executes before path movement");
+      world.process();
+      world.process();
+      assertEquals(1, factory.count("frozenorbbolt"));
+      world.process();
+      assertEquals(2, factory.count("frozenorbbolt"), "second emission at elapsed=3");
+      assertEquals(19, root.frozenOrbTargetPhase);
     } finally {
       world.dispose();
     }
@@ -132,16 +208,19 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
 
   private static final class RecordingFactory extends EntityFactory {
     final ArrayList<Missile> missiles = new ArrayList<>();
+    final java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+    final java.util.Map<String, Integer> lastSkillLevel = new java.util.HashMap<>();
+    final java.util.Map<String, Vector2> firstOrigin = new java.util.HashMap<>();
 
     int count(String name) {
-      return named(name).size();
+      return counts.getOrDefault(name, 0);
     }
 
     ArrayList<Missile> named(String name) {
       ArrayList<Missile> result = new ArrayList<>();
       for (Missile missile : missiles) {
         if (missile.missile != null && name.equalsIgnoreCase(missile.missile.Missile)) {
-          result.add(missile);
+          if (!result.contains(missile)) result.add(missile);
         }
       }
       return result;
@@ -166,7 +245,20 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
       world.getMapper(Velocity.class).create(entityId).velocity
           .set(direction).setLength(row.Vel);
       missiles.add(missile);
+      counts.merge(row.Missile, 1, Integer::sum);
+      firstOrigin.putIfAbsent(row.Missile, new Vector2(position));
       return entityId;
+    }
+
+    @Override public int createMissile(Missiles.Entry row, Vector2 direction,
+        Vector2 position, int ownerId, int skillLevel) {
+      int id = createMissile(row.Id, direction, position, ownerId);
+      if (id >= 0) {
+        world.getMapper(Missile.class).get(id).nativeLifetimeFrames =
+            Missile.nativeRangeFrames(row, skillLevel);
+        lastSkillLevel.put(row.Missile, skillLevel);
+      }
+      return id;
     }
 
     @Override public int createMissile(int id, Vector2 direction, Vector2 position) {

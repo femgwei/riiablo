@@ -2502,9 +2502,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** MISSILES_CreateMissileFromParams native level-scaled lifetime/range. */
   static int nativeMissileRange(Missiles.Entry missile, int skillLevel) {
-    if (missile == null) return 0;
-    long range = (long) missile.Range + (long) Math.max(1, skillLevel) * missile.LevRange;
-    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, range));
+    return Missile.nativeRangeFrames(missile, Math.max(1, skillLevel));
   }
 
   /** Native {@code SKILLS_SrvDo017_ChargedBolt_BoltSentry} for the Sorceress. */
@@ -2640,6 +2638,7 @@ public class ServerSkillSystem extends PassiveSystem {
       maker.skillId = skill.Id;
       maker.damageLevel = level;
       maker.range = nativeMissileRange(makerRow, level);
+      maker.nativeLifetimeFrames = Missile.nativeRangeFrames(makerRow, level);
       created++;
     }
     int centreId = createMissile(fireRow, Vector2.X, target,
@@ -2700,7 +2699,7 @@ public class ServerSkillSystem extends PassiveSystem {
     center.skillId = skill.Id;
     center.damageLevel = level;
     center.range = 0f;
-    center.nativeLifetimeFrames = Math.max(1, missile.Range);
+    center.nativeLifetimeFrames = Missile.nativeRangeFrames(missile, level);
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
@@ -2745,11 +2744,8 @@ public class ServerSkillSystem extends PassiveSystem {
     projectile.persistent = false;
     projectile.range = 0f;
     projectile.remainingFrames = Math.max(1, nativeMissileRange(center, level));
-    // MISSMODE_CreateMissileWithCollisionCheck seeds from the center X and
-    // remaining frame count. Keep a per-center stream so unrelated missiles
-    // cannot perturb Blizzard's deterministic strike positions.
-    projectile.blizzardSeed = new NativeRng(
-        Math.round(target.x) + projectile.remainingFrames).state();
+    // The callback reseeds from center X + elapsed frames for every strike.
+    projectile.blizzardSeed = (int) target.x;
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
     log.info("[SORCERESS_BLIZZARD] phase=center source={} target={} skill={} level={} "
             + "missile={} missileId={} lifetime={} radius={} interval={} child={}",
@@ -3858,6 +3854,9 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId >= 0 && mMercenary.has(ownerId)) mercenaryMissileCount++;
     if (missileId >= 0 && mMissile.has(missileId)) {
       Missile projectile = mMissile.get(missileId);
+      if (Missile.hasNativeFrameLifetime(missile)) {
+        projectile.nativeLifetimeFrames = Missile.nativeRangeFrames(missile, damageLevel);
+      }
       if (sharedHitTargets != null) projectile.shareHitTargets(sharedHitTargets);
       Attributes ownerAttrs = mAttributesWrapper.has(ownerId)
           ? mAttributesWrapper.get(ownerId).attrs : null;

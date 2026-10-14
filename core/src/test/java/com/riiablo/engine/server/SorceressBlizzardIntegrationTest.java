@@ -72,7 +72,7 @@ class SorceressBlizzardIntegrationTest extends RiiabloTest {
       world.setDelta(1f / 25f);
       world.process();
       assertEquals(1, factory.count("blizzard1"),
-          "native remaining-frame phase emits at 100 % calc2 == 0");
+          "native elapsed-frame phase starts at zero");
       Missile child = factory.first("blizzard1");
       assertNotNull(child);
       assertTrue(child.damageSnapshot);
@@ -82,6 +82,40 @@ class SorceressBlizzardIntegrationTest extends RiiabloTest {
       for (int i = 0; i < interval; i++) world.process();
       assertEquals(2, factory.count("blizzard1"),
           "the next child is emitted on the native calc2 cadence");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void nonDivisibleLifetimeDoesNotChangeInitialEmissionOrNativeReseeding() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int owner = player(world, 1);
+      int id = world.create();
+      Missiles.Entry row = Riiablo.files.Missiles.get("blizzardcenter");
+      Missile center = world.getMapper(Missile.class).create(id)
+          .set(row, Vector2.Zero, 7).setOwner(owner);
+      center.blizzardCenter = true;
+      center.skillId = SkillId.BLIZZARD;
+      center.damageLevel = 1;
+      center.remainingFrames = 7;
+      center.blizzardSeed = 0x12345678;
+      world.getMapper(Position.class).create(id).position.set(8, 3);
+      world.getMapper(Velocity.class).create(id);
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.count("blizzard1"));
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLIZZARD);
+      int maxRange = SkillFormula.evaluate(skill.calc1, skill, 1) - 1;
+      // D2Seed.h multiply/carry rolls from low=8, high=666. The second low
+      // exceeds INT_MAX, so this also distinguishes unsigned from signed mod.
+      Vector2 expected = new Vector2(8 + 1446283458L % (2 * maxRange) - maxRange,
+          3 + 4251344205L % (2 * maxRange) - maxRange);
+      assertEquals(expected, factory.firstOrigin);
     } finally {
       world.dispose();
     }
@@ -108,6 +142,7 @@ class SorceressBlizzardIntegrationTest extends RiiabloTest {
 
   private static final class RecordingFactory extends EntityFactory {
     final ArrayList<Missile> missiles = new ArrayList<>();
+    Vector2 firstOrigin;
 
     int count(String name) {
       int count = 0;
@@ -137,6 +172,9 @@ class SorceressBlizzardIntegrationTest extends RiiabloTest {
       world.getMapper(Velocity.class).create(entityId).velocity
           .set(direction).setLength(row.Vel);
       missiles.add(missile);
+      if ("blizzard1".equals(row.Missile) && firstOrigin == null) {
+        firstOrigin = new Vector2(position);
+      }
       return entityId;
     }
 

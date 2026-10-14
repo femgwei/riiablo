@@ -13,7 +13,9 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 
 ## 移植顺序与状态
 
-当前调度：旋风工作包在本次集中收尾后退出活动队列；下一模块为特殊导弹控制器。
+当前调度：旋风工作包已退出活动队列；特殊导弹工作包已集中修正帧寿命、回调相位、
+续弹等级和已支持控制器的到期行为并完成源码回归。后续切换其他模块，不再按单个
+特殊导弹拆分默认的“下一步”。未实现的原生回调与实机验收单独记录，不伪称全表等价。
 按用户要求，后续“继续下一步”不再默认追加旋风小修。历史记录中的“下一步旋风”
 建议由此调度覆盖。源码回归完成与实机验收、原版逐指令等价是不同结论。
 
@@ -23,7 +25,7 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    改为只限制上限，并回归短步长、完整奔跑步长和零速度。
    玩家创建与两条复活路径的单位换算现已核查并修正（见后续验证记录）；状态加成、
    装备加速和系统执行顺序仍待独立核查，不全局乘速度常量。
-2. **导弹速度与寿命分离**（基础导弹已修正，特殊处理器仍待核查）。参考
+2. **导弹速度与寿命分离**（基础及特殊处理器公共寿命已修正，见集中收口记录）。参考
    `b7e5f680`、`8c87f64a`。撤回此前“移动导弹 Range 是距离”的结论。
    D2MOO `MISSILES_CreateMissileFromParams` 将 Range + skillLevel * LevRange
    写入 TotalFrames/CurrentFrame，与速度无关；显式范围、初始帧和循环标记可覆盖
@@ -34,8 +36,9 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    技能等级增量；到期使用既有 LastCollide/AlwaysExplode 处理，不再同时按距离
    提前销毁，也不将最终位置截到 Range 距离。原来的错误回归已替换；新增速度
    1/1000均在第5帧到期、前4帧存活的系统测试。
-   其他移动处理器的旧距离策略、特殊覆盖、零/负寿命、固定步长和重连剩余寿命
-   仍待逐项核查；本批没有宣称完成所有导弹的原生迁移。Charged Bolt Sentry
+   本段为基础导弹批次的历史范围；其他移动处理器的旧距离策略、特殊覆盖及
+   零/负寿命已在特殊导弹集中收口批次处理，固定步长仍属平台边界。
+   这不代表实现所有导弹回调。Charged Bolt Sentry
    的77帧已在下一批核实（见验证记录），不能直接覆盖所有helper。
 3. **Blade Fury 发射时序**（已完成 1.10f 公式核查）。参考 `eecd52c9`。
    riiablo 已区分 srvmissilea/cltmissilea；现有测试允许 5 tick 后再发射，
@@ -309,3 +312,71 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
     原生整数tick/方向/位置量化、装备插入顺序、经典版/怪物特殊攻击分支及完整
     服务端运行时持久化并未因此实现。实机/真实网络重连验收仍暂缓。这些是平台
     或未支持模式的限制，不再作为默认的下一个旋风任务，也不能称原版100%等价。
+
+## 特殊导弹集中收口（2026-10-14）
+
+本批是第2项“速度与寿命分离”的特殊处理器工作包，不新增旋风工作。
+
+依据：D2MOO `MissMode.cpp:MISSMODE_HandleMissileCollision` (0x6FC56D50)、
+SrvDo table (0x6FC60090)、SrvDo06/07/10/15/16/20/21/26/31/35、
+`MISSMODE_SrvDmgHitHandler`、`MISSMODE_SrvHit29_FrozenOrb` (0x6FC5CE10)，
+以及 D2Common `Units/Missile.cpp:MISSILE_GetRemainingFrames` (#11125)。
+该名称不能按字面解释：返回 TotalFrames - CurrentFrame，即已运行帧数。
+
+- 活跃服务器回调1..37（4为null）统一默认帧寿命，工厂读取
+  `Range + skillLevel * LevRange`；零/负默认寿命在第一次更新回收，计算溢出饱和。
+  不再按相同数值的世界距离提前删除。带正数显式寿命覆盖的自定义行也走帧策略；
+  无原生回调/覆盖的合成旧行保留距离合同，避免改变测试与自定义数据的意义。
+- 附着20/21跟随存活控制单位，不被行Range或累计距离提前删除；工厂设置默认附着，
+  Blade Sentinel仍可将attachedEntityId替换为独立刀刃控制器，伤害拥有者保持玩家。
+  persistent地面效果继续使用remainingFrames，不被默认TotalFrames截断。
+- 冰封球从elapsed=0、移动前位置发弹，Param2=0不擅自改为1，负相位按
+  abs(TargetX % 64)选方向。SrvHit29只在寿命结束时生成尾部新星，不再因碰到单位
+  提前爆炸；不需要LastCollide或有效命中目标。新星按初始已运行帧窗口转向，
+  使用整数差/和除2并写回偏移，方向相对当前位置而非出生点；保留当前减速后的速度。
+- 暴风雪按已运行帧取模发弹，每次按当前位置整数X + elapsed重置随机流；
+  使用D2Seed.h的0x6AC690C5乘法/进位及high=666，第二次取模按无符号low，
+  不再把倒计时余数、通用LCG或上一发随机流用于下一发。引导箭/骨魂转向使用回调前
+  CurrentFrame倒计时取模；Phoenix Chaos Ice在elapsed=0首次转向，不补发多次回调。
+  Chaos Ice同样按原生InitLowSeed重置high=666，写回原生滚动low。
+- Poison Javelin、Fire Wall maker、Vines在移动前位置生成子弹；Vines从elapsed=0
+  开始取模。移除Fire Wall将Range误作距离的落点回退。续弹、爆炸、火场、狂犬病
+  传播与陷阱创建显式传递源技能等级，避免工厂以角色/怪物等级初始化寿命。
+- Wake maker到达实际目标点才生成双向波，移动步长跨越终点时截在目标点；
+  无法到达时仍按帧寿命超时回收，不无限滞留。子波自身按帧到期。
+- 到期的null-target回调与LastCollide最终单位查询分离；保留一次性hitFunctionTriggered
+  防重复，Fire Trauma地面爆炸仍进入自己的专用伤害/表现路径。
+
+回归新增 `SpecialMissileLifecycleTest`、`SpecialMissileControllerIntegrationTest`，
+涵盖特殊回调0/1/1000速度、零/负寿命、附着存活/删除、persistent独立寿命、
+Wake滞留、引导倒计时相位、新星整数转向/减速、Fire Wall移动前落点及Vines首帧。
+冰封球、暴风雪、刺客混乱冰及火焰波已有集成回归同步改为原生时序。
+
+诚实边界：这里只迁移所有活跃回调的公共寿命及上述已经支持的控制器链，
+没有因此补齐Cairn Stones、Tower Chest、Radament、Baal等未支持回调的全部效果，
+也没有新增Distraction子弹的原生路径事件。浮点路径/速度、房间可见性调度和
+非25Hz大步长跨越多个回调仍不等价于原版逐tick定点引擎；Wake路径节点事件由
+现有ECS终点近似表达。真正实机与联网重连视觉验收按用户要求暂缓。
+
+版本验收注意：本机默认D2_HOME为另一份`Diablo II`安装，不是用户提供的1.10F目录。
+初始宽集在默认安装出现Blaze协同字段、Immolation Arrow初始伤害的两条数据断言
+差异；不以修改生产公式迎合另一版本数据。切换D2_HOME到1.10F的宽集运行230项，
+226通过、4失败：BlessedHammerIntegrationTest的双类别加成预期100/实际50，
+NativePaladinBlessedHammerDataTest的dParam第二项预期50/实际0，
+NativeNecromancerPoisonNovaDataTest的EMin预期16/实际14，以及毒新星集成测试的
+固定伤害下界。前三项直接检查资源表字段，第四项使用同一毒新星固定曲线预期。
+这些版本合同差异保留为独立数据审计项，不能把该次宽集写成全通过。
+
+通过记录：默认安装的选定宽集230项/78类全部通过（不包含上述两条默认安装
+数据不匹配的Blaze/Immolation golden）；1.10F专项140项/20类全部通过，覆盖
+特殊控制器、基础/特殊寿命、房间、客户端寿命快照、冰封球、暴风雪、火墙、
+刺客武学/陷阱、藤蔓、引导箭、毒标枪以及1.10F的Blaze/Immolation golden。
+两套结果有重叠，不相加为独立测试数；该记录不代表完整core测试套件全绿。
+最终小轮17项/5类全部通过，重新编译并覆盖特殊寿命/控制器、冰封球、暴风雪及
+Chaos Ice的原生seed=0x13572468/high=666黄金值（low=519669410、偏移8/7）。
+
+另一台电脑可设置D2_HOME为其1.10F目录后运行本批核心回归：
+
+```powershell
+.\gradlew.bat :core:test --tests '*SpecialMissile*Test' --tests '*Missile*Test' --tests '*FrozenOrb*Test' --tests '*Blizzard*Test' --tests '*FireWall*Test' --tests '*AssassinMartialArtsTest' --tests '*AssassinSkillSpecializationTest' --tests '*DruidVine*Test' --tests '*GuidedArrowGoldenDamageTest' --tests '*PoisonJavelinGoldenDamageTest' --tests '*PlagueJavelinGoldenDamageTest' --tests '*BlazeGoldenDamageTest' --tests '*ImmolationArrowGoldenDamageTest' --console=plain
+```

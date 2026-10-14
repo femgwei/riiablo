@@ -1194,10 +1194,11 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
     missileComponent.set(missile, position, missile.Range).setOwner(ownerId);
-    if (missile.pSrvDoFunc == 1) {
+    if (com.riiablo.engine.server.component.Missile.hasNativeFrameLifetime(missile)
+        || missile.Vel == 0) {
       missileComponent.nativeLifetimeFrames =
           com.riiablo.engine.server.component.Missile.nativeRangeFrames(missile,
-              Math.max(1, damageLevel));
+              damageLevel);
     }
     missileComponent.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
 
@@ -1224,6 +1225,10 @@ public class ServerEntityFactory extends EntityFactory {
     int slowPercent = slowMissileVelocityPercent(ownerId, missile);
     if (slowPercent > 0) velocity = velocity * slowPercent / 100f;
     mVelocity.create(id).velocity.set(angle).setLength(velocity);
+    if (missile.pSrvDoFunc == 20 || missile.pSrvDoFunc == 21) {
+      missileComponent.attached = true;
+      missileComponent.attachedEntityId = ownerId;
+    }
     mAngle.create(id).set(angle);
     mSize.create(id).size = Size.SMALL;
     // Missiles are authoritative network entities. Their deletion is then

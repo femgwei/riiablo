@@ -1332,6 +1332,13 @@ class AssassinMartialArtsTest extends RiiabloTest {
       Vector2 initial = world.getMapper(Velocity.class).get(missileId).velocity.cpy().nor();
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
 
+      world.process();
+      assertEquals(519669410, missile.chaosIceSeed, "D2Seed.h roll from low=0x13572468, high=666");
+      assertEquals(8, missile.chaosIceX);
+      assertEquals(7, missile.chaosIceY);
+      assertTrue(!initial.epsilonEquals(
+          world.getMapper(Velocity.class).get(missileId).velocity.cpy().nor(), 0.0001f),
+          "SrvDo35 turns at elapsed zero, before the first movement");
       for (int i = 0; i < row.Param[0]; i++) world.process();
 
       Vector2 bent = world.getMapper(Velocity.class).get(missileId).velocity.cpy().nor();
