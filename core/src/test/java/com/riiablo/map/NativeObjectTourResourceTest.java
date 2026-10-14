@@ -11,6 +11,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeObjectTourResourceTest extends RiiabloTest {
+  @Test void actTwoSeamInstallationWorksWithProductionIteratorReuse() {
+    boolean previous = com.badlogic.gdx.utils.Collections.allocateIterators;
+    try {
+      com.badlogic.gdx.utils.Collections.allocateIterators = false;
+      Map map = new Map(1, 0);
+      Act2MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
+      Map.Zone a = map.findZone(Riiablo.files.Levels.get(41));
+      Map.Zone b = map.findZone(Riiablo.files.Levels.get(42));
+      assertTrue(map.isNativeSeamConnection(a, b), "caught bridge exception must not hide missing outdoor seams");
+      int manifestSize = map.nativeWalkEdges.size;
+      assertTrue(manifestSize > 0);
+      for (Map.Zone ignored : map.getZones()) {
+        assertTrue(map.isNativeSeamConnection(a, b));
+      }
+    } finally { com.badlogic.gdx.utils.Collections.allocateIterators = previous; }
+  }
   @Test void countessCellarMustInstallItsNativeRoomsAndPresetObjects() {
     for (String seedText : System.getProperty("map.audit.seeds", "1").split(",")) {
       int seed = Integer.parseInt(seedText.trim());

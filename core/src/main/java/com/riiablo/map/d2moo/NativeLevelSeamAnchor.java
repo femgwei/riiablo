@@ -71,7 +71,10 @@ public final class NativeLevelSeamAnchor {
     if (map == null || drlg == null) return 0;
     captureWalkEdges(map, drlg);
     int installed = 0;
-    for (Map.Zone source : map.getZones()) {
+    // Use indexed traversal: findZone() also scans this Array and GDX's
+    // production iterator rejects nested iteration when allocation is off.
+    for (int sourceIndex = 0; sourceIndex < map.getZones().size; sourceIndex++) {
+      Map.Zone source = map.getZones().get(sourceIndex);
       if (source == null || source.level == null) continue;
       D2DrlgLevel nativeSource = DrlgDrlg.getLevel(drlg, source.level.Id);
       if (nativeSource == null || nativeSource.getDrlgType() != D2DrlgTypes.DRLGTYPE_OUTDOOR) continue;
