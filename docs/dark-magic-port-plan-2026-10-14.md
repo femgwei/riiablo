@@ -21,9 +21,12 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    状态加成和系统执行顺序。D2MOO `Units.cpp:UNITS_GetBaseVelocity` 返回
    `nWalkSpeed << 8`，`PathMisc.cpp:sub_6FD5CEB0` 将速度转换为路径向量；
    完整位移链核实前不全局乘速度常量。
-2. **导弹速度与寿命分离**（待开始）。参考 `b7e5f680`、`8c87f64a`。
+2. **导弹速度与寿命分离**（已完成初步核查）。参考 `b7e5f680`、`8c87f64a`。
    分开验证每 tick 位移、初始化后寿命、删除时序和重连剩余寿命。
-   Charged Bolt Sentry 的 77 tick 是需核实的 1.14d 观察，不能直接覆盖所有 helper。
+   riiablo 的 `Missile.set` 已仅为零速度导弹设置 `nativeLifetimeFrames`，移动导弹的
+   `Range` 保持距离终点；现有静止导弹压力回收测试通过。本批新增回归，锁定移动导弹
+   `Range` 不得变成帧寿命。Charged Bolt Sentry 的 77 tick 是需核实的 1.14d 观察，
+   不能直接覆盖所有 helper。下一步仍需逐类核对特殊 helper 的寿命覆盖。
 3. **Blade Fury 发射时序**（待开始）。参考 `eecd52c9`。
    riiablo 已区分 srvmissilea/cltmissilea；现有测试允许 5 tick 后再发射，
    dark-magic 观察到 6 tick 间距。核查 1.10f SrvSt26/SrvDo48 的计数边界，

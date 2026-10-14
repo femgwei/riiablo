@@ -322,4 +322,16 @@ class MissileNativePolicyTest {
       world.dispose();
     }
   }
+
+  @Test
+  void movingMissilesKeepDistanceRangeSeparateFromStationaryLifetime() {
+    Missiles.Entry row = new Missiles.Entry();
+    row.Vel = 30;
+    row.Range = 10;
+    Missile missile = new Missile().set(row, Vector2.Zero, row.Range);
+
+    assertEquals(10f, missile.range);
+    assertEquals(0, missile.nativeLifetimeFrames,
+        "moving missile Range is a distance endpoint, not a frame lifetime");
+  }
 }
