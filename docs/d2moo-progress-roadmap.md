@@ -1,5 +1,26 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A1 怪物 AI 基础与专用决策首批
+
+- [x] `AI.initialize()` 按地图 Normal/Nightmare/Hell 难度读取 `aip1..aip8` 与
+  `aidel`；缺失/异常列安全夹取，`aiDist` 使用同一难度选择。此前所有实体固定读
+  Normal 列的问题已移除。
+- [x] `rollAiChance()` 改用 D2Common `SEED_RollPercentage` 的 64 位种子算法；与
+  D2MOO 一致，即使概率为 0/100 也消耗一次单位 AI RNG。当前初始种子仍是
+  `gameSeed ^ entityId` 混合，尚未与完整原生单位 `pSeed` 生命周期合并，不能宣称
+  与原版每一次随机序列完全一致。
+- [x] 骷髅 AI 对齐 `AITHINK_Fn002_Skeleton`：攻击概率成功时按参数选择 A1（成功）或
+  A2（失败），移除 Java 随机 1--2 秒等待，并在 Casting/Sequence 活跃时禁止重写动作。
+- [x] 新增 A1 `Andariel`、`Griswold`、`Smith` 专用 AI，分别覆盖安达利尔近战喷吐/
+  远程 Skill1/Skill2、格里斯瓦尔德 80%/50% 攻击与接近概率、铁匠按生命百分比的
+  速度加成；技能走统一 `SkillCastEvent`/`SkillStartEvent` 生命周期，技能失败不会
+  偷换成普通攻击。
+- [x] 新增纯数据 RNG/难度边界测试和真实 1.10f 表驱动 ECS 决策测试；AI 包及技能矩阵
+  定向回归通过（当前批次 14 项 + 既有 AI/技能矩阵通过）。
+- [ ] A1 仍缺 `Arach`、`GargoyleTrap`；Andariel/Smith/Griswold 的画面动作、真实
+  客户端战斗效果尚未由另一台电脑验收。A2--A5 专用 AI 与完整单位 `pSeed` 继续保持
+  未完成，不能据此提高全 Acts 移植百分比。
+
 ## 2026-10-14 ca4d724 后 A5 地形消失回归
 
 - 用户 p3.png / Desktop/game.log（20:51）：Harrogath 的 20 个 DT1 槽位全部为空，
