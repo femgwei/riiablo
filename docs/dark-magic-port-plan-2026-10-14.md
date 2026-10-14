@@ -384,3 +384,54 @@ Chaos Ice的原生seed=0x13572468/high=666黄金值（low=519669410、偏移8/7�
 ```powershell
 .\gradlew.bat :core:test --tests '*SpecialMissile*Test' --tests '*Missile*Test' --tests '*FrozenOrb*Test' --tests '*Blizzard*Test' --tests '*FireWall*Test' --tests '*AssassinMartialArtsTest' --tests '*AssassinSkillSpecializationTest' --tests '*DruidVine*Test' --tests '*GuidedArrowGoldenDamageTest' --tests '*PoisonJavelinGoldenDamageTest' --tests '*PlagueJavelinGoldenDamageTest' --tests '*BlazeGoldenDamageTest' --tests '*ImmolationArrowGoldenDamageTest' --console=plain
 ```
+
+## 冰冻箭及同类爆炸生命周期回归修复（2026-10-14）
+
+用户日志 `game.log:52137..52155`：20级 `freezingarrowexp3` 已生成
+347..358冷伤、52帧长度及冻结标记，但更新时 `frame=1/1` 直接删除；主箭最终只扣
+4物理+1火焰。不是技能公式未生成冷伤，也不能用目标免疫解释。
+
+责任归属：这是 riiablo 的适配/移植错误，不是 dark-magic 的同一错误。
+`7aeda382` 将特殊导弹到期统一移到普通碰撞之前，但 null-target dispatch 只有
+SrvHit02/29，遗漏了 SrvHit01；此前共享父箭命中集合也错误排除了爆炸主目标。
+前者由本次寿命迁移引入，后者在该提交之前就存在。dark-magic 的
+`systems/projectile.lua:apply_area_impact` 在命中/到期时直接结算范围包，
+`emit_impact` 的表现计时不承担延迟伤害，不使用这里的伤害子弹更新链。
+
+原版时序更正：不能笼统声称“SrvHit04一定立即结算”。D2MOO
+`MissMode.cpp:2673` 仅在父行 `sHitPar1>0` 时立即调用子弹 SrvDmgHitHandler；
+本机1.10F `freezingarrow.sHitPar1=0`，默认应先结算武器包，子弹下一次更新
+到期时执行 SrvHit01。`MISSMODE_HandleMissileCollision:651` 的到期调用与
+LastCollide无关，SrvHit01在删除之前结算半径包（`MissMode.cpp:2087`）。
+
+修复内容：
+
+- SrvHit01 null-target 到期/墙碰撞执行一次范围伤害，不要求LastCollide；
+  SrvHit04生成独立命中集合的冷/火爆炸子弹，并保留上述即时/延迟原生分支。
+  主命中目标能收到武器及爆炸包；穿刺的不同爆炸允许再次命中同一个邻近目标。
+- 若即时冷子弹先致死，不再补武器伤害/重复死亡，并保留父箭的Pierce消耗。
+  默认延迟分支保留物理先致死的普通尸体；冷先致死仍冻结/冰碎。
+- 爆炸箭实测同样在此次寿命修改后丢失范围伤害，本批一起修复。
+  火球单位命中的现有测试虽通过，原实现把扇出推迟到表现子弹更新；本批改为
+  当前命中回调结算，表现子弹明确只显示，不能伤害后来进入半径的目标。
+- 对照D2MOO SrvHit09/13，补齐已支持的牺牲之箭、冰尖柱null-target分支：
+  到期/撞墙也创建火场及结算初始范围包，或结算冰尖柱范围冻结。
+  这些是审查发现的既有回调缺口，不把它们全部归责到7aeda382。
+- `NativeExplosionLifecycleTest` 使用实际world.process帧推进，覆盖默认延迟与
+  正数sHitPar即时分支、中心/邻近/范围外目标、独立爆炸命中集合、穿刺、
+  物理/冷致死顺序、冷免疫、墙/到期回调、单帧子弹和表现不能重放伤害。
+
+本批仍不是“所有导弹完全原版等价”：未支持的服务器回调及此前记录的
+定点路径/非25Hz大步长限制保留；真实游戏和联网表现需另一台电脑验证。
+额外基线检查 `ShamanFireballAuditTest` 有4条因测试World未注册CofManager、
+AnimStepper注入失败的既有失败，均在修复前复现，未为本任务修改该测试夹具。
+
+最终1.10F定向回归104项/19类全部通过（不是完整core套件全绿）；包含上述新测试、
+Amazon specialist/伤害归属、冰冻箭/爆炸箭/牺牲之箭/冰尖柱/火球golden、
+火球/Ice Blast/陨石集成、特殊导弹控制器/寿命、普通导弹策略/房间、
+冰封球以及毒标枪/瘟疫标枪。另一台电脑快速验证入口：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F' # 按该电脑实际安装路径调整
+.\gradlew.bat :core:test --tests '*NativeExplosionLifecycleTest' --tests '*AmazonSkillSpecializationTest' --tests '*FreezingArrow*Test' --tests '*ExplodingArrow*Test' --tests '*SorceressFireBallIntegrationTest' --tests '*SorceressIceBlastIntegrationTest' --tests '*SpecialMissile*Test' --console=plain
+```

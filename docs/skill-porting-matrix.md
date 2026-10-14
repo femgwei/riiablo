@@ -715,10 +715,11 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   `ln12/ln34`、参数、HitFlags 和 helper 表现导弹，`SorceressIceBlastIntegrationTest`
   覆盖中心/范围内/范围外/冷免疫目标及冻结时长。
 - Fire Ball(47) 已开始按 dark-magic `missile.straight-impact-area` 对照：D2MOO
-  `MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion` 的父导弹负责
-  命中包，`ExplosionMissile` 只承载同一伤害包的范围扇出。riiablo 现在为爆炸子导弹
-  增加运行时 impact radius 快照，并共享父导弹命中集合，确保中心目标不被父/子导弹
-  重复结算；真实 1.10f `pSrvHitFunc=1`、`sHitPar[0]=4` 和 16 帧表现生命周期
+  `MISSMODE_SrvHit01_Fireball_ExplodingArrow_FreezingArrowExplosion` 在命中回调内
+  结算整个范围包，`ExplosionMissile` 是表现，不应等待它更新才扇出伤害。
+  2026-10-14 修正原先的延迟子导弹实现：当前回调处理邻近目标，中心沿直接包处理，
+  共享命中门闩防重复；表现子导弹不参与碰撞或到期伤害。
+  真实 1.10f `pSrvHitFunc=1`、`sHitPar[0]=4` 和 16 帧表现生命周期
   已锁定在 `NativeSorceressProjectileDataTest`。新增
   `SorceressFireBallIntegrationTest` 覆盖 ECS 多目标范围扇出、中心目标不重复伤害、
   墙碰撞停止导弹并生成 impact 表现；同时为父导弹增加独立的 cast-lifetime shared

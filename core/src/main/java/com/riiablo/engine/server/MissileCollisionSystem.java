@@ -426,9 +426,6 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (missile.missile != null && missile.missile.AlwaysExplode
           && !missile.impactPresentationTriggered) {
         emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, position.position);
-        if (missile.missile.pSrvHitFunc == 4) {
-          spawnAmazonExplosion(missile, position.position, Engine.INVALID_ENTITY);
-        }
       }
       log.debug("Missile {} expired: frame={}/{} distance={}/{}, owner={}, pos=({}, {})",
           entityId, missile.nativeFrame, missile.nativeLifetimeFrames, missile.distanceTraveled,
@@ -1309,7 +1306,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     Vector2 impactPosition = impact != null && !impact.isZero(0.0001f) ? impact : to;
     emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
     triggerNativeNullHit(entityId, missile, impactPosition);
-    spawnNativeMapExplosion(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
+    if (missile.missile.pSrvHitFunc != 4) {
+      spawnNativeMapExplosion(entityId, missile, Engine.INVALID_ENTITY, impactPosition);
+    }
     // Native SrvDmgHitHandler is invoked with a null target for barrier/wall
     // collisions.  It consumes the travelling missile even when CollideKill
     // is clear; CollideKill controls unit-hit persistence, not map barriers.
@@ -1605,6 +1604,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         // visual is emitted for monster/player impacts as well as walls.
         spawnNativeMapExplosion(missileId, missile, targetId, missilePos);
       }
+      if (!suppressSideEffects && missile.missile != null && missile.missile.pSrvHitFunc == 1) {
+        // SrvHit01 applies its area packet in the current hit callback. The
+        // direct target is already claimed and gets the same packet below;
+        // the ExplosionMissile is presentation, not next-tick damage work.
+        resolveNativeExplosionDamage(missileId, missile, missilePos);
+      }
       if (missile.missile != null && missile.missile.pSrvHitFunc == 9
           && !missile.hitFunctionTriggered) {
         missile.hitFunctionTriggered = true;
@@ -1646,7 +1651,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.info("[MISSILE_HIT] phase=skip_dead missileId={} owner={} target={} targetHp={}",
             missileId, missile.ownerId, targetId,
             targetHitpoints != null ? targetHitpoints.asFixed() : 0f);
-        if (!missile.attached) world.delete(missileId);
+        // SrvHit04's cold child can kill this target before the arrow's
+        // weapon packet. Do not dispatch a second death or lose Pierce.
+        if (!suppressSideEffects && consumePierce(missile)) return true;
+        if (!suppressSideEffects && !missile.attached) world.delete(missileId);
         return true;
       }
       if (missile.fixedPoisonRate) {
@@ -2209,7 +2217,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   static boolean hasNativeCollision(Missile missile) {
     // Synthetic/test missiles without a table row retain the legacy collision
     // behavior; real projectiles are strictly governed by Missiles.txt.
-    if (missile == null) return false;
+    if (missile == null || missile.presentationOnly) return false;
     if (missile.missile == null || missile.missile.Collision) return true;
     Missiles.Entry row = missile.missile;
     return row.pSrvHitFunc != 0 || row.pSrvDmgFunc != 0 || row.pSrvDoFunc != 0
@@ -2630,8 +2638,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Preserve that native radius so every hostile inside the explosion is
       // considered, not just units within the ordinary contact radius.
       child.areaRadiusOverride = Math.max(0f, nativeAreaRadius(child));
-      child.shareHitTargets(source.sharedHitTargets != null
-          ? source.sharedHitTargets : source.hitTargets);
+      // SrvHit04 creates a separate damage packet. Do not share the arrow's
+      // hit gate: its direct target must also receive the explosion, and a
+      // later Pierce impact may legitimately explode on the same nearby unit.
       Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
           ? mAttributesWrapper.get(source.ownerId).attrs : null;
       int level = Math.max(1, source.damageLevel);
@@ -2648,8 +2657,6 @@ public class MissileCollisionSystem extends IteratingSystem {
             stateList(source.ownerId))) {
           MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
         }
-        child.skillId = source.skillId;
-        child.damageLevel = level;
       }
       if (tableSnapshot && !child.damageSnapshot
           && "frze".equalsIgnoreCase(row.EType)) {
@@ -2663,6 +2670,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       // supplied by the associated Skills.txt dispatch row (for example
       // freezingarrowexp3 has EType=frze but zero EMin/EMax).
       if (tableSnapshot) child.freezesTarget = true;
+      child.skillId = skill != null ? skill.Id : source.skillId;
+      child.damageLevel = level;
       if (source.missile.Missile != null
           && "freezingarrow".equalsIgnoreCase(source.missile.Missile)
           && "freezingarrowexp3".equalsIgnoreCase(name)) {
@@ -2677,6 +2686,13 @@ public class MissileCollisionSystem extends IteratingSystem {
               + "missile={} radius={} freeze={}",
           source.ownerId, source.skillId, source.missile.Missile, childId, name,
           nativeAreaRadius(child), child.freezesTarget);
+      // D2MOO SrvHit04 calls SrvDmgHitHandler(child, target, 1) immediately
+      // when the parent sHitPar1 is positive. SrvHit01 returns 1 (remove),
+      // so a Range=1 damage child must not wait for its next lifecycle tick.
+      if (arrayValue(source.missile.sHitPar, 0) > 0 && row.pSrvHitFunc == 1) {
+        resolveNativeExplosionDamage(childId, child, origin);
+        world.delete(childId);
+      }
     }
     return spawned;
   }
@@ -2713,13 +2729,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
     if (source.missile.pSrvHitFunc == 1) {
-      // SrvHit01 resolves the parent contact and then fans the same packet
-      // through the impact radius. The child row carries presentation data;
-      // carry the radius and parent hit set explicitly so the center is not
-      // damaged a second time.
+      // SrvHit01 resolves the entire packet synchronously on the source.
+      // Keep the child and shared hit gate for presentation/diagnostics only;
+      // neither its ordinary collisions nor its expiry may replay damage.
       child.areaRadiusOverride = Math.max(0f, nativeAreaRadius(source));
       child.shareHitTargets(source.sharedHitTargets != null
           ? source.sharedHitTargets : source.hitTargets);
+      child.presentationOnly = true;
     }
     child.skillId = source.skillId;
     child.damageLevel = Math.max(1, source.damageLevel);
@@ -2753,11 +2769,10 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private static boolean isNativeAreaEffect(Missile missile) {
-    // SrvHit01 is the travelling Fire Ball parent: its radius belongs to the
-    // spawned ExplosionMissile, not to the contact projectile. Treating the
-    // parent as an area missile would resolve the direct packet on every unit
-    // along the path before the child fan-out. Runtime child snapshots carry
-    // areaRadiusOverride; SrvHit14 remains an in-flight native area packet.
+    // A travelling SrvHit01 parent first needs a contact, then its hit
+    // callback resolves the radius synchronously. It must not use that radius
+    // as a travelling hitbox. Runtime children can carry an explicit area
+    // override; SrvHit14 remains an in-flight native area packet.
     return missile != null && (missile.areaRadiusOverride >= 0f
         || missile.missile != null && missile.missile.pSrvHitFunc == 14)
         && nativeAreaRadius(missile) > 0;
@@ -2765,8 +2780,32 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Native SrvDmgHitHandler(null target) path used by walls and LastCollide. */
   private void triggerNativeNullHit(int sourceId, Missile source, Vector2 origin) {
-    if (source == null || source.missile == null || origin == null
+    if (source == null || source.missile == null || source.presentationOnly || origin == null
         || source.hitFunctionTriggered) return;
+    if (source.missile.pSrvHitFunc == 1) {
+      resolveNativeExplosionDamage(sourceId, source, origin);
+      return;
+    }
+    if (source.missile.pSrvHitFunc == 4) {
+      source.hitFunctionTriggered = true;
+      if (spawnAmazonExplosion(source, origin, Engine.INVALID_ENTITY) == 0) {
+        spawnNativeMapExplosion(sourceId, source, Engine.INVALID_ENTITY, origin);
+      }
+      return;
+    }
+    if (source.missile.pSrvHitFunc == 9) {
+      // SrvHit09 also runs on null hits: create the field and resolve the
+      // initial arrow area packet without needing a final unit collision.
+      source.hitFunctionTriggered = true;
+      spawnImmolationFire(sourceId, source, origin);
+      resolveImmolationArrowAreaDamage(sourceId, source, origin);
+      return;
+    }
+    if (source.missile.pSrvHitFunc == 13) {
+      source.hitFunctionTriggered = true;
+      resolveGlacialSpikeAreaDamage(sourceId, source, origin, Engine.INVALID_ENTITY);
+      return;
+    }
     if (source.missile.pSrvHitFunc == 29 && source.nativeLifetimeFrames > 0
         && frameLifetimeExpired(source)) {
       source.hitFunctionTriggered = true;
@@ -2778,6 +2817,31 @@ public class MissileCollisionSystem extends IteratingSystem {
     spawnPoisonCloudHitSubmissiles(source, origin);
     log.debug("[AMAZON_PLAGUE_JAVELIN] phase=null_target_hit source={} missile={} origin=({}, {})",
         sourceId, source.missile.Missile, origin.x, origin.y);
+  }
+
+  /** SrvHit01 owns an immediate, one-shot radius packet, also for null hits. */
+  private void resolveNativeExplosionDamage(int missileId, Missile missile, Vector2 origin) {
+    if (missile.hitFunctionTriggered) return;
+    missile.hitFunctionTriggered = true;
+    int radius = nativeAreaRadius(missile);
+    if (radius <= 0) {
+      Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+      if (skill == null) return;
+      radius = Math.max(1, SkillFormula.evaluate(skill.calc1, skill,
+          Math.max(1, missile.damageLevel)));
+    }
+    // This is the hit callback, not a normal collision lookup. It must run
+    // even when LastCollide is clear and before expiration deletes the unit.
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, radius);
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == missile.ownerId || !mPosition.has(targetId)
+          || !mAttributesWrapper.has(targetId) || !isAlive(targetId)) continue;
+      checkCollisionWithEntity(missileId, missile, origin, origin, targetId,
+          mPosition.get(targetId), radius, true);
+    }
+    log.info("[MISSILE_EXPLOSION] phase=resolve missileId={} missile={} owner={} radius={}",
+        missileId, missile.missile.Missile, missile.ownerId, radius);
   }
 
   /** D2MOO SrvHit14 creates the Royal Strike meteor's 18-position fire field. */
@@ -3659,6 +3723,8 @@ public class MissileCollisionSystem extends IteratingSystem {
   private static int glacialSpikeRadius(Missile missile) {
     if (missile == null || missile.missile == null
         || missile.missile.pSrvHitFunc != 13) return 0;
+    int rowRadius = arrayValue(missile.missile.sHitPar, 0);
+    if (rowRadius > 0) return rowRadius;
     Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId)
         : Riiablo.files.skills.get("Glacial Spike");
     if (skill == null) return 0;

@@ -28,7 +28,7 @@ public class Missile extends PooledComponent {
 
   /** False for client-side replicas; only the server may resolve collisions. */
   public boolean authoritative = true;
-  /** True only for client-created CltHitSubMissile presentation children. */
+  /** Visual-only child; server ExplosionMissile and client CltHitSubMissile alike. */
   public boolean presentationOnly;
   
   /** 已移动距离（用于范围检查，与 d2mod 一致） */
