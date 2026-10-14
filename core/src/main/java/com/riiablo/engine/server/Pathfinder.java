@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.combat.NativeMeleeDistance;
@@ -48,6 +49,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
+  protected ComponentMapper<NativeAiPathCache> mNativeAiPathCache;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<Velocity> mVelocity;
@@ -389,6 +391,10 @@ public class Pathfinder extends IteratingSystem {
   }
 
   public boolean findPath(int src, Vector2 target, boolean raycast, int targetEntityId) {
+    if (target != null && mNativeAiPathCache.has(src)) {
+      // ECS A* endpoints are not native tTargetCoord / path-point state.
+      mNativeAiPathCache.get(src).invalidate();
+    }
     // Don't allow pathfinding if entity doesn't have Velocity component (e.g., dead player)
     if (!mVelocity.has(src)) {
       return false;

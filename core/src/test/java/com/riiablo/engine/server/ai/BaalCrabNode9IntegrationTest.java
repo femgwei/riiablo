@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
@@ -37,6 +38,194 @@ import static org.mockito.Mockito.*;
 
 /** Node9 membership/selection and read-only TOWARD projection, not full native path state. */
 class BaalCrabNode9IntegrationTest extends RiiabloTest {
+  @Test
+  void sourceOnlyPointFromNearbyCachedTargetIsClearedByWrapper() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      terrain(f, true);
+      cache(f).allocated().targetCoordinates(13, 10);
+      int wall = wall(f, 14, 10);
+      f.targetPosition().set(65, 10);
+      f.world.process();
+      assertEquals(wall, select(f));
+      assertTrue(cache(f).coordinatesKnown);
+      assertFalse(cache(f).hasPoints);
+    }
+  }
+
+  @Test
+  void freshKnownEmptyCacheEnablesMissingPrimaryFallbackForBodyAndClone() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        NativeAiPathCache cache = cache(f).allocated();
+        int wall = wall(f, 14, 10);
+        f.targetPosition().set(65, 10); // head culled: zero primary nodes
+        f.world.process();
+        assertEquals(wall, select(f), "zero cached coordinates prove zero points without terrain");
+        assertEquals(0, baal(f).lastTargetCount());
+        assertEquals(baal(f).targetScore(wall), baal(f).lastMaxTargetScore());
+        assertTrue(cache.coordinatesKnown);
+        assertTrue(cache.pointsKnown);
+        assertFalse(cache.hasPoints);
+        verifyNoInteractions(f.paths);
+      }
+    }
+  }
+
+  @Test
+  void missingPrimaryUsesCachedCoordinatesWithoutFollowingDeadOrRemovedUnit() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      Map map = terrain(f, true);
+      int wall = wall(f, 6, 10); // cache points east, node9 candidate is west
+      f.world.process();
+      assertEquals(wall, select(f));
+      assertEquals(20, cache(f).targetX);
+      assertEquals(10, cache(f).targetY);
+      f.world.delete(f.target);
+      f.world.process();
+      clearInvocations(map);
+      assertEquals(wall, select(f));
+      assertEquals(0, baal(f).lastTargetCount());
+      verify(map, atLeastOnce()).isBlockedForPath(any(), eq(11), eq(10), anyInt(), anyInt(), anyBoolean());
+      verify(map, never()).isBlockedForPath(any(), eq(9), anyInt(), anyInt(), anyInt(), anyBoolean());
+      assertEquals(20, cache(f).targetX);
+      assertFalse(cache(f).hasPoints);
+    }
+  }
+
+  @Test
+  void successfulUnitlessProbeDoesNotReuseUnknownFinalPathEndpoint() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      Map map = terrain(f, false);
+      wall(f, 14, 10);
+      f.world.process();
+      assertEquals(f.target, select(f));
+      assertTrue(cache(f).coordinatesKnown);
+      attributes(f, f.target).base().put(Stat.hitpoints, 0f);
+      attributes(f, f.target).reset();
+      assertEquals(Engine.INVALID_ENTITY, select(f));
+      assertTrue(cache(f).pointsKnown);
+      assertTrue(cache(f).hasPoints);
+      assertFalse(cache(f).coordinatesKnown, "native may replace coordinates with the last path point");
+      when(map.isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean())).thenReturn(true);
+      assertEquals(Engine.INVALID_ENTITY, select(f), "do not re-probe a stale requested endpoint");
+      assertFalse(cache(f).pointsKnown, "unprojectable recomputation cannot retain a trusted old count");
+      attributes(f, f.target).base().put(Stat.hitpoints, 100f);
+      attributes(f, f.target).reset();
+      f.targetPosition().set(0, 10);
+      assertEquals(f.target, select(f), "zero-coordinate early return must also see the count as unknown");
+    }
+  }
+
+  @Test
+  void zeroTargetUnitCoordinateRetainsKnownPointCountAndDoesNotUpdateCache() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      NativeAiPathCache cache = cache(f).allocated();
+      int wall = wall(f, 14, 10);
+      f.targetPosition().set(0, 10);
+      f.world.process();
+      assertEquals(wall, select(f), "early return retains known zero points");
+      assertEquals(0, cache.targetY, "early return does not read target coordinates into the cache");
+      cache.pathPoints(true);
+      assertEquals(f.target, select(f), "early return can also retain known nonzero points");
+      assertEquals(0, cache.targetY);
+    }
+  }
+
+  @Test
+  void unknownCacheDoesNotBorrowEcsDestinationOrAssumeEmptyAfterPathRemoval() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      terrain(f, true);
+      wall(f, 14, 10);
+      f.targetPosition().set(65, 10);
+      GraphPath path = new GraphPath();
+      path.add(new Point2(10, 10));
+      path.add(new Point2(10, 10));
+      f.world.getMapper(Pathfind.class).create(f.actor).set(path);
+      f.world.process();
+      assertEquals(Engine.INVALID_ENTITY, select(f));
+      f.world.getMapper(Pathfind.class).remove(f.actor);
+      f.world.process();
+      assertEquals(Engine.INVALID_ENTITY, select(f));
+      assertFalse(cache(f).coordinatesKnown);
+    }
+  }
+
+  @Test
+  void missingPrimaryStillChoosesWholeBucketBeforeDistanceGate() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      cache(f).allocated();
+      wall(f, 14, 10);
+      int far = wall(f, 30, 10);
+      attributes(f, far).base().put(Stat.maxdamage, 1000);
+      attributes(f, far).reset();
+      f.targetPosition().set(65, 10);
+      f.world.process();
+      assertEquals(Engine.INVALID_ENTITY, select(f));
+      assertTrue(cache(f).pointsKnown);
+      assertFalse(cache(f).hasPoints);
+      assertEquals(0, baal(f).lastTargetCount());
+    }
+  }
+
+  @Test
+  void actionsMovementAndWarpInvalidateCacheButStoppingDoesNotInventCoordinates() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      NativeAiPathCache cache = cache(f).allocated();
+      f.ai.stopMovement();
+      assertTrue(cache.coordinatesKnown, "ECS stop is not a native coordinate command");
+      for (int action : new int[] {1, 5, 11}) {
+        cache.allocated();
+        baal(f).execute(action, f.target);
+        assertFalse(cache.coordinatesKnown, "unported mode writer: " + action);
+        assertFalse(cache.pointsKnown);
+        f.finishAction();
+      }
+      cache.allocated();
+      f.ai.walkTo(new Vector2(30, 10), f.target);
+      assertFalse(cache.coordinatesKnown);
+      cache.allocated();
+      f.ai.onOwnerWarp();
+      assertFalse(cache.coordinatesKnown);
+    }
+  }
+
+  @Test
+  void replacingAiDoesNotTreatExistingEntityAsFreshAllocation() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      NativeAiPathCache cache = cache(f);
+      cache.targetCoordinates(37, 41);
+      cache.pathPoints(true);
+      BaalCrab replacement = new BaalCrab(f.actor);
+      f.world.getInjector().inject(replacement);
+      replacement.initialize();
+      assertSame(cache, cache(f));
+      assertEquals(37, cache.targetX);
+      assertEquals(41, cache.targetY);
+      assertTrue(cache.hasPoints);
+    }
+  }
+
+  @Test
+  void explicitOverrideHasAuthorityAndDoesNotRewriteNativeCache() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      NativeAiPathCache cache = cache(f).allocated();
+      wall(f, 14, 10);
+      int forced = enemy(f, 30, 10);
+      f.world.getMapper(NativeAiTargetOverride.class).create(f.actor).setAttract(forced, f.target, 86, 100);
+      f.targetPosition().set(65, 10);
+      f.world.process();
+      assertEquals(forced, select(f));
+      assertTrue(cache.coordinatesKnown);
+      assertTrue(cache.pointsKnown);
+      assertEquals(0, cache.targetX);
+      assertFalse(cache.hasPoints);
+    }
+  }
+
+  private static NativeAiPathCache cache(Act1NativeAiIntegrationTest.Fixture f) {
+    return f.world.getMapper(NativeAiPathCache.class).create(f.actor);
+  }
+
   @Test
   void real110fBoneWallRowBelongsToNode9ButScoresZeroDueToNativeThreat() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {

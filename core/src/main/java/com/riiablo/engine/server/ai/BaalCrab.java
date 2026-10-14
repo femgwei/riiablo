@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
@@ -134,7 +135,7 @@ public class BaalCrab extends NativeDecisionAI {
       int score = eligibleScore(id, true);
       if (score > best) { best = score; candidate = id; }
     }
-    if (candidate < 0 || primary < 0 || isInNativeMeleeRange(primary)
+    if (candidate < 0 || primary >= 0 && isInNativeMeleeRange(primary)
         || distanceWithSize(mPosition.get(entityId).position, mPosition.get(candidate).position, 0) >= 5
         || !noTowardPoints(primary)) return primary;
     // node9 never contributes to nCount and need not outscore the primary.
@@ -143,21 +144,47 @@ public class BaalCrab extends NativeDecisionAI {
   }
 
   private boolean noTowardPoints(int primary) {
+    // A lazily attached component starts UNKNOWN. Only ServerEntityFactory's
+    // actual allocation boundary can establish fresh zero coordinates/points.
+    NativeAiPathCache cache = mNativeAiPathCache.create(entityId);
+    Vector2 source = mPosition.get(entityId).position;
+    int sx = Math.round(source.x), sy = Math.round(source.y);
+    if (primary >= 0) {
+      Vector2 target = mPosition.get(primary).position;
+      int tx = Math.round(target.x), ty = Math.round(target.y);
+      // This early return does NOT update coordinates or clear old points.
+      if (tx == 0 || ty == 0) return cache.pointsKnown && !cache.hasPoints;
+    }
+    if (sx == 0 && sy == 0) {
+      cache.pathPoints(false);
+      return true;
+    }
+    if (primary >= 0) {
+      Vector2 target = mPosition.get(primary).position;
+      cache.targetCoordinates(Math.round(target.x), Math.round(target.y));
+    }
+    // PATH_SetTargetUnit(null) clears the pointer, NOT tTargetCoord. Do not
+    // read a removed/recycled entity or substitute Pathfind.destination.
+    if (!cache.coordinatesKnown) {
+      // An unprojectable recomputation also makes the retained point count
+      // unknown; a later zero-coordinate unit must not reuse an older count.
+      cache.pointsKnown = false;
+      return false;
+    }
+    int tx = cache.targetX, ty = cache.targetY;
+    if (tx == 0 && ty == 0 || sx == tx && sy == ty
+        || Math.abs((long) tx - sx) > 100 || Math.abs((long) ty - sy) > 100) {
+      cache.pathPoints(false);
+      return true;
+    }
+    // A half-zero cached coordinate would hit PATH_RayTrace assertions.
+    if (tx == 0 || ty == 0) { cache.invalidate(); return false; }
     MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     // Missing terrain is unknown, not proof of zero native path points.
-    if (wrapper == null || wrapper.map == null || wrapper.zone == null) return false;
-    Vector2 source = mPosition.get(entityId).position;
-    Vector2 target = mPosition.get(primary).position;
-    int sx = Math.round(source.x), sy = Math.round(source.y);
-    int tx = Math.round(target.x), ty = Math.round(target.y);
-    // D2Common_10142 returns before clearing old points if a target-unit
-    // coordinate is zero. We do not know that retained native point count.
-    if (tx == 0 || ty == 0) return false;
-    // Other coordinate rejection paths reach the wrapper's point-count reset.
-    // In particular, do not ray-trace a remote owner-group child without the
-    // native 100-cell per-axis bound (children bypass the player-head cull).
-    if (sx == 0 && sy == 0 || Math.abs((long) tx - sx) > 100
-        || Math.abs((long) ty - sy) > 100) return true;
+    if (wrapper == null || wrapper.map == null || wrapper.zone == null) {
+      cache.pointsKnown = false;
+      return false;
+    }
     int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
     int flags = NativeGroundPathProfile.forUnit(false, monster.monstats).terrainFlags;
     boolean doors = monster.monstats != null && monster.monstats.opendoors
@@ -168,10 +195,15 @@ public class BaalCrab extends NativeDecisionAI {
     // budget/velocity/advanced-target state is not represented by ECS Pathfind.
     // Keep active movement untouched: even a partial ray is nonzero points,
     // not proof that the destination is reachable.
-    return !NativeTowardPathProbe.hasPathPoints(sx, sy, tx, ty, 14, 1, (x, y) ->
+    boolean present = NativeTowardPathProbe.hasPathPointsAfterNormalization(sx, sy, tx, ty, 14, 1, (x, y) ->
         wrapper.map.isBlockedForPath(wrapper.zone, x, y, flags, size, doors)
             || dynamic != null && !dynamic.isFreeForPath(wrapper.zone,
                 entityId, Engine.INVALID_ENTITY, x, y, size));
+    cache.pathPoints(present);
+    // Successful unitless paths may rewrite tTargetCoord to the final path
+    // point. The boolean probe does not compute that endpoint: mark unknown.
+    if (primary < 0 && present) cache.coordinatesKnown = false;
+    return !present;
   }
 
   private boolean cullPlayerHead(int id) {
@@ -315,6 +347,9 @@ public class BaalCrab extends NativeDecisionAI {
 
   /** Indices and fixed modes from AIBAAL_MainSkillHandler, exposed for branch tests. */
   void execute(int action, int targetId) {
+    // Native mode/skill/movement callbacks are not all ported cache writers.
+    // Retain no trusted cache across an action, including neutral-mode idle.
+    invalidateNativePathCache();
     Vector2 target = targetId < 0 ? mPosition.get(entityId).position
         : mPosition.get(targetId).position;
     switch (action) {

@@ -33,6 +33,7 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
@@ -50,6 +51,27 @@ import org.junit.jupiter.api.Test;
 
 /** Real server factory, 1.10f tables and reward consumers; terrain/path are stubs. */
 class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
+  @Test
+  void realFactoryAllocatesIndependentKnownEmptyNativeCaches() {
+    try (Fixture f = new Fixture()) {
+      NativeAiPathCache parent = f.world.getMapper(NativeAiPathCache.class).get(f.baal);
+      assertNotNull(parent);
+      assertTrue(parent.coordinatesKnown);
+      assertTrue(parent.pointsKnown);
+      assertFalse(parent.hasPoints);
+      assertEquals(0, parent.targetX);
+      f.ai.execute(15, f.player);
+      NativeAiPathCache clone = f.world.getMapper(NativeAiPathCache.class).get(f.cloneId());
+      assertNotNull(clone);
+      assertNotSame(parent, clone);
+      assertTrue(clone.coordinatesKnown);
+      assertTrue(clone.pointsKnown);
+      assertFalse(clone.hasPoints);
+      assertEquals(0, clone.targetY);
+      assertFalse(parent.coordinatesKnown, "parent action must not invalidate the new clone's cache");
+    }
+  }
+
   @Test
   void realCloneRowUsesDedicatedAiAndIsNotTheQuestBaal() {
     MonStats.Entry row = Riiablo.files.monstats.get("baalclone");

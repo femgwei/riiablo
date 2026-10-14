@@ -94,6 +94,7 @@ abstract class NativeDecisionAI extends AI {
 
   /** Starts the native ordinary attack action in the requested monster mode. */
   protected final void attack(int targetId, int attackMode) {
+    invalidateNativePathCache();
     stopMovement();
     lookAt(targetId);
     state = "ATTACK";
@@ -149,6 +150,7 @@ abstract class NativeDecisionAI extends AI {
 
   /** Starts a native mode-only action for MonStats rows without a Skills.txt entry. */
   protected final void startMode(int mode, int targetId) {
+    invalidateNativePathCache();
     stopMovement();
     lookAt(targetId);
     state = "CAST";
@@ -160,6 +162,7 @@ abstract class NativeDecisionAI extends AI {
   public void kill() {
     if (dead) return;
     dead = true;
+    invalidateNativePathCache();
     state = "DEAD";
     stopMovement();
     mCasting.remove(entityId);

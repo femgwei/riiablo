@@ -40,6 +40,7 @@ import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
@@ -115,6 +116,7 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
+  protected ComponentMapper<NativeAiPathCache> mNativeAiPathCache;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Target> mTarget;
 
@@ -460,6 +462,7 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   public void hit() {
+    invalidateNativePathCache();
     com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_hit_1", true);
   }
 
@@ -486,6 +489,7 @@ public abstract class AI implements Interactable.Interactor {
       int velocityBonusPercent,
       boolean raycast,
       int targetEntityId) {
+    invalidateNativePathCache();
     boolean found = pathfinder.findPath(entityId, target, raycast, targetEntityId);
     if (!found) {
       stopMovement();
@@ -547,6 +551,7 @@ public abstract class AI implements Interactable.Interactor {
    * hook resets AI-local intent that cannot be represented by ECS components.
    */
   public void onOwnerWarp() {
+    invalidateNativePathCache();
     movementActive = false;
     lastMovementRunning = false;
     lastMovementVelocityBonus = Integer.MIN_VALUE;
@@ -656,6 +661,7 @@ public abstract class AI implements Interactable.Interactor {
           entityId, skill.Id, skill.skill);
     }
 
+    invalidateNativePathCache();
     stopMovement();
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
@@ -665,6 +671,13 @@ public abstract class AI implements Interactable.Interactor {
           entityId, skill.Id, targetId, resolvedTarget.cpy(), skill.srvstfunc, skill.cltstfunc));
     }
     return true;
+  }
+
+  /** Invalidate only opted-in native path projections, never infer from A*. */
+  protected final void invalidateNativePathCache() {
+    if (mNativeAiPathCache != null && mNativeAiPathCache.has(entityId)) {
+      mNativeAiPathCache.get(entityId).invalidate();
+    }
   }
 
   /** Returns whether a skill row can create at least one projectile. */

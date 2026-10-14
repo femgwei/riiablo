@@ -32,11 +32,25 @@ final class NativeTowardPathProbe {
 
   static boolean hasPathPoints(int sx, int sy, int tx, int ty,
       int maxDistance, int targetTolerance, Blocked blocked) {
+    return hasPathPoints(sx, sy, tx, ty, maxDistance, targetTolerance, blocked, false);
+  }
+
+  /** D2Common_10142 normalizes duplicate source points; if there is no next
+   * point, its final cleanup clears dwPathPoints again. */
+  static boolean hasPathPointsAfterNormalization(int sx, int sy, int tx, int ty,
+      int maxDistance, int targetTolerance, Blocked blocked) {
+    return hasPathPoints(sx, sy, tx, ty, maxDistance, targetTolerance, blocked, true);
+  }
+
+  private static boolean hasPathPoints(int sx, int sy, int tx, int ty,
+      int maxDistance, int targetTolerance, Blocked blocked, boolean normalize) {
     if (sx == tx && sy == ty) return false;
     RayResult ray = trace(sx, sy, tx, ty, blocked);
     // PATH_Toward stores one point for a clear ray OR a clipped endpoint
     // within field_14 (PATH_UpdateTargetUnit returns 1 for players/monsters).
-    if (ray.clear || heuristic(ray.x - tx, ray.y - ty) <= targetTolerance) return true;
+    if (ray.clear || heuristic(ray.x - tx, ray.y - ty) <= targetTolerance) {
+      return !normalize || ray.x != sx || ray.y != sy;
+    }
     if (ray.x != sx || ray.y != sy) return true; // A partial ray is already a path point.
     // With no ray progress, the first successful local step changes direction
     // from PATH_DIR_NULL but does NOT append the source. A budget of one exits

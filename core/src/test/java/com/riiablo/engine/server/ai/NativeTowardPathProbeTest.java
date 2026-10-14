@@ -9,6 +9,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NativeTowardPathProbeTest {
   @Test
+  void wrapperClearsSourceOnlyPointAfterVelocityNormalization() {
+    assertTrue(NativeTowardPathProbe.hasPathPoints(10, 10, 13, 10, 14, 1, (x, y) -> true));
+    assertFalse(NativeTowardPathProbe.hasPathPointsAfterNormalization(
+        10, 10, 13, 10, 14, 1, (x, y) -> true));
+    assertTrue(NativeTowardPathProbe.hasPathPointsAfterNormalization(
+        10, 10, 13, 10, 14, 1, (x, y) -> x >= 12));
+    assertTrue(NativeTowardPathProbe.hasPathPointsAfterNormalization(
+        10, 10, 20, 10, 14, 1, (x, y) -> x != 11 || y != 9));
+  }
+
+  @Test
   void rayUsesNativeStaircaseOrderAndClipsAtLastCompletedIteration() {
     List<String> tested = new ArrayList<>();
     NativeTowardPathProbe.RayResult ray = NativeTowardPathProbe.trace(10, 10, 14, 12, (x, y) -> {

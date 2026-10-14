@@ -47,6 +47,7 @@ import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Object;
@@ -101,6 +102,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<NativeAiPathCache> mNativeAiPathCache;
   protected ComponentMapper<Warp> mWarp;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
@@ -440,6 +442,11 @@ public class ServerEntityFactory extends EntityFactory {
     if (!monstats.npc) nativeFlags.set(NativeUnitFlags.MONSTER_TARGET);
     Monster monster = mMonster.create(id).set(monstats, monstats2)
         .setRank(rank, affixes, championType, uniqueId);
+    if ("BaalCrab".equals(monstats.AI) || "BaalCrabClone".equals(monstats.AI)) {
+      // PATH_AllocDynamicPath is zero-allocated. AI replacement is NOT a new
+      // allocation, so initialize here rather than in BaalCrab.initialize().
+      mNativeAiPathCache.create(id).allocated();
+    }
     monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
 

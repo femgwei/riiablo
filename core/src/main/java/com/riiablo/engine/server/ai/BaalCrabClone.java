@@ -28,6 +28,7 @@ public class BaalCrabClone extends BaalCrab {
   @Override
   void execute(int action, int targetId) {
     if (targetId == Engine.INVALID_ENTITY) {
+      invalidateNativePathCache();
       // Native still rolls the table, but with no target it performs no action.
       idle(15);
       return;
