@@ -905,15 +905,29 @@ public abstract class AI implements Interactable.Interactor {
    * monster AIs from accidentally reverting to global nearest-player scans.
    */
   protected boolean isValidEnemyTarget(int targetId) {
+    return isValidEnemyTarget(targetId, true);
+  }
+
+  /** Boss scans supply their own native target scope, retaining faction,
+   * town, life, target flags, map ownership and explicit curse overrides. */
+  protected final boolean isValidEnemyTargetWithoutAiScope(int targetId) {
+    return isValidEnemyTarget(targetId, false);
+  }
+
+  private boolean isValidEnemyTarget(int targetId, boolean ordinaryScope) {
     if (mNativeAiTargetOverride.has(entityId)) {
       NativeAiTargetOverride override = mNativeAiTargetOverride.get(entityId);
       return override.remainingFrames >= 0 && targetId == override.targetId
           && isValidOverrideMonsterTarget(targetId);
     }
-    return isValidOrdinaryEnemyTarget(targetId);
+    return isValidOrdinaryEnemyTarget(targetId, ordinaryScope);
   }
 
   private boolean isValidOrdinaryEnemyTarget(int targetId) {
+    return isValidOrdinaryEnemyTarget(targetId, true);
+  }
+
+  private boolean isValidOrdinaryEnemyTarget(int targetId, boolean ordinaryScope) {
     if (!mPosition.has(targetId) || targetId == entityId) return false;
     SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
     if (sourcePet != null && sourcePet.passive) return false;
@@ -963,28 +977,28 @@ public abstract class AI implements Interactable.Interactor {
       MapWrapper source = mMapWrapper.get(entityId);
       MapWrapper target = mMapWrapper.get(targetId);
       if (source.map != null && target.map != null && source.map != target.map) return false;
-      if (sourcePet == null && monster != null && monster.spawnZone != null
+      if (ordinaryScope && sourcePet == null && monster != null && monster.spawnZone != null
           && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)
           && (source.map == null
               || !source.map.areZonesAdjacent(monster.spawnZone, source.zone)
               || !source.map.areZonesAdjacent(monster.spawnZone, target.zone))) return false;
-      if (source.zone != null && target.zone != null && source.zone != target.zone
+      if (ordinaryScope && source.zone != null && target.zone != null && source.zone != target.zone
           && (source.map == null || !source.map.areZonesAdjacent(source.zone, target.zone))) {
         return false;
       }
-      if (source.zone != null && target.zone == source.zone
+      if (ordinaryScope && source.zone != null && target.zone == source.zone
           && !source.zone.areRoomsAdjacent(
               mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
               mPosition.get(targetId).position.x, mPosition.get(targetId).position.y)) {
         return false;
       }
     }
-    if (!isWithinSpawnPursuitScope(targetId)) return false;
+    if (ordinaryScope && !isWithinSpawnPursuitScope(targetId)) return false;
     // Reuse the native aiDist limit for legacy AI implementations that still
     // iterate their own subscription.  A zero MonStats value is not unlimited:
     // D2Game falls back to 35.  Keep the same weighted grid metric as the
     // target-node scan so diagonal targets cannot bypass the range gate.
-    if (mPosition.has(entityId)
+    if (ordinaryScope && mPosition.has(entityId)
         && nativeAiDistance(mPosition.get(entityId).position,
             mPosition.get(targetId).position) > resolveAiDistance()) {
       return false;

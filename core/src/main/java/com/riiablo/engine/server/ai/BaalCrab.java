@@ -2,6 +2,7 @@ package com.riiablo.engine.server.ai;
 
 import com.artemis.Aspect;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
@@ -10,17 +11,19 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.DynamicUnitCollisionSystem;
-import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.AIWrapper;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
+import com.riiablo.save.CharData;
 
-/** D2MOO AiBaal.cpp Fn135 / MainSkillHandler. Boss target scoring pending. */
+/** D2MOO AiBaal.cpp Fn135 / MainSkillHandler, with ECS player-owner target groups. */
 public class BaalCrab extends NativeDecisionAI {
   // Fixed SkillsIds.h constants, NOT zero-based MonStats slots.
   static final int SKILL_TENTACLE = 315;
@@ -33,6 +36,8 @@ public class BaalCrab extends NativeDecisionAI {
   private final Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
   private boolean anchored;
+  private int targetCount;
+  private int maxTargetScore;
 
   public BaalCrab(int entityId) { super(entityId); }
 
@@ -56,13 +61,128 @@ public class BaalCrab extends NativeDecisionAI {
     execute(blocked ? 4 : rollAiRandomNumber() % 100 < 8 ? 9 : 1, Engine.INVALID_ENTITY);
   }
 
+  /** Fn135/Fn140 pass null score args: the optional anchor score bonus is zero. */
   @Override
-  protected void think(int targetId, float distance, boolean combat) {
-    int count = 0;
+  protected int findNearestTargetWithAidist(float[] outDistance) {
+    targetCount = 0;
+    maxTargetScore = 0;
+    if (mNativeAiTargetOverride.has(entityId)) {
+      // Preserve the shared explicit Attract/Confuse authority boundary.
+      int id = super.findNearestTargetWithAidist(outDistance);
+      if (id >= 0) { targetCount = 1; maxTargetScore = targetScore(id); }
+      return id;
+    }
+    int selected = Engine.INVALID_ENTITY;
     IntBag units = getEnemyEntities().getEntities();
     for (int i = 0; i < units.size(); i++) {
-      if (isValidEnemyTarget(units.get(i))) ++count;
+      int player = units.get(i);
+      if (!mPlayer.has(player) || !cullPlayerHead(player)) continue;
+      // Native includes a dead player head in the count but gives it score 0.
+      targetCount++;
+      int score = eligibleScore(player);
+      if (score > maxTargetScore) { maxTargetScore = score; selected = player; }
+      // Targets.cpp inserts new pets directly after their player head. ECS
+      // iteration is a projection, not a native slot/GUID insertion-order port.
+      for (int j = units.size() - 1; j >= 0; j--) {
+        int child = units.get(j);
+        if (child == player || playerOwner(child) != player || !sameActAndMap(child)) continue;
+        targetCount++;
+        score = eligibleScore(child);
+        if (score > maxTargetScore) { maxTargetScore = score; selected = child; }
+      }
     }
+    outDistance[0] = selected < 0 ? Float.MAX_VALUE
+        : distanceWithSize(mPosition.get(entityId).position, mPosition.get(selected).position, 0);
+    if (selected < 0) stopMovement();
+    return selected;
+  }
+
+  int lastTargetCount() { return targetCount; }
+  int lastMaxTargetScore() { return maxTargetScore; }
+
+  private int playerOwner(int id) {
+    if (mMercenary.has(id)) return mMercenary.get(id).ownerId;
+    // Bone walls/prisons and converted monsters belong to native node 9,
+    // whose path-point fallback is not projected into this primary scan.
+    if (mSummonedPet.has(id) && !mSummonedPet.get(id).boneWall) return mSummonedPet.get(id).ownerId;
+    return Engine.INVALID_ENTITY;
+  }
+
+  private boolean cullPlayerHead(int id) {
+    return sameActAndMap(id)
+        && (!mMapWrapper.has(id) || mMapWrapper.get(id).zone == null || !mMapWrapper.get(id).zone.isTown())
+        && distanceWithSize(mPosition.get(entityId).position, mPosition.get(id).position, 0) < 55;
+  }
+
+  private boolean sameActAndMap(int id) {
+    MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    MapWrapper target = mMapWrapper.has(id) ? mMapWrapper.get(id) : null;
+    if (source != null && target != null && source.map != null && target.map != null
+        && source.map != target.map) return false;
+    int sourceAct = unitAct(source);
+    int targetAct = unitAct(target);
+    return sourceAct < 0 || targetAct < 0 || sourceAct == targetAct;
+  }
+
+  private static int unitAct(MapWrapper wrapper) {
+    if (wrapper == null) return -1;
+    if (wrapper.zone != null && wrapper.zone.level != null) return wrapper.zone.level.Act;
+    return wrapper.map != null ? wrapper.map.getAct() : -1;
+  }
+
+  private int eligibleScore(int id) {
+    if (!isValidEnemyTargetWithoutAiScope(id) || mCorpse.has(id)) return 0;
+    int mode = mSequence.has(id) ? mSequence.get(id).mode1
+        : mCofReference.has(id) ? mCofReference.get(id).mode : Engine.INVALID_MODE;
+    if (mode == Engine.Player.MODE_DT
+        || mode == (mPlayer.has(id) ? Engine.Player.MODE_DD : Engine.Monster.MODE_DD)) return 0;
+    return targetScore(id);
+  }
+
+  /** AIBAAL_GetTargetScore integer arithmetic; normal boss calls have pArgs=null. */
+  int targetScore(int id) {
+    if (mMonster.has(id) && (mMonster.get(id).monstats == null
+        || mMonster.get(id).monstats.threat <= 1)) return 0;
+    int resist = (statInt(id, Stat.fireresist) + statInt(id, Stat.coldresist)
+        + statInt(id, Stat.lightresist)
+        + 4 * (statInt(id, Stat.damageresist) + 2 * statInt(id, Stat.magicresist))) / 15;
+    long damage = (long) statInt(id, Stat.maxdamage) + statInt(id, Stat.firemaxdam)
+        + statInt(id, Stat.lightmaxdam) + statInt(id, Stat.magicmaxdam)
+        + statInt(id, Stat.coldmaxdam) + (statInt(id, Stat.poisonmaxdam) >> 8);
+    int damageWeight = (int) damage / 2;
+    int rankWeight = (handAttackRank(id, Input.Buttons.LEFT)
+        + handAttackRank(id, Input.Buttons.RIGHT)) / 4;
+    int collisionWeight = isInNativeMeleeRange(id) ? 100 : hasBarrier(id) ? 0 : 75;
+    int score = (resist + 5 * collisionWeight
+        + 2 * (damageWeight + rankWeight + (isCold(id) ? 200 : 0))
+        + (lifePercent(id) >= 20 ? 300 : 0)) / 22;
+    return score == 0 ? 1 : score;
+  }
+
+  private int handAttackRank(int id, int button) {
+    CharData data = mPlayer.has(id) ? mPlayer.get(id).data : null;
+    if (data == null) return 0;
+    int skillId = data.getAction(button);
+    NativeSkills.Entry skill = Riiablo.files.NativeSkills.get(skillId);
+    int level = data.getSkill(skillId);
+    if (skill == null || level <= 0) return 0;
+    if (mUnitStates.has(id) && mUnitStates.get(id).stateList != null) {
+      level += mUnitStates.get(id).stateList.getTotalSkillModifier();
+    }
+    return Math.max(0, level) * (skill.nativeInteger("attackrank") & 0xFF);
+  }
+
+  private int statInt(int id, short stat) {
+    Attributes attrs = mAttributesWrapper.has(id) ? mAttributesWrapper.get(id).attrs : null;
+    return attrs == null ? 0 : attrs.getValue(stat, 0);
+  }
+
+  @Override
+  protected void think(int targetId, float distance, boolean combat) {
+    execute(selectAction(decisionWeights(targetId, combat), rollAiRandomNumber()), targetId);
+  }
+
+  int[] decisionWeights(int targetId, boolean combat) {
     int sourceSize = mSize.has(entityId) ? mSize.get(entityId).size : 1;
     int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : 1;
     int fromAnchor = distanceWithSize(mPosition.get(targetId).position, anchor,
@@ -71,9 +191,12 @@ public class BaalCrab extends NativeDecisionAI {
     int[] table = weights(resolveAiDifficulty(), combat, barrier,
         distanceWithSize(mPosition.get(entityId).position, mPosition.get(targetId).position,
             sourceSize), lifePercent(entityId), lifePercent(targetId), isCold(targetId),
-        count, fromAnchor > 75, fromAnchor > 100);
-    if (!combat && !barrier) table[15] = cloneWeight(monster.baalClonesCreated);
-    execute(selectAction(table, rollAiRandomNumber()), targetId);
+        targetCount, fromAnchor > 75, fromAnchor > 100);
+    if (!combat && !barrier) {
+      table[15] = cloneWeight(monster.baalClonesCreated);
+      if (maxTargetScore > 60) table[8] = 70;
+    }
+    return table;
   }
 
   /** Indices and fixed modes from AIBAAL_MainSkillHandler, exposed for branch tests. */
