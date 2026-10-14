@@ -47,13 +47,14 @@ class NativeObjectTourResourceTest extends RiiabloTest {
     }
   }
 
-  @Test void kurastStairsUseNativeObjTypeVisualsAndAllEnabledModesResolve() {
+  @Test void stairsAndSpacePaddedTokensResolveAllNativeVisualModes() {
     assertEquals("sl", Riiablo.files.objects.get(194).Token);
     assertEquals("9c", Riiablo.files.ObjType.get(194).Token);
+    assertEquals("ss", Riiablo.files.ObjType.get(523).Token);
     assertEquals("2v", Riiablo.files.ObjType.get(449).Token.toLowerCase(java.util.Locale.ROOT));
-    for (byte mode = 0; mode < 8; mode++) {
-      if (!Riiablo.files.objects.get(194).Mode[mode]) continue;
-      String token = Riiablo.files.ObjType.get(194).Token;
+    for (int id : new int[]{194, 523}) for (byte mode = 0; mode < 8; mode++) {
+      if (!Riiablo.files.objects.get(id).Mode[mode]) continue;
+      String token = Riiablo.files.ObjType.get(id).Token;
       String name = Class.Type.OBJ.getMode(mode);
       String root = Class.Type.OBJ.PATH + "\\" + token + "\\";
       String path = root + "cof\\" + token + name + "hth.cof";
@@ -67,6 +68,11 @@ class NativeObjectTourResourceTest extends RiiabloTest {
         String sprite = stem + name + layer.weaponClass + ".dcc";
         if (!Riiablo.mpqs.contains(sprite) && cof.getNumFramesPerDir() == 1)
           sprite = stem + "OP" + layer.weaponClass + ".dcc";
+        if (!Riiablo.mpqs.contains(sprite)) {
+          sprite = stem + name + layer.weaponClass + ".dc6";
+          if (!Riiablo.mpqs.contains(sprite) && cof.getNumFramesPerDir() == 1)
+            sprite = stem + "OP" + layer.weaponClass + ".dc6";
+        }
         assertTrue(Riiablo.mpqs.contains(sprite), sprite);
         DC dc = DC.loadFromFile(Riiablo.mpqs.resolve(sprite));
         try { assertTrue(dc.getNumDirections() > 0); assertTrue(dc.getNumFramesPerDir() > 0); }
