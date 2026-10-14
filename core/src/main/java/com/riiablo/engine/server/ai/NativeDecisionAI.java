@@ -46,6 +46,22 @@ abstract class NativeDecisionAI extends AI {
     if (!walkTo(mPosition.get(targetId).position, velocityBonus, targetId)) idle(10);
   }
 
+  /**
+   * Starts the native orbit/strafe movement used by flying monsters. The
+   * target remains attached to the movement action so a moving player is not
+   * left behind while the pathfinder resolves the side-step.
+   */
+  protected final void circle(int targetId, float radius) {
+    com.badlogic.gdx.math.Vector2 source = mPosition.get(entityId).position;
+    com.badlogic.gdx.math.Vector2 target = mPosition.get(targetId).position;
+    com.badlogic.gdx.math.Vector2 offset = new com.badlogic.gdx.math.Vector2(source)
+        .sub(target);
+    if (offset.isZero(0.0001f)) offset.set(1f, 0f);
+    offset.rotate90(1).nor().scl(radius).add(target);
+    state = "CIRCLE";
+    if (!walkTo(offset, 0, targetId)) idle(10);
+  }
+
   protected final void attack(int targetId) {
     attack(targetId, Engine.Monster.MODE_A1);
   }

@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A2 FlyingScimitar AI
+
+- [x] 新增 `FlyingScimitar`：按 D2MOO `AITHINK_Fn047_FlyingScimitar` 保留战斗时
+  攻击/绕行分支、非战斗时双重接近概率判断，以及 `aidel` 停顿和单位目标绑定。
+- [x] 真实 1.10f MonStats 动态查找覆盖 `FlyingScimitar` 行，攻击与绕行路径回归通过。
+- [ ] 原生飞行单位的精确圆周路径采样、`pSeed` 生命周期和 MonSeq 帧仍待后续对齐。
+
 ## 2026-10-15 A2 Duriel 与 Summoner
 
 - [x] 新增 `Duriel` 专用 AI：按 D2MOO 的 Smite/Jab/Attack2/A1 近战优先级，非近战

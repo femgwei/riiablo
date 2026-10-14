@@ -272,6 +272,25 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void flyingScimitarUsesNativeAttackAndCircleBranches() {
+    String rowId = rowIdForAi("FlyingScimitar");
+    try (Fixture f = new Fixture(rowId, 0, 1f)) {
+      f.ai.params[FlyingScimitar.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.params[FlyingScimitar.PARAM_CIRCLE_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("ATTACK", f.ai.getState());
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture(rowId, 0, 1f)) {
+      f.ai.params[FlyingScimitar.PARAM_ATTACK_CHANCE] = 0;
+      f.ai.params[FlyingScimitar.PARAM_CIRCLE_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("CIRCLE", f.ai.getState());
+      verify(f.paths).findPath(eq(f.actor), any(), eq(false), eq(f.target));
+    }
+  }
+
+  @Test
   void smithSpeedsUpWhenHurtAndUsesOrdinaryAttackInMelee() {
     try (Fixture f = new Fixture("smith", 0, 30f)) {
       f.health(50f, 100f);
@@ -451,6 +470,14 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       Riiablo.engine = previous;
       Riiablo.gameSeed = oldSeed;
     }
+  }
+
+  private static String rowIdForAi(String aiName) {
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      if (aiName.equalsIgnoreCase(row.AI)) return row.Id;
+    }
+    fail("1.10f contains no MonStats row for AI " + aiName);
+    return null;
   }
 
   private static final class NoopFactory extends EntityFactory {
