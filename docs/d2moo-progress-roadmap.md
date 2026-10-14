@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 BaalMinion AI
+
+- [x] 新增 `BaalMinion`，依据 D2MOO `AITHINK_Fn141_BaalMinion` 接入攻击概率、近战
+  技能二次概率、A1 普攻、非战斗接近概率和两套停顿参数；技能/攻击继续使用统一的
+  `SkillCast`、`SkillStart`、`Sequence` 生命周期。
+- [x] 真实 1.10f `BaalMinion` MonStats 行已解析到专用类，新增 3 项回归覆盖专用入口、
+  近战技能优先级、普攻回退以及非战斗接近/停顿分支。
+- [ ] 原生函数末尾 `AITACTICS_Idle` 与动作事件队列的精确叠加、波次 SuperUnique
+  归属、完整 `pSeed`、RoomEx 目标节点和 MonSeq 帧序列仍待对齐；本轮不宣称五波
+  首领变体及客户端动画逐帧等同。下一项继续 A5 Baal 相关 AI 链。
+
 ## 2026-10-15 A4 Diablo AI
 
 - [x] 新增 `Diablo`，依据 D2MOO `AITHINK_Fn051_Diablo` 接入同 Act 目标筛选、55 格
