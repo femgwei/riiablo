@@ -52,19 +52,8 @@ public class CofLayerCacher extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    // Animation speed is authoritative in AnimData.  Repeated Strafe actions
-    // update override for each attack cycle (including weapon IAS); keep the
-    // already-loaded client animation in lockstep instead of applying the
-    // rate only when a COF is first loaded.
-    AnimationWrapper wrapper = mAnimationWrapper.has(entityId)
-        ? mAnimationWrapper.get(entityId) : null;
-    AnimData currentAnim = mAnimData.get(entityId);
-    if (wrapper != null && wrapper.animation != null && currentAnim != null) {
-      int expectedRate = animationRate(entityId, currentAnim);
-      if (expectedRate > 0 && wrapper.animation.getFrameDelta() != expectedRate) {
-        wrapper.animation.setFrameDelta(expectedRate);
-      }
-    }
+    // Live unit rate synchronization belongs to AnimationStepper, whose
+    // subscription survives removal of the transient loading component.
     CofLoadingComponents loading = mCofLoadingComponents.get(entityId);
     // A mode/COF change can remove the transient loading component while this
     // subscription is being iterated (notably during the initial town

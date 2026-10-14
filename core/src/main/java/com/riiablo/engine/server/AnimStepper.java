@@ -71,11 +71,13 @@ public class AnimStepper extends IntervalIteratingSystem {
           delta, states.stateList.getTotalAnimationRateModifier());
     }
     if (delta < 0) delta = 0;
-    int nextFrame = animData.frame + delta;
-    if (delta == 0) {
+    // Zero-speed idle data is valid for native scenery monsters (windows).
+    // Diagnose only an actual player stall, but do not change native rates.
+    if (delta == 0 && mPlayer.has(entityId)) {
       log.warn("[ATTACK_ANIM] stalled entity={} frame={} mode animation has zero delta",
           entityId, animData.frame);
     }
+    int nextFrame = animData.frame + delta;
     while (nextFrame >= animData.numFrames) {
       nextFrame -= animData.numFrames;
       dispatchKeyframes(entityId, animData, true);

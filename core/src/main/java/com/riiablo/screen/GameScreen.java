@@ -1513,6 +1513,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       Gdx.app.log(TAG, "Arriving at waypoint: level=" + waypointTarget.LevelName
           + "(" + waypointTarget.Id + ") position=" + origin);
     }
+    if (waypointTarget != null && origin == null) {
+      Gdx.app.error(TAG, "Unable to travel to cross-act waypoint: level="
+          + waypointTarget.LevelName + "(" + waypointTarget.Id
+          + "); falling back to current-act town spawn, not a successful waypoint arrival");
+    }
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_1);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);

@@ -16,6 +16,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   public AnimationStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -50,7 +51,14 @@ public class AnimationStepper extends IntervalIteratingSystem {
       return;
     }
 
-    //mAnimationWrapper.get(entityId).animation.update(world.delta);
+    // CofLayerCacher only runs while assets are loading. Resident COFs must
+    // follow live authoritative rates too, including recovery from zero and
+    // clearing an attack/movement override. Do not restart fractional playback.
+    // Objects retain Objects.txt's per-unit visual rates set by the cacher.
+    if (animData != null && !mObject.has(entityId)) {
+      int rate = Math.max(0, animData.override >= 0 ? animData.override : animData.speed);
+      if (wrapper.animation.getFrameDelta() != rate) wrapper.animation.setFrameDelta(rate);
+    }
     wrapper.animation.update(SimulationClock.STEP_SECONDS);
   }
 }

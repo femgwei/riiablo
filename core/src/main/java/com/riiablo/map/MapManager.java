@@ -583,7 +583,7 @@ public class MapManager extends PassiveSystem {
   }
 
   /** Locates the deferred native RoomEx containing this level's waypoint. */
-  private Map.RoomEx findNativeWaypointRoom(Map.Zone zone) {
+  Map.RoomEx findNativeWaypointRoom(Map.Zone zone) {
     if (zone == null || zone.level == null || !zone.hasNativeRoomTopology()) return null;
     final int objectAct = zone.level.Act + 1;
     for (int i = 0; i < zone.nativeObjects.size; i++) {
