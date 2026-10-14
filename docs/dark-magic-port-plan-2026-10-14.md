@@ -166,3 +166,17 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   未进行实机位移验收。
   验证：PlayerVelocityUnitsTest、StaminaSystemTest、PathfinderTest定向测试通过，
   diff检查通过。随后仅调整注释及日志标签，按用户约定不再次编译。
+- 玩家速度复核第二批（模式切换与端点）：VelocityModeChanger.begin/toggleRunWalk
+  原先以setLength重设向量，会放大Pathfinder或碰撞处理留下的短步长；现只限制
+  速度上限，不放大、不改变方向。奔跑加速由下一次Pathfinder计算，不在模式切换
+  时覆盖终点截断。新增步长0.5在跑走切换后保持不变、满跑降至步行及零速回归。
+  本地GameScreen中StateUpdater先于Pathfinder，模式更新位于碰撞同步之后；
+  本地使用Box2D，D2GS使用VelocityAdder。后者再次乘stateSpeedMultiplier，而
+  Pathfinder已对<=1的状态倍率调整速度，两条位移路径存在统一合同的待办。
+  D2MOO UNITS_GetAnimStatBasePercentage 对装备FRW使用150*FRW/(150+FRW)
+  （整数除法）；移动总百分比再与STAT_VELOCITYPERCENT相加、最低25。
+  当前StateUpdater把慢速/Frenzy/光环相乘且尚未接入完整装备FRW公式，因此不能
+  宣称加速审计完成；下一批优先统一位移倍率应用一次，再迁移玩家加速公式，
+  避免把同一状态贡献重复计算。此批不改状态聚合或装备加速。
+  验证：VelocityModeChangerTest、PathfinderTest、StaminaSystemTest定向测试通过，
+  diff检查通过；尚未实机验收。

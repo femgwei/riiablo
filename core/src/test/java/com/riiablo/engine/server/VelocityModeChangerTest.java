@@ -8,6 +8,21 @@ import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
 
 class VelocityModeChangerTest {
+  @Test
+  void changingMovementModePreservesTheTerminalShortStep() {
+    com.badlogic.gdx.math.Vector2 step = new com.badlogic.gdx.math.Vector2(0.3f, 0.4f);
+    VelocityModeChanger.limitMovementSpeed(step, 9.375f);
+    assertEquals(0.5f, step.len(), 0.0001f);
+    VelocityModeChanger.limitMovementSpeed(step, 14.0625f);
+    assertEquals(0.5f, step.len(), 0.0001f);
+    step.set(14.0625f, 0);
+    VelocityModeChanger.limitMovementSpeed(step, 9.375f);
+    assertEquals(9.375f, step.len(), 0.0001f);
+    step.setZero();
+    VelocityModeChanger.limitMovementSpeed(step, 14.0625f);
+    assertEquals(0f, step.len());
+  }
+
   @Test void unsetMonsterWeaponClassCannotCrashBaseAnimationLookup() {
     com.riiablo.codec.D2 saved = com.riiablo.Riiablo.anim;
     try {

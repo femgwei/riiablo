@@ -99,10 +99,16 @@ public class VelocityModeChanger extends IteratingSystem {
     Vector2 velocity = velocityComp.velocity;
     if (velocity.isZero()) return;
     if (isEffectivelyRunning(entityId)) {
-      velocity.setLength(velocityComp.runSpeed);
+      limitMovementSpeed(velocity, velocityComp.runSpeed);
     } else {
-      velocity.setLength(velocityComp.walkSpeed);
+      limitMovementSpeed(velocity, velocityComp.walkSpeed);
     }
+  }
+
+  /** Pathfinder owns acceleration and terminal clipping; mode changes only cap it. */
+  static void limitMovementSpeed(Vector2 velocity, float speed) {
+    if (speed <= 0f) velocity.setZero();
+    else velocity.limit(speed);
   }
 
   /**
