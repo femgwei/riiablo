@@ -14,6 +14,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.DynamicUnitCollisionSystem;
+import com.riiablo.engine.server.NativeGroundPathProfile;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -95,6 +96,7 @@ public class BaalCrab extends NativeDecisionAI {
         if (score > maxTargetScore) { maxTargetScore = score; selected = child; }
       }
     }
+    selected = node9Fallback(units, selected);
     outDistance[0] = selected < 0 ? Float.MAX_VALUE
         : distanceWithSize(mPosition.get(entityId).position, mPosition.get(selected).position, 0);
     if (selected < 0) stopMovement();
@@ -105,11 +107,60 @@ public class BaalCrab extends NativeDecisionAI {
   int lastMaxTargetScore() { return maxTargetScore; }
 
   private int playerOwner(int id) {
+    if (isNode9(id)) return Engine.INVALID_ENTITY;
     if (mMercenary.has(id)) return mMercenary.get(id).ownerId;
-    // Bone walls/prisons and converted monsters belong to native node 9,
-    // whose path-point fallback is not projected into this primary scan.
-    if (mSummonedPet.has(id) && !mSummonedPet.get(id).boneWall) return mSummonedPet.get(id).ownerId;
+    if (mSummonedPet.has(id)) return mSummonedPet.get(id).ownerId;
+    // SkillPal.cpp Conversion joins the caster's player group, NOT node9.
+    if (mMonster.has(id) && mMonster.get(id).converted) return mMonster.get(id).conversionOwnerId;
     return Engine.INVALID_ENTITY;
+  }
+
+  private boolean isNode9(int id) {
+    if (!mMonster.has(id)) return false;
+    if (mSummonedPet.has(id) && mSummonedPet.get(id).boneWall) return true;
+    return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
+        && (mUnitStates.get(id).stateList.hasState(StateId.ATTRACT)
+            || mUnitStates.get(id).stateList.hasState(StateId.CONFUSE));
+  }
+
+  private int node9Fallback(IntBag units, int primary) {
+    int candidate = Engine.INVALID_ENTITY;
+    int best = 0;
+    // Native scores the ENTIRE node9 bucket before its <5 gate; a distant
+    // higher scorer therefore prevents a nearby lower scorer being used.
+    for (int i = units.size() - 1; i >= 0; i--) {
+      int id = units.get(i);
+      if (!isNode9(id) || !sameActAndMap(id)) continue;
+      int score = eligibleScore(id, true);
+      if (score > best) { best = score; candidate = id; }
+    }
+    if (candidate < 0 || primary < 0 || isInNativeMeleeRange(primary)
+        || distanceWithSize(mPosition.get(entityId).position, mPosition.get(candidate).position, 0) >= 5
+        || !noTowardStep(primary)) return primary;
+    // node9 never contributes to nCount and need not outscore the primary.
+    maxTargetScore = best;
+    return candidate;
+  }
+
+  private boolean noTowardStep(int primary) {
+    MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    // Missing terrain is unknown, not proof of zero native path points.
+    if (wrapper == null || wrapper.map == null || wrapper.zone == null) return false;
+    Vector2 source = mPosition.get(entityId).position;
+    Vector2 target = mPosition.get(primary).position;
+    int sx = Math.round(source.x), sy = Math.round(source.y);
+    int tx = Math.round(target.x), ty = Math.round(target.y);
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
+    int flags = NativeGroundPathProfile.forUnit(false, monster.monstats).terrainFlags;
+    boolean doors = monster.monstats != null && monster.monstats.opendoors
+        && NativeGroundPathProfile.forUnit(false, monster.monstats) != NativeGroundPathProfile.FLYING;
+    DynamicUnitCollisionSystem dynamic = Riiablo.engine.getSystem(DynamicUnitCollisionSystem.class);
+    // This is a read-only zero-step test, not a walk command or A* reachability
+    // query. Keep active Pathfind/velocity/target untouched during selection.
+    return !NativeTowardPathProbe.hasStep(sx, sy, tx, ty, (x, y) ->
+        wrapper.map.isBlockedForPath(wrapper.zone, x, y, flags, size, doors)
+            || dynamic != null && !dynamic.isFreeForPath(wrapper.zone,
+                entityId, Engine.INVALID_ENTITY, x, y, size));
   }
 
   private boolean cullPlayerHead(int id) {
@@ -135,7 +186,12 @@ public class BaalCrab extends NativeDecisionAI {
   }
 
   private int eligibleScore(int id) {
-    if (!isValidEnemyTargetWithoutAiScope(id) || mCorpse.has(id)) return 0;
+    return eligibleScore(id, false);
+  }
+
+  private int eligibleScore(int id, boolean node9) {
+    if (!(node9 ? isValidSpecialEnemyTargetWithoutAiScope(id)
+        : isValidEnemyTargetWithoutAiScope(id)) || mCorpse.has(id)) return 0;
     int mode = mSequence.has(id) ? mSequence.get(id).mode1
         : mCofReference.has(id) ? mCofReference.get(id).mode : Engine.INVALID_MODE;
     if (mode == Engine.Player.MODE_DT

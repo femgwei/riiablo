@@ -928,6 +928,16 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   private boolean isValidOrdinaryEnemyTarget(int targetId, boolean ordinaryScope) {
+    return isValidOrdinaryEnemyTarget(targetId, ordinaryScope, false);
+  }
+
+  /** Caller must establish native node9 membership before admitting evil units. */
+  protected final boolean isValidSpecialEnemyTargetWithoutAiScope(int targetId) {
+    return isValidOrdinaryEnemyTarget(targetId, false, true);
+  }
+
+  private boolean isValidOrdinaryEnemyTarget(int targetId, boolean ordinaryScope,
+      boolean nativeSpecialTarget) {
     if (!mPosition.has(targetId) || targetId == entityId) return false;
     SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
     if (sourcePet != null && sourcePet.passive) return false;
@@ -954,7 +964,8 @@ public abstract class AI implements Interactable.Interactor {
     if (!sourceConverted && !wildernessGuide) {
       if (sourcePet != null
           ? !(targetHostileMonster || targetHostilePlayerUnit)
-          : !(targetFriendly || candidate != null && candidate.converted)) return false;
+          : !(targetFriendly || candidate != null && candidate.converted
+              || nativeSpecialTarget && targetHostileMonster)) return false;
     }
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
         && mMapWrapper.get(targetId).zone.isTown()) {
