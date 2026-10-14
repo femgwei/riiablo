@@ -34,7 +34,7 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    1/1000均在第5帧到期、前4帧存活的系统测试。
    其他移动处理器的旧距离策略、特殊覆盖、零/负寿命、固定步长和重连剩余寿命
    仍待逐项核查；本批没有宣称完成所有导弹的原生迁移。Charged Bolt Sentry
-   的77帧也需独立核实，不能直接覆盖所有helper。
+   的77帧已在下一批核实（见验证记录），不能直接覆盖所有helper。
 3. **Blade Fury 发射时序**（已完成 1.10f 公式核查）。参考 `eecd52c9`。
    riiablo 已区分 srvmissilea/cltmissilea；现有测试允许 5 tick 后再发射，
    dark-magic 观察到 6 tick 间距。D2MOO `SKILLS_SrvDo048_BladeFury` 保存
@@ -116,3 +116,14 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 - 导弹复核第一批：`MissileNativePolicyTest` 定向测试通过，撤回第二批的距离
   语义断言；新增基础移动导弹按帧寿命及速度无关的回归。
   `MissileRoomTrackingTest` 同时通过，diff 检查通过。尚未实机验收。
+- 导弹复核第二批：D2MOO `SkillSor.cpp:SKILLS_MissileInit_ChargedBolt`
+  （0x6FD15E50）读取 TotalFrames 的 uint8 视图；>=78时才将总帧数及当前帧
+  改为77，否则保留已有寿命。SrvDo017 的陷阱和法师，以及 SkillAma.cpp 的
+  Charged Strike 均使用该初始化回调。77不是固定寿命，也不是世界距离。
+  已为陷阱/法师/Charged Strike 统一 Range + level * LevRange 后的条件截断，
+  Charged Strike 不再强制延长短寿命到77；chargedBoltPath 的显式帧寿命不再
+  被旧距离阈值提前删除。旧 range 字段暂保留兼容值，不作为这些导弹销毁阈值。
+  uint8 边界也纳入测试（300帧的低字节44不触发截断），不直接推广到刺客武学
+  的其他初始化回调；武学释放、特殊路径长度和重连剩余帧仍待后续核查。
+  验证：MissileNativePolicyTest 18项及 Charged Bolt Sentry 发射回归1项均通过，
+  无跳过，diff 检查通过；尚未实机验收。

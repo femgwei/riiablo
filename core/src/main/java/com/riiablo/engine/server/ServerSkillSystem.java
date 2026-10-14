@@ -2544,6 +2544,7 @@ public class ServerSkillSystem extends PassiveSystem {
       bolt.chargedBoltSeedLow = (int) rolled;
       bolt.chargedBoltSeedHigh = (int) (rolled >>> 32);
       bolt.chargedBoltNextTurnDistance = 2f;
+      bolt.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(row, skillLevel);
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
       created++;
@@ -2863,7 +2864,7 @@ public class ServerSkillSystem extends PassiveSystem {
       bolt.chargedBoltTargetX = targetX;
       bolt.chargedBoltTargetY = targetY;
       // SKILLS_MissileInit_ChargedBolt caps the native path at 77 frames.
-      bolt.nativeLifetimeFrames = 77;
+      bolt.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(missile, skillLevel);
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
       created++;

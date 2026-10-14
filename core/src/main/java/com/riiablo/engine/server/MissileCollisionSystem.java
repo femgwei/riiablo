@@ -391,7 +391,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       missile.hitTargets.clear();
     }
     
-    boolean basicFramePolicy = missile.missile != null && missile.missile.pSrvDoFunc == 1
+    boolean basicFramePolicy = missile.missile != null
+        && (missile.missile.pSrvDoFunc == 1 || missile.chargedBoltPath)
         && missile.nativeLifetimeFrames > 0;
     boolean frameExpiry = basicFramePolicy
         && missile.nativeFrame >= missile.nativeLifetimeFrames;

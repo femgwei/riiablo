@@ -338,6 +338,22 @@ class MissileNativePolicyTest {
   }
 
   @Test
+  void chargedBoltLifetimeCapsLongRowsWithoutExtendingShortRows() {
+    Missiles.Entry row = new Missiles.Entry();
+    row.Range = 40;
+    row.LevRange = 2;
+    assertEquals(46, Missile.chargedBoltLifetimeFrames(row, 3));
+    row.Range = 77;
+    row.LevRange = 0;
+    assertEquals(77, Missile.chargedBoltLifetimeFrames(row, 1));
+    row.Range = 78;
+    assertEquals(77, Missile.chargedBoltLifetimeFrames(row, 1));
+    row.Range = 300;
+    assertEquals(300, Missile.chargedBoltLifetimeFrames(row, 1),
+        "native callback compares the uint8 view, not the full frame count");
+  }
+
+  @Test
   void basicLifetimeDoesNotDependOnTravelSpeed() {
     for (float speed : new float[] {1f, 1000f}) {
       World world = new World(new WorldConfigurationBuilder()
@@ -364,6 +380,35 @@ class MissileNativePolicyTest {
       } finally {
         world.dispose();
       }
+    }
+  }
+
+  @Test
+  void chargedBoltOverrideExpiresByFramesNotLegacyDistance() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem()).build());
+    try {
+      int id = world.create();
+      Missiles.Entry row = new Missiles.Entry();
+      row.Vel = 30;
+      row.Range = 5;
+      Missile missile = world.getMapper(Missile.class).create(id);
+      missile.set(row, Vector2.Zero, row.Range);
+      missile.chargedBoltPath = true;
+      missile.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(row, 1);
+      world.getMapper(Position.class).create(id).position.setZero();
+      world.getMapper(Velocity.class).create(id).velocity.set(1000, 0);
+      world.setDelta(1f / 25f);
+      EntitySubscription subscription = world.getAspectSubscriptionManager().get(
+          Aspect.all(Missile.class, Position.class, Velocity.class));
+      for (int frame = 1; frame < 5; frame++) {
+        world.process();
+        assertEquals(1, subscription.getEntities().size());
+      }
+      world.process();
+      assertEquals(0, subscription.getEntities().size());
+    } finally {
+      world.dispose();
     }
   }
 }

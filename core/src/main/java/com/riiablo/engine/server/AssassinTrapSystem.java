@@ -225,7 +225,9 @@ public class AssassinTrapSystem extends IteratingSystem {
       bolt.chargedBoltSeedLow = seedLow;
       bolt.chargedBoltSeedHigh = seedHigh;
       bolt.chargedBoltNextTurnDistance = 2f;
-      // SKILLS_MissileInit_ChargedBolt caps the native path length at 77.
+      // The init callback caps frame lifetime, not world-space travel distance.
+      bolt.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(
+          missileRow, bolt.damageLevel);
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
       Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
       MissileDamageResolver.initializeSkill(

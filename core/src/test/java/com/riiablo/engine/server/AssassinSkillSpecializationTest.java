@@ -766,6 +766,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
         assertTrue(bolt.damageSnapshot,
             "each charged bolt carries authoritative lightning damage");
         assertTrue(bolt.chargedBoltPath);
+        assertEquals(Missile.chargedBoltLifetimeFrames(bolt.missile, bolt.damageLevel),
+            bolt.nativeLifetimeFrames, "sentry initialization uses native frame cap");
         assertEquals(77f, bolt.range, 0.0001f,
             "native Charged Bolt path length is capped at 77");
       }

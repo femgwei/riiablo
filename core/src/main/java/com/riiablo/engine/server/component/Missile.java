@@ -394,6 +394,12 @@ public class Missile extends PooledComponent {
     long frames = (long) row.Range + (long) Math.max(0, skillLevel) * row.LevRange;
     return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, frames));
   }
+
+  /** SkillSor.cpp SKILLS_MissileInit_ChargedBolt reads TotalFrames as uint8. */
+  public static int chargedBoltLifetimeFrames(Missiles.Entry row, int skillLevel) {
+    int frames = nativeRangeFrames(row, skillLevel);
+    return (frames & 0xff) >= 78 ? 77 : frames;
+  }
   
   public Missile setOwner(int ownerId) {
     this.ownerId = ownerId;
