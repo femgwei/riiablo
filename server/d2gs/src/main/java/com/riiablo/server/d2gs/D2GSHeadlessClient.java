@@ -5114,6 +5114,11 @@ public final class D2GSHeadlessClient {
           if (objectEvidence.get(objectEvidence.size() - 1).endsWith("result=FAIL")) {
             throw new IOException("Native object loading audit failed level=" + level);
           }
+          if (config.tourObjectLoads) {
+            tourLog(report, "OBJECT_LOAD_PASS", "level=" + level
+                + " mode=FULL_LEVEL_MATERIALIZATION walkingEvidence=false");
+            continue;
+          }
           if (loaded.synthetic || !loaded.nativeTerrain || loaded.blocked || loaded.diagnostics.length < 14
               || loaded.diagnostics[8] == 0 || loaded.diagnostics[10] == 0) {
             throw new IOException("Missing terrain/collision or blocked entry level=" + level);
@@ -5238,7 +5243,8 @@ public final class D2GSHeadlessClient {
         }
       }
       tourLog(report, "SUMMARY", "planned=" + itinerary.size() + " visited=" + visited
-          + " coverage=" + (config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
+          + " coverage=" + (config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
+              : config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
           + " walks=" + walks + " transitions=" + transitions + " detachedJumps=" + jumps
           + " combatKills=" + mapTourCombatKills
           + " failures=" + failures + " result=" + (failures == 0 && visited == itinerary.size() ? "PASS" : "FAIL"));
@@ -12984,6 +12990,7 @@ public final class D2GSHeadlessClient {
     boolean requireMovementIntent;
     boolean mapTour;
     boolean tourTownRoundTrip;
+    boolean tourObjectLoads;
     int tourFirstAct = 1, tourLastAct = 5;
     String tourLevels;
     int tourWalkMillis = 45_000;
@@ -13085,6 +13092,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-movement-intent".equals(arg)) config.requireMovementIntent = true;
         else if ("--map-tour".equals(arg)) config.mapTour = true;
         else if ("--tour-town-round-trip".equals(arg)) config.tourTownRoundTrip = true;
+        else if ("--tour-object-loads".equals(arg)) config.tourObjectLoads = true;
         else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
         else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
         else if ("--tour-levels".equals(arg)) config.tourLevels = value(args, ++i, arg);

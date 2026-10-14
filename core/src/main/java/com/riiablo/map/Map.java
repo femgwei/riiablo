@@ -2648,11 +2648,13 @@ public class Map implements Disposable {
     private boolean presetUnitsSpawned;
     private boolean objectPopulationSpawned;
     private int populationFlags;
+    private int populationOutdoorFlag80;
     private int populationSeed;
     private int populationSeedHigh = 666;
 
     public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
       populationFlags = room.getFlags();
+      populationOutdoorFlag80 = com.d2moo.common.drlg.DrlgDrlgRoom.getOutdoorRoomFlag80(room);
       if (room.getSeed() != null) {
         populationSeed = room.getSeed().getNLowSeed();
         populationSeedHigh = room.getSeed().getNHighSeed();
@@ -2665,6 +2667,7 @@ public class Map implements Disposable {
     }
     public boolean isObjectPopulationSpawned() { return objectPopulationSpawned; }
     public int populationFlags() { return populationFlags; }
+    public int populationOutdoorFlag80() { return populationOutdoorFlag80; }
     public int populationSeed() { return populationSeed; }
     public int populationSeedHigh() { return populationSeedHigh; }
 

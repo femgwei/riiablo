@@ -22,7 +22,7 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
         if (group == 38) assertTrue(object.presetIndex == 155 || object.presetIndex == 174 || object.presetIndex == 175);
         if (group == 3) assertTrue(object.presetIndex == 5 || object.presetIndex == 6);
         if (group == 10) {
-          assertTrue(base.Description.equals("Barrel") || base.Description.equals("Barrel Exploding"), base.Description);
+          assertTrue(base.Token.equals("B1") || base.Token.equals("BX"), base.Description);
           assertTrue(object.presetIndex == 7 || object.presetIndex == 11);
         }
         if (group == 29) assertTrue(java.util.Arrays.stream(new int[]{4,9,52,94,95}).anyMatch(id -> id == object.presetIndex));

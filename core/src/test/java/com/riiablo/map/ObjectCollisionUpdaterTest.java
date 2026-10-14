@@ -178,6 +178,7 @@ class ObjectCollisionUpdaterTest {
       int entity = world.create();
       world.getMapper(com.riiablo.engine.server.component.Object.class)
           .create(entity).base = base;
+      world.getMapper(com.riiablo.engine.server.component.Object.class).get(entity).mode = mode;
       world.getMapper(Position.class).create(entity).position.set(x, y);
       world.getMapper(CofReference.class).create(entity).set("DR", mode);
       world.getMapper(MapWrapper.class).create(entity).set(map, zone);
@@ -186,6 +187,7 @@ class ObjectCollisionUpdaterTest {
 
     void mode(int entity, byte mode) {
       world.getMapper(CofReference.class).get(entity).mode = mode;
+      world.getMapper(com.riiablo.engine.server.component.Object.class).get(entity).mode = mode;
     }
 
     void assertBlocked(int x, int y, boolean expected) {
