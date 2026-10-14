@@ -1525,10 +1525,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       Attributes attrs = mAttributesWrapper.has(entityId)
           ? mAttributesWrapper.get(entityId).attrs : null;
       int equipmentFrw = attrs != null ? attrs.getValue(Stat.item_fastermovevelocity, 0) : 0;
+      Player player = mPlayer.get(entityId);
+      int equipmentVelocity = player.data != null
+          ? player.data.getItems().getEquipmentMovementModifier() : 0;
       velocity.nativePlayerVelocityBonus = playerMovementBonus(equipmentFrw,
-          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent);
+          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent + equipmentVelocity);
       velocity.stateSpeedMultiplier = playerMovementMultiplier(equipmentFrw,
-          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent);
+          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent + equipmentVelocity);
       return;
     }
     

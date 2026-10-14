@@ -68,8 +68,7 @@ public class Velocity extends PooledComponent {
    * reference in D2Common; both walk and run displacement use Velocity.
    */
   public Velocity setMonster(float baseVelocity) {
-    walkSpeed = baseVelocity;
-    runSpeed = baseVelocity;
+    set(baseVelocity, baseVelocity);
     baseSpeedMultiplier = MONSTER_BASE_SPEED_MULTIPLIER;
     modeSpeedBonusMultiplier = 0f;
     return this;

@@ -204,3 +204,21 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   验证：PlayerMovementPercentageTest、MovementMultiplierContractTest、
   NativeBarbarianPassiveDataTest、PaladinSupportAuraIntegrationTest定向测试通过，
   diff检查通过。
+- 玩家移动模块集中收尾（护甲重量与初始化边界）：D2MOO Items.cpp 装备读档
+  护甲分支将 -dwSpeed 写入 STAT_VELOCITYPERCENT，武器分支则写入
+  STAT_ATTACKRATE，不能将武器 speed 当作移动重量。ItemData 现从当前生效、
+  未损坏的已装备 Armor.Entry 汇总 -speed，排除背包及备用武器组，重复物品索引
+  只计一次；在玩家公式中与有效 FRW、状态贡献相加，不进入 FRW 的150递减公式。
+  此查询只补基础护甲重量，不读取最终 velocitypercent，以免重复计算状态来源；
+  不宣称已支持所有装备词缀或自定义 velocitypercent 来源。
+  同时修复 Velocity.setMonster 直接复用玩家组件时残留玩家跑步公式标记的问题。
+  模块回归覆盖护甲/盾牌叠加、切换备用组、损坏、背包、重复槽、武器排除、
+  FRW与重量合算、玩家/怪物初始化、跑走切换、端点与倍率一次合同及状态回归。
+  后续按完整模块交付，不再要求每个内部小步骤单独确认。
+  剩余范围：其他 velocitypercent 来源与完整装备聚合、原生整数跑走比例及定点
+  量化、特殊移动、真实Box2D接触与实机验收；怪物状态聚合仍保持既有实现。
+  验证：EquipmentMovementModifierTest、PlayerMovementPercentageTest、
+  PlayerVelocityUnitsTest、MovementMultiplierContractTest、VelocityAdderTest、
+  PathfinderTest、VelocityModeChangerTest、StaminaSystemTest、
+  NativeBarbarianPassiveDataTest、PaladinSupportAuraIntegrationTest 全部通过，
+  git diff --check 通过。未进行实机验收。

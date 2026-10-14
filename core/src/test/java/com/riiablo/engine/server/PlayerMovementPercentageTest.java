@@ -27,4 +27,15 @@ class PlayerMovementPercentageTest {
     velocity.stateSpeedMultiplier = 0.25f;
     assertEquals(2.34375f, velocity.speed(true) * velocity.movementMultiplier(), 0.0001f);
   }
+
+  @Test
+  void armorWeightAddsAfterFrwDiminishingReturnsForWalkAndRun() {
+    Velocity velocity = new Velocity().setPlayer(6, 9);
+    velocity.nativePlayerVelocityBonus = StateUpdater.playerMovementBonus(75, 20 - 15);
+    velocity.stateSpeedMultiplier = StateUpdater.playerMovementMultiplier(75, 20 - 15);
+    assertEquals(55f, velocity.nativePlayerVelocityBonus);
+    assertEquals(14.53125f, velocity.speed(false) * velocity.movementMultiplier(), 0.0001f);
+    velocity.movementRunning = true;
+    assertEquals(19.21875f, velocity.speed(true) * velocity.movementMultiplier(), 0.0001f);
+  }
 }

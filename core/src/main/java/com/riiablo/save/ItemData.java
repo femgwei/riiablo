@@ -357,6 +357,20 @@ public class ItemData {
         && item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);
   }
 
+  /** Native armor Speed contributes negative velocitypercent, not equipment FRW. */
+  public int getEquipmentMovementModifier() {
+    int modifier = 0;
+    com.badlogic.gdx.utils.IntSet visited = new com.badlogic.gdx.utils.IntSet();
+    for (int index : equipped.values()) {
+      if (index == INVALID_ITEM || !visited.add(index)) continue;
+      Item item = itemData.get(index);
+      if (isActive(item) && item.base instanceof com.riiablo.codec.excel.Armor.Entry) {
+        modifier -= item.base.speed;
+      }
+    }
+    return modifier;
+  }
+
   public int getAlternate() {
     return alternate;
   }

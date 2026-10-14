@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
@@ -32,5 +33,17 @@ class PlayerVelocityUnitsTest {
     assertEquals(6f, velocity.speed(false));
     velocity.setMonster(6);
     assertEquals(4.5f, velocity.speed(false));
+  }
+
+  @Test
+  void monsterInitializationClearsPlayerRunningFormula() {
+    Velocity velocity = new Velocity().setPlayer(6, 9);
+    velocity.movementRunning = true;
+    velocity.nativePlayerVelocityBonus = 50;
+    velocity.setMonster(6);
+    assertFalse(velocity.nativePlayerSpeed);
+    assertFalse(velocity.movementRunning);
+    assertEquals(0f, velocity.nativePlayerVelocityBonus);
+    assertEquals(4.5f, velocity.speed(true) * velocity.movementMultiplier());
   }
 }
