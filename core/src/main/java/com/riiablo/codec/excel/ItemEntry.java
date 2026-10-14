@@ -18,6 +18,8 @@ public class ItemEntry extends Excel.Entry {
   @Column public String  alternateGfx;
   @Column public String  type;
   @Column public String  type2;
+  @Column public String  ubercode;
+  @Column public String  ultracode;
   @Column public int     component;
   @Column public String  flippyfile;
   @Column public String  invfile;

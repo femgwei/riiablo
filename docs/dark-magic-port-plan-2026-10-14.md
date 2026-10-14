@@ -34,10 +34,15 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    实际间隔由 `prgcalc1` 决定，而不是固定使用 `Param4`。riiablo 已改为读取
    `prgcalc1`，并增加 Param4 与公式不一致时的回归测试。首次发射、持续发射、
    释放和魔力消耗仍需真实 1.10f 客户端门槛。
-4. **ItemRatio 选择**（待开始）。参考 `964d70e9`。
-   riiablo 已有 NativeItemQualityResolver/ItemRatio.get，需先对照
-   DATATBLS_GetItemRatioTxtRecord 核实 Version、Uber、Class Specific 的真实语义，
-   避免照搬不同项目的数据约定。
+4. **ItemRatio 选择**（已完成 1.10f 核查与修正）。参考 `964d70e9`。
+   D2MOO `ItemsTbls.cpp:DATATBLS_GetItemRatioTxtRecord`（0x6FD5C220）选择
+   不超过请求版本的最高版本；原生调用使用 0/100，不强制把 100 映射为 1。
+   `Items.cpp:ITEMS_GetQuestFromItemId`（函数名称容易误导）实际判断非任务的
+   扩展级/精华级武器或护甲，并排除主类型 mpot；Uber 不是 quest 标记。
+   已补充 ubercode/ultracode 列并修正该判断。装备类别使用现有 Weapons/Armor
+   表记录类型；自定义跨表装备类型尚未验证。职业专属继续依据主类型 Class。
+   相同版本选择最后源行，不依赖 IntMap 遍历顺序；新增版本、装备等级、任务、
+   药剂、职业专属及缺失匹配测试。
 5. **数据查询身份审计**（待开始）。参考 `6da9484a`、`06158fb3`。
    用 ID 与行号故意错位的夹具验证显式 ID、位置索引和名称引用；按原生消费者逐项核实。
 6. **音效重定向与分组权重**（待开始）。参考 `b3715dd0`。
@@ -56,6 +61,10 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 ## 验证记录
 
 - 第一批：体力耗尽保留终点短步长；提交 `c5c4f667`，定向测试通过。
-- 第二批：移动导弹 Range 与静止导弹帧寿命分离；提交 `ae214d5c`，回归测试通过。
+- 第二批：移动导弹 Range 与静止导弹帧寿命分离；提交 `ae214d5c`，仅做
+  diff 检查，未运行本批新增测试。该测试锁定现有实现，不代表原生机制已经核实；
+  移动导弹 Range 的距离/帧寿命语义需重新审计，上述第二项不作为原生结论。
 - 第三批：Blade Fury 使用 1.10f `prgcalc1` 发射间隔；本次提交记录在 Git 历史，
   定向测试通过。
+- 第四批：修正 ItemRatio Uber 与同版本行选择；`ItemRatioTest`、
+  `NativeItemQualityResolverTest` 定向测试通过（BUILD SUCCESSFUL），diff 检查通过。

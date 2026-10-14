@@ -29,15 +29,25 @@ public class ItemRatio extends Excel<ItemRatio.Entry> {
   /** Mirrors DATATBLS_GetItemRatioTxtRecord's newest-compatible row choice. */
   public Entry get(ItemEntry base, ItemTypes.Entry type, int version) {
     if (base == null) return null;
-    boolean quest = base.quest != 0;
+    // ITEMS_GetQuestFromItemId (despite its name) selects upgraded equipment,
+    // excluding quest items and missile potions, not the quest flag itself.
+    boolean uber = (base instanceof Weapons.Entry || base instanceof Armor.Entry)
+        && base.quest == 0 && !"mpot".equals(base.type) && base.code != null
+        && (base.code.equals(base.ubercode) || base.code.equals(base.ultracode));
     boolean classSpecific = type != null && type.Class != null && !type.Class.isEmpty();
     Entry selected = null;
     int selectedVersion = -1;
-    for (Entry entry : this) {
-      if (entry.Uber != quest || entry.ClassSpecific != classSpecific
+    int selectedRow = -1;
+    for (com.badlogic.gdx.utils.IntMap.Entry<Entry> row : entries.entries()) {
+      Entry entry = row.value;
+      if (entry.Uber != uber || entry.ClassSpecific != classSpecific
           || entry.Version > version || entry.Version < selectedVersion) continue;
+      // IntMap iteration is not source order; native equal-version ties use
+      // the last source row (the loader assigns numeric row ids).
+      if (entry.Version == selectedVersion && row.key < selectedRow) continue;
       selected = entry;
       selectedVersion = entry.Version;
+      selectedRow = row.key;
     }
     return selected;
   }
