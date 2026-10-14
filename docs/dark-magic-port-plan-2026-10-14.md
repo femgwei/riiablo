@@ -127,3 +127,14 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   的其他初始化回调；武学释放、特殊路径长度和重连剩余帧仍待后续核查。
   验证：MissileNativePolicyTest 18项及 Charged Bolt Sentry 发射回归1项均通过，
   无跳过，diff 检查通过；尚未实机验收。
+- 导弹复核第三批（刺客武学初始投射物）：D2MOO SkillAss.cpp 的
+  sub_6FCF6600 将技能等级传入创建参数，Claws of Thunder 第三层使用
+  sub_6FCF6C10（0x6FCF6C10），按 uint8 TotalFrames 视图条件截为77；
+  Phoenix Strike 第二层的 sub_6FCF6D70 使用 sub_6FCF7390（0x6FCF7390），
+  后者用完整帧数判断>=78，不能直接复用 uint8 判断。
+  已在 Actioneer 两条创建路径设置 Range + level * LevRange 的条件截断寿命；
+  利用前批 chargedBoltPath 的帧到期策略，避免按旧距离提前删除。
+  新增两者300帧边界差异及短寿命不延长测试，并在真实武学释放夹具检查初始寿命。
+  本批不改种子、路径点算法或链式续弹；续弹、其他武学控制器及重连仍待审计。
+  验证：MissileNativePolicyTest、Claws第三层释放、Phoenix各层释放和现有
+  Phoenix连锁续弹定向测试通过，diff检查通过；尚未实机验收。

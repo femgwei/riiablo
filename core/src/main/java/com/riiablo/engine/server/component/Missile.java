@@ -400,6 +400,11 @@ public class Missile extends PooledComponent {
     int frames = nativeRangeFrames(row, skillLevel);
     return (frames & 0xff) >= 78 ? 77 : frames;
   }
+
+  /** SkillAss.cpp sub_6FCF7390 uses the full frame count, unlike sub_6FCF6C10. */
+  public static int phoenixChainLifetimeFrames(Missiles.Entry row, int skillLevel) {
+    return Math.min(77, nativeRangeFrames(row, skillLevel));
+  }
   
   public Missile setOwner(int ownerId) {
     this.ownerId = ownerId;

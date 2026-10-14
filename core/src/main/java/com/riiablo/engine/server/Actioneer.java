@@ -4718,6 +4718,9 @@ public class Actioneer extends PassiveSystem {
       projectile.chargedBoltSeedLow = (int) rolled;
       projectile.chargedBoltSeedHigh = (int) (rolled >>> 32);
       projectile.chargedBoltNextTurnDistance = 2f;
+      projectile.nativeLifetimeFrames =
+          com.riiablo.engine.server.component.Missile.chargedBoltLifetimeFrames(
+              row, release.lightningSkillLevel);
       projectile.range = Math.min(77f, Math.max(1f, projectile.range));
       MissileDamageResolver.initializeSkill(
           projectile, skill, sourceAttrs, release.lightningSkillLevel);
@@ -4926,6 +4929,9 @@ public class Actioneer extends PassiveSystem {
       projectile.chargedBoltSeedLow = (int) rolled;
       projectile.chargedBoltSeedHigh = (int) (rolled >>> 32);
       projectile.chargedBoltNextTurnDistance = 2f;
+      projectile.nativeLifetimeFrames =
+          com.riiablo.engine.server.component.Missile.phoenixChainLifetimeFrames(
+              row, projectile.damageLevel);
       created++;
     }
     assassinProgressiveSeeds.put(sourceId, rng.state());

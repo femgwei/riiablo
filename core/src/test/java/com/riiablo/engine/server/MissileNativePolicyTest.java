@@ -351,6 +351,11 @@ class MissileNativePolicyTest {
     row.Range = 300;
     assertEquals(300, Missile.chargedBoltLifetimeFrames(row, 1),
         "native callback compares the uint8 view, not the full frame count");
+    assertEquals(77, Missile.phoenixChainLifetimeFrames(row, 1),
+        "Phoenix Strike callback compares the full frame count");
+    row.Range = 40;
+    row.LevRange = 2;
+    assertEquals(46, Missile.phoenixChainLifetimeFrames(row, 3));
   }
 
   @Test

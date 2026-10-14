@@ -1226,6 +1226,8 @@ class AssassinMartialArtsTest extends RiiabloTest {
             assertTrue(missile.damageSnapshot);
             assertEquals(7, missile.chainHitsRemaining);
             assertTrue(missile.chargedBoltPath);
+            assertEquals(Missile.phoenixChainLifetimeFrames(
+                missile.missile, missile.damageLevel), missile.nativeLifetimeFrames);
           } else if (charges == 3) {
             assertTrue(missile.damageSnapshot);
             assertTrue(missile.freezesTarget);
@@ -1407,6 +1409,8 @@ class AssassinMartialArtsTest extends RiiabloTest {
           assertTrue(missile.chargedBoltPath);
           assertEquals(2f, missile.chargedBoltNextTurnDistance);
           assertTrue(missile.range <= 77f);
+          assertEquals(Missile.chargedBoltLifetimeFrames(
+              missile.missile, 5), missile.nativeLifetimeFrames);
           assertEquals(claws.Id, missile.skillId);
           assertTrue(missile.damageSnapshot);
         }
