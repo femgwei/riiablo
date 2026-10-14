@@ -5,12 +5,10 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.ai.utils.Collision;
-import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
-import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Pathfind;
@@ -20,10 +18,10 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.WhirlwindRuntime;
+import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
-import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 
 /** Advances native Whirlwind's straight skill path and weapon-speed attack timer. */
@@ -44,6 +42,7 @@ public class WhirlwindSystem extends IteratingSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<com.riiablo.engine.server.component.AnimData> mAnimData;
+  protected ComponentMapper<Box2DBody> mBox2DBody;
 
   protected Actioneer actioneer;
 
@@ -51,7 +50,6 @@ public class WhirlwindSystem extends IteratingSystem {
   protected Map map;
 
   private final Vector2 stepEnd = new Vector2();
-  private final Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
 
   /** Resolves D2Common's straight Whirlwind path to its last clear point. */
@@ -61,13 +59,8 @@ public class WhirlwindSystem extends IteratingSystem {
         || start.epsilonEquals(requested, ARRIVAL_EPSILON)) return false;
     result.set(requested);
     if (map == null || map.getZone(start) == null) return true;
-    Ray<Vector2> path = new Ray<>(new Vector2(start), new Vector2(requested));
-    Collision<Vector2> hit = new Collision<>(new Vector2(), new Vector2());
-    if (map.castRay(path, DT1.Tile.FLAG_BLOCK_WALK,
-        Math.max(Size.INSIGNIFICANT, unitSize), hit)) {
-      Vector2 direction = new Vector2(requested).sub(start).nor();
-      result.set(hit.point).mulAdd(direction, -0.2f);
-    }
+    WhirlwindCollision.cast(map, start, requested,
+        Math.max(Size.INSIGNIFICANT, unitSize), true, result);
     return !start.epsilonEquals(result, ARRIVAL_EPSILON);
   }
 
@@ -147,9 +140,8 @@ public class WhirlwindSystem extends IteratingSystem {
       int entityId, Vector2 start, Vector2 velocity, float delta, float stateMultiplier) {
     if (map == null || map.getZone(start) == null || velocity.isZero(0.0001f)) return false;
     stepEnd.set(start).mulAdd(velocity, delta * Math.max(0f, stateMultiplier));
-    ray.set(start, stepEnd);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
-    return map.castRay(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision);
+    return WhirlwindCollision.cast(map, start, stepEnd, size, false, collision.point);
   }
 
   private boolean isAlive(int entityId) {
@@ -170,28 +162,35 @@ public class WhirlwindSystem extends IteratingSystem {
     float destinationX = runtime != null ? runtime.destination.x : 0f;
     float destinationY = runtime != null ? runtime.destination.y : 0f;
     int strikes = runtime != null ? runtime.strikeIndex : 0;
-    if (mVelocity.has(entityId)) {
+    Casting casting = mCasting.get(entityId);
+    boolean ownsCasting = runtime == null || casting == null || casting.skillId == runtime.skillId;
+    if (ownsCasting && mVelocity.has(entityId)) {
       Velocity velocity = mVelocity.get(entityId);
       velocity.velocity.setZero();
       velocity.movementRunning = false;
       velocity.clearModeSpeedBonus();
     }
-    if (mPathfind.has(entityId)) mPathfind.remove(entityId);
+    if (ownsCasting && mPathfind.has(entityId)) mPathfind.remove(entityId);
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
       if (states != null && states.stateList != null) {
         states.stateList.removeState(StateId.WHIRLWIND);
       }
     }
-    if (mCasting.has(entityId)) mCasting.remove(entityId);
-    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    // An interruption may already have installed a different skill/sequence.
+    if (ownsCasting && mCasting.has(entityId)) mCasting.remove(entityId);
+    if (ownsCasting && mSequence.has(entityId)) mSequence.remove(entityId);
     if (mWhirlwindRuntime.has(entityId)) mWhirlwindRuntime.remove(entityId);
+    Box2DBody physics = mBox2DBody.get(entityId);
+    if (physics != null && physics.body != null) {
+      Box2DSynchronizerPre.applySkillMoveCollision(physics, false);
+    }
     // Native removal refreshes passive skills and animation velocity immediately.
     // Do not tick the entire StateUpdater again or disturb a death animation.
     if (isAlive(entityId)) {
       StateUpdater updater = world.getSystem(StateUpdater.class);
       if (updater != null) updater.refreshAfterSkillMove(entityId);
-      if (mAnimData.has(entityId)) mAnimData.get(entityId).override = -1;
+      if (ownsCasting && mAnimData.has(entityId)) mAnimData.get(entityId).override = -1;
     }
     log.info("[WHIRLWIND] phase=finish entity={} reason={} destination=({}, {}) strikes={}",
         entityId, reason, destinationX, destinationY, strikes);

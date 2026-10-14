@@ -37,6 +37,33 @@ import org.junit.jupiter.api.Test;
 
 class BarbarianWhirlwindTest extends RiiabloTest {
   @Test
+  void interruptedWhirlwindDoesNotDeleteReplacementSkillOrSequence() {
+    Actioneer actioneer = new Actioneer();
+    World world = world(actioneer, new DummyFactory());
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get("Whirlwind");
+      int id = player(world, 0, 0, attributes(1000, 1, 1, 100000));
+      world.getMapper(Casting.class).create(id)
+          .set(skill.Id, Engine.INVALID_ENTITY, new Vector2(100, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(id, skill.Id, Engine.INVALID_ENTITY,
+          new Vector2(100, 0), skill.srvstfunc, skill.cltstfunc));
+      Casting replacement = world.getMapper(Casting.class).get(id);
+      replacement.skillId = Riiablo.files.skills.get("Berserk").Id;
+      world.getMapper(Velocity.class).get(id).velocity.set(3, 0);
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id);
+      world.getMapper(com.riiablo.engine.server.component.AnimData.class).create(id).override = 123;
+      world.setDelta(1f / 25f);
+      world.process();
+      assertFalse(world.getMapper(WhirlwindRuntime.class).has(id));
+      assertEquals(replacement.skillId, world.getMapper(Casting.class).get(id).skillId);
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(id));
+      assertEquals(123, world.getMapper(com.riiablo.engine.server.component.AnimData.class).get(id).override);
+      assertEquals(3f, world.getMapper(Velocity.class).get(id).velocity.x);
+      assertFalse(world.getMapper(UnitStates.class).get(id).stateList.hasState(StateId.WHIRLWIND));
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void expansionWeaponSpeedBreakpointsMatchSrvDo076() {
     assertEquals(4, BarbarianSkills.getWhirlwindAttackInterval(11));
     assertEquals(6, BarbarianSkills.getWhirlwindAttackInterval(12));
@@ -88,6 +115,10 @@ class BarbarianWhirlwindTest extends RiiabloTest {
       assertTrue(hp(world, second) < secondBefore);
       assertTrue(secondBefore - hp(world, second) > firstBefore - hp(world, first),
           "the second native attack must use the stronger left-hand weapon");
+      data.getItems().getEquipped(BodyLoc.LARM).flags |= Item.ITEMFLAG_BROKEN;
+      int strikes = runtime.strikeIndex;
+      actioneer.resolveWhirlwindPulse(barbarian, runtime);
+      assertEquals(strikes + 1, runtime.strikeIndex, "broken offhand must not create a second strike");
       assertFalse(world.getMapper(Velocity.class).get(barbarian).velocity.isZero());
 
       world.getMapper(Position.class).get(barbarian).position.set(runtime.destination);

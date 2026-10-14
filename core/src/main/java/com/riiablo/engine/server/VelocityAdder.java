@@ -32,6 +32,7 @@ public class VelocityAdder extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
+  protected ComponentMapper<com.riiablo.engine.server.component.WhirlwindRuntime> mWhirlwindRuntime;
 
   @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
@@ -146,6 +147,13 @@ public class VelocityAdder extends IteratingSystem {
     }
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
+    if (mWhirlwindRuntime.has(entityId)) {
+      if (WhirlwindCollision.cast(map, from, to, size, false, collision.point)) {
+        blockReason = "terrain";
+        return false;
+      }
+      return dynamicMove(entityId, to);
+    }
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
     int flags = NativeGroundPathProfile.forUnit(mPlayer.has(entityId),
         monster == null ? null : monster.monstats).terrainFlags;

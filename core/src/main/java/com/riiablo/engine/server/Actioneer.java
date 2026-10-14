@@ -967,7 +967,13 @@ public class Actioneer extends PassiveSystem {
       if (mSequence.has(event.victim)) mSequence.remove(event.victim);
       if (mTarget.has(event.victim)) mTarget.remove(event.victim);
       if (mFrenzyRuntime.has(event.victim)) mFrenzyRuntime.remove(event.victim);
-      if (mWhirlwindRuntime.has(event.victim)) mWhirlwindRuntime.remove(event.victim);
+      if (mWhirlwindRuntime.has(event.victim)) {
+        mWhirlwindRuntime.remove(event.victim);
+        Box2DBody physics = mBox2DBody.get(event.victim);
+        if (physics != null && physics.body != null) {
+          Box2DSynchronizerPre.applySkillMoveCollision(physics, false);
+        }
+      }
       if (mPathfind.has(event.victim)) mPathfind.remove(event.victim);
       if (mVelocity.has(event.victim)) {
         com.riiablo.engine.server.component.Velocity velocity = mVelocity.get(event.victim);
@@ -4133,18 +4139,24 @@ public class Actioneer extends PassiveSystem {
   }
 
   private Item whirlwindPrimaryWeapon(int entityId) {
-    Item right = equippedFrenzyWeapon(entityId, BodyLoc.RARM);
-    return right != null ? right : equippedFrenzyWeapon(entityId, BodyLoc.LARM);
+    Item right = equippedWhirlwindWeapon(entityId, BodyLoc.RARM);
+    return right != null ? right : equippedWhirlwindWeapon(entityId, BodyLoc.LARM);
+  }
+
+  private Item equippedWhirlwindWeapon(int entityId, BodyLoc slot) {
+    Item item = equippedFrenzyWeapon(entityId, slot);
+    return item != null && (item.flags & (Item.ITEMFLAG_BROKEN | Item.ITEMFLAG__DISABLED)) == 0
+        ? item : null;
   }
 
   private boolean hasTwoWhirlwindWeapons(int entityId) {
-    return equippedFrenzyWeapon(entityId, BodyLoc.RARM) != null
-        && equippedFrenzyWeapon(entityId, BodyLoc.LARM) != null;
+    return equippedWhirlwindWeapon(entityId, BodyLoc.RARM) != null
+        && equippedWhirlwindWeapon(entityId, BodyLoc.LARM) != null;
   }
 
   private Item whirlwindWeapon(int entityId, int strikeIndex) {
-    Item right = equippedFrenzyWeapon(entityId, BodyLoc.RARM);
-    Item left = equippedFrenzyWeapon(entityId, BodyLoc.LARM);
+    Item right = equippedWhirlwindWeapon(entityId, BodyLoc.RARM);
+    Item left = equippedWhirlwindWeapon(entityId, BodyLoc.LARM);
     if (right != null && left != null) return (strikeIndex & 1) == 0 ? right : left;
     return right != null ? right : left;
   }

@@ -1842,6 +1842,11 @@ public class Map implements Disposable {
       return flags[index(width, x, y)] & 0xFF;
     }
 
+    /** Raw static DT1 low-byte collision at a world-subtile coordinate. */
+    public int staticFlagsWorld(int worldX, int worldY) {
+      return staticFlags(worldX - x, worldY - y);
+    }
+
     /** Number of currently active native object footprints at a world cell. */
     public int objectCollisionReferences(int worldX, int worldY) {
       if (objectBlockWalkRefs == null || worldX < x || worldY < y
