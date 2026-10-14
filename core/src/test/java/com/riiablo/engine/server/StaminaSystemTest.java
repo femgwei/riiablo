@@ -20,6 +20,21 @@ import org.junit.jupiter.api.Test;
 
 class StaminaSystemTest extends RiiabloTest {
   @Test
+  void exhaustionPreservesTerminalStepAndCapsFullRunStep() {
+    Velocity velocity = new Velocity().set(6f, 9f);
+    velocity.velocity.set(1.5f, 2f);
+    StaminaSystem.limitExhaustedMovement(velocity);
+    assertEquals(1.5f, velocity.velocity.x, 0.0001f);
+    assertEquals(2f, velocity.velocity.y, 0.0001f);
+    velocity.velocity.set(9f, 0f);
+    StaminaSystem.limitExhaustedMovement(velocity);
+    assertEquals(6f, velocity.velocity.x, 0.0001f);
+    velocity.velocity.setZero();
+    StaminaSystem.limitExhaustedMovement(velocity);
+    assertTrue(velocity.velocity.isZero());
+  }
+
+  @Test
   void usesNativeFixedPointRunDrain() {
     assertEquals(40f / 256f, StaminaSystem.drainPerTick(20f, 0, 0));
     assertEquals(80f / 256f, StaminaSystem.drainPerTick(20f, 10, 0));

@@ -31,6 +31,13 @@ import com.riiablo.logger.Logger;
  */
 @All({Player.class, AttributesWrapper.class, Velocity.class})
 public class StaminaSystem extends IteratingSystem {
+  /** Preserve Pathfinder's shorter terminal step when stamina expires. */
+  static void limitExhaustedMovement(Velocity velocity) {
+    if (velocity.walkSpeed > 0f) {
+      velocity.velocity.limit(velocity.walkSpeed);
+    }
+  }
+
   private static final Logger log = LogManager.getLogger(StaminaSystem.class);
   private static final float DEFAULT_RUN_DRAIN = 20f;
   private static final float FIXED_POINT_SCALE = 256f;
@@ -79,7 +86,7 @@ public class StaminaSystem extends IteratingSystem {
       next = current - drain;
       if (next <= EPSILON) {
         next = 0f;
-        if (velocity.walkSpeed > 0f) velocity.velocity.setLength(velocity.walkSpeed);
+        limitExhaustedMovement(velocity);
         log.info("[PLAYER_STAMINA] entity={} state=exhausted stamina=0.0 maximum={}",
             entityId, maximum);
       }
