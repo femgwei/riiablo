@@ -268,8 +268,7 @@ public class Pathfinder extends IteratingSystem {
             mRunning.has(entityId), mTemporaryRunning.has(entityId))
         && (!mAttributes.has(entityId)
             || StaminaSystem.hasRunStamina(mAttributes.get(entityId)));
-    float speed = velocity.speed(running)
-        * Math.max(0f, Math.min(1f, velocity.stateSpeedMultiplier));
+    float speed = velocity.speed(running);
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
           entityId, running, velocity.walkSpeed, velocity.runSpeed);
@@ -281,7 +280,7 @@ public class Pathfinder extends IteratingSystem {
     // corners, then discards the very waypoint needed to escape a wall.
     tmpVec2.set(target).sub(position0);
     speed = limitWaypointSpeed(speed, world.delta
-        * velocity.stateSpeedMultiplier, tmpVec2.len());
+        * velocity.movementMultiplier(), tmpVec2.len());
 
     Angle angle = mAngle.get(entityId);
     int oldDirection = Direction.radiansToDirection(

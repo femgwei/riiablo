@@ -13,11 +13,12 @@ import com.riiablo.engine.server.component.Velocity;
 public class Box2DSynchronizerPre extends IteratingSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Velocity> mVelocity;
+  private final Vector2 movement = new Vector2();
 
   @Override
   protected void process(int entityId) {
     Body body = mBox2DBody.get(entityId).body;
-    Vector2 velocity = mVelocity.get(entityId).velocity;
+    Vector2 velocity = resolveMovementVelocity(mVelocity.get(entityId), movement);
     body.setLinearVelocity(velocity);
 
     // FIXME: This is a temp fix to prevent shoving NPCs -- need to explore Contact Filters
@@ -26,5 +27,9 @@ public class Box2DSynchronizerPre extends IteratingSystem {
     } else {
       body.setType(BodyDef.BodyType.DynamicBody);
     }
+  }
+
+  static Vector2 resolveMovementVelocity(Velocity requested, Vector2 out) {
+    return out.set(requested.velocity).scl(requested.movementMultiplier());
   }
 }

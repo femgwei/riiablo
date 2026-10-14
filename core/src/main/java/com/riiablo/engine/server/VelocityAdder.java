@@ -58,7 +58,7 @@ public class VelocityAdder extends IteratingSystem {
     start.set(position.position);
     boolean requested = !velocity.velocity.isZero(0.001f);
     blockReason = "none";
-    float scale = world.delta * velocity.stateSpeedMultiplier;
+    float scale = world.delta * velocity.movementMultiplier();
     desired.set(position.position).mulAdd(velocity.velocity, scale);
     if (canMove(entityId, position.position, desired)) {
       position.position.set(desired);

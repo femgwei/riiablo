@@ -82,4 +82,9 @@ public class Velocity extends PooledComponent {
         baseSpeedMultiplier + modeSpeedBonusMultiplier);
     return baseSpeed * multiplier;
   }
+
+  /** Applied once by the position integrator, never baked into requested velocity. */
+  public float movementMultiplier() {
+    return stateMovementLocked ? 0f : Math.max(0f, stateSpeedMultiplier);
+  }
 }

@@ -180,3 +180,13 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   避免把同一状态贡献重复计算。此批不改状态聚合或装备加速。
   验证：VelocityModeChangerTest、PathfinderTest、StaminaSystemTest定向测试通过，
   diff检查通过；尚未实机验收。
+- 玩家速度复核第三批（位移倍率合同）：Pathfinder不再将<=1的状态倍率烘焙进
+  请求速度，但终点限速仍使用delta*最终倍率。VelocityAdder应用一次，新增
+  Box2DSynchronizerPre对复制的向量应用相同倍率，不修改请求向量；锁定移动时
+  Box2D接收零速。修复服务器减速被平方、本地加速未应用以及减速终点越界风险。
+  Velocity.movementMultiplier统一非负倍率/锁定语义；不改状态聚合及装备FRW公式。
+  新测试覆盖0.5/1/1.5倍率、终点截断、锁定、请求向量不变，以及实际VelocityAdder
+  位移与Box2D输入向量的数学一致性。未运行真实Box2D接触或实机验收；Whirlwind
+  已按原始请求速度和倍率截断终点，保持其现有路径，其他特殊移动仍需独立审计。
+  验证：MovementMultiplierContractTest、VelocityAdderTest、PathfinderTest、
+  VelocityModeChangerTest、StaminaSystemTest共40项定向测试通过，diff检查通过。

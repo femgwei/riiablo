@@ -1475,8 +1475,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyVelocityModifiers(int entityId, StateList stateList) {
     Velocity velocity = mVelocity.get(entityId);
 
-    // Keep the desired velocity untouched. VelocityAdder applies this state
-    // multiplier after Pathfinder has selected the direction for this tick.
+    // Keep requested velocity unscaled. VelocityAdder and Box2D's pre-sync
+    // each apply this multiplier once after Pathfinder selects the direction.
     velocity.stateSpeedMultiplier = 1f;
     velocity.stateMovementLocked = false;
     
