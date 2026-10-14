@@ -969,7 +969,12 @@ public class Actioneer extends PassiveSystem {
       if (mFrenzyRuntime.has(event.victim)) mFrenzyRuntime.remove(event.victim);
       if (mWhirlwindRuntime.has(event.victim)) mWhirlwindRuntime.remove(event.victim);
       if (mPathfind.has(event.victim)) mPathfind.remove(event.victim);
-      if (mVelocity.has(event.victim)) mVelocity.get(event.victim).velocity.setZero();
+      if (mVelocity.has(event.victim)) {
+        com.riiablo.engine.server.component.Velocity velocity = mVelocity.get(event.victim);
+        velocity.velocity.setZero();
+        velocity.movementRunning = false;
+        velocity.clearModeSpeedBonus();
+      }
       if (mUnitStates.has(event.victim)) {
         UnitStates states = mUnitStates.get(event.victim);
         if (states != null && states.stateList != null) {

@@ -163,7 +163,12 @@ public class WhirlwindSystem extends IteratingSystem {
     float destinationX = runtime != null ? runtime.destination.x : 0f;
     float destinationY = runtime != null ? runtime.destination.y : 0f;
     int strikes = runtime != null ? runtime.strikeIndex : 0;
-    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    if (mVelocity.has(entityId)) {
+      Velocity velocity = mVelocity.get(entityId);
+      velocity.velocity.setZero();
+      velocity.movementRunning = false;
+      velocity.clearModeSpeedBonus();
+    }
     if (mPathfind.has(entityId)) mPathfind.remove(entityId);
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
