@@ -1,10 +1,10 @@
 package com.riiablo.engine.server.ai;
 
-/** Initial-step projection of PathMisc.cpp PATH_Toward / sub_6FDAA880.
- * Unlike A*, TOWARD can produce points without reaching the destination.
- * Tests the ordinary zero-direction-offset branch's initial directions only;
- * full native point counts also depend on distance budget, ray and path flags.
- * This does not construct or install a path. */
+import com.riiablo.engine.server.combat.NativeMeleeDistance;
+
+/** Read-only nonzero-point projection of PathMisc.cpp PATH_Toward.
+ * Assumes positive native velocity, zero direction offset and stable collision
+ * queries. Does not model the dynamic-path wrapper, flags or install a path. */
 final class NativeTowardPathProbe {
   private static final int[][] DIRECTIONS = {
       {5, 4, 6}, {4, 5, 6}, {4, 3, 5}, {4, 3, 2}, {3, 4, 2},
@@ -17,6 +17,88 @@ final class NativeTowardPathProbe {
   private static final int[] DY = {0, 1, 1, 1, 0, -1, -1, -1};
 
   interface Blocked { boolean at(int x, int y); }
+
+  /** PATH_RayTrace's clipped endpoint, not an A* reachability result. */
+  static final class RayResult {
+    final int x, y;
+    final boolean clear;
+
+    RayResult(int x, int y, boolean clear) {
+      this.x = x;
+      this.y = y;
+      this.clear = clear;
+    }
+  }
+
+  static boolean hasPathPoints(int sx, int sy, int tx, int ty,
+      int maxDistance, int targetTolerance, Blocked blocked) {
+    if (sx == tx && sy == ty) return false;
+    RayResult ray = trace(sx, sy, tx, ty, blocked);
+    // PATH_Toward stores one point for a clear ray OR a clipped endpoint
+    // within field_14 (PATH_UpdateTargetUnit returns 1 for players/monsters).
+    if (ray.clear || heuristic(ray.x - tx, ray.y - ty) <= targetTolerance) return true;
+    if (ray.x != sx || ray.y != sy) return true; // A partial ray is already a path point.
+    // With no ray progress, the first successful local step changes direction
+    // from PATH_DIR_NULL but does NOT append the source. A budget of one exits
+    // at LABEL_22 with zero points. At least one further iteration is needed
+    // to append that step, regardless of whether it succeeds, blocks or turns.
+    return maxDistance > 1 && hasStep(sx, sy, tx, ty, blocked);
+  }
+
+  /** sub_6FDABA50 uses its literal near-distance table below eight cells;
+   * only larger deltas use 2*major + minor. */
+  static int heuristic(int dx, int dy) {
+    // The existing unit-size-one projection has exactly the same table,
+    // +1 rule, and large-distance formula; do not maintain a second copy.
+    return NativeMeleeDistance.between(0, 0, 1, dx, dy, 1);
+  }
+
+  /** PATH_RayTrace uses (abs(delta)+1) and checks the dominant-axis cell
+   * before the minor-axis cell. A blocked intermediate cell returns the last
+   * completed iteration, not the last individually tested free cell. */
+  static RayResult trace(int sx, int sy, int tx, int ty, Blocked blocked) {
+    int x = sx, y = sy, lastX = sx, lastY = sy;
+    int nx = Math.abs(tx - sx) + 1, ny = Math.abs(ty - sy) + 1;
+    int stepX = tx >= sx ? 1 : -1, stepY = ty >= sy ? 1 : -1;
+    if (nx == ny) {
+      while (x != tx) {
+        x += stepX;
+        y += stepY;
+        if (blocked.at(x, y)) return new RayResult(lastX, lastY, false);
+        lastX = x;
+        lastY = y;
+      }
+    } else if (nx > ny) {
+      int offset = ny;
+      while (x != tx) {
+        x += stepX;
+        if (blocked.at(x, y)) return new RayResult(lastX, lastY, false);
+        offset += ny;
+        if (offset >= nx) {
+          offset -= nx;
+          y += stepY;
+          if (offset > 0 && blocked.at(x, y)) return new RayResult(lastX, lastY, false);
+        }
+        lastX = x;
+        lastY = y;
+      }
+    } else {
+      int offset = nx;
+      while (y != ty) {
+        y += stepY;
+        if (blocked.at(x, y)) return new RayResult(lastX, lastY, false);
+        offset += nx;
+        if (offset >= ny) {
+          offset -= ny;
+          x += stepX;
+          if (offset > 0 && blocked.at(x, y)) return new RayResult(lastX, lastY, false);
+        }
+        lastX = x;
+        lastY = y;
+      }
+    }
+    return new RayResult(tx, ty, true);
+  }
 
   static boolean hasStep(int sx, int sy, int tx, int ty, Blocked blocked) {
     if (sx == tx && sy == ty) return false;

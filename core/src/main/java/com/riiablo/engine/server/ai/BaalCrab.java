@@ -136,13 +136,13 @@ public class BaalCrab extends NativeDecisionAI {
     }
     if (candidate < 0 || primary < 0 || isInNativeMeleeRange(primary)
         || distanceWithSize(mPosition.get(entityId).position, mPosition.get(candidate).position, 0) >= 5
-        || !noTowardStep(primary)) return primary;
+        || !noTowardPoints(primary)) return primary;
     // node9 never contributes to nCount and need not outscore the primary.
     maxTargetScore = best;
     return candidate;
   }
 
-  private boolean noTowardStep(int primary) {
+  private boolean noTowardPoints(int primary) {
     MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     // Missing terrain is unknown, not proof of zero native path points.
     if (wrapper == null || wrapper.map == null || wrapper.zone == null) return false;
@@ -150,14 +150,25 @@ public class BaalCrab extends NativeDecisionAI {
     Vector2 target = mPosition.get(primary).position;
     int sx = Math.round(source.x), sy = Math.round(source.y);
     int tx = Math.round(target.x), ty = Math.round(target.y);
+    // D2Common_10142 returns before clearing old points if a target-unit
+    // coordinate is zero. We do not know that retained native point count.
+    if (tx == 0 || ty == 0) return false;
+    // Other coordinate rejection paths reach the wrapper's point-count reset.
+    // In particular, do not ray-trace a remote owner-group child without the
+    // native 100-cell per-axis bound (children bypass the player-head cull).
+    if (sx == 0 && sy == 0 || Math.abs((long) tx - sx) > 100
+        || Math.abs((long) ty - sy) > 100) return true;
     int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
     int flags = NativeGroundPathProfile.forUnit(false, monster.monstats).terrainFlags;
     boolean doors = monster.monstats != null && monster.monstats.opendoors
         && NativeGroundPathProfile.forUnit(false, monster.monstats) != NativeGroundPathProfile.FLYING;
     DynamicUnitCollisionSystem dynamic = Riiablo.engine.getSystem(DynamicUnitCollisionSystem.class);
-    // This is a read-only zero-step test, not a walk command or A* reachability
-    // query. Keep active Pathfind/velocity/target untouched during selection.
-    return !NativeTowardPathProbe.hasStep(sx, sy, tx, ty, (x, y) ->
+    // Positive-velocity, zero-offset TOWARD projection. Use the monster's
+    // allocation budget (14) and target-unit tolerance (1); runtime native
+    // budget/velocity/advanced-target state is not represented by ECS Pathfind.
+    // Keep active movement untouched: even a partial ray is nonzero points,
+    // not proof that the destination is reachable.
+    return !NativeTowardPathProbe.hasPathPoints(sx, sy, tx, ty, 14, 1, (x, y) ->
         wrapper.map.isBlockedForPath(wrapper.zone, x, y, flags, size, doors)
             || dynamic != null && !dynamic.isFreeForPath(wrapper.zone,
                 entityId, Engine.INVALID_ENTITY, x, y, size));

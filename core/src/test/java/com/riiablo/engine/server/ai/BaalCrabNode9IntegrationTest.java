@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** Node9 membership/selection and read-only zero-step projection, not full native path state. */
+/** Node9 membership/selection and read-only TOWARD projection, not full native path state. */
 class BaalCrabNode9IntegrationTest extends RiiabloTest {
   @Test
   void real110fBoneWallRowBelongsToNode9ButScoresZeroDueToNativeThreat() {
@@ -88,7 +88,7 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       Riiablo.engine = engine;
       assertEquals(wall, select(f), "dynamic blockage alone can leave zero initial steps");
       Map.Zone zone = f.world.getMapper(MapWrapper.class).get(f.actor).zone;
-      verify(dynamic).isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 11, 10, 1);
+      verify(dynamic, atLeastOnce()).isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 11, 10, 1);
       when(dynamic.isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 11, 9, 1)).thenReturn(true);
       assertEquals(f.target, select(f));
     }
@@ -117,11 +117,79 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       Map map = terrain(f, true);
       wall(f, 14, 10);
       f.world.process();
-      // Target is east. Even the third native candidate (north-east) proves
-      // nonzero TOWARD points, regardless of an obstacle further along.
+      // Target is east and the ray is blocked immediately. The third native
+      // candidate (north-east), with the default budget >1, yields points.
       when(map.isBlockedForPath(any(), eq(11), eq(9), anyInt(), anyInt(), anyBoolean())).thenReturn(false);
       assertEquals(f.target, select(f));
       verifyNoInteractions(f.paths);
+    }
+  }
+
+  @Test
+  void partialRayRetainsPrimaryAndStopsAtCollisionWithoutInstallingMovement() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      Map map = terrain(f, false);
+      wall(f, 14, 10);
+      when(map.isBlockedForPath(any(), eq(13), eq(10), anyInt(), anyInt(), anyBoolean()))
+          .thenReturn(true);
+      f.world.process();
+      assertEquals(f.target, select(f), "two cells of ray progress already provide path points");
+      verify(map).isBlockedForPath(any(), eq(12), eq(10), anyInt(), anyInt(), anyBoolean());
+      verify(map).isBlockedForPath(any(), eq(13), eq(10), anyInt(), anyInt(), anyBoolean());
+      verify(map, never()).isBlockedForPath(any(), eq(14), eq(10), anyInt(), anyInt(), anyBoolean());
+      verifyNoInteractions(f.paths);
+    }
+  }
+
+  @Test
+  void dynamicOccupancyAlsoClipsRayAfterPartialProgress() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrabClone")) {
+      terrain(f, false);
+      wall(f, 14, 10);
+      f.world.process();
+      DynamicUnitCollisionSystem dynamic = mock(DynamicUnitCollisionSystem.class);
+      World engine = spy(f.world);
+      doReturn(dynamic).when(engine).getSystem(DynamicUnitCollisionSystem.class);
+      Riiablo.engine = engine;
+      Map.Zone zone = f.world.getMapper(MapWrapper.class).get(f.actor).zone;
+      when(dynamic.isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 11, 10, 1)).thenReturn(true);
+      when(dynamic.isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 12, 10, 1)).thenReturn(true);
+      assertEquals(f.target, select(f));
+      verify(dynamic).isFreeForPath(zone, f.actor, Engine.INVALID_ENTITY, 13, 10, 1);
+      verifyNoInteractions(f.paths);
+    }
+  }
+
+  @Test
+  void wrapperRejectsOwnerGroupTargetBeyondStrictHundredCellPerAxisBound() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      Map map = terrain(f, false);
+      int wall = wall(f, 14, 10);
+      int child = enemy(f, 110, 10);
+      Monster converted = f.world.getMapper(Monster.class).get(child);
+      converted.converted = true;
+      converted.conversionOwnerId = f.target;
+      attributes(f, child).base().put(Stat.maxdamage, 1000);
+      attributes(f, child).reset();
+      f.world.process();
+      assertEquals(child, select(f), "100 is still inside the native coordinate bound");
+      clearInvocations(map);
+      f.world.getMapper(Position.class).get(child).position.set(111, 10);
+      assertEquals(wall, select(f), "101 clears native points before tracing");
+      assertEquals(2, baal(f).lastTargetCount());
+      verify(map, never()).isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean());
+    }
+  }
+
+  @Test
+  void zeroTargetUnitCoordinateDoesNotGuessRetainedNativePointCount() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      Map map = terrain(f, true);
+      wall(f, 14, 10);
+      f.targetPosition().set(0, 10);
+      f.world.process();
+      assertEquals(f.target, select(f));
+      verify(map, never()).isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean());
     }
   }
 
@@ -132,7 +200,7 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       int wall = wall(f, 6, 10); // west, opposite the primary
       f.world.process();
       assertEquals(wall, select(f));
-      verify(map).isBlockedForPath(any(), eq(11), eq(10), eq(DT1.Tile.FLAG_BLOCK_WALK), eq(1), anyBoolean());
+      verify(map, atLeastOnce()).isBlockedForPath(any(), eq(11), eq(10), eq(DT1.Tile.FLAG_BLOCK_WALK), eq(1), anyBoolean());
       verify(map, never()).isBlockedForPath(any(), eq(9), anyInt(), anyInt(), anyInt(), anyBoolean());
     }
   }
