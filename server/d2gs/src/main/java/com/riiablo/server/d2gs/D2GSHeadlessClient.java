@@ -5105,6 +5105,15 @@ public final class D2GSHeadlessClient {
               + " pendingMonsters=" + loaded.pendingMonsters + " spawnedMonsters=" + loaded.spawnedMonsters
               + " spawnedObjects=" + loaded.spawnedObjects + " groundItems=" + loaded.groundItems
               + " position=" + loaded.position + " blocked=" + loaded.blocked);
+          java.util.List<String> objectEvidence = D2GS.headlessMapObjectAudit(playerId);
+          for (String evidence : objectEvidence) {
+            report.println("[MAP_TOUR] " + evidence);
+          }
+          report.flush();
+          Files.write(directory.resolve("objects-level-" + level + ".txt"), objectEvidence, StandardCharsets.UTF_8);
+          if (objectEvidence.get(objectEvidence.size() - 1).endsWith("result=FAIL")) {
+            throw new IOException("Native object loading audit failed level=" + level);
+          }
           if (loaded.synthetic || !loaded.nativeTerrain || loaded.blocked || loaded.diagnostics.length < 14
               || loaded.diagnostics[8] == 0 || loaded.diagnostics[10] == 0) {
             throw new IOException("Missing terrain/collision or blocked entry level=" + level);

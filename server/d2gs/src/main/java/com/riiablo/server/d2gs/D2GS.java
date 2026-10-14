@@ -496,6 +496,26 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  static java.util.List<String> headlessMapObjectAudit(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<java.util.List<String>> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Map.Zone zone = server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId).zone;
+        // Full-level object loading diagnostic, matching segment staging.
+        // This is not evidence that every RoomEx was reached by walking.
+        server.mapManager.createNativeObjects(zone);
+        server.world.process();
+        result.complete(MapObjectLoadAudit.inspect(server.world, zone));
+      } catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(120, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Object load audit unavailable", e);
+    }
+  }
+
   static java.util.List<Vector2> headlessMapTourRoute(int playerId, Vector2 target) {
     D2GS server = activeHeadlessInstance;
     java.util.concurrent.CompletableFuture<java.util.List<Vector2>> result = new java.util.concurrent.CompletableFuture<>();

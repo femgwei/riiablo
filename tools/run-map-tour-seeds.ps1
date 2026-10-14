@@ -61,6 +61,14 @@ try {
       throw "Incomplete load/local movement coverage seed=$seed"
     }
     Assert-MapTourEvidence -Lines $lines
+    $objectAudits = @($lines | ForEach-Object {
+      if ($_ -match '^\[MAP_TOUR\] OBJECT_AUDIT level=(\d+) .* pending=0 .* failures=0 result=PASS$') {
+        [int]$Matches[1]
+      }
+    })
+    if ($objectAudits.Count -ne 132 -or @($objectAudits | Sort-Object -Unique).Count -ne 132) {
+      throw "Incomplete per-level object loading audit seed=$seed"
+    }
     if ($issues.Count) { throw "Unresolved log issues seed=${seed}: $($issues.Count); inspect log-issues.json" }
     Write-Host "PASS seed=${seed}: 132 maps and all five town exits audited"
   }
