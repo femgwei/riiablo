@@ -75,3 +75,7 @@ Waypoint 目的地均能定位到原生 RoomEx，延迟房间物化和重复查�
 替代真机截图确认角色是否视觉卡住。
 
 2026-10-14 A5 出城旁边出现不可攻击督军：game2.log 中 A5Q1 在玩家旁三格生成 entity=87，然后 RoomEntityTracking 将其归入 level=109。移除 ZoneChangeEvent 的玩家相对 Boss 补生成，只追踪原生 RoomEx 生成的申克。D2MOO A5Q1.cpp::ACT5Q1_OnSiegeBossActivated 处理既有的 SUPERUNIQUE_SIEGE_BOSS，不在出城事件中把 Boss 生到玩家旁边。新增真实资源唯一申克预设/野外归属检查及反复出城不得额外生成 Boss 的 ECS 回归。p4.png/game2.log 的文件时间 07:04 早于地板隐藏修复提交 92812e5a 的 07:06，黑块是否仍在修复后复现需新截图，不据旧图宣称已验证解决。
+
+2026-10-15 附属物数量与 seam 复核：D2Game 的主题人口处理已补入对象生成，主题桶的网格生成不再被 ObjGrp 路径遗漏；对象审计仍分别记录 exported/created/runtime/population，不能把创建成功当作数量与原版相等。seed=1、25Hz 的 132 图对象巡游在修复版本仍需以类别计数对照原版，当前日志中的松动石头、桶、宝箱、瓦罐和 trapped-soul 数量仅是实现侧基线，尚未形成原版数量等价结论。
+
+28→27 focused TCP 复核已真实走到 level 27 落点，但落点怪物收到 visibility delete 快照，`COMBAT_UNRESOLVED` 且 casts=0；因此该边仍 FAIL，不能报告为 seam 通过。探针已移除跨 seam 攻击的错误同等级限制，并收紧近距离 native-room 可见性回退；下一步需修复实体删除/重基线生命周期，再复测同一失败包。
