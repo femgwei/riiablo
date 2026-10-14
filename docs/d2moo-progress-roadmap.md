@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A4 Diablo AI
+
+- [x] 新增 `Diablo`，依据 D2MOO `AITHINK_Fn051_Diablo` 接入同 Act 目标筛选、55 格
+  首领搜索范围、17 档加权动作表，以及 A1/A2、Skill2--Skill7、Inferno、环绕、
+  接近和难度停顿等服务端动作生命周期。加权选择保留原生随机数组的单次 RNG 消耗。
+- [x] 真实 1.10f `Diablo` MonStats 行已解析到专用类；新增 3 项回归覆盖专用入口、
+  近战/远程权重、距离分支和动作生命周期。
+- [ ] 原生 `AITHINK_GetTargetForBoss` 的路径计数、导弹屏障/火焰与闪电抗性、特殊技能、
+  Chaos Sanctuary 传送门与 `Diablo Prison` 目标、Inferno 状态切换，以及完整 `pSeed`、
+  RoomEx、MonSeq 和逐帧技能效果仍待对齐；当前不宣称与原版逐帧等同。下一项继续 A5
+  首领/召唤链 AI。
+
 ## 2026-10-15 A4 Izual AI
 
 - [x] 新增 `Izual`，依据 D2MOO `AITHINK_Fn055_Izual` 接入首次激活回调、非战斗
