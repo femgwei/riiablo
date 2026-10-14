@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 BaalTaunt AI
+
+- [x] 新增 `BaalTaunt`，依据 D2MOO `AITHINK_Fn136_BaalTaunt` 接入无目标停顿、目标
+  中立帧计数、Taunt 触发、近距离停顿和目标接近；固定 Taunt 技能当前使用 A1 模式
+  生命周期，避免伪造不存在的 MonStats 技能槽。
+- [x] 真实 1.10f `BaalTaunt` MonStats 行已解析到专用类，新增 3 项回归覆盖专用入口、
+  中立目标计数、Taunt 模式、近距离停顿和无目标分支。
+- [ ] 原生玩家/怪物动画状态的完整同步、RoomEx 阻挡探测、固定技能的客户端效果、
+  `pSeed`、目标节点和 MonSeq 帧仍待对齐；当前接近分支未宣称完整路径等同。下一项
+  继续 A5 Baal 相关 AI 链。
+
 ## 2026-10-15 A5 BaalTentacle AI
 
 - [x] 新增 `BaalTentacle`，依据 D2MOO `AITHINK_Fn139_BaalTentacle` 接入主人存活门槛、
