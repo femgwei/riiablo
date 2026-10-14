@@ -115,15 +115,15 @@ public class WhirlwindSystem extends IteratingSystem {
       finish(entityId, "zero_velocity");
       return;
     }
+    // SrvSt38 installs WalkSpeed, never the preceding ordinary run mode.
+    velocity.movementRunning = false;
     velocity.velocity.set(runtime.destination).sub(position.position).nor().setLength(baseSpeed);
     float delta = Math.max(0f, world.getDelta());
-    float stepDistance = baseSpeed * Math.max(0.0001f, velocity.stateSpeedMultiplier) * delta;
-    if (stepDistance >= distance) {
-      velocity.velocity.setLength(distance / Math.max(0.0001f,
-          delta * Math.max(0.0001f, velocity.stateSpeedMultiplier)));
-    }
+    float multiplier = velocity.movementMultiplier();
+    velocity.velocity.setLength(Pathfinder.limitWaypointSpeed(
+        baseSpeed, delta * multiplier, distance));
     if (blocked(entityId, position.position, velocity.velocity, delta,
-        velocity.stateSpeedMultiplier)) {
+        multiplier)) {
       finish(entityId, "collision");
       return;
     }

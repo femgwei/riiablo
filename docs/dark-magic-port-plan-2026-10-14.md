@@ -222,3 +222,15 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   PathfinderTest、VelocityModeChangerTest、StaminaSystemTest、
   NativeBarbarianPassiveDataTest、PaladinSupportAuraIntegrationTest 全部通过，
   git diff --check 通过。未进行实机验收。
+- 特殊移动模块：旋风普通跑步状态隔离与位移合同。D2MOO SkillBar.cpp
+  SKILLS_SrvSt38_Whirlwind 调用 PATH_SetVelocity(sub_6FD15500)；Skills.cpp
+  sub_6FD15500 对玩家返回 CharStats.WalkSpeed<<8，而不是 RunSpeed。
+  riiablo 旋风入口和每次路径推进现清除 movementRunning，避免继承普通奔跑
+  标记而使积分选择跑步倍率。终点截断复用 Pathfinder.limitWaypointSpeed，
+  碰撞预检和最终积分统一调用 Velocity.movementMultiplier，不再用0.0001倍率
+  回退掩盖锁定或零倍率。攻击计时与武器速度断点保持原有逻辑。
+  新增真实ECS旋风→Pathfinder→VelocityAdder回归，覆盖不同倍率下到达终点、
+  不越界、请求向量不预乘倍率以及下一帧清理；原生数据与既有双持攻击回归保留。
+  此批是已证实的基速选择与内部链路修复，不宣称已确认原生旋风期间全部FRW、
+  状态刷新或定点规则。D2Common按动画模式/技能标记选择velocity更新分支，
+  该条件链仍须追踪；旋风专用碰撞掩码、动态单位穿越和Box2D实机验收仍待完成。

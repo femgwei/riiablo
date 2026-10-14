@@ -133,11 +133,56 @@ class BarbarianWhirlwindTest extends RiiabloTest {
   }
 
   private static World world(Actioneer actioneer, DummyFactory factory) {
-    return new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), actioneer, new WhirlwindSystem(), new Pathfinder(), factory)
-        .build()
+    return world(actioneer, factory, false);
+  }
+
+  private static World world(Actioneer actioneer, DummyFactory factory, boolean integrate) {
+    WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new WhirlwindSystem(), new Pathfinder(), factory);
+    if (integrate) builder.with(new DynamicUnitCollisionSystem(false), new VelocityAdder());
+    return new World(builder.build()
         .register("factory", factory)
         .register("map", new com.riiablo.map.Map(0, 0)));
+  }
+
+  @Test
+  void whirlwindClearsOrdinaryRunAndClipsUsingTheIntegratorMultiplier() {
+    for (float multiplier : new float[] {0f, 0.25f, 0.5f, 1f, 1.5f}) {
+      Actioneer actioneer = new Actioneer();
+      World world = world(actioneer, new DummyFactory(), true);
+      try {
+        Skills.Entry skill = Riiablo.files.skills.get("Whirlwind");
+        int id = player(world, 0, 0, attributes(1000, 1, 1, 100000));
+        Velocity velocity = world.getMapper(Velocity.class).get(id).setPlayer(6, 9);
+        velocity.movementRunning = true;
+        velocity.stateSpeedMultiplier = multiplier;
+        velocity.nativePlayerVelocityBonus = (multiplier - 1f) * 100;
+        world.getMapper(Casting.class).create(id)
+            .set(skill.Id, Engine.INVALID_ENTITY, new Vector2(1, 0));
+        actioneer.onSkillStart(SkillStartEvent.obtain(id, skill.Id, Engine.INVALID_ENTITY,
+            new Vector2(1, 0), skill.srvstfunc, skill.cltstfunc));
+        assertFalse(velocity.movementRunning);
+        // Even a stale run flag between start and processing must not change WW displacement.
+        velocity.movementRunning = true;
+        velocity.stateMovementLocked = multiplier == 0f;
+        world.setDelta(1f);
+        world.process();
+        assertFalse(velocity.movementRunning);
+        if (multiplier == 0f) {
+          assertTrue(world.getMapper(Position.class).get(id).position.isZero());
+          assertTrue(velocity.velocity.isZero());
+          assertTrue(world.getMapper(WhirlwindRuntime.class).has(id));
+          continue;
+        }
+        assertEquals(1f, world.getMapper(Position.class).get(id).position.x, 0.0001f);
+        assertEquals(1f / multiplier, velocity.velocity.len(), 0.0001f);
+        world.process();
+        assertFalse(world.getMapper(WhirlwindRuntime.class).has(id));
+        assertTrue(velocity.velocity.isZero());
+      } finally {
+        world.dispose();
+      }
+    }
   }
 
   private static int player(World world, float x, float y, Attributes attrs) {

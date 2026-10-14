@@ -3938,6 +3938,7 @@ public class Actioneer extends PassiveSystem {
       state.needsSync = true;
     }
     Vector2 direction = new Vector2(destination).sub(start).nor();
+    mVelocity.get(entityId).movementRunning = false;
     mVelocity.get(entityId).velocity.set(direction)
         .setLength(mVelocity.get(entityId).speed(false));
     if (mAngle.has(entityId)) mAngle.get(entityId).target.set(direction);
