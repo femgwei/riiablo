@@ -6,7 +6,7 @@ import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.MissileP;
 
-/** Serializes the immutable identity of a server-authoritative projectile. */
+/** Serializes identity and the current authoritative projectile lifetime. */
 public class MissileSerializer implements FlatBuffersSerializer<Missile, MissileP> {
   public static final MissileP table = new MissileP();
 
@@ -19,7 +19,8 @@ public class MissileSerializer implements FlatBuffersSerializer<Missile, Missile
   public int putData(FlatBufferBuilder builder, Missile component) {
     int missileId = component.missile == null ? 0 : component.missile.Id;
     return MissileP.createMissileP(builder, missileId, component.ownerId, component.range,
-        component.skillId, (short) Math.max(0, Math.min(255, component.damageLevel)));
+        component.skillId, (short) Math.max(0, Math.min(255, component.damageLevel)),
+        Math.max(0, component.nativeFrame), Math.max(0, component.nativeLifetimeFrames));
   }
 
   @Override

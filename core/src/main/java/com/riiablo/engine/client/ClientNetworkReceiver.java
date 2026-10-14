@@ -1373,6 +1373,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     local.range = data.range();
     local.skillId = data.skillId();
     local.damageLevel = data.damageLevel();
+    if (data.nativeFrame() >= 0) local.nativeFrame = data.nativeFrame();
+    if (data.nativeLifetimeFrames() >= 0) {
+      local.nativeLifetimeFrames = data.nativeLifetimeFrames();
+    }
   }
 
   private void applyStateSnapshot(int entityId, StateP data) {

@@ -20,14 +20,20 @@ public final class MissileP extends Table {
   public float range() { int o = __offset(8); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public int skillId() { int o = __offset(10); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
   public int damageLevel() { int o = __offset(12); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
+  public int nativeFrame() { int o = __offset(14); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public int nativeLifetimeFrames() { int o = __offset(16); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
 
   public static int createMissileP(FlatBufferBuilder builder,
       int missileId,
       int ownerId,
       float range,
       int skillId,
-      int damageLevel) {
-    builder.startTable(5);
+      int damageLevel,
+      int nativeFrame,
+      int nativeLifetimeFrames) {
+    builder.startTable(7);
+    MissileP.addNativeLifetimeFrames(builder, nativeLifetimeFrames);
+    MissileP.addNativeFrame(builder, nativeFrame);
     MissileP.addSkillId(builder, skillId);
     MissileP.addRange(builder, range);
     MissileP.addOwnerId(builder, ownerId);
@@ -36,12 +42,14 @@ public final class MissileP extends Table {
     return MissileP.endMissileP(builder);
   }
 
-  public static void startMissileP(FlatBufferBuilder builder) { builder.startTable(5); }
+  public static void startMissileP(FlatBufferBuilder builder) { builder.startTable(7); }
   public static void addMissileId(FlatBufferBuilder builder, int missileId) { builder.addShort(0, (short)missileId, (short)0); }
   public static void addOwnerId(FlatBufferBuilder builder, int ownerId) { builder.addInt(1, ownerId, 0); }
   public static void addRange(FlatBufferBuilder builder, float range) { builder.addFloat(2, range, 0.0f); }
   public static void addSkillId(FlatBufferBuilder builder, int skillId) { builder.addInt(3, skillId, -1); }
   public static void addDamageLevel(FlatBufferBuilder builder, int damageLevel) { builder.addByte(4, (byte)damageLevel, (byte)0); }
+  public static void addNativeFrame(FlatBufferBuilder builder, int nativeFrame) { builder.addInt(5, nativeFrame, -1); }
+  public static void addNativeLifetimeFrames(FlatBufferBuilder builder, int nativeLifetimeFrames) { builder.addInt(6, nativeLifetimeFrames, -1); }
   public static int endMissileP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -145,3 +145,13 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   nativeLifetimeFrames；不套用 77 截断、不继承父弹剩余寿命。新增父弹已运行10帧
   仍生成全新寿命的回归；续弹目标筛选和命中次数保持原实现。`MissileNativePolicyTest`
   与 Phoenix 连锁定向测试通过，diff 检查通过；尚未实机验收。
+- 导弹复核第五批（同步寿命状态）：D2MOO Missiles.cpp 的原生0x73包传输
+  MISSILE_GetCurrentFrame 的剩余帧数。riiablo 的 MissileP 原先只传身份、range、
+  skill和level，无法恢复运行时寿命。现追加 nativeFrame/nativeLifetimeFrames，
+  将当前服务器时钟与显式寿命覆盖同步到只读客户端；生成的 MissileP.java 已更新。
+  新字段默认-1表示旧发送端缺省，避免旧包重置已有时钟；0为有效状态。
+  测试验证77总帧/60已运行帧还原17剩余帧、重复快照、旧包及零值覆盖。
+  MissileLifetimeSnapshotTest 与 AuthoritativeAreaSkillSnapshotTest 通过，diff检查
+  通过。此批只修复寿命元数据，不宣称完成实机重连：独立clientFrame回调时钟、
+  动画相位、延迟补偿、特殊路径/控制器状态和完整重连流程仍待审计；客户端仍不
+  执行服务器伤害逻辑。

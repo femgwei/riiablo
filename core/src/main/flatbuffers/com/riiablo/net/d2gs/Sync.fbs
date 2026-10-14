@@ -252,6 +252,9 @@ table MissileP {
   // entity but must never run its damage/controller logic.
   skillId:int32 = -1;
   damageLevel:uint8;
+  // -1 means an older sender omitted the clock; zero is a valid state.
+  nativeFrame:int32 = -1;
+  nativeLifetimeFrames:int32 = -1;
 }
 
 // One-shot presentation event.  It is deliberately not an ECS component:
