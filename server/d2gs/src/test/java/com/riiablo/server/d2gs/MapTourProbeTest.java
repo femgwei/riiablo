@@ -43,7 +43,11 @@ public class MapTourProbeTest {
     com.badlogic.gdx.backends.headless.HeadlessApplication app = new com.badlogic.gdx.backends.headless.HeadlessApplication(
         new com.badlogic.gdx.ApplicationAdapter() {});
     final boolean[] barrier = {false};
+    final boolean[] nativeSeam = {false};
     com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0) {
+      @Override public boolean isNativeSeamConnection(com.riiablo.map.Map.Zone source, com.riiablo.map.Map.Zone destination) {
+        return nativeSeam[0] && source.level.Id == 23 && destination.level.Id == 24;
+      }
       @Override public int playerFlyingFlags(int x, int y) {
         return barrier[0] && x == 5 ? com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP : 0;
       }
@@ -77,6 +81,16 @@ public class MapTourProbeTest {
       }
       world.process();
       assertEquals(nearest, MapTourProbe.blocker(world, map, player, null).warp);
+      com.riiablo.map.Map.Zone neighbor = new com.riiablo.map.Map.Zone();
+      neighbor.level = new com.riiablo.codec.excel.Levels.Entry(); neighbor.level.Id = 24;
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(selected).set(map, neighbor);
+      org.junit.Assert.assertNull("a nearby unit in an unrelated map is not a seam blocker",
+          MapTourProbe.blocker(world, map, player, null, selected));
+      nativeSeam[0] = true;
+      assertEquals("27->26: the near-side player must be able to select a hostile native-seam blocker",
+          selected, MapTourProbe.blocker(world, map, player, null, selected).warp);
+      nativeSeam[0] = false;
+      world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(selected).set(map, zone);
       assertEquals("recheck the selected target even when another monster is closer", selected,
           MapTourProbe.blocker(world, map, player, null, selected).warp);
       barrier[0] = true;

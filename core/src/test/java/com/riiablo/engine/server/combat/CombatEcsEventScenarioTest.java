@@ -26,7 +26,7 @@ class CombatEcsEventScenarioTest {
   void animationKeyframeAndFinishReachCombatEventBus() {
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new AnimStepper(), probe)
+        .with(new EventSystem(), new com.riiablo.engine.server.CofManager(), new AnimStepper(), probe)
         .build());
     try {
       int entityId = world.create();

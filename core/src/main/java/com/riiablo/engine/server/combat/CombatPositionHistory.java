@@ -134,9 +134,14 @@ public final class CombatPositionHistory {
     Snapshot attacker = snapshot(attackerId, tick);
     Snapshot target = snapshot(targetId, tick);
     if (attacker == null || target == null) return RangeResult.MISSING_SNAPSHOT;
-    if (attacker.zone != null && target.zone != null && attacker.zone != target.zone) {
+    if (attacker.zone != null && target.zone != null && attacker.zone != target.zone
+        && (map == null || attacker.zone.isTown() || target.zone.isTown()
+            || !map.isNativeSeamConnection(attacker.zone, target.zone))) {
       return RangeResult.DIFFERENT_ZONE;
     }
+    // D2Common UNITS_IsInMeleeRange uses distance and PLAYER_FLYING collision;
+    // a continuous outdoor/monastery RoomEx seam is not a combat boundary.
+    // Detached and overlapping levels above remain isolated.
     if (!NativeMeleeDistance.isInRange(
         attacker.x, attacker.y, attacker.size,
         target.x, target.y, target.size,

@@ -55,7 +55,10 @@ final class MapTourProbe {
     for (int i = 0; i < units.size(); i++) {
       int id = units.get(i);
       if (targetId != Engine.INVALID_ENTITY && id != targetId) continue;
-      if (world.getMapper(MapWrapper.class).get(id).zone != owner.zone) continue;
+      MapWrapper targetOwner = world.getMapper(MapWrapper.class).get(id);
+      if (targetOwner.zone == null || targetOwner.map != null && targetOwner.map != map
+          || targetOwner.zone != owner.zone && (targetOwner.zone.isTown()
+              || !map.isNativeSeamConnection(owner.zone, targetOwner.zone))) continue;
       com.riiablo.engine.server.component.Monster monster = world.getMapper(
           com.riiablo.engine.server.component.Monster.class).get(id);
       if (!hostileBlocker(monster)
