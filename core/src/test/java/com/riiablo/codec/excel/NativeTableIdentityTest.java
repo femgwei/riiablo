@@ -42,6 +42,33 @@ class NativeTableIdentityTest {
   }
 
   @Test
+  void skillsUseCompiledRowsAndDescriptionsUseNames() {
+    Skills skills = load(Skills.class,
+        "Id\tskill\tskilldesc\n99\tAttack\tattack-description\n"
+        + "77\tDivergent\tdivergent-description\n");
+    SkillDesc descriptions = load(SkillDesc.class,
+        "skilldesc\tIconCel\nunused\t3\nattack-description\t4\n"
+        + "divergent-description\t17\n");
+    assertEquals("Divergent", skills.get(1).skill);
+    assertEquals(1, skills.get(1).Id);
+    assertEquals(1, skills.index("Divergent"));
+    assertEquals(17, descriptions.get(skills.get(1).skilldesc).IconCel);
+    assertNull(skills.get(77));
+    assertNull(descriptions.get("missing"));
+  }
+
+  @Test
+  void objectsKeepDuplicateAuthoredIdsAsDistinctSourceRows() {
+    Objects objects = load(Objects.class,
+        "Id\tName\n408\tfirst\n408\tsecond\n");
+    assertEquals("first", objects.get(0).Name);
+    assertEquals("second", objects.get(1).Name);
+    assertEquals(1, objects.get(1).Id);
+    assertEquals(2, objects.size());
+    assertNull(objects.get(408));
+  }
+
+  @Test
   void monsterPresetsUseIndependentPerActOrdinals() {
     // Locks riiablo's existing interleaved-act extension. Native 1.10f instead
     // partitions contiguous act sections; this is not a native interleaving claim.

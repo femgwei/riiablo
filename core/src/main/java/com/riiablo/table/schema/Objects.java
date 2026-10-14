@@ -1,10 +1,9 @@
 package com.riiablo.table.schema;
 
 import com.riiablo.table.annotation.Format;
-import com.riiablo.table.annotation.PrimaryKey;
 import com.riiablo.table.annotation.Schema;
 
-@Schema
+@Schema(indexed = true)
 @SuppressWarnings("unused")
 public class Objects {
   @Override
@@ -19,7 +18,6 @@ public class Objects {
   @Format(format = "description - not loaded")
   public String Description;
 
-  @PrimaryKey
   public int Id;
 
   public String Token;

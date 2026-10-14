@@ -24,7 +24,6 @@ public class Objects extends Excel<Objects.Entry> {
     @Column(format = "description - not loaded")
     public String  Description;
     @Column
-    @Key
     public int     Id;
     @Column public String  Token;
     @Column public int     SpawnMax;

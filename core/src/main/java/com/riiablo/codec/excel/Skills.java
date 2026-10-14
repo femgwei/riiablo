@@ -6,8 +6,15 @@ import com.riiablo.CharacterClass;
 @Excel.Binned
 public class Skills extends Excel<Skills.Entry> {
   @Override
+  protected void put(int id, Entry value) {
+    // Native skills are addressed by compiled row; TXT Id is not loaded.
+    value.Id = id;
+    super.put(id, value);
+  }
+
+  @Override
   protected void init() {
-    // Skills.txt is keyed by numeric Id, but MonStats references skills by
+    // Skills.txt is keyed by compiled row, but MonStats references skills by
     // their textual name. Build the secondary name index required by monster
     // AI and other data-driven consumers.
     STRING_TO_ID = new ObjectIntMap<>();
@@ -36,13 +43,13 @@ public class Skills extends Excel<Skills.Entry> {
     return classId != -1 ? CharacterClass.get(classId) : null;
   }
 
+  @Excel.Index
   public static class Entry extends Excel.Entry {
     @Override
     public String toString() {
       return skill;
     }
 
-    @Key
     @Column
     public int     Id;
     @Column public String  skill;
