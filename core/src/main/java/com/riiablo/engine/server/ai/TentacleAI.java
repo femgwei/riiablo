@@ -1,0 +1,58 @@
+package com.riiablo.engine.server.ai;
+
+import com.badlogic.gdx.math.Vector2;
+import com.riiablo.codec.Animation;
+import com.riiablo.engine.Engine;
+
+/** Shared D2MOO Fn056/Fn057 submerge/emerge timers; durations are in seconds. */
+abstract class TentacleAI extends NativeDecisionAI {
+  static final int PARAM_ATTACK_CHANCE = 0;
+  static final int PARAM_SUBMERGE_CHANCE = 1;
+  static final int PARAM_SUBMERGE_SECONDS = 2;
+  static final int PARAM_EMERGE_SECONDS = 3;
+  static final int PARAM_STALL_DURATION = 4;
+  static final int PARAM_ACTIVE_DISTANCE = 5;
+
+  protected int phase;
+  private double frame;
+  private double changeAfter;
+
+  TentacleAI(int entityId) {
+    super(entityId);
+  }
+
+  @Override
+  protected void beforeThink(float delta) {
+    frame += Math.max(0f, delta) / Animation.FRAME_DURATION;
+  }
+
+  @Override
+  protected void thinkWithoutTarget() {
+    // These stationary units must still submerge/expire when prey disappears.
+    think(Engine.INVALID_ENTITY, Float.MAX_VALUE, false);
+  }
+
+  protected final boolean expired() {
+    return frame > changeAfter;
+  }
+
+  protected final void submerge(int targetId, int delay) {
+    Vector2 target = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+        ? mPosition.get(targetId).position : mPosition.get(entityId).position;
+    castAt(0, targetId, target);
+    // Native schedules this delay and updates phase even if UseSkill fails.
+    delayDecision(delay);
+    phase = 1;
+    changeAfter = frame + 25d * Math.max(0, params[PARAM_SUBMERGE_SECONDS]);
+  }
+
+  protected final void emerge() {
+    cast(1, entityId); // native emergence always targets the unit itself
+    phase = 2;
+    changeAfter = frame + 25d * Math.max(0, params[PARAM_EMERGE_SECONDS]);
+  }
+
+  protected final void stall() {
+    idle(params[PARAM_STALL_DURATION]);
+  }
+}

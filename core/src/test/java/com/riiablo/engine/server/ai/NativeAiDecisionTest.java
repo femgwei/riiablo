@@ -79,6 +79,16 @@ class NativeAiDecisionTest {
   }
 
   @Test
+  void tentacleParamSlotsMatchD2Moo() {
+    assertEquals(0, TentacleAI.PARAM_ATTACK_CHANCE);
+    assertEquals(1, TentacleAI.PARAM_SUBMERGE_CHANCE);
+    assertEquals(2, TentacleAI.PARAM_SUBMERGE_SECONDS);
+    assertEquals(3, TentacleAI.PARAM_EMERGE_SECONDS);
+    assertEquals(4, TentacleAI.PARAM_STALL_DURATION);
+    assertEquals(5, TentacleAI.PARAM_ACTIVE_DISTANCE);
+  }
+
+  @Test
   void smithUsesIntegerLifeBeforePercentageAndClampsSpeedBonus() {
     assertEquals(50, Smith.lifePercentage(10, 20));
     assertEquals(0, Smith.lifePercentage(0, 100));

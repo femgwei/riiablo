@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A3 Tentacle / TentacleHead AI
+
+- [x] 新增 `Tentacle` 与 `TentacleHead`，按 D2MOO `AITHINK_Fn056/Fn057` 复刻
+  Skill1 潜水、Skill2 浮出、秒数计时、停顿时间和 ActiveDistance 门槛。潜水中保持
+  不可攻击状态，浮出技能以自身为目标，普通攻击继续使用 A1 生命周期。
+- [x] `Tentacle` 保留 Mephisto 触手主人关联：没有有效 `minionOwnerId` 时进入死亡序列；
+  主人处于尸体/死亡状态时按原生 40% 概率联动死亡；主人 sequence 进入死亡模式时也可
+  被识别。`TentacleHead` 独立按距离和非战斗 1% 潜水概率运行，不依赖主人死亡。
+- [x] `NativeDecisionAI` 新增无目标决策钩子，使固定单位仍能推进潜水/寿命状态；AI
+  随机与技能事件继续走共享 seed、SkillCast/SkillStart/Sequence 生命周期。真实 1.10f
+  表驱动触手行、两套技能槽、无主人、潜水/浮出和 A1 分支回归已加入。
+- [x] 本轮定向 AI、技能矩阵与潜水数据回归共 84 项全部通过，无失败或跳过。
+- [ ] 原生动态单位 owner GUID、RoomEx 精确主人动画状态、潜水碰撞遮罩的网络同步，
+  以及 `AITACTICS_Idle` 事件队列的逐帧调度仍待对齐；当前服务端使用现有 `Corpse`/
+  `Sequence` 投影和潜水/浮出入口，不宣称客户端动画帧完全等同。下一项继续 A3 `Izual`。
+
 ## 2026-10-15 A3 Mephisto AI
 
 - [x] 新增 `Mephisto`，依据 D2MOO `AITHINK_Fn050_Mephisto` 接入近战选择、

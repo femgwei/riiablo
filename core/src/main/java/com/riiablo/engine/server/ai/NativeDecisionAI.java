@@ -21,10 +21,11 @@ abstract class NativeDecisionAI extends AI {
     nextThink -= delta;
     if (mCasting.has(entityId) || mSequence.has(entityId) || nextThink > 0f) return;
     nextThink = Math.max(Animation.FRAME_DURATION, SLEEP);
+    if (!beforeDecision()) return;
     float[] distance = {Float.MAX_VALUE};
     int targetId = findNearestTargetWithAidist(distance);
     if (targetId == Engine.INVALID_ENTITY) {
-      idle(1);
+      thinkWithoutTarget();
       return;
     }
     think(targetId, distance[0], isInNativeMeleeRange(targetId));
@@ -33,7 +34,17 @@ abstract class NativeDecisionAI extends AI {
   /** Hook for native AIs with timers that advance while an action is active. */
   protected void beforeThink(float delta) {}
 
+  /** Lifecycle checks that run at decision cadence, even without an enemy. */
+  protected boolean beforeDecision() { return true; }
+
+  protected void thinkWithoutTarget() { idle(1); }
+
   protected abstract void think(int targetId, float distance, boolean combat);
+
+  /** Schedules a decision without changing a just-started skill's mode. */
+  protected final void delayDecision(int frames) {
+    nextThink = Math.max(1, frames) * Animation.FRAME_DURATION;
+  }
 
   protected final void idle(int frames) {
     stopMovement();
