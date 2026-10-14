@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A4 Izual AI
+
+- [x] 新增 `Izual`，依据 D2MOO `AITHINK_Fn055_Izual` 接入首次激活回调、非战斗
+  距离 `<10` 的 Nova 概率、接近概率、近战攻击/Nova 概率、`aidel` 停顿，以及
+  Nova 后 `POST_NOVA_DOLDRUMS` 与 `NUM_SWINGS` 计数；普通攻击使用原生 A1 生命周期。
+- [x] `Act4QuestSystem` 增加 `ACT4Q1_OnIzualActivated` 对应入口，按当前 Izual 所在
+  区域同步启动同区玩家的 A4Q1 记录；重复 AI tick 不重复激活。真实 1.10f Izual
+  MonStats 行、六个 AI 参数槽位、严格距离边界、Nova 停顿/挥击、近战优先级及拒绝
+  施法不偷换攻击回归已加入，共 4 项定向测试通过。
+- [ ] 原生带 flags 的路径类型、完整单位 `pSeed` 生命周期、RoomEx/目标节点遍历、
+  MonSeq 帧序列和逐帧技能效果仍未完全对齐；任务激活已桥接服务端记录，但客户端
+  鬼魂/音效/状态循环等原生表现未宣称等同。下一项继续 A3/A4 尚未覆盖的首领 AI。
+
 ## 2026-10-15 A3 Tentacle / TentacleHead AI
 
 - [x] 新增 `Tentacle` 与 `TentacleHead`，按 D2MOO `AITHINK_Fn056/Fn057` 复刻

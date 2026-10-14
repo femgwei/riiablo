@@ -65,6 +65,7 @@ public class Act4QuestSystem extends PassiveSystem {
   private EntitySubscription monstersByZone;
   private EntitySubscription objectsByZone;
   private final IntSet spawnedIzualLevels = new IntSet();
+  private final IntSet activatedIzuals = new IntSet();
   private final IntSet rewardedIzuals = new IntSet();
   private final IntSet activatedDiabloSeals = new IntSet();
   private final IntSet sealBossEntities = new IntSet();
@@ -116,6 +117,25 @@ public class Act4QuestSystem extends PassiveSystem {
         }
       }
     }
+  }
+
+  /** Native ACT4Q1_OnIzualActivated bridge called by Izual's first AI tick. */
+  public void onIzualActivated(int izualEntityId) {
+    if (!activatedIzuals.add(izualEntityId)) return;
+    int level = levelId(izualEntityId);
+    if (playersByZone != null) {
+      IntBag players = playersByZone.getEntities();
+      int[] ids = players.getData();
+      for (int i = 0; i < players.size(); i++) {
+        int playerId = ids[i];
+        if (levelId(playerId) != level) continue;
+        Player player = mPlayer.get(playerId);
+        if (player != null && player.data != null) {
+          updateRecord(player.data, Act4IzualQuest::start, "izual-activated");
+        }
+      }
+    }
+    log.info("[A4Q1] Izual activated: entity={} level={}", izualEntityId, level);
   }
 
   @Subscribe
