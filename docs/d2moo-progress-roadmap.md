@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 PutridDefiler AI
+
+- [x] 新增 `PutridDefiler`，依据 D2MOO `AITHINK_Fn137_PutridDefiler` 接入战斗 A1、
+  25 格内的近战 Skill1（Impregnate）/接近分支、超出回调范围后的停顿，以及过近时
+  退避点计算；所有动作使用统一服务端生命周期。
+- [x] 真实 1.10f `PutridDefiler` MonStats 行已解析到专用类，新增 3 项回归覆盖专用
+  入口、近战攻击、非战斗接近和范围外停顿。
+- [ ] 原生第二目标节点筛选 `sub_6FCF1E80`、RoomEx 关系/障碍、精确逃跑路径、
+  `pSeed`、MonSeq 和 Impregnate 客户端表现仍待对齐；当前不宣称与原版逐帧等同。
+  下一项继续 A5 Baal 相关 AI 链。
+
 ## 2026-10-15 A5 BaalTaunt AI
 
 - [x] 新增 `BaalTaunt`，依据 D2MOO `AITHINK_Fn136_BaalTaunt` 接入无目标停顿、目标
