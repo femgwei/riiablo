@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A3 ZakarumZealot AI
+
+- [x] 新增 `ZakarumZealot`：按 D2MOO 的攻击概率、A1/A2 选择和非战斗奔跑/步行
+  接近分支接入统一动作生命周期，并按 `Velocity`/`Run` 计算原生速度加成。
+- [x] 真实 1.10f MonStats 动态查找覆盖该 AI 行，A2 攻击和奔跑接近回归已加入。
+- [ ] 任务 A3Q5 特殊目标、受伤后的碰撞/绕行分支和原生 `pSeed`/MonSeq 细节仍待接入。
+
 ## 2026-10-15 A2 ElementalBeast AI
 
 - [x] 新增 `ElementalBeast`：按 D2MOO 三阶段状态机实现激活距离、Skill1 二次施放、

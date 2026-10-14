@@ -42,8 +42,15 @@ abstract class NativeDecisionAI extends AI {
   }
 
   protected final void approach(int targetId, int velocityBonus) {
+    approach(targetId, velocityBonus, false);
+  }
+
+  protected final void approach(int targetId, int velocityBonus, boolean running) {
     state = "APPROACH";
-    if (!walkTo(mPosition.get(targetId).position, velocityBonus, targetId)) idle(10);
+    boolean moved = running
+        ? runTo(mPosition.get(targetId).position, velocityBonus, targetId)
+        : walkTo(mPosition.get(targetId).position, velocityBonus, targetId);
+    if (!moved) idle(10);
   }
 
   /**

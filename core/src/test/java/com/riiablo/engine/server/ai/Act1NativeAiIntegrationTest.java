@@ -312,6 +312,23 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void zakarumZealotSelectsNativeAttack2AndRunApproach() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumZealot"), 0, 1f)) {
+      f.ai.params[ZakarumZealot.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.params[ZakarumZealot.PARAM_ATTACK2_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("ATTACK", f.ai.getState());
+      assertEquals(Engine.Monster.MODE_A2, f.sequence().mode1);
+    }
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumZealot"), 0, 10f)) {
+      f.ai.params[ZakarumZealot.PARAM_RUN_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("APPROACH", f.ai.getState());
+      verify(f.paths).findPath(eq(f.actor), any(), eq(true), eq(f.target));
+    }
+  }
+
+  @Test
   void smithSpeedsUpWhenHurtAndUsesOrdinaryAttackInMelee() {
     try (Fixture f = new Fixture("smith", 0, 30f)) {
       f.health(50f, 100f);
