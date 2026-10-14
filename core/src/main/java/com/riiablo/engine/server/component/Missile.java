@@ -378,13 +378,21 @@ public class Missile extends PooledComponent {
     this.missile = missile;
     this.start.set(start);
     this.range = range;
-    // Missiles.txt.Range is a frame lifetime for stationary missiles. A
-    // distance-only range can never expire zero-velocity impact animations.
-    this.nativeLifetimeFrames = missile != null && missile.Vel == 0 && range > 0
+    // Native basic missiles count Range in frames regardless of velocity.
+    // Specialized moving controllers retain their existing policy pending
+    // per-handler migration; stationary rows already use the frame clock.
+    this.nativeLifetimeFrames = missile != null
+        && (missile.Vel == 0 || missile.pSrvDoFunc == 1) && range > 0
         ? Math.max(1, Math.round(range))
         : 0;
     this.missileDescriptor = new AssetDescriptor<>(Class.Type.MIS.PATH + '\\' + missile.CelFile + ".dcc", DCC.class);
     return this;
+  }
+
+  public static int nativeRangeFrames(Missiles.Entry row, int skillLevel) {
+    if (row == null) return 0;
+    long frames = (long) row.Range + (long) Math.max(0, skillLevel) * row.LevRange;
+    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, frames));
   }
   
   public Missile setOwner(int ownerId) {

@@ -1197,6 +1197,11 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
     missileComponent.set(missile, position, missile.Range).setOwner(ownerId);
+    if (missile.pSrvDoFunc == 1) {
+      missileComponent.nativeLifetimeFrames =
+          com.riiablo.engine.server.component.Missile.nativeRangeFrames(missile,
+              Math.max(1, damageLevel));
+    }
     missileComponent.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
 
     Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)

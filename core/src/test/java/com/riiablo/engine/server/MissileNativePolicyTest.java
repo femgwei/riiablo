@@ -324,14 +324,46 @@ class MissileNativePolicyTest {
   }
 
   @Test
-  void movingMissilesKeepDistanceRangeSeparateFromStationaryLifetime() {
+  void basicMovingMissilesUseNativeFrameLifetime() {
     Missiles.Entry row = new Missiles.Entry();
     row.Vel = 30;
     row.Range = 10;
+    row.pSrvDoFunc = 1;
     Missile missile = new Missile().set(row, Vector2.Zero, row.Range);
 
     assertEquals(10f, missile.range);
-    assertEquals(0, missile.nativeLifetimeFrames,
-        "moving missile Range is a distance endpoint, not a frame lifetime");
+    assertEquals(10, missile.nativeLifetimeFrames);
+    row.LevRange = 2;
+    assertEquals(16, Missile.nativeRangeFrames(row, 3));
+  }
+
+  @Test
+  void basicLifetimeDoesNotDependOnTravelSpeed() {
+    for (float speed : new float[] {1f, 1000f}) {
+      World world = new World(new WorldConfigurationBuilder()
+          .with(new EventSystem(), new MissileCollisionSystem()).build());
+      try {
+        int id = world.create();
+        Missiles.Entry row = new Missiles.Entry();
+        row.Vel = 30;
+        row.Range = 5;
+        row.pSrvDoFunc = 1;
+        Missile missile = world.getMapper(Missile.class).create(id);
+        missile.set(row, Vector2.Zero, row.Range);
+        world.getMapper(Position.class).create(id).position.setZero();
+        world.getMapper(Velocity.class).create(id).velocity.set(speed, 0);
+        world.setDelta(1f / 25f);
+        EntitySubscription subscription = world.getAspectSubscriptionManager().get(
+            Aspect.all(Missile.class, Position.class, Velocity.class));
+        for (int frame = 1; frame < 5; frame++) {
+          world.process();
+          assertEquals(1, subscription.getEntities().size(), "alive before frame 5");
+        }
+        world.process();
+        assertEquals(0, subscription.getEntities().size(), "expires at frame 5");
+      } finally {
+        world.dispose();
+      }
+    }
   }
 }

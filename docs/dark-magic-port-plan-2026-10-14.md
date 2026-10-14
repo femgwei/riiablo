@@ -21,12 +21,20 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    状态加成和系统执行顺序。D2MOO `Units.cpp:UNITS_GetBaseVelocity` 返回
    `nWalkSpeed << 8`，`PathMisc.cpp:sub_6FD5CEB0` 将速度转换为路径向量；
    完整位移链核实前不全局乘速度常量。
-2. **导弹速度与寿命分离**（已完成初步核查）。参考 `b7e5f680`、`8c87f64a`。
-   分开验证每 tick 位移、初始化后寿命、删除时序和重连剩余寿命。
-   riiablo 的 `Missile.set` 已仅为零速度导弹设置 `nativeLifetimeFrames`，移动导弹的
-   `Range` 保持距离终点；现有静止导弹压力回收测试通过。本批新增回归，锁定移动导弹
-   `Range` 不得变成帧寿命。Charged Bolt Sentry 的 77 tick 是需核实的 1.14d 观察，
-   不能直接覆盖所有 helper。下一步仍需逐类核对特殊 helper 的寿命覆盖。
+2. **导弹速度与寿命分离**（基础导弹已修正，特殊处理器仍待核查）。参考
+   `b7e5f680`、`8c87f64a`。撤回此前“移动导弹 Range 是距离”的结论。
+   D2MOO `MISSILES_CreateMissileFromParams` 将 Range + skillLevel * LevRange
+   写入 TotalFrames/CurrentFrame，与速度无关；显式范围、初始帧和循环标记可覆盖
+   默认值。`MISSMODE_SrvDo01_BasicMissile`（0x6FC5F8C0）调用
+   `MISSMODE_HandleMissileCollision`（0x6FC56D50），先更新移动路径，再将帧计数
+   减一，<=0进入销毁命中处理。因此 Range 是帧寿命，而不是等数值的行走距离。
+   已修正 pSrvDoFunc=1 基础导弹：移动/静止都初始化帧寿命，工厂加入 LevRange
+   技能等级增量；到期使用既有 LastCollide/AlwaysExplode 处理，不再同时按距离
+   提前销毁，也不将最终位置截到 Range 距离。原来的错误回归已替换；新增速度
+   1/1000均在第5帧到期、前4帧存活的系统测试。
+   其他移动处理器的旧距离策略、特殊覆盖、零/负寿命、固定步长和重连剩余寿命
+   仍待逐项核查；本批没有宣称完成所有导弹的原生迁移。Charged Bolt Sentry
+   的77帧也需独立核实，不能直接覆盖所有helper。
 3. **Blade Fury 发射时序**（已完成 1.10f 公式核查）。参考 `eecd52c9`。
    riiablo 已区分 srvmissilea/cltmissilea；现有测试允许 5 tick 后再发射，
    dark-magic 观察到 6 tick 间距。D2MOO `SKILLS_SrvDo048_BladeFury` 保存
@@ -105,3 +113,6 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 - 第六批：`NativeTableIdentityTest` 与 `NativeSoundsArchiveTest` 定向测试通过；
   原版资源测试实际执行1项、跳过0项，确认三份原版表头不含新版音效字段。
   `AudioInstanceTest` 通过，diff 检查通过。未进行实机听音验收。
+- 导弹复核第一批：`MissileNativePolicyTest` 定向测试通过，撤回第二批的距离
+  语义断言；新增基础移动导弹按帧寿命及速度无关的回归。
+  `MissileRoomTrackingTest` 同时通过，diff 检查通过。尚未实机验收。

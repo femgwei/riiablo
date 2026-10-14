@@ -391,13 +391,21 @@ public class MissileCollisionSystem extends IteratingSystem {
       missile.hitTargets.clear();
     }
     
-    // 检查范围限制
-    if (missile.range > 0 && missile.distanceTraveled >= missile.range) {
-    // Native LastCollide performs one final unit lookup at the range edge
+    boolean basicFramePolicy = missile.missile != null && missile.missile.pSrvDoFunc == 1
+        && missile.nativeLifetimeFrames > 0;
+    boolean frameExpiry = basicFramePolicy
+        && missile.nativeFrame >= missile.nativeLifetimeFrames;
+    // Frame-limited basic missiles must not also expire at a distance equal
+    // to Range. Legacy/specialized distance policies remain separate.
+    boolean distanceExpiry = !basicFramePolicy
+        && missile.range > 0 && missile.distanceTraveled >= missile.range;
+    if (frameExpiry || distanceExpiry) {
+    // Native LastCollide performs one final unit lookup at expiration
     // before the missile is removed.  This matters for fast arrows whose
     // final segment ends inside a target's hitbox.
       if (shouldResolveLastCollide(missile, true)) {
-        if (!missile.attached && moveDistance > 0f && missile.distanceTraveled > missile.range) {
+        if (distanceExpiry && !missile.attached && moveDistance > 0f
+            && missile.distanceTraveled > missile.range) {
           // A native range check resolves at the exact endpoint, not at the
           // overshot position produced by a large single-frame velocity.
           clampToRangeEndpoint(lastPos, position.position,
@@ -447,9 +455,9 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
-    // D2MOO still advances Range for stationary basic missiles. Riiablo's
-    // ordinary range is distance-based, so these explicit one-shot visuals
-    // need a frame clock or they remain in the world forever when they miss.
+    // Stationary specialized rows also retain their existing frame clock.
+    // Basic rows have already resolved expiration (including LastCollide)
+    // above; other moving handlers still await per-handler range migration.
     if (missile.nativeLifetimeFrames > 0
         && missile.nativeFrame >= missile.nativeLifetimeFrames) {
       if (isFireTraumaGround(missile)) {
