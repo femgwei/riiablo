@@ -607,6 +607,27 @@ public abstract class AI implements Interactable.Interactor {
     }
     if (mode < 0) mode = Engine.Monster.MODE_S1;
 
+    if (!startMonsterSkill(skill, mode, targetId, targetVec)) return false;
+    log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
+            + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
+        entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,
+        monsterSkillLevel(monster.monstats, skillIndex), mode, configuredMode,
+        sequenceMode, targetId);
+    return true;
+  }
+
+  /** Native fixed-ID skills (e.g. Baal Nova) need not occupy a MonStats slot. */
+  protected boolean useFixedMonsterSkill(int skillId, int mode, int targetId, Vector2 targetVec) {
+    if (monster == null || monster.monstats == null) return false;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null || !startMonsterSkill(skill, mode, targetId, targetVec)) return false;
+    log.info("[MONSTER_SKILL] phase=cast entity={} monster={} fixed=true skillId={} skill={} "
+            + "mode={} target={}",
+        entityId, monster.monstats.Id, skill.Id, skill.skill, mode, targetId);
+    return true;
+  }
+
+  private boolean startMonsterSkill(Skills.Entry skill, int mode, int targetId, Vector2 targetVec) {
     Vector2 resolvedTarget = targetVec;
     if (resolvedTarget == null && targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       resolvedTarget = mPosition.get(targetId).position;
@@ -643,11 +664,6 @@ public abstract class AI implements Interactable.Interactor {
       events.dispatch(SkillStartEvent.obtain(
           entityId, skill.Id, targetId, resolvedTarget.cpy(), skill.srvstfunc, skill.cltstfunc));
     }
-    log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
-            + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
-        entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,
-        monsterSkillLevel(monster.monstats, skillIndex), mode, configuredMode,
-        sequenceMode, targetId);
     return true;
   }
 

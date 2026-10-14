@@ -136,6 +136,17 @@ abstract class NativeDecisionAI extends AI {
     }
   }
 
+  protected final boolean castFixed(int skillId, int mode, int targetId,
+      com.badlogic.gdx.math.Vector2 target) {
+    if (useFixedMonsterSkill(skillId, mode, targetId, target)) {
+      state = "CAST";
+      nextThink = 0f;
+      return true;
+    }
+    idle(10);
+    return false;
+  }
+
   /** Starts a native mode-only action for MonStats rows without a Skills.txt entry. */
   protected final void startMode(int mode, int targetId) {
     stopMovement();
