@@ -621,12 +621,6 @@ final class MapTourProbe {
     }
     candidates.sort(java.util.Comparator.comparingDouble(id ->
         world.getMapper(Position.class).get(id).position.dst2(destination == null ? origin : destination)));
-    // A seam walk may be fronted by a closed door whose every approach cell is
-    // currently occupied by a live unit.  Keep a terrain-reachable fallback so
-    // routeTour can walk to that frontier and clear the unit through the real
-    // TCP combat path.  Never use this fallback for a directed local target:
-    // that case must continue to avoid opening unrelated side-room doors.
-    Sample staticFallback = null;
     for (int id : candidates) {
       Vector2 anchor = world.getMapper(Position.class).get(id).position;
       float range = doorApproachRange(world.getMapper(Interactable.class).get(id).range);
@@ -634,18 +628,17 @@ final class MapTourProbe {
       for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
         int x = Math.round(anchor.x) + dx, y = Math.round(anchor.y) + dy;
         if (anchor.dst2(x, y) > range * range || !clear(map, zone, x, y, size)
-            ) continue;
+            || !dynamicallyFree(world, playerId, x, y, size)) continue;
         int localX = x - zone.x(), localY = y - zone.y();
         if (!connected.get(localY * zone.width() + localX)) continue;
         Vector2 approach = new Vector2(x, y);
         Sample result = new Sample();
         result.level = zone.level.Id; result.target = approach; result.warp = id;
         result.transition = "DOOR_OPEN";
-        if (dynamicallyFree(world, playerId, x, y, size)) return result;
-        if (staticFallback == null) staticFallback = result;
+        return result;
       }
     }
-    return destination == null ? staticFallback : null;
+    return null;
   }
 
   /** Static long-range planning, live obstacles near the next click. Every
