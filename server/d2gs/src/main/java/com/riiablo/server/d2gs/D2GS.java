@@ -481,7 +481,9 @@ public class D2GS extends ApplicationAdapter {
         new java.util.concurrent.CompletableFuture<>();
     Gdx.app.postRunnable(() -> {
       try {
-        result.complete(MapTourProbe.inspect(server.world, server.map, playerId, nextLevel, local));
+        MapTourProbe.Sample sample = MapTourProbe.inspect(server.world, server.map, playerId, nextLevel, local);
+        sample.tick = server.simulation.tickNumber();
+        result.complete(sample);
       } catch (RuntimeException e) {
         result.completeExceptionally(e);
       }
@@ -493,6 +495,24 @@ public class D2GS extends ApplicationAdapter {
       throw new IllegalStateException("Map tour probe interrupted", e);
     } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
       throw new IllegalStateException("Map tour probe unavailable: " + e, e);
+    }
+  }
+
+  static java.util.List<com.riiablo.map.Map.NativeWalkEdge> headlessNativeWalkEdges() {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<java.util.List<com.riiablo.map.Map.NativeWalkEdge>> result =
+        new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        java.util.List<com.riiablo.map.Map.NativeWalkEdge> edges = new java.util.ArrayList<>();
+        for (int i = 0; i < server.map.nativeWalkEdges.size; i++) edges.add(server.map.nativeWalkEdges.get(i));
+        result.complete(edges);
+      } catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Native walk edge manifest unavailable", e);
     }
   }
 

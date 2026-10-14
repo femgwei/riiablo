@@ -40,6 +40,12 @@ class ActTownSeamResourceTest extends RiiabloTest {
       assertNotNull(town.nativeTileGrid(), "native town " + townId);
       assertTrue(map.areZonesAdjacent(town, outdoor), "geometric seam " + townId);
       assertTrue(map.isNativeSeamConnection(town, outdoor), "native walking link " + townId);
+      assertTrue(map.nativeWalkEdges.size > 0, "raw native manifest captured before DRLG is freed");
+      boolean nativeTownExit = false;
+      for (Map.NativeWalkEdge edge : map.nativeWalkEdges) {
+        if (edge.from == townId && edge.to == townId + 1) nativeTownExit = true;
+      }
+      assertTrue(nativeTownExit, "manifest includes native town exit " + townId);
       int[] outdoorChain = act == 1
           ? new int[] {40, 41, 42, 43, 44, 45}
           : act == 2

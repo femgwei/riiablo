@@ -5048,7 +5048,7 @@ public final class D2GSHeadlessClient {
   private void runMapTour(byte[] d2s, CharacterHeader character) throws Exception {
     if (config.home == null) throw new IllegalArgumentException("Map tour requires an embedded --home server");
     java.nio.file.Path directory = config.tourOutput.toPath();
-    if (config.tourTownRoundTrip && Files.exists(directory.resolve("map-tour.log"))) {
+    if (Files.exists(directory.resolve("map-tour.log"))) {
       throw new IOException("Refusing to overwrite town diagnostic: " + directory);
     }
     Files.createDirectories(directory);
@@ -5056,6 +5056,8 @@ public final class D2GSHeadlessClient {
         Riiablo.files.Levels, config.tourFirstAct, config.tourLastAct);
     com.riiablo.map.MapTourPlan.requireCoverage(itinerary, config.tourFirstAct, config.tourLastAct);
     itinerary = com.riiablo.map.MapTourPlan.focusedLevels(itinerary, config.tourLevels);
+    if (config.tourAllSeams && (config.tourLevels != null || config.tourObjectLoads || config.tourTownRoundTrip))
+      throw new IllegalArgumentException("All-seam tour requires an act range and cannot combine diagnostic modes");
     if (config.tourTownRoundTrip) com.riiablo.map.MapTourPlan.requireTownPairs(itinerary);
     int visited = 0, failures = 0, walks = 0, jumps = 0, transitions = 0;
     long sequence = 1;
@@ -5080,7 +5082,7 @@ public final class D2GSHeadlessClient {
           + " life=1000000 weapon=spr attackRating=100000 physicalDamage=5000-5000"
           + " combat=REAL_TCP_BLOCKER_CLEARING mode=MAP_MOVEMENT_NOT_COMBAT_BALANCE");
       boolean arrived = false;
-      for (int index = 0; index < itinerary.size(); index++) {
+      for (int index = 0; !config.tourAllSeams && index < itinerary.size(); index++) {
         int level = itinerary.get(index);
         int next = index + 1 < itinerary.size() ? itinerary.get(index + 1) : -1;
         try {
@@ -5242,17 +5244,86 @@ public final class D2GSHeadlessClient {
           }
         }
       }
+      if (config.tourAllSeams || config.tourLevels == null && !config.tourObjectLoads && !config.tourTownRoundTrip) {
+        failures += runNativeSeamTour(input, output, report, directory);
+      }
       tourLog(report, "SUMMARY", "planned=" + itinerary.size() + " visited=" + visited
-          + " coverage=" + (config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
+          + " coverage=" + (config.tourAllSeams ? "NATIVE_SEAMS_ONLY" : config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
               : config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
           + " walks=" + walks + " transitions=" + transitions + " detachedJumps=" + jumps
           + " combatKills=" + mapTourCombatKills
-          + " failures=" + failures + " result=" + (failures == 0 && visited == itinerary.size() ? "PASS" : "FAIL"));
+          + " failures=" + failures + " result=" + (failures == 0 && (config.tourAllSeams || visited == itinerary.size()) ? "PASS" : "FAIL"));
     }
-    if (failures != 0 || visited != itinerary.size()) {
+    if (failures != 0 || !config.tourAllSeams && visited != itinerary.size()) {
       throw new IOException("Map tour failed: visited=" + visited + "/" + itinerary.size()
           + " failures=" + failures + " report=" + directory.resolve("map-tour.log"));
     }
+  }
+
+  /** Each expected native edge is tested out and back without staging its destination. */
+  private int runNativeSeamTour(DataInputStream input, OutputStream output,
+      java.io.PrintWriter report, java.nio.file.Path directory) throws Exception {
+    int failures = 0, planned = 0, passed = 0;
+    int[] towns = {1,40,75,103,109};
+    for (int act = config.tourFirstAct; act <= config.tourLastAct; act++) {
+      int town = towns[act - 1];
+      tourLog(report, "SEAM_MANIFEST_START", "act=" + act + " source=D2MOO_VIS_WARP_MINUS_ONE");
+      if (!D2GS.headlessEnterLevel(playerId, town)) throw new IOException("Cannot generate native seam manifest act=" + act);
+      awaitLevel(this, input, town, deadline());
+      java.util.List<com.riiablo.map.Map.NativeWalkEdge> edges = D2GS.headlessNativeWalkEdges();
+      if (edges.isEmpty()) { failures++; tourLog(report, "SEAM_FAIL", "act=" + act + " reason=empty_native_manifest"); }
+      for (com.riiablo.map.Map.NativeWalkEdge edge : edges) {
+        planned++;
+        String identity = "act=" + act + " from=" + edge.from + " to=" + edge.to + " slot=" + edge.slot;
+        tourLog(report, "SEAM_EXPECTED", identity + " warp=-1");
+      }
+      for (com.riiablo.map.Map.NativeWalkEdge edge : edges) {
+        String identity = "act=" + act + " from=" + edge.from + " to=" + edge.to + " slot=" + edge.slot;
+        try {
+          tourLog(report, "SEAM_STAGE", identity + " level=" + edge.from + " role=SOURCE_ONLY");
+          if (!D2GS.headlessEnterLevel(playerId, edge.from)) throw new IOException("Cannot stage seam source");
+          awaitLevel(this, input, edge.from, deadline());
+          walkNativeSeam(input, output, report, edge.from, edge.to, identity, "OUTBOUND");
+          walkNativeSeam(input, output, report, edge.to, edge.from, identity, "RETURN");
+          passed++;
+          tourLog(report, "SEAM_EDGE_PASS", identity + " directions=2 warpRequests=0 destinationStages=0 movement=PRODUCTION_TCP");
+        } catch (Exception e) {
+          failures++;
+          tourLog(report, "SEAM_FAIL", identity + " reason=" + e.getMessage());
+          e.printStackTrace(report); report.flush();
+          Files.write(directory.resolve("failure-seam-" + edge.from + "-" + edge.to + "-" + edge.slot + ".txt"),
+              D2GS.headlessMapTourDiagnosis(playerId).getBytes(StandardCharsets.UTF_8));
+          float[] lifecycle = D2GS.headlessPlayerLifecycleState(playerId);
+          if (lifecycle.length >= 2 && lifecycle[0] != 0f) throw new IOException("Seam death remains a failure", e);
+        }
+      }
+    }
+    tourLog(report, "SEAM_SUMMARY", "planned=" + planned + " passed=" + passed + " failures=" + failures
+        + " coverage=ALL_ADJACENT_NATIVE_VIS_MINUS_ONE result=" + (failures == 0 && planned > 0 && passed == planned ? "PASS" : "FAIL"));
+    return failures;
+  }
+
+  private void walkNativeSeam(DataInputStream input, OutputStream output, java.io.PrintWriter report,
+      int from, int to, String identity, String direction) throws Exception {
+    MapTourProbe.Sample exit = D2GS.headlessMapTourSample(playerId, to, false);
+    for (int doors = 0; exit != null && exit.target == null && doors < 32; doors++) {
+      MapTourProbe.Sample door = D2GS.headlessMapTourDoor(playerId, null);
+      if (door == null) break;
+      openTourDoor(input, output, door, from, mapTourMovementSequence, report);
+      exit = D2GS.headlessMapTourSample(playerId, to, false);
+    }
+    if (exit == null || exit.level != from || !"BOUNDARY_WALK".equals(exit.transition)
+        || exit.target == null || exit.destination == null) throw new IOException("Missing walk seam " + from + "->" + to);
+    routeTour(input, output, exit.target, from, mapTourMovementSequence, report, "BOUNDARY_WALK");
+    MapTourProbe.Sample start = D2GS.headlessMapTourSample(playerId, -1, true);
+    routeTour(input, output, exit.destination, to, mapTourMovementSequence, report, "BOUNDARY_WALK");
+    MapTourProbe.Sample end = D2GS.headlessMapTourSample(playerId, -1, true);
+    if (start.level != from || end.level != to || currentLevelId != to || end.blocked
+        || !Float.isFinite(playerX) || end.position.dst2(playerX, playerY) > 4f
+        || start.position.dst2(end.position) > 20f * 20f) throw new IOException("Invalid seam continuity " + from + "->" + to);
+    tourLog(report, "SEAM_DIRECTION_PASS", identity + " direction=" + direction + " walkedFrom=" + from + " walkedTo=" + to
+        + " before=" + start.position + " after=" + end.position + " snapshot=(" + playerX + "," + playerY + ")"
+        + " clientLevel=" + currentLevelId + " warpRequests=0 movement=PRODUCTION_TCP");
   }
 
   private long routeTour(DataInputStream input, OutputStream output, Vector2 target,
@@ -5496,6 +5567,7 @@ public final class D2GSHeadlessClient {
     float furthest = 0;
     float arrivalTolerance2 = MapTourProbe.arrivalToleranceSquared(mode);
     MapTourProbe.Sample state = start;
+    MapTourProbe.Sample previous = start;
     while (System.currentTimeMillis() < end) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet != null) consume(packet);
@@ -5505,6 +5577,16 @@ public final class D2GSHeadlessClient {
       sampleAt = System.currentTimeMillis() + 200;
       state = D2GS.headlessMapTourSample(playerId, -1, true);
       if (state == null || state.position == null) throw new IOException("Player disappeared");
+      if ("BOUNDARY_WALK".equals(mode)) {
+        float allowed = Math.max(previous.maximumMovementSpeed, state.maximumMovementSpeed)
+            * Math.max(0L, state.tick - previous.tick) * 0.04f + 0.1f;
+        if (state.tick < previous.tick || previous.position.dst(state.position) > allowed)
+          throw new IOException("Discontinuous seam movement tick=" + previous.tick + "->" + state.tick
+              + " from=" + previous.position + " to=" + state.position + " allowed=" + allowed);
+        tourLog(report, "SEAM_POSITION", "sequence=" + sequence + " tick=" + state.tick + " level=" + state.level
+            + " position=" + state.position + " clientLevel=" + currentLevelId + " allowedDisplacement=" + allowed);
+      }
+      previous = state;
       furthest = Math.max(furthest, start.position.dst(state.position));
       if (lastMovementAcknowledgement >= sequence && state.level == expectedLevel
           && state.position.dst2(target) <= arrivalTolerance2 && !state.blocked
@@ -12991,6 +13073,7 @@ public final class D2GSHeadlessClient {
     boolean mapTour;
     boolean tourTownRoundTrip;
     boolean tourObjectLoads;
+    boolean tourAllSeams;
     int tourFirstAct = 1, tourLastAct = 5;
     String tourLevels;
     int tourWalkMillis = 45_000;
@@ -13093,6 +13176,7 @@ public final class D2GSHeadlessClient {
         else if ("--map-tour".equals(arg)) config.mapTour = true;
         else if ("--tour-town-round-trip".equals(arg)) config.tourTownRoundTrip = true;
         else if ("--tour-object-loads".equals(arg)) config.tourObjectLoads = true;
+        else if ("--tour-all-seams".equals(arg)) config.tourAllSeams = true;
         else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
         else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
         else if ("--tour-levels".equals(arg)) config.tourLevels = value(args, ++i, arg);

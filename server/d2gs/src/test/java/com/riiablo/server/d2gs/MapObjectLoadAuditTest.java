@@ -20,9 +20,10 @@ public class MapObjectLoadAuditTest {
       zone.getNativeObjects().add(pending);
       zone.getNativeObjects().add(missing);
       java.util.List<String> evidence = MapObjectLoadAudit.inspect(world, zone);
-      assertTrue(evidence.get(0).contains("pending_after_level_materialization"));
-      assertTrue(evidence.get(1).contains("missing_entity"));
-      assertTrue(evidence.get(2).contains("failures=2 result=FAIL"));
+      assertTrue(evidence.get(0).contains("missing_native_rooms"));
+      assertTrue(evidence.get(1).contains("pending_after_level_materialization"));
+      assertTrue(evidence.get(2).contains("missing_entity"));
+      assertTrue(evidence.get(3).contains("failures=3 result=FAIL"));
     } finally { world.dispose(); }
   }
 }

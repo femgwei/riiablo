@@ -46,6 +46,7 @@ tasks.register('headlessMapTour', JavaExec) {
   if (project.hasProperty('tourVerbose')) args '--verbose'
   if (project.hasProperty('tourTownRoundTrip')) args '--tour-town-round-trip'
   if (project.hasProperty('tourObjectLoads')) args '--tour-object-loads'
+    if (project.hasProperty('tourAllSeams')) args '--tour-all-seams'
   ignoreExitValue = false
 }
 

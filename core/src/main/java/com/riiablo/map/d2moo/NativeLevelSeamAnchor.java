@@ -69,6 +69,7 @@ public final class NativeLevelSeamAnchor {
    */
   public static int installOutdoorSeams(Map map, D2DrlgStrc drlg) {
     if (map == null || drlg == null) return 0;
+    captureWalkEdges(map, drlg);
     int installed = 0;
     for (Map.Zone source : map.getZones()) {
       if (source == null || source.level == null) continue;
@@ -100,6 +101,35 @@ public final class NativeLevelSeamAnchor {
       }
     }
     return installed;
+  }
+
+  /** Expected edges come from raw native Vis/Warp arrays, not installed seam anchors. */
+  public static void captureWalkEdges(Map map, D2DrlgStrc drlg) {
+    for (int i = 0; i < map.getZones().size; i++) {
+      Map.Zone source = map.getZones().get(i);
+      if (source == null || source.level == null) continue;
+      D2DrlgLevel nativeSource = DrlgDrlg.getLevel(drlg, source.level.Id);
+      int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, source.level.Id);
+      int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, source.level.Id);
+      for (int slot = 0; vis != null && warp != null && slot < Math.min(vis.length, warp.length); slot++) {
+        if (vis[slot] <= 0 || warp[slot] != -1 || vis[slot] == source.level.Id) continue;
+        D2DrlgLevel destination = DrlgDrlg.getLevel(drlg, vis[slot]);
+        if (nativeSource == null || destination == null) continue;
+        D2DrlgCoord a = nativeSource.getLevelCoords(), b = destination.getLevelCoords();
+        if (a == null || b == null) continue;
+        int left = Math.max(a.getNPosX(), b.getNPosX());
+        int right = Math.min(a.getNPosX() + a.getNWidth(), b.getNPosX() + b.getNWidth());
+        int top = Math.max(a.getNPosY(), b.getNPosY());
+        int bottom = Math.min(a.getNPosY() + a.getNHeight(), b.getNPosY() + b.getNHeight());
+        if (!((left == right && top < bottom) || (top == bottom && left < right))) continue;
+        boolean duplicate = false;
+        for (int j = 0; j < map.nativeWalkEdges.size; j++) {
+          Map.NativeWalkEdge edge = map.nativeWalkEdges.get(j);
+          if (edge.from == source.level.Id && edge.slot == slot && edge.to == vis[slot]) duplicate = true;
+        }
+        if (!duplicate) map.nativeWalkEdges.add(new Map.NativeWalkEdge(source.level.Id, vis[slot], slot));
+      }
+    }
   }
 
   private static Map.Zone findZone(Map map, int levelId) {

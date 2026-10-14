@@ -81,4 +81,53 @@ function Assert-MapTourEvidence {
       throw "Contradictory town exit evidence $edge"
     }
   }
+  Assert-NativeSeamEvidence -Lines $Lines
+}
+
+function Assert-NativeSeamEvidence {
+  param([string[]]$Lines, [int[]]$Acts = @(1,2,3,4,5))
+  if ($Lines -match '^\[MAP_TOUR\] (SEAM_FAIL|FAIL|DIAGNOSTIC_FAIL|DEATH_RECOVERY) ') {
+    throw 'Native seam run contains failures'
+  }
+  $expected = @{}
+  $passed = @{}
+  $outbound = @{}
+  $returned = @{}
+  $staged = @{}
+  foreach ($act in $Acts) {
+    if (@($Lines -match "^\[MAP_TOUR\] SEAM_MANIFEST_START act=$act source=D2MOO_VIS_WARP_MINUS_ONE$").Count -ne 1) {
+      throw "Missing unique native seam manifest act=$act"
+    }
+  }
+  foreach ($line in $Lines) {
+    if ($line -match '^\[MAP_TOUR\] SEAM_EXPECTED act=(\d+) from=(\d+) to=(\d+) slot=(\d+) warp=-1$') {
+      if ([int]$Matches[1] -notin $Acts) { throw 'Unexpected seam act' }
+      $key = "$($Matches[1]):$($Matches[2]):$($Matches[3]):$($Matches[4])"
+      if ($expected.ContainsKey($key)) { throw "Duplicate expected edge $key" }
+      $expected[$key] = @([int]$Matches[2], [int]$Matches[3])
+    } elseif ($line -match '^\[MAP_TOUR\] SEAM_STAGE act=(\d+) from=(\d+) to=(\d+) slot=(\d+) level=(\d+) role=SOURCE_ONLY$') {
+      $key = "$($Matches[1]):$($Matches[2]):$($Matches[3]):$($Matches[4])"
+      if (-not $expected.ContainsKey($key) -or $staged.ContainsKey($key) -or $Matches[5] -ne $Matches[2]) { throw "Invalid source staging $key" }
+      $staged[$key] = $true
+    } elseif ($line -match '^\[MAP_TOUR\] SEAM_DIRECTION_PASS act=(\d+) from=(\d+) to=(\d+) slot=(\d+) direction=(OUTBOUND|RETURN) walkedFrom=(\d+) walkedTo=(\d+) .* clientLevel=(\d+) warpRequests=0 movement=PRODUCTION_TCP$') {
+      $key = "$($Matches[1]):$($Matches[2]):$($Matches[3]):$($Matches[4])"
+      if (-not $expected.ContainsKey($key) -or -not $staged.ContainsKey($key)) { throw "Unplanned seam direction $key" }
+      $edge = $expected[$key]
+      if ($Matches[5] -eq 'OUTBOUND') {
+        if ($outbound.ContainsKey($key) -or [int]$Matches[6] -ne $edge[0] -or [int]$Matches[7] -ne $edge[1]) { throw "Invalid outbound $key" }
+        $outbound[$key] = $true
+      } else {
+        if (-not $outbound.ContainsKey($key) -or $returned.ContainsKey($key) -or [int]$Matches[6] -ne $edge[1] -or [int]$Matches[7] -ne $edge[0]) { throw "Invalid return $key" }
+        $returned[$key] = $true
+      }
+      if ($Matches[8] -ne $Matches[7]) { throw "Wrong client level $key" }
+    } elseif ($line -match '^\[MAP_TOUR\] SEAM_EDGE_PASS act=(\d+) from=(\d+) to=(\d+) slot=(\d+) directions=2 warpRequests=0 destinationStages=0 movement=PRODUCTION_TCP$') {
+      $key = "$($Matches[1]):$($Matches[2]):$($Matches[3]):$($Matches[4])"
+      if (-not $outbound.ContainsKey($key) -or -not $returned.ContainsKey($key) -or $passed.ContainsKey($key)) { throw "Incomplete/duplicate seam pass $key" }
+      $passed[$key] = $true
+    } elseif ($line -match '^\[MAP_TOUR\] SEAM_(EXPECTED|STAGE|DIRECTION_PASS|EDGE_PASS) ') { throw 'Malformed seam evidence' }
+  }
+  if ($expected.Count -eq 0 -or $expected.Count -ne $passed.Count) { throw 'Incomplete expected native seam coverage' }
+  $count = $expected.Count
+  if (@($Lines -match "^\[MAP_TOUR\] SEAM_SUMMARY planned=$count passed=$count failures=0 coverage=ALL_ADJACENT_NATIVE_VIS_MINUS_ONE result=PASS$").Count -ne 1) { throw 'Invalid native seam summary' }
 }

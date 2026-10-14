@@ -250,6 +250,7 @@ public final class Act4D2MOOLayoutBridge {
         if (Gdx.app != null) Gdx.app.log(TAG, "A2 native outdoor seams installed=" + seams);
       }
       if (actId == D2C_Acts.ACT_II) NativeTownExit.capture(map, drlg, townId);
+      NativeLevelSeamAnchor.captureWalkEdges(map, drlg);
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,

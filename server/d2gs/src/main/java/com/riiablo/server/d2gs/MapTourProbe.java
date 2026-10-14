@@ -19,6 +19,8 @@ import com.riiablo.map.MapTourPlan;
 final class MapTourProbe {
   static final class Sample {
     int level = -1;
+    long tick;
+    float maximumMovementSpeed;
     String name = "missing";
     int[] diagnostics = new int[0];
     int objects, monsters, entities, pendingMonsters, spawnedMonsters, spawnedObjects, groundItems;
@@ -158,6 +160,10 @@ final class MapTourProbe {
     Map.Zone zone = wrapper == null ? null : wrapper.zone;
     if (zone == null || position == null) return sample;
     sample.level = zone.level.Id;
+    com.riiablo.engine.server.component.Velocity velocity = world.getMapper(
+        com.riiablo.engine.server.component.Velocity.class).get(playerId);
+    if (velocity != null) sample.maximumMovementSpeed = Math.max(velocity.walkSpeed, velocity.runSpeed)
+        * Math.max(1f, velocity.movementMultiplier());
     sample.name = zone.level.LevelName;
     sample.position = new Vector2(position.position);
     com.riiablo.engine.server.Actioneer actioneer = world.getSystem(com.riiablo.engine.server.Actioneer.class);

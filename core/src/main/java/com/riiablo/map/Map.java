@@ -540,6 +540,7 @@ public class Map implements Disposable {
     dt1s.clear();
     mapGraph.clear();
     warpDestinationOverrides.clear();
+    nativeWalkEdges.clear();
   }
 
   public Array<AssetDescriptor> getDependencies() {
@@ -768,6 +769,16 @@ public class Map implements Disposable {
    * Key: (levelId << 8) | mainIndex，Value: 目标关卡 Id。
    */
   final IntIntMap warpDestinationOverrides = new IntIntMap();
+
+  /** Expected native walk links, captured before installation, including failed projections. */
+  public final Array<NativeWalkEdge> nativeWalkEdges = new Array<>();
+
+  public static final class NativeWalkEdge {
+    public final int from, to, slot;
+    public NativeWalkEdge(int from, int to, int slot) {
+      this.from = from; this.to = to; this.slot = slot;
+    }
+  }
 
   /** F10 路径调试：D2MOD 土路路径点的世界坐标列表，每点 float[]{worldX, worldY} */
   public final com.badlogic.gdx.utils.Array<float[]> pathDebugPoints = new com.badlogic.gdx.utils.Array<>(64);

@@ -1,8 +1,9 @@
 param(
   [string]$D2Home = 'G:\BaiduNetdiskDownload\Diablo II 1.10F',
-  [int[]]$Seeds = @(1, 2, 3, 12345, 54321),
+  [int[]]$Seeds = @(1, 2, 3, 12345, 54321, 127897359),
   [ValidateSet(25, 100)][int]$Rate = 25,
-  [string]$Output = 'server/d2gs/build/map-tour/five-seeds'
+  [string]$Output = 'server/d2gs/build/map-tour/six-seeds',
+  [switch]$SeamsOnly
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'map-acceptance-audit.ps1')
@@ -18,6 +19,10 @@ try {
   $baseline = (& git ls-tree HEAD -- @sourcePaths) -join "`n"
   $revision = & git rev-parse HEAD
   if (& git status --porcelain -- @sourcePaths) { throw 'Commit source changes before the seed batch' }
+  $resources = @(Get-ChildItem -LiteralPath $D2Home -Filter '*.mpq' | Sort-Object Name | ForEach-Object {
+    $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+    "$($_.Name) bytes=$($_.Length) sha256=$($hash.Hash)"
+  })
   foreach ($seed in $Seeds) {
     if (((& git ls-tree HEAD -- @sourcePaths) -join "`n") -ne $baseline `
         -or (& git status --porcelain -- @sourcePaths)) {
@@ -28,11 +33,13 @@ try {
     if (Test-Path -LiteralPath $absolute) { throw "Refusing to overwrite existing run: $absolute" }
     New-Item -ItemType Directory -Path $absolute -Force | Out-Null
     $console = Join-Path $absolute 'console.log'
-    "revision=$revision`nseed=$seed`nrate=$Rate`nhome=$D2Home" |
+    "revision=$revision`nseed=$seed`nrate=$Rate`nhome=$D2Home`nprofile=1.10f`nseamsOnly=$SeamsOnly`n$($resources -join "`n")" |
       Set-Content -LiteralPath (Join-Path $absolute 'run-baseline.txt') -Encoding UTF8
     Write-Host "Starting complete A1-A5 tour seed=$seed rate=$Rate"
+    $modeArgs = @()
+    if ($SeamsOnly) { $modeArgs += '-PtourAllSeams' }
     & .\gradlew.bat :server:d2gs:headlessMapTour "-Pd2Home=$D2Home" "-PtourSeed=$seed" `
-      "-PtourRate=$Rate" "-PtourOutput=$destination" --no-daemon --max-workers=1 *> $console
+      "-PtourRate=$Rate" "-PtourOutput=$destination" @modeArgs --no-daemon --max-workers=1 *> $console
     $result = $LASTEXITCODE
     $issues = @(Get-MapLogIssues -Lines (Get-Content -LiteralPath $console))
     ConvertTo-Json -InputObject $issues -Depth 4 |
@@ -46,6 +53,15 @@ try {
       throw "Tour failed seed=$seed exit=$result; inspect $console"
     }
     $lines = Get-Content -LiteralPath $report
+    if ($SeamsOnly) {
+      Assert-NativeSeamEvidence -Lines $lines
+      if (-not ($lines -match '^\[MAP_TOUR\] SUMMARY .* coverage=NATIVE_SEAMS_ONLY .*failures=0 result=PASS$')) {
+        throw "Invalid standalone seam summary seed=$seed"
+      }
+      if ($issues.Count) { throw "Unresolved log issues seed=${seed}: $($issues.Count); inspect log-issues.json" }
+      Write-Host "PASS seed=${seed}: all adjacent native walk seams tested out and back"
+      continue
+    }
     if (@($lines | Where-Object { $_ -match '^\[MAP_TOUR\] (FAIL|DIAGNOSTIC_FAIL|DEATH_RECOVERY) ' }).Count -gt 0 `
         -or -not ($lines -match '^\[MAP_TOUR\] SUMMARY planned=132 visited=132 .*failures=0 result=PASS$')) {
       throw "Invalid tour summary seed=$seed; inspect $report"

@@ -22,6 +22,10 @@ final class MapObjectLoadAudit {
   static List<String> inspect(World world, Map.Zone zone) {
     List<String> lines = new ArrayList<>();
     int failures = 0, created = 0, skipped = 0, pending = 0, runtime = 0, population = 0, populationRooms = 0;
+    if (!zone.isTown() && !zone.hasNativeRoomTopology()) {
+      failures++;
+      lines.add("OBJECT_TOPOLOGY level=" + zone.levelId() + " error=missing_native_rooms");
+    }
     for (Map.NativeObject source : zone.getNativeObjects()) {
       if (source.sourceFile.startsWith("ObjGroup/")) population++;
       String error = "none";
