@@ -43,8 +43,18 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    表记录类型；自定义跨表装备类型尚未验证。职业专属继续依据主类型 Class。
    相同版本选择最后源行，不依赖 IntMap 遍历顺序；新增版本、装备等级、任务、
    药剂、职业专属及缺失匹配测试。
-5. **数据查询身份审计**（待开始）。参考 `6da9484a`、`06158fb3`。
-   用 ID 与行号故意错位的夹具验证显式 ID、位置索引和名称引用；按原生消费者逐项核实。
+5. **数据查询身份审计**（完成第一批：LvlTypes）。参考 `6da9484a`、`06158fb3`。
+   D2MOO `LevelsTbls.cpp:DATATBLS_LoadLevelTypesTxt` 不加载 Id 列，
+   `DATATBLS_GetLevelTypesTxtRecord`（0x6FD61460）
+   直接查询源行数组。riiablo 的 Map/OutdoorGrid 使用 Levels.LevelType 查询，
+   已将 LvlTypes.Entry 改为 Excel.Index，并同步新版 table schema 的 indexed
+   标记；旧 codec 的 TXT/BIN 两条加载路径均按位置建索引。
+   新增真实 TXT 加载夹具，Id=2 位于行1、Id=9 位于行2，确认查询2得到行2。
+   MonPreset 已独立维护每幕位置，补充交错幕夹具锁定现有扩展行为；D2MOO
+   `DATATBLS_LoadMonPresetTxt` 按连续幕分段，不把交错幕支持宣称为原生规则。
+   Skills 尚未改动：D2MOO 的 skill 名称通过 TXTFIELD_NAMETOINDEX 链接，
+   GetSkillsTxtRecord 按编译数组索引查询，不能直接认定 dark-magic 的显式 Id
+   测试就是 1.10f 真值。Skills/SkillDesc、Objects/obj 的完整消费者审计仍待后续。
 6. **音效重定向与分组权重**（待开始）。参考 `b3715dd0`。
    Audio 当前均匀选择 Index 附近记录；Sounds.Entry 没有 Redirect/Group Weight。
    先检查 1.10f 表和客户端实现，再处理重定向目标组、权重和非法引用。
@@ -68,3 +78,5 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   定向测试通过。
 - 第四批：修正 ItemRatio Uber 与同版本行选择；`ItemRatioTest`、
   `NativeItemQualityResolverTest` 定向测试通过（BUILD SUCCESSFUL），diff 检查通过。
+- 第五批：LvlTypes 源行索引与 MonPreset 每幕索引夹具；
+  `NativeTableIdentityTest`、`NativeExpansionIdsTest` 定向测试通过。
