@@ -972,6 +972,16 @@ public class Map implements Disposable {
         && (hasNativeSeam(source, destination) || hasNativeSeam(destination, source));
   }
 
+  /** Native room-ring visibility across a continuous level boundary. */
+  public boolean areNativeRoomsVisible(Zone source, float sx, float sy,
+      Zone destination, float dx, float dy) {
+    if (source == null || destination == null) return false;
+    if (source == destination) return source.areRoomsAdjacent(sx, sy, dx, dy);
+    if (!isNativeSeamConnection(source, destination)) return false;
+    RoomEx a = source.findRoomEx(sx, sy), b = destination.findRoomEx(dx, dy);
+    return a != null && b != null && a.isNativeNeighbor(destination.levelId(), b.id);
+  }
+
   /**
    * Resolves the tile owner used by the renderer. Native wall graphics may be
    * anchored on a Zone's exclusive edge; those graphics must remain visible
@@ -2649,6 +2659,7 @@ public class Map implements Disposable {
     private int presetDef = -1;
     private int pickedFile = -1;
     private int[] adjacentRoomIds;
+    private long[] nativeNeighborKeys = new long[0];
     private int clientInRoomRefs;
     private int clientInSightRefs;
     private int clientOutOfSightRefs;
@@ -2664,12 +2675,35 @@ public class Map implements Disposable {
     private int populationSeedHigh = 666;
 
     public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
+      // Local room IDs restart at zero in each Zone. Preserve the level as
+      // well so native pRoomsNear links survive cross-level seam projection.
+      com.d2moo.common.drlg.D2DrlgRoom[] near = room.getPpRoomsNear();
+      int count = near == null ? 0 : Math.min(room.getNRoomsNear(), near.length);
+      com.badlogic.gdx.utils.LongArray keys = new com.badlogic.gdx.utils.LongArray(count);
+      for (int i = 0; i < count; i++) {
+        com.d2moo.common.drlg.D2DrlgRoom neighbor = near[i];
+        if (neighbor == null || neighbor.getLevel() == null) continue;
+        int id = 0;
+        for (com.d2moo.common.drlg.D2DrlgRoom candidate = neighbor.getLevel().getFirstRoomEx();
+            candidate != null; candidate = candidate.getDrlgRoomNext(), id++) {
+          if (candidate == neighbor) {
+            keys.add(((long) neighbor.getLevel().getLevelId() << 32) | (id & 0xffffffffL));
+            break;
+          }
+        }
+      }
+      nativeNeighborKeys = keys.toArray();
       populationFlags = room.getFlags();
       populationOutdoorFlag80 = com.d2moo.common.drlg.DrlgDrlgRoom.getOutdoorRoomFlag80(room);
       if (room.getSeed() != null) {
         populationSeed = room.getSeed().getNLowSeed();
         populationSeedHigh = room.getSeed().getNHighSeed();
       }
+    }
+    public boolean isNativeNeighbor(int levelId, int roomId) {
+      long key = ((long) levelId << 32) | (roomId & 0xffffffffL);
+      for (long neighbor : nativeNeighborKeys) if (neighbor == key) return true;
+      return false;
     }
     public boolean claimObjectPopulation() {
       if (objectPopulationSpawned) return false;

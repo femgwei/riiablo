@@ -704,10 +704,10 @@ public class DrlgDrlgRoom {
                     roomTile.setPNext(drlgRoom1.getRoomTiles());
                     drlgRoom1.setRoomTiles(roomTile);
                     
-                    bResult = true;
+                    return true;
                 }
-                
-                break;
+                // Native sub_6FD77F00 visits the entire target room chain for
+                // Warp=-1. Only a real warp returns after its first endpoint.
             }
             
             drlgRoom2 = drlgRoom2.getDrlgRoomNext();

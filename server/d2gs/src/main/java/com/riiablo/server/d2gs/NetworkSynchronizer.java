@@ -235,10 +235,11 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     if (!mPosition.has(entityId)) return 0xFFFFFFFF;
     for (IntIntMap.Entry entry : players.entries()) {
       MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
-      if (target == null || !sameLevel(source, target) || target.zone != source.zone
+      if (target == null || target.map != source.map || target.zone == null
           || !mPosition.has(entry.value)) continue;
-      if (source.zone.areRoomsAdjacent(
+      if (source.map.areNativeRoomsVisible(source.zone,
           mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+          target.zone,
           mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y)) {
         mask |= 1 << entry.key;
       }

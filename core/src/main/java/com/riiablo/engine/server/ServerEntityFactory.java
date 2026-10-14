@@ -253,7 +253,8 @@ public class ServerEntityFactory extends EntityFactory {
     mMapWrapper.create(id).set(map, map.getZone(x, y));
 
     if (base.Draw) {
-      mCofReference.create(id).set(base.Token, initialMode);
+      // D2Common COMPOSIT_GetCof uses ObjType, not Objects.Token.
+      mCofReference.create(id).set(Riiablo.files.ObjType.get(base.Id).Token, initialMode);
       int[] component = mCofComponents.create(id).component;
       Arrays.fill(component, CofComponents.COMPONENT_NULL);
       mCofAlphas.create(id);

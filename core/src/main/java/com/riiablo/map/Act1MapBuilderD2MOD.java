@@ -1516,8 +1516,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         d2MooDt1Masks.put(levelId, exportedDt1Mask);
         int written = applier.getLastExportedFloorCount();
         boolean qualityPassed = written > 0
-            && applier.getUniqueFloorIdCount() > 1
-            && applier.getZeroTileIdCount() < written
+            // A native preset may legitimately use a single floor (Countess
+            // cellar). Diversity is not an export-integrity requirement.
+            && applier.getUniqueFloorIdCount() > 0
+            // Packed ID 0 is a valid floor (orientation/style/sequence all
+            // zero), not an empty cell; TileGrid uses -1 for missing tiles.
             && applier.getExportedWallCount() > 0
             && applier.getUniqueWallIdCount() > 0
             && applier.getInvalidTileCount() == 0

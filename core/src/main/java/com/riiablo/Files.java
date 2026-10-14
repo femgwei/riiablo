@@ -45,6 +45,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.MonSounds;
 import com.riiablo.codec.excel.Obj;
 import com.riiablo.codec.excel.ObjMode;
+import com.riiablo.codec.excel.ObjType;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.codec.excel.Overlay;
 import com.riiablo.codec.excel.PlrMode;
@@ -134,6 +135,7 @@ public class Files {
   public final MonPreset        MonPreset;
   public final Objects          objects;
   public final ObjMode          ObjMode;
+  public final ObjType          ObjType;
   public final Overlay          Overlay;
   public final PlrMode          PlrMode;
   public final PlrType          PlrType;
@@ -234,6 +236,7 @@ public class Files {
     // record. Counting it shifts every expansion class (449 gate -> debris).
     objects          = load(Objects.class, Excel.EXPANSION);
     ObjMode          = load(ObjMode.class);
+    ObjType          = load(ObjType.class, Excel.EXPANSION);
     Overlay          = load(Overlay.class, Excel.EXPANSION);
     PlrMode          = load(PlrMode.class);
     PlrType          = load(PlrType.class);

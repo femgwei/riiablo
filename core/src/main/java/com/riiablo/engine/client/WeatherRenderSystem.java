@@ -596,11 +596,13 @@ public final class WeatherRenderSystem extends BaseSystem {
       for (int i = 0; i < RIPPLE_VARIANTS; i++) {
         com.riiablo.codec.excel.Objects.Entry object =
             Riiablo.files.objects.get(FIRST_CLASS_ID + i);
-        if (object == null || object.Token == null || object.Token.isEmpty()) continue;
-        String cofPath = "data\\global\\objects\\" + object.Token + "\\COF\\"
-            + object.Token + "NUHTH.cof";
-        String path = "data\\global\\objects\\" + object.Token + "\\TR\\"
-            + object.Token + "TRLITNUHTH.dcc";
+        if (object == null) continue;
+        String token = Riiablo.files.ObjType.get(object.Id).Token;
+        if (token == null || token.isEmpty()) continue;
+        String cofPath = "data\\global\\objects\\" + token + "\\COF\\"
+            + token + "NUHTH.cof";
+        String path = "data\\global\\objects\\" + token + "\\TR\\"
+            + token + "TRLITNUHTH.dcc";
         if (Riiablo.mpqs.contains(path)) {
           resourcesAvailable = true;
           // Queue the native ripple resources before the first object is

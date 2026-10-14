@@ -97,6 +97,7 @@ final class MapObjectLoadAudit {
           + " entity=" + id + " class=" + (object.base == null ? -1 : object.base.Id)
           + " name=" + (object.base == null ? "null" : object.base.Description)
           + " token=" + (object.base == null ? "null" : object.base.Token)
+          + " visualToken=" + (reference == null ? "none" : reference.token)
           + " mode=" + object.mode + " position=" + (position == null ? "null" : position.position)
           + " resources=" + resource + " error=" + error);
     }

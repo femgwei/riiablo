@@ -1,6 +1,10 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
+dependencies {
+  testImplementation project(':D2MOO_JAVA')
+}
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
