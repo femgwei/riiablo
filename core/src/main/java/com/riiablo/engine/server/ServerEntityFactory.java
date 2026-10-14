@@ -133,18 +133,15 @@ public class ServerEntityFactory extends EntityFactory {
     mMapWrapper.create(id).set(map, map.getZone(position));
 
     mPosition.create(id).position.set(position);
-    // D2MOD: UNITS_GetRunAndWalkSpeedForPlayer reads from CharStatsTxt.nWalkSpeed and nRunSpeed
-    // These values are in units that need to be converted to actual speed
-    // D2MOD uses these values directly (they're already in the correct units for the game)
-    // In riiablo, we read from CharStats.WalkVelocity and RunVelocity
+    // CharStats stores native speed units; setPlayer converts to subtiles/sec.
     com.riiablo.codec.excel.CharStats.Entry charStats = charData.classId != null ? charData.classId.entry() : null;
     float walkSpeed = charStats != null && charStats.WalkVelocity > 0
         ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
     float runSpeed = charStats != null && charStats.RunVelocity > 0
         ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
-    log.info("[MOVEMENT] player={} walkSpeed={} runSpeed={} source={}",
+    log.info("[MOVEMENT] player={} nativeWalkSpeed={} nativeRunSpeed={} source={}",
         id, walkSpeed, runSpeed, charStats == null ? "fallback" : "CharStats");
-    mVelocity.create(id).set(walkSpeed, runSpeed);
+    mVelocity.create(id).setPlayer(walkSpeed, runSpeed);
     mAngle.create(id);
 
     CofReference playerCof = mCofReference.create(id)

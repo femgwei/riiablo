@@ -17,10 +17,8 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    `fc5ba9e6`。riiablo 的 `Pathfinder.limitWaypointSpeed` 已有终点截断和测试，
    不重复添加。发现 StaminaSystem 耗尽分支会把较短终点速度放大到完整步行速度，
    改为只限制上限，并回归短步长、完整奔跑步长和零速度。
-   玩家创建与两条复活路径仍直接采用 CharStats 的 6/9 值，需要独立核查单位换算、
-   状态加成和系统执行顺序。D2MOO `Units.cpp:UNITS_GetBaseVelocity` 返回
-   `nWalkSpeed << 8`，`PathMisc.cpp:sub_6FD5CEB0` 将速度转换为路径向量；
-   完整位移链核实前不全局乘速度常量。
+   玩家创建与两条复活路径的单位换算现已核查并修正（见后续验证记录）；状态加成、
+   装备加速和系统执行顺序仍待独立核查，不全局乘速度常量。
 2. **导弹速度与寿命分离**（基础导弹已修正，特殊处理器仍待核查）。参考
    `b7e5f680`、`8c87f64a`。撤回此前“移动导弹 Range 是距离”的结论。
    D2MOO `MISSILES_CreateMissileFromParams` 将 Range + skillLevel * LevRange
@@ -155,3 +153,16 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   通过。此批只修复寿命元数据，不宣称完成实机重连：独立clientFrame回调时钟、
   动画相位、延迟补偿、特殊路径/控制器状态和完整重连流程仍待审计；客户端仍不
   执行服务器伤害逻辑。
+- 玩家速度复核第一批：`Units.cpp:UNITS_GetBaseVelocity` 返回 WalkSpeed<<8；
+  Run 状态通过 RunSpeed/WalkSpeed 的百分比调整。`Step.cpp:PATH_GetDirectionVector`
+  查表轴向向量为4096，`PathMisc.cpp:PATH_ComputeVelocityAndDirectionVectorsToNextPoint`
+  用 (direction * velocity)>>8 计算16.16位移；`Step.cpp` 将其累加到精确位置。
+  故速度S的轴向每帧位移为S/16子格，25帧/秒对应S*25/16子格/秒。
+  CharStats 6/9应初始化为9.375/14.0625世界坐标单位/秒。
+  新增 Velocity.setPlayer，统一玩家创建、服务器复活和客户端恢复三条路径；
+  保留怪物、导弹和普通Velocity.set的既有合同，Engine回退值仍是原生6/9。
+  测试覆盖原生轴向定点计算、重复初始化不重复换算及怪物/显式世界速度不变。
+  原生整数舍入、方向查表量化、装备FRW、技能加速与端点系统顺序仍待后续；
+  未进行实机位移验收。
+  验证：PlayerVelocityUnitsTest、StaminaSystemTest、PathfinderTest定向测试通过，
+  diff检查通过。随后仅调整注释及日志标签，按用户约定不再次编译。

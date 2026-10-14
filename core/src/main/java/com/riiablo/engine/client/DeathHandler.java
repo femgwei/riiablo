@@ -615,8 +615,8 @@ public class DeathHandler extends PassiveSystem {
             ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
         float runSpeed = charStats != null && charStats.RunVelocity > 0
             ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
-        mVelocity.create(playerId).set(walkSpeed, runSpeed);
-        log.debug("Player {} Velocity component restored: walkSpeed={}, runSpeed={}", playerId, walkSpeed, runSpeed);
+        mVelocity.create(playerId).setPlayer(walkSpeed, runSpeed);
+        log.debug("Player {} Velocity restored: nativeWalkSpeed={}, nativeRunSpeed={}", playerId, walkSpeed, runSpeed);
       }
     }
 

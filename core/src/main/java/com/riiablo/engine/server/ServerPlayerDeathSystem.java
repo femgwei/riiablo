@@ -173,7 +173,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
         ? stats.WalkVelocity : Engine.Player.SPEED_WALK;
     float run = stats != null && stats.RunVelocity > 0
         ? stats.RunVelocity : Engine.Player.SPEED_RUN;
-    mVelocity.create(playerId).set(walk, run);
+    mVelocity.create(playerId).setPlayer(walk, run);
     mMovementModes.create(playerId).set(
         Engine.Player.MODE_TN, Engine.Player.MODE_TW, Engine.Player.MODE_RN);
     mRunning.create(playerId);

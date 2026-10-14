@@ -94,6 +94,7 @@ public class Engine {
   }
 
   public static final class Player {
+    /** CharStats/native units; convert through Velocity.setPlayer before use. */
     public static final float SPEED_WALK = 6;
     public static final float SPEED_RUN  = 9;
 

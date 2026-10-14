@@ -6,6 +6,8 @@ import com.badlogic.gdx.math.Vector2;
 
 @PooledWeaver
 public class Velocity extends PooledComponent {
+  /** Native 8.8 velocity * 16 / 65536 subtiles per tick, at 25 ticks/sec. */
+  public static final float PLAYER_NATIVE_SPEED_SCALE = 25f / 16f;
   /** D2Game initializes monsters with STAT_VELOCITYPERCENT=75. */
   public static final float MONSTER_BASE_SPEED_MULTIPLIER = 0.75f;
   /** D2Common clamps the combined movement percentage to at least 25. */
@@ -42,6 +44,12 @@ public class Velocity extends PooledComponent {
     baseSpeedMultiplier = 1f;
     modeSpeedBonusMultiplier = 0f;
     return this;
+  }
+
+  /** Converts CharStats walk/run values to world subtiles per second. */
+  public Velocity setPlayer(float nativeWalkSpeed, float nativeRunSpeed) {
+    return set(nativeWalkSpeed * PLAYER_NATIVE_SPEED_SCALE,
+        nativeRunSpeed * PLAYER_NATIVE_SPEED_SCALE);
   }
 
   /**
