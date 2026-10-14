@@ -29,6 +29,16 @@ class NativeAssassinSkillMatrixTest extends RiiabloTest {
   };
 
   @Test
+  void bladeFuryCadenceUsesProgressiveFormulaInsteadOfHardcodedParam4() {
+    Skills.Entry skill = new Skills.Entry();
+    skill.Param = new int[] {0, 0, 0, 5};
+    skill.prgcalc = new String[] {"par4+1"};
+    assertEquals(6, ServerSkillSystem.bladeFuryIntervalFrames(skill, 1));
+    skill.prgcalc[0] = "par4";
+    assertEquals(5, ServerSkillSystem.bladeFuryIntervalFrames(skill, 1));
+  }
+
+  @Test
   void admittedAssassinRowsMatchExactCallbacksAndMissileChains() {
     assertEquals(ROWS.length, NativeSkillBehaviorRegistry.assassinSize());
     for (Row expected : ROWS) {

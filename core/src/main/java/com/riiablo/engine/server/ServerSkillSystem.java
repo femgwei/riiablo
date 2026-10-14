@@ -2959,6 +2959,8 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnBladeFury(SkillDoEvent event, Skills.Entry skill,
       int skillLevel, Vector2 caster) {
     if (skill == null || !hasText(skill.srvmissilea)) return;
+    int delay = bladeFuryIntervalFrames(skill, skillLevel);
+    if (delay <= 1) return; // Native SrvDo048 rejects prgcalc1 - 1 <= 0.
     int remaining = bladeFuryDelayFrames.get(event.entityId, 0);
     if (remaining > 0) {
       log.debug("[ASSASSIN_BLADE_FURY] phase=skip source={} remaining={}",
@@ -2987,8 +2989,6 @@ public class ServerSkillSystem extends PassiveSystem {
         null, skillLevel);
     if (missileId < 0 || !mMissile.has(missileId)) return;
     initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
-    int delay = skill.Param != null && skill.Param.length > 3
-        ? Math.max(1, skill.Param[3]) : 1;
     bladeFuryDelayFrames.put(event.entityId, delay);
     mana.sub(manaCost);
     Missile projectile = mMissile.get(missileId);
@@ -2998,6 +2998,12 @@ public class ServerSkillSystem extends PassiveSystem {
         + "delay={} manaCost={} manaLeft={} srcDam={} snapshot={}",
         event.entityId, missileId, skillLevel, delay, manaCost, mana.asFixed(),
         skill.SrcDam, projectile.damageSnapshot);
+  }
+
+  /** SrvDo048 stores frame + calc - 1 and admits only a strictly later frame. */
+  static int bladeFuryIntervalFrames(Skills.Entry skill, int level) {
+    if (skill == null || skill.prgcalc == null || skill.prgcalc.length == 0) return 0;
+    return SkillFormula.evaluate(skill.prgcalc[0], skill, level);
   }
 
   /** Native {@code SKILLS_SrvDo043_ShockField} progressive scatter. */

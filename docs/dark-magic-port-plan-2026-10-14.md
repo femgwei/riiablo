@@ -27,10 +27,13 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    `Range` 保持距离终点；现有静止导弹压力回收测试通过。本批新增回归，锁定移动导弹
    `Range` 不得变成帧寿命。Charged Bolt Sentry 的 77 tick 是需核实的 1.14d 观察，
    不能直接覆盖所有 helper。下一步仍需逐类核对特殊 helper 的寿命覆盖。
-3. **Blade Fury 发射时序**（待开始）。参考 `eecd52c9`。
+3. **Blade Fury 发射时序**（已完成 1.10f 公式核查）。参考 `eecd52c9`。
    riiablo 已区分 srvmissilea/cltmissilea；现有测试允许 5 tick 后再发射，
-   dark-magic 观察到 6 tick 间距。核查 1.10f SrvSt26/SrvDo48 的计数边界，
-   首次发射、持续发射、释放和魔力消耗需分别验证。
+   dark-magic 观察到 6 tick 间距。D2MOO `SKILLS_SrvDo048_BladeFury` 保存
+   `当前帧 + prgcalc1 - 1`，并在下一次要求 `Param1 < 当前帧`，因此 1.10f 的
+   实际间隔由 `prgcalc1` 决定，而不是固定使用 `Param4`。riiablo 已改为读取
+   `prgcalc1`，并增加 Param4 与公式不一致时的回归测试。首次发射、持续发射、
+   释放和魔力消耗仍需真实 1.10f 客户端门槛。
 4. **ItemRatio 选择**（待开始）。参考 `964d70e9`。
    riiablo 已有 NativeItemQualityResolver/ItemRatio.get，需先对照
    DATATBLS_GetItemRatioTxtRecord 核实 Version、Uber、Class Specific 的真实语义，
@@ -52,5 +55,7 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 
 ## 验证记录
 
-- 第一批：体力耗尽保留终点短步长；专项验证结果将在完成后记录。
-- 后续条目仍未完成，分析结论不计作行为验收。
+- 第一批：体力耗尽保留终点短步长；提交 `c5c4f667`，定向测试通过。
+- 第二批：移动导弹 Range 与静止导弹帧寿命分离；提交 `ae214d5c`，回归测试通过。
+- 第三批：Blade Fury 使用 1.10f `prgcalc1` 发射间隔；本次提交记录在 Git 历史，
+  定向测试通过。
