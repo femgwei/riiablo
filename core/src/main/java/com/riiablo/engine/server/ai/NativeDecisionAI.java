@@ -79,12 +79,18 @@ abstract class NativeDecisionAI extends AI {
   }
 
   protected final void cast(int slot, int targetId) {
-    if (useMonsterSkill(slot, targetId, mPosition.get(targetId).position)) {
+    castAt(slot, targetId, mPosition.get(targetId).position);
+  }
+
+  protected final boolean castAt(int slot, int targetId, com.badlogic.gdx.math.Vector2 target) {
+    if (useMonsterSkill(slot, targetId, target)) {
       state = "CAST";
       nextThink = 0f;
+      return true;
     } else {
       // Native AITACTICS_UseSkill failure waits ten frames, not a basic attack.
       idle(10);
+      return false;
     }
   }
 

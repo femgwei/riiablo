@@ -36,7 +36,7 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
   @Test
   void nativeRowsMustResolveToDedicatedAiNotFallback() {
     for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap",
-        "duriel", "summoner"}) {
+        "duriel", "summoner", "sarcophagus", "lightningspire", "turret1"}) {
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);
       assertNotNull(row, rowId);
       AI ai = AI.findAI(12, row.AI);
@@ -211,6 +211,40 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       f.ai.params[Summoner.PARAM_CAST_CHANCE] = 0;
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals("APPROACH", f.ai.getState());
+    }
+  }
+
+  @Test
+  void sarcophagusArcaneTowerAndDesertTurretUseDedicatedNativeLoops() {
+    try (Fixture f = new Fixture("sarcophagus", 0, 10f)) {
+      f.ai.params[Sarcophagus.PARAM_SPAWN_INTERVAL] = 0;
+      f.ai.params[Sarcophagus.PARAM_NUM_TO_SPAWN] = 1;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("Nest").Id, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("lightningspire", 0, 10f)) {
+      f.ai.params[ArcaneTower.PARAM_NUM_SKILL_1] = 1;
+      f.ai.params[ArcaneTower.PARAM_NUM_SKILL_2] = 1;
+      f.ai.params[ArcaneTower.PARAM_SKILL_1_STALL] = 0;
+      f.ai.params[ArcaneTower.PARAM_SKILL_1_LONG_DELAY] = 0;
+      f.ai.params[ArcaneTower.PARAM_SKILL_2_STALL] = 0;
+      f.ai.params[ArcaneTower.PARAM_SKILL_2_LONG_DELAY] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("ArcaneTower").Id, f.casting().skillId);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("turret1", 0, 10f)) {
+      f.ai.params[DesertTurret.PARAM_SHORT_DELAY] = 0;
+      f.ai.params[DesertTurret.PARAM_LONG_DELAY] = 0;
+      f.ai.params[DesertTurret.PARAM_RANGE] = 20;
+      f.ai.params[DesertTurret.PARAM_SPREAD] = 1;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("DesertTurret").Id, f.casting().skillId);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("DesertTurret").Id, f.casting().skillId);
     }
   }
 
