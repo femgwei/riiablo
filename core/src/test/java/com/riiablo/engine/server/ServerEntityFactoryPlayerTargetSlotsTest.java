@@ -27,7 +27,12 @@ class ServerEntityFactoryPlayerTargetSlotsTest extends RiiabloTest {
       int second = factory.createPlayer("NativeSlotsB", Riiablo.NECROMANCER, 20, 10);
       assertEquals(first, slots.playerAtSlot(0), "allocation, not the next ECS tick, registers the head");
       assertEquals(second, slots.playerAtSlot(1));
+      long headOrder = slots.registrationOrder(first);
+      assertTrue(headOrder > 0);
+      assertTrue(slots.acceptsChildInsertion(first, NativeTargetOrder.inserted()),
+          "a child initialized after factory return is newer than its head");
       world.process();
+      assertEquals(headOrder, slots.registrationOrder(first));
       assertEquals(first, slots.playerAtSlot(0));
       assertEquals(second, slots.playerAtSlot(1));
       assertEquals(com.riiablo.engine.Engine.INVALID_ENTITY, slots.playerAtSlot(2));

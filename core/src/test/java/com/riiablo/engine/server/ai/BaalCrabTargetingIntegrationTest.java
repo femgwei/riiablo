@@ -36,6 +36,67 @@ import static org.mockito.Mockito.*;
 /** AiBaal.cpp target-score/owner-group projection; terrain is a test double. */
 class BaalCrabTargetingIntegrationTest extends RiiabloTest {
   @Test
+  void ownerComponentRecreationDoesNotReattachUnobservedMercenaryOrSummon() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        int summon = pet(f, false, 30, 10, 2);
+        int merc = pet(f, true, 30, 10, 2);
+        f.world.getMapper(Position.class).remove(summon);
+        f.world.process();
+        // No selection before release: lazy first-observation ownership caches
+        // cannot distinguish these children from the replacement head's group.
+        f.world.getMapper(Player.class).remove(f.target);
+        f.world.process();
+        f.world.getMapper(Player.class).create(f.target);
+        f.world.getMapper(Position.class).create(summon).position.set(30, 10);
+        f.world.process();
+        assertEquals(f.target, select(f));
+        assertEquals(1, baal(f).lastTargetCount());
+        f.world.getMapper(SummonedPet.class).get(summon)
+            .set(f.target, "skeleton", 70, 1, false, 0);
+        f.world.getMapper(Mercenary.class).get(merc).set(f.target, 0, 1, 1, 0);
+        stats(f, f.target, 0);
+        assertEquals(merc, select(f), "only explicit new insertions restore released children");
+        assertEquals(3, baal(f).lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void recycledOwnerEntityIdCannotAdoptOldChildren() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      pet(f, false, 30, 10, 2);
+      pet(f, true, 30, 10, 2);
+      f.world.process();
+      f.world.delete(f.target);
+      f.world.process();
+      int replacement = player(f, 20, 10);
+      assertEquals(f.target, replacement, "exercise actual Artemis ID recycling");
+      assertEquals(replacement, select(f));
+      assertEquals(1, baal(f).lastTargetCount());
+      pet(f, false, 30, 10, 2);
+      f.world.process();
+      assertEquals(replacement, select(f));
+      assertEquals(2, baal(f).lastTargetCount());
+    }
+  }
+
+  @Test
+  void childCreatedBeforeOwnerRegistrationAndUnknownInsertionAreNotAdopted() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      f.world.getMapper(Player.class).remove(f.target);
+      f.world.process();
+      pet(f, false, 30, 10, 2);
+      int unknown = pet(f, true, 30, 10, 2);
+      f.world.getMapper(Mercenary.class).get(unknown).nativeTargetOrder = 0;
+      f.world.getMapper(Player.class).create(f.target);
+      f.world.process();
+      assertEquals(f.target, select(f));
+      assertEquals(1, baal(f).lastTargetCount());
+    }
+  }
+
+  @Test
   void filledEarlierSlotBeatsLowerEntityIdOnEqualPlayerScores() {
     for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
       try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
@@ -531,7 +592,7 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
     row.threat = threat;
     f.world.getMapper(com.riiablo.engine.server.component.Monster.class).get(id).monstats = row;
     f.world.getMapper(Size.class).create(id).size = 1;
-    if (merc) f.world.getMapper(Mercenary.class).create(id).ownerId = f.target;
+    if (merc) f.world.getMapper(Mercenary.class).create(id).set(f.target, 0, 1, 1, 0);
     else f.world.getMapper(SummonedPet.class).create(id).set(f.target, "skeleton", 70, 1, false, 0);
     return id;
   }

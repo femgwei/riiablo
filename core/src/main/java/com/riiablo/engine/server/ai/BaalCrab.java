@@ -101,9 +101,10 @@ public class BaalCrab extends NativeDecisionAI {
         int child = units.get(j);
         if (child == player || playerOwner(child) != player || !sameActAndMap(child)
             || detachedMonsterNode(child)) continue;
+        long order = playerChildOrder(child);
+        if (slots != null && !slots.acceptsChildInsertion(player, order)) continue;
         targetCount++;
         score = eligibleScore(child);
-        long order = playerChildOrder(child);
         if (score > maxTargetScore
             || score > 0 && score == maxTargetScore && selectedCurrentChild && order > selectedChildOrder) {
           maxTargetScore = score;

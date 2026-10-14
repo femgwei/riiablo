@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
@@ -433,6 +434,8 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       Monster converted = f.world.getMapper(Monster.class).get(child);
       converted.converted = true;
       converted.conversionOwnerId = f.target;
+      f.world.getMapper(UnitStates.class).create(child).init(child).stateList
+          .addState(StateId.CONVERSION, 100, 1, f.target);
       attributes(f, child).base().put(Stat.maxdamage, 1000);
       attributes(f, child).reset();
       f.world.process();
@@ -530,6 +533,8 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       monster.converted = true;
       monster.conversionOwnerId = f.target;
       attributes(f, converted).base().put(Stat.maxdamage, 1000);
+      f.world.getMapper(UnitStates.class).create(converted).init(converted).stateList
+          .addState(StateId.CONVERSION, 100, 1, f.target);
       attributes(f, converted).reset();
       f.world.process();
       assertEquals(converted, select(f));
@@ -542,6 +547,39 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void ownerRecreationReleasesConversionUntilNewStateInsertionButNotNode9Wall() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        terrain(f, true);
+        int converted = enemy(f, 30, 10);
+        Monster monster = f.world.getMapper(Monster.class).get(converted);
+        monster.converted = true;
+        monster.conversionOwnerId = f.target;
+        UnitStates states = f.world.getMapper(UnitStates.class).create(converted).init(converted);
+        states.stateList.addState(StateId.CONVERSION, 100, 1, f.target);
+        attributes(f, converted).base().put(Stat.maxdamage, 1000);
+        attributes(f, converted).reset();
+        int wall = wall(f, 14, 10);
+        f.world.process();
+        f.world.getMapper(Player.class).remove(f.target);
+        f.world.process();
+        f.world.getMapper(Player.class).create(f.target);
+        f.world.process();
+        assertEquals(wall, select(f), "independent node9 survives releasing the player group");
+        assertEquals(1, baal(f).lastTargetCount());
+        states.stateList.addState(StateId.CONVERSION, 200, 1, f.target);
+        assertEquals(wall, select(f), "refresh is not an insertion into the replacement group");
+        assertEquals(1, baal(f).lastTargetCount());
+        states.stateList.removeState(StateId.CONVERSION);
+        states.stateList.addState(StateId.CONVERSION, 200, 1, f.target);
+        f.world.getMapper(SummonedPet.class).get(wall).boneWall = false;
+        assertEquals(converted, select(f));
+        assertEquals(2, baal(f).lastTargetCount(), "wall's old player insertion remains released");
+      }
+    }
+  }
+
+  @Test
   void convertedUnitStillDependsOnOwnerHeadCullButWallDoesNot() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
       terrain(f, true);
@@ -550,6 +588,8 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       monster.converted = true;
       monster.conversionOwnerId = f.target;
       f.targetPosition().set(65, 10);
+      f.world.getMapper(UnitStates.class).create(converted).init(converted).stateList
+          .addState(StateId.CONVERSION, 100, 1, f.target);
       f.world.process();
       assertEquals(Engine.INVALID_ENTITY, select(f));
       assertEquals(0, baal(f).lastTargetCount());

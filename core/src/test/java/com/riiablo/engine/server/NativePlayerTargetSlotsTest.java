@@ -13,6 +13,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NativePlayerTargetSlotsTest {
   @Test
+  void newHeadGenerationRejectsOldAndUnknownInsertionsUntilExplicitRejoin() {
+    try (Fixture f = new Fixture()) {
+      int player = f.player();
+      long beforeHead = NativeTargetOrder.inserted();
+      f.slots.registerPlayer(player);
+      long head = f.slots.registrationOrder(player);
+      long child = NativeTargetOrder.inserted();
+      assertTrue(head > beforeHead);
+      assertFalse(f.slots.acceptsChildInsertion(player, 0));
+      assertFalse(f.slots.acceptsChildInsertion(player, beforeHead));
+      assertFalse(f.slots.acceptsChildInsertion(player, head));
+      assertTrue(f.slots.acceptsChildInsertion(player, child));
+      f.world.process();
+      f.slots.registerPlayer(player);
+      assertEquals(head, f.slots.registrationOrder(player));
+      f.world.getMapper(Player.class).remove(player);
+      f.world.process();
+      assertEquals(0, f.slots.registrationOrder(player));
+      assertFalse(f.slots.acceptsChildInsertion(player, child));
+      f.world.getMapper(Player.class).create(player);
+      f.world.process();
+      assertTrue(f.slots.registrationOrder(player) > child);
+      assertFalse(f.slots.acceptsChildInsertion(player, child));
+      assertTrue(f.slots.acceptsChildInsertion(player, NativeTargetOrder.inserted()));
+    }
+  }
+
+  @Test
   void explicitAllocationOrderWinsOverEntityAndSubscriptionOrder() {
     try (Fixture f = new Fixture()) {
       int lowerId = f.player();
@@ -92,12 +120,14 @@ class NativePlayerTargetSlotsTest {
       int player = f.player();
       f.world.getMapper(Position.class).create(player);
       f.world.process();
+      long headOrder = f.slots.registrationOrder(player);
       for (byte mode : new byte[] {Engine.Player.MODE_DT, Engine.Player.MODE_DD}) {
         f.world.getMapper(Sequence.class).create(player).sequence(mode, mode);
         f.world.getMapper(Position.class).remove(player);
         f.world.process();
         f.slots.registerPlayer(player);
         assertEquals(player, f.slots.playerAtSlot(0));
+        assertEquals(headOrder, f.slots.registrationOrder(player));
       }
     }
   }

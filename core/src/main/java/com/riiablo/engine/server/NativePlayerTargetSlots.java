@@ -26,6 +26,7 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
   protected ComponentMapper<Sequence> mSequence;
 
   private final int[] heads = new int[SLOT_COUNT];
+  private final long[] headOrders = new long[SLOT_COUNT];
   private final IntIntMap slots = new IntIntMap();
   private final IntSet allocationAttempts = new IntSet();
 
@@ -60,6 +61,7 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
     for (int slot = 0; slot < SLOT_COUNT; slot++) {
       if (heads[slot] != Engine.INVALID_ENTITY) continue;
       heads[slot] = entityId;
+      headOrders[slot] = NativeTargetOrder.inserted();
       slots.put(entityId, slot);
       return;
     }
@@ -72,6 +74,20 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
 
   public int playerAtSlot(int slot) {
     return slot >= 0 && slot < SLOT_COUNT ? heads[slot] : Engine.INVALID_ENTITY;
+  }
+
+  /** Runtime registration boundary, in the same event domain as child insertion. */
+  public long registrationOrder(int entityId) {
+    int slot = slotOf(entityId);
+    return slot < SLOT_COUNT ? headOrders[slot] : 0;
+  }
+
+  /** FreeUnitNode releases the old group: a recycled owner ID is not a rejoin.
+   * This temporal projection requires an explicit child insertion event after
+   * the current head allocation, even for children never observed by an AI. */
+  public boolean acceptsChildInsertion(int player, long childOrder) {
+    long headOrder = registrationOrder(player);
+    return headOrder != 0 && childOrder > headOrder;
   }
 
   @Override
@@ -91,7 +107,10 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
 
   private void releaseSlot(int entityId) {
     int slot = slots.remove(entityId, UNREGISTERED);
-    if (slot < SLOT_COUNT) heads[slot] = Engine.INVALID_ENTITY;
+    if (slot < SLOT_COUNT) {
+      heads[slot] = Engine.INVALID_ENTITY;
+      headOrders[slot] = 0;
+    }
   }
 
   @Override
