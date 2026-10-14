@@ -985,7 +985,8 @@ public class Map implements Disposable {
     // seam fallback. Never widen this to whole-level visibility.
     return a != null && b != null
         && (a.isNativeNeighbor(destination.levelId(), b.id)
-            || a.touches(b, DT1.Tile.SUBTILE_SIZE));
+            || a.touches(b, DT1.Tile.SUBTILE_SIZE)
+            || ((sx - dx) * (sx - dx) + (sy - dy) * (sy - dy) <= 36f));
   }
 
   /**
