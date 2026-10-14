@@ -30,6 +30,10 @@ public class BaalCrab extends NativeDecisionAI {
   static final int SKILL_NOVA = 316;
   static final int SKILL_INFERNO = 317;
   static final int SKILL_COLD_MISSILES = 318;
+  static final int SKILL_IMMOLATION_ARROW = 27;
+  static final int SKILL_FIRE_WALL = 51;
+  static final int SKILL_METEOR = 56;
+  static final int SKILL_BLIZZARD = 59;
 
   private final Vector2 anchor = new Vector2();
   private final Vector2 destination = new Vector2();
@@ -164,12 +168,42 @@ public class BaalCrab extends NativeDecisionAI {
     if (data == null) return 0;
     int skillId = data.getAction(button);
     NativeSkills.Entry skill = Riiablo.files.NativeSkills.get(skillId);
+    return skill == null ? 0
+        : effectiveHandSkillLevel(id, data, skillId) * (skill.nativeInteger("attackrank") & 0xFF);
+  }
+
+  private int effectiveHandSkillLevel(int id, CharData data, int skillId) {
     int level = data.getSkill(skillId);
-    if (skill == null || level <= 0) return 0;
+    if (level <= 0) return 0;
     if (mUnitStates.has(id) && mUnitStates.get(id).stateList != null) {
       level += mUnitStates.get(id).stateList.getTotalSkillModifier();
     }
-    return Math.max(0, level) * (skill.nativeInteger("attackrank") & 0xFF);
+    return Math.max(0, level);
+  }
+
+  /** AI_CheckSpecialSkillsOnPrimeEvil checks selected hands, not used/casting skill.
+   * CharData projects available player hands; native monster/charged pointers remain separate. */
+  boolean hasSpecialPrimeEvilSkill(int id) {
+    CharData data = mPlayer.has(id) ? mPlayer.get(id).data : null;
+    return data != null && (isSpecialPrimeEvilHand(id, data, Input.Buttons.RIGHT)
+        || isSpecialPrimeEvilHand(id, data, Input.Buttons.LEFT));
+  }
+
+  private boolean isSpecialPrimeEvilHand(int id, CharData data, int button) {
+    int skillId = data.getAction(button);
+    // An unowned action ID is not a native selected skill pointer.
+    if (data.getSkill(skillId) <= 0) return false;
+    switch (skillId) {
+      case SKILL_BLIZZARD:
+      case SKILL_METEOR:
+        return true;
+      case SKILL_FIRE_WALL:
+        return effectiveHandSkillLevel(id, data, skillId) > 3;
+      case SKILL_IMMOLATION_ARROW:
+        return effectiveHandSkillLevel(id, data, skillId) > 7;
+      default:
+        return false;
+    }
   }
 
   private int statInt(int id, short stat) {
@@ -183,18 +217,31 @@ public class BaalCrab extends NativeDecisionAI {
   }
 
   int[] decisionWeights(int targetId, boolean combat) {
+    int difficulty = resolveAiDifficulty();
     int sourceSize = mSize.has(entityId) ? mSize.get(entityId).size : 1;
     int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : 1;
     int fromAnchor = distanceWithSize(mPosition.get(targetId).position, anchor,
         (targetSize >>> 1) + 1);
     boolean barrier = hasBarrier(targetId);
-    int[] table = weights(resolveAiDifficulty(), combat, barrier,
+    boolean medium = fromAnchor > 75;
+    int[] table = weights(difficulty, combat, barrier,
         distanceWithSize(mPosition.get(entityId).position, mPosition.get(targetId).position,
             sourceSize), lifePercent(entityId), lifePercent(targetId), isCold(targetId),
-        targetCount, fromAnchor > 75, fromAnchor > 100);
+        targetCount, medium, fromAnchor > 100);
     if (!combat && !barrier) {
       table[15] = cloneWeight(monster.baalClonesCreated);
       if (maxTargetScore > 60) table[8] = 70;
+      // Monster.cpp MONSTER_GetPlayerCountBonus assigns nDifficulty from the
+      // game difficulty, NOT nPlayerCount. This gate follows the score boost.
+      if (targetCount < 2 && difficulty < 2) table[8] = 0;
+      if (!medium && hasSpecialPrimeEvilSkill(targetId)) {
+        table[6] += 30;
+        table[11] += 10;
+        table[14] += 15;
+      }
+    } else if (!combat && !medium && hasSpecialPrimeEvilSkill(targetId)) {
+      table[14] += 50;
+      table[13] += 50;
     }
     return table;
   }
@@ -402,8 +449,8 @@ public class BaalCrab extends NativeDecisionAI {
     return (Math.min(dx, dy) + 2 * Math.max(dx, dy)) / 2;
   }
 
-  /** Native base tables with available ECS inputs. Special-skill, portal,
-   * boss-score and player-count-bonus adjustments remain unprojected. */
+  /** Native base tables; decisionWeights adds score, single-target difficulty,
+   * special selected skills and clone count. Portal lookup remains unprojected. */
   static int[] weights(int difficulty, boolean melee, boolean barrier, int distance,
       int life, int targetLife, boolean cold, int count, boolean medium, boolean far) {
     if (melee) {

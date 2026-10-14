@@ -301,8 +301,9 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
   }
 
   @Test
-  void maxScoreFeedbackIsStrictlyOver60AndOnlyOpenRanged() {
+  void maxScoreFeedbackWithMultipleTargetsIsStrictlyOver60AndOnlyOpenRanged() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      player(f, 25, 10); // Single-target Normal/Nightmare curse gate is tested separately.
       Attributes stats = stats(f, f.target, 100);
       stats.base().put(Stat.maxdamage, 646);
       stats.reset();
