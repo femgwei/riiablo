@@ -976,7 +976,14 @@ public class Map implements Disposable {
   public boolean areNativeRoomsVisible(Zone source, float sx, float sy,
       Zone destination, float dx, float dy) {
     if (source == null || destination == null) return false;
-    if (source == destination) return source.areRoomsAdjacent(sx, sy, dx, dy);
+    if (source == destination) {
+      if (source.areRoomsAdjacent(sx, sy, dx, dy)) return true;
+      // A projected RoomEx can lag one update at a seam landing point. Keep
+      // the same native six-subtile interest window used by D2Game for a
+      // nearby entity, while retaining room-ring semantics at distance.
+      float ddx = sx - dx, ddy = sy - dy;
+      return ddx * ddx + ddy * ddy <= 36f;
+    }
     if (!isNativeSeamConnection(source, destination)) return false;
     RoomEx a = source.findRoomEx(sx, sy), b = destination.findRoomEx(dx, dy);
     // Native pRoomsNear is authoritative when present. Some linked outdoor

@@ -28,7 +28,7 @@ final class NativeObjectPopulation {
         control = new D2Seed((int) Seed.rollRandomNumber(game), 666);
         controls.put(zone.map, control);
       }
-      region = new Region(control);
+      region = new Region(control, countPopulatedRooms(zone));
       regions.put(zone, region);
     }
     int before = zone.getNativeObjects().size;
@@ -39,6 +39,12 @@ final class NativeObjectPopulation {
       // POPULATION_ZERO; all other native RoomEx rooms run ObjGroup rolls.
       if ((room.populationFlags() & (0x00800000 | 0x00010000 | 0x00020000)) != 0
           || room.populationOutdoorFlag80() != 0) continue;
+      // D2Game runs the level theme handler before the ObjGrp rolls.  The
+      // theme barrel pass is easy to miss because it is not represented by
+      // an ObjGroup row; outdoor levels with a barrel theme otherwise lose
+      // up to 32 containers per room.
+      region.field4++;
+      populateTheme(zone, room, region);
       D2Seed roomSeed = new D2Seed(room.populationSeed(), room.populationSeedHigh());
       for (int slot = 0; zone.level.ObjGrp != null && slot < zone.level.ObjGrp.length; slot++) {
         int groupId = zone.level.ObjGrp[slot];
@@ -73,6 +79,52 @@ final class NativeObjectPopulation {
       }
     }
     return zone.getNativeObjects().size - before;
+  }
+
+  private static int countPopulatedRooms(Map.Zone zone) {
+    int count = 0;
+    for (Map.RoomEx room : zone.getRoomsEx()) {
+      if ((room.populationFlags() & (0x00800000 | 0x00010000 | 0x00020000)) == 0
+          && room.populationOutdoorFlag80() == 0) count++;
+    }
+    return count;
+  }
+
+  private static void populateTheme(Map.Zone zone, Map.RoomEx room, Region region) {
+    int themes = zone.level.Themes;
+    if (themes == 0 || region.populatedRooms <= 0) return;
+    int probability = 12;
+    if (region.field4 > region.populatedRooms / 2) probability += 5;
+    if (region.field4 > region.populatedRooms - region.populatedRooms / 4) probability += 5;
+    if (next(region.seed, 100) >= probability) return;
+    int[] indices = new int[7];
+    int count = 0;
+    for (int i = 0; i < 7; i++) if ((themes & (1 << i)) != 0) indices[count++] = i + 1;
+    if (count == 0) return;
+    int selected = indices[next(region.seed, count)];
+    // This mirrors the native table's active entries.  Theme 2 is the
+    // populated barrel grid; the remaining handlers either do nothing or
+    // place equipment that is outside this object population audit.
+    if (selected < count && selected == 2) themeBarrels(zone, room, region.seed);
+  }
+
+  private static void themeBarrels(Map.Zone zone, Map.RoomEx room, D2Seed seed) {
+    Objects.Entry barrel = Riiablo.files.objects.get(7);
+    if (barrel == null) return;
+    int created = 0;
+    int xEnd = room.x + room.width + 1;
+    int yEnd = room.y + room.height + 1;
+    for (int x = room.x; x < xEnd && created < 32; x += 2) {
+      for (int y = room.y; y < yEnd && created < 32; y += 2) {
+        int classId = (next(seed, 4) == 0) ? 11 : 7;
+        if (room.width < 2 || room.height < 2 || x <= room.x + 2 || y <= room.y + 2
+            || x >= room.x + room.width - barrel.SizeX
+            || y >= room.y + room.height - barrel.SizeY
+            || !clear(zone, x, y, barrel.SizeX + 2, barrel.SizeY + 2)) continue;
+        add(zone, room, classId, x, y, "Theme/2/barrels");
+        created++;
+      }
+    }
   }
 
   static int densityCount(int density, int width, int height) {
@@ -283,7 +335,12 @@ final class NativeObjectPopulation {
   }
   private static final class Region {
     final D2Seed seed;
+    int field4;
+    int populatedRooms;
     final Array<int[]> shrines = new Array<>(), wells = new Array<>();
-    Region(D2Seed control) { seed = control; }
+    Region(D2Seed control, int populatedRooms) {
+      seed = control;
+      this.populatedRooms = populatedRooms;
+    }
   }
 }

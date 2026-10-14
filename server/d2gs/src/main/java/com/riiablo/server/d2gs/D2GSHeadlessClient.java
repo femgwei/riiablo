@@ -5496,7 +5496,12 @@ public final class D2GSHeadlessClient {
         MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
         Vector2 position = current != null && current.hasPosition
             ? new Vector2(current.x, current.y) : blocker.position;
-        if (state.level != blocker.level || state.position.dst2(position) > 36f) break;
+        // A native seam may leave the player in the source level while the
+        // landing blocker is owned by the destination level.  Production
+        // melee validation already permits this exact adjacent-room case;
+        // requiring equal level ids here prevented the TCP probe from ever
+        // clearing a legitimate seam blocker.
+        if (state.position.dst2(position) > 36f) break;
         MapTourProbe.Sample liveBlocker = D2GS.headlessMapTourBlocker(playerId, destination, blocker.warp);
         if (liveBlocker == null) {
           // The live-only probe excludes a just-killed target before its
