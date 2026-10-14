@@ -144,6 +144,77 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
       f.world.getMapper(Sequence.class).create(merc)
           .sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
       assertEquals(pet, select(f));
+      assertEquals(2, baal(f).lastTargetCount(), "dead monster child is unlinked; dead player head stays");
+    }
+  }
+
+  @Test
+  void equalScoreChildrenUseJoinEventsAcrossMercenariesAndSummonsNotEntityIds() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        int merc = pet(f, true, 30, 10, 2);
+        f.world.getMapper(Mercenary.class).get(merc).ownerId = -1;
+        int summon = pet(f, false, 30, 10, 2);
+        for (int id : new int[] {merc, summon}) {
+          attrs(f, id).base().put(Stat.maxdamage, 1000);
+          attrs(f, id).reset();
+        }
+        f.world.getMapper(Mercenary.class).get(merc).set(f.target, 0, 1, 1, 0);
+        f.world.process();
+        assertEquals(merc, select(f), "lower-ID hireling joins after the higher-ID summon");
+        assertEquals(3, baal(f).lastTargetCount());
+        f.world.getMapper(SummonedPet.class).remove(summon);
+        f.world.process();
+        f.world.getMapper(SummonedPet.class).create(summon).set(f.target, "skeleton", 70, 1, false, 0);
+        assertEquals(summon, select(f), "a later summon insertion shares the same order domain");
+      }
+    }
+  }
+
+  @Test
+  void latestChildCannotJumpAnEqualScorePlayerHead() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      int child = pet(f, false, 20, 10, 2);
+      f.world.process();
+      assertEquals(baal(f).targetScore(f.target), baal(f).targetScore(child));
+      assertEquals(f.target, select(f));
+    }
+  }
+
+  @Test
+  void latestChildInLaterPlayerGroupCannotJumpEarlierEqualScoreChild() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      int first = pet(f, false, 30, 10, 2);
+      int otherPlayer = player(f, 30, 10);
+      int later = pet(f, false, 30, 10, 2);
+      f.world.getMapper(SummonedPet.class).get(later).ownerId = otherPlayer;
+      for (int id : new int[] {first, later}) {
+        attrs(f, id).base().put(Stat.maxdamage, 1000);
+        attrs(f, id).reset();
+      }
+      f.world.process();
+      assertEquals(first, select(f));
+      assertEquals(4, baal(f).lastTargetCount());
+    }
+  }
+
+  @Test
+  void deathModesAndCorpseDetachMonsterChildrenButHpZeroAloneDoesNot() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      int child = pet(f, false, 30, 10, 2);
+      stats(f, child, 0);
+      f.world.process();
+      assertEquals(f.target, select(f));
+      assertEquals(2, baal(f).lastTargetCount());
+      for (int mode : new int[] {Engine.Monster.MODE_DT, Engine.Monster.MODE_DD}) {
+        f.world.getMapper(Sequence.class).create(child).sequence((byte) mode, (byte) mode);
+        assertEquals(f.target, select(f));
+        assertEquals(1, baal(f).lastTargetCount());
+      }
+      f.world.getMapper(Sequence.class).remove(child);
+      f.world.getMapper(Corpse.class).create(child);
+      assertEquals(f.target, select(f));
+      assertEquals(1, baal(f).lastTargetCount());
     }
   }
 

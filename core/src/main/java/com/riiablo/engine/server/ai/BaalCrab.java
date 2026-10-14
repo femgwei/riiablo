@@ -87,14 +87,25 @@ public class BaalCrab extends NativeDecisionAI {
       targetCount++;
       int score = eligibleScore(player);
       if (score > maxTargetScore) { maxTargetScore = score; selected = player; }
-      // Targets.cpp inserts new pets directly after their player head. ECS
-      // iteration is a projection, not a native slot/GUID insertion-order port.
+      // Targets.cpp inserts new children directly after their player head.
+      // Resolve child ties by membership events, without letting a child jump
+      // ahead of an equal-score head or an earlier player group.
+      boolean selectedCurrentChild = false;
+      long selectedChildOrder = 0;
       for (int j = units.size() - 1; j >= 0; j--) {
         int child = units.get(j);
-        if (child == player || playerOwner(child) != player || !sameActAndMap(child)) continue;
+        if (child == player || playerOwner(child) != player || !sameActAndMap(child)
+            || detachedMonsterNode(child)) continue;
         targetCount++;
         score = eligibleScore(child);
-        if (score > maxTargetScore) { maxTargetScore = score; selected = child; }
+        long order = playerChildOrder(child);
+        if (score > maxTargetScore
+            || score > 0 && score == maxTargetScore && selectedCurrentChild && order > selectedChildOrder) {
+          maxTargetScore = score;
+          selected = child;
+          selectedCurrentChild = true;
+          selectedChildOrder = order;
+        }
       }
     }
     selected = node9Fallback(units, selected);
@@ -124,16 +135,46 @@ public class BaalCrab extends NativeDecisionAI {
             || mUnitStates.get(id).stateList.hasState(StateId.CONFUSE));
   }
 
+  private long playerChildOrder(int id) {
+    if (mMercenary.has(id)) return mMercenary.get(id).nativeTargetOrder;
+    if (mSummonedPet.has(id)) return mSummonedPet.get(id).nativeTargetOrder;
+    return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
+        ? mUnitStates.get(id).stateList.nativeConversionOrder() : 0;
+  }
+
+  private long node9Order(int id) {
+    if (mSummonedPet.has(id) && mSummonedPet.get(id).boneWall) {
+      return mSummonedPet.get(id).nativeTargetOrder;
+    }
+    return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
+        ? mUnitStates.get(id).stateList.nativeNode9Order() : 0;
+  }
+
+  private boolean detachedMonsterNode(int id) {
+    if (!mMonster.has(id)) return false;
+    if (mCorpse.has(id)) return true;
+    int mode = mSequence.has(id) ? mSequence.get(id).mode1
+        : mCofReference.has(id) ? mCofReference.get(id).mode : Engine.INVALID_MODE;
+    // MonsterMode.cpp removes the node on entering DT, not merely at HP zero.
+    return mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD;
+  }
+
   private int node9Fallback(IntBag units, int primary) {
     int candidate = Engine.INVALID_ENTITY;
     int best = 0;
+    long bestOrder = 0;
     // Native scores the ENTIRE node9 bucket before its <5 gate; a distant
     // higher scorer therefore prevents a nearby lower scorer being used.
     for (int i = units.size() - 1; i >= 0; i--) {
       int id = units.get(i);
       if (!isNode9(id) || !sameActAndMap(id)) continue;
       int score = eligibleScore(id, true);
-      if (score > best) { best = score; candidate = id; }
+      long order = node9Order(id);
+      if (score > best || score > 0 && score == best && order > bestOrder) {
+        best = score;
+        bestOrder = order;
+        candidate = id;
+      }
     }
     if (candidate < 0 || primary >= 0 && isInNativeMeleeRange(primary)
         || distanceWithSize(mPosition.get(entityId).position, mPosition.get(candidate).position, 0) >= 5

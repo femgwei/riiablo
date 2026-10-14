@@ -3,6 +3,7 @@ package com.riiablo.engine.server.component;
 import com.artemis.Component;
 import com.artemis.annotations.PooledWeaver;
 import com.artemis.annotations.Transient;
+import com.riiablo.engine.server.NativeTargetOrder;
 
 /** Marks a monster-shaped entity as a player-owned native summon. */
 @Transient
@@ -21,6 +22,8 @@ public class SummonedPet extends Component {
   public float elapsedFrames;
   /** Monotonic native pet-list insertion order used for quota eviction. */
   public long spawnOrder;
+  /** Target-node insertion order, shared with hirelings and curse/conversion events. */
+  public long nativeTargetOrder;
   /** True after pet-list removal has started the DT -> DD sequence. */
   public boolean unsummonPending;
   public String unsummonReason;
@@ -69,6 +72,7 @@ public class SummonedPet extends Component {
     this.durationFrames = Math.max(0, durationFrames);
     elapsedFrames = 0f;
     spawnOrder = ++nextSpawnOrder;
+    nativeTargetOrder = NativeTargetOrder.inserted();
     unsummonPending = false;
     unsummonReason = null;
     networkReplica = false;

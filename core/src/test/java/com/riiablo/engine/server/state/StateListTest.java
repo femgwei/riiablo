@@ -17,6 +17,73 @@ import com.riiablo.codec.excel.States;
 
 public class StateListTest {
   @Test
+  public void targetMembershipRefreshAndLayersDoNotPromoteButReentryDoes() {
+    StateList states = new StateList(42);
+    assertEquals(0, states.nativeNode9Order());
+    states.addStateLayer(StateId.ATTRACT, 2, 1, 7, 86);
+    long first = states.nativeNode9Order();
+    assertTrue(first > 0);
+    states.addStateLayer(StateId.ATTRACT, 3, 1, 8, 86);
+    states.addState(StateId.ATTRACT, 3, 2, 7);
+    states.extendState(StateId.ATTRACT, 4, 2, 7);
+    assertEquals(first, states.nativeNode9Order());
+    states.removeStateLayer(StateId.ATTRACT, 7, 86);
+    assertEquals(first, states.nativeNode9Order(), "another layer still owns projected membership");
+    states.removeStateLayer(StateId.ATTRACT, 8, 86);
+    assertEquals(0, states.nativeNode9Order());
+    states.addState(StateId.CONFUSE, 1, 1, 7);
+    assertTrue(states.nativeNode9Order() > first);
+    states.update();
+    assertEquals(0, states.nativeNode9Order());
+  }
+
+  @Test
+  public void targetOrderIsSharedAcrossIndependentListsAndConversionMembership() {
+    StateList first = new StateList(42);
+    StateList second = new StateList(43);
+    first.addState(StateId.CONVERSION, 1, 1, 7);
+    long conversion = first.nativeConversionOrder();
+    second.addState(StateId.CONFUSE, 1, 1, 7);
+    assertTrue(second.nativeNode9Order() > conversion);
+    first.addState(StateId.CONVERSION, 2, 1, 7);
+    assertEquals(conversion, first.nativeConversionOrder());
+    first.update();
+    first.update();
+    assertEquals(0, first.nativeConversionOrder());
+    first.addState(StateId.CONVERSION, 1, 1, 7);
+    assertTrue(first.nativeConversionOrder() > second.nativeNode9Order());
+    first.removeNegativeEffects(null);
+    assertEquals(0, first.nativeConversionOrder());
+  }
+
+  @Test
+  public void curseApplicationRefreshDoesNotReinsertProjectedTargetNode() {
+    StateList states = new StateList(42);
+    states.applyCurseState(null, StateId.ATTRACT, 100, 1, 7, 86, 1);
+    long order = states.nativeNode9Order();
+    states.applyCurseState(null, StateId.ATTRACT, 200, 2, 7, 86, 2);
+    states.applyCurseState(null, StateId.ATTRACT, 200, 2, 8, 86, 2);
+    assertEquals(order, states.nativeNode9Order());
+    states.removeCurses();
+    assertEquals(0, states.nativeNode9Order());
+    states.applyCurseState(null, StateId.ATTRACT, 100, 1, 7, 86, 1);
+    assertTrue(states.nativeNode9Order() > order);
+  }
+
+  @Test
+  public void clearAndCurseRemovalResetTargetOrders() {
+    StateList states = new StateList(42);
+    states.addState(StateId.ATTRACT, 100, 1, 7);
+    states.removeCurses();
+    assertEquals(0, states.nativeNode9Order());
+    states.addState(StateId.CONFUSE, 100, 1, 7);
+    states.addState(StateId.CONVERSION, 100, 1, 7);
+    states.clearAll();
+    assertEquals(0, states.nativeNode9Order());
+    assertEquals(0, states.nativeConversionOrder());
+  }
+
+  @Test
   public void snapshotReplacesStaleStatesAndPreservesPayload() {
     StateList states = new StateList(42);
     states.addState(StateId.POISON, 90, 2, 7);

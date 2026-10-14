@@ -3,12 +3,15 @@ package com.riiablo.engine.server.component;
 import com.artemis.Component;
 import com.artemis.annotations.PooledWeaver;
 import com.artemis.annotations.Transient;
+import com.riiablo.engine.server.NativeTargetOrder;
 
 /** Marks a monster-shaped entity as a player-owned friendly hireling. */
 @Transient
 @PooledWeaver
 public class Mercenary extends Component {
   public int ownerId = -1;
+  /** Runtime target-node insertion order; independent of entity allocation order. */
+  public long nativeTargetOrder;
   public int mercType;
   public int level;
   public int seed;
@@ -24,6 +27,7 @@ public class Mercenary extends Component {
 
   public Mercenary set(int ownerId, int mercType, int level, int seed, int nameId) {
     this.ownerId = ownerId;
+    this.nativeTargetOrder = NativeTargetOrder.inserted();
     this.mercType = mercType;
     this.level = level;
     this.seed = seed;

@@ -7,6 +7,7 @@ import com.riiablo.codec.excel.States;
 import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
+import com.riiablo.engine.server.NativeTargetOrder;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -44,6 +45,13 @@ public class StateList {
 
   /** 所属实体ID */
   private int entityId = -1;
+
+  // Membership-event projection, not the complete native stat-list/node registry.
+  private long node9Order;
+  private long conversionOrder;
+
+  public long nativeNode9Order() { return node9Order; }
+  public long nativeConversionOrder() { return conversionOrder; }
 
   public enum DeathUnitType {
     PLAYER,
@@ -283,6 +291,11 @@ public class StateList {
     
     states.add(state);
     flags.set(stateId);
+    if ((stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) && node9Order == 0) {
+      node9Order = NativeTargetOrder.inserted();
+    } else if (stateId == StateId.CONVERSION && conversionOrder == 0) {
+      conversionOrder = NativeTargetOrder.inserted();
+    }
     
     log.debug("添加状态 {} 到实体 {}, 持续时间={}, 等级={}", 
         StateId.getName(stateId), entityId, duration, level);
@@ -408,6 +421,8 @@ public class StateList {
     }
     states.clear();
     flags.clearAll();
+    node9Order = 0;
+    conversionOrder = 0;
     log.debug("清除实体 {} 的所有状态", entityId);
   }
 
@@ -939,6 +954,9 @@ public class StateList {
       if (state.stateId == stateId) return;
     }
     flags.clear(stateId);
+    if ((stateId == StateId.ATTRACT || stateId == StateId.CONFUSE)
+        && !hasState(StateId.ATTRACT) && !hasState(StateId.CONFUSE)) node9Order = 0;
+    if (stateId == StateId.CONVERSION) conversionOrder = 0;
   }
 
   @Override

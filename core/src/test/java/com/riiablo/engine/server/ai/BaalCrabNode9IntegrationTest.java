@@ -26,6 +26,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.map.pfa.GraphPath;
@@ -38,6 +39,80 @@ import static org.mockito.Mockito.*;
 
 /** Node9 membership/selection and read-only TOWARD projection, not full native path state. */
 class BaalCrabNode9IntegrationTest extends RiiabloTest {
+  @Test
+  void node9TiesFollowCurseInsertionAndReentryButNotRefresh() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        terrain(f, true);
+        int firstEntity = enemy(f, 14, 10);
+        int secondEntity = enemy(f, 14, 10);
+        StateList second = f.world.getMapper(UnitStates.class)
+            .create(secondEntity).init(secondEntity).stateList;
+        StateList first = f.world.getMapper(UnitStates.class)
+            .create(firstEntity).init(firstEntity).stateList;
+        second.addState(StateId.ATTRACT, 100, 1, f.target);
+        first.addState(StateId.CONFUSE, 100, 1, f.target);
+        f.world.process();
+        assertEquals(firstEntity, select(f), "later curse wins despite lower entity ID");
+        second.addState(StateId.ATTRACT, 200, 2, f.target);
+        assertEquals(firstEntity, select(f), "refresh does not reinsert the node");
+        second.removeState(StateId.ATTRACT);
+        second.addState(StateId.ATTRACT, 1, 1, f.target);
+        assertEquals(secondEntity, select(f), "remove/reapply is a new insertion");
+        second.update();
+        assertEquals(firstEntity, select(f), "expired curse no longer belongs to node9");
+        first.removeState(StateId.CONFUSE);
+        assertEquals(f.target, select(f), "removal does not keep a stale candidate");
+        assertEquals(1, baal(f).lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void node9WallAndCurseInsertionUseOneSharedOrder() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      terrain(f, true);
+      int cursed = enemy(f, 14, 10);
+      int wall = wall(f, 14, 10);
+      StateList states = f.world.getMapper(UnitStates.class)
+          .create(cursed).init(cursed).stateList;
+      states.addState(StateId.ATTRACT, 100, 1, f.target);
+      f.world.process();
+      assertEquals(cursed, select(f), "curse applied after higher-ID wall insertion");
+      states.removeState(StateId.ATTRACT);
+      states.addState(StateId.ATTRACT, 100, 1, f.target);
+      int newerWall = wall(f, 14, 10);
+      f.world.process();
+      assertEquals(newerWall, select(f), "later wall insertion wins against curse order");
+      assertEquals(baal(f).targetScore(wall), baal(f).targetScore(cursed));
+    }
+  }
+
+  @Test
+  void conversionInsertionSharesChildOrderAndDeathRemovesItsCount() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
+      int converted = enemy(f, 30, 10);
+      int pet = enemy(f, 30, 10);
+      f.world.getMapper(SummonedPet.class).create(pet).set(f.target, "skeleton", 70, 1, false, 0);
+      Monster monster = f.world.getMapper(Monster.class).get(converted);
+      monster.converted = true;
+      monster.conversionOwnerId = f.target;
+      f.world.getMapper(UnitStates.class).create(converted).init(converted).stateList
+          .addState(StateId.CONVERSION, 100, 1, f.target);
+      for (int id : new int[] {converted, pet}) {
+        attributes(f, id).base().put(Stat.maxdamage, 1000);
+        attributes(f, id).reset();
+      }
+      f.world.process();
+      assertEquals(converted, select(f));
+      assertEquals(3, baal(f).lastTargetCount());
+      f.world.getMapper(Sequence.class).create(converted)
+          .sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
+      assertEquals(pet, select(f));
+      assertEquals(2, baal(f).lastTargetCount());
+    }
+  }
+
   @Test
   void sourceOnlyPointFromNearbyCachedTargetIsClearedByWrapper() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture("BaalCrab")) {
