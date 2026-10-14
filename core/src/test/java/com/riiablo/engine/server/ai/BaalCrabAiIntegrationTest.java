@@ -287,7 +287,7 @@ class BaalCrabAiIntegrationTest extends RiiabloTest {
   }
 
   @Test
-  void deferredCloneBranchDoesNotCreateRewardBearingMonsterOrCast() {
+  void cloneWithoutSafeMapDoesNotCreateRewardBearingMonsterOrCast() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture(0)) {
       int entities = f.world.getAspectSubscriptionManager()
           .get(com.artemis.Aspect.all()).getEntities().size();

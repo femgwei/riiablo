@@ -1,5 +1,6 @@
 package com.riiablo.engine.server.ai;
 
+import com.artemis.Aspect;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
@@ -7,14 +8,19 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.AIWrapper;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 
-/** D2MOO AiBaal.cpp Fn135 / MainSkillHandler. Boss target scoring and clones pending. */
+/** D2MOO AiBaal.cpp Fn135 / MainSkillHandler. Boss target scoring pending. */
 public class BaalCrab extends NativeDecisionAI {
   // Fixed SkillsIds.h constants, NOT zero-based MonStats slots.
   static final int SKILL_TENTACLE = 315;
@@ -61,10 +67,12 @@ public class BaalCrab extends NativeDecisionAI {
     int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : 1;
     int fromAnchor = distanceWithSize(mPosition.get(targetId).position, anchor,
         (targetSize >>> 1) + 1);
-    int[] table = weights(resolveAiDifficulty(), combat, hasBarrier(targetId),
+    boolean barrier = hasBarrier(targetId);
+    int[] table = weights(resolveAiDifficulty(), combat, barrier,
         distanceWithSize(mPosition.get(entityId).position, mPosition.get(targetId).position,
             sourceSize), lifePercent(entityId), lifePercent(targetId), isCold(targetId),
         count, fromAnchor > 75, fromAnchor > 100);
+    if (!combat && !barrier) table[15] = cloneWeight(monster.baalClonesCreated);
     execute(selectAction(table, rollAiRandomNumber()), targetId);
   }
 
@@ -128,8 +136,7 @@ public class BaalCrab extends NativeDecisionAI {
         else idle(5);
         break;
       case 15:
-        // Native clone creation needs owner links, one-third HP and NOXP/NOTC.
-        // Do not create a normal reward-bearing Baal in their absence.
+        spawnClone(targetId);
         idle(5);
         break;
       default:
@@ -138,6 +145,69 @@ public class BaalCrab extends NativeDecisionAI {
     // Fn135 unconditionally replaces its AI event with Idle(25), preserving
     // the action/movement just started (unlike IdleInNeutralMode).
     delayDecision(25);
+  }
+
+  static int cloneWeight(int created) {
+    return created >= 2 ? 0 : 10 * (2 - Math.max(0, created));
+  }
+
+  private void spawnClone(int targetId) {
+    // The native minion callback excludes self, regardless of monster class.
+    IntBag units = Riiablo.engine.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class)).getEntities();
+    for (int i = 0; i < units.size(); i++) {
+      int id = units.get(i);
+      if (id != entityId && mMonster.get(id).minionOwnerId == entityId
+          && isLivingMonster(id)) return;
+    }
+    int peer = monster.baalLinkedOwnerId;
+    // Also catches a clone created this tick, before subscription insertion.
+    if (isLivingMonster(peer) && mMonster.get(peer).baalLinkedOwnerId == entityId) return;
+
+    MonStats.Entry row = Riiablo.files.monstats.get("baalclone");
+    MonStats2.Entry stats2 = row == null ? null : Riiablo.files.monstats2.get(row.MonStatsEx);
+    Attributes source = mAttributesWrapper.has(entityId) ? mAttributesWrapper.get(entityId).attrs : null;
+    if (row == null || !"BaalCrabClone".equals(row.AI) || stats2 == null || source == null
+        || source.get(Stat.maxhp) == null || source.get(Stat.hitpoints) == null) return;
+
+    // MONSTERS_GetMinionSpawnInfo consumes two draws even though action15
+    // discards those coordinates, then rolls two more around the target.
+    rollAiRandomNumber();
+    rollAiRandomNumber();
+    Vector2 center = targetId >= 0 && mPosition.has(targetId)
+        ? mPosition.get(targetId).position : mPosition.get(entityId).position;
+    destination.set(Math.round(center.x) + (int) (rollAiRandomNumber() % 24) - 12,
+        Math.round(center.y) + (int) (rollAiRandomNumber() % 24) - 12);
+    if (!canLand(destination, Math.max(1, stats2.SizeX))) return;
+    int id = factory.createMonster(row.hcIdx, destination.x, destination.y);
+    if (id == Engine.INVALID_ENTITY) return;
+    mNativeUnitFlags.create(id).set(NativeUnitFlags.BAAL_CLONE);
+    AIWrapper wrapper = Riiablo.engine.getMapper(AIWrapper.class).get(id);
+    Attributes attrs = mAttributesWrapper.has(id) ? mAttributesWrapper.get(id).attrs : null;
+    if (!mMonster.has(id) || attrs == null || wrapper == null
+        || !(wrapper.ai instanceof BaalCrabClone)) {
+      Riiablo.engine.delete(id);
+      return;
+    }
+    // Divide the encoded fixed-point values, not rounded whole HP.
+    attrs.base().putEncoded(Stat.maxhp, source.get(Stat.maxhp).encodedValues() / 3);
+    attrs.base().putEncoded(Stat.hitpoints, source.get(Stat.hitpoints).encodedValues() / 3);
+    attrs.base().putEncoded(Stat.hpregen, 0);
+    attrs.reset();
+    mMonster.get(id).minionOwnerId = entityId;
+    mMonster.get(id).baalLinkedOwnerId = entityId;
+    monster.minionOwnerId = entityId;
+    monster.baalLinkedOwnerId = id;
+    monster.baalClonesCreated++;
+    ((BaalCrabClone) wrapper.ai).delayDecision(15);
+  }
+
+  protected final boolean isLivingMonster(int id) {
+    if (id < 0 || !mMonster.has(id) || mCorpse.has(id)) return false;
+    int mode = mSequence.has(id) ? mSequence.get(id).mode1
+        : mCofReference.has(id) ? mCofReference.get(id).mode : Engine.Monster.MODE_NU;
+    return mode != Engine.Monster.MODE_DT && mode != Engine.Monster.MODE_DD
+        && stat(id, Stat.hitpoints, 1f) > 0f;
   }
 
   private void wander(int radius) {
@@ -160,6 +230,10 @@ public class BaalCrab extends NativeDecisionAI {
   }
 
   private boolean canLand(Vector2 point) {
+    return canLand(point, mSize.has(entityId) ? mSize.get(entityId).size : 1);
+  }
+
+  private boolean canLand(Vector2 point, int size) {
     MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     if (wrapper == null || wrapper.map == null || wrapper.zone == null) return false;
     Map map = wrapper.map;
@@ -167,7 +241,6 @@ public class BaalCrab extends NativeDecisionAI {
     if (zone == null || zone.isTown() || zone != wrapper.zone) return false;
     Vector2 source = mPosition.get(entityId).position;
     if (!zone.areRoomsAdjacent(source.x, source.y, point.x, point.y)) return false;
-    int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
     if (map.isBlockedForPath(zone, Math.round(point.x), Math.round(point.y),
         DT1.Tile.FLAG_BLOCK_WALK, size, false)) return false;
     DynamicUnitCollisionSystem collision = Riiablo.engine.getSystem(DynamicUnitCollisionSystem.class);

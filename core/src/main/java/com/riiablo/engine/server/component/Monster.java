@@ -34,6 +34,10 @@ public class Monster extends Component {
 
   /** Native MonsterSpawn minion owner for ordinary monster party members. */
   public int minionOwnerId = -1;
+  /** Baal's reciprocal UNITS_StoreOwner link (distinct from the minion owner). */
+  public int baalLinkedOwnerId = -1;
+  /** Successful Baal clone creations, native AiParam[1]; deaths do not refund it. */
+  public int baalClonesCreated;
   /** Native per-monster seed consumed by cold/shatter rolls. */
   public int rngState;
   /** Deferred RoomEx pack identity and leader marker used during activation. */
@@ -78,6 +82,8 @@ public class Monster extends Component {
     baalWaveRoomId = -1;
     baalWaveLeader = false;
     minionOwnerId = -1;
+    baalLinkedOwnerId = -1;
+    baalClonesCreated = 0;
     rngState = 0;
     nativePackId = -1;
     nativePackLeader = false;

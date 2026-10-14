@@ -40,6 +40,8 @@ public class NativeUnitFlags extends Component {
   public static final int MAGGOT_LAY_SUMMON = NO_EXPERIENCE;
   /** D2Game {@code SKILLS_SrvDo091_Nest_EvilHutSpawner}. */
   public static final int NEST_SUMMON = NO_EXPERIENCE | NO_TREASURE_CLASS;
+  /** D2Game AIBAAL_MainSkillHandler action15. Keep the existing target bits. */
+  public static final int BAAL_CLONE = NO_EXPERIENCE | NO_TREASURE_CLASS;
 
   private int flags;
 
