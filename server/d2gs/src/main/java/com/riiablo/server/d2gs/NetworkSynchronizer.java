@@ -237,15 +237,27 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
       if (target == null || target.map != source.map || target.zone == null
           || !mPosition.has(entry.value)) continue;
-      boolean seamVisible = source.map.areNativeRoomsVisible(source.zone,
-          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
-          target.zone,
-          mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y);
+      float entityX = mPosition.get(entityId).position.x;
+      float entityY = mPosition.get(entityId).position.y;
+      float targetX = mPosition.get(entry.value).position.x;
+      float targetY = mPosition.get(entry.value).position.y;
+      float nearDx = entityX - targetX, nearDy = entityY - targetY;
+      // RoomEx activation can publish the player one tick before its
+      // level-qualified room pointer is updated. Preserve a live unit in the
+      // native six-subtile landing window during that handoff.
+      boolean sameZone = source.zone == target.zone;
+      boolean nativeSeam = source.map.isNativeSeamConnection(source.zone, target.zone);
+      boolean seamVisible = (sameZone || nativeSeam)
+          && nearDx * nearDx + nearDy * nearDy <= 36f;
+      if (!seamVisible) {
+        seamVisible = source.map.areNativeRoomsVisible(source.zone, entityX, entityY,
+            target.zone, targetX, targetY);
+      }
       // Keep the seam landing window alive for a live blocker even when the
       // two exported RoomEx rectangles have a one-cell projection gap.
       if (!seamVisible && source.map.isNativeSeamConnection(source.zone, target.zone)) {
-        float dx = mPosition.get(entityId).position.x - mPosition.get(entry.value).position.x;
-        float dy = mPosition.get(entityId).position.y - mPosition.get(entry.value).position.y;
+        float dx = nearDx;
+        float dy = nearDy;
         seamVisible = dx * dx + dy * dy <= 36f;
       }
       if (seamVisible) {

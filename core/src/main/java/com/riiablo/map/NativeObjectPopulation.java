@@ -44,7 +44,9 @@ final class NativeObjectPopulation {
       // an ObjGroup row; outdoor levels with a barrel theme otherwise lose
       // up to 32 containers per room.
       region.field4++;
-      populateTheme(zone, room, region);
+      // D2Game returns as soon as a theme handler creates anything; the
+      // ObjGroup dispatcher is not run a second time for that room.
+      if (populateTheme(zone, room, region)) continue;
       D2Seed roomSeed = new D2Seed(room.populationSeed(), room.populationSeedHigh());
       for (int slot = 0; zone.level.ObjGrp != null && slot < zone.level.ObjGrp.length; slot++) {
         int groupId = zone.level.ObjGrp[slot];
@@ -90,27 +92,30 @@ final class NativeObjectPopulation {
     return count;
   }
 
-  private static void populateTheme(Map.Zone zone, Map.RoomEx room, Region region) {
+  private static boolean populateTheme(Map.Zone zone, Map.RoomEx room, Region region) {
     int themes = zone.level.Themes;
-    if (themes == 0 || region.populatedRooms <= 0) return;
+    if (themes == 0 || region.populatedRooms <= 0) return false;
     int probability = 12;
     if (region.field4 > region.populatedRooms / 2) probability += 5;
     if (region.field4 > region.populatedRooms - region.populatedRooms / 4) probability += 5;
-    if (next(region.seed, 100) >= probability) return;
+    if (next(region.seed, 100) >= probability) return false;
     int[] indices = new int[7];
     int count = 0;
     for (int i = 0; i < 7; i++) if ((themes & (1 << i)) != 0) indices[count++] = i + 1;
-    if (count == 0) return;
+    if (count == 0) return false;
     int selected = indices[next(region.seed, count)];
     // This mirrors the native table's active entries.  Theme 2 is the
     // populated barrel grid; the remaining handlers either do nothing or
     // place equipment that is outside this object population audit.
-    if (selected < count && selected == 2) themeBarrels(zone, room, region.seed);
+    // The native table is indexed by the one-based theme id.  Comparing the
+    // id with the number of enabled themes made theme 2 unreachable whenever
+    // it was the only enabled theme (the common outdoor barrel setup).
+    return selected == 2 && themeBarrels(zone, room, region.seed) > 0;
   }
 
-  private static void themeBarrels(Map.Zone zone, Map.RoomEx room, D2Seed seed) {
+  private static int themeBarrels(Map.Zone zone, Map.RoomEx room, D2Seed seed) {
     Objects.Entry barrel = Riiablo.files.objects.get(7);
-    if (barrel == null) return;
+    if (barrel == null) return 0;
     int created = 0;
     int xEnd = room.x + room.width + 1;
     int yEnd = room.y + room.height + 1;
@@ -125,6 +130,7 @@ final class NativeObjectPopulation {
         created++;
       }
     }
+    return created;
   }
 
   static int densityCount(int density, int width, int height) {

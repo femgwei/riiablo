@@ -110,6 +110,7 @@ final class MapObjectLoadAudit {
     lines.add("OBJECT_AUDIT level=" + zone.levelId() + " exported=" + zone.getNativeObjects().size
         + " created=" + created + " skipped=" + skipped + " pending=" + pending
         + " runtime=" + runtime + " population=" + population + " populationRooms=" + populationRooms
+        + " themes=" + (zone.level == null ? 0 : zone.level.Themes)
         + " failures=" + failures + " result=" + (failures == 0 ? "PASS" : "FAIL"));
     return lines;
   }
