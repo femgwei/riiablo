@@ -243,6 +243,8 @@ public final class Act3D2MOOLayoutBridge {
       if (Gdx.app != null) Gdx.app.log(TAG,
           String.format("Act3 native terrain summary: levels=%d/%d", exportedLevels,
               NATIVE_LEVELS.length));
+      int seams = NativeLevelSeamAnchor.installOutdoorSeams(map, drlg);
+      if (Gdx.app != null) Gdx.app.log(TAG, "A3 native outdoor seams installed=" + seams);
       NativeTownExit.capture(map, drlg, FIRST_LEVEL);
       return exportedLevels > 0;
     } catch (Throwable t) {

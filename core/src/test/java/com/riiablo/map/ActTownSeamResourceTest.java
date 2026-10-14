@@ -40,6 +40,23 @@ class ActTownSeamResourceTest extends RiiabloTest {
       assertNotNull(town.nativeTileGrid(), "native town " + townId);
       assertTrue(map.areZonesAdjacent(town, outdoor), "geometric seam " + townId);
       assertTrue(map.isNativeSeamConnection(town, outdoor), "native walking link " + townId);
+      int[] outdoorChain = act == 1
+          ? new int[] {40, 41, 42, 43, 44, 45}
+          : act == 2
+              ? new int[] {75, 76, 77, 78, 79, 80, 81, 82, 83}
+              : act == 3
+                  ? new int[] {103, 104, 105, 106}
+                  : new int[] {109, 110};
+      for (int i = 1; i < outdoorChain.length; i++) {
+        Map.Zone previous = zone(map, outdoorChain[i - 1]);
+        Map.Zone next = zone(map, outdoorChain[i]);
+        assertNotNull(previous, "outdoor source " + outdoorChain[i - 1]);
+        assertNotNull(next, "outdoor destination " + outdoorChain[i]);
+        assertTrue(map.areZonesAdjacent(previous, next),
+            "geometric outdoor seam " + outdoorChain[i - 1] + "->" + outdoorChain[i]);
+        assertTrue(map.isNativeSeamConnection(previous, next),
+            "native outdoor seam " + outdoorChain[i - 1] + "->" + outdoorChain[i]);
+      }
       int crossings = 0;
       for (int y = town.y(); y < town.y() + town.height(); y++) {
         for (int x = town.x(); x < town.x() + town.width(); x++) {
@@ -141,5 +158,10 @@ class ActTownSeamResourceTest extends RiiabloTest {
     if (grid == null || x < 0 || y < 0 || x >= zone.width() || y >= zone.height()) return false;
     if (grid.nativeCollisionFlags == null || !grid.nativeCollisionCells[y / 5][x / 5]) return false;
     return (grid.nativeCollisionFlags[y * zone.width() + x] & 9) == 0;
+  }
+
+  private static Map.Zone zone(Map map, int levelId) {
+    for (Map.Zone zone : map.getZones()) if (zone.levelId() == levelId) return zone;
+    return null;
   }
 }

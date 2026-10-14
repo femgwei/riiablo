@@ -1,6 +1,7 @@
 package com.riiablo.map.d2moo;
 
 import com.d2moo.common.drlg.*;
+import com.riiablo.map.Map;
 
 /** Native RoomEx orths and outdoor level boxes, never a whole-zone centre fallback. */
 public final class NativeLevelSeamAnchor {
@@ -59,6 +60,64 @@ public final class NativeLevelSeamAnchor {
       }
     }
     return null;
+  }
+
+  /**
+   * Projects D2Common::sub_6FD82750 outdoor Vis/Warp=-1 links into the
+   * compatibility map.  These entries are continuous level seams created by
+   * DRLGROOM_AddOrth, not interactive Warp entities.
+   */
+  public static int installOutdoorSeams(Map map, D2DrlgStrc drlg) {
+    if (map == null || drlg == null) return 0;
+    int installed = 0;
+    for (Map.Zone source : map.getZones()) {
+      if (source == null || source.level == null) continue;
+      D2DrlgLevel nativeSource = DrlgDrlg.getLevel(drlg, source.level.Id);
+      if (nativeSource == null || nativeSource.getDrlgType() != D2DrlgTypes.DRLGTYPE_OUTDOOR) continue;
+      int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, source.level.Id);
+      int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, source.level.Id);
+      int slots = Math.min(8, Math.min(vis == null ? 0 : vis.length, warp == null ? 0 : warp.length));
+      for (int slot = 0; slot < slots; slot++) {
+        int destinationId = vis[slot];
+        if (destinationId <= 0 || warp[slot] != -1) continue;
+        Map.Zone destination = findZone(map, destinationId);
+        D2DrlgLevel nativeDestination = DrlgDrlg.getLevel(drlg, destinationId);
+        if (destination == null || destination == source || nativeDestination == null
+            || !map.areZonesAdjacent(source, destination)) continue;
+        int[] anchor = resolve(nativeSource, nativeDestination);
+        if (anchor == null) continue;
+
+        map.addWarpDestinationOverride(source.level.Id, slot, destinationId);
+        source.setNativeSeamAnchor(slot, anchor[0], anchor[1]);
+        installed++;
+
+        int reverseSlot = findReverseSlot(drlg, destinationId, source.level.Id);
+        if (reverseSlot < 0) continue;
+        int[] reverseAnchor = resolve(nativeDestination, nativeSource);
+        if (reverseAnchor == null) continue;
+        map.addWarpDestinationOverride(destinationId, reverseSlot, source.level.Id);
+        destination.setNativeSeamAnchor(reverseSlot, reverseAnchor[0], reverseAnchor[1]);
+      }
+    }
+    return installed;
+  }
+
+  private static Map.Zone findZone(Map map, int levelId) {
+    for (Map.Zone zone : map.getZones()) {
+      if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
+    }
+    return null;
+  }
+
+  private static int findReverseSlot(D2DrlgStrc drlg, int levelId, int targetLevelId) {
+    int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
+    if (vis == null) return -1;
+    int[] warp = DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);
+    int slots = Math.min(8, Math.min(vis.length, warp == null ? 0 : warp.length));
+    for (int slot = 0; slot < slots; slot++) {
+      if (vis[slot] == targetLevelId && warp[slot] == -1) return slot;
+    }
+    return -1;
   }
 
   private static int[] local(D2DrlgLevel source, int x, int y) {
