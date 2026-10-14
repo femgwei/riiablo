@@ -10,6 +10,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.NativePlayerTargetSlots;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -34,6 +35,76 @@ import static org.mockito.Mockito.*;
 
 /** AiBaal.cpp target-score/owner-group projection; terrain is a test double. */
 class BaalCrabTargetingIntegrationTest extends RiiabloTest {
+  @Test
+  void filledEarlierSlotBeatsLowerEntityIdOnEqualPlayerScores() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
+        int earlierId = player(f, 30, 10);
+        int laterId = player(f, 30, 10);
+        // Re-register the newest player in slot zero without freeing its ID.
+        f.world.getMapper(Player.class).remove(f.target);
+        f.world.getMapper(Player.class).remove(laterId);
+        f.world.process();
+        f.world.getMapper(Player.class).create(laterId);
+        f.world.process();
+        NativePlayerTargetSlots slots = f.world.getSystem(NativePlayerTargetSlots.class);
+        assertEquals(laterId, slots.playerAtSlot(0));
+        assertEquals(earlierId, slots.playerAtSlot(1));
+        assertEquals(laterId, select(f), "native slot order, not ECS entity order, breaks the tie");
+        assertEquals(2, baal(f).lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void culledSlotStillOccupiesItsPlaceAndAdmitsChildrenWhenHeadReturns() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      int pet = pet(f, false, 30, 10, 2);
+      stats(f, f.target, 0);
+      f.targetPosition().set(65, 10);
+      f.world.process();
+      assertEquals(Engine.INVALID_ENTITY, select(f));
+      assertEquals(0, baal(f).lastTargetCount());
+      assertEquals(0, f.world.getSystem(NativePlayerTargetSlots.class).slotOf(f.target));
+      f.targetPosition().set(20, 10);
+      assertEquals(pet, select(f));
+      assertEquals(2, baal(f).lastTargetCount());
+    }
+  }
+
+  @Test
+  void unregisteredNinthPlayerAndItsChildrenDoNotEnterPrimaryGroups() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      for (int i = 1; i < NativePlayerTargetSlots.SLOT_COUNT; i++) player(f, 30, 10);
+      int ninth = player(f, 30, 10);
+      int child = pet(f, false, 30, 10, 2);
+      f.world.getMapper(SummonedPet.class).get(child).ownerId = ninth;
+      for (int id : new int[] {ninth, child}) {
+        stats(f, id, 100).base().put(Stat.maxdamage, 1000);
+        attrs(f, id).reset();
+      }
+      f.world.process();
+      assertEquals(f.target, select(f));
+      assertEquals(8, baal(f).lastTargetCount());
+      assertEquals(NativePlayerTargetSlots.UNREGISTERED,
+          f.world.getSystem(NativePlayerTargetSlots.class).slotOf(ninth));
+    }
+  }
+
+  @Test
+  void removedPlayerGroupIsNotCountedWhileOtherSlotKeepsItsIndex() {
+    try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {
+      pet(f, false, 30, 10, 2);
+      int other = player(f, 30, 10);
+      f.world.process();
+      f.world.getMapper(Player.class).remove(f.target);
+      f.world.process();
+      assertEquals(other, select(f));
+      assertEquals(1, baal(f).lastTargetCount());
+      assertEquals(1, f.world.getSystem(NativePlayerTargetSlots.class).slotOf(other));
+    }
+  }
+
   @Test
   void highestScoreWinsRatherThanNearestAndEqualScoreKeepsFirstHead() {
     try (Act1NativeAiIntegrationTest.Fixture f = fixture()) {

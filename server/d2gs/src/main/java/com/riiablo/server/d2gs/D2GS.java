@@ -6237,6 +6237,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new com.riiablo.engine.server.MercenarySkillSystem())
         .with(new ServerMonsterCorpseSystem())
         .with(new UnitLifecycleSystem())
+        .with(new com.riiablo.engine.server.NativePlayerTargetSlots())
         .with(new com.riiablo.engine.server.item.GroundDropCleanupSystem())
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())

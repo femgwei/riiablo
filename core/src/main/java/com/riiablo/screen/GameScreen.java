@@ -919,6 +919,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
         .with(new com.riiablo.engine.server.UnitLifecycleSystem())
+        .with(new com.riiablo.engine.server.NativePlayerTargetSlots())
         .with(new SkillCastHandler()) // TODO: move to more appropriate spot in list
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.client.MissileImpactPresentationSystem())

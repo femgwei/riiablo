@@ -163,6 +163,8 @@ public class ServerEntityFactory extends EntityFactory {
     mRunning.create(id);
     mNetworked.create(id);
     mZoneAware.create(id);
+    NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
+    if (slots != null) slots.registerPlayer(id);
     return id;
   }
 

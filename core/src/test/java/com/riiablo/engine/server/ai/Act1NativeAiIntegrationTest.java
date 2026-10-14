@@ -612,7 +612,8 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
     Fixture(String rowId, int difficulty, float distance) {
       EntityFactory factory = new NoopFactory();
       world = new World(new WorldConfigurationBuilder()
-          .with(new EventSystem(), probe, new Pathfinder(), new CofManager(), factory)
+          .with(new EventSystem(), probe, new Pathfinder(), new CofManager(), factory,
+              new com.riiablo.engine.server.NativePlayerTargetSlots())
           .build().register("factory", factory).register("map", new Map(1, difficulty)));
       Riiablo.engine = world;
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);

@@ -15,6 +15,7 @@ import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.NativeGroundPathProfile;
+import com.riiablo.engine.server.NativePlayerTargetSlots;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -80,9 +81,13 @@ public class BaalCrab extends NativeDecisionAI {
     }
     int selected = Engine.INVALID_ENTITY;
     IntBag units = getEnemyEntities().getEntities();
-    for (int i = 0; i < units.size(); i++) {
-      int player = units.get(i);
-      if (!mPlayer.has(player) || !cullPlayerHead(player)) continue;
+    NativePlayerTargetSlots slots = Riiablo.engine.getSystem(NativePlayerTargetSlots.class);
+    int heads = slots != null ? NativePlayerTargetSlots.SLOT_COUNT : units.size();
+    for (int i = 0; i < heads; i++) {
+      // Production worlds use persistent native slots. Keep the legacy scan
+      // for minimal/custom worlds which have not installed the slot system.
+      int player = slots != null ? slots.playerAtSlot(i) : units.get(i);
+      if (player < 0 || !mPlayer.has(player) || !mPosition.has(player) || !cullPlayerHead(player)) continue;
       // Native includes a dead player head in the count but gives it score 0.
       targetCount++;
       int score = eligibleScore(player);
