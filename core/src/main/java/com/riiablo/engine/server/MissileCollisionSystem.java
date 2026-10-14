@@ -2870,7 +2870,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (nextTarget == Engine.INVALID_ENTITY) return;
     Vector2 direction = new Vector2(mPosition.get(nextTarget).position).sub(origin);
     if (direction.isZero(0.0001f)) return;
-    int id = factory.createMissile(source.missile, direction.nor(), origin, source.ownerId);
+    int id = factory.createMissile(source.missile, direction.nor(), origin,
+        source.ownerId, level);
     if (id < 0 || !mMissile.has(id)) return;
     Missile child = mMissile.get(id);
     Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
@@ -2878,6 +2879,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
     child.skillId = source.skillId;
     child.damageLevel = level;
+    // SrvHit12 supplies skill level but neither pInitFunc nor an explicit
+    // range/frame override: this is a fresh lifetime, not the parent's
+    // remaining frames or its martial-arts 77-frame initialization cap.
+    child.nativeFrame = 0;
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(source.missile, level);
     boolean chainLightning = skill != null
         && skill.Id == com.riiablo.engine.server.skill.SkillId.CHAIN_LIGHTNING;
     if (chainLightning) {

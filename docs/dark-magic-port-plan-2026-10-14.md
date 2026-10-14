@@ -138,3 +138,10 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   本批不改种子、路径点算法或链式续弹；续弹、其他武学控制器及重连仍待审计。
   验证：MissileNativePolicyTest、Claws第三层释放、Phoenix各层释放和现有
   Phoenix连锁续弹定向测试通过，diff检查通过；尚未实机验收。
+- 导弹复核第四批（SrvHit12 续弹）：D2MOO `MISSMODE_SrvHit12_ChainLightning_LightningStrike`
+  （0x6FC5B020）创建续弹时只复制导弹类型、owner、skill、skill level 和目标，
+  将 TargetX 减一；不复制父弹当前帧，也不调用 Claws/Phoenix 的特殊 init 回调。
+  riiablo 续弹现在重置 nativeFrame，并按完整 `Range + level * LevRange` 重新计算
+  nativeLifetimeFrames；不套用 77 截断、不继承父弹剩余寿命。新增父弹已运行10帧
+  仍生成全新寿命的回归；续弹目标筛选和命中次数保持原实现。`MissileNativePolicyTest`
+  与 Phoenix 连锁定向测试通过，diff 检查通过；尚未实机验收。

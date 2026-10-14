@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1290,12 +1291,23 @@ class AssassinMartialArtsTest extends RiiabloTest {
       root.damageLevel = 5;
       root.chainHitsRemaining = 3;
       root.shareHitTargets(new IntSet());
+      root.nativeFrame = 10;
+      root.nativeLifetimeFrames = 77;
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
 
       world.process();
 
       assertTrue(factory.missileNames.stream()
           .filter("royalstrikechainlightning"::equals).count() >= 2);
+      int childId = factory.missileEntityIds.get(1);
+      Missile child = world.getMapper(Missile.class).get(childId);
+      assertNotNull(child);
+      assertEquals(Missile.nativeRangeFrames(row, 5), child.nativeLifetimeFrames,
+          "SrvHit12 creates a fresh uncapped lifetime, not the parent remainder");
+      assertTrue(child.nativeFrame <= 1, "child starts a new frame clock");
+      assertFalse(child.chargedBoltPath, "continuation has no martial init callback");
+      assertEquals(5, child.damageLevel);
+      assertEquals(2, child.chainHitsRemaining);
     } finally {
       world.dispose();
     }
