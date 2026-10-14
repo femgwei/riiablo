@@ -102,6 +102,8 @@ public class Skeleton extends AI {
 
     nextAction -= delta;
     time -= delta;
+    // An attack owns its keyframe until Actioneer completes the sequence.
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
     if (time > 0) {
       return;
     }
@@ -154,17 +156,18 @@ public class Skeleton extends AI {
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         // D2MOD: SKELETON_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT
-        byte attackMode = rollAiChance(params[PARAM_ATTACK1_OR_2_CHANCE]) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = rollAiChance(params[PARAM_ATTACK1_OR_2_CHANCE]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-        time = MathUtils.random(1f, 2);
+        time = 0f; // Resume on animation completion, not an invented 1-2s pause.
         return;
       } else {
         // No attack, idle
         stateMachine.changeState(State.IDLE);
         // D2MOD: SKELETON_AI_PARAM_STALL_TIME
-        time = params[PARAM_STALL_TIME] * com.riiablo.codec.Animation.FRAME_DURATION;
+        stopMovement();
+        time = Math.max(1, params[PARAM_STALL_TIME]) * com.riiablo.codec.Animation.FRAME_DURATION;
         return;
       }
     }
@@ -175,13 +178,15 @@ public class Skeleton extends AI {
       // Flags 4|2|1 = 7 means walk with some special behavior, but we'll use normal pathfinding
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      // Revisit movement at aidel cadence; do not impose a random combat pause.
+      time = Math.max(com.riiablo.codec.Animation.FRAME_DURATION, SLEEP);
       return;
     } else {
       // No approach, idle
       stateMachine.changeState(State.IDLE);
       // D2MOD: SKELETON_AI_PARAM_STALL_TIME
-      time = params[PARAM_STALL_TIME] * com.riiablo.codec.Animation.FRAME_DURATION;
+      stopMovement();
+      time = Math.max(1, params[PARAM_STALL_TIME]) * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
   }

@@ -13,6 +13,8 @@ import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.math.Vector2;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
@@ -143,22 +145,22 @@ public abstract class AI implements Interactable.Interactor {
   private int lastMovementVelocityBonus = Integer.MIN_VALUE;
   private float nextWarCryThink;
   private NativeRng specialAiRng;
+  private D2Seed aiSeed;
 
   /**
    * Native-style percentage roll for AI decisions.
    *
-   * <p>D2 consumes the unit/game RNG for AIRollChanceParam.  Using LibGDX's
-   * process-global RNG here made summon decisions depend on render-side random
-   * calls and could produce different target/attack cadence on two servers.
-   * Keep the stream per unit so every authoritative simulation is repeatable.
+   * <p>AIRollChanceParam always consumes SEED_RollPercentage, even at 0/100.
+   * This stream uses D2Common's 64-bit seed arithmetic, not NativeRng's LCG.
+   * The initial low seed is still a riiablo game/entity mix: native unit
+   * creation and combat do not yet share one fully ported pSeed stream.
    */
   protected final boolean rollAiChance(int percent) {
-    if (percent <= 0) return false;
-    if (percent >= 100) return true;
-    if (specialAiRng == null) {
-      specialAiRng = NativeRng.forUnit(Riiablo.gameSeed, entityId);
+    if (aiSeed == null) {
+      aiSeed = new D2Seed();
+      Seed.initLowSeed(aiSeed, Riiablo.gameSeed ^ (entityId * 0x45D9F3B));
     }
-    return specialAiRng.nextInt(100) < percent;
+    return Seed.rollPercentage(aiSeed) < percent;
   }
 
   public AI(int entityId) {
@@ -170,22 +172,35 @@ public abstract class AI implements Interactable.Interactor {
     monster = mMonster.get(entityId);
     MonStats.Entry monstats = monster.monstats;
 
-    // TODO: difficulty-based params
+    int difficulty = resolveAiDifficulty();
     params = new int[8];
-    params[0] = monstats.aip1[0];
-    params[1] = monstats.aip2[0];
-    params[2] = monstats.aip3[0];
-    params[3] = monstats.aip4[0];
-    params[4] = monstats.aip5[0];
-    params[5] = monstats.aip6[0];
-    params[6] = monstats.aip7[0];
-    params[7] = monstats.aip8[0];
+    params[0] = difficultyValue(monstats.aip1, difficulty);
+    params[1] = difficultyValue(monstats.aip2, difficulty);
+    params[2] = difficultyValue(monstats.aip3, difficulty);
+    params[3] = difficultyValue(monstats.aip4, difficulty);
+    params[4] = difficultyValue(monstats.aip5, difficulty);
+    params[5] = difficultyValue(monstats.aip6, difficulty);
+    params[6] = difficultyValue(monstats.aip7, difficulty);
+    params[7] = difficultyValue(monstats.aip8, difficulty);
 
-    SLEEP = Animation.FRAME_DURATION * monstats.aidel[0];
+    int aidel = difficultyValue(monstats.aidel, difficulty);
+    SLEEP = Animation.FRAME_DURATION * aidel;
     monsound = monstats.MonSound;
-    log.info("[MONSTER_AI_INIT] entity={} monster={} ai={} aidel={} sleep={} params={}",
-        entityId, monstats.Id, getClass().getSimpleName(), monstats.aidel[0], SLEEP,
+    log.info("[MONSTER_AI_INIT] entity={} monster={} ai={} difficulty={} aidel={} sleep={} params={}",
+        entityId, monstats.Id, getClass().getSimpleName(), difficulty, aidel, SLEEP,
         Arrays.toString(params));
+  }
+
+  private int resolveAiDifficulty() {
+    if (mMapWrapper == null || !mMapWrapper.has(entityId)
+        || mMapWrapper.get(entityId).map == null) return 0;
+    return Math.max(0, Math.min(2, mMapWrapper.get(entityId).map.getDifficulty()));
+  }
+
+  /** Missing synthetic columns are zero; malformed difficulty stays in bounds. */
+  static int difficultyValue(int[] values, int difficulty) {
+    if (values == null || values.length == 0) return 0;
+    return values[Math.max(0, Math.min(difficulty, values.length - 1))];
   }
 
   @Override
@@ -784,12 +799,7 @@ public abstract class AI implements Interactable.Interactor {
     float maxSearchDist = DEFAULT_AI_DISTANCE;
     if (monster != null && monster.monstats != null && monster.monstats.aidist != null
         && monster.monstats.aidist.length > 0) {
-      int difficulty = 0;
-      if (mMapWrapper.has(entityId) && mMapWrapper.get(entityId).map != null) {
-        difficulty = mMapWrapper.get(entityId).map.getDifficulty();
-      }
-      int index = Math.min(difficulty, monster.monstats.aidist.length - 1);
-      int aidist = monster.monstats.aidist[index];
+      int aidist = difficultyValue(monster.monstats.aidist, resolveAiDifficulty());
       if (aidist > 0) maxSearchDist = aidist;
     }
     return maxSearchDist;

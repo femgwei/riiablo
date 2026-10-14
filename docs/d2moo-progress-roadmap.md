@@ -1,5 +1,35 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A1 怪物 AI 基础与专用决策首批
+
+- [x] `AI.initialize()` 按地图 Normal/Nightmare/Hell 难度读取 `aip1..aip8` 与
+  `aidel`；缺失/异常列安全夹取，`aiDist` 使用同一难度选择。此前所有实体固定读
+  Normal 列的问题已移除。
+- [x] `rollAiChance()` 改用 D2Common `SEED_RollPercentage` 的 64 位种子算法；与
+  D2MOO 一致，即使概率为 0/100 也消耗一次单位 AI RNG。当前初始种子仍是
+  `gameSeed ^ entityId` 混合，尚未与完整原生单位 `pSeed` 生命周期合并，不能宣称
+  与原版每一次随机序列完全一致。
+- [x] 骷髅 AI 对齐 `AITHINK_Fn002_Skeleton`：攻击概率成功时按参数选择 A1（成功）或
+  A2（失败），移除 Java 随机 1--2 秒等待，并在 Casting/Sequence 活跃时禁止重写动作。
+- [x] 新增 A1 `Andariel`、`Griswold`、`Smith` 专用 AI，分别覆盖安达利尔近战喷吐/
+  远程 Skill1/Skill2、格里斯瓦尔德 80%/50% 攻击与接近概率、铁匠按生命百分比的
+  速度加成；技能走统一 `SkillCastEvent`/`SkillStartEvent` 生命周期，技能失败不会
+  偷换成普通攻击。
+- [x] 新增纯数据 RNG/难度边界测试和真实 1.10f 表驱动 ECS 决策测试；AI 包及技能矩阵
+  定向回归通过（当前批次 14 项 + 既有 AI/技能矩阵通过）。
+
+## 2026-10-15 A1 Arach 与 GargoyleTrap
+
+- [x] 新增 `Arach`：按 D2MOO 的 `aiParam[0..2]` 状态、攻击/接近/绕行/逃跑、受伤
+  技能分支接入统一移动与技能施法生命周期。
+- [x] 新增 `GargoyleTrap`：固定单位目标、轴向邻近判定、射程/射击概率、施法恢复和
+  停顿参数；不会再落入 `GenericMonster` 追击或普通近战攻击。
+- [x] 真实 1.10f 表驱动的 Arach 攻击、GargoyleTrap 技能恢复与专用类解析回归通过；
+  AI 包及技能矩阵、`desktop:offscreenCamp` 均通过。
+- [ ] GargoyleTrap 的原版 64 方向离散朝向表、Arach 的特殊 AI 状态回调尚未完全
+  复刻；A1 入口覆盖已达 24/24，但仍不能宣称行为逐分支等同原版。A2--A5 专用 AI
+  与完整单位 `pSeed` 继续保持未完成。
+
 ## 2026-10-14 ca4d724 后 A5 地形消失回归
 
 - 用户 p3.png / Desktop/game.log（20:51）：Harrogath 的 20 个 DT1 槽位全部为空，
