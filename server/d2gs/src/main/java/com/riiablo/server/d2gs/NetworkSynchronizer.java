@@ -237,10 +237,18 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
       if (target == null || target.map != source.map || target.zone == null
           || !mPosition.has(entry.value)) continue;
-      if (source.map.areNativeRoomsVisible(source.zone,
+      boolean seamVisible = source.map.areNativeRoomsVisible(source.zone,
           mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
           target.zone,
-          mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y)) {
+          mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y);
+      // Keep the seam landing window alive for a live blocker even when the
+      // two exported RoomEx rectangles have a one-cell projection gap.
+      if (!seamVisible && source.map.isNativeSeamConnection(source.zone, target.zone)) {
+        float dx = mPosition.get(entityId).position.x - mPosition.get(entry.value).position.x;
+        float dy = mPosition.get(entityId).position.y - mPosition.get(entry.value).position.y;
+        seamVisible = dx * dx + dy * dy <= 36f;
+      }
+      if (seamVisible) {
         mask |= 1 << entry.key;
       }
     }
