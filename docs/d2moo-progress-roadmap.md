@@ -1,5 +1,23 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A3 ZakarumPriest AI
+
+- [x] 新增 `ZakarumPriest`：依据 D2MOO `AITHINK_Fn049_ZakarumPriest` 接入低于
+  33% 血量时的近战传送、普通攻击、25% 友军治疗，以及暴风雪优先于闪电的施法顺序。
+  传送/暴风雪/闪电独立计时；传送落点预检失败也保留原生冷却消耗，闪电冷却为 20 帧。
+- [x] 治疗按 `AITHINK_TargetCallback_ZakarumPriest` 只筛选邪恶阵营的 Zealot/Cantor
+  基类、生命不高于 60% 且在范围与邻接房间内的存活单位。保留原回调最后一个合格目标
+  的选择规则，不擅自改为最低血量优先；排除已转换单位、尸体、玩家和宠物。
+- [x] Missile barrier 分支只允许暴风雪，不误用普通施法概率释放闪电；技能继续走统一
+  SkillCast/SkillStart/Sequence 生命周期，施法被拒绝不会偷换成普通攻击。
+- [x] 真实 1.10f 表驱动新增 8 项 ECS 决策回归，覆盖专用入口、技能顺序、独立冷却、
+  33% 传送阈值、落点失败冷却、治疗边界/回调筛选及施法拒绝。AI 包与怪物技能矩阵
+  共 61 项全部通过，无跳过；本轮确认决策及施法事件，未新增客户端实际技能效果验证。
+- [ ] 原生 `MONSTER_GetAiState` 3/19 的非近战传送激活门槛、RoomEx 单位链精确遍历
+  顺序、跨 Zone 的逐房间邻接筛选，以及 `sub_6FCD0E80` 原生绕行路径仍待对齐。
+  当前传送限于同 Zone 邻接房间，使用现有静态/动态落点安全检查；完整 `pSeed`、MonSeq
+  帧序列和技能实际生效时刻仍不能宣称逐帧原生等同。下一项继续 A3 Mephisto。
+
 ## 2026-10-15 A3 ZakarumZealot AI
 
 - [x] 新增 `ZakarumZealot`：按 D2MOO 的攻击概率、A1/A2 选择和非战斗奔跑/步行

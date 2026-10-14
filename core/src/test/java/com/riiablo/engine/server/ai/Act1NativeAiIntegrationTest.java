@@ -412,6 +412,182 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void zakarumPriestRowsResolveDedicatedAiAndNativeSkillSlots() {
+    int rows = 0;
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      if (!"ZakarumPriest".equals(row.AI)) continue;
+      rows++;
+      assertTrue(AI.findAI(12, row.AI) instanceof ZakarumPriest);
+      assertEquals(96, Riiablo.files.skills.get(row.Skill1).srvdofunc);
+      assertNotNull(Riiablo.files.skills.get(row.Skill2));
+      assertEquals(98, Riiablo.files.skills.get(row.Skill3).srvdofunc);
+      assertNotNull(Riiablo.files.skills.get(row.Skill4));
+    }
+    assertTrue(rows > 0);
+  }
+
+  @Test
+  void zakarumPriestPrefersBlizzardThenIndependentLightningCooldown() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 10f)) {
+      f.ai.params[ZakarumPriest.PARAM_CAST_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_BLIZZARD_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_LIGHTNING_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_SPELL_TIMER] = 100;
+      MonStats.Entry row = f.ai.monster.monstats;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(row.Skill4).Id, f.casting().skillId);
+      // An active action is never overwritten even when timers advance.
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(1, f.probe.starts);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(row.Skill2).Id, f.casting().skillId);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertNull(f.casting());
+      assertEquals(2, f.probe.starts);
+      f.ai.update(21 * Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(row.Skill2).Id, f.casting().skillId);
+    }
+  }
+
+  @Test
+  void zakarumPriestTeleportsBelow33PercentBeforeMeleeAndHonorsCooldown() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 1f)) {
+      f.ai.params[ZakarumPriest.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_SPELL_TIMER] = 50;
+      f.health(32f, 100f);
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(f.ai.monster.monstats.Skill3).Id,
+          f.casting().skillId);
+      assertEquals(Engine.INVALID_ENTITY, f.casting().targetId);
+      assertEquals(new Vector2(15, 10), f.casting().targetVec);
+      f.finishAction();
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 1f)) {
+      f.health(33f, 100f);
+      f.ai.params[ZakarumPriest.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+    }
+  }
+
+  @Test
+  void zakarumPriestBlockedTeleportStillConsumesCooldown() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 1f)) {
+      Map map = mock(Map.class);
+      Map.Zone zone = mock(Map.Zone.class);
+      f.world.getMapper(MapWrapper.class).get(f.actor).set(map, zone);
+      when(map.getZone(any(Vector2.class))).thenReturn(zone);
+      when(zone.areRoomsAdjacent(10f, 10f, 15f, 10f)).thenReturn(true);
+      when(map.isBlockedForPath(zone, 15, 10,
+          com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK, 1, false)).thenReturn(true);
+      f.ai.params[ZakarumPriest.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_SPELL_TIMER] = 50;
+      f.health(32f, 100f);
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+      f.finishAction();
+      when(map.isBlockedForPath(zone, 15, 10,
+          com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK, 1, false)).thenReturn(false);
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(SkillCodes.attack, f.casting().skillId,
+          "a failed landing check consumes the native teleport cooldown");
+      f.finishAction();
+      f.ai.update(201 * Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(f.ai.monster.monstats.Skill3).Id,
+          f.casting().skillId);
+    }
+  }
+
+  @Test
+  void zakarumPriestBarrierAllowsBlizzardButNeverLightning() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 10f)) {
+      Map map = mock(Map.class);
+      Map.Zone zone = mock(Map.Zone.class);
+      f.world.getMapper(MapWrapper.class).get(f.actor).set(map, zone);
+      when(map.castRay(eq(zone), any(), eq(com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP),
+          eq(0), any(), eq(false))).thenReturn(true);
+      f.ai.params[ZakarumPriest.PARAM_ATTACK_CHANCE] = 0;
+      f.ai.params[ZakarumPriest.PARAM_CAST_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_LIGHTNING_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_BLIZZARD_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertNull(f.casting(), "barrier branch uses attack chance, not cast chance");
+      f.ai.params[ZakarumPriest.PARAM_ATTACK_CHANCE] = 100;
+      f.ai.update(21 * Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(f.ai.monster.monstats.Skill4).Id,
+          f.casting().skillId);
+    }
+  }
+
+  @Test
+  void zakarumPriestHealsOnlyEligibleAlliesAndUsesNativeCallbackOrder() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 10f)) {
+      ZakarumPriest priest = (ZakarumPriest) f.ai;
+      f.ai.params[ZakarumPriest.PARAM_HEAL_RANGE] = 8;
+      int first = f.ally("zealot1", 20f, 12, 10);
+      int last = f.ally("cantor1", 60f, 13, 10);
+      f.ally("zealot1", 61f, 12, 10);
+      f.ally("zealot1", 0f, 12, 10);
+      f.ally("skeleton1", 10f, 12, 10);
+      f.ally("zealot1", 10f, 19, 10);
+      int converted = f.ally("zealot1", 10f, 12, 10);
+      f.world.getMapper(Monster.class).get(converted).converted = true;
+      int corpse = f.ally("zealot1", 10f, 12, 10);
+      f.world.getMapper(Corpse.class).create(corpse);
+      int otherMap = f.ally("zealot1", 10f, 12, 10);
+      f.world.getMapper(MapWrapper.class).create(otherMap).set(new Map(2, 0), null);
+      f.world.process();
+      assertEquals(last, priest.findHealTarget(), "not lowest life or nearest");
+      // A converted monster is hostile to the priest: keep it from becoming
+      // a new melee target and taking priority over the healing branch below.
+      f.world.getMapper(Position.class).get(converted).position.set(100, 100);
+      f.seedFirstRoll(25, true);
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get(f.ai.monster.monstats.Skill1).Id,
+          f.casting().skillId);
+      assertEquals(last, f.casting().targetId);
+      assertEquals(1, f.probe.starts);
+      assertNotEquals(first, f.casting().targetId);
+    }
+  }
+
+  @Test
+  void zakarumPriestHealRangeIncludesBoundaryAndLivingSubOnePercentUnits() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 10f)) {
+      f.ai.params[ZakarumPriest.PARAM_HEAL_RANGE] = 8;
+      int boundary = f.ally("zealot1", 0.5f, 18, 10);
+      f.ally("cantor1", 10f, 18, 11);
+      f.world.process();
+      assertEquals(boundary, ((ZakarumPriest) f.ai).findHealTarget());
+      Map map = mock(Map.class);
+      Map.Zone zone = mock(Map.Zone.class);
+      f.world.getMapper(MapWrapper.class).get(f.actor).set(map, zone);
+      f.world.getMapper(MapWrapper.class).create(boundary).set(map, zone);
+      assertEquals(Engine.INVALID_ENTITY, ((ZakarumPriest) f.ai).findHealTarget(),
+          "same zone alone does not imply neighboring native rooms");
+      when(zone.areRoomsAdjacent(10f, 10f, 18f, 10f)).thenReturn(true);
+      assertEquals(boundary, ((ZakarumPriest) f.ai).findHealTarget());
+    }
+  }
+
+  @Test
+  void zakarumPriestRejectedSkillDoesNotFallBackToOrdinaryAttack() {
+    try (Fixture f = new Fixture(rowIdForAi("ZakarumPriest"), 0, 10f)) {
+      f.ai.params[ZakarumPriest.PARAM_CAST_CHANCE] = 100;
+      f.ai.params[ZakarumPriest.PARAM_BLIZZARD_CHANCE] = 100;
+      f.probe.reject = true;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("IDLE", f.ai.getState());
+      assertNull(f.casting());
+      assertEquals(0, f.probe.starts);
+    }
+  }
+
   private static final class Probe extends BaseSystem {
     int starts;
     boolean reject;
@@ -466,6 +642,20 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       attrs.base().put(Stat.maxhp, max);
       attrs.reset();
       world.getMapper(AttributesWrapper.class).create(actor).attrs = attrs;
+    }
+
+    int ally(String rowId, float hp, float x, float y) {
+      int id = world.create();
+      MonStats.Entry row = Riiablo.files.monstats.get(rowId);
+      assertNotNull(row, rowId);
+      world.getMapper(Monster.class).create(id).set(row, Riiablo.files.monstats2.get(row.MonStatsEx));
+      world.getMapper(Position.class).create(id).position.set(x, y);
+      Attributes attrs = Attributes.obtainStandard();
+      attrs.base().put(Stat.hitpoints, hp);
+      attrs.base().put(Stat.maxhp, 100f);
+      attrs.reset();
+      world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
+      return id;
     }
 
     Vector2 targetPosition() { return world.getMapper(Position.class).get(target).position; }
