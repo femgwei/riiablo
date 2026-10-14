@@ -65,9 +65,18 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
    assets/data/obj.txt 的全部 Id 均等于幕内行号（错位数0）。obj 是项目映射表，
    目前未证明错位时应按显式Id还是幕内位置；保留现状，不把 dark-magic 的
    recovered 表约定当成原生证据。自定义错位 obj 表仍是待研究边界。
-6. **音效重定向与分组权重**（待开始）。参考 `b3715dd0`。
-   Audio 当前均匀选择 Index 附近记录；Sounds.Entry 没有 Redirect/Group Weight。
-   先检查 1.10f 表和客户端实现，再处理重定向目标组、权重和非法引用。
+6. **音效重定向与分组权重**（完成版本边界核查，不移植新版字段）。参考 `b3715dd0`。
+   D2MOO 的 D2Sound.cpp 仅为 stub，不能据此推断播放算法。直接读取用户本地
+   1.10f 的 patch_d2.mpq、d2exp.mpq、d2data.mpq：三份 Sounds.txt 均只有
+   Group Size，没有 Redirect/Group Weight；生效的 patch 表以 Sound 命名，
+   下层两表以 Handle 命名。本地 D2Client.dll 可打印字段字符串也有 Group Size，
+   未发现 Redirect/Group Weight。其他仓库 version_99 表存在这些字段，不能
+   当成 1.10f 特性。故不添加权重、不照搬 dark-magic 重定向逻辑；Group Size
+   的原生 RNG、选择时机和数值/名称入口一致性仍待客户端反汇编确认。
+   审计中发现 riiablo Sounds.put 按 Index 存储，而默认名称索引指向源行号。
+   已重新建立 Sound→Index 名称索引，补充 Index10/11 与源行0/1错位测试；
+   不改变现有播放分组算法。新增可选原版资源测试 NativeSoundsArchiveTest，
+   使用环境变量 D2_110F_HOME，无配置时跳过，不硬编码用户路径。
 
 ## 已有覆盖与不宜直接移植的部分
 
@@ -93,3 +102,6 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 - 第五步第二批：Skills 源行、SkillDesc 名称、Objects 重复作者Id；
   `NativeTableIdentityTest`、`NativeAssassinSkillMatrixTest` 定向测试通过，
   diff 检查通过。未进行实机验收。
+- 第六批：`NativeTableIdentityTest` 与 `NativeSoundsArchiveTest` 定向测试通过；
+  原版资源测试实际执行1项、跳过0项，确认三份原版表头不含新版音效字段。
+  `AudioInstanceTest` 通过，diff 检查通过。未进行实机听音验收。

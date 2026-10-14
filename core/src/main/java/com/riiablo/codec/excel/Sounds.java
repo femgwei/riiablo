@@ -1,7 +1,21 @@
 package com.riiablo.codec.excel;
 
+import com.badlogic.gdx.utils.ObjectIntMap;
+
 @Excel.Binned
 public class Sounds extends Excel<Sounds.Entry> {
+  @Override
+  protected void init() {
+    // put stores by Index, so symbolic references must use that same identity
+    // rather than Excel's default source-row index.
+    STRING_TO_ID = new ObjectIntMap<>();
+    for (Entry entry : this) {
+      if (entry.Sound != null && !entry.Sound.isEmpty()) {
+        STRING_TO_ID.put(entry.Sound, entry.Index);
+      }
+    }
+  }
+
   @Override
   protected void put(int id, Entry value) {
     super.put(value.Index, value);

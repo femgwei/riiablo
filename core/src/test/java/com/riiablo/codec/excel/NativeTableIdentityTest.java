@@ -42,6 +42,17 @@ class NativeTableIdentityTest {
   }
 
   @Test
+  void soundNamesResolveTheSameIndexAsNumericReferences() {
+    Sounds sounds = load(Sounds.class,
+        "Sound\tIndex\tFileName\tGroup Size\n"
+        + "first\t10\tfirst.wav\t2\nsecond\t11\tsecond.wav\t0\n");
+    assertEquals(10, sounds.index("first"));
+    assertEquals("first.wav", sounds.get("first").FileName);
+    assertEquals("second.wav", sounds.get(11).FileName);
+    assertNull(sounds.get(0));
+  }
+
+  @Test
   void skillsUseCompiledRowsAndDescriptionsUseNames() {
     Skills skills = load(Skills.class,
         "Id\tskill\tskilldesc\n99\tAttack\tattack-description\n"
