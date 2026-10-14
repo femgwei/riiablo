@@ -459,6 +459,10 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public void update(float delta) {
+    // A zero 24.8 rate means hold the current frame. Dividing the resulting
+    // infinite elapsed time by an infinite duration yields NaN and would
+    // incorrectly seek to frame zero instead of pausing.
+    if (frameDuration == Float.POSITIVE_INFINITY) return;
     elapsedTime += delta;
     frame = getFrame(elapsedTime);
     if (reversed) frame = endIndex - 1 - frame;

@@ -309,7 +309,6 @@ public class DrlgMaze {
             case LVLTYPE_ACT3_KURAST:
             case LVLTYPE_ACT3_DUNGEON:
             case LVLTYPE_ACT3_SEWER:
-            case LVLTYPE_ACT5_TEMPLE:
                 // 需要初始化基础布局的关卡
                 if (nLevelType == LVLTYPE_ACT3_SEWER
                         && level.getLevelId() == D2LevelIds.LEVEL_SEWERSA3LEV1) {
@@ -476,6 +475,11 @@ public class DrlgMaze {
                 buildBasicMaze(level);
                 break;
                 
+            case LVLTYPE_ACT5_TEMPLE:
+                initBasicMazeLayout(level, 2);
+                placeAct5TempleStuff(level);
+                break;
+
             case LVLTYPE_ACT5_BAAL:
                 // Act5 巴尔
                 placeAct2TombPrev_Act5BaalPrev(level);
@@ -2870,7 +2874,7 @@ public class DrlgMaze {
         }
     }
 
-    private static void replaceOrAttachAct3MephistoPreset(D2DrlgLevel level,
+    private static void replaceOrAttachFixedPreset(D2DrlgLevel level,
             D2MazeLevelIdStrc mapping, boolean useInitialPreset) {
         if (replaceRoomPreset(level, mapping.nLevelPrestId1, mapping.nLevelPrestId2,
                 mapping.nPickedFile, false) != null) return;
@@ -2879,6 +2883,35 @@ public class DrlgMaze {
             if (!hasMapDS1(room)
                     && initRoomFixedPreset(room, mapping.nDirection, mapping.nLevelPrestId2,
                         mapping.nPickedFile, useInitialPreset) != null) return;
+        }
+    }
+
+    /** DrlgMaze.cpp::DRLGMAZE_PlaceAct5TempleStuff (D2Common.0x6FD7C380). */
+    public static void placeAct5TempleStuff(D2DrlgLevel level) {
+        if (level == null) return;
+        D2MazeLevelIdStrc[] special = {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NE,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NE_DOWN, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NW,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NW_DOWN, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SW,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SW_DOWN, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NE,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NE_WAYPOINT, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NW,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_NW_WAYPOINT, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SW,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SW_WAYPOINT, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SE_UP,
+                D2LvlPrestIds.LVLPREST_ACT5_TEMPLE_SE_WAYPOINT, -1, 2)
+        };
+        int direction = (int) ((Seed.rollRandomNumber(level.getSeed()) & 0xFFFFFFFFL) % 3);
+        if (level.getLevelId() != D2LevelIds.LEVEL_HALLSOFVAUGHT) {
+            replaceOrAttachFixedPreset(level, special[direction], true);
+            direction = (direction + 1) % 4;
+        }
+        if (level.getLevelId() == D2LevelIds.LEVEL_HALLSOFDEATHSCALLING) {
+            replaceOrAttachFixedPreset(level, special[direction + 3], true);
         }
     }
 
@@ -2919,7 +2952,7 @@ public class DrlgMaze {
         int direction = (int) (Seed.rollRandomNumber(level.getSeed()) & 3);
         // Native InitRoomFixedPreset receives bUseInitPreset=1 here; this
         // re-picks the parent room before attaching the Prev transition.
-        replaceOrAttachAct3MephistoPreset(level, prev[direction], true);
+        replaceOrAttachFixedPreset(level, prev[direction], true);
         int branch = (direction + 1) & 3;
         if (level.getLevelId() == D2LevelIds.LEVEL_DURANCEOFHATELEVEL2) {
             replaceOrAddAct3Preset(level, waypoint[branch]);

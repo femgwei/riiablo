@@ -64,4 +64,14 @@ walk seam；全部 REAL_WARP 有向边仍需另行扩展，不能称为所有类
 
 该修复验证：55 项定向测试、184 项地图回归、6 项资源审计方法（A1–A5 六种子、792 个地图实例）通过。
 
+2026-10-14 传送点/角色动画回归：`game.log` 中 9 次缺失传送点实体、8 次明确
+传送失败全部指向痛苦之厅（level 123）。D2MOO 的 `DRLGMAZE_PlaceAct5TempleStuff`
+要求先生成 Temple 基础迷宫，再按方向替换 Waypoint DS1；Java 分支此前把 level 123
+留在通用分支，导致该特殊预设未导出。补回后固定 seed=127897359 的 A2–A5 30 个
+Waypoint 目的地均能定位到原生 RoomEx，延迟房间物化和重复查找也有回归覆盖。
+动画日志中的 1,932 条零速警告来自 City of Damned 的 `window1/window2` 静态对象，
+不是角色；保留其合法零速并停止误报。另修复资源加载完成后角色 COF 不跟随权威速率
+变化的问题，并覆盖零速暂停、恢复跑步、FREEZE 和 native Jab 控制。无 GL 测试仍不能
+替代真机截图确认角色是否视觉卡住。
+
 2026-10-14 A5 出城旁边出现不可攻击督军：game2.log 中 A5Q1 在玩家旁三格生成 entity=87，然后 RoomEntityTracking 将其归入 level=109。移除 ZoneChangeEvent 的玩家相对 Boss 补生成，只追踪原生 RoomEx 生成的申克。D2MOO A5Q1.cpp::ACT5Q1_OnSiegeBossActivated 处理既有的 SUPERUNIQUE_SIEGE_BOSS，不在出城事件中把 Boss 生到玩家旁边。新增真实资源唯一申克预设/野外归属检查及反复出城不得额外生成 Boss 的 ECS 回归。p4.png/game2.log 的文件时间 07:04 早于地板隐藏修复提交 92812e5a 的 07:06，黑块是否仍在修复后复现需新截图，不据旧图宣称已验证解决。
