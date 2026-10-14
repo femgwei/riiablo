@@ -80,7 +80,10 @@ class BarbarianWhirlwindTest extends RiiabloTest {
       world.setDelta(4f / WhirlwindSystem.GAME_FRAMES_PER_SECOND);
       world.process();
 
-      assertEquals(2, runtime.strikeIndex);
+      assertEquals(1, runtime.strikeIndex, "initial native window uses one hand");
+      world.getMapper(Position.class).get(barbarian).position.x += 0.2f;
+      world.process();
+      assertEquals(3, runtime.strikeIndex, "later native window uses both hands");
       assertTrue(hp(world, first) < firstBefore);
       assertTrue(hp(world, second) < secondBefore);
       assertTrue(secondBefore - hp(world, second) > firstBefore - hp(world, first),
@@ -122,11 +125,16 @@ class BarbarianWhirlwindTest extends RiiabloTest {
           barbarian, skill.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
           skill.srvstfunc, skill.cltstfunc));
       assertTrue(world.getMapper(WhirlwindRuntime.class).has(barbarian));
+      Velocity deathVelocity = world.getMapper(Velocity.class).get(barbarian);
+      deathVelocity.movementRunning = true;
+      deathVelocity.setModeSpeedBonusPercent(50);
       actioneer.onDeath(DeathEvent.obtain(target, barbarian));
       assertFalse(world.getMapper(WhirlwindRuntime.class).has(barbarian));
       assertFalse(world.getMapper(UnitStates.class).get(barbarian)
           .stateList.hasState(StateId.WHIRLWIND));
       assertTrue(world.getMapper(Velocity.class).get(barbarian).velocity.isZero());
+      assertFalse(deathVelocity.movementRunning);
+      assertEquals(0f, deathVelocity.modeSpeedBonusMultiplier);
     } finally {
       world.dispose();
     }
@@ -134,6 +142,40 @@ class BarbarianWhirlwindTest extends RiiabloTest {
 
   private static World world(Actioneer actioneer, DummyFactory factory) {
     return world(actioneer, factory, false);
+  }
+
+  @Test
+  void longFrameDoesNotReplayMissedWindowsAndStateRemovalCleansUp() {
+    Actioneer actioneer = new Actioneer();
+    World world = world(actioneer, new DummyFactory());
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get("Whirlwind");
+      int id = player(world, 0, 0, attributes(1000, 1, 1, 100000));
+      monster(world, 1, 0, attributes(100000, 0, 0, 0));
+      world.getMapper(Casting.class).create(id)
+          .set(skill.Id, Engine.INVALID_ENTITY, new Vector2(100, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(id, skill.Id, Engine.INVALID_ENTITY,
+          new Vector2(100, 0), skill.srvstfunc, skill.cltstfunc));
+      world.setDelta(1f / 25f);
+      world.process();
+      WhirlwindRuntime runtime = world.getMapper(WhirlwindRuntime.class).get(id);
+      assertEquals(1, runtime.strikeIndex);
+      assertEquals(5f, runtime.nextAttackFrame);
+      world.getMapper(Position.class).get(id).position.x = 0.2f;
+      world.setDelta(1f);
+      world.process();
+      assertEquals(2, runtime.strikeIndex, "one callback must not replay a backlog of windows");
+      assertEquals(36f, runtime.nextAttackFrame, "overdue timer restarts from current frame");
+      Velocity velocity = world.getMapper(Velocity.class).get(id);
+      velocity.setModeSpeedBonusPercent(30);
+      world.getMapper(UnitStates.class).get(id).stateList.removeState(StateId.WHIRLWIND);
+      world.process();
+      assertFalse(world.getMapper(WhirlwindRuntime.class).has(id));
+      assertFalse(world.getMapper(Casting.class).has(id));
+      assertTrue(velocity.velocity.isZero());
+      assertFalse(velocity.movementRunning);
+      assertEquals(0f, velocity.modeSpeedBonusMultiplier);
+    } finally { world.dispose(); }
   }
 
   private static World world(Actioneer actioneer, DummyFactory factory, boolean integrate) {
@@ -171,6 +213,8 @@ class BarbarianWhirlwindTest extends RiiabloTest {
         if (multiplier == 0f) {
           assertTrue(world.getMapper(Position.class).get(id).position.isZero());
           assertTrue(velocity.velocity.isZero());
+          assertFalse(velocity.movementRunning);
+          assertEquals(0f, velocity.modeSpeedBonusMultiplier);
           assertTrue(world.getMapper(WhirlwindRuntime.class).has(id));
           continue;
         }

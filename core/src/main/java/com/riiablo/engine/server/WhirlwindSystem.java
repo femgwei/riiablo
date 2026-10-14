@@ -129,10 +129,16 @@ public class WhirlwindSystem extends IteratingSystem {
     }
 
     runtime.elapsedFrames += delta * GAME_FRAMES_PER_SECOND;
-    int safety = 0;
-    while (runtime.elapsedFrames + 0.0001f >= runtime.nextAttackFrame && safety++ < 8) {
+    if (!runtime.attackTimerInitialized) {
+      runtime.attackTimerInitialized = true;
+      runtime.nextAttackFrame = runtime.elapsedFrames + 4f;
+      actioneer.resolveWhirlwindPulse(entityId, runtime, true);
+    } else if (runtime.elapsedFrames + 0.0001f >= runtime.nextAttackFrame) {
+      float interval = actioneer.whirlwindAttackInterval(entityId);
+      float next = runtime.nextAttackFrame + interval;
+      runtime.nextAttackFrame = next < runtime.elapsedFrames
+          ? runtime.elapsedFrames + interval : next;
       actioneer.resolveWhirlwindPulse(entityId, runtime);
-      runtime.nextAttackFrame += actioneer.whirlwindAttackInterval(entityId);
     }
   }
 

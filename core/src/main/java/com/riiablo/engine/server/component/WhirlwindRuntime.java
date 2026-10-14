@@ -15,6 +15,7 @@ public class WhirlwindRuntime extends PooledComponent {
   public boolean positionInitialized;
   public float elapsedFrames;
   public float nextAttackFrame;
+  public boolean attackTimerInitialized;
   public int previousTargetId = Engine.INVALID_ENTITY;
   public int strikeIndex;
   public int stalledFrames;
@@ -28,6 +29,7 @@ public class WhirlwindRuntime extends PooledComponent {
     positionInitialized = true;
     elapsedFrames = 0f;
     nextAttackFrame = 4f;
+    attackTimerInitialized = false;
     previousTargetId = Engine.INVALID_ENTITY;
     strikeIndex = 0;
     stalledFrames = 0;
@@ -43,6 +45,7 @@ public class WhirlwindRuntime extends PooledComponent {
     positionInitialized = false;
     elapsedFrames = 0f;
     nextAttackFrame = 0f;
+    attackTimerInitialized = false;
     previousTargetId = Engine.INVALID_ENTITY;
     strikeIndex = 0;
     stalledFrames = 0;

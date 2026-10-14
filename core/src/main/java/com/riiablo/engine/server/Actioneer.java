@@ -4014,10 +4014,14 @@ public class Actioneer extends PassiveSystem {
 
   /** One native SrvDo076 attack window; dual wielding resolves two hands. */
   void resolveWhirlwindPulse(int entityId, WhirlwindRuntime runtime) {
+    resolveWhirlwindPulse(entityId, runtime, false);
+  }
+
+  void resolveWhirlwindPulse(int entityId, WhirlwindRuntime runtime, boolean initialWindow) {
     if (runtime == null || !mAttributesWrapper.has(entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(runtime.skillId);
     if (skill == null) return;
-    int count = hasTwoWhirlwindWeapons(entityId) ? 2 : 1;
+    int count = !initialWindow && hasTwoWhirlwindWeapons(entityId) ? 2 : 1;
     for (int i = 0; i < count; i++) {
       int targetId = findNextWhirlwindTarget(entityId, runtime.previousTargetId);
       if (targetId == Engine.INVALID_ENTITY) {
