@@ -5070,7 +5070,9 @@ public final class D2GSHeadlessClient {
           + " contract=2"
           + " tickStepSeconds=0.04 ticksPerWallSecond=" + config.tourRate
           + " acts=" + config.tourFirstAct + "-" + config.tourLastAct
-          + " coverage=" + (config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
+          + " coverage=" + (config.tourAllSeams ? "NATIVE_SEAMS_ONLY"
+              : config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
+              : config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
           + " planned=" + itinerary.size() + " itinerary=" + itinerary);
       send(output, connectionPacket(character, d2s));
       awaitConnection(input, deadline());
@@ -5306,10 +5308,10 @@ public final class D2GSHeadlessClient {
   private void walkNativeSeam(DataInputStream input, OutputStream output, java.io.PrintWriter report,
       int from, int to, String identity, String direction) throws Exception {
     MapTourProbe.Sample exit = D2GS.headlessMapTourSample(playerId, to, false);
-    for (int doors = 0; exit != null && exit.target == null && doors < 32; doors++) {
+    for (int attempts = 0; exit != null && exit.target == null && attempts < 32; attempts++) {
       MapTourProbe.Sample door = D2GS.headlessMapTourDoor(playerId, null);
-      if (door == null) break;
-      openTourDoor(input, output, door, from, mapTourMovementSequence, report);
+      if (door != null) openTourDoor(input, output, door, from, mapTourMovementSequence, report);
+      else if (!clearTourBlocker(input, output, from, null, report)) break;
       exit = D2GS.headlessMapTourSample(playerId, to, false);
     }
     if (exit == null || exit.level != from || !"BOUNDARY_WALK".equals(exit.transition)
@@ -5320,7 +5322,7 @@ public final class D2GSHeadlessClient {
     MapTourProbe.Sample end = D2GS.headlessMapTourSample(playerId, -1, true);
     if (start.level != from || end.level != to || currentLevelId != to || end.blocked
         || !Float.isFinite(playerX) || end.position.dst2(playerX, playerY) > 4f
-        || start.position.dst2(end.position) > 20f * 20f) throw new IOException("Invalid seam continuity " + from + "->" + to);
+        || start.position.dst2(end.position) > 12f * 12f) throw new IOException("Invalid seam continuity " + from + "->" + to);
     tourLog(report, "SEAM_DIRECTION_PASS", identity + " direction=" + direction + " walkedFrom=" + from + " walkedTo=" + to
         + " before=" + start.position + " after=" + end.position + " snapshot=(" + playerX + "," + playerY + ")"
         + " clientLevel=" + currentLevelId + " warpRequests=0 movement=PRODUCTION_TCP");

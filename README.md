@@ -134,6 +134,17 @@ and ground-item counts. These are current observations, not a complete
 monster-population or loot correctness audit. This headless tour also does not
 replace rendered-client verification on another computer.
 
+Complete tours additionally capture every adjacent native `Vis > 0 / Warp=-1`
+edge and test both directions with TCP movement. The expected list comes from
+native DRLG before seam installation, so a missing projection cannot silently
+disappear from coverage. Each edge starts in its source level, walks to the
+destination and returns without destination staging or Warp requests; tick-based
+position continuity and the receiving client's level are checked.
+Use `-PtourAllSeams` to run this seam phase alone. Its `NATIVE_SEAMS_ONLY` result
+does not prove 132-level object loading or all real Warp edges. The strict batch
+runner accepts `-SeamsOnly`, defaults to six seeds (including 127897359), records
+MPQ hashes, and rejects missing outbound/return evidence and unreviewed warnings.
+
 # Tools
 Aside from the main tools below, other tools are contained within `:tools`. To
 view all available tools, use `gradlew :tools:projects -q`. `--help` is your
