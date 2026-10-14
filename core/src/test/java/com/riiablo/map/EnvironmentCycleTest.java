@@ -12,8 +12,8 @@ public class EnvironmentCycleTest {
     EnvironmentCycle environment = new EnvironmentCycle();
     assertEquals(EnvironmentCycle.CYCLE_NOON, environment.cycleIndex());
     assertEquals(EnvironmentCycle.PERIOD_DAY, environment.periodOfDay());
-    assertEquals(0, environment.ticks());
-    assertEquals(128, environment.intensity(1, 0));
+    assertEquals(90 * EnvironmentCycle.NORMAL_TIME_RATE, environment.ticks());
+    assertEquals(255, environment.intensity(1, 0));
     assertTrue(environment.isDay());
   }
 
