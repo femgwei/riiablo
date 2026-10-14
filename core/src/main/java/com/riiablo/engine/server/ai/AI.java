@@ -156,11 +156,16 @@ public abstract class AI implements Interactable.Interactor {
    * creation and combat do not yet share one fully ported pSeed stream.
    */
   protected final boolean rollAiChance(int percent) {
+    return rollAiPercentage() < percent;
+  }
+
+  /** Native AI percentage roll, exposed when a decision compares the raw roll. */
+  protected final int rollAiPercentage() {
     if (aiSeed == null) {
       aiSeed = new D2Seed();
       Seed.initLowSeed(aiSeed, Riiablo.gameSeed ^ (entityId * 0x45D9F3B));
     }
-    return Seed.rollPercentage(aiSeed) < percent;
+    return Seed.rollPercentage(aiSeed);
   }
 
   public AI(int entityId) {

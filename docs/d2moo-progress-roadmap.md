@@ -1,5 +1,31 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A2 Duriel 与 Summoner
+
+- [x] 新增 `Duriel` 专用 AI：按 D2MOO 的 Smite/Jab/Attack2/A1 近战优先级，非近战
+  Charge 或速度参数 13 的接近分支；统一走怪物技能事件生命周期。Holy Freeze 的
+  原生右手技能选择已接入 `AuraEcsSystem` 的怪物光环入口。
+- [x] 新增 `Summoner` 专用 AI：Weaken 优先级、火/冰抗性元素选择、Frost Nova、
+  Glacial Spike、VampireFirewall、Fire Ball 的 D2MOO 顺序与冷却计时，近身逃离和
+  施法失败后的接近分支均已接入。
+- [x] 真实 1.10f MonStats/Skills 表驱动 ECS 回归覆盖两个入口及关键分支；A1/A2
+  专用类解析与技能矩阵通过。
+- [ ] Duriel 的完整原生 `pSeed` 生命周期、`seq_duriel*` MonSeq 精确帧序列，以及
+  Summoner 的任务激活回调仍未完全复刻；当前验证确认决策分支和服务器施法事件，
+  不宣称逐帧行为与原版完全一致。
+
+## 2026-10-15 A2 机关与生成器 AI
+
+- [x] 新增 `Sarcophagus`：距离 25 以上停顿、按原生间隔和数量参数调用 `Nest`，
+  达到生成次数后保持中立状态。
+- [x] 新增 `ArcaneTower`：按 D2MOO 的 Skill1/普通攻击两阶段计数、停顿和长延迟
+  循环执行；统一使用技能/攻击动作生命周期。
+- [x] 新增 `DesertTurret`：初始化施法、射程停顿、短/长延迟、散射落点及原版 8×8
+  方向离散表已接入，技能落点通过服务器施法事件传递。
+- [x] 真实 1.10f ECS 回归覆盖三个专用入口和关键循环分支。
+- [ ] DesertTurret 的原生动态单位路径目标绑定、碰撞可施法检查，以及三个 AI 的
+  完整单位 `pSeed`/MonSeq 帧级行为仍待后续对齐。
+
 ## 2026-10-15 A1 怪物 AI 基础与专用决策首批
 
 - [x] `AI.initialize()` 按地图 Normal/Nightmare/Hell 难度读取 `aip1..aip8` 与
