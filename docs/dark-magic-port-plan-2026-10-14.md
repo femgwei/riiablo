@@ -190,3 +190,17 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
   已按原始请求速度和倍率截断终点，保持其现有路径，其他特殊移动仍需独立审计。
   验证：MovementMultiplierContractTest、VelocityAdderTest、PathfinderTest、
   VelocityModeChangerTest、StaminaSystemTest共40项定向测试通过，diff检查通过。
+- 玩家速度复核第四批（装备FRW与状态相加）：依据Units.cpp的150递减公式，
+  StateUpdater玩家分支现读取item_fastermovevelocity，以整数除法求有效FRW，
+  再加状态列表速度贡献、Frenzy和旧减速回退值；不再把这些效果连乘。
+  明确velocitypercent贡献的Decrepify不再额外扣固定50。状态列表已排除Frenzy，
+  因而单独加一次，不把最终属性的velocitypercent再次当作状态来源。
+  Velocity.setPlayer标记原生玩家速度；Pathfinder保存最终跑走选择。跑步额外
+  百分比以步行速度为基准相加，最低速度仍是步行基准25%，不是跑速的25%。
+  测试覆盖75FRW→50有效FRW、整数截断、状态加减、跑步加成及极端减速最低值。
+  怪物保留原聚合；当前负装备FRW按0防御性处理，不宣称支持自定义负值。
+  原生装备重量、速度百分比其他属性来源、整数跑走比率/定点舍入及特殊移动仍待
+  后续核查；没有实机验收。
+  验证：PlayerMovementPercentageTest、MovementMultiplierContractTest、
+  NativeBarbarianPassiveDataTest、PaladinSupportAuraIntegrationTest定向测试通过，
+  diff检查通过。

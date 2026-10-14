@@ -16,6 +16,9 @@ public class Velocity extends PooledComponent {
   public final Vector2 velocity = new Vector2();
   public float walkSpeed;
   public float runSpeed;
+  public boolean nativePlayerSpeed;
+  public boolean movementRunning;
+  public float nativePlayerVelocityBonus;
 
   /** Base percentage for the unit type: players use 100%, monsters use 75%. */
   public float baseSpeedMultiplier = 1f;
@@ -32,6 +35,9 @@ public class Velocity extends PooledComponent {
     velocity.setZero();
     walkSpeed = 0;
     runSpeed = 0;
+    nativePlayerSpeed = false;
+    movementRunning = false;
+    nativePlayerVelocityBonus = 0f;
     baseSpeedMultiplier = 1f;
     modeSpeedBonusMultiplier = 0f;
     stateSpeedMultiplier = 1f;
@@ -39,6 +45,9 @@ public class Velocity extends PooledComponent {
   }
 
   public Velocity set(float walkSpeed, float runSpeed) {
+    nativePlayerSpeed = false;
+    movementRunning = false;
+    nativePlayerVelocityBonus = 0f;
     this.walkSpeed = walkSpeed;
     this.runSpeed = runSpeed;
     baseSpeedMultiplier = 1f;
@@ -48,8 +57,10 @@ public class Velocity extends PooledComponent {
 
   /** Converts CharStats walk/run values to world subtiles per second. */
   public Velocity setPlayer(float nativeWalkSpeed, float nativeRunSpeed) {
-    return set(nativeWalkSpeed * PLAYER_NATIVE_SPEED_SCALE,
+    set(nativeWalkSpeed * PLAYER_NATIVE_SPEED_SCALE,
         nativeRunSpeed * PLAYER_NATIVE_SPEED_SCALE);
+    nativePlayerSpeed = true;
+    return this;
   }
 
   /**
@@ -85,6 +96,11 @@ public class Velocity extends PooledComponent {
 
   /** Applied once by the position integrator, never baked into requested velocity. */
   public float movementMultiplier() {
-    return stateMovementLocked ? 0f : Math.max(0f, stateSpeedMultiplier);
+    if (stateMovementLocked) return 0f;
+    if (nativePlayerSpeed && movementRunning && runSpeed > 0f) {
+      return Math.max(0.25f * walkSpeed / runSpeed,
+          1f + nativePlayerVelocityBonus / 100f * walkSpeed / runSpeed);
+    }
+    return Math.max(0f, stateSpeedMultiplier);
   }
 }

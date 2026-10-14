@@ -1501,7 +1501,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState frenzy = stateList.getState(StateId.FRENZY);
     if (frenzy == null) frenzy = stateList.getState(StateId.MONFRENZY);
     if (frenzy != null) {
-      frenzyPercent = Math.min(200, Math.max(0, frenzy.velocityModifier));
+      frenzyPercent = mPlayer.has(entityId) ? frenzy.resolvedVelocityModifier()
+          : Math.min(200, Math.max(0, frenzy.velocityModifier));
     }
     
     // 减速状态
@@ -1516,7 +1517,19 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     
     // 衰老诅咒
     if (stateList.hasState(StateId.DECREPIFY)) {
-      slowPercent += 50;
+      UnitState decrepify = stateList.getState(StateId.DECREPIFY);
+      if (!decrepify.hasStatContribution(Stat.velocitypercent)) slowPercent += 50;
+    }
+
+    if (mPlayer.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.has(entityId)
+          ? mAttributesWrapper.get(entityId).attrs : null;
+      int equipmentFrw = attrs != null ? attrs.getValue(Stat.item_fastermovevelocity, 0) : 0;
+      velocity.nativePlayerVelocityBonus = playerMovementBonus(equipmentFrw,
+          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent);
+      velocity.stateSpeedMultiplier = playerMovementMultiplier(equipmentFrw,
+          stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent);
+      return;
     }
     
     // 应用减速（限制最大减速为90%）
@@ -1534,6 +1547,18 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       auraVelocityPercent = Math.max(-90, Math.min(200, auraVelocityPercent));
       velocity.stateSpeedMultiplier *= 1.0f + auraVelocityPercent / 100.0f;
     }
+  }
+
+  static float playerMovementMultiplier(int equipmentFrw, int velocityBonus) {
+    return Math.max(25L, 100L + playerMovementBonus(equipmentFrw, velocityBonus)) / 100f;
+  }
+
+  static long playerMovementBonus(int equipmentFrw, int velocityBonus) {
+    // UNITS_GetAnimStatBasePercentage uses integer division and a 150 base.
+    // Shipped equipment has nonnegative FRW; clamp malformed negatives to zero.
+    long frw = Math.max(0, equipmentFrw);
+    long effectiveFrw = frw * 150L / (frw + 150L);
+    return effectiveFrw + velocityBonus;
   }
 
   /**

@@ -268,6 +268,7 @@ public class Pathfinder extends IteratingSystem {
             mRunning.has(entityId), mTemporaryRunning.has(entityId))
         && (!mAttributes.has(entityId)
             || StaminaSystem.hasRunStamina(mAttributes.get(entityId)));
+    velocity.movementRunning = running;
     float speed = velocity.speed(running);
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
