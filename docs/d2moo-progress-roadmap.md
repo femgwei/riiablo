@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A2 Duriel 与 Summoner
+
+- [x] 新增 `Duriel` 专用 AI：按 D2MOO 的 Smite/Jab/Attack2/A1 近战优先级，非近战
+  Charge 或速度参数 13 的接近分支；统一走怪物技能事件生命周期。Holy Freeze 的
+  原生右手技能选择已接入 `AuraEcsSystem` 的怪物光环入口。
+- [x] 新增 `Summoner` 专用 AI：Weaken 优先级、火/冰抗性元素选择、Frost Nova、
+  Glacial Spike、VampireFirewall、Fire Ball 的 D2MOO 顺序与冷却计时，近身逃离和
+  施法失败后的接近分支均已接入。
+- [x] 真实 1.10f MonStats/Skills 表驱动 ECS 回归覆盖两个入口及关键分支；A1/A2
+  专用类解析与技能矩阵通过。
+- [ ] Duriel 的完整原生 `pSeed` 生命周期、`seq_duriel*` MonSeq 精确帧序列，以及
+  Summoner 的任务激活回调仍未完全复刻；当前验证确认决策分支和服务器施法事件，
+  不宣称逐帧行为与原版完全一致。
+
 ## 2026-10-15 A1 怪物 AI 基础与专用决策首批
 
 - [x] `AI.initialize()` 按地图 Normal/Nightmare/Hell 难度读取 `aip1..aip8` 与

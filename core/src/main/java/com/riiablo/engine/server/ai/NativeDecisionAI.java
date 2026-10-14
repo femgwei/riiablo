@@ -17,6 +17,7 @@ abstract class NativeDecisionAI extends AI {
   @Override
   public final void update(float delta) {
     if (dead || monster == null || !mPosition.has(entityId)) return;
+    beforeThink(delta);
     nextThink -= delta;
     if (mCasting.has(entityId) || mSequence.has(entityId) || nextThink > 0f) return;
     nextThink = Math.max(Animation.FRAME_DURATION, SLEEP);
@@ -28,6 +29,9 @@ abstract class NativeDecisionAI extends AI {
     }
     think(targetId, distance[0], isInNativeMeleeRange(targetId));
   }
+
+  /** Hook for native AIs with timers that advance while an action is active. */
+  protected void beforeThink(float delta) {}
 
   protected abstract void think(int targetId, float distance, boolean combat);
 
@@ -43,17 +47,34 @@ abstract class NativeDecisionAI extends AI {
   }
 
   protected final void attack(int targetId) {
+    attack(targetId, Engine.Monster.MODE_A1);
+  }
+
+  /** Starts the native ordinary attack action in the requested monster mode. */
+  protected final void attack(int targetId, int attackMode) {
     stopMovement();
     lookAt(targetId);
     state = "ATTACK";
-    mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+    mSequence.create(entityId).sequence((byte) attackMode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(SkillCodes.attack, targetId, mPosition.get(targetId).position);
     com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
     nextThink = 0f;
   }
 
   protected final boolean hasSkill(int slot) {
-    String name = slot == 0 ? monster.monstats.Skill1 : monster.monstats.Skill2;
+    if (monster == null || monster.monstats == null) return false;
+    String name;
+    switch (slot) {
+      case 0: name = monster.monstats.Skill1; break;
+      case 1: name = monster.monstats.Skill2; break;
+      case 2: name = monster.monstats.Skill3; break;
+      case 3: name = monster.monstats.Skill4; break;
+      case 4: name = monster.monstats.Skill5; break;
+      case 5: name = monster.monstats.Skill6; break;
+      case 6: name = monster.monstats.Skill7; break;
+      case 7: name = monster.monstats.Skill8; break;
+      default: return false;
+    }
     return name != null && !name.isEmpty();
   }
 

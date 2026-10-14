@@ -99,6 +99,16 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return activated;
   }
 
+  /** Native monster AI aura selection (monsters do not have Player data). */
+  public boolean selectAuraForMonster(int entityId, int skillId, int skillLevel) {
+    int level = Math.max(1, skillLevel);
+    boolean activated = auras.activateAura(entityId, skillId, level);
+    if (activated) {
+      log.info("[AURA] phase=activate caster={} skill={} level={} status=PASS", entityId, skillId, level);
+    }
+    return activated;
+  }
+
   public AuraManager manager() {
     return auras;
   }

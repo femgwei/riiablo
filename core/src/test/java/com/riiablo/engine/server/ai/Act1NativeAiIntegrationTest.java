@@ -35,7 +35,8 @@ import org.junit.jupiter.api.Test;
 class Act1NativeAiIntegrationTest extends RiiabloTest {
   @Test
   void nativeRowsMustResolveToDedicatedAiNotFallback() {
-    for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap"}) {
+    for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap",
+        "duriel", "summoner"}) {
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);
       assertNotNull(row, rowId);
       AI ai = AI.findAI(12, row.AI);
@@ -157,6 +158,59 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       assertFalse(f.world.getMapper(Casting.class).has(f.actor));
       f.ai.update(Animation.FRAME_DURATION + 0.00001f);
       f.assertSkill(0);
+    }
+  }
+
+  @Test
+  void durielUsesNativeMeleePriorityAndChargeOrFlaggedApproach() {
+    try (Fixture f = new Fixture("duriel", 0, 1f)) {
+      f.ai.params[Duriel.PARAM_SMITE_CHANCE] = 100;
+      f.ai.params[Duriel.PARAM_JAB_CHANCE] = 0;
+      f.ai.params[Duriel.PARAM_ATTACK2_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("Smite", Riiablo.files.monstats.get("duriel").Skill3);
+      assertEquals(Riiablo.files.skills.get("Smite").Id, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("duriel", 0, 10f)) {
+      f.ai.params[Duriel.PARAM_CHARGE_CHANCE] = 100;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("Charge").Id, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("duriel", 0, 10f)) {
+      f.ai.params[Duriel.PARAM_CHARGE_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("APPROACH", f.ai.getState());
+      assertEquals(0.13f, f.world.getMapper(Velocity.class).get(f.actor).modeSpeedBonusMultiplier, 0.0001f);
+    }
+  }
+
+  @Test
+  void summonerUsesColdNovaThenFirewallAndApproachesWhenCastRollFails() {
+    try (Fixture f = new Fixture("summoner", 0, 10f)) {
+      f.ai.params[Summoner.PARAM_CAST_CHANCE] = 100;
+      f.ai.params[Summoner.PARAM_WEAKEN_CHANCE] = 0;
+      f.ai.params[Summoner.PARAM_PREFERRED_ELEMENT_CHANCE] = 100;
+      f.ai.params[Summoner.PARAM_NOVA_TIMER] = 20;
+      f.ai.params[Summoner.PARAM_NOVA_DISTANCE] = 20;
+      f.ai.params[Summoner.PARAM_MISSILE_DISTANCE] = 30;
+      f.ai.params[Summoner.PARAM_FIREWALL_TIMER] = 20;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("Frost Nova").Id, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("summoner", 0, 20f)) {
+      f.ai.params[Summoner.PARAM_CAST_CHANCE] = 100;
+      f.ai.params[Summoner.PARAM_WEAKEN_CHANCE] = 0;
+      f.ai.params[Summoner.PARAM_PREFERRED_ELEMENT_CHANCE] = 100;
+      f.ai.params[Summoner.PARAM_NOVA_DISTANCE] = 0;
+      f.ai.params[Summoner.PARAM_MISSILE_DISTANCE] = 0;
+      f.ai.params[Summoner.PARAM_FIREWALL_TIMER] = 20;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(Riiablo.files.skills.get("VampireFirewall").Id, f.casting().skillId);
+    }
+    try (Fixture f = new Fixture("summoner", 0, 10f)) {
+      f.ai.params[Summoner.PARAM_CAST_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals("APPROACH", f.ai.getState());
     }
   }
 
