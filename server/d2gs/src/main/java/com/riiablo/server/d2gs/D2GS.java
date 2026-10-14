@@ -564,6 +564,20 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  static boolean headlessMapTourDoorOpen(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    java.util.concurrent.CompletableFuture<Boolean> result = new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try { result.complete(MapTourProbe.doorOpen(server.world, entityId)); }
+      catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Tour door state unavailable", e);
+    }
+  }
+
   static MapTourProbe.Sample headlessMapTourBlocker(int playerId, Vector2 target) {
     return headlessMapTourBlocker(playerId, target, Engine.INVALID_ENTITY);
   }

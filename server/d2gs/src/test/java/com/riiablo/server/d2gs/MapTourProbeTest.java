@@ -6,6 +6,35 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class MapTourProbeTest {
+  @Test public void seamDoorMustFinishOpeningBeforeItsNextFrontierIsPlanned() {
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().build());
+    try {
+      int doorId = world.create();
+      com.riiablo.engine.server.component.Object door = world.getMapper(
+          com.riiablo.engine.server.component.Object.class).create(doorId);
+      door.base = new com.riiablo.codec.excel.Objects.Entry();
+      door.base.Id = 23; door.base.IsDoor = true; door.base.OperateFn = 8;
+      door.mode = com.riiablo.engine.Engine.Object.MODE_ON;
+      com.riiablo.engine.server.component.CofReference cof = world.getMapper(
+          com.riiablo.engine.server.component.CofReference.class).create(doorId);
+      cof.mode = com.riiablo.engine.Engine.Object.MODE_OP;
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(doorId)
+          .sequence(com.riiablo.engine.Engine.Object.MODE_OP, com.riiablo.engine.Engine.Object.MODE_ON);
+      world.process();
+      org.junit.Assert.assertFalse("27->26: accepted interaction persists ON while OP still blocks the doorway",
+          MapTourProbe.doorOpen(world, doorId));
+      cof.mode = com.riiablo.engine.Engine.Object.MODE_ON;
+      org.junit.Assert.assertFalse("an active sequence must finish before the planner continues",
+          MapTourProbe.doorOpen(world, doorId));
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).remove(doorId);
+      world.process();
+      assertTrue(MapTourProbe.doorOpen(world, doorId));
+      door.mode = com.riiablo.engine.Engine.Object.MODE_NU;
+      org.junit.Assert.assertFalse("a stale ON COF cannot prove a reopened door", MapTourProbe.doorOpen(world, doorId));
+      world.delete(doorId); world.process();
+      org.junit.Assert.assertFalse(MapTourProbe.doorOpen(world, doorId));
+    } finally { world.dispose(); }
+  }
   @Test public void meleeProbeUsesNativeBarrierAndSelectedTargetInsteadOfGroundWalkRay() throws Exception {
     com.badlogic.gdx.Application previousApp = com.badlogic.gdx.Gdx.app;
     com.riiablo.Files previousFiles = com.riiablo.Riiablo.files;

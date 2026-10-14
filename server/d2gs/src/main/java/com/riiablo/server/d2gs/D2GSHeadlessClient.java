@@ -5546,8 +5546,22 @@ public final class D2GSHeadlessClient {
     QuestResult result = awaitQuestResult(input, request, deadline());
     if (result == null || !result.success()) throw new IOException("Door operation rejected entity=" + door.warp
         + " reason=" + (result == null ? "missing_result" : result.reason()));
-    tourLog(report, "DOOR_PASS", "level=" + level + " entity=" + door.warp);
-    return sequence;
+    // The quest result acknowledges an accepted operation, not the end of
+    // OP. A seam planner can otherwise see the still-colliding doorway and
+    // falsely conclude that its next room/exit has no reachable frontier.
+    long openedUntil = deadline();
+    while (System.currentTimeMillis() < openedUntil) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+      Visibility snapshot = visibility.get(door.warp);
+      if (snapshot != null && !snapshot.deleted && snapshot.levelId == level
+          && snapshot.cofMode == Engine.Object.MODE_ON && D2GS.headlessMapTourDoorOpen(door.warp)) {
+        tourLog(report, "DOOR_PASS", "level=" + level + " entity=" + door.warp
+            + " clientMode=ON animationComplete=true");
+        return sequence;
+      }
+    }
+    throw new IOException("Door opening did not complete entity=" + door.warp);
   }
 
   private void walkTour(DataInputStream input, OutputStream output, Vector2 target,

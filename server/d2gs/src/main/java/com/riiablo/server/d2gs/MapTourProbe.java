@@ -589,6 +589,20 @@ final class MapTourProbe {
   }
 
   /** A closed ordinary door is an interaction, never a collision exemption. */
+  static boolean doorOpen(World world, int entityId) {
+    com.riiablo.engine.server.component.Object object = world.getMapper(
+        com.riiablo.engine.server.component.Object.class).get(entityId);
+    com.riiablo.engine.server.component.CofReference cof = world.getMapper(
+        com.riiablo.engine.server.component.CofReference.class).get(entityId);
+    // ObjectInteractor persists ON when it starts the OP animation. The
+    // collision updater still obeys that active COF until the sequence ends.
+    return object != null && object.base != null && object.base.IsDoor
+        && object.mode == Engine.Object.MODE_ON && cof != null
+        && cof.mode == Engine.Object.MODE_ON
+        && !world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(entityId);
+  }
+
+  /** Find a closed door reachable through the current terrain component. */
   static Sample door(World world, Map map, int playerId, Vector2 destination) {
     Map.Zone zone = world.getMapper(MapWrapper.class).get(playerId).zone;
     Vector2 origin = world.getMapper(Position.class).get(playerId).position;
