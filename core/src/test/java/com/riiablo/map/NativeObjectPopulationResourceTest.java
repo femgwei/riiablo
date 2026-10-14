@@ -37,6 +37,23 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
     assertEquals(0, new NativeObjectPopulation().populate(zone, null));
     assertEquals(3, NativeObjectPopulation.densityCount(64,40,40));
   }
+  @Test void themeTwoUsesNativeBarrelGrid() {
+    boolean generated = false;
+    for (int seed = 1; seed <= 32 && !generated; seed++) {
+      Map.Zone zone = zone(0);
+      zone.map = new Map(seed, 0);
+      zone.level.Themes = 2;
+      NativeObjectPopulation population = new NativeObjectPopulation();
+      int count = population.populate(zone, null);
+      generated = count > 0;
+      if (generated) {
+        assertEquals("Theme/2/barrels", zone.getNativeObjects().first().sourceFile);
+        assertTrue(zone.getNativeObjects().first().presetIndex == 7
+            || zone.getNativeObjects().first().presetIndex == 11);
+      }
+    }
+    assertTrue(generated, "theme 2 must populate outdoor barrels");
+  }
   private static Map.Zone zone(int group) {
     Map.Zone zone = new Map.Zone();
     zone.map = new Map(1,0);
