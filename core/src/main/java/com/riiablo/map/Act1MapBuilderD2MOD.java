@@ -48,6 +48,7 @@ import com.riiablo.map.d2moo.Act1D2MOOLayoutBridge;
 import com.riiablo.map.d2moo.Act1D2MOOLayoutBridge.Act1LayoutResult;
 import com.riiablo.map.d2moo.Act1D2MOOLayoutBridge.LayoutAndDrlg;
 import com.riiablo.map.d2moo.D2MooTileApplier;
+import com.riiablo.map.d2moo.NativeLevelSeamAnchor;
 
 /**
  * Act1 地图生成器 - 完全复刻 D2MOD 实现
@@ -3696,9 +3697,37 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         // commonly writes -1 there for the seamless monastery links).
         int destinationLevelId = vis[slot];
         if (destinationLevelId <= 0) continue;
-        if (!isMonasteryRuntimeLink(source.level.Id, destinationLevelId)) continue;
         Zone destination = findZoneByLevelId(map, destinationLevelId);
         if (destination == null || destination == source || destination.level == null) continue;
+
+        // D2Common::sub_6FD82750 turns an outdoor Vis entry whose Warp slot
+        // remains -1 into a DRLGROOM_AddOrth connection.  It is a walkable
+        // level seam, not an interactive teleport marker.  Act I's Cold
+        // Plains -> Stony Field edge is one such link and was previously
+        // omitted because this projection only handled the monastery chain.
+        if (warp[slot] == -1 && map.areZonesAdjacent(source, destination)) {
+          int[] anchor = NativeLevelSeamAnchor.resolve(
+              DrlgDrlg.getLevel(drlg, source.level.Id),
+              DrlgDrlg.getLevel(drlg, destinationLevelId));
+          if (anchor != null) {
+            map.addWarpDestinationOverride(source.level.Id, slot, destinationLevelId);
+            source.setNativeSeamAnchor(slot, anchor[0], anchor[1]);
+            links++;
+
+            int reverseSlot = findNativeReverseSlot(drlg, destination.level.Id, source.level.Id);
+            if (reverseSlot >= 0) {
+              int[] reverseAnchor = NativeLevelSeamAnchor.resolve(
+                  DrlgDrlg.getLevel(drlg, destination.level.Id),
+                  DrlgDrlg.getLevel(drlg, source.level.Id));
+              if (reverseAnchor != null) {
+                map.addWarpDestinationOverride(destination.level.Id, reverseSlot, source.level.Id);
+                destination.setNativeSeamAnchor(reverseSlot, reverseAnchor[0], reverseAnchor[1]);
+              }
+            }
+          }
+        }
+
+        if (!isMonasteryRuntimeLink(source.level.Id, destinationLevelId)) continue;
 
         map.addWarpDestinationOverride(source.level.Id, slot, destinationLevelId);
         if (!hasWarpMarker(source, slot)) {
