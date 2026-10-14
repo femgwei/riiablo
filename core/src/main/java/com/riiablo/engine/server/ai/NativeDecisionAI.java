@@ -53,6 +53,14 @@ abstract class NativeDecisionAI extends AI {
     if (!moved) idle(10);
   }
 
+  /** Coordinate movement whose caller owns native fallback/retry decisions. */
+  protected final boolean walkToPoint(com.badlogic.gdx.math.Vector2 destination,
+      int velocityBonus, int targetId) {
+    if (!walkTo(destination, velocityBonus, targetId)) return false;
+    state = "MOVE";
+    return true;
+  }
+
   /**
    * Starts the native orbit/strafe movement used by flying monsters. The
    * target remains attached to the movement action so a moving player is not

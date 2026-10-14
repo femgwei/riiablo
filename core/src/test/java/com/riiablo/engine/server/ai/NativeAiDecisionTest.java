@@ -44,6 +44,41 @@ class NativeAiDecisionTest {
   }
 
   @Test
+  void rawItemRollAndPercentageAdvanceOneSharedNativeStream() {
+    int previous = Riiablo.gameSeed;
+    try {
+      Riiablo.gameSeed = 0xFEDCBA98;
+      AI ai = new AI(0x42) {};
+      D2Seed expected = new D2Seed(Riiablo.gameSeed ^ (0x42 * 0x45D9F3B), 666);
+      for (int i = 0; i < 100; i++) {
+        assertEquals(Seed.rollRandomNumber(expected) & 0xFFFFFFFFL, ai.rollAiRandomNumber());
+        assertEquals(Seed.rollPercentage(expected), ai.rollAiPercentage());
+      }
+    } finally {
+      Riiablo.gameSeed = previous;
+    }
+  }
+
+  @Test
+  void mephistoSkillBucketsRespectDifficultyAndStrictDistanceBoundaries() {
+    assertEquals(0, Mephisto.PARAM_CAST_OR_MELEE_CHANCE);
+    assertEquals(1, Mephisto.PARAM_LOWEST_LIFE_TARGET_CHANCE);
+    assertEquals(2, Mephisto.PARAM_SECOND_TARGET_CHANCE);
+    for (int roll = 0; roll < 100; roll++) {
+      int ordinary = roll < 32 ? 3 : roll < 48 ? 1 : 0;
+      int close = roll < 16 ? 4 : ordinary;
+      assertEquals(ordinary, Mephisto.selectSkillSlot(roll, 6, 10f, 0, true));
+      for (int difficulty = 1; difficulty <= 2; difficulty++) {
+        assertEquals(close, Mephisto.selectSkillSlot(roll, 6, 14.99f, difficulty, false));
+        assertEquals(ordinary, Mephisto.selectSkillSlot(roll, 6, 15f, difficulty, false));
+        assertEquals(ordinary, Mephisto.selectSkillSlot(roll, 6, 30f, difficulty, false));
+        assertEquals(5, Mephisto.selectSkillSlot(roll, 6, 30.01f, difficulty, false));
+        assertEquals(5, Mephisto.selectSkillSlot(roll, 6, 10f, difficulty, true));
+      }
+    }
+  }
+
+  @Test
   void smithUsesIntegerLifeBeforePercentageAndClampsSpeedBonus() {
     assertEquals(50, Smith.lifePercentage(10, 20));
     assertEquals(0, Smith.lifePercentage(0, 100));

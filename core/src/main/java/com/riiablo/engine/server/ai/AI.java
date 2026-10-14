@@ -161,11 +161,20 @@ public abstract class AI implements Interactable.Interactor {
 
   /** Native AI percentage roll, exposed when a decision compares the raw roll. */
   protected final int rollAiPercentage() {
+    return Seed.rollPercentage(aiSeed());
+  }
+
+  /** D2Game ITEMS_RollRandomNumber truncates the shared seed draw to uint32. */
+  protected final long rollAiRandomNumber() {
+    return Seed.rollRandomNumber(aiSeed()) & 0xFFFFFFFFL;
+  }
+
+  private D2Seed aiSeed() {
     if (aiSeed == null) {
       aiSeed = new D2Seed();
       Seed.initLowSeed(aiSeed, Riiablo.gameSeed ^ (entityId * 0x45D9F3B));
     }
-    return Seed.rollPercentage(aiSeed);
+    return aiSeed;
   }
 
   public AI(int entityId) {
@@ -196,7 +205,7 @@ public abstract class AI implements Interactable.Interactor {
         Arrays.toString(params));
   }
 
-  private int resolveAiDifficulty() {
+  protected final int resolveAiDifficulty() {
     if (mMapWrapper == null || !mMapWrapper.has(entityId)
         || mMapWrapper.get(entityId).map == null) return 0;
     return Math.max(0, Math.min(2, mMapWrapper.get(entityId).map.getDifficulty()));

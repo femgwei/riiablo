@@ -588,7 +588,7 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
     }
   }
 
-  private static final class Probe extends BaseSystem {
+  static final class Probe extends BaseSystem {
     int starts;
     boolean reject;
     @Subscribe public void onStart(SkillStartEvent event) { starts++; }
@@ -598,7 +598,8 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
     @Override protected void processSystem() {}
   }
 
-  private static final class Fixture implements AutoCloseable {
+  /** Shared real-table fixture for dedicated native AI integration tests. */
+  static final class Fixture implements AutoCloseable {
     final World previous = Riiablo.engine;
     final int oldSeed = Riiablo.gameSeed;
     final Probe probe = new Probe();
