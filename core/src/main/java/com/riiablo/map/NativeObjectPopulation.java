@@ -125,7 +125,7 @@ final class NativeObjectPopulation {
     next(seed, 100);
     int remaining = densityCount(density, r.width, r.height), attempts = 2 * remaining, count = 0;
     while (remaining > 0 && attempts-- > 0) {
-      int classId = next(seed, 3) == 0 ? 9 : 7;
+      int classId = next(seed, 3) == 0 ? 11 : 7;
       int x = r.x + next(seed, r.width), y = r.y + next(seed, r.height);
       if (!clusterClear(z, r, b, x, y)) continue;
       add(z, r, classId, x, y, source);
@@ -140,7 +140,7 @@ final class NativeObjectPopulation {
           spawned = clusterClear(z, r, b, x, y);
         }
         if (spawned) {
-          add(z, r, next(seed, 4) == 0 ? 9 : 7, x, y, source);
+          add(z, r, next(seed, 4) == 0 ? 11 : 7, x, y, source);
           chain++;
           if (++count >= 8) return;
         }
@@ -148,16 +148,16 @@ final class NativeObjectPopulation {
       remaining--;
     }
   }
-  private static final int[] URNS = {4,51,52,94,95};
+  private static final int[] URNS = {4,9,52,94,95};
   private static void crates(Map.Zone z, Map.RoomEx r, Objects.Entry b, int density, D2Seed seed, String source) {
     next(seed, 100);
     int remaining = densityCount(density, r.width, r.height), attempts = 2 * remaining;
     int search = 4 * remaining, count = 0;
     while (remaining > 0 && attempts-- > 0) {
-      int classId = b.Id == 8 ? 8 : URNS[next(seed, URNS.length)];
+      int classId = b.Id == 46 ? 46 : URNS[next(seed, URNS.length)];
       int x = r.x + next(seed, r.width), y = r.y + next(seed, r.height);
       if (!clusterClear(z, r, b, x, y)) continue;
-      if (classId != 8) classId = URNS[next(seed, URNS.length)];
+      if (classId != 46) classId = URNS[next(seed, URNS.length)];
       add(z, r, classId, x, y, source);
       boolean spawned = true;
       int chain = 1;
@@ -260,8 +260,8 @@ final class NativeObjectPopulation {
       for (int[] offset : pattern) {
         int px = x + offset[0], py = y + offset[1];
         if (bounds(r, px, py, b.SizeX, b.SizeY, 1) && clear(z, px, py, b.SizeX + 7, b.SizeY + 7)) {
-          add(z, r, 56 + next(seed, 2), px, py, source);
-          if (next(seed, 100) > 70) add(z, r, 27, px, py, source + "/flies");
+          add(z, r, 57 + next(seed, 2), px, py, source);
+          if (next(seed, 100) > 70) add(z, r, 103, px, py, source + "/flies");
         }
       }
       return;

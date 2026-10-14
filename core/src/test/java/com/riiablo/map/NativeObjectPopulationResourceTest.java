@@ -21,8 +21,11 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
         assertEquals(object.roomId, zone.findRoomEx(zone.x() + object.x, zone.y() + object.y).id);
         if (group == 38) assertTrue(object.presetIndex == 155 || object.presetIndex == 174 || object.presetIndex == 175);
         if (group == 3) assertTrue(object.presetIndex == 5 || object.presetIndex == 6);
-        if (group == 10) assertTrue(object.presetIndex == 7 || object.presetIndex == 9);
-        if (group == 29) assertTrue(java.util.Arrays.stream(new int[]{4,51,52,94,95}).anyMatch(id -> id == object.presetIndex));
+        if (group == 10) {
+          assertTrue(base.Description.equals("Barrel") || base.Description.equals("Barrel Exploding"), base.Description);
+          assertTrue(object.presetIndex == 7 || object.presetIndex == 11);
+        }
+        if (group == 29) assertTrue(java.util.Arrays.stream(new int[]{4,9,52,94,95}).anyMatch(id -> id == object.presetIndex));
       }
       assertEquals(0, population.populate(zone, null), "room reactivation must not duplicate population");
       assertEquals(count, zone.getNativeObjects().size);
