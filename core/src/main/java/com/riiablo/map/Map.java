@@ -979,7 +979,13 @@ public class Map implements Disposable {
     if (source == destination) return source.areRoomsAdjacent(sx, sy, dx, dy);
     if (!isNativeSeamConnection(source, destination)) return false;
     RoomEx a = source.findRoomEx(sx, sy), b = destination.findRoomEx(dx, dy);
-    return a != null && b != null && a.isNativeNeighbor(destination.levelId(), b.id);
+    // Native pRoomsNear is authoritative when present. Some linked outdoor
+    // levels are initialized in separate passes and do not retain the cross-
+    // level pointer; the exact shared RoomEx boundary is the narrow native
+    // seam fallback. Never widen this to whole-level visibility.
+    return a != null && b != null
+        && (a.isNativeNeighbor(destination.levelId(), b.id)
+            || a.touches(b, DT1.Tile.SUBTILE_SIZE));
   }
 
   /**
