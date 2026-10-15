@@ -26,6 +26,49 @@ import org.junit.jupiter.api.Test;
 
 class SubmergeSequenceIntegrationTest extends RiiabloTest {
   @Test
+  void frogModeUpdateHoldsSourceZeroWithoutInventingAnAttackPoint() {
+    Probe probe = new Probe();
+    World world = world(probe);
+    try {
+      int id = subject(world, 12, 256);
+      Sequence seq = world.getMapper(Sequence.class).get(id);
+      seq.nativeSubmerge = false;
+      seq.nativeFrogHidden = true;
+      world.getMapper(CofReference.class).get(id).token = "FD";
+      // In particular, S1's unrelated emergence COF markers must not fire.
+      for (int tick = 0; tick < 100; tick++) world.process();
+      assertTrue(seq.nativeSubmergeHeld);
+      assertEquals(0, world.getMapper(AnimData.class).get(id).frame);
+      assertEquals(0, world.getMapper(AnimData.class).get(id).override);
+      assertEquals(0, probe.actions);
+      assertEquals(0, probe.finished);
+      assertEquals(1, probe.updates);
+      seq.sequence(Engine.Monster.MODE_S1, Engine.Monster.MODE_NU);
+      assertFalse(seq.nativeFrogHidden);
+      assertFalse(seq.nativeSubmergeHeld);
+    } finally { world.dispose(); }
+  }
+
+  @Test
+  void frogFreezePreventsTheModeUpdateUntilThawed() {
+    Probe probe = new Probe();
+    World world = world(probe);
+    try {
+      int id = subject(world, 12, 256);
+      Sequence seq = world.getMapper(Sequence.class).get(id);
+      seq.nativeSubmerge = false;
+      seq.nativeFrogHidden = true;
+      world.getMapper(UnitStates.class).create(id).init(id).stateList.addState(StateId.FREEZE, 100, 1, -1);
+      for (int tick = 0; tick < 30; tick++) world.process();
+      assertFalse(seq.nativeSubmergeHeld);
+      assertEquals(0, probe.updates);
+      world.getMapper(UnitStates.class).get(id).stateList.removeState(StateId.FREEZE);
+      world.process();
+      assertTrue(seq.nativeSubmergeHeld);
+      assertEquals(1, probe.updates);
+    } finally { world.dispose(); }
+  }
+  @Test
   void nativeSequenceData() {
     D2 anim = D2.loadFromFile(Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
     for (MonStats.Entry row : Riiablo.files.monstats) {
@@ -175,7 +218,8 @@ class SubmergeSequenceIntegrationTest extends RiiabloTest {
   }
 
   private static class Probe extends PassiveSystem {
-    int actions, finished;
+    int actions, finished, updates;
+    @Subscribe public void update(com.riiablo.engine.server.event.SubmergeSequenceUpdateEvent event) { updates++; }
     @Subscribe public void action(SkillDoEvent event) {
       assertEquals(94, event.srvdofunc);
       actions++;

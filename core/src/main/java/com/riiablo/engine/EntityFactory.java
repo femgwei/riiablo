@@ -165,6 +165,12 @@ public abstract class EntityFactory extends PassiveSystem {
   /** Executes native Skills.txt SrvSt52 (emerge) for a monster. */
   public boolean emergeMonster(int monsterId) { return false; }
 
+  /** Fn052's SMALL_NO_PRESENCE / no move-test mask, not generic SrvSt51. */
+  public boolean enterFrogHidden(int monsterId) { return false; }
+
+  /** AiThink::sub_6FCD55D0; false if already SMALL_UNIT_PRESENCE or no free landing. */
+  public boolean restoreFrogPresence(int monsterId) { return false; }
+
   /** Applies native D2UnitStrc flags; client-only and test factories may ignore them. */
   public void applyNativeUnitFlags(int entityId, int flags) {}
 

@@ -1000,6 +1000,76 @@ public class ServerEntityFactory extends EntityFactory {
   }
 
   @Override
+  public boolean enterFrogHidden(int monsterId) {
+    if (!submergeMonster(monsterId)) return false;
+    Monster monster = mMonster.get(monsterId);
+    monster.frogNoPresence = true;
+    monster.frogSmallPresence = true;
+    DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collisions != null) collisions.refreshNow();
+    return true;
+  }
+
+  @Override
+  public boolean restoreFrogPresence(int monsterId) {
+    if (!mMonster.has(monsterId) || !mNativeUnitFlags.has(monsterId)) return false;
+    // Native helper sets target flags even when its landing/pattern test fails.
+    mNativeUnitFlags.get(monsterId).set(NativeUnitFlags.MONSTER_TARGET);
+    Monster monster = mMonster.get(monsterId);
+    int size = mSize.has(monsterId) ? mSize.get(monsterId).size : 1;
+    if (!monster.frogNoPresence && (monster.frogSmallPresence || size < 3)) return false;
+    MapWrapper wrapper = mMapWrapper.get(monsterId);
+    if (wrapper == null || wrapper.zone == null || !mPosition.has(monsterId)) return false;
+    Map.Zone zone = wrapper.zone;
+    Vector2 position = mPosition.get(monsterId).position;
+    int originX = Map.round(position.x), originY = Map.round(position.y);
+    DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collisions != null) collisions.refreshNow();
+    Vector2 candidate = new Vector2(), result = new Vector2(), best = new Vector2();
+    // Projection of GetFreeCoordinates(mask=0x1C09, radius=50, increment=1).
+    // FALSE rejects an unsuccessful search, not valid neighboring rooms:
+    // the native implementation still calls GetRoomBySubTileCoordinates.
+    for (int radius = 0; radius < 50; radius++) {
+      int bestDistance = Integer.MAX_VALUE;
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+          int x = originX + dx, y = originY + dy;
+          if (!zone.areRoomsAdjacent(originX, originY, x, y)) continue;
+          if (!zone.findFreeCoordinates(candidate.set(x, y), size, 0,
+              DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_PLAYER_WALK, true, result)) continue;
+          boolean sameRoom = true;
+          int footprintRadius = size >= 2 ? 1 : 0;
+          for (int fy = -footprintRadius; fy <= footprintRadius; fy++) {
+            for (int fx = -footprintRadius; fx <= footprintRadius; fx++) {
+              if (size == 2 && fx != 0 && fy != 0) continue;
+              if (!zone.areRoomsAdjacent(originX, originY, x + fx, y + fy)) sameRoom = false;
+            }
+          }
+          if (!sameRoom || collisions != null
+              && !collisions.isFreeForFrogEmergence(monsterId, x, y, size)) continue;
+          int distance = Math.abs(dx) + Math.abs(dy);
+          if (distance < bestDistance) { bestDistance = distance; best.set(result); }
+        }
+      }
+      if (bestDistance == Integer.MAX_VALUE) continue;
+      position.set(best);
+      monster.frogNoPresence = false;
+      monster.frogSmallPresence = true;
+      if (mBox2DBody.has(monsterId) && mBox2DBody.get(monsterId).body != null) {
+        mBox2DBody.get(monsterId).body.setTransform(position, 0f);
+        mBox2DBody.get(monsterId).body.setLinearVelocity(0f, 0f);
+        mBox2DBody.get(monsterId).body.setActive(true);
+      }
+      if (collisions != null) collisions.refreshNow();
+      log.info("[FROG_PRESENCE] entity={} from=({}, {}) to={} pattern=small", monsterId,
+          originX, originY, position);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
   public void applyNativeUnitFlags(int entityId, int flags) {
     if (entityId == Engine.INVALID_ENTITY || flags == 0) return;
     NativeUnitFlags unitFlags = mNativeUnitFlags.has(entityId)

@@ -55,6 +55,9 @@ public class Monster extends Component {
   public boolean playerRevive;
   /** True when the monster's lethal cold hit selected the native shatter path. */
   public boolean shatteredAtDeath;
+  /** Fn052 changes collision independently of targetability or skill start 51. */
+  public boolean frogNoPresence;
+  public boolean frogSmallPresence;
 
   /** Native activation anchor. Monsters do not pursue targets outside their
    * spawn level/room scope; Zone is the current ECS equivalent of a level
@@ -94,6 +97,8 @@ public class Monster extends Component {
     resurrectedBy = -1;
     playerRevive = false;
     shatteredAtDeath = false;
+    frogNoPresence = false;
+    frogSmallPresence = false;
     spawnZone = null;
     spawnX = 0f;
     spawnY = 0f;

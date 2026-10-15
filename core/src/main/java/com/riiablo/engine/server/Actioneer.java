@@ -795,6 +795,17 @@ public class Actioneer extends PassiveSystem {
   }
 
   @Subscribe
+  public void onSubmergeSequenceUpdate(com.riiablo.engine.server.event.SubmergeSequenceUpdateEvent event) {
+    Sequence seq = mSequence.get(event.entityId);
+    Casting casting = mCasting.get(event.entityId);
+    Skills.Entry skill = casting == null ? null : Riiablo.files.skills.get(casting.skillId);
+    if (seq == null || !seq.started || !seq.nativeFrogHidden || seq.nativeSubmergeHeld
+        || skill == null || skill.srvdofunc != 94) return;
+    srvdofunc(event.entityId, 94, casting.targetId, casting.targetVec);
+    // This maintenance callback is not an attack and emits no SkillDoEvent.
+  }
+
+  @Subscribe
   public void onAnimDataFinished(AnimDataFinishedEvent event) {
     if (!mCasting.has(event.entityId)) return;
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
@@ -1606,9 +1617,8 @@ public class Actioneer extends PassiveSystem {
       case 94: { // SKILLS_SrvDo094_Submerge: clear action, stop SQ at source frame zero.
         Sequence sequence = mSequence.get(entityId);
         AnimData anim = mAnimData.get(entityId);
-        if (sequence == null || !sequence.nativeSubmerge) {
-          // Sharing this callback does not make another MonSeq (e.g. FrogDemon)
-          // implemented. Keep its missing lifecycle visible instead of no-oping.
+        if (sequence == null || !(sequence.nativeSubmerge || sequence.nativeFrogHidden)) {
+          // Sharing callback 94 does not implement arbitrary other MonSeqs.
           log.warn("Unported Submerge sequence | entity={} mode={}", entityId,
               sequence == null ? -1 : sequence.mode1);
           break;

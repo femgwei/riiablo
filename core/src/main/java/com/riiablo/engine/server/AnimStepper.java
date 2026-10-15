@@ -56,6 +56,15 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     Sequence sequence = mSequence.get(entityId);
+    if (sequence != null && sequence.nativeFrogHidden) {
+      // UNITS_InitializeSequence starts at source frame 0. The native mode
+      // update invokes the used skill even with no MonSeq nActionFrame.
+      if (sequence.started && !sequence.nativeSubmergeHeld) {
+        animData.frame = 0;
+        events.dispatch(com.riiablo.engine.server.event.SubmergeSequenceUpdateEvent.obtain(entityId));
+      }
+      return;
+    }
     if (sequence != null && sequence.nativeSubmerge) {
       processNativeSubmerge(entityId, sequence, animData, states);
       return;

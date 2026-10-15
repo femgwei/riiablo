@@ -201,6 +201,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FallenShaman".equals(monster.AI) || "GreaterMummy".equals(monster.AI)) scenarios.add("corpse");
     if ("Tentacle".equals(monster.AI) || "BaalCrabClone".equals(monster.AI)) scenarios.add("orphan");
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
+    if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
     return scenarios;
   }
 
@@ -263,6 +264,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (subject == Engine.INVALID_ENTITY) throw new IllegalStateException("Factory rejected subject");
       zone.attachEntity(subject);
       probe.subject = subject;
+      probe.frogSubject = "FrogDemon".equals(row.monster.AI);
       if (result.scenario.equals("submerge-cycle")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -270,11 +272,19 @@ public final class MonsterAiArena extends ApplicationAdapter {
         probe.cycle = new SubmergeCycle();
         probe.emergeSkill = Riiablo.files.skills.get(row.monster.Skill2).Id;
       }
+      if (result.scenario.equals("frog-emerge")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_FROG_EMERGENCE";
+        probe.frog = new FrogCycle();
+        probe.emergeSkill = Riiablo.files.skills.get(row.monster.Skill2).Id;
+      }
       AIWrapper ai = world.getMapper(AIWrapper.class).get(subject);
       result.actualAi = ai.ai.getClass().getSimpleName();
       result.fallback = ai.ai instanceof GenericMonster;
       int corpse = helpers(world, factory, zone, row.monster, subject, 128 + distance, result, capture);
       Vector2 previous = world.getMapper(Position.class).get(subject).position.cpy();
+      boolean frogApproachRequested = false;
       for (int tick = 0; tick < config.ticks; tick++) {
         capture.tick = tick + 1;
         simulation.tick(null, null);
@@ -285,6 +295,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         Vector2 position = world.getMapper(Position.class).get(subject).position;
         probe.observeCycle();
+        if (probe.frog != null && probe.frog.phase == 1 && !frogApproachRequested) {
+          // Stimulate the native distance gate with an ordinary player path,
+          // not a warp, phase write, injected skill or changed AI parameter.
+          Vector2 destination = new Vector2(position).add(-6, 0);
+          if (!world.getSystem(Pathfinder.class).findPath(playerId, destination, false, Engine.INVALID_ENTITY)) {
+            throw new IllegalStateException("Frog stimulus player path rejected");
+          }
+          frogApproachRequested = true;
+          capture.line("fixture playerApproach=" + playerId + " destination=" + destination);
+        }
         if (!Float.isFinite(position.x) || !Float.isFinite(position.y)) throw new IllegalStateException("Nonfinite position");
         if (!position.epsilonEquals(previous, 0.01f)) result.moves++;
         previous.set(position);
@@ -295,6 +315,17 @@ public final class MonsterAiArena extends ApplicationAdapter {
         if (tick % 25 == 0) capture.line("sample subject=" + subject + " ai=" + result.actualAi
             + " state=" + ai.ai.getState() + " pos=" + position
             + " casting=" + world.getMapper(Casting.class).has(subject));
+        if (tick % 25 == 0 && "FrogDemon".equals(result.actualAi)) {
+          Sequence seq = world.getMapper(Sequence.class).get(subject);
+          AnimData anim = world.getMapper(AnimData.class).get(subject);
+          Monster monster = world.getMapper(Monster.class).get(subject);
+          capture.line("frogSample hidden=" + (seq != null && seq.nativeFrogHidden)
+              + " held=" + (seq != null && seq.nativeSubmergeHeld)
+              + " frame=" + (anim == null ? -1 : anim.frame)
+              + " noPresence=" + (monster != null && monster.frogNoPresence)
+              + " presence=" + probe.present() + " flags=" + probe.flags()
+              + " playerPos=" + world.getMapper(Position.class).get(playerId).position);
+        }
         if (corpse >= 0 && world.getMapper(Monster.class).has(corpse)) {
           Monster revived = world.getMapper(Monster.class).get(corpse);
           if (revived.resurrected && revived.resurrectedBy == subject) result.specialPassed = true;
@@ -302,7 +333,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
       if (result.specialAssert) result.special = result.specialPassed
           ? (result.scenario.equals("orphan") ? "OWNERLESS_DEATH_OBSERVED"
-              : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+              : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED"
+              : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -416,9 +448,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
   static final class Probe extends PassiveSystem {
     int subject = -1;
     int emergeSkill = -1;
+    boolean frogSubject;
     SubmergeCycle cycle;
+    FrogCycle frog;
     final CaseLog capture;
     Probe(CaseLog capture) { this.capture = capture; }
+    @Subscribe public void start(com.riiablo.engine.server.event.SkillStartEvent event) {
+      if (event.entityId != subject || !frogSubject) return;
+      capture.line("FrogSkillStart subject=" + subject + " skill=" + event.skillId
+          + " target=" + event.targetId + " srvstfunc=" + event.srvstfunc);
+    }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
       capture.result.actions++;
@@ -431,8 +470,28 @@ public final class MonsterAiArena extends ApplicationAdapter {
             && cof != null && cof.mode == Engine.Monster.MODE_A1, flags());
         cycleChanged(before);
       }
+      if (frog != null) {
+        CofReference cof = world.getMapper(CofReference.class).get(subject);
+        int before = frog.phase;
+        frog.attack(event.skillId == com.riiablo.skill.SkillCodes.attack && cof != null
+            && (cof.mode == Engine.Monster.MODE_A1 || cof.mode == Engine.Monster.MODE_A2), flags(), present());
+        frogChanged(before);
+      }
     }
     void observeCycle() {
+      if (frog != null) {
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        AnimData anim = world.getMapper(AnimData.class).get(subject);
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Monster monster = world.getMapper(Monster.class).get(subject);
+        int before = frog.phase;
+        frog.observe(seq != null && seq.nativeFrogHidden,
+            seq != null && seq.started && seq.nativeSubmergeHeld,
+            anim == null ? -1 : anim.frame, flags(), monster != null && monster.frogNoPresence,
+            present(), cast != null && cast.skillId == emergeSkill && cast.targetId == subject
+                && seq != null && seq.mode1 == Engine.Monster.MODE_S1);
+        frogChanged(before);
+      }
       if (cycle == null) return;
       Sequence seq = world.getMapper(Sequence.class).get(subject);
       AnimData anim = world.getMapper(AnimData.class).get(subject);
@@ -446,6 +505,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
       cycleChanged(before);
     }
     @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (frog != null && event.entityId == subject) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        int before = frog.phase;
+        frog.finished(cast != null && cast.skillId == emergeSkill && cast.targetId == subject
+            && seq != null && !seq.nativeFrogHidden && seq.mode1 == Engine.Monster.MODE_S1, flags(), present());
+        frogChanged(before);
+      }
       if (cycle == null || event.entityId != subject) return;
       Casting cast = world.getMapper(Casting.class).get(subject);
       Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -457,6 +524,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
     private int flags() {
       NativeUnitFlags flags = world.getMapper(NativeUnitFlags.class).get(subject);
       return flags == null ? -1 : flags.flags();
+    }
+    private boolean present() {
+      DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+      return collisions != null && collisions.hasPresence(subject);
+    }
+    private void frogChanged(int before) {
+      if (before == frog.phase) return;
+      capture.line("FrogCycle subject=" + subject + " phase=" + frog.phase
+          + " flags=" + flags() + " presence=" + present());
+      if (frog.phase == 4) capture.result.specialPassed = true;
     }
     private void cycleChanged(int before) {
       if (before == cycle.phase) return;
@@ -491,6 +568,26 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
   }
 
+  /** Frog-specific oracle also requires the production collision-presence boundary. */
+  static final class FrogCycle {
+    int phase;
+    void observe(boolean hidden, boolean held, int frame, int flags,
+        boolean noPresence, boolean present, boolean emerging) {
+      if (phase == 0 && hidden && held && frame == 0 && noPresence && !present
+          && flags >= 0 && (flags & NativeUnitFlags.MONSTER_TARGET) == 0) phase = 1;
+      else if (phase == 1 && !hidden && emerging && !noPresence && present && targetable(flags)) phase = 2;
+    }
+    void finished(boolean emergence, int flags, boolean present) {
+      if (phase == 2 && emergence && present && targetable(flags)) phase = 3;
+    }
+    void attack(boolean ordinaryAttack, int flags, boolean present) {
+      if (phase == 3 && ordinaryAttack && present && targetable(flags)) phase = 4;
+    }
+    private boolean targetable(int flags) {
+      return flags >= 0 && (flags & NativeUnitFlags.MONSTER_TARGET) == NativeUnitFlags.MONSTER_TARGET;
+    }
+  }
+
   static final class CaseLog implements AutoCloseable {
     final Result result;
     final BufferedWriter output;
@@ -504,7 +601,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
       line("BEGIN monster=" + result.monster + " scenario=" + result.scenario + " seed=" + result.seed
           + " difficulty=" + result.difficulty + " level=" + result.arenaLevel
           + " fixture=synthetic_open_arena playerHP=1000000 oracle="
-          + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE" : "NONE"));
+          + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE"
+              : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }

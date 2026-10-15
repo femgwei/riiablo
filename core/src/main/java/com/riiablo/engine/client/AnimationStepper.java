@@ -38,7 +38,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
 
     Sequence sequence = mSequence.get(entityId);
     AnimData animData = mAnimData.get(entityId);
-    if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge) && animData != null) {
+    if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden) && animData != null) {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the
       // resident emergence COF forward would show the opposite action.

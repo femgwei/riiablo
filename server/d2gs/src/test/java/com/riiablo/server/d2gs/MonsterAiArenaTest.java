@@ -36,6 +36,11 @@ public class MonsterAiArenaTest {
       probe.finished(com.riiablo.engine.server.event.AnimDataFinishedEvent.obtain(8));
       assertEquals("helper events cannot finish the subject's cycle", 3, probe.cycle.phase);
       assertFalse(result.specialPassed);
+      probe.frog = new MonsterAiArena.FrogCycle();
+      probe.frog.phase = 3;
+      probe.action(SkillDoEvent.obtain(8, 0, 9, null, 1, 0));
+      probe.finished(com.riiablo.engine.server.event.AnimDataFinishedEvent.obtain(8));
+      assertEquals("helper events cannot satisfy frog emergence", 3, probe.frog.phase);
     }
   }
 
@@ -104,6 +109,8 @@ public class MonsterAiArenaTest {
     assertEquals(4, MonsterAiArena.scenarios(row).size());
     row.AI = "TentacleHead";
     assertEquals(3, MonsterAiArena.scenarios(row).size());
+    row.AI = "FrogDemon";
+    assertTrue(MonsterAiArena.scenarios(row).contains("frog-emerge"));
     assertEquals("&lt;&amp;&quot;", MonsterAiArena.escape("<&\""));
   }
 
@@ -137,5 +144,35 @@ public class MonsterAiArenaTest {
     assertEquals(3, cycle.phase);
     cycle.attack(true, targetable);
     assertEquals(4, cycle.phase);
+  }
+
+  @Test public void frogCycleRequiresNoPresenceThenRestoredPresenceAndAnActualAttack() {
+    MonsterAiArena.FrogCycle frog = new MonsterAiArena.FrogCycle();
+    int flags = NativeUnitFlags.MONSTER_TARGET;
+    frog.observe(true, true, 0, 0, false, true, false);
+    frog.observe(true, false, 0, 0, true, false, false);
+    frog.observe(true, true, 256, 0, true, false, false);
+    frog.observe(true, true, 0, flags, true, false, false);
+    assertEquals(0, frog.phase);
+    frog.observe(true, true, 0, 0, true, false, false);
+    assertEquals(1, frog.phase);
+    frog.observe(false, false, 0, flags, true, false, true);
+    frog.observe(false, false, 0, 0, false, true, true);
+    frog.attack(true, flags, true);
+    assertEquals(1, frog.phase);
+    frog.observe(false, false, 0, flags, false, true, true);
+    assertEquals(2, frog.phase);
+    frog.finished(true, flags, false);
+    frog.finished(false, flags, true);
+    frog.attack(true, flags, true);
+    assertEquals(2, frog.phase);
+    frog.finished(true, flags, true);
+    assertEquals(3, frog.phase);
+    frog.attack(false, flags, true);
+    frog.attack(true, flags, false);
+    frog.attack(true, 0, true);
+    assertEquals(3, frog.phase);
+    frog.attack(true, flags, true);
+    assertEquals(4, frog.phase);
   }
 }

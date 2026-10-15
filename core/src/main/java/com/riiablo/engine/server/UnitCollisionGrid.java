@@ -69,6 +69,20 @@ public final class UnitCollisionGrid {
     return free[0];
   }
 
+  /** Native size-based placement check against the path-marker layer. */
+  public boolean isFreeWithSize(int moverId, int x, int y, int size, UnitBlocker blocker) {
+    // COLLISION_CheckMaskWithSize, unlike path-pattern checks: size 1 is
+    // just the center; size 2 tests a cross; size 3 tests the 3x3 square.
+    int radius = size >= 2 ? 1 : 0;
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        if (size == 2 && dx != 0 && dy != 0) continue;
+        if (hasOtherUnit(x + dx, y + dy, moverId, -1, blocker)) return false;
+      }
+    }
+    return true;
+  }
+
   /** Atomically transfers a unit footprint, restoring it if blocked. */
   public boolean move(int entityId, int ignoredEntityId,
       int x, int y, int size) {

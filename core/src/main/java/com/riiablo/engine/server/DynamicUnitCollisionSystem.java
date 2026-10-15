@@ -191,6 +191,12 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         sameSpaceBlocker(moverId));
   }
 
+  /** Dynamic NO_PATH portion of the native relocation mask 0x1C09 (no PET bit). */
+  public boolean isFreeForFrogEmergence(int moverId, int x, int y, int size) {
+    return !enabled || grid.isFreeWithSize(moverId, x, y, size,
+        other -> sharesCollisionSpace(moverId, other) && !isPetPresence(other));
+  }
+
   /** Reserves a landing immediately so later pets in this tick see it. */
   public boolean tryLand(int moverId, int x, int y, int size) {
     if (!enabled || !hasPresence(moverId)) return true;
@@ -215,12 +221,13 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     return grid.move(entityId, -1, x, y, size);
   }
 
-  boolean hasPresence(int entityId) {
+  public boolean hasPresence(int entityId) {
     if (!mClass.has(entityId) || !mVelocity.has(entityId)) return false;
     Class.Type type = mClass.get(entityId).type;
     if (type != Class.Type.MON && type != Class.Type.PLR) return false;
     if (type == Class.Type.MON && mMonster.has(entityId)) {
       Monster monster = mMonster.get(entityId);
+      if (monster.frogNoPresence) return false;
       if (!isDynamicObstacle(monster)) return false;
       MonStats.Entry stats = monster.monstats;
       if (stats != null) {
@@ -244,6 +251,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   private int footprint(int entityId) {
+    if (mMonster.has(entityId) && mMonster.get(entityId).frogSmallPresence) return 1;
     return mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
   }
 

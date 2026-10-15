@@ -14,6 +14,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void frogHiddenFollowsSourceZeroAndEmergenceClearsTheHold() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/FD/COF/FDS1HTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 256;
+      data.frame = 0;
+      data.override = 0;
+      com.riiablo.engine.server.component.Sequence seq =
+          world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id)
+              .sequence(com.riiablo.engine.Engine.Monster.MODE_S1, com.riiablo.engine.Engine.Monster.MODE_NU);
+      seq.nativeFrogHidden = seq.nativeSubmergeHeld = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int tick = 0; tick < 30; tick++) world.process();
+      assertEquals(0, animation.getFrame());
+      seq.sequence(com.riiablo.engine.Engine.Monster.MODE_S1, com.riiablo.engine.Engine.Monster.MODE_NU);
+      data.override = -1;
+      world.process();
+      assertEquals(1, animation.getFrame());
+    } finally { world.dispose(); }
+  }
   @Test void residentPlayerAnimationFollowsRateChangesWithoutReloadingCof() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

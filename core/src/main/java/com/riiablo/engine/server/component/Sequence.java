@@ -23,6 +23,8 @@ public class Sequence extends Component {
   public int nativeSubmergeFrame;
   public int nativeSubmergeLastPoint;
   public boolean nativeSubmergeHeld;
+  /** seq_froghidden: S1 0,1,2 with no action points; mode-update SrvDo94 holds at 0. */
+  public boolean nativeFrogHidden;
 
   /** Native player Jab sequence state.  Other sequences leave these fields disabled. */
   public boolean nativeJab;
@@ -42,6 +44,7 @@ public class Sequence extends Component {
     nativeSubmergeFrame = 0;
     nativeSubmergeLastPoint = -1;
     nativeSubmergeHeld = false;
+    nativeFrogHidden = false;
     nativeJab = false;
     nativeJabWeaponClass = 0;
     nativeJabFrame = 0;
