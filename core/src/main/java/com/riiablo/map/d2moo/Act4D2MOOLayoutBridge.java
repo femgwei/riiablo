@@ -125,6 +125,7 @@ public final class Act4D2MOOLayoutBridge {
 
         zone.setNativeTileGrid(grid, dt1Mask);
         if (zone.isTown()) {
+          NativeTownPortalAnchor.capture(level, zone);
           Object preset = level.getFirstRoomEx().getMazeOrOutdoor();
           if (preset instanceof D2DrlgPresetRoomStrc) {
             D2DrlgPresetRoomStrc selected = (D2DrlgPresetRoomStrc) preset;

@@ -121,6 +121,7 @@ public final class Act5D2MOOLayoutBridge {
         projectRooms(level, zone);
         com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
         zone.setNativeTileGrid(grid, dt1Mask);
+        if (zone.isTown()) NativeTownPortalAnchor.capture(level, zone);
         int[] objectCounts = {0, 0};
         int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =

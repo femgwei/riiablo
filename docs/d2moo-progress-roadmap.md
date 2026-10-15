@@ -1,5 +1,23 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 A2–A5 普通回城门城镇落点
+
+- [x] 修复 A2/A4 共用地形导出、A3 与 A5 独立导出遗漏 `townPortalSpawn` 的问题；
+  原先缺少该锚点时回退到城镇中心。现在房间激活、地形导出成功后保存原生出生标记，
+  按 `(marker - nativeLevelOrigin) * 5 + 3 + zoneOrigin` 转为世界子格坐标；A1 不变。
+- [x] 对照 D2MOO `D2GAME_CreateLinkPortal_6FD13B20`、
+  `DUNGEON_FindActSpawnLocationEx` 与 `sub_6FD788D0`：普通回城门请求索引 11；
+  定位型城镇没有匹配时使用首个 tile-info。另以本机 1.10f `D2Common.dll`
+  `6FD789C8–6FD78A34` 静态反汇编确认无匹配时计数为零、首条无条件选中的分支。
+- [x] 读取本机 1.10f MPQ 的 DS1 核实锚点（均为城镇局部子格，非硬编码）：
+  A2 LutW/LutN `(178,53)`、A3 DockTown3 `(158,68)`、A4 Fortress `(48,43)`；
+  A5 townWest 没有 11 号标记，首条索引 0 为 `(98,23)`。保持现有碰撞避让及多人门间距。
+- [x] 新增四章资源坐标夹具、无匹配首条回退、有效计数和非城镇保护断言；
+  按用户小修改约定，仅检查差异，未编译、未运行测试；资源读取及 DLL 静态核对不算实机验收。
+- [ ] 另一台电脑验证 A2–A5 各自野外开门回城，落在原版传送门区域；核对日志
+  `[TOWN_PORTAL_ANCHOR]` 的 local 坐标。实际落点可因碰撞/已有门而小幅避让，
+  并复验本人返程关闭、再次开门及本地/联网；本节不宣称这些实机行为已通过。
+
 ## 2026-10-16 辨识卷轴与辨识之书
 
 - [x] 对照 D2MOO `SKILLITEM_pSpell01_Initializer/IdentifyItem`、`sub_6FC47470`
