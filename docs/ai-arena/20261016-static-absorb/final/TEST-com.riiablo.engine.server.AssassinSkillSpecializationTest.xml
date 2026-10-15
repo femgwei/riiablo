@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.AssassinSkillSpecializationTest" tests="52" skipped="0" failures="0" errors="0" timestamp="2026-10-15T23:22:51" hostname="DESKTOP-7GGAVHU" time="0.344">
+  <properties/>
+  <testcase name="trapMissileResolutionRejectsClientOnlyHelperRows()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.018"/>
+  <testcase name="deathSentryDoesNotFireSkill2WithoutHostileTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.11"/>
+  <testcase name="wakeOfFireWavesRespectAStaticBarrierOnTheirTravelDirection()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.022"/>
+  <testcase name="bladeShieldSkipsNonAdjacentRoomsAndDifferentZones()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.013"/>
+  <testcase name="bladeShieldAndVenomExposeNativeSkillData()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.004"/>
+  <testcase name="deathSentryUsesSkill2LightningWhenNoCorpseIsInRange()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.004"/>
+  <testcase name="bladeShieldStopsWhenThePlayerDiesBeforeTheNextPulse()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="infernoSentryStreamStopsAtAStaticBarrierBeforeDamagingBehindTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.007"/>
+  <testcase name="bladeShieldStateRemainsVisibleButDealsNoTownDamage()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="sentryAiResolvesNativeAttackRowsInsteadOfPlacementSkills()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.0"/>
+  <testcase name="shockFieldSrvDo043UsesProgressiveCountAndScattersAuthoritativeMissiles()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.005"/>
+  <testcase name="trapAttackResolutionFailsClosedWhenSummonHasNoAttackSkill()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="bladeShieldSkipsPlayersAndSummonedPetsAsFriendlyTargets()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="sentrySrvDo045CreatesOwnedTrapWithNativeShotBudget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="shadowWarriorUsesNativeSrvDo049AndOwnedPetState()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="inactiveSentryPausesAndResumesItsCheckpointedSchedule()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.015"/>
+  <testcase name="sentryProjectileCompletesAfterTrapShotBudgetRetiresController()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="deathSentrySrvDo055UsesNativeCorpseInsertionOrderAcrossNormalShotBudget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="playerDepartureRemovesOwnedAssassinSentry()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="bladeShieldPulseUsesNativeTargetArmorDurabilityPath()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.031"/>
+  <testcase name="deathSentrySrvDo055ConsumesOneCorpseAndDamagesNearbyEnemies()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="fireTraumaGroundIgnoresUnitContactAndExplodesOnceAtSkillRadius()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="venomAddsDamageAndOverridesItemPoisonLength()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="auditTrapSummonSkillInheritanceRows()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="assassinSentryAiRowsDoNotUseGenericMonsterFallback()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="deathSentryRejectsHostileBehindMissileBarrier()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="deathSentrySrvDo055RejectsCorpseAtNativeDistanceBoundary()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="bladeSentinelSrvDo044StartsAtCasterAndLaunchesTowardTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.007"/>
+  <testcase name="infernoSentrySrvDo095RepeatsMissilesAndTracksTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.004"/>
+  <testcase name="bladeShieldStopsWhenItsStateIsRemovedBeforeTheNextPulse()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="infernoSentryChannelHonorsFullFireImmunity()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="fireTraumaAirNullHitCreatesOneGroundChildAndOneExplosion()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="deathSentryPreservesNativeAdjacentRoomOrderBeforeInsertionOrder()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="bladeShieldPulseUsesNativeWeaponDurabilityPath()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="deathSentryPrefersCurrentRoomBeforeNewerAdjacentCorpse()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="infernoSentryChannelCarriesFireDamageToTrackedTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="infernoSentryDoesNotConsumeShotBudgetWithoutAHostileTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="bladeFuryUsesStartManaGateWithoutChargingAtCastSubmission()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.004"/>
+  <testcase name="bladeShieldStopsWhenTheStateExpiresOrTheSkillIsLost()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="deathSentryRejectsNativeInvalidAndTownTargetsBeforeSkill2()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="auditDarkMagicTrapExactIdsAgainstLegacyRows()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.0"/>
+  <testcase name="wakeOfFireWavesCarryNativeDamageAndHitOnlyAlongTheirPaths()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="wakeOfFireSrvDo125CreatesMakerThenOppositeFireWaves()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="auditNativeAssassinRows()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.004"/>
+  <testcase name="bladeShieldAuraCrossesAdjacentRoomWithoutWallRaycast()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="wakeOfFireDoesNotConsumeShotBudgetWithoutAHostileTarget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="bladeFuryEmitsOneTimedWeaponBladeAndConsumesPerBladeMana()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.003"/>
+  <testcase name="bladeShieldPulsesAtNativeRangeAndCadence()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="chargedBoltSentrySrvDo017EmitsNativeBoltBurst()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.009"/>
+  <testcase name="fireTraumaUsesNativeAirGroundChainAndSkillSynergy()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.002"/>
+  <testcase name="bladeShieldSkipsNativeInvalidAndNullHitTargets()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <testcase name="sentryRetargetsAfterTargetRemovalAndRetiresAtShotBudget()" classname="com.riiablo.engine.server.AssassinSkillSpecializationTest" time="0.001"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=262 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=272 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=256 target=-1 srvDoFunc=43 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=271 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=268 target=-1 srvDoFunc=49 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=271 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=271 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=271 target=-1 srvDoFunc=45 cltDoFunc=0
+WARN  [Attributes] #reset() called on attributes with an empty base
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=278 target=-1 srvDoFunc=18 cltDoFunc=0
+[ASSASSIN_SUMMON_INHERIT] placement=Blade Sentinel sumskill=[Blade Sentinel, , , , ] sumskcalc=[lvl, , , , ]
+[ASSASSIN_SUMMON_INHERIT] placement=Charged Bolt Sentry sumskill=[BoltSentry, Fire Trauma, Shock Field, Lightning Sentry, Death Sentry] sumskcalc=[lvl, skill('Fire Trauma'.blvl), skill('Shock Field'.blvl), skill('Lightning Sentry'.blvl), skill('Death Sentry'.blvl)]
+[ASSASSIN_SUMMON_INHERIT] placement=Wake of Fire Sentry sumskill=[Wake Of Destruction Sentry, Fire Trauma, Inferno Sentry, , ] sumskcalc=[lvl, skill('Fire Trauma'.blvl), skill('Inferno Sentry'.blvl), , ]
+[ASSASSIN_SUMMON_INHERIT] placement=Lightning Sentry sumskill=[sentry lightning, Shock Field, Charged Bolt Sentry, Death Sentry, ] sumskcalc=[lvl, skill('Shock Field'.blvl), skill('Charged Bolt Sentry'.blvl), skill('Death Sentry'.blvl), ]
+[ASSASSIN_SUMMON_INHERIT] placement=Inferno Sentry sumskill=[mon inferno sentry, Fire Trauma, Wake of Fire Sentry, Death Sentry, ] sumskcalc=[lvl, skill('Fire Trauma'.blvl), skill('Wake of Fire Sentry'.blvl), skill('Death Sentry'.blvl), ]
+[ASSASSIN_SUMMON_INHERIT] placement=Death Sentry sumskill=[mon death sentry, death sentry ltng, Fire Trauma, Lightning Sentry, ] sumskcalc=[lvl, lvl, skill('Fire Trauma'.blvl), skill('Lightning Sentry'.blvl), ]
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=257 target=-1 srvDoFunc=44 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=272 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=272 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=251 target=-1 srvDoFunc=0 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+WARN  [Attributes] #reset() called on attributes with an empty base
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=272 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=272 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=276 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=262 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=262 target=-1 srvDoFunc=45 cltDoFunc=0
+[ASSASSIN_SKILL] id=251 name=Fire Trauma srvSt=0 srvDo=0 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4= params=[5, 0, 0, 0, 0, 0, 0, 9]
+[ASSASSIN_SKILL] id=252 name=Claw Mastery srvSt=0 srvDo=0 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4= params=[30, 10, 35, 4, 0, 25, 0, 0]
+[ASSASSIN_SKILL] id=253 name=Psychic Hammer srvSt=22 srvDo=33 cltDo=3 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4=dm56 params=[100, 0, 50, 100, 25, 99, 0, 0]
+[ASSASSIN_SKILL] id=254 name=Tiger Strike srvSt=23 srvDo=34 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=par3 calc4= params=[100, 20, 225, 50, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=255 name=Dragon Talon srvSt=24 srvDo=42 cltDo=4 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4=dm56 params=[5, 7, 50, 100, 25, 99, 0, 0]
+[ASSASSIN_SKILL] id=256 name=Shock Field srvSt=0 srvDo=43 cltDo=5 srvA=shock field in air srvB= cltA=shock field in air summon= petType= petMax= auraLen= calc4= params=[6, 4, 0, 0, 0, 0, 0, 11]
+[ASSASSIN_SKILL] id=257 name=Blade Sentinel srvSt=0 srvDo=44 cltDo=0 srvA=blade creeper srvB= cltA= summon=bladecreeper petType=assassintrap petMax=5 auraLen= calc4=ln12 params=[100, 12, 5, 3, 0, 0, 0, 0]
+[ASSASSIN_SUMMON] skill=Blade Sentinel monster=bladecreeper ai=BladeCreeper skill1=Blade Sentinel level1=1 skill2= level2=0 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[0, 0, 0] ai2=[0, 0, 0] ai3=[0, 0, 0] ai4=[0, 0, 0]
+[ASSASSIN_SUMMON_SKILL] monster=bladecreeper skill=Blade Sentinel srvDo=44 srvA=blade creeper srvB= cltA= calc1= calc2= calc3= calc4=ln12 auraRange= eType= params=[100, 12, 5, 3, 0, 0, 0, 0]
+[ASSASSIN_SUMMON_MISSILE] skill=Blade Sentinel missile=blade creeper srvDo=20 srvHit=37 velocity=0 range=10 params=[0, 0, 0, 0, 0] sub=[, , ]
+[ASSASSIN_SKILL] id=258 name=Quickness srvSt=0 srvDo=18 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=ln56 calc4= params=[15, 70, 15, 60, 3000, 300, 0, 0]
+[ASSASSIN_SKILL] id=259 name=Fists of Fire srvSt=23 srvDo=35 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=par3 calc4= params=[4, 4, 225, 50, 0, 0, 0, 12]
+[ASSASSIN_SKILL] id=260 name=Dragon Claw srvSt=25 srvDo=46 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4= params=[50, 5, 0, 0, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=261 name=Charged Bolt Sentry srvSt=0 srvDo=45 cltDo=0 srvA= srvB= cltA= summon=chargeboltsentry petType=assassintrap petMax=5 auraLen= calc4=par1 + skill('Lightning Sentry'.blvl)/4 params=[5, 0, 5, 0, 0, 0, 0, 6]
+[ASSASSIN_SUMMON] skill=Charged Bolt Sentry monster=chargeboltsentry ai=AssassinSentry skill1=BoltSentry level1=1 skill2=Shock Field level2=0 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[100, 100, 100] ai2=[10, 10, 10] ai3=[15, 15, 15] ai4=[25, 25, 25]
+[ASSASSIN_SUMMON_SKILL] monster=chargeboltsentry skill=BoltSentry srvDo=17 srvA=sentrychargedbolt srvB= cltA=sentrychargedbolt calc1=ln12 + skill('Shock Field'.blvl)/3 calc2= calc3= calc4=par8 + skill('Lightning Sentry'.blvl)/4 auraRange= eType= params=[5, 0, 0, 0, 0, 0, 0, 5]
+[ASSASSIN_SUMMON_MISSILE] skill=BoltSentry missile=sentrychargedbolt srvDo=1 srvHit=0 velocity=12 range=98 params=[0, 0, 0, 0, 0] sub=[, , ]
+[ASSASSIN_SKILL] id=262 name=Wake of Fire Sentry srvSt=0 srvDo=45 cltDo=0 srvA= srvB= cltA= summon=wakeofdestruction petType=assassintrap petMax=5 auraLen= calc4= params=[5, 0, 0, 0, 0, 0, 0, 8]
+[ASSASSIN_SUMMON] skill=Wake of Fire Sentry monster=wakeofdestruction ai=AssassinSentry skill1=Wake Of Destruction Sentry level1=1 skill2= level2=0 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[100, 100, 100] ai2=[10, 10, 10] ai3=[15, 15, 15] ai4=[15, 15, 15]
+[ASSASSIN_SUMMON_SKILL] monster=wakeofdestruction skill=Wake Of Destruction Sentry srvDo=125 srvA=wake of destruction maker srvB= cltA=wake of destruction maker calc1= calc2= calc3= calc4=par8 auraRange= eType= params=[6, 2, 0, 2, 0, 0, 0, 5]
+[ASSASSIN_SUMMON_MISSILE] skill=Wake Of Destruction Sentry missile=wake of destruction maker srvDo=31 srvHit=0 velocity=10 range=25 params=[0, 0, 0, 0, 0] sub=[wake of destruction, , ]
+[ASSASSIN_SUMMON_SUBMISSILE] parent=wake of destruction maker missile=wake of destruction srvDo=1 srvHit=0 velocity=8 range=20 size=1 damageRate=205 nextHit=true nextDelay=4
+[ASSASSIN_SKILL] id=263 name=Weapon Block srvSt=0 srvDo=0 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4= params=[20, 65, 0, 0, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=264 name=Cloak of Shadows srvSt=0 srvDo=47 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=ln34 calc4= params=[30, 30, 200, 25, 15, 3, 10, 3]
+[ASSASSIN_SKILL] id=265 name=Cobra Strike srvSt=23 srvDo=34 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=par3 calc4= params=[40, 5, 225, 50, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=266 name=Blade Fury srvSt=26 srvDo=48 cltDo=6 srvA=bladefragment1 srvB= cltA=bladefragment2 summon= petType= petMax= auraLen= calc4= params=[0, 0, 3, 5, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=267 name=Fade srvSt=0 srvDo=18 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=ln56 calc4= params=[10, 75, 40, 90, 3000, 300, 1, 1]
+[ASSASSIN_SKILL] id=268 name=Shadow Warrior srvSt=0 srvDo=49 cltDo=0 srvA= srvB= cltA= summon=shadowwarrior petType=shadowwarrior petMax=1 auraLen= calc4= params=[15, 40, 12, 0, 18, 2, 0, 0]
+[ASSASSIN_SUMMON] skill=Shadow Warrior monster=shadowwarrior ai=ShadowWarrior skill1=Fists of Fire level1=1 skill2=Blade Fury level2=1 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[40, 40, 40] ai2=[30, 30, 30] ai3=[60, 60, 60] ai4=[1, 1, 1]
+[ASSASSIN_SUMMON_SKILL] monster=shadowwarrior skill=Fists of Fire srvDo=35 srvA= srvB= cltA= calc1=lvl*3 calc2= calc3= calc4= auraRange= eType=fire params=[4, 4, 225, 50, 0, 0, 0, 12]
+[ASSASSIN_SKILL] id=269 name=Claws of Thunder srvSt=23 srvDo=35 cltDo=0 srvA= srvB=clawsofthundernova cltA= summon= petType= petMax= auraLen=par3 calc4= params=[4, 0, 225, 50, 0, 0, 0, 8]
+[ASSASSIN_SKILL] id=270 name=Dragon Tail srvSt=27 srvDo=50 cltDo=7 srvA=dragontail missile srvB= cltA=dragontail missile summon= petType= petMax= auraLen= calc4= params=[50, 10, 6, -40, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=271 name=Lightning Sentry srvSt=0 srvDo=45 cltDo=0 srvA= srvB= cltA= summon=lightningsentry petType=assassintrap petMax=5 auraLen= calc4= params=[10, 0, 0, 0, 0, 0, 0, 12]
+[ASSASSIN_SUMMON] skill=Lightning Sentry monster=lightningsentry ai=AssassinSentry skill1=sentry lightning level1=1 skill2= level2=0 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[100, 100, 100] ai2=[10, 10, 10] ai3=[15, 15, 15] ai4=[25, 25, 25]
+[ASSASSIN_SUMMON_SKILL] monster=lightningsentry skill=sentry lightning srvDo=0 srvA= srvB= cltA= calc1= calc2= calc3= calc4=par8 auraRange= eType= params=[10, 20, 4, 0, 0, 0, 0, 10]
+[ASSASSIN_SKILL] id=272 name=Inferno Sentry srvSt=0 srvDo=45 cltDo=0 srvA= srvB= cltA= summon=infernosentry petType=assassintrap petMax=5 auraLen= calc4= params=[10, 0, 0, 0, 0, 0, 10, 7]
+[ASSASSIN_SUMMON] skill=Inferno Sentry monster=infernosentry ai=AssassinSentry skill1=mon inferno sentry level1=1 skill2=Wake of Fire Sentry level2=0 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[100, 100, 100] ai2=[10, 10, 10] ai3=[15, 15, 15] ai4=[13, 13, 13]
+[ASSASSIN_SUMMON_SKILL] monster=infernosentry skill=mon inferno sentry srvDo=95 srvA=inferno sentry 1 srvB= cltA=inferno sentry 1 calc1=ln34/2 + skill('Wake of Fire Sentry'.blvl) calc2=par1 + skill('Wake of Fire Sentry'.blvl) calc3=3 calc4=par8 auraRange= eType= params=[15, 0, 40, 0, 0, 0, 0, 10]
+[ASSASSIN_SUMMON_MISSILE] skill=mon inferno sentry missile=inferno sentry 1 srvDo=1 srvHit=0 velocity=12 range=50 params=[8, 12, 0, 0, 0] sub=[, , ]
+[ASSASSIN_SKILL] id=273 name=Mind Blast srvSt=0 srvDo=51 cltDo=8 srvA= srvB= cltA=mindblast center summon= petType= petMax= auraLen= calc4= params=[50, 5, 150, 100, 15, 40, 4, 0]
+[ASSASSIN_SKILL] id=274 name=Blades of Ice srvSt=23 srvDo=35 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=par3 calc4= params=[6, 3, 225, 50, 1, 0, 0, 8]
+[ASSASSIN_SKILL] id=275 name=Dragon Flight srvSt=12 srvDo=52 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen= calc4= params=[100, 25, 0, 0, 0, 0, 27, 0]
+[ASSASSIN_SKILL] id=276 name=Death Sentry srvSt=0 srvDo=45 cltDo=0 srvA= srvB= cltA= summon=deathsentry petType=assassintrap petMax=5 auraLen= calc4= params=[5, 0, 0, 0, 0, 0, 0, 12]
+[ASSASSIN_SUMMON] skill=Death Sentry monster=deathsentry ai=DeathSentry skill1=mon death sentry level1=1 skill2=death sentry ltng level2=1 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[30, 30, 30] ai2=[0, 0, 0] ai3=[50, 50, 50] ai4=[16, 16, 16]
+[ASSASSIN_SUMMON_SKILL] monster=deathsentry skill=mon death sentry srvDo=55 srvA= srvB= cltA=corpseexplosion calc1=par1 calc2=par2 calc3=50 calc4=par8 + skill('Fire Trauma'.blvl)/3 auraRange=ln34 eType=fire params=[40, 80, 10, 1, 0, 0, 0, 5]
+[ASSASSIN_SKILL] id=277 name=Blade Shield srvSt=28 srvDo=54 cltDo=0 srvA=blade shield attachment srvB= cltA= summon= petType= petMax= auraLen=ln12 calc4= params=[500, 125, 25, 6, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=278 name=Venom srvSt=0 srvDo=18 cltDo=0 srvA= srvB= cltA= summon= petType= petMax= auraLen=ln12 calc4= params=[3000, 100, 0, 0, 0, 0, 0, 0]
+[ASSASSIN_SKILL] id=279 name=Shadow Master srvSt=0 srvDo=49 cltDo=0 srvA= srvB= cltA= summon=shadowmaster petType=shadowwarrior petMax=1 auraLen= calc4= params=[15, 40, 5, 80, 24, 3, 0, 0]
+[ASSASSIN_SUMMON] skill=Shadow Master monster=shadowmaster ai=ShadowMaster skill1=Fists of Fire level1=1 skill2=Blade Fury level2=1 missA1= missA2= missS1= missS2= missS3= missS4= ai1=[20, 10, 10] ai2=[20, 36, 36] ai3=[60, 60, 60] ai4=[0, 0, 0]
+[ASSASSIN_SUMMON_SKILL] monster=shadowmaster skill=Fists of Fire srvDo=35 srvA= srvB= cltA= calc1=lvl*3 calc2= calc3= calc4= auraRange= eType=fire params=[4, 4, 225, 50, 0, 0, 0, 12]
+[ASSASSIN_SKILL] id=280 name=Royal Strike srvSt=23 srvDo=34 cltDo=0 srvA=royalstrikemeteorcenter srvB=royalstrikechainlightning cltA=royalstrikemeteorcenter summon= petType= petMax= auraLen=225 calc4= params=[8, 6, 30, 15, 16, 10, 25, 0]
+[ASSASSIN_SKILL_SUMMARY] rows=30
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=262 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=266 target=-1 srvDoFunc=48 cltDoFunc=6
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=266 target=-1 srvDoFunc=48 cltDoFunc=6
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=266 target=-1 srvDoFunc=48 cltDoFunc=6
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=261 target=-1 srvDoFunc=45 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=251 target=-1 srvDoFunc=0 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=277 target=-1 srvDoFunc=54 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=271 target=-1 srvDoFunc=45 cltDoFunc=0
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

@@ -1,0 +1,7 @@
+Baseline: 8 tests, 2 expected Static Field delayed-absorb failures.
+final: 276 tests, 0 failures/errors/skips.
+repeat: 276 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 F37A30E77AB9EEFE9C2EA79F7D927B93E791B872B882C851F2AA8A5BDCC77583 core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 13373AE2850B09A43A44E83A4CF3EAB5B4140BCBF1121149E869E2DE70174F7F core/src/test/java/com/riiablo/engine/server/SorceressStaticFieldIntegrationTest.java
+PARTIAL: Static Field delayed-death absorb verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

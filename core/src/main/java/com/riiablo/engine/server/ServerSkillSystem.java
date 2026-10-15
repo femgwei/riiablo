@@ -1280,7 +1280,9 @@ public class ServerSkillSystem extends PassiveSystem {
           CombatSystem.INSTANCE.calculateStaticFieldDamage(
               target, mPlayer.has(targetId), mPlayer.has(event.entityId), damageType,
               rawFixed, targetStates, difficulty);
-      if (resolved.absorbedLifeFixed > 0) {
+      // SUNITDMG does not restore absorbed life during delayed death.
+      if (resolved.absorbedLifeFixed > 0
+          && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
         float restored = resolved.absorbedLifeFixed / 256f;
         hp.add(Math.max(0f, Math.min(restored, maxHp.asFixed() - hp.asFixed())));
       }

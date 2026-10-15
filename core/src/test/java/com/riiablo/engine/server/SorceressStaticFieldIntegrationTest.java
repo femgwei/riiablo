@@ -39,6 +39,28 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authoritative coverage for D2MOO SrvDo020. */
 class SorceressStaticFieldIntegrationTest extends RiiabloTest {
+  @Test void deathDelayPreventsFullAbsorbHealing() { delayedAbsorb(true, 100, 50f); }
+  @Test void deathDelayPreventsPartialAbsorbHealingButStillTakesDamage() {
+    delayedAbsorb(true, 0, 44f);
+  }
+  @Test void livingTargetStillReceivesFullAbsorbHealing() { delayedAbsorb(false, 100, 62f); }
+
+  private static void delayedAbsorb(boolean delayed, int flat, float expected) {
+    try (Harness test = new Harness(0)) {
+      int caster = test.player(0, 0, true);
+      int target = test.monster(2, 0, 50, 0);
+      Attributes attrs = test.attrs(target);
+      attrs.base().put(Stat.maxhp, 100);
+      attrs.base().put(Stat.item_absorblight_percent, 50);
+      attrs.base().put(Stat.item_absorblight, flat);
+      attrs.reset();
+      if (delayed) test.world.getMapper(UnitStates.class).get(target).stateList
+          .addState(com.riiablo.engine.server.state.StateId.DEATH_DELAY, 100, 1, caster);
+      test.cast(caster);
+      assertEquals(expected, test.hp(target), .0001f);
+    }
+  }
+
   @Test
   void nativeIntegerLifeAndDifficultyFloorArithmeticIsPreserved() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.STATIC_FIELD);
