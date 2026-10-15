@@ -1,0 +1,31 @@
+d0 SHA256=98DA0B2E4A43C8C0F3DF554FFB0E3CE3A593F9ACA6BBDCAF7DCBC5C2C7709158 repeat=IDENTICAL
+d0 first trappedsoul1 near events=26 damageEvents=24 damage=122
+d0 first trappedsoul1 far events=0 damageEvents=0 damage=0
+d0 first trappedsoul2 near events=26 damageEvents=24 damage=122
+d0 first trappedsoul2 far events=0 damageEvents=0 damage=0
+d0 repeat trappedsoul1 near events=26 damageEvents=24 damage=122
+d0 repeat trappedsoul1 far events=0 damageEvents=0 damage=0
+d0 repeat trappedsoul2 near events=26 damageEvents=24 damage=122
+d0 repeat trappedsoul2 far events=0 damageEvents=0 damage=0
+d1 SHA256=EFC5C982485EEEDCCCBB67BD7D98011E8BBD4D0E8AFE7ACE3339B673DB89B623 repeat=IDENTICAL
+d1 first trappedsoul1 near events=26 damageEvents=24 damage=471
+d1 first trappedsoul1 far events=0 damageEvents=0 damage=0
+d1 first trappedsoul2 near events=26 damageEvents=24 damage=471
+d1 first trappedsoul2 far events=0 damageEvents=0 damage=0
+d1 repeat trappedsoul1 near events=26 damageEvents=24 damage=471
+d1 repeat trappedsoul1 far events=0 damageEvents=0 damage=0
+d1 repeat trappedsoul2 near events=26 damageEvents=24 damage=471
+d1 repeat trappedsoul2 far events=0 damageEvents=0 damage=0
+d2 SHA256=0E1E90C7E284CA40B8B66BF5E81CCF0631D513C2D45E7D1374AA44A1DFC6BAAA repeat=IDENTICAL
+d2 first trappedsoul1 near events=26 damageEvents=24 damage=940
+d2 first trappedsoul1 far events=0 damageEvents=0 damage=0
+d2 first trappedsoul2 near events=26 damageEvents=24 damage=940
+d2 first trappedsoul2 far events=0 damageEvents=0 damage=0
+d2 repeat trappedsoul1 near events=26 damageEvents=24 damage=940
+d2 repeat trappedsoul1 far events=0 damageEvents=0 damage=0
+d2 repeat trappedsoul2 near events=26 damageEvents=24 damage=940
+d2 repeat trappedsoul2 far events=0 damageEvents=0 damage=0
+source=core/src/main/java/com/riiablo/engine/server/ai/TrappedSoul.java SHA256=B83AC1FEFF58424DFF7E6943B50278320E95C94689F43854EC00336FFCA49D41 snapshot=IDENTICAL
+source=core/src/main/java/com/riiablo/engine/server/ai/NativeDecisionAI.java SHA256=BA4E2773E20BB01C9A0FE58FFF6CB4B84CFA3CA204034DF3EFBDD49456E2B4F3 snapshot=IDENTICAL
+source=core/src/test/java/com/riiablo/engine/server/ai/TrappedSoulAiIntegrationTest.java SHA256=7FFEEDA7E300F453B2C559035B3E6DD6E8509634897EF3746473E00EBC428604 snapshot=IDENTICAL
+Directed tests=61; natural executions=24; overall=PARTIAL; full native animation/event scheduling not accepted

@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 TrappedSoul Fn099（整体PARTIAL）
+
+- [x] 两行专用AI：首次S2、整数象限A1/A2/S1、5/35帧严格门、NOTC及动作后S1。
+- [x] 固定源码快照验证61项定向/回归；24次自然执行，三组独立复跑逐字节一致。
+- [x] 每个近场实际伤害24次，三难度累计122/471/940HP；最终无fallback/警告/错误。
+- [ ] 自然场仍BASELINE_ONLY；原版全局事件/动作点/奖励细节、GL/TCP、地形及并行未提交修改集成未验收。
+
+证据：[TrappedSoul验证](ai-arena/20261016-trappedsoul-seed1/verification.md)。
+
 ## 2026-10-16 寻路第二十五批（生产适配仍PARTIAL）
 
 - [x] 真实RoomEx有序路径链接导出与跨Zone请求局部诊断快照；保留null/自身/重复和bounds身份。

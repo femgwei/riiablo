@@ -163,7 +163,7 @@ abstract class NativeDecisionAI extends AI {
   protected final void startMode(int mode, int targetId) {
     invalidateNativePathCache();
     stopMovement();
-    lookAt(targetId);
+    if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
     state = "CAST";
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
     nextThink = 0f;

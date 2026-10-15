@@ -1,5 +1,16 @@
 # 逐怪 AI 隔离测试场
 
+## 2026-10-16 TrappedSoul Fn099（整体PARTIAL）
+
+两行专用AI接入首次S2、整数坐标象限A1/A2/S1、5/35帧严格门和NOTC；
+所有动作结束返回S1，无目标已激活时也能请求S1。61项定向/回归测试通过。
+两行×三难度×近远及独立复跑共24次执行，三组结果逐字节一致，无fallback/警告/错误。
+每个近场26次攻击事件、24次实际伤害，Normal/Nightmare/Hell累计122/471/940HP；
+远场无动作。自然场保持BASELINE_ONLY，不把事件数当作原版动画动作点通过。
+因共享工作区雇佣面板编译错误，本批在固定提交源码快照加本人修改上验证，
+未包含并行未提交修改；全局事件调度、动作点、GL/TCP及真实地形仍待。
+证据见 [TrappedSoul验证](ai-arena/20261016-trappedsoul-seed1/verification.md)。
+
 ## 2026-10-16 HellMeteor Fn033（整体PARTIAL）
 
 接入有/无目标均自主选择自身周围整数坐标的Skill1决策，保持slot0概率、slot1等待、
