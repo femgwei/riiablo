@@ -1,0 +1,8 @@
+first counterexample=NovaResistance seed=21 raw=1.0 resisted=0.0
+first counterexample=NovaResistance seed=44 raw=1.0 resisted=0.0
+first jointTests=182 samples=64 zeroAfterResistance=2 positiveAfterResistance=62
+repeat counterexample=NovaResistance seed=21 raw=1.0 resisted=0.0
+repeat counterexample=NovaResistance seed=44 raw=1.0 resisted=0.0
+repeat jointTests=182 samples=64 zeroAfterResistance=2 positiveAfterResistance=62
+source=core/src/test/java/com/riiablo/engine/server/SorceressNovaIntegrationTest.java SHA256=ECBD32FA478E749E0A408BE1A1B82BC56382481BF2486CE128BA29D5BD7AE14F snapshot=IDENTICAL
+jointSuite=PASS independentReplay=IDENTICAL nativeFractionalDamage=NOT_ACCEPTED overall=PARTIAL

@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SorceressNovaIntegrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:13:16" hostname="DESKTOP-7GGAVHU" time="0.436">
+  <properties/>
+  <testcase name="oneCastDamagesEachCrossedTargetOnlyOnce()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.007"/>
+  <testcase name="lethalCardinalPathDoesNotStopOtherNovaPaths()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.007"/>
+  <testcase name="castValidationSpendsNovaManaExactlyOnce()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.001"/>
+  <testcase name="createsNativeSixtyFourPathRingWithOneSharedHitGate()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.003"/>
+  <testcase name="resistanceSamplesRestoreTheCallersRandomGenerator()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.006"/>
+  <testcase name="wallCollisionRemovesBlockedNovaPaths()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.005"/>
+  <testcase name="collisionAppliesLightningResistanceAndNativeImmunityGate()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.403"/>
+  <testcase name="nativeNovaRangeExpiresAllPathsWithoutRecreation()" classname="com.riiablo.engine.server.SorceressNovaIntegrationTest" time="0.003"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=0 raw=3.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=1 raw=6.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=2 raw=7.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=3 raw=6.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=4 raw=8.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=5 raw=18.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=6 raw=8.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=7 raw=4.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=8 raw=8.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=9 raw=13.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=10 raw=16.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=11 raw=14.0 resisted=7.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=12 raw=3.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=13 raw=6.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=14 raw=13.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=15 raw=10.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=16 raw=11.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=17 raw=2.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=18 raw=15.0 resisted=7.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=19 raw=18.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=20 raw=4.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=21 raw=1.0 resisted=0.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=22 raw=9.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=23 raw=6.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=24 raw=16.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=25 raw=19.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=26 raw=5.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=27 raw=6.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=28 raw=18.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=29 raw=9.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=30 raw=19.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=31 raw=3.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=32 raw=12.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=33 raw=2.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=34 raw=12.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=35 raw=4.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=36 raw=11.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=37 raw=11.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=38 raw=8.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=39 raw=9.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=40 raw=8.0 resisted=4.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=41 raw=17.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=42 raw=4.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=43 raw=7.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=44 raw=1.0 resisted=0.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=45 raw=17.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=46 raw=16.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=47 raw=17.0 resisted=8.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=48 raw=15.0 resisted=7.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=49 raw=7.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=50 raw=12.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=51 raw=19.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=52 raw=3.0 resisted=1.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=53 raw=18.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=54 raw=15.0 resisted=7.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=55 raw=14.0 resisted=7.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=56 raw=19.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=57 raw=13.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=58 raw=4.0 resisted=2.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=59 raw=10.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=60 raw=7.0 resisted=3.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=61 raw=11.0 resisted=5.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=62 raw=12.0 resisted=6.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+NovaResistance seed=63 raw=19.0 resisted=9.0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=48 target=-1 srvDoFunc=22 cltDoFunc=25
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

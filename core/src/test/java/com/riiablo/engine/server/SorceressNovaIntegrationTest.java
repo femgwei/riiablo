@@ -113,11 +113,45 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   @Test
   void collisionAppliesLightningResistanceAndNativeImmunityGate() {
+    int zeroAfterResistance = 0;
+    int positiveAfterResistance = 0;
+    for (int seed = 0; seed < 64; seed++) {
+      float raw = resistanceSample(seed, 0);
+      float resisted = resistanceSample(seed, 50);
+      assertTrue(raw >= 1 && raw <= 19, "native missile getter maximum is exclusive");
+      // CombatSystem currently settles elemental resistance in integer HP.
+      // A rolled 1 becomes 0 at 50%; asserting at least 1 was seed-dependent.
+      // Compare equal rolls instead, so a missing hit/resistance application
+      // cannot be hidden by merely widening the old allowed HP interval.
+      assertEquals((int) raw / 2, resisted, EPSILON, "seed=" + seed + " raw=" + raw);
+      if (resisted == 0) zeroAfterResistance++;
+      else positiveAfterResistance++;
+      System.out.println("NovaResistance seed=" + seed + " raw=" + raw + " resisted=" + resisted);
+    }
+    assertTrue(zeroAfterResistance > 0, "exercise the old assertion's counterexample");
+    assertTrue(positiveAfterResistance > 0, "also require non-zero resisted damage");
+  }
+
+  @Test
+  void resistanceSamplesRestoreTheCallersRandomGenerator() {
+    java.util.Random caller = com.badlogic.gdx.math.MathUtils.random;
+    long first = ((com.badlogic.gdx.math.RandomXS128) caller).getState(0);
+    long second = ((com.badlogic.gdx.math.RandomXS128) caller).getState(1);
+    resistanceSample(1, 50);
+    assertSame(caller, com.badlogic.gdx.math.MathUtils.random);
+    assertEquals(first, ((com.badlogic.gdx.math.RandomXS128) caller).getState(0));
+    assertEquals(second, ((com.badlogic.gdx.math.RandomXS128) caller).getState(1));
+  }
+
+  private static float resistanceSample(long seed, int resistance) {
+    java.util.Random caller = com.badlogic.gdx.math.MathUtils.random;
+    com.badlogic.gdx.math.MathUtils.random = new com.badlogic.gdx.math.RandomXS128(seed);
     RecordingFactory factory = new RecordingFactory();
-    World world = world(factory);
+    World world = null;
     try {
+      world = world(factory);
       int caster = player(world, 1);
-      int resisted = monster(world, 5, 0, 50);
+      int resisted = monster(world, 5, 0, resistance);
       int immune = monster(world, 0, 5, 100);
 
       cast(world, caster);
@@ -126,16 +160,21 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       // keeping the assertion before any later repeated-hit opportunity.
       for (int i = 0; i < 6; i++) world.process();
 
-      float resistedLife = life(world, resisted);
-      assertTrue(resistedLife >= 990f && resistedLife <= 999f,
-          "50% lightning resistance must reduce, not cancel, Nova damage: hp="
-              + resistedLife);
       assertEquals(1000f, life(world, immune), EPSILON,
           "100% lightning resistance must preserve native immunity");
       assertEquals(2, factory.created.get(0).sharedHitTargets.size,
           "resisted and immune targets are each claimed once by the cast");
+      float result = 1000f - life(world, resisted);
+      for (int i = 0; i < 6; i++) world.process();
+      assertEquals(result, 1000f - life(world, resisted), EPSILON,
+          "overlapping paths must not replay the resisted hit");
+      return result;
     } finally {
-      world.dispose();
+      try {
+        if (world != null) world.dispose();
+      } finally {
+        com.badlogic.gdx.math.MathUtils.random = caller;
+      }
     }
   }
 
