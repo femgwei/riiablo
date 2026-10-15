@@ -1,5 +1,94 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 跨组件共享目标成员与显式迁移
+
+- [x] 再核对 `Targets.cpp::UpdateSummonAI` / `sub_6FC40280` 的未登记前提、
+  `TARGETS_Last` 的当前节点摘除，以及 `SkillNec.cpp` / `SkillPal.cpp` 的状态
+  结束回调。新增每单位、仅运行时的 `NativeTargetNode`，由本次 ECS 分配持有；
+  不使用静态 world/entity-ID registry，也不池化节点，旧回调不能碰到复用 ID 的新节点。
+- [x] 服务端玩家/怪物分配、状态组件初始化、真实召唤/骨墙/Revive 和佣兵创建
+  绑定同一节点。已登记时拒绝跨组件重复插入，不改桶、不改主人、不刷新顺序；
+  Baal 本体/分身读取实际节点，不再按残留 Mercenary/SummonedPet/状态的组件
+  优先级猜桶。保留独立的宠物配额 `spawnOrder`，不将目标迁移当作宠物/佣兵 AI 重建。
+- [x] Attract/Confuse/Conversion 任一相关层结束，均摘除单位当前共享节点，
+  即使该状态自己的插入先前被拒绝。显式 detach 后的新事件才可迁移；残留层刷新、
+  普通复活及组件元数据变化均不恢复旧桶。普通状态 clear 不摘宠物节点，池/快照
+  discard 仅丢弃 StateList 引用，不作为游戏移除回调。NPC 复活保留独立插入入口。
+- [x] 玩家头释放清掉可见孩子；共享节点还按头登记代际检查未进入订阅的孩子，
+  防主人销毁/ID 复用后旧成员阻止下一次显式插入。缺少玩家头时插入失败且不排队；
+  node9 不依赖施法者玩家头存活。组件目标序号改为只读查询，不能旁路修改共享关系。
+- [x] 新增 12 项回归：8 项共享成员机制测试覆盖三类状态和六种组件插入顺序、
+  被拒绝层的结束回调、显式迁移、佣兵 AI/宠物配额不重置、主人头释放、跨 world
+  与实体 ID 复用；4 项真实分配/召唤工厂及 Baal 本体/分身集成覆盖首 tick 前摘链、
+  重复登记与排序、残留组件不重挂，以及骨墙元数据不能隐藏新 Conversion 成员。
+  混合组件/状态是底层成员机制夹具，不代表原生技能允许所有这些阵营组合；地形与
+  路径使用替身，不是客户端逐帧验收。反向移除共享节点的重复插入检查后，2 项新增
+  用例均按预期失败，分别检出序号刷新和跨桶覆盖；检查已恢复。
+- [x] 专用服务器 Java 编译通过；扩展回归 519 项，517 通过，2 失败，0 错误/跳过。
+  两项仍为此前已在 `70358fee` 复现的狼群落点用例和在 `b8b6ed63` 复现的
+  `CombatPipelineIntegrationTest.barbarianThrowingMasteryIsSnapshottedBeforeImpact`
+  （期望 9、实际 6），本轮不修改这两项既有问题。推送前发现远端地图提交
+  `47c61553`，本地对应四文件逐一 hash 与远端完全一致；保留内容并 fast-forward
+  同步后，再跑节点/玩家槽/Baal/StateList/尸体系统的 168 项定向回归全部通过，
+  专用服务器 Java 编译再次通过。未把其他地图任务的提交计作本轮 AI 工作。
+- [x] 代码提交 `8af56144f650faf26433b42fcfe1d29852b0c892` 已推送 `origin/master`；
+  当时仅本节文档待提交，没有其他残留改动。本节另作独立文档提交推送，交付时复核
+  远端 HEAD 与本地一致及工作区干净。
+- [ ] 这仍是玩家孩子/node9 的共享成员投影，不是完整原生双向链表；node8、
+  inactive 压缩/恢复与完整 stat-list flags/整数属性恢复尚未实现，也未做真实
+  客户端逐帧验证。独立 StateList、客户端 init(int) 与未绑定的自定义组件仍保留
+  旧事件投影；自定义服务端必须在首个游戏事件前调用 init(world, id) 或
+  bindNativeTargetNode，不能事后按 owner/flags 猜测并导入旧成员。下一步补 node8/
+  inactive 边界，并继续检查实际技能入口与完整原生恢复顺序。
+
+本轮扩展回归命令（PowerShell；包含上述两项既有失败）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :server:d2gs:compileJava :core:test `
+  --tests 'com.riiablo.engine.server.ai.*' `
+  --tests 'com.riiablo.engine.server.NativeAiPathCacheTest' `
+  --tests 'com.riiablo.engine.server.NativeTarget*Test' `
+  --tests 'com.riiablo.engine.server.NativePlayerTargetSlotsTest' `
+  --tests 'com.riiablo.engine.server.ServerEntityFactory*Test' `
+  --tests 'com.riiablo.engine.server.ServerMonsterCorpseSystemTest' `
+  --tests 'com.riiablo.engine.server.UnitLifecycleSystemTest' `
+  --tests 'com.riiablo.engine.server.MonsterSkillCoverageMatrixTest' `
+  --tests 'com.riiablo.engine.server.DeathReward*Test' `
+  --tests 'com.riiablo.engine.server.quest.Act5Baal*Test' `
+  --tests 'com.riiablo.engine.server.Pathfinder*Test' `
+  --tests 'com.riiablo.engine.server.DynamicUnitCollisionSystemTest' `
+  --tests 'com.riiablo.engine.server.NecromancerBoneWallIntegrationTest' `
+  --tests 'com.riiablo.engine.server.NativeNecromancerBoneWallDataTest' `
+  --tests 'com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest' `
+  --tests 'com.riiablo.engine.server.state.*' `
+  --tests 'com.riiablo.engine.server.*Conversion*Test' `
+  --tests 'com.riiablo.engine.server.*Curse*Test' `
+  --tests 'com.riiablo.engine.server.*Summon*Test' `
+  --tests 'com.riiablo.engine.server.component.serializer.SummonedPetSerializerTest' `
+  --tests 'com.riiablo.engine.server.*Mercenary*Test' `
+  --tests 'com.riiablo.engine.server.quest.NativeMercenaryRewardSystemTest' `
+  --tests 'com.riiablo.engine.server.pet.MercenaryManagerTest' `
+  --tests 'com.riiablo.engine.server.PaladinMeleeSkillDataTest' `
+  --tests 'com.riiablo.engine.server.*Aura*Test' `
+  --tests 'com.riiablo.engine.server.CombatPipelineIntegrationTest' `
+  --tests 'com.riiablo.engine.client.StateOverlaySystemTest' `
+  --tests 'com.riiablo.engine.client.Snapshot*Test' `
+  --no-daemon --max-workers=1 --console=plain
+```
+
+同步地图提交后的 168 项定向复验命令（同一 D2_HOME）：
+
+```powershell
+.\gradlew.bat :server:d2gs:compileJava :core:test `
+  --tests 'com.riiablo.engine.server.NativeTarget*Test' `
+  --tests 'com.riiablo.engine.server.NativePlayerTargetSlotsTest' `
+  --tests 'com.riiablo.engine.server.ai.BaalCrab*Test' `
+  --tests 'com.riiablo.engine.server.state.StateListTest' `
+  --tests 'com.riiablo.engine.server.ServerMonsterCorpseSystemTest' `
+  --no-daemon --max-workers=1 --console=plain
+```
+
 ## 2026-10-15 A5 Conversion 同步移除回调与保存层释放顺序
 
 - [x] 核对 `SkillPal.cpp::SKILLS_StatRemoveCallback_Conversion` 读取保存层、
