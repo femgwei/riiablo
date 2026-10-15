@@ -10,7 +10,30 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第五批：只读寻路 shadow
+## 2026-10-15 第六批：真实地图 shadow 采样
+
+- `033b2e9d94e26b7d0c60f9be530e38c1b6282adb` 已推送origin/master且远端SHA一致。
+  新增来源关卡过滤、脱离地图引用的关卡/房间上下文及OUTCOME/ENDPOINT/TURNS分类；
+  默认关闭，仍不安装参考路径，不改生产碰撞、平滑、房间或移动逻辑。
+- 最终133项/22类通过，失败/错误/跳过0；独立XML目录
+  `core/build/test-results/upstreamRound4-round6-final`，显式指定本机1.10F资源。
+- 两组主采样237次：195次COMPARED（105次输出一致、57次仅压缩转向点不同、
+  33次runtime FAILED/reference PARTIAL），42次快照外不判定；诊断错误/live重放差异均0。
+  33次部分路径不等于到达，也不是33个独立缺陷；没有可比较的FAILED/EXACT样本。
+- 蛆虫63/64/65在25Hz、seed12345普通难度通过：3图、10次真实TCP击杀、0通行失败，
+  1次连续入口/1次测试staging跳转，不是两条连接都通过；AI gate通过，fallbackRecords=0。
+- 火焰之河107/108通行子检查通过、连续入口1次；整个任务因AI fallbackRecords=148而失败
+  （errors=0），不能标为完整通过。原生参考只给出部分接近路径，未证明能解决生产卡路。
+- 新增4项回归覆盖过滤额度/作用域与元数据脱离、外层房间迭代器、动态目标两次快照、
+  partial终点差异。场景中也观察到同一怪物对移动玩家多个坐标请求；不是完整targetUnit状态机验收。
+- 下一步核对1.10f部分路径消费/重算及房间后置gate，再按pathType设计受控接入；
+  42个越界样本仍需补证，无benchmark/GL/132图/多seed三难度/原版动态差分。
+- 6114监听已释放；未改动/暂存另一轮的`CofModeTransitionTest.java`及随后出现的
+  `CofLayerCacher.java`/`CofLayerLoader.java`修改；本轮回归不为这些COF修改背书。
+  代码提交后本轮四份进度文档独立提交推送，最终文档SHA见git log；不宣称整个工作区clean。
+  复验命令、失败运行和样本明细见上游记录第六批及详细比较报告末尾。
+
+## 2026-10-15 第五批：只读寻路 shadow（历史）
 
 - 代码/测试/开关 `08fa479b6` 已推送origin/master且远端SHA一致。默认关闭，实际A*
   返回后捕获有界effective collision，独立重放生产/参考A*；不改移动结果或最近碰撞优化。

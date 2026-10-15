@@ -307,3 +307,47 @@ runtimeNodes是本次重放创建的唯一Point2数；referenceNodes是原生参
 即使targetId存在，也不擅自模拟native targetUnit八点approach或pTargetUnit状态。
 size→native pattern的第二套适配、完整pathType dispatch、目标预测/重算/定点步进尚未接入。
 具体回归与TCP结果见 [第五批记录](d2moo-upstream-port-2026-10-15.md#第五批只读寻路-shadow-差分)。
+
+## 后续第六批：真实地形与动态坐标请求
+
+结论：本轮未找到支持直接替换普通生产A*的证据。参考端更贴近原版的partial输出合同，
+已经在真实地图中体现为“当前失败、参考给出接近路径”；但不能把它说成“原生成功到达”，
+更不能跳过目标状态机/房间后置gate来安装这些partial。
+
+新增诊断能力仅限只读：按来源关卡过滤（`-PpathShadowLevel=63`，默认-1全关卡），
+记录脱离地图引用的来源/目标关卡、房间和障碍predicate有无，按OUTCOME/ENDPOINT/TURNS/NONE
+分类。不可比较统一INCONCLUSIVE。日志标明`stage=MAP_SEARCH_RAW`，不是最终平滑/接受路径。
+`dynamicObstacle=true`仅代表回调存在，不表示该样本的差异必由单位阻挡造成。
+过滤不消耗其他关卡采样额度，原128次/128格上限和默认关闭均保留。
+
+两组真实1.10F MPQ/TCP主采样，seed12345普通难度25Hz：
+
+- 蛆虫63/64/65三图任务通过，真实清障10次；连续入口1次、测试staging跳转1次。
+  来源63采128次，92次可比较：45次双方EXACT且压缩输出一致、25次双方EXACT仅转向点不同，
+  22次双方FAILED且输出一致；36次快照外。AI gate通过，fallbackRecords=0。
+- 火焰之河107/108通行子检查通过，但整体任务因148条AI fallback记录失败（errors=0），
+  **不能记完整通过**。来源107采109次，103次可比较：38次双方EXACT且压缩输出一致，
+  32次双方EXACT仅转向点不同，33次当前FAILED/参考PARTIAL；6次快照外。
+- 主统计237次中195次可比较：105输出一致、57仅转向点不同、33输出等级不同；
+  42次快照外不用于结论，无诊断错误/live重放不一致。请求包含重复重算，不是独立缺陷计数。
+  未出现可比较的FAILED/EXACT样本，也不能凭这点推断未来所有地图皆无此情形。
+
+火焰之河sample1：megademon2、size3、允许开门，(2840,1266)→(2830,1290)，
+生产重放FAILED（2408次候选查询），参考分配200节点、末点(2828,1288)，仅PARTIAL。
+sample89在同一房间内同样出现FAILED/PARTIAL，不能把全部差异简单归因于跨房间。
+这些调用来自当前运行中的AI，其中有GenericMonster fallback；不是原版AI完整场景oracle。
+
+蛆虫mover180追同一玩家117，目标先后为(12572,1556)/(12565,1567)/(12557,1581)/
+(12561,1587)，覆盖动态目标的多次坐标请求。shadow仍然只重放COORDINATE模式，
+没有伪造native targetUnit八点approach/预测/重算时钟。
+合成回归另说明：同为PARTIAL时，runtime可到(94,95)，参考200节点预算只到(44,44)，
+目标是被挡(95,95)；所以参考端也并非普遍更靠近目标。
+
+建议下一步先沿1.10f D2MOO/DLL对照部分路径的消费/失败恢复/重算调用链，
+再选择原本允许partial的pathType做受控接入，保留普通exact及近期碰撞优化。
+本批未改生产路径/位置/速度/RNG，未新增原版动态差分或性能benchmark；
+GL/132图/多seed三难度、快照外补证和火焰之河AI fallback仍未完成。
+
+最终133项/22类回归通过，失败/错误/跳过0；代码`033b2e9d9`已推送origin/master。
+详细命令、样本端点、日志目录、首次启动/构建失败与共享工作区边界见
+[第六批记录](d2moo-upstream-port-2026-10-15.md#第六批真实地图采样与差异分类)。

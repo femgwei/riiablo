@@ -332,9 +332,126 @@ shadow=COMPARED，双方EXACT且turns均`[(135,37)]`；候选查询各24、节�
 非benchmark，尚未做native pattern替换/目标状态机/pathType切换。
 下一步应扩展真实狭路/怪群/移动目标样本，先解释exact/partial合同和点序差异，再选择局部原生接入。
 
+## 第六批：真实地图采样与差异分类
+
+### 修改范围
+
+`NativePathShadow`新增可选来源关卡过滤，JVM属性`riiablo.path.shadow.level`默认-1（全部），
+D2GS JavaExec通过`-PpathShadowLevel=63`转发。按搜索碰撞作用域解析来源关卡，
+未匹配的请求不消耗采样频率或额度，避免城镇用完野外的128次硬上限。
+新增关卡/房间整数元数据（未知=-1）及障碍predicate有无，不保留Zone/Room引用；
+房间读取用索引遍历，不干扰外层libGDX Array迭代器。
+
+日志明确`stage=MAP_SEARCH_RAW`：采样发生在MapGraph搜索结束、生产房间后置gate、
+视线平滑和Pathfind安装之前，不能把shadow成功都说成最终接受并移动。
+`dynamicObstacle=true`只表示存在Obstacle回调，不证明每个样本都实际撞到单位。
+
+新增`difference()`：不可比较为INCONCLUSIVE；可比较时优先OUTCOME（EXACT/PARTIAL/FAILED
+不同），再ENDPOINT（同为非失败但终点不同），再TURNS（压缩点序不同），否则NONE。
+这是机械分类，不自动认定原因、缺陷或哪一方更优；原有`differs()`布尔含义保持。
+默认关闭、快照/采样上限、当前effective collision、coordinate目标模式均未改变；
+没有接入生产原生搜索/目标状态机，也未修改近期DLL逆向优化。
+
+### 定向回归
+
+新增4项：来源过滤保留采样额度/owning-zone/元数据脱离、房间外层迭代器不受影响、
+动态目标移动与新增阻挡后的独立快照、partial不同终点分类。既有用例补齐其余分类断言。
+合并上一批集合，最终**133项/22类通过，失败/错误/跳过0**；报告：
+`core/build/test-results/upstreamRound4-round6-final`。
+
+实际使用第五批同一本机隔离init，以`-PupstreamRun=round6-final`运行以下过滤集合。
+另一台电脑可直接运行仓库标准`:core:test`（结果在其标准报告目录，不依赖本机临时init）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test `
+  --tests '*UnitCollisionGridTest' --tests '*DynamicUnitCollisionSystemTest' `
+  --tests '*PathfinderTest' --tests '*PathfinderRoomBoundaryTest' `
+  --tests '*PlayerGroundPathTest' --tests '*NativeSeamCollisionTest' `
+  --tests '*ObjectCollisionUpdaterTest' --tests '*WhirlwindCollisionTest' `
+  --tests '*WarpArrivalCollisionTest' --tests 'com.d2moo.common.path.*' `
+  --tests 'com.d2moo.common.collision.*' --tests '*NativeTowardPathProbeTest' `
+  --tests '*NativeAiPathCacheTest' --tests '*NativePathRuntimeComparisonTest' `
+  --tests '*NativePathShadowTest' --console=plain
+```
+
+partial终点夹具：110格合成空地、(5,5)→被挡(95,95)、size1，双方PARTIAL，
+runtime终点(94,95)，reference终点(44,44)，参考分配200节点。
+这说明两者预算及partial选择差异具有实际输出影响，也反驳“原生一定更靠近目标”；
+是合成特征回归，不是原版DLL动态执行或真实MPQ结果。
+
+### 真实MPQ/TCP采样
+
+均显式指定本机1.10F、seed12345、difficulty0、25Hz、每匹配请求采1次、最多128次。
+下列两组为主统计，不合并先前单图预热的2次样本；不是多seed/多难度、全图或原版客户端验收。
+
+蛆虫63/64/65：整个任务通过，3图/4个walk计划/10次真实TCP击杀/0通行失败；
+连续入口1次、测试staging跳转1次，不把非连续跳转算成步行连接证据。
+AI gate通过，fallbackRecords=0、errors=0；观察模式仍不等于完整AI正确性oracle。
+sourceLevel=63过滤，128次样本中92次COMPARED：45次EXACT/EXACT且压缩输出一致，
+25次EXACT/EXACT但转向点不同，22次FAILED/FAILED且输出一致；36次快照外不判定。
+真实清障和动态回调未关闭，未用位置包/清怪作弊恢复。
+
+火焰之河107/108：通行子检查通过（2图/4个walk计划/1次连续入口/0次击杀/0通行失败），
+**整个JavaExec任务失败**：AI gate报告fallbackRecords=148、errors=0，
+`ai-summary.txt`为FAILED_OR_INTERRUPTED。日志可见GenericMonster的Megademon、DoomKnight、
+OblivionKnight、FingerMage等fallback路径；本批不修AI分派，也不把该运行记为全通过。
+sourceLevel=107过滤，109次样本中103次COMPARED：38次EXACT/EXACT且输出一致，
+32次EXACT/EXACT但转向点不同，33次FAILED/PARTIAL；另6次快照外不判定。
+
+两组合计237次：195次COMPARED（105 NONE、57 TURNS、33 OUTCOME），42次越界。
+DIAGNOSTIC_ERROR、LIVE_REPLAY_DIFFERENCE、SNAPSHOT_LIMIT均0。
+这些是请求次数，包含同一实体反复重算，不是237条独立路线或33个独立缺陷。
+没有可比较的runtime FAILED/reference EXACT样本。
+
+关键可复核样本：
+
+- 蛆虫sample4/12/28/41，mover180、target117，来源(12587,1584)未变，
+  目标依次(12572,1556)/(12565,1567)/(12557,1581)/(12561,1587)，均双方FAILED。
+  证明观察到移动玩家的坐标请求，不证明原生目标预测/八点approach/重算定时器等价。
+- 火焰之河sample1，megademon2/mover249、target117、size3、openDoors=true，
+  (2840,1266)→(2830,1290)，sourceRoom3/targetRoom0。runtime FAILED，候选查询2408；
+  reference PARTIAL，分配200节点，末点(2828,1288)，不是目标。
+- sample89，同关卡(2819,788)→(2797,769)，两端room76，runtime FAILED，
+  reference PARTIAL末点(2797,771)、分配200节点。同房也存在此输出合同差异。
+
+这些参考partial从未装入生产；是否能通过怪物房间后置gate、是否会前进/反复追逐，
+还需要按原版pathType和目标状态机做单独验收。原生压缩转向点少也不等于最终动画转弯少，
+因为现实现随后还有平滑；查询/纳秒不是公平性能benchmark。
+
+另一台电脑采样（输出目录必须不存在，复跑更换目录名）：
+
+```powershell
+.\gradlew.bat :server:d2gs:headlessMapTour '-PtourLevels=63,64,65' `
+  -PtourSeed=12345 -PtourRate=25 -PtourWalkSeconds=20 `
+  -PtourAiObserve -PtourAiObserveMillis=2000 `
+  -PtourOutput=server/d2gs/build/round6-shadow-maggot-chain `
+  -PpathShadow=true -PpathShadowEvery=1 -PpathShadowMaxSamples=128 `
+  -PpathShadowLevel=63 --console=plain
+```
+
+火焰之河使用同组参数，将Levels改为`107,108`、Level改为`107`、
+Output改为`server/d2gs/build/round6-shadow-river-retry`；保留AI gate，不绕过已发现的fallback失败。
+采样频率和AI交互受运行时序影响，不要求重复请求数逐次完全相同。
+
+本机完整日志（build下不提交）：`core/build/round6-shadow-maggot-chain.log`、
+`core/build/round6-shadow-river-retry.log`；对应tourOutput内有map-tour/ai-events/ai-summary。
+前置失败同样保留：首个蛆虫单图在正式连接前Connection refused、未采样（原因未定）；
+重试单图通过。首个river在打包时失败，当时另有COF Gradle构建共用输出目录，
+未进入采样；串行重试取得上述结果。没有通过改寻路/放松碰撞来消除失败。
+两次主运行后服务端退出，6114无监听。
+
+代码/测试/Gradle提交`033b2e9d94e26b7d0c60f9be530e38c1b6282adb`已推送origin/master，
+远端SHA一致。未纳入另一轮未提交的`CofModeTransitionTest.java`及随后出现的
+`CofLayerCacher.java`/`CofLayerLoader.java`修改；本轮回归不为这些COF改动背书。
+本轮四份进度文档独立提交推送，最终SHA见git log，不宣称整个工作区clean。
+本批沿用既有固定D2MOO/DLL审查基线，未重新fetch或新增DLL动态等价证明。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
-- 只读shadow已接入，下一步收集真实场景差分，再按path type考虑原生搜索/目标状态接入；未接入部分
-  不因独立参考测试通过就视为完成。攻击速度、目标链等其余修正继续专项对照。
+- 真实场景首批差分已收集，下一步核对1.10f部分路径消费、重算与生产房间后置gate，
+  再按path type考虑受控接入；不把partial当普通exact成功，越界样本仍需补证。
+  攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

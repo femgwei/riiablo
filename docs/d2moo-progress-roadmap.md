@@ -1,5 +1,47 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 角色停止后旧跑步动画的恢复
+
+- 用户提供的桌面 `game.log` 中，玩家137多次正确切换 `RN -> NU`，同时速度归零、
+  路径清除；这证明逻辑停止已发生，尚不能单凭该日志确定实际显示的COF/DCC。
+  D2MOO `PlrModes.cpp:159` 的 `PLRMODE_StartXY_Neutral` 明确按城镇选择TN/NU。
+- `CofLayerCacher` 过去仅订阅瞬时loading组件；构造“逻辑与已解析COF均为站立、
+  Animation仍保留RN、loading已消失”的回归，修改前永久不恢复，修改后可自动恢复。
+  这验证了恢复缺口，原始运行中造成不同步的最初触发条件尚未复现。
+- 现在持续核对已解析COF与实际Animation，不一致时重新请求完整图层；
+  `CofLayerLoader` 同时在正常process中消费dirty请求，cacher等待新图层描述符再绑定。
+  新增 `[PLAYER_ANIM]` 的recover/layers_ready日志，后者包含真实DCC/DC6路径供实机复核。
+- 定向测试26项通过，失败/错误/跳过0：`CofModeTransitionTest`（2）、
+  `CofLayerLoaderReleaseTest`（6）、`AnimationStepperTest`（7）、`VelocityModeChangerTest`（11）。
+  命令为 `gradlew.bat :core:test --tests com.riiablo.engine.client.CofModeTransitionTest
+  --tests com.riiablo.engine.client.CofLayerLoaderReleaseTest
+  --tests com.riiablo.engine.client.AnimationStepperTest
+  --tests com.riiablo.engine.server.VelocityModeChangerTest --no-daemon`，
+  D2_HOME/D2_TEST指定本机合法1.10F目录。
+- 真实1.10f `:desktop:offscreenCamp` 输出 `result=PASS`，完成营地与3帧渲染；
+  报告位于 `desktop/build/visual-tests/run-idle-regression/rogue-encampment-manifest.txt`。
+  该启动检查不等于原角色完整移动验收；下一步由另一台电脑拉取后复测跑步、停止、
+  NPC/掉落物交互和城镇/野外切换，并核对 `[PLAYER_ANIM]` 日志。
+
+
+## 2026-10-15 D2MOO 第六批：真实地图差分与结果分类
+
+- [x] 默认关闭的shadow增加`pathShadowLevel`来源关卡过滤，其他关卡不消耗频率/额度；
+  日志增加关卡/房间、障碍predicate有无、`stage=MAP_SEARCH_RAW`和机械差异分类。
+  保留128次/128格硬上限、异常隔离和原搜索输出，不切换生产寻路。
+- [x] 4项新增回归，最终133项/22类通过，失败/错误/跳过0。指定本机1.10F，
+  XML隔离到`core/build/test-results/upstreamRound4-round6-final`；非全项目测试。
+- [x] 25Hz、seed12345普通难度：蛆虫63/64/65三图定向巡游通过、真实TCP清障10次；
+  火焰之河107/108通行子检查通过，但整个AI观察任务因148条fallback记录失败，不能记全通过。
+- [x] 主采样237次，195可比较：105输出一致、57仅压缩转向点差异、33现实现失败/
+  参考partial；另42越界不判定。无诊断错误或live/replay差异，没有FAILED/EXACT样本。
+  观察到动态玩家目标坐标变化；不等同完整原版targetUnit状态机或性能结论。
+- [x] 代码/测试/开关提交`033b2e9d9`已推送origin/master、远端SHA一致。
+  未纳入另一轮未提交的COF测试及随后出现的两份COF生产修改；本轮四文档另行提交推送，
+  详情见当前状态索引，本轮回归不为这些COF改动背书。
+- [ ] 下一步按D2MOO/1.10f核对部分路径消费、重算与房间后置gate，再设计局部pathType
+  接入；不直接把partial作为普通exact成功。越界补证、AI fallback、GL/全图/多seed难度仍待。
+
 ## 2026-10-15 D2MOO 第五批：只读寻路 shadow
 
 - [x] 新增默认关闭、有界采样的NativePathShadow，实际A*结束后冻结effective collision，
