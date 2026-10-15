@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十九批：只补真实ECS动态/对象读取器→footprint观察→Request/Dispatch组合回归，
+验证door偏移、单次捕获、完整网格恢复及身份替换前置拒绝。
+新增2项，完整593项/51类通过，失败/错误/跳过0；core/build/round39-full.log。
+raw数据仍显式输入，无新增生产功能，生产仍A*；详细交接见handoff顶部。
+
 第三十八批：NativePathDynamicFootprint接通真实逻辑CofReference.mode及Class/尺寸；
 raw path/room/pattern/mask仍显式提供，不用visual覆盖或宿主碰撞索引猜测。
 新增3项，完整591项/51类通过，失败/错误/跳过0；core/build/round38-full.log。

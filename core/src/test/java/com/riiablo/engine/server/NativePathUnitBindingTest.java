@@ -10,6 +10,66 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitBindingTest {
+  private static NativePathUnitBinding.FootprintObservation ecsFootprints(Fixture f, D2ActiveRoom room) {
+    f.world.getMapper(com.riiablo.engine.server.component.Class.class).create(f.owner).type =
+        com.riiablo.engine.server.component.Class.Type.PLR;
+    f.world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(f.owner).mode = 1;
+    f.world.getMapper(com.riiablo.engine.server.component.Class.class).create(f.target).type =
+        com.riiablo.engine.server.component.Class.Type.OBJ;
+    com.riiablo.engine.server.component.Object object =
+        f.world.getMapper(com.riiablo.engine.server.component.Object.class).create(f.target);
+    object.base = new com.riiablo.codec.excel.Objects.Entry();
+    object.base.SizeX = 2; object.base.SizeY = 3;
+    object.base.IsDoor = true; object.base.Orientation = 1;
+    object.base.HasCollision = new boolean[8]; object.base.HasCollision[1] = true; object.mode = 1;
+    NativePathUnitBinding binding = new NativePathUnitBinding(f.world, f.owner, f.target,
+        (w, id) -> { fail("coordinate reader must not run"); return null; });
+    return binding.observeFootprints(0, (w, id) -> {
+      f.reads.incrementAndGet();
+      return id == f.owner ? NativePathDynamicFootprint.read(w, id,
+          new D2PathUnits.DynamicPath(10 << 16, 10 << 16, 0), room, 1, 0x80)
+          : NativePathObjectFootprint.read(w, id, p(20, 10), room);
+    });
+  }
+
+  private static D2ActiveRoom ecsRoom() {
+    D2ActiveRoom room = new D2ActiveRoom();
+    room.getCoords().setNSubtileWidth(50); room.getCoords().setNSubtileHeight(50);
+    D2CommonCollision.allocRoomCollisionGrid(room); return room;
+  }
+
+  @Test void realEcsReadersComposeWithDoorTargetRequestAndFootprintRestoration() {
+    try (Fixture f = new Fixture()) {
+      D2ActiveRoom room = ecsRoom();
+      NativePathUnitBinding.FootprintObservation pair = ecsFootprints(f, room);
+      assertSame(pair.owner.coordinates, pair.observation.owner);
+      assertSame(pair.target.coordinates, pair.observation.target);
+      D2PathFootprint.add(pair.owner); D2PathFootprint.add(pair.target);
+      int[] before = room.getPCollisionGrid().getPCellsFlags().clone();
+      D2PathRequest.State state = request(pair.observation); state.result.path.pathFlags |= 0x800;
+      assertTrue(D2PathRequest.compute(state, false,
+          new D2PathDispatch.Effects(state, pair.owner, pair.target)) > 0);
+      assertEquals(p(20, 12), state.result.path.targetPoint);
+      assertArrayEquals(before, room.getPCollisionGrid().getPCellsFlags());
+      assertEquals(2, f.reads.get());
+    }
+  }
+
+  @Test void realEcsReaderRequestRejectsReplacementBeforePathAndGridWrites() {
+    try (Fixture f = new Fixture()) {
+      D2ActiveRoom room = ecsRoom();
+      NativePathUnitBinding.FootprintObservation pair = ecsFootprints(f, room);
+      D2PathRequest.State state = request(pair.observation);
+      D2PathDispatch.Effects effects = new D2PathDispatch.Effects(state, pair.owner, pair.target);
+      D2PathFootprint.add(pair.owner); D2PathFootprint.add(pair.target);
+      int[] before = room.getPCollisionGrid().getPCellsFlags().clone();
+      state.collidedMask = 123; state.result.path.currentPointIndex = 7;
+      f.birth(f.target);
+      assertThrows(IllegalStateException.class, () -> D2PathRequest.compute(state, false, effects));
+      assertEquals(123, state.collidedMask); assertEquals(7, state.result.path.currentPointIndex);
+      assertArrayEquals(before, room.getPCollisionGrid().getPCellsFlags());
+    }
+  }
   private static D2PathFootprint.Unit footprint(D2PathUnits.Unit coordinates) {
     return D2PathFootprint.Unit.dynamic(coordinates, null, 1, 1, 0x80);
   }

@@ -2022,6 +2022,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 仅完成mode及元数据组合，不宣称动态原生字段已自动解析或完整Reader；不安装生产碰撞。
   生产仍A*，raw数据/Act与Zone/shared seed仍待；无新增DLL算法证据或动态执行。
 
+## 第三十九批：真实ECS读取器到Request/Dispatch的组合回归
+
+- 只新增测试：真实World玩家和对象组件，经两个footprint读取器、observeFootprints、
+  Request/Dispatch具体effects，验证exact坐标对象共用、各读一次、门目标偏移及完整网格恢复。
+- 目标token替换时旧request在路径/网格写入前拒绝，保留collidedMask/index及完整网格；
+  此处不冒充新实际删除/ID复用测试。raw坐标/房间/pattern/mask仍为显式测试输入。
+- 新增2项，完整593项/51类通过，失败/错误/跳过0；core/build/round39-full.log，
+  XML .gradle/path-port/round39-full/core/test-results/pathPortTest。
+- 无新增生产功能，未宣称自动数据来源已完成；生产仍A*，Act/Zone/shared seed仍待。
+  无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

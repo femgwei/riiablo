@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十九批（生产适配仍PARTIAL）
+
+- [x] 真实ECS双读取器经生命周期footprint观察组合Request/Dispatch，验证door/网格恢复/替换拒绝。
+- [x] 新增2项，完整593项/51类通过，无失败/错误/跳过。
+- [ ] 本批仅组合回归；raw坐标/房间/pattern/mask自动来源、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder，无新增DLL证据或生产功能。
+
 ## 2026-10-16 寻路第三十八批（生产适配仍PARTIAL）
 
 - [x] 动态footprint组合真实逻辑mode/Class/尺寸，忽略visual覆盖，保留unsigned模式与raw字段。

@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十八批续接结果（优先于下方历史起点）
+## 第三十九批续接结果（优先于下方历史起点）
+
+- 只新增组合回归：真实World玩家/对象组件，经NativePathDynamicFootprint与NativePathObjectFootprint
+  读取后，由observeFootprints生成exact共享坐标观察，再交给Request/Dispatch具体effects。
+- 验证Orientation==1门目标偏移、owner/target各仅读一次、搜索后完整网格恢复；另验证目标token
+  替换后旧request在collidedMask/index及网格写入前拒绝。未新增生产功能。
+- 新增2项，完整593项/51类通过，失败/错误/跳过0；core/build/round39-full.log，
+  XML `.gradle/path-port/round39-full/core/test-results/pathPortTest`。
+- raw坐标/room/pattern/mask仍为显式测试输入，不冒充已完成自动来源；token替换测试不冒充
+  另一项新的实际删除/ID复用证据。生产仍A*，Act/Zone/shared seed桥仍待，无新增DLL证据或动态执行。
+
+## 第三十八批续接结果（历史）
 
 - NativePathDynamicFootprint读取实际Class/表尺寸及CofReference.mode，组合动态footprint；
   保留mode unsigned byte，不用visualType等显示覆盖改写逻辑单位类型/模式。

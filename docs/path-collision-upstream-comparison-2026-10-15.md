@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第三十九批补充：真实World动态和对象读取器经observeFootprints组合Request/Dispatch，
+验证门偏移、读取一次、完整网格恢复和token替换拒绝；raw坐标/房间/pattern/mask仍显式提供。
+新增2项，完整593项/51类通过，失败/错误/跳过0；仅组合回归，生产仍A*，无新增DLL证据或动态执行。
+
 第三十八批补充：NativePathDynamicFootprint组合真实Class/尺寸和逻辑CofReference.mode，
 raw path/room/pattern/mask仍由调用方提供；不从visual覆盖或宿主碰撞索引推断原生字段。
 新增3项，完整591项/51类通过，失败/错误/跳过0；生产仍A*，无新增DLL证据或动态执行。
