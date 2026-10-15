@@ -732,6 +732,23 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamage, piercePercent, defenderStates, difficulty, false);
+  }
+
+  /** Native direct packet: MDR before resistance, no monster player-cap, 40% absorb cap. */
+  public CombatResult calculateNativeFixedElementalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamage, int piercePercent,
+      StateList defenderStates, int difficulty) {
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamage, piercePercent, defenderStates, difficulty, true);
+  }
+
+  private CombatResult calculateFixedElementalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamage, int piercePercent,
+      StateList defenderStates, int difficulty, boolean nativePacket) {
     CombatResult result = new CombatResult();
     result.reset();
     if (defender == null || damageType <= DAMAGE_PHYSICAL
@@ -746,7 +763,10 @@ public class CombatSystem {
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
     int penalty = defenderPlayer ? MonsterUtil.getResistancePenalty(difficulty) : 0;
-    for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) d.resistances[i] += penalty;
+    // Native difficulty penalties exclude physical and magic resistance.
+    for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+      if (i != DAMAGE_MAGIC) d.resistances[i] += penalty;
+    }
     d.maxResistances[DAMAGE_FIRE] = 75 + statInt(defender, Stat.maxfireresist, 0);
     d.maxResistances[DAMAGE_LIGHTNING] = 75 + statInt(defender, Stat.maxlightresist, 0);
     d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
@@ -783,7 +803,19 @@ public class CombatSystem {
     // for monsters. Player resistance is still clamped to the raised
     // 75..95 maximum-resistance cap below.
     d.immuneElemental[damageType] = d.isMonster && d.resistances[damageType] >= 100;
-    int reduced = applyElementalResistance(rawDamage, d, damageType, piercePercent);
+    int reduced;
+    if (nativePacket) {
+      int resistance = d.resistances[damageType] - Math.max(0, piercePercent);
+      if (d.isPlayer) resistance = Math.min(Math.min(ABSOLUTE_MAX_RESISTANCE,
+          d.maxResistances[damageType]), resistance);
+      resistance = Math.max(MIN_RESISTANCE, Math.min(100, resistance));
+      int afterReduction = Math.max(0, rawDamage - (damageType == DAMAGE_POISON ? 0 : d.magicDamageReduced));
+      reduced = d.immuneElemental[damageType] ? 0 : (int) Math.min(Integer.MAX_VALUE,
+          (long) afterReduction * (100 - resistance) / 100L);
+      d.absorbPercent[damageType] = Math.min(40, d.absorbPercent[damageType]);
+    } else {
+      reduced = applyElementalResistance(rawDamage, d, damageType, piercePercent);
+    }
     int absorbed = absorbElementalDamage(reduced, d, damageType);
     int finalDamage = reduced - absorbed;
     if (attackerPlayer && defenderPlayer) finalDamage = finalDamage * PVP_DAMAGE_PERCENT / 100;
@@ -796,6 +828,31 @@ public class CombatSystem {
   }
 
   /** Resolves a cold/freeze length through the native cold resistance row. */
+  public int resolveColdLengthBeforeState(Attributes defender, boolean defenderPlayer,
+      int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
+    if (defender == null || baseDuration <= 0) return 0;
+    if (statInt(defender, Stat.item_cannotbefrozen, 0) != 0) return 0;
+    // SUNITDMG_CalculateTotalDamage halves the packet before its Flen row.
+    if (statInt(defender, Stat.item_halffreezeduration, 0) != 0) baseDuration /= 2;
+    int resistance = statInt(defender, Stat.coldresist, 0);
+    int maximum = 75 + statInt(defender, Stat.maxcoldresist, 0);
+    if (defenderPlayer) resistance += MonsterUtil.getResistancePenalty(difficulty);
+    if (defenderStates != null) {
+      resistance += defenderStates.getTotalResistModifier(1);
+      maximum += defenderStates.getTotalStatContribution(Stat.maxcoldresist);
+    }
+    // SUnitDmg.cpp's Flen row has DAMAGE_REDUCTION_NONE: MDR and absorb
+    // affect damage, never length. StateUpdater owns ColdDiv/FreezeDiv and
+    // player/boss downgrade, so do not pre-divide monster duration here.
+    if (!defenderPlayer && resistance >= 100) return 0;
+    resistance -= Math.max(0, piercePercent);
+    resistance = Math.max(MIN_RESISTANCE, defenderPlayer
+        ? Math.min(Math.min(ABSOLUTE_MAX_RESISTANCE, maximum), resistance) : resistance);
+    int length = (int) Math.min(Integer.MAX_VALUE, (long) baseDuration * (100 - resistance) / 100L);
+    return Math.max(0, length);
+  }
+
+  /** Legacy damage callers also request the monster cold divisor here. */
   public int resolveColdDuration(Attributes defender, boolean defenderPlayer,
       int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
     if (defender == null || baseDuration <= 0) return 0;

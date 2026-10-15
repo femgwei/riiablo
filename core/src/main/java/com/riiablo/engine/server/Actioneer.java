@@ -2472,6 +2472,10 @@ public class Actioneer extends PassiveSystem {
         resolveBestow(entityId, targetId);
         break;
       }
+      case 100: // DiabCold's direct elemental packet is resolved on SkillDoEvent.
+        log.debug("[DIAB_COLD] phase=keyframe source={} target={} delegated=ServerSkillSystem",
+            entityId, targetId);
+        break;
       case 30: { // native Necromancer curse dispatcher
         // ServerSkillSystem owns the shared data-driven SrvDo030 area path
         // for both players and monsters. Keeping a second name-based single

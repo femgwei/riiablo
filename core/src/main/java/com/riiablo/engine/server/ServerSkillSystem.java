@@ -528,6 +528,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (NativeDiabCold.supports(skill)) {
+      applyDiabCold(event, skill, getSkillLevel(event.entityId, skill.Id));
+      return;
+    }
     if ((skill.srvdofunc == 95 || skill.srvdofunc == 152) && mCasting.has(event.entityId)
         && mCasting.get(event.entityId).monInferno != null) {
       event.monInfernoMissileId = spawnMonInferno(event, skill);
@@ -1727,6 +1731,63 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
             + "defense={} affected={} status=PASS",
         event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  /** SrvDo100: elemental damage and FrzLen are independent (1.10f EType=mag). */
+  private void applyDiabCold(SkillDoEvent event, Skills.Entry skill, int level) {
+    int source = event.entityId, target = event.targetId;
+    StateList targetStates = target < 0 ? null : stateList(target);
+    if (!mMonster.has(source) || target < 0 || target == source
+        || !world.getEntityManager().isActive(target)
+        || (!mPlayer.has(target) && !mMonster.has(target) && !mMercenary.has(target))
+        || !mPosition.has(target) || !mAttributesWrapper.has(target)
+        || mCorpse.has(target) || !hasPositiveLife(target)
+        || !sameZone(source, target) || isTownUnit(source) || isTownUnit(target)
+        || !isHostile(source, target) || !mNativeUnitFlagsValid(target)
+        || (targetStates != null && targetStates.hasState(StateId.UNINTERRUPTABLE))) {
+      log.info("[DIAB_COLD] phase=reject source={} target={} reason=invalid_unit_target", source, target);
+      return;
+    }
+    // No attack rating, melee-distance reroll, weapon/SrcDam, or missile
+    // entity. Native SUNIT_GetTargetUnit never falls back to cast coordinates.
+    Attributes defender = mAttributesWrapper.get(target).attrs;
+    Attributes attacker = mAttributesWrapper.has(source) ? mAttributesWrapper.get(source).attrs : null;
+    StateList sourceStates = stateList(source);
+    int min = MissileDamageResolver.skillElementalDamage(skill, level, true, name -> getBaseSkillLevel(source, name));
+    int max = MissileDamageResolver.skillElementalDamage(skill, level, false, name -> getBaseSkillLevel(source, name));
+    int raw = rollNativeDamage(min, max);
+    int type = elementalDamageType(skill.EType);
+    int difficulty = combatDifficulty(source, target);
+    boolean player = mPlayer.has(target) || mMercenary.has(target);
+    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(
+        defender, player, false, type, raw, elementalPierce(attacker, sourceStates, type),
+        targetStates, difficulty);
+    int baseLength = NativeDiabCold.freezeLength(skill, level);
+    int length = CombatSystem.INSTANCE.resolveColdLengthBeforeState(defender, player,
+        baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD), targetStates, difficulty);
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    StatRef maximum = defender.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null) return;
+    float before = hp.asFixed();
+    if (result.absorbedLife > 0 && maximum != null)
+      hp.add(Math.max(0f, Math.min(result.absorbedLife, maximum.asFixed() - hp.asFixed())));
+    DamageEvent damage = DamageEvent.obtainMissile(source, target, result.totalDamage, 0f, null, result);
+    if (events != null) events.dispatch(damage);
+    // Apply control even when magic damage was resisted/absorbed to zero.
+    UnitStates states = mUnitStates.create(target);
+    if (states.stateList == null) states.init(world, target);
+    StateUpdater updater = world.getSystem(StateUpdater.class);
+    if (updater != null && length > 0)
+      updater.applyState(target, StateId.FREEZE, length, level, source, 0, CombatSystem.DAMAGE_COLD);
+    hp.sub(Math.max(0f, damage.damage));
+    if (hp.asFixed() <= 0f) {
+      hp.set(0f);
+      if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+    }
+    log.info("[DIAB_COLD] phase=hit source={} target={} skill={} level={} type={} raw={} range={}..{} "
+            + "resolved={} applied={} freezeLength={} resistedLength={} hp={}->{}", source, target,
+        skill.Id, level, skill.EType, raw, min, max, result.totalDamage, damage.damage,
+        baseLength, length, before, hp.asFixed());
   }
 
   /** D2MOO SrvDo021: direct unit-target damage without creating a missile entity. */

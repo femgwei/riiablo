@@ -203,6 +203,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)) scenarios.add("inferno-cycle");
+    if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     return scenarios;
   }
 
@@ -258,7 +259,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       stats.base().put(Stat.hitpoints, 1000000);
       stats.reset();
       float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
-          || result.scenario.equals("inferno-cycle") ? 3 : 18;
+          || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
       zone.attachEntity(playerId);
@@ -267,6 +268,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
+      if (result.scenario.equals("diab-cold")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_DIAB_COLD";
+        probe.diabCold = new DiabColdCycle();
+      }
       if (result.scenario.equals("inferno-cycle")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -343,7 +350,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           ? (result.scenario.equals("orphan") ? "OWNERLESS_DEATH_OBSERVED"
               : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED"
               : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED"
-              : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+              : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED"
+              : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -461,6 +469,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
     SubmergeCycle cycle;
     FrogCycle frog;
     InfernoCycle inferno;
+    DiabColdCycle diabCold;
+    SkillDoEvent pendingCold;
+    float coldLifeBefore, coldDamage;
+    int coldMissilesBefore, coldDamageEvents;
+    boolean coldPacketValid, coldCastValid;
     com.riiablo.engine.server.NativeMonInferno lastInferno;
     int lastInfernoCount;
     final CaseLog capture;
@@ -472,6 +485,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
+      if (diabCold != null && event.skillId == 194 && event.srvdofunc == 100) {
+        pendingCold = event;
+        AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(event.targetId);
+        coldLifeBefore = attrs == null ? -1 : attrs.attrs.get(Stat.hitpoints).asFixed();
+        coldMissilesBefore = missileCount(); coldDamage = 0; coldDamageEvents = 0; coldPacketValid = true;
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        coldCastValid = cast != null && cast.skillId == 194 && seq != null
+            && seq.started && seq.mode1 == Engine.Monster.MODE_S2;
+      }
       capture.result.actions++;
       capture.line("SkillDo subject=" + subject + " skill=" + event.skillId + " target=" + event.targetId
           + " srvdofunc=" + event.srvdofunc);
@@ -491,6 +514,28 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (diabCold != null && pendingCold != null) {
+        int target = pendingCold.targetId;
+        AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(target);
+        float life = attrs == null ? -1 : attrs.attrs.get(Stat.hitpoints).asFixed();
+        com.riiablo.engine.server.component.UnitStates states = world.getMapper(
+            com.riiablo.engine.server.component.UnitStates.class).get(target);
+        com.riiablo.engine.server.state.UnitState cold = states == null || states.stateList == null ? null
+            : states.stateList.getState(com.riiablo.engine.server.state.StateId.COLD);
+        Monster monster = world.getMapper(Monster.class).get(subject);
+        int expectedLength = com.riiablo.engine.server.NativeDiabCold.freezeLength(
+            Riiablo.files.skills.get(194), monster.monstats.Sk2lvl);
+        boolean valid = coldCastValid && coldDamageEvents == 1 && coldPacketValid && coldDamage > 0
+            && Math.abs(coldLifeBefore - coldDamage - life) < .01f
+            && cold != null && cold.sourceEntityId == subject && cold.initialDuration == expectedLength
+            && !states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)
+            && coldMissilesBefore == missileCount();
+        diabCold.hit(valid);
+        capture.line("DiabColdHit subject=" + subject + " target=" + target + " valid=" + valid
+            + " magic=" + coldDamage + " hp=" + coldLifeBefore + "->" + life
+            + " coldLength=" + (cold == null ? -1 : cold.initialDuration) + " phase=" + diabCold.phase);
+        pendingCold = null;
+      }
       if (inferno != null) {
         com.riiablo.engine.server.component.UnitStates states = world.getMapper(
             com.riiablo.engine.server.component.UnitStates.class).get(subject);
@@ -549,6 +594,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
       cycleChanged(before);
     }
     @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (diabCold != null && event.entityId == subject) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        int before = diabCold.phase;
+        diabCold.finished(cast != null && cast.skillId == 194 && seq != null && seq.mode1 == Engine.Monster.MODE_S2);
+        if (before != diabCold.phase && diabCold.phase == 2) {
+          capture.result.specialPassed = true;
+          capture.line("DiabColdCycle subject=" + subject + " phase=2");
+        }
+      }
       if (inferno != null && event.entityId == subject) {
         int before = inferno.phase;
         inferno.finished();
@@ -591,10 +646,28 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void damage(DamageEvent event) {
       if (event.attacker != subject) return;
+      if (pendingCold != null && event.victim == pendingCold.targetId) {
+        coldDamageEvents++;
+        coldDamage += event.damage;
+        coldPacketValid &= event.kind == DamageEvent.MISSILE && event.magicDamage > 0
+            && event.damage == event.magicDamage && event.physicalDamage == 0 && event.coldDamage == 0
+            && event.fireDamage == 0 && event.lightningDamage == 0 && event.poisonDamage == 0;
+      }
       capture.result.damageEvents++;
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
     }
+    private int missileCount() {
+      return world.getAspectSubscriptionManager().get(com.artemis.Aspect.all(
+          com.riiablo.engine.server.component.Missile.class)).getEntities().size();
+    }
+  }
+
+  /** Direct hit must independently change HP/state, then finish the real S2. */
+  static final class DiabColdCycle {
+    int phase;
+    void hit(boolean valid) { if (phase == 0 && valid) phase = 1; }
+    void finished(boolean realS2) { if (phase == 1 && realS2) phase = 2; }
   }
 
   /** Ordered, subject-only lifecycle oracle; a cast or helper action cannot satisfy it. */
@@ -684,7 +757,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + " fixture=synthetic_open_arena playerHP=1000000 oracle="
           + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE"
               : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE"
-              : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE" : "NONE"));
+              : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE"
+              : "diab-cold".equals(result.scenario) ? "DIAB_COLD" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }

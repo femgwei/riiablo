@@ -1,6 +1,28 @@
 # 逐怪 AI 隔离测试场
 
-## 最新修复批次：2026-10-15 Diablo / Diabloclone 电光
+## 最新修复批次：2026-10-15 DiabCold（SrvDo100）
+
+按D2MOO及本机1.10f原表接入194/S2真实动作点的直接目标包：EType是mag，
+魔法伤害与FrzLen分离，不做AR/近战距离重判、不取武器伤害、不生成飞弹。
+长度独立经过冰抗/无法冰冻/减半时长，再复用玩家/普通怪/Boss状态分档和难度除数。
+新增Do100原生直接伤害入口处理MDR先于抗性、怪物无玩家上限、40%吸收上限；
+不扩改旧通用伤害链。共享固定元素伤害修正魔法抗性不受难度惩罚。
+
+新增两场自然diab-cold，必须实际HP下降、独立COLD来源/时长正确、无飞弹且S2结束。
+最终395项定向通过（core363/d2gs32），失败/错误/跳过0；含13项DiabCold数据/集成测试。
+557行/1157场：486动作、376回退、109告警、175无动作、7仅移动、4终止；
+异常/ERROR/NOT_RUN/专属未触发0，所有43场专属成功。
+与上一批1155场相比仅两行的near/inferno-cycle共4场变化，1151场逐字段一致，新增2场；
+far仍保留其他技能告警，WARNING113→109，不等于完整Diablo AI验收。
+最终代码两次完整目录复跑的1157场JSONL哈希一致；测试数不重复累加。
+
+新快照：[`report.html`](ai-arena/20261015-diab-cold-seed1/report.html)，
+完整日志、最终回归XML、原版依据/边界及复跑命令见
+[`verification.md`](ai-arena/20261015-diab-cold-seed1/verification.md)。
+仍有47AI/188行fallback；其他Diablo技能/完整Fn051、全局精度/事件、TCP/GL和三难度多seed
+仍待验收，未宣称全项目测试通过。下一项可补DiabWall Do102。
+
+## 前一修复批次：2026-10-15 Diablo / Diabloclone 电光
 
 按D2MOO St53/Do152及1.10f原表接入193/SC：真实源帧9首发，随后每2帧发射，
 deadline40后保留末发，InfernoLen6尾结束；飞弹帧寿命/动画速率共用已验证的原生公式。

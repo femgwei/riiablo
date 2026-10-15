@@ -16,6 +16,15 @@ import static org.junit.Assert.*;
 public class MonsterAiArenaTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+  @Test public void diabColdRequiresActualDirectHitAndTheFollowingS2End() {
+    MonsterAiArena.DiabColdCycle cycle = new MonsterAiArena.DiabColdCycle();
+    cycle.finished(true); cycle.hit(false);
+    assertEquals(0, cycle.phase);
+    cycle.hit(true); assertEquals(1, cycle.phase);
+    cycle.finished(false); assertEquals(1, cycle.phase);
+    cycle.finished(true); assertEquals(2, cycle.phase);
+  }
+
   @Test public void diabloInfernoOracleAlsoRequiresActualStateResetBetweenCasts() {
     for (boolean reset : new boolean[] {false, true}) {
       com.riiablo.codec.excel.Skills.Entry skill = new com.riiablo.codec.excel.Skills.Entry();
@@ -164,6 +173,7 @@ public class MonsterAiArenaTest {
     assertTrue(MonsterAiArena.scenarios(row).contains("frog-emerge"));
     row.AI = "Diablo";
     assertTrue(MonsterAiArena.scenarios(row).contains("inferno-cycle"));
+    assertTrue(MonsterAiArena.scenarios(row).contains("diab-cold"));
     assertEquals("&lt;&amp;&quot;", MonsterAiArena.escape("<&\""));
   }
 
