@@ -9,6 +9,39 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NativeTowardPathProbeTest {
   @Test
+  void fullTowardPointsMatchTheExistingZeroOffsetBooleanProjection() {
+    java.util.Random random = new java.util.Random(0x110f);
+    int[] budgets = {0, 1, 2, 14, 77};
+    for (int sample = 0; sample < 4000; sample++) {
+      int tx = 100 + random.nextInt(41) - 20;
+      int ty = 100 + random.nextInt(41) - 20;
+      int budget = budgets[sample % budgets.length];
+      int tolerance = sample % 4;
+      int salt = random.nextInt();
+      NativeTowardPathProbe.Blocked blocked = (x, y) ->
+          Math.floorMod((x * 73856093) ^ (y * 19349663) ^ salt, 5) < sampleDensity(salt);
+      com.d2moo.common.path.D2Toward.Result result = com.d2moo.common.path.D2Toward.compute(
+          new com.d2moo.common.path.D2Path.Point(100, 100),
+          new com.d2moo.common.path.D2Path.Point(tx, ty), budget, tolerance, 0, blocked::at);
+      assertTrue(result.points().size() <= com.d2moo.common.path.D2Path.MAX_PATH_LENGTH);
+      assertEquals(tx != 100 || ty != 100 ? !result.points().isEmpty() : false,
+          NativeTowardPathProbe.hasPathPoints(100, 100, tx, ty, budget, tolerance, blocked),
+          "raw projection sample=" + sample);
+      assertEquals(result.hasMovementPoints(), NativeTowardPathProbe.hasPathPointsAfterNormalization(
+          100, 100, tx, ty, budget, tolerance, blocked), "movement projection sample=" + sample);
+      NativeTowardPathProbe.RayResult oldRay = NativeTowardPathProbe.trace(100, 100, tx, ty, blocked);
+      com.d2moo.common.path.D2Toward.RayResult ray = com.d2moo.common.path.D2Toward.trace(
+          new com.d2moo.common.path.D2Path.Point(100, 100),
+          new com.d2moo.common.path.D2Path.Point(tx, ty), blocked::at);
+      assertEquals(oldRay.x, ray.endpoint.x);
+      assertEquals(oldRay.y, ray.endpoint.y);
+      assertEquals(oldRay.clear, ray.clear);
+    }
+  }
+
+  private static int sampleDensity(int salt) { return Math.floorMod(salt, 6); }
+
+  @Test
   void wrapperClearsSourceOnlyPointAfterVelocityNormalization() {
     assertTrue(NativeTowardPathProbe.hasPathPoints(10, 10, 13, 10, 14, 1, (x, y) -> true));
     assertFalse(NativeTowardPathProbe.hasPathPointsAfterNormalization(
