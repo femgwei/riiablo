@@ -24,6 +24,7 @@ import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.DrlgTileExporter;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.COF;
@@ -34,6 +35,7 @@ import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.badlogic.gdx.math.Vector2;
 
 /** Fixed-seed DRLG smoke test and diagnostic report for the Act1 bridge. */
 public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
@@ -390,10 +392,11 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   }
 
   @Test
-  public void mapBuilderProjectsNativeMonasteryWarpSlots() {
+  public void mapBuilderProjectsNativeMonasteryWalkSeams() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
-    Map map = new Map(seed, DEFAULT_DIFFICULTY);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    int difficulty = Integer.getInteger("d2.difficulty", DEFAULT_DIFFICULTY);
+    Map map = new Map(seed, difficulty);
+    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, difficulty);
     try {
       int[][] links = {
           { D2LevelIds.LEVEL_MONASTERYGATE, D2LevelIds.LEVEL_OUTERCLOISTER },
@@ -406,20 +409,42 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         Map.Zone target = zone(map, link[1]);
         assertNotNull(source, "native monastery source is missing " + link[0]);
         assertNotNull(target, "native monastery target is missing " + link[1]);
-        boolean found = false;
-        for (int slot = 0; slot < 8; slot++) {
-          if (map.getWarpDestinationOverride(link[0], slot) == link[1]) {
-            found = true;
-            break;
-          }
-        }
-        assertTrue(found, "native warp slot is missing " + link[0] + " -> " + link[1]);
-        assertTrue(source.nativeDiagnostics()[13] > 0,
-            "native monastery source has no warp endpoint " + link[0]);
+        // D2Common::sub_6FD82750 and DRLGMAZE's court connector use
+        // Vis + Warp=-1 / orths, not interactive UNIT_TILE endpoints.
+        int slot = nativeWalkSlot(map, link[0], link[1]);
+        int reverseSlot = nativeWalkSlot(map, link[1], link[0]);
+        assertTrue(map.isNativeSeamConnection(source, target),
+            "monastery link must be walked " + link[0] + " -> " + link[1]);
+        Vector2 anchor = source.nativeSeamAnchor(slot);
+        Vector2 reverse = target.nativeSeamAnchor(reverseSlot);
+        assertNotNull(anchor, "missing source seam anchor " + link[0] + " slot=" + slot);
+        assertNotNull(reverse, "missing destination seam anchor " + link[1]);
+        float wx = source.x() + anchor.x, wy = source.y() + anchor.y;
+        assertEquals(wx, target.x() + reverse.x, 0.001f, "paired seam X differs");
+        assertEquals(wy, target.y() + reverse.y, 0.001f, "paired seam Y differs");
+        assertTrue(wx >= Math.max(source.x(), target.x())
+                && wx <= Math.min(source.x() + source.width(), target.x() + target.width())
+                && wy >= Math.max(source.y(), target.y())
+                && wy <= Math.min(source.y() + source.height(), target.y() + target.height()),
+            "seam anchor must lie on the shared boundary, not an unrelated room");
+        System.out.println("[MONASTERY_SEAM] source=" + link[0] + " target=" + link[1]
+            + " slot=" + slot + " reverseSlot=" + reverseSlot + " anchor=" + wx + "," + wy);
       }
     } finally {
       map.dispose();
     }
+  }
+
+  private static int nativeWalkSlot(Map map, int source, int target) {
+    int slot = -1, matches = 0;
+    // These edges are captured from native Vis/Warp=-1 BEFORE projection,
+    // so a destination override alone cannot make this assertion pass.
+    for (Map.NativeWalkEdge edge : map.nativeWalkEdges) {
+      if (edge.from == source && edge.to == target) { slot = edge.slot; matches++; }
+    }
+    assertEquals(1, matches, "missing/duplicate native walk edge " + source + " -> " + target);
+    assertEquals(target, map.getWarpDestinationOverride(source, slot), "wrong projected destination");
+    return slot;
   }
 
   @Test
@@ -924,7 +949,44 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       TileGrid grid = new TileGrid(width, height);
       applier.putGrid(levelId, grid);
       applier.resetLastExportedFloorCount();
-      int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+      int[] hiddenBlankFloors = {0};
+      int attempted = DrlgExport.exportLevelTiles(drlg, levelId, new DrlgTileExporter() {
+        @Override
+        public void onTile(int id, int layer, int x, int y, int tileId) {
+          onTile(id, layer, x, y, tileId, 0);
+        }
+
+        @Override
+        public void onTile(int id, int layer, int x, int y, int tileId, int flags) {
+          // DS1 specials use this shorter callback, unlike RoomTile records.
+          onTile(id, layer, x, y, tileId, flags, null, -1, 0, 255, 0, -1);
+        }
+
+        @Override
+        public void onTile(int id, int layer, int x, int y, int tileId, int flags,
+            String sourceFile, int logicalGroupId, int nativeStateFlags,
+            int nativeAlpha, int fadeTick, int tileType) {
+          // DRLGROOMTILE_LoadTiles fills absent DS1 floors with hidden style-30
+          // collision records. Count these independently of the consumer's counters.
+          if (layer == DrlgExport.LAYER_FLOOR && grid.inBounds(x, y)
+              && (flags & FLAG_HIDDEN) != 0 && ((tileId >>> 12) & 0xFFF) == 30) {
+            hiddenBlankFloors[0]++;
+          }
+          applier.onTile(id, layer, x, y, tileId, flags, sourceFile,
+              logicalGroupId, nativeStateFlags, nativeAlpha, fadeTick, tileType);
+        }
+
+        @Override
+        public void onTileCollision(int id, int x, int y, byte[] flags, int nativeFlags) {
+          applier.onTileCollision(id, x, y, flags, nativeFlags);
+        }
+
+        @Override
+        public void onPop(int id, int x, int y, int width, int height,
+            int popPadSubtiles, int logicalIndex, int subIndex) {
+          applier.onPop(id, x, y, width, height, popPadSubtiles, logicalIndex, subIndex);
+        }
+      });
       int[] unitStats = new int[4];
       int[] nativeShrines = new int[1];
       int[] nativeChests = new int[1];
@@ -996,12 +1058,25 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertEquals(expectedFixedSeedClippedFloors(levelId),
           applier.getClippedBoundaryFloorCount(),
           "fixed-seed native shared-boundary floor count changed for level " + levelId);
-      assertEquals(attempted - applier.getClippedBoundaryFloorCount(),
+      assertEquals(levelId == D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1 ? 2011 : 0,
+          hiddenBlankFloors[0], "fixed-seed hidden blank floor coverage changed for level " + levelId);
+      assertEquals(attempted - applier.getClippedBoundaryFloorCount() - hiddenBlankFloors[0],
           applier.getLastExportedFloorCount(),
-          "not every exported floor tile was written for level " + levelId);
-      assertEquals(levelId == D2LevelIds.LEVEL_DARKWOOD ? 1 : 0,
+          "not every renderable exported floor tile was written for level " + levelId);
+      // Native nWallLayer applies to floors too. A base/overlay pair at one
+      // coordinate is legitimate; only another write to the SAME layer is a duplicate.
+      assertEquals(0,
           applier.getDuplicatePositionCount(),
-          "unexpected shared floor coordinates for level " + levelId);
+          "unexpected same-layer floor overwrite for level " + levelId);
+      int layeredFloors = 0;
+      for (int y = 0; y < grid.height; y++) for (int x = 0; x < grid.width; x++) {
+        if (grid.floorIds[y][x] == -1 || grid.floorOverlayIds[y][x] == -1) continue;
+        layeredFloors++;
+        assertEquals(1, (grid.floorNativeFlags[y][x] >>> 14) & 7, "base floor native layer");
+        assertEquals(2, (grid.floorOverlayNativeFlags[y][x] >>> 14) & 7, "overlay native layer");
+      }
+      assertEquals(levelId == D2LevelIds.LEVEL_DARKWOOD ? 1 : 0, layeredFloors,
+          "fixed-seed floor layer pair coverage changed for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
           "floor export referenced non-floor DT1 entries for level " + levelId);
       assertEquals(0, applier.getWallLayerOverflowCount(),
@@ -1038,8 +1113,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " outOfBounds=" + applier.getOutOfBoundsCount()
           + " clippedBoundary=" + applier.getClippedBoundaryCount()
           + " clippedFloor=" + applier.getClippedBoundaryFloorCount()
+          + " hiddenBlankFloor=" + hiddenBlankFloors[0]
           + " invalidTile=" + applier.getInvalidTileCount()
           + " duplicatePosition=" + applier.getDuplicatePositionCount()
+          + " layeredFloors=" + layeredFloors
           + " duplicateWall=" + applier.getDuplicateWallCount()
           + " duplicateShadow=" + applier.getDuplicateShadowCount()
           + " wallOverflow=" + applier.getWallLayerOverflowCount()

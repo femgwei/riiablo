@@ -18,6 +18,22 @@ class D2MooTileApplierTest {
     applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0,
         pack(Orientation.FLOOR, 30, 0), DrlgTileExporter.FLAG_HIDDEN | (1 << 14));
     assertEquals(-1, grid.floorIds[0][0]);
+    assertEquals(1, applier.getCallbackCount());
+    assertEquals(0, applier.getLastExportedFloorCount());
+    assertEquals(false, grid.exportedFloorCells[0][0]);
+  }
+
+  @Test void ordinaryHiddenFloorsAndVisibleStyle30AreNotBlankFiller() {
+    TileGrid grid = new TileGrid(2, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(103, grid);
+    applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0,
+        pack(Orientation.FLOOR, 7, 1), DrlgTileExporter.FLAG_HIDDEN | (1 << 14));
+    applier.onTile(103, DrlgExport.LAYER_FLOOR, 1, 0,
+        pack(Orientation.FLOOR, 30, 0), 1 << 14);
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 7, 1), grid.floorIds[0][0]);
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 30, 0), grid.floorIds[0][1]);
+    assertEquals(2, applier.getLastExportedFloorCount());
   }
   @Test void nativeFloorLayersDoNotOverwriteEachOther() {
     TileGrid grid = new TileGrid(1, 1);
@@ -29,6 +45,24 @@ class D2MooTileApplierTest {
     applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0, overlay, 2 << 14);
     assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 7, 1), grid.floorIds[0][0]);
     assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 0, 0), grid.floorOverlayIds[0][0]);
+    assertEquals(2, applier.getLastExportedFloorCount());
+    assertEquals(0, applier.getDuplicatePositionCount(), "different native floor layers are not duplicates");
+    assertEquals(1 << 14, grid.floorNativeFlags[0][0]);
+    assertEquals(2 << 14, grid.floorOverlayNativeFlags[0][0]);
+  }
+
+  @Test void duplicateFloorCountersRemainStrictWithinEachNativeLayer() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(103, grid);
+    for (int layer = 1; layer <= 2; layer++) {
+      applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0, pack(Orientation.FLOOR, 7, 1), layer << 14);
+      applier.onTile(103, DrlgExport.LAYER_FLOOR, 0, 0, pack(Orientation.FLOOR, 8, 2), layer << 14);
+    }
+    assertEquals(2, applier.getDuplicatePositionCount(), "one overwrite in each layer");
+    assertEquals(4, applier.getLastExportedFloorCount());
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 8, 2), grid.floorIds[0][0]);
+    assertEquals(DT1.Tile.Index.create(Orientation.FLOOR, 8, 2), grid.floorOverlayIds[0][0]);
   }
   private static final int LEVEL_ID = 2;
 
