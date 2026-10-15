@@ -279,9 +279,62 @@ $env:D2_TEST = $env:D2_HOME
 代码/测试提交 `776bd89c3175f8fc035a348d5e8dbd3b4e25314e` 已推送origin/master，远端SHA一致。
 提交前无其他暂存变更，仅包含两份生产文件和三份测试；详细报告/进度另行提交。
 
+## 第五批：只读寻路 shadow 差分
+
+这是第四批建议的诊断接入，不是再次移植上游功能或切换生产路径。
+新增 `NativePathShadow`，普通/partial入口在权威搜索完成后捕获有界碰撞快照，
+独立重放生产A*与已有D2AStar；不改路径选择、正常碰撞、平滑、位置、速度、RNG。
+同分/预算/partial等仍保持现有生产行为。默认关闭，仅显式采样时创建快照和重放。
+
+捕获保留门规则、原生seam、重叠地图owning-zone和动态阻挡/忽略目标predicate。
+生产重放输出先与实际原始点序核对，不一致或触及快照边界则标为不可比较；
+结果包含exact/partial/failed、原始/压缩点序、查询/节点计数及非benchmark耗时。
+原生参考只使用coordinate目标，不伪造targetUnit八点approach或完整原生状态机。
+每边最多128格、默认每128请求采1次/最多16次尝试（上限128），异常不改变权威输出。
+
+夹具观察：
+
+- 空地 `(10,10)→(20,17)` 双方EXACT，但同方向压缩后生产6个转向点、参考2个；
+  候选查询240/80，唯一/分配节点70/48。这是固定夹具，不外推实机性能或最终平滑观感。
+- 被挡坐标的普通入口FAILED/参考PARTIAL，partial入口双方到`(19,19)`且压缩输出一致。
+- 门夹具及原生seam双方EXACT且压缩输出一致；门上叠加普通对象仍阻挡。
+- 36单位动态占位夹具生产预算内FAILED，参考仅PARTIAL，并非原生成功穿过密集人群。
+  忽略目标、owner、飞行mask、重叠地图作用域另有回归。
+- 覆盖关闭/采样封顶、禁用后查询数恢复、无RNG消耗、node/metrics不污染、输出不可变、
+  变化输入/超大范围/有限边界标记、异常隔离、非A*入口不误标、同点native空flush合同。
+
+运行方式与状态含义见 [详细报告后续章节](path-collision-upstream-comparison-2026-10-15.md#后续第五批只读-shadow-已接入尚未切换生产路径)。
+另一台电脑可复验第四批107项集合，再增加 `--tests '*NativePathShadowTest'`；
+跨接缝类本轮另增1项。报告采用临时init隔离，最终XML在
+`core/build/test-results/upstreamRound4-round5-final`，不覆盖第四批历史报告。
+
+最终 **129项 / 22类通过，失败/错误/跳过0**：上批107项+新类21项+接缝1项。
+初轮15项、扩展128项均已通过，最终数量不重复累加中间运行。
+本机另运行（不是原版客户端或GL窗口）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :server:d2gs:headlessMovementIntent `
+  -PpathShadow=true -PpathShadowEvery=1 -PpathShadowMaxSamples=4 --console=plain
+```
+
+真实TCP移动意图通过：seed12345，player117，`(132,37)→(135,37)`、flags9/size2，
+shadow=COMPARED，双方EXACT且turns均`[(135,37)]`；候选查询各24、节点各15。
+`sequence=1 observedTick=7 targetTick=8 acknowledgedTick=9 tickLag=1 wallMillis=74`。
+这是单次ACK冒烟，不是关闭/开启配对性能测试；没有据此评价延迟改善。
+完整运行输出在未提交的 `core/build/round5-shadow-tcp.log`，服务端正常退出，6114监听已释放。
+
+代码/测试/启动开关提交 `08fa479b6e6d6f6802a162aa77d0c2cdc636646c` 已推送origin/master，
+远端SHA核对一致；提交只含本轮6份代码/测试/Gradle文件，进度报告随后独立提交。
+
+尚未开展全项目、GL/132图巡游、多seed×三难度或原版DLL动态逐帧对比；
+非benchmark，尚未做native pattern替换/目标状态机/pathType切换。
+下一步应扩展真实狭路/怪群/移动目标样本，先解释exact/partial合同和点序差异，再选择局部原生接入。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
-- 寻路先做只读shadow差分，再按path type考虑原生搜索/目标状态接入；未接入部分
+- 只读shadow已接入，下一步收集真实场景差分，再按path type考虑原生搜索/目标状态接入；未接入部分
   不因独立参考测试通过就视为完成。攻击速度、目标链等其余修正继续专项对照。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

@@ -1,6 +1,7 @@
 # 1.10f 寻路与碰撞：D2MOO 和当前运行时详细比较
 
 日期：2026-10-15。riiablo 审查起点：`8b687045e`，包含近期地图巡游、碰撞和 DiabRun 修改。
+正文1–8节记录第四批审查边界；第五批已接入只读shadow，最新状态见文末后续章节。
 
 ## 结论与证据边界
 
@@ -247,3 +248,62 @@ ordinary SMALL_UNIT_PRESENCE，并且发生在 town/interact 转 PET 之前。
 ```
 
 上述已核验片段支持对应局部结论，不构成整个路径系统逐函数、逐帧等价证明。
+
+## 后续第五批：只读 shadow 已接入，尚未切换生产路径
+
+新增 [NativePathShadow](../core/src/main/java/com/riiablo/map/NativePathShadow.java)，
+在普通/partial生产A*返回后、门规则及owning-zone作用域恢复前采样。
+权威搜索先正常完成，诊断不调用findPath递归、不写入Position/Velocity/path，也不替换输出。
+关闭时不创建快照、不执行重放；现有A*、碰撞尺寸、平滑、房间和恢复策略未改。
+
+一次样本分三步：
+
+1. 复制实际输出点值；冻结起终点包围框向外16格的effective collision，每格只读取一次。
+   静态地形、门、动态障碍使用既有查询；不再保留live map/predicate给搜索重放。
+   目标预检查与候选查询现有mover/target参数合同分别保留。
+2. 用独立节点/heap重放**同一个生产AStarPathFinder及邻居代码**，再运行独立D2AStar。
+   两者只读取同一个不可变快照；输出用原生同方向压缩方式比较，不执行生产视线平滑。
+3. 核对生产重放与刚才真实输出完全一致，才比较runtime/reference的EXACT/PARTIAL/FAILED
+   和压缩转向点序；不将不可比较的样本记作算法不一致。
+
+默认关闭。JVM直接启动可用 `-Driiablo.path.shadow=true`，默认每128次请求采样一次，
+每个MapGraph最多16次尝试；可分别设置 `.every`、`.maxSamples`。
+maxSamples硬限制128；snapshot每边最多128格（最多16384个中心查询，另一次目标预检查）。
+启用有额外同步捕获/分配成本，不建议以every=1常开或据此测帧率。
+
+D2GS的JavaExec任务支持显式Gradle项目参数，避免误以为Gradle自身的-D会自动传给游戏JVM：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :server:d2gs:headlessMovementIntent `
+  -PpathShadow=true -PpathShadowEvery=1 -PpathShadowMaxSamples=4 --console=plain
+```
+
+同样参数可用于 `:server:d2gs:run`；日常采样建议省略Every/MaxSamples以使用低频默认值。
+采样停止后重启JVM可重新计数。程序内测试可在simulation线程使用
+`map.setPathShadow(new NativePathShadow(every, maxSamples, sink))`；传null停用。
+Obstacle/sink必须为只读、无副作用回调；诊断不会为任意第三方回调提供事务回滚。
+
+日志前缀 `[NATIVE_PATH_SHADOW]`，显式启用时使用WARN确保默认日志阈值可见。
+包含flags/size/owner/target、门规则、exact/partial入口、起终点、实际原始点序、
+双方压缩转向点、候选碰撞查询次数、节点数、捕获及重放耗时。
+runtimeNodes是本次重放创建的唯一Point2数；referenceNodes是原生参考分配节点数，
+不是扩展次数。查询次数不含快照捕获/目标预检查；时间含实现各自的Java对象构造，
+没有预热/统计/公平分配采样，**不是benchmark，不用于宣称快几倍**。
+独立D2AStar目前不暴露压缩前原始点序，referenceTurns是其原生压缩输出，不伪造原始点序。
+
+状态解释：
+
+- `COMPARED`：生产重放一致、没有越界，differs才有比较意义。true可以只是结果合同/点序差异，
+  不等同于游戏bug；false也不证明完整原版状态机等价。
+- `SNAPSHOT_LIMIT`：范围太大或整数边界，跳过捕获/重放；计入采样尝试上限。
+- `OUTSIDE_SNAPSHOT`：任一搜索访问快照外，说明有限边界可能影响结果，不给parity判定。
+- `LIVE_REPLAY_DIFFERENCE`：实际输出与冻结快照重放不一致，不归罪于原生算法。
+- `DIAGNOSTIC_ERROR`：捕获/重放/sink的RuntimeException被隔离，权威输出不变；
+  VM Error不吞掉。诊断实例有errors计数，异常也占用采样额度，避免无限重试。
+
+本批只比较共享的**当前effective collision**；日志明确 `targetMode=COORDINATE`。
+即使targetId存在，也不擅自模拟native targetUnit八点approach或pTargetUnit状态。
+size→native pattern的第二套适配、完整pathType dispatch、目标预测/重算/定点步进尚未接入。
+具体回归与TCP结果见 [第五批记录](d2moo-upstream-port-2026-10-15.md#第五批只读寻路-shadow-差分)。

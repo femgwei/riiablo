@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 D2MOO 第五批：只读寻路 shadow
+
+- [x] 新增默认关闭、有界采样的NativePathShadow，实际A*结束后冻结effective collision，
+  独立重放生产A*及已有D2AStar；先核对live/replay，再比较输出合同与压缩点序。
+  不替换实际路点、碰撞尺寸、平滑、房间、速度、位置或恢复策略；无RNG消耗。
+- [x] 保留门/普通对象重叠、飞行mask、动态owner/目标忽略和owning-zone/native seam。
+  超大/越界/变化输入单独标记，异常隔离，输出脱离可复用节点；参考端只用coordinate目标。
+- [x] 最终129项/22类通过，失败/错误/跳过0（上批107+新类21+接缝1）。指定1.10F资源，
+  独立报告 `core/build/test-results/upstreamRound4-round5-final`；非全项目测试。
+- [x] 启用shadow的真实TCP移动意图冒烟通过：双方EXACT/压缩点一致、24次候选查询，
+  ACK tickLag1。非配对性能测试；完整日志 `core/build/round5-shadow-tcp.log` 未提交。
+  D2GS JavaExec可用 `-PpathShadow=true`，Every/MaxSamples可配，详见上游记录第五批。
+- [x] 代码/测试/开关 `08fa479b6` 已推送origin/master且远端SHA一致；文档独立提交。
+- [ ] 仍未切换生产算法；扩展真实狭路/密集单位/移动目标样本后再选pathType接入。
+  native pattern适配、目标状态机、定点步进、性能benchmark、GL/132图/多seed三难度仍待。
+
 ## 2026-10-15 D2MOO 第四批：寻路碰撞比较与非法尺寸
 
 - [x] 按上游47687ceb和本机1.10f D2Common.dll核实：非法size提前回退普通small presence，

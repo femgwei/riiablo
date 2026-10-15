@@ -10,7 +10,24 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第四批：寻路碰撞比较与非法尺寸
+## 2026-10-15 第五批：只读寻路 shadow
+
+- 代码/测试/开关 `08fa479b6` 已推送origin/master且远端SHA一致。默认关闭，实际A*
+  返回后捕获有界effective collision，独立重放生产/参考A*；不改移动结果或最近碰撞优化。
+- 生产重放与live点序一致后才比较；快照外/超大/变化输入分开标记，诊断RuntimeException
+  隔离，未消耗RNG。每边最多128格、默认每128请求采1次、最多16次尝试（硬上限128）。
+- 最终129项/22类通过，失败/错误/跳过0；指定本机1.10F资源，报告隔离在
+  `core/build/test-results/upstreamRound4-round5-final`。含21项新类与1项接缝新增回归。
+- 启用诊断的真实TCP移动意图冒烟通过：seed12345，(132,37)→(135,37)，双方EXACT/
+  压缩输出一致，ACK tickLag1。服务端正常退出，6114监听已释放；非GL或原版动态对比。
+- 另一电脑运行：`gradlew.bat :server:d2gs:headlessMovementIntent -PpathShadow=true
+  -PpathShadowEvery=1 -PpathShadowMaxSamples=4 --console=plain`，先显式设置1.10F D2_HOME。
+  完整复验命令、夹具结果、状态含义见上游记录第五批及详细比较报告后续章节。
+- 下一步扩展真实狭路/怪群/移动目标样本，之后按pathType选择原生接入。
+  尚未切换生产A*、native pattern或目标状态机/定点步进；没有性能benchmark、全图/GL验收。
+- 代码提交后仅本轮四份文档未提交，无其他代码变更；文档独立提交推送，最终SHA见git log。
+
+## 2026-10-15 第四批：寻路碰撞比较与非法尺寸（历史）
 
 - 代码/测试 `776bd89c3` 已推送origin/master，远端SHA核对一致：非法size按1.10f普通small
   presence回退，先于town/interact转PET；动态写入/查询/诊断/回滚一致。
