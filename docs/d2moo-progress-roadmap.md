@@ -51,6 +51,23 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第十五批：前置检查、城镇与占位编排
+
+- [x] 新增`D2PathRequest`组合Units/Target/Result：raw单位目标零轴早退保留旧路径，后续
+  零值/重合/逐轴±100失败走common reject；目标快照的准备写入不因后续失败回滚。
+- [x] 按1.10f DLL保留缺startRoom断言、缺targetRoom允许及普通怪物中点二次查房间；
+  fallback room只供城镇判断，不覆盖搜索初始room。CanBeInTown要求有效MonStats，即使revived。
+- [x] owner移除返回值忽略，target移除受sizeX/flag0x800与返回值控制；恢复target→owner后才
+  归一化结果。Java callback异常恢复为显式宿主安全扩展，不声称原版异常/断言路径等价。
+- [x] 新增31项、最终合并331项/32类通过，失败/错误/跳过0，含内存原生pattern网格占位事务
+  和实际Toward/WallFollow库组合，非生产或DLL动态等价证明。首次一项续算夹具距离过短已修正复验。
+  代码/测试/init `40d444c22`已推送并核验远端一致；详见第十五批记录。新增独立编译/测试init，
+  避免其他聊天争用core/build，四文档独立提交推送。
+- [ ] **寻路未完成**。请求编排不是原生footprint实现或搜索dispatcher；生产身份/表格元数据/
+  房间图适配、nDist步进消费、真实pathType安装/速度/动态碰撞消费仍待。普通生产仍A*，
+  不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial；本轮无新MPQ/TCP/GL/性能/
+  原版动态差分，其他AI进度及验收单列。
+
 ## 2026-10-16 D2MOO 第十四批：搜索结果与初始向量
 
 - [x] 新增`D2PathResult`独立结果层，共享续算状态，补begin/final、零count与耗尽的不同清理、

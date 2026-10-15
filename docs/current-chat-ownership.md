@@ -10,7 +10,29 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十四批：搜索结果、初始向量与房间标记
+## 2026-10-16 第十五批：10142前置检查、城镇规则与占位事务编排
+
+- 新增`D2PathRequest`独立请求编排层，组合Units→Target→Result与续算层；补collidedMask清零、
+  raw目标零轴早退、源点/目标零值/重合/±100窗口、房间查找及怪物城镇规则。
+  target坐标更新可能先于后续失败；早退、common reject和起始房间断言不混用清理。
+- 固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common `86F1..8A75`、`8CAA..8E09`、
+  `46620..466B7`与`56C0..5740`。DLL缺startRoom触发断言，不照搬上游outer if的普通失败；
+  缺targetRoom不直接拒绝，普通怪物经中点再查，fallback不改搜索原始targetRoom。
+- owner移除返回值忽略；target须有身份、sizeX非零及flag0x800才移除，仅返回true才恢复target。
+  搜索后先恢复target、再无条件恢复owner、最后向量归一化。Java异常finally恢复只是宿主安全增强，
+  非原版异常等价/状态回滚。实际footprint写入、身份/元数据/房间图生产适配及搜索dispatcher仍为边界。
+- 新增31项、最终合并331项/32类通过，失败/错误/跳过0；含内存pattern网格占位移除/恢复及
+  真实Toward/WallFollow库组合，非生产消费或原版DLL动态执行。首次扩大回归一项续算夹具误用
+  <=2格WallFollow，换成实际单位目标13→15场景后通过，未修改内核；详见第十五批上游记录。
+  代码/测试/init `40d444c22683426922e90fd94cc0216a333899d9`已推送origin/master且远端SHA一致。
+  独立脚本`docs/path-port-regression.init.gradle`隔离编译及报告，避免共享core/build并行清理；
+  XML `.gradle/path-port/round15-full/core/test-results/pathPortTest`。不提交其他聊天AI/交互修改，四文档另行提交。
+- **寻路仍未完成**：普通生产仍Map→AStarPathFinder。下一轮优先真实类型dispatcher及原生
+  footprint适配，随后nDist步进消费、路径安装/速度/动态碰撞消费与真实地形验收。
+  不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial；本轮无新MPQ/TCP/GL/性能/
+  原版动态差分。火焰之河AI fallback是否被其他聊天处理须单独查其报告，本轮未修/未重跑。
+
+## 2026-10-16 第十四批：搜索结果、初始向量与房间标记（历史）
 
 - 新增`D2PathResult`独立状态层，补非missile 10142结果阶段、精确重复前缀跳过、初始方向/
   速度向量、facing调度及room bit1。与续算层共享index/count/target/final/previous/flags，

@@ -568,3 +568,29 @@ FOG位模式有细微非理想对称，但本轮未找到在byte输入域改变�
 nDist步进消费及实际pathType路径安装/速度/动态碰撞消费仍待。普通生产仍Map→AStarPathFinder，
 近期碰撞/房间/步进不变，不加1.13+ gate或普通自动partial。本轮无新MPQ/TCP/GL/性能/
 原版动态差分；火焰之河AI fallback未修/未重跑。
+
+## 后续第十五批：请求失败副作用、城镇fallback与占位顺序（2026-10-16）
+
+新增`D2PathRequest`组合Units/Target/Result及续算状态。固定D2MOO`0c0bbd1e`未fetch，
+核对本机1.10f D2Common 10142前置/占位流程、46620房间查找与56C0怪物town资格。
+
+- raw单位目标任一轴0先返回，仅清collidedMask、保留旧路径；源点两轴0及准备后的
+  零值/重合/逐轴超±100才common reject，后续失败不回滚已写target。坐标单轴0不受raw gate限制。
+- **DLL与上游差异**：缺startRoom时DLL `0x6FDA8979..8992`断言，上游outer if仅普通失败；
+  本轮显式异常表达，不混入common cleanup。缺targetRoom却不拒绝：普通monster经中点
+  （向零除法）再查，fallback room只做town判断，不替换初始搜索room；不能加1.13+ gate。
+- CanBeInTown必须有有效MonStats，然后NPC/INTOWN/revived任一成立。占位owner移除返回值
+  忽略，target移除受身份/sizeX/flag0x800控制，true才恢复target；之后无条件恢复owner，
+  最后才做向量归一化。Java callback异常恢复只是宿主安全增强，不冒充原版异常/断言等价。
+
+请求编排仍不是footprint的shape/mask/死亡模式实现或完整pathType dispatcher。测试包含
+内存原生pattern网格移除/恢复与Toward、WallFollow/续算组合，但非真实地形或DLL动态执行。
+新增31项、最终合并331项/32类通过，失败/错误/跳过0。首次扩大回归的一项新夹具误将1格
+WallFollow预期为有路径；改为实际单位目标13→15场景复验通过，未改内核。
+代码/测试/init `40d444c22`已推送origin/master、远端一致；其他聊天修改保留且未纳入本轮提交。
+复验脚本、地址及实际测试/交付信息见
+[第十五批记录](d2moo-upstream-port-2026-10-15.md#第十五批10142前置检查城镇规则与占位编排2026-10-16)。
+
+**寻路仍未完成**：生产身份/元数据/房间图适配、实际10222/10223、原生dispatcher、nDist消费
+及真实pathType安装/速度/动态碰撞消费仍待。普通生产A*及近期碰撞/房间/步进不变，不自动普通
+partial。本轮无新MPQ/TCP/GL/性能/原版动态差分，其他AI更新与覆盖单列。

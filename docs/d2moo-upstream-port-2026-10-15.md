@@ -1133,13 +1133,105 @@ footprint事务/dispatcher；生产单位身份/元数据适配、nDist步进消
 速度与动态碰撞消费仍需受控接入和实际地形验收。近期碰撞/房间/步进优化保持，不加1.13+ gate，
 不自动普通exact→partial。火焰之河AI fallback未修/未重跑，其余真实覆盖继续单列。
 
+## 第十五批：10142前置检查、城镇规则与占位编排（2026-10-16）
+
+### 范围与静态证据
+
+新增`D2PathRequest`与`D2PathRequestTest`，组合第十一至十四批独立层，补非missile 10142请求
+编排。State接收稳定目标Unit、与Result共享bounds的起始房间图、已解析size/pattern/raw uint32
+moveMask、unsigned byte speed/IDA初始F值，以及CanBeInTown结果。它不负责实体ID/有效期、
+MonStats加载、真实active-room图转换或footprint写入；搜索仍是显式Effects.search接口，
+不以owner类型猜pathType，不用coordinate A*替代所有原生类型。调用方必须保持身份/房间/元数据
+在请求内稳定，并遵守前批currentPoint与precision高字同步约束；构造默认不是native allocation。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch。读取Path.cpp完整10142、
+town predicate、10222/10223及Monsters.cpp CanBeInTown；结合本机1.10f D2Common反汇编。
+SHA256仍为`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+
+- `0x6FDA86F1..8758`先清16位collided mask，再读目标raw坐标；任一轴0/动态null path直接
+  返回0，保留index/count/ACTIVE/target/final/previous。坐标目标的单轴0不受此早退限制。
+- `0x6FDA8758..88E7`：源点仅两轴均0才common reject；否则快照nDistMax，做Units.prepare并
+  写target。之后目标两轴0、源目标重合、任一轴差超±100才common reject。原static int32轴
+  非零并不保证缩窄uint16后非零，初始raw gate和prepare后的零值gate不能合并。
+  后续拒绝不回滚已写target，不更新final/previous；±100是逐轴包含100，不是欧氏半径。
+- `0x6FDA88E7..89A0`与`0x6FD46620..466B7`：先在startRoom自身half-open bounds找目标，
+  否则按DUNGEON_GetAdjacentRoomsList顺序找第一个包含点的非null room；上界加法保留int32。
+  **DLL与上游差异**：缺startRoom在`0x6FDA8979..8992`触发assert/终止，D2MOO外层if只做
+  普通失败。本层以IllegalStateException显式表达该不可满足前提，不伪造common reject清理。
+- `0x6FDA89A0..8A3F`：只限制普通monster；CanBeInTown则跳过，其他owner类型不限制。
+  初始targetRoom null时，先从startRoom找start+(target-start)/2的halfway，再从halfway找target；
+  除法向零截断，不用floor或两坐标求和取半。fallback的room仅局部用于town判断，不写回
+  PathInfo初始targetRoom。最终找不到仍允许，不引入1.13+非空targetRoom gate；allowInTown
+  可覆盖最终town拒绝，但native判断先执行，不是跳过整个前置链。
+- `0x6FDA56C0..5740`：CanBeInTown需有效MonStats记录，然后NPC/INTOWN或owner ISREVIVE
+  任一成立。即使revived，缺记录也false；helper用已解析booleans，不凭NPC名称/经验判断。
+- `0x6FDA8A3F..8A75`：快照搜索type，调用10223(owner,FALSE)且忽略返回值；目标有身份且
+  sizeX非零、flag0x800时才调用10223(target,FALSE)，仅其true结果触发后续target恢复。
+  footprint具体player/monster死亡模式、object碰撞资格、shape/mask/room写入仍由适配器实现，
+  不能拿回调测试冒充10223所有分支已移植。
+- `0x6FDA8A75..8D52`：移除后才查阻挡终点/调整；写final、清index/count；允许搜索时按快照
+  type分派，返回int覆盖live count。调整失败也执行beginSearch，不分派。先10222(target)
+  （仅移除返回true），再无条件10222(owner)，最后进入上一批finishSearch/向量计算。
+  原targetRoom仍对应调整前目标，不因终点修正重新查房间；搜索失败本层不自动type15重试，
+  重试属于10236续算层。native start未改断言由不可变Search.start及回调契约表达。
+
+Java callback抛异常时finally仍尝试恢复已完成的target移除与owner；target add抛异常也尝试owner。
+这是宿主安全增强，**不是原版异常/断言unwind或状态回滚**，异常不执行finishSearch/普通失败清理。
+若remove回调部分写入后抛异常，内部恢复责任仍在适配器；不声称自动知道部分占位写入是否完成。
+null请求返回0；missile与无有效owner投影显式不支持，不借此实现missile dispatcher。
+
+### 第十五批验证与交付
+
+首轮26项Request +25项Result定向通过。补充网格/恢复/续算夹具后，共享core/build的复跑在
+compileTestJava阶段因其他任务同时写入、无法删除输出目录而失败，未执行JUnit，不算断言失败。
+新增仓库脚本`docs/path-port-regression.init.gradle`，在各project求值前隔离buildDir到
+`.gradle/path-port/<pathRun>/<module>`，编译、资源和报告均独立；不清理其他聊天输出。
+
+独立构建首次扩大回归331项中1项新夹具失败：续算测试沿用final=(9,9)，距(10,10)仅1格，
+WallFollow按既有原版<=2步早退返回空，与夹具预期有路径冲突。已读WallFollow入口及既有短线
+测试确认；改用目标(20,10)的实际单位目标13→15重试场景，未修改请求实现或WallFollow内核。
+首次失败日志`core/build/round15-isolated-full.log`；失败后重新执行同范围合并回归，
+最终**331项/32类通过，失败/错误/跳过0**，含本轮新增31项。
+
+覆盖raw零轴保留/晚期清理、static坐标缩窄、±100逐轴包含边界、准备目标写入不回滚、缺startRoom
+断言、缺targetRoom/两跳town fallback/负向奇数中点截零、顺序邻接与half-open/int32边界、
+MonStats/town资格组合、target占位三条件/返回值、owner恢复无条件、搜索前快照、调整失败仍写final、
+原始room不随终点修正重查、count返回覆盖、Java异常恢复与不执行finishSearch边界、归一化耗尽，
+以及真实Toward输出/续算转WallFollow库组合。内存D2CommonCollision pattern网格夹具实际移除
+owner/target标记，在碰撞查询与Toward搜索时断言均不存在，结束后恢复两者且静态墙标记不变；
+它使用人为配置footprint适配回调，不是10223全部单位形状/死亡/object资格分支或实际地图验收。
+
+最终日志`core/build/round15-isolated-full-final.log`，XML
+`.gradle/path-port/round15-full/core/test-results/pathPortTest`，BUILD SUCCESSFUL。
+任务`:core:pathPortTest -PpathRun=round15-full`，filters沿用第十四批（path包自动包括本轮新类）。
+三项已有原版静态表oracle也执行、无跳过；本轮未另跑标准core:test，没有新MPQ/TCP/GL、全图/
+多seed难度、benchmark或原版DLL动态执行。静态表oracle只是原DLL数据读取，不是动态函数差分。
+
+代码/测试/init `40d444c22683426922e90fd94cc0216a333899d9`已推送origin/master并核验远端SHA一致。
+只提交本轮两个Java新文件与独立init脚本；其他聊天AI、对象声音/交互及其报告保留，未纳入本轮提交
+或专项验收。共享master上的其他独立提交不回退；四交接文档另行提交推送，最终SHA见git log。
+
+另一电脑最小复验（原版路径改为当地目录；独立构建脚本已纳入仓库）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round15-check --tests '*D2PathRequestTest' --tests '*D2PathResultTest' --tests '*D2PathUnitsTest' --tests '*D2PathContinuationTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --console=plain
+```
+
+**寻路仍未完成**：本轮补请求的gate和占位调用编排，但实际10222/10223适配、原生pathType
+dispatcher、生产身份/表格/房间图、nDist步进消费、路径安装/速度/动态碰撞消费仍待。
+下一轮优先dispatcher与footprint适配，随后受控接通真实移动并验收消费、失败、恢复、续算。
+普通生产仍Map→AStarPathFinder；近期碰撞/房间/步进不变，不加1.13+ gate，不自动普通exact→partial。
+火焰之河AI fallback本轮未修/未重跑；其他聊天AI提交不能当本轮路径验收，最新状态须另查其报告。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
-  已补独立10142结果规范化/flags生命周期；仍需生产身份/元数据解析、nDist步进消费、10142早期gate/
-  城镇规则与footprint事务/dispatcher，并将状态与真实移动接通，
+  已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
+  元数据/房间图适配、nDist步进消费、原生footprint实现与搜索dispatcher，并将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。
