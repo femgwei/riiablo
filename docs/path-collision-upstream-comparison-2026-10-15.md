@@ -542,3 +542,29 @@ FOG位模式有细微非理想对称，但本轮未找到在byte输入域改变�
 10142其他gate/结果规范化/flags生命周期、nDist步进消费及实际pathType真实移动接入仍待。
 普通生产仍Map→AStarPathFinder，近期碰撞/房间/步进不变；不加1.13+ gate或普通自动partial。
 火焰之河AI fallback及其余真实覆盖继续单列。
+
+## 后续第十四批：结果非零不等于可移动，room flag以DLL为准（2026-10-16）
+
+新增`D2PathResult`独立结果/初始向量层，组合续算状态，不替换生产A*。固定D2MOO`0c0bbd1e`
+未fetch，静态核对本机1.10f D2Common的10142结果、向量归一化、room/facing setter及方向表。
+
+- 零搜索结果只清ACTIVE；精确重复前缀耗尽先清vectors/velocity，再common reject清index/count。
+  common reject不代表所有失败：更早目标raw零轴分支直接返回，不能无条件清掉旧路径。
+- 只跳过与当前精确fp16中心相同的点，不是同整数格去重。成功先previous=旧target，再按
+  flag0x10/targetUnit决定target是否变末点；返回总count，不保证剩余点数量或实际移动。
+- vector*velocity保留int32回绕/右移，反向flag只改facing；player/monster只调度新朝向，
+  object/item直接改当前朝向。lookup只覆盖已核实的native非溢出域，域外显式拒绝。
+- **原DLL优先于上游源码的一处修正**：`0x6FDA8220..8290`先清bit1；有点且room null时
+  DLL从8240跳8282置bit1，上游外层if(room)则只清除。此次按DLL。扫描含已消费前缀、忽略
+  stale tail，half-open bounds保留int32加法；该flag不拒绝路径，不是1.13+目标房间gate。
+
+新增25项、合并300项/31类通过，失败/错误/跳过0。新静态oracle实际读取匹配哈希的原DLL，
+逐项比较128项方向/64项turn表；不是DLL动态执行。真实Toward/WallFollow与结果/续算层组合
+也只是库状态夹具，不据此宣称生产消费或性能更优。代码/测试`405e77494`已推送且远端一致。
+原版地址/哈希、输入域、条件跳过及另机命令见
+[第十四批记录](d2moo-upstream-port-2026-10-15.md#第十四批搜索结果初始向量与房间标记2026-10-16)。
+
+**寻路仍未完成**：10142早期gate/城镇规则、footprint事务/dispatcher、生产身份/元数据适配、
+nDist步进消费及实际pathType路径安装/速度/动态碰撞消费仍待。普通生产仍Map→AStarPathFinder，
+近期碰撞/房间/步进不变，不加1.13+ gate或普通自动partial。本轮无新MPQ/TCP/GL/性能/
+原版动态差分；火焰之河AI fallback未修/未重跑。

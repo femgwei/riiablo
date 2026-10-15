@@ -10,7 +10,28 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十三批：单位坐标、FOG提前量与停止距离
+## 2026-10-16 第十四批：搜索结果、初始向量与房间标记
+
+- 新增`D2PathResult`独立状态层，补非missile 10142结果阶段、精确重复前缀跳过、初始方向/
+  速度向量、facing调度及room bit1。与续算层共享index/count/target/final/previous/flags，
+  但不是完整请求gate、碰撞footprint事务、dispatcher或生产路径安装；普通生产仍Map→AStarPathFinder。
+- 零搜索结果仅清ACTIVE；全重复耗尽则先清vectors/velocity，再common reject清index/count。
+  成功先保存previous，再按flag0x10/targetUnit决定是否改target；返回总count，不保证移动。
+  固定78槽保留stale tail；只跳过精确fp16中心相同点，不按同一整数格去重。
+- 固定D2MOO`0c0bbd1e`未fetch，核对本机1.10f D2Common `8CB6..8E09`、`8220..8290`、
+  `C790..C8ED`、`9720..9762`。DLL对非空路径且null room置bit1，上游只清除；本轮按DLL，
+  不是新增目标房间gate。direction lookup只支持已核对的native非溢出域，域外显式拒绝。
+- 新增25项通过；连同Units定向52项/2类，合并300项/31类通过，失败/错误/跳过0。
+  新静态oracle读取匹配哈希的原版128项方向表/64项turn表，不是DLL动态执行；无匹配原文件会显式跳过。
+  XML：`core/build/test-results/upstreamRound4-round14-full`。代码/测试
+  `405e77494123dbbf91267c8a84280f5380dd31f2`已推送origin/master并核验远端一致；四文档另行提交推送。
+  仅提交本轮三个代码/测试文件，共享工作区对象交互/COF/服务端等其他聊天修改保留、未纳入。
+- **寻路仍未完成**：10142早期gate/城镇规则、footprint事务/dispatcher、生产身份/元数据适配、
+  nDist步进消费及真实pathType安装/速度/动态碰撞消费仍待。下一轮优先补请求包装器与事务顺序。
+  不撤回近期碰撞/房间/步进优化，不加1.13+ gate或普通自动partial；本轮无新MPQ/TCP/GL/
+  性能/原版动态差分，火焰之河AI fallback未修/未重跑。地址/边界/另机命令见第十四批上游记录。
+
+## 2026-10-16 第十三批：单位坐标、FOG提前量与停止距离（历史）
 
 - 新增`D2PathUnits`独立单位快照辅助层：静态int32/动态unsigned fp16坐标解析、空dynamicPath
   坐标/方向零值、PathUtil两种目标采样入口、初始单位目标种类容差/门偏移，以及10399尺寸距离。

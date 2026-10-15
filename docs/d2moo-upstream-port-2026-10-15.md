@@ -1062,12 +1062,84 @@ Megademon代码/测试/报告等新文件保留，未修改或纳入本轮提交
 不自动普通exact→partial，不撤回近期碰撞/房间/步进优化，不加1.13+ gate。
 火焰之河AI fallback未修/未重跑；其他真实覆盖/性能/原版动态差分继续单列。
 
+## 第十四批：搜索结果、初始向量与房间标记（2026-10-16）
+
+### 范围与原版证据
+
+新增`D2MOO_JAVA/.../path/D2PathResult.java`及`D2PathResultTest`，复用Units测试的原版PE/哈希
+读取辅助方法（仅放宽为包级可见）。本轮是非missile 10142结果阶段及初始向量状态投影，组合
+`D2PathContinuation.State`，不实现请求gate、footprint移除/恢复、dispatcher或生产路径安装。
+State构造默认值不是native allocation；适配器须保持currentPoint与precision高16位同步。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch；读取Path.cpp的10142、
+sub_6FDA8220/sub_6FDA9720及PathMisc.cpp向量归一化，结合本机1.10f D2Common静态反汇编。
+DLL SHA256复核仍为`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+
+- `0x6FDA8CB6..8E09`：准备后先清index/count、写final，即使阻挡终点准备不允许搜索也执行。
+  调用方须先恢复target footprint，再恢复owner footprint，随后才能调用finishSearch。
+  count==0只清ACTIVE 0x20，不清index/velocity/vectors/previous/unk0x38；非零count先归一化，
+  若全部耗尽则进入common reject，清index/count/ACTIVE，向量/velocity已由归一化清零。
+  成功才更新room flag、previous=原target、unk0x38=0，无flag0x10且无targetUnit时target=末点，
+  然后置ACTIVE，返回总count而非剩余点数。非零返回也不保证velocity非零或实际移动。
+  `pendingUpdate`仅是unk0x38投影名，不声称已知原生字段语义。固定78槽短结果/失败保留stale tail。
+- `0x6FDA86F1..8758`：更早的目标raw任一坐标轴0会直接返回，保留旧路径；不能把本层reject
+  当所有失败的统一清理。该gate本轮未实现，也不在beginSearch中提前执行。
+- `0x6FDAC790..C8ED`：只跳过精确fp16中心与当前precision完全相同的前缀，不按同一整数格去重。
+  全耗尽清方向/速度向量及velocity并令index=count；其余使用既有D2PathStep方向表投影，
+  vector*velocity保持int32回绕后算术右移8。flag0x200只反向facing，不反向向量；强制更新或
+  预测下一整数格等于路点格且normalizeIfSamePoint时才更新facing。
+- `0x6FDAC5E0..C6F5`：native lookup混合unsigned比较与signed乘除，本层限定unsigned精确轴差
+  <=INT_MAX且127*minorDelta<=INT_MAX。域外可能非法索引，显式拒绝，不用long增强冒充原版。
+- `0x6FDA9720..9762`：object/item直接改当前朝向；missile受flag0x40门槛；默认player/monster/
+  tile/no-owner只在newDirection变化时改newDirection与diffDirection。64方向差表的低字节
+  依次分段为0、1、4、8、-8、-4、-1，不立即推进player/monster当前朝向。
+- `0x6FDA8220..8290`：先清bit1，再从第0点扫描至count，包含已消费前缀但不读stale tail；
+  bounds为half-open，x+width/y+height保留int32回绕。**DLL与上游差异**：DLL在有点且room null
+  时从8240跳8282置bit1；D2MOO外层if(room)只清bit1。本轮按DLL；该flag不拒绝路径，非1.13+ room gate。
+- 原版方向表VA `0x6FDD2598`（文件offset `0x92598`），128项(x,y,angle)；turn表VA
+  `0x6FDD1F88`，64项int32。新静态数据测试逐项核对既有directionVector及新facing输出。
+
+### 第十四批验证与交付
+
+新增25项测试通过；与Units一起定向52项/2类通过，合并**300项/31类通过，失败/错误/跳过0**。
+覆盖零结果/全重复耗尽/精确坐标差、总count/零速度、stale tail、int32速度回绕、反向facing、
+预测格门槛、previous/target/单位身份/flag0x10、room half-open/null/前缀/溢出边界、common reject
+与朝向分段；另有实际Toward输出、首次失败状态保留后真实WallFollow输出与续算层组合。
+这些组合仍是库状态测试，不是生产路径消费或动态碰撞验收。
+
+新原版静态表oracle包含在25项内：先匹配SHA256、解析PE32 section，再核对128项方向表与64项
+turn表；不是加载DLL执行函数。无D2_HOME/匹配文件时assumption显式跳过，本机执行、跳过0。
+连同上一批两项原DLL测试，合并回归中三项静态oracle均执行；不是数百项原版动态差分。
+
+- 定向XML：`core/build/test-results/upstreamRound4-round14-result`，日志`core/build/round14-result.log`。
+- 合并XML：`core/build/test-results/upstreamRound4-round14-full`，日志`core/build/round14-full.log`。
+- 隔离任务`:core:upstreamRound4Test -PupstreamRun=round14-full`，filters沿用第十三批，BUILD SUCCESSFUL。
+- 未新增MPQ/TCP/GL、全图/多seed难度、benchmark或原版DLL动态差分；标准core:test未另跑。
+
+另一电脑最小复验（原版路径改为当地目录，不依赖本机临时init）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*D2PathResultTest' --tests '*D2PathUnitsTest' --tests '*D2PathContinuationTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --console=plain
+```
+
+代码/测试`405e77494123dbbf91267c8a84280f5380dd31f2`已推送origin/master并核验远端一致。
+仅提交上述三个代码/测试文件；共享工作区COF/对象交互/服务端等其他聊天修改保留、未纳入本轮提交。
+四文档独立提交推送，最终SHA见git log。
+
+**寻路仍未完成**，普通生产仍Map→AStarPathFinder。下一轮优先10142早期gate/城镇规则与
+footprint事务/dispatcher；生产单位身份/元数据适配、nDist步进消费、实际pathType路径安装、
+速度与动态碰撞消费仍需受控接入和实际地形验收。近期碰撞/房间/步进优化保持，不加1.13+ gate，
+不自动普通exact→partial。火焰之河AI fallback未修/未重跑，其余真实覆盖继续单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
-  仍需生产身份/元数据解析、nDist步进消费、10142其他gate/规范化及flags生命周期，并将状态与真实移动接通，
+  已补独立10142结果规范化/flags生命周期；仍需生产身份/元数据解析、nDist步进消费、10142早期gate/
+  城镇规则与footprint事务/dispatcher，并将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

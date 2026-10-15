@@ -18,6 +18,20 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第十四批：搜索结果与初始向量
+
+- [x] 新增`D2PathResult`独立结果层，共享续算状态，补begin/final、零count与耗尽的不同清理、
+  previous快照/条件target改写、ACTIVE、精确重复前缀、int32速度向量和facing/room标记。
+- [x] 按本机1.10f DLL处理null room非空路径置bit1，与上游源码有差异；该标记不拒绝路径。
+  固定78槽保留stale tail；返回总count不保证移动，lookup域外不伪装原生安全行为。
+- [x] 固定D2MOO`0c0bbd1e`未fetch，结合D2Common静态分支及128项方向/64项turn原表核验。
+  新增25项、合并300项/31类通过，失败/错误/跳过0；原表oracle不是DLL动态执行。
+  代码/测试`405e77494`已推送且远端一致；详见第十四批上游记录，四文档独立提交推送。
+- [ ] **寻路未完成**。10142早期gate/城镇规则、footprint事务/dispatcher、生产身份/元数据适配、
+  nDist步进消费及真实pathType安装/速度/动态碰撞消费仍待；下一轮优先请求包装器与事务顺序。
+  普通生产仍Map→AStarPathFinder，不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。
+  本轮无新MPQ/TCP/GL/性能/原版动态差分，火焰之河AI fallback及其他覆盖单列。
+
 ## 2026-10-16 D2MOO 第十三批：单位目标采样与尺寸距离
 
 - [x] 新增`D2PathUnits`稳定快照辅助层，解析static int32/dynamic unsigned fp16/null path坐标，
