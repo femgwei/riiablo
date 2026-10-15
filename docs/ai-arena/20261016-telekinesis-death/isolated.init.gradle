@@ -1,0 +1,14 @@
+allprojects { p ->
+  p.buildDir = new File(rootDir, 'build/telekinesis-death-isolated/' + (p.path == ':' ? 'root' : p.path.substring(1).replace(':', '_')))
+  p.afterEvaluate {
+    if (p.plugins.hasPlugin('java')) {
+      p.sourceSets.each { s ->
+        def classes = p.file("$p.buildDir/classes/java/$s.name")
+        s.java.destinationDirectory.set(classes)
+        s.output.classesDirs.setFrom(classes)
+        p.tasks.named(s.compileJavaTaskName, JavaCompile) { destinationDirectory.set(classes) }
+      }
+    }
+  }
+}
+

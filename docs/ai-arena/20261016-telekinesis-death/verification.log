@@ -1,0 +1,7 @@
+Baseline: 11 tests, 2 expected Telekinesis death-threshold failures.
+final: 289 tests, 0 failures/errors/skips.
+repeat: 289 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 F918BB2E5098FEDFBF9A4C815643501AC3D704CD49BC37E7E2634094542C1C0D core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 64267EF8A6CF9DD77ECF6EE3DE14FFBF077A3B552017305B10F82C619D96C86E core/src/test/java/com/riiablo/engine/server/SorceressTelekinesisIntegrationTest.java
+PARTIAL: Telekinesis fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

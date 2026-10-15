@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -38,6 +39,34 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authoritative coverage for D2MOO SrvSt12/SrvDo021. */
 class SorceressTelekinesisIntegrationTest extends RiiabloTest {
+  @Test void fractionalRemainderDies() { deathBoundary(20f + 255f / 256, 0f, false, false); }
+  @Test void exactlyOneLifeSurvives() { deathBoundary(21f, 1f, false, false); }
+  @Test void aboveOneLifeSurvives() { deathBoundary(21f + 1f / 256, 1f + 1f / 256, false, false); }
+  @Test void partialAbsorbPrecedesDeathThreshold() { deathBoundary(.5f, 0f, true, false); }
+  @Test void cancelledDamagePreservesFractionalLife() { deathBoundary(.5f, .5f, false, true); }
+
+  private static void deathBoundary(float initial, float expected, boolean absorb, boolean cancel) {
+    try (Harness test = new Harness()) {
+      int caster = test.player(0, 0, 20, 0);
+      int target = test.monster(1, 0, initial, 100, 0);
+      if (absorb) {
+        test.attrs(target).base().put(Stat.item_absorblight_percent, 50);
+        test.attrs(target).reset();
+      }
+      test.damage.cancel = cancel;
+      test.cast(caster, target);
+      assertEquals(expected, test.hp(target), .0001f);
+      assertEquals(expected == 0f ? 1 : 0, test.damage.deaths);
+      assertEquals(1, test.damage.count);
+      assertEquals(absorb ? 10f : 20f, test.damage.lightning, .0001f);
+      if (expected == 0f) {
+        test.cast(caster, target);
+        assertEquals(1, test.damage.deaths);
+        assertEquals(1, test.damage.count);
+      }
+    }
+  }
+
   @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, 100, 50f, 0); }
   @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, 0, 40f, 1); }
   @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, 100, 70f, 0); }
@@ -217,6 +246,8 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
   }
 
   private static final class DamageRecorder extends PassiveSystem {
+    int deaths;
+    boolean cancel;
     int count;
     byte kind;
     float physical;
@@ -227,7 +258,9 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
       kind = event.kind;
       physical = event.physicalDamage;
       lightning = event.lightningDamage;
+      if (cancel) event.damage = 0;
     }
+    @Subscribe public void onDeath(DeathEvent event) { deaths++; }
   }
 
   private static final class NoopFactory extends EntityFactory {
