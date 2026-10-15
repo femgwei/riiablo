@@ -1,0 +1,27 @@
+allprojects {
+  afterEvaluate { p ->
+    if (p.path == ':core' || p.path == ':server:d2gs') {
+      def isolatedCompile = tasks.register('compileDiabPrisonTest', JavaCompile) {
+        dependsOn tasks.named('classes')
+        source = sourceSets.test.allJava
+        classpath = sourceSets.test.compileClasspath
+        destinationDirectory = file("$buildDir/classes/java/diabPrisonTest")
+        options.encoding = 'UTF-8'
+      }
+      tasks.register('diabPrisonRegression', Test) {
+        dependsOn isolatedCompile
+        testClassesDirs = files(isolatedCompile.get().destinationDirectory)
+        classpath = files(isolatedCompile.get().destinationDirectory) + sourceSets.test.runtimeClasspath
+        if (p.path == ':core') useJUnitPlatform { excludeTags 'visual' }
+        else useJUnit()
+        maxHeapSize = '2g'
+        systemProperty 'java.awt.headless', 'true'
+        systemProperty 'gdx.test.headless', 'true'
+        reports.junitXml.destination = file("$buildDir/test-results/diab-prison-final")
+        reports.html.destination = file("$buildDir/reports/tests/diab-prison-final")
+        binaryResultsDirectory = file("$buildDir/test-results/diab-prison-final/binary")
+        testLogging { events 'failed'; exceptionFormat 'full' }
+      }
+    }
+  }
+}

@@ -137,6 +137,11 @@ public abstract class EntityFactory extends PassiveSystem {
         Integer.MAX_VALUE, true, durationFrames, x, y);
   }
 
+  /** MonsterSpawn Do104: exact placement, ordinary monster stats, no player pet. */
+  public int createDiabPrisonSegment(int monsterId, int x, int y) {
+    return Engine.INVALID_ENTITY;
+  }
+
   /** Restores a dead monster entity in place; unsupported factories return false. */
   public boolean resurrectMonster(int monsterId, int sourceId) {
     return false;

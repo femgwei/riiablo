@@ -205,6 +205,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
+    if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-run");
     return scenarios;
   }
@@ -259,6 +260,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       stats.base().put(Stat.level, 30);
       stats.base().put(Stat.maxhp, 1000000);
       stats.base().put(Stat.hitpoints, 1000000);
+      if (result.scenario.equals("diab-prison") || result.scenario.equals("diab-wall")) {
+        // A normal melee fixture can break an attackable prison, then walk out.
+        stats.base().put(Stat.mindamage, 1000); stats.base().put(Stat.maxdamage, 1000);
+        stats.base().put(Stat.tohit, 10000);
+        stats.base().put(Stat.mana, 100); stats.base().put(Stat.maxmana, 100);
+      }
       stats.reset();
       float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
           || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
@@ -270,6 +277,10 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
+      if (result.scenario.equals("diab-prison")) {
+        result.specialAssert = true; result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_DIAB_PRISON"; probe.prisonPhase = 0;
+      }
       if (result.scenario.equals("diab-run")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -317,20 +328,23 @@ public final class MonsterAiArena extends ApplicationAdapter {
       boolean wallRunSeen = false;
       for (int tick = 0; tick < config.ticks; tick++) {
         capture.tick = tick + 1;
-        if (result.scenario.equals("diab-wall") && probe.diabWall.phase == 0) {
+        if (result.scenario.equals("diab-wall") && probe.diabWall.phase == 0
+            || result.scenario.equals("diab-prison") && probe.prisonPhase == 0) {
           Casting current = world.getMapper(Casting.class).get(subject);
           if (current != null && current.diabRun != null) wallRunSeen = true;
           Vector2 actor = world.getMapper(Position.class).get(subject).position;
           Vector2 playerPos = world.getMapper(Position.class).get(playerId).position;
           if (wallRunSeen && (current == null || current.diabRun == null)
               && playerPos.dst2(actor) < 100
+              && !world.getMapper(Casting.class).has(playerId)
               && !world.getMapper(com.riiablo.engine.server.component.Pathfind.class).has(playerId)) {
             // DiabRun now closes distance legitimately. Reopen ranged space
             // through ordinary player movement, not a forced wall selection.
             Vector2 retreat = playerPos.cpy().sub(actor).nor().scl(16).add(playerPos);
-            if (!world.getSystem(Pathfinder.class).findPath(playerId, retreat, false, Engine.INVALID_ENTITY))
-              throw new IllegalStateException("DiabWall retreat path rejected");
-            capture.line("fixture wallRetreat=" + playerId + " destination=" + retreat);
+            if (world.getSystem(Pathfinder.class).findPath(playerId, retreat, false, Engine.INVALID_ENTITY))
+              capture.line("fixture wallRetreat=" + playerId + " destination=" + retreat);
+            else if (!attackNearbyPrison(world, playerId, capture))
+              throw new IllegalStateException("DiabWall retreat path rejected without attackable prison");
           }
         }
         simulation.tick(null, null);
@@ -341,6 +355,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         Vector2 position = world.getMapper(Position.class).get(subject).position;
         probe.observeCycle();
+        if (result.scenario.equals("diab-prison") && probe.prisonPhase >= 2 && probe.prisonPhase < 4) {
+          if (probe.prisonPhase == 2) attackNearbyPrison(world, playerId, capture);
+          if (probe.prisonPhase == 3 && !world.getMapper(com.riiablo.engine.server.component.Pathfind.class).has(playerId)
+              && !world.getMapper(Casting.class).has(playerId)) {
+            Vector2 exit = probe.prisonCenter.cpy().add(-8, 0);
+            if (!world.getSystem(Pathfinder.class).findPath(playerId, exit, false, -1))
+              throw new IllegalStateException("Broken prison still blocks exit");
+            capture.line("fixture prisonExit=" + playerId + " destination=" + exit);
+          }
+        }
         if (probe.frog != null && probe.frog.phase == 1 && !frogApproachRequested) {
           // Stimulate the native distance gate with an ordinary player path,
           // not a warp, phase write, injected skill or changed AI parameter.
@@ -385,6 +409,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED"
               : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED"
               : result.scenario.equals("diab-run") ? "DIAB_RUN_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+      if (result.scenario.equals("diab-prison") && result.specialPassed) result.special = "DIAB_PRISON_OBSERVED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -424,6 +449,24 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if (result.specialAssert && result.specialPassed && "orphan".equals(result.scenario)) return "TERMINAL_OBSERVED";
     if (result.actions > 0) return "ACTION_OBSERVED";
     return result.moves > 0 ? "MOVEMENT_ONLY" : "NO_ACTION";
+  }
+
+  private static boolean attackNearbyPrison(World world, int player, CaseLog capture) {
+    com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
+        com.riiablo.engine.server.component.DiabPrison.class)).getEntities();
+    Vector2 position = world.getMapper(Position.class).get(player).position;
+    for (int i = 0; i < ids.size(); i++) {
+      int id = ids.get(i);
+      if (world.getMapper(AttributesWrapper.class).get(id).attrs.get(Stat.hitpoints).asFixed() <= 0) continue;
+      if (position.dst2(world.getMapper(Position.class).get(id).position) > 9) continue;
+      if (!world.getMapper(Casting.class).has(player)) {
+        boolean accepted = world.getSystem(Actioneer.class).castAndReport(player, com.riiablo.skill.SkillCodes.attack, id,
+            world.getMapper(Position.class).get(id).position.cpy());
+        capture.line("fixture prisonAttack player=" + player + " target=" + id + " accepted=" + accepted);
+      }
+      return true;
+    }
+    return false;
   }
 
   private int helpers(World world, ServerEntityFactory factory, Map.Zone zone, MonStats.Entry row,
@@ -505,6 +548,10 @@ public final class MonsterAiArena extends ApplicationAdapter {
     DiabColdCycle diabCold;
     DiabWallCycle diabWall;
     DiabRunCycle diabRun;
+    int prisonPhase = -1, prisonTarget = -1;
+    boolean prisonCastValid, prisonHit;
+    Vector2 prisonCenter;
+    com.badlogic.gdx.utils.IntArray prisonMembers;
     com.riiablo.engine.server.NativeDiabRun runCast;
     com.badlogic.gdx.math.Vector2 runStart;
     int runTarget = -1;
@@ -529,6 +576,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
+      if (prisonPhase == 0 && event.skillId == 199 && event.srvdofunc == 104) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        prisonCastValid = cast != null && cast.skillId == 199 && seq != null
+            && seq.started && seq.mode1 == Engine.Monster.MODE_S3;
+        prisonTarget = event.targetId;
+        prisonCenter = world.getMapper(Position.class).get(prisonTarget).position.cpy();
+      }
       if (diabWall != null && diabWall.phase == 0 && !pendingWall && event.skillId == 197 && event.srvdofunc == 102) {
         pendingWall = true; wallTarget = event.targetId;
         wallLevel = world.getMapper(Monster.class).get(subject).monstats.Sk4lvl;
@@ -566,6 +621,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (prisonPhase >= 0) observePrison();
       if (diabRun != null) observeDiabRun();
       if (diabWall != null) observeDiabWall();
       if (diabCold != null && pendingCold != null) {
@@ -710,6 +766,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (cycle.phase == 4) capture.result.specialPassed = true;
     }
     @Subscribe public void damage(DamageEvent event) {
+      if (prisonPhase == 2 && event.attacker == prisonTarget && prisonMembers != null
+          && prisonMembers.contains(event.victim) && event.damage > 0 && event.physicalDamage > 0) {
+        prisonHit = true;
+        capture.line("PrisonPlayerHit victim=" + event.victim + " damage=" + event.damage);
+      }
       if (event.attacker != subject) return;
       if (diabRun != null && runCast != null && event.victim == runTarget && diabRun.phase == 2) {
         Casting cast = world.getMapper(Casting.class).get(subject);
@@ -749,6 +810,57 @@ public final class MonsterAiArena extends ApplicationAdapter {
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
     }
+    private void observePrison() {
+      int before = prisonPhase;
+      DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+      if (prisonPhase == 0 && prisonCastValid) {
+        com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
+            com.riiablo.engine.server.component.DiabPrison.class)).getEntities();
+        if (ids.size() == 4) {
+          com.badlogic.gdx.utils.IntArray group = world.getMapper(
+              com.riiablo.engine.server.component.DiabPrison.class).get(ids.get(0)).members;
+          boolean valid = group != null && group.size == 4;
+          int[][] offsets = {{1,1},{1,-1},{-1,-1},{-1,1}};
+          for (int i = 0; valid && i < 4; i++) {
+            int id = group.get(i); Monster m = world.getMapper(Monster.class).get(id);
+            valid &= m.monstats.hcIdx == 340+i && m.minionOwnerId == group.first()
+                && !world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).has(id)
+                && world.getMapper(AttributesWrapper.class).get(id).attrs.get(Stat.hitpoints).asFixed() > 0
+                && world.getMapper(Position.class).get(id).position.epsilonEquals(
+                    (int)prisonCenter.x+offsets[i][0], (int)prisonCenter.y+offsets[i][1], .001f)
+                && collisions.hasPresence(id);
+          }
+          if (valid) { prisonMembers = group; prisonPhase = 1; }
+        }
+      }
+      if (prisonPhase == 1) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        boolean risen = true;
+        for (int i=0;i<prisonMembers.size;i++) risen &= world.getMapper(CofReference.class)
+            .get(prisonMembers.get(i)).mode == Engine.Monster.MODE_NU;
+        if (risen && (cast == null || cast.skillId != 199)) {
+          boolean blocked = !world.getSystem(Pathfinder.class).findPath(prisonTarget,
+              prisonCenter.cpy().add(-8,0), false, -1);
+          if (blocked) prisonPhase = 2;
+        }
+      }
+      if (prisonPhase == 2 && prisonHit) {
+        boolean dead = true;
+        for (int i=0;i<prisonMembers.size;i++) {
+          int id=prisonMembers.get(i);
+          dead &= world.getMapper(AttributesWrapper.class).get(id).attrs.get(Stat.hitpoints).asFixed() <= 0
+              && !collisions.hasPresence(id) && world.getMapper(
+                  com.riiablo.engine.server.component.DiabPrison.class).get(id).members == null;
+        }
+        if (dead) prisonPhase = 3;
+      }
+      if (prisonPhase == 3 && world.getMapper(Position.class).get(prisonTarget).position.dst2(prisonCenter) > 9) {
+        prisonPhase = 4; capture.result.specialPassed = true;
+      }
+      if (before != prisonPhase) capture.line("DiabPrisonCycle subject=" + subject + " phase=" + prisonPhase
+          + " members=" + prisonMembers + " playerHit=" + prisonHit);
+    }
+
     private void observeDiabRun() {
       Casting cast = world.getMapper(Casting.class).get(subject);
       Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -934,6 +1046,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE"
               : "diab-cold".equals(result.scenario) ? "DIAB_COLD"
               : "diab-wall".equals(result.scenario) ? "DIAB_WALL"
+              : "diab-prison".equals(result.scenario) ? "DIAB_PRISON"
               : "diab-run".equals(result.scenario) ? "DIAB_RUN" : "NONE"));
     }
     synchronized void line(String text) {
@@ -969,7 +1082,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
         + "<style>body{font:14px system-ui;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:5px}"
         + "th{position:sticky;top:0;background:#eee}pre{white-space:pre-wrap}</style><h1>逐怪 AI 测试记录</h1>"
         + "<p>仅空地基线与已实现辅助场景；观察到动作 ≠ 原版逻辑正确。无网络、地形、任务或完整 Boss 场景验收。"
-        + "每场重新创建 World/角色，主体独立归因；警告、fallback、未触发、未运行保留。玩家 HP=1000000，不主动攻击。</p><pre>");
+        + "每场重新创建 World/角色，主体独立归因；警告、fallback、未触发、未运行保留。玩家 HP=1000000；骨牢/地火场角色可普通攻击破牢后步行。</p><pre>");
     html.append(escape(catalog.summary())).append("</pre><p>seed=").append(config.seed)
         .append(" difficulty=").append(config.difficulty).append(" ticks/case=").append(config.ticks)
         .append(" (25Hz accelerated simulation)</p><label>筛选怪物 / AI / 状态 / Act： <input id=filter></label>"

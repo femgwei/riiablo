@@ -573,10 +573,13 @@ public class ServerEntityFactory extends EntityFactory {
     // Flavie is an NPC for faction/dialogue purposes, but D2Game assigns her
     // a defensive wilderness AI. The table's generic Npc AI only patrols and
     // never acquires hostile monsters, so use the dedicated bridge here.
-    AI ai = wildernessGuide
+    boolean prison = monstats.hcIdx >= 340 && monstats.hcIdx <= 343
+        && monstats.Id.equals("boneprison" + (monstats.hcIdx - 339));
+    AI ai = prison ? new com.riiablo.engine.server.ai.BonePrison(id) : wildernessGuide
         ? new com.riiablo.engine.server.ai.Navi(id)
         : monstats.npc ? AI.IDLE : aiWrapper.findAI(id, monstats.AI).ai;
-    if (wildernessGuide) aiWrapper.ai = ai;
+    if (wildernessGuide || prison) aiWrapper.ai = ai;
+    if (prison) nativeFlags.set(NativeUnitFlags.NO_TREASURE_CLASS);
     if (monstats.npc && !wildernessGuide) aiWrapper.ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
@@ -684,6 +687,22 @@ public class ServerEntityFactory extends EntityFactory {
         ownerId, entityId, summon.Id, nativePetType, skillId, skillLevel, maximum,
         passive, durationFrames, summonPosition.x, summonPosition.y);
     return entityId;
+  }
+
+  @Override
+  public int createDiabPrisonSegment(int monsterId, int x, int y) {
+    Map.Zone zone = map == null ? null : map.getZone(x, y);
+    MonStats.Entry row = Riiablo.files.monstats.get(monsterId);
+    if (row == null || monsterId < 340 || monsterId > 343 || x == 0 || y == 0 || zone == null || zone.isTown()
+        || !isStaticFootprintFree(zone, x, y, 1)) return Engine.INVALID_ENTITY;
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision != null && !collision.isFreeForMonsterSpawn(zone, x, y, 1))
+      return Engine.INVALID_ENTITY;
+    int id = createMonster(monsterId, x, y);
+    if (id < 0) return id;
+    mSequence.create(id).sequence(Engine.Monster.MODE_S1, Engine.Monster.MODE_NU);
+    if (collision != null) collision.reserveMonsterSpawn(id, x, y, 1);
+    return id;
   }
 
   /** Native Bone Wall/Bone Prison segments use exact coordinates and no PetType limit. */

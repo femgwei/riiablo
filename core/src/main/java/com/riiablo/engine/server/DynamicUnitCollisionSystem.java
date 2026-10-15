@@ -185,6 +185,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
             && blocksNativePath(profile, isPetPresence(entityId)));
   }
 
+  /** MonsterSpawn uses CheckMaskWithSize, not the larger walking pattern. */
+  public boolean isFreeForMonsterSpawn(Map.Zone zone, int x, int y, int size) {
+    return !enabled || grid.isFreeWithSize(Engine.INVALID_ENTITY, x, y, size,
+        other -> sharesCollisionSpace(zone, other));
+  }
+
+  /** Reserve a successfully created exact-position monster within this tick. */
+  public void reserveMonsterSpawn(int entityId, int x, int y, int size) {
+    if (enabled) grid.put(entityId, x, y, size);
+  }
+
   /** Landing/placement query: every indexed unit blocks, including the owner. */
   public boolean isFreeForLanding(int moverId, int x, int y, int size) {
     return !enabled || grid.isFree(moverId, Engine.INVALID_ENTITY, x, y, size,

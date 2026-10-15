@@ -1,0 +1,90 @@
+same=1079 changed=82 added=2 missing=0 total=1163
+ACTION_OBSERVED=494
+AI_FALLBACK=376
+MOVEMENT_ONLY=7
+NO_ACTION=175
+TERMINAL_OBSERVED=4
+WARNING=107
+specialPassed=49
+boneprison1/near actualAi:Idle->BonePrison
+boneprison1/far actualAi:Idle->BonePrison
+boneprison2/near actualAi:Idle->BonePrison
+boneprison2/far actualAi:Idle->BonePrison
+boneprison3/near actualAi:Idle->BonePrison
+boneprison3/far actualAi:Idle->BonePrison
+boneprison4/near actualAi:Idle->BonePrison
+boneprison4/far actualAi:Idle->BonePrison
+clawviper10/near damage:1216->66
+clawviper10/far damage:1178->64
+clawviper6/near damage:1509->606
+clawviper6/far damage:1460->585
+clawviper7/near damage:1051->66
+clawviper7/far damage:1011->64
+clawviper8/near damage:935->66
+clawviper9/near damageEvents:523->33; damage:704.6172->117
+diablo/diab-wall status:WARNING->ACTION_OBSERVED; actions:67->66; damageEvents:273->234; moves:75->72; warnings:1->0; damage:2000.5664->1948.5312
+diabloclone/diab-wall status:WARNING->ACTION_OBSERVED; actions:67->66; damageEvents:168->94; moves:73->70; warnings:1->0; damage:2721.1602->1462.8555
+frogdemon1/near damage:3183->303
+frogdemon1/frog-emerge damage:669->69
+frogdemon2/near damage:4012->358
+frogdemon2/frog-emerge damage:1804->166
+imp1/far damageEvents:32->0; damage:305->0
+imp2/far damageEvents:32->0; damage:305->0
+imp3/far damageEvents:32->0; damage:354->0
+imp4/far damageEvents:32->0; damage:386->0
+imp5/far damageEvents:32->0; damage:386->0
+imp6/far damage:6805->885
+imp7/far damage:6805->885
+quillrat2/near damage:77->17
+quillrat2/far damage:14->2
+quillrat3/near damage:135->30
+quillrat3/far damage:135->9
+quillrat4/near damage:194->34
+quillrat4/far damage:242->18
+quillrat5/near damage:1069->134
+quillrat5/far damage:902->52
+quillrat6/far damageEvents:143->9; damage:226.69531->66
+quillrat7/far damageEvents:143->9; damage:226.69531->66
+quillrat8/far damageEvents:143->9; damage:226.69531->66
+sk_archer4/near damage:34->22
+sk_archer5/near damage:115->64
+sk_archer6/near damage:147->26
+sk_archer7/near damage:159->26
+sk_archer8/near damageEvents:12->11; damage:195->27
+sk_archer9/near damageEvents:12->11; damage:204->27
+skmage_cold1/near damage:66->18
+skmage_cold2/near damage:84->18
+skmage_cold3/near damage:146->18
+skmage_cold4/near damage:147->18
+skmage_cold5/near actions:9->8; damageEvents:18->16; damage:102->16
+skmage_fire1/near damage:84->18
+skmage_fire2/near damage:93->18
+skmage_fire3/near damage:164->18
+skmage_fire4/near damage:165->18
+skmage_fire5/near damage:77->18
+skmage_fire6/near damage:77->18
+skmage_ltng1/near damageEvents:8->4; damage:48->5
+skmage_ltng2/near damageEvents:8->4; damage:34->5
+skmage_ltng3/near damageEvents:8->4; damage:77->5
+skmage_ltng4/near damageEvents:8->4; damage:82->5
+skmage_ltng5/near damage:34->8
+skmage_ltng6/near damage:34->8
+skmage_pois1/near damageEvents:483->0; damage:22.640625->0
+skmage_pois2/near damageEvents:483->0; damage:47.16797->0
+skmage_pois3/near damageEvents:483->0; damage:71.69531->0
+skmage_pois4/near damageEvents:483->0; damage:71.69531->0
+skmage_pois5/near damageEvents:484->0; damage:71.84375->0
+skmage_pois6/near damageEvents:484->0; damage:71.84375->0
+slinger5/near damage:3475->115
+slinger5/far damage:174->6
+slinger7/near damage:258->165
+slinger7/far damage:14->9
+slinger8/near damage:258->165
+slinger8/far damage:14->9
+slinger9/near damage:258->165
+slinger9/far damage:14->9
+unraveler5/near damageEvents:0->28; damage:0->908
+unraveler6/near damageEvents:479->28; damage:1.8710938->908
+unraveler7/near damageEvents:479->28; damage:1.8710938->908
+unraveler8/near damageEvents:479->28; damage:1.8710938->908
+unraveler9/near damageEvents:479->28; damage:1.8710938->908

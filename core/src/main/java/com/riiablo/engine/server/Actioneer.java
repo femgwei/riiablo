@@ -794,7 +794,7 @@ public class Actioneer extends PassiveSystem {
         && casting.fendInitialized && casting.fendRemainingStrikes > 0;
     // SrvDo094 only consumes the unit's own sequence action. Its prey pointer
     // is not dereferenced by native Submerge and must not gate the final hold.
-    if (!targetDead || skill.srvdofunc == 94 || NativeDiabWall.supports(skill)
+    if (!targetDead || skill.srvdofunc == 94 || skill.srvdofunc == 104 || NativeDiabWall.supports(skill)
         || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget
         || zealRetarget || fendRetarget) {
       if (skill.srvdofunc == 116) casting.shapeShiftProcessed = true;
@@ -2546,6 +2546,10 @@ public class Actioneer extends PassiveSystem {
       }
       case 100: // DiabCold's direct elemental packet is resolved on SkillDoEvent.
         log.debug("[DIAB_COLD] phase=keyframe source={} target={} delegated=ServerSkillSystem",
+            entityId, targetId);
+        break;
+      case 104: // SrvDo104 creates the four native prison monsters on SkillDoEvent.
+        log.debug("[DIAB_PRISON] phase=keyframe source={} target={} delegated=ServerSkillSystem",
             entityId, targetId);
         break;
       case 102: // SrvDo102 creates native DiabWall makers on SkillDoEvent.

@@ -183,6 +183,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
   protected net.mostlyoriginal.api.event.common.EventSystem events;
 
@@ -528,6 +529,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (skill.srvdofunc == 104) {
+      spawnDiabPrison(event, skill);
+      return;
+    }
     if (NativeDiabRun.supports(skill)) {
       applyDiabRun(event, skill, getSkillLevel(event.entityId, skill.Id));
       return;
@@ -1630,6 +1635,39 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.targetId, skill.Id, skillLevel, controller,
         NecromancerSkills.getBonePrisonSegmentCount(), created, duration,
         center.x, center.y);
+  }
+
+  /** SkillMonst::Do104 -> MonsterSpawn::sub_6FC6A810 / sub_6FC6A350. */
+  private void spawnDiabPrison(SkillDoEvent event, Skills.Entry skill) {
+    if (factory == null) return;
+    MonStats.Entry summon = resolveSummonMonster(skill.summon);
+    if (summon == null || summon.hcIdx != 340) return;
+    int target = event.targetId;
+    // Native no-unit target encodes UNIT_OBJECT in firstPointY and its GUID in X.
+    if (target < 0 && event.targetVec != null && event.targetVec.y == 2
+        && event.targetVec.x == (int) event.targetVec.x) {
+      int object = (int) event.targetVec.x;
+      if (object >= 0 && mObject.has(object)) target = object;
+    }
+    if (target < 0 || !mPosition.has(target) || isTownUnit(target)
+        || !mMapWrapper.has(target) || mMapWrapper.get(target).zone == null) return;
+    Vector2 center = mPosition.get(target).position;
+    int x = (int) center.x, y = (int) center.y;
+    int[][] offsets = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
+    com.badlogic.gdx.utils.IntArray members = new com.badlogic.gdx.utils.IntArray(4);
+    ComponentMapper<com.riiablo.engine.server.component.DiabPrison> links =
+        world.getMapper(com.riiablo.engine.server.component.DiabPrison.class);
+    for (int i = 0; i < 4; i++) {
+      int id = factory.createDiabPrisonSegment(summon.hcIdx + i,
+          x + offsets[i][0], y + offsets[i][1]);
+      if (id < 0) { if (i == 0) break; else continue; }
+      members.add(id);
+      links.create(id).members = members;
+      if (mMonster.has(id)) mMonster.get(id).minionOwnerId = members.first();
+    }
+    log.info("[DIAB_PRISON] phase=created source={} target={} skill={} root={} created={} center=({}, {}) members={}",
+        event.entityId, target, skill.Id, members.size == 0 ? -1 : members.first(),
+        members.size, x, y, members);
   }
 
   private int createBoneWallSegment(int owner, MonStats.Entry summon, Skills.Entry skill,
