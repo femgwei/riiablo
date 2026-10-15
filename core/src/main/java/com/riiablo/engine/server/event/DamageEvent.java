@@ -16,6 +16,8 @@ public class DamageEvent implements Event {
   public int attacker;
   @EntityId
   public int victim;
+  /** Optional authoritative projectile identity for damage-origin diagnostics. */
+  @EntityId public int missileId = -1;
   public float damage;
   /** Post-resistance physical portion of {@link #damage}. */
   public float physicalDamage;

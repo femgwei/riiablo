@@ -16,6 +16,17 @@ import static org.junit.Assert.*;
 public class MonsterAiArenaTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+  @Test public void diabWallNeedsCastTrailActualHitAndCleanupInOrder() {
+    MonsterAiArena.DiabWallCycle cycle = new MonsterAiArena.DiabWallCycle();
+    cycle.trail(true); cycle.damage(true); cycle.cleared(true); assertEquals(0, cycle.phase);
+    cycle.cast(false); assertEquals(0, cycle.phase);
+    cycle.cast(true); assertEquals(1, cycle.phase);
+    cycle.damage(true); cycle.cleared(true); assertEquals(1, cycle.phase);
+    cycle.trail(true); cycle.damage(false); assertEquals(2, cycle.phase);
+    cycle.damage(true); cycle.cleared(false); assertEquals(3, cycle.phase);
+    cycle.cleared(true); assertEquals(4, cycle.phase);
+  }
+
   @Test public void diabColdRequiresActualDirectHitAndTheFollowingS2End() {
     MonsterAiArena.DiabColdCycle cycle = new MonsterAiArena.DiabColdCycle();
     cycle.finished(true); cycle.hit(false);
@@ -174,6 +185,7 @@ public class MonsterAiArenaTest {
     row.AI = "Diablo";
     assertTrue(MonsterAiArena.scenarios(row).contains("inferno-cycle"));
     assertTrue(MonsterAiArena.scenarios(row).contains("diab-cold"));
+    assertTrue(MonsterAiArena.scenarios(row).contains("diab-wall"));
     assertEquals("&lt;&amp;&quot;", MonsterAiArena.escape("<&\""));
   }
 

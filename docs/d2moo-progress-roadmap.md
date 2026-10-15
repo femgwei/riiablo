@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 逐怪失败表修复：DiabWall（SrvDo102）
+
+- [x] 对照Do102/MissileInit/Do12及本机197/179/180原表接入真实S3，等级决定控制飞弹数量；
+  目标X+ordinal种子、unsigned分支及首点roll、77帧上限、坐标fallback/失败不重试。
+- [x] 前次移动跨整格才铺地火，保留地图碰撞；控制飞弹无伤害，不走泛用近战fallback。
+  地火用Missiles表独立8.8火伤/skill0/继承等级/36帧/DamageRate41，不混入武器或Skills空包。
+- [x] 新增2场自然diab-wall严格验真实施法/子火归属/实际HP下降/S3结束/首cast全清理。
+  408项定向测试通过（core375/d2gs33），失败/错误/跳过0。
+  557行/1159场：486动作、376回退、111告警、175无动作、7仅移动、4终止；
+  异常/ERROR/NOT_RUN/专属未触发0，45场专属成功。旧1157场仅far2变化/1155相同。
+  两次完整JSONL一致；新证据：`docs/ai-arena/20261015-diab-wall-seed1/`。
+- [ ] DiabRun St54/Do103、Do104、完整Fn051、Horror/Sentry MonSeq、完整Fn065、
+  Megademon专用AI及47AI/188行fallback仍待处理；新场其他技能WARNING不隐藏。
+  ChargedBolt完整整格路径/InitSteps2/16.16速度、原生事件和完整伤害矩阵、TCP/GL、
+  三难度多seed尚未验收；不是全项目测试通过。下一项可接DiabRun。
+
 ## 2026-10-15 逐怪失败表修复：DiabCold（SrvDo100）
 
 - [x] 对照Do100及本机194/S2/mag原表，真实ATK动作点直接伤害/FrzLen分流；

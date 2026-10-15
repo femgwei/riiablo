@@ -204,6 +204,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
+    if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
     return scenarios;
   }
 
@@ -268,6 +269,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
+      if (result.scenario.equals("diab-wall")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_DIAB_WALL";
+        probe.diabWall = new DiabWallCycle();
+      }
       if (result.scenario.equals("diab-cold")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -351,7 +358,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED"
               : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED"
               : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED"
-              : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+              : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED"
+              : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -470,6 +478,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
     FrogCycle frog;
     InfernoCycle inferno;
     DiabColdCycle diabCold;
+    DiabWallCycle diabWall;
+    boolean pendingWall, wallCastValid, wallFinished, wallDamagePending;
+    int wallCastId, wallTarget = -1, wallLevel;
+    float wallLifeBefore, wallHitDamage;
+    final Set<Integer> wallMakers = new TreeSet<>();
     SkillDoEvent pendingCold;
     float coldLifeBefore, coldDamage;
     int coldMissilesBefore, coldDamageEvents;
@@ -485,6 +498,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
+      if (diabWall != null && diabWall.phase == 0 && !pendingWall && event.skillId == 197 && event.srvdofunc == 102) {
+        pendingWall = true; wallTarget = event.targetId;
+        wallLevel = world.getMapper(Monster.class).get(subject).monstats.Sk4lvl;
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        wallCastValid = cast != null && cast.skillId == 197 && seq != null
+            && seq.started && seq.mode1 == Engine.Monster.MODE_S3;
+      }
       if (diabCold != null && event.skillId == 194 && event.srvdofunc == 100) {
         pendingCold = event;
         AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(event.targetId);
@@ -514,6 +535,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (diabWall != null) observeDiabWall();
       if (diabCold != null && pendingCold != null) {
         int target = pendingCold.targetId;
         AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(target);
@@ -594,6 +616,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       cycleChanged(before);
     }
     @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (diabWall != null && event.entityId == subject && pendingWall) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        if (cast != null && cast.skillId == 197 && seq != null && seq.mode1 == Engine.Monster.MODE_S3)
+          wallFinished = true;
+      }
       if (diabCold != null && event.entityId == subject) {
         Casting cast = world.getMapper(Casting.class).get(subject);
         Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -646,6 +674,20 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void damage(DamageEvent event) {
       if (event.attacker != subject) return;
+      if (diabWall != null && event.missileId >= 0 && event.victim == wallTarget) {
+        com.riiablo.engine.server.component.Missile fire = world.getMapper(
+            com.riiablo.engine.server.component.Missile.class).get(event.missileId);
+        if (fire != null && fire.diabWallFire && fire.diabWallCastId == wallCastId
+            && fire.ownerId == subject && wallMakers.contains(fire.diabWallParentId)
+            && event.kind == DamageEvent.MISSILE && event.fireDamage > 0 && event.damage == event.fireDamage
+            && event.physicalDamage == 0 && event.coldDamage == 0 && event.lightningDamage == 0
+            && event.magicDamage == 0 && event.poisonDamage == 0) {
+          wallLifeBefore = world.getMapper(AttributesWrapper.class).get(event.victim).attrs.get(Stat.hitpoints).asFixed();
+          wallHitDamage = event.damage; wallDamagePending = true;
+          capture.line("DiabWallHit missile=" + event.missileId + " parent=" + fire.diabWallParentId
+              + " cast=" + wallCastId + " damage=" + event.damage + " hpBefore=" + wallLifeBefore);
+        }
+      }
       if (pendingCold != null && event.victim == pendingCold.targetId) {
         coldDamageEvents++;
         coldDamage += event.damage;
@@ -657,10 +699,55 @@ public final class MonsterAiArena extends ApplicationAdapter {
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
     }
+    private void observeDiabWall() {
+      if (!pendingWall) return;
+      com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
+          com.riiablo.engine.server.component.Missile.class)).getEntities();
+      int before = diabWall.phase, makers = 0, children = 0;
+      boolean validMakers = wallCastValid;
+      for (int i = 0; i < ids.size(); i++) {
+        int id = ids.get(i);
+        com.riiablo.engine.server.component.Missile m = world.getMapper(
+            com.riiablo.engine.server.component.Missile.class).get(id);
+        if (m.ownerId != subject) continue;
+        if (m.diabWallMaker && (wallCastId == 0 || m.diabWallCastId == wallCastId)) {
+          if (wallCastId == 0) wallCastId = m.diabWallCastId;
+          makers++; wallMakers.add(id);
+          validMakers &= m.nativeLifetimeFrames == 77 && m.damageLevel == wallLevel && m.skillId == 0;
+        }
+        if (m.diabWallFire && m.diabWallCastId == wallCastId && wallMakers.contains(m.diabWallParentId)) {
+          children++;
+          diabWall.trail(m.persistent && m.fixedElementalRate && m.skillId == 0 && m.damageLevel == wallLevel
+              && m.nativeLifetimeFrames == 36 && m.elementalDamageRate == 41
+              && m.elementalMinRateFixed == (wallLevel == 3 ? 176 : 136)
+              && m.elementalMaxRateFixed == (wallLevel == 3 ? 280 : 240));
+        }
+      }
+      if (diabWall.phase == 0 && makers > 0) diabWall.cast(validMakers && makers == wallLevel);
+      if (wallDamagePending) {
+        float life = world.getMapper(AttributesWrapper.class).get(wallTarget).attrs.get(Stat.hitpoints).asFixed();
+        diabWall.damage(life <= wallLifeBefore - wallHitDamage + .001f);
+        wallDamagePending = false;
+      }
+      diabWall.cleared(wallFinished && makers == 0 && children == 0);
+      if (before != diabWall.phase) capture.line("DiabWallCycle subject=" + subject + " phase=" + diabWall.phase
+          + " cast=" + wallCastId + " makers=" + makers + " children=" + children + " s3Finished=" + wallFinished);
+      if (diabWall.phase == 4) capture.result.specialPassed = true;
+    }
+
     private int missileCount() {
       return world.getAspectSubscriptionManager().get(com.artemis.Aspect.all(
           com.riiablo.engine.server.component.Missile.class)).getEntities().size();
     }
+  }
+
+  /** Real cast -> table-owned trail -> actual HP loss -> S3/first-cast cleanup. */
+  static final class DiabWallCycle {
+    int phase;
+    void cast(boolean valid) { if (phase == 0 && valid) phase = 1; }
+    void trail(boolean valid) { if (phase == 1 && valid) phase = 2; }
+    void damage(boolean valid) { if (phase == 2 && valid) phase = 3; }
+    void cleared(boolean valid) { if (phase == 3 && valid) phase = 4; }
   }
 
   /** Direct hit must independently change HP/state, then finish the real S2. */
@@ -758,7 +845,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE"
               : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE"
               : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE"
-              : "diab-cold".equals(result.scenario) ? "DIAB_COLD" : "NONE"));
+              : "diab-cold".equals(result.scenario) ? "DIAB_COLD"
+              : "diab-wall".equals(result.scenario) ? "DIAB_WALL" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }

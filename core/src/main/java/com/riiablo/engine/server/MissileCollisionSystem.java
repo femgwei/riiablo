@@ -335,6 +335,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       processFireWallMaker(entityId, missile, position);
       if (!world.getEntityManager().isActive(entityId)) return;
     }
+    if (missile.diabWallMaker) processDiabWallMaker(entityId, missile, position);
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance;
@@ -351,6 +352,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
       position.position.set(next);
+      if (missile.diabWallMaker) missile.diabWallMoved =
+          MathUtils.floor(lastPos.x) != MathUtils.floor(next.x)
+              || MathUtils.floor(lastPos.y) != MathUtils.floor(next.y);
     }
 
     if (!updateNativeRoom(entityId, missile, position)) return;
@@ -398,7 +402,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.range > 0 && missile.distanceTraveled >= missile.range;
     if (frameExpiry || distanceExpiry) {
       // LastCollide performs one final unit lookup before removal.
-      if (shouldResolveLastCollide(missile, true)) {
+      if (!missile.diabWallMaker && shouldResolveLastCollide(missile, true)) {
         if (distanceExpiry && !missile.attached && moveDistance > 0f
             && missile.distanceTraveled > missile.range) {
           // Only synthetic/legacy distance-limited rows clamp this endpoint.
@@ -439,7 +443,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     // 1.10f rows leave Collision=0 while providing a server hit function; in
     // that case the hit function is the native indication that collision is
     // required.
-    if (!hasNativeCollision(missile)) return;
+    if (missile.diabWallMaker || !hasNativeCollision(missile)) return;
 
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
@@ -2091,6 +2095,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         // frame. One-shot elemental impacts retain normal hit feedback.
         .suppressMonsterHitSound(missile.persistent)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
+    if (missile.diabWallFire) { event.fireDamage = damage; event.missileId = missileId; }
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
     float before = life.asFixed();
@@ -2112,6 +2117,37 @@ public class MissileCollisionSystem extends IteratingSystem {
         missileId, missile.missile != null ? missile.missile.Missile : "",
         missile.ownerId, targetId, missile.skillId, raw, applied, absorbed,
         before, life.asFixed(), missile.elementalDamageRate);
+  }
+
+  /** SrvDo12 reads the previous path step's integer-tile movement flag. */
+  private void processDiabWallMaker(int entityId, Missile maker, Position position) {
+    if (factory == null || !maker.diabWallMoved || maker.missile == null) return;
+    String name = maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0
+        ? null : maker.missile.SubMissile[0];
+    Missiles.Entry row = name == null ? null : Riiablo.files.Missiles.get(name);
+    if (row == null) { world.delete(entityId); return; }
+    Vector2 origin = new Vector2(MathUtils.floor(position.position.x), MathUtils.floor(position.position.y));
+    int id = factory.createMissile(row, Vector2.Zero, origin, maker.ownerId, maker.damageLevel);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.skillId = maker.skillId;
+    child.damageLevel = maker.damageLevel;
+    child.diabWallFire = true;
+    child.diabWallParentId = entityId;
+    child.diabWallCastId = maker.diabWallCastId;
+    child.persistent = true;
+    child.remainingFrames = Missile.nativeRangeFrames(row, maker.damageLevel);
+    child.nativeLifetimeFrames = child.remainingFrames;
+    child.tickInterval = 1;
+    child.range = 0;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    Attributes attrs = mAttributesWrapper.has(maker.ownerId) ? mAttributesWrapper.get(maker.ownerId).attrs : null;
+    MissileDamageResolver.initializeMeteorFireArea(child, attrs, mPlayer.has(maker.ownerId), maker.damageLevel,
+        stateList(maker.ownerId));
+    maker.fireWallSegmentsCreated++;
+    log.info("[DIAB_WALL] phase=segment maker={} segment={} owner={} level={} lifetime={} rawFixed={}..{} position=({}, {})",
+        entityId, id, maker.ownerId, maker.damageLevel, child.remainingFrames,
+        child.elementalMinRateFixed, child.elementalMaxRateFixed, origin.x, origin.y);
   }
 
   /** Native MISSMODE_SrvDo06 FireWallMaker child emission. */

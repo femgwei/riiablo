@@ -1,6 +1,30 @@
 # 逐怪 AI 隔离测试场
 
-## 最新修复批次：2026-10-15 DiabCold（SrvDo100）
+## 最新修复批次：2026-10-15 DiabWall（SrvDo102）
+
+按D2MOO Do102 / MissileInit / missile Do12及本机1.10f原表接入197：
+真实MonStats槽位S3动作点一次发出等级数量的diabwallmaker（3/2个），不是玩家FireWall。
+控制飞弹使用目标X+ordinal初始化种子、unsigned分支roll及ChargedBolt首点额外roll，寿命上限77帧。
+只有前次路径跨整格才在本次移动前生成diabwall；地图碰撞保留，控制飞弹不套普通近战伤害。
+地火继承owner/skill0/level，从Missiles表读取8.8每帧火伤、36帧寿命及DamageRate41，
+不让Skills197空伤害或武器伤害覆盖。目标被移除后保留原版坐标fallback。
+
+最终408项定向测试通过（core375/d2gs33），失败/错误/跳过0，含9项DiabWall数据/集成测试。
+557行/1159场：486动作、376回退、111告警、175无动作、7仅移动、4终止；
+异常/ERROR/NOT_RUN/专属未触发0，45场专属全部成功。
+新增2场自然diab-wall独立验证真实S3、控制/地火归属、实际火伤扣血、S3结束和首cast全部清理。
+与旧1157场相比仅两行far共2场变化，其余1155场逐字段一致，无丢失。
+新增两场仍有St54/Do103/104/资源告警，故总WARNING109→111；没有以地火成功覆盖其他告警。
+最终代码两次全目录1159场JSONL哈希一致；测试数不重复累加。
+
+新快照：[`report.html`](ai-arena/20261015-diab-wall-seed1/report.html)，完整日志、
+最终回归XML、原版依据/边界及复跑命令见
+[`verification.md`](ai-arena/20261015-diab-wall-seed1/verification.md)。
+ChargedBolt继续复用项目运行路径/速度单位，未宣称原版完整整格路径和16.16速度逐位复刻；
+InitSteps2、全局事件/伤害矩阵、TCP/GL及三难度多seed仍未验收。
+47AI/188行fallback未解决，下一项可补DiabRun St54/Do103。
+
+## 前一修复批次：2026-10-15 DiabCold（SrvDo100）
 
 按D2MOO及本机1.10f原表接入194/S2真实动作点的直接目标包：EType是mag，
 魔法伤害与FrzLen分离，不做AR/近战距离重判、不取武器伤害、不生成飞弹。

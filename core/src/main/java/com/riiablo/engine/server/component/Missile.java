@@ -93,6 +93,12 @@ public class Missile extends PooledComponent {
   /** Native SrvDo06 control missile; it emits SubMissile1 while moving. */
   public boolean fireWallMaker;
   public int fireWallSegmentsCreated;
+  /** Native SrvDo12 emits only after an integer-tile movement on the prior step. */
+  public boolean diabWallMaker;
+  public boolean diabWallMoved;
+  public boolean diabWallFire;
+  public int diabWallParentId = -1;
+  public int diabWallCastId;
 
   /** Native poison-skill missiles store an 8.8 per-frame rate, not life points. */
   public boolean fixedPoisonRate;
@@ -293,6 +299,11 @@ public class Missile extends PooledComponent {
     elementalAttackerPlayer = false;
     fireWallMaker = false;
     fireWallSegmentsCreated = 0;
+    diabWallMaker = false;
+    diabWallMoved = false;
+    diabWallFire = false;
+    diabWallParentId = -1;
+    diabWallCastId = 0;
     fixedPoisonRate = false;
     poisonMinRateFixed = 0;
     poisonMaxRateFixed = 0;

@@ -528,6 +528,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (NativeDiabWall.supports(skill)) {
+      spawnDiabWall(event, skill, getSkillLevel(event.entityId, skill.Id));
+      return;
+    }
     if (NativeDiabCold.supports(skill)) {
       applyDiabCold(event, skill, getSkillLevel(event.entityId, skill.Id));
       return;
@@ -1731,6 +1735,42 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
             + "defense={} affected={} status=PASS",
         event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  /** SrvDo102: same target for every maker; only the seeded initializer spreads them. */
+  private int nextDiabWallCastId;
+  private void spawnDiabWall(SkillDoEvent event, Skills.Entry skill, int level) {
+    Missiles.Entry row = skill.srvmissilea == null ? null : Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) return;
+    Vector2 start = mPosition.get(event.entityId).position;
+    Vector2 target = event.targetVec == null ? new Vector2() : new Vector2(event.targetVec);
+    if (event.targetId >= 0 && world.getEntityManager().isActive(event.targetId)
+        && mPosition.has(event.targetId)) target.set(mPosition.get(event.targetId).position);
+    int sx = MathUtils.floor(start.x), sy = MathUtils.floor(start.y);
+    int tx = MathUtils.floor(target.x), ty = MathUtils.floor(target.y);
+    if (tx == 0 || ty == 0) return; // GetXAndYFromTargetUnit requires both coordinates.
+    if (sx == tx && sy == ty) { tx++; ty++; }
+    if (Math.abs(tx - sx) >= 100 || Math.abs(ty - sy) >= 100) return;
+    int count = SkillFormula.evaluate(skill.calc1, skill, level, name -> getBaseSkillLevel(event.entityId, name));
+    int created = 0;
+    int castId = ++nextDiabWallCastId;
+    for (int i = 0; i < count; i++) {
+      Vector2 direction = new Vector2(tx - sx, ty - sy).nor();
+      int id = createMissile(row, direction, new Vector2(sx, sy), event.entityId, null, level);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile maker = mMissile.get(id);
+      NativeDiabWall.initialize(maker, level, i, sx, sy, tx, ty, direction);
+      maker.diabWallCastId = castId;
+      float speed = row.Vel + level * row.VelLev / 8;
+      int slow = ServerEntityFactory.slowMissileVelocityPercent(row, stateList(event.entityId));
+      if (slow > 0) speed = speed * slow / 100f;
+      if (mVelocity.has(id)) mVelocity.get(id).velocity.set(direction).setLength(speed);
+      if (mAngle.has(id)) mAngle.get(id).target.set(direction);
+      created++;
+      log.info("[DIAB_WALL] phase=maker source={} maker={} ordinal={} level={} charged={} lifetime={} target=({}, {})",
+          event.entityId, id, i, level, maker.chargedBoltPath, maker.nativeLifetimeFrames, tx, ty);
+    }
+    log.info("[DIAB_WALL] phase=create source={} requested={} created={} level={}", event.entityId, count, created, level);
   }
 
   /** SrvDo100: elemental damage and FrzLen are independent (1.10f EType=mag). */
