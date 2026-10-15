@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十批（生产适配仍PARTIAL）
+
+- [x] 从真实Objects表捕获door及Orientation恰等于1，校验orientation字节域。
+- [x] 元数据可与显式raw DynamicPath/静态int32及可选方向组成Unit，自动选择door目标分支。
+- [x] 与生命周期Reader组合验证，新增6项；完整564项/49类通过，无失败/错误/跳过。
+- [ ] raw坐标实际自动来源、其余元数据、Act/Zone、shared seed和原生移动消费仍待。
+
+生产仍Map→AStarPathFinder；未宣称完整Reader或迁移完成。
+
 ## 2026-10-16 寻路第二十九批（生产适配仍PARTIAL）
 
 - [x] NativePathUnitMetadata从实际ECS Class及MonStats2/Objects/Missiles表行解析原生类型和X/Y尺寸。

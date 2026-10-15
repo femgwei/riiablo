@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十批：真实Objects表door/Orientation==1谓词接通元数据快照；dynamicUnit/staticUnit组合
+显式原始坐标，可用于生命周期绑定Reader，不从ECS浮点猜测。静态lead方向不补零。
+新增6项，完整564项/49类通过，失败/错误/跳过0；日志core/build/round30-full.log。
+生产仍A*，真实raw坐标来源/其余元数据/Act与Zone/shared seed仍待；详细交接见handoff顶部。
+
 第二十九批：新增实际ECS类型/尺寸解析NativePathUnitMetadata，按Class和真实怪物/对象/导弹表行
 捕获不可变原生type及X/Y尺寸。拒绝缺失表行和歧义WRP；不从Size或浮点位置猜原生数据。
 新增5项，完整558项/49类通过，失败/错误/跳过0；生产仍A*，完整Reader/其余元数据仍待。

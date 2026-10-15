@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十九批续接结果（优先于下方历史起点）
+## 第三十批续接结果（优先于下方历史起点）
+
+- NativePathUnitMetadata捕获Objects.IsDoor与Orientation==1两个谓词，依据固定上游#10392及
+  UNITS_CheckIfObjectOrientationIs1。Orientation要求uint8域，不把2/255等非零值当1。
+  IsDoor来自宿主boolean表字段，仅声称谓词结果，不声称保留原DLL记录字节。
+- 新增dynamicUnit/staticUnit组合方法：将已解析元数据与显式原始DynamicPath或静态int32坐标
+  组合为D2PathUnits.Unit；对象自动选door分支。静态path+0x64方向仍需显式提供，缺失不补零。
+  可用于NativePathUnitBinding.Reader，集成测试覆盖读取/门偏移及删除后拒绝旧观察。
+- 新增6项，完整564项/49类通过，失败/错误/跳过0；core/build/round30-full.log，
+  XML `.gradle/path-port/round30-full/core/test-results/pathPortTest`。
+- 尚无真实raw坐标自动来源；碰撞完整原始字节、town/revive等其余元数据、运行期Act/Zone、shared seed
+  仍待。生产仍Map→AStarPathFinder；无新增DLL算法证据或动态DLL执行。
+
+## 第二十九批续接结果（历史）
 
 - NativePathUnitMetadata.read从实际World的Class和Monster.monstats2、Object.base、Missile.missile
   捕获不可变type/sizeX/sizeY；显式映射PLR/MON/OBJ/MIS/ITM到原生0/1/2/3/4，不用宿主枚举序号。

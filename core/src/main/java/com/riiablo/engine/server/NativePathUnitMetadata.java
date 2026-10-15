@@ -1,22 +1,50 @@
 package com.riiablo.engine.server;
 
 import com.artemis.World;
+import com.d2moo.common.path.D2Path;
+import com.d2moo.common.path.D2PathUnits;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Object;
 import java.util.Objects;
 
-/** ECS table-backed subset of UNITS_GetUnitSizeX/Y (#10336/#10337).
- * Capture on the game thread. This is metadata only, not a native coordinate reader.
+/** ECS table-backed subset of UNITS_GetUnitSizeX/Y (#10336/#10337),
+ * UNITS_IsDoor (#10392) and UNITS_CheckIfObjectOrientationIs1.
+ * Capture on the game thread. Coordinate composition requires caller-supplied raw data.
  * WRP mixes tile warps and portal objects and cannot be mapped by Class alone. */
 public final class NativePathUnitMetadata {
   public final int type, sizeX, sizeY;
+  /** Predicate results from the host table; these are not original DLL record bytes. */
+  public final boolean door, orientationIsOne;
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY) {
+    this(type, sizeX, sizeY, false, false);
+  }
+
+  private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne) {
     this.type = type;
     this.sizeX = sizeX;
     this.sizeY = sizeY;
+    this.door = door;
+    this.orientationIsOne = orientationIsOne;
+  }
+
+  /** Compose with an authoritative raw fp16 path snapshot; null retains native missing-path semantics. */
+  public D2PathUnits.Unit dynamicUnit(D2PathUnits.DynamicPath path) {
+    return D2PathUnits.Unit.dynamic(type, sizeX, path);
+  }
+
+  /** Raw static int32 coordinates. This does not invent the optional path +0x64 direction byte. */
+  public D2PathUnits.Unit staticUnit(D2Path.Point point) {
+    return door ? D2PathUnits.Unit.door(sizeX, point, orientationIsOne)
+        : D2PathUnits.Unit.stationary(type, sizeX, point);
+  }
+
+  /** Explicit static path +0x64 byte is required for nonzero-speed lead sampling. */
+  public D2PathUnits.Unit staticUnit(D2Path.Point point, int pathDirection) {
+    return door ? D2PathUnits.Unit.door(sizeX, point, orientationIsOne, pathDirection)
+        : D2PathUnits.Unit.stationary(type, sizeX, point, pathDirection);
   }
 
   public static NativePathUnitMetadata read(World world, int id) {
@@ -38,7 +66,11 @@ public final class NativePathUnitMetadata {
       case OBJ: {
         Object object = world.getMapper(Object.class).get(id);
         if (object == null || object.base == null) throw missing("Objects");
-        return new NativePathUnitMetadata(2, object.base.SizeX, object.base.SizeY);
+        if (object.base.Orientation < 0 || object.base.Orientation > 255) {
+          throw new IllegalArgumentException("Objects.txt unsigned orientation byte required");
+        }
+        return new NativePathUnitMetadata(2, object.base.SizeX, object.base.SizeY,
+            object.base.IsDoor, object.base.Orientation == 1);
       }
       case MIS: {
         Missile missile = world.getMapper(Missile.class).get(id);

@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十批补充：NativePathUnitMetadata读取Objects.IsDoor和Orientation==1谓词，组合调用方提供的
+raw坐标为Unit，接通现有door目标偏移；验证与ECS生命周期绑定Reader配合后仍拒绝删除的目标。
+依据固定上游#10392/UNITS_CheckIfObjectOrientationIs1，不新增DLL算法证据或动态DLL执行。
+新增6项，完整564项/49类通过，失败/错误/跳过0；未提供自动raw坐标来源或切换生产A*。
+
 第二十九批补充：以固定D2MOO origin/master 0c0bbd1的#10336/#10337为依据，
 NativePathUnitMetadata接通实际ECS Class及怪物/对象/导弹表行的原生类型和X/Y尺寸，保留对象int32，
 拒绝缺失表行和歧义WRP。它只提供元数据快照，未完成raw坐标/其余元数据Reader或生产寻路切换。

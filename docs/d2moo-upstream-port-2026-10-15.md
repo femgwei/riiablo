@@ -1908,6 +1908,19 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
   未切换生产Map→AStarPathFinder；运行期Act/Zone、shared seed、实图/性能验收仍待。
   无新增DLL算法证据或动态DLL执行。
 
+## 第三十批：真实对象door元数据与原始坐标组合
+
+- NativePathUnitMetadata按固定上游0c0bbd1的#10392/UNITS_CheckIfObjectOrientationIs1读取
+  Objects.IsDoor/Orientation==1；Orientation验证uint8域，非零不等于1。宿主IsDoor为boolean，
+  此处只声称谓词，不声称保留DLL原始字节。
+- dynamicUnit/staticUnit将元数据与显式raw DynamicPath或静态int32组成D2PathUnits.Unit，
+  自动选择对象door分支；静态lead可显式携带path+0x64字节，缺失不猜零。
+- 6项新测试覆盖两侧door偏移、0/1/2/255方向、普通对象、快照、原始坐标/缺失方向、动态空路径、
+  非法字节、Reader组合及目标删除。完整564项/49类通过，失败/错误/跳过0。
+  日志core/build/round30-full.log；XML .gradle/path-port/round30-full/core/test-results/pathPortTest。
+- 尚无raw坐标自动来源，碰撞原始字节/其余元数据、Act/Zone/shared seed仍待；生产仍A*。
+  未新增DLL算法证据或动态DLL执行，未宣称完整Reader、迁移完成或性能提升。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
