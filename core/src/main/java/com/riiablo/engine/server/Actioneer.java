@@ -3094,6 +3094,7 @@ public class Actioneer extends PassiveSystem {
     conversion.needsSync = true;
     targetMonster.converted = true;
     targetMonster.conversionOwnerId = entityId;
+    NativeConversionLifecycle.bind(conversion, targetMonster, mAttributesWrapper.get(targetId));
     if (mTarget.has(targetId)) mTarget.remove(targetId);
     if (mCasting.has(targetId)) mCasting.remove(targetId);
     if (mSequence.has(targetId)) mSequence.remove(targetId);

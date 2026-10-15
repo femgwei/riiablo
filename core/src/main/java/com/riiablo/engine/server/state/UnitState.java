@@ -214,6 +214,13 @@ public class UnitState {
   public int conversionOriginalLevel;
   public int conversionOriginalMaxHpEncoded;
 
+  /** Server-runtime stat-list hook, never copied to snapshots or pooled reuse.
+   * Called after unlinking, before pooling; may remove (not add) other layers. */
+  public interface RemovalCallback {
+    void removed(StateList states, UnitState removed);
+  }
+  public RemovalCallback removalCallback;
+
   //==========================================================================
   // 构造函数
   //==========================================================================
@@ -282,6 +289,7 @@ public class UnitState {
     expired = false;
     conversionOriginalLevel = 0;
     conversionOriginalMaxHpEncoded = 0;
+    removalCallback = null;
   }
 
   /** Clears stat-list values while retaining state identity and lifetime. */
@@ -755,6 +763,7 @@ public class UnitState {
    * @param other 源状态
    */
   public void copyFrom(UnitState other) {
+    removalCallback = null;
     this.stateId = other.stateId;
     this.level = other.level;
     this.duration = other.duration;

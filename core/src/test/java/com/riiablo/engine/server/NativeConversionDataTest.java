@@ -9,14 +9,20 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
@@ -29,6 +35,75 @@ import org.junit.jupiter.api.Test;
 
 /** Data-contract checks for the 1.10f Conversion row and native roll domain. */
 public class NativeConversionDataTest extends RiiabloTest {
+  @Test
+  void realKeyframeConversionBindsRestoreBeforeFirstWorldTick() {
+    World previous = Riiablo.engine;
+    int previousSeed = Riiablo.gameSeed;
+    NoopFactory factory = new NoopFactory();
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new Actioneer(), new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    Riiablo.engine = world;
+    try {
+      int source = world.create();
+      world.getMapper(Player.class).create(source).data = CharData.createRemote("convert", (byte) Riiablo.PALADIN);
+      world.getMapper(Player.class).get(source).data.setSkillLevel(SkillId.CONVERSION, 1);
+      world.getMapper(Position.class).create(source).position.set(10, 10);
+      world.getMapper(AttributesWrapper.class).create(source).attrs = conversionAttributes(10, 100f, 100f);
+      world.getMapper(UnitStates.class).create(source).init(source);
+      int target = world.create();
+      MonStats.Entry row = Riiablo.files.monstats.get("skeleton1");
+      Monster monster = world.getMapper(Monster.class).create(target)
+          .set(row, Riiablo.files.monstats2.get(row.MonStatsEx));
+      world.getMapper(Position.class).create(target).position.set(12, 10);
+      Attributes attrs = conversionAttributes(20, 100f, 200f);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attrs;
+      UnitStates states = world.getMapper(UnitStates.class).create(target).init(target);
+      int chance = PaladinSkills.getConversionChance(Riiablo.files.skills.get(SkillId.CONVERSION), 1, name -> 0);
+      boolean seeded = false;
+      for (int seed = 0; seed < 10000; seed++) {
+        if (NativeRng.forUnit(seed ^ SkillId.CONVERSION, source).nextInt(100) < chance) {
+          Riiablo.gameSeed = seed;
+          seeded = true;
+          break;
+        }
+      }
+      assertTrue(seeded);
+      // Prepared melee record is the boundary under test; hit calculation,
+      // terrain and animation stepping are not simulated here.
+      Casting cast = world.getMapper(Casting.class).create(source)
+          .set(SkillId.CONVERSION, target, new Vector2(12, 10));
+      cast.conversionPrepared = true;
+      cast.conversionHit = true;
+      cast.conversionTargetId = target;
+      events.dispatch(AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_ATK));
+      assertTrue(monster.converted);
+      assertEquals(10, attrs.get(Stat.level).asInt());
+      assertNotNull(states.stateList.getState(StateId.CONVERSION).removalCallback);
+      states.stateList.clearAll();
+      assertFalse(monster.converted);
+      assertEquals(-1, monster.conversionOwnerId);
+      assertEquals(20, attrs.get(Stat.level).asInt());
+      assertEquals(200f, attrs.get(Stat.maxhp).asFixed(), 0.01f);
+      assertEquals(100f, attrs.get(Stat.hitpoints).asFixed(), 0.01f);
+      assertEquals(0, states.stateList.size());
+    } finally {
+      world.dispose();
+      Riiablo.engine = previous;
+      Riiablo.gameSeed = previousSeed;
+    }
+  }
+
+  private static Attributes conversionAttributes(int level, float hp, float maxHp) {
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().put(Stat.level, level);
+    attrs.base().put(Stat.hitpoints, hp);
+    attrs.base().put(Stat.maxhp, maxHp);
+    attrs.reset();
+    return attrs;
+  }
+
   @Test
   void rowRetainsNativeStartDoStateAndFormulas() {
     Skills.Entry row = Riiablo.files.skills.get(SkillId.CONVERSION);

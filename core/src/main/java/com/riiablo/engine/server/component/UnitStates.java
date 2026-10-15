@@ -75,7 +75,7 @@ public class UnitStates extends Component {
   protected void reset() {
     snapshotOnly = false;
     if (stateList != null) {
-      stateList.clearAll();
+      stateList.discardAll();
     }
     appliedMaxLifePercent = 0;
     appliedMaxManaPercent = 0;

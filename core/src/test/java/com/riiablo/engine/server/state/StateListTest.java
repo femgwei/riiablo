@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,51 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.States;
 
 public class StateListTest {
+  @Test
+  public void removalCallbackUnlinksBeforeInvocationAndCanRemoveSiblingsOnce() {
+    StateList states = new StateList(42);
+    UnitState state = states.addState(StateId.CONVERSION, 1, 3, 7);
+    state.skillModifier = 9;
+    states.addPermanentState(StateId.CONVERSION_SAVE).conversionOriginalLevel = 20;
+    UnitState survivor = states.addState(StateId.COLD, 5, 1, 8);
+    int[] calls = {0};
+    state.removalCallback = (list, removed) -> {
+      calls[0]++;
+      assertFalse(list.hasState(StateId.CONVERSION));
+      assertEquals(0, list.nativeConversionOrder());
+      assertEquals(9, removed.skillModifier, "payload not pooled before callback");
+      assertEquals(20, list.getState(StateId.CONVERSION_SAVE).conversionOriginalLevel);
+      assertFalse(list.removeState(StateId.CONVERSION));
+      list.removeState(StateId.CONVERSION_SAVE);
+    };
+    states.update();
+    assertEquals(1, calls[0]);
+    assertEquals(4, survivor.duration, "nested removal cannot tick a surviving layer twice");
+    states.clearAll();
+    assertEquals(1, calls[0]);
+    assertNull(state.removalCallback);
+  }
+
+  @Test
+  public void teardownSnapshotsAndCopiesNeverCarryGameplayCallbacks() {
+    StateList states = new StateList(42);
+    UnitState source = states.addState(StateId.CONVERSION, 100, 1, 7);
+    UnitState.RemovalCallback forbidden = (list, removed) -> fail("non-gameplay teardown invoked callback");
+    source.removalCallback = forbidden;
+    UnitState copy = new UnitState();
+    copy.removalCallback = source.removalCallback;
+    copy.copyFrom(source);
+    assertNull(copy.removalCallback);
+    states.replaceFromSnapshot(new int[] {StateId.CONVERSION}, new int[] {100}, new int[] {1});
+    assertNull(states.getState(StateId.CONVERSION).removalCallback);
+    states.getState(StateId.CONVERSION).removalCallback = forbidden;
+    states.discardAll();
+    assertEquals(0, states.size());
+    UnitState reused = states.addState(StateId.CONVERSION, 1, 1, 7);
+    assertNull(reused.removalCallback);
+    states.update();
+  }
+
   @Test
   public void targetDetachmentPreservesStatesAndPayloadButRefreshDoesNotRejoin() {
     StateList states = new StateList(42);

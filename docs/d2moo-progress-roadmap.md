@@ -1,5 +1,41 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 Conversion 同步移除回调与保存层释放顺序
+
+- [x] 核对 `SkillPal.cpp::SKILLS_StatRemoveCallback_Conversion` 读取保存层、
+  恢复属性、再移除保存层的顺序，以及 `D2StatList.cpp::D2Common_ExpireStatList`
+  / `FreeStatListImpl` 的先摘除、调用回调、后释放结构。增加仅服务端运行时使用的
+  UnitState 移除回调；真实 Actioneer SrvDo079 成功施加时立即绑定，不等待首个 tick。
+  StateUpdater 对已有自定义服务端状态保留首次 tick 绑定与无状态时的兼容恢复。
+- [x] 统一单层和批量游戏状态删除：先摘除并更新 flags/目标成员资格，再同步调用
+  回调，最后归还对象池；回调可嵌套删除其他层，但不允许新增层。批量清理优先处理
+  本次策略选中且已绑定回调的 Conversion，让其先消费保存层；未选中的 basic/
+  stay-death/noclear Conversion 层不会因依赖优先级被强制删除。清理循环重新查找，避免回调删除
+  保存层后数组下标失效、跳过其他层；状态 tick 与到期释放分离，存活层每帧只递减一次。
+- [x] 将恢复逻辑提取到 `NativeConversionLifecycle`，通过目标本次生命周期的
+  Monster/AttributesWrapper 引用绑定，不依赖全局 world 或实体 ID 再查询；读取
+  wrapper 当前属性。显式移除、按层/来源删除、负面/全部/普通清理、到期及死亡清理
+  都能同步结束已绑定 Conversion；恢复后释放保存层，重复删除不重复恢复。
+  保留既有生者血量比例投影；死亡零血量不经过最少 1 HP 的恢复钳制，不复活尸体。
+- [x] 区分游戏移除与数据销毁：对象池组件 reset、客户端快照替换使用 discard，
+  不执行游戏回调；UnitState reset/copy 不携带闭包，防止回调跨单位/快照泄漏。
+  新增 8 项测试，覆盖两种保存层插入顺序与 9 类移除路径、回调嵌套、只 tick 一次、
+  wrapper 更新/独立单位、缺失保存层、死亡与池复用，以及真实关键帧/SrvDo079 在
+  首次 world tick 前的绑定和清理。关键帧测试预置命中记录，不模拟完整命中/地形管线。
+  状态与 Conversion 针对性 36 项全部通过。反向移除真实施加处绑定与批量清理
+  优先级后，2 项关键测试分别检出缺失回调及保存层过早释放导致等级未恢复；实现已恢复。
+  专用服务器 Java 编译通过；含 AI、光环、战斗与客户端状态/快照的扩展回归共
+  507 项，505 通过，2 失败，0 错误/跳过。狼群落点测试仍为已在 `70358fee`
+  复现的既有失败；新增覆盖到的
+  `CombatPipelineIntegrationTest.barbarianThrowingMasteryIsSnapshottedBeforeImpact`
+  在独立、干净的 `b8b6ed63` 基线也单项复现同一断言（期望 9，实际 6），
+  确认不是此次回调修改引入；本轮不修改这两项问题。
+- [ ] 仍不是完整原生 stat-list flags/属性取整实现；本轮仅修正回调时机，沿用既有
+  浮点血量比例算法，也未统一召唤物、佣兵和状态组件的唯一目标节点 registry。
+  未绑定且在首次服务端 tick 前被清空的手工状态仍走旧兼容边界；保存数据已经被独立
+  删除时不臆造原始属性。下一步继续跨组件节点唯一关系与显式成员迁移；node8/
+  inactive 管线及真实客户端逐帧验证仍待补。
+
 ## 2026-10-15 A5 Baal 状态节点唯一桶与结束回调摘链
 
 - [x] 核对 `Targets.cpp::UpdateSummonAI` / `sub_6FC40280` 的

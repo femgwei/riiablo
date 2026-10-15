@@ -1018,6 +1018,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
 
     StateList stateList = unitStates.stateList;
+    UnitState conversionState = stateList.getState(StateId.CONVERSION);
+    if (conversionState != null && conversionState.removalCallback == null
+        && mMonster.has(entityId) && mMonster.get(entityId).converted) {
+      // Compatibility for server-authored states outside Actioneer. Real
+      // SrvDo079 binds before returning, even before the first world tick.
+      NativeConversionLifecycle.bind(conversionState, mMonster.get(entityId),
+          mAttributesWrapper.has(entityId) ? mAttributesWrapper.get(entityId) : null);
+    }
 
     synchronizeBarbarianPassives(entityId, stateList);
     synchronizePaladinHardPointPassives(entityId, stateList);
@@ -1257,31 +1265,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   /** Restores the native Conversion save-list payload when its aura expires. */
   private void restoreConversion(int entityId, StateList states) {
-    if (!mMonster.has(entityId)) {
-      states.removeState(StateId.CONVERSION_SAVE);
-      return;
-    }
-    Monster monster = mMonster.get(entityId);
-    UnitState save = states.getState(StateId.CONVERSION_SAVE);
-    if (save != null && mAttributesWrapper.has(entityId)) {
-      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-      if (attrs != null) {
-        StatRef level = attrs.get(Stat.level, StatRef.obtain());
-        StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
-        StatRef maxHp = attrs.get(Stat.maxhp, StatRef.obtain());
-        if (level != null && hp != null && maxHp != null && save.conversionOriginalLevel > 0
-            && save.conversionOriginalMaxHpEncoded > 0) {
-          float ratio = Math.max(0f, Math.min(1f, hp.asFixed() / Math.max(1f, maxHp.asFixed())));
-          float originalMax = save.conversionOriginalMaxHpEncoded / 256f;
-          level.set(save.conversionOriginalLevel);
-          maxHp.set(originalMax);
-          hp.set(Math.max(1f, Math.min(originalMax, originalMax * ratio)));
-        }
-      }
-    }
-    monster.converted = false;
-    monster.conversionOwnerId = -1;
-    states.removeState(StateId.CONVERSION_SAVE);
+    NativeConversionLifecycle.restore(states, mMonster.has(entityId) ? mMonster.get(entityId) : null,
+        mAttributesWrapper.has(entityId) ? mAttributesWrapper.get(entityId) : null);
     log.info("[PALADIN_CONVERSION] phase=restore entity={} status=PASS", entityId);
   }
 

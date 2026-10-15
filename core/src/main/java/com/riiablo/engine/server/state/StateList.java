@@ -1,5 +1,7 @@
 package com.riiablo.engine.server.state;
 
+import java.util.function.Predicate;
+
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
@@ -200,15 +202,7 @@ public class StateList {
         if (current.stateId == stateId || current.curseGroup != group) continue;
         if (current.curseStrength >= resolvedStrength) return null;
       }
-      for (int i = states.size - 1; i >= 0; i--) {
-        UnitState current = states.get(i);
-        if (current.stateId != stateId && current.curseGroup == group) {
-          int removedId = current.stateId;
-          states.removeIndex(i);
-          statePool.free(current);
-          onStateRemoved(removedId);
-        }
-      }
+      removeMatching(current -> current.stateId != stateId && current.curseGroup == group);
     }
 
     UnitState applied = createState(stateId, duration, level, sourceEntityId, skillId);
@@ -233,26 +227,16 @@ public class StateList {
 
   /** Removes only curable curses according to the native States.txt mask. */
   public int removeCurableCurses(States table) {
-    int count = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
+    return removeMatching(state -> {
       States.Entry definition = table != null ? table.get(state.stateId) : null;
       boolean curse = definition != null ? definition.curse : state.isCurse();
-      if (!curse || (definition != null && !definition.curable)) continue;
-      int stateId = state.stateId;
-      states.removeIndex(i);
-      statePool.free(state);
-      onStateRemoved(stateId);
-      count++;
-    }
-    return count;
+      return curse && (definition == null || definition.curable);
+    });
   }
 
   /** Removes native harmful effects while preserving beneficial/aura states. */
   public int removeNegativeEffects(States table) {
-    int count = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
+    return removeMatching(state -> {
       States.Entry definition = table != null ? table.get(state.stateId) : null;
       boolean negative = StateId.isCurse(state.stateId) || definition != null
           && (definition.curse || definition.curable || definition.damageRed
@@ -275,14 +259,8 @@ public class StateList {
         default:
           break;
       }
-      if (!negative) continue;
-      int stateId = state.stateId;
-      states.removeIndex(i);
-      statePool.free(state);
-      onStateRemoved(stateId);
-      count++;
-    }
-    return count;
+      return negative;
+    });
   }
 
   private UnitState createState(int stateId, int duration, int level,
@@ -390,9 +368,7 @@ public class StateList {
     for (int i = states.size - 1; i >= 0; i--) {
       UnitState state = states.get(i);
       if (state.stateId == stateId) {
-        states.removeIndex(i);
-        onStateRemoved(stateId);
-        statePool.free(state);
+        removeAt(i);
         log.debug("移除状态 {} 从实体 {}", StateId.getName(stateId), entityId);
         return true;
       }
@@ -406,17 +382,7 @@ public class StateList {
    * @return 移除的状态数量
    */
   public int removeCurses() {
-    int count = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
-      if (state.isCurse()) {
-        int stateId = state.stateId;
-        states.removeIndex(i);
-        statePool.free(state);
-        onStateRemoved(stateId);
-        count++;
-      }
-    }
+    int count = removeMatching(UnitState::isCurse);
     if (count > 0) {
       log.debug("移除 {} 个诅咒状态从实体 {}", count, entityId);
     }
@@ -427,6 +393,14 @@ public class StateList {
    * 移除所有状态
    */
   public void clearAll() {
+    removeMatching(state -> true);
+    flags.clearAll();
+    detachNativeTargetNode();
+    log.debug("清除实体 {} 的所有状态", entityId);
+  }
+
+  /** Pool/network teardown is not gameplay stat-list removal. */
+  public void discardAll() {
     for (UnitState state : states) {
       statePool.free(state);
     }
@@ -446,34 +420,18 @@ public class StateList {
    * @return number of removed state-owned stat lists
    */
   public int retainForDeath(States table, DeathUnitType unitType) {
-    int removed = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
+    return removeMatching(state -> {
       States.Entry entry = table != null ? table.get(state.stateId) : null;
-      if (state.basicStatList || (entry != null && staysOnDeath(entry, unitType))) continue;
-      int stateId = state.stateId;
-      states.removeIndex(i);
-      statePool.free(state);
-      onStateRemoved(stateId);
-      removed++;
-    }
-    return removed;
+      return !state.basicStatList && !(entry != null && staysOnDeath(entry, unitType));
+    });
   }
 
   /** Clears ordinary effects while preserving States.txt {@code noclear} entries. */
   public int clearRemovable(States table) {
-    int removed = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
+    return removeMatching(state -> {
       States.Entry entry = table != null ? table.get(state.stateId) : null;
-      if (state.basicStatList || (entry != null && entry.noClear)) continue;
-      int stateId = state.stateId;
-      states.removeIndex(i);
-      statePool.free(state);
-      onStateRemoved(stateId);
-      removed++;
-    }
-    return removed;
+      return !state.basicStatList && !(entry != null && entry.noClear);
+    });
   }
 
   private static boolean staysOnDeath(States.Entry entry, DeathUnitType unitType) {
@@ -493,18 +451,7 @@ public class StateList {
    * @return 移除的状态数量
    */
   public int removeStatesFromSource(int sourceEntityId) {
-    int count = 0;
-    for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
-      if (state.sourceEntityId == sourceEntityId) {
-        int stateId = state.stateId;
-        states.removeIndex(i);
-        statePool.free(state);
-        onStateRemoved(stateId);
-        count++;
-      }
-    }
-    return count;
+    return removeMatching(state -> state.sourceEntityId == sourceEntityId);
   }
 
   //==========================================================================
@@ -556,9 +503,7 @@ public class StateList {
       UnitState state = states.get(i);
       if (state.stateId != stateId || state.sourceEntityId != sourceEntityId
           || state.skillId != skillId) continue;
-      states.removeIndex(i);
-      statePool.free(state);
-      onStateRemoved(stateId);
+      removeAt(i);
       return true;
     }
     return false;
@@ -651,15 +596,11 @@ public class StateList {
    */
   public void update() {
     for (int i = states.size - 1; i >= 0; i--) {
-      UnitState state = states.get(i);
-      if (!state.update()) {
-        // 状态已过期，移除
-        int stateId = state.stateId;
-        states.removeIndex(i);
-        statePool.free(state);
-        onStateRemoved(stateId);
-      }
+      states.get(i).update();
     }
+    // Tick once before callbacks can remove siblings. Restarting a reverse
+    // index loop after nested removal could otherwise double-tick survivors.
+    removeMatching(state -> state.expired);
   }
 
   /**
@@ -925,7 +866,7 @@ public class StateList {
    */
   public void replaceFromSnapshot(int[] stateIds, int[] durations, int[] levels,
       int[] sourceEntityIds, int[] skillIds) {
-    clearAll();
+    discardAll();
     if (stateIds == null) return;
     int count = stateIds.length;
     for (int i = 0; i < count; i++) {
@@ -958,6 +899,42 @@ public class StateList {
    */
   public int getEntityId() {
     return entityId;
+  }
+
+  private void removeAt(int index) {
+    UnitState state = states.removeIndex(index);
+    onStateRemoved(state.stateId);
+    UnitState.RemovalCallback callback = state.removalCallback;
+    state.removalCallback = null; // unlink first: reentrant removal runs once
+    try {
+      if (callback != null) callback.removed(this, state);
+    } finally {
+      statePool.free(state);
+    }
+  }
+
+  /** Counts all removed layers, including dependencies removed by callbacks. */
+  private int removeMatching(Predicate<UnitState> predicate) {
+    int removed = 0;
+    while (true) {
+      int index = -1;
+      for (int i = states.size - 1; i >= 0; i--) {
+        UnitState state = states.get(i);
+        if (!predicate.test(state)) continue;
+        if (index < 0) index = i;
+        // A selected Conversion must consume its save-list before a bulk
+        // clear can free it, irrespective of their array/insertion order.
+        if (state.stateId == StateId.CONVERSION && state.removalCallback != null) {
+          index = i;
+          break;
+        }
+      }
+      if (index < 0) return removed;
+      int before = states.size;
+      removeAt(index);
+      removed += before - states.size;
+      // Callbacks may remove siblings; never retain their old array indices.
+    }
   }
 
   private void onStateRemoved(int stateId) {
