@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.server.d2gs.MonsterAiArenaTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-15T23:50:38" hostname="DESKTOP-7GGAVHU" time="0.177">
+  <properties/>
+  <testcase name="frogCycleRequiresNoPresenceThenRestoredPresenceAndAnActualAttack" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.011"/>
+  <testcase name="rejectsInvalidOptionsAndUnknownFlags" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.006"/>
+  <testcase name="resurrectionScenariosAndHtmlEscapingAreExplicit" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.016"/>
+  <testcase name="diabloInfernoOracleAlsoRequiresActualStateResetBetweenCasts" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.009"/>
+  <testcase name="infernoOracleRejectsFakeMissileWrongIntervalAndSinglePulse" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.008"/>
+  <testcase name="submergeCycleRequiresHeldZeroFrameFlagsEmergenceEndAndSubsequentAttack" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.005"/>
+  <testcase name="warningsAndFallbackCannotPassViaMovementOrCasts" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.006"/>
+  <testcase name="helpersNeverCountAsSubjectBehavior" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.052"/>
+  <testcase name="diabColdRequiresActualDirectHitAndTheFollowingS2End" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.005"/>
+  <testcase name="diabRunRequiresNaturalCastRealPathHitAndTailCleanup" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.005"/>
+  <testcase name="futureLoggersCapturedAndSinksRestoredBetweenCases" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.032"/>
+  <testcase name="diabWallNeedsCastTrailActualHitAndCleanupInOrder" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.006"/>
+  <testcase name="infernoOracleRequiresRealPulsesIntervalTailAndNewCast" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.005"/>
+  <testcase name="catalogKeepsHostileControllersButExcludesDisabledAndNpcRows" classname="com.riiablo.server.d2gs.MonsterAiArenaTest" time="0.008"/>
+  <system-out><![CDATA[WARN  [MonsterAiArenaTest] captured-warning
+WARN  [MonsterAiArenaTest] outside-case
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

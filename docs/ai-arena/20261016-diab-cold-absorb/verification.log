@@ -1,0 +1,7 @@
+Baseline: 14 tests, 2 expected DiabCold delayed-absorb failures.
+final: 305 tests, 0 failures/errors/skips.
+repeat: 305 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 E830B4FCDB28E6DAE6ECFAC4576D650F7E46FAC2C60C687A8D0C3E94E2106797 core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 87286E4502ADFDDEE8777B444A4D56209FDF2E3FE913324AC46225599A807BB1 core/src/test/java/com/riiablo/engine/server/DiabColdIntegrationTest.java
+PARTIAL: DiabCold delayed-death absorb verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

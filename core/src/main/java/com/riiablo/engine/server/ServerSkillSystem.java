@@ -1907,7 +1907,8 @@ public class ServerSkillSystem extends PassiveSystem {
     StatRef maximum = defender.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
     float before = hp.asFixed();
-    if (result.absorbedLife > 0 && maximum != null)
+    if (result.absorbedLife > 0 && maximum != null
+        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY)))
       hp.add(Math.max(0f, Math.min(result.absorbedLife, maximum.asFixed() - hp.asFixed())));
     DamageEvent damage = DamageEvent.obtainMissile(source, target, result.totalDamage, 0f, null, result);
     if (events != null) events.dispatch(damage);

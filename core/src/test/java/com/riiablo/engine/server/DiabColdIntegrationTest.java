@@ -31,6 +31,31 @@ import org.junit.jupiter.api.Test;
 
 /** Real S2 animation entry, not an injected SkillDo or generic melee hit. */
 class DiabColdIntegrationTest extends RiiabloTest {
+  @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, true); }
+  @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, false); }
+  @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, true); }
+
+  private static void absorbBoundary(boolean delayed, boolean full) {
+    try (Fixture f = new Fixture("diablo", true, 0)) {
+      f.stat(Stat.hitpoints, 500);
+      f.stat(Stat.item_absorbmagic, full ? 1000 : 10);
+      if (delayed) f.states().addState(StateId.DEATH_DELAY, 1000, 1, f.source);
+      f.begin(); f.untilHit();
+      DamageEvent hit = f.probe.hits.get(0);
+      if (full) {
+        assertEquals(0f, hit.damage);
+        if (delayed) assertEquals(500f, f.hp());
+        else assertTrue(f.hp() >= 542f && f.hp() < 561f);
+      } else {
+        assertTrue(hit.magicDamage >= 32f && hit.magicDamage < 51f);
+        assertEquals(500f - hit.damage, f.hp(), .0001f);
+      }
+      assertEquals(0, f.probe.deaths);
+      assertEquals(250, f.states().getState(StateId.COLD).initialDuration);
+      assertEquals(0, f.missiles());
+    }
+  }
+
   @Test void coordinateOnlyFriendlyAndAlreadyDeadTargetsNeverReceiveAFakeHit() {
     for (int invalid = 0; invalid < 3; invalid++) {
       try (Fixture f = new Fixture("diablo", invalid != 1, 0)) {
