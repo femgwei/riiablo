@@ -44,7 +44,7 @@ public class CofResolver extends PassiveSystem {
         + Engine.getWClass(wclass);
     AssetDescriptor<COF> descriptor =
         new AssetDescriptor<>(formatCofPath(logicalType, token, name), COF.class);
-    if (!Riiablo.assets.contains(descriptor.fileName)) {
+    if (!Riiablo.assets.contains(descriptor.fileName) && CofLoader.isAvailable(descriptor)) {
       Riiablo.assets.load(descriptor);
     }
   }

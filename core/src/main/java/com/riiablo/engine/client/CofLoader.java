@@ -6,6 +6,8 @@ import com.artemis.annotations.Exclude;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.loaders.AssetLoader;
+import com.badlogic.gdx.files.FileHandle;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.client.component.CofDescriptor;
 import com.riiablo.engine.client.component.CofWrapper;
@@ -38,7 +40,19 @@ public class CofLoader extends IteratingSystem {
       if (DEBUG) Gdx.app.debug(TAG, "CofDescriptor not found for entity " + event.entityId);
       return;
     }
-    
+
+    // A null COF is not a completed asynchronous load in LibGDX: it keeps
+    // the task at the head of the global queue forever. Optional object
+    // modes (e.g. boOPHTH in 1.10f) must never enter that queue. Keep the
+    // resident Animation until a later, available mode replaces it.
+    if (!isAvailable(descriptor.descriptor)) {
+      if (Gdx.app != null) Gdx.app.error(TAG,
+          "[COF_MISSING] entity=" + event.entityId + " path="
+              + descriptor.descriptor.fileName + " action=skip_load");
+      mCofDescriptor.remove(event.entityId);
+      return;
+    }
+
     Riiablo.assets.load(descriptor.descriptor);
     if (DEBUG) Gdx.app.debug(TAG, "Loading " + descriptor.descriptor.fileName);
     checkLoaded(event.entityId);
@@ -46,6 +60,14 @@ public class CofLoader extends IteratingSystem {
 
   @Override
   protected void inserted(int entityId) {
+  }
+
+  static boolean isAvailable(AssetDescriptor<COF> descriptor) {
+    AssetLoader<COF, ?> loader = Riiablo.assets.getLoader(COF.class, descriptor.fileName);
+    // Leave missing-loader validation to AssetManager.load itself.
+    if (loader == null) return true;
+    FileHandle file = descriptor.file != null ? descriptor.file : loader.resolve(descriptor.fileName);
+    return file != null && file.exists();
   }
 
   private void checkLoaded(int entityId) {

@@ -1,5 +1,28 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 开箱后跑步动画不再切换：缺失COF阻塞资源队列
+
+- 用户复测仍失败。新 `game.log` 最后一次玩家137图层就绪为8815行RN；
+  开箱后8835行出现 `boOPHTH` 缺失，随后多次速度归零/RN→待机却再无图层就绪。
+  8943行另有 `bmOPHTH` 缺失；不是未拉取上一版恢复代码。
+- 根因已用真实LibGDX AssetManager异步队列复现：旧COFLoader遇到缺失文件返回null，
+  而LibGDX 1.10.0的AssetLoadingTask.update仅在asset非null时完成，导致整个队列永久等待，
+  后续玩家待机COF无法加载。上版只检查已解析COF的恢复无法跨过这个队列阻塞。
+- CofLoader现在入队前通过实际loader/resolver检查文件，缺失时记录 `[COF_MISSING]`
+  并移除请求，保留既有Animation等待后续有效模式；BL预热也跳过缺失资源。
+  卸载容忍未入队描述符；底层COFLoader对绕过检查的缺失请求显式报错，不再返回null。
+  本轮不修改原版对象模式、动作时序，也不臆造箱子OP动画或替代资源。
+- 修改前新增“开箱缺失OP→玩家待机”回归明确失败；修复后32项/6类通过，
+  失败/错误/跳过0：CofModeTransitionTest(4)、Cof110fModeTransitionTest(1)、
+  COFLoaderTest(3)、CofLayerLoaderReleaseTest(6)、AnimationStepperTest(7)、
+  VelocityModeChangerTest(11)。原版1.10F MPQ核实bo/bm的OP COF均不存在，
+  真实COF与真实异步队列跑通RN→开箱→TN及后续重复移动/停止。
+- 复验：D2_HOME/D2_TEST指向合法1.10F目录，运行 `gradlew.bat :core:test`
+  并分别用 `--tests` 指定上述六类的完整类名；最后一类在engine.server包，
+  COFLoaderTest在loader包，其余在engine.client包。报告在core/build/test-results/test。
+  此回归的装备图层设为NIL，不包含DCC/GL画面验收；另一电脑仍需复测开箱、拾取、
+  跑步与停止，并确认缺失资源日志后仍能出现玩家TN/NU图层就绪。
+
 ## 2026-10-15 角色停止后旧跑步动画的恢复
 
 - 用户提供的桌面 `game.log` 中，玩家137多次正确切换 `RN -> NU`，同时速度归零、

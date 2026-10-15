@@ -44,7 +44,7 @@ public class CofUnloader extends BaseEntitySystem {
     CofDescriptor cofDescriptor = mCofDescriptor.get(entityId);
     AssetDescriptor<COF> descriptor = cofDescriptor.descriptor;
     if (DEBUG) Gdx.app.debug(TAG, "Unloading " + descriptor.fileName);
-    Riiablo.assets.unload(descriptor.fileName);
+    if (Riiablo.assets.contains(descriptor.fileName)) Riiablo.assets.unload(descriptor.fileName);
     mCofDescriptor.remove(entityId);
   }
 }
