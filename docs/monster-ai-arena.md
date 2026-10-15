@@ -1,6 +1,33 @@
 # 逐怪 AI 隔离测试场
 
-## 最新修复批次：2026-10-15 FrogDemon
+## 最新修复批次：2026-10-15 MonInferno（非 MonSeq）
+
+对照D2MOO St53/Do95及本机1.10f原表，接入FetishInferno178/A1、MegademonInferno319/S1、
+Baal Inferno317/S1的持续施法链。真实COF动作点首发后，calc3重排周期回调；
+calc2从start计算，截止/INFERNO关闭后仍保留已排程末发，再等待InfernoLen尾动画。
+目标坐标或创建失败走尾动画，不伪造成功/重试。INFERNO为布尔开关，不自动TTL到期。
+补真实帧寿命、VelLev整数速度/SlowMissiles、本地源帧回卷和飞弹动画速率、
+死亡/目标移除/路径首点/零坐标/冻结/复用清理测试。萨满改严格小于技能级的距离边界，
+下一次空闲决策消费开关，修复静态订阅跨World残留；不宣称整个Fn065已对齐。
+
+新增8场 `inferno-cycle`，主体自然AI施法必须满足实际飞弹归属、同cast多发、
+原表间隔、截止末发、尾动画结束和新一轮施法；辅助单位不能代替主体通过。
+本机Normal seed1 500tick：557行/1153场，480动作、376回退、111告警、175无动作、
+7仅移动、4正常终止；运行时异常/ERROR/NOT_RUN/专属未触发均0。
+8场Inferno循环及旧18复活/6触手/3蛙魔/4无主人场均成功。新增8场仍有辅助吹箭怪回退告警，
+因此WARNING从103到111，没有用专属成功覆盖告警。Megademon也仍是真实fallback，不算AI已补齐。
+
+最终定向 **295项通过**（core265/d2gs30），0失败/错误/跳过，含玩家Inferno及刺客哨兵回归。
+三次全目录结果JSONL完全相同；对旧1145场仅31场变化，其余1114逐字段一致，新增8场，无丢失。
+另有Baal目标链旧测试line317失败，已在未修改18a5cc7b独立基线复现并留XML，
+不把定向通过称为全项目测试通过。本轮保留并行地图提交，不计作AI工作。
+
+新快照：[`report.html`](ai-arena/20261015-inferno-seed1/report.html)，完整日志、
+测试XML包、原版依据/命令/边界见[`verification.md`](ai-arena/20261015-inferno-seed1/verification.md)。
+仍有47个AI名称/188行回退；Do152 Diablo电光、寒冰恐魔/哨兵MonSeq明确保留未移植告警。
+全局事件时钟/速度路径单位、完整Fn065、TCP独立客户端与三难度多seed仍未验收。
+
+## 前一修复批次：2026-10-15 FrogDemon
 
 本批次按D2MOO Fn052及本机1.10f原表修复蛙魔，不以共享Submerge回调冒充完整序列。
 

@@ -56,6 +56,25 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     Sequence sequence = mSequence.get(entityId);
+    Casting casting = mCasting.get(entityId);
+    NativeMonInferno inferno = casting == null ? null : casting.monInferno;
+    if (inferno != null && sequence != null && sequence.started) {
+      inferno.frame++;
+      if (inferno.started) {
+        // Once SrvDo095 runs it deletes the ordinary COF MODECHANGE/ENDANIM
+        // events. Only the scheduled callback and InfernoLen tail may fire.
+        if (inferno.nextUpdate >= 0 && inferno.frame >= inferno.nextUpdate)
+          events.dispatch(com.riiablo.engine.server.event.MonInfernoUpdateEvent.obtain(entityId));
+        else if (inferno.endFrame >= 0 && inferno.frame >= inferno.endFrame) {
+          log.info("[MON_INFERNO] phase=end source={} skill={} frame={} missiles={}",
+              entityId, casting.skillId, inferno.frame, inferno.missiles);
+          events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+        } else if (animData.numFrames > 0) {
+          animData.frame = (animData.frame + Math.max(0, animData.speed)) % animData.numFrames;
+        }
+        return;
+      }
+    }
     if (sequence != null && sequence.nativeFrogHidden) {
       // UNITS_InitializeSequence starts at source frame 0. The native mode
       // update invokes the used skill even with no MonSeq nActionFrame.

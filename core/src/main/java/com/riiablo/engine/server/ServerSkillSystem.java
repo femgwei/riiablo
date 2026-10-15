@@ -172,6 +172,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<com.riiablo.engine.server.component.Pathfind> mPathfind;
   private volatile int mercenaryMissileCount;
   private volatile int mercenarySkillDoCount;
   private volatile int mercenaryConfiguredMissiles;
@@ -527,6 +528,11 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (skill.srvdofunc == 95 && mCasting.has(event.entityId)
+        && mCasting.get(event.entityId).monInferno != null) {
+      event.monInfernoMissileId = spawnMonInferno(event, skill);
+      return;
+    }
     // D2MOO SrvSt63_Corpse_VineCycler performs its complete effect during
     // monster skill-start: Actioneer selects the corpse and creates
     // SrvMissileA at that corpse.  There is no later SrvDo projectile to
@@ -3841,6 +3847,43 @@ public class ServerSkillSystem extends PassiveSystem {
     int lane = Math.max(0, Math.min(count - 1, index)) - count / 2;
     out.set(target.x + lane * px, target.y + lane * py).sub(start);
     return out.isZero(0.0001f) ? out.set(1, 0) : out.nor();
+  }
+
+  /** D2MOO SKILLS_SrvDo095_MonInferno; result controls MODECHANGE vs ENDANIM. */
+  private int spawnMonInferno(SkillDoEvent event, Skills.Entry skill) {
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) return -1;
+    Vector2 start = mPosition.get(event.entityId).position;
+    // A valid unit target takes precedence over the original click position.
+    // GetXAndYFromTargetUnit falls back to the native path's first point,
+    // never to a removed unit's stale cast-time position.
+    Vector2 target = event.targetVec;
+    if (event.targetId >= 0) {
+      if (world.getEntityManager().isActive(event.targetId) && mPosition.has(event.targetId)) {
+        target = mPosition.get(event.targetId).position;
+      } else {
+        com.riiablo.engine.server.component.Pathfind path = mPathfind.get(event.entityId);
+        target = path == null ? null : path.target;
+      }
+    }
+    if (target == null || (int) target.x == 0 || (int) target.y == 0) return -1;
+    int level = getSkillLevel(event.entityId, event.skillId);
+    Vector2 direction = new Vector2(target).sub(start);
+    if (direction.isZero()) direction.set(1, 0);
+    int id = createMissile(row, direction.nor(), start, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return -1;
+    Missile projectile = mMissile.get(id);
+    projectile.skillId = skill.Id;
+    int frames = NativeMonInferno.missileFrames(skill, row, level);
+    projectile.nativeLifetimeFrames = frames;
+    projectile.range = frames;
+    // Factory uses native table velocity units throughout the server. Keep
+    // that convention, but apply SrvDo095's integer VelLev term exactly.
+    float speed = NativeMonInferno.velocity(row, level);
+    int slowPercent = ServerEntityFactory.slowMissileVelocityPercent(row, stateList(event.entityId));
+    if (slowPercent > 0) speed = speed * slowPercent / 100f;
+    mVelocity.get(id).velocity.set(direction).setLength(speed);
+    return id;
   }
 
   private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,

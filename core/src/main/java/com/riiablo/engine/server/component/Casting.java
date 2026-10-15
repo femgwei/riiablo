@@ -77,6 +77,8 @@ public class Casting extends PooledComponent {
   public final IntArray strafeTargetIds = new IntArray(false, 24);
   /** Prevents a native monster basic projectile from being emitted twice. */
   public boolean monsterMissileCreated;
+  /** Used-skill Param1 and MODECHANGE/ENDANIM state, never shared between casts. */
+  public com.riiablo.engine.server.NativeMonInferno monInferno;
   /** Native Paladin Zeal SrvSt37/SrvDo013 sequence state. */
   public boolean zealInitialized;
   public boolean zealStrikeProcessed;
@@ -171,6 +173,7 @@ public class Casting extends PooledComponent {
     strafeArrowIndex = 0;
     strafeTargetIds.clear();
     monsterMissileCreated = false;
+    monInferno = null;
     zealInitialized = false;
     zealStrikeProcessed = false;
     zealRemainingStrikes = 0;
@@ -206,6 +209,7 @@ public class Casting extends PooledComponent {
 
   @Override
   protected void reset() {
+    monInferno = null;
     skillId = -1;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();

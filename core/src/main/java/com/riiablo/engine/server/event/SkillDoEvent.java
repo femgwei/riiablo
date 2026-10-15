@@ -14,6 +14,8 @@ public class SkillDoEvent implements Event {
   public Vector2 targetVec;
   public int srvdofunc;
   public int cltdofunc;
+  /** Synchronous SrvDo095 result; scheduling must reflect actual creation failure. */
+  public int monInfernoMissileId = -1;
 
   public static SkillDoEvent obtain(
       int entityId, int skillId, int targetId, Vector2 targetVec, int srvdofunc, int cltdofunc) {

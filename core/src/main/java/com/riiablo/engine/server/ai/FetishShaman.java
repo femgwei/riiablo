@@ -66,7 +66,7 @@ public class FetishShaman extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private static EntitySubscription enemyEntities;
+  private EntitySubscription enemyEntities;
   private EntitySubscription corpseEntities;
 
   final Vector2 tmpVec2 = new Vector2();
@@ -83,11 +83,8 @@ public class FetishShaman extends AI {
   @Override
   public void initialize() {
     super.initialize();
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class)
-              .one(Player.class));
-    }
+    enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
+        .all(Class.class).one(Player.class));
     corpseEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
         .all(Monster.class, Corpse.class, Position.class, AttributesWrapper.class));
   }
@@ -181,6 +178,13 @@ public class FetishShaman extends AI {
 
     time = SLEEP;
 
+    // Fn065 consumes the Inferno toggle on the next decision, not a timed
+    // StateList expiry. Keep the current cast/tail intact until it finishes.
+    com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(entityId);
+    boolean endedInferno = states != null && states.stateList != null
+        && states.stateList.hasState(com.riiablo.engine.server.state.StateId.INFERNO);
+    if (endedInferno) states.stateList.removeState(com.riiablo.engine.server.state.StateId.INFERNO);
+
     // Find target
     int targetId = Engine.INVALID_ENTITY;
     float targetDistance = Float.MAX_VALUE;
@@ -236,8 +240,8 @@ public class FetishShaman extends AI {
     // missiles.  Resolve the MonStats Skill1 row and let the normal
     // Actioneer -> SkillDoEvent -> ServerSkillSystem path execute it.
     float infernoRange = infernoRange();
-    if (targetId != Engine.INVALID_ENTITY && infernoRange > 0f
-        && targetDistance <= infernoRange) {
+    if (!endedInferno && targetId != Engine.INVALID_ENTITY && infernoRange > 0f
+        && targetDistance < infernoRange) {
       Vector2 targetPos = mPosition.get(targetId).position;
       lookAt(targetId);
       stateMachine.changeState(State.CAST);

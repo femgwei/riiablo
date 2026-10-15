@@ -712,6 +712,13 @@ public class Actioneer extends PassiveSystem {
       return;
     }
 
+    if (casting.monInferno != null) {
+      // First MODECHANGE comes from the real COF marker. Later callbacks are
+      // scheduled by SrvDo095, irrespective of target life and COF markers.
+      if (!casting.monInferno.started) updateMonInferno(event.entityId, casting, skill);
+      return;
+    }
+
     // Jab is a native three-hit SQ sequence.  The target pointer remains
     // attached to the cast after the first hit, so a lethal first strike must
     // not cancel the remaining animation records.  D2 completes the two
@@ -792,6 +799,38 @@ public class Actioneer extends PassiveSystem {
     } else {
       log.trace("Target {} is dead, skipping damage but continuing attack animation for {}", casting.targetId, event.entityId);
     }
+  }
+
+  @Subscribe
+  public void onMonInfernoUpdate(com.riiablo.engine.server.event.MonInfernoUpdateEvent event) {
+    Casting cast = mCasting.get(event.entityId);
+    if (cast == null || cast.monInferno == null || cast.monInferno.nextUpdate < 0
+        || cast.monInferno.frame < cast.monInferno.nextUpdate) return;
+    updateMonInferno(event.entityId, cast, Riiablo.files.skills.get(cast.skillId));
+  }
+
+  private void updateMonInferno(int entityId, Casting cast, Skills.Entry skill) {
+    if (skill == null) return;
+    NativeMonInferno channel = cast.monInferno;
+    SkillDoEvent update = SkillDoEvent.obtain(entityId, skill.Id, cast.targetId,
+        cast.targetVec, skill.srvdofunc, skill.cltdofunc);
+    events.dispatch(update);
+    UnitStates states = mUnitStates.get(entityId);
+    boolean enabled = states != null && states.stateList != null
+        && states.stateList.hasState(StateId.INFERNO);
+    channel.updated(update.monInfernoMissileId >= 0, enabled);
+    channel.lastMissileId = update.monInfernoMissileId;
+    // Non-SQ SKILLS_SetInfernoFrame seeks the source cursor, not the COF's
+    // frame count. ENDANIM remains an independent scheduled event.
+    if (update.monInfernoMissileId >= 0 && mAnimData.has(entityId)) {
+      AnimData anim = mAnimData.get(entityId);
+      anim.frame = mMonster.get(entityId).monstats2.InfernoAnim << 8;
+      anim.lastKeyframeIndex = anim.frame >>> 8;
+    }
+    log.info("[MON_INFERNO] phase=update source={} skill={} frame={} missile={} count={} "
+            + "deadline={} interval={} next={} end={} enabled={}", entityId, skill.Id,
+        channel.frame, update.monInfernoMissileId, channel.missiles, channel.deadline,
+        channel.interval, channel.nextUpdate, channel.endFrame, enabled);
   }
 
   @Subscribe
@@ -1395,6 +1434,26 @@ public class Actioneer extends PassiveSystem {
             && factory.emergeMonster(entityId);
         log.info("[MONSTER_EMERGE] phase=skill_start entity={} applied={}",
             entityId, emerged);
+        break;
+      }
+      case 53: { // SKILLS_SrvSt53_MonInferno (95 non-SQ subset)
+        Casting cast = mCasting.get(entityId);
+        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        Monster monster = mMonster.get(entityId);
+        if (!NativeMonInferno.supports(skill, monster, mSequence.get(entityId))) {
+          log.warn("Unported MonInferno start source={} skill={} srvdo={} (MonSeq/152 not ported)",
+              entityId, cast == null ? -1 : cast.skillId, skill == null ? -1 : skill.srvdofunc);
+          break;
+        }
+        int level = skillLevel(entityId, cast.skillId);
+        cast.monInferno = new NativeMonInferno(skill, level, monster.monstats2.InfernoLen);
+        UnitStates states = mUnitStates.create(entityId);
+        if (states.stateList == null) states.init(entityId);
+        if (!states.stateList.hasState(StateId.INFERNO))
+          states.stateList.addState(StateId.INFERNO, 0, level, entityId);
+        log.info("[MON_INFERNO] phase=start source={} skill={} deadline={} interval={} tail={}",
+            entityId, skill.Id, cast.monInferno.deadline, cast.monInferno.interval,
+            cast.monInferno.tailFrames);
         break;
       }
       case 31: { // SKILLS_SrvSt31_Charge

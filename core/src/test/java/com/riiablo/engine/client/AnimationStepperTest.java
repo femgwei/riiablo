@@ -14,6 +14,38 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void localMonInfernoFollowsAuthoritativeRollbackAndMissileAnimationRate() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DM/COF/DMS1HTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 256;
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id);
+      com.riiablo.engine.server.component.Casting cast =
+          world.getMapper(com.riiablo.engine.server.component.Casting.class).create(id);
+      cast.monInferno = new com.riiablo.engine.server.NativeMonInferno(Riiablo.files.skills.get(319), 6, 1);
+      cast.monInferno.started = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame : new int[] {10, 11, 10, 11, 0}) {
+        data.frame = frame << 8;
+        world.process();
+        assertEquals(frame, animation.getFrame());
+      }
+      cast.monInferno = null;
+      world.process();
+      assertEquals(1, animation.getFrame());
+      com.riiablo.engine.server.component.Missile missile = new com.riiablo.engine.server.component.Missile();
+      missile.missile = Riiablo.files.Missiles.get("megademoninferno");
+      missile.skillId = 319; missile.nativeLifetimeFrames = 17;
+      assertEquals((missile.missile.AnimLen << 8) / 17, MissileLoader.nativeFrameDelta(missile));
+      missile.skillId = -1;
+      assertEquals(missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256,
+          MissileLoader.nativeFrameDelta(missile));
+    } finally { world.dispose(); }
+  }
   @Test void frogHiddenFollowsSourceZeroAndEmergenceClearsTheHold() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

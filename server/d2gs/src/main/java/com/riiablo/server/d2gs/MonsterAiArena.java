@@ -202,6 +202,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Tentacle".equals(monster.AI) || "BaalCrabClone".equals(monster.AI)) scenarios.add("orphan");
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
+    if ("FetishShaman".equals(monster.AI)) scenarios.add("inferno-cycle");
     return scenarios;
   }
 
@@ -256,7 +257,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
       stats.base().put(Stat.maxhp, 1000000);
       stats.base().put(Stat.hitpoints, 1000000);
       stats.reset();
-      float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle") ? 3 : 18;
+      float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
+          || result.scenario.equals("inferno-cycle") ? 3 : 18;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
       zone.attachEntity(playerId);
@@ -265,6 +267,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
+      if (result.scenario.equals("inferno-cycle")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_INFERNO_CYCLE";
+        probe.inferno = new InfernoCycle();
+      }
       if (result.scenario.equals("submerge-cycle")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -334,7 +342,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (result.specialAssert) result.special = result.specialPassed
           ? (result.scenario.equals("orphan") ? "OWNERLESS_DEATH_OBSERVED"
               : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED"
-              : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+              : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED"
+              : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -451,6 +460,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
     boolean frogSubject;
     SubmergeCycle cycle;
     FrogCycle frog;
+    InfernoCycle inferno;
+    com.riiablo.engine.server.NativeMonInferno lastInferno;
+    int lastInfernoCount;
     final CaseLog capture;
     Probe(CaseLog capture) { this.capture = capture; }
     @Subscribe public void start(com.riiablo.engine.server.event.SkillStartEvent event) {
@@ -479,6 +491,29 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      Casting activeCast = world.getMapper(Casting.class).get(subject);
+      com.riiablo.engine.server.NativeMonInferno stream = activeCast == null ? null : activeCast.monInferno;
+      if (stream != null) {
+        if (stream != lastInferno) { lastInferno = stream; lastInfernoCount = 0; }
+        boolean pulse = stream.missiles != lastInfernoCount;
+        com.riiablo.engine.server.component.Missile missile = stream.lastMissileId < 0 ? null
+            : world.getMapper(com.riiablo.engine.server.component.Missile.class).get(stream.lastMissileId);
+        boolean valid = missile != null && missile.ownerId == subject
+            && missile.skillId == activeCast.skillId && missile.nativeLifetimeFrames > 0;
+        if (pulse) {
+          capture.line("InfernoPulse subject=" + subject + " skill=" + activeCast.skillId
+              + " frame=" + stream.frame + " missile=" + stream.lastMissileId + " valid=" + valid
+              + " count=" + stream.missiles + " deadline=" + stream.deadline
+              + " interval=" + stream.interval + " next=" + stream.nextUpdate + " end=" + stream.endFrame);
+          lastInfernoCount = stream.missiles;
+        }
+        if (inferno != null) {
+          int before = inferno.phase;
+          inferno.observe(stream, !pulse || valid);
+          if (before != inferno.phase) capture.line("InfernoCycle subject=" + subject + " phase=" + inferno.phase);
+          if (inferno.phase == 5) capture.result.specialPassed = true;
+        }
+      }
       if (frog != null) {
         Sequence seq = world.getMapper(Sequence.class).get(subject);
         AnimData anim = world.getMapper(AnimData.class).get(subject);
@@ -505,6 +540,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
       cycleChanged(before);
     }
     @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (inferno != null && event.entityId == subject) {
+        int before = inferno.phase;
+        inferno.finished();
+        if (before != inferno.phase) capture.line("InfernoCycle subject=" + subject + " phase=" + inferno.phase);
+      }
       if (frog != null && event.entityId == subject) {
         Casting cast = world.getMapper(Casting.class).get(subject);
         Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -549,6 +589,31 @@ public final class MonsterAiArena extends ApplicationAdapter {
   }
 
   /** Ordered, subject-only lifecycle oracle; a cast or helper action cannot satisfy it. */
+  /** One natural cast: actual pulses, native interval/deadline/tail, then a fresh cast. */
+  static final class InfernoCycle {
+    com.riiablo.engine.server.NativeMonInferno cast;
+    int phase, count, lastFrame;
+    boolean valid = true;
+    void observe(com.riiablo.engine.server.NativeMonInferno next, boolean realMissile) {
+      if (phase == 5 || next == null) return;
+      if (next != cast) {
+        if (phase == 4 && valid) { phase = 5; return; }
+        cast = next; phase = 1; count = 0; lastFrame = 0; valid = true;
+      }
+      if (next.missiles != count) {
+        valid &= realMissile && next.missiles == count + 1
+            && (count == 0 || next.frame - lastFrame == next.interval);
+        count = next.missiles; lastFrame = next.frame;
+        if (valid && count >= 2) phase = 2;
+        if (phase == 2 && next.frame >= next.deadline && next.nextUpdate == -1
+            && next.endFrame == next.frame + next.tailFrames) phase = 3;
+      }
+    }
+    void finished() {
+      if (phase == 3 && valid && cast.frame == cast.endFrame) phase = 4;
+    }
+  }
+
   static final class SubmergeCycle {
     int phase;
     void observe(boolean submerge, boolean held, int frame, int flags, boolean emerging) {
@@ -602,7 +667,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + " difficulty=" + result.difficulty + " level=" + result.arenaLevel
           + " fixture=synthetic_open_arena playerHP=1000000 oracle="
           + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE"
-              : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE" : "NONE"));
+              : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE"
+              : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }

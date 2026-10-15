@@ -16,6 +16,40 @@ import static org.junit.Assert.*;
 public class MonsterAiArenaTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+  @Test public void infernoOracleRequiresRealPulsesIntervalTailAndNewCast() {
+    com.riiablo.codec.excel.Skills.Entry skill = new com.riiablo.codec.excel.Skills.Entry();
+    skill.calc2 = "7"; skill.calc3 = "3";
+    com.riiablo.engine.server.NativeMonInferno cast = new com.riiablo.engine.server.NativeMonInferno(skill, 1, 4);
+    MonsterAiArena.InfernoCycle oracle = new MonsterAiArena.InfernoCycle();
+    oracle.observe(cast, true);
+    cast.frame = 1; cast.updated(true, true); oracle.observe(cast, true);
+    cast.frame = 4; cast.updated(true, true); oracle.observe(cast, true);
+    assertEquals(2, oracle.phase);
+    cast.frame = 7; cast.updated(true, true); oracle.observe(cast, true);
+    assertEquals(3, oracle.phase);
+    oracle.finished(); assertEquals("early finish must fail", 3, oracle.phase);
+    cast.frame = 11; oracle.finished(); assertEquals(4, oracle.phase);
+    oracle.observe(new com.riiablo.engine.server.NativeMonInferno(skill, 1, 4), true);
+    assertEquals(5, oracle.phase);
+  }
+
+  @Test public void infernoOracleRejectsFakeMissileWrongIntervalAndSinglePulse() {
+    for (int failure = 0; failure < 3; failure++) {
+      com.riiablo.codec.excel.Skills.Entry skill = new com.riiablo.codec.excel.Skills.Entry();
+      skill.calc2 = "7"; skill.calc3 = "3";
+      com.riiablo.engine.server.NativeMonInferno cast = new com.riiablo.engine.server.NativeMonInferno(skill, 1, 4);
+      MonsterAiArena.InfernoCycle oracle = new MonsterAiArena.InfernoCycle();
+      oracle.observe(cast, true);
+      cast.frame = 1; cast.updated(true, true); oracle.observe(cast, failure != 0);
+      cast.frame = failure == 1 ? 5 : 7;
+      if (failure != 2) { cast.updated(true, true); oracle.observe(cast, true); }
+      cast.frame = 11; oracle.finished();
+      assertNotEquals(4, oracle.phase);
+      oracle.observe(new com.riiablo.engine.server.NativeMonInferno(skill, 1, 4), true);
+      assertNotEquals(5, oracle.phase);
+    }
+  }
+
   @Test public void helpersNeverCountAsSubjectBehavior() throws Exception {
     MonsterAiArena.Result result = new MonsterAiArena.Result();
     Path path = temporary.newFolder().toPath().resolve("case.log");

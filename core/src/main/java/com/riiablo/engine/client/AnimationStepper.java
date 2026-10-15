@@ -15,6 +15,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
@@ -38,7 +39,9 @@ public class AnimationStepper extends IntervalIteratingSystem {
 
     Sequence sequence = mSequence.get(entityId);
     AnimData animData = mAnimData.get(entityId);
-    if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden) && animData != null) {
+    com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
+    boolean inferno = cast != null && cast.monInferno != null && cast.monInferno.started;
+    if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden || inferno) && animData != null) {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the
       // resident emergence COF forward would show the opposite action.

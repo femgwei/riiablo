@@ -123,7 +123,7 @@ public class MissileLoader extends IteratingSystem {
     // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
     // the table value here preserves per-missile impact/child timing instead
     // of forcing every DCC to 25 frames per second.
-    int nativeFrameDelta = entry.animrate > 0 ? (entry.animrate >> 2) : 256;
+    int nativeFrameDelta = nativeFrameDelta(missile);
     animation.setFrameDelta(Math.max(1, nativeFrameDelta));
     
     // Set direction based on Angle component if available
@@ -136,6 +136,16 @@ public class MissileLoader extends IteratingSystem {
     }
 
     mBBoxWrapper.create(entityId).box = animation.getBox();
+  }
+
+  static int nativeFrameDelta(Missile missile) {
+    // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
+    // animation rate along with TotalFrames, not just its travel distance.
+    if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317)
+        && missile.nativeLifetimeFrames > 0) {
+      return (missile.missile.AnimLen << 8) / missile.nativeLifetimeFrames;
+    }
+    return missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256;
   }
 
   /**
