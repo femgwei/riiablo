@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-13（当前状态索引；下方保留历史交接记录）
+更新时间：2026-10-15（当前状态索引；下方保留历史交接记录）
 
 > 当前技能移植基线：非视觉核对清单 **100%**，严格总进度约 **97%**。dark-magic 的七职业
 > exact-ID、行为 gate、测试模式、覆盖审计及 1.10F `d2client.dll` 静态分派证据均已收口；
@@ -9,6 +9,17 @@
 > [`dark-magic-visual-validation-checklist.md`](dark-magic-visual-validation-checklist.md) 和
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
+
+## 2026-10-15 上游修正第二批交付
+
+- `1c55883e3` 已推送origin/master，远端SHA一致：WarpDist普通怪群排除、Quill Rat
+  额外弹体/双字种子及逐弹体A2快照；102项/29类定向回归通过，失败/错误/跳过0。
+- 原始1.10f quillrat1–8三难度aip3均0，原版不增加弹数；非零分支使用夹具验收。
+- 另一轮DiabPrison仍在工作区修改，本批只部分暂存Actioneer的飞弹hunk，未纳入监牢代码。
+- 额外A1测试两项失败未收口：level5共享地板坐标断言、level26修道院Warp端点；
+  未在干净基线独立复现，不声称全项目通过。下一步先核验这两个差异。
+- 出生点逐次RNG、原版unit ID分配、A1独立人口、无单位目标路径点入口以及真实TCP/GL
+  仍有边界，详见 `d2moo-upstream-port-2026-10-15.md` 和路线图第二批章节。
 
 ## 唯一负责人
 
