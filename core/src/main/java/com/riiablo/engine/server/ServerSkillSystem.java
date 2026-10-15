@@ -3186,7 +3186,10 @@ public class ServerSkillSystem extends PassiveSystem {
     Attributes attrs = mAttributesWrapper.get(event.entityId).attrs;
     StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
     float manaCost = NativeSkillResolver.manaCost(skill, skillLevel);
-    if (mana == null || !NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
+    StateList bladeStates = stateList(event.entityId);
+    boolean bloodMana = mPlayer.has(event.entityId)
+        && com.riiablo.engine.server.skill.BloodMana.active(bladeStates);
+    if (!bloodMana && (mana == null || !NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost))) {
       log.info("[ASSASSIN_BLADE_FURY] phase=reject source={} level={} mana={} cost={} reason=mana",
           event.entityId, skillLevel, mana != null ? mana.asFixed() : -1f, manaCost);
       return;
@@ -3205,13 +3208,19 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId < 0 || !mMissile.has(missileId)) return;
     initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
     bladeFuryDelayFrames.put(event.entityId, delay);
-    mana.sub(manaCost);
+    if (bloodMana) {
+      // Native SrvSt26 consumes only after SrvDo048 emits a blade and ignores
+      // the consume result. Insufficient life must not undo the missile.
+      com.riiablo.engine.server.skill.BloodMana.consumeLife(attrs, bladeStates, manaCost);
+    } else {
+      mana.sub(manaCost);
+    }
     Missile projectile = mMissile.get(missileId);
     projectile.skillId = skill.Id;
     projectile.damageLevel = skillLevel;
     log.info("[ASSASSIN_BLADE_FURY] phase=spawn source={} missileId={} level={} "
         + "delay={} manaCost={} manaLeft={} srcDam={} snapshot={}",
-        event.entityId, missileId, skillLevel, delay, manaCost, mana.asFixed(),
+        event.entityId, missileId, skillLevel, delay, manaCost, mana != null ? mana.asFixed() : 0f,
         skill.SrcDam, projectile.damageSnapshot);
   }
 

@@ -1,0 +1,99 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: F:\3rd_src\riiablo\build\bladebloodmana-source\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\build\bladebloodmana-source\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+
+BladeFuryBloodManaIntegrationTest > insufficientLifeKeepsCreatedBladeAndRemovesOnlyBloodMana() FAILED
+    org.opentest4j.AssertionFailedError: expected: <1.0> but was: <0.5>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:102)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:97)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:732)
+        at app//com.riiablo.engine.server.BladeFuryBloodManaIntegrationTest.insufficientLifeKeepsCreatedBladeAndRemovesOnlyBloodMana(BladeFuryBloodManaIntegrationTest.java:39)
+
+BladeFuryBloodManaIntegrationTest > cadenceRejectedBladeDoesNotChargeTwice() FAILED
+    org.opentest4j.AssertionFailedError: expected: <99.0> but was: <100.0>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:102)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:97)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:732)
+        at app//com.riiablo.engine.server.BladeFuryBloodManaIntegrationTest.cadenceRejectedBladeDoesNotChargeTwice(BladeFuryBloodManaIntegrationTest.java:59)
+
+BladeFuryBloodManaIntegrationTest > equalLifeCostCreatesBladeAndReachesZero() FAILED
+    org.opentest4j.AssertionFailedError: expected: <0.0> but was: <1.0>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:102)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:97)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:732)
+        at app//com.riiablo.engine.server.BladeFuryBloodManaIntegrationTest.equalLifeCostCreatesBladeAndReachesZero(BladeFuryBloodManaIntegrationTest.java:50)
+
+BladeFuryBloodManaIntegrationTest > cursedBladePaysLifeAfterCreationWithNoMana() FAILED
+    org.opentest4j.AssertionFailedError: expected: <1> but was: <0>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.BladeFuryBloodManaIntegrationTest.cursedBladePaysLifeAfterCreationWithNoMana(BladeFuryBloodManaIntegrationTest.java:29)
+
+BladeFuryBloodManaIntegrationTest > activeInfernoAllowsContinuationWithoutStartMana() FAILED
+    org.opentest4j.AssertionFailedError: expected: <1> but was: <0>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.BladeFuryBloodManaIntegrationTest.activeInfernoAllowsContinuationWithoutStartMana(BladeFuryBloodManaIntegrationTest.java:94)
+
+8 tests completed, 5 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/bladebloodmana-source/build/bladebloodmana-isolated/core/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 20s
+12 actionable tasks: 4 executed, 8 up-to-date

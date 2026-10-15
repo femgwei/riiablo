@@ -1,5 +1,19 @@
 # 逐怪 AI 隔离测试场
 
+## 2026-10-16 Blade Fury / Blood Mana（整体PARTIAL）
+
+独立每刃消耗接入Blood Mana，按原版先生成飞刃再消费生命；不足生命不撤回已生成飞刃，
+初次startmana仍检查法力。补齐Actioneer已支持事件链中的SrvDo48路由声明，消除误报。
+新增8项边界/失败/间隔/启动测试；两组独立进程共181项通过，
+但167项core联合套件仍有1项Nova抗性碰撞断言失败，根因待查，不能报告全套件通过。
+七行新增blade-blood-mana场，怪物自然施咒后普通玩家输入朝空地施放飞刃，
+启动不扣资源，动画生成飞刃后扣1生命且法力不变；不强制SkillDo或修改怪物概率。
+三难度近/远/两类扣血场及独立复跑共168次最终自然执行，42次飞刃扣血核验通过，
+JSONL与逐场日志复跑一致，无fallback/警告/错误。
+默认journal增至1194条，本批每轮28执行、1166条NOT_RUN；自然场仍BASELINE_ONLY。
+完整持键/INFERNO调度、客户端输入门、物品充能、死亡/网络同步及真实地形仍待。
+证据见 [Blade Fury扣血验证](ai-arena/20261016-bladebloodmana-seed1/verification.md)。
+
 ## 2026-10-16 Blood Mana 施法扣血（整体PARTIAL）
 
 普通服务端施法和玩家光环消耗接入原版扣血规则：不足时解除诅咒/设1HP/拒绝消耗，

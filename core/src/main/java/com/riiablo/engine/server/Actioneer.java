@@ -2614,6 +2614,7 @@ public class Actioneer extends PassiveSystem {
       case 12: // Strafe: one arrow per animation keyframe
       case 44: // Assassin Blade Sentinel trap placement
       case 45: // Assassin Sentry trap placement/attack callback
+      case 48: // Blade Fury missile/resource cost is resolved by ServerSkillSystem
       case 18: // DefensiveBuff; Venom state is applied by ServerSkillSystem
       case 22: // Nova/radial missile skill
       case 54: // Blade Shield periodic pulse is applied by StateUpdater

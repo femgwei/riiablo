@@ -211,6 +211,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-run");
     if ("Succubus".equals(monster.AI)) scenarios.add("blood-mana");
+    if ("Succubus".equals(monster.AI)) scenarios.add("blade-blood-mana");
     return scenarios;
   }
 
@@ -259,9 +260,10 @@ public final class MonsterAiArena extends ApplicationAdapter {
       world.setDelta(Animation.FRAME_DURATION);
       AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
 
-      boolean bloodManaScene = result.scenario.equals("blood-mana");
+      boolean bladeBloodManaScene = result.scenario.equals("blade-blood-mana");
+      boolean bloodManaScene = result.scenario.equals("blood-mana") || bladeBloodManaScene;
       CharData player = CharData.obtain(config.difficulty, false, "AiTester",
-          bloodManaScene ? Riiablo.SORCERESS : Riiablo.AMAZON);
+          bladeBloodManaScene ? Riiablo.ASSASSIN : bloodManaScene ? Riiablo.SORCERESS : Riiablo.AMAZON);
       player.level = 30;
       Attributes stats = player.getStats();
       stats.base().put(Stat.level, 30);
@@ -272,7 +274,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
         // Only the player fixture changes; monster rows, chances and RNG stay native.
         stats.base().put(Stat.maxmana, 2000000);
         stats.base().put(Stat.mana, 100);
-        player.setSkillLevel(com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR, 1);
+        int fixtureSkill = bladeBloodManaScene ? com.riiablo.engine.server.skill.SkillId.BLADE_FURY
+            : com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR;
+        player.setSkillLevel(fixtureSkill, 1);
+        if (bladeBloodManaScene) {
+          com.riiablo.codec.excel.Skills.Entry blade = Riiablo.files.skills.get(fixtureSkill);
+          for (String name : new String[] {blade.reqskill1, blade.reqskill2, blade.reqskill3})
+            if (name != null && !name.isEmpty()) player.setSkillLevel(Riiablo.files.skills.get(name).Id, 1);
+        }
       }
       if (result.scenario.equals("diab-prison") || result.scenario.equals("diab-wall")) {
         // A normal melee fixture can break an attackable prison, then walk out.
@@ -293,6 +302,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       if (bloodManaScene) probe.bloodManaPlayer = playerId;
+      probe.bladeBloodManaScene = bladeBloodManaScene;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
       if (result.scenario.equals("diab-prison")) {
         result.specialAssert = true; result.special = "NOT_TRIGGERED";
@@ -390,9 +400,13 @@ public final class MonsterAiArena extends ApplicationAdapter {
             float hpBefore = live.get(Stat.hitpoints).asFixed();
             float manaBefore = live.get(Stat.mana).asFixed();
             world.getSystem(Actioneer.class).cast(playerId,
-                com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR, Engine.INVALID_ENTITY,
-                world.getMapper(Position.class).get(playerId).position.cpy());
-            capture.line("BloodManaSpend player=" + playerId + " hp=" + hpBefore + "->"
+                bladeBloodManaScene ? com.riiablo.engine.server.skill.SkillId.BLADE_FURY
+                    : com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR,
+                Engine.INVALID_ENTITY, bladeBloodManaScene
+                    ? world.getMapper(Position.class).get(playerId).position.cpy().add(0, 16)
+                    : world.getMapper(Position.class).get(playerId).position.cpy());
+            capture.line((bladeBloodManaScene ? "BladeBloodManaStart" : "BloodManaSpend")
+                + " player=" + playerId + " hp=" + hpBefore + "->"
                 + live.get(Stat.hitpoints).asFixed() + " mana=" + manaBefore + "->"
                 + live.get(Stat.mana).asFixed() + " casting=" + world.getMapper(Casting.class).has(playerId));
             bloodManaCastRequested = true;
@@ -618,6 +632,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
     SkillDoEvent pendingCold;
     int succubusCurseTarget = -1, succubusCurseSkill;
     int bloodManaPlayer = -1;
+    boolean bladeBloodManaScene, pendingBladeSpend;
+    float bladeHpBefore, bladeManaBefore, bladeOtherDamage;
+    int bladeMissilesBefore;
     float coldLifeBefore, coldDamage;
     int coldMissilesBefore, coldDamageEvents;
     boolean coldPacketValid, coldCastValid;
@@ -631,6 +648,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + " target=" + event.targetId + " srvstfunc=" + event.srvstfunc);
     }
     @Subscribe public void action(SkillDoEvent event) {
+      if (bladeBloodManaScene && event.entityId == bloodManaPlayer && event.skillId == 266) {
+        Attributes attrs = world.getMapper(AttributesWrapper.class).get(bloodManaPlayer).attrs;
+        bladeHpBefore = attrs.get(Stat.hitpoints).asFixed();
+        bladeManaBefore = attrs.get(Stat.mana).asFixed();
+        bladeOtherDamage = 0; bladeMissilesBefore = ownedBlades(); pendingBladeSpend = true;
+      }
       if (event.entityId == bloodManaPlayer) capture.line("BloodManaPlayerSkillDo player="
           + event.entityId + " skill=" + event.skillId + " srvdofunc=" + event.srvdofunc);
       if (event.entityId != subject) return;
@@ -688,7 +711,26 @@ public final class MonsterAiArena extends ApplicationAdapter {
         frogChanged(before);
       }
     }
+    private int ownedBlades() {
+      int count = 0;
+      com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager().get(Aspect.all(
+          com.riiablo.engine.server.component.Missile.class)).getEntities();
+      for (int i = 0; i < entities.size(); i++) {
+        com.riiablo.engine.server.component.Missile missile = world.getMapper(
+            com.riiablo.engine.server.component.Missile.class).get(entities.get(i));
+        if (missile.ownerId == bloodManaPlayer && missile.skillId == 266) count++;
+      }
+      return count;
+    }
     void observeCycle() {
+      if (pendingBladeSpend) {
+        Attributes attrs = world.getMapper(AttributesWrapper.class).get(bloodManaPlayer).attrs;
+        capture.line("BladeBloodManaSpend player=" + bloodManaPlayer + " hp=" + bladeHpBefore
+            + "->" + attrs.get(Stat.hitpoints).asFixed() + " mana=" + bladeManaBefore + "->"
+            + attrs.get(Stat.mana).asFixed() + " otherDamage=" + bladeOtherDamage
+            + " newBlades=" + (ownedBlades() - bladeMissilesBefore));
+        pendingBladeSpend = false;
+      }
       if (succubusCurseTarget >= 0) {
         com.riiablo.engine.server.component.UnitStates states = world.getMapper(
             com.riiablo.engine.server.component.UnitStates.class).get(succubusCurseTarget);
@@ -868,6 +910,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (cycle.phase == 4) capture.result.specialPassed = true;
     }
     @Subscribe public void damage(DamageEvent event) {
+      if (pendingBladeSpend && event.victim == bloodManaPlayer) bladeOtherDamage += event.damage;
       if (prisonPhase == 2 && event.attacker == prisonTarget && prisonMembers != null
           && prisonMembers.contains(event.victim) && event.damage > 0 && event.physicalDamage > 0) {
         prisonHit = true;
