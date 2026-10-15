@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十二批：NativePathObjectFootprint读取真实Object.mode/Objects表，组合显式raw静态坐标与
+实际D2ActiveRoom，接通对象footprint。宿主boolean仅0/1语义编码，不声称DLL原始字节。
+新增6项，完整574项/50类通过，失败/错误/跳过0；core/build/round32-full.log。
+不自行绑定身份或安装生产碰撞；生产仍A*，详细边界见handoff顶部。
+
 第三十一批：真实Monster.monstats的npc/inTown进入元数据快照，ownerCanBeInTown显式接收
 原生ISREVIVE并复用既有谓词；缺失MonStats拒绝，不把宿主复活来源当原生标志。
 新增4项，完整568项/49类通过，失败/错误/跳过0；core/build/round31-full.log。

@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十二批补充：NativePathObjectFootprint把实际Object.mode及Objects表的谓词字段接到已有
+#10338/#10410和对象footprint实现。boolean按非零语义编码0/1，不冒充DLL原始字节；
+坐标/真实房间仍显式提供，身份和同操作快照由调用方维护，生产仍A*。
+新增6项，完整574项/50类通过，失败/错误/跳过0；无新增DLL算法证据或动态DLL执行。
+
 第三十一批补充：NativePathUnitMetadata从实际Monster.monstats捕获npc/inTown，
 ownerCanBeInTown以显式ISREVIVE复用既有MONSTERS_CanBeInTown逻辑；缺失宿主表行仍为unknown。
 不从宿主复活来源或所有权推断原生flag；尚未自动解析该位或安装生产原生移动。

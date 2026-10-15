@@ -1935,6 +1935,20 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 生产仍Map→AStarPathFinder；raw坐标/碰撞字节/Act与Zone/shared seed仍待，无新增DLL算法证据
   或动态DLL执行，不宣称完整城镇适配、完整Reader或迁移完成。
 
+## 第三十二批：真实对象表到footprint的语义适配
+
+- NativePathObjectFootprint读取World中的Object.mode及Objects表字段，复用NativePathUnitMetadata
+  尺寸/door解析，与显式raw静态int32坐标、实际D2ActiveRoom及可选方向组成D2PathFootprint.Unit。
+- 固定上游0c0bbd1的#10338/#10410依据：door/vis/missile/SubClass选择掩码，当前mode索引碰撞值。
+  宿主boolean只能提供非零语义，按0/1编码，不声称无损DLL原始字节。SubClass验证uint8，
+  HasCollision要求8项，Object.mode先unsigned解释再限制0..7；缺失不补默认值。
+- 6项测试覆盖掩码优先级、八模式、快照/尺寸冻结、非法数据、raw坐标/显式方向与真实网格往返。
+  完整574项/50类通过，失败/错误/跳过0；core/build/round32-full.log，
+  XML .gradle/path-port/round32-full/core/test-results/pathPortTest。
+- 本入口不自行绑定身份；返回coordinates须与本操作生命周期观察共用。真实room可保留null，
+  不推断RoomEx。raw坐标自动来源、动态footprint字段、Act/Zone/shared seed仍待，生产仍A*。
+  沿用既有网格与原生算法，无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

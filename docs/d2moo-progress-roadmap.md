@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十二批（生产适配仍PARTIAL）
+
+- [x] 实际Object.mode及Objects字段组合对象footprint，显式raw坐标与真实D2ActiveRoom。
+- [x] 八模式/byte域校验，boolean仅非零语义编码；快照复制，复用尺寸/door解析。
+- [x] 新增6项；完整574项/50类通过，无失败/错误/跳过，含真实网格add/remove验证。
+- [ ] 调用方仍负责身份绑定、同操作coordinates共用；自动raw坐标、动态字段、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder；没有安装原生生产碰撞或宣称无损原始字节来源。
+
 ## 2026-10-16 寻路第三十一批（生产适配仍PARTIAL）
 
 - [x] 实际MonStats npc/inTown快照及ownerCanBeInTown显式运行时ISREVIVE入口。

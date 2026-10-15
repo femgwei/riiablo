@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十一批续接结果（优先于下方历史起点）
+## 第三十二批续接结果（优先于下方历史起点）
+
+- NativePathObjectFootprint从实际World对象读取Object.mode及Objects表字段，与显式raw静态坐标、
+  实际D2ActiveRoom组合为D2PathFootprint.Unit；自动复用元数据的door/尺寸，方向字节可显式传入。
+- 宿主IsDoor/BlocksVis/BlockMissile/HasCollision为boolean，只按现有非零测试编码0/1，
+  不声称恢复DLL原始字节。SubClass必须uint8，HasCollision恰8项，mode取unsigned后要求0..7。
+- 依据固定上游0c0bbd1的#10338/#10410；沿用既有#10222/#10223及网格实现，不新增DLL算法证据。
+- 新增6项，完整574项/50类通过，失败/错误/跳过0；core/build/round32-full.log，
+  XML `.gradle/path-port/round32-full/core/test-results/pathPortTest`。
+- 此入口只捕获数据，不自行绑定身份或安装生产碰撞；调用方须将返回coordinates与本操作的
+  lifecycle-bound observation共用，不能混用另一个快照。room可保留原生null，不用RoomEx替代。
+- raw坐标自动来源、原始字节无损来源、动态footprint字段、Act/Zone/shared seed仍待；生产仍A*。
+
+## 第三十一批续接结果（历史）
 
 - NativePathUnitMetadata捕获真实Monster.monstats的npc/inTown及表行是否已提供，
   ownerCanBeInTown(nativeIsRevive)复用既有原生谓词供Request.State使用；非怪物无此城镇限制。
