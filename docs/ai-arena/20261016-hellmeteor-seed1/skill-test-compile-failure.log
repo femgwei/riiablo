@@ -1,0 +1,39 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\SorceressMeteorIntegrationTest.java:58: ����: �Ҳ�������
+      assertEquals(caster, missile.owner);
+                                  ^
+  ����:   ���� owner
+  λ��: ����ΪMissile�ı��� missile
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+1 ������
+
+
+> Task :core:compileTestJava FAILED
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:compileTestJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 17s
+8 actionable tasks: 4 executed, 4 up-to-date

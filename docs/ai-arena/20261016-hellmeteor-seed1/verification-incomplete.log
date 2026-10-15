@@ -1,0 +1,10 @@
+d0 SHA256=52784D16BAE73D60DF245ED2EB05828778777255483F09963262B3AA51B3E41F repeat=IDENTICAL
+d0 fixed-first near actions=14 damageEvents=0 damage=0
+d0 fixed-first far actions=14 damageEvents=0 damage=0
+d0 repeat near actions=14 damageEvents=0 damage=0
+d0 repeat far actions=14 damageEvents=0 damage=0
+d1 SHA256=D308B16E9969ED669770AF771E9991D0F165E4F0FD9ACE244C639314F7001E67 repeat=IDENTICAL
+d1 fixed-first near actions=15 damageEvents=0 damage=0
+d1 fixed-first far actions=15 damageEvents=0 damage=0
+d1 repeat near actions=15 damageEvents=0 damage=0
+d1 repeat far actions=15 damageEvents=0 damage=0

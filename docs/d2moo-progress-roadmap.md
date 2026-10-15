@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 HellMeteor Fn033（整体PARTIAL）
+
+- [x] 无目标自主坐标施法；原版概率/等待/范围与随机取数顺序；SrvDo28直接创建hellmeteordown。
+- [x] 56项定向通过；三难度seed1共12次自然执行，三组独立复跑一致，无fallback/警告/错误。
+- [x] Hell近场一次实际伤害26HP，复跑一致；其余零伤害场景未验收，保持BASELINE_ONLY。
+- [ ] 原生room/mask5碰撞前置检查、单位RNG合流、全局调度、真实GL/TCP及全目录仍待。
+
+证据：[HellMeteor验证](ai-arena/20261016-hellmeteor-seed1/verification.md)。
+
 ## 2026-10-16 Spirit Fn097（整体PARTIAL）
 
 - [x] 专用一次性近战攻击、攻击后50帧等待及攻击前非近战10帧等待；目标丢失/warp不重置。

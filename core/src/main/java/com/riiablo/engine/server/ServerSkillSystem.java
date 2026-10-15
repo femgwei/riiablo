@@ -2875,6 +2875,21 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnMeteor(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    // SrvDo028 also launches HellMeteorDown directly at the selected point
+    // (SkillSor.cpp 0x6FD174E0 -> Skills.cpp 0x6FD115E0, flags=1).
+    // Its SrvHit13 projectile is not a delayed SrvHit14 Meteor center.
+    if (missile != null && "hellmeteordown".equalsIgnoreCase(missile.Missile)) {
+      Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+      if (isTownPoint(event.entityId, target) || caster.dst(target) > 100f) return;
+      int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+      int missileId = createMissile(missile, Vector2.X, target, event.entityId, null, level);
+      if (missileId >= 0 && mMissile.has(missileId)) {
+        Missile projectile = mMissile.get(missileId);
+        projectile.skillId = skill.Id;
+        projectile.damageLevel = level;
+      }
+      return;
+    }
     if (missile == null || missile.pSrvHitFunc != 14) {
       log.warn("[SORCERESS_METEOR] phase=reject source={} reason=missing_center missile={}",
           event.entityId, missileName);

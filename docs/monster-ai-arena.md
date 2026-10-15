@@ -1,5 +1,14 @@
 # 逐怪 AI 隔离测试场
 
+## 2026-10-16 HellMeteor Fn033（整体PARTIAL）
+
+接入有/无目标均自主选择自身周围整数坐标的Skill1决策，保持slot0概率、slot1等待、
+slot2范围及X/Y随机取数顺序；修复SrvDo28误拒绝hellmeteordown的问题。
+56项定向测试通过；三难度seed1近远及独立复跑共12次执行，三组结果逐字节一致。
+最终场景无fallback/警告/错误；Hell近场各一次26HP实际伤害，其余场景零伤害未验收。
+自然场保持BASELINE_ONLY；原生地形碰撞前置检查、全局调度及GL/TCP仍待。
+证据见 [HellMeteor验证](ai-arena/20261016-hellmeteor-seed1/verification.md)。
+
 ## 2026-10-16 Spirit Fn097（决策/事件通过，整体PARTIAL）
 
 mephistospirit接入专用AI：首次近战只发一次A1，之后等待50帧，未攻击时远处等待10帧；

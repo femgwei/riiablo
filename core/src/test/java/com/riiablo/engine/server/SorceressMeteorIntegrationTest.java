@@ -35,6 +35,34 @@ import org.junit.jupiter.api.Test;
 /** Headless contract for Meteor's delayed center and persistent fire fields. */
 class SorceressMeteorIntegrationTest extends RiiabloTest {
   @Test
+  void hellMeteorCreatesDirectSrvHit13MissileAtNullTargetCoordinates() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = monster(world, 10f, 10f);
+      MonStats.Entry row = Riiablo.files.monstats.get("hellmeteor");
+      world.getMapper(Monster.class).get(caster).set(row,
+          Riiablo.files.monstats2.get(row.MonStatsEx));
+      Skills.Entry skill = Riiablo.files.skills.get(row.Skill1);
+      assertEquals(28, skill.srvdofunc);
+      assertEquals("hellmeteordown", skill.srvmissilea);
+      assertEquals(13, Riiablo.files.Missiles.get(skill.srvmissilea).pSrvHitFunc);
+      Vector2 point = new Vector2(12, 13);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skill.Id, Engine.INVALID_ENTITY, point, skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, factory.count("hellmeteordown"));
+      Missile missile = factory.first("hellmeteordown");
+      assertEquals(point, missile.start);
+      assertEquals(caster, missile.ownerId);
+      assertTrue(!missile.meteorCenter);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void nativeRowsUseMeteorCenterSrvHit14AndMeteorFire() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.METEOR);
     assertNotNull(skill);
