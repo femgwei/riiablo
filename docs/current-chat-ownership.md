@@ -10,7 +10,30 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第八批：绕行末点耗尽后的单位目标续算
+## 2026-10-15 第九批：Toward 路点内核；寻路仍未完成
+
+- 用户要求先完成寻路再转其他D2MOO更新。核对结果：**寻路未完成**，继续寻路，不转其他模块。
+  普通生产入口仍为Map→AStarPathFinder；库中的原生算法及只读shadow不等于运行时已切换。
+- 新增`D2MOO_JAVA/.../path/D2Toward.java`：准备好坐标目标、初始归一化后速度仍非零时，
+  生成PATH_Toward及非零方向偏移分支的raw路点；射线裁剪、三候选、反转拒绝、局部预算、
+  重复/源点及最后转向省略均保留。碰撞pattern/mask/room由只读回调提供。
+  不安装生产路径，不替换Baal现有布尔探针，不新增RNG或修改近期碰撞/房间/步进逻辑。
+- 16项新路点回归+1项4000组固定输入对照；最终179项/26类通过，失败/错误/跳过0。
+  对照只证明与现有零偏移布尔投影一致，非4000项JUnit或原版DLL动态等价证明；
+  包含内存原生碰撞网格pattern/mask测试，未新增真实MPQ/TCP/GL验收。
+- 本轮已fetch D2MOO，origin/master仍为`0c0bbd1e6bef9181a3da1c046523af622a925416`；
+  结合本机1.10f D2Common的`0x6FDAA720`、`0x6FDAA9F0`局部静态证据。
+  代码/测试`74c968123852915169b668838146c3f793cc09e9`已推送origin/master、远端SHA一致。
+  复验命令、原版边界和报告见上游记录第九批；四文档另行提交推送，最终SHA见git log。
+  文档收尾时另一轮新增的`tools/verify-indexed-opacity.py`保留，未暂存/提交，不纳入本轮验收。
+- 寻路核心生产链剩余门槛（完成前不标收口）：
+  1. 补齐prepared target/unit身份、distance budget、final goal、路点索引/续算状态及必要flags。
+  2. 按实际pathType适配Toward2/13、WallFollow15等，而非统一套coordinate A*或升级普通partial。
+  3. 受控生产接入并验收实际地形/动态碰撞下的消费、失败、恢复和续算，继续保留1.10f房间规则。
+  全图/GL/多seed三难度、性能和原版动态差分仍应分别标明覆盖，不从单次冒烟推断完成。
+  火焰之河AI fallback也是未完成项，本轮未修/未重跑。
+
+## 2026-10-15 第八批：绕行末点耗尽后的单位目标续算（历史）
 
 - 代码/测试 `473bd6ba52d17fc8372c328f55f2f0da740d472f` 已推送origin/master，远端SHA一致。
   第七批保留目标身份后，仍有“到达绕行末点、未进目标范围、timer未到期便清路径”的缺口；

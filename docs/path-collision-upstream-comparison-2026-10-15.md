@@ -414,3 +414,28 @@ shadow128次中83可比较（55 NONE、28 TURNS），45越界；诊断错误/liv
 代码/测试`473bd6ba5`已推送origin/master且远端SHA一致；详细证据/复验命令见
 [第八批记录](d2moo-upstream-port-2026-10-15.md#第八批绕行路点耗尽后的实体目标续算)。
 仍无性能/GL/全图/原版动态等价结论，火焰之河AI fallback未修复/重跑。
+
+## 后续第九批：寻路尚未完成，继续补 Toward 内核
+
+按用户“先完成寻路再转其他D2MOO更新”的要求复核：生产仍是Map→AStarPathFinder，
+原生库/只读shadow/两处目标恢复修复不等于完整原生路径系统接入，因此不转其他模块。
+
+本轮新增D2Toward原始路点生成，补足之前只有布尔探针的Toward零偏移及旋转分支。
+初始射线可裁剪、三候选及180度拒绝、局部预算、重复/源点、末次转向省略均按原分支保留。
+结果不可变，原生pattern/mask/room由回调提供；不把“非空”“可移动”“末点等于请求坐标”混为一谈。
+要求已准备目标及初始归一化后非零速度，不实现完整targetUnit/flags/distance/final包装器，
+不将raw点直接安装生产路径，不替换现有Baal探针；近期碰撞/房间/平滑/步进均未改。
+
+本轮已fetch D2MOO，origin/master仍为`0c0bbd1e`。依据PathMisc.cpp及本机1.10f
+D2Common `0x6FDAA720..A87B`、`0x6FDAA9F0..ABE7`的局部静态交叉核验；
+不是执行原版DLL，10142的BROKEN边界不变。源码与地址、API约束、复验命令见
+[第九批记录](d2moo-upstream-port-2026-10-15.md#第九批toward-原始路点生成内核)。
+
+新增16项路点回归+1项4000输入的零偏移探针对照，合并179项/26类通过，失败/错误/跳过0。
+对照只证明既有布尔投影与新内核的相应结果一致，非全点序/状态机/原版动态等价证明。
+含Java内存原生碰撞网格pattern/mask测试，本轮没有新增MPQ/TCP/GL、benchmark或全图验收。
+代码/测试`74c968123`已推送origin/master、远端SHA一致。
+
+寻路核心生产链仍需prepared target/unit身份、distance/final/索引及flags续算状态，
+按实际pathType适配Toward2/13及WallFollow15等，再受控接入并验收真实消费/恢复分支。
+这些未完成前不标寻路收口；火焰之河AI fallback仍未修复/重跑，其余验收覆盖保持单列。

@@ -634,6 +634,88 @@ ENTITY_PATH_CONTINUE及MONSTER_PATH_STALLED日志均0，未触发新续算或sta
 四份文档独立提交推送，最终文档SHA见git log。下一步仍需完整distance/final goal/续算状态
 及实际pathType的受控接入，不能把局部目标恢复修复当作已经切换原生路径系统。
 
+## 第九批：Toward 原始路点生成内核
+
+### 寻路是否已完成
+
+用户要求：若寻路未完成就继续，完成后才转其他D2MOO更新。核对结论是**未完成**。
+此前恢复目标身份/耗尽续算已交付，但普通生产入口仍是Map→AStarPathFinder，
+独立A*/IDA*库、布尔Toward探针及只读shadow并不等于原生路径系统已接入。
+本轮继续补原版常用Toward分支，不转到无关更新，也不标记全部寻路完成。
+
+### 本轮移植与原版依据
+
+新增`D2MOO_JAVA/src/main/java/com/d2moo/common/path/D2Toward.java`，
+返回不可变raw点列，支持PATH_Toward零方向偏移及sub_6FDAA720的非零偏移分支。
+要求调用方已准备好坐标目标、初始归一化后速度仍非零，并提供稳定只读碰撞回调；
+不在该内核里猜测targetUnit八点approach、flags或room/pattern/mask。
+
+本轮已执行`git fetch origin`，D2MOO远端仍为
+`0c0bbd1e6bef9181a3da1c046523af622a925416`，未重置本地旧检出。
+核对`source/D2Common/src/Path/PathMisc.cpp`的sub_6FDAA720、sub_6FDAA880、
+PATH_Toward_6FDAA9F0、PATH_RayTrace；`Path.cpp::PATH_SetNewDistance`将nDistMax限制在77。
+本机1.10f D2Common.dll目录/哈希沿用第七批，静态复核：
+
+- `0x6FDAA9F0..AA18`清索引/点数、非零+98偏移跳转`0x6FDAA720`。
+- `0x6FDAAA19..AA81`初始射线和field_14容差；射线清晰或裁剪后已近目标时，
+  可直接写一个点，不受局部nDistMax预算限制。
+- `0x6FDAAA82..ABD9`保留射线可达前缀、三候选局部步进、禁止180度反转，
+  `0x6FDAAB80..AB96`只在非原始起点时追加转向点，`0x6FDAABB9..ABD9`区分退出原因。
+- `0x6FDAA720..A87B`的非零偏移分支跳过初始射线、旋转三候选并可写源点，
+  与零偏移不同；本轮也保留uint16点坐标加法的回绕。
+- 原始路点可以重复、仅含源点，或省略最后一次刚转向的步进点，即使试探坐标已到目标。
+  不用“看起来更合理”的A*压缩/去重/补终点替代它；非空、可移动和末点等于请求坐标分开表示。
+
+以上是局部静态证据及源码对照，非运行原版DLL。上游10142仍标BROKEN，
+不能凭该内核或一个布尔结果宣称完整动态路径包装器已等价。
+API拒绝非法距离/容差及非uint16坐标，而不是模拟任意损坏内存输入；
+接受的distance为0..77、tolerance为0..255，方向旋转按低三位处理。
+不支持在已有路径上累计BackupTurn点列、不做WallFollow15、单位目标准备、距离消费、
+速度归一化或生产分派；调用方不能跳过这些状态便把raw点直接装进Pathfind。
+
+本轮未修改生产Map/Pathfinder/碰撞/房间/平滑/步进，未替换Baal现有低成本布尔探针，
+无游戏RNG变化，不引入1.13+目标房间gate，不改变普通exact或DiabRun partial策略。
+
+### 第九批验证与交付
+
+新增`D2TowardTest`16项，覆盖清晰/裁剪射线、源点与近距离容差、局部预算0/1/2、
+受阻追加末点、射线前缀重复、最后转向输出省略、直线末点、±方向偏移、
+零预算偏移、射线查询顺序/整轮回滚、三候选优先级、uint16回绕及反向拒绝、
+不可变输出/非法参数，以及真实Java原生碰撞网格的pattern/mask权威性。
+
+既有`NativeTowardPathProbeTest`新增1项4000组固定种子输入比较，预算0/1/2/14/77、
+容差0..3、多种稳定碰撞密度，比较完整内核点列非空性/可移动性与既有零偏移布尔投影，
+并比较射线裁剪终点/clear。coincident输入的raw源点与包装器不调用搜索的差别单独处理。
+4000是单项JUnit内的输入数，不是4000项测试，也不是4000次原版DLL动态差分；
+不证明完整路点序列、非零偏移、目标状态、flags或性能都与原版相同。
+
+本机定向两类首轮通过，最终合并179项/26类通过，失败/错误/跳过0（第八批162+新增17）。
+过滤集合与第七/八批相同，`com.d2moo.common.path.*`自动包括新类；
+隔离任务`:core:upstreamRound4Test -PupstreamRun=round9-full`，XML
+`core/build/test-results/upstreamRound4-round9-full`、日志`core/build/round9-full.log`。
+单类阶段日志`core/build/round9-toward.log`/XML `upstreamRound4-round9-toward`是增加最后一项
+原生碰撞网格回归之前的结果，以最终179项为准。另一电脑可最小复验：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*D2TowardTest' --tests '*NativeTowardPathProbeTest' --console=plain
+```
+
+完整标准任务复验采用第七批相同filters；标准任务本轮未另跑，不依赖本机临时init。
+本轮没有新增MPQ/TCP/GL/全图/多seed难度、性能或原版动态等价验收，不沿用前轮巡游作新内核验收。
+代码/测试`74c968123852915169b668838146c3f793cc09e9`已推送origin/master、远端SHA一致。
+只暂存本轮三文件；四文档独立提交推送，最终文档SHA见git log。
+
+### 核心寻路完成前仍需收口
+
+1. 原生prepared target/unit身份、distance budget、final goal、路点索引及必要flags的消费/续算状态。
+2. 按实际pathType适配Toward2/13、WallFollow15等，受控接入生产链，不整包替换普通A*或擅自升级partial。
+3. 实际地形/动态碰撞下验收路径消费、失败、恢复和续算分支，保留既有1.10f碰撞/房间规则。
+
+上述是核心生产链的未完成项；GL/全图/多seed三难度、性能及原版动态差分覆盖单列，
+不能从一次冒烟外推。火焰之河AI fallback仍未修/未重跑，也不计作本轮Toward内核的效果。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
