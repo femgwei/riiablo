@@ -1,0 +1,94 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+MegademonAiIntegrationTest > infernoPrecedesSwingAndNeverRestartsBusyAction() FAILED
+    java.lang.NullPointerException: Cannot read field "skillId" because the return value of "com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest$Fixture.casting()" is null
+        at com.riiablo.engine.server.ai.MegademonAiIntegrationTest.infernoPrecedesSwingAndNeverRestartsBusyAction(MegademonAiIntegrationTest.java:33)
+
+MegademonAiIntegrationTest > originalRowsResolveDedicatedAiAnd319S1() FAILED
+    org.opentest4j.AssertionFailedError: expected: <Megademon> but was: <GenericMonster>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.MegademonAiIntegrationTest.originalRowsResolveDedicatedAiAnd319S1(MegademonAiIntegrationTest.java:21)
+
+MegademonAiIntegrationTest > failedInfernoRollUsesSwingThenCircleThenFiveFrameIdle() FAILED
+    org.opentest4j.AssertionFailedError: expected: <ATTACK> but was: <IDLE(fallback:Megademon)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.MegademonAiIntegrationTest.failedInfernoRollUsesSwingThenCircleThenFiveFrameIdle(MegademonAiIntegrationTest.java:58)
+
+MegademonAiIntegrationTest > rejectedInfernoConsumesCooldownAndDoesNotBecomeSwing() FAILED
+    org.opentest4j.AssertionFailedError: expected: <IDLE> but was: <IDLE(fallback:Megademon)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.MegademonAiIntegrationTest.rejectedInfernoConsumesCooldownAndDoesNotBecomeSwing(MegademonAiIntegrationTest.java:71)
+
+MegademonAiIntegrationTest > stateIsClearedButMeleeCanImmediatelyCastAgainWhenTimerAllows() FAILED
+    org.opentest4j.AssertionFailedError: expected: <false> but was: <true>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertFalse.failNotFalse(AssertFalse.java:63)
+        at app//org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:36)
+        at app//org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:31)
+        at app//org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:228)
+        at app//com.riiablo.engine.server.ai.MegademonAiIntegrationTest.stateIsClearedButMeleeCanImmediatelyCastAgainWhenTimerAllows(MegademonAiIntegrationTest.java:48)
+
+5 tests completed, 5 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/core/build/reports/tests/test/index.html
+
+
+> Task :core:test FAILED
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 20s
+12 actionable tasks: 4 executed, 8 up-to-date

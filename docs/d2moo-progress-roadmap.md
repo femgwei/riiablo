@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 Megademon Fn089（PARTIAL）
+
+- [x] 专用AI及技能319/S1接入；严格range/timer、拒绝施法仍耗冷却、状态清除及攻击/绕行分支。
+- [x] 核心27项、服务端14项定向通过；六行自然喷火循环及实际火伤扣血通过。
+- [x] 全目录557行/1174场、60专属通过，独立复跑一致；fallback降至45AI名称/177行。
+- [ ] 原生walk flags 7、circle速度5/6与方向RNG、全局native frame仍待，不能标完整对齐。
+
+证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
+
 ## 2026-10-16 D2MOO 第十三批：单位目标采样与尺寸距离
 
 - [x] 新增`D2PathUnits`稳定快照辅助层，解析static int32/dynamic unsigned fp16/null path坐标，

@@ -203,7 +203,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)
-        || "FrozenHorror".equals(monster.AI)) scenarios.add("inferno-cycle");
+        || "FrozenHorror".equals(monster.AI) || "Megademon".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
@@ -305,7 +305,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
         result.special = "NOT_TRIGGERED";
         result.coverage = "BASELINE_PLUS_INFERNO_CYCLE";
         probe.inferno = new InfernoCycle("Diablo".equals(row.monster.AI)
-            || "FrozenHorror".equals(row.monster.AI));
+            || "FrozenHorror".equals(row.monster.AI) || "Megademon".equals(row.monster.AI));
       }
       if (result.scenario.equals("submerge-cycle")) {
         result.specialAssert = true;
@@ -550,6 +550,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
     int horrorVictim = -1;
     float horrorLifeBefore, horrorDamage;
     boolean horrorDamageObserved;
+    int megademonVictim = -1;
+    float megademonLifeBefore, megademonDamage;
+    boolean megademonDamageObserved;
     DiabColdCycle diabCold;
     DiabWallCycle diabWall;
     DiabRunCycle diabRun;
@@ -626,6 +629,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (megademonVictim >= 0) {
+        float life = world.getMapper(AttributesWrapper.class).get(megademonVictim).attrs.get(Stat.hitpoints).asFixed();
+        megademonDamageObserved |= megademonDamage > 0
+            && Math.abs(megademonLifeBefore - megademonDamage - life) < .01f;
+        capture.line("MegademonFireHit victim=" + megademonVictim + " damage=" + megademonDamage
+            + " hp=" + megademonLifeBefore + "->" + life + " valid=" + megademonDamageObserved);
+        megademonVictim = -1;
+      }
       if (horrorVictim >= 0) {
         float life = world.getMapper(AttributesWrapper.class).get(horrorVictim).attrs.get(Stat.hitpoints).asFixed();
         horrorDamageObserved |= horrorDamage > 0 && Math.abs(horrorLifeBefore - horrorDamage - life) < .01f;
@@ -687,7 +698,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           int before = inferno.phase;
           inferno.observe(stream, !pulse || valid);
           if (before != inferno.phase) capture.line("InfernoCycle subject=" + subject + " phase=" + inferno.phase);
-          if (inferno.phase == 5 && (!"FrozenHorror".equals(capture.result.ai) || horrorDamageObserved))
+          if (inferno.phase == 5 && (!"FrozenHorror".equals(capture.result.ai) || horrorDamageObserved)
+              && (!"Megademon".equals(capture.result.ai) || megademonDamageObserved))
             capture.result.specialPassed = true;
         }
       }
@@ -785,6 +797,21 @@ public final class MonsterAiArena extends ApplicationAdapter {
         capture.line("PrisonPlayerHit victim=" + event.victim + " damage=" + event.damage);
       }
       if (event.attacker != subject) return;
+      if (inferno != null && "Megademon".equals(capture.result.ai) && event.missileId >= 0) {
+        com.riiablo.engine.server.component.Missile missile = world.getMapper(
+            com.riiablo.engine.server.component.Missile.class).get(event.missileId);
+        if (missile != null && missile.skillId == 319 && missile.ownerId == subject
+            && event.kind == DamageEvent.MISSILE && event.damage > 0 && event.damage == event.fireDamage
+            && event.physicalDamage == 0 && event.coldDamage == 0 && event.lightningDamage == 0
+            && event.magicDamage == 0 && event.poisonDamage == 0) {
+          if (megademonVictim < 0) {
+            megademonLifeBefore = world.getMapper(AttributesWrapper.class).get(event.victim).attrs.get(Stat.hitpoints).asFixed();
+            megademonDamage = 0;
+          }
+          megademonVictim = event.victim;
+          megademonDamage += event.damage;
+        }
+      }
       if (inferno != null && "FrozenHorror".equals(capture.result.ai) && event.missileId >= 0) {
         com.riiablo.engine.server.component.Missile missile = world.getMapper(
             com.riiablo.engine.server.component.Missile.class).get(event.missileId);

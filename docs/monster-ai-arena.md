@@ -1,5 +1,15 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 Megademon Fn089
+
+Megademon 专用决策已接入，覆盖严格喷火范围/冷却、状态复位、近战攻击与绕行优先级。
+27项核心定向测试及14项服务端场景测试通过。真实MPQ完整目录557行/1174场，
+六行 Megademon 自然喷火循环与火焰导弹实际扣血断言全部通过；60个专属场景通过，
+异常为0。独立复跑JSONL逐字节一致；共有场次仅12个Megademon近远场改变。
+fallback现为45个AI名称/177行；107个WARNING保留，六个Megademon远场仍为NO_ACTION。
+原生移动flags、绕行速度类型/方向RNG、全局帧时钟未完成，状态仍为PARTIAL。
+证据见 [verification.md](ai-arena/20261015-megademon-seed1/verification.md)。
+
 ## 最新修复批次：2026-10-15 Inferno Sentry MonSeq
 
 玩家召唤陷阱311改为原表14点S2序列：9帧准备、point9首发、point8回卷、3帧周期，
