@@ -430,18 +430,6 @@ public class Pathfinder extends IteratingSystem {
     boolean success = findPath(src, position, target, flags, size, path,
         targetEntityId, true);
     if (success) {
-      // Store target entity ID in Pathfind component for dynamic repathing
-      if (mPathfind.has(src)) {
-        Pathfind pathfind = mPathfind.get(src);
-        pathfind.targetEntityId = targetEntityId;
-        if (targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)) {
-          pathfind.lastTargetPosition.set(mPosition.get(targetEntityId).position);
-          pathfind.repathTimer = Pathfind.REPATH_INTERVAL;
-        } else {
-          pathfind.lastTargetPosition.setZero();
-          pathfind.repathTimer = 0f;
-        }
-      }
       return true;
     }
     if (raycast) {
@@ -461,19 +449,6 @@ public class Pathfinder extends IteratingSystem {
           mPathfind.remove(src);
           Pools.free(path);
           return false;
-        }
-
-        // Store target entity ID in Pathfind component for dynamic repathing
-        if (mPathfind.has(src)) {
-          Pathfind pathfind = mPathfind.get(src);
-          pathfind.targetEntityId = targetEntityId;
-          if (targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)) {
-            pathfind.lastTargetPosition.set(mPosition.get(targetEntityId).position);
-            pathfind.repathTimer = Pathfind.REPATH_INTERVAL;
-          } else {
-            pathfind.lastTargetPosition.setZero();
-            pathfind.repathTimer = 0f;
-          }
         }
 
         return true;
@@ -655,7 +630,19 @@ public class Pathfinder extends IteratingSystem {
               ray, flags, size, collision, canOpenDoors(src));
         }
       }
-      mPathfind.create(src).set(path, startAtSource);
+      Pathfind pathfind = mPathfind.create(src).set(path, startAtSource);
+      // D2Common keeps pTargetUnit separate from the generated path points.
+      // Recovery can remove/recreate this component and ends at an approach
+      // coordinate, but must still track the original unit on the next tick.
+      // Install metadata here for every accepted path, not only public requests.
+      pathfind.targetEntityId = targetEntityId;
+      if (targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)) {
+        pathfind.lastTargetPosition.set(mPosition.get(targetEntityId).position);
+        pathfind.repathTimer = Pathfind.REPATH_INTERVAL;
+      } else {
+        pathfind.lastTargetPosition.setZero();
+        pathfind.repathTimer = 0f;
+      }
     }
 
     return success;
