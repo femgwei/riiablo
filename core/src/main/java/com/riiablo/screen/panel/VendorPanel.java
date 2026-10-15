@@ -162,9 +162,6 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         if (event.isHandled() || purchasePrompt != null && purchasePrompt.isVisible()) return;
-        // Child controls have their own actions; their bubbled clicks must
-        // never sell the cursor item. VendorGrid handles its own item drops.
-        if (event.getTarget() != VendorPanel.this) return;
         if (sellCursorItem()) event.handle();
       }
     });
@@ -243,17 +240,6 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       checked = down;
     }});
     btnSell.setPosition(btnBlank[1].getX(), btnBlank[1].getY());
-    btnSell.addCaptureListener(new InputListener() {
-      @Override
-      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-        if (Riiablo.charData == null || Riiablo.charData.getItems().getCursor() == null) {
-          return false;
-        }
-        // Keep the held item and cursor intact instead of activating Sell.
-        event.stop();
-        return true;
-      }
-    });
     btnSell.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -440,7 +426,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   private void showPurchasePrompt(Item item) {
-    if (item == null) return;
+    if (item == null || Riiablo.charData == null
+        || Riiablo.charData.getItems().getCursor() != null) return;
     pendingPurchaseItem = item;
     int price = isGambling()
         ? VendorPricing.gamblePrice(item, Riiablo.charData)

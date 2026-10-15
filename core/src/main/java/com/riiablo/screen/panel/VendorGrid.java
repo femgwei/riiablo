@@ -40,6 +40,13 @@ public class VendorGrid extends ItemGrid {
 
   @Override
   protected boolean onStoredItemClicked(Item item, boolean direct) {
+    Item cursor = itemData.getCursor();
+    if (!direct && cursor != null) {
+      onCursorDrop(cursor);
+      // The held item was offered for sale, not the clicked vendor item.
+      // Returning true would remove that vendor item's actor as a purchase.
+      return false;
+    }
     return purchaseListener != null && purchaseListener.onPurchase(item, direct);
   }
 
