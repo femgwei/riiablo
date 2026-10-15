@@ -13,6 +13,9 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.NativePlayerTargetSlots;
+import com.riiablo.engine.server.NativeTargetNodes;
+import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -46,6 +49,121 @@ import static org.mockito.Mockito.*;
 
 /** Native death/real restore/Revive entry points; terrain/path are test doubles. */
 class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
+  @Test
+  void retainedWallComponentCannotHideAnExplicitNewConversionMembership() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      try (Fixture f = new Fixture(boss)) {
+        int id = f.summon(30);
+        SummonedPet pet = f.pet(id);
+        pet.detachNativeTargetNode();
+        pet.set(f.player, "bonewall", 78, 1, true, 100).boneWall = true;
+        long wall = pet.nativeTargetOrder();
+        long quota = pet.spawnOrder;
+        NativeTargetNode node = NativeTargetNodes.get(f.world, id);
+        assertTrue(node.isNode9());
+        node.detach();
+        f.states(id).addState(StateId.CONVERSION, 100, 1, f.player);
+        assertTrue(f.states(id).nativeConversionOrder() > wall);
+        assertEquals(0, pet.nativeTargetOrder());
+        f.world.process();
+        assertEquals(id, f.select(), "actual membership, not residual wall metadata, chooses the group");
+        assertEquals(2, f.ai.lastTargetCount());
+        assertEquals(quota, pet.spawnOrder);
+        f.states(id).removeState(StateId.CONVERSION);
+        assertTrue(pet.boneWall);
+        assertEquals(f.player, f.select());
+        assertEquals(1, f.ai.lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void actualSummonFactorySharesItsAllocationNodeWithStateCallbacksBeforeFirstTick() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      try (Fixture f = new Fixture(boss)) {
+        when(f.zone.findFreeCoordinates(any(Vector2.class), anyInt(), anyInt(), anyBoolean(), any(Vector2.class)))
+            .thenReturn(true);
+        int id = f.factory.createSummonedPet(f.player, Riiablo.files.monstats.get("skeleton1"),
+            "skeleton", 70, 1, 8, false, 0, 30, 10);
+        assertTrue(id >= 0);
+        f.stats(id, 1000);
+        long order = f.pet(id).nativeTargetOrder();
+        assertTrue(order > 0);
+        f.states(id).addState(StateId.CONFUSE, 1, 1, f.player);
+        assertEquals(0, f.states(id).nativeNode9Order());
+        assertEquals(order, NativeTargetNodes.get(f.world, id).order());
+        f.states(id).update(); // callback before any subscription/world tick
+        assertEquals(0, f.pet(id).nativeTargetOrder());
+        f.world.process();
+        assertEquals(f.player, f.select());
+        assertEquals(1, f.ai.lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void sharedSummonNodeRejectsCurseBucketButItsCallbackUnlinksForBodyAndClone() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      for (int curse : new int[] {StateId.ATTRACT, StateId.CONFUSE}) {
+        try (Fixture f = new Fixture(boss)) {
+          int id = f.summon(30);
+          int newer = f.summon(30);
+          NativeTargetNode node = NativeTargetNodes.get(f.world, id);
+          long order = node.order();
+          long quota = f.pet(id).spawnOrder;
+          f.states(id).addState(curse, 100, 1, f.player);
+          f.world.process();
+          assertEquals(order, node.order());
+          assertEquals(0, f.states(id).nativeNode9Order());
+          assertEquals(newer, f.select(), "rejected insertion cannot promote or hide the old child");
+          assertEquals(3, f.ai.lastTargetCount());
+          f.states(id).removeState(curse);
+          assertEquals(0, f.pet(id).nativeTargetOrder());
+          f.select();
+          assertEquals(2, f.ai.lastTargetCount(), "residual summon metadata cannot resurrect a node");
+          assertEquals(quota, f.pet(id).spawnOrder);
+          f.states(id).addState(StateId.CONVERSION, 100, 1, f.player);
+          f.select();
+          assertEquals(3, f.ai.lastTargetCount());
+          assertEquals(0, f.pet(id).nativeTargetOrder(), "new state membership is not old pet membership");
+          assertTrue(f.states(id).nativeConversionOrder() > order);
+        }
+      }
+    }
+  }
+
+  @Test
+  void stateNodeCannotBeStolenByMercenaryAndExplicitMigrationDoesNotReviveOldBucket() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      try (Fixture f = new Fixture(boss)) {
+        f.world.getMapper(Position.class).get(f.player).position.set(40, 10);
+        when(f.map.isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean()))
+            .thenReturn(true);
+        int id = f.monster(14);
+        StateList states = f.states(id);
+        states.addState(StateId.ATTRACT, 100, 1, f.player);
+        long curse = states.nativeNode9Order();
+        NativeTargetNode node = NativeTargetNodes.get(f.world, id);
+        Mercenary merc = f.world.getMapper(Mercenary.class).create(id)
+            .bindNativeTargetNode(node).set(f.player, 0, 10, 4, 5);
+        f.world.process();
+        assertEquals(0, merc.nativeTargetOrder());
+        assertEquals(curse, states.nativeNode9Order());
+        assertEquals(id, f.select());
+        assertEquals(1, f.ai.lastTargetCount(), "node9 must not also count as a hireling child");
+        node.detach();
+        merc.insertNativeTargetNode();
+        assertEquals(id, f.select());
+        assertEquals(2, f.ai.lastTargetCount());
+        assertEquals(0, states.nativeNode9Order());
+        states.removeState(StateId.ATTRACT);
+        assertEquals(0, merc.nativeTargetOrder());
+        assertEquals(f.player, f.select());
+        assertEquals(1, f.ai.lastTargetCount());
+      }
+    }
+  }
+
   @Test
   void retainedCurseDoesNotHideNewConversionAndItsRemovalUnlinksCurrentNode() {
     for (String boss : new String[] {"baalcrab", "baalclone"}) {
@@ -114,7 +232,7 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
         long quota = pet.spawnOrder;
         f.world.process();
         f.die(id); // no Baal selection observes the corpse/death modes
-        assertEquals(0, pet.nativeTargetOrder);
+        assertEquals(0, pet.nativeTargetOrder());
         assertTrue(f.factory.resurrectMonster(id, f.player));
         f.world.process();
         assertEquals(f.player, f.select());
@@ -167,7 +285,10 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
           when(f.map.isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean()))
               .thenReturn(true);
           int id = kind == -1 ? f.summon(14) : f.monster(14);
-          if (kind == -1) f.pet(id).boneWall = true;
+          if (kind == -1) {
+            f.pet(id).detachNativeTargetNode();
+            f.pet(id).set(f.player, "bonewall", 78, 1, true, 100).boneWall = true;
+          }
           else f.states(id).addState(kind, 100, 1, f.player);
           // A high-threat stand-in isolates membership. Native bone-wall rows
           // have threat <=1 and must still score zero with the real table.
@@ -184,7 +305,7 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
           assertEquals(1, f.ai.lastTargetCount());
           if (kind == -1) {
             assertTrue(f.pet(id).boneWall);
-            assertEquals(0, f.pet(id).nativeTargetOrder);
+            assertEquals(0, f.pet(id).nativeTargetOrder());
             f.pet(id).set(f.player, "bonewall", 78, 1, true, 100).boneWall = true;
           } else {
             assertTrue(f.states(id).hasState(kind));
@@ -210,12 +331,12 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
         f.die(id);
         int older = f.summon(30);
         f.world.process();
-        long olderOrder = f.pet(older).nativeTargetOrder;
+        long olderOrder = f.pet(older).nativeTargetOrder();
         f.events.dispatch(SkillDoEvent.obtain(f.player, SkillId.REVIVE, id,
             new Vector2(30, 10), 58, 0));
         assertFalse(f.world.getMapper(Corpse.class).has(id));
         assertNotNull(f.pet(id));
-        assertTrue(f.pet(id).nativeTargetOrder > olderOrder);
+        assertTrue(f.pet(id).nativeTargetOrder() > olderOrder);
         assertEquals(f.player, f.pet(id).ownerId);
         assertTrue(f.world.getMapper(AIWrapper.class).get(id).ai instanceof NecroPet);
         f.stats(id, 1000);
@@ -224,10 +345,10 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
         assertEquals(f.ai.targetScore(older), f.ai.targetScore(id));
         assertEquals(id, f.select());
         assertEquals(3, f.ai.lastTargetCount());
-        long joined = f.pet(id).nativeTargetOrder;
+        long joined = f.pet(id).nativeTargetOrder();
         f.events.dispatch(SkillDoEvent.obtain(f.player, SkillId.REVIVE, id,
             new Vector2(30, 10), 58, 0));
-        assertEquals(joined, f.pet(id).nativeTargetOrder, "rejected duplicate Revive cannot promote the child");
+        assertEquals(joined, f.pet(id).nativeTargetOrder(), "rejected duplicate Revive cannot promote the child");
       }
     }
   }
@@ -275,7 +396,9 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
     }
     int summon(int x) {
       int id = monster(x);
-      world.getMapper(SummonedPet.class).create(id).set(player, "skeleton", 70, 1, false, 0);
+      world.getMapper(SummonedPet.class).create(id)
+          .bindNativeTargetNode(NativeTargetNodes.get(world, id))
+          .set(player, "skeleton", 70, 1, false, 0);
       world.getMapper(NativeUnitFlags.class).get(id).reset().set(NativeUnitFlags.PLAYER_SUMMON);
       return id;
     }

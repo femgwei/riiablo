@@ -12,6 +12,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -48,6 +49,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<NativeTargetNode> mNativeTargetNode;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Running> mRunning;
@@ -196,8 +198,9 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     // MonsterMode.cpp TARGETS_Last is persistent: returning to NU alone must
     // not restore a child or node9 insertion. State retention is independent
     // of membership; NPC resurrection / Revive explicitly insert new nodes.
-    if (mMercenary.has(entityId)) mMercenary.get(entityId).nativeTargetOrder = 0;
-    if (mSummonedPet.has(entityId)) mSummonedPet.get(entityId).nativeTargetOrder = 0;
+    if (mMercenary.has(entityId)) mMercenary.get(entityId).detachNativeTargetNode();
+    if (mSummonedPet.has(entityId)) mSummonedPet.get(entityId).detachNativeTargetNode();
+    if (mNativeTargetNode.has(entityId)) mNativeTargetNode.get(entityId).detach();
     if (mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null) {
       mUnitStates.get(entityId).stateList.detachNativeTargetNode();
     }

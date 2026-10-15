@@ -1092,7 +1092,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           || !mAttributesWrapper.has(targetId)
           || !isEnemy(controller.rabiesSourceId, targetId)) continue;
       UnitStates targetStates = mUnitStates.get(targetId);
-      if (targetStates.stateList == null) targetStates.init(targetId);
+      if (targetStates.stateList == null) targetStates.init(world, targetId);
       if (targetStates.stateList.hasState(StateId.RABIES)) continue;
       Attributes attrs = mAttributesWrapper.get(targetId).attrs;
       StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
@@ -1984,7 +1984,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int raw = min;
     if (max > min) raw += rng.nextInt(max - min);
     missile.rngState = rng.state();
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     StateList targetStates = stateList(targetId);
     CombatSystem.CombatResult poison =
         CombatSystem.INSTANCE.calculateFixedPoisonDamageSnapshot(
@@ -2049,7 +2049,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int level = Math.max(1, missile.damageLevel);
     int duration = skill.calc4 != null && !skill.calc4.isEmpty()
         ? Math.max(5, SkillFormula.evaluate(skill.calc4, skill, level)) : 5;
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     StateList targetStates = stateList(targetId);
     UnitState applied = targetStates.addStateLayer(stateId, duration, level,
         missile.ownerId, missile.skillId);
@@ -2193,7 +2193,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private StateList targetHitStates(Missile missile, int targetId) {
     boolean nextHit = missile != null && missile.missile != null && missile.missile.NextHit;
-    if (nextHit && !mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (nextHit && !mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     return stateList(targetId);
   }
 
@@ -2410,7 +2410,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           missileId, missile.ownerId, targetId, missile.skillId);
       return;
     }
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     StateList states = mUnitStates.get(targetId).stateList;
     UnitState stun = states.addState(
         StateId.STUNNED, duration, Math.max(1, missile.damageLevel), missile.ownerId);
@@ -2449,9 +2449,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!accepted || !isAlive(targetId) || !missile.hitTargets.add(targetId)) return;
     if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) return;
 
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     UnitStates states = mUnitStates.get(targetId);
-    if (states.stateList == null) states.init(targetId);
+    if (states.stateList == null) states.init(world, targetId);
     int skillLevel = Math.max(1, missile.damageLevel);
     com.riiablo.engine.server.state.UnitState state;
     if (hitFunction == 17) {

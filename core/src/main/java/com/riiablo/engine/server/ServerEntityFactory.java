@@ -131,7 +131,7 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.PLR, "player");
     mPlayer.create(id).data = charData;
     mAttributesWrapper.create(id).attrs = charData.getStats();
-    mUnitStates.create(id).init(id);
+    mUnitStates.create(id).init(world, id);
     mMapWrapper.create(id).set(map, map.getZone(position));
 
     mPosition.create(id).position.set(position);
@@ -497,7 +497,7 @@ public class ServerEntityFactory extends EntityFactory {
     attrs.reset();
     attrs.setCombatBlockContext(monsterShield, 0);
     mAttributesWrapper.create(id).attrs = attrs;
-    mUnitStates.create(id).init(id);
+    mUnitStates.create(id).init(world, id);
     log.debug("[MONSTER_NATIVE_STATS] entity={} monster={} level={} baseLevel={} "
             + "difficulty={} players={} hp={} baseHpRange={}..{} exp={} "
             + "a1={}..{} ar={} a2={}..{} ar={} combatMultiplier={}",
@@ -641,7 +641,8 @@ public class ServerEntityFactory extends EntityFactory {
 
     int entityId = createMonster(summon.hcIdx, summonPosition.x, summonPosition.y);
     if (entityId == Engine.INVALID_ENTITY) return entityId;
-    mSummonedPet.create(entityId).set(ownerId, nativePetType, skillId, skillLevel,
+    mSummonedPet.create(entityId).bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
+        .set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
     SummonedPetSystem petSystem = world.getSystem(SummonedPetSystem.class);
@@ -707,7 +708,8 @@ public class ServerEntityFactory extends EntityFactory {
 
     int entityId = createMonster(summon.hcIdx, MathUtils.round(x), MathUtils.round(y));
     if (entityId == Engine.INVALID_ENTITY) return entityId;
-    mSummonedPet.create(entityId).set(ownerId, "bonewall", skillId, skillLevel,
+    mSummonedPet.create(entityId).bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
+        .set(ownerId, "bonewall", skillId, skillLevel,
         true, durationFrames).boneWall = true;
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
     if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();

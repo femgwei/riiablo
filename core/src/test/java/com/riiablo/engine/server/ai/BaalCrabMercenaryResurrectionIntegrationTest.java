@@ -46,7 +46,7 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
   void deathUnlinksPersistentlyRatherThanOnlyWhileDeadModeIsVisible() {
     try (Fixture f = new Fixture("baalcrab")) {
       f.die(); // no Baal scan is needed to remember the unlink
-      assertEquals(0, f.merc().nativeTargetOrder);
+      assertEquals(0, f.merc().nativeTargetOrder());
       f.world.getMapper(Corpse.class).remove(f.hireling);
       f.world.getMapper(Sequence.class).remove(f.hireling);
       f.world.getMapper(CofReference.class).get(f.hireling).mode = Engine.Monster.MODE_NU;
@@ -61,16 +61,16 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
   void retainedNpcResurrectionReinsertsAfterNewerSummonWithoutReinitializingHireling() {
     for (String boss : new String[] {"baalcrab", "baalclone"}) {
       try (Fixture f = new Fixture(boss)) {
-        long firstOrder = f.merc().nativeTargetOrder;
+        long firstOrder = f.merc().nativeTargetOrder();
         f.die();
         int summon = f.summon();
-        long summonOrder = f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder;
+        long summonOrder = f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder();
         assertTrue(summonOrder > firstOrder);
         f.merc().setSkill(0, 456, 7);
         f.merc().aiRngState = 12345;
         int seed = f.merc().seed;
         assertTrue(f.rewards.resurrectMercenaryEntity(f.hireling, f.player));
-        assertTrue(f.merc().nativeTargetOrder > summonOrder);
+        assertTrue(f.merc().nativeTargetOrder() > summonOrder);
         assertEquals(seed, f.merc().seed);
         assertEquals(456, f.merc().skills[0]);
         assertEquals(7, f.merc().skillLevels[0]);
@@ -82,9 +82,9 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
         assertEquals(f.ai.targetScore(summon), f.ai.targetScore(f.hireling));
         assertEquals(f.hireling, f.select(), "resurrected hireling is the newest equal-score child");
         assertEquals(3, f.ai.lastTargetCount());
-        long restored = f.merc().nativeTargetOrder;
+        long restored = f.merc().nativeTargetOrder();
         assertFalse(f.rewards.resurrectMercenaryEntity(f.hireling, f.player));
-        assertEquals(restored, f.merc().nativeTargetOrder, "duplicate callback cannot reorder a live child");
+        assertEquals(restored, f.merc().nativeTargetOrder(), "duplicate callback cannot reorder a live child");
       }
     }
   }
@@ -98,9 +98,9 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
       f.world.getMapper(Player.class).create(f.player);
       f.world.process();
       long newHead = f.slots.registrationOrder(f.player);
-      assertFalse(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder));
+      assertFalse(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder()));
       assertTrue(f.rewards.resurrectMercenaryEntity(f.hireling, f.player));
-      assertTrue(f.merc().nativeTargetOrder > newHead);
+      assertTrue(f.merc().nativeTargetOrder() > newHead);
       f.stats(f.hireling);
       f.world.process();
       assertEquals(f.hireling, f.select());
@@ -120,12 +120,12 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
       f.world.process();
       assertEquals(NativePlayerTargetSlots.UNREGISTERED, f.slots.slotOf(f.player));
       assertTrue(f.rewards.resurrectMercenaryEntity(f.hireling, f.player));
-      assertEquals(0, f.merc().nativeTargetOrder, "restoring life succeeds even if UpdateSummonAI cannot join");
+      assertEquals(0, f.merc().nativeTargetOrder(), "restoring life succeeds even if UpdateSummonAI cannot join");
       f.world.delete(occupying);
       f.world.process();
       f.slots.registerPlayer(f.player);
       assertEquals(0, f.slots.slotOf(f.player));
-      assertFalse(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder));
+      assertFalse(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder()));
     }
   }
 
@@ -134,7 +134,7 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
     try (Fixture f = new Fixture("baalcrab")) {
       f.die();
       int summon = f.summon();
-      long order = f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder;
+      long order = f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder();
       int other = f.playerHead();
       assertFalse(f.rewards.resurrectMercenaryEntity(f.hireling, other));
       f.world.getMapper(Corpse.class).get(f.hireling).usable = false;
@@ -142,8 +142,8 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
       f.world.getMapper(Corpse.class).get(f.hireling).usable = true;
       when(f.map.flags(any(Vector2.class))).thenReturn(DT1.Tile.FLAG_BLOCK_WALK);
       assertFalse(f.rewards.resurrectMercenaryEntity(f.hireling, f.player));
-      assertEquals(0, f.merc().nativeTargetOrder);
-      assertEquals(order, f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder);
+      assertEquals(0, f.merc().nativeTargetOrder());
+      assertEquals(order, f.world.getMapper(SummonedPet.class).get(summon).nativeTargetOrder());
       assertEquals(summon, f.select());
     }
   }
@@ -156,14 +156,14 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
       owner.base().put(Stat.gold, 0);
       owner.reset();
       assertFalse(f.rewards.resurrectMercenary(f.player));
-      assertEquals(0, f.merc().nativeTargetOrder);
+      assertEquals(0, f.merc().nativeTargetOrder());
       int cost = f.rewards.resurrectionCost(f.player);
       assertTrue(cost > 0);
       owner.base().put(Stat.gold, cost + 100);
       owner.reset();
       assertTrue(f.rewards.resurrectMercenary(f.player));
       assertEquals(f.hireling, f.rewards.mercenaryEntityId(f.player), "retained entity, not a replacement hire");
-      assertTrue(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder));
+      assertTrue(f.slots.acceptsChildInsertion(f.player, f.merc().nativeTargetOrder()));
       assertEquals(100, f.rewards.getPlayerGold(f.player));
       f.world.process();
       f.select();
@@ -235,7 +235,9 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
       MonStats.Entry threat = new MonStats.Entry();
       threat.threat = 2; // isolate score arithmetic, never mutate the shared table
       world.getMapper(Monster.class).get(id).monstats = threat;
-      world.getMapper(SummonedPet.class).create(id).set(player, "skeleton", 70, 1, false, 0);
+      world.getMapper(SummonedPet.class).create(id)
+          .bindNativeTargetNode(com.riiablo.engine.server.NativeTargetNodes.get(world, id))
+          .set(player, "skeleton", 70, 1, false, 0);
       stats(id);
       world.process();
       return id;

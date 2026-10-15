@@ -413,8 +413,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (!selectableCorpse(corpseId) || !mPosition.has(corpseId)) return false;
     Corpse corpse = mCorpse.get(corpseId);
     UnitStates states = mUnitStates.has(corpseId)
-        ? mUnitStates.get(corpseId) : mUnitStates.create(corpseId).init(corpseId);
-    if (states.stateList == null) states.init(corpseId);
+        ? mUnitStates.get(corpseId) : mUnitStates.create(corpseId).init(world, corpseId);
+    if (states.stateList == null) states.init(world, corpseId);
     if (!CorpseConsumption.tryReserve(
         corpse, mMonster.get(corpseId), mAttributes.get(corpseId).attrs,
         states.stateList, true, trap.skillLevel, sentryId, skill.Id)) return false;

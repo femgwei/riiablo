@@ -1159,7 +1159,7 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     UnitStates unitStates = mUnitStates.get(event.entityId);
-    if (unitStates.stateList == null) unitStates.init(event.entityId);
+    if (unitStates.stateList == null) unitStates.init(world, event.entityId);
     int stateId = StateId.THUNDERSTORM;
     if (skill.aurastate != null && !skill.aurastate.isEmpty()
         && !"thunderstorm".equalsIgnoreCase(skill.aurastate.trim())) {
@@ -1332,7 +1332,7 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
     if (duration <= 0) duration = 250;
     UnitState state = states.stateList.addState(
@@ -1348,10 +1348,10 @@ public class ServerSkillSystem extends PassiveSystem {
   /** D2MOO SrvDo023: Blaze stores skill/level on its timed self state. */
   private void applyBlazeState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) {
-      mUnitStates.create(event.entityId).init(event.entityId);
+      mUnitStates.create(event.entityId).init(world, event.entityId);
     }
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     int duration = SorceressSkills.getBlazeDuration(skill, skillLevel,
         name -> getBaseSkillLevel(event.entityId, name));
     UnitState state = states.stateList.addStateLayer(
@@ -1365,10 +1365,10 @@ public class ServerSkillSystem extends PassiveSystem {
   /** D2MOO SrvDo023: Energy Shield installs its timed EventFunc24 self state. */
   private void applyEnergyShieldState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) {
-      mUnitStates.create(event.entityId).init(event.entityId);
+      mUnitStates.create(event.entityId).init(world, event.entityId);
     }
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     int duration = Math.max(1,
         SkillFormula.evaluate(skill.auralencalc, skill, Math.max(1, skillLevel)));
     UnitState state = states.stateList.addStateLayer(
@@ -1382,7 +1382,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void applyVenom(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) return;
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState venom = AssassinSkills.applyVenomState(
         states.stateList, skill, skillLevel, event.entityId);
     if (venom == null) {
@@ -1398,9 +1398,9 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** Native SrvDo018 defensive-buff path for Necromancer Bone Armor. */
   private void applyBoneArmor(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
-    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(world, event.entityId);
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState armor = NecromancerSkills.applyBoneArmorState(
         states.stateList, skill, skillLevel, event.entityId,
         name -> getBaseSkillLevel(event.entityId, name),
@@ -1423,9 +1423,9 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(world, event.entityId);
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState shield = PaladinSkills.applyHolyShieldState(
         states.stateList, skill, skillLevel, event.entityId,
         name -> getBaseSkillLevel(event.entityId, name));
@@ -1444,10 +1444,10 @@ public class ServerSkillSystem extends PassiveSystem {
   private void applySorceressDefensiveArmor(
       SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) {
-      mUnitStates.create(event.entityId).init(event.entityId);
+      mUnitStates.create(event.entityId).init(world, event.entityId);
     }
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState armor = SorceressSkills.applyDefensiveArmorState(
         states.stateList, skill, skillLevel, event.entityId,
         name -> getBaseSkillLevel(event.entityId, name));
@@ -1470,9 +1470,9 @@ public class ServerSkillSystem extends PassiveSystem {
         || isHostile(event.entityId, targetId)) {
       targetId = event.entityId;
     }
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     UnitStates targetStates = mUnitStates.get(targetId);
-    if (targetStates.stateList == null) targetStates.init(targetId);
+    if (targetStates.stateList == null) targetStates.init(world, targetId);
     int mastery = sorceressFireMasteryPercent(event.entityId);
     UnitState enchant = SorceressSkills.applyEnchantState(
         targetStates.stateList, skill, skillLevel, event.entityId,
@@ -1648,7 +1648,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void armBladeShield(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) return;
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState bladeShield = states.stateList.getState(StateId.BLADESHIELD);
     if (bladeShield == null || bladeShield.skillId != event.skillId) {
       // Synthetic/server-only event paths may not have run Actioneer's start
@@ -1705,9 +1705,9 @@ public class ServerSkillSystem extends PassiveSystem {
       if (targetId == event.entityId || !isHostile(event.entityId, targetId)
           || !mPosition.has(targetId)
           || caster.dst2(mPosition.get(targetId).position) > range2) continue;
-      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
       UnitStates states = mUnitStates.get(targetId);
-      if (states.stateList == null) states.init(targetId);
+      if (states.stateList == null) states.init(world, targetId);
       UnitState state = states.stateList.applyCurseState(
           Riiablo.files != null ? Riiablo.files.States : null,
           StateId.DIMVISION, duration, skillLevel, event.entityId, event.skillId,
@@ -1908,9 +1908,9 @@ public class ServerSkillSystem extends PassiveSystem {
       if (targetId == event.entityId || !isHostile(event.entityId, targetId)
           || !mPosition.has(targetId) || !hasPositiveLife(targetId)
           || caster.dst2(mPosition.get(targetId).position) > range2) continue;
-      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
       UnitStates states = mUnitStates.get(targetId);
-      if (states.stateList == null) states.init(targetId);
+      if (states.stateList == null) states.init(world, targetId);
       UnitState state = states.stateList.addStateLayer(
           StateId.SLOWMISSILES, duration, skillLevel, event.entityId, event.skillId);
       if (state == null) continue;
@@ -1946,9 +1946,9 @@ public class ServerSkillSystem extends PassiveSystem {
       if (targetId == event.entityId || !isHostile(event.entityId, targetId)
           || !mPosition.has(targetId) || !hasPositiveLife(targetId)
           || caster.dst2(mPosition.get(targetId).position) > range2) continue;
-      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
       UnitStates states = mUnitStates.get(targetId);
-      if (states.stateList == null) states.init(targetId);
+      if (states.stateList == null) states.init(world, targetId);
       UnitState state = states.stateList.addStateLayer(
           StateId.INNERSIGHT, duration, skillLevel, event.entityId, event.skillId);
       if (state == null) continue;
@@ -2004,8 +2004,8 @@ public class ServerSkillSystem extends PassiveSystem {
       if (function == 59 && isNativeUnique(targetId)) continue;
 
       UnitStates targetStates = mUnitStates.has(targetId)
-          ? mUnitStates.get(targetId) : mUnitStates.create(targetId).init(targetId);
-      if (targetStates.stateList == null) targetStates.init(targetId);
+          ? mUnitStates.get(targetId) : mUnitStates.create(targetId).init(world, targetId);
+      if (targetStates.stateList == null) targetStates.init(world, targetId);
       Attributes targetAttributes = mAttributesWrapper.has(targetId)
           ? mAttributesWrapper.get(targetId).attrs : null;
       boolean playerOrHireling = mPlayer.has(targetId) || mMercenary.has(targetId);
@@ -2140,7 +2140,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
-      if (states.stateList == null) states.init(petId);
+      if (states.stateList == null) states.init(world, petId);
       UnitState state = states.stateList.addState(StateId.SHADOWWARRIOR, 0, skillLevel,
           event.entityId);
       if (state != null) {
@@ -2248,9 +2248,9 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     UnitStates states = mUnitStates.get(targetId);
-    if (states.stateList == null) states.init(targetId);
+    if (states.stateList == null) states.init(world, targetId);
     UnitState state = BarbarianSkills.applyWarCryState(
         states.stateList, skill, skillLevel, event.entityId, true,
         name -> getBaseSkillLevel(event.entityId, name));
@@ -2280,9 +2280,9 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** SrvDo068 applies AuraState to the caster before its 64-way shout wave. */
   private void applyBasicWarCry(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
-    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(world, event.entityId);
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     UnitState state = BarbarianSkills.applyWarCryState(
         states.stateList, skill, skillLevel, event.entityId, false,
         name -> getBaseSkillLevel(event.entityId, name));
@@ -2430,7 +2430,7 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     UnitStates states = mUnitStates.get(event.entityId);
-    if (states.stateList == null) states.init(event.entityId);
+    if (states.stateList == null) states.init(world, event.entityId);
     int stateId = event.skillId == SkillId.HURRICANE ? StateId.HURRICANE : StateId.ARMAGEDDON;
     if (skill.aurastate != null && !skill.aurastate.isEmpty()) {
       States.Entry row = Riiablo.files.States.get(skill.aurastate.trim());
@@ -3108,7 +3108,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (maxHp != null) maxHp.set(hitpoints);
     } else if (valkyrie && mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
-      if (states.stateList == null) states.init(petId);
+      if (states.stateList == null) states.init(world, petId);
       states.stateList.addState(StateId.VALKYRIE, 0, skillLevel, event.entityId);
     }
 
@@ -3173,7 +3173,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
-      if (states.stateList == null) states.init(petId);
+      if (states.stateList == null) states.init(world, petId);
       int auraState = DruidSkills.getSummonAuraState(skill);
       if (auraState != StateId.NONE) {
         UnitState state = states.stateList.addState(auraState,
@@ -4198,8 +4198,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (entityId < 0 || !mCorpse.has(entityId) || !mMonster.has(entityId)
         || !mAttributesWrapper.has(entityId)) return false;
     UnitStates unitStates = mUnitStates.has(entityId)
-        ? mUnitStates.get(entityId) : mUnitStates.create(entityId).init(entityId);
-    if (unitStates.stateList == null) unitStates.init(entityId);
+        ? mUnitStates.get(entityId) : mUnitStates.create(entityId).init(world, entityId);
+    if (unitStates.stateList == null) unitStates.init(world, entityId);
     return CorpseConsumption.tryReserve(
         mCorpse.get(entityId), mMonster.get(entityId),
         mAttributesWrapper.get(entityId).attrs, unitStates.stateList,
@@ -4576,7 +4576,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int stateId = stateId(granted.aurastate);
       if (stateId == StateId.NONE) continue;
       UnitStates states = mUnitStates.get(petId);
-      if (states.stateList == null) states.init(petId);
+      if (states.stateList == null) states.init(world, petId);
       UnitState aura = states.stateList.addStateLayer(
           stateId, 0, grantedLevel, petId, granted.Id);
       if (aura != null) {
@@ -4640,14 +4640,15 @@ public class ServerSkillSystem extends PassiveSystem {
         name -> getBaseSkillLevel(event.entityId, name)));
     SummonedPet pet = mSummonedPet.has(corpseId)
         ? mSummonedPet.get(corpseId) : mSummonedPet.create(corpseId);
-    pet.set(event.entityId, petType, event.skillId, level, false, duration);
+    pet.bindNativeTargetNode(NativeTargetNodes.get(world, corpseId))
+        .set(event.entityId, petType, event.skillId, level, false, duration);
     if (mNativeUnitFlags.has(corpseId)) {
       mNativeUnitFlags.get(corpseId).reset()
           .set(NativeUnitFlags.PLAYER_SUMMON | NativeUnitFlags.IS_REVIVE);
     }
     if (mUnitStates.has(corpseId)) {
       UnitStates states = mUnitStates.get(corpseId);
-      if (states.stateList == null) states.init(corpseId);
+      if (states.stateList == null) states.init(world, corpseId);
       UnitState revive = states.stateList.addState(StateId.REVIVE, duration, level, event.entityId);
       if (revive != null) {
         revive.skillId = event.skillId;
@@ -4768,7 +4769,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int stateId = stateId(skill.aurastate);
       if (stateId != StateId.NONE) {
         UnitStates unitStates = mUnitStates.get(petId);
-        if (unitStates.stateList == null) unitStates.init(petId);
+        if (unitStates.stateList == null) unitStates.init(world, petId);
         UnitState aura = unitStates.stateList.addStateLayer(stateId, 0, level, source, skill.Id);
         if (aura != null) aura.needsSync = true;
       }

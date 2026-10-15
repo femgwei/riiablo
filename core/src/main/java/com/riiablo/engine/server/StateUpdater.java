@@ -1663,7 +1663,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StateList targetStates = null;
       if (mUnitStates.has(targetId)) {
         UnitStates targetUnitStates = mUnitStates.get(targetId);
-        if (targetUnitStates.stateList == null) targetUnitStates.init(targetId);
+        if (targetUnitStates.stateList == null) targetUnitStates.init(world, targetId);
         targetStates = targetUnitStates.stateList;
       }
       int toHitPercent = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
@@ -1955,7 +1955,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     
     UnitStates unitStates = mUnitStates.get(entityId);
     if (unitStates.stateList == null) {
-      unitStates.init(entityId);
+      unitStates.init(world, entityId);
     }
     
     unitStates.stateList.addState(stateId, duration, level, sourceId);
@@ -2009,7 +2009,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       return;
     }
     UnitStates unitStates = mUnitStates.get(entityId);
-    if (unitStates.stateList == null) unitStates.init(entityId);
+    if (unitStates.stateList == null) unitStates.init(world, entityId);
     StateList states = unitStates.stateList;
     if ((stateId == StateId.POISON || stateId == StateId.BURNING)
         && damagePerFrame > 0f) {
@@ -2087,7 +2087,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (!mMonster.has(entityId) || !mUnitStates.has(entityId)) return;
     Monster monster = mMonster.get(entityId);
     UnitStates component = mUnitStates.get(entityId);
-    if (component.stateList == null) component.init(entityId);
+    if (component.stateList == null) component.init(world, entityId);
     if (monster.rngState == 0) {
       monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, entityId).state();
     }

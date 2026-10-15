@@ -247,7 +247,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       int[] statIds, int[] values) {
     if (!mUnitStates.has(targetId)) return;
     UnitStates states = mUnitStates.get(targetId);
-    if (states.stateList == null) states.init(targetId);
+    if (states.stateList == null) states.init(world, targetId);
     UnitState state = states.stateList.addStateLayer(
         stateId, duration, skillLevel, sourceEntityId, skillId);
     if (state == null) return;
@@ -307,7 +307,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       int sourceEntityId, int skillId) {
     if (!mUnitStates.has(casterId)) return;
     UnitStates component = mUnitStates.get(casterId);
-    if (component.stateList == null) component.init(casterId);
+    if (component.stateList == null) component.init(world, casterId);
     StateList states = component.stateList;
     if (!suppressed) {
       states.removeStateLayer(StateId.NOMANAREGEN, sourceEntityId, skillId);
@@ -360,7 +360,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       int skillLevel, int duration) {
     if (!mMonster.has(targetId) || !mUnitStates.has(targetId)) return;
     UnitStates component = mUnitStates.get(targetId);
-    if (component.stateList == null) component.init(targetId);
+    if (component.stateList == null) component.init(world, targetId);
     NativeRng rng = holyFreezeRng.get(targetId);
     if (rng == null) {
       rng = NativeRng.forUnit(Riiablo.gameSeed ^ skillId, targetId);
@@ -424,7 +424,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
           ^ ((long) corpseId * 131) ^ redemptionRollCounter++), 100);
       if (roll >= chance) continue;
       if (corpseStates == null) {
-        if (!mUnitStates.has(corpseId)) mUnitStates.create(corpseId).init(corpseId);
+        if (!mUnitStates.has(corpseId)) mUnitStates.create(corpseId).init(world, corpseId);
         corpseStates = mUnitStates.get(corpseId).stateList;
       }
       if (!CorpseConsumption.tryReserve(corpse, monster, attrs, corpseStates,

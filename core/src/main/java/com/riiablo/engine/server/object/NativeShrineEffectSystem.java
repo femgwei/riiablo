@@ -365,7 +365,7 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       int arg0, int arg1, int durationFrames) {
     if (!mUnitStates.has(playerId)) return null;
     UnitStates states = mUnitStates.get(playerId);
-    if (states.stateList == null) states.init(playerId);
+    if (states.stateList == null) states.init(world, playerId);
     return applyTimedEffect(states.stateList, shrineEntityId, code,
         arg0, arg1, durationFrames);
   }

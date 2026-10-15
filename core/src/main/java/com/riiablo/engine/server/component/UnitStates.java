@@ -1,9 +1,11 @@
 package com.riiablo.engine.server.component;
 
 import com.artemis.Component;
+import com.artemis.World;
 import com.artemis.annotations.PooledWeaver;
 
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.NativeTargetNodes;
 
 /**
  * 单位状态组件 - 存储单位上的所有状态效果
@@ -45,6 +47,13 @@ public class UnitStates extends Component {
   public int resolvedMaxManaEncoded;
   public int resolvedMaxStaminaEncoded;
   public long observedAggregateRevision;
+
+  /** Authoritative allocation path; init(int) remains the detached/client bridge. */
+  public UnitStates init(World world, int entityId) {
+    init(entityId);
+    stateList.bindNativeTargetNode(NativeTargetNodes.get(world, entityId));
+    return this;
+  }
 
   /**
    * 初始化状态组件

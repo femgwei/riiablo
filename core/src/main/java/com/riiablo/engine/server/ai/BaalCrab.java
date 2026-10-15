@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.NativeAiPathCache;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
@@ -125,6 +126,8 @@ public class BaalCrab extends NativeDecisionAI {
   int lastMaxTargetScore() { return maxTargetScore; }
 
   private int playerOwner(int id) {
+    NativeTargetNode node = nativeNode(id);
+    if (node != null) return node.ownerId();
     if (isNode9(id)) return Engine.INVALID_ENTITY;
     if (mMercenary.has(id)) return mMercenary.get(id).ownerId;
     if (mSummonedPet.has(id)) return mSummonedPet.get(id).ownerId;
@@ -135,6 +138,8 @@ public class BaalCrab extends NativeDecisionAI {
 
   private boolean isNode9(int id) {
     if (!mMonster.has(id)) return false;
+    NativeTargetNode node = nativeNode(id);
+    if (node != null) return node.isNode9();
     if (mSummonedPet.has(id) && mSummonedPet.get(id).boneWall) return true;
     // A retained curse flag cannot hide a newer Conversion insertion; nor
     // may a second state steal a node already inserted into the player group.
@@ -143,15 +148,19 @@ public class BaalCrab extends NativeDecisionAI {
   }
 
   private long playerChildOrder(int id) {
-    if (mMercenary.has(id)) return mMercenary.get(id).nativeTargetOrder;
-    if (mSummonedPet.has(id)) return mSummonedPet.get(id).nativeTargetOrder;
+    NativeTargetNode node = nativeNode(id);
+    if (node != null) return node.isNode9() ? 0 : node.order();
+    if (mMercenary.has(id)) return mMercenary.get(id).nativeTargetOrder();
+    if (mSummonedPet.has(id)) return mSummonedPet.get(id).nativeTargetOrder();
     return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
         ? mUnitStates.get(id).stateList.nativeConversionOrder() : 0;
   }
 
   private long node9Order(int id) {
+    NativeTargetNode node = nativeNode(id);
+    if (node != null) return node.isNode9() ? node.order() : 0;
     if (mSummonedPet.has(id) && mSummonedPet.get(id).boneWall) {
-      return mSummonedPet.get(id).nativeTargetOrder;
+      return mSummonedPet.get(id).nativeTargetOrder();
     }
     return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
         ? mUnitStates.get(id).stateList.nativeNode9Order() : 0;
@@ -164,6 +173,12 @@ public class BaalCrab extends NativeDecisionAI {
         : mCofReference.has(id) ? mCofReference.get(id).mode : Engine.INVALID_MODE;
     // MonsterMode.cpp removes the node on entering DT, not merely at HP zero.
     return mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD;
+  }
+
+  private NativeTargetNode nativeNode(int id) {
+    // Production allocation owns one shared node. Detached/custom fixtures
+    // retain the historical component projection rather than guessing imports.
+    return Riiablo.engine.getMapper(NativeTargetNode.class).get(id);
   }
 
   private int node9Fallback(IntBag units, int primary) {

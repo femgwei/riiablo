@@ -1179,7 +1179,7 @@ public class Actioneer extends PassiveSystem {
           break;
         }
         UnitStates states = mUnitStates.get(entityId);
-        if (states.stateList == null) states.init(entityId);
+        if (states.stateList == null) states.init(world, entityId);
         int level = Math.max(1, skillLevel(entityId, casting.skillId));
         UnitState inferno = states.stateList.getState(StateId.INFERNO);
         if (inferno == null) {
@@ -1272,7 +1272,7 @@ public class Actioneer extends PassiveSystem {
           break;
         }
         UnitStates states = mUnitStates.get(entityId);
-        if (states.stateList == null) states.init(entityId);
+        if (states.stateList == null) states.init(world, entityId);
         int level = Math.max(1, skillLevel(entityId, casting.skillId));
         UnitState bladeShield = AssassinSkills.applyBladeShieldState(
             states.stateList, skill, level, entityId);
@@ -1565,8 +1565,8 @@ public class Actioneer extends PassiveSystem {
           missile != null ? missile.Missile : "missing");
       return;
     }
-    if (targetStates == null) targetStates = mUnitStates.create(targetId).init(targetId);
-    if (targetStates.stateList == null) targetStates.init(targetId);
+    if (targetStates == null) targetStates = mUnitStates.create(targetId).init(world, targetId);
+    if (targetStates.stateList == null) targetStates.init(world, targetId);
     UnitState noSelect = targetStates.stateList.addState(
         StateId.CORPSE_NOSELECT, Integer.MAX_VALUE, level, entityId);
     if (noSelect != null) {
@@ -1737,7 +1737,7 @@ public class Actioneer extends PassiveSystem {
           }
           if (runtime.previousStrikeHit && mUnitStates.has(entityId)) {
             UnitStates states = mUnitStates.get(entityId);
-            if (states.stateList == null) states.init(entityId);
+            if (states.stateList == null) states.init(world, entityId);
             UnitState state = BarbarianSkills.applyFrenzyState(
                 states.stateList, activeSkill, activeSkillLevel, entityId);
             log.info("[FRENZY] phase=apply_previous source={} skill={} state={} level={} "
@@ -2242,7 +2242,7 @@ public class Actioneer extends PassiveSystem {
           Casting casting = mCasting.get(entityId);
           Skills.Entry chargeSkill = Riiablo.files.skills.get(casting.skillId);
           UnitStates unitStates = mUnitStates.get(entityId);
-          if (unitStates.stateList == null) unitStates.init(entityId);
+          if (unitStates.stateList == null) unitStates.init(world, entityId);
           UnitState charge = AssassinSkills.addProgressiveCharge(unitStates.stateList,
               chargeSkill, Math.max(1, skillLevel(entityId, casting.skillId)), entityId);
           if (charge == null) {
@@ -2463,7 +2463,7 @@ public class Actioneer extends PassiveSystem {
           break;
         }
         UnitStates unitStates = mUnitStates.get(entityId);
-        if (unitStates.stateList == null) unitStates.init(entityId);
+        if (unitStates.stateList == null) unitStates.init(world, entityId);
         int level = Math.max(1, skillLevel(entityId, shapeSkill.Id));
         DruidSkills.ShapeShiftResult result = DruidSkills.applyShapeShiftState(
             unitStates.stateList, shapeSkill, level, entityId,
@@ -3059,7 +3059,7 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId);
       return;
     }
-    if (targetStates.stateList == null) targetStates.init(targetId);
+    if (targetStates.stateList == null) targetStates.init(world, targetId);
     // Recasting the same state refreshes the native stat-list rather than
     // stacking two ownership overlays.
     targetStates.stateList.removeState(StateId.CONVERSION);
@@ -3126,7 +3126,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     UnitStates states = mUnitStates.get(entityId);
-    if (states.stateList == null) states.init(entityId);
+    if (states.stateList == null) states.init(world, entityId);
     if (!DruidSkills.isSkillAllowedInCurrentShape(skill, states.stateList)) {
       log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} skill={} reason=shape_restriction",
           entityId, skill.skill);
@@ -3201,7 +3201,7 @@ public class Actioneer extends PassiveSystem {
     }
     UnitStates states = mUnitStates.get(entityId);
     if (states == null) return;
-    if (states.stateList == null) states.init(entityId);
+    if (states.stateList == null) states.init(world, entityId);
     Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
     int level = Math.max(1, skillLevel(entityId, casting.skillId));
     UnitState feralState = DruidSkills.applyFeralMaulState(
@@ -3255,7 +3255,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     UnitStates unitStates = mUnitStates.get(entityId);
-    if (unitStates.stateList == null) unitStates.init(entityId);
+    if (unitStates.stateList == null) unitStates.init(world, entityId);
     if (!DruidSkills.isSkillAllowedInCurrentShape(skill, unitStates.stateList)) {
       log.info("[DRUID_{}] phase=start_reject source={} target={} reason=shape_restriction",
           rabies ? "RABIES" : "FIRE_CLAWS", entityId, targetId);
@@ -3344,7 +3344,7 @@ public class Actioneer extends PassiveSystem {
     resolveDruidElementalMeleeDamage(entityId, targetId, combat, "RABIES");
     if (!mUnitStates.has(targetId) || !isAlive(targetId)) return;
     UnitStates targetStates = mUnitStates.get(targetId);
-    if (targetStates.stateList == null) targetStates.init(targetId);
+    if (targetStates.stateList == null) targetStates.init(world, targetId);
     if (!targetStates.stateList.hasState(StateId.RABIES)) {
       UnitState infected = targetStates.stateList.addState(
           StateId.RABIES, Math.max(10, combat.poisonBaseDuration),
@@ -3450,7 +3450,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     UnitStates unitStates = mUnitStates.get(entityId);
-    if (unitStates.stateList == null) unitStates.init(entityId);
+    if (unitStates.stateList == null) unitStates.init(world, entityId);
     if (!DruidSkills.isSkillAllowedInCurrentShape(skill, unitStates.stateList)) {
       casting.furyRemainingStrikes = 0;
       log.info("[DRUID_FURY] phase=strike_reject source={} reason=shape_lost", entityId);
@@ -3547,7 +3547,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     UnitStates states = mUnitStates.get(entityId);
-    if (states.stateList == null) states.init(entityId);
+    if (states.stateList == null) states.init(world, entityId);
     if (!DruidSkills.isSkillAllowedInCurrentShape(skill, states.stateList)
         || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
       log.info("[DRUID_HUNGER] phase=reject source={} target={} reason=shape_or_range",
@@ -3835,7 +3835,7 @@ public class Actioneer extends PassiveSystem {
     }
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
-      if (states.stateList == null) states.init(entityId);
+      if (states.stateList == null) states.init(world, entityId);
       states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
     }
     log.info("[TELEPORT] phase=warp entity={} from=({}, {}) requested=({}, {}) landing=({}, {}) flags={} status=PASS",
@@ -3943,7 +3943,7 @@ public class Actioneer extends PassiveSystem {
         casting.skillId, level, destination, start);
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
-      if (states.stateList == null) states.init(entityId);
+      if (states.stateList == null) states.init(world, entityId);
       UnitState state = states.stateList.addState(
           StateId.WHIRLWIND, 0, level, entityId);
       state.skillId = casting.skillId;
@@ -3986,7 +3986,7 @@ public class Actioneer extends PassiveSystem {
         skill, level, name -> baseSkillLevel(entityId, name));
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
-      if (states.stateList == null) states.init(entityId);
+      if (states.stateList == null) states.init(world, entityId);
       UnitState state = states.stateList.addState(
           StateId.BERSERK, duration, level, entityId);
       if (state != null) {

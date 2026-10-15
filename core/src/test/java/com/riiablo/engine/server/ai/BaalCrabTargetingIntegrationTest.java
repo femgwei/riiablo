@@ -88,7 +88,7 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
       f.world.process();
       pet(f, false, 30, 10, 2);
       int unknown = pet(f, true, 30, 10, 2);
-      f.world.getMapper(Mercenary.class).get(unknown).nativeTargetOrder = 0;
+      f.world.getMapper(Mercenary.class).get(unknown).detachNativeTargetNode();
       f.world.getMapper(Player.class).create(f.target);
       f.world.process();
       assertEquals(f.target, select(f));

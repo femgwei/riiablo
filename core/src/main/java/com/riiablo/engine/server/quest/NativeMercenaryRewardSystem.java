@@ -21,7 +21,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.MercenaryFollowSystem;
 import com.riiablo.engine.server.NativePlayerTargetSlots;
-import com.riiablo.engine.server.NativeTargetOrder;
+import com.riiablo.engine.server.NativeTargetNodes;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
@@ -355,6 +355,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     // Hirelings use monster presentation data, but must never run hostile
     // monster AI or expose the hostile click target installed by that factory.
     Mercenary component = mMercenary.create(entityId)
+        .bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
         .set(playerId, def.mercType, level, seed, nameId);
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null : hirelingTable.stats(def.mercType, level);
@@ -452,9 +453,9 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     // runtime AI state are not a new hire. A missing/full owner head leaves
     // the successfully resurrected unit unlinked, not queued for promotion.
     NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
-    mMercenary.get(entityId).nativeTargetOrder = slots == null
-        || slots.slotOf(playerId) < NativePlayerTargetSlots.SLOT_COUNT
-        ? NativeTargetOrder.inserted() : 0;
+    if (slots == null || slots.slotOf(playerId) < NativePlayerTargetSlots.SLOT_COUNT) {
+      mMercenary.get(entityId).insertNativeTargetNode();
+    }
     return true;
   }
 

@@ -322,7 +322,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     }
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
-      if (states.stateList == null) states.init(entityId);
+      if (states.stateList == null) states.init(world, entityId);
       states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
     }
     repathCooldown.remove(entityId);

@@ -10,6 +10,7 @@ import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
 import com.riiablo.engine.server.NativeTargetOrder;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -51,15 +52,27 @@ public class StateList {
   // Membership-event projection, not the complete native stat-list/node registry.
   private long node9Order;
   private long conversionOrder;
+  private NativeTargetNode nativeTargetNode;
 
-  public long nativeNode9Order() { return node9Order; }
-  public long nativeConversionOrder() { return conversionOrder; }
+  /** Bind before gameplay insertion; snapshots/standalone lists stay unbound. */
+  public void bindNativeTargetNode(NativeTargetNode node) {
+    nativeTargetNode = node;
+    node9Order = conversionOrder = 0;
+  }
+
+  public long nativeNode9Order() {
+    return nativeTargetNode == null ? node9Order : nativeTargetNode.order(NativeTargetNode.CURSE);
+  }
+  public long nativeConversionOrder() {
+    return nativeTargetNode == null ? conversionOrder : nativeTargetNode.order(NativeTargetNode.CONVERSION);
+  }
 
   /** TARGETS_Last does not itself free stat lists or their payload. Retained
    * state flags (or refreshing a layer) must not resurrect a removed node. */
   public void detachNativeTargetNode() {
     node9Order = 0;
     conversionOrder = 0;
+    if (nativeTargetNode != null) nativeTargetNode.detach();
   }
 
   public enum DeathUnitType {
@@ -278,7 +291,13 @@ public class StateList {
     flags.set(stateId);
     // Targets.cpp insertion requires dwNodeIndex == 11. A second state is
     // not a second node or an implicit migration to another target bucket.
-    if (node9Order == 0 && conversionOrder == 0) {
+    if (nativeTargetNode != null) {
+      if (stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) {
+        nativeTargetNode.insert(NativeTargetNode.CURSE, sourceEntityId);
+      } else if (stateId == StateId.CONVERSION) {
+        nativeTargetNode.insert(NativeTargetNode.CONVERSION, sourceEntityId);
+      }
+    } else if (node9Order == 0 && conversionOrder == 0) {
       if (stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) {
         node9Order = NativeTargetOrder.inserted();
       } else if (stateId == StateId.CONVERSION) {
@@ -395,7 +414,6 @@ public class StateList {
   public void clearAll() {
     removeMatching(state -> true);
     flags.clearAll();
-    detachNativeTargetNode();
     log.debug("清除实体 {} 的所有状态", entityId);
   }
 
@@ -408,6 +426,7 @@ public class StateList {
     flags.clearAll();
     node9Order = 0;
     conversionOrder = 0;
+    nativeTargetNode = null;
     log.debug("清除实体 {} 的所有状态", entityId);
   }
 

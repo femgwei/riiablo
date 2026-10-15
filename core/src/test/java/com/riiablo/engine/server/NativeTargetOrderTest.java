@@ -20,12 +20,12 @@ class NativeTargetOrderTest {
     StateList conversionStates = new StateList(43);
     conversionStates.addState(StateId.CONVERSION, 100, 1, 1);
     SummonedPet last = new SummonedPet().set(1, "skeleton", 70, 1, false, 0);
-    assertTrue(first.nativeTargetOrder > 0);
-    assertTrue(merc.nativeTargetOrder > first.nativeTargetOrder);
-    assertTrue(states.nativeNode9Order() > merc.nativeTargetOrder);
+    assertTrue(first.nativeTargetOrder() > 0);
+    assertTrue(merc.nativeTargetOrder() > first.nativeTargetOrder());
+    assertTrue(states.nativeNode9Order() > merc.nativeTargetOrder());
     assertEquals(0, states.nativeConversionOrder(), "one unit is not in both state buckets");
     assertTrue(conversionStates.nativeConversionOrder() > states.nativeNode9Order());
-    assertTrue(last.nativeTargetOrder > conversionStates.nativeConversionOrder());
+    assertTrue(last.nativeTargetOrder() > conversionStates.nativeConversionOrder());
     assertEquals(first.spawnOrder + 1, last.spawnOrder, "target ordering is not quota eviction ordering");
   }
 
@@ -54,8 +54,8 @@ class NativeTargetOrderTest {
       world.delete(first);
       world.process();
       int next = world.create();
-      assertEquals(0, world.getMapper(Mercenary.class).create(next).nativeTargetOrder);
-      assertEquals(0, world.getMapper(SummonedPet.class).create(next).nativeTargetOrder);
+      assertEquals(0, world.getMapper(Mercenary.class).create(next).nativeTargetOrder());
+      assertEquals(0, world.getMapper(SummonedPet.class).create(next).nativeTargetOrder());
       StateList reused = world.getMapper(UnitStates.class).create(next).init(next).stateList;
       assertEquals(0, reused.nativeNode9Order());
       assertEquals(0, reused.nativeConversionOrder());

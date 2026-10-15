@@ -22,8 +22,9 @@ public class SummonedPet extends Component {
   public float elapsedFrames;
   /** Monotonic native pet-list insertion order used for quota eviction. */
   public long spawnOrder;
-  /** Target-node insertion order, shared with hirelings and curse/conversion events. */
-  public long nativeTargetOrder;
+  /** Detached/custom-world fallback only; production reads the shared node. */
+  private long nativeTargetOrder;
+  private NativeTargetNode nativeTargetNode;
   /** True after pet-list removal has started the DT -> DD sequence. */
   public boolean unsummonPending;
   public String unsummonReason;
@@ -62,6 +63,23 @@ public class SummonedPet extends Component {
   /** First segment which owns the remaining wall/prison segments. */
   public int controllerId;
 
+  /** Bind at allocation, before set/gameplay events; never import old metadata. */
+  public SummonedPet bindNativeTargetNode(NativeTargetNode node) {
+    nativeTargetNode = node;
+    nativeTargetOrder = 0;
+    return this;
+  }
+
+  public long nativeTargetOrder() {
+    return nativeTargetNode == null ? nativeTargetOrder
+        : nativeTargetNode.order(boneWall ? NativeTargetNode.WALL : NativeTargetNode.SUMMON);
+  }
+
+  public void detachNativeTargetNode() {
+    nativeTargetOrder = 0;
+    if (nativeTargetNode != null) nativeTargetNode.detach();
+  }
+
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
     this.ownerId = ownerId;
@@ -72,7 +90,13 @@ public class SummonedPet extends Component {
     this.durationFrames = Math.max(0, durationFrames);
     elapsedFrames = 0f;
     spawnOrder = ++nextSpawnOrder;
-    nativeTargetOrder = NativeTargetOrder.inserted();
+    if (nativeTargetNode == null) {
+      // Standalone/custom-world compatibility; production binds before set.
+      nativeTargetOrder = NativeTargetOrder.inserted();
+    } else {
+      nativeTargetNode.insert("bonewall".equals(petType)
+          ? NativeTargetNode.WALL : NativeTargetNode.SUMMON, ownerId);
+    }
     unsummonPending = false;
     unsummonReason = null;
     networkReplica = false;

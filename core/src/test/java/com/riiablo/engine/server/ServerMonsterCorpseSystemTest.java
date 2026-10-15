@@ -50,7 +50,7 @@ class ServerMonsterCorpseSystemTest {
       states.addState(StateId.CONVERSION, 100, 1, 3).basicStatList = true;
       states.addState(StateId.CONFUSE, 100, 1, 3).basicStatList = true;
       events.dispatch(DeathEvent.obtain(9, id));
-      assertEquals(0, pet.nativeTargetOrder);
+      assertEquals(0, pet.nativeTargetOrder());
       assertEquals(0, states.nativeConversionOrder());
       assertEquals(0, states.nativeNode9Order());
       assertTrue(states.hasState(StateId.CONVERSION));
@@ -81,7 +81,7 @@ class ServerMonsterCorpseSystemTest {
       assertNotNull(sequence);
       assertEquals(Engine.Monster.MODE_DT, sequence.mode1);
       assertEquals(Engine.Monster.MODE_DD, sequence.mode2);
-      assertEquals(0, world.getMapper(Mercenary.class).get(mercenaryId).nativeTargetOrder);
+      assertEquals(0, world.getMapper(Mercenary.class).get(mercenaryId).nativeTargetOrder());
     } finally {
       world.dispose();
     }
@@ -98,11 +98,11 @@ class ServerMonsterCorpseSystemTest {
       Mercenary merc = world.getMapper(Mercenary.class).create(id);
       for (byte mode : new byte[] {Engine.Monster.MODE_DT, Engine.Monster.MODE_DD}) {
         merc.set(3, 0, 8, 7, 2);
-        assertTrue(merc.nativeTargetOrder > 0);
+        assertTrue(merc.nativeTargetOrder() > 0);
         events.dispatch(ModeChangeEvent.obtain(id, mode));
-        assertEquals(0, merc.nativeTargetOrder);
+        assertEquals(0, merc.nativeTargetOrder());
         events.dispatch(ModeChangeEvent.obtain(id, Engine.Monster.MODE_NU));
-        assertEquals(0, merc.nativeTargetOrder, "NU is not UpdateSummonAI");
+        assertEquals(0, merc.nativeTargetOrder(), "NU is not UpdateSummonAI");
       }
     } finally {
       world.dispose();

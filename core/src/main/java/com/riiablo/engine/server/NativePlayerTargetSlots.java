@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.component.Sequence;
 
 /** Targets.cpp player-head slots only, not the complete native child/node registry. */
@@ -29,6 +30,7 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
   private final long[] headOrders = new long[SLOT_COUNT];
   private final IntIntMap slots = new IntIntMap();
   private final IntSet allocationAttempts = new IntSet();
+  private EntitySubscription targetNodes;
 
   public NativePlayerTargetSlots() {
     Arrays.fill(heads, Engine.INVALID_ENTITY);
@@ -36,6 +38,7 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
 
   @Override
   protected void initialize() {
+    targetNodes = world.getAspectSubscriptionManager().get(Aspect.all(NativeTargetNode.class));
     // The all-entity subscription reports even an allocation destroyed before
     // its first Player subscription insertion. Otherwise immediate factory
     // registration would leak that head (and block an eventual recycled ID).
@@ -108,6 +111,13 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
   private void releaseSlot(int entityId) {
     int slot = slots.remove(entityId, UNREGISTERED);
     if (slot < SLOT_COUNT) {
+      // FreeUnitNode sets every child to 11, even children never scanned by AI.
+      IntBag nodes = targetNodes.getEntities();
+      ComponentMapper<NativeTargetNode> mapper = world.getMapper(NativeTargetNode.class);
+      for (int i = 0; i < nodes.size(); i++) {
+        NativeTargetNode node = mapper.get(nodes.get(i));
+        if (node != null && node.ownerId() == entityId) node.detach();
+      }
       heads[slot] = Engine.INVALID_ENTITY;
       headOrders[slot] = 0;
     }

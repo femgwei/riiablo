@@ -286,7 +286,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
 
     UnitStates states = mUnitStates.has(entityId) ? mUnitStates.get(entityId) : null;
     if (states != null) {
-      if (states.stateList == null) states.init(entityId);
+      if (states.stateList == null) states.init(world, entityId);
       states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
     }
     if (events != null) events.dispatch(ZoneChangeEvent.obtain(entityId, destination));

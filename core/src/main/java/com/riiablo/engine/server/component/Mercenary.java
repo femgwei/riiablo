@@ -10,8 +10,9 @@ import com.riiablo.engine.server.NativeTargetOrder;
 @PooledWeaver
 public class Mercenary extends Component {
   public int ownerId = -1;
-  /** Runtime target-node insertion order; independent of entity allocation order. */
-  public long nativeTargetOrder;
+  /** Detached/custom-world fallback only; production reads the shared node. */
+  private long nativeTargetOrder;
+  private NativeTargetNode nativeTargetNode;
   public int mercType;
   public int level;
   public int seed;
@@ -25,9 +26,31 @@ public class Mercenary extends Component {
   public int aiChanceParam;
   public int targetId = -1;
 
+  /** Bind at allocation, before set/gameplay events; never import old metadata. */
+  public Mercenary bindNativeTargetNode(NativeTargetNode node) {
+    nativeTargetNode = node;
+    nativeTargetOrder = 0;
+    return this;
+  }
+
+  public long nativeTargetOrder() {
+    return nativeTargetNode == null ? nativeTargetOrder : nativeTargetNode.order(NativeTargetNode.MERCENARY);
+  }
+
+  public void detachNativeTargetNode() {
+    nativeTargetOrder = 0;
+    if (nativeTargetNode != null) nativeTargetNode.detach();
+  }
+
+  /** NPC resurrection is a node insertion, not a new hire/AI reset. */
+  public void insertNativeTargetNode() {
+    if (nativeTargetNode == null) nativeTargetOrder = NativeTargetOrder.inserted();
+    else nativeTargetNode.insert(NativeTargetNode.MERCENARY, ownerId);
+  }
+
   public Mercenary set(int ownerId, int mercType, int level, int seed, int nameId) {
     this.ownerId = ownerId;
-    this.nativeTargetOrder = NativeTargetOrder.inserted();
+    insertNativeTargetNode();
     this.mercType = mercType;
     this.level = level;
     this.seed = seed;
