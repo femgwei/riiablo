@@ -24,6 +24,30 @@
   NPC/掉落物交互和城镇/野外切换，并核对 `[PLAYER_ANIM]` 日志。
 
 
+## 2026-10-15 角色停止后旧跑步动画的恢复
+
+- 用户提供的桌面 `game.log` 中，玩家137多次正确切换 `RN -> NU`，同时速度归零、
+  路径清除；这证明逻辑停止已发生，尚不能单凭该日志确定实际显示的COF/DCC。
+  D2MOO `PlrModes.cpp:159` 的 `PLRMODE_StartXY_Neutral` 明确按城镇选择TN/NU。
+- `CofLayerCacher` 过去仅订阅瞬时loading组件；构造“逻辑与已解析COF均为站立、
+  Animation仍保留RN、loading已消失”的回归，修改前永久不恢复，修改后可自动恢复。
+  这验证了恢复缺口，原始运行中造成不同步的最初触发条件尚未复现。
+- 现在持续核对已解析COF与实际Animation，不一致时重新请求完整图层；
+  `CofLayerLoader` 同时在正常process中消费dirty请求，cacher等待新图层描述符再绑定。
+  新增 `[PLAYER_ANIM]` 的recover/layers_ready日志，后者包含真实DCC/DC6路径供实机复核。
+- 定向测试26项通过，失败/错误/跳过0：`CofModeTransitionTest`（2）、
+  `CofLayerLoaderReleaseTest`（6）、`AnimationStepperTest`（7）、`VelocityModeChangerTest`（11）。
+  命令为 `gradlew.bat :core:test --tests com.riiablo.engine.client.CofModeTransitionTest
+  --tests com.riiablo.engine.client.CofLayerLoaderReleaseTest
+  --tests com.riiablo.engine.client.AnimationStepperTest
+  --tests com.riiablo.engine.server.VelocityModeChangerTest --no-daemon`，
+  D2_HOME/D2_TEST指定本机合法1.10F目录。
+- 真实1.10f `:desktop:offscreenCamp` 输出 `result=PASS`，完成营地与3帧渲染；
+  报告位于 `desktop/build/visual-tests/run-idle-regression/rogue-encampment-manifest.txt`。
+  该启动检查不等于原角色完整移动验收；下一步由另一台电脑拉取后复测跑步、停止、
+  NPC/掉落物交互和城镇/野外切换，并核对 `[PLAYER_ANIM]` 日志。
+
+
 ## 2026-10-15 D2MOO 第六批：真实地图差分与结果分类
 
 - [x] 默认关闭的shadow增加`pathShadowLevel`来源关卡过滤，其他关卡不消耗频率/额度；

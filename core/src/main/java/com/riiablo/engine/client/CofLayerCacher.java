@@ -15,6 +15,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.client.component.CofLoadingComponents;
+import com.riiablo.engine.client.component.CofDirtyComponents;
 import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;
@@ -29,7 +30,8 @@ import com.riiablo.engine.server.event.CofChangeEvent;
 import net.mostlyoriginal.api.event.common.Subscribe;
 
 @All({
-    CofLoadingComponents.class, CofWrapper.class, CofComponents.class, AnimData.class
+    CofWrapper.class, CofComponents.class, AnimData.class,
+    AnimationWrapper.class, CofComponentDescriptors.class
 })
 public class CofLayerCacher extends IteratingSystem {
   private static final String TAG = "CofLayerCacher";
@@ -41,6 +43,7 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<CofComponents> mCofComponents;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<CofLoadingComponents> mCofLoadingComponents;
+  protected ComponentMapper<CofDirtyComponents> mCofDirtyComponents;
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<AIWrapper> mAIWrapper;
@@ -52,17 +55,44 @@ public class CofLayerCacher extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    // Live unit rate synchronization belongs to AnimationStepper, whose
-    // subscription survives removal of the transient loading component.
+    // Live animation rates are handled by AnimationStepper. Keep this
+    // subscription alive after loading so missed COF changes can recover.
     CofLoadingComponents loading = mCofLoadingComponents.get(entityId);
-    // A mode/COF change can remove the transient loading component while this
-    // subscription is being iterated (notably during the initial town
-    // presentation pass).  Artemis may still hand the stale entity id to
-    // this system for the current pass; do not turn that benign race into a
-    // LWJGL-thread crash that aborts the game before summons are presented.
-    if (loading == null) return;
+    // Never bind an old mode's pending DCCs to a freshly resolved COF before
+    // CofLayerLoader has published that COF's layer descriptors.
+    if (mCofDirtyComponents.has(entityId)) return;
+    if (loading == null) {
+      // Loading is transient, but the renderer's Animation is persistent.
+      // Recover a missed mode refresh even after the last loading marker was
+      // consumed; otherwise an idle unit can loop its old RN layers forever.
+      Animation animation = mAnimationWrapper.get(entityId).animation;
+      if (animation.getCOF() != mCofWrapper.get(entityId).cof) {
+        mCofDirtyComponents.create(entityId).flags |= Dirty.ALL;
+        if (mPlayer.has(entityId) && Gdx.app != null) {
+          CofReference reference = mCofReference.get(entityId);
+          Gdx.app.log(TAG, "[PLAYER_ANIM] phase=recover entity=" + entityId
+              + " mode=" + (reference == null ? -1 : reference.mode));
+        }
+      }
+      return;
+    }
     loading.flags = cacheDcs(entityId, loading.flags);
-    if (loading.flags == Dirty.NONE) mCofLoadingComponents.remove(entityId);
+    if (loading.flags == Dirty.NONE) {
+      mCofLoadingComponents.remove(entityId);
+      if (mPlayer.has(entityId) && Gdx.app != null) {
+        CofReference reference = mCofReference.get(entityId);
+        StringBuilder paths = new StringBuilder();
+        for (AssetDescriptor<? extends DC> descriptor
+            : mCofComponentDescriptors.get(entityId).descriptors) {
+          if (descriptor == null) continue;
+          if (paths.length() > 0) paths.append('|');
+          paths.append(descriptor.fileName);
+        }
+        Gdx.app.log(TAG, "[PLAYER_ANIM] phase=layers_ready entity=" + entityId
+            + " mode=" + (reference == null ? -1 : reference.mode)
+            + " layers=" + paths);
+      }
+    }
   }
 
   @Subscribe

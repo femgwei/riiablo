@@ -54,11 +54,22 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   @Override
-  protected void process(int entityId) {}
+  protected void process(int entityId) {
+    // Dirty requests may be coalesced while a COF is removed/recreated in
+    // one ECS pass. Drain them here as well as on subscription insertion.
+    // Waiting only for inserted() can leave the previous mode resident.
+    if (!mCofDirtyComponents.has(entityId)) return;
+    loadDirtyLayers(entityId);
+  }
 
   @Override
   protected void inserted(int entityId) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "inserted");
+    loadDirtyLayers(entityId);
+  }
+
+  private void loadDirtyLayers(int entityId) {
+    if (!mCofDirtyComponents.has(entityId)) return;
     int flags = mCofDirtyComponents.get(entityId).flags;
     int requiresReload = loadDcs(entityId, flags);
     mCofDirtyComponents.remove(entityId);
