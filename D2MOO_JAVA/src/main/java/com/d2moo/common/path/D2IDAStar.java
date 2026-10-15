@@ -9,9 +9,10 @@ import java.util.Map;
 /**
  * Standalone port of D2Common {@code Path/IDAStar.cpp}.
  *
- * <p>The implementation intentionally stays independent of riiablo's runtime pathfinder. It
- * preserves the native node and visit limits, direction-dependent neighbor order, five-point
- * F-score increments, coordinate-distance cache, and path flush behavior.
+ * <p>The implementation intentionally stays independent of riiablo's runtime pathfinder.
+ * The existing findPath API is a general-coordinate reference. findNativePath additionally
+ * models the verified deterministic 1.10f type0 entry arithmetic/cache lifecycle; neither
+ * API installs a production movement backend or implements type16's unit RNG stream.
  */
 public final class D2IDAStar {
     public static final int MAX_ROOM_AREA = 50_000;
@@ -73,7 +74,65 @@ public final class D2IDAStar {
             throw new IllegalArgumentException("targetDistanceThreshold must not be negative");
         }
 
-        Context context = new Context(bounds, collision);
+        return search(start, target, bounds, collision, initialHeuristic,
+                maximumFScoreExclusive, targetDistanceThreshold, false);
+    }
+
+    /** Deterministic type0 rooms-core projection (0x6FDA7A4E..81BA).
+     * initialFScore is the PathInfo uint8 ceiling input; threshold is already doubled
+     * and narrowed by the outer wrapper. No A* target-unit approach gate applies here.
+     * Unsafe native cache-buffer overflow/word-wrapped room domains are rejected. */
+    public static Result findNativePath(D2Path.Point start, D2Path.Point target, Bounds bounds,
+            D2AStar.Collision collision, int initialFScore, int targetDistanceThreshold) {
+        if (!uint16(start) || !uint16(target) || bounds == null || collision == null
+                || bounds.minX < 0 || bounds.minY < 0 || bounds.maxX > 65535 || bounds.maxY > 65535
+                || initialFScore < 0 || initialFScore > 255
+                || targetDistanceThreshold < 0 || targetDistanceThreshold > 255) {
+            throw new IllegalArgumentException("native word coordinates/bounds and byte scores required");
+        }
+        int initial = (short) D2Path.aStarHeuristic(start.x,start.y,target.x,target.y);
+        // 0x6FDA7C1F..7C2D: max(signed root h, unsigned PathInfo byte), unlike upstream's typo.
+        return search(start,target,bounds,collision,initial,Math.max(initial,initialFScore),
+                targetDistanceThreshold,true);
+    }
+
+    /** Outer #7970 room selection. Identity, not equal bounds, decides the same-room branch.
+     * This intentionally follows the directional endpoint calculation, NOT a generic union.
+     * Only the ordered, non-wrapping uint16 room projection is supported. */
+    public static Bounds nativeRoomBounds(D2PathRequest.Room start, D2PathRequest.Room target) {
+        if (start == null) throw new IllegalArgumentException("native IDA start room required");
+        D2PathResult.Room a = start.bounds;
+        long x = a.x, y = a.y, width = a.width, height = a.height;
+        if (target != null && target != start) {
+            D2PathResult.Room b = target.bounds;
+            x = Math.min(a.x,b.x); y = Math.min(a.y,b.y);
+            width = b.x >= a.x ? (long)b.x+b.width-a.x : (long)a.x+a.width-b.x;
+            height = b.y >= a.y ? (long)b.y+b.height-a.y : (long)a.y+a.height-b.y;
+        }
+        if (width == a.width) { x -= 10; width += 20; }
+        if (height == a.height) { y -= 10; height += 20; }
+        if (x < 0 || y < 0 || width <= 0 || height <= 0 || x+width > 65535 || y+height > 65535) {
+            throw new IllegalArgumentException("outside non-wrapping native IDA room domain");
+        }
+        Bounds result = new Bounds((int)x,(int)y,(int)(x+width),(int)(y+height));
+        nativeCacheSize(result); // DLL asserts only the unpadded area; do not emulate its buffer overrun.
+        return result;
+    }
+
+    private static boolean uint16(D2Path.Point p) {
+        return p != null && p.x >= 0 && p.y >= 0 && p.x <= 65535 && p.y <= 65535;
+    }
+
+    private static int nativeCacheSize(Bounds bounds) {
+        long size = ((long)bounds.maxX-bounds.minX+6)*((long)bounds.maxY-bounds.minY+6);
+        if (size > MAX_ROOM_AREA) throw new IllegalArgumentException("outside native 50000-cell padded cache domain");
+        return (int)size;
+    }
+
+    private static Result search(D2Path.Point start, D2Path.Point target, Bounds bounds,
+            D2AStar.Collision collision, int initialHeuristic, int maximumFScoreExclusive,
+            int targetDistanceThreshold, boolean nativeWords) {
+        Context context = new Context(bounds, collision, nativeWords);
         int cutoff = initialHeuristic;
         int iterations = 0;
         int lastNodeCount = 0;
@@ -150,33 +209,34 @@ public final class D2IDAStar {
 
             int[] offset = COORD_OFFSETS[current.nextNeighborIndex];
             D2Path.Point neighbor = new D2Path.Point(
-                    current.point.x + offset[0], current.point.y + offset[1]);
+                    context.coordinate(current.point.x + offset[0]), context.coordinate(current.point.y + offset[1]));
             boolean evaluateNextNeighbor = true;
             boolean mayEvaluateNode = true;
 
-            Integer cachedDistance = context.coordinateData.get(neighbor);
+            Integer cachedDistance = context.cached(neighbor);
             if (cachedDistance != null && cachedDistance == 1) {
                 mayEvaluateNode = false;
             } else if (cachedDistance == null
                     && context.collision.isBlocked(neighbor.x, neighbor.y)) {
                 // One is lower than every legal move cost, so the cell is never tested again.
-                context.coordinateData.put(neighbor, 1);
+                context.cache(neighbor, 1);
                 mayEvaluateNode = false;
             }
 
             if (mayEvaluateNode) {
-                int newDistance = saturatedAdd(
+                int newDistance = context.scoreAdd(
                         current.distanceFromStart,
                         D2Path.neighborCost(
                                 current.point.x, current.point.y, neighbor.x, neighbor.y));
-                cachedDistance = context.coordinateData.get(neighbor);
+                cachedDistance = context.cached(neighbor);
 
                 if (cachedDistance == null
-                        || Integer.compareUnsigned(newDistance, cachedDistance) < 0) {
-                    context.coordinateData.put(neighbor, newDistance);
-                    int heuristic = D2Path.aStarHeuristic(
-                            target.x, target.y, neighbor.x, neighbor.y);
-                    int fScore = saturatedAdd(heuristic, newDistance);
+                        || Integer.compareUnsigned(newDistance, cachedDistance) < 0
+                        || context.nativeWords && newDistance == cachedDistance) {
+                    context.cache(neighbor, newDistance);
+                    int heuristic = context.word(D2Path.aStarHeuristic(
+                            target.x, target.y, neighbor.x, neighbor.y));
+                    int fScore = context.scoreAdd(heuristic, newDistance);
                     if (fScore <= cutoff) {
                         Node child = current.bestChild;
                         if (child == null) {
@@ -198,7 +258,9 @@ public final class D2IDAStar {
                         current.sequenceRow = (direction(neighbor, target)
                                 - parent.nextNeighborIndex) & 7;
                         current.sequenceIndex = 0;
-                        advanceNeighbor(current);
+                        // #817E: reused children start from their PARENT's current direction.
+                        if (context.nativeWords) current.nextNeighborIndex = parent.nextNeighborIndex;
+                        advanceNeighbor(current, context.nativeWords);
 
                         if (current.heuristic < targetDistanceThreshold) {
                             return current;
@@ -209,7 +271,7 @@ public final class D2IDAStar {
             }
 
             if (evaluateNextNeighbor) {
-                current = backtrack(current, context.root);
+                current = backtrack(current, context.root, context.nativeWords);
                 if (current == null) {
                     return null;
                 }
@@ -218,10 +280,10 @@ public final class D2IDAStar {
         return current;
     }
 
-    private static Node backtrack(Node node, Node root) {
+    private static Node backtrack(Node node, Node root, boolean nativeWords) {
         if (node.evaluationsCount < 4) {
             node.sequenceIndex++;
-            advanceNeighbor(node);
+            advanceNeighbor(node, nativeWords);
         }
 
         node.evaluationsCount++;
@@ -229,7 +291,7 @@ public final class D2IDAStar {
             while (node != root) {
                 node = node.parent;
                 node.sequenceIndex++;
-                advanceNeighbor(node);
+                advanceNeighbor(node, nativeWords);
                 if (++node.evaluationsCount != 5) {
                     return node;
                 }
@@ -239,9 +301,13 @@ public final class D2IDAStar {
         return node;
     }
 
-    private static void advanceNeighbor(Node node) {
+    private static void advanceNeighbor(Node node, boolean nativeWords) {
+        // Native parent unwind advances the sequence BEFORE deciding root exhaustion.
+        // Row0 index8 reads the adjacent row1[0], still within the verified 8x8 table.
+        int row = node.sequenceRow + (nativeWords ? node.sequenceIndex / 8 : 0);
+        int column = nativeWords ? node.sequenceIndex % 8 : node.sequenceIndex;
         node.nextNeighborIndex = (node.nextNeighborIndex
-                + NEIGHBOR_SEQUENCES[node.sequenceRow][node.sequenceIndex]) & 7;
+                + NEIGHBOR_SEQUENCES[row][column]) & 7;
     }
 
     private static int direction(D2Path.Point from, D2Path.Point to) {
@@ -280,18 +346,45 @@ public final class D2IDAStar {
         final Bounds bounds;
         final D2AStar.Collision collision;
         final Map<D2Path.Point, Integer> coordinateData = new HashMap<>();
+        final boolean nativeWords;
+        final int[] nativeCache;
+        final int stride;
         final List<Node> nodes = new ArrayList<>(MAX_NODES);
         Node root;
 
-        Context(Bounds bounds, D2AStar.Collision collision) {
+        Context(Bounds bounds, D2AStar.Collision collision, boolean nativeWords) {
             this.bounds = bounds;
             this.collision = collision;
+            this.nativeWords = nativeWords;
+            this.stride = bounds.maxX-bounds.minX+6;
+            this.nativeCache = nativeWords ? new int[nativeCacheSize(bounds)] : null;
+        }
+
+        int coordinate(int value) { return nativeWords ? value & 0xffff : value; }
+        int word(int value) { return nativeWords ? (short)value : value; }
+        int scoreAdd(int a, int b) { return nativeWords ? (short)(a+b) : saturatedAdd(a,b); }
+        int cacheIndex(D2Path.Point point) {
+            long index = (long)point.x+3-bounds.minX
+                    + (long)stride*(point.y+3-bounds.minY);
+            if (index < 0 || index >= nativeCache.length) {
+                throw new IllegalArgumentException("outside native IDA cache memory domain");
+            }
+            return (int)index;
+        }
+        Integer cached(D2Path.Point point) {
+            if (!nativeWords) return coordinateData.get(point);
+            int value = nativeCache[cacheIndex(point)];
+            return value == 0 ? null : value;
+        }
+        void cache(D2Path.Point point, int value) {
+            if (nativeWords) nativeCache[cacheIndex(point)] = value;
+            else coordinateData.put(point,value);
         }
 
         void resetNodes(D2Path.Point start, D2Path.Point target, int heuristic) {
             nodes.clear();
-            // Each larger IDA* threshold must be able to revisit the preceding contour.
-            coordinateData.clear();
+            // #7A78 clears native cache ONCE; #7C31 resets only root/storage count per contour.
+            if (!nativeWords) coordinateData.clear();
             root = allocate();
             root.point = start;
             root.distanceFromStart = 0;

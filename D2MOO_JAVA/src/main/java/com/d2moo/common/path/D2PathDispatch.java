@@ -3,7 +3,7 @@ package com.d2moo.common.path;
 import java.util.List;
 import java.util.Objects;
 
-/** Stateful non-missile entry subset: types 1/2/3/5/6/7/13/15. Does not replace
+/** Stateful non-missile entry subset: types 0/1/2/3/5/6/7/13/15 (0 requires Search rooms). Does not replace
  * production A*, implement every native table entry, or consume movement ticks.
  * Stable request metadata and the native room/pattern/mask policy remain adapter responsibilities. */
 public final class D2PathDispatch {
@@ -13,14 +13,23 @@ public final class D2PathDispatch {
      * Live nDirOffset is used as-is; this must not call PATH_SetType or reapply its table. */
     public static int compute(D2PathRequest.Search search, D2Toward.Collision collision) {
         Objects.requireNonNull(search);
+        if (search.type == 0) {
+            validate(search.state.result,search.start,search.target,search.maximumDistance,search.tolerance,collision);
+            D2IDAStar.Bounds bounds = D2IDAStar.nativeRoomBounds(search.state.startRoom,search.targetRoom);
+            List<D2Path.Point> points = D2IDAStar.findNativePath(search.start,search.target,bounds,
+                    collision::blocked,search.state.initialFScore,(search.tolerance*2)&255).path();
+            writePrefix(search.state.result,points);
+            return points.size(); // as A*: only the outer Request assigns live count/index/vectors
+        }
         return compute(search.state.result, search.start, search.target, search.type,
                 search.maximumDistance, search.tolerance, collision);
     }
 
-    /** Direct PathInfo projection, useful for entry-level verification. For normal requests use Search. */
+    /** Direct projection without room metadata: type0 explicitly requires the Search overload. */
     public static int compute(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
             int type, int maximumDistance, int tolerance, D2Toward.Collision collision) {
         Objects.requireNonNull(state);
+        if (type == 0) throw new UnsupportedOperationException("native type0 requires the room-aware Search overload");
         D2PathTypes.Entry entry = D2PathTypes.entry(type);
         if (entry == D2PathTypes.Entry.NONE) throw new IllegalStateException("native null search entry assertion");
         if (entry != D2PathTypes.Entry.TOWARD && entry != D2PathTypes.Entry.TOWARD_ALIAS
@@ -28,16 +37,8 @@ public final class D2PathDispatch {
                 && entry != D2PathTypes.Entry.STRAIGHT) {
             throw new UnsupportedOperationException("native entry not ported here: " + entry);
         }
+        validate(state,start,target,maximumDistance,tolerance,collision);
         D2PathContinuation.State path = state.path;
-        if ((path.pathFlags & 0x40000) != 0 || path.ownerType != 0 && path.ownerType != 1) {
-            throw new IllegalArgumentException("resolved non-missile player/monster required");
-        }
-        if (!uint16(start) || !uint16(target) || !start.equals(path.currentPoint)
-                || (state.precisionX >>> 16) != start.x || (state.precisionY >>> 16) != start.y
-                || maximumDistance < 0 || maximumDistance > 77 || tolerance < 0 || tolerance > 255) {
-            throw new IllegalArgumentException("synchronized uint16 coordinates and native distance bytes required");
-        }
-        Objects.requireNonNull(collision);
         if (entry == D2PathTypes.Entry.A_STAR) return aStar(state, start, target, collision);
         if (entry == D2PathTypes.Entry.STRAIGHT) {
             int count = toward(state, start, target, maximumDistance, tolerance, collision);
@@ -62,6 +63,20 @@ public final class D2PathDispatch {
             return points.size();
         }
         return toward(state, start, target, maximumDistance, tolerance, collision);
+    }
+
+    private static void validate(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
+            int maximumDistance, int tolerance, D2Toward.Collision collision) {
+        D2PathContinuation.State path = state.path;
+        if ((path.pathFlags & 0x40000) != 0 || path.ownerType != 0 && path.ownerType != 1) {
+            throw new IllegalArgumentException("resolved non-missile player/monster required");
+        }
+        if (!uint16(start) || !uint16(target) || !start.equals(path.currentPoint)
+                || (state.precisionX >>> 16) != start.x || (state.precisionY >>> 16) != start.y
+                || maximumDistance < 0 || maximumDistance > 77 || tolerance < 0 || tolerance > 255) {
+            throw new IllegalArgumentException("synchronized uint16 coordinates and native distance bytes required");
+        }
+        Objects.requireNonNull(collision);
     }
 
     private static int aStar(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
