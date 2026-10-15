@@ -105,6 +105,9 @@ public final class D2PathUnits {
                 : new D2Path.Point(unit.dynamicPath.precisionX >>> 16, unit.dynamicPath.precisionY >>> 16);
     }
 
+    /** Package adapter check: a missing path is not a zeroed, allocated dynamic path. */
+    static boolean hasDynamicPath(Unit unit) { return !isStatic(unit.type) && unit.dynamicPath != null; }
+
     /**
      * PathUtil 0x6FDAB890: add the native FOG lead and store uint16. speed is the
      * owner's +0x68 unsigned byte, not movement velocity. Direction is the target's
