@@ -100,6 +100,23 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
     assertEquals(0, new NativeObjectPopulation().populate(zone, null));
     assertEquals(3, NativeObjectPopulation.densityCount(64,40,40));
   }
+  @Test void skippedExpansionJarRollsStillAdvanceTheSharedObjectSeed() {
+    NativeObjectPopulation population = new NativeObjectPopulation();
+    // With room seed (0,666), group 106 selects jar 443 in all 16 rooms.
+    // Retail Fn1 rolls its chance before rejecting that unsupported class.
+    Map.Zone jars = zone(106);
+    assertEquals(0, population.populate(jars, null));
+    Map.Zone chests = zone(3);
+    chests.map = jars.map;
+    assertTrue(population.populate(chests, null) > 0);
+    // Golden trace of the native seed: game seed (1,666), object-control
+    // seed initialized from its first roll, 16 Fn1 chance rolls, then Fn3
+    // chance and the first unobstructed chest position (mod 98, mod 97).
+    Map.NativeObject first = chests.getNativeObjects().first();
+    assertEquals(5, first.presetIndex);
+    assertEquals(22, first.x);
+    assertEquals(19, first.y);
+  }
   @Test void themeTwoUsesNativeBarrelGrid() {
     boolean generated = false;
     for (int seed = 1; seed <= 32 && !generated; seed++) {

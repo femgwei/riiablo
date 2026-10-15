@@ -262,6 +262,10 @@ final class NativeObjectPopulation {
   }
   private static void clusteredContainers(Map.Zone z, Map.RoomEx r, Objects.Entry b, int density,
       D2Seed seed, String source) {
+    // Retail Fn1 rolls its chance before class dispatch, even for expansion
+    // jar rows which it does not populate. Skipping this roll shifts the
+    // shared object-control seed and changes subsequent rooms' population.
+    next(seed, 100);
     int[] classes;
     int tries = 12, step = 1, stepRange = 0;
     boolean small = false;
@@ -273,7 +277,6 @@ final class NativeObjectPopulation {
       case 208: case 209: classes = new int[]{208,209}; small = true; break;
       default: return;
     }
-    next(seed, 100);
     int remaining = densityCount(density, r.width, r.height);
     while (remaining > 0 && tries-- > 0) {
       int classId = classes[next(seed, classes.length)];
