@@ -10,6 +10,17 @@ import org.junit.jupiter.api.Test;
 
 class TownPortalRegistryTest {
   @Test
+  void nativeZeroBasedActsReturnToTheirOwnTown() {
+    assertEquals(1, TownPortalRegistry.townLevelForAct(0));
+    assertEquals(40, TownPortalRegistry.townLevelForAct(1));
+    assertEquals(75, TownPortalRegistry.townLevelForAct(2));
+    assertEquals(103, TownPortalRegistry.townLevelForAct(3));
+    assertEquals(109, TownPortalRegistry.townLevelForAct(4));
+    assertEquals(-1, TownPortalRegistry.townLevelForAct(-1));
+    assertEquals(-1, TownPortalRegistry.townLevelForAct(5));
+  }
+
+  @Test
   void replacingOneOwnerLeavesOnlyTheNewestPair() {
     TownPortalRegistry registry = new TownPortalRegistry();
     Map.Zone source = openZone();

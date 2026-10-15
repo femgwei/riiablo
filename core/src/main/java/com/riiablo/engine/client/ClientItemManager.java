@@ -277,7 +277,9 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     Vector2 portalPosition = new Vector2(playerPosition.position);
     if (!wrapper.zone.findFreeCoordinates(portalPosition, 1, 16, true, portalPosition)) return;
     int sourceLevel = wrapper.zone.level == null ? -1 : wrapper.zone.level.Id;
-    int destinationTown = townLevelForAct(wrapper.zone.level == null ? 1 : wrapper.zone.level.Act);
+    int destinationTown = TownPortalRegistry.townLevelForAct(
+        wrapper.zone.level == null ? -1 : wrapper.zone.level.Act);
+    if (destinationTown < 0) return;
     Map.Zone townZone = sourceLevel <= 0 || Riiablo.files.Levels.get(destinationTown) == null
         || wrapper.map == null ? null
         : wrapper.map.findZone(Riiablo.files.Levels.get(destinationTown));
@@ -312,16 +314,6 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     townPortalRegistry.replace(Riiablo.game.player, world, wrapper.zone, portalPosition,
         visual, warp, townZone, returnPosition, returnVisual, returnWarp);
     if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
-  }
-
-  private static int townLevelForAct(int act) {
-    switch (act) {
-      case 2: return 40;  // Lut Gholein
-      case 3: return 75;  // Kurast Docks
-      case 4: return 103; // Pandemonium Fortress
-      case 5: return 109; // Harrogath
-      default: return 1;  // Rogue Encampment
-    }
   }
 
   @Override

@@ -9007,8 +9007,9 @@ public class D2GS extends ApplicationAdapter {
           if (!wrapper.zone.findFreeCoordinates(portal, 1, 16, true, portal)) return false;
           source[0] = wrapper.zone;
           int sourceLevel = source[0].level == null ? -1 : source[0].level.Id;
-          int destinationTown = townLevelForAct(source[0].level == null
-              ? 1 : source[0].level.Act);
+          int destinationTown = TownPortalRegistry.townLevelForAct(source[0].level == null
+              ? -1 : source[0].level.Act);
+          if (destinationTown < 0) return false;
           com.riiablo.codec.excel.Levels.Entry townLevel = Riiablo.files.Levels.get(destinationTown);
           town[0] = townLevel == null ? null : map.findZone(townLevel);
           if (sourceLevel <= 0 || town[0] == null) return false;
@@ -9048,7 +9049,7 @@ public class D2GS extends ApplicationAdapter {
           + " visual=" + visual[0] + " warp=" + warp[0]
           + " returnVisual=" + returnVisual[0] + " returnWarp=" + returnWarp[0]
           + " destination=" + (source[0] == null || source[0].level == null
-              ? 1 : townLevelForAct(source[0].level.Act)));
+              ? -1 : TownPortalRegistry.townLevelForAct(source[0].level.Act)));
     } else {
       if (warp[0] != Engine.INVALID_ENTITY) world.delete(warp[0]);
       if (visual[0] != Engine.INVALID_ENTITY) world.delete(visual[0]);
@@ -9056,16 +9057,6 @@ public class D2GS extends ApplicationAdapter {
       if (returnVisual[0] != Engine.INVALID_ENTITY) world.delete(returnVisual[0]);
     }
     return outcome;
-  }
-
-  private static int townLevelForAct(int act) {
-    switch (act) {
-      case 2: return 40;  // Lut Gholein
-      case 3: return 75;  // Kurast Docks
-      case 4: return 103; // Pandemonium Fortress
-      case 5: return 109; // Harrogath
-      default: return 1;  // Rogue Encampment
-    }
   }
 
   /** Finds a free logical item subtile while preserving native sprite overlap. */

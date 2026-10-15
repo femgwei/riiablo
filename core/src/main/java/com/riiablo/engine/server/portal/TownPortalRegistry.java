@@ -24,6 +24,18 @@ public final class TownPortalRegistry {
   /** Minimum separation between town-side portal anchors. */
   private static final float PORTAL_SEPARATION = 3f;
 
+  /** DUNGEON_GetTownLevelIdFromActNo: Levels.txt Act is zero-based (0..4). */
+  public static int townLevelForAct(int act) {
+    switch (act) {
+      case 0: return 1;   // Rogue Encampment
+      case 1: return 40;  // Lut Gholein
+      case 2: return 75;  // Kurast Docks
+      case 3: return 103; // Pandemonium Fortress
+      case 4: return 109; // Harrogath
+      default: return -1;
+    }
+  }
+
   private final HashMap<Integer, Pair> active = new HashMap<>();
 
   public static final class Pair {
