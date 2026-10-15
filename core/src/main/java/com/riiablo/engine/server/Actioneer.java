@@ -767,7 +767,9 @@ public class Actioneer extends PassiveSystem {
         && casting.zealInitialized && casting.zealRemainingStrikes > 0;
     boolean fendRetarget = skill != null && skill.Id == SkillId.FEND
         && casting.fendInitialized && casting.fendRemainingStrikes > 0;
-    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget
+    // SrvDo094 only consumes the unit's own sequence action. Its prey pointer
+    // is not dereferenced by native Submerge and must not gate the final hold.
+    if (!targetDead || skill.srvdofunc == 94 || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget
         || zealRetarget || fendRetarget) {
       if (skill.srvdofunc == 116) casting.shapeShiftProcessed = true;
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
@@ -1601,6 +1603,24 @@ public class Actioneer extends PassiveSystem {
     log.traceEntry("srvdofunc(entityId: {}, srvdofunc: {}, targetId: {}, targetVec: {})",
         entityId, srvdofunc, targetId, targetVec);
     switch (srvdofunc) {
+      case 94: { // SKILLS_SrvDo094_Submerge: clear action, stop SQ at source frame zero.
+        Sequence sequence = mSequence.get(entityId);
+        AnimData anim = mAnimData.get(entityId);
+        if (sequence == null || !sequence.nativeSubmerge) {
+          // Sharing this callback does not make another MonSeq (e.g. FrogDemon)
+          // implemented. Keep its missing lifecycle visible instead of no-oping.
+          log.warn("Unported Submerge sequence | entity={} mode={}", entityId,
+              sequence == null ? -1 : sequence.mode1);
+          break;
+        }
+        if (anim != null && anim.frame <= 0) {
+          sequence.nativeSubmergeHeld = true;
+          anim.override = 0;
+          log.info("[MONSTER_SUBMERGE] phase=held entity={} sourceFrame=0", entityId);
+        }
+        // The dispatcher consumes nActionFrame once; do not restart or damage.
+        break;
+      }
       case 0:
         break;
       case 4: { // SKILLS_SrvDo004_Unsummon

@@ -17,6 +17,13 @@ public class Sequence extends Component {
   public boolean nativeMummy;
   public int nativeMummyFrame;
 
+  /** Reverse S1 MonSeq used by Tentacle/TentacleHead Submerge. */
+  public boolean nativeSubmerge;
+  public int nativeSubmergeLastFrame;
+  public int nativeSubmergeFrame;
+  public int nativeSubmergeLastPoint;
+  public boolean nativeSubmergeHeld;
+
   /** Native player Jab sequence state.  Other sequences leave these fields disabled. */
   public boolean nativeJab;
   public byte nativeJabWeaponClass;
@@ -30,6 +37,11 @@ public class Sequence extends Component {
     this.started = false;
     nativeMummy = false;
     nativeMummyFrame = 0;
+    nativeSubmerge = false;
+    nativeSubmergeLastFrame = 0;
+    nativeSubmergeFrame = 0;
+    nativeSubmergeLastPoint = -1;
+    nativeSubmergeHeld = false;
     nativeJab = false;
     nativeJabWeaponClass = 0;
     nativeJabFrame = 0;

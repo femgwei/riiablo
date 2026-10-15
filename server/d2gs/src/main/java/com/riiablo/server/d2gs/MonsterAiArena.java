@@ -28,9 +28,14 @@ import com.riiablo.engine.server.ai.GenericMonster;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -68,7 +73,8 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 /**
  * Batch companion to skill-viewer. Reuses Map.createSyntheticArena, but runs
  * production server units/AI at 25 Hz, with a fresh world AND player per case.
- * No network, renderer, terrain, quest simulation, or correctness oracle is implied.
+ * No network, renderer, terrain or quest simulation; only named special scenarios
+ * have narrow lifecycle assertions, not a general AI-correctness oracle.
  */
 public final class MonsterAiArena extends ApplicationAdapter {
   static final class Result {
@@ -194,6 +200,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     List<String> scenarios = new ArrayList<>(Arrays.asList("near", "far"));
     if ("FallenShaman".equals(monster.AI) || "GreaterMummy".equals(monster.AI)) scenarios.add("corpse");
     if ("Tentacle".equals(monster.AI) || "BaalCrabClone".equals(monster.AI)) scenarios.add("orphan");
+    if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     return scenarios;
   }
 
@@ -248,7 +255,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       stats.base().put(Stat.maxhp, 1000000);
       stats.base().put(Stat.hitpoints, 1000000);
       stats.reset();
-      float distance = result.scenario.equals("near") ? 3 : 18;
+      float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle") ? 3 : 18;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
       zone.attachEntity(playerId);
@@ -256,6 +263,13 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (subject == Engine.INVALID_ENTITY) throw new IllegalStateException("Factory rejected subject");
       zone.attachEntity(subject);
       probe.subject = subject;
+      if (result.scenario.equals("submerge-cycle")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_SUBMERGE_CYCLE";
+        probe.cycle = new SubmergeCycle();
+        probe.emergeSkill = Riiablo.files.skills.get(row.monster.Skill2).Id;
+      }
       AIWrapper ai = world.getMapper(AIWrapper.class).get(subject);
       result.actualAi = ai.ai.getClass().getSimpleName();
       result.fallback = ai.ai instanceof GenericMonster;
@@ -270,6 +284,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
           throw new IllegalStateException("Subject removed; terminal lifecycle requires a dedicated scenario");
         }
         Vector2 position = world.getMapper(Position.class).get(subject).position;
+        probe.observeCycle();
         if (!Float.isFinite(position.x) || !Float.isFinite(position.y)) throw new IllegalStateException("Nonfinite position");
         if (!position.epsilonEquals(previous, 0.01f)) result.moves++;
         previous.set(position);
@@ -286,7 +301,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
       }
       if (result.specialAssert) result.special = result.specialPassed
-          ? (result.scenario.equals("orphan") ? "OWNERLESS_DEATH_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+          ? (result.scenario.equals("orphan") ? "OWNERLESS_DEATH_OBSERVED"
+              : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -399,6 +415,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
 
   static final class Probe extends PassiveSystem {
     int subject = -1;
+    int emergeSkill = -1;
+    SubmergeCycle cycle;
     final CaseLog capture;
     Probe(CaseLog capture) { this.capture = capture; }
     @Subscribe public void action(SkillDoEvent event) {
@@ -406,12 +424,70 @@ public final class MonsterAiArena extends ApplicationAdapter {
       capture.result.actions++;
       capture.line("SkillDo subject=" + subject + " skill=" + event.skillId + " target=" + event.targetId
           + " srvdofunc=" + event.srvdofunc);
+      if (cycle != null) {
+        CofReference cof = world.getMapper(CofReference.class).get(subject);
+        int before = cycle.phase;
+        cycle.attack(event.skillId == com.riiablo.skill.SkillCodes.attack
+            && cof != null && cof.mode == Engine.Monster.MODE_A1, flags());
+        cycleChanged(before);
+      }
+    }
+    void observeCycle() {
+      if (cycle == null) return;
+      Sequence seq = world.getMapper(Sequence.class).get(subject);
+      AnimData anim = world.getMapper(AnimData.class).get(subject);
+      Casting cast = world.getMapper(Casting.class).get(subject);
+      int before = cycle.phase;
+      cycle.observe(seq != null && seq.nativeSubmerge,
+          seq != null && seq.started && seq.nativeSubmergeHeld,
+          anim == null ? -1 : anim.frame, flags(),
+          cast != null && cast.skillId == emergeSkill && cast.targetId == subject
+              && seq != null && seq.mode1 == Engine.Monster.MODE_S1);
+      cycleChanged(before);
+    }
+    @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (cycle == null || event.entityId != subject) return;
+      Casting cast = world.getMapper(Casting.class).get(subject);
+      Sequence seq = world.getMapper(Sequence.class).get(subject);
+      int before = cycle.phase;
+      cycle.finished(cast != null && cast.skillId == emergeSkill && cast.targetId == subject
+          && seq != null && !seq.nativeSubmerge && seq.mode1 == Engine.Monster.MODE_S1, flags());
+      cycleChanged(before);
+    }
+    private int flags() {
+      NativeUnitFlags flags = world.getMapper(NativeUnitFlags.class).get(subject);
+      return flags == null ? -1 : flags.flags();
+    }
+    private void cycleChanged(int before) {
+      if (before == cycle.phase) return;
+      capture.line("SubmergeCycle subject=" + subject + " phase=" + cycle.phase + " flags=" + flags());
+      if (cycle.phase == 4) capture.result.specialPassed = true;
     }
     @Subscribe public void damage(DamageEvent event) {
       if (event.attacker != subject) return;
       capture.result.damageEvents++;
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
+    }
+  }
+
+  /** Ordered, subject-only lifecycle oracle; a cast or helper action cannot satisfy it. */
+  static final class SubmergeCycle {
+    int phase;
+    void observe(boolean submerge, boolean held, int frame, int flags, boolean emerging) {
+      if (flags < 0) return;
+      if (phase == 0 && submerge && held && frame == 0
+          && (flags & NativeUnitFlags.MONSTER_TARGET) == 0) phase = 1;
+      else if (phase == 1 && !submerge && emerging && targetable(flags)) phase = 2;
+    }
+    void finished(boolean emergence, int flags) {
+      if (phase == 2 && emergence && targetable(flags)) phase = 3;
+    }
+    void attack(boolean ordinaryA1, int flags) {
+      if (phase == 3 && ordinaryA1 && targetable(flags)) phase = 4;
+    }
+    private boolean targetable(int flags) {
+      return flags >= 0 && (flags & NativeUnitFlags.MONSTER_TARGET) == NativeUnitFlags.MONSTER_TARGET;
     }
   }
 
@@ -427,7 +503,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
       line("BEGIN monster=" + result.monster + " scenario=" + result.scenario + " seed=" + result.seed
           + " difficulty=" + result.difficulty + " level=" + result.arenaLevel
-          + " fixture=synthetic_open_arena playerHP=1000000 oracle=NONE");
+          + " fixture=synthetic_open_arena playerHP=1000000 oracle="
+          + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }

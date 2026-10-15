@@ -3,6 +3,7 @@ package com.riiablo.engine.server.ai;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.component.Sequence;
 
 /** Shared D2MOO Fn056/Fn057 submerge/emerge timers; durations are in seconds. */
 abstract class TentacleAI extends NativeDecisionAI {
@@ -36,10 +37,22 @@ abstract class TentacleAI extends NativeDecisionAI {
     return frame > changeAfter;
   }
 
+  @Override
+  protected boolean actionBlocksDecision() {
+    Sequence sequence = mSequence.get(entityId);
+    if (sequence != null && sequence.nativeSubmerge && sequence.nativeSubmergeHeld) return false;
+    return super.actionBlocksDecision();
+  }
+
   protected final void submerge(int targetId, int delay) {
     Vector2 target = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
         ? mPosition.get(targetId).position : mPosition.get(entityId).position;
-    castAt(0, targetId, target);
+    if (castAt(0, targetId, target, Engine.Monster.MODE_S1)) {
+      Sequence sequence = mSequence.get(entityId);
+      // 1.10f MonSeq: S1 12..0 (tentacle), S1 20..0 (head).
+      sequence.nativeSubmerge = true;
+      sequence.nativeSubmergeLastFrame = "TentacleHead".equals(monster.monstats.AI) ? 20 : 12;
+    }
     // Native schedules this delay and updates phase even if UseSkill fails.
     delayDecision(delay);
     phase = 1;

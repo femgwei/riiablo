@@ -21,8 +21,7 @@ public class Tentacle extends TentacleAI {
       die(Engine.INVALID_ENTITY);
       return false;
     }
-    if (mCorpse.has(ownerId)
-        || ownerMode() == Engine.Monster.MODE_DD && rollAiChance(40)) {
+    if (ownerMode() == Engine.Monster.MODE_DD && rollAiChance(40)) {
       int killer = mTarget.has(ownerId) ? mTarget.get(ownerId).target
           : mCasting.has(ownerId) ? mCasting.get(ownerId).targetId : Engine.INVALID_ENTITY;
       die(killer);
@@ -33,7 +32,7 @@ public class Tentacle extends TentacleAI {
 
   @Override
   protected void think(int targetId, float distance, boolean combat) {
-    boolean ownerSequence = ownerMode() == Engine.Monster.MODE_SC;
+    boolean ownerSequence = ownerMode() == Engine.Monster.MODE_XX;
     if (hasSkill(0)) {
       if (phase == 0) {
         submerge(targetId, 8);
@@ -65,6 +64,7 @@ public class Tentacle extends TentacleAI {
   private int ownerMode() {
     if (ownerId < 0) return Engine.Monster.MODE_NU;
     if (mSequence.has(ownerId) && mSequence.get(ownerId).started) {
+      if (mSequence.get(ownerId).nativeSubmerge) return Engine.Monster.MODE_XX;
       return mSequence.get(ownerId).mode1;
     }
     if (mCofReference.has(ownerId)) return mCofReference.get(ownerId).mode;

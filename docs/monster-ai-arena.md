@@ -1,6 +1,52 @@
 # 逐怪 AI 隔离测试场
 
-## 最新修复批次：2026-10-15 native-fixes
+## 最新修复批次：2026-10-15 submerge
+
+本批次针对 Tentacle / TentacleHead 的潜入、停帧、浮出链路，不以新增空的技能 case 消警。
+
+- 对照 D2MOO `SkillMonst.cpp::SKILLS_SrvSt51_Submerge` / `SrvDo094_Submerge` /
+  `SrvSt52_Emerge` 和 `Units.cpp::UNITS_GetShiftedFrameMetrics`：94检查的是展示源帧，
+  不是逻辑序列游标；源帧到0时停止SQ。猎物死亡或被移除不能阻断这个自身动作回调。
+- 本机1.10f `MonSeq.txt` 的 `seq_tentaclesubmerge` 为 S1源帧12→0，
+  `seq_tentheadsubmerge` 为20→0；两者分别有8/7个事件1。新增专用反向序列时钟，
+  使用真实MonSeq动作点，不再将长序列名当XX查COF，也不使用S1浮出COF的正放标记冒充潜入。
+  最后保持源帧0，不发动画结束/不回NU；停帧后AI仍按原表时间思考，浮出重建S1清掉旧保持状态。
+  客户端本地序列表现跟随权威反向源帧，避免将潜入显示成浮出；仍需另一台电脑做TCP/GL验证。
+- 按 `AiThink.cpp::AITHINK_Fn056_Tentacle` / `Fn057_TentacleHead` 修正主人SQ判定：
+  原生序列模式为14，不是SC；显示S1的主人潜入仍是SQ。主人带Corpse不能直接让触手必死，
+  只有主人在DD时才做原生40%判定，无主人仍真实走死亡链。
+- 为3行Tentacle和3行TentacleHead增加 `submerge-cycle` 场景，中心距3、使用真实表参数。
+  顺序断言主体保持源帧0且0x0E全清、浮出时恢复0x0E、真实浮出动画结束、随后主体A1动作。
+  日志的 `SubmergeCycle phase=1/2/3/4` 对应上述四阶段；辅助怪事件不计入。
+  仅施法、只有保持、缺少浮出结束或标志错误均不能满足专属断言。
+
+本次不是通用MonSeq移植。FrogDemon仍未接入其潜入序列/完整决策链；没有因同用94就
+宣称蛙魔正确，也没有更改缺资源/其他技能告警、关闭碰撞、强制施法或改原表概率。
+未移植调用会报 `Unported Submerge sequence`，3个蛙魔far场的告警数量仍与旧表一致，
+不因支持94回调而静默跳过未接入的序列；新增回归验证该边界。
+
+最终本机Normal、seed=1、500tick：**557行、1142场全部执行**（原1136场+6个专属场）。
+
+- ACTION_OBSERVED 477（原459），WARNING 106（原118）。
+- AI_FALLBACK 376、NO_ACTION 172、MOVEMENT_ONLY 7、TERMINAL_OBSERVED 4，均不变。
+- RUNTIME_ERROR / ERROR_LOG / NOT_RUN / SPECIAL_NOT_TRIGGERED 均为0。
+- 6场 `SUBMERGE_CYCLE_OBSERVED`，主体及辅助单位均无告警；原18场真实复活仍成功。
+  例如tentacle1在tick17保持、417开始浮出、434浮出结束、451恢复A1动作。
+- 与上一份 `20261015-native-fixes-seed1/results.jsonl` 按monster/scenario完整字段比较：
+  仅12个触手/触手头的near/far既有场次变化，其余1124场完全一致，无既有场次丢失。
+  六行单独运行的21场与完整运行对应记录也全部逐字段相同，辅助怪行为不算主体覆盖。
+- 定向回归 **155项通过**（core128、d2gs27），失败/错误/跳过均0，包含本批次原表/反向
+  时钟/停帧/冻结/猎物消失/主人判定/客户端帧控制与专属断言反例，以及上一批相关回归。
+
+新表：[`20261015-submerge-seed1/report.html`](ai-arena/20261015-submerge-seed1/report.html)，
+同目录 `logs.zip` 含1142个逐场日志，解压后HTML日志链接可用；复现命令和证据见
+[`verification.md`](ai-arena/20261015-submerge-seed1/verification.md)。旧快照保持不变。
+
+仍有47个AI名称/188行回退，以及Inferno、其他技能/MonSeq、骷髅复起COF等缺口。
+以上是全目录单难度单seed诊断，不是全AI正确性PASS，未执行全项目测试、三难度多seed矩阵
+或真实TCP/GL地图验证。下一批可继续处理蛙魔的独立序列/决策链或MonInferno持续施法链。
+
+## 前一修复批次：2026-10-15 native-fixes
 
 本轮从上一份1136场结果定位了三项相互叠加的复活缺陷，并补齐一个缺失AI。
 下面是本机实际修复/复测记录，不代表全部错误已清零；旧快照保持不变。
@@ -140,6 +186,8 @@ Gradle BUILD SUCCESSFUL 和 COMPLETED **都不等于 AI 验收通过**。
 - Tentacle 提供对应 TentacleHead；BaalCrabClone 提供 BaalCrab 并建立双向主人链接。
   依据 D2MOO `AiThink.cpp::AITHINK_Fn056_Tentacle`、
   `AiBaal.cpp::AITHINK_Fn140_BaalCrabClone`；另加 `orphan` 验证无主人自行死亡不崩溃。
+- Tentacle / TentacleHead 另有 `submerge-cycle`（中心距3），真实完成潜入保持、浮出结束、
+  恢复A1动作才记录 `SUBMERGE_CYCLE_OBSERVED`；仅其他怪施法、只开始浮出不能通过。
 - 复活夹具参考 D2MOO `AITHINK_Fn013_FallenShaman` / `Fn022_GreaterMummy` 及其 callback。
   没有为全部特殊 AI 补齐任务、召唤主从、受伤盟友、环境/地形触发等专属场景。
 

@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 逐怪失败表修复：Tentacle / TentacleHead Submerge
+
+- [x] 核对D2MOO SrvSt51/SrvDo094/SrvSt52及原表两个反向S1 MonSeq，补齐潜入源帧、
+  8/7个动作点、末帧保持和定时浮出链，避免XX→A1回退；猎物消失仍执行自身保持回调。
+- [x] 保持状态允许原表AI定时思考，其余施法继续忙碌保护；浮出重置序列，客户端本地动画
+  跟随反向权威源帧并保持0，不正放循环。修正主人SQ/SC误判及DD时40%死亡概率。
+- [x] 新增6场submerge-cycle，主体必须实际保持/恢复标志、浮出结束并恢复A1动作；
+  不注入技能、修改原表参数或关闭碰撞。155项定向回归通过，失败/错误/跳过均0。
+- [x] 全目录557行/1142场复测：477动作、376回退、106告警、172无动作、7仅移动、4正常终止；
+  运行时异常/ERROR/NOT_RUN/专属未触发均0。6场潜入循环和原18场复活均成功。
+  仅12个既有near/far场次改变，其余1124场逐字段不变；新增6场单独统计。
+- [ ] 47个AI名称/188行仍fallback；FrogDemon的独立MonSeq/决策链尚未移植，保留其未移植
+  序列告警，不以同用94回调消警。MonInferno、其他技能及骷髅复起COF等仍需处理。
+  完整证据见 `docs/ai-arena/20261015-submerge-seed1/` 与 `docs/monster-ai-arena.md`。
+- [ ] 真实TCP/GL、三难度多seed及全项目测试未完成，不将空地生命周期观察当作全AI验收。
+
 ## 2026-10-15 逐怪失败表修复：GreaterMummy / BloodLord
 
 - [x] 对照D2MOO Fn022修复GreaterMummy的尸体筛选、真实复活/治疗/射击技能、
@@ -10,7 +26,7 @@
   继续保留，不将“缺类已补”当作所有分支验收。
 - [x] 全目录557行/1136场重跑：459动作、376回退、118告警、172无动作、7仅移动、4正常终止，
   未触发复活/运行时异常/ERROR/NOT_RUN均为0。除上述两类44场外，其余1092场逐字段与旧表相同。
-- [ ] 47个AI名称/188行仍fallback，Inferno、Submerge等技能回调及其他MonSeq仍缺；
+- [ ] 此批次结束时47个AI名称/188行仍fallback，Inferno、Submerge等技能回调及其他MonSeq仍缺；
   新暴露的骷髅复起COF回退未隐藏。结果、原版依据和剩余问题见
   `docs/monster-ai-arena.md` 最新批次，日志表见 `docs/ai-arena/20261015-native-fixes-seed1/`。
 

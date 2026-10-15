@@ -38,11 +38,10 @@ public class AnimationStepper extends IntervalIteratingSystem {
 
     Sequence sequence = mSequence.get(entityId);
     AnimData animData = mAnimData.get(entityId);
-    if (sequence != null && sequence.nativeJab && animData != null) {
-      // Player SQ animation is authoritative on the sequence timeline.  The
-      // server's AnimStepper resolves each monseq point to the selected A1/A2
-      // mode and source COF frame; do not run the resident COF as an ordinary
-      // looping animation or it will ignore that source-frame mapping.
+    if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge) && animData != null) {
+      // SQ presentation follows the authoritative source-frame mapping.
+      // In particular Submerge reverses S1 and holds at zero; looping the
+      // resident emergence COF forward would show the opposite action.
       int frameCount = wrapper.animation.getNumFramesPerDir();
       if (frameCount > 0) {
         int frame = Math.max(0, Math.min(frameCount - 1, animData.frame >>> 8));

@@ -1,6 +1,7 @@
 package com.riiablo.server.d2gs;
 
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.logger.Appender;
@@ -29,6 +30,12 @@ public class MonsterAiArenaTest {
       probe.action(SkillDoEvent.obtain(7, 181, 9, null, 97, 0));
       assertEquals(1, result.actions);
       assertEquals("ACTION_OBSERVED", MonsterAiArena.classify(result));
+      probe.cycle = new MonsterAiArena.SubmergeCycle();
+      probe.cycle.phase = 3;
+      probe.action(SkillDoEvent.obtain(8, 0, 9, null, 1, 0));
+      probe.finished(com.riiablo.engine.server.event.AnimDataFinishedEvent.obtain(8));
+      assertEquals("helper events cannot finish the subject's cycle", 3, probe.cycle.phase);
+      assertFalse(result.specialPassed);
     }
   }
 
@@ -93,6 +100,42 @@ public class MonsterAiArenaTest {
     assertEquals(3, MonsterAiArena.scenarios(row).size());
     row.AI = "Zombie";
     assertEquals(2, MonsterAiArena.scenarios(row).size());
+    row.AI = "Tentacle";
+    assertEquals(4, MonsterAiArena.scenarios(row).size());
+    row.AI = "TentacleHead";
+    assertEquals(3, MonsterAiArena.scenarios(row).size());
     assertEquals("&lt;&amp;&quot;", MonsterAiArena.escape("<&\""));
+  }
+
+  @Test public void submergeCycleRequiresHeldZeroFrameFlagsEmergenceEndAndSubsequentAttack() {
+    MonsterAiArena.SubmergeCycle cycle = new MonsterAiArena.SubmergeCycle();
+    int targetable = NativeUnitFlags.MONSTER_TARGET;
+    cycle.attack(true, targetable);
+    cycle.finished(true, targetable);
+    cycle.observe(false, false, 0, targetable, true);
+    cycle.observe(true, false, 0, 0, false);
+    cycle.observe(true, true, 256, 0, false);
+    cycle.observe(true, true, 0, targetable, false);
+    cycle.observe(true, true, 0, -1, false);
+    assertEquals(0, cycle.phase);
+    cycle.observe(true, true, 0, 0, false);
+    assertEquals(1, cycle.phase);
+    cycle.observe(false, false, 0, 0, true);
+    cycle.finished(true, targetable);
+    cycle.attack(true, targetable);
+    assertEquals(1, cycle.phase);
+    cycle.observe(false, false, 0, targetable, true);
+    assertEquals(2, cycle.phase);
+    cycle.finished(false, targetable);
+    cycle.finished(true, 0);
+    cycle.attack(true, targetable);
+    assertEquals(2, cycle.phase);
+    cycle.finished(true, targetable);
+    assertEquals(3, cycle.phase);
+    cycle.attack(false, targetable);
+    cycle.attack(true, 0);
+    assertEquals(3, cycle.phase);
+    cycle.attack(true, targetable);
+    assertEquals(4, cycle.phase);
   }
 }

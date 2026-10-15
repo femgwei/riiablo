@@ -88,4 +88,34 @@ class AnimationStepperTest extends RiiabloTest {
       assertEquals(3, animation.getFrame(), "Jab still seeks the native sequence source frame");
     } finally { world.dispose(); }
   }
+
+  @Test void submergeReversesResidentS1HoldsZeroAndEmergeResumesForwardPlayback() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/TN/COF/TNS1HTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 256;
+      com.riiablo.engine.server.component.Sequence seq =
+          world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id)
+              .sequence(com.riiablo.engine.Engine.Monster.MODE_S1, com.riiablo.engine.Engine.Monster.MODE_NU);
+      seq.nativeSubmerge = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame = 12; frame >= 0; frame--) {
+        data.frame = frame << 8;
+        world.process();
+        assertEquals(frame, animation.getFrame());
+      }
+      seq.nativeSubmergeHeld = true;
+      data.override = 0;
+      for (int tick = 0; tick < 30; tick++) world.process();
+      assertEquals(0, animation.getFrame());
+      seq.sequence(com.riiablo.engine.Engine.Monster.MODE_S1, com.riiablo.engine.Engine.Monster.MODE_NU);
+      data.override = -1;
+      world.process();
+      assertEquals(1, animation.getFrame(), "emergence must no longer seek the old submerged frame");
+    } finally { world.dispose(); }
+  }
 }

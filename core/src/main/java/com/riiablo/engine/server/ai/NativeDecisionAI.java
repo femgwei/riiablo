@@ -19,7 +19,7 @@ abstract class NativeDecisionAI extends AI {
     if (dead || monster == null || !mPosition.has(entityId)) return;
     beforeThink(delta);
     nextThink -= delta;
-    if (mCasting.has(entityId) || mSequence.has(entityId) || nextThink > 0f) return;
+    if (actionBlocksDecision() || nextThink > 0f) return;
     nextThink = Math.max(Animation.FRAME_DURATION, SLEEP);
     if (!beforeDecision()) return;
     float[] distance = {Float.MAX_VALUE};
@@ -33,6 +33,11 @@ abstract class NativeDecisionAI extends AI {
 
   /** Hook for native AIs with timers that advance while an action is active. */
   protected void beforeThink(float delta) {}
+
+  /** Some native skills hold their final sequence point while AI timers keep running. */
+  protected boolean actionBlocksDecision() {
+    return mCasting.has(entityId) || mSequence.has(entityId);
+  }
 
   /** Lifecycle checks that run at decision cadence, even without an enemy. */
   protected boolean beforeDecision() { return true; }

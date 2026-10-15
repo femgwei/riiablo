@@ -54,7 +54,61 @@ class TentacleAiIntegrationTest extends RiiabloTest {
       assertEquals("CAST", f.ai.getState());
       assertEquals(skillId(f, 0), f.casting().skillId);
       assertEquals(f.target, f.casting().targetId);
+      assertEquals(Engine.Monster.MODE_S1, f.sequence().mode1);
+      assertTrue(f.sequence().nativeSubmerge);
+      assertEquals(12, f.sequence().nativeSubmergeLastFrame);
       assertFalse(f.ai.getState().equals("ATTACK"));
+    }
+  }
+
+  @Test
+  void heldSubmergeAllowsTimerDecisionsButUnfinishedSequenceCannotBeOverwritten() {
+    try (Fixture f = fixture("TentacleHead", 1f)) {
+      f.ai.update(Animation.FRAME_DURATION);
+      Sequence seq = f.sequence();
+      assertEquals(20, seq.nativeSubmergeLastFrame);
+      f.ai.update(100 * Animation.FRAME_DURATION);
+      assertEquals(skillId(f, 0), f.casting().skillId, "unfinished reverse S1 is busy");
+      assertSame(seq, f.sequence());
+      seq.nativeSubmergeHeld = true;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertEquals(skillId(f, 1), f.casting().skillId);
+      assertEquals(f.actor, f.casting().targetId);
+      assertFalse(f.sequence().nativeSubmerge);
+      assertFalse(f.sequence().nativeSubmergeHeld);
+    }
+  }
+
+  @Test
+  void deadOwnerUsesNativeFortyPercentRollEvenWithCorpseComponent() {
+    for (boolean die : new boolean[] {false, true}) {
+      try (Fixture f = fixture("Tentacle", 1f)) {
+        int owner = owner(f, "mephisto");
+        f.world.getMapper(Monster.class).get(f.actor).minionOwnerId = owner;
+        f.world.getMapper(CofReference.class).get(owner).mode = Engine.Monster.MODE_DD;
+        f.world.getMapper(Corpse.class).create(owner);
+        f.seedFirstRoll(40, die);
+        f.ai.update(Animation.FRAME_DURATION);
+        assertEquals(die ? "DEAD" : "CAST", f.ai.getState());
+      }
+    }
+  }
+
+  @Test
+  void ownerSubmergeIsNativeSequenceNotItsDisplayedS1Mode() {
+    try (Fixture f = fixture("Tentacle", 20f)) {
+      int owner = owner(f, "mephisto");
+      f.world.getMapper(Monster.class).get(f.actor).minionOwnerId = owner;
+      Sequence ownerSeq = f.world.getMapper(Sequence.class).create(owner)
+          .sequence(Engine.Monster.MODE_S1, Engine.Monster.MODE_NU);
+      ownerSeq.started = ownerSeq.nativeSubmerge = true;
+      f.ai.update(Animation.FRAME_DURATION);
+      f.sequence().nativeSubmergeHeld = true;
+      // A successful five-percent roll must not emerge while the owner is SQ.
+      f.seedFirstRoll(5, true);
+      f.ai.update(100 * Animation.FRAME_DURATION);
+      assertEquals(skillId(f, 0), f.casting().skillId);
+      assertTrue(f.sequence().nativeSubmergeHeld);
     }
   }
 

@@ -56,6 +56,10 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     Sequence sequence = mSequence.get(entityId);
+    if (sequence != null && sequence.nativeSubmerge) {
+      processNativeSubmerge(entityId, sequence, animData, states);
+      return;
+    }
     if (sequence != null && sequence.nativeMummy) {
       processNativeMummy(entityId, sequence, animData, states);
       return;
@@ -132,6 +136,30 @@ public class AnimStepper extends IntervalIteratingSystem {
       events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_MIS));
     }
     if (next >= (16 << 8)) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+  }
+
+  /** Reverse S1 points; SrvDo094 holds at source frame zero until AI emerges. */
+  private void processNativeSubmerge(int entityId, Sequence sequence, AnimData animData,
+      UnitStates states) {
+    if (!sequence.started || sequence.nativeSubmergeHeld) return;
+    int speed = Math.max(0, animData.speed);
+    if (states != null && states.stateList != null)
+      speed = scaleStateAnimationSpeed(speed, states.stateList.getTotalAnimationRateModifier());
+    int last = sequence.nativeSubmergeLastFrame;
+    int next = Math.min(last << 8, sequence.nativeSubmergeFrame + speed);
+    sequence.nativeSubmergeFrame = next;
+    int point = next >>> 8;
+    for (int i = sequence.nativeSubmergeLastPoint + 1; i <= point; i++) {
+      int sourceFrame = last - i;
+      animData.frame = sourceFrame << 8;
+      // These action points are from MonSeq, not S1's emergence COF markers.
+      if (i < 4 || sourceFrame <= (last == 12 ? 3 : 2)) {
+        events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+      }
+    }
+    sequence.nativeSubmergeLastPoint = point;
+    animData.frame = (last - point) << 8;
+    // No AnimDataFinished: native sequence speed is zero at the last point.
   }
 
   private void dispatchKeyframes(int entityId, AnimData animData, boolean beforeWrap) {
