@@ -50,7 +50,7 @@ final class MapTourAiLog implements AutoCloseable {
     // --verbose controls a different (LibGDX) logger and is insufficient by itself.
     for (String name : new String[] {"ai.AI", "ai.Fallen", "ai.FallenShaman", "ai.FetishShaman",
         "ai.FoulCrowNest", "ai.GreaterMummy", "ai.Npc", "ai.PinHead", "ai.Navi", "ai.Vines",
-        "ai.Zombie", "AIStepper", "Actioneer", "ServerSkillSystem"}) {
+        "ai.Zombie", "AIStepper", "Actioneer", "ServerSkillSystem", "MissileCollisionSystem"}) {
       Logger logger = LogManager.getLogger(SERVER + name);
       levels.put(logger, logger.temporaryLevel(name.equals("AIStepper") ? Level.DEBUG : Level.INFO));
     }

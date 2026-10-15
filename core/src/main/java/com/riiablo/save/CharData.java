@@ -241,13 +241,13 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   void softReset() {
     healthPotion.clear();
     manaPotion.clear();
-    statData.base().clear();
-    statData.reset();
+    // This is record disposal, not an aggregate rebuild. Clear every list so
+    // reloading/reusing a character cannot retain old serialized modifiers.
+    statData.clear();
     skillData.clear();
     itemData.clear();
     itemData.addUpdateListener(this);
-    mercData.statData.base().clear();
-    mercData.statData.reset();
+    mercData.statData.clear();
     mercData.itemData.clear();
     golemItemData = null;
 

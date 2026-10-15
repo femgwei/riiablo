@@ -1,5 +1,24 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 AI 巡游本机战斗复现与清理修复
+
+- [x] 连续 level=2,3,4 实际记录怪物近战伤害、萨满火球/复活，不再只有入口位移。
+  追踪 empty-base 告警到角色/佣兵 softReset 和萨满爆炸子弹清理，改用完整 clear；
+  新增三项修复前失败回归，保留原告警与不重复施加火球伤害约束。
+- [x] 新的飞弹命中日志进一步检出 shamanexp 空快照仍扣1点血；按原版
+  CollideType=0与D2MOO无单位碰撞回调将纯表现子弹排除战斗，保留父弹伤害和
+  特效生命周期。回归先复现100→99，不以空伤害列表代替实际伤害验证。
+- [x] 补齐四个旧火球动画链测试必需的 CofManager 注册；最终122项定向回归全部通过，
+  旧AI火球链改为完整等待后严格断言仅一次父弹伤害，不再要求额外特效伤害。
+  AI模式增加飞弹碰撞/命中INFO日志，支持沿生成到appliedDamage核验，不改变默认日志。
+- [x] 最终真实A1三图复测完成，15次火球接触、2条近战伤害记录，shamanexp错误接触=0，
+  empty-base告警=0、fallback/ERROR=0；独立观察窗口审计通过。仍有1条Goatman死亡COF
+  告警，严格无告警验收未过；保留失败，不改告警白名单。
+- [ ] A1–A5 七图抽查地图通行7/7，但AI验收失败：FingerMage/Megademon/BloodLord
+  共11次fallback，srvdofunc(101)/srvstfunc(53)未支持，另有动态出生调整和
+  Goatman死亡COF告警。以上均保留为失败，不宣称全AI完成；日志目录及复现见
+  `docs/ai-tour-validation.md`。没有执行完整132图/六种子/三难度长矩阵。
+
 ## 2026-10-15 A1–A5 AI 巡游观察开关
 
 - [x] 在现有 `headlessMapTour` 加入 `-PtourAiObserve`；批次脚本支持 `-AiObserve`、

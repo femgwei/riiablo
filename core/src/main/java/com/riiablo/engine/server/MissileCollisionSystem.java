@@ -2756,8 +2756,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       // D2MOO's shamanexp is the stationary impact animation.  Its parent
       // shafire packet is already resolved on the travelling missile; copying
       // that snapshot here makes the same fire damage apply a second time.
-      child.damage.base().clear();
-      child.damage.reset();
+      // Retail CollideType=0 has no unit-find callback in MissMode.cpp.
+      // An empty snapshot alone still enters the generic one-point attack
+      // fallback, so keep this presentation child out of combat altogether.
+      child.presentationOnly = true;
+      child.damage.clear();
       child.damageSnapshot = true;
       child.attackMinDamage = 0;
       child.attackMaxDamage = 0;

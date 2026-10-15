@@ -20,10 +20,15 @@ public class MapTourAiLogTest {
     Logger ai = LogManager.getLogger("com.riiablo.engine.server.ai.AI");
     Appender original = ai.getAppender();
     Level level = ai.level();
+    Logger missiles = LogManager.getLogger("com.riiablo.engine.server.MissileCollisionSystem");
+    Appender missileAppender = missiles.getAppender();
+    Level missileLevel = missiles.level();
     Path dir = temporary.newFolder().toPath();
     Logger future;
     try (MapTourAiLog capture = new MapTourAiLog(dir, 1, 0)) {
       assertEquals(Level.INFO, ai.level());
+      assertEquals(Level.INFO, missiles.level());
+      missiles.info("[MISSILE_HIT] phase=impact missileId=9 owner=7 target=8 appliedDamage=3.0");
       ai.info("[MONSTER_AI_INIT] entity=7 monster=skeleton1 ai=Skeleton");
       future = LogManager.getLogger("tour-test.future." + System.nanoTime());
       future.warn("future_logger_warning");
@@ -31,9 +36,12 @@ public class MapTourAiLogTest {
     }
     assertSame(original, ai.getAppender());
     assertEquals(level, ai.level());
+    assertSame(missileAppender, missiles.getAppender());
+    assertEquals(missileLevel, missiles.level());
     assertSame(LogManager.getRootLogger().getAppender(), future.getAppender());
     String events = read(dir.resolve("ai-events.log"));
     assertTrue(events.contains("MONSTER_AI_INIT"));
+    assertTrue(events.contains("[MISSILE_HIT] phase=impact"));
     assertTrue(events.contains("future_logger_warning"));
     assertTrue(read(dir.resolve("ai-summary.txt")).contains("run=COMPLETED"));
   }

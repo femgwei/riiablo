@@ -51,6 +51,12 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.logger.Appender;
+import com.riiablo.logger.Level;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
+import com.riiablo.logger.OutputStreamAppender;
+import java.io.ByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
@@ -63,6 +69,74 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       System.out.println("[SHAMAN_FIREBALL_SOUND] missile=" + name
           + " travelSound=" + row.TravelSound + " hitSound=" + row.HitSound
           + " explosionMissile=" + row.ExplosionMissile);
+    }
+  }
+
+  @Test
+  void shamanImpactClearsDamageWithoutRebuildingAnEmptyPacket() throws Exception {
+    RecordingFactory factory = new RecordingFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, factory, collisions).build()
+        .register("factory", factory).register("map", new Map(0, 0)));
+    Logger logger = LogManager.getLogger(Attributes.class);
+    Appender original = logger.getAppender();
+    Runnable restoreLevel = logger.temporaryLevel(Level.WARN);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try {
+      logger.addAppender(new OutputStreamAppender(output));
+      int owner = world.create();
+      MonStats.Entry ownerRow = Riiablo.files.monstats.get("fallenshaman1");
+      world.getMapper(Monster.class).create(owner).set(
+          ownerRow, Riiablo.files.monstats2.get(ownerRow.MonStatsEx));
+      world.getMapper(Position.class).create(owner).position.set(5, 10);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs =
+          combatAttributes(100, 10, 20, 100, 1);
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(10, 10);
+      Attributes target = combatAttributes(100, 1, 1, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(player).attrs = target;
+      Missiles.Entry row = Riiablo.files.Missiles.get("shafire1");
+      Missile source = new Missile().set(row, Vector2.Zero, row.Range).setOwner(owner);
+      source.damage.base().put(Stat.firemindam, 10);
+      source.damage.base().put(Stat.firemaxdam, 20);
+      source.damage.reset();
+      source.damageSnapshot = true;
+      java.lang.reflect.Method spawn = MissileCollisionSystem.class.getDeclaredMethod(
+          "spawnNativeMapExplosion", int.class, Missile.class, int.class, Vector2.class);
+      spawn.setAccessible(true);
+      spawn.invoke(collisions, -1, source, -1, new Vector2(10, 10));
+
+      assertEquals(1, factory.creations);
+      Missile child = world.getMapper(Missile.class).get(factory.lastEntityId);
+      assertEquals("shamanexp", child.missile.Missile);
+      assertEquals(0, child.missile.CollideType, "native no-collision mode");
+      assertFalse(child.missile.Collision);
+      assertTrue(child.damageSnapshot, "empty authoritative packet, not owner damage fallback");
+      assertTrue(child.damage.base().isEmpty());
+      assertTrue(child.damage.aggregate().isEmpty());
+      assertTrue(child.damage.remaining().isEmpty());
+      assertEquals("", output.toString("UTF-8"));
+      assertEquals(10, source.damage.getValue(Stat.firemindam, 0), "parent damage is unchanged");
+      System.out.println("[SHAMAN_IMPACT_ROW] collideType=" + child.missile.CollideType
+          + " collision=" + child.missile.Collision + " srvDo=" + child.missile.pSrvDoFunc
+          + " srvHit=" + child.missile.pSrvHitFunc + " srvDmg=" + child.missile.pSrvDmgFunc);
+      int childId = factory.lastEntityId;
+      int lifetime = child.missile.Range;
+      world.setDelta(0.04f);
+      world.process();
+      assertEquals(100f, hitpoints(target), "impact animation must not inflict minimum physical damage");
+      assertTrue(world.getEntityManager().isActive(childId), "keep the impact animation alive");
+      for (int tick = 0; tick < lifetime + 2; tick++) world.process();
+      assertEquals(100f, hitpoints(target), "impact animation must not inflict minimum physical damage");
+      assertEquals(0, probe.damageEvents, "no damage event from the presentation child");
+      assertFalse(world.getEntityManager().isActive(childId), "normal frame lifetime still expires");
+    } finally {
+      logger.addAppender(original);
+      restoreLevel.run();
+      world.dispose();
     }
   }
 
@@ -383,7 +457,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     factory.logTag = "SHAMAN_FULL_CHAIN";
     Map map = new Map(0, 0);
     WorldConfiguration config = new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, actioneer, pathfinder, animStepper, skills, factory, collisions)
+        .with(new EventSystem(), probe, new CofManager(), actioneer, pathfinder, animStepper, skills, factory, collisions)
         .build()
         .register("factory", factory)
         .register("map", map);
@@ -456,7 +530,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     Probe probe = new Probe();
     Actioneer actioneer = new Actioneer();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper(), factory)
+        .with(new EventSystem(), probe, new CofManager(), actioneer, new Pathfinder(), new AnimStepper(), factory)
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));
@@ -502,7 +576,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     Actioneer actioneer = new Actioneer();
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper(),
+        .with(new EventSystem(), probe, new CofManager(), actioneer, new Pathfinder(), new AnimStepper(),
             new ServerSkillSystem(), factory, new MissileCollisionSystem())
         .build()
         .register("factory", factory)
@@ -590,12 +664,14 @@ public class ShamanFireballAuditTest extends RiiabloTest {
           world.getMapper(com.riiablo.engine.server.component.Sequence.class).get(shaman).mode1,
           "seq_shamanresurrect must request FSA2HTH instead of the nonexistent FSXXHTH");
       aiStepper.setEnabled(false);
-      for (int i = 0; i < 64 && probe.damageEvents < 2; i++) world.process();
+      // Drain the complete parent + impact lifetime. The native visual child
+      // must not supply the second damage event this fixture used to expect.
+      for (int i = 0; i < 64; i++) world.process();
 
       float hpAfter = hitpoints(playerAttrs);
       assertEquals(1, probe.skillDoEvents);
       assertTrue(factory.creations >= 2);
-      assertTrue(probe.damageEvents >= 2);
+      assertEquals(1, probe.damageEvents, "one cast has one travelling fireball damage packet");
       assertTrue(hpAfter < hpBefore);
       System.out.println("[SHAMAN_AI_CHAIN] phase=summary decisionFrames=" + decisionFrames
           + " state=" + wrapper.ai.getState() + " skillDo=" + probe.skillDoEvents
@@ -698,7 +774,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     factory.logTag = "SKELETON_MAGE_CHAIN";
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new Actioneer(), new Pathfinder(), new AnimStepper(),
+        .with(new EventSystem(), probe, new CofManager(), new Actioneer(), new Pathfinder(), new AnimStepper(),
             new ServerSkillSystem(), factory, new MissileCollisionSystem())
         .build()
         .register("factory", factory)
@@ -865,6 +941,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     protected ComponentMapper<Velocity> mVelocity;
 
     int creations;
+    int lastEntityId = -1;
     int missileId = -1;
     int ownerId = -1;
     int resurrections;
@@ -882,6 +959,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       this.ownerId = ownerId;
       Missiles.Entry missile = Riiablo.files.Missiles.get(missileId);
       int entityId = world.create();
+      lastEntityId = entityId;
       mMissile.create(entityId).set(missile, position, missile.Range).setOwner(ownerId);
       mPosition.create(entityId).position.set(position);
       mVelocity.create(entityId).velocity.set(angle).setLength(missile.Vel);

@@ -28,7 +28,9 @@
 - `ai-events.log`：直接捕获生产日志，含时间、来源类及权威 tick（非模拟线程为 -1）。
   显式打开 AI/Actioneer/ServerSkillSystem 的 INFO 及 AIStepper 的 DEBUG；
   原有日志输出仍保留，结束时恢复日志级别和 sink。`--verbose` 控制另一套
-  LibGDX 日志，单独使用它不足以打开这些 AI 日志。
+  LibGDX 日志，单独使用它不足以打开这些 AI 日志。另显式打开 MissileCollisionSystem
+  INFO，沿 `MONSTER_MISSILE`/技能生成 → `MISSILE_HIT phase=collision/result/impact`
+  检查飞弹实际命中与 `appliedDamage`；飞弹生成或 cast 记录不等于命中。
 - `ai-summary.txt`：按 monster/实际 AI 汇总初始化、移动、决策、技能 cast 请求和
   近战 damage 路径的**日志记录数**。不当作精确动作次数、命中次数、击杀或覆盖率。
   `thinkSamples` 是 AI 更新后每 25 个 tick 的低频采样，不是全部 think 次数；
@@ -103,3 +105,64 @@ init-only、错误/fallback 及中断等反例；原地图审计反例继续由
   最终版本加入真实位置采样和反例后另建目录复验，没有覆盖早期失败证据。
 - 未启动完整 132 图、六种子或三难度长矩阵；这轮交付的是可复用观察模式，
   不是 A1–A5 全怪物 AI 行为验收结论。
+
+## 2026-10-15 本机复现与修复（续）
+
+- 原版 1.10f MPQ、普通难度、seed=1、25Hz、8000ms 窗口，先跑连续
+  level=2,3,4；输出 `server/d2gs/build/ai-tour/20261015-diagnostic-234`。
+  路线完成，观察到 CorruptRogue/Fallen 近战实际伤害、萨满火球及复活链，
+  不是只有入口初始化。完整诊断发现19条 empty-base 告警，严格验收失败。
+- 临时调用栈定位（已移除诊断代码，保留原告警）发现两个实际清理错误：
+  `CharData.softReset` 对玩家/佣兵只清 base 再 reset，留下旧 serialized property
+  lists；`spawnNativeMapExplosion` 对 shamanexp 清 base 再 reset，每次碰撞告警。
+  两处改用 `Attributes.clear()` 完整清理。火球父弹伤害不变，爆炸子弹仍保持
+  空的权威伤害快照，不能回退到主人属性或重复施加火球伤害。
+- 新开飞弹命中日志后，第二轮七图样本
+  `server/d2gs/build/ai-tour/20261015-final-7levels` 发现 shamanexp 仍造成额外1点物理伤害：
+  例如 tick=1422 shafire1 对玩家造成3点火伤，tick=1423 shamanexp 又扣1点。
+  原版数据 `CollideType=0/Collision=false` 且三个服务端回调为0；D2MOO
+  `MissMode.cpp::MISSMODE_HandleMissileCollision` 的0模式不做单位碰撞。
+  空快照仍会落入通用伤害默认值，因此明确将这个已确认的纯表现子弹标记
+  presentationOnly；不改变父弹、其他碰撞、怪物AI或测试玩家的生命值。
+  扩展原回归后修复前实际测得玩家100→99；同时断言特效存活、正常到期及零伤害事件，
+  防止通过直接删除特效或只检查空属性制造通过。
+- 新增角色清理两项、萨满特效一项回归，修复前均实际失败；修复后通过。
+  ShamanFireballAudit 原有四个动画链夹具缺少 AnimStepper 必需的 CofManager，
+  已补注册真实系统，不跳过动画/伤害断言。角色新建/存档、资源刷新、火球、爆炸
+  生命周期、AIStepper、Act1/Baal AI、MapTour 首轮104项定向回归全过；修复额外1点
+  伤害后加入 MissileNativePolicy，最终122项全过（0失败/错误/跳过）。旧AI火球链
+  原先要求至少两次伤害，改为等待完整64帧后严格断言一次父弹伤害，不能把重复伤害
+  当作测试预期。
+  AI审计正例/11个反例、原地图审计反例继续通过。
+- 扩至 level=2,3,4,49,83,108,131，覆盖 A1–A5 的7张抽样地图；
+  输出 `server/d2gs/build/ai-tour/20261015-fixed-234-49-83-108-131`。
+  地图通行7/7完成，但 **AI验收失败**：11次 fallback（FingerMage 5、Megademon 4、
+  BloodLord 2），另有 srvdofunc(101)、srvstfunc(53) 未支持、两次动态生成位置调整
+  和 Goatman `GMDT2HS` 死亡COF查找告警；不能用地图 SUMMARY PASS 覆盖进程失败。
+  两处 empty-base 告警在这个真实战斗样本中已消失。
+- 以上三类缺失AI及技能需继续按 D2MOO 移植，不以 GenericMonster 替代品冒充完成；
+  对应 `AiThink.cpp::AITHINK_Fn070_FingerMage/Fn089_Megademon/Fn125_BloodLord`，
+  `SkillMonst.cpp::SKILLS_SrvDo101_FingerMageSpider/SKILLS_SrvSt53_MonInferno`。
+  出生碰撞调整与死亡COF另需定向复现。未执行完整132图、六种子/三难度矩阵，
+  也未证明抽样图所有怪物/技能条件分支正确。
+- 最终修复后复测 level=2,3,4：
+  `server/d2gs/build/ai-tour/20261015-verified-234`，3/3路线完成，入口均200个权威tick，
+  2次真实地图过渡，0次分段跳转；AI summary 为 COMPLETED、fallback=0、ERROR=0。
+  独立 `Assert-AiTourEvidence` 通过；记录15次 shafire1 接触和2条近战 damage 记录，
+  shamanexp 单位接触为0，empty-base 告警为0。完整控制台审计仍有1条
+  Goatman `GMDT2HS` 死亡COF告警，故严格无告警验收 **仍未通过**，没有改白名单。
+  122项定向回归和所有审计反例也在最终源码上复验通过。
+
+本次真实最终复测命令（输出需换全新目录）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :server:d2gs:headlessMapTour -PtourAiObserve `
+  '-PtourLevels=2,3,4' -PtourSeed=1 -PtourAiObserveMillis=8000 `
+  -PtourOutput=server/d2gs/build/ai-tour/your-new-a1-retest `
+  --no-daemon --max-workers=1 --console=plain
+```
+
+跨 Act 缺口复现将 levels 改成 `'2,3,4,49,83,108,131'`（PowerShell 下列表参数须加引号）。
+同种子保证地图基线，不保证现有旧AI全局随机分支/实际动作记录数逐次相同；不能以
+某次未触发告警或未遇到某怪代替确定性回归。
