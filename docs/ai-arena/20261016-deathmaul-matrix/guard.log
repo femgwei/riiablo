@@ -1,0 +1,1 @@
+PASS: overwrite guard rejects existing evidence before launching Gradle

@@ -1,0 +1,65 @@
+[
+  {
+    "difficulty": 0,
+    "seed": 1,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "AD64BAAD0547243E8D9DD48CF08F538A7EC2F989E010E8710F4CBCB9BFC726EB"
+  },
+  {
+    "difficulty": 0,
+    "seed": 7,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "05A0F3CD286F94D4085C59979C2FE19D63210F293A747E56DA59109669BF1357"
+  },
+  {
+    "difficulty": 0,
+    "seed": 42,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "73AFEDBC2BBAB532E20C069C3CC96C348D45DCF156224D1558DE4B2A37AEA2BC"
+  },
+  {
+    "difficulty": 1,
+    "seed": 1,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "877B9F87A2AA8C930BABACD103E1AE7496EC445084DD987E57A4A7CCE28999A0"
+  },
+  {
+    "difficulty": 1,
+    "seed": 7,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "A9C491A185D75653E0D6676FFCBF617FEE316B9C98501327E556978AC2A88C41"
+  },
+  {
+    "difficulty": 1,
+    "seed": 42,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "977577B341954FA0DA3937B5EEA031A0DF2CE1E022508FC516AC4FBFD7CC76FC"
+  },
+  {
+    "difficulty": 2,
+    "seed": 1,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "8CD8C905D1EDC97A408CBE02954FAB4C2F1F965544BAAE33A4448B0EFE166055"
+  },
+  {
+    "difficulty": 2,
+    "seed": 7,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "1DE6842B6F2C68332B5EFF30F42EBA273473A3FE980CA880A534A22B9CD1295F"
+  },
+  {
+    "difficulty": 2,
+    "seed": 42,
+    "scenes": 18,
+    "naturalPassed": 6,
+    "sha256": "F37C897BBD105BD25420F0883384B4E9F38BF7DC00CBD35845FBB92D6288DDD3"
+  }
+]

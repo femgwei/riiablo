@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 DeathMaul 三难度/多种子验证（整体PARTIAL）
+
+- [x] 六行 × Normal/Nightmare/Hell × seed1/7/42，162场及独立复跑共324次执行。
+- [x] 每轮54个严格自然技能断言通过，九组结果逐字节一致；所选场景无警告/错误。
+- [x] Normal/seed1的18条结果与Do136已验收批次完全一致；未改生产行为或概率。
+- [ ] CltDo76/trail、真实GL/TCP/地形、单位RNG/全局调度仍待，不将矩阵结果当作这些项的验收。
+
+证据：[DeathMaul验证矩阵](ai-arena/20261016-deathmaul-matrix/verification.md)。
+
 ## 2026-10-16 DeathMaul Do136（服务端效果通过，整体PARTIAL）
 
 - [x] 对照原版在目标坐标创建静止502导弹；整数距离、寿命公式跳变及动画率96。
