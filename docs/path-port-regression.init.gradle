@@ -23,7 +23,8 @@ gradle.projectsEvaluated {
        'WarpArrivalCollisionTest', 'NativeTowardPathProbeTest', 'NativeAiPathCacheTest',
        'NativePathRuntimeComparisonTest', 'NativePathShadowTest', 'DiabRunDataTest',
        'DiabRunIntegrationTest', 'NativePathRoomGraphTest', 'NativePathIdentityTest',
-       'ServerEntityFactoryPlayerTargetSlotsTest', 'NativePathUnitBindingTest'].each { include "**/${it}.java" }
+       'ServerEntityFactoryPlayerTargetSlotsTest', 'NativePathUnitBindingTest',
+       'NativePathUnitMetadataTest'].each { include "**/${it}.java" }
     }
   }
   core.tasks.register('pathPortTest', Test) {

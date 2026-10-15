@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第二十九批：新增实际ECS类型/尺寸解析NativePathUnitMetadata，按Class和真实怪物/对象/导弹表行
+捕获不可变原生type及X/Y尺寸。拒绝缺失表行和歧义WRP；不从Size或浮点位置猜原生数据。
+新增5项，完整558项/49类通过，失败/错误/跳过0；生产仍A*，完整Reader/其余元数据仍待。
+本批日志core/build/round29-full.log；详细交接见path-port-handoff-2026-10-16.md顶部。
+
 更新时间：2026-10-16（当前状态索引；下方保留历史交接记录）
 
 第二十八批：ECS生命周期token可绑定按操作捕获的原生Unit观察；Request校验标准观察的target/speed

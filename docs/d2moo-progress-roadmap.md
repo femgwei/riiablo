@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第二十九批（生产适配仍PARTIAL）
+
+- [x] NativePathUnitMetadata从实际ECS Class及MonStats2/Objects/Missiles表行解析原生类型和X/Y尺寸。
+- [x] 玩家2×2/物品1×1，独立怪物/对象尺寸，导弹双轴Size；不使用宿主枚举序号或粗粒度Size。
+- [x] 缺失表行和歧义WRP明确拒绝；不可变操作快照。新增5项，完整558项/49类通过，无失败/错误/跳过。
+- [ ] 完整Reader仍待raw fp16/静态方向、door/town等其余元数据；本批仅完成类型/尺寸来源。
+- [ ] Act/Zone运行期桥、shared owner seed及原生移动消费仍待；生产仍Map→AStarPathFinder。
+
+
 ## 2026-10-16 寻路第二十八批（生产适配仍PARTIAL）
 
 - [x] 实际ECS owner/target token绑定原生Unit操作快照，保存选择可携带原token，拒绝ID替代实体。

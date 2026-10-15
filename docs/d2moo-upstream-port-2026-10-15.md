@@ -1894,6 +1894,20 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 尚未安装ECS原生移动消费；运行期Act/Zone桥、原生元数据/fp16来源、shared owner D2Seed、
   状态推进/实图/性能/另机验收仍待。生产仍Map→AStarPathFinder。
 
+## 第二十九批：实际ECS单位类型和尺寸来源
+
+- 新增NativePathUnitMetadata.read，读取World中Class与Monster.monstats2、Object.base、Missile.missile，
+  返回不可变type/sizeX/sizeY；PLR/MON/OBJ/MIS/ITM显式映射原生0/1/2/3/4。
+- 固定上游origin/master 0c0bbd1e6bef9181a3da1c046523af622a925416的Units.cpp #10336/#10337：
+  玩家2×2、物品1×1；怪物/对象分轴，导弹用同一Size。对象尺寸保留int32，不用ECS Size组件。
+- 缺失宿主表行拒绝，区别于原生查表确认无记录的零尺寸；WRP混合tile warp/portal，不能直接映射。
+- 5项新测试验证真实World组件、原生类型映射、分轴/大尺寸、快照、缺失/删除/歧义拒绝。
+  完整隔离回归558项/49类通过，失败/错误/跳过0；core/build/round29-full.log，
+  XML位于.gradle/path-port/round29-full/core/test-results/pathPortTest。
+- 仅接通类型和尺寸来源；完整Reader的raw fp16/静态路径方向、door/town等其余元数据仍待。
+  未切换生产Map→AStarPathFinder；运行期Act/Zone、shared seed、实图/性能验收仍待。
+  无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

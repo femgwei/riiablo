@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十八批续接结果（优先于下方历史起点）
+## 第二十九批续接结果（优先于下方历史起点）
+
+- NativePathUnitMetadata.read从实际World的Class和Monster.monstats2、Object.base、Missile.missile
+  捕获不可变type/sizeX/sizeY；显式映射PLR/MON/OBJ/MIS/ITM到原生0/1/2/3/4，不用宿主枚举序号。
+- 依据固定D2MOO origin/master 0c0bbd1的UNITS_GetUnitSizeX/Y (#10336/#10337)：玩家2×2、物品1×1，
+  怪物/对象独立X/Y，导弹Size用于两轴；不用粗粒度Size组件，保留对象int32尺寸，不截为byte。
+- 缺失宿主表行视为unknown并拒绝，不能等同原生查表确实返回null的零尺寸；WRP混有tile warp与portal，
+  不按一个Class猜原生类型。该类仅解析类型/尺寸，尚不是完整Reader，未接入原生移动消费。
+- 新增5项；完整558项/49类通过，失败/错误/跳过0。日志`core/build/round29-full.log`，
+  XML `.gradle/path-port/round29-full/core/test-results/pathPortTest`。
+- 生产仍Map→AStarPathFinder；raw fp16/静态路径方向、door/town等其余元数据、运行期Act/Zone、
+  shared owner seed仍待。无新增DLL算法证据或动态DLL执行。
+
+## 第二十八批续接结果（历史）
 
 - NativePathUnitBinding将实际ECS owner/target生命周期token绑定到调用方已解析的原生Unit数据。
   新选择可捕获当前token；保存的选择可显式传入原token，禁止按旧数字ID自动重绑定替代实体。

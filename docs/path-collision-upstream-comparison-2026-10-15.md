@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第二十九批补充：以固定D2MOO origin/master 0c0bbd1的#10336/#10337为依据，
+NativePathUnitMetadata接通实际ECS Class及怪物/对象/导弹表行的原生类型和X/Y尺寸，保留对象int32，
+拒绝缺失表行和歧义WRP。它只提供元数据快照，未完成raw坐标/其余元数据Reader或生产寻路切换。
+新增5项，完整558项/49类通过（失败/错误/跳过0）；没有新增DLL算法证据或动态DLL差分执行。
+
 第二十八批补充：NativePathUnitBinding将真实ECS身份token与显式提供的原生Unit快照绑定，
 标准Observation可被continuation和request共享。Request现校验target对象/speed一致及执行前生命周期，
 纠正原先只检查目标null状态、可混用两个单位快照的host适配缺口。自定义legacy Target仍属调用方契约。
