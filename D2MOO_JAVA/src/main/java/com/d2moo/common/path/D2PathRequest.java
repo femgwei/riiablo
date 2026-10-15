@@ -1,5 +1,6 @@
 package com.d2moo.common.path;
 
+import com.d2moo.common.drlg.D2Seed;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -34,11 +35,20 @@ public final class D2PathRequest {
         public final Room startRoom;
         public final boolean ownerCanBeInTown;
         public final int speed, unitSize, collisionPattern, moveMask, initialFScore;
+        /** Live owner unit +0x20 seed projection; required only for type16. Never cloned/reset. */
+        public final D2Seed ownerSeed;
         public int collidedMask;
 
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
                 boolean ownerCanBeInTown, int speed, int unitSize, int collisionPattern,
                 int moveMask, int initialFScore) {
+            this(result,target,startRoom,ownerCanBeInTown,speed,unitSize,collisionPattern,
+                    moveMask,initialFScore,null);
+        }
+
+        public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
+                boolean ownerCanBeInTown, int speed, int unitSize, int collisionPattern,
+                int moveMask, int initialFScore, D2Seed ownerSeed) {
             this.result = Objects.requireNonNull(result);
             if ((target == null) != (result.path.targetUnit == null)) {
                 throw new IllegalArgumentException("resolved target and path identity must agree");
@@ -60,6 +70,7 @@ public final class D2PathRequest {
             this.collisionPattern = collisionPattern;
             this.moveMask = moveMask; // raw uint32 field; collision implementation narrows if its ABI requires
             this.initialFScore = initialFScore;
+            this.ownerSeed = ownerSeed;
         }
     }
 

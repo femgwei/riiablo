@@ -1,5 +1,7 @@
 package com.d2moo.common.path;
 
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,8 +13,8 @@ import java.util.Map;
  *
  * <p>The implementation intentionally stays independent of riiablo's runtime pathfinder.
  * The existing findPath API is a general-coordinate reference. findNativePath additionally
- * models the verified deterministic 1.10f type0 entry arithmetic/cache lifecycle; neither
- * API installs a production movement backend or implements type16's unit RNG stream.
+ * models the verified 1.10f type0 entry arithmetic/cache lifecycle. findNativeStreamPath
+ * adds type16's live unit RNG stream; none installs a production movement backend.
  */
 public final class D2IDAStar {
     public static final int MAX_ROOM_AREA = 50_000;
@@ -21,6 +23,12 @@ public final class D2IDAStar {
     public static final int F_SCORE_INCREMENT = 5;
 
     private static final int DEFAULT_F_SCORE_MARGIN = 100;
+
+    // D2Common 1.10f 0x6FDD1CE0, including the non-periodic last two entries.
+    private static final int[] RANDOM_OFFSETS = {
+            -2,-1,0,1,2,-2,-1,0,1,2,-2,-1,0,1,2,-2,
+            -1,0,1,2,-2,-1,0,1,2,-2,-1,0,1,2,-1,1
+    };
 
     private static final int[][] COORD_OFFSETS = {
             {1, 0}, {1, 1}, {0, 1}, {-1, 1},
@@ -75,7 +83,7 @@ public final class D2IDAStar {
         }
 
         return search(start, target, bounds, collision, initialHeuristic,
-                maximumFScoreExclusive, targetDistanceThreshold, false);
+                initialHeuristic, maximumFScoreExclusive, targetDistanceThreshold, false, null);
     }
 
     /** Deterministic type0 rooms-core projection (0x6FDA7A4E..81BA).
@@ -84,6 +92,20 @@ public final class D2IDAStar {
      * Unsafe native cache-buffer overflow/word-wrapped room domains are rejected. */
     public static Result findNativePath(D2Path.Point start, D2Path.Point target, Bounds bounds,
             D2AStar.Collision collision, int initialFScore, int targetDistanceThreshold) {
+        return nativePath(start,target,bounds,collision,initialFScore,targetDistanceThreshold,null);
+    }
+
+    /** Type16 rooms-core projection. ownerSeed must be the owner's live shared seed, not a copy.
+     * Every direction advance consumes it, even on an unsuccessful search/flush. Root setup
+     * does not roll it; contours and subsequent requests continue the same stream. */
+    public static Result findNativeStreamPath(D2Path.Point start, D2Path.Point target, Bounds bounds,
+            D2AStar.Collision collision, int initialFScore, int targetDistanceThreshold, D2Seed ownerSeed) {
+        if (ownerSeed == null) throw new IllegalArgumentException("native type16 requires live owner seed");
+        return nativePath(start,target,bounds,collision,initialFScore,targetDistanceThreshold,ownerSeed);
+    }
+
+    private static Result nativePath(D2Path.Point start, D2Path.Point target, Bounds bounds,
+            D2AStar.Collision collision, int initialFScore, int targetDistanceThreshold, D2Seed ownerSeed) {
         if (!uint16(start) || !uint16(target) || bounds == null || collision == null
                 || bounds.minX < 0 || bounds.minY < 0 || bounds.maxX > 65535 || bounds.maxY > 65535
                 || initialFScore < 0 || initialFScore > 255
@@ -91,9 +113,11 @@ public final class D2IDAStar {
             throw new IllegalArgumentException("native word coordinates/bounds and byte scores required");
         }
         int initial = (short) D2Path.aStarHeuristic(start.x,start.y,target.x,target.y);
-        // 0x6FDA7C1F..7C2D: max(signed root h, unsigned PathInfo byte), unlike upstream's typo.
-        return search(start,target,bounds,collision,initial,Math.max(initial,initialFScore),
-                targetDistanceThreshold,true);
+        // #7BFB..7C2D: type16 narrows h+h/2 to int16, but root h/f stay unchanged.
+        // Java integer division, like the native cdq/sub/sar sequence, truncates toward zero.
+        int cutoff = ownerSeed == null ? initial : (short)(initial + initial / 2);
+        return search(start,target,bounds,collision,initial,cutoff,Math.max(cutoff,initialFScore),
+                targetDistanceThreshold,true,ownerSeed);
     }
 
     /** Outer #7970 room selection. Identity, not equal bounds, decides the same-room branch.
@@ -130,10 +154,10 @@ public final class D2IDAStar {
     }
 
     private static Result search(D2Path.Point start, D2Path.Point target, Bounds bounds,
-            D2AStar.Collision collision, int initialHeuristic, int maximumFScoreExclusive,
-            int targetDistanceThreshold, boolean nativeWords) {
-        Context context = new Context(bounds, collision, nativeWords);
-        int cutoff = initialHeuristic;
+            D2AStar.Collision collision, int initialHeuristic, int initialCutoff, int maximumFScoreExclusive,
+            int targetDistanceThreshold, boolean nativeWords, D2Seed ownerSeed) {
+        Context context = new Context(bounds, collision, nativeWords, ownerSeed);
+        int cutoff = initialCutoff;
         int iterations = 0;
         int lastNodeCount = 0;
         int maximumAllocatedNodes = 0;
@@ -260,7 +284,7 @@ public final class D2IDAStar {
                         current.sequenceIndex = 0;
                         // #817E: reused children start from their PARENT's current direction.
                         if (context.nativeWords) current.nextNeighborIndex = parent.nextNeighborIndex;
-                        advanceNeighbor(current, context.nativeWords);
+                        advanceNeighbor(current, context);
 
                         if (current.heuristic < targetDistanceThreshold) {
                             return current;
@@ -271,7 +295,7 @@ public final class D2IDAStar {
             }
 
             if (evaluateNextNeighbor) {
-                current = backtrack(current, context.root, context.nativeWords);
+                current = backtrack(current, context);
                 if (current == null) {
                     return null;
                 }
@@ -280,18 +304,18 @@ public final class D2IDAStar {
         return current;
     }
 
-    private static Node backtrack(Node node, Node root, boolean nativeWords) {
+    private static Node backtrack(Node node, Context context) {
         if (node.evaluationsCount < 4) {
             node.sequenceIndex++;
-            advanceNeighbor(node, nativeWords);
+            advanceNeighbor(node, context);
         }
 
         node.evaluationsCount++;
         if (node.evaluationsCount == 5) {
-            while (node != root) {
+            while (node != context.root) {
                 node = node.parent;
                 node.sequenceIndex++;
-                advanceNeighbor(node, nativeWords);
+                advanceNeighbor(node, context);
                 if (++node.evaluationsCount != 5) {
                     return node;
                 }
@@ -301,13 +325,15 @@ public final class D2IDAStar {
         return node;
     }
 
-    private static void advanceNeighbor(Node node, boolean nativeWords) {
+    private static void advanceNeighbor(Node node, Context context) {
         // Native parent unwind advances the sequence BEFORE deciding root exhaustion.
         // Row0 index8 reads the adjacent row1[0], still within the verified 8x8 table.
-        int row = node.sequenceRow + (nativeWords ? node.sequenceIndex / 8 : 0);
-        int column = nativeWords ? node.sequenceIndex % 8 : node.sequenceIndex;
+        int row = node.sequenceRow + (context.nativeWords ? node.sequenceIndex / 8 : 0);
+        int column = context.nativeWords ? node.sequenceIndex % 8 : node.sequenceIndex;
+        int randomOffset = context.ownerSeed == null ? 0
+                : RANDOM_OFFSETS[(int)Seed.rollRandomNumber(context.ownerSeed) & 31];
         node.nextNeighborIndex = (node.nextNeighborIndex
-                + NEIGHBOR_SEQUENCES[row][column]) & 7;
+                + NEIGHBOR_SEQUENCES[row][column] + randomOffset) & 7;
     }
 
     private static int direction(D2Path.Point from, D2Path.Point to) {
@@ -347,15 +373,17 @@ public final class D2IDAStar {
         final D2AStar.Collision collision;
         final Map<D2Path.Point, Integer> coordinateData = new HashMap<>();
         final boolean nativeWords;
+        final D2Seed ownerSeed;
         final int[] nativeCache;
         final int stride;
         final List<Node> nodes = new ArrayList<>(MAX_NODES);
         Node root;
 
-        Context(Bounds bounds, D2AStar.Collision collision, boolean nativeWords) {
+        Context(Bounds bounds, D2AStar.Collision collision, boolean nativeWords, D2Seed ownerSeed) {
             this.bounds = bounds;
             this.collision = collision;
             this.nativeWords = nativeWords;
+            this.ownerSeed = ownerSeed;
             this.stride = bounds.maxX-bounds.minX+6;
             this.nativeCache = nativeWords ? new int[nativeCacheSize(bounds)] : null;
         }
