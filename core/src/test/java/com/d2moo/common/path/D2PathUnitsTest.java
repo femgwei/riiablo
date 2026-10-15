@@ -302,7 +302,7 @@ class D2PathUnitsTest {
   }
 
   /** Optional licensed local inputs; never check binaries/resources into the repository. */
-  private static ByteBuffer originalDll(String name, String expectedSha256) throws Exception {
+  static ByteBuffer originalDll(String name, String expectedSha256) throws Exception {
     String home = System.getenv("D2_HOME");
     assumeTrue(home != null, "D2_HOME required for optional original 1.10f static-data verification");
     Path path = Paths.get(home, name);
@@ -315,7 +315,7 @@ class D2PathUnitsTest {
   }
 
   /** Resolve original VA through PE32 section headers rather than assuming file offset == RVA. */
-  private static int fileOffset(ByteBuffer pe, long address) {
+  static int fileOffset(ByteBuffer pe, long address) {
     assertEquals(0x5a4d, pe.getShort(0) & 65535);
     int header = pe.getInt(0x3c);
     assertEquals(0x4550, pe.getInt(header));
