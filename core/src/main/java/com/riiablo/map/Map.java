@@ -687,6 +687,15 @@ public class Map implements Disposable {
     finally { collisionZone = previous; }
   }
 
+  /** Opt-in best-reachable A* for native coordinate-only monster skill paths. */
+  public boolean findPartialPath(Zone zone, Vector2 src, Vector2 dst, int flags, int size,
+      GraphPath<Point2> path, MapGraph.Obstacle obstacle, boolean canOpenDoors) {
+    Zone previous = collisionZone;
+    collisionZone = zone;
+    try { return mapGraph.searchPartialNodePath(pathFinder, src, dst, flags, size, path, obstacle, canOpenDoors); }
+    finally { collisionZone = previous; }
+  }
+
   public boolean isBlockedForPath(Zone zone, int x, int y, int flags, int size,
       boolean canOpenDoors) {
     Zone previous = collisionZone;

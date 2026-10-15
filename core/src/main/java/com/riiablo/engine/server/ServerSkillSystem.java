@@ -528,6 +528,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (NativeDiabRun.supports(skill)) {
+      applyDiabRun(event, skill, getSkillLevel(event.entityId, skill.Id));
+      return;
+    }
     if (NativeDiabWall.supports(skill)) {
       spawnDiabWall(event, skill, getSkillLevel(event.entityId, skill.Id));
       return;
@@ -1771,6 +1775,46 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, id, i, level, maker.chargedBoltPath, maker.nativeLifetimeFrames, tx, ty);
     }
     log.info("[DIAB_WALL] phase=create source={} requested={} created={} level={}", event.entityId, count, created, level);
+  }
+
+  /** SrvDo103's action1: original saved target, live melee range, skill-only packet. */
+  private void applyDiabRun(SkillDoEvent event, Skills.Entry skill, int level) {
+    int source = event.entityId, target = event.targetId;
+    Casting cast = mCasting.get(source);
+    if (cast == null || cast.diabRun == null || !cast.diabRun.hitProcessed
+        || cast.diabRun.damageProcessed || !cast.diabRun.tail || cast.diabRun.cursor >>> 8 != 18
+        || cast.skillId != 198) return;
+    cast.diabRun.damageProcessed = true;
+    if (target != cast.diabRun.targetId || !mMonster.has(source) || target < 0
+        || !world.getEntityManager().isActive(target) || !mPosition.has(target)
+        || !mAttributesWrapper.has(target) || !hasPositiveLife(target)
+        || (!mPlayer.has(target) && !mMonster.has(target) && !mMercenary.has(target))
+        || !sameZone(source, target) || isTownUnit(source) || isTownUnit(target)
+        || !isHostile(source, target) || !mNativeUnitFlagsValid(target)
+        || !world.getSystem(Actioneer.class).isInLiveMeleeRange(source, target)) {
+      log.info("[DIAB_RUN] phase=hit_reject source={} target={} reason=invalid_or_out_of_range", source, target);
+      return;
+    }
+    Attributes defender = mAttributesWrapper.get(target).attrs;
+    // ResultFlags=5 already includes SUCCESSFULHIT: no AR, block, dodge or weapon roll.
+    int min = MissileDamageResolver.skillPhysicalDamage(skill, level, true, name -> getBaseSkillLevel(source, name));
+    int max = MissileDamageResolver.skillPhysicalDamage(skill, level, false, name -> getBaseSkillLevel(source, name));
+    int raw = rollNativeDamage(min, max);
+    CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+        defender, mPlayer.has(target), raw, stateList(target));
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    float before = hp.asFixed();
+    DamageEvent damage = DamageEvent.obtainMissile(source, target, physical.totalDamage, physical.physicalDamage, null);
+    events.dispatch(damage);
+    hp.sub(Math.max(0f, damage.damage));
+    if (hp.asFixed() <= 0f) {
+      hp.set(0f);
+      events.dispatch(DeathEvent.obtain(source, target));
+    } else if (physical.totalDamage > 0) {
+      world.getSystem(Actioneer.class).queueHitReaction(target, physical);
+    }
+    log.info("[DIAB_RUN] phase=hit source={} target={} level={} raw={} range={}..{} damage={} hp={}->{}",
+        source, target, level, raw, min, max, damage.damage, before, hp.asFixed());
   }
 
   /** SrvDo100: elemental damage and FrzLen are independent (1.10f EType=mag). */

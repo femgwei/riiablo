@@ -265,6 +265,7 @@ public class Actioneer extends PassiveSystem {
     if (entityId == Engine.INVALID_ENTITY) return;
     boolean hadCasting = mCasting.has(entityId);
     boolean hadSequence = mSequence.has(entityId);
+    if (hadCasting && mCasting.get(entityId).diabRun != null) pathfinder.findPath(entityId, null);
     if (hadCasting) mCasting.remove(entityId);
     if (hadSequence) mSequence.remove(entityId);
     if (mTarget.has(entityId)) mTarget.remove(entityId);
@@ -645,6 +646,12 @@ public class Actioneer extends PassiveSystem {
         meleeRange, rangeBonus);
   }
 
+  /** Native skill callbacks inspect live coordinates, not a historical player attack frame. */
+  boolean isInLiveMeleeRange(int attackerId, int targetId) {
+    return mPosition.has(attackerId) && mPosition.has(targetId)
+        && currentMeleeRange(attackerId, targetId, getMeleeRange(attackerId), 0);
+  }
+
   private long currentCombatTick() {
     return combatPositionHistory == null ? 0L : combatPositionHistory.latestTick();
   }
@@ -659,6 +666,17 @@ public class Actioneer extends PassiveSystem {
   @Subscribe
   public void onAnimDataKeyframe(AnimDataKeyframeEvent event) {
     if (!mCasting.has(event.entityId)) return;
+    Casting runCast = mCasting.get(event.entityId);
+    if (runCast.diabRun != null) {
+      NativeDiabRun run = runCast.diabRun;
+      // MIS points are path maintenance, never generic attacks/projectiles.
+      if (event.keyframe == Engine.KEYFRAME_ATK && !run.hitProcessed) {
+        run.hitProcessed = true;
+        events.dispatch(SkillDoEvent.obtain(event.entityId, 198, run.targetId,
+            run.destination, 103, 0));
+      }
+      return;
+    }
     log.traceEntry("onAnimDataKeyframe(entityId: {}, keyframe: {} ({}))",
         event.entityId, event.keyframe, Engine.getKeyframe(event.keyframe));
     final Casting casting = mCasting.get(event.entityId);
@@ -846,12 +864,50 @@ public class Actioneer extends PassiveSystem {
   }
 
   @Subscribe
+  public void onDiabRunUpdate(com.riiablo.engine.server.event.DiabRunUpdateEvent event) {
+    Casting cast = mCasting.get(event.entityId);
+    NativeDiabRun run = cast == null ? null : cast.diabRun;
+    if (run == null) return;
+    Skills.Entry skill = Riiablo.files.skills.get(cast.skillId);
+    int point = run.cursor >>> 8;
+    if (run.moving && mPathfind.has(event.entityId)
+        && mPathfind.get(event.entityId).stalledTime > 0f) {
+      // Native movement finishes when its next step is blocked, rather than
+      // tracking/repathing this coordinate indefinitely.
+      pathfinder.findPath(event.entityId, null);
+    }
+    if (run.moving && !mPathfind.has(event.entityId)) {
+      run.moving = false;
+      run.tail = true;
+      run.seek(skill.Param[1], skill.Param[0]); // flags&2: count8, cursor14
+      log.info("[DIAB_RUN] phase=tail source={} target={} cursor={} remaining={}",
+          event.entityId, run.targetId, run.cursor >>> 8, run.remaining >>> 8);
+    } else if (!run.tail && point == skill.Param[2]) {
+      run.pathStarted = true;
+      // Coordinate path only: never chase the saved unit after St54.
+      pathfinder.findPath(event.entityId, run.destination, false, Engine.INVALID_ENTITY);
+      run.moving = true;
+      log.info("[DIAB_RUN] phase=path source={} target={} destination={} installed={}",
+          event.entityId, run.targetId, run.destination, mPathfind.has(event.entityId));
+    } else if (!run.tail && point == skill.Param[3]) {
+      run.seek(skill.Param[5], skill.Param[4]); // cursor6, remaining16
+      run.loops++;
+      log.info("[DIAB_RUN] phase=loop source={} loops={}", event.entityId, run.loops);
+    }
+  }
+
+  @Subscribe
   public void onAnimDataFinished(AnimDataFinishedEvent event) {
     if (!mCasting.has(event.entityId)) return;
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
     final Casting casting = mCasting.get(event.entityId);
     final int completedTargetId = casting.targetId;
     Skills.Entry completedSkill = Riiablo.files.skills.get(casting.skillId);
+    if (casting.diabRun != null) {
+      pathfinder.findPath(event.entityId, null);
+      log.info("[DIAB_RUN] phase=end source={} target={} loops={} hitProcessed={}",
+          event.entityId, casting.diabRun.targetId, casting.diabRun.loops, casting.diabRun.hitProcessed);
+    }
 
     // Charge keeps its cast alive while the pathfinder closes the distance.
     // Native SrvSt31 does not resolve impact until the unit is in melee range;
@@ -1059,6 +1115,21 @@ public class Actioneer extends PassiveSystem {
     switch (srvstfunc) {
       case 0:
         break;
+      case 54: { // St54 snapshots the unit target, then clears path tracking.
+        Casting cast = mCasting.get(entityId);
+        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        if (!NativeDiabRun.supports(skill)) break;
+        if (targetId < 0 || !world.getEntityManager().isActive(targetId) || !mPosition.has(targetId)) {
+          cancelCasting(entityId, "diab_run_requires_unit_target");
+          break;
+        }
+        cast.diabRun = new NativeDiabRun(targetId, mPosition.get(targetId).position);
+        Sequence seq = mSequence.get(entityId);
+        if (seq != null) { seq.mode1 = Engine.Monster.MODE_RN; seq.nativeDiabRun = true; }
+        if (mTarget.has(entityId)) mTarget.remove(entityId);
+        log.info("[DIAB_RUN] phase=start source={} target={} destination={}", entityId, targetId, cast.diabRun.destination);
+        break;
+      }
       case 1: // attack
         break;
       case 4: // SKILLS_SrvSt04_Arrow_Bolt: ammo/weapon validation is owned

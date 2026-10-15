@@ -86,6 +86,18 @@ public class MapGraph {
     return searchNodePath(pathFinder, src, dst, flags, size, outPath, null);
   }
 
+  /** A blocked goal is still a valid heuristic destination, never a walkable neighbor. */
+  public boolean searchPartialNodePath(com.riiablo.map.pfa.AStarPathFinder pathFinder,
+      Vector2 src, Vector2 dst, int flags, int size, GraphPath<Point2> outPath,
+      Obstacle obstacle, boolean canOpenDoors) {
+    outPath.clear();
+    if (dst == null) return false;
+    boolean previous = this.canOpenDoors;
+    this.canOpenDoors = canOpenDoors;
+    try { return pathFinder.searchPartial(getOrCreate(src), getOrCreate(dst), flags, size, outPath, obstacle); }
+    finally { this.canOpenDoors = previous; }
+  }
+
   boolean searchNodePath(PathFinder pathFinder, Point2 src, Point2 dst,
       int flags, int size, GraphPath<Point2> outPath, Obstacle obstacle) {
     return pathFinder.search(src, dst, flags, size, outPath, obstacle);

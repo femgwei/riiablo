@@ -25,6 +25,8 @@ public class Sequence extends Component {
   public boolean nativeSubmergeHeld;
   /** seq_froghidden: S1 0,1,2 with no action points; mode-update SrvDo94 holds at 0. */
   public boolean nativeFrogHidden;
+  /** seq_diablorun has RN source points and independent looping/countdown. */
+  public boolean nativeDiabRun;
 
   /** Native player Jab sequence state.  Other sequences leave these fields disabled. */
   public boolean nativeJab;
@@ -45,6 +47,7 @@ public class Sequence extends Component {
     nativeSubmergeLastPoint = -1;
     nativeSubmergeHeld = false;
     nativeFrogHidden = false;
+    nativeDiabRun = false;
     nativeJab = false;
     nativeJabWeaponClass = 0;
     nativeJabFrame = 0;

@@ -82,15 +82,33 @@ public class AStarPathFinder implements PathFinder {
 
   protected boolean search(Point2 startNode, Point2 endNode, int flags, int size,
       MapGraph.Obstacle obstacle) {
+    return search(startNode, endNode, flags, size, obstacle, false);
+  }
+
+  /** Opt-in native A* best-reachable result; ordinary callers still require the exact endpoint. */
+  public boolean searchPartial(Point2 startNode, Point2 endNode, int flags, int size,
+      GraphPath<Point2> outPath, MapGraph.Obstacle obstacle) {
+    boolean found = search(startNode, endNode, flags, size, obstacle, true);
+    if (found) generateNodePath(startNode, outPath);
+    return found;
+  }
+
+  private boolean search(Point2 startNode, Point2 endNode, int flags, int size,
+      MapGraph.Obstacle obstacle, boolean partial) {
     initSearch(startNode, endNode);
+    Point2 best = startNode;
+    float bestDistance = heuristic.estimate(startNode, endNode);
     int limit = 0;
     do {
       current = openList.pop();
       current.category = Point2.CLOSED;
+      float distance = heuristic.estimate(current, endNode);
+      if (distance < bestDistance) { best = current; bestDistance = distance; }
       if (current == endNode) return true;
       visitChildren(current, endNode, flags, size, obstacle);
       if (metrics != null) metrics.visitedNodes++;
     } while (openList.size > 0 && limit++ < 300);
+    if (partial && best != startNode) { current = best; return true; }
     return false;
   }
 

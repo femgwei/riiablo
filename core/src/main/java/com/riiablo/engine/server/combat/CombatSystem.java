@@ -1050,6 +1050,26 @@ public class CombatSystem {
     return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) value);
   }
 
+  /** Native monster direct packet: PDR before resistance, player 50% cap, no minimum damage.
+   * Integer-damage projection of SUNITDMG_ApplyResistancesAndAbsorb; not an 8.8 replay.
+   */
+  public CombatResult calculateNativeFixedPhysicalDamage(
+      Attributes defender, boolean defenderPlayer, int rawDamage, StateList defenderStates) {
+    CombatResult result = new CombatResult();
+    result.reset();
+    if (defender == null || rawDamage <= 0) return result;
+    int resistance = statInt(defender, Stat.damageresist, 0);
+    if (defenderStates != null) resistance += defenderStates.getTotalPhysicalResistModifier();
+    resistance = Math.max(MIN_RESISTANCE, Math.min(defenderPlayer ? 50 : 100, resistance));
+    int afterReduction = Math.max(0,
+        rawDamage - Math.max(0, statInt(defender, Stat.normal_damage_reduction, 0)));
+    result.hit = true;
+    result.hitChance = 100;
+    result.physicalDamage = saturatingInt((long) afterReduction * (100 - resistance) / 100L);
+    result.totalDamage = result.physicalDamage;
+    return result;
+  }
+
   /** Resolves reflected/direct physical damage without rolling a second hit. */
   public CombatResult calculateFixedPhysicalDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,

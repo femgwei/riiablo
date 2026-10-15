@@ -1,0 +1,10 @@
+Universe: enabled MonStats, Align=0, npc=false. Counts are table-reference candidates, not actual map spawn coverage.
+ALL variants=557 families=144 ais=110
+A1 variants=66 families=30 ais=27
+A2 variants=77 families=41 ais=36
+A3 variants=71 families=41 ais=39
+A4 variants=36 families=26 ais=24
+A5 variants=187 families=74 ais=64
+unassignedAct=134 unresolvedPlacements=[A1:place_champion, A1:place_fallennest, A1:place_group100, A1:place_group25, A1:place_group50, A1:place_group75, A1:place_nothing, A1:place_npc_pack, A1:place_talkingrogue, A1:place_unique_pack, A2:place_champion, A2:place_dumbguard, A2:place_group100, A2:place_group25, A2:place_group50, A2:place_group75, A2:place_maggot, A2:place_maggotegg, A2:place_nothing, A2:place_npc_pack, A2:place_talkingguard, A2:place_tightspotboss, A2:place_unique_pack, A3:place_amphibian, A3:place_champion, A3:place_fetish, A3:place_fetishnest, A3:place_fetishshaman, A3:place_group100, A3:place_group25, A3:place_group50, A3:place_group75, A3:place_mosquitonest, A3:place_tentacle_ew, A3:place_tentacle_ns, A4:place_champion, A4:place_group100, A4:place_group25, A4:place_group50, A4:place_group75, A5:place_bloodlord, A5:place_champion, A5:place_deadbarb, A5:place_deadimp, A5:place_deadminion, A5:place_imp, A5:place_impgroup, A5:place_minion, A5:place_miniongroup, A5:place_nothing, A5:place_reanimateddead]
+{ACTION_OBSERVED=490, AI_FALLBACK=376, MOVEMENT_ONLY=7, NO_ACTION=175, TERMINAL_OBSERVED=4, WARNING=109}
+seed=1 difficulty=0 ticksPerCase=500

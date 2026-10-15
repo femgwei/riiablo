@@ -79,6 +79,7 @@ public class Casting extends PooledComponent {
   public boolean monsterMissileCreated;
   /** Used-skill Param1 and MODECHANGE/ENDANIM state, never shared between casts. */
   public com.riiablo.engine.server.NativeMonInferno monInferno;
+  public com.riiablo.engine.server.NativeDiabRun diabRun;
   /** Native Paladin Zeal SrvSt37/SrvDo013 sequence state. */
   public boolean zealInitialized;
   public boolean zealStrikeProcessed;
@@ -174,6 +175,7 @@ public class Casting extends PooledComponent {
     strafeTargetIds.clear();
     monsterMissileCreated = false;
     monInferno = null;
+    diabRun = null;
     zealInitialized = false;
     zealStrikeProcessed = false;
     zealRemainingStrikes = 0;
@@ -210,6 +212,7 @@ public class Casting extends PooledComponent {
   @Override
   protected void reset() {
     monInferno = null;
+    diabRun = null;
     skillId = -1;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();

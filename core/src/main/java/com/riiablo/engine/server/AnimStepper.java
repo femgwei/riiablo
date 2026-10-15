@@ -57,6 +57,22 @@ public class AnimStepper extends IntervalIteratingSystem {
     }
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    if (casting != null && casting.diabRun != null && sequence != null && sequence.started) {
+      NativeDiabRun run = casting.diabRun;
+      if (run.remaining <= 0) {
+        events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+        return;
+      }
+      int point = run.cursor >>> 8;
+      animData.frame = point << 8;
+      events.dispatch(new com.riiablo.engine.server.event.DiabRunUpdateEvent(entityId));
+      if (run.tail && NativeDiabRun.action(point) == Engine.KEYFRAME_ATK && !run.hitProcessed)
+        events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+      run.cursor = (run.cursor + 256) % (22 << 8);
+      run.remaining -= 256;
+      animData.frame = run.cursor;
+      return;
+    }
     NativeMonInferno inferno = casting == null ? null : casting.monInferno;
     if (inferno != null && sequence != null && sequence.started) {
       inferno.frame++;

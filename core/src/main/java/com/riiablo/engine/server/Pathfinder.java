@@ -63,6 +63,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   /**
    * Optional for focused headless tests and legacy worlds.  The movement
    * queries below already treat a missing dynamic-collision service as an
@@ -272,6 +273,11 @@ public class Pathfinder extends IteratingSystem {
             || StaminaSystem.hasRunStamina(mAttributes.get(entityId)));
     velocity.movementRunning = running;
     float speed = velocity.speed(running);
+    com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
+    if (cast != null && cast.diabRun != null && cast.diabRun.moving) {
+      speed = NativeDiabRun.baseSpeed(com.riiablo.Riiablo.files.skills.get(cast.skillId), 1)
+          * Math.max(Velocity.MIN_SPEED_MULTIPLIER, velocity.baseSpeedMultiplier + velocity.modeSpeedBonusMultiplier);
+    }
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
           entityId, running, velocity.walkSpeed, velocity.runSpeed);
@@ -617,9 +623,13 @@ public class Pathfinder extends IteratingSystem {
                 ignoredDynamicTarget(targetEntityId, x, y),
                 x, y, footprint);
     MapWrapper owner = mMapWrapper.has(src) ? mMapWrapper.get(src) : null;
-    boolean success = map.findPath(owner == null ? null : owner.zone,
-        srcPos, targetPos, flags, size, path, obstacle,
-        src, targetEntityId, canOpenDoors(src));
+    com.riiablo.engine.server.component.Casting cast = mCasting.get(src);
+    boolean runPath = cast != null && cast.diabRun != null;
+    boolean success = runPath
+        ? map.findPartialPath(owner == null ? null : owner.zone,
+            srcPos, targetPos, flags, size, path, obstacle, canOpenDoors(src))
+        : map.findPath(owner == null ? null : owner.zone,
+            srcPos, targetPos, flags, size, path, obstacle, src, targetEntityId, canOpenDoors(src));
     if (success) {
       if (!pathWithinNativeMonsterRooms(src, path)) {
         path.clear();

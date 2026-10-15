@@ -205,6 +205,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
+    if ("Diablo".equals(monster.AI)) scenarios.add("diab-run");
     return scenarios;
   }
 
@@ -269,6 +270,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       zone.attachEntity(subject);
       probe.subject = subject;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
+      if (result.scenario.equals("diab-run")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_DIAB_RUN";
+        probe.diabRun = new DiabRunCycle();
+      }
       if (result.scenario.equals("diab-wall")) {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
@@ -307,8 +314,25 @@ public final class MonsterAiArena extends ApplicationAdapter {
       int corpse = helpers(world, factory, zone, row.monster, subject, 128 + distance, result, capture);
       Vector2 previous = world.getMapper(Position.class).get(subject).position.cpy();
       boolean frogApproachRequested = false;
+      boolean wallRunSeen = false;
       for (int tick = 0; tick < config.ticks; tick++) {
         capture.tick = tick + 1;
+        if (result.scenario.equals("diab-wall") && probe.diabWall.phase == 0) {
+          Casting current = world.getMapper(Casting.class).get(subject);
+          if (current != null && current.diabRun != null) wallRunSeen = true;
+          Vector2 actor = world.getMapper(Position.class).get(subject).position;
+          Vector2 playerPos = world.getMapper(Position.class).get(playerId).position;
+          if (wallRunSeen && (current == null || current.diabRun == null)
+              && playerPos.dst2(actor) < 100
+              && !world.getMapper(com.riiablo.engine.server.component.Pathfind.class).has(playerId)) {
+            // DiabRun now closes distance legitimately. Reopen ranged space
+            // through ordinary player movement, not a forced wall selection.
+            Vector2 retreat = playerPos.cpy().sub(actor).nor().scl(16).add(playerPos);
+            if (!world.getSystem(Pathfinder.class).findPath(playerId, retreat, false, Engine.INVALID_ENTITY))
+              throw new IllegalStateException("DiabWall retreat path rejected");
+            capture.line("fixture wallRetreat=" + playerId + " destination=" + retreat);
+          }
+        }
         simulation.tick(null, null);
         result.ticks++;
         if (!world.getEntityManager().isActive(subject)) {
@@ -359,7 +383,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED"
               : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED"
               : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED"
-              : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
+              : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED"
+              : result.scenario.equals("diab-run") ? "DIAB_RUN_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -479,6 +504,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
     InfernoCycle inferno;
     DiabColdCycle diabCold;
     DiabWallCycle diabWall;
+    DiabRunCycle diabRun;
+    com.riiablo.engine.server.NativeDiabRun runCast;
+    com.badlogic.gdx.math.Vector2 runStart;
+    int runTarget = -1;
+    boolean runHitPending, runFinished;
+    float runHpBefore, runDamage;
     boolean pendingWall, wallCastValid, wallFinished, wallDamagePending;
     int wallCastId, wallTarget = -1, wallLevel;
     float wallLifeBefore, wallHitDamage;
@@ -535,6 +566,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (diabRun != null) observeDiabRun();
       if (diabWall != null) observeDiabWall();
       if (diabCold != null && pendingCold != null) {
         int target = pendingCold.targetId;
@@ -616,6 +648,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
       cycleChanged(before);
     }
     @Subscribe public void finished(AnimDataFinishedEvent event) {
+      if (diabRun != null && event.entityId == subject && runCast != null) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        if (cast != null && cast.diabRun == runCast && runCast.tail && runCast.hitProcessed)
+          runFinished = true;
+      }
       if (diabWall != null && event.entityId == subject && pendingWall) {
         Casting cast = world.getMapper(Casting.class).get(subject);
         Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -674,6 +711,19 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void damage(DamageEvent event) {
       if (event.attacker != subject) return;
+      if (diabRun != null && runCast != null && event.victim == runTarget && diabRun.phase == 2) {
+        Casting cast = world.getMapper(Casting.class).get(subject);
+        AnimData anim = world.getMapper(AnimData.class).get(subject);
+        if (cast != null && cast.diabRun == runCast && runCast.tail && runCast.hitProcessed
+            && anim != null && anim.frame >>> 8 == 18 && event.kind == DamageEvent.MISSILE
+            && event.damage >= 53 && event.damage < 69 && event.physicalDamage == event.damage
+            && event.fireDamage == 0 && event.coldDamage == 0 && event.lightningDamage == 0
+            && event.magicDamage == 0 && event.poisonDamage == 0) {
+          runHpBefore = world.getMapper(AttributesWrapper.class).get(runTarget).attrs.get(Stat.hitpoints).asFixed();
+          runDamage = event.damage; runHitPending = true;
+          capture.line("DiabRunHit target=" + runTarget + " damage=" + runDamage + " hpBefore=" + runHpBefore);
+        }
+      }
       if (diabWall != null && event.missileId >= 0 && event.victim == wallTarget) {
         com.riiablo.engine.server.component.Missile fire = world.getMapper(
             com.riiablo.engine.server.component.Missile.class).get(event.missileId);
@@ -699,6 +749,34 @@ public final class MonsterAiArena extends ApplicationAdapter {
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
     }
+    private void observeDiabRun() {
+      Casting cast = world.getMapper(Casting.class).get(subject);
+      Sequence seq = world.getMapper(Sequence.class).get(subject);
+      int before = diabRun.phase;
+      if (runCast == null && cast != null && cast.diabRun != null) {
+        runCast = cast.diabRun; runTarget = runCast.targetId;
+        runStart = world.getMapper(Position.class).get(subject).position.cpy();
+        diabRun.start(cast.skillId == 198 && seq != null && seq.nativeDiabRun
+            && seq.mode1 == Engine.Monster.MODE_RN && !runCast.pathStarted);
+      }
+      if (runCast == null) return;
+      com.riiablo.engine.server.component.Pathfind path = world.getMapper(
+          com.riiablo.engine.server.component.Pathfind.class).get(subject);
+      if (runCast.moving && path != null)
+        diabRun.move(path.targetEntityId == Engine.INVALID_ENTITY
+            && path.destination.dst2(runCast.destination) < runStart.dst2(runCast.destination)
+            && world.getMapper(Position.class).get(subject).position.dst2(runStart) > .25f);
+      if (runHitPending) {
+        float life = world.getMapper(AttributesWrapper.class).get(runTarget).attrs.get(Stat.hitpoints).asFixed();
+        diabRun.hit(life <= runHpBefore - runDamage + .001f);
+        runHitPending = false;
+      }
+      diabRun.end(runFinished && (cast == null || cast.diabRun != runCast) && path == null);
+      if (before != diabRun.phase) capture.line("DiabRunCycle subject=" + subject + " phase=" + diabRun.phase
+          + " cursor=" + (runCast.cursor >>> 8) + " loops=" + runCast.loops + " tail=" + runCast.tail);
+      if (diabRun.phase == 4) capture.result.specialPassed = true;
+    }
+
     private void observeDiabWall() {
       if (!pendingWall) return;
       com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
@@ -739,6 +817,15 @@ public final class MonsterAiArena extends ApplicationAdapter {
       return world.getAspectSubscriptionManager().get(com.artemis.Aspect.all(
           com.riiablo.engine.server.component.Missile.class)).getEntities().size();
     }
+  }
+
+  /** Natural St54 -> actual coordinate-path movement -> action18 HP loss -> tail cleanup. */
+  static final class DiabRunCycle {
+    int phase;
+    void start(boolean valid) { if (phase == 0 && valid) phase = 1; }
+    void move(boolean valid) { if (phase == 1 && valid) phase = 2; }
+    void hit(boolean valid) { if (phase == 2 && valid) phase = 3; }
+    void end(boolean valid) { if (phase == 3 && valid) phase = 4; }
   }
 
   /** Real cast -> table-owned trail -> actual HP loss -> S3/first-cast cleanup. */
@@ -846,7 +933,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE"
               : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE"
               : "diab-cold".equals(result.scenario) ? "DIAB_COLD"
-              : "diab-wall".equals(result.scenario) ? "DIAB_WALL" : "NONE"));
+              : "diab-wall".equals(result.scenario) ? "DIAB_WALL"
+              : "diab-run".equals(result.scenario) ? "DIAB_RUN" : "NONE"));
     }
     synchronized void line(String text) {
       try { output.write("tick=" + tick + " " + text + "\n"); }
