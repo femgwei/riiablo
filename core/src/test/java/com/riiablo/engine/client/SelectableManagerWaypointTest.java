@@ -38,11 +38,28 @@ class SelectableManagerWaypointTest {
     Objects.Entry chest = new Objects.Entry();
     chest.Draw = true;
     chest.OperateFn = 4;
-    chest.Selectable = new boolean[8];
+    chest.Selectable = null; // genuinely absent, not eight explicit false flags
 
     assertTrue(SelectableManager.isSelectable(chest, Engine.Object.MODE_NU));
     assertTrue(SelectableManager.isSelectable(chest, Engine.Object.MODE_ON));
     assertFalse(SelectableManager.isSelectable(chest, Engine.Object.MODE_OP));
+  }
+
+  @Test
+  void nativeBraziersNeverBecomeSelectableOnModeChanges() {
+    for (int id : new int[] {285, 286}) {
+      Objects.Entry brazier = new Objects.Entry();
+      brazier.Id = id;
+      brazier.Draw = true;
+      brazier.OperateFn = 14;
+      brazier.Selectable = new boolean[8];
+      for (int mode = Engine.Object.MODE_NU; mode <= Engine.Object.MODE_S5; mode++) {
+        assertFalse(SelectableManager.isSelectable(brazier, mode));
+      }
+      brazier.Selectable[Engine.Object.MODE_ON] = true;
+      assertFalse(SelectableManager.isSelectable(brazier, Engine.Object.MODE_NU));
+      assertTrue(SelectableManager.isSelectable(brazier, Engine.Object.MODE_ON));
+    }
   }
 
   @Test

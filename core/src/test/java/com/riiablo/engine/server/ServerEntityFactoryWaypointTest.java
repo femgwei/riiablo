@@ -51,9 +51,24 @@ class ServerEntityFactoryWaypointTest {
     Objects.Entry chest = new Objects.Entry();
     chest.Draw = true;
     chest.OperateFn = 4; // D2Game::OBJECTS_OperateFunction04_Chest
-    chest.Selectable = new boolean[8];
+    chest.Selectable = null; // genuinely absent, not eight explicit false flags
 
     assertEquals(3f, ServerEntityFactory.resolveObjectInteractionRange(chest));
+  }
+
+  @Test
+  void nativeBraziersDoNotReceiveFallbackInteractionRange() {
+    for (int id : new int[] {285, 286}) {
+      Objects.Entry brazier = new Objects.Entry();
+      brazier.Id = id;
+      brazier.Draw = true;
+      brazier.OperateFn = 14;
+      brazier.OperateRange = 2;
+      brazier.Selectable = new boolean[8];
+      assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(brazier));
+      brazier.Selectable[Engine.Object.MODE_NU] = true;
+      assertEquals(2f, ServerEntityFactory.resolveObjectInteractionRange(brazier));
+    }
   }
 
   @Test

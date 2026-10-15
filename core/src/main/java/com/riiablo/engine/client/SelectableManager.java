@@ -63,6 +63,10 @@ public class SelectableManager extends PassiveSystem {
     // Never let the converted-table fallback manufacture a mouse target.
     if (base.OperateFn == 11 || base.OperateFn == 13) return false;
 
+    // A present table explicitly owns targetability for this mode. Do not
+    // turn zero flags into targets merely because an operate callback exists.
+    if (base.Selectable != null) return false;
+
     // Keep converted native doors/chests/shrines targetable when their table
     // omitted mode-specific Selectable flags. The operation mode remains a
     // valid target; the object interactor enforces one-shot chest state.

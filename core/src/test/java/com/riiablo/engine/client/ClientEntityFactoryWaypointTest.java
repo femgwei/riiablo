@@ -34,9 +34,22 @@ class ClientEntityFactoryWaypointTest {
     Objects.Entry chest = new Objects.Entry();
     chest.Draw = true;
     chest.OperateFn = 4;
-    chest.Selectable = new boolean[8];
+    chest.Selectable = null; // genuinely absent, not eight explicit false flags
 
     assertTrue(ClientEntityFactory.isInitiallySelectable(chest));
+  }
+
+  @Test
+  void nativeBraziersWithExplicitZeroFlagsAreNotInitiallySelectable() {
+    for (int id : new int[] {285, 286}) {
+      Objects.Entry brazier = new Objects.Entry();
+      brazier.Id = id;
+      brazier.Draw = true;
+      brazier.OperateFn = 14;
+      brazier.OperateRange = 2;
+      brazier.Selectable = new boolean[8];
+      assertFalse(ClientEntityFactory.isInitiallySelectable(brazier));
+    }
   }
 
   @Test

@@ -269,6 +269,9 @@ public class ClientEntityFactory extends ServerEntityFactory {
     if (base.Selectable != null
         && Engine.Object.MODE_NU < base.Selectable.length
         && base.Selectable[Engine.Object.MODE_NU]) return true;
+    // Explicit zero flags are scenery, not missing data (native braziers
+    // 285/286 still carry OperateFn=14). Preserve the existing door exception.
+    if (base.Selectable != null && !base.IsDoor) return false;
     // Converted Objects.txt rows may omit Selectable flags while retaining a
     // valid native OperateFn. Match ServerEntityFactory's interaction-range
     // fallback so the client can actually target the same object.

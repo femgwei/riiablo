@@ -331,6 +331,11 @@ public class ServerEntityFactory extends EntityFactory {
           && mode < base.Selectable.length
           && base.Selectable[mode] ? base.OperateRange : 0f;
     }
+    // Native Objects.cpp sets targetability from Selectable[currentMode].
+    // All-zero flags are an explicit denial, not an incomplete-table signal.
+    // Doors retain their existing reversible-door interaction exception.
+    if (base.Selectable != null && !ArrayUtils.contains(base.Selectable, true)
+        && !base.IsDoor) return 0;
     if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
       return base.OperateRange;
     }
