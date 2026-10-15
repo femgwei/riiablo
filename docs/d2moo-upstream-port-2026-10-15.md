@@ -2081,6 +2081,16 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 仅host已解析元数据输入域，不模拟Excel loader截断或新增DLL动态证据；生产仍A*，
   raw数据/live字段/Act与Zone/shared seed仍待。
 
+## 第四十四批：完整owner fp16观察一致性
+
+- D2PathUnits.dynamicPath暴露不可变原始快照，动态null保留缺失语义、静态单位拒绝。
+  Request构造及既有观察复检对已分配动态owner完整precisionX/Y精确匹配，拒绝同格fraction混用。
+- 两处组合夹具显式复制原owner precision，修正result默认中心与原整数fp16混用，未改动原算法。
+- 新增2项验证构造及custom effects前fraction变化拒绝；完整607项/52类通过，失败/错误/跳过0，
+  core/build/round44-full.log，XML .gradle/path-port/round44-full/core/test-results/pathPortTest。
+- 不从浮点重建或宣称实际raw来源已完成，缺失动态路径/静态owner/legacy契约保持；
+  生产仍A*，live字段/Act与Zone/shared seed仍待，无新增DLL算法证据或动态执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

@@ -64,6 +64,12 @@ public final class D2PathRequest {
             if (!D2PathUnits.coordinates(observation.owner).equals(result.path.currentPoint)) {
                 throw new IllegalArgumentException("request start must match the owner observation; recapture after movement");
             }
+            if (D2PathUnits.hasDynamicPath(observation.owner)) {
+                D2PathUnits.DynamicPath raw = D2PathUnits.dynamicPath(observation.owner);
+                if (raw.precisionX != result.precisionX || raw.precisionY != result.precisionY) {
+                    throw new IllegalArgumentException("request precision must match the raw owner observation");
+                }
+            }
         }
 
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,

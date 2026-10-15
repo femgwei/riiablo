@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class D2PathDispatchTest {
   private static D2PathRequest.Search savedSearch(int type, Runnable guard, D2Seed seed) {
     D2PathResult.State s = state(); s.path.pathType = type;
+    s.precisionX = 10 << 16; s.precisionY = 10 << 16;
     D2PathUnits.Unit owner = D2PathUnits.Unit.dynamic(1, 2,
         new D2PathUnits.DynamicPath(10 << 16, 10 << 16, 0));
     D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));

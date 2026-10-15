@@ -292,6 +292,8 @@ class NativePathUnitBindingTest {
     path.pathType = 2;
     path.setNewDistance(30);
     D2PathResult.State result = new D2PathResult.State(path);
+    D2PathUnits.DynamicPath raw = D2PathUnits.dynamicPath(observation.owner);
+    if (raw != null) { result.precisionX = raw.precisionX; result.precisionY = raw.precisionY; }
     result.velocity = 256;
     result.room = new D2PathResult.Room(0, 0, 50, 50);
     return new D2PathRequest.State(result, observation.target,

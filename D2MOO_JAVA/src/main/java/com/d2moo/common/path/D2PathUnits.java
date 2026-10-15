@@ -108,6 +108,14 @@ public final class D2PathUnits {
     /** Package adapter check: a missing path is not a zeroed, allocated dynamic path. */
     static boolean hasDynamicPath(Unit unit) { return !isStatic(unit.type) && unit.dynamicPath != null; }
 
+    /** Immutable raw fp16 snapshot for adapters; null means no allocated path.
+     * Static coordinates have no dynamic precision and must not be centered here. */
+    public static DynamicPath dynamicPath(Unit unit) {
+        Objects.requireNonNull(unit);
+        if (isStatic(unit.type)) throw new IllegalArgumentException("dynamic unit required");
+        return unit.dynamicPath;
+    }
+
     /**
      * PathUtil 0x6FDAB890: add the native FOG lead and store uint16. speed is the
      * owner's +0x68 unsigned byte, not movement velocity. Direction is the target's

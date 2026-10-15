@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十三批续接结果（优先于下方历史起点）
+## 第四十四批续接结果（优先于下方历史起点）
+
+- D2PathUnits.dynamicPath提供只读不可变原始DynamicPath快照，null保留缺失路径，静态单位拒绝。
+  Request标准Observation对已分配动态owner核对完整precisionX/Y，不再只比较整格坐标。
+- 构造及既有Request/Search/effects观察复检入口覆盖同格内fraction变化；不从浮点或格点中心猜测。
+  组合测试夹具从原owner快照复制precision，修正此前result构造默认居中与显式整数fp16混用。
+- 新增2项，完整607项/52类通过，失败/错误/跳过0；core/build/round44-full.log，
+  XML `.gradle/path-port/round44-full/core/test-results/pathPortTest`。
+- 仅快照一致性，未接通真实ECS raw fp16来源；缺失路径/静态owner不伪造precision，legacy契约保留。
+  生产仍A*，live字段/Act与Zone/shared seed仍待，无新增DLL算法证据或动态执行。
+
+## 第四十三批续接结果（历史）
 
 - NativePathUnitMetadata对MonStats2.SizeX/SizeY及Missiles.Size要求uint8域0..255，
   防止宿主int字段越界被当作原生记录；不截断/夹紧。Objects尺寸仍保留int32，不套用byte限制。

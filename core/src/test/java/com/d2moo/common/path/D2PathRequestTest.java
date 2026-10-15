@@ -13,6 +13,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathRequestTest {
+  @Test void standardObservationRejectsSameTileDifferentFractionAtConstruction() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathRequest.State s = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    s.result.precisionX++;
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(s.result,
+        target, s.startRoom, false, 0, 2, 3, 1, 70));
+    assertEquals(p(10, 10), s.result.path.currentPoint);
+  }
+  @Test void fractionalMovementRequiresRecaptureBeforeCustomEffects() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathRequest.State s = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    s.result.precisionY ^= 1;
+    Effects effects = new Effects();
+    assertThrows(IllegalArgumentException.class, () -> D2PathRequest.compute(s, false, effects));
+    assertTrue(effects.calls.isEmpty()); assertEquals(0x1234, s.collidedMask);
+  }
   @Test void standardObservationRejectsDifferentOwnerStartAtConstruction() {
     D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
     D2PathResult.State r = result(0, p(10, 10), p(20, 10));

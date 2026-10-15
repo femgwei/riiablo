@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第四十四批补充：Request标准Observation核对已分配动态owner完整precisionX/Y，
+避免同格内fraction不同仍混用；只读DynamicPath访问器允许显式传递原值，不自动从浮点重建。
+新增2项，完整607项/52类通过，失败/错误/跳过0；未完成真实raw来源，生产仍A*，无新增DLL证据。
+
 第四十三批补充：按固定上游原生结构，MonStats2.SizeX/Y和Missiles.Size验证uint8域，
 Objects仍保留int32；合法255与#11281映射越界fallback区分，不伪造截断后的原生记录。
 新增3项，完整605项/52类通过，失败/错误/跳过0；生产仍A*，无新增DLL动态证据。

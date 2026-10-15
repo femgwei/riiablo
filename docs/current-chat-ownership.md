@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十四批：标准Request核对已分配动态owner完整fp16 precision，拒绝同格内fraction混用；
+只读raw快照访问器不从浮点重建。新增2项，完整607项/52类通过，失败/错误/跳过0。
+日志core/build/round44-full.log；真实raw来源仍待，生产仍A*，详细交接见handoff顶部。
+
 第四十三批：MonStats2双轴/Missiles尺寸要求原生uint8域，拒绝宿主越界int，不截断；
 Objects int32保持。新增3项，完整605项/52类通过，失败/错误/跳过0；core/build/round43-full.log。
 255等合法byte仍保留，pattern映射另按原规则fallback；生产仍A*，详细交接见handoff顶部。

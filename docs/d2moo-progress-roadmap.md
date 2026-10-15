@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十四批（生产适配仍PARTIAL）
+
+- [x] Request标准观察核对owner完整fp16 precision；只读原快照访问，不猜测fraction。
+- [x] 夹具显式复制原precision；新增2项，完整607项/52类通过，无失败/错误/跳过。
+- [ ] 实际ECS raw来源/live字段/Act与Zone/shared seed仍待，缺失路径及legacy边界保留。
+
+生产仍Map→AStarPathFinder，本批仅快照一致性。
+
 ## 2026-10-16 寻路第四十三批（生产适配仍PARTIAL）
 
 - [x] 怪物/导弹尺寸uint8域校验，Objects仍int32；不夹紧或截断宿主非法值。
