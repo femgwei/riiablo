@@ -99,7 +99,7 @@ public final class MercenarySkillSystem extends IteratingSystem {
       return;
     }
     merc.targetId = target;
-    NativeHirelingExperienceTable.Row row = table.row(merc.mercType, merc.level);
+    NativeHirelingExperienceTable.Row row = table.row(merc.hirelingId(), merc.level);
     if (row == null) {
       blocked(entityId, merc, 4, target, Float.NaN, "hireling_row_missing");
       return;
@@ -131,8 +131,8 @@ public final class MercenarySkillSystem extends IteratingSystem {
 
     int slot = -1;
     if (useSkill) {
-      slot = table.selectSkill(merc.mercType, merc.level,
-          rng.nextInt(table.skillRollBound(merc.mercType, merc.level)));
+      slot = table.selectSkill(merc.hirelingId(), merc.level,
+          rng.nextInt(table.skillRollBound(merc.hirelingId(), merc.level)));
     }
 
     // sub_6FCE4610 distinguishes melee and ranged hirelings before invoking
@@ -169,8 +169,8 @@ public final class MercenarySkillSystem extends IteratingSystem {
         return;
       }
       if (slot < 0) {
-        slot = table.selectSkill(merc.mercType, merc.level,
-            rng.nextInt(table.skillRollBound(merc.mercType, merc.level)));
+        slot = table.selectSkill(merc.hirelingId(), merc.level,
+            rng.nextInt(table.skillRollBound(merc.hirelingId(), merc.level)));
       }
     } else if (slot >= 0 && slot < row.skills.length && row.skills[slot] >= 0
         && row.skillLevels[slot] > 0) {

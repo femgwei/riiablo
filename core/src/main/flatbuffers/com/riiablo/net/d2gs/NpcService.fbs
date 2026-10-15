@@ -24,6 +24,27 @@ table NpcServiceStock {
   price:uint32;
 }
 
+table NpcHirelingOffer {
+  index:int32;
+  seed:int32;
+  mercType:int32;
+  hirelingId:int32;
+  nameId:int32;
+  level:int32;
+  life:int32;
+  defense:int32;
+  cost:uint32;
+  description:string;
+}
+
+table NpcMercenarySnapshot {
+  seed:int32;
+  nameId:int32;
+  hirelingId:int32;
+  experience:ulong;
+  flags:uint32;
+}
+
 /** Server response and optional refreshed stock snapshot. */
 table NpcServiceResult {
   requestId:uint32;
@@ -35,4 +56,7 @@ table NpcServiceResult {
   itemData:[ubyte];
   stock:[NpcServiceStock];
   goldBank:uint32;
+  hirelings:[NpcHirelingOffer];
+  mercenary:NpcMercenarySnapshot;
+  serviceType:NpcServiceType;
 }

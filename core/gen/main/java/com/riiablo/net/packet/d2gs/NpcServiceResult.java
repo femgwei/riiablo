@@ -35,6 +35,14 @@ public final class NpcServiceResult extends Table {
   public com.riiablo.net.packet.d2gs.NpcServiceStock.Vector stockVector() { return stockVector(new com.riiablo.net.packet.d2gs.NpcServiceStock.Vector()); }
   public com.riiablo.net.packet.d2gs.NpcServiceStock.Vector stockVector(com.riiablo.net.packet.d2gs.NpcServiceStock.Vector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
   public long goldBank() { int o = __offset(20); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public com.riiablo.net.packet.d2gs.NpcHirelingOffer hirelings(int j) { return hirelings(new com.riiablo.net.packet.d2gs.NpcHirelingOffer(), j); }
+  public com.riiablo.net.packet.d2gs.NpcHirelingOffer hirelings(com.riiablo.net.packet.d2gs.NpcHirelingOffer obj, int j) { int o = __offset(22); return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null; }
+  public int hirelingsLength() { int o = __offset(22); return o != 0 ? __vector_len(o) : 0; }
+  public com.riiablo.net.packet.d2gs.NpcHirelingOffer.Vector hirelingsVector() { return hirelingsVector(new com.riiablo.net.packet.d2gs.NpcHirelingOffer.Vector()); }
+  public com.riiablo.net.packet.d2gs.NpcHirelingOffer.Vector hirelingsVector(com.riiablo.net.packet.d2gs.NpcHirelingOffer.Vector obj) { int o = __offset(22); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
+  public com.riiablo.net.packet.d2gs.NpcMercenarySnapshot mercenary() { return mercenary(new com.riiablo.net.packet.d2gs.NpcMercenarySnapshot()); }
+  public com.riiablo.net.packet.d2gs.NpcMercenarySnapshot mercenary(com.riiablo.net.packet.d2gs.NpcMercenarySnapshot obj) { int o = __offset(24); return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null; }
+  public byte serviceType() { int o = __offset(26); return o != 0 ? bb.get(o + bb_pos) : 0; }
 
   public static int createNpcServiceResult(FlatBufferBuilder builder,
       long requestId,
@@ -45,8 +53,13 @@ public final class NpcServiceResult extends Table {
       int itemId,
       int itemDataOffset,
       int stockOffset,
-      long goldBank) {
-    builder.startTable(9);
+      long goldBank,
+      int hirelingsOffset,
+      int mercenaryOffset,
+      byte serviceType) {
+    builder.startTable(12);
+    NpcServiceResult.addMercenary(builder, mercenaryOffset);
+    NpcServiceResult.addHirelings(builder, hirelingsOffset);
     NpcServiceResult.addGoldBank(builder, goldBank);
     NpcServiceResult.addStock(builder, stockOffset);
     NpcServiceResult.addItemData(builder, itemDataOffset);
@@ -55,11 +68,12 @@ public final class NpcServiceResult extends Table {
     NpcServiceResult.addGold(builder, gold);
     NpcServiceResult.addReason(builder, reasonOffset);
     NpcServiceResult.addRequestId(builder, requestId);
+    NpcServiceResult.addServiceType(builder, serviceType);
     NpcServiceResult.addSuccess(builder, success);
     return NpcServiceResult.endNpcServiceResult(builder);
   }
 
-  public static void startNpcServiceResult(FlatBufferBuilder builder) { builder.startTable(9); }
+  public static void startNpcServiceResult(FlatBufferBuilder builder) { builder.startTable(12); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addInt(0, (int)requestId, (int)0L); }
   public static void addSuccess(FlatBufferBuilder builder, boolean success) { builder.addBoolean(1, success, false); }
   public static void addReason(FlatBufferBuilder builder, int reasonOffset) { builder.addOffset(2, reasonOffset, 0); }
@@ -74,6 +88,11 @@ public final class NpcServiceResult extends Table {
   public static int createStockVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
   public static void startStockVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static void addGoldBank(FlatBufferBuilder builder, long goldBank) { builder.addInt(8, (int)goldBank, (int)0L); }
+  public static void addHirelings(FlatBufferBuilder builder, int hirelingsOffset) { builder.addOffset(9, hirelingsOffset, 0); }
+  public static int createHirelingsVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
+  public static void startHirelingsVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addMercenary(FlatBufferBuilder builder, int mercenaryOffset) { builder.addOffset(10, mercenaryOffset, 0); }
+  public static void addServiceType(FlatBufferBuilder builder, byte serviceType) { builder.addByte(11, serviceType, 0); }
   public static int endNpcServiceResult(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

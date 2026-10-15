@@ -61,5 +61,27 @@ that the referenced item still belongs to the authenticated player.
 2. BUY and SELL atomic mutations. (implemented)
 3. REPAIR_ITEM and REPAIR_ALL. (implemented)
 4. GAMBLE inventory refresh and purchase. (implemented)
-5. HIRE and RESURRECT.
+5. HIRE candidate selection and RESURRECT (implemented; live integration verification pending).
 6. Request-result idempotency cache (implemented) and reconnect/session recovery.
+
+## Mercenary selection
+
+`HIRE/OPEN` returns `NpcHirelingOffer[]`: stable roster index/seed, native
+Hireling Id, four-class presentation type, name, level, life, defense, cost and
+HireDesc code. Opening does not charge or create a mercenary. The roster is
+private to a player/NPC and expires after ten minutes.
+
+`HIRE/HIRE` reuses `itemIndex` for the chosen roster index and `itemId` for its
+seed. `stockRevision` carries the unsigned previous mercenary seed confirmed
+by the player (zero when none exists). D2GS validates the exact offer and
+replacement consent; it computes cost and checks carried plus bank gold.
+Entity reservation/payment failure retains the old mercenary. Successful
+replacement discards the old equipment after an explicit client warning.
+
+HIRE and RESURRECT results include `NpcMercenarySnapshot` and the authoritative
+wallet. Entity snapshots append `MercenaryP`, including server owner id, native
+Hireling Id, class, level, name, seed, experience and flags. The client maps
+the owner id and shares the local owner's mercenary attributes with the HUD.
+Both client and server must be upgraded for the new selection flow.
+
+See [implementation and verification boundaries](mercenary-hire-ui.md).

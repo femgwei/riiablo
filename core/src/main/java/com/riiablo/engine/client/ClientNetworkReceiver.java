@@ -141,6 +141,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Selectable> mSelectable;
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<com.riiablo.engine.server.component.Mercenary> mMercenary;
+  private com.riiablo.engine.server.NativeHirelingExperienceTable clientHirelingTable;
 
   protected CofManager cofs;
   protected NetworkIdManager syncIds;
@@ -185,6 +187,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final IntSet deferredServerEntities = new IntSet();
   /** Last authoritative level observed for each server entity. */
   private final IntIntMap serverEntityLevels = new IntIntMap();
+  private final IntIntMap pendingMercenaryOwners = new IntIntMap();
   private final ClientPartyState partyState = new ClientPartyState();
   private final ClientTradeState tradeState = new ClientTradeState();
   private long latestServerTick;
@@ -268,6 +271,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
     }
+    resolveMercenaryOwners();
   }
 
   private void process(D2GS packet) {
@@ -774,6 +778,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void NpcServiceResult(D2GS packet) {
     NpcServiceResult result = (NpcServiceResult) packet.data(new NpcServiceResult());
+    if (result.mercenary() != null && Riiablo.charData != null) {
+      com.riiablo.net.packet.d2gs.NpcMercenarySnapshot merc = result.mercenary();
+      applyMercenaryHeader(merc.seed(), merc.nameId(), merc.hirelingId(), merc.experience(),
+          (int) merc.flags());
+      applyAuthoritativeWallet(result.gold(), result.goldBank());
+    }
+    if (Riiablo.game != null && Riiablo.game.hireMercenaryPanel != null) {
+      Riiablo.game.hireMercenaryPanel.applyNetworkResult(result);
+    }
     if (Riiablo.game != null && Riiablo.game.vendorPanel != null) {
       Riiablo.game.vendorPanel.applyNetworkResult(result);
     }
@@ -991,6 +1004,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       deferredServerEntities.remove(entityData.entityId());
       serverEntityLevels.remove(entityData.entityId(), -1);
       if (entityId != Engine.INVALID_ENTITY) {
+        pendingMercenaryOwners.remove(entityId, Engine.INVALID_ENTITY);
         interpolation.remove(entityId);
         world.delete(entityId);
       }
@@ -1141,6 +1155,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
           applySummonedPetSnapshot(entityId, data);
           break;
         }
+        case ComponentP.MercenaryP: {
+          applyMercenarySnapshot(entityId, (com.riiablo.net.packet.d2gs.MercenaryP)
+              entityData.component(new com.riiablo.net.packet.d2gs.MercenaryP(), i));
+          break;
+        }
         case ComponentP.StateP: {
           StateP data = (StateP) entityData.component(new StateP(), i);
           applyStateSnapshot(entityId, data);
@@ -1231,6 +1250,94 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (data.unsummonable()) mSelectable.create(entityId);
   }
 
+  private void applyAuthoritativeWallet(long gold, long bank) {
+    if (Riiablo.charData == null) return;
+    for (short stat : new short[] {Stat.gold, Stat.goldbank}) {
+      int amount = (int) Math.min(Integer.MAX_VALUE, stat == Stat.gold ? gold : bank);
+      Riiablo.charData.getStats().base().put(stat, amount);
+      Riiablo.charData.getStats().aggregate().put(stat, amount);
+    }
+  }
+
+  void applyMercenaryHeader(int seed, int nameId, int hirelingId, long xp, int flags) {
+    CharData.MercData saved = Riiablo.charData.getMerc();
+    boolean changed = saved.seed != seed;
+    int oldLevel = saved.getStats().get(Stat.level) == null ? 0
+        : saved.getStats().get(Stat.level).asInt();
+    if (changed) {
+      saved.getItems().replaceFromAuthoritativeSnapshot(new com.badlogic.gdx.utils.Array<Item>());
+      saved.getStats().clear();
+    }
+    saved.seed = seed; saved.name = (short) nameId; saved.type = (short) hirelingId;
+    saved.xp = xp; saved.flags = flags;
+    if (seed == 0) return;
+    if (clientHirelingTable == null) clientHirelingTable =
+        com.riiablo.engine.server.NativeHirelingExperienceTable.load();
+    int level = clientHirelingTable.levelForStoredExperience(hirelingId, xp);
+    if (changed || level != oldLevel) {
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(saved.getStats(),
+          clientHirelingTable.stats(hirelingId, level));
+      saved.getItems().updateStats();
+    }
+    saved.getStats().base().put(Stat.experience, (int) Math.min(Integer.MAX_VALUE, xp));
+    saved.getStats().aggregate().put(Stat.experience, (int) Math.min(Integer.MAX_VALUE, xp));
+  }
+
+  void applyMercenarySnapshot(int entityId, com.riiablo.net.packet.d2gs.MercenaryP data) {
+    if (data == null) return;
+    int owner = syncIds.get(data.ownerId());
+    com.riiablo.engine.server.component.Mercenary merc = mMercenary.create(entityId);
+    if (merc.seed != data.seed()) merc.set(owner, data.mercType(), data.level(), data.seed(), data.nameId());
+    merc.ownerId = owner; merc.mercType = data.mercType(); merc.hirelingId = data.hirelingId();
+    merc.level = data.level(); merc.experience = data.experience(); merc.flags = (int) data.flags();
+    if (mLabel.has(entityId)) mLabel.remove(entityId);
+    if (mSelectable.has(entityId)) mSelectable.remove(entityId);
+    world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).remove(entityId);
+    world.getMapper(com.riiablo.engine.server.component.Interactable.class).remove(entityId);
+    if (owner == Engine.INVALID_ENTITY) {
+      // Change-detected snapshots need not repeat this component. Retain a copy
+      // in ECS, not a FlatBuffer view into the packet's reusable byte buffer.
+      pendingMercenaryOwners.put(entityId, data.ownerId());
+      return;
+    }
+    pendingMercenaryOwners.remove(entityId, Engine.INVALID_ENTITY);
+    bindMercenaryOwner(entityId, merc, owner);
+  }
+
+  void resolveMercenaryOwners() {
+    IntIntMap.Entries entries = pendingMercenaryOwners.entries();
+    while (entries.hasNext) {
+      IntIntMap.Entry entry = entries.next();
+      if (!mMercenary.has(entry.key)) {
+        entries.remove();
+        continue;
+      }
+      int owner = syncIds.get(entry.value);
+      if (owner == Engine.INVALID_ENTITY) continue;
+      bindMercenaryOwner(entry.key, mMercenary.get(entry.key), owner);
+      entries.remove();
+    }
+  }
+
+  private void bindMercenaryOwner(int entityId,
+      com.riiablo.engine.server.component.Mercenary merc, int owner) {
+    merc.ownerId = owner;
+    if (Riiablo.game != null && owner == Riiablo.game.player && Riiablo.charData != null) {
+      applyMercenaryHeader(merc.seed, merc.nameId, merc.hirelingId(), merc.experience, merc.flags);
+      if (mAttributesWrapper.has(entityId)) {
+        // The HUD/equipment panel and the replica share attributes. Later VitalsP
+        // packets remain authoritative for current life and combat values.
+        com.riiablo.attributes.Attributes previous = mAttributesWrapper.get(entityId).attrs;
+        CharData.MercData saved = Riiablo.charData.getMerc();
+        if (previous != null && previous.get(Stat.hitpoints) != null) {
+          saved.getStats().base().put(Stat.hitpoints, previous.get(Stat.hitpoints).asFixed());
+          saved.getStats().aggregate().put(Stat.hitpoints, previous.get(Stat.hitpoints).asFixed());
+        }
+        mAttributesWrapper.get(entityId).attrs = saved.getStats();
+      }
+    }
+  }
+
   /** Removes stale remote entities retained from the level we just left. */
   private void pruneEntitiesForLevel(int activeLevelId) {
     IntArray staleServerIds = new IntArray();
@@ -1240,6 +1347,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (localEntityId != Engine.INVALID_ENTITY
           && (Riiablo.game == null || localEntityId != Riiablo.game.player)) {
         staleServerIds.add(entry.key);
+        pendingMercenaryOwners.remove(localEntityId, Engine.INVALID_ENTITY);
         if (interpolation != null) interpolation.remove(localEntityId);
         world.delete(localEntityId);
       }

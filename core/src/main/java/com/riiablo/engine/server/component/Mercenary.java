@@ -14,9 +14,14 @@ public class Mercenary extends Component {
   private long nativeTargetOrder;
   private NativeTargetNode nativeTargetNode;
   public int mercType;
+  /** Hireling.txt skill variant; -1 retains custom/test-world type-based rows. */
+  public int hirelingId = -1;
+  public int hirelingId() { return hirelingId < 0 ? mercType : hirelingId; }
   public int level;
   public int seed;
   public int nameId;
+  public long experience;
+  public int flags;
   /** Native Hireling.txt skills and their current levels. */
   public final int[] skills = new int[6];
   public final int[] skillLevels = new int[6];
@@ -52,9 +57,12 @@ public class Mercenary extends Component {
     this.ownerId = ownerId;
     insertNativeTargetNode();
     this.mercType = mercType;
+    this.hirelingId = -1;
     this.level = level;
     this.seed = seed;
     this.nameId = nameId;
+    this.experience = 0;
+    this.flags = 0;
     this.aiRngState = seed == 0 ? 0x6D2B79F5 : seed;
     this.aiChanceParam = 0;
     this.targetId = -1;

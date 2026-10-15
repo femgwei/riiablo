@@ -5660,7 +5660,7 @@ public class D2GS extends ApplicationAdapter {
         if (mercenary.level >= ownerLevel || mercenary.level >= 98) return;
         com.riiablo.engine.server.NativeHirelingExperienceTable table =
             com.riiablo.engine.server.NativeHirelingExperienceTable.load();
-        long nextExperience = table.nextThreshold(mercenary.mercType, mercenary.level);
+        long nextExperience = table.nextThreshold(mercenary.hirelingId(), mercenary.level);
         if (nextExperience <= 0L || nextExperience > Integer.MAX_VALUE) return;
         long seededExperience = nextExperience - 1L;
         com.riiablo.save.CharData.MercData saved = player.data.getMerc();
@@ -8194,10 +8194,14 @@ public class D2GS extends ApplicationAdapter {
       if (mercenaries == null) {
         reason = "MERCENARY_SERVICE_UNAVAILABLE";
       } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
-        // The client may open Kashya's hire panel before choosing a candidate.
+        mercenaries.setDifficulty(diff);
+        if (mercenaries.hirelingOffers(playerId, npc.monstats.hcIdx).size == 0)
+          reason = "HIRELING_DATA_UNAVAILABLE";
       } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.HIRE) {
-        if (!mercenaries.hireMercenary(playerId, npc.monstats.hcIdx)) reason = "HIRE_REJECTED";
-        else resultItemId = mercenaries.mercenaryEntityId(playerId);
+        mercenaries.setDifficulty(diff);
+        reason = mercenaries.hireSelectedMercenary(playerId, npc.monstats.hcIdx,
+            request.itemIndex(), request.itemId(), (int) request.stockRevision());
+        if (reason == null) resultItemId = mercenaries.mercenaryEntityId(playerId);
       } else {
         reason = "OPERATION_NOT_IMPLEMENTED";
       }
@@ -8551,10 +8555,50 @@ public class D2GS extends ApplicationAdapter {
       }
       stockOffset = NpcServiceResult.createStockVector(builder, stockEntries);
     }
-    int resultOffset = NpcServiceResult.createNpcServiceResult(
-        builder, requestId, success, reasonOffset, Math.max(0, gold),
-        session == null ? 0 : session.revision, itemId, itemDataOffset, stockOffset,
-        Math.max(0, goldBank));
+    int offersOffset = 0;
+    byte serviceType = requestIntent == null ? 0 : requestIntent.service;
+    if (serviceType == com.riiablo.net.packet.d2gs.NpcServiceType.HIRE
+        && (success || "STALE_HIRELING".equals(reason) || "INSUFFICIENT_GOLD".equals(reason)
+            || "HIRE_REJECTED".equals(reason) || "MERCENARY_CHANGED".equals(reason))) {
+      com.riiablo.engine.server.component.Monster npc = world.getMapper(
+          com.riiablo.engine.server.component.Monster.class).get(requestIntent.npcEntityId);
+      NativeMercenaryRewardSystem rewards = world.getSystem(NativeMercenaryRewardSystem.class);
+      if (npc != null && rewards != null) {
+        com.badlogic.gdx.utils.Array<com.riiablo.engine.server.npc.HirelingOffer> offers =
+            rewards.hirelingOffers(player.get(clientId, Engine.INVALID_ENTITY), npc.monstats.hcIdx);
+        int[] entries = new int[offers.size];
+        for (int i = 0; i < offers.size; i++) {
+          com.riiablo.engine.server.npc.HirelingOffer offer = offers.get(i);
+          int description = builder.createString(offer.description);
+          entries[i] = com.riiablo.net.packet.d2gs.NpcHirelingOffer.createNpcHirelingOffer(builder,
+              offer.index, offer.seed, offer.mercType, offer.hirelingId, offer.nameId,
+              offer.level, offer.life, offer.defense, offer.cost, description);
+        }
+        offersOffset = NpcServiceResult.createHirelingsVector(builder, entries);
+      }
+    }
+    int mercenaryOffset = 0;
+    if (character != null && (serviceType == com.riiablo.net.packet.d2gs.NpcServiceType.HIRE
+        || serviceType == com.riiablo.net.packet.d2gs.NpcServiceType.RESURRECT)) {
+      CharData.MercData merc = character.getMerc();
+      mercenaryOffset = com.riiablo.net.packet.d2gs.NpcMercenarySnapshot.createNpcMercenarySnapshot(
+          builder, merc.seed, merc.name & 0xFFFF, merc.type & 0xFFFF, merc.xp,
+          merc.flags & 0xFFFFFFFFL);
+    }
+    NpcServiceResult.startNpcServiceResult(builder);
+    NpcServiceResult.addRequestId(builder, requestId);
+    NpcServiceResult.addSuccess(builder, success);
+    NpcServiceResult.addReason(builder, reasonOffset);
+    NpcServiceResult.addGold(builder, Math.max(0, gold));
+    NpcServiceResult.addGoldBank(builder, Math.max(0, goldBank));
+    NpcServiceResult.addStockRevision(builder, session == null ? 0 : session.revision);
+    NpcServiceResult.addItemId(builder, itemId);
+    NpcServiceResult.addItemData(builder, itemDataOffset);
+    NpcServiceResult.addStock(builder, stockOffset);
+    NpcServiceResult.addHirelings(builder, offersOffset);
+    NpcServiceResult.addMercenary(builder, mercenaryOffset);
+    NpcServiceResult.addServiceType(builder, serviceType);
+    int resultOffset = NpcServiceResult.endNpcServiceResult(builder);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.NpcServiceResult, resultOffset);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

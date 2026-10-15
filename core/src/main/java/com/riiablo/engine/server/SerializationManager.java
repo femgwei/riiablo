@@ -115,6 +115,8 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(Item.class, new ItemSerializer());
     serializers.put(UnitStates.class, new StateSerializer());
     serializers.put(SummonedPet.class, new SummonedPetSerializer());
+    serializers.put(com.riiablo.engine.server.component.Mercenary.class,
+        new com.riiablo.engine.server.component.serializer.MercenarySerializer());
     serializers.put(Object.class, new ObjectSerializer());
 
     deserializers = (Class<? extends Component>[]) new Class[ComponentP.names.length];
@@ -136,6 +138,7 @@ public class SerializationManager extends PassiveSystem {
     deserializers[ComponentP.StateP] = UnitStates.class;
     deserializers[ComponentP.ObjectP] = Object.class;
     deserializers[ComponentP.SummonedPetP] = SummonedPet.class;
+    deserializers[ComponentP.MercenaryP] = com.riiablo.engine.server.component.Mercenary.class;
 
     cm = new ComponentMapper[ComponentP.names.length];
     cm[ComponentP.ClassP] = null; //mClass;

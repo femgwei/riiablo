@@ -337,7 +337,7 @@ public class Npc extends AI {
     }
     if (merc == null && Riiablo.charData != null && Riiablo.charData.hasMerc()) {
       CharData.MercData data = Riiablo.charData.getMerc();
-      mercType = data.type & 0xFFFF;
+      mercType = com.riiablo.engine.server.NativeHirelingExperienceTable.mercenaryType(data.type & 0xFFFF);
       nameId = data.name & 0xFFFF;
     }
     String name = com.riiablo.screen.panel.MercenaryHud.resolveMercenaryName(mercType, nameId);
@@ -351,21 +351,9 @@ public class Npc extends AI {
 
   private void hireMercenary(int npcType) {
     if (Riiablo.game == null) return;
-    if (Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked()) {
-      ClientNetworkSynchronizer network = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
-      if (network != null) {
-        network.requestNpcService(entityId,
-            com.riiablo.net.packet.d2gs.NpcServiceType.HIRE,
-            com.riiablo.net.packet.d2gs.NpcServiceOperation.HIRE,
-            0, -1, 0);
-      }
-    } else {
-      NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
-      if (rewards != null) rewards.hireMercenary(Riiablo.game.player, npcType);
-    }
     if (menuManager != null) menuManager.setMenu(null, Engine.INVALID_ENTITY);
+    if (Riiablo.game.hireMercenaryPanel != null)
+      Riiablo.game.hireMercenaryPanel.open(entityId, npcType);
   }
 
   private void resurrectMercenary(MenuManager menus) {

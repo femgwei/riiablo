@@ -331,7 +331,8 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     try {
       WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
-      channel.write(builder.dataBuffer());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send NPC service request", t);

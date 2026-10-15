@@ -508,7 +508,7 @@ public class ExperienceManager extends PassiveSystem {
             attrs.aggregate(), Stat.item_addexperience, 0);
       }
     }
-    addExperienceForHireling(owner, hireling.mercType, hirelingLevel,
+    addExperienceForHireling(owner, hireling.hirelingId(), hirelingLevel,
         defenderLevel, defenderExp, killerId == hirelingId, addExperiencePercent);
     long newExperience = owner.getMerc().xp;
     if (newExperience == oldExperience) return;
@@ -516,13 +516,13 @@ public class ExperienceManager extends PassiveSystem {
     int ownerLevel = Math.max(1,
         getInt(owner.getStats().aggregate(), Stat.level, owner.level & 0xFF));
     int newLevel = hirelingExperience == null ? hirelingLevel
-        : hirelingExperience.levelForExperience(hireling.mercType, hirelingLevel,
+        : hirelingExperience.levelForExperience(hireling.hirelingId(), hirelingLevel,
             newExperience, ownerLevel);
     if (newLevel > hirelingLevel) {
       hireling.level = newLevel;
       com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
           hirelingExperience == null ? null
-              : hirelingExperience.stats(hireling.mercType, newLevel);
+              : hirelingExperience.stats(hireling.hirelingId(), newLevel);
       com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
           owner.getMerc().getStats(), nativeStats);
       owner.getMerc().getItems().updateStats();

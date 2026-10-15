@@ -89,6 +89,11 @@ public class MercenaryManager {
    * 雇佣兵定义
    */
   public static class MercenaryDefinition {
+    public int hirelingId = -1;
+    public int nativeGold = -1, nativeLevel;
+    public String description = "";
+
+    public int hirelingId() { return hirelingId < 0 ? mercType : hirelingId; }
     /** 雇佣兵类型 */
     public int mercType;
 
@@ -286,6 +291,7 @@ public class MercenaryManager {
 
   /** NPC 雇佣兵列表（NPC ID -> 列表） */
   private final IntMap<NpcMercenaryList> npcLists = new IntMap<>();
+  private final IntMap<IntMap<NpcMercenaryList>> playerLists = new IntMap<>();
 
   /** 玩家雇佣兵（玩家 ID -> 雇佣兵） */
   private final IntMap<ActiveMercenary> playerMercs = new IntMap<>();
@@ -295,6 +301,34 @@ public class MercenaryManager {
 
   /** Optional native Hireling.txt table; the legacy table remains the safe fallback. */
   private NativeHirelingExperienceTable nativeExperienceTable;
+  private int rosterDifficulty = -1;
+
+  public void setRosterDifficulty(int difficulty) {
+    if (rosterDifficulty == difficulty) return;
+    rosterDifficulty = difficulty;
+    npcLists.clear();
+    playerLists.clear();
+  }
+
+  public Array<com.riiablo.engine.server.npc.HirelingOffer> hirelingOffers(int playerId,
+      int npcId, int level) {
+    Array<com.riiablo.engine.server.npc.HirelingOffer> offers = new Array<>();
+    if (!isHirelingNpc(npcId)) return offers;
+    Array<AvailableMercenary> candidates = getAvailableMercenaries(playerId, npcId, level);
+    for (int i = 0; i < candidates.size; i++) {
+      AvailableMercenary candidate = candidates.get(i);
+      if (candidate.hired || candidate.definition.hirelingId < 0) continue;
+      com.riiablo.engine.server.npc.HirelingOffer offer = new com.riiablo.engine.server.npc.HirelingOffer();
+      offer.index = i; offer.seed = candidate.seed; offer.mercType = candidate.definition.mercType;
+      offer.hirelingId = candidate.definition.hirelingId; offer.nameId = candidate.nameId;
+      offer.level = candidate.level; offer.life = calculateMercLife(candidate.definition, candidate.level);
+      offer.defense = calculateMercDefense(candidate.definition, candidate.level);
+      offer.cost = calculateHireCost(candidate.definition, candidate.level);
+      offer.description = candidate.definition.description;
+      offers.add(offer);
+    }
+    return offers;
+  }
 
   /** 回调 */
   private MercenaryCallback callback;
@@ -349,14 +383,40 @@ public class MercenaryManager {
    * @return true 如果成功雇佣
    */
   public boolean hireMercenary(int playerId, int npcId, int mercIndex) {
-    // 检查玩家是否已有雇佣兵
-    if (playerMercs.containsKey(playerId)) {
-      log.debug("Player {} already has a mercenary", playerId);
-      return false;
-    }
-
-    // 获取雇佣兵列表
     NpcMercenaryList list = npcLists.get(npcId);
+    return hireFromList(playerId, list, mercIndex, false);
+  }
+
+  /** A per-player roster: opening a low-level player's menu cannot change another's offers. */
+  public Array<AvailableMercenary> getAvailableMercenaries(int playerId, int npcId, int level) {
+    IntMap<NpcMercenaryList> lists = playerLists.get(playerId);
+    if (lists == null) playerLists.put(playerId, lists = new IntMap<>());
+    NpcMercenaryList list = lists.get(npcId);
+    if (list == null) {
+      list = new NpcMercenaryList();
+      list.npcId = npcId;
+      list.mercType = mercenaryTypeForNpc(npcId);
+      lists.put(npcId, list);
+    }
+    if (System.currentTimeMillis() - list.lastRefreshTime > REFRESH_INTERVAL) {
+      refreshMercenaryList(list, level);
+    }
+    return list.available;
+  }
+
+  public boolean hireSelectedMercenary(int playerId, int npcId, int index, int seed) {
+    IntMap<NpcMercenaryList> lists = playerLists.get(playerId);
+    NpcMercenaryList list = lists == null ? null : lists.get(npcId);
+    if (list == null || index < 0 || index >= list.available.size
+        || list.available.get(index).seed != seed
+        || System.currentTimeMillis() - list.lastRefreshTime > REFRESH_INTERVAL) return false;
+    return hireFromList(playerId, list, index, true);
+  }
+
+  private boolean hireFromList(int playerId, NpcMercenaryList list, int mercIndex,
+      boolean replace) {
+    if (callback == null || (!replace && playerMercs.containsKey(playerId))) return false;
+    int npcId = list == null ? -1 : list.npcId;
     if (list == null || mercIndex < 0 || mercIndex >= list.available.size) {
       log.debug("Invalid mercenary index {} for NPC {}", mercIndex, npcId);
       return false;
@@ -382,7 +442,7 @@ public class MercenaryManager {
     merc.nameId = available.nameId;
     merc.seed = available.seed;
     merc.level = available.level;
-    merc.experience = getExpForLevel(available.definition.mercType, available.level);
+    merc.experience = getExpForLevel(available.definition.hirelingId(), available.level);
     merc.state = STATE_HIRED;
     merc.hireTime = System.currentTimeMillis();
 
@@ -405,6 +465,12 @@ public class MercenaryManager {
       }
     }
 
+    // Commit replacement only after both reservation and payment succeeded.
+    ActiveMercenary previous = playerMercs.get(playerId);
+    if (previous != null) {
+      if (previous.entityId != Engine.INVALID_ENTITY) callback.removeMercenaryEntity(previous.entityId);
+      callback.onMercenaryDismissed(playerId, previous);
+    }
     playerMercs.put(playerId, merc);
     available.hired = true;
 
@@ -520,8 +586,14 @@ public class MercenaryManager {
    */
   public boolean restoreMercenary(int playerId, int mercType, int level,
       long experience, int seed, int nameId, boolean dead) {
-    if (playerMercs.containsKey(playerId) || callback == null || seed == 0) return false;
     MercenaryDefinition definition = definitionForSavedMercenary(mercType, nameId);
+    return restoreMercenary(playerId, definition, level, experience, seed, nameId, dead);
+  }
+
+  private boolean restoreMercenary(int playerId, MercenaryDefinition definition, int level,
+      long experience, int seed, int nameId, boolean dead) {
+    if (playerMercs.containsKey(playerId) || callback == null || seed == 0) return false;
+    int mercType = definition == null ? -1 : definition.mercType;
     if (definition == null) {
       log.warn("Cannot restore unknown hireling type: player={} type={}", playerId, mercType);
       return false;
@@ -559,6 +631,7 @@ public class MercenaryManager {
 
   /** Removes only the runtime pet record during logout; persistent data is retained. */
   public void unloadMercenary(int playerId) {
+    playerLists.remove(playerId);
     ActiveMercenary merc = playerMercs.remove(playerId);
     if (merc != null && callback != null) callback.removeMercenaryEntity(merc.entityId);
   }
@@ -584,7 +657,7 @@ public class MercenaryManager {
     merc.nameId = available.nameId;
     merc.seed = available.seed;
     merc.level = available.level;
-    merc.experience = getExpForLevel(available.definition.mercType, available.level);
+    merc.experience = getExpForLevel(available.definition.hirelingId(), available.level);
     merc.state = STATE_HIRED;
     merc.hireTime = System.currentTimeMillis();
     merc.maxLife = calculateMercLife(available.definition, available.level);
@@ -730,8 +803,8 @@ public class MercenaryManager {
 
     long award = exp;
     NativeHirelingExperienceTable table = nativeExperienceTable;
-    if (table != null && table.row(merc.definition.mercType, merc.level) != null) {
-      long maximumAward = table.maximumAward(merc.definition.mercType, merc.level);
+    if (table != null && table.row(merc.definition.hirelingId(), merc.level) != null) {
+      long maximumAward = table.maximumAward(merc.definition.hirelingId(), merc.level);
       if (maximumAward > 0) award = Math.min(award, maximumAward);
     }
     if (award <= 0) return;
@@ -739,7 +812,7 @@ public class MercenaryManager {
 
     // 检查升级
     while (merc.level < 98 && merc.level < ownerLevel) {
-      long expNeeded = nextExperienceThreshold(merc.definition.mercType, merc.level);
+      long expNeeded = nextExperienceThreshold(merc.definition.hirelingId(), merc.level);
       if (expNeeded <= 0) break;
       if (merc.experience >= expNeeded) {
         int oldLevel = merc.level;
@@ -766,6 +839,10 @@ public class MercenaryManager {
    * 计算雇佣费用
    */
   public int calculateHireCost(MercenaryDefinition def, int level) {
+    if (def.nativeGold >= 0) {
+      return (int) Math.min(Integer.MAX_VALUE, Math.max(def.nativeGold,
+          (long) def.nativeGold * (100 + 15L * (level - def.nativeLevel)) / 100));
+    }
     int baseCost = 100 + level * 50;
     return baseCost * def.hireCostMultiplier / 100;
   }
@@ -794,7 +871,11 @@ public class MercenaryManager {
   /**
    * 计算雇佣兵生命值
    */
-  private int calculateMercLife(MercenaryDefinition def, int level) {
+  public int calculateMercLife(MercenaryDefinition def, int level) {
+    if (nativeExperienceTable != null && def.hirelingId >= 0) {
+      NativeHirelingExperienceTable.Stats stats = nativeExperienceTable.stats(def.hirelingId, level);
+      if (stats != null) return stats.hitpoints;
+    }
     return def.baseLife + (level - 1) * def.lifePerLevel;
   }
 
@@ -818,6 +899,10 @@ public class MercenaryManager {
    * 计算雇佣兵防御
    */
   public int calculateMercDefense(MercenaryDefinition def, int level) {
+    if (nativeExperienceTable != null && def.hirelingId >= 0) {
+      NativeHirelingExperienceTable.Stats stats = nativeExperienceTable.stats(def.hirelingId, level);
+      if (stats != null) return stats.defense;
+    }
     return def.baseDefense + (level - 1) * def.defensePerLevel;
   }
 
@@ -848,6 +933,28 @@ public class MercenaryManager {
    */
   private void refreshMercenaryList(NpcMercenaryList list, int playerLevel) {
     list.available.clear();
+    Array<NativeHirelingExperienceTable.Row> nativeRows = nativeExperienceTable == null
+        ? new Array<>() : nativeExperienceTable.offerRows(list.npcId,
+            rosterDifficulty >= 0 ? rosterDifficulty : callback == null ? 0 : callback.getDifficulty());
+    if (nativeRows.size > 0) {
+      // Keep an actual list (including all skill categories), not an auto-hire shortcut.
+      Array<NativeHirelingExperienceTable.Row> eligible = new Array<>();
+      for (NativeHirelingExperienceTable.Row row : nativeRows) {
+        if (row.level <= playerLevel) eligible.add(row);
+      }
+      if (eligible.size == 0) eligible.add(nativeRows.first());
+      for (int i = 0; i < Math.min(12, nativeRows.first().nameCount); i++) {
+        NativeHirelingExperienceTable.Row row = eligible.get(i % eligible.size);
+        AvailableMercenary candidate = new AvailableMercenary();
+        candidate.definition = nativeDefinition(row);
+        candidate.seed = 1 + (int) (Math.random() * (Integer.MAX_VALUE - 1));
+        candidate.nameId = i;
+        candidate.level = Math.max(1, Math.min(playerLevel, row.level + (int) (Math.random() * 5)));
+        list.available.add(candidate);
+      }
+      list.lastRefreshTime = System.currentTimeMillis();
+      return;
+    }
 
     Array<MercenaryDefinition> defs = mercDefinitions.get(list.mercType);
     if (defs == null) {
@@ -937,6 +1044,24 @@ public class MercenaryManager {
   /** Installs the native Hireling.txt experience table when MPQ data is available. */
   public void setNativeExperienceTable(NativeHirelingExperienceTable table) {
     nativeExperienceTable = table;
+  }
+
+  private static MercenaryDefinition nativeDefinition(NativeHirelingExperienceTable.Row row) {
+    MercenaryDefinition definition = new MercenaryDefinition();
+    definition.mercType = NativeHirelingExperienceTable.mercenaryType(row.hirelingId);
+    definition.hirelingId = row.hirelingId;
+    definition.nativeGold = row.gold;
+    definition.nativeLevel = row.level;
+    definition.description = row.description;
+    return definition;
+  }
+
+  public boolean restoreNativeMercenary(int playerId, int hirelingId, int level,
+      long experience, int seed, int nameId, boolean dead) {
+    NativeHirelingExperienceTable.Row row = nativeExperienceTable == null
+        ? null : nativeExperienceTable.row(hirelingId, level);
+    if (row == null) return false;
+    return restoreMercenary(playerId, nativeDefinition(row), level, experience, seed, nameId, dead);
   }
 
   /**

@@ -5,6 +5,29 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 class NativeHirelingExperienceTableTest {
+  @Test void originalIdsAreNotPresentationClassIndices() {
+    assertEquals(0, NativeHirelingExperienceTable.mercenaryType(1));
+    assertEquals(1, NativeHirelingExperienceTable.mercenaryType(6));
+    assertEquals(1, NativeHirelingExperienceTable.mercenaryType(14));
+    assertEquals(2, NativeHirelingExperienceTable.mercenaryType(15));
+    assertEquals(3, NativeHirelingExperienceTable.mercenaryType(24));
+    assertEquals(-1, NativeHirelingExperienceTable.mercenaryType(-1));
+  }
+
+  @Test void offersSelectVendorAndDifficultyAndUseNativeCostFormula() {
+    NativeHirelingExperienceTable.Row normal = new NativeHirelingExperienceTable.Row(6, 9, 100)
+        .withOfferData(198, 1, 350, "comb", "merca201", "merca221");
+    NativeHirelingExperienceTable.Row nightmare = new NativeHirelingExperienceTable.Row(9, 31, 100)
+        .withOfferData(198, 2, 7900, "comb", "merca201", "merca221");
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable().add(normal).add(nightmare);
+    assertEquals(6, table.offerRows(198, 0).first().hirelingId);
+    assertEquals(9, table.offerRows(198, 1).first().hirelingId);
+    assertEquals(0, table.offerRows(150, 0).size);
+    assertEquals(21, normal.nameCount);
+    assertEquals(350, NativeHirelingExperienceTable.hireCost(normal, 9));
+    assertEquals(507, NativeHirelingExperienceTable.hireCost(normal, 12));
+    assertEquals(350, NativeHirelingExperienceTable.hireCost(normal, 1));
+  }
   @Test
   void nativeSkillRollHonorsDefaultChanceAndCumulativeRanges() {
     NativeHirelingExperienceTable.Row row = new NativeHirelingExperienceTable.Row(

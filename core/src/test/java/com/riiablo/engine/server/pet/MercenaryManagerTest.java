@@ -10,6 +10,101 @@ import com.riiablo.engine.server.NativeHirelingExperienceTable;
 import org.junit.jupiter.api.Test;
 
 class MercenaryManagerTest {
+  private static MercenaryManager nativeManager(Callback callback) {
+    MercenaryManager manager = new MercenaryManager();
+    manager.setCallback(callback);
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable();
+    for (int id : new int[] {0, 1, 6, 7, 8, 15, 16, 17, 24}) {
+      int type = NativeHirelingExperienceTable.mercenaryType(id);
+      int npc = new int[] {150, 198, 252, 515}[type];
+      table.add(new NativeHirelingExperienceTable.Row(id, 1, 100)
+          .withOfferData(npc, 1, 350, "skill" + id, "merc01", "merc20"));
+    }
+    manager.setNativeExperienceTable(table);
+    return manager;
+  }
+
+  @Test void openingFourNativeRostersDoesNotChargeOrCreateEntities() {
+    Callback callback = new Callback();
+    MercenaryManager manager = nativeManager(callback);
+    for (int npc : new int[] {150, 198, 252, 515}) {
+      assertEquals(12, manager.getAvailableMercenaries(1, npc, 20).size);
+      for (MercenaryManager.AvailableMercenary offer : manager.getAvailableMercenaries(1, npc, 20)) {
+        assertEquals(MercenaryManager.mercenaryTypeForNpc(npc), offer.definition.mercType);
+        assertTrue(offer.definition.hirelingId >= 0);
+      }
+    }
+    assertEquals(0, callback.createCalls);
+    assertEquals(0, callback.deductCalls);
+  }
+
+  @Test void selectedNativeSkillVariantIsCreatedAndChargedExactlyOnce() {
+    Callback callback = new Callback(); callback.gold = 100_000; callback.entityId = 100;
+    MercenaryManager manager = nativeManager(callback);
+    MercenaryManager.AvailableMercenary offer = manager.getAvailableMercenaries(5, 198, 20).get(2);
+    int cost = manager.calculateHireCost(offer.definition, offer.level);
+    assertEquals(8, offer.definition.hirelingId);
+    assertTrue(manager.hireSelectedMercenary(5, 198, 2, offer.seed));
+    assertEquals(8, callback.createdHirelingId);
+    assertEquals(8, manager.getPlayerMercenary(5).definition.hirelingId);
+    assertEquals(100_000 - cost, callback.gold);
+    assertFalse(manager.hireSelectedMercenary(5, 198, 2, offer.seed));
+    assertEquals(1, callback.deductCalls);
+  }
+
+  @Test void wrongSeedAndAnotherPlayersOfferCannotBeHired() {
+    Callback callback = new Callback(); callback.gold = 100_000;
+    MercenaryManager manager = nativeManager(callback);
+    MercenaryManager.AvailableMercenary offer = manager.getAvailableMercenaries(5, 198, 20).first();
+    assertFalse(manager.hireSelectedMercenary(5, 198, 0, offer.seed ^ 1));
+    assertFalse(manager.hireSelectedMercenary(6, 198, 0, offer.seed));
+    assertEquals(0, callback.createCalls);
+    assertEquals(0, callback.deductCalls);
+  }
+
+  @Test void failedReplacementPreservesLivingAndDeadHirelings() {
+    for (boolean dead : new boolean[] {false, true}) {
+      Callback callback = new Callback(); callback.entityId = 10; callback.gold = 100_000;
+      MercenaryManager manager = nativeManager(callback);
+      assertTrue(manager.restoreNativeMercenary(5, 6, 10, 1000, 42, 3, dead));
+      MercenaryManager.ActiveMercenary old = manager.getPlayerMercenary(5);
+      MercenaryManager.AvailableMercenary offer = manager.getAvailableMercenaries(5, 198, 20).get(1);
+      callback.entityId = Engine.INVALID_ENTITY;
+      assertFalse(manager.hireSelectedMercenary(5, 198, 1, offer.seed));
+      assertTrue(old == manager.getPlayerMercenary(5));
+      assertEquals(0, callback.deductCalls);
+      callback.entityId = 11;
+      callback.deductResult = false;
+      assertFalse(manager.hireSelectedMercenary(5, 198, 1, offer.seed));
+      assertTrue(old == manager.getPlayerMercenary(5));
+      assertFalse(offer.hired);
+      assertEquals(0, callback.dismissedCalls);
+      assertEquals(100_000, callback.gold);
+      callback.deductResult = true;
+      assertTrue(manager.hireSelectedMercenary(5, 198, 1, offer.seed));
+      assertEquals(11, manager.getPlayerMercenary(5).entityId);
+      assertEquals(1, callback.dismissedCalls);
+    }
+  }
+
+  @Test void insufficientFundsDoesNotReserveAnEntityOrReplaceTheOldOne() {
+    Callback callback = new Callback(); callback.entityId = 10;
+    MercenaryManager manager = nativeManager(callback);
+    assertTrue(manager.restoreNativeMercenary(5, 6, 10, 1000, 42, 3, false));
+    MercenaryManager.AvailableMercenary offer = manager.getAvailableMercenaries(5, 198, 20).first();
+    assertFalse(manager.hireSelectedMercenary(5, 198, 0, offer.seed));
+    assertEquals(1, callback.createCalls);
+    assertEquals(10, manager.getPlayerMercenary(5).entityId);
+    assertEquals(0, callback.deductCalls);
+  }
+
+  @Test void poolForAnotherPlayerDoesNotChangeExistingCandidates() {
+    Callback callback = new Callback();
+    MercenaryManager manager = nativeManager(callback);
+    MercenaryManager.AvailableMercenary offer = manager.getAvailableMercenaries(5, 198, 20).first();
+    manager.getAvailableMercenaries(6, 198, 80);
+    assertTrue(offer == manager.getAvailableMercenaries(5, 198, 20).first());
+  }
   @Test
   void mapsEachNativeHirelingNpcToItsMercenaryType() {
     assertEquals(MercenaryManager.MERC_TYPE_ROGUE,
@@ -219,6 +314,8 @@ class MercenaryManagerTest {
   }
 
   private static class Callback implements MercenaryManager.MercenaryCallback {
+    int createCalls, createdHirelingId;
+    boolean deductResult = true;
     int entityId;
     int deductCalls;
     int lastDeductAmount;
@@ -235,6 +332,8 @@ class MercenaryManagerTest {
     @Override
     public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
         int level, int seed, int nameId) {
+      createCalls++;
+      createdHirelingId = def.hirelingId;
       return entityId;
     }
 
@@ -246,6 +345,7 @@ class MercenaryManagerTest {
     @Override
     public boolean deductPlayerGold(int playerId, int amount) {
       deductCalls++;
+      if (!deductResult) return false;
       lastDeductAmount = amount;
       gold -= amount;
       return true;

@@ -21,6 +21,19 @@ public final class NativeHirelingExperienceTable {
     public int defaultChance;
     public final int[] chances = new int[6], chancePerLevels = new int[6];
     public final int[] skills, skillModes, skillLevels, skillLevelsPerLevel;
+    public int seller, difficulty, gold, nameCount;
+    public String description = "", nameFirst = "";
+
+    public Row withOfferData(int seller, int difficulty, int gold, String description,
+        String nameFirst, String nameLast) {
+      this.seller = seller;
+      this.difficulty = difficulty;
+      this.gold = Math.max(0, gold);
+      this.description = description == null ? "" : description;
+      this.nameFirst = nameFirst == null ? "" : nameFirst;
+      this.nameCount = Math.max(1, trailingNumber(nameLast) - trailingNumber(nameFirst) + 1);
+      return this;
+    }
 
     public Row(int hirelingId, int level, int experiencePerLevel) {
       this(hirelingId, level, experiencePerLevel,
@@ -161,7 +174,10 @@ public final class NativeHirelingExperienceTable {
                 indexedValues(parser, "Level"), indexedValues(parser, "LvlPerLvl"))
                 .withDefaultChance(intValue(parser, "DefaultChance", "Default Chance"))
                 .withChances(indexedValues(parser, "Chance"),
-                    indexedValues(parser, "ChancePerLvl", "Chance/Lvl")));
+                    indexedValues(parser, "ChancePerLvl", "Chance/Lvl"))
+                .withOfferData(intValue(parser, "Seller"), intValue(parser, "Difficulty"),
+                    intValue(parser, "Gold"), stringValue(parser, "HireDesc"),
+                    stringValue(parser, "NameFirst"), stringValue(parser, "NameLast")));
           }
         }
         log.info("[XP_MERC_TABLE] loaded {} Hireling.txt rows (idColumn={}, levelColumn={}, expColumn={})",
@@ -183,6 +199,41 @@ public final class NativeHirelingExperienceTable {
       if (column >= 0) return column;
     }
     return -1;
+  }
+
+  private static String stringValue(TxtParser parser, String name) {
+    int column = parser.getColumnId(name);
+    return column < 0 ? "" : parser.getString(column);
+  }
+
+  private static int trailingNumber(String name) {
+    if (name == null) return 0;
+    int start = name.length();
+    while (start > 0 && Character.isDigit(name.charAt(start - 1))) start--;
+    return start == name.length() ? 0 : Integer.parseInt(name.substring(start));
+  }
+
+  /** Native D2S type is Hireling.txt Id, not the four presentation classes. */
+  public static int mercenaryType(int hirelingId) {
+    if (hirelingId >= 0 && hirelingId <= 5) return 0;
+    if (hirelingId <= 14 && hirelingId >= 6) return 1;
+    if (hirelingId <= 23 && hirelingId >= 15) return 2;
+    if (hirelingId <= 29 && hirelingId >= 24) return 3;
+    return -1;
+  }
+
+  public Array<Row> offerRows(int npcId, int difficulty) {
+    Array<Row> result = new Array<>();
+    for (Row row : rows) {
+      if (row.seller == npcId && row.difficulty == difficulty + 1) result.add(row);
+    }
+    return result;
+  }
+
+  public static int hireCost(Row row, int level) {
+    // MONSTERS_HirelingInit: Gold * (15 * levelUps + 100) / 100, floored at Gold.
+    return (int) Math.min(Integer.MAX_VALUE,
+        Math.max(row.gold, (long) row.gold * (100 + 15L * (level - row.level)) / 100));
   }
 
   private static int intValue(TxtParser parser, String... names) {

@@ -55,6 +55,18 @@ union ComponentP {
   CofReferenceP,
   MissileP,
   SummonedPetP,
+  MercenaryP,
+}
+
+table MercenaryP {
+  ownerId:int32;
+  mercType:int32;
+  hirelingId:int32;
+  level:int32;
+  seed:int32;
+  nameId:int32;
+  experience:ulong;
+  flags:uint32;
 }
 
 enum EntityFlags:uint8 (bit_flags) {

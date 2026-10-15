@@ -280,7 +280,21 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   static int companionSlotCount(boolean merc, boolean valk) { return merc || valk ? (merc && valk ? 2 : 1) : 0; }
   static float companionSlotX(boolean merc, boolean valk) { return valk && merc ? WIDTH + SLOT_GAP : 0; }
   public static String resolveMercenaryName(Mercenary m) { return m == null ? localized("hireling_unnamed", UNNAMED) : resolveMercenaryName(m.mercType, m.nameId); }
-  public static String resolveMercenaryName(int type, int id) { if (Riiablo.string == null) return localized("hireling_unnamed", UNNAMED); id = Math.max(0, id); String[] keys; switch (type) { case 0: keys = new String[] {String.format(Locale.ROOT, "merc%02d", id + 1)}; break; case 1: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 181), String.format(Locale.ROOT, "merca%03d", id + 201)}; break; case 2: keys = new String[] {String.format(Locale.ROOT, "merca%03d", id + 182), String.format(Locale.ROOT, "merca%03d", Math.min(241, id + 222))}; break; case 3: keys = new String[] {String.format(Locale.ROOT, "MercX%03d", id + 31), String.format(Locale.ROOT, "MercX%03d", id + 101)}; break; default: return localized("hireling_unnamed", UNNAMED); } for (String k : keys) { String v = Riiablo.string.lookup(k); if (v != null && !v.startsWith("ERROR:")) return v; } return localized("hireling_unnamed", UNNAMED); }
+  public static String resolveMercenaryName(int type, int id) {
+    if (Riiablo.string == null) return localized("hireling_unnamed", UNNAMED);
+    id = Math.max(0, id);
+    // Expansion Hireling.txt NameFirst: merc01 / merca201 / merca222 / MercX101.
+    String key;
+    switch (type) {
+      case 0: key = String.format(Locale.ROOT, "merc%02d", id + 1); break;
+      case 1: key = String.format(Locale.ROOT, "merca%03d", id + 201); break;
+      case 2: key = String.format(Locale.ROOT, "merca%03d", id + 222); break;
+      case 3: key = String.format(Locale.ROOT, "MercX%03d", id + 101); break;
+      default: return localized("hireling_unnamed", UNNAMED);
+    }
+    String value = Riiablo.string.lookup(key);
+    return value == null || value.startsWith("ERROR:") ? localized("hireling_unnamed", UNNAMED) : value;
+  }
   private static String localized(String key, String fallback) { if (Riiablo.bundle == null) return fallback; String v = Riiablo.bundle.get(key); return v == null || v.isEmpty() ? fallback : v; }
   static Color healthBarColor(float ratio) { if (ratio > HEALTH_GREEN_THRESHOLD) return Color.GREEN; if (ratio > HEALTH_YELLOW_THRESHOLD) return Color.YELLOW; return Color.RED; }
 

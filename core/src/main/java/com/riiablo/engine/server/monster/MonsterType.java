@@ -119,7 +119,7 @@ public final class MonsterType {
   /** 泰瑞尔（第四幕任务 NPC，D2MOO MONSTER_TYRAEL2） */
   public static final int TYRAEL2 = 367;
   /** 泰瑞尔（第五幕巴尔击杀后，D2MOO MONSTER_TYRAEL3） */
-  public static final int TYRAEL3 = 522;
+  public static final int TYRAEL3 = 521;
 
   //==========================================================================
   // 雇佣兵
@@ -131,8 +131,8 @@ public final class MonsterType {
   public static final int HIRELING_DESERT = 338;
   /** Act 3 雇佣兵（铁狼） */
   public static final int HIRELING_IRONWOLF = 359;
-  /** Act 5 雇佣兵（野蛮人） */
-  public static final int HIRELING_BARBARIAN = 560;
+  /** Act 5 雇佣兵（Hireling.txt Class / D2MOO MONSTER_ACT5HIRE2） */
+  public static final int HIRELING_BARBARIAN = 561;
 
   //==========================================================================
   // NPC
@@ -203,13 +203,13 @@ public final class MonsterType {
   /** Jamella (Act IV town healer/gambler, D2MOO MONSTER_JAMELLA). */
   public static final int JAMELLA = 405;
 
-  // Act V town NPCs use the native D2MOO MonsterIds.h values.  Drehya is the
-  // internal MonStats id for the NPC displayed to players as Anya.
-  public static final int LARZUK = 512;
-  public static final int DREHYA = 513;
-  public static final int MALAH = 514;
-  public static final int NIHLATHAK = 515;
-  public static final int QUAL_KEHK = 516;
+  // Native hcIdx, not the text row number (MonStats.txt includes an Expansion
+  // marker row). Drehya is the internal id for the NPC displayed as Anya.
+  public static final int LARZUK = 511;
+  public static final int DREHYA = 512;
+  public static final int MALAH = 513;
+  public static final int NIHLATHAK = 514;
+  public static final int QUAL_KEHK = 515;
 
   //==========================================================================
   // 召唤物

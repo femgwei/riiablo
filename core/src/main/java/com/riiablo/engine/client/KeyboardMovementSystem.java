@@ -90,6 +90,8 @@ public class KeyboardMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
+    if (com.riiablo.Riiablo.game != null && com.riiablo.Riiablo.game.hireMercenaryPanel != null
+        && com.riiablo.Riiablo.game.hireMercenaryPanel.isVisible()) return;
     if (!enabled) {
       return;
     }

@@ -38,12 +38,14 @@ public final class OffscreenRenderClient {
     String mode = command.getOptionValue("mode", "visual").toLowerCase(Locale.ROOT);
     if (!"visual".equals(mode) && !"camp".equals(mode)
         && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)
-        && !"dialog-resources".equals(mode) && !"font-baseline".equals(mode)) {
+        && !"dialog-resources".equals(mode) && !"font-baseline".equals(mode)
+        && !"hire-mercenaries".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
     saves.mkdirs();
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
+    System.setProperty("riiablo.offscreen-hire-mercenaries", Boolean.toString("hire-mercenaries".equals(mode)));
     System.setProperty("riiablo.offscreen-font-baseline",
         Boolean.toString("font-baseline".equals(mode)));
     System.setProperty("riiablo.font-baseline-raw",

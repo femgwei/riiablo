@@ -348,6 +348,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public SpellsPanel spellsPanel;
   public StashPanel stashPanel;
   public HirelingPanel hirelingPanel;
+  public com.riiablo.screen.panel.HireMercenaryPanel hireMercenaryPanel;
   public MercenaryHud mercenaryHud;
   public WaygatePanel waygatePanel;
   public QuestsPanel questsPanel;
@@ -480,6 +481,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hirelingPanel = new HirelingPanel();
     hirelingPanel.setPosition(0, stage.getHeight() - hirelingPanel.getHeight());
     stage.addActor(hirelingPanel);
+    hireMercenaryPanel = new com.riiablo.screen.panel.HireMercenaryPanel();
+    stage.addActor(hireMercenaryPanel);
 
     mercenaryHud = new MercenaryHud(itemController);
     // Keep the native portrait inset symmetrical: its top and left margins are
@@ -568,6 +571,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           return;
         }
         if (inventoryPanel.isGoldDialogOpen() || stashPanel.isGoldDialogOpen()) {
+          return;
+        }
+        if (hireMercenaryPanel != null && hireMercenaryPanel.isVisible()) {
           return;
         }
 
@@ -679,6 +685,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
       @Override
       public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if (hireMercenaryPanel != null && hireMercenaryPanel.isVisible()) return false;
         if (Riiablo.cursor == null || !Riiablo.cursor.isIdentifying()) return false;
         Vector2 point = stage.screenToStageCoordinates(new Vector2(screenX, screenY));
         Actor actor = stage.hit(point.x, point.y, true);
@@ -693,6 +700,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
       @Override
       public boolean scrolled(float amountX, float amountY) {
+        if (hireMercenaryPanel != null && hireMercenaryPanel.isVisible()) return false;
         if (helpPanel != null && helpPanel.isVisible()) return true;
         if (amountY < 0) {
           if (UIUtils.ctrl()) {
@@ -709,6 +717,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
       @Override
       public boolean keyDown(int keycode) {
+        if (hireMercenaryPanel != null && hireMercenaryPanel.isVisible()) return false;
         if (helpPanel != null && helpPanel.isVisible()) return true;
         switch (keycode) {
           case Input.Keys.TAB:
@@ -1225,7 +1234,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     // TODO: move to a separate system TouchpadMovementSystem
-    if (touchpad != null) {
+    if (touchpad != null && (hireMercenaryPanel == null || !hireMercenaryPanel.isVisible())) {
       tmpVec2.set(touchpad.getKnobPercentX(), touchpad.getKnobPercentY()).nor();
       if (tmpVec2.isZero()) {
         Velocity velocity = engine.getMapper(Velocity.class).get(player);
@@ -1247,7 +1256,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     // 检测持续按键：automap 缩放和平移（按住键持续操作）
-    if (RenderSystem.isAutomapVisible()) {
+    if (RenderSystem.isAutomapVisible()
+        && (hireMercenaryPanel == null || !hireMercenaryPanel.isVisible())) {
       AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
       if (automapRenderer != null) {
         float actionInterval = 0.1f;  // 操作间隔（秒）

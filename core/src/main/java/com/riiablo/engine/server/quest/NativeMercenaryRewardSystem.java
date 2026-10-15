@@ -60,6 +60,11 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   private final MercenaryManager mercenaries;
   private com.riiablo.engine.server.NativeHirelingExperienceTable hirelingTable;
+  private int difficultyOverride = -1;
+  public void setDifficulty(int difficulty) {
+    difficultyOverride = difficulty;
+    mercenaries.setRosterDifficulty(difficulty);
+  }
 
   public NativeMercenaryRewardSystem() {
     this(new MercenaryManager());
@@ -142,6 +147,27 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     log.warn("[MERC_HIRE] no affordable/available mercenary: player={} npc={} level={}",
         playerId, npcId, level);
     return false;
+  }
+
+  public Array<com.riiablo.engine.server.npc.HirelingOffer> hirelingOffers(int playerId, int npcId) {
+    return !mPlayer.has(playerId) ? new Array<>()
+        : mercenaries.hirelingOffers(playerId, npcId, getPlayerLevel(playerId));
+  }
+
+  /** Selected-offer transaction, with compare-and-swap replacement consent. Null means success. */
+  public String hireSelectedMercenary(int playerId, int npcId, int index, int seed,
+      int expectedPreviousSeed) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return "PLAYER_NOT_FOUND";
+    com.riiablo.save.CharData owner = mPlayer.get(playerId).data;
+    if (owner.getMerc().seed != expectedPreviousSeed) return "MERCENARY_CHANGED";
+    com.riiablo.engine.server.npc.HirelingOffer selected = null;
+    for (com.riiablo.engine.server.npc.HirelingOffer offer : hirelingOffers(playerId, npcId)) {
+      if (offer.index == index && offer.seed == seed) selected = offer;
+    }
+    if (selected == null) return "STALE_HIRELING";
+    if (getPlayerGold(playerId) < selected.cost) return "INSUFFICIENT_GOLD";
+    return mercenaries.hireSelectedMercenary(playerId, npcId, index, seed)
+        ? null : "HIRE_REJECTED";
   }
 
   /** Test/integration entry that exercises the native free Rogue reward path. */
@@ -231,10 +257,11 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (active == null || active.entityId != entityId || level < active.level) return false;
     int oldLevel = active.level;
     active.experience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
+    if (mMercenary.has(entityId)) mMercenary.get(entityId).experience = active.experience;
     active.level = Math.max(1, Math.min(98, level));
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null
-            : hirelingTable.stats(active.definition.mercType, active.level);
+            : hirelingTable.stats(active.definition.hirelingId(), active.level);
     if (nativeStats != null) {
       active.maxLife = nativeStats.hitpoints;
       if (active.state != MercenaryManager.STATE_DEAD) active.currentLife = nativeStats.hitpoints;
@@ -256,12 +283,13 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     com.riiablo.save.CharData owner = mPlayer.get(playerId).data;
     if (!owner.hasMerc()) return false;
     com.riiablo.save.CharData.MercData data = owner.getMerc();
-    int mercType = data.type & 0xFFFF;
+    int hirelingId = data.type & 0xFFFF;
+    int mercType = com.riiablo.engine.server.NativeHirelingExperienceTable.mercenaryType(hirelingId);
     int nameId = data.name & 0xFFFF;
     int level = hirelingTable == null ? 1
-        : hirelingTable.levelForStoredExperience(mercType, data.xp);
+        : hirelingTable.levelForStoredExperience(hirelingId, data.xp);
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
-        hirelingTable == null ? null : hirelingTable.stats(mercType, level);
+        hirelingTable == null ? null : hirelingTable.stats(hirelingId, level);
     if (nativeStats == null) {
       log.warn("[MERC_RESTORE] phase=reject player={} type={} xp={} reason=hireling_row_missing",
           playerId, mercType, data.xp);
@@ -275,7 +303,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     // items remain authoritative instead of being overwritten by the loader.
     data.getItems().updateStats();
     boolean dead = (data.flags & MercenaryManager.FLAG_DEAD) != 0;
-    if (!mercenaries.restoreMercenary(playerId, mercType, level, data.xp,
+    if (!mercenaries.restoreNativeMercenary(playerId, hirelingId, level, data.xp,
         data.seed, nameId, dead)) return false;
 
     MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
@@ -294,6 +322,10 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     // The runtime entity and persistent equipment share one Attributes object;
     // later equipment and level updates therefore affect authoritative combat.
     mAttributesWrapper.get(merc.entityId).attrs = data.getStats();
+    if (mMercenary.has(merc.entityId)) {
+      mMercenary.get(merc.entityId).experience = data.xp;
+      mMercenary.get(merc.entityId).flags = data.flags;
+    }
     log.info("[MERC_RESTORE] phase=restored player={} entity={} type={} level={} xp={} "
             + "dead={} items={}",
         playerId, merc.entityId, mercType, level, data.xp, dead,
@@ -357,8 +389,9 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     Mercenary component = mMercenary.create(entityId)
         .bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
         .set(playerId, def.mercType, level, seed, nameId);
+    component.hirelingId = def.hirelingId;
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
-        hirelingTable == null ? null : hirelingTable.stats(def.mercType, level);
+        hirelingTable == null ? null : hirelingTable.stats(def.hirelingId(), level);
     if (mAttributesWrapper.has(entityId)) {
       com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
           mAttributesWrapper.get(entityId).attrs, nativeStats);
@@ -469,16 +502,19 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   public void onMercenaryHired(int playerId, MercenaryManager.ActiveMercenary merc) {
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null || merc == null) return;
     com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
+    data.getItems().replaceFromAuthoritativeSnapshot(new Array<com.riiablo.item.Item>());
+    data.getStats().clear();
+    data.flags = 0;
     data.seed = merc.seed;
     data.name = (short) merc.nameId;
-    data.type = (short) merc.definition.mercType;
+    data.type = (short) merc.definition.hirelingId();
     long nativeXp = hirelingTable == null ? 0L
-        : hirelingTable.thresholdForHireling(merc.definition.mercType, merc.level);
+        : hirelingTable.thresholdForHireling(merc.definition.hirelingId(), merc.level);
     if (nativeXp > 0L) merc.experience = nativeXp;
     data.xp = merc.experience;
     com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(data.getStats(),
         hirelingTable == null ? null
-            : hirelingTable.stats(merc.definition.mercType, merc.level));
+            : hirelingTable.stats(merc.definition.hirelingId(), merc.level));
     data.getStats().base().put(Stat.experience,
         (int) Math.min(Integer.MAX_VALUE, data.xp));
     data.getStats().aggregate().put(Stat.experience,
@@ -486,6 +522,10 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     data.getItems().updateStats();
     if (mAttributesWrapper.has(merc.entityId)) {
       mAttributesWrapper.get(merc.entityId).attrs = data.getStats();
+    }
+    if (mMercenary.has(merc.entityId)) {
+      mMercenary.get(merc.entityId).experience = data.xp;
+      mMercenary.get(merc.entityId).flags = data.flags;
     }
   }
 
@@ -502,6 +542,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   public void onMercenaryDeath(int playerId, MercenaryManager.ActiveMercenary merc) {
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
     mPlayer.get(playerId).data.getMerc().flags |= MercenaryManager.FLAG_DEAD;
+    if (mMercenary.has(merc.entityId)) mMercenary.get(merc.entityId).flags |= MercenaryManager.FLAG_DEAD;
   }
 
   @Override
@@ -509,6 +550,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null || merc == null) return;
     com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
     data.flags &= ~MercenaryManager.FLAG_DEAD;
+    if (mMercenary.has(merc.entityId)) mMercenary.get(merc.entityId).flags = data.flags;
     refreshMercenaryStats(playerId, merc, true);
     log.info("[MERC_LIFECYCLE] phase=resurrect owner={} entity={} level={} cost={}",
         playerId, merc.entityId, merc.level,
@@ -526,7 +568,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (merc == null) return false;
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null
-            : hirelingTable.stats(merc.definition.mercType, merc.level);
+            : hirelingTable.stats(merc.definition.hirelingId(), merc.level);
     if (nativeStats == null) {
       log.warn("[MERC_LEVEL] phase=refresh_skip owner={} entity={} level={} "
               + "reason=hireling_row_missing", playerId, merc.entityId, merc.level);
@@ -568,6 +610,8 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       }
     }
     if (mMercenary.has(merc.entityId)) {
+      mMercenary.get(merc.entityId).experience = merc.experience;
+      mMercenary.get(merc.entityId).level = merc.level;
       com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(
           mMercenary.get(merc.entityId), nativeStats);
     }
@@ -614,6 +658,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   @Override
   public int getDifficulty() {
+    if (difficultyOverride >= 0) return difficultyOverride;
     if (com.riiablo.Riiablo.charData != null) return com.riiablo.Riiablo.charData.diff;
     return 0;
   }
