@@ -254,6 +254,63 @@ class VendorPricingTest extends RiiabloTest {
   }
 
   @Test
+  void soldScrollBuybackDoesNotReplenishBlacksmithStock() throws Exception {
+    assertSoldScrollBuyback(false);
+  }
+
+  @Test
+  void soldScrollCursorBuybackDoesNotReplenishBlacksmithStock() throws Exception {
+    assertSoldScrollBuyback(true);
+  }
+
+  private void assertSoldScrollBuyback(boolean toCursor) throws Exception {
+    Item scroll = new ItemGenerator().generate("tsc");
+    scroll.id = 51;
+    assertTrue(scroll.base.PermStoreItem);
+    VendorGenerator generator = new VendorGenerator() {
+      @Override public Array<Item> generate(String vendor) {
+        return new Array<>(true, 0, Item.class);
+      }
+      @Override public Item restock(Item purchased) {
+        fail("Player-sold scroll must not replenish blacksmith stock");
+        return null;
+      }
+    };
+    NpcVendorSessionManager manager = new NpcVendorSessionManager();
+    NpcVendorSessionManager.Session session =
+        manager.open(10, "charsi", generator, false, null, 0);
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "ScrollBuyer", Riiablo.AMAZON);
+    character.getStats().base().put(Stat.gold, 1000);
+    character.getStats().aggregate().put(Stat.gold, 1000);
+    assertTrue(character.getItems().addToInventory(scroll));
+
+    assertTrue(manager.sell(session, character, character.getItems().indexOf(scroll)) > 0);
+    assertSame(scroll, session.stock.first());
+    assertSame(session, manager.open(10, "charsi", generator, false, null, 0));
+    assertTrue(scroll.vendorBuyback);
+    // Both local config and server sessions use these shared classification methods.
+    assertFalse(VendorPricing.isPermanentStoreItem(scroll));
+    assertFalse(VendorPricing.isInfiniteStockItem(scroll));
+    assertTrue(manager.buy(session, character, scroll.id, toCursor) > 0);
+    assertEquals(0, session.stock.size);
+    assertTrue(character.getItems().contains(scroll));
+    if (toCursor) assertSame(scroll, character.getItems().getCursor());
+  }
+
+  @Test
+  void nativeScrollStockRemainsPermanentAndItemResetClearsBuybackProvenance() {
+    Item scroll = new ItemGenerator().generate("tsc");
+    assertTrue(VendorPricing.isPermanentStoreItem(scroll));
+    assertTrue(VendorPricing.isInfiniteStockItem(scroll));
+    scroll.vendorBuyback = true;
+    assertFalse(VendorPricing.isPermanentStoreItem(scroll));
+    assertFalse(VendorPricing.isInfiniteStockItem(scroll));
+    scroll.reset();
+    assertFalse(scroll.vendorBuyback);
+  }
+
+  @Test
   void reducedPriceAndRepairUseNativeScaling() {
     Item item = item("hp1", 1, 1);
     item.base.cost = 1000;

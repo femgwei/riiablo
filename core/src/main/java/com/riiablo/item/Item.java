@@ -113,6 +113,8 @@ public class Item {
   public int         flags2; // riiablo-specific
   /** Server supplied display price for an in-store network snapshot. */
   public int         vendorPrice;
+  /** Runtime-only provenance: player-sold stock must not become native supply. */
+  public boolean     vendorBuyback;
   public int         version;
   public Location    location;
   public BodyLoc     bodyLoc;
@@ -179,6 +181,7 @@ public class Item {
   public void reset() {
     flags         = 0;
     vendorPrice   = -1;
+    vendorBuyback = false;
     version       = 0;
     location      = Location.STORED;
     bodyLoc       = BodyLoc.NONE;

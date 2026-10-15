@@ -318,6 +318,7 @@ public final class VendorPricing {
         && (item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY))) return false;
     int value = sellPrice(item, npc, character, difficulty);
     if (!items.removeOwnedItem(item)) return false;
+    item.vendorBuyback = true;
     addGold(character, value);
     return true;
   }
@@ -330,14 +331,16 @@ public final class VendorPricing {
     return "aqv".equalsIgnoreCase(item.code) || "cqv".equalsIgnoreCase(item.code);
   }
 
-  /** Native item flag used for stock that is always replenished by a vendor. */
+  /** Permanent stock excludes player-sold entries, including after reopening a vendor. */
   public static boolean isPermanentStoreItem(Item item) {
-    return item != null && item.base != null && item.base.PermStoreItem;
+    return item != null && !item.vendorBuyback && item.base != null && item.base.PermStoreItem;
   }
 
   /** Stock that native vendors replenish immediately after every purchase. */
   public static boolean isInfiniteStockItem(Item item) {
-    if (item == null) return false;
+    // D2MOO sub_6FCC7E20 checks this NPC's permanent cache, not just
+    // Items.txt PermStoreItem. A scroll sold to a blacksmith is finite stock.
+    if (item == null || item.vendorBuyback) return false;
     if (isPermanentStoreItem(item) || isQuiver(item)) return true;
     if (item.type != null && (item.type.is(Type.HPOT) || item.type.is(Type.MPOT))) return true;
     String code = item.code;
