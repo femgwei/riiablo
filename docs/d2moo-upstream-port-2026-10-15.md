@@ -1999,6 +1999,18 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 生产仍Map→AStarPathFinder；raw坐标/动态字段/Act与Zone/shared seed仍待。
   本批host一致性验证，无新增DLL算法证据或动态DLL执行。
 
+## 第三十七批：公开Search重载的直接回归证据
+
+- 仅增加测试，不新增生产功能。保存Request实际产生的Search，在type0/2/16直接调用Dispatch，
+  验证guard失效或另一有效观察替换时，拒绝先于路径写入/碰撞查询/type16 owner seed消耗。
+- 拒绝后检查buffer及seed，失效分支还检查count/index；有效观察三个分支均正常执行。
+- 新增3项，完整588项/50类通过，失败/错误/跳过0；core/build/round37-final.log，
+  XML .gradle/path-port/round37-final/core/test-results/pathPortTest。
+  首轮夹具的零起点房间不满足IDA外扩边界，修正合法域后完整重跑，无生产修改。
+  随后纠正有效分支必须寻路成功的过强断言：正常执行允许零路径，校验返回合法计数。
+- 属Java适配回归，不是DLL动态差分或新算法证据；不扩大低层State重载历史身份保证，
+  不宣称Search可跨移动继续使用。生产仍A*，raw数据/Act与Zone/shared seed来源仍待。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

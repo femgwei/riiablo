@@ -3,6 +3,7 @@ package com.d2moo.common.path;
 import com.d2moo.common.collision.D2CommonCollision;
 import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2DrlgCoords;
+import com.d2moo.common.drlg.D2Seed;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,6 +12,65 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathDispatchTest {
+  private static D2PathRequest.Search savedSearch(int type, Runnable guard, D2Seed seed) {
+    D2PathResult.State s = state(); s.path.pathType = type;
+    D2PathUnits.Unit owner = D2PathUnits.Unit.dynamic(1, 2,
+        new D2PathUnits.DynamicPath(10 << 16, 10 << 16, 0));
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    s.path.targetUnit = D2PathUnits.observation(owner, target, 0, guard);
+    s.room = new D2PathResult.Room(10, 10, 30, 30);
+    D2PathRequest.State request = new D2PathRequest.State(s, target,
+        new D2PathRequest.Room(s.room, false), false, 0, 2, 1, 0x501, 70, seed);
+    D2PathRequest.Search[] saved = {null};
+    D2PathRequest.compute(request, false, new D2PathRequest.Effects() {
+      public boolean removeOwner(D2PathRequest.State state) { return false; }
+      public boolean removeTarget(D2PathRequest.State state) { return false; }
+      public void addOwner(D2PathRequest.State state) {}
+      public void addTarget(D2PathRequest.State state) {}
+      public boolean blocked(D2PathRequest.State state, int x, int y) { return false; }
+      public int search(D2PathRequest.Search search) { saved[0] = search; return 0; }
+    });
+    return java.util.Objects.requireNonNull(saved[0]);
+  }
+
+  @Test void savedSearchRejectsExpiredLifetimeBeforePointsQueriesOrStreamSeed() {
+    for (int type : new int[] {0, 2, 16}) {
+      boolean[] live = {true}; D2Seed seed = new D2Seed(123, 456);
+      D2PathRequest.Search search = savedSearch(type, () -> {
+        if (!live[0]) throw new IllegalStateException("expired lifetime");
+      }, seed);
+      D2PathResult.State s = search.state.result;
+      D2Path.Point[] before = s.points.clone(); long seedBefore = seed.getLSeed();
+      int count = s.path.pathPointCount, index = s.path.currentPointIndex;
+      live[0] = false;
+      assertThrows(IllegalStateException.class, () -> D2PathDispatch.compute(search,
+          (x,y) -> { fail("stale search must not query"); return false; }));
+      assertArrayEquals(before, s.points); assertEquals(seedBefore, seed.getLSeed());
+      assertEquals(count, s.path.pathPointCount); assertEquals(index, s.path.currentPointIndex);
+    }
+  }
+
+  @Test void savedSearchRejectsDifferentCurrentObservationEvenWhenBothGuardsAreValid() {
+    for (int type : new int[] {0, 2, 16}) {
+      D2Seed seed = new D2Seed(123, 456);
+      D2PathRequest.Search search = savedSearch(type, () -> {}, seed);
+      D2PathResult.State s = search.state.result;
+      D2PathUnits.Observation old = (D2PathUnits.Observation) s.path.targetUnit;
+      s.path.targetUnit = D2PathUnits.observation(old.owner, old.target, old.speed);
+      D2Path.Point[] before = s.points.clone(); long seedBefore = seed.getLSeed();
+      assertThrows(IllegalArgumentException.class, () -> D2PathDispatch.compute(search,
+          (x,y) -> { fail("replacement must precede queries"); return false; }));
+      assertArrayEquals(before, s.points); assertEquals(seedBefore, seed.getLSeed());
+    }
+  }
+
+  @Test void savedCurrentSearchStillDispatchesAcrossRoomAwareAndLocalBranches() {
+    for (int type : new int[] {0, 2, 16}) {
+      D2PathRequest.Search search = savedSearch(type, () -> {}, new D2Seed(123, 456));
+      int count = assertDoesNotThrow(() -> D2PathDispatch.compute(search, (x,y) -> false));
+      assertTrue(count >= 0 && count <= search.state.result.points.length);
+    }
+  }
   @Test void directDispatchRejectsStaleObservationBeforeWritesEvenWithoutCollisionQueries() {
     for (int type : new int[] {2, 12, 15}) {
       D2PathResult.State s = state();

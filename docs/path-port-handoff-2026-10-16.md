@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十六批续接结果（优先于下方历史起点）
+## 第三十七批续接结果（优先于下方历史起点）
+
+- 本批只补公开Search重载的直接回归证据，不新增生产功能：保存真实Request生成的Search，
+  在type0/2/16分支直接再次调用Dispatch，验证失效guard与有效但被替换的观察均先于写入/查询拒绝。
+- type16同时断言live owner seed不被消耗；路径buffer/count/index保持拒绝前状态。
+  当前有效观察的type0/2/16均可正常执行，避免测试只证明入口一律拒绝。
+- 新增3项（内部覆盖三个分支），完整588项/50类通过，失败/错误/跳过0；
+  core/build/round37-final.log，XML `.gradle/path-port/round37-final/core/test-results/pathPortTest`。
+  首轮有效分支夹具房间从0开始，IDA外扩后越界；修正为合法域后完整重跑。
+  有效分支断言正常返回合法计数，允许原算法零路径结果，不强行要求寻路成功。
+- 这些是Java适配回归，不是动态DLL差分或新原生算法证据。未宣称Search可跨移动保留，
+  未扩大低层State重载的历史身份保证。生产仍A*，raw数据/Act与Zone/shared seed来源仍待。
+
+## 第三十六批续接结果（历史）
 
 - Request.State构造对标准Observation增加owner.type/sizeX与path.ownerType/unitSize一致性检查，
   避免使用自定义effects时绕过具体RequestEffects的owner元数据校验。失败先于request执行和副作用。

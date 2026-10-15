@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十七批（生产适配仍PARTIAL）
+
+- [x] 补直接Search重载回归：type0/2/16失效guard/观察替换先于写入/查询/seed拒绝。
+- [x] 有效Search正常执行；新增3项，完整588项/50类通过，无失败/错误/跳过。
+- [ ] 本批仅验证既有适配，不新增生产功能；raw数据、Act/Zone/shared seed来源仍待。
+
+生产仍Map→AStarPathFinder，无新增DLL证据或动态执行。
+
 ## 2026-10-16 寻路第三十六批（生产适配仍PARTIAL）
 
 - [x] Request构造对标准观察验证owner type/size，覆盖自定义effects入口。

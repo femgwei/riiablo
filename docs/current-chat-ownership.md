@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十七批：仅补保存Search的公开Dispatch直接调用回归，type0/2/16验证生命周期/观察替换
+拒绝先于路径写入、碰撞查询及stream seed消耗；有效观察仍可执行。
+新增3项，完整588项/50类通过，失败/错误/跳过0；core/build/round37-final.log。
+无新增生产功能或DLL证据，生产仍A*；详细边界见handoff顶部。
+
 第三十六批：Request.State对标准Observation核对owner类型/尺寸，避免自定义effects绕过
 具体适配器的元数据校验。新增2项，完整585项/50类通过，失败/错误/跳过0。
 日志core/build/round36-full.log；生产仍A*，详细边界见handoff顶部。
