@@ -11,6 +11,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathDispatchTest {
+  @Test void directDispatchRejectsStaleObservationBeforeWritesEvenWithoutCollisionQueries() {
+    for (int type : new int[] {2, 12, 15}) {
+      D2PathResult.State s = state();
+      D2PathUnits.Unit owner = D2PathUnits.Unit.dynamic(1, 2, null);
+      s.path.targetUnit = D2PathUnits.observation(owner, owner, 0, () -> {
+        throw new IllegalStateException("stale lifetime");
+      });
+      D2Path.Point[] before = s.points.clone();
+      assertThrows(IllegalStateException.class, () -> compute(s, p(20,10), type, 10, 0,
+          (x,y) -> { fail("stale observation must precede queries"); return false; }));
+      assertArrayEquals(before, s.points);
+      assertEquals(3, s.path.pathPointCount); assertEquals(2, s.path.currentPointIndex);
+      assertEquals(123, s.directionVectorX); assertEquals(456, s.velocityVectorY);
+    }
+  }
+
+  @Test void directDispatchAcceptsCurrentStandardObservation() {
+    D2PathResult.State s = state();
+    D2PathUnits.Unit owner = D2PathUnits.Unit.dynamic(1, 2, null);
+    int[] checks = {0};
+    s.path.targetUnit = D2PathUnits.observation(owner, owner, 0, () -> checks[0]++);
+    assertEquals(1, compute(s, p(20,10), 2, 77, 0, (x,y) -> false));
+    assertTrue(checks[0] > 0);
+  }
   private static D2Path.Point p(int x, int y) { return new D2Path.Point(x,y); }
   private static D2PathResult.State state() {
     D2PathContinuation.State path = new D2PathContinuation.State(1);

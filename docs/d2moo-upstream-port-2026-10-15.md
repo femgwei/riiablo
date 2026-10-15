@@ -1976,6 +1976,18 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
   不拦截直接静态footprint或自定义search。生产仍A*，raw坐标/动态字段/Act与Zone/shared seed仍待。
   本批仅host一致性验证，无新增DLL算法证据或动态DLL执行。
 
+## 第三十五批：公开Dispatch入口观察检查
+
+- D2PathDispatch.compute(Search,...)在任何分支前复检Request原观察身份及guard；
+  compute(Result.State,...)在路径写入前检查当前标准Observation guard，包括可不查询碰撞的分支。
+- Request.compute复用包内requireObservationCurrent，原missile优先检查保留。
+  低层State无历史request身份，不能检测已换成另一份有效观察；legacy自定义Target契约不变。
+- 新增2项，覆盖多种入口类型的失效观察写入前拒绝/网格查询前拒绝，以及有效观察正常执行。
+  完整583项/50类通过，失败/错误/跳过0；core/build/round35-full.log，
+  XML .gradle/path-port/round35-full/core/test-results/pathPortTest。
+- 不宣称拦截任意回调期间状态修改或自动元数据刷新；raw坐标/动态字段/Act与Zone/shared seed
+  仍待，生产仍Map→AStarPathFinder。本批host适配无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

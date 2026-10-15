@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十五批补充：Dispatch公开入口在路径写入前检查标准Observation guard，Search入口复检
+Request保存的原观察对象；低层Result.State无保存身份，只能验证当前观察，legacy契约保留。
+Request复用同一包内校验。新增2项，完整583项/50类通过，失败/错误/跳过0。
+仅host入口适配，生产仍A*，无新增DLL算法证据或动态DLL执行。
+
 第三十四批补充：RequestEffects对标准Observation增加exact owner坐标对象校验，并在构造及
 每次网格效果前复检原观察对象和生命周期，拒绝同坐标替代快照或失效观察，失败先于网格操作。
 legacy自定义Target及直接静态footprint调用仍属调用方契约；没有把全部mode/mask字段当成已验证身份。

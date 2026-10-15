@@ -14,6 +14,7 @@ public final class D2PathDispatch {
      * Live nDirOffset is used as-is; this must not call PATH_SetType or reapply its table. */
     public static int compute(D2PathRequest.Search search, D2Toward.Collision collision) {
         Objects.requireNonNull(search);
+        search.state.requireObservationCurrent();
         if (search.type == 0 || search.type == 16) {
             validate(search.state.result,search.start,search.target,search.maximumDistance,search.tolerance,collision);
             D2IDAStar.Bounds bounds = D2IDAStar.nativeRoomBounds(search.state.startRoom,search.targetRoom);
@@ -33,6 +34,11 @@ public final class D2PathDispatch {
     public static int compute(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
             int type, int maximumDistance, int tolerance, D2Toward.Collision collision) {
         Objects.requireNonNull(state);
+        // The low-level overload has no saved request identity. Validate the
+        // currently installed standard observation before any path writes.
+        if (state.path.targetUnit instanceof D2PathUnits.Observation) {
+            ((D2PathUnits.Observation) state.path.targetUnit).requireCurrent();
+        }
         if (type == 0 || type == 16) throw new UnsupportedOperationException("native type0/16 require the room-aware Search overload");
         D2PathTypes.Entry entry = D2PathTypes.entry(type);
         if (entry == D2PathTypes.Entry.NONE) throw new IllegalStateException("native null search entry assertion");

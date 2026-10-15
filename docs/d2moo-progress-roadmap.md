@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十五批（生产适配仍PARTIAL）
+
+- [x] Dispatch两个公开入口在路径写入前校验标准观察生命周期，Search入口检查原观察身份。
+- [x] Request复用包内检查，missile检查顺序保留；低层无保存身份的边界明确。
+- [x] 新增2项，完整583项/50类通过，无失败/错误/跳过。
+- [ ] raw坐标、动态字段、Act/Zone/shared seed及生产移动消费仍待。
+
+生产仍Map→AStarPathFinder，没有宣称任意回调期间状态修改也被保护。
+
 ## 2026-10-16 寻路第三十四批（生产适配仍PARTIAL）
 
 - [x] 标准Observation下effects要求exact owner坐标对象，拒绝同坐标另快照。

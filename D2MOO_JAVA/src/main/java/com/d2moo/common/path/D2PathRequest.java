@@ -50,6 +50,14 @@ public final class D2PathRequest {
             observation.requireCurrent();
         }
 
+        void requireObservationCurrent() {
+            if (observation == null) return;
+            if (result.path.targetUnit != observation) {
+                throw new IllegalArgumentException("request observation changed; rebuild the request");
+            }
+            observation.requireCurrent();
+        }
+
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
                 boolean ownerCanBeInTown, int speed, int unitSize, int collisionPattern,
                 int moveMask, int initialFScore) {
@@ -167,12 +175,7 @@ public final class D2PathRequest {
         D2PathResult.State result = state.result;
         D2PathContinuation.State path = result.path;
         if ((path.pathFlags & 0x40000) != 0) throw new IllegalArgumentException("missile dispatcher required");
-        if (state.observation != null) {
-            if (path.targetUnit != state.observation) {
-                throw new IllegalArgumentException("request observation changed; rebuild the request");
-            }
-            state.observation.requireCurrent();
-        }
+        state.requireObservationCurrent();
         state.collidedMask = 0;
         if (state.target != null) {
             D2Path.Point raw = D2PathUnits.coordinates(state.target);

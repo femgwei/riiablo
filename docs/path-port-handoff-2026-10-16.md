@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十四批续接结果（优先于下方历史起点）
+## 第三十五批续接结果（优先于下方历史起点）
+
+- D2PathDispatch两个公开compute入口在路径写入前验证标准Observation生命周期；Search入口
+  还通过Request.State校验原观察对象未被替换，type0/16房间/seed分支同样先检查。
+- Request.compute复用同一包内观察校验，原missile优先检查保留。低层Result.State重载没有保存
+  request身份，只能验证当前安装的标准观察，不能声称检测到历史观察替换；legacy Target契约不变。
+- 新增2项，完整583项/50类通过，失败/错误/跳过0；core/build/round35-full.log，
+  XML `.gradle/path-port/round35-full/core/test-results/pathPortTest`。
+- 本批为host入口一致性校验，未拦截调用期间任意自定义回调修改，也不检测元数据/位置刷新。
+  raw坐标/动态字段/Act与Zone/shared seed仍待，生产仍A*，无新增DLL算法证据或动态执行。
+
+## 第三十四批续接结果（历史）
 
 - RequestEffects对标准Observation校验exact owner.coordinates对象；同类型/坐标/尺寸但另一份
   owner快照不再可混入。target原有exact检查保留，legacy自定义Target仍按原调用方契约处理。
