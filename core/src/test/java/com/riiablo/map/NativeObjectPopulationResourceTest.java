@@ -54,6 +54,26 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
     }
     assertTrue(generated, "theme 2 must populate outdoor barrels");
   }
+  @Test void clusteredContainerSpacingAllowsPresetFloorOutsideItsFootprint() {
+    Map.Zone zone = zone(29);
+    // Every third subtile has PRESET: no 8x8 spacing box can avoid it,
+    // but the actual urn footprint still has valid positions.
+    for (int y = 0; y < zone.height; y++) for (int x = 0; x < zone.width; x += 3)
+      zone.flags[y * zone.width + x] = 0x10;
+    assertTrue(new NativeObjectPopulation().populate(zone, null) > 0,
+        "Fn1 must use 0xC01 for spacing and PLACEMENT only for the actual footprint");
+    zone = zone(29);
+    java.util.Arrays.fill(zone.flags, (byte) 0x10);
+    assertEquals(0, new NativeObjectPopulation().populate(zone, null),
+        "PRESET under the actual footprint must still reject placement");
+  }
+  @Test void uniqueMonsterMaximumComesFromItsOwnLevelsColumn() {
+    Levels table = com.riiablo.codec.excel.Excel.load(Levels.class,
+        Riiablo.mpqs.resolve("data\\global\\excel\\Levels.txt"));
+    Levels.Entry dryHills = table.get(42);
+    assertEquals(1, dryHills.MonUMin[0]);
+    assertEquals(2, dryHills.MonUMax[0]);
+  }
   private static Map.Zone zone(int group) {
     Map.Zone zone = new Map.Zone();
     zone.map = new Map(1,0);

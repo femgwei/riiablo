@@ -2637,6 +2637,8 @@ public class Map implements Disposable {
     public final String superUniqueKey;
     public final boolean spawned;
     public final int rank;
+    /** Positive for a MonPlace normal-group marker expanded after terrain installation. */
+    public final int populationGroupSize;
 
     public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
         int superUniqueId, String superUniqueKey, boolean spawned) {
@@ -2646,6 +2648,11 @@ public class Map implements Disposable {
 
     public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
         int superUniqueId, String superUniqueKey, boolean spawned, int rank) {
+      this(roomId, monsterId, mode, x, y, superUniqueId, superUniqueKey, spawned, rank, 0);
+    }
+
+    public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
+        int superUniqueId, String superUniqueKey, boolean spawned, int rank, int populationGroupSize) {
       this.roomId = roomId;
       this.monsterId = monsterId;
       this.mode = mode;
@@ -2655,6 +2662,7 @@ public class Map implements Disposable {
       this.superUniqueKey = superUniqueKey;
       this.spawned = spawned;
       this.rank = rank;
+      this.populationGroupSize = populationGroupSize;
     }
   }
 

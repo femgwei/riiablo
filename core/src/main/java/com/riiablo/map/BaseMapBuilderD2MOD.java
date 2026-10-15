@@ -9,7 +9,6 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
-import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
@@ -374,9 +373,23 @@ public class BaseMapBuilderD2MOD {
       @Override
       public void finish(Zone zone) {
         if (zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()
-            || zone.isTown() || finalSocket != null || monsters == null || monsters.length == 0) return;
+            || zone.isTown() || finalSocket != null) return;
         java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
+        int packId = 0;
+        // Normal Act V outdoor levels have MonDen=0 and rely on these DS1
+        // MonPlace group markers. Expand only after native collision exists.
+        for (Map.NativeMonster preset : zone.getNativeMonsters()) {
+          if (preset.populationGroupSize <= 0 || preset.spawned) continue;
+          int x = Math.round(zone.x() + preset.x), y = Math.round(zone.y() + preset.y);
+          Map.RoomEx room = zone.findRoomEx(x, y);
+          MonStats.Entry monster = Riiablo.files.monstats.get(preset.monsterId);
+          if (room != null && monster != null)
+            NativeRoomMonsterPopulation.addGroupAt(zone, room, monster, preset.populationGroupSize,
+                packId++, rng, x, y);
+        }
+        if (monsters == null || monsters.length == 0) return;
         for (Map.RoomEx room : zone.getRoomsEx()) {
+          if ((room.populationFlags() & com.d2moo.common.drlg.D2DrlgRoomFlags.POPULATION_ZERO) != 0) continue;
           // D2GAME_PopulateRoom samples one population cell per 3x3 subtiles.
           for (int y = room.y + 1; y < room.y + room.height - 1; y += 3) {
             for (int x = room.x + 1; x < room.x + room.width - 1; x += 3) {
@@ -388,15 +401,7 @@ public class BaseMapBuilderD2MOD {
               int min = NativeDataTables.minGroup(monster), max = NativeDataTables.maxGroup(monster);
               if (NativeMonsterRegion.isSingleMemberNormalGroup(monster.BaseId, monster.Id)) min = max = 1;
               int count = min == max ? max : min + rng.nextInt(max - min + 1);
-              MonStats2.Entry stats = Riiablo.files.monstats2.get(monster.MonStatsEx);
-              int size = stats == null ? 2 : Math.max(1, stats.SizeX);
-              for (int member = 0; member < count; member++) {
-                int px = x + rng.nextInt(5) - 2, py = y + rng.nextInt(5) - 2;
-                if (!room.contains(px, py) || zone.map.isBlockedForPath(zone, px, py,
-                    com.riiablo.engine.server.NativeGroundPathProfile.forUnit(false, monster).terrainFlags,
-                    size, monster.opendoors)) continue;
-                room.addMonsterSpawn(monster.hcIdx, px, py);
-              }
+              NativeRoomMonsterPopulation.addGroup(zone, room, monster, count, packId++, rng);
             }
           }
         }

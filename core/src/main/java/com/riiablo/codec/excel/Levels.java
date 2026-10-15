@@ -60,7 +60,7 @@ public class Levels extends Excel<Levels.Entry> {
     public int     MonDen[];
     @Column(format = "MonUMin%s", values = {"", "(N)", "(H)"}, endIndex = 3)
     public int     MonUMin[];
-    @Column(format = "MonUMin%s", values = {"", "(N)", "(H)"}, endIndex = 3)
+    @Column(format = "MonUMax%s", values = {"", "(N)", "(H)"}, endIndex = 3)
     public int     MonUMax[];
     @Column public boolean MonWndr;
     @Column public int     MonSpcWalk;

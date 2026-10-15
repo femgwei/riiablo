@@ -86,4 +86,16 @@ seed=1、25Hz 的 A1–A2 对象加载巡游（6 个关卡，独立输出目录�
 
 随后以同一修复版本执行 seed=1、25Hz、Act I–V 132 图对象加载巡游；132/132 个 `OBJECT_AUDIT` 和 `OBJECT_LOAD_PASS` 通过，`failures=0`，最终 `SUMMARY ... failures=0 result=PASS`。实现侧类别基线为 loose rock 78、barrel/exploding barrel 336、large chest 175、urn 444、floor trap 129、trapped soul 69；这些仍是加载实现的计数，尚未与原版逐房间 roll 结果建立等价证明。
 
+2026-10-15 数量生成复核：当前 A2 默认使用 `Act2MapBuilderD2MOD`，已生成户外与迷宫；“只铺 Lut Gholein 城镇”描述的是旧备用实现，不能作为现版本数量偏少的根因。`ObjGrp/ObjPrb` 位于 Levels.txt；DrlgType 1（迷宫）同样需要人口生成，不能只在类型 3（户外）执行。物件 `density * (subtileArea >> 7) >> 8` 的两次右移与 D2MOO 一致，不能通过删除除数或直接乘十修复。
+
+本次确认并修复的差异：A2–A5 普通怪群原先以固定格点加一次抖动落点，碰墙就永久丢弃成员；改为房间内最多二十次 leader 搜索及附近成员搜索，并保留 pack/party minion 关系。补入此前遗漏的 PartyMin/PartyMax 伴随怪。随机人口跳过 POPULATION_ZERO 房间。Levels.MonUMax 的注解此前误读 MonUMin 列，已改回独立最大值列。Objects PopulateFn1 的外围间距检查此前错误使用完整 PLACEMENT 掩码；按原版改为外围 Size+7 检查 0xC01、本体检查 PLACEMENT，并恢复对应边界条件。
+
+A5 普通难度部分户外图 MonDen=0，依赖 DS1 MonPlace `place_impgroup/place_miniongroup`。此前桥接将这些指令回退为低编号单只怪物；现保留真实类型与 MinGrp/MaxGrp 群组预算，在实际地形碰撞安装后展开。其它尚未处理的 `place_*` 指令不得回退成无关怪物。
+
+新增 NativePopulationAuditResourceTest，使用真实 MPQ 地形区分 rooms/eligible/roomArea、各候选组零预算数、preset/random 物件及 preset/pending 怪物数，覆盖 A1–A5 十六个代表场景；A1 的该测试仅统计预设怪物，不替代它独立的普通怪物生成器。零预算是逐候选项诊断，未按 PROB/ObjPrb 加权，不能当作漏放总数。新增外围 PRESET、完全阻塞、怪群重试、party、MonUMax 和 A5 群组专项回归，纳入 mapResourceAcceptance。
+
+数量验收仍未闭环：A1 普通宝箱偏少未确认十倍差异；需继续将 ObjGroup 概率、预设/LvlSub、放置拒绝和运行时实体逐类对照。A2–A5 随机精英包、逻辑 coord-list 分区、原版 RNG/落点搜索和三难度人口尚未建立完整等价。待生成记录增加不能代替 TCP 客户端可见与全有向边步行验收。
+
+本轮六种子（1/2/3/12345/54321/127897359）真实资源与人口检查 26 项通过、failures/errors=0。seed=1 的石制古墓一层（56）待生成怪物由基线 33 增至 458，世界之石要塞一层（128）40→121；前者随机物件 4→7、塔拉夏古墓（66）22→26。血腥荒地（110）检测到 104 个正常群组标记，最终 pending=444；旧基线 283 混入错误编号单体，不能直接视为有效怪物同比。血腥荒地随机物件仍为 73。A1 鲜血荒地（2）随机物件仍为 14、冰冷之原（3）26，均是所有随机物件合计而非仅宝箱数；抽样未发现 externalEntity=false 的容器被遗漏。该测试只证明修复有实质效果及资源安装/一次性约束，未证明原版数量等价。
+
 2026-10-15 A2 古墓绿色区域：D2Common 会把 `MAPTILE_HIDDEN` 的墙体记录保留在原生碰撞网格，但不提交其 `InvisWal.dt1`/辅助墙图形。`applyTileGridLayers` 原先只过滤隐藏入口标记，仍把普通隐藏墙安装到可见 wall layer，导致古墓内出现绿色辅助块。现已按 `bHidden`/`bRevealHidden` 规则过滤隐藏墙图形，碰撞数据继续保留；新增 `Act2TombHiddenWallResourceTest` 覆盖 level 55–72 的真实 MPQ 资源。

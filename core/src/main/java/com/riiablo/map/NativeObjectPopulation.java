@@ -146,11 +146,15 @@ final class NativeObjectPopulation {
   }
   /** Centered collision rectangle; reserve pending object footprints as native allocation does. */
   static boolean clear(Map.Zone zone, int x, int y, int width, int height) {
+    return clear(zone, x, y, width, height,
+        com.d2moo.common.collision.D2Collision.COLLIDE_MASK_PLACEMENT);
+  }
+  private static boolean clear(Map.Zone zone, int x, int y, int width, int height, int mask) {
     int minX = x - width / 2, minY = y - height / 2;
     for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++) {
       int wx = minX + dx, wy = minY + dy;
       if (!zone.contains(wx, wy) || (zone.staticFlags(wx - zone.x(), wy - zone.y())
-          & (com.d2moo.common.collision.D2Collision.COLLIDE_MASK_PLACEMENT & 0xFF)) != 0
+          & (mask & 0xFF)) != 0
           || zone.objectCollisionReferences(wx, wy) > 0) return false;
     }
     for (Map.NativeObject other : zone.getNativeObjects()) {
@@ -165,6 +169,13 @@ final class NativeObjectPopulation {
       if (minX < ox + base.SizeX && minX + width > ox && minY < oy + base.SizeY && minY + height > oy) return false;
     }
     return true;
+  }
+  /** Objects.cpp Fn1 tests walls/objects/doors around the container, PRESET only underneath. */
+  private static boolean containerClear(Map.Zone z, Map.RoomEx r, Objects.Entry b, int x, int y) {
+    return bounds(r, x, y, b.SizeX, b.SizeY, 1)
+        && x < r.x + r.width - b.SizeX - 2 && y < r.y + r.height - b.SizeY - 2
+        && clear(z, x, y, b.SizeX + 7, b.SizeY + 7, 0xC01)
+        && clear(z, x, y, b.SizeX, b.SizeY);
   }
   private static void add(Map.Zone zone, Map.RoomEx room, int classId, int x, int y, String source) {
     zone.getNativeObjects().add(new Map.NativeObject(room.id, classId, 0,
@@ -268,7 +279,7 @@ final class NativeObjectPopulation {
       int classId = classes[next(seed, classes.length)];
       int x = r.x + next(seed, r.width - b.SizeX - 1);
       int y = r.y + next(seed, r.height - b.SizeY - 1);
-      if (!bounds(r, x, y, b.SizeX, b.SizeY, 1) || !clear(z, x, y, b.SizeX + 7, b.SizeY + 7)) continue;
+      if (!containerClear(z, r, b, x, y)) continue;
       add(z, r, classId, x, y, source);
       int chain = 1;
       boolean spawned = true;
@@ -279,7 +290,7 @@ final class NativeObjectPopulation {
           x += 2 * (step + next(seed, stepRange)) * SX[dir];
           y += 2 * (step + next(seed, stepRange)) * SY[dir];
           spawned = small ? clusterClear(z, r, b, x, y)
-              : bounds(r, x, y, b.SizeX, b.SizeY, 1) && clear(z, x, y, b.SizeX + 7, b.SizeY + 7);
+              : containerClear(z, r, b, x, y);
         }
         if (spawned) { add(z, r, classes[next(seed, classes.length)], x, y, source); chain++; }
       }

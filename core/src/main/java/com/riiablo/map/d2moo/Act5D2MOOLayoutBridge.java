@@ -162,6 +162,8 @@ public final class Act5D2MOOLayoutBridge {
                   }
                   return;
                 }
+                if (queueNormalGroupMarker(zone, exportedMonsters, index, ds1Raw,
+                    roomId, mode, x, y)) return;
                 NativeMonsterResolution resolved = resolveNativeMonster(index, ds1Raw);
                 if (resolved.monsterId < 0) {
                   monsterCounts[1]++;
@@ -273,7 +275,7 @@ public final class Act5D2MOOLayoutBridge {
     if (zone == null || zone.isTown() || monsters == null) return 0;
     int queued = 0;
     for (Map.NativeMonster monster : monsters) {
-      if (monster == null || monster.spawned || monster.monsterId < 0) continue;
+      if (monster == null || monster.spawned || monster.monsterId < 0 || monster.populationGroupSize > 0) continue;
       Map.RoomEx room = monster.roomId >= 0 && monster.roomId < zone.getRoomsEx().size
           ? zone.getRoomsEx().get(monster.roomId) : null;
       float worldX = zone.x() + monster.x;
@@ -288,6 +290,28 @@ public final class Act5D2MOOLayoutBridge {
   }
 
   /** Resolves Act V MonPreset indices and encoded SuperUnique ids. */
+  static boolean queueNormalGroupMarker(Zone zone,
+      com.badlogic.gdx.utils.Array<Map.NativeMonster> output, int index, boolean ds1Raw,
+      int roomId, int mode, int x, int y) {
+    if (!ds1Raw || Riiablo.files.MonPreset == null) return false;
+    String place;
+    try { place = Riiablo.files.MonPreset.getPlace(5, index); }
+    catch (RuntimeException ignored) { return false; }
+    if (!"place_impgroup".equals(place) && !"place_miniongroup".equals(place)) return false;
+    // MonsterRegion.cpp MonPlace 24/26: these groups are normal-only.
+    if (zone.diff != 0) return true;
+    String id = "place_miniongroup".equals(place) ? "minion1"
+        : zone.levelId() == D2LevelIds.LEVEL_BLOODYFOOTHILLS ? "deathmauler1" : "imp1";
+    MonStats.Entry monster = Riiablo.files.monstats.get(id);
+    if (monster == null || monster.MinGrp <= 0 || monster.MaxGrp < monster.MinGrp) return true;
+    java.util.Random random = new java.util.Random(com.riiablo.map.NativeLevelSeed.forLevel(
+        zone.map.seed(), zone.levelId()) ^ (roomId * 31L + x * 17L + y));
+    int count = monster.MinGrp + random.nextInt(monster.MaxGrp - monster.MinGrp + 1);
+    output.add(new Map.NativeMonster(roomId, monster.hcIdx, mode, x, y, -1, null, false,
+        com.riiablo.engine.server.monster.MonsterRank.NORMAL, count));
+    return true;
+  }
+
   static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
     if (Riiablo.files == null || Riiablo.files.monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
@@ -298,6 +322,10 @@ public final class Act5D2MOOLayoutBridge {
         placement = Riiablo.files.MonPreset.getPlace(5, index);
       } catch (RuntimeException ignored) {}
     }
+    // A MonPlace token is an instruction, never a MonStats row number.
+    // Unhandled tokens must not silently become unrelated low-id monsters.
+    if (placement != null && placement.startsWith("place_"))
+      return new NativeMonsterResolution(-1, -1, null);
     MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
     SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
         ? null : Riiablo.files.SuperUniques.get(placement);
