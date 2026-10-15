@@ -142,7 +142,22 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
-## 2026-10-16 D2MOO 第十七批：类型生命周期与有状态分派
+## 2026-10-16 D2MOO 第十八批：原生A*与Straight入口
+
+- [x] dispatcher接通1/7，保留A*仅写有效prefix、返回count而不直接赋live count/index/vectors。
+  Straight先Toward，容差接受须末点不等于start；原始平方距离<=324才试A*，失败且原Toward
+  有点才重算。保留signed int32平方回绕，不强求A*精确到达，不自动转type15。
+- [x] `findNativePath`增加uint16节点坐标和signed int16评分，approach偏移仍int32；旧通用
+  findPath及普通生产不变。D2MOO固定`0c0bbd1e`及本机1.10f DLL静态对照，未做动态函数差分。
+- [x] 新增23项；定向62项、合并410项/36类通过，失败/错误/跳过0，含四项DLL静态oracle与
+  一项1,000组逐query/路点对照。代码/测试/init `26952a9d9`已推送且远端一致。
+  `-PpathTestScope=path`可选隔离测试源码，完整主源码仍编译；另机命令见第十八批上游记录。
+- [ ] **寻路未完成**。下一轮优先IDA入口与缓存相等分支：DLL接受cached>=new，现Java严格
+  new<cached，上游源码反向写new>=cached；追踪`7FCF→7FD3`后确认，不凭跳转助记符猜语义。
+  0/16与8/9/11/12、生产身份/表格/房间图、nDist及移动消费安装、矩形递归网格/地形验收仍待。
+  普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial；无新MPQ/TCP/GL/性能/动态差分。
+
+## 2026-10-16 D2MOO 第十七批：类型生命周期与有状态分派（历史）
 
 - [x] 新增`D2PathTypes`，10185/10186保存/恢复type与velocity，三张18项表、旧flags gate、
   断言前后写入顺序按DLL；10236继续直接赋type，不重套SetType规则。
