@@ -1921,6 +1921,20 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 尚无raw坐标自动来源，碰撞原始字节/其余元数据、Act/Zone/shared seed仍待；生产仍A*。
   未新增DLL算法证据或动态DLL执行，未宣称完整Reader、迁移完成或性能提升。
 
+## 第三十一批：真实MonStats城镇许可元数据
+
+- NativePathUnitMetadata捕获Monster.monstats的npc/inTown及表行已提供状态；
+  ownerCanBeInTown(nativeIsRevive)供Request.State使用，非怪物无该城镇限制。
+- 固定上游0c0bbd1的MONSTERS_CanBeInTown要求有效MonStats且npc/inTown/UNITFLAG_ISREVIVE之一成立。
+  宿主表行缺失是unknown，调用时拒绝，包括显式ISREVIVE=true时，不冒充原生查表null结果。
+- 原生flag仍由调用方明确提供；resurrected/playerRevive/所有权/MonStats2.revive均不作为替代。
+  原生ISREVIVE亦用于部分宠物/佣兵，自动生命周期flag桥仍待。
+- 新增4项测试：完整字段组合、复活来源不推定flag、缺失表行/冻结快照、非怪物分支。
+  完整568项/49类通过，失败/错误/跳过0；core/build/round31-full.log，
+  XML .gradle/path-port/round31-full/core/test-results/pathPortTest。
+- 生产仍Map→AStarPathFinder；raw坐标/碰撞字节/Act与Zone/shared seed仍待，无新增DLL算法证据
+  或动态DLL执行，不宣称完整城镇适配、完整Reader或迁移完成。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.codec.excel.Missiles;
 import org.junit.jupiter.api.Test;
@@ -172,6 +173,62 @@ class NativePathUnitMetadataTest {
       assertEquals(p(20, 28), D2PathUnits.prepare(p(10, 10), p(1, 1), observation.target, 0).target);
       w.delete(target); w.process();
       assertThrows(IllegalStateException.class, observation::coordinates);
+    } finally { w.dispose(); }
+  }
+
+  @Test void townEligibilityUsesTableFlagsAndExplicitRuntimeFlag() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id);
+      m.monstats2 = new MonStats2.Entry(); m.monstats = new MonStats.Entry();
+      for (boolean npc : new boolean[] {false, true}) {
+        for (boolean town : new boolean[] {false, true}) {
+          m.monstats.npc = npc; m.monstats.inTown = town;
+          NativePathUnitMetadata metadata = NativePathUnitMetadata.read(w, id);
+          assertEquals(npc || town, metadata.ownerCanBeInTown(false));
+          assertTrue(metadata.ownerCanBeInTown(true));
+        }
+      }
+    } finally { w.dispose(); }
+  }
+
+  @Test void resurrectionProvenanceDoesNotInventNativeReviveFlag() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id);
+      m.monstats2 = new MonStats2.Entry(); m.monstats = new MonStats.Entry();
+      m.setResurrected(42, true);
+      assertFalse(NativePathUnitMetadata.read(w, id).ownerCanBeInTown(false));
+      m.playerRevive = false;
+      assertFalse(NativePathUnitMetadata.read(w, id).ownerCanBeInTown(false));
+    } finally { w.dispose(); }
+  }
+
+  @Test void townMetadataIsFrozenAndMissingHostRowIsUnknown() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id); m.monstats2 = new MonStats2.Entry();
+      NativePathUnitMetadata unknown = NativePathUnitMetadata.read(w, id);
+      assertThrows(IllegalArgumentException.class, () -> unknown.ownerCanBeInTown(true));
+      m.monstats = new MonStats.Entry(); m.monstats.npc = true;
+      NativePathUnitMetadata old = NativePathUnitMetadata.read(w, id);
+      m.monstats.npc = false;
+      assertTrue(old.ownerCanBeInTown(false));
+      assertFalse(NativePathUnitMetadata.read(w, id).ownerCanBeInTown(false));
+      assertThrows(IllegalArgumentException.class, () -> unknown.ownerCanBeInTown(false));
+    } finally { w.dispose(); }
+  }
+
+  @Test void nonMonsterOwnersHaveNoMonsterTownRestriction() {
+    World w = new World();
+    try {
+      for (Class.Type type : new Class.Type[] {Class.Type.PLR, Class.Type.ITM}) {
+        NativePathUnitMetadata m = NativePathUnitMetadata.read(w, create(w, type));
+        assertTrue(m.ownerCanBeInTown(false));
+      }
     } finally { w.dispose(); }
   }
 }

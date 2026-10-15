@@ -3,6 +3,7 @@ package com.riiablo.engine.server;
 import com.artemis.World;
 import com.d2moo.common.path.D2Path;
 import com.d2moo.common.path.D2PathUnits;
+import com.d2moo.common.path.D2PathRequest;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
@@ -17,17 +18,35 @@ public final class NativePathUnitMetadata {
   public final int type, sizeX, sizeY;
   /** Predicate results from the host table; these are not original DLL record bytes. */
   public final boolean door, orientationIsOne;
+  private final boolean hasTownMetadata, npc, inTown;
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY) {
     this(type, sizeX, sizeY, false, false);
   }
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne) {
+    this(type, sizeX, sizeY, door, orientationIsOne, false, false, false);
+  }
+
+  private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne,
+      boolean hasTownMetadata, boolean npc, boolean inTown) {
     this.type = type;
     this.sizeX = sizeX;
     this.sizeY = sizeY;
     this.door = door;
     this.orientationIsOne = orientationIsOne;
+    this.hasTownMetadata = hasTownMetadata;
+    this.npc = npc;
+    this.inTown = inTown;
+  }
+
+  /** Owner eligibility for Request.State, not the owner's current room location.
+   * nativeIsRevive must be the resolved native runtime flag, not Monster.resurrected,
+   * MonStats2.revive, or a guess based on ownership. Unknown MonStats is rejected. */
+  public boolean ownerCanBeInTown(boolean nativeIsRevive) {
+    if (type != 1) return true;
+    if (!hasTownMetadata) throw missing("MonStats town metadata");
+    return D2PathRequest.monsterCanBeInTown(true, npc, inTown, nativeIsRevive);
   }
 
   /** Compose with an authoritative raw fp16 path snapshot; null retains native missing-path semantics. */
@@ -61,7 +80,10 @@ public final class NativePathUnitMetadata {
       case MON: {
         Monster monster = world.getMapper(Monster.class).get(id);
         if (monster == null || monster.monstats2 == null) throw missing("MonStats2");
-        return new NativePathUnitMetadata(1, monster.monstats2.SizeX, monster.monstats2.SizeY);
+        return new NativePathUnitMetadata(1, monster.monstats2.SizeX, monster.monstats2.SizeY,
+            false, false, monster.monstats != null,
+            monster.monstats != null && monster.monstats.npc,
+            monster.monstats != null && monster.monstats.inTown);
       }
       case OBJ: {
         Object object = world.getMapper(Object.class).get(id);

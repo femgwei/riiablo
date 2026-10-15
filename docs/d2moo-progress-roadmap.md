@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十一批（生产适配仍PARTIAL）
+
+- [x] 实际MonStats npc/inTown快照及ownerCanBeInTown显式运行时ISREVIVE入口。
+- [x] 缺失表行unknown拒绝；不把resurrected/playerRevive或MonStats2.revive当原生unit flag。
+- [x] 新增4项，完整568项/49类通过，失败/错误/跳过0。
+- [ ] 原生ISREVIVE实际自动来源、raw坐标、碰撞原始字节、Act/Zone/shared seed与移动消费仍待。
+
+生产仍Map→AStarPathFinder，未宣称完整城镇适配或迁移完成。
+
 ## 2026-10-16 寻路第三十批（生产适配仍PARTIAL）
 
 - [x] 从真实Objects表捕获door及Orientation恰等于1，校验orientation字节域。

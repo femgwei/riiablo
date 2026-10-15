@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十一批：真实Monster.monstats的npc/inTown进入元数据快照，ownerCanBeInTown显式接收
+原生ISREVIVE并复用既有谓词；缺失MonStats拒绝，不把宿主复活来源当原生标志。
+新增4项，完整568项/49类通过，失败/错误/跳过0；core/build/round31-full.log。
+运行时原生flags来源仍待，生产仍A*；详细交接见handoff顶部。
+
 第三十批：真实Objects表door/Orientation==1谓词接通元数据快照；dynamicUnit/staticUnit组合
 显式原始坐标，可用于生命周期绑定Reader，不从ECS浮点猜测。静态lead方向不补零。
 新增6项，完整564项/49类通过，失败/错误/跳过0；日志core/build/round30-full.log。

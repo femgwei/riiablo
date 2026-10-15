@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十一批补充：NativePathUnitMetadata从实际Monster.monstats捕获npc/inTown，
+ownerCanBeInTown以显式ISREVIVE复用既有MONSTERS_CanBeInTown逻辑；缺失宿主表行仍为unknown。
+不从宿主复活来源或所有权推断原生flag；尚未自动解析该位或安装生产原生移动。
+新增4项，完整568项/49类通过，失败/错误/跳过0；无新增DLL证据或动态DLL差分执行。
+
 第三十批补充：NativePathUnitMetadata读取Objects.IsDoor和Orientation==1谓词，组合调用方提供的
 raw坐标为Unit，接通现有door目标偏移；验证与ECS生命周期绑定Reader配合后仍拒绝删除的目标。
 依据固定上游#10392/UNITS_CheckIfObjectOrientationIs1，不新增DLL算法证据或动态DLL执行。

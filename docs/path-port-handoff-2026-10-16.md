@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十批续接结果（优先于下方历史起点）
+## 第三十一批续接结果（优先于下方历史起点）
+
+- NativePathUnitMetadata捕获真实Monster.monstats的npc/inTown及表行是否已提供，
+  ownerCanBeInTown(nativeIsRevive)复用既有原生谓词供Request.State使用；非怪物无此城镇限制。
+- 依据固定上游0c0bbd1的MONSTERS_CanBeInTown：必须有MonStats且npc/inTown/ISREVIVE之一成立。
+  缺失宿主MonStats视为unknown并拒绝，包括显式ISREVIVE为true时；不伪称原生查表确认无记录。
+- ISREVIVE仍由调用方明确提供；宿主resurrected/playerRevive、所有权或MonStats2.revive均不替代该位。
+  原生该位也用于部分宠物/佣兵，不能只凭“复活过”推定。没有自动接通运行时unit flags来源。
+- 新增4项，完整568项/49类通过，失败/错误/跳过0；core/build/round31-full.log，
+  XML `.gradle/path-port/round31-full/core/test-results/pathPortTest`。
+- 生产仍Map→AStarPathFinder；raw坐标自动来源、碰撞原始字节、运行期Act/Zone、shared seed仍待。
+  无新增DLL算法证据或动态DLL执行。
+
+## 第三十批续接结果（历史）
 
 - NativePathUnitMetadata捕获Objects.IsDoor与Orientation==1两个谓词，依据固定上游#10392及
   UNITS_CheckIfObjectOrientationIs1。Orientation要求uint8域，不把2/255等非零值当1。
