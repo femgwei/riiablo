@@ -1,0 +1,22 @@
+// Isolate compilation as well as reports from concurrent chats using core/build.
+// Usage: gradlew -I docs/path-port-regression.init.gradle :core:pathPortTest
+//        -PpathRun=round15-full --tests 'com.d2moo.common.path.*'
+gradle.beforeProject { p ->
+  def run = p.rootProject.findProperty('pathRun') ?: 'path-port'
+  if (!(run ==~ /[a-zA-Z0-9_-]+/)) throw new GradleException('Invalid pathRun label')
+  def module = p.path == ':' ? 'root' : p.path.substring(1).replace(':', '/')
+  p.buildDir = new File(p.rootProject.projectDir, ".gradle/path-port/${run}/${module}")
+}
+
+gradle.projectsEvaluated {
+  def core = gradle.rootProject.project(':core')
+  core.tasks.register('pathPortTest', Test) {
+    testClassesDirs = core.sourceSets.test.output.classesDirs
+    classpath = core.sourceSets.test.runtimeClasspath
+    useJUnitPlatform { excludeTags 'visual' }
+    maxHeapSize = '2g'
+    systemProperty 'java.awt.headless', 'true'
+    systemProperty 'gdx.test.headless', 'true'
+    testLogging { events 'failed'; exceptionFormat 'full' }
+  }
+}
