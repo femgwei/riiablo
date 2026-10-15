@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十四批：RequestEffects对标准Observation校验exact owner坐标快照，构造及每次网格效果前
+复检原观察对象与生命周期，拒绝同坐标替代owner及失效观察；legacy自定义Target契约保留。
+新增3项，完整581项/50类通过，失败/错误/跳过0；core/build/round34-full.log。
+生产仍A*，仅host一致性校验，详细交接见handoff顶部。
+
 第三十三批：NativePathUnitBinding.observeFootprints单次捕获footprint并复用exact coordinates
 形成生命周期Observation，自目标仅读一次，读取前后及后续使用均校验身份；不自动安装effects。
 新增4项，完整578项/50类通过，失败/错误/跳过0；core/build/round33-full.log。

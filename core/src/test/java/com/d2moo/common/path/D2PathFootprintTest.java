@@ -270,11 +270,16 @@ class D2PathFootprintTest {
   }
 
   private static D2PathRequest.State request(D2PathFootprint.Unit owner, D2PathFootprint.Unit target, int flags) {
+    return request(owner, target, flags, () -> {});
+  }
+
+  private static D2PathRequest.State request(D2PathFootprint.Unit owner, D2PathFootprint.Unit target,
+      int flags, Runnable guard) {
     D2PathContinuation.State path = new D2PathContinuation.State(owner.coordinates.type);
     path.currentPoint = D2PathUnits.coordinates(owner.coordinates);
     path.targetPoint = p(20, 10); path.previousTargetPoint = p(30, 30); path.finalTargetPoint = p(40, 40);
     path.pathType = 2; path.pathFlags = flags; path.setNewDistance(77);
-    if (target != null) path.targetUnit = D2PathUnits.observation(owner.coordinates, target.coordinates, 0);
+    if (target != null) path.targetUnit = D2PathUnits.observation(owner.coordinates, target.coordinates, 0, guard);
     D2PathResult.State result = new D2PathResult.State(path); result.velocity = 256;
     D2DrlgCoords c = owner.room.getCoords();
     result.room = new D2PathResult.Room(c.getNSubtileX(), c.getNSubtileY(), c.getNSubtileWidth(), c.getNSubtileHeight());
@@ -387,5 +392,54 @@ class D2PathFootprintTest {
     assertThrows(IllegalArgumentException.class, () -> new D2PathFootprint.ObjectData(0, 0, 0, 0, new int[7]));
     assertThrows(IllegalArgumentException.class, () -> object(null, 1, 1, 8, objectData(0, 0, 0, 0)));
     assertThrows(IllegalArgumentException.class, () -> D2PathFootprint.Unit.stationary(D2PathUnits.Unit.dynamic(0, 2, null), null));
+  }
+
+  @Test void standardObservationRejectsSameCoordinateReplacementOwnerBeforeGridWrites() {
+    D2ActiveRoom grid = room(0, 0, 40, 40);
+    D2PathFootprint.Unit owner = dynamic(0, grid, 1, 1, 0x80);
+    D2PathFootprint.Unit target = dynamic(1, grid, 1, 1, 0x100);
+    D2PathRequest.State state = request(owner, target, 0);
+    D2PathFootprint.Unit replacement = dynamic(0, grid, 1, 1, 0x80);
+    int[] before = cells(grid);
+    assertThrows(IllegalArgumentException.class, () -> new D2PathFootprint.RequestEffects(state, replacement, target) {
+      @Override public int search(D2PathRequest.Search search) { return 0; }
+    });
+    assertArrayEquals(before, cells(grid));
+  }
+
+  @Test void directEffectsRejectStaleObservationBeforeAnyGridOperation() {
+    D2ActiveRoom grid = room(0, 0, 40, 40);
+    D2PathFootprint.Unit owner = dynamic(0, grid, 1, 1, 0x80);
+    D2PathFootprint.Unit target = dynamic(1, grid, 1, 1, 0x100);
+    boolean[] live = {true};
+    D2PathRequest.State state = request(owner, target, 0, () -> {
+      if (!live[0]) throw new IllegalStateException("stale lifetime");
+    });
+    D2PathFootprint.RequestEffects effects = new D2PathFootprint.RequestEffects(state, owner, target) {
+      @Override public int search(D2PathRequest.Search search) { return 0; }
+    };
+    D2PathFootprint.add(owner); D2PathFootprint.add(target);
+    int[] before = cells(grid); live[0] = false;
+    assertThrows(IllegalStateException.class, () -> effects.removeOwner(state));
+    assertThrows(IllegalStateException.class, () -> effects.removeTarget(state));
+    assertThrows(IllegalStateException.class, () -> effects.addOwner(state));
+    assertThrows(IllegalStateException.class, () -> effects.addTarget(state));
+    assertThrows(IllegalStateException.class, () -> effects.blocked(state, 10, 10));
+    assertArrayEquals(before, cells(grid));
+  }
+
+  @Test void directEffectsRejectReplacedObservationAndStaleConstruction() {
+    D2ActiveRoom grid = room(0, 0, 40, 40);
+    D2PathFootprint.Unit owner = dynamic(0, grid, 1, 1, 0x80);
+    D2PathFootprint.Unit target = dynamic(1, grid, 1, 1, 0x100);
+    D2PathRequest.State state = request(owner, target, 0);
+    D2PathFootprint.RequestEffects effects = new D2PathFootprint.RequestEffects(state, owner, target) {
+      @Override public int search(D2PathRequest.Search search) { return 0; }
+    };
+    state.result.path.targetUnit = D2PathUnits.observation(owner.coordinates, target.coordinates, 0);
+    assertThrows(IllegalArgumentException.class, () -> effects.addOwner(state));
+    assertThrows(IllegalArgumentException.class, () -> new D2PathFootprint.RequestEffects(state, owner, target) {
+      @Override public int search(D2PathRequest.Search search) { return 0; }
+    });
   }
 }

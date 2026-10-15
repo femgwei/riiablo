@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十四批（生产适配仍PARTIAL）
+
+- [x] 标准Observation下effects要求exact owner坐标对象，拒绝同坐标另快照。
+- [x] 构造及每次网格效果前检查原观察对象/guard，直接effects调用也受保护。
+- [x] 新增3项，完整581项/50类通过，无失败/错误/跳过。
+- [ ] legacy自定义Target/静态直接调用仍由调用方负责；raw坐标、动态字段、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder；未安装原生移动消费。
+
 ## 2026-10-16 寻路第三十三批（生产适配仍PARTIAL）
 
 - [x] 生命周期绑定新增footprint捕获入口，Observation精确复用footprint坐标，不独立二次读取。

@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十三批续接结果（优先于下方历史起点）
+## 第三十四批续接结果（优先于下方历史起点）
+
+- RequestEffects对标准Observation校验exact owner.coordinates对象；同类型/坐标/尺寸但另一份
+  owner快照不再可混入。target原有exact检查保留，legacy自定义Target仍按原调用方契约处理。
+- 构造及每次removeOwner/removeTarget/addOwner/addTarget/blocked前复检原观察对象仍安装且
+  生命周期guard有效，直接调用effects也不能绕过compute入口的身份检查；失败先于网格操作。
+- 新增3项，完整581项/50类通过，失败/错误/跳过0；core/build/round34-full.log，
+  XML `.gradle/path-port/round34-full/core/test-results/pathPortTest`。
+- 仅补host一致性校验，不把相同Unit对象下的mode/mask等额外字段宣称为已验证身份，
+  不拦截任意直接静态footprint调用或自定义search；操作间数据变化仍须重捕获。
+- 生产仍Map→AStarPathFinder；raw坐标/动态字段/Act与Zone/shared seed仍待，无新增DLL算法证据。
+
+## 第三十三批续接结果（历史）
 
 - NativePathUnitBinding新增observeFootprints(speed, FootprintReader)，按操作读取owner/target
   footprint并直接复用其coordinates构造带身份guard的Observation，不再二次读取独立坐标快照。

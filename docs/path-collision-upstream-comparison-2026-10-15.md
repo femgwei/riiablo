@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十四批补充：RequestEffects对标准Observation增加exact owner坐标对象校验，并在构造及
+每次网格效果前复检原观察对象和生命周期，拒绝同坐标替代快照或失效观察，失败先于网格操作。
+legacy自定义Target及直接静态footprint调用仍属调用方契约；没有把全部mode/mask字段当成已验证身份。
+新增3项，完整581项/50类通过，失败/错误/跳过0；生产仍A*，无新增DLL算法证据或动态执行。
+
 第三十三批补充：NativePathUnitBinding.observeFootprints从同一次footprint捕获构造身份观察，
 直接共用exact coordinates，避免调用方两次读取混用快照；原token前后复检，自目标仅读一次。
 返回footprints仍需显式交给effects，不拦截任意直接静态调用，也不自动检测移动/元数据变化。

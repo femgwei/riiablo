@@ -40,6 +40,16 @@ public final class D2PathRequest {
         private final D2PathUnits.Observation observation;
         public int collidedMask;
 
+        /** Effects must share the standard observation's exact owner snapshot.
+         * Legacy custom targets have no verifiable owner identity contract. */
+        void requireOwnerObservation(D2PathUnits.Unit owner) {
+            if (observation == null) return;
+            if (result.path.targetUnit != observation || observation.owner != owner) {
+                throw new IllegalArgumentException("effects owner/observation changed; rebuild the request");
+            }
+            observation.requireCurrent();
+        }
+
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
                 boolean ownerCanBeInTown, int speed, int unitSize, int collisionPattern,
                 int moveMask, int initialFScore) {

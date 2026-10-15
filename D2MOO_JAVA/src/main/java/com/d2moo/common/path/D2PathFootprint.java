@@ -176,6 +176,7 @@ public final class D2PathFootprint {
             this.owner = Objects.requireNonNull(owner);
             this.target = target;
             this.activeRooms = activeRooms;
+            request.requireOwnerObservation(owner.coordinates);
             if (activeRooms != null) {
                 activeRooms.requireCurrent();
                 if (activeRooms.room(owner.room) != request.startRoom) {
@@ -206,6 +207,7 @@ public final class D2PathFootprint {
 
         protected final void check(D2PathRequest.State state) {
             if (state != request) throw new IllegalArgumentException("adapter is bound to one stable request snapshot");
+            request.requireOwnerObservation(owner.coordinates);
             if (activeRooms != null) activeRooms.requireCurrent();
         }
     }

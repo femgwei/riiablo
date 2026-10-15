@@ -1963,6 +1963,19 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
   动态footprint字段、Act/Zone/shared seed仍待；生产仍Map→AStarPathFinder。
   本批为host适配，无新增DLL算法证据或动态DLL执行。
 
+## 第三十四批：effects owner快照与生命周期复检
+
+- Request.State增加包内owner观察验证，RequestEffects构造与每次网格操作前调用：
+  标准Observation要求exact owner.coordinates及原观察对象仍安装，执行guard校验生命周期。
+- 修复仅比较owner类型/坐标/尺寸可混入另一份快照的host缺口；target原exact检查保留。
+  直接调用removeOwner/removeTarget/addOwner/addTarget/blocked亦先校验，不只依赖compute。
+- 新增3项：同坐标替代owner拒绝、失效guard下全部五个效果拒绝且网格不变、替换观察拒绝。
+  完整581项/50类通过，失败/错误/跳过0；core/build/round34-full.log，
+  XML .gradle/path-port/round34-full/core/test-results/pathPortTest。
+- legacy自定义Target契约保留；同一Unit之外的mode/mask等字段仍需调用方正确捕获，
+  不拦截直接静态footprint或自定义search。生产仍A*，raw坐标/动态字段/Act与Zone/shared seed仍待。
+  本批仅host一致性验证，无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
