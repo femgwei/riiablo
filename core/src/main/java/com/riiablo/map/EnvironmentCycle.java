@@ -57,12 +57,8 @@ public final class EnvironmentCycle {
   };
 
   private int cycleIndex = CYCLE_NOON;
-  // The native game starts a fresh environment at the middle of the noon
-  // segment (90 degrees), not at its segment boundary (0 degrees).  Keeping
-  // ticks at zero here produces only 128/255 ambient intensity while the
-  // state is already reported as daytime, making a newly entered outdoor
-  // zone visibly grey/dim until the clock advances.
-  private int ticks = 90 * NORMAL_TIME_RATE;
+  // D2MOO ENVIRONMENT_AllocDrlgEnvironment uses the noon segment boundary.
+  private int ticks;
   private boolean eclipse;
 
   public int cycleIndex() {

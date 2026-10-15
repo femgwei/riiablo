@@ -1469,12 +1469,13 @@ public class RenderSystem extends BaseEntitySystem {
     }
     int playerPop = nativePopIndexAt(grid, playerLocalX, playerLocalY);
     WallTransitionState transition = updateWallTransition(grid, playerGroup, playerPop);
-    boolean current = wallContextOccludes(grid, wallGroup, playerGroup, playerPop, x, y);
+    boolean indoor = zone.level != null && zone.level.IsInside;
+    boolean current = wallContextOccludes(grid, indoor, wallGroup, playerGroup, playerPop, x, y);
     if (transition.startMs == 0L) return current ? WALL_OCCLUDED_ALPHA : 1f;
     long elapsed = Math.max(0L, System.currentTimeMillis() - transition.startMs);
     float progress = MathUtils.clamp((float) elapsed / WALL_FADE_MILLIS, 0f, 1f);
     if (progress >= 1f) return current ? WALL_OCCLUDED_ALPHA : 1f;
-    boolean previous = wallContextOccludes(grid, wallGroup,
+    boolean previous = wallContextOccludes(grid, indoor, wallGroup,
         transition.fromGroup, transition.fromPop, x, y);
     if (previous == current) return current ? WALL_OCCLUDED_ALPHA : 1f;
     if (current) return 1f + (WALL_OCCLUDED_ALPHA - 1f) * progress;
@@ -1521,9 +1522,13 @@ public class RenderSystem extends BaseEntitySystem {
     return state;
   }
 
-  private static boolean wallContextOccludes(TileGrid grid, int wallGroup,
+  static boolean wallContextOccludes(TileGrid grid, boolean indoor, int wallGroup,
       int playerGroup, int playerPop, int wallX, int wallY) {
-    if (playerGroup >= 0 && playerGroup == wallGroup) return true;
+    // Outdoor logical groups also contain unobstructed streets, trees and
+    // building exteriors. Membership alone is not an occlusion test there:
+    // it made entire town scenery translucent. Explicit native Pops still
+    // control outdoor building cutaways.
+    if (indoor && playerGroup >= 0 && playerGroup == wallGroup) return true;
     return nativePopContainsWall(grid, playerPop, wallX, wallY);
   }
 
