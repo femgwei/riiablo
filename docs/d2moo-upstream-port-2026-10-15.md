@@ -1650,6 +1650,40 @@ $env:D2_TEST = $env:D2_HOME
 **寻路仍未完成**：下一轮优先8/9/11/12入口；生产身份/元数据/room图、nDist与移动消费安装、
 矩形递归网格与地形验收仍待。生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 
+## 第二十一批：type8/11击退入口（2026-10-16）
+
+`D2PathDispatch`新增服务端8与客户端11；裸坐标和Search两种入口均可用，生产仍
+Map→AStarPathFinder。`Target.coordinates()`新增默认显式拒绝的raw观察接口，已有自定义
+Target无需修改即可继续旧调用；`D2PathUnits.observation`提供UNITS_GetX/YPosition投影。
+服务端必须读raw坐标，不能把带FOG lead或已uint16截断的samplePoint替代它。
+
+证据继续固定D2MOO `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，未fetch，
+读取PathMisc.cpp与Path.cpp表。本机1.10f D2Common.dll SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+objdump静态核对`6FDAB240..B3B0`、`6FDAABF0..AD01`及`6FDA9E90..9EB1`：
+
+- server `B27D..B286`读取live unsigned nDist，half=(nDist>>1)+1，非nDistMax/search预算。
+  存在live target时读取其raw位置，以max(abs(dx),abs(dy))缩放远离目标的方向；int32乘法
+  回绕与有符号向零除法，最终端点按uint16写入。重合目标不改用search target。
+- `B348..B35B`先写slot0候选，再直接调用AD10射线，不做velocity/向量探测，不清index。
+  `B379`调用#10170，写targetPoint并清targetUnit；即便阻挡使终点等于start也先执行。
+  零结果保留候选slot0和原count；非零才回写实际终点和count=1。final/previous target不在此写。
+- client `B240..B261`清index、写slot0、调用ABF0，始终返回1，不直接赋count或清targetUnit。
+  ABF0先断言live type!=4且目标两轴非零；velocity为零时slot0改start且不查询；否则按live
+  count归一化向量，再决定是否调用射线。保留断言前slot/index写入，不伪造count=1。
+- 复用已核对D2Toward.trace射线与D2PathResult归一化，不增加A*回退。原有坐标同步、
+  nonmissile player/monster、安全方向查表域继续限制；abs导致负divisor的异常整数域显式拒绝。
+  Java回调异常保留已发生写入，由Request finally恢复已移除占位，不声称原版异常展开等价。
+
+新增13项：`D2PathKnockbackTest`12项、真实网格Request双入口组合1项；旧unsupported测试移除8/11。
+定向59项/3类通过，失败/错误/跳过0，日志`core/build/round21-check-final.log`。
+覆盖raw与lead分离、live nDist、零速server射线、负分量向零除法、255距离与uint16回绕、
+即时阻挡/重合/零轴、client向量与count副作用、异常写入及真实占位恢复。
+本轮是源码与DLL静态控制流核对及Java回归，不是DLL动态函数差分或实机地图验收。
+全范围466项/40类通过，失败/错误/跳过0，六项原DLL静态数据oracle执行。
+日志`core/build/round21-full.log`；XML `.gradle/path-port/round21-full/core/test-results/pathPortTest`。
+生产仍A*；下一批优先type9/12，生产映射/消费、矩形递归网格与实机地图验收继续待办。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

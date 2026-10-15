@@ -28,6 +28,10 @@ public final class D2PathContinuation {
         int unitType();
         int distanceToOwner();
         D2Path.Point samplePoint();
+        /** Raw UNITS_GetX/YPosition, without lead or uint16 narrowing. */
+        default D2Path.Point coordinates() {
+            throw new UnsupportedOperationException("raw target coordinates required for knockback");
+        }
     }
 
     public interface Effects {

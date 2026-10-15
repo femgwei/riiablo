@@ -3,7 +3,7 @@ package com.d2moo.common.path;
 import java.util.List;
 import java.util.Objects;
 
-/** Stateful non-missile entry subset: types 0/1/2/3/5/6/7/13/15/16 (0/16 require Search rooms,
+/** Stateful non-missile entry subset: types 0/1/2/3/5/6/7/8/11/13/15/16 (0/16 require Search rooms,
  * 16 also requires the live owner seed). Does not replace
  * production A*, implement every native table entry, or consume movement ticks.
  * Stable request metadata and the native room/pattern/mask policy remain adapter responsibilities. */
@@ -38,11 +38,45 @@ public final class D2PathDispatch {
         if (entry == D2PathTypes.Entry.NONE) throw new IllegalStateException("native null search entry assertion");
         if (entry != D2PathTypes.Entry.TOWARD && entry != D2PathTypes.Entry.TOWARD_ALIAS
                 && entry != D2PathTypes.Entry.WALL_FOLLOW && entry != D2PathTypes.Entry.A_STAR
-                && entry != D2PathTypes.Entry.STRAIGHT) {
+                && entry != D2PathTypes.Entry.STRAIGHT && entry != D2PathTypes.Entry.KNOCKBACK_SERVER
+                && entry != D2PathTypes.Entry.KNOCKBACK_CLIENT) {
             throw new UnsupportedOperationException("native entry not ported here: " + entry);
         }
         validate(state,start,target,maximumDistance,tolerance,collision);
         D2PathContinuation.State path = state.path;
+        if (entry == D2PathTypes.Entry.KNOCKBACK_SERVER) {
+            D2Path.Point end = target;
+            if (path.targetUnit != null) {
+                D2Path.Point raw = Objects.requireNonNull(path.targetUnit.coordinates());
+                int dx = start.x - raw.x, dy = start.y - raw.y;
+                int divisor = Math.max(Math.abs(dx), Math.abs(dy));
+                if (divisor < 0) throw new IllegalArgumentException("unsafe native knockback division");
+                if (divisor != 0) {
+                    int half = (path.nDist() >> 1) + 1;
+                    dx = dx * half / divisor;
+                    dy = dy * half / divisor;
+                }
+                end = new D2Path.Point((start.x + dx) & 65535, (start.y + dy) & 65535);
+            }
+            state.points[0] = end;
+            end = D2Toward.trace(start,end,collision).endpoint;
+            // #10170 writes target AND clears target unit even on a zero-length result.
+            path.targetPoint = end;
+            path.targetUnit = null;
+            if (end.equals(start)) return 0;
+            state.points[0] = end;
+            path.pathPointCount = 1;
+            return 1; // server does not reset index or normalize vectors
+        }
+        if (entry == D2PathTypes.Entry.KNOCKBACK_CLIENT) {
+            path.currentPointIndex = 0;
+            state.points[0] = target;
+            if (path.pathType == 4 || target.x == 0 || target.y == 0)
+                throw new IllegalStateException("native collision probe assertion");
+            if (state.velocity != 0) D2PathResult.normalizeSearchProbe(state);
+            state.points[0] = state.velocity == 0 ? start : D2Toward.trace(start,target,collision).endpoint;
+            return 1; // live count and target identity remain caller-owned
+        }
         if (entry == D2PathTypes.Entry.A_STAR) return aStar(state, start, target, collision);
         if (entry == D2PathTypes.Entry.STRAIGHT) {
             int count = toward(state, start, target, maximumDistance, tolerance, collision);

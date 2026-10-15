@@ -215,6 +215,7 @@ public final class D2PathUnits {
             @Override public int unitType() { return target.type; }
             @Override public int distanceToOwner() { return distance(target, owner); }
             @Override public D2Path.Point samplePoint() { return sample(target, speed); }
+            @Override public D2Path.Point coordinates() { return D2PathUnits.coordinates(target); }
         };
     }
 

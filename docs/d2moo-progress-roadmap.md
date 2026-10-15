@@ -245,6 +245,15 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第二十一批：type8/11击退入口
+
+- [x] server按live nDist与raw单位坐标计算远离目标的uint16端点，直接射线后写targetPoint并清identity；
+  保留失败slot/count及index。client清index、探测向量/速度，始终返回1，不直接改count/identity。
+- [x] 本机1.10f DLL静态控制流与固定D2MOO核对；新增13项，定向59项/3类及全范围466项/40类
+  通过，失败/错误/跳过0，六项DLL静态数据oracle执行。详见上游记录第二十一批。
+- [ ] 寻路未完成：下一批优先9/12；生产映射、nDist/移动消费、矩形递归网格及地图验收仍待。
+  生产仍Map→AStarPathFinder，本轮不代表DLL动态执行或实机验收。
+
 ## 2026-10-16 D2MOO 第二十批：type16随机IDA与单位RNG
 
 - [x] Search接通16，需room和live owner seed；保留旧构造器与type0/通用API行为，不新建/克隆seed。

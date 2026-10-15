@@ -1,6 +1,20 @@
 # D2MOO 寻路迁移续聊交接（2026-10-16）
 
-用户要求保存进度、归档旧聊天并在新聊天继续。本文是新聊天的起点；无需重做第二十批。
+用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
+
+## 第二十一批续接结果（优先于下方历史起点）
+
+- type8/11服务端/客户端击退已移植到D2PathDispatch，Search与直接重载均支持。
+  Target新增raw coordinates观察，D2PathUnits提供实现；没有raw观察的自定义target显式拒绝8。
+- DLL哈希及D2MOO基线不变，核对B240..B3B0、ABF0..AD01、9E90..9EB1；详细副作用见
+  `docs/d2moo-upstream-port-2026-10-15.md`第二十一批。静态核对，不是动态执行DLL。
+- 新增13项；定向59项/3类、全范围466项/40类通过，失败/错误/跳过0，六项静态oracle执行。
+  日志`core/build/round21-full.log`；XML `.gradle/path-port/round21-full/core/test-results/pathPortTest`。
+- 下一批优先type9/12（Leap/BackupTurn）及其DLL证据。下方七包中的type8/11包已完成，
+  其余六包仍待；生产仍Map→AStarPathFinder，不整体切换，不宣称寻路完成。
+- 本轮保留Spirit AI及其文档/测试等其他聊天修改，只提交本轮路径文件和进度记录。
+
+## 以下为第二十一批开始前的历史交接
 
 ## 当前基线
 

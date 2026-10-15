@@ -704,6 +704,17 @@ room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝
 矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
 
+## 第二十一批：type8/11击退入口（2026-10-16）
+
+按固定D2MOO基线及本机1.10f DLL `B240..B3B0/ABF0..AD01/9E90..9EB1`核对。
+server读live unsigned nDist与raw target坐标，缩放远离目标后uint16写入，直接射线；
+写targetPoint并清targetUnit，即便最终返回0。server不清index，失败不改count或候选slot0。
+client清index、写slot0、做velocity/向量探测并裁剪，始终返回1，不直接改count或清identity。
+`Target.coordinates`新增raw投影，不能复用带lead的sample；未提供时明确拒绝。
+新增13项，定向59项/3类、全范围466项/40类通过，失败/错误/跳过0；六项DLL静态数据
+oracle执行。日志`core/build/round21-full.log`，详情见上游记录第二十一批。
+无DLL动态函数差分/实机地形验收，生产仍A*；type9/12及生产映射/消费、矩形递归网格仍待。
+
 ## 后续第二十批：type16随机IDA与单位RNG（2026-10-16）
 
 Search分派补16（需room与live owner seed）；旧type0/通用API与生产A*不变。继续固定D2MOO

@@ -128,7 +128,7 @@ class D2PathDispatchTest {
 
   @Test void unsupportedAndNullEntriesAreExplicitAndNeverFallBackToCoordinateAStar() {
     D2PathResult.State s = state();
-    for (int type : new int[] {0,8,9,11,12,16})
+    for (int type : new int[] {0,9,12,16})
       assertThrows(UnsupportedOperationException.class,()->compute(s,p(20,10),type,77,0,(x,y)->false));
     for (int type : new int[] {4,10,14,17})
       assertThrows(IllegalStateException.class,()->compute(s,p(20,10),type,77,0,(x,y)->false));
@@ -191,6 +191,18 @@ class D2PathDispatchTest {
     assertEquals(1,D2PathRequest.compute(request,false,new D2PathDispatch.Effects(request,owner,null)));
     assertEquals(p(20,10),s.points[0]); assertEquals(0x1100,D2CommonCollision.checkMask(grid,10,10,0xffff));
     assertEquals(4096,s.velocityVectorX); assertTrue((s.path.pathFlags & 0x20)!=0);
+  }
+
+  @Test void knockbackEntriesComposeWithRequestFootprintRestorationAndNormalization() {
+    for (int type : new int[] {8,11}) {
+      D2ActiveRoom grid=grid(); D2PathFootprint.Unit owner=footprint(grid);
+      D2PathFootprint.add(owner); D2PathResult.State s=state(); D2PathTypes.setType(s,type);
+      D2PathRequest.State r=request(s);
+      assertEquals(1,D2PathRequest.compute(r,false,new D2PathDispatch.Effects(r,owner,null)));
+      assertEquals(p(20,10),s.points[0]); assertEquals(0,s.path.currentPointIndex);
+      assertEquals(0x1100,D2CommonCollision.checkMask(grid,10,10,0xffff));
+      assertEquals(4096,s.velocityVectorX);
+    }
   }
 
   @Test void concreteDispatcherComposesWithContinuationTowardToWallFollowRetry() {
