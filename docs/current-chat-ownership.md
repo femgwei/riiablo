@@ -10,7 +10,30 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十八批：原生A*与Straight入口
+## 2026-10-16 第十九批：确定性IDA type0入口与跨轮缓存
+
+- `D2IDAStar.findNativePath`新增独立原生模式，旧通用findPath行为保持；type0现在通过带room的
+  `D2PathDispatch.compute(Search,...)`接通，裸坐标重载仍显式拒绝0，不能猜target room。
+  正常Search支持0/1/2/3/5/6/7/13/15，type16尚无单位RNG投影，不用确定性IDA冒充。
+- 原生模式跨cutoff轮保留坐标缓存、接受unsigned cached>=new（含相等），子节点方向从父节点
+  当前方向重新起算；根耗尽前会前移到相邻行首表项，按连续8×8表读取。h/g/f按signed16，
+  邻居坐标uint16；type0上限max(signed root h, uint8初始分数)，cutoff每轮按int32加5。
+- room wrapper按原版方向端点构造，不偷换为标准union；相同尺寸轴才±10，Y最大值确为Y+height。
+  raw容差倍增后截byte；不改变持久nStepNum。仅写有效prefix并返回count，外层恢复占位后归一化。
+  只支持有序非回绕room域和加padding后<=50000缓存；原版内存破坏域显式拒绝，无自动fallback。
+- 固定D2MOO`0c0bbd1e`未fetch，本机1.10f DLL哈希未变；核对`7970..821B`静态证据。
+  新增24项（15内核/9分派）；定向73项通过后再补1项续算，最终**434项/38类通过，失败/错误/
+  跳过0**。新增IDA表静态oracle，五项原DLL静态数据oracle执行；独立递归200组逐query/终点/
+  contour/节点数/flush比较在一项JUnit内，不是DLL动态函数执行。
+- 代码/测试`a5a25972d994e238b4e33817a9e582a8be62f459`已推送origin/master且远端一致。
+  日志`core/build/round19-full.log`，XML `.gradle/path-port/round19-full/core/test-results/pathPortTest`；
+  沿用可选pathTestScope隔离测试源码，主源码完整编译。其他聊天DeathMaul/门修改与提交保留，
+  未混入本轮四文件代码提交；四交接文档另行提交。
+- **寻路仍未完成**：下一轮优先16的单位RNG/专用cutoff，再补8/9/11/12。生产身份/表格/room
+  映射、nDist/移动消费安装、矩形递归网格及地形验收仍待；生产仍Map→AStarPathFinder。
+  不改近期优化，不加1.13+ gate或普通自动partial；无新地形/MPQ/TCP/GL/性能/DLL动态函数验收。
+
+## 2026-10-16 第十八批：原生A*与Straight入口（历史）
 
 - `D2PathDispatch`新增1/7，现支持1/2/3/5/6/7/13/15。Straight先Toward；末点在容差内且
   不等于start才直接接受，否则原始起终点平方距离<=324时试A*。A*失败且第一次Toward非零才

@@ -1485,6 +1485,100 @@ $env:D2_TEST = $env:D2_HOME
 nDist与移动消费安装、矩形递归网格及地形验收仍待；普通生产仍Map→AStarPathFinder。
 保持近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。其他AI与火焰之河fallback进度单列。
 
+## 第十九批：确定性IDA type0入口与跨轮缓存（2026-10-16）
+
+新增`D2IDAStar.findNativePath`原生模式，**不改变旧findPath通用API行为**。room-aware
+`D2PathDispatch.compute(Search,...)`现在支持0/1/2/3/5/6/7/13/15；不带room的直接重载仍
+显式拒绝0，不能凭坐标猜target room。type16仍unsupported，不以确定性搜索替代单位RNG。
+普通生产保持Map→AStarPathFinder，尚未安装ECS原生搜索/移动后端。
+
+### 第十九批证据与行为
+
+固定D2MOO`origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`未fetch，读取
+`Path/IDAStar.cpp`。重新计算本机1.10f D2Common.dll SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`；使用objdump
+核对`0x6FDA7970..821B`，为静态控制流/表数据证据，不是DLL动态函数差分。
+
+- `797F..7992`将PathInfo field14按uint8倍增。Search保留raw不可变快照，调用内核前用
+  `(tolerance*2)&255`投影；不将这个临时字段当作持久nStepNum/停止距离改写。
+- `79AC..7A4A`按start/target room身份选择分支：target null或同room用start尺寸；其他房间
+  分别按坐标先后选择方向端点差。它**不是一般的max-right/max-bottom union**，小房间包含在
+  start内时也可能缩小范围。某轴算出尺寸等于start原尺寸才该轴origin-10、size+20。
+- `7A9F..7B0F`构造uint16 min/max/size和stride=width+6、offset=3-origin。
+  Y最大值实际为Y+height，上游读未赋值nCoord[2].Y的顺序不照搬。支持域仅有序非回绕room，
+  用long验证后投影，**不是替DLL定义整数溢出行为**。
+- `7A78..7A9D`只在入口清一次`(width+6)*(height+6)`个cache DWORD；`7C31..7C79`轮间只
+  复制起始节点、重置节点分配计数，不清坐标cache。native模式使用实际stride/offset数组，
+  blocked=1也跨轮保留。旧纯库的每轮clear仍只属于旧findPath通用模式。
+- `7F23..7FD6`非零cache按unsigned cached>=sign-extended short new g接受，**相等也继续**；
+  原版jae落到7FCF后进入7FD3更新，不是跳过。上游源码反向条件不采用。
+  在900节点安全域内g不会到short溢出，blocked=1始终小于合法新g，不重复查询碰撞。
+- `7DE4..7DE8`邻居uint16；root/child h/g/f按signed16赋值和比较。`7C1F..7C2D`type0
+  ceiling是max(signed root h, unsigned initialFScore byte)，不是上游源码的恒假自比较。
+  初始cutoff必试一次；失败后EBX按**int32**加5，下一轮仅cutoff<ceiling才执行。
+- `817E..8188`新建和复用的child都从**父节点当前方向+当前sequence首值**起算，不是累加
+  child上次方向或新节点的零值；本轮仅native模式修正。`7ED6..7EEE`等父回退路径会先前移
+  sequence再决定根耗尽，row0 index8会读取连续表中的row1[0]，仍在核对过的8×8表内。
+  native模式按连续表寻址，不能在这次无后续搜索的读取上制造Java数组越界。
+- 保留10000次visit/轮、900节点、起始root评估计数-3、子节点五候选、inclusive bounds，
+  进入越界节点后可作为terminal返回；不是邻居预先拒绝。h<threshold为严格比较，且只在进入
+  child后检查，不在root上用容差早退。type0不加A*的八点target-unit approach gate。
+- `7C85..7D32`只写有效压缩prefix，排除start，<=1或>=78点拒绝且不清stale slots。
+  内核与dispatcher不赋live index/count/vectors；外层Request接返回count，先恢复target/owner
+  再最终归一化。type0续算失败不自动改15，不能用A*/Toward兜底其一点flush拒绝。
+
+安全域额外限制：原版只断言未padding面积<=50000，随后清padding面积可能越过固定50000
+cache并破坏内存。Java要求padding后也<=50000，越界抛显式异常；word邻居绕回导致cache地址
+超出受支持内存时也显式拒绝，不用无界Map掩盖原版越界。Request finally仍恢复已移除占位，
+它是宿主安全增强，不是原版断言/内存损坏的动态等价。支持域不是所有native room布局。
+
+Result节点数、iterations/finalCutoff等是宿主诊断，不是DLL context内存快照：成功报告尝试的
+cutoff，失败耗尽ceiling时保留循环推进后的值；不把原版成功后节点计数归1当作Java诊断值。
+稳定碰撞/元数据及完整room图仍为调用方责任；没有生产身份映射或回调重入写入时序保证。
+
+### 第十九批验证与交付
+
+新增**24项**：`D2NativeIDAStarTest`15项、`D2PathIdaDispatchTest`9项。
+定向五类73项通过后，再补一项type0续算不转15；最终同范围合并
+**434项/38类通过，失败/错误/跳过均0**，BUILD SUCCESSFUL。
+
+一项独立递归contour oracle对200组固定seed小域比较逐次碰撞query、terminal/best point、
+轮数/cutoff、节点分配和压缩前缀。它用递归候选枚举而非生产可变节点/backtrack实现，但复用
+已核对方向原语与公共压缩helper；不是200项JUnit，也不是DLL动态oracle。
+新增一项读取匹配DLL的8×8 sequence/8×2 offsets并逐项比实际Java私有表；与此前四项共五项
+静态数据oracle执行、无跳过。无匹配文件时静态oracle会显式跳过，不能报告已验证原版。
+
+包含equal-cache跨轮重访/碰撞只查一次、child复用、short h提前threshold、inclusive边界、
+900节点、signed root score与int32 cutoff推进、room身份/方向端点/±10、padding/word回绕拒绝；
+Search快照type与live offset、无room/16显式拒绝、临时容差与持久step分离、prefix/live count
+生命周期、续算不fallback，以及真实内存网格owner/target双占位恢复和外层detour向量归一化。
+正常请求仍沿用±100/非missile player-monster等既有adapter支持域。
+
+首次定向暴露root回退row0 index8 Java越界，已按原版连续表读取修正；另有节点上限夹具
+padding面积过大、失败cutoff诊断与跨房夹具ceiling低于绕行所需的预期问题，调整后通过，
+没有放宽内存安全边界或强迫IDA返回路径。日志`core/build/round19-check.log`、
+`round19-check-second.log`保留失败证据，`round19-check-final.log`为73项通过；最终
+`core/build/round19-full.log`，XML `.gradle/path-port/round19-full/core/test-results/pathPortTest`。
+
+代码/测试**`a5a25972d994e238b4e33817a9e582a8be62f459`**已推送origin/master且远端一致，
+只提交本轮四个源码/测试文件。其他聊天DeathMaul/门修改与其提交保持，不混入本轮提交或
+专项验收；四交接文档另行提交推送。沿用独立build目录与可选pathTestScope测试源码隔离，
+没有跳过主源码编译。另一电脑复验（目录按当地修改）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round19-check -PpathTestScope=path --tests '*D2NativeIDAStarTest' --tests '*D2PathIdaDispatchTest' --tests '*D2IDAStarTest' --tests '*D2PathDispatchTest' --tests '*D2PathStraightTest' --console=plain
+```
+
+该定向命令在最终代码应执行74项；上述73项是补最后一项前的实际记录。
+全范围将pathRun改round19-full并删除五个--tests筛选（本轮实际运行命令），应覆盖434项/38类。
+无新增地形/MPQ验收、TCP/GL实机、多seed难度全图、性能或原版DLL动态函数差分。
+
+**寻路仍未完成**：下一轮优先type16单位RNG/随机方向消费与专用cutoff，再补8/9/11/12。
+生产身份/元数据/room图、nDist与移动消费安装、矩形递归网格及地形验收仍待。
+普通生产仍Map→AStarPathFinder，保持近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
@@ -1492,8 +1586,8 @@ nDist与移动消费安装、矩形递归网格及地形验收仍待；普通生
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
   已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
   元数据/房间图适配、nDist步进消费与原生搜索dispatcher剩余类型。已补footprint上层选择与真实
-  内存网格adapter、第十七批类型生命周期及第十八批1/2/3/5/6/7/13/15有状态分派；下一步优先
-  IDA入口/缓存相等分支，再补8/9/11/12。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
+  内存网格adapter、第十七批类型生命周期及第十九批0/1/2/3/5/6/7/13/15有状态分派（0需Search
+  room）；下一步优先16单位RNG/专用cutoff，再补8/9/11/12。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

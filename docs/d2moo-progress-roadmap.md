@@ -170,7 +170,21 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
-## 2026-10-16 D2MOO 第十八批：原生A*与Straight入口
+## 2026-10-16 D2MOO 第十九批：确定性IDA type0入口
+
+- [x] 原生IDA模式跨轮保留缓存，含相等距离继续；子节点从父方向起算，根回退越行表读取，
+  uint16坐标/signed16评分与type0 max(root h, byte ceiling)/int32 cutoff+5按本机DLL。
+  旧findPath通用API保持，不能再把其缓存清理/严格更短比较当作完整原生行为。
+- [x] Search重载接通type0与room wrapper/容差倍增；方向端点而非泛用union，尺寸相同轴±10。
+  只写prefix/返回count、恢复占位后归一化；裸坐标重载0需room仍拒绝，type16未接。
+- [x] 新增24项；合并434项/38类通过，失败/错误/跳过0。新增IDA表静态oracle，共五项执行；
+  一项独立递归200组对照，不是DLL动态执行。代码/测试`a5a25972d`已推送且远端一致。
+  详细证据、限制与另机命令见第十九批上游记录；缓存padding溢出/room回绕域显式拒绝。
+- [ ] **寻路未完成**。优先16单位RNG/专用cutoff，其后8/9/11/12；生产身份/元数据/room、
+  nDist与移动消费安装、矩形递归网格/地形验收仍待。普通生产仍A*，近期优化保持，
+  不加1.13+ gate或普通自动partial；无新地形/MPQ/TCP/GL/性能/原版动态函数验收。
+
+## 2026-10-16 D2MOO 第十八批：原生A*与Straight入口（历史）
 
 - [x] dispatcher接通1/7，保留A*仅写有效prefix、返回count而不直接赋live count/index/vectors。
   Straight先Toward，容差接受须末点不等于start；原始平方距离<=324才试A*，失败且原Toward

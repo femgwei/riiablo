@@ -678,3 +678,28 @@ dispatcher现支持1/2/3/5/6/7/13/15。固定D2MOO`0c0bbd1e`并重新核对本�
 **寻路仍未完成**：优先IDA、其余8/9/11/12，生产映射/nDist/移动消费安装、矩形递归网格与
 地形验收仍待。普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial；无新MPQ/TCP/
 GL/性能/原版动态函数差分，不据此宣称整体性能更优或完整原生等价。
+
+## 后续第十九批：IDA缓存、子方向与确定性type0入口（2026-10-16）
+
+room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝0，16尚无单位RNG
+投影，不用确定性IDA冒充。D2MOO固定`0c0bbd1e`未fetch，本机1.10f DLL哈希未变。
+
+- `7970..821B`静态对照：原生cache只在入口清一次，跨contour接受unsigned cached>=new，
+  包含相等。child从父当前方向+sequence起算；根耗尽前sequence可读到相邻行首项。
+  新findNativePath采用这些行为，旧通用findPath保持，不再将旧库直接当完整原生入口。
+- type0 ceiling=max(signed root h, uint8初始分数)，cutoff按int32加5；邻居uint16/评分short，
+  原生inclusive边界/10000 visits/900节点/一点flush拒绝保留，不自动转15或A*。
+- room wrapper按方向端点，不是标准union；尺寸相同轴才±10，DLL maxY实际是Y+height。
+  临时容差倍增截byte，不改nStepNum。只写prefix/返回count，外层恢复双占位后归一化。
+- 固定cache有原版越界风险：padding后>50000、room坐标回绕或cache地址越域在Java显式拒绝，
+  不模拟内存破坏，不据此宣称所有native room域等价。
+
+新增24项；合并**434项/38类通过，失败/错误/跳过0**，五项原DLL静态数据oracle执行。
+一项独立递归200组query/终点/contour/分配/flush比较，非DLL动态执行；真实内存网格type0
+双占位恢复/绕行通过，非生产消费安装或实机地形验收。
+代码/测试`a5a25972d`已推送且远端一致；地址、首轮失败修正、限制与复验命令见
+[第十九批记录](d2moo-upstream-port-2026-10-15.md#第十九批确定性ida-type0入口与跨轮缓存2026-10-16)。
+
+**寻路仍未完成**：优先16单位RNG/专用cutoff，其后8/9/11/12。生产映射/nDist/移动消费、
+矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
+无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
