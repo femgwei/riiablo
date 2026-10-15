@@ -211,6 +211,7 @@ task mapResourceAcceptance(type: Test) {
     includeTestsMatching 'com.riiablo.map.MapResourceAuditTest'
     includeTestsMatching 'com.riiablo.map.NativeObjectTourResourceTest'
     includeTestsMatching 'com.riiablo.map.NativeObjectPopulationResourceTest'
+    includeTestsMatching 'com.riiablo.map.NativeContainerPopulationResourceTest'
     includeTestsMatching 'com.riiablo.map.NativeRoomMonsterPopulationResourceTest'
     includeTestsMatching 'com.riiablo.map.NativePopulationAuditResourceTest'
     includeTestsMatching 'com.riiablo.map.d2moo.Act5PopulationGroupResourceTest'

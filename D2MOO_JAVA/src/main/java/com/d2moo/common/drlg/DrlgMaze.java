@@ -507,10 +507,8 @@ public class DrlgMaze {
             DrlgDrlg.updateRoomExCoordinates(level);
         }
 
-        // DRLGMAZE_RollBasicPresets converts the temporary maze rooms into
-        // backed preset maps. Act 1 cave rooms are 8x8, so the native
-        // BuildArea operation is a one-room mapping and can retain the
-        // existing RoomEx/orth topology here.
+        // DRLGMAZE_RollBasicPresets also partitions large preset maps into
+        // 8x8-tile RoomEx cells before room population/activation runs.
         materializeBasicPresetMaps(level);
     }
 
@@ -657,6 +655,30 @@ public class DrlgMaze {
                         map.getPLvlPrestTxtRecord().getDwDt1Mask());
             }
             roomIndex++;
+        }
+        splitLargePresetRooms(level);
+    }
+
+    /** DrlgMaze.cpp RollBasicPresets: only maps <=12x12 retain a single room. */
+    private static void splitLargePresetRooms(D2DrlgLevel level) {
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;) {
+            D2DrlgRoom next = room.getDrlgRoomNext();
+            if ((room.getNTileWidth() > 12 || room.getNTileHeight() > 12)
+                    && room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc) {
+                D2DrlgMapStrc map = ((D2DrlgPresetRoomStrc) room.getMazeOrOutdoor()).getPMap();
+                if (map != null) {
+                    DrlgPreset.buildArea(level, map, 0, 0);
+                    // BuildArea prepends cells; the last allocated cell is
+                    // the native return value used to transfer initialized orths.
+                    D2DrlgRoom replacement = level.getFirstRoomEx();
+                    for (D2DrlgOrth orth = room.getDrlgOrth(); orth != null; orth = orth.getPNext()) {
+                        if (orth.isBInit() && orth.getPDrlgRoom() != null)
+                            allocDrlgOrthsForRooms(replacement, orth.getPDrlgRoom(), orth.getNDirection());
+                    }
+                    DrlgDrlgRoom.freeRoomEx(room);
+                }
+            }
+            room = next;
         }
     }
     

@@ -41,6 +41,8 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
       int start = 4 + row * 0x1c0;
       assertEquals(binary.getInt(start + 0xd0), base.SizeX, "SizeX row=" + row);
       assertEquals(binary.getInt(start + 0xd4), base.SizeY, "SizeY row=" + row);
+      assertEquals(binary.get(start + 0x162) & 0xff, base.Xspace & 0xff, "Xspace row=" + row);
+      assertEquals(binary.get(start + 0x163) & 0xff, base.Yspace & 0xff, "Yspace row=" + row);
       assertEquals(binary.get(start + 0x1b1) & 0xff, base.InitFn, "InitFn row=" + row);
       assertEquals(binary.get(start + 0x1b2) & 0xff, base.PopulateFn, "PopulateFn row=" + row);
       assertEquals(binary.get(start + 0x1b3) & 0xff, base.OperateFn, "OperateFn row=" + row);
