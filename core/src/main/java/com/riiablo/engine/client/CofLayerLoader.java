@@ -183,9 +183,9 @@ public class CofLayerLoader extends IteratingSystem {
               || object.base.Id == 60);
       if (townPortal) mode = Engine.Object.MODE_ON;
     }
-    // Object.mode is the persistent authoritative state mirrored in ObjectP.
+    // Object.mode is the live authoritative state mirrored in ObjectP.
     // CofReference can briefly retain OP/ON from a previous transition while
-    // a room snapshot restores NU; use the persistent state for idle visuals,
+    // a room snapshot restores NU; use the object snapshot for idle visuals,
     // but never replace an active OP transition.
     if (!townPortal && logicalType == Class.Type.OBJ && mode != Engine.Object.MODE_OP
         && mObject.has(entityId)) {

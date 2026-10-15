@@ -37,6 +37,7 @@ public class CofManager extends BaseEntitySystem {
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   protected EventSystem event;
 
@@ -87,6 +88,10 @@ public class CofManager extends BaseEntitySystem {
           world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(id));
     }
     reference.mode = mode;
+    // Publish the live mode before COF listeners resolve Object.mode. The
+    // map-owned NativeObjectState separately retains the restorable end mode.
+    com.riiablo.engine.server.component.Object object = mObject.get(id);
+    if (object != null) object.mode = mode;
     // A forced same-mode update is used by repeated attacks to restart the
     // animation at frame zero.  Mark it explicitly so the client can reset
     // the existing Animation without unloading/reloading every DCC layer.

@@ -82,7 +82,7 @@ public class CofResolver extends PassiveSystem {
       }
     }
     // Native objects have two replicated mode fields: Object.mode is the
-    // persistent gameplay state, while CofReference.mode can briefly retain
+    // authoritative live state, while CofReference.mode can briefly retain
     // OP/ON while a room/object snapshot is being applied.  Resolve the COF
     // from the authoritative idle object mode as well; otherwise the loader
     // can keep an ON COF while collision and interaction already say NU.

@@ -10,6 +10,13 @@ public final class NativeObjectOperateTable {
     Lifecycle lifecycle = resolve(base, null);
     return lifecycle == Lifecycle.TOGGLE_DOOR || lifecycle == Lifecycle.ONE_WAY_DOOR;
   }
+
+  /** Shared one-shot state, loot and trap effects must be committed on D2GS. */
+  public static boolean isNetworkContainer(Objects.Entry base) {
+    Lifecycle lifecycle = resolve(base, null);
+    return lifecycle == Lifecycle.ANIMATED_CONTAINER
+        || lifecycle == Lifecycle.INSTANT_CONTAINER || lifecycle == Lifecycle.TRAP;
+  }
   public enum Lifecycle {
     NONE,
     ANIMATED_CONTAINER,

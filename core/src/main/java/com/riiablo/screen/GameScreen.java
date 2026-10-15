@@ -95,6 +95,7 @@ import com.riiablo.engine.client.NetworkIdManager;
 import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.client.ObjectAmbientSoundSystem;
+import com.riiablo.engine.client.ObjectBreakSoundEmitter;
 import com.riiablo.engine.client.OverlayManager;
 import com.riiablo.engine.client.OverlayStepper;
 import com.riiablo.engine.client.SelectableManager;
@@ -989,6 +990,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new LeapSystem())
 
         .with(new ObjectAmbientSoundSystem())
+        .with(new ObjectBreakSoundEmitter())
         .with(new SoundEmitterHandler())
 
         .with(factory)

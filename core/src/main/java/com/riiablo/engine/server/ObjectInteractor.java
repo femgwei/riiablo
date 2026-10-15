@@ -100,8 +100,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   private void syncSnapshotState(int entityId, NativeObjectState state) {
     Object object = mObject.get(entityId);
     if (object == null) return;
-    object.mode = state == null ? (mCofReference.has(entityId)
-        ? mCofReference.get(entityId).mode : Engine.Object.MODE_NU) : state.currentMode;
+    object.mode = mCofReference.has(entityId) ? mCofReference.get(entityId).mode
+        : state == null ? Engine.Object.MODE_NU : state.currentMode;
     byte flags = 0;
     if (state != null && state.opened) flags |= Object.STATE_OPENED;
     if (state != null && state.activated) flags |= Object.STATE_ACTIVATED;
@@ -127,7 +127,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     // clients observe one open and one shared drop set.
     if (clientNetwork != null && (isNetworkQuestObject(networkQuest)
         || NativePresetObjectResolver.isNetworkObject(kind)
-        || NativeObjectOperateTable.isNetworkDoor(object.base))
+        || NativeObjectOperateTable.isNetworkDoor(object.base)
+        || NativeObjectOperateTable.isNetworkContainer(object.base))
         && clientNetwork.requestQuest(
             com.riiablo.net.packet.d2gs.QuestOperation.OBJECT_INTERACTION,
             entityId, -1) != 0) {
@@ -237,6 +238,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     }
 
     if (lifecycle == Lifecycle.TRAP) {
+      if (cof.mode != Engine.Object.MODE_NU || mSequence.has(entityId)) {
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
       boolean first = state == null || !state.activated;
       if (first && state != null) {
         state.persistActivated(true);
@@ -334,6 +338,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
     if (lifecycle == Lifecycle.ANIMATED_CONTAINER
         || lifecycle == Lifecycle.INSTANT_CONTAINER) {
+      if (cof.mode != Engine.Object.MODE_NU || mSequence.has(entityId)) {
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
       if (state != null && state.opened) return InteractionResult.HANDLED_UNCHANGED;
       NativeObjectKeyResolver.Result keyResult = state == null
           ? NativeObjectKeyResolver.Result.NOT_LOCKED

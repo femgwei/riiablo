@@ -118,12 +118,7 @@ public class CofLayerCacher extends IteratingSystem {
         mode = object.mode;
       }
       if (object != null && object.base != null) {
-        int nativeFrameCount = CofLayerLoader.objectAnimationFrameCount(
-            object.base, mode, animation.getNumFramesPerDir());
-        animation.setFrameRange(0, nativeFrameCount);
-        animation.setMode(CofLayerLoader.objectAnimationMode(object.base, mode));
-        animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
-            object.base, mode, nativeFrameCount));
+        configureObjectAnimation(animation, object.base, mode);
       } else {
         animation.setFrame(CofLayerLoader.objectAnimationStartFrame(
             null, mode, animation.getNumFramesPerDir()));
@@ -260,6 +255,18 @@ public class CofLayerCacher extends IteratingSystem {
     }
     if (DEBUG) Gdx.app.debug(TAG, "Remaining layers: " + Dirty.toString(flags));
     return flags;
+  }
+
+  static void configureObjectAnimation(Animation animation, Objects.Entry base, byte mode) {
+    int frames = animation.getNumFramesPerDir();
+    if (frames <= 0) return;
+    // Objects.txt Start is an offset into the sprite, not into FrameCnt.
+    // Barrel/urn ON uses one frame at Start2=9/8 in a shared 10/9-frame COF.
+    int start = CofLayerLoader.objectAnimationStartFrame(base, mode, frames);
+    int count = CofLayerLoader.objectAnimationFrameCount(base, mode, frames);
+    animation.setFrameRange(start, Math.min(frames, start + count));
+    animation.setMode(CofLayerLoader.objectAnimationMode(base, mode));
+    animation.restart();
   }
 
   private int animationRate(int entityId, AnimData animData) {

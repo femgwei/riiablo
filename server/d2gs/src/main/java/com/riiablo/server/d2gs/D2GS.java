@@ -8377,7 +8377,8 @@ public class D2GS extends ApplicationAdapter {
         && com.riiablo.map.NativePresetObjectResolver.isNetworkObject(nativeState.kind);
     if (object == null || object.base == null
         || (!isNetworkQuestObject(questType) && !networkPreset
-            && !com.riiablo.engine.server.object.NativeObjectOperateTable.isNetworkDoor(object.base))) {
+            && !com.riiablo.engine.server.object.NativeObjectOperateTable.isNetworkDoor(object.base)
+            && !com.riiablo.engine.server.object.NativeObjectOperateTable.isNetworkContainer(object.base))) {
       return "QUEST_OBJECT_NOT_FOUND";
     }
     if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(objectId)) {
