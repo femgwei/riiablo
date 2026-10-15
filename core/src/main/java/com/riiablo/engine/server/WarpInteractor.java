@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
 import com.riiablo.engine.server.quest.QuestWarpPolicy;
@@ -60,6 +61,9 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
 
   @Wire(name = "map")
   protected Map map;
+
+  @Wire(name = "townPortalRegistry")
+  protected TownPortalRegistry townPortalRegistry;
 
   private final Vector2 tmpVec2 = new Vector2();
 
@@ -236,6 +240,14 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     }
     commitTransition(src, destination, tmpVec2);
     actioneer.moveTo(src, tmpVec2);
+    // OBJECTS_OperateFunction15_Portal closes both ordinary endpoints only
+    // after their owner successfully takes the town-side portal back out.
+    TownPortalRegistry.Pair pair = townPortalRegistry == null ? null : townPortalRegistry.get(src);
+    if (pair != null && pair.townWarp == sourceEntity && pair.sourceWarp == destinationEntity) {
+      townPortalRegistry.remove(src, world);
+      Gdx.app.log(TAG, "Town portal closed after owner return: player=" + src
+          + " townEndpoint=" + sourceEntity + " fieldEndpoint=" + destinationEntity);
+    }
     if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_enter", true);
     Gdx.app.log(TAG, "Town portal interaction: player=" + src
         + " source=" + (source.level == null ? -1 : source.level.Id)
