@@ -153,11 +153,71 @@ $env:D2_TEST = $env:D2_HOME
   --tests com.riiablo.map.NativeWaypointResourceTest --console=plain
 ```
 
-额外扩展A1检查存在两项失败，**没有修复，也未在干净旧提交独立复现**，不能宣布全项目绿：
+第二批交付时额外扩展A1检查存在两项失败，**当时没有修复，也未在干净旧提交独立复现**：
 `Act1D2MOOLayoutBridgeTest.fixedSeedAct1LayoutIsStableAndExportable` 的level5共享地板坐标
 预期1/实际0；`mapBuilderProjectsNativeMonasteryWarpSlots` 的level26缺少端点。
-本批没有改写A1生成器；后续应专项核对断言基线/原生端点，不靠放宽断言处理。
+第二批没有改写A1生成器；本轮专项调查和闭环见下方第三批，仍不能宣布全项目绿。
 真实TCP、三难度/多seed人口矩阵和GL实机验证未执行。
+
+## 第三批：A1 测试契约闭环（非生产移植）
+
+修改前在当前工作区用独立测试任务复现了上述两项失败（2/2），未在干净历史
+checkout 验证。调查结果是旧断言未同步既有消费语义；本批只修改测试，不改写生成器、
+渲染器或实际出口行为，也不归作新的 D2MOO 生产功能移植。
+
+### 地板分层与隐藏填充
+
+对照上述远端基线的 `DrlgRoomTile.cpp::DRLGROOMTILE_InitTileDataFlags`：
+非 shadow 的记录均保留 `(nWallLayer+1)<<14`，floor 不例外。
+`DRLGROOMTILE_LoadTiles` 为缺失 DS1 floor 生成隐藏 style-30 填充记录。
+riiablo 的 `b4c49c7d7` 已实现分层写入和填充过滤；`92812e5aa` 再保留原生 flags。
+因此不能把合法 base/overlay 同坐标视为重复，也不能要求隐藏填充进入可见地板层。
+
+- 固定种子 `0x171A6100`、普通难度：Dark Wood 实际导出5761条地板，全部写入，
+  恰有1对 base/overlay；逐对检查原生层号1/2，同层重复严格为0。
+- 原先失败遮挡的后续地下通道断言也已核对：5184条地板回调中，独立审计数出2011条
+  隐藏 style-30 填充，3173条可见地板写入，边界裁剪0。总量精确相等，不使用容差。
+- 保留其他关卡固定数量、边界裁剪、非法ID、越界、完整回调记账等断言。
+  新增同层覆盖计数反例；确认普通隐藏地板及可见 style-30 不会被误当成空白填充丢弃。
+
+### 修道院连续连接
+
+对照 `DrlgOutPlace.cpp::sub_6FD82750`（1.10f `0x6FD82750`）：
+`Vis!=0 && Warp==-1` 生成 orth 连续连接；Barracks court connector 同样使用 orth。
+`nativeDiagnostics()[13]` 只数交互 Warp marker，不能用它要求整关必有交互端点。
+
+测试改为 `mapBuilderProjectsNativeMonasteryWalkSeams`，逐边检查26↔27、27↔28：
+从投影前保存的原生 walk edge 找到唯一 slot，核对目标 override、连续连接分类、
+两端锚点存在、投影后的世界坐标相等，且锚点在两关共同边界交集中。
+既有 `Act1NativeOrthAnchorTest` 继续覆盖四方向和无 orth 时不捏造入口的反例。
+
+### 第三批验证
+
+完整 A1 bridge、TileApplier、orth anchor 及 `com.d2moo.common.drlg.*` 共
+**95项 / 18类通过**，失败/错误/跳过0。独立XML在
+`core/build/test-results/act1Round3-full`，HTML在同名 reports/tests 目录。
+修道院另跑7次：普通种子1/2/3/12345/54321，以及默认种子的难度1/2；
+加上上述默认普通难度检查，覆盖6个种子、三难度，但不是完整种子×难度矩阵。
+各轮报告独立保存于 `core/build/test-results/act1Round3Seam*`，不覆盖其他工作流报告。
+本机临时 Gradle init 任务只用于隔离报告，不纳入仓库。
+
+另一台电脑无并发时可直接复验95项集合：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test `
+  --tests com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest `
+  --tests com.riiablo.map.d2moo.D2MooTileApplierTest `
+  --tests com.riiablo.map.Act1NativeOrthAnchorTest `
+  --tests 'com.d2moo.common.drlg.*' --console=plain
+```
+
+未运行全项目、真实TCP通行、GL实机或多seed地板精确数量矩阵。
+固定地板数量只验收上述默认种子/普通难度，不外推到其他种子或难度。
+测试提交 `052a9730f61a700c43090762c69b9cae98f47074` 已推送 `origin/master`，
+远端SHA核对一致。测试提交时未混入其他暂存变更；另一轮DiabPrison已独立提交。
+本轮三份进度文档随后单独提交推送。
 
 ## 待下一批处理
 
