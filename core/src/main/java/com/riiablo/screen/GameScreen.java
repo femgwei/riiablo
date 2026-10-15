@@ -563,6 +563,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     mappedKeyStateListener = new MappedKeyStateAdapter() {
       @Override
       public void onPressed(MappedKey key, int keycode) {
+        if (Riiablo.cursor != null && Riiablo.cursor.isIdentifying() && key == Keys.Esc) {
+          Riiablo.cursor.resetCursor();
+          return;
+        }
         if (inventoryPanel.isGoldDialogOpen() || stashPanel.isGoldDialogOpen()) {
           return;
         }
@@ -672,6 +676,20 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     testingInputProcessor = new InputAdapter() {
       private final float ZOOM_AMOUNT = 0.1f;
+
+      @Override
+      public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if (Riiablo.cursor == null || !Riiablo.cursor.isIdentifying()) return false;
+        Vector2 point = stage.screenToStageCoordinates(new Vector2(screenX, screenY));
+        Actor actor = stage.hit(point.x, point.y, true);
+        com.riiablo.item.Item target = null;
+        if (button == Input.Buttons.LEFT) {
+          target = com.riiablo.screen.panel.ItemGrid.targetItem(actor);
+          if (target == null) target = inventoryPanel.targetEquippedItem(actor);
+        }
+        Riiablo.cursor.identify(target);
+        return true;
+      }
 
       @Override
       public boolean scrolled(float amountX, float amountY) {

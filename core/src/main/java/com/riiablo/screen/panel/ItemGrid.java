@@ -358,6 +358,14 @@ public class ItemGrid extends Group {
     default boolean onUse(Item item) { return false; }
   }
 
+  /** Resolves the clicked inventory actor before a targeting action can pick it up. */
+  public static Item targetItem(Actor actor) {
+    for (; actor != null; actor = actor.getParent()) {
+      if (actor instanceof ItemGrid.StoredItem) return ((ItemGrid.StoredItem) actor).item;
+    }
+    return null;
+  }
+
   class StoredItem extends Actor {
     final Item item;
     final ClickListener clickListener;

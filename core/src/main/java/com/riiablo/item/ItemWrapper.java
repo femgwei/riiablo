@@ -247,6 +247,13 @@ public class ItemWrapper extends Actor implements Disposable {
     b.resetBlendMode();
   }
 
+  /** Identification may change inventory art and palette translation. */
+  public void refresh() {
+    if (invFileDescriptor == null) return;
+    dispose();
+    load();
+  }
+
   @Override
   public void dispose() {
     if (Riiablo.assets == null) return;

@@ -8951,6 +8951,11 @@ public class D2GS extends ApplicationAdapter {
             playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
         return true;
       });
+    } else if (operation == ItemMoveOperation.IDENTIFY_ITEM
+        && playerTrades.getPlayerSession(playerEntityId) != null) {
+      // SKILLITEM_pSpell01 forbids changing item identity during player trade.
+      outcome = new AuthoritativeItemMoveService.Outcome(false, ItemMoveFailure.INVALID_OPERATION,
+          authoritativeItems.revision(playerEntityId));
     } else if (operation == ItemMoveOperation.USE_INVENTORY_ITEM) {
       com.riiablo.item.Item inventoryItem = ownedItem(character, intent.itemId);
       if (inventoryItem != null && inventoryItem.type != null

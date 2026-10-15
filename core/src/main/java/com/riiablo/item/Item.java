@@ -566,6 +566,16 @@ public class Item {
     return name;
   }
 
+  /** D2GAME_ITEMS_Identify: reveal existing rolls and invalidate client caches. */
+  public void identify() {
+    flags = (flags | ITEMFLAG_IDENTIFIED) & ~ITEMFLAG__DISABLED;
+    name = null;
+    details = null;
+    sellDetails = null;
+    header = null;
+    wrapper.refresh();
+  }
+
   private void updateName() {
     StringBuilder name = new StringBuilder();
     int prefix, suffix;

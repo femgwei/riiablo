@@ -116,6 +116,7 @@ public class CursorMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
+    if (Riiablo.cursor != null && Riiablo.cursor.blocksWorldInput()) return;
     if (profiler != null && profiler.hit()) {
       traceBlockedClick("profiler");
       return;
@@ -194,6 +195,14 @@ public class CursorMovementSystem extends BaseSystem {
   /** Samples the input edge once per render frame, before the fixed-step loop. */
   public void capturePointerInput() {
     if (Gdx.input == null) return;
+    if (Riiablo.cursor != null && Riiablo.cursor.blocksWorldInput()) {
+      pendingLeftClicks.poll();
+      pendingRightClicks.poll();
+      pendingLeftRelease = false;
+      sampledLeftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+      sampledRightDown = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+      return;
+    }
     boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if (!leftDown && sampledLeftDown) {
       pendingLeftRelease = true;

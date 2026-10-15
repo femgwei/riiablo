@@ -1,5 +1,28 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 辨识卷轴与辨识之书
+
+- [x] 对照 D2MOO `SKILLITEM_pSpell01_Initializer/IdentifyItem`、`sub_6FC47470`
+  与 `D2GAME_ITEMS_Identify_6FC49670`，接通背包右键 `isc`/`ibk` → 原版辨识光标
+  → 左键选择未鉴定物品的流程；支持角色拥有的背包、箱子、方块和装备物品。
+- [x] 成功后移除一张卷轴或扣除书中一张；最后一张用完保留空书。空书、已鉴定/非本人/
+  商人/地面物品及占用光标的请求不消耗；右键、Esc、关闭背包可取消目标选择。
+- [x] 更新已有物品的鉴定标记并刷新名称、说明、图标与属性，不重新生成词缀；选择期间及
+  该次点击释放前屏蔽世界鼠标操作，避免辨识点击触发移动、攻击或拾取。
+- [x] 追加 `IDENTIFY_ITEM` 网络操作，保留既有 opcode；`itemId` 指定卷轴/书，`x` 指定
+  目标稳定物品 ID（包括有效的负数 Java ID）。复用服务端 ownership、revision、幂等缓存
+  与完整背包快照，玩家交易期间拒绝辨识，客户端不提前修改装备或数量。
+- [x] 使用本机 1.10f MPQ，运行 `:core:test --tests
+  com.riiablo.engine.server.item.NativeIdentifyItemIntegrationTest --tests
+  com.riiablo.engine.client.NetworkedClientItemManagerTest --no-daemon`，共 10 项通过，
+  无失败或跳过；含原表 pSpell/光标编号、原有词缀/名称缓存、消耗与空书、归属/位置、
+  有效负数物品 ID、revision 与网络包编码/客户端不提前变更的断言。核心和桌面编译通过。
+- [ ] `:server:d2gs:compileJava` 及随后尝试的真实 `:desktop:offscreenCamp` 均在
+  `MonsterAiArena.java:931` 的未提交 AI 改动处被缺少 `Velocity` 导入阻塞；营地烟测
+  未实际启动，不记录为通过。该文件未纳入本次提交。
+- [ ] 另一台电脑拉取本节所在提交后，检查：背包右键卷轴/书，再左键未鉴定装备，应显示
+  鉴定名称/属性并消耗一张；空书保留；右键/Esc 取消不消耗；退出重载与 TCP/IP 下复验。
+
 ## 2026-10-16 普通回城门开门者返程关闭
 
 - [x] 上轮仅修正章节目标并核实原版规则，未接入返程关闭。补齐 `WarpInteractor`：
@@ -119,22 +142,7 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
-## 2026-10-16 D2MOO 第十八批：原生A*与Straight入口
-
-- [x] dispatcher接通1/7，保留A*仅写有效prefix、返回count而不直接赋live count/index/vectors。
-  Straight先Toward，容差接受须末点不等于start；原始平方距离<=324才试A*，失败且原Toward
-  有点才重算。保留signed int32平方回绕，不强求A*精确到达，不自动转type15。
-- [x] `findNativePath`增加uint16节点坐标和signed int16评分，approach偏移仍int32；旧通用
-  findPath及普通生产不变。D2MOO固定`0c0bbd1e`及本机1.10f DLL静态对照，未做动态函数差分。
-- [x] 新增23项；定向62项、合并410项/36类通过，失败/错误/跳过0，含四项DLL静态oracle与
-  一项1,000组逐query/路点对照。代码/测试/init `26952a9d9`已推送且远端一致。
-  `-PpathTestScope=path`可选隔离测试源码，完整主源码仍编译；另机命令见第十八批上游记录。
-- [ ] **寻路未完成**。下一轮优先IDA入口与缓存相等分支：DLL接受cached>=new，现Java严格
-  new<cached，上游源码反向写new>=cached；追踪`7FCF→7FD3`后确认，不凭跳转助记符猜语义。
-  0/16与8/9/11/12、生产身份/表格/房间图、nDist及移动消费安装、矩形递归网格/地形验收仍待。
-  普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial；无新MPQ/TCP/GL/性能/动态差分。
-
-## 2026-10-16 D2MOO 第十七批：类型生命周期与有状态分派（历史）
+## 2026-10-16 D2MOO 第十七批：类型生命周期与有状态分派
 
 - [x] 新增`D2PathTypes`，10185/10186保存/恢复type与velocity，三张18项表、旧flags gate、
   断言前后写入顺序按DLL；10236继续直接赋type，不重套SetType规则。

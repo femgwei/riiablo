@@ -22,7 +22,9 @@ enum ItemMoveOperation:byte {
   STORE_TO_BELT,
   // Uses the item currently held by the cursor on the owner's hireling.
   // Appended so all legacy item operation values remain unchanged.
-  USE_CURSOR_ITEM_ON_MERCENARY
+  USE_CURSOR_ITEM_ON_MERCENARY,
+  // itemId is the owned isc/ibk source; x is the target's stable item ID.
+  IDENTIFY_ITEM
 }
 
 enum ItemMoveFailure:byte {

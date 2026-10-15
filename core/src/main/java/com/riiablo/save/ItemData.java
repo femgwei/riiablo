@@ -1141,6 +1141,43 @@ public class ItemData {
     return false;
   }
 
+  /** Native pSpell01 starts targeting without consuming the scroll/book. */
+  public boolean canUseIdentifyItem(Item source) {
+    if (source == null || !contains(source) || getCursor() != null
+        || source.location != Location.STORED || source.storeLoc != StoreLoc.INVENTORY
+        || source.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
+    if ("isc".equalsIgnoreCase(source.code)) return true;
+    StatRef quantity = source.attrs == null ? null : source.attrs.base().get(Stat.quantity);
+    return "ibk".equalsIgnoreCase(source.code) && quantity != null && quantity.asInt() > 0;
+  }
+
+  /** D2Game sub_6FC47470 / SKILLITEM_pSpell01_IdentifyItem ownership/mode gates. */
+  public boolean canIdentifyItem(Item source, Item target) {
+    return canUseIdentifyItem(source) && target != null && target != source
+        && contains(target) && !target.isIdentified()
+        && !target.hasFlag2(Item.ITEMFLAG2_INSTORE)
+        && (target.location == Location.EQUIPPED
+            || (target.location == Location.STORED
+                && (target.storeLoc == StoreLoc.INVENTORY
+                    || target.storeLoc == StoreLoc.CUBE || target.storeLoc == StoreLoc.STASH)));
+  }
+
+  /** Identifies once; the last charge leaves an empty tome rather than deleting it. */
+  public boolean identifyItem(Item source, Item target) {
+    if (!canIdentifyItem(source, target)) return false;
+    target.identify();
+    if ("ibk".equalsIgnoreCase(source.code)) {
+      int quantity = source.attrs.base().get(Stat.quantity).asInt();
+      source.attrs.base().put(Stat.quantity, quantity - 1);
+      source.attrs.reset();
+    } else {
+      removeOwnedItem(source);
+    }
+    updateStats();
+    notifyUpdated();
+    return true;
+  }
+
   /** Consumes one unit from this exact inventory item, preserving its stack. */
   public boolean consumeStoredItem(Item item) {
     if (item == null || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY) return false;

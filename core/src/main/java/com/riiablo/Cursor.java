@@ -19,6 +19,7 @@ import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemData;
+import com.riiablo.save.ItemController;
 
 /**
  * FIXME: Drawing cursor is proving troublesome. Either draw over in-game cursor or set hardware
@@ -45,6 +46,10 @@ public class Cursor implements ItemData.LocationListener {
 
   private com.badlogic.gdx.graphics.Cursor cursor;
   private Item item;
+  private int identifySourceId = -1;
+  private Item identifySourceItem;
+  private ItemController identifyController;
+  private boolean identifyPointerCaptured;
   private DC dc;
   private int page = -1;
   private Index transform;
@@ -135,6 +140,9 @@ public class Cursor implements ItemData.LocationListener {
   }
 
   public void resetCursor() {
+    identifySourceId = -1;
+    identifySourceItem = null;
+    identifyController = null;
     dc = null;
     page = -1;
 
@@ -151,6 +159,40 @@ public class Cursor implements ItemData.LocationListener {
     return Riiablo.charData.getItems().getCursor();
   }
 
+  /** Native identify targeting is separate from holding an inventory item. */
+  public void beginIdentify(Item source, ItemController controller) {
+    if (source == null || controller == null || Riiablo.charData == null
+        || !Riiablo.charData.getItems().canUseIdentifyItem(source)) return;
+    identifySourceId = source.id;
+    identifySourceItem = source;
+    identifyController = controller;
+    setCursor(buysell, 0);
+    if (Riiablo.audio != null) Riiablo.audio.play("cursor_identify_ready", true);
+  }
+
+  public boolean isIdentifying() {
+    return identifyController != null;
+  }
+
+  public boolean blocksWorldInput() {
+    return isIdentifying() || identifyPointerCaptured;
+  }
+
+  public void identify(Item target) {
+    Item source = identifySource();
+    ItemController controller = identifyController;
+    identifyPointerCaptured = true;
+    resetCursor();
+    if (source != null && target != null && controller != null)
+      controller.identifyItem(source, target);
+  }
+
+  private Item identifySource() {
+    if (!isIdentifying() || Riiablo.charData == null) return null;
+    ItemData items = Riiablo.charData.getItems();
+    return items.contains(identifySourceItem) ? identifySourceItem : items.findItemById(identifySourceId);
+  }
+
   public void setItem(Item item) {
     if (this.item == null && item != null) {
       Riiablo.audio.play("item_pickup", true);
@@ -165,6 +207,13 @@ public class Cursor implements ItemData.LocationListener {
   }
 
   public void act(float delta) {
+    if (identifyPointerCaptured && Gdx.input != null
+        && !Gdx.input.isButtonPressed(com.badlogic.gdx.Input.Buttons.LEFT)
+        && !Gdx.input.isButtonPressed(com.badlogic.gdx.Input.Buttons.RIGHT))
+      identifyPointerCaptured = false;
+    if (isIdentifying() && (Riiablo.charData == null
+        || !Riiablo.charData.getItems().canUseIdentifyItem(identifySource())
+        || Riiablo.game == null || !Riiablo.game.inventoryPanel.isVisible())) resetCursor();
     if (dc == null) cursorAnim.update(delta);
     if (dc == null && item != null && item.wrapper.checkLoaded()) {
       setCursor(item.wrapper.invFile, item.wrapper.invColormap, item.wrapper.invColorIndex);

@@ -468,7 +468,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       // Misc consumables (notably tsc/tbk) must be routed through the item
       // controller instead of falling through to the legacy "play sound only"
       // branch in ItemGrid.StoredItem.
-      if ("tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code)) {
+      if ("tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code)
+          || "isc".equalsIgnoreCase(item.code) || "ibk".equalsIgnoreCase(item.code)) {
         itemController.useInventoryItem(item);
         return true;
       }
@@ -479,6 +480,14 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   @Override
   public void onSwap(int i, int x, int y) {
     itemController.swapStoreItem(i, StoreLoc.INVENTORY, x, y);
+  }
+
+  public Item targetEquippedItem(Actor actor) {
+    for (; actor != null; actor = actor.getParent()) {
+      if (actor instanceof BodyPart)
+        return Riiablo.charData.getItems().getSlot(((BodyPart) actor).bodyLoc);
+    }
+    return null;
   }
 
   private class BodyPart extends Actor {

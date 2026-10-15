@@ -267,6 +267,11 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public void useInventoryItem(com.riiablo.item.Item item) {
+    if ("isc".equalsIgnoreCase(item == null ? null : item.code)
+        || "ibk".equalsIgnoreCase(item == null ? null : item.code)) {
+      if (Riiablo.cursor != null) Riiablo.cursor.beginIdentify(item, this);
+      return;
+    }
     if (item == null || item.code == null || Riiablo.charData == null
         || Riiablo.game == null || Riiablo.game.player < 0) return;
     if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
@@ -314,6 +319,14 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     townPortalRegistry.replace(Riiablo.game.player, world, wrapper.zone, portalPosition,
         visual, warp, townZone, returnPosition, returnVisual, returnWarp);
     if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
+  }
+
+  @Override
+  public boolean identifyItem(com.riiablo.item.Item source, com.riiablo.item.Item target) {
+    if (Riiablo.charData == null
+        || !Riiablo.charData.getItems().identifyItem(source, target)) return false;
+    if (Riiablo.audio != null) Riiablo.audio.play("cursor_identify_item", true);
+    return true;
   }
 
   @Override

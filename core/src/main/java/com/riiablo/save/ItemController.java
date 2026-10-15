@@ -22,6 +22,8 @@ public interface ItemController {
   boolean useCursorPotionOnMercenary();
   /** Uses a consumable directly from the character inventory. */
   void useInventoryItem(com.riiablo.item.Item item);
+  /** Identifies an owned target with the selected scroll/tome. */
+  boolean identifyItem(com.riiablo.item.Item source, com.riiablo.item.Item target);
   /** Drops carried gold at the player's position. */
   void dropGold(int amount);
   /** Moves carried gold into the personal stash. */

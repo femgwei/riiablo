@@ -18,12 +18,19 @@ public final class ItemMoveValidator {
   public static byte validate(CharData character, ItemMoveIntent intent) {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY) return ItemMoveFailure.INVALID_OPERATION;
+        || intent.operation > ItemMoveOperation.IDENTIFY_ITEM) return ItemMoveFailure.INVALID_OPERATION;
     if (intent.merc && intent.operation != ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY)
       return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
     Item cursor = data.getCursor();
     switch (intent.operation) {
+      case ItemMoveOperation.IDENTIFY_ITEM: {
+        // D2 item seeds occupy all 32 bits; signed Java IDs are valid here.
+        Item source = data.findItemById(intent.itemId);
+        Item target = data.findItemById(intent.x);
+        return data.canIdentifyItem(source, target)
+            ? ItemMoveFailure.NONE : ItemMoveFailure.INVALID_ITEM;
+      }
       case ItemMoveOperation.GROUND_TO_CURSOR:
         return cursor != null ? ItemMoveFailure.CURSOR_OCCUPIED : ItemMoveFailure.NONE;
       case ItemMoveOperation.CURSOR_TO_GROUND:
