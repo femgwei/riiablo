@@ -1162,6 +1162,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.setDelta(1f / 25f);
       world.process();
 
+      assertEquals(0, factory.missiles, "MonSeq point nine owns the first missile");
+      for (int i = 0; i < 9; i++) world.process();
       assertEquals(1, factory.missiles);
       assertEquals("inferno sentry 1", factory.missileName);
       Missile channel = world.getMapper(Missile.class).get(factory.missileEntityId);
@@ -1171,8 +1173,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(23f, channel.range, 0.0001f,
           "calc1 = ln34/2 + Wake of Fire synergy controls each missile path");
       assertTrue(trap.infernoChanneling);
-      assertEquals(18, trap.infernoRemainingFrames,
-          "calc2 = par1 + Wake of Fire synergy controls the repeat window");
+      assertEquals(9, trap.infernoRemainingFrames,
+          "the 18-frame deadline starts nine frames before the first missile");
       assertEquals(3, trap.infernoPulseFrames,
           "calc3 controls the native inferno repeat cadence");
 
@@ -1182,7 +1184,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "SrvDo95 creates another missile on the calc3 animation event");
       assertTrue(factory.missileDirections.get(1).y > 0f,
           "each inferno pulse updates its direction toward the moving target");
-      for (int i = 0; i < 25 && world.getMapper(SummonedPet.class).has(factory.entityId); i++) {
+      for (int i = 0; i < 40 && world.getMapper(SummonedPet.class).has(factory.entityId); i++) {
         world.process();
       }
       assertFalse(world.getMapper(SummonedPet.class).has(factory.entityId),
@@ -1224,6 +1226,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
 
       world.setDelta(1f / 25f);
       world.process();
+      for (int i = 0; i < 9; i++) world.process();
       assertEquals(1, factory.missiles);
       Missile first = world.getMapper(Missile.class).get(factory.missileEntityId);
       assertNotNull(first);
@@ -1273,6 +1276,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
 
       world.setDelta(1f / 25f);
       world.process();
+      for (int i = 0; i < 9; i++) world.process();
       Missile first = world.getMapper(Missile.class).get(factory.missileEntityId);
       assertNotNull(first);
       assertTrue(first.damageSnapshot && first.damage.get(Stat.firemaxdam).asInt() > 0);
@@ -2743,7 +2747,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       this.petMaximum = Math.max(1, petMax);
       this.skillLevel = skillLevel;
       entityId = world.create();
-      world.getMapper(Monster.class).create(entityId).monstats = summon;
+      world.getMapper(Monster.class).create(entityId).set(summon,
+          Riiablo.files.monstats2.get(summon.MonStatsEx));
       world.getMapper(Position.class).create(entityId).position.set(x, y);
       world.getMapper(UnitStates.class).create(entityId).init(entityId);
       world.getMapper(SummonedPet.class).create(entityId)

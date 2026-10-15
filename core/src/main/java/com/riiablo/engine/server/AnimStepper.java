@@ -30,6 +30,7 @@ public class AnimStepper extends IntervalIteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
 
@@ -47,6 +48,8 @@ public class AnimStepper extends IntervalIteratingSystem {
     // in this batch with no AnimData anymore; treat it as a completed
     // animation instead of dereferencing a stale component.
     if (animData == null) return;
+    com.riiablo.engine.server.component.SummonedPet trap = mSummonedPet.get(entityId);
+    if (trap != null && trap.infernoChanneling) return;
     UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null
         && states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)) {

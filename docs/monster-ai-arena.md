@@ -1,5 +1,16 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-15 Inferno Sentry MonSeq
+
+玩家召唤陷阱311改为原表14点S2序列：9帧准备、point9首发、point8回卷、3帧周期，
+截止点末发后14帧收尾；一次射击预算贯穿全链，失败/目标移除收尾，死亡/解召停止。
+161项定向通过（core127/d2gs34，11类，失败/错误/跳过0），真实MPQ双客户端施法及重连通过、
+animationFallback=false。扩大相邻回归的狼落点碰撞测试失败仍待独立追查，保留记录，未标全通过。
+完整1168场与上一批逐字节一致，两次哈希相同；逐怪目录不包含玩家召唤Sentry，本项专属证据为
+7项新增测试和既有伤害/碰撞及真实TCP gate。无GL逐帧/三难度多seed全面验收。
+详见[验证记录](ai-arena/20261015-inferno-sentry-seed1/verification.md)。
+
+
 ## 最新修复批次：2026-10-15 FrozenHorror（323 / MonSeq）
 
 按Fn124接入五种Horror的专用AI；核对真实14点A2序列、point9 action1、成功后回卷point8、

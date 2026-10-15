@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 Inferno Sentry序列与持续链
+
+- [x] 对照Fn101/St53/Do95和真实311/seq_infernosentry，补齐9帧准备、point9发射、point8回卷、
+  3帧周期、截止末发及14帧尾动画；预算在接受攻击时消耗一次，失败收尾，解召/死亡停止排队发射。
+- [x] 161项定向通过（core127/d2gs34，11类），7项新序列数据/控制器测试；真实MPQ/TCP两客户端
+  施法及重连通过、animationFallback=false。完整目录1168场两次结果与Horror批次逐字节一致。
+- [ ] 扩大相邻回归出现狼落点碰撞测试失败，单独保留未修，不将该扩大回归标通过。逐怪目录不含
+  玩家召唤Sentry，不能充当其自然专属场。通用MonSeq、Fn101完整目标顺序/种子、GL逐帧、三难度
+  多seed仍待；46AI名称/183行fallback、Fn051/Fn065及Megademon专用AI也未完成。
+  [复验及证据](ai-arena/20261015-inferno-sentry-seed1/verification.md)。
+
 ## 2026-10-15 D2MOO 第十二批：续算决策、调度与距离状态
 
 - [x] 新增`D2PathContinuation`独立状态层，补circle耗尽、单位范围停止、lazy目标采样、两轴

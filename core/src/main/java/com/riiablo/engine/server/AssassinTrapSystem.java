@@ -71,6 +71,7 @@ public class AssassinTrapSystem extends IteratingSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<com.riiablo.engine.server.component.AnimData> mAnimData;
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   protected net.mostlyoriginal.api.event.common.EventSystem events;
@@ -82,7 +83,17 @@ public class AssassinTrapSystem extends IteratingSystem {
     SummonedPet trap = mTrap.get(entityId);
     if (trap == null || trap.petType == null
         || !trap.petType.toLowerCase(java.util.Locale.ROOT).contains("assassintrap")) return;
+    if (trap.unsummonPending || trap.deathPending) {
+      trap.infernoChanneling = false;
+      return;
+    }
     if (!mMonster.has(entityId) || !mPosition.has(entityId)) return;
+    if (trap.skillId == 272 && (mCorpse.has(entityId)
+        || !mPlayer.has(trap.ownerId) || isTownUnit(trap.ownerId)
+        || hasNoLife(entityId) || hasNoLife(trap.ownerId))) {
+      trap.infernoChanneling = false;
+      return;
+    }
     // D2MOO's trap AI is room-activation scoped just like monster AI.  Keep
     // the shot clock checkpointed while the trap's RoomEx is outside the
     // owner's CLIENT_IN_SIGHT ring; it resumes when the room becomes active.
@@ -128,6 +139,10 @@ public class AssassinTrapSystem extends IteratingSystem {
       return;
     }
     Skills.Entry attackSkill = resolveAttackSkill(monster, placementSkill);
+    if (attackSkill != null && attackSkill.Id == 311) {
+      startInfernoSequence(entityId, trap, attackSkill, target);
+      return;
+    }
     if (attackSkill != null && attackSkill.srvdofunc == 17) {
       if (fireChargedBoltSentry(entityId, trap, monster, target, attackSkill)) {
         trap.shotsFired++;
@@ -159,8 +174,6 @@ public class AssassinTrapSystem extends IteratingSystem {
             : new Vector2(origin).add(direction);
         configureWakeMaker(mMissile.get(missileId), attackSkill, trap, entityId,
             origin, targetPoint, direction);
-      } else if (attackSkill.srvdofunc == 95) {
-        startInfernoChannel(mMissile.get(missileId), attackSkill, trap, target);
       }
       MissileDamageResolver.initializeSkill(
           mMissile.get(missileId), resolveDamageSkill(missile, attackSkill, placementSkill),
@@ -523,28 +536,36 @@ public class AssassinTrapSystem extends IteratingSystem {
     return value != null ? value.asInt() : fallback;
   }
 
-  /** Starts the SrvSt53/SrvDo095 repeat window after its first missile. */
-  private void startInfernoChannel(Missile missile, Skills.Entry attackSkill,
-      SummonedPet trap, int targetId) {
-    if (missile == null || attackSkill == null) return;
-    int level = Math.max(1, trap.skillLevel);
-    int duration = SkillFormula.evaluate(attackSkill.calc2, attackSkill, level,
-        name -> resolveOwnerSkillLevel(trap.ownerId, name));
-    if (duration <= 0) duration = Math.max(1, skillParam(attackSkill, 1, 15));
-    int tick = SkillFormula.evaluate(attackSkill.calc3, attackSkill, level,
-        name -> resolveOwnerSkillLevel(trap.ownerId, name));
-    if (tick <= 0) tick = 1;
-    configureInfernoMissile(missile, attackSkill, trap);
+  /** St53 starts the deadline at sequence entry, before Do95's point-nine action. */
+  private void startInfernoSequence(int entityId, SummonedPet trap, Skills.Entry skill, int target) {
     trap.infernoChanneling = true;
-    trap.infernoRemainingFrames = Math.max(1, duration);
-    trap.infernoPulseFrames = Math.max(1, tick);
-    trap.infernoPulseCooldownFrames = trap.infernoPulseFrames;
-    trap.infernoTargetId = targetId;
-    log.info("[INFERNO_SENTRY] phase=channel_start owner={} target={} missile={} duration={} "
-            + "pulse={} path={} status=PASS",
-        trap.ownerId, targetId,
-        missile.missile != null ? missile.missile.Missile : "unknown",
-        trap.infernoRemainingFrames, trap.infernoPulseFrames, missile.range);
+    trap.infernoFrame = 0;
+    trap.infernoSequencePoint = 0;
+    trap.infernoEndFrame = -1;
+    trap.infernoRemainingFrames = Math.max(1, SkillFormula.evaluate(skill.calc2, skill,
+        trap.skillLevel, name -> resolveOwnerSkillLevel(trap.ownerId, name)));
+    trap.infernoPulseFrames = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, trap.skillLevel));
+    trap.infernoPulseCooldownFrames = 9;
+    trap.infernoTargetId = target;
+    trap.shotsFired++;
+    UnitStates states = mUnitStates.create(entityId);
+    if (states.stateList == null) states.init(entityId);
+    if (!states.stateList.hasState(com.riiablo.engine.server.state.StateId.INFERNO))
+      states.stateList.addState(com.riiablo.engine.server.state.StateId.INFERNO, 0, trap.skillLevel, entityId);
+    CofManager cofs = world.getSystem(CofManager.class);
+    if (cofs != null && world.getMapper(com.riiablo.engine.server.component.CofReference.class).has(entityId))
+      cofs.setMode(entityId, Engine.Monster.MODE_S2, true);
+    setInfernoSourceFrame(entityId, 0);
+    log.info("[INFERNO_SENTRY] phase=sequence_start entity={} target={} deadline={} pulse={} shots={}",
+        entityId, target, trap.infernoRemainingFrames, trap.infernoPulseFrames, trap.shotsFired);
+  }
+
+  private void setInfernoSourceFrame(int entityId, int point) {
+    if (mAnimData.has(entityId)) {
+      com.riiablo.engine.server.component.AnimData anim = mAnimData.get(entityId);
+      anim.frame = (point == 9 ? 1 : 0) << 8;
+      anim.lastKeyframeIndex = anim.frame >>> 8;
+    }
   }
 
   /** D2MOO SKILLS_UpdateInfernoAnimationParameters: calc1 is path length. */
@@ -557,6 +578,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       path = skillParam(missile.missile.Param, 2, 0) + level - 1;
     }
     missile.range = Math.max(1, Math.min(255, path));
+    missile.nativeLifetimeFrames = (int) missile.range;
     missile.pierceEnabled = true;
     missile.pierceChance = 100;
     missile.pierceRemaining = -1;
@@ -566,20 +588,39 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   /** Repeats SrvDo095 every calc3 frames and tracks the moving target direction. */
   private void processInfernoChannel(int entityId, SummonedPet trap, Monster monster) {
+    UnitStates states = mUnitStates.get(entityId);
+    if (states != null && states.stateList != null
+        && states.stateList.hasState(com.riiablo.engine.server.state.StateId.FREEZE)) return;
     int elapsed = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
+    trap.infernoFrame += elapsed;
+    trap.infernoSequencePoint = (trap.infernoSequencePoint + elapsed) % 14;
+    setInfernoSourceFrame(entityId, trap.infernoSequencePoint);
+    if (trap.infernoEndFrame >= 0) {
+      if (trap.infernoFrame < trap.infernoEndFrame) return;
+      trap.infernoChanneling = false;
+      trap.infernoTargetId = Engine.INVALID_ENTITY;
+      trap.attackCooldownFrames = 1;
+      if (states != null && states.stateList != null)
+        states.stateList.removeState(com.riiablo.engine.server.state.StateId.INFERNO);
+      CofManager cofs = world.getSystem(CofManager.class);
+      if (cofs != null && world.getMapper(com.riiablo.engine.server.component.CofReference.class).has(entityId))
+        cofs.setMode(entityId, Engine.Monster.MODE_NU);
+      log.info("[INFERNO_SENTRY] phase=sequence_end entity={} frame={}", entityId, trap.infernoFrame);
+      return;
+    }
     trap.infernoRemainingFrames -= elapsed;
     trap.infernoPulseCooldownFrames -= elapsed;
-    if (trap.infernoRemainingFrames <= 0 || !validTarget(trap.infernoTargetId)) {
+    if (trap.infernoPulseCooldownFrames > 0) return;
+    Vector2 targetPoint = mPosition.has(trap.infernoTargetId)
+        ? mPosition.get(trap.infernoTargetId).position : null;
+    if (targetPoint == null || (int) targetPoint.x == 0 || (int) targetPoint.y == 0) {
       log.info("[INFERNO_SENTRY] phase=channel_end entity={} owner={} target={} "
               + "remaining={} reason={}",
           entityId, trap.ownerId, trap.infernoTargetId, trap.infernoRemainingFrames,
           trap.infernoRemainingFrames <= 0 ? "duration" : "target_lost");
-      trap.infernoChanneling = false;
-      trap.infernoTargetId = Engine.INVALID_ENTITY;
-      trap.attackCooldownFrames = attackInterval(monster);
+      trap.infernoEndFrame = trap.infernoFrame + monster.monstats2.InfernoLen;
       return;
     }
-    if (trap.infernoPulseCooldownFrames > 0) return;
     trap.infernoPulseCooldownFrames += Math.max(1, trap.infernoPulseFrames);
 
     Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
@@ -594,31 +635,44 @@ public class AssassinTrapSystem extends IteratingSystem {
       return;
     }
     Vector2 origin = mPosition.get(entityId).position;
-    Vector2 direction = new Vector2(mPosition.get(trap.infernoTargetId).position).sub(origin);
-    if (direction.isZero(0.0001f)) return;
+    Vector2 direction = new Vector2(targetPoint).sub(origin);
+    if (direction.isZero(0.0001f)) direction.set(1, 0);
     int missileId = factory.createMissile(missileRow, direction.nor(), origin, entityId,
         Math.max(1, trap.skillLevel));
-    if (missileId < 0 || !mMissile.has(missileId)) return;
+    if (missileId < 0 || !mMissile.has(missileId)) {
+      trap.infernoEndFrame = trap.infernoFrame + monster.monstats2.InfernoLen;
+      return;
+    }
     Missile missile = mMissile.get(missileId);
     configureInfernoMissile(missile, attackSkill, trap);
+    if (mVelocity.has(missileId)) {
+      float speed = NativeMonInferno.velocity(missileRow, trap.skillLevel);
+      int slow = ServerEntityFactory.slowMissileVelocityPercent(missileRow,
+          states == null ? null : states.stateList);
+      if (slow > 0) speed = speed * slow / 100f;
+      mVelocity.get(missileId).velocity.set(direction).setLength(speed);
+    }
     Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
     MissileDamageResolver.initializeSkill(missile,
         resolveDamageSkill(missileRow, attackSkill, placement), attrs,
         Math.max(1, trap.skillLevel),
         name -> resolveOwnerSkillLevel(trap.ownerId, name));
     missile.damageOwnerId = trap.ownerId;
+    trap.infernoSequencePoint = monster.monstats2.InfernoAnim - 1;
+    setInfernoSourceFrame(entityId, trap.infernoSequencePoint);
+    if (trap.infernoRemainingFrames <= 0 || states == null || states.stateList == null
+        || !states.stateList.hasState(com.riiablo.engine.server.state.StateId.INFERNO))
+      trap.infernoEndFrame = trap.infernoFrame + monster.monstats2.InfernoLen;
     log.debug("[INFERNO_SENTRY] phase=pulse entity={} owner={} target={} missileId={} "
             + "remaining={} direction=({}, {})",
         entityId, trap.ownerId, trap.infernoTargetId, missileId,
         trap.infernoRemainingFrames, direction.x, direction.y);
   }
 
-  private boolean validTarget(int targetId) {
-    if (targetId < 0 || !mPosition.has(targetId) || !mAttributes.has(targetId)) return false;
-    Attributes attrs = mAttributes.get(targetId).attrs;
-    com.riiablo.attributes.StatRef hp = attrs != null
-        ? attrs.get(com.riiablo.attributes.Stat.hitpoints) : null;
-    return hp != null && hp.asFixed() > 0f;
+  private boolean hasNoLife(int entityId) {
+    if (!mAttributes.has(entityId) || mAttributes.get(entityId).attrs == null) return false;
+    StatRef life = mAttributes.get(entityId).attrs.get(Stat.hitpoints);
+    return life != null && life.asFixed() <= 0;
   }
 
   private int resolveOwnerSkillLevel(int ownerId, String name) {

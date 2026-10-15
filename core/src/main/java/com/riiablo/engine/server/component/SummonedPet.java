@@ -47,6 +47,10 @@ public class SummonedPet extends Component {
   public int bladeMissileId;
   /** Native SrvDo095 repeatedly emits inferno missiles during one attack. */
   public boolean infernoChanneling;
+  /** St53 begins at sequence entry, nine frames before the first Do95. */
+  public int infernoFrame;
+  public int infernoSequencePoint;
+  public int infernoEndFrame = -1;
   public int infernoRemainingFrames;
   public int infernoPulseFrames;
   public int infernoPulseCooldownFrames;
@@ -112,6 +116,9 @@ public class SummonedPet extends Component {
     bladeMovingToTarget = true;
     bladeMissileId = -1;
     infernoChanneling = false;
+    infernoFrame = 0;
+    infernoSequencePoint = 0;
+    infernoEndFrame = -1;
     infernoRemainingFrames = 0;
     infernoPulseFrames = 0;
     infernoPulseCooldownFrames = 0;
