@@ -67,6 +67,10 @@ public final class D2Collision {
         }
         int left = centerX - sizeX / 2;
         int bottom = centerY - sizeY / 2;
+        if ((long)centerX - sizeX / 2 != left || (long)centerY - sizeY / 2 != bottom
+                || (long)left + sizeX - 1 > Integer.MAX_VALUE || (long)bottom + sizeY - 1 > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("wrapping collision boxes are outside the supported domain");
+        }
         return new BoundingBox(left, bottom, left + sizeX - 1, bottom + sizeY - 1);
     }
 

@@ -7,6 +7,7 @@ import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
 import com.d2moo.common.drlg.D2DrlgTileDataStrc;
 import com.d2moo.common.util.D2Log;
+import java.util.ArrayDeque;
 
 /** Room collision grids aligned with D2Common's {@code D2Collision.cpp}. */
 public final class D2CommonCollision {
@@ -269,11 +270,7 @@ public final class D2CommonCollision {
     }
 
     private static int checkBox(D2ActiveRoom room, D2Collision.BoundingBox box, int mask) {
-        int result = 0;
-        for (int y = box.bottom; y <= box.top; y++) {
-            for (int x = box.left; x <= box.right; x++) result |= checkMask(room, x, y, mask);
-        }
-        return result & D2Collision.COLLIDE_ALL_MASK;
+        return visitBox(room, box, mask, 0);
     }
 
     private static void alterSize(
@@ -327,9 +324,59 @@ public final class D2CommonCollision {
 
     private static void alterBox(
             D2ActiveRoom room, D2Collision.BoundingBox box, int mask, boolean set) {
-        for (int y = box.bottom; y <= box.top; y++) {
-            for (int x = box.left; x <= box.right; x++) alterPoint(room, x, y, mask, set);
+        visitBox(room, box, mask, set ? 1 : -1);
+    }
+
+    private static final class BoxVisit {
+        final D2ActiveRoom hint;
+        final D2Collision.BoundingBox box;
+        BoxVisit(D2ActiveRoom hint, D2Collision.BoundingBox box) { this.hint = hint; this.box = box; }
+    }
+
+    /** 1.10f 41CA0/43580/43CE0: local scan, right subtree, then upper subtree.
+     * Use an explicit stack to retain native DFS order without consuming the Java call stack.
+     * Missing anchors read INVALID (even mask=0), but mutations simply skip that subtree.
+     * A resolved room becomes the hint for BOTH children; never route every cell from the root. */
+    private static int visitBox(D2ActiveRoom room, D2Collision.BoundingBox box, int mask, int operation) {
+        ArrayDeque<BoxVisit> pending = new ArrayDeque<>();
+        pending.push(new BoxVisit(room, box));
+        int result = 0;
+        while (!pending.isEmpty()) {
+            BoxVisit visit = pending.pop();
+            D2Collision.BoundingBox b = visit.box;
+            D2ActiveRoom target = getRoomBySubtileCoordinates(visit.hint, b.left, b.bottom);
+            if (target == null || target.getPCollisionGrid() == null || b.left > b.right || b.bottom > b.top) {
+                if (operation == 0) result |= D2Collision.COLLIDE_MASK_INVALID;
+                continue;
+            }
+            D2DrlgCoords c = target.getCoords();
+            D2DrlgGridStrc grid = target.getPCollisionGrid();
+            long rightEdge = (long)c.getNSubtileX() + c.getNSubtileWidth();
+            long topEdge = (long)c.getNSubtileY() + c.getNSubtileHeight();
+            if (c.getNSubtileWidth() <= 0 || c.getNSubtileHeight() <= 0
+                    || rightEdge > Integer.MAX_VALUE || topEdge > Integer.MAX_VALUE
+                    || grid.getNWidth() != c.getNSubtileWidth() || grid.getNHeight() != c.getNSubtileHeight()
+                    || grid.getPCellsFlags() == null || grid.getPCellsRowOffsets() == null) {
+                throw new IllegalArgumentException("resolved non-wrapping room collision grid required");
+            }
+            int right = Math.min(b.right, (int)rightEdge - 1);
+            int top = Math.min(b.top, (int)topEdge - 1);
+            // Push upper first so the original right remainder (including its upper corner) is visited first.
+            if (b.top >= topEdge) pending.push(new BoxVisit(target,
+                    new D2Collision.BoundingBox(b.left, (int)topEdge, right, b.top)));
+            if (b.right >= rightEdge) pending.push(new BoxVisit(target,
+                    new D2Collision.BoundingBox((int)rightEdge, b.bottom, b.right, b.top)));
+            int width = right - b.left + 1, height = top - b.bottom + 1;
+            for (int dy = 0; dy < height; dy++) {
+                for (int dx = 0; dx < width; dx++) {
+                    int x = b.left - c.getNSubtileX() + dx, y = b.bottom - c.getNSubtileY() + dy;
+                    int old = grid.getFlag(x, y);
+                    if (operation == 0) result |= old & mask;
+                    else grid.setFlag(x, y, operation > 0 ? D2Collision.setMask(old, mask) : D2Collision.resetMask(old, mask));
+                }
+            }
         }
+        return result & D2Collision.COLLIDE_ALL_MASK;
     }
 
     private static void alterPoint(

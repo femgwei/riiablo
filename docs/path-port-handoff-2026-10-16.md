@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十二批续接结果（优先于下方历史起点）
+## 第二十三批续接结果（优先于下方历史起点）
+
+- 矩形mask/set/reset（SizeXY及big size/pattern）改为DLL左下角寻房、本地→右→上DFS分区，
+  每个子区沿当前room的near-list继续，替代逐点root hint路由。缺anchor整子区跳过写入，
+  read返回未过滤0x27；部分写入保留，危险端点回绕域明确拒绝。
+- 固定D2MOO与DLL基线未变，详细地址/限制见上游记录第二十三批。新增15项，定向71项/5类通过。
+- 全范围496项/42类通过，失败/错误/跳过0，六项DLL静态oracle执行。
+  日志`core/build/round23-full.log`；XML `.gradle/path-port/round23-full/core/test-results/pathPortTest`。
+- 此包未全收口：下一轮优先small cross中心room路由、mask/Any短路和窄房间边界；
+  不把矩形部分完成等同整个碰撞原语完成。生产仍A*，其余生产映射/消费/验收工作包仍待。
+
+## 第二十二批续接结果（历史）
 
 - type9/12已接通，全部非空表项有受限分派；0/16仍需room，16需live seed。
 - Leap局部终点与slot0别名差异、BackupTurn保留count多pass追加及uint16碰撞候选均按DLL。

@@ -245,6 +245,16 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第二十三批：矩形网格递归
+
+- [x] 矩形mask/set/reset按left/bottom解析room，本地→右→上分区，每个孩子使用当前room hint。
+  缺房read返回未过滤0x27，set/reset跳过该子树；部分写入保留，回绕危险域显式拒绝。
+- [x] 固定D2MOO与本机1.10f DLL静态控制流核对。新增15项，定向71项/5类通过；
+  150组平铺网格独立逐格对照含于一项JUnit，另含2,000房间链与DFS顺序验证。
+  全范围496项/42类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round23-full.log`。
+- [ ] 此包仍待small cross中心room分派、mask/Any短路与窄房间边界核对；之后才做生产映射/消费。
+  普通生产仍Map→AStarPathFinder，没有实机/性能或DLL动态执行验收。
+
 ## 2026-10-16 D2MOO 第二十二批：type9/12
 
 - [x] Leap按局部终点探测，失败保留slot0；BackupTurn按-4/-2/+2追加，保留live count、

@@ -1718,6 +1718,47 @@ objdump静态核对`6FDAB240..B3B0`、`6FDAABF0..AD01`及`6FDA9E90..9EB1`：
 下一工作包优先矩形碰撞网格、跨房间递归及边界证据；生产身份/元数据/room/RNG映射、
 nDist与移动消费接入、真实地图验收及性能切换仍待，不能宣称寻路完成。
 
+## 第二十三批：矩形碰撞网格分区与跨房间递归（2026-10-16）
+
+`D2CommonCollision`矩形read/set/reset改为原生分区路由，替换每个格子都从最初room hint
+寻房的实现。SizeXY、big size及big pattern共用此路径；点与small cross路径保持现状。
+本轮没有切换生产搜索器，普通生产仍Map→AStarPathFinder。
+
+证据固定D2MOO `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，未fetch，
+读取`source/D2Common/src/D2Collision.cpp`的Create/AdaptBoundingBox、矩形mask及set/reset递归。
+本机1.10f D2Common.dll SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`，objdump静态核对：
+
+- `41BE0..41C98`先拒绝倒置box；以所选grid的半开右/上界切分，slot0为本地矩形，
+  slot1先放完整高度的右侧余区，若越过上界则追加裁窄至本地right的上侧余区。
+  右上角因此属于右侧子树，不能重复划入上侧。box坐标本身为inclusive右/上界。
+- `41CA0..41DD2`先按left/bottom定位room，然后本地扫描，再按数组顺序递归；每个子区的
+  hint是刚解析的room，非最初root hint。链式A→B→C可以越过root near-list到C；反之不能
+  由root的独立邻居绕过B的near-list。房间缺失/无grid返回0x27，不再与请求mask相与。
+- `41B40..41BD2`本地按行OR所有flags&mask，不因为已有非零值而提前退出。
+  即使mask=0，缺房子树仍贡献0x27；已读本地高位不能被缺房结果覆盖。
+- `43580..436E3`置位、`43CE0..43E57`清位使用相同分区顺序；缺房子树直接跳过。
+  左下角缺房时整块不访问，即使块内其他格子可由root直接找到房间；已完成的本地写入
+  在后续子区缺失时保留，且兄弟上侧子区仍继续。不是逐格独立路由，也不是全块事务回滚。
+- `44910..4493F`确认偶数尺寸向左/下偏置与inclusive末端，`418CB..418DB`确认read在
+  两轴signed size<=1时走point gate。保持既有零/负尺寸入口策略，不模拟unsigned超大尺寸。
+
+用显式DFS栈保留原生本地→右→上的访问顺序，避免Java调用栈在长链上溢出，不改变near-room
+顺序或主动遍历整个房间图。房间投影仍以D2ActiveRoom.coords表示grid坐标；需正尺寸、
+grid尺寸匹配且非null flags/row-offsets。溢出的room右/上界或BoundingBox端点显式拒绝，
+不模拟原DLL危险指针/整数回绕域。拒绝后不回滚已完成的其他块写入。
+
+新增`D2CollisionRectangleTest`15项；定向71项/5类通过，失败/错误/跳过0，日志
+`core/build/round23-check.log`。覆盖缺anchor、缺grid、mask0、部分读写、DFS顺序、hint切换、
+big pattern/size、奇偶边界、2,000房间长链，以及150组平铺图逐格read/set/reset独立结果对照。
+150组包含于一项JUnit，非150项测试或DLL动态函数差分；本轮没有实机地形/性能验收。
+全范围496项/42类通过，失败/错误/跳过0，六项原DLL静态数据oracle执行。
+日志`core/build/round23-full.log`；XML `.gradle/path-port/round23-full/core/test-results/pathPortTest`。
+
+该工作包尚未全收口：small cross按已解析中心room分派、mask与Any短路入口的区别、特殊
+窄房间/边界及grid投影进一步核对仍待。下一轮优先完成这些原语，不直接跳到生产整体切换。
+后续生产身份/元数据/room/RNG映射、nDist移动消费、真实地图及性能切换验收仍待。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

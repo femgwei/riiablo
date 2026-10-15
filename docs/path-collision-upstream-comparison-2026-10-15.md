@@ -704,6 +704,18 @@ room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝
 矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
 
+## 第二十三批：矩形碰撞网格递归（2026-10-16）
+
+原有矩形逐格从root hint寻房与DLL不同：`41BE0..41DD2`按左下角解析room后分本地、右侧、
+上侧，孩子使用已解析room hint；`43580..436E3/43CE0..43E57`set/reset同序。
+现共用显式DFS栈；缺anchor整子区跳过写入，read贡献未过滤0x27，mask=0亦然。
+本地OR与已写块保留，不把缺房当0或全部事务失败；BoundingBox/room端点回绕域明确拒绝。
+新增15项，定向71项/5类通过，含150组独立平铺结果比较（一项JUnit）、长链、DFS顺序。
+全范围496项/42类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round23-full.log`。
+这是静态DLL控制流核对及Java回归，不是DLL动态执行/实机验收。
+本包仍待small cross中心room路由、mask/Any短路与窄房间边界；生产仍Map→AStarPathFinder。
+详细证据及日志见上游移植记录第二十三批。
+
 ## 第二十二批：type9/12（2026-10-16）
 
 DLL `B1E0..B232/B0C0..B122/A720..A87B`核对Leap局部探测、BackupTurn多pass追加。
