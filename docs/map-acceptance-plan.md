@@ -216,3 +216,18 @@ C99E3067E6A7EEF7800680AC6BED2BEB1A50CC285933166BCD7FBE4F394446A6）反汇编也�
 core/build/reports/population-20261015/allact-containers-final.xml 和
 allact-container-tables-final.xml。全幕偏少问题仍待原版同条件逐类计数、运行时/可见性核对，
 全有向边双向 TCP 步行与 GL 外观验收继续独立保留。
+
+随后基于 da163a11（已包含并行 AI 提交 492585ed）完成 seed=1、25Hz、132 关运行时
+对象加载检查，目录 server/d2gs/build/map-tour/allact-container-roll-20261015。
+132 个 OBJECT_AUDIT/OBJECT_LOAD_PASS 均 failures=0，目标可交互类别的已创建记录逐
+level/class 核对 ECS 实体数量无缺失、无被跳过记录。野外运行时示例（与上述独立审计
+时序不同，不能混算）：鲜血荒地箱 139/140/141 各 4/3/1、松动石头/巨石 174/175 各
+2/1；碎石荒地瓦罐 4/9/52/94/95 各 5/3/4/7/9；蜘蛛森林篮 208/209 各 14/10；
+血腥丘陵桶 418/419 各 12/12；冰冻高地预设罐 443/444/445 各 5/10/9。这些记录的
+创建数量与逐类运行时实体数量一致，未发现目标物件的资源/位置/碰撞创建错误。
+
+严格日志审计不能记为整轮通过：Get-MapLogIssues 保留 1325 条待处理警告，其中
+DynamicUnitCollisionSystem 821、AI fallback 477、Actioneer 17、AnimDataResolver 10，
+详见同目录 log-issues.json；未新增 allowlist 或降低日志级别。对象检查结果不豁免这些
+AI/技能/动画及怪物移位问题。SUMMARY 为 OBJECT_LOAD_ONLY，walks/transitions=0；
+本轮未执行全有向边步行，也未证明客户端画面或原版数量等价。
