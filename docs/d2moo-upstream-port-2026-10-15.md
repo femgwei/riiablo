@@ -6,7 +6,8 @@
 - 审查远端：`0c0bbd1e6bef9181a3da1c046523af622a925416`（2026-10-13）。
   相对旧检出有158个提交，含合并提交，并非全为本月新增。
 - 只 fetch 远端引用，没有切换本机 D2MOO 检出。
-- 目标为1.10f。本轮读取上游原版地址/反汇编证据，未独立反汇编本地DLL。
+- 目标为1.10f。第一批读取上游原版地址/反汇编证据；第四批另静态核验本机
+  D2Common.dll 的尺寸、heuristic、目标跟踪与加速度分支，详见第四批报告。
 
 ## 已移植
 
@@ -219,8 +220,68 @@ $env:D2_TEST = $env:D2_HOME
 远端SHA核对一致。测试提交时未混入其他暂存变更；另一轮DiabPrison已独立提交。
 本轮三份进度文档随后单独提交推送。
 
+## 第四批：寻路碰撞比较与异常 size 回退
+
+详细审查见 [1.10f 寻路碰撞对比](path-collision-upstream-comparison-2026-10-15.md)。
+用户补充近期寻路优化同时参考本机 D2Client.dll、D2Common.dll 逆向；本轮按当前实际
+调用链逐层比较，未否认或撤回近期原生碰撞优化，也未整包替换生产搜索器。
+本轮沿用上述已 fetch 的远端基线，未再次 fetch，不声称覆盖当天全部上游新提交。
+
+### 实施范围
+
+- 按 `47687ceb404f99dae79da70cbb7757d4f5eb2fdf` 及本机1.10f `0x6FDA9250`：
+  size<0 或 >=4 提前退为 ordinary SMALL_UNIT_PRESENCE，在 town/interact 转PET之前返回。
+  修正动态网格写入/查询/诊断与move回滚；非法尺寸的town单位不再被玩家误忽略。
+- 保留正常尺寸、size0兼容、静态地形和生成落点接口。size API 不等于 pattern API，
+  不将本轮修正扩大到全部尺寸/出生逻辑。
+- 新增3项修复回归，覆盖MIN/-1/4/MAX、移除、回滚、规划/实际移动一致性和合法big pet恢复。
+  修改前独立报告3项全部失败，修改后通过。
+- 新增2项差异特征测试：共享碰撞查询时 blocked coordinate goal 的 native partial
+  与普通runtime exact差别；size1 static size查询与native presence pattern查询差别。
+  这是记录当前合同差异，不要求将来永久保留差异，不是执行原版DLL对比。
+
+### 对比结论
+
+- 生产普通入口仍为 `Map → MapGraph → AStarPathFinder`；独立D2AStar/IDAStar/Step
+  已移植但未直接接入这条链。原生候选pattern、门、飞行、NO_PATH/PET、死亡等近期优化已存在。
+- D2MOO在直2/斜3、邻居/tie、200分配预算、partial、转向压缩、目标状态机和定点步进
+  上更贴近原版；生产仍有欧氏A*、不同循环预算、额外平滑和恢复策略，不能只换heuristic。
+- 静态目标已不周期重算；DiabRun已有opt-in partial；不重复移植。size1静态查询、
+  原生逐步状态仍待专项接入。1.13+目标房间gate不适用于本项目1.10f。
+- 没有benchmark；不能声称D2MOO一定更快。建议下一轮先利用现有独立移植做只读shadow
+  差分，区分搜索规则与碰撞适配，之后按path type接入；本轮未实施shadow或速度积分替换。
+
+### 第四批验证
+
+显式 `D2_HOME/D2_TEST` 指向本机1.10F目录：边界修改前3失败，修复后扩展105项通过，
+两项比较测试单独通过；最终合并 **107项 / 21类通过，失败/错误/跳过0**。
+本机临时Gradle init注册 `upstreamRound4Test` 隔离报告，不纳入仓库。
+独立XML目录分别为 `core/build/test-results/upstreamRound4-boundary-baseline`、
+`upstreamRound4-movement`、`upstreamRound4-comparison`、`upstreamRound4-final`，
+HTML在对应 `core/build/reports/tests` 目录。最终不是将多次运行重复累加后的数量。
+
+另一台电脑无并发时，可用普通任务复验同一107项集合：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test `
+  --tests '*UnitCollisionGridTest' --tests '*DynamicUnitCollisionSystemTest' `
+  --tests '*PathfinderTest' --tests '*PathfinderRoomBoundaryTest' `
+  --tests '*PlayerGroundPathTest' --tests '*NativeSeamCollisionTest' `
+  --tests '*ObjectCollisionUpdaterTest' --tests '*WhirlwindCollisionTest' `
+  --tests '*WarpArrivalCollisionTest' --tests 'com.d2moo.common.path.*' `
+  --tests 'com.d2moo.common.collision.*' --tests '*NativeTowardPathProbeTest' `
+  --tests '*NativeAiPathCacheTest' --tests '*NativePathRuntimeComparisonTest' --console=plain
+```
+
+未运行全项目/TCP/GL/132图巡游/25Hz/多seed×三难度；未执行原版DLL动态差分或性能压测。
+代码/测试提交 `776bd89c3175f8fc035a348d5e8dbd3b4e25314e` 已推送origin/master，远端SHA一致。
+提交前无其他暂存变更，仅包含两份生产文件和三份测试；详细报告/进度另行提交。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
-- 碰撞、寻路、攻击速度、目标链等本月修正继续专项对照，不视为已移植。
+- 寻路先做只读shadow差分，再按path type考虑原生搜索/目标状态接入；未接入部分
+  不因独立参考测试通过就视为完成。攻击速度、目标链等其余修正继续专项对照。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

@@ -10,7 +10,23 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第三批：A1 测试契约闭环
+## 2026-10-15 第四批：寻路碰撞比较与非法尺寸
+
+- 代码/测试 `776bd89c3` 已推送origin/master，远端SHA核对一致：非法size按1.10f普通small
+  presence回退，先于town/interact转PET；动态写入/查询/诊断/回滚一致。
+  保留正常尺寸、size0兼容及静态/生成接口。
+- 107项/21类定向回归通过，失败/错误/跳过0。修改前3项全失败；包含2项当前差异夹具，
+  不能当作执行原版DLL或benchmark。显式指定1.10F资源，XML按upstreamRound4隔离。
+- 详细报告 `path-collision-upstream-comparison-2026-10-15.md`：用户确认近期D2Client与
+  D2Common逆向来源；已保留近期原生候选pattern、门/飞行/占位/死亡等优化。
+  普通生产仍为Map→AStarPathFinder，独立原生A*/IDA*/Step不等于已接入。
+- 原生搜索/状态机更贴近原版，不代表无实测就能说性能更优。下一步建议只读shadow差分，
+  尚未实施或替换生产搜索器；不混入1.13+gate，不直接改速度积分/重算阈值。
+- 详细复验命令、源码基线、DLL哈希/地址与范围见报告及上游移植记录第四批。
+  未作TCP/GL/132图/25Hz/多seed×三难度验收。代码提交后仅本轮五份文档未提交，
+  无其他代码修改；文档另行提交推送，最终文档SHA见git log。
+
+## 2026-10-15 第三批：A1 测试契约闭环（历史）
 
 - 测试提交 `052a9730f` 已推送origin/master，远端SHA一致。只修改测试，不改生产地图
   或出口；第二批遗留的两项A1失败已在当前工作区复现并闭环，未作干净历史checkout验证。

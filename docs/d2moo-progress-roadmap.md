@@ -1,5 +1,20 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 D2MOO 第四批：寻路碰撞比较与非法尺寸
+
+- [x] 按上游47687ceb和本机1.10f D2Common.dll核实：非法size提前回退普通small presence，
+  不继续转town PET。覆盖动态写入/查询/诊断/回滚，保留正常尺寸与size0兼容、静态/生成接口。
+- [x] 明确近期优化依据包括D2Client/D2Common逆向；生产已包含候选点pattern、门、飞行、
+  NO_PATH/PET、死亡释放等规则，不撤回。独立D2AStar/IDAStar/Step仍未直接接入普通生产链。
+- [x] 详细比较搜索代价/顺序/tie/预算/partial/压缩与平滑、size和pattern、目标重算、
+  定点速度状态和工程性能；源码基线及DLL哈希/地址见
+  `path-collision-upstream-comparison-2026-10-15.md`。本轮未重新fetch、未跑benchmark。
+- [x] 修改前3项边界回归全失败；最终107项/21类通过，失败/错误/跳过0，含2项差异夹具。
+  显式使用本机1.10F资源；独立报告和另一台电脑复验命令见上游移植记录第四批。
+  代码/测试提交 `776bd89c3`，远端确认见 `current-chat-ownership.md` 最新交接。
+- [ ] 下一步先用已有原生移植做只读shadow差分，再选path type接入。尚无整包切换、
+  size1静态pattern专项接入、原版动态/逐帧对比或性能压测；TCP/GL/132图/25Hz未重验。
+
 ## 2026-10-15 D2MOO 第三批：A1 测试契约闭环
 
 - [x] 修改前在当前工作区复现第二批遗留2项失败；根据D2MOO原生地板层号、隐藏
