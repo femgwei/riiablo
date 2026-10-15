@@ -13,6 +13,27 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathRequestTest {
+  @Test void standardObservationRejectsDifferentOwnerStartAtConstruction() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathResult.State r = result(0, p(10, 10), p(20, 10));
+    D2PathRequest.Room room = room(0, 0, 100, 100, false); r.room = room.bounds;
+    r.path.targetUnit = D2PathUnits.observation(D2PathUnits.Unit.dynamic(0, 2,
+        new D2PathUnits.DynamicPath(11 << 16, 10 << 16, 0)), target, 0);
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(r,
+        target, room, false, 0, 2, 3, 1, 70));
+    assertEquals(2, r.path.pathPointCount); assertEquals(99, r.pendingUpdate);
+  }
+
+  @Test void movedRequestStartRequiresRecaptureBeforeAnyCustomEffect() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathRequest.State s = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    s.result.path.currentPoint = p(11, 10);
+    Effects effects = new Effects();
+    assertThrows(IllegalArgumentException.class, () -> D2PathRequest.compute(s, false, effects));
+    assertTrue(effects.calls.isEmpty()); assertEquals(0x1234, s.collidedMask);
+    assertEquals(2, s.result.path.pathPointCount);
+  }
   @Test void standardObservationRejectsOwnerSizeMismatchBeforeEffectsExist() {
     D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
     D2PathRequest.State valid = request(result(0, p(10, 10), p(20, 10)), target,

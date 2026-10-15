@@ -2033,6 +2033,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 无新增生产功能，未宣称自动数据来源已完成；生产仍A*，Act/Zone/shared seed仍待。
   无新增DLL算法证据或动态DLL执行。
 
+## 第四十批：Request起点与owner观察一致性
+
+- Request.State标准Observation构造核对owner原生坐标与path.currentPoint，既有Request/
+  Search/effects观察校验入口执行时复检，拒绝旧观察与移动后的新起点混用。
+- 新增2项验证构造不一致和执行前起点改变时拒绝，custom effects不被调用，旧状态保持。
+  完整595项/51类通过，失败/错误/跳过0；core/build/round40-full.log，
+  XML .gradle/path-port/round40-full/core/test-results/pathPortTest。
+- 仅已提供坐标快照校验，不从浮点猜测、不自动刷新、不检查fp16低字；legacy自定义Target及
+  低层Result.State Dispatch边界保留。生产仍A*，raw数据/Act与Zone/shared seed仍待。
+  无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

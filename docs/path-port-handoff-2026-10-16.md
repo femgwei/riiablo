@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十九批续接结果（优先于下方历史起点）
+## 第四十批续接结果（优先于下方历史起点）
+
+- Request.State标准Observation构造时校验owner原生坐标与path.currentPoint一致；
+  Request/公开Search及RequestEffects既有复检入口也验证此条件，移动后需重新捕获和构造request。
+- 仅比较已提供原生坐标快照，不从ECS浮点推断；不宣称检查fp16低字或实时移动来源。
+  legacy自定义Target契约保留，低层Result.State Dispatch重载仍不具备完整request身份。
+- 新增2项，完整595项/51类通过，失败/错误/跳过0；core/build/round40-full.log，
+  XML `.gradle/path-port/round40-full/core/test-results/pathPortTest`。
+- 验证不一致在构造或custom effects执行前拒绝，collidedMask/旧点数保持；不自动刷新快照。
+  生产仍A*，raw数据/Act与Zone/shared seed仍待，无新增DLL算法证据或动态执行。
+
+## 第三十九批续接结果（历史）
 
 - 只新增组合回归：真实World玩家/对象组件，经NativePathDynamicFootprint与NativePathObjectFootprint
   读取后，由observeFootprints生成exact共享坐标观察，再交给Request/Dispatch具体effects。

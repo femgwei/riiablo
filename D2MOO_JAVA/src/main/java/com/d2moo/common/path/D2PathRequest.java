@@ -48,6 +48,7 @@ public final class D2PathRequest {
                 throw new IllegalArgumentException("effects owner/observation changed; rebuild the request");
             }
             observation.requireCurrent();
+            requireOwnerPoint();
         }
 
         void requireObservationCurrent() {
@@ -56,6 +57,13 @@ public final class D2PathRequest {
                 throw new IllegalArgumentException("request observation changed; rebuild the request");
             }
             observation.requireCurrent();
+            requireOwnerPoint();
+        }
+
+        private void requireOwnerPoint() {
+            if (!D2PathUnits.coordinates(observation.owner).equals(result.path.currentPoint)) {
+                throw new IllegalArgumentException("request start must match the owner observation; recapture after movement");
+            }
         }
 
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
@@ -91,6 +99,7 @@ public final class D2PathRequest {
                 if (observation.owner.type != result.path.ownerType || observation.owner.sizeX != unitSize) {
                     throw new IllegalArgumentException("request owner type/size must match the unit observation");
                 }
+                requireOwnerPoint();
             }
             this.target = target;
             this.startRoom = startRoom;

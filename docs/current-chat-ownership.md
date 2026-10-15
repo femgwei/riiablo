@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十批：Request标准Observation验证owner原生坐标与起点一致，构造及既有执行前检查覆盖；
+移动后需重捕获。不推断浮点或fp16低字。新增2项，完整595项/51类通过，失败/错误/跳过0。
+日志core/build/round40-full.log；生产仍A*，详细交接见handoff顶部。
+
 第三十九批：只补真实ECS动态/对象读取器→footprint观察→Request/Dispatch组合回归，
 验证door偏移、单次捕获、完整网格恢复及身份替换前置拒绝。
 新增2项，完整593项/51类通过，失败/错误/跳过0；core/build/round39-full.log。

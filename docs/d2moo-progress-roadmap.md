@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十批（生产适配仍PARTIAL）
+
+- [x] 标准Observation的owner坐标与request起点在构造及既有执行前入口核对，拒绝移动后混用。
+- [x] 新增2项，完整595项/51类通过，无失败/错误/跳过。
+- [ ] 仅已提供快照一致性，不自动刷新或推断fp16低字；raw数据、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder；legacy及低层入口边界保留。
+
 ## 2026-10-16 寻路第三十九批（生产适配仍PARTIAL）
 
 - [x] 真实ECS双读取器经生命周期footprint观察组合Request/Dispatch，验证door/网格恢复/替换拒绝。

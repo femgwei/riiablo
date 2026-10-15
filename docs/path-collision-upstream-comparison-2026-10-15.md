@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第四十批补充：Request标准Observation构造及既有执行前检查核对owner坐标与path起点一致，
+避免custom effects混用旧观察和新起点；移动后需重捕获。未推断ECS浮点或验证fp16低字。
+新增2项，完整595项/51类通过，失败/错误/跳过0；生产仍A*，无新增DLL算法证据或动态执行。
+
 第三十九批补充：真实World动态和对象读取器经observeFootprints组合Request/Dispatch，
 验证门偏移、读取一次、完整网格恢复和token替换拒绝；raw坐标/房间/pattern/mask仍显式提供。
 新增2项，完整593项/51类通过，失败/错误/跳过0；仅组合回归，生产仍A*，无新增DLL证据或动态执行。
