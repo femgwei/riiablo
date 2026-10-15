@@ -402,7 +402,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.range > 0 && missile.distanceTraveled >= missile.range;
     if (frameExpiry || distanceExpiry) {
       // LastCollide performs one final unit lookup before removal.
-      if (!missile.diabWallMaker && shouldResolveLastCollide(missile, true)) {
+      if (!missile.diabWallMaker && !missile.deathMaul && shouldResolveLastCollide(missile, true)) {
         if (distanceExpiry && !missile.attached && moveDistance > 0f
             && missile.distanceTraveled > missile.range) {
           // Only synthetic/legacy distance-limited rows clamp this endpoint.
@@ -444,6 +444,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     // that case the hit function is the native indication that collision is
     // required.
     if (missile.diabWallMaker || !hasNativeCollision(missile)) return;
+    // MISSMODE_HandleMissileCollision decrements CurrentFrame before Activate.
+    // Creation stores the original Range minus Activate; Do136 only changes Total/CurrentFrames.
+    if (missile.deathMaul
+        && missile.nativeLifetimeFrames - missile.nativeFrame >
+            Missile.nativeRangeFrames(missile.missile, missile.damageLevel) - missile.missile.Activate) return;
 
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
@@ -2209,7 +2214,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile == null || targetId < 0) return false;
     boolean nextHit = missile.missile != null && missile.missile.NextHit;
     if (nextHit && targetStates != null && targetStates.hasState(StateId.JUSTHIT)) return false;
-    if (missile.attached) {
+    if (missile.attached || missile.deathMaul) {
       if (!nextHit) {
         int nextFrame = missile.nextHitFrame.get(targetId, Integer.MIN_VALUE);
         if (missile.nativeFrame < nextFrame) return false;

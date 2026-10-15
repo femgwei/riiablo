@@ -34,5 +34,15 @@ class DeathMaulDataTest extends RiiabloTest {
     }
     assertEquals(6, rows);
     assertEquals(136, Riiablo.files.skills.get(308).srvdofunc);
+    com.riiablo.codec.excel.Missiles.Entry missile = Riiablo.files.Missiles.get("death mauler");
+    assertEquals(502, missile.Id);
+    assertEquals(0, missile.Vel);
+    assertEquals(60, missile.Range);
+    assertEquals(30, missile.Activate);
+    assertTrue(missile.NextHit);
+    assertEquals(10, missile.NextDelay);
+    assertFalse(missile.CollideKill);
+    assertEquals(1, missile.pSrvDoFunc);
+    assertEquals("96", Riiablo.files.skills.get(308).calc1);
   }
 }

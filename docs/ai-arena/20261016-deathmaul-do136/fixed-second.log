@@ -1,0 +1,218 @@
+Starting a Gradle Daemon, 14 busy and 6 stopped Daemons could not be reused, use --status for details
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava
+> Task :table:core:compileJava
+> Task :table:annotations:compileJava
+> Task :core:compileJava
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:161: ����: �޷�����ArchiveReader
+            D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                        ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\util\D2FileReader$ArchiveReader.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\util\D2FileReader$ArchiveReader.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:177: ����: �޷�����D2DrlgFlags
+                clientPresentation ? com.d2moo.common.drlg.D2DrlgFlags.ONCLIENT : 0,
+                                                          ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgFlags.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgFlags.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:200: ����: �޷�����LogLevel
+                D2Log.debug("ACT1_D2MOO_INIT level=%d type=%d beforeRooms=%d", levelId,
+                     ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\util\D2Log$LogLevel.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\util\D2Log$LogLevel.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:312: ����: �Ҳ�������
+            D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                        ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:1423: ����: �޷�����DrlgPresetUnitExporter
+        int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
+                                    ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\DrlgPresetUnitExporter.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\DrlgPresetUnitExporter.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:1562: ����: �޷�����DrlgDirtPathExporter
+              int dirtPaths = DrlgExport.exportLevelDirtPaths(drlg, levelId,
+                                        ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\DrlgDirtPathExporter.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\DrlgDirtPathExporter.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:3835: ����: �޷�����D2DrlgOrth
+        for (com.d2moo.common.drlg.D2DrlgOrth orth = room.getDrlgOrth();
+                                  ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgOrth.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgOrth.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:4166: ����: �޷�����D2DrlgVertexStrc
+    int count = Math.min(outdoors.getNVertices(), outdoors.getPPathStarts().length);
+                                                                           ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgVertexStrc.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgVertexStrc.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act2ArcaneD2MOOLayoutBridge.java:48: ����: �Ҳ�������
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                  ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act2D2MOOLayoutBridge.java:40: ����: �Ҳ�������
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                  ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act3D2MOOLayoutBridge.java:79: ����: �Ҳ�������
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                  ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act3D2MOOLayoutBridge.java:129: ����: �޷�����D2DrlgWarp
+          com.d2moo.common.drlg.D2DrlgWarp warp =
+                               ^
+  ��������ļ�: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgWarp.class
+    �޷������ļ�: java.nio.file.NoSuchFileException: F:\3rd_src\riiablo\build\deathmauler-isolated\D2MOO_JAVA\classes\java\main\com\d2moo\common\drlg\D2DrlgWarp.class
+    ��ɾ�����ļ���ȷ�����ļ�λ����ȷ����·����Ŀ¼�С�
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act3D2MOOLayoutBridge.java:132: ����: ��toString�����ò���ȷ
+              + " vis=" + java.util.Arrays.toString(warp == null ? null : warp.getNVis())
+                                          ^
+  Arrays �еķ��� toString(double[]) �� Arrays �еķ��� toString(Object[]) ��ƥ��
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act3D2MOOLayoutBridge.java:133: ����: ��toString�����ò���ȷ
+              + " warp=" + java.util.Arrays.toString(warp == null ? null : warp.getNWarp()));
+                                           ^
+  Arrays �еķ��� toString(double[]) �� Arrays �еķ��� toString(Object[]) ��ƥ��
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act4D2MOOLayoutBridge.java:67: ����: �Ҳ�������
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                  ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act5D2MOOLayoutBridge.java:73: ����: �Ҳ�������
+      D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+                  ^
+  ����:   �� ArchiveReader
+  λ��: �� D2FileReader
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\NativeLevelSeamAnchor.java:15: ����: �Ҳ�������
+        for (D2DrlgOrth orth = room.getDrlgOrth(); orth != null; orth = orth.getPNext()) {
+             ^
+  ����:   �� D2DrlgOrth
+  λ��: �� NativeLevelSeamAnchor
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\NativeLevelSeamAnchor.java:31: ����: �Ҳ�������
+      for (D2DrlgOrth orth = owner.getOutdoors().getPRoomData(); orth != null; orth = orth.getPNext()) {
+           ^
+  ����:   �� D2DrlgOrth
+  λ��: �� NativeLevelSeamAnchor
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:203: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(systemRoot, new Object[]{new Integer(ret[0])});
+                                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:206: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(userRoot, new Object[]{new Integer(ret[0])});
+                                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:308: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+                new Integer(handles[0]), toCstr(value)
+                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:312: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Integer(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:322: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            root, new Object[]{new Integer(hkey), toCstr(key)}
+                               ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:341: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        root, new Object[]{new Long(handles[0]), toCstr(value)}
+                           ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:343: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:360: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:373: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:390: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:402: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:410: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    return (int[]) regCreateKeyEx.invoke(root, new Object[]{new Long(hkey), toCstr(key)});
+                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:424: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regSetValueEx.invoke(root, new Object[]{new Long(handles[0]), toCstr(valueName), toCstr(value)});
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:425: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+18 ������
+30 ������
+
+> Task :core:compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 1m 8s
+6 actionable tasks: 5 executed, 1 up-to-date

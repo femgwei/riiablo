@@ -529,6 +529,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (skill.srvdofunc == 136) {
+      spawnDeathMaul(event, skill);
+      return;
+    }
     if (skill.srvdofunc == 104) {
       spawnDiabPrison(event, skill);
       return;
@@ -3624,6 +3628,37 @@ public class ServerSkillSystem extends PassiveSystem {
       return mMonster.get(entityId).conversionOwnerId;
     }
     return entityId;
+  }
+
+  /** SrvDo136 creates its stationary missile at the target, not at the caster. */
+  private void spawnDeathMaul(SkillDoEvent event, Skills.Entry skill) {
+    Vector2 target;
+    if (event.targetId >= 0 && world.getEntityManager().isActive(event.targetId)
+        && mPosition.has(event.targetId)) target = new Vector2(mPosition.get(event.targetId).position);
+    else if (event.targetVec != null) target = new Vector2(event.targetVec);
+    else return;
+    target.set(com.badlogic.gdx.math.MathUtils.floor(target.x), com.badlogic.gdx.math.MathUtils.floor(target.y));
+    int distance = NativeDeathMaul.distance(mPosition.get(event.entityId).position, target);
+    if (target.isZero() || distance > 100) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null || row.Id <= 0) return;
+    int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
+    int id = createMissile(row, Vector2.X, target, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    initializeSkillDamage(id, skill, event.entityId, level);
+    Missile missile = mMissile.get(id);
+    missile.skillId = skill.Id;
+    missile.damageLevel = level;
+    missile.deathMaul = true;
+    missile.nativeLifetimeFrames = NativeDeathMaul.lifetime(Missile.nativeRangeFrames(row, level), distance);
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    int speed = SkillFormula.evaluate(skill.calc1, skill, level);
+    com.riiablo.engine.server.component.AnimData anim = world.getMapper(
+        com.riiablo.engine.server.component.AnimData.class).get(id);
+    if (anim != null && speed > 0) anim.speed = anim.override = speed;
+    log.info("[DEATH_MAUL] source={} missile={} row={} skill={} level={} distance={} lifetime={} speed={} target=({}, {})",
+        event.entityId, id, row.Id, skill.Id, level, distance, missile.nativeLifetimeFrames,
+        speed, target.x, target.y);
   }
 
   private Vector2 resolveTargetPoint(SkillDoEvent event, Vector2 fallback, Vector2 out) {

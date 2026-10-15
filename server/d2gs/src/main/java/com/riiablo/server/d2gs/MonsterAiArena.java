@@ -33,6 +33,7 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
@@ -204,6 +205,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)
         || "FrozenHorror".equals(monster.AI) || "Megademon".equals(monster.AI)) scenarios.add("inferno-cycle");
+    if ("DeathMauler".equals(monster.AI)) scenarios.add("deathmaul-cycle");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
@@ -248,6 +250,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
           .with(new AIStepper(), new DynamicUnitCollisionSystem(), new Pathfinder())
           .with(new VelocityAdder(), new VelocityModeChanger(false, true), new AnimDataResolver(), factory)
           .build().register("map", map).register("factory", factory)
+          .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry())
           .register("partyManager", new PartyManager())
           .register("combatPositionHistory", new CombatPositionHistory(map)));
       world.inject(map);
@@ -270,6 +273,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       stats.reset();
       float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
           || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
+      if (result.scenario.equals("deathmaul-cycle")) distance = 10;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
       zone.attachEntity(playerId);
@@ -325,6 +329,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
       result.actualAi = ai.ai.getClass().getSimpleName();
       result.fallback = ai.ai instanceof GenericMonster;
       int corpse = helpers(world, factory, zone, row.monster, subject, 128 + distance, result, capture);
+      if (result.scenario.equals("deathmaul-cycle")) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "BASELINE_PLUS_DEATH_MAUL";
+        probe.deathMaul = true;
+      }
       Vector2 previous = world.getMapper(Position.class).get(subject).position.cpy();
       boolean frogApproachRequested = false;
       boolean wallRunSeen = false;
@@ -408,6 +418,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("submerge-cycle") ? "SUBMERGE_CYCLE_OBSERVED"
               : result.scenario.equals("frog-emerge") ? "FROG_EMERGENCE_OBSERVED"
               : result.scenario.equals("inferno-cycle") ? "INFERNO_CYCLE_OBSERVED"
+              : result.scenario.equals("deathmaul-cycle") ? "DEATH_MAUL_CYCLE_OBSERVED"
               : result.scenario.equals("diab-cold") ? "DIAB_COLD_OBSERVED"
               : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED"
               : result.scenario.equals("diab-run") ? "DIAB_RUN_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
@@ -547,6 +558,10 @@ public final class MonsterAiArena extends ApplicationAdapter {
     SubmergeCycle cycle;
     FrogCycle frog;
     InfernoCycle inferno;
+    boolean deathMaul, maulActionValid, maulValid = true, maulDelayed;
+    int maulId = -1, maulTarget = -1, maulLifetime, maulLastFrame, maulLastHit = -1, maulHits;
+    float maulHp, maulDamage;
+    Vector2 maulOrigin;
     int horrorVictim = -1;
     float horrorLifeBefore, horrorDamage;
     boolean horrorDamageObserved;
@@ -584,6 +599,12 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
+      if (deathMaul && maulId < 0 && event.skillId == 308 && event.srvdofunc == 136) {
+        Sequence seq = world.getMapper(Sequence.class).get(subject);
+        maulActionValid = seq != null && seq.started && seq.nativeDeathMaul
+            && seq.mode1 == Engine.Monster.MODE_A2 && seq.nativeDeathMaulFrame == (13 << 8);
+        maulTarget = event.targetId;
+      }
       if (prisonPhase == 0 && event.skillId == 199 && event.srvdofunc == 104) {
         Casting cast = world.getMapper(Casting.class).get(subject);
         Sequence seq = world.getMapper(Sequence.class).get(subject);
@@ -629,6 +650,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (deathMaul) observeDeathMaul();
       if (megademonVictim >= 0) {
         float life = world.getMapper(AttributesWrapper.class).get(megademonVictim).attrs.get(Stat.hitpoints).asFixed();
         megademonDamageObserved |= megademonDamage > 0
@@ -797,6 +819,18 @@ public final class MonsterAiArena extends ApplicationAdapter {
         capture.line("PrisonPlayerHit victim=" + event.victim + " damage=" + event.damage);
       }
       if (event.attacker != subject) return;
+      if (deathMaul && event.missileId == maulId && maulId >= 0) {
+        com.riiablo.engine.server.component.Missile m = world.getMapper(
+            com.riiablo.engine.server.component.Missile.class).get(maulId);
+        maulValid &= m != null && m.ownerId == subject && m.skillId == 308 && m.missile.Id == 502
+            && event.victim == maulTarget && event.kind == DamageEvent.MISSILE
+            && event.damage > 0 && event.damage == event.physicalDamage
+            && event.fireDamage == 0 && event.coldDamage == 0 && event.lightningDamage == 0
+            && event.magicDamage == 0 && event.poisonDamage == 0
+            && m.nativeLifetimeFrames - m.nativeFrame <= 30
+            && (maulLastHit < 0 || m.nativeFrame - maulLastHit >= 10);
+        maulLastHit = m.nativeFrame; maulHits++; maulDamage += event.damage;
+      }
       if (inferno != null && "Megademon".equals(capture.result.ai) && event.missileId >= 0) {
         com.riiablo.engine.server.component.Missile missile = world.getMapper(
             com.riiablo.engine.server.component.Missile.class).get(event.missileId);
@@ -865,6 +899,50 @@ public final class MonsterAiArena extends ApplicationAdapter {
       capture.result.damage += event.damage;
       capture.line("Damage subject=" + subject + " victim=" + event.victim + " amount=" + event.damage);
     }
+    private void observeDeathMaul() {
+      if (capture.result.specialPassed) return;
+      if (maulId < 0 && maulActionValid) {
+        com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
+            com.riiablo.engine.server.component.Missile.class)).getEntities();
+        for (int i = 0; i < ids.size(); i++) {
+          int id = ids.get(i);
+          com.riiablo.engine.server.component.Missile m = world.getMapper(
+              com.riiablo.engine.server.component.Missile.class).get(id);
+          if (m.ownerId != subject || m.skillId != 308 || m.missile.Id != 502) continue;
+          maulId = id; maulLifetime = m.nativeLifetimeFrames;
+          maulOrigin = world.getMapper(Position.class).get(id).position.cpy();
+          Vector2 target = world.getMapper(Position.class).get(maulTarget).position;
+          int distance = com.riiablo.engine.server.NativeDeathMaul.distance(
+              world.getMapper(Position.class).get(subject).position, target);
+          int expected = distance < 1 ? 32 : distance >= 10 ? 60 * distance / 12 : 30 + 60 * distance / 24;
+          maulHp = world.getMapper(AttributesWrapper.class).get(maulTarget).attrs.get(Stat.hitpoints).asFixed();
+          maulValid &= m.deathMaul && m.damageSnapshot && m.nativeFrame == 0
+              && m.damageLevel == world.getMapper(Monster.class).get(subject).monstats.Sk1lvl
+              && maulLifetime == expected && maulOrigin.epsilonEquals((float)Math.floor(target.x), (float)Math.floor(target.y), .001f);
+          capture.line("DeathMaulCreate id=" + id + " target=" + maulTarget + " lifetime=" + maulLifetime + " valid=" + maulValid);
+          break;
+        }
+      }
+      if (maulId < 0) return;
+      com.riiablo.engine.server.component.Missile m = world.getMapper(
+          com.riiablo.engine.server.component.Missile.class).get(maulId);
+      float hp = world.getMapper(AttributesWrapper.class).get(maulTarget).attrs.get(Stat.hitpoints).asFixed();
+      maulValid &= Math.abs(maulHp - maulDamage - hp) < .01f;
+      if (m != null && world.getEntityManager().isActive(maulId)) {
+        maulValid &= world.getMapper(Position.class).get(maulId).position.epsilonEquals(maulOrigin, .001f)
+            && world.getMapper(Velocity.class).get(maulId).velocity.isZero();
+        if (maulLifetime - m.nativeFrame > 30 && m.nativeFrame > 0) {
+          maulDelayed = true; maulValid &= maulHits == 0 && hp == maulHp;
+        }
+        maulLastFrame = m.nativeFrame;
+      } else {
+        capture.result.specialPassed = maulValid && maulDelayed && maulHits >= 2
+            && maulDamage > 0 && maulLastFrame == maulLifetime - 1;
+        capture.line("DeathMaulExpire id=" + maulId + " hits=" + maulHits + " damage=" + maulDamage
+            + " hp=" + maulHp + "->" + hp + " valid=" + capture.result.specialPassed);
+      }
+    }
+
     private void observePrison() {
       int before = prisonPhase;
       DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
@@ -1099,6 +1177,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + ("submerge-cycle".equals(result.scenario) ? "SUBMERGE_CYCLE"
               : "frog-emerge".equals(result.scenario) ? "FROG_EMERGENCE"
               : "inferno-cycle".equals(result.scenario) ? "INFERNO_CYCLE"
+              : "deathmaul-cycle".equals(result.scenario) ? "DEATH_MAUL_CYCLE"
               : "diab-cold".equals(result.scenario) ? "DIAB_COLD"
               : "diab-wall".equals(result.scenario) ? "DIAB_WALL"
               : "diab-prison".equals(result.scenario) ? "DIAB_PRISON"

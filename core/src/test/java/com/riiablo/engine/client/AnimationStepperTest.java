@@ -79,6 +79,9 @@ class AnimationStepperTest extends RiiabloTest {
       missile.skillId = -1;
       assertEquals(missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256,
           MissileLoader.nativeFrameDelta(missile));
+      missile.missile = Riiablo.files.Missiles.get("death mauler");
+      missile.skillId = 308; missile.damageLevel = 3; missile.nativeLifetimeFrames = 50;
+      assertEquals(96, MissileLoader.nativeFrameDelta(missile));
     } finally { world.dispose(); }
   }
   @Test void frogHiddenFollowsSourceZeroAndEmergenceClearsTheHold() {

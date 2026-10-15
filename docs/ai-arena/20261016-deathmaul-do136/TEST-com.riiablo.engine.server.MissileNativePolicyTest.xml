@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.MissileNativePolicyTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-15T17:18:33" hostname="DESKTOP-7GGAVHU" time="0.093">
+  <properties/>
+  <testcase name="pierceCountIsPreRolledCappedAndConsumed()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.001"/>
+  <testcase name="basicMovingMissilesUseNativeFrameLifetime()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.001"/>
+  <testcase name="projectileAndSharedCastHitSetsRemainIdempotent()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="collideTypeMapsToNativeBarrierAndWallMasks()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="lastCollideIsReadFromTheNativeRow()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="slowMissileVelocityUsesCanSlowAndNativeStateStat()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.004"/>
+  <testcase name="lastCollideUsesExactRangeEndpointWhenAFrameOvershoots()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="redirectedMonsterMissileTreatsItsTemporaryTargetAsHostile()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.002"/>
+  <testcase name="lastCollideEndpointGateIsSingleUseAndRequiresCollision()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.001"/>
+  <testcase name="multiLaneVolleyClaimsDistinctTargetsButDeduplicatesOverlap()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="chargedBoltLifetimeCapsLongRowsWithoutExtendingShortRows()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="pierceRollUsesPerProjectileDeterministicState()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="basicLifetimeDoesNotDependOnTravelSpeed()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.002"/>
+  <testcase name="zeroVelocityMissilesExpireByNativeLifetimeUnderLongRunPressure()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.06"/>
+  <testcase name="collisionAndCollideKillFlagsAreReadFromTheNativeRow()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.0"/>
+  <testcase name="shortLivedMissilesAreReclaimedUnderEntityPressure()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.007"/>
+  <testcase name="chargedBoltOverrideExpiresByFramesNotLegacyDistance()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.004"/>
+  <testcase name="nextHitAndNextDelayGateAttachedMissilesPerNativeFrame()" classname="com.riiablo.engine.server.MissileNativePolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

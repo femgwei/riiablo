@@ -138,6 +138,8 @@ public class Missile extends PooledComponent {
   public boolean clientRecyclerExplosionSpawned;
   /** Native TotalFrames, independent of velocity; explicit skill overrides are allowed. */
   public int nativeLifetimeFrames;
+  /** Stationary SrvDo136 missile: Activate countdown and NextDelay re-hits. */
+  public boolean deathMaul;
   public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
       new com.badlogic.gdx.utils.IntIntMap();
 
@@ -324,6 +326,7 @@ public class Missile extends PooledComponent {
     clientRecyclerVineSpawned = false;
     clientRecyclerExplosionSpawned = false;
     nativeLifetimeFrames = 0;
+    deathMaul = false;
     nextHitFrame.clear();
     wakeMaker = false;
     wakeSpawned = false;

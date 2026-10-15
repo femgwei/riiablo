@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 DeathMaul Do136（服务端效果通过，整体PARTIAL）
+
+- [x] 对照原版在目标坐标创建静止502导弹；整数距离、寿命公式跳变及动画率96。
+- [x] 原始Range减Activate的倒计时激活门、NextDelay=10共享状态重复命中及到期清理。
+- [x] 92项定向测试及独立复跑通过；557行/1180场两次一致，六个自然专项场实际物理扣血通过。
+- [x] 原四个远场WARNING/零伤害修为实际伤害，其余既有场景不变；66个专项断言通过。
+- [ ] CltDo76/trail、真实GL/TCP/地形、多seed/三难度自然场、单位RNG/全局调度仍待。
+
+证据：[DeathMaul Do136验证](ai-arena/20261016-deathmaul-do136/verification.md)。
+
 ## 2026-10-16 A2–A5 普通回城门城镇落点
 
 - [x] 修复 A2/A4 共用地形导出、A3 与 A5 独立导出遗漏 `townPortalSpawn` 的问题；

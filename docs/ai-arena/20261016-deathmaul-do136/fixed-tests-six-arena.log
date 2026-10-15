@@ -1,0 +1,453 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava
+> Task :table:core:compileJava
+> Task :table:annotations:compileJava
+
+> Task :core:compileJava
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeMonsterSpawnExclusion.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgLevel;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeMonsterSpawnExclusion.java:4: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgDrlgWarp;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Map.java:2722: ����: �����com.d2moo.common.drlg������
+    public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
+                                                                 ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act2ArcaneSanctuaryLayout.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LvlPrestIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act2ArcaneSanctuaryLayout.java:4: ����: �����com.d2moo.common.seed������
+import com.d2moo.common.seed.Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act2ArcaneSanctuaryLayout.java:5: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeMonsterSpawnExclusion.java:16: ����: �Ҳ�������
+  public static void capture(D2DrlgLevel level, Map.Zone zone) {
+                             ^
+  ����:   �� D2DrlgLevel
+  λ��: �� NativeMonsterSpawnExclusion
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:5: ����: �����com.d2moo.common.path������
+import com.d2moo.common.path.D2AStar;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:6: ����: �����com.d2moo.common.path������
+import com.d2moo.common.path.D2Path;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:113: ����: �����D2Path������
+  private static Run replay(Snapshot snapshot, D2Path.Point start, D2Path.Point target,
+                                                     ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:113: ����: �����D2Path������
+  private static Run replay(Snapshot snapshot, D2Path.Point start, D2Path.Point target,
+                                                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:131: ����: �����D2Path������
+  private static List<D2Path.Point> copy(GraphPath<Point2> path) {
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:233: ����: �����D2Path������
+    public final List<D2Path.Point> path, turns;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:236: ����: �����D2Path������
+    private Run(boolean success, List<D2Path.Point> path, List<D2Path.Point> turns,
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:236: ����: �����D2Path������
+    private Run(boolean success, List<D2Path.Point> path, List<D2Path.Point> turns,
+                                                                     ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:244: ����: �����D2Path������
+    public Outcome outcome(D2Path.Point target) {
+                                 ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:149: ����: �����D2Path������
+    static Snapshot capture(D2Path.Point start, D2Path.Point target, D2AStar.Collision source) {
+                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:149: ����: �����D2Path������
+    static Snapshot capture(D2Path.Point start, D2Path.Point target, D2AStar.Collision source) {
+                                                      ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:149: ����: �����D2AStar������
+    static Snapshot capture(D2Path.Point start, D2Path.Point target, D2AStar.Collision source) {
+                                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:254: ����: �����D2Path������
+    public final D2Path.Point start, target;
+                       ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:256: ����: �����D2Path������
+    public final List<D2Path.Point> livePath;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:261: ����: �����D2Path������
+        boolean canOpenDoors, boolean partial, D2Path.Point start, D2Path.Point target,
+                                                     ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:261: ����: �����D2Path������
+        boolean canOpenDoors, boolean partial, D2Path.Point start, D2Path.Point target,
+                                                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:262: ����: �����D2Path������
+        Status status, boolean liveSuccess, List<D2Path.Point> livePath,
+                                                       ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:211: ����: �����D2Path������
+    private Context(Map.Zone source, Map.Zone destination, D2Path.Point start,
+                                                                 ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:212: ����: �����D2Path������
+        D2Path.Point target, boolean dynamicObstacle) {
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePathShadow.java:219: ����: �����D2Path������
+    private static int roomId(Map.Zone zone, D2Path.Point point) {
+                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\ai\AI.java:16: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\ai\AI.java:17: ����: �����com.d2moo.common.seed������
+import com.d2moo.common.seed.Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\ai\AI.java:150: ����: �Ҳ�������
+  private D2Seed aiSeed;
+          ^
+  ����:   �� D2Seed
+  λ��: �� AI
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\ai\AI.java:174: ����: �Ҳ�������
+  private D2Seed aiSeed() {
+          ^
+  ����:   �� D2Seed
+  λ��: �� AI
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativePresetObjectResolver.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\client\ActTransitionSystem.java:6: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:8: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:9: ����: �����com.d2moo.common.seed������
+import com.d2moo.common.seed.Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:15: ����: �Ҳ�������
+  private final java.util.IdentityHashMap<Map, D2Seed> controls = new java.util.IdentityHashMap<>();
+                                               ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:116: ����: �Ҳ�������
+  private static int themeBarrels(Map.Zone zone, Map.RoomEx room, D2Seed seed) {
+                                                                  ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:139: ����: �Ҳ�������
+  private static int next(D2Seed seed, int maximum) {
+                          ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:185: ����: �Ҳ�������
+      D2Seed seed, String source, int function) {
+      ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:206: ����: �Ҳ�������
+  private static void barrels(Map.Zone z, Map.RoomEx r, int density, D2Seed seed, String source) {
+                                                                     ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:235: ����: �Ҳ�������
+  private static void crates(Map.Zone z, Map.RoomEx r, Objects.Entry b, int density, D2Seed seed, String source) {
+                                                                                     ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:264: ����: �Ҳ�������
+      D2Seed seed, String source) {
+      ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:303: ����: �Ҳ�������
+  private static void shrine(Map.Zone z, Map.RoomEx r, Objects.Entry b, D2Seed seed, Region region, String source) {
+                                                                        ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:321: ����: �Ҳ�������
+  private static void well(Map.Zone z, Map.RoomEx r, Objects.Entry b, D2Seed seed, Region region, String source) {
+                                                                      ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:337: ����: �Ҳ�������
+  private static void rogues(Map.Zone z, Map.RoomEx r, Objects.Entry b, D2Seed seed, String source) {
+                                                                        ^
+  ����:   �� D2Seed
+  λ��: �� NativeObjectPopulation
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:357: ����: �Ҳ�������
+    final D2Seed seed;
+          ^
+  ����:   �� D2Seed
+  λ��: �� Region
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\NativeObjectPopulation.java:361: ����: �Ҳ�������
+    Region(D2Seed control, int populatedRooms) {
+           ^
+  ����:   �� D2Seed
+  λ��: �� Region
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\EnvironmentObjectSystem.java:7: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2ObjectIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\object\NativeTrapSystem.java:8: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2ObjectIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act1QuestSystem.java:9: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act1QuestSystem.java:34: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2SuperUniques;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2DurielQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2DurielQuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2HoradricStaffDropSystem.java:8: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2QuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2QuestSystem.java:11: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2SuperUniques;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2TaintedSunQuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2TombSelection.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2TombSelection.java:4: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act2TombSelection.java:5: ����: �����com.d2moo.common.seed������
+import com.d2moo.common.seed.Seed;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act3MephistoQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act3MephistoQuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act3QuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act4DiabloQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act4QuestSystem.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5AncientsQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5BaalQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5NihlathakQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5PrisonQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5QuestSystem.java:12: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5QuestSystem.java:13: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2SuperUniques;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5RescueQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\Act5ShenkQuest.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\engine\server\quest\QuestWarpPolicy.java:3: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:16: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgDrlg;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:17: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgExport;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:18: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgTileExporter;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:19: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgDrlgRoom;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:20: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.DrlgDrlgWarp;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:21: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgGridStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:22: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgLevel;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:23: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:24: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgRoom;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:25: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:26: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:27: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2ObjectIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:28: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2MonsterIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\Act1MapBuilderD2MOD.java:29: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2UnitTypes;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:3: ����: �����com.d2moo.common.datatbls������
+import com.d2moo.common.datatbls.DataTbls;
+                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:4: ����: �����com.d2moo.common.datatbls������
+import com.d2moo.common.datatbls.D2LevelDefBin;
+                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:5: ����: �����com.d2moo.common.datatbls������
+import com.d2moo.common.datatbls.D2LevelTypesTxt;
+                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:6: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgAct;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:7: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2C_Acts;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:8: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgCoord;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:9: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgLevel;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:10: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgPresetInfoStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:11: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgTileInfoStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:12: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgStrc;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:13: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2LevelIds;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\d2moo\Act1D2MOOLayoutBridge.java:14: ����: �����com.d2moo.common.drlg������
+import com.d2moo.common.drlg.D2DrlgTypes;
+                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:203: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(systemRoot, new Object[]{new Integer(ret[0])});
+                                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:206: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(userRoot, new Object[]{new Integer(ret[0])});
+                                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:308: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+                new Integer(handles[0]), toCstr(value)
+                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:312: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Integer(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:322: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            root, new Object[]{new Integer(hkey), toCstr(key)}
+                               ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:341: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        root, new Object[]{new Long(handles[0]), toCstr(value)}
+                           ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:343: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:360: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:373: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:390: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:402: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:410: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    return (int[]) regCreateKeyEx.invoke(root, new Object[]{new Long(hkey), toCstr(key)});
+                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:424: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regSetValueEx.invoke(root, new Object[]{new Long(handles[0]), toCstr(valueName), toCstr(value)});
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:425: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+100 ������
+30 ������
+����ʾǰ 100 �����󣨹� 1113 ��������Ҫ�鿴���������ʹ�� -Xmaxerrs
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+> Task :core:compileJava FAILED
+Execution failed for task ':core:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 38s
+6 actionable tasks: 5 executed, 1 up-to-date

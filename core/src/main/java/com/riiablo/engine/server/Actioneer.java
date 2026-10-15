@@ -2624,6 +2624,7 @@ public class Actioneer extends PassiveSystem {
       case 115: // Druid vine summon is resolved by ServerSkillSystem
       case 119: // Druid summon is resolved by ServerSkillSystem
       case 130: // Druid Vine Attack missile is resolved by ServerSkillSystem
+      case 136: // DeathMaul target-position missile is resolved by ServerSkillSystem
         break;
       case 97: { // native monster Resurrect
         boolean restored = targetId != Engine.INVALID_ENTITY

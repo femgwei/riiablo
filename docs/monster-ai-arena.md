@@ -1,5 +1,13 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 DeathMaul Do136（服务端效果通过，整体PARTIAL）
+
+技能308按原版在目标坐标生成静止502导弹，使用整数距离寿命公式、倒计时激活与
+NextDelay=10重复命中。92项定向测试通过，六个自然专项场均验证延迟、实际物理扣血与到期移除。
+完整目录扩为557行/1180场；原四个远场从WARNING/零伤害改为实际伤害，其余既有场景不变。
+客户端CltDo76/trail、真实GL/TCP及单位RNG/全局调度仍待。
+证据见 [Do136验证](ai-arena/20261016-deathmaul-do136/verification.md)。
+
 ## 最新修复批次：2026-10-16 DeathMauler MonSeq（PARTIAL）
 
 技能308改用原表 `seq_deathmaulerdig`：35个A2序列点，第13点只发一次攻击事件。

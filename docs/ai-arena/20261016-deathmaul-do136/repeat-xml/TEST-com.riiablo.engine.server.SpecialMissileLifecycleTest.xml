@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SpecialMissileLifecycleTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-15T17:20:34" hostname="DESKTOP-7GGAVHU" time="0.025">
+  <properties/>
+  <testcase name="guidedRetargetUsesCountdownBeforeDecrement()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.0"/>
+  <testcase name="stalledWakeMakerExpiresWithoutEmittingWaves()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.0"/>
+  <testcase name="specialCallbackLifetimesAreIndependentOfVelocity()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.02"/>
+  <testcase name="persistentEffectsKeepTheirExplicitRemainingFramePolicy()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.001"/>
+  <testcase name="attachedCallbacksFollowOwnerUntilOwnerIsRemoved()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.002"/>
+  <testcase name="novaRotatesElapsedIntegerOffsetsAndPreservesSlowedSpeed()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.0"/>
+  <testcase name="zeroAndNegativeNativeRangeExpireOnFirstUpdate()" classname="com.riiablo.engine.server.SpecialMissileLifecycleTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+tick=-1 BEGIN monster=deathmauler1 scenario=near seed=1 difficulty=0 level=110 fixture=synthetic_open_arena playerHP=1000000 oracle=NONE
+com.artemis.MundaneWireException: Error while wiring com.riiablo.engine.server.WarpInteractor
+	at com.artemis.injection.CachedInjector.inject(CachedInjector.java:80)
+	at com.artemis.WorldConfiguration.initializeSystems(WorldConfiguration.java:190)
+	at com.artemis.WorldConfiguration.initialize(WorldConfiguration.java:179)
+	at com.artemis.World.<init>(World.java:89)
+	at com.riiablo.server.d2gs.MonsterAiArena.runCase(MonsterAiArena.java:254)
+	at com.riiablo.server.d2gs.MonsterAiArena.create(MonsterAiArena.java:159)
+	at com.badlogic.gdx.backends.headless.HeadlessApplication.mainLoop(HeadlessApplication.java:109)
+	at com.badlogic.gdx.backends.headless.HeadlessApplication$1.run(HeadlessApplication.java:94)
+Caused by: com.artemis.MundaneWireException: Not registered: townPortalRegistry=class com.riiablo.engine.server.portal.TownPortalRegistry
+	at com.artemis.injection.WiredFieldResolver.resolve(WiredFieldResolver.java:44)
+	at com.artemis.injection.FieldHandler.resolve(FieldHandler.java:117)
+	at com.artemis.injection.CachedInjector.injectField(CachedInjector.java:159)
+	at com.artemis.injection.CachedInjector.injectValidFields(CachedInjector.java:90)
+	at com.artemis.injection.CachedInjector.inject(CachedInjector.java:75)
+	... 7 more

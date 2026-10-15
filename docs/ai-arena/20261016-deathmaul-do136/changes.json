@@ -1,0 +1,84 @@
+[
+  {
+    "monster": "deathmauler1",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  },
+  {
+    "monster": "deathmauler2",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  },
+  {
+    "monster": "deathmauler3",
+    "scenario": "far",
+    "changes": [
+      "status: WARNING -> ACTION_OBSERVED",
+      "damageEvents: 0 -> 35",
+      "warnings: 14 -> 0",
+      "damage: 0 -> 791"
+    ]
+  },
+  {
+    "monster": "deathmauler3",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  },
+  {
+    "monster": "deathmauler4",
+    "scenario": "far",
+    "changes": [
+      "status: WARNING -> ACTION_OBSERVED",
+      "damageEvents: 0 -> 35",
+      "warnings: 14 -> 0",
+      "damage: 0 -> 931"
+    ]
+  },
+  {
+    "monster": "deathmauler4",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  },
+  {
+    "monster": "deathmauler5",
+    "scenario": "far",
+    "changes": [
+      "status: WARNING -> ACTION_OBSERVED",
+      "damageEvents: 0 -> 36",
+      "warnings: 14 -> 0",
+      "damage: 0 -> 1099"
+    ]
+  },
+  {
+    "monster": "deathmauler5",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  },
+  {
+    "monster": "deathmauler6",
+    "scenario": "far",
+    "changes": [
+      "status: WARNING -> ACTION_OBSERVED",
+      "damageEvents: 0 -> 36",
+      "warnings: 14 -> 0",
+      "damage: 0 -> 523"
+    ]
+  },
+  {
+    "monster": "deathmauler6",
+    "scenario": "deathmaul-cycle",
+    "changes": [
+      "NEW_SCENE"
+    ]
+  }
+]

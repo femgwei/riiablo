@@ -139,6 +139,11 @@ public class MissileLoader extends IteratingSystem {
   }
 
   static int nativeFrameDelta(Missile missile) {
+    if (missile.skillId == 308 && missile.missile.Id == 502) {
+      int speed = com.riiablo.engine.server.skill.SkillFormula.evaluate(
+          Riiablo.files.skills.get(308).calc1, Riiablo.files.skills.get(308), missile.damageLevel);
+      if (speed > 0) return speed;
+    }
     // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
     // animation rate along with TotalFrames, not just its travel distance.
     if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
