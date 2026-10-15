@@ -1,0 +1,6 @@
+PASS difficulty=0 one-shot decision/event checks; repeat SHA256=71FF526EFA01772F29B039B0B84AD47ACD1E8C10C8ADEB51EDC63701016FB99D
+PASS difficulty=1 one-shot decision/event checks; repeat SHA256=6FB976709C5B17DC461AE435049A41CCFCB7E63B7C7959635C17AF0282C7ACFB
+PASS difficulty=2 one-shot decision/event checks; repeat SHA256=F364AEB424EF9D0BE673BF99EDA5792C2136236E059E20BEDB07BA71AFBAB644
+PASS 12 scene executions: six near one-shot actions and six far no-action observations.
+PARTIAL: four higher-difficulty near executions have one damage event; Normal near has no damage.
+No Normal damage, GL/TCP, terrain or global scheduling acceptance.

@@ -1,0 +1,1 @@
+Initial verifier failed: Damage observation changed; investigate (verify.ps1 line 45). Normal near had no damage, but Nightmare/Hell near each had one damage event (79/131). The all-difficulties-zero assumption was wrong. This is a retrospective record of the tool-visible terminating error; redirection did not retain that error.

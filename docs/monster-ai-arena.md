@@ -1,5 +1,15 @@
 # 逐怪 AI 隔离测试场
 
+## 2026-10-16 Spirit Fn097（决策/事件通过，整体PARTIAL）
+
+mephistospirit接入专用AI：首次近战只发一次A1，之后等待50帧，未攻击时远处等待10帧；
+目标丢失和owner warp不重置。57项定向测试通过，含50帧边界。
+三难度seed1近远及独立复跑共12次执行，六次近场各一次攻击事件后持续等待，
+六次远场无动作；无fallback/警告/错误。Nightmare/Hell近场各一次实际伤害（79/131），
+Normal近场没有伤害事件或扣血，Normal伤害未验收。
+真实GL/TCP、地形和全局调度仍待。
+证据见 [Spirit验证](ai-arena/20261016-spirit-seed1/verification.md)。
+
 ## 2026-10-16 Minion Fn116 普通决策（PARTIAL）
 
 11行接入无命令分支，保留原版参数1兼作近战等待/A2概率的错误；命令队列仍待。

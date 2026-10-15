@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 Spirit Fn097（整体PARTIAL）
+
+- [x] 专用一次性近战攻击、攻击后50帧等待及攻击前非近战10帧等待；目标丢失/warp不重置。
+- [x] 57项定向测试通过；三难度seed1共12次场景执行，近场各一次事件，独立复跑一致。
+- [x] Nightmare/Hell近场各一次实际伤害（79/131），复跑一致。
+- [ ] Normal近场伤害事件/扣血为0，不作为伤害通过；真实GL/TCP、地形、单位RNG及全局调度仍待。
+
+证据：[Spirit验证](ai-arena/20261016-spirit-seed1/verification.md)。
+
 ## 2026-10-16 佣兵雇佣与复活 NPC 分流
 
 - [x] 对照 D2MOO `D2GAME_NPC_BuildHirelingList_6FCC6FF0` 与

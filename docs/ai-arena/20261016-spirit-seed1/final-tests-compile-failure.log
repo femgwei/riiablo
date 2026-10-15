@@ -1,0 +1,34 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+
+> Task :D2MOO_JAVA:compileJava
+F:\3rd_src\riiablo\D2MOO_JAVA\src\main\java\com\d2moo\common\path\D2PathDispatch.java:62: ����: �Ҳ�������
+            end = D2Toward.trace(start,end,collision).point;
+                                                     ^
+  ����:   ���� point
+  λ��: �� RayResult
+F:\3rd_src\riiablo\D2MOO_JAVA\src\main\java\com\d2moo\common\path\D2PathDispatch.java:77: ����: �Ҳ�������
+            state.points[0] = state.velocity == 0 ? start : D2Toward.trace(start,target,collision).point;
+                                                                                                  ^
+  ����:   ���� point
+  λ��: �� RayResult
+2 ������
+
+> Task :D2MOO_JAVA:compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':D2MOO_JAVA:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 4s
+3 actionable tasks: 2 executed, 1 up-to-date
