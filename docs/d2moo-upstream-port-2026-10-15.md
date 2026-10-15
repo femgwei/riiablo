@@ -1759,6 +1759,45 @@ big pattern/size、奇偶边界、2,000房间长链，以及150组平铺图逐�
 窄房间/边界及grid投影进一步核对仍待。下一轮优先完成这些原语，不直接跳到生产整体切换。
 后续生产身份/元数据/room/RNG映射、nDist移动消费、真实地图及性能切换验收仍待。
 
+## 第二十四批：small cross与Any碰撞入口（2026-10-16）
+
+`D2CommonCollision`补small cross中心room路由与原生mask/Any分离，新增
+`checkAnyCollisionWithPattern`，`D2PathFootprint.RequestEffects.blocked`改用#10122入口。
+这是现有投影adapter的改动，没有安装生产ECS原生寻路消费；普通生产仍Map→AStarPathFinder。
+
+证据固定D2MOO `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，未fetch，
+读取D2Collision.cpp的42000、42A30、428D0、432A0/436F0与Reset对应函数。
+本机1.10f D2Common.dll SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`，objdump静态核对：
+
+- `42000..42129/4261E..4262E`先按中心坐标解析room。中心缺房/缺grid或mask指针为空时，
+  mask入口返回请求mask低16位，非point/rectangle的0x27。中心有效才按四个边界位选分支。
+  opposite edge组合无case：1格宽或高的房间直接返回mask，不把五点逐格OR当作原生行为。
+- `42A30..42B57`中心缺失或窄房间default返回1，即便mask=0；正常内部Any依次检查
+  center/left/right/bottom/top并立即短路。边界先查所有本地有效臂，再从已解析中心room
+  查询外侧臂；左下角外侧顺序bottom→left（`42C63..42CF6`），其余角按right/bottom、
+  left/top、right/top。缺外侧房间直接true，不把缺房标志再与mask相与。
+- `428D0..42A1E`矩形Any复用原生分区：`429D5`先调用完整本地mask scanner，`429DA`才
+  检查返回低16位；本地碰撞则不递归右/上子树，孩子遇碰撞也停止后续兄弟。不是每格短路，
+  也不是先把整棵矩形树OR完再转boolean。沿用第二十三批显式DFS栈与安全域。
+- #10122的pattern NONE保留raw point mask返回值，其他受支持pattern返回0/1；未知pattern
+  返回1。point mask指针为空补返回0x27，point set/reset则跳过写入，与原版指针gate一致。
+- cross置位/清位经原source hint逐点寻房，其语义与中心room解析后的cross读取不同；保留
+  `432A0/436F0`及Reset对应调用编排，不把变更后的读路由套给写入/附加presence臂。
+
+新增`D2CollisionAnyCrossTest`15项；最终定向82项/5类通过，失败/错误/跳过0，日志
+`core/build/round24-check-final.log`，XML `.gradle/path-port/round24-check/core/test-results/pathPortTest`。
+覆盖缺中心、缺mask指针、窄房间default、九种正常边界、中心hint切换、原hint逐点写入、
+Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随机图将各pattern mask/Any结果
+与独立平面格子OR比较，含于一项JUnit，非200项测试或DLL动态执行。
+全范围511项/43类通过，失败/错误/跳过0，六项原DLL静态数据oracle执行。
+日志`core/build/round24-full.log`；XML `.gradle/path-port/round24-full/core/test-results/pathPortTest`。
+
+矩形/cross/Any在当前有效非回绕grid投影域的本轮边界已覆盖；不宣称任意坏指针、整数回绕、
+原生房间生命周期或全部碰撞API等价。下一包优先真实实体身份、单位元数据、room图和共享RNG
+的生产映射；随后才安装nDist/索引推进/耗尽续算/类型恢复消费，保持受控接入，不整体切换。
+真实地图/技能移动、性能及另一台电脑实机验收继续待办。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

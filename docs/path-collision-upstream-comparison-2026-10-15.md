@@ -704,6 +704,17 @@ room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝
 矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
 
+## 第二十四批：cross/Any分支（2026-10-16）
+
+按本机DLL `42000..42129/4261E/42A30..42CF6/428D0..42A1E`补中心room解析与#10122。
+cross mask在缺中心/窄房间default返回请求mask，Any为true，不能统一用point的0x27。
+cross Any本地逐臂短路后才查外臂；矩形Any先完整扫本地，遇非零才跳过右/上子树。
+cross写仍按原hint逐点寻房，point缺mask指针按原gate；RequestEffects.blocked现在调用Any。
+新增15项，定向82项/5类通过；200组pattern平面oracle比较含于一项JUnit，非DLL动态执行。
+全范围511项/43类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round24-full.log`。
+当前有效grid投影域的边界回归已补，生产身份/房间生命周期/移动消费及真实地图/性能仍待。
+下一包优先生产身份/元数据/room图/共享RNG映射；普通生产仍Map→AStarPathFinder。
+
 ## 第二十三批：矩形碰撞网格递归（2026-10-16）
 
 原有矩形逐格从root hint寻房与DLL不同：`41BE0..41DD2`按左下角解析room后分本地、右侧、

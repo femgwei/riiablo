@@ -254,6 +254,16 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第二十四批：cross/Any边界
+
+- [x] cross读先解析中心room，缺中心或窄房间mask返回请求mask，Any返回1；有效中心的外臂
+  使用已解析room hint。cross写保持原hint逐点路由，point缺mask指针gate按DLL。
+- [x] 新增#10122 pattern Any入口；cross逐格短路，矩形先完整扫本地再短路子树。
+  RequestEffects.blocked使用Any。新增15项，定向82项/5类通过；200组独立平面比较是一项JUnit。
+  全范围511项/43类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round24-full.log`。
+- [ ] 下一包真实身份/元数据/room图/共享RNG生产映射，之后nDist/索引/续算与类型消费。
+  普通生产仍A*，真实地图、性能、另机实机验收仍待；不宣称完整碰撞DLL动态等价。
+
 ## 2026-10-16 D2MOO 第二十三批：矩形网格递归
 
 - [x] 矩形mask/set/reset按left/bottom解析room，本地→右→上分区，每个孩子使用当前room hint。

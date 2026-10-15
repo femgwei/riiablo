@@ -184,7 +184,7 @@ public final class D2PathFootprint {
         @Override public final void addOwner(D2PathRequest.State state) { check(state); add(owner); }
         @Override public final boolean blocked(D2PathRequest.State state, int x, int y) {
             check(state);
-            return D2CommonCollision.checkMaskWithPattern(owner.room, x, y,
+            return D2CommonCollision.checkAnyCollisionWithPattern(owner.room, x, y,
                     request.collisionPattern, request.moveMask & 0xffff) != 0;
         }
 

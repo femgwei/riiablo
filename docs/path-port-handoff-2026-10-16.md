@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十三批续接结果（优先于下方历史起点）
+## 第二十四批续接结果（优先于下方历史起点）
+
+- small cross mask先解析中心room；缺中心/窄房间返回请求mask，Any返回1。外臂使用中心room hint，
+  写入仍从原hint逐点寻房。新增#10122 pattern Any入口，RequestEffects.blocked改用Any。
+- cross逐臂短路，矩形先完整扫描本地再短路右/上子树，point补缺mask指针gate。
+  固定D2MOO/DLL基线不变；新增15项，定向82项/5类通过；详细证据见上游记录第二十四批。
+- 全范围511项/43类通过，失败/错误/跳过0，六项DLL静态oracle执行。
+  日志`core/build/round24-full.log`；XML `.gradle/path-port/round24-full/core/test-results/pathPortTest`。
+- 下一包优先真实身份/元数据/room图/共享RNG生产映射，再做nDist/索引/续算/类型恢复消费。
+  当前grid安全域的矩形/cross边界已有回归，不代表全部碰撞API或房间生命周期动态等价。
+  生产仍A*，真实地图与性能/另机验收仍待，不擅自整体切换。
+
+## 第二十三批续接结果（历史）
 
 - 矩形mask/set/reset（SizeXY及big size/pattern）改为DLL左下角寻房、本地→右→上DFS分区，
   每个子区沿当前room的near-list继续，替代逐点root hint路由。缺anchor整子区跳过写入，

@@ -16,6 +16,11 @@ public final class D2CommonCollision {
     private static final int MAPTILE_UNWALKABLE = 0x000040;
     private static final int MAPTILE_MISSILE_BARRIER = 0x000080;
     private static final int[][] CROSS = {{-1, 0}, {0, 0}, {1, 0}, {0, -1}, {0, 1}};
+    private static final int[][] CROSS_LOCAL = {{0,0,0},{-1,0,1},{1,0,4},{0,-1,2},{0,1,8}};
+    private static final int[][] CROSS_BOTTOM_LEFT = {{0,-1},{-1,0}};
+    private static final int[][] CROSS_BOTTOM_RIGHT = {{1,0},{0,-1}};
+    private static final int[][] CROSS_TOP_LEFT = {{-1,0},{0,1}};
+    private static final int[][] CROSS_TOP_RIGHT = {{1,0},{0,1}};
 
     private D2CommonCollision() {}
 
@@ -102,7 +107,7 @@ public final class D2CommonCollision {
 
     public static int checkMask(D2ActiveRoom room, int worldX, int worldY, int mask) {
         D2ActiveRoom target = getRoomBySubtileCoordinates(room, worldX, worldY);
-        if (target == null || target.getPCollisionGrid() == null) {
+        if (target == null || target.getPCollisionGrid() == null || target.getPCollisionGrid().getPCellsFlags() == null) {
             return D2Collision.COLLIDE_MASK_INVALID;
         }
         return getLocalFlag(target, worldX, worldY) & mask & D2Collision.COLLIDE_ALL_MASK;
@@ -176,6 +181,20 @@ public final class D2CommonCollision {
     public static void setMaskWithSize(
             D2ActiveRoom room, int x, int y, int unitSize, int mask) {
         alterSize(room, x, y, unitSize, mask, true);
+    }
+
+    /** #10122: pattern NONE returns the raw point mask; other patterns return native 0/1. */
+    public static int checkAnyCollisionWithPattern(D2ActiveRoom room, int x, int y, int pattern, int mask) {
+        switch (pattern) {
+            case D2Collision.PATTERN_NONE: return checkMask(room,x,y,mask);
+            case D2Collision.PATTERN_SMALL_UNIT_PRESENCE:
+            case D2Collision.PATTERN_SMALL_PET_PRESENCE:
+            case D2Collision.PATTERN_SMALL_NO_PRESENCE: return checkCross(room,x,y,mask,true);
+            case D2Collision.PATTERN_BIG_UNIT_PRESENCE:
+            case D2Collision.PATTERN_BIG_PET_PRESENCE:
+                return visitBox(room,D2Collision.createBoundingBox(x,y,3,3),mask,2);
+            default: return 1;
+        }
     }
 
     public static void resetMaskWithSize(
@@ -264,9 +283,39 @@ public final class D2CommonCollision {
     }
 
     private static int checkCross(D2ActiveRoom room, int x, int y, int mask) {
+        return checkCross(room,x,y,mask,false);
+    }
+
+    /** 42000/42A30 resolve the center first. Only boundary arms perform point room lookups. */
+    private static int checkCross(D2ActiveRoom hint, int x, int y, int mask, boolean any) {
+        D2ActiveRoom room = getRoomBySubtileCoordinates(hint,x,y);
+        if (room == null || room.getPCollisionGrid() == null || room.getPCollisionGrid().getPCellsFlags() == null)
+            return any ? 1 : mask & 0xffff;
+        D2DrlgCoords c = room.getCoords();
+        long right = (long)c.getNSubtileX()+c.getNSubtileWidth();
+        long top = (long)c.getNSubtileY()+c.getNSubtileHeight();
+        if (right > Integer.MAX_VALUE || top > Integer.MAX_VALUE || x == Integer.MIN_VALUE || y == Integer.MIN_VALUE)
+            throw new IllegalArgumentException("non-wrapping cross coordinates required");
+        int edges = (x <= c.getNSubtileX() ? 1 : 0) | (y <= c.getNSubtileY() ? 2 : 0)
+                | (x+1 >= right ? 4 : 0) | (y+1 >= top ? 8 : 0);
+        // Native switch has no cases for opposite boundaries (width/height one).
+        if ((edges & 5) == 5 || (edges & 10) == 10) return any ? 1 : mask & 0xffff;
         int result = 0;
-        for (int[] offset : CROSS) result |= checkMask(room, x + offset[0], y + offset[1], mask);
-        return result & D2Collision.COLLIDE_ALL_MASK;
+        // Native Any local short-circuit order: center, left, right, bottom, top.
+        for (int[] cell : CROSS_LOCAL) {
+            if (cell[2] != 0 && (edges & cell[2]) != 0) continue;
+            result |= getLocalFlag(room,x+cell[0],y+cell[1]) & mask & 0xffff;
+            if (any && result != 0) return 1;
+        }
+        int[][] external = edges == 3 ? CROSS_BOTTOM_LEFT : edges == 6 ? CROSS_BOTTOM_RIGHT
+                : edges == 9 ? CROSS_TOP_LEFT : edges == 12 ? CROSS_TOP_RIGHT : CROSS;
+        for (int[] offset : external) {
+            int nx=x+offset[0], ny=y+offset[1];
+            if (nx >= c.getNSubtileX() && nx < right && ny >= c.getNSubtileY() && ny < top) continue;
+            result |= checkMask(room,nx,ny,mask);
+            if (any && result != 0) return 1;
+        }
+        return any ? 0 : result & 0xffff;
     }
 
     private static int checkBox(D2ActiveRoom room, D2Collision.BoundingBox box, int mask) {
@@ -346,6 +395,7 @@ public final class D2CommonCollision {
             D2Collision.BoundingBox b = visit.box;
             D2ActiveRoom target = getRoomBySubtileCoordinates(visit.hint, b.left, b.bottom);
             if (target == null || target.getPCollisionGrid() == null || b.left > b.right || b.bottom > b.top) {
+                if (operation == 2) return 1;
                 if (operation == 0) result |= D2Collision.COLLIDE_MASK_INVALID;
                 continue;
             }
@@ -371,10 +421,12 @@ public final class D2CommonCollision {
                 for (int dx = 0; dx < width; dx++) {
                     int x = b.left - c.getNSubtileX() + dx, y = b.bottom - c.getNSubtileY() + dy;
                     int old = grid.getFlag(x, y);
-                    if (operation == 0) result |= old & mask;
+                    if (operation == 0 || operation == 2) result |= old & mask & 0xffff;
                     else grid.setFlag(x, y, operation > 0 ? D2Collision.setMask(old, mask) : D2Collision.resetMask(old, mask));
                 }
             }
+            // 429D5 calls the complete local mask scanner, then tests its result.
+            if (operation == 2 && result != 0) return 1;
         }
         return result & D2Collision.COLLIDE_ALL_MASK;
     }
@@ -382,7 +434,7 @@ public final class D2CommonCollision {
     private static void alterPoint(
             D2ActiveRoom room, int worldX, int worldY, int mask, boolean set) {
         D2ActiveRoom target = getRoomBySubtileCoordinates(room, worldX, worldY);
-        if (target == null || target.getPCollisionGrid() == null) return;
+        if (target == null || target.getPCollisionGrid() == null || target.getPCollisionGrid().getPCellsFlags() == null) return;
         D2DrlgCoords coords = target.getCoords();
         D2DrlgGridStrc grid = target.getPCollisionGrid();
         int x = worldX - coords.getNSubtileX();
