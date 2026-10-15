@@ -458,7 +458,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public void drawShadow(PaletteIndexedBatch batch, float x, float y, boolean handleBlends) {
-    if (handleBlends) batch.setBlendMode(BlendMode.SOLID, SHADOW_TINT);
+    if (handleBlends) batch.setBlendMode(BlendMode.SHADOW, SHADOW_TINT);
     if (cof == null) {
       for (Layer layer : layers) {
         if (layer == null || !layer.shadow) continue;

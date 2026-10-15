@@ -78,6 +78,11 @@ void main() {
 
   color = texture2D(ColorTable, color.ar);
 
+  // PL2 can map an authored nonzero pixel to palette index 0 in darkness.
+  // That pixel is opaque black, not a transparent hole in a wall/object.
+  // Preserve the source silhouette before applying each blend mode's alpha.
+  color.a = sourceIndex > 0.0 ? 1.0 : 0.0;
+
   // Set alpha to tint alpha, including palette id 0
   if (blendMode == 0) {
     color.a = tint.a;
