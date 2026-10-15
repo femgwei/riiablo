@@ -245,6 +245,15 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第二十二批：type9/12
+
+- [x] Leap按局部终点探测，失败保留slot0；BackupTurn按-4/-2/+2追加，保留live count、
+  每次重启几何起点、source点和异常prefix副作用；容量越界明确拒绝。
+- [x] 固定D2MOO与本机1.10f DLL静态控制流核对，A880边界候选依DLL做uint16截断。
+  新增15项，定向47项/3类通过；200组纯offset内核组合比较包含于一项JUnit。
+  全范围481项/41类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round22-full.log`。
+- [ ] 寻路未完成。下一包优先矩形网格/跨房间递归与边界；生产映射、移动消费及地图/性能验收仍待。
+
 ## 2026-10-16 D2MOO 第二十一批：type8/11击退入口
 
 - [x] server按live nDist与raw单位坐标计算远离目标的uint16端点，直接射线后写targetPoint并清identity；

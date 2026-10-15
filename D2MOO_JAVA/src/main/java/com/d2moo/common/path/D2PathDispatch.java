@@ -3,7 +3,7 @@ package com.d2moo.common.path;
 import java.util.List;
 import java.util.Objects;
 
-/** Stateful non-missile entry subset: types 0/1/2/3/5/6/7/8/11/13/15/16 (0/16 require Search rooms,
+/** Stateful non-missile entry subset: all non-null native table types (0/16 require Search rooms,
  * 16 also requires the live owner seed). Does not replace
  * production A*, implement every native table entry, or consume movement ticks.
  * Stable request metadata and the native room/pattern/mask policy remain adapter responsibilities. */
@@ -39,11 +39,38 @@ public final class D2PathDispatch {
         if (entry != D2PathTypes.Entry.TOWARD && entry != D2PathTypes.Entry.TOWARD_ALIAS
                 && entry != D2PathTypes.Entry.WALL_FOLLOW && entry != D2PathTypes.Entry.A_STAR
                 && entry != D2PathTypes.Entry.STRAIGHT && entry != D2PathTypes.Entry.KNOCKBACK_SERVER
-                && entry != D2PathTypes.Entry.KNOCKBACK_CLIENT) {
+                && entry != D2PathTypes.Entry.KNOCKBACK_CLIENT && entry != D2PathTypes.Entry.LEAP
+                && entry != D2PathTypes.Entry.BACKUP_TURN) {
             throw new UnsupportedOperationException("native entry not ported here: " + entry);
         }
         validate(state,start,target,maximumDistance,tolerance,collision);
         D2PathContinuation.State path = state.path;
+        if (entry == D2PathTypes.Entry.BACKUP_TURN) {
+            path.currentPointIndex = 0;
+            path.directionOffset = -4;
+            int first = appendLocal(state,start,target,maximumDistance,collision);
+            if (first == 0) return 0;
+            path.directionOffset = -2;
+            int count = appendLocal(state,start,target,maximumDistance,collision);
+            if (count == first) {
+                path.directionOffset = 2;
+                count = appendLocal(state,start,target,maximumDistance,collision);
+            }
+            path.directionOffset = -4;
+            return count;
+        }
+        if (entry == D2PathTypes.Entry.LEAP) {
+            path.currentPointIndex = 0;
+            state.points[0] = target;
+            if (path.pathType == 4 || target.x == 0 || target.y == 0)
+                throw new IllegalStateException("native collision probe assertion");
+            if (state.velocity != 0) D2PathResult.normalizeSearchProbe(state);
+            D2Path.Point end = state.velocity == 0 ? start : D2Toward.trace(start,target,collision).endpoint;
+            if (end.equals(start)) return 0; // local destination differs from client slot-zero alias
+            state.points[0] = end;
+            path.pathPointCount = 1;
+            return 1;
+        }
         if (entry == D2PathTypes.Entry.KNOCKBACK_SERVER) {
             D2Path.Point end = target;
             if (path.targetUnit != null) {
@@ -101,6 +128,41 @@ public final class D2PathDispatch {
             return points.size();
         }
         return toward(state, start, target, maximumDistance, tolerance, collision);
+    }
+
+    /** A720 appends at live count, but every pass starts geometrically at the search start.
+     * Count is committed only at normal return; prefix writes survive callback exceptions. */
+    private static int appendLocal(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
+            int maximumDistance, D2Toward.Collision collision) {
+        int count = state.path.pathPointCount;
+        if (count < 0 || count > state.points.length) throw new IllegalArgumentException("native count 0..78 required");
+        int previous = -1, distance = 0;
+        boolean changed = false;
+        D2Path.Point current = start;
+        while (distance < maximumDistance) {
+            if (current.equals(target)) break;
+            changed = false;
+            // A8DF..A8ED narrows collision candidates as well as accepted steps.
+            int selected = D2Toward.firstFreeDirection(current,target,state.path.directionOffset,collision);
+            if (selected < 0 || ((selected + 4) & 7) == previous) break;
+            if (selected != previous) {
+                count = appendPoint(state,count,current);
+                changed = true;
+            }
+            current = new D2Path.Point((current.x + D2PathMisc.directionOffsetX(selected)) & 65535,
+                    (current.y + D2PathMisc.directionOffsetY(selected)) & 65535);
+            previous = selected;
+            distance++;
+        }
+        if (!changed && distance != 0) count = appendPoint(state,count,current);
+        state.path.pathPointCount = count;
+        return count;
+    }
+
+    private static int appendPoint(D2PathResult.State state, int count, D2Path.Point point) {
+        if (count >= state.points.length) throw new IllegalArgumentException("native 78-point capacity exceeded");
+        state.points[count] = point;
+        return count + 1;
     }
 
     private static void validate(D2PathResult.State state, D2Path.Point start, D2Path.Point target,

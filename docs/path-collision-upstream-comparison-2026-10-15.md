@@ -704,6 +704,16 @@ room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝
 矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
 
+## 第二十二批：type9/12（2026-10-16）
+
+DLL `B1E0..B232/B0C0..B122/A720..A87B`核对Leap局部探测、BackupTurn多pass追加。
+9失败保留原slot0/count；12不清count，每pass从原start出发，-2未追加才试+2，正常结束offset=-4。
+A880上游源码与DLL边界算术不同：DLL `A8DF..A8ED`碰撞前截uint16，已按DLL复用现有helper。
+新增15项，定向47项/3类通过；200组offset内核组合查询/路点比较是一项JUnit。
+全范围481项/41类通过，失败/错误/跳过0，六项DLL静态oracle执行；日志`core/build/round22-full.log`。
+全部非空搜索表项现有受限入口，仍不等于生产接入或DLL动态等价；下一包矩形网格/房间递归边界。
+详见上游记录第二十二批；普通生产仍Map→AStarPathFinder。
+
 ## 第二十一批：type8/11击退入口（2026-10-16）
 
 按固定D2MOO基线及本机1.10f DLL `B240..B3B0/ABF0..AD01/9E90..9EB1`核对。

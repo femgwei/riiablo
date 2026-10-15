@@ -2,7 +2,17 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十一批续接结果（优先于下方历史起点）
+## 第二十二批续接结果（优先于下方历史起点）
+
+- type9/12已接通，全部非空表项有受限分派；0/16仍需room，16需live seed。
+- Leap局部终点与slot0别名差异、BackupTurn保留count多pass追加及uint16碰撞候选均按DLL。
+  新增15项，定向47项/3类通过；详细证据及首轮旧断言失败见上游记录第二十二批。
+- 全范围481项/41类通过，失败/错误/跳过0，六项DLL静态oracle执行。
+  日志`core/build/round22-full.log`；XML `.gradle/path-port/round22-full/core/test-results/pathPortTest`。
+- 下一包优先矩形碰撞网格/跨房间递归及边界；原七包中的8/11和9/12已完成，其余五包仍待。
+  普通生产仍A*，不整体切换，不宣称寻路完成或实机验收。
+
+## 第二十一批续接结果（历史）
 
 - type8/11服务端/客户端击退已移植到D2PathDispatch，Search与直接重载均支持。
   Target新增raw coordinates观察，D2PathUnits提供实现；没有raw观察的自定义target显式拒绝8。

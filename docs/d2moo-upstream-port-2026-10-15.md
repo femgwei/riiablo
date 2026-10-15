@@ -1684,6 +1684,40 @@ objdump静态核对`6FDAB240..B3B0`、`6FDAABF0..AD01`及`6FDA9E90..9EB1`：
 日志`core/build/round21-full.log`；XML `.gradle/path-port/round21-full/core/test-results/pathPortTest`。
 生产仍A*；下一批优先type9/12，生产映射/消费、矩形递归网格与实机地图验收继续待办。
 
+## 第二十二批：type9/12 Leap与BackupTurn（2026-10-16）
+
+`D2PathDispatch`接通9/12，现支持全部非空表项（0/1/2/3/5/6/7/8/9/11/12/13/15/16）；
+0/16仍需room-aware Search，16另需live owner seed。空表项4/10/14/17仍明确拒绝。
+生产仍Map→AStarPathFinder，没有安装原生ECS移动消费。
+
+证据固定D2MOO `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，未fetch，
+读取PathMisc.cpp的A720、BackupTurn、Leap及三方向碰撞helper。
+本机1.10f D2Common.dll SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`，objdump核对：
+
+- `B1E0..B232` Leap清index、将目标同时写局部终点和slot0，再调用ABF0速度/向量探测。
+  返回终点等于start时返回0，slot0保留原目标且不直接改count；成功才回写终点与count=1。
+  因为局部终点不是slot0别名，其失败行为不同于type11。断言、零速与向量归一化复用既有语义。
+- `B0C0..B122` BackupTurn只清index，不清count；先offset=-4调用A720，返回非零才试-2，
+  仅-2未追加时再试+2；正常返回重设-4。几何起点每次仍为Search.start，不是上一段终点。
+  容差/velocity不参与A720，live type不被快照分派改写。
+- `A720..A87B`每次从live count追加，首次转向也写source，若末步新转向则省略最终点；
+  阻挡/反向退出可追加上一完成点。路径buffer逐点写，live count只在正常返回提交。
+  新增独立appendLocal编排，保留回调异常前prefix与临时offset，不将异常当正常返回重置。
+- 上游A880源码看似int32候选相加，但DLL `A8DF..A8ED`用word add并AND 0xffff后查询。
+  本轮最初推断为raw查询，复读调用点后纠正，复用既有firstFreeDirection的uint16候选。
+  78点容量越界显式拒绝，不模拟原生写坏内存；之前已写prefix保留。
+
+新增`D2PathLeapBackupTest`15项，含200组固定随机碰撞图与既有纯offset内核逐query/prefix
+组合对照（是一项JUnit，不是独立算法或DLL动态oracle）。扩展真实网格Request组合覆盖9/12，
+验证占位恢复与最终向量；不增加实机/MPQ/性能或DLL动态函数验收。
+首轮44项两处失败来自旧unsupported夹具与旧正向向量断言，改用空表项17和后退负向向量；
+最终定向47项/3类通过，失败/错误/跳过0，日志`core/build/round22-check-final.log`。
+全范围481项/41类通过，失败/错误/跳过0，六项原DLL静态数据oracle执行。
+日志`core/build/round22-full.log`，XML `.gradle/path-port/round22-full/core/test-results/pathPortTest`。
+下一工作包优先矩形碰撞网格、跨房间递归及边界证据；生产身份/元数据/room/RNG映射、
+nDist与移动消费接入、真实地图验收及性能切换仍待，不能宣称寻路完成。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
