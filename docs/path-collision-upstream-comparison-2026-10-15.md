@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第三十三批补充：NativePathUnitBinding.observeFootprints从同一次footprint捕获构造身份观察，
+直接共用exact coordinates，避免调用方两次读取混用快照；原token前后复检，自目标仅读一次。
+返回footprints仍需显式交给effects，不拦截任意直接静态调用，也不自动检测移动/元数据变化。
+新增4项，完整578项/50类通过，失败/错误/跳过0；生产仍A*，无新增DLL算法证据或动态执行。
+
 第三十二批补充：NativePathObjectFootprint把实际Object.mode及Objects表的谓词字段接到已有
 #10338/#10410和对象footprint实现。boolean按非零语义编码0/1，不冒充DLL原始字节；
 坐标/真实房间仍显式提供，身份和同操作快照由调用方维护，生产仍A*。

@@ -2,7 +2,21 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十二批续接结果（优先于下方历史起点）
+## 第三十三批续接结果（优先于下方历史起点）
+
+- NativePathUnitBinding新增observeFootprints(speed, FootprintReader)，按操作读取owner/target
+  footprint并直接复用其coordinates构造带身份guard的Observation，不再二次读取独立坐标快照。
+  返回FootprintObservation持有exact owner/target及observation；自目标只读取一次并共用对象。
+- 该入口只调用显式FootprintReader，不调用构造时的坐标Reader；读取前后检查原owner/target token，
+  后续requireCurrent及Observation采样仍拒绝身份替换。旧observe接口兼容保留。
+- 新增4项，完整578项/50类通过，失败/错误/跳过0；core/build/round33-full.log，
+  XML `.gradle/path-port/round33-full/core/test-results/pathPortTest`。
+- 返回的exact footprints供RequestEffects使用；没有自动安装effects或拦截直接调用footprint静态函数。
+  生命周期有效不等于坐标/元数据实时刷新，操作间变化仍需重新捕获；Reader仍负责提供正确原生数据。
+- raw坐标自动来源、动态footprint字段、Act/Zone/shared seed仍待；生产仍Map→AStarPathFinder。
+  本批为host快照一致性适配，无新增DLL算法证据或动态DLL执行。
+
+## 第三十二批续接结果（历史）
 
 - NativePathObjectFootprint从实际World对象读取Object.mode及Objects表字段，与显式raw静态坐标、
   实际D2ActiveRoom组合为D2PathFootprint.Unit；自动复用元数据的door/尺寸，方向字节可显式传入。

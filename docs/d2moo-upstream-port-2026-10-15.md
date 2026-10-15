@@ -1949,6 +1949,20 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
   不推断RoomEx。raw坐标自动来源、动态footprint字段、Act/Zone/shared seed仍待，生产仍A*。
   沿用既有网格与原生算法，无新增DLL算法证据或动态DLL执行。
 
+## 第三十三批：footprint与生命周期观察单次捕获
+
+- NativePathUnitBinding.observeFootprints(speed, FootprintReader)按操作读取exact owner/target
+  footprint，直接以其coordinates构造带原token guard的Observation，返回FootprintObservation。
+  自目标只读一次；不调用构造时的坐标Reader，旧observe接口兼容保留。
+- 前后身份检查及后续Observation/requireCurrent拒绝替代实体；返回exact footprints供effects使用，
+  不再要求调用方独立读一次坐标。Reader仍负责正确原生数据，身份有效不等于元数据/位置自动刷新。
+- 新增4项：exact坐标共用与冻结、自目标单读、读取前后身份替换、非法输入与后续替换。
+  完整578项/50类通过，失败/错误/跳过0；core/build/round33-full.log，
+  XML .gradle/path-port/round33-full/core/test-results/pathPortTest。
+- 未自动安装effects，未拦截直接静态footprint调用；操作间变化须重捕获。raw坐标自动来源、
+  动态footprint字段、Act/Zone/shared seed仍待；生产仍Map→AStarPathFinder。
+  本批为host适配，无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

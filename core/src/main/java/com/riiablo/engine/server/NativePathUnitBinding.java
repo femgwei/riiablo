@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import com.artemis.World;
 import com.d2moo.common.path.D2PathUnits;
+import com.d2moo.common.path.D2PathFootprint;
 import com.riiablo.engine.server.component.NativePathIdentity;
 import java.util.Objects;
 
@@ -12,6 +13,27 @@ public final class NativePathUnitBinding {
   public interface Reader {
     /** Return a complete immutable native-data snapshot, not an ECS component. */
     D2PathUnits.Unit read(World world, int entityId);
+  }
+
+  public interface FootprintReader {
+    D2PathFootprint.Unit read(World world, int entityId);
+  }
+
+  /** One immutable operation pair. Pass observation to the path and the exact
+   * footprints to RequestEffects. Identity validation precedes use; this is not
+   * a movement/metadata freshness detector or an automatic effects installer. */
+  public static final class FootprintObservation {
+    public final D2PathUnits.Observation observation;
+    public final D2PathFootprint.Unit owner, target;
+
+    private FootprintObservation(D2PathUnits.Observation observation,
+        D2PathFootprint.Unit owner, D2PathFootprint.Unit target) {
+      this.observation = observation;
+      this.owner = owner;
+      this.target = target;
+    }
+
+    public void requireCurrent() { observation.requireCurrent(); }
   }
 
   private final World world;
@@ -46,6 +68,20 @@ public final class NativePathUnitBinding {
         : Objects.requireNonNull(reader.read(world, targetId), "target snapshot");
     requireCurrent();
     return D2PathUnits.observation(owner, target, speed, this::requireCurrent);
+  }
+
+  /** Alternative capture: uses only footprintReader, never the coordinate Reader.
+   * Coordinates are taken from these very footprints, never read a second time. */
+  public FootprintObservation observeFootprints(int speed, FootprintReader footprintReader) {
+    if (speed < 0 || speed > 255) throw new IllegalArgumentException("native unsigned speed byte required");
+    Objects.requireNonNull(footprintReader);
+    requireCurrent();
+    D2PathFootprint.Unit owner = Objects.requireNonNull(footprintReader.read(world, ownerId), "owner footprint");
+    D2PathFootprint.Unit target = ownerId == targetId ? owner
+        : Objects.requireNonNull(footprintReader.read(world, targetId), "target footprint");
+    requireCurrent();
+    return new FootprintObservation(D2PathUnits.observation(owner.coordinates, target.coordinates,
+        speed, this::requireCurrent), owner, target);
   }
 
   public void requireCurrent() {

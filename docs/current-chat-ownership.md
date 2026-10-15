@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十三批：NativePathUnitBinding.observeFootprints单次捕获footprint并复用exact coordinates
+形成生命周期Observation，自目标仅读一次，读取前后及后续使用均校验身份；不自动安装effects。
+新增4项，完整578项/50类通过，失败/错误/跳过0；core/build/round33-full.log。
+生产仍A*，操作间变化需重新捕获；详细交接见handoff顶部。
+
 第三十二批：NativePathObjectFootprint读取真实Object.mode/Objects表，组合显式raw静态坐标与
 实际D2ActiveRoom，接通对象footprint。宿主boolean仅0/1语义编码，不声称DLL原始字节。
 新增6项，完整574项/50类通过，失败/错误/跳过0；core/build/round32-full.log。

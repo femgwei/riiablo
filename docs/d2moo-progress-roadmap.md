@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十三批（生产适配仍PARTIAL）
+
+- [x] 生命周期绑定新增footprint捕获入口，Observation精确复用footprint坐标，不独立二次读取。
+- [x] 自目标单读，原token读取前后复检，后续观察继续guard，原坐标Reader接口保留。
+- [x] 新增4项；完整578项/50类通过，无失败/错误/跳过。
+- [ ] effects仍需显式安装，数据变化需重捕获；raw坐标、动态字段、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder，未宣称完整原生移动消费。
+
 ## 2026-10-16 寻路第三十二批（生产适配仍PARTIAL）
 
 - [x] 实际Object.mode及Objects字段组合对象footprint，显式raw坐标与真实D2ActiveRoom。

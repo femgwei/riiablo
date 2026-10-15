@@ -10,6 +10,65 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitBindingTest {
+  private static D2PathFootprint.Unit footprint(D2PathUnits.Unit coordinates) {
+    return D2PathFootprint.Unit.dynamic(coordinates, null, 1, 1, 0x80);
+  }
+
+  @Test void footprintObservationSharesExactCoordinateObjectsWithoutSecondRead() {
+    try (Fixture f = new Fixture()) {
+      NativePathUnitBinding.FootprintObservation pair = f.binding().observeFootprints(3, (w, id) -> {
+        f.reads.incrementAndGet();
+        return footprint(id == f.owner ? f.ownerData : f.targetData);
+      });
+      assertEquals(2, f.reads.get());
+      assertSame(pair.owner.coordinates, pair.observation.owner);
+      assertSame(pair.target.coordinates, pair.observation.target);
+      assertEquals(3, pair.observation.speed);
+      f.targetData = dynamic(1, 30, 10);
+      assertEquals(p(20, 10), pair.observation.coordinates());
+      pair.requireCurrent();
+    }
+  }
+
+  @Test void footprintSelfTargetCapturesOnlyOnce() {
+    try (Fixture f = new Fixture()) {
+      NativePathUnitBinding binding = new NativePathUnitBinding(f.world, f.owner, f.owner,
+          (w, id) -> { fail("coordinate reader must not run"); return null; });
+      NativePathUnitBinding.FootprintObservation pair = binding.observeFootprints(0, (w, id) -> {
+        f.reads.incrementAndGet(); return footprint(f.ownerData);
+      });
+      assertSame(pair.owner, pair.target);
+      assertSame(pair.observation.owner, pair.observation.target);
+      assertEquals(1, f.reads.get());
+    }
+  }
+
+  @Test void footprintCaptureChecksLifetimeBeforeAndAfterReads() {
+    try (Fixture f = new Fixture()) {
+      NativePathUnitBinding binding = f.binding();
+      assertThrows(IllegalStateException.class, () -> binding.observeFootprints(0, (w, id) -> {
+        f.birth(f.target); return footprint(f.ownerData);
+      }));
+      assertThrows(IllegalStateException.class, () -> binding.observeFootprints(0, (w, id) -> {
+        fail("stale binding must not read"); return null;
+      }));
+    }
+  }
+
+  @Test void footprintObservationRejectsInvalidInputAndLaterReplacement() {
+    try (Fixture f = new Fixture()) {
+      NativePathUnitBinding binding = f.binding();
+      assertThrows(IllegalArgumentException.class, () -> binding.observeFootprints(256, (w, id) -> {
+        fail("invalid speed must not read"); return null;
+      }));
+      assertThrows(NullPointerException.class, () -> binding.observeFootprints(0, (w, id) -> null));
+      NativePathUnitBinding.FootprintObservation pair = binding.observeFootprints(0,
+          (w, id) -> footprint(id == f.owner ? f.ownerData : f.targetData));
+      f.birth(f.target);
+      assertThrows(IllegalStateException.class, pair::requireCurrent);
+      assertThrows(IllegalStateException.class, pair.observation::coordinates);
+    }
+  }
   private static D2Path.Point p(int x, int y) { return new D2Path.Point(x, y); }
   private static D2PathUnits.Unit dynamic(int type, int x, int y) {
     return D2PathUnits.Unit.dynamic(type, 2,
