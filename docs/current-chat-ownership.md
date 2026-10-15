@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-10-15（当前状态索引；下方保留历史交接记录）
+更新时间：2026-10-16（当前状态索引；下方保留历史交接记录）
 
 > 当前技能移植基线：非视觉核对清单 **100%**，严格总进度约 **97%**。dark-magic 的七职业
 > exact-ID、行为 gate、测试模式、覆盖审计及 1.10F `d2client.dll` 静态分派证据均已收口；
@@ -10,7 +10,29 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第十二批：距离字段隔离与耗尽续算状态
+## 2026-10-16 第十三批：单位坐标、FOG提前量与停止距离
+
+- 新增`D2PathUnits`独立单位快照辅助层：静态int32/动态unsigned fp16坐标解析、空dynamicPath
+  坐标/方向零值、PathUtil两种目标采样入口、初始单位目标种类容差/门偏移，以及10399尺寸距离。
+  `observation`可组合上一批续算层，保持先距离停止、后lazy采样，不安装生产路径。
+- FOG采用本机1.10f表的stride8共64个float位模式；角度为(8*目标方向-256*owner speed)&511，
+  speed是+0x68字节，不是velocity。x87乘法/截零与uint16写入保留；prepare仅player/monster
+  加提前量，sample则对任意目标非零speed加提前量。静态目标需显式提供其path+0x64别名字节，
+  不知道该字节时拒绝执行该lead，不擅自补方向0。prepare的tolerance也不等于持久nStepNum。
+- 固定D2MOO`0c0bbd1e`未fetch，核对本机D2Common `B890..BA4C`、`87AF..885C`、
+  `2CB0..2E32`及Fog的10083/10084、原表数据。具体VA/哈希/边界见第十三批上游记录。
+- 新增27项定向通过，合并275项/30类通过，失败/错误/跳过0。其中两项实际读取本机原版DLL：
+  比较FOG 64位模式/65536组lead、10399表与7744组尺寸距离，均属静态数据oracle而非DLL动态执行。
+  未配置匹配原版D2_HOME的机器会显式跳过这两项，本机两项均执行，无跳过。
+- 代码/测试`629176f444f1b3bf83d5c4b88ad6cc4302abad2a`已推送origin/master且远端SHA一致；
+  四文档另行提交推送。只提交两个本轮新文件；另一聊天NPC/Inferno已独立提交，
+  Megademon代码/测试/报告等新文件保留，未修改或混入本轮提交。
+- **寻路仍未完成**：新Unit只是已解析sizeX等数据的稳定快照，不负责entity-ID/有效期或表格元数据。
+  10142早期/后期gate、结果规范化/flags生命周期、nDist步进消费及实际pathType受控生产接入仍待。
+  普通生产仍Map→AStarPathFinder，近期碰撞/房间/步进不变；不加1.13+ gate或普通自动partial。
+  本轮无新MPQ/TCP/GL/benchmark/原版动态差分；火焰之河AI fallback未修/未重跑。
+
+## 2026-10-15 第十二批：距离字段隔离与耗尽续算状态（历史）
 
 - 新增`D2PathContinuation`，以独立可变状态投影移植10236调度及10226中内联的续算决策。
   包括circle耗尽优先、单位停止距离/采样顺序、player/monster目标位移严格>5、coordinate/unit

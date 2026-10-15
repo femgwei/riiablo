@@ -966,12 +966,108 @@ filters沿用第十一批，含原生内核/碰撞、普通Pathfinder/恢复/房
 保留近期碰撞/房间/步进优化，不自动普通exact→partial或加入1.13+目标房间gate。
 火焰之河AI fallback未修/未重跑，其余真实覆盖及benchmark/原版动态差分继续单列。
 
+## 第十三批：单位目标坐标、FOG提前量与10399尺寸距离（2026-10-16）
+
+### 范围与原版证据
+
+继续未完成的寻路，新增`D2MOO_JAVA/.../path/D2PathUnits.java`及`D2PathUnitsTest`。
+本轮实现已解析单位的独立稳定快照辅助层，不负责实体ID查找/有效期、各单位表格sizeX解析，
+不等于完整10142包装器或生产backend。`observation`把真实算术距离/采样组合给上一批续算层；
+`prepare`只做PATH_UpdateTargetUnit相应阶段，返回search前单位目标与path-info field_14容差，
+不覆盖final/previous，也不把该容差当作持久nStepNum停止距离。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch。
+读取该ref的PathUtil.cpp、Path.cpp目标更新/10142、Units.cpp的10399/GetUnitSizeX及Fog声明；
+本机objdump核验原版1.10f D2Common.dll与Fog.dll，而非凭经验换成通用几何距离或Math.sin近似。
+原版SHA256：
+
+- D2Common：`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`（与此前一致）。
+- Fog：`C4F377CC056E0A5E465D4118D18F3D98E9E650496CF0B5AFEA559057793B0DBA`。
+
+静态证据与实现边界：
+
+- `0x6FDA9CB0/9CF0`读取dynamicPath精确坐标高16位且零扩展，不是有符号右移或四舍五入。
+  `0x6FDAB98E..B9E8`对object/item/tile读staticPath+0x0C/+0x10的int32坐标，其余读动态路径，
+  dynamicPath null时两轴0；sample写入uint16。`coordinates`保留静态原始int32以便距离使用。
+- `0x6FDA9BF0..9C00`的GetDirection为path+0x64字节，null path返回0。
+  `0x6FDAB8E5..B92C`及`0x6FDAB9EC..BA45`的owner speed读取+0x68字节，非移动velocity，
+  角度为(8*direction-256*speed)&511。方向byte高两位在角度mask中消去，非先假设0..63。
+  FOG结果乘speed，经`0x6FDC4FD0..4FF6`的__ftol向零截断后加到uint16坐标，未检查目标是否移动。
+- 本机Fog #10083在`0x6FF51DF0`、#10084在`0x6FF51E10`，分别取sin表的(index+128)&511
+  与index&511项；表位于VA `0x6FF742A8`，PE文件offset `0x242A8`。
+  angle总是8的倍数，本轮只保存实际使用的64个stride8 float位模式，不复制完整二进制或游戏资源。
+  原表有非理想对称项和约-8.74e-8的sin(pi)；不按镜像/理想三角函数重建位模式。
+  float24×uint8的精确积可由double53完全表示，用double相乘再转int匹配x87不经float存储的乘积。
+  本机补充扫描在这个byte输入域未发现理想sin或先存float使最终整数偏移不同，不把位差夸大成已证明的移动bug。
+- `0x6FDA87AF..885C`初次准备目标：复制/缩窄目标位置；两轴均0则容差0并先返回，
+  player/monster仅speed非零时加lead并容差1；object非门和item容差2且不加lead；门沿既有
+  orientation/source侧±2并容差2；missile/tile等默认容差1且不加lead。
+  `0x6FDAB9EC..BA4C`续算采样入口不同：只要speed非零，对任何目标类型都加lead，无两轴0早退。
+  静态目标会把同一path指针按dynamicPath读取+0x64字节，本轮要求调用方显式提供原始别名字节；
+  未提供时拒绝此lead，不伪造0或把原版行为静默改成“静态目标永远不提前”。
+- `0x6FDC2CB0..2D8C`的10399读取两个单位的原始坐标和UNITS_GetUnitSizeX结果。
+  任一轴差>=8或任一sizeX>=4时：各轴先减(size1>>>1)+(size2>>>1)，夹到0，再算min+2*max。
+  否则按`0x6FDD3200..32FF`的8x8表查值；负项立即返回0，size任一为3仅减一次并夹0，
+  size任一<=1仅加一次。不是无尺寸的PathMisc近似距离，也不是欧氏/平方距离。
+  已核对该表与现有PathMisc短距离表数据一致，复用其raw+1/负项0投影还原raw，未修改原helper。
+- `0x6FDC2D91..2E32`的尺寸分支/结果int32运算保留，最终距离不改long饱和；公开输入要求
+  nonnegative resolved sizeX及可表示int32绝对值的坐标差，非法abs/越界表索引显式拒绝。
+  不试图安全模拟损坏的原生内存或全uint32异常尺寸。
+
+不在本层添加10142更早的raw坐标任一轴0 gate或更后的coincident/room/town/search gate，
+因此prepare.tolerance=1不代表整个请求可搜索。后续完整包装器仍须保留这些不同阶段的顺序。
+所有Unit/DynamicPath均为稳定只读快照；真实适配器需每次观察更新快照，不可永久缓存来冒充live单位。
+本轮未改生产Map/Pathfinder、碰撞/房间/平滑/步进，也不引入RNG或1.13+房间门槛。
+
+### 第十三批验证与交付
+
+新增27项定向首轮通过，合并275项/30类通过（此前248+新增27），失败/错误/跳过0。
+普通夹具覆盖unsigned fp16/静态int32缩窄/动态null、raw方向byte和speed奇偶角度/255边界、
+向零取整/uint16回绕、FOG原位模式、无目标/种类容差/门方向、prepare与sample不同的类型/零值门槛、
+静态lead未提供原字节时拒绝、10399负表项/size3及small修正/8与4边界/原始静态坐标/int32结果回绕、
+距离符号/轴/尺寸顺序对称、续算范围优先/lazy采样与led位移、非法布局/输入，以及准备结果组合
+调用阻挡终点准备与Toward内核（不安装生产Pathfind）。
+
+两项额外证据包含在上述27项JUnit内，实际读取本机原版DLL，不提交DLL：
+
+- 从PE32 section header解析VA到文件偏移，先匹配上述原版SHA256；FOG测试比较64个stride8
+  float原始位模式，再按DLL静态表独立算65536组direction byte×speed byte及边界坐标lead结果。
+- 直接读取D2Common的8x8表，对dx/dy=0..10、size1/size2=0..7的7744组距离分支独立核对。
+
+这些是原版静态数据+已核实算术分支oracle，**不是加载DLL执行原函数的动态差分或65536项JUnit**。
+若没有D2_HOME/原文件或哈希不匹配，两项用JUnit assumption明确跳过；本机两项均执行，跳过0。
+定向XML `core/build/test-results/upstreamRound4-round13-units`，日志`core/build/round13-units.log`；
+合并XML `core/build/test-results/upstreamRound4-round13-full`，日志`core/build/round13-full.log`，
+BUILD SUCCESSFUL。隔离任务`:core:upstreamRound4Test -PupstreamRun=round13-full`，filters沿用第十二批。
+没有新增MPQ/TCP/GL、全图/多seed难度、benchmark或原版DLL动态差分验收。
+
+另一电脑最小复验（路径改为其本地原版1.10f目录，不依赖本机临时init）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*D2PathUnitsTest' --tests '*D2PathContinuationTest' --tests '*D2PathTargetTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --console=plain
+```
+
+标准core:test本轮未另跑。代码/测试`629176f444f1b3bf83d5c4b88ad6cc4302abad2a`已推送origin/master，
+远端SHA一致。只提交两个本轮新文件；共享工作区NPC/Inferno独立提交不算本轮移植，
+Megademon代码/测试/报告等新文件保留，未修改或纳入本轮提交。四文档独立提交推送，最终SHA见git log。
+
+### 剩余门槛
+
+**寻路仍未完成**，普通生产仍Map→AStarPathFinder。本轮补齐独立快照上的坐标/lead/10399算术与
+单位目标种类容差，但实体身份/有效期、class/table sizeX等生产解析仍待；不据此宣称完整单位目标包装器完成。
+下一步补10142其他gate/结果规范化/flags生命周期、nDist步进尝试消费，再把状态、实际pathType及
+路径安装/速度/碰撞事务受控接入真实移动，并验收实际地形与动态碰撞的消费、失败、恢复和续算。
+不自动普通exact→partial，不撤回近期碰撞/房间/步进优化，不加1.13+ gate。
+火焰之河AI fallback未修/未重跑；其他真实覆盖/性能/原版动态差分继续单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
-  pathType设计受控接入。已补独立nDistance/final/索引续算投影，仍需目标单位/FOG采样/10399距离、
-  nDist步进消费、10142规范化及flags生命周期，并将状态与真实移动接通，
+  pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
+  仍需生产身份/元数据解析、nDist步进消费、10142其他gate/规范化及flags生命周期，并将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

@@ -515,3 +515,30 @@ pathType受控接入Toward2/13、WallFollow15等，并验收真实消费、失�
 提前量/种类容差、nDist步进消费、10142结果规范化/flags生命周期和实际pathType生产接入仍待。
 不宣称普通生产已切换，仍为Map→AStarPathFinder；近期碰撞/房间/步进优化不变。
 火焰之河AI fallback及其余真实覆盖继续单列。
+
+## 后续第十三批：目标采样和停止距离不能用通用几何替代（2026-10-16）
+
+新增`D2PathUnits`稳定Unit快照辅助层，补动态unsigned fp16/静态int32坐标、两种目标采样入口、
+FOG提前量、初始种类容差/门偏移和10399尺寸停止距离；可给独立续算层提供lazy观察，尚非生产接入。
+固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common/Fog.dll核验：
+
+- owner +0x68 speed是字节，不是移动velocity；lead角度(8*目标方向-256*speed)&511，
+  使用FOG原float表、x87乘法后截零和uint16写入，不按“目标速度×时间”的经验公式推断。
+- 初次prepare只有player/monster加lead；续算sample却对任意目标非零speed加lead。
+  静态目标须提供path+0x64真实别名字节；不知道时显式拒绝该分支，不静默假设方向0。
+  prepare的field_14容差不同于nStepNum，且不代替完整10142更早/更后的请求gate。
+- 10399先按尺寸选择8x8短表/长距离分支；长分支先减各sizeX半径之和、逐轴夹0再算min+2*max。
+  短表负项直接0，size3减一次、小单位加一次；不能拿无尺寸的PathMisc距离或欧氏距离替换。
+
+新增27项、合并275项/30类通过，失败/错误/跳过0。两项实际读取本机匹配SHA256的原版DLL：
+64个FOG位模式/65536组byte lead、7744组尺寸距离静态数据对照；不是DLL动态执行或数万项JUnit。
+FOG位模式有细微非理想对称，但本轮未找到在byte输入域改变整数lead的理想sin对照样本，
+不将静态位差当作已复现移动bug，也不据此宣称性能/体验更优。
+具体VA/哈希、类型边界、条件跳过与另一电脑复验见
+[第十三批记录](d2moo-upstream-port-2026-10-15.md#第十三批单位目标坐标fog提前量与10399尺寸距离2026-10-16)。
+代码/测试`629176f44`已推送且远端SHA一致，无新增MPQ/TCP/GL/benchmark/原版动态差分。
+
+**寻路仍未完成**：Unit是已解析元数据的稳定快照，生产身份/有效期/表格sizeX仍需适配；
+10142其他gate/结果规范化/flags生命周期、nDist步进消费及实际pathType真实移动接入仍待。
+普通生产仍Map→AStarPathFinder，近期碰撞/房间/步进不变；不加1.13+ gate或普通自动partial。
+火焰之河AI fallback及其余真实覆盖继续单列。

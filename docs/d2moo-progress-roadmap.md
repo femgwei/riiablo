@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 D2MOO 第十三批：单位目标采样与尺寸距离
+
+- [x] 新增`D2PathUnits`稳定快照辅助层，解析static int32/dynamic unsigned fp16/null path坐标，
+  补FOG提前量、prepare与sample的不同类型/零值门槛、单位种类tolerance/门偏移及原生10399距离。
+- [x] FOG stride8原表64个float位模式与x87截零语义；speed为unsigned byte、并非velocity。
+  静态目标非零speed采样要求显式原path+0x64字节，不猜方向；prepare.tolerance不冒充nStepNum。
+- [x] `observation`组合续算层，保留停止范围优先、采样lazy及严格>5位移判断；另有与阻挡
+  终点准备/Toward库组合的夹具，不是生产路径安装或完整搜索包装器。
+- [x] 固定D2MOO`0c0bbd1e`未fetch，核对D2Common与Fog.dll；新增27项、合并275项/30类通过，
+  失败/错误/跳过0。含两项匹配本机原DLL的静态数据穷举对照，不是动态执行等价证明。
+  代码/测试`629176f44`已推送且远端一致；详细地址/哈希/复验见第十三批记录。
+- [ ] **寻路未完成**。Unit快照仍需由生产适配层提供身份/有效期/表格sizeX等数据；10142其他
+  gate/结果规范化/flags生命周期、nDist步进消费、路径安装及实际pathType受控接入仍待。
+  普通生产仍Map→AStarPathFinder，不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。
+  本轮无新MPQ/TCP/GL/性能/原版动态差分，火焰之河AI fallback及其余覆盖继续单列。
+
 ## 2026-10-15 Act II NPC 服务名单修正
 
 - [x] 对照 D2MOO `SUnitNpc.cpp` 的 `D2GAME_NPC_Repair_6FCC95B0`、
