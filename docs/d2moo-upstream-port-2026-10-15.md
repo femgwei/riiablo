@@ -561,10 +561,83 @@ build证据不提交。服务端已退出，6114无监听。
 四份进度文档独立提交推送，最终文档SHA见git log；不把他人修改当作本轮交付。
 没有benchmark/GL/132图/多seed三难度/原版动态等价验收；火焰之河AI fallback本轮未修、未重跑。
 
+## 第八批：绕行路点耗尽后的实体目标续算
+
+### 原版依据与当前缺口
+
+继续使用固定D2MOO `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch。
+`PathMisc.cpp::sub_6FD5DB70`在单位目标尚未进入nStepNum范围时，除目标位移判断外，
+还检查路点索引是否耗尽及当前位置是否等于tFinalTargetCoord；未到final则调用10236续算。
+10236还受native distance等状态控制，不能只移植耗尽检查便宣称完整原生行为等价。
+
+重新核对本机1.10f D2Common.dll（目录及SHA256与第七批相同，已重算哈希一致）：
+`0x6FDACAAF/AB3`先保存当前位置BX/BP；`0x6FDACB0E..CB16`比较+24索引与+28点数；
+`0x6FDACB18..CB22`比较+18/+1A final与当前坐标；不等则`0x6FDACB24..CB27`
+push1、push单位并调用`0x6FDAC8F0`。这是未重定位VA、局部静态证据，非原版动态执行。
+上游10142仍标BROKEN，不单独当oracle；没有引入1.13+房间gate或5格阈值替换。
+
+第七批已修复恢复后丢失targetEntityId/目标快照/timer，但当前process在定时器未到期时，
+仍会把“所有绕行路点已走完”直接当作“命令完成”清除Pathfind，即使目标仍在范围外。
+本轮仅修补这一局部：已有实体目标通过既有攻击/交互范围检查后，若无剩余路点、
+当前位置已到当前路点（原0.1 epsilon）、且与live目标不同取整格，立即复用
+`repathPreservingMovementIntent`尝试exact及既有动态绕行，失败照常停止。
+新增DEBUG `[ENTITY_PATH_CONTINUE]`只记录尝试，不表示续算一定成功。
+
+仍保留同一单位身份、Running和模式速度加成；已入攻击/交互范围优先停止，
+未到末点/仍有后续路点不会因新条件提前续算。普通坐标命令及DiabRun没有实体目标，
+不因此新增partial或重算；原房间前后置gate、搜索、碰撞、平滑、步进及timer/位移阈值不变。
+本轮目标坐标来源是live实体，使用现有Map.round及范围合同，并非新增native
+tFinalTargetCoord/nStepNum/distance budget模型，也不是原生搜索backend接入。
+
+### 第八批测试与交付
+
+`PathfinderRecoveryTargetTest`增加9项：耗尽后timer未到仍向单位发起查询、
+direct仍阻挡时选择另一可用绕行点、全失败确有查询然后停止且不partial、
+已入近战范围停止、未到末点不提前重算、到达中间点仍消费下一路点、
+范围外静态交互目标续算、坐标命令耗尽不新增目标、DiabRun partial消费不隐式追单位。
+为隔离该状态传递，scripted Map允许指定唯一可达绕行点(26,6)，目标为(30,10)，
+测试直接设置actor到达末点再调用真实process；动态服务为mock，非真实逐步地形/TCP移动。
+
+修前该类18项有4失败/14通过（新增9项中4失败/5通过）；修后18项全通过。
+最终合并162项/25类通过，失败/错误/跳过0，过滤集合与第七批相同，含现有DiabRun集成测试。
+本机隔离任务`:core:upstreamRound4Test -PupstreamRun=round8-full`，
+XML `core/build/test-results/upstreamRound4-round8-full`、日志`core/build/round8-full.log`；
+修前证据在`upstreamRound4-round8-before`/`core/build/round8-before.log`，
+修后单类在`upstreamRound4-round8-recovery`/`core/build/round8-recovery.log`。
+另一电脑先显式设置合法1.10F资源，可最小复验：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*PathfinderRecoveryTargetTest' --console=plain
+```
+
+完整复验使用第七批`:core:test`的相同filters；标准任务本轮未另跑，不依赖本机临时init文件。
+
+真实MPQ/TCP命令与第七批相同，仅输出改为
+`-PtourOutput=server/d2gs/build/round8-endpoint-maggot`；全日志
+`core/build/round8-endpoint-maggot.log`，tourOutput内含map-tour/ai-events/ai-summary，均不提交。
+普通难度seed12345、25Hz、63蛆虫二层/64蛆虫三层/65古代通道，3/3图、4个walk计划、
+1连续入口+1 staging跳转、10次真实TCP击杀、0通行失败，BUILD SUCCESSFUL。
+AI run=COMPLETED、warnings=178、errors=0、fallbackRecords=0；
+coverage=OBSERVED_RUNTIME_ONLY、oracle=NONE、correctness=NOT_ASSERTED，不是完整AI正确性验收。
+ENTITY_PATH_CONTINUE及MONSTER_PATH_STALLED日志均0，未触发新续算或stalled分支；
+本次真实巡游仅为非回归冒烟，新分支证据来自scripted ECS定向回归。
+
+来源63 shadow128次：65 COMPARED（55 NONE、10 TURNS；44 EXACT/EXACT、21 FAILED/FAILED），
+63 OUTSIDE_SNAPSHOT/INCONCLUSIVE；无诊断错误/live重放差异，无FAILED/EXACT或FAILED/PARTIAL。
+与前轮计数不同受运行时序影响，不据此宣称算法提升或缺陷减少；没有性能benchmark。
+服务端退出，6114无监听。未修复/重跑火焰之河AI fallback；无GL/132图/多seed三难度或原版动态等价验收。
+
+代码/测试`473bd6ba52d17fc8372c328f55f2f0da740d472f`已推送origin/master，远端SHA一致。
+只定向暂存自己的两个代码文件；另一轮对象选择提交`13fb4568a`保持独立，非本轮移植/验收。
+四份文档独立提交推送，最终文档SHA见git log。下一步仍需完整distance/final goal/续算状态
+及实际pathType的受控接入，不能把局部目标恢复修复当作已经切换原生路径系统。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
-- 已核对1.10f部分路径消费、重算与生产房间后置gate并修复恢复目标状态；下一步按实际
+- 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
   pathType设计受控接入，仍需native distance/final goal/续算状态模型，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。

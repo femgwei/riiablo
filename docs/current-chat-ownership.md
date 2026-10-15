@@ -10,7 +10,30 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第七批：恢复路径保留单位目标
+## 2026-10-15 第八批：绕行末点耗尽后的单位目标续算
+
+- 代码/测试 `473bd6ba52d17fc8372c328f55f2f0da740d472f` 已推送origin/master，远端SHA一致。
+  第七批保留目标身份后，仍有“到达绕行末点、未进目标范围、timer未到期便清路径”的缺口；
+  现在耗尽时向仍有效的实体目标续算，不把可达末点视为已完成追踪。
+- 仅在既有攻击/交互范围检查之后、路点确已耗尽且当前位置与live目标不在同一取整格时触发，
+  复用原exact/动态绕行策略；失败停止，不升级partial。坐标走路/DiabRun无实体目标，不新增续算。
+  房间gate、碰撞、平滑、Running/速度加成、周期/位移阈值均保留，未接入原生搜索backend。
+- 新增9项，修前4项失败/5项通过（旧9项亦通过）；修后该类18项通过，合并162项/25类通过，
+  失败/错误/跳过0。XML：`core/build/test-results/upstreamRound4-round8-full`。
+  使用实际ECS处理与scripted Map/mock动态服务，含失败确实发起查询、攻击范围、静态交互、
+  中间路点/未耗尽、坐标命令和DiabRun边界；非真实地形或原版DLL动态oracle。
+- 真实MPQ/TCP：seed12345普通难度25Hz，蛆虫二/三层及古代通道63/64/65，
+  3图/10击杀/0通行失败，1连续入口+1 staging跳转；AI errors/fallbackRecords=0。
+  ENTITY_PATH_CONTINUE及MONSTER_PATH_STALLED日志均0次，未在TCP触发新分支，仅非回归冒烟。
+  shadow128次：65可比较（55 NONE、10 TURNS），63越界；无诊断错误/live重放差异，6114已释放。
+- 固定D2MOO `0c0bbd1e`，本轮未fetch；重新核对PathMisc.cpp及本机D2Common.dll
+  `0x6FDACB0E..CB27`的耗尽/final目标/10236调用，与第七批证据衔接。
+  本轮以live实体坐标和当前取整/范围规则做局部适配，不宣称完整native final goal状态机等价。
+- 下一步仍需distance budget/final goal/续算状态及实际pathType受控接入；普通A*未切换，
+  火焰之河AI fallback未修/未重跑，无性能/GL/全图/原版动态等价验收。
+  本轮只定向暂存自己的文件，未改另一轮对象选择提交；文档独立提交推送，最终SHA见git log。
+
+## 2026-10-15 第七批：恢复路径保留单位目标（历史）
 
 - 代码/测试 `b0a1f4912a52f2ee4abf0ec4d78fab392d0003d3` 已推送origin/master，远端SHA一致。
   修复动态阻挡恢复绕过public入口时，stop→绕行→重建Pathfind丢失targetEntityId，

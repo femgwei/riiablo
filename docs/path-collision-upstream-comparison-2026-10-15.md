@@ -388,3 +388,29 @@ shadow128次中83可比较（55 NONE、28 TURNS），45越界；诊断错误/liv
 下一步是按实际pathType做受控原生接入，而非将普通失败一律升级partial成功。
 详细证据及另一电脑复验命令见
 [第七批记录](d2moo-upstream-port-2026-10-15.md#第七批部分路径消费核对与恢复目标状态修复)。
+
+## 后续第八批：耗尽路径不等于完成追踪
+
+第七批目标身份恢复后，仍存在末点耗尽时timer未到期便清路径的问题；本轮修复为：
+保留有效实体目标且未进入既有攻击/交互范围时，无剩余路点、当前位置已到路点、
+与live目标不同取整格，则复用原exact/动态绕行策略续算，失败停止，不自动partial。
+到达中间路点/尚未到末点不新增重算；坐标命令及DiabRun不因本条件追单位。
+新增DEBUG `[ENTITY_PATH_CONTINUE]`表示请求尝试，不是成功证明。
+
+固定D2MOO`0c0bbd1e`（本轮未fetch）的PathMisc.cpp中，sub_6FD5DB70同样在耗尽且
+未到tFinalTargetCoord时调用10236；本机1.10f D2Common重新核验`0x6FDACB0E..CB27`的
+索引/点数、final/当前位置比较及恢复调用，哈希与第七批一致。上游10142标BROKEN，
+以上仅为局部静态交叉证据；native distance预算、nStepNum/final状态和实际pathType仍未完整接入。
+当前采用live目标及现有Map.round/范围规则，不宣称原版状态机动态等价，不替换周期/位移阈值。
+房间gate、近期碰撞、平滑、移动和生产A*不变，不引入1.13+门槛。
+
+新增9项中修前4失败，修后该类18项通过；合并162项/25类通过，失败/错误/跳过0。
+实际ECS配scripted Map/mock动态服务，直接设置到达末点，非真实逐步碰撞/TCP或原版DLL oracle。
+真实25Hz/seed12345三图MPQ/TCP巡游通过：蛆虫二/三层及古代通道63/64/65，
+10击杀/0通行失败，1连续入口+1 staging跳转，AI errors/fallbackRecords=0。
+续算和stalled日志均0，未触发新分支，仅作非回归冒烟；shadow65可比较、63越界，
+无诊断错误/live重放差异，未出现FAILED/EXACT或FAILED/PARTIAL。
+
+代码/测试`473bd6ba5`已推送origin/master且远端SHA一致；详细证据/复验命令见
+[第八批记录](d2moo-upstream-port-2026-10-15.md#第八批绕行路点耗尽后的实体目标续算)。
+仍无性能/GL/全图/原版动态等价结论，火焰之河AI fallback未修复/重跑。
