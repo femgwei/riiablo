@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十一批（生产适配仍PARTIAL）
+
+- [x] #11281 size→pattern映射/pet转换及越界提前返回，静态核对1.10f代码/表。
+- [x] 真实MonStats.interact快照参与推导，nativeSize/ISREVIVE显式提供；不用#11282替代。
+- [x] 新增4项，完整599项/51类通过，无失败/错误/跳过。
+- [ ] 推导不等于live pattern字段；技能/Wraith覆盖、raw数据、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder；无动态DLL差分或性能验收。
+
 ## 2026-10-16 寻路第四十批（生产适配仍PARTIAL）
 
 - [x] 标准Observation的owner坐标与request起点在构造及既有执行前入口核对，拒绝移动后混用。

@@ -15,6 +15,20 @@ import java.util.Objects;
 public final class D2PathFootprint {
     private D2PathFootprint() {}
 
+    /** #11281 (0x6FDA9250), not the unused MonStats2-only #11282 helper.
+     * This derives a pattern; it does not read the live path field, which skills
+     * and special monster allocation branches may override independently. */
+    public static int patternFromSize(int size, boolean monster, boolean canBeInTown, boolean interact) {
+        if (size < 0 || size >= 4) return D2Collision.PATTERN_SMALL_UNIT_PRESENCE;
+        int pattern = size == 0 ? D2Collision.PATTERN_NONE : size == 3
+                ? D2Collision.PATTERN_BIG_UNIT_PRESENCE : D2Collision.PATTERN_SMALL_UNIT_PRESENCE;
+        if (monster && canBeInTown && !interact) {
+            if (pattern == D2Collision.PATTERN_SMALL_UNIT_PRESENCE) return D2Collision.PATTERN_SMALL_PET_PRESENCE;
+            if (pattern == D2Collision.PATTERN_BIG_UNIT_PRESENCE) return D2Collision.PATTERN_BIG_PET_PRESENCE;
+        }
+        return pattern;
+    }
+
     /** Resolved Objects.txt fields; raw bytes are not normalized to 0/1.
      * The eight mode entries are copied; unsupported modes are rejected rather
      * than reading an adjacent native record byte as if it were valid metadata. */

@@ -4,6 +4,7 @@ import com.artemis.World;
 import com.d2moo.common.path.D2Path;
 import com.d2moo.common.path.D2PathUnits;
 import com.d2moo.common.path.D2PathRequest;
+import com.d2moo.common.path.D2PathFootprint;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
@@ -18,18 +19,18 @@ public final class NativePathUnitMetadata {
   public final int type, sizeX, sizeY;
   /** Predicate results from the host table; these are not original DLL record bytes. */
   public final boolean door, orientationIsOne;
-  private final boolean hasTownMetadata, npc, inTown;
+  private final boolean hasTownMetadata, npc, inTown, interact;
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY) {
     this(type, sizeX, sizeY, false, false);
   }
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne) {
-    this(type, sizeX, sizeY, door, orientationIsOne, false, false, false);
+    this(type, sizeX, sizeY, door, orientationIsOne, false, false, false, false);
   }
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne,
-      boolean hasTownMetadata, boolean npc, boolean inTown) {
+      boolean hasTownMetadata, boolean npc, boolean inTown, boolean interact) {
     this.type = type;
     this.sizeX = sizeX;
     this.sizeY = sizeY;
@@ -38,6 +39,16 @@ public final class NativePathUnitMetadata {
     this.hasTownMetadata = hasTownMetadata;
     this.npc = npc;
     this.inTown = inTown;
+    this.interact = interact;
+  }
+
+  /** #11281 derivation from the supplied native path size, not a live pattern read.
+   * Wraith/skill overrides and the actual runtime pattern remain caller-owned. */
+  public int collisionPatternFromSize(int nativeSize, boolean nativeIsRevive) {
+    if (nativeSize < 0 || nativeSize >= 4 || type != 1) {
+      return D2PathFootprint.patternFromSize(nativeSize, false, false, false);
+    }
+    return D2PathFootprint.patternFromSize(nativeSize, true, ownerCanBeInTown(nativeIsRevive), interact);
   }
 
   /** Owner eligibility for Request.State, not the owner's current room location.
@@ -83,7 +94,8 @@ public final class NativePathUnitMetadata {
         return new NativePathUnitMetadata(1, monster.monstats2.SizeX, monster.monstats2.SizeY,
             false, false, monster.monstats != null,
             monster.monstats != null && monster.monstats.npc,
-            monster.monstats != null && monster.monstats.inTown);
+            monster.monstats != null && monster.monstats.inTown,
+            monster.monstats != null && monster.monstats.interact);
       }
       case OBJ: {
         Object object = world.getMapper(Object.class).get(id);

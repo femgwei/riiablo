@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathFootprintTest {
+  @Test void runtimeSizePatternTableAndPetConversionAreExact() {
+    int[] normal = {0, 1, 1, 2}, pet = {0, 3, 3, 4};
+    for (int size = 0; size < 4; size++) {
+      assertEquals(normal[size], D2PathFootprint.patternFromSize(size, false, true, false));
+      assertEquals(normal[size], D2PathFootprint.patternFromSize(size, true, false, false));
+      assertEquals(normal[size], D2PathFootprint.patternFromSize(size, true, true, true));
+      assertEquals(pet[size], D2PathFootprint.patternFromSize(size, true, true, false));
+    }
+  }
+  @Test void invalidSizeReturnsSmallUnitBeforePetConversion() {
+    for (int size : new int[] {-1, 4, 255, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+      assertEquals(1, D2PathFootprint.patternFromSize(size, true, true, false));
+    }
+  }
   private static D2Path.Point p(int x, int y) { return new D2Path.Point(x, y); }
   private static D2ActiveRoom room(int x, int y, int width, int height) {
     D2ActiveRoom room = new D2ActiveRoom();

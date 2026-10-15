@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第四十一批：移植#11281 size→pattern推导并接真实MonStats.interact/npc/inTown快照，
+ISREVIVE/nativeSize显式提供，不冒充live pattern或unused #11282。静态核对1.10f代码及表。
+新增4项，完整599项/51类通过，失败/错误/跳过0；core/build/round41-full.log。
+生产仍A*，详细边界见handoff顶部。
+
 第四十批：Request标准Observation验证owner原生坐标与起点一致，构造及既有执行前检查覆盖；
 移动后需重捕获。不推断浮点或fp16低字。新增2项，完整595项/51类通过，失败/错误/跳过0。
 日志core/build/round40-full.log；生产仍A*，详细交接见handoff顶部。

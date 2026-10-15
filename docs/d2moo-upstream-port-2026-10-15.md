@@ -2044,6 +2044,20 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
   低层Result.State Dispatch边界保留。生产仍A*，raw数据/Act与Zone/shared seed仍待。
   无新增DLL算法证据或动态DLL执行。
 
+## 第四十一批：#11281运行时碰撞pattern推导
+
+- D2PathFootprint.patternFromSize实现固定上游0c0bbd1的#11281：size0/1/2/3映射0/1/1/2，
+  monster且可进城且非interact时1→3/2→4，越界size直接返回1，不再转换pet。
+- NativePathUnitMetadata捕获真实MonStats.interact，与npc/inTown及显式ISREVIVE共同推导；
+  显式nativeSize代表path size，不自动用当前表size覆盖。合法size缺宿主MonStats仍unknown拒绝。
+- 静态核对本地1.10f D2Common.dll 0x6FDA9250..92ED及0x6FDD1DE4映射表，
+  早返回、表值和转换分支与上游一致；不是动态执行。未套用unused MonStats2-only #11282。
+- 新增4项覆盖完整size/条件组合、越界优先级、真实表/快照/显式flag及缺表分支。
+  完整599项/51类通过，失败/错误/跳过0；core/build/round41-full.log，
+  XML .gradle/path-port/round41-full/core/test-results/pathPortTest。
+- 推导不等于读取live字段，Wraith分配/技能覆盖仍需原生pattern来源；生产仍A*，
+  raw数据/Act与Zone/shared seed仍待，无全寻路DLL差分或性能验收。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

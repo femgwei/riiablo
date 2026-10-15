@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第四十一批补充：#11281 size→pattern及pet转换移植并接真实MonStats.interact/npc/inTown，
+nativeSize/ISREVIVE仍显式提供。静态核对1.10f 0x6FDA9250..92ED与0x6FDD1DE4的0/1/1/2表。
+不是live pattern读取，不覆盖技能/Wraith等运行时改写，也不使用unused #11282规则替代。
+新增4项，完整599项/51类通过，失败/错误/跳过0；生产仍A*，无动态DLL执行。
+
 第四十批补充：Request标准Observation构造及既有执行前检查核对owner坐标与path起点一致，
 避免custom effects混用旧观察和新起点；移动后需重捕获。未推断ECS浮点或验证fp16低字。
 新增2项，完整595项/51类通过，失败/错误/跳过0；生产仍A*，无新增DLL算法证据或动态执行。

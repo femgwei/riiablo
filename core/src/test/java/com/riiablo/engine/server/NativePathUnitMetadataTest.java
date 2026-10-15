@@ -17,6 +17,34 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitMetadataTest {
+  @Test void realMonsterTableDrivesRuntimePatternDerivationWithoutResurrectionGuess() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id);
+      m.monstats2 = new MonStats2.Entry(); m.monstats = new MonStats.Entry();
+      m.monstats.npc = true;
+      NativePathUnitMetadata old = NativePathUnitMetadata.read(w, id);
+      assertEquals(3, old.collisionPatternFromSize(2, false));
+      m.monstats.interact = true;
+      assertEquals(2, NativePathUnitMetadata.read(w, id).collisionPatternFromSize(3, false));
+      assertEquals(4, old.collisionPatternFromSize(3, false));
+      m.monstats.npc = false; m.monstats.interact = false; m.setResurrected(42, true);
+      assertEquals(1, NativePathUnitMetadata.read(w, id).collisionPatternFromSize(2, false));
+      assertEquals(3, NativePathUnitMetadata.read(w, id).collisionPatternFromSize(2, true));
+    } finally { w.dispose(); }
+  }
+  @Test void invalidSizePatternBypassesUnknownTownDataAsNativeEarlyReturnDoes() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      w.getMapper(Monster.class).create(id).monstats2 = new MonStats2.Entry();
+      NativePathUnitMetadata m = NativePathUnitMetadata.read(w, id);
+      assertEquals(1, m.collisionPatternFromSize(-1, true));
+      assertEquals(1, m.collisionPatternFromSize(4, true));
+      assertThrows(IllegalArgumentException.class, () -> m.collisionPatternFromSize(2, true));
+    } finally { w.dispose(); }
+  }
   private D2Path.Point p(int x, int y) { return new D2Path.Point(x, y); }
   private int create(World w, Class.Type type) {
     int id = w.create();

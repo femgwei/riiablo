@@ -2,7 +2,21 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十批续接结果（优先于下方历史起点）
+## 第四十一批续接结果（优先于下方历史起点）
+
+- D2PathFootprint.patternFromSize移植#11281运行时size推导：0/1/2/3→0/1/1/2；
+  仅monster且canBeInTown且非interact转换1→3/2→4；越界size提前返回1，不做pet转换。
+- NativePathUnitMetadata捕获真实MonStats.interact，collisionPatternFromSize(nativeSize,nativeIsRevive)
+  复用npc/inTown快照和显式ISREVIVE；valid size缺表拒绝，invalid size按原生提前返回。
+- 这不是live pattern读取；参数为显式native path size，不默认以当前表size替代；Wraith分配/技能等
+  运行时覆盖仍需实际字段。未使用MonStats2.revive/small等unused #11282规则。
+- 固定上游0c0bbd1，并静态核对本地1.10f DLL 0x6FDA9250..92ED与0x6FDD1DE4表，
+  确认早返回/映射/转换分支；不是动态DLL执行或全寻路差分。
+- 新增4项，完整599项/51类通过，失败/错误/跳过0；core/build/round41-full.log，
+  XML `.gradle/path-port/round41-full/core/test-results/pathPortTest`。
+- 生产仍A*，raw数据/live pattern字段/Act与Zone/shared seed仍待。
+
+## 第四十批续接结果（历史）
 
 - Request.State标准Observation构造时校验owner原生坐标与path.currentPoint一致；
   Request/公开Search及RequestEffects既有复检入口也验证此条件，移动后需重新捕获和构造request。
