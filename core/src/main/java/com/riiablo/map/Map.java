@@ -1174,6 +1174,16 @@ public class Map implements Disposable {
     int width, height;
     /** D2MOO D2DrlgLevel seed ({@code levelId + drlg.startSeed}). */
     private int levelSeed;
+    private NativeMonsterSpawnExclusion nativeMonsterSpawnExclusion;
+
+    public void setNativeMonsterSpawnExclusion(NativeMonsterSpawnExclusion exclusion) {
+      nativeMonsterSpawnExclusion = exclusion;
+    }
+
+    boolean excludesNativeMonsterSpawn(int x, int y) {
+      return level != null && level.Id > 0 && nativeMonsterSpawnExclusion != null
+          && nativeMonsterSpawnExclusion.excludes(x, y, level.WarpDist);
+    }
     /** Native Act spawn coordinate used for ordinary town portals, world subtiles. */
     private Vector2 townPortalSpawn;
     /** Optional native Arcane Sanctuary graph; populated only for level 74. */
@@ -1464,6 +1474,7 @@ public class Map implements Disposable {
       x = y = 0;
       width = height = 0;
       levelSeed = 0;
+      nativeMonsterSpawnExclusion = null;
       arcaneSanctuaryTopology = null;
       nativeTileGrid = null;
       nativeDt1Mask = 0;

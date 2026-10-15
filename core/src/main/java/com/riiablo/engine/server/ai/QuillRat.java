@@ -15,7 +15,7 @@ import com.riiablo.engine.Engine;
  * D2MOD AI Parameters:
  * - params[0] = QUILLRAT_AI_PARAM_ACTIVATE_DISTANCE (activate distance)
  * - params[1] = QUILLRAT_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
- * - params[2] = QUILLRAT_AI_PARAM_UNUSED (unused)
+ * - params[2] = extra missiles per attack (consumed by MonsterMode, not AiThink)
  * - params[3] = QUILLRAT_AI_PARAM_WALK_DISTANCE (walk distance)
  * 
  * Special: Ranged attack AI. When target is far, walks randomly around target.

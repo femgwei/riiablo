@@ -73,6 +73,7 @@ public final class Act2ArcaneD2MOOLayoutBridge {
       int dt1Mask = com.d2moo.common.drlg.DrlgExport.collectLevelDt1Mask(
           drlg, LEVEL_ARCANE);
       if (exportedFloors > 0) zone.setNativeTileGrid(grid, dt1Mask);
+      com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
       com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
           new com.badlogic.gdx.utils.Array<>();
       int[] nativeWarpUnits = {0, 0};

@@ -132,6 +132,7 @@ public final class Act4D2MOOLayoutBridge {
           }
         }
         projectRooms(level, zone);
+        com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
         if (actId == D2C_Acts.ACT_IV) {
           int[] vis = com.d2moo.common.drlg.DrlgDrlgRoom.getVisArrayFromLevelId(drlg, levelId);
           int[] warps = com.d2moo.common.drlg.DrlgDrlgWarp.getWarpIdArrayFromLevelId(drlg, levelId);

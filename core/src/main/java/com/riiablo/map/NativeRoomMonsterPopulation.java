@@ -12,11 +12,19 @@ final class NativeRoomMonsterPopulation {
 
   static int addGroup(Map.Zone zone, Map.RoomEx room, MonStats.Entry monster,
       int count, int packId, Random random) {
-    return addGroupAt(zone, room, monster, count, packId, random, Integer.MIN_VALUE, Integer.MIN_VALUE);
+    return addGroupAt(zone, room, monster, count, packId, random,
+        Integer.MIN_VALUE, Integer.MIN_VALUE, true);
   }
 
   static int addGroupAt(Map.Zone zone, Map.RoomEx room, MonStats.Entry monster,
       int count, int packId, Random random, int markerX, int markerY) {
+    // DS1 preset groups (MonsterRegion cases 24/26) use their marker directly,
+    // unlike sub_6FC677D0's normal population search with a7=1.
+    return addGroupAt(zone, room, monster, count, packId, random, markerX, markerY, false);
+  }
+
+  private static int addGroupAt(Map.Zone zone, Map.RoomEx room, MonStats.Entry monster,
+      int count, int packId, Random random, int markerX, int markerY, boolean excludeWarps) {
     if (count <= 0 || room.width <= 1 || room.height <= 1 || room.isMonsterPopulationSpawned()) return 0;
     Map.MonsterSpawn leader = null;
     // MonsterRegion.cpp::sub_6FC66260 tries random positions in the population
@@ -26,6 +34,7 @@ final class NativeRoomMonsterPopulation {
           : markerX + (attempt == 0 ? 0 : random.nextInt(7) - 3);
       int y = markerY == Integer.MIN_VALUE ? room.y + 1 + random.nextInt(room.height - 1)
           : markerY + (attempt == 0 ? 0 : random.nextInt(7) - 3);
+      if (excludeWarps && zone.excludesNativeMonsterSpawn(x, y)) continue;
       if (canPlace(zone, room, monster, x, y)) {
         room.addMonsterSpawn(monster.hcIdx, x, y, packId, false);
         leader = room.getPendingMonsterSpawns().peek();

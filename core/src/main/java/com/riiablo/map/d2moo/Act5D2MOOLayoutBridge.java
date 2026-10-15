@@ -119,6 +119,7 @@ public final class Act5D2MOOLayoutBridge {
           continue;
         }
         projectRooms(level, zone);
+        com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
         zone.setNativeTileGrid(grid, dt1Mask);
         int[] objectCounts = {0, 0};
         int[] nativeWarpUnits = {0, 0};

@@ -22,6 +22,12 @@ public class DrlgDrlgWarp {
     /** Native DUNGEON_FindActSpawnLocation (the non-Ex, game-tile form). */
     public static D2ActiveRoom findActSpawnLocation(D2DrlgStrc drlg, int levelId,
             int tileIndex, int[] x, int[] y) {
+        return initializeAndGet(findActSpawnRoomEx(drlg, levelId, tileIndex, x, y));
+    }
+
+    /** Coordinate-only selection for exported metadata; does not activate the selected room. */
+    public static D2DrlgRoom findActSpawnRoomEx(D2DrlgStrc drlg, int levelId,
+            int tileIndex, int[] x, int[] y) {
         if (!hasXY(x, y) || drlg == null) return null;
         x[0] = -1; y[0] = -1;
         D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
@@ -31,13 +37,13 @@ public class DrlgDrlgWarp {
         if (def != null && def.getDwPosition() != 0) {
             if (tileIndex == 13) {
                 D2DrlgRoom waypoint = getWaypointRoomExFromLevel(level, x, y);
-                return initializeAndGet(waypoint);
+                return waypoint;
             }
             int selected = selectTileInfo(level, tileIndex);
             if (selected >= 0) {
                 D2DrlgTileInfoStrc info = level.getPTileInfo(selected);
                 x[0] = info.getNPosX(); y[0] = info.getNPosY();
-                return initializeAndGet(DrlgDrlg.getRoomExFromCoordinates(x[0], y[0], drlg, null, level));
+                return DrlgDrlg.getRoomExFromCoordinates(x[0], y[0], drlg, null, level);
             }
         }
         D2DrlgRoom room = getWaypointRoomExFromLevel(level, x, y);
@@ -50,7 +56,7 @@ public class DrlgDrlgWarp {
                             && warps != null && i < warps.length && warps[i] != -1) {
                         x[0] = candidate.getNTileXPos() + candidate.getNTileWidth() / 2;
                         y[0] = candidate.getNTileYPos() + candidate.getNTileHeight() / 2;
-                        return initializeAndGet(candidate);
+                        return candidate;
                     }
                 }
             }
@@ -63,7 +69,7 @@ public class DrlgDrlgWarp {
                 y[0] = room.getNTileYPos() + room.getNTileHeight() / 2;
             }
         }
-        return initializeAndGet(room);
+        return room;
     }
 
     /** Native DUNGEON_FindActSpawnLocationEx (subtile coordinates and footprint search). */

@@ -207,6 +207,7 @@ public final class Act3D2MOOLayoutBridge {
             });
         if (floors > 0) {
           projectRooms(level, zone);
+          com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
           queuedMonsters = queueNativeMonsters(zone, exportedMonsters);
           zone.getNativeObjects().addAll(exportedObjects);
           zone.getNativeMonsters().addAll(exportedMonsters);

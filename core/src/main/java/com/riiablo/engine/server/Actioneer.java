@@ -6303,20 +6303,44 @@ public class Actioneer extends PassiveSystem {
     Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
     direction.nor();
-    int missileId = factory.createMissile(missile, direction, start, entityId);
+    com.riiablo.codec.excel.DifficultyLevels.Entry difficulty =
+        Riiablo.files.DifficultyLevels.get(combatDifficulty());
+    int missileLevel = mMercenary.has(entityId) && mAttributesWrapper.has(entityId)
+        ? Math.max(1, statInt(mAttributesWrapper.get(entityId).attrs, Stat.level))
+        : difficulty == null ? 1 : difficulty.MonsterSkillBonus + 1;
+    int missileId = createMonsterAttackProjectile(entityId, monster, attack2,
+        missile, direction, start, missileLevel);
     if (missileId < 0) {
       log.warn("[MONSTER_MISSILE] create_failed entity={} target={} missile={}",
           entityId, targetId, missileName);
       return false;
     }
-    if (attack2 && mMissile.has(missileId)) {
-      // Keep the A2 profile on this projectile; the shared monster attributes
-      // represent A1 and must remain unchanged for overlapping attacks.
-      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
-      MissileDamageResolver.applySourceAttackProfile(projectile,
-          monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit);
-    }
     if (mCasting.has(entityId)) mCasting.get(entityId).monsterMissileCreated = true;
+    if ("quillrat1".equals(monster.monstats.BaseId)) {
+      // MonsterMode::sub_6FC64790: local two-word seed reset for EACH attack.
+      // The server ECS ID is our authoritative unit identity; this does not
+      // claim parity with the original game's unit-allocation sequence.
+      com.d2moo.common.drlg.D2Seed seed =
+          new com.d2moo.common.drlg.D2Seed(0x53454953, entityId);
+      int xOffset = 5, yOffset = 5;
+      Vector2 target = mPosition.get(targetId).position;
+      int targetX = MathUtils.floor(target.x), targetY = MathUtils.floor(target.y);
+      int[] params = monster.monstats.aip3;
+      int count = params == null || params.length == 0 ? 0
+          : params[MathUtils.clamp(combatDifficulty(), 0, params.length - 1)];
+      for (int i = 0; i < count; i++) {
+        if ((com.d2moo.common.seed.Seed.rollRandomNumber(seed) & 1) != 0) xOffset = -xOffset;
+        if ((com.d2moo.common.seed.Seed.rollRandomNumber(seed) & 1) != 0) yOffset = -yOffset;
+        // Supply the path-point target directly; do not change the live target
+        // component. Each failed secondary still consumes its two rolls.
+        int x = targetX + xOffset, y = targetY + yOffset;
+        if (x == 0 || y == 0) continue; // sub_6FD11420 rejects zero target coordinates.
+        Vector2 extraDirection = new Vector2(x, y).sub(start);
+        if (extraDirection.isZero(0.0001f)) extraDirection.set(1f, 0f);
+        createMonsterAttackProjectile(entityId, monster, attack2,
+            missile, extraDirection.nor(), start, 1);
+      }
+    }
     log.info("[MONSTER_MISSILE] created entity={} target={} mode={} missileId={} missile={} "
             + "speed={} range={} damage={}..{} ar={} start=({}, {}) direction=({}, {})",
         entityId, targetId, attack2 ? "A2" : "A1", missileId, missile.Missile,
@@ -6324,6 +6348,17 @@ public class Actioneer extends PassiveSystem {
         monsterAttackMaxDamage(entityId), monsterAttackRating(entityId),
         start.x, start.y, direction.x, direction.y);
     return true;
+  }
+
+  private int createMonsterAttackProjectile(int entityId, Monster monster, boolean attack2,
+      Missiles.Entry missile, Vector2 direction, Vector2 start, int skillLevel) {
+    int id = factory.createMissile(missile, direction, start, entityId, skillLevel);
+    if (id >= 0 && attack2 && mMissile.has(id)) {
+      // Snapshot A2 for every projectile, without overwriting shared A1 stats.
+      MissileDamageResolver.applySourceAttackProfile(mMissile.get(id),
+          monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit);
+    }
+    return id;
   }
 
   private boolean hasMonsterAttackMissile(int entityId) {
