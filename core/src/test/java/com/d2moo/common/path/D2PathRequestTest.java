@@ -13,6 +13,29 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathRequestTest {
+  @Test void standardObservationMustMatchTheExactTargetSnapshotAndSpeed() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(2, 2, p(20, 10));
+    D2PathRequest.State state = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    D2PathUnits.Unit sameCoordinates = D2PathUnits.Unit.stationary(2, 2, p(20, 10));
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(state.result,
+        sameCoordinates, state.startRoom, false, 0, 2, 3, 1, 70));
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(state.result,
+        target, state.startRoom, false, 1, 2, 3, 1, 70));
+  }
+
+  @Test void replacingAnObservationAfterConstructionRequiresANewRequest() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(2, 2, p(20, 10));
+    D2PathRequest.State state = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    state.result.path.targetUnit = D2PathUnits.observation(D2PathUnits.Unit.dynamic(0, 2, null), target, 0);
+    Effects effects = new Effects();
+    assertThrows(IllegalArgumentException.class, () -> D2PathRequest.compute(state, false, effects));
+    assertEquals(0x1234, state.collidedMask);
+    assertEquals(2, state.result.path.pathPointCount);
+    assertTrue(effects.calls.isEmpty());
+  }
+
   private static D2Path.Point p(int x, int y) { return new D2Path.Point(x, y); }
   private static D2PathRequest.Room room(int x, int y, int w, int h, boolean town) {
     return new D2PathRequest.Room(new D2PathResult.Room(x, y, w, h), town);

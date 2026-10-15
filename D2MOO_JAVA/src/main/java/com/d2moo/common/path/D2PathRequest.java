@@ -37,6 +37,7 @@ public final class D2PathRequest {
         public final int speed, unitSize, collisionPattern, moveMask, initialFScore;
         /** Live owner unit +0x20 seed projection; required only for type16. Never cloned/reset. */
         public final D2Seed ownerSeed;
+        private final D2PathUnits.Observation observation;
         public int collidedMask;
 
         public State(D2PathResult.State result, D2PathUnits.Unit target, Room startRoom,
@@ -61,6 +62,14 @@ public final class D2PathRequest {
             }
             if (speed < 0 || speed > 255 || initialFScore < 0 || initialFScore > 255 || unitSize < 0) {
                 throw new IllegalArgumentException("resolved size and unsigned native bytes required");
+            }
+            observation = result.path.targetUnit instanceof D2PathUnits.Observation
+                    ? (D2PathUnits.Observation) result.path.targetUnit : null;
+            if (observation != null) {
+                observation.requireCurrent();
+                if (observation.target != target || observation.speed != speed) {
+                    throw new IllegalArgumentException("request target/speed must match the unit observation");
+                }
             }
             this.target = target;
             this.startRoom = startRoom;
@@ -148,6 +157,12 @@ public final class D2PathRequest {
         D2PathResult.State result = state.result;
         D2PathContinuation.State path = result.path;
         if ((path.pathFlags & 0x40000) != 0) throw new IllegalArgumentException("missile dispatcher required");
+        if (state.observation != null) {
+            if (path.targetUnit != state.observation) {
+                throw new IllegalArgumentException("request observation changed; rebuild the request");
+            }
+            state.observation.requireCurrent();
+        }
         state.collidedMask = 0;
         if (state.target != null) {
             D2Path.Point raw = D2PathUnits.coordinates(state.target);

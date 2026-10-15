@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十七批续接结果（优先于下方历史起点）
+## 第二十八批续接结果（优先于下方历史起点）
+
+- NativePathUnitBinding将实际ECS owner/target生命周期token绑定到调用方已解析的原生Unit数据。
+  新选择可捕获当前token；保存的选择可显式传入原token，禁止按旧数字ID自动重绑定替代实体。
+- observe按操作捕获一次owner/target；D2PathUnits.Observation实现continuation Target，距离/lead/raw坐标
+  共用该快照并检查token。操作间移动后需显式重新observe，不是后台自动刷新。
+- Request.State对标准Observation校验target快照对象与speed一致；compute在副作用/路径写入前复检
+  原观察对象和生命周期。任意legacy自定义Target仍由调用方保证一致性，不伪称已验证其身份。
+- 原生数据Reader仍必须提供已核实的size/type/raw fp16或静态int32/path方向；不从Position浮点猜测。
+  尚未把该入口安装到ECS原生移动消费，生产仍Map→AStarPathFinder；Act/Zone、元数据、共享seed仍待。
+- 新增15项，首轮定向98项/4类通过后补2项边界；完整553项/48类通过，失败/错误/跳过0。
+  日志`core/build/round28-full-final.log`，XML `.gradle/path-port/round28-full-final/core/test-results/pathPortTest`。
+
+## 第二十七批续接结果（历史）
 
 - NativePathIdentity在公共EntityFactory实际创建边界分配不可变本地身份token，组件池化重用不复用token。
   Pathfinder安装实体目标时捕获token，续算/动态阻塞恢复前拒绝旧身份，停止旧追踪，不误追同ID新实体。

@@ -1868,6 +1868,32 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 下一步仍需将token接入D2PathUnits/Continuation的live target观察；原生类型/元数据、fp16、
   live owner D2Seed、运行期Act/Zone桥、移动状态消费、实图/性能/另机验收仍待。生产仍Map→AStarPathFinder。
 
+## 第二十八批：ECS生命周期与原生目标观察一致性（2026-10-16）
+
+- 延续固定D2MOO `0c0bbd1e6bef9181a3da1c046523af622a925416`：Path.h的pTargetUnit是独立身份字段。
+  本轮补host适配契约：原先Request.State仅比较target是否为空，无法发现continuation观察与request
+  传入了两个不同单位快照。没有新增DLL算法证据，不是动态DLL差分或完整实体元数据移植。
+- D2PathUnits.Observation统一owner/target/speed快照，实现原有Target接口，距离/采样/raw坐标仍调用
+  既有#10399、FOG lead与UNITS坐标投影；每次调用先执行只读host guard。旧三参数observation接口保留。
+  创建观察不提前读取静态path方向，stop-distance先返回的原生惰性采样顺序不变。
+- NativePathUnitBinding在实际World中要求已知owner/target token，读数据前/后均检验同一生命周期。
+  Reader按操作各读一次不可变原生Unit（自目标仅读一次），observe之后数据冻结，移动后需重新捕获。
+  保存请求可显式携带原token，不能按旧数字ID重绑定新单位；无身份不自动创建，未捕获数据不补默认值。
+  Reader必须提供已核实的native type/size/raw fp16或静态int32/方向，尚无自动生产元数据解析或浮点转换。
+- Request.State对标准Observation核对同一target Unit对象及speed；compute在collidedMask/路径写入与
+  footprint调用前要求仍为原观察对象且guard通过。标准纯快照使用no-op guard；任意legacy自定义Target
+  继续遵循原调用方契约，不能声称它也已验证。State/Observation是按操作构建，不跨重选目标复用。
+- 新增NativePathUnitBindingTest十三项及RequestTest两项：操作快照/重新捕获、raw静态和dynamic高字、
+  self-target、unknown拒绝、owner/target替换前后校验、真实删除与ID复用、显式保存token拒绝替代实体、
+  惰性静态方向、无数据/非法speed、过期请求写入前拒绝，以及真实footprint+Dispatch编排恢复。
+  Request另验证同坐标不同Unit对象、speed不一致及构造后替换观察均拒绝。
+- 首轮定向98项/4类通过，随后补raw高字与保存token两项边界。首个全范围构建因输出class文件缺失
+  在core编译阶段中断，改独立输出并使用no-daemon/max-workers=1强制重编译重跑。
+- 最终完整553项/48类通过，失败/错误/跳过0；日志`core/build/round28-full-final.log`，
+  XML `.gradle/path-port/round28-full-final/core/test-results/pathPortTest`。
+- 尚未安装ECS原生移动消费；运行期Act/Zone桥、原生元数据/fp16来源、shared owner D2Seed、
+  状态推进/实图/性能/另机验收仍待。生产仍Map→AStarPathFinder。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

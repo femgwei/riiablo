@@ -5,6 +5,13 @@
 
 ## 结论与证据边界
 
+第二十八批补充：NativePathUnitBinding将真实ECS身份token与显式提供的原生Unit快照绑定，
+标准Observation可被continuation和request共享。Request现校验target对象/speed一致及执行前生命周期，
+纠正原先只检查目标null状态、可混用两个单位快照的host适配缺口。自定义legacy Target仍属调用方契约。
+该入口不自动解析ECS浮点/类型/元数据，不自动刷新；没有切换生产A*、共享RNG或Act/Zone生命周期。
+本批是适配一致性校验，复用既有原生坐标/lead/#10399实现，无新增DLL算法证据或动态DLL执行。
+完整553项/48类通过，失败/错误/跳过0；日志与边界详见上游记录第二十八批。
+
 第二十七批补充：生产EntityFactory现生成本地不可变生命周期token，Pathfinder按token检验旧追踪，
 避免实体ID复用后将新单位当旧目标；旧unknown实体保留原兼容行为，死亡/原地复活不更换身份。
 这是host身份适配和生产旧追踪修正，尚未绑定原生live target坐标/元数据/RNG，不等同原生unitId。

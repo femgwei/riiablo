@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第二十八批（生产适配仍PARTIAL）
+
+- [x] 实际ECS owner/target token绑定原生Unit操作快照，保存选择可携带原token，拒绝ID替代实体。
+- [x] 标准Observation统一continuation采样/距离/raw坐标；Request检查target/speed与执行前身份。
+- [x] 新增15项；完整553项/48类通过，失败/错误/跳过0。
+- [ ] 原生数据Reader仍需真实元数据/fp16来源；不把Position浮点当无损原生坐标。
+- [ ] Act/Zone运行期桥、shared owner seed、原生状态消费/实图/性能/另机验收仍待。
+
+入口尚未安装ECS原生移动；生产仍Map→AStarPathFinder。
+
 ## 2026-10-16 寻路第二十七批（生产适配仍PARTIAL）
 
 - [x] 公共实体工厂真实分配边界生成本地身份token，跨World/ID复用/组件池化不混淆。

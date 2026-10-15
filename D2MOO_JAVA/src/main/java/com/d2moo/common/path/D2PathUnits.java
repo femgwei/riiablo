@@ -208,15 +208,34 @@ public final class D2PathUnits {
 
     /** Stable snapshot adapter for the continuation layer; sampling remains lazy after the stop check. */
     public static D2PathContinuation.Target observation(Unit owner, Unit target, int speed) {
-        Objects.requireNonNull(owner);
-        Objects.requireNonNull(target);
-        unsignedByte(speed);
-        return new D2PathContinuation.Target() {
-            @Override public int unitType() { return target.type; }
-            @Override public int distanceToOwner() { return distance(target, owner); }
-            @Override public D2Path.Point samplePoint() { return sample(target, speed); }
-            @Override public D2Path.Point coordinates() { return D2PathUnits.coordinates(target); }
-        };
+        return observation(owner, target, speed, () -> {});
+    }
+
+    /** Host lifetime guard; it must be read-only and used on the serialized game thread. */
+    public static Observation observation(Unit owner, Unit target, int speed, Runnable requireCurrent) {
+        return new Observation(owner, target, speed, requireCurrent);
+    }
+
+    /** One immutable data observation, not a continuously refreshed target.
+     * Recapture between continuation/request operations when unit data changes.
+     * Native sampling stays lazy: creating this does not read target path direction. */
+    public static final class Observation implements D2PathContinuation.Target {
+        public final Unit owner, target;
+        public final int speed;
+        private final Runnable guard;
+
+        private Observation(Unit owner, Unit target, int speed, Runnable guard) {
+            this.owner = Objects.requireNonNull(owner);
+            this.target = Objects.requireNonNull(target);
+            this.speed = unsignedByte(speed);
+            this.guard = Objects.requireNonNull(guard);
+        }
+
+        public void requireCurrent() { guard.run(); }
+        @Override public int unitType() { requireCurrent(); return target.type; }
+        @Override public int distanceToOwner() { requireCurrent(); return distance(target, owner); }
+        @Override public D2Path.Point samplePoint() { requireCurrent(); return sample(target, speed); }
+        @Override public D2Path.Point coordinates() { requireCurrent(); return D2PathUnits.coordinates(target); }
     }
 
     private static boolean isStatic(int type) { return type == 2 || type == 4 || type == 5; }
