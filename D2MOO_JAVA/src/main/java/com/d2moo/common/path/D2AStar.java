@@ -42,6 +42,24 @@ public final class D2AStar {
             D2Path.Point target,
             Collision collision,
             boolean targetIsUnit) {
+        return findPath(start, target, collision, targetIsUnit, false);
+    }
+
+    /** 1.10f entry arithmetic: uint16 neighbor writes and signed int16 node scores.
+     * The existing findPath API remains a general-coordinate reference used by runtime comparisons.
+     * This does not execute the DLL or model native memory/propagation-stack corruption. */
+    public static Result findNativePath(D2Path.Point start, D2Path.Point target,
+            Collision collision, boolean targetIsUnit) {
+        if (!uint16(start) || !uint16(target)) throw new IllegalArgumentException("native uint16 points required");
+        return findPath(start, target, collision, targetIsUnit, true);
+    }
+
+    private static boolean uint16(D2Path.Point point) {
+        return point != null && point.x >= 0 && point.x <= 65535 && point.y >= 0 && point.y <= 65535;
+    }
+
+    private static Result findPath(D2Path.Point start, D2Path.Point target,
+            Collision collision, boolean targetIsUnit, boolean nativeWords) {
         if (start == null || target == null || collision == null) {
             throw new IllegalArgumentException("start, target and collision are required");
         }
@@ -49,10 +67,10 @@ public final class D2AStar {
             return Result.empty(start);
         }
 
-        Context context = new Context();
+        Context context = new Context(nativeWords);
         Node startNode = context.allocate(start);
         startNode.distanceFromStart = 0;
-        startNode.heuristic = D2Path.aStarHeuristic(target.x, target.y, start.x, start.y);
+        startNode.heuristic = context.word(D2Path.aStarHeuristic(target.x, target.y, start.x, start.y));
         startNode.fScore = startNode.heuristic;
         context.makeCandidate(startNode);
 
@@ -101,8 +119,8 @@ public final class D2AStar {
             Context context, Node current, D2Path.Point target, Collision collision) {
         for (int i = 0; i < D2Path.neighborCount(); i++) {
             D2Path.Point point = new D2Path.Point(
-                    current.point.x + D2Path.neighborOffsetX(i),
-                    current.point.y + D2Path.neighborOffsetY(i));
+                    context.coordinate(current.point.x + D2Path.neighborOffsetX(i)),
+                    context.coordinate(current.point.y + D2Path.neighborOffsetY(i)));
             if (!collision.isBlocked(point.x, point.y)
                     && !evaluateNeighbor(context, current, point, target)) {
                 return false;
@@ -113,8 +131,8 @@ public final class D2AStar {
 
     private static boolean evaluateNeighbor(
             Context context, Node current, D2Path.Point point, D2Path.Point target) {
-        int distance = current.distanceFromStart
-                + D2Path.neighborCost(current.point.x, current.point.y, point.x, point.y);
+        int distance = context.word(current.distanceFromStart
+                + D2Path.neighborCost(current.point.x, current.point.y, point.x, point.y));
 
         Node node = context.pending.get(point);
         if (node != null) {
@@ -122,7 +140,7 @@ public final class D2AStar {
             if (distance < node.distanceFromStart) {
                 node.parent = current;
                 node.distanceFromStart = distance;
-                node.fScore = distance + node.heuristic;
+                node.fScore = context.word(distance + node.heuristic);
             }
             return true;
         }
@@ -133,7 +151,7 @@ public final class D2AStar {
             if (distance < node.distanceFromStart) {
                 node.parent = current;
                 node.distanceFromStart = distance;
-                node.fScore = distance + node.heuristic;
+                node.fScore = context.word(distance + node.heuristic);
                 context.propagateScore(node);
             }
             return true;
@@ -146,8 +164,8 @@ public final class D2AStar {
         current.addChild(node);
         node.parent = current;
         node.distanceFromStart = distance;
-        node.heuristic = D2Path.aStarHeuristic(point.x, point.y, target.x, target.y);
-        node.fScore = distance + node.heuristic;
+        node.heuristic = context.word(D2Path.aStarHeuristic(point.x, point.y, target.x, target.y));
+        node.fScore = context.word(distance + node.heuristic);
         context.makeCandidate(node);
         return true;
     }
@@ -162,10 +180,15 @@ public final class D2AStar {
     }
 
     private static final class Context {
+        final boolean nativeWords;
         final List<Node> nodes = new ArrayList<>(MAX_NODES);
         final List<Node> sortedPending = new ArrayList<>();
         final Map<D2Path.Point, Node> pending = new HashMap<>();
         final Map<D2Path.Point, Node> visited = new HashMap<>();
+
+        Context(boolean nativeWords) { this.nativeWords = nativeWords; }
+        int word(int value) { return nativeWords ? (short) value : value; }
+        int coordinate(int value) { return nativeWords ? value & 0xffff : value; }
 
         Node allocate(D2Path.Point point) {
             if (nodes.size() >= MAX_NODES) return null;
@@ -198,13 +221,16 @@ public final class D2AStar {
             while (!stack.isEmpty()) {
                 Node current = stack.pop();
                 for (Node child : current.children) {
-                    int distance = current.distanceFromStart
+                    int distance = word(current.distanceFromStart
                             + D2Path.neighborCost(
-                                current.point.x, current.point.y, child.point.x, child.point.y);
+                                current.point.x, current.point.y, child.point.x, child.point.y));
                     if (distance < child.distanceFromStart) {
                         child.parent = current;
                         child.distanceFromStart = distance;
-                        child.fScore = distance + child.heuristic;
+                        child.fScore = word(distance + child.heuristic);
+                        if (nativeWords && stack.size() >= MAX_NODES) {
+                            throw new IllegalStateException("outside native 200-entry propagation stack domain");
+                        }
                         stack.push(child);
                     }
                 }

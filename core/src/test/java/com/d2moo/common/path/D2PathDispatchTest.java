@@ -128,7 +128,7 @@ class D2PathDispatchTest {
 
   @Test void unsupportedAndNullEntriesAreExplicitAndNeverFallBackToCoordinateAStar() {
     D2PathResult.State s = state();
-    for (int type : new int[] {0,1,7,8,9,11,12,16})
+    for (int type : new int[] {0,8,9,11,12,16})
       assertThrows(UnsupportedOperationException.class,()->compute(s,p(20,10),type,77,0,(x,y)->false));
     for (int type : new int[] {4,10,14,17})
       assertThrows(IllegalStateException.class,()->compute(s,p(20,10),type,77,0,(x,y)->false));
@@ -213,7 +213,7 @@ class D2PathDispatchTest {
 
   @Test void unsupportedSearchStillRestoresTheOwnerFootprintThroughTheRequestFinally() {
     D2ActiveRoom grid = grid(); D2PathFootprint.Unit owner = footprint(grid); D2PathFootprint.add(owner);
-    D2PathResult.State s = state(); s.path.pathType = 7;
+    D2PathResult.State s = state(); s.path.pathType = 12;
     D2PathRequest.State request = request(s);
     assertThrows(UnsupportedOperationException.class,()->D2PathRequest.compute(request,false,
         new D2PathDispatch.Effects(request,owner,null)));

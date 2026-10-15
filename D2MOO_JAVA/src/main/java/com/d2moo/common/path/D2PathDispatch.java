@@ -3,7 +3,7 @@ package com.d2moo.common.path;
 import java.util.List;
 import java.util.Objects;
 
-/** Stateful non-missile entry subset: types 2/3/5/6/13 and 15. Does not replace
+/** Stateful non-missile entry subset: types 1/2/3/5/6/7/13/15. Does not replace
  * production A*, implement every native table entry, or consume movement ticks.
  * Stable request metadata and the native room/pattern/mask policy remain adapter responsibilities. */
 public final class D2PathDispatch {
@@ -24,7 +24,8 @@ public final class D2PathDispatch {
         D2PathTypes.Entry entry = D2PathTypes.entry(type);
         if (entry == D2PathTypes.Entry.NONE) throw new IllegalStateException("native null search entry assertion");
         if (entry != D2PathTypes.Entry.TOWARD && entry != D2PathTypes.Entry.TOWARD_ALIAS
-                && entry != D2PathTypes.Entry.WALL_FOLLOW) {
+                && entry != D2PathTypes.Entry.WALL_FOLLOW && entry != D2PathTypes.Entry.A_STAR
+                && entry != D2PathTypes.Entry.STRAIGHT) {
             throw new UnsupportedOperationException("native entry not ported here: " + entry);
         }
         D2PathContinuation.State path = state.path;
@@ -37,6 +38,22 @@ public final class D2PathDispatch {
             throw new IllegalArgumentException("synchronized uint16 coordinates and native distance bytes required");
         }
         Objects.requireNonNull(collision);
+        if (entry == D2PathTypes.Entry.A_STAR) return aStar(state, start, target, collision);
+        if (entry == D2PathTypes.Entry.STRAIGHT) {
+            int count = toward(state, start, target, maximumDistance, tolerance, collision);
+            if (count != 0) {
+                D2Path.Point last = state.points[count - 1];
+                if (D2PathMisc.approximateDistance(last, target) <= tolerance && !last.equals(start)) return count;
+            }
+            int dx = Math.abs(start.x - target.x), dy = Math.abs(start.y - target.y);
+            // 0x6FDAB1A9..B1B9: signed int32 imul/add/cmp, NOT a long squared radius.
+            if (dx * dx + dy * dy <= 18 * 18) {
+                int alternative = aStar(state, start, target, collision);
+                if (alternative != 0) return alternative;
+                if (count != 0) count = toward(state, start, target, maximumDistance, tolerance, collision);
+            }
+            return count;
+        }
         if (entry == D2PathTypes.Entry.WALL_FOLLOW) {
             // Native type15 writes buffer/returns count; caller assigns count. No initial vectors or index reset.
             List<D2Path.Point> points = D2WallFollow.compute(start, target,
@@ -44,6 +61,21 @@ public final class D2PathDispatch {
             writePrefix(state, points);
             return points.size();
         }
+        return toward(state, start, target, maximumDistance, tolerance, collision);
+    }
+
+    private static int aStar(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
+            D2Toward.Collision collision) {
+        List<D2Path.Point> points = D2AStar.findNativePath(start, target, collision::blocked,
+                state.path.targetUnit != null).path();
+        // #69E0/#78A0 write only an accepted prefix; index/count/vectors are caller-owned.
+        writePrefix(state, points);
+        return points.size();
+    }
+
+    private static int toward(D2PathResult.State state, D2Path.Point start, D2Path.Point target,
+            int maximumDistance, int tolerance, D2Toward.Collision collision) {
+        D2PathContinuation.State path = state.path;
         path.currentPointIndex = path.pathPointCount = 0;
         if (path.directionOffset != 0) {
             state.storePoints(D2Toward.compute(start, target, maximumDistance, tolerance,

@@ -10,6 +10,21 @@ gradle.beforeProject { p ->
 
 gradle.projectsEvaluated {
   def core = gradle.rootProject.project(':core')
+  // Opt-in source isolation as well as output isolation. Shared chats may have
+  // unfinished, unrelated tests; default compilation remains unchanged.
+  def scope = gradle.rootProject.findProperty('pathTestScope')
+  if (scope != null) {
+    if (scope != 'path') throw new GradleException('Invalid pathTestScope (expected path)')
+    core.tasks.named('compileTestJava') {
+      include 'com/d2moo/common/path/**', 'com/d2moo/common/collision/**', 'com/riiablo/RiiabloTest.java'
+      ['UnitCollisionGridTest', 'DynamicUnitCollisionSystemTest', 'PathfinderTest',
+       'PathfinderRecoveryTargetTest', 'PathfinderRoomBoundaryTest', 'PlayerGroundPathTest',
+       'NativeSeamCollisionTest', 'ObjectCollisionUpdaterTest', 'WhirlwindCollisionTest',
+       'WarpArrivalCollisionTest', 'NativeTowardPathProbeTest', 'NativeAiPathCacheTest',
+       'NativePathRuntimeComparisonTest', 'NativePathShadowTest', 'DiabRunDataTest',
+       'DiabRunIntegrationTest'].each { include "**/${it}.java" }
+    }
+  }
   core.tasks.register('pathPortTest', Test) {
     testClassesDirs = core.sourceSets.test.output.classesDirs
     classpath = core.sourceSets.test.runtimeClasspath
