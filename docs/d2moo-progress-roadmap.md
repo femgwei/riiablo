@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十三批（生产适配仍PARTIAL）
+
+- [x] 怪物/导弹尺寸uint8域校验，Objects仍int32；不夹紧或截断宿主非法值。
+- [x] 新增3项，完整605项/52类通过，无失败/错误/跳过，保留255及pattern fallback区别。
+- [ ] raw数据/live字段/Act与Zone/shared seed来源仍待；不模拟原生loader截断。
+
+生产仍Map→AStarPathFinder；本批仅host输入校验。
+
 ## 2026-10-16 寻路第四十二批（生产适配仍PARTIAL）
 
 - [x] #10152分配碰撞字段快照接真实ECS表，Wraith/flying/opendoors优先级，静态核对DLL。

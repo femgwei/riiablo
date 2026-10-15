@@ -17,6 +17,45 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitMetadataTest {
+  @Test void monsterSizeBytesRejectEachInvalidAxisWithoutTruncation() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id); m.monstats2 = new MonStats2.Entry();
+      for (int invalid : new int[] {-1, 256, 257, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+        m.monstats2.SizeX = invalid; m.monstats2.SizeY = 2;
+        assertThrows(IllegalArgumentException.class, () -> NativePathUnitMetadata.read(w, id));
+        m.monstats2.SizeX = 2; m.monstats2.SizeY = invalid;
+        assertThrows(IllegalArgumentException.class, () -> NativePathUnitMetadata.read(w, id));
+      }
+      m.monstats2.SizeX = 0; m.monstats2.SizeY = 255; check(w, id, 1, 0, 255);
+      m.monstats2.SizeX = 255; m.monstats2.SizeY = 0; check(w, id, 1, 255, 0);
+    } finally { w.dispose(); }
+  }
+  @Test void missileSizeByteRejectsInvalidValuesAndPreservesEndpoints() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MIS);
+      Missile m = w.getMapper(Missile.class).create(id); m.missile = new Missiles.Entry();
+      for (int invalid : new int[] {-1, 256, 257, Integer.MAX_VALUE}) {
+        m.missile.Size = invalid;
+        assertThrows(IllegalArgumentException.class, () -> NativePathUnitMetadata.read(w, id));
+      }
+      m.missile.Size = 0; check(w, id, 3, 0, 0);
+      m.missile.Size = 255; check(w, id, 3, 255, 255);
+    } finally { w.dispose(); }
+  }
+  @Test void oversizedButValidNativeSizeByteKeepsPatternFallbackSeparateFromMetadataValidation() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster m = w.getMapper(Monster.class).create(id); m.monstats2 = new MonStats2.Entry();
+      m.monstats2.SizeX = 255;
+      NativePathUnitMetadata metadata = NativePathUnitMetadata.read(w, id);
+      assertEquals(255, metadata.sizeX);
+      assertEquals(1, metadata.collisionPatternFromSize(metadata.sizeX, false));
+    } finally { w.dispose(); }
+  }
   @Test void realMonsterTableDrivesRuntimePatternDerivationWithoutResurrectionGuess() {
     World w = new World();
     try {

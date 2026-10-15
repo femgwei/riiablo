@@ -2070,6 +2070,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 仅不可变初始化碰撞快照，不包含完整#10152路径分配/类型/速度/房间插入，不读取live字段或覆盖
   技能/死亡后状态。生产仍A*，raw数据/live字段/Act与Zone/shared seed仍待。
 
+## 第四十三批：原生尺寸byte与宿主int边界
+
+- NativePathUnitMetadata按固定上游MonsterTbls.h的uint8 nSizeX/Y（+0x08/+0x09）及
+  MissilesTbls.h uint8 nSize（+0x18A），要求宿主字段0..255；越界拒绝，不截断/夹紧。
+- Objects尺寸是int32，保持大尺寸原值。合法size byte255保留，#11281另按pattern范围fallback，
+  不把pattern表仅四项误当所有原生size只能0..3。
+- 新增3项覆盖每轴越界、byte端点及255与pattern fallback区分；完整605项/52类通过，
+  失败/错误/跳过0；core/build/round43-full.log，XML .gradle/path-port/round43-full/core/test-results/pathPortTest。
+- 仅host已解析元数据输入域，不模拟Excel loader截断或新增DLL动态证据；生产仍A*，
+  raw数据/live字段/Act与Zone/shared seed仍待。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

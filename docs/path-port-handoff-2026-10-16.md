@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十二批续接结果（优先于下方历史起点）
+## 第四十三批续接结果（优先于下方历史起点）
+
+- NativePathUnitMetadata对MonStats2.SizeX/SizeY及Missiles.Size要求uint8域0..255，
+  防止宿主int字段越界被当作原生记录；不截断/夹紧。Objects尺寸仍保留int32，不套用byte限制。
+- 依据固定上游MonsterTbls.h nSizeX/Y +0x08/+0x09、MissilesTbls.h nSize +0x18A。
+  原生size byte可大于pattern映射范围，255仍合法元数据，#11281仍按已有规则返回pattern1。
+- 新增3项，完整605项/52类通过，失败/错误/跳过0；core/build/round43-full.log，
+  XML `.gradle/path-port/round43-full/core/test-results/pathPortTest`。
+- 本批为host输入域校验，不模拟Excel loader截断，不新增DLL动态证据；生产仍A*，
+  raw数据/live字段/Act与Zone/shared seed仍待。
+
+## 第四十二批续接结果（历史）
 
 - NativePathAllocationCollision从真实Class/尺寸/MonStats推导#10152分配时的pattern、footprintMask、
   moveMask：玩家0x80/0x1C09，导弹0/0；怪物0x100，Wraith优先pattern5/mask0x804，

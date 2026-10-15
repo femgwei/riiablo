@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第四十三批补充：按固定上游原生结构，MonStats2.SizeX/Y和Missiles.Size验证uint8域，
+Objects仍保留int32；合法255与#11281映射越界fallback区分，不伪造截断后的原生记录。
+新增3项，完整605项/52类通过，失败/错误/跳过0；生产仍A*，无新增DLL动态证据。
+
 第四十二批补充：NativePathAllocationCollision以真实Class/尺寸/MonStats推导#10152分配碰撞字段，
 Wraith优先于flying/opendoors，缺BaseId拒绝。静态核对1.10f 0x6FDA9480..96DF相关分支。
 新增3项，完整602项/52类通过，失败/错误/跳过0；不是完整分配/live读取，无动态DLL执行，生产仍A*。

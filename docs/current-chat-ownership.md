@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十三批：MonStats2双轴/Missiles尺寸要求原生uint8域，拒绝宿主越界int，不截断；
+Objects int32保持。新增3项，完整605项/52类通过，失败/错误/跳过0；core/build/round43-full.log。
+255等合法byte仍保留，pattern映射另按原规则fallback；生产仍A*，详细交接见handoff顶部。
+
 第四十二批：真实ECS数据推导#10152分配时碰撞pattern/footprint/move mask，Wraith优先于
 flying/opendoors；明确BaseId缺失拒绝。仅初始化快照，不代表live字段或完整动态路径分配。
 新增3项，完整602项/52类通过，失败/错误/跳过0；core/build/round42-full.log。

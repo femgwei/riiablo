@@ -91,6 +91,8 @@ public final class NativePathUnitMetadata {
       case MON: {
         Monster monster = world.getMapper(Monster.class).get(id);
         if (monster == null || monster.monstats2 == null) throw missing("MonStats2");
+        requireSizeByte(monster.monstats2.SizeX);
+        requireSizeByte(monster.monstats2.SizeY);
         return new NativePathUnitMetadata(1, monster.monstats2.SizeX, monster.monstats2.SizeY,
             false, false, monster.monstats != null,
             monster.monstats != null && monster.monstats.npc,
@@ -109,6 +111,7 @@ public final class NativePathUnitMetadata {
       case MIS: {
         Missile missile = world.getMapper(Missile.class).get(id);
         if (missile == null || missile.missile == null) throw missing("Missiles");
+        requireSizeByte(missile.missile.Size);
         return new NativePathUnitMetadata(3, missile.missile.Size, missile.missile.Size);
       }
       case ITM: return new NativePathUnitMetadata(4, 1, 1);
@@ -119,5 +122,11 @@ public final class NativePathUnitMetadata {
   private static IllegalArgumentException missing(String table) {
     // Missing host data is unknown, not proof that the native table lookup returned null.
     return new IllegalArgumentException("resolved " + table + " row required");
+  }
+
+  private static void requireSizeByte(int size) {
+    if (size < 0 || size > 255) {
+      throw new IllegalArgumentException("resolved native unsigned size byte required");
+    }
   }
 }
