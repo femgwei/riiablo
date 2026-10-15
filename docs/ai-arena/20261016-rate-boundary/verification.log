@@ -1,0 +1,7 @@
+Baseline: 10 tests, 3 expected rate life-boundary failures.
+final: 266 tests, 0 failures/errors/skips.
+repeat: 266 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 151F6788C4C045E8E45C8BD8D72D4502FFCD2EA2D632B6084D845BB055211766 core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java
+SHA256 92D405949BFB4705320F3F1ADDC1B41BCE1CAFE99C2518DA794FE699F24C295D core/src/test/java/com/riiablo/engine/server/SorceressFireAreaIntegrationTest.java
+PARTIAL: fixed elemental rate life boundaries verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

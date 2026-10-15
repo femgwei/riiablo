@@ -2085,7 +2085,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (life == null || life.asFixed() <= 0f) return;
     StatRef maximum = targetAttrs.get(Stat.maxhp, StatRef.obtain());
     float absorbed = combat.absorbedLifeFixed / 256f;
-    if (absorbed > 0f && maximum != null) {
+    StateList targetStates = stateList(targetId);
+    if (absorbed > 0f && maximum != null
+        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
       life.add(Math.min(absorbed, Math.max(0f, maximum.asFixed() - life.asFixed())));
     }
     float damage = combat.damageFixed / 256f;
@@ -2104,7 +2106,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     float applied = Math.max(0f, event.damage);
     float before = life.asFixed();
     life.sub(applied);
-    if (life.asFixed() <= 0f) {
+    if (life.asFixed() <= 0f || (applied > 0f && life.asFixed() < 1f)) {
       life.set(0f);
       events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
     } else if (missile.missile != null && missile.missile.pSrvDmgFunc == 3) {

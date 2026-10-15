@@ -189,9 +189,49 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test void rateHitBelowOneHpDies() { rateBoundary(511f / 256f, 0, false, 0f, 1); }
+  @Test void rateHitAtOneHpSurvives() { rateBoundary(2f, 0, false, 1f, 0); }
+  @Test void rateFullAbsorbHeals() { rateBoundary(50f, 1, false, 51f, 0); }
+  @Test void rateFullAbsorbDoesNotHealDeathDelay() { rateBoundary(50f, 1, true, 50f, 0); }
+  @Test void rateZeroDamageDoesNotKillFractionalLife() { rateBoundary(.5f, 1, true, .5f, 0); }
+  @Test void rateAbsorbClampsToMaximum() { rateBoundary(99.5f, 1, false, 100f, 0); }
+
+  /** Controlled fixed rate on a real Inferno missile, independent of RNG. */
+  private static void rateBoundary(float initial, int flatAbsorb, boolean delayed,
+      float expected, int deaths) {
+    RecordingFactory factory = new RecordingFactory();
+    World world = world(factory);
+    try {
+      int caster = player(world, SkillId.INFERNO, 1, 0, 0);
+      int target = monster(world, .4f, 0);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      attrs.base().put(Stat.item_absorbfire, flatAbsorb);
+      attrs.reset();
+      attrs.get(Stat.hitpoints).set(initial);
+      if (delayed) world.getMapper(UnitStates.class).get(target).stateList
+          .addState(StateId.DEATH_DELAY, 100, 1, caster);
+      cast(world, caster, Riiablo.files.skills.get(SkillId.INFERNO), new Vector2(2, 0));
+      Missile missile = factory.first("infernoflame1");
+      missile.elementalMinRateFixed = missile.elementalMaxRateFixed = 256;
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(expected, life(world, target), .0001f);
+      assertEquals(deaths, world.getSystem(DeathProbe.class).count);
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  private static final class DeathProbe extends net.mostlyoriginal.api.system.core.PassiveSystem {
+    int count;
+    @net.mostlyoriginal.api.event.common.Subscribe
+    public void onDeath(com.riiablo.engine.server.event.DeathEvent event) { count++; }
+  }
+
   private static World world(RecordingFactory factory) {
     return new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(),
+        .with(new EventSystem(), new DeathProbe(), new ServerSkillSystem(true), new StateUpdater(),
             new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new Map(0, 0)));
   }
