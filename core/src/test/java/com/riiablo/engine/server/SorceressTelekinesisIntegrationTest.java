@@ -38,6 +38,26 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authoritative coverage for D2MOO SrvSt12/SrvDo021. */
 class SorceressTelekinesisIntegrationTest extends RiiabloTest {
+  @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, 100, 50f, 0); }
+  @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, 0, 40f, 1); }
+  @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, 100, 70f, 0); }
+
+  private static void absorbBoundary(boolean delayed, int flat, float expected, int events) {
+    try (Harness test = new Harness()) {
+      int caster = test.player(0, 0, 20, 0);
+      int target = test.monster(1, 0, 50, 100, 0);
+      test.attrs(target).base().put(Stat.item_absorblight_percent, 50);
+      test.attrs(target).base().put(Stat.item_absorblight, flat);
+      test.attrs(target).reset();
+      if (delayed) test.world.getMapper(UnitStates.class).get(target).stateList
+          .addState(com.riiablo.engine.server.state.StateId.DEATH_DELAY, 100, 1, caster);
+      test.cast(caster, target);
+      assertEquals(expected, test.hp(target), .0001f);
+      assertEquals(events, test.damage.count);
+      if (events > 0) assertEquals(10f, test.damage.lightning, .0001f);
+    }
+  }
+
   @Test
   void monsterDamageUsesLightningMasteryAndCreatesNoMissile() {
     try (Harness test = new Harness()) {

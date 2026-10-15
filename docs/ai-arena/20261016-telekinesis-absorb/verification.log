@@ -1,0 +1,7 @@
+Baseline: 6 tests, 2 expected Telekinesis delayed-absorb failures.
+final: 284 tests, 0 failures/errors/skips.
+repeat: 284 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 D9ED3DC5D23F29496A0AD11614A9CD6556DC8ED9030FE3A6A8BB6EE4A67747AA core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 8619E63897A9C3C4A754E6C937BADBA9949CA02738D834A71A35C481F13221C7 core/src/test/java/com/riiablo/engine/server/SorceressTelekinesisIntegrationTest.java
+PARTIAL: Telekinesis delayed-death absorb verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

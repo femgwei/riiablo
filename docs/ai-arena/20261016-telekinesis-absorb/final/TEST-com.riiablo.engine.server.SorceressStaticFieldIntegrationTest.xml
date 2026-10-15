@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-15T23:32:26" hostname="DESKTOP-7GGAVHU" time="0.008">
+  <properties/>
+  <testcase name="expansionDifficultyThresholdIsAnEligibilityGate()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.002"/>
+  <testcase name="deathDelayPreventsFullAbsorbHealing()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.001"/>
+  <testcase name="hostilePlayerReceivesNativePvpScalarWhileNeutralPlayerIsIgnored()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.0"/>
+  <testcase name="deathDelayPreventsPartialAbsorbHealingButStillTakesDamage()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.001"/>
+  <testcase name="filterSkipsRangeTownZoneCorpseNpcOwnedAndConvertedUnits()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.001"/>
+  <testcase name="livingTargetStillReceivesFullAbsorbHealing()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.0"/>
+  <testcase name="nativeIntegerLifeAndDifficultyFloorArithmeticIsPreserved()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.0"/>
+  <testcase name="normalHitsEveryValidTargetAndUsesResistanceAbsorbAndNoMissiles()" classname="com.riiablo.engine.server.SorceressStaticFieldIntegrationTest" time="0.001"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=42 target=-1 srvDoFunc=20 cltDoFunc=0
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

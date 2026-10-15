@@ -1993,7 +1993,8 @@ public class ServerSkillSystem extends PassiveSystem {
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
     StatRef maxHp = target.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
-    if (elemental.absorbedLife > 0 && maxHp != null) {
+    if (elemental.absorbedLife > 0 && maxHp != null
+        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
       hp.add(Math.max(0f,
           Math.min((float) elemental.absorbedLife, maxHp.asFixed() - hp.asFixed())));
     }
