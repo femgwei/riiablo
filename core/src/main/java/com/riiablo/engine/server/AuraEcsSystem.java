@@ -228,6 +228,10 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (amount <= 0f) return true;
     if (!mAttributes.has(casterId)) return false;
     Attributes attrs = mAttributes.get(casterId).attrs;
+    StateList bloodStates = bloodManaStates(casterId);
+    if (bloodStates != null) {
+      return com.riiablo.engine.server.skill.BloodMana.consumeLife(attrs, bloodStates, amount);
+    }
     StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
     if (mana == null || mana.asFixed() < amount) return false;
     mana.sub(amount);
@@ -237,9 +241,18 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   @Override public boolean canConsumeMana(int casterId, float amount) {
     if (amount <= 0f) return true;
     if (!mAttributes.has(casterId)) return false;
+    // Native AuraConsume performs the insufficient-life clamp/removal when
+    // settling the useful pulse; preflight must not suppress that mutation.
+    if (bloodManaStates(casterId) != null) return true;
     Attributes attrs = mAttributes.get(casterId).attrs;
     StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
     return mana != null && NativeSkillResolver.hasEnoughMana(mana.asFixed(), amount);
+  }
+
+  private StateList bloodManaStates(int casterId) {
+    if (!mPlayer.has(casterId) || !mUnitStates.has(casterId)) return null;
+    StateList states = mUnitStates.get(casterId).stateList;
+    return com.riiablo.engine.server.skill.BloodMana.active(states) ? states : null;
   }
 
   @Override public void applyState(int targetId, int stateId, int duration,

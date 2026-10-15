@@ -1,0 +1,111 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+> Task :core:jar
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :server:d2gs:compileJava
+> Task :server:d2gs:processResources UP-TO-DATE
+> Task :server:d2gs:classes
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :server:d2gs:monsterAiArena
+[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus1 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus1 far ACTION_OBSERVED actions=24 moves=49 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus1 blood-mana ACTION_OBSERVED actions=20 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus2 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus2 far ACTION_OBSERVED actions=24 moves=45 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus2 blood-mana ACTION_OBSERVED actions=20 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus3 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus3 far ACTION_OBSERVED actions=25 moves=41 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus3 blood-mana ACTION_OBSERVED actions=20 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus4 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus4 far ACTION_OBSERVED actions=25 moves=38 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus4 blood-mana ACTION_OBSERVED actions=20 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus5 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus5 far ACTION_OBSERVED actions=25 moves=35 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus5 blood-mana ACTION_OBSERVED actions=20 moves=0 special=NOT_IMPLEMENTED
+[AI_ARENA] succubus6 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[AI_ARENA] succubus6 far ACTION_OBSERVED actions=25 moves=35 special=NOT_IMPLEMENTED
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus6 blood-mana ACTION_OBSERVED actions=21 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[Map] Creating custom sized byte array: 2560000
+[Map] Creating custom sized byte array: 2560000
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus7 near ACTION_OBSERVED actions=24 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] succubus7 far ACTION_OBSERVED actions=25 moves=35 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=40 target=-1 keyframe=ATK srvDoFunc=18 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=40 target=-1 srvDoFunc=18 cltDoFunc=0
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3328 frames=3584 lastKeyframe=13
+[AI_ARENA] succubus7 blood-mana ACTION_OBSERVED actions=21 moves=0 special=NOT_IMPLEMENTED
+[AI_ARENA] DIAGNOSTIC_COMPLETE {ACTION_OBSERVED=21, NOT_RUN=1166} correctnessPass=NOT_EVALUATED
+
+BUILD SUCCESSFUL in 10s
+14 actionable tasks: 5 executed, 9 up-to-date

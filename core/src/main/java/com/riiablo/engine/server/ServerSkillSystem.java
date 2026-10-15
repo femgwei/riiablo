@@ -442,12 +442,20 @@ public class ServerSkillSystem extends PassiveSystem {
       reject(event, 1, "not enough Blade Fury start mana");
       return;
     }
-    if (!NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
+    boolean bloodMana = com.riiablo.engine.server.skill.BloodMana.active(casterStateList);
+    if (!bloodMana && !NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
       reject(event, 1, "not enough mana");
       return;
     }
     if (manaCost > 0) {
-      mana.sub(manaCost);
+      if (bloodMana) {
+        if (!com.riiablo.engine.server.skill.BloodMana.consumeLife(attrs, casterStateList, manaCost)) {
+          reject(event, 1, "not enough life for Blood Mana");
+          return;
+        }
+      } else {
+        mana.sub(manaCost);
+      }
       log.debug("Server skill accepted: entity={}, skill={}, level={}, manaCost={}, manaLeft={}",
           event.entityId, event.skillId, skillLevel, manaCost, mana.asFixed());
     }

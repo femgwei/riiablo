@@ -210,6 +210,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-run");
+    if ("Succubus".equals(monster.AI)) scenarios.add("blood-mana");
     return scenarios;
   }
 
@@ -258,12 +259,21 @@ public final class MonsterAiArena extends ApplicationAdapter {
       world.setDelta(Animation.FRAME_DURATION);
       AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
 
-      CharData player = CharData.obtain(config.difficulty, false, "AiTester", Riiablo.AMAZON);
+      boolean bloodManaScene = result.scenario.equals("blood-mana");
+      CharData player = CharData.obtain(config.difficulty, false, "AiTester",
+          bloodManaScene ? Riiablo.SORCERESS : Riiablo.AMAZON);
       player.level = 30;
       Attributes stats = player.getStats();
       stats.base().put(Stat.level, 30);
       stats.base().put(Stat.maxhp, 1000000);
       stats.base().put(Stat.hitpoints, 1000000);
+      if (bloodManaScene) {
+        // Real Fn118 selects Blood Mana when player maxmana >= maxhp.
+        // Only the player fixture changes; monster rows, chances and RNG stay native.
+        stats.base().put(Stat.maxmana, 2000000);
+        stats.base().put(Stat.mana, 100);
+        player.setSkillLevel(com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR, 1);
+      }
       if (result.scenario.equals("diab-prison") || result.scenario.equals("diab-wall")) {
         // A normal melee fixture can break an attackable prison, then walk out.
         stats.base().put(Stat.mindamage, 1000); stats.base().put(Stat.maxdamage, 1000);
@@ -274,6 +284,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
           || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
       if (result.scenario.equals("deathmaul-cycle")) distance = 10;
+      if (bloodManaScene) distance = 3;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
       zone.attachEntity(playerId);
@@ -281,6 +292,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (subject == Engine.INVALID_ENTITY) throw new IllegalStateException("Factory rejected subject");
       zone.attachEntity(subject);
       probe.subject = subject;
+      if (bloodManaScene) probe.bloodManaPlayer = playerId;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
       if (result.scenario.equals("diab-prison")) {
         result.specialAssert = true; result.special = "NOT_TRIGGERED";
@@ -338,6 +350,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       Vector2 previous = world.getMapper(Position.class).get(subject).position.cpy();
       boolean frogApproachRequested = false;
       boolean wallRunSeen = false;
+      boolean bloodManaCastRequested = false;
       for (int tick = 0; tick < config.ticks; tick++) {
         capture.tick = tick + 1;
         if (result.scenario.equals("diab-wall") && probe.diabWall.phase == 0
@@ -367,6 +380,24 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         Vector2 position = world.getMapper(Position.class).get(subject).position;
         probe.observeCycle();
+        if (bloodManaScene && !bloodManaCastRequested) {
+          com.riiablo.engine.server.component.UnitStates states = world.getMapper(
+              com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+          if (states != null && states.stateList != null
+              && states.stateList.hasState(com.riiablo.engine.server.state.StateId.BLOOD_MANA)) {
+            // Ordinary player input after a naturally applied monster curse.
+            Attributes live = world.getMapper(AttributesWrapper.class).get(playerId).attrs;
+            float hpBefore = live.get(Stat.hitpoints).asFixed();
+            float manaBefore = live.get(Stat.mana).asFixed();
+            world.getSystem(Actioneer.class).cast(playerId,
+                com.riiablo.engine.server.skill.SkillId.FROZEN_ARMOR, Engine.INVALID_ENTITY,
+                world.getMapper(Position.class).get(playerId).position.cpy());
+            capture.line("BloodManaSpend player=" + playerId + " hp=" + hpBefore + "->"
+                + live.get(Stat.hitpoints).asFixed() + " mana=" + manaBefore + "->"
+                + live.get(Stat.mana).asFixed() + " casting=" + world.getMapper(Casting.class).has(playerId));
+            bloodManaCastRequested = true;
+          }
+        }
         if (result.scenario.equals("diab-prison") && probe.prisonPhase >= 2 && probe.prisonPhase < 4) {
           if (probe.prisonPhase == 2) attackNearbyPrison(world, playerId, capture);
           if (probe.prisonPhase == 3 && !world.getMapper(com.riiablo.engine.server.component.Pathfind.class).has(playerId)
@@ -586,6 +617,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     final Set<Integer> wallMakers = new TreeSet<>();
     SkillDoEvent pendingCold;
     int succubusCurseTarget = -1, succubusCurseSkill;
+    int bloodManaPlayer = -1;
     float coldLifeBefore, coldDamage;
     int coldMissilesBefore, coldDamageEvents;
     boolean coldPacketValid, coldCastValid;
@@ -599,6 +631,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
           + " target=" + event.targetId + " srvstfunc=" + event.srvstfunc);
     }
     @Subscribe public void action(SkillDoEvent event) {
+      if (event.entityId == bloodManaPlayer) capture.line("BloodManaPlayerSkillDo player="
+          + event.entityId + " skill=" + event.skillId + " srvdofunc=" + event.srvdofunc);
       if (event.entityId != subject) return;
       if (event.srvdofunc == 30 && (event.skillId == 309 || event.skillId == 310)) {
         succubusCurseTarget = event.targetId;
