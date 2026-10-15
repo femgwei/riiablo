@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 Act II NPC 服务名单修正
+
+- [x] 对照 D2MOO `SUnitNpc.cpp` 的 `D2GAME_NPC_Repair_6FCC95B0`、
+  `D2GAME_NPC_Heal_6FCCB220` 及 `SUnitProxy.cpp` 的 NPC 商店注册表，确认法拉同时提供
+  交易、修理和治疗；服务资格分别判断，不按 A1 治疗商人的组合推断 A2 职业。
+- [x] 客户端 `Npc.REPAIRERS` 补入法拉，恢复“交易/修理”菜单及铁匠商店模式；
+  `TRADERS` 补齐卓格南、法拉、雷山德，保留艾尔兹克。法拉原有治疗逻辑继续使用，
+  同时补齐原版治疗名单中的艾特玛；服务端法拉的商人/修理资格原已正确，无需改协议。
+- 验证：静态对照 D2MOO、检查 diff；按用户小修改要求不运行编译或测试。
+  待另一台电脑实机确认法拉交易/修理、对话治疗及其他 A2 商人的菜单。
+
 ## 2026-10-15 Inferno Sentry序列与持续链
 
 - [x] 对照Fn101/St53/Do95和真实311/seq_infernosentry，补齐9帧准备、point9发射、point8回卷、

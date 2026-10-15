@@ -75,14 +75,16 @@ public class Npc extends AI {
     // authoritative mercenary service via the NPC's native hcIdx.
     HIRERERS.addAll(MercenaryManager.NPC_KASHYA, MercenaryManager.NPC_GREIZ,
         MercenaryManager.NPC_ASHEARA, MercenaryManager.NPC_QUAL_KEHK);
-    HEALERS.addAll(MonsterType.AKARA, MonsterType.FARA, MonsterType.ORMUS,
+    // SUNITNPC Heal_6FCCB220: healing is independent of trade/repair services.
+    HEALERS.addAll(MonsterType.AKARA, MonsterType.ATMA, MonsterType.FARA, MonsterType.ORMUS,
         MonsterType.JAMELLA,
         MonsterType.MALAH);
 
     // Act 2
     TALKERS.addAll();
-    REPAIRERS.addAll();
-    TRADERS.addAll(199);
+    REPAIRERS.addAll(MonsterType.FARA);
+    TRADERS.addAll(MonsterType.DROGNAN, MonsterType.FARA, MonsterType.LYSANDER,
+        MonsterType.ELZIX);
     GAMBLERS.addAll(199);
     HIRERERS.addAll();
 
