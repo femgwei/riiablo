@@ -88,6 +88,20 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第十七批：类型生命周期与有状态分派
+
+- [x] 新增`D2PathTypes`，10185/10186保存/恢复type与velocity，三张18项表、旧flags gate、
+  断言前后写入顺序按DLL；10236继续直接赋type，不重套SetType规则。
+- [x] `D2PathDispatch`接通2/3/5/6/13/15。Toward零偏移临时slot0/count0归一化→单次ray→
+  局部搜索，非零offset跳过初始probe；零velocity不等于不能生成路点。type15用live距离，
+  保留由调用方赋count的入口语义。具体Effects组合请求/footprint，非生产安装。
+- [x] 新增29项；最终合并387项/35类通过，失败/错误/跳过0；新增本机原DLL三表静态oracle，
+  不是DLL动态执行。代码/测试`2cb53ea37`已推送且远端一致；详见第十七批上游记录。
+- [ ] **寻路未完成**。非空表项0/1/7/8/9/11/12/16尚未由新dispatcher支持，空表项不当作
+  普通失败或转A*；下一轮优先Straight7与A*/IDA入口，之后其他类型与受控生产接入。
+  生产身份/表格/房间图、nDist与真实移动消费、矩形递归网格边界/地形验收仍待。
+  普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial；无新MPQ/TCP/GL/性能/动态差分。
+
 ## 2026-10-16 D2MOO 第十六批：单位占位与请求网格适配
 
 - [x] 新增`D2PathFootprint`，补10222/10223类型shape选择、不同死亡mode/对象资格与force，

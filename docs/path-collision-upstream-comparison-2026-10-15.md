@@ -623,3 +623,28 @@ partial。本轮无新MPQ/TCP/GL/性能/原版动态差分，其他AI更新与�
 房间图映射、nDist与真实移动消费/安装及地形验收；矩形递归网格边界单列。普通生产仍A*，
 近期碰撞/房间/步进保持，不加1.13+ gate或普通自动partial。本轮无新MPQ/TCP/GL/性能/
 原版动态差分，不据此声称整体性能或完整原生等价更优。
+
+## 后续第十七批：纯路点内核不等于有状态原生入口（2026-10-16）
+
+新增`D2PathTypes`与`D2PathDispatch`，固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common
+10185/10186、三张18项表、Toward/ABF0/向量及WallFollow入口静态证据。
+
+- 10185保存条件读旧flags，再替换类型flags与offset；player SetType(2)写前断言，saved
+  knockback写后断言且不回滚。10186先恢复velocity，再按player/0x2000决定恢复type。
+  10236直接赋type的既有行为不改成SetType，不能把两种入口混用。
+- 支持2/3/5/6/13/15快照分派，不猜owner类型，也不重套live offset。Toward零偏移会先写
+  slot0、在count0时归一化初始向量，再做一次ray；不能直接调用纯compute省掉这段状态写入。
+  零velocity跳ray但仍可生成局部点，非零offset绕开初始probe；type15用live nDistMax/身份
+  min40，写buffer并返回count，由外层赋live count。
+- 完整表项只是元数据。0/1/7/8/9/11/12/16在新dispatcher中尚未接通，4/10/14/17空项；
+  显式拒绝，不用统一coordinate A*或普通partial兜底。具体Effects组合请求与真实内存占位，
+  但没有生产ECS安装。纯内核最终前缀写入不声称宿主回调重入/中途异常时与native逐指令等价。
+
+新增29项，最终合并**387项/35类通过，失败/错误/跳过0**；含请求/网格/2→15失败续算组合。
+新增一项读取本机原DLL三表54 DWORD的静态oracle，与此前三项共四项执行；不是DLL动态函数差分。
+代码/测试`2cb53ea37`已推送origin/master且远端一致。地址、边界、日志与另机命令见
+[第十七批记录](d2moo-upstream-port-2026-10-15.md#第十七批类型生命周期与有状态toward分派2026-10-16)。
+
+**寻路仍未完成**：下一步优先Straight7/A*/IDA入口，其余类型、生产映射/nDist/移动消费安装、
+矩形递归网格与真实地形验收仍待。普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
+本轮无新MPQ/TCP/GL/性能/原版动态差分，不据此宣称整体更优或完整原生等价。

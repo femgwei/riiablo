@@ -10,7 +10,28 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十六批：单位占位写入与请求网格适配
+## 2026-10-16 第十七批：类型生命周期与有状态Toward分派
+
+- 新增`D2PathTypes`，补10185/10186及三张18项表，保存previousPathType/previousVelocity，
+  按旧flags判断保存门槛；player SetType(2)写前断言、saved knockback写后断言的副作用不混用。
+  10236仍直接写type，不改成调用SetType。越界type显式拒绝，不模拟越界原生内存。
+- 新增`D2PathDispatch`接通2/3/5/6/13/15；快照type分派，live dirOffset不重套类型表。
+  Toward零偏移先清index/count、写临时slot0，再允许count0初始归一化与单次射线；零velocity
+  跳过ray但仍可生成局部点。非零offset不做该探测；type15读live nDistMax，只写buffer/返回count。
+- 固定D2MOO`0c0bbd1e`未fetch，核对本机1.10f D2Common `A0E0..A23A`、`A9F0..AD01`、
+  `B0B0..B0BE`、`C790..C8ED`、`C270`与`8CCB..8D0E`；原DLL哈希未变。
+  `D2PathDispatch.Effects`可直接组合请求与footprint，不安装生产ECS backend。
+- 新增29项；最终合并**387项/35类通过，失败/错误/跳过0**，含新增原版三表静态oracle，
+  共四项原DLL静态数据oracle执行。此前67项定向/384项首轮合并亦通过，补3项边界后最终全范围复跑。
+  XML `.gradle/path-port/round17-full/core/test-results/pathPortTest`，日志`core/build/round17-full-final.log`。
+  代码/测试`2cb53ea37d3f2d53b887133f07184572665edfc3`已推送origin/master且远端一致；
+  四文档另行提交。其他聊天物品/商人及DeathMaul测试保留，未纳入本轮提交或专项验收。
+- **寻路仍未完成**：生产仍Map→AStarPathFinder；0/1/7/8/9/11/12/16有表项但本dispatcher
+  尚不支持，4/10/14/17为空表项，不能统一回退A*。下一轮优先Straight7及A*/IDA必要入口，
+  再补其他类型、生产映射、nDist与移动消费/安装；矩形递归网格及地形验收仍待。
+  不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial；无新MPQ/TCP/GL/性能/DLL动态差分。
+
+## 2026-10-16 第十六批：单位占位写入与请求网格适配（历史）
 
 - 新增`D2PathFootprint`：10222/10223按类型选择pattern/矩形/size，保留player与monster
   不同死亡模式、object当前模式碰撞资格、force和返回值语义；Add不套Remove资格门槛。

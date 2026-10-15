@@ -1304,14 +1304,100 @@ $env:D2_TEST = $env:D2_HOME
 普通生产仍Map→AStarPathFinder；近期碰撞/房间/步进不变，不加1.13+ gate，不自动普通exact→partial。
 火焰之河AI fallback本轮未修/未重跑；其他聊天AI更新与实际验收须查看其独立报告。
 
+## 第十七批：类型生命周期与有状态Toward分派（2026-10-16）
+
+### 范围与1.10f证据
+
+新增`D2PathTypes`、`D2PathDispatch`及两个测试类；Continuation补previousPathType，Result补
+previousVelocity与包级count0归一化入口，Toward抽出已完成ray后的共享尾部。完整18项类型表
+只是元数据，本轮**仅接通2/3/5/6/13/15六个搜索类型**。`D2PathDispatch.Effects`组合既有
+Request/Footprint与本轮分派，不再需要为这六类手写search回调，但仍不安装生产路径或消费移动tick。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`未fetch，读取Path.cpp与PathMisc.cpp
+相关入口、PathWF入口；结合本机原版D2Common反汇编和静态表。DLL SHA256复核仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+
+- `0x6FDD1F40`分派表、`0x6FDD2088`flags表、`0x6FDD20D0`方向偏移表各18项。
+  2/5/6/13共用Toward，3经`0x6FDAB0B0..B0BE`清index后跳Toward，15为WallFollow；
+  0/16为IDA，1为A*，7为Straight，8/11为两种knockback，9为Leap，12为BackupTurn。
+  4/10/14/17空表项不进入普通非missile搜索。本轮不实现missile的独立dispatcher。
+- `0x6FDAA0E0..A1DD` #10185：player SetType(2)在写前断言；new flags&0x2000且old flags
+  无0x4000才保存旧type；new flags&0x8000且old无0x10000才保存velocity。再写type、
+  `newFlags | (oldFlags & 0xFFF800FF)`、表中dirOffset。最后saved type为8/11时断言，
+  写入不回滚；type4还断言nDistMax<78（现有byte setter已将可达投影值限制到77）。
+  非表域type显式拒绝，不模拟原版越界读。已存在的10236仍直接赋type，不套此函数。
+- `0x6FDAA1E0..A23A` #10186：要求owner存在，先按当前0x8000恢复velocity，然后player
+  总是SetType(7)，其他owner仅当前0x2000时SetType(previous)。速度恢复与类型恢复gate独立，
+  随后SetType断言也不回滚速度；嵌套knockback/Leap保持最初保存值。
+- `0x6FDA8CCB..8D0E`按之前快照type间接调用，将返回值覆盖live count；不是按owner或目标
+  类型猜分派。新dispatcher沿用该快照，使用live dirOffset，不因type5/6再自动写±2。
+- `0x6FDAA9F0..ABE7` Toward入口：先清index/count；live offset非零直接走A720，不做
+  初始ray或向量探测。零offset先写target到slot0，再调`0x6FDAABF0..AD01`。
+  后者先断言owner player/monster、live type非4、目标两轴非零，再检查velocity；零velocity
+  令ray endpoint回start，但后续仍可做Toward局部搜索/容差接受，不能直接返回空路径。
+- `0x6FDAC790..C8ED`归一化**会在live count=0时读取slot0**；非重复点仍计算初始向量/facing。
+  精确中心重复则清vectors/velocity并令index=count（此处仍0），不得伪造count1再归一化。
+  Result新增仅包级的这个probe入口，普通normalizeVectors仍要求有效current waypoint。
+  velocity非零且probe后仍非零才做一次ray；复用Toward尾部避免重复查询。失败时临时slot0及
+  初始向量也可能保留，不借零count清空整个buffer。整数同格但fp16未居中不算精确重复。
+- `0x6FDAC270` WallFollow入口读live nDistMax及目标身份的min40，不用PathInfo距离快照；
+  只写返回前缀/返回count，不自行重置index/count或初始向量，由外层10142接回赋count。
+
+本轮支持域要求稳定player/monster、uint16坐标、currentPoint与precision高字同步、距离0..77与
+容差uint8，沿用既有向量非溢出域。native本就不安全的域不做猜测。collision回调必须是稳定只读
+查询，局部点写入通过已有纯内核的最终前缀提交；不声称Java回调重入时的中间buffer可观察性，
+或宿主回调部分执行后异常与native动态函数的写入时序等价。footprint的finally是宿主安全增强。
+生产实体/表格/房间图映射与矩形递归网格原语边界沿用第十六批，未在本轮解决。
+
+未接通的非空表项0/1/7/8/9/11/12/16抛显式UnsupportedOperationException；空表项显式断言异常。
+它们不是普通无路可走、不是自动type15或coordinate A* fallback；对应纯算法已有不代表完整入口已接通。
+
+### 第十七批验证与交付
+
+最初定向67项/4类通过（Types10、Dispatch16、Result25、Toward16）；首轮合并384项通过。
+复核后补live type4射线断言、offset零预算stale slot0、0x200反向facing三项，并重跑同范围。
+最终**387项/35类通过，失败/错误/跳过0**，本轮新增29项（Types10、Dispatch19）。
+
+覆盖全部18type×6旧flags保存门槛、嵌套类型/速度、写前/写后断言、两类恢复gate、类型别名与
+非法域；stateful Toward初始query前状态、与纯内核逐次query/路点比较、零速度/精确中心/
+整数同格未居中、失败stale slot/向量、方向偏移与预算、WallFollow live距离/身份min40和入口写入。
+具体Effects夹具在真实内存网格移除/恢复owner并完成request归一化；另验证被包围时10236的
+2→15重试均失败且恢复owner，以及unsupported入口异常时finally恢复。未据此声称真实地图验收。
+
+新增一项可选本机DLL静态oracle，通过PE节头定位三张表，共54个DWORD逐项核对；
+与此前三项合计四项原DLL静态数据oracle均执行、无跳过。它不是54项JUnit或DLL动态执行。
+无匹配D2_HOME/哈希会显式跳过该oracle，不把缺原版文件当作已验证。
+日志`core/build/round17-check.log`、首轮`core/build/round17-full.log`、最终
+`core/build/round17-full-final.log`；XML `.gradle/path-port/round17-full/core/test-results/pathPortTest`。
+隔离init与第十六批同范围filters，`:core:pathPortTest -PpathRun=round17-full`，BUILD SUCCESSFUL。
+本轮无新MPQ/TCP/GL、全图/多seed难度、性能或原版DLL动态函数差分。
+
+代码/测试`2cb53ea37d3f2d53b887133f07184572665edfc3`已推送origin/master并核验远端一致。
+只提交本轮七个源码/测试文件，其他聊天物品/商人修改与DeathMaul测试不混入、不代为验收；
+共享master上的其他提交保持。四交接文档另行提交推送，最终SHA见git log。
+
+另一电脑最小复验（原版路径改为当地目录）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round17-check --tests '*D2PathTypesTest' --tests '*D2PathDispatchTest' --tests '*D2PathRequestTest' --tests '*D2PathFootprintTest' --tests '*D2PathResultTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --tests '*D2PathContinuationTest' --console=plain
+```
+
+**寻路仍未完成**：下一轮优先Straight7与A*/IDA必要入口，再继续其他native类型和受控生产接入。
+生产身份/元数据/房间图、nDist步进、真实路径安装/速度/动态碰撞消费、矩形递归网格边界与地形验收
+仍待。普通生产仍Map→AStarPathFinder，近期碰撞/房间/步进保持，不加1.13+ gate或普通自动partial。
+火焰之河AI fallback本轮未修/未重跑，其他聊天进度与验收单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
   已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
-  元数据/房间图适配、nDist步进消费与原生搜索dispatcher。本轮已补footprint上层选择与真实内存
-  网格adapter，但矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
+  元数据/房间图适配、nDist步进消费与原生搜索dispatcher剩余类型。已补footprint上层选择与真实
+  内存网格adapter、第十七批类型生命周期及2/3/5/6/13/15有状态分派；下一步优先Straight7和
+  A*/IDA入口。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。
