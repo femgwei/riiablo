@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 D2MOO 第十一批：搜索终点准备
+
+- [x] `D2PathTarget`补flag0x1000阻挡终点修正、独立累计候选/仅主方向重算、玩家9x9表延伸，
+  另有门orientation与源点侧±2偏移；不混淆请求/单位目标、search/final候选和输出末点。
+- [x] 固定D2MOO`0c0bbd1e`，结合本机1.10f DLL核对。按DLL的selected点源点判断及int32
+  延伸查询实现，不照搬上游primary槽第二次比较或边界uint16查询语义；具体地址见第十一批记录。
+- [x] 新增20项，含单项5000输入确定性终止/边界/重放及内存原生碰撞pattern/mask；
+  最终合并219项/28类通过，失败/错误/跳过0。代码/测试`d77c85d83`已推送且远端一致。
+- [ ] **寻路仍未完成**。本轮是已解析坐标后的准备阶段，不是完整单位目标准备/动态路径包装器。
+  单位身份/FOG LUT提前量/种类容差、distance/final/索引/flags续算状态与实际pathType生产接入仍待。
+  不整包替换普通A*，不自动普通partial或加入1.13+目标房间gate；本轮无新MPQ/TCP/GL、
+  benchmark或原版动态差分，火焰之河AI fallback及其余覆盖仍单列。
+
 ## 2026-10-15 逐怪AI：FrozenHorror及Horror MonSeq
 
 - [x] 按Fn124接入五种Horror专用AI，保留距离严格小于技能等级、概率优先级、INFERNO清除、

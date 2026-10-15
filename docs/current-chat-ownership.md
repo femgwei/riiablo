@@ -10,7 +10,25 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第十批：WallFollow/type15 路点内核；尚未接入生产
+## 2026-10-15 第十一批：阻挡终点修正与门目标偏移
+
+- 新增`D2PathTarget`：已解析目标坐标后的flag0x1000阻挡终点修正，三条独立累计候选、
+  仅重算主方向、源点失败语义、玩家9x9表延伸、门orientation/源点侧±2偏移。
+  返回search/final候选，不覆盖单位目标/previous快照；canSearch仅表示该准备阶段允许搜索。
+- 固定D2MOO`0c0bbd1e`未fetch，读取Path.cpp/PathMisc.cpp/PathUtil.cpp相关实现并静态核验本机
+  1.10f D2Common。DLL的选中点源点判定不同于上游第二次primary槽比较；玩家延伸保留int32
+  查询寄存器、仅接受后的坐标写入缩窄为uint16。上述两处按DLL实现，有分支夹具。
+- 新增20项测试，最终定向20项与合并219项/28类通过，失败/错误/跳过0；含单项5000输入
+  终止/边界/重放检查、内存原生碰撞pattern/mask及与Toward/WallFollow库组合，不是生产接入。
+  首轮一项夹具方向假设错误，纠正源坐标后复验通过；详见上游记录第十一批。
+- 代码/测试`d77c85d8330c69c3d406952e83a8af479bbf95a7`已推送origin/master且远端SHA一致。
+  四文档另行提交推送。本轮只提交两个新文件，另一轮FrozenHorror/Inferno提交`fc973fc50`保持独立。
+- **寻路未完成**：本轮未实现单位身份解析、FOG LUT提前量/单位种类容差、distance消费、
+  final/索引/flags续算状态或生产backend。下一步继续这些包装器门槛，再按实际pathType受控接入。
+  普通生产仍Map→AStarPathFinder；不改变近期碰撞/房间/步进，不加1.13+房间gate或普通自动partial。
+  本轮无新MPQ/TCP/GL/性能/原版动态差分验收；火焰之河AI fallback未修/未重跑。
+
+## 2026-10-15 第十批：WallFollow/type15 路点内核；尚未接入生产（历史）
 
 - 按用户要求继续未完成的寻路。本轮新增`D2WallFollow`，移植准备好坐标目标后的type15
   双侧绕墙、回接原路线、闭环检测、预算截断和原生直线化；不是普通A*替换或完整动态路径包装器。

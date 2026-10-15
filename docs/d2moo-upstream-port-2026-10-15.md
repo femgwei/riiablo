@@ -803,6 +803,85 @@ pathType受控接入Toward2/13、WallFollow15等；不能把raw点非空直接�
 验收实际地形/动态碰撞的消费、失败、恢复和续算，保留近期1.10f房间/碰撞优化。
 火焰之河AI fallback未修/未重跑；GL/全图/多seed三难度、性能及原版动态差分继续单列。
 
+## 第十一批：阻挡终点准备及门目标偏移
+
+### 范围与原版证据
+
+继续未完成的寻路，本轮新增`D2MOO_JAVA/.../path/D2PathTarget.java`，补已解析坐标目标后的
+`PATH_PreparePathTargetForPathUpdate`、玩家`PATH_FindValidTargetCoordsByMovingOrthogonally`，
+以及独立`doorTarget`坐标偏移。准备结果是search/final候选，不是请求坐标、单位身份或previous快照；
+`canSearch`只描述此准备阶段，不代表整个请求可移动、路径非空或exact到达。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch。
+读取Path.cpp的10142/UpdateTargetUnit/door/orthogonal分支、PathMisc.cpp的准备/碰撞候选及
+PathUtil.cpp的单位坐标/提前量实现。10142上游仍标BROKEN，不能单独作为完整包装器oracle。
+本机1.10f D2Common.dll再次核对SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`；objdump静态核验：
+
+- `0x6FDA88BF..88E1`搜索前两轴差值均须<=100；本API要求调用方已通过该窗口。
+  仍不实现房间/城镇/单位身份及零坐标/coincident等更早的完整请求gate，也不新增1.13+房间门槛。
+- `0x6FDA8A75..8AB5`仅flag0x1000且目标碰撞时修正；无flag连目标格都不查询，目标清晰时
+  不额外延伸玩家目标。missile mask0x40000在原包装器提前分流，本API显式拒绝该输入。
+- `0x6FDA8B13..8B45`三个候选初始都在原目标；`0x6FDA8B4E..8C4E`按固定优先级累计，
+  主方向以当前primary→source重算，另外两条保持初始方向；第三方向0xFF不查询，不是八向flood-fill。
+  坐标加法按uint16缩窄后查询。方向/helper表`0x6FDAB6A0..B806`和`0x6FDD2288`也已核对。
+- `0x6FDA8C75..8C90`先写selected到search target，再比较selected AX/CX与start；选中源点时
+  返回失败但保留这次target写入。若primary在全阻时到达source，循环退出而未选点，则原target不改。
+  **上游此处第二次比较的是candidates[0]，不是selected，与本机DLL不同**。本轮按DLL；
+  有primary到源点被阻、secondary到(12,12)可行的夹具，区分两种行为。
+- `0x6FDA8C94..8CA5`只对player调用`0x6FDA8FE0`延伸；9x9表位于`0x6FDD1DF8..1F3B`，
+  X直接索引、Y转置索引，可能斜向，不是只能沿四轴。距离为两轴绝对差最大值，0或>=5不延伸。
+- `0x6FDA907B..90AC`按初始表偏移逐步延伸到距离5，遇阻保留最后接受点。
+  **DLL碰撞参数使用int32 edi/ebx累积值，仅成功时WORD写入缩窄**，不会每轮先缩窄再查询。
+  因而近0/65535的查询可为-1、65536等；上游uint16 tCoords写法不可直接当边界oracle。
+- `0x6FDA90C0..9182`门orientationIsOne沿Y、其他沿X，source轴坐标>=door时+2，否则-2，
+  保存为uint16；native返回容差2。`doorTarget`仅返回坐标，该容差仍由后续单位目标包装器设置。
+
+API要求uint16源/目标、两轴差<=100及稳定碰撞回调；pattern/mask/room/footprint由调用方负责。
+不在内核里修改碰撞图或猜测动态实体类型；玩家int32延伸查询语义在回调接口和测试中保留。
+输出不是碰撞安全路径，不应跳过完整包装器和既有生产后置验证直接安装Pathfind。
+本轮未改生产Map/Pathfinder/近期碰撞、房间、平滑或步进，也没有游戏RNG变化。
+
+### 第十一批验证与交付
+
+新增`D2PathTargetTest`20项：flag门槛/清晰目标、三候选优先级、不可用第三方向、独立累计
+及主方向重算、选中source与全阻失败不同写入语义、selected/primary分歧、coincident阶段边界、
+玩家表延伸与阻挡停止/非玩家不延伸/斜向/距离5/100窗口、int32延伸与uint16候选两种回绕语义、
+门方向/源侧/相等/边缘回绕、非法输入，以及Java原生内存碰撞网格pattern/mask权威性。
+另含准备结果组合调用Toward/WallFollow库（非生产接入），并保留原请求坐标的夹具。
+单项5000组固定输入覆盖近0/32768/65535，检查Manhattan查询上界、终止及确定性重放；
+不是5000项JUnit或原版DLL动态差分。
+
+首轮20项中19通过、1失败：边界夹具源点(1,10)对应的方向表没有第三方向，却假设存在west；
+纠正为源点(0,10)，测试uint16第三候选回绕，未据此更改方向表或生产逻辑。
+补充missile/窗口输入检查后最终定向20项通过。XML
+`core/build/test-results/upstreamRound4-round11-target-final`，日志`core/build/round11-target-final.log`。
+合并219项/28类通过，失败/错误/跳过0（第十批199+新增20），BUILD SUCCESSFUL。
+隔离任务`:core:upstreamRound4Test -PupstreamRun=round11-full`，filters沿用第十批；XML
+`core/build/test-results/upstreamRound4-round11-full`，日志`core/build/round11-full.log`。
+本轮未新增MPQ/TCP/GL、全图/多seed难度、性能或原版动态等价验收。
+
+另一电脑最小复验（无需本机临时init）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*D2PathTargetTest' --tests '*D2PathMiscTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --console=plain
+```
+
+标准`:core:test`本轮未另跑；完整标准任务仍可采用前几批相同filters。
+代码/测试`d77c85d8330c69c3d406952e83a8af479bbf95a7`已推送origin/master且远端SHA一致。
+本轮只提交两个新文件；共享工作区另一轮FrozenHorror/Inferno修改已独立提交`fc973fc50`，
+不是本轮移植或AI专项验收。四文档独立提交推送，最终文档SHA见git log。
+
+### 剩余门槛
+
+**寻路仍未完成**，普通生产仍Map→AStarPathFinder。本轮仅实现坐标解析后的阻挡修正和门坐标偏移，
+不能说完整单位目标准备已完成。仍需单位身份/动态静态位置解析、FOG LUT提前量/种类容差、
+distance预算消费、final/previous/索引/flags续算模型，随后按实际pathType受控接入Toward2/13、
+WallFollow15等并验收真实地形/动态碰撞的消费、失败、恢复及续算。不自动普通partial，不加1.13+ gate。
+火焰之河AI fallback未修/未重跑；其余真实覆盖与benchmark/原版动态差分继续单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

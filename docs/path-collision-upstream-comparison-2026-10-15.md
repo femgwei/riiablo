@@ -465,3 +465,28 @@ D2PathMisc.simplify已静态核对1.10f `0x6FDAC170`，本轮只更新其旧版�
 **寻路仍未完成**。下一步优先prepared target/unit、distance/final/索引及flags续算模型，再按实际
 pathType受控接入Toward2/13、WallFollow15等，并验收真实消费、失败与恢复分支。
 普通生产仍Map→AStarPathFinder；火焰之河AI fallback及其余覆盖继续单列，不宣称收口。
+
+## 后续第十一批：搜索目标准备也不能把上游当无条件原版oracle
+
+新增`D2PathTarget`已解析坐标后的阻挡终点修正及门目标偏移。flag0x1000控制目标碰撞查询和修正，
+三条候选独立累计、只重算primary；玩家按原9x9表延伸到距离5，门按orientation及source侧±2。
+返回search/final候选，不覆盖单位身份或previous快照；canSearch只描述该准备阶段。
+
+固定D2MOO`0c0bbd1e`未fetch，核对Path.cpp/PathMisc.cpp/PathUtil.cpp与本机1.10f D2Common：
+
+- `0x6FDA8C75..8C90`DLL写入selected后比较selected是否source，上游第二次却比较primary槽。
+  新夹具将primary阻在source、secondary选到(12,12)，两者返回不同；本轮按DLL实现。
+- `0x6FDA907B..90AC`玩家延伸查询坐标保留int32寄存器，只在接受后的WORD存储缩窄，
+  不能照抄上游uint16局部坐标的边界查询语义。候选累计阶段本身仍是uint16回绕。
+- `0x6FDA90C0..9182`门orientation=1沿Y、其余沿X，source>=door取+2（含相等），否则-2。
+  容差2仍需后续单位目标准备包装器设置；本轮helper只返回门偏移坐标。
+
+详细地址、原版DLL哈希和另一电脑复验命令见
+[第十一批记录](d2moo-upstream-port-2026-10-15.md#第十一批阻挡终点准备及门目标偏移)。
+新增20项、合并219项/28类通过，失败/错误/跳过0；含单项5000输入终止/边界/重放、
+内存碰撞pattern/mask及与两个原生点生成库组合，并非生产接入或原版动态等价证明。
+代码/测试`d77c85d83`已推送且远端SHA一致，无新MPQ/TCP/GL/全图/性能验收。
+
+**寻路未完成**：仍需单位身份/位置/FOG LUT提前量/容差、distance消费、final/previous/索引/flags
+续算状态及实际pathType受控生产接入。本轮不改普通A*、近期碰撞/房间/步进或普通exact合同；
+火焰之河AI fallback及其余覆盖继续单列。
