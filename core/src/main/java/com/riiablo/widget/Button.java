@@ -26,6 +26,8 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
   int blendMode = BlendMode.ID;
   Color color = Riiablo.colors.white;
 
+  private boolean clickSoundEnabled = true;
+
   @Override
   public void setStyle(com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle style) {
     super.setStyle(style);
@@ -44,16 +46,23 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int b) {
         if (event.getButton() != Input.Buttons.LEFT || isDisabled()) {
           return super.touchDown(event, x, y, pointer, b);
-        } else if (button == null) {
-          Riiablo.assets.finishLoadingAsset(buttonDescriptor);
-          button = Riiablo.assets.get(buttonDescriptor);
         }
 
-        button.play();
+        if (clickSoundEnabled) {
+          if (button == null) {
+            Riiablo.assets.finishLoadingAsset(buttonDescriptor);
+            button = Riiablo.assets.get(buttonDescriptor);
+          }
+          button.play();
+        }
         Riiablo.input.vibrate(10);
         return super.touchDown(event, x, y, pointer, b);
       }
     });
+  }
+
+  public void setClickSoundEnabled(boolean enabled) {
+    clickSoundEnabled = enabled;
   }
 
   public void setBlendMode(int blendMode, Color color) {
