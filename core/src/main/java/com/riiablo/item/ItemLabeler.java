@@ -325,7 +325,16 @@ public class ItemLabeler {
       }
     //}
 
-    if ((item.flags & Item.ITEMFLAG_COMPACT) == 0) {
+    // Native client item decoding omits property lists until identification.
+    // Keep the stored rolls intact; only gate their presentation here.
+    boolean unidentified = !item.isIdentified()
+        && (item.quality == Quality.MAGIC || item.quality == Quality.RARE
+            || item.quality == Quality.CRAFTED || item.quality == Quality.SET
+            || item.quality == Quality.UNIQUE);
+    if (unidentified) {
+      table.add(new Label(Riiablo.string.lookup("ItemStats1b"), font, Riiablo.colors.red))
+          .center().space(SPACING).row();
+    } else if ((item.flags & Item.ITEMFLAG_COMPACT) == 0) {
       StatListRef temp = StatList.obtain();
       final StatList lists = attrs.list();
       if (lists.contains(StatListFlags.ITEM_MAGIC_LIST)) temp.addAll(lists.get(StatListFlags.ITEM_MAGIC_LIST));
@@ -360,7 +369,8 @@ public class ItemLabeler {
       table.add(new Label(itemFlags.toString(), font, Riiablo.colors.blue)).center().space(SPACING).row();
     }
 
-    if (item.quality == Quality.SET && item.location == Location.EQUIPPED) {
+    if (item.isIdentified() && item.quality == Quality.SET
+        && item.location == Location.EQUIPPED) {
       SetItems.Entry setItem = Riiablo.files.SetItems.get(item.qualityId);
       int setId = Riiablo.files.Sets.index(setItem.set);
       int numEquipped = Riiablo.charData.getItems().getEquippedSets().get(setId, 0); // TODO: use parent itemdata instead

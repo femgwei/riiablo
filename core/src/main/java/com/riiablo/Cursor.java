@@ -167,7 +167,7 @@ public class Cursor implements ItemData.LocationListener {
     identifySourceItem = source;
     identifyController = controller;
     setCursor(buysell, 0);
-    if (Riiablo.audio != null) Riiablo.audio.play("cursor_identify_ready", true);
+    if (Riiablo.audio != null) Riiablo.audio.play(source.getUseSound(), true);
   }
 
   public boolean isIdentifying() {
