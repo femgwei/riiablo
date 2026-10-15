@@ -82,6 +82,55 @@ class NpcRepairServiceTest extends RiiabloTest {
     assertEquals(100 - result.cost, character.getStats().get(Stat.gold).asInt());
   }
 
+  @Test void repairAllLeavesBackpackAndOtherStorageUntouched() {
+    CharData character = characterWithGold(1000);
+    Item equipped = damagedItem(1, 100, 10, 5);
+    Item backpack = damagedItem(2, 100, 10, 4);
+    Item stash = damagedItem(3, 100, 10, 3);
+    Item cube = damagedItem(4, 100, 10, 2);
+    Item cursor = damagedItem(5, 100, 10, 1);
+    for (Item item : new Item[] {equipped, backpack, stash, cube, cursor}) {
+      assertTrue(character.getItems().addToInventory(item));
+    }
+    character.getItems().equipItem(BodyLoc.HEAD, equipped);
+    stash.storeLoc = StoreLoc.STASH;
+    cube.storeLoc = StoreLoc.CUBE;
+    cursor.location = Location.CURSOR;
+    Npc.Entry npc = new Npc.Entry();
+    int expectedCost = VendorPricing.repairPrice(equipped, npc, character);
+
+    NpcRepairService.Result result = NpcRepairService.repairAll(character, npc);
+
+    assertTrue(result.success);
+    assertEquals(expectedCost, result.cost);
+    assertEquals(1000 - expectedCost, character.getStats().get(Stat.gold).asInt());
+    assertEquals(10, equipped.attrs.base().get(Stat.durability).asInt());
+    assertEquals(4, backpack.attrs.base().get(Stat.durability).asInt());
+    assertEquals(3, stash.attrs.base().get(Stat.durability).asInt());
+    assertEquals(2, cube.attrs.base().get(Stat.durability).asInt());
+    assertEquals(1, cursor.attrs.base().get(Stat.durability).asInt());
+
+    NpcRepairService.Result repeated = NpcRepairService.repairAll(character, npc);
+    assertFalse(repeated.success);
+    assertEquals("NOTHING_TO_REPAIR", repeated.reason);
+    assertEquals(1000 - expectedCost, character.getStats().get(Stat.gold).asInt());
+  }
+
+  @Test void fullDurabilitySingleRepairDoesNotChargeGold() {
+    CharData character = characterWithGold(100);
+    Item item = damagedItem(9, 100, 10, 10);
+    assertTrue(character.getItems().addToInventory(item));
+
+    NpcRepairService.Result result = NpcRepairService.repairItem(
+        character, new Npc.Entry(), character.getItems().indexOf(item), item.id);
+
+    assertFalse(result.success);
+    assertEquals("NOTHING_TO_REPAIR", result.reason);
+    assertEquals(0, result.cost);
+    assertEquals(100, character.getStats().get(Stat.gold).asInt());
+    assertEquals(10, item.attrs.base().get(Stat.durability).asInt());
+  }
+
   @Test void zeroQuantityThrowingWeaponIsRetainedAndRepairRestoresItsStack() {
     CharData character = characterWithGold(100000);
     Item javelin = new ItemGenerator().generate("jav");

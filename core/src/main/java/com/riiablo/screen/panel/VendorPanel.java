@@ -281,15 +281,14 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(18));
       down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(19));
     }});
-    // Only an actual repair should make a sound, after local/server success.
+    // Repair feedback (including no-op repairs) is played after the result.
     btnRepairAll.setClickSoundEnabled(false);
     btnRepairAll.setPosition(btnBlank[3].getX(), btnBlank[3].getY());
     btnRepairAll.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        repairing = true;
-        selling = false;
         repairAll();
+        event.handle();
       }
     });
     btnRepairAll.setVisible(false);
@@ -658,14 +657,21 @@ public class VendorPanel extends WidgetGroup implements Disposable {
           Riiablo.charData.getItems().removeOwnedItem(sold);
           playSellSounds(sold);
         }
-      } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
-        Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
-        if (repaired != null && ItemDurabilityManager.INSTANCE.restoreDurability(repaired)) {
-          Riiablo.charData.getItems().updateStats();
+      } else if (pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
+        if (result.success()) {
+          Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
+          if (repaired != null && ItemDurabilityManager.INSTANCE.restoreDurability(repaired)) {
+            Riiablo.charData.getItems().updateStats();
+          }
+        }
+        if (result.success() || "NOTHING_TO_REPAIR".equals(result.reason())) {
           playRepairSound();
         }
-      } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ALL) {
-        if (applyRepairAllResult()) playRepairSound();
+      } else if (pendingOperation == NpcServiceOperation.REPAIR_ALL) {
+        if (result.success()) applyRepairAllResult();
+        if (result.success() || "NOTHING_TO_REPAIR".equals(result.reason())) {
+          playRepairSound();
+        }
       }
       if (pendingOperation == NpcServiceOperation.SELL) {
         Gdx.app.log(TAG, "[VENDOR_SELL] phase=result request=" + result.requestId()
@@ -789,7 +795,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     }
     NpcRepairService.Result result = NpcRepairService.repairItem(
         Riiablo.charData, localPricing, itemIndex, item.id);
-    if (!result.success) return false;
+    if (!result.success) {
+      if ("NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
+      return false;
+    }
     refreshGold();
     playRepairSound();
     Gdx.app.debug(TAG, "Repaired " + item.code + " for " + result.cost + " gold");
@@ -798,6 +807,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   private void repairAll() {
     if (Riiablo.charData == null) return;
+    cancelTradeMode();
     if (networkFlags != 0 && networkSynchronizer != null) {
       if (pendingRequestId != 0) return;
       long requestId = networkSynchronizer.requestNpcService(networkNpcEntityId,
@@ -810,7 +820,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     }
     NpcRepairService.Result result = NpcRepairService.repairAll(
         Riiablo.charData, localPricing);
-    if (!result.success) return;
+    if (!result.success) {
+      if ("NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
+      return;
+    }
     refreshGold();
     playRepairSound();
     Gdx.app.debug(TAG, "Repaired all equipment for " + result.cost + " gold");
@@ -825,16 +838,15 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return fallbackIndex >= 0 && fallbackIndex < items.size ? items.get(fallbackIndex) : null;
   }
 
-  private boolean applyRepairAllResult() {
-    if (Riiablo.charData == null) return false;
+  private void applyRepairAllResult() {
+    if (Riiablo.charData == null) return;
     boolean changed = false;
     for (Item item : Riiablo.charData.getItems().getItems()) {
-      if (item != null && item.location == com.riiablo.item.Location.EQUIPPED) {
+      if (item != null && item.location == Location.EQUIPPED) {
         changed |= ItemDurabilityManager.INSTANCE.restoreDurability(item);
       }
     }
     if (changed) Riiablo.charData.getItems().updateStats();
-    return changed;
   }
 
   private static void playRepairSound() {
