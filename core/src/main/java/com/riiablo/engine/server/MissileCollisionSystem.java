@@ -1794,6 +1794,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         // It also preserves poison/cold application for packets whose
         // immediate damage is zero.
         applyCombatStates(missile, targetId, combat);
+        // SUNITDMG applies absorbed life independently of positive damage.
+        // Keep zero-damage hits out of the damage/pain event path below.
+        if (damage <= 0f && combat.absorbedLife > 0) {
+          restoreMissileAbsorbedLife(missileId, missile, targetId, targetAttrs, combat);
+        }
         if (damage > 0 && mAttributesWrapper.has(targetId)) {
           log.info("Missile {} hits {} for {} damage (ownerId={}, critical={}, deadly={})",
               missileId, targetId, damage, missile.ownerId, combat.critical, combat.deadlyStrike);
@@ -1824,18 +1829,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           // post-multiplier packet that produced this hit.  Apply it before
           // subtracting damage so a target at low life can survive an absorbed
           // elemental missile, and clamp to maxhp just like D2Game.
-          if (combat.absorbedLife > 0) {
-            StatRef maxHitpoints = targetAttrs.get(Stat.maxhp, StatRef.obtain());
-            float maxLife = maxHitpoints != null ? Math.max(0f, maxHitpoints.asFixed()) : Float.MAX_VALUE;
-            float requestedHeal = combat.absorbedLifeHp() * Math.max(0.01f, missile.damageMultiplier);
-            float healed = Math.max(0f, Math.min(requestedHeal, maxLife - hitpoints.asFixed()));
-            if (healed > 0f) {
-              hitpoints.add(healed);
-              log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",
-                  missileId, targetId, combat.absorbedLifeHp(), healed,
-                  hitpoints.asFixed(), maxLife);
-            }
-          }
+          restoreMissileAbsorbedLife(missileId, missile, targetId, targetAttrs, combat);
           boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(ownerId);
           if (mercenaryDamage) {
             mercenaryDamageCount++;
@@ -2519,6 +2513,24 @@ public class MissileCollisionSystem extends IteratingSystem {
     Monster monster = mMonster.get(targetId);
     StateList stateList = mUnitStates.has(targetId) ? mUnitStates.get(targetId).stateList : null;
     return BarbarianSkills.canSwitchWarCryAi(monster, stateList);
+  }
+
+  /** Native absorbed life precedes damage and never resurrects a dead/delayed unit. */
+  private void restoreMissileAbsorbedLife(int missileId, Missile missile, int targetId,
+      Attributes attrs, CombatSystem.CombatResult combat) {
+    if (combat.absorbedLife <= 0 || attrs == null) return;
+    StateList states = stateList(targetId);
+    if (states != null && states.hasState(StateId.DEATH_DELAY)) return;
+    StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+    StatRef maximum = attrs.get(Stat.maxhp, StatRef.obtain());
+    float maxLife = maximum != null ? Math.max(0f, maximum.asFixed()) : Float.MAX_VALUE;
+    float requested = combat.absorbedLifeHp() * Math.max(0.01f, missile.damageMultiplier);
+    float healed = Math.max(0f, Math.min(requested, maxLife - hitpoints.asFixed()));
+    if (healed <= 0f) return;
+    hitpoints.add(healed);
+    log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",
+        missileId, targetId, combat.absorbedLifeHp(), healed, hitpoints.asFixed(), maxLife);
   }
 
   private boolean isAlive(int entityId) {

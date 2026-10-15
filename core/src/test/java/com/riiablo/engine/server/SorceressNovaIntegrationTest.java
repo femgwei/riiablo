@@ -197,6 +197,95 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void fullAbsorbRestoresFractionalLifeOnlyOnce() {
+    float raw = resistanceSample(0, 0);
+    assertEquals(50f + raw, absorbSample(50f, 0, 100, false, 0f), EPSILON);
+  }
+
+  @Test
+  void fullAbsorbClampsHealingToMaximumLife() {
+    assertEquals(1000f, absorbSample(995f, 0, 100, false, 0f), EPSILON);
+  }
+
+  @Test
+  void partialAbsorbHealsBeforeLethalDamage() {
+    int raw = (int) (resistanceSample(0, 0) * 256);
+    float absorbed = (raw * 40 / 100) / 256f;
+    float damage = raw / 256f - absorbed;
+    assertTrue(damage > 4f, "without absorb healing this target would die");
+    assertEquals(4f + absorbed - damage, absorbSample(4f, 40, 0, false, damage), EPSILON);
+  }
+
+  @Test
+  void partialAbsorbClampsHealingBeforeSubtractingDamage() {
+    int raw = (int) (resistanceSample(0, 0) * 256);
+    float damage = (raw - raw * 40 / 100) / 256f;
+    assertEquals(1000f - damage, absorbSample(999f, 40, 0, false, damage), EPSILON);
+  }
+
+  @Test
+  void fullAbsorbDoesNotHealDeathDelayTarget() {
+    assertEquals(50f, absorbSample(50f, 0, 100, true, 0f), EPSILON);
+  }
+
+  @Test
+  void partialAbsorbDoesNotHealDeathDelayTarget() {
+    int raw = (int) (resistanceSample(0, 0) * 256);
+    float damage = (raw - raw * 40 / 100) / 256f;
+    assertEquals(50f - damage, absorbSample(50f, 40, 0, true, damage), EPSILON);
+  }
+
+  @Test
+  void fullAbsorbDoesNotResurrectDeadTarget() {
+    assertEquals(0f, absorbSample(0f, 0, 100, false, 0f), EPSILON);
+  }
+
+  private static float absorbSample(float initialLife, int percent, int flat,
+      boolean deathDelay, float expectedDamage) {
+    java.util.Random caller = com.badlogic.gdx.math.MathUtils.random;
+    com.badlogic.gdx.math.MathUtils.random = new com.badlogic.gdx.math.RandomXS128(0);
+    World world = null;
+    try {
+      RecordingFactory factory = new RecordingFactory();
+      world = world(factory);
+      int caster = player(world, 1);
+      int target = monster(world, 5, 0);
+      int immune = monster(world, 0, 5, 100);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      attrs.base().put(Stat.item_absorblight_percent, percent);
+      attrs.base().put(Stat.item_absorblight, flat);
+      attrs.reset();
+      attrs.get(Stat.hitpoints).set(initialLife);
+      if (deathDelay) world.getMapper(UnitStates.class).get(target).stateList.addState(
+          com.riiablo.engine.server.state.StateId.DEATH_DELAY, 100, 1, caster);
+      cast(world, caster);
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 6; i++) world.process();
+      float after = life(world, target);
+      DamageProbe probe = world.getSystem(DamageProbe.class);
+      assertEquals(expectedDamage > 0f ? 1 : 0, probe.count,
+          "a fully absorbed hit must not manufacture a damage/pain event");
+      if (expectedDamage > 0f) {
+        assertEquals(target, probe.victim);
+        assertEquals(expectedDamage, probe.damage, EPSILON);
+        assertEquals(expectedDamage, probe.lightning, EPSILON);
+      }
+      assertEquals(1000f, life(world, immune), EPSILON);
+      if (initialLife > 0f) assertEquals(2, factory.created.get(0).sharedHitTargets.size);
+      for (int i = 0; i < 6; i++) world.process();
+      assertEquals(after, life(world, target), EPSILON, "overlapping paths must not replay healing");
+      assertEquals(expectedDamage > 0f ? 1 : 0, probe.count);
+      return after;
+    } finally {
+      try {
+        if (world != null) world.dispose();
+      } finally {
+        com.badlogic.gdx.math.MathUtils.random = caller;
+      }
+    }
+  }
+
+  @Test
   void castValidationSpendsNovaManaExactlyOnce() {
     RecordingFactory factory = new RecordingFactory();
     World world = world(factory);
@@ -438,12 +527,14 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   private static final class DamageProbe extends PassiveSystem {
+    int count;
     int victim = -1;
     float damage;
     float lightning;
 
     @Subscribe
     public void onDamage(com.riiablo.engine.server.event.DamageEvent event) {
+      count++;
       victim = event.victim;
       damage = event.damage;
       lightning = event.lightningDamage;

@@ -1,0 +1,7 @@
+Baseline: 16 tests, 3 expected full-absorb/DEATH_DELAY failures.
+final: 246 tests, 0 failures/errors/skips.
+repeat: 246 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 0B40E303B3608AACF1A4327F9F080ED74E3D870AA3DD03B4F429E18ED559E8DF core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java
+SHA256 401105B32C62701BE86E98FF45FA738651F929E9F2E461116440FC060B6113DA core/src/test/java/com/riiablo/engine/server/SorceressNovaIntegrationTest.java
+PARTIAL: ordinary missile absorb healing verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.
