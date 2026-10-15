@@ -2011,6 +2011,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 属Java适配回归，不是DLL动态差分或新算法证据；不扩大低层State重载历史身份保证，
   不宣称Search可跨移动继续使用。生产仍A*，raw数据/Act与Zone/shared seed来源仍待。
 
+## 第三十八批：动态footprint逻辑模式组合
+
+- NativePathDynamicFootprint读取真实World的Class/表尺寸及CofReference.mode，构造动态footprint。
+  mode按unsigned byte保留，不以visualType等显示覆盖替换逻辑类型/模式；缺失mode或静态类型拒绝。
+- raw path、实际room、native pattern和uint32 mask必须显式提供，原样保留，不从浮点/Size/
+  宿主动态碰撞索引猜测；null path保留原缺失路径语义。可在observeFootprints内绑定生命周期。
+- 新增3项，完整591项/51类通过，失败/错误/跳过0；core/build/round38-full.log，
+  XML .gradle/path-port/round38-full/core/test-results/pathPortTest。
+- 仅完成mode及元数据组合，不宣称动态原生字段已自动解析或完整Reader；不安装生产碰撞。
+  生产仍A*，raw数据/Act与Zone/shared seed仍待；无新增DLL算法证据或动态执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

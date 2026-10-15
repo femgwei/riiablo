@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十七批续接结果（优先于下方历史起点）
+## 第三十八批续接结果（优先于下方历史起点）
+
+- NativePathDynamicFootprint读取实际Class/表尺寸及CofReference.mode，组合动态footprint；
+  保留mode unsigned byte，不用visualType等显示覆盖改写逻辑单位类型/模式。
+- raw DynamicPath、实际D2ActiveRoom、native pattern及uint32 footprint mask仍须显式提供，
+  原样保留，不从浮点、Size、宿主动态碰撞索引推测；null path保留既有0xFFFF mask语义。
+- 新增3项，完整591项/51类通过，失败/错误/跳过0；core/build/round38-full.log，
+  XML `.gradle/path-port/round38-full/core/test-results/pathPortTest`。
+- 可在observeFootprints内使用以绑定生命周期，但本入口自身不绑定身份/安装生产碰撞。
+  本批只接通逻辑mode及元数据组合；动态原生字段实际来源仍未完成，不宣称完整Reader。
+- 生产仍A*；raw数据、Act/Zone/shared seed仍待；无新增DLL算法证据或动态执行。
+
+## 第三十七批续接结果（历史）
 
 - 本批只补公开Search重载的直接回归证据，不新增生产功能：保存真实Request生成的Search，
   在type0/2/16分支直接再次调用Dispatch，验证失效guard与有效但被替换的观察均先于写入/查询拒绝。

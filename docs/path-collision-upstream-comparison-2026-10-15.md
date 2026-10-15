@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第三十八批补充：NativePathDynamicFootprint组合真实Class/尺寸和逻辑CofReference.mode，
+raw path/room/pattern/mask仍由调用方提供；不从visual覆盖或宿主碰撞索引推断原生字段。
+新增3项，完整591项/51类通过，失败/错误/跳过0；生产仍A*，无新增DLL证据或动态执行。
+
 第三十七批补充：只增加公开Search直接调用回归，type0/2/16在失效或观察替换时拒绝，
 验证路径状态/stream seed不变且无碰撞查询，有效观察仍正常执行。
 新增3项，完整588项/50类通过，失败/错误/跳过0；无新增生产功能、DLL证据或动态执行。

@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第三十八批：NativePathDynamicFootprint接通真实逻辑CofReference.mode及Class/尺寸；
+raw path/room/pattern/mask仍显式提供，不用visual覆盖或宿主碰撞索引猜测。
+新增3项，完整591项/51类通过，失败/错误/跳过0；core/build/round38-full.log。
+仅组合适配，生产仍A*；详细边界见handoff顶部。
+
 第三十七批：仅补保存Search的公开Dispatch直接调用回归，type0/2/16验证生命周期/观察替换
 拒绝先于路径写入、碰撞查询及stream seed消耗；有效观察仍可执行。
 新增3项，完整588项/50类通过，失败/错误/跳过0；core/build/round37-final.log。

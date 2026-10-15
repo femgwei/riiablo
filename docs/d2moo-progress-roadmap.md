@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十八批（生产适配仍PARTIAL）
+
+- [x] 动态footprint组合真实逻辑mode/Class/尺寸，忽略visual覆盖，保留unsigned模式与raw字段。
+- [x] 新增3项，完整591项/51类通过，无失败/错误/跳过。
+- [ ] raw path/room/pattern/mask仍显式提供；动态字段实际来源、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder，不宣称完整动态Reader或碰撞安装。
+
 ## 2026-10-16 寻路第三十七批（生产适配仍PARTIAL）
 
 - [x] 补直接Search重载回归：type0/2/16失效guard/观察替换先于写入/查询/seed拒绝。
