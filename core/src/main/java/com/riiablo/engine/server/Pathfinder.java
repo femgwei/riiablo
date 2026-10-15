@@ -240,8 +240,21 @@ public class Pathfinder extends IteratingSystem {
         return;
       }
       
-      // If should repath (player moved or timer expired), recalculate path
-      if (shouldRepath) {
+      // D2Common's exhausted-point check distinguishes a reachable endpoint
+      // from the final unit goal. A recovery detour can finish before the
+      // periodic timer, while the range checks above still require pursuit.
+      // Coordinate walks (including DiabRun) have no entity goal to resume.
+      boolean exhaustedShortOfTarget = !targets.hasNext()
+          && position0.epsilonEquals(target, 0.1f)
+          && (Map.round(position0.x) != Map.round(targetPos.x)
+              || Map.round(position0.y) != Map.round(targetPos.y));
+      if (exhaustedShortOfTarget) {
+        log.debug("[ENTITY_PATH_CONTINUE] entity={} target={} position=({}, {}) goal=({}, {})",
+            entityId, targetId, position0.x, position0.y, targetPos.x, targetPos.y);
+      }
+      // Reuse the existing exact/dynamic recovery policy; do not promote a
+      // failed query to partial or retry before the current endpoint is reached.
+      if (shouldRepath || exhaustedShortOfTarget) {
         repathPreservingMovementIntent(entityId, targetPos, targetId);
         return;
       }

@@ -7,6 +7,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Pathfind;
@@ -162,6 +163,140 @@ class PathfinderRecoveryTargetTest {
     }
   }
 
+  @Test void exhaustedFarDetourResumesUnitPursuitBeforePeriodicTimerExpires() {
+    try (Fixture f = new Fixture()) {
+      f.farDetour();
+      f.arrive();
+      f.rejectTarget = false;
+      f.acceptedApproach = null;
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries + 1, f.queries.size(), "waypoint exhaustion must not forget the unreached unit");
+      assertEquals(f.targetPosition(), f.queries.get(queries));
+      assertEquals(f.target, f.path().targetEntityId);
+      assertEquals(f.targetPosition(), f.path().destination);
+      assertEquals(Pathfind.REPATH_INTERVAL, f.path().repathTimer);
+      assertEquals(0.5f, f.velocity().modeSpeedBonusMultiplier);
+      assertTrue(f.world.getMapper(Running.class).has(f.actor));
+    }
+  }
+
+  @Test void exhaustedDetourCanChooseAnotherUsableApproachWithoutLosingTheUnit() {
+    try (Fixture f = new Fixture()) {
+      f.farDetour();
+      f.arrive();
+      f.acceptedApproach.set(27, 6);
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertTrue(f.queries.size() > queries);
+      assertEquals(f.targetPosition(), f.queries.get(queries));
+      assertEquals(new Vector2(27, 6), f.path().destination);
+      assertEquals(f.target, f.path().targetEntityId);
+      assertEquals(0, f.partialQueries);
+    }
+  }
+
+  @Test void exhaustedDetourWithNoContinuationStopsAfterAnActualFailedQuery() {
+    try (Fixture f = new Fixture()) {
+      f.farDetour();
+      f.arrive();
+      f.rejectAll = true;
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertTrue(f.queries.size() > queries, "a short endpoint is not proof the target was reached");
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertTrue(f.velocity().velocity.isZero());
+      assertEquals(0, f.partialQueries);
+    }
+  }
+
+  @Test void detourAlreadyInMeleeRangeStopsWithoutAContinuationQuery() {
+    try (Fixture f = new Fixture()) {
+      f.start();
+      f.rejectTarget = true;
+      f.stall();
+      f.paths.process(f.actor);
+      f.arrive(); // (29, 9), within the existing footprint-aware melee range.
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertTrue(f.velocity().velocity.isZero());
+    }
+  }
+
+  @Test void unconsumedDetourDoesNotRepathBeforeTheExistingTimer() {
+    try (Fixture f = new Fixture()) {
+      f.farDetour();
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertEquals(new Vector2(26, 6), f.path().destination);
+      assertEquals(Pathfind.REPATH_INTERVAL - 0.04f, f.path().repathTimer);
+      assertFalse(f.velocity().velocity.isZero());
+    }
+  }
+
+  @Test void reachedIntermediateWaypointIsNotAnExhaustedDetour() {
+    try (Fixture f = new Fixture()) {
+      f.farDetour();
+      GraphPath route = new GraphPath();
+      route.add(new Point2(10, 10));
+      route.add(new Point2(20, 10));
+      route.add(new Point2(26, 6));
+      f.path().set(route);
+      f.world.getMapper(Position.class).get(f.actor).position.set(20, 10);
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertEquals(new Vector2(26, 6), f.path().target);
+      assertFalse(f.velocity().velocity.isZero());
+    }
+  }
+
+  @Test void exhaustedStaticInteractionApproachAlsoContinuesWhenOutsideActivationRange() {
+    try (Fixture f = new Fixture()) {
+      f.start();
+      f.world.getMapper(Velocity.class).remove(f.target);
+      f.world.getMapper(Interactable.class).create(f.target).range = 1f;
+      assertTrue(f.paths.findPath(f.actor, new Vector2(10, 10), new Vector2(26, 6),
+          NativeGroundPathProfile.MONSTER.terrainFlags, 1, new GraphPath(), f.target));
+      f.arrive();
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries + 1, f.queries.size());
+      assertEquals(f.target, f.path().targetEntityId);
+      assertEquals(f.targetPosition(), f.path().destination);
+      assertEquals(Pathfind.REPATH_INTERVAL, f.path().repathTimer);
+    }
+  }
+
+  @Test void completedCoordinateWalkDoesNotGainAnImplicitContinuationGoal() {
+    try (Fixture f = new Fixture()) {
+      assertTrue(f.paths.findPath(f.actor, new Vector2(20, 10)));
+      f.arrive();
+      int queries = f.queries.size();
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertEquals(0, f.partialQueries);
+    }
+  }
+
+  @Test void consumedDiabRunPartialDoesNotBecomeOrdinaryUnitContinuation() {
+    try (Fixture f = new Fixture()) {
+      NativeDiabRun run = new NativeDiabRun(f.target, f.targetPosition());
+      f.world.getMapper(Casting.class).create(f.actor).diabRun = run;
+      assertTrue(f.paths.findPath(f.actor, run.destination, false, Engine.INVALID_ENTITY));
+      f.arrive();
+      f.paths.process(f.actor);
+      assertEquals(1, f.partialQueries);
+      assertTrue(f.queries.isEmpty());
+      assertEquals(new Vector2(30, 10), run.destination);
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+    }
+  }
+
   private static final class Fixture implements AutoCloseable {
     final Pathfinder paths = new Pathfinder();
     final Map map = mock(Map.class);
@@ -171,6 +306,7 @@ class PathfinderRecoveryTargetTest {
     boolean rejectTarget, rejectAll;
     int partialQueries;
     Vector2 intermediate;
+    Vector2 acceptedApproach;
 
     Fixture() {
       when(map.findPath(nullable(Map.Zone.class), any(Vector2.class), any(Vector2.class),
@@ -181,6 +317,7 @@ class PathfinderRecoveryTargetTest {
         queries.add(new Vector2(dst));
         out.clear();
         if (rejectAll || (rejectTarget && dst.epsilonEquals(targetPosition(), 0.01f))) return false;
+        if (acceptedApproach != null && !dst.epsilonEquals(acceptedApproach, 0.01f)) return false;
         out.add(new Point2(Map.round(src.x), Map.round(src.y)));
         if (intermediate != null) out.add(new Point2(Map.round(intermediate.x), Map.round(intermediate.y)));
         out.add(new Point2(Map.round(dst.x), Map.round(dst.y)));
@@ -226,6 +363,16 @@ class PathfinderRecoveryTargetTest {
       world.getMapper(Running.class).create(actor);
     }
     void stall() { path().recordMovement(true, 0f, 0.3f, true); }
+    void farDetour() {
+      start();
+      rejectTarget = true;
+      acceptedApproach = new Vector2(26, 6);
+      stall();
+      paths.process(actor);
+      assertEquals(acceptedApproach, path().destination);
+      assertEquals(Pathfind.REPATH_INTERVAL, path().repathTimer);
+    }
+    void arrive() { world.getMapper(Position.class).get(actor).position.set(path().destination); }
     Vector2 targetPosition() { return world.getMapper(Position.class).get(target).position; }
     Pathfind path() { return world.getMapper(Pathfind.class).get(actor); }
     Velocity velocity() { return world.getMapper(Velocity.class).get(actor); }
