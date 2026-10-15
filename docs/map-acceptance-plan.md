@@ -101,3 +101,41 @@ A5 普通难度部分户外图 MonDen=0，依赖 DS1 MonPlace `place_impgroup/pl
 地图回归 192 项通过。基于包含并行 AI 修复的 `df26608b`，seed=1、25Hz、132 图对象加载巡游再次完成：132 个 OBJECT_AUDIT、132 个 OBJECT_LOAD_PASS，failures=0；目录 `server/d2gs/build/map-tour/population-fix-20261015`，SUMMARY 明确为 OBJECT_LOAD_ONLY，walks/transitions=0。运行时生成时序与独立资源测试不同，计数不应混用：关卡 56 的 pendingMonsters=357 / spawnedMonsters=216，110 为 444 / 18，128 为 126 / 36；spawned 仍取决于房间激活，此次没有全房间怪物客户端可见断言。A1 关卡 2 的运行时物件 exported=created=runtime=23，其中 population=13。该结果不得冒充全有向边巡游或与原版数量等价。
 
 2026-10-15 A2 古墓绿色区域：D2Common 会把 `MAPTILE_HIDDEN` 的墙体记录保留在原生碰撞网格，但不提交其 `InvisWal.dt1`/辅助墙图形。`applyTileGridLayers` 原先只过滤隐藏入口标记，仍把普通隐藏墙安装到可见 wall layer，导致古墓内出现绿色辅助块。现已按 `bHidden`/`bRevealHidden` 规则过滤隐藏墙图形，碰撞数据继续保留；新增 `Act2TombHiddenWallResourceTest` 覆盖 level 55–72 的真实 MPQ 资源。
+
+2026-10-15 普通宝箱全幕调查（范围为 A1–A5）：已阅读 Phrozen Keep 的
+[Levels.txt 指南（1.10–1.14）](https://mail.d2mods.info/forum/kb/viewarticle?a=301)
+及 [ObjGroup.txt 指南（1.10–1.14）](https://d2mods.info/forum/kb/viewarticle?a=394)。
+前者明确 ObjGrp/ObjPrb 属于 Levels.txt；后者说明组内 PROB 控制选择概率，
+DENSITY 的效果取决于 PopulateFn，不能超过 125。旧的
+[1.09 指南](https://d2mods.info/forum/kb/viewarticle?a=241)把密度解释为物件间距，
+不能据此替换 1.10f 的数量算法。论坛资料没有提供所有地图的固定普通箱数量基准。
+
+新增三项真实 MPQ 二进制交叉验证，直接读取安装包里的原版编译表，而非只比较
+Java 两处公式：objgroup.bin（0x34/行）的全组 ID/DENSITY/PROB/SHRINES/WELLS，
+objects.bin（0x1C0/行）的 SizeX/SizeY/InitFn/PopulateFn/OperateFn/HasCollision，
+levels.bin（0x220/行）的 Id/ObjGrp/ObjPrb/Themes，均与当前加载结果逐行一致。
+未发现分组编号偏移、概率列读错或密度少一个数量级的问题。
+
+NativePopulationAuditResourceTest 从十六图抽样扩展为全部 127 个非城镇关卡，
+六种子覆盖 762 个地图实例。新增 CHEST_AUDIT / ACT_CHEST_AUDIT，区分预设和随机
+普通箱，并保留各 Objects class id。普通箱口径为 InitFn=3 且 Name 含 chest，
+包括 A2 Chest3、A5 chestR/woodchest/burialchest；排除任务箱、特殊闪光箱、
+桶、瓦罐、棺材及其他掉落容器。因此 A4 在此口径为零，不代表 A4 没有掉落物件，
+也不能把该分类结果当作 A4 生成失败。
+
+普通难度六种子的每幕随机普通箱均值：A1=305（范围 290–322）、A2=108（98–118）、
+A3=122.33（96–136）、A5=94.67（68–118）；预设普通箱均值另为 14、18.83、22.17、
+15.83。D2MOO Objects.cpp::OBJECTS_PopulateFn3_CommonObjects / OBJECTS_CreateObject
+要求每个密度名额最多五次落点，外围 Size+6 使用 PLACEMENT 检查，当前实现相同。
+审计新增静态碰撞前缀和，穷举房间候选落点，再按五次独立尝试估算地形影响。
+对应四幕的碰撞前名额均值约 457.28/258.25/259.99/279.29，静态地形估算约
+327.99/115.34/128.91/93.22，与实际生成数量接近。此估算忽略主题替代、单位占位
+和原版 RNG 相关性，不是原版游戏实测，也不是严格数量断言。
+
+本轮验证：8 项物件资源测试及 1 项六种子全地图人口审计通过，failures/errors=0。
+证据位于隔离区 core/build/reports/population-20261015/chest-terrain-six-seed.xml
+和 chest-final-tables.log。当前结论是实现侧数量与当前地形和原版放置规则基本相符，
+尚未证实或排除与原版游戏实际数量的差距；未改生成概率或人为加倍物件。下一层证据
+仍需同版本原版游戏的逐关卡/逐类别计数，并核对地形与房间人口标志、预设/LvlSub、
+原版 RNG/激活顺序及 TCP 客户端可见数量。不得将本轮通过写成“全幕普通箱数量已修复”
+或“已与原版等量”。全有向边步行和 GL 外观验收仍独立待办。

@@ -7,6 +7,67 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
+  @Test void objectGroupRowsMatchOriginalCompiledMpqTable() {
+    com.riiablo.codec.excel.ObjGroup groups = com.riiablo.codec.excel.Excel.load(
+        com.riiablo.codec.excel.ObjGroup.class, Riiablo.mpqs.resolve("data\\global\\excel\\ObjGroup.txt"));
+    java.nio.ByteBuffer binary = java.nio.ByteBuffer.wrap(
+        Riiablo.mpqs.resolve("data\\global\\excel\\objgroup.bin").readBytes())
+        .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+    int rows = binary.getInt();
+    assertEquals(rows, groups.size(), "physical row indexing including expansion divider");
+    assertEquals(rows * 0x34, binary.remaining(), "D2ObjGroupTxt record size");
+    for (int row = 0; row < rows; row++) {
+      com.riiablo.codec.excel.ObjGroup.Entry group = groups.get(row);
+      int start = 4 + row * 0x34;
+      for (int member = 0; member < 8; member++) {
+        String where = "row=" + row + " member=" + member;
+        assertEquals(binary.getInt(start + 4 * member), group.ID[member], where);
+        assertEquals(binary.get(start + 0x20 + member) & 0xff, group.DENSITY[member], where);
+        assertEquals(binary.get(start + 0x28 + member) & 0xff, group.PROB[member], where);
+      }
+      assertEquals(binary.get(start + 0x30) & 0xff, group.SHRINES);
+      assertEquals(binary.get(start + 0x31) & 0xff, group.WELLS);
+    }
+  }
+  @Test void objectPopulationFieldsMatchOriginalCompiledMpqTable() {
+    java.nio.ByteBuffer binary = java.nio.ByteBuffer.wrap(
+        Riiablo.mpqs.resolve("data\\global\\excel\\objects.bin").readBytes())
+        .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+    int rows = binary.getInt();
+    assertEquals(rows, Riiablo.files.objects.size());
+    assertEquals(rows * 0x1c0, binary.remaining());
+    for (int row = 0; row < rows; row++) {
+      Objects.Entry base = Riiablo.files.objects.get(row);
+      int start = 4 + row * 0x1c0;
+      assertEquals(binary.getInt(start + 0xd0), base.SizeX, "SizeX row=" + row);
+      assertEquals(binary.getInt(start + 0xd4), base.SizeY, "SizeY row=" + row);
+      assertEquals(binary.get(start + 0x1b1) & 0xff, base.InitFn, "InitFn row=" + row);
+      assertEquals(binary.get(start + 0x1b2) & 0xff, base.PopulateFn, "PopulateFn row=" + row);
+      assertEquals(binary.get(start + 0x1b3) & 0xff, base.OperateFn, "OperateFn row=" + row);
+      for (int mode = 0; mode < 8; mode++)
+        assertEquals(binary.get(start + 0x120 + mode) != 0, base.HasCollision[mode],
+            "HasCollision row=" + row + " mode=" + mode);
+    }
+  }
+  @Test void levelObjectGroupsAndProbabilitiesMatchOriginalCompiledMpqTable() {
+    java.nio.ByteBuffer binary = java.nio.ByteBuffer.wrap(
+        Riiablo.mpqs.resolve("data\\global\\excel\\levels.bin").readBytes())
+        .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+    int rows = binary.getInt();
+    assertEquals(rows * 0x220, binary.remaining());
+    for (int row = 0; row < rows; row++) {
+      int start = 4 + row * 0x220;
+      Levels.Entry base = Riiablo.files.Levels.get(row);
+      assertNotNull(base, "level=" + row);
+      assertEquals(binary.getShort(start) & 0xffff, base.Id, "Id level=" + row);
+      for (int slot = 0; slot < 8; slot++) {
+        String where = "level=" + row + " slot=" + slot;
+        assertEquals(binary.get(start + 0xe5 + slot) & 0xff, base.ObjGrp[slot], "ObjGrp " + where);
+        assertEquals(binary.get(start + 0xed + slot) & 0xff, base.ObjPrb[slot], "ObjPrb " + where);
+      }
+      assertEquals(binary.getInt(start + 0x210), base.Themes, "Themes level=" + row);
+    }
+  }
   @Test void realObjGroupsGenerateLooseRocksChestsBarrelsAndUrnsExactlyOnce() {
     for (int group : new int[]{38,3,10,29}) {
       Map.Zone zone = zone(group);
