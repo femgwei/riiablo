@@ -1579,6 +1579,77 @@ $env:D2_TEST = $env:D2_HOME
 生产身份/元数据/room图、nDist与移动消费安装、矩形递归网格及地形验收仍待。
 普通生产仍Map→AStarPathFinder，保持近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。
 
+## 第二十批：type16随机IDA与单位RNG（2026-10-16）
+
+`D2IDAStar.findNativeStreamPath`补上type16随机模式；`D2PathRequest.State`新增可选live owner
+`D2Seed`引用与构造器重载，保留旧调用。Search现在支持0/1/2/3/5/6/7/13/15/16，16必须有seed，
+0/16必须有room-aware Search；裸坐标重载均显式拒绝。调用方必须投影真实owner seed，不能用
+临时seed、克隆、请求间重置或目标单位seed代替。普通生产仍Map→AStarPathFinder。
+
+### 第二十批证据与行为
+
+继续固定D2MOO`origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，未fetch，复读
+`Path/IDAStar.cpp`。本机`G:\BaiduNetdiskDownload\Diablo II 1.10F\D2Common.dll`重新计算SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。objdump静态核对：
+
+- `6FDA7B02..7B34`仅PathInfo快照type==16开启随机模式，seed指向dynamicPath.ownerUnit+0x20。
+  不按live type或owner/target身份猜类型；16的表名MISSILE_STREAM不授权放宽既有missile gate。
+- `7BFB..7C19`初始cutoff为`(short)(signedRootH + signedRootH/2)`，除法向零截断；ceiling取它
+  与uint8 initialFScore的最大值。root节点h/f仍原始signed16 h，不替换成1.5h。共享search拆开
+  root heuristic与初始cutoff；type0不变。后续cutoff仍int32+5，不跟随上游局部short类型回绕。
+- `8136..818B`进入child先roll一次，再以parent当前方向+sequence首值+随机偏移起算，之后才查
+  threshold/回到exact检查。因此即便立即terminal或一点flush拒绝，也已消费seed。
+- `81C0..821B`和reject内联路径每次方向推进都roll一次，偏移取新lowSeed&31索引；复用已核对的
+  `Seed.rollRandomNumber`，不更改全局RNG算法。`7FAC..7FC8`等父回退路径先推进再增加评估计数，
+  即便根/父就此耗尽、不再查询碰撞，仍消费RNG；不能把这次调用当无用操作删掉。
+- 32个DWORD随机偏移表`6FDD1CE0..1D5F`逐项保留，最后两项为-1、1，非简单五项周期。
+  root设置方向和每轮重建root不roll；cache和live seed都跨cutoff轮保留，后续请求继续同一seed。
+- 固定seed(low=1,high=0)、start(15,15)到(20,15)、全阻挡且ceiling=0：候选方向为
+  `0,7,3,0,3,2,4,5`，只有六次实际碰撞查询、七次roll，最终seed=`0x5A0CC847EEA0F793`。
+  ceiling=21时执行两轮，14次roll、最终`0x2AED0D8050155D6D`，缓存不重查阻挡点。
+
+仍保留第十九批有序非回绕room、padding后<=50000、cache地址安全域；不模拟原版内存破坏。
+Java回调异常通过Request finally恢复完成移除的占位，但不回滚已消费seed，不声称原版异常
+展开语义等价。无seed/非法输入/超大padding在roll前拒绝；正常失败不冒充无副作用。
+只写有效prefix并返回count，count/index/vectors由外层接回和恢复占位后归一化；无A*/Toward兜底。
+
+### 第二十批验证与交付
+
+新增19项：`D2NativeIDAStreamTest`12项，`D2PathIdaDispatchTest`新增7项（现16项）。
+定向62项/4类通过；全范围**453项/39类通过，失败/错误/跳过均0**。新增随机表静态数据oracle，
+与此前五项合计六项执行，无跳过；这是匹配原DLL表数据核对，**不是动态执行DLL函数**。
+
+一项独立递归oracle用300组固定随机小域，逐query、终点、contour/cutoff、节点数、压缩prefix
+和最终64位seed比较；显式统计覆盖父耗尽的未使用推进与多contour，不能省略其RNG消费。
+它独立实现递归枚举和RNG算术，复用已核对公共方向/压缩helper，不是300项JUnit或DLL动态差分。
+其他测试覆盖exact/threshold前消费、flush拒绝、signed h/向零除法/short初始cutoff/int32增量、
+缺seed/不安全域早拒绝、跨请求seed连续、异常不回滚、Search快照与live type分离、type0零消费、
+临时容差倍增、prefix/live字段隔离，以及真实网格双占位恢复。既有非missile/±100支持域不变。
+
+首轮定向60项中一项失败：复用type0网格测试错误要求随机路径第一段Y非零，而随机路径可以
+先水平走再绕障碍。修正为检查向量已归一化，同时保留type0原非零断言；未改算法迎合夹具。
+另补两项后定向62项通过。日志`core/build/round20-check.log`保留失败，
+`round20-check-final.log`为定向通过；全范围`round20-full.log`通过，最终断言调整后复跑日志
+`round20-full-final.log`；XML `.gradle/path-port/round20-full/core/test-results/pathPortTest`。
+沿用隔离输出与`pathTestScope=path`，主源码仍完整编译；其他聊天NPC/AI修改不混入本轮提交。
+
+代码/测试`bd2fdc2dd5ddbf45845a2e633904036914244831`已推送origin/master，仅本轮五文件。
+最终`round20-full-final.log`复跑亦为453项/39类、失败/错误/跳过0；四交接文档另行提交。
+
+另机复验（原版目录按实际修改）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round20-check -PpathTestScope=path --tests '*D2NativeIDAStarTest' --tests '*D2NativeIDAStreamTest' --tests '*D2PathIdaDispatchTest' --tests '*D2PathDispatchTest' --console=plain
+```
+
+全范围改`pathRun=round20-full`并去掉四个`--tests`。无匹配DLL时静态oracle会显式跳过，不能
+据此报告原版验证通过。本轮无新地形/MPQ/TCP/GL/性能或DLL动态函数验收。
+
+**寻路仍未完成**：下一轮优先8/9/11/12入口；生产身份/元数据/room图、nDist与移动消费安装、
+矩形递归网格与地形验收仍待。生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
@@ -1586,8 +1657,8 @@ $env:D2_TEST = $env:D2_HOME
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
   已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
   元数据/房间图适配、nDist步进消费与原生搜索dispatcher剩余类型。已补footprint上层选择与真实
-  内存网格adapter、第十七批类型生命周期及第十九批0/1/2/3/5/6/7/13/15有状态分派（0需Search
-  room）；下一步优先16单位RNG/专用cutoff，再补8/9/11/12。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
+  内存网格adapter、第十七批类型生命周期及第二十批0/1/2/3/5/6/7/13/15/16有状态分派（0/16需Search
+  room，16另需live owner seed）；下一步优先8/9/11/12。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

@@ -703,3 +703,25 @@ room-aware Search dispatcher支持0/1/2/3/5/6/7/13/15；裸坐标重载仍拒绝
 **寻路仍未完成**：优先16单位RNG/专用cutoff，其后8/9/11/12。生产映射/nDist/移动消费、
 矩形递归网格与地形验收仍待；普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 无新增地形/MPQ/TCP/GL/性能/DLL动态函数验收，不据此宣称整体性能更优或寻路已收口。
+
+## 后续第二十批：type16随机IDA与单位RNG（2026-10-16）
+
+Search分派补16（需room与live owner seed）；旧type0/通用API与生产A*不变。继续固定D2MOO
+`0c0bbd1e`未fetch，并复核本机1.10f D2Common哈希及`7B02..7C2D/7FAC..7FC8/8136..821B`。
+
+- type16 cutoff=`short(h+h/2)`，向零除法，root h/f不变、ceiling=max(cutoff,byte)、轮间int32+5。
+- child进入、reject与父回退均原位消费owner+0x20 RNG，含耗尽前未使用推进；root设置不roll。
+  cache/seed跨轮保留，请求之间继续同一stream，失败/flush拒绝/Java异常不回滚已消费seed。
+- 随机表`6FDD1CE0`32项逐项读取核对，末两项不是周期值；继续复用全局Seed算法。
+  缺seed显式拒绝，不克隆/新建；type0不消费。16表名不等于安装missile dispatcher，不放宽gate。
+- 新增19项，定向62项/4类、全范围453项/39类通过，失败/错误/跳过0；六项原DLL静态数据
+  oracle执行。一项独立递归300组对照含最终seed与未使用推进，不是DLL动态执行。
+  真实网格双占位恢复/向量归一化通过，不代表ECS消费已安装或实机地形已验收。
+
+首轮一项网格断言误把type0首段Y非零套给随机路径，已修正并保留type0原断言；无算法放宽。
+代码/测试`bd2fdc2dd`已推送origin/master，最终全范围复跑同样453项/39类通过。
+详细地址、golden seed、日志与另机命令见
+[第二十批记录](d2moo-upstream-port-2026-10-15.md#第二十批type16随机ida与单位rng2026-10-16)。
+**寻路仍未完成**：下一轮8/9/11/12；生产映射/nDist/移动消费、矩形递归网格与地形验收仍待。
+普通生产仍Map→AStarPathFinder，不改近期优化、不加1.13+ gate或普通自动partial，无新性能或
+原版动态函数差分，不据此宣称整体性能更优或寻路收口。

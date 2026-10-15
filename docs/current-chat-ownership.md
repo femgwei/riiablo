@@ -10,7 +10,27 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十九批：确定性IDA type0入口与跨轮缓存
+## 2026-10-16 第二十批：type16随机IDA与单位RNG
+
+- `D2IDAStar.findNativeStreamPath`接入1.10f type16随机方向与专用cutoff，复用既有`Seed`。
+  `D2PathRequest.State`保留旧构造器，新增live owner seed引用；Search分派现支持
+  0/1/2/3/5/6/7/13/15/16，0/16需room，16另需seed，缺失显式拒绝；无生产ECS接入。
+- DLL `7B02..7C2D/8136..821B`确认seed来自owner+0x20，cutoff为short(h+h/2)，root h/f不变；
+  h/2向零截断，后续cutoff按int32加5。32项随机表按`6FDD1CE0`，末两项不能按周期生成。
+  child进入、reject、父回退推进均消费RNG，含耗尽前未使用的推进；root设置不roll。
+  cache和seed跨contour保留，搜索/flush失败及Java回调异常不回滚已消费seed，type0不消费。
+- 新增19项（随机内核12、分派7），定向62项/4类通过；全范围453项/39类通过，失败/错误/
+  跳过0。新增随机表静态oracle，合计六项原DLL静态数据oracle执行；独立递归300组逐query/
+  terminal/contour/分配/flush/最终seed对照是一项JUnit，不是DLL动态函数执行。
+  XML `.gradle/path-port/round20-full/core/test-results/pathPortTest`；首轮网格测试错误要求随机
+  首段Y非零，已改为归一化断言并保留type0原断言。具体日志/提交见第二十批上游记录。
+- 代码/测试`bd2fdc2dd5ddbf45845a2e633904036914244831`已推送origin/master；仅本轮五文件。
+  最终全范围复跑`core/build/round20-full-final.log`通过；四交接文档另行提交。
+- **寻路仍未完成**：下一轮优先8/9/11/12入口。type16表名虽为MISSILE_STREAM，本轮仅接既有
+  nonmissile player/monster投影，不放宽0x40000 gate。生产映射、nDist/移动消费、矩形递归网格
+  与地形验收仍待；普通生产仍Map→AStarPathFinder，不宣称性能或完整原生等价。
+
+## 2026-10-16 第十九批：确定性IDA type0入口与跨轮缓存（历史）
 
 - `D2IDAStar.findNativePath`新增独立原生模式，旧通用findPath行为保持；type0现在通过带room的
   `D2PathDispatch.compute(Search,...)`接通，裸坐标重载仍显式拒绝0，不能猜target room。

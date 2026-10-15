@@ -212,7 +212,19 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
-## 2026-10-16 D2MOO 第十九批：确定性IDA type0入口
+## 2026-10-16 D2MOO 第二十批：type16随机IDA与单位RNG
+
+- [x] Search接通16，需room和live owner seed；保留旧构造器与type0/通用API行为，不新建/克隆seed。
+  short(h+h/2)专用cutoff、root评分不变、int32轮增量及32项随机表按本机1.10f DLL静态证据。
+- [x] child/reject/父回退（包括耗尽前未使用推进）原位消费RNG；root不roll，cache/seed跨轮保留。
+  失败/异常不回滚seed，仍恢复双占位；只写prefix返回count，不自动fallback，不放宽missile gate。
+- [x] 新增19项，定向62项/4类、全范围453项/39类通过，失败/错误/跳过0；六项DLL静态数据
+  oracle执行。一项独立递归300组比较含最终seed，不是DLL动态执行。详见第二十批上游记录。
+  代码/测试`bd2fdc2dd`已推送origin/master；最终全范围复跑同样453项通过。
+- [ ] **寻路未完成**：优先8/9/11/12，生产身份/元数据/room、nDist/移动消费、矩形递归网格与
+  地形验收仍待。生产仍Map→AStarPathFinder；近期优化保持，不加1.13+ gate或普通自动partial。
+
+## 2026-10-16 D2MOO 第十九批：确定性IDA type0入口（历史）
 
 - [x] 原生IDA模式跨轮保留缓存，含相等距离继续；子节点从父方向起算，根回退越行表读取，
   uint16坐标/signed16评分与type0 max(root h, byte ceiling)/int32 cutoff+5按本机DLL。
