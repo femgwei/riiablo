@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十五批（生产适配仍PARTIAL）
+
+- [x] 审查地图/合成/任务/城镇WRP路由；固化拒绝推断原生类型的跨入口回归。
+- [x] 新增2项，完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log。
+- [ ] WRP可靠原生类型来源、raw fp16/live字段/Act与Zone/shared seed仍待。
+
+本批仅适配边界验证，生产仍Map→AStarPathFinder，无新算法移植。
+
 ## 2026-10-16 寻路第四十四批（生产适配仍PARTIAL）
 
 - [x] Request标准观察核对owner完整fp16 precision；只读原快照访问，不猜测fraction。

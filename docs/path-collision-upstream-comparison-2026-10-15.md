@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第四十五批补充：WRP创建路径包含合成地图出口与任务/城镇传送门，现有路由字段不能证明原生类型。
+新增2项跨入口拒绝回归，防止从Warp字段或混入Objects行猜测tile5/object2；无新算法或DLL证据，生产仍A*。
+完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log。
+
 第四十四批补充：Request标准Observation核对已分配动态owner完整precisionX/Y，
 避免同格内fraction不同仍混用；只读DynamicPath访问器允许显式传递原值，不自动从浮点重建。
 新增2项，完整607项/52类通过，失败/错误/跳过0；未完成真实raw来源，生产仍A*，无新增DLL证据。

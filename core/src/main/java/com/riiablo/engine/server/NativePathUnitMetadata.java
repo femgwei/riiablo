@@ -14,7 +14,9 @@ import java.util.Objects;
 /** ECS table-backed subset of UNITS_GetUnitSizeX/Y (#10336/#10337),
  * UNITS_IsDoor (#10392) and UNITS_CheckIfObjectOrientationIs1.
  * Capture on the game thread. Coordinate composition requires caller-supplied raw data.
- * WRP mixes tile warps and portal objects and cannot be mapped by Class alone. */
+ * WRP mixes tile warps and portal objects and cannot be mapped by Class alone.
+ * Warp.index (including QuestWarp encodings), bounds rows and town-portal links
+ * describe host routing, not authoritative native unit-type provenance. */
 public final class NativePathUnitMetadata {
   public final int type, sizeX, sizeY;
   /** Predicate results from the host table; these are not original DLL record bytes. */

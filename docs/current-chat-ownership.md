@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十五批：审查WRP真实创建路径，路由字段不足以证明原生tile/object类型，保留拒绝。
+新增2项跨元数据、分配碰撞和绑定观察的边界回归；生产仍A*，详细交接见handoff顶部。
+完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log。
+
 第四十四批：标准Request核对已分配动态owner完整fp16 precision，拒绝同格内fraction混用；
 只读raw快照访问器不从浮点重建。新增2项，完整607项/52类通过，失败/错误/跳过0。
 日志core/build/round44-full.log；真实raw来源仍待，生产仍A*，详细交接见handoff顶部。

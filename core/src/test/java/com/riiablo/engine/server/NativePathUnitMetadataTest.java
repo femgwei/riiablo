@@ -17,6 +17,48 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitMetadataTest {
+  @Test void populatedWarpRoutingDoesNotAuthorizeNativeTileOrObjectClassification() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.WRP);
+      com.riiablo.engine.server.component.Warp warp =
+          w.getMapper(com.riiablo.engine.server.component.Warp.class).create(id);
+      warp.warp = new com.riiablo.codec.excel.LvlWarp.Entry();
+      warp.dstLevel = new com.riiablo.codec.excel.Levels.Entry();
+      for (int index : new int[] {0, 0x01020304,
+          com.riiablo.engine.server.quest.QuestWarp.encode(1)}) {
+        warp.index = index;
+        assertThrows(IllegalArgumentException.class, () -> NativePathUnitMetadata.read(w, id));
+        assertThrows(IllegalArgumentException.class,
+            () -> NativePathAllocationCollision.read(w, id, false));
+      }
+      warp.townPortalOwner = 42; warp.linkedTownPortal = 43;
+      // Even a resolved object row alongside routing data cannot override Class provenance.
+      Object object = w.getMapper(Object.class).create(id);
+      object.base = new Objects.Entry(); object.base.SizeX = 3; object.base.SizeY = 2;
+      assertThrows(IllegalArgumentException.class, () -> NativePathUnitMetadata.read(w, id));
+    } finally { w.dispose(); }
+  }
+
+  @Test void ambiguousWarpCannotEscapeThroughLifetimeBoundObservation() {
+    World w = new World();
+    try {
+      int owner = create(w, Class.Type.PLR), target = create(w, Class.Type.WRP);
+      w.getMapper(NativePathIdentity.class).create(owner).allocated(w, owner);
+      w.getMapper(NativePathIdentity.class).create(target).allocated(w, target);
+      w.getMapper(com.riiablo.engine.server.component.Warp.class).create(target)
+          .index = com.riiablo.engine.server.quest.QuestWarp.encode(2);
+      NativePathUnitBinding binding = new NativePathUnitBinding(w, owner, target, (world, id) -> {
+        NativePathUnitMetadata metadata = NativePathUnitMetadata.read(world, id);
+        return id == owner ? metadata.dynamicUnit(new D2PathUnits.DynamicPath(0, 0, 0))
+            : metadata.staticUnit(p(20, 30));
+      });
+      assertThrows(IllegalArgumentException.class, () -> binding.observe(0));
+      // Rejection leaves the valid owner usable; no guessed target snapshot is returned.
+      assertEquals(0, NativePathUnitMetadata.read(w, owner).type);
+    } finally { w.dispose(); }
+  }
+
   @Test void monsterSizeBytesRejectEachInvalidAxisWithoutTruncation() {
     World w = new World();
     try {

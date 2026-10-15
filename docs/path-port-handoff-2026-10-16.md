@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十四批续接结果（优先于下方历史起点）
+## 第四十五批续接结果（优先于下方历史起点）
+
+- 审查ServerEntityFactory.createWarp、QuestWarp及TownPortalRegistry：WRP含普通出口、
+  合成地图标记、任务/城镇传送门，Warp.index、bounds、owner/link只表述宿主路由，非原生类型来源。
+- 保留WRP元数据拒绝；新增2项跨入口回归，覆盖完整路由数据、任务编码、城镇链接及混入Objects行，
+  并验证分配碰撞适配和生命周期绑定观察不能绕过拒绝。不猜测tile5或object2。
+- 本批只固化适配边界，无新算法移植或DLL动态证据；生产仍Map→AStarPathFinder。
+  可靠WRP类型来源、raw fp16/live字段/Act与Zone/shared seed仍待。
+- 完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log，
+  XML `.gradle/path-port/round45-full/core/test-results/pathPortTest`。
+
+## 第四十四批续接结果（历史）
 
 - D2PathUnits.dynamicPath提供只读不可变原始DynamicPath快照，null保留缺失路径，静态单位拒绝。
   Request标准Observation对已分配动态owner核对完整precisionX/Y，不再只比较整格坐标。

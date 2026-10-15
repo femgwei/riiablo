@@ -2091,6 +2091,16 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 不从浮点重建或宣称实际raw来源已完成，缺失动态路径/静态owner/legacy契约保持；
   生产仍A*，live字段/Act与Zone/shared seed仍待，无新增DLL算法证据或动态执行。
 
+## 第四十五批：WRP类型来源边界
+
+- 审查ServerEntityFactory.createWarp的普通/任务分支、QuestWarp编码和TownPortalRegistry链接。
+  普通分支也容纳合成出口；index/bounds/destination/owner/link属于路由数据，不能等同原生类型。
+- 保留NativePathUnitMetadata对WRP拒绝，说明来源边界；新增2项验证完整路由、任务编码、
+  城镇链接及混入Objects行仍拒绝，分配碰撞入口和生命周期绑定观察也不能绕过。
+- 无算法变更、DLL动态执行或生产切换；WRP真实类型来源与已有raw/live/room/seed缺口仍待。
+- 完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log，
+  XML .gradle/path-port/round45-full/core/test-results/pathPortTest。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
