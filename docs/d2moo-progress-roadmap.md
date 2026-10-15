@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 VileDog Fn069（PARTIAL）
+
+- [x] 十行VileDog专用AI接入：首次5帧等待、近战攻击/停顿、接近/10帧等待，无目标初始化。
+- [x] 40项定向通过；真实MPQ全目录557行/1174场，近远20场自然动作与伤害均观察到。
+- [x] 其余AI结果未变；fallback降至44AI名称/167行，107个WARNING保留。
+- [ ] 原生walk flags 7、单位RNG流及全局调度仍待；不标完整对齐，不以普通场观察替代全行为oracle。
+
+证据：[VileDog验证](ai-arena/20261016-viledog-seed1/verification.md)。
+
 ## 2026-10-16 Megademon Fn089（PARTIAL）
 
 - [x] 专用AI及技能319/S1接入；严格range/timer、拒绝施法仍耗冷却、状态清除及攻击/绕行分支。

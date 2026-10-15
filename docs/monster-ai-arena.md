@@ -1,5 +1,13 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 VileDog Fn069
+
+VileDog 专用AI覆盖首次5帧等待、近战攻击/停顿及远距离接近/10帧等待。
+40项定向测试通过；真实MPQ全目录557行/1174场完成，十行VileDog近远20场均有动作与伤害，
+其余AI结果未变。fallback现为44个AI名称/167行，107个WARNING保留。
+移动flags 7及原生RNG/调度仍未对齐，状态为PARTIAL；近远场观察不冒充专属全行为验收。
+证据见 [verification.md](ai-arena/20261016-viledog-seed1/verification.md)。
+
 ## 最新修复批次：2026-10-16 Megademon Fn089
 
 Megademon 专用决策已接入，覆盖严格喷火范围/冷却、状态复位、近战攻击与绕行优先级。
