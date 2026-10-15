@@ -5,6 +5,12 @@
 
 ## 结论与证据边界
 
+第四十六批补充：Request构造后的result.room替换也须在执行前拒绝，复检起始bounds同一对象，
+包括相同几何的新投影及无Observation调用者；已有Search/effects入口共享检查。
+新增3项验证副作用前拒绝；低层Result入口没有保存startRoom，不检测该替换历史。
+仅宿主快照契约修复，无新DLL算法证据或生产切换。
+修复前3项失败复现，修复后完整612项/52类通过，失败/错误/跳过0；core/build/round46-full.log。
+
 第四十五批补充：WRP创建路径包含合成地图出口与任务/城镇传送门，现有路由字段不能证明原生类型。
 新增2项跨入口拒绝回归，防止从Warp字段或混入Objects行猜测tile5/object2；无新算法或DLL证据，生产仍A*。
 完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log。

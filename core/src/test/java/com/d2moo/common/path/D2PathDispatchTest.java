@@ -12,6 +12,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathDispatchTest {
+  @Test void savedSearchRejectsReplacedResultRoomBeforeQueriesWritesOrStreamSeed() {
+    for (int type : new int[] {0, 2, 16}) {
+      D2Seed seed = new D2Seed(123, 456);
+      D2PathRequest.Search search = savedSearch(type, () -> {}, seed);
+      D2PathResult.State s = search.state.result;
+      // Equal geometry is still a different projection from the saved start room.
+      s.room = new D2PathResult.Room(10, 10, 30, 30);
+      D2Path.Point[] before = s.points.clone(); long seedBefore = seed.getLSeed();
+      int count = s.path.pathPointCount, index = s.path.currentPointIndex;
+      int directionX = s.directionVectorX, velocityY = s.velocityVectorY;
+      assertThrows(IllegalArgumentException.class, () -> D2PathDispatch.compute(search,
+          (x,y) -> { fail("room mismatch must precede collision queries"); return false; }));
+      assertArrayEquals(before, s.points); assertEquals(seedBefore, seed.getLSeed());
+      assertEquals(count, s.path.pathPointCount); assertEquals(index, s.path.currentPointIndex);
+      assertEquals(directionX, s.directionVectorX); assertEquals(velocityY, s.velocityVectorY);
+    }
+  }
+
   private static D2PathRequest.Search savedSearch(int type, Runnable guard, D2Seed seed) {
     D2PathResult.State s = state(); s.path.pathType = type;
     s.precisionX = 10 << 16; s.precisionY = 10 << 16;

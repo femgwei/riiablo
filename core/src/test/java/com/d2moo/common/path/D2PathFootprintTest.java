@@ -421,6 +421,31 @@ class D2PathFootprintTest {
     assertArrayEquals(before, cells(grid));
   }
 
+  @Test void directEffectsRejectReplacedRoomBeforeGridOperationsWithOrWithoutObservation() {
+    for (boolean observed : new boolean[] {false, true}) {
+      D2ActiveRoom grid = room(0, 0, 40, 40);
+      D2PathFootprint.Unit owner = dynamic(0, grid, 1, 1, 0x80);
+      D2PathFootprint.Unit target = observed ? dynamic(1, grid, 1, 1, 0x100) : null;
+      D2PathRequest.State state = request(owner, target, 0);
+      D2PathFootprint.RequestEffects effects = new D2PathFootprint.RequestEffects(state, owner, target) {
+        @Override public int search(D2PathRequest.Search search) { return 0; }
+      };
+      D2PathFootprint.add(owner);
+      if (target != null) D2PathFootprint.add(target);
+      int[] before = cells(grid);
+      state.result.room = new D2PathResult.Room(0, 0, 40, 40);
+      assertThrows(IllegalArgumentException.class, () -> effects.removeOwner(state));
+      assertThrows(IllegalArgumentException.class, () -> effects.removeTarget(state));
+      assertThrows(IllegalArgumentException.class, () -> effects.addOwner(state));
+      assertThrows(IllegalArgumentException.class, () -> effects.addTarget(state));
+      assertThrows(IllegalArgumentException.class, () -> effects.blocked(state, 10, 10));
+      assertThrows(IllegalArgumentException.class, () -> new D2PathFootprint.RequestEffects(state, owner, target) {
+        @Override public int search(D2PathRequest.Search search) { return 0; }
+      });
+      assertArrayEquals(before, cells(grid));
+    }
+  }
+
   @Test void directEffectsRejectStaleObservationBeforeAnyGridOperation() {
     D2ActiveRoom grid = room(0, 0, 40, 40);
     D2PathFootprint.Unit owner = dynamic(0, grid, 1, 1, 0x80);

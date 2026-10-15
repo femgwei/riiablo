@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十六批（生产适配仍PARTIAL）
+
+- [x] Request/Search/effects运行前重新核对result.room与startRoom.bounds身份，覆盖无Observation。
+- [x] 新增3项跨入口回归，验证网格/路径/向量/seed副作用之前拒绝替换房间投影。
+- [x] 修复前3项失败复现，修复后完整612项/52类通过，失败/错误/跳过0；core/build/round46-full.log。
+- [ ] 实际raw/live字段、Act与Zone映射、共享seed及WRP类型来源仍待；生产仍A*。
+
 ## 2026-10-16 寻路第四十五批（生产适配仍PARTIAL）
 
 - [x] 审查地图/合成/任务/城镇WRP路由；固化拒绝推断原生类型的跨入口回归。

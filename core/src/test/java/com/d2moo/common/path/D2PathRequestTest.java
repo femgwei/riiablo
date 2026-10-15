@@ -13,6 +13,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathRequestTest {
+  @Test void replacedResultRoomIsRejectedBeforeCustomEffectsWithOrWithoutObservation() {
+    for (boolean observed : new boolean[] {false, true}) {
+      for (D2PathResult.Room replacement : new D2PathResult.Room[] {null,
+          new D2PathResult.Room(0, 0, 100, 100), new D2PathResult.Room(100, 100, 20, 20)}) {
+        D2PathUnits.Unit target = observed ? D2PathUnits.Unit.stationary(4, 1, p(20, 10)) : null;
+        D2PathRequest.State s = request(result(0, p(10, 10), p(20, 10)), target,
+            room(0, 0, 100, 100, false), false, 0);
+        s.result.room = replacement;
+        D2Path.Point[] points = s.result.points.clone();
+        Effects effects = new Effects();
+        assertThrows(IllegalArgumentException.class, () -> D2PathRequest.compute(s, false, effects));
+        assertTrue(effects.calls.isEmpty()); assertEquals(0x1234, s.collidedMask);
+        assertArrayEquals(points, s.result.points);
+        assertEquals(2, s.result.path.pathPointCount); assertEquals(1, s.result.path.currentPointIndex);
+        assertEquals(p(9, 9), s.result.path.finalTargetPoint); assertEquals(99, s.result.pendingUpdate);
+      }
+    }
+  }
+
   @Test void standardObservationRejectsSameTileDifferentFractionAtConstruction() {
     D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
     D2PathRequest.State s = request(result(0, p(10, 10), p(20, 10)), target,

@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十六批：Request/Search/effects复检房间投影身份，拒绝构造后替换result.room，
+覆盖有/无Observation；新增3项验证副作用前拒绝。生产仍A*，详细交接见handoff顶部。
+修复前3项复现，修复后完整612项/52类通过，失败/错误/跳过0；core/build/round46-full.log。
+
 第四十五批：审查WRP真实创建路径，路由字段不足以证明原生tile/object类型，保留拒绝。
 新增2项跨元数据、分配碰撞和绑定观察的边界回归；生产仍A*，详细交接见handoff顶部。
 完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log。

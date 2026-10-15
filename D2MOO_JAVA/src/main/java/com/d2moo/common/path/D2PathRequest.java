@@ -43,6 +43,7 @@ public final class D2PathRequest {
         /** Effects must share the standard observation's exact owner snapshot.
          * Legacy custom targets have no verifiable owner identity contract. */
         void requireOwnerObservation(D2PathUnits.Unit owner) {
+            requireRoomProjection();
             if (observation == null) return;
             if (result.path.targetUnit != observation || observation.owner != owner) {
                 throw new IllegalArgumentException("effects owner/observation changed; rebuild the request");
@@ -52,12 +53,21 @@ public final class D2PathRequest {
         }
 
         void requireObservationCurrent() {
+            requireRoomProjection();
             if (observation == null) return;
             if (result.path.targetUnit != observation) {
                 throw new IllegalArgumentException("request observation changed; rebuild the request");
             }
             observation.requireCurrent();
             requireOwnerPoint();
+        }
+
+        /** result.room is mutable; preserve the construction-time shared bounds contract
+         * even for coordinate-only requests without a standard unit observation. */
+        private void requireRoomProjection() {
+            if (result.room != (startRoom == null ? null : startRoom.bounds)) {
+                throw new IllegalArgumentException("request room projection changed; rebuild the request");
+            }
         }
 
         private void requireOwnerPoint() {

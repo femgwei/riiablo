@@ -2101,6 +2101,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 完整609项/52类通过，失败/错误/跳过0；core/build/round45-full.log，
   XML .gradle/path-port/round45-full/core/test-results/pathPortTest。
 
+## 第四十六批：Request房间投影运行前一致性
+
+- result.room为可变字段，构造时与startRoom.bounds的身份核对不足以保证后续执行一致。
+  Request/Search/effects既有复检入口重新检查同一对象；相同几何替代物也要求重建请求。
+- 此房间契约独立于Observation；无目标/legacy调用者也检查，低层Result直接dispatch仍无保存身份。
+- 新增3项跨入口回归，检查custom effects、保存Search 0/2/16、直接footprint操作和适配器构造，
+  确保拒绝前网格、点缓冲、索引/计数、向量和stream seed无变更。
+- 仅宿主适配一致性修复，无新DLL算法证据，生产仍A*，raw/live/Act/seed/WRP缺口仍待。
+- 修复前3项失败复现（core/build/round46-red.log）；修复后完整612项/52类通过，失败/错误/跳过0，
+  core/build/round46-full.log，XML .gradle/path-port/round46-full/core/test-results/pathPortTest。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十五批续接结果（优先于下方历史起点）
+## 第四十六批续接结果（优先于下方历史起点）
+
+- 修复Request构造后result.room被替换却继续执行的房间投影混用：已有Request/Search/effects复检
+  入口重新核对result.room与startRoom.bounds同一对象；相同几何的新对象、null和不同房间均须重建请求。
+- 此检查独立于标准Observation，坐标目标/legacy调用者同样保留构造时房间契约。
+  低层Result直接dispatch无保存的startRoom，不宣称能检测替换历史。
+- 新增3项覆盖custom effects前拒绝、保存Search的0/2/16分支及直接footprint操作/构造拒绝，
+  断言网格、点缓冲、索引/计数、向量及stream seed保留。仅适配快照一致性，无新DLL算法证据。
+- 生产仍Map→AStarPathFinder；raw/live字段、实际Act与Zone映射、共享seed、WRP类型来源仍待。
+- 三项新增测试在修复前均失败（core/build/round46-red.log），修复后完整612项/52类通过，
+  失败/错误/跳过0；core/build/round46-full.log，XML `.gradle/path-port/round46-full/core/test-results/pathPortTest`。
+
+## 第四十五批续接结果（历史）
 
 - 审查ServerEntityFactory.createWarp、QuestWarp及TownPortalRegistry：WRP含普通出口、
   合成地图标记、任务/城镇传送门，Warp.index、bounds、owner/link只表述宿主路由，非原生类型来源。
