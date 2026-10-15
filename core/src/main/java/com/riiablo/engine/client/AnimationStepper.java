@@ -40,7 +40,8 @@ public class AnimationStepper extends IntervalIteratingSystem {
     Sequence sequence = mSequence.get(entityId);
     AnimData animData = mAnimData.get(entityId);
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
-    boolean inferno = cast != null && cast.monInferno != null && cast.monInferno.started;
+    boolean inferno = cast != null && cast.monInferno != null
+        && (cast.monInferno.started || cast.monInferno.horrorSequence);
     if (sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden || sequence.nativeDiabRun || inferno) && animData != null) {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the

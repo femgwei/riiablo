@@ -1811,6 +1811,7 @@ public class MissileCollisionSystem extends IteratingSystem {
               .withElementalDamage(combat, Math.max(0.01f, missile.damageMultiplier))
               .suppressElementalPresentation(hasNativeElementalPresentation(missile))
               .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
+          event.missileId = missileId;
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same

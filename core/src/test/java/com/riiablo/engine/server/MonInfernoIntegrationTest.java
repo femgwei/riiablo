@@ -30,6 +30,60 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 class MonInfernoIntegrationTest extends RiiabloTest {
+  @Test void horrorIgnoresBackingCofMarkersAndFreezeStopsItsSequenceClock() {
+    try (Fixture f = new Fixture("frozenhorror1", 323, Engine.Monster.MODE_A2)) {
+      AnimData anim = f.world.getMapper(AnimData.class).get(f.source);
+      anim.keyframes = new byte[] {Engine.KEYFRAME_MIS};
+      NativeMonInferno channel = f.cast().monInferno;
+      f.states().addState(StateId.FREEZE, 10, 1, f.target);
+      for (int i = 0; i < 12; i++) f.tick();
+      assertEquals(0, channel.frame);
+      assertTrue(f.ids.isEmpty());
+      f.states().removeState(StateId.FREEZE);
+      f.untilFirst();
+      assertEquals(9, f.frames.get(0));
+      assertEquals(8 << 8, anim.frame, "SQ seeks InfernoAnim-1, not the non-SQ source point");
+      f.tick();
+      assertEquals(9 << 8, anim.frame);
+      f.tick();
+      assertEquals(8 << 8, anim.frame, "next pulse rewinds the sequence cursor");
+      assertEquals(2, f.ids.size());
+    }
+  }
+
+  @Test void horrorCreationFailureEndsAfterNativeTailAndDeathCancelsPendingSequence() {
+    try (Fixture f = new Fixture("frozenhorror1", 323, Engine.Monster.MODE_A2)) {
+      f.fail = true;
+      NativeMonInferno channel = f.cast().monInferno;
+      while (!channel.started) f.tick();
+      assertEquals(9, channel.frame);
+      assertEquals(10, channel.endFrame);
+      f.tick();
+      assertNull(f.cast());
+      assertTrue(f.ids.isEmpty());
+      f.begin();
+      f.world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.DeathEvent.obtain(f.target, f.source));
+      for (int i = 0; i < 30; i++) f.tick();
+      assertNull(f.cast());
+      assertTrue(f.ids.isEmpty());
+    }
+  }
+  @Test void horrorUsesMonSeqActionNineAndPeriodicTwoFrameUpdates() {
+    try (Fixture f = new Fixture("frozenhorror1", 323, Engine.Monster.MODE_A2)) {
+      NativeMonInferno channel = f.cast().monInferno;
+      assertNotNull(channel);
+      f.untilFirst();
+      assertEquals(9, f.frames.get(0));
+      while (f.cast() != null) f.tick();
+      for (int i = 1; i < f.frames.size(); i++)
+        assertEquals(2, f.frames.get(i) - f.frames.get(i - 1));
+      assertTrue(f.ids.size() > 2);
+      assertEquals(channel.endFrame, channel.frame);
+      assertEquals(1, channel.tailFrames);
+      assertEquals(1, f.probe.finished);
+    }
+  }
   @Test void diablo152UsesRealScMarkerPeriodicMissilesAndSixFrameTail() {
     for (String row : new String[] {"diablo", "diabloclone"}) {
       try (Fixture f = new Fixture(row, 193, Engine.Monster.MODE_SC)) {
@@ -294,6 +348,7 @@ class MonInfernoIntegrationTest extends RiiabloTest {
       world.getMapper(Casting.class).create(source).set(skill.Id, target, new Vector2(13, 10));
       D2.Entry entry = D2.loadFromFile(Riiablo.mpqs.resolve("data/global/eanimdata.d2"))
           .getEntry((monster().monstats.Code + (mode == Engine.Monster.MODE_A1 ? "A1"
+              : mode == Engine.Monster.MODE_A2 ? "A2"
               : mode == Engine.Monster.MODE_SC ? "SC" : "S1") + "HTH").toUpperCase());
       AnimData anim = world.getMapper(AnimData.class).create(source);
       anim.frame = 0; anim.speed = entry.speed; anim.numFrames = entry.framesPerDir << 8;

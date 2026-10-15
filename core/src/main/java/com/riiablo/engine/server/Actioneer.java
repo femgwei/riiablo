@@ -839,11 +839,16 @@ public class Actioneer extends PassiveSystem {
         && states.stateList.hasState(StateId.INFERNO);
     channel.updated(update.monInfernoMissileId >= 0, enabled);
     channel.lastMissileId = update.monInfernoMissileId;
-    // Non-SQ SKILLS_SetInfernoFrame seeks the source cursor, not the COF's
-    // frame count. ENDANIM remains an independent scheduled event.
+    // SQ (Skills.monanim=xx) seeks the sequence point to InfernoAnim-1;
+    // non-SQ seeks only the source frame. ENDANIM is independently scheduled.
     if (update.monInfernoMissileId >= 0 && mAnimData.has(entityId)) {
       AnimData anim = mAnimData.get(entityId);
-      anim.frame = mMonster.get(entityId).monstats2.InfernoAnim << 8;
+      int point = mMonster.get(entityId).monstats2.InfernoAnim;
+      if (channel.horrorSequence) {
+        point--;
+        channel.sequenceCursor = point << 8;
+      }
+      anim.frame = point << 8;
       anim.lastKeyframeIndex = anim.frame >>> 8;
     }
     log.info("[MON_INFERNO] phase=update source={} skill={} frame={} missile={} count={} "
@@ -1508,7 +1513,7 @@ public class Actioneer extends PassiveSystem {
             entityId, emerged);
         break;
       }
-      case 53: { // SKILLS_SrvSt53_MonInferno (95/152 non-SQ subset)
+      case 53: { // SKILLS_SrvSt53_MonInferno (verified 95/152 consumers)
         Casting cast = mCasting.get(entityId);
         Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
         Monster monster = mMonster.get(entityId);

@@ -1,0 +1,120 @@
+same=1051 changed=112 added=5 missing=0 total=1168
+ACTION_OBSERVED=504
+AI_FALLBACK=366
+MOVEMENT_ONLY=7
+NO_ACTION=180
+TERMINAL_OBSERVED=4
+WARNING=107
+specialPassed=54
+baaltaunt/far moves:42->41
+batdemon5/far moves:42->41
+batdemon6/far moves:42->41
+batdemon7/far moves:42->41
+bonefetish1/far moves:57->49
+bonefetish4/far actions:11->8; damageEvents:8->7; damage:97->100
+bonefetish5/far moves:33->30
+bonefetish6/far moves:33->30
+bonefetish7/far moves:33->30
+corruptrogue1/far moves:47->42
+corruptrogue2/far moves:41->35
+corruptrogue3/far moves:41->35
+corruptrogue4/far moves:35->30
+corruptrogue5/far moves:31->26
+cr_lancer1/far moves:55->57
+cr_lancer2/far moves:44->39
+cr_lancer3/far moves:44->39
+cr_lancer4/far moves:41->33
+cr_lancer5/far moves:35->28
+cr_lancer6/far moves:31->25
+cr_lancer7/far moves:31->25
+cr_lancer8/far moves:31->25
+diablo/diab-wall moves:72->67
+diabloclone/diab-wall moves:70->65
+fallen1/far actions:7->3
+fallen2/far actions:6->7; moves:118->100; damage:4->2
+fallen3/far actions:6->3; damageEvents:1->3; damage:3->10
+fallen4/far moves:95->81
+fallen5/far moves:71->61
+fallenshaman1/far actions:10->11; damageEvents:6->5; moves:121->110; damage:10->7
+fallenshaman1/corpse damageEvents:8->7; moves:66->99; damage:18->12
+fallenshaman2/corpse damageEvents:9->10; damage:26->29
+fallenshaman6/corpse actions:12->13; moves:33->44; damage:83->73
+fallenshaman7/corpse actions:13->12; damageEvents:0->6; damage:0->11
+fallenshaman8/corpse actions:13->12; damageEvents:0->6; damage:0->11
+fetish11/far moves:57->49
+fetish3/far moves:39->37
+fetish4/far moves:38->33
+fetish5/far moves:34->30
+fetish6/far moves:34->30
+fetish7/far moves:34->30
+fetish8/far moves:34->30
+fetishshaman1/far moves:98->84; damage:474->473
+fetishshaman2/far moves:84->79; damage:545->546
+fetishshaman3/far actions:21->18; moves:61->72; damage:619->617
+fetishshaman4/far actions:24->21; damageEvents:22->21; moves:55->60; damage:845->809
+fetishshaman5/far actions:18->21; damageEvents:15->18; moves:49->54; damage:638->761
+fetishshaman6/far moves:49->54; damage:760->761
+fetishshaman7/far moves:49->54; damage:760->761
+fetishshaman8/far moves:49->54; damage:760->761
+foulcrow1/far moves:178->184
+foulcrow2/far moves:178->184
+foulcrow3/far actions:10->9; damageEvents:7->6; moves:110->111; damage:36->29
+foulcrow4/far moves:109->100
+foulcrow5/far moves:91->89
+foulcrow6/far moves:91->89
+foulcrow7/far moves:89->86
+foulcrow8/far moves:86->83
+frozenhorror1/near actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->ACTION_OBSERVED; actions:17->59; damageEvents:17->58; warnings:35->0; fallback:True->False; damage:105->493
+frozenhorror1/far actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->NO_ACTION; actions:17->0; warnings:35->0; fallback:True->False
+frozenhorror2/near actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->ACTION_OBSERVED; actions:17->65; damageEvents:17->65; warnings:35->0; fallback:True->False; damage:105->516
+frozenhorror2/far actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->NO_ACTION; actions:17->0; warnings:35->0; fallback:True->False
+frozenhorror3/near actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->ACTION_OBSERVED; actions:17->63; damageEvents:17->63; warnings:35->0; fallback:True->False; damage:127->610
+frozenhorror3/far actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->NO_ACTION; actions:17->0; warnings:35->0; fallback:True->False
+frozenhorror4/near actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->ACTION_OBSERVED; actions:17->63; damageEvents:17->63; warnings:35->0; fallback:True->False; damage:127->616
+frozenhorror4/far actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->NO_ACTION; actions:17->0; warnings:35->0; fallback:True->False
+frozenhorror5/near actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->ACTION_OBSERVED; actions:17->63; damageEvents:17->63; warnings:35->0; fallback:True->False; damage:161->743
+frozenhorror5/far actualAi:GenericMonster->FrozenHorror; status:AI_FALLBACK->NO_ACTION; actions:17->0; warnings:35->0; fallback:True->False
+goatman10/far moves:48->41
+goatman2/far moves:90->81
+goatman4/far moves:59->54
+goatman6/far moves:57->49
+goatman7/far moves:57->49
+goatman8/far moves:57->49
+goatman9/far moves:52->45
+maggotbaby1/far moves:142->122
+maggotbaby2/far moves:125->122; damage:13->14
+maggotbaby5/far moves:87->81
+maggotbaby6/far moves:87->81
+mephisto/far moves:56->55
+mummy1/far moves:171->162
+mummy2/far moves:170->162
+mummy3/far moves:176->162
+mummy5/far moves:170->162
+mummy6/far moves:170->162
+pantherwoman2/far moves:47->41
+pantherwoman3/far moves:41->35
+pantherwoman4/far moves:36->31
+pantherwoman5/far moves:32->27
+pantherwoman6/far moves:32->27
+skeleton4/far moves:98->97
+skeleton5/far moves:98->97
+skeleton6/far moves:98->97
+skeleton7/far moves:98->97
+swarm1/far actions:9->7; damageEvents:7->6; moves:99->97; damage:61->52
+swarm2/far moves:95->81
+swarm4/far moves:71->61
+vulture1/far moves:142->122
+vulture5/far moves:138->122
+wraith1/far moves:102->97
+wraith2/far moves:90->81
+wraith3/far moves:88->81
+wraith4/far moves:81->70
+wraith5/far moves:71->61
+wraith6/far moves:71->61
+wraith7/far moves:71->61
+wraith8/far moves:71->61
+zombie1/far moves:485->469
+zombie2/far moves:487->468
+zombie3/far moves:485->468
+zombie4/far moves:485->468
+zombie5/far moves:485->468

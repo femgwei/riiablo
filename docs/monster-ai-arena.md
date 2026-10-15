@@ -1,5 +1,17 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-15 FrozenHorror（323 / MonSeq）
+
+按Fn124接入五种Horror的专用AI；核对真实14点A2序列、point9 action1、成功后回卷point8、
+每2帧持续喷射和1帧尾动画，客户端跟随权威帧。自然专属场要求完整生命周期及寒冷导弹实际扣血。
+478项定向通过（core444/d2gs34，61类，失败/错误/跳过0）。完整1168场：ACTION504、
+FALLBACK366、WARNING107、NO_ACTION180、MOVEMENT7、TERMINAL4；54专属通过，异常/ERROR/
+NOT_RUN/SPECIAL_NOT_TRIGGERED0。46个AI名称/183表行仍fallback，Inferno Sentry MonSeq仍待。
+与上一批1051场相同、112变化、新增5、无丢失；10个旧Horror场变更，另102个非Horror变化与
+近期并行路径更新同在当前master，本批不归因。非完整AI/真实TCP/GL/多seed三难度验收。
+详见[证据](ai-arena/20261015-horror-seed1/verification.md)。
+
+
 ## 最新修复批次：2026-10-15 DiabPrison（Do104）
 
 按D2MOO及真实1.10f表接入199/S3：boneprison1..4四角独立怪物，首段失败不生成子段，

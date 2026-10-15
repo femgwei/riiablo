@@ -1,0 +1,27 @@
+allprojects {
+  afterEvaluate { p ->
+    if (p.path == ':core' || p.path == ':server:d2gs') {
+      def isolated = tasks.register('compileHorrorTests', JavaCompile) {
+        dependsOn tasks.named('classes')
+        source = sourceSets.test.allJava
+        classpath = sourceSets.test.compileClasspath
+        destinationDirectory = file("$buildDir/classes/java/horrorTests")
+        options.encoding = 'UTF-8'
+      }
+      tasks.register('horrorRegression', Test) {
+        dependsOn isolated
+        testClassesDirs = files(isolated.get().destinationDirectory)
+        classpath = files(isolated.get().destinationDirectory) + sourceSets.test.runtimeClasspath
+        if (p.path == ':core') useJUnitPlatform { excludeTags 'visual' }
+        else useJUnit()
+        maxHeapSize = '2g'
+        systemProperty 'java.awt.headless', 'true'
+        systemProperty 'gdx.test.headless', 'true'
+        reports.junitXml.destination = file("$buildDir/test-results/horror-final")
+        reports.html.destination = file("$buildDir/reports/tests/horror-final")
+        binaryResultsDirectory = file("$buildDir/test-results/horror-final/binary")
+        testLogging { events 'failed'; exceptionFormat 'full' }
+      }
+    }
+  }
+}

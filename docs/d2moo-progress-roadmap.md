@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 逐怪AI：FrozenHorror及Horror MonSeq
+
+- [x] 按Fn124接入五种Horror专用AI，保留距离严格小于技能等级、概率优先级、INFERNO清除、
+  近战/接近/停顿；真实14点A2 MonSeq point9触发、发射后point8回卷、2帧周期、1帧尾动画。
+- [x] 478项定向通过（core444/d2gs34，61类，失败/错误/跳过0），含8项新增数据/AI/序列测试。
+  新增5场自然技能循环，要求真实寒冷导弹包和HP扣减，不改原表概率或注入SkillDo。
+- [x] 完整557行/1168场：ACTION504/FALLBACK366/WARNING107/NO_ACTION180/MOVEMENT7/TERMINAL4；
+  54专属通过，异常/ERROR/NOT_RUN/SPECIAL_NOT_TRIGGERED0。与上一批1051相同/112变化/新增5/
+  丢失0，其中102条非Horror变化不能归因本批；当前master含并行路径更新。
+- [ ] 仍有46个AI名称/183表行fallback；Inferno Sentry MonSeq、完整Fn051/Fn065、Megademon专用AI、
+  全局原生时钟及三难度多seed/真实TCP/GL验收未完成。仅此AI批次完成，不代表寻路已完成。
+  复验命令、初失败、修后及比较见[Horror证据](ai-arena/20261015-horror-seed1/verification.md)。
+
 ## 2026-10-15 D2MOO 第十批：WallFollow/type15 绕墙内核
 
 - [x] 新增`D2WallFollow`准备坐标目标后的双侧绕墙内核，含原路线回接、闭环、预算截断、

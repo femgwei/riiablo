@@ -76,7 +76,27 @@ public class AnimStepper extends IntervalIteratingSystem {
     NativeMonInferno inferno = casting == null ? null : casting.monInferno;
     if (inferno != null && sequence != null && sequence.started) {
       inferno.frame++;
+      if (inferno.horrorSequence && !inferno.started) {
+        // seq_horrorarcticblast: fourteen A2 source points, action 1 on point 9.
+        // UNITS_InitializeSequence uses 256, independent of the backing COF rate.
+        int delta = 256;
+        if (states != null && states.stateList != null)
+          delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+        int previous = inferno.sequenceCursor;
+        inferno.sequenceCursor = Math.min(14 << 8, previous + delta);
+        animData.frame = Math.min(13 << 8, inferno.sequenceCursor);
+        if (previous < (9 << 8) && inferno.sequenceCursor >= (9 << 8))
+          events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+        return;
+      }
       if (inferno.started) {
+        if (inferno.horrorSequence) {
+          int delta = 256;
+          if (states != null && states.stateList != null)
+            delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+          inferno.sequenceCursor = (inferno.sequenceCursor + delta) % (14 << 8);
+          animData.frame = inferno.sequenceCursor;
+        }
         // Once SrvDo095/152 runs it deletes the ordinary COF MODECHANGE/ENDANIM
         // events. Only the scheduled callback and InfernoLen tail may fire.
         if (inferno.nextUpdate >= 0 && inferno.frame >= inferno.nextUpdate)
@@ -85,7 +105,7 @@ public class AnimStepper extends IntervalIteratingSystem {
           log.info("[MON_INFERNO] phase=end source={} skill={} frame={} missiles={}",
               entityId, casting.skillId, inferno.frame, inferno.missiles);
           events.dispatch(AnimDataFinishedEvent.obtain(entityId));
-        } else if (animData.numFrames > 0) {
+        } else if (!inferno.horrorSequence && animData.numFrames > 0) {
           animData.frame = (animData.frame + Math.max(0, animData.speed)) % animData.numFrames;
         }
         return;

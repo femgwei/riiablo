@@ -7,7 +7,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.skill.SkillFormula;
 
-/** Per-cast SrvSt53/SrvDo095/152 clock. MonSeq remains a separate port. */
+/** Per-cast SrvSt53/SrvDo095/152 clock, including Horror's verified A2 MonSeq. */
 public final class NativeMonInferno {
   public final int deadline;
   public final int interval;
@@ -18,8 +18,11 @@ public final class NativeMonInferno {
   public int missiles;
   public int lastMissileId = -1;
   public boolean started;
+  public final boolean horrorSequence;
+  public int sequenceCursor;
 
   public NativeMonInferno(Skills.Entry skill, int level, int tailFrames) {
+    horrorSequence = skill.Id == 323;
     deadline = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, level));
     interval = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, level));
     this.tailFrames = Math.max(1, tailFrames);
@@ -51,11 +54,14 @@ public final class NativeMonInferno {
     if (skill == null || skill.srvstfunc != 53
         || (skill.srvdofunc != 95 && skill.srvdofunc != 152)
         || monster == null || monster.monstats2 == null || sequence == null) return false;
-    // These rows have verified non-MonSeq backing modes in 1.10f.
+    // Explicit consumers only: verified ordinary modes plus Horror's A2 MonSeq.
     // Baal's Skills.monanim=xx is overridden by AiBaal action 12 (SKILL1).
     return (skill.srvdofunc == 95 && ((skill.Id == 178 && sequence.mode1 == Engine.Monster.MODE_A1)
         || (skill.Id == 319 && sequence.mode1 == Engine.Monster.MODE_S1)
-        || (skill.Id == 317 && sequence.mode1 == Engine.Monster.MODE_S1)))
+        || (skill.Id == 317 && sequence.mode1 == Engine.Monster.MODE_S1)
+        || (skill.Id == 323 && sequence.mode1 == Engine.Monster.MODE_A2
+            && monster.monstats != null && "FrozenHorror".equals(monster.monstats.AI)
+            && "seq_horrorarcticblast".equals(monster.monstats.Sk1mode))))
         || (skill.srvdofunc == 152 && skill.Id == 193 && sequence.mode1 == Engine.Monster.MODE_SC);
   }
 }
