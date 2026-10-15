@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第二十五批（生产适配仍PARTIAL）
+
+- [x] 真实RoomEx有序路径链接导出与跨Zone请求局部诊断快照；保留null/自身/重复和bounds身份。
+- [x] 新增4项边界/拓扑测试；完整隔离path回归515项/44类通过，失败/错误/跳过0。
+- [ ] live D2ActiveRoom列表/生命周期、实体生命周期身份、fp16坐标与共享owner D2Seed仍待。
+- [ ] 状态消费、真实地图、性能与另机验收仍待。当前生产仍Map→AStarPathFinder。
+
+本批结果见上游移植记录第二十五批；RoomEx导出不等于活动房间列表。
+
 ## 2026-10-16 HellMeteor Fn033（整体PARTIAL）
 
 - [x] 无目标自主坐标施法；原版概率/等待/范围与随机取数顺序；SrvDo28直接创建hellmeteordown。

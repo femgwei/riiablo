@@ -2705,6 +2705,13 @@ public class Map implements Disposable {
     private int pickedFile = -1;
     private int[] adjacentRoomIds;
     private long[] nativeNeighborKeys = new long[0];
+    private Long[] nativePathNeighborKeys;
+
+    /** Ordered RoomEx links for path diagnostics; null slots are preserved.
+     * This is not the live D2ActiveRoom ppRoomList. */
+    public Long[] nativePathNeighborKeys() {
+      return nativePathNeighborKeys == null ? null : nativePathNeighborKeys.clone();
+    }
     private int clientInRoomRefs;
     private int clientInSightRefs;
     private int clientOutOfSightRefs;
@@ -2724,6 +2731,7 @@ public class Map implements Disposable {
       // well so native pRoomsNear links survive cross-level seam projection.
       com.d2moo.common.drlg.D2DrlgRoom[] near = room.getPpRoomsNear();
       int count = near == null ? 0 : Math.min(room.getNRoomsNear(), near.length);
+      nativePathNeighborKeys = new Long[count];
       com.badlogic.gdx.utils.LongArray keys = new com.badlogic.gdx.utils.LongArray(count);
       for (int i = 0; i < count; i++) {
         com.d2moo.common.drlg.D2DrlgRoom neighbor = near[i];
@@ -2732,6 +2740,8 @@ public class Map implements Disposable {
         for (com.d2moo.common.drlg.D2DrlgRoom candidate = neighbor.getLevel().getFirstRoomEx();
             candidate != null; candidate = candidate.getDrlgRoomNext(), id++) {
           if (candidate == neighbor) {
+            nativePathNeighborKeys[i] = ((long) neighbor.getLevel().getLevelId() << 32)
+                | (id & 0xffffffffL);
             keys.add(((long) neighbor.getLevel().getLevelId() << 32) | (id & 0xffffffffL));
             break;
           }

@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第二十五批补充：Map.RoomEx现独立保留有序路径链接并提供跨Zone诊断快照，
+不再需要借用会过滤自身/跨层的本层邻接ID。D2MOO的DUNGEON_GetAdjacentRoomsListFromRoom
+读取live D2ActiveRoom.ppRoomList；本批RoomEx快照尚不等价该列表，也未进入生产寻路消费。
+NativeRng不是D2Seed，不能用作type16的live owner seed。完整回归515项/44类通过，失败/错误/跳过0。
+
 **以复现原版行为为目标，D2MOO 的 D2Common 搜索规则、路径状态机和定点步进更接近原版；
 不能据此推导出整包替换后性能更好，或者当前碰撞优化应当撤回。** 当前项目已经吸收大量
 原版规则，但通用生产搜索器尚不是独立 Java 原生 A* 的直接调用者。

@@ -1798,6 +1798,24 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 的生产映射；随后才安装nDist/索引推进/耗尽续算/类型恢复消费，保持受控接入，不整体切换。
 真实地图/技能移动、性能及另一台电脑实机验收继续待办。
 
+## 第二十五批：真实RoomEx有序跨层路径诊断投影（2026-10-16）
+
+- 检查真实地图桥发现本层adjacentRoomIds会过滤自身和跨层链接；新增独立nullable Long[]导出，
+  按原pRoomsNear有效范围保留自身、重复和null槽，键由levelId与该level链表room序号组成。
+  旧AI/可见性邻接列表行为不变，返回数组防御复制。
+- NativePathRoomGraph接受真实Zone集合，两阶段投影保证跨层及循环链接共享同一Room/bounds对象。
+  未加载Zone/无法解析的链接保持null，不推断几何邻接、不做BFS；拒绝未导出拓扑及重复level/room键。
+  快照需在加载/卸载后重建；nearby列表不可修改，但D2PathRequest.Room本身仍属可变投影API。
+- 依据固定D2MOO origin/master的D2Dungeon.cpp：DUNGEON_GetAdjacentRoomsListFromRoom直接返回
+  D2ActiveRoom.nNumRooms与ppRoomList。这明确了剩余边界：RoomEx图不是live active-room图，
+  本批仅新增诊断适配入口，不称已完成生产映射或动态DLL差分。本批没有新增DLL算法证据。
+- 检查NativeRng发现为31位LCG，不能替代D2Seed；没有改Monster.rngState或生产随机算法。
+  实体生命周期身份、原生fp16、共享owner seed及实际路径消费仍待，生产仍Map→AStarPathFinder。
+- 新增NativePathRoomGraphTest四项：跨层同ID/有序自身重复null、缺Zone及快照稳定性、
+  缺导出/重复键拒绝、count截断与非传递/非几何寻房。首轮定向3项通过后补充第四项并进入全回归。
+- 完整回归515项/44类通过，失败/错误/跳过0；日志`core/build/round25-full.log`，
+  XML `.gradle/path-port/round25-full/core/test-results/pathPortTest`。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

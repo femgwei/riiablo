@@ -22,7 +22,7 @@ gradle.projectsEvaluated {
        'NativeSeamCollisionTest', 'ObjectCollisionUpdaterTest', 'WhirlwindCollisionTest',
        'WarpArrivalCollisionTest', 'NativeTowardPathProbeTest', 'NativeAiPathCacheTest',
        'NativePathRuntimeComparisonTest', 'NativePathShadowTest', 'DiabRunDataTest',
-       'DiabRunIntegrationTest'].each { include "**/${it}.java" }
+       'DiabRunIntegrationTest', 'NativePathRoomGraphTest'].each { include "**/${it}.java" }
     }
   }
   core.tasks.register('pathPortTest', Test) {

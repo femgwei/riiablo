@@ -2,7 +2,18 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十四批续接结果（优先于下方历史起点）
+## 第二十五批续接结果（优先于下方历史起点）
+
+- RoomEx新增独立有序路径链接导出，保留跨层level/room键、自身、重复项与null槽。
+  NativePathRoomGraph将真实Zone/RoomEx投影成请求局部room快照，共享bounds身份；缺失Zone链接保持null。
+- 这是RoomEx诊断适配，不是live D2ActiveRoom.ppRoomList，尚未安装到生产请求或移动。
+  原本本层邻接ID过滤自身/跨层，不能作为原生near-list；下一轮优先live active-room生命周期映射。
+- NativeRng是另一套算法，不能用作D2Seed；真实实体生命周期身份、fp16坐标和共享owner RNG仍待。
+- 新增4项测试；完整回归515项/44类通过，失败/错误/跳过0。
+  日志`core/build/round25-full.log`，XML `.gradle/path-port/round25-full/core/test-results/pathPortTest`。
+  生产仍Map→AStarPathFinder。
+
+## 第二十四批续接结果（历史）
 
 - small cross mask先解析中心room；缺中心/窄房间返回请求mask，Any返回1。外臂使用中心room hint，
   写入仍从原hint逐点寻房。新增#10122 pattern Any入口，RequestEffects.blocked改用Any。
