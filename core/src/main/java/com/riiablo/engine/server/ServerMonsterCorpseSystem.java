@@ -60,6 +60,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
+    detachMercenaryTargetNode(event.victim);
 
     // UnitLifecycleSystem claims the authoritative death boundary first. A
     // late duplicate DeathEvent must not re-run AI.kill(), enqueue another
@@ -143,8 +144,11 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
-    if (event == null || event.mode != Engine.Monster.MODE_DD
-        || !mMonster.has(event.entityId)) return;
+    if (event == null || !mMonster.has(event.entityId)) return;
+    if (event.mode == Engine.Monster.MODE_DT || event.mode == Engine.Monster.MODE_DD) {
+      detachMercenaryTargetNode(event.entityId);
+    }
+    if (event.mode != Engine.Monster.MODE_DD) return;
 
     final int entityId = event.entityId;
     boolean shattered = mUnitStates.has(entityId)
@@ -184,6 +188,12 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       world.delete(entityId);
       log.info("[MONSTER_CORPSE] phase=removed_after_shatter entity={}", entityId);
     }
+  }
+
+  private void detachMercenaryTargetNode(int entityId) {
+    // MonsterMode.cpp TARGETS_Last is persistent: returning to NU alone must
+    // not restore the old child insertion. NPC resurrection explicitly rejoins.
+    if (mMercenary.has(entityId)) mMercenary.get(entityId).nativeTargetOrder = 0;
   }
 
   /** Native death collision boundary, independent of DT/DD presentation. */

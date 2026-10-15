@@ -20,6 +20,8 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.MercenaryFollowSystem;
+import com.riiablo.engine.server.NativePlayerTargetSlots;
+import com.riiablo.engine.server.NativeTargetOrder;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
@@ -434,7 +436,8 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   @Override
   public boolean resurrectMercenaryEntity(int entityId, int playerId) {
     if (factory == null || entityId == Engine.INVALID_ENTITY
-        || !mMercenary.has(entityId) || mMercenary.get(entityId).ownerId != playerId) {
+        || !mPlayer.has(playerId) || !mMercenary.has(entityId)
+        || mMercenary.get(entityId).ownerId != playerId) {
       return false;
     }
     if (!factory.resurrectMonster(entityId, playerId)) return false;
@@ -444,6 +447,14 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (mAIWrapper.has(entityId)) mAIWrapper.remove(entityId);
     if (mInteractable.has(entityId)) mInteractable.remove(entityId);
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
+    // SUnitNpc.cpp sub_6FCC84D0 rejoins only after the retained hireling has
+    // actually been restored. Do not use Mercenary.set: its skills, seed and
+    // runtime AI state are not a new hire. A missing/full owner head leaves
+    // the successfully resurrected unit unlinked, not queued for promotion.
+    NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
+    mMercenary.get(entityId).nativeTargetOrder = slots == null
+        || slots.slotOf(playerId) < NativePlayerTargetSlots.SLOT_COUNT
+        ? NativeTargetOrder.inserted() : 0;
     return true;
   }
 

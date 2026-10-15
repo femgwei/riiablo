@@ -52,6 +52,29 @@ class ServerMonsterCorpseSystemTest {
       assertNotNull(sequence);
       assertEquals(Engine.Monster.MODE_DT, sequence.mode1);
       assertEquals(Engine.Monster.MODE_DD, sequence.mode2);
+      assertEquals(0, world.getMapper(Mercenary.class).get(mercenaryId).nativeTargetOrder);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void deathModesDetachHirelingInsertionAndNeutralModeDoesNotRejoinIt() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem()).build());
+    try {
+      int id = world.create();
+      world.getMapper(Monster.class).create(id).set(new MonStats.Entry(), new MonStats2.Entry());
+      Mercenary merc = world.getMapper(Mercenary.class).create(id);
+      for (byte mode : new byte[] {Engine.Monster.MODE_DT, Engine.Monster.MODE_DD}) {
+        merc.set(3, 0, 8, 7, 2);
+        assertTrue(merc.nativeTargetOrder > 0);
+        events.dispatch(ModeChangeEvent.obtain(id, mode));
+        assertEquals(0, merc.nativeTargetOrder);
+        events.dispatch(ModeChangeEvent.obtain(id, Engine.Monster.MODE_NU));
+        assertEquals(0, merc.nativeTargetOrder, "NU is not UpdateSummonAI");
+      }
     } finally {
       world.dispose();
     }
