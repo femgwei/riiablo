@@ -49,6 +49,7 @@ public final class D2PathContinuation {
         public int ownerFlags;
         public int pathFlags;
         public int pathType;
+        public int previousPathType; // +0x40, saved only by PATH_SetType's flag gate
         public int directionOffset;
         public int currentPointIndex;
         public int pathPointCount;

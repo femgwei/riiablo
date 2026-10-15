@@ -31,13 +31,21 @@ public final class D2Toward {
             // Nonzero offset bypasses the initial ray and tolerance test entirely.
             localSteps(start, target, start, maximumDistance, directionOffset, true, points, collision);
         } else {
-            RayResult ray = trace(start, target, collision);
-            if (ray.clear || D2PathMisc.approximateDistance(ray.endpoint, target) <= targetTolerance) {
-                points.add(ray.endpoint);
-            } else {
-                if (!ray.endpoint.equals(start)) points.add(ray.endpoint);
-                localSteps(start, target, ray.endpoint, maximumDistance, 0, false, points, collision);
-            }
+            return computeAfterRay(start, target, maximumDistance, targetTolerance,
+                    trace(start, target, collision), collision);
+        }
+        return new Result(start, target, points);
+    }
+
+    /** Shared zero-offset tail after the stateful entry has performed 0x6FDAABF0 exactly once. */
+    static Result computeAfterRay(D2Path.Point start, D2Path.Point target,
+            int maximumDistance, int targetTolerance, RayResult ray, Collision collision) {
+        List<D2Path.Point> points = new ArrayList<>();
+        if (ray.clear || D2PathMisc.approximateDistance(ray.endpoint, target) <= targetTolerance) {
+            points.add(ray.endpoint);
+        } else {
+            if (!ray.endpoint.equals(start)) points.add(ray.endpoint);
+            localSteps(start, target, ray.endpoint, maximumDistance, 0, false, points, collision);
         }
         return new Result(start, target, points);
     }
@@ -150,7 +158,7 @@ public final class D2Toward {
     public static final class RayResult {
         public final D2Path.Point endpoint;
         public final boolean clear;
-        private RayResult(D2Path.Point endpoint, boolean clear) {
+        RayResult(D2Path.Point endpoint, boolean clear) {
             this.endpoint = endpoint;
             this.clear = clear;
         }

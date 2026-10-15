@@ -40,6 +40,7 @@ public final class D2PathResult {
         public Room room;
         public int precisionX, precisionY;
         public int velocity;
+        public int previousVelocity; // +0x80, independent of the current velocity
         public int directionVectorX, directionVectorY;
         public int velocityVectorX, velocityVectorY;
         public int direction, newDirection, diffDirection;
@@ -114,10 +115,23 @@ public final class D2PathResult {
      * indexing outside that domain is rejected, not silently replaced by long math.
      */
     public static void normalizeVectors(State state, boolean normalizeIfSamePoint, boolean forceFacing) {
+        normalizeVectors(state, normalizeIfSamePoint, forceFacing, false);
+    }
+
+    /** Toward's 0x6FDAABF0 probe reads slot zero with index/count BOTH zero (0x6FDAC7A6).
+     * The caller has already written the temporary target. Do not fake a live count of one:
+     * an exact-center probe must keep count/index zero while zeroing velocity/vectors. */
+    static void normalizeSearchProbe(State state) {
+        normalizeVectors(state, true, true, true);
+    }
+
+    private static void normalizeVectors(State state, boolean normalizeIfSamePoint,
+            boolean forceFacing, boolean emptyProbe) {
         requireState(state);
         requireCount(state);
         D2PathContinuation.State path = state.path;
-        if (path.currentPointIndex < 0 || path.currentPointIndex >= path.pathPointCount) {
+        if (path.currentPointIndex < 0 || path.currentPointIndex >= path.pathPointCount
+                && !(emptyProbe && path.currentPointIndex == 0 && path.pathPointCount == 0)) {
             throw new IllegalArgumentException("normalization requires a current waypoint");
         }
         int x, y;
