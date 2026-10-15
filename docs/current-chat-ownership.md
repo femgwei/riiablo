@@ -10,7 +10,29 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第六批：真实地图 shadow 采样
+## 2026-10-15 第七批：恢复路径保留单位目标
+
+- 代码/测试 `b0a1f4912a52f2ee4abf0ec4d78fab392d0003d3` 已推送origin/master，远端SHA一致。
+  修复动态阻挡恢复绕过public入口时，stop→绕行→重建Pathfind丢失targetEntityId，
+  以及直接恢复不刷新目标坐标快照/重算timer的问题。目标身份与可达末点分离。
+- 只在核心路径接受后统一安装metadata；保留普通exact、显式DiabRun partial固定目标、
+  房间前/后置gate及近期碰撞/平滑/移动优化，未接入原生搜索backend。
+- 修改前新增6项中4项失败；最终新增9项通过，合并153项/25类通过，失败/错误/跳过0。
+  XML：`core/build/test-results/upstreamRound4-round7-full`。新测试使用真实ECS恢复/消费，
+  Map和动态碰撞服务为scripted/mock，不是实际地图碰撞或原版DLL执行。
+- 真实1.10F MPQ/TCP复验：25Hz、seed12345，63蛆虫二层、64蛆虫三层、65古代通道，
+  3图/10击杀/0通行失败，连续入口1次、staging跳转1次；AI errors/fallbackRecords均0。
+  stalled日志0次，故仅为非回归冒烟，不声称真实TCP验收了本次stop/recreate分支。
+  shadow128次：83可比较（55 NONE、28 TURNS），45越界；无诊断错误/live重放差异。
+- 固定D2MOO `0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch；结合本机
+  D2Common/D2Game静态反汇编核实pTargetUnit独立于路径点、partial不等于到达、
+  Toward失败转type15绕墙而非A*。上游标BROKEN的10142不单独当oracle。
+- 下一步按实际pathType设计受控接入，补native distance/final goal/续算状态；不照搬5格阈值。
+  普通A*未切换，火焰之河AI fallback仍未解决/重验；无benchmark/GL/全图/原版动态等价验收。
+  本轮仅定向暂存自己的文件，未混入另一轮COF修改；文档独立提交推送，最终SHA见git log。
+  证据、DLL地址及另一电脑复验命令见上游记录第七批和比较报告末尾。
+
+## 2026-10-15 第六批：真实地图 shadow 采样（历史）
 
 - `033b2e9d94e26b7d0c60f9be530e38c1b6282adb` 已推送origin/master且远端SHA一致。
   新增来源关卡过滤、脱离地图引用的关卡/房间上下文及OUTCOME/ENDPOINT/TURNS分类；
@@ -20,7 +42,7 @@
 - 两组主采样237次：195次COMPARED（105次输出一致、57次仅压缩转向点不同、
   33次runtime FAILED/reference PARTIAL），42次快照外不判定；诊断错误/live重放差异均0。
   33次部分路径不等于到达，也不是33个独立缺陷；没有可比较的FAILED/EXACT样本。
-- 蛆虫63/64/65在25Hz、seed12345普通难度通过：3图、10次真实TCP击杀、0通行失败，
+- 蛆虫二/三层及古代通道63/64/65在25Hz、seed12345普通难度通过：3图、10次真实TCP击杀、0通行失败，
   1次连续入口/1次测试staging跳转，不是两条连接都通过；AI gate通过，fallbackRecords=0。
 - 火焰之河107/108通行子检查通过、连续入口1次；整个任务因AI fallbackRecords=148而失败
   （errors=0），不能标为完整通过。原生参考只给出部分接近路径，未证明能解决生产卡路。

@@ -386,7 +386,7 @@ runtime终点(94,95)，reference终点(44,44)，参考分配200节点。
 均显式指定本机1.10F、seed12345、difficulty0、25Hz、每匹配请求采1次、最多128次。
 下列两组为主统计，不合并先前单图预热的2次样本；不是多seed/多难度、全图或原版客户端验收。
 
-蛆虫63/64/65：整个任务通过，3图/4个walk计划/10次真实TCP击杀/0通行失败；
+蛆虫二/三层及古代通道63/64/65：整个任务通过，3图/4个walk计划/10次真实TCP击杀/0通行失败；
 连续入口1次、测试staging跳转1次，不把非连续跳转算成步行连接证据。
 AI gate通过，fallbackRecords=0、errors=0；观察模式仍不等于完整AI正确性oracle。
 sourceLevel=63过滤，128次样本中92次COMPARED：45次EXACT/EXACT且压缩输出一致，
@@ -448,10 +448,124 @@ Output改为`server/d2gs/build/round6-shadow-river-retry`；保留AI gate，不�
 本轮四份进度文档独立提交推送，最终SHA见git log，不宣称整个工作区clean。
 本批沿用既有固定D2MOO/DLL审查基线，未重新fetch或新增DLL动态等价证明。
 
+## 第七批：部分路径消费核对与恢复目标状态修复
+
+### 原版调用关系与静态交叉核验
+
+本轮读取D2MOO固定 `origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，
+未fetch，未改本地旧检出；不声称已检查当天全部上游更新。证据来自下列源码及本机
+合法1.10F DLL的局部静态反汇编，不是运行原版DLL逐帧差分。
+
+- `D2Common/src/Path/Path.cpp`：dispatch中type0/16是IDA*、1是A*、2/5/6/13是Toward、
+  7是Straight、15是绕墙。`D2Common_10142`上游明确标BROKEN，不能独立当oracle。
+  调用前保存final target，生成后返回点数；无flags0x10且无pTargetUnit时才以末点改target。
+  单位目标身份独立于生成路径点，非空输出不保证exact到达。
+- `AStar.cpp`：exhausted/budget可flush bestNode，压缩输出1..77点有效，0或>=78拒绝。
+  这支持PARTIAL合同，但不支持把所有普通exact失败直接换成partial成功。
+- `PathMisc.cpp`的`D2Common_10236`：非2/13/15按原type重算；2/13/15依参数选Toward2或
+  TowardFinish13，失败再转15。保留同一dynamicpath/pTargetUnit。10226的内联检查会在
+  路点耗尽且未到final goal时续算；player/monster目标位移X或Y大于5也参与判断，
+  circle5/6有特例。不能简单解释为“点耗尽即已到达”。
+- `D2Game/src/MONSTER/MonsterMode.cpp`：移动hint101默认TowardFinish13，AI可override；
+  `sub_6FC65680`在2/7/9/13无点后转15。`PathWF.cpp`的type15是Bresenham/绕障/简化，
+  可能给可用前缀，**不是A* fallback**。本轮没有把coordinate shadow扩写成全怪物dispatch。
+
+本机DLL目录：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。
+使用`C:\Strawberry\c\bin\objdump.exe -d -Mintel`核验下列未重定位VA（非文件offset）：
+
+- D2Common SHA256：`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+  `0x6FDA8CAA..8D11`保存final +18/+1A、清索引+24/点数+28、调用type表`0x6FDD1F40`；
+  `0x6FDA8D7E..8DB9`保存prevtarget +14/+16，检查flags0x10及pTargetUnit +58，
+  无单位目标才以末点改target +10/+12。
+  `0x6FDAC8F0..C98F`核实2/13/15选择及失败转15；
+  `0x6FDACA5C..CA93`核实无单位目标时耗尽但未到final的恢复；
+  `0x6FDACAAF..CB2C`核实单位目标、位移>5及耗尽恢复。BX/BP保存当前坐标，并非零。
+  type15入口为`0x6FDAC270`。
+- D2Game SHA256：`2BD92FB25E3E4B8269930712620BA9DB00CDC1AA44569D87DC4ABA76553272B6`。
+  `0x6FC65680..65767`：`0x6FC656ED`计算路径，`0x6FC65721..6575D`无点分支选择type，
+  push0xF再计算。以上只支持局部调用关系，不宣称整个引擎动态等价。
+- 本轮未新增D2Client分析，保留此前D2Client/D2Common逆向优化；不引入1.13+target-room gate。
+
+### 实际缺陷与修复范围
+
+`Pathfinder`过去只在public请求成功后补targetEntityId、lastTargetPosition和repathTimer。
+内部动态恢复绕过该入口：直接恢复保留旧快照/timer；先停止再绕行会删除旧Pathfind，
+重建组件的targetEntityId变成-1，导致追单位变成走到绕行坐标，之后目标移动/定时重算丢失。
+
+现在在核心路径通过房间后置gate、平滑和fractional起点处理后，统一安装目标metadata，
+删除public入口的重复赋值。绕行末点仍按原策略选择，单位身份独立保留；新坐标命令清空
+旧实体跟踪。Running和模式速度加成继续由原恢复逻辑保留。
+
+本轮不是原生搜索backend接入，不改变A*、碰撞pattern、门/飞行/动态owner、平滑、
+房间前后置gate、步进或partial策略。普通路径仍要求exact，DiabRun显式partial仍走固定goal；
+不移植原生distance budget/定点状态，也不把当前0.5秒timer/0.5格目标位移/0.25秒阻挡阈值
+说成等价于原版5格判断。
+
+### 第七批回归与另一电脑复验
+
+新增`PathfinderRecoveryTargetTest`最终9项：直接恢复刷新快照/timer、stop/recreate保留单位、
+绕行后目标移动和定时重算实际发起新查询、新坐标清除旧目标、全失败停止且partialQueries=0、
+DiabRun保留技能goal不追旧单位、内部路径改追另一单位、raw path绕入非邻房被后置gate拒绝。
+真实Artemis ECS与Pathfinder恢复/消费配scripted Mockito Map及mock动态服务，
+不是实际地图搜索/碰撞、TCP或原版DLL执行。
+
+修改前首6项中4失败/2通过；修复后最终9项全通过。合并定向回归153项/25类，
+失败/错误/跳过均0，含现有DiabRunData/Integration测试；不是全项目验收。
+本机通过隔离init任务`:core:upstreamRound4Test -PupstreamRun=round7-full`执行，
+XML为`core/build/test-results/upstreamRound4-round7-full`，日志`core/build/round7-full.log`；
+修前失败报告保留于`upstreamRound4-round7-before`及`core/build/round7-before.log`。
+另一电脑可用标准任务复验同一过滤集合（标准任务本轮未另跑）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test `
+  --tests '*UnitCollisionGridTest' --tests '*DynamicUnitCollisionSystemTest' `
+  --tests '*PathfinderTest' --tests '*PathfinderRecoveryTargetTest' `
+  --tests '*PathfinderRoomBoundaryTest' --tests '*PlayerGroundPathTest' `
+  --tests '*NativeSeamCollisionTest' --tests '*ObjectCollisionUpdaterTest' `
+  --tests '*WhirlwindCollisionTest' --tests '*WarpArrivalCollisionTest' `
+  --tests 'com.d2moo.common.path.*' --tests 'com.d2moo.common.collision.*' `
+  --tests '*NativeTowardPathProbeTest' --tests '*NativeAiPathCacheTest' `
+  --tests '*NativePathRuntimeComparisonTest' --tests '*NativePathShadowTest' `
+  --tests '*DiabRunDataTest' --tests '*DiabRunIntegrationTest' --console=plain
+```
+
+真实MPQ/TCP非回归复验：
+
+```powershell
+.\gradlew.bat :server:d2gs:headlessMapTour '-PtourLevels=63,64,65' `
+  -PtourSeed=12345 -PtourRate=25 -PtourWalkSeconds=20 `
+  -PtourAiObserve -PtourAiObserveMillis=2000 `
+  -PtourOutput=server/d2gs/build/round7-recovery-maggot `
+  -PpathShadow=true -PpathShadowEvery=1 -PpathShadowMaxSamples=128 `
+  -PpathShadowLevel=63 --console=plain
+```
+
+63=Maggot Lair Level 2、64=Maggot Lair Level 3、65=Ancient Tunnels，即蛆虫二/三层及
+古代通道，不是蛆虫三层连通检查。seed12345普通难度25Hz，3/3图、4个walk计划、
+10次真实TCP击杀、0通行失败，连续入口1次/staging跳转1次，BUILD SUCCESSFUL。
+AI观察run=COMPLETED、errors=0、fallbackRecords=0，warnings=178；
+coverage=OBSERVED_RUNTIME_ONLY、oracle=NONE、correctness=NOT_ASSERTED，不是AI全分支验收。
+`MONSTER_PATH_STALLED`日志0次，**没有实际触发本轮stop/recreate分支**，该分支证据来自上述
+定向ECS回归。巡游只算真实地图非回归冒烟，不声称动态目标恢复已获TCP验收。
+
+来源63的shadow128次：83 COMPARED（55 NONE、28 TURNS；60 EXACT/EXACT、23 FAILED/FAILED），
+45 OUTSIDE_SNAPSHOT/INCONCLUSIVE；无诊断错误/live重放差异，没有FAILED/EXACT或FAILED/PARTIAL。
+与第六批不同请求计数是运行时序结果，不能作为性能提升/缺陷减少证明。
+完整日志`core/build/round7-recovery-maggot.log`及上述tourOutput内map-tour/ai-events/ai-summary，
+build证据不提交。服务端已退出，6114无监听。
+
+代码/测试`b0a1f4912a52f2ee4abf0ec4d78fab392d0003d3`已推送origin/master且远端SHA一致。
+仅定向暂存自己的两个代码文件，另一轮COF修改未混入；共享工作区回归不为其背书。
+四份进度文档独立提交推送，最终文档SHA见git log；不把他人修改当作本轮交付。
+没有benchmark/GL/132图/多seed三难度/原版动态等价验收；火焰之河AI fallback本轮未修、未重跑。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
-- 真实场景首批差分已收集，下一步核对1.10f部分路径消费、重算与生产房间后置gate，
-  再按path type考虑受控接入；不把partial当普通exact成功，越界样本仍需补证。
+- 已核对1.10f部分路径消费、重算与生产房间后置gate并修复恢复目标状态；下一步按实际
+  pathType设计受控接入，仍需native distance/final goal/续算状态模型，
+  不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

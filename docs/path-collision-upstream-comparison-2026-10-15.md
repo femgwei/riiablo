@@ -322,7 +322,7 @@ size→native pattern的第二套适配、完整pathType dispatch、目标预测
 
 两组真实1.10F MPQ/TCP主采样，seed12345普通难度25Hz：
 
-- 蛆虫63/64/65三图任务通过，真实清障10次；连续入口1次、测试staging跳转1次。
+- 蛆虫二/三层及古代通道63/64/65任务通过，真实清障10次；连续入口1次、测试staging跳转1次。
   来源63采128次，92次可比较：45次双方EXACT且压缩输出一致、25次双方EXACT仅转向点不同，
   22次双方FAILED且输出一致；36次快照外。AI gate通过，fallbackRecords=0。
 - 火焰之河107/108通行子检查通过，但整体任务因148条AI fallback记录失败（errors=0），
@@ -351,3 +351,40 @@ GL/132图/多seed三难度、快照外补证和火焰之河AI fallback仍未完�
 最终133项/22类回归通过，失败/错误/跳过0；代码`033b2e9d9`已推送origin/master。
 详细命令、样本端点、日志目录、首次启动/构建失败与共享工作区边界见
 [第六批记录](d2moo-upstream-port-2026-10-15.md#第六批真实地图采样与差异分类)。
+
+## 后续第七批：目标身份不能随恢复路径丢失
+
+本轮找到并修复一个局部生产缺陷，不是将普通A*换成原生backend：内部动态恢复未经过
+public入口的metadata赋值；stop→绕行→重建组件后targetEntityId变-1，之后不再跟踪单位。
+直接恢复也未刷新目标坐标快照/timer。现在统一在核心路径接受后安装目标状态，
+保留可达末点与单位身份的独立性；新坐标命令清旧跟踪，后置房间gate仍可拒绝raw path。
+
+依据为固定D2MOO `0c0bbd1e6bef9181a3da1c046523af622a925416`（本轮未fetch）及本机
+1.10f D2Common/D2Game局部静态反汇编：
+
+- Path.cpp生成点后，仅无flags0x10且无pTargetUnit时才以末点改target；
+  DLL `0x6FDA8D7E..8DB9`可见+58目标单位检查。非空点数不表示exact到达。
+- PathMisc.cpp/10236及DLL `0x6FDAC8F0..C98F`：Toward2/13与绕墙15的恢复选择；
+  `0x6FDACA5C..CA93`及`0x6FDACAAF..CB2C`支持耗尽但未到final时续算和单位目标位移判断。
+  当前timer/阈值不据此改成5格，仍需完整distance/final goal/续算状态模型。
+- MonsterMode.cpp及D2Game `0x6FC65680..65767`支持部分type失败转15；
+  type15是PathWF绕墙，不是A* fallback。hint101默认TowardFinish13但AI可override，
+  不能把coordinate A* shadow视为全体怪物的原生算法。
+- 上游10142仍标BROKEN，必须交叉核验；以上不是原版DLL动态执行等价证明。
+  DLL完整哈希、地址片段、源码和复验命令见第七批上游记录。
+
+普通exact与DiabRun显式partial保持分离，后者仍保留固定技能goal、不追旧单位；
+未放松房间前/后置gate，未改碰撞、平滑、步进或引入1.13+目标房间gate。
+修前6项有4失败；新类最终9项全通过，合并153项/25类通过，失败/错误/跳过0。
+新类真实ECS恢复/消费配scripted Map/mock动态服务，不是实际地形或原版DLL oracle。
+
+真实1.10F MPQ/TCP巡游：25Hz、seed12345，蛆虫二/三层及古代通道63/64/65，
+3图/10击杀/0通行失败，1连续入口+1 staging跳转，AI errors/fallbackRecords均0。
+stalled日志0次，未触发本轮恢复分支，仅作非回归冒烟；不是完整AI/GL验收。
+shadow128次中83可比较（55 NONE、28 TURNS），45越界；诊断错误/live重放差异0。
+无性能提升或原版动态等价结论，火焰之河AI fallback仍未修复/重验。
+
+代码/测试`b0a1f4912`已推送origin/master，远端SHA一致；未混入另一轮COF修改。
+下一步是按实际pathType做受控原生接入，而非将普通失败一律升级partial成功。
+详细证据及另一电脑复验命令见
+[第七批记录](d2moo-upstream-port-2026-10-15.md#第七批部分路径消费核对与恢复目标状态修复)。
