@@ -572,7 +572,7 @@ public class NpcDialogManager {
     registerNpc(255, "Ormus", 3, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(253, "Hratli", 3, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
     registerNpc(254, "Alkor", 3, NPC_TYPE_GAMBLER, true, true, false, false, false);
-    registerNpc(252, "Asheara", 3, NPC_TYPE_HIRELING, false, false, false, true, false);
+    registerNpc(252, "Asheara", 3, NPC_TYPE_HIRELING, true, false, false, true, false);
     registerNpc(245, "Deckard Cain", 3, NPC_TYPE_NORMAL, false, false, false, false, false);
     registerNpc(264, "Meshif", 3, NPC_TYPE_TRAVEL, false, false, false, false, true);
     registerNpc(297, "Natalya", 3, NPC_TYPE_NORMAL, false, false, false, false, false);

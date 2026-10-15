@@ -90,22 +90,24 @@ public class Npc extends AI {
 
     // Act 3
     TALKERS.addAll();
-    REPAIRERS.addAll();
-    TRADERS.addAll(254);
+    // SUNITNPC Repair_6FCC95B0 and NPC_HandleDialogMessage use native NPC ids.
+    REPAIRERS.addAll(MonsterType.HRATLI);
+    TRADERS.addAll(MonsterType.ASHEARA, MonsterType.HRATLI, MonsterType.ALKOR,
+        MonsterType.ORMUS);
     GAMBLERS.addAll(254);
     HIRERERS.addAll();
 
     // Act 4
     TALKERS.addAll();
-    REPAIRERS.addAll();
-    TRADERS.addAll(MonsterType.JAMELLA);
+    REPAIRERS.addAll(MonsterType.HALBU);
+    TRADERS.addAll(MonsterType.HALBU, MonsterType.JAMELLA);
     GAMBLERS.addAll(MonsterType.JAMELLA);
     HIRERERS.addAll();
 
     // Act 5
     TALKERS.addAll();
-    REPAIRERS.addAll();
-    TRADERS.addAll(MonsterType.DREHYA);
+    REPAIRERS.addAll(MonsterType.LARZUK);
+    TRADERS.addAll(MonsterType.LARZUK, MonsterType.DREHYA, MonsterType.MALAH);
     GAMBLERS.addAll(MonsterType.DREHYA, MonsterType.NIHLATHAK);
     HIRERERS.addAll();
   }

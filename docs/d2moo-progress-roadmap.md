@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 A3–A5 城镇治疗者与铁匠服务识别
+
+- [x] 对照 D2MOO `D2GAME_NPC_Heal_6FCCB220`：Ormus、Jamella、Malah 已在
+  `Npc.HEALERS`，治疗者身份正确，保留现有治疗入口。
+- [x] 对照 `D2GAME_NPC_Repair_6FCC95B0`，补齐客户端 `Npc.REPAIRERS` 的 Hratli、
+  Halbu、Larzuk；原先服务端已有修理权限，但客户端没有“交易/修理”菜单入口。
+- [x] 对照 `NPC_HandleDialogMessage` 的交易白名单，补齐 A3–A5 客户端商人注册
+  （Asheara/Hratli/Ormus、Halbu、Larzuk/Malah），并允许服务端 Asheara 交易，
+  保留其雇佣身份。Jamella 的交易/赌博注册原本正确。
+- [x] 按用户极小修改约定，仅检查差异，未编译、未运行测试；提交并推送供另机验证。
+- [ ] 另机复验：Hratli/Halbu/Larzuk 显示交易/修理及全部修理；Ormus/Jamella/Malah
+  对话治疗并能打开商店；Asheara 可交易和雇佣，同时检查本地与联网入口。
+
 ## 2026-10-16 干燥高地豹人 AI 空指针崩溃
 
 - [x] 用户 `game.log` 记录从 Act V 经传送点进入 Dry Hills(42) 后，
