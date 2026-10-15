@@ -49,6 +49,17 @@ public class AIStepper extends IteratingSystem {
 
   private EntitySubscription players;
   private final IntSet dormant = new IntSet();
+  private final boolean traceAiTour;
+  private long diagnosticTicks;
+
+  public AIStepper() { this(false); }
+
+  /** Opt-in read-only sampling for the headless AI tour; default production behavior is unchanged. */
+  public AIStepper(boolean traceAiTour) { this.traceAiTour = traceAiTour; }
+
+  @Override protected void begin() {
+    if (traceAiTour) diagnosticTicks++;
+  }
 
 //  protected ComponentMapper<Interactable> mInteractable;
 //  protected ComponentMapper<Size> mSize;
@@ -134,6 +145,18 @@ public class AIStepper extends IteratingSystem {
 
     AIWrapper wrapper = mAIWrapper.get(entityId);
     if (!wrapper.ai.updateSpecialAiControl(world.delta)) wrapper.ai.update(world.delta);
+
+    if (traceAiTour && diagnosticTicks % 25 == 0) {
+      String state = wrapper.ai.getState();
+      log.debug("[MONSTER_AI_TICK] entity={} monster={} ai={} level={} state={} pos=({}, {}) "
+              + "hasPathfind={} hasCasting={} sample=AFTER_AI_UPDATE",
+          entityId, monster.monstats != null ? monster.monstats.Id : "unknown",
+          wrapper.ai.getClass().getSimpleName(),
+          entityMap != null && entityMap.zone != null && entityMap.zone.level != null ? entityMap.zone.level.Id : -1,
+          state == null || state.isEmpty() ? "UNSPECIFIED" : state,
+          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+          mPathfind.has(entityId), mCasting.has(entityId));
+    }
 
     if (!mCasting.has(entityId)) return;
     Casting casting = mCasting.get(entityId);

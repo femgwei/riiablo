@@ -1,5 +1,22 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A1–A5 AI 巡游观察开关
+
+- [x] 在现有 `headlessMapTour` 加入 `-PtourAiObserve`；批次脚本支持 `-AiObserve`、
+  观察时长及难度。默认地图巡游不变，AI 模式固定 25Hz；逐图入口及首次堵路清障前
+  无攻击请求地观察，权威 tick 停滞/玩家死亡失败，观察后重新取样。
+- [x] 显式打开生产 AI/动作日志，单独输出 `ai-events.log`、`ai-summary.txt`；
+  低频记录真实 AI 更新后的状态、坐标、寻路/施法组件，并以相邻真实坐标补充旧 AI
+  直接调用 Pathfinder 时的位移证据。初始化、仅思考、动作和技能请求/伤害路径记录分开；
+  不把记录数当覆盖率或完整技能效果。结束恢复日志 sink、级别及继承绑定。
+- [x] fallback/ERROR/没有战斗怪物动作证据均失败；独立窗口审计拒绝 init-only、
+  NPC-only、伪 tick、缺窗口及中断。专服编译、64 项定向回归、原地图审计及新增
+  11 项 AI 故障反例通过。实现和复现命令见 `docs/ai-tour-validation.md`。
+- [x] 真实 1.10f seed=1、level=8、25Hz、200 tick 短观察完成，zombie1 有9个位移
+  采样；没有攻击/施法/伤害证据。运行/窗口审计通过，但仍有4条 Attributes empty-base
+  告警，已保留日志，严格无告警验收未过。没有运行完整132图/六种子/三难度矩阵，
+  不宣称全AI表现通过。未遇到的怪物、任务/Boss触发与条件分支仍是未测试。
+
 ## 2026-10-15 A5 跨组件共享目标成员与显式迁移
 
 - [x] 再核对 `Targets.cpp::UpdateSummonAI` / `sub_6FC40280` 的未登记前提、

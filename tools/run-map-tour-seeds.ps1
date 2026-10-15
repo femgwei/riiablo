@@ -3,11 +3,17 @@ param(
   [int[]]$Seeds = @(1, 2, 3, 12345, 54321, 127897359),
   [ValidateSet(25, 100)][int]$Rate = 25,
   [string]$Output = 'server/d2gs/build/map-tour/six-seeds',
-  [switch]$SeamsOnly
+  [switch]$SeamsOnly,
+  [switch]$AiObserve,
+  [ValidateRange(40, 30000)][int]$AiObserveMillis = 8000,
+  [ValidateRange(0, 2)][int]$Difficulty = 0
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'map-acceptance-audit.ps1')
 $repo = Split-Path -Parent $PSScriptRoot
+if ($AiObserve -and ($SeamsOnly -or $Rate -ne 25)) {
+  throw 'AI observation requires 25Hz and cannot combine SeamsOnly'
+}
 if (-not (Test-Path -LiteralPath $D2Home -PathType Container)) { throw 'D2Home directory missing' }
 if ($Seeds.Count -eq 0 -or @($Seeds | Sort-Object -Unique).Count -ne $Seeds.Count) {
   throw 'Seeds must be nonempty and unique'
@@ -33,13 +39,14 @@ try {
     if (Test-Path -LiteralPath $absolute) { throw "Refusing to overwrite existing run: $absolute" }
     New-Item -ItemType Directory -Path $absolute -Force | Out-Null
     $console = Join-Path $absolute 'console.log'
-    "revision=$revision`nseed=$seed`nrate=$Rate`nhome=$D2Home`nprofile=1.10f`nseamsOnly=$SeamsOnly`n$($resources -join "`n")" |
+    "revision=$revision`nseed=$seed`nrate=$Rate`ndifficulty=$Difficulty`nhome=$D2Home`nprofile=1.10f`nseamsOnly=$SeamsOnly`naiObserve=$AiObserve`naiObserveMillis=$AiObserveMillis`n$($resources -join "`n")" |
       Set-Content -LiteralPath (Join-Path $absolute 'run-baseline.txt') -Encoding UTF8
     Write-Host "Starting complete A1-A5 tour seed=$seed rate=$Rate"
     $modeArgs = @()
     if ($SeamsOnly) { $modeArgs += '-PtourAllSeams' }
+    if ($AiObserve) { $modeArgs += @('-PtourAiObserve', "-PtourAiObserveMillis=$AiObserveMillis") }
     & .\gradlew.bat :server:d2gs:headlessMapTour "-Pd2Home=$D2Home" "-PtourSeed=$seed" `
-      "-PtourRate=$Rate" "-PtourOutput=$destination" @modeArgs --no-daemon --max-workers=1 *> $console
+      "-PtourRate=$Rate" "-PtourDifficulty=$Difficulty" "-PtourOutput=$destination" @modeArgs --no-daemon --max-workers=1 *> $console
     $result = $LASTEXITCODE
     $issues = @(Get-MapLogIssues -Lines (Get-Content -LiteralPath $console))
     ConvertTo-Json -InputObject $issues -Depth 4 |
@@ -77,6 +84,10 @@ try {
       throw "Incomplete load/local movement coverage seed=$seed"
     }
     Assert-MapTourEvidence -Lines $lines
+    if ($AiObserve) {
+      Assert-AiTourEvidence -Lines $lines -Summary (Get-Content -LiteralPath (Join-Path $absolute 'ai-summary.txt')) `
+        -ObserveMillis $AiObserveMillis
+    }
     $objectAudits = @($lines | ForEach-Object {
       if ($_ -match '^\[MAP_TOUR\] OBJECT_AUDIT level=(\d+) .* pending=0 .* failures=0 result=PASS$') {
         [int]$Matches[1]

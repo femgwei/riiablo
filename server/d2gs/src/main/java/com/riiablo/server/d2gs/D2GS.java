@@ -6259,7 +6259,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new VendorGenerator())
         .with(new RoomEntityTrackingSystem())
         .with(new RoomActivationSystem())
-        .with(new AIStepper())
+        .with(new AIStepper(Boolean.getBoolean("riiablo.d2gs.aiTour")))
         .with(new DynamicUnitCollisionSystem())
         .with(new Pathfinder())
 

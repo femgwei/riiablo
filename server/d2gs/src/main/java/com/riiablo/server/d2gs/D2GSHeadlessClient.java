@@ -208,6 +208,8 @@ public final class D2GSHeadlessClient {
   private float playerY = Float.NaN;
   private long mapTourMovementSequence = 1;
   private int mapTourCombatKills;
+  private final Set<String> aiObservedBlockers = new HashSet<>();
+  private MapTourAiLog aiLog;
   private long playerQuestRevision = -1L;
   private long baselineInventoryRevision = -1L;
   private long baselineQuestRevision = -1L;
@@ -222,6 +224,14 @@ public final class D2GSHeadlessClient {
       System.setProperty("riiablo.d2gs.mapTour", "true");
       System.setProperty("riiablo.d2gs.mapTourRate", Integer.toString(config.tourRate));
     }
+    if (config.tourAiObserve) System.setProperty("riiablo.d2gs.aiTour", "true");
+    try (MapTourAiLog aiLog = config.tourAiObserve
+        ? new MapTourAiLog(config.tourOutput.toPath(), config.seed, config.difficulty) : null) {
+      runWithAiLog(config, aiLog);
+    }
+  }
+
+  private static void runWithAiLog(Config config, MapTourAiLog aiLog) throws Exception {
     boolean startedServer = config.home != null;
     if (startedServer) {
       if (!config.verbose) {
@@ -244,7 +254,13 @@ public final class D2GSHeadlessClient {
     }
 
     try {
-      new D2GSHeadlessClient(config).run();
+      D2GSHeadlessClient client = new D2GSHeadlessClient(config);
+      client.aiLog = aiLog;
+      client.run();
+      if (aiLog != null) {
+        aiLog.requireNoRuntimeFailures();
+        aiLog.completed();
+      }
     } finally {
       if (startedServer && Gdx.app != null) Gdx.app.exit();
     }
@@ -5070,10 +5086,13 @@ public final class D2GSHeadlessClient {
           + " contract=2"
           + " tickStepSeconds=0.04 ticksPerWallSecond=" + config.tourRate
           + " acts=" + config.tourFirstAct + "-" + config.tourLastAct
-          + " coverage=" + (config.tourAllSeams ? "NATIVE_SEAMS_ONLY"
+          + " coverage=" + (config.tourAiObserve ? "AI_RUNTIME_OBSERVATION" : config.tourAllSeams ? "NATIVE_SEAMS_ONLY"
               : config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
               : config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
           + " planned=" + itinerary.size() + " itinerary=" + itinerary);
+      if (config.tourAiObserve) tourLog(report, "AI_MODE", "observeMillis=" + config.tourAiObserveMillis
+          + " observation=NO_PLAYER_ATTACKS clearAfter=REAL_TCP_BOOSTED_DAMAGE"
+          + " coverage=ENCOUNTERED_UNITS_ONLY correctness=NOT_ASSERTED");
       send(output, connectionPacket(character, d2s));
       awaitConnection(input, deadline());
       if (!D2GS.headlessSetPlayerLife(playerId, 1_000_000f)
@@ -5126,6 +5145,11 @@ public final class D2GSHeadlessClient {
           if (loaded.synthetic || !loaded.nativeTerrain || loaded.blocked || loaded.diagnostics.length < 14
               || loaded.diagnostics[8] == 0 || loaded.diagnostics[10] == 0) {
             throw new IOException("Missing terrain/collision or blocked entry level=" + level);
+          }
+          if (config.tourAiObserve && com.riiablo.map.MapTourPlan.townOutdoorDestination(level) < 0) {
+            observeTourAi(input, level, "LEVEL_ENTRY", report);
+            // Monsters can move during observation. Never route using the old sample.
+            loaded = D2GS.headlessMapTourSample(playerId, next, true);
           }
           for (int doorCount = 0; loaded.target == null && doorCount < 32; doorCount++) {
             MapTourProbe.Sample door = D2GS.headlessMapTourDoor(playerId, loaded.position);
@@ -5250,7 +5274,7 @@ public final class D2GSHeadlessClient {
         failures += runNativeSeamTour(input, output, report, directory);
       }
       tourLog(report, "SUMMARY", "planned=" + itinerary.size() + " visited=" + visited
-          + " coverage=" + (config.tourAllSeams ? "NATIVE_SEAMS_ONLY" : config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
+          + " coverage=" + (config.tourAiObserve ? "AI_RUNTIME_OBSERVATION" : config.tourAllSeams ? "NATIVE_SEAMS_ONLY" : config.tourObjectLoads ? "OBJECT_LOAD_ONLY"
               : config.tourLevels == null ? "COMPLETE_ACT_RANGE" : "FOCUSED_DIAGNOSTIC")
           + " walks=" + walks + " transitions=" + transitions + " detachedJumps=" + jumps
           + " combatKills=" + mapTourCombatKills
@@ -5456,6 +5480,12 @@ public final class D2GSHeadlessClient {
         return false;
       }
     }
+    if (config.tourAiObserve && aiObservedBlockers.add(level + ":" + blocker.warp)) {
+      observeTourAi(input, level, "BLOCKER_BEFORE_CLEAR entity=" + blocker.warp, report);
+      blocker = D2GS.headlessMapTourBlocker(playerId, destination, blocker.warp);
+      if (blocker == null || !blocker.meleeReady) return false; // Replan, never attack a stale sample.
+      before = monsters.get(blocker.warp);
+    }
     long end = System.currentTimeMillis() + 12_000;
     long castAt = 0;
     float lastLife = before != null && before.hasVitals ? before.life : Float.NaN;
@@ -5537,6 +5567,37 @@ public final class D2GSHeadlessClient {
         + " casts=" + casts + " activeBaseline=" + activeBaseline
         + " resume=REPLAN noTeleport=true");
     return false;
+  }
+
+  /** Consume real TCP traffic without sending attacks or changing the simulation. */
+  private void observeTourAi(DataInputStream input, int level, String reason,
+      java.io.PrintWriter report) throws Exception {
+    long firstTick = D2GS.headlessSimulationState()[0];
+    long requiredTicks = (config.tourAiObserveMillis + 39L) / 40L;
+    long deadline = System.nanoTime() + (config.tourAiObserveMillis * 2L + 5000L) * 1_000_000L;
+    String start = "level=" + level + " reason=" + reason + " firstTick=" + firstTick
+        + " requiredTicks=" + requiredTicks + " playerAttacks=0";
+    tourLog(report, "AI_OBSERVE_BEGIN", start);
+    if (aiLog != null) aiLog.record(com.riiablo.logger.Level.INFO, "MapTour", "[AI_TOUR] WINDOW_BEGIN " + start);
+    long tick = firstTick;
+    while (tick - firstTick < requiredTicks && System.nanoTime() < deadline) {
+      for (int i = 0; i < 64; i++) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+        if (packet == null) break;
+        consume(packet);
+      }
+      float[] lifecycle = D2GS.headlessPlayerLifecycleState(playerId);
+      if (lifecycle.length < 5 || lifecycle[0] != 0f || lifecycle[2] <= 0f
+          || !Float.isFinite(lifecycle[3])) throw new IOException("AI observation player died/unavailable");
+      Thread.sleep(20L);
+      tick = D2GS.headlessSimulationState()[0];
+    }
+    if (tick - firstTick < requiredTicks) throw new IOException("AI observation simulation stalled level=" + level);
+    String end = "level=" + level + " reason=" + reason + " firstTick=" + firstTick
+        + " lastTick=" + tick + " observedTicks=" + (tick - firstTick)
+        + " playerAttacks=0 correctness=NOT_ASSERTED";
+    tourLog(report, "AI_OBSERVE_END", end);
+    if (aiLog != null) aiLog.record(com.riiablo.logger.Level.INFO, "MapTour", "[AI_TOUR] WINDOW_END " + end);
   }
 
   private static final class TourMovementBlock extends IOException {
@@ -13077,7 +13138,7 @@ public final class D2GSHeadlessClient {
     }
   }
 
-  private static final class Config {
+  static final class Config {
     String host = "127.0.0.1";
     int port = DEFAULT_PORT;
     File home;
@@ -13095,6 +13156,8 @@ public final class D2GSHeadlessClient {
     boolean tourTownRoundTrip;
     boolean tourObjectLoads;
     boolean tourAllSeams;
+    boolean tourAiObserve;
+    int tourAiObserveMillis = 8000;
     int tourFirstAct = 1, tourLastAct = 5;
     String tourLevels;
     int tourWalkMillis = 45_000;
@@ -13198,6 +13261,8 @@ public final class D2GSHeadlessClient {
         else if ("--tour-town-round-trip".equals(arg)) config.tourTownRoundTrip = true;
         else if ("--tour-object-loads".equals(arg)) config.tourObjectLoads = true;
         else if ("--tour-all-seams".equals(arg)) config.tourAllSeams = true;
+        else if ("--tour-ai-observe".equals(arg)) config.tourAiObserve = true;
+        else if ("--tour-ai-observe-millis".equals(arg)) config.tourAiObserveMillis = integer(args, ++i, arg);
         else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
         else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
         else if ("--tour-levels".equals(arg)) config.tourLevels = value(args, ++i, arg);
@@ -13295,6 +13360,13 @@ public final class D2GSHeadlessClient {
           || config.tourFirstAct > config.tourLastAct || config.tourWalkMillis <= 0
           || config.tourRate < 25 || config.tourRate > 250)) {
         throw new IllegalArgumentException("Map tour requires valid Acts 1..5 and a positive walk timeout");
+      }
+      if (config.tourAiObserve && (!config.mapTour || config.tourObjectLoads || config.tourAllSeams
+          || config.tourTownRoundTrip || config.tourRate != 25
+          || config.tourAiObserveMillis < 40 || config.tourAiObserveMillis > 30000
+          || config.difficulty < 0 || config.difficulty > 2)) {
+        throw new IllegalArgumentException("AI observation requires map-tour at 25Hz, difficulty 0..2,"
+            + " observation 40..30000ms and no object-only/seam-only/town-only modes");
       }
       if (config.home == null) {
         String env = System.getenv("D2_HOME");
@@ -13572,6 +13644,7 @@ public final class D2GSHeadlessClient {
           + " [--require-vine] [--vine-skill 222|231|241]"
           + " [--require-spirit-aura] [--spirit-skill 226|236|246]"
           + " [--verbose]"
+          + " [--map-tour --tour-ai-observe --tour-ai-observe-millis 8000]"
           + " [--require-reconnect-visibility]"
           + " [--require-summon-reconnect]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");

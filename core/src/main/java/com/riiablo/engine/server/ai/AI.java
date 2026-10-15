@@ -202,9 +202,9 @@ public abstract class AI implements Interactable.Interactor {
     int aidel = difficultyValue(monstats.aidel, difficulty);
     SLEEP = Animation.FRAME_DURATION * aidel;
     monsound = monstats.MonSound;
-    log.info("[MONSTER_AI_INIT] entity={} monster={} ai={} difficulty={} aidel={} sleep={} params={}",
+    log.info("[MONSTER_AI_INIT] entity={} monster={} ai={} difficulty={} aidel={} sleep={} params={} nativeCombatant={}",
         entityId, monstats.Id, getClass().getSimpleName(), difficulty, aidel, SLEEP,
-        Arrays.toString(params));
+        Arrays.toString(params), monstats.Align == 0 && monstats.killable && !monstats.npc);
   }
 
   protected final int resolveAiDifficulty() {

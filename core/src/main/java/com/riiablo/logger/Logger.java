@@ -58,6 +58,22 @@ public final class Logger {
     return appender;
   }
 
+  /** Current sink, for scoped diagnostic capture which must restore it exactly. */
+  public Appender getAppender() {
+    return appender;
+  }
+
+  /** Restore both the threshold and inherited/explicit binding after diagnostic use. */
+  public Runnable temporaryLevel(final Level level) {
+    final Level previousLevel = this.level;
+    final boolean previousDeferred = this.deferred;
+    level(level);
+    return () -> {
+      this.level = previousLevel;
+      this.deferred = previousDeferred;
+    };
+  }
+
   public Level level() {
     return level;
   }

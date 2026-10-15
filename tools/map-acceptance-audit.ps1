@@ -1,4 +1,38 @@
 # Shared independent audit. Dot-source from runners; no game-state mutation.
+function Assert-AiTourEvidence {
+  param([string[]]$Lines, [string[]]$Summary, [int]$ObserveMillis = 8000)
+  if (-not ($Lines -match '^\[MAP_TOUR\] BEGIN .* coverage=AI_RUNTIME_OBSERVATION ')) {
+    throw 'Missing explicit AI observation coverage'
+  }
+  if (-not ($Summary -match '^\[AI_TOUR\] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=\d+ errors=0 fallbackRecords=0$')) {
+    throw 'Missing clean AI observation summary (not an AI correctness PASS)'
+  }
+  if (-not ($Summary -match '^\[AI_TOUR\] MONSTER .* nativeCombatant=true evidence=BEHAVIOR_OBSERVED$')) {
+    throw 'No actual AI behavior evidence; initialization alone is insufficient'
+  }
+  $required = [long][Math]::Ceiling($ObserveMillis / 40.0)
+  $loaded = @($Lines | ForEach-Object {
+    if ($_ -match '^\[MAP_TOUR\] LOAD level=(\d+) ') { [int]$Matches[1] }
+  })
+  if (@($loaded | Where-Object { $_ -notin @(1,40,75,103,109) }).Count -eq 0) {
+    throw 'No non-town level observation evidence'
+  }
+  foreach ($level in $loaded) {
+    if ($level -in @(1,40,75,103,109)) { continue }
+    $begin = @($Lines -match "^\[MAP_TOUR\] AI_OBSERVE_BEGIN level=$level reason=LEVEL_ENTRY firstTick=\d+ requiredTicks=$required playerAttacks=0$")
+    $end = @($Lines | Where-Object {
+      $_ -match "^\[MAP_TOUR\] AI_OBSERVE_END level=$level reason=LEVEL_ENTRY firstTick=(\d+) lastTick=(\d+) observedTicks=(\d+) playerAttacks=0 correctness=NOT_ASSERTED$"
+    })
+    if ($begin.Count -ne 1 -or $end.Count -ne 1) { throw "Missing unique AI entry window level=$level" }
+    $null = $end[0] -match 'firstTick=(\d+) lastTick=(\d+) observedTicks=(\d+)'
+    $first = [long]$Matches[1]; $last = [long]$Matches[2]; $observed = [long]$Matches[3]
+    if ($observed -lt $required -or $last - $first -ne $observed `
+        -or $begin[0] -notmatch " firstTick=$first ") {
+      throw "Invalid authoritative tick evidence level=$level"
+    }
+  }
+}
+
 function Get-MapLogIssues {
   param([string[]]$Lines)
   $knownCounts = @{}
