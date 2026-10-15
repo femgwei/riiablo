@@ -141,7 +141,8 @@ public class MissileLoader extends IteratingSystem {
   static int nativeFrameDelta(Missile missile) {
     // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
     // animation rate along with TotalFrames, not just its travel distance.
-    if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317)
+    if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
+        || missile.skillId == 193)
         && missile.nativeLifetimeFrames > 0) {
       return (missile.missile.AnimLen << 8) / missile.nativeLifetimeFrames;
     }

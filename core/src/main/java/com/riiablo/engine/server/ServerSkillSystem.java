@@ -528,7 +528,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
-    if (skill.srvdofunc == 95 && mCasting.has(event.entityId)
+    if ((skill.srvdofunc == 95 || skill.srvdofunc == 152) && mCasting.has(event.entityId)
         && mCasting.get(event.entityId).monInferno != null) {
       event.monInfernoMissileId = spawnMonInferno(event, skill);
       return;
@@ -3849,7 +3849,7 @@ public class ServerSkillSystem extends PassiveSystem {
     return out.isZero(0.0001f) ? out.set(1, 0) : out.nor();
   }
 
-  /** D2MOO SKILLS_SrvDo095_MonInferno; result controls MODECHANGE vs ENDANIM. */
+  /** D2MOO SrvDo095_MonInferno / SrvDo152_DiabLight; controls MODECHANGE vs ENDANIM. */
   private int spawnMonInferno(SkillDoEvent event, Skills.Entry skill) {
     Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
     if (row == null) return -1;
@@ -3878,7 +3878,7 @@ public class ServerSkillSystem extends PassiveSystem {
     projectile.nativeLifetimeFrames = frames;
     projectile.range = frames;
     // Factory uses native table velocity units throughout the server. Keep
-    // that convention, but apply SrvDo095's integer VelLev term exactly.
+    // that convention, but apply SrvDo095/152's integer VelLev term exactly.
     float speed = NativeMonInferno.velocity(row, level);
     int slowPercent = ServerEntityFactory.slowMissileVelocityPercent(row, stateList(event.entityId));
     if (slowPercent > 0) speed = speed * slowPercent / 100f;

@@ -61,7 +61,7 @@ public class AnimStepper extends IntervalIteratingSystem {
     if (inferno != null && sequence != null && sequence.started) {
       inferno.frame++;
       if (inferno.started) {
-        // Once SrvDo095 runs it deletes the ordinary COF MODECHANGE/ENDANIM
+        // Once SrvDo095/152 runs it deletes the ordinary COF MODECHANGE/ENDANIM
         // events. Only the scheduled callback and InfernoLen tail may fire.
         if (inferno.nextUpdate >= 0 && inferno.frame >= inferno.nextUpdate)
           events.dispatch(com.riiablo.engine.server.event.MonInfernoUpdateEvent.obtain(entityId));

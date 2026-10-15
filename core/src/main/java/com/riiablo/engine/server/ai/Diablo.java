@@ -5,6 +5,8 @@ import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 
 /** D2MOO AiThink.cpp AITHINK_Fn051_Diablo (0x6FCE8950). */
 public class Diablo extends NativeDecisionAI {
@@ -36,6 +38,8 @@ public class Diablo extends NativeDecisionAI {
 
   @Override
   protected void thinkWithoutTarget() {
+    // Fn051 dispatches the retained action even when its target has gone.
+    if (action == ACTION_INFERNO && stopInferno()) return;
     // Fn051's no-target branch selects either a slow idle or a short move and
     // still gives Skill8 (the native aura slot) a chance to become active.
     if (hasSkill(7)) castAt(7, Engine.INVALID_ENTITY, mPosition.get(entityId).position);
@@ -105,16 +109,10 @@ public class Diablo extends NativeDecisionAI {
           action = 0;
           return;
         }
-        // Native keeps action 5 armed while Inferno is active, allowing the
-        // next tick to toggle the state off instead of launching an attack.
-        if (actionCount > 0) {
-          actionCount = 0;
-          action = 0;
-          idle(2);
-        } else if (castAt(0, targetId, mPosition.get(targetId).position)) {
-          actionCount = 1;
-          delayDecision(2);
-        } else {
+        // Fn051 retains action 5, then consumes the actual St53 toggle at
+        // the next decision. Prior ordinary attacks are not channel state.
+        if (stopInferno()) return;
+        if (!castAt(0, targetId, mPosition.get(targetId).position)) {
           action = 0;
         }
         return;
@@ -156,6 +154,16 @@ public class Diablo extends NativeDecisionAI {
         action = 0;
         idle(defaultStallFrames());
     }
+  }
+
+  private boolean stopInferno() {
+    UnitStates states = mUnitStates.get(entityId);
+    if (states == null || states.stateList == null
+        || !states.stateList.hasState(StateId.INFERNO)) return false;
+    states.stateList.removeState(StateId.INFERNO);
+    action = 0;
+    idle(2);
+    return true;
   }
 
   private void castOrStall(int slot, int targetId) {

@@ -202,7 +202,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Tentacle".equals(monster.AI) || "BaalCrabClone".equals(monster.AI)) scenarios.add("orphan");
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
-    if ("FetishShaman".equals(monster.AI)) scenarios.add("inferno-cycle");
+    if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)) scenarios.add("inferno-cycle");
     return scenarios;
   }
 
@@ -271,7 +271,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
         result.specialAssert = true;
         result.special = "NOT_TRIGGERED";
         result.coverage = "BASELINE_PLUS_INFERNO_CYCLE";
-        probe.inferno = new InfernoCycle();
+        probe.inferno = new InfernoCycle("Diablo".equals(row.monster.AI));
       }
       if (result.scenario.equals("submerge-cycle")) {
         result.specialAssert = true;
@@ -491,6 +491,15 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (inferno != null) {
+        com.riiablo.engine.server.component.UnitStates states = world.getMapper(
+            com.riiablo.engine.server.component.UnitStates.class).get(subject);
+        boolean enabled = states != null && states.stateList != null
+            && states.stateList.hasState(com.riiablo.engine.server.state.StateId.INFERNO);
+        boolean reset = inferno.resetObserved;
+        inferno.observeState(enabled);
+        if (!reset && inferno.resetObserved) capture.line("InfernoReset subject=" + subject + " enabled=false");
+      }
       Casting activeCast = world.getMapper(Casting.class).get(subject);
       com.riiablo.engine.server.NativeMonInferno stream = activeCast == null ? null : activeCast.monInferno;
       if (stream != null) {
@@ -594,11 +603,18 @@ public final class MonsterAiArena extends ApplicationAdapter {
     com.riiablo.engine.server.NativeMonInferno cast;
     int phase, count, lastFrame;
     boolean valid = true;
+    final boolean requireReset;
+    boolean resetObserved;
+    InfernoCycle() { this(false); }
+    InfernoCycle(boolean requireReset) { this.requireReset = requireReset; }
+    void observeState(boolean enabled) {
+      if (phase == 4 && !enabled) resetObserved = true;
+    }
     void observe(com.riiablo.engine.server.NativeMonInferno next, boolean realMissile) {
       if (phase == 5 || next == null) return;
       if (next != cast) {
-        if (phase == 4 && valid) { phase = 5; return; }
-        cast = next; phase = 1; count = 0; lastFrame = 0; valid = true;
+        if (phase == 4 && valid && (!requireReset || resetObserved)) { phase = 5; return; }
+        cast = next; phase = 1; count = 0; lastFrame = 0; valid = true; resetObserved = false;
       }
       if (next.missiles != count) {
         valid &= realMissile && next.missiles == count + 1

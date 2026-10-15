@@ -41,6 +41,9 @@ class AnimationStepperTest extends RiiabloTest {
       missile.missile = Riiablo.files.Missiles.get("megademoninferno");
       missile.skillId = 319; missile.nativeLifetimeFrames = 17;
       assertEquals((missile.missile.AnimLen << 8) / 17, MissileLoader.nativeFrameDelta(missile));
+      missile.missile = Riiablo.files.Missiles.get("diablight");
+      missile.skillId = 193; missile.nativeLifetimeFrames = 19;
+      assertEquals((missile.missile.AnimLen << 8) / 19, MissileLoader.nativeFrameDelta(missile));
       missile.skillId = -1;
       assertEquals(missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256,
           MissileLoader.nativeFrameDelta(missile));

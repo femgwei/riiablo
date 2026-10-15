@@ -30,6 +30,58 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 class MonInfernoIntegrationTest extends RiiabloTest {
+  @Test void diablo152UsesRealScMarkerPeriodicMissilesAndSixFrameTail() {
+    for (String row : new String[] {"diablo", "diabloclone"}) {
+      try (Fixture f = new Fixture(row, 193, Engine.Monster.MODE_SC)) {
+        f.untilFirst();
+        NativeMonInferno channel = f.cast().monInferno;
+        assertEquals(2, channel.interval);
+        assertEquals(6, channel.tailFrames);
+        while (f.cast() != null) f.tick();
+        assertTrue(f.ids.size() >= 2);
+        for (int i = 1; i < f.frames.size(); i++)
+          assertEquals(2, f.frames.get(i) - f.frames.get(i - 1));
+        int last = f.frames.get(f.frames.size() - 1);
+        assertTrue(last >= channel.deadline && last < channel.deadline + 2);
+        assertEquals(last + 6, channel.frame);
+        assertEquals(1, f.probe.finished);
+        for (int id : f.ids) {
+          Missile missile = f.world.getMapper(Missile.class).get(id);
+          assertEquals(193, missile.skillId);
+          assertEquals(f.source, missile.ownerId);
+          assertEquals(f.monster().monstats.Sk1lvl, missile.damageLevel);
+          assertEquals(NativeMonInferno.missileFrames(f.skill, missile.missile, missile.damageLevel),
+              missile.nativeLifetimeFrames);
+          assertEquals(NativeMonInferno.velocity(missile.missile, missile.damageLevel),
+              f.world.getMapper(Velocity.class).get(id).velocity.len(), .001f);
+        }
+      }
+    }
+  }
+
+  @Test void diablo152StateOffAndCreationFailureUseTailWithoutGenericFallback() {
+    try (Fixture f = new Fixture("diablo", 193, Engine.Monster.MODE_SC)) {
+      f.untilFirst();
+      NativeMonInferno channel = f.cast().monInferno;
+      int due = channel.nextUpdate;
+      f.states().removeState(StateId.INFERNO);
+      while (channel.frame < due) f.tick();
+      assertEquals(2, f.ids.size());
+      assertEquals(-1, channel.nextUpdate);
+      assertEquals(due + 6, channel.endFrame);
+      while (f.cast() != null) f.tick();
+      assertEquals(2, f.ids.size());
+      f.begin(); f.fail = true;
+      channel = f.cast().monInferno;
+      while (!channel.started) f.tick();
+      assertEquals(0, channel.missiles);
+      assertEquals(-1, channel.nextUpdate);
+      assertEquals(channel.frame + 6, channel.endFrame);
+      while (f.cast() != null) f.tick();
+      assertEquals(2, f.ids.size());
+    }
+  }
+
   @Test void explicitInfernoVelocityDoesNotBypassSlowMissiles() {
     try (Fixture f = new Fixture()) {
       com.riiablo.engine.server.state.UnitState slow = f.states().addState(StateId.SLOWMISSILES, 100, 1, f.target);
@@ -241,7 +293,8 @@ class MonInfernoIntegrationTest extends RiiabloTest {
           .started = true;
       world.getMapper(Casting.class).create(source).set(skill.Id, target, new Vector2(13, 10));
       D2.Entry entry = D2.loadFromFile(Riiablo.mpqs.resolve("data/global/eanimdata.d2"))
-          .getEntry((monster().monstats.Code + (mode == Engine.Monster.MODE_A1 ? "A1" : "S1") + "HTH").toUpperCase());
+          .getEntry((monster().monstats.Code + (mode == Engine.Monster.MODE_A1 ? "A1"
+              : mode == Engine.Monster.MODE_SC ? "SC" : "S1") + "HTH").toUpperCase());
       AnimData anim = world.getMapper(AnimData.class).create(source);
       anim.frame = 0; anim.speed = entry.speed; anim.numFrames = entry.framesPerDir << 8;
       anim.keyframes = entry.data; anim.lastKeyframeIndex = -1;

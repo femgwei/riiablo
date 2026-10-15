@@ -12,6 +12,43 @@ import com.riiablo.engine.server.component.Sequence;
 import org.junit.jupiter.api.Test;
 
 class NativeMonInfernoDataTest extends RiiabloTest {
+  @Test void diablo152OriginalRowsAndScMarker() {
+    Skills.Entry skill = Riiablo.files.skills.get(193);
+    assertEquals(53, skill.srvstfunc);
+    assertEquals(152, skill.srvdofunc);
+    assertEquals("SC", skill.monanim);
+    assertEquals("diablight", skill.srvmissilea);
+    assertEquals("par1", skill.calc2);
+    assertEquals("2", skill.calc3);
+    com.riiablo.codec.excel.Missiles.Entry missile = Riiablo.files.Missiles.get("diablight");
+    assertEquals(30, missile.Param[1]);
+    assertEquals(20, missile.Vel);
+    assertEquals(0, missile.VelLev);
+    assertTrue(missile.CanSlow);
+    assertEquals(15, missile.AnimLen);
+    com.riiablo.codec.D2 data = com.riiablo.codec.D2.loadFromFile(Riiablo.mpqs.resolve("data/global/eanimdata.d2"));
+    for (String id : new String[] {"diablo", "diabloclone"}) {
+      MonStats.Entry mon = Riiablo.files.monstats.get(id);
+      Monster monster = new Monster().set(mon, Riiablo.files.monstats2.get(mon.MonStatsEx));
+      assertEquals("Diablo", mon.AI);
+      assertEquals("SC", mon.Sk1mode);
+      assertEquals(193, Riiablo.files.skills.get(mon.Skill1).Id);
+      assertEquals(id.equals("diablo") ? 3 : 2, mon.Sk1lvl);
+      assertEquals(9, monster.monstats2.InfernoAnim);
+      assertEquals(6, monster.monstats2.InfernoLen);
+      assertTrue(NativeMonInferno.supports(skill, monster,
+          new Sequence().sequence(Engine.Monster.MODE_SC, Engine.Monster.MODE_NU)));
+      com.riiablo.codec.D2.Entry anim = data.getEntry((mon.Code + "SCHTH").toUpperCase());
+      assertNotNull(anim);
+      assertEquals(17, anim.framesPerDir);
+      assertEquals(256, anim.speed);
+      for (int i = 0; i < anim.framesPerDir; i++)
+        assertEquals(i == 9 ? Engine.KEYFRAME_MIS : 0, anim.data[i]);
+      assertEquals(40, new NativeMonInferno(skill, mon.Sk1lvl, 6).deadline);
+      assertEquals(id.equals("diablo") ? 32 : 31, NativeMonInferno.missileFrames(skill, missile, mon.Sk1lvl));
+    }
+  }
+
   @Test void originalRowsDistinguish95FromDiablo152AndUnportedMonSeq() {
     int rows = 0;
     for (Skills.Entry skill : Riiablo.files.skills) {

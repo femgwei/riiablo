@@ -1,6 +1,26 @@
 # 逐怪 AI 隔离测试场
 
-## 最新修复批次：2026-10-15 MonInferno（非 MonSeq）
+## 最新修复批次：2026-10-15 Diablo / Diabloclone 电光
+
+按D2MOO St53/Do152及1.10f原表接入193/SC：真实源帧9首发，随后每2帧发射，
+deadline40后保留末发，InfernoLen6尾结束；飞弹帧寿命/动画速率共用已验证的原生公式。
+动作5改查真实INFERNO并在下次空闲决策关闭，不再以之前攻击计数代替开关；
+丢失目标也消费已有状态。不新增两帧强制打断，不扩修其他Diablo技能。
+
+新增2场inferno-cycle，额外要求真实尾结束/状态关闭/下轮施法，不能仅靠持续发射通过。
+本机301项定向测试通过（core270/d2gs31），失败/错误/跳过0。
+557行/1155场：480动作、376回退、113告警、175无动作、7仅移动、4终止；
+异常/ERROR/NOT_RUN/专属未触发0。10场Inferno和旧18复活/6触手/3蛙魔/4无主人场均成功。
+对旧1153场仅Diablo两行的4个near/far场变化，其余1149逐字段一致，无丢失。
+新增2场仍如实保留DiabCold Do100等其他告警，总WARNING111→113，不表示电光场完整AI验收。
+
+新快照：[`report.html`](ai-arena/20261015-diablo-seed1/report.html)，
+原版依据、完整日志/测试XML及复跑命令见
+[`verification.md`](ai-arena/20261015-diablo-seed1/verification.md)。
+仍有47AI/188行fallback，寒冰恐魔/哨兵MonSeq和其他Diablo技能待补；
+全局原生时钟/完整路径伤害、TCP/GL及三难度多seed未验收，不宣称全项目测试通过。
+
+## 前一修复批次：2026-10-15 MonInferno（非 MonSeq）
 
 对照D2MOO St53/Do95及本机1.10f原表，接入FetishInferno178/A1、MegademonInferno319/S1、
 Baal Inferno317/S1的持续施法链。真实COF动作点首发后，calc3重排周期回调；

@@ -16,6 +16,23 @@ import static org.junit.Assert.*;
 public class MonsterAiArenaTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+  @Test public void diabloInfernoOracleAlsoRequiresActualStateResetBetweenCasts() {
+    for (boolean reset : new boolean[] {false, true}) {
+      com.riiablo.codec.excel.Skills.Entry skill = new com.riiablo.codec.excel.Skills.Entry();
+      skill.calc2 = "4"; skill.calc3 = "2";
+      com.riiablo.engine.server.NativeMonInferno cast = new com.riiablo.engine.server.NativeMonInferno(skill, 3, 6);
+      MonsterAiArena.InfernoCycle oracle = new MonsterAiArena.InfernoCycle(true);
+      oracle.observeState(false); // A pre-cast false state cannot satisfy reset.
+      cast.frame = 2; cast.updated(true, true); oracle.observe(cast, true);
+      cast.frame = 4; cast.updated(true, true); oracle.observe(cast, true);
+      cast.frame = 10; oracle.finished();
+      assertEquals(4, oracle.phase);
+      oracle.observeState(!reset);
+      oracle.observe(new com.riiablo.engine.server.NativeMonInferno(skill, 3, 6), true);
+      assertEquals(reset ? 5 : 1, oracle.phase);
+    }
+  }
+
   @Test public void infernoOracleRequiresRealPulsesIntervalTailAndNewCast() {
     com.riiablo.codec.excel.Skills.Entry skill = new com.riiablo.codec.excel.Skills.Entry();
     skill.calc2 = "7"; skill.calc3 = "3";
@@ -145,6 +162,8 @@ public class MonsterAiArenaTest {
     assertEquals(3, MonsterAiArena.scenarios(row).size());
     row.AI = "FrogDemon";
     assertTrue(MonsterAiArena.scenarios(row).contains("frog-emerge"));
+    row.AI = "Diablo";
+    assertTrue(MonsterAiArena.scenarios(row).contains("inferno-cycle"));
     assertEquals("&lt;&amp;&quot;", MonsterAiArena.escape("<&\""));
   }
 

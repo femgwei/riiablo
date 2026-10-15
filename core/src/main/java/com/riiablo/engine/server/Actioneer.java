@@ -1436,12 +1436,12 @@ public class Actioneer extends PassiveSystem {
             entityId, emerged);
         break;
       }
-      case 53: { // SKILLS_SrvSt53_MonInferno (95 non-SQ subset)
+      case 53: { // SKILLS_SrvSt53_MonInferno (95/152 non-SQ subset)
         Casting cast = mCasting.get(entityId);
         Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
         Monster monster = mMonster.get(entityId);
         if (!NativeMonInferno.supports(skill, monster, mSequence.get(entityId))) {
-          log.warn("Unported MonInferno start source={} skill={} srvdo={} (MonSeq/152 not ported)",
+          log.warn("Unported MonInferno start source={} skill={} srvdo={} (MonSeq not ported)",
               entityId, cast == null ? -1 : cast.skillId, skill == null ? -1 : skill.srvdofunc);
           break;
         }
