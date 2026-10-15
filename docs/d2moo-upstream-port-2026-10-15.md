@@ -1816,6 +1816,33 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 完整回归515项/44类通过，失败/错误/跳过0；日志`core/build/round25-full.log`，
   XML `.gradle/path-port/round25-full/core/test-results/pathPortTest`。
 
+## 第二十六批：live Act房间身份及请求失效校验（2026-10-16）
+
+- 固定D2MOO origin/master `0c0bbd1e6bef9181a3da1c046523af622a925416`，核对
+  `source/D2Common/src/D2Dungeon.cpp`的#10035、AllocRoom、#10076 RemoveRoomFromAct、
+  #10082 IsRoomInTown。分配调用ReorderNearRoomList压缩活动项；删除从near-list尾部换位。
+  所以RoomEx有序导出仍不能当作实际活动列表。本批不新增DLL算法证据，不是动态DLL执行。
+- D2PathActiveRooms从真实Act链两阶段捕获：IdentityHashMap保留活动房间对象身份，
+  直接复制raw subtile坐标及native town谓词，按nNumRooms捕获实际活动near-list前缀。
+  保留自身/重复/null；忽略未使用容量，拒绝跨Act/未捕获链接、错误backlink/ownership及循环链。
+  不按roomId、坐标或level/ordinal合并对象；释放后同ID重新分配必须重新捕获。
+- requireCurrent校验当前链顺序/长度、ownership/backlink、bounds、levelId/town、grid对象引用、
+  活动邻接数量/顺序/身份和投影nearby列表引用。grid位与seed可正常变化；不克隆、不消费seed。
+  这是串行game-thread请求局部一致性检查，不是历史版本计数、并发锁或碰撞数据快照。
+- RequestEffects和Dispatch.Effects新增带activeRooms重载；绑定时要求startRoom为owner房间
+  同一投影对象，拒绝边界相同的伪房间；footprint操作/blocked及concrete search入口检查失效。
+  旧三参数调用保留；创建这些对象不会安装ECS生产后端。每次检查遍历捕获图，未作性能优势声明。
+- 新增D2PathActiveRoomsTest十二项，使用真实Dungeon.allocRoom/removeRoomFromAct验证分配压缩、
+  删除尾换位与同ID重分配、跨层town、raw subtile、顺序/空槽/容量尾部、图失效/不失效边界、
+  外来链接/ownership/cycle拒绝、空Act、同bounds伪身份、失效前不改footprint，
+  以及Request→Dispatch→Footprint跨房间搜索和footprint恢复。
+- 首轮一项测试误用不写碰撞的pattern0，改为pattern1并补写入前置断言；另一次构建遇到
+  生成class文件缺失，换独立输出并强制编译后通过。定向59项/3类通过；随后加强删除尾换位断言。
+  最终完整527项/45类通过，失败/错误/跳过0；日志`core/build/round26-full.log`，
+  XML `.gradle/path-port/round26-full/core/test-results/pathPortTest`。
+- common层活动图已可组合，ECS/Zone运行期Act桥仍未接通；真实单位生命周期身份、fp16坐标、
+  live owner D2Seed及路径状态消费/实图/性能/另机验收仍待。生产保持Map→AStarPathFinder。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

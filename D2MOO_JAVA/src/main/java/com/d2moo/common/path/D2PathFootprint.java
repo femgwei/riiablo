@@ -162,11 +162,27 @@ public final class D2PathFootprint {
     public abstract static class RequestEffects implements D2PathRequest.Effects {
         private final D2PathRequest.State request;
         private final Unit owner, target;
+        private final D2PathActiveRooms activeRooms;
 
         protected RequestEffects(D2PathRequest.State request, Unit owner, Unit target) {
+            this(request, owner, target, null);
+        }
+
+        /** Bind the request's exact start-room identity to a captured live Act graph.
+         * Existing snapshot-only callers can continue using the three-argument constructor. */
+        protected RequestEffects(D2PathRequest.State request, Unit owner, Unit target,
+                D2PathActiveRooms activeRooms) {
             this.request = Objects.requireNonNull(request);
             this.owner = Objects.requireNonNull(owner);
             this.target = target;
+            this.activeRooms = activeRooms;
+            if (activeRooms != null) {
+                activeRooms.requireCurrent();
+                if (activeRooms.room(owner.room) != request.startRoom) {
+                    throw new IllegalArgumentException("request start room must be the captured owner room");
+                }
+                if (target != null) activeRooms.room(target.room);
+            }
             if (owner.coordinates.type != request.result.path.ownerType
                     || !D2PathUnits.coordinates(owner.coordinates).equals(request.result.path.currentPoint)
                     || owner.coordinates.sizeX != request.unitSize
@@ -188,8 +204,9 @@ public final class D2PathFootprint {
                     request.collisionPattern, request.moveMask & 0xffff) != 0;
         }
 
-        private void check(D2PathRequest.State state) {
+        protected final void check(D2PathRequest.State state) {
             if (state != request) throw new IllegalArgumentException("adapter is bound to one stable request snapshot");
+            if (activeRooms != null) activeRooms.requireCurrent();
         }
     }
 

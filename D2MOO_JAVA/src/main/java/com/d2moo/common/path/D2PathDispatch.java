@@ -217,11 +217,15 @@ public final class D2PathDispatch {
     public static final class Effects extends D2PathFootprint.RequestEffects {
         private final D2PathRequest.State request;
         public Effects(D2PathRequest.State request, D2PathFootprint.Unit owner, D2PathFootprint.Unit target) {
-            super(request, owner, target);
+            this(request, owner, target, null);
+        }
+        public Effects(D2PathRequest.State request, D2PathFootprint.Unit owner, D2PathFootprint.Unit target,
+                D2PathActiveRooms activeRooms) {
+            super(request, owner, target, activeRooms);
             this.request = request;
         }
         @Override public int search(D2PathRequest.Search search) {
-            if (search.state != request) throw new IllegalArgumentException("adapter bound to one request");
+            check(search.state);
             return compute(search, (x, y) -> blocked(request, x, y));
         }
     }

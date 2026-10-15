@@ -2,7 +2,21 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十五批续接结果（优先于下方历史起点）
+## 第二十六批续接结果（优先于下方历史起点）
+
+- 新增D2PathActiveRooms，从真实D2DrlgAct活动房间链按对象身份投影raw subtile bounds、town、
+  ppRoomList有效前缀；不再用RoomEx顺序代替live列表。分配压缩/删除尾项换位均由现有Dungeon提供。
+- RequestEffects/Dispatch.Effects可绑定该图，要求startRoom为owner房间的同一投影对象；
+  在副作用和search入口验证链/邻接/坐标/元数据/网格引用是否失效。旧三参数构造器保留。
+- 新增12项，定向59项/3类通过；完整527项/45类通过，失败/错误/跳过0。
+  日志`core/build/round26-full.log`，XML `.gradle/path-port/round26-full/core/test-results/pathPortTest`。
+- 仅串行game-thread当前状态校验，不是历史版本计数/并发锁，也不冻结碰撞位或RNG。
+  核对固定D2MOO分配/删除/邻接/town接口，未新增DLL算法证据或动态DLL执行。
+- common层live图适配已可组合请求，但ECS/Zone尚未绑定运行期Act；实体生命周期身份、fp16、
+  共享owner seed与移动状态消费仍待。下一轮优先运行期Act/Zone桥或真实实体身份映射。
+  生产仍Map→AStarPathFinder，不整体切换。
+
+## 第二十五批续接结果（历史）
 
 - RoomEx新增独立有序路径链接导出，保留跨层level/room键、自身、重复项与null槽。
   NativePathRoomGraph将真实Zone/RoomEx投影成请求局部room快照，共享bounds身份；缺失Zone链接保持null。

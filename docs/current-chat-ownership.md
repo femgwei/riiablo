@@ -2,6 +2,10 @@
 
 更新时间：2026-10-16（当前状态索引；下方保留历史交接记录）
 
+第二十六批：common层新增live Act房间身份/邻接快照，RequestEffects与Dispatch.Effects支持
+精确绑定及失效检查；新增12项，完整527项/45类通过，失败/错误/跳过0。
+ECS/Zone运行期Act桥、真实单位身份/fp16/owner seed/移动消费仍待，生产仍A*；下方为历史。
+
 第二十五批：新增真实Zone/RoomEx有序跨层链接诊断快照，保留自身/重复/null与bounds身份。
 仅RoomEx投影，live D2ActiveRoom及实体身份/fp16/owner seed映射仍待；生产仍A*。
 新增4项回归，完整515项/44类通过，失败/错误/跳过0；下面第二十四批为历史。

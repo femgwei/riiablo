@@ -5,6 +5,13 @@
 
 ## 结论与证据边界
 
+第二十六批补充：D2PathActiveRooms现直接捕获live D2DrlgAct房间链和ppRoomList有效前缀，
+按对象身份共享Room/bounds；删除尾项换位不再被RoomEx顺序覆盖。图可绑定RequestEffects和
+Dispatch.Effects，并检查当前链、邻接、bounds、level/backlink与grid引用是否失效。
+common层组合已有跨房间请求/footprint恢复测试，完整527项/45类通过，失败/错误/跳过0。
+ECS/Zone仍未绑定运行期Act；该校验不是并发锁或历史版本计数，碰撞位及RNG保持live。
+本批依据固定D2MOO Dungeon接口，无新增DLL算法证据；生产仍A*。
+
 第二十五批补充：Map.RoomEx现独立保留有序路径链接并提供跨Zone诊断快照，
 不再需要借用会过滤自身/跨层的本层邻接ID。D2MOO的DUNGEON_GetAdjacentRoomsListFromRoom
 读取live D2ActiveRoom.ppRoomList；本批RoomEx快照尚不等价该列表，也未进入生产寻路消费。

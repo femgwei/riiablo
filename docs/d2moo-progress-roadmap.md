@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第二十六批（生产适配仍PARTIAL）
+
+- [x] common层从live Act房间链投影真实对象身份、subtile bounds、town与活动邻接有效前缀。
+- [x] Request/Dispatch footprint组合可绑定同一图，并检查分配/删除/替换等当前状态失效。
+- [x] 新增12项；完整527项/45类通过，失败/错误/跳过0。
+- [ ] ECS/Zone运行期Act桥、单位生命周期身份/fp16/共享owner seed、状态消费仍待。
+- [ ] 真实地图、性能、另机验收仍待；生产保持Map→AStarPathFinder。
+
+此图仅供串行请求局部组合；不冻结碰撞/RNG，不声称动态DLL等价或已接入生产。
+
 ## 2026-10-16 TrappedSoul Fn099（整体PARTIAL）
 
 - [x] 两行专用AI：首次S2、整数象限A1/A2/S1、5/35帧严格门、NOTC及动作后S1。
