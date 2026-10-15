@@ -60,6 +60,22 @@
 
 证据：[Megademon验证](ai-arena/20261015-megademon-seed1/verification.md)。以下为历史批次记录。
 
+## 2026-10-16 D2MOO 第十六批：单位占位与请求网格适配
+
+- [x] 新增`D2PathFootprint`，补10222/10223类型shape选择、不同死亡mode/对象资格与force，
+  Add不套Remove门槛；10338对象mask优先级与10410模式字节，动态null path mask为0xFFFF。
+  mask在网格调用前先截uint16，避免仅高位非零误生成presence标记。
+- [x] `RequestEffects`连接请求层与真实内存网格，owner/target用各自room，保持移除/恢复顺序；
+  搜索仍abstract。复用既有网格原语，不把逐点矩形路由当作原生递归切分等价证明；
+  零尺寸object Add、模式越界显式拒绝，生产元数据/实体/房间图映射不在此层。
+- [x] 固定D2MOO`0c0bbd1e`与本机1.10f D2Common静态证据；新增27项，合并358项/33类通过，
+  失败/错误/跳过0，三项已有原版静态表oracle执行。代码/测试`4d4112ef1`已推送并核验一致；
+  XML `.gradle/path-port/round16-full/core/test-results/pathPortTest`，详见第十六批上游记录。
+- [ ] **寻路未完成**。下一步优先原生pathType分派与入口副作用，再受控生产接入及真实移动
+  消费；nDist、身份/表格/房间图映射、动态碰撞、矩形递归网格边界与真实地形验收仍待。
+  普通生产仍A*，近期碰撞/房间/步进保持，不加1.13+ gate或普通自动partial；本轮无新
+  MPQ/TCP/GL/性能/原版DLL动态差分，其他聊天修改与覆盖独立。
+
 ## 2026-10-16 D2MOO 第十五批：前置检查、城镇与占位编排
 
 - [x] 新增`D2PathRequest`组合Units/Target/Result：raw单位目标零轴早退保留旧路径，后续

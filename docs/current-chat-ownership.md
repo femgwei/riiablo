@@ -10,7 +10,28 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十五批：10142前置检查、城镇规则与占位事务编排
+## 2026-10-16 第十六批：单位占位写入与请求网格适配
+
+- 新增`D2PathFootprint`：10222/10223按类型选择pattern/矩形/size，保留player与monster
+  不同死亡模式、object当前模式碰撞资格、force和返回值语义；Add不套Remove资格门槛。
+  补10338碰撞mask优先级与10410资格，动态null path的mask为0xFFFF，网格ABI先截低16位。
+- 固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common `0x6FDA8320..85FB`、
+  `0x6FDBDE10..DEB0`、`0x6FDBFB40..FB64`、`0x6FDA9FC0..9FD5`静态证据。
+  `RequestEffects`连接上一批请求层与真实内存网格；owner/target使用各自room，搜索仍abstract。
+- 复用既有`D2CommonCollision`写入原语，本轮没有移植/证明其原生递归矩形切分等价。
+  object零宽/零高Add显式拒绝（native退化box不等于Java no-op），Remove仍可true且无写入。
+  对象模式仅0..7；元数据、房间图一致性和快照稳定性由调用方保证，不解析生产实体/表格。
+- 新增27项，合并**358项/33类通过，失败/错误/跳过0**；含实际网格移除/恢复、Toward搜索、
+  独立target room与宿主异常恢复。三项已有原DLL静态表oracle执行，但不是DLL动态函数差分。
+  XML `.gradle/path-port/round16-full/core/test-results/pathPortTest`，日志`core/build/round16-full.log`。
+  代码/测试`4d4112ef11e7c98d7aee3fa6438c914532cc56d9`已推送origin/master并核验远端一致；
+  四文档独立提交推送。其他聊天NPC/商人等修改保留、未纳入本轮提交或专项验收。
+- **寻路仍未完成**：普通生产仍Map→AStarPathFinder。下一轮优先原生pathType分派及必要
+  入口状态副作用；生产身份/元数据/房间图映射、nDist消费、路径安装/速度/动态碰撞消费及
+  真实地形验收仍待，矩形递归网格边界另需核对。不改近期碰撞/房间/步进，不加1.13+ gate
+  或普通自动partial；本轮无新MPQ/TCP/GL/性能/原版动态差分，其他AI进度与覆盖单列。
+
+## 2026-10-16 第十五批：10142前置检查、城镇规则与占位事务编排（历史）
 
 - 新增`D2PathRequest`独立请求编排层，组合Units→Target→Result与续算层；补collidedMask清零、
   raw目标零轴早退、源点/目标零值/重合/±100窗口、房间查找及怪物城镇规则。

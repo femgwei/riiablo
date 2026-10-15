@@ -594,3 +594,32 @@ WallFollow预期为有路径；改为实际单位目标13→15场景复验通过
 **寻路仍未完成**：生产身份/元数据/房间图适配、实际10222/10223、原生dispatcher、nDist消费
 及真实pathType安装/速度/动态碰撞消费仍待。普通生产A*及近期碰撞/房间/步进不变，不自动普通
 partial。本轮无新MPQ/TCP/GL/性能/原版动态差分，其他AI更新与覆盖单列。
+
+## 后续第十六批：占位移除返回true不等于网格改变（2026-10-16）
+
+新增`D2PathFootprint`，固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common
+10222/10223、10338/10410、10177及Set/ResetSizeXY静态证据；请求层现在可以使用实际
+内存网格占位adapter，而非人为配置每个移除/恢复回调。搜索仍abstract，不是完整dispatcher。
+
+- player/monster用pattern，object用矩形，其余用size；Remove对player 0/17、monster 0/12
+  及object当前模式无碰撞分别gate，force可覆盖；Add没有这些gate。Remove的true仅表示
+  执行分支获准，即使没有room/grid、mask0或不支持size也不等于写入发生。
+- object mask按door→vis/missile、非door portal→missile→普通对象优先，门不阻视/不阻弹
+  是0x400而非0x800。动态null path mask为0xFFFF，raw32在网格ABI前截uint16，
+  不让仅高位非零制造presence。对象模式保留八个raw uint8，非零不局限于1。
+- 零尺寸object Add原生构造退化box、Remove则不写；既有Java helper都是no-op，adapter
+  显式拒绝该Add域，不虚称等价。复用既有网格原语，未移植/证明矩形逐点路由与原生递归
+  box切分、溢出域及病态房间图一致；跨房pattern测试只证明该夹具。
+- `RequestEffects`校验稳定request/owner元数据和target快照身份，占位用各自room，查询用
+  owner room与request pattern/moveMask。只比bounds，不验证完整房间图/生产身份/表格映射。
+
+新增27项，合并**358项/33类通过，失败/错误/跳过0**，三项已有DLL静态表oracle执行。
+包含真实内存网格移除/恢复、Toward搜索、独立target room和宿主异常恢复，不是原DLL动态函数
+或生产消费验收。代码/测试`4d4112ef1`已推送origin/master并核验一致，其他聊天修改未混入。
+地址、哈希、复验命令与报告见
+[第十六批记录](d2moo-upstream-port-2026-10-15.md#第十六批单位占位写入与请求网格适配2026-10-16)。
+
+**寻路仍未完成**：下一步优先原生pathType分派与必要入口副作用，再做生产身份/元数据/
+房间图映射、nDist与真实移动消费/安装及地形验收；矩形递归网格边界单列。普通生产仍A*，
+近期碰撞/房间/步进保持，不加1.13+ gate或普通自动partial。本轮无新MPQ/TCP/GL/性能/
+原版动态差分，不据此声称整体性能或完整原生等价更优。

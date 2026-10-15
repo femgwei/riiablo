@@ -1225,13 +1225,93 @@ dispatcher、生产身份/表格/房间图、nDist步进消费、路径安装/�
 普通生产仍Map→AStarPathFinder；近期碰撞/房间/步进不变，不加1.13+ gate，不自动普通exact→partial。
 火焰之河AI fallback本轮未修/未重跑；其他聊天AI提交不能当本轮路径验收，最新状态须另查其报告。
 
+## 第十六批：单位占位写入与请求网格适配（2026-10-16）
+
+### 范围与静态证据
+
+新增`D2MOO_JAVA/.../path/D2PathFootprint.java`、`D2PathFootprintTest`，在`D2PathUnits`
+增加包级动态路径分配检查。移植10222/10223上层类型分派与资格、10338 mask和10410资格，
+通过`RequestEffects`连接上一批请求编排与既有`D2CommonCollision`真实内存网格；search仍为
+abstract，**不是完整原生dispatcher或生产接入**。坐标/sizeX沿用Units的已解析快照，
+Objects字段与sizeY需调用方提供，不加载表格、不管理ECS身份/有效期。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch，读取Path.cpp、
+Units.cpp、ObjectsTbls.h及D2Collision.cpp对应实现。静态核对本机
+`G:\BaiduNetdiskDownload\Diablo II 1.10F\D2Common.dll`，SHA256复核仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+
+- `0x6FDA8320..8449` Add：player/monster用dynamic pattern；object用sizeX/sizeY矩形；
+  missile/item/tile用size，不混入pattern presence。Add不检查死亡mode或object hasCollision。
+- `0x6FDA8450..85FB` Remove：player的0/17、monster的0/12且未force时false；object当前
+  nHasCollision字节为0且未force时false；其余执行分支返回true。**true只是有资格执行，
+  不保证room/grid存在、mask非零、shape受支持或网格实际改变**。同bit重叠仍按位清除，非引用计数。
+- `0x6FDBDE10..DEB0` mask：object door优先，blocksVis→0x806，否则blockMissile→0x804，
+  都不阻挡→0x400；非door先subClass&4→0x8000，否则blockMissile→0x404，否则0x400。
+  不阻视/不阻弹door不是0x800。item→0x200、tile→1，动态单位读footprint字段。
+- `0x6FDA9FC0..9FD5` #10177：null dynamic path返回0xFFFF，不是0；非null取+0x4C DWORD。
+  保留raw32返回，进入uint16网格ABI前先截低16位，避免只有高16位非零也触发presence标记。
+  player/monster的pattern需要已分配path，null显式拒绝；死亡Remove可在读取前返回false。
+- `0x6FDBFB40..FB64` #10410：object按当前mode索引+0x120的八字节hasCollision，非object true。
+  原始uint8的非零都成立，数组复制；adapter只接受0..7模式，不模拟读越界的相邻结构字段。
+  Objects偏移：door +0x13A、blocksVis +0x13B、subClass +0x167、blockMissile +0x1B6。
+- SetSizeXY `0x6FD443E0`与ResetSizeXY `0x6FD44140`的零尺寸处理不对称：Add仍构造退化box，
+  Remove有正尺寸guard。既有Java helper把零尺寸视为no-op，因此本层零宽/零高object Add
+  **显式拒绝**，不能用no-op冒充原版；Remove有资格时仍true且无写入。
+
+本轮只移植**上层单位选择/资格/mask**，复用现有网格写入原语，不修改`D2CommonCollision`。
+其矩形逐点路由/long bounds与原版递归box切分、溢出域及病态房间图策略仍需专项核对；
+跨房pattern夹具不构成任意矩形房间图原生等价证明，也不保证set/reset与其他重叠单位组成事务回滚。
+
+`RequestEffects`绑定一个稳定request和owner/target快照，校验owner类型/current tile/sizeX、
+player/monster pattern与room bounds；target要求与request.target同一坐标快照对象。
+占位使用各自UNITS_GetRoom，blocked使用owner room与request pattern及low16 moveMask。
+只核对bounds，不证明两套房间图身份/邻接/metadata一致；调用方必须保持映射与快照稳定。
+search仍由子类明确提供正确native入口，不能直接把纯Toward/WallFollow内核冒充完整dispatcher。
+Java宿主异常恢复沿用上一批finally扩展，不声称原版异常unwind或部分网格写入原子性。
+
+### 第十六批验证与交付
+
+直接执行隔离合并回归，**358项/33类通过，失败/错误/跳过0**，含本轮新增27项。
+覆盖pattern与presence、raw32→uint16、两类mode0..20×force、object八模式raw字节与复制、
+door/vis/missile/subClass全部组合、偶数矩形bias、item/tile size0..4与missile size、空path、
+missing room/grid、static int32与dynamic unsigned高字、跨邻房pattern、同bit按位清除与退化box。
+RequestEffects夹具在真实内存网格移除owner/矩形target后运行Toward，验证恢复后向量；
+另覆盖dead owner false仍add、target false不凭空恢复、无flag0x800保留阻挡、target独立room、
+宿主search异常恢复与绑定快照拒绝。上述均为库夹具，不是生产实体/真实地图验收。
+
+命令采用`docs/path-port-regression.init.gradle`与`:core:pathPortTest -PpathRun=round16-full`，
+filters包括`com.d2moo.common.path.*`、`com.d2moo.common.collision.*`及上一批同范围运行时
+寻路/碰撞/恢复/房间/玩家地面/对象/旋风/warp/native probe/cache/comparison/shadow/DiabRun回归。
+日志`core/build/round16-full.log`，XML `.gradle/path-port/round16-full/core/test-results/pathPortTest`。
+三项已有原DLL静态表oracle执行、无跳过；本轮没有新增DLL动态函数oracle，没有新MPQ/TCP/GL、
+全图/多seed难度或性能验收，不以静态反汇编/静态表读取推断动态或性能等价。
+测试完成后只移除未使用import，按极小修改约定未重复编译。
+
+代码/测试`4d4112ef11e7c98d7aee3fa6438c914532cc56d9`已推送origin/master并核验远端SHA一致。
+只提交本轮三个源码/测试文件；其他聊天NPC/商人修理等修改保留、未纳入本轮提交或专项验收。
+四交接文档独立提交推送，最终SHA见git log。
+
+另一电脑最小复验（原版路径改为当地目录）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round16-check --tests '*D2PathFootprintTest' --tests '*D2PathRequestTest' --tests '*D2PathResultTest' --tests '*D2PathUnitsTest' --tests 'com.d2moo.common.collision.*' --console=plain
+```
+
+**寻路仍未完成**：下一轮优先原生pathType dispatcher与必要入口状态副作用；生产身份/表格/
+房间图映射、nDist步进消费、路径安装/速度/动态碰撞消费、矩形递归网格边界与真实地形验收仍待。
+普通生产仍Map→AStarPathFinder；近期碰撞/房间/步进不变，不加1.13+ gate，不自动普通exact→partial。
+火焰之河AI fallback本轮未修/未重跑；其他聊天AI更新与实际验收须查看其独立报告。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
   已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
-  元数据/房间图适配、nDist步进消费、原生footprint实现与搜索dispatcher，并将状态与真实移动接通，
+  元数据/房间图适配、nDist步进消费与原生搜索dispatcher。本轮已补footprint上层选择与真实内存
+  网格adapter，但矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。
