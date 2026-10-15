@@ -1,5 +1,64 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-15 native-fixes
+
+本轮从上一份1136场结果定位了三项相互叠加的复活缺陷，并补齐一个缺失AI。
+下面是本机实际修复/复测记录，不代表全部错误已清零；旧快照保持不变。
+
+- GreaterMummy 找尸体仍是 TODO，复活/射击都把真正技能替换成了普通 attack；
+  重写为 D2MOO `AiThink.cpp::AITHINK_Fn022_GreaterMummy` 的决策优先级，使用
+  Skill1/2/3、原生概率流，保留施法/动画忙碌保护，去掉近距离无概率强制A2和随机1–2秒停顿。
+  盟友扫描区分普通木乃伊的 lUndead、Radament 的 l/hUndead、Normal暗金例外及额外10范围，
+  检查阵营、TARGETABLE、udead/hide、终态尸体和相邻房间；按回调保留最后合格目标而非最近目标。
+- 死亡系统此前在DD清掉全部 MONSTER_TARGET，导致原版复活回调永远拒绝普通尸体。
+  根据 `MonsterMode.cpp::sub_6FC63E80` 的 `flags &= 0xFFFF7FF3`，在死亡边界清可攻击/
+  有效攻击目标等位，保留原有 TARGETABLE，仅 hide mask 清该位；不会主动把不可选目标变可选。
+  反复DD不恢复XP/掉落，尸体仍不可被普通攻击。旧断言随原版证据纠正，并新增 hide 边界测试。
+- 本机1.10f `MonSeq.txt::seq_mummyres` 为 SC 的0..15点，13点事件2（MIS）。
+  部分变体SC COF的标记不同，单纯改SC模式仍不能正确触发；新增专用序列游标，
+  由真实 AnimStepper 在13点触发一次技能、16点结束，不直接注入 SkillDo/复活结果。
+  不修改共享COF数据；测试核对原表全部16点及全部GreaterMummy行，并覆盖半速/常速/双速跨帧。
+- BloodLord 原本缺类、退回 GenericMonster。按 `AiThink.cpp::AITHINK_Fn125_BloodLord`
+  补齐近战概率、A2 Skill1狂乱/A1普通攻击、非近战接近概率和表内停顿；使用已有srvDo109。
+  不再以通用普通攻击冒充它的狂乱决策。
+
+最终Normal、seed=1、500tick，全目录仍为557行/1136场：
+
+- ACTION_OBSERVED 459（原443），MOVEMENT_ONLY 7（不变）。
+- AI_FALLBACK 376（原390），对应188行、47个AI名称（原195行、48个名称）。
+- WARNING 118（原117），NO_ACTION 172（原165）。
+- SPECIAL_NOT_TRIGGERED 0（原10），TERMINAL_OBSERVED 4（不变）。
+- RUNTIME_ERROR / ERROR_LOG / NOT_RUN 均为0；10场木乃伊复活全部
+  `resurrected && resurrectedBy==subject`，8场萨满复活仍成功。
+- BloodLord 的14场不再fallback，其中7场近距有动作、7场远距仍无动作，后者继续登记
+  NO_ACTION，不以“已有专用类”判定通过。WARNING增加的一场是unraveler1复活后骷髅
+  `SKXX1HS -> SKA11HS` 复起动画回退，未隐藏或豁免。
+
+新表及可解压日志：[`20261015-native-fixes-seed1/report.html`](ai-arena/20261015-native-fixes-seed1/report.html)。
+完整JSONL、inventory、summary、COMPLETED、logs.zip与表同目录；解压日志包后HTML日志链接可用。
+与旧表逐字段比较，仅BloodLord14场和GreaterMummy30场改变，其余1092场完全相同。
+
+定向回归141项全部通过，0失败/错误/跳过，覆盖 GreaterMummy/BloodLord决策、序列时钟、尸体标志、Bestow、原生Act1、
+死亡/生命周期、触手、BaalCrab/分身、Frenzy、SequenceHandler及测试场/巡图日志。
+没有把本次定向测试称为项目全部测试，也没有完成三难度、多seed或另一台电脑的TCP验证。
+
+### 剩余错误如何处理
+
+376场fallback是47种表内AI缺少专用类，不是一个反射加载异常；需逐类移植，不能删除
+fallback日志或改成Idle。较多的有Minion、VileDog、MinionSpawner、SuicideMinion、
+SuccubusWitch、FetishBlowgun、Imp等，FingerMage/Megademon也仍缺失。
+
+技能回调告警是独立的移植缺口：本轮日志中srvstfunc(53)796条、srvdofunc(26)462条、
+(136)396条、(101)170条、(108)/(148)各136条、(94)27条。这些是**日志条数而非场次数**，
+也可能出现在fallback场内，不能只看118个WARNING场就认定只有118场有告警。
+Inferno持续施法、Submerge动画保持/浮出和其他技能须连同生命周期修复，不能加空case消警。
+
+XX/缺COF告警包含尚未接入的MonSeq和具体资源/模式问题；本次只实现seq_mummyres，
+没有声称实现通用MonSeq，包括骷髅复起序列仍需跟进。NO_ACTION只说明20秒固定场景内
+无主体动作/位移，需按aiDist、环境/主人/受伤/任务条件补专属场景后再区分实现缺陷和条件不足；
+Idle/控制器不能被强制攻击来凑覆盖率。木乃伊仍复用共享路径/绕行近似，不声称与原版三步路径
+截断、房间单位遍历顺序、Radament任务激活回调逐项一致。
+
 ## 与 skill-viewer 的复用边界
 
 复用 `Map.createSyntheticArena`：不进入 GameScreen、不加载 DS1/DT1，建立可容纳真实
@@ -90,7 +149,7 @@ SPECIAL_NOT_TRIGGERED；否则分别记 ACTION_OBSERVED、MOVEMENT_ONLY、NO_ACT
 不是 PASS。辅助怪施法/伤害不计入主体行为；警告可来自主体或辅助怪，均保留。
 伤害事件数/合计是事件证据，不是逐包伤害公式的独立验算。
 
-## 2026-10-15 本机记录与修复
+## 2026-10-15 首轮本机记录与修复（历史快照）
 
 首轮完整目录 557 行、1132 场发现8个运行时异常：3种触手和巴尔分身在无主人时自行
 死亡，DeathEvent.killer=-1，Actioneer.onDeath 对负数调用 ComponentMapper.has 导致
@@ -109,8 +168,9 @@ ArrayIndexOutOfBoundsException。修复只在 killer>=0 时清理击杀者目标
 
 390是 **场次数**，对应195个数据行、48个表内AI名称，不是390种怪物；同一怪物
 近/远两场会重复计数。
-仍存在 FingerMage/Megademon/BloodLord 等缺失 AI、触手 srvdofunc(94) 未支持、
+该快照时仍存在 FingerMage/Megademon/BloodLord 等缺失 AI、触手 srvdofunc(94) 未支持、
 COF 回退等问题。表内动作观察数**不能换算为“AI移植完成率”**。
+BloodLord与GreaterMummy的后续修复及当前计数见本页开头，不覆盖首轮结果。
 
 最终完整场次表和可解压的逐场日志随仓库提交到
 `docs/ai-arena/20261015-normal-seed1/`。`report.html` 可直接打开；日志链接需要先把

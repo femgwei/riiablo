@@ -13,6 +13,10 @@ public class Sequence extends Component {
   /** New actions must restart their animation even when mode1 equals the current mode. */
   public boolean started;
 
+  /** MonSeq seq_mummyres: SC points 0..15, missile action on point 13. */
+  public boolean nativeMummy;
+  public int nativeMummyFrame;
+
   /** Native player Jab sequence state.  Other sequences leave these fields disabled. */
   public boolean nativeJab;
   public byte nativeJabWeaponClass;
@@ -24,6 +28,8 @@ public class Sequence extends Component {
     this.mode1 = mode1;
     this.mode2 = mode2;
     this.started = false;
+    nativeMummy = false;
+    nativeMummyFrame = 0;
     nativeJab = false;
     nativeJabWeaponClass = 0;
     nativeJabFrame = 0;

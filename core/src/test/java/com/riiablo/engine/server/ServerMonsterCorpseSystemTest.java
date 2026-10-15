@@ -143,8 +143,8 @@ class ServerMonsterCorpseSystemTest {
       assertFalse(world.getMapper(Casting.class).has(monsterId));
 
       events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
-      assertEquals(NativeUnitFlags.NO_RESURRECTION_REWARD, nativeFlags.flags(),
-          "native corpse mode must clear target bits without restoring XP or treasure rewards");
+      assertEquals(NativeUnitFlags.NO_RESURRECTION_REWARD | NativeUnitFlags.TARGETABLE, nativeFlags.flags(),
+          "native corpse remains resurrection-targetable but not attackable; rewards stay suppressed");
       Corpse corpse = world.getMapper(Corpse.class).get(monsterId);
       assertNotNull(corpse);
       assertTrue(corpse.usable);

@@ -56,6 +56,10 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     Sequence sequence = mSequence.get(entityId);
+    if (sequence != null && sequence.nativeMummy) {
+      processNativeMummy(entityId, sequence, animData, states);
+      return;
+    }
     if (sequence != null && sequence.nativeJab) {
       processNativeJab(entityId, sequence, animData);
       return;
@@ -110,6 +114,24 @@ public class AnimStepper extends IntervalIteratingSystem {
     if (baseSpeed <= 0) return 0;
     int percent = Math.max(10, Math.min(300, 100 + modifierPercent));
     return Math.max(1, (int) ((long) baseSpeed * percent / 100L));
+  }
+
+  /** MonSeq event points supersede variant-specific SC COF keyframes. */
+  private void processNativeMummy(int entityId, Sequence sequence, AnimData animData,
+      UnitStates states) {
+    if (!sequence.started) return;
+    int delta = Math.max(0, animData.speed);
+    if (states != null && states.stateList != null) {
+      delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+    }
+    int previous = sequence.nativeMummyFrame;
+    int next = Math.min(16 << 8, previous + delta);
+    sequence.nativeMummyFrame = next;
+    animData.frame = Math.min(15 << 8, next);
+    if (previous < (13 << 8) && next >= (13 << 8)) {
+      events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_MIS));
+    }
+    if (next >= (16 << 8)) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
   }
 
   private void dispatchKeyframes(int entityId, AnimData animData, boolean beforeWrap) {

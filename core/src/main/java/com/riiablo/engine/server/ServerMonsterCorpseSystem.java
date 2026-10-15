@@ -120,6 +120,8 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
       return;
     }
 
+    clearDeathCombatFlags(event.victim);
+
     // Local GameScreen still has DeathHandler, so this call is intentionally
     // idempotent: every native AI guards its DEAD state in kill().  D2GS uses
     // this system as the authoritative replacement for DeathHandler's monster
@@ -151,6 +153,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     if (event == null || !mMonster.has(event.entityId)) return;
     if (event.mode == Engine.Monster.MODE_DT || event.mode == Engine.Monster.MODE_DD) {
       detachTargetNode(event.entityId);
+      clearDeathCombatFlags(event.entityId);
     }
     if (event.mode != Engine.Monster.MODE_DD) return;
 
@@ -159,9 +162,6 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
         && mUnitStates.get(entityId).stateList != null
         && mUnitStates.get(entityId).stateList.hasState(
             com.riiablo.engine.server.state.StateId.SHATTER);
-    if (mNativeUnitFlags.has(entityId)) {
-      mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
-    }
     if (shattered) {
       if (mCorpse.has(entityId)) mCorpse.remove(entityId);
       log.info("[MONSTER_CORPSE] phase=shattered entity={} usable=false", entityId);
@@ -203,6 +203,24 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     if (mNativeTargetNode.has(entityId)) mNativeTargetNode.get(entityId).detach();
     if (mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null) {
       mUnitStates.get(entityId).stateList.detachNativeTargetNode();
+    }
+  }
+
+  private void clearDeathCombatFlags(int entityId) {
+    if (!mNativeUnitFlags.has(entityId)) return;
+    // MonsterMode.cpp sub_6FC63E80: flags &= 0xFFFF7FF3, then clear
+    // TARGETABLE only for the hide state mask. Ordinary corpses must remain
+    // selectable by resurrection callbacks, but never attackable.
+    NativeUnitFlags flags = mNativeUnitFlags.get(entityId);
+    flags.clear(0x8000 | NativeUnitFlags.CAN_BE_ATTACKED | NativeUnitFlags.IS_VALID_TARGET);
+    UnitStates states = mUnitStates.get(entityId);
+    if (states == null || states.stateList == null || Riiablo.files == null) return;
+    for (com.riiablo.engine.server.state.UnitState state : states.stateList.getStates()) {
+      com.riiablo.codec.excel.States.Entry entry = Riiablo.files.States.get(state.stateId);
+      if (entry != null && entry.hide) {
+        flags.clear(NativeUnitFlags.TARGETABLE);
+        return;
+      }
     }
   }
 

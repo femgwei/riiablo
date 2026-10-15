@@ -1,6 +1,20 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-15 逐怪隔离 AI 测试场
+## 2026-10-15 逐怪失败表修复：GreaterMummy / BloodLord
+
+- [x] 对照D2MOO Fn022修复GreaterMummy的尸体筛选、真实复活/治疗/射击技能、
+  决策优先级和忙碌保护；核对1.10f MonSeq并新增seq_mummyres的13点动作/16点结束时钟。
+- [x] 按MonsterMode.cpp修正普通尸体TARGETABLE被误清，仍清除可攻击标志、保留奖励抑制，
+  hide尸体不可选；本机10场GreaterMummy复活全部真实成功，萨满8场复活无回退。
+- [x] 补齐Fn125 BloodLord专用AI，7行/14场不再GenericMonster回退；7场远距NO_ACTION
+  继续保留，不将“缺类已补”当作所有分支验收。
+- [x] 全目录557行/1136场重跑：459动作、376回退、118告警、172无动作、7仅移动、4正常终止，
+  未触发复活/运行时异常/ERROR/NOT_RUN均为0。除上述两类44场外，其余1092场逐字段与旧表相同。
+- [ ] 47个AI名称/188行仍fallback，Inferno、Submerge等技能回调及其他MonSeq仍缺；
+  新暴露的骷髅复起COF回退未隐藏。结果、原版依据和剩余问题见
+  `docs/monster-ai-arena.md` 最新批次，日志表见 `docs/ai-arena/20261015-native-fixes-seed1/`。
+
+## 2026-10-15 逐怪隔离 AI 测试场（首轮记录）
 
 - [x] 复用 skill-viewer 的 `Map.createSyntheticArena`，新增 `monsterAiArena` 无窗口入口，
   每场重建 World/角色/主怪，保留真实 AI、单位碰撞、动画关键帧、技能与飞弹处理。
@@ -10,8 +24,9 @@
   主从与无主人死亡场景共1136场本机完成，不再只是地图遇怪抽样。
 - [x] 实测发现并修复无击杀者死亡时 `Actioneer.onDeath` 访问 killer=-1 导致数组越界；
   保留4个无主人死亡场景和正常击杀清理回归，未屏蔽告警或放松AI断言。
-- [ ] 仍有390场AI_FALLBACK、117场WARNING、165场NO_ACTION、10场复活未触发；
+- [ ] 首轮遗留390场AI_FALLBACK、117场WARNING、165场NO_ACTION、10场复活未触发；
   这些是场次而非怪物数。完整表与命令见 `docs/monster-ai-arena.md`，不换算移植完成率。
+  最新修复后计数以本页上方GreaterMummy/BloodLord批次为准。
 - [ ] 大量AI专属环境/任务/主从/受伤盟友场景与独立断言尚未覆盖，空地基线不代替
   真实地图/TCP验收，也未运行三难度、多seed矩阵。skill-viewer原GUI未改为自动巡播。
 

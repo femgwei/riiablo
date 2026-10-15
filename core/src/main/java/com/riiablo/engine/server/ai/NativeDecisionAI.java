@@ -126,7 +126,13 @@ abstract class NativeDecisionAI extends AI {
   }
 
   protected final boolean castAt(int slot, int targetId, com.badlogic.gdx.math.Vector2 target) {
-    if (useMonsterSkill(slot, targetId, target)) {
+    return castAt(slot, targetId, target, Engine.INVALID_MODE);
+  }
+
+  /** Known native MonSeq backing mode, without losing the shared cast lifecycle. */
+  protected final boolean castAt(int slot, int targetId, com.badlogic.gdx.math.Vector2 target,
+      int sequenceMode) {
+    if (useMonsterSkill(slot, targetId, target, sequenceMode)) {
       state = "CAST";
       nextThink = 0f;
       return true;
