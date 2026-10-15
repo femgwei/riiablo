@@ -1,0 +1,8 @@
+Baseline: 19 tests, 6 expected native mitigation failures.
+final: 239 tests, 0 failures/errors/skips.
+repeat: 239 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 1730855D8F32160CCE1390509B276C889C6346A056EC55A6EFB639987AE9BF24 core/src/main/java/com/riiablo/engine/server/combat/CombatSystem.java
+SHA256 5304074AE017C0B2A3353F096D0616CC2832C2AE48F4D75CD595FD65F5DFFA20 core/src/test/java/com/riiablo/engine/server/SorceressNovaIntegrationTest.java
+SHA256 9BADA6A995F979228B804EDD7436D3BEFEDB2F5304226C9C92B7A6BD7F5A1838 core/src/test/java/com/riiablo/engine/server/combat/NovaFixedPointDamageTest.java
+PARTIAL: ordinary Nova mitigation verified; native RNG, hirelings/boss scalars and full-absorb healing remain outside acceptance.

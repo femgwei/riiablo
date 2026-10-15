@@ -7,7 +7,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.engine.server.event.DamageEvent;
 import org.junit.jupiter.api.Test;
 
-/** Precision contracts; mitigation ordering is still the legacy attack path. */
+/** Nova 8.8 lightning packet contracts against SUNITDMG mitigation ordering. */
 class NovaFixedPointDamageTest extends RiiabloTest {
   private static final int LIGHTNING = CombatSystem.DAMAGE_LIGHTNING;
   private final CombatSystem combat = new CombatSystem();
@@ -49,7 +49,7 @@ class NovaFixedPointDamageTest extends RiiabloTest {
     CombatSystem.DefenderData d = new CombatSystem.DefenderData();
     d.resistances[LIGHTNING] = 50;
     d.magicDamageReduced = 1;
-    assertEquals(0.5f, combat.calculateAttack(attacker(3), d).totalDamageHp());
+    assertEquals(1f, combat.calculateAttack(attacker(3), d).totalDamageHp());
     d.immuneElemental[LIGHTNING] = true;
     assertEquals(0f, combat.calculateAttack(attacker(3), d).totalDamageHp());
   }
@@ -76,5 +76,58 @@ class NovaFixedPointDamageTest extends RiiabloTest {
     assertEquals(1, result.elementalScale);
     assertEquals(0f, result.totalDamageHp());
     assertEquals(0f, result.absorbedLifeHp());
+  }
+
+  @Test void pvpPrecedesMdrResistanceAndAbsorb() {
+    CombatSystem.AttackerData a = attacker(10);
+    a.isPlayer = true;
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.isPlayer = true;
+    d.resistances[LIGHTNING] = 50;
+    d.magicDamageReduced = 1;
+    d.absorbPercent[LIGHTNING] = 25;
+    CombatSystem.CombatResult result = combat.calculateAttack(a, d);
+    // 2560 * 17/100 = 435; -256 = 179; *50/100 = 89; absorb 22.
+    assertEquals(67f / 256f, result.totalDamageHp());
+    assertEquals(22f / 256f, result.absorbedLifeHp());
+  }
+
+  @Test void monsterResistanceIsNotClampedToThePlayerCap() {
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.isMonster = true;
+    d.resistances[LIGHTNING] = 90;
+    assertEquals(1f, combat.calculateAttack(attacker(10), d).totalDamageHp());
+    d.resistances[LIGHTNING] = 100;
+    CombatSystem.AttackerData a = attacker(10);
+    a.elementalPierce[LIGHTNING] = 200;
+    assertEquals(0f, combat.calculateAttack(a, d).totalDamageHp());
+  }
+
+  @Test void absorbPercentCapsAtFortyBeforeFlatAbsorb() {
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.absorbPercent[LIGHTNING] = 80;
+    d.absorbFlat[LIGHTNING] = 1;
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker(10), d);
+    assertEquals(5f, result.totalDamageHp());
+    assertEquals(5f, result.absorbedLifeHp());
+  }
+
+  @Test void playerMaxResistanceCapsAtNinetyFiveAndNegativeResistanceAtMinusHundred() {
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.isPlayer = true;
+    d.maxResistances[LIGHTNING] = 125;
+    d.resistances[LIGHTNING] = 200;
+    assertEquals(0.5f, combat.calculateAttack(attacker(10), d).totalDamageHp());
+    d.resistances[LIGHTNING] = -200;
+    assertEquals(20f, combat.calculateAttack(attacker(10), d).totalDamageHp());
+  }
+
+  @Test void pierceAboveHundredIsNotPrematurelyClamped() {
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.isMonster = true;
+    d.resistances[LIGHTNING] = 90;
+    CombatSystem.AttackerData a = attacker(10);
+    a.elementalPierce[LIGHTNING] = 150;
+    assertEquals(16f, combat.calculateAttack(a, d).totalDamageHp());
   }
 }

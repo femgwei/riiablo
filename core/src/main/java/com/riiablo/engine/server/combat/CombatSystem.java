@@ -289,7 +289,7 @@ public class CombatSystem {
     public int[] resistances = new int[DAMAGE_TYPE_COUNT];
 
     /** Native maximum resistance caps (75 + max*resist stats). */
-    public int[] maxResistances = new int[DAMAGE_TYPE_COUNT];
+    public int[] maxResistances = {0, 75, 75, 75, 75, 75};
 
     /** 物理伤害减免（Damage Reduced） */
     public int damageReduced;
@@ -1886,6 +1886,10 @@ public class CombatSystem {
         elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
       }
       if (elemDamage > 0) {
+        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
+          resolveNativeLightningDamage(elemDamage, attacker, defender, result);
+          continue;
+        }
         result.elementalDamage[i] = applyElementalResistance(
             elemDamage, defender, i, attacker.elementalPierce[i], result.elementalScale);
         int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i,
@@ -1895,12 +1899,12 @@ public class CombatSystem {
       }
     }
 
-    // D2MOO applies the global PvP scalar after elemental resistance and
-    // before life/mana leech are derived.  Keep poison's per-frame payload
-    // scaled as well; its duration is unchanged.
+    // Preserve legacy ordering outside the opted-in Nova lightning packet,
+    // which already applied native PvP scaling before mitigation.
     if (attacker.isPlayer && defender.isPlayer) {
       result.physicalDamage = result.physicalDamage * PVP_DAMAGE_PERCENT / 100;
       for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
+        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) continue;
         result.elementalDamage[i] = (int) ((long) result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100);
       }
     }
@@ -2210,9 +2214,35 @@ public class CombatSystem {
     return Math.max(1, damage);
   }
 
-  /**
-   * 应用元素抗性
-   */
+  /** Nova's 8.8 lightning row from SUNITDMG_CalculateTotalDamage / ApplyResistancesAndAbsorb. */
+  private void resolveNativeLightningDamage(int rawDamage, AttackerData attacker,
+      DefenderData defender, CombatResult result) {
+    int type = DAMAGE_LIGHTNING;
+    long resistance = defender.resistances[type];
+    // Monster immunity is checked before passive pierce; player resistance
+    // above 100 remains subject to the ordinary maximum resistance cap.
+    if (defender.immuneElemental[type] || (defender.isMonster && resistance >= 100)) return;
+    resistance -= attacker.elementalPierce[type];
+    if (!defender.isMonster) {
+      resistance = Math.min(resistance,
+          Math.min(ABSOLUTE_MAX_RESISTANCE, defender.maxResistances[type]));
+    }
+    resistance = Math.max(MIN_RESISTANCE, Math.min(100L, resistance));
+
+    long damage = rawDamage;
+    if (attacker.isPlayer && defender.isPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100L;
+    damage = Math.max(0L, damage - (long) Math.max(0, defender.magicDamageReduced) * 256);
+    damage = damage * (100 - resistance) / 100L;
+
+    int percent = Math.max(0, Math.min(40, defender.absorbPercent[type]));
+    long absorbed = damage * percent / 100L;
+    absorbed += Math.min(damage - absorbed,
+        (long) Math.max(0, defender.absorbFlat[type]) * 256);
+    result.elementalDamage[type] = saturatingInt(damage - absorbed);
+    result.absorbedLife = saturatingInt((long) result.absorbedLife + absorbed);
+  }
+
+  /** Applies elemental resistance using the legacy attack ordering. */
   private int applyElementalResistance(int damage, DefenderData defender, int damageType,
       int piercePercent) {
     return applyElementalResistance(damage, defender, damageType, piercePercent, 1);

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.AuraManagerPulseTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:34:05" hostname="DESKTOP-7GGAVHU" time="0.006">
+  <properties/>
+  <testcase name="paidAuraPublishesZeroStatsWhenUnfundedAndSuppressesManaRegenOnlyWhenUseful()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.0"/>
+  <testcase name="damageAuraSelfLayerDoesNotCountAsUsefulWithoutAValidDamageTarget()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.0"/>
+  <testcase name="redemptionConsumesManaOnlyAfterACorpseIsActuallyConsumed()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.0"/>
+  <testcase name="cleansingPulseAlsoProcessesTheCaster()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.001"/>
+  <testcase name="differentSkillsUsingOneStateReplaceAndRestoreWithoutLeavingHiddenEffects()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.0"/>
+  <testcase name="paidAuraWithNoValidRangeTargetKeepsSelectionAndDefersManaUntilUsefulPulse()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.001"/>
+  <testcase name="differentSkillsUsingOneStateShareOneNativeWinnerSlot()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.0"/>
+  <testcase name="unfundedStrongerSameStateAuraKeepsItsWinnerRelation()" classname="com.riiablo.engine.server.AuraManagerPulseTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -139,6 +139,20 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   private static float resistanceSample(long seed, int resistance) {
+    return resistanceSample(seed, resistance, 0, 0, 0);
+  }
+
+  @Test
+  void collisionUsesNativeMdrAndAbsorbOrder() {
+    float raw = resistanceSample(0, 0);
+    int afterMdrAndResistance = Math.max(0, (int) (raw * 256) - 256) / 2;
+    int absorbed = afterMdrAndResistance * 40 / 100;
+    float expected = (afterMdrAndResistance - absorbed) / 256f;
+    assertEquals(expected, resistanceSample(0, 50, 1, 80, 0), EPSILON);
+  }
+
+  private static float resistanceSample(long seed, int resistance,
+      int mdr, int absorbPercent, int absorbFlat) {
     java.util.Random caller = com.badlogic.gdx.math.MathUtils.random;
     com.badlogic.gdx.math.MathUtils.random = new com.badlogic.gdx.math.RandomXS128(seed);
     RecordingFactory factory = new RecordingFactory();
@@ -147,6 +161,11 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       world = world(factory);
       int caster = player(world, 1);
       int resisted = monster(world, 5, 0, resistance);
+      Attributes targetAttrs = world.getMapper(AttributesWrapper.class).get(resisted).attrs;
+      targetAttrs.base().put(Stat.magic_damage_reduction, mdr);
+      targetAttrs.base().put(Stat.item_absorblight_percent, absorbPercent);
+      targetAttrs.base().put(Stat.item_absorblight, absorbFlat);
+      targetAttrs.reset();
       int immune = monster(world, 0, 5, 100);
 
       cast(world, caster);
