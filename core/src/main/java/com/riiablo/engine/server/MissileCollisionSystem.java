@@ -1721,7 +1721,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
               && mMonster.get(targetId).monstats.demon,
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
-          ignoreTargetDefenseAllowed);
+          ignoreTargetDefenseAllowed,
+          missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA);
       boolean damageHit = combat.hit && !combat.blocked;
       if (damageHit) {
         headlessPierceLastHitMissile = missileId;
@@ -1771,7 +1772,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
         queueHitReaction(targetId, combat);
       } else {
-        float damage = combat.totalDamage * Math.max(0.01f, missile.damageMultiplier);
+        float damage = combat.totalDamageHp() * Math.max(0.01f, missile.damageMultiplier);
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit "
                 + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
                 + "chance={} roll={} "
@@ -1781,10 +1782,10 @@ public class MissileCollisionSystem extends IteratingSystem {
             statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
             combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll,
             combat.physicalDamage,
-            combat.elementalDamage[CombatSystem.DAMAGE_FIRE],
-            combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING],
-            combat.elementalDamage[CombatSystem.DAMAGE_COLD],
-            combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+            combat.elementalDamageHp(CombatSystem.DAMAGE_FIRE),
+            combat.elementalDamageHp(CombatSystem.DAMAGE_LIGHTNING),
+            combat.elementalDamageHp(CombatSystem.DAMAGE_COLD),
+            combat.elementalDamageHp(CombatSystem.DAMAGE_POISON),
             damage, combat.critical, combat.deadlyStrike,
             combat.crushingBlow);
         // Native cold/freeze callbacks run as part of the impact packet,
@@ -1826,12 +1827,12 @@ public class MissileCollisionSystem extends IteratingSystem {
           if (combat.absorbedLife > 0) {
             StatRef maxHitpoints = targetAttrs.get(Stat.maxhp, StatRef.obtain());
             float maxLife = maxHitpoints != null ? Math.max(0f, maxHitpoints.asFixed()) : Float.MAX_VALUE;
-            float requestedHeal = combat.absorbedLife * Math.max(0.01f, missile.damageMultiplier);
+            float requestedHeal = combat.absorbedLifeHp() * Math.max(0.01f, missile.damageMultiplier);
             float healed = Math.max(0f, Math.min(requestedHeal, maxLife - hitpoints.asFixed()));
             if (healed > 0f) {
               hitpoints.add(healed);
               log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",
-                  missileId, targetId, combat.absorbedLife, healed,
+                  missileId, targetId, combat.absorbedLifeHp(), healed,
                   hitpoints.asFixed(), maxLife);
             }
           }
@@ -1854,7 +1855,7 @@ public class MissileCollisionSystem extends IteratingSystem {
                   + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
                   + "chance={} roll={}",
               missileId, missile.ownerId, targetId, targetHitpoints.asFixed() + appliedDamage,
-              hpAfter, appliedDamage, combat.totalDamage,
+              hpAfter, appliedDamage, combat.totalDamageHp(),
               statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
               combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
           if (hpAfter <= 0) {

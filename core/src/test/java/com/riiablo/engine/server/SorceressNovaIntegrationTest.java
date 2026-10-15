@@ -113,23 +113,18 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   @Test
   void collisionAppliesLightningResistanceAndNativeImmunityGate() {
-    int zeroAfterResistance = 0;
-    int positiveAfterResistance = 0;
+    int fractionalRolls = 0;
     for (int seed = 0; seed < 64; seed++) {
       float raw = resistanceSample(seed, 0);
       float resisted = resistanceSample(seed, 50);
-      assertTrue(raw >= 1 && raw <= 19, "native missile getter maximum is exclusive");
-      // CombatSystem currently settles elemental resistance in integer HP.
-      // A rolled 1 becomes 0 at 50%; asserting at least 1 was seed-dependent.
-      // Compare equal rolls instead, so a missing hit/resistance application
-      // cannot be hidden by merely widening the old allowed HP interval.
-      assertEquals((int) raw / 2, resisted, EPSILON, "seed=" + seed + " raw=" + raw);
-      if (resisted == 0) zeroAfterResistance++;
-      else positiveAfterResistance++;
+      assertTrue(raw >= 1 && raw < 20, "native missile getter maximum is exclusive");
+      assertEquals((int) (raw * 256) / 2 / 256f, resisted, EPSILON,
+          "seed=" + seed + " raw=" + raw);
+      assertTrue(resisted >= 0.5f, "the minimum roll must retain half a HP");
+      if (raw != (int) raw) fractionalRolls++;
       System.out.println("NovaResistance seed=" + seed + " raw=" + raw + " resisted=" + resisted);
     }
-    assertTrue(zeroAfterResistance > 0, "exercise the old assertion's counterexample");
-    assertTrue(positiveAfterResistance > 0, "also require non-zero resisted damage");
+    assertTrue(fractionalRolls > 0, "roll in fixed-point units before resistance");
   }
 
   @Test
@@ -165,6 +160,10 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       assertEquals(2, factory.created.get(0).sharedHitTargets.size,
           "resisted and immune targets are each claimed once by the cast");
       float result = 1000f - life(world, resisted);
+      DamageProbe probe = world.getSystem(DamageProbe.class);
+      assertEquals(resisted, probe.victim);
+      assertEquals(result, probe.damage, EPSILON, "HP loss must match the damage event");
+      assertEquals(result, probe.lightning, EPSILON, "event channel must retain fixed-point HP");
       for (int i = 0; i < 6; i++) world.process();
       assertEquals(result, 1000f - life(world, resisted), EPSILON,
           "overlapping paths must not replay the resisted hit");
@@ -285,7 +284,7 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   private static World world(RecordingFactory factory, Map map) {
     return new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new ServerSkillSystem(true),
+        .with(new EventSystem(), new DamageProbe(), new ServerSkillSystem(true),
             new StateUpdater(), new MissileCollisionSystem(), factory)
         .build()
         .register("factory", factory)
@@ -416,6 +415,19 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
     @Override public int createItem(Item item, float x, float y) {
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private static final class DamageProbe extends PassiveSystem {
+    int victim = -1;
+    float damage;
+    float lightning;
+
+    @Subscribe
+    public void onDamage(com.riiablo.engine.server.event.DamageEvent event) {
+      victim = event.victim;
+      damage = event.damage;
+      lightning = event.lightningDamage;
     }
   }
 

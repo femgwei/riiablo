@@ -114,13 +114,13 @@ public class DamageEvent implements Event {
   public DamageEvent withElementalDamage(CombatSystem.CombatResult result, float scale) {
     if (result == null) return this;
     float appliedScale = Math.max(0f, scale);
-    fireDamage = Math.max(0f, result.elementalDamage[CombatSystem.DAMAGE_FIRE] * appliedScale);
+    fireDamage = Math.max(0f, result.elementalDamageHp(CombatSystem.DAMAGE_FIRE) * appliedScale);
     lightningDamage = Math.max(0f,
-        result.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] * appliedScale);
-    coldDamage = Math.max(0f, result.elementalDamage[CombatSystem.DAMAGE_COLD] * appliedScale);
-    magicDamage = Math.max(0f, result.elementalDamage[CombatSystem.DAMAGE_MAGIC] * appliedScale);
+        result.elementalDamageHp(CombatSystem.DAMAGE_LIGHTNING) * appliedScale);
+    coldDamage = Math.max(0f, result.elementalDamageHp(CombatSystem.DAMAGE_COLD) * appliedScale);
+    magicDamage = Math.max(0f, result.elementalDamageHp(CombatSystem.DAMAGE_MAGIC) * appliedScale);
     poisonDamage = Math.max(0f,
-        result.elementalDamage[CombatSystem.DAMAGE_POISON] * appliedScale);
+        result.elementalDamageHp(CombatSystem.DAMAGE_POISON) * appliedScale);
     return this;
   }
 

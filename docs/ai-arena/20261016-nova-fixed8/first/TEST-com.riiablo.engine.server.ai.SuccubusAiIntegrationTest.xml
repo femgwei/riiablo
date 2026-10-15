@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:23:00" hostname="DESKTOP-7GGAVHU" time="1.276">
+  <properties/>
+  <testcase name="deathStopsFurtherDecisions()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="1.211"/>
+  <testcase name="existingCurseAndDistanceEqualitySkipTheCurseChain()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.009"/>
+  <testcase name="failedRangedCastUsesApproachOrSlotFiveWait()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.009"/>
+  <testcase name="failedMeleeAttackUsesSlotFourWait()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.004"/>
+  <testcase name="secondCurseUsesSelfLifeAndInclusiveThreshold()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.004"/>
+  <testcase name="firstCursePrecedesMeleeAndOtherCursesAcrossDifficulties()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.011"/>
+  <testcase name="thirdAndFourthCursesUseStrictMaxLifeVersusManaComparison()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.007"/>
+  <testcase name="lifePercentageTruncatesEachFixedPointStatBeforeDivision()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.003"/>
+  <testcase name="rangedSkillFiveUsesSlotSevenAsChanceBeforeApproach()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.003"/>
+  <testcase name="sevenRealRowsSelectDedicatedAi()" classname="com.riiablo.engine.server.ai.SuccubusAiIntegrationTest" time="0.003"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+Succubus row=succubus3 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus5 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus7 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus2 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus4 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus6 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+Succubus row=succubus1 skills=[, , Defense Curse, Blood Mana, SuccubusBolt]
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

@@ -191,6 +191,8 @@ public class CombatSystem {
 
     /** 攻击是否是远程（投射物） */
     public boolean isMissile;
+    /** Opt-in 8.8 elemental packet; legacy callers remain in whole HP. */
+    public boolean fixedPointElements;
 
     /** Missiles.txt ToHit is disabled, so collision itself guarantees a hit. */
     public boolean alwaysHit;
@@ -351,11 +353,31 @@ public class CombatSystem {
     /** 最终物理伤害 */
     public int physicalDamage;
 
-    /** 各元素伤害 */
+    /** Elemental amounts in elementalScale units per HP. */
     public int[] elementalDamage = new int[DAMAGE_TYPE_COUNT];
 
-    /** 总伤害 */
+    /** Legacy whole-HP projection; precision-aware callers use totalDamageHp(). */
     public int totalDamage;
+
+    /** Units per HP for elementalDamage and absorbedLife only. */
+    public int elementalScale = 1;
+
+    public float elementalDamageHp(int type) {
+      return elementalDamage[type] / (float) elementalScale;
+    }
+
+    public float absorbedLifeHp() {
+      return absorbedLife / (float) elementalScale;
+    }
+
+    public float totalDamageHp() {
+      if (elementalScale == 1) return totalDamage;
+      float total = physicalDamage;
+      for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
+        if (i != DAMAGE_POISON || poisonDuration <= 0) total += elementalDamageHp(i);
+      }
+      return total;
+    }
 
     /** 生命偷取数量 */
     public int lifeStolen;
@@ -363,7 +385,7 @@ public class CombatSystem {
     /** 法力偷取数量 */
     public int manaStolen;
 
-    /** Life restored by elemental absorption during this hit. */
+    /** Life restored by elemental absorption, in elementalScale units per HP. */
     public int absorbedLife;
 
     /** 实际命中率 */
@@ -408,6 +430,7 @@ public class CombatSystem {
         elementalDamage[i] = 0;
       }
       totalDamage = 0;
+      elementalScale = 1;
       lifeStolen = 0;
       manaStolen = 0;
       absorbedLife = 0;
@@ -722,6 +745,27 @@ public class CombatSystem {
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
         difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead, true);
+  }
+
+  /** Full missile context with an explicit elemental precision opt-in. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      int difficulty, int magicTargetBonusPercent,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, boolean fixedPointElements) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements);
   }
 
   /** Resolves a fixed elemental packet for area effects that have no missile
@@ -1416,6 +1460,29 @@ public class CombatSystem {
       StateList.WeaponMasteryBonus mastery, int difficulty,
       int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, precomputedPhysicalDamage,
+        physicalConversionPercent, physicalConversionType, mastery, difficulty,
+        magicTargetBonusPercent, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, enhancedDamageBonus, false);
+  }
+
+  private CombatResult calculateAttackInternal(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, boolean precomputedPhysicalDamage,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList.WeaponMasteryBonus mastery, int difficulty,
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus,
+      boolean fixedPointElements) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -1425,6 +1492,7 @@ public class CombatSystem {
     AttackerData a = new AttackerData();
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
+    a.fixedPointElements = fixedPointElements;
     a.alwaysHit = alwaysHit;
     a.difficulty = Math.max(0, Math.min(2, difficulty));
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
@@ -1715,6 +1783,7 @@ public class CombatSystem {
    */
   public CombatResult calculateAttack(AttackerData attacker, DefenderData defender) {
     CombatResult result = new CombatResult();
+    result.elementalScale = attacker.fixedPointElements ? 256 : 1;
 
     // 1. Resolve the complete hit packet once. Both the combat result and
     // the structured missile audit consume this same AR/defense/chance/roll
@@ -1812,14 +1881,15 @@ public class CombatSystem {
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
-      if (i == attacker.physicalConversionType) elemDamage += convertedDamage;
+      if (i == attacker.physicalConversionType) elemDamage += convertedDamage * result.elementalScale;
       if (i == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0) {
         elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
       }
       if (elemDamage > 0) {
         result.elementalDamage[i] = applyElementalResistance(
-            elemDamage, defender, i, attacker.elementalPierce[i]);
-        int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i);
+            elemDamage, defender, i, attacker.elementalPierce[i], result.elementalScale);
+        int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i,
+            result.elementalScale);
         result.elementalDamage[i] -= absorbed;
         result.absorbedLife += absorbed;
       }
@@ -1831,7 +1901,7 @@ public class CombatSystem {
     if (attacker.isPlayer && defender.isPlayer) {
       result.physicalDamage = result.physicalDamage * PVP_DAMAGE_PERCENT / 100;
       for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-        result.elementalDamage[i] = result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100;
+        result.elementalDamage[i] = (int) ((long) result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100);
       }
     }
 
@@ -1841,7 +1911,7 @@ public class CombatSystem {
       // Poison damage is applied by StateUpdater over its duration. Do not
       // also apply it as an immediate hit when a duration is present.
       if (i != DAMAGE_POISON || result.poisonDuration <= 0) {
-        result.totalDamage += result.elementalDamage[i];
+        result.totalDamage += result.elementalDamage[i] / result.elementalScale;
       }
     }
 
@@ -1850,7 +1920,7 @@ public class CombatSystem {
     result.manaStolen = calculateManaLeech(result.physicalDamage, attacker);
 
     log.debug("[COMBAT_HIT] result=hit physical={} total={} chance={}% crit={} deadly={} crushing={}",
-        result.physicalDamage, result.totalDamage, result.hitChance, 
+        result.physicalDamage, result.totalDamageHp(), result.hitChance,
         result.critical, result.deadlyStrike, result.crushingBlow);
 
     return result;
@@ -2070,8 +2140,11 @@ public class CombatSystem {
    * 计算元素伤害
    */
   private int calculateElementalDamage(AttackerData attacker, int damageType) {
-    int minDmg = attacker.elementalMinDamage[damageType];
-    int maxDmg = attacker.elementalMaxDamage[damageType];
+    int scale = attacker.fixedPointElements ? 256 : 1;
+    int minDmg = scale == 1 ? attacker.elementalMinDamage[damageType]
+        : saturatingInt((long) attacker.elementalMinDamage[damageType] * scale);
+    int maxDmg = scale == 1 ? attacker.elementalMaxDamage[damageType]
+        : saturatingInt((long) attacker.elementalMaxDamage[damageType] * scale);
 
     if (maxDmg <= 0) {
       return 0;
@@ -2142,6 +2215,11 @@ public class CombatSystem {
    */
   private int applyElementalResistance(int damage, DefenderData defender, int damageType,
       int piercePercent) {
+    return applyElementalResistance(damage, defender, damageType, piercePercent, 1);
+  }
+
+  private int applyElementalResistance(int damage, DefenderData defender, int damageType,
+      int piercePercent, int scale) {
     if (defender.immuneElemental[damageType]) {
       return 0;
     }
@@ -2159,26 +2237,29 @@ public class CombatSystem {
     resistance = Math.max(MIN_RESISTANCE, resistance);
     resistance = Math.min(maxResist, resistance);
 
-    damage = damage * (100 - resistance) / 100;
+    damage = (int) Math.min(Integer.MAX_VALUE, (long) damage * (100 - resistance) / 100);
 
-    // Native Magic Damage Reduced by X applies to fire, lightning, cold and
-    // magic packets (but not physical or poison) after resistance and before
-    // elemental absorb.
+    // Preserve the legacy attack ordering here. Native MDR precedes
+    // resistance; migrating that rule is separate from the precision opt-in.
     if (damageType != DAMAGE_POISON && damageType != DAMAGE_PHYSICAL) {
-      damage -= defender.magicDamageReduced;
+      damage = (int) Math.max(0L, damage - (long) defender.magicDamageReduced * scale);
     }
 
     return Math.max(0, damage);
   }
 
   private int absorbElementalDamage(int damage, DefenderData defender, int damageType) {
+    return absorbElementalDamage(damage, defender, damageType, 1);
+  }
+
+  private int absorbElementalDamage(int damage, DefenderData defender, int damageType, int scale) {
     if (damage <= 0 || defender.absorbPercent == null || damageType >= defender.absorbPercent.length) {
       return 0;
     }
     int percent = Math.max(0, Math.min(100, defender.absorbPercent[damageType]));
     int flat = defender.absorbFlat != null && damageType < defender.absorbFlat.length
-        ? Math.max(0, defender.absorbFlat[damageType]) : 0;
-    int absorbed = damage * percent / 100;
+        ? (int) Math.min(Integer.MAX_VALUE, Math.max(0L, (long) defender.absorbFlat[damageType] * scale)) : 0;
+    int absorbed = (int) ((long) damage * percent / 100);
     absorbed = Math.min(damage, absorbed + Math.min(flat, damage - absorbed));
     return absorbed;
   }

@@ -1,0 +1,10 @@
+Baseline: 8 tests, 1 expected precision failure (seed 0, 1.5 vs 1.0 HP).
+final: 233 tests, 0 failures/errors/skips.
+repeat: 233 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 8F85EE35DB265C11A8458DC117E585833ACB7F023C8F8A0C7972DEBCA29E1500 core/src/main/java/com/riiablo/engine/server/combat/CombatSystem.java
+SHA256 1D45AFC540E3D4B86F51B5A1C8D835DEADAF00FF6DF79C3570661B86E7918ED5 core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java
+SHA256 5860BB05F6AF7AC7F17A0BF0CB7985D439FAB66919DB7802A0423239347A81CA core/src/main/java/com/riiablo/engine/server/event/DamageEvent.java
+SHA256 44772BAB5D8E18C485DF20CFF85FEE6A0F1BD37047AB60E415B609559A850047 core/src/test/java/com/riiablo/engine/server/SorceressNovaIntegrationTest.java
+SHA256 55BE596AF73E57BB7DDCD05073E29C096E15F2F6070A63BE46DEF91E860325E4 core/src/test/java/com/riiablo/engine/server/combat/NovaFixedPointDamageTest.java
+PARTIAL: precision verified; native mitigation ordering, caps and RNG remain unverified.
