@@ -439,3 +439,29 @@ D2Common `0x6FDAA720..A87B`、`0x6FDAA9F0..ABE7`的局部静态交叉核验；
 寻路核心生产链仍需prepared target/unit身份、distance/final/索引及flags续算状态，
 按实际pathType适配Toward2/13及WallFollow15等，再受控接入并验收真实消费/恢复分支。
 这些未完成前不标寻路收口；火焰之河AI fallback仍未修复/重跑，其余验收覆盖保持单列。
+
+## 后续第十批：WallFollow 原版内核与上游增强要区分
+
+新增`D2WallFollow`准备坐标目标后的type15路点生成，补双侧贴墙、原路线回接、闭环、预算
+截断和原生直线化；hasTargetUnit仅代表距离下限40，不代替单位目标准备或跟踪状态。
+本轮仍不接入生产Map/Pathfinder，不改变近期碰撞、房间、平滑或步进，不将普通exact失败升级partial。
+
+完整读取固定D2MOO`0c0bbd1e`的PathWF.cpp，本轮未fetch。核对本机1.10f D2Common
+`0x6FDABAC0..C589`，SHA256与此前一致。结论不是“上游每行都比当前更原版”：
+上游空cache距离返回INT_MAX是明确的非原版增强；DLL实际读取cache+0x20的finished槽，
+按packed (0或1,0)参与int32平方乘加和有符号比较。本轮安全模拟原始读值，不照搬增强。
+具体栈槽、初始化/写值/读取地址和复验命令见
+[第十批记录](d2moo-upstream-port-2026-10-15.md#第十批wallfollowtype15-原生绕墙路点内核)。
+
+同时保留任一侧finished即退出、同距选cache2、best/current计数不同、回接更新index后
+再自增导致跳过一次碰撞查询的原版细节。最后一项已有阻挡夹具证明：raw可能含未检查的墙点，
+因此该参考内核不能被当作可直接安装生产的碰撞安全路径，也不能据此宣称性能或体验更优。
+D2PathMisc.simplify已静态核对1.10f `0x6FDAC170`，本轮只更新其旧版本注释，不改实现。
+
+新增20项测试，含单项5000组稳定场的终止/边界/重放检查；合并199项/27类通过，失败/错误/跳过0。
+夹具有手工分支预期及Java原生内存碰撞pattern/mask；不是原版DLL动态执行，不是5000项JUnit。
+无新增MPQ/TCP/GL、全图/多seed难度或性能验收。代码/测试`9d6ee2754`已推送且远端SHA一致。
+
+**寻路仍未完成**。下一步优先prepared target/unit、distance/final/索引及flags续算模型，再按实际
+pathType受控接入Toward2/13、WallFollow15等，并验收真实消费、失败与恢复分支。
+普通生产仍Map→AStarPathFinder；火焰之河AI fallback及其余覆盖继续单列，不宣称收口。

@@ -10,7 +10,27 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第九批：Toward 路点内核；寻路仍未完成
+## 2026-10-15 第十批：WallFollow/type15 路点内核；尚未接入生产
+
+- 按用户要求继续未完成的寻路。本轮新增`D2WallFollow`，移植准备好坐标目标后的type15
+  双侧绕墙、回接原路线、闭环检测、预算截断和原生直线化；不是普通A*替换或完整动态路径包装器。
+  `hasTargetUnit`仅表达原生距离下限40规则，不解析/跟踪单位。碰撞pattern/mask/room由调用方提供。
+- 固定D2MOO`0c0bbd1e`，本轮未fetch；读取完整PathWF.cpp，结合本机1.10f D2Common
+  `0x6FDABAC0..C589`静态核对。空cache距离显式模拟前一槽packed finished，即(0或1,0)，
+  不照搬上游非原版INT_MAX保护；保留int32距离回绕、任一侧完成即退出、同距选第二侧、
+  返回current而非best计数、回接后跳过一次碰撞查询等细节。结果不保证所有输出段均无碰撞。
+- 新增20项测试通过，含1项5000组固定输入的终止/边界/重放检查；合并199项/27类通过，
+  失败/错误/跳过0。含内存原生碰撞网格pattern/mask，但非原版DLL动态oracle或5000项JUnit。
+  XML：`core/build/test-results/upstreamRound4-round10-full`；本轮未跑新MPQ/TCP/GL或性能测试。
+- 代码/测试`9d6ee2754952c0a215b616ee3aac70dc4da8514d`已推送origin/master、远端SHA一致。
+  四文档独立提交推送；复验命令、地址和边界见上游记录第十批。另一轮Inferno/AnimStepper/
+  FrozenHorror/AI arena修改保持独立，未暂存、修改或纳入本轮提交与专项验收。
+- **寻路仍未完成**：普通生产仍Map→AStarPathFinder。下一步优先补prepared target/unit身份、
+  distance/final goal/索引及flags续算模型，再按实际type受控接入Toward2/13、WallFollow15等，
+  验收真实地形/动态碰撞的消费、失败、恢复与续算。保留近期碰撞/房间/平滑/步进优化，
+  不加1.13+目标房间gate，不把普通exact失败升级partial；火焰之河AI fallback未修/未重跑。
+
+## 2026-10-15 第九批：Toward 路点内核；寻路仍未完成（历史）
 
 - 用户要求先完成寻路再转其他D2MOO更新。核对结果：**寻路未完成**，继续寻路，不转其他模块。
   普通生产入口仍为Map→AStarPathFinder；库中的原生算法及只读shadow不等于运行时已切换。

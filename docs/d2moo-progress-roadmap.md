@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 D2MOO 第十批：WallFollow/type15 绕墙内核
+
+- [x] 新增`D2WallFollow`准备坐标目标后的双侧绕墙内核，含原路线回接、闭环、预算截断、
+  原生simplify和targetUnit距离下限40；后者不代替单位目标准备/跟踪。
+- [x] 固定D2MOO`0c0bbd1e`未fetch，完整读取PathWF.cpp并与本机1.10f D2Common静态核对。
+  空缓存按原版packed finished槽计算距离，不采用上游INT_MAX增强；保留int32溢出、同分侧、
+  返回计数和回接后跳过一次碰撞查询的原版细节。raw/reduced点列不是安全安装生产的凭证。
+- [x] 新增20项回归，含单项5000输入确定性终止/边界/重放检查；合并199项/27类通过，
+  失败/错误/跳过0。含内存原生碰撞pattern/mask，非原版动态差分；未新增MPQ/TCP/GL/性能验收。
+- [x] 代码/测试`9d6ee2754`已推送origin/master、远端SHA一致；四文档另行提交推送。
+  D2PathMisc.simplify注释补充1.10f地址证据，未改该helper实现。
+- [ ] **寻路尚未完成**。Toward及WallFollow独立内核尚未成为生产backend，普通入口仍Map→AStarPathFinder。
+  优先补prepared target/unit、distance/final goal/路点索引及flags续算状态，再按实际pathType
+  受控接入并验收真实消费/恢复/失败分支；不整包替换、不放松1.10f房间gate、不自动普通partial。
+  火焰之河AI fallback仍待；原版动态差分、全图/GL/多seed难度和性能覆盖继续单列。
+
 ## 2026-10-15 房屋在人物照亮范围外出现透明缺口
 
 - 用户提供 Lut Gholein 的 p3/p4 对比，确认缺失区域位于人物照亮范围外。

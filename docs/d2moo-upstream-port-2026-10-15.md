@@ -716,6 +716,93 @@ $env:D2_TEST = $env:D2_HOME
 上述是核心生产链的未完成项；GL/全图/多seed三难度、性能及原版动态差分覆盖单列，
 不能从一次冒烟外推。火焰之河AI fallback仍未修/未重跑，也不计作本轮Toward内核的效果。
 
+## 第十批：WallFollow/type15 原生绕墙路点内核
+
+### 实现范围
+
+寻路仍未完成，按用户要求继续寻路。新增
+`D2MOO_JAVA/src/main/java/com/d2moo/common/path/D2WallFollow.java`，实现已准备坐标目标后的
+`PATH_ComputePathOrSlideAlongObstacles`及其双侧绕墙子路径；不是A*，不是生产Map替换。
+API要求uint16坐标、distance 0..77及稳定碰撞回调；`hasTargetUnit`只实现nDistMax至少40，
+不解析/持有单位身份，不执行单位目标准备、distance消费、final goal、flags或续算状态。
+返回不可变raw前缀及原生simplify点列，coordinate reached单独表示；无游戏RNG或生产组件写入。
+
+复用已有Bresenham和simplify，后者实现未改，只补充1.10f地址证据，纠正仅标1.13c的旧注释。
+本轮未改生产碰撞、房间、平滑、步进和近期DLL逆向优化；不加1.13+目标房间gate，
+不把普通exact失败自动升级partial，不替换Baal布尔Toward探针。
+
+### 源码与本机1.10f证据
+
+完整读取固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`的
+`source/D2Common/src/Path/PathWF.cpp`；本轮未fetch，不重置旧检出，不声称覆盖该引用以后的更新。
+本机`G:\BaiduNetdiskDownload\Diablo II 1.10F\D2Common.dll`再次计算SHA256为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+使用objdump静态核对，未执行原版DLL：
+
+- `0x6FDAC270`主入口；`0x6FDAC2E5..C308`单位目标距离提升40，
+  `0x6FDAC330..C499`直线须完整容纳distance-1，否则失败，不裁剪为partial。
+- `0x6FDAC4A4..C4BB`原始步进点数<=2直接返回0，连碰撞查询也不做。
+  `0x6FDAC4C8..C529`遇阻传distance-index，回接使用更新后的index再自增，跳过一次查询。
+  因此即便回调稳定，输出也可能含未检验的阻挡点；不能直接当另一套移动系统的安全路径。
+- `0x6FDABAC0..BBF0`两个cache初始化及四方向表；WallFollow方向从北开始，不同于Toward。
+  `0x6FDABC33..BD67`最多4候选；第四候选虽然设置dead-end调试标志，仍可成功。
+- `0x6FDABD78..BE2E`按major轴接回原点列，`0x6FDABF4D..BFD5`原地替换并保留尾段。
+  `0x6FDABE40..BE89`与对侧同步后反向走旧路即截断，避免闭环。
+- `0x6FDABE8C..BEF0`预算比较为maxLength-originalTotal-1，任一侧finished即退出；
+  syncIndex=0才轮换两侧。maxLength>80保护在本API的0..77入口不可达。
+- `0x6FDAC0BE..C148`按signed int32平方距离择侧，同距选cache2；距离比全局原始start更远则返回0。
+  复制best后返回的却是current计数，可能为0；本轮保留，不将其修正为best计数。
+- `0x6FDAC170..C269`原生直线化，包括-2 delta标记，与现有Java helper一致。
+
+尤其不能直接照搬D2MOO的empty-cache增强：上游无点时返回INT_MAX，并注明不等于原版。
+DLL中cache1 base=esp+0x384、points=+0x3A8、finished=+0x3A4；cache2对应+0x3C/+0x60/+0x5C。
+`0x6FDABFF3..C044`读取points[nPoints-1]，无点时实际读cache+0x20的finished DWORD，
+即packed坐标(0,0)或(1,0)。`0x6FDABB19/BB5D`置0，`0x6FDABECD`置1。
+Java显式建模该槽，不做越界数组访问；平方乘加保留int32回绕及有符号比较，不擅自改long。
+测试使用target=(50006,10)区分空缓存原版负数距离与INT_MAX/long增强；不是任意损坏内存模拟。
+
+### 第十批验证与交付
+
+新增`D2WallFollowTest`20项，覆盖：
+
+- 0/1/2步无查询、distance-1完整容纳、单位目标40下限、四主方向及斜向清晰线。
+- 双侧查询顺序、四主方向回接、另一侧先回接、连续两处障碍和原尾段保留；
+  回接跳过的点即便阻挡也不补查，原生raw与simplify分别断言。
+- 预算只生成一侧点但返回另一侧0计数、空cache/int32溢出、同距选第二侧、第四候选可成功、
+  四候选全阻立即停止、比全局start更远时拒绝、闭环、uint16回绕及X=0非扫描终止符。
+- 真实Java原生内存碰撞网格的pattern/mask权威性、不可变输出/非法输入。
+  另有单项5000组固定输入的终止/边界/确定性重放检查，覆盖近0/32768/65535坐标及稳定哈希碰撞场。
+
+首轮17项通过；补齐三个用例并强化哈希场后最终20项通过，XML
+`core/build/test-results/upstreamRound4-round10-wall-final`，日志`core/build/round10-wall-final.log`。
+最终合并199项/27类通过，失败/错误/跳过0（第九批179+新增20），BUILD SUCCESSFUL。
+路径/碰撞等filters沿用第九批，`com.d2moo.common.path.*`自动包含新类；隔离任务
+`:core:upstreamRound4Test -PupstreamRun=round10-full`，XML
+`core/build/test-results/upstreamRound4-round10-full`，日志`core/build/round10-full.log`。
+5000是单个JUnit中的输入数，不是5000项测试或原版动态oracle；本轮没有新增MPQ/TCP/GL、
+性能、全图/多seed难度验收，不沿用前轮巡游充当新内核验收。
+
+另一电脑最小复验，不依赖本机临时init：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat :core:test --tests '*D2WallFollowTest' --tests '*D2PathMiscTest' --console=plain
+```
+
+标准`:core:test`本轮未另跑；完整标准任务可采用第七/八/九批相同filters。
+代码/测试`9d6ee2754952c0a215b616ee3aac70dc4da8514d`已推送origin/master、远端SHA一致。
+只提交两个库文件及一个测试文件；另一轮Inferno/AnimStepper/FrozenHorror/AI arena修改未纳入。
+四文档独立提交推送，最终文档SHA见git log。
+
+### 下一步与完成门槛
+
+Toward及WallFollow点生成内核已具备独立回归，但**寻路仍未完成**：普通生产仍Map→AStarPathFinder。
+优先补prepared target/unit身份、distance/final goal/路点索引及flags续算状态模型，再按实际
+pathType受控接入Toward2/13、WallFollow15等；不能把raw点非空直接转换成生产exact成功。
+验收实际地形/动态碰撞的消费、失败、恢复和续算，保留近期1.10f房间/碰撞优化。
+火焰之河AI fallback未修/未重跑；GL/全图/多seed三难度、性能及原版动态差分继续单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
