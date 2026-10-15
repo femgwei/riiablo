@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第四十二批补充：NativePathAllocationCollision以真实Class/尺寸/MonStats推导#10152分配碰撞字段，
+Wraith优先于flying/opendoors，缺BaseId拒绝。静态核对1.10f 0x6FDA9480..96DF相关分支。
+新增3项，完整602项/52类通过，失败/错误/跳过0；不是完整分配/live读取，无动态DLL执行，生产仍A*。
+
 第四十一批补充：#11281 size→pattern及pet转换移植并接真实MonStats.interact/npc/inTown，
 nativeSize/ISREVIVE仍显式提供。静态核对1.10f 0x6FDA9250..92ED与0x6FDD1DE4的0/1/1/2表。
 不是live pattern读取，不覆盖技能/Wraith等运行时改写，也不使用unused #11282规则替代。

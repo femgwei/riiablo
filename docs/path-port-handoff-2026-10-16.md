@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十一批续接结果（优先于下方历史起点）
+## 第四十二批续接结果（优先于下方历史起点）
+
+- NativePathAllocationCollision从真实Class/尺寸/MonStats推导#10152分配时的pattern、footprintMask、
+  moveMask：玩家0x80/0x1C09，导弹0/0；怪物0x100，Wraith优先pattern5/mask0x804，
+  再flying 0x1804，再opendoors 0x3401，否则0x3C01。一般pattern复用#11281。
+- 怪物必须有明确BaseId，不把缺失当普通怪物；ISREVIVE显式提供。返回不可变初始化快照，
+  不分配路径/修改网格，不读取live字段，不覆盖技能、死亡或后续修改。
+- 固定上游0c0bbd1并静态核对本地1.10f 0x6FDA9480..96DF相关分支/立即数；非动态DLL执行。
+- 新增3项，完整602项/52类通过，失败/错误/跳过0；core/build/round42-full.log，
+  XML `.gradle/path-port/round42-full/core/test-results/pathPortTest`。
+- 未移植完整#10152（分配、速度/类型/房间插入等），生产仍A*；raw数据/live字段/Act与Zone/shared seed仍待。
+
+## 第四十一批续接结果（历史）
 
 - D2PathFootprint.patternFromSize移植#11281运行时size推导：0/1/2/3→0/1/1/2；
   仅monster且canBeInTown且非interact转换1→3/2→4；越界size提前返回1，不做pet转换。

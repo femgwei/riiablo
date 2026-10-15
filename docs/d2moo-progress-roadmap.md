@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十二批（生产适配仍PARTIAL）
+
+- [x] #10152分配碰撞字段快照接真实ECS表，Wraith/flying/opendoors优先级，静态核对DLL。
+- [x] 新增3项，完整602项/52类通过，无失败/错误/跳过。
+- [ ] 不是完整路径分配/live字段读取；raw数据、Act/Zone/shared seed及后续覆盖仍待。
+
+生产仍Map→AStarPathFinder，不自动安装碰撞或覆盖现有路径字段。
+
 ## 2026-10-16 寻路第四十一批（生产适配仍PARTIAL）
 
 - [x] #11281 size→pattern映射/pet转换及越界提前返回，静态核对1.10f代码/表。

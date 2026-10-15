@@ -25,7 +25,7 @@ gradle.projectsEvaluated {
        'DiabRunIntegrationTest', 'NativePathRoomGraphTest', 'NativePathIdentityTest',
        'ServerEntityFactoryPlayerTargetSlotsTest', 'NativePathUnitBindingTest',
        'NativePathUnitMetadataTest', 'NativePathObjectFootprintTest',
-       'NativePathDynamicFootprintTest'].each { include "**/${it}.java" }
+       'NativePathDynamicFootprintTest', 'NativePathAllocationCollisionTest'].each { include "**/${it}.java" }
     }
   }
   core.tasks.register('pathPortTest', Test) {

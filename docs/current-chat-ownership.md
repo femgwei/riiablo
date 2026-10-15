@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+第四十二批：真实ECS数据推导#10152分配时碰撞pattern/footprint/move mask，Wraith优先于
+flying/opendoors；明确BaseId缺失拒绝。仅初始化快照，不代表live字段或完整动态路径分配。
+新增3项，完整602项/52类通过，失败/错误/跳过0；core/build/round42-full.log。
+静态核对DLL分支/常数，生产仍A*；详细交接见handoff顶部。
+
 第四十一批：移植#11281 size→pattern推导并接真实MonStats.interact/npc/inTown快照，
 ISREVIVE/nativeSize显式提供，不冒充live pattern或unused #11282。静态核对1.10f代码及表。
 新增4项，完整599项/51类通过，失败/错误/跳过0；core/build/round41-full.log。
