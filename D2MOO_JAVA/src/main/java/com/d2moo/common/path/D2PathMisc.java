@@ -118,7 +118,8 @@ public final class D2PathMisc {
     }
 
     /**
-     * Corrected 1.13c {@code PATH_SimplifyToLines}: emits segment endpoints and excludes start.
+     * {@code PATH_SimplifyToLines}: emits segment endpoints and excludes start.
+     * Also checked against 1.10f D2Common 0x6FDAC170 (including the -2 delta marker).
      */
     public static List<D2Path.Point> simplifyToLines(
             D2Path.Point start, List<D2Path.Point> input) {
