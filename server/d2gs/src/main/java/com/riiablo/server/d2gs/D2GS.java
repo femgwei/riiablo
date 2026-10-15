@@ -8606,8 +8606,8 @@ public class D2GS extends ApplicationAdapter {
       case TRADE: return npc.isVendor;
       case GAMBLE: return npc.canGamble;
       case REPAIR: return npc.canRepair;
-      case HIRE:
-      case RESURRECT: return npc.canHire;
+      case HIRE: return npc.canHire;
+      case RESURRECT: return npc.canResurrect;
       default: return false;
     }
   }

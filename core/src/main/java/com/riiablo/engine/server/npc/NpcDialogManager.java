@@ -129,6 +129,9 @@ public class NpcDialogManager {
     /** 是否可雇佣 */
     public boolean canHire;
 
+    /** 是否可复活佣兵；第四幕泰瑞尔只复活、不雇佣。 */
+    public boolean canResurrect;
+
     /** 是否提供传送 */
     public boolean canTravel;
 
@@ -452,11 +455,9 @@ public class NpcDialogManager {
 
     if (def.canHire) {
       options.add(MENU_HIRE);
-
-      // 检查是否有死亡的雇佣兵
-      if (callback != null && callback.hasDeadMercenary(session.playerId)) {
-        options.add(MENU_RESURRECT);
-      }
+    }
+    if (def.canResurrect && callback != null && callback.hasDeadMercenary(session.playerId)) {
+      options.add(MENU_RESURRECT);
     }
 
     if (def.canTravel) {
@@ -585,6 +586,7 @@ public class NpcDialogManager {
         true, true, false, false, false);
     registerNpc(MonsterType.TYRAEL2, "Tyrael", 4, NPC_TYPE_NORMAL,
         false, false, false, false, false);
+    npcDefinitions.get(MonsterType.TYRAEL2).canResurrect = true;
 
     // 第五幕 NPC。D2MOO MonsterIds.h uses 512..516; the MonStats row named
     // Drehya is the NPC displayed in-game as Anya.
@@ -618,6 +620,7 @@ public class NpcDialogManager {
     def.canGamble = gamble;
     def.canRepair = repair;
     def.canHire = hire;
+    def.canResurrect = hire;
     def.canTravel = travel;
 
     npcDefinitions.put(npcId, def);

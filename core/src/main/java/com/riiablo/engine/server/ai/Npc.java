@@ -59,6 +59,7 @@ public class Npc extends AI {
   static final IntSet TRADERS    = new IntSet();
   static final IntSet GAMBLERS   = new IntSet();
   static final IntSet HIRERERS   = new IntSet();
+  static final IntSet RESURRECTERS = new IntSet();
   static final IntSet HEALERS    = new IntSet();
   private static final Array<Npc> VENDOR_NPCS = new Array<>(false, 16, Npc.class);
   static {
@@ -75,6 +76,10 @@ public class Npc extends AI {
     // authoritative mercenary service via the NPC's native hcIdx.
     HIRERERS.addAll(MercenaryManager.NPC_KASHYA, MercenaryManager.NPC_GREIZ,
         MercenaryManager.NPC_ASHEARA, MercenaryManager.NPC_QUAL_KEHK);
+    // SUNITNPC ResurrectMerc_6FCC9350: Act IV Tyrael revives but does not hire.
+    RESURRECTERS.addAll(MercenaryManager.NPC_KASHYA, MercenaryManager.NPC_GREIZ,
+        MercenaryManager.NPC_ASHEARA, MercenaryManager.NPC_QUAL_KEHK,
+        MonsterType.TYRAEL2);
     // SUNITNPC Heal_6FCCB220: healing is independent of trade/repair services.
     HEALERS.addAll(MonsterType.AKARA, MonsterType.ATMA, MonsterType.FARA, MonsterType.ORMUS,
         MonsterType.JAMELLA,
@@ -245,23 +250,20 @@ public class Npc extends AI {
       });
     }
 
+    if (RESURRECTERS.contains(entType)
+        && hasDeadMercenary(Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player)) {
+      menu.addItem(resurrectionLabel(Riiablo.game.player), new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          resurrectMercenary(menuManager);
+        }
+      });
+    }
     if (HIRERERS.contains(entType)) {
-      if (hasDeadMercenary(Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player)) {
-        menu.addItem(resurrectionLabel(Riiablo.game.player), new ClickListener() {
-          @Override
-          public void clicked(InputEvent event, float x, float y) {
-            resurrectMercenary(menuManager);
-          }
-        });
-      }
       menu.addItem(3397, new ClickListener() { // hire
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          NativeMercenaryRewardSystem mercenaries =
-              Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
-          if (mercenaries != null && Riiablo.game != null) {
-            mercenaries.hireAct1Rogue(Riiablo.game.player);
-          }
+          hireMercenary(entType);
         }
       });
     }
@@ -287,7 +289,7 @@ public class Npc extends AI {
 
   /** Refreshes the hireling menu so a death after the first interaction is visible. */
   private void refreshHirelingMenu() {
-    if (!HIRERERS.contains(monstats == null ? -1 : monstats.hcIdx)
+    if (!RESURRECTERS.contains(monstats == null ? -1 : monstats.hcIdx)
         || menuManager == null || dialogManager == null) return;
     if (menu != null) menu.remove();
     menu = null;
@@ -345,6 +347,25 @@ public class Npc extends AI {
       return "复活 " + name + ": " + cost;
     }
     return Riiablo.bundle.format("mercenary_resurrect", name, cost);
+  }
+
+  private void hireMercenary(int npcType) {
+    if (Riiablo.game == null) return;
+    if (Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked()) {
+      ClientNetworkSynchronizer network = Riiablo.engine == null ? null
+          : Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
+      if (network != null) {
+        network.requestNpcService(entityId,
+            com.riiablo.net.packet.d2gs.NpcServiceType.HIRE,
+            com.riiablo.net.packet.d2gs.NpcServiceOperation.HIRE,
+            0, -1, 0);
+      }
+    } else {
+      NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
+          : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+      if (rewards != null) rewards.hireMercenary(Riiablo.game.player, npcType);
+    }
+    if (menuManager != null) menuManager.setMenu(null, Engine.INVALID_ENTITY);
   }
 
   private void resurrectMercenary(MenuManager menus) {
