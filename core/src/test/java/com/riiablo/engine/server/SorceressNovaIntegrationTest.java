@@ -242,6 +242,41 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   private static float absorbSample(float initialLife, int percent, int flat,
       boolean deathDelay, float expectedDamage) {
+    return absorbSample(initialLife, percent, flat, deathDelay, expectedDamage, 0);
+  }
+
+  @Test
+  void positiveDamageWithOneFixedUnitBelowOneHpTriggersDeath() {
+    float raw = resistanceSample(0, 0);
+    assertEquals(0f, absorbSample(raw + 255f / 256f, 0, 0, false, raw, 1), EPSILON);
+  }
+
+  @Test
+  void positiveDamageLeavingExactlyOneHpSurvives() {
+    float raw = resistanceSample(0, 0);
+    assertEquals(1f, absorbSample(raw + 1f, 0, 0, false, raw), EPSILON);
+  }
+
+  @Test
+  void positiveDamageLeavingOneFixedUnitAboveOneHpSurvives() {
+    float raw = resistanceSample(0, 0);
+    assertEquals(257f / 256f, absorbSample(raw + 257f / 256f, 0, 0, false, raw), EPSILON);
+  }
+
+  @Test
+  void deathThresholdUsesLifeAfterAbsorbHealingAndDamage() {
+    int raw = (int) (resistanceSample(0, 0) * 256);
+    float damage = (raw - raw * 40 / 100) / 256f;
+    assertEquals(0f, absorbSample(3f, 40, 0, false, damage, 1), EPSILON);
+  }
+
+  @Test
+  void zeroDamageDoesNotApplyTheDeathThreshold() {
+    assertEquals(0.5f, absorbSample(0.5f, 0, 100, true, 0f), EPSILON);
+  }
+
+  private static float absorbSample(float initialLife, int percent, int flat,
+      boolean deathDelay, float expectedDamage, int expectedDeaths) {
     java.util.Random caller = com.badlogic.gdx.math.MathUtils.random;
     com.badlogic.gdx.math.MathUtils.random = new com.badlogic.gdx.math.RandomXS128(0);
     World world = null;
@@ -271,10 +306,13 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
         assertEquals(expectedDamage, probe.lightning, EPSILON);
       }
       assertEquals(1000f, life(world, immune), EPSILON);
+      assertEquals(expectedDeaths, world.getSystem(DeathProbe.class).count);
       if (initialLife > 0f) assertEquals(2, factory.created.get(0).sharedHitTargets.size);
       for (int i = 0; i < 6; i++) world.process();
       assertEquals(after, life(world, target), EPSILON, "overlapping paths must not replay healing");
       assertEquals(expectedDamage > 0f ? 1 : 0, probe.count);
+      assertEquals(expectedDeaths, world.getSystem(DeathProbe.class).count,
+          "overlapping paths must not replay death");
       return after;
     } finally {
       try {
@@ -392,7 +430,7 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   private static World world(RecordingFactory factory, Map map) {
     return new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new DamageProbe(), new ServerSkillSystem(true),
+        .with(new EventSystem(), new DamageProbe(), new DeathProbe(), new ServerSkillSystem(true),
             new StateUpdater(), new MissileCollisionSystem(), factory)
         .build()
         .register("factory", factory)
@@ -543,9 +581,11 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
 
   private static final class DeathProbe extends PassiveSystem {
     boolean deathObserved;
+    int count;
 
     @Subscribe
     public void onDeath(DeathEvent event) {
+      count++;
       deathObserved = true;
     }
   }

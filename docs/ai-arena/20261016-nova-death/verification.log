@@ -1,0 +1,7 @@
+Baseline: 21 tests, 2 expected missing-death failures.
+final: 251 tests, 0 failures/errors/skips.
+repeat: 251 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 D02405F4FE8A10DFB64C982F2C77450205409D757A187568C7FD262BEAC03794 core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java
+SHA256 0D13077FA13AA922BC9E8E3E8EEC2E4F86608B730C934CA73EC36C85E3F5BCFC core/src/test/java/com/riiablo/engine/server/SorceressNovaIntegrationTest.java
+PARTIAL: ordinary missile sub-1-HP death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

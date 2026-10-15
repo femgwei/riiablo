@@ -1836,9 +1836,12 @@ public class MissileCollisionSystem extends IteratingSystem {
             mercenaryLastDamageTarget = targetId;
             mercenaryLastDamageBefore = hitpoints.asFixed();
           }
+          float lifeBeforeDamage = hitpoints.asFixed();
           hitpoints.sub(appliedDamage);
           float hpAfter = hitpoints.asFixed();
-          if (hpAfter < 0) {
+          // SUNITDMG snaps a positive-damage survivor below 256 fixed units
+          // to zero. A canceled damage event must not kill a fractional-HP unit.
+          if (hpAfter < 0f || (appliedDamage > 0f && hpAfter < 1f)) {
             hitpoints.set(0);
             hpAfter = 0;
           }
@@ -1848,7 +1851,7 @@ public class MissileCollisionSystem extends IteratingSystem {
                   + "damageBefore={} damageAfter={} appliedDamage={} total={} "
                   + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
                   + "chance={} roll={}",
-              missileId, missile.ownerId, targetId, targetHitpoints.asFixed() + appliedDamage,
+              missileId, missile.ownerId, targetId, lifeBeforeDamage,
               hpAfter, appliedDamage, combat.totalDamageHp(),
               statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
               combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
