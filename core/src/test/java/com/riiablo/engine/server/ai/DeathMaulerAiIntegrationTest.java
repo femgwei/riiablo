@@ -57,6 +57,8 @@ class DeathMaulerAiIntegrationTest extends RiiabloTest {
       f.ai.params[2] = 11;
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals(308, f.casting().skillId);
+      assertEquals(Engine.Monster.MODE_A2, f.sequence().mode1,
+          "seq_deathmaulerdig uses A2 rather than the skill's XX fallback");
       assertEquals("CAST", f.ai.getState());
       f.sequence().started = true;
       f.ai.update(10);

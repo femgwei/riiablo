@@ -17,6 +17,10 @@ public class Sequence extends Component {
   public boolean nativeMummy;
   public int nativeMummyFrame;
 
+  /** seq_deathmaulerdig: 35 A2 points, attack action on point 13. */
+  public boolean nativeDeathMaul;
+  public int nativeDeathMaulFrame;
+
   /** Reverse S1 MonSeq used by Tentacle/TentacleHead Submerge. */
   public boolean nativeSubmerge;
   public int nativeSubmergeLastFrame;
@@ -41,6 +45,8 @@ public class Sequence extends Component {
     this.started = false;
     nativeMummy = false;
     nativeMummyFrame = 0;
+    nativeDeathMaul = false;
+    nativeDeathMaulFrame = 0;
     nativeSubmerge = false;
     nativeSubmergeLastFrame = 0;
     nativeSubmergeFrame = 0;

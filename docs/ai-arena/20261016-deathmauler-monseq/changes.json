@@ -1,0 +1,34 @@
+[
+  {
+    "monster": "deathmauler3",
+    "scenario": "far",
+    "changes": [
+      "actions: 32 -> 14",
+      "warnings: 65 -> 14"
+    ]
+  },
+  {
+    "monster": "deathmauler4",
+    "scenario": "far",
+    "changes": [
+      "actions: 34 -> 14",
+      "warnings: 69 -> 14"
+    ]
+  },
+  {
+    "monster": "deathmauler5",
+    "scenario": "far",
+    "changes": [
+      "actions: 35 -> 14",
+      "warnings: 70 -> 14"
+    ]
+  },
+  {
+    "monster": "deathmauler6",
+    "scenario": "far",
+    "changes": [
+      "actions: 35 -> 14",
+      "warnings: 70 -> 14"
+    ]
+  }
+]

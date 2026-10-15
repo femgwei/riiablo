@@ -1,5 +1,12 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 DeathMauler MonSeq（PARTIAL）
+
+技能308改用原表 `seq_deathmaulerdig`：35个A2序列点，第13点只发一次攻击事件。
+默认序列速度256，冻结停钟，状态变速生效；本地客户端跟随重复源帧。
+60项定向测试通过。完整arena仍保留Do136不支持警告及0技能伤害，不作为技能效果验收。
+证据见 [MonSeq验证](ai-arena/20261016-deathmauler-monseq/verification.md)。
+
 ## 最新修复批次：2026-10-16 DeathMauler Fn130（仅决策）
 
 DeathMauler 专用决策覆盖近战A1、远距离技能优先/严格范围、接近及15帧等待。

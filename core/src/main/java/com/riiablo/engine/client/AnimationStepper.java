@@ -45,7 +45,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
         && (cast.monInferno.started || cast.monInferno.horrorSequence);
     com.riiablo.engine.server.component.SummonedPet trap = mSummonedPet.get(entityId);
     if (animData != null && ((trap != null && trap.infernoChanneling)
-        || sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden || sequence.nativeDiabRun || inferno))) {
+        || sequence != null && (sequence.nativeJab || sequence.nativeSubmerge || sequence.nativeFrogHidden || sequence.nativeDiabRun || sequence.nativeDeathMaul || inferno))) {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the
       // resident emergence COF forward would show the opposite action.

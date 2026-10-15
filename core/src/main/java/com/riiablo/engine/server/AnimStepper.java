@@ -127,6 +127,10 @@ public class AnimStepper extends IntervalIteratingSystem {
       processNativeSubmerge(entityId, sequence, animData, states);
       return;
     }
+    if (sequence != null && sequence.nativeDeathMaul) {
+      processNativeDeathMaul(entityId, sequence, animData, states);
+      return;
+    }
     if (sequence != null && sequence.nativeMummy) {
       processNativeMummy(entityId, sequence, animData, states);
       return;
@@ -185,6 +189,27 @@ public class AnimStepper extends IntervalIteratingSystem {
     if (baseSpeed <= 0) return 0;
     int percent = Math.max(10, Math.min(300, 100 + modifierPercent));
     return Math.max(1, (int) ((long) baseSpeed * percent / 100L));
+  }
+
+  private static final int[] DEATH_MAUL_FRAMES = {
+      0,0,1,1,2,2,3,3,4,4,5,6,7,7,7,7,8,8,8,8,9,9,9,9,9,10,10,10,10,11,11,11,11,12,13
+  };
+
+  private void processNativeDeathMaul(int entityId, Sequence sequence, AnimData animData,
+      UnitStates states) {
+    int end = DEATH_MAUL_FRAMES.length << 8;
+    if (!sequence.started || sequence.nativeDeathMaulFrame >= end) return;
+    // D2Common UNITS_InitializeSequence defaults to 256, independent of A2 COF speed.
+    int delta = 256;
+    if (states != null && states.stateList != null)
+      delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+    int previous = sequence.nativeDeathMaulFrame;
+    int next = Math.min(end, previous + delta);
+    sequence.nativeDeathMaulFrame = next;
+    animData.frame = DEATH_MAUL_FRAMES[Math.min(DEATH_MAUL_FRAMES.length - 1, next >>> 8)] << 8;
+    if (previous < (13 << 8) && next >= (13 << 8))
+      events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+    if (next == end) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
   }
 
   /** MonSeq event points supersede variant-specific SC COF keyframes. */

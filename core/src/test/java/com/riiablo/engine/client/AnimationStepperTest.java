@@ -14,6 +14,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void deathMaulFollowsRepeatedA2SourceFrames() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/M5/COF/M5A2HTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 256;
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id).nativeDeathMaul = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame : new int[] {0,0,1,1,7,7,7,8,8,13}) {
+        data.frame = frame << 8; world.process(); assertEquals(frame, animation.getFrame());
+      }
+    } finally { world.dispose(); }
+  }
   @Test void localDiabRunFollowsNativeRnSeeksInsteadOfLoopingResidentCof() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

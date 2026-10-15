@@ -1,5 +1,7 @@
 package com.riiablo.engine.server.ai;
 
+import com.riiablo.engine.Engine;
+
 /** D2MOO AITHINK_Fn130_DeathMauler (AiThink.cpp, 0x6FCEEAD0). */
 public class DeathMauler extends NativeDecisionAI {
   public DeathMauler(int entityId) { super(entityId); }
@@ -12,9 +14,9 @@ public class DeathMauler extends NativeDecisionAI {
       }
     } else {
       if (hasSkill(0) && distance < params[2] && rollAiChance(params[3])) {
-        // Preserve configured skill/mode resolution. DeathMaul Do136 and its
-        // MonSeq are still unsupported by the shared runtime, with warnings.
-        castAt(0, targetId, mPosition.get(targetId).position);
+        // MonStats names a MonSeq, whose backing mode is A2 (not Skills XX).
+        if (castAt(0, targetId, mPosition.get(targetId).position, Engine.Monster.MODE_A2))
+          mSequence.get(entityId).nativeDeathMaul = true;
         return;
       }
       if (rollAiChance(params[1])) {
