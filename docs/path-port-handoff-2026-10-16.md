@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第二十六批续接结果（优先于下方历史起点）
+## 第二十七批续接结果（优先于下方历史起点）
+
+- NativePathIdentity在公共EntityFactory实际创建边界分配不可变本地身份token，组件池化重用不复用token。
+  Pathfinder安装实体目标时捕获token，续算/动态阻塞恢复前拒绝旧身份，停止旧追踪，不误追同ID新实体。
+  坐标命令/换目标/Pathfind.reset正确清理或替换；死亡及原地复活不重建身份。
+- 未经工厂管理的旧实体身份为unknown/null，保留原行为；这是host生命周期身份，不是原生unitId、
+  类型映射、网络ID或RNG。尚未绑定D2PathUnits/Continuation的live target观察。
+- 地图桥导出后freeDrlg/releaseDataTables，不能把已释放Act直接挂到Zone。
+  ECS/Zone运行期Act桥、fp16、元数据及共享owner seed仍待，生产仍Map→AStarPathFinder。
+- 新增10项测试，真实玩家工厂测试另补身份断言并纳入path回归；定向29项/3类通过。
+  完整538项/47类通过，失败/错误/跳过0；日志`core/build/round27-full.log`，
+  XML `.gradle/path-port/round27-full/core/test-results/pathPortTest`。
+
+## 第二十六批续接结果（历史）
 
 - 新增D2PathActiveRooms，从真实D2DrlgAct活动房间链按对象身份投影raw subtile bounds、town、
   ppRoomList有效前缀；不再用RoomEx顺序代替live列表。分配压缩/删除尾项换位均由现有Dungeon提供。

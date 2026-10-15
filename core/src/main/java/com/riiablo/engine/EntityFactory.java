@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.DS1ObjectWrapper;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.UnitLifecycle;
+import com.riiablo.engine.server.component.NativePathIdentity;
 import com.riiablo.item.Item;
 import com.riiablo.map.DS1;
 import com.riiablo.map.Map;
@@ -33,6 +34,7 @@ public abstract class EntityFactory extends PassiveSystem {
   protected ComponentMapper<PathWrapper> mPathWrapper;
   /** Lifecycle marker shared by server and client-side entity factories. */
   protected ComponentMapper<UnitLifecycle> mUnitLifecycle;
+  protected ComponentMapper<NativePathIdentity> mNativePathIdentity;
 
   @Wire(name = "map")
   protected Map map;
@@ -44,6 +46,7 @@ public abstract class EntityFactory extends PassiveSystem {
     mClass.create(id).type = type;
     mClassname.create(id).classname = classname;
     mFlags.create(id).flags = 0;
+    mNativePathIdentity.create(id).allocated(world, id);
     // Creation is an explicit native lifecycle boundary.  The authoritative
     // lifecycle system advances this marker to INSERTED and ACTIVE on the
     // next fixed simulation tick after all components have been attached.

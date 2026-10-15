@@ -20,11 +20,17 @@ class ServerEntityFactoryPlayerTargetSlotsTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new ItemManager(), new ObjectInteractor(),
             new WarpInteractor(), new ItemInteractor(), factory, slots)
-        .build().register("factory", factory).register("map", mock(Map.class)));
+        .build().register("factory", factory).register("map", mock(Map.class))
+        .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry()));
     Riiablo.engine = world;
     try {
       int first = factory.createPlayer("NativeSlotsA", Riiablo.NECROMANCER, 10, 10);
       int second = factory.createPlayer("NativeSlotsB", Riiablo.NECROMANCER, 20, 10);
+      com.riiablo.engine.server.component.NativePathIdentity.Token firstIdentity = world.getMapper(
+          com.riiablo.engine.server.component.NativePathIdentity.class).get(first).token();
+      assertNotNull(firstIdentity);
+      assertNotSame(firstIdentity, world.getMapper(
+          com.riiablo.engine.server.component.NativePathIdentity.class).get(second).token());
       assertEquals(first, slots.playerAtSlot(0), "allocation, not the next ECS tick, registers the head");
       assertEquals(second, slots.playerAtSlot(1));
       long headOrder = slots.registrationOrder(first);
@@ -32,6 +38,7 @@ class ServerEntityFactoryPlayerTargetSlotsTest extends RiiabloTest {
       assertTrue(slots.acceptsChildInsertion(first, NativeTargetOrder.inserted()),
           "a child initialized after factory return is newer than its head");
       world.process();
+      assertTrue(firstIdentity.isCurrent(world, first));
       assertEquals(headOrder, slots.registrationOrder(first));
       assertEquals(first, slots.playerAtSlot(0));
       assertEquals(second, slots.playerAtSlot(1));

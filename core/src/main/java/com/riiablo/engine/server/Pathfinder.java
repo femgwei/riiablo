@@ -26,6 +26,7 @@ import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.NativeAiPathCache;
+import com.riiablo.engine.server.component.NativePathIdentity;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.combat.NativeMeleeDistance;
@@ -50,6 +51,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<NativeAiPathCache> mNativeAiPathCache;
+  protected ComponentMapper<NativePathIdentity> mNativePathIdentity;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<Velocity> mVelocity;
@@ -94,6 +96,11 @@ public class Pathfinder extends IteratingSystem {
     Vector2 position0 = mPosition.get(entityId).position;
     tmpVec2.set(position0);
     Pathfind pathfind = mPathfind.get(entityId);
+    if (pathfind.targetIdentity != null
+        && !pathfind.targetIdentity.isCurrent(world, pathfind.targetEntityId)) {
+      findPath(entityId, null);
+      return;
+    }
 
     // A path is computed before other units move.  If a unit then occupies a
     // later waypoint (for example, the first Fallen reaches the player and
@@ -649,6 +656,9 @@ public class Pathfinder extends IteratingSystem {
       // coordinate, but must still track the original unit on the next tick.
       // Install metadata here for every accepted path, not only public requests.
       pathfind.targetEntityId = targetEntityId;
+      NativePathIdentity targetIdentity = targetEntityId == Engine.INVALID_ENTITY
+          ? null : mNativePathIdentity.get(targetEntityId);
+      pathfind.targetIdentity = targetIdentity == null ? null : targetIdentity.token();
       if (targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)) {
         pathfind.lastTargetPosition.set(mPosition.get(targetEntityId).position);
         pathfind.repathTimer = Pathfind.REPATH_INTERVAL;

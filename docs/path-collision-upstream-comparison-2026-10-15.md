@@ -5,6 +5,13 @@
 
 ## 结论与证据边界
 
+第二十七批补充：生产EntityFactory现生成本地不可变生命周期token，Pathfinder按token检验旧追踪，
+避免实体ID复用后将新单位当旧目标；旧unknown实体保留原兼容行为，死亡/原地复活不更换身份。
+这是host身份适配和生产旧追踪修正，尚未绑定原生live target坐标/元数据/RNG，不等同原生unitId。
+固定D2MOO Path.h中pTargetUnit(+0x58)与dwTargetType/Id(+0x5C/+0x60)为独立字段；本批无新增DLL证据。
+地图桥导出后释放DRLG，运行期Act/Zone桥仍待；生产搜索保持A*。
+定向29项/3类及完整538项/47类通过，失败/错误/跳过0。
+
 第二十六批补充：D2PathActiveRooms现直接捕获live D2DrlgAct房间链和ppRoomList有效前缀，
 按对象身份共享Room/bounds；删除尾项换位不再被RoomEx顺序覆盖。图可绑定RequestEffects和
 Dispatch.Effects，并检查当前链、邻接、bounds、level/backlink与grid引用是否失效。

@@ -20,6 +20,8 @@ public class Pathfind extends PooledComponent {
   
   // Track target entity for dynamic repathing (e.g., following player)
   public int targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
+  /** Null means a legacy/unmanaged target whose allocation identity is unknown. */
+  public NativePathIdentity.Token targetIdentity;
   public final Vector2 lastTargetPosition = new Vector2();
   public float repathTimer = 0f;  // Timer for periodic repathing when following player
   public static final float REPATH_INTERVAL = 0.5f;  // Repath every 0.5 seconds when following player
@@ -41,6 +43,7 @@ public class Pathfind extends PooledComponent {
     destination.setZero();
     targets = Collections.emptyIterator();
     targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
+    targetIdentity = null;
     lastTargetPosition.setZero();
     repathTimer = 0f;
     pendingDirection = -1;

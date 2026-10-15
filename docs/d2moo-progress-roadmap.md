@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第二十七批（生产适配仍PARTIAL）
+
+- [x] 公共实体工厂真实分配边界生成本地身份token，跨World/ID复用/组件池化不混淆。
+- [x] 生产Pathfinder保存目标token，在续算/动态阻塞恢复前停止旧身份追踪；保持A*后端。
+- [x] 新增10项及真实玩家工厂身份断言；完整538项/47类通过，失败/错误/跳过0。
+- [ ] token与原生live target观察结合、单位元数据/fp16/shared owner seed仍待。
+- [ ] ECS/Zone运行期Act桥仍待：当前地图桥导出后释放DRLG，不能直接留用Act引用。
+- [ ] 原生状态消费、实图、性能及另机验收仍待。
+
 ## 2026-10-16 寻路第二十六批（生产适配仍PARTIAL）
 
 - [x] common层从live Act房间链投影真实对象身份、subtile bounds、town与活动邻接有效前缀。

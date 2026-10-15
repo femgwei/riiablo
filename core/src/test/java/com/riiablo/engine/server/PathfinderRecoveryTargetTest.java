@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativePathIdentity;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
@@ -29,6 +30,78 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void knownTargetLifetimeSurvivesRecoveryAndCoordinateCommandClearsIt() {
+    try (Fixture f = new Fixture()) {
+      NativePathIdentity.Token token = f.world.getMapper(NativePathIdentity.class)
+          .create(f.target).allocated(f.world, f.target).token();
+      f.start();
+      assertSame(token, f.path().targetIdentity);
+      f.rejectTarget = true;
+      f.stall();
+      f.paths.process(f.actor);
+      assertSame(token, f.path().targetIdentity);
+      assertTrue(f.paths.findPath(f.actor, new Vector2(20, 20)));
+      assertNull(f.path().targetIdentity);
+    }
+  }
+
+  @Test void staleLifetimeStopsBeforeDynamicStallCanQueryTheReplacement() {
+    try (Fixture f = new Fixture()) {
+      NativePathIdentity identity = f.world.getMapper(NativePathIdentity.class)
+          .create(f.target).allocated(f.world, f.target);
+      f.start();
+      int queries = f.queries.size();
+      identity.allocated(f.world, f.target);
+      f.targetPosition().set(40, 16);
+      f.stall();
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertTrue(f.velocity().velocity.isZero());
+    }
+  }
+
+  @Test void actualRecycledTargetIdDoesNotBecomeANewPursuit() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      f.start();
+      f.paths.setEnabled(false);
+      f.world.process();
+      f.world.delete(f.target);
+      f.world.process();
+      int replacement = f.world.create();
+      assertEquals(f.target, replacement);
+      f.world.getMapper(Position.class).create(replacement).position.set(40, 16);
+      f.world.getMapper(Velocity.class).create(replacement).setPlayer(6, 9);
+      f.world.getMapper(NativePathIdentity.class).create(replacement).allocated(f.world, replacement);
+      f.world.process();
+      int queries = f.queries.size();
+      f.paths.setEnabled(true);
+      f.paths.process(f.actor);
+      assertEquals(queries, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertTrue(f.velocity().velocity.isZero());
+    }
+  }
+
+  @Test void switchingEntityTargetsReplacesRatherThanInheritsIdentity() {
+    try (Fixture f = new Fixture()) {
+      NativePathIdentity.Token first = f.world.getMapper(NativePathIdentity.class)
+          .create(f.target).allocated(f.world, f.target).token();
+      f.start();
+      int other = f.world.create();
+      f.world.getMapper(Position.class).create(other).position.set(35, 15);
+      NativePathIdentity.Token second = f.world.getMapper(NativePathIdentity.class)
+          .create(other).allocated(f.world, other).token();
+      assertTrue(f.paths.findPath(f.actor, new Vector2(10, 10), new Vector2(34, 14),
+          NativeGroundPathProfile.MONSTER.terrainFlags, 1, new GraphPath(), other));
+      assertNotSame(first, f.path().targetIdentity);
+      assertSame(second, f.path().targetIdentity);
+      f.path().reset();
+      assertNull(f.path().targetIdentity);
+    }
+  }
+
   @Test void dynamicStallRebuildRefreshesTargetSnapshotAndKeepsMovementIntent() {
     try (Fixture f = new Fixture()) {
       f.start();

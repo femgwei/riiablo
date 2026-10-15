@@ -1843,6 +1843,31 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - common层活动图已可组合，ECS/Zone运行期Act桥仍未接通；真实单位生命周期身份、fp16坐标、
   live owner D2Seed及路径状态消费/实图/性能/另机验收仍待。生产保持Map→AStarPathFinder。
 
+## 第二十七批：生产实体生命周期身份与旧目标ID复用防护（2026-10-16）
+
+- 检查Act1MapBuilderD2MOD发现导出末尾freeDrlg并releaseDataTables，当前不能把生成期Act引用
+  直接挂到Zone当作运行期上下文。本轮转为推进另一个已列出的前置包：真实实体生命周期身份。
+- 固定D2MOO origin/master `0c0bbd1e6bef9181a3da1c046523af622a925416`，核对
+  `source/D2Common/include/Path/Path.h`：pTargetUnit(+0x58)与dwTargetType(+0x5C)/dwTargetId(+0x60)
+  独立存在。host token用于避免ECS数字ID重用造成别名，不声称是原生内存指针或分配算法移植；
+  本批未新增DLL算法证据，也不是动态DLL差分执行。
+- 新增Transient NativePathIdentity：公共EntityFactory.createEntity的实际birth边界分配token。
+  token只保存World与entityId及自身对象身份，无全局计数器；组件reset清空引用，旧token不因池化重用复活。
+  isCurrent遵循ECS正常删除flush边界；死亡/原地复活保留实体身份。不改NativeRng或Monster.rngState。
+- Pathfind.targetIdentity保存目标token，每次成功装路径均替换（含内部detour/recovery）；
+  坐标命令及reset清空。Pathfinder在读取旧目标或动态阻塞恢复前校验token，失效就停止当前路径，
+  不对同ID替代实体发起新的搜索。工厂之外未提供身份的legacy实体保留unknown/null兼容行为。
+  仅保护已绑定的路径追踪，不宣称所有Target组件、交互/AI/网络请求已完成生命周期防护。
+- 新增NativePathIdentityTest六项及PathfinderRecoveryTargetTest四项，覆盖跨World、真实删除/ID复用、
+  组件池化、death/revive、移除/重新分配、unknown、detour保留、坐标/换目标清理、旧身份停止前不查询。
+  真实ServerEntityFactory玩家创建测试补token断言，加入path编译范围；其旧fixture缺少
+  townPortalRegistry导致注入失败，补注册该依赖，不修改生产WarpInteractor。
+- 修复fixture后定向29项/3类通过；完整538项/47类通过，失败/错误/跳过0。
+  完整统计含新增10项及新纳入的既有工厂1项；日志`core/build/round27-full.log`，
+  XML `.gradle/path-port/round27-full/core/test-results/pathPortTest`。
+- 下一步仍需将token接入D2PathUnits/Continuation的live target观察；原生类型/元数据、fp16、
+  live owner D2Seed、运行期Act/Zone桥、移动状态消费、实图/性能/另机验收仍待。生产仍Map→AStarPathFinder。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
