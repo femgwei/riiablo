@@ -22,17 +22,23 @@ public final class NativePathShadow {
   private static final Logger log = LogManager.getLogger(NativePathShadow.class);
   static final int MARGIN = 16;
   static final int MAX_SIDE = 128;
-  private final int every, maxSamples;
+  private final int every, maxSamples, levelFilter;
   private final Consumer<Result> sink;
   private long requests;
   private int samples, errors;
 
   public NativePathShadow(int every, int maxSamples, Consumer<Result> sink) {
-    if (every < 1 || maxSamples < 1 || maxSamples > 128 || sink == null) {
-      throw new IllegalArgumentException("every >= 1, samples 1..128 and sink required");
+    this(every, maxSamples, -1, sink);
+  }
+
+  /** Filter by resolved source level; -1 samples all levels. Rejected levels use no quota. */
+  public NativePathShadow(int every, int maxSamples, int levelFilter, Consumer<Result> sink) {
+    if (every < 1 || maxSamples < 1 || maxSamples > 128 || levelFilter < -1 || sink == null) {
+      throw new IllegalArgumentException("every >= 1, samples 1..128, level >= -1 and sink required");
     }
     this.every = every;
     this.maxSamples = maxSamples;
+    this.levelFilter = levelFilter;
     this.sink = sink;
   }
 
@@ -41,6 +47,7 @@ public final class NativePathShadow {
     // WARN is intentional: explicit opt-in must work with the default logger threshold.
     return new NativePathShadow(Math.max(1, Integer.getInteger("riiablo.path.shadow.every", 128)),
         Math.max(1, Math.min(128, Integer.getInteger("riiablo.path.shadow.maxSamples", 16))),
+        Math.max(-1, Integer.getInteger("riiablo.path.shadow.level", -1)),
         result -> log.warn("[NATIVE_PATH_SHADOW] {}", result));
   }
 
@@ -50,11 +57,19 @@ public final class NativePathShadow {
   void observe(MapGraph graph, Vector2 src, Vector2 dst, int flags, int size,
       MapGraph.Obstacle obstacle, int moverId, int targetId, boolean canOpenDoors,
       boolean partial, boolean liveSuccess, GraphPath<Point2> livePath) {
-    if (samples >= maxSamples || requests++ % every != 0) return;
-    int sample = ++samples;
+    if (samples >= maxSamples) return;
+    if (levelFilter < 0 && requests++ % every != 0) return;
+    int sample = 0;
     try {
       D2Path.Point start = new D2Path.Point(Map.round(src.x), Map.round(src.y));
       D2Path.Point target = new D2Path.Point(Map.round(dst.x), Map.round(dst.y));
+      Map.Zone sourceZone = levelFilter < 0 ? null : graph.map.getZone(start.x, start.y);
+      if (levelFilter >= 0 && (sourceZone == null || sourceZone.levelId() != levelFilter)) return;
+      if (levelFilter >= 0 && requests++ % every != 0) return;
+      sample = ++samples;
+      if (sourceZone == null) sourceZone = graph.map.getZone(start.x, start.y);
+      Context context = new Context(sourceZone, graph.map.getZone(target.x, target.y),
+          start, target, obstacle != null);
       List<D2Path.Point> live = copy(livePath);
       long captureStart = System.nanoTime();
       Snapshot snapshot = Snapshot.capture(start, target,
@@ -63,7 +78,7 @@ public final class NativePathShadow {
           (x, y) -> !graph.isWalkable(x, y, flags, size, obstacle, -1, -1));
       if (snapshot == null) {
         sink.accept(new Result(sample, flags, size, moverId, targetId, canOpenDoors, partial,
-            start, target, Status.SNAPSHOT_LIMIT, liveSuccess, live, null, null, 0));
+            start, target, Status.SNAPSHOT_LIMIT, liveSuccess, live, null, null, 0, context));
         return;
       }
       boolean goalFree = partial || graph.isWalkable(target.x, target.y, flags, size,
@@ -82,11 +97,12 @@ public final class NativePathShadow {
           : liveSuccess != runtime.success || !live.equals(runtime.path)
               ? Status.LIVE_REPLAY_DIFFERENCE : Status.COMPARED;
       sink.accept(new Result(sample, flags, size, moverId, targetId, canOpenDoors, partial,
-          start, target, status, liveSuccess, live, runtime, reference, captureNanos));
+          start, target, status, liveSuccess, live, runtime, reference, captureNanos, context));
     } catch (RuntimeException diagnosticFailure) {
       // A failed capture/replay/sink must not turn a successful walk into a failure.
       // Do not swallow VM errors. Bounds above keep normal diagnostic work finite.
       errors++;
+      if (sample == 0) sample = ++samples;
       try {
         log.warn("[NATIVE_PATH_SHADOW] sample={} status=DIAGNOSTIC_ERROR type={}",
             sample, diagnosticFailure.getClass().getSimpleName());
@@ -185,6 +201,32 @@ public final class NativePathShadow {
 
   public enum Status { COMPARED, SNAPSHOT_LIMIT, OUTSIDE_SNAPSHOT, LIVE_REPLAY_DIFFERENCE }
   public enum Outcome { EXACT, PARTIAL, FAILED }
+  /** Mechanical output classification, not a diagnosis of the cause. */
+  public enum Difference { INCONCLUSIVE, OUTCOME, ENDPOINT, TURNS, NONE }
+
+  /** Detached metadata resolved inside the same collision-zone scope as the search. */
+  public static final class Context {
+    public final int sourceLevel, targetLevel, sourceRoom, targetRoom;
+    public final boolean dynamicObstacle;
+    private Context(Map.Zone source, Map.Zone destination, D2Path.Point start,
+        D2Path.Point target, boolean dynamicObstacle) {
+      sourceLevel = source == null ? -1 : source.levelId();
+      targetLevel = destination == null ? -1 : destination.levelId();
+      sourceRoom = roomId(source, start);
+      targetRoom = roomId(destination, target);
+      this.dynamicObstacle = dynamicObstacle;
+    }
+    private static int roomId(Map.Zone zone, D2Path.Point point) {
+      if (zone == null) return -1;
+      // Do not reuse libGDX's shared Array iterator while an outer caller may
+      // be iterating rooms. Diagnostics must not disturb caller traversal.
+      for (int i = 0; i < zone.roomsEx.size; i++) {
+        Map.RoomEx room = zone.roomsEx.get(i);
+        if (room.contains(point.x, point.y)) return room.id;
+      }
+      return -1;
+    }
+  }
 
   public static final class Run {
     public final boolean success, outside;
@@ -214,24 +256,37 @@ public final class NativePathShadow {
     public final List<D2Path.Point> livePath;
     public final Run runtime, reference;
     public final long captureNanos;
+    public final Context context;
     private Result(int sample, int flags, int size, int moverId, int targetId,
         boolean canOpenDoors, boolean partial, D2Path.Point start, D2Path.Point target,
         Status status, boolean liveSuccess, List<D2Path.Point> livePath,
-        Run runtime, Run reference, long captureNanos) {
+        Run runtime, Run reference, long captureNanos, Context context) {
       this.sample = sample; this.flags = flags; this.size = size;
       this.moverId = moverId; this.targetId = targetId; this.canOpenDoors = canOpenDoors;
       this.partial = partial; this.start = start; this.target = target; this.status = status;
       this.liveSuccess = liveSuccess; this.livePath = livePath;
       this.runtime = runtime; this.reference = reference; this.captureNanos = captureNanos;
+      this.context = context;
     }
     public boolean differs() {
-      return status == Status.COMPARED && (runtime.outcome(target) != reference.outcome(target)
-          || !runtime.turns.equals(reference.turns));
+      Difference difference = difference();
+      return difference != Difference.INCONCLUSIVE && difference != Difference.NONE;
+    }
+    public Difference difference() {
+      if (status != Status.COMPARED) return Difference.INCONCLUSIVE;
+      if (runtime.outcome(target) != reference.outcome(target)) return Difference.OUTCOME;
+      if (runtime.outcome(target) != Outcome.FAILED && !runtime.path.get(runtime.path.size() - 1)
+          .equals(reference.path.get(reference.path.size() - 1))) return Difference.ENDPOINT;
+      return runtime.turns.equals(reference.turns) ? Difference.NONE : Difference.TURNS;
     }
     @Override public String toString() {
       String prefix = "sample=" + sample + " status=" + status + " start=" + start + " target=" + target
           + " flags=" + flags + " size=" + size + " mover=" + moverId + " targetId=" + targetId
           + " openDoors=" + canOpenDoors + " partial=" + partial + " targetMode=COORDINATE"
+          + " stage=MAP_SEARCH_RAW sourceLevel=" + context.sourceLevel
+          + " targetLevel=" + context.targetLevel + " sourceRoom=" + context.sourceRoom
+          + " targetRoom=" + context.targetRoom + " dynamicObstacle=" + context.dynamicObstacle
+          + " difference=" + difference()
           + " liveSuccess=" + liveSuccess + " livePath=" + livePath;
       if (runtime == null) return prefix;
       return prefix + " differs=" + differs() + " runtime=" + runtime.outcome(target)

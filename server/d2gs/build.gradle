@@ -20,6 +20,7 @@ tasks.withType(JavaExec).configureEach {
     systemProperty 'riiablo.path.shadow', 'true'
     systemProperty 'riiablo.path.shadow.every', project.findProperty('pathShadowEvery') ?: '128'
     systemProperty 'riiablo.path.shadow.maxSamples', project.findProperty('pathShadowMaxSamples') ?: '16'
+    systemProperty 'riiablo.path.shadow.level', project.findProperty('pathShadowLevel') ?: '-1'
   }
 }
 

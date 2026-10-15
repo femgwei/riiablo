@@ -63,6 +63,7 @@ class NativePathShadowTest {
     assertEquals(NativePathShadow.Status.COMPARED, row.status);
     assertEquals(NativePathShadow.Outcome.EXACT, row.runtime.outcome(row.target));
     assertEquals(NativePathShadow.Outcome.EXACT, row.reference.outcome(row.target));
+    assertEquals(NativePathShadow.Difference.TURNS, row.difference());
     assertTrue(row.reference.nodes <= 200);
     assertTrue(row.runtime.collisionQueries > 0);
     assertTrue(row.reference.collisionQueries > 0);
@@ -83,6 +84,7 @@ class NativePathShadowTest {
     assertEquals(NativePathShadow.Outcome.FAILED, row.runtime.outcome(row.target));
     assertEquals(NativePathShadow.Outcome.PARTIAL, row.reference.outcome(row.target));
     assertTrue(row.differs());
+    assertEquals(NativePathShadow.Difference.OUTCOME, row.difference());
     System.out.println("[NATIVE_PATH_SHADOW_FIXTURE] blocked-exact " + row);
   }
 
@@ -128,6 +130,7 @@ class NativePathShadowTest {
     assertTrue(map.findPath(new Vector2(20, 20), new Vector2(20, 20), FLAGS, 1, path, changes));
     NativePathShadow.Result row = only(rows);
     assertEquals(NativePathShadow.Status.LIVE_REPLAY_DIFFERENCE, row.status);
+    assertEquals(NativePathShadow.Difference.INCONCLUSIVE, row.difference());
     assertFalse(row.differs());
     assertEquals(1, path.getCount());
   }
@@ -184,6 +187,105 @@ class NativePathShadowTest {
     assertEquals(NativePathShadow.Status.SNAPSHOT_LIMIT, row.status);
     assertNull(row.runtime);
     assertFalse(row.differs());
+    assertEquals(NativePathShadow.Difference.INCONCLUSIVE, row.difference());
+  }
+
+  @Test void sourceLevelFilterUsesOwningZoneAndDoesNotConsumeQuotaForOtherLevels() {
+    Map map = map(32);
+    Map.Zone original = map.zones.first(), detached = new Map.Zone();
+    original.level = new com.riiablo.codec.excel.Levels.Entry();
+    original.level.Id = 1;
+    detached.map = map;
+    detached.level = new com.riiablo.codec.excel.Levels.Entry();
+    detached.level.Id = 63;
+    detached.width = detached.height = 32;
+    detached.flags = new byte[32 * 32];
+    detached.addRoomEx(0, 0, 16, 32);
+    detached.addRoomEx(16, 0, 16, 32);
+    map.zones.add(detached);
+    List<NativePathShadow.Result> rows = new ArrayList<>();
+    NativePathShadow observer = new NativePathShadow(2, 2, 63, rows::add);
+    map.setPathShadow(observer);
+    GraphPath path = new GraphPath();
+    Vector2 src = new Vector2(10, 10), dst = new Vector2(20, 10);
+    for (int i = 0; i < 5; i++) assertTrue(map.findPath(src, dst, FLAGS, 1, path));
+    assertEquals(0, observer.samples());
+    for (int i = 0; i < 4; i++) {
+      assertTrue(map.findPath(detached, src, dst, FLAGS, 1, path, (m, t, x, y, s) -> true,
+          31, 37, false));
+    }
+    assertEquals(2, rows.size());
+    NativePathShadow.Result row = rows.get(0);
+    assertEquals(NativePathShadow.Status.COMPARED, row.status);
+    assertEquals(63, row.context.sourceLevel);
+    assertEquals(63, row.context.targetLevel);
+    assertEquals(0, row.context.sourceRoom);
+    assertEquals(1, row.context.targetRoom);
+    assertTrue(row.context.dynamicObstacle);
+    detached.level.Id = 64;
+    detached.roomsEx.clear();
+    assertEquals(63, row.context.sourceLevel, "metadata must not retain mutable level/room references");
+    assertTrue(row.toString().contains("stage=MAP_SEARCH_RAW"));
+    assertEquals(1, map.getZone(10, 10).levelId(), "scope restored after capture");
+  }
+
+  @Test void roomMetadataDoesNotInvalidateAnOuterRoomIterator() {
+    Map map = map(32);
+    Map.Zone zone = map.zones.first();
+    zone.addRoomEx(0, 0, 16, 32);
+    zone.addRoomEx(16, 0, 16, 32);
+    List<NativePathShadow.Result> rows = new ArrayList<>();
+    map.setPathShadow(new NativePathShadow(1, 2, rows::add));
+    int visited = 0;
+    for (Map.RoomEx room : zone.roomsEx) {
+      assertTrue(map.findPath(new Vector2(10, 10), new Vector2(20, 10), FLAGS, 1, new GraphPath()));
+      visited++;
+    }
+    assertEquals(2, visited);
+    assertEquals(2, rows.size());
+    assertEquals(0, rows.get(0).context.sourceRoom);
+    assertEquals(1, rows.get(0).context.targetRoom);
+  }
+
+  @Test void successiveDynamicTargetSnapshotsStayDetachedWithoutInstallingNativePath() {
+    Map map = map(48);
+    com.riiablo.engine.server.UnitCollisionGrid grid = new com.riiablo.engine.server.UnitCollisionGrid();
+    grid.put(31, 10, 10, 2);
+    grid.put(37, 20, 10, 2);
+    List<NativePathShadow.Result> rows = new ArrayList<>();
+    map.setPathShadow(new NativePathShadow(1, 2, rows::add));
+    MapGraph.Obstacle obstacle = (m, t, x, y, size) -> grid.isFree(31, 37, x, y, size);
+    GraphPath path = new GraphPath();
+    assertTrue(map.findPath(new Vector2(10, 10), new Vector2(20, 10), FLAGS, 2,
+        path, obstacle, 31, 37, false));
+    String first = rows.get(0).toString();
+    grid.put(37, 22, 14, 2);
+    grid.put(38, 16, 10, 2);
+    assertTrue(map.findPath(new Vector2(10, 10), new Vector2(22, 14), FLAGS, 2,
+        path, obstacle, 31, 37, false));
+    assertEquals(first, rows.get(0).toString());
+    assertEquals(point(20, 10), rows.get(0).target);
+    assertEquals(point(22, 14), rows.get(1).target);
+    assertEquals(NativePathShadow.Status.COMPARED, rows.get(1).status);
+    assertTrue(rows.get(1).context.dynamicObstacle);
+    assertEquals(path.getCount(), rows.get(1).livePath.size());
+    System.out.println("[NATIVE_PATH_SHADOW_FIXTURE] target-moved " + rows.get(1));
+  }
+
+  @Test void partialResultsWithDifferentEndpointsAreNotLabelledOnlyAsTurns() {
+    Map map = map(110);
+    map.zones.first().or(95, 95, DT1.Tile.FLAG_BLOCK_WALK);
+    List<NativePathShadow.Result> rows = new ArrayList<>();
+    map.setPathShadow(new NativePathShadow(1, 1, rows::add));
+    assertTrue(map.findPartialPath(map.zones.first(), new Vector2(5, 5), new Vector2(95, 95),
+        FLAGS, 1, new GraphPath(), null, false));
+    NativePathShadow.Result row = only(rows);
+    assertEquals(NativePathShadow.Status.COMPARED, row.status);
+    assertEquals(NativePathShadow.Outcome.PARTIAL, row.runtime.outcome(row.target));
+    assertEquals(NativePathShadow.Outcome.PARTIAL, row.reference.outcome(row.target));
+    assertEquals(NativePathShadow.Difference.ENDPOINT, row.difference());
+    assertTrue(row.differs());
+    System.out.println("[NATIVE_PATH_SHADOW_FIXTURE] partial-endpoints " + row);
   }
 
   @Test void aRouteLeavingTheSnapshotIsNotReportedAsAParityFailure() {
@@ -325,6 +427,7 @@ class NativePathShadowTest {
     assertEquals(flying, row.flags);
     assertEquals(NativePathShadow.Outcome.EXACT, row.reference.outcome(row.target));
     assertFalse(row.differs());
+    assertEquals(NativePathShadow.Difference.NONE, row.difference());
   }
 
   @Test void scopedOverlappingLevelCannotBorrowTerrainFromTheFirstLevel() {
@@ -350,6 +453,7 @@ class NativePathShadowTest {
     assertThrows(IllegalArgumentException.class, () -> new NativePathShadow(1, 0, row -> {}));
     assertThrows(IllegalArgumentException.class, () -> new NativePathShadow(1, 129, row -> {}));
     assertThrows(IllegalArgumentException.class, () -> new NativePathShadow(1, 1, null));
+    assertThrows(IllegalArgumentException.class, () -> new NativePathShadow(1, 1, -2, row -> {}));
   }
 
   @Test void customSolversAndNullGoalsAreNotMislabelledAsRuntimeAStar() {
