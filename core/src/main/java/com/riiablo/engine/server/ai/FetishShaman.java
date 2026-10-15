@@ -223,7 +223,7 @@ public class FetishShaman extends AI {
     IntBag entities = enemyEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
+      if (mClass.has(ent) && mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = entityPos.dst(targetPos);
         if (dst < targetDistance) {

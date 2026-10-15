@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 干燥高地豹人 AI 空指针崩溃
+
+- [x] 用户 `game.log` 记录从 Act V 经传送点进入 Dry Hills(42) 后，
+  `PantherWoman.update:156` 在 `mClass.get(ent).type` 读取空组件而崩溃。
+  扫描目标时先检查 `Class` 组件仍存在，跳过已缺失该组件的订阅条目；
+  同步修正 Baboon 两处、ClawViper、FetishShaman、SandRaider 的相同读取。
+- [x] 查阅 D2MOO `AITHINK_Fn018_PantherWoman`；本次仅修正 Java ECS 空值访问，
+  不调整 AI 参数、概率或战斗分支。按用户极小修改约定，仅检查差异，未编译、未运行测试。
+- [ ] 另一台电脑拉取后复验跨 Act 传送至干燥高地及豹人索敌；
+  目标组件缺失的具体生命周期来源仍未通过运行时复现确认，不宣称实机已验收。
+
 ## 2026-10-16 DeathMaul 三难度/多种子验证（整体PARTIAL）
 
 - [x] 六行 × Normal/Nightmare/Hell × seed1/7/42，162场及独立复跑共324次执行。
