@@ -15,4 +15,3 @@ New-Item -ItemType Directory "$PSScriptRoot/$Pass" | Out-Null
 Copy-Item "$SourceRoot/build/telekinesis-death-isolated/core/test-results/test/TEST-*.xml" "$PSScriptRoot/$Pass/"
 Copy-Item "$SourceRoot/build/telekinesis-death-isolated/server_d2gs/test-results/test/TEST-*.xml" "$PSScriptRoot/$Pass/" -ErrorAction SilentlyContinue
 if($testExit -ne 0){throw 'Joint suite failed'}
-

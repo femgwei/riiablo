@@ -26,4 +26,3 @@ foreach($taskPath in @('core/src/main/java/com/riiablo/engine/server/ServerSkill
   Write-Output "SHA256 $currentHash $taskPath"
 }
 Write-Output 'PARTIAL: Telekinesis fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.'
-

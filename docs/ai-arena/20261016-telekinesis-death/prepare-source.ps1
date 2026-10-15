@@ -8,4 +8,3 @@ if($LASTEXITCODE -ne 0){throw 'Archive failed'}
 Expand-Archive -LiteralPath "$SourceRoot.zip" -DestinationPath $SourceRoot
 Copy-Item core/src/test/java/com/riiablo/engine/server/SorceressTelekinesisIntegrationTest.java "$SourceRoot/core/src/test/java/com/riiablo/engine/server/"
 if($Repaired){Copy-Item core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java "$SourceRoot/core/src/main/java/com/riiablo/engine/server/"}
-
