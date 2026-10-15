@@ -12,6 +12,45 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathDispatchTest {
+  @Test void coordinateSearchRejectsFractionalMovementBeforeQueriesWritesOrStreamSeed() {
+    for (int type : new int[] {0, 2, 16}) {
+      for (boolean xAxis : new boolean[] {false, true}) {
+        D2Seed seed = new D2Seed(123, 456);
+        D2PathRequest.Search search = savedSearch(type, () -> {}, seed, false);
+        D2PathResult.State s = search.state.result;
+        if (xAxis) s.precisionX ^= 1; else s.precisionY ^= 1;
+        D2Path.Point[] before = s.points.clone(); long seedBefore = seed.getLSeed();
+        int count = s.path.pathPointCount, index = s.path.currentPointIndex;
+        int directionX = s.directionVectorX, velocityY = s.velocityVectorY;
+        assertThrows(IllegalArgumentException.class, () -> D2PathDispatch.compute(search,
+            (x,y) -> { fail("fractional movement must precede queries"); return false; }));
+        assertArrayEquals(before, s.points); assertEquals(seedBefore, seed.getLSeed());
+        assertEquals(count, s.path.pathPointCount); assertEquals(index, s.path.currentPointIndex);
+        assertEquals(directionX, s.directionVectorX); assertEquals(velocityY, s.velocityVectorY);
+      }
+    }
+  }
+
+  @Test void unchangedCoordinateSearchStillDispatchesAcrossBranches() {
+    for (int type : new int[] {0, 2, 16}) {
+      D2PathRequest.Search search = savedSearch(type, () -> {}, new D2Seed(123, 456), false);
+      assertNull(search.state.result.path.targetUnit);
+      int count = assertDoesNotThrow(() -> D2PathDispatch.compute(search, (x,y) -> false));
+      assertTrue(count >= 0 && count <= search.state.result.points.length);
+    }
+  }
+
+  @Test void newCoordinateSearchCanCaptureMovedPrecision() {
+    for (int type : new int[] {0, 2, 16}) {
+      D2PathRequest.Search old = savedSearch(type, () -> {}, new D2Seed(123, 456), false);
+      old.state.result.precisionX ^= 1;
+      D2PathRequest.Search fresh = captureSearch(old.state);
+      assertNotSame(old, fresh);
+      int count = assertDoesNotThrow(() -> D2PathDispatch.compute(fresh, (x,y) -> false));
+      assertTrue(count >= 0 && count <= fresh.state.result.points.length);
+    }
+  }
+
   @Test void savedSearchRejectsReplacedResultRoomBeforeQueriesWritesOrStreamSeed() {
     for (int type : new int[] {0, 2, 16}) {
       D2Seed seed = new D2Seed(123, 456);
@@ -31,15 +70,23 @@ class D2PathDispatchTest {
   }
 
   private static D2PathRequest.Search savedSearch(int type, Runnable guard, D2Seed seed) {
+    return savedSearch(type, guard, seed, true);
+  }
+
+  private static D2PathRequest.Search savedSearch(int type, Runnable guard, D2Seed seed, boolean observed) {
     D2PathResult.State s = state(); s.path.pathType = type;
     s.precisionX = 10 << 16; s.precisionY = 10 << 16;
     D2PathUnits.Unit owner = D2PathUnits.Unit.dynamic(1, 2,
         new D2PathUnits.DynamicPath(10 << 16, 10 << 16, 0));
-    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
-    s.path.targetUnit = D2PathUnits.observation(owner, target, 0, guard);
+    D2PathUnits.Unit target = observed ? D2PathUnits.Unit.stationary(4, 1, p(20, 10)) : null;
+    if (observed) s.path.targetUnit = D2PathUnits.observation(owner, target, 0, guard);
     s.room = new D2PathResult.Room(10, 10, 30, 30);
     D2PathRequest.State request = new D2PathRequest.State(s, target,
         new D2PathRequest.Room(s.room, false), false, 0, 2, 1, 0x501, 70, seed);
+    return captureSearch(request);
+  }
+
+  private static D2PathRequest.Search captureSearch(D2PathRequest.State request) {
     D2PathRequest.Search[] saved = {null};
     D2PathRequest.compute(request, false, new D2PathRequest.Effects() {
       public boolean removeOwner(D2PathRequest.State state) { return false; }

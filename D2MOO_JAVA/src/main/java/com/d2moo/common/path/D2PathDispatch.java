@@ -14,7 +14,7 @@ public final class D2PathDispatch {
      * Live nDirOffset is used as-is; this must not call PATH_SetType or reapply its table. */
     public static int compute(D2PathRequest.Search search, D2Toward.Collision collision) {
         Objects.requireNonNull(search);
-        search.state.requireObservationCurrent();
+        search.requireCurrent();
         if (search.type == 0 || search.type == 16) {
             validate(search.state.result,search.start,search.target,search.maximumDistance,search.tolerance,collision);
             D2IDAStar.Bounds bounds = D2IDAStar.nativeRoomBounds(search.state.startRoom,search.targetRoom);

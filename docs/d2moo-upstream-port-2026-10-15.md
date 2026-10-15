@@ -2112,6 +2112,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 修复前3项失败复现（core/build/round46-red.log）；修复后完整612项/52类通过，失败/错误/跳过0，
   core/build/round46-full.log，XML .gradle/path-port/round46-full/core/test-results/pathPortTest。
 
+## 第四十七批：纯坐标保存Search的完整precision一致性
+
+- Search独立保存创建时precisionX/Y，dispatch前复检；先保留原Request身份/房间/Observation检查。
+  无Observation的纯坐标请求也拒绝同格fraction变化后继续使用旧Search。
+- 新增3项覆盖0/2/16双轴拒绝、未变化执行与重新捕获Search后可执行；验证查询、点缓冲、
+  索引/计数、向量与stream seed均在拒绝前保持。
+- 低层Result直接dispatch保持即时语义；不从浮点重建raw数据、不冻结共享seed。
+  仅宿主快照一致性，无新DLL算法证据或生产切换；raw/live/Act/seed/WRP缺口仍待。
+- 拒绝测试修复前复现（core/build/round47-red.log）；修复后完整615项/52类通过，失败/错误/跳过0。
+  core/build/round47-full.log，XML .gradle/path-port/round47-full/core/test-results/pathPortTest。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

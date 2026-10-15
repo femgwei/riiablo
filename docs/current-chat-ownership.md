@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十七批：保存Search捕获并复检完整precision，补齐无Observation纯坐标目标的同格fraction变化拒绝。
+新增3项覆盖0/2/16拒绝、正常执行与重新捕获；仅快照一致性，生产仍A*，见handoff顶部。
+拒绝测试修复前复现；修复后完整615项/52类通过，失败/错误/跳过0；core/build/round47-full.log。
+
 第四十六批：Request/Search/effects复检房间投影身份，拒绝构造后替换result.room，
 覆盖有/无Observation；新增3项验证副作用前拒绝。生产仍A*，详细交接见handoff顶部。
 修复前3项复现，修复后完整612项/52类通过，失败/错误/跳过0；core/build/round46-full.log。

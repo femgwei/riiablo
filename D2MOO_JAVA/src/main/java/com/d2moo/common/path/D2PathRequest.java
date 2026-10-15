@@ -137,6 +137,7 @@ public final class D2PathRequest {
         public final D2Path.Point start, target;
         public final Room targetRoom;
         public final int type, maximumDistance, tolerance;
+        private final int precisionX, precisionY;
 
         private Search(State state, D2Path.Point start, D2Path.Point target, Room targetRoom,
                 int type, int maximumDistance, int tolerance) {
@@ -147,6 +148,17 @@ public final class D2PathRequest {
             this.type = type;
             this.maximumDistance = maximumDistance;
             this.tolerance = tolerance;
+            this.precisionX = state.result.precisionX;
+            this.precisionY = state.result.precisionY;
+        }
+
+        /** A saved search is one operation, including coordinate-only targets.
+         * Re-enter Request after movement to capture a new search snapshot. */
+        void requireCurrent() {
+            state.requireObservationCurrent();
+            if (state.result.precisionX != precisionX || state.result.precisionY != precisionY) {
+                throw new IllegalArgumentException("search precision changed; capture a new search");
+            }
         }
     }
 

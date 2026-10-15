@@ -2,7 +2,19 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十六批续接结果（优先于下方历史起点）
+## 第四十七批续接结果（优先于下方历史起点）
+
+- Search捕获自身创建时result.precisionX/Y，dispatch前在既有Request复检后核对完整原值。
+  补齐无Observation的纯坐标目标保存Search在同格fraction变化后仍使用旧快照的缺口。
+- 新增3项覆盖0/2/16：双轴fraction变化在查询/点缓冲/索引/计数/向量/stream seed变化前拒绝；
+  未变化的纯坐标Search仍可执行，重新进入Request捕获新Search后可使用更新后的precision。
+- 仅保存Search的快照一致性；低层Result直接dispatch保留即时投影语义，无精度历史检查。
+  不猜测ECS raw来源、不冻结shared seed、不宣称新DLL算法证据；生产仍Map→AStarPathFinder。
+- raw/live字段、实际Act与Zone映射、共享seed、WRP类型来源仍待。
+- 拒绝测试修复前复现（core/build/round47-red.log）；修复后完整615项/52类通过，失败/错误/跳过0。
+  core/build/round47-full.log，XML `.gradle/path-port/round47-full/core/test-results/pathPortTest`。
+
+## 第四十六批续接结果（历史）
 
 - 修复Request构造后result.room被替换却继续执行的房间投影混用：已有Request/Search/effects复检
   入口重新核对result.room与startRoom.bounds同一对象；相同几何的新对象、null和不同房间均须重建请求。

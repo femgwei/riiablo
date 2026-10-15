@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第四十七批补充：Search捕获创建时完整precisionX/Y，在dispatch前复检，补齐无Observation
+纯坐标请求同格fraction变化仍使用旧Search的缺口；新增3项覆盖0/2/16拒绝、正常执行和重新捕获。
+仅保存Search快照一致性，低层即时Result语义保留；无新DLL算法证据，生产仍A*。
+拒绝测试修复前复现；修复后完整615项/52类通过，失败/错误/跳过0；core/build/round47-full.log。
+
 第四十六批补充：Request构造后的result.room替换也须在执行前拒绝，复检起始bounds同一对象，
 包括相同几何的新投影及无Observation调用者；已有Search/effects入口共享检查。
 新增3项验证副作用前拒绝；低层Result入口没有保存startRoom，不检测该替换历史。

@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十七批（生产适配仍PARTIAL）
+
+- [x] 保存Search捕获并复检完整precision，拒绝纯坐标目标同格fraction变化后继续使用旧Search。
+- [x] 新增3项覆盖0/2/16双轴拒绝、未变化执行与重新捕获，低层即时Result入口保持。
+- [x] 拒绝测试修复前复现；修复后完整615项/52类通过，失败/错误/跳过0；core/build/round47-full.log。
+- [ ] 实际raw/live字段、Act与Zone映射、共享seed及WRP类型来源仍待；生产仍A*。
+
 ## 2026-10-16 寻路第四十六批（生产适配仍PARTIAL）
 
 - [x] Request/Search/effects运行前重新核对result.room与startRoom.bounds身份，覆盖无Observation。
