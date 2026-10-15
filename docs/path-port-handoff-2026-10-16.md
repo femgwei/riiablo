@@ -2,7 +2,17 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第三十五批续接结果（优先于下方历史起点）
+## 第三十六批续接结果（优先于下方历史起点）
+
+- Request.State构造对标准Observation增加owner.type/sizeX与path.ownerType/unitSize一致性检查，
+  避免使用自定义effects时绕过具体RequestEffects的owner元数据校验。失败先于request执行和副作用。
+- 原有target/speed/exact owner对象及生命周期校验保留；legacy自定义Target仍按原调用方契约。
+- 新增2项，完整585项/50类通过，失败/错误/跳过0；core/build/round36-full.log，
+  XML `.gradle/path-port/round36-full/core/test-results/pathPortTest`。
+- 不校验未包含在Observation内的pattern/mask/mode，不自动刷新位置或元数据。
+  生产仍Map→AStarPathFinder；raw坐标/动态字段/Act与Zone/shared seed仍待，无新增DLL证据或动态执行。
+
+## 第三十五批续接结果（历史）
 
 - D2PathDispatch两个公开compute入口在路径写入前验证标准Observation生命周期；Search入口
   还通过Request.State校验原观察对象未被替换，type0/16房间/seed分支同样先检查。

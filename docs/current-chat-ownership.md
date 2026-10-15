@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第三十六批：Request.State对标准Observation核对owner类型/尺寸，避免自定义effects绕过
+具体适配器的元数据校验。新增2项，完整585项/50类通过，失败/错误/跳过0。
+日志core/build/round36-full.log；生产仍A*，详细边界见handoff顶部。
+
 第三十五批：Dispatch公开compute入口在路径写入前复检标准Observation生命周期，Search入口
 同时检查原观察未替换；Request复用观察检查。低层State只验证当前观察，legacy契约保留。
 新增2项，完整583项/50类通过，失败/错误/跳过0；core/build/round35-full.log。

@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第三十六批（生产适配仍PARTIAL）
+
+- [x] Request构造对标准观察验证owner type/size，覆盖自定义effects入口。
+- [x] 新增2项，完整585项/50类通过，无失败/错误/跳过。
+- [ ] pattern/mask/mode及原始来源仍属调用方契约；raw坐标、动态字段、Act/Zone/shared seed仍待。
+
+生产仍Map→AStarPathFinder；本批仅host一致性校验。
+
 ## 2026-10-16 寻路第三十五批（生产适配仍PARTIAL）
 
 - [x] Dispatch两个公开入口在路径写入前校验标准观察生命周期，Search入口检查原观察身份。

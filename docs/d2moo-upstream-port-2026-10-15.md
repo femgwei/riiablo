@@ -1988,6 +1988,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 不宣称拦截任意回调期间状态修改或自动元数据刷新；raw坐标/动态字段/Act与Zone/shared seed
   仍待，生产仍Map→AStarPathFinder。本批host适配无新增DLL算法证据或动态DLL执行。
 
+## 第三十六批：Request owner类型/尺寸一致性
+
+- Request.State构造时对标准Observation的owner.type/sizeX核对path.ownerType/unitSize，
+  拒绝不同类型或尺寸的元数据，避免自定义effects绕过具体footprint适配器检查。
+- 原target/speed/exact owner/guard检查保留；legacy自定义Target契约不变，
+  Observation外的pattern/mask/mode及自动数据刷新仍未覆盖。
+- 新增2项，完整585项/50类通过，失败/错误/跳过0；core/build/round36-full.log，
+  XML .gradle/path-port/round36-full/core/test-results/pathPortTest。
+- 生产仍Map→AStarPathFinder；raw坐标/动态字段/Act与Zone/shared seed仍待。
+  本批host一致性验证，无新增DLL算法证据或动态DLL执行。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

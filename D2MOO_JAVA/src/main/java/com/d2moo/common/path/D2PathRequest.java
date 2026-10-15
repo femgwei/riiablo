@@ -88,6 +88,9 @@ public final class D2PathRequest {
                 if (observation.target != target || observation.speed != speed) {
                     throw new IllegalArgumentException("request target/speed must match the unit observation");
                 }
+                if (observation.owner.type != result.path.ownerType || observation.owner.sizeX != unitSize) {
+                    throw new IllegalArgumentException("request owner type/size must match the unit observation");
+                }
             }
             this.target = target;
             this.startRoom = startRoom;

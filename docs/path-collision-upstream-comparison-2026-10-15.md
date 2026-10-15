@@ -5,6 +5,10 @@
 
 ## 结论与证据边界
 
+第三十六批补充：Request.State在构造时校验标准Observation的owner类型和尺寸一致，
+让自定义effects也不能绕过该元数据检查；未覆盖Observation外的pattern/mask/mode。
+新增2项，完整585项/50类通过，失败/错误/跳过0；生产仍A*，无新增DLL证据或动态执行。
+
 第三十五批补充：Dispatch公开入口在路径写入前检查标准Observation guard，Search入口复检
 Request保存的原观察对象；低层Result.State无保存身份，只能验证当前观察，legacy契约保留。
 Request复用同一包内校验。新增2项，完整583项/50类通过，失败/错误/跳过0。

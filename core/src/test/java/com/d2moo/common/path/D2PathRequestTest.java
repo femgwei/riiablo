@@ -13,6 +13,26 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathRequestTest {
+  @Test void standardObservationRejectsOwnerSizeMismatchBeforeEffectsExist() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathRequest.State valid = request(result(0, p(10, 10), p(20, 10)), target,
+        room(0, 0, 100, 100, false), false, 0);
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(valid.result,
+        target, valid.startRoom, false, 0, 3, 3, 1, 70));
+    assertEquals(2, valid.result.path.pathPointCount);
+    assertEquals(99, valid.result.pendingUpdate);
+  }
+
+  @Test void standardObservationRejectsOwnerTypeMismatchEvenAtSameCoordinatesAndSize() {
+    D2PathUnits.Unit target = D2PathUnits.Unit.stationary(4, 1, p(20, 10));
+    D2PathResult.State r = result(0, p(10, 10), p(20, 10));
+    D2PathRequest.Room room = room(0, 0, 100, 100, false); r.room = room.bounds;
+    r.path.targetUnit = D2PathUnits.observation(D2PathUnits.Unit.dynamic(1, 2,
+        new D2PathUnits.DynamicPath(10 << 16, 10 << 16, 0)), target, 0);
+    assertThrows(IllegalArgumentException.class, () -> new D2PathRequest.State(r,
+        target, room, false, 0, 2, 3, 1, 70));
+    assertEquals(2, r.path.pathPointCount); assertEquals(99, r.pendingUpdate);
+  }
   @Test void standardObservationMustMatchTheExactTargetSnapshotAndSpeed() {
     D2PathUnits.Unit target = D2PathUnits.Unit.stationary(2, 2, p(20, 10));
     D2PathRequest.State state = request(result(0, p(10, 10), p(20, 10)), target,
