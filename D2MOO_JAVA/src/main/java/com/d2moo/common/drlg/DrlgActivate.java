@@ -107,17 +107,17 @@ public class DrlgActivate {
     }
     
     /**
-     * 查找第一个有引用计数的状态
+     * 查找第一个有引用计数的状态；没有引用时返回 -1。
      */
-    private static D2DrlgRoomStatus roomExFindFirstStatusWithRefCount(D2DrlgRoom drlgRoom, D2DrlgRoomStatus maxStatus) {
+    private static int roomExFindFirstStatusWithRefCount(D2DrlgRoom drlgRoom, D2DrlgRoomStatus maxStatus) {
         for (int firstNonEmptyListStatus = 0; 
              firstNonEmptyListStatus <= maxStatus.getValue() && firstNonEmptyListStatus < D2DrlgRoomStatus.COUNT.getValue(); 
              firstNonEmptyListStatus++) {
             if (drlgRoom.getRoomsInList()[firstNonEmptyListStatus] != 0) {
-                return D2DrlgRoomStatus.fromValue(firstNonEmptyListStatus);
+                return firstNonEmptyListStatus;
             }
         }
-        return maxStatus;
+        return -1;
     }
     
     /**
@@ -205,12 +205,14 @@ public class DrlgActivate {
     public static void roomExIdentifyRealStatus(D2DrlgRoom drlgRoom) {
         if (drlgRoom.getRoomStatus().getValue() >= D2DrlgRoomStatus.COUNT.getValue() 
             || drlgRoom.getRoomsInList()[drlgRoom.getRoomStatus().getValue()] == 0) {
-            D2DrlgRoomStatus firstStatusWithRefCount = roomExFindFirstStatusWithRefCount(
+            int firstStatusWithRefCount = roomExFindFirstStatusWithRefCount(
                 drlgRoom, D2DrlgRoomStatus.COUNT);
-            if (drlgRoom.getRoomStatus() != firstStatusWithRefCount) {
+            D2DrlgRoomStatus realStatus = firstStatusWithRefCount < 0
+                ? D2DrlgRoomStatus.COUNT : D2DrlgRoomStatus.fromValue(firstStatusWithRefCount);
+            if (drlgRoom.getRoomStatus() != realStatus) {
                 // Status removal can move to a lower-priority (larger) value. The regular
                 // update helper intentionally only promotes, so relink explicitly here.
-                moveRoomExToStatus(drlgRoom, firstStatusWithRefCount);
+                moveRoomExToStatus(drlgRoom, realStatus);
             }
         }
     }
@@ -278,9 +280,7 @@ public class DrlgActivate {
             }
             
             if (nearRoom.getRoomStatus().getValue() >= status) {
-                D2DrlgRoomStatus firstStatusWithRefCount = roomExFindFirstStatusWithRefCount(
-                    nearRoom, D2DrlgRoomStatus.fromValue(status));
-                if (firstStatusWithRefCount.getValue() == status) {
+                if (roomExFindFirstStatusWithRefCount(nearRoom, D2DrlgRoomStatus.fromValue(status)) < 0) {
                     gRoomExSetStatus[status].setStatus(nearRoom);
                 }
             }
@@ -313,8 +313,7 @@ public class DrlgActivate {
         roomExPropagateSetStatus(drlgRoom.getLevel().getDrlg().getMempool(), drlgRoom, 
             (byte)(status.getValue() + 1));
         if (drlgRoom.getRoomStatus().getValue() >= status.getValue()) {
-            D2DrlgRoomStatus firstStatusWithRefCount = roomExFindFirstStatusWithRefCount(drlgRoom, status);
-            if (firstStatusWithRefCount == status) {
+            if (roomExFindFirstStatusWithRefCount(drlgRoom, status) < 0) {
                 gRoomExSetStatus[status.getValue()].setStatus(drlgRoom);
             }
         }

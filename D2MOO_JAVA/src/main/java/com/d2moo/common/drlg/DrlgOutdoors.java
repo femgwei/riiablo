@@ -1599,7 +1599,7 @@ public class DrlgOutdoors {
             }
         }
         int changed = 0;
-        for (int x = 1; x <= drlgRoom.getNTileWidth(); x++) {
+        for (int x = 1; x <= drlgRoom.getNTileWidth() + 1; x++) {
             for (int y = drlgRoom.getNTileHeight() + 1; y >= 1; y--) {
                 int center = DrlgDrlgGrid.getGridEntry(dirt, x, y);
                 if (center == 0) continue;

@@ -411,8 +411,14 @@ public class Missile extends PooledComponent {
     return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, frames));
   }
 
-  /** SkillSor.cpp SKILLS_MissileInit_ChargedBolt reads TotalFrames as uint8. */
+  /** 1.10f D2Game.0x6FD15E50 compares full TotalFrames before the path's byte conversion. */
   public static int chargedBoltLifetimeFrames(Missiles.Entry row, int skillLevel) {
+    int frames = nativeRangeFrames(row, skillLevel);
+    return frames >= 78 ? 77 : frames;
+  }
+
+  /** SkillAss.cpp sub_6FCF6C10 still compares a byte; do not share SkillSor's corrected policy. */
+  public static int clawsOfThunderLifetimeFrames(Missiles.Entry row, int skillLevel) {
     int frames = nativeRangeFrames(row, skillLevel);
     return (frames & 0xff) >= 78 ? 77 : frames;
   }

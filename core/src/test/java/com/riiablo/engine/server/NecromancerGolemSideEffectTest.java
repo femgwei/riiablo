@@ -85,9 +85,12 @@ class NecromancerGolemSideEffectTest extends RiiabloTest {
   }
 
   @Test
-  void bloodGolemDamageCopiesOwnerLifeEvenWhen110fShareIsZero() {
+  void bloodGolemZeroShareLeavesBothLifeValuesUnchangedBeforeDamage() {
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLOOD_GOLEM);
+    int originalShare = skill.Param[4];
     World world = world();
     try {
+      skill.Param[4] = 0;
       int owner = player(world, 0, 0);
       attrs(world, owner).aggregate().put(Stat.hitpoints, 60f);
       int attacker = monster(world, 1, 0, 100, 100);
@@ -98,9 +101,63 @@ class NecromancerGolemSideEffectTest extends RiiabloTest {
 
       world.getSystem(EventSystem.class).dispatch(hit);
 
-      assertEquals(60f, attrs(world, blood).get(Stat.hitpoints).asFixed());
-      assertEquals(10f, hit.damage, "1.10f Param5=0 must not absorb incoming damage");
+      assertEquals(20f, attrs(world, blood).get(Stat.hitpoints).asFixed());
+      assertEquals(60f, attrs(world, owner).get(Stat.hitpoints).asFixed());
+      assertEquals(10f, hit.damage, "zero share must not absorb incoming damage");
     } finally {
+      skill.Param[4] = originalShare;
+      world.dispose();
+    }
+  }
+
+  @Test
+  void bloodGolemNativeShareMatchesOriginalSkillsTxt() {
+    String[] lines = Riiablo.mpqs.resolve("data\\global\\excel\\skills.txt")
+        .readString("windows-1252").split("\\r?\\n");
+    String[] header = lines[0].split("\\t", -1);
+    int param5 = -1;
+    for (int i = 0; i < header.length; i++) {
+      if ("Param5".equalsIgnoreCase(header[i])) param5 = i;
+    }
+    assertTrue(param5 >= 0);
+    for (String line : lines) {
+      String[] cells = line.split("\\t", -1);
+      if (!"BloodGolem".equalsIgnoreCase(cells[0])) continue;
+      int share = Integer.parseInt(cells[param5]);
+      assertEquals(10, share, "retail 1.10f damage share, not the later zero-share configuration");
+      assertEquals(share, Riiablo.files.skills.get(SkillId.BLOOD_GOLEM).Param[4]);
+      return;
+    }
+    throw new AssertionError("BloodGolem missing from Skills.txt");
+  }
+
+  @Test
+  void bloodGolemDamageShareChargesOwnerAndClampsOwnerToOneLife() {
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.BLOOD_GOLEM);
+    int originalShare = skill.Param[4];
+    World world = world();
+    try {
+      skill.Param[4] = 50;
+      int owner = player(world, 0, 0);
+      attrs(world, owner).aggregate().put(Stat.hitpoints, 6f);
+      int attacker = monster(world, 1, 0, 100, 100);
+      int blood = monster(world, 0, 0, 20, 100);
+      world.getMapper(SummonedPet.class).create(blood)
+          .set(owner, "golem", SkillId.BLOOD_GOLEM, 5, false, 0);
+
+      DamageEvent hit = DamageEvent.obtainMissile(attacker, blood, 4, 4, null);
+      world.getSystem(EventSystem.class).dispatch(hit);
+      assertEquals(4f, attrs(world, owner).get(Stat.hitpoints).asFixed());
+      assertEquals(20f, attrs(world, blood).get(Stat.hitpoints).asFixed());
+      assertEquals(2f, hit.damage);
+
+      hit = DamageEvent.obtainMelee(attacker, blood, 20, 20);
+      world.getSystem(EventSystem.class).dispatch(hit);
+      assertEquals(1f, attrs(world, owner).get(Stat.hitpoints).asFixed());
+      assertEquals(20f, attrs(world, blood).get(Stat.hitpoints).asFixed());
+      assertEquals(10f, hit.damage, "native damage reduction is not limited by the owner's remaining life");
+    } finally {
+      skill.Param[4] = originalShare;
       world.dispose();
     }
   }

@@ -996,6 +996,8 @@ public class ServerSkillSystem extends PassiveSystem {
             skill.cltmissilec, skill.cltmissiled};
     if ((event.srvdofunc == 85 || skill.srvdofunc == 85) && mMonster.has(event.entityId)) {
       missileNames[0] = resolveMonsterChainMissile(mMonster.get(event.entityId), missileNames[0]);
+      // SrvDo085 rejects an invalid upgraded ID; do not fall back to a basic attack missile.
+      if (missileNames[0] == null) return;
     }
     int configuredCount = 0;
     for (String name : missileNames) {
@@ -4241,13 +4243,13 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   static String resolveMonsterChainMissile(Monster monster, String baseMissileName) {
     if (monster == null || monster.monstats == null || !hasText(baseMissileName)) {
-      return baseMissileName;
+      return null;
     }
     Missiles.Entry baseMissile = Riiablo.files.Missiles.get(baseMissileName);
-    if (baseMissile == null) return baseMissileName;
+    if (baseMissile == null) return null;
     int chainId = getMonsterChainId(monster.monstats);
     Missiles.Entry resolved = Riiablo.files.Missiles.get(baseMissile.Id + chainId);
-    if (resolved == null) return baseMissileName;
+    if (resolved == null) return null;
     log.info("[SHAMAN_FIREBALL] phase=missile_resolve monster={} baseMissile={} "
             + "chainId={} missile={} missileId={} celFile={}",
         monster.monstats.Id, baseMissileName, chainId, resolved.Missile,

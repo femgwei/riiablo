@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,6 +62,37 @@ import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
 public class ShamanFireballAuditTest extends RiiabloTest {
+  @Test
+  void invalidUpgradedMissileRejectsCastWithoutBasicAttackFallback() {
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman3");
+    Skills.Entry skill = Riiablo.files.skills.get(row.Skill2);
+    Missiles.Entry base = Riiablo.files.Missiles.get(skill.srvmissilea);
+    int originalId = base.Id;
+    RecordingFactory factory = new RecordingFactory();
+    ServerSkillSystem skills = new ServerSkillSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), skills, factory).build()
+        .register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = world.create();
+      Monster monster = world.getMapper(Monster.class).create(caster);
+      monster.set(row, Riiablo.files.monstats2.get(row.MonStatsEx));
+      world.getMapper(Position.class).create(caster).position.set(10, 10);
+      assertEquals("shafire3", ServerSkillSystem.resolveMonsterChainMissile(monster, skill.srvmissilea));
+      assertNull(ServerSkillSystem.resolveMonsterChainMissile(monster, "missing-native-missile"));
+      for (int invalidBase : new int[] {-1000, 1000000}) {
+        base.Id = invalidBase;
+        assertNull(ServerSkillSystem.resolveMonsterChainMissile(monster, skill.srvmissilea));
+        skills.onSkillDo(SkillDoEvent.obtain(caster, skill.Id, -1,
+            new Vector2(20, 10), skill.srvdofunc, skill.cltdofunc));
+        assertEquals(0, factory.creations, "invalid chain missile must not emit a fallback projectile");
+      }
+    } finally {
+      base.Id = originalId;
+      world.dispose();
+    }
+  }
+
   @Test
   void dumpShamanMissileSoundRows() {
     for (String name : new String[] {"shafire1", "shafire2", "shafire3", "shafire4", "shafire5"}) {

@@ -905,7 +905,8 @@ Multiple Shot/Strafe 的多目标、穿透与命中去重，随后继续其余 A
 - 四类 Golem 已命中 `NecroPet` 专用 AI，并对齐主人 regroup、目标范围、80% 攻击概率、
   城镇禁攻和 Warp 后 AI 缓存清理；未修改网络 schema。
 - 四类 Golem 的原生战斗副作用已补齐：Clay 被近战攻击时反向减速攻击者；Blood 使用
-  目标 Drain 和原生递减曲线回血，并保留 1.10f `Param5=0` 的受击生命同步；Iron 聚合
+  目标 Drain 和原生递减曲线回血；2026-10-15 按上游 `2bc0c20` 订正受击分担为扣主人生命，
+  本机 1.10f `Param5=10`，不再将主人生命覆盖到石魔；Iron 聚合
   被消费物品并执行 Thorns；Fire 从 `SumSkill1/SumSk1Calc` 获得 25-frame Holy Fire。
   跨区域重组后永久光环和 Iron Golem 来源物品继续存在。
 - 圣骑士 Might、Prayer、Holy Fire、Concentration、Conviction 已统一接入真实 1.10f

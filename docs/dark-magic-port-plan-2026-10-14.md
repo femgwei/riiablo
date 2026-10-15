@@ -125,20 +125,23 @@ Go/Lua 代码不直接复制；迁移确认后的行为和有区分力的测试�
 - 导弹复核第一批：`MissileNativePolicyTest` 定向测试通过，撤回第二批的距离
   语义断言；新增基础移动导弹按帧寿命及速度无关的回归。
   `MissileRoomTrackingTest` 同时通过，diff 检查通过。尚未实机验收。
-- 导弹复核第二批：D2MOO `SkillSor.cpp:SKILLS_MissileInit_ChargedBolt`
-  （0x6FD15E50）读取 TotalFrames 的 uint8 视图；>=78时才将总帧数及当前帧
+- 导弹复核第二批（2026-10-15 订正）：D2MOO `8b424dc` 附有 1.10f 反汇编，
+  `SkillSor.cpp:SKILLS_MissileInit_ChargedBolt`（0x6FD15E50）比较完整 TotalFrames；>=78时将总帧数及当前帧
   改为77，否则保留已有寿命。SrvDo017 的陷阱和法师，以及 SkillAma.cpp 的
   Charged Strike 均使用该初始化回调。77不是固定寿命，也不是世界距离。
   已为陷阱/法师/Charged Strike 统一 Range + level * LevRange 后的条件截断，
   Charged Strike 不再强制延长短寿命到77；chargedBoltPath 的显式帧寿命不再
   被旧距离阈值提前删除。旧 range 字段暂保留兼容值，不作为这些导弹销毁阈值。
-  uint8 边界也纳入测试（300帧的低字节44不触发截断），不直接推广到刺客武学
+  撤回旧的“300帧低字节44不触发截断”结论；正确为300→77，255/256边界亦覆盖。
+  只有路径距离参数在限制之后转为 uint8，不直接推广到刺客武学
   的其他初始化回调；武学释放、特殊路径长度和重连剩余帧仍待后续核查。
-  验证：MissileNativePolicyTest 18项及 Charged Bolt Sentry 发射回归1项均通过，
-  无跳过，diff 检查通过；尚未实机验收。
+  原验证：MissileNativePolicyTest 18项及 Charged Bolt Sentry 发射回归1项通过，
+  但旧测试固化了错误边界，不能作为该结论的依据。订正后的验证见
+  `d2moo-upstream-port-2026-10-15.md`；尚未实机验收。
 - 导弹复核第三批（刺客武学初始投射物）：D2MOO SkillAss.cpp 的
   sub_6FCF6600 将技能等级传入创建参数，Claws of Thunder 第三层使用
   sub_6FCF6C10（0x6FCF6C10），按 uint8 TotalFrames 视图条件截为77；
+  现由独立 `clawsOfThunderLifetimeFrames` 保留此策略，不与法师初始化共用。
   Phoenix Strike 第二层的 sub_6FCF6D70 使用 sub_6FCF7390（0x6FCF7390），
   后者用完整帧数判断>=78，不能直接复用 uint8 判断。
   已在 Actioneer 两条创建路径设置 Range + level * LevRange 的条件截断寿命；

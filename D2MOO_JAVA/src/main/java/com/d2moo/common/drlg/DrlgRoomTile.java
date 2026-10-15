@@ -1700,7 +1700,7 @@ public class DrlgRoomTile {
             while (pCurLink != null) {
                 // 检查是否为地板类型匹配
                 if ((pCurLink.isBFloor() && nTileType == TILETYPE_FLOOR) 
-                        || (nTileType != TILETYPE_FLOOR)) {
+                        || (!pCurLink.isBFloor() && nTileType != TILETYPE_FLOOR)) {
                     break; // 使用当前链接
                 }
                 pCurLink = pCurLink.getPNext();

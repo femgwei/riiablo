@@ -424,10 +424,11 @@ public class DrlgOutWild {
         
         // 如果设置了河流或桥梁标志，尝试生成桥梁
         if ((pOutdoors.getDwFlags() & (DrlgOutdoors.OUTDOOR_RIVER | DrlgOutdoors.OUTDOOR_BRIDGE)) != 0) {
-            int nRand = Seed.rollLimitedRandomNumber(level.getSeed(), nGridHeight - 2);
+            int nRowRange = nGridHeight - 2;
+            int nRand = Seed.rollLimitedRandomNumber(level.getSeed(), nRowRange);
             
-            for (int i = 0; i < nGridHeight - 2; ++i) {
-                int nY = (nRand + i) % (nGridHeight - 1);
+            for (int i = 0; i < nRowRange; ++i) {
+                int nY = (nRand + i) % nRowRange + 1;
                 
                 if (DrlgOutdoors.testGridCellSpawnValid(level, x - 1, nY) 
                         && ((pOutdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_BRIDGE) != 0 

@@ -485,8 +485,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   /**
    * D2Game EventFunc26: before incoming melee/missile damage is consumed, a
-   * Blood Golem copies its owner's current life minus Param5's absorbed share.
-   * Param5 is zero in 1.10f, but the life-copy side effect still occurs.
+   * Blood Golem redirects Param5's share to its owner (minimum one owner HP).
+   * A zero Param5 leaves both life values unchanged by this callback.
    */
   private void applyBloodGolemDamageLink(DamageEvent event) {
     if ((event.kind != DamageEvent.MELEE && event.kind != DamageEvent.MISSILE)
@@ -496,10 +496,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM
         || !mAttributesWrapper.has(pet.ownerId)) return;
     Attributes owner = mAttributesWrapper.get(pet.ownerId).attrs;
-    Attributes golem = mAttributesWrapper.get(event.victim).attrs;
     StatRef ownerLife = owner != null ? owner.get(Stat.hitpoints, StatRef.obtain()) : null;
-    StatRef golemLife = golem != null ? golem.get(Stat.hitpoints, StatRef.obtain()) : null;
-    if (ownerLife == null || golemLife == null || ownerLife.asFixed() < 1f) return;
+    if (ownerLife == null || ownerLife.asFixed() < 1f) return;
 
     Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
         ? Riiablo.files.skills.get(pet.skillId) : null;
@@ -507,7 +505,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? Math.max(0, skill.Param[4]) : 0;
     float reduced = Math.max(0f, event.damage) * share / 100f;
     float linkedLife = Math.max(1f, ownerLife.asFixed() - reduced);
-    golemLife.set(linkedLife);
+    // EventFunc26 writes the owner's remaining life, not the attacked golem's.
+    ownerLife.set(linkedLife);
     event.damage = Math.max(0f, event.damage - reduced);
     log.info("[NECRO_BLOOD_GOLEM] phase=damage_link pet={} owner={} kind={} share={} "
             + "absorbed={} linkedHp={} remaining={}",

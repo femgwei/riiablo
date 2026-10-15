@@ -912,6 +912,7 @@ public class DrlgOutPlace {
         
         // 遍历顶点链表
         do {
+            tLvlPrestPackedInfo.setNPackedValue(0);
             tLvlPrestPackedInfo.setNUnkb00(true);
             tLvlPrestPackedInfo.setBHasDirection(pDrlgVertex.getNDirection() != 0);
 

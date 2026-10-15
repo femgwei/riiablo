@@ -1397,6 +1397,24 @@ class AssassinMartialArtsTest extends RiiabloTest {
 
   @Test
   void clawsOfThunderThirdChargeStacksNovaAndChargedBoltPaths() {
+    assertClawsOfThunderThirdCharge();
+  }
+
+  @Test
+  void clawsOfThunderLongLifetimeKeepsItsSeparateByteComparison() {
+    Missiles.Entry row = Riiablo.files.Missiles.get("clawsofthunderbolt");
+    int range = row.Range, levRange = row.LevRange;
+    try {
+      row.Range = 300;
+      row.LevRange = 0;
+      assertClawsOfThunderThirdCharge();
+    } finally {
+      row.Range = range;
+      row.LevRange = levRange;
+    }
+  }
+
+  private void assertClawsOfThunderThirdCharge() {
     DummyFactory factory = new DummyFactory();
     Actioneer actioneer = new Actioneer();
     World world = new World(new WorldConfigurationBuilder()
@@ -1428,7 +1446,7 @@ class AssassinMartialArtsTest extends RiiabloTest {
           assertTrue(missile.chargedBoltPath);
           assertEquals(2f, missile.chargedBoltNextTurnDistance);
           assertTrue(missile.range <= 77f);
-          assertEquals(Missile.chargedBoltLifetimeFrames(
+          assertEquals(Missile.clawsOfThunderLifetimeFrames(
               missile.missile, 5), missile.nativeLifetimeFrames);
           assertEquals(claws.Id, missile.skillId);
           assertTrue(missile.damageSnapshot);

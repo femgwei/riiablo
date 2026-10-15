@@ -365,21 +365,21 @@ public class DrlgOutSiege {
         int nRand = (level.getLevelId() == D2LevelIds.LEVEL_BLOODYFOOTHILLS) ? 1 : -1;
         
         // 查找顶部边界（Y=0）的关卡链接
-        for (int i = 0; i < pOutdoors.getNGridHeight(); ++i) {
+        for (int i = 0; i < pOutdoors.getNGridWidth(); ++i) {
             D2DrlgOutdoorPackedGrid2InfoStrc packedInfo = DrlgOutdoors.getPackedGrid2Info(pOutdoors, i, 0);
             if (packedInfo != null && packedInfo.isBLvlLink()) {
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, i, 0, 
-                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_EXIT_32X16, 2 * nRand, false);
+                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_EXIT_32X16, nRand, false);
                 break;
             }
         }
         
         // 查找底部边界（Y=nGridHeight-2）的关卡链接
-        for (int i = 0; i < pOutdoors.getNGridHeight(); ++i) {
+        for (int i = 0; i < pOutdoors.getNGridWidth(); ++i) {
             D2DrlgOutdoorPackedGrid2InfoStrc packedInfo = DrlgOutdoors.getPackedGrid2Info(pOutdoors, i, pOutdoors.getNGridHeight() - 2);
             if (packedInfo != null && packedInfo.isBLvlLink()) {
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, i, pOutdoors.getNGridHeight() - 2, 
-                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_ENTRANCE_32X16, 2 * nRand, false);
+                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_ENTRANCE_32X16, nRand, false);
                 break;
             }
         }
@@ -389,7 +389,7 @@ public class DrlgOutSiege {
             D2DrlgOutdoorPackedGrid2InfoStrc packedInfo = DrlgOutdoors.getPackedGrid2Info(pOutdoors, 0, i);
             if (packedInfo != null && packedInfo.isBLvlLink()) {
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, 0, i, 
-                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_EXIT_16X32, 2 * nRand, false);
+                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_EXIT_16X32, nRand, false);
                 break;
             }
         }
@@ -399,7 +399,7 @@ public class DrlgOutSiege {
             D2DrlgOutdoorPackedGrid2InfoStrc packedInfo = DrlgOutdoors.getPackedGrid2Info(pOutdoors, pOutdoors.getNGridWidth() - 2, i);
             if (packedInfo != null && packedInfo.isBLvlLink()) {
                 DrlgOutdoors.spawnOutdoorLevelPresetEx(level, pOutdoors.getNGridWidth() - 2, i, 
-                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_ENTRANCE_16X32, 2 * nRand, false);
+                        D2LvlPrestIds.LVLPREST_ACT5_BARRICADE_ENTRANCE_16X32, nRand, false);
                 break;
             }
         }
