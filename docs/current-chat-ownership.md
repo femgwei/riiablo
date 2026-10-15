@@ -10,7 +10,30 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-16 第十七批：类型生命周期与有状态Toward分派
+## 2026-10-16 第十八批：原生A*与Straight入口
+
+- `D2PathDispatch`新增1/7，现支持1/2/3/5/6/7/13/15。Straight先Toward；末点在容差内且
+  不等于start才直接接受，否则原始起终点平方距离<=324时试A*。A*失败且第一次Toward非零才
+  重新运行Toward；不是恢复旧buffer，也不要求A*返回精确到达。平方运算保留signed int32回绕。
+- 新增`D2AStar.findNativePath`，节点坐标uint16、h/g/f赋值signed int16；保留旧findPath通用
+  int坐标API及生产shadow比较。单位目标approach查询仍int32。A*只写有效prefix，不赋live
+  index/count/vectors；Straight可能返回与live Toward count不同的数，外层Request才接回并归一化。
+- 固定D2MOO`0c0bbd1e`未fetch，复核本机1.10f D2Common哈希未变；静态核对`B130..B1D9`、
+  `69E0..7965`相关入口/节点/排序/flush，非DLL动态执行。新增23项，定向62项通过；最终
+  **410项/36类通过，失败/错误/跳过0**，四项原DLL静态数据oracle执行。1,000组普通输入逐query/
+  路点比较包含在一项测试中，不另计1,000项JUnit。日志`core/build/round18-full.log`，XML
+  `.gradle/path-port/round18-full/core/test-results/pathPortTest`。
+- 代码/测试/init `26952a9d94f449d9241e1d47870c20edd40cf592`已推送origin/master并核验远端一致。
+  init新增可选`-PpathTestScope=path`隔离测试源码，默认不变；完整主源码仍编译。其他聊天物品/
+  门/DeathMaul改动不混入本轮提交或专项验收，四交接文档另行提交推送。
+- **寻路仍未完成**：0/16 IDA、8/9/11/12入口与生产映射/nDist/移动消费安装、矩形递归网格及
+  地形验收仍待。下一轮优先IDA：DLL `7F34..7FD6`接受unsigned cached>=new（包括相等），
+  不是上游源码的new>=cached；现Java仅new<cached也漏相等。已追踪跳转落点纠正初读，不能把
+  `jae`当作跳过。尚未改IDA代码，另需入口容差倍增、room边界、type16 RNG/截止条件对照。
+  普通生产仍Map→AStarPathFinder；不改近期优化，不加1.13+ gate或普通自动partial。
+  本轮无新MPQ/TCP/GL/性能或原版DLL动态函数差分，不宣称寻路整体已收口。
+
+## 2026-10-16 第十七批：类型生命周期与有状态Toward分派（历史）
 
 - 新增`D2PathTypes`，补10185/10186及三张18项表，保存previousPathType/previousVelocity，
   按旧flags判断保存门槛；player SetType(2)写前断言、saved knockback写后断言的副作用不混用。

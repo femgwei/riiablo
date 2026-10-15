@@ -648,3 +648,33 @@ partial。本轮无新MPQ/TCP/GL/性能/原版动态差分，其他AI更新与�
 **寻路仍未完成**：下一步优先Straight7/A*/IDA入口，其余类型、生产映射/nDist/移动消费安装、
 矩形递归网格与真实地形验收仍待。普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial。
 本轮无新MPQ/TCP/GL/性能/原版动态差分，不据此宣称整体更优或完整原生等价。
+
+## 后续第十八批：Straight组合与A*原生字段宽度（2026-10-16）
+
+dispatcher现支持1/2/3/5/6/7/13/15。固定D2MOO`0c0bbd1e`并重新核对本机1.10f D2Common
+哈希未变；Straight `0x6FDAB130..B1D9`、A*相关`69E0..7965`静态证据，不是DLL动态执行。
+
+- Straight不是无条件A* fallback：Toward末点在容差内且不是start才直接返回；原始起终点平方
+  距离<=324才试A*，失败且首次Toward非零才重新运行Toward。signed int32平方保留回绕，
+  不用long“修正”；A* best partial也可接受，但这不授权普通生产exact→partial兜底。
+- 原生A*用uint16邻居坐标与signed int16 h/g/f，新`findNativePath`保留此算术；旧通用
+  findPath不变。单位approach的±2碰撞查询是int32，不因节点word类型跟着截断。
+  同分插前、pending降分不重排、visited传播及200节点沿用原版，而非替换成常规A*优化。
+- A*只写有效prefix/返回count，不赋live index/count/vectors；Straight可能留下Toward的live
+  count和初始向量，外层Request才接回新count并在占位恢复后归一化。已有flush逻辑对应实际
+  `0x6FDA78A0`，一点路径允许，>=78拒绝；不把IDA的一点拒绝套到A*。
+- type0/16尚未接通。IDA `7F34..7FD6`的jae目标7FCF会落到cache写入7FD3，非零cache
+  接受unsigned cached>=new（包括相等）；现Java严格new<cached漏相等，上游源码反向写
+  new>=cached。初读跳转含义已纠正，不能据错误方向移植。wrapper容差倍增/room/type16 RNG
+  与cutoff仍待专项核对，本轮没有改D2IDAStar。
+
+新增23项；定向62项、合并**410项/36类通过，失败/错误/跳过0**，四项DLL静态数据oracle执行。
+1,000组普通输入逐query/路点比较在一项JUnit内；真实网格type1/7绕行/双占位恢复不等于生产
+安装或实机地形验收。代码/测试/init `26952a9d9`已推送且远端一致；init可选
+`-PpathTestScope=path`仅隔离测试源码，不跳主源码编译。其他聊天修改不混入本轮提交。
+完整证据/失败夹具说明/另机命令见
+[第十八批记录](d2moo-upstream-port-2026-10-15.md#第十八批原生a与straight入口2026-10-16)。
+
+**寻路仍未完成**：优先IDA、其余8/9/11/12，生产映射/nDist/移动消费安装、矩形递归网格与
+地形验收仍待。普通生产仍A*，近期优化保持，不加1.13+ gate或普通自动partial；无新MPQ/TCP/
+GL/性能/原版动态函数差分，不据此宣称整体性能更优或完整原生等价。

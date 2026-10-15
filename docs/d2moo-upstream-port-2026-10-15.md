@@ -1389,6 +1389,102 @@ $env:D2_TEST = $env:D2_HOME
 仍待。普通生产仍Map→AStarPathFinder，近期碰撞/房间/步进保持，不加1.13+ gate或普通自动partial。
 火焰之河AI fallback本轮未修/未重跑，其他聊天进度与验收单列。
 
+## 第十八批：原生A*与Straight入口（2026-10-16）
+
+本轮不切换生产。`D2PathDispatch`从2/3/5/6/13/15扩为**1/2/3/5/6/7/13/15**，
+具体Effects可组合既有Request与真实内存footprint；不是生产ECS适配或移动消费安装。
+
+### 第十八批证据与入口语义
+
+D2MOO固定`origin/master=0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch，读取
+`Path/PathMisc.cpp`、`Path/AStar.cpp`及`Path/IDAStar.cpp`。重新计算本机
+`G:\BaiduNetdiskDownload\Diablo II 1.10F\D2Common.dll` SHA256仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+以下为objdump静态反汇编，不是原版DLL动态函数差分。
+
+- Straight7 `0x6FDAB130..B1D9`先清index/count后调用Toward。返回非零且最后点的近似距离
+  <=uint8容差、最后点!=原始start，才直接返回。否则用原始start/target计算
+  `dx*dx+dy*dy<=18*18`；边界324包含，`imul/add/jg`是signed int32运算，保留溢出回绕，
+  不是long距离，也不是按Toward末点测半径。正常Request的±100窗口避免此病态大差值域。
+- 在半径内调用A*，非零直接返回；A*失败且第一次Toward非零才**再次执行Toward**，保留第二次
+  查询/状态副作用，不缓存恢复旧点。首次Toward零、半径外均不重算。A*可能返回best partial，
+  Straight不另要求精确到达；这不等于授权普通生产exact→partial兜底。
+- A* `0x6FDA69E0..6D01`的targetUnit gate按顺序检查目标周围
+  `(-2,-2),(-2,+2),(+2,-2),(+2,+2),(-2,0),(0,-2),(+2,0),(0,+2)`，首个空点即停。
+  偏移查询是int32，坐标临近0/65535时也不截回uint16；没有live targetUnit则不查这八点。
+- 邻居构造`0x6FDA6D50..720F`写uint16，节点h/g/f字段为signed int16赋值和比较。
+  `0x6FDA7320..738B`先符号扩展f再排序，同分新点前插；pending降分不重排、visited传播
+  strict lower、200节点和best partial选择沿用原逻辑，不趁本轮换成更常规但不同的A*。
+  新增`D2AStar.findNativePath`专供原生入口；旧`findPath`仍保留通用int坐标语义和既有shadow
+  比较。native模式超出200项传播栈域显式异常，不模拟DLL内存破坏。
+- flush实际为`0x6FDA78A0..7965`（由入口调用确认），`0x6FDA72D0`是visited lookup。
+  现有`compressAStarPath`已按方向压缩、排除start，count<1或>=78不写，一点路径允许。
+  A*入口只写成功prefix、返回count，不改live index/count/vectors，失败不清旧槽/尾部。
+  Straight成功A*的返回count可能不同于仍保留的Toward live count，外层Request才接回赋值，
+  恢复target/owner占位后再按实际首点归一化；不能在A*内部提早改这段生命周期。
+
+adapter沿用第十七批稳定player/monster、uint16/precision同步、distance0..77/toleranceuint8域。
+这不代表原版A*在所有其他owner域都会断言，只是本adapter当前支持域更窄。碰撞回调要求稳定
+只读，不把测试中用于观察第二次调用的状态夹具当作动态碰撞生产支持；宿主异常/重入中间状态
+与原版内存副作用等价性不在本轮范围。
+
+### IDA留待下一轮：已纠正分支初读，未修改代码
+
+不能直接把现有纯`D2IDAStar`接到type0/16：原生wrapper还涉及容差uint8倍增、房间边界构造、
+类型相关cutoff与type16单位RNG，现有通用API不覆盖完整入口。room Y/height赋值顺序也需
+对照DLL，不能照搬可疑反编译顺序或凭经验修正。
+
+额外复核`0x6FDA7F1C..7FD6`发现三者差异：
+
+- DLL将short新g符号扩展后，`cmp cached,new; jae 0x6FDA7FCF`；**7FCF恢复寄存器后落到
+  7FD3写cache/继续评估**，不是跳过。非零cache仅在unsigned cached>=new时接受，包括相等。
+- 固定上游源码写成`new>=cached`，方向相反；不能仅因来自D2MOO就直接移植这个条件。
+- 现Java为unsigned `new<cached`，短路方向与DLL一致，但不接受相等，还存在通用int/饱和加法
+  与原生word算术等域差异。当前不改纯库/不接dispatcher，不声称本轮修复IDA。
+
+本轮早期曾把`jae`误当成跳过；沿两条跳转追到7FD3后已纠正，后续必须以上述完整控制流为准。
+
+### 第十八批验证与交付
+
+新增`D2PathStraightTest` **23项**。定向Straight/Dispatch/AStar/Toward共**62项/4类通过**；
+最终与第十七批同范围合并**410项/36类通过，失败/错误/跳过均0**，BUILD SUCCESSFUL。
+四项本机原DLL静态数据oracle执行；未增加/执行原版动态函数oracle。
+
+专项覆盖A*前缀/stale buffer/live状态、targetUnit approach顺序与short circuit/int32边界、
+uint16邻居回绕、signed16 h/f导致不同分支、1,000组普通输入逐query/路点/节点数/best point
+比较（在一项JUnit内）；Straight容差非精确点/source排除、18/19与对角半径、int32溢出、
+失败重算/不重算、live offset、返回count与live count区别、partial与非自动type15续算。
+真实内存网格组合type1/7移除/恢复owner和target，完成绕墙路径与外层归一化，不是实机地形验收。
+
+首次定向6项夹具预期错误：Toward一步预算尾点省略、local过程不逐步重测容差，以及A*首压缩
+点不保证立即转弯。调整预算/障碍位置与断言后通过，未为迁就测试改动Toward或A*内核。
+早期编译也遇到其他聊天物品接口/测试正在修改的错误；没有改动那部分文件。init新增可选
+`-PpathTestScope=path`，筛选本轮36类及RiiabloTest的测试源码，默认编译不变；主源码仍完整
+重新编译。临时跳过core编译的诊断尝试没有形成验收，最终通过记录未跳过主源码编译。
+
+日志：`core/build/round18-check-selected.log`（首次6项夹具失败）、
+`core/build/round18-check-selected-final.log`（62项通过）、`core/build/round18-full.log`。
+XML：`.gradle/path-port/round18-full/core/test-results/pathPortTest`。
+代码/测试/init **`26952a9d94f449d9241e1d47870c20edd40cf592`**已推送origin/master并核验远端一致。
+只提交本轮五个路径；其他聊天物品/门/DeathMaul修改及其提交保持，不代为验收。
+四交接文档另行提交推送，最终SHA见git log。
+
+另一电脑最小复验（安装目录按当地调整；无需上述临时init）：
+
+```powershell
+$env:D2_HOME = 'G:\BaiduNetdiskDownload\Diablo II 1.10F'
+$env:D2_TEST = $env:D2_HOME
+.\gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRun=round18-check -PpathTestScope=path --tests '*D2PathStraightTest' --tests '*D2PathDispatchTest' --tests '*D2AStarTest' --tests '*D2TowardTest' --console=plain
+```
+
+全范围可用同一命令改`-PpathRun=round18-full`，删除四个`--tests`筛选；`pathTestScope=path`
+只编译上述寻路回归集合。无匹配原DLL时静态oracle显式跳过，不得据此声称原版验证通过。
+本轮无新MPQ/TCP/GL、全图多seed难度、性能或原DLL动态函数差分。
+
+**寻路仍未完成**：下一轮优先IDA入口/相等分支，再补8/9/11/12。生产身份/元数据/房间图、
+nDist与移动消费安装、矩形递归网格及地形验收仍待；普通生产仍Map→AStarPathFinder。
+保持近期碰撞/房间/步进，不加1.13+ gate或普通自动partial。其他AI与火焰之河fallback进度单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
@@ -1396,8 +1492,8 @@ $env:D2_TEST = $env:D2_HOME
   pathType设计受控接入。已补独立nDistance/final/索引续算投影与Unit快照/FOG采样/10399算术，
   已补独立10142结果规范化/flags生命周期与请求gate/城镇规则/footprint调用编排；仍需生产身份/
   元数据/房间图适配、nDist步进消费与原生搜索dispatcher剩余类型。已补footprint上层选择与真实
-  内存网格adapter、第十七批类型生命周期及2/3/5/6/13/15有状态分派；下一步优先Straight7和
-  A*/IDA入口。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
+  内存网格adapter、第十七批类型生命周期及第十八批1/2/3/5/6/7/13/15有状态分派；下一步优先
+  IDA入口/缓存相等分支，再补8/9/11/12。矩形递归网格原语边界仍需专项核对；随后将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。
