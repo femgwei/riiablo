@@ -1,0 +1,103 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+> Task :core:deathMaulerBaselineClasses
+
+> Task :core:compileTestJava
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:deathMaulerBaseline
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+DeathMaulerAiIntegrationTest > failedMeleeRollWaitsFifteenFramesWithoutApproachingOrShooting() FAILED
+    org.opentest4j.AssertionFailedError: expected: <IDLE> but was: <IDLE(fallback:DeathMauler)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.failedMeleeRollWaitsFifteenFramesWithoutApproachingOrShooting(DeathMaulerAiIntegrationTest.java:44)
+
+DeathMaulerAiIntegrationTest > strictRangeAndFailedShootRollFallThroughToApproach() FAILED
+    java.lang.ClassCastException: class com.riiablo.engine.server.ai.GenericMonster cannot be cast to class com.riiablo.engine.server.ai.NativeDecisionAI (com.riiablo.engine.server.ai.GenericMonster and com.riiablo.engine.server.ai.NativeDecisionAI are in unnamed module of loader 'app')
+        at com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.strictRangeAndFailedShootRollFallThroughToApproach(DeathMaulerAiIntegrationTest.java:74)
+
+DeathMaulerAiIntegrationTest > rangedSkillPrecedesApproachAndPreservesBusyAction() FAILED
+    java.lang.NullPointerException: Cannot read field "skillId" because the return value of "com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest$Fixture.casting()" is null
+        at com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.rangedSkillPrecedesApproachAndPreservesBusyAction(DeathMaulerAiIntegrationTest.java:59)
+
+DeathMaulerAiIntegrationTest > sixRealRowsSelectDedicatedAiAndDeathMaul() FAILED
+    org.opentest4j.AssertionFailedError: expected: <DeathMauler> but was: <GenericMonster>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.sixRealRowsSelectDedicatedAiAndDeathMaul(DeathMaulerAiIntegrationTest.java:19)
+
+DeathMaulerAiIntegrationTest > meleeUsesA1InsteadOfRangedSkillInAllDifficulties() FAILED
+    java.lang.NullPointerException: Cannot read field "skillId" because the return value of "com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest$Fixture.casting()" is null
+        at com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.meleeUsesA1InsteadOfRangedSkillInAllDifficulties(DeathMaulerAiIntegrationTest.java:32)
+
+DeathMaulerAiIntegrationTest > failedRangedRollsWaitFifteenFramesAndNoTargetDoesNotCast() FAILED
+    org.opentest4j.AssertionFailedError: expected: <IDLE> but was: <IDLE(fallback:DeathMauler)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.failedRangedRollsWaitFifteenFramesAndNoTargetDoesNotCast(DeathMaulerAiIntegrationTest.java:96)
+
+DeathMaulerAiIntegrationTest > rejectedRangedSkillDoesNotBecomeApproachOrOrdinaryAttack() FAILED
+    org.opentest4j.AssertionFailedError: expected: <IDLE> but was: <IDLE(fallback:DeathMauler)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.DeathMaulerAiIntegrationTest.rejectedRangedSkillDoesNotBecomeApproachOrOrdinaryAttack(DeathMaulerAiIntegrationTest.java:87)
+
+7 tests completed, 7 failed
+
+> Task :core:deathMaulerBaseline FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:deathMaulerBaseline'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/deathmauler-isolated/core/reports/tests/deathMaulerBaseline/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 30s
+13 actionable tasks: 5 executed, 8 up-to-date

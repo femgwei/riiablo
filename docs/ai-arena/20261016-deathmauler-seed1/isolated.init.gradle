@@ -1,0 +1,34 @@
+allprojects { p ->
+  p.buildDir = new File(rootDir, 'build/deathmauler-isolated/' + (p.path == ':' ? 'root' : p.path.substring(1).replace(':', '_')))
+  p.afterEvaluate {
+    if (p.plugins.hasPlugin('java')) {
+      p.sourceSets.each { s ->
+        def classes = p.file("$p.buildDir/classes/java/$s.name")
+        s.java.destinationDirectory.set(classes)
+        s.output.classesDirs.setFrom(classes)
+        p.tasks.named(s.compileJavaTaskName, JavaCompile) {
+          destinationDirectory.set(classes)
+        }
+      }
+    }
+    if (p.path == ':core') {
+      def snapshot = p.tasks.register('deathMaulerBaselineClasses', Sync) {
+        dependsOn p.tasks.named('classes')
+        from p.sourceSets.main.output.classesDirs
+        exclude '**/DeathMauler.class'
+        into p.file("$p.buildDir/baselineMain")
+      }
+      p.tasks.register('deathMaulerBaseline', Test) {
+        dependsOn snapshot, p.tasks.named('testClasses')
+        testClassesDirs = p.sourceSets.test.output.classesDirs
+        classpath = p.files(p.sourceSets.test.output, snapshot.get().destinationDir,
+            p.sourceSets.main.output.resourcesDir) + p.configurations.testRuntimeClasspath
+        useJUnitPlatform { excludeTags 'visual' }
+        maxHeapSize = '2g'
+        systemProperty 'java.awt.headless', 'true'
+        systemProperty 'gdx.test.headless', 'true'
+        testLogging { events 'failed'; exceptionFormat 'full' }
+      }
+    }
+  }
+}

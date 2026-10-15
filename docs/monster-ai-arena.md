@@ -1,5 +1,14 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 DeathMauler Fn130（仅决策）
+
+DeathMauler 专用决策覆盖近战A1、远距离技能优先/严格范围、接近及15帧等待。
+隔离修前7项失败、修后43项定向通过；真实MPQ完整目录557行/1174场，六个近战场
+普通攻击与伤害可见。两个远场NO_ACTION、四个远场WARNING且伤害为0，均保留；
+技能308的Do136与MonSeq尚未实现，不能以技能调用数认定技能验收通过。
+fallback降至42个AI名称/158行，111个WARNING。单位RNG与全局调度仍待，状态为PARTIAL。
+证据见 [verification.md](ai-arena/20261016-deathmauler-seed1/verification.md)。
+
 ## 最新修复批次：2026-10-16 DoomKnight Fn072
 
 DoomKnight 专用AI覆盖立即A1攻击、近战停顿、接近及独立远距离停顿。

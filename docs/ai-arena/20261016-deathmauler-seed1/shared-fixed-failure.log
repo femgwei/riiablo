@@ -1,0 +1,485 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\attributes\StatFormatterTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\attributes\StatFormatterTest.java:11: ����: �Ҳ�������
+public class StatFormatterTest extends RiiabloTest {
+                                       ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\codec\excel\TreasureClassExTest.java:13: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\codec\excel\TreasureClassExTest.java:22: ����: �Ҳ�������
+class TreasureClassExTest extends RiiabloTest {
+                                  ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\Act1QuestIndicatorSystemTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\Act1QuestIndicatorSystemTest.java:18: ����: �Ҳ�������
+class Act1QuestIndicatorSystemTest extends RiiabloTest {
+                                           ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\ClientItemManagerGoldPickupTest.java:13: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\ClientItemManagerGoldPickupTest.java:27: ����: �Ҳ�������
+class ClientItemManagerGoldPickupTest extends RiiabloTest {
+                                              ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\DruidVineRecyclerPresentationTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\DruidVineRecyclerPresentationTest.java:14: ����: �Ҳ�������
+class DruidVineRecyclerPresentationTest extends RiiabloTest {
+                                                ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\MonsterNameResolverTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\MonsterNameResolverTest.java:15: ����: �Ҳ�������
+class MonsterNameResolverTest extends RiiabloTest {
+                                      ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\MonsterSkillPresentationIntegrationTest.java:11: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\MonsterSkillPresentationIntegrationTest.java:24: ����: �Ҳ�������
+class MonsterSkillPresentationIntegrationTest extends RiiabloTest {
+                                                      ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\NativeBarbarianPresentationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\NativeBarbarianPresentationTest.java:12: ����: �Ҳ�������
+class NativeBarbarianPresentationTest extends RiiabloTest {
+                                              ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\NecromancerExplosionPresentationTest.java:10: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\NecromancerExplosionPresentationTest.java:25: ����: �Ҳ�������
+class NecromancerExplosionPresentationTest extends RiiabloTest {
+                                                   ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\ObjectBreakPresentationTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\ObjectBreakPresentationTest.java:36: ����: �Ҳ�������
+class ObjectBreakPresentationTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\PoisonCloudPresentationTest.java:10: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\PoisonCloudPresentationTest.java:24: ����: �Ҳ�������
+class PoisonCloudPresentationTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\StateOverlaySystemTest.java:11: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\StateOverlaySystemTest.java:21: ����: �Ҳ�������
+class StateOverlaySystemTest extends RiiabloTest {
+                                     ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterCombatAuditTest.java:11: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterCombatAuditTest.java:36: ����: �Ҳ�������
+class Act1MonsterCombatAuditTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterEcsScenarioTest.java:13: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterEcsScenarioTest.java:45: ����: �Ҳ�������
+class Act1MonsterEcsScenarioTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterSkillMatrixTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterSkillMatrixTest.java:16: ����: �Ҳ�������
+class Act1MonsterSkillMatrixTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterSkillSmokeTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\Act1MonsterSkillSmokeTest.java:25: ����: �Ҳ�������
+class Act1MonsterSkillSmokeTest extends RiiabloTest {
+                                        ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ActioneerTest.java:10: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ActioneerTest.java:29: ����: �Ҳ�������
+class ActioneerTest extends RiiabloTest {
+                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\Act1NativeAiIntegrationTest.java:14: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\Act1NativeAiIntegrationTest.java:35: ����: �Ҳ�������
+class Act1NativeAiIntegrationTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabAiIntegrationTest.java:11: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabAiIntegrationTest.java:27: ����: �Ҳ�������
+class BaalCrabAiIntegrationTest extends RiiabloTest {
+                                        ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabCloneAiIntegrationTest.java:14: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabCloneAiIntegrationTest.java:53: ����: �Ҳ�������
+class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
+                                             ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabCounterplayIntegrationTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabCounterplayIntegrationTest.java:30: ����: �Ҳ�������
+class BaalCrabCounterplayIntegrationTest extends RiiabloTest {
+                                                 ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabMercenaryResurrectionIntegrationTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabMercenaryResurrectionIntegrationTest.java:44: ����: �Ҳ�������
+class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
+                                                           ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabNode9IntegrationTest.java:8: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabNode9IntegrationTest.java:42: ����: �Ҳ�������
+class BaalCrabNode9IntegrationTest extends RiiabloTest {
+                                           ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabSummonTargetLifecycleIntegrationTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabSummonTargetLifecycleIntegrationTest.java:51: ����: �Ҳ�������
+class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
+                                                           ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabTargetingIntegrationTest.java:7: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalCrabTargetingIntegrationTest.java:37: ����: �Ҳ�������
+class BaalCrabTargetingIntegrationTest extends RiiabloTest {
+                                               ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalMinionAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalMinionAiIntegrationTest.java:14: ����: �Ҳ�������
+class BaalMinionAiIntegrationTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalTauntAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalTauntAiIntegrationTest.java:13: ����: �Ҳ�������
+class BaalTauntAiIntegrationTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalTentacleAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BaalTentacleAiIntegrationTest.java:18: ����: �Ҳ�������
+class BaalTentacleAiIntegrationTest extends RiiabloTest {
+                                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BloodLordAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\BloodLordAiIntegrationTest.java:14: ����: �Ҳ�������
+class BloodLordAiIntegrationTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DeathMaulerAiIntegrationTest.java:5: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DeathMaulerAiIntegrationTest.java:13: ����: �Ҳ�������
+class DeathMaulerAiIntegrationTest extends RiiabloTest {
+                                           ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DiabloAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DiabloAiIntegrationTest.java:11: ����: �Ҳ�������
+class DiabloAiIntegrationTest extends RiiabloTest {
+                                      ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DoomKnightAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\DoomKnightAiIntegrationTest.java:14: ����: �Ҳ�������
+class DoomKnightAiIntegrationTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\FrogDemonAiIntegrationTest.java:4: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\FrogDemonAiIntegrationTest.java:14: ����: �Ҳ�������
+class FrogDemonAiIntegrationTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\FrozenHorrorAiIntegrationTest.java:5: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\FrozenHorrorAiIntegrationTest.java:15: ����: �Ҳ�������
+class FrozenHorrorAiIntegrationTest extends RiiabloTest {
+                                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\GreaterMummyAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\GreaterMummyAiIntegrationTest.java:18: ����: �Ҳ�������
+class GreaterMummyAiIntegrationTest extends RiiabloTest {
+                                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\IzualAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\IzualAiIntegrationTest.java:14: ����: �Ҳ�������
+class IzualAiIntegrationTest extends RiiabloTest {
+                                     ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MegademonAiIntegrationTest.java:5: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MegademonAiIntegrationTest.java:15: ����: �Ҳ�������
+class MegademonAiIntegrationTest extends RiiabloTest {
+                                         ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MephistoAiIntegrationTest.java:12: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MephistoAiIntegrationTest.java:32: ����: �Ҳ�������
+class MephistoAiIntegrationTest extends RiiabloTest {
+                                        ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MonsterSkillStartIntegrationTest.java:12: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\MonsterSkillStartIntegrationTest.java:36: ����: �Ҳ�������
+class MonsterSkillStartIntegrationTest extends RiiabloTest {
+                                               ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\NecromancerCurseAiIntegrationTest.java:12: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\NecromancerCurseAiIntegrationTest.java:41: ����: �Ҳ�������
+class NecromancerCurseAiIntegrationTest extends RiiabloTest {
+                                                ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\PutridDefilerAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\PutridDefilerAiIntegrationTest.java:14: ����: �Ҳ�������
+class PutridDefilerAiIntegrationTest extends RiiabloTest {
+                                             ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\TentacleAiIntegrationTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\TentacleAiIntegrationTest.java:24: ����: �Ҳ�������
+class TentacleAiIntegrationTest extends RiiabloTest {
+                                        ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\VileDogAiIntegrationTest.java:6: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\ai\VileDogAiIntegrationTest.java:14: ����: �Ҳ�������
+class VileDogAiIntegrationTest extends RiiabloTest {
+                                       ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonDamageOwnershipTest.java:11: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonDamageOwnershipTest.java:32: ����: �Ҳ�������
+class AmazonDamageOwnershipTest extends RiiabloTest {
+                                        ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonMeleeSkillLifecycleTest.java:14: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonMeleeSkillLifecycleTest.java:39: ����: �Ҳ�������
+class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
+                                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonSkillSpecializationTest.java:9: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AmazonSkillSpecializationTest.java:49: ����: �Ҳ�������
+class AmazonSkillSpecializationTest extends RiiabloTest {
+                                            ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinDamageOwnershipTest.java:10: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinDamageOwnershipTest.java:25: ����: �Ҳ�������
+class AssassinDamageOwnershipTest extends RiiabloTest {
+                                          ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinMartialArtsTest.java:15: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinMartialArtsTest.java:53: ����: �Ҳ�������
+class AssassinMartialArtsTest extends RiiabloTest {
+                                      ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinSkillSpecializationTest.java:10: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AssassinSkillSpecializationTest.java:46: ����: �Ҳ�������
+class AssassinSkillSpecializationTest extends RiiabloTest {
+                                              ^
+  ����: �� RiiabloTest
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AuraEcsScenarioTest.java:13: ����: �Ҳ�������
+import com.riiablo.RiiabloTest;
+                  ^
+  ����:   �� RiiabloTest
+  λ��: ����� com.riiablo
+F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\server\AuraEcsScenarioTest.java:45: ����: �Ҳ�������
+class AuraEcsScenarioTest extends RiiabloTest {
+                                  ^
+  ����: �� RiiabloTest
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+100 ������
+����ʾǰ 100 �����󣨹� 586 ��������Ҫ�鿴���������ʹ�� -Xmaxerrs
+
+> Task :core:compileTestJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:compileTestJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 24s
+8 actionable tasks: 3 executed, 5 up-to-date

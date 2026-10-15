@@ -1,0 +1,230 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava
+> Task :table:core:compileJava
+> Task :table:annotations:compileJava
+
+> Task :core:compileJava
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:203: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(systemRoot, new Object[]{new Integer(ret[0])});
+                                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:206: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(userRoot, new Object[]{new Integer(ret[0])});
+                                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:308: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+                new Integer(handles[0]), toCstr(value)
+                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:312: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Integer(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:322: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            root, new Object[]{new Integer(hkey), toCstr(key)}
+                               ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:341: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        root, new Object[]{new Long(handles[0]), toCstr(value)}
+                           ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:343: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:360: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:373: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:390: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:402: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:410: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    return (int[]) regCreateKeyEx.invoke(root, new Object[]{new Long(hkey), toCstr(key)});
+                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:424: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regSetValueEx.invoke(root, new Object[]{new Long(handles[0]), toCstr(valueName), toCstr(value)});
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:425: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+30 ������
+
+> Task :core:processResources
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes
+> Task :D2MOO_JAVA:jar
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes
+> Task :table:annotations:jar
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes
+> Task :table:core:jar
+
+> Task :core:test
+
+DeathMaulerAiIntegrationTest > initializationError FAILED
+    java.lang.NoClassDefFoundError: com/riiablo/util/InstallationFinder$WindowsInstallationFinder
+        at com.riiablo.RiiabloTest.setup(RiiabloTest.java:26)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+        at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:727)
+        at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+        at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+        at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+        at org.junit.jupiter.engine.extension.TimeoutExtension.interceptLifecycleMethod(TimeoutExtension.java:128)
+        at org.junit.jupiter.engine.extension.TimeoutExtension.interceptBeforeAllMethod(TimeoutExtension.java:70)
+        at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+        at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+        at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+        at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+        at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+        at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+        at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+        at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+        at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$invokeBeforeAllMethods$13(ClassBasedTestDescriptor.java:411)
+        at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+        at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeBeforeAllMethods(ClassBasedTestDescriptor.java:409)
+        at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.before(ClassBasedTestDescriptor.java:215)
+        at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.before(ClassBasedTestDescriptor.java:84)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:148)
+        at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+        at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+        at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+        at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+        at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+        at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+        at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+        at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+        at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+        at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+        at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+        at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+        at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:108)
+        at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:88)
+        at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:54)
+        at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:67)
+        at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:52)
+        at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:96)
+        at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:75)
+        at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.processAllTestClasses(JUnitPlatformTestClassProcessor.java:99)
+        at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.access$000(JUnitPlatformTestClassProcessor.java:79)
+        at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor.stop(JUnitPlatformTestClassProcessor.java:75)
+        at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.stop(SuiteTestClassProcessor.java:61)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+        at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36)
+        at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24)
+        at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+        at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:94)
+        at jdk.proxy1/jdk.proxy1.$Proxy2.stop(Unknown Source)
+        at org.gradle.api.internal.tasks.testing.worker.TestWorker$3.run(TestWorker.java:193)
+        at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:129)
+        at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:100)
+        at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:60)
+        at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+        at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:133)
+        at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:71)
+        at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+        at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+
+        Caused by:
+        java.lang.ClassNotFoundException: com.riiablo.util.InstallationFinder$WindowsInstallationFinder
+            at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+            at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+            at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+            ... 74 more
+
+1 test completed, 1 failed
+
+> Task :core:test FAILED
+
+12 actionable tasks: 11 executed, 1 up-to-date
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/deathmauler-isolated/core/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 1m 6s
