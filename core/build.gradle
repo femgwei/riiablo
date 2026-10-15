@@ -214,6 +214,7 @@ task mapResourceAcceptance(type: Test) {
     includeTestsMatching 'com.riiablo.map.NativeWaypointResourceTest'
     includeTestsMatching 'com.riiablo.map.ActTownSeamResourceTest'
     includeTestsMatching 'com.riiablo.map.Act2TombEntranceResourceTest'
+    includeTestsMatching 'com.riiablo.map.Act2TombHiddenWallResourceTest'
     includeTestsMatching 'com.riiablo.map.Act4FortressResourceTest'
     includeTestsMatching 'com.riiablo.map.Act5TownHiddenFloorResourceTest'
   }

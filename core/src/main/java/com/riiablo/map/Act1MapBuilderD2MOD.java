@@ -3510,14 +3510,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
               + "special=%d warpSpecial=%d skippedWarpPair=%d specialMarkerWall=%d "
-              + "warpVisual=%d hiddenWarpMarker=%d failedWarpVisual=%d "
+              + "warpVisual=%d hiddenWarpMarker=%d hiddenWallGraphics=%d failedWarpVisual=%d "
               + "failedFloor=%d failedWall=%d failedShadow=%d voidTiles=%d "
               + "collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
           specialCounts.total, specialCounts.warps, specialCounts.skippedWarpPairMarkers,
           counts.specialMarkerWalls,
-          counts.warpWalls, counts.hiddenWarpWalls, counts.failedWarpWalls,
+          counts.warpWalls, counts.hiddenWarpWalls, counts.hiddenWallGraphics,
+          counts.failedWarpWalls,
           counts.failedFloors, counts.failedWalls, counts.failedShadows, collisionCounts.voidTiles,
           collisionCounts.tiles, collisionCounts.blockedSubtiles));
       if (counts.failedResolve > 0) {
@@ -3583,6 +3584,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && slot < Map.MAX_WALLS; slot++) {
           int wallId = grid.wallIds[slot][y][x];
           if (wallId == -1) continue;
+          // D2Common keeps hidden wall records in the native collision grid,
+          // but does not submit their InvisWal/marker artwork to the visible
+          // tile layers.  Leaving these records installed paints the large
+          // green auxiliary blocks seen inside A2 tombs.  The collision grid
+          // remains available through TileGrid.nativeCollisionFlags.
+          if (!isNativeWallVisible(grid.wallNativeFlags[slot][y][x])) {
+            counts.hiddenWallGraphics++;
+            continue;
+          }
           boolean warpWall = Map.ID.WARPS.contains(wallId);
           String sourceFile = grid.sourceFile(grid.wallSourceFiles[slot][y][x]);
           DT1.Tile tile = dt1s.get(sourceFile, wallId);
@@ -3645,6 +3655,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   }
 
   static boolean isNativeFloorVisible(int flags) {
+    return isNativeTileVisible(flags);
+  }
+
+  /** Native D2Common visibility rule shared by floor and wall records. */
+  static boolean isNativeWallVisible(int flags) {
+    return isNativeTileVisible(flags);
+  }
+
+  private static boolean isNativeTileVisible(int flags) {
     // DrlgRoomTile.cpp::DRLGROOMTILE_InitTileDataFlags: bHidden sets 0x8,
     // bRevealHidden additionally sets 0x200 (retain revealable cave artwork).
     return (flags & 0x8) == 0 || (flags & 0x200) != 0;
@@ -4123,6 +4142,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int specialMarkerWalls;
     int warpWalls;
     int hiddenWarpWalls;
+    int hiddenWallGraphics;
     int failedResolve;
     int failedFloors;
     int failedWalls;
