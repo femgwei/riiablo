@@ -17,6 +17,7 @@ import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.collision.CollisionSize;
 import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -366,6 +367,9 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (!mMonster.has(entityId)) return false;
     Monster monster = mMonster.get(entityId);
     if (monster == null || monster.monstats2 == null) return false;
+    // #11281 returns ordinary SMALL_UNIT_PRESENCE for an invalid size
+    // BEFORE CanBeInTown/interact can convert it to a PET marker.
+    if (mSize.has(entityId) && !CollisionSize.isValid(mSize.get(entityId).size)) return false;
     MonStats.Entry stats = monster.monstats;
     return isPetPresence(true,
         stats != null && stats.npc,

@@ -8,6 +8,41 @@ import com.riiablo.engine.server.component.Monster;
 import org.junit.jupiter.api.Test;
 
 class DynamicUnitCollisionSystemTest {
+  @Test void invalidSizeReturnsOrdinaryPresenceBeforeTownPetConversion() {
+    DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()
+        .with(collision).build());
+    try {
+      int player = world.create(), townMonster = world.create();
+      for (int id : new int[] {player, townMonster}) {
+        world.getMapper(com.riiablo.engine.server.component.Position.class).create(id)
+            .position.set(id == player ? 0 : 10, 10);
+        world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+        world.getMapper(com.riiablo.engine.server.component.Size.class).create(id).size = 2;
+        world.getMapper(com.riiablo.engine.server.component.Class.class).create(id).type = id == player
+            ? com.riiablo.engine.server.component.Class.Type.PLR
+            : com.riiablo.engine.server.component.Class.Type.MON;
+      }
+      com.riiablo.codec.excel.MonStats.Entry stats = new com.riiablo.codec.excel.MonStats.Entry();
+      stats.inTown = true;
+      world.getMapper(Monster.class).create(townMonster).set(stats, new MonStats2.Entry());
+      world.process();
+      assertTrue(collision.isFreeForPath(player, -1, 10, 10, 2), "valid town pet is ignored by players");
+      for (int size : new int[] {Integer.MIN_VALUE, -1, 4, Integer.MAX_VALUE}) {
+        world.getMapper(com.riiablo.engine.server.component.Size.class).get(townMonster).size = size;
+        collision.refreshNow();
+        assertFalse(collision.isFreeForPath(player, -1, 10, 10, 2),
+            "11281 returns ordinary NO_PATH before consulting CanBeInTown for invalid size");
+        assertTrue(collision.isFreeForPath(player, -1, 11, 11, 1), "fallback is small, not large");
+        assertFalse(collision.tryMove(player, new com.badlogic.gdx.math.Vector2(10, 10)),
+            "authoritative movement must agree with planning");
+      }
+      world.getMapper(com.riiablo.engine.server.component.Size.class).get(townMonster).size = 3;
+      collision.refreshNow();
+      assertTrue(collision.isFreeForPath(player, -1, 10, 10, 2), "valid big town pet still ignored");
+    } finally { world.dispose(); }
+  }
+
   @Test void whirlwindPassesThroughUnitPresenceAndRestoresOrdinaryBlocking() {
     DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()

@@ -31,7 +31,7 @@ public final class UnitCollisionGrid {
     Footprint footprint = new Footprint();
     footprint.x = x;
     footprint.y = y;
-    footprint.size = Math.max(1, size);
+    footprint.size = pathPatternSize(size);
     units.put(entityId, footprint);
     forEachPathMarkerCell(footprint, (cellX, cellY) -> increment(key(cellX, cellY)));
   }
@@ -54,7 +54,7 @@ public final class UnitCollisionGrid {
     Footprint candidate = new Footprint();
     candidate.x = x;
     candidate.y = y;
-    candidate.size = Math.max(1, size);
+    candidate.size = pathPatternSize(size);
     final boolean[] free = {true};
     forEachCollisionPatternCell(candidate, (cellX, cellY) -> {
       Integer occupants = cells.get(key(cellX, cellY));
@@ -130,7 +130,7 @@ public final class UnitCollisionGrid {
       int x, int y, int size, UnitBlocker blocker) {
     com.badlogic.gdx.utils.IntArray result = new com.badlogic.gdx.utils.IntArray();
     Footprint candidate = new Footprint();
-    candidate.x = x; candidate.y = y; candidate.size = Math.max(1, size);
+    candidate.x = x; candidate.y = y; candidate.size = pathPatternSize(size);
     for (IntMap.Entry<Footprint> entry : units.entries()) {
       if (entry.key == moverId || entry.key == ignoredEntityId
           || blocker != null && !blocker.blocks(entry.key)) continue;
@@ -146,6 +146,13 @@ public final class UnitCollisionGrid {
   private static boolean pathMarkerContains(Footprint footprint, int x, int y) {
     if (footprint.size < 3) return x == footprint.x && y == footprint.y;
     return Math.abs(x - footprint.x) + Math.abs(y - footprint.y) <= 1;
+  }
+
+  private static int pathPatternSize(int size) {
+    // D2Common #11281 (1.10f 0x6FDA9250) returns SMALL_UNIT_PRESENCE
+    // for sizes outside 0..3, not BIG_UNIT_PRESENCE. Keep the existing
+    // zero-size compatibility behavior; this grid only indexes present units.
+    return size >= 1 && size <= 3 ? size : 1;
   }
 
   private void increment(long cell) {
