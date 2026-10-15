@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 DoomKnight Fn072（PARTIAL）
+
+- [x] 三行DoomKnight专用AI接入：立即A1、近战停顿、接近及独立远距离停顿。
+- [x] 45项定向通过；真实MPQ全目录557行/1174场，近远6场自然攻击与伤害均观察到。
+- [x] 独立复跑一致；6个主体变化及6个真实护卫依赖场差异逐字段核对，其余场不变。
+- [x] fallback降至43AI名称/164行，107个WARNING保留。
+- [ ] sub_6FCD0410的速度类型13、walk flags 7、单位RNG流及全局调度仍待，状态为PARTIAL。
+
+证据：[DoomKnight验证](ai-arena/20261016-doomknight-seed1/verification.md)。
+
 ## 2026-10-16 一次性容器损坏帧与声音
 
 - [x] 对照 D2MOO 的瓦罐/竹篓、木桶和爆炸桶操作函数，以及本机 1.10f MPQ、

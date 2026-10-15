@@ -1,5 +1,14 @@
 # 逐怪 AI 隔离测试场
 
+## 最新修复批次：2026-10-16 DoomKnight Fn072
+
+DoomKnight 专用AI覆盖立即A1攻击、近战停顿、接近及独立远距离停顿。
+45项定向测试通过；真实MPQ全目录557行/1174场，三行近远6场均观察到攻击与伤害。
+独立复跑一致；除6个主体场外，另6个OblivionKnight场因原表DoomKnight护卫产生受控差异。
+fallback降至43个AI名称/164行，107个WARNING保留。原生速度类型13、walk flags 7及
+单位RNG/调度仍待对齐，状态保持PARTIAL；普通场观察不等于专属全行为验收。
+证据见 [verification.md](ai-arena/20261016-doomknight-seed1/verification.md)。
+
 ## 最新修复批次：2026-10-16 VileDog Fn069
 
 VileDog 专用AI覆盖首次5帧等待、近战攻击/停顿及远距离接近/10帧等待。

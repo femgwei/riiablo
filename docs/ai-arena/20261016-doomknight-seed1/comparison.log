@@ -1,0 +1,7 @@
+PASS: three natural near-scene attack/damage checks; six changed DoomKnight scenes plus six verified DoomKnight-helper effects; repeat SHA256=AA73B2961163206E1A852E7A9B5E67391AE3D0B92DC79DB165DD5C784D8C5220
+ACTION_OBSERVED=542
+AI_FALLBACK=328
+MOVEMENT_ONLY=7
+NO_ACTION=186
+TERMINAL_OBSERVED=4
+WARNING=107
