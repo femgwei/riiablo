@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.UnitLifecycle;
@@ -41,6 +42,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
 
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Velocity> mVelocity;
@@ -60,7 +62,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
-    detachMercenaryTargetNode(event.victim);
+    detachTargetNode(event.victim);
 
     // UnitLifecycleSystem claims the authoritative death boundary first. A
     // late duplicate DeathEvent must not re-run AI.kill(), enqueue another
@@ -146,7 +148,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   public void onModeChanged(ModeChangeEvent event) {
     if (event == null || !mMonster.has(event.entityId)) return;
     if (event.mode == Engine.Monster.MODE_DT || event.mode == Engine.Monster.MODE_DD) {
-      detachMercenaryTargetNode(event.entityId);
+      detachTargetNode(event.entityId);
     }
     if (event.mode != Engine.Monster.MODE_DD) return;
 
@@ -190,10 +192,15 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     }
   }
 
-  private void detachMercenaryTargetNode(int entityId) {
+  private void detachTargetNode(int entityId) {
     // MonsterMode.cpp TARGETS_Last is persistent: returning to NU alone must
-    // not restore the old child insertion. NPC resurrection explicitly rejoins.
+    // not restore a child or node9 insertion. State retention is independent
+    // of membership; NPC resurrection / Revive explicitly insert new nodes.
     if (mMercenary.has(entityId)) mMercenary.get(entityId).nativeTargetOrder = 0;
+    if (mSummonedPet.has(entityId)) mSummonedPet.get(entityId).nativeTargetOrder = 0;
+    if (mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null) {
+      mUnitStates.get(entityId).stateList.detachNativeTargetNode();
+    }
   }
 
   /** Native death collision boundary, independent of DT/DD presentation. */

@@ -53,6 +53,13 @@ public class StateList {
   public long nativeNode9Order() { return node9Order; }
   public long nativeConversionOrder() { return conversionOrder; }
 
+  /** TARGETS_Last does not itself free stat lists or their payload. Retained
+   * state flags (or refreshing a layer) must not resurrect a removed node. */
+  public void detachNativeTargetNode() {
+    node9Order = 0;
+    conversionOrder = 0;
+  }
+
   public enum DeathUnitType {
     PLAYER,
     MONSTER,

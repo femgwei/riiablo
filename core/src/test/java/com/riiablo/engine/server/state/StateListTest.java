@@ -17,6 +17,35 @@ import com.riiablo.codec.excel.States;
 
 public class StateListTest {
   @Test
+  public void targetDetachmentPreservesStatesAndPayloadButRefreshDoesNotRejoin() {
+    StateList states = new StateList(42);
+    UnitState curse = states.addStateLayer(StateId.ATTRACT, 100, 2, 7, 86);
+    UnitState conversion = states.addStateLayer(StateId.CONVERSION, 100, 3, 7, 116);
+    conversion.skillModifier = 9;
+    long lastOrder = states.nativeConversionOrder();
+    states.detachNativeTargetNode();
+    states.detachNativeTargetNode(); // idempotent removal, independent of stat cleanup
+    assertEquals(0, states.nativeNode9Order());
+    assertEquals(0, states.nativeConversionOrder());
+    assertTrue(states.hasState(StateId.ATTRACT));
+    assertTrue(states.hasState(StateId.CONVERSION));
+    assertSame(curse, states.getState(StateId.ATTRACT));
+    assertSame(conversion, states.getState(StateId.CONVERSION));
+    assertEquals(9, conversion.skillModifier);
+    states.addStateLayer(StateId.ATTRACT, 200, 2, 7, 86);
+    states.addState(StateId.CONVERSION, 200, 3, 7);
+    states.extendState(StateId.CONVERSION, 300, 3, 7);
+    assertEquals(0, states.nativeNode9Order());
+    assertEquals(0, states.nativeConversionOrder());
+    states.removeState(StateId.ATTRACT);
+    states.removeState(StateId.CONVERSION);
+    states.addState(StateId.CONFUSE, 100, 1, 7);
+    states.addState(StateId.CONVERSION, 100, 1, 7);
+    assertTrue(states.nativeNode9Order() > lastOrder);
+    assertTrue(states.nativeConversionOrder() > states.nativeNode9Order());
+  }
+
+  @Test
   public void targetMembershipRefreshAndLayersDoNotPromoteButReentryDoes() {
     StateList states = new StateList(42);
     assertEquals(0, states.nativeNode9Order());

@@ -174,8 +174,11 @@ public class BaalCrab extends NativeDecisionAI {
     for (int i = units.size() - 1; i >= 0; i--) {
       int id = units.get(i);
       if (!isNode9(id) || !sameActAndMap(id)) continue;
-      int score = eligibleScore(id, true);
       long order = node9Order(id);
+      // Retained curse flags / a wall component are not proof that a node
+      // removed by MonsterMode is still registered, even after a raw revive.
+      if (order == 0) continue;
+      int score = eligibleScore(id, true);
       if (score > best || score > 0 && score == best && order > bestOrder) {
         best = score;
         bestOrder = order;

@@ -1,5 +1,36 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 Baal 召唤/转化/状态节点死亡摘链与 Revive 边界
+
+- [x] 依据 `MonsterMode.cpp::sub_6FC63E80`，将死亡事件和 DT/DD 模式事件的
+  持久摘链扩展到召唤物、骨墙以及 StateList 的 node9/Conversion 入链序号；
+  与佣兵共用同一死亡边界，不依赖 Baal 是否曾扫描过该单位的死亡模式。
+  仅清目标节点序号，不重置召唤配额 `spawnOrder`、主人、寿命或状态层数据；
+  原有 stay-death 清理仍单独执行，不能把“状态层仍保留”当成“节点仍在链中”。
+- [x] `StateList.detachNativeTargetNode` 可独立清除目标成员资格，保留 flags 与
+  payload；刷新已有状态/层或延长时限不恢复序号，新状态插入仍沿既有事件入口
+  生成序号。Baal 本体/分身的 node9 回退要求非零入链序号，不再仅凭残留骨墙组件
+  或 Attract/Confuse 状态认定节点存在。实际骨墙低 threat 评分规则没有改变。
+- [x] 核对 `SkillMonst.cpp::SKILLS_ResurrectUnit` / `SrvDo097`：普通复活没有
+  玩家组 `UpdateSummonAI`，因此真实工厂恢复旧召唤物后不会接回旧组；同时核对
+  `SkillNec.cpp::SrvDo058_Revive` 的独立入链步骤。真实技能路径已有的
+  `SummonedPet.set` 在成功 Revive 后生成新序号，按新孩子顺序参选，不需要
+  将普通复活臆造为显式重挂。重复/被拒绝的 Revive 不改变已入链顺序。
+- [x] 新增 4 项真实服务端工厂/技能/Baal 集成测试、1 项死亡事件回归和 1 项
+  StateList 摘链/刷新回归：覆盖本体/分身、DT/DD 后残留转化状态、骨墙和两种
+  node9 诅咒、无扫描普通复活、召唤配额不变以及真实 Revive 同分顺序。
+  地形/路径使用替身；骨墙成员测试采用高 threat 替身，不篡改真实 1.10f 表。
+- [x] 针对性 30 项回归全部通过；反向移除 node9 的零序号检查时，旧骨墙被
+  错误重新选中的用例按预期失败，检查已恢复。专用服务器 Java 编译通过；
+  扩展回归共 420 项，419 通过，唯一失败为此前已在 `70358fee` 基线复现的
+  `SummonedPetSystemTest.wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup`，
+  本轮不修改该狼群落点问题；无错误或跳过。
+- [ ] 仍为目标成员事件投影，不是完整 `D2TargetNodeStrc` registry。玩家组检查
+  依赖已安装的固定槽系统，自定义无槽位 world 仍保留旧玩家组后备；node9 不再
+  接受未知序号。未实现所有 stat-list remove callback 的跨桶迁移/唯一成员关系，
+  不据此宣称完整转化 alignment/主人恢复、inactive 压缩记录或客户端逐帧验证。
+  下一步继续诅咒/转化结束时的成员摘链和跨桶迁移边界。
+
 ## 2026-10-15 A5 Baal 佣兵死亡摘链与 NPC 原地复活重新入链
 
 - [x] 核对 `MonsterMode.cpp::sub_6FC63E80` 的 `TARGETS_Last` 和

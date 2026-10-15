@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
@@ -34,6 +35,34 @@ import org.junit.jupiter.api.Test;
 
 /** Verifies the server-only monster death -> corpse lifecycle. */
 class ServerMonsterCorpseSystemTest {
+  @Test
+  void deathDetachesSummonAndRetainedStateNodesWithoutClearingPetOrStatePayload() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new CofManager(), new ServerMonsterCorpseSystem()).build());
+    try {
+      int id = world.create();
+      world.getMapper(Monster.class).create(id).set(new MonStats.Entry(), new MonStats2.Entry());
+      SummonedPet pet = world.getMapper(SummonedPet.class).create(id).set(3, "revive", 95, 4, false, 200);
+      long quotaOrder = pet.spawnOrder;
+      com.riiablo.engine.server.state.StateList states = world.getMapper(UnitStates.class).create(id).init(id).stateList;
+      // Basic stat lists survive cleanup; their flags are not target membership.
+      states.addState(StateId.CONVERSION, 100, 1, 3).basicStatList = true;
+      states.addState(StateId.CONFUSE, 100, 1, 3).basicStatList = true;
+      events.dispatch(DeathEvent.obtain(9, id));
+      assertEquals(0, pet.nativeTargetOrder);
+      assertEquals(0, states.nativeConversionOrder());
+      assertEquals(0, states.nativeNode9Order());
+      assertTrue(states.hasState(StateId.CONVERSION));
+      assertTrue(states.hasState(StateId.CONFUSE));
+      assertEquals(quotaOrder, pet.spawnOrder);
+      assertEquals(3, pet.ownerId);
+      assertEquals(200, pet.durationFrames);
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void hirelingWithoutHostileAiStillEntersNativeDeathSequence() {
     EventSystem events = new EventSystem();
