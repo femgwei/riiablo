@@ -882,11 +882,96 @@ distance预算消费、final/previous/索引/flags续算模型，随后按实际
 WallFollow15等并验收真实地形/动态碰撞的消费、失败、恢复及续算。不自动普通partial，不加1.13+ gate。
 火焰之河AI fallback未修/未重跑；其余真实覆盖与benchmark/原版动态差分继续单列。
 
+## 第十二批：距离字段与耗尽续算调度
+
+### 范围与原版证据
+
+继续未完成的寻路，新增`D2MOO_JAVA/.../path/D2PathContinuation.java`。这是动态路径相关字段的
+独立可变投影，不是完整D2DynamicPath/10142包装器，也不接入生产Map或移动tick。
+`decide`返回KEEP/STOP/REPLAN_COORDINATE/REPLAN_UNIT；`resume`移植10236；
+`checkAndResume`组合两者，KEEP=1、STOP=0、重算保留搜索原始返回值。
+KEEP与非零搜索返回值均不保证index<count，更不代替10226的active/velocity/碰撞/room门槛。
+
+固定D2MOO`0c0bbd1e6bef9181a3da1c046523af622a925416`，本轮未fetch、不reset旧检出。
+读取PathMisc.cpp的10236、sub_6FD5DB70、10226及Path.h字段定义，并结合Step.cpp消费片段定位
+三个distance字段并非同一概念。本机1.10f D2Common.dll SHA256再次核对仍为
+`B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。
+objdump静态核验本轮实现的关键顺序：
+
+- `0x6FDAA250..A25E`的10190仅写+0x90 nDist低字节；不改变+0x91 nDistMax或+0x94 nDistance。
+  `0x6FDAA280..A2A4`的SetNewDistance先取输入低字节，再夹到77，同时写nDist/nDistMax；
+  256输入得到0，不是77。`State`构造默认值只是零投影，不是native初始化流程。
+- `0x6FDAA4E0..A51A`的PATH_SetDistance断言int在0..255后写+0x94；Java对非法输入抛异常。
+  `0x6FDAA530..A565`把零扩展nDistance与addition作int32加法，再按符号夹0..255。
+  例如1+INT_MAX先回绕为负数，结果0，不能用long饱和改成255。
+  +0x93 nStepNum为单位目标停止距离；setter仅用于适配层赋已解析uint8，不宣称移植其目标容差计算。
+- `0x6FDAC8F0..C91D`：无dynamicPath返回0；无flag0x10且owner为monster时，nDistance==0
+  直接返回0，不刷新/置位/扣减/搜索。不是检查nDist或nDistMax。
+- `0x6FDAC920..C93B`：先UNITROOM_RefreshUnit，再owner.flags|=DOUPDATE，再以-currentPointIdx
+  调AddToDistance；扣到0仍继续本次搜索。flag0x10跳过上述monster门槛和全部三项副作用。
+- `0x6FDAC940..C98F`：仅type2/13/15进入专用分支。a2非零直接赋type13并保留target；
+  a2零赋type2、复制final到target。10142返回0则直接赋type15再调用一次；其他类型只调用一次。
+  不是PATH_SetType，不重设type flags/dirOffset；第二次搜索保留第一次搜索对target/final/
+  previous/索引/count/flags/预算等全部写入，不回滚到调用前快照，也不从头重新刷新/扣预算。
+- `0x6FDACA41..CA56`：circle5/6且index>=count先返回TRUE，不再检查目标范围或final。
+  `0x6FDACA5C..CA93`：无targetUnit时，仅耗尽且current!=final才按a2=FALSE续算。
+- `0x6FDACA98..CABD`：单位距离10399<=零扩展nStepNum先返回FALSE；通过后才采样目标，
+  包括object/item等静态目标。DLL在采样前保存current XY，本实现保留该快照顺序。
+- `0x6FDACAC2..CB0C`：只有player/monster目标比较previous与采样坐标，任一轴绝对差>5
+  才按a2=TRUE续算；恰好5不触发。uint16坐标先转普通整数相减，不是环形最短距离。
+  `0x6FDACB0E..CB2C`：其余情况有剩余点或current==final则TRUE，否则按a2=TRUE续算。
+  外层10226仍在此结果非零后检查index<count；不加入1.13的owner异步/flag过滤优化。
+
+`Target`回调必须由后续适配层提供真实单位身份、D2Common_10399距离和sub_6FDAB940采样
+（含适用时的FOG LUT提前量）。本轮不猜欧氏距离、不拿未提前的live点冒充原版采样。
+目标观察要求稳定只读；refresh/search回调共享同一State以保留状态写入。所有坐标为已解析uint16，
+索引/count为native int32；该类不管理坐标解析、目标身份有效期、碰撞事务或路点列表安装。
+missile mask0x40000显式拒绝，避免把非导弹策略错误用于导弹路径。
+
+### 第十二批验证与交付
+
+新增`D2PathContinuationTest`29项，首轮全部通过。覆盖：circle耗尽优先及非耗尽范围检查、
+无单位final/索引边界、单位距离停止优先/lazy采样/uint8门槛、移动单位两轴±5/±6、
+采样与previous/target角色隔离、uint16非环形位移、静态目标仍采样但只在耗尽时续算、
+到达final与位移重算优先级、null path/monster零预算/flag0x10/player零预算、
+refresh→DOUPDATE→扣预算→搜索顺序、nDistance扣索引而非总点数、扣到0仍搜索、
+type2/13/15与其他类型分派、失败保留状态/双失败无第三次调用、非零返回不改成boolean、
+组合决策仍需外层路点门槛、各距离字段隔离、低字节先截/77上限、非法字节输入及int32回绕。
+一项遍历256预算×79路点索引，检查预算消费与nDist/nDistMax独立；不是20224项JUnit或DLL动态oracle。
+
+定向29项通过；XML `core/build/test-results/upstreamRound4-round12-state`，
+日志`core/build/round12-state.log`。合并248项/29类通过（此前219+新增29），失败/错误/跳过0，
+BUILD SUCCESSFUL；XML `core/build/test-results/upstreamRound4-round12-full`，
+日志`core/build/round12-full.log`。本机隔离任务`:core:upstreamRound4Test -PupstreamRun=round12-full`，
+filters沿用第十一批，含原生内核/碰撞、普通Pathfinder/恢复/房间、地面/动态碰撞及DiabRun测试。
+没有新增MPQ/TCP/GL、全图/多seed难度、性能或原版DLL动态差分验收。
+
+另一电脑最小复验（不依赖本机临时init，标准core:test本轮未另跑）：
+
+```powershell
+.\gradlew.bat :core:test --tests '*D2PathContinuationTest' --tests '*D2PathTargetTest' --tests '*D2TowardTest' --tests '*D2WallFollowTest' --console=plain
+```
+
+代码/测试`b09d4957179e7dc51779cfad800d3ea114f3d6f8`已推送origin/master且远端SHA一致。
+只提交两个本轮新文件；另一聊天Inferno Sentry/AnimStepper/Assassin与AI报告保持独立，
+未暂存或纳入本轮提交，不以本轮合并寻路回归代替其专项验收。四文档独立提交推送，最终SHA见git log。
+
+### 剩余门槛
+
+**寻路仍未完成**，普通生产仍Map→AStarPathFinder。此次仅有独立续算状态层；refresh与10142
+仍是适配回调，不能声称已完成native动态路径包装器或生产消费。
+仍需单位身份/动态静态坐标解析、10399距离、FOG LUT提前量/单位种类容差；nDist在步进尝试
+阶段的消费、10142结果规范化/flags生命周期、路径安装/速度/碰撞事务及实际pathType受控接入。
+下一轮优先补目标采样/距离与包装器剩余门槛，再验收真实地形/动态碰撞下的消费、失败、恢复与续算。
+保留近期碰撞/房间/步进优化，不自动普通exact→partial或加入1.13+目标房间gate。
+火焰之河AI fallback未修/未重跑，其余真实覆盖及benchmark/原版动态差分继续单列。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。
 - 已核对1.10f部分路径消费、重算与生产房间后置gate，修复恢复目标身份及实体目标的耗尽续算；下一步按实际
-  pathType设计受控接入，仍需native distance/final goal/续算状态模型，
+  pathType设计受控接入。已补独立nDistance/final/索引续算投影，仍需目标单位/FOG采样/10399距离、
+  nDist步进消费、10142规范化及flags生命周期，并将状态与真实移动接通，
   不把partial当普通exact成功，越界样本仍需补证。
   攻击速度、目标链等其余修正继续专项对照；火焰之河AI fallback单列待办。
 - 不移植1.11+充能技能查找门槛、1.13+目标房间门槛或Ubers行为。

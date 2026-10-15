@@ -490,3 +490,28 @@ pathType受控接入Toward2/13、WallFollow15等，并验收真实消费、失�
 **寻路未完成**：仍需单位身份/位置/FOG LUT提前量/容差、distance消费、final/previous/索引/flags
 续算状态及实际pathType受控生产接入。本轮不改普通A*、近期碰撞/房间/步进或普通exact合同；
 火焰之河AI fallback及其余覆盖继续单列。
+
+## 后续第十二批：续算状态必须与搜索内核分开核对
+
+新增`D2PathContinuation`独立状态层，补耗尽/目标位移决策及10236调度。固定D2MOO
+`0c0bbd1e`未fetch，结合本机1.10f D2Common静态核验：
+
+- +0x90 nDist、+0x91 nDistMax、+0x94 nDistance不是同一预算。10236扣的是nDistance，
+  按currentPointIdx扣，不是按输出点数或走过的格数；nDist步进尝试消费仍未在本轮接通。
+  SetNewDistance先截低字节再cap77；AddToDistance先int32回绕再夹0..255。
+- monster零nDistance在扣减前阻止续算；扣到0仍执行本次搜索。flag0x10跳过该门槛及
+  refresh/DOUPDATE/消费。正确顺序不能简化成“预算<=0就失败”的统一前置判断。
+- type2/13/15直接选2或13、失败直接改15重试；不调用SetType重新套flags/dirOffset，
+  不回滚第一次10142的状态副作用。非该族失败不自动转15，也不自动升级普通partial。
+- circle耗尽先KEEP；单位停止距离先于采样；静态目标也采样，但只有player/monster的
+  previous→sampled任一轴位移严格>5才立即重算。KEEP与搜索非零返回均不等于有可消费路点。
+
+地址、字段与另一电脑复验命令见
+[第十二批记录](d2moo-upstream-port-2026-10-15.md#第十二批距离字段与耗尽续算调度)。
+新增29项、合并248项/29类通过，失败/错误/跳过0；单项遍历256预算×79索引，不是DLL动态差分。
+代码/测试`b09d49571`已推送且远端SHA一致；本轮无新增MPQ/TCP/GL/性能验收。
+
+**寻路仍未完成**：本轮是状态投影，refresh/10142仍为回调；实际单位身份、10399距离、FOG LUT
+提前量/种类容差、nDist步进消费、10142结果规范化/flags生命周期和实际pathType生产接入仍待。
+不宣称普通生产已切换，仍为Map→AStarPathFinder；近期碰撞/房间/步进优化不变。
+火焰之河AI fallback及其余真实覆盖继续单列。

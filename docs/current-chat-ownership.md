@@ -10,7 +10,28 @@
 > [`dark-magic-visual-capture-plan.tsv`](dark-magic-visual-capture-plan.tsv)，不要把旧章节中的
 > 阶段性“下一步”或单套调试素材当作当前未完成的非视觉代码任务。
 
-## 2026-10-15 第十一批：阻挡终点修正与门目标偏移
+## 2026-10-15 第十二批：距离字段隔离与耗尽续算状态
+
+- 新增`D2PathContinuation`，以独立可变状态投影移植10236调度及10226中内联的续算决策。
+  包括circle耗尽优先、单位停止距离/采样顺序、player/monster目标位移严格>5、coordinate/unit
+  两类续算；KEEP或搜索非零返回都不能代替后续index<count及完整移动tick门槛。
+- 明确分离native +0x90 nDist、+0x91 nDistMax、+0x93 nStepNum与+0x94 nDistance。
+  10236只扣nDistance；怪物零预算先返回，扣到0仍执行本次搜索，flag0x10跳过此门槛/刷新/扣减。
+  type2/13/15直接赋值、不重新套type flags/dirOffset，第一次失败的状态写入保留给type15重试。
+- 固定D2MOO`0c0bbd1e`未fetch，结合本机1.10f D2Common `C8F0..C98F`、`CA41..CB2C`及
+  `A250/A280/A4E0/A530`静态证据。SetNewDistance先截低字节再限制77；AddToDistance先int32
+  回绕再夹0..255，不擅自换成long饱和。DLL哈希与此前一致，详见第十二批上游记录。
+- 新增29项定向通过，合并248项/29类通过，失败/错误/跳过0；其中一项遍历256预算×79索引，
+  不是20224项JUnit或DLL动态差分。XML：`core/build/test-results/upstreamRound4-round12-full`。
+  代码/测试`b09d4957179e7dc51779cfad800d3ea114f3d6f8`已推送origin/master且远端SHA一致。
+  四文档另行提交推送；另一聊天Inferno/AnimStepper/Assassin修改及其报告保留、未纳入本轮提交。
+- **寻路仍未完成**：这只是独立状态层，refresh与10142搜索仍为回调；目标身份/原生10399距离、
+  FOG LUT提前量/种类容差尚由适配层提供，不能用任意几何距离或live坐标冒充。nDist步进消费、
+  10142结果规范化/flags生命周期、实际pathType与真实移动接入仍待。普通生产仍Map→AStarPathFinder。
+  不改近期碰撞/房间/步进，不加1.13+ gate或普通自动partial；本轮未新跑MPQ/TCP/GL/性能/
+  原版动态差分，火焰之河AI fallback未修/未重跑。
+
+## 2026-10-15 第十一批：阻挡终点修正与门目标偏移（历史）
 
 - 新增`D2PathTarget`：已解析目标坐标后的flag0x1000阻挡终点修正，三条独立累计候选、
   仅重算主方向、源点失败语义、玩家9x9表延伸、门orientation/源点侧±2偏移。

@@ -1,6 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-15 D2MOO 第十一批：搜索终点准备
+## 2026-10-15 D2MOO 第十二批：续算决策、调度与距离状态
+
+- [x] 新增`D2PathContinuation`独立状态层，补circle耗尽、单位范围停止、lazy目标采样、两轴
+  位移严格>5、final/索引耗尽决策与10236调度；KEEP不表示仍有路点或能够移动。
+- [x] nDist/nDistMax/nStepNum/nDistance独立。保留怪物零预算先行门槛、refresh→DOUPDATE→
+  nDistance扣当前索引→搜索顺序、扣到0仍搜索、flag0x10绕过，以及原生低字节/32位回绕语义。
+- [x] type2/13/15直接选择2或13、失败转15；非该族失败不自动fallback；保留第一次搜索
+  对target/final/previous/索引/flags/预算等副作用，不调用SetType重设flags/dirOffset。
+- [x] 固定D2MOO`0c0bbd1e`未fetch，核对本机1.10f DLL；新增29项、合并248项/29类通过，
+  失败/错误/跳过0。代码/测试`b09d49571`已推送且远端一致，地址/复验见第十二批上游记录。
+- [ ] **寻路未完成**。新状态是独立投影，refresh和10142仍为回调，不是生产tick或完整包装器。
+  单位身份/10399距离、FOG LUT提前量/种类容差、nDist步进消费、10142结果规范化及flags生命周期、
+  实际pathType受控接入仍待；普通生产仍Map→AStarPathFinder，不改近期碰撞/房间/步进优化。
+  不加1.13+ gate或普通自动partial。无新增MPQ/TCP/GL/性能/原版动态差分，火焰之河AI fallback单列。
+
+## 2026-10-15 D2MOO 第十一批：搜索终点准备（历史）
 
 - [x] `D2PathTarget`补flag0x1000阻挡终点修正、独立累计候选/仅主方向重算、玩家9x9表延伸，
   另有门orientation与源点侧±2偏移；不混淆请求/单位目标、search/final候选和输出末点。
