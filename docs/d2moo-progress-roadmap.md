@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 Minion Fn116 普通决策（整体PARTIAL）
+
+- [x] 11行接入普通近战A1/A2、接近及独立等待；保留原版参数1双重用途错误。
+- [x] 51项定向测试及最终复跑通过；三难度seed1共132次自然场执行，三组独立复跑一致。
+- [x] 66次近场实际普通攻击扣血；所选场景无fallback、警告或错误。
+- [ ] 66次远场仍NO_ACTION，原因未定，不作为行为通过；命令队列定向、原生单位RNG/
+  全局调度及真实GL/TCP/地形仍待，不宣称完整Fn116或全目录验收。
+
+证据：[Minion验证](ai-arena/20261016-minion-seed1/verification.md)。
+
 ## 2026-10-16 A3–A5 城镇治疗者与铁匠服务识别
 
 - [x] 对照 D2MOO `D2GAME_NPC_Heal_6FCCB220`：Ormus、Jamella、Malah 已在

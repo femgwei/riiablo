@@ -1,0 +1,5 @@
+PASS difficulty=0 first/repeat SHA256=FAD1CAFA28A01CA256E1AFB900F04C4E985C773F865735DF35DD10EEBB62B816
+PASS difficulty=1 first/repeat SHA256=3D8ED981749E1E793253B379FC1B98868D96186992FDB1CEDE88BACF14CC7461
+PASS difficulty=2 first/repeat SHA256=7554A95334DCB8FFF4A7BB09A0E2960FC9C412420512833CD760A68E4A46CAA8
+PASS journal/repeat checks: 132 executions; 66 near ordinary attack/damage observations.
+PARTIAL: 66 far NO_ACTION observations unresolved, not behavior acceptance; unselected NOT_RUN excluded.

@@ -1,0 +1,107 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+> Task :core:jar
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :server:d2gs:compileJava
+> Task :server:d2gs:processResources
+> Task :server:d2gs:classes
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :server:d2gs:monsterAiArena
+[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion1 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion1 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion10 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion10 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion11 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion11 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion2 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion2 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion3 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion3 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion4 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion4 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion5 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion5 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion6 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion6 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion7 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[Map] Creating custom sized byte array: 2560000
+[AI_ARENA] minion7 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion8 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion8 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion9 near AI_FALLBACK actions=17 moves=0 special=NOT_IMPLEMENTED
+[Map] Creating custom sized byte array: 2560000
+WARN  [AI] [AI_FALLBACK] entityId=1 ai=Minion className=com.riiablo.engine.server.ai.Minion using GenericMonster
+[AI_ARENA] minion9 far AI_FALLBACK actions=0 moves=0 special=NOT_IMPLEMENTED
+[AI_ARENA] DIAGNOSTIC_COMPLETE {AI_FALLBACK=22, NOT_RUN=1158} correctnessPass=NOT_EVALUATED
+
+BUILD SUCCESSFUL in 19s
+14 actionable tasks: 6 executed, 8 up-to-date

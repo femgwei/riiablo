@@ -1,0 +1,1 @@
+Initial strict all-scenes action/damage verifier: FAILED at d0-first minion1/far (NO_ACTION, actions=0, damageEvents=0). The PowerShell terminating error was displayed in tool output; redirection left an empty file. This line records that failure, not a verbatim captured stack. Far scenes remain unresolved and are excluded from behavior acceptance.
