@@ -17,13 +17,15 @@ class NativeTargetOrderTest {
     Mercenary merc = new Mercenary().set(1, 0, 1, 1, 0);
     StateList states = new StateList(42);
     states.addState(StateId.ATTRACT, 100, 1, 1);
-    states.addState(StateId.CONVERSION, 100, 1, 1);
+    StateList conversionStates = new StateList(43);
+    conversionStates.addState(StateId.CONVERSION, 100, 1, 1);
     SummonedPet last = new SummonedPet().set(1, "skeleton", 70, 1, false, 0);
     assertTrue(first.nativeTargetOrder > 0);
     assertTrue(merc.nativeTargetOrder > first.nativeTargetOrder);
     assertTrue(states.nativeNode9Order() > merc.nativeTargetOrder);
-    assertTrue(states.nativeConversionOrder() > states.nativeNode9Order());
-    assertTrue(last.nativeTargetOrder > states.nativeConversionOrder());
+    assertEquals(0, states.nativeConversionOrder(), "one unit is not in both state buckets");
+    assertTrue(conversionStates.nativeConversionOrder() > states.nativeNode9Order());
+    assertTrue(last.nativeTargetOrder > conversionStates.nativeConversionOrder());
     assertEquals(first.spawnOrder + 1, last.spawnOrder, "target ordering is not quota eviction ordering");
   }
 
@@ -34,7 +36,9 @@ class NativeTargetOrderTest {
     ResettableUnitStates resettable = new ResettableUnitStates();
     StateList resetStates = resettable.init(42).stateList;
     resetStates.addState(StateId.ATTRACT, 100, 1, 1);
+    resetStates.removeState(StateId.ATTRACT);
     resetStates.addState(StateId.CONVERSION, 100, 1, 1);
+    assertTrue(resetStates.nativeConversionOrder() > 0);
     resettable.resetForTest();
     assertEquals(0, resetStates.nativeNode9Order());
     assertEquals(0, resetStates.nativeConversionOrder());

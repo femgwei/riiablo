@@ -1035,10 +1035,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // still deal its final DOT tick, then expire.
     processDamageOverTime(entityId, stateList);
     expireOrphanedConversion(entityId, stateList);
-    boolean conversionExpiring = stateList.getState(StateId.CONVERSION) != null
-        && stateList.getState(StateId.CONVERSION).duration == 1;
     stateList.update();
-    if (conversionExpiring && !stateList.hasState(StateId.CONVERSION)) {
+    // Explicit dispel/source removal/clear is also a Conversion end boundary,
+    // not only duration == 1. Reconcile before this tick's control effects.
+    if (mMonster.has(entityId) && mMonster.get(entityId).converted
+        && !stateList.hasState(StateId.CONVERSION)) {
       restoreConversion(entityId, stateList);
     }
     int removedDruidStates = DruidSkills.removeInvalidFeralMaulStates(stateList);

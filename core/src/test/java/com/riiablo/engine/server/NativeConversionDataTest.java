@@ -61,6 +61,21 @@ public class NativeConversionDataTest extends RiiabloTest {
 
   @Test
   void expiryRestoresSavedLevelMaximumLifeAndCurrentLifeRatio() {
+    verifyConversionEnd(0);
+  }
+
+  @Test
+  void explicitRemovalWithSavePayloadRestoresConversionOnNextServerTick() {
+    for (int path = 1; path <= 4; path++) verifyConversionEnd(path);
+  }
+
+  @Test
+  void bulkClearWithoutSavePayloadStillClearsConversionOwnership() {
+    verifyConversionEnd(5);
+    verifyConversionEnd(6);
+  }
+
+  private void verifyConversionEnd(int path) {
     NoopFactory factory = new NoopFactory();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new StateUpdater(), factory)
@@ -77,11 +92,22 @@ public class NativeConversionDataTest extends RiiabloTest {
       attrs.reset();
       world.getMapper(AttributesWrapper.class).create(entity).attrs = attrs;
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
-      states.stateList.addState(StateId.CONVERSION, 1, 3, 7);
+      states.stateList.addState(StateId.CONVERSION, path == 0 ? 1 : 100, 3, 7);
       UnitState save = states.stateList.addPermanentState(StateId.CONVERSION_SAVE);
       assertNotNull(save);
       save.conversionOriginalLevel = 20;
       save.conversionOriginalMaxHpEncoded = 200 * 256;
+
+      switch (path) {
+        case 0: break; // ordinary duration expiry
+        case 1: states.stateList.removeState(StateId.CONVERSION); break;
+        case 2: states.stateList.removeStateLayer(StateId.CONVERSION, 7, -1); break;
+        case 3: states.stateList.removeStatesFromSource(7); break;
+        case 4: states.stateList.getState(StateId.CONVERSION).expired = true; break;
+        case 5: states.stateList.removeNegativeEffects(null); break;
+        case 6: states.stateList.clearAll(); break;
+        default: throw new AssertionError(path);
+      }
 
       world.process();
 
@@ -89,6 +115,10 @@ public class NativeConversionDataTest extends RiiabloTest {
       assertEquals(-1, monster.conversionOwnerId);
       assertFalse(states.stateList.hasState(StateId.CONVERSION));
       assertFalse(states.stateList.hasState(StateId.CONVERSION_SAVE));
+      assertEquals(0, states.stateList.nativeConversionOrder());
+      // Destructive generic clears discard the save payload as well. Do not
+      // fabricate original stats; full synchronous callbacks remain separate.
+      if (path >= 5) return;
       assertEquals(20, attrs.get(Stat.level).asInt());
       assertEquals(200f, attrs.get(Stat.maxhp).asFixed(), 0.01f);
       assertEquals(100f, attrs.get(Stat.hitpoints).asFixed(), 0.01f);

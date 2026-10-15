@@ -22,7 +22,9 @@ public class StateListTest {
     UnitState curse = states.addStateLayer(StateId.ATTRACT, 100, 2, 7, 86);
     UnitState conversion = states.addStateLayer(StateId.CONVERSION, 100, 3, 7, 116);
     conversion.skillModifier = 9;
-    long lastOrder = states.nativeConversionOrder();
+    long lastOrder = states.nativeNode9Order();
+    assertTrue(lastOrder > 0);
+    assertEquals(0, states.nativeConversionOrder(), "one unit cannot occupy two buckets");
     states.detachNativeTargetNode();
     states.detachNativeTargetNode(); // idempotent removal, independent of stat cleanup
     assertEquals(0, states.nativeNode9Order());
@@ -42,7 +44,7 @@ public class StateListTest {
     states.addState(StateId.CONFUSE, 100, 1, 7);
     states.addState(StateId.CONVERSION, 100, 1, 7);
     assertTrue(states.nativeNode9Order() > lastOrder);
-    assertTrue(states.nativeConversionOrder() > states.nativeNode9Order());
+    assertEquals(0, states.nativeConversionOrder());
   }
 
   @Test
@@ -57,13 +59,71 @@ public class StateListTest {
     states.extendState(StateId.ATTRACT, 4, 2, 7);
     assertEquals(first, states.nativeNode9Order());
     states.removeStateLayer(StateId.ATTRACT, 7, 86);
-    assertEquals(first, states.nativeNode9Order(), "another layer still owns projected membership");
+    assertEquals(0, states.nativeNode9Order(), "remove callback unlinks even when another layer survives");
+    assertTrue(states.hasState(StateId.ATTRACT));
     states.removeStateLayer(StateId.ATTRACT, 8, 86);
     assertEquals(0, states.nativeNode9Order());
     states.addState(StateId.CONFUSE, 1, 1, 7);
     assertTrue(states.nativeNode9Order() > first);
     states.update();
     assertEquals(0, states.nativeNode9Order());
+  }
+
+  @Test
+  public void insertionIntoAnotherStateBucketNeedsExplicitRemovalFirst() {
+    for (boolean curseFirst : new boolean[] {true, false}) {
+      StateList states = new StateList(42);
+      int first = curseFirst ? StateId.CONFUSE : StateId.CONVERSION;
+      int second = curseFirst ? StateId.CONVERSION : StateId.CONFUSE;
+      states.addState(first, 100, 1, 7);
+      long order = states.nativeNode9Order() + states.nativeConversionOrder();
+      states.addState(second, 100, 1, 7);
+      assertEquals(curseFirst ? order : 0, states.nativeNode9Order());
+      assertEquals(curseFirst ? 0 : order, states.nativeConversionOrder());
+      // A remove callback acts on the unit's current node, even when that
+      // layer's own insertion was refused because the unit already had one.
+      states.removeState(second);
+      assertEquals(0, states.nativeNode9Order());
+      assertEquals(0, states.nativeConversionOrder());
+      assertTrue(states.hasState(first));
+      states.addState(first, 200, 1, 7);
+      assertEquals(0, states.nativeNode9Order() + states.nativeConversionOrder());
+      states.addState(second, 100, 1, 7);
+      assertTrue(states.nativeNode9Order() + states.nativeConversionOrder() > order);
+      assertEquals(0, curseFirst ? states.nativeNode9Order() : states.nativeConversionOrder());
+      assertTrue((curseFirst ? states.nativeConversionOrder() : states.nativeNode9Order()) > order);
+    }
+  }
+
+  @Test
+  public void everyStateRemovalPathUnlinksWithoutWaitingForLastLayer() {
+    for (int path = 0; path < 10; path++) {
+      StateList states = new StateList(42);
+      states.addStateLayer(StateId.CONFUSE, path == 6 ? 1 : 100, 1, 7, 81);
+      states.addStateLayer(StateId.CONFUSE, 200, 1, 8, 81);
+      assertTrue(states.nativeNode9Order() > 0);
+      switch (path) {
+        case 0: states.removeState(StateId.CONFUSE); break;
+        case 1: states.removeStateLayer(StateId.CONFUSE, 7, 81); break;
+        case 2: states.removeStatesFromSource(7); break;
+        case 3: states.removeCurses(); break;
+        case 4: states.removeCurableCurses(null); break;
+        case 5: states.removeNegativeEffects(null); break;
+        case 6: states.update(); break;
+        case 7: states.retainForDeath(null, StateList.DeathUnitType.MONSTER); break;
+        case 8: states.clearRemovable(null); break;
+        case 9: states.clearAll(); break;
+        default: throw new AssertionError(path);
+      }
+      assertEquals(0, states.nativeNode9Order(), "removal path " + path);
+      assertEquals(0, states.nativeConversionOrder(), "removal path " + path);
+      if (path == 0 || path == 1 || path == 2 || path == 6) {
+        assertTrue(states.hasState(StateId.CONFUSE));
+        UnitState retained = states.getState(StateId.CONFUSE);
+        states.addStateLayer(StateId.CONFUSE, 300, 1, retained.sourceEntityId, retained.skillId);
+        assertEquals(0, states.nativeNode9Order(), "refresh after removal path " + path);
+      }
+    }
   }
 
   @Test

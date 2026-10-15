@@ -47,6 +47,65 @@ import static org.mockito.Mockito.*;
 /** Native death/real restore/Revive entry points; terrain/path are test doubles. */
 class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
   @Test
+  void retainedCurseDoesNotHideNewConversionAndItsRemovalUnlinksCurrentNode() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      try (Fixture f = new Fixture(boss)) {
+        int id = f.monster(30);
+        Monster monster = f.world.getMapper(Monster.class).get(id);
+        StateList states = f.states(id);
+        states.addState(StateId.ATTRACT, 100, 1, f.player);
+        states.detachNativeTargetNode();
+        monster.converted = true;
+        monster.conversionOwnerId = f.player;
+        states.addState(StateId.CONVERSION, 100, 1, f.player);
+        f.world.process();
+        assertTrue(states.hasState(StateId.ATTRACT));
+        assertEquals(id, f.select());
+        assertEquals(2, f.ai.lastTargetCount(), "membership, not retained curse flags, determines the bucket");
+        states.removeState(StateId.ATTRACT);
+        assertTrue(states.hasState(StateId.CONVERSION));
+        assertEquals(f.player, f.select());
+        assertEquals(1, f.ai.lastTargetCount(), "curse callback unlinks the unit's current node");
+        states.addState(StateId.CONVERSION, 200, 1, f.player);
+        f.select();
+        assertEquals(1, f.ai.lastTargetCount(), "refresh must not rejoin after callback removal");
+        states.removeState(StateId.CONVERSION);
+        states.addState(StateId.CONVERSION, 100, 1, f.player);
+        assertEquals(id, f.select());
+        assertEquals(2, f.ai.lastTargetCount());
+      }
+    }
+  }
+
+  @Test
+  void secondStateCannotMoveConversionNodeAndPartialRemovalDoesNotRestoreIt() {
+    for (String boss : new String[] {"baalcrab", "baalclone"}) {
+      try (Fixture f = new Fixture(boss)) {
+        int id = f.monster(30);
+        Monster monster = f.world.getMapper(Monster.class).get(id);
+        monster.converted = true;
+        monster.conversionOwnerId = f.player;
+        StateList states = f.states(id);
+        states.addState(StateId.CONVERSION, 100, 1, f.player);
+        long order = states.nativeConversionOrder();
+        states.addStateLayer(StateId.CONFUSE, 100, 1, f.player, 81);
+        states.addStateLayer(StateId.CONFUSE, 200, 1, f.player + 1, 81);
+        f.world.process();
+        assertEquals(0, states.nativeNode9Order());
+        assertEquals(order, states.nativeConversionOrder());
+        assertEquals(id, f.select());
+        assertEquals(2, f.ai.lastTargetCount());
+        states.removeStateLayer(StateId.CONFUSE, f.player, 81);
+        assertTrue(states.hasState(StateId.CONFUSE));
+        assertEquals(0, states.nativeNode9Order());
+        assertEquals(0, states.nativeConversionOrder());
+        assertEquals(f.player, f.select());
+        assertEquals(1, f.ai.lastTargetCount());
+      }
+    }
+  }
+
+  @Test
   void ordinaryFactoryResurrectionDoesNotReinsertOldSummonOrChangePetQuotaOrder() {
     for (String boss : new String[] {"baalcrab", "baalclone"}) {
       try (Fixture f = new Fixture(boss)) {

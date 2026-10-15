@@ -206,7 +206,7 @@ public class StateList {
           int removedId = current.stateId;
           states.removeIndex(i);
           statePool.free(current);
-          refreshFlag(removedId);
+          onStateRemoved(removedId);
         }
       }
     }
@@ -242,7 +242,7 @@ public class StateList {
       int stateId = state.stateId;
       states.removeIndex(i);
       statePool.free(state);
-      refreshFlag(stateId);
+      onStateRemoved(stateId);
       count++;
     }
     return count;
@@ -279,7 +279,7 @@ public class StateList {
       int stateId = state.stateId;
       states.removeIndex(i);
       statePool.free(state);
-      refreshFlag(stateId);
+      onStateRemoved(stateId);
       count++;
     }
     return count;
@@ -298,10 +298,14 @@ public class StateList {
     
     states.add(state);
     flags.set(stateId);
-    if ((stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) && node9Order == 0) {
-      node9Order = NativeTargetOrder.inserted();
-    } else if (stateId == StateId.CONVERSION && conversionOrder == 0) {
-      conversionOrder = NativeTargetOrder.inserted();
+    // Targets.cpp insertion requires dwNodeIndex == 11. A second state is
+    // not a second node or an implicit migration to another target bucket.
+    if (node9Order == 0 && conversionOrder == 0) {
+      if (stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) {
+        node9Order = NativeTargetOrder.inserted();
+      } else if (stateId == StateId.CONVERSION) {
+        conversionOrder = NativeTargetOrder.inserted();
+      }
     }
     
     log.debug("添加状态 {} 到实体 {}, 持续时间={}, 等级={}", 
@@ -387,7 +391,7 @@ public class StateList {
       UnitState state = states.get(i);
       if (state.stateId == stateId) {
         states.removeIndex(i);
-        refreshFlag(stateId);
+        onStateRemoved(stateId);
         statePool.free(state);
         log.debug("移除状态 {} 从实体 {}", StateId.getName(stateId), entityId);
         return true;
@@ -409,7 +413,7 @@ public class StateList {
         int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
-        refreshFlag(stateId);
+        onStateRemoved(stateId);
         count++;
       }
     }
@@ -450,7 +454,7 @@ public class StateList {
       int stateId = state.stateId;
       states.removeIndex(i);
       statePool.free(state);
-      refreshFlag(stateId);
+      onStateRemoved(stateId);
       removed++;
     }
     return removed;
@@ -466,7 +470,7 @@ public class StateList {
       int stateId = state.stateId;
       states.removeIndex(i);
       statePool.free(state);
-      refreshFlag(stateId);
+      onStateRemoved(stateId);
       removed++;
     }
     return removed;
@@ -496,7 +500,7 @@ public class StateList {
         int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
-        refreshFlag(stateId);
+        onStateRemoved(stateId);
         count++;
       }
     }
@@ -554,7 +558,7 @@ public class StateList {
           || state.skillId != skillId) continue;
       states.removeIndex(i);
       statePool.free(state);
-      refreshFlag(stateId);
+      onStateRemoved(stateId);
       return true;
     }
     return false;
@@ -653,7 +657,7 @@ public class StateList {
         int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
-        refreshFlag(stateId);
+        onStateRemoved(stateId);
       }
     }
   }
@@ -956,14 +960,16 @@ public class StateList {
     return entityId;
   }
 
-  private void refreshFlag(int stateId) {
+  private void onStateRemoved(int stateId) {
+    // SkillNec::sub_6FD0C2B0 and SkillPal's Conversion remove callback
+    // TARGETS_Last the unit, not a reference-counted state bucket. Even if
+    // another layer survives, it must not resurrect the previous membership.
+    if (stateId == StateId.ATTRACT || stateId == StateId.CONFUSE
+        || stateId == StateId.CONVERSION) detachNativeTargetNode();
     for (UnitState state : states) {
       if (state.stateId == stateId) return;
     }
     flags.clear(stateId);
-    if ((stateId == StateId.ATTRACT || stateId == StateId.CONFUSE)
-        && !hasState(StateId.ATTRACT) && !hasState(StateId.CONFUSE)) node9Order = 0;
-    if (stateId == StateId.CONVERSION) conversionOrder = 0;
   }
 
   @Override

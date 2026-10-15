@@ -136,9 +136,10 @@ public class BaalCrab extends NativeDecisionAI {
   private boolean isNode9(int id) {
     if (!mMonster.has(id)) return false;
     if (mSummonedPet.has(id) && mSummonedPet.get(id).boneWall) return true;
+    // A retained curse flag cannot hide a newer Conversion insertion; nor
+    // may a second state steal a node already inserted into the player group.
     return mUnitStates.has(id) && mUnitStates.get(id).stateList != null
-        && (mUnitStates.get(id).stateList.hasState(StateId.ATTRACT)
-            || mUnitStates.get(id).stateList.hasState(StateId.CONFUSE));
+        && mUnitStates.get(id).stateList.nativeNode9Order() != 0;
   }
 
   private long playerChildOrder(int id) {

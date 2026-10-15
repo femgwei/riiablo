@@ -1,5 +1,38 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-15 A5 Baal 状态节点唯一桶与结束回调摘链
+
+- [x] 核对 `Targets.cpp::UpdateSummonAI` / `sub_6FC40280` 的
+  `dwNodeIndex == 11` 前提，以及 `SkillNec.cpp::sub_6FD0C2B0` 和
+  `SkillPal.cpp::SKILLS_StatRemoveCallback_Conversion`：移除回调对单位当前
+  节点调用 `TARGETS_Last`，不是对残留状态层做成员资格引用计数，也不自动回旧桶。
+  `SUnit.cpp::sub_6FCBDD30` 的 alignment 更新本身没有目标节点重新插入操作。
+- [x] StateList 的 node9 与 Conversion 投影互斥；第二种状态不能生成第二个节点
+  或偷换当前桶。统一状态移除入口处理显式移除、指定层/来源移除、诅咒/负面清理、
+  到期、死亡清理及一般清理；任一相关层移除均摘除当前状态节点，即使同状态的
+  其他层仍在。保留状态 flags/payload，但刷新旧层不重挂，新的插入事件才可入桶。
+- [x] Baal 本体/分身按有效状态节点登记而不是残留 Attract/Confuse flags 区分
+  node9 与玩家组；覆盖已摘链诅咒仍在时的新 Conversion，以及第二状态插入被拒绝、
+  部分层移除后不恢复旧组等边界。测试直接构造混合状态以验证底层投影，不据此宣称
+  原生技能允许对任意阵营单位叠加这些状态。
+- [x] StateUpdater 不再只对“剩余时长为 1”触发 Conversion 恢复：显式移除、
+  来源清理或 expired 标记也会在下一服务端 tick 清除 converted/owner；保存载荷
+  尚在时恢复原等级、最大血量及当前血量比例，并释放保存状态。
+- [x] 新增 6 项回归（含本体/分身循环、10 类状态清理路径与 7 类转化结束路径），
+  并修正旧测试中“残留层自动维持成员资格”和“同单位双桶”的非原生假设；共享
+  序号测试改用两个独立单位，保留跨成员事件的排序验证。针对性 34 项全部通过；
+  临时恢复旧 Baal 状态分类和仅到期恢复逻辑后，2 项新增用例均按预期失败，
+  分别检出转化目标被残留诅咒隐藏及 converted 标记未清除；实现已恢复。
+  专用服务器 Java 编译通过；最终扩展回归共 426 项，425 通过，1 失败，
+  0 错误/跳过。唯一失败仍为此前已在 `70358fee` 基线复现的
+  `SummonedPetSystemTest.wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup`，
+  本轮未修改该狼群落点问题；未进行真实客户端逐帧验证。
+- [ ] 此次只统一 StateList 内的两类成员投影，未统一 SummonedPet/Mercenary
+  的独立成员字段，不是完整每单位唯一节点 registry，也未实现 node8/inactive 管线。
+  转化恢复仍是 tick 时协调而非同步 stat-list 回调；若批量清理已先删除
+  CONVERSION_SAVE，本轮仅清控制标记，不臆造丢失的原始属性。下一步补同步移除
+  回调与保存载荷释放顺序，再收敛召唤物/佣兵与状态节点的跨组件唯一关系。
+
 ## 2026-10-15 A5 Baal 召唤/转化/状态节点死亡摘链与 Revive 边界
 
 - [x] 依据 `MonsterMode.cpp::sub_6FC63E80`，将死亡事件和 DT/DD 模式事件的
