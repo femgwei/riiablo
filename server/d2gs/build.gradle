@@ -21,6 +21,24 @@ application {
   mainClass = 'com.riiablo.server.d2gs.D2GS'
 }
 
+tasks.register('monsterAiArena', JavaExec) {
+  group = 'verification'
+  description = 'Isolated per-MonStats AI arenas, reusing the skill-viewer synthetic map.'
+  maxHeapSize = '2g'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.MonsterAiArena'
+  workingDir = rootProject.file('assets').path
+  args '--output', rootProject.file(project.findProperty('arenaOutput')
+      ?: 'server/d2gs/build/monster-ai-arena').absolutePath,
+      '--ticks', project.findProperty('arenaTicks') ?: '500',
+      '--seed', project.findProperty('arenaSeed') ?: '1',
+      '--difficulty', project.findProperty('arenaDifficulty') ?: '0'
+  def home = project.findProperty('d2Home') ?: System.getenv('D2_HOME')
+  if (home) args '--home', home
+  if (project.hasProperty('arenaMonsters')) args '--monsters', project.property('arenaMonsters')
+  if (project.hasProperty('arenaCatalogOnly')) args '--catalog-only'
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setStandardInput(System.in)

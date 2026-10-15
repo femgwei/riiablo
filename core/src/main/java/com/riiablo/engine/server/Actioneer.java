@@ -990,7 +990,9 @@ public class Actioneer extends PassiveSystem {
       }
       log.info("[PLAYER_DEATH] action state cleared entity={} killer={}", event.victim, event.killer);
     }
-    if (mTarget.has(event.killer)) {
+    // Owner-dependent native AIs (Baal clone / Tentacle) can retire without
+    // an attacker. Artemis ComponentMapper.has(-1) indexes its backing bag.
+    if (event.killer >= 0 && mTarget.has(event.killer)) {
       Target target = mTarget.get(event.killer);
       if (target.target == event.victim) {
         mTarget.remove(event.killer);

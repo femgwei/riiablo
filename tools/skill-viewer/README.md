@@ -1,5 +1,10 @@
 # Skill Effect Viewer
 
+For isolated per-monster AI batch diagnostics that reuse this viewer's synthetic
+arena map, see [Monster AI arena](../../docs/monster-ai-arena.md). The batch
+companion runs production server AI; this GUI's current `Enable AI` checkbox is
+not wired to AIStepper and must not be used as an AI acceptance result.
+
 Standalone desktop shell for skill-effect experiments. It is deliberately
 separate from `GameScreen`, so a test can be reset without entering a game or
 loading a DS1/DT1 map.

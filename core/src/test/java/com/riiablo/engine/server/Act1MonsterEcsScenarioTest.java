@@ -44,6 +44,33 @@ import org.junit.jupiter.api.Test;
 /** Real ECS event-chain scenarios for representative Act I monster skills. */
 class Act1MonsterEcsScenarioTest extends RiiabloTest {
   @Test
+  void ownerlessAiDeathDoesNotIndexNegativeKiller() {
+    Scenario scenario = new Scenario(Riiablo.files.monstats.get("fallen1"));
+    try {
+      scenario.world.getSystem(EventSystem.class).dispatch(
+          DeathEvent.obtain(Engine.INVALID_ENTITY, scenario.source));
+      assertEquals(1, scenario.probe.death);
+    } finally {
+      scenario.close();
+    }
+  }
+
+  @Test
+  void ordinaryDeathStillClearsTheKillersVictimTarget() {
+    Scenario scenario = new Scenario(Riiablo.files.monstats.get("fallen1"));
+    try {
+      int killer = scenario.world.create();
+      scenario.world.getMapper(com.riiablo.engine.server.component.Target.class)
+          .create(killer).target = scenario.source;
+      scenario.world.getSystem(EventSystem.class).dispatch(DeathEvent.obtain(killer, scenario.source));
+      assertTrue(!scenario.world.getMapper(com.riiablo.engine.server.component.Target.class).has(killer));
+      assertEquals(1, scenario.probe.death);
+    } finally {
+      scenario.close();
+    }
+  }
+
+  @Test
   void selfResurrectServerStartUsesUnifiedFactoryLifecycle() {
     Skills.Entry skill = findSkillWithServerStart(61);
     assertNotNull(skill, "Skills.txt must contain native SrvSt61 SelfResurrect");

@@ -285,7 +285,7 @@ public class ServerEntityFactory extends EntityFactory {
   }
 
   /** Resolves MonPreset.Place directives that spawn one concrete monster. */
-  static MonStats.Entry resolvePlacementMonster(String placement) {
+  public static MonStats.Entry resolvePlacementMonster(String placement) {
     if (placement == null) return null;
     String normalized = placement.trim().toLowerCase(java.util.Locale.ROOT);
     String monsterId;
