@@ -1,5 +1,17 @@
 # 逐怪 AI 隔离测试场
 
+## 2026-10-16 Succubus Fn118（整体PARTIAL）
+
+七行专用AI接入诅咒优先级、生命/距离阈值、近战、Skill5及接近/等待决策；
+修复Defense Curse/Blood Mana状态解析、诅咒掩码和护甲属性解析遗漏。
+86项定向/相关回归通过；最终三难度近远及独立复跑共84次执行，
+JSONL与逐场日志一致，188次真实诅咒状态观测成功；所有场景有实际伤害，
+无fallback/警告/错误。修前失败及AI-only阶段84次自然执行另行保留。
+固定提交源码快照仅覆盖本批文件，未验收共享工作区其他未提交改动。
+自然场仍BASELINE_ONLY；Blood Mana施法扣血、原版无目标行为、完整stat-list标记、
+共享RNG/调度、真实地形、GL/TCP仍待。
+证据见 [Succubus验证](ai-arena/20261016-succubus-seed1/verification.md)。
+
 ## 2026-10-16 TrappedSoul Fn099（整体PARTIAL）
 
 两行专用AI接入首次S2、整数坐标象限A1/A2/S1、5/35帧严格门和NOTC；

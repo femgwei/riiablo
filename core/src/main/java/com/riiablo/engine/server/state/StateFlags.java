@@ -211,7 +211,9 @@ public class StateFlags {
                check(StateId.LIFETAP) ||
                check(StateId.CONFUSE) ||
                check(StateId.DECREPIFY) ||
-               check(StateId.LOWERRESIST);
+               check(StateId.LOWERRESIST) ||
+               check(StateId.DEFENSE_CURSE) ||
+               check(StateId.BLOOD_MANA);
                
       case StateMask.AURA:
         return check(StateId.MIGHT) ||

@@ -585,6 +585,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     float wallLifeBefore, wallHitDamage;
     final Set<Integer> wallMakers = new TreeSet<>();
     SkillDoEvent pendingCold;
+    int succubusCurseTarget = -1, succubusCurseSkill;
     float coldLifeBefore, coldDamage;
     int coldMissilesBefore, coldDamageEvents;
     boolean coldPacketValid, coldCastValid;
@@ -599,6 +600,10 @@ public final class MonsterAiArena extends ApplicationAdapter {
     }
     @Subscribe public void action(SkillDoEvent event) {
       if (event.entityId != subject) return;
+      if (event.srvdofunc == 30 && (event.skillId == 309 || event.skillId == 310)) {
+        succubusCurseTarget = event.targetId;
+        succubusCurseSkill = event.skillId;
+      }
       if (deathMaul && maulId < 0 && event.skillId == 308 && event.srvdofunc == 136) {
         Sequence seq = world.getMapper(Sequence.class).get(subject);
         maulActionValid = seq != null && seq.started && seq.nativeDeathMaul
@@ -650,6 +655,22 @@ public final class MonsterAiArena extends ApplicationAdapter {
       }
     }
     void observeCycle() {
+      if (succubusCurseTarget >= 0) {
+        com.riiablo.engine.server.component.UnitStates states = world.getMapper(
+            com.riiablo.engine.server.component.UnitStates.class).get(succubusCurseTarget);
+        int stateId = succubusCurseSkill == 309
+            ? com.riiablo.engine.server.state.StateId.DEFENSE_CURSE
+            : com.riiablo.engine.server.state.StateId.BLOOD_MANA;
+        com.riiablo.engine.server.state.UnitState curse = states == null || states.stateList == null
+            ? null : states.stateList.getState(stateId);
+        boolean valid = curse != null && curse.sourceEntityId == subject
+            && curse.skillId == succubusCurseSkill && states.stateList.hasCurse();
+        capture.line("SuccubusCurse subject=" + subject + " target=" + succubusCurseTarget
+            + " skill=" + succubusCurseSkill + " state=" + stateId + " applied=" + valid
+            + " duration=" + (curse == null ? -1 : curse.duration)
+            + " armorPercent=" + (curse == null ? 0 : curse.getStatContributionValue(Stat.skill_armor_percent)));
+        succubusCurseTarget = -1;
+      }
       if (deathMaul) observeDeathMaul();
       if (megademonVictim >= 0) {
         float life = world.getMapper(AttributesWrapper.class).get(megademonVictim).attrs.get(Stat.hitpoints).asFixed();

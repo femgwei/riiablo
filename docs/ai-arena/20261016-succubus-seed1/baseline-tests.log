@@ -1,0 +1,133 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: F:\3rd_src\riiablo\build\succubus-source\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\build\succubus-source\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+SuccubusAiIntegrationTest > deathStopsFurtherDecisions() FAILED
+    org.opentest4j.AssertionFailedError: expected: <null> but was: <com.riiablo.engine.server.component.Casting@217235f5>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertNull.failNotNull(AssertNull.java:50)
+        at app//org.junit.jupiter.api.AssertNull.assertNull(AssertNull.java:35)
+        at app//org.junit.jupiter.api.AssertNull.assertNull(AssertNull.java:30)
+        at app//org.junit.jupiter.api.Assertions.assertNull(Assertions.java:276)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.deathStopsFurtherDecisions(SuccubusAiIntegrationTest.java:181)
+
+SuccubusAiIntegrationTest > existingCurseAndDistanceEqualitySkipTheCurseChain() FAILED
+    org.opentest4j.AssertionFailedError: expected: <0> but was: <66>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.existingCurseAndDistanceEqualitySkipTheCurseChain(SuccubusAiIntegrationTest.java:136)
+
+SuccubusAiIntegrationTest > failedRangedCastUsesApproachOrSlotFiveWait() FAILED
+    org.opentest4j.AssertionFailedError: expected: <IDLE> but was: <CAST(fallback:Succubus)>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.failedRangedCastUsesApproachOrSlotFiveWait(SuccubusAiIntegrationTest.java:165)
+
+SuccubusAiIntegrationTest > failedMeleeAttackUsesSlotFourWait() FAILED
+    org.opentest4j.AssertionFailedError: expected: <null> but was: <com.riiablo.engine.server.component.Casting@17222c11>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertNull.failNotNull(AssertNull.java:50)
+        at app//org.junit.jupiter.api.AssertNull.assertNull(AssertNull.java:35)
+        at app//org.junit.jupiter.api.AssertNull.assertNull(AssertNull.java:30)
+        at app//org.junit.jupiter.api.Assertions.assertNull(Assertions.java:276)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.failedMeleeAttackUsesSlotFourWait(SuccubusAiIntegrationTest.java:145)
+
+SuccubusAiIntegrationTest > secondCurseUsesSelfLifeAndInclusiveThreshold() FAILED
+    org.opentest4j.AssertionFailedError: expected: <72> but was: <66>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.assertSlot(SuccubusAiIntegrationTest.java:61)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.secondCurseUsesSelfLifeAndInclusiveThreshold(SuccubusAiIntegrationTest.java:100)
+
+SuccubusAiIntegrationTest > thirdAndFourthCursesUseStrictMaxLifeVersusManaComparison() FAILED
+    org.opentest4j.AssertionFailedError: expected: <309> but was: <66>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.assertSlot(SuccubusAiIntegrationTest.java:61)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.thirdAndFourthCursesUseStrictMaxLifeVersusManaComparison(SuccubusAiIntegrationTest.java:122)
+
+SuccubusAiIntegrationTest > rangedSkillFiveUsesSlotSevenAsChanceBeforeApproach() FAILED
+    org.opentest4j.AssertionFailedError: expected: <345> but was: <66>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:145)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:528)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.assertSlot(SuccubusAiIntegrationTest.java:61)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.rangedSkillFiveUsesSlotSevenAsChanceBeforeApproach(SuccubusAiIntegrationTest.java:158)
+
+SuccubusAiIntegrationTest > sevenRealRowsSelectDedicatedAi() FAILED
+    org.opentest4j.AssertionFailedError: expected: <Succubus> but was: <GenericMonster>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:177)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1142)
+        at app//com.riiablo.engine.server.ai.SuccubusAiIntegrationTest.sevenRealRowsSelectDedicatedAi(SuccubusAiIntegrationTest.java:77)
+
+10 tests completed, 8 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/succubus-source/build/succubus-isolated/core/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 27s
+12 actionable tasks: 4 executed, 8 up-to-date

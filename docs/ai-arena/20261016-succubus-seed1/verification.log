@@ -1,0 +1,98 @@
+d0 JSON SHA256=1E7F6540F55AF7A75903A2361294A757E958F7B58A95E22F52ADFC4D0D10BF34 repeat=IDENTICAL
+d0 fixed-JSON SHA256=794A487ED50B867D1AF0CB69A17EC59926DB25AD8D6C6A59C80EC3B8222E3951 repeat=IDENTICAL
+d0 fixed-first succubus1 near actions=23 damageEvents=19 damage=246 curseStates=2
+d0 fixed-first succubus1 far actions=19 damageEvents=15 damage=191 curseStates=3
+d0 fixed-first succubus2 near actions=23 damageEvents=19 damage=265 curseStates=2
+d0 fixed-first succubus2 far actions=20 damageEvents=15 damage=206 curseStates=3
+d0 fixed-first succubus3 near actions=23 damageEvents=19 damage=273 curseStates=2
+d0 fixed-first succubus3 far actions=20 damageEvents=16 damage=220 curseStates=2
+d0 fixed-first succubus4 near actions=23 damageEvents=19 damage=309 curseStates=2
+d0 fixed-first succubus4 far actions=20 damageEvents=16 damage=269 curseStates=2
+d0 fixed-first succubus5 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-first succubus5 far actions=20 damageEvents=16 damage=285 curseStates=2
+d0 fixed-first succubus6 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-first succubus6 far actions=20 damageEvents=16 damage=285 curseStates=2
+d0 fixed-first succubus7 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-first succubus7 far actions=20 damageEvents=16 damage=285 curseStates=2
+d0 fixed-repeat succubus1 near actions=23 damageEvents=19 damage=246 curseStates=2
+d0 fixed-repeat succubus1 far actions=19 damageEvents=15 damage=191 curseStates=3
+d0 fixed-repeat succubus2 near actions=23 damageEvents=19 damage=265 curseStates=2
+d0 fixed-repeat succubus2 far actions=20 damageEvents=15 damage=206 curseStates=3
+d0 fixed-repeat succubus3 near actions=23 damageEvents=19 damage=273 curseStates=2
+d0 fixed-repeat succubus3 far actions=20 damageEvents=16 damage=220 curseStates=2
+d0 fixed-repeat succubus4 near actions=23 damageEvents=19 damage=309 curseStates=2
+d0 fixed-repeat succubus4 far actions=20 damageEvents=16 damage=269 curseStates=2
+d0 fixed-repeat succubus5 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-repeat succubus5 far actions=20 damageEvents=16 damage=285 curseStates=2
+d0 fixed-repeat succubus6 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-repeat succubus6 far actions=20 damageEvents=16 damage=285 curseStates=2
+d0 fixed-repeat succubus7 near actions=23 damageEvents=19 damage=328 curseStates=2
+d0 fixed-repeat succubus7 far actions=20 damageEvents=16 damage=285 curseStates=2
+d1 JSON SHA256=A9F3950E0CF678E91193B5FD6E1DC9266AE2CDECA6F9EDC08696E9ECE7AD7C35 repeat=IDENTICAL
+d1 fixed-JSON SHA256=71FA81570629F332140D451BF384EFE35928AD84FEB2611F1A9F3AA0E56C78D4 repeat=IDENTICAL
+d1 fixed-first succubus1 near actions=24 damageEvents=19 damage=652 curseStates=3
+d1 fixed-first succubus1 far actions=24 damageEvents=28 damage=717 curseStates=3
+d1 fixed-first succubus2 near actions=24 damageEvents=19 damage=652 curseStates=3
+d1 fixed-first succubus2 far actions=24 damageEvents=28 damage=717 curseStates=3
+d1 fixed-first succubus3 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-first succubus3 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-first succubus4 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-first succubus4 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-first succubus5 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-first succubus5 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-first succubus6 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-first succubus6 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-first succubus7 near actions=24 damageEvents=20 damage=664 curseStates=2
+d1 fixed-first succubus7 far actions=25 damageEvents=30 damage=782 curseStates=2
+d1 fixed-repeat succubus1 near actions=24 damageEvents=19 damage=652 curseStates=3
+d1 fixed-repeat succubus1 far actions=24 damageEvents=28 damage=717 curseStates=3
+d1 fixed-repeat succubus2 near actions=24 damageEvents=19 damage=652 curseStates=3
+d1 fixed-repeat succubus2 far actions=24 damageEvents=28 damage=717 curseStates=3
+d1 fixed-repeat succubus3 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-repeat succubus3 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-repeat succubus4 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-repeat succubus4 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-repeat succubus5 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-repeat succubus5 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-repeat succubus6 near actions=24 damageEvents=20 damage=684 curseStates=2
+d1 fixed-repeat succubus6 far actions=25 damageEvents=30 damage=798 curseStates=2
+d1 fixed-repeat succubus7 near actions=24 damageEvents=20 damage=664 curseStates=2
+d1 fixed-repeat succubus7 far actions=25 damageEvents=30 damage=782 curseStates=2
+d2 JSON SHA256=0FF2341AD2ACC996C26914514B4A55C6959B6D1E3FBCC1C8229B2DDCAC18FF6E repeat=IDENTICAL
+d2 fixed-JSON SHA256=650F6BBFEC46B4900BD6618FB665A1A41E2CA82C8DD71BEE20709BB2B6098FA8 repeat=IDENTICAL
+d2 fixed-first succubus1 near actions=24 damageEvents=19 damage=1199 curseStates=3
+d2 fixed-first succubus1 far actions=51 damageEvents=88 damage=2130 curseStates=3
+d2 fixed-first succubus2 near actions=24 damageEvents=19 damage=1218 curseStates=3
+d2 fixed-first succubus2 far actions=51 damageEvents=88 damage=2130 curseStates=3
+d2 fixed-first succubus3 near actions=24 damageEvents=20 damage=1275 curseStates=2
+d2 fixed-first succubus3 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-first succubus4 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-first succubus4 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-first succubus5 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-first succubus5 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-first succubus6 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-first succubus6 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-first succubus7 near actions=24 damageEvents=20 damage=1275 curseStates=2
+d2 fixed-first succubus7 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-repeat succubus1 near actions=24 damageEvents=19 damage=1199 curseStates=3
+d2 fixed-repeat succubus1 far actions=51 damageEvents=88 damage=2130 curseStates=3
+d2 fixed-repeat succubus2 near actions=24 damageEvents=19 damage=1218 curseStates=3
+d2 fixed-repeat succubus2 far actions=51 damageEvents=88 damage=2130 curseStates=3
+d2 fixed-repeat succubus3 near actions=24 damageEvents=20 damage=1275 curseStates=2
+d2 fixed-repeat succubus3 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-repeat succubus4 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-repeat succubus4 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-repeat succubus5 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-repeat succubus5 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-repeat succubus6 near actions=24 damageEvents=20 damage=1295 curseStates=2
+d2 fixed-repeat succubus6 far actions=51 damageEvents=90 damage=2176 curseStates=2
+d2 fixed-repeat succubus7 near actions=24 damageEvents=20 damage=1275 curseStates=2
+d2 fixed-repeat succubus7 far actions=51 damageEvents=90 damage=2176 curseStates=2
+source=core/src/main/java/com/riiablo/engine/server/ai/Succubus.java SHA256=996C625F8713B51896AC87DF368039FB53EBDF63B4FFF47F924344CA0494F49B snapshot=IDENTICAL
+source=core/src/main/java/com/riiablo/engine/server/skill/NecromancerSkills.java SHA256=6224DE5EC9CBDE57B1CFB04FDE8ABB721F34D4A186AD4DC3DB271D3DF401917F snapshot=IDENTICAL
+source=core/src/main/java/com/riiablo/engine/server/state/StateId.java SHA256=A247F760206E3820D0CE5E8D35CBAE30460237A58DBC7BCB2D27164C89054DA4 snapshot=IDENTICAL
+source=core/src/main/java/com/riiablo/engine/server/state/StateFlags.java SHA256=A0B046F513BC3F83509311AE9ABD767DDC02BAEEBC605EB4509D5A1C45323160 snapshot=IDENTICAL
+source=server/d2gs/src/main/java/com/riiablo/server/d2gs/MonsterAiArena.java SHA256=08C84E72DB1D211B5974EE3D765A7E25012DE02620A143BB81ADDE04E41D2A5A snapshot=IDENTICAL
+source=core/src/test/java/com/riiablo/engine/server/ai/SuccubusAiIntegrationTest.java SHA256=91C1EECF003C336C94E93717EAB8CC8964275E233AD40537C4C3951A47155BE9 snapshot=IDENTICAL
+source=core/src/test/java/com/riiablo/engine/server/SuccubusCurseIntegrationTest.java SHA256=EBBECA3C2FA1255C11269ADC21D014A850DF43D221D7B1EEBEB278D884C9BCAE snapshot=IDENTICAL
+tests=86 finalNaturalExecutions=84 curseStates=188 damage=75844 overall=PARTIAL

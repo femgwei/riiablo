@@ -479,6 +479,8 @@ public final class StateId {
       case CONFUSE:
       case DECREPIFY:
       case LOWERRESIST:
+      case DEFENSE_CURSE:
+      case BLOOD_MANA:
         return true;
       default:
         return false;

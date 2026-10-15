@@ -822,6 +822,8 @@ public final class NecromancerSkills {
     if (name.equals("lifetap")) return StateId.LIFETAP;
     if (name.equals("decrepify")) return StateId.DECREPIFY;
     if (name.equals("lowerresist")) return StateId.LOWERRESIST;
+    if (name.equals("defensecurse") || name.equals("defense curse")) return StateId.DEFENSE_CURSE;
+    if (name.equals("bloodmana") || name.equals("blood mana")) return StateId.BLOOD_MANA;
     return StateId.NONE;
   }
 
@@ -832,6 +834,8 @@ public final class NecromancerSkills {
     switch (name) {
       case "damagepercent": return Stat.damagepercent;
       case "itemarmorpercent": return Stat.item_armor_percent;
+      case "skillarmorpercent": return Stat.skill_armor_percent;
+      case "armoroverridepercent": return Stat.armor_override_percent;
       case "itemtohitpercent": return Stat.item_tohit_percent;
       case "damageresist": return Stat.damageresist;
       case "magicresist": return Stat.magicresist;

@@ -1,0 +1,69 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: F:\3rd_src\riiablo\build\succubus-source\core\src\test\java\com\riiablo\mpq_bytebuf\MpqTest.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\build\succubus-source\core\src\test\java\com\riiablo\engine\client\CofModeTransitionTest.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+
+SuccubusCurseIntegrationTest > bloodManaAppliesItsRealState() FAILED
+    org.opentest4j.AssertionFailedError: Blood Mana ==> expected: not <null>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertNotNull.failNull(AssertNotNull.java:49)
+        at app//org.junit.jupiter.api.AssertNotNull.assertNotNull(AssertNotNull.java:35)
+        at app//org.junit.jupiter.api.Assertions.assertNotNull(Assertions.java:309)
+        at app//com.riiablo.engine.server.SuccubusCurseIntegrationTest.verify(SuccubusCurseIntegrationTest.java:33)
+        at app//com.riiablo.engine.server.SuccubusCurseIntegrationTest.bloodManaAppliesItsRealState(SuccubusCurseIntegrationTest.java:22)
+
+SuccubusCurseIntegrationTest > defenseCurseAppliesItsRealArmorPenalty() FAILED
+    org.opentest4j.AssertionFailedError: Defense Curse ==> expected: not <null>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertNotNull.failNull(AssertNotNull.java:49)
+        at app//org.junit.jupiter.api.AssertNotNull.assertNotNull(AssertNotNull.java:35)
+        at app//org.junit.jupiter.api.Assertions.assertNotNull(Assertions.java:309)
+        at app//com.riiablo.engine.server.SuccubusCurseIntegrationTest.verify(SuccubusCurseIntegrationTest.java:33)
+        at app//com.riiablo.engine.server.SuccubusCurseIntegrationTest.defenseCurseAppliesItsRealArmorPenalty(SuccubusCurseIntegrationTest.java:18)
+
+2 tests completed, 2 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/succubus-source/build/succubus-isolated/core/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 19s
+12 actionable tasks: 4 executed, 8 up-to-date
