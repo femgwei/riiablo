@@ -669,6 +669,9 @@ public class Map implements Disposable {
   // Scoped only for synchronous graph/ray calls on the simulation thread.
   private Zone collisionZone;
 
+  /** Optional read-only A* diagnostics; never used to choose the installed movement path. */
+  public void setPathShadow(NativePathShadow shadow) { mapGraph.setPathShadow(shadow); }
+
   public boolean findPath(Zone zone, Vector2 src, Vector2 dst, int flags, int size,
       GraphPath<Point2> path, MapGraph.Obstacle obstacle,
       int moverId, int targetId, boolean canOpenDoors) {

@@ -18,12 +18,21 @@ public class MapGraph {
   final Point2 tmpPoint = new Point2();
   final ObjectSet<Point2> identity = new ObjectSet<>();
   private boolean canOpenDoors;
+  private NativePathShadow pathShadow;
 
   public MapGraph(Map map) {
+    this(map, NativePathShadow.fromSystemProperties());
+  }
+
+  MapGraph(Map map, NativePathShadow pathShadow) {
     this.map = map;
+    this.pathShadow = pathShadow;
     raycaster = new RaycastCollisionDetector(map, this);
     smoother = new PathSmoother<>(raycaster);
   }
+
+  /** Configure only on the simulation thread. Null restores the zero-replay default. */
+  public void setPathShadow(NativePathShadow pathShadow) { this.pathShadow = pathShadow; }
 
   public void clear() {
     identity.clear();
@@ -72,11 +81,20 @@ public class MapGraph {
     boolean previousCanOpenDoors = this.canOpenDoors;
     this.canOpenDoors = canOpenDoors;
     try {
-      if (!isWalkable(Map.round(dst.x), Map.round(dst.y), flags, size,
-          obstacle, moverId, targetId)) return false;
-      Point2 srcP = getOrCreate(src);
-      Point2 dstP = getOrCreate(dst);
-      return searchNodePath(pathFinder, srcP, dstP, flags, size, outPath, obstacle);
+      boolean success = false;
+      if (isWalkable(Map.round(dst.x), Map.round(dst.y), flags, size,
+          obstacle, moverId, targetId)) {
+        Point2 srcP = getOrCreate(src);
+        Point2 dstP = getOrCreate(dst);
+        success = searchNodePath(pathFinder, srcP, dstP, flags, size, outPath, obstacle);
+      }
+      // Observe before the caller's collision-zone and door scopes are restored.
+      // Other PathFinder implementations are not equivalent to our A* replay.
+      if (pathShadow != null && pathFinder.getClass() == com.riiablo.map.pfa.AStarPathFinder.class) {
+        pathShadow.observe(this, src, dst, flags, size, obstacle, moverId, targetId,
+            canOpenDoors, false, success, outPath);
+      }
+      return success;
     } finally {
       this.canOpenDoors = previousCanOpenDoors;
     }
@@ -94,7 +112,14 @@ public class MapGraph {
     if (dst == null) return false;
     boolean previous = this.canOpenDoors;
     this.canOpenDoors = canOpenDoors;
-    try { return pathFinder.searchPartial(getOrCreate(src), getOrCreate(dst), flags, size, outPath, obstacle); }
+    try {
+      boolean success = pathFinder.searchPartial(getOrCreate(src), getOrCreate(dst), flags, size, outPath, obstacle);
+      if (pathShadow != null && pathFinder.getClass() == com.riiablo.map.pfa.AStarPathFinder.class) {
+        pathShadow.observe(this, src, dst, flags, size, obstacle, -1, -1,
+            canOpenDoors, true, success, outPath);
+      }
+      return success;
+    }
     finally { this.canOpenDoors = previous; }
   }
 

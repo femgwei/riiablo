@@ -15,6 +15,12 @@ sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 // fails at runtime with NoClassDefFoundError for newly added network tables.
 tasks.withType(JavaExec).configureEach {
   dependsOn ':core:jar'
+  // Opt-in only; Gradle -D properties are not automatically forwarded to the server JVM.
+  if ((project.findProperty('pathShadow') ?: 'false').toString().toBoolean()) {
+    systemProperty 'riiablo.path.shadow', 'true'
+    systemProperty 'riiablo.path.shadow.every', project.findProperty('pathShadowEvery') ?: '128'
+    systemProperty 'riiablo.path.shadow.maxSamples', project.findProperty('pathShadowMaxSamples') ?: '16'
+  }
 }
 
 application {
