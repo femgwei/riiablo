@@ -5,6 +5,7 @@ import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgRoom;
+import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.dungeon.Dungeon;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,6 +13,65 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class D2PathActiveRoomsTest {
+  @Test void internalGridReplacementOrLayoutChangeRejectsEffectsBeforeWrites() {
+    for (int mutation = 0; mutation < 5; mutation++) {
+      Fixture f = new Fixture();
+      D2ActiveRoom room = f.live[0];
+      D2DrlgGridStrc grid = room.getPCollisionGrid();
+      D2PathActiveRooms graph = new D2PathActiveRooms(f.act);
+      D2PathFootprint.Unit owner = owner(room);
+      D2PathFootprint.add(owner);
+      D2PathRequest.State state = request(graph.room(room));
+      D2PathFootprint.RequestEffects effects = effects(state, owner, graph);
+      int[] original = grid.getPCellsFlags(), before = original.clone();
+      switch (mutation) {
+        case 0: grid.setPCellsFlags(original.clone()); break;
+        case 1: grid.setPCellsRowOffsets(grid.getPCellsRowOffsets().clone()); break;
+        case 2: grid.setNWidth(grid.getNWidth() + 1); break;
+        case 3: grid.setNHeight(grid.getNHeight() + 1); break;
+        case 4: grid.getPCellsRowOffsets()[2]++; break;
+        default: throw new AssertionError();
+      }
+      int[] currentBefore = grid.getPCellsFlags().clone();
+      assertThrows(IllegalStateException.class, graph::requireCurrent);
+      assertThrows(IllegalStateException.class, () -> effects.removeOwner(state));
+      assertThrows(IllegalStateException.class, () -> effects.addOwner(state));
+      assertThrows(IllegalStateException.class, () -> effects.blocked(state, 2, 2));
+      assertThrows(IllegalStateException.class, () -> effects(state, owner, graph));
+      assertArrayEquals(before, original); assertArrayEquals(currentBefore, grid.getPCellsFlags());
+    }
+  }
+
+  @Test void gridBitsSeedAndUnusedRowCapacityRemainLive() {
+    Fixture f = new Fixture();
+    D2DrlgGridStrc grid = f.live[0].getPCollisionGrid();
+    grid.setPCellsRowOffsets(Arrays.copyOf(grid.getPCellsRowOffsets(), grid.getNHeight() + 1));
+    D2PathActiveRooms graph = new D2PathActiveRooms(f.act);
+    grid.getPCellsRowOffsets()[grid.getNHeight()] = 999;
+    D2CommonCollision.setMask(f.live[0], 2, 2, 0x80);
+    f.live[0].getSeed().setSeeds(123, 456);
+    assertDoesNotThrow(graph::requireCurrent);
+    assertEquals(0x80, D2CommonCollision.checkMask(f.live[0], 2, 2, 0x80));
+  }
+
+  @Test void recapturingReplacedCellsAllowsEffectsOnNewStorageOnly() {
+    Fixture f = new Fixture();
+    D2ActiveRoom room = f.live[0]; D2DrlgGridStrc grid = room.getPCollisionGrid();
+    D2PathFootprint.Unit owner = owner(room); D2PathFootprint.add(owner);
+    D2PathActiveRooms old = new D2PathActiveRooms(f.act);
+    int[] original = grid.getPCellsFlags(), before = original.clone();
+    grid.setPCellsFlags(original.clone());
+    assertThrows(IllegalStateException.class, old::requireCurrent);
+    D2PathActiveRooms fresh = new D2PathActiveRooms(f.act);
+    D2PathRequest.State state = request(fresh.room(room));
+    D2PathFootprint.RequestEffects effects = effects(state, owner, fresh);
+    assertTrue(effects.removeOwner(state));
+    assertEquals(0, D2CommonCollision.checkMask(room, 2, 2, 0x80));
+    effects.addOwner(state);
+    assertArrayEquals(before, grid.getPCellsFlags()); assertArrayEquals(before, original);
+    assertDoesNotThrow(fresh::requireCurrent);
+  }
+
   private static final class Fixture {
     final D2DrlgAct act = new D2DrlgAct();
     final D2DrlgRoom[] drlg = new D2DrlgRoom[3];

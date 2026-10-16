@@ -6,6 +6,7 @@ import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.dungeon.Dungeon;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.Objects;
 
 /** Request-local projection of one Act's allocated rooms and #10035 populated lists.
  * Capture/use on the serialized game thread; this is not a synchronization primitive.
- * Rebuild after topology/lifetime changes. Grid contents and unit RNG remain live.
+ * Rebuild after topology/lifetime or grid-storage/layout changes. Collision bits and unit RNG remain live.
  * Does not allocate/activate rooms or install a production movement backend. */
 public final class D2PathActiveRooms {
     private final D2DrlgAct act;
@@ -70,6 +71,8 @@ public final class D2PathActiveRooms {
         final D2ActiveRoom source;
         final D2DrlgRoom drlg;
         final D2DrlgGridStrc grid;
+        final int[] cells, rowOffsets, rowValues;
+        final int gridWidth, gridHeight;
         final int levelId;
         final D2ActiveRoom[] near;
         final D2PathRequest.Room projected;
@@ -79,6 +82,12 @@ public final class D2PathActiveRooms {
             this.source = source;
             drlg = source.getPDrlgRoom();
             grid = source.getPCollisionGrid();
+            cells = grid == null ? null : grid.getPCellsFlags();
+            rowOffsets = grid == null ? null : grid.getPCellsRowOffsets();
+            gridWidth = grid == null ? 0 : grid.getNWidth();
+            gridHeight = grid == null ? 0 : grid.getNHeight();
+            rowValues = rowOffsets == null ? null : Arrays.copyOf(rowOffsets,
+                    Math.max(0, Math.min(gridHeight, rowOffsets.length)));
             levelId = Dungeon.getLevelIdFromRoom(source);
             near = Dungeon.getAdjacentRoomsListFromRoom(source);
             projected = new D2PathRequest.Room(new D2PathResult.Room(
@@ -90,7 +99,8 @@ public final class D2PathActiveRooms {
         boolean current(D2DrlgAct act) {
             D2PathResult.Room b = projected.bounds;
             if (source.getAct() != act || source.getPDrlgRoom() != drlg || drlg.getRoom() != source
-                    || source.getPCollisionGrid() != grid || Dungeon.getLevelIdFromRoom(source) != levelId
+                    || source.getPCollisionGrid() != grid || !gridCurrent()
+                    || Dungeon.getLevelIdFromRoom(source) != levelId
                     || source.getCoords().getNSubtileX() != b.x || source.getCoords().getNSubtileY() != b.y
                     || source.getCoords().getNSubtileWidth() != b.width
                     || source.getCoords().getNSubtileHeight() != b.height
@@ -101,6 +111,20 @@ public final class D2PathActiveRooms {
             D2ActiveRoom[] live = source.getPpRoomList();
             for (int i = 0; i < near.length; i++) {
                 if (live[i] != near[i]) return false;
+            }
+            return true;
+        }
+
+        /** Storage/layout stability only; cells bits stay live and malformed initial
+         * layouts are not validated here. Unused row-array capacity is irrelevant. */
+        boolean gridCurrent() {
+            if (grid == null) return true;
+            if (grid.getPCellsFlags() != cells || grid.getPCellsRowOffsets() != rowOffsets
+                    || grid.getNWidth() != gridWidth || grid.getNHeight() != gridHeight) return false;
+            if (rowValues != null) {
+                for (int i = 0; i < rowValues.length; i++) {
+                    if (rowOffsets[i] != rowValues[i]) return false;
+                }
             }
             return true;
         }

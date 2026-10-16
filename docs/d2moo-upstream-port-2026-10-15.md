@@ -2123,6 +2123,17 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 拒绝测试修复前复现（core/build/round47-red.log）；修复后完整615项/52类通过，失败/错误/跳过0。
   core/build/round47-full.log，XML .gradle/path-port/round47-full/core/test-results/pathPortTest。
 
+## 第四十八批：ActiveRooms内部碰撞存储与布局一致性
+
+- grid对象不变时cells/row-offset数组、尺寸或有效行偏移仍可变化；ActiveRooms新增这些复检，
+  旧RequestEffects在构造/删除/添加/查询前拒绝。cells值不复制、不冻结，seed和闲置行容量保持live。
+- 新增3项验证五类存储/布局变化副作用前拒绝且新旧cells均保留、合法live变化、
+  替换cells后重捕获只操作新存储并完整恢复。
+- null grid语义保留；仅当前快照检查，不验证初始布局、不检测改回原值的历史或证明原生生命周期。
+  无新DLL算法证据，生产仍A*，实际raw/live/Act/seed/WRP缺口仍待。
+- 拒绝测试修复前复现（core/build/round48-red.log）；修复后完整618项/52类通过，失败/错误/跳过0。
+  core/build/round48-full.log，XML .gradle/path-port/round48-full/core/test-results/pathPortTest。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

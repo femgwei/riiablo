@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十八批：ActiveRooms复检grid内部cells/rows身份、尺寸及有效行偏移，拒绝旧effects操作替换存储。
+新增3项覆盖五类变动、live bits/seed/闲置容量及重捕获；生产仍A*，详细见handoff顶部。
+拒绝测试修复前复现；修复后完整618项/52类通过，失败/错误/跳过0；core/build/round48-full.log。
+
 第四十七批：保存Search捕获并复检完整precision，补齐无Observation纯坐标目标的同格fraction变化拒绝。
 新增3项覆盖0/2/16拒绝、正常执行与重新捕获；仅快照一致性，生产仍A*，见handoff顶部。
 拒绝测试修复前复现；修复后完整615项/52类通过，失败/错误/跳过0；core/build/round47-full.log。

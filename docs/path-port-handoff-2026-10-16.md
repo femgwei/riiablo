@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十七批续接结果（优先于下方历史起点）
+## 第四十八批续接结果（优先于下方历史起点）
+
+- D2PathActiveRooms在grid对象身份之外捕获cells/row-offset数组身份、width/height与有效行偏移值，
+  requireCurrent拒绝内部存储替换或布局变动，避免旧RequestEffects继续操作新存储/错误布局。
+- 不复制或冻结cells碰撞位，不冻结seed；未使用row-offset容量的值变化允许，null grid语义保留。
+  仅检测当前变化，不追踪改回原值的历史，也不新增初始化网格有效性或原生内存生命周期证明。
+- 新增3项覆盖五种存储/布局变动在effects构造、删除/添加/查询前拒绝，旧/新cells均保留；
+  碰撞位/seed/闲置容量仍可变，替换cells后重捕获允许只操作新存储。
+- 宿主适配快照修复，无新DLL算法或动态执行证据；生产仍Map→AStarPathFinder，
+  实际raw/live字段、Act与Zone映射、共享seed、WRP类型来源仍待。
+- 拒绝测试修复前复现（core/build/round48-red.log）；修复后完整618项/52类通过，失败/错误/跳过0。
+  core/build/round48-full.log，XML `.gradle/path-port/round48-full/core/test-results/pathPortTest`。
+
+## 第四十七批续接结果（历史）
 
 - Search捕获自身创建时result.precisionX/Y，dispatch前在既有Request复检后核对完整原值。
   补齐无Observation的纯坐标目标保存Search在同格fraction变化后仍使用旧快照的缺口。

@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十八批（生产适配仍PARTIAL）
+
+- [x] ActiveRooms复检grid内部cells/rows身份、尺寸、有效行偏移；不冻结bits/seed/闲置行容量。
+- [x] 新增3项验证五类变动副作用前拒绝、合法live变化及替换cells后重捕获。
+- [x] 拒绝测试修复前复现；修复后完整618项/52类通过，失败/错误/跳过0；core/build/round48-full.log。
+- [ ] 实际raw/live字段、Act与Zone映射、共享seed及WRP类型来源仍待；生产仍A*。
+
 ## 2026-10-16 寻路第四十七批（生产适配仍PARTIAL）
 
 - [x] 保存Search捕获并复检完整precision，拒绝纯坐标目标同格fraction变化后继续使用旧Search。
