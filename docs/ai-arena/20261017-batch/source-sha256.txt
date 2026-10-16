@@ -1,0 +1,9 @@
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    1B18A623657B38524C580D3EDE94427169030892E6CCE934A9EA410F17E7D332 F:\3rd_src\riiablo\build\ai-batch-20261017-source\core\src\main\java\com\riiablo\engine\server\ai\AI.java
+SHA256    60E5265D1E290DDC8E67DF4C3020DF979EDD93E30115B6E727A993BDE989AA7E F:\3rd_src\riiablo\build\ai-batch-20261017-source\core\src\main\java\com\riiablo\engine\server\ai\Catapult.java
+SHA256    B70636E953DC30CA98283B311D26F644EC101D786CD30D5AB65E2EC13322FDAB F:\3rd_src\riiablo\build\ai-batch-20261017-source\core\src\main\java\com\riiablo\engine\server\ai\SevenTIllusion.java
+SHA256    DEFC27D8D89F8490AD0EDA86DD446BC71FEED87E67E28E3AE4DA4B5FC87EE711 F:\3rd_src\riiablo\build\ai-batch-20261017-source\core\src\test\java\com\riiablo\engine\server\ai\Batch20261017AiIntegrationTest.java
+
+
