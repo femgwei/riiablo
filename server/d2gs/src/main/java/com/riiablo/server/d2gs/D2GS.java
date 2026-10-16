@@ -61,7 +61,6 @@ import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
-import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
@@ -69,20 +68,11 @@ import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
-import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
-import com.riiablo.attributes.ExperienceManager;
-import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AuthoritativeSimulation;
-import com.riiablo.engine.server.CofManager;
-import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
-import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
-import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
-import com.riiablo.engine.server.LeapSystem;
-import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
 import com.riiablo.engine.server.ServerItemManager;
 import com.riiablo.engine.server.item.AuthoritativeItemMoveService;
@@ -92,8 +82,6 @@ import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.engine.server.player.SkillPointRequestCache;
 import com.riiablo.engine.server.player.StatPointRequestCache;
-import com.riiablo.engine.server.ServerNetworkIdManager;
-import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Player;
@@ -122,7 +110,6 @@ import com.riiablo.engine.server.npc.NpcRepairService;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PartyMember;
-import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.engine.server.party.PartyRequestCache;
 import com.riiablo.engine.server.party.PartyServiceProtocol;
 import com.riiablo.engine.server.party.PartyGoldShareService;
@@ -6167,70 +6154,9 @@ public class D2GS extends ApplicationAdapter {
     combatPositionHistory = new CombatPositionHistory(map);
     SimulationSession session = new SimulationSession(
         SimulationMode.DEDICATED_SERVER, map, environment, partyManager);
-    SimulationMode mode = session.mode();
-    WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
-        .with(new EventSystem())
-        // NPC components retain client menu hooks; register inert systems so
-        // Artemis can wire them in headless D2GS without a rendered UI.
-        .with(new com.riiablo.engine.client.MenuManager(),
-            new com.riiablo.engine.client.DialogManager())
-        .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem(npcVendors))
-        // Zone changes must invalidate owner-bound missiles and periodic
-        // state layers before the next snapshot baseline is serialized.
-        .with(new com.riiablo.engine.server.ZoneTransitionCleanupSystem())
-        .with(SimulationSystemGroups.quests())
-        .with(SimulationSystemGroups.questItemRewards())
-        .with(new ServerNetworkIdManager())
-        .with(new SerializationManager())
-        .with(mapManager)
-        .with(itemManager)
-        .with(new ItemGenerator())
-        .with(new CofManager())
-        .with(new com.riiablo.engine.server.EnvironmentSystem(session.map(), session.environment()))
-        .with(new ObjectInitializer())
-        .with(new com.riiablo.engine.server.EnvironmentObjectSystem(session.environment()))
-        .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
-        .with(SimulationSystemGroups.worldObjectEffects(authoritativeItems))
-
-        // Native 25 Hz phase order: state/stat decay first, then projectile
-        // movement and collision, then unit/AI behavior and death handlers.
-        .with(SimulationSystemGroups.stateAndActions())
-        .with(SimulationSystemGroups.ownedUnits())
-        .with(SimulationSystemGroups.unitLifecycle())
-        .with(new com.riiablo.engine.server.item.GroundDropCleanupSystem())
-        .with(new AuraEcsSystem())
-        .with(new ServerPlayerDeathSystem())
-        .with(new PlayerCorpseRetrievalSystem())
-        .with(mode.createServerSkillSystem())
-        .with(new DeathRewardSystem(session.partyManager()))
-        // Apply a newly queued attack mode before advancing animation. If the
-        // old neutral animation wraps first, its Finished event can otherwise
-        // consume the fresh attack sequence before the attack keyframe runs.
-        .with(SimulationSystemGroups.sequenceAnimation())
-        .with(SimulationSystemGroups.objectCollision())
-        .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
-        .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
-        .with(new ExperienceManager(session.partyManager()))
-        .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem(session.partyManager()))
-
-        .with(new VendorGenerator())
-        .with(SimulationSystemGroups.roomPopulation(Boolean.getBoolean("riiablo.d2gs.aiTour")))
-        .with(mode.createDynamicUnitCollisionSystem())
-        .with(new Pathfinder())
-
-        .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
-
-        // Resolve modes after collision-aware movement has replaced a blocked
-        // requested velocity with zero. D2GS remains the authoritative owner
-        // of player and monster movement modes.
-        .with(mode.createVelocityModeChanger())
-        .with(new com.riiablo.engine.server.WhirlwindSystem())
-        .with(new LeapSystem())
-
-        .with(factory)
-        .with(sync)
-        .with(new AnimDataResolver())
-        ;
+    WorldConfigurationBuilder builder = D2GSSimulationAssembly.builder(
+        session, mapManager, itemManager, factory, sync, npcVendors, authoritativeItems,
+        Boolean.getBoolean("riiablo.d2gs.aiTour"));
     WorldConfiguration config = session.registerServices(builder.build())
         .register("factory", factory)
         .register("player", player)

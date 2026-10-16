@@ -1,5 +1,58 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第七批：入口清理与综合回归
+
+- [x] 新增 ClientSimulationAssembly 和 D2GS 包内 D2GSSimulationAssembly，分别
+  保存客户端/单机与专用服务端的完整有序配方；GameScreen / D2GS 继续创建和拥有
+  资源、注册命名服务及创建 World。平台条件和 AI tour 开关从宿主显式传入，
+  配方不读 Gdx.app 或系统属性，不引入新的 Gradle 模块或通用调度框架。
+- [x] 保留 GameScreen 的 protected builder 扩展点及 NetworkedGameScreen 的
+  HIGH 插值/接收优先级和原网络同步追加位置。两端任务、AI、技能、动画、物理与
+  移动顺序不统一；还原平台/诊断参数后，builder 主体与 `4f63640fa` 去注释、空白
+  一致。无玩法、RNG、25Hz、协议、存档或资源释放规则改动。
+- [x] 装配时拒绝错误运行模式、缺失必要服务和客户端音频/模拟时钟错配；不复制
+  会话资源，不在装配类启动网络或 dispose 宿主资源。新增 14 项装配测试全部通过：
+  core 9 项、D2GS 5 项，检查完整类型顺序、权威/平台分支、实际依赖对象身份、
+  模式参数、网络扩展优先级和会话系统实例独立。客户端直接调用生产屏幕装配，
+  绕过重资产构造并提供字体/贴图替身，不启动 World/GL/MPQ/网络。
+- [x] 扩大综合回归共 288 项、44 类：core 244/246、D2GS 全部 42/42，合计
+  286/288；错误/跳过均 0。core、desktop、D2GS 编译通过。覆盖六批已有回归，
+  加上动作/动画、单位生命周期、佣兵跟随、动态碰撞、移动模式、房间、玩家目标槽、
+  战斗位置历史、环境、Act I 任务及完整 D2GS 单元测试。日志
+  `build/simulation-assembly-regression.log`；原始 XML 已另存
+  `build/simulation-assembly-regression-xml/core/` 与 `d2gs/`，不以最终专项覆盖它们。
+- [x] 两个失败均做基线复核，不删用例或改期望：
+  `CombatPipelineIntegrationTest.barbarianThrowingMasteryIsSnapshottedBeforeImpact`
+  仍是期望 9 / 实际 6；扩大回归发现的
+  `MonsterRoomActivationTest.nativeRoomActivationSleepsAndWakesMonsterAi`
+  为期望 0 次更新 / 实际 1 次。临时将唯一修改的既有 core 生产文件 GameScreen
+  恢复为第六批原版，Git blob 校验两者均为
+  `a3951084a11a2e9528085ae1d7f08ec8a146f9c6`，独立重跑这两个原测试类共 20 项，
+  同样仅这两项失败；新增装配类未被此轮调用。随后恢复本批代码。基线日志
+  `build/simulation-assembly-baseline.log`，XML 为 `build/simulation-assembly-baseline-xml/`。
+- 装配用例初轮因未提供 UI 构造宿主和未处理 Artemis 三个预留槽位而失败，后续
+  补齐无资源字体/贴图/Files 夹具并显式锁定预留槽；未改生产顺序或跳过实际系统。
+  装配专项最终日志 `build/simulation-assembly-initial-06.log`（14/14）。
+- [x] 恢复本批代码后，客户端装配 9 项与 D2GS 全部 42 项再次通过，合计 51/51；
+  真实 1.10f 营地隐藏窗口三帧 PASS，D2GS 25Hz（step=0.04）、Throw 导弹创建/
+  顺序与 1000→992 伤害通过。双 TCP 客户端自然击杀后重放两次 DeathEvent，
+  claims=3、xp=49、groundItems=0 保持稳定，死亡幂等通过；因该场没有地面掉落，
+  不能据此声称网络掉落实体创建已验收。
+  最终命令整体 BUILD SUCCESSFUL，日志 `build/simulation-assembly-final-resource.log`；
+  营地 manifest 为 `build/simulation-assembly-final-camp/rogue-encampment-manifest.txt`。
+  未发现 ERROR/Exception，保留 level0/DrlgType0 跳过、Java 分配回退、表 Key 推断、
+  出生重定位及重复事件拒绝诊断；另有一次 SIM_SLOW=78.86ms（预算 40ms），不把
+  本次冒烟当作性能验收。人工画面/操作/听感、完整反复退出重进与长期泄漏验收仍待。
+- 范围限制：七批是最初约定的风险分批，不代表 D2MOO 行为对齐率或全面会话隔离。
+  其余输入/天气/脚步/怪物音效/UI/渲染、表资源、MathUtils.random、Audio 内部 CVar、
+  GroundDropOwnership 与 gameSeed 等全局依赖尚在；地图/GL 所有权、CharData 其他
+  监听和 D2GS 停机资源仍待。既有投掷专精、房间 AI 断言、佣兵网络夹具、Den 日志
+  问题未修复，不能将本批回归声明为全绿或完整游戏验收。
+- 整体进度：最初约定的七批已落地，入口整理与本轮验证完成。后续建议先独立梳理
+  地图/GL 资源所有权和退出重进，再逐组迁移剩余全局依赖；不扩大本批释放范围。
+  设计与另一台电脑的装配专项命令见
+  [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第六批：屏幕外部订阅生命周期
 
 - [x] 新增屏幕内部 ScreenSubscriptionScope，区分随 show/hide 的可见订阅和随
