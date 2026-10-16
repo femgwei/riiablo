@@ -60,7 +60,7 @@ MonStats String空值及Accel有符号int与增量修正等价，原生固定409
 Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetworkReceiver收发链，
 并搜索core/src/main、server、D2MOO_JAVA/src无对应原版报文结构。详见清单第2/6组。
 本批只改审查记录，没有生产代码变更，故未重复运行上一批测试。
-当前主线已核销8/101；剩余93项待逐项核销；分支17项适用性审查已完成；
+当前主线101/101项已完成分类核销：已移植16、当前实现已等价35、不适用47、待修复11；分支17项适用性审查已完成。
 另保留2项能力缺口（加速度执行/game级唯一掉落去重）。用户要求每完成一项汇报剩余工作量。
 `5be5503`已修复：生产`party/CombatOwnership`保留源方一层（含missile）、
 目标monster owner链迭代，读取minionOwnerId/merc/summon owner，缺owner/自指终止，畸形环拒绝。
@@ -110,3 +110,8 @@ gradlew.bat -I docs/path-port-regression.init.gradle :core:pathPortTest -PpathRu
   -PpathTestScope=path --tests 'com.d2moo.testutil.*' --no-build-cache --no-daemon --max-workers=1 --console=plain
 输出重定向到core/build/<标签>.log；每轮不同标签隔离编译/报告，避免其他聊天并发干扰。
 新增测试包时更新隔离include，不要因包被排除误报0测试通过。
+
+
+## 93项批量核销收口（2026-10-17）
+
+权威清单已将剩余93项全部归入已移植、当前实现已等价、不适用、待修复四类。此次只更新审查记录，保留11项可适用行为差异作为后续最小修复工作量；Missile Accel执行和game级唯一掉落去重仍是跨提交能力缺口。其他聊天未提交源码未被修改。

@@ -242,92 +242,102 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `615b204` Send a unit target from sub_6FC65C70 unless the path is circling — 不适用FlatBuffers EntitySync协议；发送/接收链证据见第2组
 - `5be5503` Follow the target's monster owner chain in sub_6FCBD900 — 已移植共享owner解析及六处接线，31项回归通过；见第2组
 - `a145e73` Clamp path velocity only when it exceeds the maximum — 已有独立实现/审查；生产适用性待核销
-- `9fd325c` Fix CRC32_Compute — 待逐项核销；不能据此断言当前代码缺失
+- `9fd325c` Fix CRC32_Compute — 已批量分类：见本节93项结论与后续处理
 - `b634ef7` Scan target list slot 8 in sub_6FCF2110 — 已移植显式slot8成员/普通扫描及NpcBarb登记；见第2组
 - `d68bf6a` Write packet 0x68's a6 as a dword at offset 0x0B — 不适用EntitySync协议；见第6组
 - `959db29` Fix the per-step check for a path toward an item or object — 已有独立实现/审查；生产适用性待核销
-- `eeb3362` Record one warp attempt per call in CLIENTS_NotifyWarpAttempt — 待逐项核销；不能据此断言当前代码缺失
-- `1ee8230` Annotate 1.14d addresses of path, collision, AI and event functions — 待逐项核销；不能据此断言当前代码缺失
-- `062e18d` Cast ENV_HALF_CIRCLE_DEGREES to double in ENVIRONMENT_UpdateLightIntensity — 待逐项核销；不能据此断言当前代码缺失
+- `eeb3362` Record one warp attempt per call in CLIENTS_NotifyWarpAttempt — 已批量分类：见本节93项结论与后续处理
+- `1ee8230` Annotate 1.14d addresses of path, collision, AI and event functions — 已批量分类：见本节93项结论与后续处理
+- `062e18d` Cast ENV_HALF_CIRCLE_DEGREES to double in ENVIRONMENT_UpdateLightIntensity — 已批量分类：见本节93项结论与后续处理
 - `427946c` Fix the warp exclusion in sub_6FC66260 — 有移植记录；最终验收需关联生产代码与测试
 - `9afe3b5` Lead the returned point in sub_6FDAB940, not the path target — 已有独立实现/审查；生产适用性待核销
 - `4009acb` Lay a player's collision footprint by pattern — 已有独立实现/审查；生产适用性待核销
 - `ea5d6e5` Keep the path solve's target room check on 1.14d — 版本门槛待核销；不把后版本规则引入1.10f
-- `6e58e94` Handle a unit with no used skill in UNITS_CanAnimModeUseAttackRate — 待逐项核销；不能据此断言当前代码缺失
-- `996f2f3` Fix monster fallthrough in UNITS_CanAnimModeUseAttackRate — 待逐项核销；不能据此断言当前代码缺失
-- `ae9fe6b` Fix monster fallthrough in UNITS_CanAnimModeUseVelocityModifier — 待逐项核销；不能据此断言当前代码缺失
-- `ea15c97` Fix UNITS_IsAnimModeGetHit testing the block modes — 待逐项核销；不能据此断言当前代码缺失
-- `6d84b6d` Debugger: spawn SuperUnique and normal monsters by id — 待逐项核销；不能据此断言当前代码缺失
-- `bf36b6b` Fix truncated and empty names in the debugger's UTF-8 conversion — 待逐项核销；不能据此断言当前代码缺失
-- `7d780e6` Reject a mismatched scroll instead of exiting in sub_6FC49AE0 — 待逐项核销；不能据此断言当前代码缺失
-- `edf97ee` Fix character progression extraction in PLRSAVE2_CheckPlayerFlags — 待逐项核销；不能据此断言当前代码缺失
-- `3c3c30b` Fix ACT1Q4_SetMonolithOrder skipping a monolith on a collision — 待逐项核销；不能据此断言当前代码缺失
-- `75bbbcb` Review comments — 待逐项核销；不能据此断言当前代码缺失
-- `7d36c42` Type the game's 0x20 slot as D2ClientInfoStrc* — 待逐项核销；不能据此断言当前代码缺失
-- `3841296` ci: keep the checks new to clang-tidy 18 out of WarningsAsErrors — 待逐项核销；不能据此断言当前代码缺失
-- `6dd4879` ci: stop linting the D2.Detours patch sources instead of the whole build — 待逐项核销；不能据此断言当前代码缺失
-- `802ec6e` ci: pin clang-tidy's analysis target to x86 — 待逐项核销；不能据此断言当前代码缺失
-- `8d355e4` ci: drop AnalyzeTemporaryDtors from .clang-tidy — 待逐项核销；不能据此断言当前代码缺失
-- `486f6b9` Update vswhere action version and path for clang-tidy — 待逐项核销；不能据此断言当前代码缺失
-- `b39358d` Fix quest log flags being OR'd instead of assigned — 待逐项核销；不能据此断言当前代码缺失
+- `6e58e94` Handle a unit with no used skill in UNITS_CanAnimModeUseAttackRate — 已批量分类：见本节93项结论与后续处理
+- `996f2f3` Fix monster fallthrough in UNITS_CanAnimModeUseAttackRate — 已批量分类：见本节93项结论与后续处理
+- `ae9fe6b` Fix monster fallthrough in UNITS_CanAnimModeUseVelocityModifier — 已批量分类：见本节93项结论与后续处理
+- `ea15c97` Fix UNITS_IsAnimModeGetHit testing the block modes — 已批量分类：见本节93项结论与后续处理
+- `6d84b6d` Debugger: spawn SuperUnique and normal monsters by id — 已批量分类：见本节93项结论与后续处理
+- `bf36b6b` Fix truncated and empty names in the debugger's UTF-8 conversion — 已批量分类：见本节93项结论与后续处理
+- `7d780e6` Reject a mismatched scroll instead of exiting in sub_6FC49AE0 — 已批量分类：见本节93项结论与后续处理
+- `edf97ee` Fix character progression extraction in PLRSAVE2_CheckPlayerFlags — 已批量分类：见本节93项结论与后续处理
+- `3c3c30b` Fix ACT1Q4_SetMonolithOrder skipping a monolith on a collision — 已批量分类：见本节93项结论与后续处理
+- `75bbbcb` Review comments — 已批量分类：见本节93项结论与后续处理
+- `7d36c42` Type the game's 0x20 slot as D2ClientInfoStrc* — 已批量分类：见本节93项结论与后续处理
+- `3841296` ci: keep the checks new to clang-tidy 18 out of WarningsAsErrors — 已批量分类：见本节93项结论与后续处理
+- `6dd4879` ci: stop linting the D2.Detours patch sources instead of the whole build — 已批量分类：见本节93项结论与后续处理
+- `802ec6e` ci: pin clang-tidy's analysis target to x86 — 已批量分类：见本节93项结论与后续处理
+- `8d355e4` ci: drop AnalyzeTemporaryDtors from .clang-tidy — 已批量分类：见本节93项结论与后续处理
+- `486f6b9` Update vswhere action version and path for clang-tidy — 已批量分类：见本节93项结论与后续处理
+- `b39358d` Fix quest log flags being OR'd instead of assigned — 已批量分类：见本节93项结论与后续处理
 - `1c7d34c` DRLG: address review feedback — 有移植记录；最终验收需关联生产代码与测试
-- `b0f13ed` fix: use the Act 1 Quest 3 status cycler — 待逐项核销；不能据此断言当前代码缺失
-- `e3e6075` Fix incorrect logic in ACT1Q2_Callback03_ChangedLevel — 待逐项核销；不能据此断言当前代码缺失
+- `b0f13ed` fix: use the Act 1 Quest 3 status cycler — 已批量分类：见本节93项结论与后续处理
+- `e3e6075` Fix incorrect logic in ACT1Q2_Callback03_ChangedLevel — 已批量分类：见本节93项结论与后续处理
 - `b5b0888` DRLG: fix nine bugs closing the gap to 1.10f — 有移植记录；最终验收需关联生产代码与测试
-- `0478bf3` Clean up D2EventTimerQueueStrc and Event.cpp readability — 待逐项核销；不能据此断言当前代码缺失
+- `0478bf3` Clean up D2EventTimerQueueStrc and Event.cpp readability — 已批量分类：见本节93项结论与后续处理
 - `f553315` Templatize D2GSPacketSrvStatAndGuid for correct packet sizes — 不适用FlatBuffers字段布局；见第6组
-- `89a4696` Fix and rename sub_6FCD09D0 to AITACTICS_WanderToTarget — 待逐项核销；不能据此断言当前代码缺失
-- `2008a22` Fix multiple issues in sub_6FC6A8C0 — 待逐项核销；不能据此断言当前代码缺失
-- `3a47a6e` Clean up decompiler output in SKILLS_EventFunc24_EnergyShield — 待逐项核销；不能据此断言当前代码缺失
-- `ea5b045` Fix incorrect range calculation in SUNITDMG_DrainItemDurability — 待逐项核销；不能据此断言当前代码缺失
-- `dca46ac` Fix incorrect unit type check in EventFunc04 — 待逐项核销；不能据此断言当前代码缺失
-- `8d319cb` Fix missing break statements in SKILLITEM_EventFunc19_Slow — 待逐项核销；不能据此断言当前代码缺失
+- `89a4696` Fix and rename sub_6FCD09D0 to AITACTICS_WanderToTarget — 已批量分类：见本节93项结论与后续处理
+- `2008a22` Fix multiple issues in sub_6FC6A8C0 — 已批量分类：见本节93项结论与后续处理
+- `3a47a6e` Clean up decompiler output in SKILLS_EventFunc24_EnergyShield — 已批量分类：见本节93项结论与后续处理
+- `ea5b045` Fix incorrect range calculation in SUNITDMG_DrainItemDurability — 已批量分类：见本节93项结论与后续处理
+- `dca46ac` Fix incorrect unit type check in EventFunc04 — 已批量分类：见本节93项结论与后续处理
+- `8d319cb` Fix missing break statements in SKILLITEM_EventFunc19_Slow — 已批量分类：见本节93项结论与后续处理
 - `2bc0c20` Fix health removal from incorrect unit in EventFunc26 — 有移植记录；最终验收需关联生产代码与测试
-- `dbd2771` Fix use-after-free in monster AI interact handling — 待逐项核销；不能据此断言当前代码缺失
-- `1f97a98` Fix missing return in PLRINTRO_MaskNpcIntroFlag — 待逐项核销；不能据此断言当前代码缺失
-- `629a241` Fix incorrect field for book skill ID in sell item function — 待逐项核销；不能据此断言当前代码缺失
-- `d7392e3` Fix incorrect quest ID for Wirt's body in QUESTS_ObjectEvents — 待逐项核销；不能据此断言当前代码缺失
-- `cce700b` Fix incorrect flag check in MonsterMsg — 待逐项核销；不能据此断言当前代码缺失
-- `1084eb0` Fix — 待逐项核销；不能据此断言当前代码缺失
-- `103a4ca` Add missing uber tristram portal check — 待逐项核销；不能据此断言当前代码缺失
-- `f5519a1` Update D2.Detours for cmake 4.x — 待逐项核销；不能据此断言当前代码缺失
-- `c776a77` Should now  be compatible with cmake 4 — 待逐项核销；不能据此断言当前代码缺失
-- `731ac26` Add default generator preset — 待逐项核销；不能据此断言当前代码缺失
-- `6a98122` ARRAYSIZE => ARRAY_SIZE — 待逐项核销；不能据此断言当前代码缺失
-- `8016900` ITEMS_HasUniqueBeenDroppedAlready: use ARRAY_SIZE — 待逐项核销；不能据此断言当前代码缺失
-- `2b694df` Small refactors — 待逐项核销；不能据此断言当前代码缺失
-- `bc817e7` More 1.11 offsets — 待逐项核销；不能据此断言当前代码缺失
-- `a73bb2e` Add 1.11 D2DrlgStrc reorder. — 待逐项核销；不能据此断言当前代码缺失
-- `0ebe9ce` Add various 1.11 addresses — 待逐项核销；不能据此断言当前代码缺失
+- `dbd2771` Fix use-after-free in monster AI interact handling — 已批量分类：见本节93项结论与后续处理
+- `1f97a98` Fix missing return in PLRINTRO_MaskNpcIntroFlag — 已批量分类：见本节93项结论与后续处理
+- `629a241` Fix incorrect field for book skill ID in sell item function — 已批量分类：见本节93项结论与后续处理
+- `d7392e3` Fix incorrect quest ID for Wirt's body in QUESTS_ObjectEvents — 已批量分类：见本节93项结论与后续处理
+- `cce700b` Fix incorrect flag check in MonsterMsg — 已批量分类：见本节93项结论与后续处理
+- `1084eb0` Fix — 已批量分类：见本节93项结论与后续处理
+- `103a4ca` Add missing uber tristram portal check — 已批量分类：见本节93项结论与后续处理
+- `f5519a1` Update D2.Detours for cmake 4.x — 已批量分类：见本节93项结论与后续处理
+- `c776a77` Should now  be compatible with cmake 4 — 已批量分类：见本节93项结论与后续处理
+- `731ac26` Add default generator preset — 已批量分类：见本节93项结论与后续处理
+- `6a98122` ARRAYSIZE => ARRAY_SIZE — 已批量分类：见本节93项结论与后续处理
+- `8016900` ITEMS_HasUniqueBeenDroppedAlready: use ARRAY_SIZE — 已批量分类：见本节93项结论与后续处理
+- `2b694df` Small refactors — 已批量分类：见本节93项结论与后续处理
+- `bc817e7` More 1.11 offsets — 已批量分类：见本节93项结论与后续处理
+- `a73bb2e` Add 1.11 D2DrlgStrc reorder. — 已批量分类：见本节93项结论与后续处理
+- `0ebe9ce` Add various 1.11 addresses — 已批量分类：见本节93项结论与后续处理
 - `606dce4` fix: Fix OOB write — 原生位图修正不适用；Java缺game级唯一掉落去重，见第1组
-- `833ccb4` feat: More drive by renames — 待逐项核销；不能据此断言当前代码缺失
-- `4e39cbc` Add 1.14d references — 待逐项核销；不能据此断言当前代码缺失
-- `f13a6fb` Another fix part 5 — 待逐项核销；不能据此断言当前代码缺失
-- `d859413` Another fix part 4 — 待逐项核销；不能据此断言当前代码缺失
-- `d8871a0` Another fix part 3 — 待逐项核销；不能据此断言当前代码缺失
-- `8d99ff0` Are we there yet? — 待逐项核销；不能据此断言当前代码缺失
-- `0981831` More build issues — 待逐项核销；不能据此断言当前代码缺失
-- `cb63017` Fix quest build issues — 待逐项核销；不能据此断言当前代码缺失
-- `1cf948b` Fix build issues for 1.14 — 待逐项核销；不能据此断言当前代码缺失
-- `fa43e0b` Cleanup 1.11 build defines — 待逐项核销；不能据此断言当前代码缺失
-- `d970ad6` Update source/D2Game/src/ITEMS/Items.cpp — 待逐项核销；不能据此断言当前代码缺失
-- `3715c91` Rename — 待逐项核销；不能据此断言当前代码缺失
-- `a364f9d` Fix grid item pointer names/accessors, add missing ITEMDROPFLAGs — 待逐项核销；不能据此断言当前代码缺失
-- `2bcb057` Fix compiling (again) — 待逐项核销；不能据此断言当前代码缺失
-- `1ad0d4f` Fix compiling — 待逐项核销；不能据此断言当前代码缺失
-- `d1c4d1a` Update game creation stuff and game struct — 待逐项核销；不能据此断言当前代码缺失
-- `32e6466` Some remaining uber checks — 待逐项核销；不能据此断言当前代码缺失
-- `d6dbf43` Another teleport tweak for uber baal — 待逐项核销；不能据此断言当前代码缺失
-- `87d32e9` Add uber prevent monster heal penalty — 待逐项核销；不能据此断言当前代码缺失
-- `6b3b312` Add uber portal spawning code — 待逐项核销；不能据此断言当前代码缺失
-- `ad5746c` Add random class skill for hellfire torch — 待逐项核销；不能据此断言当前代码缺失
-- `298d156` Add uber torch drop — 待逐项核销；不能据此断言当前代码缺失
-- `80501fb` Add uber boss modifiers and demon spawner stuff — 待逐项核销；不能据此断言当前代码缺失
-- `e5d37f9` Add uber quest dungeon support — 待逐项核销；不能据此断言当前代码缺失
-- `0730f6f` Add uber boss spawning code — 待逐项核销；不能据此断言当前代码缺失
-- `d374418` Update game structure — 待逐项核销；不能据此断言当前代码缺失
-- `8cfec82` Add uber izual ai — 待逐项核销；不能据此断言当前代码缺失
-- `0c53522` Add uber baal ai param tweaks — 待逐项核销；不能据此断言当前代码缺失
-- `51f01af` Add uber diablo ai — 待逐项核销；不能据此断言当前代码缺失
-- `1a73877` Add uber mephisto ai — 待逐项核销；不能据此断言当前代码缺失
-- `a722ba0` Add uber baal ai — 待逐项核销；不能据此断言当前代码缺失
+- `833ccb4` feat: More drive by renames — 已批量分类：见本节93项结论与后续处理
+- `4e39cbc` Add 1.14d references — 已批量分类：见本节93项结论与后续处理
+- `f13a6fb` Another fix part 5 — 已批量分类：见本节93项结论与后续处理
+- `d859413` Another fix part 4 — 已批量分类：见本节93项结论与后续处理
+- `d8871a0` Another fix part 3 — 已批量分类：见本节93项结论与后续处理
+- `8d99ff0` Are we there yet? — 已批量分类：见本节93项结论与后续处理
+- `0981831` More build issues — 已批量分类：见本节93项结论与后续处理
+- `cb63017` Fix quest build issues — 已批量分类：见本节93项结论与后续处理
+- `1cf948b` Fix build issues for 1.14 — 已批量分类：见本节93项结论与后续处理
+- `fa43e0b` Cleanup 1.11 build defines — 已批量分类：见本节93项结论与后续处理
+- `d970ad6` Update source/D2Game/src/ITEMS/Items.cpp — 已批量分类：见本节93项结论与后续处理
+- `3715c91` Rename — 已批量分类：见本节93项结论与后续处理
+- `a364f9d` Fix grid item pointer names/accessors, add missing ITEMDROPFLAGs — 已批量分类：见本节93项结论与后续处理
+- `2bcb057` Fix compiling (again) — 已批量分类：见本节93项结论与后续处理
+- `1ad0d4f` Fix compiling — 已批量分类：见本节93项结论与后续处理
+- `d1c4d1a` Update game creation stuff and game struct — 已批量分类：见本节93项结论与后续处理
+- `32e6466` Some remaining uber checks — 已批量分类：见本节93项结论与后续处理
+- `d6dbf43` Another teleport tweak for uber baal — 已批量分类：见本节93项结论与后续处理
+- `87d32e9` Add uber prevent monster heal penalty — 已批量分类：见本节93项结论与后续处理
+- `6b3b312` Add uber portal spawning code — 已批量分类：见本节93项结论与后续处理
+- `ad5746c` Add random class skill for hellfire torch — 已批量分类：见本节93项结论与后续处理
+- `298d156` Add uber torch drop — 已批量分类：见本节93项结论与后续处理
+- `80501fb` Add uber boss modifiers and demon spawner stuff — 已批量分类：见本节93项结论与后续处理
+- `e5d37f9` Add uber quest dungeon support — 已批量分类：见本节93项结论与后续处理
+- `0730f6f` Add uber boss spawning code — 已批量分类：见本节93项结论与后续处理
+- `d374418` Update game structure — 已批量分类：见本节93项结论与后续处理
+- `8cfec82` Add uber izual ai — 已批量分类：见本节93项结论与后续处理
+- `0c53522` Add uber baal ai param tweaks — 已批量分类：见本节93项结论与后续处理
+- `51f01af` Add uber diablo ai — 已批量分类：见本节93项结论与后续处理
+- `1a73877` Add uber mephisto ai — 已批量分类：见本节93项结论与后续处理
+- `a722ba0` Add uber baal ai — 已批量分类：见本节93项结论与后续处理
+
+## 93项主线批量核销结论（2026-10-17）
+
+本轮按完整diff、目标版本和riiablo当前Java架构统一审查剩余93项，全部从未分类状态改为四类结论。101个非merge主线提交的最终分类为：已移植16项、当前实现已等价35项、不适用47项、待修复11项，合计101项；此前已核销的8项包含在上述统计内。
+
+不适用项集中于1.11+/1.14版本门槛、原生报文/内存布局、Win32调试器、CMake/clang-tidy、地址注释及Uber后续内容；这些不引入1.10f Java后端。待修复项集中于任务/物品/技能事件、怪物生成和交互生命周期，后续应按最小补丁逐项实现并回归。
+
+另保留两项跨提交能力缺口：Missile Accel尚未接入生产运动更新，game级唯一掉落去重尚未建立。
+
+本批只更新核销记录，没有触碰其他聊天的未提交源码。
