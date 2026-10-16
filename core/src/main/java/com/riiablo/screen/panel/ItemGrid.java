@@ -140,13 +140,14 @@ public class ItemGrid extends Group implements Disposable {
     if (!isActive()) return;
     SnapshotArray<Actor> children = getChildren();
     Actor[] snapshot = children.begin();
-    for (int i = children.size - 1; i >= 0; i--) {
-      Actor child = snapshot[i];
-      if (!(child instanceof ItemGrid.StoredItem)) continue;
-      StoredItem stored = (StoredItem) child;
-      if (items == null || !items.contains(stored.item, true)) removeActor(stored);
-    }
-    children.end();
+    try {
+      for (int i = children.size - 1; i >= 0; i--) {
+        Actor child = snapshot[i];
+        if (!(child instanceof ItemGrid.StoredItem)) continue;
+        StoredItem stored = (StoredItem) child;
+        if (items == null || !items.contains(stored.item, true)) removeActor(stored);
+      }
+    } finally { children.end(); }
 
     if (items == null) return;
     for (Item item : items) {
@@ -176,9 +177,35 @@ public class ItemGrid extends Group implements Disposable {
 
   protected StoredItem addItem(Item item) {
     StoredItem store = new StoredItem(item);
-    store.setPosition(item.gridX * boxWidth, itemY(item, store.getHeight()));
-    addActor(store);
-    return store;
+    try {
+      store.setPosition(item.gridX * boxWidth, itemY(item, store.getHeight()));
+      addActor(store);
+      return store;
+    } catch (RuntimeException | Error failure) {
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.run(store::retire);
+        cleanup.run(store::remove);
+      } catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  /** StoredItem actors belong to this grid; removal is final, not a transferable view. */
+  @Override public Actor removeActorAt(int index, boolean unfocus) {
+    Actor child = getChildren().get(index);
+    try (Disposal cleanup = new Disposal()) {
+      if (child instanceof StoredItem) cleanup.run(((StoredItem) child)::retire);
+      cleanup.run(() -> super.removeActorAt(index, unfocus));
+    }
+    return child;
+  }
+
+  @Override public void clearChildren(boolean unfocus) {
+    try (Disposal cleanup = new Disposal()) {
+      for (Actor child : getChildren().toArray(Actor.class)) {
+        cleanup.run(() -> removeActor(child, unfocus));
+      }
+    }
   }
 
   /** Converts a persisted grid row into the actor's bottom-origin y coordinate. */
@@ -373,7 +400,8 @@ public class ItemGrid extends Group implements Disposable {
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.run(this::clearListeners);
-      for (Actor child : getChildren()) cleanup.run(child::clearListeners);
+      cleanup.run(this::clearActions);
+      for (Actor child : getChildren()) if (!(child instanceof StoredItem)) cleanup.run(child::clearListeners);
       cleanup.run(this::clearChildren);
       cleanup.run(this::remove);
       cleanup.dispose(fill);
@@ -390,7 +418,10 @@ public class ItemGrid extends Group implements Disposable {
   /** Resolves the clicked inventory actor before a targeting action can pick it up. */
   public static Item targetItem(Actor actor) {
     for (; actor != null; actor = actor.getParent()) {
-      if (actor instanceof ItemGrid.StoredItem) return ((ItemGrid.StoredItem) actor).item;
+      if (actor instanceof ItemGrid.StoredItem) {
+        StoredItem stored = (StoredItem) actor;
+        return stored.isCurrentItem() ? stored.item : null;
+      }
     }
     return null;
   }
@@ -398,6 +429,24 @@ public class ItemGrid extends Group implements Disposable {
   class StoredItem extends Actor {
     final Item item;
     final ClickListener clickListener;
+    private boolean retired;
+
+    private boolean isCurrentItem() {
+      return !retired && ItemGrid.this.isActive() && getParent() == ItemGrid.this;
+    }
+
+    private void retire() {
+      if (retired) return;
+      retired = true;
+      hits.remove(this);
+      if (swap == this) swap = null;
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.run(() -> setTouchable(Touchable.disabled));
+        cleanup.run(this::clearListeners);
+        cleanup.run(this::clearActions);
+      }
+      // Item, wrapper and details are borrowed; another view may already use them.
+    }
 
     StoredItem(final Item item) {
       this.item = item;
@@ -408,7 +457,7 @@ public class ItemGrid extends Group implements Disposable {
       addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (!isActive()) return;
+          if (!isCurrentItem()) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, false)) removeActor(StoredItem.this);
             event.handle();
@@ -425,7 +474,7 @@ public class ItemGrid extends Group implements Disposable {
       addListener(new ClickListener(Input.Buttons.RIGHT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (!isActive()) return;
+          if (!isCurrentItem()) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, true)) removeActor(StoredItem.this);
             event.handle();
@@ -476,13 +525,14 @@ public class ItemGrid extends Group implements Disposable {
 
     @Override
     public void setPosition(float x, float y) {
+      if (retired || !ItemGrid.this.isActive()) return;
       super.setPosition(x, y);
       item.wrapper.setPosition(x, y);
     }
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
-      if (!isActive()) return;
+      if (!isCurrentItem()) return;
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       boolean requirementsMet = ItemRequirements.check(item, Riiablo.charData).usable();
       Color background = !requirementsMet
@@ -503,6 +553,14 @@ public class ItemGrid extends Group implements Disposable {
         }
         Riiablo.game.setDetails(details, item, ItemGrid.this, item.wrapper);
       }
+    }
+
+    @Override public void act(float delta) {
+      if (isCurrentItem()) super.act(delta);
+    }
+
+    @Override public Actor hit(float x, float y, boolean touchable) {
+      return isCurrentItem() ? super.hit(x, y, touchable) : null;
     }
   }
 }

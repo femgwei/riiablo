@@ -75,6 +75,7 @@ public class HotkeyButton extends Button {
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.disabled));
       cleanup.run(super::dispose);
       cleanup.run(() -> ActorTree.clear(details));
       cleanup.run(() -> ActorTree.clear(this));

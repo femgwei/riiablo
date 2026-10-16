@@ -41,6 +41,7 @@ import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Button;
 import com.riiablo.util.Disposal;
 import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.ActorTree;
 import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.server.AuraEcsSystem;
 
@@ -53,6 +54,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   private ItemData.AlternateListener alternateListener;
   private boolean disposed;
   private int generation;
+  private final Array<HotkeyButton> ownedButtons = new Array<>();
 
   final AssetDescriptor<DC6> SkilliconDescriptor = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\Skillicon.DC6", DC6.class);
   DC6 Skillicon;
@@ -191,15 +193,42 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     generation++;
     if (buttons != null) buttons.clear();
     if (keyMappings != null) keyMappings.clear();
+    Array<Actor> retiring = new Array<>();
+    if (ownedButtons != null) {
+      retiring.addAll(ownedButtons);
+      ownedButtons.clear();
+    }
     try (Disposal cleanup = new Disposal()) {
+      if (tables != null) for (Table table : tables) if (table != null) {
+        cleanup.run(() -> {
+          for (Actor child : table.getChildren()) if (!retiring.contains(child, true)) retiring.add(child);
+        });
+      }
+      for (Actor child : retiring) {
+        if (child instanceof HotkeyButton) cleanup.dispose((HotkeyButton) child);
+        else {
+          cleanup.run(() -> Button.disposeClickSounds(child));
+          cleanup.run(() -> ActorTree.clear(child));
+        }
+      }
       if (tables == null) return;
       for (Table table : tables) {
         if (table == null) continue;
-        cleanup.run(() -> Button.disposeClickSounds(table));
-        for (Actor child : table.getChildren().toArray(Actor.class)) cleanup.run(child::clear);
         cleanup.run(table::clear);
       }
     }
+  }
+
+  private HotkeyButton createButton(DC icons, int icon, int skill, StatRef charges) {
+    final int buttonGeneration = generation;
+    HotkeyButton button = new HotkeyButton(icons, icon, skill, charges) {
+      @Override protected boolean isActive() {
+        return super.isActive() && isCurrentSession() && buttonGeneration == generation;
+      }
+    };
+    // Own returned controls before Table.add or later initialization can fail.
+    ownedButtons.add(button);
+    return button;
   }
 
   private void rebuildButtons(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
@@ -221,7 +250,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         icons = Skillicon;
         iconCel = 20;
       }
-      final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id, chargedSkill);
+      final HotkeyButton button = createButton(icons, iconCel, skill.Id, chargedSkill);
       table.add(button).size(SIZE); // Own the returned button before further initialization can fail.
       button.setWeaponRestrictionOnly(true);
       if (skill.aura) {
@@ -264,7 +293,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         icons = Skillicon;
         iconCel = 20;
       }
-      final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id);
+      final HotkeyButton button = createButton(icons, iconCel, skill.Id, null);
       table.add(button).size(SIZE);
       button.setWeaponRestrictionOnly(true);
       if (skill.aura) {

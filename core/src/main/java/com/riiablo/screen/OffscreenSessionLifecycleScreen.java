@@ -345,18 +345,73 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       }
     }
     int liveButtonReferences = references("data/global/sfx/cursor/button.wav");
+    com.riiablo.screen.panel.ItemGrid dynamicGrid = field(screen.inventoryPanel, "grid", com.riiablo.screen.panel.ItemGrid.class);
+    Array<Actor> oldItemViews = new Array<>();
+    Array<com.riiablo.item.Item> displayedItems = new Array<>();
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> oldItemClicks = new Array<>();
+    for (Actor child : dynamicGrid.getChildren()) {
+      com.riiablo.item.Item item = com.riiablo.screen.panel.ItemGrid.targetItem(child);
+      if (item == null) continue;
+      oldItemViews.add(child); displayedItems.add(item);
+      for (com.badlogic.gdx.scenes.scene2d.EventListener listener : child.getListeners())
+        if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+          oldItemClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    }
+    require(oldItemViews.size > 0, "real inventory item views for dynamic retirement");
+    dynamicGrid.syncItems(null); // Display-only removal: ItemData and item ownership are unchanged.
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : oldItemClicks) click.clicked(null, 0, 0);
+    for (int i = 0; i < oldItemViews.size; i++) {
+      Actor old = oldItemViews.get(i); com.riiablo.item.Item item = displayedItems.get(i);
+      require(old.getParent() == null && old.getListeners().size == 0
+          && old.getCaptureListeners().size == 0 && old.getActions().size == 0, "removed item view retired");
+      require(com.riiablo.screen.panel.ItemGrid.targetItem(old) == null && old.hit(0, 0, true) == null,
+          "removed item cannot be targeted");
+      float x = item.getX(), y = item.getY(); old.setPosition(999, 999);
+      require(item.getX() == x && item.getY() == y, "removed item view cannot move borrowed wrapper");
+      old.act(1); old.draw(Riiablo.batch, 1); // No begin(): inactive views must not touch the real GL batch.
+    }
+    dynamicGrid.syncItems(displayedItems);
+    require(dynamicGrid.getChildren().size == oldItemViews.size, "inventory views restored without changing ItemData");
+    for (Actor current : dynamicGrid.getChildren()) {
+      require(!oldItemViews.contains(current, true)
+          && com.riiablo.screen.panel.ItemGrid.targetItem(current) != null, "fresh inventory view is active");
+    }
     int retiredQuickButtons = 0;
+    int retiredQuickCallbacks = 0;
     for (int rebuild = 0; rebuild < 3; rebuild++) {
       Array<Actor> previousButtons = new Array<>();
       collectButtons(screen.spellsQuickPanelL, previousButtons);
       collectButtons(screen.spellsQuickPanelR, previousButtons);
       require(previousButtons.size > 0, "live quick-skill buttons before rebuild");
+      Array<Actor> previousSkillTrees = new Array<>();
+      Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> previousSkillClicks = new Array<>();
+      int leftAction = character.getAction(com.badlogic.gdx.Input.Buttons.LEFT);
+      int rightAction = character.getAction(com.badlogic.gdx.Input.Buttons.RIGHT);
+      for (Actor button : previousButtons) {
+        collectActors(button, previousSkillTrees);
+        collectActors(field(button, "details", Actor.class), previousSkillTrees);
+        for (com.badlogic.gdx.scenes.scene2d.EventListener listener : button.getListeners())
+          if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+            previousSkillClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+      }
       character.update(); // production quick-skill rebuild, including discarded buttons
       assets.finishLoading();
       for (Actor button : previousButtons) {
         require(button.getParent() == null && button.getListeners().size == 0,
             "rebuild retired previous quick-skill button");
+        com.riiablo.widget.HotkeyButton hotkey = (com.riiablo.widget.HotkeyButton) button;
+        require(hotkey.refreshDisabled() && hotkey.isDisabled() && hotkey.getMapping() == null,
+            "rebuilt skill button cannot refresh or retain mapping");
+        require(field(hotkey, "chargedSkill", Object.class) == null, "rebuilt skill releases borrowed charge");
+        hotkey.map(Keys.Skill[0]); hotkey.copy(hotkey);
+        hotkey.draw((com.badlogic.gdx.graphics.g2d.Batch) Riiablo.batch, 1); hotkey.draw(Riiablo.batch, 1);
       }
+      for (Actor old : previousSkillTrees) require(old.getParent() == null && old.getListeners().size == 0
+          && old.getCaptureListeners().size == 0 && old.getActions().size == 0, "skill subtree and details retired");
+      for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : previousSkillClicks) click.clicked(null, 0, 0);
+      retiredQuickCallbacks += previousSkillClicks.size;
+      require(character.getAction(com.badlogic.gdx.Input.Buttons.LEFT) == leftAction
+          && character.getAction(com.badlogic.gdx.Input.Buttons.RIGHT) == rightAction, "old skill callbacks cannot select");
       retiredQuickButtons += previousButtons.size;
       require(references("data/global/sfx/cursor/button.wav") == liveButtonReferences,
           "quick-skill rebuild must not accumulate click-sound references");
@@ -884,6 +939,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
         + "\nquickSkillRebuilds=3"
         + "\nquickSkillButtonsRetiredDuringRebuild=" + retiredQuickButtons
+        + "\nquickSkillLateCallbacksIgnored=" + retiredQuickCallbacks
+        + "\nquickSkillDetailsAndChargeBorrowRetired=true"
+        + "\ndynamicItemViewsRetiredAndRecreated=" + oldItemViews.size
+        + "\ndynamicItemLateClicksIgnored=" + oldItemClicks.size
+        + "\ndynamicItemBorrowedWrappersUnchanged=true"
         + "\nskillButtonsRetiredAtExit=" + skillButtonsAtExit.size
         + "\nskillOwnersRetiredByClient=3"
         + "\nquestActorsRetired=" + questActors.size

@@ -2168,3 +2168,93 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 动态 ItemGrid / 快捷技能条目移除或重建时的退休边界；其他完整控件内部尚未
 返回实例的构造失败、连接交接/全局网络路由、控制台/Timer/异步日志、跨 Act/
 加载中退出及长压仍待。未扩大或重写全局网络接收路由，不能宣称完整网络隔离。
+
+## 2026-10-17 第二十八批：动态物品视图与快捷技能条目
+
+ItemGrid 的 StoredItem 明确归原网格所有，移除即永久退休，不支持把同一个 Actor
+转交另一网格继续使用；同一 Item 可以重新创建新视图。通过 removeActorAt 和
+clearChildren(boolean) 统一覆盖 Actor.remove、Group.removeActor、clearChildren
+及 clear 的正常 API 路径（已核对 libGDX 1.10.0 字节码）；不支持直接修改
+getChildren() 数组绕过 Group API。退休先标记失效、移除命中/交换缓存，再禁用
+触摸并清普通/捕获监听及 actions；失败仍尝试 detach，清空时继续其他条目。
+保存的两种点击、act/draw/hit/targetItem 均要求仍属原网格且未退休，退休后的
+setPosition 不再移动借用包装器。Item、wrapper 和 details 不由视图卸载。
+
+syncItems 的快照 begin/end 以 finally 配对；addItem 对已经返回视图的定位或
+挂载失败执行退休/移除，保留原异常并附加清理错误。保留条目继续沿用原 Actor
+及坐标更新规则，不改拾取、使用、VendorGrid.drain 的放置或物品模型语义。
+
+SpellsQuickPanel 通过独立 ownedButtons 列表登记每个已返回按钮，早于 Table.add
+及后续初始化，不再依赖可能覆盖重复技能 id 的索引。重建先推进 generation、
+清索引，再合并归属列表及行内控件，按身份去重并完整销毁 HotkeyButton；释放
+声音、标签/详情树和键位/充能借用，清理异常继续，后续允许重建。已外部 detach
+或未挂载的按钮也归原面板清理。行排序仅重挂，不推进代次；旧按钮的刷新、映射、
+复制及两种 Batch 绘制入口失效。HotkeyButton 最终退出同时禁用触摸。
+本批不扩大 QuickPanel 现有的会话识别，不宣称同角色换 GameScreen 或全局网络
+路由已经完全隔离；不改技能计算、禁用规则、25Hz、协议或存档。
+
+### 第二十八批验证
+
+- `build/dynamic-entry-targeted.log` 保留新夹具初次编译诊断：修正 ItemWrapper
+  包名及 Item.unload() 方法。`build/dynamic-entry-targeted-recheck.log` 当时
+  三类 41 项通过；之后补充同步拾取/使用立即刷新列表的两个回归，最终大回归
+  覆盖全部改动。
+- `build/dynamic-entry-regression-gl.log`：新增 27 项（DynamicItemGrid 20 项，
+  SpellsPanelResourceLifecycle 新增 7 项）；扩大定向 35 类 393 项，391 通过、
+  2 跳过、失败/错误 0。core / desktop / D2GS 编译链、三轮真实 MPQ/GL 与
+  最终 ClientShutdown 全部通过，BUILD SUCCESSFUL，3m30s。
+- 网格专项覆盖七种移除 API、同步移除/重建/保留坐标、错误网格与跨 Group
+  重挂、普通 Actor 行为、异常继续/同步重试、已挂载添加失败回滚、同步拾取/
+  使用回调不误删 replacement、商店 drain 放置及填充纹理幂等归还。快捷技能
+  专项覆盖完整子树/详情、重复 learned+charged id、添加失败未挂载、外部 detach、
+  排序保持可用、声音清理失败后重建和旧按钮不能复制进当前 observer。
+- `build/dynamic-entry-gl/cycle-{1,2,3}-lifecycle.txt` 每轮记录
+  quickSkillRebuilds=3、quickSkillButtonsRetiredDuringRebuild=21、
+  quickSkillLateCallbacksIgnored=63、quickSkillDetailsAndChargeBorrowRetired=true；
+  dynamicItemViewsRetiredAndRecreated=2、dynamicItemLateClicksIgnored=4、
+  dynamicItemBorrowedWrappersUnchanged=true。只移除/重建真实背包视图，不修改
+  ItemData、不移动或消费物品。保留前批 ControlPanel 36 控件/54 点击/四个
+  键位监听/十九项资产/607 张纹理，以及 HUD、雇佣兵、商店、背包/金币、仓库、
+  Escape、任务/语音、技能、移动 UI、共享框、地图、加载交接及输入的所有检查。
+- 三轮退出资产种类 56/56/56，首末 remaining-assets 列表比较无差异。最终
+  ClientShutdown result=PASS，sharedProgramsDeleted=2、sharedTexturesDeleted=2、
+  assets=0、inputCleared=true、aliasesCleared=true。只证明本次采样资源和宿主
+  退出检查通过，不代表全进程零滞留或长期压力通过。57.11–89.66ms 慢帧仍超
+  40ms 预算，人工观感/输入/听感、联机、Android 真机和性能验收未完成。
+
+专项复跑（无真实 GL，拦截私有 Texture 上传）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.DynamicItemGridLifecycleTest `
+  --tests com.riiablo.screen.panel.SpellsPanelResourceLifecycleTest --no-daemon
+```
+
+扩大定向与三轮真实资源复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/dynamic-entry-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/dynamic-entry-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+总体七批子系统装配整理完成，资源阶段推进至第二十八批，尚未结束。下一批
+优先 PartyPanel / TradePanel 等剩余联机面板的控件归属和结果回调；完整控件
+内部构造失败剩余边界、连接交接/全局网络路由、控制台/Timer/异步日志、跨 Act/
+加载中退出及长压仍待。人工、联机、Android 真机与性能验收继续单列。

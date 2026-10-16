@@ -230,7 +230,7 @@ class SpellsPanelResourceLifecycleTest {
     Button survivor = new Button(new Button.ButtonStyle());
     panel.tables[0].add(failed); panel.tables[0].add(survivor);
     Error failure = new AssertionError("child clear");
-    doAnswer(call -> { call.callRealMethod(); throw failure; }).when(failed).clear();
+    doAnswer(call -> { call.callRealMethod(); throw failure; }).when(failed).clearListeners();
     assertSame(failure, assertThrows(AssertionError.class, panel::dispose));
     assertEquals(0, assets.getLoadedAssets()); assertEquals(0, survivor.getListeners().size);
     assertNull(survivor.getParent());
@@ -278,6 +278,91 @@ class SpellsPanelResourceLifecycleTest {
   private void rebuild(SpellsQuickPanel panel) {
     IntIntMap learned = new IntIntMap(); learned.put(CharacterClass.SORCERESS.firstSpell, 1);
     panel.onChanged(character, learned, new Array<StatRef>());
+  }
+
+  @Test void rebuiltSkillsRetireNestedTreesDetailsAndBothDrawOverloadsWhilePanelRemainsLive() throws Exception {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false)); rebuild(panel);
+    HotkeyButton old = panel.buttons.values().next(); old.map(Keys.Skill[0]);
+    Array<Actor> actors = new Array<>(); collect(old, actors);
+    Actor details = (Actor) get(old, "details"); collect(details, actors);
+    for (Actor actor : actors) { actor.addCaptureListener(new InputListener()); actor.addAction(new Action() { public boolean act(float dt) { fail("old action"); return false; } }); }
+    Array<ClickListener> saved = new Array<>(); for (EventListener listener : old.getListeners()) if (listener instanceof ClickListener) saved.add((ClickListener) listener);
+    rebuild(panel); assertTrue(panel.buttons.size > 0); retiredSkill(old, saved);
+    for (Actor actor : actors) {
+      assertNull(actor.getParent()); assertEquals(0, actor.getListeners().size); assertEquals(0, actor.getCaptureListeners().size); assertEquals(0, actor.getActions().size);
+    }
+    assertNull(old.getMapping()); assertNull(get(old, "chargedSkill")); assertNull(panel.keyMappings.get(Keys.Skill[0]));
+    verify(character, never()).setAction(anyInt(), anyInt());
+  }
+
+  @Test void duplicateSkillIdsRetireBothChargedAndLearnedObjectsAndClearChargeBorrow() throws Exception {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false)); int id = CharacterClass.SORCERESS.firstSpell;
+    StatRef charges = mock(StatRef.class); when(charges.param0()).thenReturn(1); when(charges.param1()).thenReturn(id);
+    IntIntMap learned = new IntIntMap(); learned.put(id, 1); panel.onChanged(character, learned, Array.with(charges));
+    Array<Actor> previous = new Array<>(); collect(panel, previous); clearInvocations(charges);
+    panel.onChanged(character, new IntIntMap(), new Array<StatRef>());
+    int count = 0; for (Actor actor : previous) if (actor instanceof HotkeyButton) {
+      count++; retiredSkill((HotkeyButton) actor, new Array<ClickListener>()); assertNull(get(actor, "chargedSkill"));
+    }
+    assertEquals(2, count); verifyNoInteractions(charges); assertFalse(assets.contains(SOUND));
+  }
+
+  @Test void failedTableAttachmentStillReleasesTheReturnedUnattachedButtonAndCanRetry() {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false));
+    com.badlogic.gdx.scenes.scene2d.ui.Table failed = spy(panel.tables[0]); panel.tables[0] = failed;
+    Array<HotkeyButton> returned = new Array<>(); Error failure = new AssertionError("table attach");
+    doAnswer(call -> { returned.add(call.getArgument(0)); throw failure; }).when(failed).add(any(Actor.class));
+    assertSame(failure, assertThrows(AssertionError.class, () -> rebuild(panel))); assertEquals(1, returned.size);
+    retiredSkill(returned.first(), new Array<ClickListener>()); assets.finishLoading(); assertFalse(assets.contains(SOUND));
+    assertEquals(0, panel.buttons.size); assertEquals(0, panel.keyMappings.size);
+    doCallRealMethod().when(failed).add(any(Actor.class)); rebuild(panel); assertEquals(1, panel.buttons.size);
+  }
+
+  @Test void removedButStillOwnedSkillButtonsAreRetiredAtTheNextRebuild() {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false)); rebuild(panel); HotkeyButton detached = panel.buttons.values().next();
+    detached.remove(); rebuild(panel); retiredSkill(detached, new Array<ClickListener>());
+    assets.finishLoading(); assertEquals(1, assets.getReferenceCount(SOUND));
+  }
+
+  @Test void sortingWithinOneGenerationKeepsAllReattachedButtonsUsableAndOrdered() {
+    int first = CharacterClass.SORCERESS.firstSpell, second = first + 1;
+    IntIntMap learned = new IntIntMap(); learned.put(first, 1); learned.put(second, 1);
+    SpellsQuickPanel left = own(new SpellsQuickPanel(null, true)), right = own(new SpellsQuickPanel(null, false));
+    left.onChanged(character, learned, new Array<StatRef>()); right.onChanged(character, learned, new Array<StatRef>());
+    assertEquals(first, ((HotkeyButton) left.tables[0].getChild(0)).getSkill());
+    assertEquals(second, ((HotkeyButton) right.tables[0].getChild(0)).getSkill());
+    for (SpellsQuickPanel panel : new SpellsQuickPanel[] {left, right}) for (HotkeyButton button : panel.buttons.values()) {
+      assertNotNull(button.getParent()); assertFalse(button.refreshDisabled()); assertFalse(button.isDisabled());
+    }
+    lastClick(left.buttons.get(first)).clicked(new InputEvent(), 0, 0);
+    verify(character).setAction(com.badlogic.gdx.Input.Buttons.LEFT, first);
+  }
+
+  @Test void soundCleanupFailureStillRetiresOldGenerationAndAllowsLaterRetry() {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false)); rebuild(panel); HotkeyButton old = panel.buttons.values().next(); assets.finishLoading();
+    Error failure = new AssertionError("sound release"); doAnswer(call -> { call.callRealMethod(); throw failure; }).when(assets).unload(SOUND);
+    assertSame(failure, assertThrows(AssertionError.class, () -> rebuild(panel))); retiredSkill(old, new Array<ClickListener>());
+    assertEquals(0, panel.buttons.size); assertEquals(0, panel.keyMappings.size);
+    doCallRealMethod().when(assets).unload(SOUND); rebuild(panel); assertEquals(1, panel.buttons.size);
+  }
+
+  @Test void oldGenerationCannotBeCopiedIntoTheCurrentObserver() {
+    SpellsQuickPanel panel = own(new SpellsQuickPanel(null, false)); rebuild(panel); HotkeyButton old = panel.buttons.values().next();
+    rebuild(panel); HotkeyButton current = panel.buttons.values().next(); current.copy(old); assertFalse(current.isDisabled());
+    assertNull(old.getMapping()); verify(character, never()).setAction(anyInt(), anyInt());
+  }
+
+  private void retiredSkill(HotkeyButton button, Array<ClickListener> saved) {
+    Batch batch = mock(Batch.class); com.riiablo.graphics.PaletteIndexedBatch palette = mock(com.riiablo.graphics.PaletteIndexedBatch.class);
+    for (ClickListener click : saved) {
+      click.clicked(null, 0, 0);
+      if (click.getClass().getName().startsWith("com.riiablo.widget.Button$")) {
+        InputEvent event = new InputEvent(); event.setButton(com.badlogic.gdx.Input.Buttons.LEFT); click.touchDown(event, 0, 0, 0, com.badlogic.gdx.Input.Buttons.LEFT);
+      }
+    }
+    assertTrue(button.refreshDisabled()); assertTrue(button.isDisabled()); assertEquals(Touchable.disabled, button.getTouchable());
+    button.map(Keys.Skill[1]); button.copy(button); button.draw(batch, 1); button.draw(palette, 1); button.act(1);
+    verifyNoInteractions(batch, palette);
   }
   private <T extends Actor & Disposable> T own(T resource) { resources.add(resource); return resource; }
   private static void collect(Actor actor, Array<Actor> actors) {
