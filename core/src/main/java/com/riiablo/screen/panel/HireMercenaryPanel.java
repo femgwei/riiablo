@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -19,7 +20,6 @@ import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.TxtParser;
-import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.npc.HirelingOffer;
@@ -33,6 +33,10 @@ import com.riiablo.net.packet.d2gs.NpcServiceType;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.save.CharData;
+import com.riiablo.screen.GameScreen;
 
 /** Native textslid-based hire roster. Opening this modal never hires or charges gold. */
 public final class HireMercenaryPanel extends WidgetGroup implements Disposable {
@@ -42,12 +46,18 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   private final AssetDescriptor<DC6> descriptor = new AssetDescriptor<>(
       "data\\global\\ui\\MENU\\textslid.dc6", DC6.class);
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final CharData.MercData mercData = character.getMerc();
+  private final com.riiablo.mpq.MPQFileHandleResolver mpqs = Riiablo.mpqs;
+  private GameScreen owner;
+  private com.artemis.World world;
+  private AssetReferenceScope references;
   private final Array<HirelingOffer> offers = new Array<>();
   private final ObjectMap<String, String> descriptions = new ObjectMap<>();
-  private final Label title, message;
-  private final LabelButton cancel, yes, no;
+  private Label title, message;
+  private LabelButton cancel, yes, no;
   private final WidgetGroup rows = new WidgetGroup();
-  private final PaletteIndexedColorDrawable background;
+  private PaletteIndexedColorDrawable background;
   private DC6 pieces;
   private int npcEntityId, npcType, first, previousSeed;
   private long pending;
@@ -56,11 +66,27 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   private HirelingOffer selected;
   private String failure;
   private float panelX, panelY;
-  private Actor previousFocus;
-  private boolean assetsRequested;
+  private Stage focusStage;
+  private Actor previousFocus, previousScrollFocus;
+  private long rosterGeneration;
   private boolean disposed;
 
   public HireMercenaryPanel() {
+    this(null);
+  }
+
+  public HireMercenaryPanel(GameScreen owner) {
+    this.owner = owner;
+    world = owner == null ? Riiablo.engine : null;
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
     setVisible(false);
     setTouchable(Touchable.enabled);
     background = new PaletteIndexedColorDrawable(Riiablo.colors.modal50);
@@ -79,6 +105,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
     addActor(no);
     addListener(new InputListener() {
       @Override public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        if (!isInteractive()) return false;
         if (pointer != 0 || button != Input.Buttons.LEFT) return true;
         if (!confirming && pending == 0 && x >= panelX + WIDTH - 20 && x <= panelX + WIDTH - 6
             && y >= panelY + FOOTER + 8 && y <= panelY + HEIGHT - HEADER - 8) {
@@ -87,13 +114,16 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
         return true; // Consume the whole screen: no click-through into the world.
       }
       @Override public void touchDragged(InputEvent event, float x, float y, int pointer) {
+        if (!isInteractive()) return;
         if (!confirming && pending == 0 && x >= panelX + WIDTH - 30) scrollTo(y);
       }
       @Override public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+        if (!isInteractive()) return false;
         if (!confirming && pending == 0) scroll((int) Math.signum(amountY));
         return true;
       }
       @Override public boolean keyDown(InputEvent event, int keycode) {
+        if (!isInteractive()) return false;
         if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) cancel();
         else if (keycode == Input.Keys.UP) scroll(-1);
         else if (keycode == Input.Keys.DOWN) scroll(1);
@@ -114,31 +144,44 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
     button.setAutoSize(false);
     button.setAlignment(Align.center);
     button.addListener(new ClickListener() {
-      @Override public void clicked(InputEvent event, float x, float y) { action.run(); }
+      @Override public void clicked(InputEvent event, float x, float y) {
+        if (isInteractive() && button.isVisible()) action.run();
+      }
     });
     return button;
   }
 
   private void loadAssets() {
-    if (disposed || pieces != null) return;
-    assets.load(descriptor);
-    assetsRequested = true;
-    assets.finishLoadingAsset(descriptor);
-    pieces = assets.get(descriptor);
-    com.badlogic.gdx.files.FileHandle file = Riiablo.mpqs.resolve("data\\global\\excel\\HireDesc.txt");
-    if (file == null) return;
-    TxtParser parser = TxtParser.loadFromFile(file);
+    if (!isCurrentSession() || pieces != null) return;
+    AssetReferenceScope attempt = new AssetReferenceScope(assets);
     try {
-      int code = parser.getColumnId("Code"), name = parser.getColumnId("Hireling Description");
-      if (code >= 0 && name >= 0) {
-        while (parser.nextLine() != null) descriptions.put(parser.getString(code), parser.getString(name));
+      attempt.load(descriptor);
+      assets.finishLoadingAsset(descriptor);
+      DC6 loaded = assets.get(descriptor);
+      com.badlogic.gdx.files.FileHandle file = mpqs.resolve("data\\global\\excel\\HireDesc.txt");
+      if (file != null) {
+        TxtParser parser = TxtParser.loadFromFile(file);
+        try {
+          int code = parser.getColumnId("Code"), name = parser.getColumnId("Hireling Description");
+          if (code >= 0 && name >= 0) {
+            while (parser.nextLine() != null) descriptions.put(parser.getString(code), parser.getString(name));
+          }
+        } finally { com.badlogic.gdx.utils.StreamUtils.closeQuietly(parser); }
       }
-    } finally { com.badlogic.gdx.utils.StreamUtils.closeQuietly(parser); }
+      pieces = loaded;
+      references = attempt;
+    } catch (RuntimeException | Error failure) {
+      descriptions.clear();
+      try { attempt.dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   /** Presents a read-only service snapshot; also used by the offscreen native-asset check. */
   public void presentOffers(Array<HirelingOffer> available) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
+    close();
     loadAssets();
     offers.clear();
     offers.addAll(available);
@@ -151,46 +194,57 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void open(int npcEntityId, int npcType) {
-    if (disposed) return;
-    loadAssets();
-    this.npcEntityId = npcEntityId;
-    this.npcType = npcType;
-    offers.clear();
-    first = 0;
-    pending = 0;
-    confirming = false;
-    selected = null;
-    purchasing = false;
-    failure = null;
-    previousSeed = Riiablo.charData.getMerc().seed;
-    previousFocus = getStage().getKeyboardFocus();
-    setVisible(true);
-    toFront();
-    getStage().setKeyboardFocus(this);
-    getStage().setScrollFocus(this);
-    showStatus("mercenary_hire_loading");
-    if (networked()) {
-      send(NpcServiceOperation.OPEN, null);
-    } else {
-      NativeMercenaryRewardSystem rewards = rewards();
-      if (rewards == null) showFailure("MERCENARY_SERVICE_UNAVAILABLE");
-      else {
-        offers.addAll(rewards.hirelingOffers(Riiablo.game.player, npcType));
-        rebuild();
+    if (!isCurrentSession()) return;
+    close();
+    Stage current = getStage();
+    if (current == null) return;
+    try {
+      loadAssets();
+      this.npcEntityId = npcEntityId;
+      this.npcType = npcType;
+      offers.clear();
+      first = 0;
+      pending = 0;
+      confirming = false;
+      selected = null;
+      purchasing = false;
+      failure = null;
+      previousSeed = mercData.seed;
+      previousFocus = current.getKeyboardFocus();
+      previousScrollFocus = current.getScrollFocus();
+      focusStage = current;
+      setVisible(true);
+      toFront();
+      if (!current.setKeyboardFocus(this) || !current.setScrollFocus(this)) { close(); return; }
+      showStatus("mercenary_hire_loading");
+      if (networked()) {
+        send(NpcServiceOperation.OPEN, null);
+      } else {
+        NativeMercenaryRewardSystem rewards = rewards();
+        if (rewards == null) showFailure("MERCENARY_SERVICE_UNAVAILABLE");
+        else {
+          offers.addAll(rewards.hirelingOffers(game().player, npcType));
+          rebuild();
+        }
       }
+    } catch (RuntimeException | Error failure) {
+      try { close(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
     }
   }
 
   private boolean networked() {
-    return Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked();
+    GameScreen game = game();
+    return game != null && game.vendorPanel != null && game.vendorPanel.isNetworked();
   }
 
   private NativeMercenaryRewardSystem rewards() {
-    return Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+    return world == null || game() == null ? null : world.getSystem(NativeMercenaryRewardSystem.class);
   }
 
   private void send(byte operation, HirelingOffer offer) {
-    ClientNetworkSynchronizer network = Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
+    ClientNetworkSynchronizer network = world == null ? null : world.getSystem(ClientNetworkSynchronizer.class);
     elapsed = 0;
     pending = network == null ? 0 : network.requestNpcService(npcEntityId,
         NpcServiceType.HIRE, operation, offer == null ? 0 : offer.seed,
@@ -199,7 +253,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void applyNetworkResult(NpcServiceResult result) {
-    if (disposed || !isVisible() || pending == 0 || result.requestId() != pending) return;
+    if (!isInteractive() || result == null || pending == 0 || result.requestId() != pending) return;
     pending = 0;
     if (result.mercenary() != null) previousSeed = result.mercenary().seed();
     if (result.success() && purchasing) { close(); return; }
@@ -221,9 +275,9 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   private void choose(HirelingOffer offer) {
-    if (pending != 0 || purchasing) return;
+    if (!isInteractive() || confirming || pending != 0 || purchasing) return;
     selected = offer;
-    previousSeed = Riiablo.charData.getMerc().seed;
+    previousSeed = mercData.seed;
     if (previousSeed != 0) {
       confirming = true;
       rebuild();
@@ -231,20 +285,20 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   private void confirm() {
-    if (selected == null || pending != 0 || purchasing) return;
+    if (!isInteractive() || selected == null || pending != 0 || purchasing) return;
     confirming = false;
     purchasing = true;
     showStatus("mercenary_hire_loading");
     if (networked()) send(NpcServiceOperation.HIRE, selected);
     else {
       String reason = rewards() == null ? "MERCENARY_SERVICE_UNAVAILABLE"
-          : rewards().hireSelectedMercenary(Riiablo.game.player, npcType, selected.index,
+          : rewards().hireSelectedMercenary(game().player, npcType, selected.index,
               selected.seed, previousSeed);
       purchasing = false;
       if (reason == null) close();
       else {
         offers.clear();
-        if (rewards() != null) offers.addAll(rewards().hirelingOffers(Riiablo.game.player, npcType));
+        if (rewards() != null) offers.addAll(rewards().hirelingOffers(game().player, npcType));
         rebuild();
         showFailure(reason);
       }
@@ -253,7 +307,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
 
   private void showStatus(String key) {
     failure = null;
-    rows.clearChildren();
+    retireRows();
     message.setText(Riiablo.bundle.get(key));
     message.setVisible(true);
     yes.setVisible(false);
@@ -274,6 +328,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void cancel() {
+    if (!isInteractive()) return;
     if (confirming) { confirming = false; rebuild(); }
     else if (message.isVisible() && offers.size > 0 && pending == 0 && !purchasing) {
       failure = null;
@@ -283,18 +338,62 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void close() {
-    if (disposed) return;
-    setVisible(false);
+    super.setVisible(false);
     pending = 0;
-    purchasing = false;
-    if (getStage() != null) {
-      if (getStage().getKeyboardFocus() == this) getStage().setKeyboardFocus(previousFocus);
-      if (getStage().getScrollFocus() == this) getStage().setScrollFocus(null);
+    purchasing = confirming = false;
+    selected = null;
+    Stage previous = focusStage;
+    Actor keyboard = previousFocus, scroll = previousScrollFocus;
+    focusStage = null; previousFocus = previousScrollFocus = null;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::retireRows);
+      if (previous != null) {
+        cleanup.run(() -> { if (previous.getKeyboardFocus() == this)
+          previous.setKeyboardFocus(keyboard != null && keyboard.getStage() == previous ? keyboard : null); });
+        cleanup.run(() -> { if (previous.getScrollFocus() == this)
+          previous.setScrollFocus(scroll != null && scroll.getStage() == previous ? scroll : null); });
+      }
     }
   }
 
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    if (!visible) close();
+    else super.setVisible(true);
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && assets == Riiablo.assets && character == Riiablo.charData
+        && mercData == character.getMerc() && world == Riiablo.engine
+        && (owner != null ? Riiablo.game == owner
+            : Riiablo.game == null || Riiablo.game.hireMercenaryPanel == this);
+  }
+
+  private boolean isInteractive() { return isCurrentSession() && isVisible(); }
+  private GameScreen game() { return owner != null ? owner : Riiablo.game; }
+
+  /** Assembly binds once, after world creation and before publishing the GameScreen. */
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
+
+  private void retireRows() {
+    rosterGeneration++;
+    try (Disposal cleanup = new Disposal()) {
+      for (Actor child : rows.getChildren().toArray(Actor.class)) cleanup.run(() -> ActorTree.clear(child));
+      cleanup.run(rows::clearChildren);
+    }
+  }
+
+  private void choose(HirelingOffer offer, long generation) {
+    if (generation == rosterGeneration && rows.isVisible() && offers.contains(offer, true)) choose(offer);
+  }
+
   private void scroll(int amount) {
-    if (confirming || pending != 0 || purchasing) return;
+    if (!isInteractive() || confirming || pending != 0 || purchasing) return;
     first = MathUtils.clamp(first + amount, 0, Math.max(0, offers.size - VISIBLE_ROWS));
     rebuild();
   }
@@ -321,7 +420,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
       layoutControls();
       return;
     }
-    rows.clearChildren();
+    retireRows();
     rows.setVisible(!confirming);
     first = Math.min(first, Math.max(0, offers.size - VISIBLE_ROWS));
     yes.setVisible(confirming);
@@ -329,12 +428,13 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
     message.setVisible(confirming || offers.size == 0);
     message.setText(Riiablo.bundle.get(confirming ? "mercenary_hire_replace" : "mercenary_hire_empty"));
     if (!confirming) {
+      final long generation = rosterGeneration;
       for (int row = 0; row < VISIBLE_ROWS && first + row < offers.size; row++) {
         HirelingOffer offer = offers.get(first + row);
         String text = Riiablo.bundle.format("mercenary_hire_row",
             MercenaryHud.resolveMercenaryName(offer.mercType, offer.nameId), offer.level,
             offer.life, offer.defense, offer.cost);
-        LabelButton entry = button(text, () -> choose(offer));
+        LabelButton entry = button(text, () -> choose(offer, generation));
         // Native English font16 is much wider than the CJK font. Use the
         // compact native list font so the price is never hidden by ellipsis.
         if (Riiablo.language != com.riiablo.D2Language.CHINESE) entry.setFont(Riiablo.fonts.font8);
@@ -357,7 +457,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
         Actor hit = new Actor();
         hit.setBounds(entry.getX(), entry.getY() - 15, entry.getWidth(), 15);
         hit.addListener(new ClickListener() {
-          @Override public void clicked(InputEvent event, float x, float y) { choose(offer); }
+          @Override public void clicked(InputEvent event, float x, float y) { choose(offer, generation); }
         });
         rows.addActor(hit);
       }
@@ -390,28 +490,28 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   @Override public void act(float delta) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.act(delta);
     if (!isVisible() || getStage() == null) return;
     float x = (getStage().getWidth() - WIDTH) / 2;
     float y = Math.max(8, (getStage().getHeight() - HEIGHT) / 2 + 25);
     setSize(getStage().getWidth(), getStage().getHeight());
     if (panelX != x || panelY != y) { panelX = x; panelY = y; rebuild(); }
-    title.setText(Riiablo.bundle.format("mercenary_hire_title", VendorPricing.availableGold(Riiablo.charData)));
+    title.setText(Riiablo.bundle.format("mercenary_hire_title", VendorPricing.availableGold(character)));
     if (pending != 0 && (elapsed += delta) >= 15) {
       pending = 0;
       offers.clear(); // Do not resend an unacknowledged payment after a timeout.
       showFailure("CONNECTION_UNAVAILABLE");
     }
-    if (Riiablo.engine != null && Riiablo.game != null) {
-      com.artemis.ComponentMapper<Position> positions = Riiablo.engine.getMapper(Position.class);
-      if (!positions.has(npcEntityId) || !positions.has(Riiablo.game.player)
-          || positions.get(npcEntityId).position.dst2(positions.get(Riiablo.game.player).position) > 64) close();
+    if (world != null && game() != null) {
+      com.artemis.ComponentMapper<Position> positions = world.getMapper(Position.class);
+      if (!positions.has(npcEntityId) || !positions.has(game().player)
+          || positions.get(npcEntityId).position.dst2(positions.get(game().player).position) > 64) close();
     }
   }
 
   @Override public void draw(Batch batch, float alpha) {
-    if (disposed || pieces == null) return;
+    if (!isCurrentSession() || pieces == null) return;
     background.draw(batch, panelX + 2, panelY + 2, WIDTH - 4, HEIGHT - 4);
     frame(batch, panelX, panelY, WIDTH, FOOTER);
     frame(batch, panelX, panelY + FOOTER, WIDTH, HEIGHT - HEADER - FOOTER);
@@ -453,21 +553,23 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::close);
       cleanup.run(() -> setTouchable(Touchable.disabled));
-      cleanup.run(this::clearListeners);
-      cleanup.run(this::clearChildren);
-      if (assetsRequested) cleanup.run(() -> {
-        if (assets.contains(descriptor.fileName) && !assets.isLoaded(descriptor.fileName)) {
-          assets.finishLoadingAsset(descriptor);
-        }
-        if (assets.contains(descriptor.fileName)) assets.unload(descriptor.fileName);
-      });
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.run(() -> ActorTree.clear(cancel));
+      cleanup.run(() -> ActorTree.clear(yes));
+      cleanup.run(() -> ActorTree.clear(no));
+      cleanup.dispose(references);
+    } finally {
       pieces = null;
       offers.clear();
       descriptions.clear();
       pending = 0;
       selected = null;
-      previousFocus = null;
+      previousFocus = previousScrollFocus = null; focusStage = null;
+      references = null; world = null; owner = null;
+      title = message = null; cancel = yes = no = null; background = null;
+      failure = null; purchasing = confirming = false;
     }
   }
 }

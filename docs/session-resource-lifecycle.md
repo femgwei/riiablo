@@ -1867,3 +1867,104 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 继续完整控件内部构造失败、连接交接/网络接收路由、控制台/Timer/异步日志、
 跨 Act/加载中退出及长期压力验证。人工、Android 真机与性能验收仍单列，
 不以商店面板收口宣称资源阶段完成。
+
+## 2026-10-16 第二十五批：雇佣兵装备与招募页的会话归属
+
+HirelingPanel 捕获原 AssetManager / CharData / MercData / ItemData / Audio / Cursor
+及显式 GameScreen owner，以 AssetReferenceScope 配对五项页面引用。GameScreen
+在创建 World 后显式绑定两个面板，保留装备控制器的既有注入；世界只能绑定一次，
+不能把缓存的 EntitySubscription 换到另一世界上继续使用。初始化可以在游戏发布
+前进行，之后装备、按钮、统计刷新与绘制均限定原角色、宿主、世界和游戏。
+退出独立释放一个按钮声音及私有 fill，退休完整控件树，清空装备缓存、页面、
+控制器、订阅、World 和 owner；不销毁借用物品、字体、角色或世界级订阅。
+部分构造失败回滚已经取得的资源，清理错误不阻止其他资源清理；失败操作不重试。
+
+HireMercenaryPanel 捕获原资源、角色、MercData、MPQ 解析宿主和 GameScreen，使用
+同样的一次性世界绑定；输入、选择/确认/取消、结果及 act/draw 不跨会话。textslid
+懒加载和描述解析失败时归还本次引用并清空部分描述，重开可重试，不重复计入成功
+引用。每次清状态/重建列表都递归退休旧 Actor；候选的第一行和第二行保存相同的
+列表代次，清监听之外仍保证已保存的旧回调失效，不选择已退休候选。
+
+招募页记录取得焦点的原 Stage 和原键盘/滚动焦点。重开先关闭旧归属，隐藏/关闭/
+最终销毁在原 Stage 清理；只有焦点仍指向本页时才恢复仍在该 Stage 的原 Actor，
+不抢走其他控件的新焦点、不恢复已脱离 Actor。获取拒绝/抛错时关闭回滚，释放
+抛错仍继续清理另一焦点和资源；无 Stage 的 open 安全返回。最终销毁幂等并清空
+请求、选择、候选、描述和宿主引用，普通关闭后仍可重新打开。
+
+保留装备槽检查和 ItemController 的 true（佣兵）路由、原数值/字体基线、原版
+雇佣报价、索引/seed/previousSeed 请求参数、替换确认、本地收费和超时不重付语义；
+不改玩法、25Hz、协议或存档。只隔离送达旧面板实例的结果，不扩展为全局网络
+接收器的连接交接或同会话迟到请求关联改造。完整控件内部尚未返回实例的构造
+失败、MercenaryHud/其他 HUD 的全部旧回调，以及装备缓存实时同步并未在本批
+宣称完成；装备缓存仍沿用原先初始化/本面板操作更新逻辑。
+
+### 第二十五批验证
+
+- `build/mercenary-resources-targeted.log`：测试夹具首次编译误用了不存在的
+  BodyLoc.value，改用枚举顺序后复跑。
+- `build/mercenary-resources-targeted-recheck.log`：29 项中 28 项失败，主因为新
+  夹具未配置 PaletteIndexedColorDrawable 所需共享 white 纹理，补齐宿主夹具。
+- `build/mercenary-resources-targeted-fixture.log`：29 项中剩 4 项失败；揭示当前
+  Artemis 配置不能以 @Wire World 自动注入，生产装配改为显式一次性 bindWorld。
+  另修正故障注入位置（Label.i18n 读取 StringTBL 而非 bundle）、抛错 mock 的
+  重置方式及共享资源待队列处理后的引用数断言，不改游戏规则。
+- `build/mercenary-resources-targeted-binding.log`：32 项专项全部通过，涵盖五项
+  装备资产/按钮声音/私有 fill 的独立归还，兼容/不兼容装备路由、原世界绑定、
+  构造失败与卸载异常、旧会话/退出后回调、懒加载/描述失败重试、旧行第一/第二
+  行选择、两种焦点恢复/换挂载/脱离/拒绝/异常、隐藏/销毁和网络/本地雇佣参数、
+  单次提交、15 秒超时不重付。
+- `build/mercenary-resources-regression-gl.log`：最终代码扩大定向 32 类 317 项，
+  315 通过、2 跳过（既有佣兵独立环境资源探针），失败/错误 0；包含既有
+  NativeHirelingOfferIntegrationTest 五项原版表/收费/替换/存档回归和定价测试。
+  core / desktop / D2GS 编译链通过，三轮真实 MPQ/GL 与最终 ClientShutdown
+  通过，BUILD SUCCESSFUL，2m47s。
+- 每轮两页面 44 控件退休、16 保存点击回调失效、重建退休 3 列表控件，隐藏
+  恢复双焦点、退出释放原焦点、旧输入失效，六项资产回基线和 45 张采样纹理
+  删除；检查报告为 `build/mercenary-resources-gl/cycle-{1,2,3}-lifecycle.txt`。
+  探针用无效 NPC 类型打开生产模态路径（不会生成候选），再展示合成候选验证
+  重建，只操作 UI，不实际雇佣或收费；生产收费逻辑由既有原版表集成测试覆盖。
+  保留前批商店/背包/仓库/金币弹窗/Escape/任务/技能/移动 UI、13 私有纹理、
+  共享框、地图和输入等所有检查。
+- 三轮退出资产种类 56/56/57；逐名比较第三轮比第一轮多出
+  `data/global/sfx/ambient/footstep/MedDirt3.wav`（Sound，refs=1），符合 Audio.play
+  按 Sounds.Entry 保留 descriptor 的宿主懒缓存路径，并非本批六项资源残留；
+  最终 ClientShutdown assets=0。不将短跑计数视为进程零滞留或长压通过。
+  仍有 47.89–71.32ms 慢帧超过 40ms 预算，人工画面/输入/听感、真实联机、
+  Android 真机和性能验收均未完成。
+
+专项复跑（原版表、无真实 GL；仅拦截私有 Texture 上传）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.MercenaryPanelsLifecycleTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest --no-daemon
+```
+
+扩大定向与三轮真实资源复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/mercenary-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/mercenary-resources-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 MercenaryHud 等剩余 HUD/控件的会话归属；随后继续完整控件内部构造
+失败、连接交接/全局网络接收路由、控制台/Timer/异步日志、跨 Act/加载中退出及
+长期压力验证。资源阶段尚未结束，人工/Android/性能验收继续单列。

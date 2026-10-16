@@ -23,6 +23,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.screen.GameScreen;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
@@ -49,6 +52,15 @@ import com.riiablo.widget.Label;
 public class HirelingPanel extends WidgetGroup implements Disposable {
   private static final String TAG = "HirelingPanel";
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final CharData.MercData mercData = character.getMerc();
+  private final ItemData itemData = mercData.getItems();
+  private final com.riiablo.audio.Audio audio = Riiablo.audio;
+  private final com.riiablo.Cursor cursor = Riiablo.cursor;
+  private GameScreen owner;
+  private com.artemis.World world;
+  private boolean initializing = true;
   private boolean disposed;
   private static final float HEADER_TEXT_Y = 220f;
 
@@ -65,7 +77,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
   final Inventory.Entry inventory;
 
-  final Texture fill;
+  Texture fill;
   final Color backgroundColorG;
   final Color backgroundColorR;
 
@@ -79,9 +91,29 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
   private Label strValue, dexValue, damageValue, defenseValue;
   private Label fireResValue, coldResValue, lightResValue, poisonResValue;
   private final float compactValueBaselineOffset;
+  private final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
 
   public HirelingPanel() {
-    assets.load(NpcInvDescriptor);
+    this(null);
+  }
+
+  public HirelingPanel(GameScreen owner) {
+    this.owner = owner;
+    world = owner == null ? Riiablo.engine : null;
+    inventory = Riiablo.files.inventory.get("Hireling");
+    compactValueBaselineOffset = measureCompactValueBaselineOffset();
+    backgroundColorR = Riiablo.colors.invRed;
+    backgroundColorG = Riiablo.colors.invGreen;
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    } finally { initializing = false; }
+  }
+
+  private void initialize() {
+    references.load(NpcInvDescriptor);
     assets.finishLoadingAsset(NpcInvDescriptor);
     NpcInv = assets.get(NpcInvDescriptor).getTexture();
     setSize(NpcInv.getRegionWidth(), NpcInv.getRegionHeight());
@@ -90,11 +122,8 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
     fill = PanelTextures.solid(Color.BLACK);
 
-    backgroundColorR = Riiablo.colors.invRed;
-    backgroundColorG = Riiablo.colors.invGreen;
-
-    btnExit = new Button(new Button.ButtonStyle() {{
-      assets.load(buysellbtnDescriptor);
+    btnExit = new SessionButton(new Button.ButtonStyle() {{
+      references.load(buysellbtnDescriptor);
       assets.finishLoadingAsset(buysellbtnDescriptor);
       up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
       down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
@@ -103,17 +132,15 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         setVisible(false);
       }
     });
     addActor(btnExit);
 
-    inventory = Riiablo.files.inventory.get("Hireling");
-    compactValueBaselineOffset = measureCompactValueBaselineOffset();
-
-    assets.load(inv_armorDescriptor);
-    assets.load(inv_helm_gloveDescriptor);
-    assets.load(inv_weaponsDescriptor);
+    references.load(inv_armorDescriptor);
+    references.load(inv_helm_gloveDescriptor);
+    references.load(inv_weaponsDescriptor);
     assets.finishLoadingAsset(inv_armorDescriptor);
     assets.finishLoadingAsset(inv_helm_gloveDescriptor);
     assets.finishLoadingAsset(inv_weaponsDescriptor);
@@ -121,8 +148,6 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     inv_armor = assets.get(inv_armorDescriptor);
     inv_helm_glove = assets.get(inv_helm_gloveDescriptor);
     inv_weapons = assets.get(inv_weaponsDescriptor);
-
-    final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
 
     BodyPart torso = bodyParts[BodyLocs.TORS] = new BodyPart(BodyLoc.TORS, inv_armor.getTexture());
     torso.setSize(inventory.torsoWidth, inventory.torsoHeight);
@@ -159,8 +184,6 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     head.yOffs = 1;
     addActor(head);
 
-    CharData.MercData mercData = Riiablo.charData.getMerc();
-    final ItemData itemData = mercData.getItems();
     for (int i = BodyLocs.HEAD; i < BodyLocs.NUM_LOCS; i++) {
       if (bodyParts[i] == null) continue;
       bodyParts[i].slot = i;
@@ -347,15 +370,16 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void act(float delta) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.act(delta);
     refreshMercenaryStats();
   }
 
   private void refreshMercenaryStats() {
-    if (Riiablo.engine == null || Riiablo.game == null) return;
+    GameScreen game = game();
+    if (world == null || game == null) return;
     if (mercenaries == null) {
-      mercenaries = Riiablo.engine.getAspectSubscriptionManager().get(
+      mercenaries = world.getAspectSubscriptionManager().get(
           Aspect.all(Mercenary.class, AttributesWrapper.class));
     }
     Mercenary mercenary = null;
@@ -363,10 +387,10 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     IntBag entities = mercenaries.getEntities();
     int[] ids = entities.getData();
     for (int i = 0; i < entities.size(); i++) {
-      Mercenary candidate = Riiablo.engine.getMapper(Mercenary.class).get(ids[i]);
-      if (candidate != null && candidate.ownerId == Riiablo.game.player) {
+      Mercenary candidate = world.getMapper(Mercenary.class).get(ids[i]);
+      if (candidate != null && candidate.ownerId == game.player) {
         mercenary = candidate;
-        wrapper = Riiablo.engine.getMapper(AttributesWrapper.class).get(ids[i]);
+        wrapper = world.getMapper(AttributesWrapper.class).get(ids[i]);
         break;
       }
     }
@@ -412,22 +436,53 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
       cleanup.run(() -> setTouchable(Touchable.disabled));
-      cleanup.run(this::clearListeners);
-      cleanup.run(this::clearChildren);
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.run(() -> ActorTree.clear(btnExit));
       cleanup.dispose(btnExit);
       cleanup.dispose(fill);
-      for (AssetDescriptor asset : new AssetDescriptor[] {
-          NpcInvDescriptor, buysellbtnDescriptor, inv_armorDescriptor,
-          inv_helm_gloveDescriptor, inv_weaponsDescriptor}) {
-        cleanup.run(() -> assets.unload(asset.fileName));
+      cleanup.dispose(references);
+    } finally {
+      for (BodyPart part : bodyParts) if (part != null) {
+        part.item = null; part.background = null;
       }
+      NpcInv = null; inv_armor = inv_helm_glove = inv_weapons = null;
+      btnExit = null; fill = null; itemController = null; mercenaries = null; world = null; owner = null;
     }
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && assets == Riiablo.assets && character == Riiablo.charData
+        && mercData == character.getMerc() && itemData == mercData.getItems()
+        && cursor == Riiablo.cursor && audio == Riiablo.audio
+        && (initializing || world == Riiablo.engine && (owner != null ? Riiablo.game == owner
+            : Riiablo.game == null || Riiablo.game.hirelingPanel == this));
+  }
+
+  private GameScreen game() { return owner != null ? owner : Riiablo.game; }
+
+  /** Assembly binds once, after world creation and before publishing the GameScreen. */
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
+
+  private class SessionButton extends Button {
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    super.setVisible(visible);
   }
 
   @Override
   public void draw(Batch batch, float a) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     batch.draw(NpcInv, getX(), getY());
     super.draw(batch, a);
   }
@@ -448,20 +503,21 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
       addListener(clickListener = new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          Item cursor = Riiablo.cursor.getItem();
-          if (cursor != null) {
-            if (!ArrayUtils.contains(cursor.typeEntry.BodyLoc, bodyPart)) {
+          if (!isCurrentSession() || itemController == null) return;
+          Item cursorItem = cursor.getItem();
+          if (cursorItem != null) {
+            if (!ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart)) {
               //Riiablo.audio.play(gameScreen.player.stats.getCharClass().name().toLowerCase() + "_impossible_1", false);
               return;
             }
 
-            Riiablo.audio.play(cursor.getDropSound(), true);
+            audio.play(cursorItem.getDropSound(), true);
             if (item != null) {
               itemController.swapBodyItem(BodyPart.this.bodyLoc, true);
             } else {
               itemController.cursorToBody(BodyPart.this.bodyLoc, true);
             }
-            item = cursor;
+            item = cursorItem;
           } else {
             item = null;
             itemController.bodyToCursor(BodyPart.this.bodyLoc, true);
@@ -479,6 +535,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
       int x, y;
       x = xOffs;
       y = yOffs;
@@ -488,7 +545,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
       }
 
       boolean blocked = false;
-      Item cursorItem = Riiablo.cursor.getItem();
+      Item cursorItem = cursor.getItem();
       if (cursorItem != null) {
         blocked = !ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart);
       }
@@ -518,7 +575,8 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
       }
 
       if (isOver && item != null && cursorItem == null) {
-        Riiablo.game.setDetails(item.details(updater), item, HirelingPanel.this, this);
+        GameScreen game = game();
+        if (game != null) game.setDetails(item.details(updater), item, HirelingPanel.this, this);
       }
     }
   }

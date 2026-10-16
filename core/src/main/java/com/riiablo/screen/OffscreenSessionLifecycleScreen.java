@@ -39,6 +39,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> storageReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> inventoryReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> vendorReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> mercenaryReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -61,6 +62,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    mercenaryReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/PANEL/NpcInv.dc6",
+        "data/global/ui/PANEL/buysellbtn.DC6", "data/global/ui/PANEL/inv_armor.DC6",
+        "data/global/ui/PANEL/inv_helm_glove.DC6", "data/global/ui/PANEL/inv_weapons.DC6",
+        "data/global/ui/MENU/textslid.dc6"}) mercenaryReferencesBeforeConstruction.put(path, references(path));
     vendorReferencesBeforeConstruction.clear();
     for (String path : new String[] {"data/global/ui/PANEL/buysell.dc6",
         "data/global/ui/PANEL/buyselltabs.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
@@ -486,6 +492,56 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         }
       }
     }
+    // Invalid NPC type deliberately exercises the production modal/focus path without
+    // generating candidates, hiring, charging, or changing the saved mercenary.
+    Actor hireKeyboard = new Actor(), hireScroll = new Actor();
+    screen.stage.addActor(hireKeyboard); screen.stage.addActor(hireScroll);
+    screen.stage.setKeyboardFocus(hireKeyboard); screen.stage.setScrollFocus(hireScroll);
+    screen.hireMercenaryPanel.open(-1, -1);
+    require(screen.stage.getKeyboardFocus() == screen.hireMercenaryPanel
+        && screen.stage.getScrollFocus() == screen.hireMercenaryPanel, "hire modal owns both focus slots");
+    screen.hireMercenaryPanel.setVisible(false);
+    require(screen.stage.getKeyboardFocus() == hireKeyboard && screen.stage.getScrollFocus() == hireScroll,
+        "hire hide restores original focus");
+    com.riiablo.engine.server.npc.HirelingOffer candidate = new com.riiablo.engine.server.npc.HirelingOffer();
+    candidate.index = -1; candidate.seed = 123; candidate.level = 3; candidate.cost = 100;
+    screen.hireMercenaryPanel.presentOffers(Array.with(candidate));
+    Group hireRows = field(screen.hireMercenaryPanel, "rows", Group.class);
+    Array<Actor> oldHireRows = new Array<>();
+    for (Actor row : hireRows.getChildren()) collectActors(row, oldHireRows);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> retiredHireClicks = new Array<>();
+    for (Actor actor : oldHireRows) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        retiredHireClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    screen.hireMercenaryPanel.presentOffers(Array.with(candidate));
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : retiredHireClicks) click.clicked(null, 0, 0);
+    require(field(screen.hireMercenaryPanel, "selected", Object.class) == null, "retired hire rows cannot select");
+    for (Actor row : oldHireRows) require(row.getParent() == null && row.getListeners().size == 0,
+        "hire rebuild retires row tree");
+    Array<Actor> mercenaryActors = new Array<>(); collectActors(screen.hirelingPanel, mercenaryActors);
+    collectActors(screen.hireMercenaryPanel, mercenaryActors);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> mercenaryClicks = new Array<>();
+    for (Actor actor : mercenaryActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        mercenaryClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    com.badlogic.gdx.scenes.scene2d.InputListener hireInput = null;
+    for (com.badlogic.gdx.scenes.scene2d.EventListener listener : screen.hireMercenaryPanel.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.InputListener)
+        hireInput = (com.badlogic.gdx.scenes.scene2d.InputListener) listener;
+    require(hireInput != null, "hire production input listener");
+    screen.hireMercenaryPanel.open(-1, -1); // Leave focus ownership to real Client teardown.
+    Set<Integer> mercenaryHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : mercenaryReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey(); require(references(path) > reference.getValue(), "live mercenary asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "mercenary sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle(); require(Gdx.gl.glIsTexture(handle), "live mercenary texture " + path);
+          if (reference.getValue() == 0) mercenaryHandles.add(handle);
+        }
+      }
+    }
     Array<Actor> escapeActors = new Array<>();
     collectActors(screen.escapePanel, escapeActors);
     Set<Integer> escapeHandles = new HashSet<>();
@@ -530,6 +586,23 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.hirelingPanel, "disposed", Boolean.class)
+        && field(screen.hireMercenaryPanel, "disposed", Boolean.class), "Client retired mercenary panels");
+    screen.hirelingPanel.dispose(); screen.hireMercenaryPanel.dispose();
+    screen.hirelingPanel.setVisible(true); screen.hireMercenaryPanel.setVisible(true);
+    screen.hireMercenaryPanel.open(-1, -1); screen.hireMercenaryPanel.presentOffers(Array.with(candidate));
+    require(!screen.hirelingPanel.isVisible() && !screen.hireMercenaryPanel.isVisible(), "retired mercenary panels cannot reopen");
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : mercenaryClicks) click.clicked(null, 0, 0);
+    require(!hireInput.keyDown(null, com.badlogic.gdx.Input.Keys.ENTER)
+        && !hireInput.scrolled(null, 0, 0, 0, 1), "late hire input ignored");
+    require(field(screen.hireMercenaryPanel, "focusStage", Stage.class) == null, "hire original focus stage released");
+    require(screen.stage.getKeyboardFocus() != screen.hireMercenaryPanel
+        && screen.stage.getScrollFocus() != screen.hireMercenaryPanel, "hire no focus retained after exit");
+    for (Actor actor : mercenaryActors) require(actor.getParent() == null && actor.getListeners().size == 0
+        && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "mercenary actor retired");
+    for (Map.Entry<String, Integer> reference : mercenaryReferencesBeforeConstruction.entrySet())
+      require(references(reference.getKey()) == reference.getValue(), "mercenary asset baseline " + reference.getKey());
+    for (int handle : mercenaryHandles) require(!Gdx.gl.glIsTexture(handle), "mercenary texture deleted");
     require(field(screen.vendorPanel, "disposed", Boolean.class), "Client retired vendor owner");
     require(!vendorStageRoot.getCaptureListeners().contains(vendorDismiss, true), "vendor exit releases original capture");
     screen.vendorPanel.dispose(); screen.vendorPanel.dispose(); screen.vendorPanel.setVisible(true);
@@ -726,6 +799,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nvendorPromptHideAndReopen=true\nvendorPromptCaptureReleased=true"
         + "\nvendorAssetBaselinesBalanced=" + vendorReferencesBeforeConstruction.size()
         + "\nvendorTexturesDeleted=" + vendorHandles.size()
+        + "\nmercenaryActorsRetired=" + mercenaryActors.size
+        + "\nmercenaryLateClicksIgnored=" + mercenaryClicks.size
+        + "\nhireRowsRetiredDuringRebuild=" + oldHireRows.size
+        + "\nhireModalHideRestoresBothFocus=true\nhireModalExitReleasesFocus=true\nhireLateInputIgnored=true"
+        + "\nmercenaryAssetBaselinesBalanced=" + mercenaryReferencesBeforeConstruction.size()
+        + "\nmercenaryTexturesDeleted=" + mercenaryHandles.size()
         + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
         + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
         + "\nstorageTexturesDeleted=" + storageHandles.size()

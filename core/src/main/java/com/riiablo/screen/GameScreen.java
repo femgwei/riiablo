@@ -407,10 +407,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         stage.getHeight() - inventoryPanel.getHeight());
     stage.addActor(inventoryPanel);
 
-    hirelingPanel = new HirelingPanel();
+    hirelingPanel = new HirelingPanel(this);
     hirelingPanel.setPosition(0, stage.getHeight() - hirelingPanel.getHeight());
     stage.addActor(hirelingPanel);
-    hireMercenaryPanel = new com.riiablo.screen.panel.HireMercenaryPanel();
+    hireMercenaryPanel = new com.riiablo.screen.panel.HireMercenaryPanel(this);
     stage.addActor(hireMercenaryPanel);
 
     mercenaryHud = new MercenaryHud(itemController);
@@ -829,6 +829,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   private void injectPanels() {
+    hirelingPanel.bindWorld(engine);
+    hireMercenaryPanel.bindWorld(engine);
     engine.inject(inventoryPanel);
     engine.inject(hirelingPanel);
     engine.inject(controlPanel);
