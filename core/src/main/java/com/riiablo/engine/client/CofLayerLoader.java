@@ -52,6 +52,8 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Override
   protected void process(int entityId) {
@@ -93,7 +95,7 @@ public class CofLayerLoader extends IteratingSystem {
           int currentFrame = animation.getFrame();
           AnimData anim = mAnimData.get(event.entityId);
           int rollbackPercent = 50;
-          com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+          com.riiablo.codec.excel.Skills.Entry skill = clientContext.files().skills.get(casting.skillId);
           if (skill != null && skill.Param != null && skill.Param.length > 5
               && skill.Param[5] > 0) rollbackPercent = skill.Param[5];
           int rollbackFrame = Math.max(0, currentFrame * rollbackPercent / 100);
@@ -132,9 +134,9 @@ public class CofLayerLoader extends IteratingSystem {
             animation.setFrame(4);
           } else if (casting != null
               && casting.fendInitialized
-              && Riiablo.files.skills != null) {
+              && clientContext.files() != null && clientContext.files().skills != null) {
             com.riiablo.codec.excel.Skills.Entry skill =
-                Riiablo.files.skills.get(casting.skillId);
+                clientContext.files().skills.get(casting.skillId);
             int rollbackPercent = 60;
             if (skill != null && skill.Param != null && skill.Param.length > 2
                 && skill.Param[2] > 0) {
@@ -247,33 +249,33 @@ public class CofLayerLoader extends IteratingSystem {
       // sprite; requiring a mode-specific DCC clears the only layer as soon
       // as the pet starts moving.  Try the native NU body only for one-frame
       // COFs, preserving strict mode lookup for animated monsters.
-      if (!Riiablo.mpqs.contains(path) && cof.getNumFramesPerDir() <= 1
+      if (!clientContext.mpqs().contains(path) && cof.getNumFramesPerDir() <= 1
           && mode != Engine.Monster.MODE_NU) {
         String fallback = new StringBuilder(builder)
             .replace(start + 10, start + 12, type.getMode(Engine.Monster.MODE_NU))
             .replace(start + 16, start + 19, DCC.EXT)
             .toString();
-        if (Riiablo.mpqs.contains(fallback)) {
+        if (clientContext.mpqs().contains(fallback)) {
           Gdx.app.debug(TAG, "Reusing static NU COF layer for " + path);
           path = fallback;
         }
       }
-      if (Riiablo.mpqs.contains(path)) {
+      if (clientContext.mpqs().contains(path)) {
         descriptor = descriptors[c] = new AssetDescriptor<>(path, DCC.class);
       } else {
         path = builder.replace(start + 16, start + 19, DC6.EXT).toString();
-        if (!Riiablo.mpqs.contains(path) && cof.getNumFramesPerDir() <= 1
+        if (!clientContext.mpqs().contains(path) && cof.getNumFramesPerDir() <= 1
             && mode != Engine.Monster.MODE_NU) {
           String fallback = new StringBuilder(builder)
               .replace(start + 10, start + 12, type.getMode(Engine.Monster.MODE_NU))
               .replace(start + 16, start + 19, DC6.EXT)
               .toString();
-          if (Riiablo.mpqs.contains(fallback)) {
+          if (clientContext.mpqs().contains(fallback)) {
             Gdx.app.debug(TAG, "Reusing static NU COF layer for " + path);
             path = fallback;
           }
         }
-        if (Riiablo.mpqs.contains(path)) {
+        if (clientContext.mpqs().contains(path)) {
           descriptor = descriptors[c] = new AssetDescriptor<>(path, DC6.class);
         } else {
           // Some MonStats/COF rows advertise a component for which the
@@ -294,7 +296,7 @@ public class CofLayerLoader extends IteratingSystem {
       // cached local player) already loaded the same DCC.  Skipping load when
       // isLoaded() is true lets a monster release the shared asset out from
       // under the player and leaves revived monsters with missing layers.
-      Riiablo.assets.load(descriptor);
+      clientContext.assets().load(descriptor);
       requiresReload |= (1 << c);
     }
 
@@ -369,7 +371,7 @@ public class CofLayerLoader extends IteratingSystem {
     AssetDescriptor descriptor = descriptors[c];
     if (descriptor == null) return;
     descriptors[c] = null;
-    releaseAsset(Riiablo.assets, descriptor);
+    releaseAsset(clientContext.assets(), descriptor);
     if (DEBUG) Gdx.app.debug(TAG, "Unloading[" + Engine.getComposite(c) + "] " + descriptor.fileName);
   }
 
@@ -397,7 +399,7 @@ public class CofLayerLoader extends IteratingSystem {
     }
   }
 
-  private static boolean isLocalPlayer(int entityId) {
-    return Riiablo.game != null && Riiablo.game.player == entityId;
+  private boolean isLocalPlayer(int entityId) {
+    return clientContext.playerId() == entityId;
   }
 }

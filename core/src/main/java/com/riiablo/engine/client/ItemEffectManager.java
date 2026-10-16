@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
@@ -13,6 +14,8 @@ import com.riiablo.engine.server.component.Item;
 public class ItemEffectManager extends BaseEntitySystem {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
   private final IntMap<Animation.AnimationListener> dropSoundListeners = new IntMap<>();
 
   @Override
@@ -22,7 +25,7 @@ public class ItemEffectManager extends BaseEntitySystem {
     Animation.AnimationListener listener = new Animation.AnimationListener() {
       @Override
       public void onTrigger(Animation animation, int frame) {
-        Riiablo.audio.play(sound, true);
+        if (clientContext.audio() != null) clientContext.audio().play(sound, true);
         animation.removeAnimationListener(frame, this);
       }
     };
@@ -42,7 +45,7 @@ public class ItemEffectManager extends BaseEntitySystem {
       animation.addAnimationListener(soundFrame, listener);
     }
     animation.restart();
-    Riiablo.audio.play("item_flippy", true);
+    if (clientContext.audio() != null) clientContext.audio().play("item_flippy", true);
     return true;
   }
 

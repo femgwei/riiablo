@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
@@ -26,6 +27,8 @@ public class OverlayManager extends IteratingSystem {
   static final int SHRINE_ICON_STATE = Integer.MIN_VALUE + 0x5249;
 
   protected ComponentMapper<com.riiablo.engine.client.component.Overlay> mOverlay;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
   private AssetManager assets;
   private final IntMap<OwnedOverlay> owned = new IntMap<>();
   private final IntArray retired = new IntArray();
@@ -43,7 +46,7 @@ public class OverlayManager extends IteratingSystem {
     }
   }
 
-  @Override protected void initialize() { assets = Riiablo.assets; }
+  @Override protected void initialize() { assets = clientContext.assets(); }
 
   @Override protected void begin() {
     if (disposed) return;
@@ -172,12 +175,12 @@ public class OverlayManager extends IteratingSystem {
    * old exact lookup silently dropped the icon in those installations.
    */
   private Overlay.Entry resolveEntry(String overlayId) {
-    if (Riiablo.files == null || Riiablo.files.Overlay == null) return null;
+    if (clientContext.files() == null || clientContext.files().Overlay == null) return null;
 
-    Overlay.Entry exact = Riiablo.files.Overlay.get(overlayId);
+    Overlay.Entry exact = clientContext.files().Overlay.get(overlayId);
     if (exact != null) return exact;
 
-    for (Overlay.Entry candidate : Riiablo.files.Overlay) {
+    for (Overlay.Entry candidate : clientContext.files().Overlay) {
       if (candidate == null) continue;
       if (same(overlayId, candidate.overlay)
           || same(overlayId, candidate.Filename)) return candidate;
@@ -222,7 +225,7 @@ public class OverlayManager extends IteratingSystem {
   }
 
   private void install(int entityId, Overlay.Entry entry, boolean persistent, int stateId) {
-    if (assets == null) assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+    if (assets == null) assets = java.util.Objects.requireNonNull(clientContext.assets(), "assets");
     removeOverlay(entityId);
     com.riiablo.engine.client.component.Overlay component = mOverlay.create(entityId).set(entry);
     component.persistent = persistent;

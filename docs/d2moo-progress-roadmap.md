@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 客户端表现资源上下文扩展
+
+- [x] 将 COF 解析/加载/分层缓存、物品与导弹加载、技能表现、天气、覆盖层、
+  地面物品闪光、死亡/元素/伤害/掉落表现、标签、神殿表现和客户端实体工厂接入
+  `ClientGameplayContext`；生产系统从所属 GameScreen 的资产、文件表、音频、字体、
+  字符串、MPQ resolver 和批处理器读取资源，旧 `fromGlobals()` 仅保留给未装配的
+  兼容测试夹具。
+- [x] 自动地图管理器、瓷砖渲染器和 d2hackmap 图标渲染器接收同一上下文，避免跨
+  屏幕复用时重新从全局 AssetManager/MPQ 解析器加载资源；保留调色板全局只读数据
+  的既有兼容路径，不改变地图标记、图标帧或渲染顺序。
+- [x] 验证：`:core:compileJava`、`ClientGameplayContextTest`、
+  `ClientNetworkSessionTest`、`GameScreenAssemblyTest` 通过。真实双客户端、Android
+  真机、人工观感和性能仍未验收。
+
 ## 2026-10-17 客户端系统上下文与独立装配
 
 - [x] 新增 `ClientGameplayContext`，由 GameScreen 捕获角色、动态本地实体、当前

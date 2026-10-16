@@ -39,6 +39,8 @@ public class StateOverlaySystem extends IteratingSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final IntSet missingOverlayLogged = new IntSet();
   private final IntSet venomTransformActive = new IntSet();
@@ -143,12 +145,12 @@ public class StateOverlaySystem extends IteratingSystem {
     // row 108 is purple.  Native unit blue state presentation uses the dark
     // blue HueVariations row 107.  Poison remains the native green row 104.
     int fallback = cold || freezeActive ? 107 : 104;
-    if (cold || freezeActive || Riiablo.files == null || Riiablo.files.States == null) {
+    if (cold || freezeActive || clientContext.files() == null || clientContext.files().States == null) {
       return fallback;
     }
     States.Entry best = null;
     if (poison) {
-      States.Entry poisonEntry = Riiablo.files.States.get("poison");
+      States.Entry poisonEntry = clientContext.files().States.get("poison");
       if (poisonEntry != null && (best == null || poisonEntry.colorPriority > best.colorPriority)) {
         best = poisonEntry;
       }
@@ -204,7 +206,7 @@ public class StateOverlaySystem extends IteratingSystem {
       return;
     }
 
-    byte venomTransform = venomPackedTransform();
+    byte venomTransform = venomPackedTransform(clientContext);
     if (venomTransform == CofTransforms.TRANSFORM_NULL) return;
     byte[] original = venomOriginalTransforms.get(entityId);
     if (original == null) {
@@ -231,10 +233,14 @@ public class StateOverlaySystem extends IteratingSystem {
   }
 
   static byte venomPackedTransform() {
-    if (Riiablo.files == null || Riiablo.files.colors == null) {
+    return venomPackedTransform(ClientGameplayContext.fromGlobals());
+  }
+
+  static byte venomPackedTransform(ClientGameplayContext context) {
+    if (context == null || context.files() == null || context.files().colors == null) {
       return CofTransforms.TRANSFORM_NULL;
     }
-    int color = Riiablo.files.colors.index("cgrn") + 1;
+    int color = context.files().colors.index("cgrn") + 1;
     return color > 0 && color < 32
         ? (byte) color : CofTransforms.TRANSFORM_NULL;
   }
@@ -348,11 +354,12 @@ public class StateOverlaySystem extends IteratingSystem {
         return null;
     }
     for (String candidate : candidates) {
-      if (Riiablo.files.Overlay.get(candidate) != null) return candidate;
+      if (clientContext.files() == null || clientContext.files().Overlay == null) return null;
+      if (clientContext.files().Overlay.get(candidate) != null) return candidate;
       // Overlay.txt keys are case-sensitive in the Java index, while MPQ
       // filenames and some 1.10 table variants are not.  Resolve aliases by
       // key or filename before giving up on a valid native overlay.
-      for (com.riiablo.codec.excel.Overlay.Entry row : Riiablo.files.Overlay) {
+      for (com.riiablo.codec.excel.Overlay.Entry row : clientContext.files().Overlay) {
         if (row == null) continue;
         if ((row.overlay != null && row.overlay.equalsIgnoreCase(candidate))
             || (row.Filename != null && row.Filename.equalsIgnoreCase(candidate))) {

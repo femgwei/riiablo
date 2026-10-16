@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
@@ -38,6 +39,8 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   protected IsometricCamera iso;
   @com.artemis.annotations.Wire(name = "batch")
   protected PaletteIndexedBatch batch;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final IntMap<GleamState> states = new IntMap<>();
   private final Vector2 screen = new Vector2();
@@ -46,7 +49,7 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   private AssetReferenceScope references;
   private boolean disposed;
 
-  @Override protected void initialize() { assets = Riiablo.assets; }
+  @Override protected void initialize() { assets = clientContext.assets(); }
 
   private static final class GleamState {
     final Animation animation;
@@ -62,7 +65,7 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   @Override
   protected void begin() {
     if (disposed) return;
-    if (assets == null) assets = Riiablo.assets;
+    if (assets == null) assets = clientContext.assets();
     if (!loadQueued && assets != null) {
       if (references == null) references = new AssetReferenceScope(assets);
       references.load(GLEAM_DESCRIPTOR);

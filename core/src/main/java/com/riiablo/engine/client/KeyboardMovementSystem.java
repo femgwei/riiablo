@@ -63,6 +63,8 @@ public class KeyboardMovementSystem extends BaseSystem {
 
   protected RenderSystem renderer;
   protected Actioneer actioneer;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   //==========================================================================
   // 字段
@@ -90,8 +92,9 @@ public class KeyboardMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (com.riiablo.Riiablo.game != null && com.riiablo.Riiablo.game.hireMercenaryPanel != null
-        && com.riiablo.Riiablo.game.hireMercenaryPanel.isVisible()) return;
+    com.riiablo.screen.GameScreen game = clientContext.game();
+    if (game != null && game.hireMercenaryPanel != null
+        && game.hireMercenaryPanel.isVisible()) return;
     if (!enabled) {
       return;
     }

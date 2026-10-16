@@ -9,7 +9,6 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ObjectMap;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Direction;
@@ -41,6 +40,15 @@ public class SkillCastHandler extends PassiveSystem {
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
+  private void playSound(String sound) {
+    if (sound != null && !sound.isEmpty() && clientContext.audio() != null) {
+      clientContext.audio().play(sound, true);
+    }
+  }
 
   private final Vector2 tmpVec = new Vector2();
 
@@ -96,7 +104,7 @@ public class SkillCastHandler extends PassiveSystem {
       case 1: // attack
         break;
       case 68: // shouts
-        Riiablo.audio.play("barbarian_circle_1", true);
+        playSound("barbarian_circle_1");
         break;
       default:
         // Server-side functions don't need client handling for most cases
@@ -108,7 +116,8 @@ public class SkillCastHandler extends PassiveSystem {
   public void cltstfunc(SkillStartEvent event) {
     log.traceEntry("cltstfunc(entityId: {}, cltstfunc: {}, targetId: {}, targetVec: {})",
         event.entityId, event.cltstfunc, event.targetId, event.targetVec);
-    final Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
+    if (clientContext.files() == null || clientContext.files().skills == null) return;
+    final Skills.Entry skill = clientContext.files().skills.get(event.skillId);
     if (skill == null) {
       log.warn("[SKILL_PRESENTATION] phase=start_missing_skill entity={} skillId={}",
           event.entityId, event.skillId);
@@ -126,7 +135,7 @@ public class SkillCastHandler extends PassiveSystem {
           presentationMarker,
           event.entityId, skill.skill);
     } else {
-      Riiablo.audio.play(skill.stsound, true);
+      playSound(skill.stsound);
     }
 
     if (skill.castoverlay != null && !skill.castoverlay.isEmpty()) {
@@ -175,12 +184,13 @@ public class SkillCastHandler extends PassiveSystem {
   public void cltdofunc(SkillDoEvent event) {
     log.traceEntry("cltdofunc(entityId: {}, cltdofunc: {}, targetId: {}, targetVec: {})",
         event.entityId, event.cltdofunc, event.targetId, event.targetVec);
-    final Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
+    if (clientContext.files() == null || clientContext.files().skills == null) return;
+    final Skills.Entry skill = clientContext.files().skills.get(event.skillId);
     if (skill == null) {
       log.warn("Skill {} not found for cltdofunc, skipping", event.skillId);
       return;
     }
-    Riiablo.audio.play(skill.dosound, true);
+    playSound(skill.dosound);
 
     Vector2 position = mPosition.has(event.entityId) ? mPosition.get(event.entityId).position : null;
 
@@ -254,12 +264,12 @@ public class SkillCastHandler extends PassiveSystem {
     }
     boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
     if (fistOfHeavens && event.targetId >= 0 && mPosition.has(event.targetId)
-        && Riiablo.files.NativeSkills != null) {
+        && clientContext.files() != null && clientContext.files().NativeSkills != null) {
       com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
-          Riiablo.files.NativeSkills.get(skill.Id);
+          clientContext.files().NativeSkills.get(skill.Id);
       String serverOverlay = nativeSkill != null
           ? nativeSkill.string("srvoverlay") : null;
-      if (hasText(serverOverlay) && Riiablo.colors != null && Riiablo.assets != null) {
+      if (hasText(serverOverlay) && clientContext.colors() != null && clientContext.assets() != null) {
         overlays.set(event.targetId, serverOverlay);
         log.info("[FIST_OF_HEAVENS] phase=target_overlay source={} target={} overlay={}",
             event.entityId, event.targetId, serverOverlay);
@@ -306,14 +316,14 @@ public class SkillCastHandler extends PassiveSystem {
 
       case 1: // Attack - play weapon swing sound
         String hitClass = getHitClassSound(event.entityId);
-        Riiablo.audio.play(hitClass, true);
+        playSound(hitClass);
         break;
 
       case 2: // Kick / melee hit with specific sound
         // Explicit Throw/Left Hand Throw has already been handled above.
         // Keep this branch for genuine non-throwing skills that use the same
         // client function number.
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
         break;
 
       case 3: // Throw - create thrown missile visual
@@ -338,7 +348,7 @@ public class SkillCastHandler extends PassiveSystem {
         // Only Jab owns the callback's three additional weapon impacts.
         if (event.srvdofunc == 7 || skill.srvdofunc == 7) {
           for (int i = 0; i < 3; i++) {
-            Riiablo.audio.play("weapon_1hs_small_1", true);
+            playSound("weapon_1hs_small_1");
           }
         }
         break;
@@ -348,8 +358,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 9: // Frenzy - dual weapon sounds
-        Riiablo.audio.play("weapon_1hs_small_1", true);
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
+        playSound("weapon_1hs_small_1");
         break;
 
       case 10: // Guided Arrow / Bone Spirit - homing missile
@@ -357,7 +367,7 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 11: // Charged Strike - melee with lightning effect
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
         // TODO: spawn charged bolt visuals from hit position
         break;
 
@@ -369,11 +379,11 @@ public class SkillCastHandler extends PassiveSystem {
         // The server emits one authoritative SkillDo/keyframe for each
         // repeated strike. Playing four impacts per event multiplied Fury's
         // audio while its animation sequence was already repeating.
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
         break;
 
       case 14: // Lightning Strike - chain lightning visual
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
         break;
 
       case 15: // Decoy spawn visual
@@ -446,7 +456,7 @@ public class SkillCastHandler extends PassiveSystem {
         if (event.srvdofunc == 55 || skill.srvdofunc == 55) {
           cltDoCorpseExplosionVisual(event, skill);
         } else {
-          Riiablo.audio.play("weapon_1hs_small_1", true);
+          playSound("weapon_1hs_small_1");
         }
         break;
 
@@ -479,12 +489,12 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 68: // Shout - barbarian war cry
-        Riiablo.audio.play("barbarian_circle_1", true);
+        playSound("barbarian_circle_1");
         break;
 
       case 70: // Double Swing
-        Riiablo.audio.play("weapon_1hs_small_1", true);
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+        playSound("weapon_1hs_small_1");
+        playSound("weapon_1hs_small_1");
         break;
 
       case 73: // Blessed Hammer
@@ -502,7 +512,7 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 78: // Leap Attack
-        Riiablo.audio.play("weapon_1hs_large_1", true);
+        playSound("weapon_1hs_large_1");
         break;
 
       case 80: // Fist of the Heavens
@@ -537,8 +547,8 @@ public class SkillCastHandler extends PassiveSystem {
     } else {
       // If skill doesn't have missile, try to get from equipped throwable weapon
       try {
-        if (Riiablo.charData != null && Riiablo.charData.getItems() != null) {
-          weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+        if (clientContext.charData() != null && clientContext.charData().getItems() != null) {
+          weapon = clientContext.charData().getItems().getEquippedThrowableWeapon();
           if (weapon != null && weapon.base != null) {
             boolean isThrowable = weapon.type.is(Type.JAVE) || 
                                  weapon.type.is(Type.TKNI) || 
@@ -558,7 +568,7 @@ public class SkillCastHandler extends PassiveSystem {
               };
               
               for (String candidate : missileCandidates) {
-                Missiles.Entry testMissile = Riiablo.files.Missiles.get(candidate);
+                Missiles.Entry testMissile = clientContext.files().Missiles.get(candidate);
                 if (testMissile != null) {
                   missileName = candidate;
                   break;
@@ -581,7 +591,7 @@ public class SkillCastHandler extends PassiveSystem {
       return;
     }
     
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = clientContext.files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("[MISSILE_CREATE] phase=client_resolve owner={} skill={} weaponCode={} missileName={} result=missing",
           event.entityId, event.skillId,
@@ -608,7 +618,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoFanMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     Vector2 baseAngle = tmpVec.set(event.targetVec).sub(position).nor();
@@ -627,7 +637,7 @@ public class SkillCastHandler extends PassiveSystem {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) {
       return;
     }
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) {
       return;
     }
@@ -639,7 +649,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoStrafeMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     Vector2 baseAngle = tmpVec.set(event.targetVec).sub(position).nor();
@@ -653,7 +663,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoChargedBoltMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     Vector2 baseAngle = tmpVec.set(event.targetVec).sub(position).nor();
@@ -669,7 +679,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoStreamMissile(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     Vector2 angle = tmpVec.set(event.targetVec).sub(position).nor();
@@ -685,7 +695,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoNovaMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     int numMissiles = nativeDirectionCount(missile, 64);
@@ -698,7 +708,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoFireWallMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     // Create line of fire at target location
@@ -713,7 +723,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoDelayedAoEMissile(SkillDoEvent event, Skills.Entry skill) {
     if (skill == null || skill.cltmissilea.isEmpty()) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     // Create missile at target location
@@ -722,7 +732,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoCorpseExplosionVisual(SkillDoEvent event, Skills.Entry skill) {
     if (skill == null || skill.cltmissilea.isEmpty()) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     // Explosion at target corpse location
@@ -733,7 +743,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoAuraPulse(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     // Aura pulse emanates from caster
@@ -747,7 +757,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoDoubleThrowMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     Vector2 baseAngle = tmpVec.set(event.targetVec).sub(position).nor();
@@ -759,7 +769,7 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoFistOfHeavensMissile(SkillDoEvent event, Skills.Entry skill) {
     if (skill == null || skill.cltmissilea.isEmpty()) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
     // Lightning bolt from sky at target location
@@ -772,7 +782,7 @@ public class SkillCastHandler extends PassiveSystem {
     String missileName = hasText(skill.cltmissile) ? skill.cltmissile
         : hasText(skill.cltmissilea) ? skill.cltmissilea : null;
     if (!hasText(missileName)) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = clientContext.files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("[SKILL_PRESENTATION] phase=missing_missile entity={} skill={} missile={}",
           event.entityId, skill.skill, missileName);

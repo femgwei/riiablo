@@ -8,6 +8,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -16,6 +17,9 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 @All(Class.class)
 public class BlockSoundEmitter extends PassiveSystem {
   protected ComponentMapper<Class> mClass;
+
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
@@ -31,12 +35,16 @@ public class BlockSoundEmitter extends PassiveSystem {
     } else {
       return;
     }
-    if (Riiablo.audio == null) return;
+    if (clientContext.audio() == null) return;
     int variant = MathUtils.random(1, 3);
     // Mode changes are replicated for every visible unit.  Route the one-shot
     // through the shared spatial gate so a distant monster/player block is not
     // audible as a global sound; the local player's own block remains full
     // volume because its listener-relative distance is zero.
-    MonsterAudio.play(event.entityId, "block_weapon_" + variant, true);
+    float gain = MonsterAudio.spatialGain(event.entityId);
+    if (gain <= 0f) return;
+    com.riiablo.audio.Audio.Instance instance =
+        clientContext.audio().play("block_weapon_" + variant, true);
+    if (instance != null) instance.setVolume(gain);
   }
 }

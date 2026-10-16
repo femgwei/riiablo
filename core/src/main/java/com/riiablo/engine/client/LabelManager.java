@@ -43,6 +43,8 @@ public class LabelManager extends IteratingSystem {
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Array<Actor> labels = new Array<>();
@@ -75,7 +77,7 @@ public class LabelManager extends IteratingSystem {
 
   @Override
   protected void initialize() {
-    hoveredGroundLabelBackground = new PaletteIndexedColorDrawable(Riiablo.colors.invBlue) {{
+    hoveredGroundLabelBackground = new PaletteIndexedColorDrawable(clientContext.colors().invBlue) {{
       final float PADDING = 6;
       setLeftWidth(PADDING);
       setTopHeight(PADDING - 2);
@@ -111,11 +113,11 @@ public class LabelManager extends IteratingSystem {
     }
     updateHoveredGroundLabelBackgrounds();
 
-    Riiablo.batch.begin();
+    clientContext.batch().begin();
     for (Actor label : labels) {
-      label.draw(Riiablo.batch, 1);
+      label.draw(clientContext.batch(), 1);
     }
-    Riiablo.batch.end();
+    clientContext.batch().end();
   }
 
   @Override

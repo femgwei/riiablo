@@ -42,6 +42,8 @@ public class MonsterLabelManager extends BaseEntitySystem {
 
   @Wire(name = "batch")
   protected PaletteIndexedBatch batch;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Vector2 tmpVec2 = new Vector2();
   private final MonsterLabel monsterLabel = new MonsterLabel();
@@ -89,13 +91,13 @@ public class MonsterLabelManager extends BaseEntitySystem {
     MonsterLabel() {
       label = new Table();
       label.setBackground(background = new PaletteIndexedColorDrawable(
-          Riiablo.colors.darkRed) {{
+          clientContext.colors().darkRed) {{
         setTopHeight(VERTICAL_PADDING);
         setBottomHeight(VERTICAL_PADDING);
         setLeftWidth(HORIZONTAL_PADDING);
         setRightWidth(HORIZONTAL_PADDING);
       }});
-      label.add(name = new com.riiablo.widget.Label(Riiablo.fonts.font16));
+      label.add(name = new com.riiablo.widget.Label(clientContext.fonts().font16));
       label.pack();
 
       // The original header is a compact dark-red health bar with the name
@@ -119,8 +121,8 @@ public class MonsterLabelManager extends BaseEntitySystem {
       }
       name.setText(displayName);
       name.setColor(monster.rank == MonsterRank.CHAMPION
-          ? Riiablo.colors.blue
-          : MonsterRank.isUnique(monster.rank) ? Riiablo.colors.gold : Riiablo.colors.white);
+          ? clientContext.colors().blue
+          : MonsterRank.isUnique(monster.rank) ? clientContext.colors().gold : clientContext.colors().white);
 
       AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
       if (wrapper == null || wrapper.attrs == null) return 0f;

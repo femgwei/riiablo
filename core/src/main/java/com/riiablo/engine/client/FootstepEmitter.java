@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.CharacterClass;
-import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
@@ -38,13 +37,15 @@ public class FootstepEmitter extends BaseEntitySystem {
   protected ComponentMapper<CofReference> mCofReference;
 
   protected Map map;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private int previousFrame = -1;
   private byte previousMode = -1;
 
   @Override
   protected void processSystem() {
-    final int entityId = Riiablo.game.player;
+    final int entityId = clientContext.playerId();
     // 检查玩家实体是否存在且有 Velocity 组件（防止死亡后访问空指针）
     if (entityId < 0 || !mVelocity.has(entityId)) {
       return;
@@ -91,7 +92,7 @@ public class FootstepEmitter extends BaseEntitySystem {
       Player player = mPlayer.get(entityId);
       CharacterClass characterClass = player.data == null ? null : player.data.classId;
       String sound = sound(characterClass, running, material);
-      Audio.Instance playback = Riiablo.audio.play(sound, true);
+      Audio.Instance playback = clientContext.audio() == null ? null : clientContext.audio().play(sound, true);
       Gdx.app.log(TAG, String.format(java.util.Locale.ROOT,
           "[PLAYER_FOOTSTEP] entity=%d mode=%s running=%s speed=%.3f "
               + "walkSpeed=%.3f runSpeed=%.3f frame=%d/%d material=%s sound=%s "

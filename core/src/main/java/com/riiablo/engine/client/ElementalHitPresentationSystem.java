@@ -1,7 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
-import com.riiablo.Riiablo;
+import com.artemis.annotations.Wire;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.logger.LogManager;
@@ -20,6 +20,8 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected OverlayManager overlays;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
   public void onDamage(DamageEvent event) {
@@ -43,7 +45,7 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
   private void present(DamageEvent event, float damage, int hitClass,
       String sound, String overlayId) {
     if (damage <= 0f) return;
-    if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
+    if (clientContext.audio() != null) clientContext.audio().play(sound, true);
     if (overlays == null) {
       log.warn("[ELEMENTAL_HIT] class={} result=no_overlay_manager", hitClass);
       return;

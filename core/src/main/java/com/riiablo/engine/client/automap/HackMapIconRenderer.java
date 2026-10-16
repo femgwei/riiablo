@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.Palettes;
 import com.riiablo.Riiablo;
+import com.riiablo.engine.client.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.Palette;
 import com.riiablo.graphics.PaletteIndexedBatch;
@@ -46,8 +47,14 @@ public final class HackMapIconRenderer implements Disposable {
   private String attemptedHome;
   private boolean requested;
   private boolean active;
+  private final ClientGameplayContext clientContext;
 
   public HackMapIconRenderer() {
+    this(ClientGameplayContext.fromGlobals());
+  }
+
+  public HackMapIconRenderer(ClientGameplayContext clientContext) {
+    this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
     resetDefaultFileNames();
   }
 
@@ -168,9 +175,9 @@ public final class HackMapIconRenderer implements Disposable {
     return best == 0xFF ? 0xFE : best;
   }
 
-  private static int[] loadAct1Palette() {
+  private int[] loadAct1Palette() {
     try {
-      FileHandle file = Riiablo.mpqs == null ? null : Riiablo.mpqs.resolve(Palettes.ACT1);
+      FileHandle file = clientContext.mpqs() == null ? null : clientContext.mpqs().resolve(Palettes.ACT1);
       return file == null ? null : Palette.loadFromFile(file).get();
     } catch (RuntimeException ignored) {
       return null;

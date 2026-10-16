@@ -5,7 +5,6 @@ import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.NativeRng;
@@ -41,6 +40,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   protected EntityFactory factory;
   @com.artemis.annotations.Wire(failOnNull = false)
   protected OverlayManager overlays;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Vector2 direction = new Vector2(1f, 0f);
 
@@ -142,10 +143,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   private void processClientHitFunction(Missile visual, Vector2 position) {
     if (visual == null || visual.missile == null || position == null
         || visual.missile.pCltHitFunc != 31 || factory == null
-        || Riiablo.files == null || Riiablo.files.Missiles == null) return;
+        || clientContext.files() == null || clientContext.files().Missiles == null) return;
     String childName = clientHit31Child(visual.missile.Missile);
     if (childName == null) return;
-    Missiles.Entry child = Riiablo.files.Missiles.get(childName);
+    Missiles.Entry child = clientContext.files().Missiles.get(childName);
     if (child == null) {
       log.warn("[MISSILE_IMPACT_FUNC31] source={} missing child={}",
           visual.missile.Missile, childName);
@@ -342,7 +343,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, float angle, float offsetX, float offsetY) {
-    Missiles.Entry child = Riiablo.files.Missiles.get(childName);
+    Missiles.Entry child = clientContext.files().Missiles.get(childName);
     if (child == null) {
       log.warn("[MISSILE_FLIGHT] source={} missing CltSubMissile={}",
           source.Missile, childName);
@@ -372,18 +373,18 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   @Subscribe
   public void onMissileImpact(MissileImpactEvent event) {
-    if (event == null || Riiablo.files == null || Riiablo.files.Missiles == null) return;
-    Missiles.Entry source = Riiablo.files.Missiles.get(event.missileId);
+    if (event == null || clientContext.files() == null || clientContext.files().Missiles == null) return;
+    Missiles.Entry source = clientContext.files().Missiles.get(event.missileId);
     if (source == null) return;
 
     String hitSound = event.impactSound != null ? event.impactSound : source.HitSound;
-    if (hitSound != null && !hitSound.isEmpty() && Riiablo.audio != null) {
+    if (hitSound != null && !hitSound.isEmpty() && clientContext.audio() != null) {
       // An empty native HitSound means silence.  Do not substitute a generic
       // impact sound: that changes the observable Missiles.txt behavior.
       playImpactSound(event, hitSound);
     }
     String hitClassSound = hitClassSound(source.HitClass, event.targetEntityId);
-    if (hitClassSound != null && Riiablo.audio != null) {
+    if (hitClassSound != null && clientContext.audio() != null) {
       playImpactSound(event, hitClassSound);
     }
 
@@ -418,7 +419,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     String[] children = source.CltHitSubMissile;
     if (isIceArrow(source)
         && source.ExplosionMissile != null && !source.ExplosionMissile.isEmpty()
-        && Riiablo.files.Missiles.get(source.ExplosionMissile) != null) {
+        && clientContext.files().Missiles.get(source.ExplosionMissile) != null) {
       children = new String[] {source.ExplosionMissile};
     }
     // Exploding Arrow's native ExplosionMissile is the authoritative client
@@ -426,11 +427,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // legacy fallback used by data packs that omit ExplosionMissile.
     if ("explodingarrow".equalsIgnoreCase(source.Missile)
         && source.ExplosionMissile != null && !source.ExplosionMissile.isEmpty()
-        && Riiablo.files.Missiles.get(source.ExplosionMissile) != null) {
+        && clientContext.files().Missiles.get(source.ExplosionMissile) != null) {
       children = new String[] {source.ExplosionMissile};
     }
     if ((children == null || children.length == 0) && event.impactDcc != null) {
-      for (Missiles.Entry candidate : Riiablo.files.Missiles) {
+      for (Missiles.Entry candidate : clientContext.files().Missiles) {
         if (candidate != null && event.impactDcc.equalsIgnoreCase(candidate.CelFile)) {
           children = new String[] {candidate.Missile};
           break;
@@ -475,16 +476,16 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   /** Plays impact audio through the same listener/zone attenuation as monster sounds. */
   private void playImpactSound(MissileImpactEvent event, String sound) {
-    if (event == null || sound == null || sound.isEmpty() || Riiablo.audio == null) return;
+    if (event == null || sound == null || sound.isEmpty() || clientContext.audio() == null) return;
     if (event.targetEntityId < 0) {
       // Wall/range impacts have no target entity.  Keep them local to the
       // listener instead of turning them into global sounds.
-      if (Riiablo.game == null || Riiablo.game.player < 0 || Riiablo.engine == null
-          || !mPosition.has(Riiablo.game.player)) return;
-      com.badlogic.gdx.math.Vector2 listener = mPosition.get(Riiablo.game.player).position;
+      int player = clientContext.playerId();
+      if (player < 0 || !mPosition.has(player)) return;
+      com.badlogic.gdx.math.Vector2 listener = mPosition.get(player).position;
       float gain = MonsterAudio.spatialGain(listener.dst2(event.x, event.y), true);
       if (gain <= 0f) return;
-      com.riiablo.audio.Audio.Instance instance = Riiablo.audio.play(sound, true);
+      com.riiablo.audio.Audio.Instance instance = clientContext.audio().play(sound, true);
       if (instance != null) instance.setVolume(gain);
       return;
     }
@@ -507,7 +508,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   private void createVisual(Missiles.Entry source, String childName,
       MissileImpactEvent event, float angle, float offsetX, float offsetY) {
     if (childName == null || childName.isEmpty()) return;
-    Missiles.Entry child = Riiablo.files.Missiles.get(childName);
+    Missiles.Entry child = clientContext.files().Missiles.get(childName);
     if (child == null) {
       log.warn("[MISSILE_IMPACT] source={} missing CltHitSubMissile={}",
           source.Missile, childName);
@@ -535,8 +536,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     visual.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
     if ("explodingarrowexp".equalsIgnoreCase(childName)
         && child.TravelSound != null && !child.TravelSound.isEmpty()
-        && Riiablo.audio != null) {
-      Riiablo.audio.play(child.TravelSound, true);
+        && clientContext.audio() != null) {
+      clientContext.audio().play(child.TravelSound, true);
     }
     // ClientEntityFactory.createMissilePresentation() has already finished
     // the DCC load and attached the AnimationWrapper synchronously.  Do not

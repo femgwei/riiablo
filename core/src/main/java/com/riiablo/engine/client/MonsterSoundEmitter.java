@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.utils.IntMap;
 
@@ -40,6 +41,9 @@ public class MonsterSoundEmitter extends IteratingSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<SummonedPet> mSummonedPet;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   private final IntMap<State> states = new IntMap<>();
 
   @Subscribe
@@ -49,7 +53,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
         || !mSummonedPet.get(event.entityId).networkReplica
         || !mMonster.has(event.entityId)) return;
     MonSounds.Entry bank = soundBank(mMonster.get(event.entityId));
-    if (bank != null && hasSound(bank.DeathSound) && Riiablo.audio != null) {
+    if (bank != null && hasSound(bank.DeathSound) && clientContext.audio() != null) {
       play(event.entityId, bank.DeathSound);
     }
   }
@@ -57,8 +61,8 @@ public class MonsterSoundEmitter extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Monster monster = mMonster.get(entityId);
-    if (monster == null || monster.monstats == null || Riiablo.files == null
-        || Riiablo.audio == null || !MonsterAudio.isAudible(entityId)) return;
+    if (monster == null || monster.monstats == null || clientContext.files() == null
+        || clientContext.audio() == null || !MonsterAudio.isAudible(entityId)) return;
 
     MonSounds.Entry bank = soundBank(monster);
     if (bank == null) return;
@@ -143,7 +147,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
       id = monster.monstats.UMonSound;
     }
     if (!hasSound(id)) return null;
-    return Riiablo.files.MonSounds.get(id);
+    return clientContext.files().MonSounds.get(id);
   }
 
   static boolean isAudible(float distance2, boolean sameZone) {
@@ -165,8 +169,12 @@ public class MonsterSoundEmitter extends IteratingSystem {
     return sound != null && !sound.isEmpty() && !"none".equalsIgnoreCase(sound);
   }
 
-  private static void play(int entityId, String sound) {
-    if (hasSound(sound)) MonsterAudio.play(entityId, sound, true);
+  private void play(int entityId, String sound) {
+    if (!hasSound(sound) || clientContext.audio() == null) return;
+    float gain = MonsterAudio.spatialGain(entityId);
+    if (gain <= 0f) return;
+    com.riiablo.audio.Audio.Instance instance = clientContext.audio().play(sound, true);
+    if (instance != null) instance.setVolume(gain);
   }
 
   private static final class State {

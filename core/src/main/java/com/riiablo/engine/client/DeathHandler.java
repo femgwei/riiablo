@@ -90,6 +90,8 @@ public class DeathHandler extends PassiveSystem {
   
   @Wire(name = "map")
   protected Map map;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
   
   @Subscribe
   public void onDeathEvent(DeathEvent event) {
@@ -114,7 +116,7 @@ public class DeathHandler extends PassiveSystem {
           }
         }
         states.retainForDeath(
-            Riiablo.files != null ? Riiablo.files.States : null, unitType);
+            clientContext.files() != null ? clientContext.files().States : null, unitType);
       }
     }
     
@@ -341,11 +343,11 @@ public class DeathHandler extends PassiveSystem {
 
   private void spawnShatterEffect(int entityId) {
     if (factory == null || !(factory instanceof ClientEntityFactory)
-        || !mPosition.has(entityId) || Riiablo.files == null
-        || Riiablo.files.Missiles == null) return;
+        || !mPosition.has(entityId) || clientContext.files() == null
+        || clientContext.files().Missiles == null) return;
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.MEDIUM;
     String name = shatterMissileName(size);
-    com.riiablo.codec.excel.Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    com.riiablo.codec.excel.Missiles.Entry row = clientContext.files().Missiles.get(name);
     if (row == null) return;
     Vector2 position = new Vector2(mPosition.get(entityId).position);
     // The native ice-death presentation is a layered pair: the size-specific
@@ -353,15 +355,15 @@ public class DeathHandler extends PassiveSystem {
     // the large white flash visible behind them. The latter is a separate
     // missile row and is not emitted by pCltHitFunc=31.
     int smokeId = -1;
-    com.riiablo.codec.excel.Missiles.Entry smoke = Riiablo.files.Missiles.get("icebreaksmoke");
+    com.riiablo.codec.excel.Missiles.Entry smoke = clientContext.files().Missiles.get("icebreaksmoke");
     if (smoke != null) {
       smokeId = ((ClientEntityFactory) factory).createMissilePresentation(smoke,
           new Vector2(1f, 0f), position);
     }
     int visualId = ((ClientEntityFactory) factory).createMissilePresentation(row,
         new Vector2(1f, 0f), position);
-    if (Riiablo.audio != null && row.TravelSound != null && !row.TravelSound.isEmpty()) {
-      Riiablo.audio.play(row.TravelSound, true);
+    if (clientContext.audio() != null && row.TravelSound != null && !row.TravelSound.isEmpty()) {
+      clientContext.audio().play(row.TravelSound, true);
     }
     log.info("[MONSTER_SHATTER] entity={} size={} smoke=icebreaksmoke smokeId={} "
             + "missile={} visualId={} position=({}, {})",

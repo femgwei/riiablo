@@ -18,6 +18,7 @@ import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Orientation;
 import com.riiablo.Riiablo;
+import com.riiablo.engine.client.ClientGameplayContext;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.util.DebugUtils;
 
@@ -159,7 +160,8 @@ public class AutomapManager implements Disposable {
   private final Array<EntityMarker> nativeRenderedMarkers = new Array<>();
   /** Marker instances replaced by an external d2hackmap blob icon this frame. */
   private final Array<EntityMarker> hackMapRenderedMarkers = new Array<>();
-  private final HackMapIconRenderer hackMapIcons = new HackMapIconRenderer();
+  private final HackMapIconRenderer hackMapIcons;
+  private final ClientGameplayContext clientContext;
   
   /** 小地图偏移 */
   private float offsetX = 0;
@@ -208,8 +210,13 @@ public class AutomapManager implements Disposable {
   // ==================== 构造与初始化 ====================
   
   public AutomapManager() {
-    // 初始化默认设置
-    tileRenderer = new AutomapTileRenderer();
+    this(ClientGameplayContext.fromGlobals());
+  }
+
+  public AutomapManager(ClientGameplayContext clientContext) {
+    this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
+    hackMapIcons = new HackMapIconRenderer(this.clientContext);
+    tileRenderer = new AutomapTileRenderer(this.clientContext);
   }
   
   /**
@@ -354,9 +361,9 @@ public class AutomapManager implements Disposable {
 
   /** Restores explored cells from a native difficulty-specific .ma file. */
   public void loadNativeAutomap(AutomapExplorationStore.MaFile file) {
-    if (file == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (file == null || clientContext.files() == null || clientContext.files().Levels == null) return;
     restoredNativeCellsPrepared = false;
-    for (Levels.Entry level : Riiablo.files.Levels) {
+    for (Levels.Entry level : clientContext.files().Levels) {
       int index = nativeLayerIndex(level);
       if (index < 0 || file.layers[index] == null) continue;
       AutomapExplorationStore.Layer nativeLayer = file.layers[index];
@@ -387,7 +394,7 @@ public class AutomapManager implements Disposable {
   public AutomapExplorationStore.MaFile createNativeAutomap(
       AutomapExplorationStore.MaFile existing) {
     AutomapExplorationStore.MaFile result = copyNativeAutomap(existing);
-    if (Riiablo.files == null || Riiablo.files.Levels == null) return result;
+    if (clientContext.files() == null || clientContext.files().Levels == null) return result;
     for (IntMap.Entry<AutomapLayer> entry : layers) {
       int levelId = entry.key;
       AutomapLayer source = entry.value;
@@ -396,7 +403,7 @@ public class AutomapManager implements Disposable {
           || source.walls.size > 0 || source.objects.size > 0 || source.extras.size > 0
           || source.townCells.size > 0;
       if (!Boolean.TRUE.equals(nativeCellsBuilt.get(levelId)) && !hasCells) continue;
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = clientContext.files().Levels.get(levelId);
       int index = nativeLayerIndex(level);
       if (index < 0) continue;
       AutomapExplorationStore.Layer nativeLayer = result.layers[index];

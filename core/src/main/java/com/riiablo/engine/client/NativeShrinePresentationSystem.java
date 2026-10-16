@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.Riiablo;
@@ -38,6 +39,8 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
   @com.artemis.annotations.Wire(name = "map")
   protected Map map;
   protected OverlayManager overlays;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Override
   protected void process(int entityId) {
@@ -47,7 +50,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
         || NativeObjectOperateTable.resolve(object.base, state.kind)
             != NativeObjectOperateTable.Lifecycle.SHRINE) return;
 
-    if (state.shrineId < 0 && Riiablo.files != null && Riiablo.files.Shrines != null) {
+    if (state.shrineId < 0 && clientContext.files() != null && clientContext.files().Shrines != null) {
       MapWrapper wrapper = mMapWrapper.get(entityId);
       Position position = mPosition.get(entityId);
       int levelId = wrapper == null || wrapper.zone == null || wrapper.zone.level == null
@@ -56,7 +59,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
       int y = position == null ? 0 : (int) position.position.y;
       int seed = map == null ? 0 : map.seed();
       state.persistShrineId(com.riiablo.engine.server.object.NativeShrineResolver.resolve(
-          Riiablo.files.Shrines, object.base, state.originalClassId,
+          clientContext.files().Shrines, object.base, state.originalClassId,
           levelId, seed, x, y));
     }
     updateLabel(entityId, state.shrineId);
@@ -88,20 +91,20 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
     }
   }
 
-  static String overlayFor(int shrineId) {
-    if (Riiablo.files == null || Riiablo.files.Shrines == null
-        || shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return null;
-    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
-    return shrine == null ? null : ClientEntityFactory.shrineOverlay(shrineId);
+  String overlayFor(int shrineId) {
+    if (clientContext.files() == null || clientContext.files().Shrines == null
+        || shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return null;
+    Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
+    return shrine == null ? null : ClientEntityFactory.shrineOverlay(clientContext, shrineId);
   }
 
   private void updateLabel(int entityId, int shrineId) {
     if (!mLabel.has(entityId) || mLabel.get(entityId).actor == null
-        || Riiablo.files == null || Riiablo.files.Shrines == null
-        || shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return;
-    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
+        || clientContext.files() == null || clientContext.files().Shrines == null
+        || shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return;
+    Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
     if (shrine == null) return;
-    String name = ClientEntityFactory.shrineDisplayName(shrine);
+    String name = ClientEntityFactory.shrineDisplayName(clientContext, shrine);
     if (name == null || name.isEmpty()) return;
     if (mLabel.get(entityId).actor instanceof com.riiablo.widget.Label) {
       ((com.riiablo.widget.Label) mLabel.get(entityId).actor).setText(name);

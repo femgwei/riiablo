@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
+import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
@@ -62,6 +63,9 @@ public class ClientEntityFactory extends ServerEntityFactory {
   protected DialogManager dialogManager;
   protected OverlayManager overlayManager;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   @Override
   public int createPlayer(CharData charData, Vector2 position) {
     int id = super.createPlayer(charData, position);
@@ -98,8 +102,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     if (mObject.has(id) && mObject.get(id).base != null
         && mObject.get(id).base.Id
             == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
-        && Riiablo.audio != null) {
-      Riiablo.audio.play("object_townportal", true);
+        && clientContext.audio() != null) {
+      clientContext.audio().play("object_townportal", true);
     }
 
     Objects.Entry base = mObject.get(id).base;
@@ -108,7 +112,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     String name;
     if (waypoint) {
       Map.Zone zone = map.getZone(x, y);
-      String objectName = Riiablo.string.lookup(base.Name);
+      String objectName = clientContext.strings().lookup(base.Name);
       if (zone == null) {
         // A network server may own static objects for acts/levels that this
         // client has not loaded. Keep the harmless visual replica, but do not
@@ -121,14 +125,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
             id, base.Id, x, y));
       } else {
         mMapWrapper.get(id).set(map, zone);
-        String levelName = Riiablo.string.lookup(zone.level.LevelName);
+        String levelName = clientContext.strings().lookup(zone.level.LevelName);
         name = String.format("%s\n%s", levelName, objectName);
       }
     } else {
       name = shrineViewName(base, x, y);
       if (name == null) {
         name = base.Name.equalsIgnoreCase("dummy")
-            ? base.Description : Riiablo.string.lookup(base.Name);
+            ? base.Description : clientContext.strings().lookup(base.Name);
       }
     }
 
@@ -193,28 +197,32 @@ public class ClientEntityFactory extends ServerEntityFactory {
   }
 
   private String shrineViewName(Objects.Entry base, float x, float y) {
-    if (!isShrine(base) || Riiablo.files == null || Riiablo.files.Shrines == null) {
+    if (!isShrine(base) || clientContext.files() == null || clientContext.files().Shrines == null) {
       return null;
     }
     int shrineId = resolveClientShrineId(base, x, y);
-    if (shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return null;
-    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
-    return shrineDisplayName(shrine);
+    if (shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return null;
+    Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
+    return shrineDisplayName(clientContext, shrine);
   }
 
   private int resolveClientShrineId(Objects.Entry base, float x, float y) {
-    if (!isShrine(base) || map == null || Riiablo.files == null
-        || Riiablo.files.Shrines == null) return -1;
+    if (!isShrine(base) || map == null || clientContext.files() == null
+        || clientContext.files().Shrines == null) return -1;
     Map.Zone zone = map.getZone(x, y);
     int levelId = zone == null || zone.level == null ? 0 : zone.level.Id;
-    return NativeShrineResolver.resolve(Riiablo.files.Shrines, base, base.Id,
+    return NativeShrineResolver.resolve(clientContext.files().Shrines, base, base.Id,
         levelId, map.seed(), (int) x, (int) y);
   }
 
   /** Maps the native Shrines.txt code to its stock overhead icon. */
   static String shrineOverlay(int shrineId) {
-    if (Riiablo.files == null || Riiablo.files.Shrines == null) return null;
-    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
+    return shrineOverlay(ClientGameplayContext.fromGlobals(), shrineId);
+  }
+
+  static String shrineOverlay(ClientGameplayContext context, int shrineId) {
+    if (context == null || context.files() == null || context.files().Shrines == null) return null;
+    Shrines.Entry shrine = context.files().Shrines.get(shrineId);
     if (shrine == null) return null;
     switch (shrine.Code) {
       case 6: return "shrine_armor";
@@ -237,9 +245,13 @@ public class ClientEntityFactory extends ServerEntityFactory {
    * are the string-table keys ShrId0..ShrId22.
    */
   static String shrineDisplayName(Shrines.Entry shrine) {
+    return shrineDisplayName(ClientGameplayContext.fromGlobals(), shrine);
+  }
+
+  static String shrineDisplayName(ClientGameplayContext context, Shrines.Entry shrine) {
     if (shrine == null) return null;
     String key = "ShrId" + shrine.Code;
-    String localized = Riiablo.string == null ? null : Riiablo.string.lookup(key);
+    String localized = context == null || context.strings() == null ? null : context.strings().lookup(key);
     if (localized != null && !localized.isEmpty()
         && !localized.regionMatches(true, 0, "ERROR:", 0, 6)) {
       return localized;
@@ -247,7 +259,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     String view = shrine.ViewName;
     if (view != null && !view.isEmpty() && !view.equalsIgnoreCase("blah")) {
-      String resolved = Riiablo.string == null ? null : Riiablo.string.lookup(view);
+      String resolved = context == null || context.strings() == null ? null : context.strings().lookup(view);
       if (resolved != null && !resolved.isEmpty()
           && !resolved.regionMatches(true, 0, "ERROR:", 0, 6)) return resolved;
       return view;
@@ -336,7 +348,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     MonStats2.Entry monstats2 = monster.monstats2;
 
     String name = monstats.NameStr.equalsIgnoreCase("dummy")
-        ? monstats.Id : Riiablo.string.lookup(monstats.NameStr);
+        ? monstats.Id : clientContext.strings().lookup(monstats.NameStr);
 
     if (monstats.Align == 1) {
       Label label = mLabel.create(id);
@@ -504,8 +516,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // MonEquip.txt gives Valkyrie an item level of 25 + 3*(slvl-1).  At the
     // first skill level the selected rows already contain the uar/7p7 tier;
     // the head upgrades from ci0 to ci2 at item level 27 (skill level 2).
-    Armor.Entry body = Riiablo.files.armor.get("uar");
-    if (body == null) body = Riiablo.files.armor.get("ful");
+    Armor.Entry body = clientContext.files().armor.get("uar");
+    if (body == null) body = clientContext.files().armor.get("ful");
     if (body != null) {
       cofs.setComponent(entityId, com.riiablo.codec.COF.Component.TR, body.Torso + 1);
       cofs.setComponent(entityId, com.riiablo.codec.COF.Component.LG, body.Legs + 1);
@@ -517,14 +529,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     int itemLevel = 25 + Math.max(0, skillLevel - 1) * 3;
     Armor.Entry head = itemLevel >= 27
-        ? Riiablo.files.armor.get("ci2") : Riiablo.files.armor.get("ci0");
+        ? clientContext.files().armor.get("ci2") : clientContext.files().armor.get("ci0");
     if (head != null && head.alternateGfx != null && !head.alternateGfx.isEmpty()) {
       cofs.setComponent(entityId, com.riiablo.codec.COF.Component.HD,
           Class.Type.PLR.getComponent(head.alternateGfx));
     }
 
-    Weapons.Entry weapon = Riiablo.files.weapons.get("7p7");
-    if (weapon == null) weapon = Riiablo.files.weapons.get("spr");
+    Weapons.Entry weapon = clientContext.files().weapons.get("7p7");
+    if (weapon == null) weapon = clientContext.files().weapons.get("spr");
     // Valkyrie's native player composite uses the 7p7 visual weapon, but
     // MonStats only ships AM* COFs for the HTH animation class.  Keeping the
     // weapon's visual layer while resolving animations as 2HT produces the
@@ -607,7 +619,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
       box.asBox(-32, -64, 64, 96);
     }
 
-    String name = Riiablo.string.lookup(warp.dstLevel.LevelWarp);
+    String name = clientContext.strings().lookup(warp.dstLevel.LevelWarp);
 
     IntIntMap substs = warp.substs;
     if (!questWarp && entry.LitVersion) {
@@ -650,7 +662,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
   public int createItem(com.riiablo.item.Item item, float x, float y) {
     int id = super.createItem(item, x, y);
     Item itemWrapper = mItem.get(id);
-    Riiablo.assets.load(itemWrapper.flippyDescriptor);
+    clientContext.assets().load(itemWrapper.flippyDescriptor);
     /**
      * FIXME: at least some items appear to be about a half subtile too high after their drop
      *        animations finish -- is this expected? or some issue with offsets? It's happening with
@@ -698,7 +710,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // NetworkIdManager or it will alias every local projectile.
     if (mNetworked.has(id)) mNetworked.remove(id);
     Missile missileWrapper = mMissile.get(id);
-    Riiablo.assets.load(missileWrapper.missileDescriptor);
+    clientContext.assets().load(missileWrapper.missileDescriptor);
     mBox2DBody.create(id);
 
     Missiles.Entry missile = mMissile.get(id).missile;
@@ -706,8 +718,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
       // D2 plays TravelSound once when the missile is created.  Keep the
       // emitter on the missile so the normal distance attenuation applies;
       // MissileCollisionSystem separately emits HitSound on impact.
-      if (Riiablo.audio != null && mSoundEmitter != null) {
-        Audio.Instance travel = Riiablo.audio.play(missile.TravelSound, true);
+      if (clientContext.audio() != null && mSoundEmitter != null) {
+        Audio.Instance travel = clientContext.audio().play(missile.TravelSound, true);
         if (travel != null) {
           // Start at the listener-relative gain immediately.  Waiting for
           // SoundEmitterHandler's first tick briefly played every arrow at
@@ -740,7 +752,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
       mMissile.get(id).presentationOnly = true;
     }
     AssetDescriptor<DCC> descriptor = mMissile.get(id).missileDescriptor;
-    Riiablo.assets.load(descriptor);
+    clientContext.assets().load(descriptor);
     // Never finish a newly queued DCC synchronously from an impact/death
     // callback. Icebreak effects can otherwise block the render thread while
     // AssetManager waits for decode/texture upload, leaving the window marked
@@ -749,12 +761,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // exists, so an uncached effect can safely wait for MissileLoader's next
     // pass. Preserve same-tick presentation only for an already cached DCC.
     MissileLoader loader = world.getSystem(MissileLoader.class);
-    if (loader != null && Riiablo.assets.isLoaded(descriptor)) loader.loadNow(id);
+    if (loader != null && clientContext.assets().isLoaded(descriptor)) loader.loadNow(id);
     return id;
   }
 
-  private static com.riiablo.widget.Label createLabel(String text) {
-    com.riiablo.widget.Label label = new com.riiablo.widget.Label(Riiablo.fonts.font16);
+  private com.riiablo.widget.Label createLabel(String text) {
+    com.riiablo.widget.Label label = new com.riiablo.widget.Label(clientContext.fonts().font16);
     label.setAlignment(Align.center);
     label.getStyle().background = com.riiablo.widget.Label.MODAL;
     label.setText(text);

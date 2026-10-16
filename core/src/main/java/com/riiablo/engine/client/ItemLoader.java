@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.Riiablo;
@@ -26,6 +27,9 @@ public class ItemLoader extends IteratingSystem {
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Selectable> mSelectable;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   private final BBox MIN_BBOX = new BBox() {{
     xMin = -DT1.Tile.SUBTILE_WIDTH50;
     yMin = -DT1.Tile.SUBTILE_HEIGHT50;
@@ -38,8 +42,8 @@ public class ItemLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Item item = mItem.get(entityId);
-    if (!Riiablo.assets.isLoaded(item.flippyDescriptor)) return;
-    DC6 flippy = Riiablo.assets.get(item.flippyDescriptor);
+    if (clientContext.assets() == null || !clientContext.assets().isLoaded(item.flippyDescriptor)) return;
+    DC6 flippy = clientContext.assets().get(item.flippyDescriptor);
 
     Animation animation = mAnimationWrapper.create(entityId).animation;
     animation.edit()

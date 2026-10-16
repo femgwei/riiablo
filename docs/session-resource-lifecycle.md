@@ -1,5 +1,16 @@
 # 会话资源生命周期
 
+# 2026-10-17 客户端表现资源上下文扩展
+
+- COF 解析/加载/分层缓存、物品/导弹加载、技能表现、天气、覆盖层、地面物品闪光、
+  死亡/元素/伤害/掉落表现、标签、神殿表现和客户端实体工厂均通过 `clientContext`
+  读取会话资源；自动地图管理器、瓷砖和 d2hackmap 图标渲染器也由同一上下文构造。
+  这样在 GameScreen 交替切换时，旧 World 不会因静态别名变更而改用新屏幕的资产、
+  文件表、MPQ resolver、音频或字体。`fromGlobals()` 仍只用于旧测试夹具。
+- `core:compileJava`、`ClientGameplayContextTest`、`ClientNetworkSessionTest` 和
+  `GameScreenAssemblyTest` 均通过。本轮没有把真实双客户端、Android 真机、人工画面
+  /声音/输入或性能结论写成通过。
+
 # 2026-10-17 客户端系统边界与后台生命周期补充
 
 - GameScreen 现在创建并注册一个 `ClientGameplayContext`，系统通过该上下文读取

@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.ObjectMap;
 
 import com.riiablo.Riiablo;
+import com.riiablo.engine.client.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.AutoMap;
 import com.riiablo.codec.util.BBox;
@@ -95,6 +96,7 @@ public class AutomapTileRenderer implements Disposable {
   
   /** 主小地图精灵 */
   private DC6 maxiMap;
+  private final ClientGameplayContext clientContext;
 
   private boolean ownsMaxiMap;
   private final ObjectMap<String, DC6> townSprites = new ObjectMap<>();
@@ -124,19 +126,24 @@ public class AutomapTileRenderer implements Disposable {
   /** 调色板纹理 */
   private Texture paletteTexture;
   
-  public AutomapTileRenderer() {
-  }
-  
   /**
    * 初始化渲染器，加载必要资源
    */
+  public AutomapTileRenderer() {
+    this(ClientGameplayContext.fromGlobals());
+  }
+
+  public AutomapTileRenderer(ClientGameplayContext clientContext) {
+    this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
+  }
+
   public void init() {
     if (initialized) return;
     
     try {
       // 加载主小地图精灵
-      if (Riiablo.assets != null && Riiablo.assets.isLoaded(PATH_MAXIMAP)) {
-        maxiMap = Riiablo.assets.get(PATH_MAXIMAP);
+      if (clientContext.assets() != null && clientContext.assets().isLoaded(PATH_MAXIMAP)) {
+        maxiMap = clientContext.assets().get(PATH_MAXIMAP);
       }
       
       // 加载调色板纹理（使用 Act1 调色板）
@@ -170,12 +177,12 @@ public class AutomapTileRenderer implements Disposable {
    */
   public boolean ensureSpriteLoaded() {
     if (currentSprite != null) return true;
-    if (Riiablo.assets == null) return false;
+    if (clientContext.assets() == null) return false;
     String[] paths = {PATH_MAXIMAP, PATH_MAXIMAP.replace('\\', '/')};
     try {
       for (String path : paths) {
-        if (!Riiablo.assets.isLoaded(path)) continue;
-        maxiMap = Riiablo.assets.get(path, DC6.class);
+        if (!clientContext.assets().isLoaded(path)) continue;
+        maxiMap = clientContext.assets().get(path, DC6.class);
         if (maxiMap == null) continue;
         currentSprite = maxiMap;
         if (currentSprite != null) {
@@ -183,12 +190,12 @@ public class AutomapTileRenderer implements Disposable {
         }
         break;
       }
-      if (currentSprite == null && Riiablo.mpqs != null) {
+      if (currentSprite == null && clientContext.mpqs() != null) {
         // AssetManager keys are platform-normalized and differ between the
         // legacy and current clients.  Resolve the native DC6 directly from
         // the mounted MPQ as a deterministic last step instead of silently
         // switching to geometric markers.
-        maxiMap = DC6.loadFromFile(Riiablo.mpqs.resolve(PATH_MAXIMAP));
+        maxiMap = DC6.loadFromFile(clientContext.mpqs().resolve(PATH_MAXIMAP));
         if (maxiMap != null) {
           ownsMaxiMap = true;
           maxiMap.loadDirection(0);
@@ -480,11 +487,11 @@ public class AutomapTileRenderer implements Disposable {
   public boolean renderTownTile(PaletteIndexedBatch batch, int levelId, int frameIndex,
       float x, float y) {
     String path = NativeTownAutomap.spritePath(levelId);
-    if (path == null || Riiablo.mpqs == null || failedTownSprites.containsKey(path)) return false;
+    if (path == null || clientContext.mpqs() == null || failedTownSprites.containsKey(path)) return false;
     DC6 sprite = townSprites.get(path);
     if (sprite == null) {
       try {
-        sprite = DC6.loadFromFile(Riiablo.mpqs.resolve(path));
+      sprite = DC6.loadFromFile(clientContext.mpqs().resolve(path));
         sprite.loadDirection(0, false);
       } catch (RuntimeException e) {
         if (sprite != null) sprite.dispose();

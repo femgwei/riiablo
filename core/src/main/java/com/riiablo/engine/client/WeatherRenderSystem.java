@@ -87,6 +87,9 @@ public final class WeatherRenderSystem extends BaseSystem {
   @Wire(name = "shapes")
   protected ShapeRenderer shapes;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   private final Matrix4 projection = new Matrix4();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
   private final RainRippleField ripples = new RainRippleField(RANDOM_SEED ^ 0x4D2A7B19L);
@@ -143,7 +146,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   }
 
   private void updateRainAmbience(Mode mode, float intensity) {
-    Audio audio = Riiablo.audio;
+    Audio audio = clientContext.audio();
     if (audio == null || audio.isBackgroundPaused()) return;
 
     float volume = rainVolume(mode, intensity);
@@ -592,28 +595,29 @@ public final class WeatherRenderSystem extends BaseSystem {
       if (resourcesChecked) return resourcesAvailable;
       resourcesChecked = true;
       resourcesAvailable = false;
-      if (Riiablo.files == null || Riiablo.files.objects == null || Riiablo.mpqs == null) return false;
+      if (clientContext.files() == null || clientContext.files().objects == null
+          || clientContext.mpqs() == null) return false;
       for (int i = 0; i < RIPPLE_VARIANTS; i++) {
         com.riiablo.codec.excel.Objects.Entry object =
-            Riiablo.files.objects.get(FIRST_CLASS_ID + i);
+            clientContext.files().objects.get(FIRST_CLASS_ID + i);
         if (object == null) continue;
-        String token = Riiablo.files.ObjType.get(object.Id).Token;
+        String token = clientContext.files().ObjType.get(object.Id).Token;
         if (token == null || token.isEmpty()) continue;
         String cofPath = "data\\global\\objects\\" + token + "\\COF\\"
             + token + "NUHTH.cof";
         String path = "data\\global\\objects\\" + token + "\\TR\\"
             + token + "TRLITNUHTH.dcc";
-        if (Riiablo.mpqs.contains(path)) {
+        if (clientContext.mpqs().contains(path)) {
           resourcesAvailable = true;
           // Queue the native ripple resources before the first object is
           // created.  CofLayerLoader still owns the per-entity references;
           // this only removes the first-frame async loading race.
-          if (Riiablo.assets != null) {
-            if (Riiablo.mpqs.contains(cofPath)) {
-              Riiablo.assets.load(new AssetDescriptor<>(cofPath,
+          if (clientContext.assets() != null) {
+            if (clientContext.mpqs().contains(cofPath)) {
+              clientContext.assets().load(new AssetDescriptor<>(cofPath,
                   com.riiablo.codec.COF.class));
             }
-            Riiablo.assets.load(new AssetDescriptor<>(path,
+            clientContext.assets().load(new AssetDescriptor<>(path,
                 com.riiablo.codec.DCC.class));
           }
         }

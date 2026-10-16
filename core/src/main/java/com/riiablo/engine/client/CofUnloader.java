@@ -6,7 +6,6 @@ import com.artemis.annotations.All;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
-import com.riiablo.Riiablo;
 import com.riiablo.engine.client.component.CofDescriptor;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.codec.COF;
@@ -20,6 +19,8 @@ public class CofUnloader extends BaseEntitySystem {
   private static final boolean DEBUG_EVENTS = DEBUG && true;
 
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Override
   protected void processSystem() {}
@@ -44,7 +45,9 @@ public class CofUnloader extends BaseEntitySystem {
     CofDescriptor cofDescriptor = mCofDescriptor.get(entityId);
     AssetDescriptor<COF> descriptor = cofDescriptor.descriptor;
     if (DEBUG) Gdx.app.debug(TAG, "Unloading " + descriptor.fileName);
-    if (Riiablo.assets.contains(descriptor.fileName)) Riiablo.assets.unload(descriptor.fileName);
+    if (clientContext.assets() != null && clientContext.assets().contains(descriptor.fileName)) {
+      clientContext.assets().unload(descriptor.fileName);
+    }
     mCofDescriptor.remove(entityId);
   }
 }

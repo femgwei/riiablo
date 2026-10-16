@@ -115,7 +115,7 @@ public class AutomapRenderer extends BaseSystem {
   @Override
   protected void initialize() {
     // 初始化小地图管理器
-    automapManager = new AutomapManager();
+    automapManager = new AutomapManager(clientContext);
     automapManager.init();
     
     // 创建 automap 专用摄像头

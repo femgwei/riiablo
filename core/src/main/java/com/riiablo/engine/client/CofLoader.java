@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.loaders.AssetLoader;
 import com.badlogic.gdx.files.FileHandle;
-import com.riiablo.Riiablo;
 import com.riiablo.engine.client.component.CofDescriptor;
 import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.event.CofChangeEvent;
@@ -25,6 +24,8 @@ public class CofLoader extends IteratingSystem {
 
   protected ComponentMapper<CofWrapper> mCofWrapper;
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Override
   protected void process(int entityId) {
@@ -45,7 +46,7 @@ public class CofLoader extends IteratingSystem {
     // the task at the head of the global queue forever. Optional object
     // modes (e.g. boOPHTH in 1.10f) must never enter that queue. Keep the
     // resident Animation until a later, available mode replaces it.
-    if (!isAvailable(descriptor.descriptor)) {
+    if (!isAvailable(clientContext, descriptor.descriptor)) {
       if (Gdx.app != null) Gdx.app.error(TAG,
           "[COF_MISSING] entity=" + event.entityId + " path="
               + descriptor.descriptor.fileName + " action=skip_load");
@@ -53,7 +54,7 @@ public class CofLoader extends IteratingSystem {
       return;
     }
 
-    Riiablo.assets.load(descriptor.descriptor);
+    clientContext.assets().load(descriptor.descriptor);
     if (DEBUG) Gdx.app.debug(TAG, "Loading " + descriptor.descriptor.fileName);
     checkLoaded(event.entityId);
   }
@@ -62,8 +63,9 @@ public class CofLoader extends IteratingSystem {
   protected void inserted(int entityId) {
   }
 
-  static boolean isAvailable(AssetDescriptor<COF> descriptor) {
-    AssetLoader<COF, ?> loader = Riiablo.assets.getLoader(COF.class, descriptor.fileName);
+  static boolean isAvailable(ClientGameplayContext context, AssetDescriptor<COF> descriptor) {
+    if (context == null || context.assets() == null) return false;
+    AssetLoader<COF, ?> loader = context.assets().getLoader(COF.class, descriptor.fileName);
     // Leave missing-loader validation to AssetManager.load itself.
     if (loader == null) return true;
     FileHandle file = descriptor.file != null ? descriptor.file : loader.resolve(descriptor.fileName);
@@ -72,8 +74,8 @@ public class CofLoader extends IteratingSystem {
 
   private void checkLoaded(int entityId) {
     AssetDescriptor<COF> descriptor = mCofDescriptor.get(entityId).descriptor;
-    if (!Riiablo.assets.isLoaded(descriptor)) return;
-    COF cof = Riiablo.assets.get(descriptor);
+    if (!clientContext.assets().isLoaded(descriptor)) return;
+    COF cof = clientContext.assets().get(descriptor);
     // D2MOD: COF can be null if file doesn't exist, system continues with null COF
     if (cof == null) {
       if (DEBUG) Gdx.app.debug(TAG, "COF is null for " + descriptor.fileName + ", skipping wrapper creation");

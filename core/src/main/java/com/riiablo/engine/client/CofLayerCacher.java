@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.riiablo.Riiablo;
@@ -50,6 +51,9 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<CofReference> mCofReference;
+
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   protected CofManager cofs;
 
@@ -166,11 +170,11 @@ public class CofLayerCacher extends IteratingSystem {
       }
 
       AssetDescriptor<? extends DC> descriptor = descriptors[c];
-      if (Riiablo.assets.isLoaded(descriptor)) {
+      if (clientContext.assets() != null && clientContext.assets().isLoaded(descriptor)) {
         flags &= ~flag;
         alteredLayers |= flag;
         if (DEBUG) Gdx.app.debug(TAG, "Loaded[" + Engine.getComposite(c) + "] " + descriptor.fileName);
-        DC dc = Riiablo.assets.get(descriptor);
+        DC dc = clientContext.assets().get(descriptor);
         // D2 keeps the active unit graphics ready for all discrete facings.
         // Lazy GL texture creation during a player direction change stalls or
         // briefly blanks a composite layer, which is visible as flashing.

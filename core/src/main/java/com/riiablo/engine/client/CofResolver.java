@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.riiablo.Riiablo;
@@ -31,6 +32,9 @@ public class CofResolver extends PassiveSystem {
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   protected void inserted(int entityId) {
     // Block reactions are short-lived.  Queue the player's BL COF when the
     // entity is created so the first authoritative block does not spend its
@@ -44,8 +48,10 @@ public class CofResolver extends PassiveSystem {
         + Engine.getWClass(wclass);
     AssetDescriptor<COF> descriptor =
         new AssetDescriptor<>(formatCofPath(logicalType, token, name), COF.class);
-    if (!Riiablo.assets.contains(descriptor.fileName) && CofLoader.isAvailable(descriptor)) {
-      Riiablo.assets.load(descriptor);
+    if (clientContext.assets() != null
+        && !clientContext.assets().contains(descriptor.fileName)
+        && CofLoader.isAvailable(clientContext, descriptor)) {
+      clientContext.assets().load(descriptor);
     }
   }
 

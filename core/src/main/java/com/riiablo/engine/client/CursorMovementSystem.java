@@ -15,7 +15,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.badlogic.gdx.utils.TimeUtils;
 
-import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Hovered;
@@ -64,6 +63,8 @@ public class CursorMovementSystem extends BaseSystem {
   protected HoveredManager hoveredManager;
   protected DeathHandler deathHandler;
   protected ClientNetworkReceiver networkReceiver;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -116,7 +117,7 @@ public class CursorMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (Riiablo.cursor != null && Riiablo.cursor.blocksWorldInput()) return;
+    if (clientContext.cursor() != null && clientContext.cursor().blocksWorldInput()) return;
     if (profiler != null && profiler.hit()) {
       traceBlockedClick("profiler");
       return;
@@ -157,7 +158,7 @@ public class CursorMovementSystem extends BaseSystem {
       if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
         stopTargeting(playerId);
       } else {
-        final int skillId = Riiablo.charData.getAction(
+        final int skillId = clientContext.charData().getAction(
             leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         if (!isSkillAllowedForInput(playerId, skillId)) {
@@ -195,7 +196,7 @@ public class CursorMovementSystem extends BaseSystem {
   /** Samples the input edge once per render frame, before the fixed-step loop. */
   public void capturePointerInput() {
     if (Gdx.input == null) return;
-    if (Riiablo.cursor != null && Riiablo.cursor.blocksWorldInput()) {
+    if (clientContext.cursor() != null && clientContext.cursor().blocksWorldInput()) {
       pendingLeftClicks.poll();
       pendingRightClicks.poll();
       pendingLeftRelease = false;
@@ -230,13 +231,13 @@ public class CursorMovementSystem extends BaseSystem {
   private boolean consumePendingMercenaryPotionDrop() {
     if (!pendingLeftRelease) return false;
     pendingLeftRelease = false;
-    if (Riiablo.game == null || Riiablo.game.mercenaryHud == null
-        || !Riiablo.game.mercenaryHud.isVisible()) return false;
+    com.riiablo.screen.GameScreen game = clientContext.game();
+    if (game == null || game.mercenaryHud == null || !game.mercenaryHud.isVisible()) return false;
     stage.screenToStageCoordinates(tmpVec2.set(pendingLeftReleaseX, pendingLeftReleaseY));
-    if (!Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) return false;
+    if (!game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) return false;
     // Keep the UI click consumed even if the item is not a healing potion; the
     // invalid item remains on the cursor instead of being dropped on the map.
-    Riiablo.game.mercenaryHud.useCursorPotion();
+    game.mercenaryHud.useCursorPotion();
     return true;
   }
 
@@ -254,12 +255,13 @@ public class CursorMovementSystem extends BaseSystem {
     // click; it does not dispatch the Scene2D listener because this queue is
     // consumed by the simulation loop.  Route that specific case explicitly
     // before returning from the generic UI-click branch.
-    if (Riiablo.game != null && Riiablo.game.mercenaryHud != null
-        && Riiablo.game.mercenaryHud.isVisible()
-        && Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)
-        && Riiablo.cursor != null && Riiablo.cursor.getItem() != null) {
-      int itemId = Riiablo.cursor.getItem().id;
-      boolean used = Riiablo.game.mercenaryHud.useCursorPotion();
+    com.riiablo.screen.GameScreen game = clientContext.game();
+    if (game != null && game.mercenaryHud != null
+        && game.mercenaryHud.isVisible()
+        && game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)
+        && clientContext.cursor() != null && clientContext.cursor().getItem() != null) {
+      int itemId = clientContext.cursor().getItem().id;
+      boolean used = game.mercenaryHud.useCursorPotion();
       Gdx.app.log(TAG, "[MERC_POTION_UI] phase=queued-click used=" + used
           + " item=" + itemId);
       return true;
@@ -279,7 +281,7 @@ public class CursorMovementSystem extends BaseSystem {
     // otherwise one click first picks up the old item and then drops the held
     // item, which is not how the native client behaves.
     if (shouldDropHeldItemOnWorldClick(
-        Riiablo.cursor != null && Riiablo.cursor.getItem() != null,
+        clientContext.cursor() != null && clientContext.cursor().getItem() != null,
         hit1 != null || hit2 != null)) {
       itemController.cursorToGround();
       requireRelease = true;
@@ -301,7 +303,7 @@ public class CursorMovementSystem extends BaseSystem {
         pendingLeftClicks.restore(click);
         return false;
       }
-      int skillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      int skillId = clientContext.charData().getAction(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, skillId)) {
         stopTargeting(src);
         return true;
@@ -336,19 +338,20 @@ public class CursorMovementSystem extends BaseSystem {
   private boolean consumePendingRightPress(int src) {
     PointerClickQueue.Click click = pendingRightClicks.poll();
     if (click == null) return false;
+    com.riiablo.screen.GameScreen game = clientContext.game();
 
     // Right-click starts a new action even when it lands on the world. Clear
     // any vendor cursor mode before the UI/world handler processes that action.
-    if (Riiablo.game != null) Riiablo.game.cancelVendorTradeMode();
+    if (game != null) game.cancelVendorTradeMode();
 
     stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
-    if (Riiablo.game != null && Riiablo.game.mercenaryHud != null
-        && Riiablo.game.mercenaryHud.isVisible()
-        && Riiablo.game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) {
+    if (game != null && game.mercenaryHud != null
+        && game.mercenaryHud.isVisible()
+        && game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) {
       // The simulation-side pointer queue can consume the click before
       // Scene2D's ClickListener sees it. Route the portrait action here too.
-      if (Riiablo.game.hirelingPanel != null) {
-        Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel);
+      if (game.hirelingPanel != null) {
+        game.setLeftPanel(game.hirelingPanel);
       }
       return true;
     }
@@ -368,7 +371,7 @@ public class CursorMovementSystem extends BaseSystem {
       stopTargeting(src);
       return true;
     }
-    int skillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
+    int skillId = clientContext.charData().getAction(Input.Buttons.RIGHT);
     if (!isSkillAllowedForInput(src, skillId)) {
       stopTargeting(src);
       return true;
@@ -409,7 +412,7 @@ public class CursorMovementSystem extends BaseSystem {
     int src = renderer.getSrc();
     boolean pressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if (pressed && !requireRelease) {
-      Item cursor = Riiablo.cursor.getItem();
+      Item cursor = clientContext.cursor() == null ? null : clientContext.cursor().getItem();
       if (cursor != null) {
         itemController.cursorToGround();
         requireRelease = true;
@@ -472,7 +475,7 @@ public class CursorMovementSystem extends BaseSystem {
           
           final int selectedSkillId = skillForApproachedTarget(
               approachTarget, approachSkill, targetId,
-              Riiablo.charData.getAction(Input.Buttons.LEFT));
+              clientContext.charData().getAction(Input.Buttons.LEFT));
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
           final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
@@ -480,7 +483,7 @@ public class CursorMovementSystem extends BaseSystem {
           // weapon is throwable and has quantity. A throwable weapon does not
           // turn the normal Attack skill into a ranged attack.
           boolean canThrow = false;
-          Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+          Item weapon = clientContext.charData().getItems().getEquippedThrowableWeapon();
           
           if (weapon != null && weapon.attrs != null) {
             com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
@@ -555,7 +558,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void closeTradePanelsForMovement() {
-    if (Riiablo.game != null) Riiablo.game.closeTradePanelsForMovement();
+    if (clientContext.game() != null) clientContext.game().closeTradePanelsForMovement();
   }
 
   static boolean shouldRefreshHeldGroundPath(
@@ -609,8 +612,8 @@ public class CursorMovementSystem extends BaseSystem {
    */
   private boolean isSkillAllowedForInput(int sourceId, int skillId) {
     if (!isPlayerInTown(sourceId)) return true;
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(skillId) : null;
+    Skills.Entry skill = clientContext.files() != null && clientContext.files().skills != null
+        ? clientContext.files().skills.get(skillId) : null;
     boolean allowed = com.riiablo.engine.server.skill.NativeSkillResolver
         .isAllowedInTown(skill, true);
     if (!allowed && Gdx.app != null) {
@@ -621,9 +624,9 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private boolean isPlayerInTown(int playerId) {
-    if (Riiablo.engine == null || playerId < 0) return false;
+    if (playerId < 0) return false;
     try {
-      ComponentMapper<MapWrapper> mapper = Riiablo.engine.getMapper(MapWrapper.class);
+      ComponentMapper<MapWrapper> mapper = world.getMapper(MapWrapper.class);
       if (mapper == null || !mapper.has(playerId)) return false;
       MapWrapper wrapper = mapper.get(playerId);
       return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
@@ -677,7 +680,7 @@ public class CursorMovementSystem extends BaseSystem {
       // A disabled offensive skill must not turn a town click into an
       // approach/attack command.  Keep interactables above unaffected so NPC
       // and waypoint clicks remain usable while an attack icon is red.
-      final int selectedSkill = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      final int selectedSkill = clientContext.charData().getAction(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, selectedSkill)) {
         stopTargeting(src);
         return true;
@@ -699,7 +702,7 @@ public class CursorMovementSystem extends BaseSystem {
       // weapon is throwable and has quantity. Normal Attack remains point-
       // blank melee even when a throwable weapon is equipped.
       boolean canThrow = false;
-      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+      Item weapon = clientContext.charData().getItems().getEquippedThrowableWeapon();
 
       if (weapon != null && weapon.attrs != null) {
         com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
@@ -732,9 +735,9 @@ public class CursorMovementSystem extends BaseSystem {
     return true;
   }
 
-  private static Skills.Entry skillEntry(int skillId) {
-    return skillId >= 0 && Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(skillId) : null;
+  private Skills.Entry skillEntry(int skillId) {
+    return skillId >= 0 && clientContext.files() != null && clientContext.files().skills != null
+        ? clientContext.files().skills.get(skillId) : null;
   }
 
   static boolean shouldMoveOnUntargetedRightClick(
@@ -793,12 +796,12 @@ public class CursorMovementSystem extends BaseSystem {
    * pipeline. Weapon type alone is intentionally not enough: D2 lets a
    * javelin, throwing knife, or throwing axe perform a normal melee Attack.
    */
-  private static boolean isThrowSkill(int skillId) {
+  private boolean isThrowSkill(int skillId) {
     if (skillId < 0) return false;
     if (skillId == SkillCodes.throw_ || skillId == SkillCodes.left_hand_throw) {
       return true;
     }
-    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    Skills.Entry skill = clientContext.files().skills.get(skillId);
     return skill != null && (skill.srvdofunc == 3 || skill.srvdofunc == 5
         || skill.cltdofunc == 3 || skill.cltdofunc == 5);
   }
@@ -821,9 +824,9 @@ public class CursorMovementSystem extends BaseSystem {
 
   private boolean isRangedNormalAttack(int skillId) {
     return skillId == SkillCodes.attack
-        && Riiablo.charData != null
-        && Riiablo.charData.getItems() != null
-        && Riiablo.charData.getItems().getEquippedRangedWeapon() != null;
+        && clientContext.charData() != null
+        && clientContext.charData().getItems() != null
+        && clientContext.charData().getItems().getEquippedRangedWeapon() != null;
   }
 
   private boolean isMeleeNormalAttack(int skillId) {
@@ -856,8 +859,8 @@ public class CursorMovementSystem extends BaseSystem {
         || lastAttackRangeRangedNormal != rangedNormalAttack;
     if (!stateChanged && now - lastAttackRangeTraceMillis < 1000L) return;
 
-    Item throwable = Riiablo.charData != null && Riiablo.charData.getItems() != null
-        ? Riiablo.charData.getItems().getEquippedThrowableWeapon() : null;
+    Item throwable = clientContext.charData() != null && clientContext.charData().getItems() != null
+        ? clientContext.charData().getItems().getEquippedThrowableWeapon() : null;
     int quantity = -1;
     if (throwable != null && throwable.attrs != null) {
       com.riiablo.attributes.StatRef quantityRef = throwable.attrs.base().get(Stat.quantity);

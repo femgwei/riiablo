@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
+import com.artemis.annotations.Wire;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -24,6 +25,8 @@ public class DamageHandler extends PassiveSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Class> mClass;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
   public void onDamageEvent(DamageEvent event) {
@@ -120,7 +123,7 @@ public class DamageHandler extends PassiveSystem {
         && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
       String sound = event.hitSound;
       if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
-      if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
+      if (clientContext.audio() != null) clientContext.audio().play(sound, true);
     }
   }
 }

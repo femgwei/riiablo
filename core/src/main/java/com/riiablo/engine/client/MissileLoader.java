@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.Riiablo;
@@ -25,11 +26,14 @@ public class MissileLoader extends IteratingSystem {
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Angle> mAngle;
 
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
-    if (!Riiablo.assets.isLoaded(missile.missileDescriptor)) return;
-    DCC celFile = Riiablo.assets.get(missile.missileDescriptor);
+    if (clientContext.assets() == null || !clientContext.assets().isLoaded(missile.missileDescriptor)) return;
+    DCC celFile = clientContext.assets().get(missile.missileDescriptor);
 
     Missiles.Entry entry = missile.missile;
     // One-shot impact DCCs are created and rendered in the same simulation
@@ -123,7 +127,7 @@ public class MissileLoader extends IteratingSystem {
     // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
     // the table value here preserves per-missile impact/child timing instead
     // of forcing every DCC to 25 frames per second.
-    int nativeFrameDelta = nativeFrameDelta(missile);
+    int nativeFrameDelta = nativeFrameDelta(clientContext, missile);
     animation.setFrameDelta(Math.max(1, nativeFrameDelta));
     
     // Set direction based on Angle component if available
@@ -139,9 +143,14 @@ public class MissileLoader extends IteratingSystem {
   }
 
   static int nativeFrameDelta(Missile missile) {
+    return nativeFrameDelta(ClientGameplayContext.fromGlobals(), missile);
+  }
+
+  static int nativeFrameDelta(ClientGameplayContext context, Missile missile) {
     if (missile.skillId == 308 && missile.missile.Id == 502) {
+      if (context == null || context.files() == null || context.files().skills == null) return 256;
       int speed = com.riiablo.engine.server.skill.SkillFormula.evaluate(
-          Riiablo.files.skills.get(308).calc1, Riiablo.files.skills.get(308), missile.damageLevel);
+          context.files().skills.get(308).calc1, context.files().skills.get(308), missile.damageLevel);
       if (speed > 0) return speed;
     }
     // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
