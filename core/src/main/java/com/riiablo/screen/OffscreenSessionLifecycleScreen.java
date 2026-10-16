@@ -14,6 +14,7 @@ import com.riiablo.map.DT1;
 import com.riiablo.save.CharData;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /** Real local GameScreen loading/render/exit/re-entry, not a manual visual acceptance test. */
 public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
@@ -174,6 +175,19 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(Gdx.gl.glGetError() == 0, "no GL errors");
     previousTiles.clear();
     previousTiles.putAll(currentTiles);
+    // Total counts alone cannot distinguish lazy host caches from leaked session assets.
+    // Retain names, types and reference counts for comparisons between exit/re-entry cycles.
+    Map<String, String> remainingAssets = new TreeMap<>();
+    for (String name : assets.getAssetNames()) {
+      remainingAssets.put(name, assets.getAssetType(name).getName()
+          + "\trefs=" + assets.getReferenceCount(name));
+    }
+    StringBuilder assetReport = new StringBuilder();
+    for (Map.Entry<String, String> asset : remainingAssets.entrySet()) {
+      assetReport.append(asset.getKey()).append('\t').append(asset.getValue()).append('\n');
+    }
+    Gdx.files.absolute(output).child("cycle-" + cycle + "-remaining-assets.txt")
+        .writeString(assetReport.toString(), false, "UTF-8");
     String report = "cycle=" + cycle + "\nmapAssets=" + currentTiles.size()
         + "\ntextures=" + handles.size + "\ninputProcessors=" + inputBaseline
         + "\nuiButtonReferencesBeforeConstruction=" + buttonReferencesBeforeConstruction

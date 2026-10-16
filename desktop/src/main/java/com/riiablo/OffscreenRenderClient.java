@@ -39,12 +39,13 @@ public final class OffscreenRenderClient {
     if (!"visual".equals(mode) && !"camp".equals(mode)
         && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)
         && !"dialog-resources".equals(mode) && !"font-baseline".equals(mode)
-        && !"hire-mercenaries".equals(mode)) {
+        && !"hire-mercenaries".equals(mode) && !"menus".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
     saves.mkdirs();
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
+    System.setProperty("riiablo.offscreen-menu-lifecycle", Boolean.toString("menus".equals(mode)));
     System.setProperty("riiablo.offscreen-hire-mercenaries", Boolean.toString("hire-mercenaries".equals(mode)));
     System.setProperty("riiablo.offscreen-font-baseline",
         Boolean.toString("font-baseline".equals(mode)));
@@ -102,7 +103,7 @@ public final class OffscreenRenderClient {
       Runtime.getRuntime().halt(1);
     });
 
-    if ("camp".equals(mode)) {
+    if ("camp".equals(mode) || "menus".equals(mode)) {
       // The lifecycle task loads/renders/retires three complete sessions in
       // one process. Keep the single-camp budget per session, not per process.
       final boolean sessionLifecycle = Boolean.getBoolean("riiablo.offscreen-session-lifecycle");
@@ -111,7 +112,8 @@ public final class OffscreenRenderClient {
         try {
           Thread.sleep(timeoutMillis);
           System.err.println("[OFFSCREEN_FATAL] "
-              + (sessionLifecycle ? "Three-session lifecycle" : "Rogue Encampment smoke test")
+              + ("menus".equals(mode) ? "Three-menu lifecycle"
+                  : sessionLifecycle ? "Three-session lifecycle" : "Rogue Encampment smoke test")
               + " timed out after " + timeoutMillis + "ms");
           System.err.flush();
           Runtime.getRuntime().halt(2);
@@ -129,10 +131,14 @@ public final class OffscreenRenderClient {
     config.height = 1;
     config.fullscreen = false;
     config.resizable = false;
+    // An off-desktop 1x1 window can be reported as minimized on Windows.
+    // Verification must keep rendering without relying on desktop focus/visibility.
+    config.pauseWhenMinimized = false;
+    config.pauseWhenBackground = false;
     // Gdx.app.exit() shuts down the render loop; leaving forceExit disabled
     // lets Gradle receive a normal zero exit status on Windows.
     config.forceExit = false;
-    Client client = "camp".equals(mode)
+    Client client = ("camp".equals(mode) || "menus".equals(mode))
         ? new ShutdownCheckedClient(new FileHandle(command.getOptionValue("d")), saves)
         : new Client(new FileHandle(command.getOptionValue("d")), saves, 480);
     new LwjglApplication(client, config);
@@ -179,6 +185,18 @@ public final class OffscreenRenderClient {
       require(getScreen() == null && Riiablo.client == null && Riiablo.assets == null
           && Riiablo.batch == null && Riiablo.shapes == null, "old host aliases cleared");
       require(System.out != consoleOutput && System.err != consoleOutput, "console streams restored");
+      if (Boolean.getBoolean("riiablo.offscreen-menu-lifecycle")) {
+        try {
+          java.lang.reflect.Field registry = com.badlogic.gdx.controllers.Controllers.class.getDeclaredField("managers");
+          registry.setAccessible(true);
+          com.badlogic.gdx.utils.ObjectMap<?, ?> managers = (com.badlogic.gdx.utils.ObjectMap<?, ?>) registry.get(null);
+          require(!((com.badlogic.gdx.utils.ObjectMap) managers).containsKey(com.badlogic.gdx.Gdx.app),
+              "screen shutdown must not resurrect the retired controller manager");
+        } catch (ReflectiveOperationException failure) {
+          throw new IllegalStateException("controller shutdown fixture", failure);
+        }
+        com.badlogic.gdx.Gdx.app.log("MenuShutdown", "[MENU_SHUTDOWN] result=PASS activeMenuRetired=true controllerManagerResurrected=false");
+      }
       com.badlogic.gdx.Gdx.app.log("ClientShutdown", "[CLIENT_SHUTDOWN] result=PASS "
           + "sharedProgramsDeleted=2 sharedTexturesDeleted=2 assets=0 inputCleared=true aliasesCleared=true");
     }

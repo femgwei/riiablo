@@ -653,3 +653,137 @@ dispose 之前就已清空；报告增加 entryRetiredByClient/gameRetiredByClie
   build/screen-transition-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
   最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
   SIM_SLOW=70.92/50.39/53.02/70.42ms，预算 40ms，不作性能验收。
+
+## 第十批：启动页、主菜单与多人菜单的显式资源归属
+
+本批限定 SplashScreen、MenuScreen、MultiplayerScreen 三页，不把带角色预览、
+后台连接和 socket 的 SelectCharacterScreen/2/3、LoginScreen、TCPIPScreen、
+CreateCharacterScreen、LobbyScreen 混入同一批。后续继续菜单第二组，再进入控制台/
+异步日志及其余共享宿主边界，不以本批三页通过宣称整个前端零泄漏。
+
+三页使用包内 MenuScreenResources：构造期每个描述符只 load 一次，由原始
+AssetManager 的 ScreenAssetScope 配对释放；show 不再重复 load，hide 只解除本页
+输入/控制器订阅，保持 Stage、按钮和图片以便从栈恢复；最终 dispose 一次性关闭
+订阅、释放每个显式登记按钮自身的点击音效、Stage 和该页的资产引用。Stage 仍借用
+Client.batch，字体、音乐控制器、动画对象及其他宿主资源不由页面销毁。按钮只回收
+其声音，不递归调用任意 Actor.dispose，也不销毁 style 中的共享图片或字体。
+
+页面持有原输入 multiplexer，旧屏不去新 Riiablo.input/assets 解除订阅或卸载资产。
+同页重复 show/hide 不重复注册，disposed 后拒绝 show，隐藏/释放后 render 返回。
+控制器订阅仍经 libGDX Controllers（以当前 Gdx.app 定位平台 manager），不保证任意
+替换 Gdx.app 后仍能解除旧 manager；本批不是双完整 Client 并行运行协议。
+Splash 保持原有控制器/继续输入/Stage 的注册顺序；隐藏后的旧继续回调不能再导航。
+
+构造路径包裹失败清理，所有已经登记的 asset、Stage 和成功构造的按钮均会尝试释放，
+包括尚未挂入 Stage 的按钮。show 订阅失败按 ScreenSubscriptionScope 回滚，最终
+清理每项 RuntimeException/Error 后继续，传播首异常及 suppressed。失败清理不自动
+重试，也不保证某个子控件自己尚未完成构造时的内部回滚、资产加载器内部异常回收、
+音乐播放队列恢复或整个 GameScreen 构造图回滚。
+
+Splash→Menu 和 Menu→Multiplayer 仍共享原 Logo Animation，不重新创建或复制动画。
+每个页面独立拥有底层 Logo DC6 引用，即使上页隐藏/退出，当前消费者的纹理仍有效。
+Menu 拥有 9 种资源，其中 button.wav 是父页 1 份预载 + 4 个按钮；Multiplayer 为
+8 种资源，button.wav 是 1+3。两页同时保留时 button 引用为 9，返回 Menu 为 5，
+最终退出为 0（均相对外部消费者基线）；不删除显式预载来改变既有播放就绪行为。
+
+新增 MenuScreenLifecycleTest 19 项，使用真实页面构造/按钮/AssetManager 与同步
+替身资源，GL/Stage/字体/动画/控制器为夹具。覆盖三页三次可见周期、原宿主绑定、
+未 show 即销毁、外部共享引用、未挂树按钮的构造失败、Stage 释放失败、部分控制器
+注册回滚/重试、控制器解除 Error 后继续、隐藏渲染和旧输入防护，以及不释放任意
+外借 Actor/字体/Batch。前两轮失败日志保留：menu-resources-focused.log 因夹具
+缺少 Label 静态初始化所需的 Textures.white 引发级联失败；focused-02.log 剩 1 项
+因重新 stub 控制器静态方法触发旧 Answer 并登记 null。现用显式故障开关注入错误，
+不在重新 stub 时执行登记动作，保留“回滚后全部解绑”的断言。
+
+新增 :desktop:offscreenMenuLifecycle（--mode menus），使用真实生产 Client 和原版
+MPQ/GL。三轮各走真实 Splash 继续输入→Menu 多人按钮→Multiplayer 取消按钮→原
+Menu→clear；每个可见阶段直接调用生产 render 三次，检查九种资源精确回基线、
+按钮声音 0/5/9/5/0、三 Stage 已由 Client 主动清空、输入/控制器回基线。采样完整
+DC6 pages 的 GL 纹理句柄，要求 pop 后共享纹理仍有效、clear 后全部删除，并在
+GL 上下文销毁前复用生产 Client 最终共享资源检查。此入口通过事件夹具触发按钮，
+不证明真实鼠标/手柄操作、菜单外观/音效听感或登录/TCP/IP 连接已经人工验收。
+
+平台退出还包含独立边界：LWJGL 先调用 LifecycleListener.dispose，之后才调用
+Client.dispose；Controllers 的平台生命周期回调会从其 registry 移除旧 manager，
+此后再调用静态 removeListener 会按 API 实现重新初始化 manager。本批每个可见的
+控制器页面同时注册本机 Application 的终止观察器；普通 hide/dispose 仍解除自己的
+控制器监听并移除观察器，平台已经终止时则不再调用会初始化 manager 的静态入口。
+页面输入、Stage、按钮和图片清理仍照常进行。19 项中含平台先终止的专项；GL 探针
+三轮结束后再停留于一个新主菜单直接退出，在真实 backend 顺序下验证 manager 没有
+复活，并复用共享 GL/资产最终清理断言。生产逻辑不通过反射修改控制器 registry。
+
+控制器探针按实际库结构验证：gdx-controllers-desktop 2.2.1 的 getListeners 返回
+包含单一 CompositeControllerListener 的 Array，而非页面注册清单；验收代码只读
+展开该组合对象的 listeners，检查数量与页面 listener 的对象身份。平台内部的
+ManageControllers 监听保留在基线，不调用 clearListeners，也不更换为测试 manager。
+此只读检查及最终 registry 检查属于版本相关的测试探针，不是生产生命周期协议。
+
+专项验证记录：focused-03.log 中 82 项全部通过，但 GL 因把组合包装层当作页面数量
+而失败；修正为读取实际注册列表后 focused-04.log 的 82/82、真实菜单三轮和共享
+退出检查通过（56s）。再加入平台先销毁/前台主菜单直接关闭边界后，最终
+build/menu-resources-focused-05.log 的 83/83、6 类与三端编译/真实 GL 验收通过
+（58s）：三轮均为 9 种资产回基线、126 张纹理删除、3 Stage 由 Client 清空、
+button 引用 0/5/9/5/0、输入 2、控制器内部常驻监听 1，MENU_SHUTDOWN 明确
+controllerManagerResurrected=false，CLIENT_SHUTDOWN PASS。未降低断言或延长预算。
+
+最小复跑（日志和报告输出应使用各自独立的目录）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.MenuScreenLifecycleTest `
+  --tests com.riiablo.screen.ClientScreenTransitionTest `
+  --tests com.riiablo.screen.ClientShutdownLifecycleTest `
+  --tests com.riiablo.screen.ScreenAssetScopeTest `
+  --tests com.riiablo.screen.ScreenSubscriptionScopeTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  :desktop:offscreenMenuLifecycle :server:d2gs:compileJava `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/menu-resources-focused-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/menu-resources-focused' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 第十批最终回归
+
+- 扩大定向回归 429/429、55 类：core 387/387（48 类）、D2GS 全部 42/42
+  （7 类），失败/错误/跳过均 0；是上批 410 项加本批 19 项，不包含既有玩法/AI
+  基线失败，不宣称全仓全绿。core/desktop/D2GS 编译通过。
+- 同一命令的菜单三轮均通过：九种资产精确回基线、126 张纹理删除、三个 Stage
+  主动清空、按钮声音引用 0/5/9/5/0、输入基线 2、控制器常驻基线 1。最终停留于
+  主菜单直接关闭，MENU_SHUTDOWN 和共享资源 CLIENT_SHUTDOWN 均 PASS。
+- 独立地图 GL 三轮仍为 44 tiles、引用 4→2→1→0；本地生产入场链/营地退出重进
+  三轮的原有资源硬断言均通过：每轮 58 个 DT1、2626 张地图贴图、按钮引用
+  0/129/138/0、8 种面板资产回基线、3 张私有纹理删除、入场/游戏由 Client 主动
+  释放。退出时剩余资产种类为 58/59/59，不声称本次三轮稳定为 58。
+- 单轮营地三帧、三次生产 Client 最终 GL 检查（两共享程序/两纹理删除、assets=0、
+  输入/别名/流恢复）、D2GS 25Hz step=0.04、Throw 顺序及伤害 1000→992 同一
+  命令通过，BUILD SUCCESSFUL，耗时 3m18s。
+- 日志 build/menu-resources-regression.log；菜单报告
+  build/menu-resources-camp/menu-cycle-N-lifecycle.txt，会话报告 cycle-N-lifecycle.txt。
+  最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断和
+  不可用音乐跳过记录。SIM_SLOW=92.90/50.23/40.68/91.37ms，预算 40ms，
+  不作性能验收。资源阶段尚未结束，下一批为角色选择/预览等菜单第二组。
+
+为核对总资产数变化，OffscreenSessionLifecycleScreen 另输出
+cycle-N-remaining-assets.txt，逐项保存退出后的路径、类型及引用数；不删除原有资源
+硬断言，也不把总种类相等作为已验证事实。首次复跑 build/menu-resources-assets.log
+在第一轮加载后停止渲染，线程检查显示 LWJGL Application 正常后台循环而无加载任务；
+LWJGL 的 pauseWhenMinimized 会让离屏 1x1 窗口在被判为不可见时停止 render。
+主动结束该测试进程并保留失败日志，离屏入口明确设置 pauseWhenMinimized=false /
+pauseWhenBackground=false；普通游戏入口不变，三轮/三帧和看门狗预算不变。
+
+补充复跑 build/menu-resources-assets-02.log：真实会话三轮和菜单三轮、两次最终
+Client GL 检查均 PASS，BUILD SUCCESSFUL，耗时 2m9s，无 ERROR/Exception/
+OFFSCREEN_FATAL；SIM_SLOW=84.61/48.57/41.49ms，仍不作性能验收。三轮退出
+种类为 59/59/59，三个资产清单路径相同；声音项包含 MedDirt3.wav、wilderness day
+2.wav、fire4.wav，Audio.play 当前会缓存已加载的声音库。原回归没有逐项快照，
+因此不能事后断定 58→59 究竟新增哪一项，不把缓存推测写成已证实结论。
+
+快照同时暴露下一资源批需要处理的引用递增，不能以资产种类相同宣称会话零泄漏：
+Gleam.dcc、NPCSpeechBalloon.dcc、ShrineManaRegen.dcc 和区域标题
+data/local/ui/chi/act1/A1L1.dc6 均为 refs=1→2→3；MENU/boxpieces.DC6 为
+12→24→36。它们不在本批三页菜单的九种描述符内，属于覆盖动画/区域标题及
+共享框组件的单独生命周期边界，本批只新增证据，不扩散修改这些实现。现有会话
+PASS 只代表已列明的资源硬断言通过；最终 Client.dispose 后 assets=0 仍通过，
+不代表宿主存活时上述引用已经归位。清单位于 build/menu-resources-assets-02/
+cycle-N-remaining-assets.txt，后续修复应以逐项引用为依据补充断言。

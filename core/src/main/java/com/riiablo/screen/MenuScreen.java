@@ -7,7 +7,6 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.ControllerAdapter;
 import com.badlogic.gdx.controllers.ControllerListener;
-import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -32,6 +31,7 @@ import com.riiablo.widget.Label;
 import com.riiablo.widget.TextButton;
 
 public class MenuScreen extends ScreenAdapter {
+  private final MenuScreenResources resources = new MenuScreenResources(Riiablo.assets, Riiablo.input);
   final AssetDescriptor<DC6> TitleScreenDescriptor = new AssetDescriptor<>("data\\global\\ui\\FrontEnd\\TitleScreen.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion TitleScreen;
 
@@ -63,34 +63,45 @@ public class MenuScreen extends ScreenAdapter {
   }
 
   public MenuScreen(Animation D2logoLeft, Animation D2logoRight) {
+    try {
+      create(D2logoLeft, D2logoRight);
+      resources.useStageInput();
+      controllerListener = createControllerListener();
+      resources.useController(controllerListener);
+    } catch (RuntimeException | Error failure) {
+      resources.fail(failure);
+    }
+  }
+
+  private void create(Animation D2logoLeft, Animation D2logoRight) {
     this.D2logoLeft = D2logoLeft;
     this.D2logoRight = D2logoRight;
     load();
 
-    stage = new Stage(Riiablo.defaultViewport, Riiablo.batch);
+    stage = resources.own(new Stage(Riiablo.defaultViewport, Riiablo.batch));
 
-    Riiablo.assets.finishLoadingAsset(TitleScreenDescriptor);
-    TitleScreen = Riiablo.assets.get(TitleScreenDescriptor).getTexture();
+    resources.assets.finishLoadingAsset(TitleScreenDescriptor);
+    TitleScreen = resources.assets.get(TitleScreenDescriptor).getTexture();
 
     if (D2logoLeft == null || D2logoRight == null) {
       Riiablo.music.enqueue("data/global/music/Act4/diablo.wav");
     }
 
     if (D2logoLeft == null) {
-      Riiablo.assets.finishLoadingAsset(D2logoBlackLeftDescriptor);
-      Riiablo.assets.finishLoadingAsset(D2logoFireLeftDescriptor);
+      resources.assets.finishLoadingAsset(D2logoBlackLeftDescriptor);
+      resources.assets.finishLoadingAsset(D2logoFireLeftDescriptor);
       this.D2logoLeft = D2logoLeft = Animation.builder()
-          .layer(Riiablo.assets.get(D2logoBlackLeftDescriptor))
-          .layer(Riiablo.assets.get(D2logoFireLeftDescriptor), BlendMode.LUMINOSITY)
+          .layer(resources.assets.get(D2logoBlackLeftDescriptor))
+          .layer(resources.assets.get(D2logoFireLeftDescriptor), BlendMode.LUMINOSITY)
           .build();
     }
 
     if (D2logoRight == null) {
-      Riiablo.assets.finishLoadingAsset(D2logoBlackRightDescriptor);
-      Riiablo.assets.finishLoadingAsset(D2logoFireRightDescriptor);
+      resources.assets.finishLoadingAsset(D2logoBlackRightDescriptor);
+      resources.assets.finishLoadingAsset(D2logoFireRightDescriptor);
       this.D2logoRight = D2logoRight = Animation.builder()
-          .layer(Riiablo.assets.get(D2logoBlackRightDescriptor))
-          .layer(Riiablo.assets.get(D2logoFireRightDescriptor), BlendMode.LUMINOSITY)
+          .layer(resources.assets.get(D2logoBlackRightDescriptor))
+          .layer(resources.assets.get(D2logoFireRightDescriptor), BlendMode.LUMINOSITY)
           .build();
     }
     D2logo = new AnimationWrapper(D2logoLeft, D2logoRight);
@@ -98,8 +109,8 @@ public class MenuScreen extends ScreenAdapter {
     stage.addActor(D2logo);
 
     TextButton.TextButtonStyle wideButtonStyle = new TextButton.TextButtonStyle() {{
-      Riiablo.assets.finishLoadingAsset(WideButtonBlankDescriptor);
-        DC6 WideButtonBlank = Riiablo.assets.get(WideButtonBlankDescriptor);
+      resources.assets.finishLoadingAsset(WideButtonBlankDescriptor);
+        DC6 WideButtonBlank = resources.assets.get(WideButtonBlankDescriptor);
         up   = new TextureRegionDrawable(WideButtonBlank.getTexture(0));
         down = new TextureRegionDrawable(WideButtonBlank.getTexture(1));
         font = Riiablo.fonts.fontexocet10;
@@ -117,11 +128,11 @@ public class MenuScreen extends ScreenAdapter {
         }
       }
     };
-    btnSinglePlayer = new TextButton(5106, wideButtonStyle);
+    btnSinglePlayer = resources.own(new TextButton(5106, wideButtonStyle));
     btnSinglePlayer.addListener(clickListener);
-    btnMultiplayer = new TextButton(5107, wideButtonStyle);
+    btnMultiplayer = resources.own(new TextButton(5107, wideButtonStyle));
     btnMultiplayer.addListener(clickListener);
-    btnExitDiablo = new TextButton(5109, wideButtonStyle);
+    btnExitDiablo = resources.own(new TextButton(5109, wideButtonStyle));
     btnExitDiablo.addListener(clickListener);
 
     final Table panel = new Table() {{
@@ -135,13 +146,13 @@ public class MenuScreen extends ScreenAdapter {
     stage.addActor(panel);
 
     TextButton.TextButtonStyle mediumButtonStyle = new TextButton.TextButtonStyle() {{
-      Riiablo.assets.finishLoadingAsset(MediumButtonBlankDescriptor);
-        DC6 MediumButtonBlank = Riiablo.assets.get(MediumButtonBlankDescriptor);
+      resources.assets.finishLoadingAsset(MediumButtonBlankDescriptor);
+        DC6 MediumButtonBlank = resources.assets.get(MediumButtonBlankDescriptor);
         up   = new TextureRegionDrawable(MediumButtonBlank.getTexture(0));
         down = new TextureRegionDrawable(MediumButtonBlank.getTexture(1));
         font = Riiablo.fonts.fontexocet10;
     }};
-    btnExit = new TextButton(5101, mediumButtonStyle);
+    btnExit = resources.own(new TextButton(5101, mediumButtonStyle));
     btnExit.addListener(clickListener);
     btnExit.setPosition(20, 20, Align.bottomLeft);
     //btnExit.setVisible(Gdx.app.getType() == Application.ApplicationType.Android);
@@ -154,10 +165,12 @@ public class MenuScreen extends ScreenAdapter {
 
   @Override
   public void show() {
+    resources.show();
     Riiablo.viewport = Riiablo.defaultViewport;
-    load();
-    Riiablo.input.addProcessor(stage);
-    Controllers.addListener(controllerListener = new ControllerAdapter() {
+  }
+
+  private ControllerListener createControllerListener() {
+    return new ControllerAdapter() {
       Vector2 tmp = new Vector2();
       Actor focus;
 
@@ -223,43 +236,34 @@ public class MenuScreen extends ScreenAdapter {
         System.out.println(axisIndex + " " + value);
         return super.axisMoved(controller, axisIndex, value);
       }
-    });
+    };
   }
 
   @Override
   public void hide() {
-    Controllers.removeListener(controllerListener);
-    Riiablo.input.removeProcessor(stage);
-    dispose();
+    resources.hide();
   }
 
   private void load() {
-    Riiablo.assets.load(TitleScreenDescriptor);
-    Riiablo.assets.load(D2logoFireLeftDescriptor);
-    Riiablo.assets.load(D2logoFireRightDescriptor);
-    Riiablo.assets.load(D2logoBlackLeftDescriptor);
-    Riiablo.assets.load(D2logoBlackRightDescriptor);
-    Riiablo.assets.load(WideButtonBlankDescriptor);
-    Riiablo.assets.load(MediumButtonBlankDescriptor);
-    Riiablo.assets.load(buttonDescriptor);
-    Riiablo.assets.load(selectDescriptor);
+    resources.load(TitleScreenDescriptor);
+    resources.load(D2logoFireLeftDescriptor);
+    resources.load(D2logoFireRightDescriptor);
+    resources.load(D2logoBlackLeftDescriptor);
+    resources.load(D2logoBlackRightDescriptor);
+    resources.load(WideButtonBlankDescriptor);
+    resources.load(MediumButtonBlankDescriptor);
+    resources.load(buttonDescriptor);
+    resources.load(selectDescriptor);
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(TitleScreenDescriptor.fileName);
-    Riiablo.assets.unload(D2logoFireLeftDescriptor.fileName);
-    Riiablo.assets.unload(D2logoFireRightDescriptor.fileName);
-    Riiablo.assets.unload(D2logoBlackLeftDescriptor.fileName);
-    Riiablo.assets.unload(D2logoBlackRightDescriptor.fileName);
-    Riiablo.assets.unload(WideButtonBlankDescriptor.fileName);
-    Riiablo.assets.unload(MediumButtonBlankDescriptor.fileName);
-    Riiablo.assets.unload(buttonDescriptor.fileName);
-    Riiablo.assets.unload(selectDescriptor.fileName);
+    resources.dispose();
   }
 
   @Override
   public void render(float delta) {
+    if (!resources.isVisible()) return;
     PaletteIndexedBatch b = Riiablo.batch;
     b.begin(Riiablo.palettes.units);
     b.draw(TitleScreen, (stage.getWidth() / 2) - (TitleScreen.getRegionWidth() / 2), 0);

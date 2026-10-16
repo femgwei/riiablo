@@ -1,5 +1,43 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第十批：启动页与主菜单资源
+
+- [x] 本批限定 SplashScreen、MenuScreen、MultiplayerScreen；新增包内
+  MenuScreenResources，构造只持有一份资产引用，绑定原 AssetManager 和输入。
+  show/hide 仅激活/解除可见订阅；最终一次性释放按钮音效、Stage 和页面图片/音效，
+  不销毁借用的 batch、字体、音乐控制器，也不泛化递归 dispose 任意 Actor。
+- [x] 保留 Splash→Menu→Multiplayer 共享 Logo Animation 的行为，各页独立持有
+  底层 DC6 引用，隐藏与返回不卸载／重复加载。成功构造但尚未挂树的按钮也被登记，
+  页面构造失败会尝试释放已登记资源；不宣称任意子组件半构造内部均能自动回滚。
+- [x] 处理 LWJGL 平台控制器早于 Client.dispose 终止的顺序：可见页观察原 Application
+  生命周期，平台已终止时不调用会重新初始化 manager 的静态解绑入口；正常隐藏仍
+  解除自己的监听。隐藏/销毁后的渲染及旧 Splash 继续输入不再访问资产或导航。
+- [x] 新增 MenuScreenLifecycleTest 19 项。夹具缺少共享白纹理、静态方法重新 stub
+  执行旧 Answer 的两轮失败均保留；第三轮 82 项通过但 GL 控制器计数误读组合包装层。
+  修正只读探针读取实际注册清单，保留数量/身份解绑断言；先 82/82 与真实三轮通过，
+  再增加平台终止专项，最终 83/83、6 类与真实 GL/三端编译通过。
+- 新增 :desktop:offscreenMenuLifecycle：三轮真实原版 MPQ、生产页面/按钮事件/
+  渲染、Client 导航；每轮九种资产回基线、126 张纹理删除、三 Stage 清空、按钮音效
+  0/5/9/5/0、输入 2、控制器常驻基线 1，Logo 在 pop 后仍有效。最后停留主菜单
+  直接关闭，MENU_SHUTDOWN 验证 manager 不复活，Client 共享资源退出 PASS。
+  专项日志 build/menu-resources-focused-05.log；不代替人工画面/操作/听感验收。
+- [x] 最终扩大定向回归 429/429、55 类（core 387/387，D2GS 42/42），失败/
+  错误/跳过均 0；三端编译、菜单/地图/会话三轮、单轮营地、最终 GL 退出、25Hz
+  Tick 和 Throw 顺序/伤害全部通过，日志 build/menu-resources-regression.log。
+  不包含既有玩法/AI 基线失败，不宣称全仓全绿，SIM_SLOW 仍超过 40ms 预算。
+- 补充逐项剩余资产快照；第一次复跑因隐藏窗口被判最小化而停止渲染，主动结束并
+  保留失败日志。仅离屏入口关闭最小化/失焦自动暂停，不改游戏入口或延长预算。
+  修正后真实会话及菜单各三轮通过，日志 build/menu-resources-assets-02.log。
+  原回归退出种类为 58/59/59，复跑 59/59/59，原回归无清单，不能断定具体增量。
+- [ ] 新清单暴露本批范围外的引用累积：Gleam / NPCSpeechBalloon /
+  ShrineManaRegen 及区域标题 A1L1 均 1→2→3，MENU/boxpieces 为 12→24→36。
+  纳入后续覆盖动画/区域标题与共享组件资源改造；种类稳定或最终 assets=0 不能
+  代替宿主存活时的逐项引用归位。本批三页九种菜单资产仍精确回基线。
+- 总体：七批装配完成，资源阶段推进第十批。下一批继续角色选择/预览等菜单第二组；
+  登录/TCP/IP/入场连接交接、控制台/异步日志、其他共享组件、构造失败与跨 Act/
+  加载中退出、长时压力及人工/性能验收仍待。详细边界、失败记录与复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第九批：运行中屏幕切换与清栈
 
 - [x] set/push/pop/clearAndSet 统一归属：替换/弹栈释放旧前台，push 保留，

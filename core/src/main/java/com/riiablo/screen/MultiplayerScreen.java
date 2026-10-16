@@ -22,6 +22,7 @@ import com.riiablo.widget.AnimationWrapper;
 import com.riiablo.widget.TextButton;
 
 public class MultiplayerScreen extends ScreenAdapter {
+  private final MenuScreenResources resources = new MenuScreenResources(Riiablo.assets, Riiablo.input);
   private static final String TAG = "MultiplayerScreen";
 
   final AssetDescriptor<DC6> TitleScreenDescriptor = new AssetDescriptor<>("data\\global\\ui\\FrontEnd\\TitleScreen.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -50,34 +51,43 @@ public class MultiplayerScreen extends ScreenAdapter {
   }
 
   public MultiplayerScreen(Animation D2logoLeft, Animation D2logoRight) {
+    try {
+      create(D2logoLeft, D2logoRight);
+      resources.useStageInput();
+    } catch (RuntimeException | Error failure) {
+      resources.fail(failure);
+    }
+  }
+
+  private void create(Animation D2logoLeft, Animation D2logoRight) {
     this.D2logoLeft = D2logoLeft;
     this.D2logoRight = D2logoRight;
     load();
 
-    stage = new Stage(Riiablo.defaultViewport, Riiablo.batch);
+    stage = resources.own(new Stage(Riiablo.defaultViewport, Riiablo.batch));
 
-    Riiablo.assets.finishLoadingAsset(TitleScreenDescriptor);
-    TitleScreen = Riiablo.assets.get(TitleScreenDescriptor).getTexture();
+    resources.assets.finishLoadingAsset(TitleScreenDescriptor);
+    TitleScreen = resources.assets.get(TitleScreenDescriptor).getTexture();
 
     if (D2logoLeft == null || D2logoRight == null) {
       Riiablo.music.enqueue("data/global/music/Act1/tristram.wav");
     }
 
     if (D2logoLeft == null) {
-      Riiablo.assets.finishLoadingAsset(D2logoBlackLeftDescriptor);
-      Riiablo.assets.finishLoadingAsset(D2logoFireLeftDescriptor);
+      resources.assets.finishLoadingAsset(D2logoBlackLeftDescriptor);
+      resources.assets.finishLoadingAsset(D2logoFireLeftDescriptor);
       this.D2logoLeft = D2logoLeft = Animation.builder()
-          .layer(Riiablo.assets.get(D2logoBlackLeftDescriptor))
-          .layer(Riiablo.assets.get(D2logoFireLeftDescriptor), BlendMode.LUMINOSITY)
+          .layer(resources.assets.get(D2logoBlackLeftDescriptor))
+          .layer(resources.assets.get(D2logoFireLeftDescriptor), BlendMode.LUMINOSITY)
           .build();
     }
 
     if (D2logoRight == null) {
-      Riiablo.assets.finishLoadingAsset(D2logoBlackRightDescriptor);
-      Riiablo.assets.finishLoadingAsset(D2logoFireRightDescriptor);
+      resources.assets.finishLoadingAsset(D2logoBlackRightDescriptor);
+      resources.assets.finishLoadingAsset(D2logoFireRightDescriptor);
       this.D2logoRight = D2logoRight = Animation.builder()
-          .layer(Riiablo.assets.get(D2logoBlackRightDescriptor))
-          .layer(Riiablo.assets.get(D2logoFireRightDescriptor), BlendMode.LUMINOSITY)
+          .layer(resources.assets.get(D2logoBlackRightDescriptor))
+          .layer(resources.assets.get(D2logoFireRightDescriptor), BlendMode.LUMINOSITY)
           .build();
     }
     D2logo = new AnimationWrapper(D2logoLeft, D2logoRight);
@@ -85,8 +95,8 @@ public class MultiplayerScreen extends ScreenAdapter {
     stage.addActor(D2logo);
 
     TextButton.TextButtonStyle style = new TextButton.TextButtonStyle() {{
-        Riiablo.assets.finishLoadingAsset(WideButtonBlankDescriptor);
-        DC6 WideButtonBlank = Riiablo.assets.get(WideButtonBlankDescriptor);
+        resources.assets.finishLoadingAsset(WideButtonBlankDescriptor);
+        DC6 WideButtonBlank = resources.assets.get(WideButtonBlankDescriptor);
         up   = new TextureRegionDrawable(WideButtonBlank.getTexture(0));
         down = new TextureRegionDrawable(WideButtonBlank.getTexture(1));
         font = Riiablo.fonts.fontexocet10;
@@ -104,11 +114,11 @@ public class MultiplayerScreen extends ScreenAdapter {
         }
       }
     };
-    btnOpenBattlenet = new TextButton(5115, style);
+    btnOpenBattlenet = resources.own(new TextButton(5115, style));
     btnOpenBattlenet.addListener(clickListener);
-    btnTCPIP = new TextButton(5116, style);
+    btnTCPIP = resources.own(new TextButton(5116, style));
     btnTCPIP.addListener(clickListener);
-    btnCancel = new TextButton(5134, style);
+    btnCancel = resources.own(new TextButton(5134, style));
     btnCancel.addListener(clickListener);
 
     final Table panel = new Table() {{
@@ -124,42 +134,34 @@ public class MultiplayerScreen extends ScreenAdapter {
 
   @Override
   public void show() {
+    resources.show();
     Riiablo.viewport = Riiablo.defaultViewport;
-    load();
-    Riiablo.input.addProcessor(stage);
   }
 
   @Override
   public void hide() {
-    Riiablo.input.removeProcessor(stage);
-    dispose();
+    resources.hide();
   }
 
   private void load() {
-    Riiablo.assets.load(TitleScreenDescriptor);
-    Riiablo.assets.load(D2logoFireLeftDescriptor);
-    Riiablo.assets.load(D2logoFireRightDescriptor);
-    Riiablo.assets.load(D2logoBlackLeftDescriptor);
-    Riiablo.assets.load(D2logoBlackRightDescriptor);
-    Riiablo.assets.load(WideButtonBlankDescriptor);
-    Riiablo.assets.load(buttonDescriptor);
-    Riiablo.assets.load(selectDescriptor);
+    resources.load(TitleScreenDescriptor);
+    resources.load(D2logoFireLeftDescriptor);
+    resources.load(D2logoFireRightDescriptor);
+    resources.load(D2logoBlackLeftDescriptor);
+    resources.load(D2logoBlackRightDescriptor);
+    resources.load(WideButtonBlankDescriptor);
+    resources.load(buttonDescriptor);
+    resources.load(selectDescriptor);
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(TitleScreenDescriptor.fileName);
-    Riiablo.assets.unload(D2logoFireLeftDescriptor.fileName);
-    Riiablo.assets.unload(D2logoFireRightDescriptor.fileName);
-    Riiablo.assets.unload(D2logoBlackLeftDescriptor.fileName);
-    Riiablo.assets.unload(D2logoBlackRightDescriptor.fileName);
-    Riiablo.assets.unload(WideButtonBlankDescriptor.fileName);
-    Riiablo.assets.unload(buttonDescriptor.fileName);
-    Riiablo.assets.unload(selectDescriptor.fileName);
+    resources.dispose();
   }
 
   @Override
   public void render(float delta) {
+    if (!resources.isVisible()) return;
     PaletteIndexedBatch b = Riiablo.batch;
     b.begin(Riiablo.palettes.units);
     b.draw(TitleScreen, (stage.getWidth() / 2) - (TitleScreen.getRegionWidth() / 2), 0);
