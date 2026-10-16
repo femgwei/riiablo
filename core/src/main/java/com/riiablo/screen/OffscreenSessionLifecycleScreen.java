@@ -207,6 +207,27 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
         "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
+    Array<Actor> retiredPartyMessages = new Array<>();
+    for (int reopen = 0; reopen < 3; reopen++) {
+      screen.setLeftPanel(screen.partyPanel);
+      screen.partyPanel.act(0);
+      for (Actor old : retiredPartyMessages) {
+        require(old.getParent() == null && old.getListeners().size == 0 && old.getActions().size == 0,
+            "reopening offline party retires old roster message");
+        old.act(1); old.draw(Riiablo.batch, 1);
+      }
+      if (reopen < 2) retiredPartyMessages.add(field(screen.partyPanel, "roster", Group.class).getChild(0));
+      screen.stage.draw(); // Real fonts, shared batch and normal Stage layout; no network requests.
+      screen.setLeftPanel(null);
+    }
+    screen.setLeftPanel(screen.tradePanel); screen.tradePanel.act(0); screen.stage.draw();
+    screen.setLeftPanel(null);
+    Array<Actor> networkPanelActors = new Array<>();
+    collectActors(screen.partyPanel, networkPanelActors); collectActors(screen.tradePanel, networkPanelActors);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> networkPanelClicks = new Array<>();
+    for (Actor actor : networkPanelActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        networkPanelClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
     Array<Actor> questActors = new Array<>();
     collectActors(screen.questsPanel, questActors);
     Array<com.riiablo.widget.DialogScroller> questDialogs = new Array<>();
@@ -711,6 +732,29 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.partyPanel, "disposed", Boolean.class) && field(screen.tradePanel, "disposed", Boolean.class),
+        "Client retired both network panel owners");
+    screen.partyPanel.dispose(); screen.tradePanel.dispose();
+    screen.partyPanel.setVisible(true); screen.tradePanel.setVisible(true);
+    screen.partyPanel.act(1); screen.tradePanel.act(1);
+    screen.partyPanel.draw(Riiablo.batch, 1); screen.tradePanel.draw(Riiablo.batch, 1);
+    screen.tradePanel.applyNetworkState(new com.riiablo.engine.client.ClientNetworkReceiver());
+    require(!screen.partyPanel.isVisible() && !screen.tradePanel.isVisible()
+        && screen.partyPanel.hit(0, 0, true) == null && screen.tradePanel.hit(0, 0, true) == null,
+        "retired network panels cannot reopen or hit-test");
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : networkPanelClicks) click.clicked(null, 0, 0);
+    for (Actor actor : networkPanelActors) {
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "network panel actor retired");
+      if (actor instanceof com.riiablo.widget.Label) {
+        actor.act(1); actor.draw(Riiablo.batch, 1);
+        ((com.riiablo.widget.Label) actor).draw(Riiablo.batch, 1);
+      }
+    }
+    for (Actor panel : new Actor[] {screen.partyPanel, screen.tradePanel})
+      require(field(panel, "owner", Object.class) == null && field(panel, "world", Object.class) == null
+          && field(panel, "receiver", Object.class) == null && field(panel, "synchronizer", Object.class) == null,
+          "network panel borrowed session links cleared");
     require(field(screen.controlPanel, "disposed", Boolean.class), "Client retired control panel");
     screen.controlPanel.dispose(); screen.controlPanel.dispose(); screen.controlPanel.setVisible(true);
     screen.controlPanel.act(1); screen.controlPanel.acknowledgeQuestLog(); screen.controlPanel.setMinipanelVisible(true);
@@ -937,6 +981,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nuiButtonReferencesBeforeConstruction=" + buttonReferencesBeforeConstruction
         + "\nuiButtonReferencesAfterConstruction=" + buttonReferencesAfterConstruction
         + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
+        + "\nnetworkPanelActorsRetired=" + networkPanelActors.size
+        + "\nnetworkPanelLateClicksIgnored=" + networkPanelClicks.size
+        + "\nnetworkPanelBorrowedSystemsCleared=true"
+        + "\nnetworkPanelLiveStageDraws=4"
+        + "\nofflinePartyMessagesRetiredDuringReopen=" + retiredPartyMessages.size
         + "\nquickSkillRebuilds=3"
         + "\nquickSkillButtonsRetiredDuringRebuild=" + retiredQuickButtons
         + "\nquickSkillLateCallbacksIgnored=" + retiredQuickCallbacks

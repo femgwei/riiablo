@@ -2258,3 +2258,113 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 优先 PartyPanel / TradePanel 等剩余联机面板的控件归属和结果回调；完整控件
 内部构造失败剩余边界、连接交接/全局网络路由、控制台/Timer/异步日志、跨 Act/
 加载中退出及长压仍待。人工、联机、Android 真机与性能验收继续单列。
+
+## 2026-10-17 第二十九批：组队与玩家交易面板
+
+PartyPanel / TradePanel 通过共用的 SessionNetworkPanel 捕获原 GameScreen、
+AssetManager、CharData、Fonts、Colors、本地化 bundle 和 Textures 宿主。GameScreen
+创建两页时显式传入 owner，创建世界后一次绑定 World；在游戏发布前允许装配，
+但不派发输入或结果。网络收发系统必须确实来自绑定世界，只允许重复绑定同一对，
+不可转交新世界或新连接；销毁后不接受重新绑定。保留无参的独立面板用法。
+
+面板、内部 Table、Label 和 LabelButton 的 act/draw/hit 限定所属会话及控件
+归属，按钮动作还要求面板可见、控件仍挂在该页。销毁、换游戏/世界/角色或资源
+宿主、动态名单退休后，保存的点击或绘制入口都不能访问新会话。标签的普通
+Batch 和 PaletteIndexedBatch 两个入口均受保护；同步发送期间若面板已退出，
+返回后不再更新已退休状态标签。
+
+每个已返回控件先登记、再定位/挂载；父级构造失败、动态行挂载失败、未挂载和
+外部 detach 的控件都仍有归属。组队名单和双方报价维护独立动态列表，刷新先
+移除全部旧归属，再递归清理监听、actions 和父节点及行 cells；某项失败仍继续
+其他控件。构造失败保留原异常并附加清理错误；动态构造或清理失败不提交显示
+revision，后续同一 revision 可重试。最终退出先失效并清 owner/World/网络借用，
+再清理完整控件树与背景，重复退出无副作用，不自动重试失败清理动作。
+
+两页只使用借用字体和共享白色纹理，不新增资源引用、不销毁字体/纹理/角色/
+AssetManager、网络系统或 World，退出也不发送取消/组队等网络操作。保持现有
+组队排序/关系动作、快照请求、目标 id/LEAVE 参数、交易 session/操作参数、
+报价展示、关闭/取消以及成功/失败本地化反馈，不改 25Hz、协议、存档或玩法。
+
+ClientNetworkReceiver.TradeResult 仍先更新其自己的 ClientTradeState，再把开关
+窗口动作交给 TradePanel.applyNetworkState(source)；该入口校验当前会话和原
+receiver 身份。旧接收器可以更新自己的脱离式快照，但不能误开或误关新游戏的
+交易窗口。这里只收紧玩家交易窗口的结果路由，不代表其他包处理、连接交接或
+全局网络路由已改造完成；不增加联机监听或修改服务器状态。
+
+### 第二十九批验证
+
+- `build/network-panel-targeted.log` 和 `...-recheck.log` 保留纯单元测试夹具
+  初始化诊断：补齐 Gdx.files 与共享白色纹理宿主，避免 libGDX Cell 默认值
+  初始化递归及 Label 静态背景空宿主。`...-final.log` 的新增纹理宿主切换用例
+  在完整生产改动重新编译前执行；完整重编译后由下一份日志验证。
+- `build/network-panel-targeted-complete.log`：最终生产代码新增 37 项全部通过，
+  连同 PartyPanelActionTest / ClientTradeStateTest 共 40 项通过，BUILD SUCCESSFUL，
+  1m2s。覆盖独立/重复退出、完整树和外部 detach、隐藏/重开、九种宿主变化、
+  一次世界/收发绑定、发布前装配、无参独立用法、构造失败及附加清理错误，动态
+  刷新挂载/清理失败后同 revision 重试、无累积归属、当前请求参数和本地化反馈。
+  使用实际旧 ClientNetworkReceiver 的脱离式 TradeResult 包入口验证不能开关
+  新游戏面板，并验证当前来源的结果可正常路由；没有真实 socket/联机验收。
+- `build/network-panel-regression-gl.log`：扩大定向 48 类 465 项中一项既有佣兵
+  测试失败。当前已提交的佣兵界面把候选两行共用一个 hit Actor，旧测试仍寻找
+  第二行文本自己的监听。测试改为验证两行坐标命中同一个 Actor，再走其选择/
+  取消动作；保留现有生产界面代码，不通过回退界面实现满足旧夹具。
+- `build/network-panel-regression-gl-recheck.log`：最终 48 类 465 项，463 通过、
+  2 跳过（既有佣兵独立资源环境探针）、失败/错误 0。包含组队/玩家交易服务端
+  策略、缓存、协议、物品权限及 ClientTradeState 回归；core / desktop / D2GS
+  编译链、三轮真实 MPQ/GL 与最终 ClientShutdown 全部通过，BUILD SUCCESSFUL，
+  3m24s。
+- `build/network-panel-gl/cycle-{1,2,3}-lifecycle.txt` 每轮记录
+  networkPanelActorsRetired=22、networkPanelLateClicksIgnored=10、
+  networkPanelBorrowedSystemsCleared=true、networkPanelLiveStageDraws=4、
+  offlinePartyMessagesRetiredDuringReopen=2。通过正常 Client 退出销毁两页，重复
+  dispose、保存点击、根/标签绘制、act/hit 和迟到结果均无效；四次 Stage 绘制
+  使用真实字体和共享 GL batch，但只打开离线页面，不伪装真实联机。
+  保留前批动态物品视图、快捷技能、ControlPanel、头像 HUD、雇佣兵、商店、
+  背包/金币/仓库、Escape、任务/语音、移动 UI、共享框、地图、加载交接和输入
+  的所有检查。佣兵保存点击计数为 14，与当前两行共用 hit Actor 的实现一致。
+- 三轮退出资产种类 56/56/56，首末 remaining-assets 列表无差异。最终
+  ClientShutdown result=PASS，sharedProgramsDeleted=2、sharedTexturesDeleted=2、
+  assets=0、inputCleared=true、aliasesCleared=true。只证明本次采样资源与宿主
+  退出检查通过，不代表全进程零滞留或长期压力通过；47.48–82.27ms 慢帧仍超
+  40ms 预算，人工观感/输入/听感、真实联机、Android 真机和性能验收未完成。
+
+专项复跑（无 MPQ/真实 GL/socket）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.NetworkPanelLifecycleTest `
+  --tests com.riiablo.screen.panel.PartyPanelActionTest `
+  --tests com.riiablo.engine.client.ClientTradeStateTest --no-daemon
+```
+
+扩大定向与三轮真实资源复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest `
+  --tests 'com.riiablo.engine.server.party.*Test' `
+  --tests 'com.riiablo.engine.server.trade.*Test' `
+  --tests com.riiablo.engine.client.ClientTradeStateTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/network-panel-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/network-panel-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+总体七批子系统装配整理完成，资源阶段推进至第二十九批，尚未结束。下一批
+优先 WaygatePanel 的传送/页签回调与构造回滚；CharacterPanel 等剩余控件、
+完整控件内部构造失败剩余边界、连接交接/全局网络路由、控制台/Timer/异步日志、
+跨 Act/加载中退出及长压仍待。人工、联机、Android 真机与性能验收继续单列。

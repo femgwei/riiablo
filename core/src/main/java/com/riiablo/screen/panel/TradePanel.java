@@ -1,46 +1,58 @@
 package com.riiablo.screen.panel;
 
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.client.ClientNetworkReceiver;
-import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.client.ClientTradeState;
 import com.riiablo.engine.server.trade.TradeState;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.net.packet.d2gs.TradeOperation;
 import com.riiablo.widget.Label;
-import com.riiablo.widget.LabelButton;
+import com.riiablo.screen.GameScreen;
+import com.riiablo.util.Disposal;
 
 /** Basic network-backed player trade window. */
-public class TradePanel extends Table {
+public class TradePanel extends SessionNetworkPanel {
   private static final float WIDTH = 360;
   private static final float HEIGHT = 420;
 
-  private final Table sourceOffer = new Table();
-  private final Table targetOffer = new Table();
-  private final Label status = new Label("", Riiablo.fonts.fontformal10, Riiablo.colors.grey);
-  private ClientNetworkSynchronizer synchronizer;
-  private ClientNetworkReceiver receiver;
+  private Table sourceOffer;
+  private Table targetOffer;
+  private Label status;
+  private final Array<Actor> offerActors = new Array<>();
   private long displayedRevision = Long.MIN_VALUE;
   private long displayedRequestId;
 
   public TradePanel() {
+    this(Riiablo.game);
+  }
+
+  public TradePanel(GameScreen owner) {
+    super(owner);
+    try { initialize(); }
+    catch (RuntimeException | Error failure) { constructionFailed(failure); throw failure; }
+  }
+
+  private void initialize() {
+    sourceOffer = table();
+    targetOffer = table();
+    status = label("", fonts.fontformal10, colors.grey);
     setSize(WIDTH, HEIGHT);
     setTouchable(Touchable.enabled);
-    setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal75));
+    setBackground(new PaletteIndexedColorDrawable(colors.modal75));
     pad(12);
     defaults().growX();
 
-    Label title = new Label(text("trade_title"), Riiablo.fonts.font16, Riiablo.colors.gold);
+    Label title = label(text("trade_title"), fonts.font16, colors.gold);
     title.setAlignment(Align.center);
     add(title).height(28).row();
 
-    Table offers = new Table();
+    Table offers = table();
     offers.defaults().top().pad(4);
     offers.add(offerColumn(text("party_you"), sourceOffer)).width(160).top();
     offers.add(offerColumn(text("trade_other_player"), targetOffer)).width(160).top();
@@ -50,7 +62,7 @@ public class TradePanel extends Table {
     status.setWrap(true);
     add(status).height(28).padTop(4).row();
 
-    Table actions = new Table();
+    Table actions = table();
     actions.add(actionButton(text("accept"), () -> request(TradeOperation.ACCEPT))).pad(2);
     actions.add(actionButton(text("confirm"), () -> request(TradeOperation.CONFIRM))).pad(2);
     actions.add(actionButton(text("cancel"), () -> request(TradeOperation.CANCEL))).pad(2);
@@ -60,90 +72,111 @@ public class TradePanel extends Table {
   }
 
   private Table offerColumn(String title, Table content) {
-    Table column = new Table();
-    Label header = new Label(title, Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+    Table column = table();
+    Label header = label(title, fonts.fontformal11, colors.gold);
     header.setAlignment(Align.center);
     column.add(header).height(22).row();
     column.add(content).grow().top().row();
     return column;
   }
 
-  public void setNetworkSystems(ClientNetworkSynchronizer synchronizer,
-                                ClientNetworkReceiver receiver) {
-    this.synchronizer = synchronizer;
-    this.receiver = receiver;
-    displayedRevision = Long.MIN_VALUE;
-  }
-
   @Override
   public void setVisible(boolean visible) {
+    if (visible && !isCurrentSession()) return;
     super.setVisible(visible);
     if (visible) displayedRevision = Long.MIN_VALUE;
   }
 
   @Override
   public void act(float delta) {
+    if (!isCurrentSession()) return;
     super.act(delta);
-    if (!isVisible() || receiver == null) return;
+    if (!isInteractive() || receiver == null) return;
     ClientTradeState state = receiver.tradeState();
     if (state.revision() != displayedRevision) rebuild(state);
     if (state.lastRequestId() != 0 && state.lastRequestId() != displayedRequestId) {
       displayedRequestId = state.lastRequestId();
-      status.setColor(state.lastSuccess() ? Riiablo.colors.green : Riiablo.colors.red);
+      status.setColor(state.lastSuccess() ? colors.green : colors.red);
       status.setText(state.lastSuccess() ? localizedStateLabel(state.state())
           : localizedFailure(state.lastReason()));
     }
   }
 
   private void rebuild(ClientTradeState state) {
-    displayedRevision = state.revision();
-    sourceOffer.clearChildren();
-    targetOffer.clearChildren();
+    retireOffers();
+    try { buildOffers(state); displayedRevision = state.revision(); }
+    catch (RuntimeException | Error failure) {
+      try { retireOffers(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void buildOffers(ClientTradeState state) {
     addItems(sourceOffer, state.sourceItems());
     addItems(targetOffer, state.targetItems());
-    sourceOffer.add(new Label(format("trade_gold", state.sourceGold()),
-        Riiablo.fonts.fontformal10, Riiablo.colors.gold)).left().row();
-    targetOffer.add(new Label(format("trade_gold", state.targetGold()),
-        Riiablo.fonts.fontformal10, Riiablo.colors.gold)).left().row();
+    sourceOffer.add(content(label(format("trade_gold", state.sourceGold()),
+        fonts.fontformal10, colors.gold))).left().row();
+    targetOffer.add(content(label(format("trade_gold", state.targetGold()),
+        fonts.fontformal10, colors.gold))).left().row();
     status.setText(localizedStateLabel(state.state()));
   }
 
-  private static void addItems(Table target, com.badlogic.gdx.utils.Array<ClientTradeState.Item> items) {
+  private void addItems(Table target, Array<ClientTradeState.Item> items) {
     if (items.size == 0) {
-      target.add(new Label(text("empty"), Riiablo.fonts.fontformal10, Riiablo.colors.grey)).left().row();
+      target.add(content(label(text("empty"), fonts.fontformal10, colors.grey))).left().row();
       return;
     }
     for (ClientTradeState.Item item : items) {
-      target.add(new Label("#" + item.itemId + "  " + item.width + "x" + item.height
+      target.add(content(label("#" + item.itemId + "  " + item.width + "x" + item.height
           + " @" + item.x + "," + item.y,
-          Riiablo.fonts.fontformal10, Riiablo.colors.white)).left().row();
+          fonts.fontformal10, colors.white))).left().row();
     }
   }
 
   private void request(byte operation) {
-    if (synchronizer == null || receiver == null) return;
+    if (!isInteractive() || synchronizer == null || receiver == null) return;
     ClientTradeState state = receiver.tradeState();
     long requestId = synchronizer.requestTrade(operation, -1, state.sessionId(),
         -1, 0, 0, 0);
-    status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
+    if (!isInteractive()) return;
+    status.setColor(requestId == 0 ? colors.red : colors.gold);
     status.setText(requestId == 0 ? text("trade_request_send_failed") : text("request_sent"));
     if (operation == TradeOperation.CANCEL) close();
   }
 
   private void close() {
-    if (Riiablo.game != null) Riiablo.game.setLeftPanel(null);
+    if (!isCurrentSession()) return;
+    if (owner != null) owner.setLeftPanel(null);
     else setVisible(false);
   }
 
-  private LabelButton actionButton(String text, final Runnable action) {
-    LabelButton button = new LabelButton(text, Riiablo.fonts.fontformal10, Riiablo.colors.white);
-    button.addListener(new ClickListener() {
-      @Override public void clicked(InputEvent event, float x, float y) { action.run(); }
-    });
-    return button;
+  /** Only the receiver borrowed from this panel's world may open/close this session's window. */
+  public void applyNetworkState(ClientNetworkReceiver source) {
+    if (!isCurrentSession() || receiver == null || source != receiver) return;
+    if (receiver.tradeState().active()) {
+      if (owner != null) owner.openTradePanel();
+      else setVisible(true);
+    } else if (isVisible()) close();
   }
 
-  private static String localizedStateLabel(int state) {
+  private <T extends Actor> T content(T actor) { offerActors.add(actor); return actor; }
+
+  private void retireOffers() {
+    displayedRevision = Long.MIN_VALUE;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> retireActors(offerActors));
+      if (sourceOffer != null) cleanup.run(sourceOffer::clearChildren);
+      if (targetOffer != null) cleanup.run(targetOffer::clearChildren);
+    }
+  }
+
+  @Override protected void clearView() {
+    try { retireOffers(); }
+    finally { sourceOffer = null; targetOffer = null; status = null; displayedRequestId = 0; }
+  }
+
+  private String localizedStateLabel(int state) {
     switch (state) {
       case TradeState.PENDING: return text("trade_state_pending");
       case TradeState.INVITED: return text("trade_state_invited");
@@ -155,7 +188,7 @@ public class TradePanel extends Table {
     }
   }
 
-  private static String localizedFailure(String reason) {
+  private String localizedFailure(String reason) {
     if (reason == null || reason.isEmpty()) return text("trade_request_rejected");
     switch (reason) {
       case "UNAUTHENTICATED_OR_INVALID_OPERATION": return text("trade_error_invalid_operation");
@@ -180,11 +213,4 @@ public class TradePanel extends Table {
     }
   }
 
-  private static String text(String key) {
-    return Riiablo.bundle.get(key);
-  }
-
-  private static String format(String key, Object... args) {
-    return Riiablo.bundle.format(key, args);
-  }
 }

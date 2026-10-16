@@ -226,7 +226,11 @@ class MercenaryPanelsLifecycleTest extends RiiabloTest {
 
   @Test void rosterSecondLineSelectsSameCandidateAndNoReturnsToList() throws Exception {
     HireMercenaryPanel panel = roster(); character.getMerc().seed = 7; HirelingOffer offer = offer(1); panel.presentOffers(Array.with(offer));
-    action(rows(panel).getChildren().get(2)).clicked(null, 0, 0); assertSame(offer, get(panel, "selected")); assertTrue((Boolean) get(panel, "confirming"));
+    Actor entry = rows(panel).getChildren().get(1), description = rows(panel).getChildren().get(2);
+    Actor firstHit = rows(panel).hit(entry.getX() + 1, entry.getY() + 1, true);
+    Actor secondHit = rows(panel).hit(description.getX() + 1, description.getY() + 1, true);
+    assertNotNull(firstHit); assertSame(firstHit, secondHit);
+    action(secondHit).clicked(null, 0, 0); assertSame(offer, get(panel, "selected")); assertTrue((Boolean) get(panel, "confirming"));
     action((Actor) get(panel, "no")).clicked(null, 0, 0); assertFalse((Boolean) get(panel, "confirming")); assertEquals(3, rows(panel).getChildren().size);
   }
 

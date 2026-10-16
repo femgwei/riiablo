@@ -820,11 +820,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     TradeResult result = (TradeResult) packet.data(new TradeResult());
     tradeState.apply(result);
     if (Riiablo.game != null && Riiablo.game.tradePanel != null) {
-      if (tradeState.active()) {
-        Riiablo.game.openTradePanel();
-      } else if (Riiablo.game.tradePanel.isVisible()) {
-        Riiablo.game.setLeftPanel(null);
-      }
+      Riiablo.game.tradePanel.applyNetworkState(this);
     }
     Gdx.app.log(TAG, "[TRADE] request=" + result.requestId()
         + " operation=" + result.operation() + " success=" + result.success()

@@ -439,11 +439,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     questsPanel.setPosition(0, stage.getHeight() - questsPanel.getHeight());
     stage.addActor(questsPanel);
 
-    partyPanel = new PartyPanel();
+    partyPanel = new PartyPanel(this);
     partyPanel.setPosition(0, stage.getHeight() - partyPanel.getHeight());
     stage.addActor(partyPanel);
 
-    tradePanel = new TradePanel();
+    tradePanel = new TradePanel(this);
     tradePanel.setPosition(0, stage.getHeight() - tradePanel.getHeight());
     stage.addActor(tradePanel);
 
@@ -833,6 +833,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hireMercenaryPanel.bindWorld(engine);
     mercenaryHud.bindWorld(engine);
     controlPanel.bindWorld(engine);
+    partyPanel.bindWorld(engine);
+    tradePanel.bindWorld(engine);
     engine.inject(inventoryPanel);
     engine.inject(hirelingPanel);
     engine.inject(controlPanel);
