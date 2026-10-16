@@ -22,8 +22,8 @@
 
 ## 可复核工作量（按提交核销，不代表功能完成率）
 
-本清单已核销主线提交7项：`185ae45`、`4d45674`、`606dce4`、`615b204`、`d68bf6a`、`f553315`、`5be5503`。
-主线101项中剩余94项待逐项核销；已有移植记录但缺验收链的仍计入剩余。
+本清单已核销主线提交8项：`185ae45`、`4d45674`、`606dce4`、`615b204`、`d68bf6a`、`f553315`、`5be5503`、`b634ef7`。
+主线101项中剩余93项待逐项核销；已有移植记录但缺验收链的仍计入剩余。
 分支17项已完成适用性审查。加速度执行、game级唯一掉落去重为明确保留的能力缺口，
 不因相关增量提交已分类而宣称修复。后续每核销一项更新此计数及对应索引。
 
@@ -138,7 +138,25 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
   与既有`PvpCombatRulesTest`八项、`NecromancerCurseIntegrationTest`十八项共31项通过，
   失败/错误/跳过0；日志`core/build/upstream-owner-01.log`，
   XML `.gradle/path-port/upstream-owner-01/core/test-results/pathPortTest`。
-- `b634ef7`：目标列表slot8。
+- `b634ef7`：已移植普通目标扫描的slot 8适用语义，已核销。
+  已读AiUtil.cpp完整函数相关扫描段及Targets.cpp注册/删除逻辑，核对全部slot8注册调用。
+  slot8独立于八个player组及node9，NpcBarb、已获救Wussie、游荡rogue2等使用它。
+  原Java扫描虽然订阅全部Position，但资格筛选排除了这类友军怪物，不能据全订阅就算等价。
+  `NativeTargetNode.ALLIED/isNode8`新增独立成员关系：不依附player slot、不占node9、detach立即退出；
+  `ServerEntityFactory.createMonster`对NpcBarb行建立该成员关系（提前到分配时，避免首个扫描遗漏）。
+  普通`AI.findNearestOrdinaryEnemy/isValidOrdinaryEnemyTarget`纳入slot8，并保留
+  玩家组同距优先、slot8头插入同距顺序、严格aiDist边界、同Act/地图/存活等现有资格检查。
+  `CombatOwnership`按显式slot8成员关系识别友军，确保被选中后战斗关系门禁也允许敌方攻击；
+  不把所有Align=1或NPC一概加入候选。BaalCrab使用AiBaal独立评分，不因本提交重写。
+  `Slot8TargetTest`覆盖无player时扫描、player组同距优先、slot8同距顺序、
+  更近但未注册的友军排除、detach/尸体/距离边界、玩家组与node9独立关系及阵营门禁。
+  `Slot8FactoryTest`使用实际1.10f数据和生产ServerEntityFactory验证NpcBarb行分配后的登记。
+  本批只移植目标扫描修正，不新增Wussie救援AI或随机游荡rogue2生成器；
+  对这些尚未投影的生命周期，不按名称自动注册（尤其不把未获救Wussie提前放出）。
+  不宣称复现整个原生视觉/v66、寻路或全部特殊NPC AI。
+  验证日志`core/build/upstream-slot8-01.log`，XML
+  `.gradle/path-port/upstream-slot8-01/core/test-results/pathPortTest`。
+  三项slot8回归加owner五项、PvP八项、player slots九项，共25项/五类通过，失败/错误/跳过0。
 - `cce700b`：MonsterMsg标志检查。
 - `6e58e94`、`996f2f3`：无used skill与monster fallthrough的attack-rate规则。
 - `ae9fe6b`、`ae15c97`：velocity modifier类型分支、GetHit与block模式判断。
@@ -225,7 +243,7 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `5be5503` Follow the target's monster owner chain in sub_6FCBD900 — 已移植共享owner解析及六处接线，31项回归通过；见第2组
 - `a145e73` Clamp path velocity only when it exceeds the maximum — 已有独立实现/审查；生产适用性待核销
 - `9fd325c` Fix CRC32_Compute — 待逐项核销；不能据此断言当前代码缺失
-- `b634ef7` Scan target list slot 8 in sub_6FCF2110 — 待逐项核销；不能据此断言当前代码缺失
+- `b634ef7` Scan target list slot 8 in sub_6FCF2110 — 已移植显式slot8成员/普通扫描及NpcBarb登记；见第2组
 - `d68bf6a` Write packet 0x68's a6 as a dword at offset 0x0B — 不适用EntitySync协议；见第6组
 - `959db29` Fix the per-step check for a path toward an item or object — 已有独立实现/审查；生产适用性待核销
 - `eeb3362` Record one warp attempt per call in CLIENTS_NotifyWarpAttempt — 待逐项核销；不能据此断言当前代码缺失

@@ -19,6 +19,7 @@ gradle.projectsEvaluated {
       include 'com/d2moo/common/path/**', 'com/d2moo/common/collision/**', 'com/riiablo/RiiabloTest.java'
       include 'com/d2moo/testutil/**'
       include '**/PvpCombatRulesTest.java', '**/NecromancerCurseIntegrationTest.java'
+      include '**/NativePlayerTargetSlotsTest.java'
       ['UnitCollisionGridTest', 'DynamicUnitCollisionSystemTest', 'PathfinderTest',
        'PathfinderRecoveryTargetTest', 'PathfinderRoomBoundaryTest', 'PlayerGroundPathTest',
        'NativeSeamCollisionTest', 'ObjectCollisionUpdaterTest', 'WhirlwindCollisionTest',

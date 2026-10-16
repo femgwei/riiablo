@@ -67,7 +67,7 @@ class CombatOwnershipTest {
     return system;
   }
 
-  private void wire(World w, PartyManager parties, Object system) throws Exception {
+  static void wire(World w, PartyManager parties, Object system) throws Exception {
     for (Class<?> c = system.getClass(); c != null; c = c.getSuperclass()) for (Field f : c.getDeclaredFields()) {
       f.setAccessible(true);
       if (f.getType() == ComponentMapper.class) {

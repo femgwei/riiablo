@@ -60,7 +60,7 @@ MonStats String空值及Accel有符号int与增量修正等价，原生固定409
 Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetworkReceiver收发链，
 并搜索core/src/main、server、D2MOO_JAVA/src无对应原版报文结构。详见清单第2/6组。
 本批只改审查记录，没有生产代码变更，故未重复运行上一批测试。
-当前主线已核销7/101；剩余94项待逐项核销；分支17项适用性审查已完成；
+当前主线已核销8/101；剩余93项待逐项核销；分支17项适用性审查已完成；
 另保留2项能力缺口（加速度执行/game级唯一掉落去重）。用户要求每完成一项汇报剩余工作量。
 `5be5503`已修复：生产`party/CombatOwnership`保留源方一层（含missile）、
 目标monster owner链迭代，读取minionOwnerId/merc/summon owner，缺owner/自指终止，畸形环拒绝。
@@ -70,7 +70,14 @@ Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetwork
 另跑PvP八项/诅咒十八项，共31项通过，失败/错误/跳过0；非完整战斗tick/非原DLL差分。
 日志`core/build/upstream-owner-01.log`，XML `.gradle/path-port/upstream-owner-01/core/test-results/pathPortTest`。
 其他聊天的Trap-Melee/Missile/Nova工厂注册及相关文件已由其独立提交，勿覆盖；本轮仅修改AI目标资格相关hunk。
-下一步核销 `b634ef7` / `cce700b`（diff已读）。
+`b634ef7`已移植：NativeTargetNode.ALLIED表示独立slot8，普通AI扫描纳入显式成员，
+同距player优先/slot8头插入优先、严格aiDist边界、同Act检查，CombatOwnership承认该成员的友军阵营。
+ServerEntityFactory对真实NpcBarb行登记；未把所有友军/NPC一概加入，未扩展Wussie救援AI或rogue2生成器。
+Slot8FactoryTest验证实际1.10f行经生产工厂分配；Slot8TargetTest验证扫描/顺序/脱离/尸体/距离边界。
+加已有owner/PvP/player slots，共25项/五类通过，失败/错误/跳过0；
+日志`core/build/upstream-slot8-01.log`，XML `.gradle/path-port/upstream-slot8-01/core/test-results/pathPortTest`。
+本批目标扫描增量不改Baal专用评分，不声称完整原生视觉/寻路/NPC AI迁移。
+下一步核销 `cce700b`（diff已读），再进入动画速度四项。
 追踪Java生产owner链和target slots、summoner状态消息。只修确认差异，不扩展完整寻路迁移。
 
 ## VisitorFramework九项源码索引（已读）

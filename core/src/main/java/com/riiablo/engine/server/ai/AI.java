@@ -906,7 +906,16 @@ public abstract class AI implements Interactable.Interactor {
       if (isValidOrdinaryEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = nativeAiDistance(entityPos, targetPos);
-        if (dst <= maxSearchDist && dst < best) {
+        com.riiablo.engine.server.component.NativeTargetNode node = Riiablo.engine
+            .getMapper(com.riiablo.engine.server.component.NativeTargetNode.class).get(ent);
+        com.riiablo.engine.server.component.NativeTargetNode previous = targetId < 0 ? null : Riiablo.engine
+            .getMapper(com.riiablo.engine.server.component.NativeTargetNode.class).get(targetId);
+        boolean slot8 = node != null && node.isNode8();
+        // Native scans player groups first, then head-inserted slot 8, using strict <.
+        boolean earlier = previous != null && previous.isNode8()
+            && (!slot8 || node.order() > previous.order());
+        if (dst <= maxSearchDist && (!slot8 || dst < maxSearchDist)
+            && (dst < best || dst == best && earlier)) {
           best = dst;
           targetId = ent;
         }
@@ -965,6 +974,18 @@ public abstract class AI implements Interactable.Interactor {
     boolean targetFriendly = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId) || mPlayer.has(targetOwner);
     Monster candidate = mMonster.has(targetId) ? mMonster.get(targetId) : null;
+    com.riiablo.engine.server.component.NativeTargetNode targetNode = Riiablo.engine
+        .getMapper(com.riiablo.engine.server.component.NativeTargetNode.class).get(targetId);
+    boolean targetSlot8 = targetNode != null && targetNode.isNode8()
+        && candidate != null && !mCorpse.has(targetId)
+        && monster != null && monster.monstats != null && monster.monstats.Align == 0
+        && !sourceConverted && sourcePet == null && !mMercenary.has(entityId);
+    if (targetSlot8 && mMapWrapper.has(entityId) && mMapWrapper.has(targetId)) {
+      Map.Zone sourceZone = mMapWrapper.get(entityId).zone;
+      Map.Zone targetZone = mMapWrapper.get(targetId).zone;
+      if (sourceZone != null && targetZone != null && sourceZone.level != null
+          && targetZone.level != null && sourceZone.level.Act != targetZone.level.Act) return false;
+    }
     boolean targetHostileMonster = candidate != null && !targetFriendly
         && !mCorpse.has(targetId)
         && candidate.monstats != null && candidate.monstats.Align == 0
@@ -984,7 +1005,7 @@ public abstract class AI implements Interactable.Interactor {
     if (!sourceConverted && !wildernessGuide) {
       if (sourcePet != null
           ? !(targetHostileMonster || targetHostilePlayerUnit)
-          : !(targetFriendly || candidate != null && candidate.converted
+          : !(targetFriendly || targetSlot8 || candidate != null && candidate.converted
               || nativeSpecialTarget && targetHostileMonster)) return false;
     }
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null

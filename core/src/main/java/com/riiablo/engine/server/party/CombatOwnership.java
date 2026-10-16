@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SummonedPet;
 
@@ -55,9 +56,11 @@ public final class CombatOwnership {
   }
 
   private static boolean aligned(World world, int resolved, int original, boolean fallback) {
-    if (resolved == original) return fallback;
+    NativeTargetNode node = world.getMapper(NativeTargetNode.class).get(resolved);
+    if (resolved == original) return fallback || node != null && node.isNode8();
     Monster monster = world.getMapper(Monster.class).get(resolved);
     return world.getMapper(Player.class).has(resolved)
+        || node != null && node.isNode8()
         || world.getMapper(Mercenary.class).has(resolved)
         || world.getMapper(SummonedPet.class).has(resolved)
         || monster != null && monster.converted;

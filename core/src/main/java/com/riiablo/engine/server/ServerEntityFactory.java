@@ -518,6 +518,11 @@ public class ServerEntityFactory extends EntityFactory {
     // the generated boss and clients may resolve the wrong level at a boundary.
     mMapWrapper.create(id).set(map, zone);
     monster.setSpawnAnchor(zone, x, y);
+    // AITHINK_Fn127_NpcBarb joins the independent target list at slot 8.
+    if ("NpcBarb".equals(monstats.AI)) {
+      NativeTargetNodes.get(world, id).insert(
+          com.riiablo.engine.server.component.NativeTargetNode.ALLIED, -1);
+    }
     // D2Common UNITS_GetBaseVelocity always uses MonStats.Velocity for
     // monsters. MonStats.Run only participates in run-animation-rate table
     // generation; treating it as displacement speed makes animation and
