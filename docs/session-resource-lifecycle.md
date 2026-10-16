@@ -1183,3 +1183,39 @@ showFill=false 仍会分配；本批没有修改该边界，现有三张面板�
   25Hz sim_tick（ticks 6→36）与 Throw 战斗（life 1000→992）均通过，三轮共享框
   仍为 0→12→0，三轮最终 ClientShutdown 共享 GL 释放通过；BUILD SUCCESSFUL，
   2m18s。日志仍报告 47.64–89.03ms 慢帧，超出 40ms 预算，不作性能验收。
+
+## 第十五批：ItemGrid/VendorGrid/BeltGrid 私有纹理
+
+本批收口上一批留下的私有 `fill` Texture。ItemGrid 现在实现幂等 Disposable，使用
+统一的 PanelTextures 上传路径，退出时禁用输入、解除网格及 StoredItem 监听、清理
+子项、脱离 Stage，再释放自己的填充纹理；不销毁 ItemData、物品 wrapper 或借用的
+颜色/贴图。退出后的 draw、点击、populate 和 syncItems 均不再访问已释放状态。
+
+InventoryPanel、StashPanel、CubePanel 显式持有并释放各自网格；VendorPanel 逐个
+释放四个 VendorGrid。VendorGrid 退出时先清除购买回调，避免旧网格继续触发交易。
+BeltGrid 同样纳入归属：ControlPanel 释放它的腰带网格，并解除 Keys.Belt 的按键
+分配监听；监听回调在退出后不会更新旧标签。腰带背景仍借用 ControlPanel 资产，
+只清引用，不重复释放借用纹理。
+
+真实会话探针改为递归清点 Inventory/Stash/Cube/Vendor/Control 下的全部网格，
+本批每轮验证 11 张私有 GL 纹理（3 张既有面板纹理、8 个 ItemGrid/VendorGrid/
+BeltGrid 填充纹理）存活并在 Client 退出后删除；保留原地图、按钮、共享框、表现
+资源、输入、加载页和最终 GL 检查。
+
+### 第十五批验证
+
+- 首次专项 `build/grid-resources-focused.log` 暴露的失败只是测试夹具对未初始化
+  Actor listener 数组调用真实 dispose 的 NPE，不是生产路径；移除该不完整 mock
+  断言并保留面板实际所有权验证。
+- `build/grid-resources-focused-03.log`：30 项专项、三端编译通过；面板资源及
+  共享框回归无失败。
+- `build/grid-resources-regression.log`：13 类 154 项，失败/错误 0，跳过 2 项；
+  包含全部 panel 测试、共享框生命周期、GameScreen 装配与菜单页回归。
+- `build/grid-resources-offscreen-02.log`：同一 Client 三轮真实会话通过，每轮
+  `ownedPanelTexturesDeleted=11`、共享框 `0→12→0`、NPC 菜单 10 节点退休，
+  最终 ClientShutdown 通过；BUILD SUCCESSFUL，1m59s。该探针仍记录慢帧，未作
+  性能或人工画面验收。
+
+本批仍不覆盖网格之外的长期压力、连接交接、控制台/Timer/异步日志、跨 Act/加载中
+退出、人工输入声音联机存档验收；资源阶段还需继续检查其他私有 GL Actor 和完整
+构造失败回滚。

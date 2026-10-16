@@ -432,10 +432,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(() -> setVisible(false));
       cleanup.run(this::clearListeners);
-      cleanup.run(this::clearChildren);
+      if (tabs != null) for (Tab tab : tabs) {
+        if (tab != null) cleanup.dispose(tab.grid);
+      }
       cleanup.dispose(btnBuy); cleanup.dispose(btnSell); cleanup.dispose(btnRepair);
       cleanup.dispose(btnRepairAll); cleanup.dispose(btnExit);
       if (btnBlank != null) for (Button button : btnBlank) cleanup.dispose(button);
+      cleanup.run(this::clearChildren);
       if (purchasePromptBackground != null) purchasePromptBackground.getStyle().background = null;
       cleanup.dispose(purchasePromptBorder);
       cleanup.dispose(references);

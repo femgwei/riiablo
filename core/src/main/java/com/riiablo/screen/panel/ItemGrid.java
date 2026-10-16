@@ -3,7 +3,6 @@ package com.riiablo.screen.panel;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.MathUtils;
@@ -14,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.utils.SnapshotArray;
 
@@ -27,8 +27,9 @@ import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemRequirements;
 import com.riiablo.save.ItemData;
+import com.riiablo.util.Disposal;
 
-public class ItemGrid extends Group {
+public class ItemGrid extends Group implements Disposable {
   private static final String TAG = "ItemGrid";
   final int width;
   final int height;
@@ -56,6 +57,7 @@ public class ItemGrid extends Group {
   Vector2 itemSize = new Vector2();
 
   protected AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
+  private boolean disposed;
 
   public ItemGrid(Inventory.Entry inv) {
     this(inv, null);
@@ -76,12 +78,6 @@ public class ItemGrid extends Group {
     this.boxHeight = boxHeight;
     this.gridListener = gridListener;
 
-    Pixmap solidColorPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-    solidColorPixmap.setColor(0.0f, 0.0f, 0.0f, 1.0f);
-    solidColorPixmap.fill();
-    fill = new Texture(solidColorPixmap);
-    solidColorPixmap.dispose();
-
     backgroundColorR = Riiablo.colors.invRed;
     backgroundColorG = Riiablo.colors.invGreen;
     backgroundColorB = Riiablo.colors.invBlue;
@@ -92,6 +88,7 @@ public class ItemGrid extends Group {
     addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (disposed) return;
         if (event.isHandled()) return;
         ItemGrid.this.mouseMoved();
         Item cursor = itemData.getCursor();
@@ -122,9 +119,12 @@ public class ItemGrid extends Group {
         }
       }
     });
+    // Last fallible step; PanelTextures releases upload pixels even if texture creation fails.
+    fill = PanelTextures.solid(Color.BLACK);
   }
 
   public void populate(Array<Item> items) {
+    if (disposed) return;
     for (Item item : items) {
       addItem(item);
     }
@@ -137,6 +137,7 @@ public class ItemGrid extends Group {
    * handlers to add or remove actors.
    */
   public void syncItems(Array<Item> items) {
+    if (disposed) return;
     SnapshotArray<Actor> children = getChildren();
     Actor[] snapshot = children.begin();
     for (int i = children.size - 1; i >= 0; i--) {
@@ -232,6 +233,7 @@ public class ItemGrid extends Group {
   }
 
   protected void mouseMoved() {
+    if (disposed) return;
     swap = null;
     blocked = true;
     hits.clear();
@@ -316,6 +318,7 @@ public class ItemGrid extends Group {
 
   @Override
   protected void drawChildren(Batch batch, float parentAlpha) {
+    if (disposed) return;
     super.drawChildren(batch, parentAlpha);
     mouseMoved();
     Item cursor = itemData.getCursor();
@@ -351,6 +354,29 @@ public class ItemGrid extends Group {
     }
   }
 
+  public boolean isDisposed() { return disposed; }
+
+  @Override public void draw(Batch batch, float parentAlpha) {
+    if (!disposed) super.draw(batch, parentAlpha);
+  }
+
+  /** Releases only this grid's private fill, never ItemData or borrowed item graphics. */
+  @Override
+  public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    swap = null;
+    hits.clear();
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      for (Actor child : getChildren()) cleanup.run(child::clearListeners);
+      cleanup.run(this::clearChildren);
+      cleanup.run(this::remove);
+      cleanup.dispose(fill);
+    }
+  }
+
   public interface GridListener {
     void onDrop(int x, int y);
     boolean onPickup(int i);
@@ -379,6 +405,7 @@ public class ItemGrid extends Group {
       addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (disposed) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, false)) removeActor(StoredItem.this);
             event.handle();
@@ -395,6 +422,7 @@ public class ItemGrid extends Group {
       addListener(new ClickListener(Input.Buttons.RIGHT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (disposed) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, true)) removeActor(StoredItem.this);
             event.handle();
@@ -451,6 +479,7 @@ public class ItemGrid extends Group {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+      if (disposed) return;
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       boolean requirementsMet = ItemRequirements.check(item, Riiablo.charData).usable();
       Color background = !requirementsMet

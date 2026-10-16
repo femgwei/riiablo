@@ -28,6 +28,7 @@ import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
+import com.riiablo.util.Disposal;
 
 public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "StashPanel";
@@ -44,6 +45,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
   Button btnExit;
 
   final Inventory.Entry inventory;
+  ItemGrid grid;
+  private boolean disposed;
 
   @Wire(name = "itemController")
   protected ItemController itemController;
@@ -74,7 +77,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     inventory = Riiablo.files.inventory.get("Big Bank Page 1");
     final ItemData itemData = Riiablo.charData.getItems();
 
-    ItemGrid grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this);
     IntArray stashItems = itemData.getStore(StoreLoc.STASH);
     Array<Item> items = itemData.toItemArray(stashItems);
     grid.populate(items);
@@ -131,11 +134,16 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
   @Override
   public void dispose() {
-    btnExit.dispose();
-    Riiablo.assets.unload(TradeStashDescriptor.fileName);
-    Riiablo.assets.unload(goldcoinbtnDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
-    goldDialog.dispose();
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.dispose(btnExit);
+      cleanup.dispose(grid);
+      cleanup.run(() -> Riiablo.assets.unload(TradeStashDescriptor.fileName));
+      cleanup.run(() -> Riiablo.assets.unload(goldcoinbtnDescriptor.fileName));
+      cleanup.run(() -> Riiablo.assets.unload(buysellbtnDescriptor.fileName));
+      cleanup.dispose(goldDialog);
+    }
   }
 
   @Override

@@ -68,6 +68,7 @@ class PanelResourceLifecycleTest {
       verify(panel.btnExit).dispose();
       verify(panel.btnDropGold).dispose();
       verify(panel.goldDialog).dispose();
+      verify(panel.grid).dispose();
       verifyNoInteractions(Riiablo.assets);
     } finally { Riiablo.assets = previous; }
   }
@@ -151,6 +152,7 @@ class PanelResourceLifecycleTest {
     panel.btnExit = mock(Button.class);
     panel.btnDropGold = mock(Button.class);
     panel.goldDialog = mock(GoldAmountDialog.class);
+    set(panel, "grid", mock(ItemGrid.class));
     return panel;
   }
 

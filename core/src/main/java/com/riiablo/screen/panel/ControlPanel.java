@@ -1034,6 +1034,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         cleanup.dispose(btnRun);
         cleanup.dispose(btnMenu);
         cleanup.dispose(minipanelWidget);
+        cleanup.dispose(belt);
         cleanup.dispose(background);
         cleanup.run(() -> assets.unload(runButtonDescriptor.fileName));
         cleanup.run(() -> assets.unload(minipanelDescriptor.fileName));

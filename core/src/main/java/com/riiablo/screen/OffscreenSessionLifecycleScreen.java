@@ -5,6 +5,8 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Keys;
@@ -184,8 +186,16 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     Texture fill = field(screen.inventoryPanel, "fill", Texture.class);
     Object controlWidget = field(screen.controlPanel, "controlWidget", Object.class);
     Object experienceWidget = field(screen.controlPanel, "experienceWidget", Object.class);
-    Texture[] ownedPanelTextures = {fill, field(controlWidget, "background", Texture.class),
-        field(experienceWidget, "whitePixelTexture", Texture.class)};
+    Array<Texture> ownedPanelTextures = new Array<>();
+    ownedPanelTextures.add(fill);
+    ownedPanelTextures.add(field(controlWidget, "background", Texture.class));
+    ownedPanelTextures.add(field(experienceWidget, "whitePixelTexture", Texture.class));
+    collectGridTextures(screen.inventoryPanel, ownedPanelTextures);
+    collectGridTextures(screen.stashPanel, ownedPanelTextures);
+    collectGridTextures(screen.cubePanel, ownedPanelTextures);
+    collectGridTextures(screen.vendorPanel, ownedPanelTextures);
+    collectGridTextures(screen.controlPanel, ownedPanelTextures);
+    require(ownedPanelTextures.size == 11, "all eight grid textures plus three panel textures sampled");
     Array<Integer> panelHandles = new Array<>();
     for (Texture texture : ownedPanelTextures) {
       require(texture != null && Gdx.gl.glIsTexture(texture.getTextureObjectHandle()),
@@ -308,6 +318,15 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     if (!condition) throw new IllegalStateException("Session lifecycle: " + message);
   }
 
+  private static void collectGridTextures(Actor actor, Array<Texture> textures) {
+    if (actor instanceof com.riiablo.screen.panel.ItemGrid) {
+      textures.add(field(actor, "fill", Texture.class));
+    }
+    if (actor instanceof Group) {
+      for (Actor child : ((Group) actor).getChildren()) collectGridTextures(child, textures);
+    }
+  }
+
   @SuppressWarnings("unchecked") private static void collectMenus(com.riiablo.widget.NpcMenu menu,
       Array<com.riiablo.widget.NpcMenu> menus) {
     require(!menu.isDisposed(), "live NPC menu");
@@ -323,7 +342,13 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private static <T> T field(Object owner, String name, Class<T> type) {
     require(owner != null, "missing panel owner for " + name);
     try {
-      java.lang.reflect.Field field = owner.getClass().getDeclaredField(name);
+      Class<?> declaring = owner.getClass();
+      while (declaring != null) {
+        try { declaring.getDeclaredField(name); break; }
+        catch (NoSuchFieldException missing) { declaring = declaring.getSuperclass(); }
+      }
+      if (declaring == null) throw new NoSuchFieldException(name);
+      java.lang.reflect.Field field = declaring.getDeclaredField(name);
       field.setAccessible(true);
       return type.cast(field.get(owner));
     } catch (ReflectiveOperationException failure) {

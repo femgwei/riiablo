@@ -368,6 +368,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       cleanup.dispose(btnExit);
       cleanup.dispose(btnDropGold);
       cleanup.dispose(goldDialog);
+      cleanup.dispose(grid);
       cleanup.dispose(fill);
       for (AssetDescriptor asset : new AssetDescriptor[] {
           invcharDescriptor, invcharTabDescriptor, buysellbtnDescriptor, goldcoinbtnDescriptor,

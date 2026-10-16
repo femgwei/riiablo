@@ -14,6 +14,7 @@ import com.riiablo.item.Item;
 import com.riiablo.item.Type;
 import com.riiablo.key.MappedKey;
 import com.riiablo.widget.Label;
+import com.riiablo.util.Disposal;
 
 /**
  * FIXME: creating BeltGrid without setHidden(true) in constructor causes items to appear starting
@@ -24,6 +25,7 @@ public class BeltGrid extends ItemGrid {
 
   final Rectangle visibleArea = new Rectangle();
   final Label[] hotkeys;
+  private final MappedKey.AssignmentListener[] assignments;
 
   TextureRegion background;
   boolean hidden;
@@ -36,16 +38,20 @@ public class BeltGrid extends ItemGrid {
     setHidden(true);
 
     hotkeys = new Label[width];
+    assignments = new MappedKey.AssignmentListener[width];
+    try {
     for (int i = 0; i < width; i++) {
       final Label hotkey = hotkeys[i] = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold);
-      Keys.Belt[i].addAssignmentListener(new MappedKey.AssignmentListener() {
+      MappedKey.AssignmentListener listener = assignments[i] = new MappedKey.AssignmentListener() {
         @Override
         public void onAssigned(MappedKey key, int assignment, int keycode) {
+          if (isDisposed()) return;
           hotkey.setText(Input.Keys.toString(key.getPrimaryAssignment()));
         }
 
         @Override
         public void onUnassigned(MappedKey key, int assignment, int keycode) {
+          if (isDisposed()) return;
           hotkey.setText("");
         }
 
@@ -53,7 +59,26 @@ public class BeltGrid extends ItemGrid {
         public void onFirstAssignment(MappedKey key, int assignment, int keycode) {
           onAssigned(key, assignment, keycode);
         }
-      });
+      };
+      Keys.Belt[i].addAssignmentListener(listener);
+    }
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  @Override public void dispose() {
+    if (isDisposed()) return;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(super::dispose);
+      for (int i = 0; i < assignments.length; i++) {
+        final int slot = i;
+        cleanup.run(() -> Keys.Belt[slot].removeAssignmentListener(assignments[slot]));
+        assignments[i] = null;
+      }
+      background = null; // borrowed from ControlPanel
     }
   }
 
@@ -118,6 +143,7 @@ public class BeltGrid extends ItemGrid {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (isDisposed()) return;
     setHidden(!clickListener.isOver());
     if (!hidden) {
       float x = getX() - 1;

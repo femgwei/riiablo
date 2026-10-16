@@ -21,6 +21,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
+import com.riiablo.util.Disposal;
 
 public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "CubePanel";
@@ -35,6 +36,8 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
   Button btnExit;
 
   final Inventory.Entry inventory;
+  ItemGrid grid;
+  private boolean disposed;
 
   @Wire(name = "itemController")
   protected ItemController itemController;
@@ -80,7 +83,7 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
     inventory = Riiablo.files.inventory.get("Transmogrify Box Page 1");
     final ItemData itemData = Riiablo.charData.getItems();
 
-    ItemGrid grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this);
     IntArray cubeItems = itemData.getStore(StoreLoc.CUBE);
     Array<Item> items = itemData.toItemArray(cubeItems);
     grid.populate(items);
@@ -94,10 +97,15 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
 
   @Override
   public void dispose() {
-    btnExit.dispose();
-    Riiablo.assets.unload(supertransmogrifierDescriptor.fileName);
-    Riiablo.assets.unload(miniconvertDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.dispose(btnExit);
+      cleanup.dispose(grid);
+      cleanup.run(() -> Riiablo.assets.unload(supertransmogrifierDescriptor.fileName));
+      cleanup.run(() -> Riiablo.assets.unload(miniconvertDescriptor.fileName));
+      cleanup.run(() -> Riiablo.assets.unload(buysellbtnDescriptor.fileName));
+    }
   }
 
   @Override

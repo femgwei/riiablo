@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第十五批：网格私有纹理
+
+- [x] ItemGrid 实现幂等 Disposable，统一创建私有 fill Texture；退出禁用输入、
+  清理 StoredItem 监听与子项、移除 Stage 后释放纹理，退出后 draw/click/sync 不再
+  访问旧状态。VendorGrid 清除购买回调。
+- [x] Inventory/Stash/Cube/Vendor 显式持有并释放全部网格；ControlPanel 纳入
+  BeltGrid，解除 Keys.Belt 分配监听并只断开借用的背景纹理引用。
+- [x] 专项 30 项与三端编译通过；扩大定向 154 项、13 类，失败/错误 0、跳过 2。
+  真实 Client 三轮递归检查 11 张私有网格/面板纹理，每轮全部删除，共享框仍
+  0→12→0，ClientShutdown 通过。详见 session-resource-lifecycle.md。
+- 待续：其他私有 GL Actor、完整构造失败回滚、连接交接、控制台/Timer/异步日志、
+  跨 Act/加载中退出、长期压力及人工/性能验收仍待；不宣称资源阶段结束。
+
 ## 2026-10-16 会话资源阶段第十四批：共享框与 NPC 菜单树
 
 - [x] BorderedPaletteIndexedDrawable 捕获原资产宿主并显式配对共享框引用，退出断开

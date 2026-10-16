@@ -35,11 +35,18 @@ public class VendorGrid extends ItemGrid {
   }
 
   public void setPurchaseListener(PurchaseListener listener) {
+    if (isDisposed()) return;
     this.purchaseListener = listener;
+  }
+
+  @Override public void dispose() {
+    purchaseListener = null;
+    super.dispose();
   }
 
   @Override
   protected boolean onStoredItemClicked(Item item, boolean direct) {
+    if (isDisposed()) return false;
     Item cursor = itemData.getCursor();
     if (!direct && cursor != null) {
       onCursorDrop(cursor);
@@ -52,6 +59,7 @@ public class VendorGrid extends ItemGrid {
 
   @Override
   protected boolean onCursorDrop(Item item) {
+    if (isDisposed()) return false;
     return purchaseListener != null && purchaseListener.onSell(item);
   }
 
