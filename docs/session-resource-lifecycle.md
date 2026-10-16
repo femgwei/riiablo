@@ -1090,3 +1090,96 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 总体七批子系统装配完成，资源第十三批完成。第十四批处理共享框的 NPC 菜单树、
 对话、角色/商店面板所有权；之后继续连接交接其余边界、控制台/Timer/异步日志、
 完整构造失败回滚、跨 Act/加载中退出与长期压力，人工与性能验收继续保留。
+
+## 第十四批：共享框与 NPC 菜单树归属
+
+本批收口 MENU/boxpieces.DC6，覆盖 BorderedPaletteIndexedDrawable、NpcMenu、
+NpcDialogBox、CharacterPanel 与 VendorPanel 的全部生产创建点。不合并每个控件
+独立持有的引用，也不改变 NPC 选项、任务/交易规则、文本滚动、边框布局或原版文件。
+
+BorderedPaletteIndexedDrawable 捕获原 AssetManager，以 AssetReferenceScope 配对
+每次成功请求；幂等退出先断开缓存 DC6、regions 和借用的白纹理引用，再归还资产。
+两种 draw 在退出后均无动作，不销毁宿主 white 或其他消费者使用中的共享贴图。
+
+NPC 根菜单由 MenuManager 工厂创建并登记实体账本，子菜单在填充选项之前登记到
+父菜单；不依赖 Stage 递归销毁，因为未显示的子菜单从未进入 Stage。普通导航、
+隐藏与关闭保留整棵树；根替换、MenuWrapper 移除、实体删除及 World 退出显式
+释放整棵树。首次 process 前删除也会收回，同帧移除/重建不误释放新菜单；工厂
+安装组件失败立即回滚。菜单清理解除按钮监听、Stage 和父子归属，异常/Error 不
+跳过兄弟或其他根；销毁不是玩法 cancel，不触发已删除实体的交互计数修改。
+
+DialogManager 接管对话的替换、显式关闭和 World 最终退出；同实例不重复安装，
+销毁后传入的新对话立即释放。NpcDialogBox 清理自己的 Audio.Instance，而非停止
+整个共享声音；停止声音失败仍归还边框，旧完成回调不再复活对话。构造/挂载失败
+清理已持有的资源，恢复菜单失败作为附加异常，不覆盖最初的挂载错误；旧对话
+清理失败仍尝试安装新对话，并由管理器保留后续退出所需的归属。
+
+角色/商店面板捕获原资产宿主，为三种各自页面资产逐项配对，并显式释放按钮与
+共享框；部分构造失败按已持有字段清理。商店先请求自己的按钮贴图，再创建按钮
+样式，不再借角色面板先加载。退出隐藏购买提示、解除 Stage capture listener、
+清除待处理购买/交易状态；面板退出后不会重新显示或绘制已释放的背景。
+
+OffscreenSessionLifecycleScreen 保留原四类表现资源和地图/按钮/面板/输入/加载页
+断言，增加第五类共享框的构造前基线、实际 GL/Pixmap 及退出检查；清点全部
+MenuWrapper 的整棵菜单树，每个节点和两个面板各持一份引用。执行三次对话安装/
+替换、显式关闭，再留下活动对话交给生产 World 退出；逐节点检查菜单已释放、
+父归属已断开，DialogManager 已清空。不是靠最终 AssetManager.clear 掩盖累积。
+
+### 第十四批专项验证与复跑
+
+生产代码初步回归 build/box-resources-initial.log：原面板资源、角色属性及屏幕
+装配测试与三端编译通过，1m9s。新增专项首轮 build/box-resources-focused.log
+42 项中 20 项失败，均在夹具初始化给 Fonts 的 final 字段赋值时被拒绝，尚未进入
+资源断言；修正夹具只设置非 final 字段，保留原断言与失败日志。
+
+第二轮 build/box-resources-focused-02.log：42/42、4 类及三端编译、真实会话三轮
+通过，2m24s。每轮共享框 0→12→0、10 个 NPC 菜单节点释放，对话替换与 World
+最终回收通过；五类表现资源共 64 张纹理删除、64 个原始/上传 Pixmap 释放。
+随后新增三项工厂回滚/多根错误清理/对话替换错误测试，纳入最终扩大回归，不计入
+这次 42 项结果。
+
+最小复跑（共享框专项与原版 MPQ 同一 Client 三轮）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/box-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/box-resources-recheck' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+本批范围限制：ItemGrid 构造的私有 fill Texture 尚无显式释放，VendorGrid 虽然
+showFill=false 仍会分配；本批没有修改该边界，现有三张面板私有纹理断言不覆盖
+这些网格纹理。下一批优先检查所有网格消费者及归属，不把 AssetManager 剩余
+种类稳定或最终 assets=0 当作私有 GL 零泄漏。完整构造失败回滚、连接交接其余
+边界、控制台/Timer/异步日志、跨 Act/加载中退出、长时压力及人工/性能仍待。
+
+### 第十四批扩大回归
+
+- build/box-resources-regression.log 的定向 JUnit 525/525、61 类：core 483/483
+  （54 类）、D2GS 42/42（7 类），失败/错误/跳过均 0；含新增共享框 23 项，以及
+  原面板、菜单/选择/创建页、表现资源、Act1QuestDialogController 与 NpcHealer
+  回归，三端编译通过。该筛选仍不包含独立环境的佣兵资源探针和已记录的玩法/
+  AI 基线失败，不宣称全仓测试全绿，也没有修改原断言或伤害规则。
+- 独立地图三轮均 44 tiles、引用 4→2→1→0；同一 Client 的三轮真实会话每轮
+  58 个 DT1 / 2626 张地图纹理、共享框 0→12→0、10 个菜单节点退休、五类表现
+  引用回基线、64 张表现纹理删除及 64 个原始/上传 Pixmap 释放。原按钮
+  0/129/138/0、8 项面板基线、3 张面板私有纹理、输入及加载页检查均保留。
+- 三轮退出的剩余资产种类为 54/55/55；第二轮仅新增宿主声音缓存
+  data/global/sfx/ambient/footstep/MedDirt3.wav，refs=1，第三轮逐项清单与第二轮
+  一致。共享框及此前四类表现资源均不在退出快照中；声音缓存和私有网格纹理
+  是不同边界，不以总种类数代替逐项引用或私有 GL 检查。
+- 该命令在已通过地图/三轮会话/独立营地及两个 Client 最终退出之后，
+  headlessSimulationTick 报本地 127.0.0.1:6114 Connection refused；因此整条命令
+  BUILD FAILED，3m57s，headlessMissileCombat 尚未执行。保留日志，不把前段
+  525 项通过等同于整条回归成功，也暂不把连接被拒绝归因于本批 UI 修改。
+- 最后审查发现探针原字段 dialogReplacements=3 实际将首次安装也算作替换；
+  补充独立的首次安装及引用断言，再真正执行三次替换。原日志的资源释放结果
+  仍有效，但其中替换计数不作三次替换的证据；使用修正后的探针另行重跑。
+- 修正探针后 build/box-resources-final-gl.log：同一 Client 三轮会话、独立营地、
+  25Hz sim_tick（ticks 6→36）与 Throw 战斗（life 1000→992）均通过，三轮共享框
+  仍为 0→12→0，三轮最终 ClientShutdown 共享 GL 释放通过；BUILD SUCCESSFUL，
+  2m18s。日志仍报告 47.64–89.03ms 慢帧，超出 40ms 预算，不作性能验收。

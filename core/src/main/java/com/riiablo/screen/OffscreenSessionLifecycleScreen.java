@@ -56,7 +56,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
     for (String path : new String[] {"data/global/overlays/Gleam.dcc",
         "data/global/overlays/NPCSpeechBalloon.dcc", "data/global/overlays/ShrineManaRegen.dcc",
-        "data/local/ui/" + language + "/act1/A1L1.dc6"}) {
+        "data/local/ui/" + language + "/act1/A1L1.dc6", "data/global/ui/MENU/boxpieces.DC6"}) {
       presentationReferencesBeforeConstruction.put(path, references(path));
     }
     buttonReferencesBeforeConstruction = references("data/global/sfx/cursor/button.wav");
@@ -106,6 +106,39 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     entryScreen.dispose();
     require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
         "retiring entry again cannot unload the game's shared loading image");
+    assets.finishLoading();
+    // Exercise actual dialog replacement, explicit close, and World-owned final teardown.
+    // These add their own border references on top of the already-live NPC/panel consumers.
+    com.riiablo.engine.client.DialogManager dialogs =
+        screen.engine.getSystem(com.riiablo.engine.client.DialogManager.class);
+    String speech = "akara_act1_intro";
+    require(Riiablo.files.speech.get(speech) != null, "real speech fixture");
+    int boxReferencesWhileLive = references("data/global/ui/MENU/boxpieces.DC6");
+    Array<com.riiablo.widget.NpcMenu> sessionMenus = new Array<>();
+    com.artemis.utils.IntBag menuOwners = screen.engine.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(com.riiablo.engine.server.component.MenuWrapper.class)).getEntities();
+    for (int i = 0; i < menuOwners.size(); i++) {
+      com.riiablo.widget.NpcMenu menu = screen.engine
+          .getMapper(com.riiablo.engine.server.component.MenuWrapper.class).get(menuOwners.get(i)).menu;
+      require(menu != null, "live NPC root menu");
+      collectMenus(menu, sessionMenus);
+    }
+    require(sessionMenus.size > 0 && boxReferencesWhileLive == sessionMenus.size + 2,
+        "every NPC menu and both panels own one shared-box reference");
+    dialogs.setDialog(new com.riiablo.widget.NpcDialogBox(speech, d -> dialogs.setDialog(null)));
+    assets.finishLoading();
+    require(references("data/global/ui/MENU/boxpieces.DC6") == boxReferencesWhileLive + 1,
+        "initial dialog owns exactly one border");
+    for (int replacement = 0; replacement < 3; replacement++) {
+      dialogs.setDialog(new com.riiablo.widget.NpcDialogBox(speech, d -> dialogs.setDialog(null)));
+      assets.finishLoading();
+      require(references("data/global/ui/MENU/boxpieces.DC6") == boxReferencesWhileLive + 1,
+          "dialog replacement owns exactly one border");
+    }
+    dialogs.setDialog(null);
+    require(references("data/global/ui/MENU/boxpieces.DC6") == boxReferencesWhileLive,
+        "dialog close restores NPC/panel border baseline");
+    dialogs.setDialog(new com.riiablo.widget.NpcDialogBox(speech, d -> dialogs.setDialog(null)));
     assets.finishLoading();
     Set<Integer> presentationHandles = new HashSet<>();
     Set<Pixmap> presentationPixels = new HashSet<>();
@@ -196,6 +229,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         && !Keys.DebugMode.containsStateListener(screen.debugKeyListener), "old keys detached");
     require(Riiablo.input.getProcessors().size == inputBaseline, "input processors balanced");
     require(Riiablo.game == null && Riiablo.engine == null, "old global aliases cleared");
+    for (com.riiablo.widget.NpcMenu menu : sessionMenus) {
+      require(menu.isDisposed() && menu.getParent() == null, "visible or unattached NPC menu retired");
+    }
+    require(dialogs.getDialog() == null, "World retired the active dialog");
     // Screen preloads use the pre-show baseline; Button's separately owned
     // references must return all the way to the pre-construction baseline.
     require(references("data/global/sfx/cursor/button.wav") == buttonReferencesBeforeConstruction,
@@ -251,6 +288,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\npresentationAssetBaselinesBalanced=" + presentationReferencesBeforeConstruction.size()
         + "\npresentationTexturesDeleted=" + presentationHandles.size()
         + "\npresentationPixelsFreed=" + presentationPixels.size()
+        + "\nsharedBoxReferencesBeforeConstruction="
+            + presentationReferencesBeforeConstruction.get("data/global/ui/MENU/boxpieces.DC6")
+        + "\nsharedBoxReferencesWhileLive=" + boxReferencesWhileLive
+        + "\nsharedBoxReferencesAfterExit=" + references("data/global/ui/MENU/boxpieces.DC6")
+        + "\ndialogReplacements=3\ndialogRetiredByWorld=true"
+        + "\nnpcMenusRetired=" + sessionMenus.size
         + "\nentryStageReleased=true\nentryLoadingReferencesBalanced=true"
         + "\nentryRetiredByClient=true\ngameRetiredByClient=true"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")
@@ -263,6 +306,14 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
 
   private static void require(boolean condition, String message) {
     if (!condition) throw new IllegalStateException("Session lifecycle: " + message);
+  }
+
+  @SuppressWarnings("unchecked") private static void collectMenus(com.riiablo.widget.NpcMenu menu,
+      Array<com.riiablo.widget.NpcMenu> menus) {
+    require(!menu.isDisposed(), "live NPC menu");
+    menus.add(menu);
+    Array<com.riiablo.widget.NpcMenu> children = field(menu, "subMenus", Array.class);
+    for (com.riiablo.widget.NpcMenu child : children) collectMenus(child, menus);
   }
 
   private int references(String name) {

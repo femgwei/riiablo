@@ -3,6 +3,7 @@ package com.riiablo.screen.panel;
 import java.text.NumberFormat;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -46,8 +47,14 @@ import com.riiablo.widget.Label;
 import com.riiablo.widget.StatLabel;
 import com.riiablo.widget.SkillNameResolver;
 import com.riiablo.engine.server.player.PlayerStatsManager;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 public class CharacterPanel extends WidgetGroup implements Disposable {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private BorderedPaletteIndexedDrawable statPointsBorder;
+  private boolean disposed;
 
   final AssetDescriptor<DC6> invcharDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\invchar6.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion invchar;
@@ -69,265 +76,271 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private Button.ButtonStyle statButtonStyle;
 
   public CharacterPanel() {
-    Riiablo.assets.load(invcharDescriptor);
-    Riiablo.assets.finishLoadingAsset(invcharDescriptor);
-    invchar = Riiablo.assets.get(invcharDescriptor).getTexture(0);
-    setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
-    setTouchable(Touchable.enabled);
-    setVisible(false);
+    try {
+      references.load(invcharDescriptor);
+      assets.finishLoadingAsset(invcharDescriptor);
+      invchar = assets.get(invcharDescriptor).getTexture(0);
+      setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
+      setTouchable(Touchable.enabled);
+      setVisible(false);
 
-    Riiablo.assets.load(levelButtonDescriptor);
-    Riiablo.assets.finishLoadingAsset(levelButtonDescriptor);
-    DC6 levelButton = Riiablo.assets.get(levelButtonDescriptor);
-    statButtonStyle = new Button.ButtonStyle(
-        new TextureRegionDrawable(levelButton.getTexture(0)),
-        new TextureRegionDrawable(levelButton.getTexture(1)));
-    statButtonStyle.disabled = new TextureRegionDrawable(levelButton.getTexture(2));
+      references.load(levelButtonDescriptor);
+      assets.finishLoadingAsset(levelButtonDescriptor);
+      DC6 levelButton = assets.get(levelButtonDescriptor);
+      statButtonStyle = new Button.ButtonStyle(
+          new TextureRegionDrawable(levelButton.getTexture(0)),
+          new TextureRegionDrawable(levelButton.getTexture(1)));
+      statButtonStyle.disabled = new TextureRegionDrawable(levelButton.getTexture(2));
 
-    btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
-    }});
-    btnExit.setPosition(128, 11);
-    btnExit.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        setVisible(false);
-      }
-    });
-    addActor(btnExit);
+      btnExit = new Button(new Button.ButtonStyle() {{
+        references.load(buysellbtnDescriptor);
+        assets.finishLoadingAsset(buysellbtnDescriptor);
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
+      }});
+      btnExit.setPosition(128, 11);
+      btnExit.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          setVisible(false);
+        }
+      });
+      addActor(btnExit);
 
-    // The stat-point balance belongs to the lower-left "Stat Points" row.
-    // It used to be attached to the top "Next Level" box, which made the
-    // number appear as an extra value after the next-level experience.
-    statPointsGroup = new WidgetGroup();
-    statPointsGroup.setSize(getWidth(), getHeight());
-    addActor(statPointsGroup);
+      // The stat-point balance belongs to the lower-left "Stat Points" row.
+      // It used to be attached to the top "Next Level" box, which made the
+      // number appear as an extra value after the next-level experience.
+      statPointsGroup = new WidgetGroup();
+      statPointsGroup.setSize(getWidth(), getHeight());
+      addActor(statPointsGroup);
 
-    Table statPointsRow = new Table();
-    statPointsRow.setBackground(new BorderedPaletteIndexedDrawable());
-    statPointsRow.setPosition(8, getHeight() - 379);
-    statPointsRow.setSize(150, 24);
-    statPointsGroup.addActor(statPointsRow);
+      Table statPointsRow = new Table();
+      statPointsRow.setBackground(statPointsBorder = new BorderedPaletteIndexedDrawable());
+      statPointsRow.setPosition(8, getHeight() - 379);
+      statPointsRow.setSize(150, 24);
+      statPointsGroup.addActor(statPointsRow);
 
-    Label statPointsLabel = new Label(statPointsRemainingText(), Riiablo.fonts.ReallyTheLastSucker);
-    statPointsLabel.setPosition(11, getHeight() - 373);
-    statPointsLabel.setSize(108, 16);
-    statPointsLabel.setAlignment(Align.center);
-    statPointsGroup.addActor(statPointsLabel);
+      Label statPointsLabel = new Label(statPointsRemainingText(), Riiablo.fonts.ReallyTheLastSucker);
+      statPointsLabel.setPosition(11, getHeight() - 373);
+      statPointsLabel.setSize(108, 16);
+      statPointsLabel.setAlignment(Align.center);
+      statPointsGroup.addActor(statPointsLabel);
 
-    // Keep the caption and the remaining value as separate labels, with the
-    // native-style divider between their two cells.
-    Image statPointsDivider = new Image(new PaletteIndexedColorDrawable(Riiablo.colors.gold));
-    statPointsDivider.setPosition(119, getHeight() - 373);
-    statPointsDivider.setSize(1, 16);
-    statPointsGroup.addActor(statPointsDivider);
+      // Keep the caption and the remaining value as separate labels, with the
+      // native-style divider between their two cells.
+      Image statPointsDivider = new Image(new PaletteIndexedColorDrawable(Riiablo.colors.gold));
+      statPointsDivider.setPosition(119, getHeight() - 373);
+      statPointsDivider.setSize(1, 16);
+      statPointsGroup.addActor(statPointsDivider);
 
-    statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
-    statPoints.setAutoSize(false);
-    // font16 has a different calibrated baseline from the caption font; move
-    // the numeric value down slightly so it sits on the same visual center.
-    statPoints.setPosition(120, getHeight() - 375);
-    statPoints.setSize(36, 16);
-    statPoints.setAlignment(Align.center);
-    statPointsGroup.addActor(statPoints);
+      statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
+      statPoints.setAutoSize(false);
+      // font16 has a different calibrated baseline from the caption font; move
+      // the numeric value down slightly so it sits on the same visual center.
+      statPoints.setPosition(120, getHeight() - 375);
+      statPoints.setSize(36, 16);
+      statPoints.setAlignment(Align.center);
+      statPointsGroup.addActor(statPoints);
 
-    Label name = new Label(Riiablo.charData.name, Riiablo.fonts.font16);
-    name.setPosition(12, getHeight() - 24);
-    name.setSize(168, 13);
-    name.setAlignment(Align.center);
-    addActor(name);
+      Label name = new Label(Riiablo.charData.name, Riiablo.fonts.font16);
+      name.setPosition(12, getHeight() - 24);
+      name.setSize(168, 13);
+      name.setAlignment(Align.center);
+      addActor(name);
 
-    Label levelLabel = new Label(4057, Riiablo.fonts.ReallyTheLastSucker);
-    levelLabel.setPosition(12, getHeight() - 48);
-    levelLabel.setSize(42, 14);
-    levelLabel.setAlignment(Align.center);
-    addActor(levelLabel);
-    levelValue = new Label("0", Riiablo.fonts.font16);
-    configureTopValue(levelValue, 12, 42);
+      Label levelLabel = new Label(4057, Riiablo.fonts.ReallyTheLastSucker);
+      levelLabel.setPosition(12, getHeight() - 48);
+      levelLabel.setSize(42, 14);
+      levelLabel.setAlignment(Align.center);
+      addActor(levelLabel);
+      levelValue = new Label("0", Riiablo.fonts.font16);
+      configureTopValue(levelValue, 12, 42);
 
-    Label expLabel = new Label(4058, Riiablo.fonts.ReallyTheLastSucker);
-    expLabel.setPosition(66, getHeight() - 48);
-    expLabel.setSize(114, 14);
-    expLabel.setAlignment(Align.center);
-    addActor(expLabel);
-    experienceValue = new Label("0", Riiablo.fonts.font16);
-    configureTopValue(experienceValue, 66, 114);
+      Label expLabel = new Label(4058, Riiablo.fonts.ReallyTheLastSucker);
+      expLabel.setPosition(66, getHeight() - 48);
+      expLabel.setSize(114, 14);
+      expLabel.setAlignment(Align.center);
+      addActor(expLabel);
+      experienceValue = new Label("0", Riiablo.fonts.font16);
+      configureTopValue(experienceValue, 66, 114);
 
-    Label clazz = new Label(Riiablo.charData.classId.name, Riiablo.fonts.font16);
-    clazz.setPosition(194, getHeight() - 24);
-    clazz.setSize(114, 13);
-    clazz.setAlignment(Align.center);
-    addActor(clazz);
+      Label clazz = new Label(Riiablo.charData.classId.name, Riiablo.fonts.font16);
+      clazz.setPosition(194, getHeight() - 24);
+      clazz.setSize(114, 13);
+      clazz.setAlignment(Align.center);
+      addActor(clazz);
 
-    Label nextLevelLabel = new Label(4059, Riiablo.fonts.ReallyTheLastSucker);
-    nextLevelLabel.setPosition(194, getHeight() - 48);
-    nextLevelLabel.setSize(114, 14);
-    nextLevelLabel.setAlignment(Align.center);
-    addActor(nextLevelLabel);
-    nextLevelValue = new Label("0", Riiablo.fonts.font16);
-    configureTopValue(nextLevelValue, 194, 114);
+      Label nextLevelLabel = new Label(4059, Riiablo.fonts.ReallyTheLastSucker);
+      nextLevelLabel.setPosition(194, getHeight() - 48);
+      nextLevelLabel.setSize(114, 14);
+      nextLevelLabel.setAlignment(Align.center);
+      addActor(nextLevelLabel);
+      nextLevelValue = new Label("0", Riiablo.fonts.font16);
+      configureTopValue(nextLevelValue, 194, 114);
 
-    Label strLabel = new Label(4060, Riiablo.fonts.ReallyTheLastSucker);
-    strLabel.setPosition(11, getHeight() - 100);
-    strLabel.setSize(63, 16);
-    strLabel.setAlignment(Align.center);
-    addActor(strLabel);
+      Label strLabel = new Label(4060, Riiablo.fonts.ReallyTheLastSucker);
+      strLabel.setPosition(11, getHeight() - 100);
+      strLabel.setSize(63, 16);
+      strLabel.setAlignment(Align.center);
+      addActor(strLabel);
 
-    Label str = createPrimaryStatLabel(Stat.strength);
-    str.setPosition(78, getHeight() - 100);
-    str.setSize(36, 16);
-    addActor(str);
-    addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 137, getHeight() - 92);
+      Label str = createPrimaryStatLabel(Stat.strength);
+      str.setPosition(78, getHeight() - 100);
+      str.setSize(36, 16);
+      addActor(str);
+      addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 137, getHeight() - 92);
 
-    addCombatRow(4061, getHeight() - 100, damageValues, damageNames, 0, false);
-    addCombatRow(4061, getHeight() - 124, damageValues, damageNames, 1, true);
+      addCombatRow(4061, getHeight() - 100, damageValues, damageNames, 0, false);
+      addCombatRow(4061, getHeight() - 124, damageValues, damageNames, 1, true);
 
-    Label dexLabel = new Label(4062, Riiablo.fonts.ReallyTheLastSucker);
-    dexLabel.setPosition(11, getHeight() - 162);
-    dexLabel.setSize(63, 16);
-    dexLabel.setAlignment(Align.center);
-    addActor(dexLabel);
+      Label dexLabel = new Label(4062, Riiablo.fonts.ReallyTheLastSucker);
+      dexLabel.setPosition(11, getHeight() - 162);
+      dexLabel.setSize(63, 16);
+      dexLabel.setAlignment(Align.center);
+      addActor(dexLabel);
 
-    Label dex = createPrimaryStatLabel(Stat.dexterity);
-    dex.setPosition(78, getHeight() - 162);
-    dex.setSize(36, 16);
-    addActor(dex);
-    addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 137, getHeight() - 154);
+      Label dex = createPrimaryStatLabel(Stat.dexterity);
+      dex.setPosition(78, getHeight() - 162);
+      dex.setSize(36, 16);
+      addActor(dex);
+      addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 137, getHeight() - 154);
 
-    addCombatRow(4063, getHeight() - 162, attackRatingValues, attackRatingNames, 0, false);
-    addCombatRow(4063, getHeight() - 186, attackRatingValues, attackRatingNames, 1, false);
+      addCombatRow(4063, getHeight() - 162, attackRatingValues, attackRatingNames, 0, false);
+      addCombatRow(4063, getHeight() - 186, attackRatingValues, attackRatingNames, 1, false);
 
-    Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
-    defenseLabel.setPosition(165, getHeight() - 210);
-    defenseLabel.setSize(108, 16);
-    defenseLabel.setAlignment(Align.center);
-    addActor(defenseLabel);
+      Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
+      defenseLabel.setPosition(165, getHeight() - 210);
+      defenseLabel.setSize(108, 16);
+      defenseLabel.setAlignment(Align.center);
+      addActor(defenseLabel);
 
-    Label armorclass = createStatLabel(Stat.armorclass);
-    armorclass.setPosition(272, getHeight() - 210);
-    armorclass.setSize(40, 16);
-    addActor(armorclass);
+      Label armorclass = createStatLabel(Stat.armorclass);
+      armorclass.setPosition(272, getHeight() - 210);
+      armorclass.setSize(40, 16);
+      addActor(armorclass);
 
-    Label vitLabel = new Label(4066, Riiablo.fonts.ReallyTheLastSucker);
-    vitLabel.setPosition(11, getHeight() - 248);
-    vitLabel.setSize(63, 16);
-    vitLabel.setAlignment(Align.center);
-    addActor(vitLabel);
+      Label vitLabel = new Label(4066, Riiablo.fonts.ReallyTheLastSucker);
+      vitLabel.setPosition(11, getHeight() - 248);
+      vitLabel.setSize(63, 16);
+      vitLabel.setAlignment(Align.center);
+      addActor(vitLabel);
 
-    Label vit = createPrimaryStatLabel(Stat.vitality);
-    vit.setPosition(78, getHeight() - 248);
-    vit.setSize(36, 16);
-    addActor(vit);
-    addStatButton(PlayerStatsManager.STAT_TYPE_VITALITY, 137, getHeight() - 240);
+      Label vit = createPrimaryStatLabel(Stat.vitality);
+      vit.setPosition(78, getHeight() - 248);
+      vit.setSize(36, 16);
+      addActor(vit);
+      addStatButton(PlayerStatsManager.STAT_TYPE_VITALITY, 137, getHeight() - 240);
 
-    Label staminaLabel = Label.i18n("strchrstm", Riiablo.fonts.ReallyTheLastSucker);
-    staminaLabel.setPosition(165, getHeight() - 248);
-    staminaLabel.setSize(63, 16);
-    staminaLabel.setAlignment(Align.center);
-    addActor(staminaLabel);
+      Label staminaLabel = Label.i18n("strchrstm", Riiablo.fonts.ReallyTheLastSucker);
+      staminaLabel.setPosition(165, getHeight() - 248);
+      staminaLabel.setSize(63, 16);
+      staminaLabel.setAlignment(Align.center);
+      addActor(staminaLabel);
 
-    Label maxstamina = createStatLabel(Stat.maxstamina);
-    maxstamina.setPosition(235, getHeight() - 248);
-    maxstamina.setSize(36, 16);
-    addActor(maxstamina);
+      Label maxstamina = createStatLabel(Stat.maxstamina);
+      maxstamina.setPosition(235, getHeight() - 248);
+      maxstamina.setSize(36, 16);
+      addActor(maxstamina);
 
-    Label stamina = createStatLabel(Stat.stamina);
-    stamina.setPosition(275, getHeight() - 248);
-    stamina.setSize(36, 16);
-    addActor(stamina);
+      Label stamina = createStatLabel(Stat.stamina);
+      stamina.setPosition(275, getHeight() - 248);
+      stamina.setSize(36, 16);
+      addActor(stamina);
 
-    Label lifeLabel = Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker);
-    lifeLabel.setPosition(165, getHeight() - 272);
-    lifeLabel.setSize(63, 16);
-    lifeLabel.setAlignment(Align.center);
-    addActor(lifeLabel);
+      Label lifeLabel = Label.i18n("strchrlif", Riiablo.fonts.ReallyTheLastSucker);
+      lifeLabel.setPosition(165, getHeight() - 272);
+      lifeLabel.setSize(63, 16);
+      lifeLabel.setAlignment(Align.center);
+      addActor(lifeLabel);
 
-    Label maxhp = createStatLabel(Stat.maxhp);
-    maxhp.setPosition(235, getHeight() - 272);
-    maxhp.setSize(36, 16);
-    addActor(maxhp);
+      Label maxhp = createStatLabel(Stat.maxhp);
+      maxhp.setPosition(235, getHeight() - 272);
+      maxhp.setSize(36, 16);
+      addActor(maxhp);
 
-    Label hitpoints = createStatLabel(Stat.hitpoints);
-    hitpoints.setPosition(275, getHeight() - 272);
-    hitpoints.setSize(36, 16);
-    addActor(hitpoints);
+      Label hitpoints = createStatLabel(Stat.hitpoints);
+      hitpoints.setPosition(275, getHeight() - 272);
+      hitpoints.setSize(36, 16);
+      addActor(hitpoints);
 
-    Label eneLabel = new Label(4069, Riiablo.fonts.ReallyTheLastSucker);
-    eneLabel.setPosition(11, getHeight() - 310);
-    eneLabel.setSize(63, 16);
-    eneLabel.setAlignment(Align.center);
-    addActor(eneLabel);
+      Label eneLabel = new Label(4069, Riiablo.fonts.ReallyTheLastSucker);
+      eneLabel.setPosition(11, getHeight() - 310);
+      eneLabel.setSize(63, 16);
+      eneLabel.setAlignment(Align.center);
+      addActor(eneLabel);
 
-    Label ene = createPrimaryStatLabel(Stat.energy);
-    ene.setPosition(78, getHeight() - 310);
-    ene.setSize(36, 16);
-    addActor(ene);
-    addStatButton(PlayerStatsManager.STAT_TYPE_ENERGY, 137, getHeight() - 302);
+      Label ene = createPrimaryStatLabel(Stat.energy);
+      ene.setPosition(78, getHeight() - 310);
+      ene.setSize(36, 16);
+      addActor(ene);
+      addStatButton(PlayerStatsManager.STAT_TYPE_ENERGY, 137, getHeight() - 302);
 
-    Label manaLabel = Label.i18n("strchrman", Riiablo.fonts.ReallyTheLastSucker);
-    manaLabel.setPosition(165, getHeight() - 310);
-    manaLabel.setSize(63, 16);
-    manaLabel.setAlignment(Align.center);
-    addActor(manaLabel);
+      Label manaLabel = Label.i18n("strchrman", Riiablo.fonts.ReallyTheLastSucker);
+      manaLabel.setPosition(165, getHeight() - 310);
+      manaLabel.setSize(63, 16);
+      manaLabel.setAlignment(Align.center);
+      addActor(manaLabel);
 
-    Label maxmana = createStatLabel(Stat.maxmana);
-    maxmana.setPosition(235, getHeight() - 310);
-    maxmana.setSize(36, 16);
-    addActor(maxmana);
+      Label maxmana = createStatLabel(Stat.maxmana);
+      maxmana.setPosition(235, getHeight() - 310);
+      maxmana.setSize(36, 16);
+      addActor(maxmana);
 
-    Label mana = createStatLabel(Stat.mana);
-    mana.setPosition(275, getHeight() - 310);
-    mana.setSize(36, 16);
-    addActor(mana);
+      Label mana = createStatLabel(Stat.mana);
+      mana.setPosition(275, getHeight() - 310);
+      mana.setSize(36, 16);
+      addActor(mana);
 
-    Label fireResLabel = new Label(4071, Riiablo.fonts.ReallyTheLastSucker);
-    fireResLabel.setPosition(175, getHeight() - 349);
-    fireResLabel.setSize(94, 16);
-    fireResLabel.setAlignment(Align.center);
-    addActor(fireResLabel);
+      Label fireResLabel = new Label(4071, Riiablo.fonts.ReallyTheLastSucker);
+      fireResLabel.setPosition(175, getHeight() - 349);
+      fireResLabel.setSize(94, 16);
+      fireResLabel.setAlignment(Align.center);
+      addActor(fireResLabel);
 
-    Label fireRes = createStatLabel(Stat.fireresist, StatLabel.Colorizer.RESISTANCE);
-    fireRes.setPosition(273, getHeight() - 349);
-    fireRes.setSize(36, 16);
-    addActor(fireRes);
+      Label fireRes = createStatLabel(Stat.fireresist, StatLabel.Colorizer.RESISTANCE);
+      fireRes.setPosition(273, getHeight() - 349);
+      fireRes.setSize(36, 16);
+      addActor(fireRes);
 
-    Label coldResLabel = new Label(4072, Riiablo.fonts.ReallyTheLastSucker);
-    coldResLabel.setPosition(175, getHeight() - 373);
-    coldResLabel.setSize(94, 16);
-    coldResLabel.setAlignment(Align.center);
-    addActor(coldResLabel);
+      Label coldResLabel = new Label(4072, Riiablo.fonts.ReallyTheLastSucker);
+      coldResLabel.setPosition(175, getHeight() - 373);
+      coldResLabel.setSize(94, 16);
+      coldResLabel.setAlignment(Align.center);
+      addActor(coldResLabel);
 
-    Label coldRes = createStatLabel(Stat.coldresist, StatLabel.Colorizer.RESISTANCE);
-    coldRes.setPosition(273, getHeight() - 373);
-    coldRes.setSize(36, 16);
-    addActor(coldRes);
+      Label coldRes = createStatLabel(Stat.coldresist, StatLabel.Colorizer.RESISTANCE);
+      coldRes.setPosition(273, getHeight() - 373);
+      coldRes.setSize(36, 16);
+      addActor(coldRes);
 
-    Label lightningResLabel = new Label(4073, Riiablo.fonts.ReallyTheLastSucker);
-    lightningResLabel.setPosition(175, getHeight() - 397);
-    lightningResLabel.setSize(94, 16);
-    lightningResLabel.setAlignment(Align.center);
-    addActor(lightningResLabel);
+      Label lightningResLabel = new Label(4073, Riiablo.fonts.ReallyTheLastSucker);
+      lightningResLabel.setPosition(175, getHeight() - 397);
+      lightningResLabel.setSize(94, 16);
+      lightningResLabel.setAlignment(Align.center);
+      addActor(lightningResLabel);
 
-    Label lightningRes = createStatLabel(Stat.lightresist, StatLabel.Colorizer.RESISTANCE);
-    lightningRes.setPosition(273, getHeight() - 397);
-    lightningRes.setSize(36, 16);
-    addActor(lightningRes);
+      Label lightningRes = createStatLabel(Stat.lightresist, StatLabel.Colorizer.RESISTANCE);
+      lightningRes.setPosition(273, getHeight() - 397);
+      lightningRes.setSize(36, 16);
+      addActor(lightningRes);
 
-    Label poisonResLabel = new Label(4074, Riiablo.fonts.ReallyTheLastSucker);
-    poisonResLabel.setPosition(175, getHeight() - 421);
-    poisonResLabel.setSize(94, 16);
-    poisonResLabel.setAlignment(Align.center);
-    addActor(poisonResLabel);
+      Label poisonResLabel = new Label(4074, Riiablo.fonts.ReallyTheLastSucker);
+      poisonResLabel.setPosition(175, getHeight() - 421);
+      poisonResLabel.setSize(94, 16);
+      poisonResLabel.setAlignment(Align.center);
+      addActor(poisonResLabel);
 
-    Label poisonRes = createStatLabel(Stat.poisonresist, StatLabel.Colorizer.RESISTANCE);
-    poisonRes.setPosition(273, getHeight() - 421);
-    poisonRes.setSize(36, 16);
-    addActor(poisonRes);
+      Label poisonRes = createStatLabel(Stat.poisonresist, StatLabel.Colorizer.RESISTANCE);
+      poisonRes.setPosition(273, getHeight() - 421);
+      poisonRes.setSize(36, 16);
+      addActor(poisonRes);
 
-    //setDebug(true, true);
+      //setDebug(true, true);
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   private Label createStatLabel(short statId) {
@@ -943,12 +956,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void act(float delta) {
+    if (disposed) return;
     super.act(delta);
     updateStatPointControls();
   }
 
   @Override
   public void setVisible(boolean visible) {
+    if (disposed) { super.setVisible(false); return; }
     super.setVisible(visible);
     // Refresh synchronously when the panel is opened. Waiting for the next
     // stage tick made newly awarded points appear to be missing.
@@ -987,16 +1002,25 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(invcharDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
-    Riiablo.assets.unload(levelButtonDescriptor.fileName);
-    for (Button button : statButtons) {
-      if (button != null) button.dispose();
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setVisible(false));
+      cleanup.run(this::clearListeners);
+      cleanup.run(this::clearChildren);
+      cleanup.dispose(btnExit);
+      for (Button button : statButtons) cleanup.dispose(button);
+      cleanup.dispose(statPointsBorder);
+      cleanup.dispose(references);
+    } finally {
+      invchar = null;
+      statPointsBorder = null;
     }
   }
 
   @Override
   public void draw(Batch batch, float a) {
+    if (disposed) return;
     batch.draw(invchar, getX(), getY());
     super.draw(batch, a);
   }

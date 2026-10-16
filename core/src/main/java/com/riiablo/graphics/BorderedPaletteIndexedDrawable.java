@@ -1,13 +1,19 @@
 package com.riiablo.graphics;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.util.AssetReferenceScope;
 
-public class BorderedPaletteIndexedDrawable extends PaletteIndexedColorDrawable {
+public class BorderedPaletteIndexedDrawable extends PaletteIndexedColorDrawable implements Disposable {
+  private final AssetManager assets;
+  private final AssetReferenceScope references;
+  private boolean disposed;
 
   static final AssetDescriptor<DC6> boxpiecesDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\boxpieces.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   DC6 boxpieces;
@@ -28,18 +34,20 @@ public class BorderedPaletteIndexedDrawable extends PaletteIndexedColorDrawable 
     setRightWidth(PADDING);
     setBottomHeight(PADDING);
 
-    // FIXME: memory leak
-    Riiablo.assets.load(boxpiecesDescriptor);
+    assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+    references = new AssetReferenceScope(assets);
+    references.load(boxpiecesDescriptor);
   }
 
   @Override
   public void draw(Batch batch, float x, float y, float width, float height) {
+    if (disposed) return;
     super.draw(batch, x + 2, y + 2, width - 4, height - 4);
     if (!(batch instanceof PaletteIndexedBatch)) {
       return;
     } else if (boxpieces == null) {
-      if (!Riiablo.assets.isLoaded(boxpiecesDescriptor)) return;
-      boxpieces = Riiablo.assets.get(boxpiecesDescriptor);
+      if (!assets.isLoaded(boxpiecesDescriptor)) return;
+      boxpieces = assets.get(boxpiecesDescriptor);
       TOPLEFT     = boxpieces.getTexture(0);
       TOPRIGHT    = boxpieces.getTexture(1);
       BOTTOMLEFT  = boxpieces.getTexture(8);
@@ -79,5 +87,20 @@ public class BorderedPaletteIndexedDrawable extends PaletteIndexedColorDrawable 
     b.draw(TOPRIGHT, x + width - TOPRIGHT.getRegionWidth(), y + height - TOPRIGHT.getRegionHeight());
     b.draw(BOTTOMLEFT, x, y);
     b.draw(BOTTOMRIGHT, x + width - BOTTOMRIGHT.getRegionWidth(), y);
+  }
+
+  @Override public void draw(Batch batch, float x, float y, float originX, float originY,
+      float width, float height, float scaleX, float scaleY, float rotation) {
+    if (!disposed) super.draw(batch, x, y, originX, originY, width, height, scaleX, scaleY, rotation);
+  }
+
+  @Override public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    boxpieces = null;
+    TOPLEFT = TOPRIGHT = BOTTOMLEFT = BOTTOMRIGHT = null;
+    LEFT = RIGHT = TOP = BOTTOM = null;
+    setRegion(null);
+    references.dispose();
   }
 }

@@ -34,7 +34,6 @@ import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
-import com.riiablo.engine.server.component.MenuWrapper;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
@@ -117,7 +116,6 @@ public class Npc extends AI {
     HIRERERS.addAll();
   }
 
-  protected ComponentMapper<MenuWrapper> mMenuWrapper;
 
   protected EventSystem event;
 
@@ -178,12 +176,12 @@ public class Npc extends AI {
     Validate.validState(menu == null, "menu already initialized!");
     this.menuManager = menuManager;
     this.dialogManager = dialogManager;
-    menu = mMenuWrapper.create(entityId).menu = new NpcMenu(menuManager, entityId, name);
+    menu = menuManager.createMenu(entityId, name);
 
     final int entType = monstats.hcIdx;
     if (TALKERS.contains(entType)) {
       // talk
-      menu.addItem(3381, new NpcMenu(menuManager, 3381)
+      menu.addItem(3381, menu.createSubMenu(3381)
           // introduction
           .addItem(3399, new ClickListener() {
             @Override

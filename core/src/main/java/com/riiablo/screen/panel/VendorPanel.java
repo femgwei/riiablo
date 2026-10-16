@@ -3,6 +3,7 @@ package com.riiablo.screen.panel;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
@@ -49,8 +50,14 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 public class VendorPanel extends WidgetGroup implements Disposable {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private BorderedPaletteIndexedDrawable purchasePromptBorder;
+  private boolean disposed;
   private static final String TAG = "VendorPanel";
 
   public static final int BUY        = 1 << 0;
@@ -152,276 +159,292 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private static final float PURCHASE_PROMPT_SIDE_MARGIN = 6;
 
   public VendorPanel() {
-    Riiablo.assets.load(buysellDescriptor);
-    Riiablo.assets.finishLoadingAsset(buysellDescriptor);
-    buysell = Riiablo.assets.get(buysellDescriptor).getTexture();
-    setSize(buysell.getRegionWidth(), buysell.getRegionHeight());
-    setTouchable(Touchable.enabled);
-    setVisible(false);
-    addListener(new ClickListener(Input.Buttons.LEFT) {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        if (event.isHandled() || purchasePrompt != null && purchasePrompt.isVisible()) return;
-        if (sellCursorItem()) event.handle();
-      }
-    });
-
-    Riiablo.assets.load(buyselltabsDescriptor);
-    Riiablo.assets.finishLoadingAsset(buyselltabsDescriptor);
-    buyselltabs = Riiablo.assets.get(buyselltabsDescriptor);
-
-    float tabY = getHeight() - buyselltabs.getTexture().getRegionHeight();
-    float tabX = 0;
-    tabs = new Tab[4];
-    for (int i = 0; i < tabs.length; i++) {
-      Tab tab = tabs[i] = new Tab(buyselltabs.getTexture(i), buyselltabs.getTexture(i + tabs.length));
-      tab.setPosition(tabX, tabY);
-      tabX += tab.getWidth() + 1;
-      addActor(tab);
-    }
-
-    String[] names = {"strBSArmor", "strBSWeapons", "strBSWeapons", "strBSMisc"};
-    LabelButton[] labels = new LabelButton[4];
-    for (int i = 0; i < labels.length; i++) {
-      final LabelButton label = labels[i] = LabelButton.i18n(names[i], Riiablo.fonts.font16);
-      label.setAlignment(Align.center);
-      Tab tab = tabs[i];
-      tab.label = label;
-      label.setPosition(tab.getX(), tab.getY());
-      label.setSize(tab.getWidth(), tab.getHeight());
-      label.setUserObject(tab);
-      label.addListener(new ClickListener() {
+    try {
+      references.load(buysellDescriptor);
+      assets.finishLoadingAsset(buysellDescriptor);
+      buysell = assets.get(buysellDescriptor).getTexture();
+      setSize(buysell.getRegionWidth(), buysell.getRegionHeight());
+      setTouchable(Touchable.enabled);
+      setVisible(false);
+      addListener(new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          setTab((Tab) label.getUserObject());
+          if (event.isHandled() || purchasePrompt != null && purchasePrompt.isVisible()) return;
+          if (sellCursorItem()) event.handle();
         }
       });
-      addActor(label);
-    }
 
-    final float[] X = {116, 168, 220, 272};
-    Button.ButtonStyle blankButtonStyle = new Button.ButtonStyle() {{
-      up = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(0));
-    }};
-    btnBlank = new Button[4];
-    for (int i = 0; i < btnBlank.length; i++) {
-      Button button = btnBlank[i] = new Button(blankButtonStyle);
-      button.setDisabledBlendMode(BlendMode.NONE, Riiablo.colors.white);
-      button.setDisabled(true);
-      button.setPosition(X[i], 15);
-      button.setVisible(false);
-      addActor(button);
-    }
+      references.load(buyselltabsDescriptor);
+      assets.finishLoadingAsset(buyselltabsDescriptor);
+      buyselltabs = assets.get(buyselltabsDescriptor);
+      // Own the button sheet before constructing styles; do not depend on another panel.
+      references.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
 
-    btnBuy = new Button(new Button.ButtonStyle() {{
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(2));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(3));
-      checked = down;
-    }});
-    btnBuy.setPosition(btnBlank[0].getX(), btnBlank[0].getY());
-    btnBuy.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        repairing = false;
-        selling = false;
-        if (btnBuy.isChecked()) {
-          Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 3);
-        } else {
-          Riiablo.cursor.resetCursor();
-        }
+      float tabY = getHeight() - buyselltabs.getTexture().getRegionHeight();
+      float tabX = 0;
+      tabs = new Tab[4];
+      for (int i = 0; i < tabs.length; i++) {
+        Tab tab = tabs[i] = new Tab(buyselltabs.getTexture(i), buyselltabs.getTexture(i + tabs.length));
+        tab.setPosition(tabX, tabY);
+        tabX += tab.getWidth() + 1;
+        addActor(tab);
       }
-    });
-    btnBuy.setVisible(false);
-    addActor(btnBuy);
 
-    btnSell = new Button(new Button.ButtonStyle() {{
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(4));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(5));
-      checked = down;
-    }});
-    btnSell.setPosition(btnBlank[1].getX(), btnBlank[1].getY());
-    btnSell.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        repairing = false;
-        selling = btnSell.isChecked();
-        Gdx.app.log(TAG, "[VENDOR_MODE] mode=sell enabled=" + selling);
-        if (btnSell.isChecked()) {
-          Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
-        } else {
-          Riiablo.cursor.resetCursor();
-        }
+      String[] names = {"strBSArmor", "strBSWeapons", "strBSWeapons", "strBSMisc"};
+      LabelButton[] labels = new LabelButton[4];
+      for (int i = 0; i < labels.length; i++) {
+        final LabelButton label = labels[i] = LabelButton.i18n(names[i], Riiablo.fonts.font16);
+        label.setAlignment(Align.center);
+        Tab tab = tabs[i];
+        tab.label = label;
+        label.setPosition(tab.getX(), tab.getY());
+        label.setSize(tab.getWidth(), tab.getHeight());
+        label.setUserObject(tab);
+        label.addListener(new ClickListener() {
+          @Override
+          public void clicked(InputEvent event, float x, float y) {
+            setTab((Tab) label.getUserObject());
+          }
+        });
+        addActor(label);
       }
-    });
-    btnSell.setVisible(false);
-    addActor(btnSell);
 
-    btnRepair = new Button(new Button.ButtonStyle() {{
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(6));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(7));
-      checked = down;
-    }});
-    btnRepair.setPosition(btnBlank[2].getX(), btnBlank[2].getY());
-    btnRepair.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        repairing = btnRepair.isChecked();
-        selling = false;
-        if (btnRepair.isChecked()) {
-          Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 1);
-        } else {
-          Riiablo.cursor.resetCursor();
-        }
+      final float[] X = {116, 168, 220, 272};
+      Button.ButtonStyle blankButtonStyle = new Button.ButtonStyle() {{
+        up = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(0));
+      }};
+      btnBlank = new Button[4];
+      for (int i = 0; i < btnBlank.length; i++) {
+        Button button = btnBlank[i] = new Button(blankButtonStyle);
+        button.setDisabledBlendMode(BlendMode.NONE, Riiablo.colors.white);
+        button.setDisabled(true);
+        button.setPosition(X[i], 15);
+        button.setVisible(false);
+        addActor(button);
       }
-    });
-    btnRepair.setVisible(false);
-    addActor(btnRepair);
 
-    btnRepairAll = new Button(new Button.ButtonStyle() {{
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(18));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(19));
-    }});
-    // Repair feedback (including no-op repairs) is played after the result.
-    btnRepairAll.setClickSoundEnabled(false);
-    btnRepairAll.setPosition(btnBlank[3].getX(), btnBlank[3].getY());
-    btnRepairAll.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        repairAll();
-        event.handle();
-      }
-    });
-    btnRepairAll.setVisible(false);
-    addActor(btnRepairAll);
-
-    Riiablo.assets.load(buysellbtnDescriptor);
-    Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-    btnExit = new Button(new Button.ButtonStyle() {{
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
-    }});
-    btnExit.setPosition(btnBlank[3].getX(), btnBlank[3].getY());
-    btnExit.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null) Riiablo.game.closeVendorTradePanels();
-        else setVisible(false);
-      }
-    });
-    btnExit.setVisible(false);
-    addActor(btnExit);
-
-    buttonGroup = new ButtonGroup<>();
-    buttonGroup.setMinCheckCount(0);
-    buttonGroup.add(btnBuy, btnSell, btnRepair);
-
-    Label goldbankLabel = Label.i18n("stash", Riiablo.fonts.font16);
-    goldbankLabel.setSize(180, 16);
-    goldbankLabel.setPosition(20, 57);
-    addActor(goldbankLabel);
-
-    StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
-    goldLabel = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
-    goldLabel.setAutoSize(false);
-    goldLabel.setSize(goldLabel.getPrefWidth(), goldbankLabel.getHeight());
-    goldLabel.setPosition(
-        goldbankLabel.getX() + goldbankLabel.getWidth() - goldLabel.getWidth(),
-        goldbankLabel.getY());
-    addActor(goldLabel);
-
-    inventory = Riiablo.files.inventory.get("Monster");
-    for (int i = 0; i < tabs.length; i++) {
-      VendorGrid grid = tabs[i].grid = new VendorGrid(inventory, null);
-      grid.setPurchaseListener(new VendorGrid.PurchaseListener() {
+      btnBuy = new Button(new Button.ButtonStyle() {{
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(2));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(3));
+        checked = down;
+      }});
+      btnBuy.setPosition(btnBlank[0].getX(), btnBlank[0].getY());
+      btnBuy.addListener(new ClickListener() {
         @Override
-        public boolean onPurchase(Item item, boolean direct) {
-          return purchase(item, direct);
-        }
-
-        @Override
-        public boolean onSell(Item item) {
-          return sellCursorItem();
+        public void clicked(InputEvent event, float x, float y) {
+          repairing = false;
+          selling = false;
+          if (btnBuy.isChecked()) {
+            Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 3);
+          } else {
+            Riiablo.cursor.resetCursor();
+          }
         }
       });
-      grid.setPosition(
-          inventory.gridLeft - inventory.invLeft,
-          getHeight() - inventory.gridTop - grid.getHeight());
-      grid.setVisible(false);
-      addActor(grid);
+      btnBuy.setVisible(false);
+      addActor(btnBuy);
+
+      btnSell = new Button(new Button.ButtonStyle() {{
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(4));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(5));
+        checked = down;
+      }});
+      btnSell.setPosition(btnBlank[1].getX(), btnBlank[1].getY());
+      btnSell.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          repairing = false;
+          selling = btnSell.isChecked();
+          Gdx.app.log(TAG, "[VENDOR_MODE] mode=sell enabled=" + selling);
+          if (btnSell.isChecked()) {
+            Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
+          } else {
+            Riiablo.cursor.resetCursor();
+          }
+        }
+      });
+      btnSell.setVisible(false);
+      addActor(btnSell);
+
+      btnRepair = new Button(new Button.ButtonStyle() {{
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(6));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(7));
+        checked = down;
+      }});
+      btnRepair.setPosition(btnBlank[2].getX(), btnBlank[2].getY());
+      btnRepair.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          repairing = btnRepair.isChecked();
+          selling = false;
+          if (btnRepair.isChecked()) {
+            Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 1);
+          } else {
+            Riiablo.cursor.resetCursor();
+          }
+        }
+      });
+      btnRepair.setVisible(false);
+      addActor(btnRepair);
+
+      btnRepairAll = new Button(new Button.ButtonStyle() {{
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(18));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(19));
+      }});
+      // Repair feedback (including no-op repairs) is played after the result.
+      btnRepairAll.setClickSoundEnabled(false);
+      btnRepairAll.setPosition(btnBlank[3].getX(), btnBlank[3].getY());
+      btnRepairAll.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          repairAll();
+          event.handle();
+        }
+      });
+      btnRepairAll.setVisible(false);
+      addActor(btnRepairAll);
+
+      btnExit = new Button(new Button.ButtonStyle() {{
+        up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+        down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
+      }});
+      btnExit.setPosition(btnBlank[3].getX(), btnBlank[3].getY());
+      btnExit.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          if (Riiablo.game != null) Riiablo.game.closeVendorTradePanels();
+          else setVisible(false);
+        }
+      });
+      btnExit.setVisible(false);
+      addActor(btnExit);
+
+      buttonGroup = new ButtonGroup<>();
+      buttonGroup.setMinCheckCount(0);
+      buttonGroup.add(btnBuy, btnSell, btnRepair);
+
+      Label goldbankLabel = Label.i18n("stash", Riiablo.fonts.font16);
+      goldbankLabel.setSize(180, 16);
+      goldbankLabel.setPosition(20, 57);
+      addActor(goldbankLabel);
+
+      StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
+      goldLabel = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
+      goldLabel.setAutoSize(false);
+      goldLabel.setSize(goldLabel.getPrefWidth(), goldbankLabel.getHeight());
+      goldLabel.setPosition(
+          goldbankLabel.getX() + goldbankLabel.getWidth() - goldLabel.getWidth(),
+          goldbankLabel.getY());
+      addActor(goldLabel);
+
+      inventory = Riiablo.files.inventory.get("Monster");
+      for (int i = 0; i < tabs.length; i++) {
+        VendorGrid grid = tabs[i].grid = new VendorGrid(inventory, null);
+        grid.setPurchaseListener(new VendorGrid.PurchaseListener() {
+          @Override
+          public boolean onPurchase(Item item, boolean direct) {
+            return purchase(item, direct);
+          }
+
+          @Override
+          public boolean onSell(Item item) {
+            return sellCursorItem();
+          }
+        });
+        grid.setPosition(
+            inventory.gridLeft - inventory.invLeft,
+            getHeight() - inventory.gridTop - grid.getHeight());
+        grid.setVisible(false);
+        addActor(grid);
+      }
+
+      purchasePrompt = new WidgetGroup();
+      purchasePrompt.setTouchable(Touchable.enabled);
+      purchasePrompt.setSize(1, 1);
+      centerPurchasePrompt();
+      purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+        @Override
+        public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+          return true;
+        }
+      });
+      purchasePromptBackground = new Label("", Riiablo.fonts.fontformal11);
+      // Reuse the native MENU/boxpieces.dc6 frame used by NPC/task dialogs.
+      // This changes only the prompt presentation; purchase confirmation and
+      // cancellation behavior remain unchanged.
+      purchasePromptBackground.getStyle().background = purchasePromptBorder = new BorderedPaletteIndexedDrawable();
+      purchasePromptBackground.setTouchable(Touchable.disabled);
+      purchasePromptBackground.setBounds(0, 0, purchasePrompt.getWidth(), purchasePrompt.getHeight());
+      purchasePrompt.addActor(purchasePromptBackground);
+      purchasePromptTitle = new Label(Riiablo.bundle.get("vendor_buy_title"),
+          Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+      purchasePromptTitle.setAlignment(Align.center);
+      purchasePromptTitle.setBounds(0, 0, purchasePrompt.getWidth(), 1);
+      purchasePrompt.addActor(purchasePromptTitle);
+      purchasePromptItem = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+      purchasePromptItem.setAlignment(Align.center);
+      purchasePromptItem.setBounds(0, 0, purchasePrompt.getWidth(), 1);
+      purchasePrompt.addActor(purchasePromptItem);
+      purchasePromptPrice = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
+      purchasePromptPrice.setAlignment(Align.center);
+      purchasePromptPrice.setBounds(0, 0, purchasePrompt.getWidth(), 1);
+      purchasePrompt.addActor(purchasePromptPrice);
+      // LabelButton already follows the native text treatment: white at rest and
+      // palette blue while hovered/pressed.
+      purchaseConfirm = new LabelButton(Riiablo.bundle.get("yes"), Riiablo.fonts.fontformal11);
+      purchaseConfirm.setAlignment(Align.center);
+      purchaseConfirm.setBounds(0, 0, 1, 1);
+      purchaseConfirm.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          Item item = pendingPurchaseItem;
+          hidePurchasePrompt();
+          if (item != null) purchaseNow(item, false);
+        }
+      });
+      purchasePrompt.addActor(purchaseConfirm);
+      purchaseCancel = new LabelButton(Riiablo.bundle.get("no"), Riiablo.fonts.fontformal11);
+      purchaseCancel.setAlignment(Align.center);
+      purchaseCancel.setBounds(0, 0, 1, 1);
+      purchaseCancel.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          hidePurchasePrompt();
+        }
+      });
+      purchasePrompt.addActor(purchaseCancel);
+      purchasePrompt.setVisible(false);
+      addActor(purchasePrompt);
+
+      //setDebug(true, true);
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
     }
-
-    purchasePrompt = new WidgetGroup();
-    purchasePrompt.setTouchable(Touchable.enabled);
-    purchasePrompt.setSize(1, 1);
-    centerPurchasePrompt();
-    purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
-      @Override
-      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-        return true;
-      }
-    });
-    purchasePromptBackground = new Label("", Riiablo.fonts.fontformal11);
-    // Reuse the native MENU/boxpieces.dc6 frame used by NPC/task dialogs.
-    // This changes only the prompt presentation; purchase confirmation and
-    // cancellation behavior remain unchanged.
-    purchasePromptBackground.getStyle().background = new BorderedPaletteIndexedDrawable();
-    purchasePromptBackground.setTouchable(Touchable.disabled);
-    purchasePromptBackground.setBounds(0, 0, purchasePrompt.getWidth(), purchasePrompt.getHeight());
-    purchasePrompt.addActor(purchasePromptBackground);
-    purchasePromptTitle = new Label(Riiablo.bundle.get("vendor_buy_title"),
-        Riiablo.fonts.fontformal11, Riiablo.colors.gold);
-    purchasePromptTitle.setAlignment(Align.center);
-    purchasePromptTitle.setBounds(0, 0, purchasePrompt.getWidth(), 1);
-    purchasePrompt.addActor(purchasePromptTitle);
-    purchasePromptItem = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
-    purchasePromptItem.setAlignment(Align.center);
-    purchasePromptItem.setBounds(0, 0, purchasePrompt.getWidth(), 1);
-    purchasePrompt.addActor(purchasePromptItem);
-    purchasePromptPrice = new Label("", Riiablo.fonts.fontformal11, Riiablo.colors.gold);
-    purchasePromptPrice.setAlignment(Align.center);
-    purchasePromptPrice.setBounds(0, 0, purchasePrompt.getWidth(), 1);
-    purchasePrompt.addActor(purchasePromptPrice);
-    // LabelButton already follows the native text treatment: white at rest and
-    // palette blue while hovered/pressed.
-    purchaseConfirm = new LabelButton(Riiablo.bundle.get("yes"), Riiablo.fonts.fontformal11);
-    purchaseConfirm.setAlignment(Align.center);
-    purchaseConfirm.setBounds(0, 0, 1, 1);
-    purchaseConfirm.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        Item item = pendingPurchaseItem;
-        hidePurchasePrompt();
-        if (item != null) purchaseNow(item, false);
-      }
-    });
-    purchasePrompt.addActor(purchaseConfirm);
-    purchaseCancel = new LabelButton(Riiablo.bundle.get("no"), Riiablo.fonts.fontformal11);
-    purchaseCancel.setAlignment(Align.center);
-    purchaseCancel.setBounds(0, 0, 1, 1);
-    purchaseCancel.addListener(new ClickListener() {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        hidePurchasePrompt();
-      }
-    });
-    purchasePrompt.addActor(purchaseCancel);
-    purchasePrompt.setVisible(false);
-    addActor(purchasePrompt);
-
-    //setDebug(true, true);
   }
 
   @Override
   public void dispose() {
-    btnBuy.dispose();
-    btnSell.dispose();
-    btnRepair.dispose();
-    btnRepairAll.dispose();
-    btnExit.dispose();
-    for (int i = 0; i < btnBlank.length; i++) btnBlank[i].dispose();
-    Riiablo.assets.unload(buysellDescriptor.fileName);
-    Riiablo.assets.unload(buyselltabsDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setVisible(false));
+      cleanup.run(this::clearListeners);
+      cleanup.run(this::clearChildren);
+      cleanup.dispose(btnBuy); cleanup.dispose(btnSell); cleanup.dispose(btnRepair);
+      cleanup.dispose(btnRepairAll); cleanup.dispose(btnExit);
+      if (btnBlank != null) for (Button button : btnBlank) cleanup.dispose(button);
+      if (purchasePromptBackground != null) purchasePromptBackground.getStyle().background = null;
+      cleanup.dispose(purchasePromptBorder);
+      cleanup.dispose(references);
+    } finally {
+      purchasePromptBorder = null;
+      buysell = null;
+      buyselltabs = null;
+      pendingPurchaseItem = null;
+    }
   }
 
   private void showPurchasePrompt(Item item) {
@@ -510,6 +533,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float a) {
+    if (disposed) return;
     refreshGold();
     batch.draw(buysell, getX(), getY());
     super.draw(batch, a);
@@ -517,6 +541,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void setVisible(boolean visible) {
+    if (disposed && visible) return;
     super.setVisible(visible);
     if (visible) {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
