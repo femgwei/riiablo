@@ -26,8 +26,8 @@ class NativeNecromancerExplosionDataTest extends RiiabloTest {
     assertEquals("par5", skill.calc3);
     assertEquals("corpseexplosion", skill.cltmissilea);
     assertEquals("fire", skill.EType);
-    assertEquals(70, NecromancerSkills.getCorpseExplosionDamagePercent(skill, 1)[0]);
-    assertEquals(120, NecromancerSkills.getCorpseExplosionDamagePercent(skill, 1)[1]);
+    assertEquals(60, NecromancerSkills.getCorpseExplosionDamagePercent(skill, 1)[0]);
+    assertEquals(100, NecromancerSkills.getCorpseExplosionDamagePercent(skill, 1)[1]);
     assertEquals(50, NecromancerSkills.getCorpseExplosionElementalPercent(skill, 1));
     assertEquals(4, NecromancerSkills.getCorpseExplosionRadii(skill, 2)[0]);
     assertEquals(5, NecromancerSkills.getCorpseExplosionRadii(skill, 2)[1]);

@@ -1,0 +1,8 @@
+Baseline: 7 tests, 2 expected Corpse Explosion delayed-absorb failures.
+final: 319 tests, 0 failures/errors/skips.
+repeat: 319 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 73156A8887B2B09412C6687DDAF9E2F12F6893F2A0795BC67C1D8489E647F64B core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 A8B877E80385A12F5AAED64FAB940CEF6B5FF4AD53A7583D38EE346EEA868F04 core/src/test/java/com/riiablo/engine/server/NecromancerExplosionIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Corpse Explosion delayed-death absorb verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

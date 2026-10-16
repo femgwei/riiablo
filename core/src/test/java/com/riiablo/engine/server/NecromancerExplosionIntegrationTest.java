@@ -30,16 +30,69 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 /** Authoritative SrvSt17/SrvDo055/SrvDo063 integration coverage. */
 class NecromancerExplosionIntegrationTest extends RiiabloTest {
+  @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, true); }
+  @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, false); }
+  @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, true); }
+
+  private static void absorbBoundary(boolean delayed, boolean full) {
+    RecordingFactory factory = new RecordingFactory();
+    DamageRecorder probe = new DamageRecorder();
+    World world = world(factory, new ServerSkillSystem(true), false, probe);
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.CORPSE_EXPLOSION);
+      int owner = player(world, skill.Id);
+      int corpse = corpse(world, 0, 0, 100, 5);
+      int target = monster(world, 4.5f, 0, 1000);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      attrs.base().put(Stat.hitpoints, 500);
+      attrs.base().put(Stat.item_absorbfire, full ? 1000 : 10);
+      attrs.reset();
+      if (delayed) world.getMapper(UnitStates.class).get(target).stateList
+          .addState(StateId.DEATH_DELAY, 1000, 1, owner);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, skill.Id, corpse, Vector2.Zero, skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, probe.hits);
+      assertEquals(0f, probe.physical);
+      assertEquals(0, probe.deaths);
+      if (full) {
+        assertEquals(0f, probe.damage);
+        if (delayed) assertEquals(500f, hp(world, target));
+        else assertTrue(hp(world, target) >= 530f && hp(world, target) <= 549f);
+      } else {
+        assertTrue(probe.damage >= 20f && probe.damage <= 39f);
+        assertEquals(500f - probe.damage, hp(world, target), .0001f);
+      }
+      assertFalse(world.getMapper(Corpse.class).get(corpse).usable);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static final class DamageRecorder extends PassiveSystem {
+    int hits, deaths;
+    float damage, physical;
+    @Subscribe public void damage(DamageEvent event) {
+      hits++;
+      damage = event.damage;
+      physical = event.physicalDamage;
+    }
+    @Subscribe public void death(DeathEvent event) { deaths++; }
+  }
+
   @Test
   void corpseExplosionConsumesOnceAndAppliesInnerPhysicalOuterFireDamage() {
     RecordingFactory factory = new RecordingFactory();
@@ -66,9 +119,9 @@ class NecromancerExplosionIntegrationTest extends RiiabloTest {
           .stateList.hasState(StateId.CORPSE_NODRAW));
       float innerDamage = 1000 - hp(world, inner);
       float outerDamage = 1000 - hp(world, outer);
-      assertTrue(innerDamage >= 70 && innerDamage <= 119,
-          "inner radius must receive the complete 70%-119% packet");
-      assertTrue(outerDamage >= 35 && outerDamage <= 59,
+      assertTrue(innerDamage >= 60 && innerDamage <= 99,
+          "inner radius must receive the complete 1.10f 60%-99% packet");
+      assertTrue(outerDamage >= 30 && outerDamage <= 49,
           "the outer half-square ring receives only the 50% fire portion");
       assertEquals(100f, hp(world, friendly));
 
@@ -198,9 +251,11 @@ class NecromancerExplosionIntegrationTest extends RiiabloTest {
   }
 
   private static World world(
-      RecordingFactory factory, ServerSkillSystem skills, boolean missiles) {
+      RecordingFactory factory, ServerSkillSystem skills, boolean missiles,
+      PassiveSystem... observers) {
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem(), skills);
+    builder.with(observers);
     if (missiles) builder.with(new MissileCollisionSystem(), new StateUpdater());
     return new World(builder.with(factory).build().register("factory", factory)
         .register("map", new com.riiablo.map.Map(0, 0)));

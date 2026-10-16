@@ -4604,7 +4604,8 @@ public class ServerSkillSystem extends PassiveSystem {
               fireDamage, 0, targetStates, combatDifficulty(source, target));
       int resolved = physicalResult.totalDamage + fireResult.totalDamage;
       if (resolved <= 0 && fireResult.absorbedLife <= 0) continue;
-      if (fireResult.absorbedLife > 0) {
+      if (fireResult.absorbedLife > 0
+          && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
         StatRef maxHp = targetAttrs.get(Stat.maxhp, StatRef.obtain());
         if (maxHp != null) hp.add(Math.max(0f,
             Math.min((float) fireResult.absorbedLife, maxHp.asFixed() - hp.asFixed())));
