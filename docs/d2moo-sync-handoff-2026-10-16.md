@@ -40,9 +40,22 @@
   不创建假DLL地址调用；如要实际DLL差分另立明确原生桥工作。
 - 017e8ce空NoOpFixture为C++ mixin终止类型，JUnit无需同构空类；2dd609b/8390bfe为CMake/header装配。
 
-## 下一步：VisitorFramework的9项
+## VisitorFramework第二批已完成适用性审查
 
-先读上游源码，识别Java适用语义与已有测试能力，移植必要部分，不机械翻译模板和宏：
+已读取下述九项全部最终源码，Java测试适配为
+`core/src/test/java/com/d2moo/testutil/ObjectDifferences.java`，新增五项测试。
+与第一批合计九项/两类通过；日志 `core/build/upstream-visitor-01.log`，
+XML `.gradle/path-port/upstream-visitor-01/core/test-results/pathPortTest`。
+逐提交归类和Java差异见权威剩余清单第二批章节。
+身份对去重是安全改进，不复制单侧指针去重；无原DLL调用，无生产逻辑变更。
+
+下一步回主线101项逐项核销。已初读 `185ae45` / `4d45674` / `606dce4` diff，
+MonStats使用String missile引用、Missiles.Accel为int；尚未完成实际加载/调用回归证据，勿直接宣称已核销。
+先追踪这些数据实际使用及唯一掉落状态，不扩展完整寻路迁移。
+
+## VisitorFramework九项源码索引（已读）
+
+已审查上游源码并移植必要Java语义，没有机械翻译模板和宏：
 6288354 VisitorFramework module；586fd95 DifferenceType；5baef9d DifferenceDescriptor；
 2a21c28 DiffContext；a53f818 VisitorTraits；1842788 FieldVisitor；9ca6c7f DiffVisitor；
 ae3c0f1 TestComparator；14110b3 Macros。

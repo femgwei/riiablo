@@ -31,11 +31,38 @@
   当前Java测试后端不能直接移植，不建立假DLL地址调用。若后续明确要求真实DLL差分，再单列原生桥工程。
 - `017e8ce`：空NoOpFixture用于C++fixture mixin，当前JUnit不需要同构空类。
 - `2dd609b`/`8390bfe`：CMake模块/umbrella header为C++装配；Java工具放core/src/test/java/com/d2moo/testutil。
-- VisitorFramework另外9个提交尚待核销，不以本批两个工具宣称整个17提交已完成。
+- VisitorFramework另外9个提交的Java适用部分见下节；不将测试工具验收视作主线101项完成。
 - 本批仅新增测试基础设施，无生产游戏逻辑、寻路或协议变动。
 - 定向4项/1类通过，失败/错误/跳过0；日志core/build/upstream-tools-01.log，
   XML .gradle/path-port/upstream-tools-01/core/test-results/pathPortTest。覆盖实际临时bin文件、
   小端记录/尾随数据/只读buffer、非法count/截断、uint32端点/非法范围及拒绝采样尾部。
+
+## 最新分支同步第二批：VisitorFramework（2026-10-16）
+
+已读取 `origin/test_utilities..origin/visitor_framework` 九个提交及最终全部源码，基准 `14110b3`。
+Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/ObjectDifferences.java`：
+
+- `586fd95` / `5baef9d` / `2a21c28`：已移植字段/引用差异分类、结构化路径和值、每次比较独立上下文及只读结果。
+  Java输出为普通文本，不复制ANSI颜色或C++ ostream装配。
+- `a53f818` / `1842788` / `14110b3`：已移植显式Schema/Visitor选择字段、嵌套对象和数组。
+  泛型接口替代traits/成员指针/宏；省略字段及union分支由schema显式编写Java逻辑。
+  原生动态数组pointer/count在Java用数组长度替代；长度不等报告差异并只遍历共有元素，避免越界。
+- `9ca6c7f`：已移植对象图比较、空引用、数组索引路径及精确/浮点字段规则。
+  原版按单侧地址去重，Java按两侧对象身份对去重，避免共享actual对象掩盖不同expected对象；
+  循环可终止，不检测引用别名拓扑是否完全相同。Java同步深度优先遍历，不保证上游延迟child visitor的输出顺序。
+  原生地址与memcmp对象布局不适用于Java，引用仅显示null/present，普通字段按Java值比较。
+- `ae3c0f1`：已移植独立浮点比较和有界byte[] C字符串比较；普通精确断言继续使用JUnit。
+  **保留上游规则区别**：TestComparator浮点相等为 `abs(a-b) < 0.0001`；
+  DiffVisitor浮点字段不同为 `abs(a-b) > 0.0001`，因此边界、NaN/无穷行为不同。
+  数组浮点元素为数值精确比较（NaN不同、正负零相等），不自动套用容差。
+  strcmp忽略NUL后内容；无终止符Java显式拒绝，不复制C++越界读取。
+- `6288354`：CMake静态库/C++17模块不适用Java；由现有Gradle测试源集装配，无新增构建模块。
+
+验证：`ObjectDifferencesTest` 五项，加第一批四项，共九项/两类；
+日志 `core/build/upstream-visitor-01.log`，XML `.gradle/path-port/upstream-visitor-01/core/test-results/pathPortTest`。
+以上是测试基础设施的Java适配，未执行原DLL差分，未改变生产游戏逻辑或精确回归断言。
+主线初步审查：MonStats三套Java表使用字符串missile引用；Missiles.Accel为int，
+仍需关联实际加载/发射/速度调用与回归再核销 `185ae45` / `4d45674`；`606dce4` 仍待追踪唯一掉落状态。
 
 ## 剩余工作，按优先级核销
 
