@@ -1,0 +1,8 @@
+Baseline: 14 tests, 1 expected DiabRun death-threshold failure.
+final: 341 tests, 0 failures/errors/skips.
+repeat: 341 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 41E3BD53E94093E82F94A85A6CC8AB30C8876811C018E39D38071EF24437F349 core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 D7FF3CCDEE712965C92D47A5D69F5303BBFB9AF53416B2E2B129B31F1B607A47 core/src/test/java/com/riiablo/engine/server/DiabRunIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: DiabRun fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

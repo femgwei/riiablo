@@ -27,6 +27,39 @@ import org.junit.jupiter.api.Test;
 
 /** Actual MonSeq cursor, Pathfinder and collision movement; never inject SkillDo. */
 class DiabRunIntegrationTest extends RiiabloTest {
+  @Test void fractionalRemainderDies() { deathBoundary(255f / 256f, false, false); }
+  @Test void exactlyOneLifeSurvives() { deathBoundary(1f, false, false); }
+  @Test void aboveOneLifeSurvives() { deathBoundary(257f / 256f, false, false); }
+  @Test void cancelledDamagePreservesFractionalLife() { deathBoundary(.5f, true, false); }
+  @Test void zeroDamagePreservesFractionalLife() { deathBoundary(.5f, false, true); }
+
+  private static void deathBoundary(float remainder, boolean cancel, boolean zero) {
+    try (Fixture f = new Fixture("diablo", 3)) {
+      Attributes attrs = f.world.getMapper(AttributesWrapper.class).get(f.target).attrs;
+      if (zero) {
+        f.stat(f.target, Stat.normal_damage_reduction, 1000);
+        attrs.get(Stat.hitpoints).set(remainder);
+      } else {
+        // Arrange exact life against the real random packet at its event
+        // boundary without replacing the skill roll or animation sequence.
+        f.probe.beforeDamage = hit -> {
+          assertTrue(hit.physicalDamage >= 53f && hit.physicalDamage < 69f);
+          attrs.get(Stat.hitpoints).set(cancel ? remainder : hit.damage + remainder);
+          if (cancel) hit.damage = 0f;
+        };
+      }
+      f.begin(); f.finish();
+      boolean fatal = !cancel && !zero && remainder < 1f;
+      assertEquals(fatal ? 0f : remainder, f.hp(), .0001f);
+      assertEquals(fatal ? 1 : 0, f.probe.deaths);
+      assertEquals(1, f.probe.hits.size());
+      if (zero) assertEquals(0f, f.probe.hits.get(0).damage);
+      for (int i = 0; i < 3; i++) f.tick();
+      assertEquals(1, f.probe.hits.size());
+      assertEquals(fatal ? 1 : 0, f.probe.deaths);
+    }
+  }
+
   @Test void partialSearchIsExplicitAndNeverTreatsBlockedGoalAsWalkable() {
     try(Fixture f=new Fixture("diablo",18)) {
       Vector2 start=new Vector2(100,100),goal=new Vector2(118,100);
@@ -145,8 +178,11 @@ class DiabRunIntegrationTest extends RiiabloTest {
   }
 
   static class Probe extends PassiveSystem {
+    java.util.function.Consumer<DamageEvent> beforeDamage;
+    int deaths;
     final List<DamageEvent> hits=new ArrayList<>();int finished;
-    @Subscribe public void hit(DamageEvent e){hits.add(e);}
+    @Subscribe public void hit(DamageEvent e){hits.add(e);if(beforeDamage!=null)beforeDamage.accept(e);}
+    @Subscribe public void death(DeathEvent e){deaths++;}
     @Subscribe public void end(AnimDataFinishedEvent e){finished++;}
   }
   static class Fixture implements AutoCloseable {

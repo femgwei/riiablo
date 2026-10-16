@@ -1860,8 +1860,9 @@ public class ServerSkillSystem extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent damage = DamageEvent.obtainMissile(source, target, physical.totalDamage, physical.physicalDamage, null);
     events.dispatch(damage);
-    hp.sub(Math.max(0f, damage.damage));
-    if (hp.asFixed() <= 0f) {
+    float applied = Math.max(0f, damage.damage);
+    hp.sub(applied);
+    if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
       hp.set(0f);
       events.dispatch(DeathEvent.obtain(source, target));
     } else if (physical.totalDamage > 0) {

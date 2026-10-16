@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-16T00:25:13" hostname="DESKTOP-7GGAVHU" time="0.016">
+  <properties/>
+  <testcase name="aboveOneLifeSurvives()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="outerFractionalRemainderDies()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="townOrNoSelectCorpseIsRejectedBeforeManaSpend()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.0"/>
+  <testcase name="cancelledDamagePreservesFractionalLife()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="exactlyOneLifeSurvives()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="livingFullAbsorbStillHeals()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="fullAbsorbPreservesDelayedFractionalLife()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="sharedReservationPreventsDeathSentryOrSecondPlayerDoubleConsumption()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.0"/>
+  <testcase name="delayedFullAbsorbDoesNotHeal()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.0"/>
+  <testcase name="innerFractionalRemainderDies()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="poisonExplosionCreatesEightAuthoritativeDriftingCloudsAndAppliesFixedPoison()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.004"/>
+  <testcase name="delayedPartialAbsorbStillTakesDamage()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <testcase name="corpseExplosionConsumesOnceAndAppliesInnerPhysicalOuterFireDamage()" classname="com.riiablo.engine.server.NecromancerExplosionIntegrationTest" time="0.001"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=83 target=1 srvDoFunc=63 cltDoFunc=33
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=74 target=1 srvDoFunc=55 cltDoFunc=32
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>
