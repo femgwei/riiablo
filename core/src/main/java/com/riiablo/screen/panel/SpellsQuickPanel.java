@@ -53,6 +53,8 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   private final ItemData items = character.getItems();
   private ItemData.AlternateListener alternateListener;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
   private int generation;
   private final Array<HotkeyButton> ownedButtons = new Array<>();
 
@@ -97,6 +99,12 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   }
 
   public SpellsQuickPanel(final HotkeyButton o, final boolean leftSkills, Socket socket) {
+    this(Riiablo.game, o, leftSkills, socket);
+  }
+
+  public SpellsQuickPanel(com.riiablo.screen.GameScreen owner, final HotkeyButton o,
+      final boolean leftSkills, Socket socket) {
+    session = new PanelSession(owner);
     this.observer = o;
     this.leftSkills = leftSkills;
     this.buttonId = leftSkills ? Input.Buttons.LEFT : Input.Buttons.RIGHT;
@@ -108,6 +116,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     CharSkillicon = new DC6[CharSkilliconDescriptor.length];
     try {
       initialize();
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -359,11 +368,11 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   }
 
   public void setObserver(HotkeyButton observer) {
-    if (!disposed) this.observer = observer;
+    if (!disposed && (observer == null || isCurrentSession())) this.observer = observer;
   }
 
   @Override public void setVisible(boolean visible) {
-    if (!disposed) super.setVisible(visible);
+    if (!disposed && (!visible || isCurrentSession())) super.setVisible(visible);
   }
 
   private boolean isSkillButtonTarget(Actor target) {
@@ -381,14 +390,14 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
       NetworkedActionSender.selectSkill(socket, buttonId, skillId);
       return;
     }
-    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return;
-    AuraEcsSystem auraSystem = Riiablo.engine.getSystem(AuraEcsSystem.class);
+    if (session.world() == null || session.owner() == null || session.owner().player < 0) return;
+    AuraEcsSystem auraSystem = session.world().getSystem(AuraEcsSystem.class);
     if (auraSystem == null || leftSkills) return;
     Skills.Entry skill = Riiablo.files.skills.get(skillId);
     if (skill != null && skill.aura) {
-      auraSystem.selectAura(Riiablo.game.player, skillId);
+      auraSystem.selectAura(session.owner().player, skillId);
     } else {
-      auraSystem.clearAura(Riiablo.game.player);
+      auraSystem.clearAura(session.owner().player);
     }
   }
 
@@ -411,6 +420,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
       }
       cleanup.run(this::clearChildren);
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       Skillicon = null;
@@ -419,11 +429,15 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData;
+    return !disposed && session.isCurrent() && character == Riiablo.charData;
   }
 
   @Override public void act(float delta) {
     if (isCurrentSession()) super.act(delta);
+  }
+
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   @Override public void draw(Batch batch, float parentAlpha) {

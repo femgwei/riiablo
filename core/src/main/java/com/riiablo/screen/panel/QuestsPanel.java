@@ -46,6 +46,8 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
   private final Array<QuestButton> questButtons = new Array<>();
   private final Tab[] tabs = new Tab[5];
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   final AssetDescriptor<DC6> questbackgroundDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\questbackground.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion questbackground;
@@ -71,8 +73,14 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
   Tab activeTab;
 
   public QuestsPanel() {
+    this(Riiablo.game);
+  }
+
+  public QuestsPanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     try {
       initialize();
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -267,6 +275,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
         cleanup.dispose(button);
       }
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       ownedButtons.clear(); questButtons.clear();
@@ -277,11 +286,15 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData;
+    return !disposed && session.isCurrent() && character == Riiablo.charData;
+  }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   @Override public void setVisible(boolean visible) {
-    if (disposed) return;
+    if (disposed || visible && !isCurrentSession()) return;
     super.setVisible(visible);
     if (!visible && tabs != null) try (Disposal cleanup = new Disposal()) {
       for (Tab tab : tabs) if (tab != null) cleanup.run(tab::hide);
@@ -327,7 +340,12 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
           if (!isCurrentSession()) return;
           if (selected != null) setQuestText(selected);
         }
-      });
+      }) {
+        @Override public void play(String speech) { if (isCurrentSession()) super.play(speech); }
+        @Override public void setText(String text) { if (isCurrentSession()) super.setText(text); }
+        @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+        @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
+      };
       add(questDialog).grow().row();
     }
 
@@ -398,7 +416,9 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
       this.nativeRecordIndex = nativeRecordIndex;
       setName(quest.qstr);
 
-      completed = new DCWrapper();
+      completed = new DCWrapper() {
+        @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
+      };
       completed.setDrawable(questdone.getTexture(quest.questdone));
       completed.setPosition(5, 4);
       completed.setSize(72, 86);
@@ -408,11 +428,16 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
       anim = Animation.newAnimation(questicons[q]);
       anim.setClamp(FRAME_UP, FRAME_DOWN);
       anim.setFrameDuration(Float.MAX_VALUE);
-      AnimationWrapper animWrapper = new AnimationWrapper(anim);
+      AnimationWrapper animWrapper = new AnimationWrapper(anim) {
+        @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+        @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
+      };
       animWrapper.setPosition(5, 4);
       addActor(animWrapper);
 
-      overlay = new DCWrapper();
+      overlay = new DCWrapper() {
+        @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
+      };
       overlay.setDrawable(questsockets.getTexture(0));
       overlay.setSize(80, 95);
       addActor(overlay);

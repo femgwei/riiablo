@@ -87,6 +87,8 @@ class SpellsQuickPanelLifecycleTest {
       when(owner.contains("class-icons")).thenReturn(true);
       when(owner.isLoaded("class-icons")).thenReturn(true);
       set(panel, "references", references);
+      set(panel, "session", new PanelSession(Riiablo.game));
+      doReturn(new com.badlogic.gdx.utils.SnapshotArray<>(com.badlogic.gdx.scenes.scene2d.Actor.class)).when(panel).getChildren();
       set(panel, "character", mock(com.riiablo.save.CharData.class));
       // This legacy sound-error fixture bypasses the Actor constructor.
       doNothing().when(panel).clearChildren();

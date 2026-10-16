@@ -30,6 +30,7 @@ public class StatLabel extends Label {
 
   @Override
   public void act(float delta) {
+    if (!isSessionActive()) return;
     updateValue();
     super.act(delta);
   }

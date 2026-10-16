@@ -3,6 +3,79 @@
 本阶段接在七批子系统装配之后，独立处理资源归属与会话退出；不改变装配顺序、
 25Hz、玩法、协议或存档格式，不以释放方法存在与否判断资源归属。
 
+## 2026-10-17 面板集中收口：当前范围
+
+本轮合并剩余面板与直接控件的代码工作，统一测试和提交，不再逐面板拆批或
+重复扩大回归。下方各批记录保留历史事实，其“下一批”不是当前新增轮数。
+
+- `PanelSession` 捕获角色、资源/字体/颜色/纹理/文本宿主及显式 GameScreen，
+  允许构造期填充，返回后按原 owner / World 校验，一次绑定世界且禁止换绑。
+  登记已返回控件树，包括后来脱离父节点的控件；退出退休动作/普通及捕获监听、
+  子树和父链接，只归还自己的按钮声音，不销毁借用字体/纹理/角色/世界。
+- CharacterPanel 的加点、动态值、状态查询，SpellsPanel 的加点/详情和
+  SpellsQuickPanel 的热键/光环/observer 均受会话门禁；保留快捷技能的代次
+  退休和排序重挂规则。技能详情单独清理，动态标签不累积进全局归属表。
+- WaygatePanel / HelpPanel 资产逐次 load 配对到原 AssetManager，构造失败回滚，
+  完整退休页签、退出/传送回调、帮助绘制及外部移除的子树。
+- Cube / Stash、Quests / Escape、MobilePanel / MobileControls 统一 owner / World
+  边界；Inventory / Vendor 补世界门禁与子控件门禁。金币对话框含输入框继承
+  原面板门禁，不允许在同角色换世界后开启或提交；焦点释放保持原来的所有权规则。
+- Button / Label 的门禁为可选能力，不改变未绑定菜单控件的行为；HotkeyButton
+  的 act/hit 和标签遵循其现有 isActive 扩展点。Button 与 IconTextButton 内部
+  初始化失败会归还已成功取得的声音引用。Escape 继续借用原音频宿主，不因全局
+  音频别名变化而把动作转发给新宿主。
+- GameScreen 为全部剩余面板显式传 owner 并集中绑世界；桌面探针中晚创建的
+  移动控件显式补绑已经存在的世界。发布 owner 后重放已计算的技能快照，避免
+  构造期回调被门禁拒绝后快捷技能初始为空；不移动或重复角色 update 计算。
+  原有佣兵 UI、组队交易、物品、任务规则不变。
+
+当前非面板待办：连接交接/全局网络路由、控制台/Timer/异步日志；跨 Act/加载中
+退出、长压、真实联机、Android 真机、人工观感和性能验收继续单列。完成面板代码
+不等于全资源阶段结束，也不代表全进程零滞留。
+
+### 集中验证与失败复验
+
+- 新增 38 项用例：借用宿主更换、构造期填充/世界一次绑定、同角色换游戏/世界、
+  保存点击及直接保留控件入口、脱离父节点的子树、传送/帮助四项加载阶段失败回滚，
+  以及金币对话框/背包/商店同角色隔离、发布 owner 后只广播既有技能快照。
+  旧的绕构造声音失败夹具显式注入会话边界。
+- `build/panel-consolidation-regression.log`：首轮集中扩大覆盖 500 项，490 通过、
+  8 失败、2 跳过。六项失败为新增传送页夹具缺少无参背景纹理返回值；另两项是
+  Escape 原音频宿主借用约定和快捷技能条目的独立 hit 门禁，均修复并定向复验。
+- `build/panel-consolidation-recheck.log`：受影响单测通过；首次真实 GL 在首帧
+  暴露桌面探针晚创建移动页未绑世界，补齐探针装配；GameScreen 同时容忍已退休
+  EscapeController 不再返回按钮。正常 Android 装配不受此探针差异影响。
+- `build/panel-consolidation-final-recheck.log`：最终只复验受影响 10 类 191 项，
+  191/191 通过；包含最后补充的背包/商店两项。core / desktop / D2GS 编译通过。
+  加上发布时序测试，本轮覆盖集合共 503 项；没有为每个小修复重复首轮扩大覆盖。
+- 后续真实 GL 暴露初始快捷技能为空：构造末尾的角色计算先于 owner 发布，
+  新门禁正确拒绝当时的 UI 回调。修复为发布后调用 notifySkillChanged 重放快照，
+  不放松门禁，不移动或重复 update。`build/panel-consolidation-publication-recheck.log`
+  只复验装配/订阅/技能四类 64 项，64/64 通过，编译链及三轮真实 GL 全部通过。
+- 三轮每轮新增三页面板共 217 个控件退休、192 个保存点击失效，同角色换游戏/
+  世界隔离通过，恢复后正常 Stage 绘制三次；原有技能重建、移动 UI、物品、
+  任务、金币、商店、佣兵、网络页、共享资源等检查继续通过。
+  三轮退出资产 56/56/56，名称、类型、引用数列表均无差异，按钮声音引用归零；
+  最终 ClientShutdown PASS，宿主 assets=0、输入和全局别名清空。
+  这不代表全进程零滞留。观测到 78.54–125.42ms 慢帧，仍超过 40ms 预算，
+  本轮不宣称性能达标；人工、真实联机及 Android 真机尚未验收。
+
+最后发布时序修复的定向复验与真实资源复跑命令（此前 191 项另见上述日志）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.screen.panel.SpellsPanelResourceLifecycleTest `
+  --tests com.riiablo.screen.panel.SpellsQuickPanelLifecycleTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/panel-consolidation-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/panel-consolidation-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
 ## 第一批：UI / 调试 GL 资源归属与释放规则
 
 - `GameScreen` 创建并拥有主 `stage` 与 `scaledStage`，二者构造时都借用

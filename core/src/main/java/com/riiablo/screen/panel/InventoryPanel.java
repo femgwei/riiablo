@@ -59,6 +59,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   private final com.riiablo.audio.Audio audio = Riiablo.audio;
   private final com.riiablo.Cursor cursor = Riiablo.cursor;
   private GameScreen owner;
+  private com.artemis.World world;
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
   private boolean initializing = true;
   private ItemData.AlternateListener alternateListener;
   private boolean disposed;
@@ -106,8 +113,9 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   public InventoryPanel(GameScreen owner) {
     this.owner = owner;
+    world = owner == null ? Riiablo.engine : null;
     inventory = Riiablo.files.inventory.getClass(character.charClass);
-    try { initialize(); }
+    try { initialize(); PanelSession.guardTree(this, this::isCurrentSession); }
     catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -405,7 +413,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       invchar = invcharTabR = invcharTabL = null;
       inv_armor = inv_belt = inv_boots = inv_helm_glove = inv_ring_amulet = inv_weapons = null;
       alternateListener = null; itemController = null; depositGoldToStash = false;
-      owner = null;
+      owner = null; world = null;
       btnExit = null; btnDropGold = null; goldDialog = null; invgold = null; grid = null; fill = null;
     }
   }
@@ -414,7 +422,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     return !disposed && character == Riiablo.charData && assets == Riiablo.assets
         && itemData == character.getItems() && audio == Riiablo.audio && cursor == Riiablo.cursor
         // GameScreen publishes itself only after create() has built its panels.
-        && (initializing || (owner != null ? Riiablo.game == owner
+        && (initializing || world == Riiablo.engine && (owner != null ? Riiablo.game == owner
             : Riiablo.game == null || Riiablo.game.inventoryPanel == this));
   }
 
@@ -428,6 +436,10 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   }
 
   @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
 
   @Override
   public void setVisible(boolean visible) {

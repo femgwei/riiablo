@@ -380,7 +380,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     output.setTouchable(Touchable.disabled);
     stage.addActor(output);
 
-    escapePanel = new EscapePanel();
+    escapePanel = new EscapePanel(this);
     stage.addActor(escapePanel);
 
     controlPanel = new ControlPanel(this);
@@ -389,12 +389,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     stage.addActor(controlPanel);
 
     if (DEBUG_MOBILE || Gdx.app.getType() == Application.ApplicationType.Android) {
-      mobilePanel = new MobilePanel();
+      mobilePanel = new MobilePanel(this);
       mobilePanel.setPosition(0, 0);
       mobilePanel.setWidth(stage.getWidth());
       stage.addActor(mobilePanel);
 
-      mobileControls = new MobileControls();
+      mobileControls = new MobileControls(this);
       mobileControls.setPosition(
           stage.getWidth() - mobileControls.getWidth(),
           mobilePanel.getHeight());
@@ -419,11 +419,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight() - 8);
     stage.addActor(mercenaryHud);
 
-    stashPanel = new StashPanel();
+    stashPanel = new StashPanel(this);
     stashPanel.setPosition(0, stage.getHeight() - stashPanel.getHeight());
     stage.addActor(stashPanel);
 
-    cubePanel = new CubePanel();
+    cubePanel = new CubePanel(this);
     cubePanel.setPosition(0, stage.getHeight() - cubePanel.getHeight());
     stage.addActor(cubePanel);
 
@@ -431,11 +431,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     vendorPanel.setPosition(0, stage.getHeight() - vendorPanel.getHeight());
     stage.addActor(vendorPanel);
 
-    characterPanel = new CharacterPanel();
+    characterPanel = new CharacterPanel(this);
     characterPanel.setPosition(0, stage.getHeight() - characterPanel.getHeight());
     stage.addActor(characterPanel);
 
-    questsPanel = new QuestsPanel();
+    questsPanel = new QuestsPanel(this);
     questsPanel.setPosition(0, stage.getHeight() - questsPanel.getHeight());
     stage.addActor(questsPanel);
 
@@ -447,22 +447,22 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     tradePanel.setPosition(0, stage.getHeight() - tradePanel.getHeight());
     stage.addActor(tradePanel);
 
-    waygatePanel = new WaygatePanel(charData);
+    waygatePanel = new WaygatePanel(this, charData);
     waygatePanel.setPosition(0, stage.getHeight() - waygatePanel.getHeight());
     stage.addActor(waygatePanel);
 
-    spellsPanel = new SpellsPanel();
+    spellsPanel = new SpellsPanel(this);
     spellsPanel.setPosition(
         stage.getWidth() - spellsPanel.getWidth(),
         stage.getHeight() - spellsPanel.getHeight());
     stage.addActor(spellsPanel);
 
-    spellsQuickPanelL = new SpellsQuickPanel(controlPanel.getLeftSkill(), true, socket);
+    spellsQuickPanelL = new SpellsQuickPanel(this, controlPanel.getLeftSkill(), true, socket);
     spellsQuickPanelL.setPosition(0, 100, Align.bottomLeft);
     spellsQuickPanelL.setVisible(false);
     stage.addActor(spellsQuickPanelL);
 
-    spellsQuickPanelR = new SpellsQuickPanel(controlPanel.getRightSkill(), false, socket);
+    spellsQuickPanelR = new SpellsQuickPanel(this, controlPanel.getRightSkill(), false, socket);
     spellsQuickPanelR.setPosition(stage.getWidth(), 100, Align.bottomRight);
     spellsQuickPanelR.setVisible(false);
     stage.addActor(spellsQuickPanelR);
@@ -489,7 +489,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     });
 
-    helpPanel = new HelpPanel();
+    helpPanel = new HelpPanel(this);
     stage.addActor(helpPanel);
 
     mappedKeyStateListener = new MappedKeyStateAdapter() {
@@ -829,6 +829,20 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   private void injectPanels() {
+    inventoryPanel.bindWorld(engine);
+    vendorPanel.bindWorld(engine);
+    characterPanel.bindWorld(engine);
+    helpPanel.bindWorld(engine);
+    spellsPanel.bindWorld(engine);
+    spellsQuickPanelL.bindWorld(engine);
+    spellsQuickPanelR.bindWorld(engine);
+    questsPanel.bindWorld(engine);
+    escapePanel.bindWorld(engine);
+    cubePanel.bindWorld(engine);
+    stashPanel.bindWorld(engine);
+    waygatePanel.bindWorld(engine);
+    if (mobilePanel != null) mobilePanel.bindWorld(engine);
+    if (mobileControls != null) mobileControls.bindWorld(engine);
     hirelingPanel.bindWorld(engine);
     hireMercenaryPanel.bindWorld(engine);
     mercenaryHud.bindWorld(engine);
@@ -1125,6 +1139,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         if (actor instanceof EscapeController) {
           EscapeController escapeController = (EscapeController) actor;
           Actor escape = escapeController.getEscapeButton();
+          if (escape == null) continue; // A retired controller no longer exposes a live control.
           escape.localToStageCoordinates(tmpVec2.set(0, 0));
           escape.setPosition(tmpVec2.x, tmpVec2.y);
           stage.addActor(escape);
@@ -1222,7 +1237,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     create();
 
-    Riiablo.game = this;
+    publishPanelSession();
     configureSubscriptions();
     visibleSubscriptions.activate();
 
@@ -1320,6 +1335,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     renderer.updatePosition(true);
+  }
+
+  /** Replay the already computed UI snapshot only after this owner is published. */
+  void publishPanelSession() {
+    Riiablo.game = this;
+    charData.notifySkillChanged();
   }
 
   /**

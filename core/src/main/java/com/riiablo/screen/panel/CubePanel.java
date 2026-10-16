@@ -46,13 +46,20 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
   final Inventory.Entry inventory;
   ItemGrid grid;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   @Wire(name = "itemController")
   protected ItemController itemController;
 
   public CubePanel() {
+    this(Riiablo.game);
+  }
+
+  public CubePanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     inventory = Riiablo.files.inventory.get("Transmogrify Box Page 1");
-    try { initialize(); }
+    try { initialize(); session.finish(this); }
     catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -126,6 +133,7 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
       cleanup.run(() -> ActorTree.clear(btnExit));
       cleanup.run(() -> ActorTree.clear(btnTransmog));
       cleanup.dispose(grid);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       supertransmogrifier = null; btnExit = null; btnTransmog = null; grid = null; itemController = null;
@@ -133,8 +141,12 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+    return !disposed && session.isCurrent() && character == Riiablo.charData && assets == Riiablo.assets
         && itemData == character.getItems();
+  }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   private class SessionButton extends Button {

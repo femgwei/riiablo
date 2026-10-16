@@ -98,6 +98,7 @@ class SpellsPanelResourceLifecycleTest {
     assets.setLoader(DC6.class, new SynchronousAssetLoader<DC6, AssetLoaderParameters<DC6>>(FileHandle::new) {
       @Override public DC6 load(AssetManager manager, String name, FileHandle file, AssetLoaderParameters<DC6> params) {
         DC6 sheet = mock(DC6.class); when(sheet.getTexture(anyInt())).thenReturn(region);
+        when(sheet.getTexture()).thenReturn(region);
         when(sheet.getNumPages()).thenReturn(100); return sheet;
       }
       @Override public Array<AssetDescriptor> getDependencies(String name, FileHandle file, AssetLoaderParameters<DC6> params) { return null; }
@@ -115,6 +116,87 @@ class SpellsPanelResourceLifecycleTest {
     } finally {
       for (Map.Entry<Field, Object> alias : aliases.entrySet()) alias.getKey().set(null, alias.getValue());
       Gdx.app = previousApp; Gdx.files = previousFiles;
+    }
+  }
+
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void sameCharacterCannotRouteSavedControlsIntoAnotherGameOrWorld(boolean quick) {
+    com.riiablo.screen.GameScreen game = mock(com.riiablo.screen.GameScreen.class);
+    Riiablo.game = game;
+    Actor panel = own(quick ? new SpellsQuickPanel(game, null, false, null) : new SpellsPanel(game));
+    if (quick) rebuild((SpellsQuickPanel) panel);
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.game = mock(com.riiablo.screen.GameScreen.class);
+    PanelSessionAssertions.assertInactive(panel, actors);
+    verifyNoInteractions(Riiablo.game);
+    Riiablo.game = game; Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors);
+    verifyNoInteractions(Riiablo.engine);
+    ((Disposable) panel).dispose();
+    PanelSessionAssertions.assertInactive(panel, actors);
+  }
+
+  private Actor overlay(String kind, com.riiablo.screen.GameScreen game) throws Exception {
+    Riiablo.fonts.fontformal12 = Riiablo.fonts.font16;
+    Riiablo.fonts.ReallyTheLastSucker = Riiablo.fonts.font16;
+    if (kind.equals("help")) return own(new HelpPanel(game));
+    if (kind.equals("character")) {
+      when(character.getStats()).thenReturn(mock(Attributes.class, RETURNS_DEEP_STUBS));
+      try (org.mockito.MockedConstruction<com.riiablo.graphics.BorderedPaletteIndexedDrawable> ignored =
+          mockConstruction(com.riiablo.graphics.BorderedPaletteIndexedDrawable.class)) {
+        return own(new CharacterPanel(game));
+      }
+    }
+    com.riiablo.codec.excel.Levels table = mock(com.riiablo.codec.excel.Levels.class);
+    com.riiablo.codec.excel.Levels.Entry row = new com.riiablo.codec.excel.Levels.Entry();
+    row.Act = 0; row.Waypoint = 0; row.LevelName = "town";
+    when(table.iterator()).thenAnswer(call -> Array.with(row).iterator());
+    set(com.riiablo.Files.class, Riiablo.files, "Levels", table);
+    return own(new WaygatePanel(game, character));
+  }
+
+  @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({
+      "help,game", "help,world", "character,game", "character,world", "waygate,game", "waygate,world"})
+  void remainingOverlaysRetireSavedControlsWithoutChangingTheCharacter(String kind, String changed) throws Exception {
+    com.riiablo.screen.GameScreen game = mock(com.riiablo.screen.GameScreen.class); Riiablo.game = game;
+    Actor panel = overlay(kind, game);
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    if (changed.equals("game")) Riiablo.game = mock(com.riiablo.screen.GameScreen.class);
+    else Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors);
+    if (changed.equals("game")) verifyNoInteractions(Riiablo.game);
+    else verifyNoInteractions(Riiablo.engine);
+    ((Disposable) panel).dispose(); ((Disposable) panel).dispose();
+    PanelSessionAssertions.assertInactive(panel, actors);
+    assertEquals(0, assets.getLoadedAssets());
+  }
+
+  @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({
+      "help,1", "help,2", "help,3", "help,4", "waygate,1", "waygate,2", "waygate,3", "waygate,4"})
+  void overlayConstructionFailureReturnsEverySubmittedReference(String kind, int failAt) throws Exception {
+    RuntimeException failure = new RuntimeException("injected overlay asset failure");
+    int[] loaded = {0};
+    doAnswer(call -> {
+      if (++loaded[0] == failAt) throw failure;
+      return call.callRealMethod();
+    }).when(assets).finishLoadingAsset(any(AssetDescriptor.class));
+    assertSame(failure, assertThrows(RuntimeException.class, () -> overlay(kind, null)));
+    assertEquals(0, assets.getLoadedAssets());
+    assertEquals(0, assets.getQueuedAssets());
+  }
+
+  @ParameterizedTest @ValueSource(strings = {"help", "character", "waygate"})
+  void detachedOverlaySubtreesAndExternalAssetReferencesSurviveOnlyAsIntended(String kind) throws Exception {
+    assets.load(SOUND, Sound.class); assets.finishLoading();
+    Actor panel = overlay(kind, null);
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    for (Actor child : ((Group) panel).getChildren().toArray(Actor.class)) child.remove();
+    ((Disposable) panel).dispose(); ((Disposable) panel).dispose();
+    assets.finishLoading();
+    assertEquals(1, assets.getLoadedAssets()); assertEquals(1, assets.getReferenceCount(SOUND));
+    for (Actor actor : actors) {
+      assertNull(actor.getParent()); assertTrue(actor.getListeners().isEmpty());
+      assertTrue(actor.getCaptureListeners().isEmpty()); assertTrue(actor.getActions().isEmpty());
     }
   }
 

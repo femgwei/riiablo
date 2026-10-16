@@ -172,10 +172,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     // still run unchanged. Mobile coverage is opt-in; normal desktop is unchanged.
     if (mobileUiLifecycle) {
       require(screen.mobilePanel == null && screen.mobileControls == null, "desktop mobile fixture starts absent");
-      screen.mobilePanel = new com.riiablo.screen.panel.MobilePanel();
+      screen.mobilePanel = new com.riiablo.screen.panel.MobilePanel(screen);
+      screen.mobilePanel.bindWorld(screen.engine);
       screen.mobilePanel.setWidth(screen.stage.getWidth());
       screen.stage.addActor(screen.mobilePanel);
-      screen.mobileControls = new com.riiablo.screen.panel.MobileControls();
+      screen.mobileControls = new com.riiablo.screen.panel.MobileControls(screen);
+      screen.mobileControls.bindWorld(screen.engine);
       screen.mobileControls.setPosition(screen.stage.getWidth() - screen.mobileControls.getWidth(),
           screen.mobilePanel.getHeight());
       screen.stage.addActor(screen.mobileControls);
@@ -208,6 +210,25 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
     Array<Actor> retiredPartyMessages = new Array<>();
+    Actor[] remainingPanels = {screen.characterPanel, screen.helpPanel, screen.waygatePanel};
+    Array<Actor> remainingPanelActors = new Array<>();
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> remainingPanelClicks = new Array<>();
+    for (Actor panel : remainingPanels) collectActors(panel, remainingPanelActors);
+    for (Actor actor : remainingPanelActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        remainingPanelClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    // Same character/resources, but the owning game or world is no longer published.
+    GameScreen publishedGame = Riiablo.game;
+    com.artemis.World publishedWorld = Riiablo.engine;
+    try {
+      Riiablo.game = null;
+      checkInactivePanels(remainingPanels, remainingPanelActors, remainingPanelClicks);
+      Riiablo.game = publishedGame; Riiablo.engine = null;
+      checkInactivePanels(remainingPanels, remainingPanelActors, remainingPanelClicks);
+    } finally { Riiablo.game = publishedGame; Riiablo.engine = publishedWorld; }
+    for (Actor panel : remainingPanels) {
+      panel.setVisible(true); screen.stage.draw(); panel.setVisible(false);
+    }
     for (int reopen = 0; reopen < 3; reopen++) {
       screen.setLeftPanel(screen.partyPanel);
       screen.partyPanel.act(0);
@@ -732,6 +753,16 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    for (Actor panel : remainingPanels) {
+      require(field(panel, "disposed", Boolean.class), "remaining panel retired by Client");
+      ((com.badlogic.gdx.utils.Disposable) panel).dispose();
+      panel.setVisible(true); require(!panel.isVisible(), "remaining panel cannot reopen");
+    }
+    checkInactivePanels(remainingPanels, remainingPanelActors, remainingPanelClicks);
+    for (Actor actor : remainingPanelActors)
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0,
+          "remaining panel detached control tree retired");
     require(field(screen.partyPanel, "disposed", Boolean.class) && field(screen.tradePanel, "disposed", Boolean.class),
         "Client retired both network panel owners");
     screen.partyPanel.dispose(); screen.tradePanel.dispose();
@@ -982,6 +1013,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nuiButtonReferencesAfterConstruction=" + buttonReferencesAfterConstruction
         + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
         + "\nnetworkPanelActorsRetired=" + networkPanelActors.size
+        + "\nremainingPanelOwnersRetired=3"
+        + "\nremainingPanelActorsRetired=" + remainingPanelActors.size
+        + "\nremainingPanelLateClicksIgnored=" + remainingPanelClicks.size
+        + "\nremainingPanelSameCharacterGameAndWorldIsolation=true"
+        + "\nremainingPanelLiveStageDraws=3"
         + "\nnetworkPanelLateClicksIgnored=" + networkPanelClicks.size
         + "\nnetworkPanelBorrowedSystemsCleared=true"
         + "\nnetworkPanelLiveStageDraws=4"
@@ -1069,6 +1105,19 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
 
   private static void require(boolean condition, String message) {
     if (!condition) throw new IllegalStateException("Session lifecycle: " + message);
+  }
+
+  private static void checkInactivePanels(Actor[] panels, Array<Actor> actors,
+      Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> clicks) {
+    for (Actor panel : panels) {
+      panel.act(1); panel.draw((com.badlogic.gdx.graphics.g2d.Batch) null, 1);
+      require(panel.hit(0, 0, true) == null, "inactive remaining panel cannot hit-test");
+    }
+    for (Actor actor : actors) if (actor instanceof com.riiablo.widget.Button || actor instanceof com.riiablo.widget.Label) {
+      actor.act(1); actor.draw((com.badlogic.gdx.graphics.g2d.Batch) null, 1);
+      require(actor.hit(0, 0, true) == null, "inactive remaining control cannot hit-test");
+    }
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : clicks) click.clicked(null, 0, 0);
   }
 
   private static void collectGridTextures(Actor actor, Array<Texture> textures) {

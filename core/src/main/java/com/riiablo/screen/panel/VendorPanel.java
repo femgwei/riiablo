@@ -66,6 +66,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private final com.riiablo.audio.Audio audio = Riiablo.audio;
   private final com.riiablo.Cursor cursor = Riiablo.cursor;
   private GameScreen owner;
+  private com.artemis.World world;
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
   private boolean initializing = true;
   private Stage purchasePromptStage;
   private BorderedPaletteIndexedDrawable purchasePromptBorder;
@@ -176,6 +183,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   public VendorPanel(GameScreen owner) {
     this.owner = owner;
+    world = owner == null ? Riiablo.engine : null;
     try {
       references.load(buysellDescriptor);
       assets.finishLoadingAsset(buysellDescriptor);
@@ -448,6 +456,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       addActor(purchasePrompt);
 
       //setDebug(true, true);
+      PanelSession.guardTree(this, this::isCurrentSession);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -498,7 +507,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       buyselltabs = null;
       pendingPurchaseItem = null;
       localStock = null; localPricing = null; localVendorGenerator = null; permanentStockBases.clear();
-      networkSynchronizer = null; clientSocket = null; owner = null; goldLabel = null;
+      networkSynchronizer = null; clientSocket = null; owner = null; world = null; goldLabel = null;
       networkFlags = configuredFlags = networkNpcEntityId = 0; networkStockRevision = 0;
       clearPendingRequest();
     }
@@ -508,7 +517,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return !disposed && character == Riiablo.charData && assets == Riiablo.assets
         && itemData == character.getItems() && audio == Riiablo.audio && cursor == Riiablo.cursor
         // GameScreen publishes itself only after create() has built its panels.
-        && (initializing || (owner != null ? Riiablo.game == owner
+        && (initializing || world == Riiablo.engine && (owner != null ? Riiablo.game == owner
             : Riiablo.game == null || Riiablo.game.vendorPanel == this));
   }
 
@@ -520,6 +529,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
 
   private void showPurchasePrompt(Item item) {
     if (!isCurrentSession() || item == null

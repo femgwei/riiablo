@@ -35,6 +35,8 @@ public class MobileControls extends WidgetGroup implements Disposable {
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
   private final AssetReferenceScope references = new AssetReferenceScope(assets);
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
   private ActorGestureListener gestureListener;
   private SpellsQuickPanel observedPanel;
   final AssetDescriptor<DC6> SkilliconDescriptor = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\Skillicon.DC6", DC6.class);
@@ -59,8 +61,14 @@ public class MobileControls extends WidgetGroup implements Disposable {
   final float SIZE = 64;
 
   public MobileControls() {
+    this(Riiablo.game);
+  }
+
+  public MobileControls(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     try {
       initialize();
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -85,7 +93,7 @@ public class MobileControls extends WidgetGroup implements Disposable {
     interact.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (disposed) return;
+        if (!isCurrentSession() || events == null) return;
         events.dispatch(InteractEvent.obtain());
       }
     });
@@ -101,8 +109,8 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
       @Override
       public boolean longPress(Actor actor, float x, float y) {
-        if (disposed) return false;
-        SpellsQuickPanel spellsQuickPanel = Riiablo.game.spellsQuickPanelR;
+        if (!isCurrentSession() || session.owner() == null) return false;
+        SpellsQuickPanel spellsQuickPanel = session.owner().spellsQuickPanelR;
         final boolean visible = !spellsQuickPanel.isVisible();
         if (visible) {
           HotkeyButton dst = (HotkeyButton) actor;
@@ -119,9 +127,9 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
       @Override
       public void tap(InputEvent event, float x, float y, int count, int button) {
-        if (disposed) return;
-        if (Riiablo.game.spellsQuickPanelR.isVisible()) {
-          Riiablo.game.spellsQuickPanelR.setVisible(false);
+        if (!isCurrentSession() || session.owner() == null) return;
+        if (session.owner().spellsQuickPanelR.isVisible()) {
+          session.owner().spellsQuickPanelR.setVisible(false);
           return;
         }
 
@@ -134,10 +142,12 @@ public class MobileControls extends WidgetGroup implements Disposable {
         if (actor.isDisabled()) return;
         final int skillId = actor.getSkill();
         if (skillId == -1) return;
-        final int player = Riiablo.game.player;
+        final int player = session.owner().player;
+        if (player < 0 || mAngle == null || mPosition == null
+            || !mAngle.has(player) || !mPosition.has(player)) return;
         tmpVec2.set(mAngle.get(player).target).scl(12).add(mPosition.get(player).position);
         if (socket == null) {
-          actioneer.cast(player, skillId, Engine.INVALID_ENTITY, tmpVec2);
+          if (actioneer != null) actioneer.cast(player, skillId, Engine.INVALID_ENTITY, tmpVec2);
         } else {
           NetworkedActionSender.cast(socket, skillId, Engine.INVALID_ENTITY, tmpVec2);
         }
@@ -193,6 +203,7 @@ public class MobileControls extends WidgetGroup implements Disposable {
       }
       cleanup.run(this::clearChildren);
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       Skillicon = null;
@@ -211,12 +222,17 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void act(float delta) {
-    if (!disposed) super.act(delta);
+    if (isCurrentSession()) super.act(delta);
+  }
+
+  private boolean isCurrentSession() { return !disposed && session.isCurrent(); }
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 }

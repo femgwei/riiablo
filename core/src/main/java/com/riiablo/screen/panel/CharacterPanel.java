@@ -55,6 +55,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private final AssetReferenceScope references = new AssetReferenceScope(assets);
   private BorderedPaletteIndexedDrawable statPointsBorder;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   final AssetDescriptor<DC6> invcharDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\invchar6.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion invchar;
@@ -76,13 +78,18 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private Button.ButtonStyle statButtonStyle;
 
   public CharacterPanel() {
+    this(Riiablo.game);
+  }
+
+  public CharacterPanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     try {
       references.load(invcharDescriptor);
       assets.finishLoadingAsset(invcharDescriptor);
       invchar = assets.get(invcharDescriptor).getTexture(0);
       setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
       setTouchable(Touchable.enabled);
-      setVisible(false);
+      super.setVisible(false); // Do not refresh a partially assembled character view.
 
       references.load(levelButtonDescriptor);
       assets.finishLoadingAsset(levelButtonDescriptor);
@@ -336,6 +343,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
       addActor(poisonRes);
 
       //setDebug(true, true);
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -513,8 +521,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     button.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game == null) return;
-        boolean accepted = Riiablo.game.spendStatPoint(statType);
+        if (!isCurrentSession() || session.owner() == null) return;
+        boolean accepted = session.owner().spendStatPoint(statType);
         com.riiablo.logger.LogManager.getLogger("CharacterPanel").info(
             "[STAT_POINT_UI] phase=request stat={} accepted={}", statType, accepted);
         // Single-player mutations are immediate. Multiplayer waits for the
@@ -527,6 +535,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   }
 
   private void updateStatPointControls() {
+    if (!isCurrentSession()) return;
     int available = Riiablo.charData == null ? 0 : Riiablo.charData.getAvailableStatPoints();
     if (statPoints != null) statPoints.setText(Integer.toString(available));
     if (levelValue != null) {
@@ -641,12 +650,13 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   }
 
   private StateList playerStates() {
-    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return null;
+    if (!isCurrentSession() || session.world() == null || session.owner() == null
+        || session.owner().player < 0) return null;
     try {
       com.artemis.ComponentMapper<UnitStates> mapper =
-          Riiablo.engine.getMapper(UnitStates.class);
-      if (mapper == null || !mapper.has(Riiablo.game.player)) return null;
-      UnitStates component = mapper.get(Riiablo.game.player);
+          session.world().getMapper(UnitStates.class);
+      if (mapper == null || !mapper.has(session.owner().player)) return null;
+      UnitStates component = mapper.get(session.owner().player);
       return component == null ? null : component.stateList;
     } catch (RuntimeException ignored) {
       return null;
@@ -956,7 +966,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void act(float delta) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.act(delta);
     updateStatPointControls();
   }
@@ -964,6 +974,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   @Override
   public void setVisible(boolean visible) {
     if (disposed) { super.setVisible(false); return; }
+    if (visible && !isCurrentSession()) return;
     super.setVisible(visible);
     // Refresh synchronously when the panel is opened. Waiting for the next
     // stage tick made newly awarded points appear to be missing.
@@ -1006,11 +1017,11 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(() -> setVisible(false));
-      cleanup.run(this::clearListeners);
-      cleanup.run(this::clearChildren);
+      cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.dispose(btnExit);
       for (Button button : statButtons) cleanup.dispose(button);
       cleanup.dispose(statPointsBorder);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       invchar = null;
@@ -1020,8 +1031,13 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float a) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     batch.draw(invchar, getX(), getY());
     super.draw(batch, a);
+  }
+
+  private boolean isCurrentSession() { return !disposed && session.isCurrent(); }
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 }

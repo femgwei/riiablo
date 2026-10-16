@@ -54,6 +54,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private final List<Table> ownedPages = new ArrayList<>();
   private Stage captureStage;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   public enum Page { MAIN, OPTIONS, SOUND, VIDEO, AUTOMAP, CONTROLS }
 
@@ -118,8 +120,14 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   };
 
   public EscapePanel() {
+    this(Riiablo.game);
+  }
+
+  public EscapePanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     try {
       initialize();
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -148,7 +156,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       public void clicked(InputEvent event, float x, float y) {
         if (!isCurrentSession()) return;
         audio.play(2, true); // select.wav
-        if (Riiablo.game != null && !Riiablo.game.saveCharacter()) return;
+        if (session.owner() != null && !session.owner().saveCharacter()) return;
         Riiablo.client.clearAndSet(new MenuScreen());
       }
     });
@@ -696,6 +704,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       if (pentspinL != null) cleanup.run(pentspinL::reset);
       if (pentspin != null) cleanup.run(pentspin::reset);
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       ownedPages.clear(); controlRows.clear();
@@ -707,7 +716,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData && keys == Riiablo.keys && assets == Riiablo.assets;
+    return !disposed && session.isCurrent() && character == Riiablo.charData
+        && keys == Riiablo.keys && assets == Riiablo.assets;
+  }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   private static void clearActorTree(Actor actor) {
@@ -723,7 +737,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   @Override public void setVisible(boolean visible) {
-    if (disposed) return;
+    if (disposed || visible && !isCurrentSession()) return;
     super.setVisible(visible);
     if (!visible) {
       controlsState.cancel();

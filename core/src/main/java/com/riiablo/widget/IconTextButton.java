@@ -7,22 +7,32 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.riiablo.codec.FontTBL;
 
 public class IconTextButton extends Table {
-  final Button button;
-  final LabelButton label;
+  Button button;
+  LabelButton label;
 
   public IconTextButton(Button.ButtonStyle style, String text, FontTBL.BitmapFont font) {
-    add(button = new Button(style)).fill(false).pad(2).padLeft(1).padTop(3);
-    add(label = new LabelButton(text, font)).grow().spaceLeft(25).row();
-    setTouchable(Touchable.enabled);
-    addListener(new InputListener() {
-      @Override
-      public boolean handle(Event e) {
-        if (button.isDisabled()) return false;
-        button.getClickListener().handle(e);
-        label.clickListener.handle(e);
-        return true;
+    try {
+      add(button = new Button(style)).fill(false).pad(2).padLeft(1).padTop(3);
+      add(label = new LabelButton(text, font)).grow().spaceLeft(25).row();
+      setTouchable(Touchable.enabled);
+      addListener(new InputListener() {
+        @Override
+        public boolean handle(Event e) {
+          if (button.isDisabled()) return false;
+          button.getClickListener().handle(e);
+          label.clickListener.handle(e);
+          return true;
+        }
+      });
+    } catch (RuntimeException | Error failure) {
+      try (com.riiablo.util.Disposal cleanup = new com.riiablo.util.Disposal()) {
+        cleanup.dispose(button);
+        cleanup.run(() -> com.riiablo.util.ActorTree.clear(this));
+      } catch (RuntimeException | Error cleanup) {
+        if (cleanup != failure) failure.addSuppressed(cleanup);
       }
-    });
+      throw failure;
+    }
   }
 
   public void setDisabled(boolean disabled) {

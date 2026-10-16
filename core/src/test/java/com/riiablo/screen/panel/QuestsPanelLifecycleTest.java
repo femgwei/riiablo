@@ -119,6 +119,17 @@ class QuestsPanelLifecycleTest {
     }
   }
 
+  @Test void sameCharacterQuestCallbacksCannotReachReplacementGameOrWorld() {
+    com.riiablo.screen.GameScreen game = mock(com.riiablo.screen.GameScreen.class); Riiablo.game = game;
+    QuestsPanel panel = own(new QuestsPanel(game));
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.game = mock(com.riiablo.screen.GameScreen.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.game);
+    Riiablo.game = game; Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.engine);
+    panel.dispose(); PanelSessionAssertions.assertInactive(panel, actors);
+  }
+
   @Test void independentExitBalancesAllAssetsOnOriginalManagerAndClearsWholeTree() throws Exception {
     Array<String> paths = assetPaths();
     for (String path : paths) assets.load(path, DC6.class);

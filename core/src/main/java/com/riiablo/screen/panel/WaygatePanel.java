@@ -26,6 +26,7 @@ import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.IconTextButton;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.AssetReferenceScope;
 
 import java.util.Comparator;
 
@@ -33,6 +34,9 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
   private static final String TAG = "WaygatePanel";
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
   private boolean disposed;
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   final AssetDescriptor<DC6> waygatebackgroundDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\waygatebackground.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion waygatebackground;
@@ -52,8 +56,22 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
   final Array<WaypointControl> waypointControls = new Array<>(42);
 
   public WaygatePanel(CharData charData) {
+    this(Riiablo.game, charData);
+  }
+
+  public WaygatePanel(com.riiablo.screen.GameScreen owner, CharData charData) {
     this.charData = charData;
-    assets.load(waygatebackgroundDescriptor);
+    session = new PanelSession(owner);
+    try { initialize(); session.finish(this); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(waygatebackgroundDescriptor);
     assets.finishLoadingAsset(waygatebackgroundDescriptor);
     waygatebackground = assets.get(waygatebackgroundDescriptor).getTexture();
     setSize(waygatebackground.getRegionWidth(), waygatebackground.getRegionHeight());
@@ -61,26 +79,28 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     setVisible(false);
 
     btnExit = new Button(new Button.ButtonStyle() {{
-      assets.load(buysellbtnDescriptor);
+      references.load(buysellbtnDescriptor);
       assets.finishLoadingAsset(buysellbtnDescriptor);
       up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
       down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
+    session.own(btnExit);
     btnExit.setPosition(272, 14);
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null) Riiablo.game.setLeftPanel(null);
+        if (!isCurrentSession()) return;
+        if (session.owner() != null) session.owner().setLeftPanel(null);
         else setVisible(false);
       }
     });
     addActor(btnExit);
 
-    assets.load(expwaygatetabsDescriptor);
+    references.load(expwaygatetabsDescriptor);
     assets.finishLoadingAsset(expwaygatetabsDescriptor);
     expwaygatetabs = assets.get(expwaygatetabsDescriptor);
 
-    assets.load(waygateiconsDescriptor);
+    references.load(waygateiconsDescriptor);
     assets.finishLoadingAsset(waygateiconsDescriptor);
     waygateicons = assets.get(waygateiconsDescriptor);
 
@@ -93,10 +113,11 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     clickListener = new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         IconTextButton button = (IconTextButton) event.getListenerActor();
         if (button.isDisabled()) return;
         Levels.Entry target = (Levels.Entry) button.getUserObject();
-        Riiablo.game.setLevel(target);
+        if (session.owner() != null) session.owner().setLevel(target);
       }
     };
 
@@ -121,6 +142,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     final Tab[] tabs = new Tab[5];
     for (int i = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
+      session.own(tab);
       for (Levels.Entry entry : waypoints[i]) {
         Actor controller = tab.addWaypoint(entry.LevelName);
         controller.setUserObject(entry);
@@ -146,12 +168,14 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
         up   = new TextureRegionDrawable(expwaygatetabs.getTexture(j + 1));
         checked = down;
       }});
+      session.own(actor);
       actor.setHighlightedBlendMode(BlendMode.ID, Color.WHITE);
       actor.setPosition(x, y, Align.topLeft);
       actor.setUserObject(tabs[i]);
       actor.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (!isCurrentSession()) return;
           for (Tab tab : tabs) if (tab != null) tab.setVisible(false);
           Tab tab = (Tab) actor.getUserObject();
           tab.setVisible(true);
@@ -174,7 +198,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
   /** Refreshes destination availability from the current difficulty save flags. */
   public void refresh() {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     for (WaypointControl control : waypointControls) {
       Levels.Entry level = control.level;
       boolean active = charData.isWaypointActivated(level.Act, level.Waypoint);
@@ -184,7 +208,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     batch.draw(waygatebackground, getX(), getY());
     super.draw(batch, parentAlpha);
   }
@@ -194,15 +218,14 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
       cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.run(this::clearListeners);
       cleanup.run(() -> Button.disposeClickSounds(this));
       cleanup.dispose(btnExit);
-      cleanup.run(this::clearChildren);
-      cleanup.run(() -> assets.unload(waygatebackgroundDescriptor.fileName));
-      cleanup.run(() -> assets.unload(waygateiconsDescriptor.fileName));
-      cleanup.run(() -> assets.unload(expwaygatetabsDescriptor.fileName));
-      cleanup.run(() -> assets.unload(buysellbtnDescriptor.fileName));
+      cleanup.run(() -> session.dispose(this));
+      cleanup.dispose(references);
+    } finally {
       waygatebackground = null;
       expwaygatetabs = null;
       waygateicons = null;
@@ -212,6 +235,15 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     }
   }
 
+  private boolean isCurrentSession() { return !disposed && session.isCurrent() && charData == Riiablo.charData; }
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
+  @Override public void setVisible(boolean visible) {
+    if (!disposed && (!visible || isCurrentSession())) super.setVisible(visible);
+  }
+
   private class Tab extends Table {
     Tab() {
       columnDefaults(0).height(32).spaceBottom(4).growX();
@@ -219,6 +251,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
     Actor addWaypoint(String descId) {
       IconTextButton button = new IconTextButton(waygateButtonStyle, Riiablo.string.lookup(descId), Riiablo.fonts.font16);
+      session.own(button);
       add(button).row();
       return button;
     }

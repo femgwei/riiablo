@@ -89,6 +89,18 @@ class EscapePanelLifecycleTest {
     }
   }
 
+  @Test void sameCharacterOptionsCannotModifyReplacementGameOrWorld() {
+    Riiablo.engine = null;
+    com.riiablo.screen.GameScreen game = mock(com.riiablo.screen.GameScreen.class); Riiablo.game = game;
+    EscapePanel panel = new EscapePanel(game); panels.add(panel);
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.game = mock(com.riiablo.screen.GameScreen.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.game);
+    Riiablo.game = game; Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.engine);
+    panel.dispose(); PanelSessionAssertions.assertInactive(panel, actors);
+  }
+
   @Test void exitBalancesFourSharedAssetsOnOriginalHostAndRetiresAllSixPages() throws Exception {
     for (String path : paths()) assets.load(path, DC6.class);
     assets.finishLoading(); EscapePanel panel = panel();

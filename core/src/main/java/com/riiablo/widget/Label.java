@@ -26,6 +26,13 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
   private Fonts.Role fontRole;
   private int fontGeneration = -1;
   private boolean baselineAligned = true;
+  private java.util.function.BooleanSupplier sessionGuard;
+
+  public final void setSessionGuard(java.util.function.BooleanSupplier guard) { sessionGuard = guard; }
+  protected final boolean isSessionActive() { return sessionGuard == null || sessionGuard.getAsBoolean(); }
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isSessionActive() ? super.hit(x, y, touchable) : null;
+  }
 
   /**
    * Controls whether changing the text also replaces the actor's explicit
@@ -130,6 +137,7 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
   @Override
   public void act(float delta) {
+    if (!isSessionActive()) return;
     refreshBoundFont();
     super.act(delta);
   }
@@ -144,6 +152,7 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
 
   @Override
   public void draw(Batch batch, float a) {
+    if (!isSessionActive()) return;
     if (batch instanceof PaletteIndexedBatch) {
       draw((PaletteIndexedBatch) batch, a);
     } else {
@@ -152,6 +161,7 @@ public class Label extends com.badlogic.gdx.scenes.scene2d.ui.Label {
   }
 
   public void draw(PaletteIndexedBatch batch, float a) {
+    if (!isSessionActive()) return;
     refreshBoundFont();
     validate();
 

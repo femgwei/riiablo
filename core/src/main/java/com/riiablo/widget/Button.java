@@ -35,6 +35,17 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
   private final AssetManager soundAssets;
   private Sound clickSound;
   private boolean soundDisposed;
+  private java.util.function.BooleanSupplier sessionGuard;
+
+  /** Optional borrowed-host guard; unscoped menu buttons retain their existing behavior. */
+  public final void setSessionGuard(java.util.function.BooleanSupplier guard) { sessionGuard = guard; }
+  protected final boolean isSessionActive() { return sessionGuard == null || sessionGuard.getAsBoolean(); }
+
+  @Override public boolean isDisabled() { return !isSessionActive() || super.isDisabled(); }
+  @Override public void act(float delta) { if (isSessionActive()) super.act(delta); }
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isSessionActive() ? super.hit(x, y, touchable) : null;
+  }
 
   @Override
   public void setStyle(com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle style) {
@@ -45,24 +56,30 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
     super(style);
     soundAssets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
     soundAssets.load(buttonDescriptor);
-    addListener(new ClickListener() {
-      @Override
-      public boolean touchDown(InputEvent event, float x, float y, int pointer, int b) {
-        if (event.getButton() != Input.Buttons.LEFT || isDisabled()) {
+    try {
+      addListener(new ClickListener() {
+        @Override
+        public boolean touchDown(InputEvent event, float x, float y, int pointer, int b) {
+          if (event.getButton() != Input.Buttons.LEFT || isDisabled()) {
+            return super.touchDown(event, x, y, pointer, b);
+          }
+
+          if (clickSoundEnabled && !soundDisposed) {
+            if (clickSound == null) {
+              soundAssets.finishLoadingAsset(buttonDescriptor);
+              clickSound = soundAssets.get(buttonDescriptor);
+            }
+            clickSound.play();
+          }
+          Riiablo.input.vibrate(10);
           return super.touchDown(event, x, y, pointer, b);
         }
-
-        if (clickSoundEnabled && !soundDisposed) {
-          if (clickSound == null) {
-            soundAssets.finishLoadingAsset(buttonDescriptor);
-            clickSound = soundAssets.get(buttonDescriptor);
-          }
-          clickSound.play();
-        }
-        Riiablo.input.vibrate(10);
-        return super.touchDown(event, x, y, pointer, b);
-      }
-    });
+      });
+    } catch (RuntimeException | Error failure) {
+      try { disposeClickSound(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   public void setClickSoundEnabled(boolean enabled) {
@@ -133,6 +150,7 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (!isSessionActive()) return;
     if (batch instanceof PaletteIndexedBatch) {
       draw((PaletteIndexedBatch) batch, parentAlpha);
     } else {
@@ -142,6 +160,7 @@ public class Button extends com.badlogic.gdx.scenes.scene2d.ui.Button implements
 
   // FIXME: super.draw(Batch,float) sets color and applies to batch, circumventing my own color -- workaround is to set actor's color
   public void draw(PaletteIndexedBatch batch, float parentAlpha) {
+    if (!isSessionActive()) return;
     final boolean disabled = isDisabled();
     final boolean over = isOver();
     if (disabled) {

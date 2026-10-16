@@ -122,6 +122,34 @@ class StoragePanelLifecycleTest {
     }
   }
 
+  @Test void cubeAndStashRejectSameCharacterReplacementGameAndWorld() {
+    Riiablo.engine = null;
+    GameScreen game = mock(GameScreen.class); Riiablo.game = game;
+    CubePanel cube = new CubePanel(game); resources.add(cube); cube.itemController = controller;
+    StashPanel stash = new StashPanel(game); resources.add(stash); stash.itemController = controller;
+    Array<Actor> cubeActors = PanelSessionAssertions.snapshot(cube), stashActors = PanelSessionAssertions.snapshot(stash);
+    Riiablo.game = mock(GameScreen.class);
+    PanelSessionAssertions.assertInactive(cube, cubeActors); PanelSessionAssertions.assertInactive(stash, stashActors);
+    cube.onDrop(0, 0); stash.onDrop(0, 0); verifyNoInteractions(controller, Riiablo.game);
+    Riiablo.game = game; Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(cube, cubeActors); PanelSessionAssertions.assertInactive(stash, stashActors);
+    verifyNoInteractions(Riiablo.engine);
+    cube.dispose(); stash.dispose();
+    PanelSessionAssertions.assertInactive(cube, cubeActors); PanelSessionAssertions.assertInactive(stash, stashActors);
+  }
+
+  @Test void inventoryAndBorrowedGoldDialogRejectSameCharacterReplacementWorld() {
+    Riiablo.engine = null;
+    GameScreen game = mock(GameScreen.class); Riiablo.game = game;
+    InventoryPanel panel = own(new InventoryPanel(game)); panel.itemController = controller;
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors);
+    panel.goldDialog.open(); assertFalse(panel.goldDialog.isOpen());
+    panel.goldDialog.act(1); panel.goldDialog.draw(null, 1); assertNull(panel.goldDialog.hit(0, 0, true));
+    verifyNoInteractions(controller, Riiablo.engine);
+  }
+
   @Test void twoPanelsReturnOnlyTheirReferencesOnOriginalHostAndClearWholeTrees() {
     for (String path : paths()) assets.load(path, DC6.class);
     assets.load(SOUND, Sound.class); assets.finishLoading();

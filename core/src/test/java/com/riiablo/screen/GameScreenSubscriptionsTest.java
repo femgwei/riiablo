@@ -92,6 +92,22 @@ class GameScreenSubscriptionsTest {
   }
 
   @Test
+  void publishingPanelSessionReplaysComputedSkillsAfterOwnerPublication() throws Exception {
+    GameScreen screen = screen();
+    Riiablo.game = null;
+    doAnswer(invocation -> {
+      assertSame(screen, Riiablo.game, "skill callbacks must see the published owner");
+      return null;
+    }).when(screen.charData).notifySkillChanged();
+
+    screen.publishPanelSession();
+
+    assertSame(screen, Riiablo.game);
+    verify(screen.charData).notifySkillChanged();
+    verify(screen.charData, never()).update();
+  }
+
+  @Test
   void repeatedVisibilityCyclesKeepAllKeysAndProcessorsBalanced() throws Exception {
     GameScreen screen = screen();
     configure(screen);

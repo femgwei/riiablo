@@ -20,6 +20,8 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
   private final AssetReferenceScope references = new AssetReferenceScope(assets);
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
   final AssetDescriptor<DC6> minipanelbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\minipanelbtn.DC6", DC6.class);
 
   Button btnCharacter;
@@ -33,8 +35,14 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
   Button btnSwapWeapons;
 
   public MobilePanel() {
+    this(Riiablo.game);
+  }
+
+  public MobilePanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     try {
       initialize();
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -49,33 +57,34 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
     ClickListener clickListener = new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (disposed) return;
+        if (!isCurrentSession() || session.owner() == null) return;
+        com.riiablo.screen.GameScreen game = session.owner();
         Actor actor = event.getListenerActor();
         if (actor == btnCharacter) {
-          Actor panel = Riiablo.game.characterPanel;
-          Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+          Actor panel = game.characterPanel;
+          game.setLeftPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnSwapWeapons) {
           Riiablo.charData.getItems().alternate();
         } else if (actor == btnInventory) {
-          Actor panel = Riiablo.game.inventoryPanel;
-          Riiablo.game.setRightPanel(panel.isVisible() ? null : panel);
+          Actor panel = game.inventoryPanel;
+          game.setRightPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnSkillTree) {
-          Actor panel = Riiablo.game.spellsPanel;
-          Riiablo.game.setRightPanel(panel.isVisible() ? null : panel);
+          Actor panel = game.spellsPanel;
+          game.setRightPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnParty) {
-          Actor panel = Riiablo.game.partyPanel;
-          Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+          Actor panel = game.partyPanel;
+          game.setLeftPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnMap) {
 
         } else if (actor == btnMessages) {
-          Riiablo.game.input.setVisible(!Riiablo.game.input.isVisible());
-          Riiablo.game.input.getStage().setKeyboardFocus(Riiablo.game.input);
+          game.input.setVisible(!game.input.isVisible());
+          game.input.getStage().setKeyboardFocus(game.input);
         } else if (actor == btnQuests) {
-          Actor panel = Riiablo.game.questsPanel;
-          Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+          Actor panel = game.questsPanel;
+          game.setLeftPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnEscapeMenu) {
-          if (Riiablo.game.escapePanel.isVisible()) Riiablo.game.escapePanel.close();
-          else Riiablo.game.escapePanel.open();
+          if (game.escapePanel.isVisible()) game.escapePanel.close();
+          else game.escapePanel.open();
         }
       }
     };
@@ -104,6 +113,7 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
       down = new TextureRegionDrawable(minipanelbtn.getTexture(9));
     }});
     btnMap.addListener(clickListener);
+    session.own(btnMap); // This optional control is intentionally not attached to the layout.
     btnMessages = new Button(new Button.ButtonStyle() {{
       up   = new TextureRegionDrawable(minipanelbtn.getTexture(10));
       down = new TextureRegionDrawable(minipanelbtn.getTexture(11));
@@ -142,7 +152,7 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
 
   @Override
   public Actor getEscapeButton() {
-    return disposed ? null : btnEscapeMenu;
+    return isCurrentSession() ? btnEscapeMenu : null;
   }
 
   @Override
@@ -164,6 +174,7 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
       }
       cleanup.run(this::clearChildren);
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       btnCharacter = null;
@@ -180,12 +191,17 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void act(float delta) {
-    if (!disposed) super.act(delta);
+    if (isCurrentSession()) super.act(delta);
+  }
+
+  private boolean isCurrentSession() { return !disposed && session.isCurrent(); }
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 }

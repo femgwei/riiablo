@@ -54,6 +54,8 @@ public class HotkeyButton extends Button {
       add().grow();
       row();
       add(charges = new Label(chargedSkill != null ? Integer.toString(chargedSkill.value0()) : "", Riiablo.fonts.font16, Riiablo.colors.blue)).align(Align.bottomLeft);
+      hotkey.setSessionGuard(this::isActive);
+      charges.setSessionGuard(this::isActive);
       pad(2);
       pack();
 
@@ -67,9 +69,14 @@ public class HotkeyButton extends Button {
   }
 
   /** HUD owners may retire the button when its captured session is replaced. */
-  protected boolean isActive() { return !disposed; }
+  protected boolean isActive() { return !disposed && isSessionActive(); }
 
   @Override public boolean isDisabled() { return !isActive() || super.isDisabled(); }
+
+  @Override public void act(float delta) { if (isActive()) super.act(delta); }
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isActive() ? super.hit(x, y, touchable) : null;
+  }
 
   @Override public void dispose() {
     if (disposed) return;

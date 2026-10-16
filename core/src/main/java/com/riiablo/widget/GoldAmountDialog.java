@@ -35,6 +35,10 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
   private Stage focusStage;
   private boolean disposed;
+  private java.util.function.BooleanSupplier sessionGuard;
+  public void setSessionGuard(java.util.function.BooleanSupplier guard) {
+    if (!disposed) sessionGuard = guard;
+  }
   private static final String BACKGROUND_PATH = "data\\global\\ui\\MENU\\dialogbackground.dc6";
   // The in-game panel sheet contains the native square cancel/confirm glyphs.
   // Frames 10/11 are cancel (normal/pressed), 16/17 are confirm.
@@ -191,6 +195,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     title = new Label(titleText, Riiablo.fonts.fontformal11, Riiablo.colors.gold);
     title.setAlignment(Align.center);
     title.setTouchable(Touchable.disabled);
+    title.setSessionGuard(this::isCurrentSession);
     addActor(title);
 
     amount = new TextField("", new TextField.TextFieldStyle() {{
@@ -198,6 +203,12 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
       fontColor = Riiablo.colors.white;
       cursor = new TextureRegionDrawable(Riiablo.textures.white);
     }}) {
+      @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+      @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+      @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
+      @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+        return isCurrentSession() ? super.hit(x, y, touchable) : null;
+      }
       @Override
       protected void drawCursor(Drawable cursor, Batch batch, BitmapFont font, float x, float y) {
         // LibGDX positions the cursor from the text baseline. Raise the
@@ -371,11 +382,12 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData && assets == Riiablo.assets;
+    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+        && (sessionGuard == null || sessionGuard.getAsBoolean());
   }
 
   private class SessionButton extends Button {
-    SessionButton(ButtonStyle style) { super(style); }
+    SessionButton(ButtonStyle style) { super(style); setSessionGuard(GoldAmountDialog.this::isCurrentSession); }
     @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
   }
 
@@ -386,6 +398,10 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
@@ -398,7 +414,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   public void dispose() {
     if (disposed) return;
     disposed = true;
-    listener = null; maximumProvider = null;
+    listener = null; maximumProvider = null; sessionGuard = null;
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(this::close);
       cleanup.run(() -> setTouchable(Touchable.disabled));

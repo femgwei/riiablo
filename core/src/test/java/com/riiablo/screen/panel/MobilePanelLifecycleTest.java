@@ -101,6 +101,19 @@ class MobilePanelLifecycleTest {
     }
   }
 
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void sameCharacterMenuAndGesturesCannotReachReplacementGameOrWorld(boolean controls) {
+    Riiablo.engine = null;
+    com.riiablo.screen.GameScreen game = mock(com.riiablo.screen.GameScreen.class); Riiablo.game = game;
+    Actor panel = controls ? (Actor) own(new MobileControls(game)) : own(new MobilePanel(game));
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.game = mock(com.riiablo.screen.GameScreen.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.game);
+    Riiablo.game = game; Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.engine);
+    ((Disposable) panel).dispose(); PanelSessionAssertions.assertInactive(panel, actors);
+  }
+
   @Test void menuOwnsAllNineButtonsIncludingUnattachedMapAndReparentedEscape() {
     MobilePanel panel = own(new MobilePanel());
     Button[] buttons = menuButtons(panel);

@@ -23,6 +23,7 @@ import com.riiablo.key.MappedKey;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.AssetReferenceScope;
 
 /** Diablo II's in-game help overlay, assembled from the original 640x480 resources. */
 public class HelpPanel extends WidgetGroup implements Disposable {
@@ -31,6 +32,8 @@ public class HelpPanel extends WidgetGroup implements Disposable {
   private static final float HUD_X_SCALE = 0.8f;
   private static final float HUD_Y_OFFSET = -120f;
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final com.riiablo.Textures textures = Riiablo.textures;
 
   private final AssetDescriptor<DC6> borderDescriptor = new AssetDescriptor<>(
       "data\\global\\ui\\MENU\\helpborder.DC6", DC6.class);
@@ -42,17 +45,33 @@ public class HelpPanel extends WidgetGroup implements Disposable {
       "data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class);
 
   private final WidgetGroup canvas = new WidgetGroup();
-  private final DC6 border;
-  private final TextureRegion yellowBullet;
-  private final TextureRegion whiteBullet;
-  private final Button closeButton;
+  private DC6 border;
+  private TextureRegion yellowBullet;
+  private TextureRegion whiteBullet;
+  private Button closeButton;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   public HelpPanel() {
-    assets.load(borderDescriptor);
-    assets.load(yellowBulletDescriptor);
-    assets.load(whiteBulletDescriptor);
-    assets.load(closeButtonDescriptor);
+    this(Riiablo.game);
+  }
+
+  public HelpPanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
+    try { initialize(); session.finish(this); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(borderDescriptor);
+    references.load(yellowBulletDescriptor);
+    references.load(whiteBulletDescriptor);
+    references.load(closeButtonDescriptor);
     assets.finishLoadingAsset(borderDescriptor);
     assets.finishLoadingAsset(yellowBulletDescriptor);
     assets.finishLoadingAsset(whiteBulletDescriptor);
@@ -68,12 +87,12 @@ public class HelpPanel extends WidgetGroup implements Disposable {
     addListener(new InputListener() {
       @Override
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-        return true;
+        return isCurrentSession();
       }
 
       @Override
       public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-        return true;
+        return isCurrentSession();
       }
     });
 
@@ -90,6 +109,7 @@ public class HelpPanel extends WidgetGroup implements Disposable {
     closeButton = new Button(new Button.ButtonStyle(
         new TextureRegionDrawable(closeButtonSheet.getTexture(10)),
         new TextureRegionDrawable(closeButtonSheet.getTexture(11))));
+    session.own(closeButton);
     closeButton.setSize(32f, 32f);
     closeButton.setPosition(525f, fromTop(25f, closeButton.getHeight()));
     closeButton.addListener(new ClickListener() {
@@ -211,18 +231,18 @@ public class HelpPanel extends WidgetGroup implements Disposable {
   }
 
   public void open() {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     setVisible(true);
     toFront();
   }
 
   public void close() {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     setVisible(false);
   }
 
   public void toggle() {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     if (isVisible()) close();
     else open();
   }
@@ -232,22 +252,30 @@ public class HelpPanel extends WidgetGroup implements Disposable {
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
-      cleanup.run(() -> setVisible(false));
+      cleanup.run(() -> super.setVisible(false));
       cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.run(this::clearListeners);
       cleanup.dispose(closeButton);
-      cleanup.run(this::clearChildren);
-      cleanup.run(() -> assets.unload(borderDescriptor.fileName));
-      cleanup.run(() -> assets.unload(yellowBulletDescriptor.fileName));
-      cleanup.run(() -> assets.unload(whiteBulletDescriptor.fileName));
-      cleanup.run(() -> assets.unload(closeButtonDescriptor.fileName));
+      cleanup.run(() -> session.dispose(this));
+      cleanup.dispose(references);
+    } finally {
+      border = null; yellowBullet = null; whiteBullet = null; closeButton = null;
     }
   }
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.draw(batch, parentAlpha);
+  }
+
+  private boolean isCurrentSession() { return !disposed && session.isCurrent(); }
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
+  @Override public void setVisible(boolean visible) {
+    if (!disposed && (!visible || isCurrentSession())) super.setVisible(visible);
   }
 
   private final class Artwork extends Actor {
@@ -261,6 +289,7 @@ public class HelpPanel extends WidgetGroup implements Disposable {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+      if (!isCurrentSession()) return;
       float x = getX();
       float y = getY();
       drawTop(batch, frames[0], x, y, 0f);
@@ -299,7 +328,7 @@ public class HelpPanel extends WidgetGroup implements Disposable {
       float lineHeight = Math.max(1f, dotTop - lineTop);
       Color previous = batch.getColor().cpy();
       batch.setColor(Color.WHITE);
-      batch.draw(Riiablo.textures.white, parentX + lineX, lineBottom, 1f, lineHeight);
+      batch.draw(textures.white, parentX + lineX, lineBottom, 1f, lineHeight);
       batch.setColor(previous);
       drawTop(batch, whiteBullet, parentX + dotX, parentY, dotTop);
     }

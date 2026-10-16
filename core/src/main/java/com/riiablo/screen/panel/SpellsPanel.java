@@ -54,6 +54,8 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
   private final Array<Button> ownedButtons = new Array<>();
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   final AssetDescriptor<DC6> skltreeDescriptor;
   TextureRegion skltree;
@@ -73,11 +75,17 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       = new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(Riiablo.fonts.font16, null);
 
   public SpellsPanel() {
+    this(Riiablo.game);
+  }
+
+  public SpellsPanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     CharacterClass charClass = character.classId;
     skltreeDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellsBackground + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
     SkilliconDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellIcons + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
     try {
       initialize(charClass);
+      session.finish(this);
     } catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -186,13 +194,12 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       final Skills.Entry skill = Riiablo.files.skills.get(i);
       final SkillDesc.Entry desc = SkillNameResolver.description(skill);
       SkillButton button = buttons[i - charClass.firstSpell] = new SkillButton(skill, desc);
-      ownedButtons.add(button);
       button.setPosition(X[desc.SkillColumn], Y[desc.SkillRow]);
       button.addListener(new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (!isCurrentSession() || Riiablo.game == null) return;
-          boolean accepted = Riiablo.game.spendSkillPoint(skill.Id);
+          if (!isCurrentSession() || session.owner() == null) return;
+          boolean accepted = session.owner().spendSkillPoint(skill.Id);
           log.info("[SKILL_POINT_UI] phase=request skill={} accepted={}", skill.Id, accepted);
         }
       });
@@ -247,7 +254,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   @Override
   public void setVisible(boolean visible) {
-    if (disposed) return;
+    if (disposed || visible && !isCurrentSession()) return;
     super.setVisible(visible);
     if (isCurrentSession()) updateSkillPoints(character);
   }
@@ -291,12 +298,16 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       cleanup.run(() -> character.removeSkillListener(this));
       cleanup.run(() -> clearActorListeners(this));
       for (Button button : ownedButtons) {
+        if (button instanceof SkillButton) {
+          cleanup.run(() -> com.riiablo.util.ActorTree.clear(((SkillButton) button).details));
+        }
         cleanup.run(button::clearListeners);
         cleanup.run(button::remove);
         cleanup.dispose(button);
       }
       cleanup.run(this::clearChildren);
       cleanup.run(this::remove);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       ownedButtons.clear();
@@ -308,7 +319,11 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData;
+    return !disposed && session.isCurrent() && character == Riiablo.charData;
+  }
+
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   private static void clearActorListeners(Actor actor) {
@@ -320,6 +335,11 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
         }
       }
     }
+  }
+
+  private void guardLabels(Actor actor) {
+    if (actor instanceof Label) ((Label) actor).setSessionGuard(this::isCurrentSession);
+    if (actor instanceof Group) for (Actor child : ((Group) actor).getChildren()) guardLabels(child);
   }
 
   private class SkillButton extends Button {
@@ -339,6 +359,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       }});
       this.skill = skill;
       this.desc = desc;
+      ownedButtons.add(this); // Register before detail/label construction or mounting can fail.
       this.details = new Details();
 
       this.label = new Label(LARGE_LABEL_STYLE);
@@ -388,12 +409,15 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       if (!isCurrentSession()) return;
       super.draw(batch, parentAlpha);
       if (isOver()) {
-        Riiablo.game.setDetails(details, null, SpellsPanel.this, this);
+        if (session.owner() != null) session.owner().setDetails(details, null, SpellsPanel.this, this);
       }
     }
 
     private class Details extends Table {
+      @Override public void draw(Batch batch, float alpha) { if (isCurrentSession()) super.draw(batch, alpha); }
       void update() {
+        if (!isCurrentSession()) return;
+        for (Actor child : getChildren().toArray(Actor.class)) com.riiablo.util.ActorTree.clear(child);
         clearChildren();
         final float SPACING = 2;
         final BitmapFont font = Riiablo.fonts.font16;
@@ -448,6 +472,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
           if (str != null) add(new Label(str, Riiablo.fonts.font16, desc.dsc3line[i] == 40 ? SpellsPanel.getColor(desc.dsc3calca[i]) : Riiablo.colors.white)).center().space(SPACING).row();
         }
         pack();
+        guardLabels(this);
       }
     }
   }

@@ -54,13 +54,20 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
   final Inventory.Entry inventory;
   ItemGrid grid;
   private boolean disposed;
+  private final PanelSession session;
+  public void bindWorld(com.artemis.World world) { session.bindWorld(world); }
 
   @Wire(name = "itemController")
   protected ItemController itemController;
 
   public StashPanel() {
+    this(Riiablo.game);
+  }
+
+  public StashPanel(com.riiablo.screen.GameScreen owner) {
+    session = new PanelSession(owner);
     inventory = Riiablo.files.inventory.get("Big Bank Page 1");
-    try { initialize(); }
+    try { initialize(); session.finish(this); }
     catch (RuntimeException | Error failure) {
       try { dispose(); }
       catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
@@ -166,6 +173,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
       cleanup.run(() -> ActorTree.clear(btnExit));
       cleanup.run(() -> ActorTree.clear(btnDropGold));
       cleanup.dispose(grid);
+      cleanup.run(() -> session.dispose(this));
       cleanup.dispose(references);
     } finally {
       TradeStash = null; btnExit = null; btnDropGold = null; grid = null;
@@ -174,8 +182,12 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
   }
 
   private boolean isCurrentSession() {
-    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+    return !disposed && session.isCurrent() && character == Riiablo.charData && assets == Riiablo.assets
         && itemData == character.getItems();
+  }
+
+  @Override public com.badlogic.gdx.scenes.scene2d.Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
   }
 
   private class SessionButton extends Button {
@@ -221,8 +233,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     if (disposed || visible && !isCurrentSession()) return;
     if (!visible && goldDialog != null) goldDialog.close();
     super.setVisible(visible);
-    if (visible && Riiablo.game != null) {
-      Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
+    if (visible && session.owner() != null) {
+      session.owner().setRightPanel(session.owner().inventoryPanel);
     }
   }
 

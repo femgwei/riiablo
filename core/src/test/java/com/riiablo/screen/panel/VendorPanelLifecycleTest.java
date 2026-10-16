@@ -88,6 +88,17 @@ class VendorPanelLifecycleTest extends RiiabloTest {
     finally { uploads.close(); for (Map.Entry<Field, Object> alias : aliases.entrySet()) alias.getKey().set(null, alias.getValue()); Gdx.input = previousInput; }
   }
 
+  @Test void sameCharacterVendorControlsRejectReplacementWorld() {
+    Riiablo.engine = null;
+    GameScreen game = mock(GameScreen.class); Riiablo.game = game;
+    VendorPanel panel = own(new VendorPanel(game));
+    Array<Actor> actors = PanelSessionAssertions.snapshot(panel);
+    Riiablo.engine = mock(com.artemis.World.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.engine);
+    Riiablo.engine = null; Riiablo.game = mock(GameScreen.class);
+    PanelSessionAssertions.assertInactive(panel, actors); verifyNoInteractions(Riiablo.game);
+  }
+
   @Test void independentExitReturnsNineButtonSoundsFourSheetsAndFourPrivateFillsOnlyOnce() throws Exception {
     for (String path : paths()) assets.load(path, DC6.class); assets.load(SOUND, Sound.class); assets.finishLoading();
     VendorPanel panel = vendor(); assets.finishLoading(); assertEquals(10, assets.getReferenceCount(SOUND));
