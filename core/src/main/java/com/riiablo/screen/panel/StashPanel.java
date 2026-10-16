@@ -3,7 +3,7 @@ package com.riiablo.screen.panel;
 import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -25,13 +25,20 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
+import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
 
 public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "StashPanel";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final ItemData itemData = java.util.Objects.requireNonNull(character.getItems(), "items");
 
   final AssetDescriptor<DC6> TradeStashDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\TradeStash.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion TradeStash;
@@ -52,32 +59,42 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
   protected ItemController itemController;
 
   public StashPanel() {
-    Riiablo.assets.load(TradeStashDescriptor);
-    Riiablo.assets.finishLoadingAsset(TradeStashDescriptor);
-    TradeStash = Riiablo.assets.get(TradeStashDescriptor).getTexture();
+    inventory = Riiablo.files.inventory.get("Big Bank Page 1");
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(TradeStashDescriptor);
+    assets.finishLoadingAsset(TradeStashDescriptor);
+    TradeStash = assets.get(TradeStashDescriptor).getTexture();
     setSize(TradeStash.getRegionWidth(), TradeStash.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
-    btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+    btnExit = new SessionButton(new Button.ButtonStyle() {{
+      references.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
     btnExit.setPosition(272, 15);
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         setVisible(false);
       }
     });
     addActor(btnExit);
 
-    inventory = Riiablo.files.inventory.get("Big Bank Page 1");
-    final ItemData itemData = Riiablo.charData.getItems();
-
-    grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this) {
+      @Override protected boolean isActive() { return super.isActive() && isCurrentSession(); }
+    };
     IntArray stashItems = itemData.getStore(StoreLoc.STASH);
     Array<Item> items = itemData.toItemArray(stashItems);
     grid.populate(items);
@@ -86,16 +103,16 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
         getHeight() - inventory.gridTop - grid.getHeight());
     addActor(grid);
 
-    StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
+    StatRef goldbankStat = character.getStats().get(Stat.goldbank);
     stashgold = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
     stashgold.setSize(150, 16);
     stashgold.setPosition(98, 393);
     addActor(stashgold);
 
-    btnDropGold = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(goldcoinbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(goldcoinbtnDescriptor);
-      DC6 goldcoinbtn = Riiablo.assets.get(goldcoinbtnDescriptor);
+    btnDropGold = new SessionButton(new Button.ButtonStyle() {{
+      references.load(goldcoinbtnDescriptor);
+      assets.finishLoadingAsset(goldcoinbtnDescriptor);
+      DC6 goldcoinbtn = assets.get(goldcoinbtnDescriptor);
       up   = new TextureRegionDrawable(goldcoinbtn.getTexture(0));
       down = new TextureRegionDrawable(goldcoinbtn.getTexture(1));
     }});
@@ -103,6 +120,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     btnDropGold.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         goldDialog.open();
       }
     });
@@ -112,6 +130,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
         new GoldAmountDialog.Listener() {
       @Override
       public void submitted(String text) {
+        if (!isCurrentSession()) return;
         try {
           int amount = Integer.parseInt(text.trim());
           if (itemController != null && amount > 0) itemController.withdrawGold(amount);
@@ -124,7 +143,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
       public void canceled() {}
         });
     goldDialog.setMaximumProvider(negative -> {
-      StatRef gold = Riiablo.charData.getStats().get(Stat.goldbank);
+      if (!isCurrentSession()) return 0;
+      StatRef gold = character.getStats().get(Stat.goldbank);
       return gold == null ? 0 : gold.asInt();
     });
     addActor(goldDialog);
@@ -137,18 +157,38 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.dispose(btnExit);
-      cleanup.dispose(grid);
-      cleanup.run(() -> Riiablo.assets.unload(TradeStashDescriptor.fileName));
-      cleanup.run(() -> Riiablo.assets.unload(goldcoinbtnDescriptor.fileName));
-      cleanup.run(() -> Riiablo.assets.unload(buysellbtnDescriptor.fileName));
+      cleanup.dispose(btnDropGold);
       cleanup.dispose(goldDialog);
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.run(() -> ActorTree.clear(btnExit));
+      cleanup.run(() -> ActorTree.clear(btnDropGold));
+      cleanup.dispose(grid);
+      cleanup.dispose(references);
+    } finally {
+      TradeStash = null; btnExit = null; btnDropGold = null; grid = null;
+      stashgold = null; goldDialog = null; itemController = null;
     }
   }
 
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+        && itemData == character.getItems();
+  }
+
+  private class SessionButton extends Button {
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+  }
+
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
   @Override
   public void draw(Batch batch, float a) {
-    StatRef currentGold = Riiablo.charData.getStats().get(Stat.goldbank);
+    if (!isCurrentSession()) return;
+    StatRef currentGold = character.getStats().get(Stat.goldbank);
     if (stashgold != null) {
       int value = currentGold == null ? 0 : currentGold.asInt();
       if (!Integer.toString(value).contentEquals(stashgold.getText())) stashgold.setText(Integer.toString(value));
@@ -159,25 +199,29 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
   @Override
   public void onDrop(int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.cursorToStore(StoreLoc.STASH, x, y);
   }
 
   @Override
   public boolean onPickup(int i) {
+    if (!isCurrentSession() || itemController == null) return false;
     itemController.storeToCursor(i);
     return true;
   }
 
   @Override
   public void onSwap(int i, int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.swapStoreItem(i, StoreLoc.STASH, x, y);
   }
 
   @Override
   public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
     if (!visible && goldDialog != null) goldDialog.close();
     super.setVisible(visible);
-    if (visible) {
+    if (visible && Riiablo.game != null) {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
     }
   }

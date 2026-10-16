@@ -88,7 +88,7 @@ public class ItemGrid extends Group implements Disposable {
     addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (disposed) return;
+        if (!isActive()) return;
         if (event.isHandled()) return;
         ItemGrid.this.mouseMoved();
         Item cursor = itemData.getCursor();
@@ -124,7 +124,7 @@ public class ItemGrid extends Group implements Disposable {
   }
 
   public void populate(Array<Item> items) {
-    if (disposed) return;
+    if (!isActive()) return;
     for (Item item : items) {
       addItem(item);
     }
@@ -137,7 +137,7 @@ public class ItemGrid extends Group implements Disposable {
    * handlers to add or remove actors.
    */
   public void syncItems(Array<Item> items) {
-    if (disposed) return;
+    if (!isActive()) return;
     SnapshotArray<Actor> children = getChildren();
     Actor[] snapshot = children.begin();
     for (int i = children.size - 1; i >= 0; i--) {
@@ -233,7 +233,7 @@ public class ItemGrid extends Group implements Disposable {
   }
 
   protected void mouseMoved() {
-    if (disposed) return;
+    if (!isActive()) return;
     swap = null;
     blocked = true;
     hits.clear();
@@ -318,7 +318,7 @@ public class ItemGrid extends Group implements Disposable {
 
   @Override
   protected void drawChildren(Batch batch, float parentAlpha) {
-    if (disposed) return;
+    if (!isActive()) return;
     super.drawChildren(batch, parentAlpha);
     mouseMoved();
     Item cursor = itemData.getCursor();
@@ -356,8 +356,11 @@ public class ItemGrid extends Group implements Disposable {
 
   public boolean isDisposed() { return disposed; }
 
+  /** Owners may also retire input/rendering when their captured session is no longer current. */
+  protected boolean isActive() { return !disposed; }
+
   @Override public void draw(Batch batch, float parentAlpha) {
-    if (!disposed) super.draw(batch, parentAlpha);
+    if (isActive()) super.draw(batch, parentAlpha);
   }
 
   /** Releases only this grid's private fill, never ItemData or borrowed item graphics. */
@@ -405,7 +408,7 @@ public class ItemGrid extends Group implements Disposable {
       addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (disposed) return;
+          if (!isActive()) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, false)) removeActor(StoredItem.this);
             event.handle();
@@ -422,7 +425,7 @@ public class ItemGrid extends Group implements Disposable {
       addListener(new ClickListener(Input.Buttons.RIGHT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (disposed) return;
+          if (!isActive()) return;
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
             if (onStoredItemClicked(item, true)) removeActor(StoredItem.this);
             event.handle();
@@ -479,7 +482,7 @@ public class ItemGrid extends Group implements Disposable {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
-      if (disposed) return;
+      if (!isActive()) return;
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       boolean requirementsMet = ItemRequirements.check(item, Riiablo.charData).usable();
       Color background = !requirementsMet

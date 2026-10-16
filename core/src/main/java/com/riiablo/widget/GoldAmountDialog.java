@@ -2,11 +2,13 @@ package com.riiablo.widget;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -17,6 +19,10 @@ import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
+import com.riiablo.save.CharData;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 /**
  * Native in-game gold amount dialog.  The background and button artwork are
@@ -24,6 +30,11 @@ import com.riiablo.codec.DC6;
  * provided by the client.
  */
 public final class GoldAmountDialog extends WidgetGroup implements Disposable {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private Stage focusStage;
+  private boolean disposed;
   private static final String BACKGROUND_PATH = "data\\global\\ui\\MENU\\dialogbackground.dc6";
   // The in-game panel sheet contains the native square cancel/confirm glyphs.
   // Frames 10/11 are cancel (normal/pressed), 16/17 are confirm.
@@ -37,13 +48,13 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   private final AssetDescriptor<DC6> goldButtonDescriptor =
       new AssetDescriptor<>(GOLD_BUTTON_PATH, DC6.class);
 
-  private final TextureRegion background;
-  private final Button okButton;
-  private final Button cancelButton;
-  private final Button increaseButton;
-  private final Button decreaseButton;
-  private final Label title;
-  private final TextField amount;
+  private TextureRegion background;
+  private Button okButton;
+  private Button cancelButton;
+  private Button increaseButton;
+  private Button decreaseButton;
+  private Label title;
+  private TextField amount;
   private final boolean allowNegative;
   private Listener listener;
   private MaximumProvider maximumProvider;
@@ -57,15 +68,25 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   public GoldAmountDialog(String titleText, Listener listener, boolean allowNegative) {
     this.listener = listener;
     this.allowNegative = allowNegative;
+    try { initialize(titleText); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize(String titleText) {
     setTouchable(Touchable.enabled);
     addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-        return true;
+        return isCurrentSession();
       }
 
       @Override
       public boolean keyDown(InputEvent event, int keycode) {
+        if (!isCurrentSession() || !isVisible()) return false;
         if (keycode == Input.Keys.ESCAPE) {
           cancel();
           return true;
@@ -83,6 +104,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     addCaptureListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
       public boolean keyDown(InputEvent event, int keycode) {
+        if (!isCurrentSession() || !isVisible()) return false;
         if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
           cancel();
           return true;
@@ -95,25 +117,25 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
       }
     });
 
-    Riiablo.assets.load(backgroundDescriptor);
-    Riiablo.assets.load(okCancelDescriptor);
-    Riiablo.assets.load(goldButtonDescriptor);
-    Riiablo.assets.finishLoadingAsset(backgroundDescriptor);
-    Riiablo.assets.finishLoadingAsset(okCancelDescriptor);
-    Riiablo.assets.finishLoadingAsset(goldButtonDescriptor);
+    references.load(backgroundDescriptor);
+    references.load(okCancelDescriptor);
+    references.load(goldButtonDescriptor);
+    assets.finishLoadingAsset(backgroundDescriptor);
+    assets.finishLoadingAsset(okCancelDescriptor);
+    assets.finishLoadingAsset(goldButtonDescriptor);
 
-    DC6 backgroundDc6 = Riiablo.assets.get(backgroundDescriptor);
-    DC6 okCancelDc6 = Riiablo.assets.get(okCancelDescriptor);
-    DC6 goldButtonDc6 = Riiablo.assets.get(goldButtonDescriptor);
+    DC6 backgroundDc6 = assets.get(backgroundDescriptor);
+    DC6 okCancelDc6 = assets.get(okCancelDescriptor);
+    DC6 goldButtonDc6 = assets.get(goldButtonDescriptor);
     background = backgroundDc6.getTexture();
 
     TextureRegion cancelUp = frame(okCancelDc6, 10);
     TextureRegion cancelDown = frame(okCancelDc6, 11);
     TextureRegion okUp = frame(okCancelDc6, 16);
     TextureRegion okDown = frame(okCancelDc6, 17);
-    okButton = new Button(new Button.ButtonStyle(
+    okButton = new SessionButton(new Button.ButtonStyle(
         new TextureRegionDrawable(okUp), new TextureRegionDrawable(okDown)));
-    cancelButton = new Button(new Button.ButtonStyle(
+    cancelButton = new SessionButton(new Button.ButtonStyle(
         new TextureRegionDrawable(cancelUp), new TextureRegionDrawable(cancelDown)));
     okButton.addListener(new ClickListener() {
       @Override
@@ -124,7 +146,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     cancelButton.addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        cancel();
+        GoldAmountDialog.this.cancel();
       }
     });
     // Keep a direct touch path as well as ClickListener.  This is important
@@ -135,22 +157,24 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
 
       @Override
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        if (!isCurrentSession() || !isVisible()) return false;
         pressed = button == Input.Buttons.LEFT;
         return pressed;
       }
 
       @Override
       public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+        if (!isCurrentSession() || !isVisible()) { pressed = false; return; }
         if (pressed && button == Input.Buttons.LEFT && cancelButton.hit(x, y, true) != null) {
           cancel();
         }
         pressed = false;
       }
     });
-    increaseButton = new Button(new Button.ButtonStyle(
+    increaseButton = new SessionButton(new Button.ButtonStyle(
         new TextureRegionDrawable(frame(goldButtonDc6, 0)),
         new TextureRegionDrawable(frame(goldButtonDc6, 1))));
-    decreaseButton = new Button(new Button.ButtonStyle(
+    decreaseButton = new SessionButton(new Button.ButtonStyle(
         new TextureRegionDrawable(frame(goldButtonDc6, 2)),
         new TextureRegionDrawable(frame(goldButtonDc6, 3))));
     increaseButton.addListener(new ClickListener() {
@@ -189,6 +213,7 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     amount.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
       @Override
       public boolean keyDown(InputEvent event, int keycode) {
+        if (!isCurrentSession() || !isVisible()) return false;
         if (keycode == Input.Keys.ENTER || keycode == Input.Keys.NUMPAD_ENTER) {
           submit();
           return true;
@@ -206,6 +231,8 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   public void open() {
+    if (!isCurrentSession()) return;
+    close();
     sizeToStage();
     dialogX = (getWidth() - background.getRegionWidth()) / 2f;
     dialogY = (getHeight() - background.getRegionHeight()) / 2f;
@@ -221,13 +248,35 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     placeButton(cancelButton, dialogX + 140, dialogY + 10);
     setVisible(true);
     toFront();
-    if (getStage() != null) getStage().setKeyboardFocus(amount);
+    focusAmount();
+  }
+
+  private void focusAmount() {
+    try {
+      Stage current = getStage();
+      if (focusStage != current) {
+        Stage previous = focusStage;
+        focusStage = null;
+        if (previous != null && previous.getKeyboardFocus() == amount) previous.setKeyboardFocus(null);
+      }
+      focusStage = current;
+      if (focusStage != null && !focusStage.setKeyboardFocus(amount)) close();
+    } catch (RuntimeException | Error failure) {
+      try { close(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   public void close() {
-    setVisible(false);
-    if (getStage() != null && getStage().getKeyboardFocus() == amount) {
-      getStage().setKeyboardFocus(null);
+    super.setVisible(false);
+    Stage previous = focusStage;
+    focusStage = null;
+    try (Disposal cleanup = new Disposal()) {
+      if (amount != null) cleanup.run(() -> amount.getDefaultInputListener().keyUp(null, 0));
+      if (previous != null) cleanup.run(() -> {
+        if (previous.getKeyboardFocus() == amount) previous.setKeyboardFocus(null);
+      });
     }
   }
 
@@ -236,14 +285,17 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   public void setListener(Listener listener) {
+    if (!isCurrentSession()) return;
     this.listener = listener;
   }
 
   public void setTitle(String titleText) {
+    if (!isCurrentSession()) return;
     title.setText(titleText);
   }
 
   public void setMaximumProvider(MaximumProvider maximumProvider) {
+    if (!isCurrentSession()) return;
     this.maximumProvider = maximumProvider;
   }
 
@@ -270,15 +322,16 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   private void submit() {
-    if (!isVisible()) return;
+    if (!isCurrentSession() || !isVisible()) return;
     clampAmount();
     String value = amount.getText().trim();
     if (value.isEmpty()) return;
     close();
-    if (listener != null) listener.submitted(value);
+    if (isCurrentSession() && listener != null) listener.submitted(value);
   }
 
   private void adjust(int delta) {
+    if (!isCurrentSession() || !isVisible()) return;
     int value;
     try {
       value = Integer.parseInt(amount.getText().trim());
@@ -292,11 +345,11 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     if (next < 0) next = 0;
     amount.setText(Long.toString(next));
     clampAmount();
-    if (getStage() != null) getStage().setKeyboardFocus(amount);
+    focusAmount();
   }
 
   private void clampAmount() {
-    if (maximumProvider == null) return;
+    if (!isCurrentSession() || maximumProvider == null) return;
     String text = amount.getText().trim();
     if (text.isEmpty() || "-".equals(text)) return;
     try {
@@ -312,26 +365,57 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   private void cancel() {
-    if (!isVisible()) return;
+    if (!isCurrentSession() || !isVisible()) return;
     close();
-    if (listener != null) listener.canceled();
+    if (isCurrentSession() && listener != null) listener.canceled();
   }
+
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData && assets == Riiablo.assets;
+  }
+
+  private class SessionButton extends Button {
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    if (!visible) close();
+    else super.setVisible(true);
+  }
+
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (!isCurrentSession()) return;
     if (isVisible()) batch.draw(background, getX() + dialogX, getY() + dialogY);
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void dispose() {
-    okButton.dispose();
-    cancelButton.dispose();
-    increaseButton.dispose();
-    decreaseButton.dispose();
-    Riiablo.assets.unload(backgroundDescriptor.fileName);
-    Riiablo.assets.unload(okCancelDescriptor.fileName);
-    Riiablo.assets.unload(goldButtonDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    listener = null; maximumProvider = null;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::close);
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      if (amount != null) cleanup.run(() -> {
+        amount.setDisabled(true);
+        amount.setTextFieldListener(null); amount.setTextFieldFilter(null);
+      });
+      cleanup.run(() -> ActorTree.clear(this));
+      for (Button button : new Button[] {okButton, cancelButton, increaseButton, decreaseButton}) {
+        cleanup.dispose(button);
+        cleanup.run(() -> ActorTree.clear(button));
+      }
+      cleanup.dispose(references);
+    } finally {
+      background = null; okButton = null; cancelButton = null;
+      increaseButton = null; decreaseButton = null; title = null; amount = null;
+    }
   }
 
   private static TextureRegion frame(DC6 dc6, int index) {

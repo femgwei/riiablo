@@ -1582,3 +1582,103 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 下一批优先 CubePanel / StashPanel 等仍使用可变全局 AssetManager 卸载的剩余面板。
 完整控件内部构造回滚、连接交接、控制台/Timer/异步日志、跨 Act/加载中退出、长期
 压力、Android 真机和人工/性能验收仍待，资源阶段尚未结束。
+
+## 第二十二批：方块、仓库与共享金币对话框
+
+`CubePanel` / `StashPanel` 捕获原 AssetManager / CharData / ItemData，页面 DC6
+通过 AssetReferenceScope 配对；退出不再向后来的全局资源宿主卸载。独立释放方块
+两个按钮、仓库两个按钮、网格私有 fill 和仓库金币对话框，不再依赖 GameScreen
+递归释放按钮声音。构造中途失败清理已经返回的按钮/网格/对话框和已提交引用；
+某项清理抛 RuntimeException / Error 时仍尝试其余项，幂等退出不重复归还。
+
+`ActorTree.clear` 只清理明确拥有的控件树的普通/捕获监听、动作和父节点，不调用
+任意子控件的 dispose，不销毁共享 style、字体或物品贴图。面板自己按字段释放资源，
+包括部分构造时尚未挂载的控件。两面板的网格使用 ItemGrid 的 isActive 扩展点，
+使旧角色/旧资源宿主的保存点击、物品按钮和绘制不能再操作新会话；其他网格默认
+仍只使用原来的 disposed 判定。拖入、拾取和交换仍路由原 CUBE / STASH 操作。
+
+仓库拥有的 `GoldAmountDialog` 也存在全局卸载、非幂等退出和回调保留问题，因此
+本批一起收口这个共享控件，并回归背包对话框的生产退出路径。它捕获原资源宿主/
+角色，配对三项 DC6，独立清理四个按钮声音、输入过滤/监听、提交/上限回调和控件
+树。构造失败也释放已取得资源；最终销毁后不能重开，迟到提交、取消、箭头和输入
+不再触及会话。面板和对话框按钮在所属会话过期/销毁后视为 disabled，使保存的
+按下回调也不会访问后来的输入宿主以播放声音或震动。
+
+对话框记录获得焦点时的原 Stage，只清仍属于自己的输入框焦点；隐藏仓库/关闭
+弹窗释放焦点但保留可重开状态，重新挂载后打开先解除旧 Stage 焦点。焦点获取
+被拒绝/抛异常时隐藏弹窗，焦点释放失败仍继续销毁按钮和资产。关闭会通过 libGDX
+默认输入监听的 keyUp 取消连按，销毁后 disable 输入框；Blink/KeyRepeat 的已排队
+任务依赖 libGDX 在发现输入框离开 Stage 后自行取消，不等于全局 Timer 审计完成。
+
+新测试发现原取消按钮的 ClickListener 内部未限定的 cancel() 实际调用了继承的
+ClickListener.cancel()，未关闭弹窗或通知取消；现在明确调用对话框的 cancel。
+保留直接 touchUp 取消路径、数字过滤、上限钳制、负数选项、箭头不低于零、单次
+提交和正常重开语义。没有新增方块合成、改金币规则、协议或存档格式。
+
+真实会话探针增加两面板与背包/仓库两个金币对话框的控件采样，实际通过仓库按钮
+打开、隐藏关闭、重新打开，再通过背包按钮打开另一弹窗；两者均留给生产退出清理。
+检查回调、输入和 Stage 归属已退休、八项（保留文件名大小写的）资产回构造前基线、
+已采样纹理删除，并保留前批 Escape、任务、技能、移动 UI、私有纹理、地图、共享框
+与最终 ClientShutdown 检查。这不等于金币交易或方块玩法的人工验收。
+
+### 第二十二批验证
+
+- `build/storage-resources-compile.log`：core 主代码与原有测试源码编译通过。
+- `build/storage-resources-targeted.log` 首轮 19 项中 2 项失败：一项暴露取消按钮
+  误调继承方法的生产缺陷，已限定为对话框取消；一项为字体 mock 的已有 Answer
+  在重新设桩时调用内部 mock，导致 BitmapFontCache 被错误地配置到布尔方法上。
+  `build/storage-resources-regression-gl.log` 扩大到 217 项后仍有这项夹具失败、
+  2 项跳过，未运行 GL；最终改用 doReturn / doThrow，保留原有故障断言。
+  随后另补一项保存的按下回调不得震动新宿主的专项，共 20 项。
+- `build/storage-resources-final.log`：20 项新增专项全部通过；扩大到 28 类 218 项，
+  216 通过、2 跳过（既有佣兵独立环境资源探针），失败/错误 0。core、desktop、
+  D2GS 编译链通过，三轮 MPQ/GL 及最终 ClientShutdown 通过，2m55s。
+  每轮退休 23 个相关控件、两个金币对话框，八项资产回基线、57 张纹理删除；
+  保留 Escape 三次捕获、任务、技能、移动 UI 等全部既有检查。
+  随后仅将 close 中取消连按和释放焦点拆为独立清理尝试，最终代码另行复跑。
+- 最终代码 `build/storage-resources-verified.log`：同一 28 类 218 项再次通过
+  （216 通过、2 跳过、失败/错误 0），core / desktop / D2GS 编译链通过，
+  三轮真实 MPQ/GL、全部前批检查及 ClientShutdown 再次通过，BUILD SUCCESSFUL，
+  2m57s。每轮仍为 23 个相关控件、两个金币弹窗、八项资产基线与 57 张纹理；
+  面板/弹窗按钮声音由各自明确的宿主配对，不依赖顶层声音遍历兜底。
+- 最终三轮退出后资产种类为 56/57/57：对比剩余资产的名称/类型/引用，第二轮
+  比首轮及前批 Escape 导航基线多出 `data/global/sfx/ambient/footstep/MedDirt3.wav`
+  （Sound，refs=1），第三轮不再增加。这是 Audio 按 Sounds 条目首次加载并保留的
+  脚步声宿主缓存，不是八项存储面板/DC6 的引用累积；不报告总数或全体资产一致。
+  最终 ClientShutdown 资产为 0，不代表进程零滞留。
+  最终复跑仍记录 44.96–73.53ms 慢帧，超过 40ms 预算，不作性能、人工输入/
+  听感、金币交易、方块合成、联机或 Android 真机验收。
+
+无需 MPQ/GL 的专项复跑（仅拦截私有 Texture 上传，真实面板/网格/弹窗/引用计数）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.StoragePanelLifecycleTest --no-daemon
+```
+
+扩大定向及原版 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/storage-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/storage-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 InventoryPanel 剩余会话回调、匿名 AlternateListener 的独立解绑和构造
+回滚边界。借用全局角色的其他控件、完整控件内部构造失败、连接交接、控制台/
+Timer/异步日志、跨 Act/加载中退出、长期压力、Android 真机及人工/性能验收仍待，
+不能据本批宣称资源阶段结束。

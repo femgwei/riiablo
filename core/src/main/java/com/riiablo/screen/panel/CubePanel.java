@@ -2,6 +2,7 @@ package com.riiablo.screen.panel;
 
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -20,11 +21,18 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
+import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
 import com.riiablo.util.Disposal;
 
 public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "CubePanel";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final ItemData itemData = java.util.Objects.requireNonNull(character.getItems(), "items");
 
   final AssetDescriptor<DC6> supertransmogrifierDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\supertransmogrifier.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion supertransmogrifier;
@@ -43,33 +51,44 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
   protected ItemController itemController;
 
   public CubePanel() {
-    Riiablo.assets.load(supertransmogrifierDescriptor);
-    Riiablo.assets.finishLoadingAsset(supertransmogrifierDescriptor);
-    supertransmogrifier = Riiablo.assets.get(supertransmogrifierDescriptor).getTexture();
+    inventory = Riiablo.files.inventory.get("Transmogrify Box Page 1");
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(supertransmogrifierDescriptor);
+    assets.finishLoadingAsset(supertransmogrifierDescriptor);
+    supertransmogrifier = assets.get(supertransmogrifierDescriptor).getTexture();
     setSize(supertransmogrifier.getRegionWidth(), supertransmogrifier.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
-    btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+    btnExit = new SessionButton(new Button.ButtonStyle() {{
+      references.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
     btnExit.setPosition(275, 15);
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         setVisible(false);
       }
     });
     addActor(btnExit);
 
-    btnTransmog = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(miniconvertDescriptor);
-      Riiablo.assets.finishLoadingAsset(miniconvertDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(miniconvertDescriptor).getTexture(0));
-      down = new TextureRegionDrawable(Riiablo.assets.get(miniconvertDescriptor).getTexture(1));
+    btnTransmog = new SessionButton(new Button.ButtonStyle() {{
+      references.load(miniconvertDescriptor);
+      assets.finishLoadingAsset(miniconvertDescriptor);
+      up   = new TextureRegionDrawable(assets.get(miniconvertDescriptor).getTexture(0));
+      down = new TextureRegionDrawable(assets.get(miniconvertDescriptor).getTexture(1));
     }});
     btnTransmog.setPosition(144, 139);
     btnTransmog.addListener(new ClickListener() {
@@ -80,10 +99,9 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
     });
     addActor(btnTransmog);
 
-    inventory = Riiablo.files.inventory.get("Transmogrify Box Page 1");
-    final ItemData itemData = Riiablo.charData.getItems();
-
-    grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this) {
+      @Override protected boolean isActive() { return super.isActive() && isCurrentSession(); }
+    };
     IntArray cubeItems = itemData.getStore(StoreLoc.CUBE);
     Array<Item> items = itemData.toItemArray(cubeItems);
     grid.populate(items);
@@ -100,33 +118,60 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.dispose(btnExit);
+      cleanup.dispose(btnTransmog);
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.run(() -> ActorTree.clear(btnExit));
+      cleanup.run(() -> ActorTree.clear(btnTransmog));
       cleanup.dispose(grid);
-      cleanup.run(() -> Riiablo.assets.unload(supertransmogrifierDescriptor.fileName));
-      cleanup.run(() -> Riiablo.assets.unload(miniconvertDescriptor.fileName));
-      cleanup.run(() -> Riiablo.assets.unload(buysellbtnDescriptor.fileName));
+      cleanup.dispose(references);
+    } finally {
+      supertransmogrifier = null; btnExit = null; btnTransmog = null; grid = null; itemController = null;
     }
   }
 
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+        && itemData == character.getItems();
+  }
+
+  private class SessionButton extends Button {
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    super.setVisible(visible);
+  }
+
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
   @Override
   public void draw(Batch batch, float a) {
+    if (!isCurrentSession()) return;
     batch.draw(supertransmogrifier, getX(), getY());
     super.draw(batch, a);
   }
 
   @Override
   public void onDrop(int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.cursorToStore(StoreLoc.CUBE, x, y);
   }
 
   @Override
   public boolean onPickup(int i) {
+    if (!isCurrentSession() || itemController == null) return false;
     itemController.storeToCursor(i);
     return true;
   }
 
   @Override
   public void onSwap(int i, int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.swapStoreItem(i, StoreLoc.CUBE, x, y);
   }
 }

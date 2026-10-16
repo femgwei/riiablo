@@ -36,6 +36,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> mobileReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> questReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> escapeReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> storageReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -58,6 +59,14 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    storageReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/PANEL/supertransmogrifier.dc6",
+        "data/global/ui/PANEL/miniconvert.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
+        "data/global/ui/PANEL/TradeStash.DC6", "data/global/ui/PANEL/goldcoinbtn.dc6",
+        "data/global/ui/MENU/dialogbackground.dc6", "data/global/ui/PANEL/buysellbtn.dc6",
+        "data/global/ui/BIGMENU/numberarrows.dc6"}) {
+      storageReferencesBeforeConstruction.put(path, references(path));
+    }
     presentationReferencesBeforeConstruction.clear();
     String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
     escapeReferencesBeforeConstruction.clear();
@@ -363,6 +372,44 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       }
     }
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
+    Array<Actor> storageActors = new Array<>();
+    collectActors(screen.cubePanel, storageActors); collectActors(screen.stashPanel, storageActors);
+    com.riiablo.widget.GoldAmountDialog stashGold = field(screen.stashPanel, "goldDialog",
+        com.riiablo.widget.GoldAmountDialog.class);
+    com.riiablo.widget.GoldAmountDialog inventoryGold = field(screen.inventoryPanel, "goldDialog",
+        com.riiablo.widget.GoldAmountDialog.class);
+    collectActors(inventoryGold, storageActors);
+    Array<com.riiablo.widget.TextField> goldFields = new Array<>();
+    Array<com.badlogic.gdx.scenes.scene2d.InputListener> goldInputs = new Array<>();
+    for (com.riiablo.widget.GoldAmountDialog dialog : new com.riiablo.widget.GoldAmountDialog[] {stashGold, inventoryGold}) {
+      goldFields.add(field(dialog, "amount", com.riiablo.widget.TextField.class));
+      goldInputs.add((com.badlogic.gdx.scenes.scene2d.InputListener) dialog.getCaptureListeners().first());
+    }
+    screen.stashPanel.setVisible(true);
+    clickAction(field(screen.stashPanel, "btnDropGold", Actor.class));
+    require(stashGold.isOpen() && screen.stage.getKeyboardFocus() == goldFields.first(), "stash gold focus");
+    screen.stashPanel.setVisible(false);
+    require(!stashGold.isOpen() && screen.stage.getKeyboardFocus() != goldFields.first(), "stash hide releases modal focus");
+    screen.stashPanel.setVisible(true);
+    clickAction(field(screen.stashPanel, "btnDropGold", Actor.class));
+    require(stashGold.isOpen(), "stash gold reusable after hiding");
+    clickAction(field(screen.inventoryPanel, "btnDropGold", Actor.class));
+    require(inventoryGold.isOpen() && stashGold.isOpen()
+        && screen.stage.getKeyboardFocus() == goldFields.peek(), "both production gold owners open at exit");
+    Set<Integer> storageHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : storageReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey();
+      require(references(path) > reference.getValue(), "live storage asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "storage sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle();
+          require(Gdx.gl.glIsTexture(handle), "live storage texture " + path);
+          if (reference.getValue() == 0) storageHandles.add(handle);
+        }
+      }
+    }
     Array<Actor> escapeActors = new Array<>();
     collectActors(screen.escapePanel, escapeActors);
     Set<Integer> escapeHandles = new HashSet<>();
@@ -407,6 +454,27 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.cubePanel, "disposed", Boolean.class)
+        && field(screen.stashPanel, "disposed", Boolean.class), "Client retired storage owners");
+    screen.cubePanel.dispose(); screen.stashPanel.dispose();
+    for (com.riiablo.widget.GoldAmountDialog dialog : new com.riiablo.widget.GoldAmountDialog[] {stashGold, inventoryGold}) {
+      require(field(dialog, "disposed", Boolean.class) && field(dialog, "listener", Object.class) == null
+          && field(dialog, "maximumProvider", Object.class) == null, "gold dialog callbacks retired");
+      dialog.dispose(); dialog.dispose(); dialog.open(); require(!dialog.isOpen(), "retired gold dialog cannot reopen");
+    }
+    for (int i = 0; i < goldFields.size; i++) {
+      require(screen.stage.getKeyboardFocus() != goldFields.get(i) && goldFields.get(i).isDisabled(), "gold focus and input retired");
+      require(!goldInputs.get(i).keyDown(null, com.badlogic.gdx.Input.Keys.ENTER), "late gold submit ignored");
+      require(!goldFields.get(i).getDefaultInputListener().keyTyped(null, '1'), "late gold typing ignored");
+    }
+    for (Actor actor : storageActors) {
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "storage actor retired");
+    }
+    for (Map.Entry<String, Integer> reference : storageReferencesBeforeConstruction.entrySet()) {
+      require(references(reference.getKey()) == reference.getValue(), "storage asset baseline " + reference.getKey());
+    }
+    for (int handle : storageHandles) require(!Gdx.gl.glIsTexture(handle), "storage texture deleted");
     require(field(screen.escapePanel, "disposed", Boolean.class), "Client retired escape owner");
     require(!Riiablo.keys.isCaptureOwner(screen.escapePanel)
         && screen.stage.getKeyboardFocus() != screen.escapePanel, "Client released capture and focus");
@@ -544,6 +612,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nescapeCaptures=3\nescapeNavigationRelease=true\nescapeHideRelease=true\nescapeExitRelease=true"
         + "\nescapeAssetBaselinesBalanced=" + escapeReferencesBeforeConstruction.size()
         + "\nescapeTexturesDeleted=" + escapeHandles.size()
+        + "\nstorageActorsRetired=" + storageActors.size
+        + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
+        + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
+        + "\nstorageTexturesDeleted=" + storageHandles.size()
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\nmobileUiLifecycle=" + mobileUiLifecycle
