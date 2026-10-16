@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import java.util.Objects;
 
 /** ECS table-backed subset of UNITS_GetUnitSizeX/Y (#10336/#10337),
@@ -22,6 +23,7 @@ public final class NativePathUnitMetadata {
   /** Predicate results from the host table; these are not original DLL record bytes. */
   public final boolean door, orientationIsOne;
   private final boolean hasTownMetadata, npc, inTown, interact;
+  private final boolean hasRuntimeFlags, isRevive;
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY) {
     this(type, sizeX, sizeY, false, false);
@@ -33,6 +35,12 @@ public final class NativePathUnitMetadata {
 
   private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne,
       boolean hasTownMetadata, boolean npc, boolean inTown, boolean interact) {
+    this(type, sizeX, sizeY, door, orientationIsOne, hasTownMetadata, npc, inTown, interact, false, false);
+  }
+
+  private NativePathUnitMetadata(int type, int sizeX, int sizeY, boolean door, boolean orientationIsOne,
+      boolean hasTownMetadata, boolean npc, boolean inTown, boolean interact,
+      boolean hasRuntimeFlags, boolean isRevive) {
     this.type = type;
     this.sizeX = sizeX;
     this.sizeY = sizeY;
@@ -42,6 +50,28 @@ public final class NativePathUnitMetadata {
     this.npc = npc;
     this.inTown = inTown;
     this.interact = interact;
+    this.hasRuntimeFlags = hasRuntimeFlags;
+    this.isRevive = isRevive;
+  }
+
+  /** Derive from the captured authoritative runtime flag; missing monster flags are unknown.
+   * Invalid sizes retain #11281's early fallback without requiring flag metadata. */
+  public int collisionPatternFromSize(int nativeSize) {
+    if (nativeSize < 0 || nativeSize >= 4 || type != 1) {
+      return collisionPatternFromSize(nativeSize, false);
+    }
+    return collisionPatternFromSize(nativeSize, resolvedIsRevive());
+  }
+
+  /** Town eligibility using the same capture's MonStats and NativeUnitFlags. */
+  public boolean ownerCanBeInTown() {
+    return ownerCanBeInTown(resolvedIsRevive());
+  }
+
+  boolean resolvedIsRevive() {
+    if (type != 1) return false;
+    if (!hasRuntimeFlags) throw missing("NativeUnitFlags");
+    return isRevive;
   }
 
   /** #11281 derivation from the supplied native path size, not a live pattern read.
@@ -95,11 +125,13 @@ public final class NativePathUnitMetadata {
         if (monster == null || monster.monstats2 == null) throw missing("MonStats2");
         requireSizeByte(monster.monstats2.SizeX);
         requireSizeByte(monster.monstats2.SizeY);
+        NativeUnitFlags flags = world.getMapper(NativeUnitFlags.class).get(id);
         return new NativePathUnitMetadata(1, monster.monstats2.SizeX, monster.monstats2.SizeY,
             false, false, monster.monstats != null,
             monster.monstats != null && monster.monstats.npc,
             monster.monstats != null && monster.monstats.inTown,
-            monster.monstats != null && monster.monstats.interact);
+            monster.monstats != null && monster.monstats.interact,
+            flags != null, flags != null && flags.has(NativeUnitFlags.IS_REVIVE));
       }
       case OBJ: {
         Object object = world.getMapper(Object.class).get(id);

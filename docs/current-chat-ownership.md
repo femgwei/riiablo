@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第五十批：捕获真实NativeUnitFlags.IS_REVIVE，元数据/分配碰撞新增无bool入口，缺失monster flags拒绝。
+新增4项验证bit来源/冻结/未知/表规则和Wraith优先级，显式bool入口保留；生产仍A*，见handoff顶部。
+完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log。
+
 第四十九批：新增ITM足迹ECS适配，复用type4/size1及0x200规则；raw坐标/room/方向显式提供。
 新增4项含绑定观察→Request/Dispatch网格恢复及目标token替换拒绝；资格判断未接，生产仍A*，见handoff顶部。
 完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，新测试类已加入隔离清单。

@@ -11,6 +11,27 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathAllocationCollisionTest {
+  @Test void allocationUsesCapturedRuntimeFlagAndRejectsUnknownFlags() {
+    World w = new World();
+    try {
+      int id = w.create(); w.getMapper(Class.class).create(id).type = Class.Type.MON;
+      Monster monster = w.getMapper(Monster.class).create(id);
+      monster.monstats = new MonStats.Entry(); monster.monstats.BaseId = "fallen1";
+      monster.monstats2 = new MonStats2.Entry(); monster.monstats2.SizeX = 3; w.process();
+      assertThrows(IllegalArgumentException.class, () -> NativePathAllocationCollision.read(w, id));
+      com.riiablo.engine.server.component.NativeUnitFlags flags =
+          w.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class).create(id).reset();
+      assertEquals(2, NativePathAllocationCollision.read(w, id).pattern);
+      flags.set(com.riiablo.engine.server.component.NativeUnitFlags.IS_REVIVE);
+      NativePathAllocationCollision pet = NativePathAllocationCollision.read(w, id);
+      assertEquals(4, pet.pattern); assertEquals(0x100, pet.footprintMask); assertEquals(0x3c01, pet.moveMask);
+      monster.monstats.BaseId = "wraith1";
+      assertEquals(5, NativePathAllocationCollision.read(w, id).pattern);
+      w.getMapper(Class.class).get(id).type = Class.Type.PLR;
+      assertEquals(0x1c09, NativePathAllocationCollision.read(w, id).moveMask);
+    } finally { w.dispose(); }
+  }
+
   @Test void playerAndMissileAllocationMasksUseNativeConstants() {
     World w = new World();
     try {

@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第五十批补充：元数据捕获真实NativeUnitFlags.IS_REVIVE，town/pattern和allocation新增无bool入口，
+缺失monster flags仍未知并拒绝，显式bool来源契约保留；不从复活经历、IS_RESURRECT或佣兵身份猜测。
+新增4项覆盖来源/冻结/缺失/表规则；固定上游Monsters.cpp/Units.h复核，无新DLL动态证据，生产仍A*。
+完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log。
+
 第四十九批补充：NativePathItemFootprint将真实Class.ITM/size1接入既有静态footprint和0x200规则，
 raw坐标、room及可选方向显式提供；新增4项含完整绑定观察/搜索/恢复与替换token拒绝。
 不判断ground/inventory资格，不推断raw来源或安装碰撞；固定上游分支复核，无新DLL动态证据，生产仍A*。

@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第五十批（生产适配仍PARTIAL）
+
+- [x] 真实NativeUnitFlags.IS_REVIVE快照接入town/pattern及allocation便利入口，缺失拒绝，不用复活经历代替。
+- [x] 新增4项验证bit来源、未知/冻结、npc/interact与pet/Wraith规则；显式bool入口保留。
+- [x] 完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log。
+- [ ] 实际raw/live字段、Act与Zone映射、共享seed及WRP来源仍待；生产仍A*。
+
 ## 2026-10-16 寻路第四十九批（生产适配仍PARTIAL）
 
 - [x] NativePathItemFootprint接真实Class.ITM/size1至既有静态足迹，显式raw坐标/room/可选方向。

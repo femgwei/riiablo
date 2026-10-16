@@ -2146,6 +2146,18 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，
   XML .gradle/path-port/round49-full/core/test-results/pathPortTest，新类已加入隔离编译清单。
 
+## 第五十批：真实ECS IS_REVIVE快照来源
+
+- NativePathUnitMetadata捕获NativeUnitFlags存在性及IS_REVIVE值；新增无bool town/pattern入口，
+  NativePathAllocationCollision新增无bool read，使用同次捕获；独立已验证bool来源仍可用原入口。
+- monster缺少flag组件拒绝，不推断false；不从IS_RESURRECT、MERCENARY、resurrected/playerRevive
+  或MonStats2.revive代替。缺MonStats仍拒绝；非monster不强求flag，无效size早退仍保持。
+- 新增4项覆盖真实bit来源、快照冻结、缺失数据、npc/interact、allocation pet与Wraith优先级。
+  固定上游0c0bbd1 Monsters.cpp城镇谓词与Units.h的0x80000000常量复核。
+- 不读取live path字段、不新增DLL动态证据或生产切换；实际raw/live/Act/seed/WRP缺口仍待。
+- 完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log，
+  XML .gradle/path-port/round50-full/core/test-results/pathPortTest。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

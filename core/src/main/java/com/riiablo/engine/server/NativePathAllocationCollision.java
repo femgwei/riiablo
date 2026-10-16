@@ -16,6 +16,17 @@ public final class NativePathAllocationCollision {
   /** nativeIsRevive is explicit runtime metadata, never resurrection provenance. */
   public static NativePathAllocationCollision read(World world, int id, boolean nativeIsRevive) {
     NativePathUnitMetadata metadata = NativePathUnitMetadata.read(world, id);
+    return read(world, id, metadata, nativeIsRevive);
+  }
+
+  /** Use the captured authoritative NativeUnitFlags; missing monster flags are rejected. */
+  public static NativePathAllocationCollision read(World world, int id) {
+    NativePathUnitMetadata metadata = NativePathUnitMetadata.read(world, id);
+    return read(world, id, metadata, metadata.resolvedIsRevive());
+  }
+
+  private static NativePathAllocationCollision read(World world, int id,
+      NativePathUnitMetadata metadata, boolean nativeIsRevive) {
     if (metadata.type != 0 && metadata.type != 1 && metadata.type != 3) {
       throw new IllegalArgumentException("dynamic ECS unit required");
     }

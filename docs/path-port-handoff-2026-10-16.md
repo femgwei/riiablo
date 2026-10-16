@@ -2,7 +2,21 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十九批续接结果（优先于下方历史起点）
+## 第五十批续接结果（优先于下方历史起点）
+
+- NativePathUnitMetadata捕获真实NativeUnitFlags.IS_REVIVE(0x80000000)，新增无bool的
+  ownerCanBeInTown()/collisionPatternFromSize(size)入口；原显式bool入口保留供独立已验证来源。
+- NativePathAllocationCollision.read(world,id)使用同次元数据捕获的真实flag；已有显式入口保留。
+  缺失monster flags拒绝，不当作false，不从resurrected/playerRevive/MonStats2.revive或佣兵归属推断。
+- Monster仍需有效MonStats；#11281无效size早退不强求flag；player等非monster不要求该组件。
+  仅不可变操作快照，flag后续变化需重新捕获；不把分配默认值冒充live path字段。
+- 新增4项覆盖真实bit、IS_RESURRECT/mercenary及复活经历非替代物、缺失数据、快照冻结、
+  npc/interact与分配pet pattern、Wraith优先级。固定上游0c0bbd1核对Monsters.cpp与Units.h常量。
+- 无新DLL动态执行，生产仍Map→AStarPathFinder；实际raw/live字段、Act与Zone映射、共享seed、WRP来源仍待。
+- 完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log，
+  XML `.gradle/path-port/round50-full/core/test-results/pathPortTest`。
+
+## 第四十九批续接结果（历史）
 
 - 新增NativePathItemFootprint：真实ECS Class.ITM→既有type4/size1元数据→静态size足迹，
   复用原有COLLIDE_ITEM(0x200)规则；非ITM/WRP拒绝，不读取Size或猜测表行。

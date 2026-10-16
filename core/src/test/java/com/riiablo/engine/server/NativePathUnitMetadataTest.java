@@ -17,6 +17,67 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathUnitMetadataTest {
+  @Test void capturedRuntimeReviveFlagDrivesTownAndPetPatternWithoutProvenanceGuesses() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster monster = w.getMapper(Monster.class).create(id);
+      monster.monstats = new MonStats.Entry(); monster.monstats2 = new MonStats2.Entry();
+      com.riiablo.engine.server.component.NativeUnitFlags flags =
+          w.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class).create(id).reset();
+      monster.setResurrected(42, true); monster.monstats2.revive = true;
+      flags.set(com.riiablo.engine.server.component.NativeUnitFlags.IS_RESURRECT
+          | com.riiablo.engine.server.component.NativeUnitFlags.MERCENARY);
+      NativePathUnitMetadata ordinary = NativePathUnitMetadata.read(w, id);
+      assertFalse(ordinary.ownerCanBeInTown()); assertEquals(1, ordinary.collisionPatternFromSize(2));
+      flags.set(com.riiablo.engine.server.component.NativeUnitFlags.IS_REVIVE);
+      NativePathUnitMetadata revived = NativePathUnitMetadata.read(w, id);
+      assertTrue(revived.ownerCanBeInTown()); assertEquals(3, revived.collisionPatternFromSize(2));
+      assertEquals(4, revived.collisionPatternFromSize(3));
+      flags.clear(com.riiablo.engine.server.component.NativeUnitFlags.IS_REVIVE);
+      assertTrue(revived.ownerCanBeInTown()); assertFalse(ordinary.ownerCanBeInTown());
+      assertFalse(NativePathUnitMetadata.read(w, id).ownerCanBeInTown());
+    } finally { w.dispose(); }
+  }
+
+  @Test void runtimeFlagDoesNotReplaceMissingMonStatsAndMissingFlagsAreNotZero() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster monster = w.getMapper(Monster.class).create(id); monster.monstats2 = new MonStats2.Entry();
+      monster.monstats = new MonStats.Entry();
+      NativePathUnitMetadata unknown = NativePathUnitMetadata.read(w, id);
+      assertThrows(IllegalArgumentException.class, unknown::ownerCanBeInTown);
+      assertThrows(IllegalArgumentException.class, () -> unknown.collisionPatternFromSize(2));
+      assertEquals(1, unknown.collisionPatternFromSize(255));
+      // Explicit callers can still supply independently verified runtime metadata.
+      assertTrue(unknown.ownerCanBeInTown(true));
+      w.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class).create(id)
+          .set(com.riiablo.engine.server.component.NativeUnitFlags.IS_REVIVE);
+      monster.monstats = null;
+      NativePathUnitMetadata missingTable = NativePathUnitMetadata.read(w, id);
+      assertThrows(IllegalArgumentException.class, missingTable::ownerCanBeInTown);
+      assertThrows(IllegalArgumentException.class, () -> missingTable.collisionPatternFromSize(2));
+    } finally { w.dispose(); }
+  }
+
+  @Test void capturedTownFlagsAndInteractStillSelectRuntimePattern() {
+    World w = new World();
+    try {
+      int id = create(w, Class.Type.MON);
+      Monster monster = w.getMapper(Monster.class).create(id);
+      monster.monstats = new MonStats.Entry(); monster.monstats2 = new MonStats2.Entry();
+      w.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class).create(id).reset();
+      monster.monstats.npc = true;
+      assertTrue(NativePathUnitMetadata.read(w, id).ownerCanBeInTown());
+      assertEquals(3, NativePathUnitMetadata.read(w, id).collisionPatternFromSize(2));
+      monster.monstats.interact = true;
+      assertEquals(1, NativePathUnitMetadata.read(w, id).collisionPatternFromSize(2));
+      NativePathUnitMetadata player = NativePathUnitMetadata.read(w, create(w, Class.Type.PLR));
+      assertTrue(player.ownerCanBeInTown()); assertEquals(1, player.collisionPatternFromSize(2));
+    } finally { w.dispose(); }
+  }
+
   @Test void populatedWarpRoutingDoesNotAuthorizeNativeTileOrObjectClassification() {
     World w = new World();
     try {
