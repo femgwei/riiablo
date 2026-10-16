@@ -4,6 +4,8 @@ import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -26,8 +28,15 @@ import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.HotkeyButton;
+import com.riiablo.util.Disposal;
+import com.riiablo.util.AssetReferenceScope;
 
 public class MobileControls extends WidgetGroup implements Disposable {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private boolean disposed;
+  private ActorGestureListener gestureListener;
+  private SpellsQuickPanel observedPanel;
   final AssetDescriptor<DC6> SkilliconDescriptor = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\Skillicon.DC6", DC6.class);
   DC6 Skillicon;
 
@@ -50,13 +59,23 @@ public class MobileControls extends WidgetGroup implements Disposable {
   final float SIZE = 64;
 
   public MobileControls() {
-    Riiablo.assets.load(SkilliconDescriptor);
-    Riiablo.assets.finishLoadingAsset(SkilliconDescriptor);
-    Skillicon = Riiablo.assets.get(SkilliconDescriptor);
+    try {
+      initialize();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
 
-    Riiablo.assets.load(SoSkilliconDescriptor);
-    Riiablo.assets.finishLoadingAsset(SoSkilliconDescriptor);
-    SoSkillicon = Riiablo.assets.get(SoSkilliconDescriptor);
+  private void initialize() {
+    references.load(SkilliconDescriptor);
+    assets.finishLoadingAsset(SkilliconDescriptor);
+    Skillicon = assets.get(SkilliconDescriptor);
+
+    references.load(SoSkilliconDescriptor);
+    assets.finishLoadingAsset(SoSkilliconDescriptor);
+    SoSkillicon = assets.get(SoSkilliconDescriptor);
 
     interact = new Button(new Button.ButtonStyle() {{
       up   = new TextureRegionDrawable(Skillicon.getTexture(8));
@@ -66,6 +85,7 @@ public class MobileControls extends WidgetGroup implements Disposable {
     interact.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (disposed) return;
         events.dispatch(InteractEvent.obtain());
       }
     });
@@ -76,16 +96,18 @@ public class MobileControls extends WidgetGroup implements Disposable {
       skills[i].setSize(SIZE, SIZE);
     }
 
-    ActorGestureListener gestureListener = new ActorGestureListener() {
+    gestureListener = new ActorGestureListener() {
       private final Vector2 tmpVec2 = new Vector2();
 
       @Override
       public boolean longPress(Actor actor, float x, float y) {
+        if (disposed) return false;
         SpellsQuickPanel spellsQuickPanel = Riiablo.game.spellsQuickPanelR;
         final boolean visible = !spellsQuickPanel.isVisible();
         if (visible) {
           HotkeyButton dst = (HotkeyButton) actor;
           spellsQuickPanel.setObserver(dst);
+          observedPanel = spellsQuickPanel;
           // FIXME: Scale this better
           tmpVec2.set(actor.getWidth(), actor.getHeight());
           actor.localToStageCoordinates(tmpVec2);
@@ -97,6 +119,7 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
       @Override
       public void tap(InputEvent event, float x, float y, int count, int button) {
+        if (disposed) return;
         if (Riiablo.game.spellsQuickPanelR.isVisible()) {
           Riiablo.game.spellsQuickPanelR.setVisible(false);
           return;
@@ -140,7 +163,60 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(SkilliconDescriptor.fileName);
-    Riiablo.assets.unload(SoSkilliconDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      if (gestureListener != null) cleanup.run(() -> gestureListener.getGestureDetector().cancel());
+      // The quick chooser only borrows a skill slot; do not clear a newer observer.
+      if (observedPanel != null && skills != null) {
+        for (HotkeyButton skill : skills) {
+          if (skill != null && observedPanel.observer == skill) {
+            cleanup.run(() -> observedPanel.setObserver(null));
+            cleanup.run(() -> observedPanel.setVisible(false));
+            break;
+          }
+        }
+      }
+      cleanup.run(this::clearListeners);
+      if (interact != null) {
+        cleanup.run(interact::clearListeners);
+        cleanup.run(interact::remove);
+        cleanup.dispose(interact);
+      }
+      if (skills != null) for (HotkeyButton skill : skills) {
+        if (skill == null) continue;
+        cleanup.run(skill::clearListeners);
+        cleanup.run(skill::remove);
+        cleanup.dispose(skill);
+      }
+      cleanup.run(this::clearChildren);
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      Skillicon = null;
+      SoSkillicon = null;
+      interact = null;
+      skills = null;
+      events = null;
+      actioneer = null;
+      socket = null;
+      mAngle = null;
+      mPosition = null;
+      gestureListener = null;
+      observedPanel = null;
+    }
+  }
+
+  @Override
+  public void draw(Batch batch, float parentAlpha) {
+    if (disposed) return;
+    super.draw(batch, parentAlpha);
+  }
+
+  @Override
+  public void act(float delta) {
+    if (!disposed) super.act(delta);
   }
 }

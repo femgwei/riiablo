@@ -1,6 +1,8 @@
 package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -11,8 +13,13 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.widget.Button;
+import com.riiablo.util.Disposal;
+import com.riiablo.util.AssetReferenceScope;
 
 public class MobilePanel extends Table implements Disposable, EscapeController {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private boolean disposed;
   final AssetDescriptor<DC6> minipanelbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\minipanelbtn.DC6", DC6.class);
 
   Button btnCharacter;
@@ -26,12 +33,23 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
   Button btnSwapWeapons;
 
   public MobilePanel() {
-    Riiablo.assets.load(minipanelbtnDescriptor);
-    Riiablo.assets.finishLoadingAsset(minipanelbtnDescriptor);
-    final DC6 minipanelbtn = Riiablo.assets.get(minipanelbtnDescriptor);
+    try {
+      initialize();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(minipanelbtnDescriptor);
+    assets.finishLoadingAsset(minipanelbtnDescriptor);
+    final DC6 minipanelbtn = assets.get(minipanelbtnDescriptor);
     ClickListener clickListener = new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (disposed) return;
         Actor actor = event.getListenerActor();
         if (actor == btnCharacter) {
           Actor panel = Riiablo.game.characterPanel;
@@ -124,13 +142,50 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
 
   @Override
   public Actor getEscapeButton() {
-    return btnEscapeMenu;
+    return disposed ? null : btnEscapeMenu;
   }
 
   @Override
   public void dispose() {
-    btnCharacter.dispose();
-    btnInventory.dispose();
-    Riiablo.assets.unload(minipanelbtnDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      for (Button button : new Button[] {
+          btnCharacter, btnInventory, btnSkillTree, btnParty, btnMap,
+          btnMessages, btnQuests, btnEscapeMenu, btnSwapWeapons}) {
+        if (button == null) continue;
+        cleanup.run(button::clearListeners);
+        // Escape is reparented directly onto Stage after the first frame.
+        cleanup.run(button::remove);
+        cleanup.dispose(button);
+      }
+      cleanup.run(this::clearChildren);
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      btnCharacter = null;
+      btnInventory = null;
+      btnSkillTree = null;
+      btnParty = null;
+      btnMap = null;
+      btnMessages = null;
+      btnQuests = null;
+      btnEscapeMenu = null;
+      btnSwapWeapons = null;
+    }
+  }
+
+  @Override
+  public void draw(Batch batch, float parentAlpha) {
+    if (disposed) return;
+    super.draw(batch, parentAlpha);
+  }
+
+  @Override
+  public void act(float delta) {
+    if (!disposed) super.act(delta);
   }
 }

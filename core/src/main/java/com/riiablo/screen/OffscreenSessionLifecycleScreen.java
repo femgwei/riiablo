@@ -32,6 +32,8 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> baselineReferences = new HashMap<>();
   private final Map<String, Integer> panelReferencesBeforeConstruction = new HashMap<>();
   private final Map<String, Integer> presentationReferencesBeforeConstruction = new TreeMap<>();
+  private final boolean mobileUiLifecycle = Boolean.getBoolean("riiablo.offscreen-mobile-ui-lifecycle");
+  private final Map<String, Integer> mobileReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -62,6 +64,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       presentationReferencesBeforeConstruction.put(path, references(path));
     }
     buttonReferencesBeforeConstruction = references("data/global/sfx/cursor/button.wav");
+    mobileReferencesBeforeConstruction.clear();
+    if (mobileUiLifecycle) for (String path : new String[] {
+        "data/global/ui/PANEL/minipanelbtn.DC6", "data/global/ui/SPELLS/Skillicon.DC6",
+        "data/global/ui/SPELLS/SoSkillicon.DC6"}) {
+      mobileReferencesBeforeConstruction.put(path, references(path));
+    }
     panelReferencesBeforeConstruction.clear();
     panelReferencesBeforeConstruction.put("data/global/ui/PANEL/invchar6Tab.DC6",
         references("data/global/ui/PANEL/invchar6Tab.DC6"));
@@ -82,6 +90,19 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(references("data/local/ui/loadingscreen.dc6") == entryLoadingBaseline + 1,
         "entry owns exactly one loading-image reference");
     OffscreenCampScreen screen = new OffscreenCampScreen(character, output + "/cycle-" + cycle);
+    // Desktop-hosted production mobile widgets, not Android platform emulation.
+    // The normal show/inject, first-frame escape reparenting and Client teardown
+    // still run unchanged. Mobile coverage is opt-in; normal desktop is unchanged.
+    if (mobileUiLifecycle) {
+      require(screen.mobilePanel == null && screen.mobileControls == null, "desktop mobile fixture starts absent");
+      screen.mobilePanel = new com.riiablo.screen.panel.MobilePanel();
+      screen.mobilePanel.setWidth(screen.stage.getWidth());
+      screen.stage.addActor(screen.mobilePanel);
+      screen.mobileControls = new com.riiablo.screen.panel.MobileControls();
+      screen.mobileControls.setPosition(screen.stage.getWidth() - screen.mobileControls.getWidth(),
+          screen.mobilePanel.getHeight());
+      screen.stage.addActor(screen.mobileControls);
+    }
     // The constructor also builds UI actors, which have their own asset loads.
     // Measure the preload scope immediately before show, not before those
     // separate owners exist. Report their remaining references separately.
@@ -109,6 +130,37 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
         "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
+    Array<Actor> mobileButtons = new Array<>();
+    Set<Integer> mobileHandles = new HashSet<>();
+    if (mobileUiLifecycle) {
+      Actor escape = screen.mobilePanel.getEscapeButton();
+      require(escape != null && escape.getParent() == screen.stage.getRoot(),
+          "production first frame reparents mobile escape onto Stage");
+      mobileButtons.addAll(screen.mobilePanel.getChildren());
+      mobileButtons.add(escape);
+      mobileButtons.add(field(screen.mobilePanel, "btnMap", Actor.class)); // never attached
+      mobileButtons.addAll(screen.mobileControls.getChildren());
+      require(mobileButtons.size == 15, "nine menu and six action buttons sampled");
+      for (Map.Entry<String, Integer> reference : mobileReferencesBeforeConstruction.entrySet()) {
+        String path = reference.getKey();
+        require(references(path) > reference.getValue(), "live mobile asset " + path);
+        DC6 dc = assets.get(path, DC6.class);
+        for (int direction = 0; direction < dc.getNumDirections(); direction++) {
+          require(dc.isLoaded(direction), "mobile sheet uploaded " + path);
+          for (com.badlogic.gdx.graphics.g2d.TextureRegion region : dc.getRegions(direction)) {
+            int handle = region.getTexture().getTextureObjectHandle();
+            require(Gdx.gl.glIsTexture(handle), "live mobile texture " + path);
+            if (reference.getValue() == 0) mobileHandles.add(handle);
+          }
+        }
+      }
+      // Leave the borrowed skill-slot observer active for production teardown.
+      com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener gesture = field(screen.mobileControls,
+          "gestureListener", com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener.class);
+      screen.spellsQuickPanelR.setVisible(false);
+      require(gesture.longPress(mobileButtons.peek(), 0, 0), "mobile long press opens chooser");
+      require(screen.spellsQuickPanelR.isVisible(), "mobile chooser active at exit");
+    }
     // Exercise actual dialog replacement, explicit close, and World-owned final teardown.
     // These add their own border references on top of the already-live NPC/panel consumers.
     com.riiablo.engine.client.DialogManager dialogs =
@@ -245,6 +297,22 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       require(menu.isDisposed() && menu.getParent() == null, "visible or unattached NPC menu retired");
     }
     require(dialogs.getDialog() == null, "World retired the active dialog");
+    if (mobileUiLifecycle) {
+      require(field(screen.mobilePanel, "disposed", Boolean.class)
+          && field(screen.mobileControls, "disposed", Boolean.class), "Client retired both mobile owners");
+      screen.mobilePanel.dispose(); screen.mobileControls.dispose();
+      for (Actor button : mobileButtons) {
+        require(button.getParent() == null && button.getListeners().size == 0, "mobile button retired");
+      }
+      require(screen.mobilePanel.getEscapeButton() == null, "retired escape is not exposed");
+      require(field(screen.spellsQuickPanelR, "observer", Object.class) == null,
+          "mobile chooser no longer borrows retired slot");
+      require(!screen.spellsQuickPanelR.isVisible(), "retired mobile chooser hidden");
+      for (Map.Entry<String, Integer> reference : mobileReferencesBeforeConstruction.entrySet()) {
+        require(references(reference.getKey()) == reference.getValue(), "mobile asset baseline " + reference.getKey());
+      }
+      for (int handle : mobileHandles) require(!Gdx.gl.glIsTexture(handle), "mobile texture deleted");
+    }
     // Screen preloads use the pre-show baseline; Button's separately owned
     // references must return all the way to the pre-construction baseline.
     require(references("data/global/sfx/cursor/button.wav") == buttonReferencesBeforeConstruction,
@@ -296,6 +364,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nquickSkillRebuilds=3"
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
+        + "\nmobileUiLifecycle=" + mobileUiLifecycle
+        + "\nmobileButtonsRetired=" + mobileButtons.size
+        + "\nmobileAssetBaselinesBalanced=" + mobileReferencesBeforeConstruction.size()
+        + "\nmobileTexturesDeleted=" + mobileHandles.size()
         + "\npanelUploadPixelsFreed=true"
         + "\npresentationAssetBaselinesBalanced=" + presentationReferencesBeforeConstruction.size()
         + "\npresentationTexturesDeleted=" + presentationHandles.size()

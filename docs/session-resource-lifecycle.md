@@ -1243,6 +1243,7 @@ BeltGrid 填充纹理）存活并在 Client 退出后删除；保留原地图、
 
 本批仍未覆盖其他私有 GL Actor 的完整构造失败回滚、连接交接、控制台/Timer/异步
 日志、跨 Act/加载中退出和长期压力；资源阶段继续按宿主归属逐项收口。
+
 ## 第十七批：招募、帮助与传送小面板资源宿主
 
 本批收口 `HireMercenaryPanel`、`HelpPanel` 和 `WaygatePanel`。三个组件现在在构造时
@@ -1270,3 +1271,63 @@ BeltGrid 填充纹理）存活并在 Client 退出后删除；保留原地图、
 本批没有宣称移动端 `MobileControls`/`MobilePanel` 已覆盖；它们的构造路径和专用
 生命周期测试留到下一批。慢帧、人工画面/输入/声音、联机/存档、跨 Act、加载中退出、
 完整构造失败回滚及长期压力仍未完成验收。
+
+## 第十八批：移动端菜单与操作栏归属
+
+`MobilePanel` 与 `MobileControls` 捕获构造时的 AssetManager，用 AssetReferenceScope
+逐项配对自己的 DC6 请求；构造中途失败释放已取得的页面引用及已返回的按钮实例。
+退出幂等，异常/Error 不跳过其余资源，清除注入的借用引用但不销毁 World、Socket、
+Actioneer 或其他面板。旧 act/draw、点击、短按和长按在退出后不再访问当前会话。
+
+MobilePanel 显式持有并释放全部九个按钮，而非只释放角色和背包按钮：包括未挂入
+表格的地图按钮，以及首帧被 GameScreen 移到 Stage 顶层的退出按钮。逐按钮清除
+监听、从父节点移除并归还按钮声音；再清理自身及页面资产。MobileControls 对
+交互按钮和五个技能按钮做同样清理，取消 GestureDetector 长按任务。快捷选择器
+只借用移动技能槽；退出时仅当它仍指向本操作栏的槽位才解除 observer 并隐藏，
+不清除已替换的新 observer，也不释放共享选择器、字体或贴图。
+
+离屏会话探针新增可选 `-PmobileUiLifecycle`：在桌面隐藏 GL 客户端显式创建这两个
+生产移动控件，仍执行真实 GameScreen.show 注入、首帧退出按钮重挂载与 Client
+退出。每轮检查 15 个按钮退休、三项移动 UI 资产回构造前基线及对应 GL 删除，
+并留下活动快捷选择器交给生产退出。此路径不是 Android 平台模拟，也不是触屏/
+软键盘/真机性能或视觉验收；默认桌面探针行为不变。
+
+### 第十八批验证
+
+- 最初单项夹具因 libGDX app 未初始化触发 Cell 递归；补齐应用后又暴露路径标准化
+  断言差异，修正为 AssetDescriptor 使用的 `/`。扩展专项首轮
+  `build/mobile-resources-focused.log` 的 11 项中 6 项因缺少借用 white 纹理夹具失败；
+  补齐夹具，没有修改生产断言或技能规则。
+- `build/mobile-resources-focused-02.log`：11 项全部通过，失败/错误/跳过 0；
+  core、desktop、D2GS 编译通过，43s。专项使用真实 AssetManager/控件，覆盖全部
+  按钮、未挂载/重挂载按钮、共享资产和排队声音、全局宿主替换、手势取消、迟到
+  回调、observer 身份、异常清理与部分构造回滚，无需 MPQ、真实 GL 或 Android。
+- `build/mobile-resources-regression-gl.log`：扩大定向 14 类 106 项，失败/错误 0、
+  跳过 2；同一 Client 三轮每轮 `mobileButtonsRetired=15`、
+  `mobileAssetBaselinesBalanced=3`、`mobileTexturesDeleted=102`，构造前/退出后按钮
+  声音引用均 0；保留原 13 张私有纹理、共享框 `0→12→0`、10 个 NPC 菜单节点、
+  地图、表现资源和 ClientShutdown 检查，BUILD SUCCESSFUL，2m36s。首轮装配测试
+  筛选误用不存在的类名，未计入装配覆盖，最终复跑使用 GameScreenAssemblyTest。
+- `build/mobile-resources-final.log`：正确装配筛选后共 15 类 115 项，失败/错误 0、
+  跳过 2（佣兵独立环境资源探针）；新增断言先确认两个移动宿主已由 Client 释放，
+  再测试重复 dispose，避免探针手动清理掩盖归属缺失。原版 1.10f MPQ 三轮仍分别
+  退休 15 个按钮、归还三项移动 UI 资源、删除 102 张相关共享纹理，私有纹理 13 张、
+  共享框 `0→12→0`、菜单 10 节点及 ClientShutdown 通过，BUILD SUCCESSFUL，2m51s。
+  退出剩余资产种类为 55/55/55，不据此声称整个资源阶段零泄漏。仍报告
+  42.69–89.03ms 慢帧，超过 40ms 预算，不作性能或人工验收。
+
+最小移动 UI 复跑（桌面宿主，原版 MPQ，同一 Client 三轮）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.MobilePanelLifecycleTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/mobile-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/mobile-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+完整控件内部构造失败回滚、其余技能/任务等面板的宿主、连接交接、控制台/Timer/
+异步日志、跨 Act/加载中退出、长期压力及人工/性能验收仍待；资源阶段尚未结束。

@@ -86,6 +86,9 @@ task offscreenSessionLifecycle(type: JavaExec) {
        '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/session-lifecycle',
        '--mode', 'camp', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   systemProperty 'riiablo.offscreen-session-lifecycle', 'true'
+  if (project.hasProperty('mobileUiLifecycle')) {
+    systemProperty 'riiablo.offscreen-mobile-ui-lifecycle', 'true'
+  }
   ignoreExitValue = false
 }
 
