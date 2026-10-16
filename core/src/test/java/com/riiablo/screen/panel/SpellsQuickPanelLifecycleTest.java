@@ -79,6 +79,18 @@ class SpellsQuickPanelLifecycleTest {
       for (Table table : panel.tables) table.add(new Button(new Button.ButtonStyle()));
       set(panel, "SkilliconDescriptor", new AssetDescriptor<>("icons", DC6.class));
       set(panel, "CharSkilliconDescriptor", new AssetDescriptor[] {new AssetDescriptor<>("class-icons", DC6.class)});
+      com.riiablo.util.AssetReferenceScope references = new com.riiablo.util.AssetReferenceScope(owner);
+      references.load(new AssetDescriptor<>("icons", DC6.class));
+      references.load(new AssetDescriptor<>("class-icons", DC6.class));
+      when(owner.contains("icons")).thenReturn(true);
+      when(owner.isLoaded("icons")).thenReturn(true);
+      when(owner.contains("class-icons")).thenReturn(true);
+      when(owner.isLoaded("class-icons")).thenReturn(true);
+      set(panel, "references", references);
+      set(panel, "character", mock(com.riiablo.save.CharData.class));
+      // This legacy sound-error fixture bypasses the Actor constructor.
+      doNothing().when(panel).clearChildren();
+      doNothing().when(panel).clearListeners();
       for (MappedKey key : Keys.Skill) key.addStateListener(panel.mappedKeyListener);
       assertSame(failure, assertThrows(RuntimeException.class, panel::dispose));
       verify(owner, times(2)).unload(path);

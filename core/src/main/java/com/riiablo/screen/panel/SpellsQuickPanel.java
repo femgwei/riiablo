@@ -7,6 +7,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -37,11 +40,19 @@ import com.riiablo.save.ItemData;
 import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Button;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.AssetReferenceScope;
 import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.server.AuraEcsSystem;
 
 public class SpellsQuickPanel extends Table implements Disposable, CharData.SkillListener {
   private static final String SPELLS_PATH = "data\\global\\ui\\SPELLS\\";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final ItemData items = character.getItems();
+  private ItemData.AlternateListener alternateListener;
+  private boolean disposed;
+  private int generation;
 
   final AssetDescriptor<DC6> SkilliconDescriptor = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\Skillicon.DC6", DC6.class);
   DC6 Skillicon;
@@ -89,21 +100,30 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     this.buttonId = leftSkills ? Input.Buttons.LEFT : Input.Buttons.RIGHT;
     this.socket = socket;
 
-    Riiablo.assets.load(SkilliconDescriptor);
-    Riiablo.assets.finishLoadingAsset(SkilliconDescriptor);
-    Skillicon = Riiablo.assets.get(SkilliconDescriptor);
-
-    CharSkilliconDescriptor = new AssetDescriptor[7];
-    CharSkillicon = new DC6[CharSkilliconDescriptor.length];
-    for (int i = 0; i < CharSkilliconDescriptor.length; i++) {
-      CharSkilliconDescriptor[i] = new AssetDescriptor<>(SPELLS_PATH + CharacterClass.get(i).spellIcons + ".DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-      Riiablo.assets.load(CharSkilliconDescriptor[i]);
-      Riiablo.assets.finishLoadingAsset(CharSkilliconDescriptor[i]);
-      CharSkillicon[i] = Riiablo.assets.get(CharSkilliconDescriptor[i]);
-    }
-
     SIZE = Gdx.app.getType() == Application.ApplicationType.Android ? 64 : 48;
     ALIGN = leftSkills ? Align.left : Align.right;
+    CharSkilliconDescriptor = new AssetDescriptor[7];
+    CharSkillicon = new DC6[CharSkilliconDescriptor.length];
+    try {
+      initialize();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(SkilliconDescriptor);
+    assets.finishLoadingAsset(SkilliconDescriptor);
+    Skillicon = assets.get(SkilliconDescriptor);
+
+    for (int i = 0; i < CharSkilliconDescriptor.length; i++) {
+      CharSkilliconDescriptor[i] = new AssetDescriptor<>(SPELLS_PATH + CharacterClass.get(i).spellIcons + ".DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
+      references.load(CharSkilliconDescriptor[i]);
+      assets.finishLoadingAsset(CharSkilliconDescriptor[i]);
+      CharSkillicon[i] = assets.get(CharSkilliconDescriptor[i]);
+    }
 
     buttons = new IntMap<>(31);
     keyMappings = new ObjectMap<>(31);
@@ -118,6 +138,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     addListener(new InputListener() {
       @Override
       public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        if (!isCurrentSession()) return false;
         if (!isSkillButtonTarget(event.getTarget())) setVisible(false);
         return false;
       }
@@ -128,44 +149,55 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
     mappedKeyListener = new MappedKeyStateAdapter() {
       @Override
       public void onPressed(MappedKey key, int keycode) {
+        if (!isCurrentSession()) return;
         HotkeyButton button = keyMappings.get(key);
         if (button == null) return;
-        observer.copy(button);
+        if (observer != null) observer.copy(button);
         selectSkill(button.getSkill());
       }
     };
     for (MappedKey Skill : Keys.Skill) Skill.addStateListener(mappedKeyListener);
-    Riiablo.charData.addSkillListener(this);
+    character.addSkillListener(this);
 
-    Riiablo.charData.getItems().addAlternateListener(new ItemData.AlternateListener() {
+    alternateListener = new ItemData.AlternateListener() {
       @Override
       public void onAlternated(ItemData items, int alternate, Item LH, Item RH) {
+        if (!isCurrentSession() || items != SpellsQuickPanel.this.items) return;
         for (IntMap.Entry<HotkeyButton> entry : buttons) {
           entry.value.refreshDisabled();
         }
-        int skillId = Riiablo.charData.getAction(buttonId);
+        int skillId = character.getAction(buttonId);
         HotkeyButton button = buttons.get(skillId);
         if (observer != null) observer.copy(button); // observer is null on android
       }
-    });
+    };
+    items.addAlternateListener(alternateListener);
   }
 
   @Override
   public void onChanged(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
+    if (!isCurrentSession() || client != character) return;
     clearButtons();
-    rebuildButtons(client, skills, chargedSkills);
+    try {
+      rebuildButtons(client, skills, chargedSkills);
+    } catch (RuntimeException | Error failure) {
+      try { clearButtons(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   private void clearButtons() {
-    buttons.clear();
-    keyMappings.clear();
+    generation++;
+    if (buttons != null) buttons.clear();
+    if (keyMappings != null) keyMappings.clear();
     try (Disposal cleanup = new Disposal()) {
+      if (tables == null) return;
       for (Table table : tables) {
+        if (table == null) continue;
         cleanup.run(() -> Button.disposeClickSounds(table));
-        cleanup.run(() -> {
-          for (Actor child : table.getChildren()) child.clear();
-          table.clear();
-        });
+        for (Actor child : table.getChildren().toArray(Actor.class)) cleanup.run(child::clear);
+        cleanup.run(table::clear);
       }
     }
   }
@@ -190,27 +222,29 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         iconCel = 20;
       }
       final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id, chargedSkill);
+      table.add(button).size(SIZE); // Own the returned button before further initialization can fail.
       button.setWeaponRestrictionOnly(true);
       if (skill.aura) {
         button.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
       }
 
-      int index = Riiablo.charData.getHotkey(buttonId, chargedSkill.param1());
+      int index = character.getHotkey(buttonId, chargedSkill.param1());
       if (index != ArrayUtils.INDEX_NOT_FOUND) {
         MappedKey mapping = Keys.Skill[index];
         button.map(mapping);
         keyMappings.put(mapping, button);
       }
 
+      final int buttonGeneration = generation;
       button.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          observer.copy(button);
+          if (!isCurrentSession() || buttonGeneration != generation) return;
+          if (observer != null) observer.copy(button);
           selectSkill(button.getSkill());
           SpellsQuickPanel.this.setVisible(false);
         }
       });
-      table.add(button).size(SIZE);
       buttons.put(button.getSkill(), button);
     }
     for (IntIntMap.Entry skillId : skills) {
@@ -231,27 +265,29 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         iconCel = 20;
       }
       final HotkeyButton button = new HotkeyButton(icons, iconCel, skill.Id);
+      table.add(button).size(SIZE);
       button.setWeaponRestrictionOnly(true);
       if (skill.aura) {
         button.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
       }
 
-      int index = Riiablo.charData.getHotkey(buttonId, skillId.key);
+      int index = character.getHotkey(buttonId, skillId.key);
       if (index != ArrayUtils.INDEX_NOT_FOUND) {
         MappedKey mapping = Keys.Skill[index];
         button.map(mapping);
         keyMappings.put(mapping, button);
       }
 
+      final int buttonGeneration = generation;
       button.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          observer.copy(button);
+          if (!isCurrentSession() || buttonGeneration != generation) return;
+          if (observer != null) observer.copy(button);
           selectSkill(button.getSkill());
           SpellsQuickPanel.this.setVisible(false);
         }
       });
-      table.add(button).size(SIZE);
       buttons.put(button.getSkill(), button);
     }
     // Match the skill-book layout within each quick-skill row: page order,
@@ -294,7 +330,11 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   }
 
   public void setObserver(HotkeyButton observer) {
-    this.observer = observer;
+    if (!disposed) this.observer = observer;
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (!disposed) super.setVisible(visible);
   }
 
   private boolean isSkillButtonTarget(Actor target) {
@@ -306,7 +346,8 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   }
 
   private void selectSkill(int skillId) {
-    Riiablo.charData.setAction(buttonId, skillId);
+    if (!isCurrentSession()) return;
+    character.setAction(buttonId, skillId);
     if (socket != null) {
       NetworkedActionSender.selectSkill(socket, buttonId, skillId);
       return;
@@ -324,15 +365,39 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
 
   @Override
   public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    observer = null;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      cleanup.run(() -> character.removeSkillListener(this));
+      if (items != null && alternateListener != null) {
+        cleanup.run(() -> items.removeAlternateListener(alternateListener));
+      }
       cleanup.run(this::clearButtons);
-      for (MappedKey Skill : Keys.Skill) {
+      if (mappedKeyListener != null) for (MappedKey Skill : Keys.Skill) {
         cleanup.run(() -> Skill.removeStateListener(mappedKeyListener));
       }
-      cleanup.run(() -> Riiablo.assets.unload(SkilliconDescriptor.fileName));
-      for (AssetDescriptor assetDescriptor : CharSkilliconDescriptor) {
-        cleanup.run(() -> Riiablo.assets.unload(assetDescriptor.fileName));
-      }
+      cleanup.run(this::clearChildren);
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      Skillicon = null;
+      CharSkillicon = null;
     }
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData;
+  }
+
+  @Override public void act(float delta) {
+    if (isCurrentSession()) super.act(delta);
+  }
+
+  @Override public void draw(Batch batch, float parentAlpha) {
+    if (isCurrentSession()) super.draw(batch, parentAlpha);
   }
 }

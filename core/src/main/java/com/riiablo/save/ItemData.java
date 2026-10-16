@@ -1634,6 +1634,10 @@ public class ItemData {
     return true;
   }
 
+  public boolean removeAlternateListener(AlternateListener l) {
+    return alternateListeners.removeValue(l, true);
+  }
+
   private void notifyAlternated(int alternate, Item LH, Item RH) {
     for (AlternateListener l : alternateListeners) l.onAlternated(this, alternate, LH, RH);
   }

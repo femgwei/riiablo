@@ -1248,6 +1248,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return true;
   }
 
+  public boolean removeSkillListener(SkillListener l) {
+    return skillListeners.removeValue(l, true);
+  }
+
   private void notifySkillChanged(IntIntMap skills, Array<StatRef> chargedSkills) {
     for (SkillListener l : skillListeners) l.onChanged(this, skills, chargedSkills);
   }

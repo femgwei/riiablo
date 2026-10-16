@@ -77,6 +77,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       String name = "data/global/ui/SPELLS/" + charClass.spellIcons + ".DC6";
       panelReferencesBeforeConstruction.put(name, references(name));
     }
+    for (String name : new String[] {"data/global/ui/SPELLS/Skillicon.DC6",
+        "data/global/ui/SPELLS/" + character.classId.spellIcons + ".dc6",
+        "data/global/ui/SPELLS/" + character.classId.spellsBackground + ".dc6",
+        "data/global/ui/PANEL/buysellbtn.DC6"}) {
+      panelReferencesBeforeConstruction.put(name, references(name));
+    }
     entryLoadingBaseline = references("data/local/ui/loadingscreen.dc6");
     entryScreen = new GameEntryLoadingScreen(this::createGameScreen);
     require(references("data/local/ui/loadingscreen.dc6") == entryLoadingBaseline,
@@ -227,12 +233,26 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       }
     }
     int liveButtonReferences = references("data/global/sfx/cursor/button.wav");
+    int retiredQuickButtons = 0;
     for (int rebuild = 0; rebuild < 3; rebuild++) {
+      Array<Actor> previousButtons = new Array<>();
+      collectButtons(screen.spellsQuickPanelL, previousButtons);
+      collectButtons(screen.spellsQuickPanelR, previousButtons);
+      require(previousButtons.size > 0, "live quick-skill buttons before rebuild");
       character.update(); // production quick-skill rebuild, including discarded buttons
       assets.finishLoading();
+      for (Actor button : previousButtons) {
+        require(button.getParent() == null && button.getListeners().size == 0,
+            "rebuild retired previous quick-skill button");
+      }
+      retiredQuickButtons += previousButtons.size;
       require(references("data/global/sfx/cursor/button.wav") == liveButtonReferences,
           "quick-skill rebuild must not accumulate click-sound references");
     }
+    Array<Actor> skillButtonsAtExit = new Array<>();
+    collectButtons(screen.spellsPanel, skillButtonsAtExit);
+    collectButtons(screen.spellsQuickPanelL, skillButtonsAtExit);
+    collectButtons(screen.spellsQuickPanelR, skillButtonsAtExit);
     Array<Pixmap> pixels = new Array<>();
     // These are unmanaged textures, absent from AssetManager diagnostics.
     Texture fill = field(screen.inventoryPanel, "fill", Texture.class);
@@ -285,6 +305,20 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.spellsPanel, "disposed", Boolean.class)
+        && field(screen.spellsQuickPanelL, "disposed", Boolean.class)
+        && field(screen.spellsQuickPanelR, "disposed", Boolean.class), "Client retired all skill owners");
+    screen.spellsPanel.dispose(); screen.spellsQuickPanelL.dispose(); screen.spellsQuickPanelR.dispose();
+    for (Actor button : skillButtonsAtExit) {
+      require(button.getParent() == null && button.getListeners().size == 0, "skill button retired at exit");
+    }
+    for (Object panel : new Object[] {screen.spellsQuickPanelL, screen.spellsQuickPanelR}) {
+      com.riiablo.key.MappedKeyStateAdapter listener = field(panel, "mappedKeyListener",
+          com.riiablo.key.MappedKeyStateAdapter.class);
+      for (com.riiablo.key.MappedKey key : Keys.Skill) {
+        require(!key.containsStateListener(listener), "skill hotkey listener retired");
+      }
+    }
     screen.dispose(); // must be idempotent
     require(screen.map.getZones().size == 0, "old map cleared");
     require(screen.stage.getActors().size == 0 && screen.scaledStage.getActors().size == 0,
@@ -362,6 +396,9 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nuiButtonReferencesAfterConstruction=" + buttonReferencesAfterConstruction
         + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
         + "\nquickSkillRebuilds=3"
+        + "\nquickSkillButtonsRetiredDuringRebuild=" + retiredQuickButtons
+        + "\nskillButtonsRetiredAtExit=" + skillButtonsAtExit.size
+        + "\nskillOwnersRetiredByClient=3"
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\nmobileUiLifecycle=" + mobileUiLifecycle
@@ -398,6 +435,13 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     if (actor instanceof Group) {
       for (Actor child : ((Group) actor).getChildren()) collectGridTextures(child, textures);
+    }
+  }
+
+  private static void collectButtons(Actor actor, Array<Actor> buttons) {
+    if (actor instanceof com.riiablo.widget.Button) buttons.add(actor);
+    if (actor instanceof Group) {
+      for (Actor child : ((Group) actor).getChildren()) collectButtons(child, buttons);
     }
   }
 

@@ -5,12 +5,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
@@ -39,11 +42,18 @@ import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
 import com.riiablo.widget.SkillDetails;
 import com.riiablo.widget.SkillNameResolver;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 public class SpellsPanel extends WidgetGroup implements Disposable, CharData.SkillListener {
   private static final String TAG = "SpellsPanel";
   private static final Logger log = LogManager.getLogger(SpellsPanel.class);
   private static final String SPELLS_PATH = "data\\global\\ui\\SPELLS\\";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final Array<Button> ownedButtons = new Array<>();
+  private boolean disposed;
 
   final AssetDescriptor<DC6> skltreeDescriptor;
   TextureRegion skltree;
@@ -53,21 +63,32 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
 
-  final SkillButton[] buttons;
-  private final Label skillsRemaining;
+  SkillButton[] buttons;
+  private Label skillsRemaining;
   private int availableSkillPoints = -1;
 
-  static final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle SMALL_LABEL_STYLE
+  final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle SMALL_LABEL_STYLE
       = new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(Riiablo.fonts.fontformal10, null);
-  static final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle LARGE_LABEL_STYLE
+  final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle LARGE_LABEL_STYLE
       = new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(Riiablo.fonts.font16, null);
 
   public SpellsPanel() {
-    CharacterClass charClass = Riiablo.charData.classId;
+    CharacterClass charClass = character.classId;
     skltreeDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellsBackground + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-    Riiablo.assets.load(skltreeDescriptor);
-    Riiablo.assets.finishLoadingAsset(skltreeDescriptor);
-    skltree = Riiablo.assets.get(skltreeDescriptor).getTexture(0);
+    SkilliconDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellIcons + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
+    try {
+      initialize(charClass);
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize(CharacterClass charClass) {
+    references.load(skltreeDescriptor);
+    assets.finishLoadingAsset(skltreeDescriptor);
+    skltree = assets.get(skltreeDescriptor).getTexture(0);
     setSize(skltree.getRegionWidth(), skltree.getRegionHeight());
     setTouchable(Touchable.enabled);
     // Avoid dispatching to the overridden setVisible while this panel is
@@ -75,14 +96,13 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     // below and are not safe to refresh yet.
     super.setVisible(false);
 
-    SkilliconDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellIcons + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-    Riiablo.assets.load(SkilliconDescriptor);
-    Riiablo.assets.finishLoadingAsset(SkilliconDescriptor);
-    Skillicon = Riiablo.assets.get(SkilliconDescriptor);
+    references.load(SkilliconDescriptor);
+    assets.finishLoadingAsset(SkilliconDescriptor);
+    Skillicon = assets.get(SkilliconDescriptor);
 
-    Riiablo.assets.load(buysellbtnDescriptor);
-    Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-    DC buysellbtn = Riiablo.assets.get(buysellbtnDescriptor);
+    references.load(buysellbtnDescriptor);
+    assets.finishLoadingAsset(buysellbtnDescriptor);
+    DC buysellbtn = assets.get(buysellbtnDescriptor);
     TextureRegionDrawable exitUp   = new TextureRegionDrawable(buysellbtn.getTexture(10));
     TextureRegionDrawable exitDown = new TextureRegionDrawable(buysellbtn.getTexture(11));
     Button.ButtonStyle exitButtonStyle = new Button.ButtonStyle(exitUp, exitDown);
@@ -90,19 +110,21 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     ClickListener closeListener = new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         SpellsPanel.this.setVisible(false);
       }
     };
     final float[] exitY = {31, 115, 187};
     final Tab[] tabs = new Tab[4];
     for (int i = 1; i < tabs.length; i++) {
-      Tab tab = tabs[i] = new Tab(Riiablo.assets.get(skltreeDescriptor).getTexture(i));
+      Tab tab = tabs[i] = new Tab(assets.get(skltreeDescriptor).getTexture(i));
       tab.setSize(getWidth(), getHeight());
       tab.setPosition(0, 0);
       tab.setVisible(false);
       addActor(tab);
 
       Button exit = new Button(exitButtonStyle);
+      ownedButtons.add(exit);
       exit.addListener(closeListener);
       exit.setPosition(exitY[charClass.spellCloseCol[i - 1]], 31, Align.center);
       tab.addActor(exit);
@@ -128,6 +150,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       actor.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (!isCurrentSession()) return;
           for (Tab tab : tabs) if (tab != null) tab.setVisible(false);
           Tab tab = (Tab) actor.getUserObject();
           tab.setVisible(true);
@@ -163,11 +186,12 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       final Skills.Entry skill = Riiablo.files.skills.get(i);
       final SkillDesc.Entry desc = SkillNameResolver.description(skill);
       SkillButton button = buttons[i - charClass.firstSpell] = new SkillButton(skill, desc);
+      ownedButtons.add(button);
       button.setPosition(X[desc.SkillColumn], Y[desc.SkillRow]);
       button.addListener(new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (Riiablo.game == null) return;
+          if (!isCurrentSession() || Riiablo.game == null) return;
           boolean accepted = Riiablo.game.spendSkillPoint(skill.Id);
           log.info("[SKILL_POINT_UI] phase=request skill={} accepted={}", skill.Id, accepted);
         }
@@ -178,12 +202,13 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     tabs[1].setVisible(true);
     //setDebug(true, true);
 
-    Riiablo.charData.addSkillListener(this);
-    updateSkillPoints(Riiablo.charData);
+    character.addSkillListener(this);
+    updateSkillPoints(character);
   }
 
   @Override
   public void onChanged(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
+    if (!isCurrentSession() || client != character) return;
     updateSkillPoints(client);
     for (int i = client.classId.firstSpell; i < client.classId.lastSpell; i++) {
       SkillButton button = buttons[i - client.classId.firstSpell];
@@ -207,10 +232,11 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   @Override
   public void act(float delta) {
+    if (!isCurrentSession()) return;
     // PlayerP progression snapshots update CharData directly and may not
     // change a skill level. Poll the authoritative stat so a level-up makes
     // the allocation controls appear immediately when the panel is open.
-    updateSkillPoints(Riiablo.charData);
+    updateSkillPoints(character);
     if (buttons != null) {
       for (SkillButton button : buttons) {
         if (button != null) button.refreshTemporaryLevel();
@@ -221,8 +247,9 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   @Override
   public void setVisible(boolean visible) {
+    if (disposed) return;
     super.setVisible(visible);
-    updateSkillPoints(Riiablo.charData);
+    if (isCurrentSession()) updateSkillPoints(character);
   }
 
   private static Color getColor(String str) {
@@ -249,15 +276,50 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (!isCurrentSession()) return;
     batch.draw(skltree, getX(), getY());
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(skltreeDescriptor.fileName);
-    Riiablo.assets.unload(SkilliconDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(() -> character.removeSkillListener(this));
+      cleanup.run(() -> clearActorListeners(this));
+      for (Button button : ownedButtons) {
+        cleanup.run(button::clearListeners);
+        cleanup.run(button::remove);
+        cleanup.dispose(button);
+      }
+      cleanup.run(this::clearChildren);
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      ownedButtons.clear();
+      buttons = null;
+      skillsRemaining = null;
+      skltree = null;
+      Skillicon = null;
+    }
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData;
+  }
+
+  private static void clearActorListeners(Actor actor) {
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(actor::clearListeners);
+      if (actor instanceof Group) {
+        for (Actor child : ((Group) actor).getChildren()) {
+          cleanup.run(() -> clearActorListeners(child));
+        }
+      }
+    }
   }
 
   private class SkillButton extends Button {
@@ -301,8 +363,8 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
     /** Refreshes only the timed all-skills layer without rebuilding the panel. */
     void refreshTemporaryLevel() {
-      if (Riiablo.charData == null) return;
-      int permanent = Math.max(0, Riiablo.charData.getSkill(skill.Id));
+      if (!isCurrentSession()) return;
+      int permanent = Math.max(0, character.getSkill(skill.Id));
       int effective = Math.max(0,
           permanent + SkillDetails.activePlayerSkillBonus());
       if (permanent == permanentLvl && effective == sLvl) return;
@@ -317,12 +379,13 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
     void updateEnabledState() {
       String validation = PlayerStatsManager.INSTANCE.validateSkillPoint(
-          Riiablo.charData, skill.Id);
+          character, skill.Id);
       setDisabled(!PlayerStatsManager.SKILL_OK.equals(validation));
     }
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+      if (!isCurrentSession()) return;
       super.draw(batch, parentAlpha);
       if (isOver()) {
         Riiablo.game.setDetails(details, null, SpellsPanel.this, this);
@@ -389,7 +452,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     }
   }
 
-  private static class Tab extends WidgetGroup {
+  private class Tab extends WidgetGroup {
     TextureRegion background;
 
     public Tab(TextureRegion background) {
@@ -398,6 +461,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+      if (!isCurrentSession()) return;
       batch.draw(background, getX(), getY());
       super.draw(batch, parentAlpha);
     }

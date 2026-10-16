@@ -1331,3 +1331,78 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 
 完整控件内部构造失败回滚、其余技能/任务等面板的宿主、连接交接、控制台/Timer/
 异步日志、跨 Act/加载中退出、长期压力及人工/性能验收仍待；资源阶段尚未结束。
+
+## 第十九批：技能书与快捷技能选择器
+
+`SpellsPanel` 与左右两个 `SpellsQuickPanel` 捕获原 AssetManager 和 CharData，
+用 AssetReferenceScope 配对各自的 DC6 请求。面板退出幂等，逐项清理按钮声音、
+监听、Stage 归属及页面引用；构造失败回滚已提交的请求与已返回的按钮实例。
+技能书的字体样式改为实例字段，不让静态样式跨客户端持有上一宿主的字体。
+共享字体、Socket、CharData、ItemData 只是借用，不由面板销毁。
+
+CharData / ItemData 增加按对象身份移除 skill / alternate listener 的接口，
+面板独立销毁时解绑自己注册的监听，不清空其他消费者。快捷选择器保存原 ItemData
+与 alternate listener；退出同时解除全体技能热键和 observer。旧点击、热键、武器
+切换、技能通知及 act/draw 均受生命周期保护；外来角色的通知不触发重建。
+技能书的关闭、页签和加点回调也受同一保护。
+
+快捷技能重建用代次标记让已保存的旧按钮点击失效；仍按原有技能规则、行及技能书
+顺序布局。返回的按钮先交给行表格持有，再执行可能失败的后续初始化，失败时清掉
+本次已返回按钮和映射。清理遍历全部行子 Actor 而非可能覆盖相同技能 ID 的 IntMap，
+同时存在的充能/已学技能不会漏释放。单个声音或子控件清理异常仍继续其余行及资产。
+observer 为 null（移动端）时仍可正常选择技能，不再直接解引用。
+
+真实会话探针在原有面板基线上增加 generic 技能图标、技能书小写扩展名图标、背景
+和关闭按钮，合计检查 12 项资产；逐次采样重建前的技能按钮，并要求生产 Client
+已销毁三个技能宿主后才验证重复 dispose。保留可选移动组件路径及前批所有检查。
+
+### 第十九批验证
+
+- `build/spells-resources-compile.log`：core 主代码与测试源码编译通过。
+- 首轮 `build/spells-resources-focused.log` 共 12 项，新增的 10 项均通过；旧的
+  CALLS_REAL_METHODS 夹具绕过 Actor 构造，新增清理访问了不存在的 listeners，
+  导致其中 1 项失败。补齐该夹具的生命周期字段与 Actor 桩，保留原异常传播及
+  全行/热键/图标释放断言；后续真实控件测试也单独覆盖这些清理路径。
+- 中间版本 `build/spells-resources-regression-gl.log` 共 16 类 126 项，失败/错误 0、
+  跳过 2；三轮会话与 ClientShutdown 通过，2m31s。
+- 最终 `build/spells-resources-final.log`：新增专项扩至 14 项且全部通过；扩大定向
+  16 类共 129 项，127 通过、2 跳过（佣兵独立环境资源探针），失败/错误 0。
+  core、desktop、D2GS 编译链通过，BUILD SUCCESSFUL，2m50s。
+- 最终原版 1.10f MPQ 三轮均通过：每轮 3 次重建累计退休 21 个快捷技能按钮，
+  退出退休 40 个技能/关闭按钮，三个技能宿主均由 Client 销毁，12 项面板资产
+  回基线，退出按钮声音引用 0。移动组件仍退休 15 个按钮、归还 3 项资源并删除
+  102 张相关共享纹理；原 13 张私有纹理、共享框 `0→12→0`、10 个 NPC 菜单节点
+  和最终 ClientShutdown 通过。
+- 最终会话退出剩余资产种类 55/55/55，不据此宣称全部会话资源零泄漏；中间版本
+  的 54/54/54 与上批清单差异仅为懒加载的 MedDirt3 脚步声缓存，不算本批修复成果。
+  最终仍有 49.94–77.75ms 慢帧，超过 40ms 预算，不作性能、人工画面/输入/声音、
+  联机或存档验收。
+
+最小专项复跑（不需 MPQ/GL）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.SpellsPanelResourceLifecycleTest `
+  --tests com.riiablo.screen.panel.SpellsQuickPanelLifecycleTest --no-daemon
+```
+
+完整定向及真实 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/spells-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/spells-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+仍未覆盖 Button/HotkeyButton 内部构造尚未返回实例即失败的完整回滚；这不等于整个
+控件树所有构造路径安全。任务面板等其余宿主、连接交接、控制台/Timer/异步日志、
+跨 Act/加载中退出、长期压力、Android 真机与人工/性能验收继续留待后续批次。
