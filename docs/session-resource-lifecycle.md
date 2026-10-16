@@ -997,3 +997,96 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 总体七批子系统装配完成，资源第十二批完成但资源阶段未结束。下一批优先修复
 已确认的覆盖动画/区域标题/共享框引用累积，再继续控制台与异步日志、连接交接其余
 边界、完整构造失败回滚、跨 Act/加载中退出及长期压力；人工与性能验收继续保留。
+
+## 第十三批：覆盖动画与区域标题
+
+本批收口 Gleam、NPCSpeechBalloon、实体覆盖动画（营地探针中的 ShrineManaRegen）
+及区域标题（当前中文环境的 A1L1）。共享框 MENU/boxpieces 涉及 NPC 菜单树、
+对话和面板的不同归属，留到第十四批；不以 AssetManager 最终整体清空代替宿主
+存活时逐项引用归位，不声称资源阶段已结束。本批不改暗黑规则或原版文件。
+
+GroundItemGleamSystem / Act1QuestIndicatorSystem 捕获原 AssetManager，成功请求
+登记到 AssetReferenceScope；重复 begin 不重复请求，退出清空动画状态并幂等归还
+自身引用。初始化时宿主尚不可用则绑定首次有效宿主，之后不跟随全局别名切换。
+不改变闪光周期、任务标记条件、动画混合、光照、偏移或帧率。
+
+OverlayManager 为每个实体保存组件身份、描述符身份及独立引用作用域。替换、
+自然结束、匹配状态清除、组件移除、实体删除和 World 退出均归还引用；首次
+subscription 插入前就移除的资源，由 begin 的账本核对补收。核对采用复用的
+IntArray，避免遍历账本时删除条目，也不每帧创建实体快照。同帧移除/重新安装
+依据当前 subscription 与描述符身份判别，旧通知不释放新所有者，组件池复用后
+不重置新动画。World 退出遍历账本而不是仅订阅内实体，覆盖未 process 的请求。
+清理先移出账本，动画 reset 异常/Error 仍尝试归还引用及清理其他实体。无效
+overlay id 先解析再替换，保留原效果，修复旧实现先卸载却仍保留旧组件的问题。
+保留 transient 的首次可见帧及 minimumDisplayFrames、persistent 状态生命周期。
+
+ZoneEntryDisplayer 为每次区域标题单独登记请求，切换前先清动作、隐藏并断开旧
+Drawable，再卸载旧引用；最终退出同时移除 Stage Actor。保留语言、ACT 路径及
+Id=8 使用 A1Q1 的规则；队列未完成、重复退出、外部共享消费者和原宿主均纳入
+生命周期测试，不将标题 Actor 遗留在 Stage 上等待宿主兜底。
+
+OffscreenSessionLifecycleScreen 在进入加载页/构造 GameScreen **之前**采样四项
+基线；真实加载结束后要求四项均有新增引用、实际 GL 纹理及原始/上传 Pixmap。
+生产 Client 退出游戏后逐项断言引用回基线，零基线资产另断言纹理删除及像素释放。
+保留原有地图、按钮、面板、输入、加载页和最终宿主检查，以及全部剩余资产快照；
+不会跳过未覆盖的本批资源，也不把共享框累积隐藏在总种类数中。
+
+### 第十三批验证与复跑
+
+首轮 build/overlay-resources-focused.log 为 31 项中 15 项失败（Label 静态初始化
+缺少宿主 white 纹理、Mockito 在未完成设桩时构造另一设桩）。修正夹具后第二轮
+build/overlay-resources-focused-02.log 剩 3 项失败，确认为生产删除判断缺陷：
+Artemis EntityManager.isActive 在帧末 purge 前仍返回 true；改查当前订阅活跃位，
+保留原有断言而非延后等待或放宽“删除即归还”的标准。
+
+第三轮 build/overlay-resources-focused-03.log：31/31、3 类及三端编译通过，其中
+新 PresentationAssetLifecycleTest 为 19 项；另 5 项任务标记、7 项状态覆盖动画。
+同一真实 Client 三轮会话通过，每轮四项引用回基线、42 张覆盖动画/标题纹理
+删除、42 个原始/上传 Pixmap 释放；原地图/按钮/面板/输入/加载页及最终 Client
+GL 检查全部保留并通过。剩余资产种类由原来的 58/58/58 降为 54/54/54，四项
+已不在退出快照中，boxpieces 仍 refs=12/24/36，不声称整体零泄漏。
+BUILD SUCCESSFUL，退出码 0，2m41s。之后另补“请求提交 Error”和“宿主延后可用”
+两项进入最终扩大回归，不计入该次 31 项结果。
+
+最小复跑（专项 + 原版 MPQ 同宿主三轮）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.engine.client.PresentationAssetLifecycleTest `
+  --tests com.riiablo.engine.client.Act1QuestIndicatorSystemTest `
+  --tests com.riiablo.engine.client.StateOverlaySystemTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/overlay-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/overlay-resources-recheck' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 第十三批最终扩大回归
+
+- build/overlay-resources-regression.log：资源定向 JUnit 497/497、58 类，core
+  455/455（51 类）、D2GS 42/42（7 类），失败/错误/跳过均 0；包含新增 21 项
+  PresentationAssetLifecycleTest、任务标记、状态覆盖动画、Amazon 箭矢、死灵爆炸
+  和怪物技能表现测试。三端编译通过。独立地图三轮 44 tiles、引用 4→2→1→0；
+  生产会话三轮每轮 58 个 DT1 / 2626 张地图纹理、四项表现引用回基线、42 张
+  表现纹理删除和 42 个原始/上传 Pixmap 释放。按钮 0/129/138/0、8 项面板基线、
+  3 张面板私有纹理、输入、加载页以及两个 Client 最终共享 GL 检查均通过。
+- 同一命令的独立营地三帧、25Hz step=0.04（ticks 6→37）、Throw 顺序及伤害
+  1000→992 通过，BUILD SUCCESSFUL，退出码 0，3m54s。三轮退出剩余资产
+  54/54/54，四项目标均不在快照中；boxpieces 仍 refs=12/24/36。慢帧
+  146.67/57.04/43.86/81.76ms，仍超过 40ms，不作性能验收。
+- 首次扩大筛选误把两个圣骑士测试写在 client 包，实际未执行；随后使用正确的
+  server 包补跑全部 core 筛选，build/overlay-resources-regression-core-final.log
+  为 471 项、53 类，470 通过、1 失败，1m7s。FistOfHeavens 9/9、BlessedHammer
+  6/7；失败为 srvDmg05StacksUndeadAndDemonBonuses，预期 100 / 实际 50，与
+  docs/dark-magic-port-plan-2026-10-14.md 的既有失败记录一致。该方法只调用
+  未修改的伤害加成逻辑，不经过本批系统；保留失败日志及原断言，不借本批改变
+  暗黑伤害规则。合并 D2GS 后扩展范围共 513 项、60 类，512 通过 / 1 既有失败，
+  不得宣称 513/513、全仓全绿或整个资源阶段零泄漏。
+- 本批未重跑创建/选择页全部真实 GL 组合，已有页面生命周期单元回归纳入上述
+  筛选；人工画面、输入、声音、跨 Act、联机、存档、加载中退出及长时压力仍待。
+
+总体七批子系统装配完成，资源第十三批完成。第十四批处理共享框的 NPC 菜单树、
+对话、角色/商店面板所有权；之后继续连接交接其余边界、控制台/Timer/异步日志、
+完整构造失败回滚、跨 Act/加载中退出与长期压力，人工与性能验收继续保留。

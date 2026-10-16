@@ -1,5 +1,30 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第十三批：覆盖动画与区域标题
+
+- [x] GroundItemGleamSystem / Act1QuestIndicatorSystem 捕获原 AssetManager，
+  成功请求逐项配对，重复 begin 不叠加引用，World 退出幂等释放；初始化无宿主
+  时绑定首次有效管理器，不跟随后续全局别名切换。不改闪光周期或任务标记规则。
+- [x] OverlayManager 显式登记实体、组件/描述符身份与引用作用域；覆盖替换、
+  自然结束、状态清除、组件移除、实体删除及 World 退出。补收首次插入前移除的
+  请求；以当前订阅而非延迟 purge 的 EntityManager.isActive 判别删除，同帧替换
+  和组件池复用不误释放新动画。无效 id 保留原效果，异常/Error 仍继续清理。
+- [x] ZoneEntryDisplayer 切换/退出先清动作并断开旧 Drawable，再归还标题引用，
+  最终移除 Actor。保留原语言/ACT 路径及 A1Q1 特例，不改暗黑玩法或原版文件。
+- [x] 新增 21 项生命周期专项；资源定向回归 497/497、58 类（core 455、D2GS 42）
+  及三端编译通过。原版 MPQ 同 Client 三轮每轮四类引用回基线、42 张表现纹理
+  删除、42 个原始/上传 Pixmap 释放；地图三轮、面板/按钮/输入/加载页、独立营地、
+  Client 共享 GL、25Hz Tick 与 Throw 战斗通过。日志及首两轮失败修复见资源文档。
+- [x] 补正两个圣骑士测试的筛选包名后重跑 core：471 项、470 通过 / 1 既有失败；
+  圣锤双类别加成预期 100 / 实际 50，与 dark-magic-port-plan-2026-10-14.md
+  既有记录一致，不经过本批系统，未修改伤害逻辑或断言。合并 D2GS 的扩大范围
+  共 513 项、512 通过 / 1 失败，不宣称全绿。日志 overlay-resources-regression.log
+  和 overlay-resources-regression-core-final.log；慢帧仍超 40ms。
+- 总体：七批装配完成，资源第十三批完成；四种表现资源不再跨会话累积，剩余
+  资产种类 54/54/54，但共享框仍 refs=12/24/36。第十四批单独处理 NPC 菜单树、
+  对话与角色/商店面板的共享框归属；连接交接其余边界、控制台/Timer/异步日志、
+  完整构造失败回滚、跨 Act/加载中退出、长期压力及人工/性能验收仍待。
+
 ## 2026-10-16 会话资源阶段第十二批：创建角色页与职业控件
 
 - [x] CreateCharacterScreen 改为构造一次完整页面，捕获原 AssetManager / input /

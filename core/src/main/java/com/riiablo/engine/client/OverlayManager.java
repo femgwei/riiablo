@@ -5,6 +5,9 @@ import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntArray;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
@@ -13,6 +16,8 @@ import com.riiablo.codec.excel.Overlay;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 @All(com.riiablo.engine.client.component.Overlay.class)
 public class OverlayManager extends IteratingSystem {
@@ -21,11 +26,53 @@ public class OverlayManager extends IteratingSystem {
   static final int SHRINE_ICON_STATE = Integer.MIN_VALUE + 0x5249;
 
   protected ComponentMapper<com.riiablo.engine.client.component.Overlay> mOverlay;
+  private AssetManager assets;
+  private final IntMap<OwnedOverlay> owned = new IntMap<>();
+  private final IntArray retired = new IntArray();
+  private boolean disposed;
+
+  private static final class OwnedOverlay {
+    final com.riiablo.engine.client.component.Overlay component;
+    final AssetDescriptor descriptor;
+    final AssetReferenceScope references;
+
+    OwnedOverlay(com.riiablo.engine.client.component.Overlay component, AssetReferenceScope references) {
+      this.component = component;
+      descriptor = component.assetDescriptor;
+      this.references = references;
+    }
+  }
+
+  @Override protected void initialize() { assets = Riiablo.assets; }
+
+  @Override protected void begin() {
+    if (disposed) return;
+    // An overlay removed before its first subscription insertion has no removed callback.
+    // Also reconcile external component replacement without touching the new pooled value.
+    retired.clear();
+    for (IntMap.Entry<OwnedOverlay> entry : owned) {
+      if (!isCurrent(entry.key, entry.value)) retired.add(entry.key);
+    }
+    try (Disposal cleanup = new Disposal()) {
+      for (int i = 0; i < retired.size; i++) {
+        final int entityId = retired.get(i);
+        cleanup.run(() -> retire(entityId));
+      }
+    }
+  }
+
+  private boolean isCurrent(int entityId, OwnedOverlay overlay) {
+    // EntityManager stays active until the end-of-frame purge even after deletion.
+    return subscription.getActiveEntityIds().get(entityId) && mOverlay.has(entityId)
+        && mOverlay.get(entityId) == overlay.component
+        && overlay.component.assetDescriptor == overlay.descriptor;
+  }
 
   @Override
   protected void process(int entityId) {
+    if (disposed || assets == null || !owned.containsKey(entityId)) return;
     com.riiablo.engine.client.component.Overlay overlay = mOverlay.get(entityId);
-    if (!Riiablo.assets.isLoaded(overlay.assetDescriptor)) return;
+    if (overlay == null || overlay.assetDescriptor == null || !assets.isLoaded(overlay.assetDescriptor)) return;
 
     Animation animation = overlay.animation;
     // A newly loaded one-frame DCC starts at frame 0, which is also its
@@ -36,7 +83,7 @@ public class OverlayManager extends IteratingSystem {
     // render frame.
     boolean loadedBefore = overlay.isLoaded;
     if (!overlay.isLoaded) {
-      DC dc = Riiablo.assets.get(overlay.assetDescriptor);
+      DC dc = assets.get(overlay.assetDescriptor);
       animation.edit()
           .layer(dc, overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID)
           .build();
@@ -67,27 +114,23 @@ public class OverlayManager extends IteratingSystem {
     if (!overlay.persistent && loadedBefore
         && overlay.minimumDisplayFrames <= 0
         && animation.getFrame() >= animation.getNumFramesPerDir() - 1) {
-      dispose(overlay);
-      mOverlay.remove(entityId);
+      removeOverlay(entityId);
     }
   }
 
   public void set(int entityId, String overlayId) {
-    if (mOverlay.has(entityId)) {
-      dispose(mOverlay.get(entityId));
-    }
-
+    ensureOpen();
     Overlay.Entry overlay = resolveEntry(overlayId);
     if (overlay == null) {
       log.warn("[OVERLAY] entity={} id={} result=missing", entityId, overlayId);
       return;
     }
-    com.riiablo.engine.client.component.Overlay overlayC = mOverlay.create(entityId).set(overlay);
-    Riiablo.assets.load(overlayC.assetDescriptor);
+    install(entityId, overlay, false, -1);
   }
 
   /** Installs a looping overlay owned by a synchronized state. */
   public void setPersistent(int entityId, int stateId, String overlayId) {
+    ensureOpen();
     if (overlayId == null || overlayId.isEmpty()) return;
     com.riiablo.engine.client.component.Overlay current =
         mOverlay.has(entityId) ? mOverlay.get(entityId) : null;
@@ -98,20 +141,16 @@ public class OverlayManager extends IteratingSystem {
       log.warn("[STATE_OVERLAY] entity={} state={} id={} result=missing", entityId, stateId, overlayId);
       return;
     }
-    if (current != null) dispose(current);
-    com.riiablo.engine.client.component.Overlay overlayC = mOverlay.create(entityId).set(overlay);
-    overlayC.persistent = true;
-    overlayC.stateId = stateId;
-    Riiablo.assets.load(overlayC.assetDescriptor);
+    install(entityId, overlay, true, stateId);
     log.info("[STATE_OVERLAY] entity={} state={} id={} result=queued", entityId, stateId, overlayId);
   }
 
   public void clearPersistent(int entityId, int stateId) {
+    if (disposed) return;
     if (!mOverlay.has(entityId)) return;
     com.riiablo.engine.client.component.Overlay overlay = mOverlay.get(entityId);
     if (!overlay.persistent || overlay.stateId != stateId) return;
-    dispose(overlay);
-    mOverlay.remove(entityId);
+    removeOverlay(entityId);
     log.info("[STATE_OVERLAY] entity={} state={} result=cleared", entityId, stateId);
   }
 
@@ -178,9 +217,66 @@ public class OverlayManager extends IteratingSystem {
     return filename.toString();
   }
 
-  void dispose(com.riiablo.engine.client.component.Overlay overlay) {
-    AssetDescriptor assetDescriptor = overlay.assetDescriptor;
-    Riiablo.assets.unload(assetDescriptor.fileName);
-    log.debug("Unloaded {}", assetDescriptor.fileName);
+  private void ensureOpen() {
+    if (disposed) throw new IllegalStateException("overlay manager is disposed");
+  }
+
+  private void install(int entityId, Overlay.Entry entry, boolean persistent, int stateId) {
+    if (assets == null) assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+    removeOverlay(entityId);
+    com.riiablo.engine.client.component.Overlay component = mOverlay.create(entityId).set(entry);
+    component.persistent = persistent;
+    component.stateId = stateId;
+    AssetReferenceScope references = new AssetReferenceScope(assets);
+    try {
+      references.load(component.assetDescriptor);
+      owned.put(entityId, new OwnedOverlay(component, references));
+    } catch (RuntimeException | Error failure) {
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.run(() -> {
+          if (failure instanceof Error) throw (Error) failure;
+          throw (RuntimeException) failure;
+        });
+        cleanup.run(() -> mOverlay.remove(entityId));
+        cleanup.dispose(references);
+      }
+    }
+  }
+
+  private void removeOverlay(int entityId) {
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> retire(entityId));
+      cleanup.run(() -> mOverlay.remove(entityId));
+    }
+  }
+
+  @Override protected void removed(int entityId) {
+    OwnedOverlay current = owned.get(entityId);
+    // A deferred removal notification may follow an installation on the same entity.
+    if (current != null && !isCurrent(entityId, current)) retire(entityId);
+  }
+
+  private void retire(int entityId) {
+    // Component removal/reset may already have run; the ledger does not depend on its fields.
+    OwnedOverlay closing = owned.remove(entityId);
+    if (closing == null) return;
+    try (Disposal cleanup = new Disposal()) {
+      // Never clear a pooled component which has since been reused for another overlay.
+      if (closing.component.assetDescriptor == closing.descriptor) {
+        cleanup.run(closing.component.animation::reset);
+        closing.component.assetDescriptor = null;
+        closing.component.isLoaded = false;
+      }
+      cleanup.dispose(closing.references);
+    }
+  }
+
+  @Override protected void dispose() {
+    if (disposed) return;
+    disposed = true;
+    int[] entities = owned.keys().toArray().toArray();
+    try (Disposal cleanup = new Disposal()) {
+      for (int entityId : entities) cleanup.run(() -> retire(entityId));
+    }
   }
 }

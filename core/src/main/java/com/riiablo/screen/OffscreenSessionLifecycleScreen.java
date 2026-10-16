@@ -10,11 +10,15 @@ import com.badlogic.gdx.utils.Array;
 import com.riiablo.Keys;
 import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
+import com.riiablo.codec.DC;
+import com.riiablo.codec.DC6;
 import com.riiablo.map.DT1;
 import com.riiablo.save.CharData;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Real local GameScreen loading/render/exit/re-entry, not a manual visual acceptance test. */
 public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
@@ -25,6 +29,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, DT1> previousTiles = new HashMap<>();
   private final Map<String, Integer> baselineReferences = new HashMap<>();
   private final Map<String, Integer> panelReferencesBeforeConstruction = new HashMap<>();
+  private final Map<String, Integer> presentationReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -47,6 +52,13 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    presentationReferencesBeforeConstruction.clear();
+    String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
+    for (String path : new String[] {"data/global/overlays/Gleam.dcc",
+        "data/global/overlays/NPCSpeechBalloon.dcc", "data/global/overlays/ShrineManaRegen.dcc",
+        "data/local/ui/" + language + "/act1/A1L1.dc6"}) {
+      presentationReferencesBeforeConstruction.put(path, references(path));
+    }
     buttonReferencesBeforeConstruction = references("data/global/sfx/cursor/button.wav");
     panelReferencesBeforeConstruction.clear();
     panelReferencesBeforeConstruction.put("data/global/ui/PANEL/invchar6Tab.DC6",
@@ -95,6 +107,38 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
         "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
+    Set<Integer> presentationHandles = new HashSet<>();
+    Set<Pixmap> presentationPixels = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : presentationReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey();
+      require(references(path) > reference.getValue(), "session owns presentation asset: " + path);
+      DC dc = (DC) assets.get(path);
+      Set<Integer> liveHandles = new HashSet<>();
+      Set<Pixmap> livePixels = new HashSet<>();
+      for (int direction = 0; direction < dc.getNumDirections(); direction++) {
+        require(dc.isLoaded(direction), "presentation direction loaded: " + path);
+        for (int frame = 0; frame < dc.getNumFramesPerDir(); frame++) {
+          livePixels.add(dc.getPixmap(direction, frame));
+        }
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : dc.getRegions(direction)) {
+          Texture texture = region.getTexture();
+          require(Gdx.gl.glIsTexture(texture.getTextureObjectHandle()), "live presentation texture: " + path);
+          liveHandles.add(texture.getTextureObjectHandle());
+        }
+      }
+      if (dc instanceof DC6) {
+        Pixmap[][] uploads = field(dc, "pixmaps", Pixmap[][].class);
+        if (uploads != null) for (Pixmap[] direction : uploads) {
+          if (direction != null) for (Pixmap pixel : direction) livePixels.add(pixel);
+        }
+      }
+      require(!liveHandles.isEmpty() && !livePixels.isEmpty(), "presentation GL/pixel coverage: " + path);
+      for (Pixmap pixel : livePixels) require(pixel != null && !pixel.isDisposed(), "live presentation pixels: " + path);
+      // External owners keep their GL resources; only zero-baseline assets must be destroyed.
+      if (reference.getValue() == 0) {
+        presentationHandles.addAll(liveHandles); presentationPixels.addAll(livePixels);
+      }
+    }
     int liveButtonReferences = references("data/global/sfx/cursor/button.wav");
     for (int rebuild = 0; rebuild < 3; rebuild++) {
       character.update(); // production quick-skill rebuild, including discarded buttons
@@ -162,6 +206,13 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
               + " actual=" + references(reference.getKey()));
     }
     for (int handle : panelHandles) require(!Gdx.gl.glIsTexture(handle), "owned panel texture deleted");
+    for (Map.Entry<String, Integer> reference : presentationReferencesBeforeConstruction.entrySet()) {
+      require(references(reference.getKey()) == reference.getValue(),
+          "presentation references balanced: " + reference.getKey() + " expected=" + reference.getValue()
+              + " actual=" + references(reference.getKey()));
+    }
+    for (int handle : presentationHandles) require(!Gdx.gl.glIsTexture(handle), "presentation texture deleted");
+    for (Pixmap pixel : presentationPixels) require(pixel.isDisposed(), "presentation pixels released");
     for (com.badlogic.gdx.assets.AssetDescriptor asset : new com.badlogic.gdx.assets.AssetDescriptor[] {
         screen.loadingscreenDescriptor, screen.windowopenDescriptor, screen.automapDescriptor}) {
       int expected = baselineReferences.getOrDefault(asset.fileName, 0);
@@ -197,6 +248,9 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\npanelUploadPixelsFreed=true"
+        + "\npresentationAssetBaselinesBalanced=" + presentationReferencesBeforeConstruction.size()
+        + "\npresentationTexturesDeleted=" + presentationHandles.size()
+        + "\npresentationPixelsFreed=" + presentationPixels.size()
         + "\nentryStageReleased=true\nentryLoadingReferencesBalanced=true"
         + "\nentryRetiredByClient=true\ngameRetiredByClient=true"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")

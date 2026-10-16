@@ -5,6 +5,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
@@ -16,6 +17,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.profiler.GpuSystem;
+import com.riiablo.util.AssetReferenceScope;
 
 /**
  * Renders the native ground-item gleam.  D2 does not put dropped items on the
@@ -40,6 +42,11 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   private final IntMap<GleamState> states = new IntMap<>();
   private final Vector2 screen = new Vector2();
   private boolean loadQueued;
+  private AssetManager assets;
+  private AssetReferenceScope references;
+  private boolean disposed;
+
+  @Override protected void initialize() { assets = Riiablo.assets; }
 
   private static final class GleamState {
     final Animation animation;
@@ -54,8 +61,11 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
 
   @Override
   protected void begin() {
-    if (!loadQueued && Riiablo.assets != null) {
-      Riiablo.assets.load(GLEAM_DESCRIPTOR);
+    if (disposed) return;
+    if (assets == null) assets = Riiablo.assets;
+    if (!loadQueued && assets != null) {
+      if (references == null) references = new AssetReferenceScope(assets);
+      references.load(GLEAM_DESCRIPTOR);
       loadQueued = true;
     }
   }
@@ -72,10 +82,10 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
 
   @Override
   protected void processSystem() {
-    if (Riiablo.assets == null || !Riiablo.assets.isLoaded(GLEAM_DESCRIPTOR)
+    if (disposed || assets == null || !assets.isLoaded(GLEAM_DESCRIPTOR)
         || iso == null || batch == null) return;
 
-    DCC dcc = Riiablo.assets.get(GLEAM_DESCRIPTOR);
+    DCC dcc = assets.get(GLEAM_DESCRIPTOR);
     float now = world.getDelta();
     // Render systems are invoked once per visible frame; retain a monotonic
     // local clock rather than using the fixed simulation tick.
@@ -119,4 +129,12 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   }
 
   private float elapsed;
+
+  @Override protected void dispose() {
+    if (disposed) return;
+    disposed = true;
+    states.clear();
+    elapsed = 0;
+    if (references != null) references.dispose();
+  }
 }

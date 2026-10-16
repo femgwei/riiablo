@@ -6,6 +6,7 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
@@ -31,6 +32,7 @@ import com.riiablo.profiler.GpuSystem;
 import com.riiablo.save.CharData;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.widget.Label;
+import com.riiablo.util.AssetReferenceScope;
 
 /** Draws the native Act I quest-available/reward marker above town NPCs. */
 @GpuSystem
@@ -50,6 +52,11 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   private static final float QUEST_MARKER_X_OFFSET = -6f;
   private Animation questMarkerAnimation;
   private boolean questMarkerLoadQueued;
+  private AssetManager assets;
+  private AssetReferenceScope references;
+  private boolean disposed;
+
+  @Override protected void initialize() { assets = Riiablo.assets; }
 
   private static final class MarkerPosition {
     final float x;
@@ -65,12 +72,14 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   @Override
   protected void begin() {
+    if (disposed) return;
     markers.clear();
     loadQuestMarkerAnimation();
   }
 
   @Override
   protected void process(int entityId) {
+    if (disposed) return;
     int playerId = renderer.getSrc();
     if (!mPlayer.has(playerId)) return;
     CharData data = mPlayer.get(playerId).data;
@@ -89,7 +98,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   @Override
   protected void end() {
-    if (markers.size == 0) return;
+    if (disposed || markers.size == 0) return;
     if (questMarkerAnimation != null) questMarkerAnimation.act(Gdx.graphics.getDeltaTime());
     Riiablo.batch.begin();
     for (MarkerPosition position : markers) {
@@ -105,19 +114,30 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   }
 
   private void loadQuestMarkerAnimation() {
-    if (questMarkerAnimation != null || Riiablo.assets == null) return;
+    if (disposed || questMarkerAnimation != null) return;
+    if (assets == null) assets = Riiablo.assets;
+    if (assets == null) return;
     if (!questMarkerLoadQueued) {
-      Riiablo.assets.load(QUEST_MARKER_DESCRIPTOR);
+      if (references == null) references = new AssetReferenceScope(assets);
+      references.load(QUEST_MARKER_DESCRIPTOR);
       questMarkerLoadQueued = true;
     }
-    if (!Riiablo.assets.isLoaded(QUEST_MARKER_DESCRIPTOR)) return;
+    if (!assets.isLoaded(QUEST_MARKER_DESCRIPTOR)) return;
 
-    DCC dcc = Riiablo.assets.get(QUEST_MARKER_DESCRIPTOR);
+    DCC dcc = assets.get(QUEST_MARKER_DESCRIPTOR);
     // Keep the native overlay self-lit. BRIGHTEN preserves the authored glow
     // in dark outdoor scenes where a luminosity-only alpha makes the marker
     // appear gray and noticeably dimmer than the original client.
     questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.BRIGHTEN_LUMINOSITY).build();
     questMarkerAnimation.setMode(Animation.Mode.LOOP);
+  }
+
+  @Override protected void dispose() {
+    if (disposed) return;
+    disposed = true;
+    markers.clear();
+    questMarkerAnimation = null;
+    if (references != null) references.dispose();
   }
 
   static boolean hasQuestMarker(int monsterType, CharData data) {
