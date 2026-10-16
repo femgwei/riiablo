@@ -60,9 +60,13 @@ MonStats String空值及Accel有符号int与增量修正等价，原生固定409
 Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetworkReceiver收发链，
 并搜索core/src/main、server、D2MOO_JAVA/src无对应原版报文结构。详见清单第2/6组。
 本批只改审查记录，没有生产代码变更，故未重复运行上一批测试。
-当前主线有最终适用性结论6/101，剩余95项待核销；分支17项适用性审查已完成；
+当前主线已核销6/101；剩余94项待逐项审查、1项(`5be5503`)确认待修复；分支17项适用性审查已完成；
 另保留2项能力缺口（加速度执行/game级唯一掉落去重）。用户要求每完成一项汇报剩余工作量。
-下一步继续第2组 `5be5503` / `b634ef7` / `cce700b`，三个diff已读但未核销；
+`5be5503`已读完整diff及原版函数、追踪Java六处生产目标/战斗入口，确认多为只取一层owner，
+且未使用`Monster.minionOwnerId`沿目标链归属。详细位置、最小修复边界及验收矩阵见清单第2组。
+此项待修复，不得算等价或完成；上游源方只取一层、目标方才沿monster链循环，不能两边无条件递归。
+这轮仅记录已确认差异，未运行测试或修改生产代码。工作区AI.java及TrapMelee相关文件属其他聊天，勿覆盖。
+下一步优先修复`5be5503`并补真实ECS回归，再核销 `b634ef7` / `cce700b`（diff已读）。
 追踪Java生产owner链和target slots、summoner状态消息。只修确认差异，不扩展完整寻路迁移。
 
 ## VisitorFramework九项源码索引（已读）

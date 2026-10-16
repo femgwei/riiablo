@@ -23,7 +23,8 @@
 ## 可复核工作量（按提交核销，不代表功能完成率）
 
 本清单已形成最终适用性结论的主线提交为6项：`185ae45`、`4d45674`、`606dce4`、`615b204`、`d68bf6a`、`f553315`。
-主线101项中剩余95项待完成逐提交核销；已有移植记录但缺验收链的仍计入剩余。
+另已确认`5be5503`为待修复，不能计入已核销六项。
+主线101项中剩余94项待逐项审查、1项已确认待修复；已有移植记录但缺验收链的仍计入剩余。
 分支17项已完成适用性审查。加速度执行、game级唯一掉落去重为明确保留的能力缺口，
 不因相关增量提交已分类而宣称修复。后续每核销一项更新此计数及对应索引。
 
@@ -110,7 +111,26 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
   没有原版0x67/0x68按circle类型选取目标单位/路径终点的客户端预测协议。
   依据为上游diff及以上完整发送/接收链静态审查；本项无代码变动，不新增模拟原版报文测试。
   仅说明此报文分支修正无落点，不宣称现有客户端与原版目标预测等价。
-- `5be5503`：攻击检查沿monster owner链查找。
+- `5be5503`：已审查，待修复，未核销。
+  已读完整diff及`origin/master:source/D2Game/src/UNIT/SUnit.cpp::sub_6FCBD900`完整函数。
+  上游先把攻击者monster/missile替换为**一层**owner，再沿目标的monster owner链追到终点；
+  同一单位禁止攻击，双方player时检查PLAYERLIST flag8，否则按alignment。
+  本提交修正目标循环把UNIT_PLAYER误写为UNIT_MONSTER，不授权把双方任意owner都无条件追到根。
+  Java已有`Monster.minionOwnerId`，生产`RoomActivationSystem.resolvePackOwners`及Baal/触手AI
+  维护此关系；但下述战斗关系检查没有沿该字段追踪目标：
+  `Actioneer.canDamageRelation/playerAlignmentOwner`、
+  `MissileCollisionSystem.isEnemy/alignmentOwner`、
+  `ServerSkillSystem.isHostile/playerAlignmentOwner`、
+  `StateUpdater.isHostile/playerAlignmentOwner`、`AuraEcsSystem.isHostile/alignmentOwner`、
+  `ai/AI.alignmentOwner/isValidOrdinaryEnemyTarget`。
+  这些主要按Mercenary/SummonedPet取一层owner，或先按原始组件判阵营；不是上游完整目标owner链。
+  例：玩家P与Q敌对，目标T归宠物M、M归Q；现有单层路径会用P/M查PLAYERLIST，
+  无法使用已存在的P/Q敌对关系。只改PvpCombatRules（仅收实体ID及阵营bool，无World）不能解决。
+  后续最小修复需要共享目标owner解析器，按monster类型迭代、缺owner/自指终止、
+  对畸形多节点环作宿主保护，并在实际战斗/目标资格入口使用解析结果；
+  保留源方一层解析与Conversion专用分支，不以全图递归替代所有owner语义。
+  验收需真实ECS中两层目标、同owner、敌对/友好player、普通monster minion、无owner、
+  自指/环及转换状态回归；当前没有这些端到端证据，不能宣称已同步。
 - `b634ef7`：目标列表slot8。
 - `cce700b`：MonsterMsg标志检查。
 - `6e58e94`、`996f2f3`：无used skill与monster fallthrough的attack-rate规则。
@@ -195,7 +215,7 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `8b424dc` Cap charged bolt lifetime before truncating it to a byte — 有移植记录；最终验收需关联生产代码与测试
 - `47687ce` Reject out-of-range sizes in D2Common_11281_CollisionPatternFromSize — 有移植记录；最终验收需关联生产代码与测试
 - `615b204` Send a unit target from sub_6FC65C70 unless the path is circling — 不适用FlatBuffers EntitySync协议；发送/接收链证据见第2组
-- `5be5503` Follow the target's monster owner chain in sub_6FCBD900 — 待逐项核销；不能据此断言当前代码缺失
+- `5be5503` Follow the target's monster owner chain in sub_6FCBD900 — 已确认待修复，目标关系主要只取一层owner；见第2组
 - `a145e73` Clamp path velocity only when it exceeds the maximum — 已有独立实现/审查；生产适用性待核销
 - `9fd325c` Fix CRC32_Compute — 待逐项核销；不能据此断言当前代码缺失
 - `b634ef7` Scan target list slot 8 in sub_6FCF2110 — 待逐项核销；不能据此断言当前代码缺失
