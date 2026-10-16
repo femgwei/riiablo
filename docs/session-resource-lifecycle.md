@@ -569,3 +569,87 @@ Cvar/Timer、AsyncOutputStreamAppender 线程、完整共享子组件释放与�
   关键别名解除、标准流恢复；GL 上下文仍有效时检查，重复退出安全。
 - 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
   SIM_SLOW=109.08/65.80/64.39/110.71ms，预算 40ms，不作性能验收。
+
+## 第九批：运行中屏幕切换、弹栈与清栈
+
+Client 的 setScreen/pushScreen/popScreen/clearAndSet 现在统一处理明确的归属：
+普通替换和弹栈释放被替换的前台，不再根据 show 返回后栈是否为空猜测；push 保留
+旧前台。clearAndSet 先移走完整旧栈，前台 hide 后 dispose，再按栈顶至栈底释放，
+按对象身份去重；目标若是旧栈中的对象则保留并恢复，目标若已经是前台则只清旧栈，
+不重复 hide/show/resize 或注册输入。普通 set/push 当前对象为空操作，直接指向旧栈
+对象则报错并要求明确使用 pop/clear，避免同一对象同时归前台和栈所有。
+
+切换先移除旧前台及其 Client 管理的输入，再 hide/释放旧归属，最后 show 新屏幕。
+每项 RuntimeException/Error 不阻断余项释放或后续安装，最后传播首异常及 suppressed。
+因此调用抛错不意味着目标没安装，也不意味着可以无条件 dispose 目标。show/resize
+失败的目标仍归当前 Client 所有，供后续替换/最终退出清理；失败回调后不继续 resize
+或自动注册屏幕自身的 InputProcessor。各屏幕自己注册的 Stage/订阅仍由其 hide/dispose
+负责，本批不把任意回调失败恢复成完全可运行 UI，也不做自动回滚到旧屏幕。
+
+保留 show/resize 的同步嵌套导航：GameScreen.show 仍可 push 可复用加载屏。
+每次实际换前台递增版本，外层只在版本未变且未请求退出时继续 resize/输入注册，
+避免嵌套切换后把已隐藏甚至已释放的对象重新注册。嵌套 push/pop 即使回到同一对象
+也不能误执行外层旧回调。hide/dispose 期间明确拒绝导航，避免重入重新认领已移走
+资源；审计现有生产屏幕的这两类回调没有导航需求，不采用后台排队或隐式延后导航。
+空栈 pop 明确抛 IllegalStateException，不依赖 JVM assert 是否开启。该协议仍限定
+应用生命周期线程，不是多线程导航锁或异步任务取消协议。
+
+切换回调中请求 Client.dispose 会立即禁止后续导航/应用生命周期回调，并等最外层
+切换完成屏幕清理后才释放共享宿主。若尚未 show 目标，只 dispose 其构造期归属，不
+调用 hide；若目标已经进入 show，则最终整栈退出仍会 hide/dispose。嵌套切换也不能
+提前销毁还被外层清理使用的 AssetManager/GL 资源。render 在屏幕回调返回后再次
+检查终止状态，不在回调已关闭 Client 后继续绘制共享 cursor/batch。
+
+旧菜单配对审计：MenuScreen、MultiplayerScreen、LoginScreen、TCPIPScreen 与
+SelectCharacterScreen/2/3 均为构造 load、show 再 load、hide 调 dispose，最终
+Client.dispose 还要释放其构造期份额；不能统一删除第二次 dispose 或把 hide 改成
+永久终止。SplashScreen 构造加载、hide 仅解绑；CreateCharacterScreen/LobbyScreen
+hide 解绑（后者还关闭连接），其构造期资源由最终 dispose 处理。这些屏幕的 Stage、
+按钮/角色预览内部释放、背景任务/socket 归属仍有待单独收口，本批不声称菜单零泄漏
+或完整菜单/联机验收，也未改变这些旧屏幕自身的加载/释放次数。
+
+新增 ClientScreenTransitionTest 26 项，使用真实 Client 和 InputProcessor，替身屏幕
+绕过 MPQ/GL 构造，覆盖替换/保留/弹栈、嵌套 show/resize、回到同一身份、同屏空操作、
+重复入栈拒绝、空栈/null、清栈顺序/保留目标、身份去重、hide/多项释放异常和 Error、
+show/resize 失败归属、嵌套后外层失败、清理重入拒绝、回调中退出及宿主清理顺序，
+同一 loader 连续三次 push/pop，确认没有全局“一次释放后永不复用”的注册表。
+真实三轮入口额外要求入场屏已被 Client 标记 dispose，游戏退出地图在测试显式重复
+dispose 之前就已清空；报告增加 entryRetiredByClient/gameRetiredByClient。
+
+最小专项复跑：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.ClientScreenTransitionTest `
+  --tests com.riiablo.screen.ClientShutdownLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameLoadingScreenLifecycleTest `
+  --tests com.riiablo.screen.GameEntryLoadingScreenLifecycleTest `
+  :desktop:compileJava :server:d2gs:compileJava --no-daemon
+```
+
+首轮专项 73/73、5 类及三端编译通过，日志 build/screen-transition-focused.log。
+其后补充退出请求期间的应用回调防护、深度 finally 复位和真实三轮探针，由最终扩大
+回归重新验证。本批未改玩法/RNG/Tick/协议/存档格式。下一批优先收口旧菜单的
+显式资源归属与 show/hide 配对；console 内部监听/Timer/异步日志线程、共享子组件、
+菜单/入场连接交接、后台启动竞争、构造回滚、跨 Act/真实加载中退出、长时压力、
+人工与性能验收仍待，资源阶段没有全部结束。
+
+### 第九批最终回归
+
+- 扩大定向回归 410/410、54 类：core 368/368（47 类）、D2GS 全部 42/42
+  （7 类），失败/错误/跳过均 0；是上批 384 项加本批 26 项，不包含既有玩法/AI
+  基线失败，不宣称全仓全绿。core/desktop/D2GS 编译通过。
+- 同一命令的真实本地生产入场链/营地退出重进三轮全部通过，新增
+  entryRetiredByClient/gameRetiredByClient 每轮均为 true；每轮 58 个 DT1、2626 张
+  地图贴图与 CPU 像素释放，输入回基线 2，按钮引用 0/129/138/0，三次技能重建稳定，
+  8 种面板资产回基线、3 张私有纹理删除、上传像素释放、入场 Stage/图片清理，常驻
+  资产种类保持 58。没有降低资源断言，也没有改变三轮/三帧和看门狗预算。
+- 独立地图 GL 三轮仍为 44 tiles、引用 4→2→1→0；真实子 JVM/TCP 三轮专项
+  继续通过。单轮营地三帧、两次生产 Client 最终 GL 检查（两共享程序/两纹理删除、
+  assets=0、输入/别名/流恢复）通过；D2GS 25Hz step=0.04、Throw 顺序和伤害
+  1000→992 同一命令通过，BUILD SUCCESSFUL，耗时 3m33s。
+- 日志 build/screen-transition-regression.log；三轮报告
+  build/screen-transition-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+  最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
+  SIM_SLOW=70.92/50.39/53.02/70.42ms，预算 40ms，不作性能验收。

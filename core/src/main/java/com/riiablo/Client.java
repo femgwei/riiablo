@@ -96,6 +96,10 @@ public class Client extends Game {
   private final SnapshotArray<ScreenBoundsListener> screenBoundsListeners = new SnapshotArray<>(ScreenBoundsListener.class);
   private final Array<Runnable> cvarUnbinders = new Array<>();
   private boolean disposed;
+  private boolean shutdownRequested;
+  private boolean retiringScreens;
+  private int screenChangeDepth;
+  private long screenChangeVersion;
   private PrintStream originalOut;
   private PrintStream originalErr;
 
@@ -207,43 +211,99 @@ public class Client extends Game {
 
   @Override
   public void setScreen(Screen screen) {
-    requireOpen();
-    Screen previousScreen = this.screen;
-    Gdx.app.debug(TAG, "Scene change: " + screenToString(previousScreen) + " -> " + screenToString(screen));
-    if (previousScreen instanceof com.badlogic.gdx.InputProcessor) {
-      input.removeProcessor((com.badlogic.gdx.InputProcessor) previousScreen);
-    }
-
-    super.setScreen(screen);
-    if (previousScreen != null && screens.isEmpty()) {
-      Gdx.app.debug(TAG, "Disposing " + screenToString(previousScreen));
-      previousScreen.dispose(); // FIXME: memory leak -- need to fix assets loading/unloading scheme
-    }
-    if (screen instanceof com.badlogic.gdx.InputProcessor) {
-      input.addProcessor((com.badlogic.gdx.InputProcessor) screen);
-    }
+    requireNavigation();
+    requireUnstacked(screen);
+    changeScreen(screen, false, false);
   }
 
   public void pushScreen(Screen screen) {
-    requireOpen();
-    if (this.screen != null) {
-      screens.add(this.screen);
-    }
-
-    setScreen(screen);
+    requireNavigation();
+    requireUnstacked(screen);
+    changeScreen(screen, true, false);
   }
 
   public void popScreen() {
-    requireOpen();
-    assert screens.size > 0;
-    setScreen(screens.pop());
+    requireNavigation();
+    if (screens.isEmpty()) throw new IllegalStateException("Screen stack is empty");
+    changeScreen(screens.pop(), false, false);
   }
 
   public void clearAndSet(Screen screen) {
+    requireNavigation();
+    changeScreen(screen, false, true);
+  }
+
+  private void requireNavigation() {
     requireOpen();
-    for (Screen s : screens) s.dispose();
-    screens.clear();
-    setScreen(screen);
+    if (retiringScreens) throw new IllegalStateException("Cannot navigate from screen hide/dispose");
+  }
+
+  private void requireUnstacked(Screen next) {
+    if (next != null && screens.contains(next, true)) {
+      throw new IllegalArgumentException("Screen is already stacked; use popScreen or clearAndSet");
+    }
+  }
+
+  private void changeScreen(Screen next, boolean preservePrevious, boolean clearStack) {
+    final Screen previous = screen;
+    final boolean changed = previous != next;
+    if (!changed && !clearStack) return;
+    final long version = changed ? ++screenChangeVersion : screenChangeVersion;
+    final Array<Screen> closing = new Array<>();
+    final IdentityHashMap<Screen, Boolean> seen = new IdentityHashMap<>();
+    if (changed && previous != null && !preservePrevious) {
+      closing.add(previous);
+      seen.put(previous, true);
+    }
+    if (clearStack) {
+      for (int i = screens.size - 1; i >= 0; i--) {
+        Screen stacked = screens.get(i);
+        if (stacked != null && stacked != next && seen.put(stacked, true) == null) closing.add(stacked);
+      }
+      screens.clear();
+    } else if (changed && preservePrevious && previous != null) {
+      screens.add(previous);
+    }
+
+    screenChangeDepth++;
+    try (Disposal cleanup = new Disposal()) {
+      try {
+        // Remove ownership before callbacks. Only show/resize may navigate again.
+        if (changed) screen = null;
+        retiringScreens = true;
+        try {
+          if (changed && input != null && previous instanceof com.badlogic.gdx.InputProcessor) {
+            cleanup.run(() -> input.removeProcessor((com.badlogic.gdx.InputProcessor) previous));
+          }
+          if (changed && previous != null) cleanup.run(previous::hide);
+          for (Screen retiring : closing) cleanup.run(retiring::dispose);
+          if (shutdownRequested && changed && next != null) {
+            // This target has never been shown: release its constructor ownership only.
+            cleanup.run(next::dispose);
+          }
+        } finally {
+          retiringScreens = false;
+        }
+        if (changed && !shutdownRequested) {
+          screen = next;
+          cleanup.run(() -> {
+            Gdx.app.debug(TAG, "Scene change: " + screenToString(previous) + " -> " + screenToString(next));
+            if (next == null) return;
+            next.show();
+            // show/resize may synchronously push a loader or replace this screen.
+            if (screenChangeVersion != version || shutdownRequested) return;
+            next.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            if (screenChangeVersion == version && !shutdownRequested && input != null
+                && next instanceof com.badlogic.gdx.InputProcessor) {
+              input.addProcessor((com.badlogic.gdx.InputProcessor) next);
+            }
+          });
+        }
+      } finally {
+        screenChangeDepth--;
+        if (screenChangeDepth == 0 && shutdownRequested) cleanup.run(this::dispose);
+      }
+    }
   }
 
   @Override
@@ -518,7 +578,7 @@ public class Client extends Game {
 
   @Override
   public void resize(int width, int height) {
-    if (disposed) return;
+    if (disposed || shutdownRequested) return;
     this.width  = width;
     this.height = height;
     BATCH_RESET.setToOrtho2D(0, 0, width, height);
@@ -532,7 +592,7 @@ public class Client extends Game {
 
   @Override
   public void render() {
-    if (disposed) return;
+    if (disposed || shutdownRequested) return;
     Gdx.gl.glClearColor(glClearColor.r, glClearColor.g, glClearColor.b, glClearColor.a);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -566,6 +626,7 @@ public class Client extends Game {
     }
 
     super.render();
+    if (disposed || shutdownRequested) return;
     cursor.act(Gdx.graphics.getDeltaTime());
     cursor.render(batch);
 
@@ -639,7 +700,7 @@ public class Client extends Game {
 
   @Override
   public void pause() {
-    if (disposed) return;
+    if (disposed || shutdownRequested) return;
     audio.pauseForBackground();
     music.pauseForBackground();
     super.pause();
@@ -647,7 +708,7 @@ public class Client extends Game {
 
   @Override
   public void resume() {
-    if (disposed) return;
+    if (disposed || shutdownRequested) return;
     Riiablo.client = this;
     Riiablo.logs = logs;
     Riiablo.home = home;
@@ -689,6 +750,11 @@ public class Client extends Game {
   @Override
   public void dispose() {
     if (disposed) return;
+    if (screenChangeDepth > 0) {
+      // Finish all detached screen cleanup before destroying borrowed host resources.
+      shutdownRequested = true;
+      return;
+    }
     disposed = true;
     Screen activeScreen = screen;
     Array<Screen> closing = new Array<>();
@@ -739,7 +805,7 @@ public class Client extends Game {
   }
 
   private void requireOpen() {
-    if (disposed) throw new IllegalStateException("Client is disposed");
+    if (disposed || shutdownRequested) throw new IllegalStateException("Client is disposed or shutting down");
   }
 
   private void reportSaveFailures(Collection<Throwable> failures) {

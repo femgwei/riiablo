@@ -87,6 +87,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(screen.player >= 0 && screen.map.getZones().size > 0, "live player and map");
     require(entryStage.getActors().size == 0, "entry stage cleared during handoff");
     require(field(entryScreen, "stage", Stage.class) == null, "entry stage reference cleared");
+    require(field(entryScreen, "disposed", Boolean.class), "entry retired by Client, not just hidden");
     int loadingReferencesAfterHandoff = references("data/local/ui/loadingscreen.dc6");
     entryScreen.dispose();
     entryScreen.dispose();
@@ -141,6 +142,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
+    require(screen.map.getZones().size == 0, "Client retired the game before returning");
     screen.dispose(); // must be idempotent
     require(screen.map.getZones().size == 0, "old map cleared");
     require(screen.stage.getActors().size == 0 && screen.scaledStage.getActors().size == 0,
@@ -182,6 +184,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\npanelUploadPixelsFreed=true"
         + "\nentryStageReleased=true\nentryLoadingReferencesBalanced=true"
+        + "\nentryRetiredByClient=true\ngameRetiredByClient=true"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")
         + "\nremainingAssets=" + assets.getLoadedAssets() + "\nresult=PASS\n";
     Gdx.files.absolute(output).child("cycle-" + cycle + "-lifecycle.txt").writeString(report, false, "UTF-8");

@@ -1,5 +1,34 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第九批：运行中屏幕切换与清栈
+
+- [x] set/push/pop/clearAndSet 统一归属：替换/弹栈释放旧前台，push 保留，
+  清栈先移走后按前台/栈顶至底身份去重释放。目标可由 clear 恢复/保留；同屏
+  set/push 不重复操作，普通 set/push 不允许直接指向栈内对象，空栈 pop 明确报错。
+- [x] 旧归属在新 show 之前释放；hide/释放异常或 Error 后继续其余清理及安装，
+  首异常/suppressed 最终传播。show/resize 失败保留目标归属，不误判抛错即未安装，
+  不自动回滚旧屏，也不自动注册失败目标的 InputProcessor。
+- [x] 保留 GameScreen.show 嵌套 push loader，用切换版本避免外层错误 resize/
+  输入注册，支持嵌套返回同一身份与 loader 重复使用；hide/dispose 禁止重入导航。
+- [x] 切换期间请求最终退出，立即禁止导航/后续应用回调，待最外层完成屏幕清理后
+  才退出共享宿主，未 show 目标不误 hide；render 回调返回后复查终止状态。
+- [x] 审计旧菜单多份加载与 hide/dispose 配对，本批保留其实现，不直接减少释放
+  次数或泛化递归回收。菜单 Stage/按钮/预览及后台/socket 归属仍待后续单独收口。
+- [x] 新增 ClientScreenTransitionTest 26 项，首轮专项 73/73、5 类及三端编译通过；
+  真实三轮探针加强要求 entry/game 已被 Client 主动释放，不让测试的手动重复 dispose
+  掩盖问题。最终扩大回归结果见资源文档第九批验证记录。
+- [x] 最终扩大定向回归 410/410、54 类（core 368/368，D2GS 42/42），无失败/
+  错误/跳过；三端编译、生产会话三轮、独立地图 GL 三轮、单轮营地、两次最终 GL
+  退出、25Hz Tick 与 Throw 顺序/伤害检查全部通过，BUILD SUCCESSFUL。
+  新的主动释放断言及原有资源硬断言每轮均通过。日志 build/screen-transition-regression.log，
+  报告 build/screen-transition-camp/cycle-N-lifecycle.txt；无 ERROR/Exception/OFFSCREEN_FATAL。
+  SIM_SLOW=70.92/50.39/53.02/70.42ms，预算 40ms，不作性能验收。
+- 总体：七批子系统装配已完成；资源阶段推进到第九批，尚未全部收口。后续优先
+  菜单显式资源归属，再处理 console/异步日志、其余共享组件及连接交接等边界。
+  自动化不替代最终人工画面/输入/听感、真实联机/跨 Act/加载中退出与性能验收。
+  实现范围、复跑命令与保留项见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第八批：Client 最终退出
 
 - [x] 本批限定应用最终 dispose，不改变运行中 set/push/pop/clearAndSet 事务。
