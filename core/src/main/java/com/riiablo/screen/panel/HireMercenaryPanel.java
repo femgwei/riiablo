@@ -434,7 +434,8 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
         String text = Riiablo.bundle.format("mercenary_hire_row",
             MercenaryHud.resolveMercenaryName(offer.mercType, offer.nameId), offer.level,
             offer.life, offer.defense, offer.cost);
-        LabelButton entry = button(text, () -> choose(offer, generation));
+        Label entry = label(text, Align.left);
+        entry.setTouchable(Touchable.disabled);
         // Native English font16 is much wider than the CJK font. Use the
         // compact native list font so the price is never hidden by ellipsis.
         if (Riiablo.language != com.riiablo.D2Language.CHINESE) entry.setFont(Riiablo.fonts.font8);
@@ -453,32 +454,22 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
         description.setBounds(entry.getX() + 6, entry.getY() - 14, entry.getWidth() - 6, 16);
         description.setTouchable(Touchable.disabled);
         rows.addActor(description);
-        // The skill line is a separate label, so it does not inherit the
-        // LabelButton hover color from the candidate's first line. Share the
-        // hover state with both selectable areas so the complete row is blue.
-        final int[] hoverCount = {0};
-        final Runnable updateHighlight = () -> description.setColor(
-            hoverCount[0] > 0 ? Riiablo.colors.blue : Riiablo.colors.white);
-        InputListener highlight = new InputListener() {
-          @Override public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-            hoverCount[0]++;
-            updateHighlight.run();
-          }
-
-          @Override public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-            if (hoverCount[0] > 0) hoverCount[0]--;
-            updateHighlight.run();
+        // Both visual lines are one candidate, with one hover/press/click state.
+        ClickListener selection = new ClickListener() {
+          @Override public void clicked(InputEvent event, float x, float y) { choose(offer, generation); }
+        };
+        Actor hit = new Actor() {
+          @Override public void act(float delta) {
+            super.act(delta);
+            com.badlogic.gdx.graphics.Color color = selection.isOver() || selection.isPressed()
+                ? Riiablo.colors.blue : Riiablo.colors.white;
+            entry.setColor(color);
+            description.setColor(color);
           }
         };
-        entry.addListener(highlight);
-        // The second line belongs to the same selectable candidate.
-        Actor hit = new Actor();
-        hit.setBounds(entry.getX(), entry.getY() - 15, entry.getWidth(), 15);
-        hit.addListener(new ClickListener() {
-          @Override public void clicked(InputEvent event, float x, float y) { choose(offer, generation); }
-        });
-        hit.addListener(highlight);
-        rows.addActor(hit);
+        hit.setBounds(entry.getX(), entry.getY() - 15, entry.getWidth(), entry.getHeight() + 15);
+        hit.addListener(selection);
+        rows.addActorBefore(entry, hit);
       }
     }
     layoutControls();

@@ -299,6 +299,25 @@ class MercenaryPanelsLifecycleTest extends RiiabloTest {
     assertFalse(input.keyDown(null, Input.Keys.ENTER)); assertFalse(input.scrolled(null, 0, 0, 0, 1)); assertFalse(panel.isVisible()); retired(actors); verifyNoInteractions(result); assertEquals(0, assets.getLoadedAssets());
   }
 
+  @Test void rosterBothLinesShareOneHoverAndClickTarget() throws Exception {
+    HireMercenaryPanel panel = roster(); panel.presentOffers(Array.with(offer(1)));
+    WidgetGroup rows = rows(panel); Actor hit = rows.getChildren().get(0);
+    Actor entry = rows.getChildren().get(1), description = rows.getChildren().get(2);
+    assertEquals(Touchable.disabled, entry.getTouchable());
+    assertEquals(Touchable.disabled, description.getTouchable());
+    assertSame(hit, rows.hit(entry.getX() + 1, entry.getY() + 8, true));
+    assertSame(hit, rows.hit(description.getX() + 1, description.getY() + 8, true));
+    ClickListener selection = action(hit);
+    for (float y : new float[] {8, 23}) {
+      selection.enter(null, 1, y, -1, null); hit.act(0);
+      assertEquals(Riiablo.colors.blue, entry.getColor());
+      assertEquals(entry.getColor(), description.getColor());
+      selection.exit(null, 1, y, -1, null); hit.act(0);
+      assertEquals(Riiablo.colors.white, entry.getColor());
+      assertEquals(entry.getColor(), description.getColor());
+    }
+  }
+
   @Test void rosterNetworkOpenAndHireKeepRequestFieldsAndSingleSubmission() throws Exception {
     World world = mock(World.class); Riiablo.engine = world; ClientNetworkSynchronizer sync = mock(ClientNetworkSynchronizer.class);
     when(world.getSystem(ClientNetworkSynchronizer.class)).thenReturn(sync); when(sync.requestNpcService(anyInt(), anyByte(), anyByte(), anyInt(), anyInt(), anyLong())).thenReturn(42L, 43L);
