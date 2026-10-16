@@ -1,5 +1,54 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第二批：地图引用计数与 DT1 释放
+
+- [x] Zone 区分依赖配方与实际加载记录；捕获原 AssetManager，用于完成加载、
+  Preset 的 DS1 读取和最终卸载。计算过依赖但未 load 的 Zone 不卸载资产；重复
+  load 幂等，配方内同名条目仍逐条计数，提交失败只回滚已经成功提交的部分。
+- [x] 针对 libGDX 1.10 活动任务按文件名取消的语义，Zone 清理先完成在途提交，
+  再逐引用卸载，避免同名多消费者被误取消。加载中退出可能同步等待，必须在原资源
+  宿主有效时执行，有 GL 资源时要求 GL 线程；不重写通用异步取消协议。
+- [x] Map/Zone 卸载失败仍尝试其余资产/Zone，清空索引，异常不静默吞掉；重复
+  dispose 不重试失败资源。归还的 tile 数组清引用，Zone 清空 map/level/type，
+  避免静态池保留旧会话。换 Act 的既有释放入口继续使用该实现。
+- [x] DT1 同时释放自己拥有的 Texture 与 Pixmap，不再因释放时静态 loadData
+  改变而漏释放；清空 tile 的纹理/像素引用，重复释放幂等。截断解码或贴图准备中途
+  失败清理已创建资源；dispose 后不能复用旧 DT1 prepareTextures，重载创建新实例。
+- [x] 新增 18 项专项：MapAssetLifecycleTest 12 项、DT1LifecycleTest 6 项。
+  使用真实 AssetManager/同步与异步加载器、native Pixmap 与 mock GL，覆盖双地图
+  加外部引用、未加载/重复加载、提交失败回滚、换 Act、原宿主、异常后继续、池清理、
+  在途异步共享引用及截断解码。18/18 通过；core、desktop、D2GS 编译通过。
+  证据 `build/map-assets-focused-real-02.log` 和专项 XML；该次单元测试通过，但随后
+  新 GL 入口因夹具未清空已加载资产的重复引用队列而失败，不视为整条命令通过。
+- 新增 `:desktop:offscreenMapAssets`：原版 MPQ / DT1Loader / 隐藏真实 GL 上下文，
+  同一进程和 AssetManager 上三轮双地图加外部引用，检查引用计数、Pixmap 状态、
+  GL 贴图句柄删除与新 DT1 实例。初次引用计数夹具未等待全部队列，已补
+  owner.finishLoading；早期 GL mock 缺 Graphics、错误拦截浮点而非整数 GL 参数的
+  夹具问题也已修正，未改断言规避。中途一次源/测试增量不一致的运行已完整重跑。
+- [x] 扩大定向回归 301/301 项、43 类通过：core 259/259、D2GS 全部 42/42，
+  失败/错误/跳过均 0。覆盖上批 194 项、两项新增类及 DT1 索引/动画、Zone 坐标、
+  Act I–V 地图 builder 边界；三端编译通过。日志 `build/map-assets-regression.log`，
+  JUnit XML 在 `core/build/test-results/test/` 与 `server/d2gs/build/test-results/test/`。
+  未纳入此前两个已基线复现的玩法/AI 失败，不宣称全仓测试全绿。
+- [x] 修正夹具后真实 GL 地图资产三轮全部 PASS：每轮原版 Cavedr.dt1 的 44 个
+  tile，双地图加外部引用为 4→2→1→0，Pixmap 均释放、GL 句柄均删除、下一轮取得
+  新 DT1 实例；原管理器归零，替换宿主未被触碰，无 GL 错误。
+  与上述 301 项在同一命令完成，整体 BUILD SUCCESSFUL，日志同
+  `build/map-assets-regression.log`。该入口只验证资产，不生成完整地图或切换屏幕。
+- [x] 生产真实 1.10f 营地三帧及 Client 退出清理通过；D2GS 25Hz（step=0.04）
+  和 Throw 导弹创建/顺序、1000→992 伤害通过，整体 BUILD SUCCESSFUL。
+  日志 `build/map-assets-real-resource.log`，营地 manifest 为
+  `build/map-assets-camp/rogue-encampment-manifest.txt`。未发现 ERROR/Exception；
+  保留 level0/DrlgType0 跳过、Java 分配回退、表 Key 推断诊断，以及一次
+  SIM_SLOW=89.23ms（预算 40ms），不将冒烟作为性能或人工画面/听感验收。
+- 范围限制：本批验证的是地图资产，不是完整 GameScreen 退出重进。屏幕中的
+  map.dispose FIXME 仍保留，未接通普通退出整图卸载，不能据此声称地图退出泄漏
+  已解决。完整会话重进、GameLoadingScreen、网络停机/Client 共享资源、构造回滚、
+  外部直接取消加载或第三方 Texture 构造内部失败仍待；既有玩法/夹具问题未修。
+- 整体进度：七批装配完成，资源阶段推进到第二批。下一批验证完整同进程退出重进，
+  再启用屏幕整图释放；不改玩法/RNG/Tick/协议/存档。实现、权衡和复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第一批：UI / 调试 GL 释放
 
 - [x] 在七批装配改造之后启动独立的资源生命周期阶段。本批只处理已确认由当前

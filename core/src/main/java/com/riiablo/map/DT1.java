@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.StreamUtils;
 import com.riiablo.codec.Palette;
 import com.riiablo.graphics.PaletteIndexedPixmap;
 import com.riiablo.util.BufferUtils;
+import com.riiablo.util.Disposal;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.Validate;
@@ -41,6 +42,7 @@ public class DT1 implements Disposable {
   Header  header;
   Tile    tiles[];
   Texture textures[];
+  private boolean disposed;
 
   private DT1(String fileName, Header header, Tile[] tiles) {
     this.fileName = fileName;
@@ -63,20 +65,42 @@ public class DT1 implements Disposable {
 
   @Override
   public void dispose() {
-    if (!loadData) return;
-    if (textures == null) return;
-    for (Texture texture : textures) texture.dispose();
+    if (disposed) return;
+    disposed = true;
+    Texture[] ownedTextures = textures;
+    textures = null;
+    try (Disposal cleanup = new Disposal()) {
+      if (ownedTextures != null) {
+        for (Texture texture : ownedTextures) cleanup.dispose(texture);
+      }
+      for (Tile tile : tiles) {
+        if (tile == null) continue;
+        Pixmap pixmap = tile.pixmap;
+        tile.pixmap = null;
+        tile.texture = null;
+        // PixmapTextureData uses disposePixmap=false; DT1 owns the CPU pixels too.
+        cleanup.dispose(pixmap);
+      }
+    }
   }
 
   public void prepareTextures() {
+    Validate.validState(!disposed, "DT1 has been disposed");
     if (!loadData) return;
     Validate.validState(textures == null, "textures have already been prepared");
     textures = new Texture[header.numTiles];
-    for (int i = 0; i < header.numTiles; i++) {
-      Texture texture = new Texture(new PixmapTextureData(tiles[i].pixmap, null, false, false, false));
-      //texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-      texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
-      tiles[i].texture = new TextureRegion(textures[i] = texture);
+    try {
+      for (int i = 0; i < header.numTiles; i++) {
+        Texture texture = textures[i] = new Texture(new PixmapTextureData(tiles[i].pixmap, null, false, false, false));
+        //texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
+        tiles[i].texture = new TextureRegion(texture);
+      }
+    } catch (RuntimeException | Error failure) {
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.run(() -> { throw failure; });
+        cleanup.dispose(this);
+      }
     }
   }
 
@@ -85,6 +109,7 @@ public class DT1 implements Disposable {
   }
 
   public static DT1 loadFromStream(String fileName, InputStream in) {
+    DT1 dt1 = null;
     try {
       Header header = new Header(in);
       if (DEBUG) Gdx.app.debug(TAG, header.toString());
@@ -95,6 +120,7 @@ public class DT1 implements Disposable {
         throw new GdxRuntimeException("Unknown version2: " + header.version2);
 
       Tile[] tiles = new Tile[header.numTiles];
+      dt1 = new DT1(fileName, header, tiles);
       for (int i = 0; i < header.numTiles; i++) {
         Tile tile = tiles[i] = new Tile(in);
         if (DEBUG_TILE_HEADERS) Gdx.app.debug(TAG, tile.toString());
@@ -117,8 +143,12 @@ public class DT1 implements Disposable {
 
       assert in.available() == 0;
       }
-      return new DT1(fileName, header, tiles);
+      return dt1;
     } catch (Throwable t) {
+      if (dt1 != null) {
+        try { dt1.dispose(); }
+        catch (RuntimeException | Error cleanup) { if (t != cleanup) t.addSuppressed(cleanup); }
+      }
       throw new GdxRuntimeException("Couldn't read DT1", t);
     } finally {
       StreamUtils.closeQuietly(in);

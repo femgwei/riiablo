@@ -11,6 +11,7 @@ import com.badlogic.gdx.ai.pfa.SmoothableGraphPath;
 import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -36,6 +37,7 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.pfa.AStarPathFinder;
 import com.riiablo.map.pfa.Point2;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.util.Disposal;
 
 public class Map implements Disposable {
   private static final String TAG = "Map";
@@ -546,14 +548,16 @@ public class Map implements Disposable {
 
   @Override
   public void dispose() {
-    for (Zone zone : zones) Zone.free(zone);
-    zones.clear();
-    for (DT1s dt1s : this.dt1s.values()) dt1s.clear();
-    dt1s.clear();
-    mapGraph.clear();
-    warpDestinationOverrides.clear();
-    nativeWalkEdges.clear();
-    nativeArrowTrapTypes.clear();
+    try (Disposal cleanup = new Disposal()) {
+      for (Zone zone : zones) cleanup.run(() -> Zone.free(zone));
+      zones.clear();
+      for (DT1s dt1s : this.dt1s.values()) dt1s.clear();
+      dt1s.clear();
+      mapGraph.clear();
+      warpDestinationOverrides.clear();
+      nativeWalkEdges.clear();
+      nativeArrowTrapTypes.clear();
+    }
   }
 
   public Array<AssetDescriptor> getDependencies() {
@@ -1158,6 +1162,7 @@ public class Map implements Disposable {
       if (layer == null) return;
       for (int i = 0; i < sizes.length; i++) {
         if (layer.length == sizes[i]) {
+          Arrays.fill(layer, null);
           tilePools[i].free(layer);
           return;
         }
@@ -1239,6 +1244,9 @@ public class Map implements Disposable {
 
     static final Array<AssetDescriptor> EMPTY_ASSET_ARRAY = new Array<>(0);
     Array<AssetDescriptor> dependencies = EMPTY_ASSET_ARRAY;
+    // Dependencies are a recipe, not proof of a load. Retain each submitted reference.
+    private AssetManager dependencyAssets;
+    private final Array<AssetDescriptor> loadedDependencies = new Array<>();
 
     /** Persistent copies of native RoomEx DS1 objects used by ECS. */
     final Array<NativeObject> nativeObjects = new Array<>();
@@ -1428,8 +1436,11 @@ public class Map implements Disposable {
     }
 
     static void free(Zone zone) {
-      zone.dispose();
-      pool.free(zone);
+      try {
+        zone.dispose();
+      } finally {
+        pool.free(zone);
+      }
     }
 
     private Zone setInternal(Map map, Levels.Entry level, int diff, int gridSizeX, int gridSizeY) {
@@ -1511,7 +1522,6 @@ public class Map implements Disposable {
       //for (Preset[] x : presets) for (Preset y : x) if (y != null) y.dispose();
       presets = null;
 
-      for (AssetDescriptor asset : dependencies) Riiablo.assets.unload(asset.fileName);
       dependencies = EMPTY_ASSET_ARRAY;
 
       nativeObjects.clear();
@@ -1536,6 +1546,10 @@ public class Map implements Disposable {
       nativeWallTileTypes.clear();
       nativeWallTileTypesByTile.clear();
       nativeWallTileTypesByCoord.clear();
+      map = null;
+      level = null;
+      type = null;
+      unloadDependencies();
     }
 
     @Override
@@ -2299,10 +2313,49 @@ public class Map implements Disposable {
     }
 
     void load() {
-      for (AssetDescriptor asset : getDependencies()) Riiablo.assets.load(asset);
+      if (dependencyAssets != null) return;
+      Array<AssetDescriptor> dependencies = getDependencies();
+      AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+      dependencyAssets = assets;
+      try {
+        for (AssetDescriptor asset : dependencies) {
+          assets.load(asset);
+          loadedDependencies.add(asset);
+        }
+      } catch (RuntimeException | Error failure) {
+        try (Disposal cleanup = new Disposal()) {
+          cleanup.run(() -> { throw failure; });
+          cleanup.run(this::unloadDependencies);
+        }
+      }
+    }
+
+    private void unloadDependencies() {
+      AssetManager assets = dependencyAssets;
+      dependencyAssets = null;
+      AssetDescriptor[] loaded = loadedDependencies.toArray(AssetDescriptor.class);
+      loadedDependencies.clear();
+      try (Disposal cleanup = new Disposal()) {
+        // AssetManager 1.10 unload(active-name) cancels the active task, even when
+        // several queued consumers share that name. Drain submitted loads first so
+        // each unload releases one reference rather than repeatedly cancelling one task.
+        for (AssetDescriptor asset : loaded) {
+          cleanup.run(() -> {
+            if (assets.contains(asset.fileName) && !assets.isLoaded(asset.fileName)) {
+              assets.finishLoadingAsset(asset);
+            }
+          });
+        }
+        for (AssetDescriptor asset : loaded) {
+          cleanup.run(() -> {
+            if (assets.contains(asset.fileName)) assets.unload(asset.fileName);
+          });
+        }
+      }
     }
 
     void finishLoading() {
+      AssetManager assets = java.util.Objects.requireNonNull(dependencyAssets, "Zone.load must precede finishLoading");
       int type = this.type.Id;
       DT1s dt1s = map.dt1s.get(type);
       if (dt1s == null) map.dt1s.put(type, dt1s = new DT1s());
@@ -2310,9 +2363,9 @@ public class Map implements Disposable {
       Array<AssetDescriptor> deps = getDependencies();
       int dt1Count = 0;
       for (AssetDescriptor asset : deps) {
-        Riiablo.assets.finishLoadingAsset(asset);
+        assets.finishLoadingAsset(asset);
         if (asset.type == DT1.class) {
-          DT1 dt1 = (DT1) Riiablo.assets.get(asset);
+          DT1 dt1 = (DT1) assets.get(asset);
           dt1s.add(dt1, asset.fileName);
           dt1Count++;
           if (DEBUG_BUILD) {
@@ -2389,7 +2442,7 @@ public class Map implements Disposable {
             continue;
           }
 
-          preset.finishLoading();
+          preset.finishLoading(dependencyAssets);
           // Native non-town layers/units are exported below; copying the
           // old compatibility DS1 here overlays a different room layout.
           if (nativeTileGrid == null || town) preset.copyTo(this, gridX, gridY);
@@ -3051,9 +3104,9 @@ public class Map implements Disposable {
       return dependencies;
     }
 
-    DS1 finishLoading() {
-      assert Riiablo.assets.isLoaded(ds1Descriptor) : ds1Path + " should have been loaded by parent Zone";
-      return ds1 = Riiablo.assets.get(ds1Descriptor);
+    DS1 finishLoading(AssetManager assets) {
+      assert assets.isLoaded(ds1Descriptor) : ds1Path + " should have been loaded by parent Zone";
+      return ds1 = assets.get(ds1Descriptor);
     }
 
     void copyTo(Zone zone, int tx, int ty) {
