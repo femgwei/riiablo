@@ -1,5 +1,10 @@
 # 当前 Chat 维护状态
 
+范围纠正：当前优先同步D2MOO最新增量，暂停完整寻路替换扩展。最新分支测试工具第一批：
+Java测试专用bin记录读取/uint32随机fixture工具；Native hook/DLL地址不伪装移植，VisitorFramework待核销。
+完整提交清单及状态见docs/d2moo-upstream-remaining-2026-10-16.md；此前50批寻路记录为历史进度。
+测试工具定向4项/1类通过，失败/错误/跳过0；core/build/upstream-tools-01.log，无生产逻辑变动。
+
 第五十批：捕获真实NativeUnitFlags.IS_REVIVE，元数据/分配碰撞新增无bool入口，缺失monster flags拒绝。
 新增4项验证bit来源/冻结/未知/表规则和Wraith优先级，显式bool入口保留；生产仍A*，见handoff顶部。
 完整626项/53类通过，失败/错误/跳过0；core/build/round50-full.log。

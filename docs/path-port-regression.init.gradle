@@ -17,6 +17,7 @@ gradle.projectsEvaluated {
     if (scope != 'path') throw new GradleException('Invalid pathTestScope (expected path)')
     core.tasks.named('compileTestJava') {
       include 'com/d2moo/common/path/**', 'com/d2moo/common/collision/**', 'com/riiablo/RiiabloTest.java'
+      include 'com/d2moo/testutil/**'
       ['UnitCollisionGridTest', 'DynamicUnitCollisionSystemTest', 'PathfinderTest',
        'PathfinderRecoveryTargetTest', 'PathfinderRoomBoundaryTest', 'PlayerGroundPathTest',
        'NativeSeamCollisionTest', 'ObjectCollisionUpdaterTest', 'WhirlwindCollisionTest',

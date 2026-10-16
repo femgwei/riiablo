@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 最新上游增量：测试工具第一批
+
+- 当前目标为上游增量同步，暂停以完整替换生产寻路作为默认工作。
+- master=0c0bbd1；新增test_utilities/visitor_framework分支合计17个独立提交，非寻路新算法。
+- Java测试层移植aec1395 bin记录读取及da15a17 uint32随机fixture能力；C++/DLL专属工具分类记录。
+- VisitorFramework9项仍待核销；状态以docs/d2moo-upstream-remaining-2026-10-16.md为准。
+- 测试工具定向4项/1类通过，失败/错误/跳过0；core/build/upstream-tools-01.log，无生产逻辑变动。
+
 ## 2026-10-16 寻路第五十批（生产适配仍PARTIAL）
 
 - [x] 真实NativeUnitFlags.IS_REVIVE快照接入town/pattern及allocation便利入口，缺失拒绝，不用复活经历代替。
