@@ -1,0 +1,15 @@
+param([string]$SourceRoot='build/iron-maiden-formulas-source',[switch]$Repaired)
+$ErrorActionPreference='Stop'
+if(Test-Path $SourceRoot){throw 'Source exists'}
+$base=(Get-Content "$PSScriptRoot/source-base-sha.txt" -Raw).Trim()
+if(Test-Path "$SourceRoot.zip"){throw 'Archive exists'}
+& git archive --format=zip "--output=$SourceRoot.zip" $base
+if($LASTEXITCODE -ne 0){throw 'Archive failed'}
+Expand-Archive -LiteralPath "$SourceRoot.zip" -DestinationPath $SourceRoot
+Copy-Item core/src/test/java/com/riiablo/engine/server/NecromancerCurseIntegrationTest.java "$SourceRoot/core/src/test/java/com/riiablo/engine/server/"
+Copy-Item core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java "$SourceRoot/core/src/test/java/com/riiablo/engine/server/"
+if($Repaired){Copy-Item core/src/main/java/com/riiablo/engine/server/StateUpdater.java "$SourceRoot/core/src/main/java/com/riiablo/engine/server/"}
+if($Repaired){
+  Copy-Item core/src/main/java/com/riiablo/engine/server/skill/NecromancerSkills.java "$SourceRoot/core/src/main/java/com/riiablo/engine/server/skill/"
+  Copy-Item core/src/test/java/com/riiablo/engine/server/NativeNecromancerCurseDataTest.java "$SourceRoot/core/src/test/java/com/riiablo/engine/server/"
+}

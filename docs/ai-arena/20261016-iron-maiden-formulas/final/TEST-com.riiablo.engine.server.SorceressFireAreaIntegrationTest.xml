@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-16T00:59:52" hostname="DESKTOP-7GGAVHU" time="0.015">
+  <properties/>
+  <testcase name="rateHitBelowOneHpDies()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.003"/>
+  <testcase name="rateZeroDamageDoesNotKillFractionalLife()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="blazeStateEmitsOnlyAfterActualMovementAndKeepsFractionalDamage()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.003"/>
+  <testcase name="infernoSrvDoEmitsOneFractionalSkillOwnedStreamMissile()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="blazeTrailDamagesAnOverlappingTargetOnItsFirstGameFrame()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="fireWallCreatesOpposedMakersCentreAndDamagingChildSegments()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.002"/>
+  <testcase name="rateFullAbsorbDoesNotHealDeathDelay()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="rateHitAtOneHpSurvives()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="rateAbsorbClampsToMaximum()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <testcase name="rateFullAbsorbHeals()" classname="com.riiablo.engine.server.SorceressFireAreaIntegrationTest" time="0.001"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=46 target=-1 srvDoFunc=23 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=46 target=-1 srvDoFunc=23 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=51 target=-1 srvDoFunc=24 cltDoFunc=26
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=41 target=-1 srvDoFunc=19 cltDoFunc=24
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

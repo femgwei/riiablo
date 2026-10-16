@@ -1,0 +1,10 @@
+Baseline: 15 tests, 2 expected Iron Maiden formula-selection failures.
+final: 356 tests, 0 failures/errors/skips.
+repeat: 356 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 5FAD3067159F465876F19A0C3708CD5B91330AE2E0EF612C6C2A336D72A34D1D core/src/main/java/com/riiablo/engine/server/StateUpdater.java
+SHA256 697DB33389FB7A6A990A0E1675A6BC0D70E204C36174BFD27A2AE7E3550D8412 core/src/main/java/com/riiablo/engine/server/skill/NecromancerSkills.java
+SHA256 DB0575E4E0C503B0EF252C9ABA87A5A95318428951BA746511AB20CEF4E799AF core/src/test/java/com/riiablo/engine/server/NativeNecromancerCurseDataTest.java
+SHA256 1C403FE9522C9C5628FB7F69686BEE8E57F4A10637586F506BC3462ACFB13394 core/src/test/java/com/riiablo/engine/server/NecromancerCurseIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Iron Maiden formula branch selection verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

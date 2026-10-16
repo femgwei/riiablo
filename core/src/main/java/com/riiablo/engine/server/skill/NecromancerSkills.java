@@ -880,11 +880,13 @@ public final class NecromancerSkills {
         skill == null ? null : skill.calc1, skill, Math.max(1, skillLevel)));
   }
 
-  /** D2Game reduces reflected thorns damage to one eighth against players and hirelings. */
-  public static int ironMaidenPercent(
-      Skills.Entry skill, int skillLevel, boolean attackerPlayerOrHireling) {
-    int percent = reactiveCursePercent(skill, skillLevel);
-    return attackerPlayerOrHireling ? (percent + 4) / 8 : percent;
+  /** Native EventFunc04 selects calc1/2/3 using both original combatants. */
+  public static int ironMaidenPercent(Skills.Entry skill, int skillLevel,
+      boolean attackerMonsterOrHireling, boolean defenderMonster) {
+    if (skill == null) return 0;
+    String formula = !attackerMonsterOrHireling ? skill.calc1
+        : defenderMonster ? skill.calc2 : skill.calc3;
+    return Math.max(0, SkillFormula.evaluate(formula, skill, Math.max(1, skillLevel)));
   }
 
   /** Applies one native SrvDo030 curse layer from the row's aura stat columns. */

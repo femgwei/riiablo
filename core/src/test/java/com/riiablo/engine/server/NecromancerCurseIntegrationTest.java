@@ -17,6 +17,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -38,9 +39,46 @@ import org.junit.jupiter.api.Test;
 
 /** ECS contract for target-centred, server-authoritative Necromancer curses. */
 class NecromancerCurseIntegrationTest extends RiiabloTest {
-  @Test void ironMaidenFractionalRemainderDies() { ironBoundary(40f + 255f / 256, 0f, false, false); }
-  @Test void ironMaidenExactlyOneLifeSurvives() { ironBoundary(41f, 1f, false, false); }
-  @Test void ironMaidenAboveOneLifeSurvives() { ironBoundary(41f + 1f / 256, 1f + 1f / 256, false, false); }
+  @Test void ironMaidenSelectsFormulaForBothCombatants() {
+    for (int attackerType = 0; attackerType < 3; attackerType++) {
+      for (boolean defenderMonster : new boolean[] {false, true}) {
+        NoopFactory factory = new NoopFactory();
+        IronProbe probe = new IronProbe();
+        EventSystem events = new EventSystem();
+        World world = new World(new WorldConfigurationBuilder()
+            .with(events, probe, new StateUpdater(), factory).build()
+            .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+        try {
+          int attacker = attackerType == 0 ? player(world, "attacker", 0, 0)
+              : monster(world, 0, 0, 0);
+          if (attackerType == 2) world.getMapper(Mercenary.class).create(attacker);
+          int defender = defenderMonster ? monster(world, 1, 0, 0)
+              : player(world, "defender", 1, 0);
+          UnitStates curse = world.getMapper(UnitStates.class).has(attacker)
+              ? world.getMapper(UnitStates.class).get(attacker)
+              : world.getMapper(UnitStates.class).create(attacker).init(attacker);
+          com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
+          NecromancerSkills.applyCurse(curse.stateList, Riiablo.files.States, skill,
+              1, defender, Riiablo.files.DifficultyLevels.get(0),
+              world.getMapper(AttributesWrapper.class).get(attacker).attrs, attackerType != 1);
+          String formula = attackerType == 0 ? skill.calc1 : defenderMonster ? skill.calc2 : skill.calc3;
+          int percent = SkillFormula.evaluate(formula, skill, 1);
+          int expected = 20 * percent / 100;
+          if (attackerType == 0 && !defenderMonster) expected = expected * 17 / 100;
+          System.out.println("IronMaiden attackerType=" + attackerType + " defenderMonster="
+              + defenderMonster + " formula=" + formula + " percent=" + percent);
+          events.dispatch(DamageEvent.obtainMelee(attacker, defender, 20, 20));
+          assertEquals(expected, probe.physical, .0001f);
+          assertEquals(expected > 0 ? 1 : 0, probe.reactive);
+          assertEquals(100f - expected, world.getMapper(AttributesWrapper.class)
+              .get(attacker).attrs.get(Stat.hitpoints).asFixed(), .0001f);
+        } finally { world.dispose(); }
+      }
+    }
+  }
+  @Test void ironMaidenFractionalRemainderDies() { ironBoundary(10f + 255f / 256, 0f, false, false); }
+  @Test void ironMaidenExactlyOneLifeSurvives() { ironBoundary(11f, 1f, false, false); }
+  @Test void ironMaidenAboveOneLifeSurvives() { ironBoundary(11f + 1f / 256, 1f + 1f / 256, false, false); }
   @Test void cancelledIronMaidenPreservesFractionalLife() { ironBoundary(.5f, .5f, true, false); }
   @Test void immuneIronMaidenPreservesFractionalLife() { ironBoundary(.5f, .5f, false, true); }
 
@@ -67,7 +105,7 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
           .get(Stat.hitpoints).asFixed(), .0001f);
       assertEquals(immune ? 0 : 1, probe.reactive);
       assertEquals(expected == 0f ? 1 : 0, probe.deaths);
-      if (!immune) assertEquals(40f, probe.physical);
+      if (!immune) assertEquals(10f, probe.physical);
       if (expected == 0f) {
         assertEquals(defender, probe.killer);
         assertEquals(attacker, probe.victim);
@@ -119,7 +157,7 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       // Explicit melee event: tests cast/state/reaction, not range or hit rolls.
       events.dispatch(DamageEvent.obtainMelee(attacker, defender, 20, 20));
       boolean reflects = curseAttacker && !snapshot;
-      assertEquals(reflects ? 60f : 100f, world.getMapper(AttributesWrapper.class)
+      assertEquals(reflects ? 90f : 100f, world.getMapper(AttributesWrapper.class)
           .get(attacker).attrs.get(Stat.hitpoints).asFixed());
       assertEquals(reflects ? 1 : 0, probe.reactive);
       events.dispatch(DamageEvent.obtainMissile(attacker, defender, 20, 20, null));
@@ -329,11 +367,11 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.base().put(Stat.maxhp, 100);
       world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.reset();
       eventSystem.dispatch(DamageEvent.obtainMelee(monsterAttacker, reflectedTarget, 20, 20));
-      assertEquals(60, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
-          .get(Stat.hitpoints).asInt(), "Iron Maiden level 1 reflects calc1=200% physical damage");
+      assertEquals(90, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
+          .get(Stat.hitpoints).asInt(), "monster attacker uses calc2=50% physical damage");
       eventSystem.dispatch(DamageEvent.obtainMissile(
           monsterAttacker, reflectedTarget, 20, 20, null));
-      assertEquals(60, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
+      assertEquals(90, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
           .get(Stat.hitpoints).asInt(), "Iron Maiden must not reflect missile damage");
 
       attackerAttrs.base().put(Stat.hitpoints, 100);
@@ -341,8 +379,8 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       NecromancerSkills.applyCurse(states(world, attacker), Riiablo.files.States,
           iron, 1, reflectedTarget, Riiablo.files.DifficultyLevels.get(0), attackerAttrs, false);
       eventSystem.dispatch(DamageEvent.obtainMelee(attacker, reflectedTarget, 20, 20));
-      assertEquals(95, attackerAttrs.get(Stat.hitpoints).asInt(),
-          "native player/hireling Iron Maiden reflection must use the one-eighth divisor");
+      assertEquals(60, attackerAttrs.get(Stat.hitpoints).asInt(),
+          "player attacker must use the native calc1 branch");
     } finally {
       world.dispose();
     }

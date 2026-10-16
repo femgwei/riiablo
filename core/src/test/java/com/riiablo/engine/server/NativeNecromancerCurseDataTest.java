@@ -70,8 +70,20 @@ class NativeNecromancerCurseDataTest extends RiiabloTest {
     Skills.Entry ironMaiden = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
     Skills.Entry lifeTap = Riiablo.files.skills.get(SkillId.LIFE_TAP);
     assertEquals(200, NecromancerSkills.reactiveCursePercent(ironMaiden, 1));
-    assertEquals(25, NecromancerSkills.ironMaidenPercent(ironMaiden, 1, true));
-    assertEquals(200, NecromancerSkills.ironMaidenPercent(ironMaiden, 1, false));
+    assertEquals(200, NecromancerSkills.ironMaidenPercent(ironMaiden, 1, false, true));
+    assertEquals(SkillFormula.evaluate(ironMaiden.calc2, ironMaiden, 1),
+        NecromancerSkills.ironMaidenPercent(ironMaiden, 1, true, true));
+    assertEquals(SkillFormula.evaluate(ironMaiden.calc3, ironMaiden, 1),
+        NecromancerSkills.ironMaidenPercent(ironMaiden, 1, true, false));
     assertEquals(50, NecromancerSkills.reactiveCursePercent(lifeTap, 1));
+  }
+
+  @Test void ironMaidenFormulaBranchesRemainDistinct() {
+    Skills.Entry skill = new Skills.Entry();
+    skill.calc1 = "101"; skill.calc2 = "202"; skill.calc3 = "303";
+    assertEquals(101, NecromancerSkills.ironMaidenPercent(skill, 1, false, false));
+    assertEquals(101, NecromancerSkills.ironMaidenPercent(skill, 1, false, true));
+    assertEquals(202, NecromancerSkills.ironMaidenPercent(skill, 1, true, true));
+    assertEquals(303, NecromancerSkills.ironMaidenPercent(skill, 1, true, false));
   }
 }

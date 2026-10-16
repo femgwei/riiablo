@@ -843,9 +843,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyIronMaiden(DamageEvent event, UnitState state, float physicalDamage) {
     Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
         ? Riiablo.files.skills.get(state.skillId) : null;
-    boolean playerOrHireling = mPlayer.has(event.attacker) || mMercenary.has(event.attacker);
     int percent = NecromancerSkills.ironMaidenPercent(
-        skill, state.level, playerOrHireling);
+        skill, state.level, mMonster.has(event.attacker) || mMercenary.has(event.attacker),
+        mMonster.has(event.victim) || mMercenary.has(event.victim));
     int raw = (int) Math.floor(physicalDamage * percent / 100f);
     if (raw <= 0) return;
 
