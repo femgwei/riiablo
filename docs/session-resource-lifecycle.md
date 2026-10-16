@@ -896,3 +896,104 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 CreateCharacterScreen / CharacterCreateButton，继续按明确归属补测试；共享组件/
 覆盖动画/区域标题引用递增、连接交接、控制台与异步日志、完整构造失败回滚、
 跨 Act/加载中退出、长期同宿主压力及人工画面/操作/联机/性能验收仍待。
+
+## 第十二批：创建角色页与职业控件
+
+本批只收口 CreateCharacterScreen / CharacterCreateButton 的页面、动画、声音与
+可见订阅；不改 initializeNewCharacter 的暗黑属性/装备/技能规则、D2S 写入过程，
+也不改变本地 GameEntryLoadingScreen 或在线 onCreated 回调的导航与连接交接。
+不访问/修改原版 exe/dll，本批没有需要重新推断的暗黑机制。
+
+创建页复用 MenuScreenResources，构造中只创建一次页面、TextField、七职业控件、
+两个按钮及火焰动画。已成功构造但尚未挂树的职业控件立刻登记，后续任意创建失败
+会释放此前已登记的资源；每次 show 不再重复创建 Actor，hide 保留职业/名称和全部
+图形引用。最终释放七职业、按钮声音、Stage（借用宿主 batch）和五种页面资产，
+包括旧实现漏掉的 textbox.dc6。删除未执行的旧后台线程/场景绘制注释，不恢复这些
+未实现功能，也不泛化递归 dispose 任意 Actor。
+
+输入与布局监听分别绑定构造时的 input / Client；重复 show/hide 幂等，显示订阅失败
+回滚已有订阅，某项解绑异常/Error 仍继续其他清理。隐藏和最终销毁先禁止旧页面
+回调，解除输入/布局监听，禁用各职业交互并只停止其自身播放；姓名框失焦并通过
+libGDX 默认 keyUp 取消按键重复，失焦失败仍尝试取消。隐藏/销毁后 render、旧按键、
+旧确认按钮与旧布局回调不再导航、写存档或绘制。没有重写通用 TextField/全局 Timer；
+libGDX 的光标闪烁任务在 Actor 退出 Stage 后由其原回调自行取消，不声称同步回收
+全部 UI Timer，隐藏保留 Stage 时也不声称闪烁任务已同步停止。
+
+职业控件使用原 AssetManager + AssetReferenceScope，每个成功提交的不同描述符
+只登记一次，loadRemainingAssets 可重复调用，也支持只构造初始 NU1 就销毁。
+公共 select/deselect 与悬停按需保证其剩余资源已提交，不依赖页面调用加载的时序；
+不改变职业特殊图层、动画混合、NU1/FW/NU3/BW 状态顺序。声音保存每次 play 返回
+的 ID，切换、隐藏及退出只 stop(id)，不对共享 Sound 调用无参数 stop。退出幂等，
+先禁止交互/动画回调并断开动画，再停止各自身播放与配对归还资产；某项 stop 抛出
+异常/Error 后仍继续其余清理，旧动画完成回调不会重新加载已释放资产。
+
+专项在 MenuScreenLifecycleTest 中新增 28 项（原 45 + 28 = 73）：七职业初始加载
+退出、七职业重复加载与选中/退回、共享音效播放 ID 和原 manager 保护、声音 stop
+Error、初始动画构造失败、旧事件/旧完成回调，以及创建页重复 show/hide 与名称/
+Actor 保留、未 show 退出、可见退出保护原宿主、第二职业构造失败、布局 attach
+回滚/重试、detach Error、Stage Error、隐藏旧页面回调，以及部分提交失败重试不
+重复已成功请求、外部消费者的 textbox 引用保护。使用真实页面/控件和
+AssetManager，Stage/动画/字体/GL/声音为替身，不替代人工操作/听感。
+首轮 build/create-resources-focused.log：135/135、6 类和三端编译通过，47s。
+
+新增 :desktop:offscreenCreateCharacterLifecycle，沿用前置菜单三轮及 120 秒子进程
+看门狗，在同一真实 Client 上反复三轮构造/隐藏恢复/最终清栈创建页。加载原版 MPQ，
+通过生产的职业/页面 ClickListener，配合真实 Animation.act 的确定性完成步推进七
+职业悬停、FW→NU3、BW→NU1；不调用确认按钮，不写存档、不发网络请求，也不
+代替真实鼠标命中/逐帧时序、外观或声音人工验收。只读反射观察资产/布局清单，
+清栈后核对全部引用、输入、布局监听、Stage 及本批 DC6 GL 纹理和原始/上传 Pixmap。
+首轮 build/create-resources-gl.log 因 getDeclaredField 只查离屏 Client 子类而找不到
+父类的 screenBoundsListeners，退出码 1，38s；保留失败日志，探针改为沿继承链查找，
+不删除或放宽布局监听及任何资源断言。
+
+第二轮 build/create-resources-focused-02.log：135/135（新增前 26 项时）、6 类与
+创建页 GL 三轮全部通过，BUILD SUCCESSFUL，1m3s；每轮七职业的 14 次完成状态
+转换、47 个 DC6，1545 张纹理删除、1557 个原始/上传 Pixmap 释放，全部引用与输入/
+布局监听回基线；选中职业、名称、Actor 数量在隐藏恢复后保持，Stage 由 Client 主动
+清空。前置菜单三轮、MENU_SHUTDOWN、Client 最终共享 GL 释放也通过。随后再补
+两项边界测试进入最终扩大回归，不把尚未运行的测试计入该次 135 项结果。
+
+本批最小复跑（73 项菜单/选择/创建生命周期 + 三轮创建页真实 GL）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test --tests com.riiablo.screen.MenuScreenLifecycleTest `
+  :desktop:offscreenCreateCharacterLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/create-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/create-resources-recheck' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 第十二批最终回归
+
+- 扩大定向 JUnit 441/441、52 类：core 399/399（45 类），D2GS 42/42（7 类），
+  失败/错误/跳过均 0；三端编译通过。本次使用第十一批的筛选范围，加本批 28 项；
+  仍排除独立环境的 MercenaryHudAssetProbeTest 及既有玩法/AI 基线失败，不宣称
+  全仓测试全绿，也未降低任何既有资源断言。
+- 创建页同一 Client 三轮全部通过，每轮七职业、47 个 DC6、1545 张纹理删除、
+  1557 个原始/上传 Pixmap 释放；全部资产引用、输入和布局监听回基线，隐藏/恢复
+  保留职业/名称且不新增 Actor，Stage 由生产 Client 主动清空。上一批选择页
+  C1V1 七职业组也通过：61 个 DCC、刷新/最终退出各 14176 张纹理释放与像素
+  释放、全部引用回基线。本次只复查选择页一组，不把上批九组冒充本次再次全跑。
+- 两个菜单进程的前置三轮均通过，共 6 轮菜单、2 次 MENU_SHUTDOWN；独立地图
+  三轮仍为 44 tiles、引用 4→2→1→0。生产会话三轮仍每轮 58 个 DT1 / 2626 张
+  地图纹理、按钮引用 0/129/138/0、8 种面板资产回基线、3 张私有纹理释放，
+  entry/game 已由 Client 主动释放；单轮营地三帧、总计 4 次 Client 共享最终 GL
+  检查（两程序/两纹理删除、assets=0、输入/别名/流恢复）、D2GS 25Hz
+  step=0.04、Throw 顺序及伤害 1000→992 均同一命令通过。
+- 逐项会话清单种类 58/58/58，三轮路径相同；Gleam / NPCSpeechBalloon /
+  ShrineManaRegen / A1L1 仍 refs=1→2→3，MENU/boxpieces 仍 12→24→36。
+  本批未修改这些边界，种类稳定和最终 assets=0 都不能代替宿主存活时的逐项引用
+  归位。没有把前批不同运行中的声音缓存变化当成本批结果。
+- 日志 build/create-resources-regression.log；报告目录
+  build/create-resources-regression/ 包含 creation-cycle-N.txt、
+  character-cycle-1-variant-1.txt、cycle-N-lifecycle.txt 与
+  cycle-N-remaining-assets.txt。BUILD SUCCESSFUL，退出码 0，4m39s，
+  无 ERROR/Exception/OFFSCREEN_FATAL。保留首轮探针失败及原有地图/分配/表 Key
+  诊断、不可用音乐跳过记录。SIM_SLOW=62.31/54.69/96.62/65.18ms，预算 40ms，
+  仍不作性能验收；自动探针也不替代人工画面、真实输入、声音、联机或存档验收。
+
+总体七批子系统装配完成，资源第十二批完成但资源阶段未结束。下一批优先修复
+已确认的覆盖动画/区域标题/共享框引用累积，再继续控制台与异步日志、连接交接其余
+边界、完整构造失败回滚、跨 Act/加载中退出及长期压力；人工与性能验收继续保留。

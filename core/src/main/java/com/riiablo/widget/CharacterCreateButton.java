@@ -2,11 +2,13 @@ package com.riiablo.widget;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Disposable;
@@ -15,9 +17,20 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.util.BBox;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 public class CharacterCreateButton extends Widget implements Disposable {
   private static final String TAG = "CharButton";
+  private final AssetManager assets;
+  private final AssetReferenceScope references;
+  private final Set<String> requested = new HashSet<>();
+  private boolean disposed;
+  private boolean interactionEnabled = true;
+  private long selectId = -1, deselectId = -1;
 
   public enum State { NU1, FW, NU3, BW }
 
@@ -50,7 +63,13 @@ public class CharacterCreateButton extends Widget implements Disposable {
   private final ClickListener clickListener;
 
   public CharacterCreateButton(final CharacterClass charClass) {
-    this.charClass = charClass;
+    this(charClass, Riiablo.assets);
+  }
+
+  public CharacterCreateButton(final CharacterClass charClass, AssetManager assets) {
+    this.charClass = Objects.requireNonNull(charClass, "charClass");
+    this.assets = Objects.requireNonNull(assets, "assets");
+    references = new AssetReferenceScope(assets);
     bwDesc = new AssetDescriptor<>("data\\global\\ui\\FrontEnd\\" + charClass + "\\" + charClass.shortName + "bw.dc6", DC6.class);
     bwsDesc = new AssetDescriptor<>("data\\global\\ui\\FrontEnd\\" + charClass + "\\" + charClass.shortName + "bws.dc6", DC6.class);
     fwDesc = new AssetDescriptor<>("data\\global\\ui\\FrontEnd\\" + charClass + "\\" + charClass.shortName + "fw.dc6", DC6.class);
@@ -63,85 +82,129 @@ public class CharacterCreateButton extends Widget implements Disposable {
     selectDesc = new AssetDescriptor<>("data\\global\\sfx\\cursor\\intro\\" + charClass + " select.wav", Sound.class);
     deselectDesc = new AssetDescriptor<>("data\\global\\sfx\\cursor\\intro\\" + charClass + " deselect.wav", Sound.class);
 
-    Riiablo.assets.load(nu1Desc);
+    try {
+      load(nu1Desc);
 
-    addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
-      @Override
-      public void clicked(InputEvent event, float x, float y) {
-        switch (state) {
-          case NU1:
-            select();
-            break;
-          case NU3:
-            deselect();
-            break;
-          default:
-            // do nothing
-        }
-      }
-
-      @Override
-      public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-        if (state == State.NU1) {
-          if (nu2 == null) {
-            Riiablo.assets.finishLoadingAsset(nu2Desc);
-            nu2 = Animation.newAnimation(Riiablo.assets.get(nu2Desc));
-            nu2.setFrameDuration(1 / 16f);
+      addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          if (!canInteract()) return;
+          switch (state) {
+            case NU1:
+              select();
+              break;
+            case NU3:
+              deselect();
+              break;
+            default:
+              // do nothing
           }
-          setActive(nu2);
-          nu2.setFrame(nu1.getFrame());
         }
-      }
 
-      @Override
-      public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-        if (state == State.NU1) {
-          assert nu1 != null;
-          setActive(nu1);
-          nu1.setFrame(nu2.getFrame());
+        @Override
+        public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+          if (!canInteract()) return;
+          if (state == State.NU1) {
+            loadRemainingAssets();
+            if (nu2 == null) {
+              assets.finishLoadingAsset(nu2Desc);
+              nu2 = Animation.newAnimation(assets.get(nu2Desc));
+              nu2.setFrameDuration(1 / 16f);
+            }
+            setActive(nu2);
+            nu2.setFrame(nu1.getFrame());
+          }
         }
-      }
-    });
 
-    Riiablo.assets.finishLoadingAsset(nu1Desc);
-    nu1 = Animation.newAnimation(Riiablo.assets.get(nu1Desc));
-    nu1.setFrameDuration(1 / 16f);
-    setActive(nu1);
+        @Override
+        public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+          if (!canInteract()) return;
+          if (state == State.NU1) {
+            setActive(nu1);
+            if (nu2 != null) nu1.setFrame(nu2.getFrame());
+          }
+        }
+      });
+
+      assets.finishLoadingAsset(nu1Desc);
+      nu1 = Animation.newAnimation(assets.get(nu1Desc));
+      nu1.setFrameDuration(1 / 16f);
+      setActive(nu1);
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); } catch (RuntimeException | Error cleanup) {
+        if (failure != cleanup) failure.addSuppressed(cleanup);
+      }
+      throw failure;
+    }
+  }
+
+  private void load(AssetDescriptor descriptor) {
+    if (requested.contains(descriptor.fileName)) return;
+    references.load(descriptor);
+    requested.add(descriptor.fileName);
   }
 
   public void loadRemainingAssets() {
-    Riiablo.assets.load(bwDesc);
-    Riiablo.assets.load(fwDesc);
-    Riiablo.assets.load(nu2Desc);
-    Riiablo.assets.load(nu3Desc);
-    if (charClass.bws)  Riiablo.assets.load(bwsDesc);
-    if (charClass.fws)  Riiablo.assets.load(fwsDesc);
-    if (charClass.nu3s) Riiablo.assets.load(nu3sDesc);
+    if (disposed) throw new IllegalStateException("character button is disposed");
+    load(bwDesc);
+    load(fwDesc);
+    load(nu2Desc);
+    load(nu3Desc);
+    if (charClass.bws)  load(bwsDesc);
+    if (charClass.fws)  load(fwsDesc);
+    if (charClass.nu3s) load(nu3sDesc);
 
-    Riiablo.assets.load(selectDesc);
-    Riiablo.assets.load(deselectDesc);
+    load(selectDesc);
+    load(deselectDesc);
+  }
+
+  private boolean canInteract() { return !disposed && interactionEnabled; }
+
+  public void setInteractionEnabled(boolean enabled) {
+    if (disposed) return;
+    interactionEnabled = enabled;
+    setTouchable(enabled ? Touchable.enabled : Touchable.disabled);
+    if (!enabled) {
+      clickListener.cancel();
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.run(this::stopSelect);
+        cleanup.run(this::stopDeselect);
+      }
+    }
+  }
+
+  private void stopSelect() {
+    long id = selectId;
+    selectId = -1;
+    if (select != null && id != -1) select.stop(id);
+  }
+
+  private void stopDeselect() {
+    long id = deselectId;
+    deselectId = -1;
+    if (deselect != null && id != -1) deselect.stop(id);
   }
 
   @Override
   public void dispose() {
-    if (select != null) select.stop();
-    if (deselect != null) deselect.stop();
-
-    Riiablo.assets.unload(bwDesc.fileName);
-    Riiablo.assets.unload(fwDesc.fileName);
-    Riiablo.assets.unload(nu1Desc.fileName);
-    Riiablo.assets.unload(nu2Desc.fileName);
-    Riiablo.assets.unload(nu3Desc.fileName);
-    if (charClass.bws)  Riiablo.assets.unload(bwsDesc.fileName);
-    if (charClass.fws)  Riiablo.assets.unload(fwsDesc.fileName);
-    if (charClass.nu3s) Riiablo.assets.unload(nu3sDesc.fileName);
-
-    Riiablo.assets.unload(selectDesc.fileName);
-    Riiablo.assets.unload(deselectDesc.fileName);
+    if (disposed) return;
+    disposed = true;
+    interactionEnabled = false;
+    active = nu1 = nu2 = nu3 = fw = bw = null;
+    setTouchable(Touchable.disabled);
+    requested.clear();
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::stopSelect);
+      cleanup.run(this::stopDeselect);
+      cleanup.dispose(references);
+    } finally {
+      select = deselect = null;
+    }
   }
 
   @Override
   public void draw(Batch batch, float a) {
+    if (disposed) return;
     active.act();
     BBox offset = active.getBox();
     active.draw(batch, getX() - offset.xMin, getY() + offset.yMax);
@@ -149,6 +212,7 @@ public class CharacterCreateButton extends Widget implements Disposable {
 
   @Override
   public void drawDebug(ShapeRenderer shapes) {
+    if (disposed) return;
     if (state == State.NU1 || state == State.NU3) {
       super.drawDebug(shapes);
     }
@@ -166,6 +230,7 @@ public class CharacterCreateButton extends Widget implements Disposable {
 
   @Override
   public void setPosition(float x, float y) {
+    if (disposed) return;
     this.x = x;
     this.y = y;
     BBox offset = active.getBox();
@@ -185,28 +250,31 @@ public class CharacterCreateButton extends Widget implements Disposable {
   }
 
   public void select() {
+    if (!canInteract()) return;
+    loadRemainingAssets();
     state = State.FW;
     if (fw == null) {
-      Riiablo.assets.finishLoadingAsset(fwDesc);
+      assets.finishLoadingAsset(fwDesc);
       Animation.Builder builder = Animation.builder()
-          .layer(Riiablo.assets.get(fwDesc));
+          .layer(assets.get(fwDesc));
       if (charClass.fws) {
-        Riiablo.assets.finishLoadingAsset(fwsDesc);
-        builder.layer(Riiablo.assets.get(fwsDesc), charClass.blendSpecial);
+        assets.finishLoadingAsset(fwsDesc);
+        builder.layer(assets.get(fwsDesc), charClass.blendSpecial);
       }
       fw = builder.build();
       fw.setMode(Animation.Mode.CLAMP);
       fw.addAnimationListener(-1, new Animation.AnimationListener() {
         @Override
         public void onTrigger(Animation fw, int frame) {
+          if (disposed) return;
           state = State.NU3;
           if (nu3 == null) {
-            Riiablo.assets.finishLoadingAsset(nu3Desc);
+            assets.finishLoadingAsset(nu3Desc);
             Animation.Builder builder = Animation.builder()
-                .layer(Riiablo.assets.get(nu3Desc));
+                .layer(assets.get(nu3Desc));
             if (charClass.nu3s) {
-              Riiablo.assets.finishLoadingAsset(nu3sDesc);
-              builder.layer(Riiablo.assets.get(nu3sDesc), charClass.blendSpecial);
+              assets.finishLoadingAsset(nu3sDesc);
+              builder.layer(assets.get(nu3sDesc), charClass.blendSpecial);
             }
             nu3 = builder.build();
           }
@@ -215,33 +283,36 @@ public class CharacterCreateButton extends Widget implements Disposable {
       });
     }
     setActive(fw);
-    if (deselect != null) deselect.stop();
+    stopSelect();
+    stopDeselect();
     if (select == null) {
-      Riiablo.assets.finishLoadingAsset(selectDesc);
-      select = Riiablo.assets.get(selectDesc);
+      assets.finishLoadingAsset(selectDesc);
+      select = assets.get(selectDesc);
     }
-    select.play();
+    selectId = select.play();
     CharacterCreateButton.super.toFront();
   }
 
   public void deselect() {
+    if (!canInteract()) return;
+    loadRemainingAssets();
     state = State.BW;
     if (bw == null) {
-      Riiablo.assets.finishLoadingAsset(bwDesc);
+      assets.finishLoadingAsset(bwDesc);
       Animation.Builder builder = Animation.builder()
-          .layer(Riiablo.assets.get(bwDesc));
+          .layer(assets.get(bwDesc));
       if (charClass.bws) {
-        Riiablo.assets.finishLoadingAsset(bwsDesc);
-        builder.layer(Riiablo.assets.get(bwsDesc), charClass.blendSpecial);
+        assets.finishLoadingAsset(bwsDesc);
+        builder.layer(assets.get(bwsDesc), charClass.blendSpecial);
       }
       bw = builder.build();
       bw.setMode(Animation.Mode.CLAMP);
       bw.addAnimationListener(-1, new Animation.AnimationListener() {
         @Override
         public void onTrigger(Animation bw, int frame) {
+          if (disposed) return;
           state = State.NU1;
-          if (clickListener.isOver()) {
-            assert nu2 != null;
+          if (clickListener.isOver() && nu2 != null) {
             setActive(nu2);
           } else {
             setActive(nu1);
@@ -250,11 +321,12 @@ public class CharacterCreateButton extends Widget implements Disposable {
       });
     }
     setActive(bw);
-    select.stop();
+    stopSelect();
+    stopDeselect();
     if (deselect == null) {
-      Riiablo.assets.finishLoadingAsset(deselectDesc);
-      deselect = Riiablo.assets.get(deselectDesc);
+      assets.finishLoadingAsset(deselectDesc);
+      deselect = assets.get(deselectDesc);
     }
-    deselect.play();
+    deselectId = deselect.play();
   }
 }

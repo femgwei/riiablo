@@ -101,6 +101,19 @@ task offscreenMenuLifecycle(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenCreateCharacterLifecycle(type: JavaExec) {
+  group = 'verification'
+  description = 'Verify seven creation widgets and three creation-page exits/re-entries on one real GL Client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/creation-lifecycle',
+       '--mode', 'menus', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  systemProperty 'riiablo.offscreen-creation-lifecycle', 'true'
+  ignoreExitValue = false
+}
+
 task offscreenCharacterLifecycle {
   group = 'verification'
   description = 'Verify all three selection variants three times, each seven-class group in an isolated JVM.'

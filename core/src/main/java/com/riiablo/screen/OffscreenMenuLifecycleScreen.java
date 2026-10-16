@@ -115,6 +115,9 @@ public final class OffscreenMenuLifecycleScreen extends ScreenAdapter {
     if (Boolean.getBoolean("riiablo.offscreen-character-lifecycle")) {
       OffscreenCharacterLifecycle.verify(output, this);
     }
+    if (Boolean.getBoolean("riiablo.offscreen-creation-lifecycle")) {
+      OffscreenCreateCharacterLifecycle.verify(output, this);
+    }
     // Exercise real backend order too: platform listeners retire before the active Client screen.
     MenuScreen terminalMenu = new MenuScreen();
     Riiablo.client.setScreen(terminalMenu);

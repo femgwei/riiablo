@@ -25,6 +25,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.I18NBundle;
 import com.riiablo.Client;
+import com.riiablo.CharacterClass;
 import com.riiablo.Colors;
 import com.riiablo.Fonts;
 import com.riiablo.Riiablo;
@@ -37,6 +38,9 @@ import com.riiablo.codec.StringTBLs;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.CharacterSelectButton;
+import com.riiablo.widget.CharacterCreateButton;
+import com.riiablo.widget.TextField;
+import com.riiablo.codec.util.BBox;
 import com.riiablo.entity.CharacterPreview;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.COFD2;
@@ -58,6 +62,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 
@@ -116,7 +121,7 @@ class MenuScreenLifecycleTest {
     when(font.getColor()).thenReturn(Color.WHITE);
     when(font.getRegions()).thenReturn(Array.with(region));
     when(font.newFontCache()).thenAnswer(call -> new BitmapFontCache(font));
-    Riiablo.fonts.font16 = Riiablo.fonts.fontformal12 = Riiablo.fonts.fontexocet10 = font;
+    Riiablo.fonts.font16 = Riiablo.fonts.font42 = Riiablo.fonts.fontformal12 = Riiablo.fonts.fontexocet10 = font;
     owner = new AssetManager(FileHandle::new, false);
     owner.setLoader(DC6.class, new SynchronousAssetLoader<DC6, AssetLoaderParameters<DC6>>(FileHandle::new) {
       @Override public DC6 load(AssetManager manager, String name, FileHandle file, AssetLoaderParameters<DC6> params) {
@@ -128,7 +133,11 @@ class MenuScreenLifecycleTest {
       @Override public Array<AssetDescriptor> getDependencies(String name, FileHandle file, AssetLoaderParameters<DC6> params) { return null; }
     });
     owner.setLoader(Sound.class, new SynchronousAssetLoader<Sound, AssetLoaderParameters<Sound>>(FileHandle::new) {
-      @Override public Sound load(AssetManager manager, String name, FileHandle file, AssetLoaderParameters<Sound> params) { return mock(Sound.class); }
+      @Override public Sound load(AssetManager manager, String name, FileHandle file, AssetLoaderParameters<Sound> params) {
+        Sound sound = mock(Sound.class);
+        when(sound.play()).thenReturn(11L, 22L, 33L);
+        return sound;
+      }
       @Override public Array<AssetDescriptor> getDependencies(String name, FileHandle file, AssetLoaderParameters<Sound> params) { return null; }
     });
     Riiablo.assets = owner;
@@ -539,6 +548,265 @@ class MenuScreenLifecycleTest {
     assertTrue(input.getProcessors().isEmpty());
     resources.dispose();
     verify(first).dispose();
+  }
+
+  @ParameterizedTest @EnumSource(CharacterClass.class)
+  void createButtonCanDisposeWithOnlyInitialAnimationLoaded(CharacterClass type) {
+    prepareCreateAnimations();
+    CharacterCreateButton button = new CharacterCreateButton(type);
+    assertEquals(1, owner.getLoadedAssets());
+    button.dispose(); button.dispose(); button.draw(batch, 1);
+    assertEquals(0, owner.getLoadedAssets());
+    assertThrows(IllegalStateException.class, button::loadRemainingAssets);
+  }
+
+  @ParameterizedTest @EnumSource(CharacterClass.class)
+  void createButtonRepeatedLoadsAndSelectionKeepOneReferencePerAsset(CharacterClass type) {
+    prepareCreateAnimations();
+    CharacterCreateButton button = new CharacterCreateButton(type);
+    button.loadRemainingAssets(); owner.finishLoading();
+    Map<String, Integer> baseline = references();
+    assertEquals(7 + (type.bws ? 1 : 0) + (type.fws ? 1 : 0) + (type.nu3s ? 1 : 0), baseline.size());
+    for (int cycle = 0; cycle < 3; cycle++) {
+      button.loadRemainingAssets(); button.select(); button.deselect(); owner.finishLoading();
+      assertEquals(baseline, references());
+      for (int refs : references().values()) assertEquals(1, refs);
+    }
+    button.dispose();
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void createButtonStopsOnlyItsOwnPlaybackAndUsesOriginalManager() {
+    prepareCreateAnimations();
+    CharacterCreateButton first = new CharacterCreateButton(CharacterClass.AMAZON);
+    CharacterCreateButton second = new CharacterCreateButton(CharacterClass.AMAZON);
+    first.select(); second.select();
+    Sound shared = owner.get("data/global/sfx/cursor/intro/AMAZON select.wav", Sound.class);
+    AssetManager replacement = mock(AssetManager.class);
+    Riiablo.assets = replacement;
+    first.dispose(); first.dispose();
+    verify(shared).stop(11L);
+    verify(shared, never()).stop(22L);
+    verify(shared, never()).stop();
+    verify(shared, never()).dispose();
+    second.deselect(); second.dispose();
+    verify(shared).stop(22L);
+    verify(shared).dispose();
+    verifyNoInteractions(replacement);
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void createButtonStopErrorStillReleasesAssetsAndDoesNotRetry() {
+    prepareCreateAnimations();
+    CharacterCreateButton button = new CharacterCreateButton(CharacterClass.SORCERESS);
+    button.select();
+    Sound sound = owner.get("data/global/sfx/cursor/intro/SORCERESS select.wav", Sound.class);
+    Error failure = new AssertionError("selection playback");
+    doThrow(failure).when(sound).stop(11L);
+    assertSame(failure, assertThrows(AssertionError.class, button::dispose));
+    assertEquals(0, owner.getLoadedAssets());
+    button.dispose();
+    verify(sound).stop(11L);
+  }
+
+  @Test void createButtonConstructorFailureReturnsInitialReference() {
+    prepareCreateAnimations();
+    animations.when(() -> Animation.newAnimation(any(DC6.class))).thenThrow(new IllegalStateException("animation"));
+    assertThrows(IllegalStateException.class, () -> new CharacterCreateButton(CharacterClass.AMAZON));
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void createButtonPartialLoadRetryDoesNotDuplicateSuccessfulRequests() {
+    prepareCreateAnimations();
+    java.util.concurrent.atomic.AtomicBoolean reject = new java.util.concurrent.atomic.AtomicBoolean(true);
+    AssetManager partial = new AssetManager(FileHandle::new, false) {
+      @Override public synchronized void load(AssetDescriptor descriptor) {
+        if (descriptor.fileName.endsWith("amfw.dc6") && reject.get()) throw new IllegalStateException("submit fw");
+        super.load(descriptor);
+      }
+    };
+    partial.setLoader(DC6.class, owner.getLoader(DC6.class));
+    partial.setLoader(Sound.class, owner.getLoader(Sound.class));
+    CharacterCreateButton button = null;
+    try {
+      button = new CharacterCreateButton(CharacterClass.AMAZON, partial);
+      assertThrows(IllegalStateException.class, button::loadRemainingAssets);
+      reject.set(false);
+      button.loadRemainingAssets(); button.loadRemainingAssets(); partial.finishLoading();
+      assertEquals(7, partial.getLoadedAssets());
+      for (String path : partial.getAssetNames()) assertEquals(1, partial.getReferenceCount(path));
+      button.dispose();
+      assertEquals(0, partial.getLoadedAssets());
+    } finally {
+      if (button != null) button.dispose();
+      partial.dispose();
+    }
+  }
+
+  @Test void hiddenAndDisposedCreateButtonIgnoresOldInputAndAnimationCompletion() throws Exception {
+    prepareCreateAnimations();
+    CharacterCreateButton button = new CharacterCreateButton(CharacterClass.SORCERESS);
+    button.select();
+    org.mockito.ArgumentCaptor<Animation.AnimationListener> completions =
+        org.mockito.ArgumentCaptor.forClass(Animation.AnimationListener.class);
+    verify(logo).addAnimationListener(eq(-1), completions.capture());
+    com.badlogic.gdx.scenes.scene2d.utils.ClickListener listener = field(button, "clickListener");
+    button.setInteractionEnabled(false);
+    owner.finishLoading();
+    Map<String, Integer> baseline = references();
+    listener.enter(null, 0, 0, -1, null); listener.clicked(null, 0, 0);
+    button.select(); button.deselect();
+    owner.finishLoading();
+    assertEquals(baseline, references());
+    button.dispose();
+    completions.getValue().onTrigger(logo, -1);
+    listener.enter(null, 0, 0, -1, null); listener.exit(null, 0, 0, -1, null); listener.clicked(null, 0, 0);
+    assertFalse(baseline.isEmpty());
+    assertNull(field(button, "active"));
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void createScreenVisibilityRetainsActorsNameAndReferences() throws Exception {
+    CreateCharacterScreen screen = creation();
+    owner.finishLoading();
+    Stage stage = field(screen, "stage");
+    int actors = stage.getRoot().getChildren().size;
+    TextField name = field(screen, "tfCharName");
+    name.setOnlyFontChars(false); name.setText("Retained");
+    CharacterCreateButton amazon = field(screen, "amazon");
+    Map<String, Integer> baseline = references();
+    Client original = Riiablo.client;
+    for (int cycle = 0; cycle < 3; cycle++) {
+      screen.show(); screen.show();
+      assertEquals(1, input.getProcessors().size);
+      screen.hide(); screen.hide(); screen.render(1);
+      assertTrue(input.getProcessors().isEmpty());
+      assertEquals("Retained", name.getText());
+      assertSame(amazon, field(screen, "amazon"));
+      assertEquals(actors, stage.getRoot().getChildren().size);
+      assertEquals(baseline, references());
+    }
+    verify(original, times(3)).addScreenBoundsListener(any());
+    verify(original, times(3)).removeScreenBoundsListener(any());
+    screen.dispose(); screen.dispose();
+    assertEquals(0, owner.getLoadedAssets());
+    verify(stage).dispose();
+    assertThrows(IllegalStateException.class, screen::show);
+  }
+
+  @Test void createScreenDisposeBeforeShowProtectsReplacementHosts() throws Exception {
+    CreateCharacterScreen screen = creation();
+    Client original = Riiablo.client;
+    AssetManager replacement = mock(AssetManager.class);
+    Client replacementClient = mock(Client.class);
+    Client.InputProcessor replacementInput = mock(Client.InputProcessor.class);
+    Riiablo.assets = replacement; Riiablo.client = replacementClient; Riiablo.input = replacementInput;
+    screen.dispose(); screen.hide(); screen.render(1);
+    assertEquals(0, owner.getLoadedAssets());
+    verifyNoInteractions(replacement, replacementClient, replacementInput, original);
+    verify(stages.constructed().get(0)).dispose();
+  }
+
+  @Test void createScreenVisibleDisposeDetachesFromOriginalClientAndInput() throws Exception {
+    CreateCharacterScreen screen = creation();
+    screen.show();
+    Client original = Riiablo.client;
+    Client replacement = mock(Client.class);
+    Riiablo.client = replacement;
+    screen.dispose();
+    verify(original).removeScreenBoundsListener(any());
+    verifyNoInteractions(replacement);
+    assertTrue(input.getProcessors().isEmpty());
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void externalTextboxOwnerSurvivesCreatePageRetirement() {
+    String path = "data/global/ui/FrontEnd/textbox.dc6";
+    owner.load(path, DC6.class);
+    CreateCharacterScreen screen = creation(); owner.finishLoading();
+    DC6 textbox = owner.get(path, DC6.class);
+    assertEquals(2, owner.getReferenceCount(path));
+    screen.dispose(); screen.dispose();
+    assertEquals(1, owner.getLoadedAssets());
+    assertEquals(1, owner.getReferenceCount(path));
+    verify(textbox, never()).dispose();
+    owner.unload(path);
+    verify(textbox).dispose();
+  }
+
+  @Test void createScreenPartialChildConstructionRollsBackExistingChildrenAndButtons() {
+    prepareCreateAnimations();
+    java.util.concurrent.atomic.AtomicInteger constructed = new java.util.concurrent.atomic.AtomicInteger();
+    animations.when(() -> Animation.newAnimation(any(DC6.class))).thenAnswer(call -> {
+      if (constructed.incrementAndGet() == 2) throw new IllegalStateException("second class");
+      return logo;
+    });
+    assertThrows(IllegalStateException.class, CreateCharacterScreen::new);
+    assertEquals(0, owner.getLoadedAssets());
+    verify(stages.constructed().get(0)).dispose();
+    assertTrue(input.getProcessors().isEmpty());
+  }
+
+  @Test void createScreenBoundsAttachFailureRollsBackInputAndCanRetryWithoutRebuild() throws Exception {
+    CreateCharacterScreen screen = creation(); owner.finishLoading();
+    Map<String, Integer> baseline = references();
+    doThrow(new IllegalStateException("bounds attach")).when(Riiablo.client).addScreenBoundsListener(any());
+    assertThrows(IllegalStateException.class, screen::show);
+    assertTrue(input.getProcessors().isEmpty());
+    assertEquals(baseline, references());
+    doNothing().when(Riiablo.client).addScreenBoundsListener(any());
+    screen.show(); screen.dispose();
+    assertEquals(0, owner.getLoadedAssets());
+  }
+
+  @Test void createScreenBoundsDetachErrorStillReleasesEveryResource() throws Exception {
+    CreateCharacterScreen screen = creation(); screen.show();
+    Error failure = new AssertionError("bounds detach");
+    doThrow(failure).when(Riiablo.client).removeScreenBoundsListener(any());
+    assertSame(failure, assertThrows(AssertionError.class, screen::dispose));
+    assertTrue(input.getProcessors().isEmpty());
+    assertEquals(0, owner.getLoadedAssets());
+    verify(stages.constructed().get(0)).dispose();
+    screen.dispose();
+  }
+
+  @Test void createScreenStageErrorStillReleasesAllPageAndCharacterAssets() throws Exception {
+    CreateCharacterScreen screen = creation(); screen.show();
+    Error failure = new AssertionError("creation Stage");
+    doThrow(failure).when(stages.constructed().get(0)).dispose();
+    assertSame(failure, assertThrows(AssertionError.class, screen::dispose));
+    assertEquals(0, owner.getLoadedAssets());
+    assertTrue(input.getProcessors().isEmpty());
+  }
+
+  @Test void hiddenCreateScreenIgnoresOldButtonsKeysAndBoundsCallbacks() throws Exception {
+    Runnable callback = mock(Runnable.class);
+    prepareCreateAnimations();
+    CreateCharacterScreen screen = new CreateCharacterScreen(callback); screens.add(screen);
+    screen.show(); screen.hide();
+    clearInvocations(Riiablo.client);
+    com.badlogic.gdx.scenes.scene2d.ui.Button exit = field(screen, "btnExit");
+    exit.fire(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent());
+    com.badlogic.gdx.InputProcessor processor = field(screen, "inputProcessor");
+    assertFalse(processor.keyDown(com.badlogic.gdx.Input.Keys.ESCAPE));
+    Client.ScreenBoundsListener bounds = field(screen, "screenBoundsListener");
+    com.badlogic.gdx.scenes.scene2d.ui.Table options = field(screen, "charOptions");
+    float y = options.getY();
+    bounds.updateScreenBounds(0, 100, 800, 600);
+    assertEquals(y, options.getY());
+    verifyNoInteractions(Riiablo.client, callback);
+  }
+
+  private void prepareCreateAnimations() {
+    when(logo.getBox()).thenReturn(new BBox(0, 0, 64, 96));
+    animations.when(() -> Animation.newAnimation(any(DC6.class))).thenReturn(logo);
+  }
+
+  private CreateCharacterScreen creation() {
+    prepareCreateAnimations();
+    CreateCharacterScreen screen = new CreateCharacterScreen();
+    screens.add(screen);
+    return screen;
   }
 
   private void prepareCharacters(FileHandle... saves) throws Exception {
