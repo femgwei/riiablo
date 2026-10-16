@@ -1687,6 +1687,10 @@ public class ItemData {
     return true;
   }
 
+  public boolean removeLocationListener(LocationListener l) {
+    return locationListeners.removeValue(l, true);
+  }
+
   private void notifyLocationChanged(Item item, Location oldLocation) {
     for (LocationListener l : locationListeners) l.onChanged(this, oldLocation, item.location, item);
   }

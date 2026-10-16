@@ -273,6 +273,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   Viewport viewport;
   GameLoadingScreen loadingScreen;
   boolean created;
+  private boolean disposed;
+  private boolean subscriptionsConfigured;
+  private final ScreenSubscriptionScope visibleSubscriptions = new ScreenSubscriptionScope();
+  private final ScreenSubscriptionScope sessionSubscriptions = new ScreenSubscriptionScope();
   boolean isDebug;
   boolean discardNextSimulationDelta;
   private final FixedStepAccumulator simulationAccumulator =
@@ -864,14 +868,23 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     injectPanels();
 
-    // TODO: better place to put this?
-    charData.getItems().addLocationListener(Riiablo.cursor);
-    charData.getMerc().getItems().addLocationListener(Riiablo.cursor);
+    bindItemLocationListeners();
 
     // FIXME: #75 Initial CharData update event
     charData.update();
 
     loadingScreen = new GameLoadingScreen(map, getDependencies());
+  }
+
+  private void bindItemLocationListeners() {
+    final com.riiablo.save.ItemData playerItems = charData.getItems();
+    final com.riiablo.save.ItemData mercItems = charData.getMerc().getItems();
+    final com.riiablo.save.ItemData.LocationListener cursor = Riiablo.cursor;
+    sessionSubscriptions.add(() -> playerItems.addLocationListener(cursor),
+        () -> playerItems.removeLocationListener(cursor));
+    sessionSubscriptions.add(() -> mercItems.addLocationListener(cursor),
+        () -> mercItems.removeLocationListener(cursor));
+    sessionSubscriptions.activate();
   }
 
   private void injectPanels() {
@@ -1112,6 +1125,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   @Override
   public void resume() {
+    if (disposed) return;
     discardNextSimulationDelta = true;
     Riiablo.engine = engine;
     Riiablo.game = this;
@@ -1418,6 +1432,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   @Override
   public void show() {
+    if (disposed) throw new IllegalStateException("GameScreen is disposed");
     if (map.getAct() == -1) {
       int savedAct = charData == null ? 0 : (charData.towns[charData.diff] & 0x7);
       if (savedAct < 0 || savedAct >= Riiablo.NUM_ACTS) savedAct = 0;
@@ -1428,54 +1443,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     create();
 
     Riiablo.game = this;
-    Keys.DebugMode.addStateListener(debugKeyListener);
-    Keys.Esc.addStateListener(mappedKeyStateListener);
-    Keys.Help.addStateListener(mappedKeyStateListener);
-    Keys.Enter.addStateListener(mappedKeyStateListener);
-    Keys.Run.addStateListener(mappedKeyStateListener);
-    Keys.Inventory.addStateListener(mappedKeyStateListener);
-    Keys.Character.addStateListener(mappedKeyStateListener);
-    Keys.Hireling.addStateListener(mappedKeyStateListener);
-    Keys.Spells.addStateListener(mappedKeyStateListener);
-    Keys.Quests.addStateListener(mappedKeyStateListener);
-    Keys.SwapWeapons.addStateListener(mappedKeyStateListener);
-    Keys.Stash.addStateListener(mappedKeyStateListener);
-    Keys.Vendor.addStateListener(mappedKeyStateListener);
-    Keys.Belt1.addStateListener(mappedKeyStateListener);
-    Keys.Belt2.addStateListener(mappedKeyStateListener);
-    Keys.Belt3.addStateListener(mappedKeyStateListener);
-    Keys.Belt4.addStateListener(mappedKeyStateListener);
-    Riiablo.input.addProcessor(testingInputProcessor);
-    Riiablo.input.addProcessor(stage);
-    Riiablo.input.addProcessor(scaledStage);
-    Riiablo.client.addScreenBoundsListener(screenBoundsListener = new Client.ScreenBoundsListener() {
-      final float THRESHOLD = 150;
-      float prevY = 0;
-
-      @Override
-      public void updateScreenBounds(float x, float y, float width, float height) {
-        if (y < THRESHOLD && prevY >= THRESHOLD) input.setVisible(false);
-        input.setPosition(stage.getWidth() / 2, y + 100, Align.bottom | Align.center);
-        prevY = y;
-      }
-    });
-    screenBoundsListener.updateScreenBounds(0, 0, 0, 0);
-
-    if (!DEBUG_MOBILE && Gdx.app.getType() == Application.ApplicationType.Desktop) {
-      Cvars.Client.Display.KeepControlPanelGrouped.addStateListener(new CvarStateAdapter<Boolean>() {
-        @Override
-        public void onChanged(Cvar<Boolean> cvar, Boolean from, Boolean to) {
-          if (to) {
-            controlPanel.pack();
-            controlPanel.setPosition(stage.getWidth() / 2, 0, Align.bottom | Align.center);
-          } else {
-            controlPanel.setX(0);
-            controlPanel.setWidth(stage.getWidth());
-            controlPanel.layout();
-          }
-        }
-      });
-    }
+    configureSubscriptions();
+    visibleSubscriptions.activate();
 
     Riiablo.viewport = viewport;
     Riiablo.music.stop();
@@ -1673,8 +1642,62 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         + " mode=" + mode + " result=entity_not_found");
   }
 
+  private void configureSubscriptions() {
+    if (subscriptionsConfigured) return;
+    subscriptionsConfigured = true;
+    final Client client = Riiablo.client;
+    final Client.InputProcessor inputProcessors = Riiablo.input;
+    visibleSubscriptions.add(() -> Keys.DebugMode.addStateListener(debugKeyListener),
+        () -> Keys.DebugMode.removeStateListener(debugKeyListener));
+    for (MappedKey key : new MappedKey[] {Keys.Esc, Keys.Help, Keys.Enter, Keys.Run,
+        Keys.Inventory, Keys.Character, Keys.Hireling, Keys.Spells, Keys.Quests,
+        Keys.SwapWeapons, Keys.Stash, Keys.Vendor, Keys.Belt1, Keys.Belt2, Keys.Belt3, Keys.Belt4}) {
+      visibleSubscriptions.add(() -> key.addStateListener(mappedKeyStateListener),
+          () -> key.removeStateListener(mappedKeyStateListener));
+    }
+    for (InputProcessor processor : new InputProcessor[] {testingInputProcessor, stage, scaledStage}) {
+      visibleSubscriptions.add(() -> inputProcessors.addProcessor(processor),
+          () -> inputProcessors.removeProcessor(processor));
+    }
+    visibleSubscriptions.add(() -> {
+      screenBoundsListener = new Client.ScreenBoundsListener() {
+        final float THRESHOLD = 150;
+        float prevY = 0;
+
+        @Override
+        public void updateScreenBounds(float x, float y, float width, float height) {
+          if (y < THRESHOLD && prevY >= THRESHOLD) input.setVisible(false);
+          input.setPosition(stage.getWidth() / 2, y + 100, Align.bottom | Align.center);
+          prevY = y;
+        }
+      };
+      client.addScreenBoundsListener(screenBoundsListener);
+      screenBoundsListener.updateScreenBounds(0, 0, 0, 0);
+    }, () -> client.removeScreenBoundsListener(screenBoundsListener));
+    if (!DEBUG_MOBILE && Gdx.app.getType() == Application.ApplicationType.Desktop) {
+      Cvar.StateListener<Boolean> groupedListener = new CvarStateAdapter<Boolean>() {
+        @Override
+        public void onChanged(Cvar<Boolean> cvar, Boolean from, Boolean to) {
+          if (to) {
+            controlPanel.pack();
+            controlPanel.setPosition(stage.getWidth() / 2, 0, Align.bottom | Align.center);
+          } else {
+            controlPanel.setX(0);
+            controlPanel.setWidth(stage.getWidth());
+            controlPanel.layout();
+          }
+        }
+      };
+      visibleSubscriptions.add(
+          () -> Cvars.Client.Display.KeepControlPanelGrouped.addStateListener(groupedListener),
+          () -> Cvars.Client.Display.KeepControlPanelGrouped.removeStateListener(groupedListener));
+    }
+  }
+
   @Override
   public void hide() {
+    if (disposed) return;
+    visibleSubscriptions.deactivate();
     // Persist exploration on every screen transition as well as final
     // disposal.  Waypoint/act loading keeps this GameScreen on the screen
     // stack, so waiting for dispose would otherwise lose the latest reveal.
@@ -1682,43 +1705,31 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
       if (automapRenderer != null) automapRenderer.saveNativeAutomap();
     }
-    Keys.DebugMode.removeStateListener(debugKeyListener);
-    Keys.Esc.removeStateListener(mappedKeyStateListener);
-    Keys.Help.removeStateListener(mappedKeyStateListener);
-    Keys.Enter.removeStateListener(mappedKeyStateListener);
-    Keys.Run.removeStateListener(mappedKeyStateListener);
-    Keys.Inventory.removeStateListener(mappedKeyStateListener);
-    Keys.Character.removeStateListener(mappedKeyStateListener);
-    Keys.Hireling.removeStateListener(mappedKeyStateListener);
-    Keys.Spells.removeStateListener(mappedKeyStateListener);
-    Keys.Quests.removeStateListener(mappedKeyStateListener);
-    Keys.SwapWeapons.removeStateListener(mappedKeyStateListener);
-    Keys.Stash.removeStateListener(mappedKeyStateListener);
-    Keys.Vendor.removeStateListener(mappedKeyStateListener);
-    Keys.Belt1.removeStateListener(mappedKeyStateListener);
-    Keys.Belt2.removeStateListener(mappedKeyStateListener);
-    Keys.Belt3.removeStateListener(mappedKeyStateListener);
-    Keys.Belt4.removeStateListener(mappedKeyStateListener);
-    Riiablo.input.removeProcessor(testingInputProcessor);
-    Riiablo.input.removeProcessor(stage);
-    Riiablo.input.removeProcessor(scaledStage);
-    Riiablo.client.removeScreenBoundsListener(screenBoundsListener);
-    Cvars.Client.Display.KeepControlPanelGrouped.clearStateListeners();
   }
 
   @Override
   public void dispose() {
-    //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
-    if (!characterSavedForExit && !saveCharacter()) {
-      Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
+    if (disposed) return;
+    disposed = true;
+    try {
+      visibleSubscriptions.dispose();
+      sessionSubscriptions.dispose();
+      //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
+      if (!characterSavedForExit && !saveCharacter()) {
+        Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
+      }
+      charData.clearListeners();
+      AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+      if (automapRenderer != null) automapRenderer.saveNativeAutomap();
+      engine.dispose();
+      for (Actor actor : stage.getActors()) if (actor instanceof Disposable) ((Disposable) actor).dispose();
+      stage.dispose();
+      for (AssetDescriptor asset : preloadedAssets) Riiablo.assets.unload(asset.fileName);
+    } finally {
+      // An old screen must never clear a newer session's legacy aliases.
+      if (Riiablo.game == this) Riiablo.game = null;
+      if (Riiablo.engine == engine) Riiablo.engine = null;
     }
-    charData.clearListeners();
-    AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
-    if (automapRenderer != null) automapRenderer.saveNativeAutomap();
-    engine.dispose();
-    for (Actor actor : stage.getActors()) if (actor instanceof Disposable) ((Disposable) actor).dispose();
-    stage.dispose();
-    for (AssetDescriptor asset : preloadedAssets) Riiablo.assets.unload(asset.fileName);
   }
 
   /** Persists the local character before leaving the current game. */

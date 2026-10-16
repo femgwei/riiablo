@@ -1,5 +1,43 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第六批：屏幕外部订阅生命周期
+
+- [x] 新增屏幕内部 ScreenSubscriptionScope，区分随 show/hide 的可见订阅和随
+  会话创建/dispose 的背包光标订阅。重复激活/解除不叠加，最终释放后拒绝激活；
+  初始化回调失败时回滚，解除失败继续处理其他注册并保留异常，不静默吞错。
+- [x] GameScreen 在原位置注册同样的 17 个按键、3 个输入处理器、窗口与显示设置
+  监听。hide 不再 clearStateListeners，只移除自身显示设置监听，保留其他对象。
+  输入/窗口解绑使用原宿主实例，窗口 prevY 和初始化回调保留每次显示的重置时序。
+- [x] ItemData 新增按身份移除一个 location listener。玩家/佣兵 cursor 在原构造
+  位置挂接，hide 保留、dispose 配对移除，不清其他监听或另一条相同 cursor 注册。
+  dispose 即使未经过 hide 也解除外部订阅，正常重复释放不再重复保存/释放资源。
+  旧屏幕只在全局别名仍指向自身时清除 game/engine，dispose 后 resume 不再发布自身。
+- [x] GameScreen World 装配方法与 `bf5f1a36a` 保持一致。Tick、模式、玩法、协议、
+  存档规则未改；保存角色/Automap、CharData.clearListeners、World/演员/Stage/预载
+  资产仍沿用原释放路径。map.dispose 的历史 FIXME 未启用，scaledStage、UI/GL
+  所有权、D2GS 停机线程/资源也未在本批扩大处理。
+- [x] 新增 15 项：Scope 6 项、生产 GameScreen 配置/hide/dispose 方法 7 项、真实
+  ItemData 监听通知 2 项。覆盖重复可见周期、异常回滚、直接销毁、未显示即释放、
+  旧/新屏幕隔离、宿主替换、保留其他 Cvar 监听、背包监听跨 hide 保留与最终移除。
+  GameScreen 测试绕过资产密集构造并 mock 宿主，不是完整 GL 屏幕退出重进验收。
+- [x] 最终回归 127/127 项、21 类通过，失败/错误/跳过均 0；core、desktop、D2GS
+  编译通过，覆盖既有装配/模式/会话、客户端环境音、音频实例/选项、渲染 runner、
+  死亡奖励与屏幕动作回归。首轮 21 项及扩大回归也通过；最终日志
+  `build/simulation-lifecycle-regression-final.log`，JUnit XML 在
+  `core/build/test-results/test/`，首轮日志为 `build/simulation-lifecycle-initial.log`。
+- [x] 真实 1.10f 营地隐藏窗口三帧 PASS，客户端退出流程正常结束；D2GS 固定
+  25Hz（step=0.04）和 Throw 导弹创建/顺序、1000→992 伤害通过。日志未发现
+  ERROR/Exception；保留 level0/DrlgType0 跳过、Java object 分配回退和表 Key 推断
+  诊断。证据日志 `build/simulation-lifecycle-real-resource.log`，营地 manifest 为
+  `build/simulation-lifecycle-camp/rogue-encampment-manifest.txt`。这仍是单次生产
+  资源冒烟，不等同完整多次 GL 会话退出重进或长期内存验收。
+- 范围限制：本批完成屏幕外部订阅边界，不能据此宣称全部资源无泄漏、任意重复 show
+  可恢复完整游戏、完整双会话并行或服务端停机生命周期已验收。其余全局依赖、
+  地图/贴图所有权、CharData 其他监听清理策略仍待；第一批既有的投掷专精差异、
+  佣兵夹具和 Den 日志问题未修复，人工画面/操作/听感与长期泄漏验收仍待。
+- 整体进度：已完成六批；下一批暂定入口清理与综合回归，复杂边界继续细拆，不以
+  批数冒充全面隔离完成率。见 [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第五批：客户端环境音依赖
 
 - [x] 新增 `ClientAudioSession`，绑定当前会话环境时钟、实时监听玩家提供器、宿主
