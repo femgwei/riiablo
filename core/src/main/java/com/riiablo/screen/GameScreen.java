@@ -401,7 +401,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       stage.addActor(mobileControls);
     }
 
-    inventoryPanel = new InventoryPanel();
+    inventoryPanel = new InventoryPanel(this);
     inventoryPanel.setPosition(
         stage.getWidth() - inventoryPanel.getWidth(),
         stage.getHeight() - inventoryPanel.getHeight());

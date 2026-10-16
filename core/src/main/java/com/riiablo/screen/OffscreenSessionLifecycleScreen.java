@@ -37,6 +37,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> questReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> escapeReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> storageReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> inventoryReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -59,6 +60,15 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    inventoryReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/PANEL/invchar6.DC6",
+        "data/global/ui/PANEL/invchar6Tab.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
+        "data/global/ui/PANEL/goldcoinbtn.dc6", "data/global/ui/PANEL/inv_armor.DC6",
+        "data/global/ui/PANEL/inv_belt.DC6", "data/global/ui/PANEL/inv_boots.DC6",
+        "data/global/ui/PANEL/inv_helm_glove.DC6", "data/global/ui/PANEL/inv_ring_amulet.DC6",
+        "data/global/ui/PANEL/inv_weapons.DC6"}) {
+      inventoryReferencesBeforeConstruction.put(path, references(path));
+    }
     storageReferencesBeforeConstruction.clear();
     for (String path : new String[] {"data/global/ui/PANEL/supertransmogrifier.dc6",
         "data/global/ui/PANEL/miniconvert.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
@@ -373,6 +383,29 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
     Array<Actor> storageActors = new Array<>();
+    Array<Actor> inventoryActors = new Array<>(); collectActors(screen.inventoryPanel, inventoryActors);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> inventoryClicks = new Array<>();
+    for (Actor actor : inventoryActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners()) {
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        inventoryClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    }
+    com.riiablo.save.ItemData.AlternateListener inventoryAlternate = field(screen.inventoryPanel,
+        "alternateListener", com.riiablo.save.ItemData.AlternateListener.class);
+    Array<?> alternateListeners = field(character.getItems(), "alternateListeners", Array.class);
+    require(containsIdentity(alternateListeners, inventoryAlternate), "inventory alternate listener registered");
+    Set<Integer> inventoryHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : inventoryReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey(); require(references(path) > reference.getValue(), "live inventory asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "inventory sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle();
+          require(Gdx.gl.glIsTexture(handle), "live inventory texture " + path);
+          if (reference.getValue() == 0) inventoryHandles.add(handle);
+        }
+      }
+    }
     collectActors(screen.cubePanel, storageActors); collectActors(screen.stashPanel, storageActors);
     com.riiablo.widget.GoldAmountDialog stashGold = field(screen.stashPanel, "goldDialog",
         com.riiablo.widget.GoldAmountDialog.class);
@@ -457,6 +490,21 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(field(screen.cubePanel, "disposed", Boolean.class)
         && field(screen.stashPanel, "disposed", Boolean.class), "Client retired storage owners");
     screen.cubePanel.dispose(); screen.stashPanel.dispose();
+    require(field(screen.inventoryPanel, "disposed", Boolean.class), "Client retired inventory owner");
+    require(!containsIdentity(alternateListeners, inventoryAlternate), "inventory alternate listener independently removed");
+    screen.inventoryPanel.dispose(); screen.inventoryPanel.dispose(); screen.inventoryPanel.setVisible(true);
+    require(!screen.inventoryPanel.isVisible(), "retired inventory cannot reopen");
+    inventoryAlternate.onAlternated(character.getItems(), 1, null, null);
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : inventoryClicks) click.clicked(null, 0, 0);
+    screen.inventoryPanel.onDrop(0, 0); screen.inventoryPanel.onSwap(0, 0, 0);
+    require(!screen.inventoryPanel.onPickup(0) && !screen.inventoryPanel.onUse(null), "retired inventory routes inactive");
+    for (Actor actor : inventoryActors) {
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "inventory actor retired");
+    }
+    for (Map.Entry<String, Integer> reference : inventoryReferencesBeforeConstruction.entrySet())
+      require(references(reference.getKey()) == reference.getValue(), "inventory asset baseline " + reference.getKey());
+    for (int handle : inventoryHandles) require(!Gdx.gl.glIsTexture(handle), "inventory texture deleted");
     for (com.riiablo.widget.GoldAmountDialog dialog : new com.riiablo.widget.GoldAmountDialog[] {stashGold, inventoryGold}) {
       require(field(dialog, "disposed", Boolean.class) && field(dialog, "listener", Object.class) == null
           && field(dialog, "maximumProvider", Object.class) == null, "gold dialog callbacks retired");
@@ -613,6 +661,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nescapeAssetBaselinesBalanced=" + escapeReferencesBeforeConstruction.size()
         + "\nescapeTexturesDeleted=" + escapeHandles.size()
         + "\nstorageActorsRetired=" + storageActors.size
+        + "\ninventoryActorsRetired=" + inventoryActors.size
+        + "\ninventoryAlternateListenerRemoved=true"
+        + "\ninventoryLateClicksIgnored=" + inventoryClicks.size
+        + "\ninventoryAssetBaselinesBalanced=" + inventoryReferencesBeforeConstruction.size()
+        + "\ninventoryTexturesDeleted=" + inventoryHandles.size()
         + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
         + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
         + "\nstorageTexturesDeleted=" + storageHandles.size()
@@ -640,6 +693,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     Gdx.app.log("OffscreenSessionLifecycleScreen", "[SESSION_LIFECYCLE] " + report.replace('\n', ' '));
     if (cycle < 3) Gdx.app.postRunnable(this::enter);
     else Gdx.app.exit();
+  }
+
+  private static boolean containsIdentity(Array<?> values, Object expected) {
+    for (Object value : values) if (value == expected) return true;
+    return false;
   }
 
   private static void require(boolean condition, String message) {

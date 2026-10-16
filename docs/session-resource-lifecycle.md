@@ -1682,3 +1682,91 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 回滚边界。借用全局角色的其他控件、完整控件内部构造失败、连接交接、控制台/
 Timer/异步日志、跨 Act/加载中退出、长期压力、Android 真机及人工/性能验收仍待，
 不能据本批宣称资源阶段结束。
+
+## 第二十三批：背包资源、武器切换监听与所属会话
+
+`InventoryPanel` 捕获原 AssetManager、CharData / ItemData、Audio 与 Cursor，
+以 `AssetReferenceScope` 记录十项成功提交的页面资产。部分构造失败回滚已经取得
+的引用、已返回的按钮/网格/金币对话框和两张私有 fill；某项清理失败仍继续其余项，
+保留原错误与 suppressed 异常，不销毁借用的音频、光标、字体、装备图像或物品数据。
+控件内部尚未返回实例就抛错的完整审计仍留后批，不宣称所有构造边界已覆盖。
+
+武器切换 `AlternateListener` 保存身份，注册前先记录，背包退出独立从原 ItemData
+移除，不依赖最终 CharData 批量清理。保留读档后初始化当前武器组，当前监听按原
+左右手映射更新；来自其他 ItemData、旧角色/物品数据或已销毁面板的通知直接失效。
+退出清理装备缓存与背景引用、监听/动作/父节点、控制器和金币宿主回调，重复退出
+不重复释放，也不自动重试已经失败的清理。
+
+生产 `GameScreen` 显式把自身传给背包。构造期间允许填充初始网格，构造完成后
+只有原 GameScreen 是当前全局会话时才允许输入/绘制/更新；这样即使重用同一个
+CharData / AssetManager，旧面板也不能向新游戏路由物品或商店操作。退出清空 owner，
+避免保存旧控件时额外牵住整个 GameScreen。无参入口保留，若有当前游戏则必须是
+其 inventoryPanel。原资源、角色、物品数据、音频或光标被替换后同样停止派发。
+
+装备点击、武器组按钮、金币提交/上限、网格操作、act/draw 和装备目标查询均受
+会话门禁保护；按钮过期后视为 disabled，保存的按下回调也不能播放声音或震动
+后来的输入宿主。目标查询只接受本面板的 BodyPart，不接受另一背包的装备 Actor。
+维持原库存/腰带/装备/商店/金币路由与限制，不改玩法、25Hz、协议或存档格式。
+
+真实同 Client 三轮探针增加整个背包控件树、具名监听注册与独立移除、保存点击
+回调失效、十项资产回构造前基线及采样 GL 纹理删除检查，继续保留第二十二批
+仓库/方块/金币弹窗和此前所有检查；不能替代人工装备操作、交易或听感验收。
+
+### 第二十三批验证
+
+- `build/inventory-resources-targeted.log` 首次因新测试把 Java List 的 get(0)
+  写成 first() 而未通过测试源码编译，已修正。
+- `build/inventory-resources-targeted-recheck.log`：42 项中 4 项失败，均为旧
+  `PanelResourceLifecycleTest` 的模拟按钮缺少 getChildren 场景树桩，不能用于
+  新增的 ActorTree 清理。补齐按钮空树及原夹具的引用作用域；保留原有资产独立
+  消费者、重复释放和异常继续断言。首轮新增背包专项 15 项通过，随后另补两项
+  真实声音卸载失败继续清理、同角色内替换 ItemData 的隔离测试，共新增 17 项。
+- `build/inventory-resources-regression-gl.log`：最终代码新增 17 项全部通过，
+  扩大到 28 类 235 项，233 通过、2 跳过（既有佣兵独立环境资源探针），失败/
+  错误 0；core / desktop / D2GS 编译链通过。三轮真实 MPQ/GL 和最终
+  ClientShutdown 通过，BUILD SUCCESSFUL，3m。每轮退休背包 26 个控件、
+  36 个保存点击回调失效、独立监听移除、十项资产回基线、37 张采样纹理删除。
+  保留仓库/方块 23 个控件、两个金币弹窗、八项资产/57 张纹理，Escape 208
+  控件/三次捕获/四项资产/12 张纹理，任务 146 控件/五个滚动控件/三次重播/
+  33 项资产/794 张纹理，技能重建退休 21 个旧按钮/退出 40 个按钮、移动 UI
+  15 个按钮/102 张纹理，以及 13 张私有纹理、共享框、地图、输入等既有检查。
+- 三轮退出后资产种类均为 56，最终 ClientShutdown assets=0。这仅说明本次
+  正常进出探针的资产计数与采样通过，不代表长压、全进程零滞留或所有缓存均已
+  验收。仍记录 42.13–67.29ms 慢帧，超过 40ms 预算；不作性能、人工画面/
+  输入/听感、装备交易玩法、联机或 Android 真机验收。
+
+无需 MPQ/GL 的背包与存储专项（拦截私有 Texture 上传，运行真实生产构造与
+AssetManager 引用计数）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.StoragePanelLifecycleTest `
+  --tests com.riiablo.screen.panel.PanelResourceLifecycleTest --no-daemon
+```
+
+扩大定向及原版 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/inventory-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/inventory-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 VendorPanel / 雇佣兵相关剩余控件的旧会话回调归属，不重做已配对的
+正常资产释放；再继续控件内部构造失败、连接交接、控制台/Timer/异步日志、
+跨 Act/加载中退出及长期压力验证。Android 真机、人工与性能验收单列，资源阶段
+尚未结束；不以本批三轮正常进出替代这些边界。

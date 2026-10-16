@@ -16,6 +16,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.GoldAmountDialog;
+import com.riiablo.util.AssetReferenceScope;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
 
@@ -31,10 +32,12 @@ class PanelResourceLifecycleTest {
         @Override public Array<AssetDescriptor> getDependencies(String name, FileHandle file, AssetLoaderParameters<DC6> params) { return null; }
       });
       set(panel, "assets", owner);
+      AssetReferenceScope references = new AssetReferenceScope(owner);
+      set(panel, "references", references);
       for (Field field : InventoryPanel.class.getDeclaredFields()) {
         if (field.getType() == AssetDescriptor.class) {
           field.setAccessible(true);
-          owner.load((AssetDescriptor) field.get(panel));
+          references.load((AssetDescriptor) field.get(panel));
         }
       }
       owner.load(panel.invcharTabDescriptor); // an independent consumer of the same sheet
@@ -57,6 +60,10 @@ class PanelResourceLifecycleTest {
   @Test void inventoryReleasesAllTenReferencesAndOwnedFillOnlyOnce() throws Exception {
     InventoryPanel panel = inventory();
     AssetManager owner = (AssetManager) get(panel, "assets");
+    Texture fill = panel.fill;
+    Button exit = panel.btnExit, drop = panel.btnDropGold;
+    GoldAmountDialog dialog = panel.goldDialog;
+    ItemGrid grid = panel.grid;
     AssetManager previous = Riiablo.assets;
     Riiablo.assets = mock(AssetManager.class);
     try {
@@ -64,11 +71,11 @@ class PanelResourceLifecycleTest {
       panel.dispose();
       verify(owner, times(10)).unload(anyString());
       verify(owner).unload("invcharTabDescriptor");
-      verify(panel.fill).dispose();
-      verify(panel.btnExit).dispose();
-      verify(panel.btnDropGold).dispose();
-      verify(panel.goldDialog).dispose();
-      verify(panel.grid).dispose();
+      verify(fill).dispose();
+      verify(exit).dispose();
+      verify(drop).dispose();
+      verify(dialog).dispose();
+      verify(grid).dispose();
       verifyNoInteractions(Riiablo.assets);
     } finally { Riiablo.assets = previous; }
   }
@@ -78,25 +85,28 @@ class PanelResourceLifecycleTest {
     AssetManager owner = (AssetManager) get(panel, "assets");
     RuntimeException first = new RuntimeException("button");
     RuntimeException second = new RuntimeException("fill");
+    Texture fill = panel.fill;
+    GoldAmountDialog dialog = panel.goldDialog;
     doThrow(first).when(panel.btnExit).dispose();
     doThrow(second).when(panel.fill).dispose();
     assertSame(first, assertThrows(RuntimeException.class, panel::dispose));
     assertArrayEquals(new Throwable[] {second}, first.getSuppressed());
-    verify(panel.goldDialog).dispose();
+    verify(dialog).dispose();
     verify(owner, times(10)).unload(anyString());
     panel.dispose();
-    verify(panel.fill).dispose();
+    verify(fill).dispose();
   }
 
   @Test void inventoryAssetFailureStillReleasesRemainingReferences() throws Exception {
     InventoryPanel panel = inventory();
     AssetManager owner = (AssetManager) get(panel, "assets");
     RuntimeException failure = new RuntimeException("inventory sheet");
+    Texture fill = panel.fill;
     doThrow(failure).when(owner).unload("invcharDescriptor");
     assertSame(failure, assertThrows(RuntimeException.class, panel::dispose));
     verify(owner).unload("invcharTabDescriptor");
     verify(owner).unload("inv_weaponsDescriptor");
-    verify(panel.fill).dispose();
+    verify(fill).dispose();
   }
 
   @Test void controlReleasesAllFifteenReferencesAndBothOwnedTexturesOnlyOnce() throws Exception {
@@ -147,10 +157,23 @@ class PanelResourceLifecycleTest {
   private static InventoryPanel inventory() throws Exception {
     InventoryPanel panel = mock(InventoryPanel.class, CALLS_REAL_METHODS);
     doReturn(new SnapshotArray<>(Actor.class)).when(panel).getChildren();
-    initAssets(panel);
+    doNothing().when(panel).clearListeners();
+    doNothing().when(panel).clearActions();
+    doNothing().when(panel).clearChildren();
+    doReturn(false).when(panel).remove();
+    AssetManager owner = initAssets(panel);
+    when(owner.contains(anyString())).thenReturn(true);
+    when(owner.isLoaded(anyString())).thenReturn(true);
+    AssetReferenceScope references = new AssetReferenceScope(owner);
+    set(panel, "references", references);
+    for (Field field : InventoryPanel.class.getDeclaredFields()) if (field.getType() == AssetDescriptor.class) {
+      field.setAccessible(true); references.load((AssetDescriptor) field.get(panel));
+    }
     set(panel, "fill", mock(Texture.class));
     panel.btnExit = mock(Button.class);
     panel.btnDropGold = mock(Button.class);
+    when(panel.btnExit.getChildren()).thenReturn(new SnapshotArray<>(Actor.class));
+    when(panel.btnDropGold.getChildren()).thenReturn(new SnapshotArray<>(Actor.class));
     panel.goldDialog = mock(GoldAmountDialog.class);
     set(panel, "grid", mock(ItemGrid.class));
     return panel;

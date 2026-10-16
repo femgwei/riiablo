@@ -41,14 +41,26 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
+import com.riiablo.save.CharData;
+import com.riiablo.screen.GameScreen;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
 
 public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "InventoryPanel";
-  private final AssetManager assets = Riiablo.assets;
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final ItemData itemData = java.util.Objects.requireNonNull(character.getItems(), "items");
+  private final com.riiablo.audio.Audio audio = Riiablo.audio;
+  private final com.riiablo.Cursor cursor = Riiablo.cursor;
+  private GameScreen owner;
+  private boolean initializing = true;
+  private ItemData.AlternateListener alternateListener;
   private boolean disposed;
 
   final AssetDescriptor<DC6> invcharDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\invchar6.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -77,37 +89,49 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   final Inventory.Entry inventory;
 
-  final Texture fill;
-  final Color backgroundColorG;
-  final Color backgroundColorR;
+  Texture fill;
+  final Color backgroundColorG = Riiablo.colors.invGreen;
+  final Color backgroundColorR = Riiablo.colors.invRed;
 
   @Wire(name = "itemController")
   protected ItemController itemController;
 
   protected AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
   final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
-  final ItemGrid grid;
+  ItemGrid grid;
 
   public InventoryPanel() {
-    assets.load(invcharDescriptor);
+    this(null);
+  }
+
+  public InventoryPanel(GameScreen owner) {
+    this.owner = owner;
+    inventory = Riiablo.files.inventory.getClass(character.charClass);
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    } finally { initializing = false; }
+  }
+
+  private void initialize() {
+    references.load(invcharDescriptor);
     assets.finishLoadingAsset(invcharDescriptor);
     invchar = assets.get(invcharDescriptor).getTexture(1);
     setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
-    assets.load(invcharTabDescriptor);
+    references.load(invcharTabDescriptor);
     assets.finishLoadingAsset(invcharTabDescriptor);
     invcharTabR = assets.get(invcharTabDescriptor).getTexture(0);
     invcharTabL = assets.get(invcharTabDescriptor).getTexture(1);
 
     fill = PanelTextures.solid(Color.BLACK);
 
-    backgroundColorR = Riiablo.colors.invRed;
-    backgroundColorG = Riiablo.colors.invGreen;
-
-    btnExit = new Button(new Button.ButtonStyle() {{
-      assets.load(buysellbtnDescriptor);
+    btnExit = new SessionButton(new Button.ButtonStyle() {{
+      references.load(buysellbtnDescriptor);
       assets.finishLoadingAsset(buysellbtnDescriptor);
       up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
       down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
@@ -116,11 +140,12 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-            && Riiablo.game.vendorPanel.isVisible()) {
-          Riiablo.game.closeVendorTradePanels();
-        } else if (Riiablo.game != null) {
-          Riiablo.game.setRightPanel(null);
+        if (!isCurrentSession()) return;
+        GameScreen game = game();
+        if (game != null && game.vendorPanel != null && game.vendorPanel.isVisible()) {
+          game.closeVendorTradePanels();
+        } else if (game != null) {
+          game.setRightPanel(null);
         } else {
           setVisible(false);
         }
@@ -128,14 +153,12 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     });
     addActor(btnExit);
 
-    inventory = Riiablo.files.inventory.getClass(Riiablo.charData.charClass);
-
-    assets.load(inv_armorDescriptor);
-    assets.load(inv_beltDescriptor);
-    assets.load(inv_bootsDescriptor);
-    assets.load(inv_helm_gloveDescriptor);
-    assets.load(inv_ring_amuletDescriptor);
-    assets.load(inv_weaponsDescriptor);
+    references.load(inv_armorDescriptor);
+    references.load(inv_beltDescriptor);
+    references.load(inv_bootsDescriptor);
+    references.load(inv_helm_gloveDescriptor);
+    references.load(inv_ring_amuletDescriptor);
+    references.load(inv_weaponsDescriptor);
     assets.finishLoadingAsset(inv_armorDescriptor);
     assets.finishLoadingAsset(inv_beltDescriptor);
     assets.finishLoadingAsset(inv_bootsDescriptor);
@@ -239,7 +262,6 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     gloves.yOffs = 2;
     addActor(gloves);
 
-    final ItemData itemData = Riiablo.charData.getItems();
     for (int i = BodyLocs.HEAD; i < BodyLocs.NUM_LOCS; i++) {
       if (bodyParts[i] == null) continue;
       bodyParts[i].slot = i;
@@ -264,32 +286,30 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     EventListener swapListener = new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         itemData.alternate();
       }
     };
     alternateWeaponsL.addListener(swapListener);
     alternateWeaponsR.addListener(swapListener);
 
-    itemData.addAlternateListener(new ItemData.AlternateListener() {
-//      @Override
-//      public void onChanged(CharData client, BodyLoc bodyLoc, Item oldItem, Item item) {
-//        System.out.println("slot = " + slot);
-//        bodyParts[bodyLoc.ordinal()].item = item;
-//        if (item != null) Riiablo.audio.play(item.base.dropsound, true);
-//      }
-
+    alternateListener = new ItemData.AlternateListener() {
       @Override
       public void onAlternated(ItemData items, int alternate, Item LH, Item RH) {
+        if (!isCurrentSession() || items != itemData) return;
         syncActiveWeaponSet(alternate, LH, RH);
       }
-    });
+    };
+    itemData.addAlternateListener(alternateListener);
     // D2SReader restores the active set before UI listeners exist. Initialize
     // the two visible weapon slots from that saved state instead of waiting
     // for the player to switch sets once after entering the game.
     syncActiveWeaponSet(itemData.getAlternate(),
         itemData.getEquipped(BodyLoc.LARM), itemData.getEquipped(BodyLoc.RARM));
 
-    grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this) {
+      @Override protected boolean isActive() { return super.isActive() && isCurrentSession(); }
+    };
     IntArray inventoryItems = itemData.getStore(StoreLoc.INVENTORY);
     Array<Item> items = itemData.toItemArray(inventoryItems);
     grid.populate(items);
@@ -298,14 +318,14 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
         getHeight() - inventory.gridTop - grid.getHeight());
     addActor(grid);
 
-    StatRef gold = Riiablo.charData.getStats().get(Stat.gold);
+    StatRef gold = character.getStats().get(Stat.gold);
     invgold = new Label(Integer.toString(gold != null ? gold.asInt() : 0), Riiablo.fonts.font16);
     invgold.setSize(88, 16);
     invgold.setPosition(109, 24);
     addActor(invgold);
 
-    btnDropGold = new Button(new Button.ButtonStyle() {{
-      assets.load(goldcoinbtnDescriptor);
+    btnDropGold = new SessionButton(new Button.ButtonStyle() {{
+      references.load(goldcoinbtnDescriptor);
       assets.finishLoadingAsset(goldcoinbtnDescriptor);
       DC6 goldcoinbtn = assets.get(goldcoinbtnDescriptor);
       up   = new TextureRegionDrawable(goldcoinbtn.getTexture(0));
@@ -315,9 +335,9 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     btnDropGold.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        depositGoldToStash = Riiablo.game != null
-            && Riiablo.game.stashPanel != null
-            && Riiablo.game.stashPanel.isVisible();
+        if (!isCurrentSession()) return;
+        GameScreen game = game();
+        depositGoldToStash = game != null && game.stashPanel != null && game.stashPanel.isVisible();
         goldDialog.setTitle(Riiablo.bundle.get(
             depositGoldToStash ? "stash_gold_prompt" : "drop_gold_prompt"));
         goldDialog.open();
@@ -329,6 +349,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
         new GoldAmountDialog.Listener() {
       @Override
       public void submitted(String text) {
+        if (!isCurrentSession()) return;
         try {
           int amount = Integer.parseInt(text.trim());
           if (amount > 0 && itemController != null) {
@@ -344,7 +365,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       public void canceled() {}
         });
     goldDialog.setMaximumProvider(negative -> {
-      StatRef carriedGold = Riiablo.charData.getStats().get(Stat.gold);
+      if (!isCurrentSession()) return 0;
+      StatRef carriedGold = character.getStats().get(Stat.gold);
       return carriedGold == null ? 0 : carriedGold.asInt();
     });
     addActor(goldDialog);
@@ -364,23 +386,52 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
-      cleanup.run(() -> Button.disposeClickSounds(this));
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      if (alternateListener != null) cleanup.run(() -> itemData.removeAlternateListener(alternateListener));
       cleanup.dispose(btnExit);
       cleanup.dispose(btnDropGold);
       cleanup.dispose(goldDialog);
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.run(() -> ActorTree.clear(btnExit));
+      cleanup.run(() -> ActorTree.clear(btnDropGold));
       cleanup.dispose(grid);
       cleanup.dispose(fill);
-      for (AssetDescriptor asset : new AssetDescriptor[] {
-          invcharDescriptor, invcharTabDescriptor, buysellbtnDescriptor, goldcoinbtnDescriptor,
-          inv_armorDescriptor, inv_beltDescriptor, inv_bootsDescriptor, inv_helm_gloveDescriptor,
-          inv_ring_amuletDescriptor, inv_weaponsDescriptor}) {
-        cleanup.run(() -> assets.unload(asset.fileName));
+      cleanup.dispose(references);
+    } finally {
+      if (bodyParts != null) for (BodyPart part : bodyParts) if (part != null) {
+        part.item = null; part.background = null;
       }
+      invchar = invcharTabR = invcharTabL = null;
+      inv_armor = inv_belt = inv_boots = inv_helm_glove = inv_ring_amulet = inv_weapons = null;
+      alternateListener = null; itemController = null; depositGoldToStash = false;
+      owner = null;
+      btnExit = null; btnDropGold = null; goldDialog = null; invgold = null; grid = null; fill = null;
     }
   }
 
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData && assets == Riiablo.assets
+        && itemData == character.getItems() && audio == Riiablo.audio && cursor == Riiablo.cursor
+        // GameScreen publishes itself only after create() has built its panels.
+        && (initializing || (owner != null ? Riiablo.game == owner
+            : Riiablo.game == null || Riiablo.game.inventoryPanel == this));
+  }
+
+  private GameScreen game() {
+    return owner != null ? owner : Riiablo.game;
+  }
+
+  private class SessionButton extends Button {
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return !isCurrentSession() || super.isDisabled(); }
+  }
+
+  @Override public void act(float delta) { if (isCurrentSession()) super.act(delta); }
+
   @Override
   public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
     if (!visible && goldDialog != null) goldDialog.close();
     super.setVisible(visible);
   }
@@ -391,7 +442,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void draw(Batch batch, float a) {
-    StatRef gold = Riiablo.charData.getStats().get(Stat.gold);
+    if (!isCurrentSession()) return;
+    StatRef gold = character.getStats().get(Stat.gold);
     int carriedGold = gold == null ? 0 : gold.asInt();
     if (!Integer.toString(carriedGold).contentEquals(invgold.getText())) {
       invgold.setText(Integer.toString(carriedGold));
@@ -399,14 +451,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     // BodyPart caches are UI state only. Equipment may also change through
     // death/corpse handling, so refresh from the authoritative slot map and
     // never leave a clickable image for an already detached item.
-    ItemData itemData = Riiablo.charData.getItems();
     grid.syncItems(itemData.toItemArray(itemData.getStore(StoreLoc.INVENTORY)));
     for (BodyPart bodyPart : bodyParts) {
       if (bodyPart != null) bodyPart.item = itemData.getSlot(bodyPart.bodyLoc);
     }
 
     batch.draw(invchar, getX(), getY());
-    if (Riiablo.charData.getItems().getAlternate() > 0) {
+    if (itemData.getAlternate() > 0) {
       batch.draw(invcharTabR,
           getX() + inventory.rArmLeft - inventory.invLeft - 5,
           getY() + getHeight() - inventory.rArmBottom - 4);
@@ -419,18 +470,19 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void onDrop(int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.cursorToStore(StoreLoc.INVENTORY, x, y);
   }
 
   @Override
   public boolean onPickup(int i) {
-    if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-        && Riiablo.game.vendorPanel.isRepairing()) {
-      Riiablo.game.vendorPanel.repairItem(i);
+    if (!isCurrentSession() || itemController == null) return false;
+    GameScreen game = game();
+    if (game != null && game.vendorPanel != null && game.vendorPanel.isRepairing()) {
+      game.vendorPanel.repairItem(i);
       return false;
     }
-    com.riiablo.item.Item item = i >= 0 && i < Riiablo.charData.getItems().getItems().size
-        ? Riiablo.charData.getItems().getItems().get(i) : null;
+    Item item = i >= 0 && i < itemData.getItems().size ? itemData.getItems().get(i) : null;
     if (isShiftHeld() && item != null && item.type != null
         && item.type.is(com.riiablo.item.Type.POTI)) {
       // Native D2's Shift+left-click auto-belt action bypasses the mouse
@@ -449,11 +501,12 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public boolean onUse(Item item) {
+    if (!isCurrentSession() || itemController == null) return false;
+    GameScreen game = game();
     // Right-click starts a normal item action. Cancel any vendor mode first
     // so repair/sell/buy cannot consume or block that action.
-    if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-        && Riiablo.game.vendorPanel.isVisible()) {
-      Riiablo.game.vendorPanel.cancelTradeMode();
+    if (game != null && game.vendorPanel != null && game.vendorPanel.isVisible()) {
+      game.vendorPanel.cancelTradeMode();
     }
     // Selling is intentionally not handled here. Native D2 sells by dragging
     // an item from the inventory onto the vendor area; right-click remains the
@@ -464,8 +517,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
           itemController.useInventoryItem(item);
           return true;
         }
-        if (Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
-          if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+        if (character.useInventoryPotion(item)) {
+          if (audio != null) audio.play(item.getUseSound(), true);
           return true;
         }
       }
@@ -483,13 +536,15 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void onSwap(int i, int x, int y) {
+    if (!isCurrentSession() || itemController == null) return;
     itemController.swapStoreItem(i, StoreLoc.INVENTORY, x, y);
   }
 
   public Item targetEquippedItem(Actor actor) {
+    if (!isCurrentSession()) return null;
     for (; actor != null; actor = actor.getParent()) {
-      if (actor instanceof BodyPart)
-        return Riiablo.charData.getItems().getSlot(((BodyPart) actor).bodyLoc);
+      if (actor instanceof BodyPart && ((BodyPart) actor).panel() == this)
+        return itemData.getSlot(((BodyPart) actor).bodyLoc);
     }
     return null;
   }
@@ -510,29 +565,31 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       addListener(clickListener = new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (!isCurrentSession() || itemController == null) return;
           // A death/corpse transfer can change equipment outside this panel's
           // click flow. Resolve the slot again before deciding whether this is
           // an unequip, equip, or swap operation.
-          item = Riiablo.charData.getItems().getSlot(BodyPart.this.bodyLoc);
-          Item cursor = Riiablo.cursor.getItem();
-          if (cursor != null) {
-            if (!ArrayUtils.contains(cursor.typeEntry.BodyLoc, bodyPart)) {
-              Riiablo.audio.play(Riiablo.charData.classId.name().toLowerCase() + "_impossible_1", false);
+          item = itemData.getSlot(BodyPart.this.bodyLoc);
+          Item cursorItem = cursor.getItem();
+          if (cursorItem != null) {
+            if (!ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart)) {
+              audio.play(character.classId.name().toLowerCase() + "_impossible_1", false);
               return;
             }
 
-            Riiablo.audio.play(cursor.getDropSound(), true);
+            audio.play(cursorItem.getDropSound(), true);
             if (item != null) {
               itemController.swapBodyItem(BodyPart.this.bodyLoc, false);
             } else {
               itemController.cursorToBody(BodyPart.this.bodyLoc, false);
             }
-            item = cursor;
+            item = cursorItem;
           } else {
             if (item == null) return;
-            VendorPanel vendor = Riiablo.game.vendorPanel;
+            GameScreen game = game();
+            VendorPanel vendor = game == null ? null : game.vendorPanel;
             if (vendor != null && vendor.isRepairing()) {
-              vendor.repairItem(Riiablo.charData.getItems().indexOf(item));
+              vendor.repairItem(itemData.indexOf(item));
               return;
             }
             item = null;
@@ -549,10 +606,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       bodyPart = code;
     }
 
+    private InventoryPanel panel() { return InventoryPanel.this; }
+
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
       int x, y;
-      if (Riiablo.charData.getItems().getAlternate() > 0) {
+      if (itemData.getAlternate() > 0) {
         x = xOffsAlt == Integer.MIN_VALUE ? xOffs : xOffsAlt;
         y = yOffsAlt == Integer.MIN_VALUE ? yOffs : yOffsAlt;
       } else {
@@ -565,16 +625,16 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       }
 
       boolean blocked = false;
-      Item cursorItem = Riiablo.cursor.getItem();
+      Item cursorItem = cursor.getItem();
       if (cursorItem != null) {
         blocked = !ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart)
-            || !ItemRequirements.check(cursorItem, Riiablo.charData).usable();
+            || !ItemRequirements.check(cursorItem, character).usable();
       }
 
       boolean isOver = clickListener.isOver();
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       boolean itemRequirementsMet = item == null
-          || ItemRequirements.check(item, Riiablo.charData).usable();
+          || ItemRequirements.check(item, character).usable();
       if (item != null && !itemRequirementsMet) {
         b.setBlendMode(BlendMode.SOLID, backgroundColorR);
         b.draw(fill, getX(), getY(), getWidth(), getHeight());
@@ -603,12 +663,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
       if (isOver && item != null && cursorItem == null) {
         Actor details = item.details(updater);
-        VendorPanel vendor = Riiablo.game.vendorPanel;
+        GameScreen game = game();
+        VendorPanel vendor = game == null ? null : game.vendorPanel;
         if (!item.hasFlag2(Item.ITEMFLAG2_INSTORE)
             && vendor != null && vendor.canSellItems()) {
           details = vendor.sellDetails(item, updater);
         }
-        Riiablo.game.setDetails(details, item, InventoryPanel.this, this);
+        if (game != null) game.setDetails(details, item, InventoryPanel.this, this);
       }
     }
   }
