@@ -1,5 +1,9 @@
 # 当前 Chat 维护状态
 
+第四十九批：新增ITM足迹ECS适配，复用type4/size1及0x200规则；raw坐标/room/方向显式提供。
+新增4项含绑定观察→Request/Dispatch网格恢复及目标token替换拒绝；资格判断未接，生产仍A*，见handoff顶部。
+完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，新测试类已加入隔离清单。
+
 第四十八批：ActiveRooms复检grid内部cells/rows身份、尺寸及有效行偏移，拒绝旧effects操作替换存储。
 新增3项覆盖五类变动、live bits/seed/闲置容量及重捕获；生产仍A*，详细见handoff顶部。
 拒绝测试修复前复现；修复后完整618项/52类通过，失败/错误/跳过0；core/build/round48-full.log。

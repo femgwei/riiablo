@@ -2134,6 +2134,18 @@ Any中心/臂访问顺序及矩形整块扫描后子树短路。200组平铺随�
 - 拒绝测试修复前复现（core/build/round48-red.log）；修复后完整618项/52类通过，失败/错误/跳过0。
   core/build/round48-full.log，XML .gradle/path-port/round48-full/core/test-results/pathPortTest。
 
+## 第四十九批：真实ECS物品足迹组合入口
+
+- 新增NativePathItemFootprint，限定Class.ITM，复用NativePathUnitMetadata的type4/size1与
+  D2PathFootprint静态size形状/COLLIDE_ITEM(0x200)；固定上游0c0bbd1 Units.cpp分支复核。
+- raw int32坐标、实际D2ActiveRoom和可选path方向显式提供；不判断ground/inventory资格，
+  不从浮点、Size组件或视觉表行猜测，不自动安装碰撞/身份绑定。
+- 新增4项覆盖raw/方向、物品Request无lead且tolerance2、错误输入、保留其他bit的单格足迹，
+  真实ECS→绑定footprint观察→Request/Dispatch移除/搜索/完整恢复，并覆盖目标token替换前置拒绝。
+- 无新DLL动态证据，生产仍A*，实际raw/live/Act/seed/WRP缺口仍待。
+- 完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，
+  XML .gradle/path-port/round49-full/core/test-results/pathPortTest，新类已加入隔离编译清单。
+
 ## 待下一批处理
 
 - 第一/二批以外的调用者与上述坐标/RNG/身份投影限制，仍需后续专项对照。

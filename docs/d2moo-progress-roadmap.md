@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 寻路第四十九批（生产适配仍PARTIAL）
+
+- [x] NativePathItemFootprint接真实Class.ITM/size1至既有静态足迹，显式raw坐标/room/可选方向。
+- [x] 新增4项含物品tolerance2、单格mask0x200、真实ECS绑定/搜索/恢复/目标替换拒绝。
+- [x] 完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，新类加入隔离清单。
+- [ ] 物品资格判断及实际raw/live字段、Act与Zone映射、共享seed、WRP来源仍待；生产仍A*。
+
 ## 2026-10-16 寻路第四十八批（生产适配仍PARTIAL）
 
 - [x] ActiveRooms复检grid内部cells/rows身份、尺寸、有效行偏移；不冻结bits/seed/闲置行容量。

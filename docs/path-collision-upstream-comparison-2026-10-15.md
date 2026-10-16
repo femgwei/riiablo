@@ -5,6 +5,11 @@
 
 ## 结论与证据边界
 
+第四十九批补充：NativePathItemFootprint将真实Class.ITM/size1接入既有静态footprint和0x200规则，
+raw坐标、room及可选方向显式提供；新增4项含完整绑定观察/搜索/恢复与替换token拒绝。
+不判断ground/inventory资格，不推断raw来源或安装碰撞；固定上游分支复核，无新DLL动态证据，生产仍A*。
+完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log。
+
 第四十八批补充：ActiveRooms除grid对象外复检内部cells/rows身份、尺寸和有效行偏移，
 避免旧effects操作替换存储或变动布局；bits/seed及未用行容量仍live，替换后可重新捕获。
 新增3项跨网格/effects回归；仅宿主当前快照一致性，不证明初始布局有效或原生生命周期，无新DLL证据，生产仍A*。

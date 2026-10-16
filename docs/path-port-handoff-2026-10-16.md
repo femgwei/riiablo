@@ -2,7 +2,20 @@
 
 用户要求保存进度、归档旧聊天并在新聊天继续。第二十一批已在新聊天完成；无需重做第二十/二十一批。
 
-## 第四十八批续接结果（优先于下方历史起点）
+## 第四十九批续接结果（优先于下方历史起点）
+
+- 新增NativePathItemFootprint：真实ECS Class.ITM→既有type4/size1元数据→静态size足迹，
+  复用原有COLLIDE_ITEM(0x200)规则；非ITM/WRP拒绝，不读取Size或猜测表行。
+- raw int32坐标、实际D2ActiveRoom及可选path +0x64方向由调用者提供；不从浮点还原、不判断
+  ground/inventory资格、不自动绑定身份或安装生产碰撞。null room保持原契约。
+- 新增4项验证raw坐标/显式方向与物品Request无lead且tolerance2、输入拒绝、单格足迹保留其他bit，
+  以及真实ECS→observeFootprints→Request/Dispatch移除/搜索/恢复并在目标token替换后副作用前拒绝。
+- 固定上游0c0bbd1核对Units.cpp的尺寸和mask分支，复用已移植算法，无新DLL动态证据。
+  生产仍Map→AStarPathFinder；实际raw/live字段、Act与Zone映射、共享seed、WRP类型来源仍待。
+- 完整622项/53类通过，失败/错误/跳过0；core/build/round49-full.log，
+  XML `.gradle/path-port/round49-full/core/test-results/pathPortTest`；新类已加入隔离编译清单。
+
+## 第四十八批续接结果（历史）
 
 - D2PathActiveRooms在grid对象身份之外捕获cells/row-offset数组身份、width/height与有效行偏移值，
   requireCurrent拒绝内部存储替换或布局变动，避免旧RequestEffects继续操作新存储/错误布局。
