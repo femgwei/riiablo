@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.DiabColdIntegrationTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-16T00:39:22" hostname="DESKTOP-7GGAVHU" time="1.761">
+  <properties/>
+  <testcase name="playerDifficultyPenaltyAndRaisedColdCapApplyToLengthNotMagicResistance()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="1.456"/>
+  <testcase name="aboveOneLifeSurvives()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.015"/>
+  <testcase name="lostTargetNeverFallsBackToCoordinatesAndMovingOutOfMeleeDoesNotRerollRange()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.022"/>
+  <testcase name="cancelledDamagePreservesFractionalLife()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.01"/>
+  <testcase name="nativeDirectDamageReducesBeforeResistanceAndCapsPercentAbsorbAtForty()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.011"/>
+  <testcase name="exactlyOneLifeSurvives()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.009"/>
+  <testcase name="livingFullAbsorbStillHeals()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.008"/>
+  <testcase name="ordinaryMonsterUsesFreezeDivisorOnceBossUsesColdAndUninterruptableRejects()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.069"/>
+  <testcase name="realS2MarkerAppliesMagicNotColdOrWeaponDamageAndPlayerChill()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.017"/>
+  <testcase name="zeroDamagePreservesFractionalLife()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.007"/>
+  <testcase name="monsterResistanceHasNoPlayerCapAndHalfLengthPrecedesResistanceRounding()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.009"/>
+  <testcase name="lethalHitDispatchesDeathAndChillExpiresNormally()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.032"/>
+  <testcase name="coordinateOnlyFriendlyAndAlreadyDeadTargetsNeverReceiveAFakeHit()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.025"/>
+  <testcase name="fractionalRemainderDies()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.009"/>
+  <testcase name="mdrAndAbsorbCanRemoveDamageButDoNotShortenFreezeLength()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.015"/>
+  <testcase name="magicImmuneMonsterCanFreezeButColdImmuneMonsterCannot()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.013"/>
+  <testcase name="delayedFullAbsorbDoesNotHeal()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.007"/>
+  <testcase name="magicResistanceColdResistanceAndCannotBeFrozenAreIndependent()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.012"/>
+  <testcase name="delayedPartialAbsorbStillTakesDamage()" classname="com.riiablo.engine.server.DiabColdIntegrationTest" time="0.006"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

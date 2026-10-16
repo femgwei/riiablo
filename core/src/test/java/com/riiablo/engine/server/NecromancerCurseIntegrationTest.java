@@ -25,16 +25,75 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 /** ECS contract for target-centred, server-authoritative Necromancer curses. */
 class NecromancerCurseIntegrationTest extends RiiabloTest {
+  @Test void ironMaidenFractionalRemainderDies() { ironBoundary(40f + 255f / 256, 0f, false, false); }
+  @Test void ironMaidenExactlyOneLifeSurvives() { ironBoundary(41f, 1f, false, false); }
+  @Test void ironMaidenAboveOneLifeSurvives() { ironBoundary(41f + 1f / 256, 1f + 1f / 256, false, false); }
+  @Test void cancelledIronMaidenPreservesFractionalLife() { ironBoundary(.5f, .5f, true, false); }
+  @Test void immuneIronMaidenPreservesFractionalLife() { ironBoundary(.5f, .5f, false, true); }
+
+  private static void ironBoundary(float initial, float expected, boolean cancel, boolean immune) {
+    NoopFactory factory = new NoopFactory();
+    IronProbe probe = new IronProbe();
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, probe, new StateUpdater(), factory).build()
+        .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int defender = monster(world, 1, 0, 0);
+      int attacker = monster(world, 2, 0, immune ? 100 : 0);
+      UnitStates curse = world.getMapper(UnitStates.class).create(defender).init(defender);
+      NecromancerSkills.applyCurse(curse.stateList, Riiablo.files.States,
+          Riiablo.files.skills.get(SkillId.IRON_MAIDEN), 1, defender,
+          Riiablo.files.DifficultyLevels.get(0),
+          world.getMapper(AttributesWrapper.class).get(defender).attrs, false);
+      world.getMapper(AttributesWrapper.class).get(attacker).attrs
+          .get(Stat.hitpoints).set(initial);
+      probe.cancel = cancel;
+      events.dispatch(DamageEvent.obtainMelee(attacker, defender, 20, 20));
+      assertEquals(expected, world.getMapper(AttributesWrapper.class).get(attacker).attrs
+          .get(Stat.hitpoints).asFixed(), .0001f);
+      assertEquals(immune ? 0 : 1, probe.reactive);
+      assertEquals(expected == 0f ? 1 : 0, probe.deaths);
+      if (!immune) assertEquals(40f, probe.physical);
+      if (expected == 0f) {
+        assertEquals(defender, probe.killer);
+        assertEquals(attacker, probe.victim);
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static final class IronProbe extends PassiveSystem {
+    int reactive, deaths, killer, victim;
+    float physical;
+    boolean cancel;
+    @Subscribe public void damage(DamageEvent event) {
+      if (event.kind != DamageEvent.REACTIVE) return;
+      reactive++;
+      physical = event.physicalDamage;
+      if (cancel) event.damage = 0f;
+    }
+    @Subscribe public void death(DeathEvent event) {
+      deaths++;
+      killer = event.killer;
+      victim = event.victim;
+    }
+  }
+
   @Test
   void amplifyDamageUsesTargetCentreAndFeedsPhysicalResistance() {
     NoopFactory factory = new NoopFactory();

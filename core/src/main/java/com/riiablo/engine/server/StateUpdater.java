@@ -858,7 +858,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (life == null || life.asFixed() <= 0f || applied <= 0f) return;
     float before = life.asFixed();
     life.sub(applied);
-    if (life.asFixed() <= 0f) {
+    if (life.asFixed() < 1f) {
       life.set(0f);
       if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
     }
