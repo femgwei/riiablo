@@ -265,3 +265,65 @@ GameScreen Stage 测试的隐藏嵌套按钮覆盖。真实会话入口每轮额
 尚需清理。这些独立的面板资产留给下一批，不通过递归 dispose 所有控件处理。
 网络停机、Client 完整屏幕栈/共享资源、GameEntryLoadingScreen、完整构造回滚、
 跨 Act/加载中退出及长时压力/人工画面听感验收仍未完成。
+
+## 第五批：背包与控制面板资产、私有贴图
+
+InventoryPanel 补齐 invchar6Tab.DC6 的一份 unload，以及自建黑色 fill Texture
+的释放。ControlPanel 补齐七份职业技能图标引用；两个面板自身的资产获取和卸载均
+使用构造时的 AssetManager，控制条/迷你栏的相关引用仍由各自既有层级负责。
+不是对所有 UI 的全局宿主依赖迁移，GoldAmountDialog 等其他控件仍有自己的旧实现。
+
+两面板的 dispose 增加幂等边界：先标记终止，按所有权释放按钮音效、自建子资源及
+逐份资产引用；某项失败仍尝试后续，保留首异常和 suppressed，重复调用不重试。
+ControlWidget 清理也采用失败后继续，避免按钮异常跳过背景纹理或其它图标引用。
+不递归调用任意子 Actor 的 dispose，也不直接销毁 AssetManager 管理的共享纹理。
+
+包内 PanelTextures 统一创建临时纯色像素与拼接背景：try/finally 在上传成功或
+失败后释放自己分配的 Pixmap；DC6 提供的源帧像素仍归 DC6。拼接顺序、底部对齐、
+尺寸及 unmanaged TextureData 设定保持原样。背包 fill 和经验条白点也走此路径。
+若 ControlWidget 构造失败，调用方回收已经返回的背景 Texture；这只是局部回滚，
+不保证整个 ControlPanel/GameScreen 构造失败时的全资源自动回滚，也不能保证第三方
+Texture 构造函数尚未返回时其内部 GL 句柄一定已回滚。
+
+新增 PanelResourceLifecycleTest 7 项（真实释放方法、模拟资源及真实 AssetManager），覆盖面板重复退出、
+全部父级引用、原宿主、嵌套异常后继续、非桌面无控制条分支。PanelTexturesTest 5 项
+用 native Pixmap / 模拟 Texture 构造，覆盖上传/拼接失败清理、源帧归属、像素与布局。
+真实三轮入口另外对 invchar6Tab 和七种职业图标做构造前基线断言，检查背包 fill、
+控制条背景和经验条白点三张自建纹理的活跃/退出 GL 句柄，并验证上传像素提前释放。
+
+后续优先处理 GameEntryLoadingScreen 的 Stage/加载图生命周期，再推进网络停机、
+Client 完整屏幕栈/共享资源等边界；跨 Act/加载中退出、长时压力与人工显示/听感仍待。
+
+本批最小复跑（全量定向回归还沿用第四批的装配/音频/地图选择）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.PanelResourceLifecycleTest `
+  --tests com.riiablo.screen.panel.PanelTexturesTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/ui-panels-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/ui-panels-camp' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 第五批验证记录
+
+- 新增 12 项通过，最终扩大定向回归 334/334、49 类：core 292/292（42 类）、
+  D2GS 全部 42/42（7 类），失败/错误/跳过均 0；core/desktop/D2GS 编译检查通过。
+  沿用第四批 322 项并新增本批用例，不含既有玩法/AI 基线失败，不宣称全仓全绿。
+- 真实资源三轮，每轮 8 种面板资产回到构造前基线、3 张自建纹理 GL 句柄删除，
+  上传像素在运行期间已释放。按钮 0/129/138/0、三次技能重建稳定；每轮地图
+  58 个 DT1 / 2626 张贴图及 CPU 像素回收、新会话新实例、输入基线 2 仍通过。
+  退出 loaded asset 种类由上一批 57 降至 49，不等同于全部内存或 GL 资源验收。
+- 独立地图真实 GL 三轮保持 44 tiles、引用 4→2→1→0；单轮营地三帧及 Client
+  退出、D2GS 25Hz step=0.04、Throw 导弹顺序与伤害 1000→992 全部通过，
+  与上述测试同一命令 BUILD SUCCESSFUL。日志 build/ui-panels-regression.log；
+  报告 build/ui-panels-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+- 初次专项的 11 项新增测试与既有 23 项均通过，真实三轮也通过；随后加入第 12 项
+  真实 AssetManager 外部共享引用用例，纳入最终扩大回归。初次日志
+  build/ui-panels-focused.log。没有先失败再修改断言或延长看门狗的情况。
+- 最终无 ERROR/Exception/OFFSCREEN_FATAL；仍保留既有地图/分配/表 Key 诊断。
+  四次 SIM_SLOW=100.47/68.01/51.20/85.57ms（预算 40ms），不作性能验收。

@@ -11,13 +11,12 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.PixmapTextureData;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -57,10 +56,13 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Label;
+import com.riiablo.util.Disposal;
 
 public class ControlPanel extends Table implements Disposable, EscapeController {
   private static final String TAG = "ControlPanel";
   private static final boolean DEBUG_MOBILE = !true;
+  private final AssetManager assets = Riiablo.assets;
+  private boolean disposed;
 
   final AssetDescriptor<DC6> ctrlpnlDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl7.DC6", DC6.class);
   HealthWidget healthWidget;
@@ -153,25 +155,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   HotkeyButton leftSkill, rightSkill;
 
   public ControlPanel() {
-    Riiablo.assets.load(hlthmanaDescriptor);
-    Riiablo.assets.finishLoadingAsset(hlthmanaDescriptor);
-    hlthmana = Riiablo.assets.get(hlthmanaDescriptor);
+    assets.load(hlthmanaDescriptor);
+    assets.finishLoadingAsset(hlthmanaDescriptor);
+    hlthmana = assets.get(hlthmanaDescriptor);
 
-    Riiablo.assets.load(overlapDescriptor);
-    Riiablo.assets.finishLoadingAsset(overlapDescriptor);
-    overlap = Riiablo.assets.get(overlapDescriptor);
+    assets.load(overlapDescriptor);
+    assets.finishLoadingAsset(overlapDescriptor);
+    overlap = assets.get(overlapDescriptor);
 
-    Riiablo.assets.load(invwarnDescriptor);
-    Riiablo.assets.finishLoadingAsset(invwarnDescriptor);
-    invwarn = Riiablo.assets.get(invwarnDescriptor);
+    assets.load(invwarnDescriptor);
+    assets.finishLoadingAsset(invwarnDescriptor);
+    invwarn = assets.get(invwarnDescriptor);
 
-    Riiablo.assets.load(ctrlpnlDescriptor);
-    Riiablo.assets.finishLoadingAsset(ctrlpnlDescriptor);
-    DC6 ctrlpnl = Riiablo.assets.get(ctrlpnlDescriptor);
+    assets.load(ctrlpnlDescriptor);
+    assets.finishLoadingAsset(ctrlpnlDescriptor);
+    DC6 ctrlpnl = assets.get(ctrlpnlDescriptor);
 
-    Riiablo.assets.load(levelButtonDescriptor);
-    Riiablo.assets.finishLoadingAsset(levelButtonDescriptor);
-    DC6 levelButton = Riiablo.assets.get(levelButtonDescriptor);
+    assets.load(levelButtonDescriptor);
+    assets.finishLoadingAsset(levelButtonDescriptor);
+    DC6 levelButton = assets.get(levelButtonDescriptor);
     Button.ButtonStyle addPointStyle = new Button.ButtonStyle(
         new TextureRegionDrawable(levelButton.getTexture(0)),
         new TextureRegionDrawable(levelButton.getTexture(1)));
@@ -206,25 +208,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     addSkillsLabel = createPromptLabel(Riiablo.bundle.get("new_skill"));
     questLogLabel = createPromptLabel(Riiablo.bundle.get("quest_log"));
 
-    Riiablo.assets.load(levelUpSoundDescriptor);
-    Riiablo.assets.finishLoadingAsset(levelUpSoundDescriptor);
-    levelUpSound = Riiablo.assets.get(levelUpSoundDescriptor);
+    assets.load(levelUpSoundDescriptor);
+    assets.finishLoadingAsset(levelUpSoundDescriptor);
+    levelUpSound = assets.get(levelUpSoundDescriptor);
 
-    Riiablo.assets.load(popbeltDescriptor);
-    Riiablo.assets.finishLoadingAsset(popbeltDescriptor);
-    popbelt = Riiablo.assets.get(popbeltDescriptor).getTexture();
+    assets.load(popbeltDescriptor);
+    assets.finishLoadingAsset(popbeltDescriptor);
+    popbelt = assets.get(popbeltDescriptor).getTexture();
 
-    Riiablo.assets.load(SkilliconDescriptor);
-    Riiablo.assets.finishLoadingAsset(SkilliconDescriptor);
-    Skillicon = Riiablo.assets.get(SkilliconDescriptor);
+    assets.load(SkilliconDescriptor);
+    assets.finishLoadingAsset(SkilliconDescriptor);
+    Skillicon = assets.get(SkilliconDescriptor);
 
     CharSkilliconDescriptor = new AssetDescriptor[7];
     CharSkillicon = new DC6[CharSkilliconDescriptor.length];
     for (int i = 0; i < CharSkilliconDescriptor.length; i++) {
       CharSkilliconDescriptor[i] = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\" + CharacterClass.get(i).spellIcons + ".DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-      Riiablo.assets.load(CharSkilliconDescriptor[i]);
-      Riiablo.assets.finishLoadingAsset(CharSkilliconDescriptor[i]);
-      CharSkillicon[i] = Riiablo.assets.get(CharSkilliconDescriptor[i]);
+      assets.load(CharSkilliconDescriptor[i]);
+      assets.finishLoadingAsset(CharSkilliconDescriptor[i]);
+      CharSkillicon[i] = assets.get(CharSkilliconDescriptor[i]);
     }
 
     final int numFrames = ctrlpnl.getNumFramesPerDir();
@@ -294,23 +296,16 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         }
       });
 
-      int width = 0;
-      int height = Integer.MIN_VALUE;
-      for (int i = 1; i < numFrames - 2; i++) {
-        Pixmap frame = ctrlpnl.getPixmap(0, i);
-        width += frame.getWidth();
-        height = Math.max(height, frame.getHeight());
+      Texture background = PanelTextures.controlBackground(ctrlpnl);
+      try {
+        controlWidget = new ControlWidget(background);
+      } catch (RuntimeException | Error failure) {
+        try { background.dispose(); }
+        catch (RuntimeException | Error cleanup) {
+          if (cleanup != failure) failure.addSuppressed(cleanup);
+        }
+        throw failure;
       }
-      Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-      pixmap.setBlending(Pixmap.Blending.None);
-      int x = 0;
-      for (int i = 1; i < numFrames - 2; i++) {
-        Pixmap frame = ctrlpnl.getPixmap(0, i);
-        pixmap.drawPixmap(frame, x, pixmap.getHeight() - frame.getHeight());
-        x += frame.getWidth();
-      }
-
-      controlWidget = new ControlWidget(new Texture(new PixmapTextureData(pixmap, null, false, false, false)));
     }
 
     final float height = controlWidget == null ? 0 : controlWidget.background.getHeight() - 7;
@@ -558,20 +553,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(ctrlpnlDescriptor.fileName);
-    Riiablo.assets.unload(popbeltDescriptor.fileName);
-    Riiablo.assets.unload(overlapDescriptor.fileName);
-    Riiablo.assets.unload(hlthmanaDescriptor.fileName);
-    Riiablo.assets.unload(invwarnDescriptor.fileName);
-    Riiablo.assets.unload(SkilliconDescriptor.fileName);
-    Riiablo.assets.unload(levelButtonDescriptor.fileName);
-    Riiablo.assets.unload(levelUpSoundDescriptor.fileName);
-    if (btnAddStats != null) btnAddStats.dispose();
-    if (btnAddSkills != null) btnAddSkills.dispose();
-    if (btnQuestLog != null) btnQuestLog.dispose();
-    if (experienceWidget != null) experienceWidget.dispose();
-    if (inventoryWarningWidget != null) inventoryWarningWidget.dispose();
-    if (controlWidget != null) controlWidget.dispose();
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> Button.disposeClickSounds(this));
+      cleanup.dispose(btnAddStats);
+      cleanup.dispose(btnAddSkills);
+      cleanup.dispose(btnQuestLog);
+      if (experienceWidget != null) cleanup.run(experienceWidget::dispose);
+      cleanup.dispose(inventoryWarningWidget);
+      cleanup.dispose(controlWidget);
+      for (AssetDescriptor asset : new AssetDescriptor[] {
+          ctrlpnlDescriptor, popbeltDescriptor, overlapDescriptor, hlthmanaDescriptor,
+          invwarnDescriptor, SkilliconDescriptor, levelButtonDescriptor, levelUpSoundDescriptor}) {
+        cleanup.run(() -> assets.unload(asset.fileName));
+      }
+      for (AssetDescriptor asset : CharSkilliconDescriptor) {
+        cleanup.run(() -> assets.unload(asset.fileName));
+      }
+    }
   }
 
   private class HealthWidget extends Actor {
@@ -836,12 +836,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       // 宽度和位置由外部设置
 
       // 创建1x1白色像素纹理
-      Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-      pixmap.setColor(Color.WHITE);
-      pixmap.fill();
-      whitePixelTexture = new Texture(pixmap);
+      whitePixelTexture = PanelTextures.solid(Color.WHITE);
       whitePixel = new TextureRegion(whitePixelTexture);
-      pixmap.dispose();
     }
 
     void dispose() {
@@ -965,9 +961,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       setSize(background.getWidth(), background.getHeight() - 7);
       setTouchable(Touchable.enabled);
 
-      Riiablo.assets.load(runButtonDescriptor);
-      Riiablo.assets.finishLoadingAsset(runButtonDescriptor);
-      DC6 runButton = Riiablo.assets.get(runButtonDescriptor);
+      assets.load(runButtonDescriptor);
+      assets.finishLoadingAsset(runButtonDescriptor);
+      DC6 runButton = assets.get(runButtonDescriptor);
       walkStyle = new Button.ButtonStyle(
           new TextureRegionDrawable(runButton.getTexture(0)),
           new TextureRegionDrawable(runButton.getTexture(1)));
@@ -986,21 +982,21 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       });
       addActor(btnRun);
 
-      Riiablo.assets.load(minipanelDescriptor);
-      Riiablo.assets.finishLoadingAsset(minipanelDescriptor);
-      minipanelWidget = new MinipanelWidget(Riiablo.assets.get(minipanelDescriptor).getTexture(0));
+      assets.load(minipanelDescriptor);
+      assets.finishLoadingAsset(minipanelDescriptor);
+      minipanelWidget = new MinipanelWidget(assets.get(minipanelDescriptor).getTexture(0));
       minipanelWidget.setPosition((getWidth() / 2) - (minipanelWidget.getWidth() / 2), getHeight());
       addActor(minipanelWidget);
 
-      Riiablo.assets.load(menubuttonDescriptor);
-      Riiablo.assets.finishLoadingAsset(menubuttonDescriptor);
+      assets.load(menubuttonDescriptor);
+      assets.finishLoadingAsset(menubuttonDescriptor);
       menuHidden = new Button.ButtonStyle() {{
-        up   = new TextureRegionDrawable(Riiablo.assets.get(menubuttonDescriptor).getTexture(0));
-        down = new TextureRegionDrawable(Riiablo.assets.get(menubuttonDescriptor).getTexture(1));
+        up   = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(0));
+        down = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(1));
       }};
       menuShown = new Button.ButtonStyle() {{
-        up   = new TextureRegionDrawable(Riiablo.assets.get(menubuttonDescriptor).getTexture(2));
-        down = new TextureRegionDrawable(Riiablo.assets.get(menubuttonDescriptor).getTexture(3));
+        up   = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(2));
+        down = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(3));
       }};
       btnMenu = new Button(minipanelWidget.isVisible() ? menuShown : menuHidden);
       btnMenu.setPosition((getWidth() / 2) - (btnMenu.getWidth() / 2), 15);
@@ -1034,13 +1030,15 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void dispose() {
-      btnRun.dispose();
-      btnMenu.dispose();
-      Riiablo.assets.unload(runButtonDescriptor.fileName);
-      Riiablo.assets.unload(minipanelDescriptor.fileName);
-      minipanelWidget.dispose();
-      background.dispose();
-      Riiablo.assets.unload(menubuttonDescriptor.fileName);
+      try (Disposal cleanup = new Disposal()) {
+        cleanup.dispose(btnRun);
+        cleanup.dispose(btnMenu);
+        cleanup.dispose(minipanelWidget);
+        cleanup.dispose(background);
+        cleanup.run(() -> assets.unload(runButtonDescriptor.fileName));
+        cleanup.run(() -> assets.unload(minipanelDescriptor.fileName));
+        cleanup.run(() -> assets.unload(menubuttonDescriptor.fileName));
+      }
     }
 
     @Override
@@ -1095,8 +1093,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         setSize(background.getRegionWidth(), background.getRegionHeight());
         //setVisible(false);
 
-        Riiablo.assets.load(minipanelbtnDescriptor);
-        Riiablo.assets.finishLoadingAsset(minipanelbtnDescriptor);
+        assets.load(minipanelbtnDescriptor);
+        assets.finishLoadingAsset(minipanelbtnDescriptor);
         ClickListener clickListener = new ClickListener() {
           @Override
           public void clicked(InputEvent event, float x, float y) {
@@ -1127,43 +1125,43 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
           }
         };
         btnCharacter = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(0));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(1));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(0));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(1));
         }});
         btnCharacter.addListener(clickListener);
         btnInventory = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(2));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(3));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(2));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(3));
         }});
         btnInventory.addListener(clickListener);
         btnSkillTree = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(4));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(5));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(4));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(5));
         }});
         btnSkillTree.addListener(clickListener);
         btnParty = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(6));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(7));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(6));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(7));
         }});
         btnParty.addListener(clickListener);
         btnMap = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(8));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(9));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(8));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(9));
         }});
         btnMap.addListener(clickListener);
         btnMessages = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(10));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(11));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(10));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(11));
         }});
         btnMessages.addListener(clickListener);
         btnQuests = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(12));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(13));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(12));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(13));
         }});
         btnQuests.addListener(clickListener);
         btnEscapeMenu = new Button(new Button.ButtonStyle() {{
-          up   = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(14));
-          down = new TextureRegionDrawable(Riiablo.assets.get(minipanelbtnDescriptor).getTexture(15));
+          up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(14));
+          down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(15));
         }});
         btnEscapeMenu.addListener(clickListener);
         Table table = new Table();
@@ -1183,9 +1181,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       @Override
       public void dispose() {
-        btnCharacter.dispose();
-        btnInventory.dispose();
-        Riiablo.assets.unload(minipanelbtnDescriptor.fileName);
+        try (Disposal cleanup = new Disposal()) {
+          cleanup.run(() -> Button.disposeClickSounds(this));
+          cleanup.run(() -> assets.unload(minipanelbtnDescriptor.fileName));
+        }
       }
 
       @Override

@@ -1,5 +1,43 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第五批：背包/控制面板资源
+
+- [x] InventoryPanel 补齐 invchar6Tab 引用与私有 fill Texture 的释放；
+  ControlPanel 补齐七份职业图标引用。两面板自身及控制条/迷你栏的资产获取/卸载
+  使用原 AssetManager，不直接销毁共享 DC6 贴图，不改变玩法、Tick、协议或存档。
+- [x] 两面板 dispose 幂等；按所有权清理按钮、私有子资源、逐份资产引用，某项
+  失败仍继续后续清理，保留首异常与 suppressed，不重试失败引用。ControlWidget
+  同样避免按钮失败跳过背景和图标；保留层级归属，不任意递归 dispose 所有控件。
+- [x] PanelTextures 在成功/失败时释放纯色或拼接背景的临时 Pixmap，不释放
+  DC6 源帧；保留拼接像素、尺寸、底对齐和 unmanaged 设定。背包 fill、经验条白点
+  共用安全上传路径；ControlWidget 构造失败回收已生成的背景 Texture。
+- [x] 新增 12 项：PanelResourceLifecycleTest 7 项、PanelTexturesTest 5 项；覆盖
+  幂等、异常后继续、非桌面分支、原宿主、真实 AssetManager 外部共享引用，以及
+  native Pixmap 上传/拼接失败清理和源帧/像素布局。首次专项命令 11 项新增与
+  既有 23 项通过，三轮真实资源检查通过；随后新增外部共享引用用例纳入扩大回归。
+  初次日志 build/ui-panels-focused.log，未发生先失败再弱化断言的处理。
+- [x] 生产三轮入口新增 8 种资产的构造前引用基线、3 张私有 GL 贴图退出删除、
+  临时上传像素提前释放检查。每轮仍校验按钮引用归零、三次技能重建稳定及地图
+  58 个 DT1 / 2626 张贴图回收。退出已加载资产种类由上一批 57 降到 49，不能将
+  该种类数等同于全部内存、GL 或共享引用的全面验收。
+- [x] 最终扩大定向回归 334/334、49 类通过：core 292/292（42 类）、D2GS
+  全部 42/42（7 类），失败/错误/跳过均 0。范围是第四批 322 项加本批 12 项，
+  未纳入既有玩法/AI 基线失败，不宣称全仓全绿；core/desktop/D2GS 编译检查通过。
+- [x] 同一命令的两类三轮真实 GL、单轮营地/Client 退出、25Hz step=0.04、
+  Throw 导弹顺序及伤害 1000→992 全部通过，BUILD SUCCESSFUL。日志
+  build/ui-panels-regression.log；每轮报告 build/ui-panels-camp/cycle-N-lifecycle.txt，
+  营地 manifest 在 cycle-N/。无 ERROR/Exception/OFFSCREEN_FATAL；保留既有
+  地图/分配/表 Key 诊断。SIM_SLOW=100.47/68.01/51.20/85.57ms，预算 40ms，
+  不作性能验收；没有降低断言或扩大看门狗预算。
+- 本批只做局部资源回滚，不包含整个面板/GameScreen 的构造失败回滚；
+  GoldAmountDialog 等其它控件仍有旧的全局宿主实现，不能宣称任意宿主替换安全或
+  UI 全部资源零泄漏。第三方 Texture 构造内部尚未返回的 GL 失败也不作全回滚保证。
+- 下一批优先处理 GameEntryLoadingScreen 的 Stage/加载图生命周期，再推进
+  网络 socket / HostedD2GS、Client 完整屏幕栈与共享资源、跨 Act/加载中退出。
+  长时内存、人工画面/听感和性能验收仍待。
+- 整体进度：七批装配改造完成，资源阶段第五批完成；资源阶段尚未全部收口。
+  实现、范围与复跑命令见 [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第四批：按钮音效引用收口
 
 - [x] Button 的每份点击音效引用绑定原 AssetManager；播放/卸载使用同一宿主，

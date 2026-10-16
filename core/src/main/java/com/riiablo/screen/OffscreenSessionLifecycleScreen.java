@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Keys;
+import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.map.DT1;
 import com.riiablo.save.CharData;
@@ -21,6 +22,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final int inputBaseline = Riiablo.input.getProcessors().size;
   private final Map<String, DT1> previousTiles = new HashMap<>();
   private final Map<String, Integer> baselineReferences = new HashMap<>();
+  private final Map<String, Integer> panelReferencesBeforeConstruction = new HashMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -41,6 +43,13 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
     buttonReferencesBeforeConstruction = references("data/global/sfx/cursor/button.wav");
+    panelReferencesBeforeConstruction.clear();
+    panelReferencesBeforeConstruction.put("data/global/ui/PANEL/invchar6Tab.DC6",
+        references("data/global/ui/PANEL/invchar6Tab.DC6"));
+    for (CharacterClass charClass : CharacterClass.values()) {
+      String name = "data/global/ui/SPELLS/" + charClass.spellIcons + ".DC6";
+      panelReferencesBeforeConstruction.put(name, references(name));
+    }
     OffscreenCampScreen screen = new OffscreenCampScreen(character, output + "/cycle-" + cycle);
     // The constructor also builds UI actors, which have their own asset loads.
     // Measure the preload scope immediately before show, not before those
@@ -66,6 +75,22 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
           "quick-skill rebuild must not accumulate click-sound references");
     }
     Array<Pixmap> pixels = new Array<>();
+    // These are unmanaged textures, absent from AssetManager diagnostics.
+    Texture fill = field(screen.inventoryPanel, "fill", Texture.class);
+    Object controlWidget = field(screen.controlPanel, "controlWidget", Object.class);
+    Object experienceWidget = field(screen.controlPanel, "experienceWidget", Object.class);
+    Texture[] ownedPanelTextures = {fill, field(controlWidget, "background", Texture.class),
+        field(experienceWidget, "whitePixelTexture", Texture.class)};
+    Array<Integer> panelHandles = new Array<>();
+    for (Texture texture : ownedPanelTextures) {
+      require(texture != null && Gdx.gl.glIsTexture(texture.getTextureObjectHandle()),
+          "live owned panel texture");
+      panelHandles.add(texture.getTextureObjectHandle());
+      require(texture.getTextureData() instanceof com.badlogic.gdx.graphics.glutils.PixmapTextureData,
+          "panel upload pixel fixture");
+      require(texture.getTextureData().consumePixmap().isDisposed(),
+          "temporary panel upload pixels already released");
+    }
     Array<Integer> handles = new Array<>();
     Map<String, DT1> currentTiles = new HashMap<>();
     for (String name : assets.getAssetNames()) {
@@ -102,6 +127,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     // references must return all the way to the pre-construction baseline.
     require(references("data/global/sfx/cursor/button.wav") == buttonReferencesBeforeConstruction,
         "all session click-sound references must return to the host baseline");
+    for (Map.Entry<String, Integer> reference : panelReferencesBeforeConstruction.entrySet()) {
+      require(references(reference.getKey()) == reference.getValue(),
+          "panel references balanced: " + reference.getKey() + " expected=" + reference.getValue()
+              + " actual=" + references(reference.getKey()));
+    }
+    for (int handle : panelHandles) require(!Gdx.gl.glIsTexture(handle), "owned panel texture deleted");
     for (com.badlogic.gdx.assets.AssetDescriptor asset : new com.badlogic.gdx.assets.AssetDescriptor[] {
         screen.loadingscreenDescriptor, screen.windowopenDescriptor, screen.automapDescriptor}) {
       int expected = baselineReferences.getOrDefault(asset.fileName, 0);
@@ -121,6 +152,9 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nuiButtonReferencesAfterConstruction=" + buttonReferencesAfterConstruction
         + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
         + "\nquickSkillRebuilds=3"
+        + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
+        + "\nownedPanelTexturesDeleted=" + panelHandles.size
+        + "\npanelUploadPixelsFreed=true"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")
         + "\nremainingAssets=" + assets.getLoadedAssets() + "\nresult=PASS\n";
     Gdx.files.absolute(output).child("cycle-" + cycle + "-lifecycle.txt").writeString(report, false, "UTF-8");
@@ -135,5 +169,16 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
 
   private int references(String name) {
     return assets.isLoaded(name) ? assets.getReferenceCount(name) : 0;
+  }
+
+  private static <T> T field(Object owner, String name, Class<T> type) {
+    require(owner != null, "missing panel owner for " + name);
+    try {
+      java.lang.reflect.Field field = owner.getClass().getDeclaredField(name);
+      field.setAccessible(true);
+      return type.cast(field.get(owner));
+    } catch (ReflectiveOperationException failure) {
+      throw new IllegalStateException("Session lifecycle: panel fixture " + name, failure);
+    }
   }
 }

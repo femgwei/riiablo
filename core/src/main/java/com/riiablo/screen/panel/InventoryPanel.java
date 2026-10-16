@@ -5,10 +5,10 @@ import org.apache.commons.lang3.ArrayUtils;
 import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -44,9 +44,12 @@ import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
+import com.riiablo.util.Disposal;
 
 public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
   private static final String TAG = "InventoryPanel";
+  private final AssetManager assets = Riiablo.assets;
+  private boolean disposed;
 
   final AssetDescriptor<DC6> invcharDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\invchar6.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion invchar;
@@ -86,32 +89,28 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   final ItemGrid grid;
 
   public InventoryPanel() {
-    Riiablo.assets.load(invcharDescriptor);
-    Riiablo.assets.finishLoadingAsset(invcharDescriptor);
-    invchar = Riiablo.assets.get(invcharDescriptor).getTexture(1);
+    assets.load(invcharDescriptor);
+    assets.finishLoadingAsset(invcharDescriptor);
+    invchar = assets.get(invcharDescriptor).getTexture(1);
     setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
-    Riiablo.assets.load(invcharTabDescriptor);
-    Riiablo.assets.finishLoadingAsset(invcharTabDescriptor);
-    invcharTabR = Riiablo.assets.get(invcharTabDescriptor).getTexture(0);
-    invcharTabL = Riiablo.assets.get(invcharTabDescriptor).getTexture(1);
+    assets.load(invcharTabDescriptor);
+    assets.finishLoadingAsset(invcharTabDescriptor);
+    invcharTabR = assets.get(invcharTabDescriptor).getTexture(0);
+    invcharTabL = assets.get(invcharTabDescriptor).getTexture(1);
 
-    Pixmap solidColorPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-    solidColorPixmap.setColor(0.0f, 0.0f, 0.0f, 1.0f);
-    solidColorPixmap.fill();
-    fill = new Texture(solidColorPixmap);
-    solidColorPixmap.dispose();
+    fill = PanelTextures.solid(Color.BLACK);
 
     backgroundColorR = Riiablo.colors.invRed;
     backgroundColorG = Riiablo.colors.invGreen;
 
     btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+      assets.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
     btnExit.setPosition(18, 15);
     btnExit.addListener(new ClickListener() {
@@ -131,25 +130,25 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
     inventory = Riiablo.files.inventory.getClass(Riiablo.charData.charClass);
 
-    Riiablo.assets.load(inv_armorDescriptor);
-    Riiablo.assets.load(inv_beltDescriptor);
-    Riiablo.assets.load(inv_bootsDescriptor);
-    Riiablo.assets.load(inv_helm_gloveDescriptor);
-    Riiablo.assets.load(inv_ring_amuletDescriptor);
-    Riiablo.assets.load(inv_weaponsDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_armorDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_beltDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_bootsDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_helm_gloveDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_ring_amuletDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_weaponsDescriptor);
+    assets.load(inv_armorDescriptor);
+    assets.load(inv_beltDescriptor);
+    assets.load(inv_bootsDescriptor);
+    assets.load(inv_helm_gloveDescriptor);
+    assets.load(inv_ring_amuletDescriptor);
+    assets.load(inv_weaponsDescriptor);
+    assets.finishLoadingAsset(inv_armorDescriptor);
+    assets.finishLoadingAsset(inv_beltDescriptor);
+    assets.finishLoadingAsset(inv_bootsDescriptor);
+    assets.finishLoadingAsset(inv_helm_gloveDescriptor);
+    assets.finishLoadingAsset(inv_ring_amuletDescriptor);
+    assets.finishLoadingAsset(inv_weaponsDescriptor);
 
-    inv_armor = Riiablo.assets.get(inv_armorDescriptor);
-    inv_belt = Riiablo.assets.get(inv_beltDescriptor);
-    inv_boots = Riiablo.assets.get(inv_bootsDescriptor);
-    inv_helm_glove = Riiablo.assets.get(inv_helm_gloveDescriptor);
-    inv_ring_amulet = Riiablo.assets.get(inv_ring_amuletDescriptor);
-    inv_weapons = Riiablo.assets.get(inv_weaponsDescriptor);
+    inv_armor = assets.get(inv_armorDescriptor);
+    inv_belt = assets.get(inv_beltDescriptor);
+    inv_boots = assets.get(inv_bootsDescriptor);
+    inv_helm_glove = assets.get(inv_helm_gloveDescriptor);
+    inv_ring_amulet = assets.get(inv_ring_amuletDescriptor);
+    inv_weapons = assets.get(inv_weaponsDescriptor);
 
     BodyPart torso = bodyParts[BodyLocs.TORS] = new BodyPart(BodyLoc.TORS, inv_armor.getTexture());
     torso.setSize(inventory.torsoWidth, inventory.torsoHeight);
@@ -306,9 +305,9 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     addActor(invgold);
 
     btnDropGold = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(goldcoinbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(goldcoinbtnDescriptor);
-      DC6 goldcoinbtn = Riiablo.assets.get(goldcoinbtnDescriptor);
+      assets.load(goldcoinbtnDescriptor);
+      assets.finishLoadingAsset(goldcoinbtnDescriptor);
+      DC6 goldcoinbtn = assets.get(goldcoinbtnDescriptor);
       up   = new TextureRegionDrawable(goldcoinbtn.getTexture(0));
       down = new TextureRegionDrawable(goldcoinbtn.getTexture(1));
     }});
@@ -362,17 +361,21 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void dispose() {
-    btnExit.dispose();
-    Riiablo.assets.unload(invcharDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
-    Riiablo.assets.unload(goldcoinbtnDescriptor.fileName);
-    Riiablo.assets.unload(inv_armorDescriptor.fileName);
-    Riiablo.assets.unload(inv_beltDescriptor.fileName);
-    Riiablo.assets.unload(inv_bootsDescriptor.fileName);
-    Riiablo.assets.unload(inv_helm_gloveDescriptor.fileName);
-    Riiablo.assets.unload(inv_ring_amuletDescriptor.fileName);
-    Riiablo.assets.unload(inv_weaponsDescriptor.fileName);
-    goldDialog.dispose();
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> Button.disposeClickSounds(this));
+      cleanup.dispose(btnExit);
+      cleanup.dispose(btnDropGold);
+      cleanup.dispose(goldDialog);
+      cleanup.dispose(fill);
+      for (AssetDescriptor asset : new AssetDescriptor[] {
+          invcharDescriptor, invcharTabDescriptor, buysellbtnDescriptor, goldcoinbtnDescriptor,
+          inv_armorDescriptor, inv_beltDescriptor, inv_bootsDescriptor, inv_helm_gloveDescriptor,
+          inv_ring_amuletDescriptor, inv_weaponsDescriptor}) {
+        cleanup.run(() -> assets.unload(asset.fileName));
+      }
+    }
   }
 
   @Override
