@@ -1,0 +1,12 @@
+Baseline: 18 tests, 2 expected Iron Maiden overkill failures.
+final: 359 tests, 0 failures/errors/skips.
+repeat: 359 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 F54F04232ACD82C5E586BD8E80B666B2212F965949730710E8DD27A7AED9CAAC core/src/main/java/com/riiablo/engine/server/StateUpdater.java
+Unchanged file differs only by CRLF/LF: tested SHA256 7A44924F546D107D4A869258C0A9E76B841B97EB6FE44CA1E3C12438D317793E core/src/main/java/com/riiablo/engine/server/skill/NecromancerSkills.java
+SHA256 697DB33389FB7A6A990A0E1675A6BC0D70E204C36174BFD27A2AE7E3550D8412 core/src/main/java/com/riiablo/engine/server/skill/NecromancerSkills.java
+Unchanged file differs only by CRLF/LF: tested SHA256 047E33D02D06E44EA60B75361805AEFE79344AE1C2048551DDD2AF7FC9CCE215 core/src/test/java/com/riiablo/engine/server/NativeNecromancerCurseDataTest.java
+SHA256 DB0575E4E0C503B0EF252C9ABA87A5A95318428951BA746511AB20CEF4E799AF core/src/test/java/com/riiablo/engine/server/NativeNecromancerCurseDataTest.java
+SHA256 9AE8F7DCB5DE9CC534B432E2BD51AC3B78F8A7406E91F668880714A11130C97B core/src/test/java/com/riiablo/engine/server/NecromancerCurseIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Iron Maiden overkill reflection base verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

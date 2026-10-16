@@ -173,13 +173,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? victimAttributes.get(Stat.hitpoints, StatRef.obtain()) : null;
     float availableLife = victimLife != null ? Math.max(0f, victimLife.asFixed()) : 0f;
     float physical = Math.min(Math.max(0f, event.physicalDamage), Math.max(0f, event.damage));
-    physical = Math.min(physical, availableLife);
     if (physical <= 0f) return;
 
-    applyBloodGolemLifeLink(event, physical);
+    float lifeLost = Math.min(physical, availableLife);
+    if (lifeLost > 0f) applyBloodGolemLifeLink(event, lifeLost);
 
     UnitState lifeTap = victimStates != null ? victimStates.getState(StateId.LIFETAP) : null;
-    if (lifeTap != null) applyLifeTap(event, lifeTap, physical);
+    if (lifeTap != null && lifeLost > 0f) applyLifeTap(event, lifeTap, lifeLost);
 
     UnitStates attackerUnitStates = mUnitStates.has(event.attacker)
         ? mUnitStates.get(event.attacker) : null;

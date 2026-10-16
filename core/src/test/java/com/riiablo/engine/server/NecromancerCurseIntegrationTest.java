@@ -39,6 +39,43 @@ import org.junit.jupiter.api.Test;
 
 /** ECS contract for target-centred, server-authoritative Necromancer curses. */
 class NecromancerCurseIntegrationTest extends RiiabloTest {
+  @Test void ironMaidenUsesPacketAgainstOneLifeVictim() { ironOverkill(1f, 40.5f); }
+  @Test void ironMaidenUsesPacketAgainstFractionalLifeVictim() { ironOverkill(.5f, 40.25f); }
+  @Test void ironMaidenAndLifeTapKeepTheirIndependentBases() { ironOverkill(100f, 50f); }
+
+  private static void ironOverkill(float victimLife, float expectedLife) {
+    NoopFactory factory = new NoopFactory();
+    IronProbe probe = new IronProbe();
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, probe, new StateUpdater(), factory).build()
+        .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int attacker = monster(world, 0, 0, 0);
+      int defender = monster(world, 1, 0, 0);
+      Attributes attackerAttrs = world.getMapper(AttributesWrapper.class).get(attacker).attrs;
+      Attributes defenderAttrs = world.getMapper(AttributesWrapper.class).get(defender).attrs;
+      attackerAttrs.get(Stat.hitpoints).set(50f);
+      defenderAttrs.get(Stat.hitpoints).set(victimLife);
+      UnitStates attackerStates = world.getMapper(UnitStates.class).create(attacker).init(attacker);
+      UnitStates defenderStates = world.getMapper(UnitStates.class).create(defender).init(defender);
+      NecromancerSkills.applyCurse(attackerStates.stateList, Riiablo.files.States,
+          Riiablo.files.skills.get(SkillId.IRON_MAIDEN), 1, defender,
+          Riiablo.files.DifficultyLevels.get(0), attackerAttrs, false);
+      NecromancerSkills.applyCurse(defenderStates.stateList, Riiablo.files.States,
+          Riiablo.files.skills.get(SkillId.LIFE_TAP), 1, attacker,
+          Riiablo.files.DifficultyLevels.get(0), defenderAttrs, false);
+      DamageEvent hit = DamageEvent.obtainMelee(attacker, defender, 20, 20);
+      events.dispatch(hit);
+      assertEquals(1, probe.reactive);
+      assertEquals(10f, probe.physical);
+      assertEquals(expectedLife, attackerAttrs.get(Stat.hitpoints).asFixed(), .0001f);
+      assertEquals(20f, hit.damage);
+      assertEquals(20f, hit.physicalDamage);
+      assertEquals(0, probe.deaths);
+    } finally { world.dispose(); }
+  }
+
   @Test void ironMaidenSelectsFormulaForBothCombatants() {
     for (int attackerType = 0; attackerType < 3; attackerType++) {
       for (boolean defenderMonster : new boolean[] {false, true}) {
