@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.combat.CombatSystemTest" tests="46" skipped="0" failures="0" errors="0" timestamp="2026-10-16T00:00:57" hostname="DESKTOP-7GGAVHU" time="0.015">
+  <properties/>
+  <testcase name="fixedPoisonSnapshotsMasteryAndPierceForSpreadTargets()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedFireRateDoesNotBreakMonsterImmunityWithPierce()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="runtimeDefianceStateChangesHitChance()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="monsterAttackingPlayerDoesNotReceiveAnExtraPvpHitFactor()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="playerFallbackAttackRatingAvoidsArtificialFivePercentFloor()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="playerVsPlayerDamageUsesNativeSeventeenPercentScalar()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="shieldBlockAcceptsPhysicalMissilesButNotElementalOnlyMissiles()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedFireRateCapsPercentAbsorbAtNativeFortyPercent()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="ignoreTargetDefenseOnlyAppliesToEligibleMonsterTargets()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="poisonShrineSuppressesDotWithoutDiscardingInfectionLifetime()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="calculatesPvmHitChanceWithLevelFactor()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="nativeMaximumResistanceCapIsApplied()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedElementalDamageUsesTheSameMagicDamageReductionRule()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="runtimeMightStateIncreasesAuthoritativePhysicalDamage()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="itemPoisonTotalDamageUsesFixedRatePerFrame()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="runtimeResistFireStateReducesElementalDamage()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="clampsHitChanceToNativeBounds()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedElementalAreaDamageUsesSameAbsorbAndPvpChain()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="calculatesBlockChanceFromDexterityAndLevel()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="attackRatingVsMonsterOnlyAffectsMonsterTargets()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="playerDifficultyResistancePenaltyMatchesNativeValues()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="alwaysHitUsesNativeSentinelRoll()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="amazonPassiveDefenseKeepsTypeAndNoDamage()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedPoisonAppliesHellPenaltyToPlayerDamageAndLength()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="nativeElementalPierceReducesTargetResistance()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="nativeHitFormulaIncludesAttackerAndDefenderLevels()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="elementalAbsorbAppliesPercentThenFlatAndRecordsLife()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="playerBlockUsesShieldAndClassBlockFactorAndRunningPenalty()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="playerResistanceAtOneHundredUsesCapInsteadOfMonsterImmunity()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="attackModeDefenseBonusesAreAddedToBaseDefense()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="difficultyResistancePenaltyDoesNotApplyToMonsterTargets()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="meleeStrengthUsesNativePercentScaling()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedPhysicalDamageAppliesResistanceFlatReductionAndPvp()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="monsterAttackUsesShieldContextAcrossMovementAndHolyShieldStates()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="blockAnimationHonorsFasterBlockRateFrameGate()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="playerAttackDoesNotShieldBlockAMonsterWithoutShieldContext()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="runtimeHolyFireStateAddsAuthoritativeMeleeElementalDamage()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="magicDamageReductionAppliesToRegularElementalPacketsBeforeAbsorb()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="deterministicHitResultKeepsArDefenseChanceAndRollTogether()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="nativeResistanceIsClampedToNegativeHundred()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="elementalAbsorbNeverProducesNegativeDamage()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedPoisonSeparatesRateAndLengthResistance()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.001"/>
+  <testcase name="fixedPoisonPvpScalesRateButNotDuration()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="fixedFireRatePreservesFractionAndScalesMdrByDamageRate()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="convertsWeaponPoisonFromNativeEightEightRate()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <testcase name="zeroToBlockShieldStillUsesPlayerClassBlockFactor()" classname="com.riiablo.engine.server.combat.CombatSystemTest" time="0.0"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[AURA_COMBAT] aura=DEFIANCE hitChance=50->37 status=PASS
+[AURA_COMBAT] aura=MIGHT base=10 buffed=14 status=PASS
+[AURA_COMBAT] aura=RESIST_FIRE baseFire=20 resistedFire=14 status=PASS
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

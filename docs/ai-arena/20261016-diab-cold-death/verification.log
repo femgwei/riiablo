@@ -1,0 +1,7 @@
+Baseline: 19 tests, 1 expected DiabCold death-threshold failure.
+final: 310 tests, 0 failures/errors/skips.
+repeat: 310 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 A1AFFB7D23539B575F13989EF8308F5A55B982385D7A1770A345BD2B15880039 core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 7379B05FE31B1F9B5FADFB507A1F89FC8F967EA55838A280A7F7C338196D323A core/src/test/java/com/riiablo/engine/server/DiabColdIntegrationTest.java
+PARTIAL: DiabCold fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

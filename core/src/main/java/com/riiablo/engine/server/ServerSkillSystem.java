@@ -1918,8 +1918,9 @@ public class ServerSkillSystem extends PassiveSystem {
     StateUpdater updater = world.getSystem(StateUpdater.class);
     if (updater != null && length > 0)
       updater.applyState(target, StateId.FREEZE, length, level, source, 0, CombatSystem.DAMAGE_COLD);
-    hp.sub(Math.max(0f, damage.damage));
-    if (hp.asFixed() <= 0f) {
+    float applied = Math.max(0f, damage.damage);
+    hp.sub(applied);
+    if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
       hp.set(0f);
       if (events != null) events.dispatch(DeathEvent.obtain(source, target));
     }

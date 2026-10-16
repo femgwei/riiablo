@@ -31,6 +31,41 @@ import org.junit.jupiter.api.Test;
 
 /** Real S2 animation entry, not an injected SkillDo or generic melee hit. */
 class DiabColdIntegrationTest extends RiiabloTest {
+  @Test void fractionalRemainderDies() { deathBoundary(255f / 256f, false); }
+  @Test void exactlyOneLifeSurvives() { deathBoundary(1f, false); }
+  @Test void aboveOneLifeSurvives() { deathBoundary(257f / 256f, false); }
+  @Test void cancelledDamagePreservesFractionalLife() { deathBoundary(.5f, true); }
+
+  private static void deathBoundary(float remainder, boolean cancel) {
+    try (Fixture f = new Fixture("diablo", true, 0)) {
+      // The native roll varies. At the damage event boundary, arrange exact
+      // defender life relative to that roll without changing its damage packet.
+      f.probe.beforeDamage = hit -> {
+        assertTrue(hit.magicDamage >= 42f && hit.magicDamage < 61f);
+        f.attrs().get(Stat.hitpoints).set(cancel ? remainder : hit.damage + remainder);
+        if (cancel) hit.damage = 0f;
+      };
+      f.begin(); f.untilHit();
+      boolean fatal = !cancel && remainder < 1f;
+      assertEquals(fatal ? 0f : remainder, f.hp(), .0001f);
+      assertEquals(fatal ? 1 : 0, f.probe.deaths);
+      f.finish();
+      assertEquals(1, f.probe.hits.size());
+      assertEquals(fatal ? 1 : 0, f.probe.deaths);
+    }
+  }
+
+  @Test void zeroDamagePreservesFractionalLife() {
+    try (Fixture f = new Fixture("diablo", true, 0)) {
+      f.stat(Stat.magic_damage_reduction, 1000);
+      f.attrs().get(Stat.hitpoints).set(.5f);
+      f.begin(); f.untilHit();
+      assertEquals(0f, f.probe.hits.get(0).damage);
+      assertEquals(.5f, f.hp());
+      assertEquals(0, f.probe.deaths);
+    }
+  }
+
   @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, true); }
   @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, false); }
   @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, true); }
@@ -237,9 +272,13 @@ class DiabColdIntegrationTest extends RiiabloTest {
   }
 
   static final class Probe extends PassiveSystem {
+    java.util.function.Consumer<DamageEvent> beforeDamage;
     final List<DamageEvent> hits = new ArrayList<>();
     int finished, deaths;
-    @Subscribe public void damage(DamageEvent event) { hits.add(event); }
+    @Subscribe public void damage(DamageEvent event) {
+      hits.add(event);
+      if (beforeDamage != null) beforeDamage.accept(event);
+    }
     @Subscribe public void finished(AnimDataFinishedEvent event) { finished++; }
     @Subscribe public void death(DeathEvent event) { deaths++; }
   }

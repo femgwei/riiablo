@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-15T23:58:25" hostname="DESKTOP-7GGAVHU" time="0.011">
+  <properties/>
+  <testcase name="aboveOneLifeSurvives()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.002"/>
+  <testcase name="hostilePlayerUsesPvpScalarWhileInvalidTargetsAreSkipped()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.002"/>
+  <testcase name="cancelledDamagePreservesFractionalLife()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.0"/>
+  <testcase name="exactlyOneLifeSurvives()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.0"/>
+  <testcase name="livingFullAbsorbStillHeals()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.0"/>
+  <testcase name="partialAbsorbPrecedesDeathThreshold()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.001"/>
+  <testcase name="fractionalRemainderDies()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.001"/>
+  <testcase name="resistanceImmunityAndAbsorbUseTheNativeElementalPipeline()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.001"/>
+  <testcase name="monsterDamageUsesLightningMasteryAndCreatesNoMissile()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.001"/>
+  <testcase name="delayedFullAbsorbDoesNotHeal()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.001"/>
+  <testcase name="delayedPartialAbsorbStillTakesDamage()" classname="com.riiablo.engine.server.SorceressTelekinesisIntegrationTest" time="0.0"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=2 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=3 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=4 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=5 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=2 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=3 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=43 target=1 srvDoFunc=21 cltDoFunc=0
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>
