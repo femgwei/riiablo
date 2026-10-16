@@ -145,22 +145,23 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
    */
   @Subscribe
   public void onDamageEvent(DamageEvent event) {
-    if (event == null || event.victim < 0 || !mUnitStates.has(event.victim)) return;
-    UnitStates victimUnitStates = mUnitStates.get(event.victim);
+    if (event == null || event.victim < 0) return;
+    UnitStates victimUnitStates = mUnitStates.has(event.victim)
+        ? mUnitStates.get(event.victim) : null;
     // Network clients consume authoritative snapshots and must not apply the
     // same curse side effect a second time in their presentation world.
     if (victimUnitStates != null && victimUnitStates.snapshotOnly) return;
     StateList victimStates = victimUnitStates != null ? victimUnitStates.stateList : null;
-    if (victimStates == null) return;
-
-    applySorceressArmorReaction(event, victimStates);
-    applyEnergyShield(event, victimStates);
+    if (victimStates != null) {
+      applySorceressArmorReaction(event, victimStates);
+      applyEnergyShield(event, victimStates);
+    }
     if (event.physicalDamage <= 0f || !mAttributesWrapper.has(event.victim)) return;
 
     applyNativeGolemHitEffects(event);
     applyBloodGolemDamageLink(event);
 
-    absorbBoneArmor(event, victimStates);
+    if (victimStates != null) absorbBoneArmor(event, victimStates);
     applyThorns(event, victimStates);
 
     if (event.attacker < 0 || event.attacker == event.victim
@@ -177,10 +178,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     applyBloodGolemLifeLink(event, physical);
 
-    UnitState lifeTap = victimStates.getState(StateId.LIFETAP);
+    UnitState lifeTap = victimStates != null ? victimStates.getState(StateId.LIFETAP) : null;
     if (lifeTap != null) applyLifeTap(event, lifeTap, physical);
 
-    UnitState ironMaiden = victimStates.getState(StateId.IRONMAIDEN);
+    UnitStates attackerUnitStates = mUnitStates.has(event.attacker)
+        ? mUnitStates.get(event.attacker) : null;
+    if (attackerUnitStates != null && attackerUnitStates.snapshotOnly) return;
+    StateList attackerStates = attackerUnitStates != null ? attackerUnitStates.stateList : null;
+    UnitState ironMaiden = attackerStates != null ? attackerStates.getState(StateId.IRONMAIDEN) : null;
     if (ironMaiden != null && event.isMelee()) {
       applyIronMaiden(event, ironMaiden, physical);
     }

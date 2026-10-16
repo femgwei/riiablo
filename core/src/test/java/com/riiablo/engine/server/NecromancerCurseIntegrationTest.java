@@ -54,11 +54,11 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
     try {
       int defender = monster(world, 1, 0, 0);
       int attacker = monster(world, 2, 0, immune ? 100 : 0);
-      UnitStates curse = world.getMapper(UnitStates.class).create(defender).init(defender);
+      UnitStates curse = world.getMapper(UnitStates.class).create(attacker).init(attacker);
       NecromancerSkills.applyCurse(curse.stateList, Riiablo.files.States,
           Riiablo.files.skills.get(SkillId.IRON_MAIDEN), 1, defender,
           Riiablo.files.DifficultyLevels.get(0),
-          world.getMapper(AttributesWrapper.class).get(defender).attrs, false);
+          world.getMapper(AttributesWrapper.class).get(attacker).attrs, false);
       world.getMapper(AttributesWrapper.class).get(attacker).attrs
           .get(Stat.hitpoints).set(initial);
       probe.cancel = cancel;
@@ -91,6 +91,41 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       deaths++;
       killer = event.killer;
       victim = event.victim;
+    }
+  }
+
+  @Test void castIronMaidenReflectsFromCursedAttacker() { ironCastDirection(true, false); }
+  @Test void cursedVictimDoesNotReflectIronMaiden() { ironCastDirection(false, false); }
+  @Test void snapshotAttackerDoesNotRepeatIronMaiden() { ironCastDirection(true, true); }
+
+  private static void ironCastDirection(boolean curseAttacker, boolean snapshot) {
+    NoopFactory factory = new NoopFactory();
+    IronProbe probe = new IronProbe();
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, probe, new StateUpdater(), new ServerSkillSystem(true), factory).build()
+        .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = player(world, "necromancer", 0, 0);
+      int attacker = monster(world, 10, 0, 0);
+      int defender = monster(world, 50, 0, 0);
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
+      world.getMapper(Player.class).get(owner).data.setSkillLevel(skill.Id, 1);
+      int cursed = curseAttacker ? attacker : defender;
+      events.dispatch(SkillDoEvent.obtain(owner, skill.Id, cursed,
+          world.getMapper(Position.class).get(cursed).position, skill.srvdofunc, 0));
+      assertTrue(states(world, cursed).hasState(StateId.IRONMAIDEN));
+      world.getMapper(UnitStates.class).get(cursed).snapshotOnly = snapshot;
+      // Explicit melee event: tests cast/state/reaction, not range or hit rolls.
+      events.dispatch(DamageEvent.obtainMelee(attacker, defender, 20, 20));
+      boolean reflects = curseAttacker && !snapshot;
+      assertEquals(reflects ? 60f : 100f, world.getMapper(AttributesWrapper.class)
+          .get(attacker).attrs.get(Stat.hitpoints).asFixed());
+      assertEquals(reflects ? 1 : 0, probe.reactive);
+      events.dispatch(DamageEvent.obtainMissile(attacker, defender, 20, 20, null));
+      assertEquals(reflects ? 1 : 0, probe.reactive);
+    } finally {
+      world.dispose();
     }
   }
 
@@ -284,12 +319,12 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
           .get(Stat.hitpoints).asInt(), "Life Tap must restore 50% of physical attack damage");
 
       int reflectedTarget = monster(world, 2, 0, 0);
-      UnitStates ironStates = world.getMapper(UnitStates.class).create(reflectedTarget).init(reflectedTarget);
+      int monsterAttacker = monster(world, 3, 0, 0);
+      UnitStates ironStates = world.getMapper(UnitStates.class).create(monsterAttacker).init(monsterAttacker);
       com.riiablo.codec.excel.Skills.Entry iron = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
       NecromancerSkills.applyCurse(ironStates.stateList, Riiablo.files.States,
           iron, 1, reflectedTarget, Riiablo.files.DifficultyLevels.get(0),
-          world.getMapper(AttributesWrapper.class).get(reflectedTarget).attrs, false);
-      int monsterAttacker = monster(world, 3, 0, 0);
+          world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs, false);
       world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.base().put(Stat.hitpoints, 100);
       world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.base().put(Stat.maxhp, 100);
       world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.reset();
@@ -303,6 +338,8 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
 
       attackerAttrs.base().put(Stat.hitpoints, 100);
       attackerAttrs.reset();
+      NecromancerSkills.applyCurse(states(world, attacker), Riiablo.files.States,
+          iron, 1, reflectedTarget, Riiablo.files.DifficultyLevels.get(0), attackerAttrs, false);
       eventSystem.dispatch(DamageEvent.obtainMelee(attacker, reflectedTarget, 20, 20));
       assertEquals(95, attackerAttrs.get(Stat.hitpoints).asInt(),
           "native player/hireling Iron Maiden reflection must use the one-eighth divisor");

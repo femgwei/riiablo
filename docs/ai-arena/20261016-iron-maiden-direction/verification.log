@@ -1,0 +1,8 @@
+Baseline: 14 tests, 7 expected attacker-state direction failures.
+final: 354 tests, 0 failures/errors/skips.
+repeat: 354 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 C5E7096043A18823A5B8F855D8B38C9F8C3FB3A4FE3A41D8CF0611ED36A7EB31 core/src/main/java/com/riiablo/engine/server/StateUpdater.java
+SHA256 F6B13D0C960C6FFFD44964E843AE4F6ED65CFCA2FA44B28AFD7AA07FD3C333DE core/src/test/java/com/riiablo/engine/server/NecromancerCurseIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Iron Maiden attacker-state lookup verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.
