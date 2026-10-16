@@ -1,6 +1,7 @@
 package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -24,11 +25,14 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.IconTextButton;
+import com.riiablo.util.Disposal;
 
 import java.util.Comparator;
 
 public class WaygatePanel extends WidgetGroup implements Disposable {
   private static final String TAG = "WaygatePanel";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private boolean disposed;
 
   final AssetDescriptor<DC6> waygatebackgroundDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\waygatebackground.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion waygatebackground;
@@ -49,18 +53,18 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
   public WaygatePanel(CharData charData) {
     this.charData = charData;
-    Riiablo.assets.load(waygatebackgroundDescriptor);
-    Riiablo.assets.finishLoadingAsset(waygatebackgroundDescriptor);
-    waygatebackground = Riiablo.assets.get(waygatebackgroundDescriptor).getTexture();
+    assets.load(waygatebackgroundDescriptor);
+    assets.finishLoadingAsset(waygatebackgroundDescriptor);
+    waygatebackground = assets.get(waygatebackgroundDescriptor).getTexture();
     setSize(waygatebackground.getRegionWidth(), waygatebackground.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
     btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+      assets.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
     btnExit.setPosition(272, 14);
     btnExit.addListener(new ClickListener() {
@@ -72,13 +76,13 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     });
     addActor(btnExit);
 
-    Riiablo.assets.load(expwaygatetabsDescriptor);
-    Riiablo.assets.finishLoadingAsset(expwaygatetabsDescriptor);
-    expwaygatetabs = Riiablo.assets.get(expwaygatetabsDescriptor);
+    assets.load(expwaygatetabsDescriptor);
+    assets.finishLoadingAsset(expwaygatetabsDescriptor);
+    expwaygatetabs = assets.get(expwaygatetabsDescriptor);
 
-    Riiablo.assets.load(waygateiconsDescriptor);
-    Riiablo.assets.finishLoadingAsset(waygateiconsDescriptor);
-    waygateicons = Riiablo.assets.get(waygateiconsDescriptor);
+    assets.load(waygateiconsDescriptor);
+    assets.finishLoadingAsset(waygateiconsDescriptor);
+    waygateicons = assets.get(waygateiconsDescriptor);
 
     waygateButtonStyle = new Button.ButtonStyle() {{
       disabled = new TextureRegionDrawable(waygateicons.getTexture(0));
@@ -170,6 +174,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
   /** Refreshes destination availability from the current difficulty save flags. */
   public void refresh() {
+    if (disposed) return;
     for (WaypointControl control : waypointControls) {
       Levels.Entry level = control.level;
       boolean active = charData.isWaypointActivated(level.Act, level.Waypoint);
@@ -179,16 +184,32 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (disposed) return;
     batch.draw(waygatebackground, getX(), getY());
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(waygatebackgroundDescriptor.fileName);
-    Riiablo.assets.unload(waygateiconsDescriptor.fileName);
-    Riiablo.assets.unload(expwaygatetabsDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      cleanup.run(() -> Button.disposeClickSounds(this));
+      cleanup.dispose(btnExit);
+      cleanup.run(this::clearChildren);
+      cleanup.run(() -> assets.unload(waygatebackgroundDescriptor.fileName));
+      cleanup.run(() -> assets.unload(waygateiconsDescriptor.fileName));
+      cleanup.run(() -> assets.unload(expwaygatetabsDescriptor.fileName));
+      cleanup.run(() -> assets.unload(buysellbtnDescriptor.fileName));
+      waygatebackground = null;
+      expwaygatetabs = null;
+      waygateicons = null;
+      waygateButtonStyle = null;
+      clickListener = null;
+      waypointControls.clear();
+    }
   }
 
   private class Tab extends Table {

@@ -2,6 +2,7 @@ package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -21,6 +22,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.key.MappedKey;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
+import com.riiablo.util.Disposal;
 
 /** Diablo II's in-game help overlay, assembled from the original 640x480 resources. */
 public class HelpPanel extends WidgetGroup implements Disposable {
@@ -28,6 +30,7 @@ public class HelpPanel extends WidgetGroup implements Disposable {
   static final float LOGICAL_HEIGHT = 480f;
   private static final float HUD_X_SCALE = 0.8f;
   private static final float HUD_Y_OFFSET = -120f;
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
 
   private final AssetDescriptor<DC6> borderDescriptor = new AssetDescriptor<>(
       "data\\global\\ui\\MENU\\helpborder.DC6", DC6.class);
@@ -42,20 +45,22 @@ public class HelpPanel extends WidgetGroup implements Disposable {
   private final DC6 border;
   private final TextureRegion yellowBullet;
   private final TextureRegion whiteBullet;
+  private final Button closeButton;
+  private boolean disposed;
 
   public HelpPanel() {
-    Riiablo.assets.load(borderDescriptor);
-    Riiablo.assets.load(yellowBulletDescriptor);
-    Riiablo.assets.load(whiteBulletDescriptor);
-    Riiablo.assets.load(closeButtonDescriptor);
-    Riiablo.assets.finishLoadingAsset(borderDescriptor);
-    Riiablo.assets.finishLoadingAsset(yellowBulletDescriptor);
-    Riiablo.assets.finishLoadingAsset(whiteBulletDescriptor);
-    Riiablo.assets.finishLoadingAsset(closeButtonDescriptor);
+    assets.load(borderDescriptor);
+    assets.load(yellowBulletDescriptor);
+    assets.load(whiteBulletDescriptor);
+    assets.load(closeButtonDescriptor);
+    assets.finishLoadingAsset(borderDescriptor);
+    assets.finishLoadingAsset(yellowBulletDescriptor);
+    assets.finishLoadingAsset(whiteBulletDescriptor);
+    assets.finishLoadingAsset(closeButtonDescriptor);
 
-    border = Riiablo.assets.get(borderDescriptor);
-    yellowBullet = Riiablo.assets.get(yellowBulletDescriptor).getTexture(0);
-    whiteBullet = Riiablo.assets.get(whiteBulletDescriptor).getTexture(0);
+    border = assets.get(borderDescriptor);
+    yellowBullet = assets.get(yellowBulletDescriptor).getTexture(0);
+    whiteBullet = assets.get(whiteBulletDescriptor).getTexture(0);
 
     setFillParent(true);
     setTouchable(Touchable.enabled);
@@ -81,19 +86,19 @@ public class HelpPanel extends WidgetGroup implements Disposable {
     addBulletedHelp();
     addHudCallouts();
 
-    DC6 closeButton = Riiablo.assets.get(closeButtonDescriptor);
-    Button close = new Button(new Button.ButtonStyle(
-        new TextureRegionDrawable(closeButton.getTexture(10)),
-        new TextureRegionDrawable(closeButton.getTexture(11))));
-    close.setSize(32f, 32f);
-    close.setPosition(525f, fromTop(25f, close.getHeight()));
-    close.addListener(new ClickListener() {
+    DC6 closeButtonSheet = assets.get(closeButtonDescriptor);
+    closeButton = new Button(new Button.ButtonStyle(
+        new TextureRegionDrawable(closeButtonSheet.getTexture(10)),
+        new TextureRegionDrawable(closeButtonSheet.getTexture(11))));
+    closeButton.setSize(32f, 32f);
+    closeButton.setPosition(525f, fromTop(25f, closeButton.getHeight()));
+    closeButton.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         close();
       }
     });
-    canvas.addActor(close);
+    canvas.addActor(closeButton);
     addCenteredLabel(text("strClose"), 542f, 60f, 100f, 20f,
         Riiablo.fonts.font16, Riiablo.colors.gold);
   }
@@ -206,25 +211,43 @@ public class HelpPanel extends WidgetGroup implements Disposable {
   }
 
   public void open() {
+    if (disposed) return;
     setVisible(true);
     toFront();
   }
 
   public void close() {
+    if (disposed) return;
     setVisible(false);
   }
 
   public void toggle() {
+    if (disposed) return;
     if (isVisible()) close();
     else open();
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(borderDescriptor.fileName);
-    Riiablo.assets.unload(yellowBulletDescriptor.fileName);
-    Riiablo.assets.unload(whiteBulletDescriptor.fileName);
-    Riiablo.assets.unload(closeButtonDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      cleanup.dispose(closeButton);
+      cleanup.run(this::clearChildren);
+      cleanup.run(() -> assets.unload(borderDescriptor.fileName));
+      cleanup.run(() -> assets.unload(yellowBulletDescriptor.fileName));
+      cleanup.run(() -> assets.unload(whiteBulletDescriptor.fileName));
+      cleanup.run(() -> assets.unload(closeButtonDescriptor.fileName));
+    }
+  }
+
+  @Override
+  public void draw(Batch batch, float parentAlpha) {
+    if (disposed) return;
+    super.draw(batch, parentAlpha);
   }
 
   private final class Artwork extends Actor {

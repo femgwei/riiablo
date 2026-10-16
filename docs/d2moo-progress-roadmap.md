@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第十七批：招募、帮助与传送面板
+
+- [x] `HireMercenaryPanel` 捕获原始 AssetManager，保留 `textslid.dc6` 延迟加载，
+  退出时幂等归还请求；旧 act/draw、打开和网络回调不再访问已释放状态。
+- [x] `HelpPanel`、`WaygatePanel` 捕获原始 AssetManager，逐项释放 DC6、按钮和
+  子 Actor；退出后不再绘制或响应输入，替换 `Riiablo.assets` 不影响卸载宿主。
+- [x] 核心编译、面板/招募定向回归、原版 1.10f 招募窗口离屏渲染和同一 Client
+  三轮会话通过；三轮仍为 13 张私有网格/面板/HUD 纹理删除、共享框 `0→12→0`、
+  10 个 NPC 菜单节点退休、ClientShutdown 通过。详见 `session-resource-lifecycle.md`。
+- 待续：`MobileControls`/`MobilePanel` 移动端路径、完整构造失败回滚、连接交接、
+  控制台/Timer/异步日志、跨 Act/加载中退出、长期压力及人工/性能验收仍待。
+
 ## 2026-10-16 会话资源阶段第十六批：雇佣兵 UI 私有纹理
 
 - [x] HirelingPanel 捕获原 AssetManager，私有填充纹理使用统一上传路径；退出时

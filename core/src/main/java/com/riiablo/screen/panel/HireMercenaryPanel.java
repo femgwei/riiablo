@@ -2,6 +2,7 @@ package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
@@ -31,6 +32,7 @@ import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceType;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
+import com.riiablo.util.Disposal;
 
 /** Native textslid-based hire roster. Opening this modal never hires or charges gold. */
 public final class HireMercenaryPanel extends WidgetGroup implements Disposable {
@@ -39,6 +41,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   private static final float ROW_HEIGHT = 33;
   private final AssetDescriptor<DC6> descriptor = new AssetDescriptor<>(
       "data\\global\\ui\\MENU\\textslid.dc6", DC6.class);
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
   private final Array<HirelingOffer> offers = new Array<>();
   private final ObjectMap<String, String> descriptions = new ObjectMap<>();
   private final Label title, message;
@@ -54,6 +57,8 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   private String failure;
   private float panelX, panelY;
   private Actor previousFocus;
+  private boolean assetsRequested;
+  private boolean disposed;
 
   public HireMercenaryPanel() {
     setVisible(false);
@@ -115,10 +120,11 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   private void loadAssets() {
-    if (pieces != null) return;
-    Riiablo.assets.load(descriptor);
-    Riiablo.assets.finishLoadingAsset(descriptor);
-    pieces = Riiablo.assets.get(descriptor);
+    if (disposed || pieces != null) return;
+    assets.load(descriptor);
+    assetsRequested = true;
+    assets.finishLoadingAsset(descriptor);
+    pieces = assets.get(descriptor);
     com.badlogic.gdx.files.FileHandle file = Riiablo.mpqs.resolve("data\\global\\excel\\HireDesc.txt");
     if (file == null) return;
     TxtParser parser = TxtParser.loadFromFile(file);
@@ -132,6 +138,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
 
   /** Presents a read-only service snapshot; also used by the offscreen native-asset check. */
   public void presentOffers(Array<HirelingOffer> available) {
+    if (disposed) return;
     loadAssets();
     offers.clear();
     offers.addAll(available);
@@ -144,6 +151,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void open(int npcEntityId, int npcType) {
+    if (disposed) return;
     loadAssets();
     this.npcEntityId = npcEntityId;
     this.npcType = npcType;
@@ -191,7 +199,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void applyNetworkResult(NpcServiceResult result) {
-    if (!isVisible() || pending == 0 || result.requestId() != pending) return;
+    if (disposed || !isVisible() || pending == 0 || result.requestId() != pending) return;
     pending = 0;
     if (result.mercenary() != null) previousSeed = result.mercenary().seed();
     if (result.success() && purchasing) { close(); return; }
@@ -275,6 +283,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   public void close() {
+    if (disposed) return;
     setVisible(false);
     pending = 0;
     purchasing = false;
@@ -381,6 +390,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   @Override public void act(float delta) {
+    if (disposed) return;
     super.act(delta);
     if (!isVisible() || getStage() == null) return;
     float x = (getStage().getWidth() - WIDTH) / 2;
@@ -401,7 +411,7 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   @Override public void draw(Batch batch, float alpha) {
-    if (pieces == null) return;
+    if (disposed || pieces == null) return;
     background.draw(batch, panelX + 2, panelY + 2, WIDTH - 4, HEIGHT - 4);
     frame(batch, panelX, panelY, WIDTH, FOOTER);
     frame(batch, panelX, panelY + FOOTER, WIDTH, HEIGHT - HEADER - FOOTER);
@@ -440,6 +450,24 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   }
 
   @Override public void dispose() {
-    if (pieces != null) Riiablo.assets.unload(descriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      cleanup.run(this::clearChildren);
+      if (assetsRequested) cleanup.run(() -> {
+        if (assets.contains(descriptor.fileName) && !assets.isLoaded(descriptor.fileName)) {
+          assets.finishLoadingAsset(descriptor);
+        }
+        if (assets.contains(descriptor.fileName)) assets.unload(descriptor.fileName);
+      });
+      pieces = null;
+      offers.clear();
+      descriptions.clear();
+      pending = 0;
+      selected = null;
+      previousFocus = null;
+    }
   }
 }

@@ -1243,3 +1243,30 @@ BeltGrid 填充纹理）存活并在 Client 退出后删除；保留原地图、
 
 本批仍未覆盖其他私有 GL Actor 的完整构造失败回滚、连接交接、控制台/Timer/异步
 日志、跨 Act/加载中退出和长期压力；资源阶段继续按宿主归属逐项收口。
+## 第十七批：招募、帮助与传送小面板资源宿主
+
+本批收口 `HireMercenaryPanel`、`HelpPanel` 和 `WaygatePanel`。三个组件现在在构造时
+捕获原始 `AssetManager`，后续加载、完成加载和卸载均不再读取可变的
+`Riiablo.assets` 全局别名；按钮自身的声音引用也沿用其创建时捕获的宿主。三个面板
+的 `dispose` 均幂等，退出后禁用输入、清除监听和子 Actor，并阻止旧 `act`/`draw`、
+打开或网络回调继续访问已释放资源。
+
+`HireMercenaryPanel` 的 `textslid.dc6` 仍保持延迟加载语义：首次展示招募列表时请求，
+退出时即使加载尚未完成也先完成自己的请求再归还引用，避免取消同名资源的其他使用者。
+`HelpPanel` 和 `WaygatePanel` 的四项资源在构造时取得，退出逐项归还；传送点按钮、
+帮助关闭按钮和菜单子项不再留在旧 Stage 上。
+
+### 第十七批验证
+
+- `:core:compileJava :core:compileTestJava` 通过。
+- `PanelResourceLifecycleTest`、`HelpPanelLayoutTest`、`NativeHirelingOfferIntegrationTest`
+  定向回归通过；随后 `ButtonLifecycleTest` 也通过。
+- 使用原版 1.10f MPQ 的 `:desktop:offscreenHireMercenaries` 通过，生成实际
+  招募窗口 PNG 与 `roster.tsv`，日志为 `build/hire17-preview.log`。
+- 同一 Client 三轮 `:desktop:offscreenSessionLifecycle` 通过；每轮仍删除 13 张私有
+  网格/面板/HUD 纹理，共享框 `0→12→0`，NPC 菜单 10 个节点退休，最终
+  `ClientShutdown result=PASS`，日志为 `build/hire17-session.log`。
+
+本批没有宣称移动端 `MobileControls`/`MobilePanel` 已覆盖；它们的构造路径和专用
+生命周期测试留到下一批。慢帧、人工画面/输入/声音、联机/存档、跨 Act、加载中退出、
+完整构造失败回滚及长期压力仍未完成验收。
