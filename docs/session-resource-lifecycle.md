@@ -1406,3 +1406,88 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 仍未覆盖 Button/HotkeyButton 内部构造尚未返回实例即失败的完整回滚；这不等于整个
 控件树所有构造路径安全。任务面板等其余宿主、连接交接、控制台/Timer/异步日志、
 跨 Act/加载中退出、长期压力、Android 真机与人工/性能验收继续留待后续批次。
+
+## 第二十批：任务面板、任务语音与滚动控件
+
+`QuestsPanel` 捕获构造时的 AssetManager / CharData，用 AssetReferenceScope 配对
+六项公共 DC6 与全部可见任务图标的请求；即使文件名重复也保留每次提交的引用。
+退出幂等，停止全部五个页签（包括隐藏页签）的滚动语音，解除完成回调，清除控件树
+的普通/捕获监听与动作，移除 Stage 归属，释放七个按钮声音及全部已取得的页面引用。
+部分构造失败同样清理已返回的按钮和页签，不依赖 GameScreen 递归释放声音。
+旧角色的点击、页签、回放、完成通知与 act/draw 不再访问新会话。
+
+`DialogScroller` 原来的 dispose 仅停止语音，任务页签一直把它用作可复用的“停止”，
+最终退出反而没有销毁这五个控件。现在区分可复用的 stop 与最终、幂等的 dispose：
+设置普通文本、重复回放、切换任务/页签和隐藏整个任务面板会先停止旧语音；重新打开
+仍能回放。最终销毁清空音频实例与完成监听，拆除子控件，并忽略迟到的播放/文字/
+act/draw 调用。音频停止前先清除自己持有的实例，异常不会导致重复停止旧实例。
+
+滚动控件捕获原 Audio 与实例字体，不再用静态字段持有上一客户端字体；字体和音频
+宿主仅借用，不由控件销毁。静态任务文本不触发完成，单次回放只完成一次；缺失语音
+映射和缺少时长前缀的文本也不会丢失旧音频归属。任务状态判定、任务排序和图标帧
+仍沿用原有规则，本批没有扩展 Act I 以外的任务实现。
+
+任务图标动画退出时 reset；同时修复 Animation.Layer 归还池时仍保留 DC / regions /
+transform 的引用，归还时只清空借用引用，不 dispose 共享贴图。重新取用仍由原 set
+完整初始化渲染状态，两项池生命周期测试与既有动画回归共同约束此变更。这不代表
+其他池、全部控件内部构造失败或所有异步入口均已完成审计。
+
+真实会话探针现在实际选择 Act I 第一个任务，执行三次生产回放、一次关闭后重开，
+让最后一次语音留给生产退出流程清理；采样全部任务控件和已上传任务贴图，检查
+五个 scroller 已由面板销毁、回放实例停止、资产回构造前基线及 GL 贴图删除。
+保留前批技能、移动 UI、地图、私有纹理、共享框和最终 ClientShutdown 检查。
+
+### 第二十批验证
+
+- `build/quests-resources-compile.log`：core 主代码及已有测试源码编译通过。
+- `build/quests-resources-focused.log` 首轮因 mock 辅助方法导入缺失而编译失败。
+  `build/quests-resources-focused-02.log` 的 13 项中有 2 项夹具失败：模拟切回第一页
+  时没有执行页签点击，字体替身也缺少 BitmapFont 内部数据；修正为真实页签回调和
+  完整字体夹具，没有放宽生产断言。随后 `build/quests-resources-regression-gl.log`
+  176 项中 1 项因 Mockito 嵌套求值导致未完成桩配置而失败、2 项跳过，尚未运行 GL；
+  将被引用的字体区域先保存到局部变量后修正，保留上述失败日志。
+- 最终 `build/quests-resources-final.log`：新增 13 项任务/滚动控件专项与 2 项动画池
+  生命周期专项全部通过；扩大到 25 类 176 项，174 通过、2 跳过（佣兵独立环境
+  资源探针），失败/错误 0。包含既有动画、音频和 Act I 任务呈现回归，
+  core、desktop、D2GS 编译链通过，BUILD SUCCESSFUL，2m34s。
+- 同一 Client 三轮真实 MPQ/GL 会话均通过：每轮三次任务语音回放、一次关闭后重开，
+  退出时 146 个任务控件解除父节点、监听与动作，五个滚动控件销毁，三个回放实例
+  均停止，33 项任务资产回基线、794 张相关纹理删除。前批每轮技能重建退休 21 个
+  旧按钮、退出退休 40 个技能按钮、移动组件 15 按钮/102 张纹理、13 张私有纹理、
+  共享框 `0→12→0` 和 10 个 NPC 菜单节点检查继续通过，最终 ClientShutdown 通过。
+- 每轮退出后资产种类为 55/55/55，不等价于进程零滞留。仍记录 52.82–89.51ms
+  慢帧，超过 40ms 预算，不作性能验收；语音实例和引用检查也不替代人工听感、
+  画面/输入、Android 真机、联机和存档验收。
+
+专项复跑（无需 MPQ/GL）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.QuestsPanelLifecycleTest `
+  --tests com.riiablo.codec.AnimationLayerLifecycleTest --no-daemon
+```
+
+扩大定向及原版 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/quests-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/quests-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+资源阶段继续：EscapePanel 设置/按键捕获与其他尚使用可变资源宿主的面板、完整控件
+内部构造回滚、连接交接、控制台/Timer/异步日志、跨 Act/加载中退出、长期压力、
+Android 真机及人工/性能验收仍待，不能据本批宣称完整资源阶段完成或进程零滞留。

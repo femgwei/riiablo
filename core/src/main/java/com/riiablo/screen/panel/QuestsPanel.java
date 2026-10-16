@@ -1,10 +1,13 @@
 package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -28,11 +31,21 @@ import com.riiablo.widget.Button;
 import com.riiablo.widget.DCWrapper;
 import com.riiablo.widget.DialogScroller;
 import com.riiablo.widget.Label;
+import com.riiablo.save.CharData;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 import java.util.Comparator;
 
 public class QuestsPanel extends WidgetGroup implements Disposable {
   private static final String TAG = "QuestsPanel";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final Array<Button> ownedButtons = new Array<>();
+  private final Array<QuestButton> questButtons = new Array<>();
+  private final Tab[] tabs = new Tab[5];
+  private boolean disposed;
 
   final AssetDescriptor<DC6> questbackgroundDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\questbackground.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   TextureRegion questbackground;
@@ -49,7 +62,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
   final AssetDescriptor<DC6> questdoneDescriptor = new AssetDescriptor<>("data\\global\\ui\\MENU\\questdone.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   DC questdone;
 
-  final AssetDescriptor<DC6>[] questiconsDescriptor;
+  AssetDescriptor<DC6>[] questiconsDescriptor;
   DC[] questicons;
 
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -57,52 +70,63 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
 
   Tab activeTab;
 
-  private static final int[] QUESTS = { 6, 6, 6, 3, 6 };
+  public QuestsPanel() {
+    try {
+      initialize();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
 
   @SuppressWarnings("unchecked")
-  public QuestsPanel() {
-    Riiablo.assets.load(questbackgroundDescriptor);
-    Riiablo.assets.finishLoadingAsset(questbackgroundDescriptor);
-    questbackground = Riiablo.assets.get(questbackgroundDescriptor).getTexture();
+  private void initialize() {
+    references.load(questbackgroundDescriptor);
+    assets.finishLoadingAsset(questbackgroundDescriptor);
+    questbackground = assets.get(questbackgroundDescriptor).getTexture();
     setSize(questbackground.getRegionWidth(), questbackground.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
     btnPlayQuest = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(questlastDescriptor);
-      Riiablo.assets.finishLoadingAsset(questlastDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(questlastDescriptor).getTexture(0));
-      down = new TextureRegionDrawable(Riiablo.assets.get(questlastDescriptor).getTexture(1));
+      references.load(questlastDescriptor);
+      assets.finishLoadingAsset(questlastDescriptor);
+      up   = new TextureRegionDrawable(assets.get(questlastDescriptor).getTexture(0));
+      down = new TextureRegionDrawable(assets.get(questlastDescriptor).getTexture(1));
     }});
+    ownedButtons.add(btnPlayQuest);
     btnPlayQuest.setPosition(227, 10);
     addActor(btnPlayQuest);
 
     btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+      references.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
+    ownedButtons.add(btnExit);
     btnExit.setPosition(278, 10);
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         setVisible(false);
       }
     });
     addActor(btnExit);
 
-    Riiablo.assets.load(expquesttabsDescriptor);
-    Riiablo.assets.finishLoadingAsset(expquesttabsDescriptor);
-    expquesttabs = Riiablo.assets.get(expquesttabsDescriptor);
+    references.load(expquesttabsDescriptor);
+    assets.finishLoadingAsset(expquesttabsDescriptor);
+    expquesttabs = assets.get(expquesttabsDescriptor);
 
-    Riiablo.assets.load(questsocketsDescriptor);
-    Riiablo.assets.finishLoadingAsset(questsocketsDescriptor);
-    questsockets = Riiablo.assets.get(questsocketsDescriptor);
+    references.load(questsocketsDescriptor);
+    assets.finishLoadingAsset(questsocketsDescriptor);
+    questsockets = assets.get(questsocketsDescriptor);
 
-    Riiablo.assets.load(questdoneDescriptor);
-    Riiablo.assets.finishLoadingAsset(questdoneDescriptor);
-    questdone = Riiablo.assets.get(questdoneDescriptor);
+    references.load(questdoneDescriptor);
+    assets.finishLoadingAsset(questdoneDescriptor);
+    questdone = assets.get(questdoneDescriptor);
 
     @SuppressWarnings("unchecked")
     Array<Quests.Entry>[] quests = (Array<Quests.Entry>[]) new Array[5];
@@ -129,14 +153,13 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     for (int act = 0, q = 0; act < 5; act++) {
       for (Quests.Entry quest : quests[act]) {
         questiconsDescriptor[q] = new AssetDescriptor<>("data\\global\\ui\\MENU\\" + quest.icon + ".dc6", DC6.class);
-        Riiablo.assets.load(questiconsDescriptor[q]);
-        Riiablo.assets.finishLoadingAsset(questiconsDescriptor[q]);
-        questicons[q] = Riiablo.assets.get(questiconsDescriptor[q]);
+        references.load(questiconsDescriptor[q]);
+        assets.finishLoadingAsset(questiconsDescriptor[q]);
+        questicons[q] = assets.get(questiconsDescriptor[q]);
         q++;
       }
     }
 
-    final Tab[] tabs = new Tab[5];
     for (int i = 0, q = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
       for (Quests.Entry quest : quests[i]) {
@@ -164,12 +187,14 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
         up   = new TextureRegionDrawable(expquesttabs.getTexture(j + 1));
         checked = down;
       }});
+      ownedButtons.add(actor);
       actor.setHighlightedBlendMode(BlendMode.ID, Color.WHITE);
       actor.setPosition(x, y, Align.topLeft);
       actor.setUserObject(tabs[i]);
       actor.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (!isCurrentSession()) return;
           for (Tab tab : tabs) if (tab != null) tab.setVisible(false);
           activeTab = (Tab) actor.getUserObject();
           activeTab.setVisible(true);
@@ -189,6 +214,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     btnPlayQuest.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        if (!isCurrentSession()) return;
         if (activeTab != null && activeTab.selected != null) {
           String speech = activeTab.selected.replaySpeech();
           if (speech != null && Riiablo.files.speech.get(speech) != null) {
@@ -203,25 +229,77 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
+    if (!isCurrentSession()) return;
     batch.draw(questbackground, getX(), getY());
     super.draw(batch, parentAlpha);
   }
 
   @Override
   public void act(float delta) {
+    if (!isCurrentSession()) return;
     super.act(delta);
     if (activeTab != null) activeTab.refresh();
   }
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(questbackgroundDescriptor.fileName);
-    Riiablo.assets.unload(expquesttabsDescriptor.fileName);
-    Riiablo.assets.unload(questlastDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
-    Riiablo.assets.unload(questdoneDescriptor.fileName);
-    Riiablo.assets.unload(questsocketsDescriptor.fileName);
-    for (AssetDescriptor assetDescriptor : questiconsDescriptor) Riiablo.assets.unload(assetDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    activeTab = null;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      for (Tab tab : tabs) {
+        if (tab == null) continue;
+        tab.selected = null;
+        cleanup.dispose(tab.questDialog);
+        // A partially built tab need not have reached addActor yet.
+        cleanup.run(() -> clearActorTree(tab));
+        cleanup.run(tab::remove);
+      }
+      for (QuestButton button : questButtons) {
+        cleanup.run(button.anim::reset);
+      }
+      cleanup.run(() -> clearActorTree(this));
+      for (Button button : ownedButtons) {
+        cleanup.run(button::clearListeners);
+        cleanup.run(button::remove);
+        cleanup.dispose(button);
+      }
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      ownedButtons.clear(); questButtons.clear();
+      java.util.Arrays.fill(tabs, null);
+      questbackground = null; expquesttabs = null; questsockets = null;
+      questdone = null; questicons = null; btnPlayQuest = null; btnExit = null;
+    }
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData;
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed) return;
+    super.setVisible(visible);
+    if (!visible && tabs != null) try (Disposal cleanup = new Disposal()) {
+      for (Tab tab : tabs) if (tab != null) cleanup.run(tab::hide);
+    }
+  }
+
+  private static void clearActorTree(Actor actor) {
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(actor::clearListeners);
+      cleanup.run(actor::clearActions);
+      if (actor instanceof Group) {
+        Group group = (Group) actor;
+        for (Actor child : group.getChildren().toArray(Actor.class)) {
+          cleanup.run(() -> clearActorTree(child));
+        }
+        cleanup.run(group::clearChildren);
+      }
+    }
   }
 
   private class Tab extends Table {
@@ -246,6 +324,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
       questDialog = new DialogScroller(new DialogScroller.DialogCompletionListener() {
         @Override
         public void onCompleted(DialogScroller d) {
+          if (!isCurrentSession()) return;
           if (selected != null) setQuestText(selected);
         }
       });
@@ -259,23 +338,24 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     }
 
     void hide() {
-      questDialog.dispose();
+      if (!isCurrentSession()) return;
       questDialog.setText(selected != null ? Riiablo.string.lookup(selected.quest.qsts[0]) : "");
     }
 
     void setSelected(QuestButton quest) {
+      if (!isCurrentSession()) return;
       if (selected != quest) {
         if (selected != null) selected.setSelected(false);
         selected = quest;
         quest.setSelected(true);
         questName.setText(Riiablo.string.lookup(quest.getName()));
-        questDialog.dispose();
         setQuestText(quest);
       }
     }
 
     void addQuest(Quests.Entry quest, int q, int nativeRecordIndex) {
       QuestButton button = new QuestButton(this, quest, q, nativeRecordIndex);
+      questButtons.add(button);
       questIcons.add(button);
       if (questIcons.getCells().size % QUEST_COLS == 0) {
         questIcons.row();
@@ -283,6 +363,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     }
 
     void refresh() {
+      if (!isCurrentSession()) return;
       for (com.badlogic.gdx.scenes.scene2d.Actor actor : questIcons.getChildren()) {
         if (actor instanceof QuestButton) ((QuestButton) actor).refresh();
       }
@@ -291,7 +372,6 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
 
     private void setQuestText(QuestButton quest) {
       String textId = quest.textId();
-      questDialog.dispose();
       if (textId == null) questDialog.setText("");
       else questDialog.setTextId(textId);
     }
@@ -352,6 +432,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
 
     @Override
     public void act(float delta) {
+      if (!isCurrentSession()) return;
       super.act(delta);
       if (nativeRecordIndex > 0 && !isAvailable()) {
         anim.setFrame(FRAME_DISABLED);
@@ -363,7 +444,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     }
 
     void refresh() {
-      if (nativeRecordIndex <= 0 || Riiablo.charData == null) return;
+      if (!isCurrentSession() || nativeRecordIndex <= 0) return;
       short record = record();
       if (record != lastRecord) {
         lastRecord = record;
@@ -381,14 +462,13 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     }
 
     boolean isAvailable() {
-      int level = Riiablo.charData == null ? 0
-          : Riiablo.charData.getStats().aggregate().getValue(Stat.level, 0);
+      int level = character.getStats().aggregate().getValue(Stat.level, 0);
       return nativeRecordIndex <= 0
           || Act1QuestPresentation.isAvailable(nativeRecordIndex, record(), level);
     }
 
     short record() {
-      short[] records = Riiablo.charData.getQuests(Riiablo.ACT1);
+      short[] records = character.getQuests(Riiablo.ACT1);
       return nativeRecordIndex > 0 && nativeRecordIndex < records.length
           ? records[nativeRecordIndex] : 0;
     }

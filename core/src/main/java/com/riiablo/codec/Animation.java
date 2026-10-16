@@ -699,7 +699,13 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     }
 
     @Override
-    public void reset() {} // Does nothing -- call Layer#set(DC,int) when obtained
+    public void reset() {
+      // Pooled layers must not keep retired session sheets/GL regions alive.
+      // Layer#set still initializes all rendering state when obtained again.
+      dc = null;
+      regions = null;
+      transform = null;
+    }
 
     protected Layer loadAll(Bits dirs) {
       for (int d = dirs.nextSetBit(0); d >= 0; d = dirs.nextSetBit(d + 1)) {

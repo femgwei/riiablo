@@ -34,6 +34,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> presentationReferencesBeforeConstruction = new TreeMap<>();
   private final boolean mobileUiLifecycle = Boolean.getBoolean("riiablo.offscreen-mobile-ui-lifecycle");
   private final Map<String, Integer> mobileReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> questReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -64,6 +65,17 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       presentationReferencesBeforeConstruction.put(path, references(path));
     }
     buttonReferencesBeforeConstruction = references("data/global/sfx/cursor/button.wav");
+    questReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/MENU/questbackground.dc6",
+        "data/global/ui/MENU/questlast.dc6", "data/global/ui/MENU/expquesttabs.dc6",
+        "data/global/ui/MENU/questsockets.dc6", "data/global/ui/MENU/questdone.dc6",
+        "data/global/ui/PANEL/buysellbtn.DC6"}) {
+      questReferencesBeforeConstruction.put(path, references(path));
+    }
+    for (com.riiablo.codec.excel.Quests.Entry quest : Riiablo.files.quests) if (quest.visible) {
+      String path = "data/global/ui/MENU/" + quest.icon + ".dc6";
+      questReferencesBeforeConstruction.put(path, references(path));
+    }
     mobileReferencesBeforeConstruction.clear();
     if (mobileUiLifecycle) for (String path : new String[] {
         "data/global/ui/PANEL/minipanelbtn.DC6", "data/global/ui/SPELLS/Skillicon.DC6",
@@ -136,6 +148,47 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
         "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
+    Array<Actor> questActors = new Array<>();
+    collectActors(screen.questsPanel, questActors);
+    Array<com.riiablo.widget.DialogScroller> questDialogs = new Array<>();
+    Actor firstQuest = null;
+    for (Actor actor : questActors) {
+      if (actor instanceof com.riiablo.widget.DialogScroller) questDialogs.add((com.riiablo.widget.DialogScroller) actor);
+      if (actor.getClass().getSimpleName().equals("QuestButton")
+          && field(actor, "nativeRecordIndex", Integer.class) == 1) firstQuest = actor;
+    }
+    require(firstQuest != null && questDialogs.size == 5, "Act I quest and five real scrollers sampled");
+    click(firstQuest);
+    screen.questsPanel.act(0); // consume initial record refresh before replaying
+    com.riiablo.widget.DialogScroller replayDialog = questDialogs.first();
+    Array<com.riiablo.audio.Audio.Instance> questSpeech = new Array<>();
+    for (int replay = 0; replay < 3; replay++) {
+      screen.questsPanel.setVisible(true);
+      click(field(screen.questsPanel, "btnPlayQuest", Actor.class));
+      com.riiablo.audio.Audio.Instance instance = field(replayDialog, "audio", com.riiablo.audio.Audio.Instance.class);
+      require(instance != null, "quest replay owns audio instance");
+      if (replay > 0) require(field(questSpeech.peek(), "stopped", Boolean.class), "replacement stopped old quest speech");
+      questSpeech.add(instance);
+      if (replay == 0) {
+        screen.questsPanel.setVisible(false);
+        require(field(instance, "stopped", Boolean.class) && field(replayDialog, "audio", Object.class) == null,
+            "hiding quest log stops speech but keeps scroller reusable");
+      }
+    }
+    Set<Integer> questHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : questReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey();
+      require(references(path) > reference.getValue(), "live quest asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "quest sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle();
+          require(Gdx.gl.glIsTexture(handle), "live quest texture " + path);
+          if (reference.getValue() == 0) questHandles.add(handle);
+        }
+      }
+    }
     Array<Actor> mobileButtons = new Array<>();
     Set<Integer> mobileHandles = new HashSet<>();
     if (mobileUiLifecycle) {
@@ -305,6 +358,25 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.questsPanel, "disposed", Boolean.class), "Client retired quest owner");
+    screen.questsPanel.dispose(); screen.questsPanel.dispose();
+    for (Actor actor : questActors) {
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "quest actor retired");
+    }
+    for (com.riiablo.widget.DialogScroller dialog : questDialogs) {
+      require(field(dialog, "disposed", Boolean.class) && field(dialog, "audio", Object.class) == null
+          && field(dialog, "listener", Object.class) == null, "quest scroller retired");
+      dialog.act(10000); dialog.play("akara_act1_q1_init");
+      require(field(dialog, "audio", Object.class) == null, "late quest playback ignored");
+    }
+    for (com.riiablo.audio.Audio.Instance instance : questSpeech) {
+      require(field(instance, "stopped", Boolean.class), "quest speech stopped at exit");
+    }
+    for (Map.Entry<String, Integer> reference : questReferencesBeforeConstruction.entrySet()) {
+      require(references(reference.getKey()) == reference.getValue(), "quest asset baseline " + reference.getKey());
+    }
+    for (int handle : questHandles) require(!Gdx.gl.glIsTexture(handle), "quest texture deleted");
     require(field(screen.spellsPanel, "disposed", Boolean.class)
         && field(screen.spellsQuickPanelL, "disposed", Boolean.class)
         && field(screen.spellsQuickPanelR, "disposed", Boolean.class), "Client retired all skill owners");
@@ -399,6 +471,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nquickSkillButtonsRetiredDuringRebuild=" + retiredQuickButtons
         + "\nskillButtonsRetiredAtExit=" + skillButtonsAtExit.size
         + "\nskillOwnersRetiredByClient=3"
+        + "\nquestActorsRetired=" + questActors.size
+        + "\nquestScrollersRetired=" + questDialogs.size
+        + "\nquestSpeechReplays=" + questSpeech.size
+        + "\nquestSpeechHideStops=1"
+        + "\nquestAssetBaselinesBalanced=" + questReferencesBeforeConstruction.size()
+        + "\nquestTexturesDeleted=" + questHandles.size()
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\nmobileUiLifecycle=" + mobileUiLifecycle
@@ -443,6 +521,22 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     if (actor instanceof Group) {
       for (Actor child : ((Group) actor).getChildren()) collectButtons(child, buttons);
     }
+  }
+
+  private static void collectActors(Actor actor, Array<Actor> actors) {
+    actors.add(actor);
+    if (actor instanceof Group) for (Actor child : ((Group) actor).getChildren()) collectActors(child, actors);
+  }
+
+  private static void click(Actor actor) {
+    com.badlogic.gdx.scenes.scene2d.utils.ClickListener listener = null;
+    for (com.badlogic.gdx.scenes.scene2d.EventListener candidate : actor.getListeners()) {
+      if (candidate instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener) {
+        listener = (com.badlogic.gdx.scenes.scene2d.utils.ClickListener) candidate;
+      }
+    }
+    require(listener != null, "production quest click listener");
+    listener.clicked(null, 0, 0);
   }
 
   @SuppressWarnings("unchecked") private static void collectMenus(com.riiablo.widget.NpcMenu menu,
