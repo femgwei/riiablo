@@ -67,6 +67,8 @@ class GameScreenSubscriptionsTest {
     Riiablo.client = mock(Client.class);
     Riiablo.input = mock(Client.InputProcessor.class);
     Riiablo.assets = mock(AssetManager.class);
+    when(Riiablo.assets.contains(anyString())).thenReturn(true);
+    when(Riiablo.assets.isLoaded(anyString())).thenReturn(true);
     Riiablo.cursor = mock(Cursor.class);
   }
 
@@ -186,6 +188,8 @@ class GameScreenSubscriptionsTest {
     verify(screen.engine).dispose();
     verify(screen.stage).dispose();
     verify(screen.scaledStage).dispose();
+    verify(screen.map).dispose();
+    verify(screen.loadingScreen).dispose();
     verify(Riiablo.assets).unload("session-owned.wav");
     verify(Riiablo.input).removeProcessor(screen.scaledStage);
     assertFalse(Keys.Esc.containsStateListener(screen.mappedKeyStateListener));
@@ -282,6 +286,7 @@ class GameScreenSubscriptionsTest {
     assets.add(new AssetDescriptor<>("second.wav", Sound.class));
     assets.add(new AssetDescriptor<>("second.wav", Sound.class));
     set(screen, "preloadedAssets", assets);
+    installAssets(screen, assets);
 
     assertSame(actorFailure, assertThrows(RuntimeException.class, screen::dispose));
     assertArrayEquals(new Throwable[] {stageFailure, assetFailure}, actorFailure.getSuppressed());
@@ -319,7 +324,7 @@ class GameScreenSubscriptionsTest {
       assertEquals(0, screen.stage.getActors().size);
       assertEquals(0, screen.scaledStage.getActors().size);
       verify(sharedBatch, never()).dispose();
-      verify(screen.map, never()).dispose();
+      verify(screen.map).dispose();
     } finally {
       Gdx.graphics = previousGraphics;
       Gdx.gl = previousGl;
@@ -358,6 +363,8 @@ class GameScreenSubscriptionsTest {
     set(screen, "visibleSubscriptions", new ScreenSubscriptionScope());
     set(screen, "sessionSubscriptions", new ScreenSubscriptionScope());
     screen.engine = mock(World.class);
+    screen.map = mock(com.riiablo.map.Map.class);
+    screen.loadingScreen = mock(GameLoadingScreen.class);
     screen.stage = mock(Stage.class);
     screen.scaledStage = mock(Stage.class);
     when(screen.stage.getActors()).thenReturn(new SnapshotArray<>(Actor.class));
@@ -372,8 +379,37 @@ class GameScreenSubscriptionsTest {
     Array<AssetDescriptor> assets = new Array<>();
     assets.add(new AssetDescriptor<>("session-owned.wav", Sound.class));
     set(screen, "preloadedAssets", assets);
+    installAssets(screen, assets);
     screens.add(screen);
     return screen;
+  }
+
+  private static void installAssets(GameScreen screen, Array<AssetDescriptor> assets) throws Exception {
+    ScreenAssetScope scope = new ScreenAssetScope(Riiablo.assets);
+    for (AssetDescriptor asset : assets) scope.load(asset);
+    set(screen, "sessionAssets", scope);
+  }
+
+  @Test
+  void mapIsReleasedAfterSavingWorldAndUiEvenWhenItFails() throws Exception {
+    GameScreen screen = screen();
+    com.riiablo.engine.client.AutomapRenderer automap =
+        mock(com.riiablo.engine.client.AutomapRenderer.class);
+    when(screen.engine.getSystem(com.riiablo.engine.client.AutomapRenderer.class)).thenReturn(automap);
+    RuntimeException failure = new RuntimeException("map cleanup");
+    doThrow(failure).when(screen.map).dispose();
+    assertSame(failure, assertThrows(RuntimeException.class, screen::dispose));
+    org.mockito.InOrder order = inOrder(automap, screen.engine, screen.stage,
+        screen.scaledStage, screen.map, screen.loadingScreen, Riiablo.assets);
+    order.verify(automap).saveNativeAutomap();
+    order.verify(screen.engine).dispose();
+    order.verify(screen.stage).dispose();
+    order.verify(screen.scaledStage).dispose();
+    order.verify(screen.map).dispose();
+    order.verify(screen.loadingScreen).dispose();
+    order.verify(Riiablo.assets).unload("session-owned.wav");
+    screen.dispose();
+    verify(screen.map).dispose();
   }
 
   private static void configure(GameScreen screen) throws Exception {

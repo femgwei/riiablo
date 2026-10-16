@@ -206,6 +206,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     }
   }};
+  private final ScreenAssetScope sessionAssets = new ScreenAssetScope(Riiablo.assets);
 
 
   Stage stage;
@@ -813,7 +814,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // FIXME: #75 Initial CharData update event
     charData.update();
 
-    loadingScreen = new GameLoadingScreen(map, getDependencies());
+    loadingScreen = new GameLoadingScreen(map, getDependencies(), sessionAssets);
   }
 
   private void bindItemLocationListeners() {
@@ -1365,10 +1366,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
 
       AssetDescriptor<COF> cofDescriptor = new AssetDescriptor<>(cofPath, COF.class);
-      Riiablo.assets.load(cofDescriptor);
-      preloadedAssets.add(cofDescriptor);
-      Riiablo.assets.finishLoading();
-      COF cof = Riiablo.assets.get(cofDescriptor);
+      sessionAssets.load(cofDescriptor);
+      sessionAssets.assets.finishLoading();
+      COF cof = sessionAssets.assets.get(cofDescriptor);
 
       Array<AssetDescriptor<? extends DC>> layerDescriptors = new Array<>();
       int[] componentCodes = components.get(entityId).component;
@@ -1396,14 +1396,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           }
           descriptor = new AssetDescriptor<>(dc6Path, DC6.class);
         }
-        Riiablo.assets.load(descriptor);
-        preloadedAssets.add(descriptor);
+        sessionAssets.load(descriptor);
         layerDescriptors.add(descriptor);
       }
 
-      Riiablo.assets.finishLoading();
+      sessionAssets.assets.finishLoading();
       for (AssetDescriptor<? extends DC> descriptor : layerDescriptors) {
-        Riiablo.assets.get(descriptor).loadDirections();
+        sessionAssets.assets.get(descriptor).loadDirections();
       }
       Gdx.app.log(TAG, "[NPC_PRESENTATION_PREWARM] entity=" + entityId
           + " monster=" + monster.monstats.Id + " mode=" + modeName
@@ -1487,7 +1486,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(visibleSubscriptions::dispose);
       cleanup.run(sessionSubscriptions::dispose);
-      //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
       cleanup.run(() -> {
         if (!characterSavedForExit && !saveCharacter()) {
           Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
@@ -1501,9 +1499,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       cleanup.run(() -> engine.dispose());
       disposeStage(stage, cleanup);
       if (scaledStage != stage) disposeStage(scaledStage, cleanup);
-      for (AssetDescriptor asset : preloadedAssets) {
-        cleanup.run(() -> Riiablo.assets.unload(asset.fileName));
-      }
+      // Save exploration and retire map consumers before releasing map textures.
+      cleanup.run(() -> map.dispose());
+      cleanup.run(() -> { if (loadingScreen != null) loadingScreen.dispose(); });
+      cleanup.run(sessionAssets::dispose);
     } finally {
       // An old screen must never clear a newer session's legacy aliases.
       if (Riiablo.game == this) Riiablo.game = null;

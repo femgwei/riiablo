@@ -109,7 +109,7 @@ mock GL/Texture 验证幂等/开关改变/失败清理，另有截断解码清�
   '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
 ```
 
-## 后续边界（第二批后）
+## 后续边界（第二批完成时的历史记录）
 
 下一批开展完整同进程多次会话退出重进验证，再启用 GameScreen 的 map.dispose。
 目前仍保留该历史 FIXME，正常退出的整图卸载尚未接通，不能宣称地图退出泄漏已解决。
@@ -117,3 +117,81 @@ mock GL/Texture 验证幂等/开关改变/失败清理，另有截断解码清�
 资源及屏幕栈清理、构造/初始化失败后的自动回滚均尚未完成。
 本批没有消除 UI 内部的 Riiablo 全局依赖，预载资产卸载也尚未绑定原 AssetManager，
 不能据此宣称任意宿主替换安全、全部资源无泄漏或全面会话隔离。
+
+## 第三批：GameScreen 整图退出与加载屏生命周期
+
+`GameScreen.dispose()` 现在在保存角色/Automap、销毁 World 和两个 UI Stage 后，
+调用 `Map.dispose()`，然后清理加载屏和会话预载。异常后继续尝试其它资源的规则不变。
+地图资源在消费者退出之后、Client 的 AssetManager 与 GL 上下文销毁之前释放，
+不再保留普通会话退出的历史 map.dispose FIXME。
+
+新增包内 `ScreenAssetScope`：捕获创建时的 AssetManager，只记录成功提交的 load，
+每次提交对应一次 unload，不按文件名去重。未显示的屏幕不会卸载尚未提交的预载配方。
+预载的加载、Warriv 备用模式的预热和最终卸载归入同一会话 scope；原始配方仍由
+`getDependencies()` 提供。清理先完成仍在途的同名资产，再逐引用卸载，沿用上一批
+libGDX 1.10 的处理约束：可能同步等待，必须在资源宿主存活时、GL 线程上调用。
+
+`GameLoadingScreen` 的构造不再获取贴图或创建 Stage；每次 show 创建临时 Stage，
+持有一份加载图引用，hide/dispose 释放二者。Client 在 pop 后可能调用 dispose，
+但同一 GameScreen 后续换 Act 仍会复用这个 loader，因此这里的 dispose 仅结束
+当前显示周期，不永久封闭 loader。会话预载仅提交一次，最终由 GameScreen 释放。
+show 中途失败会清理已创建的临时资源；不等于整个 GameScreen 构造/初始化自动回滚。
+
+### 同进程生产验证入口
+
+新增 `:desktop:offscreenSessionLifecycle`。同一 Client、AssetManager 和真实 1.10f
+MPQ/GL 上下文中三轮构造生产 GameScreen，经加载屏、Act I DRLG、营地实体和真实
+渲染后，通过 Client.setScreen 退出，再进入下一轮。退出目标是无资源占位屏，不是
+实际菜单/角色选择屏；每轮输出独立营地 manifest 和生命周期报告。
+
+入口检查旧地图/Stage 清空、按键与输入处理器解除、全局 game/engine 别名清空、
+加载图、windowopen 和 MaxiMap 三种屏幕专属预载的引用数平衡、DT1 从管理器移除、
+原生 Pixmap 释放及 GL 句柄删除；
+后续会话必须获得新的 DT1 实例。重复 dispose 不重复释放。它不宣称全部 UI 内部
+引用归零，不替代人工画面/听感、长时间运行或网络会话验证。
+
+```powershell
+.\gradlew.bat :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/session-reentry-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/session-reentry-camp' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 新暴露的独立 UI 引用问题
+
+首次真实验证发现构造 UI 后，退出仍残留 `data/global/sfx/cursor/button.wav`
+引用。`Button` 构造各自 load，而 GameScreen 只清理顶层 Disposable Actor，
+嵌套按钮的 dispose 未被统一配对。验证必须区分 UI 构造自身的引用和稍后 show
+提交的会话预载，不能把前者算作后者；顶层控件又会在退出时正确释放其中一部分，
+因此也不能要求整个管理器的共享音效引用等于构造后的计数。真实入口只对上述三种
+专属预载做基线断言，逐提交/重复文件名的 scope 配对另有专项测试；不把共享音效
+包装为通过。生命周期报告单独记录构造前、构造后与退出后的按钮引用数。
+此问题本批不扩展处理，后续需要明确控件/面板资源所有权，不能简单
+递归 dispose 所有子控件（会与已有面板的子资源释放重叠）。
+
+网络屏幕 socket / HostedD2GS、Client 完整屏幕栈及共享资源、GameEntryLoadingScreen
+自身资源、完整构造回滚、真实跨 Act/加载中退出、长时间多轮压力测试仍未验收。
+
+### 第三批验证记录
+
+- 新增 8 项专项，扩大定向回归 309/309、45 类通过：core 267/267（38 类）、
+  D2GS 全部 42/42（7 类），失败/错误/跳过均 0。范围沿用第二批 301 项并新增
+  scope、loader 和整图清理顺序覆盖；未纳入两个既有玩法/AI 基线失败。
+- 同进程完整生产会话三轮全部通过上述限定检查：每轮 58 个 DT1 资产、2626 张
+  地图贴图及其 Pixmap 退出释放，下一轮新实例；输入处理器回到基线 2。
+  专属预载回到显示前引用基线，重复 dispose 安全。报告
+  `build/session-reentry-camp/cycle-1-lifecycle.txt` 至 `cycle-3-lifecycle.txt`；
+  每轮营地渲染三帧，独立 manifest 在相应 cycle-N 目录。
+- 按钮引用实际为构造前/构造后/退出后：第一轮 0/129/105，第二轮
+  105/234/210，第三轮 210/339/315，明确是未解决的独立问题。
+- 独立地图资产 GL 三轮继续 PASS：Cavedr.dt1 44 tiles，4→2→1→0。
+  日志 `build/session-reentry-regression.log`。初轮编译的包私有字段访问、
+  Animation 测试夹具 Colors 初始化、路径规范化及共享音效基线归因错误均已
+  修正；保留初轮失败日志，不把这些失败运行视为成功。
+- 上述 309 项、两种三轮真实 GL 检查、原单轮营地/Client 退出、D2GS 25Hz
+  （step=0.04）和 Throw 导弹顺序/伤害 1000→992 在同一命令完成，最终
+  `BUILD SUCCESSFUL`，core/desktop/D2GS 编译通过。日志仍为
+  `build/session-reentry-regression.log`，未出现 ERROR/Exception。
+  保留 level0/DrlgType0 跳过、Java 分配回退、表 Key 推断等既有诊断；四次
+  SIM_SLOW 为 107.33 / 58.70 / 57.31 / 112.39ms（预算 40ms），不作性能验收。

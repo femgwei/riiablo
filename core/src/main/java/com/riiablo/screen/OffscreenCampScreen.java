@@ -49,6 +49,11 @@ public final class OffscreenCampScreen extends GameScreen {
   private String objectAuditSummary = "";
   private int renderedFrames;
   private boolean completed;
+  private Runnable completion = () -> Gdx.app.exit();
+
+  void onComplete(Runnable completion) {
+    this.completion = java.util.Objects.requireNonNull(completion);
+  }
   private boolean targetApplied;
   private Map.Zone targetZone;
   private int targetNativeCells;
@@ -268,7 +273,7 @@ public final class OffscreenCampScreen extends GameScreen {
     output.child("rogue-encampment-manifest.txt").writeString(report, false, "UTF-8");
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CAMP] result=PASS act="
         + (map.getAct() + 1) + " player=" + player + " frames=" + renderedFrames);
-    Gdx.app.exit();
+    completion.run();
   }
 
   /**

@@ -450,7 +450,10 @@ public class Client extends Game {
       boolean offscreenWarpCollision = Boolean.getBoolean("riiablo.offscreen-warp-collision");
       Gdx.app.log(TAG, "[OFFSCREEN_FLAGS] warpGraph=" + offscreenWarpGraph
           + " continuity=" + offscreenContinuity + " warpCollision=" + offscreenWarpCollision);
-      setScreen(new OffscreenCampScreen(smokeCharacter,
+      if (Boolean.getBoolean("riiablo.offscreen-session-lifecycle")) {
+        setScreen(new com.riiablo.screen.OffscreenSessionLifecycleScreen(smokeCharacter,
+            System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
+      } else setScreen(new OffscreenCampScreen(smokeCharacter,
           System.getProperty("riiablo.offscreen-output", "build/visual-tests"),
           offscreenLevel, offscreenWarpGraph, offscreenContinuity, offscreenWarpCollision));
     } else if ((Gdx.app.getType() == Application.ApplicationType.Android && !home.child("data").exists()) || DEBUG_AUDIO_UNPACKER) {

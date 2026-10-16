@@ -1,5 +1,51 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第三批：整图退出与同进程重进
+
+- [x] 移除 GameScreen 普通退出的 map.dispose 历史 FIXME；保存角色/Automap、
+  释放 World 和 UI 后再释放整图，随后清理加载屏与会话预载。某项失败仍尝试后续
+  清理，重复 dispose 幂等，不改变系统顺序、25Hz、玩法、协议或存档格式。
+- [x] ScreenAssetScope 捕获原 AssetManager，区分预载配方与成功提交的 load；
+  每次提交对应一次 unload，重复文件名不去重。初始预载和 Warriv 备用模式预热
+  归同一会话所有。未 show 不误卸外部资源；在途清理沿用先完成、再卸载的 GL
+  线程约束，不提供任意宿主替换或通用异步取消保证。
+- [x] GameLoadingScreen 不再在构造中持有资源；每次 show 创建借用 Client batch
+  的 Stage 和加载图引用，hide/dispose 释放，异常也清理临时资源。同一会话换 Act
+  可继续复用 loader；会话预载仅提交一次，最终由 GameScreen 释放。
+- [x] 新增 8 项专项：ScreenAssetScopeTest 4 项、GameLoadingScreenLifecycleTest
+  3 项、GameScreenSubscriptionsTest 新增 1 项保存/World/UI/地图释放时序测试，
+  同时更新原有释放契约。扩大定向回归 309/309、45 类通过（core 267/267、
+  D2GS 全部 42/42），失败/错误/跳过均 0；不包含此前两个已基线复现的玩法/AI
+  失败，不宣称全仓全绿。
+- [x] 新增 :desktop:offscreenSessionLifecycle：真实 1.10f MPQ、同一 Client /
+  AssetManager / GL 上下文，生产加载屏、Act I DRLG、营地实体和渲染，连续三轮
+  退出重进通过。每轮 58 个 DT1、2626 张地图贴图退出释放，Pixmap 已释放、GL
+  句柄已删除，下一轮为新 DT1；旧 Map/Stage 清空，按键/输入处理器和全局别名
+  清理通过。加载图、windowopen、MaxiMap 三种专属预载回到显示前基线。
+  退出到无资源占位屏，未覆盖真实菜单/角色选择流程、跨 Act 或加载中退出。
+- [x] 独立地图资产真实 GL 三轮继续通过：44 tiles，引用数 4→2→1→0。
+  生命周期报告位于 build/session-reentry-camp/cycle-N-lifecycle.txt，三轮营地
+  manifest 位于相应 cycle-N 目录；日志 build/session-reentry-regression.log。
+- [x] 原单轮营地三帧/Client 退出、D2GS 25Hz（step=0.04）、Throw 导弹顺序
+  与 1000→992 伤害通过；与 309 项及两类三轮 GL 验证在同一命令完成，最终
+  BUILD SUCCESSFUL，三端编译通过。无 ERROR/Exception；既有地图/分配/表 Key
+  诊断保留。四次 SIM_SLOW 为 107.33 / 58.70 / 57.31 / 112.39ms，超过
+  40ms 预算，不将本次冒烟作为性能验收。
+- 验证暴露且尚未处理的 UI 内部泄漏：按钮音效每轮构造增加 129 个引用，退出只
+  释放其中 24 个，退出残留累计 105→210→315。共享音效同时被 UI 和预载持有，
+  整个管理器的前后计数不能直接归因给单一 scope；真实入口对三种专属预载做
+  断言，共享按钮引用单独报告，不包装成全部资源无泄漏。下一批优先梳理面板/
+  嵌套控件所有权，避免递归释放与面板既有清理重叠。
+- 首轮编译修正验证入口访问 Tile 包私有字段的问题；单元夹具补齐 Animation
+  初始化所需 Colors 并使用 AssetDescriptor 规范化后的路径。真实入口最初对
+  全部共享音效做错误的整体基线比较，改为上述明确的独占资源检查，保留原失败
+  日志 session-reentry-focused*.log、session-reentry-real-03.log，并如实记录残留。
+- 整体进度：七批装配改造完成，资源阶段推进到第三批；地图普通退出已接通，
+  但资源阶段尚未收口。UI 内部引用、GameEntryLoadingScreen、Client 完整屏幕栈/
+  共享资源、网络 socket / HostedD2GS 停机及完整构造回滚仍待；不以冒烟代替人工
+  画面/听感、长时内存或性能验收。实现与复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第二批：地图引用计数与 DT1 释放
 
 - [x] Zone 区分依赖配方与实际加载记录；捕获原 AssetManager，用于完成加载、
