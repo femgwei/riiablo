@@ -110,6 +110,7 @@ import com.riiablo.engine.client.debug.PathDebugger;
 import com.riiablo.engine.client.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
+import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.InteractionRange;
@@ -134,7 +135,6 @@ import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.PlayerItemHandler;
-import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.attributes.ExperienceManager;
@@ -893,6 +893,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   protected WorldConfigurationBuilder getWorldConfigurationBuilder() {
+    SimulationMode mode = socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT;
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         // Must precede input, AI and animation keyframes in every fixed tick.
         .with(new CombatPositionCaptureSystem())
@@ -934,7 +935,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // mutation remains authoritative in the local/server Act2QuestSystem.
     builder.with(new Act2QuestDialogController());
     builder.with(new Act4QuestDialogController());
-    if (socket == null) {
+    if (mode.isAuthoritative()) {
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
@@ -943,7 +944,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(SimulationSystemGroups.quests());
       builder.with(SimulationSystemGroups.ownedUnits());
       builder.with(SimulationSystemGroups.questItemRewards());
-      builder.with(new ServerSkillSystem(true));
+      builder.with(mode.createServerSkillSystem());
       builder.with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem());
       builder.with(new com.riiablo.engine.server.AuraEcsSystem());
       builder.with(new ItemGenerator());
@@ -963,7 +964,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // D2 uses a dynamic collision footprint rather than physics-engine
         // pushing.  Keep the local simulation authoritative while networked
         // clients remain replicas of D2GS positions.
-        .with(new com.riiablo.engine.server.DynamicUnitCollisionSystem(socket == null))
+        .with(mode.createDynamicUnitCollisionSystem())
         .with(new Pathfinder())
         .with(new LeapSystem())
 
@@ -990,7 +991,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // their frame. Otherwise a late layer refresh can overwrite cblu.
         .with(new com.riiablo.engine.client.StateOverlaySystem());
 //        .with(new VelocityAdder());
-    if (socket != null) {
+    if (!mode.isAuthoritative()) {
       // FIXME: crash when changing acts in multiplayer
       builder.with(new Box2DDisposer());
     }
@@ -1003,9 +1004,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // still request movement into a torch or wall after Box2D has stopped
         // the body; using the requested velocity leaves the player running in
         // place. Multiplayer replicas retain their D2GS-owned modes.
-        .with(socket == null
-            ? new VelocityModeChanger()
-            : new VelocityModeChanger(true, false))
+        .with(mode.createVelocityModeChanger())
 
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new ExperienceManager())
@@ -1023,7 +1022,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
         .with(new WarpSubstManager())
         ;
-    if (socket == null) {
+    if (mode.isAuthoritative()) {
       // Local games own Whirlwind movement and periodic damage. Multiplayer
       // clients render the authoritative D2GS position/mode/state snapshots.
       builder.with(new com.riiablo.engine.server.WhirlwindSystem());

@@ -1,6 +1,36 @@
-# 单机 / D2GS 公共系统装配（第一批）
+# 单机 / D2GS 公共系统装配
 
 日期：2026-10-16。行为基线：本批修改前的 `d24537104`。
+
+## 第二批：显式运行模式（2026-10-16）
+
+基线为第一批提交 `342aad7a3`。新增无会话状态的 `SimulationMode`，区分
+`LOCAL`、`DEDICATED_SERVER` 和 `REMOTE_CLIENT`。GameScreen 仅在装配入口
+根据 socket 选择模式，D2GS 显式选择服务端模式，不把 socket 推入引擎配置。
+
+- 单机：保留权威注册分支、动态单位碰撞、本地跑走输入、Networked 模式更新和
+  `ServerSkillSystem(true)` 旧适配分工。
+- D2GS：保留动态单位碰撞和 Networked 模式更新，不读取本地跑走输入，
+  技能仍等价于 `ServerSkillSystem(false)`。
+- 联网客户端：不进入权威注册分支，动态碰撞系统仍注册但不建立权威足迹，
+  保留本地跑走输入，不重新推导 Networked 单位的 COF 模式；创建权威技能系统直接拒绝。
+
+三个模式均即时创建新的系统实例。模式只集中现有构造参数，不持有库存服务、map、
+socket、World 或其他可变资源。库存修订服务、AI tour 开关仍由宿主显式传入原注册组。
+GameScreen 中非装配用途的 socket 判断未改动，Box2D/VelocityAdder 差异和所有 Tick
+插入位置保留。本批没有新增或修改 1.10f 游戏规则，不是新的原版行为移植。
+
+`SimulationModeTest` 锁定三种模式的参数、远端技能拒绝、实例隔离及 builder 即时插入。
+`SimulationModeIntegrationTest` 使用真实 Artemis World 验证动态足迹阻挡与
+Networked 移动模式归属，并确认客户端未联网单位的动画更新没有一起被关闭。
+测试不依赖 MPQ/GL；生产入口另跑真实营地和 D2GS 资源专项。
+
+第二批结果：新增 18 项与既有装配/移动/碰撞回归合计 62/62，三端编译通过。
+真实 1.10f 营地三帧、D2GS 25Hz Tick 和 Throw 导弹伤害通过；日志保留
+level0/DrlgType0 跳过与 Java object 分配回退警告，另一台电脑画面/操作仍待验收。
+完整证据和未解决的第一批既有问题见 `d2moo-progress-roadmap.md` 最新章节。
+
+## 第一批：公共注册组
 
 ## 范围
 
@@ -27,11 +57,13 @@
 - `objectCollision`：对象碰撞 → Bone Wall/Prison 单位足迹。
 
 任务、所属单位、任务物品奖励、对象效果、房间激活这五组仅用于权威世界。
-GameScreen 的联网客户端仍不进入 `socket == null` 权威注册分支。
+GameScreen 的联网客户端仍不进入权威注册分支（第一批为 `socket == null`，
+第二批等价改为 `mode.isAuthoritative()`）。
 其余四组保留原有客户端副本注册，不因名称包含 server 而擅自移除。
 
 `ServerSkillSystem(true)`（单机旧表现分工）、`ServerSkillSystem()`（D2GS）、
-`DynamicUnitCollisionSystem` 和 `VelocityModeChanger` 的模式参数仍在入口显式选择。
+`DynamicUnitCollisionSystem` 和 `VelocityModeChanger` 的模式参数第一批仍在入口显式选择，
+第二批由 `SimulationMode` 集中创建，入口继续决定安装位置。
 UI、音频、渲染、传输、会话资源注入及宿主对象生命周期仍由各入口负责。
 后续可以继续提取这些边界，但不在本批改动中顺带更换职责。
 
@@ -65,5 +97,8 @@ Act1Quest*Test。真实资源通过 D2_HOME 或任务的 d2Home 参数注入，�
 
 ## 下一步
 
-根据两台电脑的回归结果，再决定是否提取显式的模式配置和会话上下文。
+公共注册组和显式运行模式已分两批接入，尚未完成会话依赖隔离或全局状态拆分。
+下一批宜先盘点两个装配入口实际使用的会话依赖，从最小边界引入显式会话上下文，
+不一次替换所有 Riiablo 全局引用；需要单独测试会话重建及资源归属。
 任务、佣兵、AI 在两端的位置不同，需要独立行为证据才能调整，不在提取注册时重排。
+不以复刻 dark-magic 的模块数量为目标，也不将架构整理计作 D2MOO 行为对齐完成度。

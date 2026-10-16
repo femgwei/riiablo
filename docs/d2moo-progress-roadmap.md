@@ -1,5 +1,35 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第二批：显式运行模式
+
+- [x] 新增 `SimulationMode`：LOCAL / DEDICATED_SERVER / REMOTE_CLIENT。
+  集中动态单位碰撞、技能执行及移动模式构造参数；GameScreen 在入口根据 socket
+  选择模式，D2GS 显式选择服务端模式；客户端创建权威技能系统直接拒绝。
+- [x] 单机旧技能适配、联网本地跑走输入及服务端 Networked 模式归属保持不变；
+  各工厂每次创建新系统，不在 enum 缓存会话资源；未改协议、存档或 1.10f 规则。
+- [x] 与第一批 `342aad7a3` 对照，将模式调用还原为原表达式后，两个入口装配方法
+  除空白外全文一致；所有注册位置和条件等价，未统一两端不同的 Tick 顺序。
+- [x] 模式参数/实例隔离/拒绝/插入位置 12 项、真实 ECS 模式边界 6 项通过；
+  追加原有公共装配 21 项、移动模式 11 项、动态碰撞 12 项，合计 62/62，
+  失败/错误/跳过均 0。core、desktop、D2GS 编译通过。
+  首次编译发现测试调用了 Artemis Bag 不支持的 indexOf，修正测试集合读取后重跑通过；
+  初始失败日志保留，不作为通过证据。
+- [x] 真实 1.10f 营地 1x1 隐藏窗口三帧 PASS；D2GS 25Hz 固定 Tick 推进
+  29 tick、step=0.04；Throw 导弹生命周期/顺序及伤害 PASS，生命 1000→992。
+  三项任务整体成功。日志仍含 level0/DrlgType0 跳过、Java object 分配回退警告，
+  未更改日志级别或掩盖警告，不声称无警告或已完成人工画面验收。
+- 证据日志：`build/simulation-mode-compile-test.log`（首次测试编译失败）、
+  `build/simulation-mode-compile-test-02.log`（62 项及三端编译通过）、
+  `build/simulation-mode-real-resource.log`（三项真实资源任务）；营地结果
+  `build/simulation-mode-camp/rogue-encampment-manifest.txt`（result=PASS）。
+- 第一批已复现的投掷专精期望差异、佣兵测试房间缺失、Den victim 缺等级日志
+  本批均未修复；不能据本批定向通过宣称全套回归无错。另一台电脑操作/画面验收仍待。
+- 整体架构进度：公共系统注册分组和显式运行模式已完成两批；仍是宿主保留总调度的
+  渐进整理，不是完整 dark-magic 式模块拆分。会话依赖显式化、Riiablo 全局状态隔离、
+  跨会话资源归属测试尚待。统一两端 Tick 顺序需要独立证据，不作为默认下一步。
+  本批属于架构维护，不提高各 D2MOO 行为模块的 ALIGNED 状态或虚报总体完成率。
+- 详细边界见 [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第一批
 
 - [x] 新增 `SimulationSystemGroups`，集中两端共用的 38 个系统、9 个注册组；

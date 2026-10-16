@@ -59,6 +59,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.D2;
 import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -66,7 +67,6 @@ import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.MissileCollisionSystem;
-import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.attributes.ExperienceManager;
@@ -80,7 +80,6 @@ import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
-import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -6165,6 +6164,7 @@ public class D2GS extends ApplicationAdapter {
     mapManager = new MapManager();
     sync = new NetworkSynchronizer();
     combatPositionHistory = new CombatPositionHistory(map);
+    SimulationMode mode = SimulationMode.DEDICATED_SERVER;
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
         // NPC components retain client menu hooks; register inert systems so
@@ -6198,7 +6198,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
         .with(new PlayerCorpseRetrievalSystem())
-        .with(new ServerSkillSystem())
+        .with(mode.createServerSkillSystem())
         .with(new DeathRewardSystem())
         // Apply a newly queued attack mode before advancing animation. If the
         // old neutral animation wraps first, its Finished event can otherwise
@@ -6212,7 +6212,7 @@ public class D2GS extends ApplicationAdapter {
 
         .with(new VendorGenerator())
         .with(SimulationSystemGroups.roomPopulation(Boolean.getBoolean("riiablo.d2gs.aiTour")))
-        .with(new DynamicUnitCollisionSystem())
+        .with(mode.createDynamicUnitCollisionSystem())
         .with(new Pathfinder())
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
@@ -6220,7 +6220,7 @@ public class D2GS extends ApplicationAdapter {
         // Resolve modes after collision-aware movement has replaced a blocked
         // requested velocity with zero. D2GS remains the authoritative owner
         // of player and monster movement modes.
-        .with(new com.riiablo.engine.server.VelocityModeChanger(false, true))
+        .with(mode.createVelocityModeChanger())
         .with(new com.riiablo.engine.server.WhirlwindSystem())
         .with(new LeapSystem())
 
