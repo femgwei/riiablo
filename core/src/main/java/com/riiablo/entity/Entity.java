@@ -2,6 +2,7 @@ package com.riiablo.entity;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -416,7 +417,7 @@ public abstract class Entity implements Animation.AnimationListener {
       if (DEBUG_DIRTY) Gdx.app.log(TAG, path);
 
       AssetDescriptor<? extends DC> descriptor = this.layer[layer.component] = new AssetDescriptor<>(path, DCC.class);
-      Riiablo.assets.load(descriptor);
+      loadAsset(descriptor);
       load |= (1 << layer.component);
     }
 
@@ -429,6 +430,10 @@ public abstract class Entity implements Animation.AnimationListener {
 
     dirty = Dirty.NONE;
   }
+
+  protected AssetManager assetManager() { return Riiablo.assets; }
+
+  protected void loadAsset(AssetDescriptor descriptor) { assetManager().load(descriptor); }
 
   protected void loadLayers() {
     if (load == Dirty.NONE) return;
@@ -443,10 +448,10 @@ public abstract class Entity implements Animation.AnimationListener {
       }
 
       AssetDescriptor<? extends DC> descriptor = this.layer[layer.component];
-      if (Riiablo.assets.isLoaded(descriptor)) {
+      if (assetManager().isLoaded(descriptor)) {
         if (DEBUG_LOAD) Gdx.app.debug(TAG, "loaded " + descriptor);
         load &= ~(1 << layer.component);
-        DC dc = Riiablo.assets.get(descriptor);
+        DC dc = assetManager().get(descriptor);
         animation.setLayer(layer, dc, false)
             .setTransform(trans[layer.component])
             .setAlpha(alpha[layer.component])
@@ -843,9 +848,9 @@ public abstract class Entity implements Animation.AnimationListener {
     if (!skill.castoverlay.isEmpty()) {
       overlayEntry = Riiablo.files.Overlay.get(skill.castoverlay);
       AssetDescriptor<DCC> descriptor = new AssetDescriptor<>("data\\global\\overlays\\" + overlayEntry.Filename + ".dcc", DCC.class);
-      Riiablo.assets.load(descriptor);
-      Riiablo.assets.finishLoadingAsset(descriptor);
-      DCC dcc = Riiablo.assets.get(descriptor);
+      loadAsset(descriptor);
+      assetManager().finishLoadingAsset(descriptor);
+      DCC dcc = assetManager().get(descriptor);
       overlay = Animation.builder()
           .layer(dcc, overlayEntry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID)
           .build();

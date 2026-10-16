@@ -101,6 +101,34 @@ task offscreenMenuLifecycle(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenCharacterLifecycle {
+  group = 'verification'
+  description = 'Verify all three selection variants three times, each seven-class group in an isolated JVM.'
+}
+
+def previousCharacterLifecycle = null
+(1..3).each { cycle ->
+  (1..3).each { variant ->
+    def verification = tasks.create("offscreenCharacterLifecycleC${cycle}V${variant}", JavaExec) {
+      group = 'verification'
+      description = "Verify character-selection variant ${variant}, repetition ${cycle}, with seven real previews."
+      classpath = sourceSets.main.runtimeClasspath
+      mainClass = 'com.riiablo.OffscreenRenderClient'
+      args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+           '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+           '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/character-lifecycle',
+           '--mode', 'menus', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+      systemProperty 'riiablo.offscreen-character-lifecycle', 'true'
+      systemProperty 'riiablo.offscreen-character-cycle', cycle.toString()
+      systemProperty 'riiablo.offscreen-character-variant', variant.toString()
+      ignoreExitValue = false
+    }
+    if (previousCharacterLifecycle != null) verification.mustRunAfter previousCharacterLifecycle
+    previousCharacterLifecycle = verification
+    offscreenCharacterLifecycle.dependsOn verification
+  }
+}
+
 task offscreenWarpGraph(type: JavaExec) {
   group = 'verification'
   description = 'Validate every generated Act 1 Warp edge in a hidden 1x1 client.'

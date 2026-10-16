@@ -30,6 +30,8 @@ import com.riiablo.widget.Label;
 import com.riiablo.widget.TextButton;
 
 public class SelectCharacterScreen2 extends ScreenAdapter {
+  private final MenuScreenResources resources = new MenuScreenResources(Riiablo.assets, Riiablo.input);
+  private final FileHandle savesLocation = Riiablo.saves;
   private static final String TAG = "SelectCharacterScreen2";
 
   final AssetDescriptor<DC6> characterselectscreenEXPDescriptor = new AssetDescriptor<>("data\\global\\ui\\CharSelect\\charselectbckg.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -46,7 +48,7 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
   private Table actionPanel;
 
   private CharacterSelectButton        selected;
-  private Array<CharacterSelectButton> characters;
+  private final Array<CharacterSelectButton> characters = new Array<>();
 
   private Account account;
 
@@ -56,20 +58,30 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
 
   public SelectCharacterScreen2(Account account) {
     this.account = account;
+    try {
+      create();
+      resources.useStageInput();
+    } catch (RuntimeException | Error failure) {
+      resources.fail(failure);
+    }
+  }
+
+  private void create() {
     load();
 
-    stage = new Stage(Riiablo.viewport, Riiablo.batch);
+    stage = resources.own(new Stage(Riiablo.viewport, Riiablo.batch));
 
-    Riiablo.assets.finishLoadingAsset(characterselectscreenEXPDescriptor);
-    characterselectscreenEXP = Riiablo.assets.get(characterselectscreenEXPDescriptor).getTexture();
+    resources.assets.finishLoadingAsset(characterselectscreenEXPDescriptor);
+    characterselectscreenEXP = resources.assets.get(characterselectscreenEXPDescriptor).getTexture();
 
     ChangeListener clickListener = new ChangeListener() {
       @Override
       public void changed(ChangeEvent event, Actor actor) {
+        if (!resources.isVisible()) return;
         if (actor == btnExit) {
           Riiablo.client.popScreen();
         } else if (actor == btnOK) {
-          assert selected != null;
+          if (selected == null) return;
           Riiablo.client.pushScreen(new LobbyScreen(SelectCharacterScreen2.this.account, Riiablo.charData.clear().load(selected.getD2S())));
         } else if (actor == btnCreateNewCharacter) {
           Riiablo.client.pushScreen(new CreateCharacterScreen(() ->
@@ -86,17 +98,17 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
       }
     };
     TextButton.TextButtonStyle tallButtonStyle = new TextButton.TextButtonStyle() {{
-      Riiablo.assets.finishLoadingAsset(TallButtonBlankDescriptor);
-      DC6 pages = Riiablo.assets.get(TallButtonBlankDescriptor);
+      resources.assets.finishLoadingAsset(TallButtonBlankDescriptor);
+      DC6 pages = resources.assets.get(TallButtonBlankDescriptor);
       up   = disabled = new TextureRegionDrawable(pages.getTexture(0));
       down = new TextureRegionDrawable(pages.getTexture(1));
       disabled = up;
       font = Riiablo.fonts.fontexocet10;
     }};
-    btnDeleteCharacter = new TextButton(StringTBL.EXPANSION_OFFSET + 2744, tallButtonStyle);
+    btnDeleteCharacter = resources.own(new TextButton(StringTBL.EXPANSION_OFFSET + 2744, tallButtonStyle));
     btnDeleteCharacter.addListener(clickListener);
     btnDeleteCharacter.setDisabled(true);
-    btnCreateNewCharacter = new TextButton(StringTBL.EXPANSION_OFFSET + 2743, tallButtonStyle);
+    btnCreateNewCharacter = resources.own(new TextButton(StringTBL.EXPANSION_OFFSET + 2743, tallButtonStyle));
     btnCreateNewCharacter.addListener(clickListener);
     actionPanel = new Table() {{
       final float SPACING = 4;
@@ -108,19 +120,19 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
     stage.addActor(actionPanel);
 
     TextButton.TextButtonStyle mediumButtonStyle = new TextButton.TextButtonStyle() {{
-      Riiablo.assets.finishLoadingAsset(MediumButtonBlankDescriptor);
-      DC6 pages = Riiablo.assets.get(MediumButtonBlankDescriptor);
+      resources.assets.finishLoadingAsset(MediumButtonBlankDescriptor);
+      DC6 pages = resources.assets.get(MediumButtonBlankDescriptor);
       up   = disabled = new TextureRegionDrawable(pages.getTexture(0));
       down = new TextureRegionDrawable(pages.getTexture(1));
       font = Riiablo.fonts.fontexocet10;
     }};
 
-    btnExit = new TextButton(5101, mediumButtonStyle);
+    btnExit = resources.own(new TextButton(5101, mediumButtonStyle));
     btnExit.addListener(clickListener);
     btnExit.setPosition(20, 20, Align.bottomLeft);
     stage.addActor(btnExit);
 
-    btnOK = new TextButton(5102, mediumButtonStyle);
+    btnOK = resources.own(new TextButton(5102, mediumButtonStyle));
     btnOK.addListener(clickListener);
     btnOK.setPosition(stage.getWidth() - 20, 20, Align.bottomRight);
     btnOK.setDisabled(true);
@@ -143,9 +155,9 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
     label.setWrap(true);
     label.setAlignment(Align.center);
 
-    btnDeleteYes = new TextButton(Riiablo.bundle.get("yes"), mediumButtonStyle);
+    btnDeleteYes = resources.own(new TextButton(Riiablo.bundle.get("yes"), mediumButtonStyle));
     btnDeleteYes.addListener(clickListener);
-    btnDeleteNo = new TextButton(Riiablo.bundle.get("no"), mediumButtonStyle);
+    btnDeleteNo = resources.own(new TextButton(Riiablo.bundle.get("no"), mediumButtonStyle));
     btnDeleteNo.addListener(clickListener);
 
     box.add(label).width(320).pad(8).row();
@@ -179,27 +191,29 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
   }
 
   private void refreshCharacters() {
-    if (characters != null) {
-      for (CharacterSelectButton b : characters) {
-        b.remove();
-        b.dispose();
+    selected = null;
+    btnOK.setDisabled(true);
+    btnDeleteCharacter.setDisabled(true);
+    CharacterSelectButton[] closing = characters.toArray(CharacterSelectButton.class);
+    characters.clear();
+    try (com.riiablo.util.Disposal cleanup = new com.riiablo.util.Disposal()) {
+      for (CharacterSelectButton button : closing) {
+        cleanup.run(button::remove);
+        cleanup.run(() -> resources.releaseResource(button));
       }
     }
-    selected = null;
-    characters = new Array<>();
 
-    FileHandle savesLocation = Riiablo.saves;
     Gdx.app.debug(TAG, "Accessing saves within " + savesLocation.toString());
     FileHandle[] saves = savesLocation.list(D2S.EXT);
     CharacterSaveSorter.sort(saves);
     for (FileHandle save : saves) {
       Gdx.app.debug(TAG, "Loading " + save.toString());
       D2S d2s = D2SReader.INSTANCE.readD2S(save);
-      CharacterSelectButton button = new CharacterSelectButton(d2s, save);
+      CharacterSelectButton button = resources.ownResource(new CharacterSelectButton(d2s, save, resources.assets));
       button.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (deleteConfirm.isVisible()) return;
+          if (!resources.isVisible() || deleteConfirm.isVisible() || !characters.contains(button, true)) return;
           if (getTapCount() >= 2) {
             assert selected == event.getListenerActor();
             btnOK.toggle();
@@ -240,34 +254,30 @@ public class SelectCharacterScreen2 extends ScreenAdapter {
 
   @Override
   public void show() {
-    load();
-    Riiablo.input.addProcessor(stage);
+    resources.show();
   }
 
   @Override
   public void hide() {
-    Riiablo.input.removeProcessor(stage);
-    dispose();
+    resources.hide();
   }
 
   private void load() {
-    CharacterSelectButton.loadBox();
-    Riiablo.assets.load(characterselectscreenEXPDescriptor);
-    Riiablo.assets.load(MediumButtonBlankDescriptor);
-    Riiablo.assets.load(TallButtonBlankDescriptor);
+    resources.load(characterselectscreenEXPDescriptor);
+    resources.load(MediumButtonBlankDescriptor);
+    resources.load(TallButtonBlankDescriptor);
   }
 
   @Override
   public void dispose() {
-    CharacterSelectButton.unloadBox();
-    for (CharacterSelectButton selectButton : characters) selectButton.dispose();
-    Riiablo.assets.unload(characterselectscreenEXPDescriptor.fileName);
-    Riiablo.assets.unload(MediumButtonBlankDescriptor.fileName);
-    Riiablo.assets.unload(TallButtonBlankDescriptor.fileName);
+    selected = null;
+    characters.clear();
+    resources.dispose();
   }
 
   @Override
   public void render(float delta) {
+    if (!resources.isVisible()) return;
     PaletteIndexedBatch b = Riiablo.batch;
     b.begin(Riiablo.palettes.units);
     b.draw(characterselectscreenEXP, (stage.getWidth() / 2) - (characterselectscreenEXP.getRegionWidth() / 2), stage.getHeight() - characterselectscreenEXP.getRegionHeight());

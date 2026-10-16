@@ -1,5 +1,34 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第十一批：角色选择与预览
+
+- [x] SelectCharacterScreen / 2 / 3 统一显式图形资源归属：构造加载一次，show/hide
+  只处理原输入宿主的可见订阅，最终释放角色条目、六个按钮声音、Stage 和页面图片。
+  不改变 socket / Account / HostedD2GS 的导航与交接语义，相关连接改造另批处理。
+- [x] CharacterSelectButton 选中框改为每条目持有引用，取消静态纹理缓存与全局
+  loadBox/unloadBox 配对；空列表不占框资源，外部消费者不受旧条目退出影响。
+  列表刷新显式释放全部旧条目；更换预览、标签失败、部分构造和重复退出有清理路径。
+- [x] CharacterPreview 捕获原 AssetManager，记录并复用已请求图层，最终归还全部
+  引用，退出后不再 act/draw。Entity 仅增加默认行为不变的资产扩展点，未泛化旧
+  Entity 所有权，也不把 EntityWrapper 改为递归资源销毁器。共享资产 scope 复用
+  原屏幕已验证的成功登记、排队加载与异常后继续清理规则。
+- [x] MenuScreenLifecycleTest 新增 26 项，共 45 项；专项 109/109、6 类和三端
+  编译通过。首个真实七职业组的 61 个 DCC / 14176 张纹理在刷新、最终退出后
+  释放，引用回基线。原九组单 JVM 触发 120 秒看门狗，保留 focused-02.log。
+- [x] 新增 :desktop:offscreenCharacterLifecycle，九个串行独立 JVM 组全部通过，均保留
+  120 秒预算及每组完整断言；不是九组同宿主长期压力验收。使用 build 内独立
+  生成的七职业存档，不使用/覆盖/删除用户存档；不验收角色外观、实际输入或联机。
+- [x] 最终扩大定向回归 413/413、52 类（core 371/371，D2GS 42/42），失败/
+  错误/跳过均 0，三端编译、地图/会话三轮、营地、11 次 Client 最终 GL 退出、
+  25Hz Tick、Throw 顺序及伤害均通过，BUILD SUCCESSFUL，耗时 14m36s。
+  本次筛选不同于上批 429 项，不宣称全仓全绿；SIM_SLOW 仍超过 40ms 预算。
+  会话剩余资产 58/58/59，第三轮新增 MedDirt1.wav 缓存；五种既有共享引用累积
+  仍在，不能以最终 assets=0 宣称宿主存活时零泄漏。日志及逐项清单见资源文档。
+- 总体：七批装配完成，资源第十一批完成，下一批创建角色页。连接交接、控制台/
+  异步日志、覆盖动画/区域标题与共享框引用递增、完整构造失败回滚、跨 Act/
+  加载中退出、长时压力和人工/性能仍待。最终回归、复跑及限制见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第十批：启动页与主菜单资源
 
 - [x] 本批限定 SplashScreen、MenuScreen、MultiplayerScreen；新增包内

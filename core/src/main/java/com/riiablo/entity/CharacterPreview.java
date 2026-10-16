@@ -4,6 +4,9 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.COF;
@@ -12,22 +15,61 @@ import com.riiablo.engine.Direction;
 import com.riiablo.engine.Engine.Player;
 import com.riiablo.item.ItemCodes;
 import com.riiablo.save.D2S;
+import com.riiablo.graphics.PaletteIndexedBatch;
+import com.riiablo.util.AssetReferenceScope;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 @Deprecated
-public class CharacterPreview extends Entity {
+public class CharacterPreview extends Entity implements Disposable {
   private static final String TAG = "CharacterPreview";
   private static final boolean DEBUG       = true;
   private static final boolean DEBUG_STATE = DEBUG && true;
 
   final D2S d2s;
+  private final AssetManager assets;
+  private final AssetReferenceScope references;
+  private final Set<String> requested = new HashSet<>();
+  private boolean disposed;
 
   public CharacterPreview(D2S d2s) {
+    this(d2s, Riiablo.assets);
+  }
+
+  public CharacterPreview(D2S d2s, AssetManager assets) {
     super(Type.PLR, "char-preview", Player.getToken(d2s.charClass()), d2s.composites(), d2s.colors());
     this.d2s = d2s;
+    this.assets = Objects.requireNonNull(assets, "assets");
+    references = new AssetReferenceScope(assets);
     setMode(Player.MODE_TN);
     setWeapon(Entity.WEAPON_1HS);
     angle(Direction.direction8ToRadians(Direction.DOWN));
     updateWeaponClass();
+  }
+
+  @Override protected AssetManager assetManager() { return assets; }
+
+  @Override protected void loadAsset(AssetDescriptor descriptor) {
+    if (disposed) throw new IllegalStateException("preview is disposed");
+    // A preview retains each visited layer until retirement, not one reference per redraw.
+    if (requested.contains(descriptor.fileName)) return;
+    references.load(descriptor);
+    requested.add(descriptor.fileName);
+  }
+
+  @Override public void act(float delta) { if (!disposed) super.act(delta); }
+
+  @Override public void draw(PaletteIndexedBatch batch) { if (!disposed) super.draw(batch); }
+
+  @Override public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    animation = overlay = null;
+    java.util.Arrays.fill(layer, null);
+    dirty = load = Dirty.NONE;
+    requested.clear();
+    references.dispose();
   }
 
   private void updateWeaponClass() {

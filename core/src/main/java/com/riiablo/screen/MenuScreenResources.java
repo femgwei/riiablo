@@ -22,6 +22,7 @@ final class MenuScreenResources implements Disposable {
   private final ScreenAssetScope references;
   private final ScreenSubscriptionScope subscriptions = new ScreenSubscriptionScope();
   private final Array<Button> buttons = new Array<>();
+  private final Array<Disposable> children = new Array<>();
   private Stage stage;
   private boolean visible;
   private boolean disposed;
@@ -53,6 +54,17 @@ final class MenuScreenResources implements Disposable {
   }
 
   void subscribe(Runnable attach, Runnable detach) { subscriptions.add(attach, detach); }
+
+  <T extends Disposable> T ownResource(T child) {
+    if (disposed) throw new IllegalStateException("menu is disposed");
+    children.add(Objects.requireNonNull(child, "child"));
+    return child;
+  }
+
+  void releaseResource(Disposable child) {
+    // Remove before calling user code: failure/re-entry cannot dispose this owner twice.
+    if (children.removeValue(child, true)) child.dispose();
+  }
 
   void useController(ControllerListener listener) {
     Application application = Objects.requireNonNull(Gdx.app, "app");
@@ -92,8 +104,11 @@ final class MenuScreenResources implements Disposable {
     stage = null;
     Button[] closingButtons = buttons.toArray(Button.class);
     buttons.clear();
+    Disposable[] closingChildren = children.toArray(Disposable.class);
+    children.clear();
     try (Disposal cleanup = new Disposal()) {
       cleanup.run(subscriptions::dispose);
+      for (Disposable child : closingChildren) cleanup.dispose(child);
       // Explicit registration also covers a constructor failing before parenting its buttons.
       for (Button button : closingButtons) cleanup.run(() -> Button.disposeClickSounds(button));
       cleanup.dispose(closingStage); // borrows the Client's batch

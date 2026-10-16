@@ -787,3 +787,112 @@ data/local/ui/chi/act1/A1L1.dc6 均为 refs=1→2→3；MENU/boxpieces.DC6 为
 PASS 只代表已列明的资源硬断言通过；最终 Client.dispose 后 assets=0 仍通过，
 不代表宿主存活时上述引用已经归位。清单位于 build/menu-resources-assets-02/
 cycle-N-remaining-assets.txt，后续修复应以逐项引用为依据补充断言。
+
+## 第十一批：角色选择页与角色预览资源
+
+本批限定 SelectCharacterScreen / 2 / 3、CharacterSelectButton 和旧 CharacterPreview
+的图形资源，不改变三种选择页的单机/大厅/TCP/IP 导航方式、存档读写格式、角色
+装备组合或动画规则。CreateCharacterScreen / CharacterCreateButton、登录及 socket /
+托管进程交接另批处理；上一批发现的五种共享资产引用递增也未在此批顺带修改。
+
+三页复用 MenuScreenResources：构造只加载三种页面图片一次，显式登记六个按钮及
+每个角色条目；show/hide 只注册/解除原输入宿主的 Stage，隐藏不再调用 dispose。
+最终释放条目、按钮声音、借用 batch 的 Stage 和页面图片，重复退出安全，隐藏或
+销毁后的 render 和旧操作回调不再导航。成功创建但尚未挂树的条目也被登记；列表
+刷新先移走旧集合，再逐项移除 Actor、注销归属并释放，某项失败继续其余旧条目。
+刷新开始即禁用需要选中角色的操作，不把刷新失败的部分列表当作完整恢复事务。
+本批不增加“每次 show 都重读存档”的行为，仍由原有构造/刷新路径更新列表。
+
+CharacterSelectButton 不再共享静态 charselectbox 纹理：每个条目拥有一份选中框
+资产引用，选择时从原 AssetManager 获取当前对象；空列表不加载选中框。删除旧的
+loadBox/unloadBox 全局配对，最后一个条目退出才允许实际释放，外部消费者的引用
+不受影响。条目拥有其 CharacterPreview；set 更换预览时释放旧实例，标签准备失败
+保留旧预览并释放新实例。dispose 先断开 EntityWrapper，再释放预览及框引用。
+EntityWrapper 仍为借用容器，不泛化销毁任意传入 Entity。
+
+旧 Entity 的加载/读取路径增加两个保护扩展点，默认仍使用原全局实现；仅
+CharacterPreview 绑定创建时的 AssetManager 并记录成功请求的路径，同一预览中
+重复无效化/重画同一图层不重复 load，访问过的不同图层保留到该预览退出。释放时
+丢弃动画/图层引用，配对归还全部请求；已释放的预览不再 act/draw。该策略不是
+运行时装备切换的逐帧缓存淘汰，也没有把所有旧 Entity 或游戏 ECS 改为新的归属协议。
+
+ScreenAssetScope 原有实现移入可由屏幕/控件/预览共用的 AssetReferenceScope，
+屏幕包内保留原入口作为委托。成功 load 才登记，每次成功请求对应一次 unload；
+按 libGDX 1.10 共享排队加载语义，先完成仍在加载的请求再卸载，不能取消其他
+消费者的同名请求。清理幂等，异常/Error 后继续并保留首异常与 suppressed；仍需
+在宿主 AssetManager 退出前的 GL 线程执行，不承诺加载器内部失败自动回滚。
+
+专项验证扩展 MenuScreenLifecycleTest，在真实页面/控件/AssetManager 上使用替身
+Stage、DC6/DCC、字体、动画和控制器；列表使用校验和有效的 1.10 头部夹具（不是
+完整可玩存档）。首轮 96/96、5 类和三端编译通过，日志
+build/character-resources-focused.log；后续加入空列表、旧回调、共享排队预览等边界
+及真实 GL 探针后再完成最终验证。预览/条目构造之前成功登记的资源可回滚，不宣称
+任意子控件尚未构造完成的内部资源或完整连接图均已自动回滚。
+
+新增 :desktop:offscreenCharacterLifecycle，在前台菜单验收入口上追加三轮、每轮三种
+选择页、每页七职业预览。独立生成 build 输出目录内的新存档夹具，不读取/覆盖/
+删除用户存档；通过生产 Client push/pop 验证隐藏保留、原页恢复，再调用生产列表
+刷新检查旧 DCC 纹理/像素释放，最终清栈要求全部 AssetManager 引用精确回基线、
+输入归位、Stage 已被 Client 清空。只读反射读取私有状态，并调用原刷新方法；
+不模拟网络连接，也不点击进入游戏或删除角色，不代替人工外观/操作与联机验收。
+
+第二轮 build/character-resources-focused-02.log 的 109/109、6 类及三端编译通过：
+MenuScreenLifecycleTest 共 45 项（原 19 项 + 本批新增 26 项）。真实 GL 的第一个
+七职业组通过，61 个 DCC、14176 张纹理在刷新及最终退出后均释放，全部引用回基线；
+连续九组则触发既有 120 秒看门狗，进程退出码 2，保留失败日志。线程检查显示正在
+执行真实 DCC/GL 纹理删除而非死锁，不降低资源断言或增大超时掩盖耗时。
+
+因此聚合任务拆为 C1V1 至 C3V3 九个串行 JavaExec 子任务，每组独立 JVM 保持
+120 秒预算，七职业/三帧渲染、隐藏恢复、列表刷新、完整纹理/像素与引用断言不变。
+这是三轮独立运行验证，不冒充九组在同一长期存活宿主的压力测试；每组内部仍由同一
+真实 Client 经过隐藏恢复及列表销毁/重建，长时同宿主压力及性能验收继续保留。
+可单独运行 :desktop:offscreenCharacterLifecycleC1V1 复查一组；默认聚合执行全部九组。
+聚合任务的总时间可以超过 120 秒，120 秒是每个子 JVM 的上限而非整个聚合任务的
+上限。第二/三种选择页使用空 Account/socket，仅执行图形资源路径，不触发连接或
+进入大厅/游戏；UI 验证通过不能据此宣称连接所有权已经验收。
+
+本批最小复跑（45 项菜单/角色生命周期单元测试 + 一组七职业真实 GL）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test --tests com.riiablo.screen.MenuScreenLifecycleTest `
+  :desktop:offscreenCharacterLifecycleC1V1 `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/character-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/character-resources-recheck' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+将单组任务替换为 :desktop:offscreenCharacterLifecycle 可复跑全部九个独立组。
+
+### 第十一批最终回归
+
+- 扩大定向 JUnit 413/413、52 类：core 371/371（45 类），D2GS 全部 42/42
+  （7 类），失败/错误/跳过均 0；三端编译通过。本次筛选范围与第十批 429 项不同，
+  不能当作“上批 429 + 本批 26”或全仓全绿，既有玩法/AI 基线失败未纳入。
+- 九个独立 JVM 角色组全部通过：三种选择页各重复三次，每组七职业、61 个 DCC，
+  刷新与最终退出各确认 14176 张纹理删除及 Pixmap 释放；隐藏/恢复不增减引用，
+  列表重建后引用相同，最终全部 AssetManager 引用精确回基线，输入归位，Stage
+  由生产 Client 主动清空。每组前置菜单三轮也通过，共 27 轮菜单、9 次
+  MENU_SHUTDOWN 和 9 次角色组 Client 共享退出检查。
+- 独立地图三轮均为 44 tiles、引用 4→2→1→0；生产会话三轮资源硬断言均通过：
+  每轮 58 个 DT1、2626 张地图贴图、按钮音效引用 0/129/138/0、8 种面板资产
+  回基线、3 张私有纹理删除、入场及游戏屏幕由 Client 主动释放。单轮营地三帧、
+  总计 11 次 Client 最终 GL 检查（两共享程序/两纹理删除、assets=0、输入/别名
+  清空）、D2GS 25Hz step=0.04、Throw 顺序及伤害 1000→992 同命令通过。
+- 会话剩余种类为 58/58/59。逐项清单确认第一/二轮路径相同，第三轮新增
+  data/global/sfx/ambient/footstep/MedDirt1.wav（Sound，refs=1），与声音库缓存
+  行为一致；不把音效缓存或最终 assets=0 当成会话期间零泄漏的证据。
+  Gleam / NPCSpeechBalloon / ShrineManaRegen 和 A1L1 仍 refs=1→2→3，
+  MENU/boxpieces 仍 12→24→36，明确留到后续批次，本批未修改这些资源边界。
+- 日志 build/character-resources-regression.log，报告目录
+  build/character-resources-regression/，包含九份 character-cycle-N-variant-V.txt、
+  三份 cycle-N-lifecycle.txt 及三份 cycle-N-remaining-assets.txt。BUILD SUCCESSFUL，
+  退出码 0，耗时 14m36s，无 ERROR/Exception/OFFSCREEN_FATAL。保留已有地图/
+  分配/表 Key 诊断、不可用音乐记录，以及 focused-02.log 的超时失败，不覆盖失败史。
+  SIM_SLOW=66.51/78.75/50.84/94.16ms，预算 40ms，不作性能验收。
+
+总体七批子系统装配完成，资源第十一批完成但资源阶段未结束。下一批优先收口
+CreateCharacterScreen / CharacterCreateButton，继续按明确归属补测试；共享组件/
+覆盖动画/区域标题引用递增、连接交接、控制台与异步日志、完整构造失败回滚、
+跨 Act/加载中退出、长期同宿主压力及人工画面/操作/联机/性能验收仍待。
