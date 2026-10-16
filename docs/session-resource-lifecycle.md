@@ -327,3 +327,76 @@ Client 完整屏幕栈/共享资源等边界；跨 Act/加载中退出、长时�
   build/ui-panels-focused.log。没有先失败再修改断言或延长看门狗的情况。
 - 最终无 ERROR/Exception/OFFSCREEN_FATAL；仍保留既有地图/分配/表 Key 诊断。
   四次 SIM_SLOW=100.47/68.01/51.20/85.57ms（预算 40ms），不作性能验收。
+
+## 第六批：入场加载屏的临时资源与交接
+
+GameEntryLoadingScreen 的构造不再创建 Stage 或加载图片；每次 show 才取得一份
+加载图引用并创建借用 Client batch 的 Stage。hide 先移走资源引用，再释放 Stage
+和 ScreenAssetScope；重复 hide/dispose 不重复卸载，尚未完成的隐藏屏幕可重新 show，
+最终 dispose 或成功交接后禁止重用。某项清理失败仍尝试后续，保留首异常和 suppressed。
+
+必须在 hide 完成清理，而不是只补 dispose：Client.setScreen 调用新 GameScreen.show
+时，后者会 push 游戏加载屏，导致外层返回后屏幕栈非空，旧入场屏未必收到 dispose。
+本批不改 Client 的栈判定或切换事务；生产交接中即使旧屏只收到 hide，也能回收临时
+Stage 和加载图，不误卸随后游戏加载屏/会话持有的同名图片引用。
+
+入场屏捕获原 AssetManager、Fonts 和 Client，用于自己的加载、字体准备和交接；
+绘制仍借用全局 viewport/batch/palettes，后继 GameScreen 仍有全局宿主依赖，不能
+据此宣称任意宿主替换安全。字体队列及共享字体属于 Client/Fonts，不由入场屏取消或
+卸载；socket/localHost 参数原样传递给网络屏幕，入场视图不关闭 socket 或托管服务。
+初始化、工厂或切换失败会终止旧入场屏并清理其临时资源，不自动重试。Client 可能已
+安装新屏后才抛错，所以不能在 catch 中无条件 dispose 新屏；完整 GameScreen 构造
+回滚、切换事务以及失败入场的网络所有权收口仍待后续处理。
+
+新增 GameEntryLoadingScreenLifecycleTest 15 项，覆盖未使用即销毁、重复显示/隐藏、
+隐藏恢复、隐藏后禁止入场、字体探测/资产未就绪、缓存时黑帧、一次性交接与回调重入、
+原宿主、队列/提交/探测/工厂/切换失败、清理异常后继续、动画进度边界和本地/网络
+参数传递。测试替换重型新屏构造，不能单靠它证明真实游戏创建成功。
+
+offscreenSessionLifecycle 现在每轮先使用生产 GameEntryLoadingScreen，字体准备
+完成后由包内工厂创建原 OffscreenCampScreen，再由真实 Client 交接至游戏加载屏。
+新增断言：构造不 load、显示时独占一份图片引用、交接后 Stage Actor 及字段清空、
+重复销毁旧入场屏不扣游戏的共享图片引用。预载基线排除构造游戏时仍活跃的入场屏
+临时引用，不能把它算入退出后的宿主基线；前五批资源硬断言全部保留。
+
+当前真实资源入口为中文环境，首次入场初始化 9 种此前入口绕过的延迟字体，退出
+loaded asset 种类从旧入口的 49 变为 58，三轮稳定。这些是 Client/Fonts 常驻资源，
+不是本批临时视图的释放目标；这里只核对种类和生命周期路径，不宣称字体引用计数
+或 Client 关闭时的全部共享资源已验收。没有删除字体缓存，本批不验收冷缓存 CJK
+图集重建，也不代替真实菜单/角色选择、人工画面/听感或网络会话检查。
+
+本批最小复跑（扩大回归另含前五批装配/音频/地图选择）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.GameEntryLoadingScreenLifecycleTest `
+  --tests com.riiablo.screen.GameLoadingScreenLifecycleTest `
+  --tests com.riiablo.screen.ScreenAssetScopeTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/entry-loading-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/entry-loading-camp' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先审计网络 socket / HostedD2GS 的幂等停机与异常后继续，再推进 Client
+完整屏幕栈/共享资源；跨 Act/加载中退出、完整构造回滚、长时压力、人工与性能验收仍待。
+
+### 第六批验证记录
+
+- 首轮 15 项新增及既有专项通过，真实入场链三轮通过，日志
+  build/entry-loading-focused.log；未发生先失败再放松断言或延长看门狗的处理。
+- 最终扩大定向回归 349/349、50 类通过：core 307/307（43 类）、D2GS
+  全部 42/42（7 类），失败/错误/跳过均 0。范围为上批 334 项加本批 15 项；
+  不含既有玩法/AI 基线失败，不宣称全仓全绿。core/desktop/D2GS 编译检查通过。
+- 同一命令的生产入场链三轮全部通过：每轮 entryStageReleased 和
+  entryLoadingReferencesBalanced 均 true；按钮引用 0/129/138/0，三次技能重建
+  稳定、8 种面板资产回基线、3 张私有纹理删除，58 个 DT1 / 2626 张地图贴图及
+  CPU 像素释放、新会话新实例、输入处理器基线 2 继续通过。常驻资产种类三轮均 58。
+- 独立地图 GL 三轮 44 tiles、引用 4→2→1→0，单轮营地三帧/Client 退出、D2GS
+  25Hz step=0.04 和 Throw 顺序及伤害 1000→992 全部通过，整体 BUILD SUCCESSFUL。
+  日志 build/entry-loading-regression.log；报告
+  build/entry-loading-regression-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+- 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
+  SIM_SLOW=80.82/67.55/47.30/90.42ms，预算 40ms，不作性能验收。

@@ -2,13 +2,20 @@ package com.riiablo.screen;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.riiablo.Client;
+import com.riiablo.Fonts;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.AnimationWrapper;
+import com.riiablo.util.Disposal;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Displays a loading frame while staged gameplay fonts are loaded by the
@@ -20,11 +27,13 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   private static final AssetDescriptor<DC6> LOADING = new AssetDescriptor<>(
       "data\\local\\ui\\loadingscreen.dc6", DC6.class);
 
-  private final CharData charData;
-  private final com.badlogic.gdx.net.Socket socket;
-  private final boolean localHost;
-  private final Stage stage;
-  private final AnimationWrapper image;
+  private final AssetManager assets;
+  private final Fonts fonts;
+  private final Client client;
+  private final Supplier<? extends Screen> nextScreen;
+  private Stage stage;
+  private ScreenAssetScope visibleAssets;
+  private boolean disposed;
   private boolean entered;
   private boolean showEntryLoading;
 
@@ -34,20 +43,31 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
 
   public GameEntryLoadingScreen(CharData charData, com.badlogic.gdx.net.Socket socket,
       boolean localHost) {
-    this.charData = charData;
-    this.socket = socket;
-    this.localHost = localHost;
+    // The caller/game screen owns the socket and hosted server, not this
+    // temporary font-loading view. Preserve that ownership during handoff.
+    this(() -> socket == null ? new GameScreen(charData)
+        : new NetworkedGameScreen(charData, socket, localHost));
+  }
+
+  GameEntryLoadingScreen(Supplier<? extends Screen> nextScreen) {
+    this.nextScreen = Objects.requireNonNull(nextScreen, "nextScreen");
+    assets = Objects.requireNonNull(Riiablo.assets, "assets");
+    fonts = Objects.requireNonNull(Riiablo.fonts, "fonts");
+    client = Objects.requireNonNull(Riiablo.client, "client");
+  }
+
+  private void createStage() {
     stage = new Stage(Riiablo.defaultViewport, Riiablo.batch);
 
-    Riiablo.assets.load(LOADING);
-    Riiablo.assets.finishLoadingAsset(LOADING);
-    Animation loading = Animation.newAnimation(Riiablo.assets.get(LOADING));
+    visibleAssets.load(LOADING);
+    assets.finishLoadingAsset(LOADING);
+    Animation loading = Animation.newAnimation(assets.get(LOADING));
     loading.setFrameDuration(Float.MAX_VALUE);
-    image = new AnimationWrapper(loading) {
+    AnimationWrapper image = new AnimationWrapper(loading) {
       @Override public void act(float delta) {
         super.act(delta);
         loading.setFrame(Math.max(0, Math.min(loading.getNumFramesPerDir() - 1,
-            (int) (Riiablo.assets.getProgress() * (loading.getNumFramesPerDir() - 1)))));
+            (int) (assets.getProgress() * (loading.getNumFramesPerDir() - 1)))));
       }
     };
     image.setPosition((stage.getWidth() - loading.getMinWidth()) / 2f,
@@ -56,33 +76,67 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   }
 
   @Override public void show() {
+    if (disposed || entered) throw new IllegalStateException("entry loading screen is finished");
+    if (visibleAssets != null) return;
     Riiablo.viewport = Riiablo.defaultViewport;
     // Once staged fonts are indexed, the following GameLoadingScreen is the
     // only visible progress screen. Keeping this screen black for the tiny
     // handoff prevents the loading animation from appearing twice.
-    showEntryLoading = !Riiablo.fonts.hasIndexedGameplayFontCache();
-    Riiablo.fonts.queueGameplayFonts();
+    visibleAssets = new ScreenAssetScope(assets);
+    try {
+      createStage();
+      showEntryLoading = !fonts.hasIndexedGameplayFontCache();
+      fonts.queueGameplayFonts();
+    } catch (RuntimeException | Error failure) {
+      fail(failure);
+    }
   }
 
   @Override public void hide() {
-    Riiablo.assets.unload(LOADING.fileName);
+    Stage previousStage = stage;
+    ScreenAssetScope previousAssets = visibleAssets;
+    stage = null;
+    visibleAssets = null;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.dispose(previousStage); // borrows Client's batch
+      cleanup.dispose(previousAssets);
+    }
+  }
+
+  @Override public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    hide();
   }
 
   @Override public void render(float delta) {
-    if (!Riiablo.fonts.finishQueueGameplayFonts()) {
+    if (disposed || visibleAssets == null || entered) return;
+    try {
+      if (!fonts.finishQueueGameplayFonts()) {
+        drawLoading(delta);
+        return;
+      }
+      if (assets.update()) {
+        entered = true; // before initialization/factory/Client callbacks can re-enter
+        fonts.initializeGameplayFonts();
+        Gdx.app.log(TAG, "Gameplay fonts ready; entering game");
+        client.clearAndSet(Objects.requireNonNull(nextScreen.get(), "next screen"));
+        return;
+      }
       drawLoading(delta);
-      return;
+    } catch (RuntimeException | Error failure) {
+      fail(failure);
     }
-    if (!entered && Riiablo.assets.update()) {
-      entered = true;
-      Riiablo.fonts.initializeGameplayFonts();
-      Gdx.app.log(TAG, "Gameplay fonts ready; entering game");
-      if (socket == null) Riiablo.client.clearAndSet(new GameScreen(charData));
-      else Riiablo.client.clearAndSet(new NetworkedGameScreen(charData, socket, localHost));
-      return;
-    }
+  }
 
-    drawLoading(delta);
+  private void fail(Throwable failure) {
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> {
+        if (failure instanceof Error) throw (Error) failure;
+        throw (RuntimeException) failure;
+      });
+      cleanup.run(this::dispose);
+    }
   }
 
   private void drawLoading(float delta) {

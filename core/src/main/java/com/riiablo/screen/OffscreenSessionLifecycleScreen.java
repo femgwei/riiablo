@@ -5,6 +5,7 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Keys;
 import com.riiablo.CharacterClass;
@@ -27,6 +28,9 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private int cycle;
   private int buttonReferencesBeforeConstruction;
   private int buttonReferencesAfterConstruction;
+  private GameEntryLoadingScreen entryScreen;
+  private Stage entryStage;
+  private int entryLoadingBaseline;
 
   public OffscreenSessionLifecycleScreen(CharData character, String output) {
     this.character = character;
@@ -50,6 +54,18 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       String name = "data/global/ui/SPELLS/" + charClass.spellIcons + ".DC6";
       panelReferencesBeforeConstruction.put(name, references(name));
     }
+    entryLoadingBaseline = references("data/local/ui/loadingscreen.dc6");
+    entryScreen = new GameEntryLoadingScreen(this::createGameScreen);
+    require(references("data/local/ui/loadingscreen.dc6") == entryLoadingBaseline,
+        "entry constructor does not acquire loading image");
+    Riiablo.client.setScreen(entryScreen);
+  }
+
+  private OffscreenCampScreen createGameScreen() {
+    entryStage = field(entryScreen, "stage", Stage.class);
+    require(entryStage != null && entryStage.getActors().size == 1, "entry stage shown");
+    require(references("data/local/ui/loadingscreen.dc6") == entryLoadingBaseline + 1,
+        "entry owns exactly one loading-image reference");
     OffscreenCampScreen screen = new OffscreenCampScreen(character, output + "/cycle-" + cycle);
     // The constructor also builds UI actors, which have their own asset loads.
     // Measure the preload scope immediately before show, not before those
@@ -58,14 +74,24 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     for (String name : assets.getAssetNames()) {
       baselineReferences.put(name, assets.getReferenceCount(name));
     }
+    // The entry view is still active during construction, but owns no part
+    // of the game's preload baseline after its hide-time handoff cleanup.
+    baselineReferences.put("data/local/ui/loadingscreen.dc6", entryLoadingBaseline);
     buttonReferencesAfterConstruction = references("data/global/sfx/cursor/button.wav");
     screen.onComplete(() -> Gdx.app.postRunnable(() -> leave(screen)));
-    Riiablo.client.setScreen(screen);
+    return screen;
   }
 
   private void leave(OffscreenCampScreen screen) {
     require(Riiablo.client.getScreen() == screen, "production loading screen must have popped");
     require(screen.player >= 0 && screen.map.getZones().size > 0, "live player and map");
+    require(entryStage.getActors().size == 0, "entry stage cleared during handoff");
+    require(field(entryScreen, "stage", Stage.class) == null, "entry stage reference cleared");
+    int loadingReferencesAfterHandoff = references("data/local/ui/loadingscreen.dc6");
+    entryScreen.dispose();
+    entryScreen.dispose();
+    require(references("data/local/ui/loadingscreen.dc6") == loadingReferencesAfterHandoff,
+        "retiring entry again cannot unload the game's shared loading image");
     assets.finishLoading();
     int liveButtonReferences = references("data/global/sfx/cursor/button.wav");
     for (int rebuild = 0; rebuild < 3; rebuild++) {
@@ -155,6 +181,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\npanelUploadPixelsFreed=true"
+        + "\nentryStageReleased=true\nentryLoadingReferencesBalanced=true"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")
         + "\nremainingAssets=" + assets.getLoadedAssets() + "\nresult=PASS\n";
     Gdx.files.absolute(output).child("cycle-" + cycle + "-lifecycle.txt").writeString(report, false, "UTF-8");

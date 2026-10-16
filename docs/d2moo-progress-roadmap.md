@@ -1,5 +1,40 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第六批：入场加载屏生命周期
+
+- [x] GameEntryLoadingScreen 构造不再占有 Stage/加载图；每次 show 获取，hide
+  释放并清空临时引用，最终 dispose 幂等。Client 交接期间新游戏会 push 加载屏，
+  旧入场屏未必收到 dispose，因此资源清理必须在 hide 完成，不改屏幕栈语义。
+- [x] 隐藏屏幕不再继续探测/进入游戏；未完成的 hide 可恢复，成功交接前先设置
+  一次性防护，初始化/构造/切换失败终止旧屏并清理临时资源，保留首异常与 suppressed。
+  不无条件销毁可能已安装的新游戏，不声称完整构造回滚或 Client 切换事务已解决。
+- [x] 自身资源、字体准备与交接绑定原 AssetManager/Fonts/Client；Stage 借用
+  Client batch，字体及其队列仍属共享 Fonts，socket/localHost 原样传递给网络屏幕。
+  不由临时入场视图关闭 socket/HostedD2GS，也不保证全局宿主任意替换安全。
+- [x] 新增 15 项专项，覆盖幂等、隐藏恢复、未就绪/缓存分支、交接重入、原宿主、
+  多阶段失败及继续清理、动画边界和本地/网络构造参数。首轮专项和真实三轮全部通过，
+  日志 build/entry-loading-focused.log，没有修改断言规避失败或扩大看门狗。
+- [x] 三轮生产资源验证现先经过真实入场屏，再由工厂创建营地屏，沿真实 Client
+  切换至游戏加载屏。新增 Stage 清空、单份加载图引用及重复销毁旧屏不误卸新屏引用
+  断言；会话预载基线排除旧入场屏临时引用，前五批按钮/面板/地图检查不变。
+- 当前中文入口首次初始化 9 种延迟游戏字体，因此退出常驻资产种类由旧入口 49
+  变为 58，三轮稳定。它们归 Client/Fonts，不归临时入场视图；未删除缓存，不验收
+  冷缓存 CJK 图集生成、字体全部引用计数或 Client 共享资源完整关闭。
+- [x] 最终扩大定向回归 349/349、50 类：core 307/307（43 类）、D2GS 全部
+  42/42（7 类），失败/错误/跳过均 0；三端编译通过。范围为上批 334 项加本批
+  15 项，不含既有玩法/AI 基线失败，不宣称全仓全绿。
+- [x] 同一命令完成两类三轮真实 GL、单轮营地/Client 退出、25Hz step=0.04、
+  Throw 顺序与伤害 1000→992，BUILD SUCCESSFUL。每轮入场屏 Stage/图片检查通过；
+  按钮 0/129/138/0、8 种面板资产及 3 张私有纹理、58 个 DT1 / 2626 张地图贴图
+  清理继续通过。日志 build/entry-loading-regression.log，报告
+  build/entry-loading-regression-camp/cycle-N-lifecycle.txt，manifest 在 cycle-N/。
+  无 ERROR/Exception/OFFSCREEN_FATAL；保留既有诊断。
+  SIM_SLOW=80.82/67.55/47.30/90.42ms，预算 40ms，不作性能验收。
+- 下一批优先推进网络 socket / HostedD2GS 的幂等停机与异常后继续，再处理 Client
+  完整屏幕栈/共享资源；跨 Act/加载中退出、完整构造回滚、长时内存、人工画面/听感
+  和性能验收仍待。七批装配、资源阶段第六批完成，资源阶段尚未全部收口；详细边界及复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第五批：背包/控制面板资源
 
 - [x] InventoryPanel 补齐 invchar6Tab 引用与私有 fill Texture 的释放；
