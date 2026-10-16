@@ -38,6 +38,15 @@ public class Box2DDebugger extends BaseSystem {
   }
 
   @Override
+  protected void dispose() {
+    // The injected render/physics systems are borrowed; only this renderer is owned.
+    Box2DDebugRenderer owned = renderer;
+    renderer = null;
+    camera = null;
+    if (owned != null) owned.dispose();
+  }
+
+  @Override
   protected void processSystem() {
     camera.position.set(iso.position, 0);
     camera.zoom = BOX2D_ZOOM_FACTOR * renderSystem.zoom();

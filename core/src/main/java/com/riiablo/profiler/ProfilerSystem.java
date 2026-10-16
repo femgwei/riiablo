@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Align;
 
 import com.riiablo.Riiablo;
+import com.riiablo.util.Disposal;
 
 /**
  * Example profiling system.
@@ -63,6 +64,24 @@ public class ProfilerSystem extends BaseSystem {
     gui.show(stage);
     world.inject(gui, true);
     gui.initialize();
+  }
+
+  @Override
+  protected void dispose() {
+    Stage ownedStage = stage;
+    ShapeRenderer ownedRenderer = renderer;
+    Skin ownedSkin = skin;
+    stage = null;
+    renderer = null;
+    skin = null;
+    camera = null;
+    gui = null;
+    try (Disposal cleanup = new Disposal()) {
+      // new Stage() owns its batch; Skin owns only profiler/uiskin.json resources.
+      cleanup.dispose(ownedStage);
+      cleanup.dispose(ownedRenderer);
+      cleanup.dispose(ownedSkin);
+    }
   }
 
   @Override

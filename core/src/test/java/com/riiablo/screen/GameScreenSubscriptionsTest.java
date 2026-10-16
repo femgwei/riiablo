@@ -6,14 +6,20 @@ import static org.mockito.Mockito.*;
 import com.artemis.World;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.SnapshotArray;
+import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.GdxNativesLoader;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.riiablo.Client;
 import com.riiablo.Cvars;
 import com.riiablo.Cursor;
@@ -179,6 +185,7 @@ class GameScreenSubscriptionsTest {
     screen.resume();
     verify(screen.engine).dispose();
     verify(screen.stage).dispose();
+    verify(screen.scaledStage).dispose();
     verify(Riiablo.assets).unload("session-owned.wav");
     verify(Riiablo.input).removeProcessor(screen.scaledStage);
     assertFalse(Keys.Esc.containsStateListener(screen.mappedKeyStateListener));
@@ -206,6 +213,7 @@ class GameScreenSubscriptionsTest {
     assertTrue(Keys.Help.containsStateListener(replacement.mappedKeyStateListener));
     verify(replacement.engine, never()).dispose();
     verify(replacement.stage, never()).dispose();
+    verify(replacement.scaledStage, never()).dispose();
   }
 
   @Test
@@ -238,6 +246,112 @@ class GameScreenSubscriptionsTest {
     verify(mercItems).removeLocationListener(originalCursor);
   }
 
+  @Test
+  void worldFailureStillDisposesBothStagesAndAssetsAndClearsAliases() throws Exception {
+    GameScreen screen = screen();
+    RuntimeException failure = new RuntimeException("world cleanup");
+    doThrow(failure).when(screen.engine).dispose();
+    Riiablo.game = screen;
+    Riiablo.engine = screen.engine;
+    assertSame(failure, assertThrows(RuntimeException.class, screen::dispose));
+    verify(screen.stage).dispose();
+    verify(screen.scaledStage).dispose();
+    verify(Riiablo.assets).unload("session-owned.wav");
+    assertNull(Riiablo.game);
+    assertNull(Riiablo.engine);
+    screen.dispose();
+    verify(screen.engine).dispose();
+  }
+
+  @Test
+  void actorAndAssetFailuresDoNotSkipOtherResourcesOrLoseFailures() throws Exception {
+    GameScreen screen = screen();
+    DisposableActor first = mock(DisposableActor.class);
+    DisposableActor second = mock(DisposableActor.class);
+    DisposableActor scaled = mock(DisposableActor.class);
+    screen.stage.getActors().addAll(first, second);
+    screen.scaledStage.getActors().add(scaled);
+    RuntimeException actorFailure = new RuntimeException("actor cleanup");
+    RuntimeException stageFailure = new RuntimeException("stage cleanup");
+    RuntimeException assetFailure = new RuntimeException("asset cleanup");
+    doThrow(actorFailure).when(first).dispose();
+    doThrow(stageFailure).when(screen.stage).dispose();
+    doThrow(assetFailure).when(Riiablo.assets).unload("session-owned.wav");
+    Array<AssetDescriptor> assets = new Array<>();
+    assets.add(new AssetDescriptor<>("session-owned.wav", Sound.class));
+    assets.add(new AssetDescriptor<>("second.wav", Sound.class));
+    assets.add(new AssetDescriptor<>("second.wav", Sound.class));
+    set(screen, "preloadedAssets", assets);
+
+    assertSame(actorFailure, assertThrows(RuntimeException.class, screen::dispose));
+    assertArrayEquals(new Throwable[] {stageFailure, assetFailure}, actorFailure.getSuppressed());
+    verify(second).dispose();
+    verify(scaled).dispose();
+    verify(screen.scaledStage).dispose();
+    verify(Riiablo.assets, times(2)).unload("second.wav");
+  }
+
+  @Test
+  void actorSelfRemovalUsesSnapshotAndBorrowedBatchIsNeverDisposed() throws Exception {
+    GdxNativesLoader.load();
+    Graphics previousGraphics = Gdx.graphics;
+    GL20 previousGl = Gdx.gl;
+    Gdx.graphics = mock(Graphics.class);
+    Gdx.gl = mock(GL20.class);
+    when(Gdx.graphics.getWidth()).thenReturn(800);
+    when(Gdx.graphics.getHeight()).thenReturn(600);
+    try {
+      GameScreen screen = screen();
+      Batch sharedBatch = mock(Batch.class);
+      screen.stage = new Stage(new ScreenViewport(), sharedBatch);
+      screen.scaledStage = new Stage(new ScreenViewport(), sharedBatch);
+      AtomicInteger releases = new AtomicInteger();
+      for (Stage stage : new Stage[] {screen.stage, screen.scaledStage}) {
+        stage.addActor(new RemovingActor(releases));
+        stage.addActor(new RemovingActor(releases));
+      }
+      screen.map = mock(com.riiablo.map.Map.class);
+      screen.hide();
+      assertEquals(0, releases.get());
+      screen.dispose();
+      screen.dispose();
+      assertEquals(4, releases.get());
+      assertEquals(0, screen.stage.getActors().size);
+      assertEquals(0, screen.scaledStage.getActors().size);
+      verify(sharedBatch, never()).dispose();
+      verify(screen.map, never()).dispose();
+    } finally {
+      Gdx.graphics = previousGraphics;
+      Gdx.gl = previousGl;
+    }
+  }
+
+  @Test
+  void savingFailureStillCleansUpAndIdenticalStagesAreNotDisposedTwice() throws Exception {
+    GameScreen screen = screen();
+    screen.scaledStage = screen.stage;
+    screen.characterSavedForExit = false;
+    RuntimeException failure = new RuntimeException("save");
+    doThrow(failure).when(screen).saveCharacter();
+    assertSame(failure, assertThrows(RuntimeException.class, screen::dispose));
+    verify(screen.engine).dispose();
+    verify(screen.stage).dispose();
+    verify(Riiablo.assets).unload("session-owned.wav");
+  }
+
+  private static class DisposableActor extends Actor implements Disposable {
+    @Override public void dispose() {}
+  }
+
+  private static class RemovingActor extends Actor implements Disposable {
+    private final AtomicInteger releases;
+    RemovingActor(AtomicInteger releases) { this.releases = releases; }
+    @Override public void dispose() {
+      releases.incrementAndGet();
+      remove();
+    }
+  }
+
   private GameScreen screen() throws Exception {
     // Bypass the asset-heavy constructor only; invoke the real production methods below.
     GameScreen screen = mock(GameScreen.class, CALLS_REAL_METHODS);
@@ -247,6 +361,7 @@ class GameScreenSubscriptionsTest {
     screen.stage = mock(Stage.class);
     screen.scaledStage = mock(Stage.class);
     when(screen.stage.getActors()).thenReturn(new SnapshotArray<>(Actor.class));
+    when(screen.scaledStage.getActors()).thenReturn(new SnapshotArray<>(Actor.class));
     screen.charData = mock(CharData.class);
     screen.characterSavedForExit = true;
     screen.debugKeyListener = new MappedKeyStateAdapter();

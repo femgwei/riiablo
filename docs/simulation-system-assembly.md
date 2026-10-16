@@ -276,5 +276,7 @@ Act1Quest*Test。真实资源通过 D2_HOME 或任务的 d2Home 参数注入，�
 后续优先独立梳理地图/GL 所有权与会话退出重进，再分别迁移其余客户端依赖和
 服务端停机资源；开始修改释放逻辑前必须确认共享资源与宿主所有权，不能只因
 存在 dispose 方法就扩大释放范围。
+该后续阶段的首批 UI / 调试 GL 归属、测试入口与地图限制记录在
+[session-resource-lifecycle.md](session-resource-lifecycle.md)。
 任务、佣兵、AI 在两端的位置不同，需要独立行为证据才能调整，不在提取注册时重排。
 不以复刻 dark-magic 的模块数量为目标，也不将架构整理计作 D2MOO 行为对齐完成度。

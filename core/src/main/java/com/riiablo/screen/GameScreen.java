@@ -135,6 +135,7 @@ import com.riiablo.screen.panel.StashPanel;
 import com.riiablo.screen.panel.TradePanel;
 import com.riiablo.screen.panel.VendorPanel;
 import com.riiablo.screen.panel.WaygatePanel;
+import com.riiablo.util.Disposal;
 import com.riiablo.widget.TextArea;
 
 public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loadable {
@@ -1483,25 +1484,43 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public void dispose() {
     if (disposed) return;
     disposed = true;
-    try {
-      visibleSubscriptions.dispose();
-      sessionSubscriptions.dispose();
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(visibleSubscriptions::dispose);
+      cleanup.run(sessionSubscriptions::dispose);
       //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
-      if (!characterSavedForExit && !saveCharacter()) {
-        Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
+      cleanup.run(() -> {
+        if (!characterSavedForExit && !saveCharacter()) {
+          Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
+        }
+      });
+      cleanup.run(() -> charData.clearListeners());
+      cleanup.run(() -> {
+        AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+        if (automapRenderer != null) automapRenderer.saveNativeAutomap();
+      });
+      cleanup.run(() -> engine.dispose());
+      disposeStage(stage, cleanup);
+      if (scaledStage != stage) disposeStage(scaledStage, cleanup);
+      for (AssetDescriptor asset : preloadedAssets) {
+        cleanup.run(() -> Riiablo.assets.unload(asset.fileName));
       }
-      charData.clearListeners();
-      AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
-      if (automapRenderer != null) automapRenderer.saveNativeAutomap();
-      engine.dispose();
-      for (Actor actor : stage.getActors()) if (actor instanceof Disposable) ((Disposable) actor).dispose();
-      stage.dispose();
-      for (AssetDescriptor asset : preloadedAssets) Riiablo.assets.unload(asset.fileName);
     } finally {
       // An old screen must never clear a newer session's legacy aliases.
       if (Riiablo.game == this) Riiablo.game = null;
       if (Riiablo.engine == engine) Riiablo.engine = null;
     }
+  }
+
+  private static void disposeStage(Stage stage, Disposal cleanup) {
+    if (stage == null) return;
+    cleanup.run(() -> {
+      // Actors may remove themselves while disposing. Keep the original list stable.
+      for (Actor actor : stage.getActors().toArray(Actor.class)) {
+        if (actor instanceof Disposable) cleanup.dispose((Disposable) actor);
+      }
+    });
+    // Both stages borrow Client's batch. Stage.dispose only clears their own state.
+    cleanup.dispose(stage);
   }
 
   /** Persists the local character before leaving the current game. */

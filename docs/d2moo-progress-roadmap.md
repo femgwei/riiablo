@@ -1,5 +1,50 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第一批：UI / 调试 GL 释放
+
+- [x] 在七批装配改造之后启动独立的资源生命周期阶段。本批只处理已确认由当前
+  对象创建并拥有的 UI / 调试资源，不改变系统顺序、25Hz、玩法、协议或存档格式。
+- [x] GameScreen 现在释放原先遗漏的 scaledStage 及其顶层 Disposable Actor，
+  保留主 Stage 的同类清理。释放 Actor 使用快照，允许它移除自身而不漏掉后续 Actor；
+  不递归释放子控件/style 共享资产，两 Stage 借用的 Client batch 均不由屏幕销毁。
+- [x] Box2DDebugger 释放自建 Box2DDebugRenderer，不释放借用的 RenderSystem 或
+  Box2DPhysics；ProfilerSystem 按 Stage、ShapeRenderer、Skin 顺序释放自建资源。
+  系统先清空私有引用，重复 dispose 或部分字段未初始化时不会重复释放。
+- [x] 新增一次性 Disposal 清理过程：按序尝试、保留首异常及后续 suppressed，
+  不推断所有权、不去重、不重试。GameScreen 保存/监听/Automap/World/UI/资产中
+  某项抛错后仍继续尝试后续清理；全局别名仍按身份清理。预载资产维持逐加载引用
+  unload，不因重名合并；没有把全部全局资源依赖改成会话绑定。
+- [x] 新增 16 项测试，加既有屏幕 7 项专项共 23/23，通过 core、desktop、D2GS
+  编译。覆盖异常后的清理、重复释放、Actor 自移除、资产重复引用、禁用 ECS 系统
+  收到 World.dispose，以及两个真实 Stage 借用同 Batch 不误释放。GL renderer 使用
+  mock；Stage 测试使用 native 矩阵与 mock GL，不创建真实 GL 上下文。
+  首轮 23 项中 3 项因夹具缺少注入依赖/GL 替身失败；第二轮剩 1 项因 mock
+  RenderSystem 触发其环境注入失败。仅完善测试夹具，第三轮全部通过；禁用 debugger
+  的生命周期夹具不注入渲染依赖，生产 initialize 由后续真实资源冒烟覆盖。
+  证据日志 `build/session-resources-initial.log`、`-02.log`、`-03.log`。
+- [x] 扩大定向回归 194/194 项、32 类通过：core 152/152、D2GS 全部 42/42，
+  失败/错误/跳过均 0。包含七批装配/模式/会话、屏幕订阅、客户端环境音、音频、
+  渲染 runner、死亡奖励及本批清理测试；core、desktop、D2GS 编译通过。
+  日志 `build/session-resources-regression.log`，JUnit XML 为
+  `core/build/test-results/test/` 与 `server/d2gs/build/test-results/test/`。
+- [x] 真实 1.10f 营地隐藏窗口三帧 PASS，客户端正常走完屏幕与共享资产退出清理；
+  D2GS 25Hz（step=0.04，推进 30 tick）、Throw 导弹创建/顺序及 1000→992 伤害
+  通过，整体 BUILD SUCCESSFUL。日志 `build/session-resources-real.log`，营地
+  manifest 为 `build/session-resources-camp/rogue-encampment-manifest.txt`。
+  未发现 ERROR/Exception；保留 level0/DrlgType0 跳过、Java 分配回退和表 Key 推断
+  诊断。出现一次 SIM_SLOW=68.65ms（预算 40ms），本轮不是性能验收。
+  这只是单次生产 GL/资源退出冒烟，不等于完整同进程重进、人工画面/听感或泄漏验收。
+- 地图审计：DT1Loader 把贴图资源交给 AssetManager，DT1s.clear 只清索引；Zone
+  依赖加载/卸载仍经共享全局资产管理器，实际加载计数和失败/换 Act 路径尚待核实。
+  本批保留 map.dispose 的历史 FIXME，不手工销毁共享 DT1，也不直接启用整图卸载。
+- 范围限制：网络屏幕 socket / HostedD2GS 停机、Client 共享资源/屏幕栈、构造失败
+  自动回滚、原 AssetManager 绑定、其余全局依赖未在本批解决；不宣称完整退出重进、
+  长期泄漏或全面会话隔离已验收。此前投掷专精、房间 AI、佣兵网络夹具及 Den 日志
+  已知问题未改；本批定向回归不用于宣称全仓测试全绿。
+- 整体进度：七批装配整理完成；新资源阶段已推进首批，下一批处理地图资产实际
+  load/unload 所有权，再验证同进程多次退出重进。资源归属、待办和另一台电脑的
+  专项命令见 [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 子系统装配第七批：入口清理与综合回归
 
 - [x] 新增 ClientSimulationAssembly 和 D2GS 包内 D2GSSimulationAssembly，分别
