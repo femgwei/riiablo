@@ -532,6 +532,18 @@ public class Map implements Disposable {
     return seed;
   }
 
+  /** Native monster-region unk0x2D4; shared by both arrow-trap AIs per level. */
+  private final IntIntMap nativeArrowTrapTypes = new IntIntMap();
+
+  public int nativeArrowTrapType(int levelId, java.util.function.LongSupplier random) {
+    int type = nativeArrowTrapTypes.get(levelId, -1);
+    if (type < 0) {
+      type = levelId >= 40 ? (int) (random.getAsLong() % 3L) : 0;
+      nativeArrowTrapTypes.put(levelId, type);
+    }
+    return type;
+  }
+
   @Override
   public void dispose() {
     for (Zone zone : zones) Zone.free(zone);
@@ -541,6 +553,7 @@ public class Map implements Disposable {
     mapGraph.clear();
     warpDestinationOverrides.clear();
     nativeWalkEdges.clear();
+    nativeArrowTrapTypes.clear();
   }
 
   public Array<AssetDescriptor> getDependencies() {

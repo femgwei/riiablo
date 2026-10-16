@@ -1,0 +1,12 @@
+diff --git a/core/src/main/java/com/riiablo/engine/server/ai/AI.java b/core/src/main/java/com/riiablo/engine/server/ai/AI.java
+index 0131d7bd8..6864ef7bb 100644
+--- a/core/src/main/java/com/riiablo/engine/server/ai/AI.java
++++ b/core/src/main/java/com/riiablo/engine/server/ai/AI.java
+@@ -80,6 +80,7 @@ public abstract class AI implements Interactable.Interactor {
+     if ("Trap-Missile".equals(ai)) return new TrapMissile(entityId);
+     if ("Trap-Nova".equals(ai)) return new TrapNova(entityId);
+     if ("Trap-Poison".equals(ai)) return new TrapPoison(entityId);
++    if ("Trap-RightArrow".equals(ai)) return new TrapRightArrow(entityId);
+     String fullClassName = "com.riiablo.engine.server.ai." + ai;
+     try {
+       java.lang.Class<?> clazz = java.lang.Class.forName(fullClassName);

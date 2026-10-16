@@ -6,7 +6,7 @@
 
 ## 本轮实现
 
-累计完成 4/37，剩余 33 类。
+累计完成 5/37，剩余 32 类。
 
 - Trap-Melee：已完成 Fn087 的攻击概率、失败等待、非近战及无目标固定 40 帧等待；补齐表名到 Java 类的显式映射。隔离源码测试通过，证据见 `ai-arena/20261016-trap-melee/`。本轮完成 1 类，剩余 36 类。测试覆盖 AI 决策与共享动作生命周期，未进行图形客户端场景验收。
 - Trap-Missile：已完成 Fn077 的距离/次数限制、交替等待、无目标/超距/耗尽死亡及禁止掉落；补齐表名映射。6 项专用测试及相关回归共 37 项通过，证据见 `ai-arena/20261016-trap-missile/`。复用现有飞弹攻击和单位标志，无新增大依赖；未进行自然地图飞弹命中验收。完成后剩余 35 类。
@@ -14,12 +14,14 @@
 
 - Trap-Poison：已接入原版 Fn080/092 共用决策，以自身 PrimePoisonNova（SrvDo099，A1）施放。随 AI 补齐 SrvDo099 两组方向/速度、Calc1 循环数和 Calc2 步长的小依赖。5 项毒云 AI 测试、1 项三难度技能生产路径测试及相关回归共 71 项通过，证据见 `ai-arena/20261016-trap-poison/`。无新增大依赖，未进行自然地图毒云命中验收。完成后剩余 33 类。
 
+- Trap-RightArrow：已完成 Fn078 的距离上下界、整数 X 坐标差、严格冷却截止帧、30/40 帧等待及普通箭/Skill1 分支。随 AI 补齐地图关卡级共享攻击类型与释放清理；小于 40 的关卡不消耗随机数，其余首次有效攻击 uint32 % 3。实表 PoisonBallTrap（SrvDo0）复用现有通用飞弹路径。7 项专用测试及相关回归共 56 项通过，证据见 `ai-arena/20261016-trap-right-arrow/`。无新增大依赖，尚未进行自然地图命中验收。完成后剩余 32 类。
+
 ## 已确认的大依赖
 
 暂无登记。后续条目必须注明受影响 AI、原版函数/位置、缺少的生产能力、行为影响及后续工作。未核实的依赖不作阻塞依据。
 
-## 待完成（33）
+## 待完成（32）
 
-7TIllusion、AbyssKnight、Ancient、BaalThrone、BaalToStairs、BatDemon、Catapult、CatapultSpotter、ClawViperEx、DarkWanderer、FetishBlowgun、FingerMage、GenericSpawner、HighPriest、Imp、InvisoSpawner、MinionSpawner、Mosquito、Nihlathak、OblivionKnight、Overseer、QuillMother、ReanimatedHorde、Regurgitator、SiegeBeast、SiegeTower、SuccubusWitch、SuicideMinion、ThornHulk、Trap-LeftArrow、Trap-RightArrow、VileMother、WillOWisp。
+7TIllusion、AbyssKnight、Ancient、BaalThrone、BaalToStairs、BatDemon、Catapult、CatapultSpotter、ClawViperEx、DarkWanderer、FetishBlowgun、FingerMage、GenericSpawner、HighPriest、Imp、InvisoSpawner、MinionSpawner、Mosquito、Nihlathak、OblivionKnight、Overseer、QuillMother、ReanimatedHorde、Regurgitator、SiegeBeast、SiegeTower、SuccubusWitch、SuicideMinion、ThornHulk、Trap-LeftArrow、VileMother、WillOWisp。
 
 Baboon、Scarab 已有专用类，不在本轮 37 类中；此处不将其视为完整原版验收。
