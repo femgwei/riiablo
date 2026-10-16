@@ -111,6 +111,7 @@ import com.riiablo.engine.client.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
+import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.InteractionRange;
@@ -300,6 +301,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   Socket socket;
 
   EngineConfig config;
+  private final SimulationSession simulationSession;
   Map map;
   MapManager mapManager;
   com.riiablo.engine.server.party.PartyManager partyManager;
@@ -816,22 +818,22 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     factory = new ClientEntityFactory();
     TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
     EnvironmentCycle environment = new EnvironmentCycle();
+    simulationSession = new SimulationSession(
+        socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT, map, environment);
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
         new com.riiablo.engine.server.quest.Act5QuestGameState();
-    WorldConfiguration config = getWorldConfiguration();
+    WorldConfiguration config = simulationSession.registerServices(getWorldConfiguration());
     config
         .register("iso", iso)
         .register("config", config)
-        .register("map", map)
         .register("factory", factory)
         .register("itemController", itemController)
         .register("townPortalRegistry", townPortalRegistry)
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
-        .register("environment", environment)
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)
@@ -893,7 +895,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   protected WorldConfigurationBuilder getWorldConfigurationBuilder() {
-    SimulationMode mode = socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT;
+    SimulationMode mode = simulationSession.mode();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         // Must precede input, AI and animation keyframes in every fixed tick.
         .with(new CombatPositionCaptureSystem())
@@ -903,7 +905,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(mapManager)
         .with(itemController, new ItemManager())
         .with(new CofManager())
-        .with(new com.riiablo.engine.server.EnvironmentSystem())
+        .with(new com.riiablo.engine.server.EnvironmentSystem(
+            simulationSession.map(), simulationSession.environment()))
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new MenuManager(), new DialogManager())
@@ -940,7 +943,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
       builder.with(new Act1QuestDialogController(), new ActTransitionSystem());
-      builder.with(new com.riiablo.engine.server.EnvironmentObjectSystem());
+      builder.with(new com.riiablo.engine.server.EnvironmentObjectSystem(
+          simulationSession.environment()));
       builder.with(SimulationSystemGroups.quests());
       builder.with(SimulationSystemGroups.ownedUnits());
       builder.with(SimulationSystemGroups.questItemRewards());

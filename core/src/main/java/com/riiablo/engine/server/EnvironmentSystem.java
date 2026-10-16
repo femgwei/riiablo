@@ -1,19 +1,22 @@
 package com.riiablo.engine.server;
 
 import com.artemis.BaseSystem;
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.map.Map;
+import java.util.Objects;
 
 /** Advances the D2Common environment clock once per fixed simulation tick. */
 public final class EnvironmentSystem extends BaseSystem {
   private static final String TAG = "EnvironmentSystem";
 
-  @Wire(name = "environment")
-  protected EnvironmentCycle environment;
-  @Wire(name = "map")
-  protected Map map;
+  private final EnvironmentCycle environment;
+  private final Map map;
+
+  public EnvironmentSystem(Map map, EnvironmentCycle environment) {
+    this.map = Objects.requireNonNull(map, "map");
+    this.environment = Objects.requireNonNull(environment, "environment");
+  }
 
   @Override
   protected void initialize() {
@@ -22,7 +25,7 @@ public final class EnvironmentSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (environment.advance(map == null ? 0 : map.getAct())) {
+    if (environment.advance(map.getAct())) {
       logState("transition");
     }
   }

@@ -2,7 +2,6 @@ package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
-import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.d2moo.common.drlg.D2ObjectIds;
 import com.riiablo.engine.Engine;
@@ -13,6 +12,7 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.EnvironmentCycle;
+import java.util.Objects;
 
 /** Mirrors D2Game's native day/night event for the Rogue Encampment bonfire. */
 @All({Object.class, CofReference.class, MapWrapper.class})
@@ -25,8 +25,11 @@ public final class EnvironmentObjectSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Sequence> mSequence;
   protected CofManager cofs;
-  @Wire(name = "environment")
-  protected EnvironmentCycle environment;
+  private final EnvironmentCycle environment;
+
+  public EnvironmentObjectSystem(EnvironmentCycle environment) {
+    this.environment = Objects.requireNonNull(environment, "environment");
+  }
 
   @Override
   protected void process(int entityId) {

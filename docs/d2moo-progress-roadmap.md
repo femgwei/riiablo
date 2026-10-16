@@ -1,5 +1,34 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第三批：最小会话上下文
+
+- [x] 新增 `SimulationSession`，仅绑定 mode / map / environment 三项。
+  GameScreen / D2GS 原宿主继续创建并拥有资源；上下文不保存 World、socket 或 UI，
+  不复制状态，不增加资源释放行为。mode 不再在系统装配方法内重复推导。
+- [x] 先迁移环境组两个生产系统：EnvironmentSystem 显式接收 map/environment，
+  EnvironmentObjectSystem 显式接收 environment；不再依赖该组字符串注入。
+  空依赖构造时拒绝；正常单机/服务端/客户端逻辑、昼夜算法和 Tick 位置不变。
+- [x] `registerServices` 保留 map/environment 原注入别名并绑定同一实例，
+  另外注册 simulationSession；未迁移的渲染、音频、网络和任务消费者保持原对象。
+- [x] 新增绑定/别名/缺参测试 10 项，真实 ECS 双世界交替 Tick、实时 Act、
+  销毁重建、构造依赖优先和篝火跨昼夜测试 8 项。追加现有装配、模式和环境回归，
+  共 67 项/8 类通过，失败/错误/跳过均 0；core、desktop、D2GS 编译通过。
+  与 `996f77c8a` 对照，还原显式构造参数和 mode 来源后，两端装配方法除空白外一致。
+- [x] 真实 1.10f `offscreenCamp` 完成 1x1 隐藏窗口三帧 PASS，D2GS
+  `headlessSimulationTick`（step=0.04）与 `headlessMissileCombat` 通过，
+  Throw 导弹生命周期/顺序正确，生命 1000→992。日志仍有 level0/DrlgType0
+  跳过和 Java object 分配回退两类警告，未屏蔽；本次日志未发现 ERROR/Exception。
+- 证据日志：`build/simulation-session-compile-test.log`、
+  `build/simulation-session-real-resource.log`；测试 XML 位于
+  `core/build/test-results/test/TEST-com.riiablo.engine.SimulationSession*.xml`，
+  营地结果为 `build/simulation-session-camp/rogue-encampment-manifest.txt`。
+- 本批仅对小型 ECS 世界做销毁重建，不等于完整 GameScreen/D2GS 生命周期或
+  内存泄漏验收；未动原有 dispose 流程、Riiablo 全局状态或其他服务。
+  第一批已记录的投掷专精差异、佣兵夹具缺失和 Den 日志问题未修复。
+- 整体进度：约七批计划中的前三批已落地。剩余暂定权威依赖迁移、客户端依赖隔离、
+  生命周期收口、入口清理/综合回归四批，必要时继续细拆；不是游戏功能完成率。
+  详细边界见 [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第二批：显式运行模式
 
 - [x] 新增 `SimulationMode`：LOCAL / DEDICATED_SERVER / REMOTE_CLIENT。

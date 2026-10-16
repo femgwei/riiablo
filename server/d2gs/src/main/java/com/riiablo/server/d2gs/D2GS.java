@@ -60,6 +60,7 @@ import com.riiablo.codec.D2;
 import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationMode;
+import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -6164,7 +6165,8 @@ public class D2GS extends ApplicationAdapter {
     mapManager = new MapManager();
     sync = new NetworkSynchronizer();
     combatPositionHistory = new CombatPositionHistory(map);
-    SimulationMode mode = SimulationMode.DEDICATED_SERVER;
+    SimulationSession session = new SimulationSession(SimulationMode.DEDICATED_SERVER, map, environment);
+    SimulationMode mode = session.mode();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
         // NPC components retain client menu hooks; register inert systems so
@@ -6183,9 +6185,9 @@ public class D2GS extends ApplicationAdapter {
         .with(itemManager)
         .with(new ItemGenerator())
         .with(new CofManager())
-        .with(new com.riiablo.engine.server.EnvironmentSystem())
+        .with(new com.riiablo.engine.server.EnvironmentSystem(session.map(), session.environment()))
         .with(new ObjectInitializer())
-        .with(new com.riiablo.engine.server.EnvironmentObjectSystem())
+        .with(new com.riiablo.engine.server.EnvironmentObjectSystem(session.environment()))
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(SimulationSystemGroups.worldObjectEffects(authoritativeItems))
 
@@ -6228,8 +6230,7 @@ public class D2GS extends ApplicationAdapter {
         .with(sync)
         .with(new AnimDataResolver())
         ;
-    WorldConfiguration config = builder.build()
-        .register("map", map)
+    WorldConfiguration config = session.registerServices(builder.build())
         .register("factory", factory)
         .register("player", player)
         .register("outPackets", outPackets)
@@ -6237,7 +6238,6 @@ public class D2GS extends ApplicationAdapter {
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("townPortalRegistry", townPortalRegistry)
-        .register("environment", environment)
         ;
     Riiablo.engine = world = new World(config);
 
