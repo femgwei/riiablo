@@ -20,6 +20,13 @@
 每个非merge提交必须归入“已移植”“当前实现已等价”“不适用”“待修复”之一，并给出当前代码位置、版本依据和必要回归证据。
 只对确认存在的差异补最小修正，不要求重写已有架构；已移植项不重复实现。覆盖全部提交后再报告完成率。
 
+## 可复核工作量（按提交核销，不代表功能完成率）
+
+本清单已形成最终适用性结论的主线提交为6项：`185ae45`、`4d45674`、`606dce4`、`615b204`、`d68bf6a`、`f553315`。
+主线101项中剩余95项待完成逐提交核销；已有移植记录但缺验收链的仍计入剩余。
+分支17项已完成适用性审查。加速度执行、game级唯一掉落去重为明确保留的能力缺口，
+不因相关增量提交已分类而宣称修复。后续每核销一项更新此计数及对应索引。
+
 ## 最新分支同步第一批：测试工具（2026-10-16）
 
 - `aec1395`：已添加Java测试专用readBinFile，按工作目录的data/global/excel路径读取，
@@ -93,7 +100,16 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 
 ### 2. 目标选择与动画速度
 
-- `615b204`：普通追踪与circling路径的目标消息区别。
+- `615b204`：不适用当前网络协议，已核销。
+  上游仅反转`MONSTER/MonsterMsg.cpp::sub_6FC65C70`的报文分支：有目标默认0x68，
+  walk/run且CW/CCW circle时0x67；不修改服务端路径求解或目标选择。
+  当前`server/netty/.../server/d2gs/NetworkSynchronizer`及`d2gs_netty/NetworkSynchronizer`
+  均调用`SerializationManager.serialize`发送FlatBuffers `EntitySync`。
+  `core/src/main/flatbuffers/com/riiablo/net/d2gs/Sync.fbs`定义PositionP/VelocityP，
+  对应Serializer写当前坐标/速度，`ClientNetworkReceiver`读取这些分量；
+  没有原版0x67/0x68按circle类型选取目标单位/路径终点的客户端预测协议。
+  依据为上游diff及以上完整发送/接收链静态审查；本项无代码变动，不新增模拟原版报文测试。
+  仅说明此报文分支修正无落点，不宣称现有客户端与原版目标预测等价。
 - `5be5503`：攻击检查沿monster owner链查找。
 - `b634ef7`：目标列表slot8。
 - `cce700b`：MonsterMsg标志检查。
@@ -126,9 +142,21 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 
 ### 6. 网络、存档与校验
 
-- `d68bf6a`：packet0x68的字段宽度/offset；若本项目协议不同，记录不适用依据。
+- `d68bf6a`：不适用当前协议，已核销。上游完整diff只将原版0x68发送函数的a6
+  从int8 `unk0x10`改写至int32 `unk0x0B`（另加地址注释）。
+  当前生产链见第2组`615b204`，两种NetworkSynchronizer均发EntitySync，
+  PositionSerializer/VelocitySerializer写float坐标/速度；没有原版Srv68结构、a6或固定offset写入。
+  已搜索core/src/main、server、D2MOO_JAVA/src，无上述原版发送函数/结构。
+  不将实体ID或其他int字段强行对应不明含义的a6；此项静态适用性审查，无生产修改或新增测试。
 - `eeb3362`：每次调用记录一次warp attempt。
-- `f553315`：stat/guid包长度，按本项目协议实现判断。
+- `f553315`：不适用当前协议，已核销。已读完整diff：C++原版9E/9F/A0/A1/A2
+  的共用结构按8/16/32位value模板化，D2Net包长表改用sizeof；本项目无该结构/包长表。
+  当前`Sync.fbs`的PlayerP定义具体属性，VitalsP定义float32资源，
+  `StatRequest.fbs::SpendStatPointResult`定义uint16 statValue/statPoints；
+  这些由FlatBuffers生成器确定字段布局，不能套用原版7/8/10字节包长。
+  `SerializationManager`及`VitalsSerializer`按对应组件构造发送数据，未复用一个uint8 stat值结构。
+  静态搜索core/src/main、server、D2MOO_JAVA/src无原版StatAndGuid及9E/9F/A0/A1/A2结构。
+  本结论仅核销原版报文布局修正，不宣称Java所有属性数值范围等价；无生产修改或新增测试。
 - `9fd325c`：CRC32表、byte索引和最终取反；核对实际存档调用，避免与其他checksum算法混用。
 
 ### 7. 仅收口上游寻路增量
@@ -166,12 +194,12 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `4d45674` Make D2MissilesTxt::wAccel signed — 字段符号已等价；生产加速度缺口另记第1组
 - `8b424dc` Cap charged bolt lifetime before truncating it to a byte — 有移植记录；最终验收需关联生产代码与测试
 - `47687ce` Reject out-of-range sizes in D2Common_11281_CollisionPatternFromSize — 有移植记录；最终验收需关联生产代码与测试
-- `615b204` Send a unit target from sub_6FC65C70 unless the path is circling — 待逐项核销；不能据此断言当前代码缺失
+- `615b204` Send a unit target from sub_6FC65C70 unless the path is circling — 不适用FlatBuffers EntitySync协议；发送/接收链证据见第2组
 - `5be5503` Follow the target's monster owner chain in sub_6FCBD900 — 待逐项核销；不能据此断言当前代码缺失
 - `a145e73` Clamp path velocity only when it exceeds the maximum — 已有独立实现/审查；生产适用性待核销
 - `9fd325c` Fix CRC32_Compute — 待逐项核销；不能据此断言当前代码缺失
 - `b634ef7` Scan target list slot 8 in sub_6FCF2110 — 待逐项核销；不能据此断言当前代码缺失
-- `d68bf6a` Write packet 0x68's a6 as a dword at offset 0x0B — 待逐项核销；不能据此断言当前代码缺失
+- `d68bf6a` Write packet 0x68's a6 as a dword at offset 0x0B — 不适用EntitySync协议；见第6组
 - `959db29` Fix the per-step check for a path toward an item or object — 已有独立实现/审查；生产适用性待核销
 - `eeb3362` Record one warp attempt per call in CLIENTS_NotifyWarpAttempt — 待逐项核销；不能据此断言当前代码缺失
 - `1ee8230` Annotate 1.14d addresses of path, collision, AI and event functions — 待逐项核销；不能据此断言当前代码缺失
@@ -202,7 +230,7 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `e3e6075` Fix incorrect logic in ACT1Q2_Callback03_ChangedLevel — 待逐项核销；不能据此断言当前代码缺失
 - `b5b0888` DRLG: fix nine bugs closing the gap to 1.10f — 有移植记录；最终验收需关联生产代码与测试
 - `0478bf3` Clean up D2EventTimerQueueStrc and Event.cpp readability — 待逐项核销；不能据此断言当前代码缺失
-- `f553315` Templatize D2GSPacketSrvStatAndGuid for correct packet sizes — 待逐项核销；不能据此断言当前代码缺失
+- `f553315` Templatize D2GSPacketSrvStatAndGuid for correct packet sizes — 不适用FlatBuffers字段布局；见第6组
 - `89a4696` Fix and rename sub_6FCD09D0 to AITACTICS_WanderToTarget — 待逐项核销；不能据此断言当前代码缺失
 - `2008a22` Fix multiple issues in sub_6FC6A8C0 — 待逐项核销；不能据此断言当前代码缺失
 - `3a47a6e` Clean up decompiler output in SKILLS_EventFunc24_EnergyShield — 待逐项核销；不能据此断言当前代码缺失

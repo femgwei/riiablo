@@ -55,8 +55,15 @@ MonStats String空值及Accel有符号int与增量修正等价，原生固定409
 日志 `core/build/upstream-data-01.log`，XML `.gradle/path-port/upstream-data-01/core/test-results/pathPortTest`。
 生产没有读取Accel，也没有game级唯一掉落去重/nolimit检查，这是保留的能力缺口，不能误报行为等价。
 代码/调用依据详见剩余清单第1组。没有为字段符号修正新建完整加速度或掉落系统。
-下一步进入第2组目标选择/动画速度：先读 `615b204` / `5be5503` / `b634ef7` / `cce700b` diff，
-追踪Java生产目标消息、owner链和target slots；只修确认差异，不扩展完整寻路迁移。
+后续已核销 `615b204` / `d68bf6a` / `f553315`：原版报文选择/字段offset/包长修正
+不适用当前FlatBuffers EntitySync协议；已核对两个NetworkSynchronizer、SerializationManager、
+Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetworkReceiver收发链，
+并搜索core/src/main、server、D2MOO_JAVA/src无对应原版报文结构。详见清单第2/6组。
+本批只改审查记录，没有生产代码变更，故未重复运行上一批测试。
+当前主线有最终适用性结论6/101，剩余95项待核销；分支17项适用性审查已完成；
+另保留2项能力缺口（加速度执行/game级唯一掉落去重）。用户要求每完成一项汇报剩余工作量。
+下一步继续第2组 `5be5503` / `b634ef7` / `cce700b`，三个diff已读但未核销；
+追踪Java生产owner链和target slots、summoner状态消息。只修确认差异，不扩展完整寻路迁移。
 
 ## VisitorFramework九项源码索引（已读）
 
