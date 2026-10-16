@@ -40,6 +40,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> inventoryReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> vendorReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> mercenaryReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> hudReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -62,6 +63,14 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    hudReferencesBeforeConstruction.clear();
+    for (String icon : new String[] {"rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6",
+        "barbhirable_icon.dc6", "Raven.dc6", "Wolf.dc6", "OakSage.dc6", "Vines.dc6", "Bear.dc6",
+        "valkarieicon.dc6", "amazonicon.dc6", "skeletonicon.dc6", "skeletonmageicon.dc6", "golemicon.dc6",
+        "revivedicon.dc6", "ShadowAssassin.dc6", "sorceressicon.dc6"}) {
+      String path = "data/global/ui/HIREABLES/" + icon;
+      hudReferencesBeforeConstruction.put(path, references(path));
+    }
     mercenaryReferencesBeforeConstruction.clear();
     for (String path : new String[] {"data/global/ui/PANEL/NpcInv.dc6",
         "data/global/ui/PANEL/buysellbtn.DC6", "data/global/ui/PANEL/inv_armor.DC6",
@@ -542,6 +551,27 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         }
       }
     }
+    screen.mercenaryHud.showTemporaryMessage("Lifecycle");
+    require(field(screen.mercenaryHud, "feedback", Actor.class).isVisible(), "HUD feedback active before exit");
+    require(field(screen.mercenaryHud, "mercenaries", Object.class) != null
+        && field(screen.mercenaryHud, "summonedPets", Object.class) != null, "HUD borrowed world subscriptions active");
+    Array<Actor> hudActors = new Array<>(); collectActors(screen.mercenaryHud, hudActors);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> hudClicks = new Array<>();
+    for (Actor actor : hudActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        hudClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    Set<Integer> hudHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : hudReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey(); require(references(path) > reference.getValue(), "live HUD asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "HUD sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle(); require(Gdx.gl.glIsTexture(handle), "live HUD texture " + path);
+          if (reference.getValue() == 0) hudHandles.add(handle);
+        }
+      }
+    }
     Array<Actor> escapeActors = new Array<>();
     collectActors(screen.escapePanel, escapeActors);
     Set<Integer> escapeHandles = new HashSet<>();
@@ -586,6 +616,24 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.mercenaryHud, "disposed", Boolean.class), "Client retired mercenary HUD");
+    screen.mercenaryHud.dispose(); screen.mercenaryHud.dispose(); screen.mercenaryHud.setVisible(true);
+    screen.mercenaryHud.showTemporaryMessage("late"); screen.mercenaryHud.act(1);
+    require(!screen.mercenaryHud.isVisible() && !screen.mercenaryHud.useCursorPotion()
+        && !screen.mercenaryHud.containsStagePoint(10, 30), "retired HUD cannot reopen, feed or hit-test");
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : hudClicks) {
+      click.clicked(null, 10, 30); click.enter(null, 10, 30, 0, null); click.exit(null, 10, 30, 0, null);
+      require(!click.mouseMoved(null, 10, 30), "retired HUD hover ignored");
+    }
+    for (Actor actor : hudActors) require(actor.getParent() == null && actor.getListeners().size == 0
+        && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "HUD actor retired");
+    require(field(screen.mercenaryHud, "feedback", Actor.class) == null
+        && field(screen.mercenaryHud, "mercenaries", Object.class) == null
+        && field(screen.mercenaryHud, "summonedPets", Object.class) == null
+        && field(screen.mercenaryHud, "itemController", Object.class) == null, "HUD borrowed state cleared");
+    for (Map.Entry<String, Integer> reference : hudReferencesBeforeConstruction.entrySet())
+      require(references(reference.getKey()) == reference.getValue(), "HUD asset baseline " + reference.getKey());
+    for (int handle : hudHandles) require(!Gdx.gl.glIsTexture(handle), "HUD texture deleted");
     require(field(screen.hirelingPanel, "disposed", Boolean.class)
         && field(screen.hireMercenaryPanel, "disposed", Boolean.class), "Client retired mercenary panels");
     screen.hirelingPanel.dispose(); screen.hireMercenaryPanel.dispose();
@@ -805,6 +853,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nhireModalHideRestoresBothFocus=true\nhireModalExitReleasesFocus=true\nhireLateInputIgnored=true"
         + "\nmercenaryAssetBaselinesBalanced=" + mercenaryReferencesBeforeConstruction.size()
         + "\nmercenaryTexturesDeleted=" + mercenaryHandles.size()
+        + "\nhudActorsRetired=" + hudActors.size
+        + "\nhudLateClicksAndHoverIgnored=" + hudClicks.size
+        + "\nhudFeedbackAndSubscriptionsCleared=true"
+        + "\nhudAssetBaselinesBalanced=" + hudReferencesBeforeConstruction.size()
+        + "\nhudTexturesDeleted=" + hudHandles.size()
         + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
         + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
         + "\nstorageTexturesDeleted=" + storageHandles.size()

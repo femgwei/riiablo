@@ -1968,3 +1968,96 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 下一批优先 MercenaryHud 等剩余 HUD/控件的会话归属；随后继续完整控件内部构造
 失败、连接交接/全局网络接收路由、控制台/Timer/异步日志、跨 Act/加载中退出及
 长期压力验证。资源阶段尚未结束，人工/Android/性能验收继续单列。
+
+## 2026-10-16 第二十六批：佣兵与召唤物头像 HUD
+
+MercenaryHud 捕获原 AssetManager / CharData / Cursor / MPQ 宿主及显式 GameScreen
+owner。GameScreen 在 World 创建后一次性绑定 HUD 的世界，禁止改绑；所有实体
+收集和生命读取使用所属世界，缓存的佣兵/召唤物 EntitySubscription 不混入新
+世界。当前会话身份覆盖点击/悬停、命中测试、药水入口、临时反馈、act 和两种
+绘制入口，隐藏 HUD 不再接收头像交互，已保存的旧监听及退出后回调无效。
+
+以 AssetReferenceScope 配对四种佣兵头像与十三种召唤物头像引用，支持仍在队列
+中的独立退出，不卸载外部 owner 的共享引用。私有血条 fill 改用 PanelTextures
+的 finally 上传像素清理路径；构造中途失败回滚已取得资源，原失败保留且附加
+清理错误。最终退出先隐藏/禁用，递归退休完整控件树及尚未挂载的已返回 Label，
+独立归还十七项引用和私有纹理，清空槽位、名称/计数 Label 缓存、反馈、控制器、
+世界/订阅与 owner。清理幂等，某项抛错仍继续清理其他项，失败操作只尝试一次；
+不销毁借用角色、物品、字体、控制器或世界级订阅。
+
+PetType 名称静态缓存改按 MPQFileHandleResolver 身份匹配，换宿主后重新解析；
+未提供解析宿主/缺少表的空结果不会污染后来新宿主。缓存只保存不可变字符串
+映射，并通过 WeakReference 识别来源，不强持有旧 MPQ 宿主。保持同一 resolver
+内的既有懒缓存/缺表回退，不声称同一 resolver 内动态改挂 MPQ 后自动热更新。
+
+不改头像文件、佣兵优先与召唤物分组/排列、原有存活过滤/熊狼展示、名称解析
+规则、血条位置/颜色阈值、药水类型/消耗/治疗逻辑或右键打开装备页语义；只是
+限定所属且可见的头像交互。仍沿用现有变种头像回退，不扩展头像玩法或重写
+CursorMovementSystem/网络接收器的全局路由。不改 25Hz、协议或存档。
+
+### 第二十六批验证
+
+- `build/mercenary-hud-targeted.log`：新测试初次编译因 component 通配导入中的
+  Object / Class 与 java.lang 同名而失败，改用明确的组件导入。
+- `build/mercenary-hud-targeted-recheck.log`：当时新增 23 项专项全部通过，连同
+  既有头像资源探针共 27 项、2 跳过；随后增加一项当前头像和半血条绘制回归。
+- `build/mercenary-hud-regression-gl.log`：341 项中 1 项失败、2 跳过；新增绘制
+  测试的 DC6 夹具只模拟无参 getTexture，没有模拟生产使用的 getTexture(0)，
+  导致空帧。补齐帧索引取图的夹具，不改生产绘制逻辑。
+- `build/mercenary-hud-regression-gl-recheck.log`：最终代码新增 24 项专项全过，
+  扩大定向 33 类 341 项，339 通过、2 跳过（既有佣兵独立环境资源探针），
+  失败/错误 0；core / desktop / D2GS 编译链通过，三轮真实 MPQ/GL 与最终
+  ClientShutdown 通过，BUILD SUCCESSFUL，2m51s。
+- 专项覆盖十七项共享引用/排队引用和私有 fill 的独立归还、早期 load/后期 Label
+  构造失败与附加清理错误、卸载异常继续、可见头像药水/右键/悬停/命中/反馈、
+  原角色/游戏/光标/资源/MPQ/世界门禁、一次绑定和退出后全部回调失效。
+  使用真实 Artemis World / component / subscription 验证原 owner 和存活过滤、
+  分组计数、熊狼展示及旧订阅不查询新世界；验证当前图像/半血条绘制与 PetType
+  缓存换宿主、缺表回退和弱来源/不可变映射。不销毁借用订阅或字体。
+- 三轮报告 `build/mercenary-hud-gl/cycle-{1,2,3}-lifecycle.txt` 每轮 HUD 31 控件
+  退休、两个保存输入监听的点击/进入/离开/移动回调失效、反馈/控制器/订阅清空、
+  十七项头像资产回基线及 17 张采样纹理删除；私有 fill 包含在保留的 13 张私有
+  纹理检查中。保留前批两雇佣兵页 44 控件/16 点击/六项资产/45 纹理，及商店、
+  背包、金币弹窗、仓库、Escape、任务/语音、技能、移动 UI、共享框、地图、
+  加载交接和输入检查。真实资源探针不创建佣兵/召唤物、不消费药水、不做联机。
+- 三轮退出资产种类 56/56/56，最终 ClientShutdown assets=0；仅表明本次采样
+  引用/纹理和宿主退出检查通过，不代表全进程零滞留或长期压力通过。仍记录
+  41.27–72.79ms 慢帧，超过 40ms 预算；人工观感/输入/听感、实际药水玩法与
+  联机、Android 真机及性能验收均未完成。
+
+定向复跑（需要原版资源表、无真实 GL，仅拦截私有 Texture 上传）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.MercenaryHudLifecycleTest `
+  --tests com.riiablo.screen.panel.MercenaryHudAssetProbeTest --no-daemon
+```
+
+扩大定向与三轮真实资源复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/mercenary-hud-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/mercenary-hud-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 ControlPanel 剩余会话回调和动态子控件；完整控件内部尚未返回实例
+的构造失败、连接交接/全局网络接收路由、控制台/Timer/异步日志、跨 Act/加载中
+退出及长期压力验证仍待，资源阶段未结束。人工/Android/性能验收继续单列。

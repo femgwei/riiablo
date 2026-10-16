@@ -7,7 +7,6 @@ import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -36,6 +35,12 @@ import com.riiablo.save.ItemController;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.SkillNameResolver;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.save.CharData;
+import com.riiablo.screen.GameScreen;
+import com.riiablo.mpq.MPQFileHandleResolver;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -53,7 +58,16 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private static final String UNNAMED = "UNNAMED";
   private static final float HEALTH_GREEN_THRESHOLD = 2f / 3f;
   private static final float HEALTH_YELLOW_THRESHOLD = 1f / 3f;
-  private static volatile Map<String, String> petTypeNameKeys;
+  private static volatile PetTypeNames petTypeNameKeys;
+
+  private static final class PetTypeNames {
+    final WeakReference<MPQFileHandleResolver> source;
+    final Map<String, String> names;
+    PetTypeNames(MPQFileHandleResolver source, Map<String, String> names) {
+      this.source = new WeakReference<>(source);
+      this.names = Collections.unmodifiableMap(names);
+    }
+  }
 
   private enum SummonKind {
     RAVEN(5, "Raven", "Raven.dc6"), WOLF(10, "Wolf", "Wolf.dc6"),
@@ -91,33 +105,52 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
 
   private final Map<SummonKind, AssetDescriptor<DC6>> summonIcons =
       new LinkedHashMap<SummonKind, AssetDescriptor<DC6>>();
-  private final AssetDescriptor<DC6>[] mercenaryIcons;
-  private final Texture fill;
-  private final Label tooltip, feedback;
+  private final AssetDescriptor<DC6>[] mercenaryIcons = new AssetDescriptor[4];
+  private Texture fill;
+  private Label tooltip, feedback;
   private final List<Label> slotNames = new ArrayList<Label>(), slotCounts = new ArrayList<Label>();
   private final List<Slot> slots = new ArrayList<Slot>();
-  private final ItemController itemController;
+  private ItemController itemController;
   private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final com.riiablo.Cursor cursor = Riiablo.cursor;
+  private final MPQFileHandleResolver mpqs = Riiablo.mpqs;
+  private GameScreen owner;
+  private com.artemis.World world;
   private EntitySubscription mercenaries, summonedPets;
   private int mercenaryId = -1, mercenarySlotIndex = -1;
   private float life, maxLife, feedbackRemaining;
   private boolean hovered;
   private boolean disposed;
 
-  @SuppressWarnings("unchecked")
   public MercenaryHud(ItemController itemController) {
-    this.itemController = itemController; setSize(WIDTH, HEIGHT); setTouchable(Touchable.enabled);
-    mercenaryIcons = new AssetDescriptor[4];
+    this(null, itemController);
+  }
+
+  public MercenaryHud(GameScreen owner, ItemController itemController) {
+    this.owner = owner;
+    this.itemController = itemController;
+    world = owner == null ? Riiablo.engine : null;
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    setSize(WIDTH, HEIGHT); setTouchable(Touchable.enabled);
     String[] mercNames = {"rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6", "barbhirable_icon.dc6"};
     for (int i = 0; i < mercNames.length; i++) mercenaryIcons[i] = descriptor(mercNames[i]);
     for (SummonKind kind : SummonKind.values()) summonIcons.put(kind, descriptor(kind.iconName));
-    Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888); pixmap.setColor(Color.WHITE); pixmap.fill();
-    fill = new Texture(pixmap); pixmap.dispose();
+    fill = PanelTextures.solid(Color.WHITE);
     for (int i = 0; i < SummonKind.values().length + 1; i++) {
       Label name = new Label("", Riiablo.fonts.font16, Color.WHITE); name.setAlignment(Align.center);
-      name.setTouchable(Touchable.disabled); name.setVisible(false); addActor(name); slotNames.add(name);
+      name.setTouchable(Touchable.disabled); name.setVisible(false); slotNames.add(name); addActor(name);
       Label count = new Label("", Riiablo.fonts.font16, Color.WHITE); count.setAlignment(Align.center);
-      count.setTouchable(Touchable.disabled); count.setVisible(false); addActor(count); slotCounts.add(count);
+      count.setTouchable(Touchable.disabled); count.setVisible(false); slotCounts.add(count); addActor(count);
     }
     tooltip = new Label("", Riiablo.fonts.font16, Color.WHITE); tooltip.setPosition(0, -35); tooltip.setSize(300, 32);
     tooltip.setAlignment(Align.left); tooltip.setTouchable(Touchable.disabled); tooltip.setVisible(false); addActor(tooltip);
@@ -125,14 +158,16 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
     feedback.setAlignment(Align.center); feedback.setTouchable(Touchable.disabled); feedback.setVisible(false); addActor(feedback);
     addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override public void enter(InputEvent e, float x, float y, int p, com.badlogic.gdx.scenes.scene2d.Actor from) { updateHover(x); }
-      @Override public void exit(InputEvent e, float x, float y, int p, com.badlogic.gdx.scenes.scene2d.Actor to) { hovered = false; tooltip.setVisible(false); }
-      @Override public boolean mouseMoved(InputEvent e, float x, float y) { updateHover(x); return true; }
+      @Override public void exit(InputEvent e, float x, float y, int p, com.badlogic.gdx.scenes.scene2d.Actor to) { if (!isInteractive()) return; hovered = false; tooltip.setVisible(false); }
+      @Override public boolean mouseMoved(InputEvent e, float x, float y) { if (!isInteractive()) return false; updateHover(x); return true; }
       @Override public void clicked(InputEvent e, float x, float y) { if (isMercenaryPoint(x, y)) useCursorPotion(); }
     });
     addListener(new ClickListener(Input.Buttons.RIGHT) {
       @Override public void clicked(InputEvent e, float x, float y) {
-        if (isMercenaryPoint(x, y) && Riiablo.game != null && Riiablo.game.hirelingPanel != null) {
-          Riiablo.game.setLeftPanel(Riiablo.game.hirelingPanel); e.handle();
+        if (!isInteractive()) return;
+        GameScreen game = game();
+        if (isMercenaryPoint(x, y) && game != null && game.hirelingPanel != null) {
+          game.setLeftPanel(game.hirelingPanel); e.handle();
         }
       }
     });
@@ -140,28 +175,29 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
 
   private AssetDescriptor<DC6> descriptor(String name) {
     AssetDescriptor<DC6> d = new AssetDescriptor<DC6>(ICON_ROOT + name, DC6.class, DC6Loader.DC6Parameters.COMBINE);
-    assets.load(d); return d;
+    references.load(d); return d;
   }
   public boolean useCursorPotion() {
-    Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
+    if (!isInteractive()) return false;
+    Item item = cursor == null ? null : cursor.getItem();
     if (item == null || itemController == null || mercenaryId < 0) return false;
     if (maxLife > 0 && life >= maxLife) {
       return false;
     }
     return itemController.useCursorPotionOnMercenary();
   }
-  public void showTemporaryMessage(String message) { feedback.setText(message == null ? "" : message); feedbackRemaining = 1.5f; feedback.setVisible(message != null && !message.isEmpty()); }
-  public boolean containsStagePoint(float stageX, float stageY) { Vector2 p = stageToLocalCoordinates(new Vector2(stageX, stageY)); return isMercenaryPoint(p.x, p.y); }
+  public void showTemporaryMessage(String message) { if (!isCurrentSession()) return; feedback.setText(message == null ? "" : message); feedbackRemaining = 1.5f; feedback.setVisible(message != null && !message.isEmpty()); }
+  public boolean containsStagePoint(float stageX, float stageY) { if (!isInteractive()) return false; Vector2 p = stageToLocalCoordinates(new Vector2(stageX, stageY)); return isMercenaryPoint(p.x, p.y); }
   @Override public void act(float delta) {
-    if (disposed) return;
+    if (!isCurrentSession()) return;
     super.act(delta); if (feedbackRemaining > 0 && (feedbackRemaining -= delta) <= 0) { feedbackRemaining = 0; feedback.setVisible(false); } refreshState();
   }
 
   private void refreshState() {
     slots.clear(); mercenaryId = -1; mercenarySlotIndex = -1; life = maxLife = 0;
-    if (mercenaries == null && Riiablo.engine != null) mercenaries = Riiablo.engine.getAspectSubscriptionManager().get(Aspect.all(Mercenary.class, AttributesWrapper.class));
-    if (summonedPets == null && Riiablo.engine != null) summonedPets = Riiablo.engine.getAspectSubscriptionManager().get(Aspect.all(SummonedPet.class, AttributesWrapper.class));
-    if (Riiablo.game == null || Riiablo.engine == null) { setVisible(false); hideSlotLabels(); return; }
+    if (mercenaries == null && world != null) mercenaries = world.getAspectSubscriptionManager().get(Aspect.all(Mercenary.class, AttributesWrapper.class));
+    if (summonedPets == null && world != null) summonedPets = world.getAspectSubscriptionManager().get(Aspect.all(SummonedPet.class, AttributesWrapper.class));
+    if (game() == null || world == null) { setVisible(false); hideSlotLabels(); return; }
     collectMercenary(); collectSummons();
     if (findSlot(SummonKind.BEAR) != null) removeSlot(SummonKind.WOLF);
     Collections.sort(slots, new Comparator<Slot>() {
@@ -178,9 +214,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   }
   private void collectMercenary() {
     if (mercenaries == null) return; IntBag entities = mercenaries.getEntities(); int[] ids = entities.getData();
-    for (int i = 0; i < entities.size(); i++) { int id = ids[i]; Mercenary merc = Riiablo.engine.getMapper(Mercenary.class).get(id);
-      if (merc == null || merc.ownerId != Riiablo.game.player) continue;
-      UnitLifecycle l = Riiablo.engine.getMapper(UnitLifecycle.class).get(id); if (l != null && l.isDead()) continue;
+    for (int i = 0; i < entities.size(); i++) { int id = ids[i]; Mercenary merc = world.getMapper(Mercenary.class).get(id);
+      if (merc == null || merc.ownerId != game().player) continue;
+      UnitLifecycle l = world.getMapper(UnitLifecycle.class).get(id); if (l != null && l.isDead()) continue;
       float[] v = readVitals(id); Slot s = new Slot(); s.mercenary = true; s.count = 1; s.representativeId = id;
       s.icon = mercenaryIcons[Math.max(0, Math.min(mercenaryIcons.length - 1, merc.mercType))]; s.name = resolveMercenaryName(merc); s.life = v[0]; s.maxLife = v[1]; slots.add(s);
       mercenaryId = id; life = s.life; maxLife = s.maxLife; return;
@@ -188,8 +224,8 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   }
   private void collectSummons() {
     if (summonedPets == null) return; Map<SummonKind, Slot> grouped = new LinkedHashMap<SummonKind, Slot>(); IntBag entities = summonedPets.getEntities(); int[] ids = entities.getData();
-    for (int i = 0; i < entities.size(); i++) { int id = ids[i]; SummonedPet pet = Riiablo.engine.getMapper(SummonedPet.class).get(id);
-      if (pet == null || pet.ownerId != Riiablo.game.player) continue; float[] v = readVitals(id); UnitLifecycle l = Riiablo.engine.getMapper(UnitLifecycle.class).get(id);
+    for (int i = 0; i < entities.size(); i++) { int id = ids[i]; SummonedPet pet = world.getMapper(SummonedPet.class).get(id);
+      if (pet == null || pet.ownerId != game().player) continue; float[] v = readVitals(id); UnitLifecycle l = world.getMapper(UnitLifecycle.class).get(id);
       if (!isLivingSummon(pet, l, v[0], v[1])) continue; SummonKind kind = SummonKind.from(pet.petType); if (kind == null) continue;
       Slot s = grouped.get(kind); if (s == null) { s = new Slot(); s.kind = kind; s.icon = iconForSummon(pet, kind); s.name = summonName(pet, kind); s.representativeId = id; grouped.put(kind, s); }
       s.count++; s.life = v[0]; s.maxLife = v[1]; s.skillOrder = Math.min(s.skillOrder, skillTableOrder(pet.skillId));
@@ -234,32 +270,32 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   }
   /** PetType.txt is not part of Files yet; read only its name mapping lazily and losslessly. */
   private static Map<String, String> loadPetTypeNameKeys() {
-    Map<String, String> cached = petTypeNameKeys;
-    if (cached != null) return cached;
+    MPQFileHandleResolver source = Riiablo.mpqs;
+    if (source == null) return Collections.emptyMap();
+    PetTypeNames cached = petTypeNameKeys;
+    if (cached != null && cached.source.get() == source) return cached.names;
     Map<String, String> result = new LinkedHashMap<String, String>();
-    if (Riiablo.mpqs != null) {
-      try {
-        FileHandle file = Riiablo.mpqs.resolve("data\\global\\excel\\PetType.txt");
-        if (file != null && file.exists()) {
-          LosslessTxtTable table = LosslessTxtTable.parse(file.readBytes());
-          int typeColumn = firstColumn(table, "Pet Type", "pettype", "type");
-          int nameColumn = firstColumn(table, "Name", "name");
-          if (typeColumn >= 0 && nameColumn >= 0) {
-            for (int i = 0; i < table.rowCount(); i++) {
-              String type = table.get(i, typeColumn).trim();
-              String name = table.get(i, nameColumn).trim();
-              if (type.isEmpty() || name.isEmpty()) continue;
-              result.put(type.toLowerCase(Locale.ROOT), name);
-              String canonical = PetType.canonical(type);
-              if (!canonical.isEmpty() && !result.containsKey(canonical)) result.put(canonical, name);
-            }
+    try {
+      FileHandle file = source.resolve("data\\global\\excel\\PetType.txt");
+      if (file != null && file.exists()) {
+        LosslessTxtTable table = LosslessTxtTable.parse(file.readBytes());
+        int typeColumn = firstColumn(table, "Pet Type", "pettype", "type");
+        int nameColumn = firstColumn(table, "Name", "name");
+        if (typeColumn >= 0 && nameColumn >= 0) {
+          for (int i = 0; i < table.rowCount(); i++) {
+            String type = table.get(i, typeColumn).trim();
+            String name = table.get(i, nameColumn).trim();
+            if (type.isEmpty() || name.isEmpty()) continue;
+            result.put(type.toLowerCase(Locale.ROOT), name);
+            String canonical = PetType.canonical(type);
+            if (!canonical.isEmpty() && !result.containsKey(canonical)) result.put(canonical, name);
           }
         }
-      } catch (Exception ignored) {
-        // Keep the HUD usable with old/custom MPQ sets that omit PetType.txt.
       }
+    } catch (Exception ignored) {
+      // Keep the HUD usable with old/custom MPQ sets that omit PetType.txt.
     }
-    petTypeNameKeys = result;
+    petTypeNameKeys = new PetTypeNames(source, result);
     return result;
   }
   private static int firstColumn(LosslessTxtTable table, String... names) {
@@ -277,9 +313,9 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   }
   private void updateSlotLabels() { hideSlotLabels(); for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); float x = i * (WIDTH + SLOT_GAP); Label n = slotNames.get(i); n.setPosition(x, 1); n.setSize(WIDTH, 14); n.setText(s.name); n.setVisible(true); Label c = slotCounts.get(i); c.setPosition(x + 12f, ICON_Y + 5f); c.setSize(WIDTH - 12f, 18); c.setAlignment(Align.left); c.setText(s.count > 1 ? Integer.toString(s.count) : ""); c.setVisible(s.count > 1); } tooltip.setPosition(Math.max(0, mercenarySlotIndex) * (WIDTH + SLOT_GAP), -35); tooltip.setText(hovered ? localized("mercenary_heal_hint", "Place a potion on the portrait to heal\nRight-click to open the inventory (O)") : ""); tooltip.setVisible(hovered && mercenarySlotIndex >= 0); }
   private void hideSlotLabels() { for (Label l : slotNames) l.setVisible(false); for (Label l : slotCounts) l.setVisible(false); tooltip.setVisible(false); }
-  private float[] readVitals(int id) { AttributesWrapper a = Riiablo.engine.getMapper(AttributesWrapper.class).get(id); if (a == null || a.attrs == null) return new float[] {0, 0}; StatRef hp = a.attrs.aggregate().get(Stat.hitpoints, StatRef.obtain()); StatRef max = a.attrs.aggregate().get(Stat.maxhp, StatRef.obtain()); return new float[] {hp == null ? 0 : hp.asFixed(), max == null ? 0 : max.asFixed()}; }
-  private void updateHover(float x) { hovered = isMercenaryPoint(x, 0); tooltip.setVisible(hovered); }
-  private boolean isMercenaryPoint(float x, float y) { if (mercenarySlotIndex < 0) return false; float left = mercenarySlotIndex * (WIDTH + SLOT_GAP); return x >= left && x <= left + WIDTH && y >= 0 && y <= HEIGHT; }
+  private float[] readVitals(int id) { AttributesWrapper a = world.getMapper(AttributesWrapper.class).get(id); if (a == null || a.attrs == null) return new float[] {0, 0}; StatRef hp = a.attrs.aggregate().get(Stat.hitpoints, StatRef.obtain()); StatRef max = a.attrs.aggregate().get(Stat.maxhp, StatRef.obtain()); return new float[] {hp == null ? 0 : hp.asFixed(), max == null ? 0 : max.asFixed()}; }
+  private void updateHover(float x) { if (!isInteractive()) return; hovered = isMercenaryPoint(x, 0); tooltip.setVisible(hovered); }
+  private boolean isMercenaryPoint(float x, float y) { if (!isInteractive() || mercenarySlotIndex < 0) return false; float left = mercenarySlotIndex * (WIDTH + SLOT_GAP); return x >= left && x <= left + WIDTH && y >= 0 && y <= HEIGHT; }
   static boolean isValkyriePetType(String t) { return SummonKind.from(t) == SummonKind.VALKYRIE; }
   static boolean isLivingSummon(SummonedPet p, UnitLifecycle l, float hp, float max) { return p != null && !p.deathPending && p.deadFrames <= 0 && (l == null || !l.isDead()) && max > 0 && hp > 0; }
   static int companionSlotCount(boolean merc, boolean valk) { return merc || valk ? (merc && valk ? 2 : 1) : 0; }
@@ -303,8 +339,52 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private static String localized(String key, String fallback) { if (Riiablo.bundle == null) return fallback; String v = Riiablo.bundle.get(key); return v == null || v.isEmpty() ? fallback : v; }
   static Color healthBarColor(float ratio) { if (ratio > HEALTH_GREEN_THRESHOLD) return Color.GREEN; if (ratio > HEALTH_YELLOW_THRESHOLD) return Color.YELLOW; return Color.RED; }
 
-  public void drawCompanions(Batch batch, float alpha) { if (disposed || !isVisible()) return; for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); boolean bar = s.mercenary || (s.kind != SummonKind.RAVEN && s.count == 1); drawCompanion(batch, alpha, s.icon, i * (WIDTH + SLOT_GAP), s.life, s.maxLife, bar, i == mercenarySlotIndex && hovered); } }
-  @Override public void draw(Batch batch, float alpha) { if (disposed || !isVisible()) return; drawCompanions(batch, alpha); batch.setColor(Color.WHITE); super.draw(batch, alpha); }
+  public void drawCompanions(Batch batch, float alpha) { if (!isInteractive()) return; for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); boolean bar = s.mercenary || (s.kind != SummonKind.RAVEN && s.count == 1); drawCompanion(batch, alpha, s.icon, i * (WIDTH + SLOT_GAP), s.life, s.maxLife, bar, i == mercenarySlotIndex && hovered); } }
+  @Override public void draw(Batch batch, float alpha) { if (!isInteractive()) return; drawCompanions(batch, alpha); batch.setColor(Color.WHITE); super.draw(batch, alpha); }
   private void drawCompanion(Batch batch, float alpha, AssetDescriptor<DC6> d, float slotX, float hp, float max, boolean bar, boolean highlight) { if (disposed || d == null || !assets.isLoaded(d.fileName, DC6.class)) return; DC6 icon = assets.get(d.fileName, DC6.class); TextureRegion region = icon.getTexture(0); float x = getX() + slotX + (WIDTH - region.getRegionWidth()) * .5f, y = getY() + ICON_Y; batch.setColor(1, 1, 1, alpha); if (highlight && batch instanceof PaletteIndexedBatch) { PaletteIndexedBatch b = (PaletteIndexedBatch) batch; b.setBlendMode(BlendMode.BRIGHTEN, Riiablo.colors.highlight); batch.draw(region, x, y); b.resetBlendMode(); } else batch.draw(region, x, y); if (!bar) return; float ratio = max <= 0 ? 0 : Math.max(0, Math.min(1, hp / max)); Color c = healthBarColor(ratio); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).setBlendMode(BlendMode.SOLID, c); else batch.setColor(c.r, c.g, c.b, alpha); batch.draw(fill, getX() + slotX + 5f, getY() + BAR_Y, 46f * ratio, 5f); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).resetBlendMode(); }
-  @Override public void dispose() { if (disposed) return; disposed = true; try (Disposal cleanup = new Disposal()) { cleanup.run(() -> setTouchable(Touchable.disabled)); cleanup.run(this::clearListeners); cleanup.run(this::clearChildren); cleanup.dispose(fill); for (AssetDescriptor<DC6> d : mercenaryIcons) cleanup.run(() -> assets.unload(d.fileName)); for (AssetDescriptor<DC6> d : summonIcons.values()) cleanup.run(() -> assets.unload(d.fileName)); } }
+  private boolean isCurrentSession() {
+    return !disposed && assets == Riiablo.assets && character == Riiablo.charData
+        && cursor == Riiablo.cursor && mpqs == Riiablo.mpqs && world == Riiablo.engine
+        && (owner != null ? Riiablo.game == owner
+            : Riiablo.game == null || Riiablo.game.mercenaryHud == this);
+  }
+
+  private boolean isInteractive() { return isCurrentSession() && isVisible(); }
+  private GameScreen game() { return owner != null ? owner : Riiablo.game; }
+
+  /** Assembly binds once, after world creation and before publishing the GameScreen. */
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    super.setVisible(visible);
+  }
+
+  @Override public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(() -> ActorTree.clear(this));
+      // Also retire any label returned before an addActor failure.
+      for (Label label : slotNames) cleanup.run(() -> ActorTree.clear(label));
+      for (Label label : slotCounts) cleanup.run(() -> ActorTree.clear(label));
+      cleanup.run(() -> ActorTree.clear(tooltip));
+      cleanup.run(() -> ActorTree.clear(feedback));
+      cleanup.dispose(fill);
+      cleanup.dispose(references);
+    } finally {
+      slots.clear(); slotNames.clear(); slotCounts.clear(); summonIcons.clear();
+      java.util.Arrays.fill(mercenaryIcons, null);
+      fill = null; tooltip = feedback = null; mercenaries = summonedPets = null;
+      itemController = null; world = null; owner = null;
+      mercenaryId = mercenarySlotIndex = -1; life = maxLife = feedbackRemaining = 0; hovered = false;
+    }
+  }
 }

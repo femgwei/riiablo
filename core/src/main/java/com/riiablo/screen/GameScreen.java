@@ -413,7 +413,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hireMercenaryPanel = new com.riiablo.screen.panel.HireMercenaryPanel(this);
     stage.addActor(hireMercenaryPanel);
 
-    mercenaryHud = new MercenaryHud(itemController);
+    mercenaryHud = new MercenaryHud(this, itemController);
     // Keep the native portrait inset symmetrical: its top and left margins are
     // both eight virtual pixels instead of touching the top edge.
     mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight() - 8);
@@ -831,6 +831,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   private void injectPanels() {
     hirelingPanel.bindWorld(engine);
     hireMercenaryPanel.bindWorld(engine);
+    mercenaryHud.bindWorld(engine);
     engine.inject(inventoryPanel);
     engine.inject(hirelingPanel);
     engine.inject(controlPanel);
