@@ -2,18 +2,16 @@ package com.riiablo.engine.client;
 
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.MathUtils;
 
-import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.excel.SoundEnviron;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.MapWrapper;
-import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.map.Map;
+import java.util.Objects;
 
 /** Plays the ambience and periodic event authored by the player's current level. */
 public final class SoundEnvironmentSystem extends BaseSystem {
@@ -21,8 +19,7 @@ public final class SoundEnvironmentSystem extends BaseSystem {
 
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
-  @Wire(name = "environment")
-  protected EnvironmentCycle environment;
+  private final ClientAudioSession session;
 
   private int environmentId = -1;
   private boolean day = true;
@@ -38,14 +35,18 @@ public final class SoundEnvironmentSystem extends BaseSystem {
   private int eventDurationFrames;
   private boolean eventFading;
 
+  public SoundEnvironmentSystem(ClientAudioSession session) {
+    this.session = Objects.requireNonNull(session, "session");
+  }
+
   @Override
   protected void processSystem() {
-    Audio audio = Riiablo.audio;
+    Audio audio = session.audio();
     if (audio == null || audio.isBackgroundPaused()) return;
 
     Map.Zone zone = playerZone();
     int nextEnvironmentId = zone == null || zone.level == null ? 0 : zone.level.SoundEnv;
-    boolean nextDay = environment == null || environment.isDay();
+    boolean nextDay = session.environment().isDay();
     if (nextEnvironmentId != environmentId || nextDay != day) {
       changeEnvironment(nextEnvironmentId, nextDay);
     }
@@ -59,17 +60,14 @@ public final class SoundEnvironmentSystem extends BaseSystem {
   }
 
   private Map.Zone playerZone() {
-    if (Riiablo.game == null) return null;
-    int player = Riiablo.game.player;
+    int player = session.listener();
     if (player == Engine.INVALID_ENTITY || !mMapWrapper.has(player)) return null;
     MapWrapper mapWrapper = mMapWrapper.get(player);
     return mapWrapper == null ? null : mapWrapper.zone;
   }
 
   private void changeEnvironment(int nextEnvironmentId, boolean nextDay) {
-    SoundEnviron.Entry next = Riiablo.files == null || Riiablo.files.SoundEnviron == null
-        ? null
-        : Riiablo.files.SoundEnviron.get(nextEnvironmentId);
+    SoundEnviron.Entry next = session.soundEnviron().get(nextEnvironmentId);
 
     stopEvent(true);
     soundEnvironment = next;
@@ -88,7 +86,7 @@ public final class SoundEnvironmentSystem extends BaseSystem {
     ambienceId = nextAmbienceId;
     ambienceSound = sound(nextAmbienceId, false);
     ambience = ambienceSound == null ? null
-        : Riiablo.audio.play(ambienceSound, true, Audio.Channel.ENVIRONMENT);
+        : session.audio().play(ambienceSound, true, Audio.Channel.ENVIRONMENT);
     if (ambience != null && ambienceSound.Fade_In > 0) {
       ambience.fadeIn(framesToSeconds(ambienceSound.Fade_In));
     }
@@ -98,7 +96,7 @@ public final class SoundEnvironmentSystem extends BaseSystem {
     stopEvent(false);
     eventSound = sound(soundId, true);
     event = eventSound == null ? null
-        : Riiablo.audio.play(eventSound, true, Audio.Channel.ENVIRONMENT);
+        : session.audio().play(eventSound, true, Audio.Channel.ENVIRONMENT);
     eventDurationFrames = eventSound == null || !eventSound.Loop
         ? 0
         : Math.max(0, eventSound.Duration);
@@ -142,12 +140,12 @@ public final class SoundEnvironmentSystem extends BaseSystem {
     eventFading = false;
   }
 
-  private static Sounds.Entry sound(int id, boolean randomizeGroup) {
-    if (id <= NO_SOUND || Riiablo.files == null || Riiablo.files.Sounds == null) return null;
-    Sounds.Entry sound = Riiablo.files.Sounds.get(id);
+  private Sounds.Entry sound(int id, boolean randomizeGroup) {
+    if (id <= NO_SOUND) return null;
+    Sounds.Entry sound = session.sounds().get(id);
     if (sound == null) return null;
     if (randomizeGroup && sound.Group_Size > 0) {
-      sound = Riiablo.files.Sounds.get(sound.Index + MathUtils.random.nextInt(sound.Group_Size));
+      sound = session.sounds().get(sound.Index + MathUtils.random.nextInt(sound.Group_Size));
     }
     return sound == null || sound.FileName == null || sound.FileName.isEmpty() ? null : sound;
   }

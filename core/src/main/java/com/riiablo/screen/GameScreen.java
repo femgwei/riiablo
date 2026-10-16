@@ -112,6 +112,7 @@ import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
+import com.riiablo.engine.client.ClientAudioSession;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.InteractionRange;
@@ -302,6 +303,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   EngineConfig config;
   private final SimulationSession simulationSession;
+  private final ClientAudioSession clientAudioSession;
   Map map;
   MapManager mapManager;
   com.riiablo.engine.server.party.PartyManager partyManager;
@@ -821,6 +823,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     simulationSession = new SimulationSession(
         socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT,
         map, environment, partyManager);
+    clientAudioSession = new ClientAudioSession(simulationSession.environment(), () -> player,
+        Riiablo.audio, Riiablo.files.SoundEnviron, Riiablo.files.Sounds);
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -973,9 +977,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Pathfinder())
         .with(new LeapSystem())
 
-        .with(new ObjectAmbientSoundSystem())
+        .with(new ObjectAmbientSoundSystem(clientAudioSession))
         .with(new ObjectBreakSoundEmitter())
-        .with(new SoundEmitterHandler())
+        .with(new SoundEmitterHandler(clientAudioSession))
 
         .with(factory)
         .with(new AnimDataResolver())
@@ -1020,7 +1024,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem())
         .with(new ZoneEntryDisplayer())
 
-        .with(new SoundEnvironmentSystem())
+        .with(new SoundEnvironmentSystem(clientAudioSession))
         .with(new FootstepEmitter())
         .with(new MonsterSoundEmitter())
         .with(new BlockSoundEmitter())

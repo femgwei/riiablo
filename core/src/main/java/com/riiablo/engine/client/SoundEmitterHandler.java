@@ -7,17 +7,23 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SoundEmitter;
+import java.util.Objects;
 
 @All({SoundEmitter.class, Position.class})
 public class SoundEmitterHandler extends IteratingSystem {
   protected ComponentMapper<SoundEmitter> mSoundEmitter;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+
+  private final ClientAudioSession session;
+
+  public SoundEmitterHandler(ClientAudioSession session) {
+    this.session = Objects.requireNonNull(session, "session");
+  }
 
   @Override
   protected void dispose() {
@@ -32,8 +38,8 @@ public class SoundEmitterHandler extends IteratingSystem {
   protected void process(int entityId) {
     SoundEmitter soundEmitter = mSoundEmitter.get(entityId);
     if (soundEmitter == null || soundEmitter.sound == null
-        || !soundEmitter.sound.isLoaded() || Riiablo.game == null) return;
-    int player = Riiablo.game.player;
+        || !soundEmitter.sound.isLoaded()) return;
+    int player = session.listener();
     if (player == Engine.INVALID_ENTITY || !mPosition.has(player)) return;
 
     Vector2 position = mPosition.get(entityId).position;

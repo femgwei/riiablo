@@ -7,7 +7,6 @@ import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.engine.Engine;
@@ -17,6 +16,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SoundEmitter;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.DT1;
+import java.util.Objects;
 
 /** Creates distance-attenuated environmental loops for native map sound markers. */
 @All({com.riiablo.engine.server.component.Object.class, Position.class, MapWrapper.class})
@@ -52,9 +52,15 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<SoundEmitter> mSoundEmitter;
 
+  private final ClientAudioSession session;
+
   private boolean riverMarkerAudible;
   private boolean missingRiverSoundLogged;
   private Audio.Instance terrainRiver;
+
+  public ObjectAmbientSoundSystem(ClientAudioSession session) {
+    this.session = Objects.requireNonNull(session, "session");
+  }
 
   @Override
   protected void begin() {
@@ -84,11 +90,10 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
       return;
     }
     if (soundId == RIVER_SOUND) riverMarkerAudible = true;
-    if (emitter != null || Riiablo.audio == null || Riiablo.audio.isBackgroundPaused()
-        || Riiablo.files == null || Riiablo.files.Sounds == null) return;
+    if (emitter != null || session.audio() == null || session.audio().isBackgroundPaused()) return;
 
-    Sounds.Entry sound = Riiablo.files.Sounds.get(soundId);
-    Audio.Instance instance = Riiablo.audio.play(sound, true, Audio.Channel.ENVIRONMENT);
+    Sounds.Entry sound = session.sounds().get(soundId);
+    Audio.Instance instance = session.audio().play(sound, true, Audio.Channel.ENVIRONMENT);
     if (instance == null) return;
 
     if (sound.Fade_In > 0) {
@@ -122,12 +127,13 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     }
 
     MapWrapper listenerMap = playerMap();
-    if (listenerMap == null || listenerMap.zone == null || !mPosition.has(Riiablo.game.player)) {
+    int player = session.listener();
+    if (listenerMap == null || listenerMap.zone == null || !mPosition.has(player)) {
       stopTerrainRiver();
       return;
     }
 
-    Vector2 listener = mPosition.get(Riiablo.game.player).position;
+    Vector2 listener = mPosition.get(player).position;
     float radius = terrainRiver == null ? RIVER_AUDIBLE_RADIUS : RIVER_STOP_RADIUS;
     float distance2 = nearestRiverDistance2(listenerMap.map, listenerMap.zone, listener, radius);
     if (!withinRadius(distance2, radius)) {
@@ -144,8 +150,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   }
 
   private MapWrapper playerMap() {
-    if (Riiablo.game == null) return null;
-    int player = Riiablo.game.player;
+    int player = session.listener();
     if (player == Engine.INVALID_ENTITY || !mMapWrapper.has(player)) return null;
     MapWrapper wrapper = mMapWrapper.get(player);
     return wrapper == null || wrapper.map == null ? null : wrapper;
@@ -153,9 +158,8 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
 
   private void startTerrainRiver(com.riiablo.map.Map.Zone zone, Vector2 listener,
       float distance2) {
-    if (Riiablo.audio == null || Riiablo.audio.isBackgroundPaused()
-        || Riiablo.files == null || Riiablo.files.Sounds == null) return;
-    Sounds.Entry sound = Riiablo.files.Sounds.get(RIVER_SOUND);
+    if (session.audio() == null || session.audio().isBackgroundPaused()) return;
+    Sounds.Entry sound = session.sounds().get(RIVER_SOUND);
     if (sound == null || sound.FileName == null || sound.FileName.isEmpty()) {
       if (!missingRiverSoundLogged) {
         missingRiverSoundLogged = true;
@@ -166,7 +170,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     }
     missingRiverSoundLogged = false;
 
-    terrainRiver = Riiablo.audio.play(sound, true, Audio.Channel.ENVIRONMENT);
+    terrainRiver = session.audio().play(sound, true, Audio.Channel.ENVIRONMENT);
     if (terrainRiver == null) return;
     terrainRiver.setVolume(0f);
     if (sound.Fade_In > 0) {
@@ -184,8 +188,7 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   }
 
   private boolean isAudible(int entityId, float radius, boolean allowAdjacentZones) {
-    if (Riiablo.game == null) return false;
-    int player = Riiablo.game.player;
+    int player = session.listener();
     if (player == Engine.INVALID_ENTITY || !mPosition.has(player)
         || !mMapWrapper.has(player)) return false;
 

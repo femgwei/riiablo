@@ -1,5 +1,39 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第五批：客户端环境音依赖
+
+- [x] 新增 `ClientAudioSession`，绑定当前会话环境时钟、实时监听玩家提供器、宿主
+  Audio 和 SoundEnviron / Sounds 表。GameScreen 显式给 SoundEnvironmentSystem、
+  ObjectAmbientSoundSystem、SoundEmitterHandler 传入同一个绑定；三者不再直接
+  读取 Riiablo.game/audio/files。玩家编号支持创建 World 后赋值和后续替换，不捕获旧值。
+- [x] 模拟上下文不增加音频/UI 依赖，D2GS 不创建客户端音频绑定。空 Audio 显式支持
+  静音宿主；其他必要参数构造时拒绝缺失。绑定不 dispose 宿主资源，旧系统各自释放
+  播放句柄。还原三处构造参数后，GameScreen 装配方法与 `c466a087b` 除空白外一致。
+  系统顺序、模式条件、声音编号、事件/渐变时序、RNG、协议、存档和玩法规则均未改变。
+- [x] 新增 11 项绑定/实际 ECS 测试：两种客户端模式的双世界同实体 ID、独立表/时钟/
+  播放端点、冲突别名、玩家延迟赋值/更换和切区、后台暂停/循环事件时长、火炬开关与
+  离开范围、不清理其他对象音源、河流地形、缺失记录/静音宿主、销毁后重新创建。
+  播放端点用 mock，无 MPQ/GL/声音设备；保留 AudioInstanceTest 的真实 Audio 类回归。
+- [x] 定向回归 137/137 项、21 类通过，失败/错误/跳过均 0；core、desktop、D2GS
+  编译通过。覆盖新增用例、既有装配/模式/会话、环境时钟/篝火、天气、脚步、音效表、
+  音频实例/选项、渲染 runner 和死亡奖励集成。最终证据为
+  `build/simulation-client-audio-regression-final.log`；JUnit XML 位于
+  `core/build/test-results/test/`。首轮 30 项通过，扩大后的首轮 137 项也通过。
+- [x] 真实 1.10f 营地 1x1 三帧 PASS，实际 fire ambience 为实体 214/219 的
+  sound=2578；D2GS 25Hz（step=0.04）和 Throw 导弹创建/顺序及 1000→992 伤害通过。
+  日志 `build/simulation-client-audio-real-resource-02.log`，营地 manifest 位于
+  `build/simulation-client-audio-camp/rogue-encampment-manifest.txt`。
+  未发现 ERROR/Exception；保留 level0/DrlgType0 跳过、Java object 分配回退和表 Key
+  推断诊断。首次资源命令因 PowerShell 拆分未加引号的版本参数，在执行资源任务前失败，
+  保存在 `build/simulation-client-audio-real-resource.log`；修正命令后重跑成功。
+- 范围限制：仅迁移首组环境音边界；天气、脚步、怪物音效、输入、UI、渲染等全局引用
+  尚在，Audio 内部共享资源/CVar 和 MathUtils.random 未全面隔离。自动资源冒烟只能
+  证明生产接线，不代表声音听感、完整会话退出重进或长期泄漏验收；未声称全客户端隔离。
+  第一批既有的投掷专精差异、佣兵夹具和 Den 日志问题仍未处理。
+- 整体进度：已完成五批；按约七批的风险边界，后续暂定生命周期收口、入口清理/
+  综合回归两批，必要时继续细拆。详见
+  [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第四批：队伍与死亡奖励依赖
 
 - [x] `SimulationSession` 新增宿主 PartyManager 绑定；保留同实例 partyManager
