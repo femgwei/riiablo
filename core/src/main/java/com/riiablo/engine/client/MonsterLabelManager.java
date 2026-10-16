@@ -109,7 +109,7 @@ public class MonsterLabelManager extends BaseEntitySystem {
     float set(int entityId) {
       Monster monster = mMonster.get(entityId);
       MonStats.Entry monstats = monster.monstats;
-      String displayName = MonsterNameResolver.displayName(monster);
+      String displayName = MonsterNameResolver.displayName(clientContext, monster);
       if (mSummonedPet.has(entityId)) {
         SummonedPet pet = mSummonedPet.get(entityId);
         // Monster rows such as skeleton1 and druidbear use generic native

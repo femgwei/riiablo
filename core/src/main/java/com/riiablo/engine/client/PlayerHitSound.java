@@ -27,10 +27,14 @@ final class PlayerHitSound {
    * Returns false when the player is not fully initialized or audio is unavailable.
    */
   static boolean play(Player player) {
-    if (player == null || player.data == null || Riiablo.audio == null) return false;
+    return play(ClientGameplayContext.fromGlobals(), player);
+  }
+
+  static boolean play(ClientGameplayContext context, Player player) {
+    if (player == null || player.data == null || context == null || context.audio() == null) return false;
     String sound = soundFor(player.data.classId);
     if (sound == null) return false;
-    Riiablo.audio.play(sound, true);
+    context.audio().play(sound, true);
     return true;
   }
 }

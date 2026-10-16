@@ -47,6 +47,8 @@ public class HoveredManager extends IteratingSystem {
 
   @Wire(name="iso")
   protected IsometricCamera iso;
+  @Wire(name="clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Vector2 coords = new Vector2();
   private final Vector2 tmpVec2 = new Vector2();
@@ -174,9 +176,9 @@ public class HoveredManager extends IteratingSystem {
   }
 
   private boolean isUnsummonSelected() {
-    if (Riiablo.charData == null) return false;
-    return Riiablo.charData.getAction(Input.Buttons.LEFT) == SkillId.UNSUMMON
-        || Riiablo.charData.getAction(Input.Buttons.RIGHT) == SkillId.UNSUMMON;
+    if (clientContext.charData() == null) return false;
+    return clientContext.charData().getAction(Input.Buttons.LEFT) == SkillId.UNSUMMON
+        || clientContext.charData().getAction(Input.Buttons.RIGHT) == SkillId.UNSUMMON;
   }
 
   static boolean containsLabelPoint(com.badlogic.gdx.scenes.scene2d.Actor actor,

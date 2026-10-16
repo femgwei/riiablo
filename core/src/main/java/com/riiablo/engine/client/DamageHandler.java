@@ -102,7 +102,7 @@ public class DamageHandler extends PassiveSystem {
     // local player damage events, whose entities do not have an AIWrapper.
     if (event.damage > 0f && isPlayerVictim
         && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
-      PlayerHitSound.play(mPlayer.get(event.victim));
+      PlayerHitSound.play(clientContext, mPlayer.get(event.victim));
     }
     
     // Trigger hit reaction for entities with AI (monsters, NPCs, etc.)
