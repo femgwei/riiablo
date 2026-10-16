@@ -41,6 +41,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> vendorReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> mercenaryReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> hudReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> controlReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -63,6 +64,18 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    controlReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/PANEL/ctrlpnl7.DC6",
+        "data/global/ui/PANEL/hlthmana.DC6", "data/global/ui/PANEL/overlap.DC6",
+        "data/global/ui/PANEL/invwarn.dc6", "data/global/ui/PANEL/level.DC6",
+        "data/global/sfx/cursor/levelup.wav", "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",
+        "data/global/ui/SPELLS/Skillicon.DC6", "data/global/ui/PANEL/runbutton.dc6",
+        "data/global/ui/PANEL/minipanel.dc6", "data/global/ui/PANEL/menubutton.DC6",
+        "data/global/ui/PANEL/minipanelbtn.DC6"}) controlReferencesBeforeConstruction.put(path, references(path));
+    for (CharacterClass charClass : CharacterClass.values()) {
+      String path = "data/global/ui/SPELLS/" + charClass.spellIcons + ".DC6";
+      controlReferencesBeforeConstruction.put(path, references(path));
+    }
     hudReferencesBeforeConstruction.clear();
     for (String icon : new String[] {"rogueicon.dc6", "act2hireableicon.dc6", "act3hireableicon.dc6",
         "barbhirable_icon.dc6", "Raven.dc6", "Wolf.dc6", "OakSage.dc6", "Vines.dc6", "Bear.dc6",
@@ -572,6 +585,33 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         }
       }
     }
+    Array<Actor> controlActors = new Array<>(); collectActors(screen.controlPanel, controlActors);
+    // Keep coverage even if an owned escape button is reparented by its host.
+    Actor controlEscape = screen.controlPanel.getEscapeButton();
+    require(controlEscape != null, "control escape button still borrowed by EscapePanel");
+    if (!controlActors.contains(controlEscape, true)) collectActors(controlEscape, controlActors);
+    com.riiablo.widget.HotkeyButton controlLeft = screen.controlPanel.getLeftSkill();
+    com.riiablo.widget.HotkeyButton controlRight = screen.controlPanel.getRightSkill();
+    Object controlBelt = field(controlWidget, "belt", Object.class);
+    com.riiablo.key.MappedKey.AssignmentListener[] controlAssignments =
+        field(controlBelt, "assignments", com.riiablo.key.MappedKey.AssignmentListener[].class).clone();
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> controlClicks = new Array<>();
+    for (Actor actor : controlActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        controlClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    Set<Integer> controlHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : controlReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey(); require(references(path) > reference.getValue(), "live control asset " + path);
+      if (!path.endsWith(".wav")) {
+        DC6 sheet = assets.get(path, DC6.class);
+        // Skill sheets for other classes may have been loaded but not uploaded yet.
+        for (int direction = 0; direction < sheet.getNumDirections(); direction++) if (sheet.isLoaded(direction))
+          for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+            int handle = region.getTexture().getTextureObjectHandle(); require(Gdx.gl.glIsTexture(handle), "live control texture " + path);
+            if (reference.getValue() == 0) controlHandles.add(handle);
+          }
+      }
+    }
     Array<Actor> escapeActors = new Array<>();
     collectActors(screen.escapePanel, escapeActors);
     Set<Integer> escapeHandles = new HashSet<>();
@@ -616,6 +656,26 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.controlPanel, "disposed", Boolean.class), "Client retired control panel");
+    screen.controlPanel.dispose(); screen.controlPanel.dispose(); screen.controlPanel.setVisible(true);
+    screen.controlPanel.act(1); screen.controlPanel.acknowledgeQuestLog(); screen.controlPanel.setMinipanelVisible(true);
+    require(!screen.controlPanel.isVisible() && screen.controlPanel.hit(0, 0, true) == null
+        && screen.controlPanel.getEscapeButton() == null, "retired control cannot reopen or hit-test");
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : controlClicks) click.clicked(null, 0, 0);
+    for (Actor actor : controlActors) require(actor.getParent() == null && actor.getListeners().size == 0
+        && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "control actor retired");
+    for (int i = 0; i < controlAssignments.length; i++) {
+      require(!Keys.Belt[i].containsAssignmentListener(controlAssignments[i]), "control belt assignment detached");
+      controlAssignments[i].onAssigned(Keys.Belt[i], 0, com.badlogic.gdx.Input.Keys.A);
+      controlAssignments[i].onUnassigned(Keys.Belt[i], 0, com.badlogic.gdx.Input.Keys.A);
+    }
+    require(controlLeft.refreshDisabled() && controlRight.refreshDisabled(), "retired HUD skills inactive");
+    require(field(screen.controlPanel, "itemController", Object.class) == null
+        && field(screen.controlPanel, "owner", Object.class) == null
+        && field(screen.controlPanel, "world", Object.class) == null, "control borrowed state cleared");
+    for (Map.Entry<String, Integer> reference : controlReferencesBeforeConstruction.entrySet())
+      require(references(reference.getKey()) == reference.getValue(), "control asset baseline " + reference.getKey());
+    for (int handle : controlHandles) require(!Gdx.gl.glIsTexture(handle), "control texture deleted");
     require(field(screen.mercenaryHud, "disposed", Boolean.class), "Client retired mercenary HUD");
     screen.mercenaryHud.dispose(); screen.mercenaryHud.dispose(); screen.mercenaryHud.setVisible(true);
     screen.mercenaryHud.showTemporaryMessage("late"); screen.mercenaryHud.act(1);
@@ -858,6 +918,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nhudFeedbackAndSubscriptionsCleared=true"
         + "\nhudAssetBaselinesBalanced=" + hudReferencesBeforeConstruction.size()
         + "\nhudTexturesDeleted=" + hudHandles.size()
+        + "\ncontrolActorsRetired=" + controlActors.size
+        + "\ncontrolLateClicksIgnored=" + controlClicks.size
+        + "\ncontrolBeltAssignmentListenersRemoved=" + controlAssignments.length
+        + "\ncontrolOwnerWorldCleared=true\ncontrolHudSkillsInactive=true"
+        + "\ncontrolAssetBaselinesBalanced=" + controlReferencesBeforeConstruction.size()
+        + "\ncontrolTexturesDeleted=" + controlHandles.size()
         + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
         + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
         + "\nstorageTexturesDeleted=" + storageHandles.size()

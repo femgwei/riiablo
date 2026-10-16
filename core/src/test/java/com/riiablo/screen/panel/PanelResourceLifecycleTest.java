@@ -149,9 +149,10 @@ class PanelResourceLifecycleTest {
   @Test void controlWithoutDesktopWidgetStillReleasesIconsAndExperience() throws Exception {
     ControlPanel panel = control();
     set(panel, "controlWidget", null);
+    Texture experience = (Texture) get(get(panel, "experienceWidget"), "whitePixelTexture");
     panel.dispose();
     verify((AssetManager) get(panel, "assets"), times(15)).unload(anyString());
-    verify((Texture) get(get(panel, "experienceWidget"), "whitePixelTexture")).dispose();
+    verify(experience).dispose();
   }
 
   private static InventoryPanel inventory() throws Exception {
@@ -181,23 +182,50 @@ class PanelResourceLifecycleTest {
 
   private static ControlPanel control() throws Exception {
     ControlPanel panel = mock(ControlPanel.class, CALLS_REAL_METHODS);
-    doReturn(new SnapshotArray<>(Actor.class)).when(panel).getChildren();
-    initAssets(panel);
+    retireable(panel);
+    AssetManager owner = initAssets(panel);
+    when(owner.contains(anyString())).thenReturn(true);
+    when(owner.isLoaded(anyString())).thenReturn(true);
+    AssetReferenceScope references = new AssetReferenceScope(owner);
+    set(panel, "references", references);
+    for (Field field : ControlPanel.class.getDeclaredFields()) if (field.getType() == AssetDescriptor.class) {
+      field.setAccessible(true); references.load((AssetDescriptor) field.get(panel));
+    }
     AssetDescriptor[] icons = new AssetDescriptor[7];
     for (int i = 0; i < icons.length; i++) icons[i] = new AssetDescriptor<>("class-" + i, DC6.class);
     set(panel, "CharSkilliconDescriptor", icons);
+    for (AssetDescriptor icon : icons) references.load(icon);
     panel.btnAddStats = mock(Button.class);
     panel.btnAddSkills = mock(Button.class);
     panel.btnQuestLog = mock(Button.class);
+    retireable(panel.btnAddStats); retireable(panel.btnAddSkills); retireable(panel.btnQuestLog);
     Object xp = nested(panel, "experienceWidget");
+    retireable((Actor) xp);
     set(xp, "whitePixelTexture", mock(Texture.class));
     Object widget = nested(panel, "controlWidget");
     initDescriptors(widget);
     set(widget, "this$0", panel);
+    retireable((com.badlogic.gdx.scenes.scene2d.Group) widget);
+    AssetReferenceScope nestedReferences = new AssetReferenceScope(owner);
+    set(widget, "references", nestedReferences);
+    for (Field field : widget.getClass().getDeclaredFields()) if (field.getType() == AssetDescriptor.class) {
+      field.setAccessible(true); nestedReferences.load((AssetDescriptor) field.get(widget));
+    }
     set(widget, "background", mock(Texture.class));
     set(widget, "btnRun", mock(Button.class));
     set(widget, "btnMenu", mock(Button.class));
+    retireable((Button) get(widget, "btnRun")); retireable((Button) get(widget, "btnMenu"));
     return panel;
+  }
+
+  private static void retireable(Actor actor) {
+    doNothing().when(actor).clearListeners(); doNothing().when(actor).clearActions();
+    doReturn(false).when(actor).remove();
+    if (actor instanceof com.badlogic.gdx.scenes.scene2d.Group) {
+      com.badlogic.gdx.scenes.scene2d.Group group = (com.badlogic.gdx.scenes.scene2d.Group) actor;
+      doReturn(new SnapshotArray<>(Actor.class)).when(group).getChildren();
+      doNothing().when(group).clearChildren();
+    }
   }
 
   private static AssetManager initAssets(Object panel) throws Exception {

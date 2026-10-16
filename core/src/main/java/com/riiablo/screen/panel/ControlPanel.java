@@ -57,11 +57,24 @@ import com.riiablo.widget.Button;
 import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Label;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.save.CharData;
+import com.riiablo.screen.GameScreen;
 
 public class ControlPanel extends Table implements Disposable, EscapeController {
   private static final String TAG = "ControlPanel";
   private static final boolean DEBUG_MOBILE = !true;
   private final AssetManager assets = Riiablo.assets;
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final ItemData items = java.util.Objects.requireNonNull(character.getItems(), "items");
+  private final com.riiablo.Cursor cursor = Riiablo.cursor;
+  private final com.riiablo.audio.Audio audio = Riiablo.audio;
+  private final com.riiablo.Client.InputProcessor input = Riiablo.input;
+  private GameScreen owner;
+  private com.artemis.World world;
+  private boolean initializing = true;
   private boolean disposed;
 
   final AssetDescriptor<DC6> ctrlpnlDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl7.DC6", DC6.class);
@@ -127,7 +140,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   final AssetDescriptor<DC6> SkilliconDescriptor = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\Skillicon.DC6", DC6.class);
   DC6 Skillicon;
 
-  final AssetDescriptor<DC6> CharSkilliconDescriptor[];
+  final AssetDescriptor<DC6> CharSkilliconDescriptor[] = new AssetDescriptor[7];
   DC6 CharSkillicon[];
 
   @Wire(name = "itemController")
@@ -154,52 +167,116 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   HotkeyButton leftSkill, rightSkill;
 
-  public ControlPanel() {
-    assets.load(hlthmanaDescriptor);
+  public ControlPanel() { this(null); }
+
+  public ControlPanel(GameScreen owner) {
+    this.owner = owner;
+    world = owner == null ? Riiablo.engine : null;
+    try { initialize(); }
+    catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    } finally { initializing = false; }
+  }
+
+  public void bindWorld(com.artemis.World world) {
+    if (disposed) return;
+    java.util.Objects.requireNonNull(world, "world");
+    if (this.world != null && this.world != world) throw new IllegalStateException("world already bound");
+    this.world = world;
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && assets == Riiablo.assets && character == Riiablo.charData
+        && items == character.getItems() && cursor == Riiablo.cursor && audio == Riiablo.audio
+        && input == Riiablo.input && (world == null || world == Riiablo.engine)
+        && (initializing || (owner != null ? owner == Riiablo.game
+            : Riiablo.game == null || Riiablo.game.controlPanel == this));
+  }
+
+  private GameScreen game() { return owner != null ? owner : Riiablo.game; }
+
+  private class SessionButton extends Button {
+    private boolean retired;
+    SessionButton(ButtonStyle style) { super(style); }
+    @Override public boolean isDisabled() { return retired || !isCurrentSession() || super.isDisabled(); }
+    @Override public void dispose() { retired = true; super.dispose(); }
+    @Override public void draw(Batch batch, float alpha) {
+      if (!retired && isCurrentSession()) super.draw(batch, alpha);
+    }
+    @Override public void draw(com.riiablo.graphics.PaletteIndexedBatch batch, float alpha) {
+      if (!retired && isCurrentSession()) super.draw(batch, alpha);
+    }
+  }
+
+  private class SessionHotkeyButton extends HotkeyButton {
+    SessionHotkeyButton(DC icons, int index, int skill) { super(icons, index, skill); }
+    @Override protected boolean isActive() { return super.isActive() && isCurrentSession(); }
+  }
+
+  @Override public Actor hit(float x, float y, boolean touchable) {
+    return isCurrentSession() ? super.hit(x, y, touchable) : null;
+  }
+
+  @Override public void draw(Batch batch, float alpha) {
+    if (isCurrentSession()) super.draw(batch, alpha);
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed || visible && !isCurrentSession()) return;
+    super.setVisible(visible);
+  }
+
+  private void initialize() {
+    references.load(hlthmanaDescriptor);
     assets.finishLoadingAsset(hlthmanaDescriptor);
     hlthmana = assets.get(hlthmanaDescriptor);
 
-    assets.load(overlapDescriptor);
+    references.load(overlapDescriptor);
     assets.finishLoadingAsset(overlapDescriptor);
     overlap = assets.get(overlapDescriptor);
 
-    assets.load(invwarnDescriptor);
+    references.load(invwarnDescriptor);
     assets.finishLoadingAsset(invwarnDescriptor);
     invwarn = assets.get(invwarnDescriptor);
 
-    assets.load(ctrlpnlDescriptor);
+    references.load(ctrlpnlDescriptor);
     assets.finishLoadingAsset(ctrlpnlDescriptor);
     DC6 ctrlpnl = assets.get(ctrlpnlDescriptor);
 
-    assets.load(levelButtonDescriptor);
+    references.load(levelButtonDescriptor);
     assets.finishLoadingAsset(levelButtonDescriptor);
     DC6 levelButton = assets.get(levelButtonDescriptor);
     Button.ButtonStyle addPointStyle = new Button.ButtonStyle(
         new TextureRegionDrawable(levelButton.getTexture(0)),
         new TextureRegionDrawable(levelButton.getTexture(1)));
-    btnAddStats = new Button(addPointStyle);
+    btnAddStats = new SessionButton(addPointStyle);
     btnAddStats.setVisible(false);
     btnAddStats.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null) Riiablo.game.setLeftPanel(Riiablo.game.characterPanel);
+        if (!isCurrentSession()) return;
+        if (game() != null) game().setLeftPanel(game().characterPanel);
       }
     });
-    btnAddSkills = new Button(addPointStyle);
+    btnAddSkills = new SessionButton(addPointStyle);
     btnAddSkills.setVisible(false);
     btnAddSkills.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null) Riiablo.game.setRightPanel(Riiablo.game.spellsPanel);
+        if (!isCurrentSession()) return;
+        if (game() != null) game().setRightPanel(game().spellsPanel);
       }
     });
-    btnQuestLog = new Button(new Button.ButtonStyle(addPointStyle));
+    btnQuestLog = new SessionButton(new Button.ButtonStyle(addPointStyle));
     btnQuestLog.setVisible(false);
     btnQuestLog.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (Riiablo.game != null) {
-          Riiablo.game.setLeftPanel(Riiablo.game.questsPanel);
+        if (!isCurrentSession()) return;
+        if (game() != null) {
+          game().setLeftPanel(game().questsPanel);
         }
         acknowledgeQuestLog();
       }
@@ -208,23 +285,22 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     addSkillsLabel = createPromptLabel(Riiablo.bundle.get("new_skill"));
     questLogLabel = createPromptLabel(Riiablo.bundle.get("quest_log"));
 
-    assets.load(levelUpSoundDescriptor);
+    references.load(levelUpSoundDescriptor);
     assets.finishLoadingAsset(levelUpSoundDescriptor);
     levelUpSound = assets.get(levelUpSoundDescriptor);
 
-    assets.load(popbeltDescriptor);
+    references.load(popbeltDescriptor);
     assets.finishLoadingAsset(popbeltDescriptor);
     popbelt = assets.get(popbeltDescriptor).getTexture();
 
-    assets.load(SkilliconDescriptor);
+    references.load(SkilliconDescriptor);
     assets.finishLoadingAsset(SkilliconDescriptor);
     Skillicon = assets.get(SkilliconDescriptor);
 
-    CharSkilliconDescriptor = new AssetDescriptor[7];
     CharSkillicon = new DC6[CharSkilliconDescriptor.length];
     for (int i = 0; i < CharSkilliconDescriptor.length; i++) {
       CharSkilliconDescriptor[i] = new AssetDescriptor<>("data\\global\\ui\\SPELLS\\" + CharacterClass.get(i).spellIcons + ".DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-      assets.load(CharSkilliconDescriptor[i]);
+      references.load(CharSkilliconDescriptor[i]);
       assets.finishLoadingAsset(CharSkilliconDescriptor[i]);
       CharSkillicon[i] = assets.get(CharSkilliconDescriptor[i]);
     }
@@ -238,7 +314,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     experienceWidget = new ExperienceWidget();
 
     if (!DEBUG_MOBILE && Gdx.app.getType() == Application.ApplicationType.Desktop) {
-      int leftSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      int leftSkillId = character.getAction(Input.Buttons.LEFT);
       // Skill id 0 is the valid D2 normal attack, not an unassigned slot.
       if (leftSkillId >= 0) {
         final Skills.Entry skill = Riiablo.files.skills.get(leftSkillId);
@@ -250,24 +326,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
           iconCel = 20;
         }
 
-        leftSkill = new HotkeyButton(icons, iconCel, skill.Id);
+        leftSkill = new SessionHotkeyButton(icons, iconCel, skill.Id);
         if (skill.aura) leftSkill.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
-        int index = Riiablo.charData.getHotkey(Input.Buttons.LEFT, leftSkillId);
+        int index = character.getHotkey(Input.Buttons.LEFT, leftSkillId);
         if (index != ArrayUtils.INDEX_NOT_FOUND) {
           MappedKey mapping = Keys.Skill[index];
           leftSkill.map(mapping);
         }
       } else {
-        leftSkill = new HotkeyButton(Skillicon, 0, -1);
+        leftSkill = new SessionHotkeyButton(Skillicon, 0, -1);
       }
       leftSkill.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          Riiablo.game.spellsQuickPanelL.setVisible(!Riiablo.game.spellsQuickPanelL.isVisible());
+          if (!isCurrentSession() || game() == null) return;
+          game().spellsQuickPanelL.setVisible(!game().spellsQuickPanelL.isVisible());
         }
       });
 
-      int rightSkillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
+      int rightSkillId = character.getAction(Input.Buttons.RIGHT);
       // Skill id 0 is the valid D2 normal attack, not an unassigned slot.
       if (rightSkillId >= 0) {
         final Skills.Entry skill = Riiablo.files.skills.get(rightSkillId);
@@ -279,33 +356,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
           iconCel = 20;
         }
 
-        rightSkill = new HotkeyButton(icons, iconCel, skill.Id);
+        rightSkill = new SessionHotkeyButton(icons, iconCel, skill.Id);
         if (skill.aura) rightSkill.setBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenGold);
-        int index = Riiablo.charData.getHotkey(Input.Buttons.RIGHT, rightSkillId);
+        int index = character.getHotkey(Input.Buttons.RIGHT, rightSkillId);
         if (index != ArrayUtils.INDEX_NOT_FOUND) {
           MappedKey mapping = Keys.Skill[index];
           rightSkill.map(mapping);
         }
       } else {
-        rightSkill = new HotkeyButton(Skillicon, 0, -1);
+        rightSkill = new SessionHotkeyButton(Skillicon, 0, -1);
       }
       rightSkill.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          Riiablo.game.spellsQuickPanelR.setVisible(!Riiablo.game.spellsQuickPanelR.isVisible());
+          if (!isCurrentSession() || game() == null) return;
+          game().spellsQuickPanelR.setVisible(!game().spellsQuickPanelR.isVisible());
         }
       });
 
-      Texture background = PanelTextures.controlBackground(ctrlpnl);
-      try {
-        controlWidget = new ControlWidget(background);
-      } catch (RuntimeException | Error failure) {
-        try { background.dispose(); }
-        catch (RuntimeException | Error cleanup) {
-          if (cleanup != failure) failure.addSuppressed(cleanup);
-        }
-        throw failure;
-      }
+      controlWidget = new ControlWidget(PanelTextures.controlBackground(ctrlpnl));
     }
 
     final float height = controlWidget == null ? 0 : controlWidget.background.getHeight() - 7;
@@ -437,10 +506,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     questLogLabel.setVisible(visible);
   }
 
-  private static boolean hasQuestProgress() {
-    if (Riiablo.charData == null) return false;
+  private boolean hasQuestProgress() {
+    if (character == null) return false;
     for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-      short[] quests = Riiablo.charData.getQuests(act);
+      short[] quests = character.getQuests(act);
       if (quests == null) continue;
       for (short quest : quests) {
         if (quest != 0 && !NativeQuestRecord.has(quest, NativeQuestRecord.UPDATE_QUEST_LOG)) {
@@ -460,9 +529,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
    * again on the next update.
    */
   public void acknowledgeQuestLog() {
-    if (Riiablo.charData == null) return;
+    if (!isCurrentSession()) return;
+    if (character == null) return;
     for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-      short[] quests = Riiablo.charData.getQuests(act);
+      short[] quests = character.getQuests(act);
       if (quests == null) continue;
       for (int i = 0; i < quests.length; i++) {
         if (quests[i] != 0) {
@@ -473,12 +543,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     setQuestPromptVisible(false);
   }
 
-  private static long currentQuestRevision() {
+  private long currentQuestRevision() {
     long revision = 1469598103934665603L;
-    if (Riiablo.charData == null) return revision;
+    if (character == null) return revision;
     int index = 0;
     for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-      short[] quests = Riiablo.charData.getQuests(act);
+      short[] quests = character.getQuests(act);
       if (quests == null) continue;
       for (short quest : quests) {
         revision ^= (quest & 0xFFFFL) + ((long) index++ << 16);
@@ -499,14 +569,15 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   @Override
   public void act(float delta) {
+    if (!isCurrentSession()) return;
     super.act(delta);
     if (inventoryWarningWidget != null) {
       updateInventoryWarningWidgetLayout();
       inventoryWarningWidget.refresh();
     }
-    if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
-    StatListRef stats = Riiablo.charData.getStats().aggregate();
-    int level = stats.getValue(Stat.level, Riiablo.charData.level & 0xFF);
+    if (character == null || character.getStats() == null) return;
+    StatListRef stats = character.getStats().aggregate();
+    int level = stats.getValue(Stat.level, character.level & 0xFF);
     if (observedLevel != Integer.MIN_VALUE && level > observedLevel) {
       levelUpSound.play();
       Gdx.app.log(TAG, "[LEVEL_UP_FEEDBACK] level=" + observedLevel + "->" + level
@@ -528,19 +599,20 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       observedQuestRevision = questRevision;
       setQuestPromptVisible(hasQuestProgress());
     }
-    if (Riiablo.game != null && Riiablo.game.questsPanel != null
-        && Riiablo.game.questsPanel.isVisible()) {
+    if (game() != null && game().questsPanel != null
+        && game().questsPanel.isVisible()) {
       acknowledgeQuestLog();
     }
   }
 
   @Override
   public Button getEscapeButton() {
-    return controlWidget.minipanelWidget.btnEscapeMenu;
+    return isCurrentSession() && controlWidget != null && controlWidget.minipanelWidget != null
+        ? controlWidget.minipanelWidget.btnEscapeMenu : null;
   }
 
   public void setMinipanelVisible(boolean b) {
-    if (controlWidget != null) controlWidget.setMinipanelVisible(b);
+    if (isCurrentSession() && controlWidget != null) controlWidget.setMinipanelVisible(b);
   }
 
   public HotkeyButton getLeftSkill() {
@@ -556,21 +628,34 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     if (disposed) return;
     disposed = true;
     try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
       cleanup.run(() -> Button.disposeClickSounds(this));
       cleanup.dispose(btnAddStats);
       cleanup.dispose(btnAddSkills);
       cleanup.dispose(btnQuestLog);
+      cleanup.dispose(leftSkill);
+      cleanup.dispose(rightSkill);
       if (experienceWidget != null) cleanup.run(experienceWidget::dispose);
       cleanup.dispose(inventoryWarningWidget);
       cleanup.dispose(controlWidget);
-      for (AssetDescriptor asset : new AssetDescriptor[] {
-          ctrlpnlDescriptor, popbeltDescriptor, overlapDescriptor, hlthmanaDescriptor,
-          invwarnDescriptor, SkilliconDescriptor, levelButtonDescriptor, levelUpSoundDescriptor}) {
-        cleanup.run(() -> assets.unload(asset.fileName));
+      // Some controls may not yet have been attached when construction fails.
+      for (Actor actor : new Actor[] {btnAddStats, btnAddSkills, btnQuestLog, leftSkill,
+          rightSkill, addStatsLabel, addSkillsLabel, questLogLabel, healthWidget, manaWidget,
+          staminaWidget, experienceWidget, inventoryWarningWidget}) {
+        cleanup.run(() -> ActorTree.clear(actor));
       }
-      for (AssetDescriptor asset : CharSkilliconDescriptor) {
-        cleanup.run(() -> assets.unload(asset.fileName));
-      }
+      if (healthWidget != null) cleanup.run(() -> ActorTree.clear(healthWidget.label));
+      if (manaWidget != null) cleanup.run(() -> ActorTree.clear(manaWidget.label));
+      cleanup.run(() -> ActorTree.clear(this));
+      cleanup.dispose(references);
+    } finally {
+      owner = null; world = null; itemController = null; levelUpSound = null;
+      hlthmana = overlap = invwarn = Skillicon = null; popbelt = null; CharSkillicon = null;
+      leftSkill = rightSkill = null; btnAddStats = btnAddSkills = btnQuestLog = null;
+      addStatsLabel = addSkillsLabel = questLogLabel = null;
+      healthWidget = null; manaWidget = null; staminaWidget = null; controlWidget = null;
+      experienceWidget = null; inventoryWarningWidget = null;
     }
   }
 
@@ -595,13 +680,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
       final float x = getX();
       final float y = getY();
       batch.draw(background, x, y);
       
       // 计算 HP 比例并裁剪血条高度（暗黑2中血条是垂直的，从底部向上填充，减少时从顶部裁剪）
-      float currentHP = Riiablo.charData.getStats().get(Stat.hitpoints).asFixed();
-      float maxHP = Riiablo.charData.getStats().get(Stat.maxhp).asFixed();
+      float currentHP = character.getStats().get(Stat.hitpoints).asFixed();
+      float maxHP = character.getStats().get(Stat.maxhp).asFixed();
       float hpRatio = maxHP > 0 ? Math.max(0, Math.min(1, currentHP / maxHP)) : 0;
       
       int fullHeight = health.getRegionHeight();
@@ -648,13 +734,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
       final float x = getX();
       final float y = getY();
       batch.draw(background, x, y);
       
       // 计算 MP 比例并裁剪法力条高度（暗黑2中法力条是垂直的，从底部向上填充，减少时从顶部裁剪）
-      float currentMana = Riiablo.charData.getStats().get(Stat.mana).asFixed();
-      float maxMana = Riiablo.charData.getStats().get(Stat.maxmana).asFixed();
+      float currentMana = character.getStats().get(Stat.mana).asFixed();
+      float maxMana = character.getStats().get(Stat.maxmana).asFixed();
       float manaRatio = maxMana > 0 ? Math.max(0, Math.min(1, currentMana / maxMana)) : 0;
       
       int fullHeight = mana.getRegionHeight();
@@ -701,8 +788,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float a) {
-      if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
-      StatListRef stats = Riiablo.charData.getStats().aggregate();
+      if (!isCurrentSession()) return;
+      if (character == null || character.getStats() == null) return;
+      StatListRef stats = character.getStats().aggregate();
       float current = stats.getValue(Stat.stamina, 0f);
       float maximum = stats.getValue(Stat.maxstamina, 0f);
       float ratio = maximum > 0f ? Math.max(0f, Math.min(1f, current / maximum)) : 0f;
@@ -718,18 +806,18 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
 
     private boolean hasStaminaShrine() {
-      if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) {
+      if (world == null || game() == null || game().player < 0) {
         return false;
       }
-      UnitStates states = Riiablo.engine.getMapper(UnitStates.class)
-          .get(Riiablo.game.player);
+      UnitStates states = world.getMapper(UnitStates.class)
+          .get(game().player);
       return states != null && states.stateList != null
           && states.stateList.hasState(StateId.SHRINE_STAMINA);
     }
   }
 
   private boolean hasVisibleSidePanel() {
-    return Riiablo.game != null && Riiablo.game.hasVisibleSidePanel();
+    return game() != null && game().hasVisibleSidePanel();
   }
 
   /**
@@ -756,8 +844,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
 
     void refresh() {
+      if (!isCurrentSession()) return;
       entries.clear();
-      if (Riiablo.charData == null || Riiablo.charData.getItems() == null) {
+      if (character == null || character.getItems() == null) {
         setVisible(false);
         return;
       }
@@ -765,7 +854,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       InventoryWarning.Entry quantity = null;
       InventoryWarning.Entry[] durabilityByGroup =
           new InventoryWarning.Entry[InventoryWarning.FRAME_GROUPS];
-      for (InventoryWarning.Entry entry : InventoryWarning.collect(Riiablo.charData.getItems())) {
+      for (InventoryWarning.Entry entry : InventoryWarning.collect(character.getItems())) {
         if (entry.kind == InventoryWarning.Kind.QUANTITY) {
           if (isMoreSevere(entry, quantity)) quantity = entry;
         } else if (isMoreSevere(entry, durabilityByGroup[entry.group])) {
@@ -796,7 +885,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
-      if (sprites == null || entries.isEmpty()) return;
+      if (!isCurrentSession() || sprites == null || entries.isEmpty()) return;
       for (int i = 0; i < entries.size(); i++) {
         InventoryWarning.Entry entry = entries.get(i);
         TextureRegion icon = sprites.getTexture(entry.frame);
@@ -821,6 +910,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     // 1x1白色像素纹理用于填充
     private final TextureRegion whitePixel;
     private final Texture whitePixelTexture;
+    private boolean retired;
     private long lastLoggedExperience = Long.MIN_VALUE;
     private int lastLoggedLevel = Integer.MIN_VALUE;
     private long lastLoggedCurrentLevelExp = Long.MIN_VALUE;
@@ -837,15 +927,24 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       // 创建1x1白色像素纹理
       whitePixelTexture = PanelTextures.solid(Color.WHITE);
-      whitePixel = new TextureRegion(whitePixelTexture);
+      try { whitePixel = new TextureRegion(whitePixelTexture); }
+      catch (RuntimeException | Error failure) {
+        try { whitePixelTexture.dispose(); }
+        catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+        throw failure;
+      }
     }
 
     void dispose() {
+      if (retired) return;
+      retired = true;
       whitePixelTexture.dispose();
     }
 
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
+      if (retired) return;
       // Table children can move when the panel is regrouped or the viewport is
       // resized. Re-anchor immediately before drawing as a final safeguard.
       updateExperienceWidgetLayout();
@@ -877,7 +976,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       // 计算经验百分比。经验条没有自己的计数器，始终消费 CharData 的
       // aggregate（服务端同步也会更新该列表），因此不会与战斗经验分叉。
-      if (Riiablo.charData == null || Riiablo.charData.getStats() == null) {
+      if (character == null || character.getStats() == null) {
         if (!missingStatsLogged) {
           Gdx.app.log(TAG, "[XP_BAR] character stats unavailable; drawing empty bar");
           missingStatsLogged = true;
@@ -885,14 +984,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         batch.setColor(Color.WHITE);
         return;
       }
-      StatListRef aggregate = Riiablo.charData.getStats().aggregate();
-      StatListRef base = Riiablo.charData.getStats().base();
+      StatListRef aggregate = character.getStats().aggregate();
+      StatListRef base = character.getStats().base();
       long currentExp = aggregate.getValue(Stat.experience,
           base.getValue(Stat.experience, 0L));
       int currentLevel = aggregate.getValue(Stat.level,
-          Riiablo.charData.level & 0xFF);
+          character.level & 0xFF);
       currentLevel = Math.max(1, Math.min(ExperienceTable.MAX_LEVEL, currentLevel));
-      int charClass = Riiablo.charData.charClass & 0xFF;
+      int charClass = character.charClass & 0xFF;
 
       // 获取当前等级和下一等级所需经验
       long nextLevelExp = getNextLevelExperience(currentLevel, charClass);
@@ -938,6 +1037,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   private class ControlWidget extends WidgetGroup implements Disposable, ItemGrid.GridListener {
+    private final AssetReferenceScope references = new AssetReferenceScope(assets);
+    private boolean retired;
     private static final float RUN_BUTTON_X = 10f;
     private static final float RUN_BUTTON_Y = 10f;
 
@@ -954,14 +1055,23 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     MinipanelWidget minipanelWidget;
 
     Texture background;
-    final BeltGrid belt;
+    BeltGrid belt;
 
     ControlWidget(Texture background) {
       this.background = background;
+      try { initialize(); }
+      catch (RuntimeException | Error failure) {
+        try { dispose(); }
+        catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+        throw failure;
+      }
+    }
+
+    private void initialize() {
       setSize(background.getWidth(), background.getHeight() - 7);
       setTouchable(Touchable.enabled);
 
-      assets.load(runButtonDescriptor);
+      references.load(runButtonDescriptor);
       assets.finishLoadingAsset(runButtonDescriptor);
       DC6 runButton = assets.get(runButtonDescriptor);
       walkStyle = new Button.ButtonStyle(
@@ -970,25 +1080,26 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       runStyle = new Button.ButtonStyle(
           new TextureRegionDrawable(runButton.getTexture(2)),
           new TextureRegionDrawable(runButton.getTexture(3)));
-      btnRun = new Button(walkStyle);
+      btnRun = new SessionButton(walkStyle);
       // The centered 640-wide panel maps this widget's left edge to native x=245;
       // runbutton's native x=255 therefore becomes child-local x=10.
       btnRun.setPosition(RUN_BUTTON_X, RUN_BUTTON_Y);
       btnRun.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          if (Riiablo.game != null) Riiablo.game.toggleRunWalk();
+          if (retired || !isCurrentSession()) return;
+          if (game() != null) game().toggleRunWalk();
         }
       });
       addActor(btnRun);
 
-      assets.load(minipanelDescriptor);
+      references.load(minipanelDescriptor);
       assets.finishLoadingAsset(minipanelDescriptor);
       minipanelWidget = new MinipanelWidget(assets.get(minipanelDescriptor).getTexture(0));
       minipanelWidget.setPosition((getWidth() / 2) - (minipanelWidget.getWidth() / 2), getHeight());
       addActor(minipanelWidget);
 
-      assets.load(menubuttonDescriptor);
+      references.load(menubuttonDescriptor);
       assets.finishLoadingAsset(menubuttonDescriptor);
       menuHidden = new Button.ButtonStyle() {{
         up   = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(0));
@@ -998,22 +1109,27 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         up   = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(2));
         down = new TextureRegionDrawable(assets.get(menubuttonDescriptor).getTexture(3));
       }};
-      btnMenu = new Button(minipanelWidget.isVisible() ? menuShown : menuHidden);
+      btnMenu = new SessionButton(minipanelWidget.isVisible() ? menuShown : menuHidden);
       btnMenu.setPosition((getWidth() / 2) - (btnMenu.getWidth() / 2), 15);
       btnMenu.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (retired || !isCurrentSession()) return;
           boolean visible = !minipanelWidget.isVisible();
           setMinipanelVisible(visible);
         }
       });
       addActor(btnMenu);
 
-      final ItemData itemData = Riiablo.charData.getItems();
+      final ItemData itemData = items;
       IntArray beltItems = itemData.getLocation(Location.BELT);
       Array<Item> items = itemData.toItemArray(beltItems);
 
-      belt = new BeltGrid(4, 4, 31, 31, this);
+      belt = new BeltGrid(4, 4, 31, 31, this) {
+        @Override protected boolean isActive() {
+          return super.isActive() && !retired && isCurrentSession();
+        }
+      };
       belt.setRows(itemData.getBeltRows());
       belt.setBackground(popbelt);
       belt.setPosition(177, 8);
@@ -1024,31 +1140,41 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
 
     void setMinipanelVisible(boolean b) {
+        if (retired || !isCurrentSession()) return;
         btnMenu.setStyle(b ? menuShown : menuHidden);
         minipanelWidget.setVisible(b);
     }
 
     @Override
     public void dispose() {
+      if (retired) return;
+      retired = true;
       try (Disposal cleanup = new Disposal()) {
         cleanup.dispose(btnRun);
         cleanup.dispose(btnMenu);
         cleanup.dispose(minipanelWidget);
+        if (belt != null) cleanup.run(() -> ActorTree.clear(belt));
         cleanup.dispose(belt);
+        cleanup.run(() -> ActorTree.clear(btnRun));
+        cleanup.run(() -> ActorTree.clear(btnMenu));
+        cleanup.run(() -> ActorTree.clear(this));
         cleanup.dispose(background);
-        cleanup.run(() -> assets.unload(runButtonDescriptor.fileName));
-        cleanup.run(() -> assets.unload(minipanelDescriptor.fileName));
-        cleanup.run(() -> assets.unload(menubuttonDescriptor.fileName));
+        cleanup.dispose(references);
+      } finally {
+        btnRun = btnMenu = null; minipanelWidget = null; belt = null; background = null;
+        walkStyle = runStyle = menuHidden = menuShown = null;
       }
     }
 
     @Override
     public void draw(Batch batch, float a) {
-      ItemData itemData = Riiablo.charData.getItems();
+      if (!isCurrentSession()) return;
+      if (retired) return;
+      ItemData itemData = items;
       belt.setRows(itemData.getBeltRows());
       belt.syncItems(itemData.toItemArray(itemData.getLocation(Location.BELT)));
       Button.ButtonStyle desiredRunStyle =
-          Riiablo.game != null && Riiablo.game.isRunModeEnabled() ? runStyle : walkStyle;
+          game() != null && game().isRunModeEnabled() ? runStyle : walkStyle;
       if (btnRun.getStyle() != desiredRunStyle) btnRun.setStyle(desiredRunStyle);
       batch.draw(background, getX(), getY());
       super.draw(batch, a);
@@ -1056,27 +1182,33 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void onDrop(int x, int y) {
+      if (retired || !isCurrentSession() || itemController == null) return;
       itemController.cursorToBelt(x, y);
     }
 
     @Override
     public boolean onPickup(int i) {
+      if (retired || !isCurrentSession() || itemController == null) return false;
       itemController.beltToCursor(i);
       return true;
     }
 
     @Override
     public void onSwap(int i, int x, int y) {
+      if (retired || !isCurrentSession() || itemController == null) return;
       itemController.swapBeltItem(i);
     }
 
     @Override
     public boolean onUse(Item item) {
+      if (retired || !isCurrentSession() || itemController == null) return false;
       itemController.useBeltSlot(item.gridX);
       return true;
     }
 
     private class MinipanelWidget extends WidgetGroup implements Disposable {
+      private final AssetReferenceScope references = new AssetReferenceScope(assets);
+      private boolean retired;
       final AssetDescriptor<DC6> minipanelbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\minipanelbtn.DC6", DC6.class);
 
       Button btnCharacter;
@@ -1091,76 +1223,86 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       TextureRegion background;
       MinipanelWidget(TextureRegion background) {
         this.background = background;
+        try { initialize(); }
+        catch (RuntimeException | Error failure) {
+          try { dispose(); }
+          catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+          throw failure;
+        }
+      }
+
+      private void initialize() {
         setSize(background.getRegionWidth(), background.getRegionHeight());
         //setVisible(false);
 
-        assets.load(minipanelbtnDescriptor);
+        references.load(minipanelbtnDescriptor);
         assets.finishLoadingAsset(minipanelbtnDescriptor);
         ClickListener clickListener = new ClickListener() {
           @Override
           public void clicked(InputEvent event, float x, float y) {
+            if (retired || !isCurrentSession() || game() == null) return;
             Actor actor = event.getListenerActor();
             if (actor == btnCharacter) {
-              Actor panel = Riiablo.game.characterPanel;
-              Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+              Actor panel = game().characterPanel;
+              game().setLeftPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnInventory) {
-              Actor panel = Riiablo.game.inventoryPanel;
-              Riiablo.game.setRightPanel(panel.isVisible() ? null : panel);
+              Actor panel = game().inventoryPanel;
+              game().setRightPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnSkillTree) {
-              Actor panel = Riiablo.game.spellsPanel;
-              Riiablo.game.setRightPanel(panel.isVisible() ? null : panel);
+              Actor panel = game().spellsPanel;
+              game().setRightPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnParty) {
-              Actor panel = Riiablo.game.partyPanel;
-              Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+              Actor panel = game().partyPanel;
+              game().setLeftPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnMap) {
               RenderSystem.toggleAutomap();
             } else if (actor == btnMessages) {
 
             } else if (actor == btnQuests) {
-              Actor panel = Riiablo.game.questsPanel;
-              Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
+              Actor panel = game().questsPanel;
+              game().setLeftPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnEscapeMenu) {
-              if (Riiablo.game.escapePanel.isVisible()) Riiablo.game.escapePanel.close();
-              else Riiablo.game.escapePanel.open();
+              if (game().escapePanel.isVisible()) game().escapePanel.close();
+              else game().escapePanel.open();
             }
           }
         };
-        btnCharacter = new Button(new Button.ButtonStyle() {{
+        btnCharacter = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(0));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(1));
         }});
         btnCharacter.addListener(clickListener);
-        btnInventory = new Button(new Button.ButtonStyle() {{
+        btnInventory = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(2));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(3));
         }});
         btnInventory.addListener(clickListener);
-        btnSkillTree = new Button(new Button.ButtonStyle() {{
+        btnSkillTree = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(4));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(5));
         }});
         btnSkillTree.addListener(clickListener);
-        btnParty = new Button(new Button.ButtonStyle() {{
+        btnParty = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(6));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(7));
         }});
         btnParty.addListener(clickListener);
-        btnMap = new Button(new Button.ButtonStyle() {{
+        btnMap = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(8));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(9));
         }});
         btnMap.addListener(clickListener);
-        btnMessages = new Button(new Button.ButtonStyle() {{
+        btnMessages = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(10));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(11));
         }});
         btnMessages.addListener(clickListener);
-        btnQuests = new Button(new Button.ButtonStyle() {{
+        btnQuests = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(12));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(13));
         }});
         btnQuests.addListener(clickListener);
-        btnEscapeMenu = new Button(new Button.ButtonStyle() {{
+        btnEscapeMenu = new SessionButton(new Button.ButtonStyle() {{
           up   = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(14));
           down = new TextureRegionDrawable(assets.get(minipanelbtnDescriptor).getTexture(15));
         }});
@@ -1182,14 +1324,25 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       @Override
       public void dispose() {
+        if (retired) return;
+        retired = true;
         try (Disposal cleanup = new Disposal()) {
-          cleanup.run(() -> Button.disposeClickSounds(this));
-          cleanup.run(() -> assets.unload(minipanelbtnDescriptor.fileName));
+          for (Button button : new Button[] {btnCharacter, btnInventory, btnSkillTree, btnParty,
+              btnMap, btnMessages, btnQuests, btnEscapeMenu}) {
+            cleanup.dispose(button);
+            cleanup.run(() -> ActorTree.clear(button));
+          }
+          cleanup.run(() -> ActorTree.clear(this));
+          cleanup.dispose(references);
+        } finally {
+          btnCharacter = btnInventory = btnSkillTree = btnParty = null;
+          btnMap = btnMessages = btnQuests = btnEscapeMenu = null; background = null;
         }
       }
 
       @Override
       public void draw(Batch batch, float a) {
+        if (retired || !isCurrentSession()) return;
         batch.draw(background, getX(), getY());
         super.draw(batch, a);
       }

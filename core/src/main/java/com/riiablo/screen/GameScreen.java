@@ -383,7 +383,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     escapePanel = new EscapePanel();
     stage.addActor(escapePanel);
 
-    controlPanel = new ControlPanel();
+    controlPanel = new ControlPanel(this);
     controlPanel.setPosition(stage.getWidth() / 2, 0, Align.bottom | Align.center);
     controlPanel.pack();
     stage.addActor(controlPanel);
@@ -832,6 +832,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hirelingPanel.bindWorld(engine);
     hireMercenaryPanel.bindWorld(engine);
     mercenaryHud.bindWorld(engine);
+    controlPanel.bindWorld(engine);
     engine.inject(inventoryPanel);
     engine.inject(hirelingPanel);
     engine.inject(controlPanel);

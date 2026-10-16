@@ -2061,3 +2061,110 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 下一批优先 ControlPanel 剩余会话回调和动态子控件；完整控件内部尚未返回实例
 的构造失败、连接交接/全局网络接收路由、控制台/Timer/异步日志、跨 Act/加载中
 退出及长期压力验证仍待，资源阶段未结束。人工/Android/性能验收继续单列。
+
+## 2026-10-17 第二十七批：ControlPanel 与嵌套 HUD 控件
+
+ControlPanel 由 GameScreen 显式传入 owner，捕获原 AssetManager / CharData /
+ItemData / Cursor / Audio / 输入宿主，并在世界创建后显式一次绑定 World。
+允许未发布 owner 的构造填充，完成构造后要求当前游戏仍是该 owner；同一世界
+重复绑定无副作用，拒绝换绑，销毁后不重新绑定。保留无参构造，捕获其初始世界，
+不使用无法在当前 Artemis 配置下注入的 @Wire World。
+
+提示按钮、任务日志确认/提示更新、运行切换、迷你菜单全部操作、腰带控制器与
+网格、左右技能的点击/刷新/复制/绘制、面板 act/draw/命中和重新显示均受原
+会话身份限制。保存的 Button 声音按下回调通过 disabled 门禁，不访问新输入
+宿主；体力神殿从绑定世界查询。维持任务确认位、升级提示音、生命/法力/经验/
+体力显示、布局、普通攻击技能 0、快捷键映射、技能禁用规则、菜单路由、腰带
+槽位/用药参数及显示语义，不改 25Hz、协议、存档或暗黑玩法。
+
+父页十五项资源、ControlWidget 三项、MinipanelWidget 一项，各由原 manager 的
+AssetReferenceScope 配对；十九项不包含 Button 既有的独立点击声音引用。经验
+fill、组合背景和腰带 fill 三张私有纹理独立释放，不销毁借用的 DC6、字体、
+物品/属性、控制器或 World。父页及两层嵌套 owner 均支持部分构造回滚，特别
+处理已经返回但尚未挂载的按钮，以及经验纹理已生成后 TextureRegion 构造失败。
+整个退出先禁止输入/渲染，再归还资源并退休控件树，额外清理不在树内的生命/
+法力标签、技能详情和腰带热键标签，清空 owner、世界与控制器等借用引用。
+重复退出无副作用，单项失败仍尝试其余清理，原始构造错误保留、清理错误附加；
+失败清理动作不自动重试。
+
+HotkeyButton 提供 isActive 扩展点，ControlPanel 的两个 observer 使用原会话门禁；
+已销毁按钮不再刷新/映射/复制/绘制，并释放自身声音和控件/详情树，构造内部
+失败也归还声音引用。BeltGrid 的键位回调和绘制改遵循 ItemGrid.isActive，
+ControlPanel 将其限定原 owner；独立退出解绑四个 AssignmentListener，并退休
+不属于 Scene2D 子节点的四个标签。这里不声称其他动态网格/快捷技能 owner 的
+所有移除或重建路径已完成退休，那些边界继续下一批。
+
+### 第二十七批验证
+
+- `build/control-panel-compile.log` 与 `build/control-panel-targeted.log` 保留早期
+  编译诊断：输入宿主类型不匹配，以及新测试的通配导入/StatListRef API/World
+  非 AutoCloseable 夹具问题，均已修正。
+- `build/control-panel-targeted-recheck.log`：当时 23 项专项中 22 项通过，一项
+  因重新 stubbing 字体方法时触发已有 Answer，造成测试夹具递归；改用 doAnswer。
+  随后增加腰带部分标签构造失败和移动端分支退出，共 25 项。
+- `build/control-panel-resources-regression-gl.log` 与 `...-recheck.log`：新增
+  25 项已通过，扩大定向的三个旧部分 mock 未提供新资源作用域/完整 ActorTree
+  清理所需的组和 Actor 状态。更新旧夹具，保留原共享引用、异常继续、重复退出
+  断言；不通过改变生产清理逻辑迎合不完整 mock。
+- `build/control-panel-resources-regression-gl-final.log`：最终代码 34 类 366 项，
+  364 通过、2 跳过（既有佣兵独立环境资源探针），失败/错误 0；core / desktop /
+  D2GS 编译链、三轮真实 MPQ/GL 与最终 ClientShutdown 全部通过，BUILD
+  SUCCESSFUL，3m5s。
+- 新增 25 项使用真实生产 ControlPanel / 嵌套 owner、AssetManager 引用计数与
+  原版数据表，仅拦截私有 Texture 上传。覆盖共享/排队引用、十五个按钮的声音、
+  三张私有纹理、完整树/键位监听清理，早期资产、HotkeyButton 内部、组合背景
+  所属子控件、迷你菜单后期未挂载按钮、腰带部分标签的构造失败，原错误附加
+  清理错误与异常后继续。覆盖角色/游戏/资源/光标/音频/输入/世界替换和销毁后
+  保存点击/声音按下/键位回调及两种 Batch 绘制入口，不触及替代宿主；保留当前
+  菜单/技能/腰带参数、任务确认/升级声音、攻击 0/热键与移动端分支回归。
+- `build/control-panel-resources-gl/cycle-{1,2,3}-lifecycle.txt` 每轮新增验证：
+  ControlPanel 36 控件退休、54 保存点击失效、4 腰带键位监听解绑且保存回调
+  失效、左右技能停止刷新、owner/世界/控制器清空、十九项资产回基线、607 张
+  实际上传的 DC6 采样纹理删除；三张私有纹理仍纳入原 13 张私有纹理检查。
+  保留头像 HUD、雇佣兵页、商店/背包/仓库/金币、Escape、任务/语音、技能、
+  移动 UI、共享框、地图、加载交接与输入的所有前批检查。探针不消费药水或
+  创建真实交互玩法，不代表联机或 Android 平台模拟。
+- 三轮退出资产种类 56/56/57；对比 cycle-2/3-remaining-assets.txt，唯一新增为
+  `data/global/sfx/ambient/footstep/MedDirt3.wav`，Sound refs=1，符合既有 Audio
+  宿主懒缓存路径。最终 ClientShutdown assets=0；只证明本轮采样引用/纹理和
+  退出检查通过，不代表全进程零滞留或长期压力通过。仍有
+  48.23–79.70ms 慢帧超过 40ms 预算，人工观感/听感/输入、联机、Android
+  真机及性能验收均未完成。
+
+定向复跑（需要原版数据表，无真实 GL，拦截私有上传）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.ControlPanelLifecycleTest `
+  --tests com.riiablo.screen.panel.PanelResourceLifecycleTest --no-daemon
+```
+
+扩大定向与三轮真实资源复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/control-panel-resources-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/control-panel-resources-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+总体七批子系统装配整理完成，资源阶段推进至第二十七批但未结束。下一批优先
+动态 ItemGrid / 快捷技能条目移除或重建时的退休边界；其他完整控件内部尚未
+返回实例的构造失败、连接交接/全局网络路由、控制台/Timer/异步日志、跨 Act/
+加载中退出及长压仍待。未扩大或重写全局网络接收路由，不能宣称完整网络隔离。

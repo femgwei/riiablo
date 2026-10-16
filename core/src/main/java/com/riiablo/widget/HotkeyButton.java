@@ -15,6 +15,9 @@ import com.riiablo.item.Item;
 import com.riiablo.save.ItemData;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
+import com.riiablo.util.ActorTree;
+import com.riiablo.util.Disposal;
+import com.riiablo.graphics.PaletteIndexedBatch;
 
 public class HotkeyButton extends Button {
   MappedKey mapping;
@@ -28,6 +31,7 @@ public class HotkeyButton extends Button {
   private String displayedQuantity;
   /** Quick-selection grids tint only native weapon/ammunition restrictions. */
   private boolean weaponRestrictionOnly;
+  private boolean disposed;
 
   public HotkeyButton(final DC dc, final int index, int skillId) {
     this(dc, index, skillId, null);
@@ -41,22 +45,47 @@ public class HotkeyButton extends Button {
       pressedOffsetX = pressedOffsetY = -2;
     }});
 
-    this.skillId = skillId;
-    this.chargedSkill = chargedSkill;
-    this.details = new SkillDetails(skillId, chargedSkill);
-    add(hotkey = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold)).align(Align.topRight);
-    row();
-    add().grow();
-    row();
-    add(charges = new Label(chargedSkill != null ? Integer.toString(chargedSkill.value0()) : "", Riiablo.fonts.font16, Riiablo.colors.blue)).align(Align.bottomLeft);
-    pad(2);
-    pack();
+    try {
+      this.skillId = skillId;
+      this.chargedSkill = chargedSkill;
+      this.details = new SkillDetails(skillId, chargedSkill);
+      add(hotkey = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold)).align(Align.topRight);
+      row();
+      add().grow();
+      row();
+      add(charges = new Label(chargedSkill != null ? Integer.toString(chargedSkill.value0()) : "", Riiablo.fonts.font16, Riiablo.colors.blue)).align(Align.bottomLeft);
+      pad(2);
+      pack();
 
-    setDisabledBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenRed);
-    refreshDisabled();
+      setDisabledBlendMode(BlendMode.DARKEN, Riiablo.colors.darkenRed);
+      refreshDisabled();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  /** HUD owners may retire the button when its captured session is replaced. */
+  protected boolean isActive() { return !disposed; }
+
+  @Override public boolean isDisabled() { return !isActive() || super.isDisabled(); }
+
+  @Override public void dispose() {
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(super::dispose);
+      cleanup.run(() -> ActorTree.clear(details));
+      cleanup.run(() -> ActorTree.clear(this));
+    } finally {
+      mapping = null; chargedSkill = null;
+      if (details != null) details.setSkill(-1, null);
+    }
   }
 
   public void map(MappedKey mapping) {
+    if (!isActive()) return;
     this.mapping = mapping;
     hotkey.setText(Input.Keys.toString(mapping.getPrimaryAssignment()));
   }
@@ -74,6 +103,7 @@ public class HotkeyButton extends Button {
    * red, while temporary cast failures such as town or low mana stay white.
    */
   public void setWeaponRestrictionOnly(boolean weaponRestrictionOnly) {
+    if (!isActive()) return;
     this.weaponRestrictionOnly = weaponRestrictionOnly;
     refreshDisabled();
   }
@@ -87,6 +117,7 @@ public class HotkeyButton extends Button {
    * observer and the quick-skill panel without requiring a second event bus.
    */
   public boolean refreshDisabled() {
+    if (!isActive()) return true;
     boolean disabled = skillId < 0 || Riiablo.charData == null;
     String reason = disabled ? (skillId < 0 ? "unassigned" : "no_char_data") : "";
     String quantityText = chargedSkill != null ? Integer.toString(chargedSkill.value0()) : "";
@@ -199,6 +230,7 @@ public class HotkeyButton extends Button {
   }
 
   public void copy(HotkeyButton other) {
+    if (!isActive() || other != null && !other.isActive()) return;
     if (other == null) {
       setDisabled(true);
       return;
@@ -216,11 +248,16 @@ public class HotkeyButton extends Button {
 
   @Override
   public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
+    if (!isActive()) return;
     refreshDisabled();
     super.draw(batch, parentAlpha);
     if (skillId >= 0 && isOver() && Riiablo.game != null && getParent() != null) {
       details.refresh();
       Riiablo.game.setDetails(details, null, getParent(), this);
     }
+  }
+
+  @Override public void draw(PaletteIndexedBatch batch, float parentAlpha) {
+    if (isActive()) super.draw(batch, parentAlpha);
   }
 }

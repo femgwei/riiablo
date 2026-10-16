@@ -15,6 +15,7 @@ import com.riiablo.item.Type;
 import com.riiablo.key.MappedKey;
 import com.riiablo.widget.Label;
 import com.riiablo.util.Disposal;
+import com.riiablo.util.ActorTree;
 
 /**
  * FIXME: creating BeltGrid without setHidden(true) in constructor causes items to appear starting
@@ -45,13 +46,13 @@ public class BeltGrid extends ItemGrid {
       MappedKey.AssignmentListener listener = assignments[i] = new MappedKey.AssignmentListener() {
         @Override
         public void onAssigned(MappedKey key, int assignment, int keycode) {
-          if (isDisposed()) return;
+          if (!isActive()) return;
           hotkey.setText(Input.Keys.toString(key.getPrimaryAssignment()));
         }
 
         @Override
         public void onUnassigned(MappedKey key, int assignment, int keycode) {
-          if (isDisposed()) return;
+          if (!isActive()) return;
           hotkey.setText("");
         }
 
@@ -76,7 +77,9 @@ public class BeltGrid extends ItemGrid {
       for (int i = 0; i < assignments.length; i++) {
         final int slot = i;
         cleanup.run(() -> Keys.Belt[slot].removeAssignmentListener(assignments[slot]));
+        cleanup.run(() -> ActorTree.clear(hotkeys[slot]));
         assignments[i] = null;
+        hotkeys[i] = null;
       }
       background = null; // borrowed from ControlPanel
     }
@@ -143,7 +146,7 @@ public class BeltGrid extends ItemGrid {
 
   @Override
   public void draw(Batch batch, float parentAlpha) {
-    if (isDisposed()) return;
+    if (!isActive()) return;
     setHidden(!clickListener.isOver());
     if (!hidden) {
       float x = getX() - 1;
