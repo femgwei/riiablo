@@ -61,16 +61,35 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 验证：`ObjectDifferencesTest` 五项，加第一批四项，共九项/两类；
 日志 `core/build/upstream-visitor-01.log`，XML `.gradle/path-port/upstream-visitor-01/core/test-results/pathPortTest`。
 以上是测试基础设施的Java适配，未执行原DLL差分，未改变生产游戏逻辑或精确回归断言。
-主线初步审查：MonStats三套Java表使用字符串missile引用；Missiles.Accel为int，
-仍需关联实际加载/发射/速度调用与回归再核销 `185ae45` / `4d45674`；`606dce4` 仍待追踪唯一掉落状态。
+主线数据字段及边界已完成本批审查，结论、调用证据与能力缺口见下方第1组。
 
 ## 剩余工作，按优先级核销
 
 ### 1. 数据符号与边界
 
-- `185ae45`：MonStats missile字段的有符号语义，核对加载、缺失值与实际发射调用。
-- `4d45674`：Missiles.Accel有符号语义，核对解析及速度计算。
-- `606dce4`：unique-drop位图4095/4096边界。Java结构可能不同，按语义核销。
+- `185ae45`：当前实现已等价（本提交的空值/符号问题）。
+  `codec/excel/MonStats.Entry`、`table/schema/MonStats`、`excel/txt/MonStats`八个Miss字段均为String，
+  `NativeMonStats.SCHEMA`也保留String，不经过uint16 ID转换，不会把缺失值-1变成65535。
+  生产 `Actioneer.spawnMonsterAttackMissile`（约6300行）对A1/A2空值返回false，查表失败也返回false；
+  `hasMonsterAttackMissile`使用hasText判空。现有A1/A2互相fallback策略不由本次类型修正改变。
+  回归 `UpstreamDataBoundaryTest` 对真实1.10f MPQ与运行时八列逐行比较，并验证空白及命名fixture。
+- `4d45674`：当前实现已等价（字段符号修正）；生产加速度能力仍待修复/实现。
+  `codec/excel/Missiles.Entry.Accel`及`table/schema/Missiles.Accel`为有符号int，
+  `NativeMissiles`/`LosslessTxtTable.getNativeInt`保留负数，无unsigned mask。
+  回归验证-32768/-1/0/32767/空白，并对真实MPQ与运行时Accel逐行比较。
+  **不能宣称速度行为等价**：全生产源码无`.Accel`读取；`ServerEntityFactory.createMissile`
+  当前由Vel与Slow Missiles计算初速（约1330行），`MissileData.acceleration`仅声明/重置。
+  本提交仅改C++成员类型，Java无需重复类型补丁；接入完整加速度不是这个字段修正的默认范围。
+- `606dce4`：原生位图越界修正不适用当前Java结构；唯一掉落去重能力待修复。
+  上游`ITEMS_HasUniqueBeenDroppedAlready`把`>4096`改为`>=4096`，保护128个uint32位图；
+  Java没有对应固定4096位表或按unique ID位移访问，无法触发该4096越界。
+  生产`item/ItemGenerator.findUnique`按code/level/enabled筛候选，
+  `engine/server/item/LootManager`按TC选择品质，均无game级already-dropped/nolimit检查。
+  不添加未接线的假位图或把“没有越界”宣称为“已有唯一掉落去重”。
+
+本批证据：新增`core/src/test/java/com/d2moo/testutil/UpstreamDataBoundaryTest.java`四项；
+日志`core/build/upstream-data-01.log`，XML `.gradle/path-port/upstream-data-01/core/test-results/pathPortTest`。
+这些结论仅核销上述增量问题；未完成的加速度/唯一去重作为明确能力差距保留，不重写生产系统。
 
 ### 2. 目标选择与动画速度
 
@@ -141,10 +160,10 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `e36bc70` Gate the path solve's target room check on >= 1.13 — 版本门槛待核销；不把后版本规则引入1.10f
 - `c64028e` Move the charged-skill lookup gate down to 1.11 — 版本门槛待核销；不把后版本规则引入1.10f
 - `509c4ce` Skip charged skills in SKILLS_GetHighestLevelSkillFromSkillId on 1.14 — 版本门槛待核销；不把后版本规则引入1.10f
-- `185ae45` Make MonStats.txt missile columns signed — 待逐项核销；不能据此断言当前代码缺失
+- `185ae45` Make MonStats.txt missile columns signed — 当前实现已等价；String空值及真实运行时八列回归见第1组
 - `45b2f0c` Seed quill rat spread with the unit id — 有移植记录；最终验收需关联生产代码与测试
 - `9a701ba` Reject out-of-range upgraded missiles in SKILLS_SrvDo085 — 有移植记录；最终验收需关联生产代码与测试
-- `4d45674` Make D2MissilesTxt::wAccel signed — 待逐项核销；不能据此断言当前代码缺失
+- `4d45674` Make D2MissilesTxt::wAccel signed — 字段符号已等价；生产加速度缺口另记第1组
 - `8b424dc` Cap charged bolt lifetime before truncating it to a byte — 有移植记录；最终验收需关联生产代码与测试
 - `47687ce` Reject out-of-range sizes in D2Common_11281_CollisionPatternFromSize — 有移植记录；最终验收需关联生产代码与测试
 - `615b204` Send a unit target from sub_6FC65C70 unless the path is circling — 待逐项核销；不能据此断言当前代码缺失
@@ -207,7 +226,7 @@ Java适用能力集中于测试专用 `core/src/test/java/com/d2moo/testutil/Obj
 - `bc817e7` More 1.11 offsets — 待逐项核销；不能据此断言当前代码缺失
 - `a73bb2e` Add 1.11 D2DrlgStrc reorder. — 待逐项核销；不能据此断言当前代码缺失
 - `0ebe9ce` Add various 1.11 addresses — 待逐项核销；不能据此断言当前代码缺失
-- `606dce4` fix: Fix OOB write — 待逐项核销；不能据此断言当前代码缺失
+- `606dce4` fix: Fix OOB write — 原生位图修正不适用；Java缺game级唯一掉落去重，见第1组
 - `833ccb4` feat: More drive by renames — 待逐项核销；不能据此断言当前代码缺失
 - `4e39cbc` Add 1.14d references — 待逐项核销；不能据此断言当前代码缺失
 - `f13a6fb` Another fix part 5 — 待逐项核销；不能据此断言当前代码缺失

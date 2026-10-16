@@ -49,9 +49,14 @@ XML `.gradle/path-port/upstream-visitor-01/core/test-results/pathPortTest`。
 逐提交归类和Java差异见权威剩余清单第二批章节。
 身份对去重是安全改进，不复制单侧指针去重；无原DLL调用，无生产逻辑变更。
 
-下一步回主线101项逐项核销。已初读 `185ae45` / `4d45674` / `606dce4` diff，
-MonStats使用String missile引用、Missiles.Accel为int；尚未完成实际加载/调用回归证据，勿直接宣称已核销。
-先追踪这些数据实际使用及唯一掉落状态，不扩展完整寻路迁移。
+主线数据组 `185ae45` / `4d45674` / `606dce4` 已完成本批适用性审查：
+MonStats String空值及Accel有符号int与增量修正等价，原生固定4096位图越界不适用当前结构。
+新增 `UpstreamDataBoundaryTest` 四项通过（失败/错误/跳过0），包括实际1.10f MPQ与运行时逐行加载比对；
+日志 `core/build/upstream-data-01.log`，XML `.gradle/path-port/upstream-data-01/core/test-results/pathPortTest`。
+生产没有读取Accel，也没有game级唯一掉落去重/nolimit检查，这是保留的能力缺口，不能误报行为等价。
+代码/调用依据详见剩余清单第1组。没有为字段符号修正新建完整加速度或掉落系统。
+下一步进入第2组目标选择/动画速度：先读 `615b204` / `5be5503` / `b634ef7` / `cce700b` diff，
+追踪Java生产目标消息、owner链和target slots；只修确认差异，不扩展完整寻路迁移。
 
 ## VisitorFramework九项源码索引（已读）
 
