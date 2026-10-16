@@ -2,7 +2,6 @@ package com.riiablo.engine.server.party;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
-import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.attributes.Attributes;
@@ -12,16 +11,20 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import java.util.Objects;
 
 /** Keeps PartyMember snapshots synchronized with the authoritative ECS player. */
 @All({Player.class, Position.class, AttributesWrapper.class, MapWrapper.class})
 public class PartyMemberSyncSystem extends IteratingSystem {
-  @Wire(name = "partyManager")
-  protected PartyManager partyManager;
+  private final PartyManager partyManager;
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+
+  public PartyMemberSyncSystem(PartyManager partyManager) {
+    this.partyManager = Objects.requireNonNull(partyManager, "partyManager");
+  }
 
   @Override
   protected void process(int entityId) {

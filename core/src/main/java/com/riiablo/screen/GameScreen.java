@@ -819,7 +819,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
     EnvironmentCycle environment = new EnvironmentCycle();
     simulationSession = new SimulationSession(
-        socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT, map, environment);
+        socket == null ? SimulationMode.LOCAL : SimulationMode.REMOTE_CLIENT,
+        map, environment, partyManager);
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -831,7 +832,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("factory", factory)
         .register("itemController", itemController)
         .register("townPortalRegistry", townPortalRegistry)
-        .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("batch", Riiablo.batch)
@@ -955,11 +955,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // Local games dispatch authoritative DeathEvent in this world. Without
       // the reward subscriber, XP still advances but no monster drop is ever
       // rolled or materialized. Network clients receive D2GS-created items.
-      builder.with(new DeathRewardSystem());
+      builder.with(new DeathRewardSystem(simulationSession.partyManager()));
       builder.with(SimulationSystemGroups.worldObjectEffects(null));
       builder.with(new VendorGenerator());
       builder.with(SimulationSystemGroups.roomPopulation(false));
-      builder.with(new com.riiablo.engine.server.party.PartyMemberSyncSystem());
+      builder.with(new com.riiablo.engine.server.party.PartyMemberSyncSystem(
+          simulationSession.partyManager()));
     } else {
       builder.with(new ItemGenerator()); // TODO: #89
       builder.with(new VendorGenerator()); // TODO: #89
@@ -1011,7 +1012,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(mode.createVelocityModeChanger())
 
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
-        .with(new ExperienceManager())
+        .with(new ExperienceManager(simulationSession.partyManager()))
         .with(new PlayerCorpseRetrievalSystem())
 
         .with(new ZoneChangeTracker())

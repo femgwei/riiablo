@@ -61,9 +61,11 @@ class LootDropProbeTest extends RiiabloTest {
     MathUtils.random.setSeed(0x4C4F4F54L);
     DropFactory factory = new DropFactory();
     EventSystem events = new EventSystem();
-    ExperienceManager experience = new ExperienceManager();
+    com.riiablo.engine.server.party.PartyManager parties =
+        new com.riiablo.engine.server.party.PartyManager();
+    ExperienceManager experience = new ExperienceManager(parties);
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, experience, new DeathRewardSystem(), new ItemGenerator(), factory)
+        .with(events, experience, new DeathRewardSystem(parties), new ItemGenerator(), factory)
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));
@@ -142,9 +144,11 @@ class LootDropProbeTest extends RiiabloTest {
     Riiablo.gameSeed = 0x51000000 + difficulty;
     DropFactory factory = new DropFactory();
     EventSystem events = new EventSystem();
-    ExperienceManager experience = new ExperienceManager();
+    com.riiablo.engine.server.party.PartyManager parties =
+        new com.riiablo.engine.server.party.PartyManager();
+    ExperienceManager experience = new ExperienceManager(parties);
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, experience, new DeathRewardSystem(), new ItemGenerator(), factory)
+        .with(events, experience, new DeathRewardSystem(parties), new ItemGenerator(), factory)
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));

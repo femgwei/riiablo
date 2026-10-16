@@ -1,5 +1,41 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第四批：队伍与死亡奖励依赖
+
+- [x] `SimulationSession` 新增宿主 PartyManager 绑定；保留同实例 partyManager
+  别名。两端显式向 PartyMemberSyncSystem、ExperienceManager、DeathRewardSystem
+  传入会话队伍管理器，三个系统不再靠字符串注入该依赖；空参数提前拒绝。
+  移除仓库内未使用的 ExperienceManager.setPartyManager，固定解析器与系统引用。
+- [x] 正常单机/服务端/联网客户端注册条件不变；无队伍夹具显式使用空管理器。
+  还原构造参数后，两端装配方法与 `ce1e7d6a5` 除空白外一致。经验/掉落公式、
+  RNG、Tick 顺序、协议、存档与资源释放不变，未全面清理权威逻辑全局依赖。
+- [x] 新增 3 项实际奖励 ECS 回归（本地/服务端双世界、冲突别名），验证同 ID
+  不同队伍、67/67 对比 100/0 经验、同级掉落资格、重复事件、实时退队和掉落实体
+  归属元数据；更新上下文身份/别名/缺参测试和 5 个调用夹具。
+  固定经验期望核对 D2MOO SUnitDmg.cpp 的组队加成，不修改公式。
+- [x] 定向 89 项/12 类通过，失败/错误/跳过均 0；core、desktop、D2GS 编译通过。
+  包含克隆不奖励、实际致死→经验/升级/掉落/复活链、队伍同步和既有装配/模式回归。
+  首次运行 11 项巴尔克隆夹具在 WarpInteractor 注入时失败；对照改造前源码同样缺少
+  TownPortalRegistry 绑定。本批仅补测试夹具真实依赖、未改断言或生产 WarpInteractor，
+  重跑 12 项克隆测试全部通过；未以首次失败结果冒充通过。
+- [x] 真实 1.10f 营地 1x1 三帧 PASS；D2GS 固定 Tick（step=0.04）、Throw
+  导弹生命周期/顺序及 1000→992 伤害通过。双 TCP 客户端死亡幂等专项通过：
+  自然击杀后重放 2 次 DeathEvent，claims=3、xp=49、groundItems=0 保持稳定。
+  该场没有地面物品，不用它声称网络掉落创建已验收；物品元数据由上述 ECS 测试覆盖。
+  本次日志未发现 ERROR/Exception；保留 level0/DrlgType0、Java object 分配回退、
+  entity118 出生重定位以及刻意重复事件被拒绝的 WARN，未屏蔽或宣称无警告。
+- 证据日志：`build/simulation-party-compile-test.log`（首次 78/89）、
+  `build/simulation-party-compile-test-02.log`（89/89 与三端编译）；
+  `build/simulation-party-real-resource.log`（四项资源任务）；营地 manifest 为
+  `build/simulation-party-camp/rogue-encampment-manifest.txt`。
+  奖励集成 XML：`core/build/test-results/test/TEST-com.riiablo.engine.server.DeathRewardIntegrationTest.xml`。
+- 范围限制：仅本组 PartyManager/ECS 奖励数据隔离，GroundDropOwnership 静态缓存、
+  表资源及 Riiablo.gameSeed 等全局依赖尚在，不声称完整双会话并行拾取或游戏隔离。
+  第一批投掷专精差异、佣兵夹具缺失和 Den 日志问题未修复，人工验收仍待。
+- 整体进度：已完成四批；后续暂定客户端依赖隔离、生命周期收口、入口清理/综合回归
+  三个阶段，复杂阶段可继续细拆；不是原版行为对齐完成率。
+  边界详见 [simulation-system-assembly.md](simulation-system-assembly.md)。
+
 ## 2026-10-16 子系统装配第三批：最小会话上下文
 
 - [x] 新增 `SimulationSession`，仅绑定 mode / map / environment 三项。

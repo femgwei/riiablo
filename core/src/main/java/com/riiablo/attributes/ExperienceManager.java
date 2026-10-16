@@ -1,5 +1,6 @@
 package com.riiablo.attributes;
 
+import java.util.Objects;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -54,9 +55,8 @@ public class ExperienceManager extends PassiveSystem {
 
   private ExperienceTable expTable;
   
-  /** 队伍管理器（可选注入） */
-  @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
-  private PartyManager partyManager;
+  /** Session-owned parties; an empty manager preserves the solo path. */
+  private final PartyManager partyManager;
   private com.artemis.ComponentMapper<Player> mPlayer;
   private com.artemis.ComponentMapper<Mercenary> mMercenary;
   private com.artemis.ComponentMapper<SummonedPet> mSummonedPet;
@@ -103,7 +103,8 @@ public class ExperienceManager extends PassiveSystem {
   private static final int PARTY_EXP_BONUS_NUMERATOR = 89;
   private static final int PARTY_EXP_BONUS_DENOMINATOR = 256;
 
-  public ExperienceManager() {
+  public ExperienceManager(PartyManager partyManager) {
+    this.partyManager = Objects.requireNonNull(partyManager, "partyManager");
     expTable = ExperienceTable.getInstance();
   }
 
@@ -115,15 +116,6 @@ public class ExperienceManager extends PassiveSystem {
         mPlayer, mMercenary, mSummonedPet, mMapWrapper, mPosition, partyManager);
     hirelingExperience = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
     mercenaryRewards = world.getSystem(NativeMercenaryRewardSystem.class);
-  }
-
-  /**
-   * 设置队伍管理器（用于组队经验分配）
-   * 
-   * @param partyManager 队伍管理器实例
-   */
-  public void setPartyManager(PartyManager partyManager) {
-    this.partyManager = partyManager;
   }
 
   @Subscribe

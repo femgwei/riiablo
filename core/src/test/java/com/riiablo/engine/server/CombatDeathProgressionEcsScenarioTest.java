@@ -40,6 +40,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -60,12 +61,13 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
     MathUtils.random.setSeed(0xD34D1234L);
     EventSystem events = new EventSystem();
     Probe probe = new Probe();
-    ExperienceManager experience = new ExperienceManager();
+    PartyManager parties = new PartyManager();
+    ExperienceManager experience = new ExperienceManager(parties);
     LootFactory factory = new LootFactory();
     DeathHandler death = new DeathHandler();
     CofManager cofs = new CofManager();
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, probe, experience, new DeathRewardSystem(), new ItemGenerator(),
+        .with(events, probe, experience, new DeathRewardSystem(parties), new ItemGenerator(),
             cofs, death, new PlayerCorpseRetrievalSystem(), factory,
             new MissileCollisionSystem())
         .build()

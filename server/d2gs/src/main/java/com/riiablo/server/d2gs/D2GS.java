@@ -6165,7 +6165,8 @@ public class D2GS extends ApplicationAdapter {
     mapManager = new MapManager();
     sync = new NetworkSynchronizer();
     combatPositionHistory = new CombatPositionHistory(map);
-    SimulationSession session = new SimulationSession(SimulationMode.DEDICATED_SERVER, map, environment);
+    SimulationSession session = new SimulationSession(
+        SimulationMode.DEDICATED_SERVER, map, environment, partyManager);
     SimulationMode mode = session.mode();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
@@ -6201,7 +6202,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ServerPlayerDeathSystem())
         .with(new PlayerCorpseRetrievalSystem())
         .with(mode.createServerSkillSystem())
-        .with(new DeathRewardSystem())
+        .with(new DeathRewardSystem(session.partyManager()))
         // Apply a newly queued attack mode before advancing animation. If the
         // old neutral animation wraps first, its Finished event can otherwise
         // consume the fresh attack sequence before the attack keyframe runs.
@@ -6209,8 +6210,8 @@ public class D2GS extends ApplicationAdapter {
         .with(SimulationSystemGroups.objectCollision())
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
-        .with(new ExperienceManager())
-        .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem())
+        .with(new ExperienceManager(session.partyManager()))
+        .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem(session.partyManager()))
 
         .with(new VendorGenerator())
         .with(SimulationSystemGroups.roomPopulation(Boolean.getBoolean("riiablo.d2gs.aiTour")))
@@ -6234,7 +6235,6 @@ public class D2GS extends ApplicationAdapter {
         .register("factory", factory)
         .register("player", player)
         .register("outPackets", outPackets)
-        .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("townPortalRegistry", townPortalRegistry)

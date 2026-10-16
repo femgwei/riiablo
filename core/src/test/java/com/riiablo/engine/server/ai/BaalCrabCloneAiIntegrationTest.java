@@ -336,11 +336,14 @@ class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
       when(map.getZone(any(Vector2.class))).thenReturn(zone);
       when(zone.areRoomsAdjacent(anyFloat(), anyFloat(), anyFloat(), anyFloat())).thenReturn(true);
       when(paths.findPath(anyInt(), any(), anyBoolean(), anyInt())).thenReturn(true);
+      com.riiablo.engine.server.party.PartyManager parties =
+          new com.riiablo.engine.server.party.PartyManager();
       world = new World(new WorldConfigurationBuilder()
-          .with(events, probe, new ExperienceManager(), new DeathRewardSystem(), new ItemGenerator(),
+          .with(events, probe, new ExperienceManager(parties), new DeathRewardSystem(parties), new ItemGenerator(),
               new ItemManager(), new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(),
               new Pathfinder(), new CofManager(), factory)
-          .build().register("factory", factory).register("map", map));
+          .build().register("factory", factory).register("map", map)
+          .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry()));
       Riiablo.engine = world;
       playerData = CharData.obtain().clear().set(Riiablo.NORMAL, false, "CloneTest", Riiablo.AMAZON);
       playerData.getStats().base().put(Stat.level, 1);

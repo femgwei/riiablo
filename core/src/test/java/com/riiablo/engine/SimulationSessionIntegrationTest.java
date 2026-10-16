@@ -15,6 +15,7 @@ import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.EnvironmentObjectSystem;
 import com.riiablo.engine.server.EnvironmentSystem;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
@@ -146,7 +147,7 @@ class SimulationSessionIntegrationTest {
   }
 
   private static SimulationSession session(SimulationMode mode, Map map) {
-    return new SimulationSession(mode, map, new EnvironmentCycle());
+    return new SimulationSession(mode, map, new EnvironmentCycle(), new PartyManager());
   }
 
   private static World clockWorld(SimulationSession session) {

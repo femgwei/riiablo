@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import com.artemis.Aspect;
@@ -65,8 +66,7 @@ public class DeathRewardSystem extends PassiveSystem {
   @Wire(name = "factory")
   protected EntityFactory factory;
 
-  @Wire(name = "partyManager", failOnNull = false)
-  protected PartyManager partyManager;
+  private final PartyManager partyManager;
 
   /** ItemGenerator is registered as a world system by D2GS. */
   protected ItemGenerator itemGenerator;
@@ -74,6 +74,10 @@ public class DeathRewardSystem extends PassiveSystem {
   private final LootManager lootManager = new LootManager();
   private EntitySubscription players;
   private KillCreditResolver killCredits;
+
+  public DeathRewardSystem(PartyManager partyManager) {
+    this.partyManager = Objects.requireNonNull(partyManager, "partyManager");
+  }
 
   @Override
   protected void initialize() {

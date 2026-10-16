@@ -21,7 +21,7 @@ class PartyManagerRuntimeTest extends RiiabloTest {
   void authoritativePlayerSnapshotFeedsPartyMemberState() {
     PartyManager parties = new PartyManager();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new PartyMemberSyncSystem())
+        .with(new PartyMemberSyncSystem(parties))
         .build()
         .register("partyManager", parties));
     try {
