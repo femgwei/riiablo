@@ -1,0 +1,62 @@
+diff --git a/core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java b/core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+index 5a68bcccb..b6ab81587 100644
+--- a/core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
++++ b/core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+@@ -875,6 +875,10 @@ public class ServerSkillSystem extends PassiveSystem {
+       spawnAssassinShockField(event, skill, skillLevel, start);
+       return;
+     }
++    if (event.srvdofunc == 99 || skill.srvdofunc == 99) {
++      spawnPrimePoisonNova(event, skill, start, skillLevel);
++      return;
++    }
+     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
+       if (isDruidFissure(skill)) {
+         spawnDruidFissure(event, skill, start);
+@@ -2503,6 +2507,46 @@ public class ServerSkillSystem extends PassiveSystem {
+         state != null ? state.duration : 0);
+   }
+
++  /** Native SrvDo099: eight even offsets, then odd offsets at Calc2 spacing. */
++  private void spawnPrimePoisonNova(
++      SkillDoEvent event, Skills.Entry skill, Vector2 start, int level) {
++    Missiles.Entry row = hasText(skill.srvmissilea)
++        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
++    if (row == null) return;
++    int[] x = {0, 1, 2, 2, 2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1};
++    int[] y = {2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1, 0, 1, 2, 2};
++    int loops = SkillFormula.evaluate(skill.calc1, skill, level);
++    int step = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, level));
++    for (int i = 0; i < 16; i += 2) {
++      createPrimePoisonCloud(event, skill, row, start, level, loops, x[i], y[i], 0);
++    }
++    if (step > 1) {
++      for (int i = 0; i < 15; i += step) {
++        createPrimePoisonCloud(event, skill, row, start, level, loops, x[i + 1], y[i + 1], 1);
++      }
++    }
++  }
++
++  private void createPrimePoisonCloud(SkillDoEvent event, Skills.Entry skill,
++      Missiles.Entry row, Vector2 start, int level, int loops, int x, int y, int ring) {
++    Vector2 direction = new Vector2(x, y).nor();
++    int id = createMissile(row, direction, start, event.entityId, null, level);
++    if (id < 0 || !mMissile.has(id)) return;
++    Missile cloud = mMissile.get(id);
++    cloud.skillId = skill.Id;
++    cloud.damageLevel = level;
++    cloud.poisonCloudLoops = loops;
++    cloud.poisonCloudTarget.set(start).add(x, y);
++    cloud.poisonCloudTraveling = true;
++    // Native flags 0x1F keep Param[ring]<<6 precise velocity; the server
++    // stores table velocity units (the default native velocity is Vel<<8).
++    float speed = firstParam(row.Param, ring, 0) / 4f;
++    int slow = ServerEntityFactory.slowMissileVelocityPercent(row, stateList(event.entityId));
++    if (slow > 0) speed = speed * slow / 100f;
++    if (mVelocity.has(id)) mVelocity.get(id).velocity.set(direction).scl(speed);
++    initializeSkillDamage(id, skill, event.entityId, level);
++  }
++
+   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
+     // SKILLS_GetProgressiveSkillMissileId falls back to SrvMissileA. The
+     // currently routed SrvDo022 class skills are non-progressive; progressive
