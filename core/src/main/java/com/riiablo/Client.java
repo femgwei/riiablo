@@ -135,6 +135,7 @@ public class Client extends Game {
   private D2                    anim;
   private Metrics               metrics;
   private GdxLoggerManager      logs;
+  private AsyncOutputStreamAppender asyncAppender;
 
   private boolean forceWindowed;
   private boolean forceDrawFps;
@@ -330,7 +331,8 @@ public class Client extends Game {
     try {
       System.setOut(console.out);
       System.setErr(console.out);
-      registry.getRoot().addAppender(new AsyncOutputStreamAppender(System.out));
+      asyncAppender = new AsyncOutputStreamAppender(System.out);
+      registry.setRootAppender(asyncAppender);
     } catch (SecurityException e) {
       console.out.println("stdout could not be redirected to console: " + e.getMessage());
       throw new GdxRuntimeException("Unable to bind console out.", e);
@@ -789,6 +791,7 @@ public class Client extends Game {
       cleanup.run(() -> { if (logs != null) logs.saveAll(); });
       cleanup.run(() -> { if (cvars != null) reportSaveFailures(cvars.saveAll()); });
       cleanup.run(() -> { if (keys != null) reportSaveFailures(keys.saveAll()); });
+      cleanup.run(() -> { if (asyncAppender != null) asyncAppender.dispose(); });
       // All screens save/retire while their borrowed host resources are valid.
       cleanup.dispose(console);
       cleanup.dispose(shapes);

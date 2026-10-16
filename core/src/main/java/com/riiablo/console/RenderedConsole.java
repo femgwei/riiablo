@@ -60,6 +60,31 @@ public class RenderedConsole extends Console implements Disposable, InputProcess
   private static final float CARET_HOLD_DELAY  = 1.0f;
   private Timer.Task caretBlinkTask;
   private boolean showCaret;
+  private boolean disposed;
+  private final Cvar.StateListener<String> fontListener = new CvarStateAdapter<String>() {
+    @Override public void onChanged(Cvar<String> cvar, String from, String to) {
+      if (disposed) return;
+      if (from != null) Riiablo.assets.unload(from);
+      Riiablo.assets.load(to, BitmapFont.class);
+      Riiablo.assets.finishLoadingAsset(to);
+      font = Riiablo.assets.get(to);
+      recalculateScrollOffset();
+    }
+  };
+  private final Cvar.StateListener<Float> colorListener = new CvarStateAdapter<Float>() {
+    @Override public void onChanged(Cvar<Float> cvar, Float from, Float to) {
+      if (disposed || font == null) return;
+      if (cvar == Cvars.Client.Console.Color.a) font.getColor().a = to;
+      else if (cvar == Cvars.Client.Console.Color.r) font.getColor().r = to;
+      else if (cvar == Cvars.Client.Console.Color.g) font.getColor().g = to;
+      else if (cvar == Cvars.Client.Console.Color.b) font.getColor().b = to;
+    }
+  };
+  private final Cvar.StateListener<Float> heightListener = new CvarStateAdapter<Float>() {
+    @Override public void onChanged(Cvar<Float> cvar, Float from, Float to) {
+      if (!disposed) { height = to; recalculateScrollOffset(); }
+    }
+  };
 
   public static RenderedConsole wrap(OutputStream out) {
     ConsoleOutputStream cout = new ConsoleOutputStream();
@@ -114,6 +139,7 @@ public class RenderedConsole extends Console implements Disposable, InputProcess
   }
 
   public void create() {
+    if (disposed) throw new IllegalStateException("console is disposed");
     Pixmap solidColorPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
     solidColorPixmap.setColor(0.0f, 0.0f, 0.0f, 0.5f);
     solidColorPixmap.fill();
@@ -126,42 +152,12 @@ public class RenderedConsole extends Console implements Disposable, InputProcess
     cursorTexture = new Texture(solidColorPixmap);
     solidColorPixmap.dispose();
 
-    final Cvar.StateListener<Float> colorChangeListener = new CvarStateAdapter<Float>() {
-      @Override
-      public void onChanged(Cvar<Float> cvar, Float from, Float to) {
-        if (cvar == Cvars.Client.Console.Color.a) {
-          font.getColor().a = to;
-        } else if (cvar == Cvars.Client.Console.Color.r) {
-          font.getColor().r = to;
-        } else if (cvar == Cvars.Client.Console.Color.g) {
-          font.getColor().g = to;
-        } else if (cvar == Cvars.Client.Console.Color.b) {
-          font.getColor().b = to;
-        }
-      }
-    };
-    Cvars.Client.Console.Font.addStateListener(new CvarStateAdapter<String>() {
-      @Override
-      public void onChanged(Cvar<String> cvar, String from, String to) {
-        if (from != null) Riiablo.assets.unload(from);
-        Riiablo.assets.load(to, BitmapFont.class);
-        Riiablo.assets.finishLoadingAsset(to);
-        font = Riiablo.assets.get(to);
-        Cvars.Client.Console.Color.a.addStateListener(colorChangeListener);
-        Cvars.Client.Console.Color.r.addStateListener(colorChangeListener);
-        Cvars.Client.Console.Color.g.addStateListener(colorChangeListener);
-        Cvars.Client.Console.Color.b.addStateListener(colorChangeListener);
-        recalculateScrollOffset();
-      }
-    });
-
-    Cvars.Client.Console.Height.addStateListener(new CvarStateAdapter<Float>() {
-      @Override
-      public void onChanged(Cvar<Float> cvar, Float from, Float to) {
-        height = to;
-        recalculateScrollOffset();
-      }
-    });
+    Cvars.Client.Console.Font.addStateListener(fontListener);
+    Cvars.Client.Console.Color.a.addStateListener(colorListener);
+    Cvars.Client.Console.Color.r.addStateListener(colorListener);
+    Cvars.Client.Console.Color.g.addStateListener(colorListener);
+    Cvars.Client.Console.Color.b.addStateListener(colorListener);
+    Cvars.Client.Console.Height.addStateListener(heightListener);
 
     caretBlinkTask = new Timer.Task() {
       @Override
@@ -231,8 +227,20 @@ public class RenderedConsole extends Console implements Disposable, InputProcess
 
   @Override
   public void dispose() {
-    cursorTexture.dispose();
-    modalBackground.dispose();
+    if (disposed) return;
+    disposed = true;
+    if (caretBlinkTask != null) caretBlinkTask.cancel();
+    Cvars.Client.Console.Font.removeStateListener(fontListener);
+    Cvars.Client.Console.Color.a.removeStateListener(colorListener);
+    Cvars.Client.Console.Color.r.removeStateListener(colorListener);
+    Cvars.Client.Console.Color.g.removeStateListener(colorListener);
+    Cvars.Client.Console.Color.b.removeStateListener(colorListener);
+    Cvars.Client.Console.Height.removeStateListener(heightListener);
+    clearBindings();
+    if (cursorTexture != null) cursorTexture.dispose();
+    if (modalBackground != null) modalBackground.dispose();
+    cursorTexture = null;
+    modalBackground = null;
   }
 
   @Override

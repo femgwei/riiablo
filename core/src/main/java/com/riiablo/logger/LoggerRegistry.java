@@ -31,6 +31,24 @@ public class LoggerRegistry {
     return ROOT_LOGGER;
   }
 
+  /** Replaces the root sink and retires the previous asynchronous worker. */
+  public synchronized void setRootAppender(Appender appender) {
+    Appender previous = ROOT_LOGGER.getAppender();
+    ROOT_LOGGER.addAppender(appender);
+    if (previous instanceof AsyncOutputStreamAppender) {
+      ((AsyncOutputStreamAppender) previous).dispose();
+    }
+  }
+
+  /** Retires the root sink during application shutdown. */
+  public synchronized void dispose() {
+    Appender previous = ROOT_LOGGER.getAppender();
+    ROOT_LOGGER.addAppender(null);
+    if (previous instanceof AsyncOutputStreamAppender) {
+      ((AsyncOutputStreamAppender) previous).dispose();
+    }
+  }
+
   public Logger getLogger(Class<?> clazz) {
     return getLogger(clazz.getCanonicalName());
   }

@@ -74,6 +74,12 @@ public class Console implements InputProcessor {
     return o != null && SUGGESTION_PROVIDERS.contains(o);
   }
 
+  /** Clears callbacks owned by the console host during final shutdown. */
+  public void clearBindings() {
+    PROCESSORS.clear();
+    SUGGESTION_PROVIDERS.clear();
+  }
+
   @Override
   public boolean keyTyped(char ch) {
     switch (ch) {
