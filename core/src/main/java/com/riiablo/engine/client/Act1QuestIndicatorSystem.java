@@ -10,7 +10,6 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
-import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.Animation;
@@ -46,7 +45,9 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   @Wire(name = "iso") protected IsometricCamera iso;
 
   private final Array<MarkerPosition> markers = new Array<>();
-  private final Label marker = new Label("!", Riiablo.fonts.font16, Riiablo.colors.gold);
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  private Label marker;
   private static final AssetDescriptor<DCC> QUEST_MARKER_DESCRIPTOR =
       new AssetDescriptor<>("data\\global\\overlays\\NPCSpeechBalloon.dcc", DCC.class);
   private static final float QUEST_MARKER_X_OFFSET = -6f;
@@ -56,7 +57,12 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   private AssetReferenceScope references;
   private boolean disposed;
 
-  @Override protected void initialize() { assets = Riiablo.assets; }
+  @Override protected void initialize() {
+    assets = clientContext.assets();
+    if (clientContext.fonts() != null && clientContext.colors() != null) {
+      marker = new Label("!", clientContext.fonts().font16, clientContext.colors().gold);
+    }
+  }
 
   private static final class MarkerPosition {
     final float x;
@@ -88,7 +94,8 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
     Vector2 screen = new Vector2(mPosition.get(entityId).position);
     iso.toScreen(screen);
-    MonStats2.Entry visual = Riiablo.files.monstats2.get(npc.monstats.MonStatsEx);
+    if (clientContext.files() == null || clientContext.files().monstats2 == null) return;
+    MonStats2.Entry visual = clientContext.files().monstats2.get(npc.monstats.MonStatsEx);
     float markerHeight = visual == null ? 80 : Math.max(64, visual.pixHeight);
     // NPCSpeechBalloon.dcc is authored around the unit's native ground
     // anchor. Keep both anchors: the DCC uses the ground point, while the
@@ -100,22 +107,23 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   protected void end() {
     if (disposed || markers.size == 0) return;
     if (questMarkerAnimation != null) questMarkerAnimation.act(Gdx.graphics.getDeltaTime());
-    Riiablo.batch.begin();
+    if (clientContext.batch() == null) return;
+    clientContext.batch().begin();
     for (MarkerPosition position : markers) {
       if (questMarkerAnimation != null) {
         questMarkerAnimation.draw(
-            Riiablo.batch, position.x + QUEST_MARKER_X_OFFSET, position.anchorY);
-      } else {
+            clientContext.batch(), position.x + QUEST_MARKER_X_OFFSET, position.anchorY);
+      } else if (marker != null) {
         marker.setPosition(position.x, position.fallbackY, Align.center | Align.bottom);
-        marker.draw(Riiablo.batch, 1f);
+        marker.draw(clientContext.batch(), 1f);
       }
     }
-    Riiablo.batch.end();
+    clientContext.batch().end();
   }
 
   private void loadQuestMarkerAnimation() {
     if (disposed || questMarkerAnimation != null) return;
-    if (assets == null) assets = Riiablo.assets;
+    if (assets == null) assets = clientContext.assets();
     if (assets == null) return;
     if (!questMarkerLoadQueued) {
       if (references == null) references = new AssetReferenceScope(assets);
@@ -141,7 +149,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   }
 
   static boolean hasQuestMarker(int monsterType, CharData data) {
-    short[] quests = data.getQuests(Riiablo.ACT1);
+    short[] quests = data.getQuests(com.riiablo.Riiablo.ACT1);
     if (quests == null) return false;
     short record;
     switch (monsterType) {

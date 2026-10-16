@@ -6,7 +6,6 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
-import com.riiablo.Riiablo;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.StoreLoc;
@@ -48,6 +47,14 @@ public class NetworkedClientItemManager extends ClientItemManager {
   private long inventoryRevision;
   private int nextGoldRequestId = 1;
 
+  public NetworkedClientItemManager() {
+    super();
+  }
+
+  public NetworkedClientItemManager(ClientGameplayContext clientContext) {
+    super(clientContext);
+  }
+
   public long inventoryRevision() { return inventoryRevision; }
   /** Establishes the server revision after a complete snapshot baseline. */
   public void resetInventoryRevision(long revision) {
@@ -69,7 +76,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     }
     inventoryRevision = result.revision();
     if (result.success() && result.operation() == ItemMoveOperation.IDENTIFY_ITEM
-        && Riiablo.audio != null) Riiablo.audio.play("cursor_identify_item", true);
+        && clientContext.audio() != null) clientContext.audio().play("cursor_identify_item", true);
     Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] request=" + result.requestId()
         + " success=" + result.success() + " failure=" + result.failure()
         + " revision=" + inventoryRevision + " snapshot=" + result.snapshotLength());
@@ -121,8 +128,8 @@ public class NetworkedClientItemManager extends ClientItemManager {
     wrapAndSend(builder, D2GSData.ItemMoveRequest, dataOffset);
   }
 
-  private static int itemId(int index) {
-    com.riiablo.save.ItemData data = Riiablo.charData == null ? null : Riiablo.charData.getItems();
+  private int itemId(int index) {
+    com.riiablo.save.ItemData data = clientContext.charData() == null ? null : clientContext.charData().getItems();
     if (data == null || index < 0 || index >= data.getItems().size) return -1;
     com.riiablo.item.Item item = data.getItems().get(index);
     return item == null ? -1 : item.id;
@@ -156,7 +163,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   @Override
   public boolean inventoryToBelt(int i) {
-    com.riiablo.save.ItemData data = Riiablo.charData == null ? null : Riiablo.charData.getItems();
+    com.riiablo.save.ItemData data = clientContext.charData() == null ? null : clientContext.charData().getItems();
     if (data == null || i < 0 || i >= data.getItems().size) return false;
     com.riiablo.item.Item item = data.getItems().get(i);
     int slot = data.findFreeBeltSlot(item);
@@ -208,17 +215,17 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   @Override
   public void useBeltSlot(int column) {
-    com.riiablo.item.Item potion = Riiablo.charData == null
-        ? null : Riiablo.charData.getItems().getBeltPotion(column);
+    com.riiablo.item.Item potion = clientContext.charData() == null
+        ? null : clientContext.charData().getItems().getBeltPotion(column);
     if (potion == null) return;
-    Riiablo.audio.play(potion.getUseSound(), true);
+    if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
     send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
   }
 
   @Override
   public boolean useCursorPotionOnMercenary() {
-    com.riiablo.item.Item potion = Riiablo.charData == null
-        ? null : Riiablo.charData.getItems().getCursor();
+    com.riiablo.item.Item potion = clientContext.charData() == null
+        ? null : clientContext.charData().getItems().getCursor();
     if (potion == null) {
       log.info("[MERC_POTION] phase=rejected mode=network reason=empty_cursor");
       return false;
@@ -231,7 +238,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     send(ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY, potion.id, -1, -1,
         -1, -1, -1, true);
     log.info("[MERC_POTION] phase=requested mode=network item={} code={} player={}",
-        potion.id, potion.code, Riiablo.game == null ? -1 : Riiablo.game.player);
+        potion.id, potion.code, clientContext.playerId());
     return true;
   }
 
@@ -239,23 +246,23 @@ public class NetworkedClientItemManager extends ClientItemManager {
   public void useInventoryItem(com.riiablo.item.Item item) {
     if (item == null || item.code == null) return;
     if ("isc".equalsIgnoreCase(item.code) || "ibk".equalsIgnoreCase(item.code)) {
-      if (Riiablo.cursor != null) Riiablo.cursor.beginIdentify(item, this);
+      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, this);
       return;
     }
     if (item.id < 0) return;
     boolean portal = "tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code);
     boolean potion = item.type != null && item.type.is(com.riiablo.item.Type.POTI);
     if (!portal && !potion) return;
-    if (Riiablo.audio != null) {
-      Riiablo.audio.play(portal ? "player_townportal_cast" : item.getUseSound(), true);
+    if (clientContext.audio() != null) {
+      clientContext.audio().play(portal ? "player_townportal_cast" : item.getUseSound(), true);
     }
     send(ItemMoveOperation.USE_INVENTORY_ITEM, item.id, -1, -1, -1, -1, -1, false);
   }
 
   @Override
   public boolean identifyItem(com.riiablo.item.Item source, com.riiablo.item.Item target) {
-    if (Riiablo.charData == null || source == null || target == null
-        || !Riiablo.charData.getItems().canIdentifyItem(source, target)) return false;
+    if (clientContext.charData() == null || source == null || target == null
+        || !clientContext.charData().getItems().canIdentifyItem(source, target)) return false;
     send(ItemMoveOperation.IDENTIFY_ITEM, source.id, -1, -1, target.id, -1, -1, false);
     return true;
   }

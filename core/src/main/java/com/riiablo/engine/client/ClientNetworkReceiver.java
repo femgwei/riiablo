@@ -152,6 +152,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected AuthoritativeInterpolationSystem interpolation;
   protected ClientNetworkSynchronizer networkSynchronizer;
   @Wire(name="clientSession") protected ClientNetworkSession clientSession;
+  @Wire(name="clientContext") protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Wire(name = "environment")
   protected EnvironmentCycle environment;
@@ -374,7 +375,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
     String charName = connection.charName();
     int charClass = connection.charClass();
 
-    output.appendText(Riiablo.string.format(3641, charName));
+    if (output != null && clientContext.strings() != null) {
+      output.appendText(clientContext.strings().format(3641, charName));
+    }
     output.appendText("\n");
 
     Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
@@ -421,7 +424,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     CharData data = mPlayer.get(entityId).data;
 
-    output.appendText(Riiablo.string.format(3642, data.name));
+    if (output != null && clientContext.strings() != null) {
+      output.appendText(clientContext.strings().format(3642, data.name));
+    }
     output.appendText("\n");
 
     world.delete(entityId);
@@ -490,8 +495,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
                 + sync.entityId() + " reason=missing_position");
             return Engine.INVALID_ENTITY;
           }
-          String objectType = Riiablo.files.MonPreset.getPlace(ds1ObjectWrapper.act(), ds1ObjectWrapper.id());
-          MonStats.Entry monstats = Riiablo.files.monstats.get(objectType);
+          String objectType = clientContext.files().MonPreset.getPlace(ds1ObjectWrapper.act(), ds1ObjectWrapper.id());
+          MonStats.Entry monstats = clientContext.files().monstats.get(objectType);
           if (monstats == null) {
             Gdx.app.error(TAG, "[ENTITY_SYNC] phase=monster_reject serverEntity="
                 + sync.entityId() + " reason=missing_monstats placement=" + objectType);
@@ -589,10 +594,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private Map.Zone zoneForLevel(int levelId) {
-    if (map == null || levelId < 0 || Riiablo.files == null || Riiablo.files.Levels == null) {
+    if (map == null || levelId < 0 || clientContext.files() == null || clientContext.files().Levels == null) {
       return null;
     }
-    return map.findZone(Riiablo.files.Levels.get(levelId));
+    return map.findZone(clientContext.files().Levels.get(levelId));
   }
 
   private void attachNetworkZone(int entityId, int levelId) {
@@ -787,10 +792,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (clientSession != null && clientSession.results() != null) {
       clientSession.results().onNpcService(result);
     } else {
-      if (Riiablo.game != null && Riiablo.game.hireMercenaryPanel != null)
-        Riiablo.game.hireMercenaryPanel.applyNetworkResult(result);
-      if (Riiablo.game != null && Riiablo.game.vendorPanel != null)
-        Riiablo.game.vendorPanel.applyNetworkResult(result);
+      if (clientContext.game() != null && clientContext.game().hireMercenaryPanel != null)
+        clientContext.game().hireMercenaryPanel.applyNetworkResult(result);
+      if (clientContext.game() != null && clientContext.game().vendorPanel != null)
+        clientContext.game().vendorPanel.applyNetworkResult(result);
     }
     Gdx.app.log(TAG, "[NPC_SERVICE] request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
@@ -822,8 +827,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     tradeState.apply(result);
     if (clientSession != null && clientSession.results() != null) {
       clientSession.results().onTradeState(this);
-    } else if (Riiablo.game != null && Riiablo.game.tradePanel != null) {
-      Riiablo.game.tradePanel.applyNetworkState(this);
+    } else if (clientContext.game() != null && clientContext.game().tradePanel != null) {
+      clientContext.game().tradePanel.applyNetworkState(this);
     }
     Gdx.app.log(TAG, "[TRADE] request=" + result.requestId()
         + " operation=" + result.operation() + " success=" + result.success()
@@ -1724,11 +1729,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
         }
       }
       Item cursorItem = character().getItems().getCursor();
-      if (Riiablo.cursor != null) Riiablo.cursor.setItem(cursorItem);
+      if (clientContext.cursor() != null) clientContext.cursor().setItem(cursorItem);
       if (result.success()
           && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
           && cursorItem == null) {
-        ClientItemManager.playPickupSound();
+        ClientItemManager pickupManager = world.getSystem(ClientItemManager.class);
+        if (pickupManager != null) pickupManager.playPickupSound();
       }
     }
     if (result.groundEntityId() >= 0 && result.groundItemDataLength() == 0) {
@@ -1819,11 +1825,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private CharData character() {
-    return clientSession != null ? clientSession.character() : Riiablo.charData;
+    return clientSession != null ? clientSession.character() : clientContext.charData();
   }
 
   private int player() {
     return clientSession != null ? clientSession.player()
-        : Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player;
+        : clientContext.playerId();
   }
 }

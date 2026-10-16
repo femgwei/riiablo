@@ -77,6 +77,7 @@ import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.client.ClientAudioSession;
+import com.riiablo.engine.client.ClientGameplayContext;
 import com.riiablo.engine.client.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.InteractionRange;
@@ -250,6 +251,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   EngineConfig config;
   private final SimulationSession simulationSession;
   private final ClientAudioSession clientAudioSession;
+  private final ClientGameplayContext clientGameplayContext;
   Map map;
   MapManager mapManager;
   com.riiablo.engine.server.party.PartyManager partyManager;
@@ -315,11 +317,17 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public GameScreen(CharData charData, Socket socket) {
     this.charData = charData;
     this.socket = socket;
+    clientGameplayContext = new ClientGameplayContext(
+        charData, () -> player, () -> this, this::setAct,
+        Riiablo.assets, Riiablo.audio, Riiablo.cursor, Riiablo.files, Riiablo.batch,
+        Riiablo.fonts, Riiablo.colors, Riiablo.string, Riiablo.saves, Riiablo.home);
     // Create the item controller before any HUD/panel captures it.  The
     // mercenary portrait accepts cursor potions through this controller; the
     // previous order constructed MercenaryHud first and permanently retained
     // a null reference.
-    itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
+    itemController = socket == null
+        ? new ClientItemManager(clientGameplayContext)
+        : new NetworkedClientItemManager(clientGameplayContext);
 
     // Native Diablo II key bindings are character-scoped (unlike the
     // preferences fallback used by the controls screen).  Load them as soon
@@ -788,6 +796,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
               }
             }))
         .register("iso", iso)
+        .register("clientContext", clientGameplayContext)
         .register("config", config)
         .register("factory", factory)
         .register("itemController", itemController)

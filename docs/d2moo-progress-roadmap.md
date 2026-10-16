@@ -1,5 +1,22 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 客户端系统上下文与独立装配
+
+- [x] 新增 `ClientGameplayContext`，由 GameScreen 捕获角色、动态本地实体、当前
+  屏幕切幕回调、音频、光标、文件表、资产、字体、字符串、保存目录和批处理器；
+  `ClientItemManager` / `NetworkedClientItemManager`、`AutoInteracter`、
+  `ActTransitionSystem`、`Act1QuestIndicatorSystem`、`AutomapRenderer` 及网络接收
+  路由的生产路径改用显式绑定。保留 `fromGlobals()` 仅供未走 Artemis 注入的旧
+  测试夹具使用。
+- [x] 新增 `ClientSystemHarness`，可在不创建完整 GameScreen、渲染器、资源加载器
+  或 socket 的情况下装配 Artemis 系统；新增上下文/切幕 headless 回归。
+- [x] CvarManager 增加幂等 `clear` / `dispose`，Client 退出时在保存后解除所有
+  Cvar 监听；TCP/IP 连接交接增加代次门禁和待处理 socket 清理，旧异步回调不会导航
+  到新屏幕。协议、存档格式、玩法数值和 25Hz 未改变。
+- [x] `core:compileJava`、`ClientGameplayContextTest`、`ClientNetworkSessionTest`、
+  `GameScreenAssemblyTest` 通过。真实双客户端、跨 Act/加载中退出、长压、Android
+  真机、人工画面/声音/输入和性能仍未验收。
+
 ## 2026-10-17 全局网络身份显式化：第一组
 
 - [x] 新增 `ClientNetworkSession`，为一个 GameScreen 固定 `CharData`，并通过

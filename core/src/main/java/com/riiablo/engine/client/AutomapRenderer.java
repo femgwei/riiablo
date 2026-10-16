@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.files.FileHandle;
 import java.io.IOException;
 
-import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.DC6;
@@ -68,6 +67,9 @@ public class AutomapRenderer extends BaseSystem {
   private static final String TAG = "AutomapRenderer";
   
   protected RenderSystem renderer;
+
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -122,16 +124,16 @@ public class AutomapRenderer extends BaseSystem {
     automapEntities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class, Class.class));
 
-    // 尝试加载 AutoMap.txt 数据和小地图图标精灵
-    // 说明: 这里直接使用 Riiablo.files / Riiablo.assets，避免在系统间重复传递依赖
-    if (Riiablo.files != null && Riiablo.files.AutoMap != null) {
-      automapManager.loadAutomapData(Riiablo.files.AutoMap);
+    // Load host-owned tables and sprites through the session context.
+    if (clientContext.files() != null && clientContext.files().AutoMap != null) {
+      automapManager.loadAutomapData(clientContext.files().AutoMap);
     } else {
       // Gdx.app.debug(TAG, "AutoMap.txt not loaded (Riiablo.files is null or AutoMap is null)");
     }
 
-    if (Riiablo.assets != null && Riiablo.assets.isLoaded(AutomapTileRenderer.PATH_MAXIMAP, DC6.class)) {
-      DC6 icon = Riiablo.assets.get(AutomapTileRenderer.PATH_MAXIMAP, DC6.class);
+    if (clientContext.assets() != null
+        && clientContext.assets().isLoaded(AutomapTileRenderer.PATH_MAXIMAP, DC6.class)) {
+      DC6 icon = clientContext.assets().get(AutomapTileRenderer.PATH_MAXIMAP, DC6.class);
       automapManager.loadIconSprite(icon);
     } else {
       // Gdx.app.debug(TAG, "Automap icon sprite not loaded from assets");
@@ -152,9 +154,9 @@ public class AutomapRenderer extends BaseSystem {
 
   private void loadNativeAutomapSave() {
     if (nativeAutomapLoaded) return;
-    if (Riiablo.saves == null || Riiablo.charData == null) return;
-    String name = Riiablo.charData.name;
-    int difficulty = Riiablo.charData.diff;
+    if (clientContext.saves() == null || clientContext.charData() == null) return;
+    String name = clientContext.charData().name;
+    int difficulty = clientContext.charData().diff;
     if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
     // Mark the load complete only after all prerequisites and character
     // identity are available.  GameScreen/world construction can call this
@@ -163,9 +165,9 @@ public class AutomapRenderer extends BaseSystem {
     nativeAutomapLoaded = true;
     nativeAutomapCharacter = name;
     nativeAutomapDifficulty = difficulty;
-    nativeAutomapSeed = map != null ? map.seed() : Riiablo.charData.mapSeed;
+    nativeAutomapSeed = map != null ? map.seed() : clientContext.charData().mapSeed;
     try {
-      FileHandle mapFile = Riiablo.saves.child(name + ".map");
+      FileHandle mapFile = clientContext.saves().child(name + ".map");
       if (mapFile.exists()) {
         AutomapExplorationStore.MapSeeds seeds = AutomapExplorationStore.readMap(mapFile);
         if (seeds.seed(difficulty) != 0 && seeds.seed(difficulty) != nativeAutomapSeed) {
@@ -173,7 +175,7 @@ public class AutomapRenderer extends BaseSystem {
           return;
         }
       }
-      FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
+      FileHandle maFile = clientContext.saves().child(name + ".ma" + difficulty);
       if (maFile.exists()) {
         loadedNativeAutomap = AutomapExplorationStore.readMa(maFile);
         automapManager.loadNativeAutomap(loadedNativeAutomap);
@@ -188,7 +190,7 @@ public class AutomapRenderer extends BaseSystem {
 
   /** Saves the current difficulty's native Automap sidecars. */
   public void saveNativeAutomap() {
-    if (Riiablo.saves == null || automapManager == null) return;
+    if (clientContext.saves() == null || automapManager == null) return;
     loadNativeAutomapSave();
     // A quit/menu transition can happen between fixed simulation ticks. Make
     // the current room reveal authoritative before converting runtime cells
@@ -201,16 +203,16 @@ public class AutomapRenderer extends BaseSystem {
     int mapSeed = nativeAutomapSeed;
     if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
     try {
-      FileHandle mapFile = Riiablo.saves.child(name + ".map");
+      FileHandle mapFile = clientContext.saves().child(name + ".map");
       AutomapExplorationStore.MapSeeds seeds = mapFile.exists()
           ? AutomapExplorationStore.readMap(mapFile) : new AutomapExplorationStore.MapSeeds();
       seeds.seeds[difficulty] = mapSeed;
       AutomapExplorationStore.writeMap(mapFile, seeds);
       loadedNativeAutomap = automapManager.createNativeAutomap(loadedNativeAutomap);
-      AutomapExplorationStore.writeMa(Riiablo.saves.child(name + ".ma" + difficulty),
+      AutomapExplorationStore.writeMa(clientContext.saves().child(name + ".ma" + difficulty),
           loadedNativeAutomap);
       if (Gdx.app != null) {
-        FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
+        FileHandle maFile = clientContext.saves().child(name + ".ma" + difficulty);
         Gdx.app.log(TAG, String.format(
             "Saved native Automap: path=%s difficulty=%d seed=%d bytes=%d",
             maFile.file().getAbsolutePath(), difficulty, mapSeed,
@@ -367,8 +369,8 @@ public class AutomapRenderer extends BaseSystem {
   }
 
   private void updateExplorationFromPlayer() {
-    if (mPosition == null || map == null || Riiablo.game == null) return;
-    int playerId = Riiablo.game.player;
+    if (mPosition == null || map == null || clientContext.game() == null) return;
+    int playerId = clientContext.playerId();
     // Scene transitions can briefly retain the previous player's entity id
     // while the new Artemis world is already active. ComponentMapper.has()
     // indexes its backing bag directly, so validate world membership first
@@ -423,7 +425,7 @@ public class AutomapRenderer extends BaseSystem {
       // AutomapMarkerPolicy correctly rejects them as non-hostile monsters
       // and the dedicated mercenary marker is never added.
       if (mMercenary != null && mMercenary.has(id)) {
-        String mercName = Riiablo.charData == null ? null : Riiablo.charData.getMerc().getName();
+        String mercName = clientContext.charData() == null ? null : clientContext.charData().getMerc().getName();
         automapManager.addMercenaryMarker(id, position.position.x, position.position.y, mercName);
       } else if (show(Cvars.Client.Automap.ShowCorpses) && mCorpse != null && mCorpse.has(id)) {
         Monster monster = mMonster != null && mMonster.has(id) ? mMonster.get(id) : null;
@@ -461,8 +463,8 @@ public class AutomapRenderer extends BaseSystem {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
         boolean npc = AutomapMarkerPolicy.isNpc(monster.monstats);
-        if (npc && Riiablo.string != null) {
-          name = Riiablo.string.lookup(name);
+        if (npc && clientContext.strings() != null) {
+          name = clientContext.strings().lookup(name);
         }
         boolean interactable = mInteractable != null && mInteractable.has(id);
         if (npc && (!AutomapMarkerPolicy.shouldDisplayNpc(monster.monstats, interactable)
@@ -508,9 +510,9 @@ public class AutomapRenderer extends BaseSystem {
             position.position.x, position.position.y, object.base.Name,
             objectColor(type), type == AutomapIconType.OBJECT ? 4 : 6, cell);
       } else if (clazz.type == Class.Type.PLR) {
-        if (id == Riiablo.game.player) {
+        if (id == clientContext.playerId()) {
           automapManager.addPlayerMarker(id, position.position.x, position.position.y,
-              Riiablo.charData == null ? null : Riiablo.charData.name);
+              clientContext.charData() == null ? null : clientContext.charData().name);
         } else if (isPartyMember(id)) {
           automapManager.addPartyMarker(id, position.position.x, position.position.y,
               partyMemberName(id));
@@ -525,8 +527,8 @@ public class AutomapRenderer extends BaseSystem {
   }
 
   private boolean isNpcWithinRange(float npcX, float npcY) {
-    if (Riiablo.game == null || mPosition == null) return false;
-    int playerId = Riiablo.game.player;
+    if (clientContext.game() == null || mPosition == null) return false;
+    int playerId = clientContext.playerId();
     if (playerId == Engine.INVALID_ENTITY || !mPosition.has(playerId)) return false;
     Position player = mPosition.get(playerId);
     return player != null && player.position != null
@@ -593,7 +595,7 @@ public class AutomapRenderer extends BaseSystem {
     automapManager.showMinimapPointers = Boolean.TRUE.equals(
         Cvars.Client.Automap.ShowMinimapPointers.get());
     automapManager.setHackMapEnabled(
-        Boolean.TRUE.equals(Cvars.Client.Automap.HackMap.get()), Riiablo.home);
+        Boolean.TRUE.equals(Cvars.Client.Automap.HackMap.get()), clientContext.home());
     String diagnostic = "mode=" + mode + " fade=" + fade + " opacity=" + opacity
         + " hackMap=" + automapManager.isHackMapEnabled()
         + " hackMapIcons=" + automapManager.getHackMapIconCount();
@@ -604,10 +606,10 @@ public class AutomapRenderer extends BaseSystem {
   }
 
   private void renderNativeEntitySprites() {
-    if (Riiablo.batch == null || shapes == null) return;
+    if (clientContext.batch() == null || shapes == null) return;
     // Do not nest a SpriteBatch pass.  Another system owning the batch must
     // finish its pass before Automap is rendered.
-    if (Riiablo.batch.isDrawing()) {
+    if (clientContext.batch().isDrawing()) {
       if (Gdx.app != null) {
         Gdx.app.debug(TAG, "Skipping native entity sprites: SpriteBatch is already drawing");
       }
@@ -624,13 +626,13 @@ public class AutomapRenderer extends BaseSystem {
     shapes.end();
     try {
       phase = AutomapRenderState.enterSprites(phase);
-      Riiablo.batch.setProjectionMatrix(renderProjection);
-      Riiablo.batch.begin();
+      clientContext.batch().setProjectionMatrix(renderProjection);
+      clientContext.batch().begin();
       batchBegun = true;
-      automapManager.renderNativeEntitySprites(Riiablo.batch, automapManager.opacity);
+      automapManager.renderNativeEntitySprites(clientContext.batch(), automapManager.opacity);
     } finally {
-      if (batchBegun && Riiablo.batch.isDrawing()) {
-        Riiablo.batch.end();
+      if (batchBegun && clientContext.batch().isDrawing()) {
+        clientContext.batch().end();
       }
       if (phase == AutomapRenderState.Phase.SPRITES) {
         AutomapRenderState.leaveSprites(phase);
@@ -641,18 +643,18 @@ public class AutomapRenderer extends BaseSystem {
   }
 
   private void renderNames() {
-    if (!automapManager.showNames || Riiablo.batch == null || shapes == null
-        || Riiablo.fonts == null || Riiablo.batch.isDrawing()) return;
+    if (!automapManager.showNames || clientContext.batch() == null || shapes == null
+        || clientContext.fonts() == null || clientContext.batch().isDrawing()) return;
     Matrix4 previousProjection = new Matrix4(shapes.getProjectionMatrix());
     boolean batchBegun = false;
     shapes.end();
     try {
-      Riiablo.batch.setProjectionMatrix(renderProjection);
-      Riiablo.batch.begin();
+      clientContext.batch().setProjectionMatrix(renderProjection);
+      clientContext.batch().begin();
       batchBegun = true;
-      automapManager.renderNames(Riiablo.batch, Riiablo.fonts.fontformal10);
+      automapManager.renderNames(clientContext.batch(), clientContext.fonts().fontformal10);
     } finally {
-      if (batchBegun && Riiablo.batch.isDrawing()) Riiablo.batch.end();
+      if (batchBegun && clientContext.batch().isDrawing()) clientContext.batch().end();
       shapes.setProjectionMatrix(previousProjection);
       shapes.begin(ShapeRenderer.ShapeType.Filled);
     }
@@ -660,18 +662,18 @@ public class AutomapRenderer extends BaseSystem {
 
   /** Draws native terrain/object cells in the same camera space as the map. */
   private int renderNativeTerrainSprites() {
-    if (Riiablo.batch == null || shapes == null || automapManager == null) return 0;
-    if (Riiablo.batch.isDrawing()) return 0;
+    if (clientContext.batch() == null || shapes == null || automapManager == null) return 0;
+    if (clientContext.batch().isDrawing()) return 0;
     Matrix4 previousProjection = new Matrix4(shapes.getProjectionMatrix());
     boolean batchBegun = false;
     shapes.end();
     try {
-      Riiablo.batch.setProjectionMatrix(renderProjection);
-      Riiablo.batch.begin();
+      clientContext.batch().setProjectionMatrix(renderProjection);
+      clientContext.batch().begin();
       batchBegun = true;
-      return automapManager.renderWithSprites(Riiablo.batch, map, 0, 0, 0, 0, 0, 0);
+      return automapManager.renderWithSprites(clientContext.batch(), map, 0, 0, 0, 0, 0, 0);
     } finally {
-      if (batchBegun && Riiablo.batch.isDrawing()) Riiablo.batch.end();
+      if (batchBegun && clientContext.batch().isDrawing()) clientContext.batch().end();
       shapes.setProjectionMatrix(previousProjection);
       shapes.begin(ShapeRenderer.ShapeType.Filled);
     }

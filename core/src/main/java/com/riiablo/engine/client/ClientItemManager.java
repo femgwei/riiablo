@@ -8,7 +8,6 @@ import com.artemis.ComponentMapper;
 import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.Vector2;
-import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.EntityFactory;
@@ -43,6 +42,17 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   @Wire(name = "townPortalRegistry")
   protected TownPortalRegistry townPortalRegistry;
 
+  protected final ClientGameplayContext clientContext;
+
+  /** Legacy construction is retained for isolated fixtures; GameScreen supplies a context. */
+  public ClientItemManager() {
+    this(ClientGameplayContext.fromGlobals());
+  }
+
+  public ClientItemManager(ClientGameplayContext clientContext) {
+    this.clientContext = java.util.Objects.requireNonNull(clientContext, "clientContext");
+  }
+
   @Override
   public void groundToCursor(int entityId) {
     Item component = mItem.get(entityId);
@@ -55,7 +65,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       int amount = quantity(item);
       log.info("[GROUND_PICKUP] phase=gold_request mode=local entity={} item={} amount={}",
           entityId, item.id, amount);
-      VendorPricing.GoldGrant grant = VendorPricing.grantCarriedGold(Riiablo.charData, amount);
+      VendorPricing.GoldGrant grant = VendorPricing.grantCarriedGold(clientContext.charData(), amount);
       if (grant.credited <= 0) {
         log.info("[GROUND_PICKUP] phase=reject mode=local entity={} reason={} amount={}",
             entityId, amount <= 0 ? "invalid_quantity" : "gold_limit", amount);
@@ -74,19 +84,19 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       return;
     }
     if (prefersCursorPickup(item)) {
-      if (Riiablo.charData == null || Riiablo.charData.getItems().getCursor() != null) {
+      if (clientContext.charData() == null || clientContext.charData().getItems().getCursor() != null) {
         log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=cursor_occupied",
             entityId, item.id);
         return;
       }
-      Riiablo.charData.groundToCursor(item);
+      clientContext.charData().groundToCursor(item);
       world.delete(entityId);
       log.info("[GROUND_PICKUP] phase=cursor mode=local entity={} item={} code={}",
           entityId, item.id, item.code);
       return;
     }
-    boolean stored = Riiablo.charData != null
-        && Riiablo.charData.getItems().addGroundPickup(item, Riiablo.charData);
+    boolean stored = clientContext.charData() != null
+        && clientContext.charData().getItems().addGroundPickup(item, clientContext.charData());
     if (!stored) {
       boolean replayed = replayGroundDrop(entityId);
       log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=no_space",
@@ -107,14 +117,14 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   /** Native D2 uses one generic sound when an item is taken by the player. */
-  protected static void playPickupSound() {
-    if (Riiablo.audio != null) Riiablo.audio.play("item_pickup", true);
+  public void playPickupSound() {
+    if (clientContext.audio() != null) clientContext.audio().play("item_pickup", true);
   }
 
   protected boolean prefersCursorPickup(com.riiablo.item.Item item) {
-    boolean inventoryVisible = Riiablo.game != null
-        && Riiablo.game.inventoryPanel != null
-        && Riiablo.game.inventoryPanel.isVisible();
+    com.riiablo.screen.GameScreen game = clientContext.game();
+    boolean inventoryVisible = game != null
+        && game.inventoryPanel != null && game.inventoryPanel.isVisible();
     return prefersCursorPickup(item, inventoryVisible);
   }
 
@@ -130,10 +140,13 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public void cursorToGround() {
-    com.riiablo.item.Item item = Riiablo.charData.getItems().getCursor();
-    Riiablo.charData.cursorToGround();
+    if (clientContext.charData() == null) return;
+    int player = clientContext.playerId();
+    if (player < 0 || mPosition.get(player) == null) return;
+    com.riiablo.item.Item item = clientContext.charData().getItems().getCursor();
+    clientContext.charData().cursorToGround();
 
-    Vector2 position = freeGroundPosition(Riiablo.game.player, mPosition.get(Riiablo.game.player).position);
+    Vector2 position = freeGroundPosition(player, mPosition.get(player).position);
     factory.createItem(item, position);
   }
 
@@ -162,75 +175,75 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public void storeToCursor(int i) {
-    Riiablo.charData.storeToCursor(i);
+    if (clientContext.charData() != null) clientContext.charData().storeToCursor(i);
   }
 
   @Override
   public boolean inventoryToBelt(int i) {
-    if (Riiablo.charData == null || i < 0 || i >= Riiablo.charData.getItems().getItems().size)
+    if (clientContext.charData() == null || i < 0 || i >= clientContext.charData().getItems().getItems().size)
       return false;
-    com.riiablo.item.Item item = Riiablo.charData.getItems().getItems().get(i);
-    int slot = Riiablo.charData.getItems().findFreeBeltSlot(item);
-    return slot >= 0 && Riiablo.charData.getItems().movePotionToBelt(
+    com.riiablo.item.Item item = clientContext.charData().getItems().getItems().get(i);
+    int slot = clientContext.charData().getItems().findFreeBeltSlot(item);
+    return slot >= 0 && clientContext.charData().getItems().movePotionToBelt(
         item, slot & 3, slot >>> 2);
   }
 
   @Override
   public void cursorToStore(StoreLoc storeLoc, int x, int y) {
-    Riiablo.charData.cursorToStore(storeLoc, x, y);
+    if (clientContext.charData() != null) clientContext.charData().cursorToStore(storeLoc, x, y);
   }
 
   @Override
   public void swapStoreItem(int i, StoreLoc storeLoc, int x, int y) {
-    Riiablo.charData.swapStoreItem(i, storeLoc, x, y);
+    if (clientContext.charData() != null) clientContext.charData().swapStoreItem(i, storeLoc, x, y);
   }
 
   @Override
   public void bodyToCursor(BodyLoc bodyLoc, boolean merc) {
-    Riiablo.charData.bodyToCursor(bodyLoc, merc);
+    if (clientContext.charData() != null) clientContext.charData().bodyToCursor(bodyLoc, merc);
   }
 
   @Override
   public void cursorToBody(BodyLoc bodyLoc, boolean merc) {
-    Riiablo.charData.cursorToBody(bodyLoc, merc);
+    if (clientContext.charData() != null) clientContext.charData().cursorToBody(bodyLoc, merc);
   }
 
   @Override
   public void swapBodyItem(BodyLoc bodyLoc, boolean merc) {
-    Riiablo.charData.swapBodyItem(bodyLoc, merc);
+    if (clientContext.charData() != null) clientContext.charData().swapBodyItem(bodyLoc, merc);
   }
 
   @Override
   public void beltToCursor(int i) {
-    Riiablo.charData.beltToCursor(i);
+    if (clientContext.charData() != null) clientContext.charData().beltToCursor(i);
   }
 
   @Override
   public void cursorToBelt(int x, int y) {
-    Riiablo.charData.cursorToBelt(x, y);
+    if (clientContext.charData() != null) clientContext.charData().cursorToBelt(x, y);
   }
 
   @Override
   public void swapBeltItem(int i) {
-    Riiablo.charData.swapBeltItem(i);
+    if (clientContext.charData() != null) clientContext.charData().swapBeltItem(i);
   }
 
   @Override
   public void useBeltSlot(int column) {
-    if (Riiablo.charData == null) return;
-    com.riiablo.item.Item potion = Riiablo.charData.getItems().getBeltPotion(column);
-    if (potion != null && Riiablo.charData.useBeltPotion(column)) {
-      Riiablo.audio.play(potion.getUseSound(), true);
+    if (clientContext.charData() == null) return;
+    com.riiablo.item.Item potion = clientContext.charData().getItems().getBeltPotion(column);
+    if (potion != null && clientContext.charData().useBeltPotion(column)) {
+      if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
     }
   }
 
   @Override
   public boolean useCursorPotionOnMercenary() {
-    if (Riiablo.charData == null || Riiablo.game == null) {
+    if (clientContext.charData() == null || clientContext.game() == null) {
       log.info("[MERC_POTION] phase=rejected mode=local reason=game_state_missing");
       return false;
     }
-    com.riiablo.item.Item potion = Riiablo.charData.getItems().getCursor();
+    com.riiablo.item.Item potion = clientContext.charData().getItems().getCursor();
     if (potion == null) {
       log.info("[MERC_POTION] phase=rejected mode=local reason=empty_cursor");
       return false;
@@ -249,19 +262,20 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
           itemId, itemCode);
       return false;
     }
-    if (!service.useOnMercenary(Riiablo.game.player, potion)) {
+    int player = clientContext.playerId();
+    if (player < 0 || !service.useOnMercenary(player, potion)) {
       log.info("[MERC_POTION] phase=rejected mode=local reason=service_rejected item={} code={} player={}",
-          itemId, itemCode, Riiablo.game.player);
+          itemId, itemCode, player);
       return false;
     }
-    if (!Riiablo.charData.consumeCursorPotion(potion)) {
+    if (!clientContext.charData().consumeCursorPotion(potion)) {
       log.info("[MERC_POTION] phase=rejected mode=local reason=consume_failed item={} code={}",
           itemId, itemCode);
       return false;
     }
-    if (Riiablo.audio != null) Riiablo.audio.play(potion.getUseSound(), true);
+    if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
     log.info("[MERC_POTION] phase=used mode=local item={} code={} player={}", itemId, itemCode,
-        Riiablo.game.player);
+        player);
     return true;
   }
 
@@ -269,14 +283,15 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   public void useInventoryItem(com.riiablo.item.Item item) {
     if ("isc".equalsIgnoreCase(item == null ? null : item.code)
         || "ibk".equalsIgnoreCase(item == null ? null : item.code)) {
-      if (Riiablo.cursor != null) Riiablo.cursor.beginIdentify(item, this);
+      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, this);
       return;
     }
-    if (item == null || item.code == null || Riiablo.charData == null
-        || Riiablo.game == null || Riiablo.game.player < 0) return;
+    if (item == null || item.code == null || clientContext.charData() == null
+        || clientContext.game() == null || clientContext.playerId() < 0) return;
     if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
-    MapWrapper wrapper = mMapWrapper == null ? null : mMapWrapper.get(Riiablo.game.player);
-    Position playerPosition = mPosition.get(Riiablo.game.player);
+    int player = clientContext.playerId();
+    MapWrapper wrapper = mMapWrapper == null ? null : mMapWrapper.get(player);
+    Position playerPosition = mPosition.get(player);
     if (wrapper == null || wrapper.zone == null || wrapper.zone.isTown() || playerPosition == null) return;
 
     Vector2 portalPosition = new Vector2(playerPosition.position);
@@ -285,9 +300,10 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     int destinationTown = TownPortalRegistry.townLevelForAct(
         wrapper.zone.level == null ? -1 : wrapper.zone.level.Act);
     if (destinationTown < 0) return;
-    Map.Zone townZone = sourceLevel <= 0 || Riiablo.files.Levels.get(destinationTown) == null
+    if (clientContext.files() == null || clientContext.files().Levels == null) return;
+    Map.Zone townZone = sourceLevel <= 0 || clientContext.files().Levels.get(destinationTown) == null
         || wrapper.map == null ? null
-        : wrapper.map.findZone(Riiablo.files.Levels.get(destinationTown));
+        : wrapper.map.findZone(clientContext.files().Levels.get(destinationTown));
     Vector2 returnPosition = TownPortalRegistry.preferredTownPosition(townZone, world);
     if (returnPosition == null
         || townPortalRegistry == null
@@ -309,33 +325,34 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       if (returnWarp >= 0) world.delete(returnWarp);
       return;
     }
-    if (!Riiablo.charData.getItems().consumeStoredItem(item)) {
+    if (!clientContext.charData().getItems().consumeStoredItem(item)) {
       world.delete(warp);
       if (visual >= 0) world.delete(visual);
       world.delete(returnWarp);
       if (returnVisual >= 0) world.delete(returnVisual);
       return;
     }
-    townPortalRegistry.replace(Riiablo.game.player, world, wrapper.zone, portalPosition,
+    townPortalRegistry.replace(player, world, wrapper.zone, portalPosition,
         visual, warp, townZone, returnPosition, returnVisual, returnWarp);
-    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
+    if (clientContext.audio() != null) clientContext.audio().play("player_townportal_cast", true);
   }
 
   @Override
   public boolean identifyItem(com.riiablo.item.Item source, com.riiablo.item.Item target) {
-    if (Riiablo.charData == null
-        || !Riiablo.charData.getItems().identifyItem(source, target)) return false;
-    if (Riiablo.audio != null) Riiablo.audio.play("cursor_identify_item", true);
+    if (clientContext.charData() == null
+        || !clientContext.charData().getItems().identifyItem(source, target)) return false;
+    if (clientContext.audio() != null) clientContext.audio().play("cursor_identify_item", true);
     return true;
   }
 
   @Override
   public void dropGold(int amount) {
-    if (Riiablo.charData == null || amount <= 0) return;
-    StatRef carriedRef = Riiablo.charData.getStats().get(Stat.gold);
+    if (clientContext.charData() == null || amount <= 0) return;
+    StatRef carriedRef = clientContext.charData().getStats().get(Stat.gold);
     if (carriedRef == null || amount > carriedRef.asInt()) return;
-    if (Riiablo.game == null || Riiablo.game.player < 0) return;
-    Position position = mPosition.get(Riiablo.game.player);
+    int player = clientContext.playerId();
+    if (player < 0) return;
+    Position position = mPosition.get(player);
     ItemGenerator generator = world.getSystem(ItemGenerator.class);
     com.riiablo.item.Item gold = generator == null ? null : generator.generate("gld");
     if (position == null || gold == null) return;
@@ -343,20 +360,20 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
     gold.attrs.base().put(Stat.quantity, amount);
     gold.attrs.aggregate().put(Stat.quantity, amount);
-    Vector2 dropPosition = freeGroundPosition(Riiablo.game.player, position.position);
+    Vector2 dropPosition = freeGroundPosition(player, position.position);
     int entityId = factory.createItem(gold, dropPosition);
     if (entityId >= 0) {
-      VendorPricing.dropCarriedGold(Riiablo.charData, amount);
+      VendorPricing.dropCarriedGold(clientContext.charData(), amount);
     }
   }
 
   @Override
   public void depositGold(int amount) {
-    VendorPricing.depositGold(Riiablo.charData, amount);
+    if (clientContext.charData() != null) VendorPricing.depositGold(clientContext.charData(), amount);
   }
 
   @Override
   public void withdrawGold(int amount) {
-    VendorPricing.withdrawGold(Riiablo.charData, amount);
+    if (clientContext.charData() != null) VendorPricing.withdrawGold(clientContext.charData(), amount);
   }
 }

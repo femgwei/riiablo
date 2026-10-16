@@ -73,6 +73,20 @@ public class CvarManager implements Cvar.StateListener, Iterable<Cvar> {
     return alias != null && CVARS.containsKey(alias.toLowerCase());
   }
 
+  /**
+   * Detaches every listener owned by this manager. Hosts call this during
+   * shutdown so a retired client cannot keep receiving global Cvar updates.
+   * Safe to call repeatedly.
+   */
+  public void clear() {
+    for (Cvar cvar : CVARS.values()) {
+      if (cvar != null) cvar.removeStateListener(this);
+    }
+    CVARS.clear();
+  }
+
+  public void dispose() { clear(); }
+
   @Override
   public void onChanged(Cvar cvar, Object from, Object to) {}
 

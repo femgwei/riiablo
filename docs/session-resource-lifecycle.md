@@ -1,5 +1,18 @@
 # 会话资源生命周期
 
+# 2026-10-17 客户端系统边界与后台生命周期补充
+
+- GameScreen 现在创建并注册一个 `ClientGameplayContext`，系统通过该上下文读取
+  会话角色、动态玩家实体、音频/光标、资产/文件表和渲染宿主。物品拾取、物品移动、
+  自动交互、Act 切换、Act I 任务标记、Automap 以及网络物品结果音效不再从生产路径
+  读取对应的 `Riiablo` 全局别名；无参构造只保留给旧测试夹具。
+- `ClientSystemHarness` 提供最小 Artemis 生命周期，用于只装配目标系统的 headless
+  测试。当前回归覆盖显式切幕回调和动态玩家身份，未声称完整画面或真实联机验收。
+- `CvarManager.clear/dispose` 在 Client 保存 Cvar 后解除所有状态监听。TCPIPScreen
+  记录连接代次，dispose 会中断 launcher、关闭待交接 socket；迟到的 postRunnable
+  在代次不符时丢弃，不会把旧连接交给新屏幕。异步日志 worker 和控制台 Timer 的
+  既有幂等清理保持有效。
+
 ## 2026-10-17 全局网络身份显式化：第一组
 
 本批把网络客户端的会话身份从全局静态状态显式提升为 World 服务：

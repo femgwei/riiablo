@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TCPIPScreen extends ScreenAdapter {
   private static final String TAG = "MultiplayerScreen";
@@ -59,7 +60,9 @@ public class TCPIPScreen extends ScreenAdapter {
   private Label  lbDescription;
   private Button btnCancel;
   private final AtomicBoolean disposed = new AtomicBoolean();
+  private final AtomicLong connectionGeneration = new AtomicLong();
   private volatile Thread launcher;
+  private volatile Socket pendingSocket;
 
   public TCPIPScreen(Animation D2logoLeft, Animation D2logoRight) {
     this.D2logoLeft = D2logoLeft;
@@ -126,6 +129,7 @@ public class TCPIPScreen extends ScreenAdapter {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         if (disposed.get()) return;
+        final long generation = connectionGeneration.get();
         Actor actor = event.getListenerActor();
         if (actor == btnHostGame) {
           hostLocalGame();
@@ -138,10 +142,16 @@ public class TCPIPScreen extends ScreenAdapter {
                 try {
                   socket = Gdx.net.newClientSocket(Net.Protocol.TCP, text, 6114, null);
                   final Socket socketRef = socket;
+                  pendingSocket = socketRef;
                   Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-                      if (disposed.get()) { socketRef.dispose(); return; }
+                      if (disposed.get() || generation != connectionGeneration.get()) {
+                        if (pendingSocket == socketRef) pendingSocket = null;
+                        socketRef.dispose();
+                        return;
+                      }
+                      pendingSocket = null;
                       Riiablo.client.clearAndSet(new SelectCharacterScreen3(socketRef));
                     }
                   });
@@ -206,14 +216,20 @@ public class TCPIPScreen extends ScreenAdapter {
 
   private void hostLocalGame() {
     if (disposed.get()) return;
+    final long generation = connectionGeneration.get();
     btnHostGame.setDisabled(true);
     lbDescription.setText(Riiablo.bundle.get("tcp_starting_server"));
     Thread launch = new Thread(() -> {
       try {
         HostedD2GS.start();
         final Socket socket = connectLocalServer(15000L);
+        pendingSocket = socket;
         Gdx.app.postRunnable(() -> {
-          if (disposed.get()) { socket.dispose(); HostedD2GS.stop(); return; }
+          if (disposed.get() || generation != connectionGeneration.get()) {
+            if (pendingSocket == socket) pendingSocket = null;
+            socket.dispose(); HostedD2GS.stop(); return;
+          }
+          pendingSocket = null;
           Riiablo.client.clearAndSet(new SelectCharacterScreen3(socket, true));
         });
       } catch (Throwable t) {
@@ -273,8 +289,12 @@ public class TCPIPScreen extends ScreenAdapter {
   @Override
   public void dispose() {
     if (!disposed.compareAndSet(false, true)) return;
+    connectionGeneration.incrementAndGet();
     Thread launch = launcher;
     if (launch != null) launch.interrupt();
+    Socket socket = pendingSocket;
+    pendingSocket = null;
+    if (socket != null) socket.dispose();
     Riiablo.assets.unload(TitleScreenDescriptor.fileName);
     Riiablo.assets.unload(D2logoFireLeftDescriptor.fileName);
     Riiablo.assets.unload(D2logoFireRightDescriptor.fileName);

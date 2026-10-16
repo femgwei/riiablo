@@ -790,6 +790,7 @@ public class Client extends Game {
       cleanup.run(() -> { if (music != null) music.stop(); });
       cleanup.run(() -> { if (logs != null) logs.saveAll(); });
       cleanup.run(() -> { if (cvars != null) reportSaveFailures(cvars.saveAll()); });
+      cleanup.run(() -> { if (cvars != null) cvars.dispose(); });
       cleanup.run(() -> { if (keys != null) reportSaveFailures(keys.saveAll()); });
       cleanup.run(() -> { if (asyncAppender != null) asyncAppender.dispose(); });
       // All screens save/retire while their borrowed host resources are valid.
