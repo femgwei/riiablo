@@ -6,14 +6,17 @@
 
 ## 本轮实现
 
+累计完成 2/37，剩余 35 类。
+
 - Trap-Melee：已完成 Fn087 的攻击概率、失败等待、非近战及无目标固定 40 帧等待；补齐表名到 Java 类的显式映射。隔离源码测试通过，证据见 `ai-arena/20261016-trap-melee/`。本轮完成 1 类，剩余 36 类。测试覆盖 AI 决策与共享动作生命周期，未进行图形客户端场景验收。
+- Trap-Missile：已完成 Fn077 的距离/次数限制、交替等待、无目标/超距/耗尽死亡及禁止掉落；补齐表名映射。6 项专用测试及相关回归共 37 项通过，证据见 `ai-arena/20261016-trap-missile/`。复用现有飞弹攻击和单位标志，无新增大依赖；未进行自然地图飞弹命中验收。完成后剩余 35 类。
 
 ## 已确认的大依赖
 
 暂无登记。后续条目必须注明受影响 AI、原版函数/位置、缺少的生产能力、行为影响及后续工作。未核实的依赖不作阻塞依据。
 
-## 待完成（36）
+## 待完成（35）
 
-7TIllusion、AbyssKnight、Ancient、BaalThrone、BaalToStairs、BatDemon、Catapult、CatapultSpotter、ClawViperEx、DarkWanderer、FetishBlowgun、FingerMage、GenericSpawner、HighPriest、Imp、InvisoSpawner、MinionSpawner、Mosquito、Nihlathak、OblivionKnight、Overseer、QuillMother、ReanimatedHorde、Regurgitator、SiegeBeast、SiegeTower、SuccubusWitch、SuicideMinion、ThornHulk、Trap-LeftArrow、Trap-Missile、Trap-Nova、Trap-Poison、Trap-RightArrow、VileMother、WillOWisp。
+7TIllusion、AbyssKnight、Ancient、BaalThrone、BaalToStairs、BatDemon、Catapult、CatapultSpotter、ClawViperEx、DarkWanderer、FetishBlowgun、FingerMage、GenericSpawner、HighPriest、Imp、InvisoSpawner、MinionSpawner、Mosquito、Nihlathak、OblivionKnight、Overseer、QuillMother、ReanimatedHorde、Regurgitator、SiegeBeast、SiegeTower、SuccubusWitch、SuicideMinion、ThornHulk、Trap-LeftArrow、Trap-Nova、Trap-Poison、Trap-RightArrow、VileMother、WillOWisp。
 
 Baboon、Scarab 已有专用类，不在本轮 37 类中；此处不将其视为完整原版验收。

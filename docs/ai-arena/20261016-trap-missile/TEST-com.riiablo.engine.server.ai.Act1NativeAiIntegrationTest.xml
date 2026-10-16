@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-10-16T01:47:45" hostname="DESKTOP-7GGAVHU" time="2.736">
+  <properties/>
+  <testcase name="griswoldUsesNative80And50PercentBranchesAndTenFrameIdle()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="1.935"/>
+  <testcase name="sarcophagusArcaneTowerAndDesertTurretUseDedicatedNativeLoops()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.022"/>
+  <testcase name="elementalBeastCastsTwiceThenSelfDestructs()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.008"/>
+  <testcase name="noTargetDoesNotCastOrChaseAndActiveSequenceAloneBlocksNewDecision()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.007"/>
+  <testcase name="initializationReadsAllEightParamsAndThinkDelayFromEachDifficulty()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.011"/>
+  <testcase name="smithSpeedsUpWhenHurtAndUsesOrdinaryAttackInMelee()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.008"/>
+  <testcase name="zakarumPriestBarrierAllowsBlizzardButNeverLightning()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.458"/>
+  <testcase name="zakarumPriestTeleportsBelow33PercentBeforeMeleeAndHonorsCooldown()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.011"/>
+  <testcase name="nativeRowsMustResolveToDedicatedAiNotFallback()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.008"/>
+  <testcase name="andarielStallsExactlyFiveFramesThenCanEngage()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.031"/>
+  <testcase name="zakarumPriestRowsResolveDedicatedAiAndNativeSkillSlots()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.006"/>
+  <testcase name="andarielMeleeSelectsSprayOrAttackAndDoesNotOverwriteActiveCast()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.018"/>
+  <testcase name="arachUsesNativeAttackDecisionAndGargoyleTrapUsesSkillRecovery()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.017"/>
+  <testcase name="skeletonUsesA1OnSuccessfulRollAndResumesAfterAnimationWithoutRandomPause()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.023"/>
+  <testcase name="zakarumPriestBlockedTeleportStillConsumesCooldown()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.051"/>
+  <testcase name="flyingScimitarUsesNativeAttackAndCircleBranches()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.017"/>
+  <testcase name="zakarumPriestHealsOnlyEligibleAlliesAndUsesNativeCallbackOrder()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.006"/>
+  <testcase name="failedSkillDoesNotSubstituteBasicAttackAndWaitsTenFrames()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.003"/>
+  <testcase name="durielUsesNativeMeleePriorityAndChargeOrFlaggedApproach()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.012"/>
+  <testcase name="zakarumPriestRejectedSkillDoesNotFallBackToOrdinaryAttack()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.003"/>
+  <testcase name="zakarumZealotSelectsNativeAttack2AndRunApproach()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.014"/>
+  <testcase name="andarielRangedBranchesUseBothConfiguredSkills()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.016"/>
+  <testcase name="zakarumPriestHealRangeIncludesBoundaryAndLivingSubOnePercentUnits()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.004"/>
+  <testcase name="zakarumPriestPrefersBlizzardThenIndependentLightningCooldown()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.003"/>
+  <testcase name="maggotEggHatchesThenDiesAndPantherJavelinUsesNativeMissA1Attack()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.009"/>
+  <testcase name="summonerUsesColdNovaThenFirewallAndApproachesWhenCastRollFails()" classname="com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest" time="0.007"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

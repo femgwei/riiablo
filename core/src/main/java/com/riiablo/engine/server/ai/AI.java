@@ -77,6 +77,7 @@ public abstract class AI implements Interactable.Interactor {
   public static AI findAI(int entityId, String ai) {
     // MonStats names containing '-' cannot be Java class names.
     if ("Trap-Melee".equals(ai)) return new TrapMelee(entityId);
+    if ("Trap-Missile".equals(ai)) return new TrapMissile(entityId);
     String fullClassName = "com.riiablo.engine.server.ai." + ai;
     try {
       java.lang.Class<?> clazz = java.lang.Class.forName(fullClassName);
