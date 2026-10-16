@@ -1,5 +1,45 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第四批：按钮音效引用收口
+
+- [x] Button 的每份点击音效引用绑定原 AssetManager；播放/卸载使用同一宿主，
+  释放幂等且不再播放已释放的缓存 Sound。在途清理仍先完成再卸载，要求宿主有效，
+  必须在主线程/GL 线程执行，可能同步等待，不扩展为通用异步取消协议。
+- [x] GameScreen 在两 Stage 顶层 Actor 清理前，快照并清理整棵树的 Button
+  基类音效引用，包含隐藏/嵌套控件。不递归调用任意 Disposable 或 Button 子类
+  dispose，不释放共享 style/贴图/batch，保留已有面板的其他子资源所有权。
+- [x] SpellsQuickPanel 重建/退出时按实际行控件清理旧按钮，不依赖可能因同 skill
+  id 覆盖而不完整的索引；排序 clear/readd 不销毁。清理失败仍处理余行、监听和图标。
+- [x] 新增 ButtonLifecycleTest 11 项、SpellsQuickPanelLifecycleTest 2 项，
+  加强现有 GameScreen 测试对隐藏嵌套按钮的生产释放入口覆盖。首轮无界面夹具缺
+  Gdx.files 导致 libGDX Cell 初始化递归，补齐后专项全部通过；保留初次失败日志
+  build/ui-buttons-focused.log，不降低断言或记作成功。
+- [x] 真实 1.10f MPQ / 同一 Client、AssetManager、GL 三轮生产营地重进通过，
+  每轮按钮引用构造前/构造后/运行中/退出后为 0/129/138/0；每轮额外三次技能更新
+  重建均保持运行中引用数不增长，退出由诊断升级为构造前基线硬断言。原先每轮残留
+  105、累计 315 的已知问题已消除；每轮地图 58 个 DT1 / 2626 张贴图仍释放。
+  首次成功证据 build/ui-buttons-focused-02.log 与 build/ui-buttons-camp/。
+- 扩大回归首次在第三轮营地三帧 PASS 后触发验证入口的 120 秒进程看门狗，
+  前两轮生命周期 PASS，保留 build/ui-buttons-regression.log 为失败记录；不计作
+  完整成功。三轮入口原先错误沿用单轮总预算，现按三轮给出 360 秒有界进程预算，
+  单轮仍 120 秒；资源断言和 Tick 预算不变，不将延长验证时限视为性能通过。
+- [x] 最终扩大定向回归 322/322、47 类通过：core 280/280（40 类）、D2GS
+  全部 42/42（7 类），失败/错误/跳过均 0；包括上一批 309 项与新增 13 项，不含
+  既有玩法/AI 基线失败，不宣称全仓全绿。三端编译检查通过。
+- [x] 最终同一命令复跑两种三轮 GL 验证、单轮营地/Client 退出、D2GS 25Hz
+  step=0.04、Throw 导弹顺序及伤害 1000→992，全部通过，BUILD SUCCESSFUL；
+  日志 build/ui-buttons-regression-02.log，生命周期报告与营地 manifest 位于
+  build/ui-buttons-camp/。未出现 ERROR/Exception/OFFSCREEN_FATAL；保留原有地图/
+  分配/表 Key 诊断。四次 SIM_SLOW=70.36/85.18/88.17/78.22ms，预算 40ms，
+  不作性能验收；构造/运行中引用数字是本夹具结果，断言依赖宿主基线而非硬编码数字。
+- 下一批处理审计已确认的面板资源：InventoryPanel 的 invchar6Tab 引用、fill
+  Texture；ControlPanel 的七份职业图标引用、拼接背景 CPU Pixmap。它们未由本批
+  音效清理覆盖，不能宣称 UI 全资源无泄漏。
+- 整体进度：七批装配改造完成，资源阶段第四批完成；网络 socket / HostedD2GS
+  停机、Client 完整屏幕栈/共享资源、GameEntryLoadingScreen、完整构造回滚、跨 Act /
+  加载中退出、长时内存及人工画面/听感验收仍待。实现与复跑说明见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第三批：整图退出与同进程重进
 
 - [x] 移除 GameScreen 普通退出的 map.dispose 历史 FIXME；保存角色/Automap、

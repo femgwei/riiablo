@@ -195,3 +195,73 @@ MPQ/GL 上下文中三轮构造生产 GameScreen，经加载屏、Act I DRLG、�
   `build/session-reentry-regression.log`，未出现 ERROR/Exception。
   保留 level0/DrlgType0 跳过、Java 分配回退、表 Key 推断等既有诊断；四次
   SIM_SLOW 为 107.33 / 58.70 / 57.31 / 112.39ms（预算 40ms），不作性能验收。
+
+## 第四批：嵌套按钮音效与动态快捷栏清理
+
+`Button` 每次构造获得的一份 button.wav 引用现在绑定原 AssetManager；播放和
+卸载均使用该宿主，重复释放不重复扣减，释放后不再播放缓存的 Sound。清理在途加载
+沿用前述先完成、再卸载的约束，可能同步等待，要求原宿主仍有效的主线程/GL 线程。
+
+新增 `Button.disposeClickSounds(root)`，先快照整棵子树中的 Button，再仅清理
+Button 基类自己的音效引用。包含隐藏控件，但不调用任意 Actor 或 Button 子类的
+dispose，不释放共享 style/贴图/batch。GameScreen 在原有顶层 Actor 清理之前调用，
+面板既有的按钮 dispose 仍安全，其他子资源仍由原面板负责，避免通用递归销毁重叠。
+单纯 detach、排序时 clear/readd 不代表终止生命周期，不自动释放。
+
+`SpellsQuickPanel` 在技能变化重建和最终 dispose 时，先按每行实际控件树回收旧
+按钮音效，再清空旧 Actor/Cell 和索引；不能仅遍历按 skill id 索引的 map，因为
+充能技能和普通技能可能同 id 覆盖，导致漏掉仍存在的按钮。排序重排不释放按钮。
+某行音效清理失败仍清空该行并处理余行，最终 dispose 仍尝试全部按键监听和图标，
+保留首异常及后续 suppressed，不对失败引用重试。
+
+新增 ButtonLifecycleTest 11 项、SpellsQuickPanelLifecycleTest 2 项，并加强现有
+GameScreen Stage 测试的隐藏嵌套按钮覆盖。真实会话入口每轮额外触发三次技能更新，
+要求运行中音效引用不累积，并要求退出回到 UI 构造前的基线；上一批的单独诊断现在
+升级为硬断言。仍不宣称所有 UI 资产或 Client 全部资源都已归零。
+
+三轮生命周期入口共用同一进程，不应共用单轮 camp 的 120 秒总看门狗；该入口
+现在按三轮给出 360 秒进程上限，普通单轮仍为 120 秒。资源断言、轮数和帧数不变，
+这只是失败进程的外部终止预算，不是放宽 40ms Tick 预算或性能验收门槛。
+
+本批最小复跑（扩大回归另含前述装配/音频/地图测试）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.screen.panel.SpellsQuickPanelLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/ui-buttons-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/ui-buttons-camp' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+### 第四批验证记录
+
+- 新增 13 项专项通过，扩大定向回归共 322/322、47 类：core 280/280（40 类）、
+  D2GS 全部 42/42（7 类），失败/错误/跳过均 0；三端编译检查通过。范围为上一批
+  309 项加本批专项，未纳入既有玩法/AI 基线失败，不宣称全仓全绿。
+- 最终真实资源三轮，每轮按钮引用构造前/构造后/运行中/退出后为 0/129/138/0；
+  三次技能更新重建保持运行中计数稳定。旧 105/轮残留消除。每轮 58 个 DT1、
+  2626 张地图贴图及其 CPU 像素退出释放，新会话使用新 DT1，输入处理器回到 2。
+  数字是当前夹具观测值，生产入口按宿主基线断言，不硬编码 129 或 138。
+- 独立地图资产三轮 44 tiles、引用 4→2→1→0，单轮营地三帧及 Client 退出、
+  D2GS 25Hz step=0.04、Throw 导弹顺序及伤害 1000→992 全部通过；与上述 322 项
+  在同一命令完成，BUILD SUCCESSFUL。日志 build/ui-buttons-regression-02.log，
+  报告 build/ui-buttons-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+- 无 ERROR/Exception/OFFSCREEN_FATAL；仍保留既有地图/分配/表 Key 诊断。
+  SIM_SLOW=70.36/85.18/88.17/78.22ms（40ms 预算），本次不作性能验收。
+- 初轮夹具缺少 Gdx.files，导致 Cell 默认值初始化递归，已补齐并完整重跑；失败
+  日志 build/ui-buttons-focused.log 保留。首个成功三轮见 ui-buttons-focused-02.log。
+  首次扩大回归在第三轮营地三帧 PASS 后达到旧 120 秒看门狗，未完成退出断言，
+  ui-buttons-regression.log 保留为失败记录；按三轮修正有界总预算后完整重跑通过，
+  不将失败运行记为成功，也不放宽资源断言。
+
+### 后续边界
+
+本轮审计另外确认：InventoryPanel 的 invchar6Tab.DC6 引用和自建 fill Texture
+尚未配对释放；ControlPanel 的七份职业技能图标引用，以及拼接背景的 CPU Pixmap
+尚需清理。这些独立的面板资产留给下一批，不通过递归 dispose 所有控件处理。
+网络停机、Client 完整屏幕栈/共享资源、GameEntryLoadingScreen、完整构造回滚、
+跨 Act/加载中退出及长时压力/人工画面听感验收仍未完成。

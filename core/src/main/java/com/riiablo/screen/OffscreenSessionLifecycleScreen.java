@@ -57,6 +57,14 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void leave(OffscreenCampScreen screen) {
     require(Riiablo.client.getScreen() == screen, "production loading screen must have popped");
     require(screen.player >= 0 && screen.map.getZones().size > 0, "live player and map");
+    assets.finishLoading();
+    int liveButtonReferences = references("data/global/sfx/cursor/button.wav");
+    for (int rebuild = 0; rebuild < 3; rebuild++) {
+      character.update(); // production quick-skill rebuild, including discarded buttons
+      assets.finishLoading();
+      require(references("data/global/sfx/cursor/button.wav") == liveButtonReferences,
+          "quick-skill rebuild must not accumulate click-sound references");
+    }
     Array<Pixmap> pixels = new Array<>();
     Array<Integer> handles = new Array<>();
     Map<String, DT1> currentTiles = new HashMap<>();
@@ -90,10 +98,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         && !Keys.DebugMode.containsStateListener(screen.debugKeyListener), "old keys detached");
     require(Riiablo.input.getProcessors().size == inputBaseline, "input processors balanced");
     require(Riiablo.game == null && Riiablo.engine == null, "old global aliases cleared");
-    // These three descriptors are not also acquired by UI constructors. A
-    // whole-manager before/after count cannot attribute shared click sounds:
-    // top-level actors correctly release some UI references during exit,
-    // while nested UI references remain a separate, reported defect.
+    // Screen preloads use the pre-show baseline; Button's separately owned
+    // references must return all the way to the pre-construction baseline.
+    require(references("data/global/sfx/cursor/button.wav") == buttonReferencesBeforeConstruction,
+        "all session click-sound references must return to the host baseline");
     for (com.badlogic.gdx.assets.AssetDescriptor asset : new com.badlogic.gdx.assets.AssetDescriptor[] {
         screen.loadingscreenDescriptor, screen.windowopenDescriptor, screen.automapDescriptor}) {
       int expected = baselineReferences.getOrDefault(asset.fileName, 0);
@@ -111,6 +119,8 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\ntextures=" + handles.size + "\ninputProcessors=" + inputBaseline
         + "\nuiButtonReferencesBeforeConstruction=" + buttonReferencesBeforeConstruction
         + "\nuiButtonReferencesAfterConstruction=" + buttonReferencesAfterConstruction
+        + "\nuiButtonReferencesWhileLive=" + liveButtonReferences
+        + "\nquickSkillRebuilds=3"
         + "\nuiButtonReferencesAfterExit=" + references("data/global/sfx/cursor/button.wav")
         + "\nremainingAssets=" + assets.getLoadedAssets() + "\nresult=PASS\n";
     Gdx.files.absolute(output).child("cycle-" + cycle + "-lifecycle.txt").writeString(report, false, "UTF-8");

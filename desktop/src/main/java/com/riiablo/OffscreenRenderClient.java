@@ -103,10 +103,16 @@ public final class OffscreenRenderClient {
     });
 
     if ("camp".equals(mode)) {
+      // The lifecycle task loads/renders/retires three complete sessions in
+      // one process. Keep the single-camp budget per session, not per process.
+      final boolean sessionLifecycle = Boolean.getBoolean("riiablo.offscreen-session-lifecycle");
+      final long timeoutMillis = 120_000L * (sessionLifecycle ? 3 : 1);
       Thread timeout = new Thread(() -> {
         try {
-          Thread.sleep(120_000L);
-          System.err.println("[OFFSCREEN_FATAL] Rogue Encampment smoke test timed out");
+          Thread.sleep(timeoutMillis);
+          System.err.println("[OFFSCREEN_FATAL] "
+              + (sessionLifecycle ? "Three-session lifecycle" : "Rogue Encampment smoke test")
+              + " timed out after " + timeoutMillis + "ms");
           System.err.flush();
           Runtime.getRuntime().halt(2);
         } catch (InterruptedException ignored) {

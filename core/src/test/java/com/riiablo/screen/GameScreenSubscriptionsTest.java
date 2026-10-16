@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 /** Runs production subscription configuration/disposal with mocked host resources, without GL/MPQ. */
 class GameScreenSubscriptionsTest {
   private Application previousApp;
+  private com.badlogic.gdx.Files previousFiles;
   private Client previousClient;
   private Client.InputProcessor previousInput;
   private AssetManager previousAssets;
@@ -56,6 +57,7 @@ class GameScreenSubscriptionsTest {
   @BeforeEach
   void installHost() {
     previousApp = Gdx.app;
+    previousFiles = Gdx.files;
     previousClient = Riiablo.client;
     previousInput = Riiablo.input;
     previousAssets = Riiablo.assets;
@@ -63,6 +65,7 @@ class GameScreenSubscriptionsTest {
     previousGame = Riiablo.game;
     previousCursor = Riiablo.cursor;
     Gdx.app = mock(Application.class);
+    Gdx.files = mock(com.badlogic.gdx.Files.class);
     when(Gdx.app.getType()).thenReturn(Application.ApplicationType.Desktop);
     Riiablo.client = mock(Client.class);
     Riiablo.input = mock(Client.InputProcessor.class);
@@ -79,6 +82,7 @@ class GameScreenSubscriptionsTest {
       scope(screen, "sessionSubscriptions").dispose();
     }
     Gdx.app = previousApp;
+    Gdx.files = previousFiles;
     Riiablo.client = previousClient;
     Riiablo.input = previousInput;
     Riiablo.assets = previousAssets;
@@ -315,6 +319,18 @@ class GameScreenSubscriptionsTest {
         stage.addActor(new RemovingActor(releases));
         stage.addActor(new RemovingActor(releases));
       }
+      com.riiablo.Colors previousColors = Riiablo.colors;
+      Riiablo.colors = new com.riiablo.Colors();
+      try {
+        for (Stage stage : new Stage[] {screen.stage, screen.scaledStage}) {
+          com.badlogic.gdx.scenes.scene2d.Group nested = new com.badlogic.gdx.scenes.scene2d.Group();
+          nested.setVisible(false);
+          nested.addActor(new com.riiablo.widget.Button(new com.riiablo.widget.Button.ButtonStyle()));
+          stage.addActor(nested);
+        }
+      } finally {
+        Riiablo.colors = previousColors;
+      }
       screen.map = mock(com.riiablo.map.Map.class);
       screen.hide();
       assertEquals(0, releases.get());
@@ -325,6 +341,7 @@ class GameScreenSubscriptionsTest {
       assertEquals(0, screen.scaledStage.getActors().size);
       verify(sharedBatch, never()).dispose();
       verify(screen.map).dispose();
+      verify(Riiablo.assets, times(2)).unload("data/global/sfx/cursor/button.wav");
     } finally {
       Gdx.graphics = previousGraphics;
       Gdx.gl = previousGl;

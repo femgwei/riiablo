@@ -35,6 +35,8 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.HotkeyButton;
+import com.riiablo.widget.Button;
+import com.riiablo.util.Disposal;
 import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.server.AuraEcsSystem;
 
@@ -150,12 +152,25 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
 
   @Override
   public void onChanged(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
+    clearButtons();
+    rebuildButtons(client, skills, chargedSkills);
+  }
+
+  private void clearButtons() {
     buttons.clear();
     keyMappings.clear();
-    for (Table table : tables) {
-      for (Actor child : table.getChildren()) child.clear();
-      table.clear();
+    try (Disposal cleanup = new Disposal()) {
+      for (Table table : tables) {
+        cleanup.run(() -> Button.disposeClickSounds(table));
+        cleanup.run(() -> {
+          for (Actor child : table.getChildren()) child.clear();
+          table.clear();
+        });
+      }
     }
+  }
+
+  private void rebuildButtons(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
     for (StatRef chargedSkill : chargedSkills) {
       if (chargedSkill.param0() <= 0) continue; // level <= 0
 
@@ -309,8 +324,15 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
 
   @Override
   public void dispose() {
-    for (MappedKey Skill : Keys.Skill) Skill.removeStateListener(mappedKeyListener);
-    Riiablo.assets.unload(SkilliconDescriptor.fileName);
-    for (AssetDescriptor assetDescriptor : CharSkilliconDescriptor) Riiablo.assets.unload(assetDescriptor.fileName);
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::clearButtons);
+      for (MappedKey Skill : Keys.Skill) {
+        cleanup.run(() -> Skill.removeStateListener(mappedKeyListener));
+      }
+      cleanup.run(() -> Riiablo.assets.unload(SkilliconDescriptor.fileName));
+      for (AssetDescriptor assetDescriptor : CharSkilliconDescriptor) {
+        cleanup.run(() -> Riiablo.assets.unload(assetDescriptor.fileName));
+      }
+    }
   }
 }

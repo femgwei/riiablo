@@ -1512,6 +1512,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   private static void disposeStage(Stage stage, Disposal cleanup) {
     if (stage == null) return;
+    // Only Button's own sound reference is recursive. Existing panel dispose
+    // methods remain responsible for their other children and shared assets.
+    cleanup.run(() -> com.riiablo.widget.Button.disposeClickSounds(stage.getRoot()));
     cleanup.run(() -> {
       // Actors may remove themselves while disposing. Keep the original list stable.
       for (Actor actor : stage.getActors().toArray(Actor.class)) {
