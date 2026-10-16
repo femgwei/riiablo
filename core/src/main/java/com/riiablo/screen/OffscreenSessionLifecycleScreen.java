@@ -190,12 +190,14 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     ownedPanelTextures.add(fill);
     ownedPanelTextures.add(field(controlWidget, "background", Texture.class));
     ownedPanelTextures.add(field(experienceWidget, "whitePixelTexture", Texture.class));
+    ownedPanelTextures.add(field(screen.hirelingPanel, "fill", Texture.class));
+    ownedPanelTextures.add(field(screen.mercenaryHud, "fill", Texture.class));
     collectGridTextures(screen.inventoryPanel, ownedPanelTextures);
     collectGridTextures(screen.stashPanel, ownedPanelTextures);
     collectGridTextures(screen.cubePanel, ownedPanelTextures);
     collectGridTextures(screen.vendorPanel, ownedPanelTextures);
     collectGridTextures(screen.controlPanel, ownedPanelTextures);
-    require(ownedPanelTextures.size == 11, "all eight grid textures plus three panel textures sampled");
+    require(ownedPanelTextures.size == 13, "all eight grid textures plus five private panel textures sampled");
     Array<Integer> panelHandles = new Array<>();
     for (Texture texture : ownedPanelTextures) {
       require(texture != null && Gdx.gl.glIsTexture(texture.getTextureObjectHandle()),

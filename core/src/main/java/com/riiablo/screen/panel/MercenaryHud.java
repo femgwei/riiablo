@@ -4,6 +4,7 @@ import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -34,6 +35,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.SkillNameResolver;
+import com.riiablo.util.Disposal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -95,10 +97,12 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private final List<Label> slotNames = new ArrayList<Label>(), slotCounts = new ArrayList<Label>();
   private final List<Slot> slots = new ArrayList<Slot>();
   private final ItemController itemController;
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
   private EntitySubscription mercenaries, summonedPets;
   private int mercenaryId = -1, mercenarySlotIndex = -1;
   private float life, maxLife, feedbackRemaining;
   private boolean hovered;
+  private boolean disposed;
 
   @SuppressWarnings("unchecked")
   public MercenaryHud(ItemController itemController) {
@@ -136,7 +140,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
 
   private AssetDescriptor<DC6> descriptor(String name) {
     AssetDescriptor<DC6> d = new AssetDescriptor<DC6>(ICON_ROOT + name, DC6.class, DC6Loader.DC6Parameters.COMBINE);
-    Riiablo.assets.load(d); return d;
+    assets.load(d); return d;
   }
   public boolean useCursorPotion() {
     Item item = Riiablo.cursor == null ? null : Riiablo.cursor.getItem();
@@ -149,6 +153,7 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   public void showTemporaryMessage(String message) { feedback.setText(message == null ? "" : message); feedbackRemaining = 1.5f; feedback.setVisible(message != null && !message.isEmpty()); }
   public boolean containsStagePoint(float stageX, float stageY) { Vector2 p = stageToLocalCoordinates(new Vector2(stageX, stageY)); return isMercenaryPoint(p.x, p.y); }
   @Override public void act(float delta) {
+    if (disposed) return;
     super.act(delta); if (feedbackRemaining > 0 && (feedbackRemaining -= delta) <= 0) { feedbackRemaining = 0; feedback.setVisible(false); } refreshState();
   }
 
@@ -298,8 +303,8 @@ public final class MercenaryHud extends WidgetGroup implements Disposable {
   private static String localized(String key, String fallback) { if (Riiablo.bundle == null) return fallback; String v = Riiablo.bundle.get(key); return v == null || v.isEmpty() ? fallback : v; }
   static Color healthBarColor(float ratio) { if (ratio > HEALTH_GREEN_THRESHOLD) return Color.GREEN; if (ratio > HEALTH_YELLOW_THRESHOLD) return Color.YELLOW; return Color.RED; }
 
-  public void drawCompanions(Batch batch, float alpha) { if (!isVisible()) return; for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); boolean bar = s.mercenary || (s.kind != SummonKind.RAVEN && s.count == 1); drawCompanion(batch, alpha, s.icon, i * (WIDTH + SLOT_GAP), s.life, s.maxLife, bar, i == mercenarySlotIndex && hovered); } }
-  @Override public void draw(Batch batch, float alpha) { if (!isVisible()) return; drawCompanions(batch, alpha); batch.setColor(Color.WHITE); super.draw(batch, alpha); }
-  private void drawCompanion(Batch batch, float alpha, AssetDescriptor<DC6> d, float slotX, float hp, float max, boolean bar, boolean highlight) { if (d == null || !Riiablo.assets.isLoaded(d.fileName, DC6.class)) return; DC6 icon = Riiablo.assets.get(d.fileName, DC6.class); TextureRegion region = icon.getTexture(0); float x = getX() + slotX + (WIDTH - region.getRegionWidth()) * .5f, y = getY() + ICON_Y; batch.setColor(1, 1, 1, alpha); if (highlight && batch instanceof PaletteIndexedBatch) { PaletteIndexedBatch b = (PaletteIndexedBatch) batch; b.setBlendMode(BlendMode.BRIGHTEN, Riiablo.colors.highlight); batch.draw(region, x, y); b.resetBlendMode(); } else batch.draw(region, x, y); if (!bar) return; float ratio = max <= 0 ? 0 : Math.max(0, Math.min(1, hp / max)); Color c = healthBarColor(ratio); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).setBlendMode(BlendMode.SOLID, c); else batch.setColor(c.r, c.g, c.b, alpha); batch.draw(fill, getX() + slotX + 5f, getY() + BAR_Y, 46f * ratio, 5f); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).resetBlendMode(); }
-  @Override public void dispose() { fill.dispose(); for (AssetDescriptor<DC6> d : mercenaryIcons) Riiablo.assets.unload(d.fileName); for (AssetDescriptor<DC6> d : summonIcons.values()) Riiablo.assets.unload(d.fileName); }
+  public void drawCompanions(Batch batch, float alpha) { if (disposed || !isVisible()) return; for (int i = 0; i < slots.size(); i++) { Slot s = slots.get(i); boolean bar = s.mercenary || (s.kind != SummonKind.RAVEN && s.count == 1); drawCompanion(batch, alpha, s.icon, i * (WIDTH + SLOT_GAP), s.life, s.maxLife, bar, i == mercenarySlotIndex && hovered); } }
+  @Override public void draw(Batch batch, float alpha) { if (disposed || !isVisible()) return; drawCompanions(batch, alpha); batch.setColor(Color.WHITE); super.draw(batch, alpha); }
+  private void drawCompanion(Batch batch, float alpha, AssetDescriptor<DC6> d, float slotX, float hp, float max, boolean bar, boolean highlight) { if (disposed || d == null || !assets.isLoaded(d.fileName, DC6.class)) return; DC6 icon = assets.get(d.fileName, DC6.class); TextureRegion region = icon.getTexture(0); float x = getX() + slotX + (WIDTH - region.getRegionWidth()) * .5f, y = getY() + ICON_Y; batch.setColor(1, 1, 1, alpha); if (highlight && batch instanceof PaletteIndexedBatch) { PaletteIndexedBatch b = (PaletteIndexedBatch) batch; b.setBlendMode(BlendMode.BRIGHTEN, Riiablo.colors.highlight); batch.draw(region, x, y); b.resetBlendMode(); } else batch.draw(region, x, y); if (!bar) return; float ratio = max <= 0 ? 0 : Math.max(0, Math.min(1, hp / max)); Color c = healthBarColor(ratio); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).setBlendMode(BlendMode.SOLID, c); else batch.setColor(c.r, c.g, c.b, alpha); batch.draw(fill, getX() + slotX + 5f, getY() + BAR_Y, 46f * ratio, 5f); if (batch instanceof PaletteIndexedBatch) ((PaletteIndexedBatch) batch).resetBlendMode(); }
+  @Override public void dispose() { if (disposed) return; disposed = true; try (Disposal cleanup = new Disposal()) { cleanup.run(() -> setTouchable(Touchable.disabled)); cleanup.run(this::clearListeners); cleanup.run(this::clearChildren); cleanup.dispose(fill); for (AssetDescriptor<DC6> d : mercenaryIcons) cleanup.run(() -> assets.unload(d.fileName)); for (AssetDescriptor<DC6> d : summonIcons.values()) cleanup.run(() -> assets.unload(d.fileName)); } }
 }

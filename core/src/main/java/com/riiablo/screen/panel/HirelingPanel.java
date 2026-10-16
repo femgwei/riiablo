@@ -8,8 +8,8 @@ import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -22,6 +22,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
+import com.riiablo.util.Disposal;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
@@ -47,6 +48,8 @@ import com.riiablo.widget.Label;
 
 public class HirelingPanel extends WidgetGroup implements Disposable {
   private static final String TAG = "HirelingPanel";
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private boolean disposed;
   private static final float HEADER_TEXT_Y = 220f;
 
   final AssetDescriptor<DC6> NpcInvDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\NpcInv.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -78,27 +81,23 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
   private final float compactValueBaselineOffset;
 
   public HirelingPanel() {
-    Riiablo.assets.load(NpcInvDescriptor);
-    Riiablo.assets.finishLoadingAsset(NpcInvDescriptor);
-    NpcInv = Riiablo.assets.get(NpcInvDescriptor).getTexture();
+    assets.load(NpcInvDescriptor);
+    assets.finishLoadingAsset(NpcInvDescriptor);
+    NpcInv = assets.get(NpcInvDescriptor).getTexture();
     setSize(NpcInv.getRegionWidth(), NpcInv.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
 
-    Pixmap solidColorPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-    solidColorPixmap.setColor(0.0f, 0.0f, 0.0f, 1.0f);
-    solidColorPixmap.fill();
-    fill = new Texture(solidColorPixmap);
-    solidColorPixmap.dispose();
+    fill = PanelTextures.solid(Color.BLACK);
 
     backgroundColorR = Riiablo.colors.invRed;
     backgroundColorG = Riiablo.colors.invGreen;
 
     btnExit = new Button(new Button.ButtonStyle() {{
-      Riiablo.assets.load(buysellbtnDescriptor);
-      Riiablo.assets.finishLoadingAsset(buysellbtnDescriptor);
-      up   = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(10));
-      down = new TextureRegionDrawable(Riiablo.assets.get(buysellbtnDescriptor).getTexture(11));
+      assets.load(buysellbtnDescriptor);
+      assets.finishLoadingAsset(buysellbtnDescriptor);
+      up   = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(10));
+      down = new TextureRegionDrawable(assets.get(buysellbtnDescriptor).getTexture(11));
     }});
     btnExit.setPosition(272, 15);
     btnExit.addListener(new ClickListener() {
@@ -112,16 +111,16 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
     inventory = Riiablo.files.inventory.get("Hireling");
     compactValueBaselineOffset = measureCompactValueBaselineOffset();
 
-    Riiablo.assets.load(inv_armorDescriptor);
-    Riiablo.assets.load(inv_helm_gloveDescriptor);
-    Riiablo.assets.load(inv_weaponsDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_armorDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_helm_gloveDescriptor);
-    Riiablo.assets.finishLoadingAsset(inv_weaponsDescriptor);
+    assets.load(inv_armorDescriptor);
+    assets.load(inv_helm_gloveDescriptor);
+    assets.load(inv_weaponsDescriptor);
+    assets.finishLoadingAsset(inv_armorDescriptor);
+    assets.finishLoadingAsset(inv_helm_gloveDescriptor);
+    assets.finishLoadingAsset(inv_weaponsDescriptor);
 
-    inv_armor = Riiablo.assets.get(inv_armorDescriptor);
-    inv_helm_glove = Riiablo.assets.get(inv_helm_gloveDescriptor);
-    inv_weapons = Riiablo.assets.get(inv_weaponsDescriptor);
+    inv_armor = assets.get(inv_armorDescriptor);
+    inv_helm_glove = assets.get(inv_helm_gloveDescriptor);
+    inv_weapons = assets.get(inv_weaponsDescriptor);
 
     final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
 
@@ -348,6 +347,7 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void act(float delta) {
+    if (disposed) return;
     super.act(delta);
     refreshMercenaryStats();
   }
@@ -409,16 +409,25 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void dispose() {
-    btnExit.dispose();
-    Riiablo.assets.unload(NpcInvDescriptor.fileName);
-    Riiablo.assets.unload(buysellbtnDescriptor.fileName);
-    Riiablo.assets.unload(inv_armorDescriptor.fileName);
-    Riiablo.assets.unload(inv_helm_gloveDescriptor.fileName);
-    Riiablo.assets.unload(inv_weaponsDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      cleanup.run(this::clearListeners);
+      cleanup.run(this::clearChildren);
+      cleanup.dispose(btnExit);
+      cleanup.dispose(fill);
+      for (AssetDescriptor asset : new AssetDescriptor[] {
+          NpcInvDescriptor, buysellbtnDescriptor, inv_armorDescriptor,
+          inv_helm_gloveDescriptor, inv_weaponsDescriptor}) {
+        cleanup.run(() -> assets.unload(asset.fileName));
+      }
+    }
   }
 
   @Override
   public void draw(Batch batch, float a) {
+    if (disposed) return;
     batch.draw(NpcInv, getX(), getY());
     super.draw(batch, a);
   }

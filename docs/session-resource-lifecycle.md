@@ -1219,3 +1219,27 @@ BeltGrid 填充纹理）存活并在 Client 退出后删除；保留原地图、
 本批仍不覆盖网格之外的长期压力、连接交接、控制台/Timer/异步日志、跨 Act/加载中
 退出、人工输入声音联机存档验收；资源阶段还需继续检查其他私有 GL Actor 和完整
 构造失败回滚。
+
+## 第十六批：雇佣兵面板与头像 HUD 私有纹理
+
+本批收口 `HirelingPanel` 与 `MercenaryHud` 的私有白色填充纹理。两个组件捕获构造
+时的原 AssetManager；HirelingPanel 改用 PanelTextures 的安全上传路径，退出时清理
+自身监听/子 Actor、按钮、填充纹理及五项页面资产；MercenaryHud 退出时清理头像
+标签和点击监听、填充纹理及全部雇佣兵/召唤物图标引用。两者退出幂等，旧 act/draw
+不会继续访问已释放状态，替换全局 AssetManager 也不会把引用卸载到错误宿主。
+
+真实会话探针在上一批 11 张网格/面板纹理之外增加 HirelingPanel 与 MercenaryHud
+两张私有纹理，要求每轮共 13 张纹理存活、退出后全部删除；保留共享框、菜单树、
+地图、表现资源、输入、加载页和 ClientShutdown 检查。
+
+### 第十六批验证
+
+- `build/mercenary-resources-focused.log`：雇佣兵 HUD 探针、面板资源、共享框专项
+  与三端编译通过，BUILD SUCCESSFUL，1m3s。
+- `build/mercenary-resources-offscreen.log`：同一 Client 三轮真实会话和独立营地
+  通过；每轮 `ownedPanelTexturesDeleted=13`、共享框 `0→12→0`、10 个 NPC 菜单
+  节点退休，最终 ClientShutdown 通过；BUILD SUCCESSFUL，1m58s。慢帧仍不作
+  性能验收，人工画面/输入/声音/联机/存档仍待。
+
+本批仍未覆盖其他私有 GL Actor 的完整构造失败回滚、连接交接、控制台/Timer/异步
+日志、跨 Act/加载中退出和长期压力；资源阶段继续按宿主归属逐项收口。
