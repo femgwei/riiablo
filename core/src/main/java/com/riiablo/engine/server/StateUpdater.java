@@ -45,6 +45,7 @@ import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
@@ -1783,11 +1784,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     boolean targetConverted = mMonster.has(targetId) && mMonster.get(targetId).converted;
     if (sourceConverted) return mMonster.has(targetId) && !targetConverted;
     if (targetConverted) return mMonster.has(sourceId);
-    if (mMonster.has(targetId) && !mMercenary.has(targetId)
-        && !mSummonedPet.has(targetId)) return isPlayerAligned(sourceId);
-    return PvpCombatRules.canDamage(partyManager,
-        isPlayerAligned(sourceId) ? playerAlignmentOwner(sourceId) : sourceId,
-        isPlayerAligned(targetId) ? playerAlignmentOwner(targetId) : targetId,
+    return CombatOwnership.canDamage(world, partyManager, sourceId, targetId,
         isPlayerAligned(sourceId), isPlayerAligned(targetId));
   }
 

@@ -60,13 +60,17 @@ MonStats String空值及Accel有符号int与增量修正等价，原生固定409
 Position/Velocity/Vitals Serializer、Sync.fbs、StatRequest.fbs及ClientNetworkReceiver收发链，
 并搜索core/src/main、server、D2MOO_JAVA/src无对应原版报文结构。详见清单第2/6组。
 本批只改审查记录，没有生产代码变更，故未重复运行上一批测试。
-当前主线已核销6/101；剩余94项待逐项审查、1项(`5be5503`)确认待修复；分支17项适用性审查已完成；
+当前主线已核销7/101；剩余94项待逐项核销；分支17项适用性审查已完成；
 另保留2项能力缺口（加速度执行/game级唯一掉落去重）。用户要求每完成一项汇报剩余工作量。
-`5be5503`已读完整diff及原版函数、追踪Java六处生产目标/战斗入口，确认多为只取一层owner，
-且未使用`Monster.minionOwnerId`沿目标链归属。详细位置、最小修复边界及验收矩阵见清单第2组。
-此项待修复，不得算等价或完成；上游源方只取一层、目标方才沿monster链循环，不能两边无条件递归。
-这轮仅记录已确认差异，未运行测试或修改生产代码。工作区AI.java及TrapMelee相关文件属其他聊天，勿覆盖。
-下一步优先修复`5be5503`并补真实ECS回归，再核销 `b634ef7` / `cce700b`（diff已读）。
+`5be5503`已修复：生产`party/CombatOwnership`保留源方一层（含missile）、
+目标monster owner链迭代，读取minionOwnerId/merc/summon owner，缺owner/自指终止，畸形环拒绝。
+已接线Actioneer、MissileCollisionSystem、ServerSkillSystem、StateUpdater、AuraEcsSystem、AI目标资格；
+现有Conversion专用规则保留。普通无owner目标不分配visited集合。
+新增`CombatOwnershipTest`五项，反射调用真实生产关系入口/AI资格，实体与mapper来自真实ECS，
+另跑PvP八项/诅咒十八项，共31项通过，失败/错误/跳过0；非完整战斗tick/非原DLL差分。
+日志`core/build/upstream-owner-01.log`，XML `.gradle/path-port/upstream-owner-01/core/test-results/pathPortTest`。
+其他聊天的Trap-Melee/Missile/Nova工厂注册及相关文件已由其独立提交，勿覆盖；本轮仅修改AI目标资格相关hunk。
+下一步核销 `b634ef7` / `cce700b`（diff已读）。
 追踪Java生产owner链和target slots、summoner状态消息。只修确认差异，不扩展完整寻路迁移。
 
 ## VisitorFramework九项源码索引（已读）

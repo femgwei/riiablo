@@ -68,6 +68,7 @@ import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
@@ -3648,11 +3649,14 @@ public class ServerSkillSystem extends PassiveSystem {
   private boolean isHostile(int sourceId, int candidate) {
     boolean sourcePlayer = isPlayerAligned(sourceId);
     boolean targetPlayer = isPlayerAligned(candidate);
-    if (sourcePlayer != targetPlayer) return true;
-    if (!sourcePlayer) return false;
-    return PvpCombatRules.canTarget(
-        partyManager, playerAlignmentOwner(sourceId), playerAlignmentOwner(candidate),
-        true, true);
+    if (mMonster.has(sourceId) && mMonster.get(sourceId).converted
+        || mMonster.has(candidate) && mMonster.get(candidate).converted) {
+      if (sourcePlayer != targetPlayer) return true;
+      return sourcePlayer && PvpCombatRules.canTarget(partyManager,
+          playerAlignmentOwner(sourceId), playerAlignmentOwner(candidate), true, true);
+    }
+    return CombatOwnership.canDamage(world, partyManager, sourceId, candidate,
+        sourcePlayer, targetPlayer);
   }
 
   private boolean isPlayerAligned(int entityId) {

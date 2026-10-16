@@ -959,8 +959,10 @@ public abstract class AI implements Interactable.Interactor {
     SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
     if (sourcePet != null && sourcePet.passive) return false;
     boolean sourceConverted = monster != null && monster.converted;
+    int targetOwner = alignmentOwner(targetId);
+    if (targetOwner < 0) return false;
     boolean targetFriendly = mPlayer.has(targetId) || mMercenary.has(targetId)
-        || mSummonedPet.has(targetId);
+        || mSummonedPet.has(targetId) || mPlayer.has(targetOwner);
     Monster candidate = mMonster.has(targetId) ? mMonster.get(targetId) : null;
     boolean targetHostileMonster = candidate != null && !targetFriendly
         && !mCorpse.has(targetId)
@@ -1041,9 +1043,7 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   protected int alignmentOwner(int targetId) {
-    if (mMercenary.has(targetId)) return mMercenary.get(targetId).ownerId;
-    if (mSummonedPet.has(targetId)) return mSummonedPet.get(targetId).ownerId;
-    return targetId;
+    return com.riiablo.engine.server.party.CombatOwnership.target(Riiablo.engine, targetId);
   }
 
   protected boolean isValidOverrideMonsterTarget(int targetId) {

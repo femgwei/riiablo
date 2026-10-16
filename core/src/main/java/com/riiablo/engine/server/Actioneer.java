@@ -70,7 +70,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.party.PartyManager;
-import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.monster.MonsterUniqueModifiers;
 import com.riiablo.engine.server.component.Size;
@@ -5287,16 +5287,8 @@ public class Actioneer extends PassiveSystem {
     if (sourceConverted && targetConverted) return false;
     if (sourceConverted) return mMonster.has(targetId);
     if (targetConverted) return mMonster.has(sourceId);
-    int relationSource = sourcePlayerAligned ? playerAlignmentOwner(sourceId) : sourceId;
-    int relationTarget = targetPlayerAligned ? playerAlignmentOwner(targetId) : targetId;
-    return PvpCombatRules.canDamage(
-        partyManager, relationSource, relationTarget, sourcePlayerAligned, targetPlayerAligned);
-  }
-
-  private int playerAlignmentOwner(int entityId) {
-    if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
-    if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
-    return entityId;
+    return CombatOwnership.canDamage(world, partyManager, sourceId, targetId,
+        sourcePlayerAligned, targetPlayerAligned);
   }
 
   private static int rollRange(int min, int max) {

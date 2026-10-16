@@ -30,7 +30,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.party.PartyManager;
-import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.skill.AuraManager;
 import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
@@ -520,10 +520,8 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   private boolean isHostile(int sourceId, int targetId) {
     boolean sourceAligned = isPlayerAligned(sourceId);
     boolean targetAligned = isPlayerAligned(targetId);
-    if (sourceAligned != targetAligned) return true;
-    if (!sourceAligned) return false;
-    return PvpCombatRules.canDamage(partyManager,
-        alignmentOwner(sourceId), alignmentOwner(targetId), true, true);
+    return CombatOwnership.canDamage(world, partyManager, sourceId, targetId,
+        sourceAligned, targetAligned);
   }
 
   private static int elementalType(String element) {

@@ -41,7 +41,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.party.PartyManager;
-import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
@@ -3863,9 +3863,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     if (!sourcePlayer && !sourceMonster) return false;
     if (!targetPlayer && !targetMonster) return false;
-    int relationSource = sourcePlayer ? alignmentOwner(entityId1) : entityId1;
-    int relationTarget = targetPlayer ? alignmentOwner(entityId2) : entityId2;
-    boolean enemy = PvpCombatRules.canDamage(partyManager, relationSource, relationTarget,
+    boolean enemy = CombatOwnership.canDamage(world, partyManager, entityId1, entityId2,
         sourcePlayer, targetPlayer);
     if (sourcePlayer && targetPlayer && !enemy) {
       log.info("[PVP] phase=missile_reject source={} target={} reason=not_hostile",
