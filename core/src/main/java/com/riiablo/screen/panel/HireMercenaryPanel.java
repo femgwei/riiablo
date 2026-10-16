@@ -453,12 +453,31 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
         description.setBounds(entry.getX() + 6, entry.getY() - 14, entry.getWidth() - 6, 16);
         description.setTouchable(Touchable.disabled);
         rows.addActor(description);
+        // The skill line is a separate label, so it does not inherit the
+        // LabelButton hover color from the candidate's first line. Share the
+        // hover state with both selectable areas so the complete row is blue.
+        final int[] hoverCount = {0};
+        final Runnable updateHighlight = () -> description.setColor(
+            hoverCount[0] > 0 ? Riiablo.colors.blue : Riiablo.colors.white);
+        InputListener highlight = new InputListener() {
+          @Override public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+            hoverCount[0]++;
+            updateHighlight.run();
+          }
+
+          @Override public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+            if (hoverCount[0] > 0) hoverCount[0]--;
+            updateHighlight.run();
+          }
+        };
+        entry.addListener(highlight);
         // The second line belongs to the same selectable candidate.
         Actor hit = new Actor();
         hit.setBounds(entry.getX(), entry.getY() - 15, entry.getWidth(), 15);
         hit.addListener(new ClickListener() {
           @Override public void clicked(InputEvent event, float x, float y) { choose(offer, generation); }
         });
+        hit.addListener(highlight);
         rows.addActor(hit);
       }
     }
