@@ -532,9 +532,10 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
   @Override public void draw(Batch batch, float alpha) {
     if (!isCurrentSession() || pieces == null) return;
     background.draw(batch, panelX + 2, panelY + 2, WIDTH - 4, HEIGHT - 4);
-    frame(batch, panelX, panelY, WIDTH, FOOTER);
-    frame(batch, panelX, panelY + FOOTER, WIDTH, HEIGHT - HEADER - FOOTER);
-    frame(batch, panelX, panelY + HEIGHT - HEADER, WIDTH, HEADER);
+    // Adjacent complete frames duplicate their shared horizontal borders.
+    frame(batch, panelX, panelY, WIDTH, HEIGHT);
+    separator(batch, panelY + FOOTER);
+    separator(batch, panelY + HEIGHT - HEADER);
     if (!confirming && !message.isVisible()) {
       float x = panelX + WIDTH - 18, bottom = panelY + FOOTER + 10;
       float top = panelY + HEIGHT - HEADER - 18;
@@ -544,12 +545,19 @@ public final class HireMercenaryPanel extends WidgetGroup implements Disposable 
       float track = top - bottom - 12;
       float thumb = Math.max(12, track * Math.min(1f, (float) VISIBLE_ROWS / Math.max(1, offers.size)));
       float thumbTop = top - 1 - (track - thumb) * first / Math.max(1, offers.size - VISIBLE_ROWS);
+      // Native thumb art is inset one pixel farther right than the gutter.
+      float thumbX = x - 1;
       for (float y = thumbTop - thumb + 12; y < thumbTop - 12; y += 12)
-        batch.draw(pieces.getTexture(15), x, y);
-      batch.draw(pieces.getTexture(14), x, thumbTop - 12);
-      batch.draw(pieces.getTexture(16), x, thumbTop - thumb);
+        batch.draw(pieces.getTexture(15), thumbX, y);
+      batch.draw(pieces.getTexture(14), thumbX, thumbTop - 12);
+      batch.draw(pieces.getTexture(16), thumbX, thumbTop - thumb);
     }
     super.draw(batch, alpha);
+  }
+
+  private void separator(Batch batch, float y) {
+    for (float dx = 2; dx < WIDTH - 2; dx += 12)
+      batch.draw(pieces.getTexture(6), panelX + dx, y, Math.min(12, WIDTH - 2 - dx), 13);
   }
 
   private void frame(Batch batch, float x, float y, float w, float h) {
