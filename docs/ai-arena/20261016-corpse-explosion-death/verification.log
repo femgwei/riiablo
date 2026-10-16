@@ -1,0 +1,8 @@
+Baseline: 13 tests, 2 expected Corpse Explosion death-threshold failures.
+final: 325 tests, 0 failures/errors/skips.
+repeat: 325 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 6660C04D1538A139C341FB5208891F81251FF0ED9551047C7CECC75DFA9EE90E core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java
+SHA256 204386997C0711E40BD8B3049AC0C82B7E52B22F900DDB7B1AF6BEA542AA1D8C core/src/test/java/com/riiablo/engine/server/NecromancerExplosionIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Corpse Explosion fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

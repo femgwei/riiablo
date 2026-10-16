@@ -44,6 +44,57 @@ import org.junit.jupiter.api.Test;
 
 /** Authoritative SrvSt17/SrvDo055/SrvDo063 integration coverage. */
 class NecromancerExplosionIntegrationTest extends RiiabloTest {
+  @Test void innerFractionalRemainderDies() { deathBoundary(3f, 255f / 256f, false, false); }
+  @Test void outerFractionalRemainderDies() { deathBoundary(4.5f, 255f / 256f, false, false); }
+  @Test void exactlyOneLifeSurvives() { deathBoundary(3f, 1f, false, false); }
+  @Test void aboveOneLifeSurvives() { deathBoundary(4.5f, 257f / 256f, false, false); }
+  @Test void cancelledDamagePreservesFractionalLife() { deathBoundary(3f, .5f, true, false); }
+  @Test void fullAbsorbPreservesDelayedFractionalLife() { deathBoundary(4.5f, .5f, false, true); }
+
+  private static void deathBoundary(float x, float remainder, boolean cancel, boolean absorb) {
+    RecordingFactory factory = new RecordingFactory();
+    DamageRecorder probe = new DamageRecorder();
+    World world = world(factory, new ServerSkillSystem(true), false, probe);
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.CORPSE_EXPLOSION);
+      int owner = player(world, skill.Id);
+      int corpse = corpse(world, 0, 0, 100, 5);
+      int target = monster(world, x, 0, 1000);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      if (absorb) {
+        attrs.base().put(Stat.item_absorbfire, 1000);
+        attrs.base().put(Stat.hitpoints, remainder);
+        attrs.reset();
+        world.getMapper(UnitStates.class).get(target).stateList
+            .addState(StateId.DEATH_DELAY, 1000, 1, owner);
+      } else {
+        // Arrange exact remaining life against the real random packet at the
+        // event boundary; do not replace the skill's native damage roll.
+        probe.beforeDamage = hit -> {
+          assertTrue(hit.damage > 0f);
+          attrs.get(Stat.hitpoints).set(cancel ? remainder : hit.damage + remainder);
+          if (cancel) hit.damage = 0f;
+        };
+      }
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, skill.Id, corpse, Vector2.Zero, skill.srvdofunc, skill.cltdofunc));
+      boolean fatal = !cancel && !absorb && remainder < 1f;
+      assertEquals(fatal ? 0f : remainder, hp(world, target), .0001f);
+      assertEquals(1, probe.hits);
+      assertEquals(fatal ? 1 : 0, probe.deaths);
+      if (x > 4f) assertEquals(0f, probe.physical);
+      else assertTrue(probe.physical > 0f);
+      if (absorb) assertEquals(0f, probe.damage);
+      assertFalse(world.getMapper(Corpse.class).get(corpse).usable);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, skill.Id, corpse, Vector2.Zero, skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, probe.hits);
+      assertEquals(fatal ? 1 : 0, probe.deaths);
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, true); }
   @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, false); }
   @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, true); }
@@ -83,12 +134,14 @@ class NecromancerExplosionIntegrationTest extends RiiabloTest {
   }
 
   private static final class DamageRecorder extends PassiveSystem {
+    java.util.function.Consumer<DamageEvent> beforeDamage;
     int hits, deaths;
     float damage, physical;
     @Subscribe public void damage(DamageEvent event) {
       hits++;
       damage = event.damage;
       physical = event.physicalDamage;
+      if (beforeDamage != null) beforeDamage.accept(event);
     }
     @Subscribe public void death(DeathEvent event) { deaths++; }
   }
