@@ -579,8 +579,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StatRef life = attacker.get(Stat.hitpoints, StatRef.obtain());
     if (life == null || life.asFixed() <= 0f) return;
     float before = life.asFixed();
-    life.sub(Math.max(0f, reactive.damage));
-    if (life.asFixed() <= 0f) {
+    float applied = Math.max(0f, reactive.damage);
+    life.sub(applied);
+    if (life.asFixed() <= 0f || (applied > 0f && life.asFixed() < 1f)) {
       life.set(0f);
       if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
     }

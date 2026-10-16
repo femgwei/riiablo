@@ -1,0 +1,8 @@
+Baseline: 10 tests, 1 expected Thorns death-threshold failure.
+final: 346 tests, 0 failures/errors/skips.
+repeat: 346 tests, 0 failures/errors/skips.
+64 paired fixed-point samples agree in both final-source runs.
+SHA256 675D33C505EE75EE47573B9490B1EF0A3E53FF1F453B5BC6D5D554FD29104174 core/src/main/java/com/riiablo/engine/server/StateUpdater.java
+SHA256 4AB349D6A72EEB4D74D9E8CC2F2D5276725F1F4C793AAB402E976D0260B89D3D core/src/test/java/com/riiablo/engine/server/PaladinSupportAuraIntegrationTest.java
+SHA256 2B78A96EA8B6C54D4DF76E70BB0F9049C17A6A58EF15385A7C576FD186830915 core/src/test/java/com/riiablo/engine/server/NativeNecromancerExplosionDataTest.java
+PARTIAL: Thorns fractional death threshold verified; other resolvers, native RNG and complete death-mode/callback parity remain outside acceptance.

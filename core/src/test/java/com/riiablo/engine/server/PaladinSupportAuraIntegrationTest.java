@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.skill.AuraManager;
 import com.riiablo.engine.server.skill.SkillId;
@@ -33,10 +34,59 @@ import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 /** Authoritative native integration for Defiance, Aim, Vigor, Fanaticism and Thorns. */
 class PaladinSupportAuraIntegrationTest extends RiiabloTest {
+  @Test void thornsFractionalRemainderDies() { thornsBoundary(25f + 255f / 256, 0f, false, false); }
+  @Test void thornsExactlyOneLifeSurvives() { thornsBoundary(26f, 1f, false, false); }
+  @Test void thornsAboveOneLifeSurvives() { thornsBoundary(26f + 1f / 256, 1f + 1f / 256, false, false); }
+  @Test void cancelledThornsPreservesFractionalLife() { thornsBoundary(.5f, .5f, true, false); }
+  @Test void reducedToZeroThornsPreservesFractionalLife() { thornsBoundary(.5f, .5f, false, true); }
+
+  private static void thornsBoundary(float initial, float expected, boolean cancel, boolean reduced) {
+    try (Harness test = new Harness()) {
+      int defender = player(test.world, "paladin", (byte) Riiablo.PALADIN, 0, 0);
+      int attacker = monster(test.world, 1, 0);
+      test.world.getMapper(Player.class).get(defender).data.setSkillLevel(SkillId.THORNS, 1);
+      assertTrue(test.auras.selectAura(defender, SkillId.THORNS));
+      test.tick();
+      Attributes attrs = test.world.getMapper(AttributesWrapper.class).get(attacker).attrs;
+      attrs.base().put(Stat.hitpoints, initial);
+      if (reduced) attrs.base().put(Stat.damageresist, 100);
+      attrs.reset();
+      test.probe.cancel = cancel;
+      test.events.dispatch(DamageEvent.obtainMelee(attacker, defender, 10, 10));
+      assertEquals(expected, life(test.world, attacker), .0001f);
+      assertEquals(expected == 0f ? 1 : 0, test.probe.deaths);
+      assertEquals(reduced ? 0 : 1, test.probe.reactive);
+      if (!reduced) assertEquals(25f, test.probe.physical, .0001f);
+      if (expected == 0f) {
+        assertEquals(defender, test.probe.killer);
+        assertEquals(attacker, test.probe.victim);
+      }
+    }
+  }
+
+  private static final class DamageProbe extends PassiveSystem {
+    int reactive, deaths, killer, victim;
+    float physical;
+    boolean cancel;
+    @Subscribe public void damage(DamageEvent event) {
+      if (event.kind != DamageEvent.REACTIVE) return;
+      reactive++;
+      physical = event.physicalDamage;
+      if (cancel) event.damage = 0f;
+    }
+    @Subscribe public void death(DeathEvent event) {
+      deaths++;
+      killer = event.killer;
+      victim = event.victim;
+    }
+  }
+
   @Test
   void allFiveSupportAurasReplaceTheirLegacyDefinitions() {
     AuraManager manager = new AuraManager();
@@ -179,8 +229,9 @@ class PaladinSupportAuraIntegrationTest extends RiiabloTest {
     final AuraEcsSystem auras = new AuraEcsSystem();
     final EventSystem events = new EventSystem();
     final NoopFactory factory = new NoopFactory();
+    final DamageProbe probe = new DamageProbe();
     final World world = new World(new WorldConfigurationBuilder()
-        .with(events, new StateUpdater(), auras, factory).build()
+        .with(events, probe, new StateUpdater(), auras, factory).build()
         .register("factory", factory)
         .register("map", new Map(0, 0))
         .register("partyManager", parties));
