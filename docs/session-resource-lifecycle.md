@@ -1770,3 +1770,100 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 正常资产释放；再继续控件内部构造失败、连接交接、控制台/Timer/异步日志、
 跨 Act/加载中退出及长期压力验证。Android 真机、人工与性能验收单列，资源阶段
 尚未结束；不以本批三轮正常进出替代这些边界。
+
+## 第二十四批：商店会话回调与购买确认框捕获
+
+保留 VendorPanel 已有的三项页面资产引用作用域与共享 boxpieces 边框归属，
+不重做正常加载/卸载。本批捕获原 CharData / ItemData、Audio、Cursor，并由
+生产 GameScreen 显式传入 owner；构造时允许创建网格，构造完成后必须仍是原
+资源/角色/物品数据/音频/光标和当前 GameScreen 才能派发。无参入口保留，但有
+当前游戏时须是该游戏的 vendorPanel；最终退出清空 owner、网络同步器/借用
+socket、库存/定价/生成器引用与待处理操作，不销毁借用的物品、库存数组或宿主。
+
+买/卖/修理/退出、页签、确认/取消、网格交易、配置/网络结果、act/draw 与报价
+入口均受会话门禁保护。九个 Button 在旧会话视为 disabled，保存的按下回调不会
+访问后来的输入宿主；VendorGrid 的交易入口、drain 和容量查询使用 isActive
+扩展点，过期网格不再触及角色或调用购买监听。最终退出递归清理普通/捕获监听、
+动作、父节点与页签链接，独立释放九个按钮声音、四张网格私有 fill、共享边框
+引用和三项页面引用；已经返回但尚未挂载的网格/确认框也纳入清理。清理幂等、
+部分构造失败回滚、异常继续，失败的操作只尝试一次，错误不静默吞掉。
+
+购买确认框记录实际添加捕获监听的原 Stage，重开先释放旧捕获；隐藏、取消、
+外部点击、退出和先脱离/换挂载后关闭均清理原 Stage，不误清新 Stage 的其他
+监听。添加捕获或打开中途失败时回滚，移除捕获失败仍隐藏确认框、清空提交物品，
+隐藏面板时仍清理待处理请求和交易模式，最终退出仍继续资源清理。只有当前会话
+才能重置其交易光标，旧面板退出不重置后来会话的光标。
+
+保留左键确认购买至光标、右键直接购买与取消交易模式、现有卖出/修理反馈、
+定价函数、库存及协议语义；同一会话隐藏面板后到达的钱包快照仍按既有逻辑处理。
+本批仅隔离送达旧面板实例的结果，不重写 ClientNetworkReceiver 的全局路由、
+连接交接或同会话不同请求/服务的迟到响应关联；完整网络交接边界仍是后续工作。
+也不宣称雇佣兵相关控件、库存重建的全部迟到 Actor 回调、控件内部尚未返回实例
+的构造失败或物品图像自身生命周期已全部收口。不改玩法、25Hz、协议或存档格式。
+
+真实探针在退出前使用一件未加载私有物品图像的合成药水记录，仅触发生产购买
+确认 UI（不成交、不生成 NPC 库存），检查隐藏后重开和最终捕获清理；采样整个
+商店控件树、保存点击/购买回调失效、四项资产基线和采样 GL 纹理删除，保留前批
+所有检查。该探针不是交易玩法、联机、人工视觉/听感、长压或 Android 真机验收。
+
+### 第二十四批验证
+
+- `build/vendor-resources-targeted.log`：52 项中 4 项失败。新测试取到框架 Button
+  内部点击监听而非最后添加的业务监听；修正动作选择后确认/取消/光标路径恢复。
+- `build/vendor-resources-targeted-recheck.log`：52 项中仍有 2 项购买断言失败，
+  测试把钱包扣款写死为 50，而原版表及既有交易定价入口计算为 30。移除人为
+  注入的缓存报价，按现有交易定价函数断言钱包扣款，保留单次确认、光标目的地
+  与直接购买的断言，不改生产定价算法。随后补隐藏捕获失败、仅替换 ItemData/
+  AssetManager、借用库存不销毁三项，共新增 23 项。
+- `build/vendor-resources-regression-gl.log`：最终代码 23 项新增专项全部通过，
+  扩大定向包括既有 VendorPricingTest，共 30 类 280 项，278 通过、2 跳过
+  （既有佣兵独立环境资源探针），失败/错误 0；core / desktop / D2GS 编译链
+  通过。三轮真实 MPQ/GL、全部前批检查及 ClientShutdown 通过，BUILD SUCCESSFUL，
+  3m12s。每轮商店 32 个控件退休、42 个保存点击回调失效，确认框隐藏/重开与
+  最终原 Stage 捕获清理、四项资产基线和 54 张采样纹理删除通过。
+  保留背包 26 控件/36 回调/十项资产/37 纹理、仓库/方块 23 控件/两个金币弹窗/
+  八项资产/57 纹理、Escape 208 控件/三次捕获/四项资产/12 纹理、任务 146 控件/
+  五个滚动控件/三次重播/33 项资产/794 纹理、技能重建退休 21 个旧按钮/退出
+  40 个按钮、移动 UI 15 个按钮/102 纹理，以及 13 张私有纹理、共享框、地图、
+  输入等既有检查。
+- 三轮退出后资产种类 56/56/56，最终 ClientShutdown assets=0；不表示全进程
+  零滞留、长期压力或完整网络交接通过。仍记录 47.71–93.53ms 慢帧，超过 40ms
+  预算；人工画面/输入/听感、真实商店交易/联机及 Android 真机与性能验收均未完成。
+
+需要原版资源表、但无需真实 GL 的专项（只拦截私有 Texture 上传）：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.VendorPanelLifecycleTest `
+  --tests com.riiablo.screen.panel.VendorRepairFeedbackTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest --no-daemon
+```
+
+扩大定向及原版 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  --tests com.riiablo.item.VendorPricingTest `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/vendor-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/vendor-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 HirelingPanel / HireMercenaryPanel 等雇佣兵控件的旧会话归属；随后
+继续完整控件内部构造失败、连接交接/网络接收路由、控制台/Timer/异步日志、
+跨 Act/加载中退出及长期压力验证。人工、Android 真机与性能验收仍单列，
+不以商店面板收口宣称资源阶段完成。

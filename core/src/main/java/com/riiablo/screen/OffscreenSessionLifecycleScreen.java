@@ -38,6 +38,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final Map<String, Integer> escapeReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> storageReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> inventoryReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> vendorReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -60,6 +61,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private void enter() {
     cycle++;
     require(assets == Riiablo.assets, "same host AssetManager");
+    vendorReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/global/ui/PANEL/buysell.dc6",
+        "data/global/ui/PANEL/buyselltabs.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
+        "data/global/ui/MENU/boxpieces.DC6"}) vendorReferencesBeforeConstruction.put(path, references(path));
     inventoryReferencesBeforeConstruction.clear();
     for (String path : new String[] {"data/global/ui/PANEL/invchar6.DC6",
         "data/global/ui/PANEL/invchar6Tab.DC6", "data/global/ui/PANEL/buysellbtn.DC6",
@@ -443,6 +448,44 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         }
       }
     }
+    // Exercise only the production confirmation UI, not a purchase or NPC stock generation.
+    com.riiablo.item.Item vendorItem = new com.riiablo.item.Item(); vendorItem.reset();
+    vendorItem.setBase(Riiablo.files.misc.get("hp1")); vendorItem.quality = com.riiablo.item.Quality.NORMAL;
+    vendorItem.flags2 |= com.riiablo.item.Item.ITEMFLAG2_INSTORE; vendorItem.vendorPrice = 50;
+    screen.vendorPanel.config(com.riiablo.screen.panel.VendorPanel.TRADER, Array.with(vendorItem));
+    com.riiablo.screen.panel.VendorGrid vendorGrid = field(screen.vendorPanel, "activeGrid",
+        com.riiablo.screen.panel.VendorGrid.class);
+    com.riiablo.screen.panel.VendorGrid.PurchaseListener vendorPurchase = field(vendorGrid, "purchaseListener",
+        com.riiablo.screen.panel.VendorGrid.PurchaseListener.class);
+    com.badlogic.gdx.scenes.scene2d.InputListener vendorDismiss = field(screen.vendorPanel,
+        "purchasePromptDismissListener", com.badlogic.gdx.scenes.scene2d.InputListener.class);
+    Group vendorStageRoot = screen.stage.getRoot();
+    for (int opening = 0; opening < 2; opening++) {
+      screen.vendorPanel.setVisible(true); vendorPurchase.onPurchase(vendorItem, false);
+      require(vendorStageRoot.getCaptureListeners().contains(vendorDismiss, true), "vendor prompt capture acquired");
+      require(field(screen.vendorPanel, "purchasePrompt", Actor.class).isVisible(), "vendor prompt visible");
+      if (opening == 0) {
+        screen.vendorPanel.setVisible(false);
+        require(!vendorStageRoot.getCaptureListeners().contains(vendorDismiss, true), "vendor hide releases capture");
+      }
+    }
+    Array<Actor> vendorActors = new Array<>(); collectActors(screen.vendorPanel, vendorActors);
+    Array<com.badlogic.gdx.scenes.scene2d.utils.ClickListener> vendorClicks = new Array<>();
+    for (Actor actor : vendorActors) for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners())
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)
+        vendorClicks.add((com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener);
+    Set<Integer> vendorHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : vendorReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey(); require(references(path) > reference.getValue(), "live vendor asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "vendor sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle(); require(Gdx.gl.glIsTexture(handle), "live vendor texture " + path);
+          if (reference.getValue() == 0) vendorHandles.add(handle);
+        }
+      }
+    }
     Array<Actor> escapeActors = new Array<>();
     collectActors(screen.escapePanel, escapeActors);
     Set<Integer> escapeHandles = new HashSet<>();
@@ -487,6 +530,18 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.vendorPanel, "disposed", Boolean.class), "Client retired vendor owner");
+    require(!vendorStageRoot.getCaptureListeners().contains(vendorDismiss, true), "vendor exit releases original capture");
+    screen.vendorPanel.dispose(); screen.vendorPanel.dispose(); screen.vendorPanel.setVisible(true);
+    require(!screen.vendorPanel.isVisible(), "retired vendor cannot reopen");
+    for (com.badlogic.gdx.scenes.scene2d.utils.ClickListener click : vendorClicks) click.clicked(null, 0, 0);
+    require(!vendorDismiss.touchDown(null, 0, 0, 0, 0) && !vendorPurchase.onPurchase(vendorItem, true)
+        && !vendorPurchase.onSell(vendorItem), "late vendor callbacks ignored");
+    for (Actor actor : vendorActors) require(actor.getParent() == null && actor.getListeners().size == 0
+        && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "vendor actor retired");
+    for (Map.Entry<String, Integer> reference : vendorReferencesBeforeConstruction.entrySet())
+      require(references(reference.getKey()) == reference.getValue(), "vendor asset baseline " + reference.getKey());
+    for (int handle : vendorHandles) require(!Gdx.gl.glIsTexture(handle), "vendor texture deleted");
     require(field(screen.cubePanel, "disposed", Boolean.class)
         && field(screen.stashPanel, "disposed", Boolean.class), "Client retired storage owners");
     screen.cubePanel.dispose(); screen.stashPanel.dispose();
@@ -666,6 +721,11 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\ninventoryLateClicksIgnored=" + inventoryClicks.size
         + "\ninventoryAssetBaselinesBalanced=" + inventoryReferencesBeforeConstruction.size()
         + "\ninventoryTexturesDeleted=" + inventoryHandles.size()
+        + "\nvendorActorsRetired=" + vendorActors.size
+        + "\nvendorLateClicksIgnored=" + vendorClicks.size
+        + "\nvendorPromptHideAndReopen=true\nvendorPromptCaptureReleased=true"
+        + "\nvendorAssetBaselinesBalanced=" + vendorReferencesBeforeConstruction.size()
+        + "\nvendorTexturesDeleted=" + vendorHandles.size()
         + "\ngoldDialogsRetired=2\nstashGoldHideAndReopen=true\ngoldDialogLateInputIgnored=true"
         + "\nstorageAssetBaselinesBalanced=" + storageReferencesBeforeConstruction.size()
         + "\nstorageTexturesDeleted=" + storageHandles.size()

@@ -427,7 +427,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     cubePanel.setPosition(0, stage.getHeight() - cubePanel.getHeight());
     stage.addActor(cubePanel);
 
-    vendorPanel = new VendorPanel();
+    vendorPanel = new VendorPanel(this);
     vendorPanel.setPosition(0, stage.getHeight() - vendorPanel.getHeight());
     stage.addActor(vendorPanel);
 

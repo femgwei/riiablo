@@ -46,7 +46,7 @@ public class VendorGrid extends ItemGrid {
 
   @Override
   protected boolean onStoredItemClicked(Item item, boolean direct) {
-    if (isDisposed()) return false;
+    if (!isActive()) return false;
     Item cursor = itemData.getCursor();
     if (!direct && cursor != null) {
       onCursorDrop(cursor);
@@ -59,7 +59,7 @@ public class VendorGrid extends ItemGrid {
 
   @Override
   protected boolean onCursorDrop(Item item) {
-    if (isDisposed()) return false;
+    if (!isActive()) return false;
     return purchaseListener != null && purchaseListener.onSell(item);
   }
 
@@ -74,6 +74,7 @@ public class VendorGrid extends ItemGrid {
   }
 
   public int drain(Array<Item> items) {
+    if (!isActive()) return 0;
     clearChildren();
     sort(items);
     Gdx.app.debug(TAG, "Draining " + items);
@@ -102,7 +103,7 @@ public class VendorGrid extends ItemGrid {
 
   /** Returns whether another item can be displayed on this page. */
   public boolean hasRoom(Item item) {
-    if (item == null || item.base == null) return false;
+    if (!isActive() || item == null || item.base == null) return false;
     Array<Item> placed = new Array<>(true, getChildren().size, Item.class);
     SnapshotArray<Actor> children = getChildren();
     for (Actor child : children) {

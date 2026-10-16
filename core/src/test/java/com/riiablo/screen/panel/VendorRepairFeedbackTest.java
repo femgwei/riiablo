@@ -23,17 +23,21 @@ import com.riiablo.widget.Button;
 class VendorRepairFeedbackTest extends RiiabloTest {
   private Audio previousAudio;
   private CharData previousCharacter;
+  private com.riiablo.screen.GameScreen previousGame;
   private VendorPanel panel;
 
   @BeforeEach void prepare() throws Exception {
     previousAudio = Riiablo.audio;
     previousCharacter = Riiablo.charData;
+    previousGame = Riiablo.game; Riiablo.game = null;
     Riiablo.audio = mock(Audio.class);
     Riiablo.charData = CharData.obtain().clear().set(
         Riiablo.NORMAL, false, "RepairFeedback", Riiablo.AMAZON);
     Riiablo.charData.getStats().base().put(Stat.gold, 1000);
     Riiablo.charData.getStats().aggregate().put(Stat.gold, 1000);
     panel = mock(VendorPanel.class, CALLS_REAL_METHODS);
+    set("character", Riiablo.charData); set("itemData", Riiablo.charData.getItems());
+    set("assets", Riiablo.assets); set("audio", Riiablo.audio); set("cursor", Riiablo.cursor);
     doReturn(true).when(panel).isVisible();
     set("repairing", true);
     set("btnRepair", mock(Button.class));
@@ -42,6 +46,7 @@ class VendorRepairFeedbackTest extends RiiabloTest {
   @AfterEach void restore() {
     Riiablo.audio = previousAudio;
     Riiablo.charData = previousCharacter;
+    Riiablo.game = previousGame;
   }
 
   @Test void fullDurabilitySingleRepairStillSoundsLocally() {
