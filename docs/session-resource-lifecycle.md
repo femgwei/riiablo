@@ -473,3 +473,99 @@ TCPIPScreen 后台启动与离屏竞争、GameEntryLoadingScreen 入场失败的
   每轮报告 build/network-lifecycle-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
 - 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
   SIM_SLOW=80.13/57.19/91.21/104.12ms，预算 40ms，不作性能验收。
+
+## 第八批：Client 最终退出的整栈与共享宿主清理
+
+本批只收口应用最终 dispose，不改运行中的 setScreen/pushScreen/popScreen/
+clearAndSet 切换事务。旧实现只 hide/dispose 前台屏幕；游戏加载屏在前台时，真正
+拥有 World/UI/地图的 GameScreen 留在栈中，可能随进程直接丢弃而没有保存/释放。
+任何一项抛错还会跳过所有后续宿主资源。Client 现先标记终止，快照并移走前台和
+完整栈，前台优先、栈由上至下按对象身份去重，前台 hide 后逐一 dispose。已经隐藏
+的栈内屏幕不再 hide。去重仅限本次 Client 直接清理，不替代各屏幕内部幂等规则，
+也不建立阻止 GameLoadingScreen 后续正常复用的全局“已销毁对象”注册表。
+
+所有屏幕在原保存路径、字体、音频、AssetManager 与 GL 宿主仍有效时退出；每项
+RuntimeException/Error 之后继续其余屏幕和宿主清理，首异常与 suppressed 最终传播。
+退出回调不能 set/push/pop/clearAndSet 或重新 create，重复 dispose/回调重入不会
+重复清理；结束后的 render/resize/pause/resume 不再触碰释放资源或重新写入全局别名。
+未初始化的空 Client 可退出，但不保证任意子组件的半构造内部回滚。
+
+屏幕后解绑 Client 自己的四个 Cvar 监听（FPS/Gamma/VSync/Realm）、清空屏幕边界
+监听与本机输入；只在平台当前仍使用旧 multiplexer 时解除平台输入，不影响替换者。
+InputProcessor 现在移除自己持有的 Vibration 监听并清空处理器。之后停音乐，保存
+日志/Cvars/按键，释放 console、此前遗漏的 ShapeRenderer、batch、外借给 batch 的
+shader、调色/色变/纯色纹理及 AssetManager。共享资产不由屏幕提前销毁。某个组件
+内部失败是否还能清理其内部全部资源，仍受该组件实现约束，不作全面零泄漏保证。
+
+stdout/stderr 在重定向前保存；console 包装借用的原 stdout 时使用关闭屏障，
+关闭自己的 PrintStream 不关闭原输出。退出只恢复仍指向本 console 的标准流，不
+覆盖其他宿主后来设置的流；各流恢复和 flush/close 都在失败后继续清理范围内。
+Riiablo 中由该 Client 发布的宿主别名逐字段按身份清理，不能清掉新 Client 的别名。
+这不是允许两个完整客户端任意并行运行的保证，组件自身的旧全局依赖仍存在。
+
+新增 ClientShutdownLifecycleTest 17 项：整栈顺序/身份去重、重复退出、hide/屏幕/
+宿主异常/Error、退出重入与拒绝装屏、释放后生命周期、空 Client、输入解除与新宿主
+隔离、Client Cvar/输入监听解绑、标准流恢复/不误关借用流、保存失败、别名清理，以及
+前台 loader + 栈中真实生产 GameScreen.dispose 的 World/地图先于共享资产释放。
+重型 Client.create/GameScreen 构造使用替身，不以单元测试代替真实 GL 验收。
+
+desktop OffscreenRenderClient 的 camp 模式现在包裹生产 Client.dispose，在 LWJGL
+销毁上下文之前验证：两份共享 Shader 程序、两张纯色纹理已删除、AssetManager
+loaded=0、宿主输入清空/平台输入解除、Client/关键 GL 别名清空、标准流不再指向旧
+console，重复 dispose 安全。GL 删除程序的语义允许仍绑定的程序延迟回收，验证先
+glUseProgram(0) 再 glIsProgram；这是验证探针，不改变游戏渲染或 Client 停机逻辑。
+此探针覆盖正常完成后的生产会话退出，真实加载中终止仍未作为端到端场景验收。
+
+本批最小复跑（真实资源入口保持三轮和既有资源断言）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.ClientShutdownLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameEntryLoadingScreenLifecycleTest `
+  --tests com.riiablo.screen.NetworkedGameScreenLifecycleTest `
+  --tests com.riiablo.screen.HostedD2GSLifecycleTest `
+  :desktop:offscreenSessionLifecycle `
+  '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/client-shutdown-focused-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/client-shutdown-focused-camp' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+后续优先处理运行中屏幕替换/清栈的重入、异常和输入归属；旧菜单 hide/dispose 的
+多份引用配对必须逐项审计，不能直接统一为任意递归释放。RenderedConsole 的内部
+Cvar/Timer、AsyncOutputStreamAppender 线程、完整共享子组件释放与静态绑定清理、
+菜单/入场连接交接及后台启动竞争、完整构造回滚、跨 Act/真实加载中退出、长期压力、
+人工与性能验收仍待。本批没有修改玩法/RNG/Tick/协议/存档格式。
+
+### 第八批专项验证记录
+
+- 首轮编译误将 libGDX Screen 作为 Disposable 传入，改为显式调用其 dispose；
+  build/client-shutdown-focused.log 保留为失败记录。后两轮各有 1 项夹具失败：Cvar
+  第一次不同值赋值会发 onLoaded，不是 onChanged；设置相同值不触发初始化，因此
+  不能靠同值赋值修复夹具。现按 isLoaded 明确验证对应事件，继续要求第三方监听
+  保留、旧 Client batch 不收到回调，未删除或减弱解绑检查。失败日志
+  build/client-shutdown-focused-02.log、client-shutdown-focused-03.log 保留。
+- 修正后 62/62 专项通过，含本批 17 项与既有订阅/入场/网络专项；原版资源三轮
+  及真实 Client 最终 GL 检查通过，BUILD SUCCESSFUL。日志
+  build/client-shutdown-focused-04.log；三轮报告和 manifest 在
+  build/client-shutdown-focused-camp/。未降低资源断言，也未改动轮数/帧数或进程看门狗预算。
+
+### 第八批最终回归
+
+- 扩大定向回归 384/384、53 类：core 342/342（46 类）、D2GS 全部 42/42
+  （7 类），失败/错误/跳过均 0。沿用第七批 367 项加本批 17 项，不含既有玩法/AI
+  基线失败，不宣称全仓全绿；core/desktop/D2GS 编译检查通过。
+- 同一命令的生产入场链三轮、独立地图 GL 三轮、单轮营地三帧、D2GS 25Hz
+  step=0.04 和 Throw 顺序/伤害 1000→992 全部通过，BUILD SUCCESSFUL。日志
+  build/client-shutdown-regression.log；三轮报告
+  build/client-shutdown-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+- 前七批资源硬断言保持通过：每轮 58 个 DT1 / 2626 张贴图及 CPU 像素释放；
+  按钮 0/129/138/0、三次技能重建稳定、8 种面板资产回基线、3 张私有纹理删除、
+  上传像素已释放；入场 Stage/图片清理，输入基线 2，常驻资产种类三轮均 58。
+  独立地图仍为 44 tiles、引用 4→2→1→0；子进程/TCP 三轮专项继续通过。
+- 两次生产 Client 最终退出（完整三轮结束、独立单轮结束）均有 CLIENT_SHUTDOWN
+  PASS：两份共享程序及两张纯色纹理删除、AssetManager loaded=0、输入清空、
+  关键别名解除、标准流恢复；GL 上下文仍有效时检查，重复退出安全。
+- 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
+  SIM_SLOW=109.08/65.80/64.39/110.71ms，预算 40ms，不作性能验收。

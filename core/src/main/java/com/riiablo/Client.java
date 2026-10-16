@@ -1,10 +1,12 @@
 package com.riiablo;
 
-import java.io.OutputStream;
+import java.io.PrintStream;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Locale;
+import java.util.IdentityHashMap;
+import org.apache.commons.io.output.CloseShieldOutputStream;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
@@ -29,6 +31,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.I18NBundle;
 import com.badlogic.gdx.utils.Scaling;
@@ -76,6 +79,7 @@ import com.riiablo.screen.AudioUnpackerScreen;
 import com.riiablo.screen.CreateCharacterScreen;
 import com.riiablo.screen.OffscreenCampScreen;
 import com.riiablo.screen.SplashScreen;
+import com.riiablo.util.Disposal;
 
 public class Client extends Game {
   private static final String TAG = "Client";
@@ -90,6 +94,10 @@ public class Client extends Game {
 
   private final Array<Screen> screens = new Array<>(16);
   private final SnapshotArray<ScreenBoundsListener> screenBoundsListeners = new SnapshotArray<>(ScreenBoundsListener.class);
+  private final Array<Runnable> cvarUnbinders = new Array<>();
+  private boolean disposed;
+  private PrintStream originalOut;
+  private PrintStream originalErr;
 
   private FileHandle            home;
   private FileHandle            saves;
@@ -199,6 +207,7 @@ public class Client extends Game {
 
   @Override
   public void setScreen(Screen screen) {
+    requireOpen();
     Screen previousScreen = this.screen;
     Gdx.app.debug(TAG, "Scene change: " + screenToString(previousScreen) + " -> " + screenToString(screen));
     if (previousScreen instanceof com.badlogic.gdx.InputProcessor) {
@@ -216,6 +225,7 @@ public class Client extends Game {
   }
 
   public void pushScreen(Screen screen) {
+    requireOpen();
     if (this.screen != null) {
       screens.add(this.screen);
     }
@@ -224,11 +234,13 @@ public class Client extends Game {
   }
 
   public void popScreen() {
+    requireOpen();
     assert screens.size > 0;
     setScreen(screens.pop());
   }
 
   public void clearAndSet(Screen screen) {
+    requireOpen();
     for (Screen s : screens) s.dispose();
     screens.clear();
     setScreen(screen);
@@ -236,6 +248,7 @@ public class Client extends Game {
 
   @Override
   public void create() {
+    requireOpen();
     Riiablo.client = this;
     Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
@@ -253,12 +266,7 @@ public class Client extends Game {
     Riiablo.home = home = Gdx.files.absolute(home.path());
     Riiablo.saves = saves = Gdx.files.absolute(saves.path());
 
-    boolean usesStdOut = true;
-    final OutputStream consoleOut = usesStdOut
-        ? System.out
-        : Gdx.files.internal("console.out").write(false);
-
-    Riiablo.console = console = RenderedConsole.wrap(consoleOut);
+    createConsoleOutput();
     try {
       System.setOut(console.out);
       System.setErr(console.out);
@@ -465,29 +473,42 @@ public class Client extends Game {
     Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
   }
 
+  private void createConsoleOutput() {
+    originalOut = System.out;
+    originalErr = System.err;
+    // Console owns its wrapper, not the application's original stdout.
+    Riiablo.console = console = RenderedConsole.wrap(new CloseShieldOutputStream(originalOut));
+  }
+
+  private <T> void bindCvar(Cvar<T> cvar, Cvar.StateListener<T> listener) {
+    // Register removal before add's synchronous initialization callback.
+    cvarUnbinders.add(() -> cvar.removeStateListener(listener));
+    cvar.addStateListener(listener);
+  }
+
   private void bindCvars() {
-    Cvars.Client.Display.ShowFPS.addStateListener(new CvarStateAdapter<Byte>() {
+    bindCvar(Cvars.Client.Display.ShowFPS, new CvarStateAdapter<Byte>() {
       @Override
       public void onChanged(Cvar<Byte> cvar, Byte from, Byte to) {
         drawFpsMethod = to;
       }
     });
 
-    Cvars.Client.Display.Gamma.addStateListener(new CvarStateAdapter<Float>() {
+    bindCvar(Cvars.Client.Display.Gamma, new CvarStateAdapter<Float>() {
       @Override
       public void onChanged(Cvar<Float> cvar, Float from, Float to) {
         batch.setGamma(to);
       }
     });
 
-    Cvars.Client.Display.VSync.addStateListener(new CvarStateAdapter<Boolean>() {
+    bindCvar(Cvars.Client.Display.VSync, new CvarStateAdapter<Boolean>() {
       @Override
       public void onChanged(Cvar<Boolean> cvar, Boolean from, Boolean to) {
         Gdx.graphics.setVSync(to);
       }
     });
 
-    Cvars.Client.Realm.addStateListener(new CvarStateAdapter<String>() {
+    bindCvar(Cvars.Client.Realm, new CvarStateAdapter<String>() {
       @Override
       public void onChanged(Cvar<String> cvar, String from, String to) {
         realm = to;
@@ -497,6 +518,7 @@ public class Client extends Game {
 
   @Override
   public void resize(int width, int height) {
+    if (disposed) return;
     this.width  = width;
     this.height = height;
     BATCH_RESET.setToOrtho2D(0, 0, width, height);
@@ -510,6 +532,7 @@ public class Client extends Game {
 
   @Override
   public void render() {
+    if (disposed) return;
     Gdx.gl.glClearColor(glClearColor.r, glClearColor.g, glClearColor.b, glClearColor.a);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -616,6 +639,7 @@ public class Client extends Game {
 
   @Override
   public void pause() {
+    if (disposed) return;
     audio.pauseForBackground();
     music.pauseForBackground();
     super.pause();
@@ -623,6 +647,7 @@ public class Client extends Game {
 
   @Override
   public void resume() {
+    if (disposed) return;
     Riiablo.client = this;
     Riiablo.logs = logs;
     Riiablo.home = home;
@@ -663,67 +688,119 @@ public class Client extends Game {
 
   @Override
   public void dispose() {
-    Gdx.app.debug(TAG, "Disposing screen...");
-    Screen activeScreen = getScreen();
-    super.dispose();
-    // libGDX Game.dispose() only hides the active screen. Explicitly dispose
-    // it while save paths and render resources are still valid so GameScreen
-    // can flush native .map/.ma exploration on window/process exit.
-    if (activeScreen != null) activeScreen.dispose();
-
-    Gdx.app.debug(TAG, "Disposing shader...");
-    shader.dispose();
-    Gdx.app.debug(TAG, "Disposing batch...");
-    batch.dispose();
-
-    Gdx.app.debug(TAG, "Saving loggers...");
-    logs.saveAll();
-
-    Collection<Throwable> throwables;
-    Gdx.app.debug(TAG, "Saving CVARS...");
-    throwables = cvars.saveAll();
-    for (Throwable t : throwables) {
-      Gdx.app.error(TAG, t.getMessage(), t);
+    if (disposed) return;
+    disposed = true;
+    Screen activeScreen = screen;
+    Array<Screen> closing = new Array<>();
+    IdentityHashMap<Screen, Boolean> seen = new IdentityHashMap<>();
+    if (activeScreen != null) { closing.add(activeScreen); seen.put(activeScreen, true); }
+    for (int i = screens.size - 1; i >= 0; i--) {
+      Screen stacked = screens.get(i);
+      if (stacked != null && seen.put(stacked, true) == null) closing.add(stacked);
     }
-
-    Gdx.app.debug(TAG, "Saving key assignments...");
-    throwables = keys.saveAll();
-    for (Throwable t : throwables) {
-      Gdx.app.error(TAG, t.getMessage(), t);
-    }
-
-    Gdx.app.debug(TAG, "Disposing console...");
-    console.dispose();
-
-    Gdx.app.debug(TAG, "Disposing assets...");
-    palettes.dispose();
-    colormaps.dispose();
-    textures.dispose();
-    assets.dispose();
-
-    try {
-      Gdx.app.debug(TAG, "Resetting stdout...");
-      System.setOut(System.out);
-      Gdx.app.debug(TAG, "Resetting stderr...");
-      System.setErr(System.err);
-    } catch (SecurityException ignored) {
+    // Detach ownership before callbacks. Shutdown cannot install another screen.
+    screen = null;
+    screens.clear();
+    try (Disposal cleanup = new Disposal()) {
+      if (activeScreen != null) cleanup.run(activeScreen::hide);
+      for (Screen retiring : closing) {
+        if (input != null && retiring instanceof com.badlogic.gdx.InputProcessor) {
+          cleanup.run(() -> input.removeProcessor((com.badlogic.gdx.InputProcessor) retiring));
+        }
+        cleanup.run(retiring::dispose);
+      }
+      screenBoundsListeners.clear();
+      for (Runnable unbind : cvarUnbinders.toArray(Runnable.class)) cleanup.run(unbind);
+      cvarUnbinders.clear();
+      cleanup.run(() -> {
+        if (Gdx.input != null && Gdx.input.getInputProcessor() == input) Gdx.input.setInputProcessor(null);
+      });
+      cleanup.dispose(input);
+      cleanup.run(() -> { if (music != null) music.stop(); });
+      cleanup.run(() -> { if (logs != null) logs.saveAll(); });
+      cleanup.run(() -> { if (cvars != null) reportSaveFailures(cvars.saveAll()); });
+      cleanup.run(() -> { if (keys != null) reportSaveFailures(keys.saveAll()); });
+      // All screens save/retire while their borrowed host resources are valid.
+      cleanup.dispose(console);
+      cleanup.dispose(shapes);
+      cleanup.dispose(batch);
+      cleanup.dispose(shader);
+      cleanup.dispose(palettes);
+      cleanup.dispose(colormaps);
+      cleanup.dispose(textures);
+      cleanup.dispose(assets);
+      cleanup.run(() -> { if (console != null && System.out == console.out && originalOut != null) System.setOut(originalOut); });
+      cleanup.run(() -> { if (console != null && System.err == console.out && originalErr != null) System.setErr(originalErr); });
+      cleanup.run(() -> { if (console != null) console.out.flush(); });
+      cleanup.run(() -> { if (console != null) console.out.close(); });
     } finally {
-      Gdx.app.debug(TAG, "Flushing console...");
-      console.out.flush();
-      console.out.close();
+      clearAliases();
     }
   }
 
-  public static class InputProcessor extends InputMultiplexer {
+  private void requireOpen() {
+    if (disposed) throw new IllegalStateException("Client is disposed");
+  }
+
+  private void reportSaveFailures(Collection<Throwable> failures) {
+    for (Throwable failure : failures) Gdx.app.error(TAG, failure.getMessage(), failure);
+  }
+
+  private void clearAliases() {
+    if (Riiablo.client == this) Riiablo.client = null;
+    if (Riiablo.home == home) Riiablo.home = null;
+    if (Riiablo.saves == saves) Riiablo.saves = null;
+    if (Riiablo.viewport == viewport) Riiablo.viewport = null;
+    if (Riiablo.defaultViewport == defaultViewport) Riiablo.defaultViewport = null;
+    if (Riiablo.scalingViewport == scalingViewport) Riiablo.scalingViewport = null;
+    if (Riiablo.extendViewport == extendViewport) Riiablo.extendViewport = null;
+    if (Riiablo.batch == batch) Riiablo.batch = null;
+    if (Riiablo.shader == shader) Riiablo.shader = null;
+    if (Riiablo.shapes == shapes) Riiablo.shapes = null;
+    if (Riiablo.mpqs == mpqs) Riiablo.mpqs = null;
+    if (Riiablo.assets == assets) Riiablo.assets = null;
+    if (Riiablo.input == input) Riiablo.input = null;
+    if (Riiablo.console == console) Riiablo.console = null;
+    if (Riiablo.commands == commands) Riiablo.commands = null;
+    if (Riiablo.cvars == cvars) Riiablo.cvars = null;
+    if (Riiablo.keys == keys) Riiablo.keys = null;
+    if (Riiablo.bundle == bundle) Riiablo.bundle = null;
+    if (Riiablo.string == string) Riiablo.string = null;
+    if (Riiablo.colors == colors) Riiablo.colors = null;
+    if (Riiablo.palettes == palettes) Riiablo.palettes = null;
+    if (Riiablo.colormaps == colormaps) Riiablo.colormaps = null;
+    if (Riiablo.fonts == fonts) Riiablo.fonts = null;
+    if (Riiablo.files == files) Riiablo.files = null;
+    if (Riiablo.cofs == cofs) Riiablo.cofs = null;
+    if (Riiablo.textures == textures) Riiablo.textures = null;
+    if (Riiablo.audio == audio) Riiablo.audio = null;
+    if (Riiablo.music == music) Riiablo.music = null;
+    if (Riiablo.cursor == cursor) Riiablo.cursor = null;
+    if (Riiablo.charData == charData) Riiablo.charData = null;
+    if (Riiablo.anim == anim) Riiablo.anim = null;
+    if (Riiablo.metrics == metrics) Riiablo.metrics = null;
+    if (Riiablo.logs == logs) Riiablo.logs = null;
+  }
+
+  public static class InputProcessor extends InputMultiplexer implements Disposable {
     boolean vibration = false;
+    private boolean disposed;
+    private final Cvar.StateListener<Boolean> vibrationListener = new CvarStateAdapter<Boolean>() {
+      @Override
+      public void onChanged(Cvar<Boolean> cvar, Boolean from, Boolean to) {
+        vibration = to;
+      }
+    };
 
     public InputProcessor() {
-      Cvars.Client.Input.Vibration.addStateListener(new CvarStateAdapter<Boolean>() {
-        @Override
-        public void onChanged(Cvar<Boolean> cvar, Boolean from, Boolean to) {
-          vibration = to;
-        }
-      });
+      Cvars.Client.Input.Vibration.addStateListener(vibrationListener);
+    }
+
+    @Override public void dispose() {
+      if (disposed) return;
+      disposed = true;
+      Cvars.Client.Input.Vibration.removeStateListener(vibrationListener);
+      clear();
     }
 
     public void vibrate(int millis) {

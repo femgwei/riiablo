@@ -132,7 +132,9 @@ public final class OffscreenRenderClient {
     // Gdx.app.exit() shuts down the render loop; leaving forceExit disabled
     // lets Gradle receive a normal zero exit status on Windows.
     config.forceExit = false;
-    Client client = new Client(new FileHandle(command.getOptionValue("d")), saves, 480);
+    Client client = "camp".equals(mode)
+        ? new ShutdownCheckedClient(new FileHandle(command.getOptionValue("d")), saves)
+        : new Client(new FileHandle(command.getOptionValue("d")), saves, 480);
     new LwjglApplication(client, config);
     // Keep the tiny context outside the desktop work area while the FBO test
     // is running. The rendered output never depends on the default window.
@@ -140,6 +142,49 @@ public final class OffscreenRenderClient {
       org.lwjgl.opengl.Display.setLocation(-32768, -32768);
     } catch (Throwable ignored) {
       // Some CI OpenGL drivers do not expose a movable native window.
+    }
+  }
+
+  /** Verify the production terminal cleanup before LWJGL destroys the GL context. */
+  private static final class ShutdownCheckedClient extends Client {
+    private boolean checked;
+
+    ShutdownCheckedClient(FileHandle home, FileHandle saves) {
+      super(home, saves, 480);
+    }
+
+    @Override public void dispose() {
+      if (checked) { super.dispose(); return; }
+      checked = true;
+      com.badlogic.gdx.assets.AssetManager ownedAssets = Riiablo.assets;
+      Client.InputProcessor ownedInput = Riiablo.input;
+      java.io.PrintStream consoleOutput = Riiablo.console.out;
+      int paletteProgram = Riiablo.shader.getHandle();
+      int shapeProgram = ((com.badlogic.gdx.graphics.glutils.ImmediateModeRenderer20)
+          Riiablo.shapes.getRenderer()).getShader().getHandle();
+      int whiteTexture = Riiablo.textures.white.getTextureObjectHandle();
+      int modalTexture = Riiablo.textures.modal.getTextureObjectHandle();
+      com.badlogic.gdx.graphics.GL20 gl = com.badlogic.gdx.Gdx.gl;
+      require(gl.glIsProgram(paletteProgram) && gl.glIsProgram(shapeProgram), "live shared programs");
+      require(gl.glIsTexture(whiteTexture) && gl.glIsTexture(modalTexture), "live shared textures");
+      super.dispose();
+      super.dispose(); // backend/exit re-entry must not double-release resources
+      // A deleted but still bound GL program is retained until it is unbound.
+      gl.glUseProgram(0);
+      require(!gl.glIsProgram(paletteProgram) && !gl.glIsProgram(shapeProgram), "shared programs deleted");
+      require(!gl.glIsTexture(whiteTexture) && !gl.glIsTexture(modalTexture), "shared textures deleted");
+      require(ownedAssets.getLoadedAssets() == 0, "host AssetManager empty");
+      require(ownedInput.getProcessors().size == 0, "host input cleared");
+      require(com.badlogic.gdx.Gdx.input.getInputProcessor() != ownedInput, "platform input detached");
+      require(getScreen() == null && Riiablo.client == null && Riiablo.assets == null
+          && Riiablo.batch == null && Riiablo.shapes == null, "old host aliases cleared");
+      require(System.out != consoleOutput && System.err != consoleOutput, "console streams restored");
+      com.badlogic.gdx.Gdx.app.log("ClientShutdown", "[CLIENT_SHUTDOWN] result=PASS "
+          + "sharedProgramsDeleted=2 sharedTexturesDeleted=2 assets=0 inputCleared=true aliasesCleared=true");
+    }
+
+    private static void require(boolean condition, String message) {
+      if (!condition) throw new IllegalStateException("Client shutdown: " + message);
     }
   }
 }

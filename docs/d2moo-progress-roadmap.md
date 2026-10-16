@@ -1,5 +1,49 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第八批：Client 最终退出
+
+- [x] 本批限定应用最终 dispose，不改变运行中 set/push/pop/clearAndSet 事务。
+  Client 先标记终止并移走前台/完整栈，前台优先、栈由上至下按身份去重；仅 hide
+  前台，再逐一 dispose。修复加载屏在前台时，栈中的 GameScreen 未收到最终退出
+  导致 World/UI/地图保存/释放被跳过的边界；不建立影响 loader 正常复用的全局去重表。
+- [x] 所有屏幕先于共享资源退出；清理异常/Error 后继续，保留首异常和 suppressed。
+  清理回调不能重新装屏，重复退出/重入不重复清理；终止后 render/resize/pause/resume
+  不触碰释放资源或覆盖新宿主别名。空 Client 可退出，不保证整个半构造图的自动回滚。
+- [x] 解绑 Client 四项 Cvar 及 InputProcessor 的 Vibration 监听，清空屏幕边界
+  监听和输入，仅解除仍属于旧宿主的平台处理器；停音乐、保存日志/Cvars/按键，再
+  释放 console、此前遗漏的 ShapeRenderer、batch/外借 shader 和共享资产。宿主
+  别名逐字段按身份清理，保留新 Client；子组件内部异常清理仍取决于其自身实现。
+- [x] stdout/stderr 保存原值，console 通过关闭屏障借用原 stdout；结束时只恢复
+  仍指向旧 console 的流，不覆盖后来重定向，不关闭借用的原输出。
+- [x] 新增 ClientShutdownLifecycleTest 17 项，覆盖整栈/身份去重、时序、异常/
+  Error、重入、拒绝装屏、终止后回调、输入/Cvar、流与新别名保护、保存失败，以及
+  前台 loader + 栈中生产 GameScreen.dispose 的 World/地图先于共享宿主释放。
+- camp 验证入口新增真实 GL 终止检查：生产 Client.dispose 后、上下文销毁前，
+  检查共享 ShapeRenderer/Shader 程序和两张纯色纹理删除、资产清空、输入解除、
+  关键别名与标准流恢复；验证重复 dispose。程序按 GL 语义先解绑再查询删除状态。
+  此入口仍非真实加载中终止或完整菜单/联机流程验收。
+- 首轮修正 Screen 不继承 Disposable 的编译问题；后两轮各有 1 项夹具事件预期
+  错误：首次不同值赋值为 onLoaded，同值赋值不初始化。按 isLoaded 验证明确的
+  对应事件后，62/62 专项（17 项新增）和真实会话三轮/Client GL 退出通过。
+  保留 build/client-shutdown-focused.log、focused-02/03.log 的失败记录；首个完整
+  成功日志 build/client-shutdown-focused-04.log，未降低资源断言或延长看门狗。
+- [x] 最终扩大定向回归 384/384、53 类：core 342/342（46 类）、D2GS 全部
+  42/42（7 类），失败/错误/跳过均 0；三端编译通过。范围是上批 367 项加本批
+  17 项，不含既有玩法/AI 基线失败，不宣称全仓全绿。
+- [x] 同一命令的两类三轮 GL、本地单轮营地、25Hz step=0.04、Throw 顺序与
+  伤害 1000→992 通过，原有按钮/面板/入场屏/地图资源硬断言保持通过。两次生产
+  Client 最终 GL 检查均 PASS（共享程序/纹理删除、assets=0、输入/别名/流恢复），
+  BUILD SUCCESSFUL。日志 build/client-shutdown-regression.log；三轮报告
+  build/client-shutdown-camp/cycle-N-lifecycle.txt，manifest 在 cycle-N/。
+  无 ERROR/Exception/OFFSCREEN_FATAL；保留既有诊断。
+  SIM_SLOW=109.08/65.80/64.39/110.71ms，预算 40ms，不作性能验收。
+- 后续优先处理运行中屏幕切换/清栈的重入、异常和输入归属，并逐项审计旧菜单
+  hide/dispose 的资源配对。RenderedConsole 内部监听/Timer、异步日志线程、其余
+  共享组件内部清理、菜单/入场连接交接、后台启动竞争、完整构造回滚、跨 Act/加载中
+  退出、长时压力、人工/性能验收仍待。七批装配、资源阶段第八批完成，资源阶段
+  尚未全部收口；实现和复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第七批：网络与托管进程停机
 
 - [x] NetworkedGameScreen 网络清理增加一次性/重入防护；保留 GameScreen/World
