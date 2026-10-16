@@ -1,9 +1,12 @@
 package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -23,6 +26,8 @@ import java.util.List;
 import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
 import com.riiablo.Keys;
+import com.riiablo.GdxKeyMapper;
+import com.riiablo.audio.Audio;
 import com.riiablo.audio.SoundOptions;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
@@ -36,8 +41,19 @@ import com.riiablo.key.MappedKey;
 import com.riiablo.screen.MenuScreen;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
+import com.riiablo.save.CharData;
+import com.riiablo.util.AssetReferenceScope;
+import com.riiablo.util.Disposal;
 
 public class EscapePanel extends WidgetGroup implements Disposable {
+  private final AssetManager assets = java.util.Objects.requireNonNull(Riiablo.assets, "assets");
+  private final AssetReferenceScope references = new AssetReferenceScope(assets);
+  private final CharData character = java.util.Objects.requireNonNull(Riiablo.charData, "character");
+  private final GdxKeyMapper keys = java.util.Objects.requireNonNull(Riiablo.keys, "keys");
+  private final Audio audio = java.util.Objects.requireNonNull(Riiablo.audio, "audio");
+  private final List<Table> ownedPages = new ArrayList<>();
+  private Stage captureStage;
+  private boolean disposed;
 
   public enum Page { MAIN, OPTIONS, SOUND, VIDEO, AUTOMAP, CONTROLS }
 
@@ -102,45 +118,58 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   };
 
   public EscapePanel() {
-    Riiablo.assets.load(optionsDescriptor);
-    Riiablo.assets.finishLoadingAsset(optionsDescriptor);
-    options = new EscapeButton(Riiablo.assets.get(optionsDescriptor).getTexture(0));
+    try {
+      initialize();
+    } catch (RuntimeException | Error failure) {
+      try { dispose(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
+  }
+
+  private void initialize() {
+    references.load(optionsDescriptor);
+    assets.finishLoadingAsset(optionsDescriptor);
+    options = new EscapeButton(assets.get(optionsDescriptor).getTexture(0));
     options.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Riiablo.audio.play(2, true); // select.wav
+        if (!isCurrentSession()) return;
+        audio.play(2, true); // select.wav
         showPage(Page.OPTIONS);
       }
     });
 
-    Riiablo.assets.load(exitDescriptor);
-    Riiablo.assets.finishLoadingAsset(exitDescriptor);
-    exit = new EscapeButton(Riiablo.assets.get(exitDescriptor).getTexture(0));
+    references.load(exitDescriptor);
+    assets.finishLoadingAsset(exitDescriptor);
+    exit = new EscapeButton(assets.get(exitDescriptor).getTexture(0));
     exit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Riiablo.audio.play(2, true); // select.wav
+        if (!isCurrentSession()) return;
+        audio.play(2, true); // select.wav
         if (Riiablo.game != null && !Riiablo.game.saveCharacter()) return;
         Riiablo.client.clearAndSet(new MenuScreen());
       }
     });
 
-    Riiablo.assets.load(returntogameDescriptor);
-    Riiablo.assets.finishLoadingAsset(returntogameDescriptor);
-    returntogame = new EscapeButton(Riiablo.assets.get(returntogameDescriptor).getTexture(0));
+    references.load(returntogameDescriptor);
+    assets.finishLoadingAsset(returntogameDescriptor);
+    returntogame = new EscapeButton(assets.get(returntogameDescriptor).getTexture(0));
     returntogame.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Riiablo.audio.play(2, true); // select.wav
+        if (!isCurrentSession()) return;
+        audio.play(2, true); // select.wav
         close();
       }
     });
 
-    Riiablo.assets.load(pentspinDescriptor);
-    Riiablo.assets.finishLoadingAsset(pentspinDescriptor);
-    pentspinL = Animation.newAnimation(Riiablo.assets.get(pentspinDescriptor));
+    references.load(pentspinDescriptor);
+    assets.finishLoadingAsset(pentspinDescriptor);
+    pentspinL = Animation.newAnimation(assets.get(pentspinDescriptor));
     pentspinL.setReversed(true);
-    pentspin = Animation.newAnimation(Riiablo.assets.get(pentspinDescriptor));
+    pentspin = Animation.newAnimation(assets.get(pentspinDescriptor));
     focusActor = new FocusActor[6];
     for (int i = 0; i < focusActor.length; i += 2) {
       focusActor[i    ] = new FocusActor(pentspinL);
@@ -149,11 +178,13 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     ClickListener focusListener = new ClickListener() {
       @Override
       public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+        if (!isCurrentSession()) return;
         setVisible(event.getListenerActor(), true);
       }
 
       @Override
       public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+        if (!isCurrentSession()) return;
         setVisible(event.getListenerActor(), false);
       }
 
@@ -176,6 +207,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     final int spacing = 24;
     mainPage = new Table();
+    ownedPages.add(mainPage);
     mainPage.align(Align.center);
     mainPage.add(focusActor[0]);
     mainPage.add(options).space(0, spacing, 0, spacing).fillX();
@@ -350,16 +382,29 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private void beginCapture(ControlBindingRow row, int assignment) {
+    if (!isCurrentSession() || !isVisible() || currentPage != Page.CONTROLS) return;
+    releaseCapture();
     capturingRow = row;
     capturingAssignment = assignment;
-    Riiablo.keys.setCaptureMode(true);
-    controlsState.beginCapture(mappingLabel(row.mapping), assignment != MappedKey.PRIMARY_MAPPING);
-    controlsStatus.setText(controlsStatusLabel());
-    if (getStage() != null) getStage().setKeyboardFocus(this);
+    try {
+      keys.beginCapture(this);
+      controlsState.beginCapture(mappingLabel(row.mapping), assignment != MappedKey.PRIMARY_MAPPING);
+      controlsStatus.setText(controlsStatusLabel());
+      captureStage = getStage();
+      if (captureStage != null && !captureStage.setKeyboardFocus(this)) {
+        controlsState.cancel();
+        cancelCapture(ui("controls_change_cancelled"));
+      }
+    } catch (RuntimeException | Error failure) {
+      try { releaseCapture(); }
+      catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+      throw failure;
+    }
   }
 
   private boolean captureKey(int keycode) {
-    if (currentPage != Page.CONTROLS || capturingRow == null) return false;
+    if (!isCurrentSession() || !isVisible() || !keys.isCaptureOwner(this)
+        || currentPage != Page.CONTROLS || capturingRow == null) return false;
     if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
       controlsState.cancel();
       cancelCapture(ui("controls_change_cancelled"));
@@ -367,14 +412,14 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     }
     if (keycode == Input.Keys.BACKSPACE) {
       capturingRow.mapping.unassign(capturingAssignment);
-      Riiablo.keys.save(capturingRow.mapping);
+      keys.save(capturingRow.mapping);
       refreshControlRows();
       controlsState.cleared();
       cancelCapture(ui("controls_binding_cleared"));
       return true;
     }
 
-    for (MappedKey existing : Riiablo.keys.get(keycode)) {
+    for (MappedKey existing : keys.get(keycode)) {
       if (existing != capturingRow.mapping) {
         controlsState.conflict(mappingLabel(existing));
         controlsStatus.setText(controlsStatusLabel());
@@ -390,7 +435,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     try {
       capturingRow.mapping.assign(capturingAssignment, keycode);
-      Riiablo.keys.save(capturingRow.mapping);
+      keys.save(capturingRow.mapping);
       refreshControlRows();
       controlsState.saved();
       cancelCapture(controlsStatusLabel());
@@ -401,14 +446,26 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private void cancelCapture(String message) {
-    capturingRow = null;
-    Riiablo.keys.setCaptureMode(false);
+    releaseCapture();
     controlsStatus.setText(message);
-    if (getStage() != null) getStage().setKeyboardFocus(null);
+  }
+
+  private void releaseCapture() {
+    capturingRow = null;
+    capturingAssignment = 0;
+    Stage previous = captureStage;
+    captureStage = null;
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(() -> keys.endCapture(this));
+      if (previous != null) cleanup.run(() -> {
+        if (previous.getKeyboardFocus() == this) previous.setKeyboardFocus(null);
+      });
+    }
   }
 
   private void resetControlDefaults() {
-    Riiablo.keys.resetAll();
+    if (!isCurrentSession()) return;
+    keys.resetAll();
     refreshControlRows();
     controlsState.defaultsRestored();
     cancelCapture(controlsStatusLabel());
@@ -443,6 +500,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private Table createPage(String title) {
     Table page = new Table();
+    ownedPages.add(page);
     page.setFillParent(true);
     page.setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal50));
     page.align(Align.center);
@@ -461,7 +519,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     button.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Riiablo.audio.play(2, true);
+        if (!isCurrentSession()) return;
+        audio.play(2, true);
         action.run();
       }
     });
@@ -474,7 +533,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     button.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Riiablo.audio.play(2, true);
+        if (!isCurrentSession()) return;
+        audio.play(2, true);
         action.run();
       }
     });
@@ -568,17 +628,20 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   public void open() {
+    if (!isCurrentSession()) return;
     showPage(Page.MAIN);
     setVisible(true);
   }
 
   public void close() {
+    if (!isCurrentSession()) return;
     setVisible(false);
     showPage(Page.MAIN);
   }
 
   /** Returns true when Escape navigated to a parent page instead of closing the menu. */
   public boolean navigateBack() {
+    if (!isCurrentSession()) return false;
     switch (currentPage) {
       case MAIN:
         return false;
@@ -596,6 +659,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private void showPage(Page page) {
+    if (!isCurrentSession()) return;
+    if (page != Page.CONTROLS) {
+      controlsState.cancel();
+      releaseCapture();
+    }
     currentPage = page;
     if (page == Page.SOUND) refreshSoundRows();
     if (page == Page.VIDEO) refreshVideoRows();
@@ -611,26 +679,78 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(optionsDescriptor.fileName);
-    Riiablo.assets.unload(exitDescriptor.fileName);
-    Riiablo.assets.unload(returntogameDescriptor.fileName);
-    Riiablo.assets.unload(pentspinDescriptor.fileName);
+    if (disposed) return;
+    disposed = true;
+    controlsState.cancel();
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(this::releaseCapture);
+      cleanup.run(() -> super.setVisible(false));
+      cleanup.run(() -> setTouchable(Touchable.disabled));
+      for (Table page : ownedPages) cleanup.run(() -> clearActorTree(page));
+      for (Actor button : new Actor[] {options, exit, returntogame}) {
+        if (button == null) continue;
+        cleanup.run(() -> clearActorTree(button));
+        cleanup.run(button::remove);
+      }
+      cleanup.run(() -> clearActorTree(this));
+      if (pentspinL != null) cleanup.run(pentspinL::reset);
+      if (pentspin != null) cleanup.run(pentspin::reset);
+      cleanup.run(this::remove);
+      cleanup.dispose(references);
+    } finally {
+      ownedPages.clear(); controlRows.clear();
+      pentspinL = null; pentspin = null; focusActor = null;
+      options = null; exit = null; returntogame = null;
+      mainPage = null; optionsPage = null; soundPage = null;
+      videoPage = null; automapPage = null; controlsPage = null; controlsStatus = null;
+    }
+  }
+
+  private boolean isCurrentSession() {
+    return !disposed && character == Riiablo.charData && keys == Riiablo.keys && assets == Riiablo.assets;
+  }
+
+  private static void clearActorTree(Actor actor) {
+    try (Disposal cleanup = new Disposal()) {
+      cleanup.run(actor::clearListeners);
+      cleanup.run(actor::clearActions);
+      if (actor instanceof Group) {
+        Group group = (Group) actor;
+        for (Actor child : group.getChildren().toArray(Actor.class)) cleanup.run(() -> clearActorTree(child));
+        cleanup.run(group::clearChildren);
+      }
+    }
+  }
+
+  @Override public void setVisible(boolean visible) {
+    if (disposed) return;
+    super.setVisible(visible);
+    if (!visible) {
+      controlsState.cancel();
+      releaseCapture();
+    }
+  }
+
+  @Override public void act(float delta) {
+    if (isCurrentSession()) super.act(delta);
   }
 
   @Override
   public void draw(Batch batch, float a) {
+    if (!isCurrentSession()) return;
     pentspinL.act();
     pentspin.act();
     super.draw(batch, a);
   }
 
-  private static class EscapeButton extends Button {
+  private class EscapeButton extends Button {
     EscapeButton(TextureRegion region) {
       super(new TextureRegionDrawable(region));
     }
 
     @Override
     protected void drawBackground(Batch batch, float a, float x, float y) {
+      if (!isCurrentSession()) return;
       Drawable background = getBackground();
       background.draw(batch,
           x + (getWidth() / 2) - (background.getMinWidth() / 2),
@@ -640,7 +760,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     }
   }
 
-  private static class FocusActor extends Actor {
+  private class FocusActor extends Actor {
     Animation pentspin;
     FocusActor(Animation pentspin) {
       this.pentspin = pentspin;
@@ -650,11 +770,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     @Override
     public void draw(Batch batch, float a) {
+      if (!isCurrentSession()) return;
       pentspin.draw(batch, getX(), getY());
     }
   }
 
-  private static class OptionRow extends Table {
+  private class OptionRow extends Table {
     final Label name;
     final Label value;
 
@@ -678,7 +799,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         ClickListener listener = new ClickListener() {
           @Override
           public void clicked(InputEvent event, float x, float y) {
-            Riiablo.audio.play(2, true);
+            if (!isCurrentSession()) return;
+            audio.play(2, true);
             action.run();
           }
         };

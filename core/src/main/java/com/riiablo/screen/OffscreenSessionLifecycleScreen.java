@@ -35,6 +35,7 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
   private final boolean mobileUiLifecycle = Boolean.getBoolean("riiablo.offscreen-mobile-ui-lifecycle");
   private final Map<String, Integer> mobileReferencesBeforeConstruction = new TreeMap<>();
   private final Map<String, Integer> questReferencesBeforeConstruction = new TreeMap<>();
+  private final Map<String, Integer> escapeReferencesBeforeConstruction = new TreeMap<>();
   private boolean started;
   private int cycle;
   private int buttonReferencesBeforeConstruction;
@@ -59,6 +60,12 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     require(assets == Riiablo.assets, "same host AssetManager");
     presentationReferencesBeforeConstruction.clear();
     String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
+    escapeReferencesBeforeConstruction.clear();
+    for (String path : new String[] {"data/local/ui/" + language + "/options.dc6",
+        "data/local/ui/" + language + "/exit.dc6", "data/local/ui/" + language + "/returntogame.dc6",
+        "data/global/ui/CURSOR/pentspin.DC6"}) {
+      escapeReferencesBeforeConstruction.put(path, references(path));
+    }
     for (String path : new String[] {"data/global/overlays/Gleam.dcc",
         "data/global/overlays/NPCSpeechBalloon.dcc", "data/global/overlays/ShrineManaRegen.dcc",
         "data/local/ui/" + language + "/act1/A1L1.dc6", "data/global/ui/MENU/boxpieces.DC6"}) {
@@ -356,8 +363,64 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
       }
     }
     require(!currentTiles.isEmpty() && handles.size > 0, "real DT1 resources sampled");
+    Array<Actor> escapeActors = new Array<>();
+    collectActors(screen.escapePanel, escapeActors);
+    Set<Integer> escapeHandles = new HashSet<>();
+    for (Map.Entry<String, Integer> reference : escapeReferencesBeforeConstruction.entrySet()) {
+      String path = reference.getKey();
+      require(references(path) > reference.getValue(), "live escape asset " + path);
+      DC6 sheet = assets.get(path, DC6.class);
+      for (int direction = 0; direction < sheet.getNumDirections(); direction++) {
+        require(sheet.isLoaded(direction), "escape sheet uploaded " + path);
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion region : sheet.getRegions(direction)) {
+          int handle = region.getTexture().getTextureObjectHandle();
+          require(Gdx.gl.glIsTexture(handle), "live escape texture " + path);
+          if (reference.getValue() == 0) escapeHandles.add(handle);
+        }
+      }
+    }
+    com.badlogic.gdx.scenes.scene2d.InputListener escapeInput = null;
+    for (com.badlogic.gdx.scenes.scene2d.EventListener listener : screen.escapePanel.getListeners()) {
+      if (listener instanceof com.badlogic.gdx.scenes.scene2d.InputListener) {
+        escapeInput = (com.badlogic.gdx.scenes.scene2d.InputListener) listener;
+      }
+    }
+    require(escapeInput != null, "escape production key listener");
+    for (int capture = 0; capture < 3; capture++) {
+      screen.escapePanel.open();
+      clickAction(field(screen.escapePanel, "options", Actor.class));
+      Group options = field(screen.escapePanel, "optionsPage", Group.class);
+      clickAction(options.getChildren().get(3));
+      require(screen.escapePanel.getCurrentPage() == com.riiablo.screen.panel.EscapePanel.Page.CONTROLS,
+          "production controls-page navigation");
+      java.util.List<?> rows = field(screen.escapePanel, "controlRows", java.util.List.class);
+      clickAction(field(rows.get(0), "primary", Actor.class));
+      require(Riiablo.keys.isCaptureOwner(screen.escapePanel)
+          && screen.stage.getKeyboardFocus() == screen.escapePanel, "production capture owns focus");
+      if (capture == 0) {
+        require(screen.escapePanel.navigateBack(), "escape parent navigation");
+      } else if (capture == 1) {
+        screen.escapePanel.setVisible(false);
+      } else break; // Leave active capture to production Client teardown.
+      require(!Riiablo.keys.isCaptureOwner(screen.escapePanel)
+          && screen.stage.getKeyboardFocus() != screen.escapePanel, "capture released on navigation/hide");
+    }
     Riiablo.client.setScreen(this); // real Client.hide/dispose, host stays alive
     require(screen.map.getZones().size == 0, "Client retired the game before returning");
+    require(field(screen.escapePanel, "disposed", Boolean.class), "Client retired escape owner");
+    require(!Riiablo.keys.isCaptureOwner(screen.escapePanel)
+        && screen.stage.getKeyboardFocus() != screen.escapePanel, "Client released capture and focus");
+    require(!escapeInput.keyDown(null, com.badlogic.gdx.Input.Keys.F12), "late escape key ignored");
+    screen.escapePanel.dispose(); screen.escapePanel.dispose(); screen.escapePanel.open();
+    require(!screen.escapePanel.isVisible(), "retired escape cannot reopen");
+    for (Actor actor : escapeActors) {
+      require(actor.getParent() == null && actor.getListeners().size == 0
+          && actor.getCaptureListeners().size == 0 && actor.getActions().size == 0, "escape actor retired");
+    }
+    for (Map.Entry<String, Integer> reference : escapeReferencesBeforeConstruction.entrySet()) {
+      require(references(reference.getKey()) == reference.getValue(), "escape asset baseline " + reference.getKey());
+    }
+    for (int handle : escapeHandles) require(!Gdx.gl.glIsTexture(handle), "escape texture deleted");
     require(field(screen.questsPanel, "disposed", Boolean.class), "Client retired quest owner");
     screen.questsPanel.dispose(); screen.questsPanel.dispose();
     for (Actor actor : questActors) {
@@ -477,6 +540,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
         + "\nquestSpeechHideStops=1"
         + "\nquestAssetBaselinesBalanced=" + questReferencesBeforeConstruction.size()
         + "\nquestTexturesDeleted=" + questHandles.size()
+        + "\nescapeActorsRetired=" + escapeActors.size
+        + "\nescapeCaptures=3\nescapeNavigationRelease=true\nescapeHideRelease=true\nescapeExitRelease=true"
+        + "\nescapeAssetBaselinesBalanced=" + escapeReferencesBeforeConstruction.size()
+        + "\nescapeTexturesDeleted=" + escapeHandles.size()
         + "\npanelAssetBaselinesBalanced=" + panelReferencesBeforeConstruction.size()
         + "\nownedPanelTexturesDeleted=" + panelHandles.size
         + "\nmobileUiLifecycle=" + mobileUiLifecycle
@@ -537,6 +604,21 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     require(listener != null, "production quest click listener");
     listener.clicked(null, 0, 0);
+  }
+
+  /** Skip inherited no-op clicks (hover-only listeners) and invoke the actual menu action. */
+  private static void clickAction(Actor actor) {
+    com.badlogic.gdx.scenes.scene2d.utils.ClickListener action = null;
+    for (com.badlogic.gdx.scenes.scene2d.EventListener listener : actor.getListeners()) {
+      if (!(listener instanceof com.badlogic.gdx.scenes.scene2d.utils.ClickListener)) continue;
+      try {
+        listener.getClass().getDeclaredMethod("clicked", com.badlogic.gdx.scenes.scene2d.InputEvent.class,
+            float.class, float.class);
+      } catch (NoSuchMethodException inherited) { continue; }
+      action = (com.badlogic.gdx.scenes.scene2d.utils.ClickListener) listener;
+    }
+    require(action != null, "missing production menu action");
+    action.clicked(null, 0, 0);
   }
 
   @SuppressWarnings("unchecked") private static void collectMenus(com.riiablo.widget.NpcMenu menu,

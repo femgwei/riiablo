@@ -33,6 +33,7 @@ public class GdxKeyMapper extends SaveableKeyMapper {
   private final Trie<String, MappedKey> KEYS = new PatriciaTrie<>();
   private final Map<String, int[]> DEFAULTS = new HashMap<>();
   private boolean captureMode;
+  private Object captureOwner;
 
   /**
    * Slots in the native D2 key table that correspond to Riiablo's controls.
@@ -226,7 +227,25 @@ public class GdxKeyMapper extends SaveableKeyMapper {
 
   /** Temporarily prevents captured keys from also dispatching gameplay actions. */
   public void setCaptureMode(boolean captureMode) {
+    captureOwner = null;
     this.captureMode = captureMode;
+  }
+
+  /** Replaces the current capture; only this owner may release it afterward. */
+  public void beginCapture(Object owner) {
+    captureOwner = java.util.Objects.requireNonNull(owner, "capture owner");
+    captureMode = true;
+  }
+
+  public boolean isCaptureOwner(Object owner) {
+    return captureMode && owner != null && captureOwner == owner;
+  }
+
+  public boolean endCapture(Object owner) {
+    if (!isCaptureOwner(owner)) return false;
+    captureOwner = null;
+    captureMode = false;
+    return true;
   }
 
   @NonNull

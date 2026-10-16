@@ -1491,3 +1491,94 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
 资源阶段继续：EscapePanel 设置/按键捕获与其他尚使用可变资源宿主的面板、完整控件
 内部构造回滚、连接交接、控制台/Timer/异步日志、跨 Act/加载中退出、长期压力、
 Android 真机及人工/性能验收仍待，不能据本批宣称完整资源阶段完成或进程零滞留。
+
+## 第二十一批：Escape 菜单、设置页与按键捕获
+
+`EscapePanel` 捕获构造时的 AssetManager / CharData / GdxKeyMapper / Audio，
+用 AssetReferenceScope 配对本地化的 options、exit、returntogame 以及 pentspin
+四项 DC6 请求。保留本地化按钮的独立帧加载方式，不启用 COMBINE；设置规则、
+键位保存格式、玩法和存档不变。字体、角色、按键及 Audio 宿主仅借用。
+
+主菜单、选项、声音、视频、自动地图和按键六个页面在创建时登记，尚未挂到根面板
+的页面也能在构造失败后清理。最终退出幂等，清除整树普通/捕获监听、动作和父节点，
+清空按键行与页面索引，reset 两个旋转动画后归还资产。焦点或某项卸载抛出 Error
+时仍尝试其余清理，不重复归还已经尝试的引用；这不代表全部控件内部构造失败路径
+或所有 Stage 错误都已验收。
+
+原来按键捕获只有全局 boolean，隐藏菜单、离开按键页或退出没有统一解除；旧菜单
+还可能把后来菜单的捕获关闭。GdxKeyMapper 现在提供按对象身份归属的 begin / end，
+只允许当前 owner 解除捕获；兼容的 setCaptureMode 会使旧 token 失效，不让旧 owner
+解除后续未署名捕获。捕获期间 gameplay 输入仍沿用原来的跳过逻辑。
+
+菜单在关闭、隐藏、返回父页、取消、保存、清空、恢复默认和最终销毁时释放自己的
+捕获；保存原 Stage，只在其 keyboardFocus 仍是本菜单时清焦点，不清后来 Actor 的
+焦点。重新挂载后再次捕获会先解除原 Stage 的焦点。焦点获取被拒绝或抛出异常时
+回滚捕获，避免留下屏蔽 gameplay 的全局开关。旧会话/已销毁菜单的点击、悬停、
+按键及 act/draw 均不再访问新角色/按键宿主或触发退出；销毁后不能重新打开。
+
+真实会话探针实际通过菜单按钮进入按键页，分别验证返回父页、隐藏和最终退出三次
+捕获的释放。最后一次捕获及焦点留给生产 Client teardown，不提前手工 dispose。
+退出后检查六页全树、迟到按键、四项资产构造前基线和已采样 GL 贴图删除；保留
+任务语音、技能重建、移动 UI、地图、私有纹理、共享框及 ClientShutdown 检查。
+
+### 第二十一批验证
+
+- `build/escape-resources-compile.log`：core 主代码与原有测试源码编译通过。
+- 首轮 `build/escape-resources-targeted.log` 的 19 项中 2 项失败：清除主键的断言
+  忽略了现有 MappedKey 将副键前移的规则；另一个断言将 Stage 清子控件的正常调用
+  误计为越权修改焦点。修正为保留原有键位语义、只禁止修改新焦点，随后
+  `build/escape-resources-targeted-02.log` 的 19 项全部通过。
+- 扩大前补充三项专项，并将夹具导航改为生产按钮回调。
+  `build/escape-resources-regression-gl.log` 因测试误调用 Audio 不存在的 dispose
+  方法而编译失败；`build/escape-resources-regression-gl-02.log` 的 198 项中 2 项
+  因迟到回调断言未扣除导航阶段两次正常选择音而失败、2 项跳过，未运行 GL。
+  现分别验证并清除导航阶段调用记录，再检查迟到回调零调用，保留失败日志。
+- 最终 `build/escape-resources-final.log`：18 项真实 Escape 控件/资产专项及 4 项
+  GdxKeyMapper 捕获归属/生产输入专项全部通过；扩大定向为 27 类 198 项，196 通过、
+  2 跳过（佣兵独立环境资源探针），失败/错误 0。core、desktop、D2GS 编译链通过，
+  BUILD SUCCESSFUL，2m37s。
+- 同一 Client 的三轮原版 1.10f MPQ/GL 会话均通过：每轮三次真实菜单按键捕获，
+  返回父页、隐藏和最终退出均释放捕获/焦点，208 个菜单控件清除父节点、普通/
+  捕获监听与动作，四项 Escape 资产回基线、12 张相关纹理删除，迟到按键无效。
+  保留每轮任务 146 控件/5 个 scroller/33 项资产/794 张纹理、技能重建 21 个旧
+  按钮/退出 40 个按钮、移动 UI 15 按钮/102 张纹理、私有纹理 13 张、共享框
+  `0→12→0`、10 个 NPC 菜单及地图资源检查，最终 ClientShutdown 通过。
+- 每轮退出后资产种类为 56/56/56，剩余资产名称/类型/引用一致；对比前批多出的
+  一项为实际菜单导航首次触发、由 Audio 宿主缓存的 `data/global/sfx/cursor/select.wav`
+  （refs=1），不是 Escape 四项 DC6 的引用累积。最终宿主退出 AssetManager 资产为 0，
+  但不能据此宣称整个进程零滞留。仍有 46.31–95.04ms 慢帧，超过 40ms 预算，
+  不作人工画面/听感、Android 真机、联机、完整存档或性能验收。
+
+专项复跑（无需 MPQ/GL，不写真实偏好或角色键位文件）：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.panel.EscapePanelLifecycleTest `
+  --tests com.riiablo.GdxKeyMapperCaptureTest --no-daemon
+```
+
+扩大定向及原版 1.10f 三轮复跑：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test `
+  --tests 'com.riiablo.screen.panel.*' `
+  --tests com.riiablo.GdxKeyMapperCaptureTest `
+  --tests com.riiablo.widget.ButtonLifecycleTest `
+  --tests com.riiablo.engine.client.SharedBoxLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests 'com.riiablo.codec.Animation*Test' `
+  --tests com.riiablo.engine.client.AnimationStepperTest `
+  --tests com.riiablo.engine.client.Act1QuestPresentationTest `
+  --tests 'com.riiablo.audio.*Test' `
+  :desktop:offscreenSessionLifecycle '-PmobileUiLifecycle' `
+  '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' `
+  '-PsavesDir=F:/3rd_src/riiablo/build/escape-resources-recheck-saves' `
+  '-PvisualOutput=F:/3rd_src/riiablo/build/escape-resources-recheck-gl' `
+  '-Pd2Version=1.10f' --no-daemon
+```
+
+下一批优先 CubePanel / StashPanel 等仍使用可变全局 AssetManager 卸载的剩余面板。
+完整控件内部构造回滚、连接交接、控制台/Timer/异步日志、跨 Act/加载中退出、长期
+压力、Android 真机和人工/性能验收仍待，资源阶段尚未结束。
