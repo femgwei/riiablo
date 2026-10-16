@@ -58,6 +58,7 @@ import com.riiablo.engine.client.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
 import com.riiablo.engine.client.ClientRenderSystemRunner;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
+import com.riiablo.engine.client.ClientNetworkSession;
 import com.riiablo.engine.client.CofLayerCacher;
 import com.riiablo.engine.client.CofLayerLoader;
 import com.riiablo.engine.client.CofLoader;
@@ -776,6 +777,16 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         new com.riiablo.engine.server.quest.Act5QuestGameState();
     WorldConfiguration config = simulationSession.registerServices(getWorldConfiguration());
     config
+        .register("clientSession", new ClientNetworkSession(charData, () -> player,
+            new ClientNetworkSession.ResultRouter() {
+              @Override public void onNpcService(com.riiablo.net.packet.d2gs.NpcServiceResult result) {
+                if (hireMercenaryPanel != null) hireMercenaryPanel.applyNetworkResult(result);
+                if (vendorPanel != null) vendorPanel.applyNetworkResult(result);
+              }
+              @Override public void onTradeState(com.riiablo.engine.client.ClientNetworkReceiver receiver) {
+                if (tradePanel != null) tradePanel.applyNetworkState(receiver);
+              }
+            }))
         .register("iso", iso)
         .register("config", config)
         .register("factory", factory)

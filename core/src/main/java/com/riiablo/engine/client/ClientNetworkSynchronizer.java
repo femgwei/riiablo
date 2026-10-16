@@ -73,6 +73,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
   protected NetworkIdManager idManager;
   protected ClientNetworkReceiver receiver;
+  @Wire(name="clientSession") protected ClientNetworkSession clientSession;
 
   boolean init = false;
   private long nextNpcRequestId = 1;
@@ -102,12 +103,12 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     init = true;
 
     try {
-      CharData charData = Riiablo.charData;
+      CharData charData = session().character();
 
       FlatBufferBuilder builder = new FlatBufferBuilder(8192);
       int charNameOffset = builder.createString(charData.name);
 
-      int entityId = Riiablo.game.player;
+      int entityId = session().player();
       int[] component = mCofComponents.get(entityId).component;
       builder.startVector(1, component.length, 1);
       for (int i = component.length - 1; i >= 0; i--) builder.addByte((byte) component[i]);
@@ -153,7 +154,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       }
       int serverId = connection.entityId();
       Gdx.app.log(TAG, "assign " + entityId + " to " + serverId);
-      idManager.put(serverId, Riiablo.game.player);
+      idManager.put(serverId, session().player());
       Vector2 initialPosition = mPosition.get(entityId).position;
       prediction.reset(initialPosition.x, initialPosition.y);
       nextMovementSequence = 1L;
@@ -166,7 +167,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
   @Override
   protected void processSystem() {
-    int entityId = Riiablo.game.player;
+    int entityId = session().player();
 
     // A dead local player intentionally has no Velocity. Do not dereference
     // it or keep sending stale movement while waiting for server respawn.
@@ -435,9 +436,13 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
   /** Server entity id assigned to this client during the authenticated handshake. */
   public int serverPlayerId() {
-    if (Riiablo.game == null || Riiablo.game.player < 0) return -1;
-    int localEntityId = Riiablo.game.player;
+    if (session() == null || session().player() < 0) return -1;
+    int localEntityId = session().player();
     return mNetworked.has(localEntityId)
         ? mNetworked.get(localEntityId).serverId : -1;
+  }
+
+  private ClientNetworkSession session() {
+    return clientSession != null ? clientSession : ClientNetworkSession.fromGlobals();
   }
 }

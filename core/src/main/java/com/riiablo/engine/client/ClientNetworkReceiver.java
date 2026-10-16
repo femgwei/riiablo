@@ -151,6 +151,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected EventSystem events;
   protected AuthoritativeInterpolationSystem interpolation;
   protected ClientNetworkSynchronizer networkSynchronizer;
+  @Wire(name="clientSession") protected ClientNetworkSession clientSession;
 
   @Wire(name = "environment")
   protected EnvironmentCycle environment;
@@ -628,8 +629,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void applyPlayerSnapshot(int entityId, PlayerP data) {
-    if (Riiablo.charData == null || Riiablo.game == null
-        || entityId != Riiablo.game.player) {
+    if (character() == null || player() < 0 || entityId != player()) {
       return;
     }
 
@@ -641,14 +641,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
     int skillPoints = data.skillPoints();
     int statPoints = data.statPoints();
     if (data.walletPresent()) {
-      com.riiablo.item.VendorPricing.setGoldSnapshot(Riiablo.charData,
+      com.riiablo.item.VendorPricing.setGoldSnapshot(character(),
           (int) Math.min(Integer.MAX_VALUE, data.gold()),
           (int) Math.min(Integer.MAX_VALUE, data.goldBank()));
     }
     if (data.ammoPresent()) {
-      com.riiablo.item.Item ammo = Riiablo.charData.getItems().findItemById(data.ammoItemId());
-      if (ammo == null) ammo = Riiablo.charData.getItems().getEquippedRangedAmmo();
-      if (ammo == null) ammo = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+      com.riiablo.item.Item ammo = character().getItems().findItemById(data.ammoItemId());
+      if (ammo == null) ammo = character().getItems().getEquippedRangedAmmo();
+      if (ammo == null) ammo = character().getItems().getEquippedThrowableWeapon();
       if (ammo != null && ammo.attrs != null) {
         int quantity = data.ammoQuantity();
         ammo.attrs.base().put(Stat.quantity, quantity);
@@ -657,7 +657,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
             + " code=" + ammo.code + " quantity=" + quantity);
       }
     } else {
-      com.riiablo.save.ItemData items = Riiablo.charData.getItems();
+      com.riiablo.save.ItemData items = character().getItems();
       com.riiablo.item.Item staleQuiver = items.getEquippedRangedAmmo();
       if (staleQuiver != null && com.riiablo.item.VendorPricing.isQuiver(staleQuiver)) {
         items.removeOwnedItem(staleQuiver);
@@ -666,38 +666,38 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
     }
 
-    long oldExperience = Riiablo.charData.getStats().aggregate()
+    long oldExperience = character().getStats().aggregate()
         .getValue(Stat.experience, 0L);
-    int oldLevel = Riiablo.charData.getStats().aggregate()
-        .getValue(Stat.level, Riiablo.charData.level & 0xFF);
-    int oldSkillPoints = Riiablo.charData.getStats().aggregate()
+    int oldLevel = character().getStats().aggregate()
+        .getValue(Stat.level, character().level & 0xFF);
+    int oldSkillPoints = character().getStats().aggregate()
         .getValue(Stat.newskills, 0);
-    int oldStatPoints = Riiablo.charData.getStats().aggregate()
+    int oldStatPoints = character().getStats().aggregate()
         .getValue(Stat.statpts, 0);
 
     // The HUD reads aggregate stats, while save/load and server award code use
     // the base list. Keep both in lockstep so a later refresh cannot erase the
     // value received from the server.
-    Riiablo.charData.getStats().base().put(Stat.experience, experience);
-    Riiablo.charData.getStats().aggregate().put(Stat.experience, experience);
-    Riiablo.charData.getStats().base().put(Stat.level, level);
-    Riiablo.charData.getStats().aggregate().put(Stat.level, level);
-    Riiablo.charData.setAvailablePoints(Stat.newskills, skillPoints);
-    Riiablo.charData.setAvailablePoints(Stat.statpts, statPoints);
-    Riiablo.charData.level = (byte) level;
+    character().getStats().base().put(Stat.experience, experience);
+    character().getStats().aggregate().put(Stat.experience, experience);
+    character().getStats().base().put(Stat.level, level);
+    character().getStats().aggregate().put(Stat.level, level);
+    character().setAvailablePoints(Stat.newskills, skillPoints);
+    character().setAvailablePoints(Stat.statpts, statPoints);
+    character().level = (byte) level;
 
     // PlayerP and VitalsP are independent components in the same snapshot.
     // Keep progression insertion from exposing a stale base resource between
     // component applications (or after a packet that omits unchanged vitals).
-    Riiablo.charData.synchronizeCurrentResources();
+    character().synchronizeCurrentResources();
 
     int questCount = Math.min(data.questRecordsLength(), com.riiablo.Riiablo.NUM_ACTS * 8);
     if (questCount > 0) {
-      int currentDifficulty = Riiablo.charData.diff;
+      int currentDifficulty = character().diff;
       // The server serializes all acts for the character's current
       // difficulty; diff is not an act index.
       for (int act = 0; act < com.riiablo.Riiablo.NUM_ACTS; act++) {
-        short[] records = Riiablo.charData.getQuests(act);
+        short[] records = character().getQuests(act);
         int actOffset = act * 8;
         for (int i = 0; i < records.length && actOffset + i < questCount; i++) {
           records[i] = (short) data.questRecords(actOffset + i);
@@ -708,24 +708,24 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
 
     int wireSkills = Math.min(data.skillIdsLength(), data.skillLevelsLength());
-    if (Riiablo.charData.classId != null) {
+    if (character().classId != null) {
       boolean[] present = new boolean[Math.max(0,
-          Riiablo.charData.classId.lastSpell - Riiablo.charData.classId.firstSpell)];
+          character().classId.lastSpell - character().classId.firstSpell)];
       for (int i = 0; i < wireSkills; i++) {
         int skillId = data.skillIds(i);
         int skillLevel = data.skillLevels(i);
-        if (skillId < Riiablo.charData.classId.firstSpell
-            || skillId >= Riiablo.charData.classId.lastSpell) continue;
-        present[skillId - Riiablo.charData.classId.firstSpell] = true;
-        if (Riiablo.charData.getBaseSkillLevel(skillId) != skillLevel) {
-          Riiablo.charData.setSkillLevel(skillId, skillLevel);
+        if (skillId < character().classId.firstSpell
+            || skillId >= character().classId.lastSpell) continue;
+        present[skillId - character().classId.firstSpell] = true;
+        if (character().getBaseSkillLevel(skillId) != skillLevel) {
+          character().setSkillLevel(skillId, skillLevel);
         }
       }
-      for (int skillId = Riiablo.charData.classId.firstSpell;
-          skillId < Riiablo.charData.classId.lastSpell; skillId++) {
-        if (!present[skillId - Riiablo.charData.classId.firstSpell]
-            && Riiablo.charData.getBaseSkillLevel(skillId) != 0) {
-          Riiablo.charData.setSkillLevel(skillId, 0);
+      for (int skillId = character().classId.firstSpell;
+          skillId < character().classId.lastSpell; skillId++) {
+        if (!present[skillId - character().classId.firstSpell]
+            && character().getBaseSkillLevel(skillId) != 0) {
+          character().setSkillLevel(skillId, 0);
         }
       }
     }
@@ -737,7 +737,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints,
           statPoints, oldStatPoints, wireSkills));
     }
-    if (oldSkillPoints != skillPoints) Riiablo.charData.notifySkillChanged();
+    if (oldSkillPoints != skillPoints) character().notifySkillChanged();
   }
 
   private void applyObjectSnapshot(int entityId, com.riiablo.net.packet.d2gs.ObjectP snapshot) {
@@ -778,24 +778,25 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void NpcServiceResult(D2GS packet) {
     NpcServiceResult result = (NpcServiceResult) packet.data(new NpcServiceResult());
-    if (result.mercenary() != null && Riiablo.charData != null) {
+    if (result.mercenary() != null && character() != null) {
       com.riiablo.net.packet.d2gs.NpcMercenarySnapshot merc = result.mercenary();
       applyMercenaryHeader(merc.seed(), merc.nameId(), merc.hirelingId(), merc.experience(),
           (int) merc.flags());
       applyAuthoritativeWallet(result.gold(), result.goldBank());
     }
-    if (Riiablo.game != null && Riiablo.game.hireMercenaryPanel != null) {
-      Riiablo.game.hireMercenaryPanel.applyNetworkResult(result);
-    }
-    if (Riiablo.game != null && Riiablo.game.vendorPanel != null) {
-      Riiablo.game.vendorPanel.applyNetworkResult(result);
+    if (clientSession != null && clientSession.results() != null) {
+      clientSession.results().onNpcService(result);
+    } else {
+      if (Riiablo.game != null && Riiablo.game.hireMercenaryPanel != null)
+        Riiablo.game.hireMercenaryPanel.applyNetworkResult(result);
+      if (Riiablo.game != null && Riiablo.game.vendorPanel != null)
+        Riiablo.game.vendorPanel.applyNetworkResult(result);
     }
     Gdx.app.log(TAG, "[NPC_SERVICE] request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
         + " gold=" + result.gold() + " stockRevision=" + result.stockRevision()
         + " stockCount=" + result.stockLength());
   }
-
   private void PartyResult(D2GS packet) {
     PartyResult result = (PartyResult) packet.data(new PartyResult());
     partyState.apply(result);
@@ -819,7 +820,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void TradeResult(D2GS packet) {
     TradeResult result = (TradeResult) packet.data(new TradeResult());
     tradeState.apply(result);
-    if (Riiablo.game != null && Riiablo.game.tradePanel != null) {
+    if (clientSession != null && clientSession.results() != null) {
+      clientSession.results().onTradeState(this);
+    } else if (Riiablo.game != null && Riiablo.game.tradePanel != null) {
       Riiablo.game.tradePanel.applyNetworkState(this);
     }
     Gdx.app.log(TAG, "[TRADE] request=" + result.requestId()
@@ -836,10 +839,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void SpendSkillPointResult(D2GS packet) {
     SpendSkillPointResult result = (SpendSkillPointResult) packet.data(
         new SpendSkillPointResult());
-    if (Riiablo.charData != null && result.success()) {
-      Riiablo.charData.setSkillLevel(result.skillId(), result.skillLevel());
-      Riiablo.charData.setAvailablePoints(Stat.newskills, result.skillPoints());
-      Riiablo.charData.notifySkillChanged();
+    if (character() != null && result.success()) {
+      character().setSkillLevel(result.skillId(), result.skillLevel());
+      character().setAvailablePoints(Stat.newskills, result.skillPoints());
+      character().notifySkillChanged();
     }
     Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=result request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
@@ -850,7 +853,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void SpendStatPointResult(D2GS packet) {
     SpendStatPointResult result = (SpendStatPointResult) packet.data(
         new SpendStatPointResult());
-    if (Riiablo.charData != null && result.success()) {
+    if (character() != null && result.success()) {
       short stat;
       switch (result.statType()) {
         case com.riiablo.engine.server.player.PlayerStatsManager.STAT_TYPE_STRENGTH:
@@ -864,10 +867,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
         default: stat = -1;
       }
       if (stat >= 0) {
-        Riiablo.charData.getStats().base().put(stat, result.statValue());
-        Riiablo.charData.getStats().aggregate().put(stat, result.statValue());
+        character().getStats().base().put(stat, result.statValue());
+        character().getStats().aggregate().put(stat, result.statValue());
       }
-      Riiablo.charData.setAvailablePoints(Stat.statpts, result.statPoints());
+      character().setAvailablePoints(Stat.statpts, result.statPoints());
     }
     Gdx.app.log(TAG, "[STAT_POINT_NET] phase=result request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
@@ -909,10 +912,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void QuestResult(D2GS packet) {
     QuestResult result = (QuestResult) packet.data(new QuestResult());
-    if (Riiablo.charData != null && result.questRecordsLength() > 0) {
+    if (character() != null && result.questRecordsLength() > 0) {
       int count = Math.min(result.questRecordsLength(), Riiablo.NUM_ACTS * 8);
       for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-        short[] records = Riiablo.charData.getQuests(act);
+        short[] records = character().getQuests(act);
         int offset = act * 8;
         for (int i = 0; i < records.length && offset + i < count; i++) {
           records[i] = (short) result.questRecords(offset + i);
@@ -950,9 +953,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // it can establish the new level after a warp.
     final int packetLevelId = entityData.levelId();
     final int mappedEntityId = syncIds.get(entityData.entityId());
-    final boolean packetForLocalPlayer = Riiablo.game != null
+    final boolean packetForLocalPlayer = player() >= 0
         && mappedEntityId != Engine.INVALID_ENTITY
-        && mappedEntityId == Riiablo.game.player;
+        && mappedEntityId == player();
     if (!packetForLocalPlayer && packetLevelId >= 0 && localLevelId >= 0
         && packetLevelId != localLevelId) {
       Gdx.app.log(TAG, "[ENTITY_SYNC] phase=drop_wrong_level serverEntity="
@@ -1038,7 +1041,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       syncIds.put(entityData.entityId(), entityId);
     }
 
-    boolean localPlayer = Riiablo.game != null && entityId == Riiablo.game.player;
+    boolean localPlayer = player() >= 0 && entityId == player();
     if (localPlayer) {
       StateP markerStates = findTable(entityData, ComponentP.StateP, new StateP());
       VitalsP markerVitals = findTable(entityData, ComponentP.VitalsP, new VitalsP());
@@ -1247,16 +1250,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void applyAuthoritativeWallet(long gold, long bank) {
-    if (Riiablo.charData == null) return;
+    if (character() == null) return;
     for (short stat : new short[] {Stat.gold, Stat.goldbank}) {
       int amount = (int) Math.min(Integer.MAX_VALUE, stat == Stat.gold ? gold : bank);
-      Riiablo.charData.getStats().base().put(stat, amount);
-      Riiablo.charData.getStats().aggregate().put(stat, amount);
+      character().getStats().base().put(stat, amount);
+      character().getStats().aggregate().put(stat, amount);
     }
   }
 
   void applyMercenaryHeader(int seed, int nameId, int hirelingId, long xp, int flags) {
-    CharData.MercData saved = Riiablo.charData.getMerc();
+    CharData.MercData saved = character().getMerc();
     boolean changed = saved.seed != seed;
     int oldLevel = saved.getStats().get(Stat.level) == null ? 0
         : saved.getStats().get(Stat.level).asInt();
@@ -1318,13 +1321,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void bindMercenaryOwner(int entityId,
       com.riiablo.engine.server.component.Mercenary merc, int owner) {
     merc.ownerId = owner;
-    if (Riiablo.game != null && owner == Riiablo.game.player && Riiablo.charData != null) {
+    if (owner == player() && character() != null) {
       applyMercenaryHeader(merc.seed, merc.nameId, merc.hirelingId(), merc.experience, merc.flags);
       if (mAttributesWrapper.has(entityId)) {
         // The HUD/equipment panel and the replica share attributes. Later VitalsP
         // packets remain authoritative for current life and combat values.
         com.riiablo.attributes.Attributes previous = mAttributesWrapper.get(entityId).attrs;
-        CharData.MercData saved = Riiablo.charData.getMerc();
+        CharData.MercData saved = character().getMerc();
         if (previous != null && previous.get(Stat.hitpoints) != null) {
           saved.getStats().base().put(Stat.hitpoints, previous.get(Stat.hitpoints).asFixed());
           saved.getStats().aggregate().put(Stat.hitpoints, previous.get(Stat.hitpoints).asFixed());
@@ -1341,7 +1344,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (entry.value == activeLevelId) continue;
       int localEntityId = syncIds.get(entry.key);
       if (localEntityId != Engine.INVALID_ENTITY
-          && (Riiablo.game == null || localEntityId != Riiablo.game.player)) {
+          && (player() < 0 || localEntityId != player())) {
         staleServerIds.add(entry.key);
         pendingMercenaryOwners.remove(localEntityId, Engine.INVALID_ENTITY);
         if (interpolation != null) interpolation.remove(localEntityId);
@@ -1422,8 +1425,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
         world.getSystem(NetworkedClientItemManager.class)
             .resetInventoryRevision(marker.inventoryRevision());
       }
-      if (Riiablo.charData != null && marker.questRevision() != 0L) {
-        long appliedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(Riiablo.charData));
+      if (character() != null && marker.questRevision() != 0L) {
+        long appliedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(character()));
         if (appliedQuestRevision != marker.questRevision()) {
           Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=quest_revision_mismatch expected="
               + marker.questRevision() + " applied=" + appliedQuestRevision
@@ -1443,12 +1446,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void applyWaypointBaseline(SnapshotBaseline marker) {
-    if (Riiablo.charData == null || marker.waypointMasksLength() == 0) return;
+    if (character() == null || marker.waypointMasksLength() == 0) return;
     int difficulty = Math.max(0, Math.min(com.riiablo.Riiablo.NUM_DIFFS - 1,
         marker.difficulty()));
     int count = Math.min(marker.waypointMasksLength(), com.riiablo.Riiablo.NUM_ACTS);
     for (int act = 0; act < count; act++) {
-      Riiablo.charData.setWaypointMask(difficulty, act, (int) marker.waypointMasks(act));
+      character().setWaypointMask(difficulty, act, (int) marker.waypointMasks(act));
     }
     Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=waypoints difficulty=" + difficulty
         + " acts=" + count);
@@ -1586,8 +1589,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
           + " reason=" + result.reason());
       return;
     }
-    if (Riiablo.game == null || Riiablo.game.player < 0) return;
-    int localPlayerId = Riiablo.game.player;
+    if (player() < 0) return;
+    int localPlayerId = player();
     DeathHandler death = world.getSystem(DeathHandler.class);
     if (death != null && death.isPlayerDead(localPlayerId)) {
       death.respawnPlayerAtTown(localPlayerId);
@@ -1629,57 +1632,57 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void GroundToCursor(D2GS packet) {
     GroundToCursor groundToCursor = (GroundToCursor) packet.data(new GroundToCursor());
     int entityId = syncIds.get(groundToCursor.itemId());
-    items.groundToCursor(Riiablo.game.player, entityId);
+    items.groundToCursor(player(), entityId);
   }
 
   private void CursorToGround(D2GS packet) {
     CursorToGround cursorToGround = (CursorToGround) packet.data(new CursorToGround());
-    items.cursorToGround(Riiablo.game.player);
+    items.cursorToGround(player());
   }
 
   private void StoreToCursor(D2GS packet) {
     StoreToCursor storeToCursor = (StoreToCursor) packet.data(new StoreToCursor());
-    items.storeToCursor(Riiablo.game.player, storeToCursor.itemId());
+    items.storeToCursor(player(), storeToCursor.itemId());
   }
 
   private void CursorToStore(D2GS packet) {
     CursorToStore cursorToStore = (CursorToStore) packet.data(new CursorToStore());
-    items.cursorToStore(Riiablo.game.player, cursorToStore.storeLoc(), cursorToStore.x(), cursorToStore.y());
+    items.cursorToStore(player(), cursorToStore.storeLoc(), cursorToStore.x(), cursorToStore.y());
   }
 
   private void SwapStoreItem(D2GS packet) {
     SwapStoreItem swapStoreItem = (SwapStoreItem) packet.data(new SwapStoreItem());
-    items.swapStoreItem(Riiablo.game.player, swapStoreItem.itemId(), swapStoreItem.storeLoc(), swapStoreItem.x(), swapStoreItem.y());
+    items.swapStoreItem(player(), swapStoreItem.itemId(), swapStoreItem.storeLoc(), swapStoreItem.x(), swapStoreItem.y());
   }
 
   private void BodyToCursor(D2GS packet) {
     BodyToCursor bodyToCursor = (BodyToCursor) packet.data(new BodyToCursor());
-    items.bodyToCursor(Riiablo.game.player, bodyToCursor.bodyLoc(), bodyToCursor.merc());
+    items.bodyToCursor(player(), bodyToCursor.bodyLoc(), bodyToCursor.merc());
   }
 
   private void CursorToBody(D2GS packet) {
     CursorToBody cursorToBody = (CursorToBody) packet.data(new CursorToBody());
-    items.cursorToBody(Riiablo.game.player, cursorToBody.bodyLoc(), cursorToBody.merc());
+    items.cursorToBody(player(), cursorToBody.bodyLoc(), cursorToBody.merc());
   }
 
   private void SwapBodyItem(D2GS packet) {
     SwapBodyItem swapBodyItem = (SwapBodyItem) packet.data(new SwapBodyItem());
-    items.swapBodyItem(Riiablo.game.player, swapBodyItem.bodyLoc(), swapBodyItem.merc());
+    items.swapBodyItem(player(), swapBodyItem.bodyLoc(), swapBodyItem.merc());
   }
 
   private void BeltToCursor(D2GS packet) {
     BeltToCursor beltToCursor = (BeltToCursor) packet.data(new BeltToCursor());
-    items.beltToCursor(Riiablo.game.player, beltToCursor.itemId());
+    items.beltToCursor(player(), beltToCursor.itemId());
   }
 
   private void CursorToBelt(D2GS packet) {
     CursorToBelt cursorToBelt = (CursorToBelt) packet.data(new CursorToBelt());
-    items.cursorToBelt(Riiablo.game.player, cursorToBelt.x(), cursorToBelt.y());
+    items.cursorToBelt(player(), cursorToBelt.x(), cursorToBelt.y());
   }
 
   private void SwapBeltItem(D2GS packet) {
     SwapBeltItem swapBeltItem = (SwapBeltItem) packet.data(new SwapBeltItem());
-    items.swapBeltItem(Riiablo.game.player, swapBeltItem.itemId());
+    items.swapBeltItem(player(), swapBeltItem.itemId());
   }
 
   private void ItemMoveResult(D2GS packet) {
@@ -1688,7 +1691,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (itemManager != null && !itemManager.onAuthoritativeResult(result)) {
       return;
     }
-    if (Riiablo.charData != null) {
+    if (character() != null) {
       com.badlogic.gdx.utils.Array<Item> snapshot = new com.badlogic.gdx.utils.Array<>(false,
           result.snapshotLength(), Item.class);
       for (int i = 0; i < result.snapshotLength(); i++) {
@@ -1708,7 +1711,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           Gdx.app.error(TAG, "[ITEM_MOVE_SNAPSHOT] failed to decode item " + entry.itemId(), t);
         }
       }
-      Riiablo.charData.getItems().replaceFromAuthoritativeSnapshot(snapshot);
+      character().getItems().replaceFromAuthoritativeSnapshot(snapshot);
       // Artwork is client-only state and must not decide whether an
       // authoritative item exists. Load each icon after ownership has been
       // committed so a missing/bad asset cannot make a picked item disappear.
@@ -1720,7 +1723,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
               + item.id + " code=" + item.code, t);
         }
       }
-      Item cursorItem = Riiablo.charData.getItems().getCursor();
+      Item cursorItem = character().getItems().getCursor();
       if (Riiablo.cursor != null) Riiablo.cursor.setItem(cursorItem);
       if (result.success()
           && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
@@ -1788,8 +1791,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void GoldResult(D2GS packet) {
     GoldResult result = (GoldResult) packet.data(new GoldResult());
-    if (result.success() && Riiablo.charData != null) {
-      com.riiablo.item.VendorPricing.setGoldSnapshot(Riiablo.charData,
+    if (result.success() && character() != null) {
+      com.riiablo.item.VendorPricing.setGoldSnapshot(character(),
           (int) Math.min(Integer.MAX_VALUE, result.gold()),
           (int) Math.min(Integer.MAX_VALUE, result.goldBank()));
     }
@@ -1813,5 +1816,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
     local.dropPartyId = data.dropPartyId();
     local.dropPartyUntilMillis = data.dropPartyUntilMillis();
     local.partyShareGold = data.partyShareGold();
+  }
+
+  private CharData character() {
+    return clientSession != null ? clientSession.character() : Riiablo.charData;
+  }
+
+  private int player() {
+    return clientSession != null ? clientSession.player()
+        : Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player;
   }
 }
