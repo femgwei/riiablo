@@ -27,7 +27,7 @@ public class TrapRightArrow extends NativeDecisionAI {
     Vector2 source = mPosition.get(entityId).position;
     Vector2 target = mPosition.get(targetId).position;
     long frame = (long) (elapsedFrames + .00001);
-    if (Math.abs((int) source.x - (int) target.x) > 2 || frame <= nextAttackFrame) {
+    if (alignmentDifference(source, target) > 2 || frame <= nextAttackFrame) {
       idle(30);
       return;
     }
@@ -43,5 +43,10 @@ public class TrapRightArrow extends NativeDecisionAI {
     if (type != 1) attack(targetId);
     else if (hasSkill(0)) cast(0, targetId);
     else idle(30);
+  }
+
+  /** Fn078 aligns on X; Fn079 reuses the same decisions aligned on Y. */
+  protected int alignmentDifference(Vector2 source, Vector2 target) {
+    return Math.abs((int) source.x - (int) target.x);
   }
 }
