@@ -1,5 +1,43 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 会话资源阶段第七批：网络与托管进程停机
+
+- [x] NetworkedGameScreen 网络清理增加一次性/重入防护；保留 GameScreen/World
+  先退出、socket 再关闭、托管进程最后停止的顺序。父级、socket 或停机动作抛错仍
+  尝试后续，保留首异常和 suppressed；删除重复连接字段，关闭后清空引用。
+  hide 不断开网络，重复 dispose 不重试失败资源，旧屏不清理新会话的全局别名。
+- [x] localHost 网络屏幕捕获当时进程的停机回调；旧/空回调不停止替换后的服务，
+  远程屏幕不请求本机停机。原菜单/启动失败/shutdown hook 保留全局 start/stop，
+  不把本批描述成完整菜单到游戏的连接所有权交接改造。
+- [x] HostedD2GS 请求终止后限时等待，仍存活再强制终止并限时确认，每次 waitFor
+  最多 1000ms；确认退出才清空句柄。动作抛错继续清理，仍存活时报错并保留句柄供
+  后续全局 stop 重试，start 不重复启动活跃服务。中断仍尝试停机，最后恢复中断标志。
+  等待发生在调用线程，不承诺 OS 调用实时上限或服务器优雅保存/断连协议已完成。
+- [x] 新增 NetworkedGameScreenLifecycleTest 9 项、HostedD2GSLifecycleTest
+  9 项，涵盖幂等、时序、异常/Error、重入、旧宿主隔离、强制结束、中断、退出失败保留
+  和防重启。另有三轮真实子 JVM/TCP/libGDX socket 检查：真实握手、流关闭、进程
+  退出、端口有界拒绝连接和旧回调不影响新进程；夹具不启动 D2GS.main，不替代真实
+  联机入场、运行、重连及托管启动命令验收。
+- 首轮 54 项有 1 项失败：进程退出后立即探测 TCP 拒绝存在竞态。保留
+  build/network-lifecycle-focused.log；端口检查改为独立的 2 秒有界确认，并加强
+  客户端流已关闭检查，未删除断言或扩大生产停机预算。修正后 18 项新增及既有专项
+  共 54/54 通过，三端编译通过，日志 build/network-lifecycle-focused-02.log。
+- [x] 最终扩大定向回归 367/367、52 类：core 325/325（45 类）、D2GS 全部
+  42/42（7 类），失败/错误/跳过均 0；三端编译通过。范围为上批 349 项加本批
+  18 项，不含既有玩法/AI 基线失败，不宣称全仓全绿；真实子进程/TCP 三轮再次通过。
+- [x] 同一命令的地图资产与本地入场链两类三轮 GL、单轮营地/Client 退出、25Hz
+  step=0.04、Throw 顺序与伤害 1000→992 均通过，BUILD SUCCESSFUL。按钮/面板/
+  入场屏/地图全部既有资源断言保持通过，不以本地营地冒烟代替真实网络屏幕验收。
+  日志 build/network-lifecycle-regression.log，报告
+  build/network-lifecycle-camp/cycle-N-lifecycle.txt，manifest 在 cycle-N/。
+  无 ERROR/Exception/OFFSCREEN_FATAL；保留既有诊断。
+  SIM_SLOW=80.13/57.19/91.21/104.12ms，预算 40ms，不作性能验收。
+- 后续优先处理 Client 完整屏幕栈/共享资源；菜单持有连接的失败退出、TCPIPScreen
+  后台启动/离屏竞争、入场失败所有权交接、GameScreen 完整构造回滚、跨 Act/加载中
+  退出、长时压力和人工/性能验收仍待。七批装配、资源阶段第七批完成，资源阶段
+  尚未全部收口；详细边界与复跑命令见
+  [session-resource-lifecycle.md](session-resource-lifecycle.md)。
+
 ## 2026-10-16 会话资源阶段第六批：入场加载屏生命周期
 
 - [x] GameEntryLoadingScreen 构造不再占有 Stage/加载图；每次 show 获取，hide

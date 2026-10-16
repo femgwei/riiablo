@@ -11,13 +11,14 @@ import com.riiablo.engine.client.NetworkProfiler;
 import com.riiablo.engine.client.Pinger;
 import com.riiablo.Riiablo;
 import com.riiablo.save.CharData;
+import com.riiablo.util.Disposal;
 
 public class NetworkedGameScreen extends GameScreen {
   private static final String TAG = "NetworkedGameScreen";
   private static final boolean DEBUG = true;
 
-  private Socket socket;
-  private final boolean localHost;
+  private final Runnable stopHostedServer;
+  private boolean networkDisposed;
 
   public NetworkedGameScreen(CharData charData, Socket socket) {
     this(charData, socket, false);
@@ -25,8 +26,9 @@ public class NetworkedGameScreen extends GameScreen {
 
   public NetworkedGameScreen(CharData charData, Socket socket, boolean localHost) {
     super(charData, socket);
-    this.socket = socket;
-    this.localHost = localHost;
+    // Capture this host's process, not whichever process happens to be current
+    // when an old screen is eventually disposed.
+    stopHostedServer = localHost ? HostedD2GS.stopAction() : null;
   }
 
   @Override
@@ -43,9 +45,16 @@ public class NetworkedGameScreen extends GameScreen {
 
   @Override
   public void dispose() {
-    super.dispose();
-    socket.dispose();
-    if (localHost) HostedD2GS.stop();
+    if (networkDisposed) return;
+    networkDisposed = true;
+    try (Disposal cleanup = new Disposal()) {
+      // Retire World/network consumers before closing their borrowed socket.
+      cleanup.run(super::dispose);
+      Socket ownedSocket = socket;
+      socket = null;
+      cleanup.dispose(ownedSocket);
+      if (stopHostedServer != null) cleanup.run(stopHostedServer);
+    }
   }
 
   @Override

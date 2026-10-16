@@ -400,3 +400,76 @@ loaded asset 种类从旧入口的 49 变为 58，三轮稳定。这些是 Clien
   build/entry-loading-regression-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
 - 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
   SIM_SLOW=80.82/67.55/47.30/90.42ms，预算 40ms，不作性能验收。
+
+## 第七批：网络屏幕退出与托管进程停机
+
+NetworkedGameScreen 在进入 dispose 时先标记网络生命周期终止，按原顺序清理
+GameScreen/World/UI/地图，再关闭其拥有的 socket，最后尝试停止本地托管服务。
+某项 RuntimeException/Error 不跳过后续项，保留首异常及 suppressed；重复调用和
+清理回调重入不再重复关闭 socket/停止服务。删除子类重复的 socket 字段，关闭后
+清空父类连接引用；World 系统注入的连接在其自身 dispose 期间仍有效。hide 只暂停
+可见订阅，不关闭网络，保留游戏加载屏/跨 Act 切换的现有行为。
+
+只有 localHost 网络屏幕才捕获 HostedD2GS.stopAction；该回调绑定当时的 Process
+身份，而非退出时的任意当前进程。旧回调遇到已替换的服务或捕获时没有进程时不做
+处理，远程加入者不停止本机托管服务。全局 start/stop 入口仍供原菜单/启动失败及
+JVM shutdown hook 使用；本批不是整个菜单到游戏的连接所有权协议重写。
+
+HostedD2GS.stop 先请求 destroy，最多等待 1000ms；仍活跃则 destroyForcibly，
+再最多等待 1000ms，并以 isAlive 确认退出后才清空句柄。终止动作抛错仍尝试剩余
+步骤并最终传播，不把失败吞掉。两次等待后仍存活则报错并保留句柄，后续全局 stop
+可以再次尝试，start 不会另起重叠实例。网络屏幕本身仍是一次性清理，不因重复
+dispose 自动重试失败资源。等待被中断仍尝试强制结束/确认，最后恢复线程中断标志。
+以上等待在调用线程执行，可能增加退出延迟；两个限时约束的是 waitFor，不保证 OS
+终止调用自身的实时上限，不是服务器优雅保存/协议断连确认或 Tick 性能验收。
+
+新增两类专项覆盖真实生产释放方法，但绕过 GameScreen 重型构造：
+
+- NetworkedGameScreenLifecycleTest 9 项：远程/托管清理、hide 保留连接、父级或
+  socket 失败后继续、Error/suppressed、回调重入、父级已释放、缺少连接、旧屏不清
+  新别名。另含同一测试内三轮真实子 JVM + libGDX NetJavaSocketImpl：真实握手、
+  客户端流关闭、进程确认退出、监听端口有界关闭、旧停机回调不影响新进程。
+- HostedD2GSLifecycleTest 9 项：空/已退出进程、普通退出确认、超时强制结束、仍存活
+  报错/保留/防重启、终止动作失败后继续、异常链、中断恢复与旧/空回调隔离。
+
+真实子进程只是标准 Java TCP 夹具，通过反射安装到 HostedD2GS 的当前进程槽；
+使用生产 stopAction/stop 和网络屏幕 dispose，不启动 D2GS.main，也不验收真实
+服务器启动命令、联机入场/运行/重连或保存协议。初轮立即探测 TCP 拒绝出现竞态，
+保留 build/network-lifecycle-focused.log 为失败记录；现在独立要求进程返回时已退出，
+并要求端口在 2 秒内明确拒绝连接，同时检查客户端已关闭的流读取抛出 IOException。
+不删除端口检查、不扩大生产等待预算，不将失败运行记为成功。
+
+本批最小复跑：
+
+```powershell
+.\gradlew.bat :core:test `
+  --tests com.riiablo.screen.NetworkedGameScreenLifecycleTest `
+  --tests com.riiablo.screen.HostedD2GSLifecycleTest `
+  --tests com.riiablo.screen.GameScreenSubscriptionsTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.screen.GameEntryLoadingScreenLifecycleTest `
+  :desktop:compileJava :server:d2gs:compileJava --no-daemon
+```
+
+后续优先处理 Client 完整屏幕栈/共享资源。菜单持有 socket 的退出/构造失败路径、
+TCPIPScreen 后台启动与离屏竞争、GameEntryLoadingScreen 入场失败的所有权交接、
+整个 GameScreen 构造回滚、跨 Act/加载中退出、长时压力和人工/性能验收仍未收口。
+
+### 第七批验证记录
+
+- 修正夹具后首个成功专项共 54/54，含 18 项新增和既有 GameScreen 订阅/装配、
+  入场屏测试；三端编译通过，日志 build/network-lifecycle-focused-02.log。
+- 最终扩大定向回归 367/367、52 类通过：core 325/325（45 类），D2GS 全部
+  42/42（7 类），失败/错误/跳过均 0。沿用第六批 349 项加本批 18 项，不含既有
+  玩法/AI 基线失败，不宣称全仓全绿。真实子进程/TCP 三轮也在此命令内重新通过，
+  专项 XML 位于 core/build/test-results/test/；core/desktop/D2GS 编译检查通过。
+- 原版 1.10f 资源检查保持通过：独立地图 GL 三轮 44 tiles、引用 4→2→1→0；
+  生产入场链/营地退出三轮，每轮 58 个 DT1 / 2626 张地图贴图和 CPU 像素释放、
+  输入处理器回到 2；按钮 0/129/138/0、三次技能重建稳定、8 种面板资产回基线、
+  3 张私有纹理删除、临时上传像素已释放。入场屏 Stage/图片均释放，常驻资产种类
+  三轮均 58。此入口仍是本地 GameScreen，不将其作为 NetworkedGameScreen 实机验收。
+- 单轮营地三帧/Client 退出、D2GS 25Hz step=0.04、Throw 顺序及伤害
+  1000→992 同一命令通过，BUILD SUCCESSFUL；日志 build/network-lifecycle-regression.log。
+  每轮报告 build/network-lifecycle-camp/cycle-N-lifecycle.txt，营地 manifest 在 cycle-N/。
+- 最终无 ERROR/Exception/OFFSCREEN_FATAL；保留既有地图/分配/表 Key 诊断。
+  SIM_SLOW=80.13/57.19/91.21/104.12ms，预算 40ms，不作性能验收。
