@@ -110,9 +110,7 @@ import com.riiablo.engine.client.debug.PathDebugger;
 import com.riiablo.engine.client.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
-import com.riiablo.engine.server.AIStepper;
-import com.riiablo.engine.server.RoomActivationSystem;
-import com.riiablo.engine.server.RoomEntityTrackingSystem;
+import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.InteractionRange;
 import com.riiablo.engine.server.combat.CombatPositionCaptureSystem;
@@ -120,40 +118,22 @@ import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
-import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
-import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
-import com.riiablo.engine.server.quest.Act3QuestSystem;
-import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
-import com.riiablo.engine.server.quest.Act5QuestSystem;
-import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
-import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
-import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.client.Act2QuestDialogController;
 import com.riiablo.engine.client.Act4QuestDialogController;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
-import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
-import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.Box2DDisposer;
 import com.riiablo.engine.server.Box2DSynchronizerPost;
 import com.riiablo.engine.server.Box2DSynchronizerPre;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
-import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
-import com.riiablo.engine.server.object.NativeObjectDropSystem;
-import com.riiablo.engine.server.object.NativeShrineSystem;
-import com.riiablo.engine.server.object.NativeShrineEffectSystem;
-import com.riiablo.engine.server.object.NativeTrapSystem;
-import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.PlayerItemHandler;
-import com.riiablo.engine.server.SequenceHandler;
-import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.player.PlayerStatsManager;
@@ -938,16 +918,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     builder
         // Explicit native 25 Hz order: state/stat decay, missile movement and
         // collision, then unit/AI behavior and death processing.
-        .with(new StateUpdater())
-        .with(new com.riiablo.engine.server.StaminaSystem())
-        .with(new com.riiablo.engine.server.ManaRecoverySystem())
-        .with(new com.riiablo.engine.server.PotionRecoverySystem())
-        .with(new com.riiablo.engine.server.MercenaryPotionSystem())
-        .with(new MissileCollisionSystem())
-        .with(new Actioneer()) // TODO: move to more appropriate spot in list
-        .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
-        .with(new com.riiablo.engine.server.UnitLifecycleSystem())
-        .with(new com.riiablo.engine.server.NativePlayerTargetSlots())
+        .with(SimulationSystemGroups.stateAndActions())
+        .with(SimulationSystemGroups.unitLifecycle())
         .with(new SkillCastHandler()) // TODO: move to more appropriate spot in list
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.client.MissileImpactPresentationSystem())
@@ -968,25 +940,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // duplicate missile for the same SkillDoEvent.
       builder.with(new Act1QuestDialogController(), new ActTransitionSystem());
       builder.with(new com.riiablo.engine.server.EnvironmentObjectSystem());
-      builder.with(new Act1QuestSystem());
-      builder.with(new Act2QuestSystem());
-      builder.with(new Act3QuestSystem());
-      builder.with(new Act3MephistoQuestSystem());
-      builder.with(new com.riiablo.engine.server.quest.Act4QuestSystem());
-      builder.with(new Act5QuestSystem());
-      builder.with(new Act2TaintedSunQuestSystem());
-      builder.with(new Act2DurielQuestSystem());
-      builder.with(new NativeMercenaryRewardSystem());
-      builder.with(new com.riiablo.engine.server.MercenaryFollowSystem());
-      builder.with(new com.riiablo.engine.server.SummonedPetSystem());
-      builder.with(new com.riiablo.engine.server.AssassinTrapSystem());
-      // Local games own the authoritative hireling combat loop just like
-      // D2GS.  Without this registration mercenaries can still be moved by
-      // MercenaryFollowSystem (and relocated through warps), but their native
-      // Hireling.txt skills are never selected or cast.
-      builder.with(new com.riiablo.engine.server.MercenarySkillSystem());
-      builder.with(new NativeCountessRewardSystem());
-      builder.with(new NativeCharsiImbueSystem());
+      builder.with(SimulationSystemGroups.quests());
+      builder.with(SimulationSystemGroups.ownedUnits());
+      builder.with(SimulationSystemGroups.questItemRewards());
       builder.with(new ServerSkillSystem(true));
       builder.with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem());
       builder.with(new com.riiablo.engine.server.AuraEcsSystem());
@@ -995,14 +951,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // the reward subscriber, XP still advances but no monster drop is ever
       // rolled or materialized. Network clients receive D2GS-created items.
       builder.with(new DeathRewardSystem());
-      builder.with(new NativeObjectDropSystem());
-      builder.with(new Act2HoradricStaffDropSystem());
-      builder.with(new NativeShrineEffectSystem());
-      builder.with(new NativeShrineSystem());
-      builder.with(new NativeTrapSystem());
-      builder.with(new NativeTrapFireSystem());
+      builder.with(SimulationSystemGroups.worldObjectEffects(null));
       builder.with(new VendorGenerator());
-      builder.with(new RoomEntityTrackingSystem(), new RoomActivationSystem(), new AIStepper());
+      builder.with(SimulationSystemGroups.roomPopulation(false));
       builder.with(new com.riiablo.engine.server.party.PartyMemberSyncSystem());
     } else {
       builder.with(new ItemGenerator()); // TODO: #89
@@ -1025,18 +976,16 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // A queued sequence must select its attack/cast COF before AnimStepper
         // advances the previous neutral animation. Otherwise a neutral wrap
         // can finish and remove the new sequence without firing its keyframe.
-        .with(new SequenceHandler())
-        .with(new AnimStepper())
+        .with(SimulationSystemGroups.sequenceAnimation())
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
         .with(new CofAlphaHandler(), new CofTransformHandler())
         .with(new ItemLoader())
         .with(new MissileLoader())
         .with(new AnimationStepper())
-        .with(new ObjectCollisionUpdater())
         // Bone Wall/Prison are monster units, not map objects. Their
         // temporary walk footprint must exist in local and network clients.
-        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
+        .with(SimulationSystemGroups.objectCollision())
         // Apply state-driven transforms after COF/layer systems have finished
         // their frame. Otherwise a late layer refresh can overwrite cblu.
         .with(new com.riiablo.engine.client.StateOverlaySystem());

@@ -59,21 +59,16 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.D2;
 import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.EntityFactory;
-import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AuraEcsSystem;
-import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
-import com.riiablo.engine.server.ServerMonsterCorpseSystem;
-import com.riiablo.engine.server.UnitLifecycleSystem;
-import com.riiablo.engine.server.SequenceHandler;
-import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AuthoritativeSimulation;
@@ -83,13 +78,7 @@ import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
-import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
-import com.riiablo.engine.server.object.NativeObjectDropSystem;
-import com.riiablo.engine.server.object.NativeShrineSystem;
-import com.riiablo.engine.server.object.NativeShrineEffectSystem;
-import com.riiablo.engine.server.object.NativeTrapSystem;
-import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.LeapSystem;
@@ -115,10 +104,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
-import com.riiablo.engine.server.quest.Act2QuestSystem;
 import com.riiablo.engine.server.quest.Act3QuestSystem;
-import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
-import com.riiablo.engine.server.quest.Act4QuestSystem;
 import com.riiablo.engine.server.quest.Act4QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
@@ -126,13 +112,8 @@ import com.riiablo.engine.server.quest.QuestWarpPolicy;
 import com.riiablo.engine.server.quest.Act5QuestMessageValidator;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
-import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
-import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
-import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
-import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
-import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.quest.QuestRequestCache;
 import com.riiablo.engine.server.quest.QuestSnapshot;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
@@ -6194,17 +6175,8 @@ public class D2GS extends ApplicationAdapter {
         // Zone changes must invalidate owner-bound missiles and periodic
         // state layers before the next snapshot baseline is serialized.
         .with(new com.riiablo.engine.server.ZoneTransitionCleanupSystem())
-        .with(new Act1QuestSystem())
-        .with(new Act2QuestSystem())
-        .with(new Act3QuestSystem())
-        .with(new Act3MephistoQuestSystem())
-        .with(new Act4QuestSystem())
-        .with(new Act5QuestSystem())
-        .with(new Act2TaintedSunQuestSystem())
-        .with(new Act2DurielQuestSystem())
-        .with(new NativeMercenaryRewardSystem())
-        .with(new NativeCountessRewardSystem())
-        .with(new NativeCharsiImbueSystem())
+        .with(SimulationSystemGroups.quests())
+        .with(SimulationSystemGroups.questItemRewards())
         .with(new ServerNetworkIdManager())
         .with(new SerializationManager())
         .with(mapManager)
@@ -6215,51 +6187,31 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new com.riiablo.engine.server.EnvironmentObjectSystem())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
-        .with(new NativeObjectDropSystem())
-        .with(new Act2HoradricStaffDropSystem())
-        .with(new NativeShrineEffectSystem(authoritativeItems))
-        .with(new NativeShrineSystem())
-        .with(new NativeTrapSystem())
-        .with(new NativeTrapFireSystem())
+        .with(SimulationSystemGroups.worldObjectEffects(authoritativeItems))
 
         // Native 25 Hz phase order: state/stat decay first, then projectile
         // movement and collision, then unit/AI behavior and death handlers.
-        .with(new StateUpdater())
-        .with(new com.riiablo.engine.server.StaminaSystem())
-        .with(new com.riiablo.engine.server.ManaRecoverySystem())
-        .with(new com.riiablo.engine.server.PotionRecoverySystem())
-        .with(new com.riiablo.engine.server.MercenaryPotionSystem())
-        .with(new MissileCollisionSystem())
-        .with(new Actioneer())
-        .with(new com.riiablo.engine.server.MercenaryFollowSystem())
-        .with(new com.riiablo.engine.server.SummonedPetSystem())
-        .with(new com.riiablo.engine.server.AssassinTrapSystem())
-        .with(new com.riiablo.engine.server.MercenarySkillSystem())
-        .with(new ServerMonsterCorpseSystem())
-        .with(new UnitLifecycleSystem())
-        .with(new com.riiablo.engine.server.NativePlayerTargetSlots())
+        .with(SimulationSystemGroups.stateAndActions())
+        .with(SimulationSystemGroups.ownedUnits())
+        .with(SimulationSystemGroups.unitLifecycle())
         .with(new com.riiablo.engine.server.item.GroundDropCleanupSystem())
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
         .with(new PlayerCorpseRetrievalSystem())
         .with(new ServerSkillSystem())
         .with(new DeathRewardSystem())
-        .with(new SequenceHandler())
         // Apply a newly queued attack mode before advancing animation. If the
         // old neutral animation wraps first, its Finished event can otherwise
         // consume the fresh attack sequence before the attack keyframe runs.
-        .with(new AnimStepper())
-        .with(new ObjectCollisionUpdater())
-        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
+        .with(SimulationSystemGroups.sequenceAnimation())
+        .with(SimulationSystemGroups.objectCollision())
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
         .with(new ExperienceManager())
         .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem())
 
         .with(new VendorGenerator())
-        .with(new RoomEntityTrackingSystem())
-        .with(new RoomActivationSystem())
-        .with(new AIStepper(Boolean.getBoolean("riiablo.d2gs.aiTour")))
+        .with(SimulationSystemGroups.roomPopulation(Boolean.getBoolean("riiablo.d2gs.aiTour")))
         .with(new DynamicUnitCollisionSystem())
         .with(new Pathfinder())
 

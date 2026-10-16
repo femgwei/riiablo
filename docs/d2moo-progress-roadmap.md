@@ -1,5 +1,32 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-16 子系统装配第一批
+
+- [x] 新增 `SimulationSystemGroups`，集中两端共用的 38 个系统、9 个注册组；
+  `GameScreen` 与 D2GS 在原位置调用，保持现有顺序、联网客户端条件及参数。
+  组包括状态/动作、生命周期、任务、所属单位、任务奖励、对象效果、房间激活、动画、碰撞。
+- [x] 新增 21 项无资源装配测试，锁定组内顺序、Artemis 实际插入位置、会话实例隔离、
+  无重复类型及服务端库存/AI tour 参数；21/21 通过。core、desktop、D2GS 编译通过。
+- [x] 展开注册组与修改前 `d24537104` 对照，GameScreen 132 个、D2GS 72 个构造
+  注册序列一致；没有把两端不同的执行顺序擅自合并。
+- [x] 定向行为回归 69 项中 68 项通过；追加佣兵经验/管理器/任务奖励 30/30 通过。
+  唯一失败为 `CombatPipelineIntegrationTest.barbarianThrowingMasteryIsSnapshottedBeforeImpact`
+  预期 9 / 实际 6，已在隔离的改造前版本 `d24537104` 复现。该夹具不使用公共装配。
+- [x] 真实 1.10f `offscreenCamp` 返回 PASS，完成 1x1 隐藏窗口三帧；
+  `headlessSimulationTick`、`headlessMissileCombat` 通过，Throw 生命 1000→992。
+  `headlessDenQuestDual` 输出多人资格/隔离、奖励待领取和重连 PASS；日志中
+  victim=175 缺等级 stat 的 ERROR 在改造前版本也复现，不能视为无错误全绿。
+- [ ] `headlessMercenarySkill` 未通过：Blood Moor Fallen/Shaman 测试房间不存在，
+  尚未进入佣兵技能验证；改造前版本复跑同样失败。保留该既有夹具缺口，本批不扩展修复。
+  另一台电脑仍需单机/联机操作与画面验收。
+- 证据日志：`build/simulation-groups-compile-test.log`、`simulation-groups-regression.log`、
+  `simulation-groups-mercenary.log`、`simulation-groups-real-resource.log`、
+  `simulation-groups-baseline.log`、`simulation-groups-baseline-resource.log`；
+  营地 manifest：`build/simulation-assembly-camp/rogue-encampment-manifest.txt`。
+- 范围与下一步见 [simulation-system-assembly.md](simulation-system-assembly.md)。
+  本批仅提取装配；更改全局依赖、会话上下文和统一两端 Tick 顺序需后续独立批次。
+  提交以本节所在 Git 提交为准，推送状态以本次交付说明和远程分支核对结果为准。
+
 ## 2026-10-16 最新上游增量：测试工具第一批
 
 - 当前目标为上游增量同步，暂停以完整替换生产寻路作为默认工作。
