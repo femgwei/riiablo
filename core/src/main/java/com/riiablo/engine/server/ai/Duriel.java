@@ -50,7 +50,7 @@ public class Duriel extends NativeDecisionAI {
     if (!hasSkill(3) || Riiablo.engine == null) return;
     AuraEcsSystem auras = Riiablo.engine.getSystem(AuraEcsSystem.class);
     if (auras == null) return;
-    Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill4);
+    Skills.Entry skill = files().skills.get(monster.monstats.Skill4);
     if (skill != null) {
       auras.selectAuraForMonster(entityId, skill.Id, params[PARAM_HOLY_FREEZE_LEVEL]);
     }

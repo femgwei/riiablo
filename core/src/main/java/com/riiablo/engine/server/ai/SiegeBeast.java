@@ -18,7 +18,7 @@ public class SiegeBeast extends SiegeTower {
       return;
     }
     if (hasSkill(0)) {
-      Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+      Skills.Entry skill = files().skills.get(monster.monstats.Skill1);
       int range = skill != null && skill.Param != null && skill.Param.length > 4
           ? skill.Param[4] : 0;
       if (distance < range && rollAiChance(params[4])) {

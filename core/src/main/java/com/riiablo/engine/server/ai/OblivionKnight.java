@@ -40,9 +40,9 @@ public class OblivionKnight extends NativeDecisionAI {
     long frame = nativeFrame();
     int ally = nearestDoomKnight();
     if (distance < params[0]) {
-      Skills.Entry skill = hasSkill(3) ? Riiablo.files.skills.get(monster.monstats.Skill4) : null;
+      Skills.Entry skill = hasSkill(3) ? files().skills.get(monster.monstats.Skill4) : null;
       States.Entry curse = skill == null || skill.auratargetstate == null
-          || skill.auratargetstate.isEmpty() ? null : Riiablo.files.States.get(skill.auratargetstate);
+          || skill.auratargetstate.isEmpty() ? null : files().States.get(skill.auratargetstate);
       UnitStates targetStates = mUnitStates.get(targetId);
       if (curse != null && curse.id > 0 && (targetStates == null
           || targetStates.stateList == null || !targetStates.stateList.hasState(curse.id))) {

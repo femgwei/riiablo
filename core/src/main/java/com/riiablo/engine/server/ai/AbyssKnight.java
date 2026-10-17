@@ -13,8 +13,8 @@ public class AbyssKnight extends NativeDecisionAI {
   public AbyssKnight(int entityId) { super(entityId); }
 
   @Override protected void think(int targetId, float distance, boolean combat) {
-    Skills.Entry armor = hasSkill(1) ? Riiablo.files.skills.get(monster.monstats.Skill2) : null;
-    States.Entry state = armor == null ? null : Riiablo.files.States.get(armor.aurastate);
+    Skills.Entry armor = hasSkill(1) ? files().skills.get(monster.monstats.Skill2) : null;
+    States.Entry state = armor == null ? null : files().States.get(armor.aurastate);
     UnitStates active = mUnitStates.get(entityId);
     if (state != null && (active == null || active.stateList == null
         || !active.stateList.hasState(state.id)) && nativeLifePercent(entityId) < params[0]

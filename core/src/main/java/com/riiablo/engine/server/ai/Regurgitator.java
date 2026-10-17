@@ -51,7 +51,7 @@ public class Regurgitator extends NativeDecisionAI {
       boolean undeadState = false;
       if (states != null && states.stateList != null) {
         for (UnitState state : states.stateList.getStates()) {
-          com.riiablo.codec.excel.States.Entry row = Riiablo.files.States.get(state.stateId);
+          com.riiablo.codec.excel.States.Entry row = files().States.get(state.stateId);
           if (row != null && row.undead) { undeadState = true; break; }
         }
       }

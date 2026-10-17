@@ -32,7 +32,7 @@ public class ReanimatedHorde extends NativeDecisionAI {
     com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null) {
       for (com.riiablo.engine.server.state.UnitState state : states.stateList.getStates()) {
-        com.riiablo.codec.excel.States.Entry definition = com.riiablo.Riiablo.files.States.get(state.stateId);
+        com.riiablo.codec.excel.States.Entry definition = files().States.get(state.stateId);
         if (definition != null && definition.undead) return;
       }
     }

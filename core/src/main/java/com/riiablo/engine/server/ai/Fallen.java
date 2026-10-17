@@ -438,7 +438,7 @@ public class Fallen extends AI {
         missileName = monster.monstats.MissA2;
       }
       if (missileName != null) {
-        com.riiablo.codec.excel.Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+        com.riiablo.codec.excel.Missiles.Entry missile = files().Missiles.get(missileName);
         if (missile != null) {
           rangedRng = missile.Range - 2f;
           if (rangedRng < meleeRng) {

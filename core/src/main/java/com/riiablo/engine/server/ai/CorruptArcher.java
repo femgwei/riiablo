@@ -84,7 +84,7 @@ public class CorruptArcher extends AI {
         ? monster.monstats.MissA1 
         : (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty() ? monster.monstats.MissA2 : null);
     if (missileName != null) {
-      missile = Riiablo.files.Missiles.get(missileName);
+      missile = files().Missiles.get(missileName);
     }
   }
 

@@ -101,7 +101,7 @@ public class GreaterMummy extends NativeDecisionAI {
     UnitStates states = mUnitStates.has(id) ? mUnitStates.get(id) : null;
     if (states == null || states.stateList == null) return false;
     for (UnitState state : states.stateList.getStates()) {
-      States.Entry entry = Riiablo.files.States.get(state.stateId);
+      States.Entry entry = files().States.get(state.stateId);
       if (entry != null && (hide ? entry.hide : entry.undead)) return true;
     }
     return false;

@@ -154,7 +154,7 @@ public class FetishShaman extends AI {
   private float infernoRange() {
     if (monster == null || monster.monstats == null
         || monster.monstats.Skill1 == null || monster.monstats.Skill1.isEmpty()) return 0f;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(monster.monstats.Skill1);
     return hasProjectileMissile(skill) ? Math.max(1, monster.monstats.Sk1lvl) : 0f;
   }
 

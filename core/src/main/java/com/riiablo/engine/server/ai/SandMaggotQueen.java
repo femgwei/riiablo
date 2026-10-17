@@ -28,7 +28,7 @@ public class SandMaggotQueen extends NativeDecisionAI {
       return;
     }
     MonStats.Entry minion = monster.monstats.minion1 == null
-        ? null : com.riiablo.Riiablo.files.monstats.get(monster.monstats.minion1);
+        ? null : files().monstats.get(monster.monstats.minion1);
     if (minion == null || factory == null || !mPosition.has(entityId)) {
       idle(params[PARAM_DELAY]);
       return;

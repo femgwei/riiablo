@@ -39,6 +39,16 @@
   `:core:subsystemRegression` 通过。
 - [ ] AI 目录剩余具体类仍有兼容表访问，继续迁移后再收紧兼容预算。
 
+## 2026-10-17 AI 具体实现第三组上下文化
+
+- [x] `AbyssKnight`、`OblivionKnight`、`GreaterMummy`、`FetishShaman`、`Fallen`、
+  `Duriel`、`CorruptArcher`、`ReanimatedHorde`、`Regurgitator`、`SandMaggotQueen`、
+  `SiegeBeast` 的技能、状态和导弹表查询改用 `AI.files()`；ECS 引擎兼容入口保持
+  不变。
+- [x] `:core:compileJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 通过。
+- [ ] AI 目录仍有少量具体类待迁移，完成后再统一降低全局访问预算。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II
