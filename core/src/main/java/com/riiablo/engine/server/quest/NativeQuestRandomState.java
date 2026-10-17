@@ -31,9 +31,24 @@ public final class NativeQuestRandomState extends BaseSystem {
   /** Snapshot hooks; a world persistence caller is not installed yet. */
   public int lowSeed() { return seed.getNLowSeed(); }
   public int highSeed() { return seed.getNHighSeed(); }
+  public Snapshot snapshot() { return new Snapshot(lowSeed(), highSeed()); }
   public void restore(int lowSeed, int highSeed) {
     seed.setSeeds(lowSeed, highSeed);
     restored = true;
+  }
+  public void restore(Snapshot snapshot) {
+    if (snapshot == null) throw new NullPointerException("snapshot");
+    restore(snapshot.lowSeed, snapshot.highSeed);
+  }
+
+  public static final class Snapshot {
+    public final int lowSeed;
+    public final int highSeed;
+
+    public Snapshot(int lowSeed, int highSeed) {
+      this.lowSeed = lowSeed;
+      this.highSeed = highSeed;
+    }
   }
 
   @Override protected void processSystem() {}
