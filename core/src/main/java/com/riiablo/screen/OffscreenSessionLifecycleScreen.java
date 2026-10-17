@@ -330,10 +330,10 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     int boxReferencesWhileLive = references("data/global/ui/MENU/boxpieces.DC6");
     Array<com.riiablo.widget.NpcMenu> sessionMenus = new Array<>();
     com.artemis.utils.IntBag menuOwners = screen.engine.getAspectSubscriptionManager()
-        .get(com.artemis.Aspect.all(com.riiablo.engine.server.component.MenuWrapper.class)).getEntities();
+        .get(com.artemis.Aspect.all(com.riiablo.engine.shared.component.MenuWrapper.class)).getEntities();
     for (int i = 0; i < menuOwners.size(); i++) {
       com.riiablo.widget.NpcMenu menu = screen.engine
-          .getMapper(com.riiablo.engine.server.component.MenuWrapper.class).get(menuOwners.get(i)).menu;
+        .getMapper(com.riiablo.engine.shared.component.MenuWrapper.class).get(menuOwners.get(i)).menu;
       require(menu != null, "live NPC root menu");
       collectMenus(menu, sessionMenus);
     }

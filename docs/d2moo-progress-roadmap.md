@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 共享组件边界与全局访问增长门禁
+
+- [x] `MenuWrapper` 从 `engine.server.component` 移入
+  `engine.shared.component`，`MenuManager`、离屏生命周期装配和测试统一使用共享
+  组件；服务端组件层不再直接导入 `NpcMenu`，架构测试中的旧兼容基线同步删除。
+- [x] 扩展 `DependencyDirectionTest`：除反向 import 门禁外，针对
+  `MissileCollisionSystem`、`Stat`、`Type`、`DruidSkills` 和服务端 combat 包增加
+  全局表、随机数及 `INSTANCE` 访问增长门禁，防止已收口的兼容入口重新扩散。
+- [x] 验证：`:core:compileTestJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 全部通过。该门禁是增长控制，不代表 D2MOO_JAVA 的
+  `DataTbls` 静态缓存、`core` 物理 Gradle 模块拆分或全部 presentation bridge 已完成；
+  这些仍列为后续分层工作。
+
 ## 2026-10-17 客户端表现资源上下文扩展
 
 - [x] 将 COF 解析/加载/分层缓存、物品与导弹加载、技能表现、天气、覆盖层、

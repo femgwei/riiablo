@@ -12,7 +12,7 @@ import com.badlogic.gdx.utils.IntArray;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Label;
-import com.riiablo.engine.server.component.MenuWrapper;
+import com.riiablo.engine.shared.component.MenuWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
 import com.riiablo.widget.NpcMenu;

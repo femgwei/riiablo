@@ -8,7 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -44,6 +46,54 @@ class DependencyDirectionTest {
         "new outward dependency edges detected:\n  " + String.join("\n  ", violations));
   }
 
+  @Test
+  void targetedGlobalAccessDoesNotGrow() throws IOException {
+    Path sourceRoot = sourceRoot();
+    Map<String, Integer> budgets = new HashMap<>();
+    budgets.put("com/riiablo/engine/server/MissileCollisionSystem.java", 1);
+    budgets.put("com/riiablo/attributes/Stat.java", 3);
+    budgets.put("com/riiablo/item/Type.java", 1);
+    budgets.put("com/riiablo/engine/server/skill/DruidSkills.java", 0);
+
+    List<String> violations = new ArrayList<>();
+    for (Map.Entry<String, Integer> budget : budgets.entrySet()) {
+      Path file = sourceRoot.resolve(budget.getKey());
+      int count = countMatches(file, Pattern.compile(
+          "Riiablo\\.files|Riiablo\\.mpqs|MathUtils\\.random|\\bINSTANCE\\b"));
+      if (count > budget.getValue()) {
+        violations.add(budget.getKey() + " has " + count
+            + " targeted global accesses (budget " + budget.getValue() + ")");
+      }
+    }
+
+    Path combatRoot = sourceRoot.resolve("com/riiablo/engine/server/combat");
+    try (Stream<Path> paths = Files.walk(combatRoot)) {
+      paths.filter(path -> path.toString().endsWith(".java")).forEach(path -> {
+        try {
+          int count = countMatches(path, Pattern.compile("\\bINSTANCE\\b"));
+          if (count > 0) {
+            violations.add(sourceRoot.relativize(path).toString().replace('\\', '/')
+                + " has " + count + " combat singleton references");
+          }
+        } catch (IOException e) {
+          throw new AssertionError("cannot inspect " + path, e);
+        }
+      });
+    }
+
+    assertTrue(violations.isEmpty(),
+        "targeted global access grew:\n  " + String.join("\n  ", violations));
+  }
+
+  private static int countMatches(Path file, Pattern pattern) throws IOException {
+    int count = 0;
+    for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+      Matcher matcher = pattern.matcher(line);
+      while (matcher.find()) count++;
+    }
+    return count;
+  }
+
   private static void inspect(Path path, Path sourceRoot, List<String> violations) {
     String relative = sourceRoot.relativize(path).toString().replace('\\', '/');
     if (!isMechanismPackage(relative)) return;
@@ -73,9 +123,6 @@ class DependencyDirectionTest {
 
   /** Existing bridges are debt, not permission for a new reverse dependency. */
   private static boolean knownLegacyBridge(String relative, String imported) {
-    if (relative.equals("com/riiablo/engine/server/component/MenuWrapper.java")) {
-      return imported.startsWith("com.riiablo.widget.");
-    }
     if (relative.equals("com/riiablo/item/ItemLabeler.java")) {
       return imported.startsWith("com.riiablo.widget.");
     }
