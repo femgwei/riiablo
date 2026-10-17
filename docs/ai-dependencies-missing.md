@@ -30,3 +30,8 @@ Baboon、Scarab 在本批前已有专用类；新增实表检查同时覆盖这�
 仍需区分实现完成与原版精度验收：尚未进行自然地图/图形客户端全场景验收；通用移动、碰撞及伤害沿用当前引擎，未证明与原版固定点逐帧一致。生成 overlay、其他 sumumod 组合、MonSeq 之外的动画表现及完整特殊状态矩阵不在本批测试的等价证明范围中。DarkWanderer afterglow 已拆分为原版独立的 +27 帧 MONUMOD 生成事件与 Objects.txt FrameCnt[1] 驱动的 ENDANIM 模式事件，仍需真实地图复核；任务随机流尚未接入全局 game-owned quest seed。WillOWisp 仪式逻辑已移植参考源码，但不能仅据测试声称该彩蛋属于未修改的零售 1.10f。
 
 没有保留“缺少专用 AI 类而回退 GenericMonster”的待实现条目；上述精度/表现验证限制也不计作已通过验收。
+
+## 任务 RNG 后续核对
+
+NativeQuestRandomState 当前只提供世界内共享种子及高低位导出/恢复接口；尚未安装完整世界存档读写入口，不能宣称重启恢复已落地。restore 在 ECS initialize 前调用时会保留恢复状态，避免初始化覆盖。现有 SerializationManager 是实体网络同步，不能直接当作世界存档。原版从 game-owned seed 掷点初始化 QuestControl 的链路尚待接入；直接使用地图种子只是当前兼容初始化。
+
