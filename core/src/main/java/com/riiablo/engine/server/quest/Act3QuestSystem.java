@@ -85,6 +85,9 @@ public class Act3QuestSystem extends BaseSystem {
   private double darkWandererElapsed;
   private final com.badlogic.gdx.math.Vector2 darkWandererCoordinates = new com.badlogic.gdx.math.Vector2();
   private final com.badlogic.gdx.utils.IntMap<Long> afterglowDeadlines = new com.badlogic.gdx.utils.IntMap<>();
+  /** Independent EVENTTYPE_ENDANIM deadline (native schedules this separately from MONUMOD). */
+  private final com.badlogic.gdx.utils.IntMap<Long> afterglowEndDeadlines = new com.badlogic.gdx.utils.IntMap<>();
+  private final IntSet afterglowSpawned = new IntSet();
   private final com.badlogic.gdx.utils.IntMap<com.riiablo.engine.server.component.NativePathIdentity.Token>
       afterglowIdentities = new com.badlogic.gdx.utils.IntMap<>();
   private final com.d2moo.common.drlg.D2Seed wandererQuestSeed = new com.d2moo.common.drlg.D2Seed();
@@ -164,6 +167,8 @@ public class Act3QuestSystem extends BaseSystem {
       com.riiablo.engine.server.component.NativePathIdentity.Token previous = afterglowIdentities.get(id);
       if (previous != null && !previous.isCurrent(world, id)) {
         afterglowDeadlines.remove(id);
+        afterglowEndDeadlines.remove(id);
+        afterglowSpawned.remove(id);
         afterglowIdentities.remove(id);
       }
       Long deadline = afterglowDeadlines.get(id);
@@ -171,22 +176,45 @@ public class Act3QuestSystem extends BaseSystem {
         if (object.mode != com.riiablo.engine.Engine.Object.MODE_NU) continue;
         setAfterglowMode(id, com.riiablo.engine.Engine.Object.MODE_OP);
         afterglowDeadlines.put(id, darkWandererFrame + 27);
+        // Objects.txt stores 8.8 fixed-point frame counts, matching D2MOO's
+        // (FrameCnt[1] >> 8) + gameFrame + 1 expression.
+        int frameCount = object.base.FrameCnt == null
+            || com.riiablo.engine.Engine.Object.MODE_OP >= object.base.FrameCnt.length
+            ? 0 : (object.base.FrameCnt[com.riiablo.engine.Engine.Object.MODE_OP] >> 8);
+        // Hand-authored compatibility objects may omit Objects.txt timing;
+        // retain the historical 27-frame visual lifetime in that case.
+        if (frameCount <= 0) frameCount = 27;
+        afterglowEndDeadlines.put(id, darkWandererFrame + frameCount + 1L);
         com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
             com.riiablo.engine.server.component.NativePathIdentity.class).get(id);
         if (identity != null) afterglowIdentities.put(id, identity.token());
-      } else if (deadline >= 0 && darkWandererFrame >= deadline) {
-        afterglowDeadlines.put(id, -1L);
-        setAfterglowMode(id, com.riiablo.engine.Engine.Object.MODE_ON);
+      } else {
+        // EVENTTYPE_MONUMOD: spawn at +27, independently of animation length.
+        if (deadline >= 0 && darkWandererFrame >= deadline && !afterglowSpawned.contains(id)) {
+          afterglowSpawned.add(id);
+          spawnVileChild(id);
+          afterglowDeadlines.put(id, -1L);
+        }
+        // EVENTTYPE_ENDANIM: the object enters OPENED when its operating
+        // animation ends. This may occur before or after the +27 spawn.
+        Long end = afterglowEndDeadlines.get(id);
+        if (end != null && end >= 0 && darkWandererFrame >= end) {
+          afterglowEndDeadlines.put(id, -1L);
+          setAfterglowMode(id, com.riiablo.engine.Engine.Object.MODE_ON);
+        }
+      }
+    }
+  }
+
+  private void spawnVileChild(int id) {
         MapWrapper owner = mMapWrapper.get(id);
-        if (factory != null && owner.zone != null && owner.zone.level != null
+        if (factory != null && owner != null && owner.zone != null && owner.zone.level != null
             && owner.zone.level.Id == D2LevelIds.LEVEL_SPIDERFOREST) {
           com.riiablo.codec.excel.MonStats.Entry child = Riiablo.files.monstats.get("vilechild1");
           com.badlogic.gdx.math.Vector2 point = mPosition.get(id).position.cpy();
           if (child != null && owner.zone.findFreeCoordinates(point, 1, 3, 0x1C09, false, point))
             factory.createMonster(child, point.x, point.y);
         }
-      }
-    }
   }
 
   private void setAfterglowMode(int id, byte mode) {
