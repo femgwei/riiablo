@@ -1,0 +1,9 @@
+# Scarab failed pursuit fallback — 2026-10-18
+
+Evidence: local D2MOO AiThink.cpp AITHINK_Fn020_Scarab calls WalkToTargetUnitWithFlags(...,7) in non-melee phase one. AiTactics.cpp AITACTICS_MoveToTarget, after a failed mode change, handles flags 7 then consumes a uint32 random draw modulo 100. Values >=70 call IdleInNeutralMode(10); lower values call WalkCloseToUnit(self,4). Fn020 subsequently performs its ordinary phase-clear percentage draw regardless of fallback result.
+
+Added these decision branches to Scarab's existing failed walkTo path. The local walk consumes four native draws (axis, offset modulo four, x sign, y sign), uses the actor's integer position and INVALID_ENTITY target, and issues one coordinate request. Failed local movement does not retry. Diagnostic state records acceptance. Phase-clear draw remains after fallback draws. Successful pursuit is unchanged.
+
+Validation: three new methods failed before the production change and passed afterward. They cover the idle fallback, accepted local walk and rejected local walk across all three difficulties; assertions include coordinate/target requests, wait value, diagnostic state, phase result, no casting and exact RNG continuation. The focused Scarab/Baboon regression run passed 31 tests. No full suite or actual-game reproduction is claimed.
+
+Limits: this implements the flags-2 fallback decisions within the existing generic movement interface. Native flags-4 AI-event deletion and flags-1 control bit 0x40 are not represented, nor are the initial path type 2/four-step parameters. Generic walkTo also clears movement on failure. Native neutral mode execution and exact event scheduling remain shared-execution concerns. The original immobility report is not established as resolved. No shared movement files were changed.

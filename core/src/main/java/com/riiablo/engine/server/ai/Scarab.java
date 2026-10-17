@@ -90,6 +90,17 @@ public class Scarab extends AI {
     return false;
   }
 
+  /** Flags-7 local fallback: one coordinate request and four native seed draws. */
+  private boolean walkCloseToSelf(int radius) {
+    boolean axis = (rollAiRandomNumber() & 1L) != 0;
+    int random = (int) (rollAiRandomNumber() % radius);
+    int x = axis ? radius : random, y = axis ? random : radius;
+    if ((rollAiRandomNumber() & 1L) != 0) x = -x;
+    if ((rollAiRandomNumber() & 1L) != 0) y = -y;
+    Vector2 source = mPosition.get(entityId).position;
+    return walkTo(new Vector2((int) source.x + x, (int) source.y + y), Engine.INVALID_ENTITY);
+  }
+
   @Override
   public void update(float delta) {
     stateMachine.update();
@@ -144,8 +155,16 @@ public class Scarab extends AI {
       if (aiParam0 != 0) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 0, 4u)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
-        walkTo(targetPos, targetId);
-        stateMachine.changeState(State.APPROACH);
+        if (walkTo(targetPos, targetId)) {
+          stateMachine.changeState(State.APPROACH);
+        } else if (rollAiRandomNumber() % 100 >= 70) {
+          // MoveToTarget flags 7: a failed request may enter neutral for ten frames.
+          stopMovement();
+          stateMachine.changeState(State.IDLE);
+          time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+        } else {
+          stateMachine.changeState(walkCloseToSelf(4) ? State.APPROACH : State.IDLE);
+        }
         // Native AI_RollPercentage > 10 clears the ordinary pursuit phase.
         if (rollAiPercentage() > 10) {
           aiParam0 = 0;
