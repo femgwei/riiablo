@@ -181,6 +181,8 @@ public class Scarab extends AI {
       time = MathUtils.random(1f, 2);
       return;
     }
+    // Fn020 ends a declined attack with IdleInNeutralMode, cancelling movement.
+    stopMovement();
     stateMachine.changeState(State.IDLE);
     time = params[2] * com.riiablo.codec.Animation.FRAME_DURATION;
   }

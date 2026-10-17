@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.ai;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import com.riiablo.RiiabloTest;
 import com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest.Fixture;
 import com.riiablo.engine.server.component.Velocity;
@@ -26,11 +27,16 @@ class ScarabDecisionBranchTest extends RiiabloTest {
         ai.params[0] = 0;
         ai.params[2] = 13;
         ai.params[3] = 100;
+        f.world.getMapper(com.riiablo.engine.server.component.Running.class).create(f.actor);
+        f.world.getMapper(Velocity.class).get(f.actor).setModeSpeedBonusPercent(100);
         ai.update(0.04f);
         assertEquals("IDLE", ai.getState());
         assertNull(f.casting());
         assertNull(f.sequence());
         assertEquals(13 * com.riiablo.codec.Animation.FRAME_DURATION, ai.time);
+        verify(f.paths).findPath(f.actor, null);
+        assertFalse(f.world.getMapper(com.riiablo.engine.server.component.Running.class).has(f.actor));
+        assertEquals(0f, f.world.getMapper(Velocity.class).get(f.actor).modeSpeedBonusMultiplier);
       }
     }
   }
