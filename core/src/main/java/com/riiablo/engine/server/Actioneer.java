@@ -2633,16 +2633,27 @@ public class Actioneer extends PassiveSystem {
         Casting cast = mCasting.get(entityId);
         if (cast == null || cast.nativeSummonClass < 0 || factory == null || map == null) break;
         Vector2 position = cast.nativeSummonPosition.cpy();
-        Map.Zone zone = map.getZone(position);
+        MapWrapper sourceMapping = mMapWrapper.get(entityId);
+        Map.Zone zone = sourceMapping != null && sourceMapping.zone != null
+            ? sourceMapping.zone : map.getZone(position);
         if (zone == null) break;
         MonStats.Entry summonRow = files().monstats.get(cast.nativeSummonClass);
+        if (summonRow == null) break;
         com.riiablo.codec.excel.MonStats2.Entry dimensions = summonRow == null ? null
             : files().monstats2.get(summonRow.MonStatsEx);
         int footprint = dimensions == null ? 1 : Math.max(1, dimensions.SizeX);
-        if (!zone.findFreeCoordinates(position, footprint, 0, false, position)
+        DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+        if (collision != null) {
+          collision.refreshNow();
+          if (!collision.findMonsterSpawn(zone, Map.round(position.x), Map.round(position.y), footprint,
+              4, NativeGroundPathProfile.forUnit(false, summonRow).terrainFlags, position)) break;
+        } else if (!zone.findFreeCoordinates(position, footprint, 0, false, position)
             && !zone.findFreeCoordinates(position, footprint, 4, false, position)) break;
         int spawned = factory.createMonster(cast.nativeSummonClass, position.x, position.y);
         if (spawned == Engine.INVALID_ENTITY) break;
+        mMapWrapper.create(spawned).set(map, zone);
+        if (collision != null) collision.reserveMonsterSpawn(spawned,
+            Map.round(position.x), Map.round(position.y), footprint);
         factory.applyNativeUnitFlags(spawned, NativeUnitFlags.NEST_SUMMON);
         mMonster.get(spawned).nativeOwnerId = entityId;
         com.riiablo.engine.server.component.NativePathIdentity ownerIdentity = world.getMapper(
@@ -4790,6 +4801,12 @@ public class Actioneer extends PassiveSystem {
         && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
+    if (type == Class.Type.MON && mMonster.has(victimId)
+        && !mMonster.get(victimId).canPlayHitReaction(blocked)) {
+      world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+          .create(victimId).previousMode = 19;
+      return;
+    }
     if (blocked) {
       // D2MOO's PLRMODES_First refuses the BL transition when the active
       // Skills.txt row has interrupt=0.  The shield roll has already

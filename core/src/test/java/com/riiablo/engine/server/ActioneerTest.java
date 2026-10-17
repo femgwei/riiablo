@@ -27,6 +27,33 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class ActioneerTest extends RiiabloTest {
+  @Test void monsterWithoutNativeBlockModeKeepsItsActionForMeleeAndMissileBlocks() throws Exception {
+    com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get("minion1");
+    com.riiablo.codec.excel.MonStats2.Entry stats = Riiablo.files.monstats2.get(row.MonStatsEx);
+    assertFalse(stats.mMode[Engine.Monster.MODE_BL]);
+    for (boolean missile : new boolean[] {false, true}) {
+      ReactionHarness harness = new ReactionHarness();
+      try {
+        int id = harness.player(Engine.Monster.MODE_A1);
+        harness.world.getMapper(Class.class).get(id).type = Class.Type.MON;
+        harness.world.getMapper(Monster.class).create(id).set(row, stats);
+        harness.world.getMapper(Casting.class).create(id).set(0, -1, new Vector2());
+        harness.world.getMapper(Sequence.class).create(id)
+            .sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+        if (missile) {
+          java.lang.reflect.Method method = MissileCollisionSystem.class.getDeclaredMethod(
+              "queueHitReaction", int.class, CombatSystem.CombatResult.class);
+          method.setAccessible(true);
+          method.invoke(harness.world.getSystem(MissileCollisionSystem.class), id, blockedResult());
+        } else harness.actioneer.queueHitReaction(id, blockedResult());
+        assertEquals(Engine.Monster.MODE_A1, harness.world.getMapper(CofReference.class).get(id).mode);
+        assertEquals(Engine.Monster.MODE_A1, harness.world.getMapper(Sequence.class).get(id).mode1);
+        assertTrue(harness.world.getMapper(Casting.class).has(id));
+        assertEquals(19, harness.world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+            .get(id).previousMode);
+      } finally { harness.dispose(); }
+    }
+  }
   @Test
   void playerSequenceSkillStartsWithItsTransitionAnimation() {
     Skills.Entry jab = new Skills.Entry();
@@ -174,10 +201,11 @@ class ActioneerTest extends RiiabloTest {
 
     ReactionHarness() {
       world = new World(new WorldConfigurationBuilder()
-          .with(new EventSystem(), new CofManager())
+          .with(new EventSystem(), new CofManager(), new MissileCollisionSystem())
           .build());
       world.process();
       actioneer.mClass = world.getMapper(Class.class);
+      actioneer.mMonster = world.getMapper(Monster.class);
       actioneer.mCasting = world.getMapper(Casting.class);
       actioneer.mSequence = world.getMapper(Sequence.class);
       actioneer.mAnimData = world.getMapper(AnimData.class);

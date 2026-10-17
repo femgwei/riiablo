@@ -2493,6 +2493,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
     if (type == Class.Type.MON
         && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
+    if (type == Class.Type.MON && mMonster.has(victimId)
+        && !mMonster.get(victimId).canPlayHitReaction(blocked)) {
+      world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+          .create(victimId).previousMode = 19;
+      return;
+    }
     if (blocked) {
       // D2MOO's PLRMODES_First applies Skills.txt:interrupt to missile hits
       // too. Jab/other rows with interrupt=0 keep their active sequence; the

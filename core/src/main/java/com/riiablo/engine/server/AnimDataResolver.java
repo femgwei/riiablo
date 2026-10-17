@@ -75,8 +75,9 @@ public class AnimDataResolver extends PassiveSystem {
         D2.Entry fallback = Riiablo.anim.getEntry(candidate);
         if (fallback != null) {
           entry = fallback;
-          log.warn("COF lookup fallback | entity={} requested=\"{}\" resolved=\"{}\"",
-              entityId, cof, candidate);
+          Monster actor = mMonster.get(entityId);
+          log.warn("COF lookup fallback | entity={} requested=\"{}\" resolved=\"{}\" monster={}",
+              entityId, cof, candidate, actor != null && actor.monstats != null ? actor.monstats.Id : "player");
           break;
         }
       }

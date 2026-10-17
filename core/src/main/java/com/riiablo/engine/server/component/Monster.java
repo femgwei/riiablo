@@ -173,6 +173,14 @@ public class Monster extends Component {
     return this;
   }
 
+  /** SUNITDMG_ExecuteDamage requires the MonStats2 reaction-mode flag. */
+  public boolean canPlayHitReaction(boolean blocked) {
+    int mode = blocked ? com.riiablo.engine.Engine.Monster.MODE_BL
+        : com.riiablo.engine.Engine.Monster.MODE_GH;
+    return monstats2 == null || monstats2.mMode == null
+        || mode < monstats2.mMode.length && monstats2.mMode[mode];
+  }
+
   public static boolean isMeleeMode(int mode) {
     return mode == com.riiablo.engine.Engine.Monster.MODE_A1
         || mode == com.riiablo.engine.Engine.Monster.MODE_A2;

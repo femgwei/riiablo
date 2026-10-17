@@ -163,9 +163,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
             mBox2DBody.get(entityId).body.setLinearVelocity(0f, 0f);
           }
           grid.put(entityId, x, y, size);
-          log.warn("[DYNAMIC_SPAWN_RELOCATE] entity={} from=({}, {}) to=({}, {}) size={} level={}",
+          log.warn("[DYNAMIC_SPAWN_RELOCATE] entity={} from=({}, {}) to=({}, {}) size={} level={} monster={} new={}",
               entityId, originX, originY, x, y, size,
-              zone != null && zone.level != null ? zone.level.Id : -1);
+              zone != null && zone.level != null ? zone.level.Id : -1,
+              mMonster.has(entityId) && mMonster.get(entityId).monstats != null
+                  ? mMonster.get(entityId).monstats.Id : "player", newUnits.contains(entityId));
           return true;
         }
       }
@@ -250,6 +252,23 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       Position position = mPosition.get(id);
       if (sharesCollisionSpace(zone, id) && Map.round(position.position.x) == x
           && Map.round(position.position.y) == y) return true;
+    }
+    return false;
+  }
+
+  /** Local native-size placement search for skill-created monsters. */
+  public boolean findMonsterSpawn(Map.Zone zone, int originX, int originY,
+      int size, int radius, int terrainMask, Vector2 out) {
+    if (zone == null || zone.map == null) return false;
+    for (int ring = 0; ring <= radius; ring++) {
+      for (int dy = -ring; dy <= ring; dy++) for (int dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) != ring) continue;
+        int x = originX + dx, y = originY + dy;
+        if (!zone.contains(x, y) || zone.map.isBlockedForPath(zone, x, y, terrainMask, size, false)
+            || !isFreeForMonsterSpawn(zone, x, y, size)) continue;
+        out.set(x, y);
+        return true;
+      }
     }
     return false;
   }
