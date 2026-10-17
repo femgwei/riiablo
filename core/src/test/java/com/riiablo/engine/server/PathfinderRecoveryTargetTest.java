@@ -81,6 +81,62 @@ class PathfinderRecoveryTargetTest {
     }
   }
 
+  @Test void nativeMovementRejectsForbiddenTownAndStopsExistingPath() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      f.start();
+      Map.Zone town = mock(Map.Zone.class);
+      when(town.isTown()).thenReturn(true);
+      when(f.map.getZone(any(Vector2.class))).thenReturn(town);
+      assertFalse(f.paths.findNativeChase(f.actor, f.target));
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      assertTrue(f.velocity().velocity.isZero());
+      assertFalse(f.paths.findNativeOrbit(f.actor, f.target, 5, true));
+    }
+  }
+
+  @Test void nativeMovementRejectsNonAdjacentRoom() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      Map.Zone zone = new Map.Zone();
+      Map.RoomEx first = zone.addRoomEx(0, 0, 20, 20);
+      Map.RoomEx second = zone.addRoomEx(20, 0, 20, 20);
+      first.setAdjacentRoomIds(new int[0]);
+      second.setAdjacentRoomIds(new int[0]);
+      f.world.getMapper(MapWrapper.class).create(f.actor).zone = zone;
+      when(f.map.getZone(any(Vector2.class))).thenReturn(zone);
+      assertFalse(f.paths.findNativeChase(f.actor, f.target));
+      assertFalse(f.paths.findNativeOrbit(f.actor, f.target, 5, true));
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+    }
+  }
+
+  @Test void nativeOrbitCannotLeaveExportedRoomsWithLegalTarget() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      Map.Zone zone = new Map.Zone();
+      Map.RoomEx room = zone.addRoomEx(0, 9, 40, 3);
+      room.setAdjacentRoomIds(new int[0]);
+      f.world.getMapper(MapWrapper.class).create(f.actor).zone = zone;
+      when(f.map.getZone(any(Vector2.class))).thenReturn(zone);
+      assertTrue(f.paths.findNativeChase(f.actor, f.target));
+      assertFalse(f.paths.findNativeOrbit(f.actor, f.target, 5, true));
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+    }
+  }
+
+  @Test void nativeMovementStillAllowsTownCapableMonster() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      f.world.getMapper(Monster.class).get(f.actor).monstats.inTown = true;
+      Map.Zone town = mock(Map.Zone.class);
+      when(town.isTown()).thenReturn(true);
+      when(f.map.getZone(any(Vector2.class))).thenReturn(town);
+      assertTrue(f.paths.findNativeChase(f.actor, f.target));
+      assertEquals(13, f.path().nativePathType);
+    }
+  }
+
   @Test void nativePathRejectsUnallocatedTargetIdentityWithoutThrowing() {
     try (Fixture f = new Fixture()) {
       f.world.getMapper(NativePathIdentity.class).create(f.target);

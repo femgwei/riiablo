@@ -438,6 +438,13 @@ public class Pathfinder extends IteratingSystem {
         || !targetIdentity.token().isCurrent(world, targetId)) return false;
     Vector2 source = mPosition.get(src).position;
     Vector2 target = mPosition.get(targetId).position;
+    // Projected native waypoints bypass the ordinary A* entry point, not its
+    // monster destination policy. Reject before replacing a current path.
+    if ((mMonster.has(src) && !isMonsterTargetDestinationAllowed(src, target))
+        || !isNativeMonsterRoomPathAllowed(src, source, target)) {
+      findPath(src, null);
+      return false;
+    }
     MapWrapper owner = mMapWrapper.get(src);
     int flags = groundPathFlags(src);
     int size = mSize.has(src) ? mSize.get(src).size : 1;
@@ -452,7 +459,12 @@ public class Pathfinder extends IteratingSystem {
         : com.riiablo.engine.server.ai.NativeTowardPathProbe.orbit(
             (int) source.x, (int) source.y, (int) target.x, (int) target.y,
             budget, directionOffset, blocked);
-    if (path.getCount() < 2) { findPath(src, null); return false; }
+    // Orbit waypoints can leave the permitted rooms even when the target is
+    // legal. Apply the same exported-room postcheck as ordinary paths.
+    if (path.getCount() < 2 || !pathWithinNativeMonsterRooms(src, path)) {
+      findPath(src, null);
+      return false;
+    }
     mRunning.remove(src);
     mVelocity.get(src).clearModeSpeedBonus();
     // Native circle ends at its generated final point instead of chasing the unit.
