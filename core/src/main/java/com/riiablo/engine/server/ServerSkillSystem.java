@@ -232,6 +232,7 @@ public class ServerSkillSystem extends PassiveSystem {
   @Override
   protected void initialize() {
     itemGenerator = world.getSystem(ItemGenerator.class);
+    barbarianLoot = new LootManager(serverContext);
   }
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -262,7 +263,7 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Item generator is wired by both local and dedicated server worlds. */
   @com.artemis.annotations.SkipWire
   protected ItemGenerator itemGenerator;
-  private final LootManager barbarianLoot = new LootManager();
+  private LootManager barbarianLoot;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;

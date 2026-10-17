@@ -71,7 +71,9 @@ public class DeathRewardSystem extends PassiveSystem {
   /** ItemGenerator is registered as a world system by D2GS. */
   protected ItemGenerator itemGenerator;
 
-  private final LootManager lootManager = new LootManager();
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+  private LootManager lootManager;
   private EntitySubscription players;
   private KillCreditResolver killCredits;
 
@@ -81,6 +83,7 @@ public class DeathRewardSystem extends PassiveSystem {
 
   @Override
   protected void initialize() {
+    lootManager = new LootManager(serverContext);
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
     killCredits = new KillCreditResolver(
         mPlayer, mMercenary, mSummonedPet, mMapWrapper, mPosition, partyManager);

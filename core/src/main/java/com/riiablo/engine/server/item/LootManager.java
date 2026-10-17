@@ -4,16 +4,17 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.item.TreasureClassResolver;
 import com.riiablo.item.NativeItemQualityResolver;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -249,7 +250,24 @@ public class LootManager {
   // 构造函数
   //==========================================================================
 
-  public LootManager() {}
+  private final ServerGameplayContext serverContext;
+
+  /** Compatibility constructor for legacy tests that have no world context. */
+  public LootManager() {
+    this(null);
+  }
+
+  public LootManager(ServerGameplayContext serverContext) {
+    this.serverContext = serverContext;
+  }
+
+  private Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
 
   //==========================================================================
   // 核心方法
@@ -277,15 +295,19 @@ public class LootManager {
       return cachedResult;
     }
 
+    // Legacy fallback still uses the same unit-scoped stream as native TC
+    // resolution, so a server world never consumes LibGDX's global RNG.
+    NativeRng rng = new NativeRng(config.rngSeed == 0 ? gameSeed() : config.rngSeed);
+
     // 计算金币掉落
-    calculateGoldDrop(config, cachedResult);
+    calculateGoldDrop(config, cachedResult, rng);
 
     // 计算物品掉落数量
-    int dropCount = calculateDropCount(config);
+    int dropCount = calculateDropCount(config, rng);
 
     // 为每个掉落位生成物品
     for (int i = 0; i < dropCount; i++) {
-      generateDrop(config, cachedResult);
+      generateDrop(config, cachedResult, rng);
     }
 
     log.debug("Calculated loot: items={}, gold={}", 
@@ -296,9 +318,9 @@ public class LootManager {
 
   private boolean calculateTreasureClassDrop(LootConfig config, LootResult result) {
     if (config.treasureClass == null || config.treasureClass.trim().isEmpty()
-        || Riiablo.files == null || Riiablo.files.TreasureClassEx == null) return false;
-    if (Riiablo.files.TreasureClassEx.index(config.treasureClass) < 0
-        && Riiablo.files.TreasureClassEx.get(config.treasureClass) == null) return false;
+        || files() == null || files().TreasureClassEx == null) return false;
+    if (files().TreasureClassEx.index(config.treasureClass) < 0
+        && files().TreasureClassEx.get(config.treasureClass) == null) return false;
     // Native TC quality uses the monster's already rank-adjusted level. The
     // legacy fallback below retains its historical procedural bonuses.
     int itemLevel = Math.max(1, Math.min(99, config.monsterLevel));
@@ -306,10 +328,10 @@ public class LootManager {
         config.difficulty, itemLevel, config.noRatio, config.isBoss);
     TreasureClassResolver.PlayerContext players = new TreasureClassResolver.PlayerContext(
         config.playerCount, config.partyMembersInLevel, config.monsterPlayerCount);
-    int rootId = Riiablo.files.TreasureClassEx.index(config.treasureClass);
+    int rootId = files().TreasureClassEx.index(config.treasureClass);
     com.riiablo.codec.excel.TreasureClassEx.Entry root = rootId < 0
-        ? Riiablo.files.TreasureClassEx.get(config.treasureClass)
-        : Riiablo.files.TreasureClassEx.getForLevel(rootId, tcLookupLevel);
+        ? files().TreasureClassEx.get(config.treasureClass)
+        : files().TreasureClassEx.getForLevel(rootId, tcLookupLevel);
     log.debug("[LOOT_TC] phase=root requested={} selected={} difficulty={} "
             + "monsterLevel={} lookupLevel={} picks={} noDrop={} itemProbability={} "
             + "totalPlayers={} partyInLevel={} monsterPlayerCount={} effectivePlayers={}",
@@ -319,11 +341,11 @@ public class LootManager {
         root != null ? root.itemProbability() : 0,
         players.totalPlayers, players.partyMembersInLevel,
         players.monsterPlayerCount, players.effectivePlayerCount());
-    NativeRng rng = new NativeRng(config.rngSeed == 0 ? Riiablo.gameSeed : config.rngSeed);
+    NativeRng rng = new NativeRng(config.rngSeed == 0 ? gameSeed() : config.rngSeed);
     List<TreasureClassResolver.Drop> drops;
     try {
       TreasureClassResolver resolver = new TreasureClassResolver(
-          Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
+          files().TreasureClassEx, files().itemTypeTreasureClasses);
       drops = resolver.resolve(config.treasureClass, tcLookupLevel,
           rng::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS, players);
     } catch (RuntimeException ex) {
@@ -353,10 +375,10 @@ public class LootManager {
         quality = rollTreasureQuality(drop, base, itemLevel, config, rng);
       } else {
         if (quality == ItemQuality.UNIQUE) {
-          com.riiablo.codec.excel.UniqueItems.Entry unique = Riiablo.files.UniqueItems.get(token);
+          com.riiablo.codec.excel.UniqueItems.Entry unique = files().UniqueItems.get(token);
           code = unique.code;
         } else if (quality == ItemQuality.SET) {
-          com.riiablo.codec.excel.SetItems.Entry set = Riiablo.files.SetItems.get(token);
+          com.riiablo.codec.excel.SetItems.Entry set = files().SetItems.get(token);
           code = set._item != null && !set._item.isEmpty() ? set._item : set.item;
         }
       }
@@ -368,29 +390,29 @@ public class LootManager {
   }
 
   private int forcedTreasureQuality(String token) {
-    if (Riiablo.files.UniqueItems != null && Riiablo.files.UniqueItems.get(token) != null)
+    if (files().UniqueItems != null && files().UniqueItems.get(token) != null)
       return ItemQuality.UNIQUE;
-    if (Riiablo.files.SetItems != null && Riiablo.files.SetItems.get(token) != null)
+    if (files().SetItems != null && files().SetItems.get(token) != null)
       return ItemQuality.SET;
     return ItemQuality.NORMAL;
   }
 
   private ItemEntry findBase(String code) {
     if (code == null || code.isEmpty()) return null;
-    ItemEntry entry = Riiablo.files.armor.get(code);
+    ItemEntry entry = files().armor.get(code);
     if (entry != null) return entry;
-    entry = Riiablo.files.weapons.get(code);
+    entry = files().weapons.get(code);
     if (entry != null) return entry;
-    return Riiablo.files.misc.get(code);
+    return files().misc.get(code);
   }
 
   /** Applies ItemRatio, MF diminishing returns, and inherited TC modifiers. */
   private int rollTreasureQuality(TreasureClassResolver.Drop drop, ItemEntry base, int itemLevel,
                                   LootConfig config, NativeRng rng) {
     com.riiablo.codec.excel.ItemTypes.Entry type =
-        base == null ? null : Riiablo.files.ItemTypes.get(base.type);
-    com.riiablo.codec.excel.ItemRatio.Entry ratio = Riiablo.files.ItemRatio == null
-        ? null : Riiablo.files.ItemRatio.get(base, type, 100);
+        base == null ? null : files().ItemTypes.get(base.type);
+    com.riiablo.codec.excel.ItemRatio.Entry ratio = files().ItemRatio == null
+        ? null : files().ItemRatio.get(base, type, 100);
     if (ratio == null) return rollItemQuality(config, itemLevel, rng);
     return NativeItemQualityResolver.roll(ratio, base, type, itemLevel, config.magicFind,
         drop.Unique, drop.Set, drop.Rare, drop.Magic, drop.Superior, drop.Normal,
@@ -499,14 +521,14 @@ public class LootManager {
    * 
    * <p>参考 D2MOD ITEMS_DropGold
    */
-  private void calculateGoldDrop(LootConfig config, LootResult result) {
+  private void calculateGoldDrop(LootConfig config, LootResult result, NativeRng rng) {
     // 金币掉落几率（大部分怪物都掉金币）
-    if (MathUtils.random(99) < 70) {
+    if (randomInt(rng, 100) < 70) {
       // 基础金币数量
       int minGold = BASE_GOLD_MIN + (int) (config.monsterLevel * GOLD_LEVEL_MULTIPLIER);
       int maxGold = BASE_GOLD_MAX + (int) (config.monsterLevel * GOLD_LEVEL_MULTIPLIER * 2);
 
-      int goldAmount = MathUtils.random(minGold, maxGold);
+      int goldAmount = minGold + randomInt(rng, maxGold - minGold + 1);
 
       // 难度加成
       switch (config.difficulty) {
@@ -546,28 +568,28 @@ public class LootManager {
   /**
    * 计算掉落数量
    */
-  private int calculateDropCount(LootConfig config) {
+  private int calculateDropCount(LootConfig config, NativeRng rng) {
     int baseCount = 0;
 
     // BOSS 掉落 4-6 件物品
     if (config.isBoss) {
-      baseCount = MathUtils.random(4, 6);
+      baseCount = 4 + randomInt(rng, 3);
     }
     // 超级暗金怪掉落 3-5 件
     else if (config.isSuperUnique) {
-      baseCount = MathUtils.random(3, 5);
+      baseCount = 3 + randomInt(rng, 3);
     }
     // 精英怪掉落 1-3 件
     else if (config.isElite) {
-      baseCount = MathUtils.random(1, 3);
+      baseCount = 1 + randomInt(rng, 3);
     }
     // 普通怪物
     else {
       // 普通怪物有 30% 几率掉落物品
-      if (MathUtils.random(99) < 30) {
+      if (randomInt(rng, 100) < 30) {
         baseCount = 1;
         // 10% 几率额外掉落一件
-        if (MathUtils.random(99) < 10) {
+        if (randomInt(rng, 100) < 10) {
           baseCount++;
         }
       }
@@ -576,7 +598,7 @@ public class LootManager {
     // 玩家数量影响
     if (config.playerCount > 1 && baseCount > 0) {
       // 每多一个玩家增加 10% 掉落几率
-      if (MathUtils.random(99) < 10 * (config.playerCount - 1)) {
+      if (randomInt(rng, 100) < 10 * (config.playerCount - 1)) {
         baseCount++;
       }
     }
@@ -587,15 +609,15 @@ public class LootManager {
   /**
    * 生成单个掉落物品
    */
-  private void generateDrop(LootConfig config, LootResult result) {
+  private void generateDrop(LootConfig config, LootResult result, NativeRng rng) {
     // 确定物品等级
     int itemLevel = calculateItemLevel(config);
 
     // 确定物品品质
-    int quality = rollItemQuality(config, itemLevel);
+    int quality = rollItemQuality(config, itemLevel, rng);
 
     // 根据品质选择物品代码（简化版本 - 实际应从 TreasureClass 查询）
-    String itemCode = selectItemCode(config, quality, itemLevel);
+    String itemCode = selectItemCode(config, quality, itemLevel, rng);
 
     if (itemCode != null) {
       result.addItem(itemCode, quality, itemLevel);
@@ -801,7 +823,7 @@ public class LootManager {
   }
 
   private int randomInt(NativeRng rng, int bound) {
-    return rng == null ? MathUtils.random(bound - 1) : rng.nextInt(bound);
+    return rng == null ? 0 : rng.nextInt(bound);
   }
 
   /**
@@ -809,27 +831,27 @@ public class LootManager {
    * 
    * <p>简化版本 - 实际应该从 TreasureClass 系统查询
    */
-  private String selectItemCode(LootConfig config, int quality, int itemLevel) {
+  private String selectItemCode(LootConfig config, int quality, int itemLevel, NativeRng rng) {
     // 先判断是否掉落宝石或符文
-    int specialRoll = MathUtils.random(999);
+    int specialRoll = randomInt(rng, 1000);
 
     // 宝石掉落几率（约 5%）
     if (specialRoll < 50) {
-      return selectGem(itemLevel, config.difficulty);
+      return selectGem(itemLevel, config.difficulty, rng);
     }
 
     // 符文掉落几率（约 3%，高级符文更稀有）
     if (specialRoll < 80) {
-      return selectRune(itemLevel, config.difficulty);
+      return selectRune(itemLevel, config.difficulty, rng);
     }
 
     // 根据物品等级范围返回不同物品
     if (itemLevel >= 80) {
-      return selectHighLevelItem(quality);
+      return selectHighLevelItem(quality, rng);
     } else if (itemLevel >= 50) {
-      return selectMidLevelItem(quality);
+      return selectMidLevelItem(quality, rng);
     } else {
-      return selectLowLevelItem(quality);
+      return selectLowLevelItem(quality, rng);
     }
   }
 
@@ -845,13 +867,13 @@ public class LootManager {
    *   <li>完美宝石：怪物等级 60+</li>
    * </ul>
    */
-  private String selectGem(int itemLevel, int difficulty) {
+  private String selectGem(int itemLevel, int difficulty, NativeRng rng) {
     // 宝石颜色
     String[] gemColors = {"r", "g", "b", "w", "y", "v"}; // 红绿蓝白黄紫
-    String color = gemColors[MathUtils.random(gemColors.length - 1)];
+    String color = gemColors[randomInt(rng, gemColors.length)];
 
     // 根据等级选择宝石品质
-    String prefix = selectGemPrefix(itemLevel, difficulty);
+    String prefix = selectGemPrefix(itemLevel, difficulty, rng);
 
     return "g" + prefix + color;
   }
@@ -859,12 +881,12 @@ public class LootManager {
   /**
    * 选择宝石品质前缀
    */
-  private String selectGemPrefix(int itemLevel, int difficulty) {
+  private String selectGemPrefix(int itemLevel, int difficulty, NativeRng rng) {
     // 调整后的掉落等级（难度增加掉落更好宝石的几率）
     int adjustedLevel = itemLevel + difficulty * 15;
 
     // 使用加权随机
-    int roll = MathUtils.random(99);
+    int roll = randomInt(rng, 100);
 
     if (adjustedLevel >= 70) {
       // 高等级：完美>无瑕>普通
@@ -910,7 +932,7 @@ public class LootManager {
    * 
    * <p>高级符文的掉落几率约为 1:50000 到 1:5000000
    */
-  private String selectRune(int itemLevel, int difficulty) {
+  private String selectRune(int itemLevel, int difficulty, NativeRng rng) {
     // 调整后的等级
     int adjustedLevel = itemLevel + difficulty * 10;
 
@@ -931,7 +953,7 @@ public class LootManager {
     }
 
     // 使用加权随机 - 低级符文更常见
-    int runeNum = rollRuneNumber(maxRune);
+    int runeNum = rollRuneNumber(maxRune, rng);
 
     return String.format("r%02d", runeNum);
   }
@@ -941,7 +963,7 @@ public class LootManager {
    * 
    * <p>使用指数分布，低级符文更常见
    */
-  private int rollRuneNumber(int maxRune) {
+  private int rollRuneNumber(int maxRune, NativeRng rng) {
     // 每升一级，稀有度约翻倍
     // 使用多次随机来模拟指数分布
 
@@ -951,7 +973,7 @@ public class LootManager {
 
     while (rune < maxRune && attempts < maxAttempts) {
       // 约 50% 几率升级到下一个符文
-      if (MathUtils.random(99) < 40) {
+      if (randomInt(rng, 100) < 40) {
         rune++;
       } else {
         break;
@@ -963,27 +985,27 @@ public class LootManager {
     if (rune >= 20) {
       // Lem 以上的符文需要额外检查
       int extraCheck = (rune - 19) * 15; // 每级多 15% 失败率
-      if (MathUtils.random(99) < extraCheck) {
-        rune = Math.max(1, rune - MathUtils.random(1, 5));
+      if (randomInt(rng, 100) < extraCheck) {
+        rune = Math.max(1, rune - (1 + randomInt(rng, 5)));
       }
     }
 
     return Math.min(rune, maxRune);
   }
 
-  private String selectHighLevelItem(int quality) {
+  private String selectHighLevelItem(int quality, NativeRng rng) {
     String[] items = {"amu", "rin", "jew", "cm1", "cm2", "cm3"};
-    return items[MathUtils.random(items.length - 1)];
+    return items[randomInt(rng, items.length)];
   }
 
-  private String selectMidLevelItem(int quality) {
+  private String selectMidLevelItem(int quality, NativeRng rng) {
     String[] items = {"cap", "skp", "hlm", "ltp", "buc", "lrg"};
-    return items[MathUtils.random(items.length - 1)];
+    return items[randomInt(rng, items.length)];
   }
 
-  private String selectLowLevelItem(int quality) {
+  private String selectLowLevelItem(int quality, NativeRng rng) {
     String[] items = {"cap", "qui", "lea", "buc", "sst", "clb"};
-    return items[MathUtils.random(items.length - 1)];
+    return items[randomInt(rng, items.length)];
   }
 
   //==========================================================================
