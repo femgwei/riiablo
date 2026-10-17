@@ -72,6 +72,8 @@ public class Monster extends Component {
   public boolean frogNoPresence;
   /** Server PATH_SetUnitDeadCollision boundary, independent of DD/Corpse usability. */
   public boolean nativeCorpseCollision;
+  /** SKILLS_ResurrectUnit explicitly rebuilt the pattern from runtime size. */
+  public boolean nativeRestoredCollisionPattern;
   public boolean frogSmallPresence;
   /** Small-pattern hidden transition: center stays cleared until a subtile change. */
   public boolean frogSpawnMarkerInitialized;
@@ -126,6 +128,7 @@ public class Monster extends Component {
     shatteredAtDeath = false;
     frogNoPresence = false;
     nativeCorpseCollision = false;
+    nativeRestoredCollisionPattern = false;
     frogSmallPresence = false;
     frogSpawnMarkerInitialized = false;
     frogSpawnMarkerMoved = false;

@@ -1,5 +1,14 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：复活按尺寸重建 pattern 的运行时状态
+
+- 来源：SkillMonst.cpp 的 SKILLS_ResurrectUnit 调用 D2Common_10214；Path.cpp 的该函数使用 D2Common_11281_CollisionPatternFromSize 重建，后者按 size 及可进城/交互元数据选择普通/宠物 pattern，没有初始 PATH_AllocDynamicPath 的 WRAITH1 特例。
+- 新增独立运行时标记记录该次重建，不借用 resurrected/playerRevive 等来源字段推断碰撞。通用复活成功后，幽灵不再永久被 BaseId 无占位判断排除，旧潜伏 SMALL_NO_PRESENCE/小型 presence 状态也清除，使用现有 runtime Size。
+- 初始分配/原实体重初始化仍走初始规则并重置该标记；后续显式 FrogDemon 潜伏仍可重新覆盖。出生查询不再同时投影“复活前幽灵十字”和“复活后普通占位”。
+- 新增大型复活回归揭示行走索引只存 NO_PATH/PET，而非全部 MONSTER footprint。出生查询现另按怪物 pattern 投影小型 MONSTER 十字/大型 3×3，保留行走索引的中心/十字 NO_PATH/PET；D2Collision.cpp 的 COLLISION_SetMaskWithPattern 明确区分这两层。deadCol 保留的活体 pattern 同样可投影。
+- 本批不改变飞行/幽灵移动测试 mask，不声明完成 size=0、非法尺寸、全部宠物/特殊状态矩阵与原版共享网格残留；仍未运行客户端图形验收。
+- 验证：CorpseSpawnCollisionIntegrationTest（6）、FrogPresenceIntegrationTest（7）、MaggotSpawnExecutionTest（9）、DynamicUnitCollisionSystemTest（12），共 34 项通过，architectureRegression 通过；日志 `build/ai-restored-pattern-revalidation.log`。首轮大型复活怪物角格漏检，分离 MONSTER footprint 与行走标记后重跑通过；未运行全量测试。
+
 ## 后续：复活活体占位的同帧恢复
 
 - 来源：SkillMonst.cpp 的 SKILLS_ResurrectUnit 在恢复生命与 footprint mask 后调用 D2Common_10214，并立即 COLLISION_SetMaskWithPattern；Path.cpp 的 D2Common_10214 也同步重建 pattern/footprint，而不是等待下一帧单位列表刷新。

@@ -1,5 +1,10 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 复活运行时 collision pattern
+
+- 依据 D2Common_10214/11281，通用复活按 runtime Size 重建普通/宠物 pattern，不重复幽灵的初始分配特例。
+- 修正复活幽灵仍永久无占位、复活前潜伏状态残留的问题；原实体重初始化重置运行时切换。完整矩阵与共享位网格边界见 [出生搜索专项记录](ai-native-spawn-search-2026-10-18.md)。
+
 ## 2026-10-18 复活占位同帧恢复
 
 - 对齐 SKILLS_ResurrectUnit 的即时活体碰撞写入，修复普通复活/Revive 与原实体重初始化后、Velocity 订阅更新前的出生检查空窗。

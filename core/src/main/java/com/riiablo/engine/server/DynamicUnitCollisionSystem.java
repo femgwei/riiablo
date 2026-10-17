@@ -243,7 +243,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
       if ((flags & mask) != 0) return false;
       if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
-      if (enabled && (mask & 0x100) != 0 && hasSpawnNoPresenceMarker(sourceId, zone, px, py)) return false;
+      if (enabled && (mask & 0x100) != 0 && hasSpawnMonsterMarker(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
         if (!sharesCollisionSpace(zone, other)) return false;
         int bits = isPlayer(other) ? 0x80 : 0x100;
@@ -292,7 +292,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     return false;
   }
 
-  private boolean hasSpawnNoPresenceMarker(int sourceId, Map.Zone zone, int x, int y) {
+  private boolean hasSpawnMonsterMarker(int sourceId, Map.Zone zone, int x, int y) {
     for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnUnits.iterator(); it.hasNext;) {
       int id = it.next();
       if (id == sourceId || !mClass.has(id) || mClass.get(id).type != Class.Type.MON
@@ -300,16 +300,24 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           || !sharesCollisionSpace(zone, id)) continue;
       Monster monster = mMonster.get(id);
       if (monster.nativeCorpseCollision) continue;
+      boolean present = hasPresence(id);
       com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
-      if (mCorpse.has(id) || lifecycle != null && lifecycle.phase.ordinal()
-          >= com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal()) continue;
+      if (!present && (mCorpse.has(id) || lifecycle != null && lifecycle.phase.ordinal()
+          >= com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal())) continue;
       if (mCasting.has(id) && mCasting.get(id).monsterHatchStarted) continue;
       Position position = mPosition.get(id);
+      int dx = Math.abs(Map.round(position.position.x) - x);
+      int dy = Math.abs(Map.round(position.position.y) - y);
+      // The walking index stores NO_PATH/PET only, not the full MONSTER mask.
+      if (present) {
+        if (footprint(id) >= 3 ? dx <= 1 && dy <= 1 : dx + dy <= 1) return true;
+        continue;
+      }
       boolean hiddenFrog = monster.frogNoPresence && monster.frogSpawnMarkerInitialized;
-      if (!NativeGroundPathProfile.isWraith(monster.monstats) && !hiddenFrog) continue;
+      if ((!NativeGroundPathProfile.isWraith(monster.monstats)
+          || monster.nativeRestoredCollisionPattern) && !hiddenFrog) continue;
       if (hiddenFrog) observeHiddenFrogMove(id, position.position);
-      int distance = Math.abs(Map.round(position.position.x) - x)
-          + Math.abs(Map.round(position.position.y) - y);
+      int distance = dx + dy;
       if (hiddenFrog && !monster.frogSpawnMarkerMoved && distance == 0) continue;
       // PATH_AllocDynamicPath: SMALL_NO_PRESENCE retains only a MONSTER cross.
       if (distance <= 1) return true;
@@ -419,13 +427,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (type == Class.Type.MON && mMonster.has(entityId)) {
       Monster monster = mMonster.get(entityId);
       if (monster.frogNoPresence) return false;
-      if (!isDynamicObstacle(monster)) return false;
+      if (!monster.nativeRestoredCollisionPattern && !isDynamicObstacle(monster)) return false;
       MonStats.Entry stats = monster.monstats;
       if (stats != null) {
-        String base = stats.BaseId == null ? "" : stats.BaseId.toLowerCase(java.util.Locale.ROOT);
-        String id = stats.Id == null ? "" : stats.Id.toLowerCase(java.util.Locale.ROOT);
-        // D2 gives flying/wraith-like units the no-presence pattern.
-        if (NativeGroundPathProfile.hasNoPresence(stats)) return false;
+        // Resurrection rebuilds from size; it does not repeat allocation's wraith override.
+        if (!monster.nativeRestoredCollisionPattern && NativeGroundPathProfile.hasNoPresence(stats)) return false;
       }
     }
     return true;
