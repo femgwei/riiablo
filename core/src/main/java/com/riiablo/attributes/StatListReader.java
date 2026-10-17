@@ -10,7 +10,7 @@ public class StatListReader {
   private static final Logger log = LogManager.getLogger(StatListReader.class);
 
   public StatRef read(StatListRef stats, short stat, BitInput bits, boolean cs) {
-    final ItemStatCost.Entry entry = Stat.entry(stat);
+    final ItemStatCost.Entry entry = stats.table().entry(stat);
     log.traceEntry("read(stats: {}, stat: {} ({}), bits: {}, cs: {})", stats, stat, entry, bits, cs);
     final int encodedParams, encodedValues;
     if (cs) {
@@ -20,7 +20,7 @@ public class StatListReader {
     } else {
       log.trace("Reading as standard stat...");
       encodedParams = (int) bits.read63u(entry.Save_Param_Bits);
-      encodedValues = Stat.encode(stat, (int) (bits.read63u(entry.Save_Bits) - entry.Save_Add));
+      encodedValues = stats.table().encode(stat, (int) (bits.read63u(entry.Save_Bits) - entry.Save_Add));
     }
     return stats.putEncoded(stat, encodedParams, encodedValues);
   }

@@ -28,10 +28,8 @@ import com.riiablo.save.CharData;
 public class SkillSynergyManager {
   private static final Logger log = LogManager.getLogger(SkillSynergyManager.class);
 
-  /** 单例实例 */
-  public static final SkillSynergyManager INSTANCE = new SkillSynergyManager();
 
-  private SkillSynergyManager() {}
+  public SkillSynergyManager() {}
 
   //==========================================================================
   // 协同类型

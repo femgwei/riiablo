@@ -37,7 +37,7 @@ public final class Act2ArcaneD2MOOLayoutBridge {
    * the current Zone pipeline until the exported DS1 tile bridge is enabled.
    */
   public static boolean populateZone(int gameSeed, int diff, Zone zone) {
-    if (zone == null || zone.levelId() != LEVEL_ARCANE || RiiabloAccess.mpqsMissing()) {
+    if (zone == null || zone.levelId() != LEVEL_ARCANE || D2MOOLayoutContext.mpqs() == null) {
       return false;
     }
     D2DrlgStrc drlg = null;
@@ -146,6 +146,12 @@ public final class Act2ArcaneD2MOOLayoutBridge {
     }
   }
 
+  public static boolean populateZone(D2MOOLayoutContext context, int gameSeed, int diff, Zone zone) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateZone(gameSeed, diff, zone);
+    }
+  }
+
   private static void projectRooms(D2DrlgLevel level, Zone zone) {
     int levelX = level.getLevelCoords().getNPosX();
     int levelY = level.getLevelCoords().getNPosY();
@@ -204,23 +210,23 @@ public final class Act2ArcaneD2MOOLayoutBridge {
 
   /** Resolves Act II MonPreset indices and encoded SuperUnique ids. */
   static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+    if (D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
-    if (ds1Raw && Riiablo.files.MonPreset != null) {
+    if (ds1Raw && D2MOOLayoutContext.files().MonPreset != null) {
       try {
-        placement = Riiablo.files.MonPreset.getPlace(2, index);
+        placement = D2MOOLayoutContext.files().MonPreset.getPlace(2, index);
       } catch (RuntimeException ignored) {}
     }
     MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
-    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
-        ? null : Riiablo.files.SuperUniques.get(placement);
-    if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
-    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size();
-      superUnique = Riiablo.files.SuperUniques.get(suIndex);
-      if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    SuperUniques.Entry superUnique = placement == null || D2MOOLayoutContext.files().SuperUniques == null
+        ? null : D2MOOLayoutContext.files().SuperUniques.get(placement);
+    if (monster == null && superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
+    if (monster == null && superUnique == null && D2MOOLayoutContext.files().SuperUniques != null) {
+      int suIndex = index - D2MOOLayoutContext.files().monstats.size();
+      superUnique = D2MOOLayoutContext.files().SuperUniques.get(suIndex);
+      if (superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
     }
     return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
         superUnique == null ? -1 : superUnique.hcIdx,
@@ -241,7 +247,7 @@ public final class Act2ArcaneD2MOOLayoutBridge {
   /** Avoids touching MPQ handles from a headless test JVM. */
   private static final class RiiabloAccess {
     static boolean mpqsMissing() {
-      return com.riiablo.Riiablo.mpqs == null;
+      return D2MOOLayoutContext.mpqs() == null;
     }
   }
 }

@@ -10,7 +10,7 @@ import com.artemis.WorldConfigurationBuilder;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.net.packet.d2gs.ObjectP;

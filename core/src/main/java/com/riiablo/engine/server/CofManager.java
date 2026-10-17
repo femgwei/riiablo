@@ -4,7 +4,7 @@ import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.riiablo.engine.Dirty;
-import com.riiablo.engine.client.component.CofDirtyComponents;
+import com.riiablo.engine.shared.component.CofDirtyComponents;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;

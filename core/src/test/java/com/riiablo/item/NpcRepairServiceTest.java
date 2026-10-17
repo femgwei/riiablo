@@ -174,7 +174,7 @@ class NpcRepairServiceTest extends RiiabloTest {
     character.getItems().equipItem(BodyLoc.HEAD, item);
     assertTrue(character.getItems().isActive(item));
 
-    assertTrue(com.riiablo.engine.server.item.ItemDurabilityManager.INSTANCE
+    assertTrue(new com.riiablo.engine.server.item.ItemDurabilityManager()
         .drainDurability(item, 1));
     character.getItems().updateStats();
     assertFalse(character.getItems().isActive(item));

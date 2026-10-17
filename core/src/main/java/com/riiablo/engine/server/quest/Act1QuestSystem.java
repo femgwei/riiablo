@@ -49,7 +49,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Event adapter for native Act 1 quest scripts. */
 @Wire(failOnNull = false)
-public class Act1QuestSystem extends PassiveSystem {
+public class Act1QuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act1QuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -869,7 +869,7 @@ public class Act1QuestSystem extends PassiveSystem {
     addOne(attrs.aggregate());
   }
 
-  private static void addOne(StatListRef stats) {
+  private void addOne(StatListRef stats) {
     StatRef current = stats.get(Stat.newskills);
     stats.put(Stat.newskills, current == null ? 1 : current.asInt() + 1);
   }
@@ -889,19 +889,19 @@ public class Act1QuestSystem extends PassiveSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static short getRecord(CharData data) {
+  private short getRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
   }
 
-  private static short getMalusRecord(CharData data) {
+  private short getMalusRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
   }
 
-  private static short getBloodRavenRecord(CharData data) {
+  private short getBloodRavenRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
   }
 
-  private static void setBloodRavenRecord(CharData data, short record) {
+  private void setBloodRavenRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] = record;
   }
 
@@ -916,11 +916,11 @@ public class Act1QuestSystem extends PassiveSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static short getCainRecord(CharData data) {
+  private short getCainRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
   }
 
-  private static void setCainRecord(CharData data, short record) {
+  private void setCainRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = record;
   }
 
@@ -935,19 +935,19 @@ public class Act1QuestSystem extends PassiveSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static void setMalusRecord(CharData data, short record) {
+  private void setMalusRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = record;
   }
 
-  private static short getCountessRecord(CharData data) {
+  private short getCountessRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
   }
 
-  private static short getAndarielRecord(CharData data) {
+  private short getAndarielRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
   }
 
-  private static void setAndarielRecord(CharData data, short record) {
+  private void setAndarielRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD] = record;
   }
 
@@ -962,7 +962,7 @@ public class Act1QuestSystem extends PassiveSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static void setCountessRecord(CharData data, short record) {
+  private void setCountessRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD] = record;
   }
 
@@ -996,11 +996,11 @@ public class Act1QuestSystem extends PassiveSystem {
     return level == null ? 0 : level.asInt();
   }
 
-  private static void setRecord(CharData data, short record) {
+  private void setRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] = record;
   }
 
-  private static void persist(CharData data) {
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  private void persist(CharData data) {
+    persistCharacter(data);
   }
 }

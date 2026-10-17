@@ -222,7 +222,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
       int hits = 0;
       Attributes fallenAttrs = world.getMapper(AttributesWrapper.class).get(fallen).attrs;
       while (defender.currentLife > 0 && attacks++ < 32) {
-        CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(attacker, defender);
+        CombatSystem.CombatResult result = new CombatSystem().calculateAttack(attacker, defender);
         if (!result.hit || result.blocked) continue;
         hits++;
         defender.currentLife = Math.max(0, defender.currentLife - result.totalDamage);

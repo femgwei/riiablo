@@ -3539,9 +3539,10 @@ public class D2GS extends ApplicationAdapter {
             if (aura != null) {
               aura.skillId = skillId;
               com.riiablo.codec.excel.Skills.Entry auraSkill =
-                  com.riiablo.engine.server.skill.DruidSkills.getSummonAuraSkill(skill);
+                  com.riiablo.engine.server.skill.DruidSkills.getSummonAuraSkill(
+                      Riiablo.files, skill);
               com.riiablo.engine.server.skill.DruidSkills.applySummonAuraModifiers(
-                  aura, auraSkill != null ? auraSkill : skill, 1, name -> 0);
+                  Riiablo.files, aura, auraSkill != null ? auraSkill : skill, 1, name -> 0);
               aura.needsSync = true;
             }
           }
@@ -7393,13 +7394,13 @@ public class D2GS extends ApplicationAdapter {
     Player playerComponent = entityId == Engine.INVALID_ENTITY ? null
         : world.getMapper(Player.class).get(entityId);
     CharData data = playerComponent != null ? playerComponent.data : null;
-    String reason = PlayerStatsManager.INSTANCE.validateSkillPoint(data, request.skillId());
+    String reason = new PlayerStatsManager().validateSkillPoint(data, request.skillId());
     boolean success = PlayerStatsManager.SKILL_OK.equals(reason)
-        && PlayerStatsManager.INSTANCE.spendSkillPoint(data, request.skillId());
+        && new PlayerStatsManager().spendSkillPoint(data, request.skillId());
     if (!success && PlayerStatsManager.SKILL_OK.equals(reason)) reason = "UPDATE_REJECTED";
     int level = data != null ? data.getBaseSkillLevel(request.skillId()) : 0;
     int points = data != null
-        ? PlayerStatsManager.INSTANCE.getAvailableSkillPoints(data) : 0;
+        ? new PlayerStatsManager().getAvailableSkillPoints(data) : 0;
     sendSkillPointResult(packet.id, request.requestId(), success, reason,
         request.skillId(), level, points, true);
     if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);
@@ -7449,7 +7450,7 @@ public class D2GS extends ApplicationAdapter {
     Player playerComponent = entityId == Engine.INVALID_ENTITY ? null
         : world.getMapper(Player.class).get(entityId);
     CharData data = playerComponent != null ? playerComponent.data : null;
-    int result = PlayerStatsManager.INSTANCE.spendStatPoint(data, request.statType());
+    int result = new PlayerStatsManager().spendStatPoint(data, request.statType());
     boolean success = result == PlayerStatsManager.RESULT_SUCCESS;
     String reason;
     switch (result) {
@@ -7459,9 +7460,9 @@ public class D2GS extends ApplicationAdapter {
       default: reason = "INVALID_STAT"; break;
     }
     int statValue = data == null ? 0
-        : PlayerStatsManager.INSTANCE.getStatValue(data, request.statType());
+        : new PlayerStatsManager().getStatValue(data, request.statType());
     int statPoints = data == null ? 0
-        : PlayerStatsManager.INSTANCE.getAvailableStatPoints(data);
+        : new PlayerStatsManager().getAvailableStatPoints(data);
     sendStatPointResult(packet.id, request.requestId(), success, reason,
         request.statType(), statValue, statPoints, true);
     if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);

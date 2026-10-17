@@ -43,7 +43,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Server-authoritative Act IV A4Q1 Izual lifecycle and Tyrael reward. */
 @Wire(failOnNull = false)
-public class Act4QuestSystem extends PassiveSystem {
+public class Act4QuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act4QuestSystem.class);
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -721,7 +721,7 @@ public class Act4QuestSystem extends PassiveSystem {
     add(attrs.aggregate(), amount);
   }
 
-  private static void add(StatListRef stats, int amount) {
+  private void add(StatListRef stats, int amount) {
     StatRef current = stats.get(Stat.newskills);
     stats.put(Stat.newskills, (current == null ? 0 : current.asInt()) + amount);
   }
@@ -780,8 +780,8 @@ public class Act4QuestSystem extends PassiveSystem {
     persist(data);
   }
 
-  private static void persist(CharData data) {
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  private void persist(CharData data) {
+    persistCharacter(data);
   }
 
   private void updateRecord(CharData data, java.util.function.UnaryOperator<Short> transition,
@@ -790,7 +790,7 @@ public class Act4QuestSystem extends PassiveSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT4)[Act4IzualQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A4Q1] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -803,7 +803,7 @@ public class Act4QuestSystem extends PassiveSystem {
         ? -1 : wrapper.zone.level.Id;
   }
 
-  private static boolean isAct4Level(int levelId) {
+  private boolean isAct4Level(int levelId) {
     return levelId >= D2LevelIds.LEVEL_OUTERSTEPPES
         && levelId <= D2LevelIds.LEVEL_CHAOSSANCTUM;
   }

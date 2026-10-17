@@ -36,6 +36,22 @@ public final class StatList {
   private final int[] values;
   private final byte[] flags;
 
+  private StatTable statTable;
+
+  public StatTable table() {
+    return statTable != null ? statTable : new StatTable(com.riiablo.Riiablo.files.ItemStatCost);
+  }
+
+  StatList bind(StatTable table) {
+    if (tail != 0) throw new IllegalStateException("cannot rebind populated stats");
+    statTable = java.util.Objects.requireNonNull(table, "table");
+    return this;
+  }
+
+  public static StatListRef obtain(StatTable table) {
+    return new StatList().bind(table).reset(1).buildList();
+  }
+
   private final int maxSize;
   private int maxLists;
   private int numLists;
@@ -251,7 +267,7 @@ public final class StatList {
 
   int put(final int list, final short stat, final int value) {
     assertSimple(stat);
-    return putEncoded(list, stat, 0, Stat.encode(stat, value));
+    return putEncoded(list, stat, 0, table().encode(stat, value));
   }
 
   int put(final int list, final short stat, final long value) {
@@ -276,7 +292,7 @@ public final class StatList {
     final short stat = ids[index];
     assertSimple(stat);
     assert equalsEncoded(index, stat, 0);
-    return setEncoded(list, index, stat, entry(stat), 0, Stat.encode(stat, value));
+    return setEncoded(list, index, stat, entry(stat), 0, table().encode(stat, value));
   }
 
   int set(final int list, final int index, final long value) {
@@ -343,7 +359,7 @@ public final class StatList {
   }
 
   int add(final int list, final int index, final int value) {
-    return addEncoded(list, index, Stat.encode(ids[index], value));
+    return addEncoded(list, index, table().encode(ids[index], value));
   }
 
   int add(final int list, final int index, final long value) {
@@ -369,7 +385,7 @@ public final class StatList {
   }
 
   int sub(final int list, final int index, final int value) {
-    return subEncoded(list, index, Stat.encode(ids[index], value));
+    return subEncoded(list, index, table().encode(ids[index], value));
   }
 
   int sub(final int list, final int index, final long value) {
@@ -384,7 +400,7 @@ public final class StatList {
     return (int) value;
   }
 
-  private static int asInt(final short stat, final float value) {
+  private int asInt(final short stat, final float value) {
     assert entry(stat).ValShift == 8 : "entry.ValShift(" + entry(stat).ValShift + ") != " + 8;
     return Fixed.floatToIntBits(value, 8);
   }
@@ -392,14 +408,14 @@ public final class StatList {
   int asInt(final int index) {
     assert Stat.numEncodedValues(encoding(index)) == 1;
     return (flags[index] & FLAG_FIXED) == FLAG_FIXED
-        ? Stat.decode(ids[index], encodedValues(index))
+        ? table().decode(ids[index], encodedValues(index))
         : encodedValues(index);
   }
 
   long asLong(final int index) {
     assert Stat.numEncodedValues(encoding(index)) == 1;
     return (flags[index] & FLAG_FIXED) == FLAG_FIXED
-        ? Stat.decode(ids[index], encodedValues(index))
+        ? table().decode(ids[index], encodedValues(index))
         : encodedValues(index);
   }
 
@@ -552,8 +568,8 @@ public final class StatList {
     return entry(ids[index]);
   }
 
-  static ItemStatCost.Entry entry(final short stat) {
-    return Stat.entry(stat);
+  ItemStatCost.Entry entry(final short stat) {
+    return table().entry(stat);
   }
 
   int encoding(final int index) {

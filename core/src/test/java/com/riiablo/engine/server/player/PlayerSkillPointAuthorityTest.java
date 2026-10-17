@@ -20,10 +20,10 @@ class PlayerSkillPointAuthorityTest extends RiiabloTest {
     Skills.Entry skill = firstWithoutPrerequisite(CharacterClass.AMAZON);
     assertNotNull(skill);
     assertEquals(PlayerStatsManager.SKILL_OK,
-        PlayerStatsManager.INSTANCE.validateSkillPoint(data, skill.Id));
-    assertTrue(PlayerStatsManager.INSTANCE.spendSkillPoint(data, skill.Id));
+        new PlayerStatsManager().validateSkillPoint(data, skill.Id));
+    assertTrue(new PlayerStatsManager().spendSkillPoint(data, skill.Id));
     assertEquals(1, data.getBaseSkillLevel(skill.Id));
-    assertEquals(1, PlayerStatsManager.INSTANCE.getAvailableSkillPoints(data));
+    assertEquals(1, new PlayerStatsManager().getAvailableSkillPoints(data));
     System.out.println("[SKILL_POINT_AUTH] phase=accept class=AMAZON skill=" + skill.skill
         + " level=1 points=1 status=PASS");
   }
@@ -32,7 +32,7 @@ class PlayerSkillPointAuthorityTest extends RiiabloTest {
   void rejectsWrongClassLevelPrerequisiteAndCapWithoutMutation() {
     CharData data = character(CharacterClass.AMAZON, 1, 10);
     assertEquals(PlayerStatsManager.SKILL_WRONG_CLASS,
-        PlayerStatsManager.INSTANCE.validateSkillPoint(
+        new PlayerStatsManager().validateSkillPoint(
             data, CharacterClass.SORCERESS.firstSpell));
 
     Skills.Entry levelLocked = null;
@@ -46,19 +46,19 @@ class PlayerSkillPointAuthorityTest extends RiiabloTest {
     }
     assertNotNull(levelLocked);
     assertEquals(PlayerStatsManager.SKILL_LEVEL_REQUIRED,
-        PlayerStatsManager.INSTANCE.validateSkillPoint(data, levelLocked.Id));
+        new PlayerStatsManager().validateSkillPoint(data, levelLocked.Id));
 
     setProgress(data, 99, 10);
     assertNotNull(prerequisiteLocked);
     assertEquals(PlayerStatsManager.SKILL_PREREQUISITE,
-        PlayerStatsManager.INSTANCE.validateSkillPoint(data, prerequisiteLocked.Id));
+        new PlayerStatsManager().validateSkillPoint(data, prerequisiteLocked.Id));
 
     Skills.Entry capped = firstWithoutPrerequisite(CharacterClass.AMAZON);
     int cap = capped.maxlvl > 0 ? capped.maxlvl : 20;
     data.setSkillLevel(capped.Id, cap);
     assertEquals(PlayerStatsManager.SKILL_MAX_LEVEL,
-        PlayerStatsManager.INSTANCE.validateSkillPoint(data, capped.Id));
-    assertEquals(10, PlayerStatsManager.INSTANCE.getAvailableSkillPoints(data));
+        new PlayerStatsManager().validateSkillPoint(data, capped.Id));
+    assertEquals(10, new PlayerStatsManager().getAvailableSkillPoints(data));
     System.out.println("[SKILL_POINT_AUTH] phase=reject wrongClass=true level=true "
         + "prerequisite=true cap=true pointsUnchanged=10 status=PASS");
   }

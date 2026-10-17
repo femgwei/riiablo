@@ -83,6 +83,8 @@ import net.mostlyoriginal.api.event.common.Subscribe;
  */
 @All(UnitStates.class)
 public class StateUpdater extends IteratingSystem implements StatusEffectApplier.StateSink {
+  private final ItemDurabilityManager itemDurabilityManagerResolver = new ItemDurabilityManager();
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(StateUpdater.class);
   private static final int[] BARBARIAN_PASSIVE_SKILLS = {
       127, 128, 129, 134, 135, 136, 141, 145, 148, 153
@@ -133,10 +135,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   protected EventSystem events;
 
+  private final StatusEffectApplier statusEffects = new StatusEffectApplier();
+
+  public StatusEffectApplier statusEffects() { return statusEffects; }
+
   @Override
   protected void initialize() {
     super.initialize();
-    StatusEffectApplier.INSTANCE.setStateSink(this);
+    statusEffects.setStateSink(this);
   }
 
   /**
@@ -229,7 +235,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         skill, armor.level, name -> baseSkillLevel(event.victim, name));
     duration = resolveArmorColdDuration(event.victim, event.attacker, duration);
     if (duration <= 0) return;
-    StatusEffectApplier.INSTANCE.applyFreeze(event.attacker, duration, event.victim);
+    StatusEffectApplier.forWorld(world).applyFreeze(event.attacker, duration, event.victim);
     log.info("[SORCERESS_FROZEN_ARMOR] phase=retaliate source={} attacker={} "
             + "skill={} level={} duration={}",
         event.victim, event.attacker, skill != null ? skill.Id : -1,
@@ -252,7 +258,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StateList attackerStates = mUnitStates.has(attackerId)
         ? mUnitStates.get(attackerId).stateList : null;
     int pierce = armorColdPierce(victimId, ownerStates);
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult result = combatSystemResolver.calculateFixedElementalDamage(
         attacker, isPlayerAligned(attackerId), isPlayerAligned(victimId),
         CombatSystem.DAMAGE_COLD, raw, pierce, attackerStates, difficulty());
     applyElementalAbsorb(attacker, result.absorbedLife);
@@ -274,7 +280,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         skill, armor.level, name -> baseSkillLevel(victimId, name));
     int duration = resolveArmorColdDuration(victimId, attackerId, coldLength);
     if (duration > 0 && isAlive(attackerId)) {
-      StatusEffectApplier.INSTANCE.applyCold(attackerId, duration, victimId);
+      StatusEffectApplier.forWorld(world).applyCold(attackerId, duration, victimId);
     }
     log.info("[SORCERESS_SHIVER_ARMOR] phase=retaliate source={} attacker={} skill={} "
             + "level={} raw={} applied={} hp={} -> {} cold={}",
@@ -327,7 +333,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? mUnitStates.get(sourceId).stateList : null;
     StateList targetStates = mUnitStates.has(targetId)
         ? mUnitStates.get(targetId).stateList : null;
-    return CombatSystem.INSTANCE.resolveColdDuration(
+    return combatSystemResolver.resolveColdDuration(
         mAttributesWrapper.get(targetId).attrs, isPlayerAligned(targetId), duration,
         armorColdPierce(sourceId, sourceStates), targetStates, difficulty());
   }
@@ -576,7 +582,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
     StateList attackerStates = mUnitStates.has(event.attacker)
         ? mUnitStates.get(event.attacker).stateList : null;
-    CombatSystem.CombatResult reflected = CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+    CombatSystem.CombatResult reflected = combatSystemResolver.calculateFixedPhysicalDamage(
         attacker, isPlayerAligned(event.attacker), true, raw, attackerStates);
     if (reflected.totalDamage <= 0) return;
     DamageEvent reactive = DamageEvent.obtainReactive(
@@ -645,7 +651,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       int raw = damageRange[0] + rng.nextInt(Math.max(1, damageRange[1] - damageRange[0] + 1));
       StateList targetStates = mUnitStates.has(targetId)
           ? mUnitStates.get(targetId).stateList : null;
-      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
           target, isPlayerAligned(targetId), true, CombatSystem.DAMAGE_FIRE,
           raw, 0, targetStates, difficulty());
       applyElementalAbsorb(target, combat.absorbedLife);
@@ -853,7 +859,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
     StateList attackerStates = mUnitStates.has(event.attacker)
         ? mUnitStates.get(event.attacker).stateList : null;
-    CombatSystem.CombatResult reflected = CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+    CombatSystem.CombatResult reflected = combatSystemResolver.calculateFixedPhysicalDamage(
         attacker, mPlayer.has(event.attacker), mPlayer.has(event.victim), raw, attackerStates);
     if (reflected.totalDamage <= 0) return;
     DamageEvent reflectedEvent = DamageEvent.obtainReactive(
@@ -1674,7 +1680,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       }
       int toHitPercent = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
       boolean alwaysHit = (skill.ResultFlags & 1) != 0;
-      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateBladeShieldAttack(
+      CombatSystem.CombatResult combat = combatSystemResolver.calculateBladeShieldAttack(
           source, target, isPlayerAligned(entityId), isPlayerAligned(targetId),
           skillDamage[0], skillDamage[1], skill.SrcDam, toHitPercent, alwaysHit,
           states, targetStates, isMoving(targetId));
@@ -1800,10 +1806,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (weapon == null) {
         weapon = mPlayer.get(sourceId).data.getItems().getEquipped(BodyLoc.LARM);
       }
-      ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true);
+      itemDurabilityManagerResolver.drainWeaponDurability(weapon, true);
     }
     if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
-      ItemDurabilityManager.INSTANCE.drainArmorDurability(
+      itemDurabilityManagerResolver.drainArmorDurability(
           mPlayer.get(targetId).data.getItems());
     }
   }

@@ -94,7 +94,7 @@ public class StatFormatter {
         return builder.toString();
       }
       case 6: { // +%d %s1 %s2
-        final int value = Stat.decode(stat.id(), op(stat, opBase));
+        final int value = stat.table().decode(stat.id(), op(stat, opBase));
         if (valmode == 1) builder.append(PLUS).append(value).append(SPACE);
         builder
             .append(Riiablo.string.lookup(value < 0 ? strneg : strpos))
@@ -104,7 +104,7 @@ public class StatFormatter {
         return builder.toString();
       }
       case 7: { // %d%% %s1 %s2
-        final int value = Stat.decode(stat.id(), op(stat, opBase));
+        final int value = stat.table().decode(stat.id(), op(stat, opBase));
         if (valmode == 1) builder.append(value).append(PERCENT).append(SPACE);
         builder
             .append(Riiablo.string.lookup(value < 0 ? strneg : strpos))
@@ -114,7 +114,7 @@ public class StatFormatter {
         return builder.toString();
       }
       case 8: { // +%d%% %s1 %s2
-        final int value = Stat.decode(stat.id(), op(stat, opBase));
+        final int value = stat.table().decode(stat.id(), op(stat, opBase));
         if (valmode == 1) builder.append(PLUS).append(value).append(PERCENT).append(SPACE);
         builder
             .append(Riiablo.string.lookup(value < 0 ? strneg : strpos))
@@ -124,7 +124,7 @@ public class StatFormatter {
         return builder.toString();
       }
       case 9: { // %d %s1 %s2
-        final int value = Stat.decode(stat.id(), op(stat, opBase));
+        final int value = stat.table().decode(stat.id(), op(stat, opBase));
         if (valmode == 1) builder.append(value).append(SPACE);
         builder
             .append(Riiablo.string.lookup(value < 0 ? strneg : strpos))
@@ -347,7 +347,7 @@ public class StatFormatter {
     final ItemStatCost.Entry entry = stat.entry();
     final int op_param = entry.op_param;
     final int op_base = op_param > 0
-        ? opBase.aggregate().get(Stat.index(entry.op_base)).value0()
+        ? opBase.aggregate().get(stat.table().index(entry.op_base)).value0()
         : 1;
     final int value = stat.value0();
     switch (entry.op) {

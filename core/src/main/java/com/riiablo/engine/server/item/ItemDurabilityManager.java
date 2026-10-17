@@ -29,10 +29,8 @@ import com.riiablo.save.ItemData;
 public class ItemDurabilityManager {
   private static final Logger log = LogManager.getLogger(ItemDurabilityManager.class);
 
-  /** 单例实例 */
-  public static final ItemDurabilityManager INSTANCE = new ItemDurabilityManager();
 
-  private ItemDurabilityManager() {}
+  public ItemDurabilityManager() {}
 
   //==========================================================================
   // 耐久度消耗权重（身体部位）

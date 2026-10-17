@@ -24,7 +24,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Expands the Countess' SuperUniques.txt treasure class into ground items. */
 @Wire(failOnNull = false)
-public class NativeCountessRewardSystem extends PassiveSystem {
+public class NativeCountessRewardSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(NativeCountessRewardSystem.class);
   private static final int COUNTESS_SUPER_UNIQUE_ID = 6;
 
@@ -37,11 +37,11 @@ public class NativeCountessRewardSystem extends PassiveSystem {
   @Subscribe
   public void onCountessKilled(NativeCountessQuestEvent event) {
     if (event == null || event.countessId < 0 || !mPosition.has(event.countessId)
-        || factory == null || itemGenerator == null || Riiablo.files == null
-        || Riiablo.files.SuperUniques == null || Riiablo.files.TreasureClassEx == null) {
+        || factory == null || itemGenerator == null || files() == null
+        || files().SuperUniques == null || files().TreasureClassEx == null) {
       log.warn("[A1Q5] Countess treasure service unavailable: victim={} factory={} generator={} files={}",
           event == null ? -1 : event.countessId, factory != null,
-          itemGenerator != null, Riiablo.files != null);
+          itemGenerator != null, files() != null);
       return;
     }
 
@@ -56,7 +56,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     int itemLevel = monsterLevel(event.countessId, event.difficulty);
     NativeRng random = new NativeRng(foldSeed(seed(event, position)));
     List<TreasureClassResolver.Drop> drops = new TreasureClassResolver(
-        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses)
+        files().TreasureClassEx, files().itemTypeTreasureClasses)
             .resolve(treasureClass, itemLevel,
             random::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS);
 
@@ -74,9 +74,9 @@ public class NativeCountessRewardSystem extends PassiveSystem {
   }
 
   private SuperUniques.Entry findCountess() {
-    SuperUniques.Entry indexed = Riiablo.files.SuperUniques.get(COUNTESS_SUPER_UNIQUE_ID);
+    SuperUniques.Entry indexed = files().SuperUniques.get(COUNTESS_SUPER_UNIQUE_ID);
     if (indexed != null && indexed.hcIdx == COUNTESS_SUPER_UNIQUE_ID) return indexed;
-    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+    for (SuperUniques.Entry entry : files().SuperUniques) {
       if (entry != null && entry.hcIdx == COUNTESS_SUPER_UNIQUE_ID) return entry;
     }
     return null;
@@ -118,7 +118,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     }
   }
 
-  private static long seed(NativeCountessQuestEvent event, Position position) {
+  private long seed(NativeCountessQuestEvent event, Position position) {
     long seed = 0xC0A17E55L;
     seed = 31 * seed + event.countessId;
     seed = 31 * seed + event.difficulty;
@@ -126,7 +126,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     return 31 * seed + Float.floatToRawIntBits(position.position.y);
   }
 
-  private static int foldSeed(long seed) {
+  private int foldSeed(long seed) {
     return (int) (seed ^ (seed >>> 32));
   }
 }

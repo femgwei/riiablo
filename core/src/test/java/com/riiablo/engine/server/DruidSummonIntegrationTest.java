@@ -78,12 +78,12 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     for (int id : vineSkills) {
       com.riiablo.codec.excel.Skills.Entry vine = Riiablo.files.skills.get(id);
       assertEquals(StateId.VINE_BEAST, DruidSkills.getSummonAuraState(vine));
-      assertTrue(DruidSkills.getSummonAuraSkill(vine) == null,
+      assertTrue(DruidSkills.getSummonAuraSkill(Riiablo.files, vine) == null,
           "Vines use the Vine Attack SumSkill, not a party aura row");
       assertEquals("Vine Attack", vine.sumskill[0]);
       com.riiablo.codec.excel.Skills.Entry attack = Riiablo.files.skills.get(vine.sumskill[0]);
       assertTrue(attack != null && attack.Id >= 0);
-      assertEquals(8, DruidSkills.getSummonGrantedSkillLevel(vine, 8, attack.Id, name -> 0),
+      assertEquals(8, DruidSkills.getSummonGrantedSkillLevel(Riiablo.files, vine, 8, attack.Id, name -> 0),
           "D2MOO SumSk1Calc=lvl must preserve the parent vine skill level");
     }
   }

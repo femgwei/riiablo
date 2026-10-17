@@ -1120,7 +1120,7 @@ public class ItemData {
    * Consumes one unit from the first matching stack on a stored inventory page.
    * The final unit removes the item and emits the normal store-removal event.
    */
-  public boolean consumeStoredItemQuantity(StoreLoc storeLoc, int itemType) {
+  public boolean consumeStoredItemQuantity(StoreLoc storeLoc, String itemType) {
     IntArray stored = getStore(storeLoc);
     for (int n = 0; n < stored.size; n++) {
       int index = stored.get(n);

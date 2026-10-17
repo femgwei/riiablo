@@ -790,7 +790,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       } else if (pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
         if (result.success()) {
           Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
-          if (repaired != null && ItemDurabilityManager.INSTANCE.restoreDurability(repaired)) {
+          if (repaired != null && new ItemDurabilityManager().restoreDurability(repaired)) {
             itemData.updateStats();
           }
         }
@@ -980,7 +980,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     boolean changed = false;
     for (Item item : itemData.getItems()) {
       if (item != null && item.location == Location.EQUIPPED) {
-        changed |= ItemDurabilityManager.INSTANCE.restoreDurability(item);
+        changed |= new ItemDurabilityManager().restoreDurability(item);
       }
     }
     if (changed) itemData.updateStats();

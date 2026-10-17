@@ -56,10 +56,16 @@ public final class Act4D2MOOLayoutBridge {
     return populateZones(gameSeed, diff, map, D2C_Acts.ACT_IV, TOWN, LEVELS);
   }
 
+  public static boolean populateZones(D2MOOLayoutContext context, int gameSeed, int diff, Map map) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateZones(gameSeed, diff, map);
+    }
+  }
+
   /** Shared native terrain export; coordinates remain relative to the act's town. */
   public static boolean populateZones(int gameSeed, int diff, Map map,
       byte actId, int townId, int[] levelIds) {
-    if (map == null || RiiabloAccess.mpqsMissing()) return false;
+    if (map == null || D2MOOLayoutContext.mpqs() == null) return false;
     D2DrlgStrc drlg = null;
     try {
       DataTbls.setLevelDefBinCache(Act1D2MOOLayoutBridge.buildLevelDefCache(diff, -1));
@@ -349,23 +355,23 @@ public final class Act4D2MOOLayoutBridge {
   }
 
   private static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw, int act) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+    if (D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
-    if (ds1Raw && Riiablo.files.MonPreset != null) {
+    if (ds1Raw && D2MOOLayoutContext.files().MonPreset != null) {
       try {
-        placement = Riiablo.files.MonPreset.getPlace(act, index);
+        placement = D2MOOLayoutContext.files().MonPreset.getPlace(act, index);
       } catch (RuntimeException ignored) {}
     }
     MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
-    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
-        ? null : Riiablo.files.SuperUniques.get(placement);
-    if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
-    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size();
-      superUnique = Riiablo.files.SuperUniques.get(suIndex);
-      if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    SuperUniques.Entry superUnique = placement == null || D2MOOLayoutContext.files().SuperUniques == null
+        ? null : D2MOOLayoutContext.files().SuperUniques.get(placement);
+    if (monster == null && superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
+    if (monster == null && superUnique == null && D2MOOLayoutContext.files().SuperUniques != null) {
+      int suIndex = index - D2MOOLayoutContext.files().monstats.size();
+      superUnique = D2MOOLayoutContext.files().SuperUniques.get(suIndex);
+      if (superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
     }
     return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
         superUnique == null ? -1 : superUnique.hcIdx,
@@ -384,6 +390,6 @@ public final class Act4D2MOOLayoutBridge {
   }
 
   private static final class RiiabloAccess {
-    static boolean mpqsMissing() { return com.riiablo.Riiablo.mpqs == null; }
+    static boolean mpqsMissing() { return D2MOOLayoutContext.mpqs() == null; }
   }
 }

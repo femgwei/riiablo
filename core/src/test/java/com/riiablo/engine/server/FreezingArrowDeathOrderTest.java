@@ -41,7 +41,6 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), probe, states, new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int amazon = world.create();
       world.getMapper(Player.class).create(amazon);
@@ -76,7 +75,6 @@ class FreezingArrowDeathOrderTest extends RiiabloTest {
       assertTrue(probe.shatterAtDeath,
           "a lethal cold hit on a frozen monster must select SHATTER before DeathEvent");
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
     }
   }

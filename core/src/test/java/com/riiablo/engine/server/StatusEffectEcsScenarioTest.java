@@ -86,7 +86,6 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
           + " duration=3 hp=20->17 expired=true status=PASS");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -102,7 +101,7 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       int target = createMonster(world, 10, 10, 5, 0);
       Velocity velocity = world.getMapper(Velocity.class).create(target).set(1f, 2f);
 
-      StatusEffectApplier.INSTANCE.applyPoison(target, 2, 3, source);
+      StatusEffectApplier.forWorld(world).applyPoison(target, 2, 3, source);
       world.process();
       world.process();
       world.process();
@@ -113,7 +112,7 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       assertEquals(1, probe.deathEvents, "a lethal DOT must not repeat DeathEvent");
 
       setHitpoints(world, target, 20);
-      StatusEffectApplier.INSTANCE.applyCold(target, 2, source);
+      StatusEffectApplier.forWorld(world).applyCold(target, 2, source);
       world.process();
       assertTrue(velocity.stateSpeedMultiplier < 1f);
       assertFalse(velocity.stateMovementLocked);
@@ -125,7 +124,6 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
           + " slowed=true recovered=true status=PASS");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -160,7 +158,6 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
           "DeathEvent remains idempotent after the lethal tick");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -208,7 +205,6 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       assertEquals(2, burning.level);
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -233,10 +229,10 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       world.getMapper(Velocity.class).create(unique).set(1f, 2f);
       world.getMapper(Velocity.class).create(normal).set(1f, 2f);
 
-      StatusEffectApplier.INSTANCE.applyFreeze(player, 40, source);
-      StatusEffectApplier.INSTANCE.applyFreeze(unique, 40, source);
-      StatusEffectApplier.INSTANCE.applyFreeze(normal, 40, source);
-      StatusEffectApplier.INSTANCE.applyFreeze(immune, 40, source);
+      StatusEffectApplier.forWorld(world).applyFreeze(player, 40, source);
+      StatusEffectApplier.forWorld(world).applyFreeze(unique, 40, source);
+      StatusEffectApplier.forWorld(world).applyFreeze(normal, 40, source);
+      StatusEffectApplier.forWorld(world).applyFreeze(immune, 40, source);
 
       UnitState playerCold = world.getMapper(UnitStates.class).get(player)
           .stateList.getState(StateId.COLD);
@@ -258,7 +254,6 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       assertTrue(world.getMapper(Velocity.class).get(normal).stateMovementLocked);
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -337,8 +332,11 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     int id = world.create();
     Missile missile = world.getMapper(Missile.class).create(id)
         .set(row, new Vector2(x, y), 100).setOwner(owner);
-    missile.damage.base().put(Stat.poisonmindam, damagePerFrame);
-    missile.damage.base().put(Stat.poisonmaxdam, damagePerFrame);
+    // Item poison stats are total damage over poisonlength; the state stores
+    // the resulting per-frame rate after resistance is applied.
+    int totalPoisonDamage = damagePerFrame * duration;
+    missile.damage.base().put(Stat.poisonmindam, totalPoisonDamage);
+    missile.damage.base().put(Stat.poisonmaxdam, totalPoisonDamage);
     missile.damage.base().put(Stat.poisonlength, duration);
     missile.damage.base().put(Stat.level, 1);
     missile.damage.reset();

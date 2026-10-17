@@ -28,10 +28,8 @@ import com.riiablo.logger.Logger;
 public class DamageCalculator {
   private static final Logger log = LogManager.getLogger(DamageCalculator.class);
 
-  /** 单例实例 */
-  public static final DamageCalculator INSTANCE = new DamageCalculator();
 
-  private DamageCalculator() {}
+  public DamageCalculator() {}
 
   //==========================================================================
   // 伤害结果标志位 (D2MOD: D2DamageResultFlags)

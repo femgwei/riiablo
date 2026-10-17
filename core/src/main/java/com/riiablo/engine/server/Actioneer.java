@@ -93,6 +93,8 @@ import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 
 public class Actioneer extends PassiveSystem {
+  private final ItemDurabilityManager itemDurabilityManagerResolver = new ItemDurabilityManager();
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
 
@@ -1382,7 +1384,7 @@ public class Actioneer extends PassiveSystem {
         int[] kickDamage = AssassinSkills.calculateDragonTailKickDamage(
             skill, level, attacker, equippedBoots(entityId));
         int attackRating = AssassinSkills.dragonTailAttackRating(skill, level, attacker);
-        CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             kickDamage[0], kickDamage[1], attackRating,
             stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2173,7 +2175,7 @@ public class Actioneer extends PassiveSystem {
               berserkWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getBerserkMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
@@ -2195,7 +2197,7 @@ public class Actioneer extends PassiveSystem {
               frenzyWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getFrenzyMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
@@ -2212,7 +2214,7 @@ public class Actioneer extends PassiveSystem {
         } else if (frenzyAttack) {
           int attackRating = BarbarianSkills.getFrenzyAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId), attackRating,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2223,7 +2225,7 @@ public class Actioneer extends PassiveSystem {
                 activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
             int attackRating = AssassinSkills.dragonTailAttackRating(
                 activeSkill, activeSkillLevel, attackerAttrs);
-            dragonTailCombat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+            dragonTailCombat = combatSystemResolver.calculatePrecomputedMeleeAttack(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer,
                 kickDamage[0], kickDamage[1], attackRating,
                 stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2242,7 +2244,7 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
           int attackRating = AssassinSkills.dragonTalonAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               kickDamage[0], kickDamage[1], attackRating,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2256,7 +2258,7 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
           int attackRating = AssassinSkills.dragonFlightAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               kickDamage[0], kickDamage[1], attackRating,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2269,7 +2271,7 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, dragonClawWeapon);
           int attackRating = AssassinSkills.dragonClawAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               clawDamage[0], clawDamage[1], attackRating,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -2288,7 +2290,7 @@ public class Actioneer extends PassiveSystem {
           int conversion = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, Math.min(100,
                   SkillFormula.evaluate(activeSkill.calc4, activeSkill, activeSkillLevel))) : 0;
-          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, lightningDamageType(activeSkill.EType),
@@ -2312,7 +2314,7 @@ public class Actioneer extends PassiveSystem {
               SkillFormula.evaluate(activeSkill.calc1, activeSkill, level));
           int conversionPercent = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, SkillFormula.evaluate(activeSkill.calc4, activeSkill, level)) : 0;
-          combat = CombatSystem.INSTANCE.calculateLightningStrikeAttack(
+          combat = combatSystemResolver.calculateLightningStrikeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               lightningMin, lightningMax, damagePercent,
               conversionPercent, lightningDamageType(activeSkill.EType),
@@ -2329,7 +2331,7 @@ public class Actioneer extends PassiveSystem {
               ? null : MonsterUniqueModifiers.rollSpectralHit(
                   attackingMonster, attackerAttrs, combatDifficulty());
           if (uniqueAttack == null) {
-            combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
+            combat = combatSystemResolver.calculateAttackAgainstMonsterType(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
                 monsterAttackRating(entityId),
@@ -2338,7 +2340,7 @@ public class Actioneer extends PassiveSystem {
                 isDemonTarget(targetId), isUndeadTarget(targetId),
                 ignoreTargetDefenseAllowed);
           } else {
-            combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
+            combat = combatSystemResolver.calculateAttackAgainstMonsterType(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
                 monsterAttackRating(entityId), uniqueAttack.min, uniqueAttack.max,
@@ -2528,7 +2530,7 @@ public class Actioneer extends PassiveSystem {
             && progressiveRelease.coldFreezeDuration > 0
             && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0
             && mUnitStates.has(targetId)) {
-          StatusEffectApplier.INSTANCE.applyFreeze(
+          StatusEffectApplier.forWorld(world).applyFreeze(
               targetId, progressiveRelease.coldFreezeDuration, entityId);
           log.info("[ASSASSIN_BLADES] phase=primary_freeze source={} target={} duration={}",
               entityId, targetId, progressiveRelease.coldFreezeDuration);
@@ -2849,7 +2851,7 @@ public class Actioneer extends PassiveSystem {
         skill, level, false, name -> baseSkillLevel(entityId, name));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+    CombatSystem.CombatResult combat = combatSystemResolver
         .calculatePrecomputedMeleeElementalAttack(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], amazonAttackRating(
@@ -2894,7 +2896,7 @@ public class Actioneer extends PassiveSystem {
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(
             skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating, conversion,
         lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
@@ -2967,7 +2969,7 @@ public class Actioneer extends PassiveSystem {
             weapon.attrs.aggregate().put(Stat.quantity, next);
           }
         } else {
-          ItemDurabilityManager.INSTANCE.drainDurability(weapon, amount);
+          itemDurabilityManagerResolver.drainDurability(weapon, amount);
         }
       }
     }
@@ -3057,7 +3059,7 @@ public class Actioneer extends PassiveSystem {
         entityId, skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(target),
         damage[0], damage[1], attackRating, conversion,
         lightningDamageType(skill.EType), stateList(entityId), stateList(target),
@@ -3138,7 +3140,7 @@ public class Actioneer extends PassiveSystem {
     StateList attackerStates = stateList(entityId);
     int[] physical = NecromancerSkills.getPoisonDaggerPhysicalDamage(
         skill, level, attacker, weapon, attackerStates);
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+    CombatSystem.CombatResult combat = combatSystemResolver
         .calculatePrecomputedMeleeElementalAttack(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], NecromancerSkills.getPoisonDaggerAttackRating(
@@ -3153,7 +3155,7 @@ public class Actioneer extends PassiveSystem {
     int poisonDuration = NecromancerSkills.getPoisonDaggerDurationFrames(
         skill, level, name -> baseSkillLevel(entityId, name));
     if (combat.hit && !combat.blocked) {
-      CombatSystem.CombatResult poison = CombatSystem.INSTANCE.calculateFixedPoisonDamage(
+      CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
           MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
           stateList(targetId), combatDifficulty());
@@ -3267,7 +3269,7 @@ public class Actioneer extends PassiveSystem {
     int level = Math.max(1, skillLevel(entityId, skill.Id));
     int toHit = statInt(attacker, Stat.tohit) + skill.ToHit
         + Math.max(0, level - 1) * skill.LevToHit;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, true, false,
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage), toHit,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -3441,7 +3443,7 @@ public class Actioneer extends PassiveSystem {
         skill, level, attacker, weapon, states.stateList);
     int attackRating = DruidSkills.getFeralMaulAttackRating(
         skill, level, attacker, attackerPlayer);
-    casting.feralMaulCombat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    casting.feralMaulCombat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, attackerPlayer, targetPlayer,
         damage[0], damage[1], attackRating,
         states.stateList, stateList(targetId), isEntityMoving(targetId),
@@ -3513,7 +3515,7 @@ public class Actioneer extends PassiveSystem {
           Stat.maxhp, lifeStolen);
     }
     if (stunFrames > 0) {
-      StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+      StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
     }
     applyCombatStates(entityId, targetId, combat);
     if (hitpoints.asFixed() > 0f) queueHitReaction(targetId, false);
@@ -3572,7 +3574,7 @@ public class Actioneer extends PassiveSystem {
     }
     int duration = rabies ? DruidSkills.getRabiesPoisonDuration(
         skill, level, name -> baseSkillLevel(entityId, name)) : 0;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+    CombatSystem.CombatResult combat = combatSystemResolver
         .calculatePrecomputedMeleeElementalAttack(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], DruidSkills.getShapeAttackRating(
@@ -3581,7 +3583,7 @@ public class Actioneer extends PassiveSystem {
             unitStates.stateList, stateList(targetId), isEntityMoving(targetId));
     if (rabies && combat.hit && !combat.blocked) {
       int rawFixed = MathUtils.random(elemental[0], elemental[1]);
-      CombatSystem.CombatResult poison = CombatSystem.INSTANCE.calculateFixedPoisonDamage(
+      CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
           rawFixed, duration, stateList(targetId), combatDifficulty());
       // Weapon poison was already resolved by the melee record. It is also an
@@ -3690,7 +3692,7 @@ public class Actioneer extends PassiveSystem {
     int attackRating = statInt(attacker, Stat.tohit);
     int arBonus = PaladinSkills.getZealAttackRatingPercent(skill, level);
     attackRating += attackRating * arBonus / 100;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, true, isPlayerEntity(target), min, max, attackRating,
         stateList(entityId), stateList(target), isEntityMoving(target),
         weaponMastery(entityId, weapon, false));
@@ -3769,7 +3771,7 @@ public class Actioneer extends PassiveSystem {
         skill, level, attacker, weapon, unitStates.stateList);
     int attackRating = DruidSkills.getShapeAttackRating(
         skill, level, attacker, isPlayerEntity(entityId));
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(current),
         damage[0], damage[1], attackRating,
         unitStates.stateList, stateList(current), isEntityMoving(current),
@@ -3845,7 +3847,7 @@ public class Actioneer extends PassiveSystem {
     Item weapon = activeAttackWeapon(entityId);
     int[] damage = DruidSkills.calculateShapeWeaponDamage(
         skill, level, attacker, weapon, states.stateList);
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+    CombatSystem.CombatResult combat = combatSystemResolver
         .calculatePrecomputedMeleeAttack(attacker, defender,
             isPlayerEntity(entityId), isPlayerEntity(targetId), damage[0], damage[1],
             DruidSkills.getShapeAttackRating(skill, level, attacker, isPlayerEntity(entityId)),
@@ -4402,7 +4404,7 @@ public class Actioneer extends PassiveSystem {
         stateList(entityId));
     int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
         skill, level, attacker, isPlayerEntity(entityId), weapon, stateList(entityId));
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId),
@@ -4535,12 +4537,12 @@ public class Actioneer extends PassiveSystem {
 
   private void drainPlayerMeleeDurability(int attackerId, Item weapon, int targetId) {
     if (mPlayer.has(attackerId) && mPlayer.get(attackerId).data != null
-        && ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true)) {
+        && itemDurabilityManagerResolver.drainWeaponDurability(weapon, true)) {
       mPlayer.get(attackerId).data.getItems().updateStats();
     }
     if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
       ItemData items = mPlayer.get(targetId).data.getItems();
-      if (ItemDurabilityManager.INSTANCE.drainArmorDurability(items) != null) {
+      if (itemDurabilityManagerResolver.drainArmorDurability(items) != null) {
         items.updateStats();
       }
     }
@@ -4828,13 +4830,13 @@ public class Actioneer extends PassiveSystem {
           : CombatSystem.totalPoisonToPerFrame(
               combat.elementalDamage[CombatSystem.DAMAGE_POISON],
               combat.poisonDuration);
-      StatusEffectApplier.INSTANCE.applyPoison(targetId,
+      StatusEffectApplier.forWorld(world).applyPoison(targetId,
           poisonPerFrame,
           combat.poisonDuration, attackerId);
     }
     if (combat.coldDuration > 0
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
-      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+      StatusEffectApplier.forWorld(world).applyCold(targetId, combat.coldDuration, attackerId);
     }
   }
 
@@ -4881,7 +4883,7 @@ public class Actioneer extends PassiveSystem {
       CombatSystem.CombatResult combat, Attributes defender, StateList defenderStates,
       int damageType, int rawDamage) {
     if (rawDamage <= 0) return;
-    CombatSystem.CombatResult elemental = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult elemental = combatSystemResolver.calculateFixedElementalDamage(
         defender, isPlayerEntity(targetId), isPlayerEntity(sourceId), damageType,
         rawDamage, 0, defenderStates, combatDifficulty());
     combat.elementalDamage[damageType] += elemental.elementalDamage[damageType];
@@ -4938,7 +4940,7 @@ public class Actioneer extends PassiveSystem {
       int physical = scalePvpPhysical(
           resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
               Stat.damageresist, -1), sourceId, targetId);
-      CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult fireResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
           CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
@@ -5160,7 +5162,7 @@ public class Actioneer extends PassiveSystem {
       int physical = scalePvpPhysical(
           resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
               Stat.damageresist, -1), sourceId, targetId);
-      CombatSystem.CombatResult coldResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult coldResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
           CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), combatDifficulty());
       int cold = coldResult.elementalDamage[CombatSystem.DAMAGE_COLD];
@@ -5174,7 +5176,7 @@ public class Actioneer extends PassiveSystem {
       if (hp == null || applied <= 0f) continue;
       hp.sub(applied);
       if (cold > 0 && release.coldLength > 0) {
-        StatusEffectApplier.INSTANCE.applyCold(targetId, release.coldLength, sourceId);
+        StatusEffectApplier.forWorld(world).applyCold(targetId, release.coldLength, sourceId);
       }
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
@@ -5381,7 +5383,7 @@ public class Actioneer extends PassiveSystem {
       if (targetId == sourceId || !isValidFistsTarget(sourceId, targetId)) continue;
       if (mPosition.get(targetId).position.dst2(origin) > radius * radius) continue;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
-      CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult fireResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
           CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
@@ -5595,7 +5597,7 @@ public class Actioneer extends PassiveSystem {
         profile.elementalMax[CombatSystem.DAMAGE_MAGIC],
         profile.matchedElementProfiles);
 
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
         attacker, defender, false, isPlayerEntity(targetId), false,
         profile.minDamage, profile.maxDamage, profile.attackRating, false,
         profile.elementalMin, profile.elementalMax,
@@ -5720,7 +5722,7 @@ public class Actioneer extends PassiveSystem {
       maxDamage = statInt(attacker, Stat.maxdamage);
       attackRating = statInt(attacker, Stat.tohit);
     }
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
         attacker, defender, false, isPlayerEntity(targetId), false,
         minDamage, maxDamage, attackRating,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId));
@@ -5750,7 +5752,7 @@ public class Actioneer extends PassiveSystem {
         ? files().skills.get(mCasting.get(entityId).skillId) : null;
     int stunFrames = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill,
         monsterSkillLevelFor(entityId, skill));
-    if (stunFrames > 0) StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+    if (stunFrames > 0) StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
     log.info("[MONSTER_SMITE] phase=result source={} target={} result=hit damage={} hp={} -> {} "
             + "chance={} stunFrames={} a2Profile={}..{} ar={}",
         entityId, targetId, damage, before, hitpoints.asFixed(), combat.hitChance,
@@ -6018,7 +6020,7 @@ public class Actioneer extends PassiveSystem {
     int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
         statInt(attacker, Stat.tohit));
     Item weapon = activeAttackWeapon(entityId);
-    casting.vengeanceCombat = CombatSystem.INSTANCE.calculateAttack(
+    casting.vengeanceCombat = combatSystemResolver.calculateAttack(
         attacker, defender, true, isPlayerEntity(targetId), false,
         physicalMin, physicalMax, attackRating, false,
         elementalMin, elementalMax, coldLength, 0,
@@ -6114,7 +6116,7 @@ public class Actioneer extends PassiveSystem {
     int maxDamage = Math.max(minDamage, statInt(attacker, Stat.maxdamage));
     int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
         statInt(attacker, Stat.tohit));
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, true, isPlayerEntity(resolvedTarget), minDamage, maxDamage,
         attackRating, stateList(entityId), stateList(resolvedTarget), isEntityMoving(resolvedTarget),
         weaponMastery(entityId, weapon, false));
@@ -6161,7 +6163,7 @@ public class Actioneer extends PassiveSystem {
     }
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
         attacker, defender, false, isPlayerEntity(targetId), false,
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit),
@@ -6223,7 +6225,7 @@ public class Actioneer extends PassiveSystem {
       min += hsBonus;
       max += hsBonus;
     }
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, true, isPlayerEntity(targetId), min, max,
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
         isEntityMoving(targetId));
@@ -6241,9 +6243,9 @@ public class Actioneer extends PassiveSystem {
     hp.sub(Math.max(0f, damageEvent.damage));
     if (hp.asFixed() < 0f) hp.set(0f);
     int stunFrames = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
-    if (stunFrames > 0) StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+    if (stunFrames > 0) StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
     if (mPosition.has(entityId) && mPosition.has(targetId)) {
-      StatusEffectApplier.INSTANCE.applyKnockback(targetId,
+      StatusEffectApplier.forWorld(world).applyKnockback(targetId,
           mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
           mPosition.get(targetId).position.x, mPosition.get(targetId).position.y);
     }
@@ -6288,7 +6290,7 @@ public class Actioneer extends PassiveSystem {
     if (attacker == null || defender == null || !canDamageRelation(
         entityId, targetId, true, isPlayerEntity(targetId))) return;
     int level = Math.max(1, skillLevel(entityId, skill.Id));
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
         attacker, defender, true, isPlayerEntity(targetId),
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),

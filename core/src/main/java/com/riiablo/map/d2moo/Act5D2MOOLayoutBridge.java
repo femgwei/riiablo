@@ -65,7 +65,7 @@ public final class Act5D2MOOLayoutBridge {
    * A missing or partial archive leaves the compatibility builder untouched.
    */
   public static boolean populateZones(int gameSeed, int diff, Map map) {
-    if (map == null || RiiabloAccess.mpqsMissing()) return false;
+    if (map == null || D2MOOLayoutContext.mpqs() == null) return false;
     D2DrlgStrc drlg = null;
     try {
       DataTbls.setLevelDefBinCache(Act1D2MOOLayoutBridge.buildLevelDefCache(diff, -1));
@@ -217,6 +217,12 @@ public final class Act5D2MOOLayoutBridge {
     }
   }
 
+  public static boolean populateZones(D2MOOLayoutContext context, int gameSeed, int diff, Map map) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateZones(gameSeed, diff, map);
+    }
+  }
+
   private static Zone findZone(Map map, int levelId) {
     for (Zone zone : map.getZones()) {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
@@ -295,16 +301,16 @@ public final class Act5D2MOOLayoutBridge {
   static boolean queueNormalGroupMarker(Zone zone,
       com.badlogic.gdx.utils.Array<Map.NativeMonster> output, int index, boolean ds1Raw,
       int roomId, int mode, int x, int y) {
-    if (!ds1Raw || Riiablo.files.MonPreset == null) return false;
+    if (!ds1Raw || D2MOOLayoutContext.files().MonPreset == null) return false;
     String place;
-    try { place = Riiablo.files.MonPreset.getPlace(5, index); }
+    try { place = D2MOOLayoutContext.files().MonPreset.getPlace(5, index); }
     catch (RuntimeException ignored) { return false; }
     if (!"place_impgroup".equals(place) && !"place_miniongroup".equals(place)) return false;
     // MonsterRegion.cpp MonPlace 24/26: these groups are normal-only.
     if (zone.diff != 0) return true;
     String id = "place_miniongroup".equals(place) ? "minion1"
         : zone.levelId() == D2LevelIds.LEVEL_BLOODYFOOTHILLS ? "deathmauler1" : "imp1";
-    MonStats.Entry monster = Riiablo.files.monstats.get(id);
+    MonStats.Entry monster = D2MOOLayoutContext.files().monstats.get(id);
     if (monster == null || monster.MinGrp <= 0 || monster.MaxGrp < monster.MinGrp) return true;
     java.util.Random random = new java.util.Random(com.riiablo.map.NativeLevelSeed.forLevel(
         zone.map.seed(), zone.levelId()) ^ (roomId * 31L + x * 17L + y));
@@ -315,13 +321,13 @@ public final class Act5D2MOOLayoutBridge {
   }
 
   static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+    if (D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
-    if (ds1Raw && Riiablo.files.MonPreset != null) {
+    if (ds1Raw && D2MOOLayoutContext.files().MonPreset != null) {
       try {
-        placement = Riiablo.files.MonPreset.getPlace(5, index);
+        placement = D2MOOLayoutContext.files().MonPreset.getPlace(5, index);
       } catch (RuntimeException ignored) {}
     }
     // A MonPlace token is an instruction, never a MonStats row number.
@@ -329,13 +335,13 @@ public final class Act5D2MOOLayoutBridge {
     if (placement != null && placement.startsWith("place_"))
       return new NativeMonsterResolution(-1, -1, null);
     MonStats.Entry monster = Act1MapBuilderD2MOD.resolveD2MooPresetMonster(index, placement);
-    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
-        ? null : Riiablo.files.SuperUniques.get(placement);
-    if (monster == null && superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
-    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
-      int suIndex = index - Riiablo.files.monstats.size();
-      superUnique = Riiablo.files.SuperUniques.get(suIndex);
-      if (superUnique != null) monster = Riiablo.files.monstats.get(superUnique.MonClass);
+    SuperUniques.Entry superUnique = placement == null || D2MOOLayoutContext.files().SuperUniques == null
+        ? null : D2MOOLayoutContext.files().SuperUniques.get(placement);
+    if (monster == null && superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
+    if (monster == null && superUnique == null && D2MOOLayoutContext.files().SuperUniques != null) {
+      int suIndex = index - D2MOOLayoutContext.files().monstats.size();
+      superUnique = D2MOOLayoutContext.files().SuperUniques.get(suIndex);
+      if (superUnique != null) monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
     }
     return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
         superUnique == null ? -1 : superUnique.hcIdx,

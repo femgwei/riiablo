@@ -24,10 +24,14 @@ import com.riiablo.engine.server.state.StateId;
 public class StatusEffectApplier {
   private static final Logger log = LogManager.getLogger(StatusEffectApplier.class);
 
-  /** 单例实例 */
-  public static final StatusEffectApplier INSTANCE = new StatusEffectApplier();
+  public StatusEffectApplier() {}
 
-  private StatusEffectApplier() {}
+  /** Resolve the state sink owned by this World, including isolated headless worlds. */
+  public static StatusEffectApplier forWorld(com.artemis.World world) {
+    com.riiablo.engine.server.StateUpdater updater =
+        world.getSystem(com.riiablo.engine.server.StateUpdater.class);
+    return updater == null ? new StatusEffectApplier() : updater.statusEffects();
+  }
 
   /** Runtime sink supplied by the ECS StateUpdater. */
   public interface StateSink {

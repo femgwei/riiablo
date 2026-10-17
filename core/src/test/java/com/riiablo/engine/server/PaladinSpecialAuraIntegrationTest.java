@@ -116,11 +116,11 @@ class PaladinSpecialAuraIntegrationTest extends RiiabloTest {
       Attributes defender = attributes();
       defender.base().put(Stat.damageresist, 100);
       defender.reset();
-      CombatSystem.CombatResult without = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
+      CombatSystem.CombatResult without = new CombatSystem().calculateAttackAtDifficulty(
           attacker, defender, true, false, true,
           10, 10, 1000, true, null, null, 0, 0,
           null, null, false, null, 0, 0, false, true);
-      CombatSystem.CombatResult with = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
+      CombatSystem.CombatResult with = new CombatSystem().calculateAttackAtDifficulty(
           attacker, defender, true, false, true,
           10, 10, 1000, true, null, null, 0, 0,
           casterStates, null, false, null, 0, 0, false, true);

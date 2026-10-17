@@ -67,7 +67,6 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
           "one level-1 Inferno stream hit must preserve its 128..255 fixed roll");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -108,7 +107,6 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       assertEquals(2, factory.count("blaze"));
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -136,7 +134,6 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
           "one level-1 Blaze frame must apply its 64..127 fixed roll immediately");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -185,7 +182,6 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       }
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -219,7 +215,6 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       assertEquals(deaths, world.getSystem(DeathProbe.class).count);
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 

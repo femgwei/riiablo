@@ -10538,3 +10538,23 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 本次架构复核定向测试：core 82 项、D2GS 装配 5 项全部通过；架构约束单独入口
   1 项通过，并已加入 `subsystemRegression`，该门禁现为 761 项（759 通过、2 跳过、
   0 失败）。该约束是依赖方向防回退，不等同于全系统已经完成隔离。
+
+## 2026-10-17 继续分层收敛
+
+- [x] `MissileCollisionSystem` 通过可注入 `ServerGameplayContext` 读取 Files，导弹命中随机推进自身
+  `rngState`；生产上下文不再依赖全局 Files/LibGDX RNG，旧无上下文夹具保留兼容 fallback。
+- [x] 任务系统主要 Act I--V 事件适配器统一继承 `ContextualQuestSystem`，Files、seed、角色和保存回调
+  由 World 上下文提供；`NativeQuestRandomState`、奖励系统和 Baal/雇佣兵路径随 World 隔离。
+- [x] 新增 `ItemTypeCatalog`、`StatTable`：ItemTypes 的等价闭包和属性编码元数据可绑定到实例数据集，
+  `Type` 不再在类初始化阶段读取全局 ItemTypes；静态兼容入口只作为旧调用迁移桥。
+- [x] `StatusEffectApplier`、Combat/Defense/Damage/耐久/玩家属性/技能协同解析器改为可构造实例；
+  `StateUpdater` 持有每个 World 的状态应用器，服务端系统不再共享可变 `INSTANCE` 状态。
+- [x] 服务端 NPC 的菜单、对话、面板和音频提取到客户端 `ClientNpc`；共享 ECS 标记组件移至
+  `engine.shared.component`，服务端 NPC 库存刷新按当前 World 遍历。
+- [x] D2MOO Act I--V bridge 增加 `D2MOOLayoutContext` 资源入口，Files/MPQ 读取走当前布局上下文，
+  并为各 Act 提供显式 context overload；D2MOO_JAVA 的 `DataTbls` 仍是第三方静态缓存，完整实例化
+  迁移留作下一阶段，桥接调用已集中到可替换的上下文边界。
+- [x] `:core:compileJava :core:compileTestJava` 通过；架构约束与子系统回归已按串行方式重新执行，
+  避免多个 Gradle Test 任务同时清理共享的 `core/build` 产物。
+- [ ] core 仍未物理拆成多个 Gradle 编译模块；D2MOO `DataTbls` 静态缓存、少数全局兼容入口和
+  `Npc`/RenderSystem 等历史 presentation bridge 仍需继续收窄，不能宣称已经达到 dark-magic 的零遗留分层。

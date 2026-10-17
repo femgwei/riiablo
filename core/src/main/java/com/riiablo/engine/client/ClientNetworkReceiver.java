@@ -45,7 +45,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.SummonedPet;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.client.component.Label;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;

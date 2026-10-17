@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import com.riiablo.engine.server.state.StateId;
 
 public class StatusEffectApplierTest {
+  private final StatusEffectApplier applier = new StatusEffectApplier();
   @Test
   public void poisonIsForwardedToTheRuntimeStateSink() {
     int[] values = new int[7];
@@ -20,11 +21,11 @@ public class StatusEffectApplierTest {
       values[6] = type;
     };
 
-    StatusEffectApplier.INSTANCE.setStateSink(sink);
+    applier.setStateSink(sink);
     try {
-      StatusEffectApplier.INSTANCE.applyPoison(12, 7, 30, 4);
+      applier.applyPoison(12, 7, 30, 4);
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
+      applier.setStateSink(null);
     }
 
     assertEquals(12, values[0]);
@@ -52,11 +53,11 @@ public class StatusEffectApplierTest {
         exact[0] = damage;
       }
     };
-    StatusEffectApplier.INSTANCE.setStateSink(sink);
+    applier.setStateSink(sink);
     try {
-      StatusEffectApplier.INSTANCE.applyPoison(12, 0.1875f, 100, 4);
+      applier.applyPoison(12, 0.1875f, 100, 4);
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
+      applier.setStateSink(null);
     }
     assertEquals(0.1875f, exact[0]);
   }

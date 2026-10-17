@@ -138,6 +138,13 @@ public final class Act1D2MOOLayoutBridge {
         return getLayoutAndDrlg(seed, diff, burialGroundsId, false);
     }
 
+    public static LayoutAndDrlg getLayoutAndDrlg(D2MOOLayoutContext context,
+            int seed, int diff, int burialGroundsId, boolean clientPresentation) {
+        try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+            return getLayoutAndDrlg(seed, diff, burialGroundsId, clientPresentation);
+        }
+    }
+
     /**
      * Builds either the authoritative server DRLG or its client presentation
      * counterpart. Native client generation adds hardcoded river water and
@@ -366,7 +373,7 @@ public final class Act1D2MOOLayoutBridge {
 
         for (int cursor = 0; cursor < generated.size(); cursor++) {
             int sourceLevelId = generated.get(cursor);
-            Levels.Entry source = Riiablo.files.Levels.get(sourceLevelId);
+            Levels.Entry source = D2MOOLayoutContext.files().Levels.get(sourceLevelId);
             if (source == null || source.Vis == null || source.Warp == null) continue;
 
             Set<Integer> targets = new java.util.LinkedHashSet<>();
@@ -384,7 +391,7 @@ public final class Act1D2MOOLayoutBridge {
                         || mainIndex >= source.Warp.length
                         || source.Warp[mainIndex] < 0) return;
                     int targetLevelId = source.Vis[mainIndex];
-                    Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);
+                    Levels.Entry target = D2MOOLayoutContext.files().Levels.get(targetLevelId);
                     if (targetLevelId <= 0 || target == null || target.Act != 0
                         || !hasReverseVis(target, sourceLevelId)) return;
                     targets.add(targetLevelId);
@@ -435,7 +442,7 @@ public final class Act1D2MOOLayoutBridge {
 
     private static boolean hasWarpSpecialTo(
             D2DrlgStrc drlg, int levelId, int destinationLevelId) {
-        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Levels.Entry level = D2MOOLayoutContext.files().Levels.get(levelId);
         if (level == null || level.Vis == null || level.Warp == null) return false;
         boolean[] found = { false };
         DrlgExport.exportLevelTiles(drlg, levelId,
@@ -464,14 +471,14 @@ public final class Act1D2MOOLayoutBridge {
      * first, then the DS1 tiles root without changing D2MOO_JAVA's archive API.
      */
     static byte[] readArchiveFile(String fileName) {
-        if (Riiablo.mpqs == null || fileName == null || fileName.isEmpty()) return null;
+        if (D2MOOLayoutContext.mpqs() == null || fileName == null || fileName.isEmpty()) return null;
         String normalized = fileName.replace('\\', '/');
         String lower = normalized.toLowerCase(java.util.Locale.ROOT);
         String[] candidates = lower.startsWith("data/")
             ? new String[] { normalized }
             : new String[] { normalized, "data/global/tiles/" + normalized };
         for (String candidate : candidates) {
-            com.badlogic.gdx.files.FileHandle handle = Riiablo.mpqs.resolve(candidate);
+            com.badlogic.gdx.files.FileHandle handle = D2MOOLayoutContext.mpqs().resolve(candidate);
             if (handle != null && handle.exists()) return handle.readBytes();
         }
         return null;
@@ -493,7 +500,7 @@ public final class Act1D2MOOLayoutBridge {
     static D2LevelDefBin[] buildLevelDefCache(int diff, int burialGroundsId) {
         List<D2LevelDefBin> records = new ArrayList<>();
         Set<Integer> seenIds = new HashSet<>();
-        for (Levels.Entry entry : Riiablo.files.Levels) {
+        for (Levels.Entry entry : D2MOOLayoutContext.files().Levels) {
             if (entry == null) continue;
             final int sourceId = entry.Id;
             // Riiablo and D2MOO use the same ids for Act 1 in the current
@@ -560,7 +567,7 @@ public final class Act1D2MOOLayoutBridge {
 
     static D2LevelTypesTxt[] buildLevelTypesCache() {
         java.util.ArrayList<D2LevelTypesTxt> cache = new java.util.ArrayList<>();
-        for (LvlTypes.Entry source : Riiablo.files.LvlTypes) {
+        for (LvlTypes.Entry source : D2MOOLayoutContext.files().LvlTypes) {
             if (source == null) continue;
             D2LevelTypesTxt target = new D2LevelTypesTxt();
             target.setDwLevelType(source.Id);

@@ -10,7 +10,7 @@ import com.badlogic.gdx.Gdx;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.CofComponentDescriptors;

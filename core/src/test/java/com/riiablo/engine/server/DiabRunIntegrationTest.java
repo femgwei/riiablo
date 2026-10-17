@@ -141,7 +141,7 @@ class DiabRunIntegrationTest extends RiiabloTest {
   @Test void nativePhysicalReductionUsesFlatBeforePercentAndCanReachZero() {
     try(Fixture f=new Fixture("diablo",3)) {
       Attributes attrs=f.world.getMapper(AttributesWrapper.class).get(f.target).attrs;
-      com.riiablo.engine.server.combat.CombatSystem combat=com.riiablo.engine.server.combat.CombatSystem.INSTANCE;
+      com.riiablo.engine.server.combat.CombatSystem combat=new com.riiablo.engine.server.combat.CombatSystem();
       f.stat(f.target,Stat.normal_damage_reduction,20);f.stat(f.target,Stat.damageresist,50);
       assertEquals(40,combat.calculateNativeFixedPhysicalDamage(attrs,true,100,null).totalDamage);
       f.stat(f.target,Stat.damageresist,100);

@@ -233,7 +233,7 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
           "a target outside the selected-point radius must remain untouched");
 
       Attributes attacker = attributes(100);
-      CombatSystem.CombatResult cursed = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult cursed = new CombatSystem().calculateAttack(
           attacker, world.getMapper(AttributesWrapper.class).get(selected).attrs,
           true, false, false, 100, 100, 1000, true,
           null, null, 0, 0, null, selectedStates);

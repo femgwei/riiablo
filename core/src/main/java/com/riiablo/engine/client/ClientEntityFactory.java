@@ -29,7 +29,7 @@ import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.client.component.Label;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.ServerEntityFactory;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.Box2DBody;
@@ -367,15 +367,15 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // NPCs so headless worlds do not depend on client UI services. The local
     // client still needs Npc.interact() to build the menu and dispatch the
     // quest-dialog event when the player clicks an NPC.
-    if (monstats.npc && monstats.interact && !(ai instanceof com.riiablo.engine.server.ai.Npc)) {
-      ai = new com.riiablo.engine.server.ai.Npc(id);
+    if (monstats.npc && monstats.interact && !(ai instanceof ClientNpc)) {
+      ai = new ClientNpc(id);
       mAIWrapper.get(id).ai = ai;
       world.getInjector().inject(ai);
       ai.initialize();
       mInteractable.create(id).set(mSize.get(id).size, ai);
     }
-    if (ai instanceof Npc) {
-      ((Npc) ai).createMenu(menuManager, dialogManager);
+    if (ai instanceof ClientNpc) {
+      ((ClientNpc) ai).createMenu(menuManager, dialogManager);
     }
 
     return id;

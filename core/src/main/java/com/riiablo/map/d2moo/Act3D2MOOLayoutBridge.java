@@ -71,7 +71,7 @@ public final class Act3D2MOOLayoutBridge {
   private Act3D2MOOLayoutBridge() {}
 
   public static boolean populateZones(int gameSeed, int diff, Map map) {
-    if (map == null || RiiabloAccess.mpqsMissing()) return false;
+    if (map == null || D2MOOLayoutContext.mpqs() == null) return false;
     D2DrlgStrc drlg = null;
     try {
       DataTbls.setLevelDefBinCache(Act1D2MOOLayoutBridge.buildLevelDefCache(diff, -1));
@@ -265,6 +265,12 @@ public final class Act3D2MOOLayoutBridge {
     }
   }
 
+  public static boolean populateZones(D2MOOLayoutContext context, int gameSeed, int diff, Map map) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateZones(gameSeed, diff, map);
+    }
+  }
+
   private static Zone findZone(Map map, int levelId) {
     for (Zone zone : map.getZones()) {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
@@ -359,31 +365,31 @@ public final class Act3D2MOOLayoutBridge {
    * is used by preset bosses that have no MonPreset row at the exported site.
    */
   static NativeMonsterResolution resolveNativeMonster(int index) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) {
+    if (D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
-    if (Riiablo.files.MonPreset != null) {
+    if (D2MOOLayoutContext.files().MonPreset != null) {
       try {
-        placement = Riiablo.files.MonPreset.getPlace(3, index);
+        placement = D2MOOLayoutContext.files().MonPreset.getPlace(3, index);
       } catch (RuntimeException ignored) {
         // Keep the direct class-id lookup for native units without a MonPreset row.
       }
     }
     MonStats.Entry monster = com.riiablo.map.Act1MapBuilderD2MOD
         .resolveD2MooPresetMonster(index, placement);
-    SuperUniques.Entry superUnique = placement == null || Riiablo.files.SuperUniques == null
-        ? null : Riiablo.files.SuperUniques.get(placement);
+    SuperUniques.Entry superUnique = placement == null || D2MOOLayoutContext.files().SuperUniques == null
+        ? null : D2MOOLayoutContext.files().SuperUniques.get(placement);
     if (monster == null && superUnique != null) {
-      monster = Riiablo.files.monstats.get(superUnique.MonClass);
+      monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
     }
-    if (monster == null && superUnique == null && Riiablo.files.SuperUniques != null) {
+    if (monster == null && superUnique == null && D2MOOLayoutContext.files().SuperUniques != null) {
       // D2MOO encodes preset SuperUniques as
       // MonStatsCount + hcIdx.
-      int suIndex = index - Riiablo.files.monstats.size();
-      superUnique = Riiablo.files.SuperUniques.get(suIndex);
+      int suIndex = index - D2MOOLayoutContext.files().monstats.size();
+      superUnique = D2MOOLayoutContext.files().SuperUniques.get(suIndex);
       if (superUnique != null) {
-        monster = Riiablo.files.monstats.get(superUnique.MonClass);
+        monster = D2MOOLayoutContext.files().monstats.get(superUnique.MonClass);
       }
     }
     return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
@@ -405,7 +411,7 @@ public final class Act3D2MOOLayoutBridge {
 
   private static final class RiiabloAccess {
     static boolean mpqsMissing() {
-      return com.riiablo.Riiablo.mpqs == null;
+      return D2MOOLayoutContext.mpqs() == null;
     }
   }
 }

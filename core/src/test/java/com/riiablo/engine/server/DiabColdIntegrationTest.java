@@ -132,13 +132,13 @@ class DiabColdIntegrationTest extends RiiabloTest {
     }
     try (Fixture f = new Fixture("diablo", true, 0)) {
       f.stat(Stat.item_halffreezeduration, 1); f.stat(Stat.coldresist, -100);
-      assertEquals(150, com.riiablo.engine.server.combat.CombatSystem.INSTANCE.resolveColdLengthBeforeState(
+      assertEquals(150, new com.riiablo.engine.server.combat.CombatSystem().resolveColdLengthBeforeState(
           f.attrs(), true, 151, 0, f.states(), 0));
     }
   }
 
   @Test void nativeDirectDamageReducesBeforeResistanceAndCapsPercentAbsorbAtForty() {
-    com.riiablo.engine.server.combat.CombatSystem combat = com.riiablo.engine.server.combat.CombatSystem.INSTANCE;
+    com.riiablo.engine.server.combat.CombatSystem combat = new com.riiablo.engine.server.combat.CombatSystem();
     try (Fixture f = new Fixture("diablo", false, 0)) {
       f.stat(Stat.magicresist, 90);
       assertEquals(10, combat.calculateNativeFixedElementalDamage(f.attrs(), false, false,

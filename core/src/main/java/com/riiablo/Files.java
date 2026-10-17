@@ -73,6 +73,12 @@ import com.riiablo.codec.excel.Weapons;
 import com.riiablo.item.ItemTypeTreasureClasses;
 
 public class Files {
+  private com.riiablo.item.ItemTypeCatalog itemTypeCatalog;
+
+  public synchronized com.riiablo.item.ItemTypeCatalog itemTypes() {
+    if (itemTypeCatalog == null) itemTypeCatalog = new com.riiablo.item.ItemTypeCatalog(ItemTypes);
+    return itemTypeCatalog;
+  }
   private static final String TAG = "Files";
   private static final String EXCEL_PATH = "data\\global\\excel\\";
 

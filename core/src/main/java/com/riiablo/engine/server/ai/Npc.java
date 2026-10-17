@@ -1,8 +1,6 @@
 package com.riiablo.engine.server.ai;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import com.artemis.Aspect;
 import java.util.Locale;
 
@@ -14,22 +12,15 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
-import com.riiablo.audio.Audio;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.DialogManager;
-import com.riiablo.engine.client.MenuManager;
-import com.riiablo.engine.client.Act1QuestDialogController;
-import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -44,23 +35,23 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.DS1;
 import com.riiablo.save.CharData;
-import com.riiablo.screen.panel.VendorPanel;
-import com.riiablo.widget.NpcDialogBox;
-import com.riiablo.widget.NpcMenu;
 
 public class Npc extends AI {
   private static final Logger log = LogManager.getLogger(Npc.class);
   private static final float PATH_STALL_REPATH_TIME = 0.4f;
   private static final float PATH_STALL_RETRY_DELAY = 0.5f;
 
-  static final IntSet TALKERS    = new IntSet();
-  static final IntSet REPAIRERS  = new IntSet();
-  static final IntSet TRADERS    = new IntSet();
-  static final IntSet GAMBLERS   = new IntSet();
-  static final IntSet HIRERERS   = new IntSet();
-  static final IntSet RESURRECTERS = new IntSet();
-  static final IntSet HEALERS    = new IntSet();
-  private static final Array<Npc> VENDOR_NPCS = new Array<>(false, 16, Npc.class);
+  protected static final IntSet TALKERS    = new IntSet();
+  protected static final IntSet REPAIRERS  = new IntSet();
+  protected static final IntSet TRADERS    = new IntSet();
+  protected static final IntSet GAMBLERS   = new IntSet();
+  protected static final IntSet HIRERERS   = new IntSet();
+  protected static final IntSet RESURRECTERS = new IntSet();
+  protected static final IntSet HEALERS    = new IntSet();
+  protected EntitySubscription mercenaries;
+  protected com.artemis.World world;
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected com.riiablo.engine.server.ServerGameplayContext serverContext;
   static {
     // Act 1
     TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN, MonsterType.CAIN4,
@@ -123,38 +114,12 @@ public class Npc extends AI {
 
   static final int NULL_TARGET = ArrayUtils.INDEX_NOT_FOUND;
   int targetId = NULL_TARGET;
-  float actionTimer = 0;
+  protected float actionTimer = 0;
   boolean actionPerformed = false;
-  NpcMenu menu;
-  // Client-only UI systems are absent from the authoritative D2GS world.
-  // Keep these optional so town NPCs can still be spawned by headless/real-MPQ
-  // verification without requiring a scene2d stage or camera.
-  @com.artemis.annotations.Wire(failOnNull = false)
-  private MenuManager menuManager;
-  @com.artemis.annotations.Wire(failOnNull = false)
-  private DialogManager dialogManager;
   String state = "";
 
-  String name;
-  MonStats.Entry monstats;
-
-  /** Stable, language-independent prefix used for speech and sound table keys. */
-  private String speechPrefix() {
-    String id = monstats != null ? monstats.Id : name;
-    if (id == null) return "";
-    id = id.trim().toLowerCase(Locale.ROOT);
-    // MonStats uses variants such as warriv1/warriv2, while speech.txt
-    // keys are shared by the base NPC (warriv, akara, cain, ...).
-    int end = id.length();
-    while (end > 0 && Character.isDigit(id.charAt(end - 1))) end--;
-    return end == 0 ? id : id.substring(0, end);
-  }
-
-  protected VendorGenerator vendors;
-  private EntitySubscription mercenaries;
-  /** Normal trade stock persists until the town inventory is refreshed. */
-  private Array<Item> vendorStock;
-  private String vendorStockType;
+  protected String name;
+  protected MonStats.Entry monstats;
 
   public Npc(int entityId) {
     super(entityId);
@@ -164,258 +129,20 @@ public class Npc extends AI {
   public void initialize() {
     super.initialize();
     monstats = monster.monstats;
-    name = monstats.NameStr.equalsIgnoreCase("dummy") ? monstats.Id : Riiablo.string.lookup(monstats.NameStr);
+    name = monstats.Id;
     mSize.get(entityId).size = 1; // fixes pathfinding issues
-    if (Riiablo.engine != null) {
-      mercenaries = Riiablo.engine.getAspectSubscriptionManager()
+    if (world != null) {
+      mercenaries = world.getAspectSubscriptionManager()
           .get(Aspect.all(Mercenary.class, AttributesWrapper.class));
     }
   }
 
-  public void createMenu(MenuManager menuManager, final DialogManager dialogManager) {
-    Validate.validState(menu == null, "menu already initialized!");
-    this.menuManager = menuManager;
-    this.dialogManager = dialogManager;
-    menu = menuManager.createMenu(entityId, name);
+  /** Client subclasses own presentation and local vendor stock. */
+  protected void presentInteraction() {}
+  protected void faceNearbyPlayer() {}
+  public void clearVendorStock() {}
 
-    final int entType = monstats.hcIdx;
-    if (TALKERS.contains(entType)) {
-      // talk
-      menu.addItem(3381, menu.createSubMenu(3381)
-          // introduction
-          .addItem(3399, new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-              String id = speechPrefix() + "_act1_intro";
-              dialogManager.setDialog(new NpcDialogBox(id, new NpcDialogBox.DialogCompletionListener() {
-                @Override
-                public void onCompleted(NpcDialogBox d) {
-                  dialogManager.setDialog(null);
-                }
-              }));
-            }
-          })
-          // gossip
-          .addItem(3395, new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-              String id = speechPrefix() + "_act1_gossip_1";
-              dialogManager.setDialog(new NpcDialogBox(id, new NpcDialogBox.DialogCompletionListener() {
-                @Override
-                public void onCompleted(NpcDialogBox d) {
-                  dialogManager.setDialog(null);
-                }
-              }));
-            }
-          })
-          .addItem("Quest", new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-              if (entType == MonsterType.CAIN4 || entType == MonsterType.TYRAEL2) {
-                com.riiablo.engine.client.Act4QuestDialogController quests =
-                    Riiablo.engine.getSystem(com.riiablo.engine.client.Act4QuestDialogController.class);
-                if (quests != null && Riiablo.game != null) {
-                  menuManager.setMenu(null, Engine.INVALID_ENTITY);
-                  quests.openQuestDialog(Riiablo.game.player, entityId);
-                }
-                return;
-              }
-              Act1QuestDialogController quests =
-                  Riiablo.engine.getSystem(Act1QuestDialogController.class);
-              if (quests != null && Riiablo.game != null) {
-                menuManager.setMenu(null, Engine.INVALID_ENTITY);
-                quests.openQuestDialog(Riiablo.game.player, entityId);
-              }
-            }
-          })
-          .addCancel(null)
-          .build());
-    }
-
-    if (REPAIRERS.contains(entType)) {
-      menu.addItem(3334, new ClickListener() { // trade/repair
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          openVendor(VendorPanel.SMITHY, com.riiablo.net.packet.d2gs.NpcServiceType.TRADE);
-        }
-      });
-    } else if (TRADERS.contains(entType)) {
-      menu.addItem(3396, new ClickListener() { // trade
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          openVendor(VendorPanel.TRADER, com.riiablo.net.packet.d2gs.NpcServiceType.TRADE);
-        }
-      });
-    }
-
-    if (RESURRECTERS.contains(entType)
-        && hasDeadMercenary(Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player)) {
-      menu.addItem(resurrectionLabel(Riiablo.game.player), new ClickListener() {
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          resurrectMercenary(menuManager);
-        }
-      });
-    }
-    if (HIRERERS.contains(entType)) {
-      menu.addItem(3397, new ClickListener() { // hire
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          hireMercenary(entType);
-        }
-      });
-    }
-
-    if (GAMBLERS.contains(entType)) {
-      menu.addItem(3398, new ClickListener() { // gamble
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          openVendor(VendorPanel.GAMBLER, com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE);
-        }
-      });
-    }
-
-    menu.addCancel(new NpcMenu.CancellationListener() {
-        @Override
-        public void onCancelled() {
-          mInteractable.get(entityId).count--;
-          actionTimer = 4;
-        }
-      })
-      .build();
-  }
-
-  /** Refreshes the hireling menu so a death after the first interaction is visible. */
-  private void refreshHirelingMenu() {
-    if (!RESURRECTERS.contains(monstats == null ? -1 : monstats.hcIdx)
-        || menuManager == null || dialogManager == null) return;
-    if (menu != null) menu.remove();
-    menu = null;
-    createMenu(menuManager, dialogManager);
-  }
-
-  private boolean hasDeadMercenary(int playerId) {
-    if (playerId == Engine.INVALID_ENTITY) return false;
-    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
-    if (rewards != null && rewards.hasDeadMercenary(playerId)) return true;
-    if (Riiablo.charData != null && Riiablo.charData.hasMerc()
-        && (Riiablo.charData.getMerc().flags & MercenaryManager.FLAG_DEAD) != 0) return true;
-    if (mercenaries == null || mMercenary == null || mCorpse == null) return false;
-    IntBag entities = mercenaries.getEntities();
-    int[] ids = entities.getData();
-    for (int i = 0; i < entities.size(); i++) {
-      Mercenary merc = mMercenary.get(ids[i]);
-      if (merc != null && merc.ownerId == playerId && mCorpse.has(ids[i])) return true;
-    }
-    return false;
-  }
-
-  private String resurrectionLabel(int playerId) {
-    Mercenary merc = null;
-    if (mercenaries != null && mMercenary != null) {
-      IntBag entities = mercenaries.getEntities();
-      int[] ids = entities.getData();
-      for (int i = 0; i < entities.size(); i++) {
-        Mercenary candidate = mMercenary.get(ids[i]);
-        if (candidate != null && candidate.ownerId == playerId) {
-          merc = candidate;
-          break;
-        }
-      }
-    }
-    int mercType = merc == null ? MercenaryManager.MERC_TYPE_ROGUE : merc.mercType;
-    int nameId = merc == null ? 0 : merc.nameId;
-    int level = merc == null ? 1 : Math.max(1, merc.level);
-    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
-    if (rewards != null) {
-      int serviceLevel = rewards.mercenaryLevel(playerId);
-      if (serviceLevel > 0) level = serviceLevel;
-    }
-    if (merc == null && Riiablo.charData != null && Riiablo.charData.hasMerc()) {
-      CharData.MercData data = Riiablo.charData.getMerc();
-      mercType = com.riiablo.engine.server.NativeHirelingExperienceTable.mercenaryType(data.type & 0xFFFF);
-      nameId = data.name & 0xFFFF;
-    }
-    String name = com.riiablo.screen.panel.MercenaryHud.resolveMercenaryName(mercType, nameId);
-    int cost = MercenaryManager.nativeResurrectionCost(level);
-    String template = Riiablo.bundle == null ? null : Riiablo.bundle.get("mercenary_resurrect");
-    if (template == null || template.isEmpty() || template.startsWith("ERROR:")) {
-      return "复活 " + name + ": " + cost;
-    }
-    return Riiablo.bundle.format("mercenary_resurrect", name, cost);
-  }
-
-  private void hireMercenary(int npcType) {
-    if (Riiablo.game == null) return;
-    if (menuManager != null) menuManager.setMenu(null, Engine.INVALID_ENTITY);
-    if (Riiablo.game.hireMercenaryPanel != null)
-      Riiablo.game.hireMercenaryPanel.open(entityId, npcType);
-  }
-
-  private void resurrectMercenary(MenuManager menus) {
-    if (Riiablo.game == null) return;
-    int playerId = Riiablo.game.player;
-    if (Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked()) {
-      ClientNetworkSynchronizer network = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
-      if (network != null) {
-        network.requestNpcService(entityId,
-            com.riiablo.net.packet.d2gs.NpcServiceType.RESURRECT,
-            com.riiablo.net.packet.d2gs.NpcServiceOperation.RESURRECT,
-            0, -1, 0);
-      }
-    } else {
-      NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
-      if (rewards != null) rewards.resurrectMercenary(playerId);
-    }
-    if (menus != null) menus.setMenu(null, Engine.INVALID_ENTITY);
-  }
-
-  private void openVendor(int flags, byte service) {
-    if (Riiablo.game.vendorPanel.isNetworked()) {
-      Riiablo.game.vendorPanel.configNetwork(
-          flags, entityId, service, Riiablo.files.Npc.get(monstats.Id));
-      Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
-      return;
-    }
-    Array<Item> items;
-    try {
-      if (service == com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE) {
-        // Gambling is player-specific and rerolls when the panel is opened.
-        items = vendors.generateGamble();
-      } else {
-        if (vendorStock == null || !monstats.Id.equals(vendorStockType)) {
-          int difficulty = Riiablo.charData == null ? Riiablo.NORMAL : Riiablo.charData.diff;
-          vendorStock = vendors.generate(monstats.Id, difficulty);
-          vendorStockType = monstats.Id;
-        }
-        if (!VENDOR_NPCS.contains(this, true)) VENDOR_NPCS.add(this);
-        items = vendorStock;
-      }
-    } catch (Throwable t) {
-      items = new Array<>(false, 0, Item.class);
-      log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
-          entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
-    }
-    Riiablo.game.vendorPanel.config(
-        flags, items, Riiablo.files.Npc.get(monstats.Id), service, vendors);
-    Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
-  }
-
-  /** Called when the last player leaves the town and native vendor stock rerolls. */
-  public void clearVendorStock() {
-    vendorStock = null;
-    vendorStockType = null;
-  }
-
-  public static void clearAllVendorStocks() {
-    for (Npc npc : VENDOR_NPCS) if (npc != null) npc.clearVendorStock();
-  }
-
-  static boolean isHealer(int monsterId) {
+  protected static boolean isHealer(int monsterId) {
     return HEALERS.contains(monsterId);
   }
 
@@ -432,7 +159,7 @@ public class Npc extends AI {
     if (mUnitStates.has(playerId)) {
       com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
       if (states != null && states.stateList != null) {
-        states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
+        states.stateList.removeNegativeEffects(serverContext != null ? serverContext.files().States : Riiablo.files == null ? null : Riiablo.files.States);
       }
     }
     log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina mercenaries={}",
@@ -473,7 +200,7 @@ public class Npc extends AI {
         com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(mercenaryId);
         if (states != null && states.stateList != null) {
           changed |= states.stateList.removeNegativeEffects(
-              Riiablo.files == null ? null : Riiablo.files.States) > 0;
+              serverContext != null ? serverContext.files().States : Riiablo.files == null ? null : Riiablo.files.States) > 0;
         }
       }
       if (changed) restored++;
@@ -510,27 +237,9 @@ public class Npc extends AI {
     pathfinder.findPath(entityId, null);
     lookAt(src);
     healPlayer(src);
-    // D2 attaches sound index 10 to the healer NPC interaction.  Keep this
-    // client-side trigger unconditional for healer NPCs: the authoritative
-    // stat update may already be reflected in the client snapshot by the time
-    // this interaction callback runs.
-    if (isHealer(monstats == null ? -1 : monstats.hcIdx) && Riiablo.audio != null) {
-      Riiablo.audio.play("cursor_convert_ready", true);
-    }
-
-    // TODO: need some kind of static method that can take in some state params, e.g., character
-    //       class, player mode and spit out the proper file index.
-    //       I.e., akara_act1_intro -> akara_act1_intro_sor automatically if it exists
-    String id = speechPrefix() + "_greeting_1";
-    Audio.Instance instance = Riiablo.audio.play(id, false);
-    if (instance == null) {
-      id = speechPrefix() + "_greeting_inactive_1";
-      Riiablo.audio.play(id, false);
-    }
-
+    presentInteraction();
     actionTimer = Float.POSITIVE_INFINITY;
     actionPerformed = false;
-    refreshHirelingMenu();
     event.dispatch(NpcInteractionEvent.obatin(src, entityId));
     mInteractable.get(entityId).count++;
   }
@@ -576,20 +285,13 @@ public class Npc extends AI {
       } else if (actionTimer > 0) {
         actionTimer -= delta;
         actionPerformed = actionTimer < 0;
-        if (!actionPerformed && Riiablo.game != null) { // FIXME: checking Riiablo.game != null for server instances
-          int player = Riiablo.game.player;
-          Vector2 targetPos = mPosition.get(player).position;
-          Vector2 entityPos = mPosition.get(entityId).position;
-          if (entityPos.dst(targetPos) <= 8) {
-            lookAt(player);
-          }
-        }
+        if (!actionPerformed) faceNearbyPlayer();
 
         state = "IDLE";
         return;
       } else if (actionPerformed) {
         actionPerformed = false;
-        targetId = MathUtils.random(path.numPoints - 1);
+        targetId = (int) (rollAiRandomNumber() % path.numPoints);
       } else {
         int actionId = path.points[targetId].action;
         actionTimer = action(actionId);

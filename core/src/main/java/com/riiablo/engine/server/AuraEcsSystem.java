@@ -48,6 +48,7 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 /** Bridges native Paladin aura pulses to authoritative ECS state snapshots. */
 @Wire(failOnNull = false)
 public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallback {
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(AuraEcsSystem.class);
 
   private final AuraManager auras = new AuraManager();
@@ -351,7 +352,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     int damageType = elementalType(elementType);
     StateList targetStates = mUnitStates.has(targetId)
         ? mUnitStates.get(targetId).stateList : null;
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
         target, isPlayerAligned(targetId), isPlayerAligned(casterId),
         damageType, raw, 0, targetStates, map != null ? map.getDifficulty() : 0);
     restoreAbsorb(target, combat.absorbedLife);

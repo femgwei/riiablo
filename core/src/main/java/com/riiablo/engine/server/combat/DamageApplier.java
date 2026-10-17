@@ -26,10 +26,8 @@ import com.riiablo.logger.Logger;
 public class DamageApplier {
   private static final Logger log = LogManager.getLogger(DamageApplier.class);
 
-  /** 单例实例 */
-  public static final DamageApplier INSTANCE = new DamageApplier();
 
-  private DamageApplier() {}
+  public DamageApplier() {}
 
   //==========================================================================
   // 伤害类型常量

@@ -40,7 +40,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Event adapter for native Act II quest scripts, beginning with A2Q1. */
 @Wire(failOnNull = false)
-public class Act2QuestSystem extends PassiveSystem {
+public class Act2QuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act2QuestSystem.class);
   /** Native 1.10f LevelsIds.h ordinal; Kurast Docks starts at 75. */
   static final int ARCANE_SANCTUARY_LEVEL = D2LevelIds.LEVEL_ARCANESANCTUARY;
@@ -96,7 +96,7 @@ public class Act2QuestSystem extends PassiveSystem {
     // The Horadric Orifice exists only in the seed-selected staff tomb.  A
     // few DS1 exports omit the preset, so use the same room-backed fallback
     // while preserving the native level selection rule.
-    int gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+    int gameSeed = map == null ? gameSeed() : map.seed();
     if (levelId == Act2TombSelection.forGameSeed(gameSeed).staffTombLevel()) {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.HORADRIC_ORIFICE, "Horadric Orifice", 42);
@@ -438,35 +438,35 @@ public class Act2QuestSystem extends PassiveSystem {
         && levelId <= ARCANE_SANCTUARY_LEVEL;
   }
 
-  private static short getRecord(CharData data) {
+  private short getRecord(CharData data) {
     return data.getQuests(Riiablo.ACT2)[Act2RadamentQuest.RECORD];
   }
 
-  private static short getStaffRecord(CharData data) {
+  private short getStaffRecord(CharData data) {
     return data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD];
   }
 
-  private static short getSummonerRecord(CharData data) {
+  private short getSummonerRecord(CharData data) {
     return data.getQuests(Riiablo.ACT2)[Act2SummonerQuest.RECORD];
   }
 
-  private static short getHorazonRecord(CharData data) {
+  private short getHorazonRecord(CharData data) {
     return data.getQuests(Riiablo.ACT2)[Act2HorazonTomeQuest.RECORD];
   }
 
-  private static void setRecord(CharData data, short record) {
+  private void setRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2RadamentQuest.RECORD] = record;
   }
 
-  private static void setStaffRecord(CharData data, short record) {
+  private void setStaffRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD] = record;
   }
 
-  private static void setSummonerRecord(CharData data, short record) {
+  private void setSummonerRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2SummonerQuest.RECORD] = record;
   }
 
-  private static void setHorazonRecord(CharData data, short record) {
+  private void setHorazonRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2HorazonTomeQuest.RECORD] = record;
   }
 
@@ -503,8 +503,8 @@ public class Act2QuestSystem extends PassiveSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static void persist(CharData data) {
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  private void persist(CharData data) {
+    persistCharacter(data);
   }
 
   private interface RecordUpdate {

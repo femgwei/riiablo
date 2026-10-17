@@ -39,7 +39,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 
 /** A2Q6 bridge for inserting the assembled staff and opening Duriel's portal. */
 @Wire(failOnNull = false)
-public class Act2DurielQuestSystem extends BaseSystem {
+public class Act2DurielQuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act2DurielQuestSystem.class);
   private static final int ORIFICE_OBJECT_ID = 152;
   public static final int RECORD = Act2DurielQuest.RECORD;
@@ -493,12 +493,12 @@ public class Act2DurielQuestSystem extends BaseSystem {
   }
 
   private void ensureTyraelNpc(Map.Zone zone, float x, float y) {
-    if (zone == null || factory == null || Riiablo.files == null
-        || Riiablo.files.monstats == null) return;
-    com.riiablo.codec.excel.MonStats.Entry stats = Riiablo.files.monstats.get("Tyrael1");
-    if (stats == null) stats = Riiablo.files.monstats.get("Tyrael");
+    if (zone == null || factory == null || files() == null
+        || files().monstats == null) return;
+    com.riiablo.codec.excel.MonStats.Entry stats = files().monstats.get("Tyrael1");
+    if (stats == null) stats = files().monstats.get("Tyrael");
     if (stats == null) {
-      for (com.riiablo.codec.excel.MonStats.Entry candidate : Riiablo.files.monstats) {
+      for (com.riiablo.codec.excel.MonStats.Entry candidate : files().monstats) {
         if (candidate != null && candidate.hcIdx == MonsterType.TYRAEL1) {
           stats = candidate;
           break;
@@ -536,7 +536,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
     return wrapper == null || wrapper.map == null ? 0 : wrapper.map.getDifficulty();
   }
 
-  private static short record(CharData data) {
+  private short record(CharData data) {
     return data.getQuests(Riiablo.ACT2)[RECORD];
   }
 
@@ -551,20 +551,20 @@ public class Act2DurielQuestSystem extends BaseSystem {
     short previous = record(data);
     if (next == previous) return;
     data.getQuests(Riiablo.ACT2)[RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A2Q6] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static void removeObsoleteHoradricItems(ItemData items) {
+  private void removeObsoleteHoradricItems(ItemData items) {
     if (items == null) return;
     items.removeItemCode(REMOVED_TAINTED_SUN_STAFF);
     items.removeItemCode(Act2HoradricStaffQuest.VIPER_AMULET);
     items.removeItemCode(REMOVED_FALSE_STAFF);
   }
 
-  private static void markRecords(CharData data) {
+  private void markRecords(CharData data) {
     short[] act2 = data.getQuests(Riiablo.ACT2);
     short staff = act2[Act2HoradricStaffQuest.RECORD];
     staff = NativeQuestRecord.set(staff, NativeQuestRecord.REWARD_GRANTED);
@@ -577,7 +577,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
     // Tyrael's post-Duriel message and must not be set here.
     duriel = Act2DurielQuest.repairLegacyOrificeFlags(duriel);
     act2[RECORD] = duriel;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
   }
 
   static boolean isAct2(int levelId) {

@@ -189,7 +189,6 @@ class BarbarianWarCryTest extends RiiabloTest {
       assertEquals(100f, attrs.get(Stat.maxstamina).asFixed(), 0.001f);
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -285,7 +284,6 @@ class BarbarianWarCryTest extends RiiabloTest {
       assertEquals(barbarian, stun.sourceEntityId);
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 

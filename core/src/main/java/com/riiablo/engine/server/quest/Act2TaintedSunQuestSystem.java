@@ -30,7 +30,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 
 /** Native A2Q3 Tainted Sun altar state and Viper Amulet reward bridge. */
 @Wire(failOnNull = false)
-public class Act2TaintedSunQuestSystem extends BaseSystem {
+public class Act2TaintedSunQuestSystem extends ContextualQuestSystem {
   /** Act II records: Q0 gossip, Q1 Radament, Q2 Staff, Q3 Tainted Sun. */
   public static final int RECORD = 3;
   private static final Logger log = LogManager.getLogger(Act2TaintedSunQuestSystem.class);
@@ -152,7 +152,7 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
   }
 
   private Item createAmulet() {
-    if (factory == null || itemGenerator == null || Riiablo.files == null) return null;
+    if (factory == null || itemGenerator == null || files() == null) return null;
     try {
       Item item = itemGenerator.generate(VIPER_AMULET);
       if (item == null) return null;
@@ -170,7 +170,7 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
     }
   }
 
-  private static void markRewardPending(CharData data) {
+  private void markRewardPending(CharData data) {
     short[] act2 = data.getQuests(Riiablo.ACT2);
     short record = act2[RECORD];
     if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
@@ -180,10 +180,10 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
     record = NativeQuestRecord.set(record, NativeQuestRecord.REWARD_PENDING);
     record = NativeQuestRecord.clear(record, NativeQuestRecord.COMPLETED_NOW);
     act2[RECORD] = record;
-    if (record != previous && data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    if (record != previous) persistCharacter(data);
   }
 
-  private static void markCompletedNow(CharData data) {
+  private void markCompletedNow(CharData data) {
     short[] act2 = data.getQuests(Riiablo.ACT2);
     short record = act2[RECORD];
     if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
@@ -191,10 +191,10 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
     short next = NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
     if (next == record) return;
     act2[RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
   }
 
-  private static int levelId(MapWrapper wrapper) {
+  private int levelId(MapWrapper wrapper) {
     Map.Zone zone = wrapper == null ? null : wrapper.zone;
     Levels.Entry level = zone == null ? null : zone.level;
     return level == null ? -1 : level.Id;
@@ -206,7 +206,7 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
         || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV2;
   }
 
-  private static boolean isAct2Level(int levelId) {
+  private boolean isAct2Level(int levelId) {
     return levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
         && levelId <= Act2QuestSystem.ARCANE_SANCTUARY_LEVEL;
   }

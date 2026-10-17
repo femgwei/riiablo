@@ -42,7 +42,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), states, new MissileCollisionSystem(), factory).build()
         .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int caster = caster(world);
       int target = target(world, 0);
@@ -69,7 +68,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
       world.process();
       assertEquals(afterHit, life(world, target), 0.0001f);
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
     }
   }
@@ -81,7 +79,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), states, new MissileCollisionSystem(), factory).build()
         .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int caster = caster(world);
       int target = target(world, 100);
@@ -100,7 +97,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
       assertFalse(targetStates.stateList.hasState(StateId.COLD));
       assertEquals(100f, life(world, target), 0.0001f);
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
     }
   }
@@ -113,7 +109,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
         .with(new net.mostlyoriginal.api.event.common.EventSystem(), states,
             new MissileCollisionSystem(), factory).build()
         .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int caster = caster(world);
       int center = targetAt(world, 0, 0, 0);
@@ -151,7 +146,6 @@ class SorceressIceBlastIntegrationTest extends RiiabloTest {
       assertFalse(world.getMapper(UnitStates.class).get(immune).stateList.hasState(StateId.FREEZE));
       assertFalse(world.getMapper(UnitStates.class).get(outside).stateList.hasState(StateId.FREEZE));
     } finally {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
     }
   }

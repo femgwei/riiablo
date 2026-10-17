@@ -73,22 +73,8 @@ class DependencyDirectionTest {
 
   /** Existing bridges are debt, not permission for a new reverse dependency. */
   private static boolean knownLegacyBridge(String relative, String imported) {
-    if (relative.equals("com/riiablo/engine/server/CofManager.java")) {
-      return imported.startsWith("com.riiablo.engine.client.component.");
-    }
-    if (relative.equals("com/riiablo/engine/server/VelocityModeChanger.java")) {
-      return imported.startsWith("com.riiablo.engine.client.component.");
-    }
-    if (relative.equals("com/riiablo/engine/server/quest/NativeMercenaryRewardSystem.java")) {
-      return imported.startsWith("com.riiablo.engine.client.component.");
-    }
     if (relative.equals("com/riiablo/engine/server/component/MenuWrapper.java")) {
       return imported.startsWith("com.riiablo.widget.");
-    }
-    if (relative.equals("com/riiablo/engine/server/ai/Npc.java")) {
-      return imported.startsWith("com.riiablo.engine.client.")
-          || imported.startsWith("com.riiablo.screen.")
-          || imported.startsWith("com.riiablo.widget.");
     }
     if (relative.equals("com/riiablo/item/ItemLabeler.java")) {
       return imported.startsWith("com.riiablo.widget.");

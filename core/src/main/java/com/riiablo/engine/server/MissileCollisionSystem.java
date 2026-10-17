@@ -17,6 +17,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.component.Class;
@@ -74,6 +75,20 @@ import com.riiablo.map.DT1;
 @All({Missile.class, Position.class, Velocity.class})
 @com.artemis.annotations.Wire(failOnNull = false)
 public class MissileCollisionSystem extends IteratingSystem {
+  private final CombatSystem combatSystemResolver = new CombatSystem();
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private static int rollStun(Missile missile) {
+    NativeRng rng = new NativeRng(missile.rngState);
+    int roll = rng.nextInt(100);
+    missile.rngState = rng.state();
+    return roll;
+  }
   private static final Logger log = LogManager.getLogger(MissileCollisionSystem.class);
   /** D2DynamicPathStrc::MAXPATHLEN - 1, as used by PATHTYPE_BLESSEDHAMMER. */
   public static final int BLESSED_HAMMER_PATH_POINTS = 77;
@@ -488,7 +503,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       name = firstMissileName(controller.missile.CltSubMissile);
     }
     if (name == null || name.isEmpty() || factory == null) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) return;
 
     NativeRng rng = new NativeRng(controller.druidFissureSeed);
@@ -506,7 +521,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     vent.remainingFrames = Math.max(1, row.Range);
     vent.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 5);
     if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
-    Skills.Entry skill = controller.skillId >= 0 ? Riiablo.files.skills.get(controller.skillId) : null;
+    Skills.Entry skill = controller.skillId >= 0 ? files().skills.get(controller.skillId) : null;
     Attributes owner = mAttributesWrapper.has(controller.ownerId)
         ? mAttributesWrapper.get(controller.ownerId).attrs : null;
     if (skill != null) {
@@ -548,7 +563,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       name = firstMissileName(controller.missile.CltSubMissile);
     }
     if (name == null || name.isEmpty() || factory == null) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) return;
 
     NativeRng rng = new NativeRng(controller.druidVolcanoSeed);
@@ -569,7 +584,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       float speed = Math.max(0f, row.Vel);
       mVelocity.get(childId).velocity.set(0f, 1f).setLength(speed);
     }
-    Skills.Entry skill = controller.skillId >= 0 ? Riiablo.files.skills.get(controller.skillId) : null;
+    Skills.Entry skill = controller.skillId >= 0 ? files().skills.get(controller.skillId) : null;
     Attributes owner = mAttributesWrapper.has(controller.ownerId)
         ? mAttributesWrapper.get(controller.ownerId).attrs : null;
     if (skill != null) {
@@ -717,11 +732,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       world.delete(entityId);
       return;
     }
-    Skills.Entry skill = center.skillId >= 0 ? Riiablo.files.skills.get(center.skillId) : null;
+    Skills.Entry skill = center.skillId >= 0 ? files().skills.get(center.skillId) : null;
     String childName = center.missile.SubMissile != null
         && center.missile.SubMissile.length > 0 ? center.missile.SubMissile[0] : null;
     Missiles.Entry childRow = childName != null && !childName.isEmpty()
-        ? Riiablo.files.Missiles.get(childName) : null;
+        ? files().Missiles.get(childName) : null;
     if (skill == null || childRow == null) {
       log.warn("[SORCERESS_BLIZZARD] phase=center_remove missileId={} owner={} reason=data",
           entityId, center.ownerId);
@@ -754,8 +769,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     String shardName = orb.missile.SubMissile != null
         && orb.missile.SubMissile.length > 0 ? orb.missile.SubMissile[0] : null;
     Missiles.Entry shard = shardName != null && !shardName.isEmpty()
-        ? Riiablo.files.Missiles.get(shardName) : null;
-    Skills.Entry skill = orb.skillId >= 0 ? Riiablo.files.skills.get(orb.skillId) : null;
+        ? files().Missiles.get(shardName) : null;
+    Skills.Entry skill = orb.skillId >= 0 ? files().skills.get(orb.skillId) : null;
     if (shard == null || skill == null) {
       log.warn("[SORCERESS_FROZEN_ORB] phase=controller_remove missileId={} owner={} reason=data",
           entityId, orb.ownerId);
@@ -814,8 +829,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (factory == null || source == null || source.missile == null
         || source.missile.HitSubMissile == null || source.missile.HitSubMissile.length == 0) return;
     String name = source.missile.HitSubMissile[0];
-    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Missiles.Entry row = name != null ? files().Missiles.get(name) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     if (row == null || skill == null) return;
     int step = Math.max(1, arrayValue(source.missile.sHitPar, 0));
     int level = Math.max(1, source.damageLevel);
@@ -847,7 +862,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Native MISSMODE_SrvHit14: delayed impact plus meteorfire fields. */
   private void processMeteorCenter(int entityId, Missile center, Position position) {
-    Skills.Entry skill = center.skillId >= 0 ? Riiablo.files.skills.get(center.skillId) : null;
+    Skills.Entry skill = center.skillId >= 0 ? files().skills.get(center.skillId) : null;
     if (skill == null || center.missile == null
         || center.nativeFrame < Math.max(1, center.nativeLifetimeFrames)) return;
     int level = Math.max(1, center.damageLevel);
@@ -875,7 +890,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (factory == null || center.missile.HitSubMissile == null
         || center.missile.HitSubMissile.length == 0) return 0;
     String name = center.missile.HitSubMissile[0];
-    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    Missiles.Entry row = name != null ? files().Missiles.get(name) : null;
     if (row == null) return 0;
     int step = Math.max(1, arrayValue(center.missile.sHitPar, 1));
     int lifetime = ServerSkillSystem.meteorFireLifetime(skill, level);
@@ -963,8 +978,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         || delay.missile.HitSubMissile == null
         || delay.missile.HitSubMissile.length == 0) return;
     String name = delay.missile.HitSubMissile[0];
-    Missiles.Entry boltRow = name != null ? Riiablo.files.Missiles.get(name) : null;
-    Skills.Entry skill = delay.skillId >= 0 ? Riiablo.files.skills.get(delay.skillId) : null;
+    Missiles.Entry boltRow = name != null ? files().Missiles.get(name) : null;
+    Skills.Entry skill = delay.skillId >= 0 ? files().skills.get(delay.skillId) : null;
     if (boltRow == null || !PaladinSkills.isFistOfTheHeavens(skill)) {
       log.warn("[FIST_OF_HEAVENS] phase=split_reject owner={} missile={} skill={} reason=data",
           delay.ownerId, name, delay.skillId);
@@ -1110,7 +1125,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int duration = Math.max(10, controller.remainingFrames);
       int difficulty = combatDifficulty(controller.rabiesSourceId, targetId);
       CombatSystem.CombatResult poison =
-          CombatSystem.INSTANCE.calculateFixedPoisonDamageSnapshot(
+          combatSystemResolver.calculateFixedPoisonDamageSnapshot(
               attrs, mPlayer.has(targetId), controller.rabiesAttackerPlayer,
               controller.rabiesRawDamageFixed, controller.rabiesPoisonPierce,
               duration, targetStates.stateList, difficulty);
@@ -1121,7 +1136,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       infected.skillId = controller.skillId;
       infected.needsSync = true;
       if (poison.poisonDamagePerFrame > 0f && poison.poisonDuration > 0) {
-        StatusEffectApplier.INSTANCE.applyPoison(
+        StatusEffectApplier.forWorld(world).applyPoison(
             targetId, poison.poisonDamagePerFrame, poison.poisonDuration,
             controller.rabiesSourceId);
       }
@@ -1143,7 +1158,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         || controller.missile.SubMissile == null
         || controller.missile.SubMissile.length == 0) return;
     String name = controller.missile.SubMissile[0];
-    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    Missiles.Entry row = name != null ? files().Missiles.get(name) : null;
     if (row == null) return;
     Vector2 direction = new Vector2(target).sub(origin);
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
@@ -1207,7 +1222,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     String waveName = maker.missile.SubMissile[0];
     Missiles.Entry wave = waveName != null && !waveName.isEmpty()
-        ? Riiablo.files.Missiles.get(waveName) : null;
+        ? files().Missiles.get(waveName) : null;
     if (wave == null) {
       log.warn("[WAKE_OF_FIRE] phase=maker_stall missileId={} owner={} reason=unknown_submissile name={}",
           entityId, maker.ownerId, waveName);
@@ -1218,7 +1233,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (direction.isZero(0.0001f)) direction.set(Vector2.Y);
     direction.nor();
     int spawned = 0;
-    Skills.Entry skill = maker.skillId >= 0 ? Riiablo.files.skills.get(maker.skillId) : null;
+    Skills.Entry skill = maker.skillId >= 0 ? files().skills.get(maker.skillId) : null;
     int damageOwnerId = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
     Attributes ownerAttrs = damageOwnerId >= 0 && mAttributesWrapper.has(damageOwnerId)
         ? mAttributesWrapper.get(damageOwnerId).attrs : null;
@@ -1704,7 +1719,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (mPlayer.has(targetId)) {
         targetAttrs.setCombatRunning(mRunning.has(targetId));
       }
-      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
+      CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
           mPlayer.has(ownerId),
@@ -1932,10 +1947,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         || missile.ownerId < 0 || targetId == missile.ownerId
         || !mAttributesWrapper.has(targetId) || !isAlive(targetId)
         || !areAligned(missile.ownerId, targetId)) return false;
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
-    if (skill == null || Riiablo.files.NativeSkills == null) return false;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+    if (skill == null || files().NativeSkills == null) return false;
     com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
-        Riiablo.files.NativeSkills.get(skill.Id);
+        files().NativeSkills.get(skill.Id);
     if (nativeSkill == null) return false;
     boolean pet = mMercenary.has(targetId) || mSummonedPet.has(targetId);
     boolean ally = mPlayer.has(targetId) || pet;
@@ -1960,7 +1975,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private void healHolyBoltTarget(int missileId, Missile missile, int targetId) {
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
     int level = Math.max(1, missile.damageLevel);
     int[] healing = PaladinSkills.getHolyBoltHealing(
         skill, level, name -> baseSkillLevel(missile.ownerId, name));
@@ -1996,13 +2011,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
     StateList targetStates = stateList(targetId);
     CombatSystem.CombatResult poison =
-        CombatSystem.INSTANCE.calculateFixedPoisonDamageSnapshot(
+        combatSystemResolver.calculateFixedPoisonDamageSnapshot(
             targetAttrs, mPlayer.has(targetId), missile.poisonAttackerPlayer,
             raw, missile.poisonPiercePercent,
             Math.max(1, missile.poisonDurationFrames), targetStates,
             combatDifficulty(missile.ownerId, targetId));
     if (poison.poisonDamagePerFrame > 0f && poison.poisonDuration > 0) {
-      StatusEffectApplier.INSTANCE.applyPoison(
+      StatusEffectApplier.forWorld(world).applyPoison(
           targetId, poison.poisonDamagePerFrame, poison.poisonDuration, missile.ownerId);
     }
     log.info("[POISON_CLOUD] phase=apply missileId={} owner={} target={} skill={} "
@@ -2021,7 +2036,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (callbackFrame % interval != 0) return;
     String childName = maker.missile.SubMissile[0];
     if (childName == null || childName.isEmpty()) return;
-    Missiles.Entry childRow = Riiablo.files.Missiles.get(childName);
+    Missiles.Entry childRow = files().Missiles.get(childName);
     if (childRow == null) return;
     int childId = factory.createMissile(childRow, tmpVec.setZero(), origin,
         maker.ownerId, Math.max(1, maker.damageLevel));
@@ -2051,9 +2066,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Native SrvHit16 for Vine/Plague Vines trail missiles. */
   private void applyVineTrailState(Missile missile, int targetId) {
     if (missile == null || targetId < 0) return;
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
     if (skill == null || skill.auratargetstate == null || skill.auratargetstate.isEmpty()) return;
-    com.riiablo.codec.excel.States.Entry stateRow = Riiablo.files.States.get(skill.auratargetstate);
+    com.riiablo.codec.excel.States.Entry stateRow = files().States.get(skill.auratargetstate);
     int stateId = stateRow != null ? stateRow.id : StateId.SLOWED;
     int level = Math.max(1, missile.damageLevel);
     int duration = skill.calc4 != null && !skill.calc4.isEmpty()
@@ -2077,7 +2092,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (max > min) raw += rng.nextInt(max - min);
     missile.rngState = rng.state();
     CombatSystem.FixedElementalDamageResult combat =
-        CombatSystem.INSTANCE.calculateFixedElementalRateDamage(
+        combatSystemResolver.calculateFixedElementalRateDamage(
             targetAttrs, mPlayer.has(targetId), missile.elementalAttackerPlayer,
             missile.fixedElementalType, raw, missile.elementalPiercePercent,
             missile.elementalDamageRate, stateList(targetId),
@@ -2131,7 +2146,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (factory == null || !maker.diabWallMoved || maker.missile == null) return;
     String name = maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0
         ? null : maker.missile.SubMissile[0];
-    Missiles.Entry row = name == null ? null : Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = name == null ? null : files().Missiles.get(name);
     if (row == null) { world.delete(entityId); return; }
     Vector2 origin = new Vector2(MathUtils.floor(position.position.x), MathUtils.floor(position.position.y));
     int id = factory.createMissile(row, Vector2.Zero, origin, maker.ownerId, maker.damageLevel);
@@ -2166,8 +2181,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     String childName = maker.missile.SubMissile[0];
     Missiles.Entry childRow = childName != null && !childName.isEmpty()
-        ? Riiablo.files.Missiles.get(childName) : null;
-    Skills.Entry skill = maker.skillId >= 0 ? Riiablo.files.skills.get(maker.skillId) : null;
+        ? files().Missiles.get(childName) : null;
+    Skills.Entry skill = maker.skillId >= 0 ? files().skills.get(maker.skillId) : null;
     if (childRow == null || skill == null) {
       log.warn("[SORCERESS_FIRE_WALL] phase=maker_reject maker={} owner={} "
               + "child={} skill={}", entityId, maker.ownerId, childName, maker.skillId);
@@ -2399,8 +2414,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       // shield roll still succeeds and suppresses damage.
       if (mCasting.has(victimId)) {
         Casting casting = mCasting.get(victimId);
-        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-            ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = files() != null && files().skills != null
+            ? files().skills.get(casting.skillId) : null;
         if (!Actioneer.blockReactionMayInterrupt(skill)) {
           log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={} source=missile",
               victimId, skill == null ? null : skill.skill, casting.skillId);
@@ -2434,7 +2449,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Applies post-damage state carried by native missile SrvDmg functions. */
   private void applyNativeMissileDamageState(int missileId, Missile missile, int targetId) {
     if (missile == null || missile.missile == null || missile.missile.pSrvDmgFunc != 7) return;
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
     boolean shockWave = DruidSkills.isShockWave(skill);
     int duration = shockWave
         ? DruidSkills.getShockWaveStunDuration(
@@ -2444,7 +2459,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     String tag = shockWave ? "[DRUID_SHOCK_WAVE]" : "[BARBARIAN_WAR_CRY]";
     Monster monster = mMonster.has(targetId) ? mMonster.get(targetId) : null;
     int uniqueRoll = monster != null && MonsterRank.isUnique(monster.rank)
-        ? com.badlogic.gdx.math.MathUtils.random(99) : 99;
+        ? rollStun(missile) : 99;
     duration = BarbarianSkills.resolveWarCryStunDuration(
         monster, mPlayer.has(targetId), mMercenary.has(targetId), duration,
         uniqueRoll);
@@ -2474,7 +2489,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   private void handleWarCryCollision(
       int missileId, Missile missile, int targetId, int hitFunction) {
     if (missile == null || missile.ownerId < 0 || targetId == missile.ownerId) return;
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
     if (skill == null) return;
 
     boolean accepted;
@@ -2613,7 +2628,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Skills.txt .blvl reads hard points and deliberately excludes +skills. */
   private int baseSkillLevel(int entityId, String skillName) {
-    Skills.Entry skill = skillName != null ? Riiablo.files.skills.get(skillName) : null;
+    Skills.Entry skill = skillName != null ? files().skills.get(skillName) : null;
     if (skill == null || !mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
     return Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
   }
@@ -2664,9 +2679,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   private int spawnAmazonExplosion(Missile source, Vector2 origin, int targetId) {
     if (factory == null || source == null || source.missile == null
         || source.missile.HitSubMissile == null) return 0;
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     if (skill == null && source.missile.Skill != null && !source.missile.Skill.isEmpty()) {
-      skill = Riiablo.files.skills.get(source.missile.Skill);
+      skill = files().skills.get(source.missile.Skill);
     }
     // Client-created elemental arrows do not always carry skillId, and the
     // primary Missiles.txt row can leave Skill blank. Recover the dispatch
@@ -2676,9 +2691,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       String missileName = source.missile.Missile.trim().toLowerCase(java.util.Locale.ROOT);
       if (missileName.equals("freezingarrow")
           || source.missile.Id == com.riiablo.engine.server.missile.MissileId.FREEZING_ARROW) {
-        skill = Riiablo.files.skills.get("Freezing Arrow");
+        skill = files().skills.get("Freezing Arrow");
         if (skill == null) {
-          skill = Riiablo.files.skills.get(
+          skill = files().skills.get(
               com.riiablo.engine.server.skill.SkillId.FREEZING_ARROW);
         }
       }
@@ -2686,7 +2701,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int spawned = 0;
     for (String name : source.missile.HitSubMissile) {
       if (name == null || name.isEmpty()) continue;
-      Missiles.Entry row = Riiablo.files.Missiles.get(name);
+      Missiles.Entry row = files().Missiles.get(name);
       if (row == null) continue;
       int childId = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId,
           Math.max(1, source.damageLevel));
@@ -2721,7 +2736,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       if (tableSnapshot && !child.damageSnapshot
           && "frze".equalsIgnoreCase(row.EType)) {
-        Skills.Entry freezingArrow = Riiablo.files.skills.get("Freezing Arrow");
+        Skills.Entry freezingArrow = files().skills.get("Freezing Arrow");
         if (freezingArrow != null) {
           MissileDamageResolver.initializeColdSkillMissile(child, freezingArrow,
               ownerAttrs, level);
@@ -2777,7 +2792,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       name = source.missile.HitSubMissile[0];
     }
     if (name == null || name.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) {
       log.debug("[MISSILE_MAP_HIT] explosion_missing missile={} explosion={}",
           source.missile.Missile, name);
@@ -2898,7 +2913,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     missile.hitFunctionTriggered = true;
     int radius = nativeAreaRadius(missile);
     if (radius <= 0) {
-      Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+      Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
       if (skill == null) return;
       radius = Math.max(1, SkillFormula.evaluate(skill.calc1, skill,
           Math.max(1, missile.damageLevel)));
@@ -2923,9 +2938,9 @@ public class MissileCollisionSystem extends IteratingSystem {
         || source.missile.HitSubMissile == null
         || source.missile.HitSubMissile.length == 0) return;
     String name = source.missile.HitSubMissile[0];
-    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    Missiles.Entry row = name != null ? files().Missiles.get(name) : null;
     if (row == null) return;
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     int level = Math.max(1, source.damageLevel);
     int lifetime = row.Range;
     if (skill != null && skill.Param != null && skill.Param.length > 3) {
@@ -2967,7 +2982,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** D2MOO SrvHit12 selects a new nearby hostile and decrements TargetX. */
   private void spawnChainLightningContinuation(
       Missile source, int struckTarget, Vector2 origin) {
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     int level = Math.max(1, source.damageLevel);
     // Amazon Lightning Strike stores its seek radius in calc1.  Sorceress
     // Chain Lightning uses AuraRangeCalc instead; using the latter for both
@@ -3049,15 +3064,15 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** D2MOO SrvHit09 creates a circular grid of stationary Immolation Fire missiles. */
   private void spawnImmolationFire(int sourceId, Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null) return;
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId)
-        : Riiablo.files.skills.get("Immolation Arrow");
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId)
+        : files().skills.get("Immolation Arrow");
     int level = Math.max(1, source.damageLevel);
     int radius = skill != null ? Math.max(1, SkillFormula.evaluate(skill.calc1, skill, level)) : 3;
     if (radius <= 0) radius = 3;
     String name = source.missile.HitSubMissile != null
         && source.missile.HitSubMissile.length > 0
         ? source.missile.HitSubMissile[0] : "immolationfire";
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) return;
     Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
@@ -3127,7 +3142,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       name = source.missile.CltSubMissile[0];
     }
     if (name == null || name.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) return;
     int id = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId,
         Math.max(1, source.damageLevel));
@@ -3136,7 +3151,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.skillId = source.skillId;
     cloud.damageLevel = Math.max(1, source.damageLevel);
     cloud.poisonCloudLoops = 2 * Math.max(0, cloud.damageLevel - 1);
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     configurePersistentPoisonCloud(cloud, skill);
     log.info("[AMAZON_POISON_CLOUD] phase=create owner={} skill={} source={} child={} "
             + "missile={} duration={} tick={} poison={}..{} length={}",
@@ -3158,7 +3173,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         && source.missile.HitSubMissile.length > 0
         ? source.missile.HitSubMissile[0] : null;
     if (name == null || name.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null) return;
 
     // D2MOO passes HitPar[0] as the interleaved-ring step and HitPar[1]
@@ -3167,7 +3182,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int mainStep = Math.max(1, arrayValue(source.missile.sHitPar, 1));
     int loops = Math.max(0, arrayValue(source.missile.sHitPar, 2));
     int level = Math.max(1, source.damageLevel);
-    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
     int created = 0;
@@ -3225,7 +3240,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     position.position.set(cloud.poisonCloudTarget);
     velocity.velocity.setZero();
     cloud.poisonCloudTraveling = false;
-    Skills.Entry skill = cloud.skillId >= 0 ? Riiablo.files.skills.get(cloud.skillId) : null;
+    Skills.Entry skill = cloud.skillId >= 0 ? files().skills.get(cloud.skillId) : null;
     configurePersistentPoisonCloud(cloud, skill);
   }
 
@@ -3236,7 +3251,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Skills.Entry damageSkill = sourceSkill;
     if ((damageSkill == null || !"pois".equalsIgnoreCase(damageSkill.EType))
         && cloud.missile.Skill != null && !cloud.missile.Skill.isEmpty()) {
-      Skills.Entry missileSkill = Riiablo.files.skills.get(cloud.missile.Skill);
+      Skills.Entry missileSkill = files().skills.get(cloud.missile.Skill);
       if (missileSkill != null) damageSkill = missileSkill;
     }
     if (!cloud.damageSnapshot && damageSkill != null) {
@@ -3337,8 +3352,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     Skills.Entry skill = source.skillId >= 0
-        ? Riiablo.files.skills.get(source.skillId)
-        : Riiablo.files.skills.get("Fire Trauma");
+        ? files().skills.get(source.skillId)
+        : files().skills.get("Fire Trauma");
     int level = Math.max(1, source.damageLevel);
     int radius = skill != null
         ? SkillFormula.evaluate(skill.aurarangecalc, skill, level,
@@ -3383,15 +3398,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         || source.missile.HitSubMissile.length == 0) return;
     String subMissileName = source.missile.HitSubMissile[0];
     if (subMissileName == null || subMissileName.isEmpty()) return;
-    Missiles.Entry subMissile = Riiablo.files.Missiles.get(subMissileName);
+    Missiles.Entry subMissile = files().Missiles.get(subMissileName);
     if (subMissile == null) {
       log.warn("[AMAZON_LIGHTNING_FURY] phase=reject owner={} reason=missing_submissile name={}",
           source.ownerId, subMissileName);
       return;
     }
     Skills.Entry skill = source.missile.Skill == null || source.missile.Skill.isEmpty()
-        ? Riiablo.files.skills.get("Lightning Fury")
-        : Riiablo.files.skills.get(source.missile.Skill);
+        ? files().skills.get("Lightning Fury")
+        : files().skills.get(source.missile.Skill);
     int level = Math.max(1, source.damageLevel);
     int range = lightningFuryRange(source.missile, skill, level);
     int maximum = lightningFuryBoltCount(source.missile, skill, level);
@@ -3567,7 +3582,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           : CombatSystem.totalPoisonToPerFrame(
               combat.elementalDamage[CombatSystem.DAMAGE_POISON], combat.poisonDuration);
       if (poisonPerFrame > 0f) {
-        StatusEffectApplier.INSTANCE.applyPoison(targetId, poisonPerFrame,
+        StatusEffectApplier.forWorld(world).applyPoison(targetId, poisonPerFrame,
             combat.poisonDuration, attackerId);
       }
     }
@@ -3593,7 +3608,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       boolean freezePacket = convertsColdToFreeze(missile);
       if (!freezePacket) {
         // Cold must run first because it owns the native shatter roll.
-        StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+        StatusEffectApplier.forWorld(world).applyCold(targetId, combat.coldDuration, attackerId);
       }
       if (missile != null && missile.freezesTarget) {
         // D2Game's ApplyFreezeState converts the packet back to ordinary COLD
@@ -3601,9 +3616,9 @@ public class MissileCollisionSystem extends IteratingSystem {
         // chill packet on those targets even though its missile row uses
         // SrvDmgFunc=2 and normally converts ColdLen to FrzLen.
         if (freezePacket && nativeFreezeSuppressed(targetId)) {
-          StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+          StatusEffectApplier.forWorld(world).applyCold(targetId, combat.coldDuration, attackerId);
         } else {
-          StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
+          StatusEffectApplier.forWorld(world).applyFreeze(targetId, combat.coldDuration, attackerId);
         }
       } else if (isColdArrow(missile)) {
         // Cold Arrow is a chill-only packet.  It slows and tints the target,
@@ -3618,7 +3633,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.onHitStateId != StateId.POISON
         && missile.onHitStateId != StateId.COLD
         && missile.onHitStateId != StateId.FREEZE) {
-      StatusEffectApplier.INSTANCE.applyState(targetId, missile.onHitStateId,
+      StatusEffectApplier.forWorld(world).applyState(targetId, missile.onHitStateId,
           missile.onHitStateDuration, attackerId);
     }
   }
@@ -3793,13 +3808,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
   }
 
-  private static int glacialSpikeRadius(Missile missile) {
+  private int glacialSpikeRadius(Missile missile) {
     if (missile == null || missile.missile == null
         || missile.missile.pSrvHitFunc != 13) return 0;
     int rowRadius = arrayValue(missile.missile.sHitPar, 0);
     if (rowRadius > 0) return rowRadius;
-    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId)
-        : Riiablo.files.skills.get("Glacial Spike");
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId)
+        : files().skills.get("Glacial Spike");
     if (skill == null) return 0;
     return Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill,
         Math.max(1, missile.damageLevel)));
@@ -3810,7 +3825,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile == null || missile.damageSnapshot || missile.missile == null
         || !"frze".equalsIgnoreCase(missile.missile.EType)
         || !"freezingarrowexp3".equalsIgnoreCase(missile.missile.Missile)) return;
-    Skills.Entry skill = Riiablo.files.skills.get("Freezing Arrow");
+    Skills.Entry skill = files().skills.get("Freezing Arrow");
     if (skill != null) {
       MissileDamageResolver.initializeColdSkillMissile(
           missile, skill, ownerAttrs, Math.max(1, missile.damageLevel));

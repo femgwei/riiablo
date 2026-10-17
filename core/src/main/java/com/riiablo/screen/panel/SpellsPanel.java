@@ -399,7 +399,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     }
 
     void updateEnabledState() {
-      String validation = PlayerStatsManager.INSTANCE.validateSkillPoint(
+      String validation = new PlayerStatsManager().validateSkillPoint(
           character, skill.Id);
       setDisabled(!PlayerStatsManager.SKILL_OK.equals(validation));
     }

@@ -94,6 +94,7 @@ import com.badlogic.gdx.utils.IntIntMap;
  * active frame.</p>
  */
 public class ServerSkillSystem extends PassiveSystem {
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   @Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
 
@@ -138,10 +139,10 @@ public class ServerSkillSystem extends PassiveSystem {
       Attributes defender = mAttributesWrapper.get(target).attrs;
       StateList states = stateList(target);
       boolean player = mPlayer.has(target);
-      CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+      CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
           defender, player, raw, states);
       CombatSystem.CombatResult elemental = coldLength <= 0 ? new CombatSystem.CombatResult()
-          : CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(defender, player, false,
+          : combatSystemResolver.calculateNativeFixedElementalDamage(defender, player, false,
               coldLength == 1 ? CombatSystem.DAMAGE_FIRE : CombatSystem.DAMAGE_COLD,
               raw, 0, states, difficulty);
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
@@ -156,9 +157,9 @@ public class ServerSkillSystem extends PassiveSystem {
         hp.set(0f);
         if (events != null) events.dispatch(DeathEvent.obtain(source, target));
       } else if (coldLength >= 2) {
-        int duration = CombatSystem.INSTANCE.resolveColdLengthBeforeState(defender,
+        int duration = combatSystemResolver.resolveColdLengthBeforeState(defender,
             player, coldLength, 0, states, difficulty);
-        if (duration > 0) com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE
+        if (duration > 0) com.riiablo.engine.server.combat.StatusEffectApplier.forWorld(world)
             .applyCold(target, duration, source);
       }
     }
@@ -1440,9 +1441,9 @@ public class ServerSkillSystem extends PassiveSystem {
       Attributes defender = mAttributesWrapper.get(target).attrs;
       StateList states = stateList(target);
       boolean player = mPlayer.has(target);
-      CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+      CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
           defender, player, physicalRaw, states);
-      CombatSystem.CombatResult elemental = CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(
+      CombatSystem.CombatResult elemental = combatSystemResolver.calculateNativeFixedElementalDamage(
           defender, player, false, elementalDamageType(skill.EType), elementalRaw, 0,
           states, combatDifficulty(source, target));
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
@@ -1563,7 +1564,7 @@ public class ServerSkillSystem extends PassiveSystem {
       StateList targetStates = mUnitStates.has(targetId)
           ? mUnitStates.get(targetId).stateList : null;
       CombatSystem.StaticFieldDamageResult resolved =
-          CombatSystem.INSTANCE.calculateStaticFieldDamage(
+          combatSystemResolver.calculateStaticFieldDamage(
               target, mPlayer.has(targetId), mPlayer.has(event.entityId), damageType,
               rawFixed, targetStates, difficulty);
       // SUNITDMG does not restore absorbed life during delayed death.
@@ -2140,7 +2141,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int min = MissileDamageResolver.skillPhysicalDamage(skill, level, true, name -> getBaseSkillLevel(source, name));
     int max = MissileDamageResolver.skillPhysicalDamage(skill, level, false, name -> getBaseSkillLevel(source, name));
     int raw = rollNativeDamage(min, max);
-    CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+    CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
         defender, mPlayer.has(target), raw, stateList(target));
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp.asFixed();
@@ -2184,11 +2185,11 @@ public class ServerSkillSystem extends PassiveSystem {
     int type = elementalDamageType(skill.EType);
     int difficulty = combatDifficulty(source, target);
     boolean player = mPlayer.has(target) || mMercenary.has(target);
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(
+    CombatSystem.CombatResult result = combatSystemResolver.calculateNativeFixedElementalDamage(
         defender, player, false, type, raw, elementalPierce(attacker, sourceStates, type),
         targetStates, difficulty);
     int baseLength = NativeDiabCold.freezeLength(skill, level);
-    int length = CombatSystem.INSTANCE.resolveColdLengthBeforeState(defender, player,
+    int length = combatSystemResolver.resolveColdLengthBeforeState(defender, player,
         baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD), targetStates, difficulty);
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     StatRef maximum = defender.get(Stat.maxhp, StatRef.obtain());
@@ -2273,10 +2274,10 @@ public class ServerSkillSystem extends PassiveSystem {
     boolean sourcePlayer = true;
     boolean targetPlayer = mPlayer.has(targetId);
     CombatSystem.CombatResult physical =
-        CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+        combatSystemResolver.calculateFixedPhysicalDamage(
             target, targetPlayer, sourcePlayer, physicalRaw, targetStates);
     CombatSystem.CombatResult elemental =
-        CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        combatSystemResolver.calculateFixedElementalDamage(
             target, targetPlayer, sourcePlayer, damageType, elementalRaw,
             pierce, targetStates, combatDifficulty(sourceId, targetId));
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
@@ -3747,8 +3748,8 @@ public class ServerSkillSystem extends PassiveSystem {
           // row itself. Resolve that native row before evaluating aurastat*;
           // falling back to the summon row keeps malformed/custom tables
           // fail-closed without inventing values.
-          Skills.Entry auraSkill = DruidSkills.getSummonAuraSkill(skill);
-          DruidSkills.applySummonAuraModifiers(state,
+          Skills.Entry auraSkill = DruidSkills.getSummonAuraSkill(files(), skill);
+          DruidSkills.applySummonAuraModifiers(files(), state,
               auraSkill != null ? auraSkill : skill, skillLevel,
               name -> getBaseSkillLevel(event.entityId, name));
           state.needsSync = true;
@@ -4729,7 +4730,7 @@ public class ServerSkillSystem extends PassiveSystem {
       com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
       Skills.Entry summonSkill = pet != null && files() != null && files().skills != null
           ? files().skills.get(pet.skillId) : null;
-      int granted = DruidSkills.getSummonGrantedSkillLevel(summonSkill,
+      int granted = DruidSkills.getSummonGrantedSkillLevel(files(), summonSkill,
           pet != null ? pet.skillLevel : 1, skillId,
           name -> pet != null ? getBaseSkillLevel(pet.ownerId, name) : 0);
       if (granted > 0) return granted;
@@ -4934,10 +4935,10 @@ public class ServerSkillSystem extends PassiveSystem {
       boolean sourcePlayer = mPlayer.has(source);
       boolean targetPlayer = mPlayer.has(target);
       CombatSystem.CombatResult physicalResult =
-          CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+          combatSystemResolver.calculateFixedPhysicalDamage(
               targetAttrs, targetPlayer, sourcePlayer, physical, targetStates);
       CombatSystem.CombatResult fireResult =
-          CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          combatSystemResolver.calculateFixedElementalDamage(
               targetAttrs, targetPlayer, sourcePlayer, CombatSystem.DAMAGE_FIRE,
               fireDamage, 0, targetStates, combatDifficulty(source, target));
       int resolved = physicalResult.totalDamage + fireResult.totalDamage;

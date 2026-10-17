@@ -50,6 +50,8 @@ public final class StatRef {
     return new StatRef(stats, list, index);
   }
 
+  public StatTable table() { return stats.table(); }
+
   public short id() {
     return stats.id(index);
   }

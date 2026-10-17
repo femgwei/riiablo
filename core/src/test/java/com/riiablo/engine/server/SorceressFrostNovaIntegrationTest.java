@@ -76,7 +76,6 @@ class SorceressFrostNovaIntegrationTest extends RiiabloTest {
       }
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -112,7 +111,6 @@ class SorceressFrostNovaIntegrationTest extends RiiabloTest {
           "20 Cold Mastery first raises 200 frames to 240, then Half Freeze Duration halves it");
     } finally {
       world.dispose();
-      StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 

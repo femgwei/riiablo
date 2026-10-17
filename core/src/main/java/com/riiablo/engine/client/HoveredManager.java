@@ -18,7 +18,7 @@ import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.client.component.Label;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;

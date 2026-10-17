@@ -13,7 +13,7 @@ import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Label;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.map.DT1;

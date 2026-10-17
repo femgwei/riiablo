@@ -193,7 +193,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     Attributes resistant = attributes(1, 100);
     resistant.base().put(Stat.lightresist, 50);
     resistant.reset();
-    CombatSystem.CombatResult halved = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult halved = new CombatSystem().calculateFixedElementalDamage(
         resistant, false, true, CombatSystem.DAMAGE_LIGHTNING, rawLightning, 0, null, 0);
     assertTrue(halved.totalDamage > 0 && halved.totalDamage < rawLightning,
         "Lightning Bolt must apply monster lightning resistance to its snapshot");
@@ -201,7 +201,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     Attributes immune = attributes(1, 100);
     immune.base().put(Stat.lightresist, 100);
     immune.reset();
-    CombatSystem.CombatResult blocked = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult blocked = new CombatSystem().calculateFixedElementalDamage(
         immune, false, true, CombatSystem.DAMAGE_LIGHTNING, rawLightning, 0, null, 0);
     assertEquals(0, blocked.totalDamage,
         "100% monster lightning resistance must preserve native immunity");
@@ -345,7 +345,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), states, new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int amazon = world.create();
       world.getMapper(Player.class).create(amazon).data =
@@ -376,7 +375,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           name -> "freezingarrowexp3".equalsIgnoreCase(name)));
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -540,7 +538,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), states, collisions, factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int amazon = world.create();
       world.getMapper(Player.class).create(amazon).data =
@@ -597,7 +594,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       Attributes targetAttrs = attributes(1, 100);
       world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
       world.getMapper(UnitStates.class).create(target).init(target);
-      CombatSystem.CombatResult poisonPreview = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult poisonPreview = new CombatSystem().calculateAttack(
           cloud.damage, targetAttrs, true, false, true, 0, 0, 0, true,
           null, null, 0, 0, null, null, false);
       assertEquals(1, poisonPreview.elementalDamage[CombatSystem.DAMAGE_POISON]);
@@ -640,7 +637,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           "poison trap must use the same authoritative persistent cloud pipeline");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -651,7 +647,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), states, new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
-    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
     try {
       int ownerId = world.create();
       world.getMapper(Monster.class).create(ownerId);
@@ -681,7 +676,6 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           "corpse poison cloud must apply the same persistent area state as javelins and traps");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -1269,7 +1263,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
 
   @Test
   void passiveDodgeAvoidEvadeUseNativeAttackContext() {
-    DefenseCalculator defense = DefenseCalculator.INSTANCE;
+    DefenseCalculator defense = new DefenseCalculator();
     assertEquals(DefenseCalculator.DEFENSE_DODGE,
         defense.checkPassiveDefense(DefenseCalculator.ATTACK_MELEE, false, 100, 0, 0, 0));
     assertEquals(DefenseCalculator.DEFENSE_AVOID,
@@ -1287,7 +1281,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     defender.attackType = DefenseCalculator.ATTACK_RANGED;
     defender.isMoving = true;
     defender.passiveEvade = 100;
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(attacker, defender);
+    CombatSystem.CombatResult result = new CombatSystem().calculateAttack(attacker, defender);
     assertTrue(result.hit);
     assertTrue(result.blocked);
     assertEquals(0, result.totalDamage);

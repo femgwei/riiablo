@@ -210,19 +210,19 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     mastery.attackRatingPercent = 36;
     mastery.damagePercent = 33;
 
-    CombatSystem.CombatResult base = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult base = new CombatSystem().calculateAttack(
         attacker, defender, true, false, false, 100, 100, 100, true,
         null, null, 0, 0, null, null, false, null);
-    CombatSystem.CombatResult enhanced = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult enhanced = new CombatSystem().calculateAttack(
         attacker, defender, true, false, false, 100, 100, 100, true,
         null, null, 0, 0, null, null, false, mastery);
     assertEquals(100, base.physicalDamage);
     assertEquals(133, enhanced.physicalDamage);
 
-    base = CombatSystem.INSTANCE.calculateAttack(
+    base = new CombatSystem().calculateAttack(
         attacker, defender, true, false, false, 100, 100, 100, false,
         null, null, 0, 0, null, null, false, null);
-    enhanced = CombatSystem.INSTANCE.calculateAttack(
+    enhanced = new CombatSystem().calculateAttack(
         attacker, defender, true, false, false, 100, 100, 100, false,
         null, null, 0, 0, null, null, false, mastery);
     assertTrue(enhanced.hitChance > base.hitChance);
@@ -230,7 +230,7 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     mastery.attackRatingPercent = 0;
     mastery.damagePercent = 0;
     mastery.criticalChance = 100;
-    CombatSystem.CombatResult critical = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult critical = new CombatSystem().calculateAttack(
         attacker, defender, true, false, false, 100, 100, 100, true,
         null, null, 0, 0, null, null, false, mastery);
     assertTrue(critical.critical);
@@ -335,10 +335,10 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
 
     Attributes attacker = combatAttributes(100, 0, 20, 1000);
     Attributes defender = combatAttributes(100, 100, 1, 1);
-    CombatSystem.CombatResult base = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult base = new CombatSystem().calculateAttack(
         attacker, defender, true, true, false, 1, 1, 1000, false,
         null, null, 0, 0, null, null);
-    CombatSystem.CombatResult protectedResult = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult protectedResult = new CombatSystem().calculateAttack(
         attacker, defender, true, true, false, 1, 1, 1000, false,
         null, null, 0, 0, null, source.stateList);
     assertTrue(protectedResult.hitChance < base.hitChance,
@@ -348,7 +348,7 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
     elementalMin[CombatSystem.DAMAGE_FIRE] = 100;
     elementalMax[CombatSystem.DAMAGE_FIRE] = 100;
-    CombatSystem.CombatResult resisted = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult resisted = new CombatSystem().calculateAttack(
         attacker, defender, true, true, false, 1, 1, 1000, true,
         elementalMin, elementalMax, 0, 0, null, source.stateList);
     assertEquals(13, resisted.elementalDamage[CombatSystem.DAMAGE_FIRE],

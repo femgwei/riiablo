@@ -9,7 +9,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Label;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.NativeHirelingExperienceTable;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.net.packet.d2gs.MercenaryP;

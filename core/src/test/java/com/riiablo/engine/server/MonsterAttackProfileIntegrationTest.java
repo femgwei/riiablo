@@ -44,7 +44,7 @@ class MonsterAttackProfileIntegrationTest extends RiiabloTest {
     Attributes defender = attributes(60, 0, 0, 0);
     MathUtils.random.setSeed(0xA2D4A6EL);
 
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult result = new CombatSystem().calculateAttack(
         attacker, defender, false, true, true, 0, 0, 10);
 
     assertTrue(result.hit);

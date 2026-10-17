@@ -219,7 +219,7 @@ class Act1MonsterCombatAuditTest extends RiiabloTest {
     int damagingHits = 0;
     MathUtils.random.setSeed(0x41435431L + monster.hcIdx * 31L + mode.hashCode());
     for (int i = 0; i < ATTEMPTS_PER_PROFILE; i++) {
-      CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult result = new CombatSystem().calculateAttack(
           attacker, defender, false, true, missile,
           minDamage, maxDamage, attackRating);
       assertEquals(expectedChance, result.hitChance, monster.Id + " " + mode);

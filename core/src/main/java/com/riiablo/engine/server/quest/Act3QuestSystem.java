@@ -48,7 +48,7 @@ import com.artemis.BaseSystem;
  * and dialogue transitions.</p>
  */
 @Wire(failOnNull = false)
-public class Act3QuestSystem extends BaseSystem {
+public class Act3QuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act3QuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -109,7 +109,7 @@ public class Act3QuestSystem extends BaseSystem {
         int id = objects.get(i);
         Object object = mObject.get(id);
         if (object.base == null || object.base.InitFn != 43) continue;
-        com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get("darkwanderer");
+        com.riiablo.codec.excel.MonStats.Entry row = files().monstats.get("darkwanderer");
         if (row == null) break;
         boolean alreadySeen = false;
         IntBag players = playersByZone.getEntities();
@@ -230,7 +230,7 @@ public class Act3QuestSystem extends BaseSystem {
         MapWrapper owner = mMapWrapper.get(id);
         if (factory != null && owner != null && owner.zone != null && owner.zone.level != null
             && owner.zone.level.Id == D2LevelIds.LEVEL_SPIDERFOREST) {
-          com.riiablo.codec.excel.MonStats.Entry child = Riiablo.files.monstats.get("vilechild1");
+          com.riiablo.codec.excel.MonStats.Entry child = files().monstats.get("vilechild1");
           com.badlogic.gdx.math.Vector2 point = mPosition.get(id).position.cpy();
           if (child != null && owner.zone.findFreeCoordinates(point, 1, 3, 0x1C09, false, point))
             factory.createMonster(child, point.x, point.y);
@@ -282,7 +282,7 @@ public class Act3QuestSystem extends BaseSystem {
     // client fallback; this keeps multiple worlds isolated while all Act III
     // quest rolls in one world consume the same stream.
     if (questRandomState == null) {
-      long gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+      long gameSeed = map == null ? gameSeed() : map.seed();
       com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, (int) gameSeed);
     }
     playersByZone = world.getAspectSubscriptionManager().get(
@@ -358,10 +358,10 @@ public class Act3QuestSystem extends BaseSystem {
       if (!preset.externalEntity || preset.spawned) continue;
       int id = preset.presetIndex;
       if (preset.ds1Raw) {
-        if (Riiablo.files == null || Riiablo.files.obj == null || zone.level == null) continue;
+        if (files() == null || files().obj == null || zone.level == null) continue;
         int act = zone.level.Act + 1;
-        if (id < 0 || id >= Riiablo.files.obj.getSize(act)) continue;
-        id = Riiablo.files.obj.getObjectId(act, id);
+        if (id < 0 || id >= files().obj.getSize(act)) continue;
+        id = files().obj.getObjectId(act, id);
       }
       if (id == classId) return true;
     }
@@ -763,7 +763,7 @@ public class Act3QuestSystem extends BaseSystem {
     return false;
   }
 
-  private static String khalimChestCode(int objectClassId) {
+  private String khalimChestCode(int objectClassId) {
     switch (objectClassId) {
       case Act3KhalimQuest.KHALIM_CHEST1: return Act3KhalimQuest.KHALIM_HEART;
       case Act3KhalimQuest.KHALIM_CHEST2: return Act3KhalimQuest.KHALIM_EYE;
@@ -949,7 +949,7 @@ public class Act3QuestSystem extends BaseSystem {
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
-  private static void persist(CharData data) {
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  private void persist(CharData data) {
+    persistCharacter(data);
   }
 }

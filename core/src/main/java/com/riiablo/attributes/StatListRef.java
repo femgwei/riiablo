@@ -18,6 +18,8 @@ public final class StatListRef implements Iterable<StatRef> {
     this.tuple = new StatRef(stats, list);
   }
 
+  public StatTable table() { return stats.table(); }
+
   StatList parent() {
     return stats;
   }
@@ -114,7 +116,7 @@ public final class StatListRef implements Iterable<StatRef> {
 
   public int getValue(final short stat, final int defaultValue) {
     final int index = indexOf(stat);
-    if (index < 0) return Stat.encode(stat, defaultValue);
+    if (index < 0) return table().encode(stat, defaultValue);
     return get(index).asInt();
   }
 

@@ -10,7 +10,6 @@ import com.riiablo.codec.D2;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -46,7 +45,6 @@ public class VelocityModeChanger extends IteratingSystem {
   protected ComponentMapper<Networked> mNetworked;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<CofReference> mCofReference;
-  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
 
   protected CofManager cofs;
 
@@ -144,7 +142,6 @@ public class VelocityModeChanger extends IteratingSystem {
         float intendedSpeed = velocity.speed(running);
         animData.override = movementAnimationRate(
             baseAnimSpeed, intendedSpeed, running ? velocity.runSpeed : velocity.walkSpeed);
-        syncClientAnimation(entityId, animData, velocity, running, baseAnimSpeed);
       } else {
         setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
         animData.override = -1;
@@ -162,7 +159,6 @@ public class VelocityModeChanger extends IteratingSystem {
         animData.override = scaleAnimationSpeed(
             baseAnimSpeed, currentVelocity.len(), velocity.walkSpeed);
       }
-      syncClientAnimation(entityId, animData, velocity, running, baseAnimSpeed);
     } else {
       if (isEffectivelyRunning(entityId)) {
         setMovementMode(entityId, mMovementModes.get(entityId).RN, currentVelocity);
@@ -287,37 +283,4 @@ public class VelocityModeChanger extends IteratingSystem {
         0x7FFF);
   }
 
-  /**
-   * COF caching used to apply AnimData.override only when the COF changed.
-   * Native AI velocity bonuses often keep WL/RN unchanged, so update the
-   * visible animation whenever its authoritative rate changes.
-   */
-  private void syncClientAnimation(
-      int entityId,
-      AnimData animData,
-      Velocity velocity,
-      boolean running,
-      int baseAnimSpeed) {
-    if (!mAnimationWrapper.has(entityId)) return;
-
-    com.riiablo.codec.Animation animation = mAnimationWrapper.get(entityId).animation;
-    int expectedRate = animData.override >= 0 ? animData.override : animData.speed;
-    int previousRate = animation.getFrameDelta();
-    if (previousRate == expectedRate) return;
-
-    animation.setFrameDelta(expectedRate);
-    Monster monster = mMonster.get(entityId);
-    log.info(
-        "[MONSTER_ANIM_SYNC] entity={} monster={} mode={} baseAnimRate={} "
-            + "previousVisualRate={} visualRate={} movementSpeed={} baseVelocity={} baseId={}",
-        entityId,
-        monster != null && monster.monstats != null ? monster.monstats.Id : "unknown",
-        running ? "RN" : "WL",
-        baseAnimSpeed,
-        previousRate,
-        expectedRate,
-        velocity.velocity.len(),
-        running ? velocity.runSpeed : velocity.walkSpeed,
-        monster != null && monster.monstats != null ? monster.monstats.BaseId : "unknown");
-  }
 }

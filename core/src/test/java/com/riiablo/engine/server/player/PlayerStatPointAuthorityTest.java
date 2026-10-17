@@ -22,19 +22,19 @@ class PlayerStatPointAuthorityTest extends RiiabloTest {
     data.getStats().aggregate().put(Stat.statpts, 2);
 
     assertEquals(PlayerStatsManager.RESULT_SUCCESS,
-        PlayerStatsManager.INSTANCE.spendStatPoint(
+        new PlayerStatsManager().spendStatPoint(
             data, PlayerStatsManager.STAT_TYPE_STRENGTH));
     assertEquals(1, data.getStats().base().get(Stat.strength).asInt());
     assertEquals(1, data.getStats().aggregate().get(Stat.strength).asInt());
-    assertEquals(1, PlayerStatsManager.INSTANCE.getAvailableStatPoints(data));
+    assertEquals(1, new PlayerStatsManager().getAvailableStatPoints(data));
 
     assertEquals(PlayerStatsManager.RESULT_SUCCESS,
-        PlayerStatsManager.INSTANCE.spendStatPoint(
+        new PlayerStatsManager().spendStatPoint(
             data, PlayerStatsManager.STAT_TYPE_VITALITY));
     assertEquals(1, data.getStats().base().get(Stat.vitality).asInt());
-    assertEquals(0, PlayerStatsManager.INSTANCE.getAvailableStatPoints(data));
+    assertEquals(0, new PlayerStatsManager().getAvailableStatPoints(data));
     assertEquals(PlayerStatsManager.RESULT_NO_POINTS,
-        PlayerStatsManager.INSTANCE.spendStatPoint(
+        new PlayerStatsManager().spendStatPoint(
             data, PlayerStatsManager.STAT_TYPE_ENERGY));
     System.out.println("[STAT_POINT_AUTH] strength=1 vitality=1 points=0 status=PASS");
   }

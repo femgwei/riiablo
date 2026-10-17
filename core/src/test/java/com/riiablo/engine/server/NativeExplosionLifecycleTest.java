@@ -290,7 +290,6 @@ class NativeExplosionLifecycleTest extends RiiabloTest {
           .with(new EventSystem(), probe, states, new MissileCollisionSystem(), factory)
           .build().register("factory", factory).register("map", new Map(0, 0)));
       probe.world = world;
-      StatusEffectApplier.INSTANCE.setStateSink(states);
       owner = world.create();
       world.getMapper(Player.class).create(owner);
       world.getMapper(Position.class).create(owner).position.set(-2, 0);
@@ -357,7 +356,6 @@ class NativeExplosionLifecycleTest extends RiiabloTest {
     float life(int id) { return world.getMapper(AttributesWrapper.class).get(id).attrs.get(Stat.hitpoints).asFixed(); }
     boolean frozen(int id) { return world.getMapper(UnitStates.class).get(id).stateList.hasState(StateId.FREEZE); }
     @Override public void close() {
-      StatusEffectApplier.INSTANCE.setStateSink(null);
       world.dispose();
     }
   }

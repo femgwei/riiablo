@@ -53,6 +53,7 @@ import com.riiablo.map.Map;
  */
 @All({SummonedPet.class, Monster.class, Position.class})
 public class AssassinTrapSystem extends IteratingSystem {
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(AssassinTrapSystem.class);
   private static final int ATTACK_INTERVAL_FRAMES = 15;
   private static final float SEARCH_RANGE = 25f;
@@ -488,7 +489,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       attack.base().put(Stat.mindamage, physical);
       attack.base().put(Stat.maxdamage, physical);
       attack.reset();
-      CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult result = combatSystemResolver.calculateAttack(
           attack, targetAttrs, false, false, true, 0, 0, 0, true,
           elementalMin, elementalMax, 0, 0);
       if (!result.hit || result.blocked

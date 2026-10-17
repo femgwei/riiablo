@@ -2049,7 +2049,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     attacker.base().put(Stat.firemindam, 8);
     attacker.base().put(Stat.firemaxdam, 8);
     attacker.reset();
-    CombatSystem.CombatResult scaled = CombatSystem.INSTANCE.calculateBladeShieldAttack(
+    CombatSystem.CombatResult scaled = new CombatSystem().calculateBladeShieldAttack(
         attacker, attributes(100), true, false,
         20, 20, blade.SrcDam, 0, true, null, null, false);
     assertEquals(10, scaled.physicalDamage,
@@ -2096,7 +2096,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(10, venom.poisonLengthOverride);
 
       Attributes defender = attributes(1000);
-      CombatSystem.CombatResult hit = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult hit = new CombatSystem().calculateAttack(
           attacker, defender, true, false, false,
           0, 0, 1000, true, null, null, 0, 0,
           world.getMapper(UnitStates.class).get(assassin).stateList, null, false);
@@ -2116,7 +2116,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(3000, replaced.duration);
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2156,7 +2155,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "the next periodic event resolves after 25 frames");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2179,7 +2177,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           .hasState(StateId.BLADESHIELD));
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2208,7 +2205,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "D2MOO scans the current RoomEx and its direct neighbors; walls do not add a raycast gate");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2244,7 +2240,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "a complete MapWrapper must reject targets in another zone");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2273,7 +2268,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "a valid hostile target remains eligible");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2312,7 +2306,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "Blade Shield must not damage a friendly summoned pet");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2356,7 +2349,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "an expired Blade Shield cannot schedule later pulses");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2386,7 +2378,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "player death interrupts the periodic weapon state");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2415,7 +2406,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           .hasState(StateId.BLADESHIELD));
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2456,7 +2446,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "a confirmed Blade Shield pulse drains one native weapon durability point");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -2497,7 +2486,6 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "a confirmed Blade Shield hit drains one native target armor durability point");
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 

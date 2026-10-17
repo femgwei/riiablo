@@ -43,11 +43,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 火焰伤害
    */
-  public static int calculateFirestormDamage(int skillLevel) {
+  public static int calculateFirestormDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 3-6，每级 +3-5
     int minDamage = 3 + (skillLevel - 1) * 3;
     int maxDamage = 6 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -56,11 +56,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 火焰伤害
    */
-  public static int calculateMoltenBoulderDamage(int skillLevel) {
+  public static int calculateMoltenBoulderDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 16-32，每级 +8-10
     int minDamage = 16 + (skillLevel - 1) * 8;
     int maxDamage = 32 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -69,11 +69,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 冰冷伤害
    */
-  public static int calculateArcticBlastDamage(int skillLevel) {
+  public static int calculateArcticBlastDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 4-8，每级 +3-5
     int minDamage = 4 + (skillLevel - 1) * 3;
     int maxDamage = 8 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -82,11 +82,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 每秒火焰伤害
    */
-  public static int calculateFissureDamagePerSecond(int skillLevel) {
+  public static int calculateFissureDamagePerSecond(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 15-25，每级 +12-14
     int minDamage = 15 + (skillLevel - 1) * 12;
     int maxDamage = 25 + (skillLevel - 1) * 14;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -106,11 +106,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 物理伤害
    */
-  public static int calculateTwisterDamage(int skillLevel) {
+  public static int calculateTwisterDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 6-12，每级 +4-5
     int minDamage = 6 + (skillLevel - 1) * 4;
     int maxDamage = 12 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -119,11 +119,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 火焰伤害
    */
-  public static int calculateVolcanoDamage(int skillLevel) {
+  public static int calculateVolcanoDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 20-40，每级 +15-18
     int minDamage = 20 + (skillLevel - 1) * 15;
     int maxDamage = 40 + (skillLevel - 1) * 18;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -132,11 +132,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 物理伤害
    */
-  public static int calculateTornadoDamage(int skillLevel) {
+  public static int calculateTornadoDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 25-35，每级 +12-14
     int minDamage = 25 + (skillLevel - 1) * 12;
     int maxDamage = 35 + (skillLevel - 1) * 14;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -145,11 +145,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 每颗流星伤害
    */
-  public static int calculateArmageddonDamage(int skillLevel) {
+  public static int calculateArmageddonDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 50-100，每级 +25-30
     int minDamage = 50 + (skillLevel - 1) * 25;
     int maxDamage = 100 + (skillLevel - 1) * 30;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -158,11 +158,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 冰冷伤害
    */
-  public static int calculateHurricaneDamage(int skillLevel) {
+  public static int calculateHurricaneDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 25-50，每级 +10-12
     int minDamage = 25 + (skillLevel - 1) * 10;
     int maxDamage = 50 + (skillLevel - 1) * 12;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   //==========================================================================
@@ -537,12 +537,12 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 总毒素伤害
    */
-  public static int calculateRabiesDamage(int skillLevel) {
-    Skills.Entry skill = com.riiablo.Riiablo.files != null
-        ? com.riiablo.Riiablo.files.skills.get(SkillId.RABIES) : null;
+  public static int calculateRabiesDamage(com.riiablo.Files files, com.riiablo.engine.server.NativeRng rng, int skillLevel) {
+    Skills.Entry skill = files != null
+        ? files.skills.get(SkillId.RABIES) : null;
     int[] damage = getRabiesPoisonDamage(skill, skillLevel, name -> 0);
     int duration = getRabiesPoisonDuration(skill, skillLevel, name -> 0);
-    return Math.round(MathUtils.random(damage[0], damage[1]) / 256f * duration);
+    return Math.round((damage[0] + rng.nextInt(damage[1] - damage[0] + 1)) / 256f * duration);
   }
 
   public static boolean isRabies(Skills.Entry skill) {
@@ -575,11 +575,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 火焰伤害
    */
-  public static int calculateFireClawsDamage(int skillLevel) {
-    Skills.Entry skill = com.riiablo.Riiablo.files != null
-        ? com.riiablo.Riiablo.files.skills.get(SkillId.FIRE_CLAWS) : null;
+  public static int calculateFireClawsDamage(com.riiablo.Files files, com.riiablo.engine.server.NativeRng rng, int skillLevel) {
+    Skills.Entry skill = files != null
+        ? files.skills.get(SkillId.FIRE_CLAWS) : null;
     int[] damage = getFireClawsFireDamage(skill, skillLevel, name -> 0);
-    return MathUtils.random(damage[0], damage[1]);
+    return (damage[0] + rng.nextInt(damage[1] - damage[0] + 1));
   }
 
   public static int[] getFireClawsFireDamage(
@@ -745,9 +745,9 @@ public final class DruidSkills {
    * @deprecated use {@link #getShockWaveStunDuration(Skills.Entry, int)} for server frames.
    */
   @Deprecated
-  public static float getShockWaveStunDuration(int skillLevel) {
-    Skills.Entry skill = com.riiablo.Riiablo.files != null
-        ? com.riiablo.Riiablo.files.skills.get(SkillId.SHOCK_WAVE) : null;
+  public static float getShockWaveStunDuration(com.riiablo.Files files, int skillLevel) {
+    Skills.Entry skill = files != null
+        ? files.skills.get(SkillId.SHOCK_WAVE) : null;
     int frames = getShockWaveStunDuration(skill, skillLevel);
     return frames > 0 ? frames / 25f : 0f;
   }
@@ -783,9 +783,9 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 伤害加成百分比
    */
-  public static int calculateFuryDamageBonus(int skillLevel) {
-    Skills.Entry skill = com.riiablo.Riiablo.files != null
-        ? com.riiablo.Riiablo.files.skills.get(SkillId.FURY) : null;
+  public static int calculateFuryDamageBonus(com.riiablo.Files files, int skillLevel) {
+    Skills.Entry skill = files != null
+        ? files.skills.get(SkillId.FURY) : null;
     return getFuryDamagePercent(skill, skillLevel);
   }
 
@@ -794,9 +794,9 @@ public final class DruidSkills {
    * 
    * @return 攻击次数
    */
-  public static int getFuryHitCount() {
-    Skills.Entry skill = com.riiablo.Riiablo.files != null
-        ? com.riiablo.Riiablo.files.skills.get(SkillId.FURY) : null;
+  public static int getFuryHitCount(com.riiablo.Files files) {
+    Skills.Entry skill = files != null
+        ? files.skills.get(SkillId.FURY) : null;
     return getFuryHitCount(skill, 20);
   }
 
@@ -821,11 +821,11 @@ public final class DruidSkills {
    * @param skillLevel 技能等级
    * @return 毒素伤害
    */
-  public static int calculatePoisonCreeperDamage(int skillLevel) {
+  public static int calculatePoisonCreeperDamage(com.riiablo.engine.server.NativeRng rng, int skillLevel) {
     // 基础 10-20，每级 +5-10
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 20 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return (minDamage + rng.nextInt(maxDamage - minDamage + 1));
   }
 
   /**
@@ -936,16 +936,16 @@ public final class DruidSkills {
   }
 
   /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */
-  public static Skills.Entry getSummonAuraSkill(Skills.Entry summonSkill) {
-    if (summonSkill == null || com.riiablo.Riiablo.files == null
-        || com.riiablo.Riiablo.files.NativeSkills == null
-        || com.riiablo.Riiablo.files.skills == null) return null;
-    NativeSkills.Entry nativeSummon = com.riiablo.Riiablo.files.NativeSkills.get(summonSkill.Id);
+  public static Skills.Entry getSummonAuraSkill(com.riiablo.Files files, Skills.Entry summonSkill) {
+    if (summonSkill == null || files == null
+        || files.NativeSkills == null
+        || files.skills == null) return null;
+    NativeSkills.Entry nativeSummon = files.NativeSkills.get(summonSkill.Id);
     if (nativeSummon == null) return null;
     for (int i = 1; i <= 5; i++) {
       String name = nativeSummon.string("sumskill" + i);
       if (name == null || name.trim().isEmpty()) continue;
-      Skills.Entry aura = com.riiablo.Riiablo.files.skills.get(name.trim());
+      Skills.Entry aura = files.skills.get(name.trim());
       if (aura != null && getSummonAuraState(aura) != StateId.NONE) return aura;
     }
     return null;
@@ -953,26 +953,26 @@ public final class DruidSkills {
 
   /** Resolves a summon-installed SumSkill level exactly like D2MOO's
    * D2GAME_SetSummonPassiveStats (for example Vine Attack on SrvDo115 vines). */
-  public static int getSummonGrantedSkillLevel(Skills.Entry summonSkill, int summonLevel,
+  public static int getSummonGrantedSkillLevel(com.riiablo.Files files, Skills.Entry summonSkill, int summonLevel,
       int grantedSkillId, ToIntFunction<String> baseSkillLevel) {
     if (summonSkill == null || summonSkill.sumskill == null || summonSkill.sumskcalc == null
-        || com.riiablo.Riiablo.files == null || com.riiablo.Riiablo.files.skills == null) return 0;
+        || files == null || files.skills == null) return 0;
     int count = Math.min(summonSkill.sumskill.length, summonSkill.sumskcalc.length);
     for (int i = 0; i < count; i++) {
       String name = summonSkill.sumskill[i];
       if (name == null || name.trim().isEmpty()) continue;
-      Skills.Entry granted = com.riiablo.Riiablo.files.skills.get(name.trim());
+      Skills.Entry granted = files.skills.get(name.trim());
       if (granted == null || granted.Id != grantedSkillId) continue;
       int level = SkillFormula.evaluate(summonSkill.sumskcalc[i], summonSkill,
           Math.max(1, summonLevel), baseSkillLevel,
-          skillName -> com.riiablo.Riiablo.files.skills.get(skillName));
+          skillName -> files.skills.get(skillName));
       return Math.max(0, level);
     }
     return 0;
   }
 
   /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */
-  public static void applySummonAuraModifiers(UnitState state, Skills.Entry skill,
+  public static void applySummonAuraModifiers(com.riiablo.Files files, UnitState state, Skills.Entry skill,
       int skillLevel, ToIntFunction<String> baseSkillLevel) {
     if (state == null || skill == null || skill.aurastat == null) return;
     int count = Math.min(skill.aurastat.length,
@@ -981,7 +981,7 @@ public final class DruidSkills {
       String stat = skill.aurastat[i];
       if (stat == null || stat.isEmpty()) continue;
       int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, skillLevel,
-          baseSkillLevel, name -> com.riiablo.Riiablo.files.skills.get(name));
+          baseSkillLevel, name -> files.skills.get(name));
       switch (stat.trim().toLowerCase(Locale.ROOT)) {
         case "damagepercent": state.damageModifier += value; break;
         case "item_tohit_percent": case "tohit": state.attackModifier += value; break;

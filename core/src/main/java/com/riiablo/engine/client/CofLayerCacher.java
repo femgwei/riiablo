@@ -16,7 +16,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.client.component.CofLoadingComponents;
-import com.riiablo.engine.client.component.CofDirtyComponents;
+import com.riiablo.engine.shared.component.CofDirtyComponents;
 import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;

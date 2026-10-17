@@ -31,7 +31,7 @@ public final class Act2D2MOOLayoutBridge {
    */
   public static boolean populateTown(int gameSeed, int diff, Zone town, String source) {
     if (town == null || town.levelId() != TOWN || !town.isTown()
-        || source == null || RiiabloAccess.mpqsMissing()) return false;
+        || source == null || D2MOOLayoutContext.mpqs() == null) return false;
 
     D2DrlgStrc drlg = null;
     try {
@@ -69,10 +69,17 @@ public final class Act2D2MOOLayoutBridge {
     }
   }
 
+  public static boolean populateTown(D2MOOLayoutContext context, int gameSeed, int diff,
+      Zone town, String source) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateTown(gameSeed, diff, town, source);
+    }
+  }
+
   /** Transactional projection, also exercised with deterministic native RoomEx fixtures. */
   static boolean projectTownMonsters(D2DrlgStrc drlg, Zone town, String source) {
       if (drlg == null || town == null || town.levelId() != TOWN || !town.isTown()
-          || source == null || Riiablo.files == null || Riiablo.files.monstats == null) return false;
+          || source == null || D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) return false;
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, TOWN);
       if (level == null || level.getLevelCoords() == null) return false;
       int width = level.getLevelCoords().getNWidth();
@@ -95,14 +102,14 @@ public final class Act2D2MOOLayoutBridge {
               counts[1]++;
               return;
             }
-            if (ds1Raw && (Riiablo.files.MonPreset == null || index < 0
-                || index >= Riiablo.files.MonPreset.getSize(2))) {
+            if (ds1Raw && (D2MOOLayoutContext.files().MonPreset == null || index < 0
+                || index >= D2MOOLayoutContext.files().MonPreset.getSize(2))) {
               counts[1]++;
               return;
             }
             Act2ArcaneD2MOOLayoutBridge.NativeMonsterResolution resolved =
                 Act2ArcaneD2MOOLayoutBridge.resolveNativeMonster(index, ds1Raw);
-            if (resolved.monsterId < 0 || Riiablo.files.monstats.get(resolved.monsterId) == null) {
+            if (resolved.monsterId < 0 || D2MOOLayoutContext.files().monstats.get(resolved.monsterId) == null) {
               counts[1]++;
               return;
             }
@@ -134,7 +141,7 @@ public final class Act2D2MOOLayoutBridge {
 
   private static final class RiiabloAccess {
     static boolean mpqsMissing() {
-      return com.riiablo.Riiablo.mpqs == null;
+      return D2MOOLayoutContext.mpqs() == null;
     }
   }
 }

@@ -8,7 +8,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
@@ -41,7 +41,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Owns the entity-side transaction for native quest hireling rewards. */
 @Wire(failOnNull = false)
-public class NativeMercenaryRewardSystem extends PassiveSystem
+public class NativeMercenaryRewardSystem extends ContextualQuestSystem
     implements MercenaryManager.MercenaryCallback {
   private static final Logger log = LogManager.getLogger(NativeMercenaryRewardSystem.class);
 
@@ -221,12 +221,12 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     }
   }
 
-  private static boolean sameLevel(Map.Zone first, Map.Zone second) {
+  private boolean sameLevel(Map.Zone first, Map.Zone second) {
     return first != null && second != null && levelId(first) >= 0
         && levelId(first) == levelId(second);
   }
 
-  private static int levelId(Map.Zone zone) {
+  private int levelId(Map.Zone zone) {
     return zone == null || zone.level == null ? -1 : zone.level.Id;
   }
 
@@ -438,12 +438,12 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         Math.round(owner.y));
   }
 
-  private static int mercenaryFootprint(int monsterId) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null
-        || Riiablo.files.monstats2 == null) return Size.MEDIUM;
-    MonStats.Entry stats = Riiablo.files.monstats.get(monsterId);
+  private int mercenaryFootprint(int monsterId) {
+    if (files() == null || files().monstats == null
+        || files().monstats2 == null) return Size.MEDIUM;
+    MonStats.Entry stats = files().monstats.get(monsterId);
     if (stats == null) return Size.MEDIUM;
-    MonStats2.Entry stats2 = Riiablo.files.monstats2.get(stats.MonStatsEx);
+    MonStats2.Entry stats2 = files().monstats2.get(stats.MonStatsEx);
     return stats2 == null ? Size.MEDIUM : Math.max(1, stats2.SizeX);
   }
 
@@ -452,7 +452,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         ? Math.max(1, mSize.get(playerId).size) : Size.MEDIUM;
   }
 
-  private static int monsterId(int mercType) {
+  private int monsterId(int mercType) {
     switch (mercType) {
       case MercenaryManager.MERC_TYPE_ROGUE: return MonsterType.HIRELING_ROGUE;
       case MercenaryManager.MERC_TYPE_DESERT: return MonsterType.HIRELING_DESERT;
@@ -659,7 +659,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   @Override
   public int getDifficulty() {
     if (difficultyOverride >= 0) return difficultyOverride;
-    if (com.riiablo.Riiablo.charData != null) return com.riiablo.Riiablo.charData.diff;
+    if (character() != null) return character().diff;
     return 0;
   }
 }

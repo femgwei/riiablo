@@ -30,10 +30,8 @@ import com.riiablo.save.CharData;
 public class PlayerStatsManager {
   private static final Logger log = LogManager.getLogger(PlayerStatsManager.class);
 
-  /** 单例实例 */
-  public static final PlayerStatsManager INSTANCE = new PlayerStatsManager();
 
-  private PlayerStatsManager() {}
+  public PlayerStatsManager() {}
 
   //==========================================================================
   // 属性ID常量

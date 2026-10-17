@@ -17,7 +17,7 @@ public class DamageApplierTest extends RiiabloTest {
     DamageResult result = new DamageResult();
     result.fireDamage = 100;
 
-    DamageApplier.INSTANCE.applyResistancesAndAbsorb(result, monster, false, true);
+    new DamageApplier().applyResistancesAndAbsorb(result, monster, false, true);
 
     assertEquals(100, result.rolled[DamageResult.CHANNEL_FIRE]);
     assertEquals(0, result.mitigated[DamageResult.CHANNEL_FIRE]);
@@ -32,7 +32,7 @@ public class DamageApplierTest extends RiiabloTest {
     DamageResult result = new DamageResult();
     result.fireDamage = 100;
 
-    DamageApplier.INSTANCE.applyResistancesAndAbsorb(result, player, false, false);
+    new DamageApplier().applyResistancesAndAbsorb(result, player, false, false);
 
     assertEquals(25, result.fireDamage);
     assertEquals(25, result.immediateTotal());

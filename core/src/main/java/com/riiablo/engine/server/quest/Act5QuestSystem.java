@@ -56,7 +56,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 
 /** Server-authoritative A5Q1 Shenk lifecycle and Larzuk completion state. */
 @Wire(failOnNull = false)
-public class Act5QuestSystem extends BaseSystem {
+public class Act5QuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act5QuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -1230,7 +1230,7 @@ public class Act5QuestSystem extends BaseSystem {
 
     short completed = Act5AncientsQuest.complete(previous);
     player.data.getQuests(Riiablo.ACT5)[Act5AncientsQuest.RECORD] = completed;
-    if (player.data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(player.data);
+    persistCharacter(player.data);
     log.info("[A5Q5] Ancients reward granted: player={} difficulty={} oldLevel={} "
             + "newLevel={} experience={} reason={} record=0x{}",
         playerId, difficulty, oldLevel, player.data.level & 0xFF, reward, reason,
@@ -1420,9 +1420,9 @@ public class Act5QuestSystem extends BaseSystem {
     // as a lost-room spawn. Delayed controllers also carry the requested wave,
     // so an old missile can never materialize a later wave.
     if (pendingBaalWave == activeWave) {
-      com.riiablo.codec.excel.Skills.Entry spawn = Riiablo.files.skills.get(286);
+      com.riiablo.codec.excel.Skills.Entry spawn = files().skills.get(286);
       com.riiablo.codec.excel.Missiles.Entry control = spawn == null ? null
-          : Riiablo.files.Missiles.get(spawn.srvmissile);
+          : files().Missiles.get(spawn.srvmissile);
       int timeout = control == null ? 250 : Math.max(250,
           com.riiablo.engine.server.component.Missile.nativeRangeFrames(control, 1) + 50);
       if (++pendingBaalWaveTicks < timeout) return;
@@ -1504,7 +1504,7 @@ public class Act5QuestSystem extends BaseSystem {
     return count;
   }
 
-  private static boolean isBaalWaveSuperUnique(int id) {
+  private boolean isBaalWaveSuperUnique(int id) {
     for (int waveId : Act5BaalQuest.WAVE_SUPER_UNIQUES) {
       if (waveId == id) return true;
     }
@@ -1568,37 +1568,37 @@ public class Act5QuestSystem extends BaseSystem {
     return true;
   }
 
-  private static SuperUniques.Entry resolveBaalWaveSuperUnique(int waveIndex) {
+  private SuperUniques.Entry resolveBaalWaveSuperUnique(int waveIndex) {
     if (waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_COUNT
-        || Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
+        || files() == null || files().SuperUniques == null) return null;
     int id = Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex];
-    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+    for (SuperUniques.Entry entry : files().SuperUniques) {
       if (entry != null && entry.hcIdx == id) return entry;
     }
     return null;
   }
 
-  private static MonStats.Entry resolveBaalWaveStats(
+  private MonStats.Entry resolveBaalWaveStats(
       int waveIndex, SuperUniques.Entry unique) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    if (files() == null || files().monstats == null) return null;
     if (unique != null && unique.MonClass != null && !unique.MonClass.isEmpty()) {
-      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
+      MonStats.Entry stats = files().monstats.get(unique.MonClass);
       if (stats != null) return stats;
     }
     if (waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_MONSTER_IDS.length) return null;
-    MonStats.Entry stats = Riiablo.files.monstats.get(Act5BaalQuest.WAVE_MONSTER_IDS[waveIndex]);
+    MonStats.Entry stats = files().monstats.get(Act5BaalQuest.WAVE_MONSTER_IDS[waveIndex]);
     if (stats != null) return stats;
-    for (MonStats.Entry entry : Riiablo.files.monstats) {
+    for (MonStats.Entry entry : files().monstats) {
       if (entry != null && entry.Id != null
           && entry.Id.equalsIgnoreCase(Act5BaalQuest.WAVE_MONSTER_IDS[waveIndex])) return entry;
     }
     return null;
   }
 
-  private static MonStats.Entry resolveBaalWaveMinion(MonStats.Entry leader) {
-    if (leader == null || Riiablo.files == null || Riiablo.files.monstats == null) return leader;
+  private MonStats.Entry resolveBaalWaveMinion(MonStats.Entry leader) {
+    if (leader == null || files() == null || files().monstats == null) return leader;
     if (leader.minion1 != null && !leader.minion1.isEmpty()) {
-      MonStats.Entry minion = Riiablo.files.monstats.get(leader.minion1);
+      MonStats.Entry minion = files().monstats.get(leader.minion1);
       if (minion != null) return minion;
     }
     return leader;
@@ -1950,13 +1950,13 @@ public class Act5QuestSystem extends BaseSystem {
     return Engine.INVALID_ENTITY;
   }
 
-  private static MonStats.Entry resolveTyraelStats() {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
-    MonStats.Entry stats = Riiablo.files.monstats.get("Tyrael3");
+  private MonStats.Entry resolveTyraelStats() {
+    if (files() == null || files().monstats == null) return null;
+    MonStats.Entry stats = files().monstats.get("Tyrael3");
     if (stats != null) return stats;
-    stats = Riiablo.files.monstats.get("Tyrael");
+    stats = files().monstats.get("Tyrael");
     if (stats != null && Act5BaalQuest.isTyrael3(stats.hcIdx, stats.Id)) return stats;
-    for (MonStats.Entry entry : Riiablo.files.monstats) {
+    for (MonStats.Entry entry : files().monstats) {
       if (entry != null && Act5BaalQuest.isTyrael3(entry.hcIdx, entry.Id)) return entry;
     }
     return null;
@@ -2109,8 +2109,8 @@ public class Act5QuestSystem extends BaseSystem {
 
   private Map.Zone findZone(int levelId) {
     if (map != null) {
-      Levels.Entry level = Riiablo.files == null || Riiablo.files.Levels == null
-          ? null : Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files() == null || files().Levels == null
+          ? null : files().Levels.get(levelId);
       Map.Zone zone = level == null ? null : map.findZone(level);
       if (zone != null) return zone;
     }
@@ -2136,13 +2136,13 @@ public class Act5QuestSystem extends BaseSystem {
     return Act5BaalQuest.isBaalMonster(stats.hcIdx, stats.Id);
   }
 
-  private static MonStats.Entry resolveBaalStats() {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
-    MonStats.Entry stats = Riiablo.files.monstats.get("BaalCrab");
+  private MonStats.Entry resolveBaalStats() {
+    if (files() == null || files().monstats == null) return null;
+    MonStats.Entry stats = files().monstats.get("BaalCrab");
     if (stats != null) return stats;
-    stats = Riiablo.files.monstats.get("Baal");
+    stats = files().monstats.get("Baal");
     if (stats != null) return stats;
-    for (MonStats.Entry entry : Riiablo.files.monstats) {
+    for (MonStats.Entry entry : files().monstats) {
       if (entry != null && Act5BaalQuest.isBaalMonster(entry.hcIdx, entry.Id)) return entry;
     }
     return null;
@@ -2199,7 +2199,7 @@ public class Act5QuestSystem extends BaseSystem {
     player.data.flags = NativeCharacterProgression.update(
         player.data.flags, 5, difficulty(playerId), player.data.isExpansion());
     player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD] = completed;
-    if (player.data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(player.data);
+    persistCharacter(player.data);
     log.info("[A5Q6] Baal reward granted: player={} difficulty={} progression={}->{} "
             + "reason={} record=0x{}",
         playerId, difficulty(playerId), previousProgression,
@@ -2210,26 +2210,26 @@ public class Act5QuestSystem extends BaseSystem {
 
   private MonStats.Entry resolveAncientStats(int superUniqueId, int ordinal) {
     SuperUniques.Entry unique = resolveAncientSuperUnique(superUniqueId);
-    if (unique != null && unique.MonClass != null && Riiablo.files != null
-        && Riiablo.files.monstats != null) {
-      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
+    if (unique != null && unique.MonClass != null && files() != null
+        && files().monstats != null) {
+      MonStats.Entry stats = files().monstats.get(unique.MonClass);
       if (stats != null) return stats;
     }
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    if (files() == null || files().monstats == null) return null;
     String[] names = {"AncientBarb" + ordinal, "Ancient" + ordinal};
     for (String name : names) {
-      MonStats.Entry stats = Riiablo.files.monstats.get(name);
+      MonStats.Entry stats = files().monstats.get(name);
       if (stats != null) return stats;
     }
-    for (MonStats.Entry entry : Riiablo.files.monstats) {
+    for (MonStats.Entry entry : files().monstats) {
       if (entry != null && containsName(entry.Id, "ancientbarb" + ordinal)) return entry;
     }
     return null;
   }
 
-  private static SuperUniques.Entry resolveAncientSuperUnique(int id) {
-    if (Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
-    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+  private SuperUniques.Entry resolveAncientSuperUnique(int id) {
+    if (files() == null || files().SuperUniques == null) return null;
+    for (SuperUniques.Entry entry : files().SuperUniques) {
       if (entry != null && entry.hcIdx == id) return entry;
     }
     return null;
@@ -2250,31 +2250,31 @@ public class Act5QuestSystem extends BaseSystem {
     return containsName(stats.Id, "nihlathak") || containsName(stats.NameStr, "nihlathak");
   }
 
-  private static boolean containsName(String value, String needle) {
+  private boolean containsName(String value, String needle) {
     return value != null && value.toLowerCase().contains(needle);
   }
 
-  private static MonStats.Entry resolveNihlathakStats() {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+  private MonStats.Entry resolveNihlathakStats() {
+    if (files() == null || files().monstats == null) return null;
     SuperUniques.Entry unique = resolveNihlathakSuperUnique();
     if (unique != null && unique.MonClass != null) {
-      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
+      MonStats.Entry stats = files().monstats.get(unique.MonClass);
       if (stats != null) return stats;
     }
-    MonStats.Entry stats = Riiablo.files.monstats.get("Nihlathak");
+    MonStats.Entry stats = files().monstats.get("Nihlathak");
     if (stats != null) return stats;
-    for (MonStats.Entry entry : Riiablo.files.monstats) {
+    for (MonStats.Entry entry : files().monstats) {
       if (entry != null && (containsName(entry.Id, "nihlathak")
           || containsName(entry.NameStr, "nihlathak"))) return entry;
     }
     return null;
   }
 
-  private static SuperUniques.Entry resolveNihlathakSuperUnique() {
-    if (Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
-    SuperUniques.Entry indexed = Riiablo.files.SuperUniques.get("Nihlathak");
+  private SuperUniques.Entry resolveNihlathakSuperUnique() {
+    if (files() == null || files().SuperUniques == null) return null;
+    SuperUniques.Entry indexed = files().SuperUniques.get("Nihlathak");
     if (indexed != null) return indexed;
-    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+    for (SuperUniques.Entry entry : files().SuperUniques) {
       if (entry != null && (entry.hcIdx == Act5NihlathakQuest.SUPERUNIQUE_NIHLATHAK_BOSS
           || containsName(entry.Superunique, "nihlathak"))) return entry;
     }
@@ -2421,7 +2421,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q1] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2433,7 +2433,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5RescueQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2445,7 +2445,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5PrisonQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2457,7 +2457,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5NihlathakQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q4] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2469,7 +2469,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5AncientsQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q5] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2481,7 +2481,7 @@ public class Act5QuestSystem extends BaseSystem {
     short next = transition.apply(previous);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD] = next;
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    persistCharacter(data);
     log.info("[A5Q6] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
@@ -2521,7 +2521,7 @@ public class Act5QuestSystem extends BaseSystem {
     gameState().restore(snapshot);
   }
 
-  private static boolean isAct5Level(int levelId) {
+  private boolean isAct5Level(int levelId) {
     return levelId >= D2LevelIds.LEVEL_HARROGATH
         && levelId <= D2LevelIds.LEVEL_WORLDSTONECHAMBER;
   }

@@ -135,7 +135,7 @@ class BarbarianFrenzyTest extends RiiabloTest {
     defender.level = 1;
     defender.resistances[CombatSystem.DAMAGE_PHYSICAL] = 100;
     defender.immunePhysical = true;
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(attacker, defender);
+    CombatSystem.CombatResult result = new CombatSystem().calculateAttack(attacker, defender);
     assertEquals(0, result.physicalDamage);
     assertEquals(50, result.elementalDamage[CombatSystem.DAMAGE_MAGIC]);
     assertEquals(50, result.totalDamage);

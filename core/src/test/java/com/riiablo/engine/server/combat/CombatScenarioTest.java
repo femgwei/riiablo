@@ -101,7 +101,7 @@ class CombatScenarioTest {
 
     void attackUntilDead() {
       assertTrue(player != null && monster != null, "spawn step must run first");
-      CombatSystem combat = CombatSystem.INSTANCE;
+      CombatSystem combat = new CombatSystem();
       while (!dead && attacks < 32) {
         attacks++;
         CombatSystem.CombatResult result = combat.calculateAttack(player, monster);

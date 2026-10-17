@@ -112,7 +112,7 @@ public final class AttributesUpdater {
     final int op = entry.op;
     final int op_param = entry.op_param;
     assert op_param == 0 || !entry.op_base.isEmpty();
-    final short opBaseStatId = Stat.index(entry.op_base);
+    final short opBaseStatId = stat.table().index(entry.op_base);
     assert op_param == 0 || opBase.aggregate().contains(opBaseStatId) : "entry.op_base " + entry.op_base;
     final int op_base = op_param > 0 ? opBase.aggregate().getValue(opBaseStatId, 1) : 1;
 
@@ -121,7 +121,7 @@ public final class AttributesUpdater {
       if (op_stat.isEmpty()) break;
       expectedOps++;
 
-      final short opStatId = Stat.index(op_stat);
+      final short opStatId = stat.table().index(op_stat);
       final StatRef opStat = agg.get(opStatId);
       if (opStat != null) {
         if (log.traceEnabled()) log.trace("Op stat({}) with opStat({})", stat.debugString(), opStat.debugString());
@@ -129,7 +129,7 @@ public final class AttributesUpdater {
         opStat.addEncoded(value);
         ops++;
       } else {
-        log.debug("stat({}) modifies opStat({}) but agg({}) does not contain it", stat.debugString(), Stat.entry(opStatId), agg);
+        log.debug("stat({}) modifies opStat({}) but agg({}) does not contain it", stat.debugString(), stat.table().entry(opStatId), agg);
       }
     }
 

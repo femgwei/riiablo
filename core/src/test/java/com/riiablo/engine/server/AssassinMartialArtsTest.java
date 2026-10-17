@@ -1120,7 +1120,6 @@ class AssassinMartialArtsTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), stateUpdater, actioneer, new Pathfinder(), factory)
         .build().register("factory", factory).register("map", new Map(0, 0)));
-    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(stateUpdater);
     try {
       int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
       Attributes targetAttrs = attributes(10000, 0, 0, 0);
@@ -1160,7 +1159,6 @@ class AssassinMartialArtsTest extends RiiabloTest {
       }
     } finally {
       world.dispose();
-      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 

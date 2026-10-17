@@ -26,10 +26,8 @@ import com.riiablo.logger.Logger;
 public class DefenseCalculator {
   private static final Logger log = LogManager.getLogger(DefenseCalculator.class);
 
-  /** 单例实例 */
-  public static final DefenseCalculator INSTANCE = new DefenseCalculator();
 
-  private DefenseCalculator() {}
+  public DefenseCalculator() {}
 
   //==========================================================================
   // 常量

@@ -40,7 +40,7 @@ public final class NpcRepairService {
       return rejected("ITEM_NOT_OWNED");
     }
     int cost = VendorPricing.repairPrice(item, npc, character);
-    if (cost <= 0 || !ItemDurabilityManager.INSTANCE.isRepairable(item)) {
+    if (cost <= 0 || !new ItemDurabilityManager().isRepairable(item)) {
       return rejected("NOTHING_TO_REPAIR");
     }
     if (VendorPricing.availableGold(character) < cost) {
@@ -51,7 +51,7 @@ public final class NpcRepairService {
     }
     // All validation and the wallet mutation completed before durability is
     // changed, so a rejected request can never leave a partially repaired item.
-    ItemDurabilityManager.INSTANCE.restoreDurability(item);
+    new ItemDurabilityManager().restoreDurability(item);
     items.updateStats();
     return accepted(cost, item.id);
   }
@@ -62,7 +62,7 @@ public final class NpcRepairService {
     long total = 0;
     for (Item item : character.getItems().getItems()) {
       if (item == null || item.location != Location.EQUIPPED
-          || !ItemDurabilityManager.INSTANCE.isRepairable(item)) continue;
+          || !new ItemDurabilityManager().isRepairable(item)) continue;
       int cost = VendorPricing.repairPrice(item, npc, character);
       if (cost <= 0) continue;
       repairable.add(item);
@@ -75,7 +75,7 @@ public final class NpcRepairService {
         || !VendorPricing.chargeGold(character, cost)) {
       return rejected("INSUFFICIENT_GOLD");
     }
-    for (Item item : repairable) ItemDurabilityManager.INSTANCE.restoreDurability(item);
+    for (Item item : repairable) new ItemDurabilityManager().restoreDurability(item);
     character.getItems().updateStats();
     return accepted(cost, 0);
   }

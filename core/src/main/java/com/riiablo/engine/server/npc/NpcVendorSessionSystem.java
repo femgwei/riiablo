@@ -37,7 +37,13 @@ public final class NpcVendorSessionSystem extends PassiveSystem {
     if (townStillOccupied()) return;
 
     if (sessions != null) sessions.clearAll();
-    Npc.clearAllVendorStocks();
+    com.artemis.utils.IntBag npcs = world.getAspectSubscriptionManager().get(
+        com.artemis.Aspect.all(com.riiablo.engine.server.component.AIWrapper.class)).getEntities();
+    for (int i = 0; i < npcs.size(); i++) {
+      com.riiablo.engine.server.ai.AI ai = world.getMapper(
+          com.riiablo.engine.server.component.AIWrapper.class).get(npcs.get(i)).ai;
+      if (ai instanceof Npc) ((Npc) ai).clearVendorStock();
+    }
   }
 
   private boolean townStillOccupied() {

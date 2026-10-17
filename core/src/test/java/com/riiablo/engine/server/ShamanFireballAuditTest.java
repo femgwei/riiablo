@@ -202,10 +202,10 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     fireResist.base().put(Stat.fireresist, 50);
     fireResist.reset();
     MathUtils.random.setSeed(0x51EBA1L);
-    CombatSystem.CombatResult full = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult full = new CombatSystem().calculateAttack(
         projectile.damage, noResist, false, false, true, 0, 0, 0, true);
     MathUtils.random.setSeed(0x51EBA1L);
-    CombatSystem.CombatResult resisted = CombatSystem.INSTANCE.calculateAttack(
+    CombatSystem.CombatResult resisted = new CombatSystem().calculateAttack(
         projectile.damage, fireResist, false, false, true, 0, 0, 0, true);
     assertTrue(full.hit);
     assertTrue(resisted.hit);

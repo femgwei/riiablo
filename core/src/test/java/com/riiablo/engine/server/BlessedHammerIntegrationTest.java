@@ -143,7 +143,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
     defender.base().put(Stat.item_absorbmagic_percent, 20);
     defender.reset();
 
-    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
+    CombatSystem.CombatResult result = new CombatSystem().calculateAttackAtDifficulty(
         attacker, defender, true, true, true,
         0, 0, 0, true, null, null, 0, 0,
         null, null, false, null, 0, 50);

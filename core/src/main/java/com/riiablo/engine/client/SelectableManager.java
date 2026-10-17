@@ -4,7 +4,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 

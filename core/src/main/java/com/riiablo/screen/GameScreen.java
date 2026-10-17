@@ -959,13 +959,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   /** Allocates locally in single-player or sends intent to the authoritative D2GS. */
   public boolean spendSkillPoint(int skillId) {
     if (socket != null) return NetworkedActionSender.spendSkillPoint(socket, skillId);
-    return PlayerStatsManager.INSTANCE.spendSkillPoint(charData, skillId);
+    return new PlayerStatsManager().spendSkillPoint(charData, skillId);
   }
 
   /** Allocates one attribute point locally or through the authoritative D2GS. */
   public boolean spendStatPoint(int statType) {
     if (socket != null) return NetworkedActionSender.spendStatPoint(socket, statType);
-    return PlayerStatsManager.INSTANCE.spendStatPoint(charData, statType)
+    return new PlayerStatsManager().spendStatPoint(charData, statType)
         == PlayerStatsManager.RESULT_SUCCESS;
   }
 

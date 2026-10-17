@@ -33,10 +33,9 @@ import com.riiablo.engine.server.monster.MonsterUtil;
  * @author riiablo team
  */
 public class CombatSystem {
+  private final DefenseCalculator defenseCalculatorResolver = new DefenseCalculator();
   private static final Logger log = LogManager.getLogger(CombatSystem.class);
 
-  /** Shared pure combat resolver used by the ECS systems. */
-  public static final CombatSystem INSTANCE = new CombatSystem();
 
   //==========================================================================
   // 常量 - 伤害类型
@@ -1820,7 +1819,7 @@ public class CombatSystem {
 
     // If shield block fails, native code falls through to Weapon Block and
     // Dodge/Avoid/Evade in that order.
-    int passiveDefense = DefenseCalculator.INSTANCE.checkPassiveDefense(
+    int passiveDefense = defenseCalculatorResolver.checkPassiveDefense(
         defender.attackType, defender.isMoving, defender.passiveDodge,
         defender.passiveAvoid, defender.passiveEvade, defender.passiveWeaponBlock);
     if (passiveDefense == DefenseCalculator.DEFENSE_DODGE

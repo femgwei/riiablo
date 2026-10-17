@@ -52,7 +52,7 @@ import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.client.component.Overlay;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.engine.client.automap.AutomapViewport;
 import com.riiablo.engine.server.component.AIWrapper;

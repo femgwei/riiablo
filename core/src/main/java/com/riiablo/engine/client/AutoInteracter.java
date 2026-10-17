@@ -5,7 +5,7 @@ import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.client.event.InteractEvent;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Position;

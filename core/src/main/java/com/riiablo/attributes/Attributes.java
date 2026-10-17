@@ -21,6 +21,15 @@ public final class Attributes implements Iterable<StatRef> {
    * which may have a potential large number/variety of stats aggregated onto
    * them.
    */
+  public static Attributes obtainLarge(StatTable table) {
+    Attributes attributes = obtainLarge();
+    attributes.list.bind(table);
+    attributes.base.stats.bind(table);
+    attributes.agg.stats.bind(table);
+    attributes.rem.stats.bind(table);
+    return attributes;
+  }
+
   public static Attributes obtainLarge() {
     final Attributes attributes = obtain();
     attributes.reset(Type.LARGE);
@@ -40,6 +49,15 @@ public final class Attributes implements Iterable<StatRef> {
    * stats. This is intended for standard items or other entities which may
    * have relatively few stats aggregated onto them.
    */
+  public static Attributes obtainStandard(StatTable table) {
+    Attributes attributes = obtainStandard();
+    attributes.list.bind(table);
+    attributes.base.stats.bind(table);
+    attributes.agg.stats.bind(table);
+    attributes.rem.stats.bind(table);
+    return attributes;
+  }
+
   public static Attributes obtainStandard() {
     final Attributes attributes = obtain();
     attributes.reset(Type.STANDARD);
@@ -55,6 +73,15 @@ public final class Attributes implements Iterable<StatRef> {
    * stats. This is intended for compact items or other entities which may
    * have only a couple stats aggregated onto them.
    */
+  public static Attributes obtainCompact(StatTable table) {
+    Attributes attributes = obtainCompact();
+    attributes.list.bind(table);
+    attributes.base.stats.bind(table);
+    attributes.agg.stats.bind(table);
+    attributes.rem.stats.bind(table);
+    return attributes;
+  }
+
   public static Attributes obtainCompact() {
     final Attributes attributes = obtain();
     attributes.reset(Type.COMPACT);
@@ -133,6 +160,8 @@ public final class Attributes implements Iterable<StatRef> {
   private int combatBlockFactor;
   private boolean combatRunningKnown;
   private boolean combatRunning;
+
+  public StatTable table() { return list.table(); }
 
   Attributes() {}
 

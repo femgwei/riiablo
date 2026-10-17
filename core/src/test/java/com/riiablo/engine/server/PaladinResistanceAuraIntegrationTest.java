@@ -68,7 +68,7 @@ class PaladinResistanceAuraIntegrationTest extends RiiabloTest {
 
       attributes(test.world, paladin).base().put(Stat.fireresist, 100);
       attributes(test.world, paladin).reset();
-      CombatSystem.CombatResult capped = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult capped = new CombatSystem().calculateFixedElementalDamage(
           attributes(test.world, paladin), true, false,
           CombatSystem.DAMAGE_FIRE, 100, 0, states, 0);
       assertEquals(23, capped.totalDamage,
@@ -103,7 +103,7 @@ class PaladinResistanceAuraIntegrationTest extends RiiabloTest {
 
       attributes(test.world, ally).base().put(Stat.fireresist, 100);
       attributes(test.world, ally).reset();
-      CombatSystem.CombatResult capped = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+      CombatSystem.CombatResult capped = new CombatSystem().calculateFixedElementalDamage(
           attributes(test.world, ally), true, false,
           CombatSystem.DAMAGE_FIRE, 100, 0, allyStates, 0);
       assertEquals(21, capped.totalDamage,

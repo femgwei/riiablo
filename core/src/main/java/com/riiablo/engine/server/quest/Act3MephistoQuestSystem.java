@@ -34,7 +34,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 
 /** Server-authoritative A3Q6 Mephisto completion and Hell Gate transition. */
 @Wire(failOnNull = false)
-public class Act3MephistoQuestSystem extends BaseSystem {
+public class Act3MephistoQuestSystem extends ContextualQuestSystem {
   private static final Logger log = LogManager.getLogger(Act3MephistoQuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -263,11 +263,11 @@ public class Act3MephistoQuestSystem extends BaseSystem {
     return wrapper == null || wrapper.map == null ? 0 : wrapper.map.getDifficulty();
   }
 
-  private static short record(CharData data) {
+  private short record(CharData data) {
     return data.getQuests(Riiablo.ACT3)[Act3MephistoQuest.RECORD];
   }
 
-  private static void persist(CharData data) {
-    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  private void persist(CharData data) {
+    persistCharacter(data);
   }
 }

@@ -27,6 +27,7 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 /** Ticks native fire trap objects and removes them after their animation lifetime. */
 @Wire(failOnNull = false)
 public class NativeTrapFireSystem extends BaseSystem {
+  private final CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(NativeTrapFireSystem.class);
 
   protected ComponentMapper<NativeTrapFire> mFire;
@@ -111,7 +112,7 @@ public class NativeTrapFireSystem extends BaseSystem {
     int max = Math.max(hitpoints >> 3, min + 1);
     int roll = min + fire.nextInt(max - min + 1);
     int rawDamage = Math.max(1, Math.round(roll * fire.damagePercent / 100f));
-    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
         attrs, true, false, CombatSystem.DAMAGE_FIRE, rawDamage, 0, stateList(targetId),
         sourceDifficulty(fireId, targetId));
     if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
