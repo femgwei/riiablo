@@ -16,7 +16,7 @@ Baboon、Scarab 在本批前已有专用类；新增实表检查同时覆盖这�
 - D02 状态与命令：NativeAiState 记录 MonsterData 的模式记忆；3/19 不再解释成 Terror/Taunt。命令有队列、目标/所有者身份和截止帧；Fallen、Minion 逐条消费，CryHelp 分发到所属 minion。
 - D03 生成上下文：地图保存本局区域怪物选择，房间保存生成随机流；Nest、MinionSpawner 的选类/出生模式/坐标由 Casting 保存，服务端回调调用工厂并设置所有权和奖励标志。
 - D04 骑乘：Imp、SiegeTower、SiegeBeast 共享候选载具和分配身份；附着后跟随、卸载碰撞，宿主消失后清理身份并恢复单位标志；骑乘技能按 imp1 表读取。
-- D05 剧情：DarkWanderer 的 InitFn43、退场和 InitFn59 计时进入正常服务器更新；Act3QuestSystem 从 PassiveSystem 改为 BaseSystem。Baal 共用现有五波任务时钟，技能 286 生成真实 SrvHit54 控制弹体，携带波次与 owner 身份以拒绝迟到回调；同实体重建为 stairs，传送门创建成功后才移除。Ancient 分三个处理器；本批实表中出现的 12 个 MonSeq 定义均可执行，混合移动/攻击模式切换、冲锋接近等待与持续喷火调度各自处理；Leap Attack 补齐起跳、落地和单次攻击。CatapultSpotter 同时查询活动单位与房间保存的死亡 catapult 记录。
+- D05 剧情：DarkWanderer 的 InitFn43、退场和 InitFn59 计时进入正常服务器更新；Act3QuestSystem 从 PassiveSystem 改为 BaseSystem；任务随机流已提升为世界级 NativeQuestRandomState。Baal 共用现有五波任务时钟，技能 286 生成真实 SrvHit54 控制弹体，携带波次与 owner 身份以拒绝迟到回调；同实体重建为 stairs，传送门创建成功后才移除。Ancient 分三个处理器；本批实表中出现的 12 个 MonSeq 定义均可执行，混合移动/攻击模式切换、冲锋接近等待与持续喷火调度各自处理；Leap Attack 补齐起跳、落地和单次攻击。CatapultSpotter 同时查询活动单位与房间保存的死亡 catapult 记录。
 - D06 死亡与尸体：SuicideMinion 的倒计时和死亡后 4 帧爆炸接入死亡更新，表现弹体不重复伤害；Regurgitator 接入吞尸回调；ReanimatedHorde 的基础类修饰符、复生次数和等待保存在 Monster 生命周期中。
 - D07 特殊状态与移动预检：原先把 BatDemon Unk029 称为受击回调有误；该函数是特殊 AI 状态切换回调。实现挂顶保持、特殊控制切换和回血增量撤销。ClawViperEx 使用技能移动预检；Imp 传送绕过玩家专属关卡传送限制。
 - 小技能依赖：补充 ImpInferno126、CryHelp128、Imp129、Whip131、FireMissile132、Pregnant133、Stomp134、Spawner135 的服务器入口。未重构通用伤害/反伤系统。

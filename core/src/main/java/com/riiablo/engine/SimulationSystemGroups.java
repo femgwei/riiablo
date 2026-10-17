@@ -40,6 +40,7 @@ import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
+import com.riiablo.engine.server.quest.NativeQuestRandomState;
 
 /**
  * Shared, ordered registration groups for local games and dedicated servers.
@@ -83,6 +84,7 @@ public final class SimulationSystemGroups {
   /** Quest state and the free mercenary reward share one authority boundary. */
   public static BaseSystem[] quests() {
     return new BaseSystem[] {
+        new NativeQuestRandomState(),
         new Act1QuestSystem(),
         new Act2QuestSystem(),
         new Act3QuestSystem(),

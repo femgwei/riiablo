@@ -65,6 +65,8 @@ public class Act3QuestSystem extends BaseSystem {
   protected PartyManager partyManager;
   @Wire(name = "map", failOnNull = false)
   protected Map map;
+  @Wire(failOnNull = false)
+  protected NativeQuestRandomState questRandomState;
   protected EventSystem event;
 
   private EntitySubscription playersByZone;
@@ -156,7 +158,9 @@ public class Act3QuestSystem extends BaseSystem {
       MapWrapper wrapper = darkWandererEntity < 0 ? null : mMapWrapper.get(darkWandererEntity);
       if (wrapper != null && wrapper.zone != null) {
         int[][] offsets = {{-3,-3},{-3,0},{-3,3},{0,-3},{0,3},{3,-3},{3,0},{-3,3}};
-        int start = (int) (com.d2moo.common.seed.Seed.rollRandomNumber(wandererQuestSeed) & 1L);
+        com.d2moo.common.drlg.D2Seed questSeed = questRandomState == null
+            ? wandererQuestSeed : questRandomState.seed();
+        int start = (int) (com.d2moo.common.seed.Seed.rollRandomNumber(questSeed) & 1L);
         com.badlogic.gdx.math.Vector2 point = new com.badlogic.gdx.math.Vector2();
         com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
         for (int i = start; i < offsets.length; i++) {
@@ -277,8 +281,10 @@ public class Act3QuestSystem extends BaseSystem {
     // map is the server's world seed, so prefer it over the process-wide
     // client fallback; this keeps multiple worlds isolated while all Act III
     // quest rolls in one world consume the same stream.
-    long gameSeed = map == null ? Riiablo.gameSeed : map.seed();
-    com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, (int) gameSeed);
+    if (questRandomState == null) {
+      long gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+      com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, (int) gameSeed);
+    }
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
   }
