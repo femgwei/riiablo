@@ -232,7 +232,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (zone.objectCollisionReferences(px, py) > 0) flags |= 0x400;
       if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
       if ((flags & mask) != 0) return false;
-      if (enabled && (mask & 0x100) != 0 && hasSpawnWraith(sourceId, zone, px, py)) return false;
+      if (enabled && (mask & 0x100) != 0 && hasSpawnNoPresenceMarker(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
         if (!sharesCollisionSpace(zone, other)) return false;
         int bits = isPlayer(other) ? 0x80 : 0x100;
@@ -261,7 +261,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     spawnUnits.add(id);
   }
 
-  private boolean hasSpawnWraith(int sourceId, Map.Zone zone, int x, int y) {
+  private boolean hasSpawnNoPresenceMarker(int sourceId, Map.Zone zone, int x, int y) {
     for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnUnits.iterator(); it.hasNext;) {
       int id = it.next();
       if (id == sourceId || !mClass.has(id) || mClass.get(id).type != Class.Type.MON
@@ -271,12 +271,16 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
       if (mCorpse.has(id) || lifecycle != null && lifecycle.phase.ordinal()
           >= com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal()) continue;
-      if (!NativeGroundPathProfile.isWraith(monster.monstats)
-          || (mCasting.has(id) && mCasting.get(id).monsterHatchStarted)) continue;
+      if (mCasting.has(id) && mCasting.get(id).monsterHatchStarted) continue;
       Position position = mPosition.get(id);
+      boolean hiddenFrog = monster.frogNoPresence && monster.frogSpawnMarkerInitialized;
+      if (!NativeGroundPathProfile.isWraith(monster.monstats) && !hiddenFrog) continue;
+      if (hiddenFrog) observeHiddenFrogMove(id, position.position);
+      int distance = Math.abs(Map.round(position.position.x) - x)
+          + Math.abs(Map.round(position.position.y) - y);
+      if (hiddenFrog && !monster.frogSpawnMarkerMoved && distance == 0) continue;
       // PATH_AllocDynamicPath: SMALL_NO_PRESENCE retains only a MONSTER cross.
-      if (Math.abs(Map.round(position.position.x) - x)
-          + Math.abs(Map.round(position.position.y) - y) <= 1) return true;
+      if (distance <= 1) return true;
     }
     return false;
   }
@@ -342,10 +346,26 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   /** Transfers a unit to a destination without pushing another unit. */
   public boolean tryMove(int entityId, Vector2 destination) {
-    if (!enabled || destination == null || !hasPresence(entityId)) return true;
+    if (!enabled || destination == null) return true;
+    if (!hasPresence(entityId)) {
+      observeHiddenFrogMove(entityId, destination);
+      return true;
+    }
     return grid.move(entityId, -1, Map.round(destination.x),
         Map.round(destination.y), footprint(entityId),
         mWhirlwindRuntime.has(entityId) ? other -> false : blockerFor(entityId));
+  }
+
+  private void observeHiddenFrogMove(int id, Vector2 destination) {
+    if (!mMonster.has(id)) return;
+    Monster monster = mMonster.get(id);
+    if (monster.frogNoPresence && monster.frogSpawnMarkerInitialized
+        && (Map.round(destination.x) != monster.frogSpawnMarkerX
+            || Map.round(destination.y) != monster.frogSpawnMarkerY)) {
+      monster.frogSpawnMarkerMoved = true;
+      monster.frogSpawnMarkerX = Map.round(destination.x);
+      monster.frogSpawnMarkerY = Map.round(destination.y);
+    }
   }
 
   public boolean tryMove(int entityId, float x, float y) {

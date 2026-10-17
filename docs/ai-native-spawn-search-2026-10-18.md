@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：小型潜伏 footprint 的中心清除与移动
+
+- 来源：AiThink.cpp 的 FrogDemon 分支先 ResetMask 中心 NO_PATH/MONSTER，再设 SMALL_NO_PRESENCE；Path.cpp 的 PATH_SetUnitCollisionPattern 仅修改字段。D2Collision.cpp 的 COLLISION_SetUnitCollisionMask 在后续迁移时按新模式清旧十字、写新十字；Step.cpp 的普通移动循环在整数格未变化时跳过迁移写入。
+- enterFrogHidden 现在记录进入前的小型 pattern 与中心格；出生查询保留四臂 MONSTER、清中心 MONSTER，不增加 NO_PATH/PET。格内位移不恢复中心，首次跨格移动后使用完整 MONSTER 十字，返回原格也不回滚。
+- 使用现有移动接受入口记录跨格变化，查询也观察当前坐标；不会把潜伏单位重新加入行走占位。现有成功出水恢复 SMALL_UNIT_PRESENCE 后重新提供中心 NO_PATH，重复潜伏重新清中心。
+- 边界：本批投影只支持进入前的小型 pattern（Size 1/2 或已恢复的小型 presence）。大型原始 pattern 的边角/NO_PATH 残留、原生无引用计数网格的跨单位互清、同格强制传送重写以及完整 CORPSE 层尚未模拟，不能视为完整 16 位碰撞矩阵验收。
+- 验证：FrogPresenceIntegrationTest（7）、ImpMountCollisionIntegrationTest（2）、MaggotSpawnExecutionTest（9）、NativeMonsterSpawnSearchTest（10）、DynamicUnitCollisionSystemTest（12），共 40 项通过，architectureRegression 通过；日志 `build/ai-frog-marker-revalidation.log`。首轮新增路径断言误用无效 mover=-1，修正为有效实体后重跑通过；未运行全量测试或客户端图形验收。
+
 ## 后续：骑乘小恶魔保留占位
 
 - D2MOO 调用链：`SkillDruid.cpp` 的 SrvDo129 调用 `sub_6FCBDFE0(...,1,0)`，经 `SUnit.cpp`、`PathMisc.cpp` 的 D2Common_10229 到 `Step.cpp` 的 sub_6FDAD5E0，使用现有 collision pattern/footprint 迁移网格；上坐骑只另设 ATTACHED、owner、目标位与特殊 AI16，不清 footprint。AiThink.cpp 的 AI16 初始化/思考也未将其切换为 no-presence。

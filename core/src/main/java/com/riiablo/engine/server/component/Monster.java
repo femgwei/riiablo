@@ -71,6 +71,10 @@ public class Monster extends Component {
   /** Fn052 changes collision independently of targetability or skill start 51. */
   public boolean frogNoPresence;
   public boolean frogSmallPresence;
+  /** Small-pattern hidden transition: center stays cleared until a subtile change. */
+  public boolean frogSpawnMarkerInitialized;
+  public boolean frogSpawnMarkerMoved;
+  public int frogSpawnMarkerX, frogSpawnMarkerY;
 
   /** Native activation anchor. Monsters do not pursue targets outside their
    * spawn level/room scope; Zone is the current ECS equivalent of a level
@@ -120,6 +124,9 @@ public class Monster extends Component {
     shatteredAtDeath = false;
     frogNoPresence = false;
     frogSmallPresence = false;
+    frogSpawnMarkerInitialized = false;
+    frogSpawnMarkerMoved = false;
+    frogSpawnMarkerX = frogSpawnMarkerY = 0;
     spawnZone = null;
     spawnX = 0f;
     spawnY = 0f;

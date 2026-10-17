@@ -14,6 +14,47 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Real factory/collision/map implementation; only entity construction is minimal. */
 class FrogPresenceIntegrationTest extends RiiabloTest {
+  @Test void hiddenSmallPatternClearsOnlyCenterUntilFirstSubtileMove() {
+    try (Fixture f = new Fixture()) {
+      assertTrue(f.factory.enterFrogHidden(f.actor));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 31, 30, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 31, 31, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x3000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(f.actor, f.zone, 31, 30, 1, 0x100));
+      Position position = f.world.getMapper(Position.class).get(f.actor);
+      assertTrue(f.collisions.tryMove(f.actor, new Vector2(30.1f, 30.1f)));
+      position.position.set(30.1f, 30.1f);
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x100));
+      assertTrue(f.collisions.tryMove(f.actor, new Vector2(35, 35)));
+      position.position.set(35, 35);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 35, 35, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 36, 35, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 31, 30, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 35, 35, 1, 0x3000));
+      f.collisions.refreshNow();
+      assertFalse(f.collisions.hasPresence(f.actor));
+      assertTrue(f.collisions.isFreeForPath(f.actor, -1, 35, 35, 1));
+      // Returning to the entry cell does not undo the first movement write.
+      assertTrue(f.collisions.tryMove(f.actor, new Vector2(30, 30)));
+      position.position.set(30, 30);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x100));
+    }
+  }
+
+  @Test void emergingRestoresNoPathAndNextHideClearsCenterAgain() {
+    try (Fixture f = new Fixture()) {
+      assertTrue(f.factory.enterFrogHidden(f.actor));
+      assertTrue(f.factory.restoreFrogPresence(f.actor));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x1000));
+      assertTrue(f.factory.enterFrogHidden(f.actor));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 30, 30, 1, 0x1100));
+      f.world.delete(f.actor); f.world.process();
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 31, 30, 1, 0x100));
+    }
+  }
+
   @Test void genericSubmergeIsNotNoPresenceAndSmallSpawnDoesNotEmergeAgain() {
     try (Fixture f = new Fixture()) {
       assertFalse(f.factory.restoreFrogPresence(f.actor));

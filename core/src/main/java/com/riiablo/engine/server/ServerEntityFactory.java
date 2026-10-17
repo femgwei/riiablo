@@ -1177,6 +1177,16 @@ public class ServerEntityFactory extends EntityFactory {
   public boolean enterFrogHidden(int monsterId) {
     if (!submergeMonster(monsterId)) return false;
     Monster monster = mMonster.get(monsterId);
+    int previousSize = monster.frogSmallPresence ? 1
+        : mSize.has(monsterId) ? mSize.get(monsterId).size : 1;
+    monster.frogSpawnMarkerInitialized = previousSize >= 1 && previousSize <= 2
+        && mPosition.has(monsterId);
+    monster.frogSpawnMarkerMoved = false;
+    if (monster.frogSpawnMarkerInitialized) {
+      Vector2 position = mPosition.get(monsterId).position;
+      monster.frogSpawnMarkerX = Map.round(position.x);
+      monster.frogSpawnMarkerY = Map.round(position.y);
+    }
     monster.frogNoPresence = true;
     monster.frogSmallPresence = true;
     DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
