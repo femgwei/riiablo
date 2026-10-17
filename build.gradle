@@ -58,6 +58,11 @@ configure(subprojects - project(':android')) {
 // generates sources when creating IDEA project files
 tasks.idea.dependsOn 'core:generateSources'
 
+// Configure after child projects have declared their source sets and tasks.
+gradle.projectsEvaluated {
+  apply from: rootProject.file('gradle/architecture.gradle')
+}
+
 task release(type: Copy) {
   doFirst {
     delete "$buildDir/release"

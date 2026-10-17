@@ -21,11 +21,11 @@ public class ItemStatCost extends Excel<ItemStatCost.Entry> {
   protected void init() {
     put(new Entry() {{
       Stat = "reqstr";
-      ID = com.riiablo.attributes.Stat.reqstr;
+      ID = com.riiablo.attributes.SyntheticStatIds.REQUIRED_STRENGTH;
     }});
     put(new Entry() {{
       Stat = "reqdex";
-      ID = com.riiablo.attributes.Stat.reqdex;
+      ID = com.riiablo.attributes.SyntheticStatIds.REQUIRED_DEXTERITY;
     }});
   }
 

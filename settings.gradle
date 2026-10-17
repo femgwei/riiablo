@@ -1,6 +1,10 @@
 rootProject.name = 'riiablo'
 
 include 'core'
+include 'shared'
+include 'game-data'
+include 'server-domain'
+include 'server-systems'
 include 'D2MOO_JAVA'
 include 'desktop'
 include 'android'

@@ -28,6 +28,7 @@ project.ext.flatbuffersSourceDirs = file('src/main/flatbuffers/')
 
 // Java
 dependencies {
+  api project(':server-systems')
   implementation 'javax.annotation:javax.annotation-api:1.3.2'
 }
 

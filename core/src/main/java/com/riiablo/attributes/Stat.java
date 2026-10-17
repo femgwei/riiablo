@@ -370,8 +370,8 @@ public class Stat {
   static final short NONE = (1 << BITS) - 1; // 0x1FF
 
   // Synthetic stats
-  public static final short reqstr = NONE - 1;
-  public static final short reqdex = NONE - 2;
+  public static final short reqstr = SyntheticStatIds.REQUIRED_STRENGTH;
+  public static final short reqdex = SyntheticStatIds.REQUIRED_DEXTERITY;
 
   private static final byte[] GROUPED_COUNT = { 1, 4, 4, };
 

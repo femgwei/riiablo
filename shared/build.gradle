@@ -1,0 +1,7 @@
+// Host-independent utilities and identifiers. No dependency on :core.
+dependencies {
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api 'org.apache.commons:commons-lang3:3.9'
+  api 'org.apache.commons:commons-collections4:4.1'
+  implementation 'commons-io:commons-io:2.5'
+}

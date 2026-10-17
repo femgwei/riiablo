@@ -1,0 +1,113 @@
+// The extracted modules form a strict DAG; :core is their consumer/legacy host.
+ext.isolatedModuleDependencies = [
+    ':shared': [] as Set,
+    ':game-data': [':shared'] as Set,
+    ':server-domain': [':game-data', ':D2MOO_JAVA'] as Set,
+    ':server-systems': [':server-domain'] as Set,
+    ':D2MOO_JAVA': [] as Set,
+]
+
+tasks.register('verifyModuleBoundaries') {
+  group = 'verification'
+  description = 'Rejects reverse project edges, project cycles, and host/global access in extracted modules.'
+  doLast {
+    def allowed = rootProject.ext.isolatedModuleDependencies
+    def violations = []
+    def owners = [:]
+    (allowed.keySet() + [':core']).each { name ->
+      project(name).sourceSets.main.allJava.each { file ->
+        def text = file.getText('UTF-8')
+        def declaration = text =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+        if (declaration.find() && file.name != 'package-info.java') {
+          def type = declaration.group(1) + '.' + file.name.replaceFirst(/\.java$/, '')
+          if (owners.containsKey(type)) violations.add("Duplicate source owner for ${type}: ${owners[type]} and ${name}")
+          owners[type] = name
+        }
+      }
+    }
+    def graph = [:].withDefault { [] as Set }
+    rootProject.subprojects.each { p ->
+      p.configurations.each { configuration ->
+        configuration.dependencies.withType(ProjectDependency).each { dependency ->
+          def target = dependency.dependencyProject.path
+          // Test fixtures/annotation-processor integration may intentionally
+          // refer back to the tested project; they are not production edges.
+          if (configuration.name in ['api', 'implementation', 'compileOnly', 'runtimeOnly', 'annotationProcessor']) {
+            graph[p.path].add(target)
+          }
+          if (allowed.containsKey(p.path) && !allowed[p.path].contains(target)) {
+            violations.add("${p.path}:${configuration.name} -> ${target} is forbidden")
+          }
+        }
+      }
+    }
+    def active = []
+    def visited = [] as Set
+    Closure visit
+    visit = { String node ->
+      if (active.contains(node)) {
+        violations.add('Project dependency cycle: ' + (active + node).join(' -> '))
+      } else if (visited.add(node)) {
+        active.add(node)
+        graph[node].each { visit(it) }
+        active.remove(active.size() - 1)
+      }
+    }
+    graph.keySet().toList().each { visit(it) }
+
+    allowed.keySet().findAll { it != ':D2MOO_JAVA' }.each { name ->
+      def p = project(name)
+      // Each class must have exactly one physical source owner. Do not compile
+      // against another module's source tree or an injected core class directory.
+      p.sourceSets.main.java.srcDirs.each { dir ->
+        if (!dir.canonicalPath.startsWith(p.projectDir.canonicalPath + File.separator)) {
+          violations.add("${name} borrows source directory ${dir}")
+        }
+      }
+      ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath'].each { config ->
+        p.configurations[config].allDependencies.each { dependency ->
+          if (dependency instanceof FileCollectionDependency) {
+            violations.add("${name}:${config} contains an unmanaged file/classpath dependency")
+          }
+        }
+      }
+      p.fileTree('src/main/java').matching { include '**/*.java' }.each { file ->
+        def text = file.getText('UTF-8').replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"/, ' ')
+        def forbidden = [
+            /\b(?:com\.)?riiablo\.engine\.client\b/,
+            /\bcom\.riiablo\.(?:screen|widget|graphics|audio)\b/,
+            /\bcom\.badlogic\.gdx\.(?:graphics|scenes|audio|backends)\b/,
+            /\bRiiablo\s*\./,
+            /\bcom\.riiablo\.(?:Riiablo|Files)\b/,
+            /\bMathUtils\s*\.\s*random\b/,
+        ]
+        if (name in [':server-domain', ':server-systems']) forbidden.add(/\bINSTANCE\b/)
+        forbidden.each { pattern ->
+          if ((text =~ pattern).find()) violations.add("${name} ${p.relativePath(file)} violates ${pattern}")
+        }
+      }
+    }
+    if (!violations.empty) throw new GradleException(violations.unique().sort().join('\n'))
+    logger.lifecycle('Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.')
+  }
+}
+
+configure(isolatedModuleDependencies.keySet().collect { project(it) }) {
+  if (path != ':D2MOO_JAVA') {
+    dependencies {
+      testImplementation platform('org.junit:junit-bom:5.7.1')
+      testImplementation 'org.junit.jupiter:junit-jupiter'
+    }
+    tasks.named('test') { useJUnitPlatform(); systemProperty 'java.awt.headless', 'true' }
+  }
+  tasks.named('compileJava') { dependsOn rootProject.tasks.named('verifyModuleBoundaries') }
+  tasks.named('check') { dependsOn rootProject.tasks.named('verifyModuleBoundaries') }
+}
+
+project(':core') {
+  tasks.named('architectureRegression') {
+    dependsOn rootProject.tasks.named('verifyModuleBoundaries')
+    dependsOn ':shared:test', ':game-data:test', ':server-domain:test', ':server-systems:test'
+  }
+  tasks.named('check') { dependsOn tasks.named('architectureRegression') }
+}

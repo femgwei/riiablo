@@ -1,9 +1,13 @@
 package com.riiablo.codec.excel;
 
-import com.riiablo.Riiablo;
-
 @Excel.Binned
 public class ItemTypes extends Excel<ItemTypes.Entry> {
+  @Override
+  protected void put(int id, Entry value) {
+    value.owner = this;
+    super.put(id, value);
+  }
+
   public boolean is(Entry entry, String type) {
     if (entry.Code.equals(type)) {
       return true;
@@ -21,13 +25,15 @@ public class ItemTypes extends Excel<ItemTypes.Entry> {
   }
 
   public static class Entry extends Excel.Entry {
+    private ItemTypes owner;
     @Override
     public String toString() {
       return ItemType;
     }
 
     public boolean is(String type) {
-      return Riiablo.files.ItemTypes.is(this, type);
+      if (owner == null) throw new IllegalStateException("ItemTypes entry has no owning table: " + Code);
+      return owner.is(this, type);
     }
 
     @Column public String  ItemType;

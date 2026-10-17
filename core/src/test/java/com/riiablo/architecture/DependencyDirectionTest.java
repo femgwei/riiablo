@@ -47,6 +47,37 @@ class DependencyDirectionTest {
   }
 
   @Test
+  void legacyGlobalAccessDoesNotGrowInAnyMechanismFile() throws IOException {
+    Path sourceRoot = sourceRoot();
+    Path baseline = sourceRoot.resolve("../../../../docs/architecture-global-access.tsv").normalize();
+    Map<String, Integer> budgets = new HashMap<>();
+    for (String line : Files.readAllLines(baseline, StandardCharsets.UTF_8)) {
+      if (line.isEmpty() || line.startsWith("#")) continue;
+      String[] parts = line.split("\\t");
+      budgets.put(parts[0], Integer.parseInt(parts[1]));
+    }
+    Pattern globals = Pattern.compile(
+        "\\bRiiablo\\s*\\.\\s*(?:files|mpqs|gameSeed)\\b|\\bMathUtils\\s*\\.\\s*random\\b|\\bINSTANCE\\b");
+    Pattern commentsAndStrings = Pattern.compile(
+        "/\\*.*?\\*/|//[^\\n]*|\"(?:\\\\.|[^\"\\\\])*\"", Pattern.DOTALL);
+    List<String> violations = new ArrayList<>();
+    try (Stream<Path> paths = Files.walk(sourceRoot)) {
+      for (Path file : (Iterable<Path>) paths.filter(path -> path.toString().endsWith(".java"))::iterator) {
+        String relative = sourceRoot.relativize(file).toString().replace('\\', '/');
+        if (!isMechanismPackage(relative)) continue;
+        String text = commentsAndStrings.matcher(new String(
+            Files.readAllBytes(file), StandardCharsets.UTF_8)).replaceAll(" ");
+        Matcher matcher = globals.matcher(text);
+        int count = 0;
+        while (matcher.find()) count++;
+        int budget = budgets.getOrDefault(relative, 0);
+        if (count > budget) violations.add(relative + ": " + count + " > " + budget);
+      }
+    }
+    assertTrue(violations.isEmpty(), "legacy global access grew:\n" + String.join("\n", violations));
+  }
+
+  @Test
   void targetedGlobalAccessDoesNotGrow() throws IOException {
     Path sourceRoot = sourceRoot();
     Map<String, Integer> budgets = new HashMap<>();

@@ -1,0 +1,7 @@
+// Domain records, quest rules, managers and ECS state without a game host.
+dependencies {
+  api project(':game-data')
+  api project(':D2MOO_JAVA')
+  api "net.onedaybeard.artemis:artemis-odb:$artemisOdbVersion"
+  api "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
+}

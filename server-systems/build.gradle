@@ -1,0 +1,6 @@
+// Systems whose complete dependency closure is independent of the host.
+dependencies {
+  api project(':server-domain')
+  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+  implementation 'org.apache.commons:commons-math3:3.6.1'
+}
