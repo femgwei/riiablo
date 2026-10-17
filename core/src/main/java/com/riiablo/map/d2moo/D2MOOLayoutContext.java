@@ -4,6 +4,7 @@ import com.riiablo.Files;
 import com.riiablo.Riiablo;
 import com.riiablo.map.MapResources;
 import com.riiablo.mpq.MPQFileHandleResolver;
+import com.d2moo.common.datatbls.DataTbls;
 import java.util.Objects;
 
 /** Resources bound to one map generation; legacy bridges use a thread-scoped view. */
@@ -38,7 +39,11 @@ public final class D2MOOLayoutContext {
   public Scope activate() {
     D2MOOLayoutContext previous = CURRENT.get();
     CURRENT.set(this);
-    return () -> { if (previous == null) CURRENT.remove(); else CURRENT.set(previous); };
+    DataTbls.Scope tables = DataTbls.activate();
+    return () -> {
+      tables.close();
+      if (previous == null) CURRENT.remove(); else CURRENT.set(previous);
+    };
   }
 
   public interface Scope extends AutoCloseable {

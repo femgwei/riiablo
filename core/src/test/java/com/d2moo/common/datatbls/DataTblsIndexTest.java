@@ -80,6 +80,23 @@ class DataTblsIndexTest {
   }
 
   @Test
+  void activationIsolatesConcurrentTableSnapshots() {
+    D2LevelDefBin outer = levelDef(101, false);
+    D2LevelDefBin inner = levelDef(202, false);
+    DataTbls.setLevelDefBinCache(new D2LevelDefBin[] {outer});
+
+    try (DataTbls.Scope ignored = DataTbls.activate()) {
+      assertNull(DataTbls.getLevelDefRecord(101));
+      DataTbls.setLevelDefBinCache(new D2LevelDefBin[] {inner});
+      assertSame(inner, DataTbls.getLevelDefRecord(202));
+      assertNull(DataTbls.getLevelDefRecord(101));
+    }
+
+    assertSame(outer, DataTbls.getLevelDefRecord(101));
+    assertNull(DataTbls.getLevelDefRecord(202));
+  }
+
+  @Test
   void buildsPortalLevelsInSourceTableOrderAndReturnsACopy() {
     D2LevelDefBin normal = levelDef(7, false);
     D2LevelDefBin firstPortal = levelDef(40, true);

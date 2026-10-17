@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 D2MOO 表缓存上下文化
+
+- [x] `D2MOO_JAVA` 的 `DataTbls` 保留静态 API 兼容层，但缓存和索引迁入
+  `ThreadLocal` 的 `CacheState`；`DataTbls.activate()` 为一次布局生成建立独立表快照，
+  退出时恢复外层快照。`D2MOOLayoutContext.Scope` 同步管理资源上下文和表上下文，
+  并行或嵌套地图生成不会互相覆盖 `Levels/LvlPrest/LvlSub/LvlMaze/LvlWarp` 等表。
+- [x] 增加 `DataTblsIndexTest.activationIsolatesConcurrentTableSnapshots`，验证内外
+  快照隔离和恢复；既有索引、卸载及 D2MOO 地图测试继续使用兼容静态入口。
+- [ ] 仍需继续把各 Act 的无参桥接入口统一改为显式 `D2MOOLayoutContext`，并最终
+  移除桥接对 `Riiablo.files/mpqs` 的兼容回退；`core` 的物理 Gradle 模块拆分和
+  其余 presentation bridge 也仍未完成。
+
 ## 2026-10-17 共享组件边界与全局访问增长门禁
 
 - [x] `MenuWrapper` 从 `engine.server.component` 移入

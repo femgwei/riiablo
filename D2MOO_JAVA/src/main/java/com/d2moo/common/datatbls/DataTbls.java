@@ -19,27 +19,53 @@ import java.util.Map;
  */
 public class DataTbls {
     
-    // 数据表缓存（占位符，实际需要从文件加载）
-    private static D2LevelTypesTxt[] levelTypesTxtCache;
-    private static D2LvlWarpTxt[] lvlWarpTxtCache;
-    private static D2LevelDefBin[] levelDefBinCache;
-    private static D2LvlPrestTxt[] lvlPrestTxtCache;
-    private static D2LvlMazeTxt[] lvlMazeTxtCache;
-    private static D2LvlSubTxt[] lvlSubTxtCache;
-    private static D2LevelsTxt[] levelsTxtCache;
-    private static D2MonStatsTxt[] monStatsTxtCache;
-    private static D2SuperUniquesTxt[] superUniquesTxtCache;
-    private static int[] portalLevels = new int[0];
+    /**
+     * A table snapshot owned by one active D2MOO layout context.  The native API is
+     * still exposed through static methods for source compatibility, but the data
+     * itself is no longer shared by concurrent map generations.
+     */
+    private static final class CacheState {
+        D2LevelTypesTxt[] levelTypesTxtCache;
+        D2LvlWarpTxt[] lvlWarpTxtCache;
+        D2LevelDefBin[] levelDefBinCache;
+        D2LvlPrestTxt[] lvlPrestTxtCache;
+        D2LvlMazeTxt[] lvlMazeTxtCache;
+        D2LvlSubTxt[] lvlSubTxtCache;
+        D2LevelsTxt[] levelsTxtCache;
+        D2MonStatsTxt[] monStatsTxtCache;
+        D2SuperUniquesTxt[] superUniquesTxtCache;
+        int[] portalLevels = new int[0];
+        Map<Integer, D2LevelTypesTxt> levelTypesById;
+        Map<Integer, D2LevelDefBin> levelDefsById;
+        Map<Integer, D2LvlPrestTxt> lvlPrestByDef;
+        Map<Integer, D2LvlPrestTxt> lvlPrestByLevelId;
+        Map<Long, D2LvlWarpTxt> lvlWarpByLevelAndDirection;
+        Map<Integer, D2LvlSubTxt> lvlSubByType;
+        Map<Integer, D2LvlMazeTxt> lvlMazeByLevelId;
+    }
 
-    // Native tables are immutable after loading. These indexes retain the first matching row,
-    // matching the previous linear lookup behavior when malformed tables contain duplicates.
-    private static Map<Integer, D2LevelTypesTxt> levelTypesById;
-    private static Map<Integer, D2LevelDefBin> levelDefsById;
-    private static Map<Integer, D2LvlPrestTxt> lvlPrestByDef;
-    private static Map<Integer, D2LvlPrestTxt> lvlPrestByLevelId;
-    private static Map<Long, D2LvlWarpTxt> lvlWarpByLevelAndDirection;
-    private static Map<Integer, D2LvlSubTxt> lvlSubByType;
-    private static Map<Integer, D2LvlMazeTxt> lvlMazeByLevelId;
+    private static final ThreadLocal<CacheState> CURRENT =
+            ThreadLocal.withInitial(CacheState::new);
+
+    private static CacheState state() {
+        return CURRENT.get();
+    }
+
+    /** Starts an isolated table snapshot for the current D2MOO operation. */
+    public static Scope activate() {
+        CacheState previous = CURRENT.get();
+        CURRENT.set(new CacheState());
+        return () -> CURRENT.set(previous);
+    }
+
+    /** Clears only the current thread's native table snapshot. */
+    public static void clearCurrentContext() {
+        CURRENT.remove();
+    }
+
+    public interface Scope extends AutoCloseable {
+        @Override void close();
+    }
     
     /**
      * D2Common.0x6FD61460 (#10023)
@@ -48,13 +74,13 @@ public class DataTbls {
      * @return 关卡类型文本记录，如果不存在返回 null
      */
     public static D2LevelTypesTxt getLevelTypesTxtRecord(int nLevelType) {
-        return levelTypesById == null ? null : levelTypesById.get(nLevelType);
+        return state().levelTypesById == null ? null : state().levelTypesById.get(nLevelType);
     }
 
     /** Installs an externally decoded LvlTypes table (for example, riiablo's). */
     public static void setLevelTypesTxtCache(D2LevelTypesTxt[] cache) {
-        levelTypesTxtCache = cache;
-        levelTypesById = indexLevelTypes(cache);
+        state().levelTypesTxtCache = cache;
+        state().levelTypesById = indexLevelTypes(cache);
     }
     
     /**
@@ -64,7 +90,7 @@ public class DataTbls {
      * @return 关卡定义记录，如果不存在返回 null
      */
     public static D2LevelDefBin getLevelDefRecord(int nLevelId) {
-        return levelDefsById == null ? null : levelDefsById.get(nLevelId);
+        return state().levelDefsById == null ? null : state().levelDefsById.get(nLevelId);
     }
 
     /**
@@ -72,7 +98,7 @@ public class DataTbls {
      * The copy prevents callers from changing the table-derived cache.
      */
     public static int[] getPortalLevels() {
-        return portalLevels.clone();
+        return state().portalLevels.clone();
     }
     
     /**
@@ -82,7 +108,7 @@ public class DataTbls {
      * @return 关卡预设文本记录，如果不存在返回 null
      */
     public static D2LvlPrestTxt getLvlPrestTxtRecord(int nId) {
-        return lvlPrestByDef == null ? null : lvlPrestByDef.get(nId);
+        return state().lvlPrestByDef == null ? null : state().lvlPrestByDef.get(nId);
     }
     
     /**
@@ -91,7 +117,7 @@ public class DataTbls {
      * @return 关卡预设文本记录，如果不存在返回 null
      */
     public static D2LvlPrestTxt getLvlPrestTxtRecordFromLevelId(int nLevelId) {
-        return lvlPrestByLevelId == null ? null : lvlPrestByLevelId.get(nLevelId);
+        return state().lvlPrestByLevelId == null ? null : state().lvlPrestByLevelId.get(nLevelId);
     }
     
     /**
@@ -105,8 +131,8 @@ public class DataTbls {
         // LevelsTbls.cpp 0x6FD61DE0: either the requested direction or the
         // record's direction may be 'b'. Preserve the first matching TXT row,
         // rather than preferring a later exact match over a bidirectional row.
-        if (lvlWarpTxtCache == null) return null;
-        for (D2LvlWarpTxt record : lvlWarpTxtCache) {
+        if (state().lvlWarpTxtCache == null) return null;
+        for (D2LvlWarpTxt record : state().lvlWarpTxtCache) {
             if (record == null || record.getDwLevelId() != nLevelId) continue;
             String direction = record.getSzDirection();
             if (direction != null && !direction.isEmpty()
@@ -183,7 +209,7 @@ public class DataTbls {
         }
         
         setLevelTypesTxtCache(records.toArray(new D2LevelTypesTxt[0]));
-        D2Log.debug("DATATBLS_LoadLevelTypesTxt: Loaded " + levelTypesTxtCache.length + " records");
+        D2Log.debug("DATATBLS_LoadLevelTypesTxt: Loaded " + state().levelTypesTxtCache.length + " records");
     }
     
     /**
@@ -274,7 +300,7 @@ public class DataTbls {
         }
         
         setLevelDefBinCache(records.toArray(new D2LevelDefBin[0]));
-        D2Log.debug("DATATBLS_LoadLevelDefsBin: Loaded " + levelDefBinCache.length + " records");
+        D2Log.debug("DATATBLS_LoadLevelDefsBin: Loaded " + state().levelDefBinCache.length + " records");
     }
     
     /**
@@ -288,9 +314,9 @@ public class DataTbls {
      * 注入关卡定义缓存（供外部如 riiablo 从 Levels.txt 填充后传入）
      */
     public static void setLevelDefBinCache(D2LevelDefBin[] cache) {
-        levelDefBinCache = cache;
-        levelDefsById = indexLevelDefs(cache);
-        portalLevels = indexPortalLevels(cache);
+        state().levelDefBinCache = cache;
+        state().levelDefsById = indexLevelDefs(cache);
+        state().portalLevels = indexPortalLevels(cache);
     }
     
     /**
@@ -362,12 +388,12 @@ public class DataTbls {
         }
         
         setLvlPrestTxtCache(records.toArray(new D2LvlPrestTxt[0]));
-        D2Log.debug("DATATBLS_LoadLvlPrestTxt: Loaded " + lvlPrestTxtCache.length + " records, a2: " + a2);
+        D2Log.debug("DATATBLS_LoadLvlPrestTxt: Loaded " + state().lvlPrestTxtCache.length + " records, a2: " + a2);
         // Keep the native Act III maze IDs auditable when a user's MPQ has a
         // different table revision.  The enum values are only useful if they
         // resolve to the expected DS1 family; logging the actual Def/file pair
         // makes an ordinal drift immediately visible without shipping assets.
-        for (D2LvlPrestTxt record : lvlPrestTxtCache) {
+        for (D2LvlPrestTxt record : state().lvlPrestTxtCache) {
             if (record == null || record.getSzFile() == null) continue;
             for (String file : record.getSzFile()) {
                 if (file != null && isAct3UndergroundPresetFile(file)) {
@@ -397,9 +423,9 @@ public class DataTbls {
 
     /** Installs an externally decoded LvlPrest table. */
     public static void setLvlPrestTxtCache(D2LvlPrestTxt[] cache) {
-        lvlPrestTxtCache = cache;
-        lvlPrestByDef = indexLvlPrestByDef(cache);
-        lvlPrestByLevelId = indexLvlPrestByLevelId(cache);
+        state().lvlPrestTxtCache = cache;
+        state().lvlPrestByDef = indexLvlPrestByDef(cache);
+        state().lvlPrestByLevelId = indexLvlPrestByLevelId(cache);
     }
     
     /**
@@ -455,7 +481,7 @@ public class DataTbls {
         }
         
         setLvlWarpTxtCache(records.toArray(new D2LvlWarpTxt[0]));
-        D2Log.debug("DATATBLS_LoadLvlWarpTxt: Loaded " + lvlWarpTxtCache.length + " records");
+        D2Log.debug("DATATBLS_LoadLvlWarpTxt: Loaded " + state().lvlWarpTxtCache.length + " records");
     }
     
     /**
@@ -467,8 +493,8 @@ public class DataTbls {
 
     /** Installs an externally decoded LvlWarp table. */
     public static void setLvlWarpTxtCache(D2LvlWarpTxt[] cache) {
-        lvlWarpTxtCache = cache;
-        lvlWarpByLevelAndDirection = indexLvlWarps(cache);
+        state().lvlWarpTxtCache = cache;
+        state().lvlWarpByLevelAndDirection = indexLvlWarps(cache);
     }
     
     /**
@@ -739,8 +765,8 @@ public class DataTbls {
             records.add(record);
         }
         
-        levelsTxtCache = records.toArray(new D2LevelsTxt[0]);
-        D2Log.debug("DATATBLS_LoadLevelsTxt: Loaded " + levelsTxtCache.length + " records");
+        state().levelsTxtCache = records.toArray(new D2LevelsTxt[0]);
+        D2Log.debug("DATATBLS_LoadLevelsTxt: Loaded " + state().levelsTxtCache.length + " records");
     }
     
     /**
@@ -749,7 +775,7 @@ public class DataTbls {
      */
     public static void unloadLevelsTxt() {
         // 清理关卡文本表相关的缓存
-        levelsTxtCache = null;
+        state().levelsTxtCache = null;
         D2Log.debug("DATATBLS_UnloadLevelsTxt: Unloaded levels text table");
     }
     
@@ -760,13 +786,13 @@ public class DataTbls {
      */
     public static D2LevelsTxt getLevelsTxtRecord(int nLevelId) {
         // 检查数据表是否已加载
-        if (levelsTxtCache == null) {
+        if (state().levelsTxtCache == null) {
             // 数据表未加载，返回 null（不输出警告，因为这是正常的）
             return null;
         }
         
         // 简单的线性查找（实际应该使用哈希表或索引）
-        for (D2LevelsTxt record : levelsTxtCache) {
+        for (D2LevelsTxt record : state().levelsTxtCache) {
             if (record != null && record.getDwLevelId() == nLevelId) {
                 return record;
             }
@@ -874,15 +900,15 @@ public class DataTbls {
             records.add(record);
         }
         
-        monStatsTxtCache = records.toArray(new D2MonStatsTxt[0]);
-        D2Log.debug("DATATBLS_LoadMonStatsTxt: Loaded " + monStatsTxtCache.length + " records");
+        state().monStatsTxtCache = records.toArray(new D2MonStatsTxt[0]);
+        D2Log.debug("DATATBLS_LoadMonStatsTxt: Loaded " + state().monStatsTxtCache.length + " records");
     }
     
     /**
      * 卸载怪物统计文本表
      */
     public static void unloadMonStatsTxt() {
-        monStatsTxtCache = null;
+        state().monStatsTxtCache = null;
         D2Log.debug("DATATBLS_UnloadMonStatsTxt: Unloaded monster stats text table");
     }
     
@@ -892,12 +918,12 @@ public class DataTbls {
      */
     public static int getMonStatsTxtRecordCount() {
         // 检查数据表是否已加载
-        if (monStatsTxtCache == null) {
+        if (state().monStatsTxtCache == null) {
             // 数据表未加载，返回 0（不输出警告，因为这是正常的）
             return 0;
         }
         
-        return monStatsTxtCache.length;
+        return state().monStatsTxtCache.length;
     }
     
     /**
@@ -907,13 +933,13 @@ public class DataTbls {
      */
     public static D2MonStatsTxt getMonStatsTxtRecord(int nId) {
         // 检查数据表是否已加载
-        if (monStatsTxtCache == null) {
+        if (state().monStatsTxtCache == null) {
             // 数据表未加载，返回 null（不输出警告，因为这是正常的）
             return null;
         }
         
         // 简单的线性查找（实际应该使用哈希表或索引）
-        for (D2MonStatsTxt record : monStatsTxtCache) {
+        for (D2MonStatsTxt record : state().monStatsTxtCache) {
             if (record != null && record.getDwId() == nId) {
                 return record;
             }
@@ -1054,15 +1080,15 @@ public class DataTbls {
             records.add(record);
         }
         
-        superUniquesTxtCache = records.toArray(new D2SuperUniquesTxt[0]);
-        D2Log.debug("DATATBLS_LoadSuperUniquesTxt: Loaded " + superUniquesTxtCache.length + " records");
+        state().superUniquesTxtCache = records.toArray(new D2SuperUniquesTxt[0]);
+        D2Log.debug("DATATBLS_LoadSuperUniquesTxt: Loaded " + state().superUniquesTxtCache.length + " records");
     }
     
     /**
      * 卸载超级唯一怪物文本表
      */
     public static void unloadSuperUniquesTxt() {
-        superUniquesTxtCache = null;
+        state().superUniquesTxtCache = null;
         D2Log.debug("DATATBLS_UnloadSuperUniquesTxt: Unloaded super uniques text table");
     }
     
@@ -1072,12 +1098,12 @@ public class DataTbls {
      */
     public static int getSuperUniquesTxtRecordCount() {
         // 检查数据表是否已加载
-        if (superUniquesTxtCache == null) {
+        if (state().superUniquesTxtCache == null) {
             // 数据表未加载，返回 0（不输出警告，因为这是正常的）
             return 0;
         }
         
-        return superUniquesTxtCache.length;
+        return state().superUniquesTxtCache.length;
     }
     
     /**
@@ -1087,13 +1113,13 @@ public class DataTbls {
      */
     public static D2SuperUniquesTxt getSuperUniquesTxtRecord(int nId) {
         // 检查数据表是否已加载
-        if (superUniquesTxtCache == null) {
+        if (state().superUniquesTxtCache == null) {
             // 数据表未加载，返回 null（不输出警告，因为这是正常的）
             return null;
         }
         
         // 简单的线性查找（实际应该使用哈希表或索引）
-        for (D2SuperUniquesTxt record : superUniquesTxtCache) {
+        for (D2SuperUniquesTxt record : state().superUniquesTxtCache) {
             if (record != null && record.getDwId() == nId) {
                 return record;
             }
@@ -1110,7 +1136,7 @@ public class DataTbls {
      * @return 关卡子文本记录，如果不存在返回 null
      */
     public static D2LvlSubTxt getLvlSubTxtRecord(int nSubType) {
-        return lvlSubByType == null ? null : lvlSubByType.get(nSubType);
+        return state().lvlSubByType == null ? null : state().lvlSubByType.get(nSubType);
     }
     
     /**
@@ -1121,14 +1147,14 @@ public class DataTbls {
      * @return 下一个相同类型的记录，如果不存在返回 null
      */
     public static D2LvlSubTxt getNextLvlSubTxtRecord(D2LvlSubTxt currentRecord, int nSubType) {
-        if (lvlSubTxtCache == null || currentRecord == null) {
+        if (state().lvlSubTxtCache == null || currentRecord == null) {
             return null;
         }
         
         // 查找当前记录在数组中的位置
         int currentIndex = -1;
-        for (int i = 0; i < lvlSubTxtCache.length; ++i) {
-            if (lvlSubTxtCache[i] == currentRecord) {
+        for (int i = 0; i < state().lvlSubTxtCache.length; ++i) {
+            if (state().lvlSubTxtCache[i] == currentRecord) {
                 currentIndex = i;
                 break;
             }
@@ -1142,8 +1168,8 @@ public class DataTbls {
         // while condition stops at the first different Type. Do not skip over
         // intervening types looking for another matching row.
         int nextIndex = currentIndex + 1;
-        if (nextIndex >= lvlSubTxtCache.length) return null;
-        D2LvlSubTxt next = lvlSubTxtCache[nextIndex];
+        if (nextIndex >= state().lvlSubTxtCache.length) return null;
+        D2LvlSubTxt next = state().lvlSubTxtCache[nextIndex];
         return next != null && next.getDwType() == nSubType ? next : null;
     }
     
@@ -1202,7 +1228,7 @@ public class DataTbls {
         }
         
         setLvlSubTxtCache(records.toArray(new D2LvlSubTxt[0]));
-        D2Log.debug("DATATBLS_LoadLvlSubTxt: Loaded " + lvlSubTxtCache.length + " records");
+        D2Log.debug("DATATBLS_LoadLvlSubTxt: Loaded " + state().lvlSubTxtCache.length + " records");
     }
     
     /**
@@ -1215,8 +1241,8 @@ public class DataTbls {
 
     /** Installs an externally decoded LvlSub table while preserving row order. */
     public static void setLvlSubTxtCache(D2LvlSubTxt[] cache) {
-        lvlSubTxtCache = cache;
-        lvlSubByType = indexLvlSub(cache);
+        state().lvlSubTxtCache = cache;
+        state().lvlSubByType = indexLvlSub(cache);
     }
     
     /**
@@ -1228,7 +1254,7 @@ public class DataTbls {
      * @return 迷宫文本记录，如果不存在返回 null
      */
     public static D2LvlMazeTxt getLvlMazeTxtRecordFromLevelId(int nLevelId) {
-        return lvlMazeByLevelId == null ? null : lvlMazeByLevelId.get(nLevelId);
+        return state().lvlMazeByLevelId == null ? null : state().lvlMazeByLevelId.get(nLevelId);
     }
     
     /**
@@ -1307,7 +1333,7 @@ public class DataTbls {
         }
         
         setLvlMazeTxtCache(records.toArray(new D2LvlMazeTxt[0]));
-        D2Log.debug("DATATBLS_LoadLvlMazeTxt: Loaded " + lvlMazeTxtCache.length + " records");
+        D2Log.debug("DATATBLS_LoadLvlMazeTxt: Loaded " + state().lvlMazeTxtCache.length + " records");
     }
     
     /**
@@ -1320,8 +1346,8 @@ public class DataTbls {
 
     /** Installs an externally decoded LvlMaze table. */
     public static void setLvlMazeTxtCache(D2LvlMazeTxt[] cache) {
-        lvlMazeTxtCache = cache;
-        lvlMazeByLevelId = indexLvlMaze(cache);
+        state().lvlMazeTxtCache = cache;
+        state().lvlMazeByLevelId = indexLvlMaze(cache);
     }
 
     private static Map<Integer, D2LevelTypesTxt> indexLevelTypes(D2LevelTypesTxt[] cache) {
