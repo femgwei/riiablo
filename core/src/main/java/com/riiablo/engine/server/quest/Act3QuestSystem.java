@@ -150,8 +150,13 @@ public class Act3QuestSystem extends BaseSystem {
         com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
         for (int i = start; i < offsets.length; i++) {
           point.add(offsets[i][0], offsets[i][1]);
-          if (wrapper.zone.findFreeCoordinates(point, 3, 11, 0x1C09, true, free))
+          if (wrapper.zone.findFreeCoordinates(point, 3, 11, 0x1C09, true, free)) {
+            // COLLISION_GetFreeCoordinates writes back through the native
+            // coordinate structure. Subsequent offsets therefore accumulate
+            // from the resolved location, rather than the blocked candidate.
+            point.set(free);
             factory.createStaticObjectByClassId(131, free.x, free.y);
+          }
         }
       }
     }
