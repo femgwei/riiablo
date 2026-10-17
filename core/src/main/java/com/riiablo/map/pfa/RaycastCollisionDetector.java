@@ -12,6 +12,7 @@ public class RaycastCollisionDetector {
 
   private final Vector2 delta = new Vector2();
   private final Vector2 sample = new Vector2();
+  private final Collision<Vector2> probeCollision = new Collision<>(new Vector2(), new Vector2());
 
   private Map map;
 
@@ -20,22 +21,9 @@ public class RaycastCollisionDetector {
   }
 
   public boolean collides(Ray<Vector2> ray, int flags, int size) {
-    Vector2 start = ray.start;
-    Vector2 end = ray.end;
-
-    sample.set(start);
-    delta.set(end).sub(start).setLength(DELTA);
-    float add = delta.len();
-    for (float curDist = 0, maxDist = start.dst(end); curDist < maxDist; curDist += add, sample.add(delta)) {
-      // Map flags are a bit field, not a boolean walkability value.  D2
-      // deliberately keeps movement-only flags (for example swamp/deep
-      // water) separate from FLAG_BLOCK_JUMP, which is the native missile
-      // barrier.  Testing != 0 made every non-empty terrain cell stop arrows
-      // even when the requested collision mask did not include that bit.
-      if ((map.flags(sample) & flags) != 0) return true;
-    }
-
-    return (map.flags(end) & flags) != 0;
+    // Keep boolean/smoothing queries identical to authoritative movement,
+    // including native size patterns, masks and the final footprint.
+    return findCollision(ray, flags, size, probeCollision);
   }
 
 

@@ -14,6 +14,16 @@ import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
 class RaycastFootprintTest {
+  @Test void booleanRayUsesTheSameFootprintAsMovementRay() {
+    Map map = terrain((x, y) -> x == 11 && y == 10);
+    RaycastCollisionDetector rays = new RaycastCollisionDetector(map, new MapGraph(map));
+    for (int size = 1; size <= 3; size++) {
+      Ray<Vector2> ray = ray(10, 10, 10, 10);
+      assertEquals(rays.findCollision(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision()),
+          rays.collides(ray, DT1.Tile.FLAG_BLOCK_WALK, size), "size=" + size);
+    }
+  }
+
   @Test void ordinaryBigFootprintFitsThreeCellDoorJustLikeDoorOpener() {
     Map map = terrain((x, y) -> x == 20 && (y < 9 || y > 11));
     RaycastCollisionDetector rays = new RaycastCollisionDetector(map, new MapGraph(map));
@@ -42,6 +52,8 @@ class RaycastFootprintTest {
     RaycastCollisionDetector rays = new RaycastCollisionDetector(map, new MapGraph(map));
     assertFalse(rays.findCollision(ray(10, 10, 12, 10), DT1.Tile.FLAG_BLOCK_JUMP, 1, collision()));
     assertTrue(rays.findCollision(ray(10, 10, 12, 10), DT1.Tile.FLAG_BLOCK_WALK, 1, collision()));
+    assertFalse(rays.collides(ray(10, 10, 12, 10), DT1.Tile.FLAG_BLOCK_JUMP, 1));
+    assertTrue(rays.collides(ray(10, 10, 12, 10), DT1.Tile.FLAG_BLOCK_WALK, 1));
   }
 
   static Map terrain(BiPredicate<Integer, Integer> blocked) {
