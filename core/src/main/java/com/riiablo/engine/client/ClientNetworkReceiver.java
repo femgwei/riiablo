@@ -1093,6 +1093,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
                   authoritative.x(), authoritative.y(), predicted.x, predicted.y, hard);
           applyLocalPositionNormally = false;
           if (!correction.stale) {
+            mPosition.get(entityId).invalidateNativePrecision();
             predicted.set(correction.x, correction.y);
             if (mBox2DBody.has(entityId)) {
               Body body = mBox2DBody.get(entityId).body;
@@ -1204,6 +1205,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           if (localPlayer && !applyLocalPositionNormally) break;
           Vector2 position = mPosition.get(entityId).position;
           PositionP data = (PositionP) entityData.component(new PositionP(), i);
+          mPosition.get(entityId).invalidateNativePrecision();
           position.x = data.x();
           position.y = data.y();
           if (mBox2DBody.has(entityId)) {
