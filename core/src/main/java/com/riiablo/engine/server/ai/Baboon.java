@@ -136,6 +136,17 @@ public class Baboon extends AI {
     }
   }
 
+  /** D2GAME_AICORE_Escape uses integer coordinates and independent axis signs. */
+  private boolean escapeFrom(int targetId, int distance, int velocityBonus) {
+    Vector2 source = mPosition.get(entityId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    int x = (int) source.x, y = (int) source.y;
+    return walkTo(new Vector2(
+        x + Integer.compare(x, (int) target.x) * distance,
+        y + Integer.compare(y, (int) target.y) * distance),
+        velocityBonus, Engine.INVALID_ENTITY);
+  }
+
   private void changeRegen(int delta) {
     if (!mAttributesWrapper.has(entityId)) return;
     com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
@@ -227,8 +238,7 @@ public class Baboon extends AI {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
         // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 15, 1)
         stateMachine.changeState(State.ESCAPE);
-        Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
-        boolean escaped = walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
+        boolean escaped = escapeFrom(targetId, 15, nVel);
         if (!escaped) {
           // Can't escape
           if (!bCombat) {
@@ -305,8 +315,7 @@ public class Baboon extends AI {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
         // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 0xFu, 0)
         stateMachine.changeState(State.ESCAPE);
-        Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
-        walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
+        escapeFrom(targetId, 15, nVel);
         return;
       }
 
