@@ -55,6 +55,13 @@ public final class MercenarySkillSystem extends IteratingSystem {
   private volatile int processCount;
   private volatile int blockStage;
 
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
   public MercenarySkillSystem() {
     super(Aspect.all(Mercenary.class, Monster.class, Position.class));
   }
@@ -313,13 +320,13 @@ public final class MercenarySkillSystem extends IteratingSystem {
 
   private boolean castRogueFallback(int entityId, int targetId) {
     Monster monster = mMonster.get(entityId);
-    if (monster == null || monster.monstats == null || Riiablo.files == null
-        || Riiablo.files.skills == null) return false;
+    if (monster == null || monster.monstats == null || files() == null
+        || files().skills == null) return false;
     String skillName = monster.monstats.Skill1;
     if (skillName == null || skillName.isEmpty()) return false;
-    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    Skills.Entry skill = files().skills.get(skillName);
     if (skill == null) return false;
-    int mode = Riiablo.files.MonMode.index(monster.monstats.Sk1mode);
+    int mode = files().MonMode.index(monster.monstats.Sk1mode);
     if (mode < 0) mode = Engine.Monster.MODE_S1;
     actioneer.castWithMode(entityId, skill.Id, (byte) mode, targetId,
         mPosition.get(targetId).position.cpy());
@@ -355,8 +362,8 @@ public final class MercenarySkillSystem extends IteratingSystem {
   }
 
   private boolean requiresMeleeApproach(int skillId) {
-    if (Riiablo.files == null || Riiablo.files.skills == null) return true;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (files() == null || files().skills == null) return true;
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(skillId);
     if (skill == null) return true;
     return empty(skill.srvmissile) && empty(skill.srvmissilea)
         && empty(skill.srvmissileb) && empty(skill.srvmissilec)

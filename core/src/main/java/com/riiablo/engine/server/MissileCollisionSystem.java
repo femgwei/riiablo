@@ -75,7 +75,13 @@ import com.riiablo.map.DT1;
 @All({Missile.class, Position.class, Velocity.class})
 @com.artemis.annotations.Wire(failOnNull = false)
 public class MissileCollisionSystem extends IteratingSystem {
-  private final CombatSystem combatSystemResolver = new CombatSystem();
+  @Override
+  protected void initialize() {
+    if (serverContext != null) combatSystemResolver = new CombatSystem(
+        NativeRng.forUnit(serverContext.gameSeed(), 1));
+  }
+
+  private CombatSystem combatSystemResolver = new CombatSystem();
   @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
 
@@ -525,7 +531,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Attributes owner = mAttributesWrapper.has(controller.ownerId)
         ? mAttributesWrapper.get(controller.ownerId).attrs : null;
     if (skill != null) {
-      MissileDamageResolver.initializeSorceressFireArea(vent, skill,
+      MissileDamageResolver.initializeSorceressFireArea(files(), vent, skill,
           owner, mPlayer.has(controller.ownerId), vent.damageLevel,
           skillName -> baseSkillLevel(controller.ownerId, skillName), null);
     }
@@ -588,7 +594,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Attributes owner = mAttributesWrapper.has(controller.ownerId)
         ? mAttributesWrapper.get(controller.ownerId).attrs : null;
     if (skill != null) {
-      MissileDamageResolver.initializeSorceressFireArea(eruption, skill,
+      MissileDamageResolver.initializeSorceressFireArea(files(), eruption, skill,
           owner, mPlayer.has(controller.ownerId), eruption.damageLevel,
           name2 -> baseSkillLevel(controller.ownerId, name2), null);
     }
@@ -794,7 +800,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         child.damageLevel = Math.max(1, orb.damageLevel);
         Attributes ownerAttrs = mAttributesWrapper.has(orb.ownerId)
             ? mAttributesWrapper.get(orb.ownerId).attrs : null;
-        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel,
+        MissileDamageResolver.initializeSkill(files(), child, skill, ownerAttrs, child.damageLevel,
             name -> baseSkillLevel(orb.ownerId, name), stateList(orb.ownerId));
         log.debug("[SORCERESS_FROZEN_ORB] phase=bolt source={} root={} bolt={} index={} "
                 + "offset=({}, {}) damageSnapshot={}",
@@ -851,7 +857,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       nova.frozenOrbTargetY = FROZEN_ORB_Y[i];
       nova.range = 0f;
       nova.nativeLifetimeFrames = Missile.nativeRangeFrames(row, level);
-      MissileDamageResolver.initializeSkill(nova, skill, ownerAttrs, level,
+      MissileDamageResolver.initializeSkill(files(), nova, skill, ownerAttrs, level,
           key -> baseSkillLevel(source.ownerId, key), stateList(source.ownerId));
       created++;
     }
@@ -909,7 +915,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       fire.tickInterval = 1;
       fire.range = 0f;
       if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
-      MissileDamageResolver.initializeMeteorFireArea(fire, ownerAttrs,
+      MissileDamageResolver.initializeMeteorFireArea(files(), fire, ownerAttrs,
           mPlayer.has(center.ownerId), level, stateList(center.ownerId));
       created++;
     }
@@ -962,7 +968,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.damageMultiplier = center.damageMultiplier;
     Attributes ownerAttrs = mAttributesWrapper.has(center.ownerId)
         ? mAttributesWrapper.get(center.ownerId).attrs : null;
-    MissileDamageResolver.initializeSkillArea(
+    MissileDamageResolver.initializeSkillArea(files(),
         child, skill, ownerAttrs, child.damageLevel,
         name -> baseSkillLevel(center.ownerId, name), stateList(center.ownerId));
     log.info("[SORCERESS_BLIZZARD] phase=strike owner={} centerSkill={} child={} "
@@ -1013,7 +1019,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       bolt.skillId = delay.skillId;
       bolt.damageLevel = level;
       bolt.targetId = targetId;
-      MissileDamageResolver.initializePaladinFistOfHeavensBolt(
+      MissileDamageResolver.initializePaladinFistOfHeavensBolt(files(),
           bolt, skill, ownerAttrs, level,
           skillName -> baseSkillLevel(delay.ownerId, skillName));
       created++;
@@ -1246,7 +1252,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       child.skillId = maker.skillId;
       child.damageLevel = Math.max(1, maker.damageLevel);
       if (skill != null) {
-        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel,
+        MissileDamageResolver.initializeSkill(files(), child, skill, ownerAttrs, child.damageLevel,
             name -> baseSkillLevel(damageOwnerId, name));
       }
       spawned++;
@@ -2164,7 +2170,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.range = 0;
     if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
     Attributes attrs = mAttributesWrapper.has(maker.ownerId) ? mAttributesWrapper.get(maker.ownerId).attrs : null;
-    MissileDamageResolver.initializeMeteorFireArea(child, attrs, mPlayer.has(maker.ownerId), maker.damageLevel,
+    MissileDamageResolver.initializeMeteorFireArea(files(), child, attrs, mPlayer.has(maker.ownerId), maker.damageLevel,
         stateList(maker.ownerId));
     maker.fireWallSegmentsCreated++;
     log.info("[DIAB_WALL] phase=segment maker={} segment={} owner={} level={} lifetime={} rawFixed={}..{} position=({}, {})",
@@ -2203,7 +2209,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
     Attributes ownerAttrs = mAttributesWrapper.has(owner)
         ? mAttributesWrapper.get(owner).attrs : null;
-    MissileDamageResolver.initializeSorceressFireArea(
+    MissileDamageResolver.initializeSorceressFireArea(files(),
         child, skill, ownerAttrs, mPlayer.has(owner), level,
         name -> baseSkillLevel(owner, name), stateList(owner));
     maker.fireWallSegmentsCreated++;
@@ -2725,20 +2731,20 @@ public class MissileCollisionSystem extends IteratingSystem {
               || "freeze".equalsIgnoreCase(row.EType)
               || "frze".equalsIgnoreCase(row.EType));
       boolean initialized = tableSnapshot
-          && MissileDamageResolver.initializeTableMissile(child, ownerAttrs, level);
+          && MissileDamageResolver.initializeTableMissile(files(), child, ownerAttrs, level);
       if (!initialized && skill != null) {
-        if (!MissileDamageResolver.initializeSkillArea(
+        if (!MissileDamageResolver.initializeSkillArea(files(),
             child, skill, ownerAttrs, level,
             synergyName -> baseSkillLevel(source.ownerId, synergyName),
             stateList(source.ownerId))) {
-          MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
+          MissileDamageResolver.initialize(files(), child, ownerAttrs, null, -1, level, 0);
         }
       }
       if (tableSnapshot && !child.damageSnapshot
           && "frze".equalsIgnoreCase(row.EType)) {
         Skills.Entry freezingArrow = files().skills.get("Freezing Arrow");
         if (freezingArrow != null) {
-          MissileDamageResolver.initializeColdSkillMissile(child, freezingArrow,
+          MissileDamageResolver.initializeColdSkillMissile(files(), child, freezingArrow,
               ownerAttrs, level);
         }
       }
@@ -2957,7 +2963,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           new Vector2(origin).add(xs[i], ys[i]), source.ownerId, level);
       if (id < 0 || !mMissile.has(id)) continue;
       Missile fire = mMissile.get(id);
-      MissileDamageResolver.initialize(fire, ownerAttrs, null, -1, level, 0);
+      MissileDamageResolver.initialize(files(), fire, ownerAttrs, null, -1, level, 0);
       fire.skillId = source.skillId;
       fire.damageLevel = level;
       fire.persistent = true;
@@ -3020,7 +3026,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missile child = mMissile.get(id);
     Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
-    MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
+    MissileDamageResolver.initialize(files(), child, ownerAttrs, null, -1, level, 0);
     child.skillId = source.skillId;
     child.damageLevel = level;
     // SrvHit12 supplies skill level but neither pInitFunc nor an explicit
@@ -3031,7 +3037,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     boolean chainLightning = skill != null
         && skill.Id == com.riiablo.engine.server.skill.SkillId.CHAIN_LIGHTNING;
     if (chainLightning) {
-      MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, level,
+      MissileDamageResolver.initializeSkill(files(), child, skill, ownerAttrs, level,
           name -> baseSkillLevel(source.ownerId, name), stateList(source.ownerId));
     }
     child.chainHitsRemaining = source.chainHitsRemaining - 1;
@@ -3093,7 +3099,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             Math.max(1, source.damageLevel));
         if (id < 0 || !mMissile.has(id)) continue;
         Missile fire = mMissile.get(id);
-        MissileDamageResolver.initializeImmolationFireArea(
+        MissileDamageResolver.initializeImmolationFireArea(files(),
             fire, ownerAttrs, mPlayer.has(source.ownerId), level);
         fire.skillId = source.skillId;
         fire.damageLevel = level;
@@ -3255,7 +3261,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (missileSkill != null) damageSkill = missileSkill;
     }
     if (!cloud.damageSnapshot && damageSkill != null) {
-      MissileDamageResolver.initializeSkillPoisonArea(
+      MissileDamageResolver.initializeSkillPoisonArea(files(),
           cloud, damageSkill, ownerAttrs, mPlayer.has(cloud.ownerId),
           Math.max(1, cloud.damageLevel),
           name -> baseSkillLevel(cloud.ownerId, name));
@@ -3434,10 +3440,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
             ? mAttributesWrapper.get(source.ownerId).attrs : null;
         if (skill != null) {
-          MissileDamageResolver.initializeSkillArea(bolt, skill, ownerAttrs, level);
+          MissileDamageResolver.initializeSkillArea(files(), bolt, skill, ownerAttrs, level);
         } else {
           Monster ownerMonster = mMonster.has(source.ownerId) ? mMonster.get(source.ownerId) : null;
-          MissileDamageResolver.initialize(bolt, ownerAttrs, ownerMonster, -1, level, 0);
+          MissileDamageResolver.initialize(files(), bolt, ownerAttrs, ownerMonster, -1, level, 0);
         }
       }
       selectedTargets[created] = targetId;
@@ -3827,7 +3833,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         || !"freezingarrowexp3".equalsIgnoreCase(missile.missile.Missile)) return;
     Skills.Entry skill = files().skills.get("Freezing Arrow");
     if (skill != null) {
-      MissileDamageResolver.initializeColdSkillMissile(
+      MissileDamageResolver.initializeColdSkillMissile(files(),
           missile, skill, ownerAttrs, Math.max(1, missile.damageLevel));
     }
     missile.freezesTarget = true;

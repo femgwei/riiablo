@@ -53,7 +53,29 @@ import com.riiablo.map.Map;
  */
 @All({SummonedPet.class, Monster.class, Position.class})
 public class AssassinTrapSystem extends IteratingSystem {
-  private final CombatSystem combatSystemResolver = new CombatSystem();
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  int roll(Monster monster, int unitId, int bound) {
+    NativeRng rng = monster.rngState == 0
+        ? NativeRng.forUnit(serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed, unitId)
+        : new NativeRng(monster.rngState);
+    int value = rng.nextInt(bound);
+    monster.rngState = rng.state();
+    return value;
+  }
+
+  @Override
+  protected void initialize() {
+    if (serverContext != null) combatSystemResolver = new CombatSystem(
+        NativeRng.forUnit(serverContext.gameSeed(), 2));
+  }
+
+  private CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(AssassinTrapSystem.class);
   private static final int ATTACK_INTERVAL_FRAMES = 15;
   private static final float SEARCH_RANGE = 25f;
@@ -116,7 +138,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     trap.attackCooldownFrames -= Math.max(1, Math.round(world.delta * 25f));
     if (trap.attackCooldownFrames > 0) return;
     Monster monster = mMonster.get(entityId);
-    Skills.Entry placementSkill = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
+    Skills.Entry placementSkill = trap.skillId >= 0 ? files().skills.get(trap.skillId) : null;
     int target = nearestHostile(entityId, monster);
     if (target < 0) {
       trap.attackCooldownFrames = inactiveInterval(monster);
@@ -135,11 +157,11 @@ public class AssassinTrapSystem extends IteratingSystem {
         return;
       }
     }
-    if (MathUtils.random(99) >= attackChance(monster)) {
+    if (roll(monster, entityId, 100) >= attackChance(monster)) {
       trap.attackCooldownFrames = attackInterval(monster);
       return;
     }
-    Skills.Entry attackSkill = resolveAttackSkill(monster, placementSkill);
+    Skills.Entry attackSkill = resolveAttackSkill(files(), monster, placementSkill);
     if (attackSkill != null && attackSkill.Id == 311) {
       startInfernoSequence(entityId, trap, attackSkill, target);
       return;
@@ -155,7 +177,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       }
     }
     String missileName = resolveMissile(attackSkill, monster);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null || factory == null) {
       log.warn("[ASSASSIN_TRAP] phase=stall entity={} skill={} target={} reason=missing_missile name={}",
           entityId, trap.skillId, target, missileName);
@@ -176,8 +198,8 @@ public class AssassinTrapSystem extends IteratingSystem {
         configureWakeMaker(mMissile.get(missileId), attackSkill, trap, entityId,
             origin, targetPoint, direction);
       }
-      MissileDamageResolver.initializeSkill(
-          mMissile.get(missileId), resolveDamageSkill(missile, attackSkill, placementSkill),
+      MissileDamageResolver.initializeSkill(files(),
+          mMissile.get(missileId), resolveDamageSkill(files(), missile, attackSkill, placementSkill),
           mAttributes.get(entityId).attrs,
           Math.max(1, trap.skillLevel),
           name -> resolveOwnerSkillLevel(trap.ownerId, name));
@@ -203,7 +225,7 @@ public class AssassinTrapSystem extends IteratingSystem {
       int targetId, Skills.Entry attackSkill) {
     if (factory == null || !mPosition.has(entityId) || !mPosition.has(targetId)) return false;
     String missileName = resolveMissile(attackSkill, monster);
-    Missiles.Entry missileRow = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missileRow = missileName != null ? files().Missiles.get(missileName) : null;
     if (missileRow == null) {
       log.warn("[CHARGED_BOLT_SENTRY] phase=stall entity={} owner={} target={} reason=missing_missile name={}",
           entityId, trap.ownerId, targetId, missileName);
@@ -245,9 +267,9 @@ public class AssassinTrapSystem extends IteratingSystem {
       bolt.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(
           missileRow, bolt.damageLevel);
       bolt.range = Math.min(77f, Math.max(1f, bolt.range));
-      Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
-      MissileDamageResolver.initializeSkill(
-          bolt, resolveDamageSkill(missileRow, attackSkill, placement), attrs, bolt.damageLevel,
+      Skills.Entry placement = trap.skillId >= 0 ? files().skills.get(trap.skillId) : null;
+      MissileDamageResolver.initializeSkill(files(),
+          bolt, resolveDamageSkill(files(), missileRow, attackSkill, placement), attrs, bolt.damageLevel,
           name -> resolveOwnerSkillLevel(trap.ownerId, name));
       bolt.damageOwnerId = trap.ownerId;
       created++;
@@ -322,19 +344,19 @@ public class AssassinTrapSystem extends IteratingSystem {
     return out.set(MathUtils.cos(radians), MathUtils.sin(radians)).nor();
   }
 
-  static Skills.Entry resolveDamageSkill(Missiles.Entry missile, Skills.Entry attack,
+  static Skills.Entry resolveDamageSkill(com.riiablo.Files files, Missiles.Entry missile, Skills.Entry attack,
       Skills.Entry placement) {
     if (missile != null && missile.Skill != null && !missile.Skill.isEmpty()) {
-      Skills.Entry linked = Riiablo.files.skills.get(missile.Skill);
+      Skills.Entry linked = files.skills.get(missile.Skill);
       if (linked != null) return linked;
     }
     return attack != null ? attack : placement;
   }
 
-  private static Skills.Entry resolveCorpseSkill(Monster monster) {
+  private Skills.Entry resolveCorpseSkill(Monster monster) {
     if (!isDeathSentry(monster) || monster.monstats.Skill1 == null
         || monster.monstats.Skill1.isEmpty()) return null;
-    Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+    Skills.Entry skill = files().skills.get(monster.monstats.Skill1);
     return skill != null && skill.srvdofunc == 55 ? skill : null;
   }
 
@@ -438,8 +460,10 @@ public class AssassinTrapSystem extends IteratingSystem {
     int minPercent = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, trap.skillLevel));
     int maxPercent = Math.max(minPercent,
         SkillFormula.evaluate(skill.calc2, skill, trap.skillLevel));
-    int baseDamage = MathUtils.random(
-        corpseMaxHp * minPercent / 100, corpseMaxHp * maxPercent / 100);
+    int minimumDamage = corpseMaxHp * minPercent / 100;
+    int maximumDamage = corpseMaxHp * maxPercent / 100;
+    int baseDamage = minimumDamage + roll(mMonster.get(sentryId), sentryId,
+        maximumDamage - minimumDamage + 1);
     int corpseLevel = Math.max(1, statInt(corpseAttrs, Stat.level, 1));
     Attributes sentryAttrs = mAttributes.has(sentryId) ? mAttributes.get(sentryId).attrs : null;
     int sentryLevel = Math.max(1, statInt(sentryAttrs, Stat.level, 1));
@@ -521,7 +545,7 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   private void spawnCorpseExplosionVisual(int sentryId, Vector2 origin, Skills.Entry skill) {
     if (factory == null || skill.cltmissilea == null || skill.cltmissilea.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.cltmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.cltmissilea);
     if (row == null) return;
     int missileId = factory.createMissile(row, Vector2.X, origin, sentryId);
     if (missileId < 0 || !mMissile.has(missileId)) return;
@@ -624,10 +648,10 @@ public class AssassinTrapSystem extends IteratingSystem {
     }
     trap.infernoPulseCooldownFrames += Math.max(1, trap.infernoPulseFrames);
 
-    Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
-    Skills.Entry attackSkill = resolveAttackSkill(monster, placement);
+    Skills.Entry placement = trap.skillId >= 0 ? files().skills.get(trap.skillId) : null;
+    Skills.Entry attackSkill = resolveAttackSkill(files(), monster, placement);
     String missileName = resolveMissile(attackSkill, monster);
-    Missiles.Entry missileRow = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missileRow = missileName != null ? files().Missiles.get(missileName) : null;
     if (attackSkill == null || attackSkill.srvdofunc != 95 || missileRow == null || factory == null) {
       trap.infernoChanneling = false;
       trap.attackCooldownFrames = attackInterval(monster);
@@ -654,8 +678,8 @@ public class AssassinTrapSystem extends IteratingSystem {
       mVelocity.get(missileId).velocity.set(direction).setLength(speed);
     }
     Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
-    MissileDamageResolver.initializeSkill(missile,
-        resolveDamageSkill(missileRow, attackSkill, placement), attrs,
+    MissileDamageResolver.initializeSkill(files(), missile,
+        resolveDamageSkill(files(), missileRow, attackSkill, placement), attrs,
         Math.max(1, trap.skillLevel),
         name -> resolveOwnerSkillLevel(trap.ownerId, name));
     missile.damageOwnerId = trap.ownerId;
@@ -679,7 +703,7 @@ public class AssassinTrapSystem extends IteratingSystem {
   private int resolveOwnerSkillLevel(int ownerId, String name) {
     if (name == null || name.isEmpty() || ownerId < 0 || !mPlayer.has(ownerId)
         || mPlayer.get(ownerId).data == null) return 0;
-    Skills.Entry skill = Riiablo.files.skills.get(name);
+    Skills.Entry skill = files().skills.get(name);
     return skill != null ? mPlayer.get(ownerId).data.getBaseSkillLevel(skill.Id) : 0;
   }
 
@@ -760,9 +784,9 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   private void createBladeMissile(int entityId, SummonedPet trap, Vector2 origin,
       Monster monster) {
-    Skills.Entry skill = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
+    Skills.Entry skill = trap.skillId >= 0 ? files().skills.get(trap.skillId) : null;
     String missileName = resolveMissile(skill, monster);
-    Missiles.Entry missileRow = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missileRow = missileName != null ? files().Missiles.get(missileName) : null;
     if (missileRow == null || factory == null) {
       log.warn("[BLADE_SENTINEL] phase=stall entity={} owner={} reason=missing_missile name={}",
           entityId, trap.ownerId, missileName);
@@ -789,7 +813,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     blade.pierceRemaining = -1;
     Attributes ownerAttrs = trap.ownerId >= 0 && mAttributes.has(trap.ownerId)
         ? mAttributes.get(trap.ownerId).attrs : null;
-    MissileDamageResolver.initializeSkill(blade, skill, ownerAttrs,
+    MissileDamageResolver.initializeSkill(files(), blade, skill, ownerAttrs,
         Math.max(1, trap.skillLevel),
         name -> resolveOwnerSkillLevel(trap.ownerId, name));
     blade.damageOwnerId = trap.ownerId;
@@ -807,7 +831,12 @@ public class AssassinTrapSystem extends IteratingSystem {
         : BLADE_FALLBACK_SPEED;
   }
 
+  /** Compatibility entry point for legacy callers without a server world. */
   static Skills.Entry resolveAttackSkill(Monster monster, Skills.Entry fallback) {
+    return resolveAttackSkill(Riiablo.files, monster, fallback);
+  }
+
+  static Skills.Entry resolveAttackSkill(com.riiablo.Files files, Monster monster, Skills.Entry fallback) {
     // D2MOO's sentry AI first resolves MonStats.Skill[0] (and Death Sentry's
     // corpse/lightning Skill[1]).  A missing row makes the pet idle; it does
     // not execute the placement skill again.  Falling back to a SrvDo045
@@ -819,12 +848,12 @@ public class AssassinTrapSystem extends IteratingSystem {
         && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
       // Corpse selection/explosion is a separate native branch. Until a dead
       // target is selected, Fn104 uses Skill2 as the ordinary lightning shot.
-      Skills.Entry attack = Riiablo.files.skills.get(monster.monstats.Skill2);
+      Skills.Entry attack = files.skills.get(monster.monstats.Skill2);
       if (attack != null) return attack;
     }
     if (monster != null && monster.monstats != null
         && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-      Skills.Entry attack = Riiablo.files.skills.get(monster.monstats.Skill1);
+      Skills.Entry attack = files.skills.get(monster.monstats.Skill1);
       if (attack != null) return attack;
     }
     return null;

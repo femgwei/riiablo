@@ -2452,7 +2452,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   @Test
   void bladeShieldPulseUsesNativeTargetArmorDurabilityPath() {
     RecordingFactory factory = new RecordingFactory();
-    World world = bladeShieldWorld(factory, new com.riiablo.map.Map(0, 0));
+    com.riiablo.engine.server.party.PartyManager parties = new com.riiablo.engine.server.party.PartyManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0))
+        .register("partyManager", parties));
     try {
       Skills.Entry blade = Riiablo.files.skills.get("Blade Shield");
       int assassin = createBladeShieldPlayer(world, blade);
@@ -2468,6 +2472,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       armor.attrs.reset();
       targetData.getItems().equipItem(BodyLoc.FEET, targetData.getItems().add(armor));
       world.getMapper(com.riiablo.engine.server.component.Player.class).create(target).data = targetData;
+      assertTrue(parties.declareHostility(assassin, target), "durability fixture must permit PvP hits");
 
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(),

@@ -67,7 +67,7 @@ class NativeHolyShieldDataTest extends RiiabloTest {
   void replicatedStateRebuildsNativePayloadOnRemoteClient() {
     UnitStates source = new UnitStates().init(7);
     PaladinSkills.applyHolyShieldState(source.stateList, skill(), 2, 7, name -> 0);
-    StateSerializer serializer = new StateSerializer();
+    StateSerializer serializer = new StateSerializer(Riiablo.files);
     FlatBufferBuilder builder = new FlatBufferBuilder(256);
     int stateOffset = serializer.putData(builder, source);
     int types = EntitySync.createComponentTypeVector(builder, new byte[] {ComponentP.StateP});
@@ -76,7 +76,13 @@ class NativeHolyShieldDataTest extends RiiabloTest {
         0L, 0L, 0L, 0L, 0L, -1);
     builder.finish(root);
     UnitStates remote = new UnitStates().init(7);
-    serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, remote);
+    com.riiablo.Files previous = Riiablo.files;
+    try {
+      Riiablo.files = null;
+      serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, remote);
+    } finally {
+      Riiablo.files = previous;
+    }
     UnitState state = remote.stateList.getState(StateId.HOLYSHIELD);
     assertNotNull(state);
     assertEquals(18, state.getStatContributionValue(Stat.toblock));

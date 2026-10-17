@@ -24,6 +24,91 @@ import org.junit.jupiter.api.Test;
 
 /** Exercises production systems with two simultaneous Worlds and no global game host. */
 class ServerSystemIsolationTest {
+  @Test void trapSkillAndMissileImpactRowsStayBoundWhenGlobalsAreUnavailable() throws Exception {
+    Files previous = Riiablo.files;
+    Files first = files("first-impact", 11);
+    Files second = files("second-impact", 29);
+    Skills.Entry firstSkill = new Skills.Entry();
+    Skills.Entry secondSkill = new Skills.Entry();
+    when(first.skills.get("trap-attack")).thenReturn(firstSkill);
+    when(second.skills.get("trap-attack")).thenReturn(secondSkill);
+    Monster monster = new Monster();
+    monster.monstats = new com.riiablo.codec.excel.MonStats.Entry();
+    monster.monstats.Skill1 = "trap-attack";
+    Missiles.Entry row = new Missiles.Entry();
+    row.CltHitSubMissile = new String[] {"impact"};
+    Missiles.Entry firstImpact = first.Missiles.get(7);
+    Missiles.Entry secondImpact = second.Missiles.get(7);
+    when(first.Missiles.get("impact")).thenReturn(firstImpact);
+    when(second.Missiles.get("impact")).thenReturn(secondImpact);
+    Missile a = new Missile();
+    Missile b = new Missile();
+    a.missile = b.missile = row;
+    try {
+      Riiablo.files = null;
+      assertSame(firstSkill, AssassinTrapSystem.resolveAttackSkill(first, monster, null));
+      assertSame(secondSkill, AssassinTrapSystem.resolveAttackSkill(second, monster, null));
+      com.riiablo.engine.server.missile.MissileDamageResolver.configureMetadata(first, a, null, 0, 0);
+      com.riiablo.engine.server.missile.MissileDamageResolver.configureMetadata(second, b, null, 0, 0);
+      assertEquals("first-impact", a.impactDcc);
+      assertEquals("second-impact", b.impactDcc);
+      com.riiablo.save.CharData character = mock(com.riiablo.save.CharData.class);
+      firstSkill.Id = 10;
+      secondSkill.Id = 11;
+      when(character.getSkill(10)).thenReturn(1);
+      Skills.Entry dependent = new Skills.Entry();
+      dependent.reqskill1 = "trap-attack";
+      assertTrue(com.riiablo.engine.server.skill.NativeSkillResolver.prerequisitesMet(first, character, dependent));
+      assertFalse(com.riiablo.engine.server.skill.NativeSkillResolver.prerequisitesMet(second, character, dependent));
+    } finally { Riiablo.files = previous; }
+  }
+
+  @Test void skillDamageAndCombatRollsDoNotConsumeTheClientRandomSource() {
+    java.util.Random original = com.badlogic.gdx.math.MathUtils.random;
+    try {
+      com.badlogic.gdx.math.RandomXS128 forbidden = mock(com.badlogic.gdx.math.RandomXS128.class);
+      com.badlogic.gdx.math.MathUtils.random = forbidden;
+      NativeRng expected = new NativeRng(123);
+      NativeRng actual = new NativeRng(123);
+      for (int i = 0; i < 8; i++) {
+        assertEquals(10 + expected.nextInt(90), ServerSkillSystem.rollNativeDamage(actual, 10, 100));
+      }
+      com.riiablo.engine.server.combat.CombatSystem combat =
+          new com.riiablo.engine.server.combat.CombatSystem(new NativeRng(123));
+      com.riiablo.engine.server.combat.CombatSystem.AttackerData attacker =
+          new com.riiablo.engine.server.combat.CombatSystem.AttackerData();
+      com.riiablo.engine.server.combat.CombatSystem.DefenderData defender =
+          new com.riiablo.engine.server.combat.CombatSystem.DefenderData();
+      attacker.minDamage = 10;
+      attacker.maxDamage = 20;
+      attacker.alwaysHit = true;
+      defender.passiveDodge = 50;
+      combat.calculateAttack(attacker, defender);
+      verifyNoInteractions(forbidden);
+    } finally { com.badlogic.gdx.math.MathUtils.random = original; }
+  }
+
+  @Test void trapRollsKeepUnitStateAndUseTheWorldSeed() {
+    AssassinTrapSystem first = new AssassinTrapSystem();
+    AssassinTrapSystem second = new AssassinTrapSystem();
+    first.serverContext = new ServerGameplayContext(mock(Files.class), 123);
+    second.serverContext = new ServerGameplayContext(mock(Files.class), 456);
+    Monster a = new Monster();
+    Monster b = new Monster();
+    NativeRng expectedA = NativeRng.forUnit(123, 7);
+    NativeRng expectedB = NativeRng.forUnit(456, 7);
+    int previousSeed = Riiablo.gameSeed;
+    try {
+      for (int i = 0; i < 8; i++) {
+        Riiablo.gameSeed = -i;
+        assertEquals(expectedA.nextInt(100), first.roll(a, 7, 100));
+        assertEquals(expectedB.nextInt(100), second.roll(b, 7, 100));
+        assertEquals(expectedA.state(), a.rngState);
+        assertEquals(expectedB.state(), b.rngState);
+      }
+    } finally { Riiablo.gameSeed = previousSeed; }
+  }
+
   @Test void factoriesAndSkillsUseTheirOwnRowsAndSeedWithIdenticalEntityIds() throws Exception {
     Files previous = Riiablo.files;
     int previousSeed = Riiablo.gameSeed;

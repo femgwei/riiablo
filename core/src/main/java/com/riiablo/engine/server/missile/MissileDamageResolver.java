@@ -39,13 +39,144 @@ public final class MissileDamageResolver {
 
   private MissileDamageResolver() {}
 
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initialize(Missile projectile, Attributes ownerAttrs,
+      Monster ownerMonster, int currentMode, int level, int difficulty) {
+    return initialize(Riiablo.files, projectile, ownerAttrs, ownerMonster, currentMode, level, difficulty);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeTableMissile(Missile projectile,
+      Attributes ownerAttrs, int level) {
+    return initializeTableMissile(Riiablo.files, projectile, ownerAttrs, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeColdSkillMissile(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level) {
+    return initializeColdSkillMissile(Riiablo.files, projectile, skill, ownerAttrs, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level) {
+    return initializeSkill(Riiablo.files, projectile, skill, ownerAttrs, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel) {
+    return initializeSkill(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
+      StateList ownerStates) {
+    return initializeSkill(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel, ownerStates);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level) {
+    return initializeSkillArea(Riiablo.files, projectile, skill, ownerAttrs, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, boolean attackerPlayer, int level) {
+    return initializeSkillPoisonArea(Riiablo.files, projectile, skill, ownerAttrs, attackerPlayer, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializeSkillPoisonArea(Riiablo.files, projectile, skill, ownerAttrs, attackerPlayer, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeImmolationFireArea(Missile projectile,
+      Attributes ownerAttrs, boolean attackerPlayer, int level) {
+    return initializeImmolationFireArea(Riiablo.files, projectile, ownerAttrs, attackerPlayer, level);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeMeteorFireArea(Missile projectile,
+      Attributes ownerAttrs, boolean attackerPlayer, int level, StateList ownerStates) {
+    return initializeMeteorFireArea(Riiablo.files, projectile, ownerAttrs, attackerPlayer, level, ownerStates);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
+      StateList ownerStates) {
+    return initializeSkillArea(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel, ownerStates);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSorceressFireArea(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializeSorceressFireArea(Riiablo.files, projectile, skill, ownerAttrs, attackerPlayer, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeSorceressFireArea(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel, StateList ownerStates) {
+    return initializeSorceressFireArea(Riiablo.files, projectile, skill, ownerAttrs, attackerPlayer, level, baseSkillLevel, ownerStates);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializeNecromancerBoneMagic(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializeNecromancerBoneMagic(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializePaladinBlessedHammer(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel, int concentrationPercent) {
+    return initializePaladinBlessedHammer(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel, concentrationPercent);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializePaladinFistOfTheHeavens(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializePaladinFistOfTheHeavens(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializePaladinHolyBolt(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializePaladinHolyBolt(Riiablo.files, projectile, skill, ownerAttrs, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static boolean initializePaladinFistOfHeavensBolt(Missile projectile,
+      Skills.Entry fist, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    return initializePaladinFistOfHeavensBolt(Riiablo.files, projectile, fist, ownerAttrs, level, baseSkillLevel);
+  }
+
+  /** Compatibility overload for callers without explicit server data. */
+  public static void configureMetadata(Missile projectile, int[] elementalMax,
+      int coldDuration, int poisonDuration) {
+    configureMetadata(Riiablo.files, projectile, elementalMax, coldDuration, poisonDuration);
+  }
+
+
   /**
    * Resolves non-skill Missiles.txt damage and source damage at spawn time.
    * Skill-owned missiles are left on the legacy path until the complete
    * Skills.txt damage schema is available; this avoids silently replacing a
    * working player spell with an empty snapshot.
    */
-  public static boolean initialize(Missile projectile, Attributes ownerAttrs,
+  public static boolean initialize(com.riiablo.Files files, Missile projectile, Attributes ownerAttrs,
       Monster ownerMonster, int currentMode, int level, int difficulty) {
     if (projectile == null || projectile.missile == null) return false;
     Missiles.Entry row = projectile.missile;
@@ -115,13 +246,15 @@ public final class MissileDamageResolver {
     }
 
     if (sourceScale > 0 && ownerMonster != null && ownerMonster.monstats != null) {
-      int mode = resolveAttackMode(ownerMonster.monstats, row, currentMode);
+      int mode = resolveAttackMode(files, ownerMonster.monstats, row, currentMode);
       int[] duration = {coldLength, poisonLength};
       int playerCount = Math.max(1, statInt(ownerAttrs, Stat.monster_playercount));
       int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
           ownerMonster.monstats, difficulty, playerCount, true);
-      addMonsterElemental(ownerMonster.monstats, mode, level, difficulty,
+      com.riiablo.engine.server.NativeRng rng = new com.riiablo.engine.server.NativeRng(projectile.rngState);
+      addMonsterElemental(files, rng, ownerMonster.monstats, mode, level, difficulty,
           sourceScale, combatMultiplier, elementalMin, elementalMax, duration);
+      projectile.rngState = rng.state();
       coldLength = duration[0];
       poisonLength = duration[1];
     }
@@ -138,7 +271,7 @@ public final class MissileDamageResolver {
       return false;
     }
 
-    writeSnapshot(projectile, ownerAttrs, sourceScale > 0, level,
+    writeSnapshot(files, projectile, ownerAttrs, sourceScale > 0, level,
         physicalMin, physicalMax, attackRating,
         elementalMin, elementalMax, coldLength, poisonLength);
     log.info("[MISSILE_DAMAGE_SNAPSHOT] missile={} owner={} level={} toHit={} srcDamage={} "
@@ -162,7 +295,7 @@ public final class MissileDamageResolver {
    * damage), so routing them through initializeSkill would erase EType/EMin/
    * EMax and lose the freeze flag.
    */
-  public static boolean initializeTableMissile(Missile projectile,
+  public static boolean initializeTableMissile(com.riiablo.Files files, Missile projectile,
       Attributes ownerAttrs, int level) {
     if (projectile == null || projectile.missile == null) return false;
     Missiles.Entry row = projectile.missile;
@@ -190,13 +323,13 @@ public final class MissileDamageResolver {
     boolean meaningful = physicalMax > 0;
     for (int i = 1; i < DAMAGE_TYPES; i++) meaningful |= elementalMax[i] > 0;
     if (!meaningful) return false;
-    writeSnapshot(projectile, ownerAttrs, false, level, physicalMin, physicalMax,
+    writeSnapshot(files, projectile, ownerAttrs, false, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
     projectile.damageLevel = level;
     projectile.freezesTarget = row.pSrvDmgFunc == 2 || row.pSrvDmgFunc == 4
         || "freeze".equalsIgnoreCase(row.EType)
         || "frze".equalsIgnoreCase(row.EType);
-    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
+    configureMetadata(files, projectile, elementalMax, coldLength, poisonLength);
     projectile.usesAttackRating = false;
     log.info("[MISSILE_TABLE_SNAPSHOT] missile={} level={} element={} damage={}..{} "
             + "coldLength={} freezesTarget={}", row.Missile, level, row.EType,
@@ -205,7 +338,7 @@ public final class MissileDamageResolver {
   }
 
   /** Builds the cold packet for a Missiles.txt freeze child from its skill row. */
-  public static boolean initializeColdSkillMissile(Missile projectile,
+  public static boolean initializeColdSkillMissile(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level) {
     if (projectile == null || projectile.missile == null || skill == null) return false;
     level = Math.max(1, level);
@@ -217,37 +350,37 @@ public final class MissileDamageResolver {
     elementalMin[COLD] = min;
     elementalMax[COLD] = Math.max(min, max);
     int coldLength = Math.max(0, skill.ELen + damageBonusByLevel(level, skill.ELevLen));
-    writeSnapshot(projectile, ownerAttrs, false, level, 0, 0,
+    writeSnapshot(files, projectile, ownerAttrs, false, level, 0, 0,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
     projectile.damageLevel = level;
     projectile.freezesTarget = true;
     projectile.usesAttackRating = false;
-    configureMetadata(projectile, elementalMax, coldLength, 0);
+    configureMetadata(files, projectile, elementalMax, coldLength, 0);
     log.info("[MISSILE_COLD_SKILL_SNAPSHOT] missile={} skill={} level={} cold={}..{} length={}",
         projectile.missile.Missile, skill.skill, level, min, max, coldLength);
     return true;
   }
 
   /** Builds the native Skills.txt damage snapshot used by elemental arrows. */
-  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkill(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
-    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+    return initializeSkill(files, projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
         name -> 0, 0);
   }
 
   /** Native skill snapshot with a resolver for EDmgSymPerCalc/ELenSymPerCalc. */
-  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkill(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel) {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
-    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+    return initializeSkill(files, projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, 0);
   }
 
   /** Skill snapshot including permanent passive stat lists owned by the caster. */
-  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkill(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
       StateList ownerStates) {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
@@ -260,25 +393,25 @@ public final class MissileDamageResolver {
             ownerStates.getTotalStatContribution(masteryStat));
       }
     }
-    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+    return initializeSkill(files, projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
 
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
-  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkillArea(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
-    return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0, 0);
+    return initializeSkill(files, projectile, skill, ownerAttrs, level, false, true, name -> 0, 0);
   }
 
   /** Captures the native 8.8 poison rate for a skill-owned persistent cloud. */
-  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkillPoisonArea(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, boolean attackerPlayer, int level) {
-    return initializeSkillPoisonArea(projectile, skill, ownerAttrs, attackerPlayer, level,
+    return initializeSkillPoisonArea(files, projectile, skill, ownerAttrs, attackerPlayer, level,
         name -> 0);
   }
 
   /** Captures poison damage with the caster's hard-point synergy levels. */
-  public static boolean initializeSkillPoisonArea(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkillPoisonArea(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, boolean attackerPlayer, int level,
       ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || skill == null || !"pois".equalsIgnoreCase(skill.EType)) {
@@ -286,7 +419,7 @@ public final class MissileDamageResolver {
     }
     level = Math.max(1, level);
     ToIntFunction<String> levels = baseSkillLevel == null ? name -> 0 : baseSkillLevel;
-    boolean initialized = initializeSkill(projectile, skill, ownerAttrs, level, false, true,
+    boolean initialized = initializeSkill(files, projectile, skill, ownerAttrs, level, false, true,
         levels, 0);
     projectile.fixedPoisonRate = true;
     projectile.poisonMinRateFixed = Math.max(0,
@@ -307,7 +440,7 @@ public final class MissileDamageResolver {
   }
 
   /** Captures one native Immolation Fire ground missile's 8.8 fire rate. */
-  public static boolean initializeImmolationFireArea(Missile projectile,
+  public static boolean initializeImmolationFireArea(com.riiablo.Files files, Missile projectile,
       Attributes ownerAttrs, boolean attackerPlayer, int level) {
     if (projectile == null || projectile.missile == null
         || !"fire".equalsIgnoreCase(projectile.missile.EType)) return false;
@@ -334,7 +467,7 @@ public final class MissileDamageResolver {
    * Unlike the impact center, meteorfire has no Skills.txt owner; ApplyMastery
    * explicitly opts its Missiles.txt packet into Fire Mastery.
    */
-  public static boolean initializeMeteorFireArea(Missile projectile,
+  public static boolean initializeMeteorFireArea(com.riiablo.Files files, Missile projectile,
       Attributes ownerAttrs, boolean attackerPlayer, int level, StateList ownerStates) {
     if (projectile == null || projectile.missile == null
         || !"fire".equalsIgnoreCase(projectile.missile.EType)) return false;
@@ -373,7 +506,7 @@ public final class MissileDamageResolver {
   }
 
   /** Elemental-only explosion snapshot including the owner's passive stat lists. */
-  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+  public static boolean initializeSkillArea(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
       StateList ownerStates) {
     int additionalMastery = 0;
@@ -384,7 +517,7 @@ public final class MissileDamageResolver {
             ownerStates.getTotalStatContribution(masteryStat));
       }
     }
-    return initializeSkill(projectile, skill, ownerAttrs, level, false, true,
+    return initializeSkill(files, projectile, skill, ownerAttrs, level, false, true,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
 
@@ -394,15 +527,15 @@ public final class MissileDamageResolver {
    * D2Common's skill-owned missile path always applies elemental mastery;
    * {@code Missiles.ApplyMastery} only gates table-owned missile damage.
    */
-  public static boolean initializeSorceressFireArea(Missile projectile,
+  public static boolean initializeSorceressFireArea(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
       ToIntFunction<String> baseSkillLevel) {
-    return initializeSorceressFireArea(projectile, skill, ownerAttrs, attackerPlayer,
+    return initializeSorceressFireArea(files, projectile, skill, ownerAttrs, attackerPlayer,
         level, baseSkillLevel, null);
   }
 
   /** Fire-area snapshot including Fire Mastery's source-owned passive state. */
-  public static boolean initializeSorceressFireArea(Missile projectile,
+  public static boolean initializeSorceressFireArea(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
       ToIntFunction<String> baseSkillLevel, StateList ownerStates) {
     if (projectile == null || projectile.missile == null || skill == null
@@ -440,7 +573,7 @@ public final class MissileDamageResolver {
   }
 
   /** Builds the native magic packet used by Bone Spear and Bone Spirit. */
-  public static boolean initializeNecromancerBoneMagic(Missile projectile,
+  public static boolean initializeNecromancerBoneMagic(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
       ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || skill == null
@@ -454,7 +587,7 @@ public final class MissileDamageResolver {
     int[] elementalMax = new int[DAMAGE_TYPES];
     elementalMin[MAGIC] = damage[0];
     elementalMax[MAGIC] = damage[1];
-    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+    writeSnapshot(files, projectile, ownerAttrs, false, Math.max(1, level),
         0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
     projectile.skillId = skill.Id;
     projectile.damageLevel = Math.max(1, level);
@@ -467,7 +600,7 @@ public final class MissileDamageResolver {
   }
 
   /** Builds the SrvDo073 magic snapshot after its cast-time Concentration bonus. */
-  public static boolean initializePaladinBlessedHammer(Missile projectile,
+  public static boolean initializePaladinBlessedHammer(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
       ToIntFunction<String> baseSkillLevel, int concentrationPercent) {
     if (projectile == null || !PaladinSkills.isBlessedHammer(skill)) return false;
@@ -480,7 +613,7 @@ public final class MissileDamageResolver {
     int[] elementalMax = new int[DAMAGE_TYPES];
     elementalMin[MAGIC] = damage[0];
     elementalMax[MAGIC] = damage[1];
-    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+    writeSnapshot(files, projectile, ownerAttrs, false, Math.max(1, level),
         0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
     projectile.skillId = skill.Id;
     projectile.damageLevel = Math.max(1, level);
@@ -492,13 +625,13 @@ public final class MissileDamageResolver {
   }
 
   /** Builds the SrvDo080 center lightning snapshot stored on the delay missile. */
-  public static boolean initializePaladinFistOfTheHeavens(Missile projectile,
+  public static boolean initializePaladinFistOfTheHeavens(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
       ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || !PaladinSkills.isFistOfTheHeavens(skill)) return false;
     int[] damage = PaladinSkills.getFistOfHeavensLightningDamage(
         skill, level, baseSkillLevel);
-    boolean initialized = initializePaladinElemental(
+    boolean initialized = initializePaladinElemental(files,
         projectile, skill, ownerAttrs, level, Stat.lightmindam, Stat.lightmaxdam, damage);
     if (initialized) {
       log.info("[FIST_OF_HEAVENS_DAMAGE] phase=center missile={} level={} lightning={}..{}",
@@ -509,12 +642,12 @@ public final class MissileDamageResolver {
   }
 
   /** Builds the ordinary Holy Bolt magic packet from Skills.txt. */
-  public static boolean initializePaladinHolyBolt(Missile projectile,
+  public static boolean initializePaladinHolyBolt(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
       ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || !PaladinSkills.isHolyBolt(skill)) return false;
     int[] damage = PaladinSkills.getHolyBoltMagicDamage(skill, level, baseSkillLevel);
-    boolean initialized = initializePaladinElemental(
+    boolean initialized = initializePaladinElemental(files,
         projectile, skill, ownerAttrs, level, Stat.magicmindam, Stat.magicmaxdam, damage);
     if (initialized) {
       log.info("[HOLY_BOLT_DAMAGE] missile={} level={} magic={}..{}",
@@ -525,14 +658,14 @@ public final class MissileDamageResolver {
   }
 
   /** Builds each SrvHit22 child from the FoH-bolt Missiles.txt row. */
-  public static boolean initializePaladinFistOfHeavensBolt(Missile projectile,
+  public static boolean initializePaladinFistOfHeavensBolt(com.riiablo.Files files, Missile projectile,
       Skills.Entry fist, Attributes ownerAttrs, int level,
       ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || projectile.missile == null
         || !PaladinSkills.isFistOfTheHeavens(fist)) return false;
     int[] damage = PaladinSkills.getFistOfHeavensBoltMagicDamage(
         projectile.missile, fist, level, baseSkillLevel);
-    boolean initialized = initializePaladinElemental(
+    boolean initialized = initializePaladinElemental(files,
         projectile, fist, ownerAttrs, level, Stat.magicmindam, Stat.magicmaxdam, damage);
     if (initialized) {
       log.info("[FIST_OF_HEAVENS_DAMAGE] phase=holy_bolt missile={} level={} magic={}..{}",
@@ -541,7 +674,7 @@ public final class MissileDamageResolver {
     return initialized;
   }
 
-  private static boolean initializePaladinElemental(Missile projectile,
+  private static boolean initializePaladinElemental(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
       short minStat, short maxStat, int[] damage) {
     if (damage == null || damage.length < 2 || damage[1] <= 0) return false;
@@ -550,7 +683,7 @@ public final class MissileDamageResolver {
     int type = minStat == Stat.lightmindam ? LIGHTNING : MAGIC;
     elementalMin[type] = Math.max(0, damage[0]);
     elementalMax[type] = Math.max(elementalMin[type], damage[1]);
-    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+    writeSnapshot(files, projectile, ownerAttrs, false, Math.max(1, level),
         0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
     projectile.skillId = skill.Id;
     projectile.damageLevel = Math.max(1, level);
@@ -558,7 +691,7 @@ public final class MissileDamageResolver {
     return projectile.damage.get(minStat) != null && projectile.damage.get(maxStat) != null;
   }
 
-  private static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+  private static boolean initializeSkill(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement,
       ToIntFunction<String> baseSkillLevel, int additionalMastery) {
     if (projectile == null || skill == null) return false;
@@ -686,7 +819,7 @@ public final class MissileDamageResolver {
     }
     projectile.skillId = skill.Id;
     projectile.damageLevel = level;
-    writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
+    writeSnapshot(files, projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
     // D2MOO SKILLS_SrvDo012_Strafe installs SKILLS_AddDamagePercentBonus on
     // every strafearrow/strafebolt before MISSILE_CalculateDamageData runs.
@@ -721,7 +854,7 @@ public final class MissileDamageResolver {
             || projectile.missile.pSrvDmgFunc == 4
             || "freeze".equalsIgnoreCase(projectile.missile.EType)
             || "frze".equalsIgnoreCase(projectile.missile.EType));
-    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
+    configureMetadata(files, projectile, elementalMax, coldLength, poisonLength);
     projectile.usesAttackRating = includeSource && skill.SrcDam > 0
         && !"Guided Arrow".equalsIgnoreCase(skill.skill);
     return true;
@@ -766,7 +899,7 @@ public final class MissileDamageResolver {
     }
   }
 
-  private static void writeSnapshot(Missile projectile, Attributes ownerAttrs,
+  private static void writeSnapshot(com.riiablo.Files files, Missile projectile, Attributes ownerAttrs,
       boolean copySourceBonuses, int level, int physicalMin, int physicalMax,
       int attackRating, int[] elementalMin, int[] elementalMax,
       int coldLength, int poisonLength) {
@@ -829,7 +962,7 @@ public final class MissileDamageResolver {
     projectile.attackMinDamage = physicalMin;
     projectile.attackMaxDamage = physicalMax;
     projectile.attackRating = Math.max(0, attackRating);
-    configureMetadata(projectile, elementalMax, coldLength, poisonLength);
+    configureMetadata(files, projectile, elementalMax, coldLength, poisonLength);
   }
 
   /**
@@ -837,7 +970,7 @@ public final class MissileDamageResolver {
    * CombatSystem keeps poison before magic in its legacy array, while the
    * public DamageResult channel order is physical/fire/lightning/cold/magic/poison.
    */
-  public static void configureMetadata(Missile projectile, int[] elementalMax,
+  public static void configureMetadata(com.riiablo.Files files, Missile projectile, int[] elementalMax,
       int coldDuration, int poisonDuration) {
     if (projectile == null) return;
     Missiles.Entry row = projectile.missile;
@@ -864,21 +997,21 @@ public final class MissileDamageResolver {
       projectile.onHitStateDuration = Math.max(0, coldDuration);
     }
     if (row != null) {
-      Missiles.Entry impact = firstImpactRow(row);
+      Missiles.Entry impact = firstImpactRow(files, row);
       projectile.impactDcc = impact != null ? impact.CelFile : row.CelFile;
       projectile.impactPalette = "data\\global\\palette\\units\\pal.dat";
       projectile.impactSound = row.HitSound;
     }
   }
 
-  private static Missiles.Entry firstImpactRow(Missiles.Entry row) {
-    if (row == null || Riiablo.files == null || Riiablo.files.Missiles == null) return null;
+  private static Missiles.Entry firstImpactRow(com.riiablo.Files files, Missiles.Entry row) {
+    if (row == null || files == null || files.Missiles == null) return null;
     String[][] candidates = {row.CltHitSubMissile, row.HitSubMissile};
     for (String[] names : candidates) {
       if (names == null) continue;
       for (String name : names) {
         if (name == null || name.isEmpty()) continue;
-        Missiles.Entry impact = Riiablo.files.Missiles.get(name);
+        Missiles.Entry impact = files.Missiles.get(name);
         if (impact != null) return impact;
       }
     }
@@ -900,7 +1033,7 @@ public final class MissileDamageResolver {
     addScaledPair(attrs, Stat.magicmindam, Stat.magicmaxdam, scale, min, max, MAGIC);
   }
 
-  private static void addMonsterElemental(MonStats.Entry monster, int mode,
+  private static void addMonsterElemental(com.riiablo.Files files, com.riiablo.engine.server.NativeRng rng, MonStats.Entry monster, int mode,
       int level, int difficulty, int sourceScale, int combatMultiplier,
       int[] min, int[] max,
       int[] duration) {
@@ -908,12 +1041,12 @@ public final class MissileDamageResolver {
     String[] types = {monster.El1Type, monster.El2Type, monster.El3Type};
     int[][] chances = {monster.El1Pct, monster.El2Pct, monster.El3Pct};
     for (int i = 0; i < modes.length; i++) {
-      if (!hasText(modes[i]) || Riiablo.files.MonMode.index(modes[i]) != mode) continue;
+      if (!hasText(modes[i]) || files.MonMode.index(modes[i]) != mode) continue;
       int chance = arrayValue(chances[i], difficulty);
-      if (chance <= 0 || (chance < 100 && MathUtils.random(99) >= chance)) continue;
+      if (chance <= 0 || (chance < 100 && rng.nextInt(100) >= chance)) continue;
       MonsterStatsCalculator.MonsterStatsInit stats =
           new MonsterStatsCalculator.MonsterStatsInit();
-      if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(monster.hcIdx, 1,
+      if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files, monster.hcIdx, 1,
           difficulty, level, (short) (0x40 << i), stats)) continue;
       int type = damageType(types[i]);
       if (type <= PHYSICAL) continue;
@@ -938,13 +1071,13 @@ public final class MissileDamageResolver {
     }
   }
 
-  private static int resolveAttackMode(MonStats.Entry monster, Missiles.Entry missile,
+  private static int resolveAttackMode(com.riiablo.Files files, MonStats.Entry monster, Missiles.Entry missile,
       int currentMode) {
     if (currentMode >= 0) return currentMode;
     if (hasText(monster.MissA2) && monster.MissA2.equalsIgnoreCase(missile.Missile)) {
-      return Riiablo.files.MonMode.index("A2");
+      return files.MonMode.index("A2");
     }
-    return Riiablo.files.MonMode.index("A1");
+    return files.MonMode.index("A1");
   }
 
   static int damageBonusByLevel(int level, int[] values) {

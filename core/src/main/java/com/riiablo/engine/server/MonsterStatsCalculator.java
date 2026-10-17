@@ -36,16 +36,21 @@ public class MonsterStatsCalculator {
       int level,
       short flags,
       MonsterStatsInit result) {
-    if (result == null || Riiablo.files == null
-        || Riiablo.files.monstats == null || Riiablo.files.MonLvl == null) {
+    return calculateMonsterStatsByLevel(Riiablo.files, monsterId, gameType, difficulty, level, flags, result);
+  }
+
+  public static boolean calculateMonsterStatsByLevel(com.riiablo.Files files,
+      int monsterId, int gameType, int difficulty, int level, short flags, MonsterStatsInit result) {
+    if (result == null || files == null
+        || files.monstats == null || files.MonLvl == null) {
       return false;
     }
 
-    MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
-    if (monstats == null || level < 0 || Riiablo.files.MonLvl.size() <= 0) return false;
+    MonStats.Entry monstats = files.monstats.get(monsterId);
+    if (monstats == null || level < 0 || files.MonLvl.size() <= 0) return false;
 
-    level = Math.max(0, Math.min(level, Riiablo.files.MonLvl.size() - 1));
-    MonLvl.Entry monLvl = Riiablo.files.MonLvl.get(level);
+    level = Math.max(0, Math.min(level, files.MonLvl.size() - 1));
+    MonLvl.Entry monLvl = files.MonLvl.get(level);
     if (monLvl == null) return false;
 
     difficulty = NativeDataTables.difficulty(difficulty);
@@ -200,14 +205,19 @@ public class MonsterStatsCalculator {
   /** Applies the spawn-time portion of D2Game's fixed SuperUnique UMods. */
   static void applyNativeAffixStats(
       StatListRef base, MonStats.Entry monster, int difficulty, long affixes) {
+    applyNativeAffixStats(Riiablo.files, base, monster, difficulty, affixes);
+  }
+
+  static void applyNativeAffixStats(com.riiablo.Files files,
+      StatListRef base, MonStats.Entry monster, int difficulty, long affixes) {
     if (base == null || affixes == MonsterAffix.NONE) return;
     difficulty = NativeDataTables.difficulty(difficulty);
 
     if (MonsterAffix.hasAffix(affixes, MonsterAffix.EXTRA_STRONG)) {
       int difficultyBonus = new int[] {90, 75, 66}[difficulty];
-      if (Riiablo.files != null && Riiablo.files.DifficultyLevels != null
-          && Riiablo.files.DifficultyLevels.get(difficulty) != null) {
-        difficultyBonus = Riiablo.files.DifficultyLevels.get(difficulty).UniqueDamageBonus;
+      if (files != null && files.DifficultyLevels != null
+          && files.DifficultyLevels.get(difficulty) != null) {
+        difficultyBonus = files.DifficultyLevels.get(difficulty).UniqueDamageBonus;
       }
       base.put(Stat.damagepercent,
           base.getValue(Stat.damagepercent, 0) + 150 * difficultyBonus / 100);

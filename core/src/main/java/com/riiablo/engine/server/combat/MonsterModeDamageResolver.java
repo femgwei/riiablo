@@ -43,6 +43,12 @@ public final class MonsterModeDamageResolver {
   /** Resolves a mode profile with the game-wide LoD multiplayer combat rules. */
   public static Profile resolve(MonStats.Entry monster, int level, int difficulty, int mode,
       int playerCount, boolean expansion) {
+    return resolve(Riiablo.files, bound -> MathUtils.random(bound - 1), monster,
+        level, difficulty, mode, playerCount, expansion);
+  }
+
+  public static Profile resolve(com.riiablo.Files files, java.util.function.IntUnaryOperator random,
+      MonStats.Entry monster, int level, int difficulty, int mode, int playerCount, boolean expansion) {
     Profile profile = new Profile();
     if (monster == null) return profile;
 
@@ -53,7 +59,7 @@ public final class MonsterModeDamageResolver {
     short physicalFlag = physicalFlag(mode);
     MonsterStatsCalculator.MonsterStatsInit physical =
         new MonsterStatsCalculator.MonsterStatsInit();
-    if (MonsterStatsCalculator.calculateMonsterStatsByLevel(
+    if (MonsterStatsCalculator.calculateMonsterStatsByLevel(files,
         monster.hcIdx, expansion ? 1 : 0, difficulty, level, physicalFlag, physical)) {
       profile.attackRating = Math.max(0, physical.TH);
       if (physicalFlag == 0x10) {
@@ -78,17 +84,17 @@ public final class MonsterModeDamageResolver {
     String[] types = {monster.El1Type, monster.El2Type, monster.El3Type};
     int[][] chances = {monster.El1Pct, monster.El2Pct, monster.El3Pct};
     for (int i = 0; i < modes.length; i++) {
-      if (!modeMatches(modes[i], mode)) continue;
+      if (!modeMatches(files, modes[i], mode)) continue;
       int chance = arrayValue(chances[i], difficulty);
-      if (chance <= 0 || (chance < 100 && MathUtils.random(99) >= chance)) continue;
+      if (chance <= 0 || (chance < 100 && random.applyAsInt(100) >= chance)) continue;
 
       MonsterStatsCalculator.MonsterStatsInit element =
           new MonsterStatsCalculator.MonsterStatsInit();
-      if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(
+      if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files,
           monster.hcIdx, expansion ? 1 : 0, difficulty, level, (short) (0x40 << i), element)) {
         continue;
       }
-      int type = damageType(types[i]);
+      int type = damageType(random, types[i]);
       if (type <= CombatSystem.DAMAGE_PHYSICAL) continue;
       int min = MonsterStatsCalculator.scaleMonsterCombatValue(
           Math.max(0, element.ElMinD), combatMultiplier);
@@ -120,12 +126,12 @@ public final class MonsterModeDamageResolver {
     return 0x08;
   }
 
-  private static boolean modeMatches(String modeName, int mode) {
+  private static boolean modeMatches(com.riiablo.Files files, String modeName, int mode) {
     return modeName != null && !modeName.isEmpty()
-        && Riiablo.files.MonMode.index(modeName) == mode;
+        && files.MonMode.index(modeName) == mode;
   }
 
-  private static int damageType(String type) {
+  private static int damageType(java.util.function.IntUnaryOperator random, String type) {
     if ("fire".equalsIgnoreCase(type)) return CombatSystem.DAMAGE_FIRE;
     if ("ltng".equalsIgnoreCase(type) || "lightning".equalsIgnoreCase(type)) {
       return CombatSystem.DAMAGE_LIGHTNING;
@@ -139,7 +145,7 @@ public final class MonsterModeDamageResolver {
     if ("mag".equalsIgnoreCase(type) || "magic".equalsIgnoreCase(type)) {
       return CombatSystem.DAMAGE_MAGIC;
     }
-    if ("rand".equalsIgnoreCase(type)) return MathUtils.random(1, 5);
+    if ("rand".equalsIgnoreCase(type)) return 1 + random.applyAsInt(5);
     return CombatSystem.DAMAGE_PHYSICAL;
   }
 

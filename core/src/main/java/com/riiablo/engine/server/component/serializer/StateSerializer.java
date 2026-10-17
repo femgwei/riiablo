@@ -18,6 +18,21 @@ import com.riiablo.net.packet.d2gs.StateP;
 
 /** Serializes the authoritative active status list for multiplayer clients. */
 public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP> {
+  private final java.util.function.Supplier<com.riiablo.Files> files;
+
+  /** Compatibility entry point for clients and legacy tools without a world context. */
+  public StateSerializer() {
+    this(() -> Riiablo.files);
+  }
+
+  public StateSerializer(com.riiablo.Files files) {
+    this(() -> files);
+  }
+
+  private StateSerializer(java.util.function.Supplier<com.riiablo.Files> files) {
+    this.files = files;
+  }
+
   public static final StateP table = new StateP();
 
   @Override
@@ -101,6 +116,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
 
   @Override
   public UnitStates getData(EntitySync sync, int index, UnitStates component) {
+    com.riiablo.Files files = this.files.get();
     StateP data = getTable(sync, index);
     int count = data.stateIdLength();
     int[] stateIds = new int[count];
@@ -143,10 +159,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         // StateP predates generic native stat-list serialization. Rebuild
         // Holy Shield's data-driven block/defense payload from its replicated
         // skill level so remote clients run the same combat formulas.
-        if (state.stateId == StateId.HOLYSHIELD && Riiablo.files != null
-            && Riiablo.files.skills != null) {
+        if (state.stateId == StateId.HOLYSHIELD && files != null
+            && files.skills != null) {
           com.riiablo.codec.excel.Skills.Entry holyShield =
-              Riiablo.files.skills.get(com.riiablo.engine.server.skill.SkillId.HOLY_SHIELD);
+              files.skills.get(com.riiablo.engine.server.skill.SkillId.HOLY_SHIELD);
           int level = Math.max(1, state.level);
           int replicatedDefense = state.runtimeValue;
           state.clearModifiers();
@@ -163,10 +179,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         if ((state.stateId == StateId.CRITICALSTRIKE || state.stateId == StateId.DODGE
             || state.stateId == StateId.AVOID || state.stateId == StateId.PENETRATE
             || state.stateId == StateId.EVADE || state.stateId == StateId.PIERCE)
-            && Riiablo.files != null && Riiablo.files.skills != null
+            && files != null && files.skills != null
             && state.skillId >= 0) {
           com.riiablo.codec.excel.Skills.Entry passive =
-              Riiablo.files.skills.get(state.skillId);
+              files.skills.get(state.skillId);
           if (passive != null && AmazonSkills.getPassiveStateId(passive) == state.stateId) {
             // Restore the source/skill identity before asking the native
             // bridge to rebuild the existing snapshot layer; otherwise
@@ -179,11 +195,11 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         if ((state.stateId == StateId.FROZENARMOR
             || state.stateId == StateId.SHIVERARMOR
             || state.stateId == StateId.CHILLINGARMOR)
-            && Riiablo.files != null && Riiablo.files.skills != null) {
+            && files != null && files.skills != null) {
           int skillId = state.stateId == StateId.FROZENARMOR ? SkillId.FROZEN_ARMOR
               : state.stateId == StateId.SHIVERARMOR ? SkillId.SHIVER_ARMOR
               : SkillId.CHILLING_ARMOR;
-          com.riiablo.codec.excel.Skills.Entry armor = Riiablo.files.skills.get(skillId);
+          com.riiablo.codec.excel.Skills.Entry armor = files.skills.get(skillId);
           int defense = state.runtimeValue > 0 ? state.runtimeValue
               : SorceressSkills.getDefensiveArmorDefensePercent(
                   armor, Math.max(1, state.level));
@@ -194,10 +210,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
           state.skillId = skillId;
           state.needsSync = false;
         }
-        if (state.stateId == StateId.FIREMASTERY && Riiablo.files != null
-            && Riiablo.files.skills != null) {
+        if (state.stateId == StateId.FIREMASTERY && files != null
+            && files.skills != null) {
           com.riiablo.codec.excel.Skills.Entry mastery =
-              Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+              files.skills.get(SkillId.FIRE_MASTERY);
           state.clearModifiers();
           state.setStatContribution(Stat.passive_fire_mastery, 0,
               NativeStatResolver.Operation.ADD,
@@ -205,10 +221,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
           state.skillId = SkillId.FIRE_MASTERY;
           state.needsSync = false;
         }
-        if (state.stateId == StateId.ENCHANT && Riiablo.files != null
-            && Riiablo.files.skills != null) {
+        if (state.stateId == StateId.ENCHANT && files != null
+            && files.skills != null) {
           com.riiablo.codec.excel.Skills.Entry enchant =
-              Riiablo.files.skills.get(SkillId.ENCHANT);
+              files.skills.get(SkillId.ENCHANT);
           int[] damage = SorceressSkills.getEnchantDamage(
               enchant, Math.max(1, state.level), name -> 0, 0);
           int replicatedMinimum = state.runtimeValue;

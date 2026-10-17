@@ -5577,9 +5577,12 @@ public class Actioneer extends PassiveSystem {
         .get(Aspect.all(Player.class)).getEntities().size();
     int playerCount = MonsterStatsCalculator.nativePlayerCount(
         monster.monstats, connectedPlayers);
+    NativeRng profileRng = monster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
+        : new NativeRng(monster.rngState);
     MonsterModeDamageResolver.Profile profile = MonsterModeDamageResolver.resolve(
-        monster.monstats, level, combatDifficulty(), Engine.Monster.MODE_S1,
+        files(), profileRng::nextInt, monster.monstats, level, combatDifficulty(), Engine.Monster.MODE_S1,
         playerCount, true);
+    monster.rngState = profileRng.state();
     log.info("[MONSTER_SKILL] phase=fire_hit_profile entity={} monster={} target={} "
             + "source=monstats_s1 physical={}..{} ar={} fire={}..{} lightning={}..{} "
             + "cold={}..{} poison={}..{} magic={}..{} elements={}",

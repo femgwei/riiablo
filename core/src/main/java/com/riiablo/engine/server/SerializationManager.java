@@ -91,6 +91,9 @@ public class SerializationManager extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper[] cm;
 
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
   protected ComponentManager componentManager;
   protected CofManager cofs;
 
@@ -113,7 +116,8 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(Monster.class, new MonsterSerializer());
     serializers.put(Missile.class, new MissileSerializer());
     serializers.put(Item.class, new ItemSerializer());
-    serializers.put(UnitStates.class, new StateSerializer());
+    serializers.put(UnitStates.class, serverContext != null
+        ? new StateSerializer(serverContext.files()) : new StateSerializer());
     serializers.put(SummonedPet.class, new SummonedPetSerializer());
     serializers.put(com.riiablo.engine.server.component.Mercenary.class,
         new com.riiablo.engine.server.component.serializer.MercenarySerializer());

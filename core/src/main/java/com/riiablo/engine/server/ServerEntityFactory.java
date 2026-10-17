@@ -440,11 +440,11 @@ public class ServerEntityFactory extends EntityFactory {
         new MonsterStatsCalculator.MonsterStatsInit();
     MonsterStatsCalculator.MonsterStatsInit attack2Init =
         new MonsterStatsCalculator.MonsterStatsInit();
-    boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(
+    boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
         monsterId, gameType, difficulty, baseMonsterLevel, (short) 7, statsInit)
-        && MonsterStatsCalculator.calculateMonsterStatsByLevel(
+        && MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
             monsterId, gameType, difficulty, baseMonsterLevel, (short) 8, attack1Init)
-        && MonsterStatsCalculator.calculateMonsterStatsByLevel(
+        && MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
             monsterId, gameType, difficulty, baseMonsterLevel, (short) 0x10, attack2Init);
     if (!calculated) {
       log.error("[MONSTER_NATIVE_STATS] calculation failed: monster={} level={} difficulty={}",
@@ -547,7 +547,7 @@ public class ServerEntityFactory extends EntityFactory {
       // leader after replacing its maximum/current life.
       base.put(Stat.hpregen, 0);
     }
-    MonsterStatsCalculator.applyNativeAffixStats(base, monstats, difficulty, affixes);
+    MonsterStatsCalculator.applyNativeAffixStats(files(), base, monstats, difficulty, affixes);
     attrs.reset();
     attrs.setCombatBlockContext(monsterShield, 0);
     mAttributesWrapper.create(id).attrs = attrs;
@@ -1374,7 +1374,7 @@ public class ServerEntityFactory extends EntityFactory {
         ? mMonster.get(ownerId) : null;
     int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
         ? mCofReference.get(ownerId).mode : -1;
-    MissileDamageResolver.initialize(missileComponent, ownerAttrs, ownerMonster,
+    MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
         ownerMode, Math.max(1, damageLevel), 0);
 
     mPosition.create(id).position.set(position);

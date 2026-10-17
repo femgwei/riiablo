@@ -84,7 +84,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 @All(UnitStates.class)
 public class StateUpdater extends IteratingSystem implements StatusEffectApplier.StateSink {
   private final ItemDurabilityManager itemDurabilityManagerResolver = new ItemDurabilityManager();
-  private final CombatSystem combatSystemResolver = new CombatSystem();
+  private CombatSystem combatSystemResolver = new CombatSystem();
   private static final Logger log = LogManager.getLogger(StateUpdater.class);
   private static final int[] BARBARIAN_PASSIVE_SKILLS = {
       127, 128, 129, 134, 135, 136, 141, 145, 148, 153
@@ -152,6 +152,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   @Override
   protected void initialize() {
+    if (serverContext != null) combatSystemResolver = new CombatSystem(
+        NativeRng.forUnit(serverContext.gameSeed(), 4));
+
     super.initialize();
     statusEffects.setStateSink(this);
   }

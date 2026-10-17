@@ -27,7 +27,16 @@ public class DefenseCalculator {
   private static final Logger log = LogManager.getLogger(DefenseCalculator.class);
 
 
-  public DefenseCalculator() {}
+  private final java.util.function.IntUnaryOperator random;
+
+  /** Compatibility entry point for callers without an explicit RNG. */
+  public DefenseCalculator() {
+    this(bound -> MathUtils.random(bound - 1));
+  }
+
+  public DefenseCalculator(java.util.function.IntUnaryOperator random) {
+    this.random = java.util.Objects.requireNonNull(random, "random");
+  }
 
   //==========================================================================
   // 常量
@@ -113,7 +122,7 @@ public class DefenseCalculator {
     // 2. 武器格挡检查（刺客技能）
     int weaponBlockChance = getInt(defender, Stat.passive_weaponblock, 0);
     if (weaponBlockChance > 0 && !isRunning) {
-      if (MathUtils.random(99) < Math.min(weaponBlockChance, MAX_BLOCK_CHANCE)) {
+      if (random.applyAsInt(100) < Math.min(weaponBlockChance, MAX_BLOCK_CHANCE)) {
         log.debug("Weapon block successful: {}%", weaponBlockChance);
         return DEFENSE_WEAPON_BLOCK;
       }
@@ -123,7 +132,7 @@ public class DefenseCalculator {
     // 3.1 Dodge - 近战攻击时站立
     if (attackType == ATTACK_MELEE && !isRunning && !isWalking) {
       int dodgeChance = getInt(defender, Stat.passive_dodge, 0);
-      if (dodgeChance > 0 && MathUtils.random(99) < Math.min(dodgeChance, MAX_DODGE_CHANCE)) {
+      if (dodgeChance > 0 && random.applyAsInt(100) < Math.min(dodgeChance, MAX_DODGE_CHANCE)) {
         log.debug("Dodge successful: {}%", dodgeChance);
         return DEFENSE_DODGE;
       }
@@ -132,7 +141,7 @@ public class DefenseCalculator {
     // 3.2 Avoid - 远程攻击时站立
     if (attackType == ATTACK_RANGED && !isRunning && !isWalking) {
       int avoidChance = getInt(defender, Stat.passive_avoid, 0);
-      if (avoidChance > 0 && MathUtils.random(99) < Math.min(avoidChance, MAX_DODGE_CHANCE)) {
+      if (avoidChance > 0 && random.applyAsInt(100) < Math.min(avoidChance, MAX_DODGE_CHANCE)) {
         log.debug("Avoid successful: {}%", avoidChance);
         return DEFENSE_AVOID;
       }
@@ -141,7 +150,7 @@ public class DefenseCalculator {
     // 3.3 Evade - 任何攻击时移动中
     if (isRunning || isWalking) {
       int evadeChance = getInt(defender, Stat.passive_evade, 0);
-      if (evadeChance > 0 && MathUtils.random(99) < Math.min(evadeChance, MAX_DODGE_CHANCE)) {
+      if (evadeChance > 0 && random.applyAsInt(100) < Math.min(evadeChance, MAX_DODGE_CHANCE)) {
         log.debug("Evade successful: {}%", evadeChance);
         return DEFENSE_EVADE;
       }
@@ -184,7 +193,7 @@ public class DefenseCalculator {
 
   private boolean rollPassive(int chance) {
     if (chance >= 100) return true;
-    return MathUtils.random(99) < Math.min(Math.max(chance, 0), MAX_DODGE_CHANCE);
+    return random.applyAsInt(100) < Math.min(Math.max(chance, 0), MAX_DODGE_CHANCE);
   }
 
   /**
@@ -220,7 +229,7 @@ public class DefenseCalculator {
     if (effectiveBlock <= 0) {
       return false;
     }
-    return MathUtils.random(99) < effectiveBlock;
+    return random.applyAsInt(100) < effectiveBlock;
   }
 
   //==========================================================================

@@ -52,11 +52,15 @@ public final class NativeSkillResolver {
    * Keep a conservative system-skill fallback for reduced/custom tables.
    */
   public static boolean isAllowedInTown(Skills.Entry skill) {
+    return isAllowedInTown(com.riiablo.Riiablo.files, skill);
+  }
+
+  public static boolean isAllowedInTown(com.riiablo.Files files, Skills.Entry skill) {
     if (skill == null) return true;
     if (isPlayerSummonSkill(skill)) return true;
-    if (com.riiablo.Riiablo.files != null
-        && com.riiablo.Riiablo.files.NativeSkills != null) {
-      com.riiablo.codec.excel.NativeSkills nativeSkills = com.riiablo.Riiablo.files.NativeSkills;
+    if (files != null
+        && files.NativeSkills != null) {
+      com.riiablo.codec.excel.NativeSkills nativeSkills = files.NativeSkills;
       if (nativeSkills.source().columnIndex("InTown") >= 0) {
         com.riiablo.codec.excel.NativeSkills.Entry nativeSkill = nativeSkills.get(skill.Id);
         if (nativeSkill != null) return nativeSkill.bool("InTown");
@@ -113,11 +117,15 @@ public final class NativeSkillResolver {
 
   /** Returns the native TargetableOnly rule used by unmodified mouse input. */
   public static boolean isTargetableOnly(Skills.Entry skill) {
+    return isTargetableOnly(com.riiablo.Riiablo.files, skill);
+  }
+
+  public static boolean isTargetableOnly(com.riiablo.Files files, Skills.Entry skill) {
     if (skill == null) return false;
-    if (com.riiablo.Riiablo.files != null
-        && com.riiablo.Riiablo.files.NativeSkills != null) {
+    if (files != null
+        && files.NativeSkills != null) {
       com.riiablo.codec.excel.NativeSkills nativeSkills =
-          com.riiablo.Riiablo.files.NativeSkills;
+          files.NativeSkills;
       if (nativeSkills.source().columnIndex("TargetableOnly") >= 0) {
         com.riiablo.codec.excel.NativeSkills.Entry nativeSkill = nativeSkills.get(skill.Id);
         if (nativeSkill != null) return nativeSkill.bool("TargetableOnly");
@@ -294,6 +302,11 @@ public final class NativeSkillResolver {
    */
   public static int validatePlayerCast(CharData data, Skills.Entry skill,
       int effectiveLevel, int casterLevel) {
+    return validatePlayerCast(com.riiablo.Riiablo.files, data, skill, effectiveLevel, casterLevel);
+  }
+
+  public static int validatePlayerCast(com.riiablo.Files files, CharData data, Skills.Entry skill,
+      int effectiveLevel, int casterLevel) {
     if (data == null || skill == null) return NOT_LEARNED;
     int characterClassId = data.charClass & 0xFF;
     // Native oskills (effective level supplied by an item) are usable across
@@ -308,20 +321,24 @@ public final class NativeSkillResolver {
 
     int level = Math.max(0, effectiveLevel);
     if (!isSystemSkill(skill) && level <= 0) return NOT_LEARNED;
-    if (!prerequisitesMet(data, skill)) return MISSING_PREREQUISITE;
+    if (!prerequisitesMet(files, data, skill)) return MISSING_PREREQUISITE;
     return OK;
   }
 
   /** Native prerequisite rows are names, not Java constants. */
   public static boolean prerequisitesMet(CharData data, Skills.Entry skill) {
-    return data != null && hasPrerequisite(data, skill != null ? skill.reqskill1 : null)
-        && hasPrerequisite(data, skill != null ? skill.reqskill2 : null)
-        && hasPrerequisite(data, skill != null ? skill.reqskill3 : null);
+    return prerequisitesMet(com.riiablo.Riiablo.files, data, skill);
   }
 
-  private static boolean hasPrerequisite(CharData data, String name) {
+  public static boolean prerequisitesMet(com.riiablo.Files files, CharData data, Skills.Entry skill) {
+    return data != null && hasPrerequisite(files, data, skill != null ? skill.reqskill1 : null)
+        && hasPrerequisite(files, data, skill != null ? skill.reqskill2 : null)
+        && hasPrerequisite(files, data, skill != null ? skill.reqskill3 : null);
+  }
+
+  private static boolean hasPrerequisite(com.riiablo.Files files, CharData data, String name) {
     if (name == null || name.trim().isEmpty()) return true;
-    Skills.Entry required = com.riiablo.Riiablo.files.skills.get(name.trim());
+    Skills.Entry required = files.skills.get(name.trim());
     return required != null && data.getSkill(required.Id) > 0;
   }
 

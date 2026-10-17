@@ -94,7 +94,7 @@ import com.badlogic.gdx.utils.IntIntMap;
  * active frame.</p>
  */
 public class ServerSkillSystem extends PassiveSystem {
-  private final CombatSystem combatSystemResolver = new CombatSystem();
+  private CombatSystem combatSystemResolver = new CombatSystem();
   @Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
 
@@ -114,7 +114,7 @@ public class ServerSkillSystem extends PassiveSystem {
     MonsterStatsCalculator.MonsterStatsInit base = new MonsterStatsCalculator.MonsterStatsInit();
     int difficulty = combatDifficulty(source, source);
     int level = (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1);
-    if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(owner.monstats.hcIdx,
+    if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files(), owner.monstats.hcIdx,
         1, difficulty, level, (short) 8, base)) return;
     int span = base.A1MaxD - base.A1MinD;
     int raw = base.A1MinD + (span > 0 ? (int) (seedRoll % span) : 0);
@@ -231,6 +231,9 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Override
   protected void initialize() {
+    if (serverContext != null) combatSystemResolver = new CombatSystem(
+        NativeRng.forUnit(serverContext.gameSeed(), 3));
+
     itemGenerator = world.getSystem(ItemGenerator.class);
     barbarianLoot = new LootManager(serverContext);
   }
@@ -238,6 +241,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.SkillRandom> mSkillRandom;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -336,7 +340,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     StatRef level = attrs.get(Stat.level, StatRef.obtain());
     if (level != null) casterLevel = Math.max(1, level.asInt());
-    int validation = NativeSkillResolver.validatePlayerCast(
+    int validation = NativeSkillResolver.validatePlayerCast(files(),
         player.data, skill, skillLevel, casterLevel);
     if (validation != NativeSkillResolver.OK) {
       String reason;
@@ -353,7 +357,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // Native D2 rejects skills whose Skills.txt InTown bit is clear while the
     // caster is in a town.  Keep this authoritative check alongside the
     // client red-tint gate so a forged network cast cannot bypass the UI.
-    if (isTownUnit(event.entityId) && !NativeSkillResolver.isAllowedInTown(skill)) {
+    if (isTownUnit(event.entityId) && !NativeSkillResolver.isAllowedInTown(files(), skill)) {
       reject(event, 3, "skill is not usable in town");
       log.info("[SKILL_CAST] phase=reject source={} skill={} reason=town_in_town_flag",
           event.entityId, skill.skill);
@@ -504,7 +508,7 @@ public class ServerSkillSystem extends PassiveSystem {
     boolean bladeFury = isBladeFurySkill(skill);
     float manaCost = bladeFury ? 0f : NativeSkillResolver.manaCost(skill, skillLevel);
     if (event.targetId == Engine.INVALID_ENTITY
-        && NativeSkillResolver.isTargetableOnly(skill)) {
+        && NativeSkillResolver.isTargetableOnly(files(), skill)) {
       // Shift-forced target-only attacks retain their presentation animation,
       // but no valid skill execution occurred and native D2 spends no mana.
       manaCost = 0f;
@@ -1472,7 +1476,7 @@ public class ServerSkillSystem extends PassiveSystem {
         com.riiablo.engine.server.component.AIWrapper.class).get(source);
     if (wrapper != null && wrapper.ai != null)
       return (int) (min + wrapper.ai.rollNativeSkillRandomNumber() % span);
-    return rollNativeDamage(min, maximum);
+    return rollNativeDamage(source, min, maximum);
   }
 
   /** Native SKILLS_SrvDo029: create or refresh the self Thunder Storm aura. */
@@ -2141,7 +2145,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // ResultFlags=5 already includes SUCCESSFULHIT: no AR, block, dodge or weapon roll.
     int min = MissileDamageResolver.skillPhysicalDamage(skill, level, true, name -> getBaseSkillLevel(source, name));
     int max = MissileDamageResolver.skillPhysicalDamage(skill, level, false, name -> getBaseSkillLevel(source, name));
-    int raw = rollNativeDamage(min, max);
+    int raw = rollNativeDamage(source, min, max);
     CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
         defender, mPlayer.has(target), raw, stateList(target));
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
@@ -2182,7 +2186,7 @@ public class ServerSkillSystem extends PassiveSystem {
     StateList sourceStates = stateList(source);
     int min = MissileDamageResolver.skillElementalDamage(skill, level, true, name -> getBaseSkillLevel(source, name));
     int max = MissileDamageResolver.skillElementalDamage(skill, level, false, name -> getBaseSkillLevel(source, name));
-    int raw = rollNativeDamage(min, max);
+    int raw = rollNativeDamage(source, min, max);
     int type = elementalDamageType(skill.EType);
     int difficulty = combatDifficulty(source, target);
     boolean player = mPlayer.has(target) || mMercenary.has(target);
@@ -2257,7 +2261,7 @@ public class ServerSkillSystem extends PassiveSystem {
         skill, skillLevel, true, levels);
     int physicalMax = MissileDamageResolver.skillPhysicalDamage(
         skill, skillLevel, false, levels);
-    int physicalRaw = rollNativeDamage(physicalMin, physicalMax);
+    int physicalRaw = rollNativeDamage(sourceId, physicalMin, physicalMax);
 
     int elementalMin = MissileDamageResolver.skillElementalDamage(
         skill, skillLevel, true, levels);
@@ -2268,7 +2272,7 @@ public class ServerSkillSystem extends PassiveSystem {
         + (sourceStates != null ? sourceStates.getTotalStatContribution(masteryStat) : 0));
     elementalMin = saturatedScale(elementalMin, 100 + mastery, 100);
     elementalMax = saturatedScale(elementalMax, 100 + mastery, 100);
-    int elementalRaw = rollNativeDamage(elementalMin, elementalMax);
+    int elementalRaw = rollNativeDamage(sourceId, elementalMin, elementalMax);
     int damageType = elementalDamageType(skill.EType);
     int pierce = elementalPierce(source, sourceStates, damageType);
 
@@ -2308,6 +2312,20 @@ public class ServerSkillSystem extends PassiveSystem {
             + "physical={} elemental={} mastery={} pierce={} resolved={}",
         sourceId, targetId, event.skillId, skillLevel, range, physicalRaw,
         elementalRaw, mastery, pierce, resolved);
+  }
+
+  private int rollNativeDamage(int source, int minimum, int maximum) {
+    com.riiablo.engine.server.component.SkillRandom state = mSkillRandom.create(source);
+    NativeRng rng = state.state == 0 ? NativeRng.forUnit(gameSeed(), source) : new NativeRng(state.state);
+    int value = rollNativeDamage(rng, minimum, maximum);
+    state.state = rng.state();
+    return value;
+  }
+
+  static int rollNativeDamage(NativeRng rng, int minimum, int maximum) {
+    int min = Math.max(0, minimum);
+    int max = Math.max(min, maximum);
+    return max - min > 1 ? min + rng.nextInt(max - min) : min;
   }
 
   /** ITEMS_RollLimitedRandomNumber(seed, max-min) uses an exclusive upper bound. */
@@ -2910,7 +2928,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
     Attributes owner = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    MissileDamageResolver.initializeSorceressFireArea(controller, skill, owner,
+    MissileDamageResolver.initializeSorceressFireArea(files(), controller, skill, owner,
         mPlayer.has(event.entityId), level,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
     log.info("[DRUID_FISSURE] phase=controller source={} skill={} level={} missile={} "
@@ -2950,7 +2968,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
     Attributes owner = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    MissileDamageResolver.initializeSorceressFireArea(controller, skill, owner,
+    MissileDamageResolver.initializeSorceressFireArea(files(), controller, skill, owner,
         mPlayer.has(event.entityId), level,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
     log.info("[DRUID_VOLCANO] phase=controller source={} skill={} level={} missile={} "
@@ -3018,7 +3036,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (mVelocity.has(id)) mVelocity.get(id).velocity.set(direction).setLength(velocity);
       Attributes owner = mAttributesWrapper.has(event.entityId)
           ? mAttributesWrapper.get(event.entityId).attrs : null;
-      MissileDamageResolver.initializeSorceressFireArea(fissure, skill, owner,
+      MissileDamageResolver.initializeSorceressFireArea(files(), fissure, skill, owner,
           mPlayer.has(event.entityId), level,
           name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
       created++;
@@ -3199,7 +3217,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
     Attributes owner = mAttributesWrapper.has(ownerId)
         ? mAttributesWrapper.get(ownerId).attrs : null;
-    return MissileDamageResolver.initializeSorceressFireArea(
+    return MissileDamageResolver.initializeSorceressFireArea(files(),
         projectile, skill, owner, mPlayer.has(ownerId), level,
         name -> getBaseSkillLevel(ownerId, name), stateList(ownerId));
   }
@@ -3258,7 +3276,7 @@ public class ServerSkillSystem extends PassiveSystem {
         ? mAttributesWrapper.get(event.entityId).attrs : null;
     // SrvHit14 uses the skill-owned elemental packet for the immediate impact.
     // Its meteorfire children instead own a separate Missiles.txt rate curve.
-    MissileDamageResolver.initializeSorceressFireArea(center, skill, ownerAttrs,
+    MissileDamageResolver.initializeSorceressFireArea(files(), center, skill, ownerAttrs,
         mPlayer.has(event.entityId), level,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
     log.info("[SORCERESS_METEOR] phase=center source={} target={} skill={} level={} "
@@ -3495,7 +3513,7 @@ public class ServerSkillSystem extends PassiveSystem {
         skill.calc1, skill, skillLevel, name -> getBaseSkillLevel(event.entityId, name)));
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    MissileDamageResolver.initializeSorceressFireArea(
+    MissileDamageResolver.initializeSorceressFireArea(files(),
         projectile, skill, ownerAttrs, mPlayer.has(event.entityId), skillLevel,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
     log.info("[SORCERESS_INFERNO] phase=stream source={} skill={} level={} missile={} "
@@ -3860,7 +3878,7 @@ public class ServerSkillSystem extends PassiveSystem {
       // callback can be marked as an explosion in Missiles.txt, but the
       // Skills.txt fire packet must still be snapshotted at cast time.
       if (mAttributesWrapper.has(event.entityId)) {
-        MissileDamageResolver.initializeSorceressFireArea(mMissile.get(missileId), skill,
+        MissileDamageResolver.initializeSorceressFireArea(files(), mMissile.get(missileId), skill,
             mAttributesWrapper.get(event.entityId).attrs, mPlayer.has(event.entityId),
             skillLevel, name -> getBaseSkillLevel(event.entityId, name),
             stateList(event.entityId));
@@ -4495,7 +4513,7 @@ public class ServerSkillSystem extends PassiveSystem {
           ? mAttributesWrapper.get(ownerId).attrs : null;
       Monster ownerMonster = mMonster.has(ownerId) ? mMonster.get(ownerId) : null;
       int ownerMode = mCofReference.has(ownerId) ? mCofReference.get(ownerId).mode : -1;
-      MissileDamageResolver.initialize(projectile, ownerAttrs, ownerMonster,
+      MissileDamageResolver.initialize(files(), projectile, ownerAttrs, ownerMonster,
           ownerMode, damageLevel, 0);
       configurePierce(projectile, ownerId);
     }
@@ -4533,7 +4551,7 @@ public class ServerSkillSystem extends PassiveSystem {
     delay.nativeLifetimeFrames = Math.max(1, row.Range);
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    MissileDamageResolver.initializePaladinFistOfTheHeavens(
+    MissileDamageResolver.initializePaladinFistOfTheHeavens(files(),
         delay, skill, ownerAttrs, skillLevel,
         name -> getBaseSkillLevel(event.entityId, name));
 
@@ -4574,7 +4592,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int concentration = blessedHammerConcentrationPercent(event.entityId, skill);
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
-    MissileDamageResolver.initializePaladinBlessedHammer(
+    MissileDamageResolver.initializePaladinBlessedHammer(files(),
         projectile, skill, ownerAttrs, skillLevel,
         name -> getBaseSkillLevel(event.entityId, name), concentration);
     log.info("[BLESSED_HAMMER] phase=create entity={} missileId={} level={} "
@@ -4599,14 +4617,14 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId < 0 || skill == null || !mMissile.has(missileId)
         || !mAttributesWrapper.has(ownerId)) return;
     Missile projectile = mMissile.get(missileId);
-    boolean nativePaladin = MissileDamageResolver.initializePaladinHolyBolt(
+    boolean nativePaladin = MissileDamageResolver.initializePaladinHolyBolt(files(),
         projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
         name -> getBaseSkillLevel(ownerId, name));
-    boolean nativeBone = !nativePaladin && MissileDamageResolver.initializeNecromancerBoneMagic(
+    boolean nativeBone = !nativePaladin && MissileDamageResolver.initializeNecromancerBoneMagic(files(),
         projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
         name -> getBaseSkillLevel(ownerId, name));
     if (!nativePaladin && !nativeBone) {
-      MissileDamageResolver.initializeSkill(projectile, skill,
+      MissileDamageResolver.initializeSkill(files(), projectile, skill,
           mAttributesWrapper.get(ownerId).attrs, skillLevel,
           name -> getBaseSkillLevel(ownerId, name), stateList(ownerId));
     }
@@ -4902,7 +4920,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int difficulty = combatDifficulty(corpseId, corpseId);
       MonsterStatsCalculator.MonsterStatsInit calculated =
           new MonsterStatsCalculator.MonsterStatsInit();
-      if (MonsterStatsCalculator.calculateMonsterStatsByLevel(
+      if (MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
           mMonster.get(corpseId).monstats.hcIdx, 1, difficulty, level,
           (short) 1, calculated)
           && calculated.minHP > 0 && calculated.maxHP >= calculated.minHP) {
