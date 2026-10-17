@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：出生检查的飞弹标记
+
+- D2MOO `D2Game/src/MISSILES/Missiles.cpp` 依据 `nCollision` 设置 `COLLIDE_MISSILE=0x40`，不是依据 `CollideType`。
+- `D2Common/src/Path/Path.cpp` 的 `PATH_AddCollisionFootprintForUnit` 对飞弹使用 WithSize；`Units.cpp` 从 Missiles.txt 读取 Size。Size 1 为点、2 为十字、3 为九宫格，0 不写标记（`D2Collision.cpp` 的 `COLLISION_SetMaskWithSize`）。
+- 出生 mask 查询现读取服务端飞弹实时位置，按表格 Collision/Size 投影；排除客户端副本及纯表现子飞弹。工厂立即登记，避免同帧创建尚未进入 ECS 订阅的空窗；订阅移除清理登记。
+- 不写入行走占位索引，不改变飞弹命中处理；no-presence、CORPSE 和其他特殊状态矩阵仍未补齐。
+- 验证：隔离构建的 MaggotSpawnExecutionTest（7）与 NativeMonsterSpawnSearchTest（10）通过，architectureRegression 通过；日志 `build/ai-missile-spawn-validation.log`。未运行客户端图形验收。
+
 ## 后续：SpawnCol=1 特殊地板分支
 
 - 本地 1.10F D2Game.dll 0x6FC68FEE–0x6FC69136 核实：普通 SpawnCol=1 从活动房间的原生 floor 数组取候选，材质必须含水位 0x2；触手链 ID 258–263、HellMeteor ID 153 则走普通周界搜索。

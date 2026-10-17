@@ -27,6 +27,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(DynamicUnitCollisionSystem.class);
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
@@ -41,6 +42,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private final com.badlogic.gdx.utils.IntSet newUnits = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription units;
+  private final com.badlogic.gdx.utils.IntSet spawnMissiles = new com.badlogic.gdx.utils.IntSet();
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
   private final Vector2 resolved = new Vector2();
@@ -55,6 +57,16 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void initialize() {
+    world.getAspectSubscriptionManager().get(Aspect.all(
+        com.riiablo.engine.server.component.Missile.class, Position.class))
+        .addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
+          @Override public void inserted(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) spawnMissiles.add(ids.get(i));
+          }
+          @Override public void removed(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) spawnMissiles.remove(ids.get(i));
+          }
+        });
     units = world.getAspectSubscriptionManager().get(
         Aspect.all(Class.class, Position.class, Size.class, Velocity.class));
     units.addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
@@ -224,10 +236,35 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         return (bits & mask) != 0;
       })) return false;
       if ((mask & 0x200) != 0 && hasSpawnItem(zone, px, py)) return false;
-      // Missile collision bits are not maintained for every projectile yet;
-      // SpawnCol=1's special floor branch is rejected by the factory.
+      if (enabled && (mask & 0x40) != 0 && hasSpawnMissile(sourceId, zone, px, py)) return false;
     }
     return true;
+  }
+
+  /** Factory registration makes newborn missiles visible before subscription insertion. */
+  public void reserveMissileSpawn(int id) {
+    spawnMissiles.add(id);
+  }
+
+  private boolean hasSpawnMissile(int sourceId, Map.Zone zone, int x, int y) {
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnMissiles.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (id == sourceId || !mMissile.has(id) || !mPosition.has(id)
+          || !sharesCollisionSpace(zone, id)) continue;
+      com.riiablo.engine.server.component.Missile missile = mMissile.get(id);
+      // Missiles.cpp: Collision controls the footprint, NOT CollideType.
+      if (!missile.authoritative || missile.presentationOnly || missile.missile == null
+          || !missile.missile.Collision) continue;
+      int size = missile.missile.Size;
+      if (size < 1 || size > 3) continue;
+      Position position = mPosition.get(id);
+      int dx = Math.abs(Map.round(position.position.x) - x);
+      int dy = Math.abs(Map.round(position.position.y) - y);
+      // PATH_AddCollisionFootprintForUnit uses WithSize for missiles, not unit patterns.
+      if (size == 1 ? dx == 0 && dy == 0
+          : size == 2 ? dx + dy <= 1 : dx <= 1 && dy <= 1) return true;
+    }
+    return false;
   }
 
   private boolean hasSpawnItem(Map.Zone zone, int x, int y) {

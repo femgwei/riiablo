@@ -1495,6 +1495,8 @@ public class ServerEntityFactory extends EntityFactory {
     }
     mAngle.create(id).set(angle);
     mSize.create(id).size = Size.SMALL;
+    DynamicUnitCollisionSystem spawnCollision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (spawnCollision != null) spawnCollision.reserveMissileSpawn(id);
     // Missiles are authoritative network entities. Their deletion is then
     // announced by NetworkSynchronizer when collision/range removes them.
     mNetworked.create(id);

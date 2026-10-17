@@ -13,6 +13,41 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaggotSpawnExecutionTest extends RiiabloTest {
+  @Test void missileSpawnMarkersFollowNativeCollisionSizeAndLiveLifecycle() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      int id = f.world.create();
+      Missile missile = f.world.getMapper(Missile.class).create(id);
+      missile.missile = new com.riiablo.codec.excel.Missiles.Entry();
+      missile.missile.Collision = true;
+      missile.missile.Size = 2;
+      Position position = f.world.getMapper(Position.class).create(id);
+      position.position.set(180, 180);
+      f.collisions.reserveMissileSpawn(id);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 180, 1, 0x40));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x40));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(id, f.zone, 180, 180, 1, 0x40));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x1000));
+      missile.missile.Size = 3;
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x40));
+      missile.missile.Collision = false;
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
+      missile.missile.Collision = true;
+      missile.authoritative = false;
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
+      missile.authoritative = true;
+      missile.presentationOnly = true;
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
+      missile.presentationOnly = false;
+      f.world.process();
+      position.position.set(185, 185);
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x40));
+      f.world.delete(id); f.world.process();
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x40));
+    }
+  }
+
   @Test void realFactoryUsesNativeWaterFloorRecordsAndCommitsBirthModeImmediately() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       MonStats.Entry child = null;

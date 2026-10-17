@@ -1,5 +1,10 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 出生检查飞弹层
+
+- 按 D2MOO 的 Collision 字段和原生 Size 形状补入 MISSILE 标记，支持同帧工厂登记、实时位置及删除清理，不改变行走碰撞。
+- no-presence/CORPSE 等特殊层仍待单独对齐；来源和边界见 [出生搜索专项记录](ai-native-spawn-search-2026-10-18.md)。
+
 ## 2026-10-18 SpawnCol=1 原生特殊地板搜索
 
 - 结合本地 1.10F DLL 接入水材质 floor 数组搜索、一次房间 RNG、原生起止索引与四泊位探测；触手/陨石保留周界分支例外。
