@@ -509,6 +509,7 @@ public class MapViewer extends Tool {
             int amount = UIUtils.ctrl() ? 1 : Tile.SUBTILE_SIZE;
             if (UIUtils.shift()) amount *= 8;
             y -= amount;
+            mPosition.get(ent).invalidateNativePrecision();
             mPosition.get(ent).position.set(x, y);
             return true;
           case Input.Keys.S:
@@ -516,6 +517,7 @@ public class MapViewer extends Tool {
             amount = UIUtils.ctrl() ? 1 : Tile.SUBTILE_SIZE;
             if (UIUtils.shift()) amount *= 8;
             y += amount;
+            mPosition.get(ent).invalidateNativePrecision();
             mPosition.get(ent).position.set(x, y);
             return true;
           case Input.Keys.A:
@@ -523,6 +525,7 @@ public class MapViewer extends Tool {
             amount = UIUtils.ctrl() ? 1 : Tile.SUBTILE_SIZE;
             if (UIUtils.shift()) amount *= 8;
             x -= amount;
+            mPosition.get(ent).invalidateNativePrecision();
             mPosition.get(ent).position.set(x, y);
             return true;
           case Input.Keys.D:
@@ -530,6 +533,7 @@ public class MapViewer extends Tool {
             amount = UIUtils.ctrl() ? 1 : Tile.SUBTILE_SIZE;
             if (UIUtils.shift()) amount *= 8;
             x += amount;
+            mPosition.get(ent).invalidateNativePrecision();
             mPosition.get(ent).position.set(x, y);
             return true;
 //          case Input.Keys.UP:
@@ -617,7 +621,9 @@ public class MapViewer extends Tool {
 
   private int createSrc(float x, float y) {
     int id = engine.create();
-    mPosition.create(id).position.set(x, y);
+    Position position = mPosition.create(id);
+    position.invalidateNativePrecision();
+    position.position.set(x, y);
     engine.getMapper(Classname.class).create(id).classname = "null";
     engine.getMapper(Class.class).create(id).type = null;
     return id;
