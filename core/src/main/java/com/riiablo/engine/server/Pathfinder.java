@@ -428,6 +428,9 @@ public class Pathfinder extends IteratingSystem {
   }
 
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
+    // These projected waypoints do not establish complete native dynamic-path
+    // state. Like ordinary path requests, they must not retain a trusted cache.
+    if (mNativeAiPathCache.has(src)) mNativeAiPathCache.get(src).invalidate();
     if (!mVelocity.has(src) || !mPosition.has(src) || !mPosition.has(targetId)) return false;
     // Only accept a live allocation. Delayed command callers must additionally
     // validate their saved token; looking up today's token cannot identify an

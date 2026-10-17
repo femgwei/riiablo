@@ -11,6 +11,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativePathIdentity;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
@@ -30,6 +31,36 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void projectedNativeRequestsInvalidateCachedNativeStateOnSuccessAndRejection() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      NativeAiPathCache cache = f.world.getMapper(NativeAiPathCache.class).create(f.actor);
+      cache.allocated();
+      assertTrue(f.paths.findNativeChase(f.actor, f.target));
+      assertFalse(cache.coordinatesKnown);
+      assertFalse(cache.pointsKnown);
+
+      cache.allocated();
+      assertTrue(f.paths.findNativeOrbit(f.actor, f.target, 5, true));
+      assertFalse(cache.coordinatesKnown);
+      assertFalse(cache.pointsKnown);
+
+      cache.allocated();
+      f.world.getMapper(NativePathIdentity.class).remove(f.target);
+      assertFalse(f.paths.findNativePath(f.actor, f.target, 5, 0));
+      assertFalse(cache.coordinatesKnown);
+      assertFalse(cache.pointsKnown);
+    }
+  }
+
+  @Test void projectedNativeRequestDoesNotAllocateNativeCache() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);
+      assertTrue(f.paths.findNativeChase(f.actor, f.target));
+      assertFalse(f.world.getMapper(NativeAiPathCache.class).has(f.actor));
+    }
+  }
+
   @Test void initialFailureWithoutDynamicGoalBlockDoesNotTryApproachPoints() {
     try (Fixture f = new Fixture()) {
       f.rejectTarget = true;
