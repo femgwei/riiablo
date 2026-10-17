@@ -71,3 +71,14 @@ RoomActivationSystem 根据独立来源标记分流，旧 float 记录（即使�
 随后直接相关复跑 16 项全部通过：DiabPrisonIntegrationTest 12、房间混合来源激活 1、
 MonsterSpawnIntegerSelectionTest 3；失败/错误/跳过均为 0，architectureRegression 通过，
 模块测试为 UP-TO-DATE。最终日志 build/ai-mobile-allocation-focused.log。
+
+## 后续守卫回归
+
+IntegerMonsterAllocationGuardTest 以受控 createMonster 返回值/最终坐标，调用真实
+createMonsterAtIntegerSelection，覆盖 x 或 y 改变、INVALID_ENTITY、缺少 Position、
+0/65535 raw 位模式及每轴 -1/65536；并确认品质参数透传和落点不被覆盖。
+这是包装层分支回归，不是引入或验证实际工厂的自由落点搜索。
+本批未改运行代码。执行日志 build/ai-mobile-allocation-guards.log。
+结果：21 项定向测试全部通过（守卫 5、真实工厂/骨牢 12、房间混合来源激活 1、
+来源队列 3），失败/错误/跳过均为 0；architectureRegression 通过。
+未复跑上批失败的房间休眠用例，不将本批通过解读为该问题已解决。
