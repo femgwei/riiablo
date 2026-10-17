@@ -78,6 +78,10 @@ class TeleportGoldenDamageTest extends RiiabloTest {
       assertTrue(actioneer.resolveTeleport(caster, new Vector2(10, 10)));
       assertEquals(new Vector2(10, 10),
           world.getMapper(Position.class).get(caster).position);
+      Position position = world.getMapper(Position.class).get(caster).initializeNativeCell(10, 10);
+      assertTrue(actioneer.resolveTeleport(caster, new Vector2(10, 10)));
+      org.junit.jupiter.api.Assertions.assertFalse(position.hasNativePrecision(),
+          "same-projection skill teleport must not reuse old raw coordinates");
       assertEquals(0, factory.missilesCreated);
       assertEquals(0, probe.damageEvents);
     } finally {

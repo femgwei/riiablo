@@ -760,6 +760,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     float distance = delta.len();
     float step = bladeSpeed(monster) * Math.max(0f, world.delta);
     if (distance <= Math.max(0.001f, step)) {
+      position.invalidateNativePrecision();
       position.position.set(destinationX, destinationY);
       trap.bladeMovingToTarget = !trap.bladeMovingToTarget;
       if (trap.bladeMissileId >= 0 && mMissile.has(trap.bladeMissileId)) {
@@ -775,6 +776,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     }
 
     delta.scl(step / distance);
+    position.invalidateNativePrecision();
     position.position.add(delta);
     if (mVelocity.has(entityId)) {
       mVelocity.get(entityId).velocity.set(delta).scl(

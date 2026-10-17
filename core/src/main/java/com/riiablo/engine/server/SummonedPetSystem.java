@@ -297,6 +297,7 @@ public class SummonedPetSystem extends IteratingSystem {
       mAIWrapper.get(entityId).ai.onOwnerWarp();
     }
 
+    mPosition.get(entityId).invalidateNativePrecision();
     position.set(destination);
     petMap.set(ownerMap.map, ownerMap.zone);
     com.riiablo.map.Map.RoomEx room = ownerMap.zone.findRoomEx(destination.x, destination.y);

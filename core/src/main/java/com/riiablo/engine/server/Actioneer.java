@@ -4087,6 +4087,7 @@ public class Actioneer extends PassiveSystem {
     if (sourceMap == null || mountMap == null || sourceMap.zone != mountMap.zone
         || sourceMap.map != mountMap.map) return;
     Vector2 mountPosition = mPosition.get(targetId).position;
+    mPosition.get(entityId).invalidateNativePrecision();
     mPosition.get(entityId).position.set(mountPosition);
     mPathfind.remove(entityId);
     mTarget.remove(entityId);
@@ -4167,6 +4168,7 @@ public class Actioneer extends PassiveSystem {
       return false;
     }
 
+    mPosition.get(entityId).invalidateNativePrecision();
     mPosition.get(entityId).position.set(landing);
     if (mPathfind.has(entityId)) mPathfind.remove(entityId);
     if (mTarget.has(entityId)) mTarget.remove(entityId);

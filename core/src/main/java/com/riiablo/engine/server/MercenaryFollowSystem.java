@@ -310,6 +310,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (mCasting.has(entityId)) mCasting.remove(entityId);
     if (mSequence.has(entityId)) mSequence.remove(entityId);
     if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    mPosition.get(entityId).invalidateNativePrecision();
     position.set(destination);
 
     MapWrapper wrapper = mMapWrapper.get(entityId);
