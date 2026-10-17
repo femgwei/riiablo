@@ -2990,6 +2990,16 @@ public class Map implements Disposable {
       }
     }
 
+    /** Preserves explicit integer selection inputs, not final factory coordinates. */
+    public void addIntegerMonsterSpawn(int monsterId, int worldX, int worldY,
+        int packId, boolean minion) {
+      if (!monsterPopulationSpawned) {
+        pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY,
+            packId, minion, -1, null,
+            com.riiablo.engine.server.monster.MonsterRank.NORMAL, true, worldX, worldY));
+      }
+    }
+
     public Array<MonsterSpawn> getPendingMonsterSpawns() {
       return pendingMonsterSpawns;
     }
@@ -3050,6 +3060,21 @@ public class Map implements Disposable {
 
   /** Deferred native room population entry in world subtile coordinates. */
   public static final class MonsterSpawn {
+    private final boolean integerSelectionKnown;
+    private final int integerSelectionX, integerSelectionY;
+
+    public boolean hasIntegerSelection() { return integerSelectionKnown; }
+
+    public int integerSelectionX() {
+      if (!integerSelectionKnown) throw new IllegalStateException("Integer selection is unknown");
+      return integerSelectionX;
+    }
+
+    public int integerSelectionY() {
+      if (!integerSelectionKnown) throw new IllegalStateException("Integer selection is unknown");
+      return integerSelectionY;
+    }
+
     public final int monsterId;
     public final float x;
     public final float y;
@@ -3079,6 +3104,15 @@ public class Map implements Disposable {
 
     MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
         int superUniqueId, String superUniqueKey, int rank) {
+      this(monsterId, x, y, packId, minion, superUniqueId, superUniqueKey, rank, false, 0, 0);
+    }
+
+    private MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
+        int superUniqueId, String superUniqueKey, int rank,
+        boolean integerSelectionKnown, int integerSelectionX, int integerSelectionY) {
+      this.integerSelectionKnown = integerSelectionKnown;
+      this.integerSelectionX = integerSelectionX;
+      this.integerSelectionY = integerSelectionY;
       this.monsterId = monsterId;
       this.x = x;
       this.y = y;

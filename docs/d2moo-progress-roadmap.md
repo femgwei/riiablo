@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 AI 固定点接入：延迟人口整数选点来源
+
+- RoomEx 新增显式 addIntegerMonsterSpawn；MonsterSpawn 独立保留选点整数及来源标记，
+  未知来源读取抛异常。原 float API 即使传入整值也仍未知，不添加隐式 int 重载。
+- NativeRoomMonsterPopulation 的领队与同伴选点改用该入口；浮点展示字段、队列顺序、
+  pack/minion 元数据和重复人口认领规则保持不变。
+- 这是选点参数来源，不是工厂最终坐标或原生精度：允许记录完整 int 域，
+  不借 uint16 raw 约束改变既有出生成功率；没有接到 RoomActivationSystem 的 raw 初始化。
+- 新增来源区分、完整 int 保留、已认领拒绝追加测试，扩展真实人口生成用例。
+  验证结果记录于 [来源接入记录](ai-mobile-position-source-2026-10-18.md)。
+
 ## 2026-10-18 AI 固定点接入：移动出生来源前置追踪
 
 - 确认 NativeRoomMonsterPopulation 的 int 候选点在 RoomEx.addMonsterSpawn 的

@@ -61,6 +61,11 @@ class NativeRoomMonsterPopulationResourceTest extends RiiabloTest {
         Riiablo.files.monstats.get("skeleton1"), 2, 1, random));
     assertEquals(15, zone.getRoomsEx().first().getPendingMonsterSpawns().get(0).x);
     assertEquals(13, zone.getRoomsEx().first().getPendingMonsterSpawns().get(1).x);
+    for (Map.MonsterSpawn spawn : zone.getRoomsEx().first().getPendingMonsterSpawns()) {
+      assertTrue(spawn.hasIntegerSelection());
+      assertEquals(spawn.x, (float) spawn.integerSelectionX());
+      assertEquals(spawn.y, (float) spawn.integerSelectionY());
+    }
   }
 
   @Test void exclusionUsesTwentyAttemptsButDoesNotAffectPresetMarkers() {

@@ -35,7 +35,7 @@ final class NativeRoomMonsterPopulation {
           : markerY + (attempt == 0 ? 0 : random.nextInt(7) - 3);
       if (excludeWarps && zone.excludesNativeMonsterSpawn(x, y)) continue;
       if (canPlace(zone, room, monster, x, y)) {
-        room.addMonsterSpawn(monster.hcIdx, x, y, packId, false);
+        room.addIntegerMonsterSpawn(monster.hcIdx, x, y, packId, false);
         leader = room.getPendingMonsterSpawns().peek();
       }
     }
@@ -70,7 +70,7 @@ final class NativeRoomMonsterPopulation {
       int x = Math.round(leader.x) + random.nextInt(7) - 3;
       int y = Math.round(leader.y) + random.nextInt(7) - 3;
       if (!canPlace(zone, room, monster, x, y)) continue;
-      room.addMonsterSpawn(monster.hcIdx, x, y, packId, minion);
+      room.addIntegerMonsterSpawn(monster.hcIdx, x, y, packId, minion);
       return true;
     }
     return false;

@@ -1,6 +1,6 @@
 # 移动怪物坐标来源接入前置记录
 
-本轮只追踪源码与确定接入边界，未修改运行代码。
+首轮只追踪源码与确定接入边界；后续来源保留实现见文末。
 
 ## 已确认的房间人口链路
 
@@ -38,3 +38,15 @@ float 整值仍未知、显式来源跨 deferred 队列保留、非法坐标与�
 工厂落点调整不能沿用旧 raw、房间重复激活不重复分配，以及实际移动后的失效。
 
 本轮仅源码检查与文档静态检查，未编译、未运行测试；未验证自然地图或客户端行为。
+
+## 后续实现：延迟队列保留整数选点
+
+RoomEx.addIntegerMonsterSpawn 是显式新入口，MonsterSpawn 保存独立整数来源标记及原始 int。
+旧 float 构造和 API 不建立来源。NativeRoomMonsterPopulation 的两处实际 int 选点使用新入口。
+完整 int 域仍可被记录，不等于允许直接建立 uint16 raw；实体工厂与房间激活尚未消费此来源。
+同伴选点保存的是本次候选整数，不是恢复领队 fp16 低位。
+
+定向验证使用独立 buildDir / project-cache-dir，日志 build/ai-mobile-selection-tests.log。
+结果：MonsterSpawnIntegerSelectionTest 3 项、人口真实路径用例 1 项全部通过，
+失败/错误/跳过均为 0；architectureRegression 通过（其模块测试为 UP-TO-DATE，未声称全部重跑）。
+未运行人口资源测试类中的完整自然 Act 地图用例，也未新增图形客户端验收。
