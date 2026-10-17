@@ -196,6 +196,22 @@ task subsystemRegression(type: Test) {
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
 
+// Architecture ratchet: fail when a mechanism package gains a new dependency
+// on client/presentation code. Existing bridges are listed in the test as
+// migration debt and must shrink over time.
+task architectureRegression(type: Test) {
+  group = 'verification'
+  description = 'Checks Java dependency direction and prevents new reverse-layer imports.'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter { includeTestsMatching 'com.riiablo.architecture.*' }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
 // Map-only regression gate for the Act II–V layout work.  Keep this separate
 // from the full core test task so a second machine can verify map topology,
 // Warp links, native RoomEx projection, DT1 export, and preset-unit queues

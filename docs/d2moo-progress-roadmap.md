@@ -10522,3 +10522,18 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   （伤害/吸收范围）及 NecromancerGolemSideEffectTest（原始 TXT Param5 期望 10，安装值 0），
   仍未通过；本次没有修改这些技能业务或放宽断言，不能报告全量测试通过。
 - [ ] 本轮未执行真实双客户端、Android 真机、人工画面对照、长期压力或性能验收。
+
+## 2026-10-17 架构分层复核与依赖方向约束
+
+- [x] 复核确认服务端上下文/测试宿主、客户端上下文/装配、MapResources/实例构建器、
+  加载屏宿主和 SimulationSession 已具备独立装配与定向测试入口。
+- [ ] 复核确认全仓仍未达到 dark-magic 式独立分层：`MissileCollisionSystem` 仍直接读取
+  全局 Files，任务系统约 21 个类仍有全局状态访问，D2MOO 桥接仍写入静态 `DataTbls`
+  缓存，`Stat.entry`/`item.Type` 依赖全局表，战斗/状态解析器仍有 `INSTANCE` 单例，
+  服务端仍存在客户端/UI 反向导入，core 仍是单一编译模块。
+- [x] 新增 `:core:architectureRegression`。该测试仿照 dark-magic 的
+  `TestDependencyDirection` 扫描 Java import 边，禁止 server/attributes/item/map 机制包
+  新增指向 client/screen/widget 的反向依赖；当前已知桥接作为显式基线记录，迁移一个桥接
+  时必须同时删除对应基线，新增桥接会直接失败。
+- [x] 本次架构复核定向测试：core 82 项、D2GS 装配 5 项全部通过；架构约束单独入口随后
+  运行并纳入后续统一门禁。该约束是依赖方向防回退，不等同于全系统已经完成隔离。
