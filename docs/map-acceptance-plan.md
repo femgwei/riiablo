@@ -231,3 +231,54 @@ DynamicUnitCollisionSystem 821、AI fallback 477、Actioneer 17、AnimDataResolv
 详见同目录 log-issues.json；未新增 allowlist 或降低日志级别。对象检查结果不豁免这些
 AI/技能/动画及怪物移位问题。SUMMARY 为 OBJECT_LOAD_ONLY，walks/transitions=0；
 本轮未执行全有向边步行，也未证明客户端画面或原版数量等价。
+
+2026-10-17 分层重构后复验（A1–A5，包含野外）：初轮固定生产代码
+`d3d6f179a`，最终生产基线固定为 `f12346dc7`（两者之间只有 AI 寻路修改），
+测试提交为 `bd0174d0c` / `f80b05421`。地图人口代码仍在 core，不能将本轮
+复验解释为服务器分层已经全部完成。
+
+此前大型迷宫预设拆房间、主题桶、Fn1 在类别分派前消耗 chance roll 的修复均保留。
+人口生成改用地图实例的 Files/MPQ；新增真实对象组隔离回归，先记录石头、箱、桶、
+瓦罐和篮的数量、类别、房间、位置及来源，再清空全局 Riiablo.files/mpqs，断言显式
+MapResources 路径结果完全相同且重复人口不新增。全图人口审计只读取 DT1 头部和碰撞，
+关闭并恢复像素解码，避免六种子循环持有无关像素资源；这不是 GL 外观检查。
+
+同资源比较使用上轮 `G:\BaiduNetdiskDownload\Diablo II`（Game.exe 1.14.0.64）：
+六种子 762 个非城镇地图实例（含 180 个野外实例）的房间数量全部与 10/15 记录一致，
+559 个实例的随机容器类别计数、9 个实例的预设计数有变化，不能宣称逐图数量不变。
+A2 随机瓦罐（4/9/52/94/95）六种子总数从 6164 到 6243，未见整体十倍缩减；
+seed=1 的死亡之殿一层仍有 21→0 的差异，但该关六种子合计从 160 到 245，不能用
+单个种子的零数量直接判定链路断开。具体随机轨迹差异尚未归因，也未建立原版等量结论。
+
+另用独立安装 `G:\BaiduNetdiskDownload\Diablo II 1.10F`（Game.exe
+1, 0, 10, 39）复验，不能和上述资源混算。两套 Game.exe、d2data.mpq、patch_d2.mpq
+的 SHA256、固定版本和种子记录于隔离区
+`core/build/reports/population-20261017/run-metadata.json`；同资源比较保存在
+`same-resource-comparison.json`，1.10F 的表、容器、怪物和全图人口 XML 分开保存。
+完整证据根目录为 `C:\Users\DELL\.codex\worktrees\map-object-tour\riiablo`。
+
+1.10F 六种子全图人口抽样（生产基线 d3d6f179a）：seed=1 的 level 56、66、110、128
+待创建怪物分别为 401、419、444、130，104 个 A5 level 110 群组标记已参与生成。
+这些是安装真实地形后的 pending 数量，不能当作客户端同时可见怪物数量。普通箱沿用
+InitFn=3 且 Name 含 chest 的口径；其余掉落容器另计，A4 在该普通箱口径为零。
+人口测试只验证实现侧预算、怪群安装及一次性约束；仍缺原版同版本、同条件逐类统计，
+不据此关闭“普通箱、桶罐及怪物偏少”的问题。
+
+最终基线的 1.10F 六种子资源/人口回归 19 项通过（容器全图 1、对象表及隔离 10、
+怪物专项 7、全图人口 1），failures/errors/skipped=0。762 条容器审计输出与初轮
+1.10F 输出逐行一致，见 `final-resource-comparison.json`；固定版本之间没有观察到
+这批地图计数继续变化。最终 XML 以 `final-TEST-` 为前缀保存在上述证据目录。
+
+最终基线的 MapBuilderIsolationTest 2 项通过；seed=1、普通难度、25Hz 的 132 图
+对象加载复查也完成，输出 `server/d2gs/build/map-tour/refactor-container-final-20261017`。
+132 个 OBJECT_AUDIT 和 132 个 OBJECT_LOAD_PASS 的对象 failures=0。将六种子容器
+审计实际出现的 147 个类别用于筛选运行时记录，3657 条源记录全部为 created，按
+level/entity 核对 runtime 的 class/room 无差异、无目标跳过记录；详见同目录
+`container-entity-audit.json`。COF/图像资源和对象碰撞检查也属于该对象加载审计。
+
+严格控制台日志审计仍有 686 条待处理记录：DynamicUnitCollisionSystem 681、AI 4
+（NpcBarb fallback）、Actioneer 1（srvdofunc 101）。同目录 `log-issues.json` 保留
+全部记录，没有新增 allowlist；不能将对象子检查 PASS 写成整轮验收通过。本次仅新增
+测试及记录，未以放宽碰撞、放开不支持对象类别或直接乘密度来改变生产人口。
+SUMMARY 明确为 OBJECT_LOAD_ONLY，walks/transitions=0；所有原生相邻 Vis + Warp=-1
+边的双向 TCP 步行、全怪物激活/客户端可见、GL 外观与原版同条件数量验收仍待完成。
