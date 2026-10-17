@@ -38,8 +38,9 @@ public class Duriel extends NativeDecisionAI {
     if (hasSkill(0) && rollAiChance(params[PARAM_CHARGE_CHANCE])) {
       cast(0, targetId);
     } else {
-      // Native AITACTICS_SetVelocity(pUnit, 13, 0, 0) precedes the flagged walk.
-      approach(targetId, 13);
+      // SetVelocity(unit, 13, 0, 0): 13 selects the path type, not a speed bonus.
+      // Full type-13/flags-7 movement still requires the native runtime bridge.
+      approach(targetId, 0);
     }
   }
 

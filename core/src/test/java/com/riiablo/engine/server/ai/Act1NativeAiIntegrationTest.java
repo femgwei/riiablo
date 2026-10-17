@@ -181,7 +181,7 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       f.ai.params[Duriel.PARAM_CHARGE_CHANCE] = 0;
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals("APPROACH", f.ai.getState());
-      assertEquals(0.13f, f.world.getMapper(Velocity.class).get(f.actor).modeSpeedBonusMultiplier, 0.0001f);
+      assertEquals(0f, f.world.getMapper(Velocity.class).get(f.actor).modeSpeedBonusMultiplier, 0.0001f);
     }
   }
 

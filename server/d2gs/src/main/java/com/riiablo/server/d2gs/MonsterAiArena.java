@@ -206,6 +206,8 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)
         || "FrozenHorror".equals(monster.AI) || "Megademon".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("DeathMauler".equals(monster.AI)) scenarios.add("deathmaul-cycle");
+    // Observe natural non-melee decisions at ten subtiles separately from far=18.
+    if ("Duriel".equals(monster.AI)) scenarios.add("duriel-engage");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-cold");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-wall");
     if ("Diablo".equals(monster.AI)) scenarios.add("diab-prison");
@@ -293,6 +295,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
       float distance = result.scenario.equals("near") || result.scenario.equals("submerge-cycle")
           || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
       if (result.scenario.equals("deathmaul-cycle")) distance = 10;
+      if (result.scenario.equals("duriel-engage")) distance = 10;
       if (bloodManaScene) distance = 3;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
