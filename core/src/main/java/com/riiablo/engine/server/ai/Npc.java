@@ -15,7 +15,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntSet;
 
-import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -159,7 +158,7 @@ public class Npc extends AI {
     if (mUnitStates.has(playerId)) {
       com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
       if (states != null && states.stateList != null) {
-        states.stateList.removeNegativeEffects(serverContext != null ? serverContext.files().States : Riiablo.files == null ? null : Riiablo.files.States);
+        states.stateList.removeNegativeEffects(files() == null ? null : files().States);
       }
     }
     log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina mercenaries={}",
@@ -200,7 +199,7 @@ public class Npc extends AI {
         com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(mercenaryId);
         if (states != null && states.stateList != null) {
           changed |= states.stateList.removeNegativeEffects(
-              serverContext != null ? serverContext.files().States : Riiablo.files == null ? null : Riiablo.files.States) > 0;
+              files() == null ? null : files().States) > 0;
         }
       }
       if (changed) restored++;

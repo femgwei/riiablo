@@ -49,6 +49,16 @@
   `:core:subsystemRegression` 通过。
 - [ ] AI 目录仍有少量具体类待迁移，完成后再统一降低全局访问预算。
 
+## 2026-10-17 AI 具体实现第四组上下文化
+
+- [x] `Npc`、`BloodRaven`、`HighPriest`、`SkeletonBow`、`SkeletonMage`、`Succubus`
+  和 `Zombie` 的表读取改用 `AI.files()`；`Riiablo.engine` 兼容访问仅保留在仍需
+  ECS 全局桥接的类中。
+- [x] 当前 AI 目录的直接 `Riiablo.files` 访问已收敛到兼容测试入口（`InvisoSpawner`
+  静态辅助和 `AI` 的未装配回退）。编译、架构和子系统回归通过。
+- [ ] 下一步转向服务端技能、状态、掉落及 `NativeMonsterSequence` 之外的系统级全局
+  引用，继续建立按上下文分层的增长门禁。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II

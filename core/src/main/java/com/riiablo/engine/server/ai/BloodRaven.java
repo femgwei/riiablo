@@ -2,7 +2,6 @@ package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -171,7 +170,7 @@ public final class BloodRaven extends AI {
       case 2: name = monster.monstats.Skill3; break;
       default: return false;
     }
-    return name != null && !name.isEmpty() && Riiablo.files.skills.get(name) != null;
+    return name != null && !name.isEmpty() && files().skills.get(name) != null;
   }
 
   private int difficulty() {

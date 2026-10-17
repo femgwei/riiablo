@@ -7,7 +7,6 @@ import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
@@ -85,7 +84,7 @@ public class SkeletonMage extends AI {
         ? monster.monstats.MissA1 
         : (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty() ? monster.monstats.MissA2 : null);
     if (missileName != null) {
-      missile = Riiablo.files.Missiles.get(missileName);
+      missile = files().Missiles.get(missileName);
     }
   }
 

@@ -1,6 +1,5 @@
 package com.riiablo.engine.server.ai;
 
-import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
@@ -62,7 +61,7 @@ public class Succubus extends NativeDecisionAI {
     String[] names = {monster.monstats.Skill1, monster.monstats.Skill2,
         monster.monstats.Skill3, monster.monstats.Skill4, monster.monstats.Skill5};
     String name = names[slot];
-    Skills.Entry skill = name == null || name.isEmpty() ? null : Riiablo.files.skills.get(name);
+    Skills.Entry skill = name == null || name.isEmpty() ? null : files().skills.get(name);
     return skill != null && skill.Id > 0;
   }
 

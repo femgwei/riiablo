@@ -54,7 +54,7 @@ public class HighPriest extends NativeDecisionAI {
         castAt(0, targetId, point); healHydraDeadline = frame + 100; return;
       }
       if (params[4] > 0) {
-        Missiles.Entry missile = Riiablo.files.Missiles.get(monster.monstats.MissS1);
+        Missiles.Entry missile = files().Missiles.get(monster.monstats.MissS1);
         if (missile != null && distance < missile.Range - 2 && rollAiChance(params[4])) {
           attack(targetId, Engine.Monster.MODE_S1); return;
         }
