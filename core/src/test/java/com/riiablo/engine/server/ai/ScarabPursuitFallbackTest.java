@@ -40,10 +40,11 @@ class ScarabPursuitFallbackTest extends RiiabloTest {
           local = new Vector2(10 + x, 10 + y);
         }
         int expectedPhase = Seed.rollPercentage(seed) > 10 ? 0 : 1;
-        when(f.paths.findPath(f.actor, f.targetPosition(), false, f.target)).thenReturn(false);
+        when(f.paths.findNativePath(f.actor, f.target, 4, 0)).thenReturn(false);
         if (!idle) when(f.paths.findPath(f.actor, local, false, Engine.INVALID_ENTITY)).thenReturn(accepted);
         ai.update(0.04f);
-        verify(f.paths).findPath(f.actor, f.targetPosition(), false, f.target);
+        verify(f.paths).findNativePath(f.actor, f.target, 4, 0);
+        verify(f.paths, never()).findPath(f.actor, f.targetPosition(), false, f.target);
         if (idle) verify(f.paths, never()).findPath(eq(f.actor), any(Vector2.class), eq(false), eq(Engine.INVALID_ENTITY));
         else verify(f.paths).findPath(f.actor, local, false, Engine.INVALID_ENTITY);
         assertEquals(idle || !accepted ? "IDLE" : "APPROACH", ai.getState());

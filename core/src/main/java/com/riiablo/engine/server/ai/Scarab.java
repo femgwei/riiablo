@@ -155,7 +155,8 @@ public class Scarab extends AI {
       if (aiParam0 != 0) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 0, 4u)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
-        if (walkTo(targetPos, targetId)) {
+        // Path type 2 is Toward; zero direction offset with a four-step budget.
+        if (pathfinder.findNativePath(entityId, targetId, 4, 0)) {
           stateMachine.changeState(State.APPROACH);
         } else if (rollAiRandomNumber() % 100 >= 70) {
           // MoveToTarget flags 7: a failed request may enter neutral for ten frames.

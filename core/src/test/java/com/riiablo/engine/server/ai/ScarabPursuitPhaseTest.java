@@ -31,7 +31,8 @@ class ScarabPursuitPhaseTest extends RiiabloTest {
         ai.rollAiRandomNumber();
         Seed.rollPercentage(seed);
         ai.update(0.04f);
-        verify(f.paths).findPath(f.actor, f.targetPosition(), false, f.target);
+        verify(f.paths).findNativePath(f.actor, f.target, 4, 0);
+        verify(f.paths, never()).findPath(eq(f.actor), any(), anyBoolean(), anyInt());
         assertEquals(roll > 10 ? 0 : 1, ai.aiParam0);
         assertEquals("APPROACH", ai.getState());
         assertEquals(ai.SLEEP, ai.time);
