@@ -165,7 +165,7 @@ public class Baboon extends AI {
         boolean bCombat = isInCombat(targetId);
 
         // D2MOD: If in combat, 33% chance to attack
-        if (bCombat && MathUtils.randomBoolean(0.33f)) {
+        if (bCombat && rollAiPercentage() < 33) {
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
           stateMachine.changeState(State.ATTACK);
@@ -176,8 +176,8 @@ public class Baboon extends AI {
           return;
         }
 
-        // D2MOD: If life > 75%, exit regen state
-        if (lifePercent > 75) {
+        // Fn011 only leaves regeneration through this branch outside melee.
+        if (!bCombat && lifePercent > 75) {
           aiParam0 = 0;
           // D2MOD: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
           // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
@@ -204,8 +204,8 @@ public class Baboon extends AI {
         // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 15, 1)
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
-        walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
-        if (!mPathfind.has(entityId)) {
+        boolean escaped = walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
+        if (!escaped) {
           // Can't escape
           if (!bCombat) {
             // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 5u)
