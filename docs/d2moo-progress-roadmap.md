@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 AI 固定点接入：移动出生来源前置追踪
+
+- 确认 NativeRoomMonsterPopulation 的 int 候选点在 RoomEx.addMonsterSpawn 的
+  float API / MonsterSpawn float 存储处丢失来源，随后由 RoomActivationSystem 消费。
+- 本轮未改运行代码，未扩大生产 raw 来源；不能靠末端强转替代来源保留。
+- 后续须保留显式整数来源，并核对工厂实际落点是否漂移，跨层接入需定向执行测试。
+  详见 [接入前置记录](ai-mobile-position-source-2026-10-18.md)。
+- 本轮仅源码与文档静态检查，未编译、未运行测试。
+
 ## 2026-10-18 AI 固定点接入：辅助测试实体初始化收尾
 
 - D2GS 五处新建任务测试实体复制 ownerPosition 浮点坐标前显式失效 raw；
