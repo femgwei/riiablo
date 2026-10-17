@@ -173,7 +173,8 @@ public class Scarab extends AI {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
-      byte attackMode = rollAiChance(params[1]) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+      // Native attack-choice helper selects A1 when the chance succeeds.
+      byte attackMode = rollAiChance(params[1]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
       mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
