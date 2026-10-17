@@ -30,6 +30,57 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void initialFailureWithoutDynamicGoalBlockDoesNotTryApproachPoints() {
+    try (Fixture f = new Fixture()) {
+      f.rejectTarget = true;
+      assertFalse(f.paths.findPath(f.actor, f.targetPosition(), false, f.target));
+      assertEquals(1, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+    }
+  }
+
+  @Test void skillOwnedMovementDoesNotUseOrdinaryApproachFallback() {
+    try (Fixture f = new Fixture()) {
+      f.rejectTarget = true;
+      f.world.getMapper(Casting.class).create(f.actor);
+      when(f.paths.dynamicCollision.isFreeForPath(f.actor, Engine.INVALID_ENTITY, 30, 10, 1))
+          .thenReturn(false);
+      assertFalse(f.paths.findPath(f.actor, f.targetPosition(), false, f.target));
+      assertEquals(1, f.queries.size());
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+    }
+  }
+
+  @Test void initialBlockedEntityCenterCanUseAnApproachWithoutLosingTargetLifetime() {
+    try (Fixture f = new Fixture()) {
+      NativePathIdentity.Token token = f.world.getMapper(NativePathIdentity.class)
+          .create(f.target).allocated(f.world, f.target).token();
+      f.rejectTarget = true;
+      when(f.paths.dynamicCollision.isFreeForPath(f.actor, Engine.INVALID_ENTITY, 30, 10, 1))
+          .thenReturn(false);
+      assertTrue(f.paths.findPath(f.actor, f.targetPosition(), false, f.target));
+      assertNotEquals(f.targetPosition(), f.path().destination);
+      assertEquals(f.target, f.path().targetEntityId);
+      assertSame(token, f.path().targetIdentity);
+      assertEquals(f.targetPosition(), f.path().lastTargetPosition);
+      assertEquals(0, f.partialQueries);
+    }
+  }
+
+  @Test void initialUnreachableEntityAndCoordinateCommandDoNotInventAPath() {
+    try (Fixture f = new Fixture()) {
+      f.rejectAll = true;
+      when(f.paths.dynamicCollision.isFreeForPath(f.actor, Engine.INVALID_ENTITY, 30, 10, 1))
+          .thenReturn(false);
+      assertFalse(f.paths.findPath(f.actor, f.targetPosition(), false, f.target));
+      assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
+      int queries = f.queries.size();
+      assertFalse(f.paths.findPath(f.actor, f.targetPosition(), false, Engine.INVALID_ENTITY));
+      assertEquals(queries + 1, f.queries.size(), "coordinate commands must not search around their goal");
+      assertEquals(0, f.partialQueries);
+    }
+  }
+
   @Test void nativePathRejectsUnallocatedTargetIdentityWithoutThrowing() {
     try (Fixture f = new Fixture()) {
       f.world.getMapper(NativePathIdentity.class).create(f.target);

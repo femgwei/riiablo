@@ -516,6 +516,23 @@ public class Pathfinder extends IteratingSystem {
     if (success) {
       return true;
     }
+    // A large mover cannot reach an occupied unit's centre even when that
+    // exact goal node ignores the target: every neighboring footprint can
+    // still collide. Use the existing collision-checked approach search for
+    // ordinary monster pursuit, retaining the unit identity for continuation.
+    // Coordinate orders and skill-owned movement keep their exact semantics.
+    if (mMonster.has(src) && !mCasting.has(src)
+        && targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)
+        && target.epsilonEquals(mPosition.get(targetEntityId).position, 0.01f)
+        && dynamicCollision != null
+        && !dynamicCollision.isFreeForPath(src, Engine.INVALID_ENTITY,
+            Map.round(target.x), Map.round(target.y), size)
+        && isMonsterTargetDestinationAllowed(src, target)
+        && isNativeMonsterRoomPathAllowed(src, position, target)
+        && findDynamicApproachPath(src, target, targetEntityId, position)) {
+      Pools.free(path);
+      return true;
+    }
     if (raycast) {
       ray.set(position, target);
       MapWrapper owner = mMapWrapper.has(src) ? mMapWrapper.get(src) : null;

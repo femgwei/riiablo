@@ -444,7 +444,29 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         if (tick % 25 == 0) capture.line("sample subject=" + subject + " ai=" + result.actualAi
             + " state=" + ai.ai.getState() + " pos=" + position
-            + " casting=" + world.getMapper(Casting.class).has(subject));
+            + " casting=" + world.getMapper(Casting.class).has(subject)
+            + " path=" + world.getMapper(com.riiablo.engine.server.component.Pathfind.class).has(subject)
+            + " nativeRooms=" + zone.hasNativeRoomTopology()
+            + " decision={" + ai.ai.getDecisionDiagnostics() + "}");
+        if (tick == 0) {
+          Vector2 goal = world.getMapper(Position.class).get(playerId).position;
+          int size = world.getMapper(com.riiablo.engine.server.component.Size.class).get(subject).size;
+          int flags = com.riiablo.engine.server.NativeGroundPathProfile.forUnit(false,
+              world.getMapper(Monster.class).get(subject).monstats).terrainFlags;
+          DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+          int freeGoalNeighbors = 0;
+          for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) {
+            if (dx == 0 && dy == 0) continue;
+            int x = Map.round(goal.x) + dx, y = Map.round(goal.y) + dy;
+            if (!map.isBlockedForPath(zone, x, y, flags, size, false)
+                && collision.isFreeForPath(subject, Engine.INVALID_ENTITY, x, y, size)) freeGoalNeighbors++;
+          }
+          capture.line("pathGeometry size=" + size + " goal=" + goal
+              + " terrainBlocked=" + map.isBlockedForPath(zone, Map.round(goal.x), Map.round(goal.y), flags, size, false)
+              + " dynamicBlocked=" + !collision.isFreeForPath(subject, Engine.INVALID_ENTITY,
+                  Map.round(goal.x), Map.round(goal.y), size)
+              + " freeGoalNeighbors=" + freeGoalNeighbors);
+        }
         if (tick % 25 == 0 && "FrogDemon".equals(result.actualAi)) {
           Sequence seq = world.getMapper(Sequence.class).get(subject);
           AnimData anim = world.getMapper(AnimData.class).get(subject);

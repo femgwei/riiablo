@@ -13,6 +13,26 @@ import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
 
 class DurielMovementIntegrationTest extends RiiabloTest {
+  @Test void diagnosticSnapshotDoesNotRunAnotherDecisionOrPathQuery() {
+    try (Fixture f = new Fixture("duriel", 0, 10)) {
+      f.ai.params[Duriel.PARAM_CHARGE_CHANCE] = 0;
+      f.ai.update(Animation.FRAME_DURATION);
+      clearInvocations(f.paths);
+      String snapshot = f.ai.getDecisionDiagnostics();
+      assertTrue(snapshot.contains("decisions=1 target=" + f.target));
+      assertTrue(snapshot.contains("approach=ACCEPTED"));
+      assertEquals(snapshot, f.ai.getDecisionDiagnostics());
+      verifyNoInteractions(f.paths);
+      assertEquals("APPROACH", f.ai.getState());
+      NativeDecisionAI observed = spy((NativeDecisionAI) f.ai);
+      // Some subclasses perform recovery scheduling inside this gameplay hook.
+      doThrow(new AssertionError("diagnostics must not execute gameplay hooks"))
+          .when(observed).actionBlocksDecision();
+      assertDoesNotThrow(observed::getDecisionDiagnostics);
+      verify(observed, never()).actionBlocksDecision();
+    }
+  }
+
   @Test void pathTypeThirteenIsNotAThirteenPercentSpeedBonus() {
     for (int difficulty = 0; difficulty < 3; difficulty++) {
       try (Fixture f = new Fixture("duriel", difficulty, 10)) {

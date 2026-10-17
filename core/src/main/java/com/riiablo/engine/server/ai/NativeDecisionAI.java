@@ -13,6 +13,17 @@ abstract class NativeDecisionAI extends AI {
   private String state = "IDLE";
   private boolean dead;
   private double elapsedFrames;
+  private long decisionCount;
+  private int lastDecisionTarget = Engine.INVALID_ENTITY;
+  private String lastApproach = "NOT_REQUESTED";
+
+  @Override
+  public String getDecisionDiagnostics() {
+    return "decisions=" + decisionCount + " target=" + lastDecisionTarget
+        + " approach=" + lastApproach + " frame=" + nativeFrame()
+        + " due=" + nextThinkFrame + " componentActionLock="
+        + (mCasting.has(entityId) || mSequence.has(entityId));
+  }
 
   NativeDecisionAI(int entityId) {
     super(entityId);
@@ -31,6 +42,8 @@ abstract class NativeDecisionAI extends AI {
     if (!beforeDecision()) return;
     float[] distance = {Float.MAX_VALUE};
     int targetId = findNearestTargetWithAidist(distance);
+    decisionCount++;
+    lastDecisionTarget = targetId;
     if (targetId == Engine.INVALID_ENTITY) {
       thinkWithoutTarget();
       return;
@@ -112,6 +125,7 @@ abstract class NativeDecisionAI extends AI {
     boolean moved = running
         ? runTo(mPosition.get(targetId).position, velocityBonus, targetId)
         : walkTo(mPosition.get(targetId).position, velocityBonus, targetId);
+    lastApproach = moved ? "ACCEPTED" : "REJECTED";
     if (!moved) idle(10);
   }
 

@@ -483,6 +483,9 @@ public abstract class AI implements Interactable.Interactor {
     return true;
   }
 
+  /** Read-only diagnostic snapshot; must not perform a fresh target scan or consume RNG. */
+  public String getDecisionDiagnostics() { return "unavailable"; }
+
   public String getState() {
     return "";
   }
