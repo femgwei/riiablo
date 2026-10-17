@@ -25,15 +25,44 @@ public class Ancient extends NativeDecisionAI {
     int selected = Engine.INVALID_ENTITY;
     int best = 0;
     com.artemis.utils.IntBag units = getEnemyEntities().getEntities();
-    for (int i = 0; i < units.size(); i++) {
-      int id = units.get(i);
-      if (!sameLevel(id) || !isValidEnemyTargetWithoutAiScope(id)) continue;
+    java.util.ArrayList<Integer> ordered = bossCandidates(units);
+    for (int id : ordered) {
+      if (!isValidEnemyTargetWithoutAiScope(id)) continue;
       int score = bossTargetScore(id);
       if (score > best) { best = score; selected = id; }
     }
     distance[0] = selected < 0 ? Float.MAX_VALUE : nativeAiDistance(
         mPosition.get(entityId).position, mPosition.get(selected).position);
     return selected;
+  }
+
+  /** Target nodes visit player slots in order, then newest children first.
+   * Strict score comparison preserves the first node on a tie. */
+  private java.util.ArrayList<Integer> bossCandidates(com.artemis.utils.IntBag units) {
+    java.util.ArrayList<Integer> result = new java.util.ArrayList<>();
+    com.riiablo.engine.server.NativePlayerTargetSlots slots = Riiablo.engine.getSystem(
+        com.riiablo.engine.server.NativePlayerTargetSlots.class);
+    if (slots == null) {
+      for (int i = 0; i < units.size(); i++) if (sameLevel(units.get(i))) result.add(units.get(i));
+      return result;
+    }
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeTargetNode> nodes =
+        Riiablo.engine.getMapper(com.riiablo.engine.server.component.NativeTargetNode.class);
+    for (int slot = 0; slot < com.riiablo.engine.server.NativePlayerTargetSlots.SLOT_COUNT; slot++) {
+      int player = slots.playerAtSlot(slot);
+      if (player < 0 || !mPosition.has(player) || !sameLevel(player)) continue;
+      result.add(player);
+      java.util.ArrayList<Integer> children = new java.util.ArrayList<>();
+      for (int i = 0; i < units.size(); i++) {
+        int id = units.get(i);
+        com.riiablo.engine.server.component.NativeTargetNode node = nodes.get(id);
+        if (id != player && node != null && node.ownerId() == player
+            && slots.acceptsChildInsertion(player, node.order())) children.add(id);
+      }
+      children.sort((a, b) -> Long.compare(nodes.get(b).order(), nodes.get(a).order()));
+      result.addAll(children);
+    }
+    return result;
   }
 
   /** AITHINK_GetTargetScore with the null command used by all three Ancients. */
