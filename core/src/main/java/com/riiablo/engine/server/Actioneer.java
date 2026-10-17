@@ -5975,7 +5975,20 @@ public class Actioneer extends PassiveSystem {
     Vector2 sourcePosition = mPosition.get(entityId).position;
     float preferredX = sourcePosition.x + source.monstats.spawnx;
     float preferredY = sourcePosition.y + source.monstats.spawny;
-    Vector2 position = map != null
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    MapWrapper mapping = mMapWrapper.get(entityId);
+    Map.Zone zone = mapping != null && mapping.zone != null ? mapping.zone
+        : map == null ? null : map.getZone(preferredX, preferredY);
+    com.riiablo.codec.excel.MonStats2.Entry dimensions = files().monstats2.get(spawn.MonStatsEx);
+    int footprint = dimensions == null ? 1 : Math.max(1, dimensions.SizeX);
+    Vector2 position;
+    if (map != null && collision != null) {
+      collision.refreshNow();
+      position = new Vector2();
+      if (!collision.findMonsterSpawn(zone, Map.round(preferredX), Map.round(preferredY),
+          footprint, 3, NativeGroundPathProfile.forUnit(false, spawn).terrainFlags, position))
+        position = null;
+    } else position = map != null
         ? findNestSpawnPosition(map, preferredX, preferredY, new Vector2())
         // Detached/headless worlds may not register a Map; preserve the
         // native spawn request while making the degraded collision check
@@ -6004,6 +6017,9 @@ public class Actioneer extends PassiveSystem {
           entityId, spawnId);
       return;
     }
+    if (zone != null) mMapWrapper.create(spawned).set(map, zone);
+    if (collision != null) collision.reserveMonsterSpawn(spawned,
+        Map.round(position.x), Map.round(position.y), footprint);
     factory.applyNativeUnitFlags(spawned, NativeUnitFlags.NEST_SUMMON);
     if (mMonster.has(spawned)) {
       mMonster.get(spawned).minionOwnerId = entityId;

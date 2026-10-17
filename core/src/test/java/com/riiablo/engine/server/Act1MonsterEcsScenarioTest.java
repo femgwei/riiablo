@@ -500,6 +500,12 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       return id;
     }
     @Override public int createWarp(int index, float x, float y) { return -1; }
+    @Override public int createMonsterChild(int sourceId, int monsterId, int mode, float x, float y,
+        int searchRadius, boolean replaceSource, int unitFlags) {
+      int id = createMonster(monsterId, x, y);
+      applyNativeUnitFlags(id, unitFlags);
+      return id;
+    }
     @Override public boolean selfResurrectMonster(int monsterId) {
       selfResurrections++;
       lastSelfResurrected = monsterId;

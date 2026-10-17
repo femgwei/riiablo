@@ -22,11 +22,20 @@ import org.junit.jupiter.api.Test;
 
 class MinionSpawnerPlacementIntegrationTest extends RiiabloTest {
   @Test void skillActionChecksLiveMotherAndSameTickChildrenBeforeAllocating() {
+    checkPlacement(135);
+  }
+
+  @Test void vileMotherNestChecksLiveMotherAndSameTickChildrenBeforeAllocating() {
+    checkPlacement(91);
+  }
+
+  private void checkPlacement(int function) {
     Map map = mock(Map.class);
     Map.Zone zone = mock(Map.Zone.class); zone.map = map;
     when(zone.contains(anyInt(), anyInt())).thenReturn(true);
     when(map.getZone(any(Vector2.class))).thenReturn(zone);
     EntityFactory factory = mock(EntityFactory.class);
+    when(factory.createMonster(any(MonStats.Entry.class), anyFloat(), anyFloat())).thenCallRealMethod();
     DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder().with(events, collision,
@@ -37,7 +46,7 @@ class MinionSpawnerPlacementIntegrationTest extends RiiabloTest {
       MonStats.Entry mother = Riiablo.files.monstats.get("vilemother3");
       MonStats.Entry child = Riiablo.files.monstats.get("vilechild3");
       Skills.Entry skill = null;
-      for (Skills.Entry row : Riiablo.files.skills) if (row.srvdofunc == 135) { skill = row; break; }
+      for (Skills.Entry row : Riiablo.files.skills) if (row.srvdofunc == function) { skill = row; break; }
       assertNotNull(skill);
       int source = unit(world, mother, 10, 10);
       world.getMapper(MapWrapper.class).create(source).set(map, zone);
@@ -52,15 +61,17 @@ class MinionSpawnerPlacementIntegrationTest extends RiiabloTest {
       for (int i = 0; i < 2; i++) {
         cast.nativeSummonClass = child.hcIdx; cast.nativeSummonPosition.set(10, 10);
         events.dispatch(AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_MIS));
-        assertEquals(i + 1, children.size());
+        assertEquals(i + 1, children.size(), mockingDetails(factory).printInvocations());
         Vector2 p = selected.get(i);
         assertFalse(UnitCollisionGrid.placementOverlapsMarker((int) p.x, (int) p.y,
             Riiablo.files.monstats2.get(child.MonStatsEx).SizeX, 10, 10,
             Riiablo.files.monstats2.get(mother.MonStatsEx).SizeX));
       }
       assertNotEquals(selected.get(0), selected.get(1));
-      events.dispatch(AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_MIS));
-      assertEquals(2, children.size(), "one frozen summon per skill start");
+      if (function == 135) {
+        events.dispatch(AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_MIS));
+        assertEquals(2, children.size(), "one frozen summon per skill start");
+      }
       when(map.isBlockedForPath(eq(zone), anyInt(), anyInt(), anyInt(), anyInt(), eq(false))).thenReturn(true);
       cast.nativeSummonClass = child.hcIdx;
       events.dispatch(AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_MIS));

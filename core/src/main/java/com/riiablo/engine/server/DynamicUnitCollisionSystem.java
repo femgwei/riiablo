@@ -141,6 +141,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private boolean relocateOverlappingUnit(int entityId, int originX, int originY,
       int size) {
+    String blockers = describeBlockers(entityId, originX, originY, size);
     Position position = mPosition.get(entityId);
     Map.Zone zone = null;
     if (mMapWrapper != null && mMapWrapper.has(entityId)) {
@@ -163,16 +164,29 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
             mBox2DBody.get(entityId).body.setLinearVelocity(0f, 0f);
           }
           grid.put(entityId, x, y, size);
-          log.warn("[DYNAMIC_SPAWN_RELOCATE] entity={} from=({}, {}) to=({}, {}) size={} level={} monster={} new={}",
+          log.warn("[DYNAMIC_SPAWN_RELOCATE] entity={} from=({}, {}) to=({}, {}) size={} level={} monster={} new={} blockers={}",
               entityId, originX, originY, x, y, size,
               zone != null && zone.level != null ? zone.level.Id : -1,
               mMonster.has(entityId) && mMonster.get(entityId).monstats != null
-                  ? mMonster.get(entityId).monstats.Id : "player", newUnits.contains(entityId));
+                  ? mMonster.get(entityId).monstats.Id : "player", newUnits.contains(entityId), blockers);
           return true;
         }
       }
     }
     return false;
+  }
+
+  private String describeBlockers(int entityId, int x, int y, int size) {
+    com.badlogic.gdx.utils.IntArray ids = grid.blockers(entityId, -1, x, y, size, sameSpaceBlocker(entityId));
+    StringBuilder result = new StringBuilder();
+    for (int i = 0; i < ids.size; i++) {
+      int id = ids.get(i);
+      if (i > 0) result.append(';');
+      result.append(id).append(':').append(mMonster.has(id) && mMonster.get(id).monstats != null
+          ? mMonster.get(id).monstats.Id : "player");
+      if (mPosition.has(id)) result.append('@').append(mPosition.get(id).position);
+    }
+    return result.toString();
   }
 
   private boolean staticWalkable(Map.Zone zone, int x, int y, int size) {
