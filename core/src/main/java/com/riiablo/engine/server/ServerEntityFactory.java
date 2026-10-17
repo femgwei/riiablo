@@ -736,6 +736,8 @@ public class ServerEntityFactory extends EntityFactory {
       mInteractable.create(id).set(size, ai);
     }
 
+    DynamicUnitCollisionSystem spawnCollision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (spawnCollision != null) spawnCollision.registerMonsterSpawnMarkers(id);
     mNetworked.create(id);
     return id;
   }

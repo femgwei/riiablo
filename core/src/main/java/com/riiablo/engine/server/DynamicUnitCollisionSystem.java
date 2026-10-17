@@ -27,6 +27,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(DynamicUnitCollisionSystem.class);
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Corpse> mCorpse;
+  protected ComponentMapper<com.riiablo.engine.server.component.UnitLifecycle> mLifecycle;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
@@ -43,6 +45,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private final com.badlogic.gdx.utils.IntSet newUnits = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription units;
   private final com.badlogic.gdx.utils.IntSet spawnMissiles = new com.badlogic.gdx.utils.IntSet();
+  private final com.badlogic.gdx.utils.IntSet spawnUnits = new com.badlogic.gdx.utils.IntSet();
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
   private final Vector2 resolved = new Vector2();
@@ -71,10 +74,16 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         Aspect.all(Class.class, Position.class, Size.class, Velocity.class));
     units.addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
       @Override public void inserted(IntBag entities) {
-        for (int i = 0; i < entities.size(); i++) newUnits.add(entities.get(i));
+        for (int i = 0; i < entities.size(); i++) {
+          newUnits.add(entities.get(i));
+          spawnUnits.add(entities.get(i));
+        }
       }
       @Override public void removed(IntBag entities) {
-        for (int i = 0; i < entities.size(); i++) newUnits.remove(entities.get(i));
+        for (int i = 0; i < entities.size(); i++) {
+          newUnits.remove(entities.get(i));
+          spawnUnits.remove(entities.get(i));
+        }
       }
     });
   }
@@ -223,6 +232,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (zone.objectCollisionReferences(px, py) > 0) flags |= 0x400;
       if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
       if ((flags & mask) != 0) return false;
+      if (enabled && (mask & 0x100) != 0 && hasSpawnWraith(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
         if (!sharesCollisionSpace(zone, other)) return false;
         int bits = isPlayer(other) ? 0x80 : 0x100;
@@ -244,6 +254,31 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Factory registration makes newborn missiles visible before subscription insertion. */
   public void reserveMissileSpawn(int id) {
     spawnMissiles.add(id);
+  }
+
+  /** Marker-only registration does not add walking presence. */
+  public void registerMonsterSpawnMarkers(int id) {
+    spawnUnits.add(id);
+  }
+
+  private boolean hasSpawnWraith(int sourceId, Map.Zone zone, int x, int y) {
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnUnits.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (id == sourceId || !mClass.has(id) || mClass.get(id).type != Class.Type.MON
+          || !mMonster.has(id) || !mPosition.has(id) || !mVelocity.has(id)
+          || !sharesCollisionSpace(zone, id)) continue;
+      Monster monster = mMonster.get(id);
+      com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
+      if (mCorpse.has(id) || lifecycle != null && lifecycle.phase.ordinal()
+          >= com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal()) continue;
+      if (!NativeGroundPathProfile.isWraith(monster.monstats)
+          || (mCasting.has(id) && mCasting.get(id).monsterHatchStarted)) continue;
+      Position position = mPosition.get(id);
+      // PATH_AllocDynamicPath: SMALL_NO_PRESENCE retains only a MONSTER cross.
+      if (Math.abs(Map.round(position.position.x) - x)
+          + Math.abs(Map.round(position.position.y) - y) <= 1) return true;
+    }
+    return false;
   }
 
   private boolean hasSpawnMissile(int sourceId, Map.Zone zone, int x, int y) {
@@ -281,7 +316,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   /** Reserve a successfully created exact-position monster within this tick. */
   public void reserveMonsterSpawn(int entityId, int x, int y, int size) {
-    if (enabled) grid.put(entityId, x, y, size);
+    registerMonsterSpawnMarkers(entityId);
+    if (enabled && hasPresence(entityId)) grid.put(entityId, x, y, size);
   }
 
   public void removeMonsterSpawnPresence(int entityId) { grid.remove(entityId); }

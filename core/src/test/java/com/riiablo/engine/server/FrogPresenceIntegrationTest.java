@@ -111,7 +111,8 @@ class FrogPresenceIntegrationTest extends RiiabloTest {
     final World world = new World(new WorldConfigurationBuilder()
         .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
             new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory, collisions)
-        .build().register("factory", factory).register("map", map));
+        .build().register("factory", factory).register("map", map)
+        .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry()));
     final int actor;
     Fixture() { actor = unit(30, 30); world.process(); }
     int unit(int x, int y) {

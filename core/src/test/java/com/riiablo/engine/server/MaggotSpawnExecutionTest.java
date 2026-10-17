@@ -13,6 +13,43 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaggotSpawnExecutionTest extends RiiabloTest {
+  @Test void wraithBirthMarkersAreCrossShapedWithoutWalkingPresence() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      int ghost = f.factory.createMonster(Riiablo.files.monstats.get("wraith1").hcIdx, 180, 180);
+      // Exact child reservations must not turn no-presence units into obstacles.
+      f.collisions.reserveMonsterSpawn(ghost, 180, 180, 3);
+      assertFalse(f.collisions.hasPresence(ghost));
+      assertTrue(f.collisions.isFreeForPath(f.source, -1, 180, 180, 1));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 180, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x3000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(ghost, f.zone, 180, 180, 1, 0x100));
+      f.world.process(); f.collisions.refreshNow();
+      f.pos(ghost).set(185, 185);
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x100));
+      f.world.getMapper(UnitLifecycle.class).create(ghost).transition(UnitLifecycle.Phase.DEATH);
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x100));
+      f.world.getMapper(UnitLifecycle.class).get(ghost).revive();
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x100));
+      f.world.delete(ghost); f.world.process();
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 185, 185, 1, 0x100));
+    }
+  }
+
+  @Test void overlappingWraithMarkersKeepOtherOwnerWhenSourceIsExcluded() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      int first = f.factory.createMonster(Riiablo.files.monstats.get("wraith1").hcIdx, 180, 180);
+      int second = f.factory.createMonster(Riiablo.files.monstats.get("wraith1").hcIdx, 180, 180);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 180, 180, 1, 0x100));
+      f.world.process();
+      f.world.delete(second); f.world.process();
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+    }
+  }
+
   @Test void missileSpawnMarkersFollowNativeCollisionSizeAndLiveLifecycle() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       int id = f.world.create();

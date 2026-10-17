@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：幽灵的 no-presence 出生标记
+
+- 来源：D2MOO `D2Common/src/Path/Path.cpp` 的 `PATH_AllocDynamicPath` 为 BaseId=WRAITH1 设置 SMALL_NO_PRESENCE，保留 MONSTER footprint；`D2Collision.cpp` 的 `COLLISION_SetMaskWithPattern` 对该模式仅写十字形传入 mask，不写 NO_PATH/PET。
+- 出生 mask 查询新增独立的幽灵 MONSTER 十字投影，读取实时位置，排除 source，沿用同碰撞空间判断；工厂在 ECS 订阅插入前登记，删除/移除速度组件后不再参与。死亡生命周期/尸体不投影活体 MONSTER，复活重新参与。
+- 修正精确子代 reserve 不经 hasPresence 直接写行走索引的问题；幽灵登记不会短暂变成行走障碍。
+- 本批只覆盖服务端分配逻辑明确的幽灵。鸟类的同模式出现在 `PATH_SetUnitAliveCollision(..., false)` 客户端恢复分支，不能直接作为服务端出生依据；潜伏/骑乘/环境小动物以及完整 CORPSE 层仍需分别核对。
+- 验证：MaggotSpawnExecutionTest（9）、NativeMonsterSpawnSearchTest（10）、FrogPresenceIntegrationTest（5）、DynamicUnitCollisionSystemTest（12），共 36 项通过，architectureRegression 通过。首轮潜伏夹具缺少 townPortalRegistry 注册而初始化失败，补齐夹具后重跑通过；日志 `build/ai-wraith-spawn-revalidation.log`。未运行全量测试或客户端图形验收。
+
 ## 后续：出生检查的飞弹标记
 
 - D2MOO `D2Game/src/MISSILES/Missiles.cpp` 依据 `nCollision` 设置 `COLLIDE_MISSILE=0x40`，不是依据 `CollideType`。
