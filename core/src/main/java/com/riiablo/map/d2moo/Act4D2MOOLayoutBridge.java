@@ -61,6 +61,13 @@ public final class Act4D2MOOLayoutBridge {
     }
   }
 
+  public static boolean populateZones(D2MOOLayoutContext context, int gameSeed, int diff,
+      Map map, byte actId, int townId, int[] levelIds) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return populateZones(gameSeed, diff, map, actId, townId, levelIds);
+    }
+  }
+
   /** Shared native terrain export; coordinates remain relative to the act's town. */
   public static boolean populateZones(int gameSeed, int diff, Map map,
       byte actId, int townId, int[] levelIds) {

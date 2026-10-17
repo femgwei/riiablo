@@ -379,6 +379,11 @@ public class Map implements Disposable {
     return resources != null ? resources.mpqs() : Riiablo.mpqs;
   }
 
+  /** Explicit resource context for native D2MOO bridge calls. */
+  public com.riiablo.map.d2moo.D2MOOLayoutContext d2mooContext() {
+    return com.riiablo.map.d2moo.D2MOOLayoutContext.of(resources);
+  }
+
   private com.riiablo.COFs cofs() { return resources != null ? resources.cofs() : Riiablo.cofs; }
   private com.riiablo.GdxCvarManager cvars() {
     return resources != null ? resources.cvars() : Riiablo.cvars;

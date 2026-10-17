@@ -253,7 +253,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
     // D2MOO's native RoomEx/TileGrid export and retain native preset objects
     // (seals, quest objects, etc.).  The bridge is resource-gated and leaves
     // all compatibility Zones intact when an export is unavailable.
-    Act4D2MOOLayoutBridge.populateZones(seed, diff, map);
+    Act4D2MOOLayoutBridge.populateZones(map.d2mooContext(), seed, diff, map);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTPLACE_InitAct4OutdoorLevel

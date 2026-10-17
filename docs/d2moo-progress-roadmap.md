@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
+
+- [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II
+  Town/Outdoor、Act III、Act IV 和 Act V 的生产调用全部改用带上下文的桥接重载。
+  Act IV 的通用多关卡导出也补齐上下文重载，表缓存和 MPQ 读取在一次地图生成期间
+  绑定到同一资源作用域。
+- [x] 验证：`:core:compileJava`、`:core:compileTestJava`、
+  `:core:architectureRegression`、`:core:subsystemRegression` 通过。
+- [ ] 旧无参桥接 API 仍为测试/外部工具保留，下一阶段继续收紧为显式上下文，并
+  清理 `fromGlobals()` 的最后生产调用。
+
 ## 2026-10-17 清理 D2MOO 桥接中的伪全局兼容层
 
 - [x] 删除 Act I–V 及 Arcane 桥接中未使用的 `Riiablo` 导入和旧

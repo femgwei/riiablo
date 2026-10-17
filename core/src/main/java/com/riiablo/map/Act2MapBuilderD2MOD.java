@@ -455,13 +455,13 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
     // Export Lut Gholein's native UNIT_MONSTER records when the 1.10f MPQs
     // are available. Compatibility terrain remains the fallback if the
     // resource-gated native town export cannot be built.
-    Act2D2MOOLayoutBridge.populateTown(seed, diff, townZone, townSourceFile);
+    Act2D2MOOLayoutBridge.populateTown(map.d2mooContext(), seed, diff, townZone, townSourceFile);
     // All A2 sublevels must use MPQ-backed RoomEx/tiles, not empty compatibility floors.
     // Town and desert must come from the same DRLG. A compatibility LutW
     // preset cannot be joined to a native Rocky Waste placed north of town.
     int[] nativeLevels = new int[ACT2_LEVEL_LAST - 39];
     for (int i = 0; i < nativeLevels.length; i++) nativeLevels[i] = 40 + i;
-    com.riiablo.map.d2moo.Act4D2MOOLayoutBridge.populateZones(seed, diff, map,
+    com.riiablo.map.d2moo.Act4D2MOOLayoutBridge.populateZones(map.d2mooContext(), seed, diff, map,
         com.d2moo.common.drlg.D2C_Acts.ACT_II, 40, nativeLevels);
 
     // Configure the runtime slots before MapManager creates Warp entities.
@@ -712,7 +712,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
         if (target.Id == LEVEL_ARCANESANCTUARY) {
-          Act2ArcaneD2MOOLayoutBridge.populateZone(seed, diff, zone);
+          Act2ArcaneD2MOOLayoutBridge.populateZone(map.d2mooContext(), seed, diff, zone);
         }
         generated.add(target.Id);
         queue.add(target.Id);
@@ -792,7 +792,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
         if (tombId == LEVEL_ARCANESANCTUARY) {
-          Act2ArcaneD2MOOLayoutBridge.populateZone(seed, diff, zone);
+          Act2ArcaneD2MOOLayoutBridge.populateZone(map.d2mooContext(), seed, diff, zone);
         }
         generated.add(tombId);
         queue.add(tombId);

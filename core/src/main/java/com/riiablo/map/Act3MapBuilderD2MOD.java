@@ -294,7 +294,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     // When 1.10f MPQs are available, replace the compatibility outdoor
     // terrain with D2MOO's actual RoomEx/DT1 export.  The bridge is gated and
     // failure-safe, so headless/resource-light environments keep this builder.
-    Act3D2MOOLayoutBridge.populateZones(seed, diff, map);
+    Act3D2MOOLayoutBridge.populateZones(map.d2mooContext(), seed, diff, map);
     // Travincal's native outdoor link is represented by an edge link rather
     // than a preset wall cell.  Seed one logical VIS_0_00 marker so the
     // existing MapManager/WarpInteractor path exposes the Durance entrance;
