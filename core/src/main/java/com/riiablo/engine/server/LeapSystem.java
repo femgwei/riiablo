@@ -35,6 +35,7 @@ public class LeapSystem extends IteratingSystem {
     // the apparent vertical arc.
     float smooth = alpha * alpha * (3f - 2f * alpha);
     Position position = mPosition.get(entityId);
+    position.invalidateNativePrecision();
     position.position.set(leap.start).lerp(leap.destination, smooth);
     if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
     if (mBox2DBody.has(entityId) && mBox2DBody.get(entityId).body != null) {

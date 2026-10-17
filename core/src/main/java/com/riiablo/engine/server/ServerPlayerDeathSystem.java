@@ -145,7 +145,9 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     if (town == null) town = map.find(Map.ID.TP_LOCATION);
     if (town == null) return false;
 
-    mPosition.get(playerId).position.set(town);
+    Position position = mPosition.get(playerId);
+    position.invalidateNativePrecision();
+    position.position.set(town);
     if (mMapWrapper.has(playerId)) {
       mMapWrapper.get(playerId).set(map, map.getZone(town));
     } else {

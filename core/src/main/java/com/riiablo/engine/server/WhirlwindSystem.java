@@ -85,6 +85,7 @@ public class WhirlwindSystem extends IteratingSystem {
 
     float distance = position.position.dst(runtime.destination);
     if (distance <= ARRIVAL_EPSILON) {
+      position.invalidateNativePrecision();
       position.position.set(runtime.destination);
       finish(entityId, "destination_reached");
       return;

@@ -19,6 +19,24 @@ import org.junit.jupiter.api.Test;
 /** Headless coverage for the native Sand Leaper skill and airborne movement. */
 class LeapIntegrationTest extends RiiabloTest {
   @Test
+  void samePointLeapDoesNotRetainRawPrecisionFromBeforeTheSkill() {
+    World world = new World(new WorldConfigurationBuilder().with(new LeapSystem()).build());
+    try {
+      int entity = world.create();
+      Position position = world.getMapper(Position.class).create(entity).initializeNativeCell(10, 20);
+      world.getMapper(Leap.class).create(entity).set(
+          new Vector2(10, 20), new Vector2(10, 20), 0.3f, Engine.INVALID_ENTITY);
+      world.setDelta(0.1f);
+      world.process();
+      assertEquals(new Vector2(10, 20), position.position);
+      org.junit.jupiter.api.Assertions.assertFalse(position.hasNativePrecision());
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, position::nativePrecisionX);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void sandLeaperUsesNativeLeapFunctions() {
     MonStats.Entry row = Riiablo.files.monstats.get("sandleaper1");
     assertNotNull(row);
