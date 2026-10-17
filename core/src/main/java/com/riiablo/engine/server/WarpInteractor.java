@@ -283,7 +283,9 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   private void commitTransition(int entityId, Map.Zone destination, Vector2 arrival) {
     actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
 
-    Vector2 position = mPosition.get(entityId).position;
+    Position component = mPosition.get(entityId);
+    component.invalidateNativePrecision();
+    Vector2 position = component.position;
     position.set(arrival);
 
     MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;

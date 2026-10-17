@@ -142,6 +142,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           int y = originY + dy;
           if (!staticWalkable(zone, x, y, size)) continue;
           if (!grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) continue;
+          position.invalidateNativePrecision();
           position.position.set(x, y);
           if (mBox2DBody != null && mBox2DBody.has(entityId)
               && mBox2DBody.get(entityId).body != null) {
