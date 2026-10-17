@@ -14,11 +14,9 @@ public class RaycastCollisionDetector {
   private final Vector2 sample = new Vector2();
 
   private Map map;
-  private MapGraph graph;
 
   public RaycastCollisionDetector(Map map, MapGraph graph) {
     this.map = map;
-    this.graph = graph;
   }
 
   public boolean collides(Ray<Vector2> ray, int flags, int size) {
@@ -60,18 +58,17 @@ public class RaycastCollisionDetector {
       // Use the caller's native collision mask here as well.  In particular,
       // a missile ray must ignore FLAG_BLOCK_WALK while still stopping on
       // FLAG_BLOCK_JUMP (walls/explicit missile barriers).
-      boolean blocked = canOpenDoors || flags == com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP
-          || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
-          ? map.isBlockedForPath(Map.round(sample.x), Map.round(sample.y), flags, size, canOpenDoors)
-          : (map.flags(sample) & flags) != 0 || graph.getOrCreate(sample).clearance < size;
+      // Use the same native footprint as A* for every unit, not only door
+      // openers/players. Legacy clearance treats BIG as a larger radius and
+      // rejects a legal three-cell doorway for ordinary monsters.
+      boolean blocked = map.isBlockedForPath(
+          Map.round(sample.x), Map.round(sample.y), flags, size, canOpenDoors);
       if (blocked) {
         return true;
       }
     }
 
-    return canOpenDoors || flags == com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP
-        || (flags & com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0
-        ? map.isBlockedForPath(Map.round(end.x), Map.round(end.y), flags, size, canOpenDoors)
-        : (map.flags(end) & flags) != 0;
+    // The final sample (also a zero-length ray) needs the whole footprint.
+    return map.isBlockedForPath(Map.round(end.x), Map.round(end.y), flags, size, canOpenDoors);
   }
 }
