@@ -238,7 +238,11 @@ public class Act3QuestSystem extends BaseSystem {
     if (cofs != null) cofs.setMode(id, mode);
     mObject.get(id).mode = mode;
     NativeObjectState state = mNativeObjectState.get(id);
-    if (state != null) state.persistMode(mode);
+    if (state != null) {
+      state.persistMode(mode);
+      if (mode == com.riiablo.engine.Engine.Object.MODE_ON)
+        state.persistOpened(true);
+    }
   }
 
   public boolean getDarkWandererCoordinates(int entityId, com.badlogic.gdx.math.Vector2 result) {
