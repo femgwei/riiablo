@@ -51,6 +51,7 @@ public class Scarab extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<com.riiablo.engine.server.component.NativeAiCommand> mNativeAiCommand;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -149,6 +150,23 @@ public class Scarab extends AI {
 
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
+
+    // Fn020 command 1 acts on the current AI target, independent of pursuit phase.
+    com.riiablo.engine.server.component.NativeAiCommand command = mNativeAiCommand.get(entityId);
+    if (command != null && command.isAttack()) {
+      if (bCombat && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
+        if (!command.pop()) mNativeAiCommand.remove(entityId);
+        useMonsterSkill(0, targetId, targetPos);
+        stateMachine.changeState(State.JAB);
+      } else if (pathfinder.findNativePath(entityId, targetId, 5, 0)) {
+        mVelocity.get(entityId).setModeSpeedBonusPercent(100);
+        stateMachine.changeState(State.APPROACH);
+      } else {
+        if (!command.pop()) mNativeAiCommand.remove(entityId);
+        stateMachine.changeState(State.IDLE);
+      }
+      return;
+    }
 
     // D2MOD: If not in combat
     if (!bCombat) {
