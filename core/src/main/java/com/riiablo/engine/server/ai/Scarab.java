@@ -83,12 +83,24 @@ public class Scarab extends AI {
     return isInNativeMeleeRange(targetId);
   }
 
-  /**
-   * Check if is minion owner (simplified).
-   */
+  /** Explicit MonsterSpawn owner/leader metadata; never infer a pack by proximity. */
   private boolean isMinionOwner() {
-    // TODO: Implement minion owner check
-    return false;
+    return monster.minionOwnerId == entityId
+        || (monster.minionOwnerId < 0 && monster.nativePackLeader);
+  }
+
+  private void commandMinions(int targetId) {
+    com.artemis.utils.IntBag ids = com.riiablo.Riiablo.engine.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Monster.class)).getEntities();
+    for (int i = 0; i < ids.size(); i++) {
+      int id = ids.get(i);
+      if (id != entityId && mMonster.get(id).minionOwnerId == entityId) {
+        mNativeAiCommand.create(id).copy(com.riiablo.Riiablo.engine, entityId,
+            com.riiablo.engine.server.component.NativeAiCommand.ATTACK, targetId);
+      }
+    }
+    mNativeAiCommand.create(entityId).copy(com.riiablo.Riiablo.engine, entityId,
+        com.riiablo.engine.server.component.NativeAiCommand.ATTACK, targetId);
   }
 
   /** Flags-7 local fallback: one coordinate request and four native seed draws. */
@@ -153,6 +165,10 @@ public class Scarab extends AI {
 
     // Fn020 command 1 acts on the current AI target, independent of pursuit phase.
     com.riiablo.engine.server.component.NativeAiCommand command = mNativeAiCommand.get(entityId);
+    if (command == null && targetDistance < 20 && isMinionOwner() && rollAiChance(params[4])) {
+      commandMinions(targetId);
+      command = mNativeAiCommand.get(entityId);
+    }
     if (command != null && command.isAttack()) {
       if (bCombat && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         if (!command.pop()) mNativeAiCommand.remove(entityId);
