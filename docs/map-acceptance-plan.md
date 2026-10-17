@@ -319,3 +319,22 @@ SUMMARY 明确为 OBJECT_LOAD_ONLY，walks/transitions=0；所有原生相邻 Vi
 Nest 最后补修后追加的 33 项相关测试、4 项架构回归及两端编译也全部通过。
 测试 XML、完整 Gradle 日志与资源指纹保存在
 `core/build/reports/warning-fixes-20261018/`。
+
+2026-10-18 组合验证：继续合并主区已提交的 `8a6ccd13c`，保留普通出生的原生房间 RNG、
+SpawnCol 水面搜索/碰撞掩码与 MonSeq 表现改动。组合版本 `78c263e97` 的 139 项专项、
+4 项架构回归、22 项六种子资源/人口测试全部通过，失败、错误和跳过均为零；
+容器审计记录 762 条，desktop 与 D2GS 编译通过。完整门禁日志为
+`core/build/reports/warning-fixes-20261018/integrated-latest-gates.log`，XML 在 `latest-xml/`。
+
+组合版本最终巡游：1.10F、seed=1、普通难度、25Hz，132/132 图，failures=0；
+严格 Get-MapLogIssues 的未解决告警由本轮基线 685 条降至 0。132 份对象审计全部
+PASS；147 类目标容器中的 3535 条源记录逐实体核对 level/class/room 全部匹配，
+无目标跳过或创建失败（本轮对象源记录合计 10292 条）。最终证据目录为
+`server/d2gs/build/map-tour/warnings-integrated-20261018/`，包括 `log-issues.json`、
+`container-entity-audit.json` 及每图对象记录；完整日志为
+`core/build/reports/warning-fixes-20261018/integrated-runtime.log`。
+合并前 `5c9950011` 另一次巡游也是零未解决告警，目标容器源记录 3657 条；
+两轮生产组合不同，数量分开记录，不把较大数移用于组合版本的最终结论。
+
+本轮结论仍仅为 OBJECT_LOAD_ONLY，walks/transitions=0。原版同条件数量等量、
+全部原生有向边双向 TCP 步行、三难度以及古墓绿色等 GL 外观均未由此验收证明。
