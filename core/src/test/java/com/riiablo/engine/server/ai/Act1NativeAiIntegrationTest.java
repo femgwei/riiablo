@@ -675,7 +675,21 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       assertEquals(skill.Id, casting().skillId);
       assertEquals(target, casting().targetId);
       assertEquals(targetPosition(), casting().targetVec);
-      int mode = Riiablo.files.MonMode.index(slot == 0 ? row.Sk1mode : row.Sk2mode);
+      String configuredMode = slot == 0 ? row.Sk1mode : row.Sk2mode;
+      int mode = Riiablo.files.MonMode.index(configuredMode);
+      if (configuredMode != null && configuredMode.startsWith("seq_")) {
+        // The animation mode comes from the first MonSeq point, not the
+        // Skills.txt SQ fallback. Read the resource independently of its loader.
+        for (String line : Riiablo.mpqs.resolve("data/global/excel/monseq.txt")
+            .readString("windows-1252").split("\\r?\\n")) {
+          String[] fields = line.split("\\t", -1);
+          if (fields.length >= 5 && configuredMode.equals(fields[0])) {
+            mode = Riiablo.files.MonMode.index(fields[1]);
+            assertNotNull(sequence().nativeMonster);
+            break;
+          }
+        }
+      }
       if (mode < 0 && skill.monanim != null) mode = Riiablo.files.MonMode.index(skill.monanim);
       if (mode < 0) mode = Engine.Monster.MODE_S1;
       assertEquals(mode, sequence().mode1);

@@ -80,6 +80,13 @@ class FingerMageSpiderIntegrationTest extends RiiabloTest {
       assertNotNull(state);
       int duration = Math.max(5, SkillFormula.evaluate(f.skill.auralencalc, f.skill, level));
       assertEquals(duration, state.duration);
+      for (int i = 0; i < f.skill.aurastat.length; i++) {
+        String name = f.skill.aurastat[i];
+        if (name == null || name.isEmpty()) continue;
+        int stat = Stat.index(name);
+        if (stat >= 0) assertEquals(SkillFormula.evaluate(f.skill.aurastatcalc[i], f.skill, level),
+            state.getStatContributionValue(stat));
+      }
       assertEquals(1000, f.hp());
       state.duration = 1;
       f.cast(f.target);
