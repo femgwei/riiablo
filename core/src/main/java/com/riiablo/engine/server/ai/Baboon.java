@@ -54,6 +54,8 @@ public class Baboon extends AI {
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
+  protected ComponentMapper<com.riiablo.engine.server.component.NativeAiState> mNativeAiState;
+
   final Vector2 tmpVec2 = new Vector2();
 
   final StateMachine<Integer, State> stateMachine;
@@ -92,18 +94,29 @@ public class Baboon extends AI {
   private float getLifePercentage() {
     if (!mAttributesWrapper.has(entityId)) return 100f;
     com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-    com.riiablo.attributes.StatRef hitpoints = attrs.get(com.riiablo.attributes.Stat.hitpoints);
-    com.riiablo.attributes.StatRef maxhp = attrs.get(com.riiablo.attributes.Stat.maxhp);
-    if (hitpoints == null || maxhp == null || maxhp.asFixed() <= 0) return 100f;
-    return (hitpoints.asFixed() / maxhp.asFixed()) * 100f;
+    if (attrs == null) return 100f;
+    int hitpoints = attrs.getValue(com.riiablo.attributes.Stat.hitpoints, 0);
+    int maxhp = attrs.getValue(com.riiablo.attributes.Stat.maxhp, 0);
+    return maxhp > 0 ? (100L * hitpoints) / maxhp : 100f;
   }
 
   /**
-   * Check if in special AI state (simplified).
+   * D2Game sub_6FCF2E70: MonsterData mode memory is 3 or 19.
    */
   private boolean checkSpecialAiState() {
-    // TODO: Implement proper AI state check
-    return false;
+    com.riiablo.engine.server.component.NativeAiState memory = mNativeAiState.get(entityId);
+    return memory != null && memory.isUncontrolled();
+  }
+
+  private void changeRegen(int delta) {
+    if (!mAttributesWrapper.has(entityId)) return;
+    com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    if (attrs == null) return;
+    short stat = com.riiablo.attributes.Stat.hpregen;
+    int base = attrs.base().getValue(stat, 0);
+    int aggregate = attrs.getValue(stat, 0);
+    attrs.base().put(stat, base + delta);
+    attrs.aggregate().put(stat, aggregate + delta);
   }
 
   @Override
@@ -139,8 +152,7 @@ public class Baboon extends AI {
       // D2MOD: Remove regen bonus if timer expired or life > 75%
       if (aiParam0 == 0 || lifePercent > 75) {
         // D2MOD: STATLIST_SetUnitStat(pUnit, STAT_HPREGEN, STATLIST_UnitGetStatValue(pUnit, STAT_HPREGEN, 0) - pAiTickParam->pAiControl->dwAiParam[2], 0)
-        // TODO: Remove regen bonus from attributes
-        aiParam2 = 0;
+        changeRegen(-aiParam2);
       }
 
       float[] targetDistances = {Float.MAX_VALUE};
@@ -191,8 +203,7 @@ public class Baboon extends AI {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
         // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 15, 1)
         stateMachine.changeState(State.ESCAPE);
-        Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
-        Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
+        Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
         walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
         if (!mPathfind.has(entityId)) {
           // Can't escape
@@ -262,21 +273,18 @@ public class Baboon extends AI {
     // D2MOD: In combat
     if (checkSpecialAiState()) {
       // D2MOD: If hurt, start regen
-      if (lifePercent < hurtPct && MathUtils.randomBoolean(0.5f)) {
-        aiParam0 = MathUtils.random(2, 6); // Random 2-6 ticks
+      if (lifePercent < hurtPct && rollAiPercentage() < 50) {
+        aiParam0 = (int) (rollAiRandomNumber() % 5) + 2;
         
-        // D2MOD: Add regen bonus
-        // TODO: Add regen bonus to attributes
-        if (params.length > 4) {
-          // Calculate regen bonus
-          aiParam2 = params[4]; // Simplified
-        }
+        int regen = mAttributesWrapper.has(entityId)
+            ? mAttributesWrapper.get(entityId).attrs.getValue(com.riiablo.attributes.Stat.hpregen, 0) : 0;
+        aiParam2 = regen * params[4] / 8;
+        changeRegen(aiParam2);
 
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
         // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 0xFu, 0)
         stateMachine.changeState(State.ESCAPE);
-        Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
-        Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
+        Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
         walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
         time = MathUtils.random(1f, 2);
         return;
