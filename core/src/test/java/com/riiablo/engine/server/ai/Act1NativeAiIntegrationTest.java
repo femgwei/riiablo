@@ -286,7 +286,7 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       f.ai.params[FlyingScimitar.PARAM_CIRCLE_CHANCE] = 100;
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals("CIRCLE", f.ai.getState());
-      verify(f.paths).findPath(eq(f.actor), any(), eq(false), eq(f.target));
+      verify(f.paths).findNativeOrbit(eq(f.actor), eq(f.target), eq(8), anyBoolean());
     }
   }
 
@@ -635,6 +635,9 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       world.getInjector().inject(ai);
       ai.pathfinder = paths;
       when(paths.findPath(anyInt(), any(), anyBoolean(), anyInt())).thenReturn(true);
+      when(paths.findNativeOrbit(anyInt(), anyInt(), anyInt(), anyBoolean())).thenReturn(true);
+      when(paths.findNativePath(anyInt(), anyInt(), anyInt(), anyInt())).thenReturn(true);
+      when(paths.findNativeChase(anyInt(), anyInt())).thenReturn(true);
       ai.initialize();
     }
 

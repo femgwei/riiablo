@@ -311,6 +311,19 @@ public class StateList {
     return state;
   }
 
+  /** Independent native stat list without a state bit or refresh identity. */
+  public UnitState addAnonymousStatList(int duration) {
+    UnitState state = statePool.obtain();
+    state.stateId = StateId.NONE;
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = 1;
+    state.sourceEntityId = -1;
+    state.skillId = -1;
+    states.add(state);
+    return state;
+  }
+
   /** Extends an existing state expiry without changing its owner or payload. */
   public UnitState extendState(int stateId, int duration, int level, int sourceEntityId) {
     if (!StateId.isValid(stateId) || duration <= 0) return null;

@@ -139,6 +139,52 @@ public class AnimStepper extends IntervalIteratingSystem {
       processNativeJab(entityId, sequence, animData);
       return;
     }
+    if (sequence != null && sequence.nativeMonster != null) {
+      if (!sequence.started) return;
+      // Leap Attack suspends its sequence while the server owns airborne travel.
+      if (world.getMapper(com.riiablo.engine.server.component.Leap.class).has(entityId)) return;
+      NativeMonsterSequence data = sequence.nativeMonster;
+      int delta = 256;
+      if (states != null && states.stateList != null)
+        delta = scaleStateAnimationSpeed(delta, states.stateList.getTotalAnimationRateModifier());
+      int previous = sequence.nativeMonsterCursor;
+      if (previous >= data.frames.length << 8) return;
+      int next = Math.min(data.frames.length << 8, previous + delta);
+      boolean charge = casting != null && com.riiablo.Riiablo.files.skills.get(casting.skillId) != null
+          && com.riiablo.Riiablo.files.skills.get(casting.skillId).srvdofunc == 67;
+      int pointIndex = Math.min(data.frames.length - 1, next >>> 8);
+      boolean movingPoint = data.modes[pointIndex] == Engine.Monster.MODE_WL
+          || data.modes[pointIndex] == Engine.Monster.MODE_RN;
+      if (charge && !movingPoint && sequence.mode1 != Engine.Monster.MODE_A2) {
+        com.riiablo.engine.server.component.Position source = world.getMapper(
+            com.riiablo.engine.server.component.Position.class).get(entityId);
+        com.riiablo.engine.server.component.Position target = casting.targetId < 0 ? null : world.getMapper(
+            com.riiablo.engine.server.component.Position.class).get(casting.targetId);
+        if (source == null || target == null || ++sequence.nativeMonsterWaitFrames > 125) {
+          events.dispatch(AnimDataFinishedEvent.obtain(entityId)); return;
+        }
+        Actioneer actions = world.getSystem(Actioneer.class);
+        if (actions != null ? !actions.isInMeleeRange(entityId, casting.targetId, 0)
+            : source.position.dst2(target.position) > 9) return;
+        Pathfinder paths = world.getSystem(Pathfinder.class);
+        if (paths != null) paths.findPath(entityId, null);
+      }
+      if (sequence.mode1 != data.modes[pointIndex]) {
+        sequence.mode1 = data.modes[pointIndex];
+        if (mCofReference.has(entityId)) cofs.setMode(entityId, sequence.mode1, true);
+      }
+      sequence.nativeMonsterCursor = next;
+      animData.frame = data.frames[Math.min(data.frames.length - 1, next >>> 8)] << 8;
+      for (int point = (previous >>> 8) + 1; point <= (next >>> 8) && point < data.actions.length; point++) {
+        boolean movement = data.modes[point] == Engine.Monster.MODE_WL
+            || data.modes[point] == Engine.Monster.MODE_RN;
+        if (data.actions[point] != 0 && data.actions[point] != Engine.KEYFRAME_SND
+            && !(charge && movement))
+          events.dispatch(AnimDataKeyframeEvent.obtain(entityId, data.actions[point]));
+      }
+      if (next == data.frames.length << 8) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+      return;
+    }
     if (animData.numFrames <= 0) return;
 
     int delta = animData.override >= 0 ? animData.override : animData.speed;

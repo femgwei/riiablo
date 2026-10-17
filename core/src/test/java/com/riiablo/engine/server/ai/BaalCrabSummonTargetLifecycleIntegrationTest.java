@@ -379,7 +379,8 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
           .with(events, new ItemManager(), new ObjectInteractor(), new WarpInteractor(),
               new ItemInteractor(), new Pathfinder(), new CofManager(), factory,
               new ServerMonsterCorpseSystem(), new NativePlayerTargetSlots(), new ServerSkillSystem(true))
-          .build().register("factory", factory).register("map", map));
+          .build().register("factory", factory).register("map", map)
+          .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry()));
       Riiablo.engine = world;
       player = factory.createPlayer("SummonNode", Riiablo.NECROMANCER, 20, 10);
       world.getMapper(Player.class).get(player).data.setSkillLevel(SkillId.REVIVE, 5);
@@ -420,6 +421,9 @@ class BaalCrabSummonTargetLifecycleIntegrationTest extends RiiabloTest {
       world.getMapper(Sequence.class).remove(id);
       world.getMapper(CofReference.class).get(id).mode = Engine.Monster.MODE_NU;
       events.dispatch(ModeChangeEvent.obtain(id, Engine.Monster.MODE_NU));
+      // This fixture revives the unit without the factory. Restore its combat
+      // flags explicitly; target-node membership must remain detached.
+      world.getMapper(NativeUnitFlags.class).get(id).set(NativeUnitFlags.MONSTER_TARGET);
       world.process();
     }
     void die(int id) {

@@ -111,6 +111,10 @@ public class Pathfinder extends IteratingSystem {
     // monster stops instead of playing walk animation in place; its AI can
     // issue a fresh approach request on the next think tick.
     if (mMonster.has(entityId) && shouldRepathAfterDynamicBlock(pathfind)) {
+      if (pathfind.nativeBounded) {
+        findPath(entityId, null);
+        return;
+      }
       int targetEntityId = pathfind.targetEntityId;
       if (isOverlappingDynamicTarget(entityId, targetEntityId)) {
         float stalledTime = pathfind.stalledTime;
@@ -262,6 +266,12 @@ public class Pathfinder extends IteratingSystem {
       // Reuse the existing exact/dynamic recovery policy; do not promote a
       // failed query to partial or retry before the current endpoint is reached.
       if (shouldRepath || exhaustedShortOfTarget) {
+        if (pathfind.nativePathType == 13) {
+          int bonus = Math.round(mVelocity.get(entityId).modeSpeedBonusMultiplier * 100f);
+          if (findNativeChase(entityId, targetId))
+            mVelocity.get(entityId).setModeSpeedBonusPercent(bonus);
+          return;
+        }
         repathPreservingMovementIntent(entityId, targetPos, targetId);
         return;
       }
@@ -410,6 +420,53 @@ public class Pathfinder extends IteratingSystem {
 
   public boolean findPath(int src, Vector2 target) {
     return findPath(src, target, false, Engine.INVALID_ENTITY);
+  }
+
+  /** Install native circle waypoints directly, without A* or path smoothing. */
+  public boolean findNativeOrbit(int src, int targetId, int budget, boolean clockwise) {
+    return findNativePath(src, targetId, budget, clockwise ? 2 : -2);
+  }
+
+  public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
+    if (!mVelocity.has(src) || !mPosition.has(src) || !mPosition.has(targetId)) return false;
+    Vector2 source = mPosition.get(src).position;
+    Vector2 target = mPosition.get(targetId).position;
+    MapWrapper owner = mMapWrapper.get(src);
+    int flags = groundPathFlags(src);
+    int size = mSize.has(src) ? mSize.get(src).size : 1;
+    com.riiablo.engine.server.ai.NativeTowardPathProbe.Blocked blocked =
+        (x, y) -> map.isBlockedForPath(owner == null ? null : owner.zone,
+            x, y, flags, size, canOpenDoors(src))
+            || (dynamicCollision != null && !dynamicCollision.isFreeForPath(
+                src, targetId, x, y, size));
+    GraphPath path = directionOffset == 0
+        ? com.riiablo.engine.server.ai.NativeTowardPathProbe.toward(
+            (int) source.x, (int) source.y, (int) target.x, (int) target.y, budget, 1, blocked)
+        : com.riiablo.engine.server.ai.NativeTowardPathProbe.orbit(
+            (int) source.x, (int) source.y, (int) target.x, (int) target.y,
+            budget, directionOffset, blocked);
+    if (path.getCount() < 2) { findPath(src, null); return false; }
+    mRunning.remove(src);
+    mVelocity.get(src).clearModeSpeedBonus();
+    // Native circle ends at its generated final point instead of chasing the unit.
+    Pathfind nativePath = mPathfind.create(src).set(path);
+    nativePath.nativeBounded = true;
+    nativePath.targetEntityId = Engine.INVALID_ENTITY;
+    nativePath.targetIdentity = null;
+    return true;
+  }
+
+  /** Type 13 uses Toward with flag 0x100 and retains the live target. */
+  public boolean findNativeChase(int src, int targetId) {
+    if (!findNativePath(src, targetId, 77, 0)) return false;
+    Pathfind path = mPathfind.get(src);
+    path.nativePathType = 13;
+    path.targetEntityId = targetId;
+    path.lastTargetPosition.set(mPosition.get(targetId).position);
+    com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(targetId);
+    path.targetIdentity = identity == null ? null : identity.token();
+    return true;
   }
 
   public boolean findPath(int src, Vector2 target, boolean raycast) {

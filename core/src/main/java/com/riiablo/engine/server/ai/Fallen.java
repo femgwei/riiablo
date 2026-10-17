@@ -190,8 +190,8 @@ public class Fallen extends AI {
       int candidate = candidates.get(i);
       if (!isFallenPackMember(candidate) || !sameNativeZone(candidate)) continue;
       if (position.dst2(mPosition.get(candidate).position) > 15f * 15f) continue;
-      mNativeAiCommand.create(candidate).set(
-          entityId, NativeAiCommand.ATTACK, targetId);
+      mNativeAiCommand.create(candidate).copy(
+          Riiablo.engine, entityId, NativeAiCommand.ATTACK, targetId);
       commanded++;
     }
     log.info("[FALLEN_COMMAND] phase=attack owner={} target={} members={}",
@@ -202,14 +202,18 @@ public class Fallen extends AI {
   private boolean executeCommand(int targetId, Vector2 targetPos, boolean inCombat) {
     if (!mNativeAiCommand.has(entityId)) return false;
     NativeAiCommand command = mNativeAiCommand.get(entityId);
-    if (!command.isAttack() || !mPosition.has(targetId)
+    if (!command.isAttack() || command.targetId < 0 || !mPosition.has(command.targetId)
+        || !command.targetIsCurrent(Riiablo.engine) || !command.ownerIsCurrent(Riiablo.engine)
         || !isLivingCommandOwner(command.ownerId)) {
-      mNativeAiCommand.remove(entityId);
+      if (!command.pop()) mNativeAiCommand.remove(entityId);
       return false;
     }
+    targetId = command.targetId;
+    targetPos = mPosition.get(targetId).position;
+    inCombat = isInCombat(targetId);
     if (!inCombat) {
       if (!moveTo(targetPos, false, 0, true, targetId)) {
-        mNativeAiCommand.remove(entityId);
+        if (!command.pop()) mNativeAiCommand.remove(entityId);
       }
       stateMachine.changeState(State.APPROACH);
       return true;
@@ -218,9 +222,18 @@ public class Fallen extends AI {
       time = 5f * com.riiablo.codec.Animation.FRAME_DURATION;
       return true;
     }
-    mNativeAiCommand.remove(entityId);
-    aiParam0 = true;
-    return false;
+    if (!command.pop()) mNativeAiCommand.remove(entityId);
+    aiParam0 = false;
+    pathfinder.findPath(entityId, null);
+    lookAt(targetId);
+    stateMachine.changeState(State.ATTACK);
+    byte mode = MathUtils.randomBoolean(params[3] / 100f)
+        ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+    mSequence.create(entityId).sequence(mode, Engine.Monster.MODE_NU);
+    mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+    time = MathUtils.random(1f, 2);
+    return true;
   }
 
   private boolean isLivingCommandOwner(int ownerId) {
@@ -239,9 +252,9 @@ public class Fallen extends AI {
    * For now, we'll use a simplified check.
    */
   private boolean checkSpecialAiState() {
-    // TODO: Implement proper AI state check
-    // D2MOD checks MONSTER_GetAiState(pUnit) == 3 || == 19
-    return false;
+    com.riiablo.engine.server.component.NativeAiState memory = Riiablo.engine.getMapper(
+        com.riiablo.engine.server.component.NativeAiState.class).get(entityId);
+    return memory != null && memory.isUncontrolled();
   }
 
   /**

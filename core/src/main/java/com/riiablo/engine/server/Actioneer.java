@@ -841,7 +841,7 @@ public class Actioneer extends PassiveSystem {
     channel.lastMissileId = update.monInfernoMissileId;
     // SQ (Skills.monanim=xx) seeks the sequence point to InfernoAnim-1;
     // non-SQ seeks only the source frame. ENDANIM is independently scheduled.
-    if (update.monInfernoMissileId >= 0 && mAnimData.has(entityId)) {
+    if ((update.monInfernoMissileId >= 0 || channel.impInferno) && mAnimData.has(entityId)) {
       AnimData anim = mAnimData.get(entityId);
       int point = mMonster.get(entityId).monstats2.InfernoAnim;
       if (channel.horrorSequence) {
@@ -1513,7 +1513,26 @@ public class Actioneer extends PassiveSystem {
             entityId, emerged);
         break;
       }
-      case 53: { // SKILLS_SrvSt53_MonInferno (verified 95/152 consumers)
+      case 62: { // Native MinionSpawner freezes summon data at skill start.
+        Casting cast = mCasting.get(entityId);
+        Monster source = mMonster.get(entityId);
+        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        if (cast == null || source == null || skill == null) break;
+        // bFromMonster=1 reads the monster row, never Skills.summon.
+        MonStats.Entry row = hasText(source.monstats.spawn)
+            ? Riiablo.files.monstats.get(source.monstats.spawn) : null;
+        if (row == null && source.nativeSpawnClassId >= 0) row = Riiablo.files.monstats.get(source.nativeSpawnClassId);
+        if (row == null) break;
+        cast.nativeSummonClass = row.hcIdx;
+        cast.nativeSummonMode = !hasText(source.monstats.spawnmode)
+            ? Engine.Monster.MODE_NU : Riiablo.files.MonMode.index(source.monstats.spawnmode);
+        if (cast.nativeSummonMode < 0) cast.nativeSummonMode = Engine.Monster.MODE_NU;
+        cast.nativeSummonPosition.set(mPosition.get(entityId).position)
+            .add(source.monstats.spawnx, source.monstats.spawny);
+        break;
+      }
+      case 53: // SKILLS_SrvSt53_MonInferno (verified 95/152 consumers)
+      case 59: { // ImpInferno shares the scheduler, with its own 3-frame interval.
         Casting cast = mCasting.get(entityId);
         Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
         Monster monster = mMonster.get(entityId);
@@ -1666,6 +1685,7 @@ public class Actioneer extends PassiveSystem {
         startBerserk(entityId, targetId);
         break;
       }
+      case 41: // Leap Attack reserves its landing at the first MonSeq action.
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -1994,6 +2014,11 @@ public class Actioneer extends PassiveSystem {
         boolean loggedMonsterMelee = isMonsterMeleeMode(entityId);
         Monster attackingMonster = loggedMonsterMelee ? mMonster.get(entityId) : null;
         if (targetId == Engine.INVALID_ENTITY) {
+          if (hasMonsterAttackMissile(entityId) && mCasting.has(entityId)
+              && mCasting.get(entityId).skillId == SkillCodes.attack) {
+            spawnMonsterAttackMissile(entityId, targetId);
+            break;
+          }
           logMonsterMeleeReject(entityId, attackingMonster, targetId, "invalid_target");
           break;
         }
@@ -2515,6 +2540,19 @@ public class Actioneer extends PassiveSystem {
         startLeap(entityId, targetId, targetVec);
         break;
       }
+      case 78: { // Leap Attack: takeoff, airborne hold, then one landing attack.
+        if (!mMonster.has(entityId) || !mCasting.has(entityId)) break;
+        Casting leapCast = mCasting.get(entityId);
+        if (!leapCast.monsterLeapStarted) {
+          leapCast.monsterLeapStarted = true;
+          startLeap(entityId, targetId, targetVec, false);
+        } else if (!mLeap.has(entityId) && !leapCast.monsterLeapHit) {
+          leapCast.monsterLeapHit = true;
+          if (targetId >= 0 && isInMeleeRangeAtTick(entityId, targetId, 0, 0L))
+            resolveCharge(entityId, targetId);
+        }
+        break;
+      }
       case 86: { // native MaggotDown: heal current life by calc1 percent
         resolveMaggotDown(entityId);
         break;
@@ -2545,6 +2583,51 @@ public class Actioneer extends PassiveSystem {
         log.info("[MONSTER_VAMPIRE] phase=keyframe entity={} target={} srvdofunc={} delegated=ServerSkillSystem",
             entityId, targetId, srvdofunc);
         break;
+      case 108: { // RegurgitatorEat removes the corpse and heals from its max life.
+        if (targetId < 0 || !mMonster.has(targetId) || mMercenary.has(targetId)
+            || !mCofReference.has(targetId)
+            || mCofReference.get(targetId).mode != Engine.Monster.MODE_DD
+            || !mCorpse.has(targetId) || !mCorpse.get(targetId).usable
+            || !mAttributesWrapper.has(targetId) || !mAttributesWrapper.has(entityId)) break;
+        Casting cast = mCasting.get(entityId);
+        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        if (skill == null) break;
+        int corpseLife = mAttributesWrapper.get(targetId).attrs.getValue(Stat.maxhp, 0);
+        mCorpse.get(targetId).usable = false;
+        world.delete(targetId);
+        if (corpseLife > 0) {
+          com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+          StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+          int percent = SkillFormula.evaluate(skill.calc1, skill, skillLevel(entityId, skill.Id));
+          long restored = hp.asInt() + (long) corpseLife * percent / 100;
+          hp.set((int) Math.max(1L, Math.min(attrs.getValue(Stat.maxhp, 0), restored)));
+        }
+        break;
+      }
+      case 135: { // Native MinionSpawner creates a no-reward, owned monster.
+        Casting cast = mCasting.get(entityId);
+        if (cast == null || cast.nativeSummonClass < 0 || factory == null || map == null) break;
+        Vector2 position = cast.nativeSummonPosition.cpy();
+        Map.Zone zone = map.getZone(position);
+        if (zone == null) break;
+        MonStats.Entry summonRow = Riiablo.files.monstats.get(cast.nativeSummonClass);
+        com.riiablo.codec.excel.MonStats2.Entry dimensions = summonRow == null ? null
+            : Riiablo.files.monstats2.get(summonRow.MonStatsEx);
+        int footprint = dimensions == null ? 1 : Math.max(1, dimensions.SizeX);
+        if (!zone.findFreeCoordinates(position, footprint, 0, false, position)
+            && !zone.findFreeCoordinates(position, footprint, 4, false, position)) break;
+        int spawned = factory.createMonster(cast.nativeSummonClass, position.x, position.y);
+        if (spawned == Engine.INVALID_ENTITY) break;
+        factory.applyNativeUnitFlags(spawned, NativeUnitFlags.NEST_SUMMON);
+        mMonster.get(spawned).nativeOwnerId = entityId;
+        com.riiablo.engine.server.component.NativePathIdentity ownerIdentity = world.getMapper(
+            com.riiablo.engine.server.component.NativePathIdentity.class).get(entityId);
+        mMonster.get(spawned).nativeOwnerIdentity = ownerIdentity == null ? null : ownerIdentity.token();
+        if (cast.nativeSummonMode != Engine.Monster.MODE_NU)
+          mSequence.create(spawned).sequence((byte) cast.nativeSummonMode, Engine.Monster.MODE_NU);
+        cast.nativeSummonClass = -1;
+        break;
+      }
       case 96: { // native ZakarumHeal/Bestow: percentage heal on an allied target
         resolveBestow(entityId, targetId);
         break;
@@ -2603,8 +2686,17 @@ public class Actioneer extends PassiveSystem {
       }
       case 27:  // player Teleport
       case 98:  // monster Teleport
-      case 129: // imp Teleport
         resolveTeleport(entityId, targetVec);
+        break;
+      case 129:
+        resolveImpTeleport(entityId, targetId, targetVec);
+        break;
+      case 128: // CryHelp distributes expiring minion commands on SkillDoEvent.
+      case 126: // ImpInferno's repeated emissions use the channel scheduler.
+      case 131: // OverseerWhip rebuilds a minion or applies its buff on SkillDoEvent.
+      case 132: // ImpFireMissile selects its chain-relative missile on SkillDoEvent.
+      case 133: // Impregnate installs the death-removal callback on SkillDoEvent.
+      case 134: // SiegeBeastStomp applies one direct area packet on SkillDoEvent.
         break;
       // These server functions are resolved by ServerSkillSystem from the
       // SkillDoEvent emitted immediately below.  Keep the Actioneer stage
@@ -3943,6 +4035,68 @@ public class Actioneer extends PassiveSystem {
   }
 
   /** D2MOO SrvDo027: validate the landing subtile, warp, and clear stale movement intent. */
+  private void resolveImpTeleport(int entityId, int targetId, Vector2 targetVec) {
+    Monster imp = mMonster.get(entityId);
+    if (imp == null || !"imp1".equals(imp.monstats.BaseId)) return;
+    int ownerId = imp.nativeOwnerId;
+    if (ownerId >= 0) {
+      if (!resolveTeleport(entityId, targetVec)) return;
+      Monster owner = imp.nativeOwnerIdentity != null && !imp.nativeOwnerIdentity.isCurrent(world, ownerId)
+          ? null : mMonster.get(ownerId);
+      if (owner != null && owner.nativeOwnerId == entityId) owner.nativeOwnerId = -1;
+      imp.nativeOwnerId = -1;
+      imp.nativeOwnerIdentity = null;
+      imp.nativeRequestedMountId = -1;
+      imp.nativeRequestedMountIdentity = null;
+      UnitStates states = mUnitStates.get(entityId);
+      if (states != null && states.stateList != null) states.stateList.removeState(StateId.ATTACHED);
+      if (mAttributesWrapper.has(entityId)) {
+        com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+        if (attrs.getValue(Stat.hitpoints, 0f) * 10 < attrs.getValue(Stat.maxhp, 0f)) {
+          StatRef hp = attrs.get(Stat.hitpoints);
+          if (hp != null) hp.set(0);
+          if (events != null) events.dispatch(DeathEvent.obtain(entityId, entityId));
+          return;
+        }
+      }
+      mNativeUnitFlags.create(entityId).set(NativeUnitFlags.MONSTER_TARGET);
+      Box2DBody physics = mBox2DBody.get(entityId);
+      if (physics != null && physics.body != null) physics.body.setActive(true);
+      return;
+    }
+    if (targetId == Engine.INVALID_ENTITY) { resolveTeleport(entityId, targetVec); return; }
+    Monster mount = mMonster.get(targetId);
+    if (mount == null || mount.nativeOwnerId >= 0 || !mPosition.has(targetId)) return;
+    String base = mount.monstats.BaseId;
+    if (!"barricadetower".equals(base) && !"siegebeast1".equals(base)) return;
+    MapWrapper sourceMap = mMapWrapper.get(entityId);
+    MapWrapper mountMap = mMapWrapper.get(targetId);
+    if (sourceMap == null || mountMap == null || sourceMap.zone != mountMap.zone
+        || sourceMap.map != mountMap.map) return;
+    Vector2 mountPosition = mPosition.get(targetId).position;
+    mPosition.get(entityId).position.set(mountPosition);
+    mPathfind.remove(entityId);
+    mTarget.remove(entityId);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    Box2DBody mountedPhysics = mBox2DBody.get(entityId);
+    if (mountedPhysics != null && mountedPhysics.body != null)
+      mountedPhysics.body.setTransform(mountPosition, mountedPhysics.body.getAngle());
+    UnitStates states = mUnitStates.create(entityId);
+    if (states.stateList == null) states.init(world, entityId);
+    states.stateList.addState(StateId.ATTACHED, 0, 1, targetId);
+    imp.nativeOwnerId = targetId;
+    mount.nativeOwnerId = entityId;
+    com.riiablo.engine.server.component.NativePathIdentity mountIdentity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(targetId);
+    com.riiablo.engine.server.component.NativePathIdentity impIdentity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(entityId);
+    imp.nativeOwnerIdentity = mountIdentity == null ? null : mountIdentity.token();
+    mount.nativeOwnerIdentity = impIdentity == null ? null : impIdentity.token();
+    Box2DBody physics = mBox2DBody.get(entityId);
+    if (physics != null && physics.body != null) physics.body.setActive(false);
+    mNativeUnitFlags.create(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
+  }
+
   boolean resolveTeleport(int entityId, Vector2 targetVec) {
     if (!mPosition.has(entityId) || targetVec == null
         || !Float.isFinite(targetVec.x) || !Float.isFinite(targetVec.y)) {
@@ -3959,7 +4113,7 @@ public class Actioneer extends PassiveSystem {
     // 关卡和 RoomEx 拓扑校验。
     Map.Zone sourceZone = map != null ? map.getZone(from) : null;
     if (sourceZone != null) {
-      if (sourceZone.level == null || sourceZone.level.Teleport == 0) {
+      if (!mMonster.has(entityId) && (sourceZone.level == null || sourceZone.level.Teleport == 0)) {
         log.info("[TELEPORT] phase=reject entity={} level={} teleport={} reason=level_disabled",
             entityId, sourceZone.level != null ? sourceZone.level.Id : -1,
             sourceZone.level != null ? sourceZone.level.Teleport : -1);
@@ -3975,7 +4129,7 @@ public class Actioneer extends PassiveSystem {
       // Levels.Teleport == 2 时使用 COLLIDE_MASK_PLAYER_FLYING 特殊限制
       // （导弹屏障和关闭的门）；普通落点仍继续走下面的安全坐标搜索。
       int flyingFlags = map.playerFlyingFlags(Map.round(targetVec.x), Map.round(targetVec.y));
-      if (sourceZone.level.Teleport == 2
+      if (!mMonster.has(entityId) && sourceZone.level != null && sourceZone.level.Teleport == 2
           && (flyingFlags & DT1.Tile.FLAG_BLOCK_JUMP) != 0) {
         log.info("[TELEPORT] phase=reject entity={} level={} target=({}, {}) flags={} reason=flying_collision",
             entityId, sourceZone.level.Id, targetVec.x, targetVec.y, flyingFlags);
@@ -4628,6 +4782,10 @@ public class Actioneer extends PassiveSystem {
             victimId, interruptedCasting, interruptedSequence);
       }
     } else if (mCasting.has(victimId)) {
+      if (type == Class.Type.MON) {
+        world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+            .create(victimId).previousMode = 19;
+      }
       // Preserve the existing soft GH behavior for a unit that is actively
       // casting; only a real shield BL is authoritative enough to interrupt it.
       log.debug("[HIT_REACTION] victim={} skipped=active_casting blocked={}", victimId, blocked);
@@ -5711,6 +5869,10 @@ public class Actioneer extends PassiveSystem {
     }
     Monster source = mMonster.get(entityId);
     String spawnId = source.monstats != null ? source.monstats.spawn : null;
+    if (!hasText(spawnId) && source.nativeSpawnClassId >= 0) {
+      MonStats.Entry selected = Riiablo.files.monstats.get(source.nativeSpawnClassId);
+      if (selected != null) spawnId = selected.Id;
+    }
     // Native MONSTERS_GetSpawnMode_XY falls back to the minion chain when a
     // nest row has no explicit spawn field.
     if (!hasText(spawnId) && source.monstats != null) {
@@ -5760,6 +5922,9 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     factory.applyNativeUnitFlags(spawned, NativeUnitFlags.NEST_SUMMON);
+    if (mMonster.has(spawned)) {
+      mMonster.get(spawned).minionOwnerId = entityId;
+    }
     log.info("[MONSTER_NEST] phase=spawn source={} spawn={} entity={} position=({}, {})",
         entityId, spawnId, spawned, position.x, position.y);
   }
@@ -6220,6 +6385,10 @@ public class Actioneer extends PassiveSystem {
   }
 
   private void startLeap(int entityId, int targetId, Vector2 requestedTarget) {
+    startLeap(entityId, targetId, requestedTarget, true);
+  }
+
+  private void startLeap(int entityId, int targetId, Vector2 requestedTarget, boolean vault) {
     if (!mPosition.has(entityId) || mLeap.has(entityId)) {
       log.info("[MONSTER_LEAP] phase=rejected entity={} target={} reason={}",
           entityId, targetId,
@@ -6241,7 +6410,8 @@ public class Actioneer extends PassiveSystem {
 
     // D2MOO SrvSt40 uses 2 * target - unit for monsters, making a sand
     // leaper vault across the target instead of landing on top of it.
-    Vector2 desired = new Vector2(target).scl(2f).sub(start);
+    Vector2 desired = new Vector2(target);
+    if (vault) desired.scl(2f).sub(start);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : 0;
     Vector2 landing = new Vector2();
     if (!LeapSystem.findLanding(map, desired, size, landing)) {
@@ -6273,8 +6443,9 @@ public class Actioneer extends PassiveSystem {
   }
 
   private boolean spawnMonsterAttackMissile(int entityId, int targetId) {
+    boolean positionedTarget = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId);
     if (!mMonster.has(entityId) || factory == null || !mPosition.has(entityId)
-        || !mPosition.has(targetId)) {
+        || (!positionedTarget && !mCasting.has(entityId))) {
       return false;
     }
     if (mCasting.has(entityId) && mCasting.get(entityId).skillId != SkillCodes.attack) {
@@ -6289,10 +6460,7 @@ public class Actioneer extends PassiveSystem {
     Monster monster = mMonster.get(entityId);
     if (monster.monstats == null) return false;
     boolean attack2 = currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2;
-    String missileName = attack2 ? monster.monstats.MissA2 : monster.monstats.MissA1;
-    if (missileName == null || missileName.isEmpty()) {
-      missileName = attack2 ? monster.monstats.MissA1 : monster.monstats.MissA2;
-    }
+    String missileName = monsterAttackMissileName(entityId);
     if (missileName == null || missileName.isEmpty()) return false;
 
     Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
@@ -6303,7 +6471,9 @@ public class Actioneer extends PassiveSystem {
     }
 
     Vector2 start = mPosition.get(entityId).position;
-    Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
+    Vector2 targetPosition = positionedTarget
+        ? mPosition.get(targetId).position : mCasting.get(entityId).targetVec;
+    Vector2 direction = new Vector2(targetPosition).sub(start);
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
     direction.nor();
     com.riiablo.codec.excel.DifficultyLevels.Entry difficulty =
@@ -6326,7 +6496,7 @@ public class Actioneer extends PassiveSystem {
       com.d2moo.common.drlg.D2Seed seed =
           new com.d2moo.common.drlg.D2Seed(0x53454953, entityId);
       int xOffset = 5, yOffset = 5;
-      Vector2 target = mPosition.get(targetId).position;
+      Vector2 target = targetPosition;
       int targetX = MathUtils.floor(target.x), targetY = MathUtils.floor(target.y);
       int[] params = monster.monstats.aip3;
       int count = params == null || params.length == 0 ? 0
@@ -6365,10 +6535,28 @@ public class Actioneer extends PassiveSystem {
   }
 
   private boolean hasMonsterAttackMissile(int entityId) {
-    if (!mMonster.has(entityId)) return false;
+    return hasText(monsterAttackMissileName(entityId));
+  }
+
+  /** MonStats assigns a separate native projectile to each animation mode. */
+  private String monsterAttackMissileName(int entityId) {
+    if (!mMonster.has(entityId)) return null;
     Monster monster = mMonster.get(entityId);
-    if (monster.monstats == null) return false;
-    return hasText(monster.monstats.MissA1) || hasText(monster.monstats.MissA2);
+    if (monster.monstats == null) return null;
+    switch (currentMonsterAttackMode(entityId)) {
+      case Engine.Monster.MODE_A1:
+        return hasText(monster.monstats.MissA1)
+            ? monster.monstats.MissA1 : monster.monstats.MissA2;
+      case Engine.Monster.MODE_A2:
+        return hasText(monster.monstats.MissA2)
+            ? monster.monstats.MissA2 : monster.monstats.MissA1;
+      case Engine.Monster.MODE_SC: return monster.monstats.MissC;
+      case Engine.Monster.MODE_S1: return monster.monstats.MissS1;
+      case Engine.Monster.MODE_S2: return monster.monstats.MissS2;
+      case Engine.Monster.MODE_S3: return monster.monstats.MissS3;
+      case Engine.Monster.MODE_S4: return monster.monstats.MissS4;
+      default: return null;
+    }
   }
 
   private boolean isMonsterProjectileSkill(int entityId) {

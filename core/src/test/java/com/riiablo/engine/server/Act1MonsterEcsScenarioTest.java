@@ -493,7 +493,11 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       lastMonster = row != null ? row.Id : null;
       lastMonsterX = x;
       lastMonsterY = y;
-      return 9000 + monstersCreated;
+      int id = world.create();
+      world.getMapper(Monster.class).create(id).set(row,
+          row == null ? null : Riiablo.files.monstats2.get(row.MonStatsEx));
+      world.getMapper(Position.class).create(id).position.set(x, y);
+      return id;
     }
     @Override public int createWarp(int index, float x, float y) { return -1; }
     @Override public boolean selfResurrectMonster(int monsterId) {

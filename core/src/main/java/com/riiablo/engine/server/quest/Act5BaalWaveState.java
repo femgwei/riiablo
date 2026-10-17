@@ -78,6 +78,8 @@ public final class Act5BaalWaveState {
     return phase == Phase.DONE;
   }
 
+  public boolean preparingWave() { return phase == Phase.PRE_WAVE_DELAY; }
+
   public boolean canStart() {
     return phase == Phase.IDLE;
   }

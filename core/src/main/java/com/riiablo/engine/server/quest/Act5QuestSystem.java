@@ -87,6 +87,8 @@ public class Act5QuestSystem extends BaseSystem {
   private EntitySubscription playersByZone;
   private EntitySubscription monstersByZone;
   private EntitySubscription objectsByZone;
+  private int pendingBaalWave = -1;
+  private int pendingBaalWaveTicks;
   private final IntSet spawnedShenkLevels = new IntSet();
   private final IntSet killedShenkEntities = new IntSet();
   private final IntSet spawnedNihlathakLevels = new IntSet();
@@ -140,7 +142,7 @@ public class Act5QuestSystem extends BaseSystem {
     if (baalWaveState.started() && !baalWaveState.finished()) {
       int action = baalWaveState.tick(isBaalThroneClear());
       if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
-        spawnBaalWave(action);
+        if (!deferBaalWaveToThrone(action)) spawnBaalWave(action);
       } else if (action == Act5BaalWaveState.SPAWN_BAAL) {
         spawnBaalAfterWaves();
       }
@@ -1085,6 +1087,11 @@ public class Act5QuestSystem extends BaseSystem {
         || killedAncientEntities.size > 0;
   }
 
+  /** AI uses the same encounter membership that portal/death reset removes. */
+  public boolean isAncientCombatActive(int entityId) {
+    return spawnedAncientEntities.contains(entityId) && ancientEncounterActive();
+  }
+
   private int countLivingSummitPlayers() {
     if (playersByZone == null) return 0;
     int living = 0;
@@ -1238,12 +1245,14 @@ public class Act5QuestSystem extends BaseSystem {
     if (origin == null) origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
     if (origin == null) return;
     gameState().setBaalOrigin(origin.position.x, origin.position.y);
+    ensureClosedBaalPortal(origin.position);
     baalWaveState.start();
     log.info("[A5Q6] Baal throne sequence armed: player={} clearRadius={} preDelay={}",
         playerId, Act5BaalQuest.THRONE_CLEAR_RADIUS, Act5BaalQuest.PRE_WAVE_DELAY_TICKS);
   }
 
   private void spawnBaalWave(int waveIndex) {
+    if (pendingBaalWave == waveIndex) { pendingBaalWave = -1; pendingBaalWaveTicks = 0; }
     if (factory == null || waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_COUNT) return;
     SuperUniques.Entry unique = resolveBaalWaveSuperUnique(waveIndex);
     MonStats.Entry leaderStats = resolveBaalWaveStats(waveIndex, unique);
@@ -1331,6 +1340,50 @@ public class Act5QuestSystem extends BaseSystem {
         Act5BaalQuest.POST_SPAWN_LOCK_TICKS);
   }
 
+  private boolean deferBaalWaveToThrone(int wave) {
+    if (monstersByZone == null) return false;
+    IntBag monsters = monstersByZone.getEntities();
+    for (int i = 0; i < monsters.size(); i++) {
+      int id = monsters.get(i);
+      com.riiablo.engine.server.component.AIWrapper ai = world.getMapper(
+          com.riiablo.engine.server.component.AIWrapper.class).get(id);
+      if (levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
+          && isLiveHostileMonster(id)
+          && ai != null && ai.ai instanceof com.riiablo.engine.server.ai.BaalThrone) {
+        pendingBaalWave = wave;
+        pendingBaalWaveTicks = 0;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void ensureClosedBaalPortal(com.badlogic.gdx.math.Vector2 origin) {
+    Map.Zone throne = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
+    if (throne == null || objectsByZone == null) return;
+    IntBag objects = objectsByZone.getEntities();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = objects.get(i);
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      if (object.base != null && object.base.Id == NativeQuestObjectResolver.BAAL_PORTAL
+          && mMapWrapper.has(id) && mMapWrapper.get(id).zone == throne) return;
+    }
+    com.badlogic.gdx.math.Vector2 point = origin.cpy().add(0, 10);
+    if (throne.findFreeCoordinates(point, 1, 8, true, point))
+      factory.createStaticObjectByClassId(NativeQuestObjectResolver.BAAL_PORTAL, point.x, point.y);
+  }
+
+  public int pendingBaalWaveForAi() { return pendingBaalWave; }
+
+  /** SrvHit54, not the quest timer, materializes the requested preset. */
+  public void resolveBaalWaveMissile(int owner, int expectedWave) {
+    if (pendingBaalWave < 0 || pendingBaalWave != expectedWave || !mMonster.has(owner)
+        || !"BaalThrone".equals(mMonster.get(owner).monstats.AI)) return;
+    int wave = pendingBaalWave;
+    pendingBaalWave = -1;
+    spawnBaalWave(wave);
+  }
+
   /** Applies the neutral facing used by D2GAME_SpawnNormalMonster to both the
    * SuperUnique leader and its preset minions. */
   private void applyBaalSpawnFacing(int entityId) {
@@ -1363,6 +1416,17 @@ public class Act5QuestSystem extends BaseSystem {
     Act5BaalWaveState waves = gameState().baalWaves;
     int activeWave = waves.activeWaveIndex();
     if (activeWave < 0 || activeWave >= Act5BaalQuest.WAVE_COUNT) return;
+    // Let the native cast/controller finish before treating an absent preset
+    // as a lost-room spawn. Delayed controllers also carry the requested wave,
+    // so an old missile can never materialize a later wave.
+    if (pendingBaalWave == activeWave) {
+      com.riiablo.codec.excel.Skills.Entry spawn = Riiablo.files.skills.get(286);
+      com.riiablo.codec.excel.Missiles.Entry control = spawn == null ? null
+          : Riiablo.files.Missiles.get(spawn.srvmissile);
+      int timeout = control == null ? 250 : Math.max(250,
+          com.riiablo.engine.server.component.Missile.nativeRangeFrames(control, 1) + 50);
+      if (++pendingBaalWaveTicks < timeout) return;
+    }
     int superUniqueId = Act5BaalQuest.WAVE_SUPER_UNIQUES[activeWave];
     int leader = baalWaveLeaders.get(superUniqueId, Engine.INVALID_ENTITY);
     int markedMembers = countMarkedBaalWaveMembers(activeWave, superUniqueId);
@@ -1601,7 +1665,6 @@ public class Act5QuestSystem extends BaseSystem {
       // but before the Throne -> Chamber warp was registered.  Keep the
       // portal side effect idempotent instead of returning with a boss that
       // cannot be reached through the native quest transition.
-      openWorldstoneChamberPortal();
       spawnedBaalLevels.add(levelId);
       return;
     }
@@ -1618,11 +1681,8 @@ public class Act5QuestSystem extends BaseSystem {
       log.error("[A5Q6] Baal stats unresolved; cannot spawn terminal boss");
       return;
     }
-    // D2MOO opens the Worldstone Chamber portal after the fifth wave is
-    // cleared, before Baal becomes attackable. Keep the object and warp
-    // creation idempotent because the final DeathEvent may be delivered more
-    // than once by reconnect/replay paths.
-    openWorldstoneChamberPortal();
+    // Fn138 opens access when the transition Baal reaches the authored
+    // portal object. Spawning the chamber boss must not open it early.
     float spawnX = baalWaveOriginX() + 3f;
     float spawnY = baalWaveOriginY();
     if (chamber != null) {
@@ -1748,19 +1808,19 @@ public class Act5QuestSystem extends BaseSystem {
   }
 
   /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
-  private void openWorldstoneChamberPortal() {
-    if (factory == null || world == null) return;
+  public boolean openWorldstoneChamberPortal() {
+    if (factory == null || world == null) return false;
     Map.Zone source = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
     if (source == null) {
       log.warn("[A5Q6] Worldstone Chamber portal deferred: throne zone not found");
-      return;
+      return false;
     }
     int questWarp = QuestWarp.encode(Act5BaalQuest.WORLDSTONE_CHAMBER);
     int existingWarp = source.findWarp(questWarp);
     if (existingWarp != Engine.INVALID_ENTITY) {
       ensurePortalVisual(source, NativeQuestObjectResolver.BAAL_PORTAL, existingWarp);
       gameState().baalPortals.openWorldstoneChamber();
-      return;
+      return true;
     }
     Position throne = findBaalThronePosition();
     float portalX = throne == null ? baalWaveOriginX() : throne.position.x;
@@ -1774,20 +1834,45 @@ public class Act5QuestSystem extends BaseSystem {
       portalX = free.x;
       portalY = free.y;
     }
-    int visual = factory.createStaticObjectByClassId(
+    int visual = Engine.INVALID_ENTITY;
+    if (objectsByZone != null) {
+      IntBag objects = objectsByZone.getEntities();
+      for (int i = 0; i < objects.size(); i++) {
+        int id = objects.get(i);
+        com.riiablo.engine.server.component.Object object = mObject.get(id);
+        if (object.base != null && object.base.Id == NativeQuestObjectResolver.BAAL_PORTAL
+            && mMapWrapper.has(id) && mMapWrapper.get(id).zone == source && mPosition.has(id)) {
+          visual = id;
+          portalX = mPosition.get(id).position.x;
+          portalY = mPosition.get(id).position.y;
+          break;
+        }
+      }
+    }
+    boolean createdVisual = visual == Engine.INVALID_ENTITY;
+    if (createdVisual) visual = factory.createStaticObjectByClassId(
         NativeQuestObjectResolver.BAAL_PORTAL, portalX, portalY);
     int warp = factory.createQuestWarp(Act5BaalQuest.WORLDSTONE_CHAMBER, portalX, portalY);
     if (warp == Engine.INVALID_ENTITY) {
-      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      if (createdVisual && visual != Engine.INVALID_ENTITY) world.delete(visual);
       log.error("[A5Q6] Worldstone Chamber portal creation failed: visual={} position=({}, {})",
           visual, portalX, portalY);
-      return;
+      return false;
     }
     gameState().baalPortals.openWorldstoneChamber();
     source.addWarp(warp);
+    if (visual >= 0) {
+      com.riiablo.engine.server.CofManager cofs = world.getSystem(com.riiablo.engine.server.CofManager.class);
+      if (cofs != null) cofs.setMode(visual, Engine.Object.MODE_OP);
+      if (mNativeObjectState.has(visual)) {
+        mNativeObjectState.get(visual).persistOpened(true);
+        mNativeObjectState.get(visual).persistMode(Engine.Object.MODE_ON);
+      }
+    }
     log.info("[A5Q6] Worldstone Chamber portal opened: visual={} warp={} destination={} "
         + "position=({}, {})", visual, warp, Act5BaalQuest.WORLDSTONE_CHAMBER,
         portalX, portalY);
+    return true;
   }
 
   /**
@@ -2425,6 +2510,11 @@ public class Act5QuestSystem extends BaseSystem {
   public Act5QuestGameState.Snapshot snapshotGameState() {
     return gameState().snapshot();
   }
+
+  /** Read-only AI bridge; this system remains the sole wave timer/spawner. */
+  public Act5BaalWaveState baalWaveStateForAi() { return gameState().baalWaves; }
+
+  public boolean isBaalThroneClearForAi() { return isBaalThroneClear(); }
 
   /** Restores the room snapshot before the next authoritative quest tick. */
   public void restoreGameState(Act5QuestGameState.Snapshot snapshot) {

@@ -30,6 +30,13 @@ import com.riiablo.skill.SkillCodes;
 @Wire(failOnNull = false)
 @All({AIWrapper.class, Position.class, Monster.class})
 public class AIStepper extends IteratingSystem {
+  @net.mostlyoriginal.api.event.common.Subscribe
+  public void onNativeDamage(com.riiablo.engine.server.event.DamageEvent event) {
+    if (event.damage <= 0 || event.kind == com.riiablo.engine.server.event.DamageEvent.DAMAGE_OVER_TIME
+        || !mAIWrapper.has(event.victim)) return;
+    com.riiablo.engine.server.ai.AI ai = mAIWrapper.get(event.victim).ai;
+    if (ai != null) ai.onNativeHit(event.attacker);
+  }
   private static final Logger log = LogManager.getLogger(AIStepper.class);
 
   protected ComponentMapper<AIWrapper> mAIWrapper;
@@ -130,7 +137,9 @@ public class AIStepper extends IteratingSystem {
     // the shared AI boundary once a real movement stall is observed.
     if (pathfinder != null && mPathfind.has(entityId)) {
       Pathfind path = mPathfind.get(entityId);
-      if (path.stalledTime >= 0.5f && !path.blockedByDynamic) {
+      if (path.nativeBounded && path.stalledTime >= 0.5f) {
+        pathfinder.findPath(entityId, null);
+      } else if (path.stalledTime >= 0.5f && !path.blockedByDynamic) {
         int targetId = path.targetEntityId;
         Vector2 destination = targetId >= 0 && mPosition.has(targetId)
             ? mPosition.get(targetId).position : path.destination;

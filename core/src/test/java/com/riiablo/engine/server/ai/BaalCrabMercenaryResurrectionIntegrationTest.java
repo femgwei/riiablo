@@ -190,7 +190,8 @@ class BaalCrabMercenaryResurrectionIntegrationTest extends RiiabloTest {
           .with(events, new ItemManager(), new ObjectInteractor(), new WarpInteractor(),
               new ItemInteractor(), new Pathfinder(), new CofManager(), factory,
               new ServerMonsterCorpseSystem(), slots, rewards)
-          .build().register("factory", factory).register("map", map));
+          .build().register("factory", factory).register("map", map)
+          .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry()));
       Riiablo.engine = world;
       player = factory.createPlayer("TargetRejoin", Riiablo.NECROMANCER, 20, 10);
       initializePlayerStats();

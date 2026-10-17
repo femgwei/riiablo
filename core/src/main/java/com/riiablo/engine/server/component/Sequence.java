@@ -8,6 +8,10 @@ import com.riiablo.engine.server.NativeJabSequence;
 @Transient
 @PooledWeaver
 public class Sequence extends Component {
+  public com.riiablo.engine.server.NativeMonsterSequence nativeMonster;
+  public int nativeMonsterCursor;
+  public int nativeMonsterWaitFrames;
+
   public byte mode1;
   public byte mode2;
   /** New actions must restart their animation even when mode1 equals the current mode. */
@@ -40,6 +44,9 @@ public class Sequence extends Component {
   public int nativeJabSpeed;
 
   public Sequence sequence(byte mode1, byte mode2) {
+    nativeMonster = null;
+    nativeMonsterCursor = 0;
+    nativeMonsterWaitFrames = 0;
     this.mode1 = mode1;
     this.mode2 = mode2;
     this.started = false;

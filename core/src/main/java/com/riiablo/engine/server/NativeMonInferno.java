@@ -19,19 +19,21 @@ public final class NativeMonInferno {
   public int lastMissileId = -1;
   public boolean started;
   public final boolean horrorSequence;
+  public final boolean impInferno;
   public int sequenceCursor;
 
   public NativeMonInferno(Skills.Entry skill, int level, int tailFrames) {
     horrorSequence = skill.Id == 323;
-    deadline = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, level));
-    interval = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, level));
-    this.tailFrames = Math.max(1, tailFrames);
+    impInferno = skill.srvstfunc == 59 && skill.srvdofunc == 126;
+    deadline = Math.max(1, SkillFormula.evaluate(impInferno ? skill.calc1 : skill.calc2, skill, level));
+    interval = impInferno ? 3 : Math.max(1, SkillFormula.evaluate(skill.calc3, skill, level));
+    this.tailFrames = impInferno ? 13 : Math.max(1, tailFrames);
   }
 
   public void updated(boolean created, boolean infernoState) {
     started = true;
     if (created) missiles++;
-    if (created && frame < deadline && infernoState) {
+    if ((created || impInferno) && frame < deadline && infernoState) {
       nextUpdate = frame + interval;
       endFrame = -1;
     } else {
@@ -41,6 +43,8 @@ public final class NativeMonInferno {
   }
 
   public static int missileFrames(Skills.Entry skill, Missiles.Entry missile, int level) {
+    if (skill.srvdofunc == 126)
+      return Math.max(1, missile.Param[1] + SkillFormula.evaluate(skill.calc2, skill, level));
     int frames = SkillFormula.evaluate(skill.calc1, skill, level);
     if (frames <= 0) frames = missile.Param[1] + level - 1;
     return Math.max(1, Math.min(255, frames));
@@ -51,9 +55,13 @@ public final class NativeMonInferno {
   }
 
   public static boolean supports(Skills.Entry skill, Monster monster, Sequence sequence) {
+    if (skill != null && skill.srvstfunc == 59 && skill.srvdofunc == 126
+        && monster != null && monster.monstats2 != null && sequence != null) return true;
     if (skill == null || skill.srvstfunc != 53
         || (skill.srvdofunc != 95 && skill.srvdofunc != 152)
         || monster == null || monster.monstats2 == null || sequence == null) return false;
+    if (skill.srvdofunc == 95 && sequence.mode1 == Engine.Monster.MODE_A1
+        && monster.monstats != null && "Nihlathak".equals(monster.monstats.AI)) return true;
     // Explicit consumers only: verified ordinary modes plus Horror's A2 MonSeq.
     // Baal's Skills.monanim=xx is overridden by AiBaal action 12 (SKILL1).
     return (skill.srvdofunc == 95 && ((skill.Id == 178 && sequence.mode1 == Engine.Monster.MODE_A1)

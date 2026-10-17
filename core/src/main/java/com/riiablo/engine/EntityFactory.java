@@ -107,6 +107,9 @@ public abstract class EntityFactory extends PassiveSystem {
 
   public abstract int createMonster(int monsterId, float x, float y);
 
+  /** Rebuilds monster data while retaining the allocated unit identity. */
+  public boolean reinitializeMonster(int entityId, int monsterId, int mode) { return false; }
+
   /**
    * Creates a ranked monster. Client/test factories may ignore server-only
    * quality metadata; the authoritative server overrides this method.

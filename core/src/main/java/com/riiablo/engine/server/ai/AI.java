@@ -74,6 +74,9 @@ public abstract class AI implements Interactable.Interactor {
 
   public static final AI IDLE = new Idle();
 
+  /** Native monster AI hit callback; ordinary AIs have no override. */
+  public void onNativeHit(int attackerId) {}
+
   public static AI findAI(int entityId, String ai) {
     if ("7TIllusion".equals(ai)) return new SevenTIllusion(entityId);
     // MonStats names containing '-' cannot be Java class names.
@@ -178,6 +181,9 @@ public abstract class AI implements Interactable.Interactor {
   protected final long rollAiRandomNumber() {
     return Seed.rollRandomNumber(aiSeed()) & 0xFFFFFFFFL;
   }
+
+  /** Skill callbacks consume the same per-unit stream as the AI decision. */
+  public final long rollNativeSkillRandomNumber() { return rollAiRandomNumber(); }
 
   private D2Seed aiSeed() {
     if (aiSeed == null) {
@@ -592,10 +598,9 @@ public abstract class AI implements Interactable.Interactor {
 
   /**
    * Uses a monster skill whose {@code Sk#mode} names a native MonSeq entry.
-   * riiablo does not yet step MonSeq.txt directly, so callers that know the
-   * sequence's backing animation mode provide it here. This prevents a long
-   * sequence name such as {@code seq_shamanresurrect} from being mistaken for
-   * the {@code XX} monster mode and producing a nonexistent COF.
+   * Supported native sequences install their MonSeq source points and actions.
+   * Other callers can provide a verified backing mode for a specialized sequence
+   * driver, rather than treating a sequence name as an XX monster COF.
    */
   protected boolean useMonsterSkill(
       int skillIndex, int targetId, Vector2 targetVec, int sequenceMode) {
@@ -610,7 +615,9 @@ public abstract class AI implements Interactable.Interactor {
     }
 
     String configuredMode = monsterSkillMode(monster.monstats, skillIndex);
-    int mode = sequenceMode;
+    com.riiablo.engine.server.NativeMonsterSequence nativeSequence =
+        com.riiablo.engine.server.NativeMonsterSequence.load(configuredMode);
+    int mode = nativeSequence == null ? sequenceMode : nativeSequence.mode;
     if (mode < 0) {
       mode = configuredMode != null && !configuredMode.isEmpty()
           ? Riiablo.files.MonMode.index(configuredMode) : -1;
@@ -621,6 +628,7 @@ public abstract class AI implements Interactable.Interactor {
     if (mode < 0) mode = Engine.Monster.MODE_S1;
 
     if (!startMonsterSkill(skill, mode, targetId, targetVec)) return false;
+    if (nativeSequence != null) mSequence.get(entityId).nativeMonster = nativeSequence;
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
             + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
         entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,

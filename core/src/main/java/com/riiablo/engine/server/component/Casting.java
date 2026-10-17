@@ -14,6 +14,9 @@ import com.riiablo.item.Item;
 @PooledWeaver
 public class Casting extends PooledComponent {
   public int skillId = -1;
+  public int nativeSummonClass = -1;
+  public int nativeSummonMode;
+  public final Vector2 nativeSummonPosition = new Vector2();
   @EntityId
   public int targetId;
   public final Vector2 targetVec = new Vector2();
@@ -76,6 +79,8 @@ public class Casting extends PooledComponent {
   public int strafeArrowIndex;
   public final IntArray strafeTargetIds = new IntArray(false, 24);
   /** Prevents a native monster basic projectile from being emitted twice. */
+  public boolean monsterLeapStarted;
+  public boolean monsterLeapHit;
   public boolean monsterMissileCreated;
   /** Used-skill Param1 and MODECHANGE/ENDANIM state, never shared between casts. */
   public com.riiablo.engine.server.NativeMonInferno monInferno;
@@ -125,6 +130,9 @@ public class Casting extends PooledComponent {
 
   public Casting set(int skillId, int targetId, Vector2 targetVec,
       long positionSnapshotTick) {
+    nativeSummonClass = -1;
+    nativeSummonMode = 0;
+    nativeSummonPosition.setZero();
     this.skillId = skillId;
     this.targetId = targetId;
     this.targetVec.set(targetVec);
@@ -173,6 +181,8 @@ public class Casting extends PooledComponent {
     strafeRemainingArrows = 0;
     strafeArrowIndex = 0;
     strafeTargetIds.clear();
+    monsterLeapStarted = false;
+    monsterLeapHit = false;
     monsterMissileCreated = false;
     monInferno = null;
     diabRun = null;
@@ -211,6 +221,11 @@ public class Casting extends PooledComponent {
 
   @Override
   protected void reset() {
+    monsterLeapStarted = false;
+    monsterLeapHit = false;
+    nativeSummonClass = -1;
+    nativeSummonMode = 0;
+    nativeSummonPosition.setZero();
     monInferno = null;
     diabRun = null;
     skillId = -1;

@@ -2845,6 +2845,15 @@ public class MissileCollisionSystem extends IteratingSystem {
   private void triggerNativeNullHit(int sourceId, Missile source, Vector2 origin) {
     if (source == null || source.missile == null || source.presentationOnly || origin == null
         || source.hitFunctionTriggered) return;
+    if (source.missile.pSrvHitFunc == 54) {
+      source.hitFunctionTriggered = true;
+      com.riiablo.engine.server.quest.Act5QuestSystem quests = world.getSystem(
+          com.riiablo.engine.server.quest.Act5QuestSystem.class);
+      if (quests != null && (source.nativeBaalOwnerIdentity == null
+          || source.nativeBaalOwnerIdentity.isCurrent(world, source.ownerId)))
+        quests.resolveBaalWaveMissile(source.ownerId, source.nativeBaalWave);
+      return;
+    }
     if (source.missile.pSrvHitFunc == 1) {
       resolveNativeExplosionDamage(sourceId, source, origin);
       return;

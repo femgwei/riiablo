@@ -266,6 +266,7 @@ public class BaseMapBuilderD2MOD {
           if (entry != null && entry.isSpawn) selected.add(entry);
         }
         MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
+        zone.nativeRegionMonsters = monstats.clone();
         for (MonStats.Entry entry : monstats) {
           prob += entry.Rarity;
         }

@@ -13,6 +13,9 @@ import java.util.Iterator;
 @PooledWeaver
 public class Pathfind extends PooledComponent {
   public GraphPath path;
+  /** A bounded native path must stop on obstruction rather than turn into A*. */
+  public boolean nativeBounded;
+  public int nativePathType;
   public Iterator<Vector2> targets = Collections.emptyIterator();
   public final Vector2 target = new Vector2();
   /** Final reachable destination used by network clients to send intent, not waypoints. */
@@ -38,6 +41,8 @@ public class Pathfind extends PooledComponent {
   public String movementBlockReason = "none";
 
   public void reset() {
+    nativeBounded = false;
+    nativePathType = 0;
     path = null;
     target.setZero();
     destination.setZero();
@@ -59,6 +64,8 @@ public class Pathfind extends PooledComponent {
 
   /** Retain the source centre when a fractional start cannot sweep to node two. */
   public Pathfind set(GraphPath path, boolean startAtSource) {
+    nativeBounded = false;
+    nativePathType = 0;
     this.path = path;
     targets = path.vectorIterator();
     Vector2 position = targets.next();

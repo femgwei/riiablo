@@ -53,12 +53,12 @@ public class Succubus extends NativeDecisionAI {
     idle(params[5]);
   }
 
-  private boolean cursed(int targetId) {
+  protected final boolean cursed(int targetId) {
     UnitStates states = mUnitStates.get(targetId);
     return states != null && states.stateList != null && states.stateList.hasCurse();
   }
 
-  private boolean positiveSkill(int slot) {
+  protected final boolean positiveSkill(int slot) {
     String[] names = {monster.monstats.Skill1, monster.monstats.Skill2,
         monster.monstats.Skill3, monster.monstats.Skill4, monster.monstats.Skill5};
     String name = names[slot];
@@ -66,13 +66,13 @@ public class Succubus extends NativeDecisionAI {
     return skill != null && skill.Id > 0;
   }
 
-  private int lifePercent(int id) {
+  protected final int lifePercent(int id) {
     // UNITS_GetCurrentLifePercentage truncates both fixed-point values first.
     int max = (int) stat(id, Stat.maxhp);
     return max == 0 ? 0 : (int) (100L * (int) stat(id, Stat.hitpoints) / max);
   }
 
-  private float stat(int id, short stat) {
+  protected final float stat(int id, short stat) {
     Attributes attrs = mAttributesWrapper.has(id) ? mAttributesWrapper.get(id).attrs : null;
     return attrs == null ? 0f : attrs.getValue(stat, 0f);
   }

@@ -87,6 +87,14 @@ public class Box2DPhysics extends IntervalSystem {
     return box2d;
   }
 
+  /** Monster_Reinitialize changes class and collision size without changing GUID. */
+  public void rebuildMonsterBody(int entityId) {
+    if (box2d == null || box2d.isLocked() || !mBox2DBody.has(entityId)) return;
+    Box2DBody wrapper = mBox2DBody.get(entityId);
+    if (wrapper.body != null) box2d.destroyBody(wrapper.body);
+    wrapper.body = createBody(entityId);
+  }
+
   @Override
   protected void initialize() {
     Box2D.init();

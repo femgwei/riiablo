@@ -94,6 +94,64 @@ import com.badlogic.gdx.utils.IntIntMap;
  * active frame.</p>
  */
 public class ServerSkillSystem extends PassiveSystem {
+  private double nativeElapsedFrames;
+  /** MonsterUnique suicide modifier: one direct packet, visual missile only. */
+  public void resolveSuicideExplosion(int source, int coldLength, int radius, long seedRoll) {
+    if (!mMonster.has(source) || !mAttributesWrapper.has(source) || !mPosition.has(source)) return;
+    Monster owner = mMonster.get(source);
+    MonsterStatsCalculator.MonsterStatsInit base = new MonsterStatsCalculator.MonsterStatsInit();
+    int difficulty = combatDifficulty(source, source);
+    int level = (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1);
+    if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(owner.monstats.hcIdx,
+        1, difficulty, level, (short) 8, base)) return;
+    int span = base.A1MaxD - base.A1MinD;
+    int raw = base.A1MinD + (span > 0 ? (int) (seedRoll % span) : 0);
+    String name = coldLength == 1 ? "suicidefireexplode"
+        : coldLength < 2 ? "suicidecorpseexplode" : "suicideiceexplode";
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null || factory == null) return;
+    Vector2 origin = mPosition.get(source).position;
+    int visual = factory.createMissile(row, new Vector2(1, 0), origin, source, 1);
+    if (visual < 0) return;
+    if (mMissile.has(visual)) mMissile.get(visual).presentationOnly = true;
+    IntBag units = world.getAspectSubscriptionManager().get(
+        Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    // Damage callbacks may mutate subscriptions; freeze the affected candidate ids.
+    int[] candidates = java.util.Arrays.copyOf(units.getData(), units.size());
+    for (int target : candidates) {
+      if (target == source || !world.getEntityManager().isActive(target)
+          || (!mPlayer.has(target) && !mMonster.has(target) && !mMercenary.has(target))
+          || !hasPositiveLife(target) || !sameZone(source, target)
+          || isTownUnit(target) || !isHostile(source, target) || !mNativeUnitFlagsValid(target)
+          || mPosition.get(target).position.dst2(origin) > (long) radius * radius) continue;
+      Attributes defender = mAttributesWrapper.get(target).attrs;
+      StateList states = stateList(target);
+      boolean player = mPlayer.has(target);
+      CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+          defender, player, raw, states);
+      CombatSystem.CombatResult elemental = coldLength <= 0 ? new CombatSystem.CombatResult()
+          : CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(defender, player, false,
+              coldLength == 1 ? CombatSystem.DAMAGE_FIRE : CombatSystem.DAMAGE_COLD,
+              raw, 0, states, difficulty);
+      StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+      StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
+      if (elemental.absorbedLife > 0 && max != null)
+        hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
+      DamageEvent damage = DamageEvent.obtainMissile(source, target,
+          physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null);
+      if (events != null) events.dispatch(damage);
+      hp.sub(Math.max(0f, damage.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+      } else if (coldLength >= 2) {
+        int duration = CombatSystem.INSTANCE.resolveColdLengthBeforeState(defender,
+            player, coldLength, 0, states, difficulty);
+        if (duration > 0) com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE
+            .applyCold(target, duration, source);
+      }
+    }
+  }
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
   private static final int NOVA_MISSILE_COUNT = 64;
@@ -131,6 +189,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Override
   protected void processSystem() {
+    nativeElapsedFrames += Math.max(0f, world.delta) * 25.0;
     int elapsed = Math.max(1, Math.round(world.delta * 25f));
     IntIntMap.Entries entries = poisonJavelinDelayFrames.entries();
     while (entries.hasNext) {
@@ -538,6 +597,157 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (skill.Id == 286) { // Native Baal Monster Spawn: stationary target controller.
+      Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissile);
+      if (row == null || row.pSrvHitFunc != 54) return;
+      Vector2 origin = resolveTargetPoint(event, mPosition.get(event.entityId).position, new Vector2());
+      int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
+      int id = createMissile(row, Vector2.X, origin, event.entityId, null, level);
+      if (id >= 0 && mMissile.has(id)) {
+        Missile controller = mMissile.get(id);
+        controller.skillId = skill.Id;
+        com.riiablo.engine.server.quest.Act5QuestSystem quests = world.getSystem(
+            com.riiablo.engine.server.quest.Act5QuestSystem.class);
+        controller.nativeBaalWave = quests == null ? -1 : quests.pendingBaalWaveForAi();
+        com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+            com.riiablo.engine.server.component.NativePathIdentity.class).get(event.entityId);
+        controller.nativeBaalOwnerIdentity = identity == null ? null : identity.token();
+        controller.damageLevel = level;
+        controller.range = 0f;
+        controller.nativeLifetimeFrames = Missile.nativeRangeFrames(row, level);
+        if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+      }
+      return;
+    }
+    if (skill.srvdofunc == 134) {
+      applySiegeBeastStomp(event, skill);
+      return;
+    }
+    if (skill.srvdofunc == 131) {
+      int target = event.targetId;
+      if (target < 0 || !hasPositiveLife(target)) return;
+      com.riiablo.codec.excel.States.Entry definition = Riiablo.files.States.get(skill.auratargetstate);
+      if (definition == null) return;
+      int level = getSkillLevel(event.entityId, skill.Id);
+      UnitStates holder = mUnitStates.get(target);
+      if (holder == null || holder.stateList == null) holder = mUnitStates.create(target).init(world, target);
+      if (mMonster.has(target) && "minion1".equals(mMonster.get(target).monstats.BaseId)) {
+        com.riiablo.engine.server.component.AIWrapper sourceAi = world.getMapper(
+            com.riiablo.engine.server.component.AIWrapper.class).get(event.entityId);
+        long roll = sourceAi == null ? 0 : sourceAi.ai.rollNativeSkillRandomNumber() % 100;
+        int chance = SkillFormula.evaluate(skill.calc1, skill, level,
+            name -> getBaseSkillLevel(event.entityId, name));
+        if (roll >= chance && !holder.stateList.hasState(definition.id)) {
+          MonStats.Entry old = mMonster.get(target).monstats;
+          MonStats.Entry variant = Riiablo.files.monstats.get(old.BaseId);
+          int depth = 0;
+          while (variant != null && variant.hcIdx != old.hcIdx && depth < 128) {
+            variant = Riiablo.files.monstats.get(variant.NextInClass); depth++;
+          }
+          MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+          if (summon != null) summon = Riiablo.files.monstats.get(summon.BaseId);
+          for (int i = 0; i < depth && summon != null; i++)
+            summon = Riiablo.files.monstats.get(summon.NextInClass);
+          int mode = hasText(skill.summode) ? Riiablo.files.MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
+          if (summon != null && factory != null && factory.reinitializeMonster(target,
+              summon.hcIdx, mode >= 0 && mode < 16 ? mode : Engine.Monster.MODE_NU)) {
+            UnitStates transformed = mUnitStates.get(target);
+            UnitState changed = transformed.stateList.addStateLayer(
+                StateId.CHANGECLASS, 0, level, event.entityId, skill.Id);
+            changed.setStatContribution(Stat.shortparam1, 0,
+                NativeStatResolver.Operation.ADD, summon.hcIdx);
+          }
+          return;
+        }
+      }
+      int duration = SkillFormula.evaluate(skill.auralencalc, skill, level,
+          name -> getBaseSkillLevel(event.entityId, name));
+      UnitState buff = holder.stateList.addStateLayer(definition.id, duration, level, event.entityId, skill.Id);
+      buff.clearModifiers();
+      int length = Math.min(skill.aurastat == null ? 0 : skill.aurastat.length,
+          skill.aurastatcalc == null ? 0 : skill.aurastatcalc.length);
+      for (int i = 0; i < length; i++) {
+        if (!hasText(skill.aurastat[i])) continue;
+        int stat = Stat.index(skill.aurastat[i]);
+        if (stat < 0) continue;
+        int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, level,
+            name -> getBaseSkillLevel(event.entityId, name));
+        buff.setStatContribution(stat, 0, com.riiablo.attributes.NativeStatResolver.Operation.ADD, value);
+      }
+      return;
+    }
+    if (skill.srvdofunc == 132) {
+      if (!mMonster.has(event.entityId)) return;
+      Missiles.Entry base = Riiablo.files.Missiles.get(skill.srvmissilea);
+      if (base == null || base.Id <= 0) return;
+      Monster monster = mMonster.get(event.entityId);
+      MonStats.Entry variant = Riiablo.files.monstats.get(monster.monstats.BaseId);
+      int depth = 0;
+      while (variant != null && variant.hcIdx != monster.monstats.hcIdx && depth < 128) {
+        variant = Riiablo.files.monstats.get(variant.NextInClass);
+        depth++;
+      }
+      Missiles.Entry row = Riiablo.files.Missiles.get(base.Id + depth);
+      if (row == null) return;
+      Vector2 start = mPosition.get(event.entityId).position;
+      Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start);
+      if (direction.isZero()) direction.set(1, 0);
+      int level = getSkillLevel(event.entityId, skill.Id);
+      int id = createMissile(row, direction.nor(), start, event.entityId, null, level);
+      if (id >= 0) initializeSkillDamage(id, skill, event.entityId, level);
+      return;
+    }
+    if (skill.srvdofunc == 133) {
+      int target = event.targetId;
+      if (target < 0 || !mMonster.has(target) || !hasPositiveLife(target)) return;
+      Monster victim = mMonster.get(target);
+      if (victim.monstats.Align == 1 || "putriddefiler1".equals(victim.monstats.BaseId)
+          || "painworm1".equals(victim.monstats.BaseId)) return;
+      UnitStates holder = mUnitStates.get(target);
+      if (holder == null || holder.stateList == null) holder = mUnitStates.create(target).init(world, target);
+      if (holder.stateList.hasState(StateId.PREGNANT)) return;
+      UnitState state = holder.stateList.addStateLayer(StateId.PREGNANT, 0,
+          getSkillLevel(event.entityId, skill.Id), event.entityId, skill.Id);
+      com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+          com.riiablo.engine.server.component.NativePathIdentity.class).get(target);
+      final com.riiablo.engine.server.component.NativePathIdentity.Token token =
+          identity == null ? null : identity.token();
+      state.removalCallback = (list, removed) -> {
+        if (factory == null || !world.getEntityManager().isActive(target)
+            || token != null && !token.isCurrent(world, target)
+            || !mPosition.has(target) || hasPositiveLife(target)) return;
+        MonStats.Entry summon = hasText(skill.summon) ? Riiablo.files.monstats.get(skill.summon) : null;
+        if (summon == null) summon = Riiablo.files.monstats.get("painworm1");
+        if (summon == null) return;
+        Vector2 position = mPosition.get(target).position;
+        int spawned = factory.createMonster(summon, position.x, position.y);
+        int mode = hasText(skill.summode) ? Riiablo.files.MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
+        if (spawned >= 0 && mode >= 0 && mode < 16) {
+          CofManager cofs = world.getSystem(CofManager.class);
+          if (cofs != null) cofs.setMode(spawned, (byte) mode, true);
+        }
+      };
+      return;
+    }
+    if (skill.srvdofunc == 128) {
+      if (!mMonster.has(event.entityId) || event.targetId < 0
+          || !world.getEntityManager().isActive(event.targetId)) return;
+      int timeout = Math.max(1, SkillFormula.evaluate(skill.calc1, skill,
+          getSkillLevel(event.entityId, skill.Id), name -> getBaseSkillLevel(event.entityId, name)));
+      AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+      long frame = simulation == null ? (long) (nativeElapsedFrames + .00001) : simulation.tickNumber();
+      IntBag minions = world.getAspectSubscriptionManager().get(Aspect.all(Monster.class)).getEntities();
+      for (int i = 0; i < minions.size(); i++) {
+        int id = minions.get(i);
+        if (mMonster.get(id).minionOwnerId != event.entityId) continue;
+        com.riiablo.engine.server.component.NativeAiCommand command = world.getMapper(
+            com.riiablo.engine.server.component.NativeAiCommand.class).create(id);
+        command.copy(world, event.entityId,
+            com.riiablo.engine.server.component.NativeAiCommand.ATTACK, event.targetId);
+        command.expiresAtFrame = frame + timeout;
+      }
+      return;
+    }
     if (skill.srvdofunc == 136) {
       spawnDeathMaul(event, skill);
       return;
@@ -558,7 +768,7 @@ public class ServerSkillSystem extends PassiveSystem {
       applyDiabCold(event, skill, getSkillLevel(event.entityId, skill.Id));
       return;
     }
-    if ((skill.srvdofunc == 95 || skill.srvdofunc == 152) && mCasting.has(event.entityId)
+    if ((skill.srvdofunc == 95 || skill.srvdofunc == 152 || skill.srvdofunc == 126) && mCasting.has(event.entityId)
         && mCasting.get(event.entityId).monInferno != null) {
       event.monInfernoMissileId = spawnMonInferno(event, skill);
       return;
@@ -1190,6 +1400,66 @@ public class ServerSkillSystem extends PassiveSystem {
       consumeJavelinQuantityForSkill(event, skill);
       consumeRangedAmmoForSkill(event, skill);
     }
+  }
+
+  /** SrvDo134 rolls one packet, then applies it directly to the nearby units. */
+  private void applySiegeBeastStomp(SkillDoEvent event, Skills.Entry skill) {
+    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (missile == null || missile.Id <= 0 || !mAttributesWrapper.has(event.entityId)) return;
+    int source = event.entityId;
+    int level = getSkillLevel(source, skill.Id);
+    java.util.function.ToIntFunction<String> levels = name -> getBaseSkillLevel(source, name);
+    int physicalRaw = rollMonsterSkillDamage(source,
+        MissileDamageResolver.skillPhysicalDamage(skill, level, true, levels),
+        MissileDamageResolver.skillPhysicalDamage(skill, level, false, levels));
+    int elementalRaw = rollMonsterSkillDamage(source,
+        MissileDamageResolver.skillElementalDamage(skill, level, true, levels),
+        MissileDamageResolver.skillElementalDamage(skill, level, false, levels));
+    int radius = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, level, levels));
+    Vector2 origin = new Vector2(mPosition.get(source).position);
+    IntBag units = world.getAspectSubscriptionManager().get(
+        Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    int[] candidates = java.util.Arrays.copyOf(units.getData(), units.size());
+    for (int target : candidates) {
+      if (target == source || !world.getEntityManager().isActive(target)
+          || (!mPlayer.has(target) && !mMonster.has(target) && !mMercenary.has(target))
+          || !hasPositiveLife(target) || !sameZone(source, target) || isTownUnit(target)
+          || !isHostile(source, target) || !mNativeUnitFlagsValid(target)
+          || origin.dst2(mPosition.get(target).position) > (long) radius * radius) continue;
+      Attributes defender = mAttributesWrapper.get(target).attrs;
+      StateList states = stateList(target);
+      boolean player = mPlayer.has(target);
+      CombatSystem.CombatResult physical = CombatSystem.INSTANCE.calculateNativeFixedPhysicalDamage(
+          defender, player, physicalRaw, states);
+      CombatSystem.CombatResult elemental = CombatSystem.INSTANCE.calculateNativeFixedElementalDamage(
+          defender, player, false, elementalDamageType(skill.EType), elementalRaw, 0,
+          states, combatDifficulty(source, target));
+      StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+      StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
+      if (hp == null) continue;
+      if (elemental.absorbedLife > 0 && max != null
+          && (states == null || !states.hasState(StateId.DEATH_DELAY)))
+        hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
+      DamageEvent damage = DamageEvent.obtainMissile(source, target,
+          physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null, elemental);
+      if (events != null) events.dispatch(damage);
+      hp.sub(Math.max(0f, damage.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+      }
+    }
+  }
+
+  private int rollMonsterSkillDamage(int source, int minimum, int maximum) {
+    int min = Math.max(0, minimum);
+    long span = (long) Math.max(min, maximum) - min;
+    if (span == 0) return min;
+    com.riiablo.engine.server.component.AIWrapper wrapper = world.getMapper(
+        com.riiablo.engine.server.component.AIWrapper.class).get(source);
+    if (wrapper != null && wrapper.ai != null)
+      return (int) (min + wrapper.ai.rollNativeSkillRandomNumber() % span);
+    return rollNativeDamage(min, maximum);
   }
 
   /** Native SKILLS_SrvDo029: create or refresh the self Thunder Storm aura. */

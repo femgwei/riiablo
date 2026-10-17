@@ -336,6 +336,7 @@ class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
       when(map.getZone(any(Vector2.class))).thenReturn(zone);
       when(zone.areRoomsAdjacent(anyFloat(), anyFloat(), anyFloat(), anyFloat())).thenReturn(true);
       when(paths.findPath(anyInt(), any(), anyBoolean(), anyInt())).thenReturn(true);
+      when(paths.findNativeOrbit(anyInt(), anyInt(), anyInt(), anyBoolean())).thenReturn(true);
       com.riiablo.engine.server.party.PartyManager parties =
           new com.riiablo.engine.server.party.PartyManager();
       world = new World(new WorldConfigurationBuilder()

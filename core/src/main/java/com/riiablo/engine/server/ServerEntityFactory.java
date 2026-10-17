@@ -377,6 +377,31 @@ public class ServerEntityFactory extends EntityFactory {
   @Override
   public int createMonster(int monsterId, float x, float y,
       int rank, long affixes, int championType, int uniqueId) {
+    return initializeMonster(Engine.INVALID_ENTITY, monsterId, x, y,
+        rank, affixes, championType, uniqueId);
+  }
+
+  @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {
+    if (!mMonster.has(entityId) || !mPosition.has(entityId) || mode < 0 || mode >= 16) return false;
+    MonStats.Entry row = Riiablo.files.monstats.get(monsterId);
+    if (row == null || !row.enabled) return false;
+    Vector2 position = mPosition.get(entityId).position;
+    int rebuilt = initializeMonster(entityId, monsterId, position.x, position.y,
+        0, 0L, -1, -1);
+    if (rebuilt < 0) return false;
+    CofManager cofs = world.getSystem(CofManager.class);
+    if (cofs != null) cofs.setMode(entityId, (byte) mode, true);
+    else mCofReference.get(entityId).mode = (byte) mode;
+    if (mLifecycle != null && mLifecycle.has(entityId)) mLifecycle.get(entityId).revive();
+    com.riiablo.map.Box2DPhysics physics = world.getSystem(com.riiablo.map.Box2DPhysics.class);
+    if (physics != null) physics.rebuildMonsterBody(entityId);
+    DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collisions != null) collisions.refreshNow();
+    return true;
+  }
+
+  private int initializeMonster(int existingId, int monsterId, float x, float y,
+      int rank, long affixes, int championType, int uniqueId) {
     MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
     if (monstats == null) {
       log.error("[MONSTER_NATIVE_STATS] monster row missing: id={}", monsterId);
@@ -441,7 +466,24 @@ public class ServerEntityFactory extends EntityFactory {
     int monsterLevel = baseMonsterLevel
         + MonsterStatsCalculator.nativeRankLevelBonus(rank);
 
-    int id = super.createEntity(Class.Type.MON, monstats.Id);
+    int id = existingId == Engine.INVALID_ENTITY
+        ? super.createEntity(Class.Type.MON, monstats.Id) : existingId;
+    if (existingId != Engine.INVALID_ENTITY) {
+      NativeTargetNodes.get(world, id).detach();
+      if (mUnitStates.has(id) && mUnitStates.get(id).stateList != null)
+        mUnitStates.get(id).stateList.discardAll();
+      mCasting.remove(id);
+      mSequence.remove(id);
+      mRunning.remove(id);
+      mCorpse.remove(id);
+      mInteractable.remove(id);
+      mSuperUnique.remove(id);
+      world.getMapper(com.riiablo.engine.server.component.Pathfind.class).remove(id);
+      world.getMapper(com.riiablo.engine.server.component.NativeAiCommand.class).remove(id);
+      world.getMapper(com.riiablo.engine.server.component.NativeAiState.class).remove(id);
+      mNativeAiPathCache.remove(id);
+      mClassname.create(id).classname = monstats.Id;
+    }
     // D2MOO stores town/transition NPCs in UNIT_MONSTER, but the native
     // MonStats NPC flag keeps them out of the monster faction and combat AI.
     // Flavie at the Blood Moor -> Cold Plains transition is the visible case.
@@ -457,7 +499,8 @@ public class ServerEntityFactory extends EntityFactory {
     monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
 
-    Attributes attrs = Attributes.obtainStandard();
+    Attributes attrs = existingId != Engine.INVALID_ENTITY && mAttributesWrapper.has(id)
+        ? mAttributesWrapper.get(id).attrs : Attributes.obtainStandard();
     StatListRef base = attrs.base();
     base.clear();
     base.put(Stat.level, monsterLevel);
@@ -531,6 +574,7 @@ public class ServerEntityFactory extends EntityFactory {
     mAngle.create(id);
 
     CofReference reference = mCofReference.create(id);
+    if (existingId != Engine.INVALID_ENTITY) reference.clearVisualOverride();
     // D2 COF table uses MonStats.Code (abbreviation like "FA"), not Id (full name like "fallen1")
     reference.token  = monstats.Code;
     reference.mode   = monstats.spawnmode.isEmpty() ? Engine.Monster.MODE_NU : (byte) Riiablo.files.MonMode.index(monstats.spawnmode);
@@ -541,6 +585,7 @@ public class ServerEntityFactory extends EntityFactory {
           monstats.Id, monstats2.BaseW);
     }
     int[] component = mCofComponents.create(id).component;
+    if (existingId != Engine.INVALID_ENTITY) Arrays.fill(component, CofComponents.COMPONENT_NIL);
     boolean hasComponentValue = false;
     for (byte i = 0; i < monstats2.ComponentV.length; i++) {
       String ComponentV = monstats2.ComponentV[i];
@@ -565,6 +610,10 @@ public class ServerEntityFactory extends EntityFactory {
 
     mCofAlphas.create(id);
     CofTransforms transforms = mCofTransforms.create(id);
+    if (existingId != Engine.INVALID_ENTITY) {
+      Arrays.fill(mCofAlphas.get(id).alpha, CofAlphas.ALPHA_NULL);
+      Arrays.fill(transforms.transform, CofTransforms.TRANSFORM_NULL);
+    }
     // MonStats variants share a Code/model and select their native colours
     // through TransLvl and the matching monster palshift.dat. palshift.dat's
     // first two rows are reserved; TransLvl 0 uses row 2.

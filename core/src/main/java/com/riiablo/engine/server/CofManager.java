@@ -61,6 +61,22 @@ public class CofManager extends BaseEntitySystem {
     if (restart && !force) return;
     if (force) reference.animationRestartId++;
     Monster monster = mMonster.get(id);
+    if (monster != null && monster.monstats != null
+        && "catapult1".equals(monster.monstats.BaseId)
+        && (mode == com.riiablo.engine.Engine.Monster.MODE_DT
+            || mode == com.riiablo.engine.Engine.Monster.MODE_DD)) {
+      com.riiablo.engine.server.component.MapWrapper wrapper = world.getMapper(
+          com.riiablo.engine.server.component.MapWrapper.class).get(id);
+      com.riiablo.engine.server.component.Position position = world.getMapper(
+          com.riiablo.engine.server.component.Position.class).get(id);
+      if (wrapper != null && wrapper.zone != null && position != null) {
+        com.riiablo.map.Map.RoomEx room = wrapper.zone.findRoomEx(position.position.x, position.position.y);
+        if (room != null) room.recordDeadCatapult(monster.monstats.hcIdx);
+      }
+    }
+    if (monster != null) world.getMapper(
+        com.riiablo.engine.server.component.NativeAiState.class).create(id)
+        .onModeChange(reference.mode);
     if (monster != null && (Monster.isMeleeMode(reference.mode) || Monster.isMeleeMode(mode)
         || (mSequence.has(id) && Monster.isMeleeMode(mSequence.get(id).mode1)))) {
       AnimData anim = mAnimData.get(id);

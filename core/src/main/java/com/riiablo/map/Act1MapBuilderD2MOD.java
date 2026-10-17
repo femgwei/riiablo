@@ -570,6 +570,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
 
           MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
+          zone.nativeRegionMonsters = monstats.clone();
           for (MonStats.Entry entry : monstats) {
             prob += entry.Rarity;
           }

@@ -20,6 +20,9 @@ public class Missile extends PooledComponent {
   
   /** 导弹拥有者实体 ID（用于伤害计算和敌人判断） */
   public int ownerId = -1;
+  /** Wave and owner lifetime captured by the Baal spawn controller. */
+  public int nativeBaalWave = -1;
+  public NativePathIdentity.Token nativeBaalOwnerIdentity;
   /** Per-projectile native RNG state (pierce/branch rolls never use global RNG). */
   public int rngState;
 
@@ -263,6 +266,8 @@ public class Missile extends PooledComponent {
     missileDescriptor = null;
     start.setZero();
     ownerId = -1;
+    nativeBaalWave = -1;
+    nativeBaalOwnerIdentity = null;
     rngState = 0;
     roomId = -1;
     authoritative = true;

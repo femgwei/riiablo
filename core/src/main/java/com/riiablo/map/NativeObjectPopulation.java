@@ -47,7 +47,7 @@ final class NativeObjectPopulation {
       // D2Game returns as soon as a theme handler creates anything; the
       // ObjGroup dispatcher is not run a second time for that room.
       if (populateTheme(zone, room, region)) continue;
-      D2Seed roomSeed = new D2Seed(room.populationSeed(), room.populationSeedHigh());
+      D2Seed roomSeed = room.runtimeSeed();
       for (int slot = 0; zone.level.ObjGrp != null && slot < zone.level.ObjGrp.length; slot++) {
         int groupId = zone.level.ObjGrp[slot];
         int probability = next(roomSeed, 100);

@@ -5,7 +5,7 @@ import com.riiablo.engine.server.combat.NativeMeleeDistance;
 /** Read-only nonzero-point projection of PathMisc.cpp PATH_Toward.
  * Assumes positive native velocity, zero direction offset and stable collision
  * queries. Does not model the dynamic-path wrapper, flags or install a path. */
-final class NativeTowardPathProbe {
+public final class NativeTowardPathProbe {
   private static final int[][] DIRECTIONS = {
       {5, 4, 6}, {4, 5, 6}, {4, 3, 5}, {4, 3, 2}, {3, 4, 2},
       {6, 5, 4}, {5, 4, 6}, {4, 3, 5}, {3, 4, 2}, {2, 3, 4},
@@ -16,7 +16,71 @@ final class NativeTowardPathProbe {
   private static final int[] DX = {1, 1, 0, -1, -1, -1, 0, 1};
   private static final int[] DY = {0, 1, 1, 1, 0, -1, -1, -1};
 
-  interface Blocked { boolean at(int x, int y); }
+  public interface Blocked { boolean at(int x, int y); }
+
+  /** PATH_Toward with zero direction offset, generating its actual waypoints. */
+  public static com.riiablo.map.pfa.GraphPath toward(int sx, int sy, int tx, int ty,
+      int budget, int tolerance, Blocked blocked) {
+    com.riiablo.map.pfa.GraphPath path = new com.riiablo.map.pfa.GraphPath();
+    path.add(new com.riiablo.map.pfa.Point2(sx, sy));
+    RayResult ray = trace(sx, sy, tx, ty, blocked);
+    if (ray.clear || heuristic(ray.x - tx, ray.y - ty) <= tolerance) {
+      if (ray.x != sx || ray.y != sy) path.add(new com.riiablo.map.pfa.Point2(ray.x, ray.y));
+      return path;
+    }
+    int x = ray.x, y = ray.y;
+    if (x != sx || y != sy) path.add(new com.riiablo.map.pfa.Point2(x, y));
+    int previous = -1, steps = 0;
+    boolean turned = false;
+    for (; steps < Math.min(77, budget); steps++) {
+      if (x == tx && y == ty) { turned = false; break; }
+      turned = false;
+      int direction = -1;
+      for (int candidate : DIRECTIONS[directionIndex(tx - x, ty - y)]) {
+        if (!blocked.at(x + DX[candidate], y + DY[candidate])) {
+          direction = candidate; break;
+        }
+      }
+      if (direction < 0 || ((direction + 4) & 7) == previous) break;
+      if (direction != previous) {
+        if (x != sx || y != sy) path.add(new com.riiablo.map.pfa.Point2(x, y));
+        turned = true;
+      }
+      x += DX[direction]; y += DY[direction]; previous = direction;
+    }
+    if (!turned && steps > 0 && (x != sx || y != sy))
+      path.add(new com.riiablo.map.pfa.Point2(x, y));
+    return path;
+  }
+
+  /** PathMisc.cpp sub_6FDAA720, including native segment-end truncation. */
+  public static com.riiablo.map.pfa.GraphPath orbit(int sx, int sy, int tx, int ty,
+      int budget, int offset, Blocked blocked) {
+    com.riiablo.map.pfa.GraphPath path = new com.riiablo.map.pfa.GraphPath();
+    path.add(new com.riiablo.map.pfa.Point2(sx, sy));
+    int x = sx, y = sy, previous = -1, steps = 0;
+    boolean added = false;
+    for (; steps < Math.min(77, budget); steps++) {
+      if (x == tx && y == ty) break;
+      added = false;
+      int direction = -1;
+      for (int candidate : DIRECTIONS[directionIndex(tx - x, ty - y)]) {
+        int d = (candidate + offset + 8) & 7;
+        if (!blocked.at(x + DX[d], y + DY[d])) { direction = d; break; }
+      }
+      if (direction < 0 || ((direction + 4) & 7) == previous) break;
+      if (direction != previous) {
+        if (x != sx || y != sy) path.add(new com.riiablo.map.pfa.Point2(x, y));
+        added = true;
+      }
+      x += DX[direction];
+      y += DY[direction];
+      previous = direction;
+    }
+    if (!added && steps != 0 && (x != sx || y != sy))
+      path.add(new com.riiablo.map.pfa.Point2(x, y));
+    return path;
+  }
 
   /** PATH_RayTrace's clipped endpoint, not an A* reachability result. */
   static final class RayResult {

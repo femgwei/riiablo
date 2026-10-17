@@ -36,7 +36,7 @@ import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.event.common.EventSystem;
-import net.mostlyoriginal.api.system.core.PassiveSystem;
+import com.artemis.BaseSystem;
 
 /**
  * Event adapter for the native Act III Golden Bird quest.
@@ -48,7 +48,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
  * and dialogue transitions.</p>
  */
 @Wire(failOnNull = false)
-public class Act3QuestSystem extends PassiveSystem {
+public class Act3QuestSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(Act3QuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -76,9 +76,154 @@ public class Act3QuestSystem extends PassiveSystem {
   private boolean jadeDropIssued;
   private boolean gidbinnDropIssued;
   private boolean khalimFlailDropIssued;
+  private boolean darkWandererInitialized;
+  private boolean darkWandererCoordinatesCalculated;
+  private boolean darkWandererDeparted;
+  private int darkWandererEntity = -1;
+  private long darkWandererDepartureFrame = -1;
+  private long darkWandererFrame;
+  private double darkWandererElapsed;
+  private final com.badlogic.gdx.math.Vector2 darkWandererCoordinates = new com.badlogic.gdx.math.Vector2();
+  private final com.badlogic.gdx.utils.IntMap<Long> afterglowDeadlines = new com.badlogic.gdx.utils.IntMap<>();
+  private final com.badlogic.gdx.utils.IntMap<com.riiablo.engine.server.component.NativePathIdentity.Token>
+      afterglowIdentities = new com.badlogic.gdx.utils.IntMap<>();
+  private final com.d2moo.common.drlg.D2Seed wandererQuestSeed = new com.d2moo.common.drlg.D2Seed();
+
+  @Override protected void processSystem() {
+    darkWandererElapsed += Math.max(0f, world.delta) * 25.0;
+    com.riiablo.engine.server.AuthoritativeSimulation simulation =
+        com.riiablo.engine.server.AuthoritativeSimulation.current();
+    darkWandererFrame = simulation == null ? (long) (darkWandererElapsed + .00001)
+        : simulation.tickNumber();
+    updateVileDogAfterglows();
+    if (!darkWandererInitialized && factory != null) {
+      IntBag objects = world.getAspectSubscriptionManager().get(
+          Aspect.all(Object.class, Position.class)).getEntities();
+      for (int i = 0; i < objects.size(); i++) {
+        int id = objects.get(i);
+        Object object = mObject.get(id);
+        if (object.base == null || object.base.InitFn != 43) continue;
+        com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get("darkwanderer");
+        if (row == null) break;
+        boolean alreadySeen = false;
+        IntBag players = playersByZone.getEntities();
+        for (int j = 0; j < players.size(); j++) {
+          Player player = mPlayer.get(players.get(j));
+          if (player.data != null && NativeQuestRecord.has(player.data.getQuests(Riiablo.ACT3)[7],
+              NativeQuestRecord.REWARD_GRANTED)) { alreadySeen = true; break; }
+        }
+        if (!alreadySeen) {
+          com.badlogic.gdx.math.Vector2 position = mPosition.get(id).position;
+          darkWandererCoordinates.set((int) position.x + 7, (int) position.y);
+          darkWandererEntity = factory.createMonster(row,
+              darkWandererCoordinates.x, darkWandererCoordinates.y);
+          if (darkWandererEntity < 0) continue;
+        }
+        darkWandererInitialized = true;
+        break;
+      }
+    }
+    if (!darkWandererDeparted && darkWandererDepartureFrame >= 0
+        && darkWandererFrame >= darkWandererDepartureFrame) {
+      darkWandererDeparted = true;
+      IntBag players = playersByZone.getEntities();
+      for (int i = 0; i < players.size(); i++) {
+        int id = players.get(i);
+        Player player = mPlayer.get(id);
+        MapWrapper wrapper = mMapWrapper.get(id);
+        if (player.data == null || wrapper.zone == null || wrapper.zone.level == null
+            || !isAct3Level(wrapper.zone.level.Id)) continue;
+        player.data.getQuests(Riiablo.ACT3)[7] = NativeQuestRecord.set(
+            player.data.getQuests(Riiablo.ACT3)[7], NativeQuestRecord.REWARD_GRANTED);
+        persist(player.data);
+      }
+      // A3Q7's source starts this accumulator at (0,0), not the wanderer's
+      // position. Preserve that placement behavior rather than silently fixing it.
+      MapWrapper wrapper = darkWandererEntity < 0 ? null : mMapWrapper.get(darkWandererEntity);
+      if (wrapper != null && wrapper.zone != null) {
+        int[][] offsets = {{-3,-3},{-3,0},{-3,3},{0,-3},{0,3},{3,-3},{3,0},{-3,3}};
+        int start = (int) (com.d2moo.common.seed.Seed.rollRandomNumber(wandererQuestSeed) & 1L);
+        com.badlogic.gdx.math.Vector2 point = new com.badlogic.gdx.math.Vector2();
+        com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+        for (int i = start; i < offsets.length; i++) {
+          point.add(offsets[i][0], offsets[i][1]);
+          if (wrapper.zone.findFreeCoordinates(point, 3, 11, 0x1C09, true, free))
+            factory.createStaticObjectByClassId(131, free.x, free.y);
+        }
+      }
+    }
+  }
+
+  private void updateVileDogAfterglows() {
+    IntBag objects = world.getAspectSubscriptionManager().get(
+        Aspect.all(Object.class, Position.class, MapWrapper.class)).getEntities();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = objects.get(i);
+      Object object = mObject.get(id);
+      if (object.base == null || object.base.InitFn != 59) continue;
+      com.riiablo.engine.server.component.NativePathIdentity.Token previous = afterglowIdentities.get(id);
+      if (previous != null && !previous.isCurrent(world, id)) {
+        afterglowDeadlines.remove(id);
+        afterglowIdentities.remove(id);
+      }
+      Long deadline = afterglowDeadlines.get(id);
+      if (deadline == null) {
+        if (object.mode != com.riiablo.engine.Engine.Object.MODE_NU) continue;
+        setAfterglowMode(id, com.riiablo.engine.Engine.Object.MODE_OP);
+        afterglowDeadlines.put(id, darkWandererFrame + 27);
+        com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+            com.riiablo.engine.server.component.NativePathIdentity.class).get(id);
+        if (identity != null) afterglowIdentities.put(id, identity.token());
+      } else if (deadline >= 0 && darkWandererFrame >= deadline) {
+        afterglowDeadlines.put(id, -1L);
+        setAfterglowMode(id, com.riiablo.engine.Engine.Object.MODE_ON);
+        MapWrapper owner = mMapWrapper.get(id);
+        if (factory != null && owner.zone != null && owner.zone.level != null
+            && owner.zone.level.Id == D2LevelIds.LEVEL_SPIDERFOREST) {
+          com.riiablo.codec.excel.MonStats.Entry child = Riiablo.files.monstats.get("vilechild1");
+          com.badlogic.gdx.math.Vector2 point = mPosition.get(id).position.cpy();
+          if (child != null && owner.zone.findFreeCoordinates(point, 1, 3, 0x1C09, false, point))
+            factory.createMonster(child, point.x, point.y);
+        }
+      }
+    }
+  }
+
+  private void setAfterglowMode(int id, byte mode) {
+    com.riiablo.engine.server.CofManager cofs = world.getSystem(com.riiablo.engine.server.CofManager.class);
+    if (cofs != null) cofs.setMode(id, mode);
+    mObject.get(id).mode = mode;
+    NativeObjectState state = mNativeObjectState.get(id);
+    if (state != null) state.persistMode(mode);
+  }
+
+  public boolean getDarkWandererCoordinates(int entityId, com.badlogic.gdx.math.Vector2 result) {
+    if (!darkWandererInitialized || entityId != darkWandererEntity) return false;
+    if (!darkWandererCoordinatesCalculated) {
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      if (wrapper == null || wrapper.map == null || wrapper.zone == null) return false;
+      darkWandererCoordinatesCalculated = true;
+      int x = (int) darkWandererCoordinates.x, y = (int) darkWandererCoordinates.y;
+      int[][] probes = {{x,y-20},{x,y-11},{x+2,y-11},{x-2,y-11},{x,y-8}};
+      darkWandererCoordinates.set(x, y - 3);
+      for (int[] probe : probes) {
+        if (!wrapper.map.isBlockedForPath(wrapper.zone, probe[0], probe[1], 0x1C09, 1, false)) {
+          darkWandererCoordinates.set(probe[0], probe[1]); break;
+        }
+      }
+    }
+    result.set(darkWandererCoordinates);
+    return true;
+  }
+
+  public void scheduleDarkWandererDeparture(int entityId, long frame) {
+    if (entityId == darkWandererEntity && darkWandererDepartureFrame < 0)
+      darkWandererDepartureFrame = (frame / 20 + 3) * 20;
+  }
 
   @Override
   protected void initialize() {
+    com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, Riiablo.gameSeed);
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
   }

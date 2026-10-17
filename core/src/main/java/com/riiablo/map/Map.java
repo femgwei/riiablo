@@ -1219,6 +1219,9 @@ public class Map implements Disposable {
 
     public Map          map;
     public Levels.Entry level;
+    /** This game's selected region entries, before rarity expansion. */
+    public com.riiablo.codec.excel.MonStats.Entry[] nativeRegionMonsters =
+        new com.riiablo.codec.excel.MonStats.Entry[0];
     public int          diff;
 
     boolean        town;
@@ -1494,7 +1497,10 @@ public class Map implements Disposable {
      * This is called when zones are cleared before they are disposed -- not when obtained.
      */
     @Override
-    public void reset() { syntheticArena = false; }
+    public void reset() {
+      syntheticArena = false;
+      nativeRegionMonsters = new com.riiablo.codec.excel.MonStats.Entry[0];
+    }
 
     @Override
     public void dispose() {
@@ -2783,6 +2789,10 @@ public class Map implements Disposable {
     private int clientOutOfSightRefs;
     private int untileRefs;
     private int activationStatus = COUNT;
+    /** Dead catapult records survive removal of the active ECS room population. */
+    private final com.badlogic.gdx.utils.IntSet nativeDeadCatapults = new com.badlogic.gdx.utils.IntSet();
+    public void recordDeadCatapult(int classId) { nativeDeadCatapults.add(classId); }
+    public boolean hasDeadCatapult(int classId) { return nativeDeadCatapults.contains(classId); }
     private final Array<MonsterSpawn> pendingMonsterSpawns = new Array<>();
     private boolean monsterPopulationSpawned;
     private boolean presetUnitsSpawned;
@@ -2836,6 +2846,16 @@ public class Map implements Disposable {
     public int populationOutdoorFlag80() { return populationOutdoorFlag80; }
     public int populationSeed() { return populationSeed; }
     public int populationSeedHigh() { return populationSeedHigh; }
+    private com.d2moo.common.drlg.D2Seed runtimeSeed;
+    /** Active-room stream shared by object population and later AI spawning. */
+    public com.d2moo.common.drlg.D2Seed runtimeSeed() {
+      if (runtimeSeed == null) runtimeSeed = new com.d2moo.common.drlg.D2Seed(
+          populationSeed, populationSeedHigh);
+      return runtimeSeed;
+    }
+    public int rollAiSpawnCoordinate(int limit) {
+      return limit <= 0 ? 0 : (int) (com.d2moo.common.seed.Seed.rollRandomNumber(runtimeSeed()) % limit);
+    }
 
     RoomEx(int id, int x, int y, int width, int height) {
       this.id = id;

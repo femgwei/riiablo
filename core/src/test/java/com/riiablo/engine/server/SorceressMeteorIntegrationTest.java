@@ -35,6 +35,33 @@ import org.junit.jupiter.api.Test;
 /** Headless contract for Meteor's delayed center and persistent fire fields. */
 class SorceressMeteorIntegrationTest extends RiiabloTest {
   @Test
+  void baalMonsterSpawnCreatesItsNativeWaveControllerAtTheRequestedPoint() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = monster(world, 10f, 10f);
+      Skills.Entry skill = Riiablo.files.skills.get(286);
+      assertNotNull(skill);
+      assertEquals(0, skill.srvdofunc);
+      Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissile);
+      assertNotNull(row);
+      assertEquals(54, row.pSrvHitFunc);
+      Vector2 point = new Vector2(10, 23);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skill.Id, Engine.INVALID_ENTITY, point, skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, factory.count(row.Missile));
+      Missile controller = factory.first(row.Missile);
+      assertEquals(point, controller.start);
+      assertEquals(caster, controller.ownerId);
+      assertEquals(skill.Id, controller.skillId);
+      assertTrue(controller.nativeLifetimeFrames > 0);
+      assertTrue(!controller.meteorCenter);
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void hellMeteorCreatesDirectSrvHit13MissileAtNullTargetCoordinates() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

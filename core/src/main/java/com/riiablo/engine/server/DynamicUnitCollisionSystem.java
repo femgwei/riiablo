@@ -240,6 +240,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (type == Class.Type.MON && mMonster.has(entityId)) {
       Monster monster = mMonster.get(entityId);
       if (monster.frogNoPresence) return false;
+      if (monster.nativeOwnerId >= 0 && monster.monstats != null
+          && "imp1".equals(monster.monstats.BaseId)) return false;
       if (!isDynamicObstacle(monster)) return false;
       MonStats.Entry stats = monster.monstats;
       if (stats != null) {

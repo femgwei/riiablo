@@ -34,6 +34,17 @@ public class Monster extends Component {
 
   /** Native MonsterSpawn minion owner for ordinary monster party members. */
   public int minionOwnerId = -1;
+  /** AI-selected class consumed by Nest and monster summoning callbacks. */
+  public int nativeSpawnClassId = -1;
+  public int nativeOwnerId = -1;
+  public NativePathIdentity.Token nativeOwnerIdentity;
+  /** Fn113/Fn115 asks an unmounted Imp to use this siege unit. */
+  public int nativeRequestedMountId = -1;
+  public NativePathIdentity.Token nativeRequestedMountIdentity;
+  /** Self-resurrection limit survives rebuilding the AI after resurrection. */
+  public int nativeSelfResurrections;
+  /** MonsterSpawn's base-class MONUMOD_SELFRESURRECT assignment. */
+  public boolean nativeSelfResurrect;
   /** Baal's reciprocal UNITS_StoreOwner link (distinct from the minion owner). */
   public int baalLinkedOwnerId = -1;
   /** Successful Baal clone creations, native AiParam[1]; deaths do not refund it. */
@@ -85,6 +96,13 @@ public class Monster extends Component {
     baalWaveRoomId = -1;
     baalWaveLeader = false;
     minionOwnerId = -1;
+    nativeSpawnClassId = -1;
+    nativeOwnerId = -1;
+    nativeOwnerIdentity = null;
+    nativeRequestedMountId = -1;
+    nativeRequestedMountIdentity = null;
+    nativeSelfResurrections = 0;
+    nativeSelfResurrect = monstats != null && "reanimatedhorde1".equals(monstats.BaseId);
     baalLinkedOwnerId = -1;
     baalClonesCreated = 0;
     rngState = 0;
