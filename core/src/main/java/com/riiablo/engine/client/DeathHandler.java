@@ -473,6 +473,7 @@ public class DeathHandler extends PassiveSystem {
     
     // Set corpse position at death location
     Position corpsePos = mPosition.create(corpseEntityId);
+    corpsePos.invalidateNativePrecision();
     corpsePos.position.set(deathLocation);
     
     // Set corpse size
@@ -557,6 +558,7 @@ public class DeathHandler extends PassiveSystem {
 
     // Move player to town location
     if (mPosition.has(playerId)) {
+      mPosition.get(playerId).invalidateNativePrecision();
       mPosition.get(playerId).position.set(townLocation);
       log.debug("Player {} respawned at town location: ({}, {})", 
           playerId, townLocation.x, townLocation.y);

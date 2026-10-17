@@ -98,6 +98,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       processClientFlightFunction(entityId, visual, velocity, delta);
     }
     if (distance > 0f) {
+      mPosition.get(entityId).invalidateNativePrecision();
       mPosition.get(entityId).position.mulAdd(velocity, delta);
       visual.distanceTraveled += distance;
     }

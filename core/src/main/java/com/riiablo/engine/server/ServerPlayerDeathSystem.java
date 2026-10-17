@@ -97,7 +97,9 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     marker.cursorItem = items.detachCursorItem();
 
     int corpseId = world.create();
-    mPosition.create(corpseId).position.set(position.position);
+    Position corpsePosition = mPosition.create(corpseId);
+    corpsePosition.invalidateNativePrecision();
+    corpsePosition.position.set(position.position);
     PlayerCorpse corpse = mPlayerCorpse.create(corpseId);
     corpse.playerId = playerId;
     corpse.deathLocation.set(position.position);
