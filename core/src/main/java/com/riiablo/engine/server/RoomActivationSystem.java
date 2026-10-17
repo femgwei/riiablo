@@ -373,10 +373,16 @@ public class RoomActivationSystem extends IteratingSystem {
         }
         long affixes = superUniqueRow == null
             ? MonsterAffix.NONE : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
-        int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
-            superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
-                : spawn.rank,
-            affixes, -1, superUnique ? spawn.superUniqueId : -1);
+        int monsterId = spawn.hasIntegerSelection()
+            ? factory.createMonsterAtIntegerSelection(spawn.monsterId,
+                spawn.integerSelectionX(), spawn.integerSelectionY(),
+                superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
+                    : spawn.rank,
+                affixes, -1, superUnique ? spawn.superUniqueId : -1)
+            : factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
+                superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
+                    : spawn.rank,
+                affixes, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         if (spawn.monsterId == com.riiablo.engine.server.monster.MonsterType.NAVI) {
           log.info("[NAVI_SPAWN] level={} room={} entity={} position=({}, {})",

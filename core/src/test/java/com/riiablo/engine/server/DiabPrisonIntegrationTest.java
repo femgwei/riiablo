@@ -19,6 +19,31 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class DiabPrisonIntegrationTest extends RiiabloTest {
+  @Test void explicitMobileIntegerAllocationEstablishesRawButLegacyRebuildDropsIt() {
+    try (Fixture f = new Fixture("diablo")) {
+      int row = Riiablo.files.monstats.get("fallen1").hcIdx;
+      int id = f.factory.createMonsterAtIntegerSelection(row, 150, 150, 0, 0L, -1, -1);
+      assertTrue(id >= 0);
+      Position position = f.world.getMapper(Position.class).get(id);
+      assertEquals(new Vector2(150, 150), position.position);
+      assertEquals((150 << 16) | 0x8000, position.nativePrecisionX());
+      assertEquals((150 << 16) | 0x8000, position.nativePrecisionY());
+      assertTrue(f.factory.reinitializeMonster(id, row, Engine.Monster.MODE_NU));
+      assertFalse(position.hasNativePrecision());
+    }
+  }
+
+  @Test void outOfRawDomainSelectionKeepsLegacyAllocationWithoutPrecision() {
+    try (Fixture f = new Fixture("diablo")) {
+      int row = Riiablo.files.monstats.get("fallen1").hcIdx;
+      int id = f.factory.createMonsterAtIntegerSelection(row, 65536, 150, 0, 0L, -1, -1);
+      assertTrue(id >= 0, "raw eligibility must not change legacy allocation success");
+      Position position = f.world.getMapper(Position.class).get(id);
+      assertEquals(65536f, position.position.x);
+      assertFalse(position.hasNativePrecision());
+    }
+  }
+
   @Test void realS3CreatesFourNativeRowsBlocksExitAndHasNoTimedExpiry() {
     for (String boss : new String[] {"diablo", "diabloclone"}) try (Fixture f = new Fixture(boss)) {
       f.cast(); IntArray group = f.group(); assertEquals(4, group.size);

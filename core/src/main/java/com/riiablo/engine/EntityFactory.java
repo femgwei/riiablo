@@ -130,6 +130,13 @@ public abstract class EntityFactory extends PassiveSystem {
     return createMonster(monsterId, x, y);
   }
 
+  /** Explicit integer allocation selection; fallback factories establish no raw precision. */
+  public int createMonsterAtIntegerSelection(int monsterId, int x, int y,
+      int rank, long affixes, int championType, int uniqueId) {
+    return createMonster(monsterId, (float) x, (float) y,
+        rank, affixes, championType, uniqueId);
+  }
+
   /**
    * Creates a player-owned monster-shaped summon. Client and detached test
    * factories may decline this server-authoritative operation.

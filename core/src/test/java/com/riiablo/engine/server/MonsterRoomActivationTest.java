@@ -217,6 +217,7 @@ class MonsterRoomActivationTest {
     Map.Zone zone = nativeThreeRoomZone();
     zone.map = map;
     zone.getRoomsEx().get(2).addMonsterSpawn(7, 90, 10);
+    zone.getRoomsEx().get(2).addIntegerMonsterSpawn(7, 92, 10, -1, false);
     RecordingFactory factory = new RecordingFactory();
     RoomActivationSystem activation = new RoomActivationSystem();
     World world = new World(new WorldConfigurationBuilder().with(activation, factory)
@@ -234,16 +235,19 @@ class MonsterRoomActivationTest {
 
       playerPosition.position.set(50, 10);
       world.process();
-      assertEquals(1, factory.monstersCreated,
+      assertEquals(2, factory.monstersCreated,
           "room population must spawn on first CLIENT_IN_SIGHT transition");
+      assertEquals(1, factory.integerSelectionsCreated,
+          "only explicit provenance may use the integer allocation entry");
       assertTrue(zone.getRoomsEx().get(2).isMonsterPopulationSpawned());
 
       playerPosition.position.set(10, 10);
       world.process();
       playerPosition.position.set(50, 10);
       world.process();
-      assertEquals(1, factory.monstersCreated,
+      assertEquals(2, factory.monstersCreated,
           "reactivation must not duplicate native room population");
+      assertEquals(1, factory.integerSelectionsCreated);
     } finally {
       world.dispose();
     }
@@ -517,6 +521,15 @@ class MonsterRoomActivationTest {
   }
 
   private static final class RecordingFactory extends EntityFactory {
+    int integerSelectionsCreated;
+
+    @Override public int createMonsterAtIntegerSelection(int monsterId, int x, int y,
+        int rank, long affixes, int championType, int uniqueId) {
+      integerSelectionsCreated++;
+      return super.createMonsterAtIntegerSelection(monsterId, x, y,
+          rank, affixes, championType, uniqueId);
+    }
+
     int monstersCreated;
     int lastMonsterId = Engine.INVALID_ENTITY;
     int lastRank = MonsterRank.NORMAL;

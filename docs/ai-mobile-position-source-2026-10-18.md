@@ -50,3 +50,24 @@ RoomEx.addIntegerMonsterSpawn 是显式新入口，MonsterSpawn 保存独立整�
 结果：MonsterSpawnIntegerSelectionTest 3 项、人口真实路径用例 1 项全部通过，
 失败/错误/跳过均为 0；architectureRegression 通过（其模块测试为 UP-TO-DATE，未声称全部重跑）。
 未运行人口资源测试类中的完整自然 Act 地图用例，也未新增图形客户端验收。
+
+## 后续实现：显式整数分配到实体
+
+新增 createMonsterAtIntegerSelection，默认工厂回退旧 float 创建；服务端成功创建后，
+仅在 x/y 均属 uint16 域且最终投影等于输入时调用 initializeNativeCell。
+核对当前 initializeMonster 从参数到 Position 提交，无修改 x/y 的落点搜索；
+AI 初始化在该检查前完成。失败不读取 Position，域外输入仍走旧分配但不建立 raw。
+RoomActivationSystem 根据独立来源标记分流，旧 float 记录（即使整值）仍走旧入口。
+不改变 rank/affix/unique 参数及房间重复认领规则。
+
+新增真实工厂移动怪物出生/重建、域外分配回归，房间激活用例混合 float 和整数来源记录，
+确认只分流显式来源且重复激活不重复创建。日志 build/ai-mobile-allocation-tests.log。
+不包含人为修改最终落点的工厂替身用例；守卫分支仍需后续专门回归。
+本批不切换生产原生步进或恢复移动后的低位，不构成自然地图/客户端一致性验收。
+
+首轮 28 项中 27 项通过，MonsterRoomActivationTest.nativeRoomActivationSleepsAndWakesMonsterAi
+失败（预期 updates=0，实际 1）。该用例未注册 factory，不执行本批出生分流；
+未回退基线复现，不能将其声明为已证实的基线失败，也未修改休眠逻辑。
+随后直接相关复跑 16 项全部通过：DiabPrisonIntegrationTest 12、房间混合来源激活 1、
+MonsterSpawnIntegerSelectionTest 3；失败/错误/跳过均为 0，architectureRegression 通过，
+模块测试为 UP-TO-DATE。最终日志 build/ai-mobile-allocation-focused.log。

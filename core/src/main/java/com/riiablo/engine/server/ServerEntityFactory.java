@@ -391,6 +391,22 @@ public class ServerEntityFactory extends EntityFactory {
         rank, affixes, championType, uniqueId);
   }
 
+  @Override
+  public int createMonsterAtIntegerSelection(int monsterId, int x, int y,
+      int rank, long affixes, int championType, int uniqueId) {
+    int id = createMonster(monsterId, (float) x, (float) y,
+        rank, affixes, championType, uniqueId);
+    if (id == Engine.INVALID_ENTITY) return id;
+    Position position = mPosition.get(id);
+    // Preserve legacy allocation success outside the raw domain. A changed
+    // final landing is not authority for the original integer selection.
+    if (x >= 0 && x <= 0xFFFF && y >= 0 && y <= 0xFFFF
+        && position != null && position.position.x == x && position.position.y == y) {
+      position.initializeNativeCell(x, y);
+    }
+    return id;
+  }
+
   @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {
     if (!mMonster.has(entityId) || !mPosition.has(entityId) || mode < 0 || mode >= 16) return false;
     MonStats.Entry row = files().monstats.get(monsterId);

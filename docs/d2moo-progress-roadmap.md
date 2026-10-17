@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 AI 固定点接入：房间整数出生分配
+
+- EntityFactory 新增显式整数选点分配入口，默认回退仍不承诺原生精度；
+  ServerEntityFactory 成功创建后，仅在 uint16 域内且最终浮点落点与输入一致时建立 fp16 格心。
+- RoomActivationSystem 对有整数来源的 deferred 记录选择新入口；旧 float 记录不升级。
+  域外输入保持原创建成功/失败语义，不因不具备 raw 资格而拒绝分配。
+- 本轮核对 initializeMonster：当前普通初始化直接提交 x/y，无自由落点搜索；
+  仍保留最终落点守卫以防后续实现调整。重建仍按旧 float 入口失效精度。
+- 这扩展生产 raw 出生来源到显式整数房间人口，不切换移动积分或 NativePathUnitBinding；
+  旧浮点移动后 raw 会失效，不能把出生精度当作完整动态路径精度。
+- 验证范围及结果见 [来源接入记录](ai-mobile-position-source-2026-10-18.md)。
+
 ## 2026-10-18 AI 固定点接入：延迟人口整数选点来源
 
 - RoomEx 新增显式 addIntegerMonsterSpawn；MonsterSpawn 独立保留选点整数及来源标记，
