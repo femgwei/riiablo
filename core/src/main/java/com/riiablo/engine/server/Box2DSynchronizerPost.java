@@ -124,6 +124,17 @@ public class Box2DSynchronizerPost extends IteratingSystem {
         mAngle.get(entityId).target.set(mVelocity.get(entityId).velocity).nor();
       }
     }
+    commitBodyPosition(mPosition.get(entityId), current);
+  }
+
+  static void commitBodyPosition(Position position, Vector2 current) {
+    Vector2 previous = position.position;
+    // Even sub-epsilon solver movement loses raw low bits. An unchanged
+    // body projection, however, is not a new native coordinate source.
+    if (Float.floatToIntBits(previous.x) != Float.floatToIntBits(current.x)
+        || Float.floatToIntBits(previous.y) != Float.floatToIntBits(current.y)) {
+      position.invalidateNativePrecision();
+    }
     previous.set(current);
   }
 
