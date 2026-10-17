@@ -6,7 +6,10 @@ import com.riiablo.skill.SkillCodes;
 
 /** Shared action lifecycle for directly ported AITHINK decision functions. */
 abstract class NativeDecisionAI extends AI {
-  private float nextThink;
+  // AITACTICS_Idle (D2Game.0x6FCD0110) schedules an absolute game frame.
+  // Float countdowns can leave a positive remainder on the requested frame,
+  // and stop advancing altogether while AIStepper leaves a room dormant.
+  private long nextThinkFrame;
   private String state = "IDLE";
   private boolean dead;
   private double elapsedFrames;
@@ -22,9 +25,9 @@ abstract class NativeDecisionAI extends AI {
     if (dead) { thinkWhileDead(delta); return; }
     beforeThink(delta);
     if (dead) return;
-    nextThink -= delta;
-    if (actionBlocksDecision() || nextThink > 0f) return;
-    nextThink = Math.max(Animation.FRAME_DURATION, SLEEP);
+    if (actionBlocksDecision() || nativeFrame() < nextThinkFrame) return;
+    nextThinkFrame = Float.isInfinite(SLEEP) ? Long.MAX_VALUE
+        : nativeFrame() + Math.max(1, Math.round(SLEEP / Animation.FRAME_DURATION));
     if (!beforeDecision()) return;
     float[] distance = {Float.MAX_VALUE};
     int targetId = findNearestTargetWithAidist(distance);
@@ -91,13 +94,13 @@ abstract class NativeDecisionAI extends AI {
 
   /** Schedules a decision without changing a just-started skill's mode. */
   protected final void delayDecision(int frames) {
-    nextThink = Math.max(1, frames) * Animation.FRAME_DURATION;
+    nextThinkFrame = nativeFrame() + Math.max(1, frames);
   }
 
   protected final void idle(int frames) {
     stopMovement();
     state = "IDLE";
-    nextThink = Math.max(1, frames) * Animation.FRAME_DURATION;
+    delayDecision(frames);
   }
 
   protected final void approach(int targetId, int velocityBonus) {
@@ -212,7 +215,7 @@ abstract class NativeDecisionAI extends AI {
     mSequence.create(entityId).sequence((byte) attackMode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(SkillCodes.attack, targetId, target);
     com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-    nextThink = 0f;
+    nextThinkFrame = 0;
   }
 
   protected final boolean hasSkill(int slot) {
@@ -245,7 +248,7 @@ abstract class NativeDecisionAI extends AI {
       int sequenceMode) {
     if (useMonsterSkill(slot, targetId, target, sequenceMode)) {
       state = "CAST";
-      nextThink = 0f;
+      nextThinkFrame = 0;
       return true;
     } else {
       // Native AITACTICS_UseSkill failure waits ten frames, not a basic attack.
@@ -258,7 +261,7 @@ abstract class NativeDecisionAI extends AI {
       com.badlogic.gdx.math.Vector2 target) {
     if (useFixedMonsterSkill(skillId, mode, targetId, target)) {
       state = "CAST";
-      nextThink = 0f;
+      nextThinkFrame = 0;
       return true;
     }
     idle(10);
@@ -272,7 +275,7 @@ abstract class NativeDecisionAI extends AI {
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
     state = "CAST";
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
-    nextThink = 0f;
+    nextThinkFrame = 0;
   }
 
   @Override
@@ -290,7 +293,7 @@ abstract class NativeDecisionAI extends AI {
   @Override
   public void onOwnerWarp() {
     super.onOwnerWarp();
-    nextThink = 0f;
+    nextThinkFrame = 0;
     if (!dead) state = "IDLE";
   }
 
