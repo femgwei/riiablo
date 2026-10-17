@@ -30,6 +30,15 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void nativePathRejectsUnallocatedTargetIdentityWithoutThrowing() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(NativePathIdentity.class).create(f.target);
+      assertFalse(f.paths.findNativePath(f.actor, f.target, 5, 0));
+      assertFalse(f.paths.findNativeOrbit(f.actor, f.target, 5, true));
+      assertFalse(f.paths.findNativeChase(f.actor, f.target));
+    }
+  }
+
   @Test void knownTargetLifetimeSurvivesRecoveryAndCoordinateCommandClearsIt() {
     try (Fixture f = new Fixture()) {
       NativePathIdentity.Token token = f.world.getMapper(NativePathIdentity.class)

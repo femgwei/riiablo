@@ -429,12 +429,13 @@ public class Pathfinder extends IteratingSystem {
 
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
     if (!mVelocity.has(src) || !mPosition.has(src) || !mPosition.has(targetId)) return false;
-    // Native path requests carry a unit pointer, not a recyclable ECS id.
-    // Reject a target that has no lifetime identity so delayed AI commands
-    // cannot path toward an entity whose slot has already been reused.
+    // Only accept a live allocation. Delayed command callers must additionally
+    // validate their saved token; looking up today's token cannot identify an
+    // old target after its ECS slot has been reused.
     com.riiablo.engine.server.component.NativePathIdentity targetIdentity =
         world.getMapper(com.riiablo.engine.server.component.NativePathIdentity.class).get(targetId);
-    if (targetIdentity == null || !targetIdentity.token().isCurrent(world, targetId)) return false;
+    if (targetIdentity == null || targetIdentity.token() == null
+        || !targetIdentity.token().isCurrent(world, targetId)) return false;
     Vector2 source = mPosition.get(src).position;
     Vector2 target = mPosition.get(targetId).position;
     MapWrapper owner = mMapWrapper.get(src);
