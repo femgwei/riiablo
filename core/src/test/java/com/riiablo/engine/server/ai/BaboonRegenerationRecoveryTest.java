@@ -48,7 +48,7 @@ class BaboonRegenerationRecoveryTest extends RiiabloTest {
       assertEquals("ATTACK", ai.getState());
       assertNotNull(f.casting());
       assertEquals(f.target, f.casting().targetId);
-      assertEquals(Engine.Monster.MODE_A2, f.sequence().mode1);
+      assertEquals(Engine.Monster.MODE_A1, f.sequence().mode1);
     }
   }
 }

@@ -182,7 +182,7 @@ public class Baboon extends AI {
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
           stateMachine.changeState(State.ATTACK);
-          byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+          byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
           mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
           time = MathUtils.random(1f, 2);
@@ -229,7 +229,7 @@ public class Baboon extends AI {
             pathfinder.findPath(entityId, null);
             lookAt(targetId);
             stateMachine.changeState(State.ATTACK);
-            byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+            byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
             mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
             mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
           }
@@ -309,7 +309,7 @@ public class Baboon extends AI {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
-        byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         time = MathUtils.random(1f, 2);
@@ -328,12 +328,12 @@ public class Baboon extends AI {
     }
 
     // D2MOD: Normal attack logic
-    if (aiParam1 == 0 || (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f))) {
+    if (aiParam1 == 0 || (rollAiChance(params[2]))) {
       aiParam1 = 1;
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
-      byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+      byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
       mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
@@ -341,19 +341,14 @@ public class Baboon extends AI {
       return;
     }
 
-    // D2MOD: Circle or idle
-    if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
-      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
-      stateMachine.changeState(State.APPROACH);
+    // Fn011 deliberately enters neutral for 15 frames even after requesting orbit.
+    if (rollAiChance(params[1])) {
+      pathfinder.findNativeOrbit(entityId, targetId, 3, (rollAiRandomNumber() & 255L) < 128L);
       aiParam1 = 0;
-      time = MathUtils.random(1f, 2);
-      return;
-    } else {
-      stateMachine.changeState(State.IDLE);
-      time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
-      return;
     }
+    stopMovement();
+    stateMachine.changeState(State.IDLE);
+    time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override
