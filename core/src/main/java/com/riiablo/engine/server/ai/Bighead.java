@@ -57,6 +57,8 @@ public class Bighead extends AI {
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
+  protected ComponentMapper<com.riiablo.engine.server.component.NativeAiState> mNativeAiState;
+
   final Vector2 tmpVec2 = new Vector2();
 
   final StateMachine<Integer, State> stateMachine;
@@ -102,11 +104,11 @@ public class Bighead extends AI {
   }
 
   /**
-   * Check if in special AI state (simplified).
+   * D2Game sub_6FCF2E70: previous monster mode is GH (3) or GH + 16 (19).
    */
-  private boolean checkSpecialAiState() {
-    // TODO: Implement proper AI state check
-    return false;
+  boolean checkSpecialAiState() {
+    com.riiablo.engine.server.component.NativeAiState memory = mNativeAiState.get(entityId);
+    return memory != null && memory.isUncontrolled();
   }
 
   @Override
