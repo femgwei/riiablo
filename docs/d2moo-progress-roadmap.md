@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 清理 D2MOO 桥接中的伪全局兼容层
+
+- [x] 删除 Act I–V 及 Arcane 桥接中未使用的 `Riiablo` 导入和旧
+  `RiiabloAccess` 辅助类；桥接的文件表/MPQ 读取统一经 `D2MOOLayoutContext`。
+- [x] `:core:compileJava` 与 `:core:architectureRegression` 通过；当前 Act 桥接源文件
+  不再直接引用 `Riiablo.files` 或 `Riiablo.mpqs`。
+- [ ] 无参桥接入口仍保留给旧调用方，下一步将这些入口全部改成显式上下文调用，之后
+  才能移除 `D2MOOLayoutContext.fromGlobals()` 兼容回退。
+
 ## 2026-10-17 服务端交互与客户端网络边界
 
 - [x] 新增共享层 `QuestRequestRouter`，`ClientNetworkSynchronizer` 实现该接口；

@@ -13,7 +13,6 @@ import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2MemoryPool;
-import com.riiablo.Riiablo;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
 
@@ -139,9 +138,4 @@ public final class Act2D2MOOLayoutBridge {
     return normalized.startsWith(root) ? normalized.substring(root.length()) : normalized;
   }
 
-  private static final class RiiabloAccess {
-    static boolean mpqsMissing() {
-      return D2MOOLayoutContext.mpqs() == null;
-    }
-  }
 }

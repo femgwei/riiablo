@@ -15,7 +15,6 @@ import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2MemoryPool;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.map.Map;
@@ -409,9 +408,4 @@ public final class Act3D2MOOLayoutBridge {
     }
   }
 
-  private static final class RiiabloAccess {
-    static boolean mpqsMissing() {
-      return D2MOOLayoutContext.mpqs() == null;
-    }
-  }
 }
