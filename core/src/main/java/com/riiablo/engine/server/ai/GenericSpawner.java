@@ -41,10 +41,9 @@ public class GenericSpawner extends NativeDecisionAI {
         Vector2 point = mPosition.get(entityId).position.cpy();
         if (owner.zone.findFreeCoordinates(point, monsterFootprint("evilHut"),
             0, 0x1C09, false, point)) {
-          count++;
           com.riiablo.codec.excel.Skills.Entry nest = Riiablo.files.skills.get("Nest");
-          if (nest != null) castAt(0, targetId,
-              mPosition.get(targetId).position);
+          if (nest != null && castAt(0, targetId,
+              mPosition.get(targetId).position)) count++;
           return;
         }
       }
