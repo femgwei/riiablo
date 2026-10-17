@@ -1,7 +1,7 @@
 package com.riiablo.engine.server.ai;
 
-import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
+import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.States;
 import com.riiablo.engine.Engine;
@@ -18,7 +18,7 @@ public class BaalThrone extends NativeDecisionAI {
 
   private boolean statePresent(int id, String name) {
     if (name == null || name.isEmpty()) return false;
-    States.Entry state = Riiablo.files.States.get(name);
+    States.Entry state = files().States.get(name);
     UnitStates states = mUnitStates.get(id);
     return state != null && states != null && states.stateList != null
         && states.stateList.hasState(state.id);
@@ -32,7 +32,7 @@ public class BaalThrone extends NativeDecisionAI {
     int pending = quests.pendingBaalWaveForAi();
     if (pending >= 0) {
       if (castWave != pending) {
-        Skills.Entry spawn = Riiablo.files.skills.get(286);
+        Skills.Entry spawn = files().skills.get(286);
         if (spawn != null && castFixed(spawn.Id, Engine.Monster.MODE_S3,
             Engine.INVALID_ENTITY, mPosition.get(entityId).position.cpy().add(0, 13)))
           castWave = pending;
@@ -41,7 +41,7 @@ public class BaalThrone extends NativeDecisionAI {
       return false;
     }
     if (waves.finished()) {
-      com.riiablo.codec.excel.MonStats.Entry stairs = Riiablo.files.monstats.get("baalcrabstairs");
+      com.riiablo.codec.excel.MonStats.Entry stairs = files().monstats.get("baalcrabstairs");
       if (stairs != null && factory != null
           && factory.reinitializeMonster(entityId, stairs.hcIdx, Engine.Monster.MODE_NU)) {
         transformed = true;
@@ -57,7 +57,7 @@ public class BaalThrone extends NativeDecisionAI {
     }
     if (waves.preparingWave() && preparedWave != waves.wave()) {
       preparedWave = waves.wave();
-      Skills.Entry explosion = Riiablo.files.skills.get(285);
+      Skills.Entry explosion = files().skills.get(285);
       if (explosion != null) castFixed(explosion.Id, Engine.Monster.MODE_S3,
           entityId, mPosition.get(entityId).position);
       else idle(10);
@@ -71,7 +71,7 @@ public class BaalThrone extends NativeDecisionAI {
   @Override protected void think(int targetId, float distance, boolean combat) {
     Act5QuestSystem quests = Riiablo.engine.getSystem(Act5QuestSystem.class);
     if (quests != null && !quests.isBaalThroneClearForAi() && hasSkill(0)) {
-      Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+      Skills.Entry skill = files().skills.get(monster.monstats.Skill1);
       if (skill != null && !statePresent(entityId, skill.aurastate)
           && !statePresent(targetId, skill.auratargetstate) && rollAiChance(params[0])) {
         cast(0, targetId); return;

@@ -1,7 +1,7 @@
 package com.riiablo.engine.server.ai;
 
-import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
+import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Monster;
@@ -13,13 +13,13 @@ public class Imp extends NativeDecisionAI {
   public Imp(int entityId) { super(entityId); }
 
   private boolean castMounted(int slot, int targetId, Vector2 target) {
-    MonStats.Entry row = Riiablo.files.monstats.get("imp1");
+    MonStats.Entry row = files().monstats.get("imp1");
     if (row == null) return false;
     String name = slot == 0 ? row.Skill1 : slot == 2 ? row.Skill3 : row.Skill5;
     String mode = slot == 0 ? row.Sk1mode : slot == 2 ? row.Sk3mode : row.Sk5mode;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
     if (skill == null) return false;
-    int animation = Riiablo.files.MonMode.index(mode);
+    int animation = files().MonMode.index(mode);
     return castFixed(skill.Id, animation >= 0 ? animation : Engine.Monster.MODE_S1,
         targetId, target);
   }
@@ -66,7 +66,7 @@ public class Imp extends NativeDecisionAI {
   }
 
   private int parameter(String rowId, int slot) {
-    MonStats.Entry row = Riiablo.files.monstats.get(rowId);
+    MonStats.Entry row = files().monstats.get(rowId);
     if (row == null) return 0;
     int[][] columns = {row.aip1, row.aip2, row.aip3, row.aip4};
     return difficultyValue(columns[slot], resolveAiDifficulty());

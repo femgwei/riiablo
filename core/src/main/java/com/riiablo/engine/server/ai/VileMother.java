@@ -1,9 +1,9 @@
 package com.riiablo.engine.server.ai;
 
+import com.riiablo.Riiablo;
 import com.artemis.Aspect;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -15,12 +15,12 @@ public class VileMother extends NativeDecisionAI {
   public VileMother(int entityId) { super(entityId); }
 
   private MonStats.Entry childVariant() {
-    MonStats.Entry mother = Riiablo.files.monstats.get(monster.monstats.BaseId);
-    MonStats.Entry child = Riiablo.files.monstats.get("vilechild1");
+    MonStats.Entry mother = files().monstats.get(monster.monstats.BaseId);
+    MonStats.Entry child = files().monstats.get("vilechild1");
     for (int i = 0; i < 128 && mother != null && child != null
         && mother.hcIdx != monster.monstats.hcIdx; i++) {
-      mother = Riiablo.files.monstats.get(mother.NextInClass);
-      child = Riiablo.files.monstats.get(child.NextInClass);
+      mother = files().monstats.get(mother.NextInClass);
+      child = files().monstats.get(child.NextInClass);
     }
     return child;
   }

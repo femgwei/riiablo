@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.ai;
 
+import com.riiablo.Riiablo;
 import com.badlogic.gdx.math.Vector2;
 import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
@@ -112,7 +112,7 @@ public class Vines extends AI {
         monster.monstats.Skill7, monster.monstats.Skill8
     };
     String name = names[skillSlot];
-    return name == null || name.isEmpty() ? null : Riiablo.files.skills.get(name);
+    return name == null || name.isEmpty() ? null : files().skills.get(name);
   }
 
   private int findNearbyCorpse(float[] outDistance, float maxRange) {
@@ -164,7 +164,7 @@ public class Vines extends AI {
     for (int i = 0; i < names.length; i++) {
       String name = names[i];
       if (name == null || name.isEmpty()) continue;
-      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+      com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
       if (skill == null || skill.srvdofunc == 97) continue;
       if (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
           || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
@@ -189,7 +189,7 @@ public class Vines extends AI {
       case 7: name = monster.monstats.Skill8; break;
       default: return 0f;
     }
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+      com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
     if (skill == null) return 0f;
     String[] missiles = {skill.srvmissilea, skill.srvmissileb,
         skill.srvmissilec, skill.srvmissiled, skill.cltmissilea,
@@ -197,7 +197,7 @@ public class Vines extends AI {
     float range = 0f;
     for (String missileName : missiles) {
       if (!hasText(missileName)) continue;
-      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+      Missiles.Entry missile = files().Missiles.get(missileName);
       if (missile != null && missile.Range > 0) range = Math.max(range, missile.Range);
     }
     // Converted rows occasionally omit Range. Keep the conservative fallback

@@ -2,7 +2,6 @@ package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Sequence;
@@ -49,7 +48,7 @@ public final class Navi extends Npc {
       // snapshots read the new values from the aggregate list.
       mAttributesWrapper.get(entityId).attrs.reset();
     }
-    attackRng = NativeRng.forUnit(Riiablo.gameSeed ^ 0x4E415649, entityId);
+    attackRng = NativeRng.forUnit(gameSeed() ^ 0x4E415649, entityId);
     burstPause = 0f;
     burstRemaining = 0;
   }
@@ -62,7 +61,7 @@ public final class Navi extends Npc {
     }
     if (monster == null || !mPosition.has(entityId)) return;
     if (attackRng == null) {
-      attackRng = NativeRng.forUnit(Riiablo.gameSeed ^ 0x4E415649, entityId);
+      attackRng = NativeRng.forUnit(gameSeed() ^ 0x4E415649, entityId);
     }
     if (burstPause > 0f) {
       burstPause = Math.max(0f, burstPause - delta);
@@ -106,7 +105,7 @@ public final class Navi extends Npc {
 
   private boolean createNativeArrow(int targetId, Vector2 target) {
     if (factory == null || monster == null || monster.monstats == null
-        || Riiablo.files == null || Riiablo.files.Missiles == null
+        || files() == null || files().Missiles == null
         || !mPosition.has(entityId)) return false;
     String missileName = monster.monstats.MissA1;
     if (missileName == null || missileName.isEmpty()) missileName = monster.monstats.MissA2;
@@ -114,7 +113,7 @@ public final class Navi extends Npc {
       log.warn("[NAVI_MISSILE] entity={} reason=missing_monstats_missile", entityId);
       return false;
     }
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("[NAVI_MISSILE] entity={} missile={} reason=lookup_failed", entityId, missileName);
       return false;
@@ -135,9 +134,9 @@ public final class Navi extends Npc {
 
   private float nativeAttackRange() {
     String missileName = monster.monstats == null ? null : monster.monstats.MissA1;
-    if (missileName != null && !missileName.isEmpty() && Riiablo.files != null
-        && Riiablo.files.Missiles != null) {
-      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missileName != null && !missileName.isEmpty() && files() != null
+        && files().Missiles != null) {
+      Missiles.Entry missile = files().Missiles.get(missileName);
       if (missile != null && missile.Range > 0) return Math.max(4f, missile.Range - 2f);
     }
     return 8f;

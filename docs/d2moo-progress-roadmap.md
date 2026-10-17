@@ -21,6 +21,15 @@
 - [ ] 具体 AI/技能/掉落类仍有较多兼容读取，后续继续按基类辅助入口迁移，暂不宣称
   服务端已经达到零全局引用。
 
+## 2026-10-17 具体 AI 辅助器继续迁移
+
+- [x] `Navi`、`BaalThrone`、`Imp`、`VileMother`、`Vines` 的技能、导弹、怪物表和
+  AI 随机种子读取改用 `AI.files()` / `AI.gameSeed()`；仍保留对所属 ECS 引擎的旧
+  兼容访问，不改变行为和生成规则。
+- [x] `:core:compileJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 通过。
+- [ ] AI 目录仍有其他具体类的表访问，继续按同一入口迁移。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II
