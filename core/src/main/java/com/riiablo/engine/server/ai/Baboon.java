@@ -121,6 +121,21 @@ public class Baboon extends AI {
         velocityBonus, Engine.INVALID_ENTITY);
   }
 
+  /** Fn011 sub_6FCD0410 flags 7: failed chase chooses idle or one local walk. */
+  private void chaseWithFallback(int targetId, int velocityBonus) {
+    if (pathfinder.findNativeChase(entityId, targetId)) {
+      mVelocity.get(entityId).setModeSpeedBonusPercent(velocityBonus);
+      stateMachine.changeState(State.APPROACH);
+    } else if (rollAiRandomNumber() % 100 >= 70) {
+      stopMovement();
+      stateMachine.changeState(State.IDLE);
+      time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+    } else {
+      // The failed mode change has consumed the initial velocity override.
+      stateMachine.changeState(walkCloseToSelf(4, 0) ? State.APPROACH : State.IDLE);
+    }
+  }
+
   private void changeRegen(int delta) {
     if (!mAttributesWrapper.has(entityId)) return;
     com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
@@ -193,10 +208,7 @@ public class Baboon extends AI {
           aiParam0 = 0;
           // D2MOD: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
           // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-          if (pathfinder.findNativeChase(entityId, targetId)) {
-            mVelocity.get(entityId).setModeSpeedBonusPercent(nVel);
-          }
-          stateMachine.changeState(State.APPROACH);
+          chaseWithFallback(targetId, nVel);
           return;
         }
 
@@ -275,8 +287,7 @@ public class Baboon extends AI {
     // D2MOD: If not in combat, approach
     if (!bCombat) {
       // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-      pathfinder.findNativeChase(entityId, targetId);
-      stateMachine.changeState(State.APPROACH);
+      chaseWithFallback(targetId, 0);
       return;
     }
 
