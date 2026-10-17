@@ -13,6 +13,8 @@ import com.riiablo.codec.excel.Missiles;
 @Transient
 @PooledWeaver
 public class Missile extends PooledComponent {
+  public final com.riiablo.engine.server.missile.NativeMissileAcceleration acceleration =
+      new com.riiablo.engine.server.missile.NativeMissileAcceleration();
   public Missiles.Entry missile;
   public float range = 0;
   public AssetDescriptor<DCC> missileDescriptor;
@@ -261,6 +263,7 @@ public class Missile extends PooledComponent {
 
   @Override
   protected void reset() {
+    acceleration.initialize(0, 0);
     missile = null;
     range = 0;
     missileDescriptor = null;

@@ -1385,6 +1385,7 @@ public class ServerEntityFactory extends EntityFactory {
     int slowPercent = slowMissileVelocityPercent(ownerId, missile);
     if (slowPercent > 0) velocity = velocity * slowPercent / 100f;
     mVelocity.create(id).velocity.set(angle).setLength(velocity);
+    missileComponent.acceleration.initialize(missile.Accel, missile.MaxVel);
     if (missile.pSrvDoFunc == 20 || missile.pSrvDoFunc == 21) {
       missileComponent.attached = true;
       missileComponent.attachedEntityId = ownerId;

@@ -26,6 +26,7 @@ import com.riiablo.attributes.PropertiesGenerator;
 import com.riiablo.engine.server.NativeRng;
 
 public class ItemGenerator extends PassiveSystem {
+  private final UniqueDropHistory uniqueDrops = new UniqueDropHistory();
   private static final String TAG = "ItemGenerator";
 
   private static final boolean DEBUG = true;
@@ -94,6 +95,9 @@ public class ItemGenerator extends PassiveSystem {
       UniqueItems.Entry entry = findUnique(code, itemLevel, rng);
       if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
           seed, difficulty);
+      if (!uniqueDrops.claim(Riiablo.files.UniqueItems.index(entry.index), entry.nolimit != 0)) {
+        return generateLootItem(code, itemLevel, Quality.RARE, seed, difficulty);
+      }
       item.qualityId = Riiablo.files.UniqueItems.index(entry.index);
       item.qualityData = entry;
       addUniqueProperties(item, entry, properties);

@@ -342,6 +342,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile.attached) {
       moveDistance = lastPos.dst(position.position);
     } else {
+      missile.acceleration.advance(velocity.velocity);
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
