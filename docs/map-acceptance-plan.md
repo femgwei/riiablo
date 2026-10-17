@@ -282,3 +282,40 @@ level/entity 核对 runtime 的 class/room 无差异、无目标跳过记录；�
 测试及记录，未以放宽碰撞、放开不支持对象类别或直接乘密度来改变生产人口。
 SUMMARY 明确为 OBJECT_LOAD_ONLY，walks/transitions=0；所有原生相邻 Vis + Warp=-1
 边的双向 TCP 步行、全怪物激活/客户端可见、GL 外观与原版同条件数量验收仍待完成。
+
+2026-10-18 日志告警修复：先在已提交生产基线 `eba8728b7` 上重新运行相同的
+1.10F、seed=1、普通难度、25Hz、132 图对象加载检查。严格日志审计为 685 条
+（动态出生移位 680、NpcBarb fallback 4、srvdofunc 101 未实现 1）；上轮 686 条
+是另一固定基线的结果，不能混称为本次修复前数量。原始证据保存在隔离区
+`core/build/reports/warning-fixes-20261018/before-runtime.log` 与
+`server/d2gs/build/map-tour/warnings-before-20261018/log-issues.json`。
+
+修复内容保留原版密度、对象组和日志级别：
+
+- 待生成普通怪群按 MonStats2 体积和 native presence marker 检查占位，覆盖相邻
+  RoomEx；保留原有二十次候选重试。房间激活还会检查玩家及已存在怪物的实时位置，
+  在创建前选点并立即预留。同一 tick 内尚未进入 Artemis 订阅的预留不会被刷新丢弃。
+- 出生与重建检查使用 CheckMaskWithSize；行走仍使用原来的路径碰撞 pattern。
+  合法的 size=1 相邻出生不再被按行走十字范围误判并移位。
+- 新增 D2MOO Fn127 的 NpcBarb AI，保留友方节点、攻击/奔跑和三次步行探测规则；
+  友方守卫只选择邪恶怪物。另修正同一 Zone 被当成相邻 Zone 而唤醒视野外 AI 的问题。
+- 补齐技能 SrvDo101、投射物 SrvDo11 与 SrvHit19：一次关键帧发射一枚 Finger Mage
+  投射物，按倒计时重定向，命中添加/刷新 AuraTargetState 及其属性，不走普通武器伤害。
+- 首次修复后复验剩余五条告警。先为 SrvDo135 子体生成补上动态占位及同 tick 预留；
+  后续完整巡游仍有三条出生移位。通过调用栈及阻挡实体坐标确认 VileMother 实际
+  走 SrvDo91（Nest），其旧路径只检查中心地形，直接把子体放在母体坐标。
+  已为该路径按子体体积检查地形、动态占位及同 tick 预留，并使用施法者所属 Zone。
+  两条动画告警是 minion1 被强行切入缺失的 BL
+  动画，现按 SUNITDMG 的 MonStats2 模式标志决定近战/投射物命中反应，保留 AI 状态
+  19，不中断正在执行的动作。诊断日志保留于 `warnings-after-20261018` 及
+  `warnings-diagnostic-20261018`，未将这些告警加入 allowlist。
+
+代码已合并并行提交 `5cd8696b4`，保留显式整数出生坐标来源、蛆虫子体生成和移动速度
+修复。架构门禁中的 Java 字符串剥离正则在扫描大文件时触发 StackOverflowError，
+已改为等价的占有式重复并新增长字符串/转义回归；全局访问预算没有上调。
+
+修复门禁：90 项专项、4 项架构回归、22 项六种子资源/人口测试全部通过，失败、
+错误和跳过均为零；容器资源审计实际输出 762 条记录。desktop 与 D2GS 编译通过。
+Nest 最后补修后追加的 33 项相关测试、4 项架构回归及两端编译也全部通过。
+测试 XML、完整 Gradle 日志与资源指纹保存在
+`core/build/reports/warning-fixes-20261018/`。
