@@ -4,6 +4,7 @@ import com.artemis.BaseSystem;
 import com.artemis.annotations.Wire;
 import com.riiablo.Riiablo;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.ServerGameplayContext;
 import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.seed.Seed;
 
@@ -12,12 +13,15 @@ import com.d2moo.common.seed.Seed;
 public final class NativeQuestRandomState extends BaseSystem {
   @Wire(name = "map", failOnNull = false)
   private Map map;
+  @Wire(name = "serverContext", failOnNull = false)
+  private ServerGameplayContext serverContext;
   private final D2Seed seed = new D2Seed();
   private boolean restored;
 
   @Override protected void initialize() {
     if (!restored) {
-      int gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+      int gameSeed = serverContext != null ? serverContext.gameSeed()
+          : map == null ? Riiablo.gameSeed : map.seed();
       // D2Game: QUESTS_InitQuestData seeds QuestControl from one roll of the
       // game-owned stream, rather than copying the game seed directly.
       D2Seed gameRandom = new D2Seed();
