@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 AI 基类与通用 AI 的服务器上下文
+
+- [x] `AI` 现在显式注入 `ServerGameplayContext`，统一提供 `files()` 和
+  `gameSeed()`；AI 基类、`GenericMonster`、`GenericSpawner` 的技能/导弹/随机种子
+  读取改用所属服务器上下文，未装配旧夹具仍保留兼容回退。
+- [x] 验证：`:core:compileJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 通过；通用 AI 不再直接读取 `Riiablo.files` 或
+  `Riiablo.gameSeed`。
+- [ ] 其他具体 AI 文件仍有同类兼容访问，下一步按共享 AI 辅助入口继续收口，直到
+  服务器技能/状态/掉落路径都只从 `ServerGameplayContext` 取表。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II

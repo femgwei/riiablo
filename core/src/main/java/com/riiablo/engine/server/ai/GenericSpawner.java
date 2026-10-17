@@ -1,7 +1,6 @@
 package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.math.Vector2;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -18,7 +17,7 @@ public class GenericSpawner extends NativeDecisionAI {
   @Override protected void think(int targetId, float distance, boolean combat) {
     MapWrapper owner = mMapWrapper.get(entityId);
     if (monster.nativeSpawnClassId < 0) {
-      MonStats.Entry selected = Riiablo.files.monstats.get("imp5");
+      MonStats.Entry selected = files().monstats.get("imp5");
       MonStats.Entry[] region = owner != null && owner.zone != null
           ? owner.zone.nativeRegionMonsters : new MonStats.Entry[0];
       if (region.length > 0) {
@@ -41,7 +40,7 @@ public class GenericSpawner extends NativeDecisionAI {
         Vector2 point = mPosition.get(entityId).position.cpy();
         if (owner.zone.findFreeCoordinates(point, monsterFootprint("evilHut"),
             0, 0x1C09, false, point)) {
-          com.riiablo.codec.excel.Skills.Entry nest = Riiablo.files.skills.get("Nest");
+          com.riiablo.codec.excel.Skills.Entry nest = files().skills.get("Nest");
           if (nest != null && castAt(0, targetId,
               mPosition.get(targetId).position)) count++;
           return;

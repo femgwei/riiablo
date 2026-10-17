@@ -17,6 +17,7 @@ import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.seed.Seed;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Player;
@@ -27,6 +28,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.Pathfinder;
@@ -132,6 +134,8 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<Target> mTarget;
 
   protected CofManager cofs;
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
   protected Pathfinder pathfinder;
   /** Shared event bus used to expose monster casts to server and client systems. */
   @Wire(failOnNull = false)
@@ -159,6 +163,14 @@ public abstract class AI implements Interactable.Interactor {
   private float nextWarCryThink;
   private NativeRng specialAiRng;
   private D2Seed aiSeed;
+
+  protected final Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  protected final int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
 
   /**
    * Native-style percentage roll for AI decisions.
@@ -188,7 +200,7 @@ public abstract class AI implements Interactable.Interactor {
   private D2Seed aiSeed() {
     if (aiSeed == null) {
       aiSeed = new D2Seed();
-      Seed.initLowSeed(aiSeed, Riiablo.gameSeed ^ (entityId * 0x45D9F3B));
+      Seed.initLowSeed(aiSeed, gameSeed() ^ (entityId * 0x45D9F3B));
     }
     return aiSeed;
   }
@@ -396,7 +408,7 @@ public abstract class AI implements Interactable.Interactor {
       return true;
     }
     if (specialAiRng == null) {
-      specialAiRng = NativeRng.forUnit(Riiablo.gameSeed, entityId);
+      specialAiRng = NativeRng.forUnit(gameSeed(), entityId);
     }
     if (specialAiRng.nextInt(100) < 20) {
       walkTo(mPosition.get(targetId).position, targetId);
@@ -576,7 +588,7 @@ public abstract class AI implements Interactable.Interactor {
     Vector2 angle = mAngle.get(entityId).target;
     // ?? ServerEntityFactory ??4 ??????????ID
     if (factory instanceof com.riiablo.engine.server.ServerEntityFactory) {
-      int missileId = Riiablo.files.Missiles.index(missile.Missile);
+      int missileId = files().Missiles.index(missile.Missile);
       if (missileId >= 0) {
         return ((com.riiablo.engine.server.ServerEntityFactory) factory).createMissile(missileId, angle, position, entityId);
       }
@@ -607,7 +619,7 @@ public abstract class AI implements Interactable.Interactor {
     if (monster == null || monster.monstats == null) return false;
     String skillName = monsterSkillName(monster.monstats, skillIndex);
     if (skillName == null || skillName.isEmpty()) return false;
-    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    Skills.Entry skill = files().skills.get(skillName);
     if (skill == null) {
       log.warn("[MONSTER_SKILL] phase=lookup_failed entity={} monster={} slot={} skill={}",
           entityId, monster.monstats.Id, skillIndex + 1, skillName);
@@ -620,9 +632,9 @@ public abstract class AI implements Interactable.Interactor {
     int mode = nativeSequence == null ? sequenceMode : nativeSequence.mode;
     if (mode < 0) {
       mode = configuredMode != null && !configuredMode.isEmpty()
-          ? Riiablo.files.MonMode.index(configuredMode) : -1;
+          ? files().MonMode.index(configuredMode) : -1;
       if (mode < 0 && skill.monanim != null && !skill.monanim.isEmpty()) {
-        mode = Riiablo.files.MonMode.index(skill.monanim);
+      mode = files().MonMode.index(skill.monanim);
       }
     }
     if (mode < 0) mode = Engine.Monster.MODE_S1;
@@ -640,7 +652,7 @@ public abstract class AI implements Interactable.Interactor {
   /** Native fixed-ID skills (e.g. Baal Nova) need not occupy a MonStats slot. */
   protected boolean useFixedMonsterSkill(int skillId, int mode, int targetId, Vector2 targetVec) {
     if (monster == null || monster.monstats == null) return false;
-    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    Skills.Entry skill = files().skills.get(skillId);
     if (skill == null || !startMonsterSkill(skill, mode, targetId, targetVec)) return false;
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} fixed=true skillId={} skill={} "
             + "mode={} target={}",

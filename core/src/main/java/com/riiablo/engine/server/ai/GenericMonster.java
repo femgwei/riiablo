@@ -2,7 +2,6 @@ package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -136,7 +135,7 @@ public class GenericMonster extends AI {
     float melee = 1f + (monster.monstats2 != null ? monster.monstats2.MeleeRng : 0);
     String missileName = firstNonEmpty(monster.monstats.MissA1, monster.monstats.MissA2);
     if (missileName == null) return melee;
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = files().Missiles.get(missileName);
     if (missile == null || missile.Range <= 0) return melee;
     return Math.max(melee, missile.Range - 2f);
   }
@@ -158,7 +157,7 @@ public class GenericMonster extends AI {
     for (int i = 0; i < names.length; i++) {
       String name = names[i];
       if (name == null || name.isEmpty()) continue;
-      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+      com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
       if (skill == null || skill.srvdofunc == 97) continue;
       if (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
           || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
@@ -173,7 +172,7 @@ public class GenericMonster extends AI {
   private float resolveSkillRange(int skillSlot) {
     String name = monsterSkillName(skillSlot);
     if (name == null || name.isEmpty()) return 0f;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
     if (skill == null) return 0f;
     String[] missiles = {skill.srvmissilea, skill.srvmissileb,
         skill.srvmissilec, skill.srvmissiled, skill.cltmissilea,
@@ -181,7 +180,7 @@ public class GenericMonster extends AI {
     float range = 0f;
     for (String missileName : missiles) {
       if (!hasText(missileName)) continue;
-      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+      Missiles.Entry missile = files().Missiles.get(missileName);
       if (missile != null && missile.Range > 0) range = Math.max(range, missile.Range);
     }
     // Some converted missile rows omit Range. Keep a useful native-like
