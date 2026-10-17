@@ -193,7 +193,9 @@ public class Baboon extends AI {
           aiParam0 = 0;
           // D2MOD: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
           // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-          walkTo(targetPos, nVel, targetId);
+          if (pathfinder.findNativeChase(entityId, targetId)) {
+            mVelocity.get(entityId).setModeSpeedBonusPercent(nVel);
+          }
           stateMachine.changeState(State.APPROACH);
           return;
         }
@@ -273,7 +275,7 @@ public class Baboon extends AI {
     // D2MOD: If not in combat, approach
     if (!bCombat) {
       // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      pathfinder.findNativeChase(entityId, targetId);
       stateMachine.changeState(State.APPROACH);
       return;
     }

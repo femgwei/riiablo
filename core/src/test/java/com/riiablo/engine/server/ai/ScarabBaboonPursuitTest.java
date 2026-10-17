@@ -29,7 +29,7 @@ class ScarabBaboonPursuitTest extends RiiabloTest {
           if ("Scarab".equals(name)) {
             verify(f.paths).findNativeOrbit(eq(f.actor), eq(f.target), eq(5), anyBoolean());
           } else {
-            verify(f.paths).findPath(eq(f.actor), eq(f.targetPosition()), eq(false), eq(f.target));
+            verify(f.paths).findNativeChase(f.actor, f.target);
           }
         }
       }
@@ -47,7 +47,7 @@ class ScarabBaboonPursuitTest extends RiiabloTest {
         f.world.process();
         f.ai.update(0.04f);
         assertEquals("APPROACH", f.ai.getState(), "world " + run);
-        verify(f.paths).findPath(eq(f.actor), eq(new com.badlogic.gdx.math.Vector2(20, 10)), eq(false), eq(replacement));
+        verify(f.paths).findNativeChase(f.actor, replacement);
       }
     }
   }
