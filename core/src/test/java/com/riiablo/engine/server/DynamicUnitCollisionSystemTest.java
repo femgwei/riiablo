@@ -8,6 +8,31 @@ import com.riiablo.engine.server.component.Monster;
 import org.junit.jupiter.api.Test;
 
 class DynamicUnitCollisionSystemTest {
+  @Test void adjacentSizeOneBirthsStayPutAndUnflushedReservationsSurviveRefresh() {
+    DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()
+        .with(collision).build());
+    try {
+      for (int x : new int[] {10, 11}) {
+        int id = world.create();
+        world.getMapper(com.riiablo.engine.server.component.Position.class).create(id).position.set(x, 10);
+        world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+        world.getMapper(com.riiablo.engine.server.component.Size.class).create(id).size = 1;
+        world.getMapper(com.riiablo.engine.server.component.Class.class).create(id).type =
+            com.riiablo.engine.server.component.Class.Type.MON;
+        collision.reserveMonsterSpawn(id, x, 10, 1);
+        collision.refreshNow();
+        assertFalse(collision.isFreeForMonsterSpawn(null, x, 10, 1));
+      }
+      world.process(); collision.rebuildNow();
+      com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(com.riiablo.engine.server.component.Position.class)).getEntities();
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Position.class)
+          .get(ids.get(0)).position.epsilonEquals(10, 10, 0));
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Position.class)
+          .get(ids.get(1)).position.epsilonEquals(11, 10, 0));
+    } finally { world.dispose(); }
+  }
   @Test void invalidSizeReturnsOrdinaryPresenceBeforeTownPetConversion() {
     DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()

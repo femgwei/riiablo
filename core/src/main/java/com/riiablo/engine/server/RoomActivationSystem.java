@@ -347,6 +347,9 @@ public class RoomActivationSystem extends IteratingSystem {
 
   private void spawnActiveRoomPopulations(Map.Zone zone) {
     if (factory == null || zone == null) return;
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision != null) collision.refreshNow();
+    PopulationPosition placement = new PopulationPosition();
     // Entity creation may resolve the owning RoomEx and therefore iterate the
     // same LibGDX Array. Array's reusable iterator rejects nested iteration,
     // so keep this activation pass iterator-free.
@@ -357,6 +360,11 @@ public class RoomActivationSystem extends IteratingSystem {
           || !room.claimMonsterPopulation()) continue;
       int spawned = 0;
       for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
+        if (!findPopulationPosition(zone, room, spawn, collision, placement)) {
+          log.warn("[ROOM_MONSTER_SPAWN_REJECT] level={} room={} monster={} position=({}, {}) reason=no_free_position",
+              levelId(zone), room.id, spawn.monsterId, spawn.x, spawn.y);
+          continue;
+        }
         boolean superUnique = spawn.superUniqueId >= 0;
         SuperUniques.Entry superUniqueRow = !superUnique || spawn.superUniqueKey == null
             || Riiablo.files == null
@@ -373,24 +381,29 @@ public class RoomActivationSystem extends IteratingSystem {
         }
         long affixes = superUniqueRow == null
             ? MonsterAffix.NONE : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
-        int monsterId = spawn.hasIntegerSelection()
+        int monsterId = placement.integerSelection
             ? factory.createMonsterAtIntegerSelection(spawn.monsterId,
-                spawn.integerSelectionX(), spawn.integerSelectionY(),
+                placement.integerX, placement.integerY,
                 superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
                     : spawn.rank,
                 affixes, -1, superUnique ? spawn.superUniqueId : -1)
-            : factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
+            : factory.createMonster(spawn.monsterId, placement.x, placement.y,
                 superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
                     : spawn.rank,
                 affixes, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         if (spawn.monsterId == com.riiablo.engine.server.monster.MonsterType.NAVI) {
           log.info("[NAVI_SPAWN] level={} room={} entity={} position=({}, {})",
-              levelId(zone), room.id, monsterId, spawn.x, spawn.y);
+              levelId(zone), room.id, monsterId, placement.x, placement.y);
         }
         mMapWrapper.create(monsterId).set(zone.map, zone);
+        if (collision != null && mMonster.has(monsterId)) {
+          Monster monster = mMonster.get(monsterId);
+          int size = monster.monstats2 != null ? Math.max(1, monster.monstats2.SizeX) : 1;
+          collision.reserveMonsterSpawn(monsterId, Map.round(placement.x), Map.round(placement.y), size);
+        }
         if (mMonster.has(monsterId)) {
-          mMonster.get(monsterId).setSpawnAnchor(zone, spawn.x, spawn.y);
+          mMonster.get(monsterId).setSpawnAnchor(zone, placement.x, placement.y);
           // D2Game records the pack leader before creating its PartyMin/
           // PartyMax companions. Preserve that relationship so AI callbacks
           // can restrict resurrection to the leader's own minions.
@@ -409,6 +422,48 @@ public class RoomActivationSystem extends IteratingSystem {
       log.info("[ROOM_MONSTER_POPULATION] level={} room={} queued={} spawned={} action=first_activate",
           levelId(zone), room.id, room.getPendingMonsterSpawns().size, spawned);
     }
+  }
+
+  private static final class PopulationPosition {
+    float x, y;
+    boolean integerSelection;
+    int integerX, integerY;
+
+    void from(Map.MonsterSpawn spawn) {
+      x = spawn.x; y = spawn.y;
+      integerSelection = spawn.hasIntegerSelection();
+      if (integerSelection) { integerX = spawn.integerSelectionX(); integerY = spawn.integerSelectionY(); }
+    }
+
+    void select(int x, int y) {
+      this.x = integerX = x; this.y = integerY = y; integerSelection = true;
+    }
+  }
+
+  private boolean findPopulationPosition(Map.Zone zone, Map.RoomEx room,
+      Map.MonsterSpawn spawn, DynamicUnitCollisionSystem collision, PopulationPosition out) {
+    out.from(spawn);
+    if (collision == null || zone.map == null || zone.map.files() == null) return true;
+    com.riiablo.codec.excel.MonStats.Entry row = zone.map.files().monstats.get(spawn.monsterId);
+    if (row == null) return true;
+    com.riiablo.codec.excel.MonStats2.Entry stats = zone.map.files().monstats2.get(row.MonStatsEx);
+    if (NativeGroundPathProfile.hasNoPresence(row) || stats != null && stats.critter) return true;
+    int size = stats == null ? 2 : Math.max(1, stats.SizeX);
+    int x = Map.round(spawn.x), y = Map.round(spawn.y);
+    if (collision.isFreeForMonsterSpawn(zone, x, y, size)) return true;
+    int mask = NativeGroundPathProfile.forUnit(false, row).terrainFlags;
+    // Placement precedes allocation. Keep all queued units when a nearby
+    // cell is available, rather than repairing overlaps on the next tick.
+    for (int radius = 1; radius <= 16; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) != radius || !room.contains(x + dx, y + dy)) continue;
+        if (zone.map.isBlockedForPath(zone, x + dx, y + dy, mask, size, false)
+            || !collision.isFreeForMonsterSpawn(zone, x + dx, y + dy, size)) continue;
+        out.select(x + dx, y + dy);
+        return true;
+      }
+    }
+    return false;
   }
 
   private void resolvePackOwners(Map.Zone zone) {

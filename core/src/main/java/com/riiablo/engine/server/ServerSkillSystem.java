@@ -810,6 +810,10 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnDeathMaul(event, skill);
       return;
     }
+    if (skill.srvdofunc == 101) {
+      spawnFingerMageSpider(event, skill);
+      return;
+    }
     if (skill.srvdofunc == 104) {
       spawnDiabPrison(event, skill);
       return;
@@ -2130,6 +2134,27 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** SrvDo102: same target for every maker; only the seeded initializer spreads them. */
   private int nextDiabWallCastId;
+  private void spawnFingerMageSpider(SkillDoEvent event, Skills.Entry skill) {
+    Missiles.Entry row = hasText(skill.srvmissilea) ? files().Missiles.get(skill.srvmissilea) : null;
+    if (row == null || !mPosition.has(event.entityId)) return;
+    Vector2 origin = mPosition.get(event.entityId).position;
+    Vector2 target = event.targetId >= 0 && mPosition.has(event.targetId)
+        ? mPosition.get(event.targetId).position : event.targetVec;
+    if (target == null) return;
+    Vector2 direction = new Vector2(target).sub(origin);
+    if (direction.isZero()) direction.set(1, 0);
+    int level = getSkillLevel(event.entityId, skill.Id);
+    int id = createMissile(row, direction.nor(), origin, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile projectile = mMissile.get(id);
+    projectile.skillId = skill.Id;
+    projectile.targetId = event.targetId;
+    initializeSkillDamage(id, skill, event.entityId, level);
+    // SrvDo101 sets flags=3, so nLoops does not extend lifetime (flag 8).
+    log.info("[FINGER_MAGE] phase=create source={} missile={} skill={} level={} target={}",
+        event.entityId, id, skill.Id, level, event.targetId);
+  }
+
   private void spawnDiabWall(SkillDoEvent event, Skills.Entry skill, int level) {
     Missiles.Entry row = skill.srvmissilea == null ? null : files().Missiles.get(skill.srvmissilea);
     if (row == null) return;

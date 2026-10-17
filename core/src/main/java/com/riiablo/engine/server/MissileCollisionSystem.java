@@ -37,6 +37,8 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
@@ -135,6 +137,8 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<Target> mTarget;
+  protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Sequence> mSequence;
 
   @com.artemis.annotations.Wire(failOnNull = false)
@@ -254,6 +258,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       position.invalidateNativePrecision();
       position.position.set(mPosition.get(missile.attachedEntityId).position);
       velocity.velocity.setZero();
+    }
+
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 11) {
+      steerFingerMageSpider(entityId, missile, position.position, velocity, callbackFrame);
     }
 
     // Guided Arrow/Bone Spirit tracks its native target every server tick.
@@ -1605,6 +1613,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         emitImpactPresentation(missileId, missile, targetId, missilePos);
       }
 
+      if (hitFunction == 19) {
+        applyFingerMageState(missile, targetId);
+        if (collidesKill(missile)) world.delete(missileId);
+        return true;
+      }
+
       // MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown applies the same
       // packet to every hostile unit in its impact radius.  The travelling
       // missile itself still owns the first contact, so fan out only to the
@@ -2073,6 +2087,65 @@ public class MissileCollisionSystem extends IteratingSystem {
         childRow.SubMissile != null && childRow.SubMissile.length > 0
             ? childRow.SubMissile[0] : "",
         origin.x, origin.y);
+  }
+
+  /** SrvDo11 uses countdown intervals and an axis-sign target path. */
+  private void steerFingerMageSpider(int id, Missile missile, Vector2 position,
+      Velocity velocity, int callbackFrame) {
+    int target = missile.targetId;
+    if (target < 0 || !world.getEntityManager().isActive(target) || !mPosition.has(target)) {
+      Casting cast = missile.ownerId >= 0 ? mCasting.get(missile.ownerId) : null;
+      Target ownerTarget = missile.ownerId >= 0 ? mTarget.get(missile.ownerId) : null;
+      Pathfind path = missile.ownerId >= 0 ? mPathfind.get(missile.ownerId) : null;
+      target = cast != null && cast.targetId >= 0 ? cast.targetId
+          : ownerTarget != null && ownerTarget.target >= 0 ? ownerTarget.target
+          : path != null ? path.targetEntityId : -1;
+    }
+    if (target < 0 || !mPosition.has(target) || !isAlive(target)) return;
+    int[] param = missile.missile.Param;
+    int interval = param[0] > 0 ? param[0] : 5;
+    if ((missile.nativeLifetimeFrames - callbackFrame) % interval != 0) return;
+    Vector2 destination = mPosition.get(target).position;
+    int dx = Map.round(destination.x) - Map.round(position.x);
+    int dy = Map.round(destination.y) - Map.round(position.y);
+    int size = (mSize.has(id) ? mSize.get(id).size / 2 : 0)
+        + (mSize.has(target) ? mSize.get(target).size / 2 : 0);
+    int ax = Math.max(0, Math.abs(dx) - size), ay = Math.max(0, Math.abs(dy) - size);
+    if (Math.max(ax, ay) + Math.min(ax, ay) / 2 > param[1]) return;
+    int step = Math.max(1, param[2]);
+    tmpVec.set(Integer.signum(dx) * step, Integer.signum(dy) * step);
+    float speed = velocity.velocity.len();
+    if (speed > 0f && !tmpVec.isZero()) {
+      velocity.velocity.set(tmpVec).setLength(speed);
+      if (mAngle.has(id)) mAngle.get(id).target.set(tmpVec).nor();
+    }
+  }
+
+  /** SrvHit19 applies AuraTargetState and its stats without weapon damage. */
+  private void applyFingerMageState(Missile missile, int targetId) {
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+    if (skill == null || missile.ownerId < 0
+        || !world.getEntityManager().isActive(missile.ownerId)) return;
+    com.riiablo.codec.excel.States.Entry state = files().States.get(skill.auratargetstate);
+    if (state == null) return;
+    int level = Math.max(1, missile.damageLevel);
+    int duration = Math.max(5, SkillFormula.evaluate(skill.auralencalc, skill, level,
+        name -> baseSkillLevel(missile.ownerId, name)));
+    UnitStates holder = mUnitStates.get(targetId);
+    if (holder == null || holder.stateList == null) holder = mUnitStates.create(targetId).init(world, targetId);
+    UnitState applied = holder.stateList.addStateLayer(state.id, duration, level,
+        missile.ownerId, missile.skillId);
+    applied.clearModifiers();
+    int length = Math.min(skill.aurastat.length, skill.aurastatcalc.length);
+    for (int i = 0; i < length; i++) {
+      if (skill.aurastat[i] == null || skill.aurastat[i].isEmpty()) continue;
+      int stat = Stat.index(skill.aurastat[i]);
+      if (stat < 0) continue;
+      applied.setStatContribution(stat, 0, com.riiablo.attributes.NativeStatResolver.Operation.ADD,
+          SkillFormula.evaluate(skill.aurastatcalc[i], skill, level,
+              name -> baseSkillLevel(missile.ownerId, name)));
+    }
+    applied.needsSync = true;
   }
 
   /** Native SrvHit16 for Vine/Plague Vines trail missiles. */

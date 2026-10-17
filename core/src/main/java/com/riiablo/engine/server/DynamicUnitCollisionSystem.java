@@ -40,6 +40,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private final com.badlogic.gdx.utils.IntSet newUnits = new com.badlogic.gdx.utils.IntSet();
+  private final com.badlogic.gdx.utils.IntSet reservedUnits = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription units;
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
@@ -95,6 +96,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     // occupied and leave pathfinding with no valid first step.
     insertUnits(entities, true, relocateOverlaps);
     insertUnits(entities, false, relocateOverlaps);
+    // Factory allocations can precede Artemis subscription insertion. Keep
+    // their same-tick reservations across another room's prewarm refresh.
+    com.badlogic.gdx.utils.IntSet.IntSetIterator reservations = reservedUnits.iterator();
+    while (reservations.hasNext) {
+      int id = reservations.next();
+      boolean indexed = false;
+      for (int i = 0; i < entities.size(); i++) if (entities.get(i) == id) { indexed = true; break; }
+      if (indexed || !mPosition.has(id) || !hasPresence(id)) { reservations.remove(); continue; }
+      Position position = mPosition.get(id);
+      grid.put(id, Map.round(position.position.x), Map.round(position.position.y), footprint(id));
+    }
     newUnits.clear();
   }
 
@@ -106,7 +118,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int x = Map.round(position.position.x);
       int y = Map.round(position.position.y);
       int size = footprint(entityId);
-      if (grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) {
+      if (grid.isFreeWithSize(entityId, x, y, size, sameSpaceBlocker(entityId))) {
         grid.put(entityId, x, y, size);
       } else if (isOwnedCompanionOverlappingOwner(entityId)) {
         // Keep the real position in the collision index. MercenaryFollowSystem
@@ -142,7 +154,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           int x = originX + dx;
           int y = originY + dy;
           if (!staticWalkable(zone, x, y, size)) continue;
-          if (!grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) continue;
+          if (!grid.isFreeWithSize(entityId, x, y, size, sameSpaceBlocker(entityId))) continue;
           position.invalidateNativePrecision();
           position.position.set(x, y);
           if (mBox2DBody != null && mBox2DBody.has(entityId)
@@ -244,7 +256,10 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   /** Reserve a successfully created exact-position monster within this tick. */
   public void reserveMonsterSpawn(int entityId, int x, int y, int size) {
-    if (enabled) grid.put(entityId, x, y, size);
+    if (enabled && hasPresence(entityId)) {
+      grid.put(entityId, x, y, size);
+      reservedUnits.add(entityId);
+    }
   }
 
   public void removeMonsterSpawnPresence(int entityId) { grid.remove(entityId); }

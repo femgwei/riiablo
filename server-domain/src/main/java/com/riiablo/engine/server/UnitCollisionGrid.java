@@ -70,6 +70,20 @@ public final class UnitCollisionGrid {
   }
 
   /** Native size-based placement check against the path-marker layer. */
+  public static boolean placementOverlapsMarker(int x, int y, int size,
+      int otherX, int otherY, int otherSize) {
+    int radius = size >= 2 ? 1 : 0;
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        if (size == 2 && dx != 0 && dy != 0) continue;
+        int distance = Math.abs(x + dx - otherX) + Math.abs(y + dy - otherY);
+        if (distance <= (pathPatternSize(otherSize) >= 3 ? 1 : 0)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Native size-based placement check against the path-marker layer. */
   public boolean isFreeWithSize(int moverId, int x, int y, int size, UnitBlocker blocker) {
     // COLLISION_CheckMaskWithSize, unlike path-pattern checks: size 1 is
     // just the center; size 2 tests a cross; size 3 tests the 3x3 square.

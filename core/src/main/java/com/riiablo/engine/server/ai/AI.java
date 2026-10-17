@@ -1023,17 +1023,17 @@ public abstract class AI implements Interactable.Interactor {
         && !candidate.converted
         && candidate.monstats.killable && !candidate.monstats.npc
         && !candidate.monstats.inTown;
-    boolean wildernessGuide = monster != null && monster.monstats != null
-        && monster.monstats.hcIdx == MonsterType.NAVI;
-    // Flavie is friendly to players but uses the native Navi AI to defend the
-    // Blood Moor border against nearby evil monsters.
-    if (wildernessGuide && !targetHostileMonster) return false;
+    boolean alliedDefender = monster != null && monster.monstats != null
+        && (monster.monstats.hcIdx == MonsterType.NAVI
+            || "NpcBarb".equals(monster.monstats.AI));
+    // Flavie and the outdoor barbarian defenders seek evil monsters.
+    if (alliedDefender && !targetHostileMonster) return false;
     // A converted monster is player-aligned and only seeks ordinary evil
     // monsters.  It must never reacquire the caster or another converted unit.
     if (sourceConverted && !targetHostileMonster) return false;
     boolean targetHostilePlayerUnit = sourcePet != null && targetFriendly
         && arePlayerOwnersHostile(sourcePet.ownerId, alignmentOwner(targetId));
-    if (!sourceConverted && !wildernessGuide) {
+    if (!sourceConverted && !alliedDefender) {
       if (sourcePet != null
           ? !(targetHostileMonster || targetHostilePlayerUnit)
           : !(targetFriendly || targetSlot8 || candidate != null && candidate.converted

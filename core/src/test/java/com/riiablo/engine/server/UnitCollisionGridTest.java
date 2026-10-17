@@ -7,6 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class UnitCollisionGridTest {
+  @Test void placementUsesSizeWhileWalkingUsesTheLargerPattern() {
+    UnitCollisionGrid grid = new UnitCollisionGrid();
+    grid.put(1, 10, 10, 1);
+    assertTrue(grid.isFreeWithSize(2, 11, 10, 1, null));
+    assertFalse(grid.isFree(2, -1, 11, 10, 1));
+    assertFalse(grid.isFreeWithSize(2, 11, 10, 2, null));
+    assertFalse(UnitCollisionGrid.placementOverlapsMarker(11, 10, 1, 10, 10, 1));
+    assertTrue(UnitCollisionGrid.placementOverlapsMarker(11, 10, 1, 10, 10, 3));
+    assertTrue(UnitCollisionGrid.placementOverlapsMarker(12, 10, 3, 10, 10, 3));
+    assertFalse(UnitCollisionGrid.placementOverlapsMarker(13, 10, 3, 10, 10, 3));
+  }
   @Test
   void invalidPresenceSizesUseSmallPatternForWritesQueriesAndDiagnostics() {
     for (int size : new int[] {Integer.MIN_VALUE, -1, 4, Integer.MAX_VALUE}) {

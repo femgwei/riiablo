@@ -8,6 +8,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeRoomMonsterPopulationResourceTest extends RiiabloTest {
+  @Test void largePackMarkersReserveAcrossRoomBoundaries() {
+    Map.Zone zone = zone();
+    Map.RoomEx first = zone.getRoomsEx().first();
+    Map.RoomEx second = zone.addRoomEx(20, 0, 20, 40);
+    MonStats.Entry large = null;
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      com.riiablo.codec.excel.MonStats2.Entry stats = Riiablo.files.monstats2.get(row.MonStatsEx);
+      if (stats != null && stats.SizeX == 3 && !stats.critter
+          && !com.riiablo.engine.server.NativeGroundPathProfile.hasNoPresence(row)) { large = row; break; }
+    }
+    assertNotNull(large);
+    first.addMonsterSpawn(large.hcIdx, 19, 10);
+    assertEquals(0, NativeRoomMonsterPopulation.addGroupAt(zone, second, large, 1, 1,
+        rolls(), 20, 10), "every retry stays on an occupied marker");
+    assertEquals(1, NativeRoomMonsterPopulation.addGroupAt(zone, second, large, 1, 1,
+        rolls(), 23, 10));
+  }
   @Test void nativeActTwoThroughFiveBridgesRetainWarpRoomCentersAfterDrlgRelease() throws Exception {
     java.lang.reflect.Field metadata = Map.Zone.class.getDeclaredField("nativeMonsterSpawnExclusion");
     metadata.setAccessible(true);

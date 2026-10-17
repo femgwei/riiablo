@@ -4,6 +4,7 @@ import java.util.Random;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.NativeGroundPathProfile;
+import com.riiablo.engine.server.UnitCollisionGrid;
 
 /** Deferred normal packs for the native Act II-V room topology. */
 final class NativeRoomMonsterPopulation {
@@ -82,8 +83,23 @@ final class NativeRoomMonsterPopulation {
     int size = stats == null ? 2 : Math.max(1, stats.SizeX);
     if (zone.map.isBlockedForPath(zone, x, y,
         NativeGroundPathProfile.forUnit(false, monster).terrainFlags, size, false)) return false;
-    for (Map.MonsterSpawn other : room.getPendingMonsterSpawns())
-      if (Math.round(other.x) == x && Math.round(other.y) == y) return false;
+    if (NativeGroundPathProfile.hasNoPresence(monster) || stats != null && stats.critter) return true;
+    // Deferred units must reserve native presence markers before the room is
+    // activated. Checking only equal centres allowed large pack members to
+    // overlap, including across adjoining RoomEx boundaries.
+    for (int r = 0; r < zone.getRoomsEx().size; r++) {
+      Map.RoomEx otherRoom = zone.getRoomsEx().get(r);
+      for (Map.MonsterSpawn other : otherRoom.getPendingMonsterSpawns()) {
+        int ox = Math.round(other.x), oy = Math.round(other.y);
+        if (Math.abs(ox - x) > 2 || Math.abs(oy - y) > 2) continue;
+        MonStats.Entry otherMonster = zone.map.files().monstats.get(other.monsterId);
+        if (otherMonster == null || NativeGroundPathProfile.hasNoPresence(otherMonster)) continue;
+        MonStats2.Entry otherStats = zone.map.files().monstats2.get(otherMonster.MonStatsEx);
+        if (otherStats != null && otherStats.critter) continue;
+        int otherSize = otherStats == null ? 2 : Math.max(1, otherStats.SizeX);
+        if (UnitCollisionGrid.placementOverlapsMarker(x, y, size, ox, oy, otherSize)) return false;
+      }
+    }
     return true;
   }
 }

@@ -2661,6 +2661,9 @@ public class Actioneer extends PassiveSystem {
         log.debug("[DIAB_COLD] phase=keyframe source={} target={} delegated=ServerSkillSystem",
             entityId, targetId);
         break;
+      case 101: // SrvDo101 creates the Finger Mage projectile on SkillDoEvent.
+        log.debug("[FINGER_MAGE] phase=keyframe source={} delegated=ServerSkillSystem", entityId);
+        break;
       case 104: // SrvDo104 creates the four native prison monsters on SkillDoEvent.
         log.debug("[DIAB_PRISON] phase=keyframe source={} target={} delegated=ServerSkillSystem",
             entityId, targetId);

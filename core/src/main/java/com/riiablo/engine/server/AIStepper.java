@@ -257,7 +257,8 @@ public class AIStepper extends IteratingSystem {
       for (int i = 0, size = entities.size(); i < size; i++) {
         MapWrapper target = mMapWrapper.get(data[i]);
         if (target == null || target.map != source.map || target.zone == null) continue;
-        if (source.map.areZonesAdjacent(source.zone, target.zone)) return true;
+        if (target.zone != source.zone && source.map != null
+            && source.map.isNativeSeamConnection(source.zone, target.zone)) return true;
       }
       return false;
     }
