@@ -40,6 +40,38 @@ class ScarabDecisionBranchTest extends RiiabloTest {
       }
     }
   }
+  @Test void zeroStallWaitsOneFrameBeforeAnotherDecision() {
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      try (Fixture f = new Fixture("scarab1", difficulty, 1)) {
+        Scarab ai = (Scarab) f.ai;
+        ai.params[0] = 0;
+        ai.params[2] = 0;
+        ai.update(0.04f);
+        assertEquals(com.riiablo.codec.Animation.FRAME_DURATION, ai.time);
+        assertEquals("IDLE", ai.getState());
+        verify(f.paths).findPath(f.actor, null);
+        clearInvocations(f.paths);
+        ai.update(com.riiablo.codec.Animation.FRAME_DURATION / 2);
+        verifyNoInteractions(f.paths);
+        assertNull(f.casting());
+        ai.update(com.riiablo.codec.Animation.FRAME_DURATION);
+        verify(f.paths).findPath(f.actor, null);
+        assertEquals(com.riiablo.codec.Animation.FRAME_DURATION, ai.time);
+      }
+    }
+  }
+
+  @Test void oneFrameStallRetainsConfiguredDuration() {
+    try (Fixture f = new Fixture("scarab1", 0, 1)) {
+      Scarab ai = (Scarab) f.ai;
+      ai.params[0] = 0;
+      ai.params[2] = 1;
+      ai.update(0.04f);
+      assertEquals(com.riiablo.codec.Animation.FRAME_DURATION, ai.time);
+      assertNull(f.casting());
+    }
+  }
+
   @Test void successfulJabRollUsesConfiguredSkillInsteadOfBasicAttack() {
     try (Fixture f = new Fixture("scarab1", 0, 1)) {
       Scarab ai = (Scarab) f.ai;

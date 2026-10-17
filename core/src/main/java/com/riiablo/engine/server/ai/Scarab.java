@@ -204,7 +204,9 @@ public class Scarab extends AI {
     // Fn020 ends a declined attack with IdleInNeutralMode, cancelling movement.
     stopMovement();
     stateMachine.changeState(State.IDLE);
-    time = params[2] * com.riiablo.codec.Animation.FRAME_DURATION;
+    // AITACTICS_Idle substitutes one frame only when the requested count is zero.
+    int stallFrames = params[2] == 0 ? 1 : params[2];
+    time = stallFrames * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override
