@@ -170,6 +170,8 @@ public class ServerEntityFactory extends EntityFactory {
     mZoneAware.create(id);
     NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
     if (slots != null) slots.registerPlayer(id);
+    DynamicUnitCollisionSystem spawnCollision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (spawnCollision != null) spawnCollision.reservePlayerSpawn(id);
     return id;
   }
 

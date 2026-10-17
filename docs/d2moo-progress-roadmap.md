@@ -1,5 +1,10 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 完整活体 PLAYER 标记
+
+- 玩家 PLAYER footprint 与行走 NO_PATH/PET 分离查询，修复小型四臂/大型角格漏检；工厂同帧登记并沿用 source/碰撞空间/尺寸规则。
+- 玩家死亡 CORPSE 与共享位互清尚未宣称完成，来源及验证见 [出生搜索专项记录](ai-native-spawn-search-2026-10-18.md)。
+
 ## 2026-10-18 宿主尺寸 pattern 边界
 
 - size=0 作为 NONE 不参与活体 presence；非法尺寸回退小型普通 pattern，修复出生标记误扩大为大型范围的问题。

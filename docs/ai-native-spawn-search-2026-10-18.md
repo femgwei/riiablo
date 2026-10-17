@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：完整活体 PLAYER 出生标记
+
+- 来源：Path.cpp 的玩家分配使用 COLLIDE_PLAYER；D2Collision.cpp 的 COLLISION_SetMaskWithPattern 对小型 pattern 写 PLAYER 十字+中心 NO_PATH，大型写 PLAYER 3×3+NO_PATH 十字。行走索引只保存后者，不能代替 PLAYER 层。
+- 出生查询现在独立投影 PLAYER footprint，保留实时位置、source 排除、同碰撞空间及尺寸 0/非法值规则；行走索引回调仅查询 NO_PATH/PET，不再重复推断 PLAYER/MONSTER footprint。
+- 玩家工厂即时登记，保证尚未进入 ECS 订阅的玩家已提供出生标记和行走 presence；删除订阅清理登记，查询额外排除 Corpse/死亡生命周期。
+- 本批仅覆盖活体 PLAYER 层，不声明完成玩家死亡 CORPSE、尸体移除/复活的完整流程或原版共享位互清；未进行客户端图形验收。
+- 验证：PlayerSpawnMarkerIntegrationTest（3）、SpawnPatternSizeIntegrationTest（3）、CorpseSpawnCollisionIntegrationTest（6）、MaggotSpawnExecutionTest（9）、ImpMountCollisionIntegrationTest（2），共 23 项通过，architectureRegression 通过；日志 `build/ai-player-marker-validation.log`。未运行全量测试。
+
 ## 后续：尺寸 0 与非法尺寸的宿主 pattern 边界
 
 - 来源：Path.cpp 的尺寸到 pattern 数组以 NONE 开头，D2Common_11281 对越界尺寸先返回 SMALL_UNIT_PRESENCE，再处理可进城/交互的宠物转换；NONE 不写 footprint 或 NO_PATH/PET。

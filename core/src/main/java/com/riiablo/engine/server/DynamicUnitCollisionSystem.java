@@ -244,9 +244,10 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if ((flags & mask) != 0) return false;
       if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
       if (enabled && (mask & 0x100) != 0 && hasSpawnMonsterMarker(sourceId, zone, px, py)) return false;
+      if (enabled && (mask & 0x80) != 0 && hasSpawnPlayerMarker(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
         if (!hasPresence(other) || !sharesCollisionSpace(zone, other)) return false;
-        int bits = isPlayer(other) ? 0x80 : 0x100;
+        int bits = 0; // PLAYER/MONSTER footprints are queried separately from walking presence.
         Position position = mPosition.get(other);
         if (position != null) {
           int distance = Math.abs(Map.round(position.position.x) - px)
@@ -270,6 +271,30 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Marker-only registration does not add walking presence. */
   public void registerMonsterSpawnMarkers(int id) {
     spawnUnits.add(id);
+  }
+
+  /** Player allocation writes collision before ECS subscription insertion. */
+  public void reservePlayerSpawn(int id) {
+    spawnUnits.add(id);
+    if (enabled && hasPresence(id) && mPosition.has(id)) {
+      Position position = mPosition.get(id);
+      grid.put(id, Map.round(position.position.x), Map.round(position.position.y), footprint(id));
+    }
+  }
+
+  private boolean hasSpawnPlayerMarker(int sourceId, Map.Zone zone, int x, int y) {
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnUnits.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (id == sourceId || !isPlayer(id) || !hasPresence(id) || !mPosition.has(id)
+          || mCorpse.has(id) || !sharesCollisionSpace(zone, id)) continue;
+      com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
+      if (lifecycle != null && lifecycle.isDead()) continue;
+      Position position = mPosition.get(id);
+      int dx = Math.abs(Map.round(position.position.x) - x);
+      int dy = Math.abs(Map.round(position.position.y) - y);
+      if (footprint(id) >= 3 ? dx <= 1 && dy <= 1 : dx + dy <= 1) return true;
+    }
+    return false;
   }
 
   /** Native server dead collision is a 3x3 CORPSE marker, not live presence. */
