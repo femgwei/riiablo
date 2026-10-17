@@ -24,6 +24,37 @@ import org.junit.jupiter.api.Test;
 
 /** Exercises production systems with two simultaneous Worlds and no global game host. */
 class ServerSystemIsolationTest {
+  @Test void actFiveMessageValidationUsesExplicitMonsterRows() throws Exception {
+    Files previous = Riiablo.files;
+    Files files = mock(Files.class);
+    com.riiablo.codec.excel.MonStats monsters = mock(com.riiablo.codec.excel.MonStats.class);
+    java.lang.reflect.Field field = Files.class.getField("monstats");
+    field.setAccessible(true);
+    field.set(files, monsters);
+    com.riiablo.codec.excel.MonStats.Entry drehya = new com.riiablo.codec.excel.MonStats.Entry();
+    drehya.Id = "Drehya";
+    when(monsters.get(999)).thenReturn(drehya);
+    CharData character = mock(CharData.class);
+    when(character.isExpansion()).thenReturn(true);
+    short[] records = new short[8];
+    records[com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD] =
+        com.riiablo.engine.server.quest.NativeQuestRecord.set((short) 0,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING);
+    records[com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD] =
+        com.riiablo.engine.server.quest.NativeQuestRecord.set((short) 0,
+            com.riiablo.engine.server.quest.NativeQuestRecord.STARTED);
+    when(character.getQuests(Riiablo.ACT5)).thenReturn(records);
+    try {
+      Riiablo.files = null;
+      assertTrue(com.riiablo.engine.server.quest.Act5QuestMessageValidator.isAllowed(files, 999, character,
+          com.d2moo.common.drlg.D2LevelIds.LEVEL_HARROGATH,
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.MESSAGE_DREHYA_START));
+      assertFalse(com.riiablo.engine.server.quest.Act5QuestMessageValidator.isAllowed(files, 998, character,
+          com.d2moo.common.drlg.D2LevelIds.LEVEL_HARROGATH,
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.MESSAGE_DREHYA_START));
+    } finally { Riiablo.files = previous; }
+  }
+
   @Test void trapSkillAndMissileImpactRowsStayBoundWhenGlobalsAreUnavailable() throws Exception {
     Files previous = Riiablo.files;
     Files first = files("first-impact", 11);

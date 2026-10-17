@@ -13,12 +13,18 @@ public class PropertiesGenerator {
   private static final Logger log = LogManager.getLogger(PropertiesGenerator.class);
   public interface RandomSource { int betweenInclusive(int min, int max); }
   private final RandomSource random;
+  private final com.riiablo.Files suppliedFiles;
 
   public PropertiesGenerator() {
     this(MathUtils::random);
   }
 
   public PropertiesGenerator(RandomSource random) {
+    this(null, random);
+  }
+
+  public PropertiesGenerator(com.riiablo.Files files, RandomSource random) {
+    suppliedFiles = files;
     if (random == null) throw new NullPointerException("random");
     this.random = random;
   }
@@ -45,7 +51,7 @@ public class PropertiesGenerator {
       try {
         MDC.put("propCode", c);
         log.trace("Adding {}", c);
-        final Properties.Entry prop = Riiablo.files.Properties.get(c);
+        final Properties.Entry prop = (suppliedFiles != null ? suppliedFiles : Riiablo.files).Properties.get(c);
         for (int j = 0; j < prop.func.length; j++) {
           if (prop.func[j] == 0) break;
           add(stats, prop, j, param[i], min[i], max[i]);
@@ -73,7 +79,7 @@ public class PropertiesGenerator {
         "add(stats: {}, prop: {}, propId: {}, param: {}, min: {}, max: {})",
         stats, prop, propId, param, min, max);
     // NOTE: some stats have a function without a stat, e.g., dmg-min -- func 5
-    ItemStatCost.Entry entry = Stat.entry(prop.stat[propId]);
+    ItemStatCost.Entry entry = stats.table().entry(prop.stat[propId]);
     final int func = prop.func[propId];
     log.trace("func: {}", func);
     switch (func) {
@@ -89,7 +95,7 @@ public class PropertiesGenerator {
       }
       case 3: { // res-all, all-stats, etc -- copy previous
         final StatRef last = stats.last();
-        assert last.id() == Stat.entry(prop.stat[propId - 1]).ID :
+        assert last.id() == stats.table().entry(prop.stat[propId - 1]).ID :
             "last.id(" + last.id() + ") != prop.stat(" + prop.stat[propId - 1] + ")";
         stats.putEncoded((short) entry.ID, last.encodedParams(), last.encodedValues());
         return;

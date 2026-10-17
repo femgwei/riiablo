@@ -148,11 +148,11 @@ public final class VendorPricing {
     int mult = MULTIPLIER_SCALE, add = 0;
     switch (item.quality) {
       case MAGIC:
-        if (Riiablo.files != null) {
+        if (item.files() != null) {
           int prefix = item.qualityId & Item.MAGIC_AFFIX_MASK;
           int suffix = item.qualityId >>> Item.MAGIC_AFFIX_SIZE;
-          com.riiablo.codec.excel.MagicAffix p = Riiablo.files.MagicPrefix.get(prefix);
-          com.riiablo.codec.excel.MagicAffix s = Riiablo.files.MagicSuffix.get(suffix);
+          com.riiablo.codec.excel.MagicAffix p = item.files().MagicPrefix.get(prefix);
+          com.riiablo.codec.excel.MagicAffix s = item.files().MagicSuffix.get(suffix);
           if (p != null) { mult += p.multiply; add += p.add; }
           if (s != null) { mult += s.multiply; add += s.add; }
         }
@@ -202,7 +202,7 @@ public final class VendorPricing {
         int multiply = entry.Multiply;
         switch (entry.Encode) {
           case 1: {
-            NativeSkills.Entry skill = nativeSkill(stat.param0());
+            NativeSkills.Entry skill = nativeSkill(item, stat.param0());
             if (skill == null) continue;
             value = stat.encodedValues() >> entry.ValShift;
             add = skill.nativeInteger("cost add");
@@ -211,7 +211,7 @@ public final class VendorPricing {
           }
           case 2:
           case 3: {
-            NativeSkills.Entry skill = nativeSkill(stat.param1());
+            NativeSkills.Entry skill = nativeSkill(item, stat.param1());
             if (skill == null) continue;
             value = stat.param0();
             add = skill.nativeInteger("cost add");
@@ -233,9 +233,9 @@ public final class VendorPricing {
     return (int) additional;
   }
 
-  private static NativeSkills.Entry nativeSkill(int skillId) {
-    return Riiablo.files == null || Riiablo.files.NativeSkills == null
-        ? null : Riiablo.files.NativeSkills.get(skillId);
+  private static NativeSkills.Entry nativeSkill(Item item, int skillId) {
+    return item.files() == null || item.files().NativeSkills == null
+        ? null : item.files().NativeSkills.get(skillId);
   }
 
   private static int socketableCost(Item item) {

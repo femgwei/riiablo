@@ -24,6 +24,16 @@ public final class NativeShrineDistributionAudit {
   private NativeShrineDistributionAudit() {}
 
   public static String run(int firstSeed, int seedCount, int difficulty) {
+    return run(D2MOOLayoutContext.fromGlobals(), firstSeed, seedCount, difficulty);
+  }
+
+  public static String run(D2MOOLayoutContext context, int firstSeed, int seedCount, int difficulty) {
+    try (D2MOOLayoutContext.Scope ignored = context.activate()) {
+      return runActive(firstSeed, seedCount, difficulty);
+    }
+  }
+
+  private static String runActive(int firstSeed, int seedCount, int difficulty) {
     if (seedCount <= 0) throw new IllegalArgumentException("seedCount must be positive");
     int burialGroundsId = findLevelId("Burial Grounds");
     if (burialGroundsId < 0) {
@@ -61,11 +71,11 @@ public final class NativeShrineDistributionAudit {
               // D2MOO exports non-object presets too; only Objects.txt classes
               // participate in shrine/well creation.
               if (unitType != D2UnitTypes.UNIT_OBJECT || spawned) return;
-              int objectId = ds1Raw ? Riiablo.files.obj.getObjectId(1, index) : index;
+              int objectId = ds1Raw ? D2MOOLayoutContext.files().obj.getObjectId(1, index) : index;
               rawCounts.merge(objectId, 1, Integer::sum);
               NativePresetObjectResolver.Resolution resolution =
                   NativePresetObjectResolver.resolve(1, levelId, objectId, seed, x, y);
-              Objects.Entry base = Riiablo.files.objects.get(resolution.classId);
+              Objects.Entry base = D2MOOLayoutContext.files().objects.get(resolution.classId);
               if (base != null) {
                 rawDetails.put(objectId, "name=" + base.Name
                     + ",operateFn=" + base.OperateFn
@@ -79,10 +89,10 @@ public final class NativeShrineDistributionAudit {
                   || (base != null && base.OperateFn == 2)) {
                 shrinePresets[0]++;
                 shrineModeCounts.merge(mode, 1, Integer::sum);
-                int shrineId = NativeShrineResolver.resolve(Riiablo.files.Shrines, base,
+                int shrineId = NativeShrineResolver.resolve(D2MOOLayoutContext.files().Shrines, base,
                     objectId, levelId, seed, x, y);
                 shrineCounts.merge(shrineId, 1, Integer::sum);
-                Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
+                Shrines.Entry shrine = D2MOOLayoutContext.files().Shrines.get(shrineId);
                 String view = shrine == null || shrine.ViewName == null
                     ? "<missing-row-" + shrineId + ">" : shrine.ViewName;
                 viewCounts.merge(view, 1, Integer::sum);
@@ -135,7 +145,7 @@ public final class NativeShrineDistributionAudit {
   }
 
   private static int findLevelId(String name) {
-    for (com.riiablo.codec.excel.Levels.Entry level : Riiablo.files.Levels) {
+    for (com.riiablo.codec.excel.Levels.Entry level : D2MOOLayoutContext.files().Levels) {
       if (level != null && name.equals(level.LevelName)) return level.Id;
     }
     return -1;

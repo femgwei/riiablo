@@ -77,11 +77,11 @@ public class ItemWrapper extends Actor implements Disposable {
 
     invColormap      = Riiablo.colormaps.get(item.base.InvTrans);
     String invColor  = item.getInvColor();
-    invColorIndex    = invColor != null ? Riiablo.files.colors.index(invColor) + 1 : 0;
+    invColorIndex    = invColor != null ? item.files().colors.index(invColor) + 1 : 0;
 
     charColormap     = Riiablo.colormaps.get(item.base.Transform);
     String charColor = item.getCharColor();
-    charColorIndex   = charColor != null ? Riiablo.files.colors.index(charColor) + 1 : 0;
+    charColorIndex   = charColor != null ? item.files().colors.index(charColor) + 1 : 0;
 
     if (getSocketCount() > 0) {
       socketDescriptor = new AssetDescriptor<>(

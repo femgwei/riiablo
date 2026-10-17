@@ -88,13 +88,13 @@ public final class ItemRequirements {
   }
 
   private static int qualityRequiredLevel(Item item, CharacterClass characterClass) {
-    if (item.quality == null || Riiablo.files == null) return 0;
+    if (item.quality == null || item.files() == null) return 0;
     switch (item.quality) {
       case MAGIC:
         return Math.max(
-            affixRequiredLevel(Riiablo.files.MagicPrefix.get(
+            affixRequiredLevel(item.files().MagicPrefix.get(
                 item.qualityId & Item.MAGIC_AFFIX_MASK), characterClass),
-            affixRequiredLevel(Riiablo.files.MagicSuffix.get(
+            affixRequiredLevel(item.files().MagicSuffix.get(
                 item.qualityId >>> Item.MAGIC_AFFIX_SIZE), characterClass));
       case RARE:
       case CRAFTED:
@@ -103,8 +103,8 @@ public final class ItemRequirements {
         int required = 0;
         int craftBonus = item.quality == Quality.CRAFTED ? 10 : 0;
         for (int i = 0; i < RareQualityData.NUM_AFFIXES; i++) {
-          MagicAffix prefix = Riiablo.files.MagicPrefix.get(rare.prefixes[i]);
-          MagicAffix suffix = Riiablo.files.MagicSuffix.get(rare.suffixes[i]);
+          MagicAffix prefix = item.files().MagicPrefix.get(rare.prefixes[i]);
+          MagicAffix suffix = item.files().MagicSuffix.get(rare.suffixes[i]);
           if (prefix != null) {
             required = Math.max(required, affixRequiredLevel(prefix, characterClass));
             if (item.quality == Quality.CRAFTED) craftBonus += 3;
@@ -142,13 +142,13 @@ public final class ItemRequirements {
   }
 
   private static int skillRequiredLevel(Item item, CharacterClass characterClass) {
-    if (item.attrs == null || Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    if (item.attrs == null || item.files() == null || item.files().skills == null) return 0;
     int required = 0;
     for (int i = 0; i < item.attrs.list().numLists(); i++) {
       StatListRef list = item.attrs.list(i);
       for (StatRef stat : list) {
         if (stat.id() != Stat.item_singleskill && stat.id() != Stat.item_nonclassskill) continue;
-        Skills.Entry skill = Riiablo.files.skills.get(stat.param0());
+        Skills.Entry skill = item.files().skills.get(stat.param0());
         if (skill == null) continue;
         int skillRequirement = skill.reqlevel;
         if (stat.id() == Stat.item_nonclassskill

@@ -66,8 +66,8 @@ final class NativeWeaponSpeed {
     Weapons.Entry weapon = item.getBase();
     int attackLength = 45;
     if (Riiablo.anim != null && weapon.wclass != null) {
-      com.riiablo.codec.excel.PlrType.Entry playerType = Riiablo.files == null
-          || Riiablo.files.PlrType == null ? null : Riiablo.files.PlrType.get(characterClass.id);
+      com.riiablo.codec.excel.PlrType.Entry playerType = item.files() == null
+          || item.files().PlrType == null ? null : item.files().PlrType.get(characterClass.id);
       String token = playerType == null ? characterClass.shortName : playerType.Token;
       String cof = token.toUpperCase(java.util.Locale.ROOT)
           + "A1" + weapon.wclass.toUpperCase(java.util.Locale.ROOT);

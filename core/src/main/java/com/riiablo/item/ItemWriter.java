@@ -228,7 +228,7 @@ public class ItemWriter {
         log.warn("Missing armorclass stat while saving item: code={} id={} "
                 + "quality={} qualityId={}; writing fallback={}",
             item.code, item.id, item.quality, item.qualityId, fallback);
-        writeInlineStatValue(Stat.armorclass, fallback, bits);
+        writeInlineStatValue(item, Stat.armorclass, fallback, bits);
       }
     }
     return hasAC;
@@ -246,14 +246,14 @@ public class ItemWriter {
         maxdurability = statListWriter.write(item.attrs.base(), maxStat, bits, false).asInt();
       } else {
         maxdurability = fallbackMaxDurability(item);
-        writeInlineStatValue(Stat.maxdurability, maxdurability, bits);
+        writeInlineStatValue(item, Stat.maxdurability, maxdurability, bits);
       }
       if (maxdurability > 0) {
         StatRef durability = item.attrs.base().get(Stat.durability);
         if (durability != null) {
           statListWriter.write(item.attrs.base(), durability, bits, false);
         } else {
-          writeInlineStatValue(Stat.durability, maxdurability, bits);
+          writeInlineStatValue(item, Stat.durability, maxdurability, bits);
         }
       }
     }
@@ -261,8 +261,8 @@ public class ItemWriter {
   }
 
   /** Inline item fields carry only the encoded value, not a 9-bit stat id. */
-  private static void writeInlineStatValue(short stat, int value, BitOutput bits) {
-    com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(stat);
+  private static void writeInlineStatValue(Item item, short stat, int value, BitOutput bits) {
+    com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(item.attrs.table(), stat);
     bits.write63u(0, entry.Save_Param_Bits);
     bits.write63u(value + entry.Save_Add, entry.Save_Bits);
   }
@@ -318,7 +318,7 @@ public class ItemWriter {
 
   private static int writeSetFlags(Item item, BitOutput bits) {
     if (item.quality != Quality.SET) return 0;
-    SetItems.Entry setItem = Riiablo.files.SetItems.get(item.qualityId);
+    SetItems.Entry setItem = item.files().SetItems.get(item.qualityId);
     Sets.Entry set = setItem.getSet();
     final int numSetItems = set.getItems().size;
     final int flags = (1 << (numSetItems - 1)) - 1;

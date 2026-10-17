@@ -115,7 +115,8 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(Warp.class, new WarpSerializer());
     serializers.put(Monster.class, new MonsterSerializer());
     serializers.put(Missile.class, new MissileSerializer());
-    serializers.put(Item.class, new ItemSerializer());
+    serializers.put(Item.class, serverContext != null
+        ? new ItemSerializer(serverContext.files()) : new ItemSerializer());
     serializers.put(UnitStates.class, serverContext != null
         ? new StateSerializer(serverContext.files()) : new StateSerializer());
     serializers.put(SummonedPet.class, new SummonedPetSerializer());

@@ -2,7 +2,6 @@ package com.riiablo.attributes;
 
 import org.apache.commons.lang3.math.NumberUtils;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.ItemStatCost;
 
 @SuppressWarnings("unused")
@@ -405,16 +404,20 @@ public class Stat {
   }
 
   public static ItemStatCost.Entry entry(short stat) {
-    return Riiablo.files.ItemStatCost.get(stat);
+    return StatTable.fromGlobals().entry(stat);
   }
 
   public static ItemStatCost.Entry entry(String stat) {
-    return Riiablo.files.ItemStatCost.get(stat);
+    return StatTable.fromGlobals().entry(stat);
   }
 
   public static short index(String stat) {
-    return (short) Riiablo.files.ItemStatCost.index(stat);
+    return StatTable.fromGlobals().index(stat);
   }
+
+  public static ItemStatCost.Entry entry(StatTable table, short stat) { return table.entry(stat); }
+  public static ItemStatCost.Entry entry(StatTable table, String stat) { return table.entry(stat); }
+  public static short index(StatTable table, String stat) { return table.index(stat); }
 
   static boolean encodingSupported(final int encoding) {
     return encoding >= 0 && encoding <= 4;

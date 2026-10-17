@@ -18,6 +18,35 @@ import org.junit.jupiter.api.Test;
 /** Real Excel/MPQ half of the native item-generation test gate. */
 class NativeItemGeneratorIntegrationTest extends RiiabloTest {
   @Test
+  void explicitItemDataSurvivesGenerationRequirementsAndWireRoundTripWithoutGlobals() {
+    com.riiablo.Files files = com.riiablo.Riiablo.files;
+    ItemGenerator generator = new ItemGenerator(files);
+    Item expected = generator.generateLootItem("cap", 30, Quality.MAGIC, 0x34567812, 1);
+    io.netty.buffer.ByteBuf buffer = io.netty.buffer.Unpooled.buffer();
+    try {
+      com.riiablo.Riiablo.files = null;
+      Item actual = generator.generateLootItem("cap", 30, Quality.MAGIC, 0x34567812, 1);
+      assertEquals(expected.qualityId, actual.qualityId);
+      assertEquals(expected.type.getOrdinalString(), actual.type.getOrdinalString());
+      assertEquals(ItemRequirements.requiredLevel(expected, com.riiablo.CharacterClass.AMAZON),
+          ItemRequirements.requiredLevel(actual, com.riiablo.CharacterClass.AMAZON));
+      assertTrue(VendorPricing.buyPrice(actual) >= 0);
+      new ItemWriter().writeItem(actual, com.riiablo.io.ByteOutput.wrap(buffer));
+      Item restored = new ItemReader(files).readItem(com.riiablo.io.ByteInput.wrap(buffer));
+      assertEquals(actual.code, restored.code);
+      assertEquals(actual.qualityId, restored.qualityId);
+      assertEquals(actual.attrs.base().get(Stat.maxdurability).asInt(),
+          restored.attrs.base().get(Stat.maxdurability).asInt());
+      assertTrue(restored.files() == files);
+      Item gem = generator.generateLootItem("gcv", 20, Quality.NORMAL, 1234, 0);
+      assertTrue(gem.attrs.list().numLists() > 0);
+    } finally {
+      com.riiablo.Riiablo.files = files;
+      buffer.release();
+    }
+  }
+
+  @Test
   void fixedSeedProducesStableBaseStatsAndTraits() {
     ItemGenerator generator = new ItemGenerator();
     Item first = generator.generateLootItem("cap", 20, Quality.NORMAL, 0x12345678, 0);

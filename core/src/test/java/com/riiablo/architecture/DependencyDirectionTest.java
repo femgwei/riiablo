@@ -51,8 +51,13 @@ class DependencyDirectionTest {
     Path sourceRoot = sourceRoot();
     Map<String, Integer> budgets = new HashMap<>();
     budgets.put("com/riiablo/engine/server/MissileCollisionSystem.java", 1);
-    budgets.put("com/riiablo/attributes/Stat.java", 3);
+    budgets.put("com/riiablo/attributes/Stat.java", 0);
     budgets.put("com/riiablo/item/Type.java", 1);
+    budgets.put("com/riiablo/item/ItemRequirements.java", 0);
+    budgets.put("com/riiablo/item/ItemWriter.java", 0);
+    budgets.put("com/riiablo/item/VendorPricing.java", 0);
+    budgets.put("com/riiablo/map/d2moo/NativeShrineDistributionAudit.java", 0);
+    budgets.put("com/riiablo/engine/server/quest/Act5QuestMessageValidator.java", 1);
     budgets.put("com/riiablo/engine/server/skill/DruidSkills.java", 0);
 
     List<String> violations = new ArrayList<>();

@@ -26,6 +26,17 @@ import com.riiablo.attributes.PropertiesGenerator;
 import com.riiablo.engine.server.NativeRng;
 
 public class ItemGenerator extends PassiveSystem {
+  private final com.riiablo.Files suppliedFiles;
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected com.riiablo.engine.server.ServerGameplayContext serverContext;
+
+  public ItemGenerator() { this(null); }
+  public ItemGenerator(com.riiablo.Files files) { suppliedFiles = files; }
+  private com.riiablo.Files files() {
+    return suppliedFiles != null ? suppliedFiles : serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+  private int gameSeed() { return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed; }
+
   private final UniqueDropHistory uniqueDrops = new UniqueDropHistory();
   private static final String TAG = "ItemGenerator";
 
@@ -36,7 +47,7 @@ public class ItemGenerator extends PassiveSystem {
 //  }
 
   public Item generate(String code) {
-    ItemEntry type = ItemUtils.getBase(code);
+    ItemEntry type = ItemUtils.getBase(files(), code);
     return generate(type);
   }
 
@@ -55,7 +66,7 @@ public class ItemGenerator extends PassiveSystem {
 
   /** Creates a drop with native quality metadata and persisted affix data. */
   public Item generateLootItem(String code, int itemLevel, Quality requested) {
-    int seed = Riiablo.gameSeed ^ code.hashCode() ^ (itemLevel * 0x45D9F3B);
+    int seed = gameSeed() ^ code.hashCode() ^ (itemLevel * 0x45D9F3B);
     return generateLootItem(code, itemLevel, requested, seed, Riiablo.NORMAL);
   }
 
@@ -89,23 +100,23 @@ public class ItemGenerator extends PassiveSystem {
     // the client tooltip and later socketing paths see the native properties.
     if ((item.type.is(Type.GEM) || item.type.is(Type.RUNE))
         && item.attrs.list().numLists() == 0) {
-      new GemGenerator(properties).set(item.attrs, item.code);
+      new GemGenerator(files(), properties).set(item.attrs, item.code);
     }
     if (item.quality == Quality.UNIQUE) {
       UniqueItems.Entry entry = findUnique(code, itemLevel, rng);
       if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
           seed, difficulty);
-      if (!uniqueDrops.claim(Riiablo.files.UniqueItems.index(entry.index), entry.nolimit != 0)) {
+      if (!uniqueDrops.claim(files().UniqueItems.index(entry.index), entry.nolimit != 0)) {
         return generateLootItem(code, itemLevel, Quality.RARE, seed, difficulty);
       }
-      item.qualityId = Riiablo.files.UniqueItems.index(entry.index);
+      item.qualityId = files().UniqueItems.index(entry.index);
       item.qualityData = entry;
       addUniqueProperties(item, entry, properties);
     } else if (item.quality == Quality.SET) {
       SetItems.Entry entry = findSet(code, itemLevel, rng);
       if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
           seed, difficulty);
-      item.qualityId = Riiablo.files.SetItems.index(entry.index);
+      item.qualityId = files().SetItems.index(entry.index);
       item.qualityData = entry;
       addSetProperties(item, entry, properties);
     }
@@ -120,11 +131,11 @@ public class ItemGenerator extends PassiveSystem {
     return item;
   }
 
-  private static UniqueItems.Entry findUnique(String code, int itemLevel, NativeRng rng) {
-    if (Riiablo.files.UniqueItems == null) return null;
+  private UniqueItems.Entry findUnique(String code, int itemLevel, NativeRng rng) {
+    if (files().UniqueItems == null) return null;
     Array<UniqueItems.Entry> candidates = new Array<>();
     int totalRarity = 0;
-    for (UniqueItems.Entry entry : Riiablo.files.UniqueItems) {
+    for (UniqueItems.Entry entry : files().UniqueItems) {
       if (entry.enabled && code.equals(entry.code) && (entry.lvl <= 0 || entry.lvl <= itemLevel)) {
         candidates.add(entry);
         totalRarity += Math.max(1, entry.rarity);
@@ -139,11 +150,11 @@ public class ItemGenerator extends PassiveSystem {
     return candidates.peek();
   }
 
-  private static SetItems.Entry findSet(String code, int itemLevel, NativeRng rng) {
-    if (Riiablo.files.SetItems == null) return null;
+  private SetItems.Entry findSet(String code, int itemLevel, NativeRng rng) {
+    if (files().SetItems == null) return null;
     Array<SetItems.Entry> candidates = new Array<>();
     int totalRarity = 0;
-    for (SetItems.Entry entry : Riiablo.files.SetItems) {
+    for (SetItems.Entry entry : files().SetItems) {
       String itemCode = entry._item != null && !entry._item.isEmpty() ? entry._item : entry.item;
       if (code.equals(itemCode) && (entry.lvl <= 0 || entry.lvl <= itemLevel)) {
         candidates.add(entry);
@@ -182,7 +193,7 @@ public class ItemGenerator extends PassiveSystem {
   /** Creates a native quest reward with valid persisted magic/rare metadata. */
   public Item generateQuestReward(String code, int itemLevel, Quality quality, int id) {
     NativeRng rng = new NativeRng(id == 0
-        ? Riiablo.gameSeed ^ code.hashCode() ^ (itemLevel * 0x45D9F3B) : id);
+        ? gameSeed() ^ code.hashCode() ^ (itemLevel * 0x45D9F3B) : id);
     return generateQuestReward(code, itemLevel, quality, id, rng);
   }
 
@@ -201,25 +212,25 @@ public class ItemGenerator extends PassiveSystem {
     PropertiesGenerator properties = properties(rng);
 
     if (quality == Quality.MAGIC) {
-      int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel, rng);
-      MagicPrefix.Entry prefixEntry = Riiablo.files.MagicPrefix.get(prefix);
+      int prefix = findMagicAffix(files().MagicPrefix, item, itemLevel, rng);
+      MagicPrefix.Entry prefixEntry = files().MagicPrefix.get(prefix);
       addMagicAffix(magic, prefixEntry, properties);
       applyMagicSocketAffix(item, magic, itemLevel, Riiablo.NORMAL);
-      int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel, rng);
+      int suffix = findMagicAffix(files().MagicSuffix, item, itemLevel, rng);
       item.qualityId = prefix | (suffix << Item.MAGIC_AFFIX_SIZE);
-      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix), properties);
+      addMagicAffix(magic, files().MagicSuffix.get(suffix), properties);
     } else if (quality == Quality.RARE) {
-      int rarePrefix = findRareAffix(Riiablo.files.RarePrefix, item, rng);
-      int rareSuffix = findRareAffix(Riiablo.files.RareSuffix, item, rng);
+      int rarePrefix = findRareAffix(files().RarePrefix, item, rng);
+      int rareSuffix = findRareAffix(files().RareSuffix, item, rng);
       item.qualityId = rarePrefix | (rareSuffix << Item.RARE_AFFIX_SIZE);
       // RarePrefix/RareSuffix supply only the generated rare name. The six
       // persisted RareQualityData slots reference MagicPrefix/MagicSuffix;
       // storing rare-name ids there corrupts the property stream on reload.
-      int magicPrefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel, rng);
-      int magicSuffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel, rng);
+      int magicPrefix = findMagicAffix(files().MagicPrefix, item, itemLevel, rng);
+      int magicSuffix = findMagicAffix(files().MagicSuffix, item, itemLevel, rng);
       item.qualityData = new RareQualityData(magicPrefix, magicSuffix);
-      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(magicPrefix), properties);
-      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(magicSuffix), properties);
+      addMagicAffix(magic, files().MagicPrefix.get(magicPrefix), properties);
+      addMagicAffix(magic, files().MagicSuffix.get(magicSuffix), properties);
     }
     item.attrs.reset();
     return item;
@@ -340,7 +351,7 @@ public class ItemGenerator extends PassiveSystem {
   private static boolean excludes(Item item, String... types) {
     if (item == null || item.typeEntry == null || types == null) return false;
     for (String type : types) {
-      if (type != null && !type.isEmpty() && item.typeEntry.is(type)) return true;
+      if (type != null && !type.isEmpty() && item.files().itemTypes().get(item.typeEntry).is(type)) return true;
     }
     return false;
   }
@@ -377,7 +388,7 @@ public class ItemGenerator extends PassiveSystem {
 
   private static boolean supports(String a, String b, String c, String d, String e, String f, String g, Item item) {
     String[] types = {a, b, c, d, e, f, g};
-    for (String type : types) if (type != null && !type.isEmpty() && item.typeEntry.is(type)) return true;
+    for (String type : types) if (type != null && !type.isEmpty() && item.files().itemTypes().get(item.typeEntry).is(type)) return true;
     return false;
   }
 
@@ -401,17 +412,17 @@ public class ItemGenerator extends PassiveSystem {
     }
   }
 
-  private static PropertiesGenerator properties(NativeRng rng) {
-    return new PropertiesGenerator((min, max) -> {
+  private PropertiesGenerator properties(NativeRng rng) {
+    return new PropertiesGenerator(files(), (min, max) -> {
       int lower = Math.min(min, max);
       int upper = Math.max(min, max);
       return upper <= lower ? lower : lower + rng.nextInt(upper - lower + 1);
     });
   }
 
-  private static void applyNativeTraits(Item item, Quality quality, int itemLevel,
+  private void applyNativeTraits(Item item, Quality quality, int itemLevel,
       int difficulty, int seed, NativeRng rng) {
-    NativeItemGeneration.rollStaffMods(item, itemLevel, 0, Riiablo.files.skills, rng::nextInt);
+    NativeItemGeneration.rollStaffMods(item, itemLevel, 0, files().skills, rng::nextInt);
     NativeItemGeneration.rollEthereal(item, quality, rng::nextInt);
     NativeItemGeneration.rollSockets(item, quality, itemLevel, difficulty,
         seed, rng::nextInt);
@@ -473,7 +484,7 @@ public class ItemGenerator extends PassiveSystem {
   }
 
   public Item generate(Armor.Entry base) {
-    Item item = new Item();
+    Item item = new Item(files());
     item.reset();
     item.location = Location.STORED; // FIXME: should allow null?
     if (base.compactsave) item.flags |= Item.ITEMFLAG_COMPACT;
@@ -484,7 +495,7 @@ public class ItemGenerator extends PassiveSystem {
   }
 
   public Item generate(Weapons.Entry base) {
-    Item item = new Item();
+    Item item = new Item(files());
     item.reset();
     item.location = Location.STORED; // FIXME: should allow null?
     if (base.compactsave) item.flags |= Item.ITEMFLAG_COMPACT;
@@ -505,7 +516,7 @@ public class ItemGenerator extends PassiveSystem {
   }
 
   public Item generate(final Misc.Entry base) {
-    Item item = new Item();
+    Item item = new Item(files());
     item.reset();
     item.location = Location.STORED; // FIXME: should allow null?
     if (base.compactsave) item.flags |= Item.ITEMFLAG_COMPACT;

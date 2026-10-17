@@ -7,6 +7,12 @@ import com.riiablo.logger.MDC;
 public class GemGenerator {
   protected PropertiesGenerator generator;
 
+  private com.riiablo.Files files;
+  public GemGenerator(com.riiablo.Files files, PropertiesGenerator generator) {
+    this(generator);
+    this.files = files;
+  }
+
   public GemGenerator() {}
 
   public GemGenerator(PropertiesGenerator generator) {
@@ -14,7 +20,7 @@ public class GemGenerator {
   }
 
   public Attributes set(Attributes attrs, String code) {
-    return set(attrs, Riiablo.files.Gems.get(code));
+    return set(attrs, (files != null ? files : Riiablo.files).Gems.get(code));
   }
 
   public Attributes set(Attributes attrs, Gems.Entry gem) {

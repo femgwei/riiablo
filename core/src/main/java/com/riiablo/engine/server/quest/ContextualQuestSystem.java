@@ -5,7 +5,6 @@ import com.riiablo.Files;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.save.CharData;
-import com.riiablo.save.D2SWriter;
 import com.artemis.BaseSystem;
 
 /** Host bindings shared by quest event adapters; quest rules remain pure. */
@@ -29,6 +28,6 @@ public abstract class ContextualQuestSystem extends BaseSystem {
   protected final void persistCharacter(CharData data) {
     if (!data.managed) return;
     if (serverContext != null) serverContext.persistCharacter(data);
-    else if (Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    else ServerGameplayContext.persistLegacyCharacter(data);
   }
 }

@@ -69,10 +69,15 @@ public final class ServerGameplayContext {
 
   public void persistCharacter(CharData data) { characterStore.accept(data); }
 
+  /** Persistence adapter for legacy hosts that have no registered server world. */
+  public static void persistLegacyCharacter(CharData data) {
+    if (Riiablo.saves != null) com.riiablo.save.D2SWriter.INSTANCE.save(data);
+  }
+
   /** Compatibility bridge for old tests and tools that have no server host. */
   public static ServerGameplayContext fromGlobals() {
     return new ServerGameplayContext(Riiablo.files, Riiablo.gameSeed, Riiablo.charData, Riiablo.anim,
         Riiablo.mpqs,
-        data -> { if (Riiablo.saves != null) com.riiablo.save.D2SWriter.INSTANCE.save(data); });
+        ServerGameplayContext::persistLegacyCharacter);
   }
 }

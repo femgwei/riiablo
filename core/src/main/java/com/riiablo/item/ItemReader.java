@@ -25,6 +25,15 @@ public class ItemReader {
   protected PropertiesGenerator propertiesGenerator = new PropertiesGenerator(); // TODO: inject
   protected GemGenerator gems = new GemGenerator(propertiesGenerator); // TODO: inject
 
+  private final com.riiablo.Files suppliedFiles;
+  public ItemReader() { this(null); }
+  public ItemReader(com.riiablo.Files files) {
+    suppliedFiles = files;
+    propertiesGenerator = new PropertiesGenerator(files, com.badlogic.gdx.math.MathUtils::random);
+    gems = new GemGenerator(files, propertiesGenerator);
+  }
+  private com.riiablo.Files files() { return suppliedFiles != null ? suppliedFiles : Riiablo.files; }
+
   public void skipUntil(ByteInput in) {
     in.skipUntil(SIGNATURE);
   }
@@ -73,7 +82,7 @@ public class ItemReader {
     log.trace("Reading item...");
     log.trace("Validating item signature");
     in.readSignature(SIGNATURE);
-    Item item = new Item();
+    Item item = new Item(files());
     item.reset();
     item.flags = in.read32();
     log.tracef("flags: 0x%08X [%s]", item.flags, item.getFlagsString());
@@ -212,7 +221,7 @@ public class ItemReader {
       case SET:
         item.qualityId = bits.read31u(Item.SET_ID_SIZE);
         log.trace("qualityId: {}", item.qualityId);
-        item.qualityData = Riiablo.files.SetItems.get(item.qualityId);
+        item.qualityData = item.files().SetItems.get(item.qualityId);
         log.trace("qualityData: {}", item.qualityData);
         if (item.qualityId == (1 << Item.SET_ID_SIZE) - 1) {
           log.error("Unknown set item id: {}", item.qualityId);
@@ -224,7 +233,7 @@ public class ItemReader {
       case UNIQUE:
         item.qualityId = bits.read31u(Item.UNIQUE_ID_SIZE);
         log.trace("qualityId: {}", item.qualityId);
-        item.qualityData = Riiablo.files.UniqueItems.get(item.qualityId);
+        item.qualityData = item.files().UniqueItems.get(item.qualityId);
         log.trace("qualityData: {}", item.qualityData);
         if (item.qualityId == (1 << Item.UNIQUE_ID_SIZE) - 1) {
           log.warn("Unknown unique item id: {}", item.qualityId);

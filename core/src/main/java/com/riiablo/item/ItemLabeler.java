@@ -371,8 +371,8 @@ public class ItemLabeler {
 
     if (item.isIdentified() && item.quality == Quality.SET
         && item.location == Location.EQUIPPED) {
-      SetItems.Entry setItem = Riiablo.files.SetItems.get(item.qualityId);
-      int setId = Riiablo.files.Sets.index(setItem.set);
+      SetItems.Entry setItem = item.files().SetItems.get(item.qualityId);
+      int setId = item.files().Sets.index(setItem.set);
       int numEquipped = Riiablo.charData.getItems().getEquippedSets().get(setId, 0); // TODO: use parent itemdata instead
       if (numEquipped >= 2) {
         Iterable<String> labels = labelFormatter.createLabels(attrs.list(numEquipped), Riiablo.charData.getStats());
@@ -413,10 +413,10 @@ public class ItemLabeler {
       }
 
       table.add().height(font.getLineHeight()).space(SPACING).row();
-      Sets.Entry set = Riiablo.files.SetItems.get(item.qualityId).getSet();
+      Sets.Entry set = item.files().SetItems.get(item.qualityId).getSet();
       table.add(new Label(Riiablo.string.lookup(set.name), font, Riiablo.colors.gold)).space(SPACING).row();
       for (SetItems.Entry setItemEntry : set.getItems()) {
-        int numOwned = Riiablo.charData.getItems().getOwnedSetCount(Riiablo.files.SetItems.index(setItemEntry.index));
+        int numOwned = Riiablo.charData.getItems().getOwnedSetCount(item.files().SetItems.index(setItemEntry.index));
         Label label = new Label(Riiablo.string.lookup(setItemEntry.index), font,
             numOwned > 0 ? Riiablo.colors.green : Riiablo.colors.red);
         table.add(label).space(SPACING).row();

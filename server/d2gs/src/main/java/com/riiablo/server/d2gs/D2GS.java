@@ -6043,6 +6043,7 @@ public class D2GS extends ApplicationAdapter {
   int diff;
 
   World world;
+  private com.riiablo.engine.server.ServerGameplayContext serverContext;
   AuthoritativeSimulation simulation;
   Map map;
   CombatPositionHistory combatPositionHistory;
@@ -6158,12 +6159,13 @@ public class D2GS extends ApplicationAdapter {
     WorldConfigurationBuilder builder = D2GSSimulationAssembly.builder(
         session, mapManager, itemManager, factory, sync, npcVendors, authoritativeItems,
         Boolean.getBoolean("riiablo.d2gs.aiTour"));
+    serverContext = new com.riiablo.engine.server.ServerGameplayContext(
+        Riiablo.files, map.seed(), null, Riiablo.anim);
     WorldConfiguration config = session.registerServices(builder.build())
         .register("factory", factory)
         .register("player", player)
         .register("outPackets", outPackets)
-        .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(
-            Riiablo.files, map.seed(), null, Riiablo.anim))
+        .register("serverContext", serverContext)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("townPortalRegistry", townPortalRegistry)
@@ -8241,7 +8243,7 @@ public class D2GS extends ApplicationAdapter {
         && !Act2QuestMessageValidator.isAllowed(
             npc.monstats.hcIdx, player.data, messageIndex)
         && !Act5QuestMessageValidator.isAllowed(
-                npc.monstats.hcIdx, player.data, levelIdOf(npcId), messageIndex)
+                serverContext.files(), npc.monstats.hcIdx, player.data, levelIdOf(npcId), messageIndex)
         && !Act4QuestMessageValidator.isAllowed(
                 npc.monstats.hcIdx, player.data, messageIndex)) {
       return "QUEST_MESSAGE_NOT_AVAILABLE";

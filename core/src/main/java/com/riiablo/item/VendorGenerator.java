@@ -16,6 +16,17 @@ import com.riiablo.attributes.Stat;
 public class VendorGenerator extends PassiveSystem {
   private static final int FIRST_VENDOR_ITEM_ID = 0x60000000;
 
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected com.riiablo.engine.server.ServerGameplayContext serverContext;
+  private NativeRng random;
+
+  private com.riiablo.Files files() { return serverContext != null ? serverContext.files() : Riiablo.files; }
+  private int roll(int bound) {
+    if (random == null && serverContext != null) random = new NativeRng(serverContext.gameSeed());
+    return random != null ? random.nextInt(bound) : MathUtils.random(bound - 1);
+  }
+  private int between(int min, int max) { return min + roll(max - min + 1); }
+
   protected ItemGenerator generator;
   private int nextItemId = FIRST_VENDOR_ITEM_ID;
   private int generationDifficulty = Riiablo.NORMAL;
@@ -32,23 +43,23 @@ public class VendorGenerator extends PassiveSystem {
   public Array<Item> generate(String vendor, int difficulty) throws Exception {
     difficulty = Math.max(Riiablo.NORMAL, Math.min(Riiablo.HELL, difficulty));
     Array<Item> items = new Array<>(true, 64, Item.class);
-    generate(vendor, items, Riiablo.files.armor, difficulty);
-    generate(vendor, items, Riiablo.files.weapons, difficulty);
-    generate(vendor, items, Riiablo.files.misc, difficulty);
+    generate(vendor, items, files().armor, difficulty);
+    generate(vendor, items, files().weapons, difficulty);
+    generate(vendor, items, files().misc, difficulty);
     return items;
   }
 
   /** Generates a compact native-style gambling page for Gheed. */
   public Array<Item> generateGamble() {
     Array<ItemEntry> candidates = new Array<>(false, 128, ItemEntry.class);
-    collectGambleCandidates(candidates, Riiablo.files.armor);
-    collectGambleCandidates(candidates, Riiablo.files.weapons);
-    collectGambleCandidates(candidates, Riiablo.files.misc);
+    collectGambleCandidates(candidates, files().armor);
+    collectGambleCandidates(candidates, files().weapons);
+    collectGambleCandidates(candidates, files().misc);
     Array<Item> items = new Array<>(true, 10, Item.class);
     int count = Math.min(10, candidates.size);
     for (int i = 0; i < count; i++) {
-      ItemEntry base = candidates.get(MathUtils.random(candidates.size - 1));
-      int roll = MathUtils.random(99);
+      ItemEntry base = candidates.get(roll(candidates.size));
+      int roll = roll(100);
       Item item;
       if (roll < 5) {
         try {
@@ -88,14 +99,14 @@ public class VendorGenerator extends PassiveSystem {
     for (ItemEntry base : excel) {
       int[] vendorData = (int[]) field.get(base);
       if (vendorData[1] > 0) {
-        int count = base.PermStoreItem ? 1 : MathUtils.random(vendorData[0], vendorData[1]);
+        int count = base.PermStoreItem ? 1 : between(vendorData[0], vendorData[1]);
         for (int i = 0; i < count; i++) {
           Item item = createNormal(base, difficulty, true);
           items.add(item);
         }
       }
       if (vendorData[3] > 0 && vendorData[4] != 0xFF) {
-        int count = base.PermStoreItem ? 1 : MathUtils.random(vendorData[2], vendorData[3]);
+        int count = base.PermStoreItem ? 1 : between(vendorData[2], vendorData[3]);
         for (int i = 0; i < count; i++) {
           Item item = createMagic(base, vendorData[4], difficulty, true);
           items.add(item);
@@ -121,7 +132,7 @@ public class VendorGenerator extends PassiveSystem {
     // D2GAME_CreateItemUnit routes normal NPC stock through the native
     // StaffMods assignment path as well as the magic-item path.  Keep the
     // skill roll before sockets, matching sub_6FC4D900's ordering.
-    NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, Riiablo.files.skills,
+    NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, files().skills,
         rng::nextInt);
     if (rollSockets) {
       NativeItemGeneration.rollSockets(item, item.quality, item.ilvl,
@@ -159,7 +170,7 @@ public class VendorGenerator extends PassiveSystem {
       NativeItemGeneration.normalizeVendorBaseStats(item, rng::nextInt);
       // Magic vendor stock receives the same native StaffMods roll after its
       // prefix/suffix properties have been assigned.
-      NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, Riiablo.files.skills,
+      NativeItemGeneration.rollStaffMods(item, item.ilvl, 0, files().skills,
           rng::nextInt);
       item.attrs.reset();
       loadClientAssets(item);

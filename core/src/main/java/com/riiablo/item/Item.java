@@ -170,7 +170,15 @@ public class Item {
   public ItemWrapper wrapper; // TODO: decouple
 
   /** Public constructor for server-side/test item fabrication. */
-  public Item() {}
+  private final com.riiablo.Files suppliedFiles;
+  private com.riiablo.Files boundFiles;
+
+  public Item() { this(null); }
+  public Item(com.riiablo.Files files) { suppliedFiles = boundFiles = files; }
+
+  /** Data ownership follows the item; unbound legacy items use the active host. */
+  public com.riiablo.Files files() { return boundFiles != null ? boundFiles : Riiablo.files; }
+
 
   @Deprecated
   public byte[] data() {
@@ -179,6 +187,7 @@ public class Item {
   }
 
   public void reset() {
+    boundFiles = suppliedFiles;
     flags         = 0;
     vendorPrice   = -1;
     vendorBuyback = false;
@@ -244,7 +253,7 @@ public class Item {
   }
 
   public int getBaseIndex() {
-    return ItemUtils.getBaseIndex(code);
+    return ItemUtils.getBaseIndex(files(), code);
   }
 
   public void setBase(ItemEntry base) {
@@ -253,15 +262,16 @@ public class Item {
 
   void setBase(String code) {
     assert base == null : "setBase called on unrecycled Item?";
+    boundFiles = files();
     this.code = code;
-    base = ItemUtils.getBase(code);
-    type = Type.get(
-        typeEntry  = Riiablo.files.ItemTypes.get(base.type),
-        type2Entry = Riiablo.files.ItemTypes.get(base.type2));
+    base = ItemUtils.getBase(files(), code);
+    typeEntry = files().ItemTypes.get(base.type);
+    type2Entry = files().ItemTypes.get(base.type2);
+    type = Type.get(files().itemTypes().get(typeEntry.Code), files().itemTypes().get(type2Entry.Code));
 
     attrs = (flags & ITEMFLAG_COMPACT) == ITEMFLAG_COMPACT
-        ? Attributes.obtainCompact()
-        : Attributes.obtainStandard();
+        ? Attributes.obtainCompact(new com.riiablo.attributes.StatTable(files().ItemStatCost))
+        : Attributes.obtainStandard(new com.riiablo.attributes.StatTable(files().ItemStatCost));
     StatListRef baseProps = attrs.base();
     baseProps.put(Stat.item_levelreq, base.levelreq);
     switch (getBaseType()) {
@@ -364,10 +374,10 @@ public class Item {
       case MAGIC: {
         MagicAffix affix;
         int prefix = qualityId & Item.MAGIC_AFFIX_MASK;
-        if ((affix = Riiablo.files.MagicPrefix.get(prefix)) != null && affix.transform)
+        if ((affix = files().MagicPrefix.get(prefix)) != null && affix.transform)
           return affix.transformcolor;
         int suffix = qualityId >>> Item.MAGIC_AFFIX_SIZE;
-        if ((affix = Riiablo.files.MagicSuffix.get(suffix)) != null && affix.transform)
+        if ((affix = files().MagicSuffix.get(suffix)) != null && affix.transform)
           return affix.transformcolor;
         return null;
       }
@@ -378,10 +388,10 @@ public class Item {
         RareQualityData rareQualityData = (RareQualityData) qualityData;
         for (int i = 0; i < RareQualityData.NUM_AFFIXES; i++) {
           int prefix = rareQualityData.prefixes[i];
-          if ((affix = Riiablo.files.MagicPrefix.get(prefix)) != null && affix.transform)
+          if ((affix = files().MagicPrefix.get(prefix)) != null && affix.transform)
             return affix.transformcolor;
           int suffix = rareQualityData.suffixes[i];
-          if ((affix = Riiablo.files.MagicSuffix.get(suffix)) != null && affix.transform)
+          if ((affix = files().MagicSuffix.get(suffix)) != null && affix.transform)
             return affix.transformcolor;
         }
         return null;
@@ -404,10 +414,10 @@ public class Item {
       case MAGIC: {
         MagicAffix affix;
         int prefix = qualityId & Item.MAGIC_AFFIX_MASK;
-        if ((affix = Riiablo.files.MagicPrefix.get(prefix)) != null && affix.transform)
+        if ((affix = files().MagicPrefix.get(prefix)) != null && affix.transform)
           return affix.transformcolor;
         int suffix = qualityId >>> Item.MAGIC_AFFIX_SIZE;
-        if ((affix = Riiablo.files.MagicSuffix.get(suffix)) != null && affix.transform)
+        if ((affix = files().MagicSuffix.get(suffix)) != null && affix.transform)
           return affix.transformcolor;
         return null;
       }
@@ -418,10 +428,10 @@ public class Item {
         RareQualityData rareQualityData = (RareQualityData) qualityData;
         for (int i = 0; i < RareQualityData.NUM_AFFIXES; i++) {
           int prefix = rareQualityData.prefixes[i];
-          if ((affix = Riiablo.files.MagicPrefix.get(prefix)) != null && affix.transform)
+          if ((affix = files().MagicPrefix.get(prefix)) != null && affix.transform)
             return affix.transformcolor;
           int suffix = rareQualityData.suffixes[i];
-          if ((affix = Riiablo.files.MagicSuffix.get(suffix)) != null && affix.transform)
+          if ((affix = files().MagicSuffix.get(suffix)) != null && affix.transform)
             return affix.transformcolor;
         }
         return null;
@@ -596,7 +606,7 @@ public class Item {
       case HIGH:
         if ((flags & ITEMFLAG_RUNEWORD) == ITEMFLAG_RUNEWORD) {
           int runeword = RunewordData.id(runewordData);
-          name.append(Riiablo.string.lookup(Riiablo.files.Runes.get(runeword).Name));
+          name.append(Riiablo.string.lookup(files().Runes.get(runeword).Name));
           break;
         } else if (socketsFilled > 0) {
           name.append(Riiablo.string.lookup(1728)) // Gemmed
@@ -626,9 +636,9 @@ public class Item {
       case MAGIC:
         prefix = qualityId &   MAGIC_AFFIX_MASK;
         suffix = qualityId >>> MAGIC_AFFIX_SIZE;
-        String prefixName = (affix = Riiablo.files.MagicPrefix.get(prefix)) == null
+        String prefixName = (affix = files().MagicPrefix.get(prefix)) == null
             ? null : Riiablo.string.lookup(affix.name);
-        String suffixName = (affix = Riiablo.files.MagicSuffix.get(suffix)) == null
+        String suffixName = (affix = files().MagicSuffix.get(suffix)) == null
             ? null : Riiablo.string.lookup(affix.name);
         name.append(formatMagicName(
             Riiablo.language, prefixName, Riiablo.string.lookup(base.namestr), suffixName));
@@ -638,14 +648,14 @@ public class Item {
       case CRAFTED:
         prefix = qualityId &   RARE_AFFIX_MASK;
         suffix = qualityId >>> RARE_AFFIX_SIZE;
-        name.append(Riiablo.string.lookup(Riiablo.files.RarePrefix.get(prefix).name))
+        name.append(Riiablo.string.lookup(files().RarePrefix.get(prefix).name))
             .append(' ')
-            .append(Riiablo.string.lookup(Riiablo.files.RareSuffix.get(suffix).name));
+            .append(Riiablo.string.lookup(files().RareSuffix.get(suffix).name));
         break;
 
       case SET:
         if (qualityId != (1 << SET_ID_SIZE) - 1) {
-          name.append(Riiablo.string.lookup(Riiablo.files.SetItems.get(qualityId).index));
+          name.append(Riiablo.string.lookup(files().SetItems.get(qualityId).index));
         } else {
           name.append(Riiablo.string.lookup(base.namestr));
         }
@@ -653,7 +663,7 @@ public class Item {
 
       case UNIQUE:
         if (qualityId != NO_UNIQUE_ID) {
-          name.append(Riiablo.string.lookup(Riiablo.files.UniqueItems.get(qualityId).index));
+          name.append(Riiablo.string.lookup(files().UniqueItems.get(qualityId).index));
         } else {
           name.append(Riiablo.string.lookup(base.namestr));
         }
@@ -712,7 +722,7 @@ public class Item {
     final int numEquippedSets;
     if (quality == Quality.SET && location == Location.EQUIPPED) {
       SetItems.Entry setItem = (SetItems.Entry) qualityData;
-      int setId = Riiablo.files.Sets.index(setItem.set);
+      int setId = files().Sets.index(setItem.set);
       numEquippedSets = equippedSets.get(setId, 0);
     } else {
       numEquippedSets = 0;
@@ -830,7 +840,7 @@ public class Item {
             break;
 
           case HIGH:
-            builder.append("qualityId", Riiablo.files.QualityItems.get((int) qualityId));
+            builder.append("qualityId", files().QualityItems.get((int) qualityId));
             break;
 
           case MAGIC:

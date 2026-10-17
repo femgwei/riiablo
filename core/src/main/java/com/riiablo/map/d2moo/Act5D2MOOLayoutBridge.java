@@ -65,6 +65,12 @@ public final class Act5D2MOOLayoutBridge {
    */
   public static boolean populateZones(int gameSeed, int diff, Map map) {
     if (map == null || D2MOOLayoutContext.mpqs() == null) return false;
+    return populateZones(new D2MOOLayoutContext(D2MOOLayoutContext.files(), D2MOOLayoutContext.mpqs()),
+        gameSeed, diff, map);
+  }
+
+  private static boolean populateZonesActive(int gameSeed, int diff, Map map) {
+    if (map == null || D2MOOLayoutContext.mpqs() == null) return false;
     D2DrlgStrc drlg = null;
     try {
       DataTbls.setLevelDefBinCache(Act1D2MOOLayoutBridge.buildLevelDefCache(diff, -1));
@@ -218,7 +224,7 @@ public final class Act5D2MOOLayoutBridge {
 
   public static boolean populateZones(D2MOOLayoutContext context, int gameSeed, int diff, Map map) {
     try (D2MOOLayoutContext.Scope ignored = context.activate()) {
-      return populateZones(gameSeed, diff, map);
+      return populateZonesActive(gameSeed, diff, map);
     }
   }
 

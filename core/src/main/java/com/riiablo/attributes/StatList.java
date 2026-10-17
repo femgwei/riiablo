@@ -39,7 +39,7 @@ public final class StatList {
   private StatTable statTable;
 
   public StatTable table() {
-    return statTable != null ? statTable : new StatTable(com.riiablo.Riiablo.files.ItemStatCost);
+    return statTable != null ? statTable : StatTable.fromGlobals();
   }
 
   StatList bind(StatTable table) {

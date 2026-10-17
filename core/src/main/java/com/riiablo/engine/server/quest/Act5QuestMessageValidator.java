@@ -8,13 +8,18 @@ public final class Act5QuestMessageValidator {
 
   public static boolean isAllowed(int npcType, CharData data, int levelId,
       int messageIndex) {
+    return isAllowed(com.riiablo.Riiablo.files, npcType, data, levelId, messageIndex);
+  }
+
+  public static boolean isAllowed(com.riiablo.Files files, int npcType, CharData data, int levelId,
+      int messageIndex) {
     if (data == null || !data.isExpansion()) return false;
     // A5Q4 Drehya messages are native quest dialogue as well.  Resolve the
     // MonStats row by hcIdx so the validator works with both the canonical
     // 1.10f table and projects that remap monster ordinals at load time.
     com.riiablo.codec.excel.MonStats.Entry npc = null;
-    if (com.riiablo.Riiablo.files != null && com.riiablo.Riiablo.files.monstats != null) {
-      npc = com.riiablo.Riiablo.files.monstats.get(npcType);
+    if (files != null && files.monstats != null) {
+      npc = files.monstats.get(npcType);
     }
     boolean drehya = npc != null
         && ("Drehya".equalsIgnoreCase(npc.Id)

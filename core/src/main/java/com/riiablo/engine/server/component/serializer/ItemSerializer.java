@@ -15,10 +15,13 @@ import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.ItemP;
 
 public class ItemSerializer implements FlatBuffersSerializer<Item, ItemP> {
-  public static final ItemP table = new ItemP();
+  public final ItemP table = new ItemP();
 
-  protected static final ItemReader itemReader = new ItemReader(); // TODO: inject
-  protected static final ItemWriter itemWriter = new ItemWriter(); // TODO: inject
+  protected final ItemReader itemReader;
+  protected final ItemWriter itemWriter = new ItemWriter(); // TODO: inject
+
+  public ItemSerializer() { this(null); }
+  public ItemSerializer(com.riiablo.Files files) { itemReader = new ItemReader(files); }
 
   @Override
   public byte getDataType() {
