@@ -614,6 +614,7 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.component.Position position =
             server.world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
         if (destination == null || position == null) return;
+        position.invalidateNativePrecision();
         position.position.set(destination);
         com.riiablo.engine.server.component.Box2DBody body =
             server.world.getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
@@ -652,6 +653,7 @@ public class D2GS extends ApplicationAdapter {
         Vector2 destination = findHeadlessLevelPosition(server, levelId);
         Position position = server.world.getMapper(Position.class).get(playerId);
         if (destination == null || position == null) return;
+        position.invalidateNativePrecision();
         position.position.set(destination);
         com.riiablo.engine.server.component.MapWrapper wrapper =
             server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
@@ -716,6 +718,7 @@ public class D2GS extends ApplicationAdapter {
           if (destination == null) return;
           server.world.getSystem(com.riiablo.engine.server.Pathfinder.class).findPath(playerId, null);
         }
+        position.invalidateNativePrecision();
         position.position.set(destination);
         wrapper.set(server.map, zone);
         com.riiablo.engine.server.component.Box2DBody body = server.world
@@ -1693,6 +1696,7 @@ public class D2GS extends ApplicationAdapter {
               || wrapper.zone != playerWrapper.zone
               || warp.dstLevel.Id != destinationLevelId) continue;
           Vector2 warpPosition = server.world.getMapper(Position.class).get(warpId).position;
+          playerPosition.invalidateNativePrecision();
           playerPosition.position.set(warpPosition);
           com.riiablo.engine.server.component.Box2DBody body = server.world
               .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
@@ -1770,6 +1774,7 @@ public class D2GS extends ApplicationAdapter {
         if (destination == null || playerPosition == null || playerWrapper == null || zone == null) {
           return;
         }
+        playerPosition.invalidateNativePrecision();
         playerPosition.position.set(destination);
         playerWrapper.set(server.map, zone);
         com.riiablo.engine.server.component.Box2DBody body = server.world
@@ -2048,6 +2053,7 @@ public class D2GS extends ApplicationAdapter {
           for (int y = zone.y() + 1; y < zone.y() + zone.height() - 1; y++) {
             if (server.map.getZone(leftX, y) == zone
                 && (server.map.flags(leftX, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.invalidateNativePrecision();
               position.position.set(leftX, y);
               setHeadlessZone(server, playerId, zone);
               result.set(new float[] {leftX, y, zone.x() - 1, y});
@@ -2055,6 +2061,7 @@ public class D2GS extends ApplicationAdapter {
             }
             if (server.map.getZone(rightX, y) == zone
                 && (server.map.flags(rightX, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.invalidateNativePrecision();
               position.position.set(rightX, y);
               setHeadlessZone(server, playerId, zone);
               result.set(new float[] {rightX, y, zone.x() + zone.width(), y});
@@ -2064,6 +2071,7 @@ public class D2GS extends ApplicationAdapter {
           for (int x = zone.x() + 1; x < zone.x() + zone.width() - 1; x++) {
             if (server.map.getZone(x, topY) == zone
                 && (server.map.flags(x, topY) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.invalidateNativePrecision();
               position.position.set(x, topY);
               setHeadlessZone(server, playerId, zone);
               result.set(new float[] {x, topY, x, zone.y() - 1});
@@ -2071,6 +2079,7 @@ public class D2GS extends ApplicationAdapter {
             }
             if (server.map.getZone(x, bottomY) == zone
                 && (server.map.flags(x, bottomY) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.invalidateNativePrecision();
               position.position.set(x, bottomY);
               setHeadlessZone(server, playerId, zone);
               result.set(new float[] {x, bottomY, x, zone.y() + zone.height()});
@@ -2084,6 +2093,7 @@ public class D2GS extends ApplicationAdapter {
         if (levelId >= 109 && levelId <= 132 && zone.width() > 2 && zone.height() > 2) {
           int x = zone.x() + zone.width() / 2;
           int y = zone.y() + zone.height() / 2;
+          position.invalidateNativePrecision();
           position.position.set(x, y);
           setHeadlessZone(server, playerId, zone);
           result.set(new float[] {x, y, zone.x() - 1, y});
@@ -2214,6 +2224,7 @@ public class D2GS extends ApplicationAdapter {
         Vector2 destination = findHeadlessRoomPosition(server, zone, room);
         Position position = server.world.getMapper(Position.class).get(playerId);
         if (destination == null || position == null) return;
+        position.invalidateNativePrecision();
         position.position.set(destination);
         com.riiablo.engine.server.component.Box2DBody body = server.world
             .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
@@ -2900,6 +2911,7 @@ public class D2GS extends ApplicationAdapter {
         if (player == null || target == null) return;
         // Keep the fixture outside Box2D overlap while staying inside the
         // native range requested by the caller.
+        player.invalidateNativePrecision();
         player.position.set(target.position.x - offset, target.position.y);
         com.riiablo.engine.server.component.Box2DBody body = server.world
             .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
@@ -2929,6 +2941,7 @@ public class D2GS extends ApplicationAdapter {
         Position monster = server.world.getMapper(Position.class).get(monsterId);
         Position anchor = server.world.getMapper(Position.class).get(anchorId);
         if (monster == null || anchor == null) return;
+        monster.invalidateNativePrecision();
         monster.position.set(anchor.position.x + dx, anchor.position.y + dy);
         com.riiablo.engine.server.component.Box2DBody body = server.world
             .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
@@ -2998,6 +3011,7 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.engine.server.component.Box2DBody box = server.world.getMapper(
             com.riiablo.engine.server.component.Box2DBody.class).get(monsterId);
         if (box != null && box.body != null) box.body.setActive(false);
+        monster.invalidateNativePrecision();
         monster.position.set(anchor.position.x + dx, anchor.position.y + dy);
         if (box != null && box.body != null) box.body.setTransform(monster.position, box.body.getAngle());
         com.riiablo.engine.server.component.Velocity velocity = server.world.getMapper(
@@ -4289,6 +4303,7 @@ public class D2GS extends ApplicationAdapter {
             .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
         if (source == null || target == null || targetWrapper == null
             || targetWrapper.zone == null || sourceWrapper == null) return;
+        source.invalidateNativePrecision();
         source.position.set(target.position);
         sourceWrapper.set(server.map, targetWrapper.zone);
         com.riiablo.engine.server.component.Box2DBody body = server.world
@@ -5513,6 +5528,7 @@ public class D2GS extends ApplicationAdapter {
               || monster.monstats.hcIdx != monsterClass || wrapper == null
               || wrapper.zone != playerWrapper.zone) continue;
           Position target = server.world.getMapper(Position.class).get(entityId);
+          playerPosition.invalidateNativePrecision();
           playerPosition.position.set(target.position.x + 1f, target.position.y);
           com.riiablo.engine.server.component.Box2DBody body = server.world
               .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
