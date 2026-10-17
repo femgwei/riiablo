@@ -42,6 +42,28 @@ class ScarabLeaderCommandTest extends RiiabloTest {
   @Test void unownedMonsterDoesNotGenerateCommand() { verifyNoGeneration(false, 1, false); }
   @Test void existingCommandBlocksLeaderGeneration() { verifyNoGeneration(true, 1, true); }
 
+  @Test void declinedCommandChanceFallsThroughToOrdinaryAttackChance() {
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      try (Fixture f = new Fixture("scarab1", difficulty, 1)) {
+        Scarab ai = (Scarab) f.ai;
+        ai.monster.nativePackLeader = true;
+        ai.params[0] = ai.params[4] = 0;
+        int owned = member(f, f.actor);
+        f.world.process();
+        Riiablo.gameSeed = 12;
+        ai.update(0.04f);
+        assertEquals("IDLE", ai.getState());
+        assertNull(f.casting());
+        assertFalse(f.world.getMapper(NativeAiCommand.class).has(f.actor));
+        assertFalse(f.world.getMapper(NativeAiCommand.class).has(owned));
+        D2Seed seed = new D2Seed(12 ^ (f.actor * 0x45D9F3B), 666);
+        Seed.rollPercentage(seed); // Eligible leader still consumes the failed command chance.
+        Seed.rollPercentage(seed); // Then the ordinary attack chance.
+        assertEquals(Seed.rollRandomNumber(seed) & 0xffffffffL, ai.rollAiRandomNumber());
+      }
+    }
+  }
+
   private void verifyNoGeneration(boolean leader, int distance, boolean existing) {
     try (Fixture f = new Fixture("scarab1", 0, distance)) {
       Scarab ai = (Scarab) f.ai;

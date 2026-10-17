@@ -35,6 +35,42 @@ class ScarabCommandTest extends RiiabloTest {
   @Test void failedCommandApproachRemovesOnlyCurrentCommand() { verifyApproach(false, true); }
   @Test void failedSoleCommandRemovesComponent() { verifyApproach(false, false); }
 
+  @Test void commandUsesCurrentAiTargetRatherThanSavedTargetId() {
+    try (Fixture f = new Fixture("scarab1", 0, 1)) {
+      Scarab ai = (Scarab) f.ai;
+      ai.params[0] = ai.params[3] = 0;
+      // Fn020 command 1 carries a marker; its action uses pAiTickParam->pTarget.
+      f.world.getMapper(NativeAiCommand.class).create(f.actor)
+          .set(f.actor, NativeAiCommand.ATTACK, 999999);
+      Riiablo.gameSeed = 12;
+      ai.update(0.04f);
+      assertEquals("JAB", ai.getState());
+      assertEquals(f.target, f.casting().targetId);
+      assertEquals(f.targetPosition(), f.casting().targetVec);
+      assertFalse(f.world.getMapper(NativeAiCommand.class).has(f.actor));
+      assertUnconsumed(f, ai);
+    }
+  }
+
+  @Test void meleeCommandWithoutSkillUsesApproachAndRetainsCommand() {
+    try (Fixture f = new Fixture("scarab1", 0, 1)) {
+      Scarab ai = (Scarab) f.ai;
+      // Replace only this actor's row reference, preserving the shared tables.
+      ai.monster.monstats = Riiablo.files.monstats.get("fallen1");
+      assertTrue(ai.monster.monstats.Skill1 == null || ai.monster.monstats.Skill1.isEmpty());
+      NativeAiCommand command = f.world.getMapper(NativeAiCommand.class).create(f.actor)
+          .set(f.actor, NativeAiCommand.ATTACK, f.target);
+      Riiablo.gameSeed = 12;
+      ai.update(0.04f);
+      verify(f.paths).findNativePath(f.actor, f.target, 5, 0);
+      assertEquals("APPROACH", ai.getState());
+      assertEquals(NativeAiCommand.ATTACK, command.command);
+      assertNull(f.casting());
+      assertEquals(1f, f.world.getMapper(Velocity.class).get(f.actor).modeSpeedBonusMultiplier);
+      assertUnconsumed(f, ai);
+    }
+  }
+
   private void verifyApproach(boolean accepted, boolean pending) {
     try (Fixture f = new Fixture("scarab1", 0, 10)) {
       Scarab ai = (Scarab) f.ai;
