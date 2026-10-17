@@ -162,6 +162,7 @@ task subsystemRegression(type: Test) {
   classpath = sourceSets.test.runtimeClasspath
   useJUnitPlatform()
   filter {
+    includeTestsMatching 'com.riiablo.architecture.*'
     includeTestsMatching 'com.riiablo.screen.*'
     includeTestsMatching 'com.riiablo.engine.client.ClientGameplayContextTest'
     includeTestsMatching 'com.riiablo.engine.client.ClientNetworkSessionTest'
