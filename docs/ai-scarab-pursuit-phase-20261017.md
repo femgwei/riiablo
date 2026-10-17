@@ -1,0 +1,7 @@
+# Scarab pursuit phase delay — 2026-10-17
+
+D2MOO AiThink.cpp AITHINK_Fn020_Scarab's non-melee phase-one branch requests movement, clears phase only when AI_RollPercentage >10, and returns without a separate random delay. Java previously inserted a random 1–2 second countdown. Removed that extra delay, retaining the existing base AI sleep and the native phase draw.
+
+ScarabPursuitPhaseTest covers exact rolls 10 (retain phase) and 11 (clear phase) across all three difficulties. It advances the seed once before the boundary decision because the initialized stream's first draw cannot produce every percentage. Both test methods failed against the old extra-delay code and passed after correction. Assertions check pursuit command, phase, base delay, no casting and RNG continuation; roll 11 additionally verifies the next scheduled decision issues the five-step orbit and advances phase. The focused regression run passed 28 tests; no full suite claim.
+
+Limits: timing assertion concerns the Java countdown value, not full native frame-event equivalence. The general walkTo interface still lacks Fn020's path type 2/four-step request and flags 7 failure behavior (AI event deletion, control flag 0x40 and the idle/local-walk fallback). Those remain explicit follow-ups; this change does not claim to complete phase-one pursuit or resolve the actual-game immobility report. Shared movement execution was not modified.

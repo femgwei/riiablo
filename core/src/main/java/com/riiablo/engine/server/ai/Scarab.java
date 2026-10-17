@@ -150,7 +150,7 @@ public class Scarab extends AI {
         if (rollAiPercentage() > 10) {
           aiParam0 = 0;
         }
-        time = MathUtils.random(1f, 2);
+        // Fn020 returns without an additional random delay after pursuit.
         return;
       } else {
         // Fn020 passes no distance override; MonsterMode resolves it to five.
