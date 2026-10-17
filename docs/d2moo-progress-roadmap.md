@@ -59,6 +59,17 @@
 - [ ] 下一步转向服务端技能、状态、掉落及 `NativeMonsterSequence` 之外的系统级全局
   引用，继续建立按上下文分层的增长门禁。
 
+## 2026-10-17 状态更新系统上下文化
+
+- [x] `StateUpdater` 注入 `ServerGameplayContext`，其技能、状态、导弹、难度表和
+  NativeRng 种子读取统一经 `files()` / `gameSeed()`；仅保留未装配旧测试夹具的兼容
+  回退入口。
+- [x] `:core:compileJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 通过；该系统的 43 处直接表/种子全局访问已收敛到
+  两个兼容辅助方法。
+- [ ] 下一步继续迁移 `LootManager`、`AssassinTrapSystem`、`StateSerializer` 等
+  系统级引用，并在完成后降低架构测试预算。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II

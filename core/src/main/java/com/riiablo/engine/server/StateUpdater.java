@@ -127,6 +127,17 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
 
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
   @Wire(name = "map", failOnNull = false)
   protected Map map;
 
@@ -229,7 +240,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   /** D2Game EventFunc02: freeze a melee attacker after physical damage. */
   private void applyFrozenArmor(DamageEvent event, UnitState armor) {
-    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+    Skills.Entry skill = files().skills.get(armor.skillId >= 0
         ? armor.skillId : SkillId.FROZEN_ARMOR);
     int duration = SorceressSkills.getFrozenArmorFreezeLength(
         skill, armor.level, name -> baseSkillLevel(event.victim, name));
@@ -246,12 +257,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyShiverArmor(
       int attackerId, int victimId, UnitState armor, StateList ownerStates) {
     if (!mAttributesWrapper.has(attackerId)) return;
-    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+    Skills.Entry skill = files().skills.get(armor.skillId >= 0
         ? armor.skillId : SkillId.SHIVER_ARMOR);
     if (skill == null) return;
     int[] range = SorceressSkills.getArmorColdDamage(
         skill, armor.level, name -> baseSkillLevel(victimId, name));
-    NativeRng rng = new NativeRng(Riiablo.gameSeed
+    NativeRng rng = new NativeRng(gameSeed()
         ^ victimId * 0x45D9F3B ^ attackerId * 31 ^ armor.duration);
     int raw = rollNativeDamage(rng, range[0], range[1]);
     Attributes attacker = mAttributesWrapper.get(attackerId).attrs;
@@ -300,10 +311,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void launchChillingArmorBolt(
       DamageEvent event, UnitState armor, StateList ownerStates) {
     if (factory == null || !mPosition.has(event.victim) || !mPosition.has(event.attacker)) return;
-    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+    Skills.Entry skill = files().skills.get(armor.skillId >= 0
         ? armor.skillId : SkillId.CHILLING_ARMOR);
     String missileName = skill != null ? skill.srvmissilea : null;
-    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = missileName != null ? files().Missiles.get(missileName) : null;
     if (skill == null || row == null) {
       log.warn("[SORCERESS_CHILLING_ARMOR] phase=retaliate_reject source={} attacker={} "
               + "missile={} reason=missing_data",
@@ -351,7 +362,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   private int baseSkillLevel(int entityId, String name) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
-    Skills.Entry skill = Riiablo.files.skills.get(name);
+    Skills.Entry skill = files().skills.get(name);
     return skill != null
         ? Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id)) : 0;
   }
@@ -363,7 +374,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
     UnitState shield = victimStates.getState(StateId.ENERGYSHIELD);
     if (shield == null) return;
-    Skills.Entry skill = Riiablo.files.skills.get(
+    Skills.Entry skill = files().skills.get(
         shield.skillId >= 0 ? shield.skillId : SkillId.ENERGY_SHIELD);
     if (skill == null) return;
     int level = Math.max(1, shield.level);
@@ -463,8 +474,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? mAttributesWrapper.get(event.victim).attrs : null;
     int slow = golem != null ? statInt(golem, Stat.item_slow) : 0;
     if (slow <= 0) {
-      Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-          ? Riiablo.files.skills.get(pet.skillId) : null;
+      Skills.Entry skill = files() != null && files().skills != null
+          ? files().skills.get(pet.skillId) : null;
       slow = skill != null ? SkillFormula.evaluate(skill.aurastatcalc[0], skill,
           Math.max(1, pet.skillLevel)) : 0;
     }
@@ -511,8 +522,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StatRef ownerLife = owner != null ? owner.get(Stat.hitpoints, StatRef.obtain()) : null;
     if (ownerLife == null || ownerLife.asFixed() < 1f) return;
 
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(pet.skillId) : null;
+      Skills.Entry skill = files() != null && files().skills != null
+          ? files().skills.get(pet.skillId) : null;
     int share = skill != null && skill.Param != null && skill.Param.length > 4
         ? Math.max(0, skill.Param[4]) : 0;
     float reduced = Math.max(0f, event.damage) * share / 100f;
@@ -531,8 +542,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     SummonedPet pet = mSummonedPet.get(event.attacker);
     if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM
         || !mAttributesWrapper.has(event.attacker)) return;
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(pet.skillId) : null;
+      Skills.Entry skill = files() != null && files().skills != null
+          ? files().skills.get(pet.skillId) : null;
     int percent = NecromancerSkills.nativeDiminishingPercent(skill, pet.skillLevel, 0, 1);
     if (percent <= 0) return;
     int drain = bloodGolemDrainPercent(event.victim);
@@ -625,8 +636,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     log.info("[DRUID_STORM] phase=tick source={} skill={} state={} delay={} position=({}, {})",
         entityId, aura.skillId, StateId.getName(aura.stateId), aura.periodicDelayFrames,
         mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(aura.skillId) : null;
+      Skills.Entry skill = files() != null && files().skills != null
+          ? files().skills.get(aura.skillId) : null;
     if (skill == null) return;
     aura.periodicCountdownFrames = Math.max(1, aura.periodicDelayFrames);
     if (map != null) {
@@ -637,7 +648,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     int range = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level));
     int[] damageRange = NecromancerSkills.nativeElementalDamageRange(skill, aura.level);
     if (range <= 0 || damageRange[1] <= 0) return;
-    NativeRng rng = new NativeRng(Riiablo.gameSeed ^ entityId * 0x45D9F3B
+    NativeRng rng = new NativeRng(gameSeed() ^ entityId * 0x45D9F3B
         ^ ++aura.runtimeValue * 0x9E3779B9);
     IntBag targets = world.getAspectSubscriptionManager()
         .get(Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
@@ -695,8 +706,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       aura.periodicCountdownFrames--;
       if (aura.periodicCountdownFrames > 0) return;
     }
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(aura.skillId) : null;
+      Skills.Entry skill = files() != null && files().skills != null
+          ? files().skills.get(aura.skillId) : null;
     if (skill == null) {
       aura.expired = true;
       return;
@@ -720,7 +731,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
     String missileName = skill.srvmissilea != null && !skill.srvmissilea.isEmpty()
         ? skill.srvmissilea : "thunderstorm";
-    Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry row = files().Missiles.get(missileName);
     if (row == null) {
       log.warn("[SORCERESS_THUNDER_STORM] phase=strike_reject source={} target={} "
               + "reason=missing_missile missile={}", entityId, targetId, missileName);
@@ -828,8 +839,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private void applyLifeTap(DamageEvent event, UnitState state, float physicalDamage) {
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(state.skillId) : null;
+    Skills.Entry skill = files() != null && files().skills != null
+        ? files().skills.get(state.skillId) : null;
     int percent = NecromancerSkills.reactiveCursePercent(skill, state.level);
     if (percent <= 0) return;
     Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
@@ -848,8 +859,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private void applyIronMaiden(DamageEvent event, UnitState state, float physicalDamage) {
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(state.skillId) : null;
+    Skills.Entry skill = files() != null && files().skills != null
+        ? files().skills.get(state.skillId) : null;
     int percent = NecromancerSkills.ironMaidenPercent(
         skill, state.level, mMonster.has(event.attacker) || mMercenary.has(event.attacker),
         mMonster.has(event.victim) || mMercenary.has(event.victim));
@@ -896,7 +907,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
    * player id; this also lets removal of the pet revoke the aura cleanly.
    */
   private void processDruidSummonAuras() {
-    if (Riiablo.files == null || Riiablo.files.skills == null) return;
+    if (files() == null || files().skills == null) return;
     IntSet activeSources = new IntSet();
     ObjectSet<String> activeLayers = new ObjectSet<>();
     IntBag sources = world.getAspectSubscriptionManager()
@@ -910,7 +921,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         continue;
       }
       if (!sameDruidAuraZone(sourceId, pet.ownerId)) continue;
-      Skills.Entry skill = Riiablo.files.skills.get(pet.skillId);
+      Skills.Entry skill = files().skills.get(pet.skillId);
       int stateId = DruidSkills.getSummonAuraState(skill);
       if (!isDruidSpiritAura(stateId)) continue;
       UnitState sourceAura = sourceStates.stateList.getState(stateId);
@@ -1162,8 +1173,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       aura.periodicCountdownFrames--;
       if (aura.periodicCountdownFrames > 0) return;
     }
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(aura.skillId) : null;
+    Skills.Entry skill = files() != null && files().skills != null
+        ? files().skills.get(aura.skillId) : null;
     if (skill == null) {
       log.info("[DRUID_STORM] phase=skip source={} skill={} reason=missing_skill_entry",
           entityId, aura.skillId);
@@ -1176,7 +1187,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       return;
     }
     String missileName = firstStormMissile(skill);
-    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = missileName != null ? files().Missiles.get(missileName) : null;
     // A few 1.10f TXT exports leave SrvMissile/CltMissile blank for the
     // SrvDo124 storm rows. D2MOO resolves the native MissileIds directly in
     // that case; retain the same data-driven fallback instead of silently
@@ -1231,9 +1242,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     return skill.cltmissilea;
   }
 
-  private static Missiles.Entry missileByNativeId(int id) {
-    if (Riiablo.files == null || Riiablo.files.Missiles == null) return null;
-    for (Missiles.Entry candidate : Riiablo.files.Missiles) {
+  private Missiles.Entry missileByNativeId(int id) {
+    if (files() == null || files().Missiles == null) return null;
+    for (Missiles.Entry candidate : files().Missiles) {
       if (candidate != null && candidate.Id == id) return candidate;
     }
     return null;
@@ -1290,7 +1301,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     for (int i = 0; i < BARBARIAN_PASSIVE_SKILLS.length; i++) {
       int skillId = BARBARIAN_PASSIVE_SKILLS[i];
       int stateId = BARBARIAN_PASSIVE_STATES[i];
-      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      Skills.Entry skill = files().skills.get(skillId);
       int ownedLevel = skill != null
           ? Math.max(0, mPlayer.get(entityId).data.getSkill(skillId)) : 0;
       // Native SKILLS_GetHighestLevelSkillFromSkillId first requires an
@@ -1330,7 +1341,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     for (int i = 0; i < PALADIN_HARD_POINT_PASSIVE_SKILLS.length; i++) {
       int skillId = PALADIN_HARD_POINT_PASSIVE_SKILLS[i];
       int stateId = PALADIN_HARD_POINT_PASSIVE_STATES[i];
-      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      Skills.Entry skill = files().skills.get(skillId);
       int hardLevel = skill == null ? 0
           : Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skillId));
       UnitState current = states.getState(stateId);
@@ -1364,7 +1375,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     for (int i = 0; i < AMAZON_PASSIVE_SKILLS.length; i++) {
       int skillId = AMAZON_PASSIVE_SKILLS[i];
       int stateId = AMAZON_PASSIVE_STATES[i];
-      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      Skills.Entry skill = files().skills.get(skillId);
       int level = skill == null ? 0
           : Math.max(0, mPlayer.get(entityId).data.getSkill(skillId));
       UnitState current = states.getState(stateId);
@@ -1402,7 +1413,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private void synchronizeSorceressWarmth(int entityId, StateList states) {
-    Skills.Entry skill = Riiablo.files.skills.get(SkillId.WARMTH);
+    Skills.Entry skill = files().skills.get(SkillId.WARMTH);
     int ownedLevel = skill != null
         ? Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.WARMTH)) : 0;
     int level = ownedLevel > 0 ? ownedLevel + states.getTotalSkillModifier() : 0;
@@ -1425,7 +1436,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private void synchronizeSorceressFireMastery(int entityId, StateList states) {
-    Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+    Skills.Entry skill = files().skills.get(SkillId.FIRE_MASTERY);
     int ownedLevel = skill != null
         ? Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.FIRE_MASTERY)) : 0;
     int level = ownedLevel > 0 ? ownedLevel + states.getTotalSkillModifier() : 0;
@@ -1637,7 +1648,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       state.periodicCountdownFrames--;
       if (state.periodicCountdownFrames > 0) return;
     }
-    Skills.Entry skill = Riiablo.files.skills.get(state.skillId);
+    Skills.Entry skill = files().skills.get(state.skillId);
     if (skill == null || skill.srvdofunc != 54 || !isAlive(entityId)
         || !stillOwnsSkill(entityId, state.skillId)) {
       state.expired = true;
@@ -1864,7 +1875,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState state = stateList.getState(StateId.SPIDERLAY);
     int elapsed = Math.max(0, state.initialDuration - state.duration);
     if ((elapsed & 3) != 0) return;
-    Missiles.Entry missile = Riiablo.files.Missiles.get("spidergoolay");
+    Missiles.Entry missile = files().Missiles.get("spidergoolay");
     if (missile == null) {
       log.warn("[SPIDER_LAY] phase=reject entity={} reason=missing_spidergoolay", entityId);
       state.expired = true;
@@ -1897,10 +1908,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       Map.Zone zone = currentMap.getZone(position);
       if (zone != null && zone.isTown()) return;
     }
-    Skills.Entry skill = Riiablo.files.skills.get(state.skillId);
+    Skills.Entry skill = files().skills.get(state.skillId);
     String missileName = skill != null && skill.srvmissilea != null
         && !skill.srvmissilea.isEmpty() ? skill.srvmissilea : "blaze";
-    Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry row = files().Missiles.get(missileName);
     if (skill == null || row == null) {
       log.warn("[SORCERESS_BLAZE] phase=trail_reject source={} skill={} missile={}",
           entityId, state.skillId, missileName);
@@ -1924,7 +1935,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     MissileDamageResolver.initializeSorceressFireArea(
         projectile, skill, owner, mPlayer.has(entityId), state.level,
         name -> {
-          Skills.Entry synergy = Riiablo.files.skills.get(name);
+          Skills.Entry synergy = files().skills.get(name);
           return synergy != null && mPlayer.has(entityId)
               && mPlayer.get(entityId).data != null
               ? mPlayer.get(entityId).data.getBaseSkillLevel(synergy.Id) : 0;
@@ -1980,8 +1991,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (state.duration <= 0 || state.stateId == StateId.CLEANSING
           || state.stateId == StateId.MEDITATION || state.stateId == StateId.REDEMPTION) continue;
       boolean poison = state.stateId == StateId.POISON;
-      States.Entry definition = Riiablo.files != null && Riiablo.files.States != null
-          ? Riiablo.files.States.get(state.stateId) : null;
+      States.Entry definition = files() != null && files().States != null
+          ? files().States.get(state.stateId) : null;
       boolean curse = definition != null ? definition.curse : StateId.isCurse(state.stateId);
       // Native Cleansing only shortens curses carrying the States.txt
       // curable bit.  Keep the legacy StateId fallback for headless tests
@@ -2038,7 +2049,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // lets States.txt group/strength arbitration run in one place.
     if (StateId.isCurse(stateId)) {
       states.applyCurseState(
-          Riiablo.files != null ? Riiablo.files.States : null,
+          files() != null ? files().States : null,
           stateId, Math.max(1, duration), Math.max(1, level), sourceId, -1,
           Math.max(1, level));
       return;
@@ -2097,7 +2108,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitStates component = mUnitStates.get(entityId);
     if (component.stateList == null) component.init(world, entityId);
     if (monster.rngState == 0) {
-      monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, entityId).state();
+      monster.rngState = NativeRng.forUnit(gameSeed(), entityId).state();
     }
     NativeRng rng = new NativeRng(monster.rngState);
     int roll = rng.nextInt(100);
@@ -2177,8 +2188,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private DifficultyLevels.Entry difficultyEntry(int difficulty) {
-    return Riiablo.files == null || Riiablo.files.DifficultyLevels == null
-        ? null : Riiablo.files.DifficultyLevels.get(difficulty);
+    return files() == null || files().DifficultyLevels == null
+        ? null : files().DifficultyLevels.get(difficulty);
   }
 
   /**
