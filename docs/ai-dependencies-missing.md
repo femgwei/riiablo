@@ -35,3 +35,6 @@ Baboon、Scarab 在本批前已有专用类；新增实表检查同时覆盖这�
 
 NativeQuestRandomState 当前提供世界内共享种子及高低位导出/恢复接口；初始化已按原版先从 ServerGameplayContext 的 game-owned seed 随机流掷出 QuestControl 低位种子。尚未安装完整世界存档读写入口，不能宣称重启恢复已落地。restore 在 ECS initialize 前调用时会保留恢复状态，避免初始化覆盖。现有 SerializationManager 是实体网络同步，不能直接当作世界存档。
 
+
+Ancient 目标选择：普通候选扫描已加入同世界、同关卡筛选，并通过不同关卡/同关卡/不同世界专项测试；完整 AITHINK_GetTargetForBoss 评分、玩家节点顺序以及 Talic 与另外两位的选敌入口差异仍待移植，不能称整条 Boss 选敌依赖已完成。
+

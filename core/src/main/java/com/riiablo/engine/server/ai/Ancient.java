@@ -13,6 +13,23 @@ import com.riiablo.engine.server.state.StateId;
 public class Ancient extends NativeDecisionAI {
   public Ancient(int entityId) { super(entityId); }
 
+  /** Native AITHINK_AreUnitsInSameLevel cull; ordinary acquisition must not
+   * select a unit from another level even when its coordinates are nearby. */
+  @Override protected boolean acceptOrdinaryTargetCandidate(int targetId) {
+    return sameLevel(targetId);
+  }
+
+  private boolean sameLevel(int targetId) {
+    com.riiablo.engine.server.component.MapWrapper source = mMapWrapper.get(entityId);
+    com.riiablo.engine.server.component.MapWrapper target = mMapWrapper.get(targetId);
+    // Legacy arena fixtures have no map wrappers. Production candidates must
+    // carry both a world and a level; do not compare only their coordinates.
+    if (source == null || source.zone == null) return target == null || target.zone == null;
+    return target != null && target.map == source.map && target.zone != null
+        && source.zone.level != null && target.zone.level != null
+        && source.zone.level.Id == target.zone.level.Id;
+  }
+
   @Override protected boolean beforeDecision() {
     Act5QuestSystem quests = Riiablo.engine.getSystem(Act5QuestSystem.class);
     if (quests != null && !quests.isAncientCombatActive(entityId)) { idle(25); return false; }

@@ -914,7 +914,7 @@ public abstract class AI implements Interactable.Interactor {
     IntBag entities = getEnemyEntities().getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (isValidOrdinaryEnemyTarget(ent)) {
+      if (acceptOrdinaryTargetCandidate(ent) && isValidOrdinaryEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = nativeAiDistance(entityPos, targetPos);
         com.riiablo.engine.server.component.NativeTargetNode node = Riiablo.engine
@@ -942,6 +942,9 @@ public abstract class AI implements Interactable.Interactor {
    * monster's active map.  Keeping this in one helper prevents individual
    * monster AIs from accidentally reverting to global nearest-player scans.
    */
+  /** Additional native per-AI cull before ordinary target distance ranking. */
+  protected boolean acceptOrdinaryTargetCandidate(int targetId) { return true; }
+
   protected boolean isValidEnemyTarget(int targetId) {
     return isValidEnemyTarget(targetId, true);
   }

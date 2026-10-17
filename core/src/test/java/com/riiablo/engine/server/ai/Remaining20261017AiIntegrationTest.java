@@ -15,6 +15,25 @@ import org.junit.jupiter.api.Test;
 
 /** Remaining native handlers, exercised against installed 1.10f data. */
 class Remaining20261017AiIntegrationTest extends RiiabloTest {
+  @Test void ancientCandidatesRequireTheSameWorldAndLevel() {
+    try (Fixture f = new Fixture("ancientbarb1", 0, 8)) {
+      com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);
+      com.riiablo.map.Map.Zone source = org.mockito.Mockito.mock(com.riiablo.map.Map.Zone.class);
+      com.riiablo.map.Map.Zone target = org.mockito.Mockito.mock(com.riiablo.map.Map.Zone.class);
+      source.level = new com.riiablo.codec.excel.Levels.Entry();
+      target.level = new com.riiablo.codec.excel.Levels.Entry();
+      source.level.Id = 120;
+      target.level.Id = 121;
+      f.ai.mMapWrapper.create(f.ai.entityId).set(map, source);
+      f.ai.mMapWrapper.create(f.target).set(map, target);
+      assertFalse(f.ai.acceptOrdinaryTargetCandidate(f.target));
+      target.level.Id = 120;
+      assertTrue(f.ai.acceptOrdinaryTargetCandidate(f.target));
+      f.ai.mMapWrapper.get(f.target).map = new com.riiablo.map.Map(1, 0);
+      assertFalse(f.ai.acceptOrdinaryTargetCandidate(f.target));
+    }
+  }
+
   static final String[] NAMES = {
       "AbyssKnight", "Ancient", "BaalThrone", "BaalToStairs", "BatDemon",
       "CatapultSpotter", "ClawViperEx", "DarkWanderer", "FetishBlowgun", "FingerMage",
