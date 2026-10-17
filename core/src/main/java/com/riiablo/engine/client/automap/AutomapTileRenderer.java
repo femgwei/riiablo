@@ -147,8 +147,8 @@ public class AutomapTileRenderer implements Disposable {
       }
       
       // 加载调色板纹理（使用 Act1 调色板）
-      if (Riiablo.palettes != null) {
-        paletteTexture = Riiablo.palettes.act1;
+      if (clientContext.palettes() != null) {
+        paletteTexture = clientContext.palettes().act1;
       }
       
       // 设置当前精灵

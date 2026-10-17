@@ -321,7 +321,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         charData, () -> player, () -> this, this::setAct,
         Riiablo.assets, Riiablo.audio, Riiablo.cursor, Riiablo.files, Riiablo.batch,
         Riiablo.fonts, Riiablo.colors, Riiablo.string, Riiablo.saves, Riiablo.home,
-        Riiablo.language == null ? null : Riiablo.language.resourceCode, Riiablo.mpqs);
+        Riiablo.language == null ? null : Riiablo.language.resourceCode, Riiablo.mpqs,
+        Riiablo.palettes);
     // Create the item controller before any HUD/panel captures it.  The
     // mercenary portrait accepts cursor potions through this controller; the
     // previous order constructed MercenaryHud first and permanently retained
@@ -835,7 +836,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // FIXME: #75 Initial CharData update event
     charData.update();
 
-    loadingScreen = new GameLoadingScreen(map, getDependencies(), sessionAssets);
+    loadingScreen = new GameLoadingScreen(map, getDependencies(), sessionAssets, clientGameplayContext);
   }
 
   private void bindItemLocationListeners() {

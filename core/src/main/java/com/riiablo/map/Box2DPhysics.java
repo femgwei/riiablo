@@ -54,6 +54,7 @@ public class Box2DPhysics extends IntervalSystem {
   protected IsometricCamera iso;
 
   private World box2d;
+  private long worldGeneration;
 
   private final float interval;
 
@@ -87,12 +88,29 @@ public class Box2DPhysics extends IntervalSystem {
     return box2d;
   }
 
+  /** Identifies bodies that belong to the currently active physics world. */
+  public long getWorldGeneration() {
+    return worldGeneration;
+  }
+
+  /** Safely retires a component body, including after an act-world rebuild. */
+  public boolean destroyBody(Box2DBody wrapper) {
+    if (wrapper == null || wrapper.body == null) return false;
+    Body body = wrapper.body;
+    wrapper.body = null;
+    if (box2d == null || wrapper.worldGeneration != worldGeneration) return false;
+    if (box2d.isLocked()) return false;
+    box2d.destroyBody(body);
+    return true;
+  }
+
   /** Monster_Reinitialize changes class and collision size without changing GUID. */
   public void rebuildMonsterBody(int entityId) {
     if (box2d == null || box2d.isLocked() || !mBox2DBody.has(entityId)) return;
     Box2DBody wrapper = mBox2DBody.get(entityId);
-    if (wrapper.body != null) box2d.destroyBody(wrapper.body);
+    destroyBody(wrapper);
     wrapper.body = createBody(entityId);
+    wrapper.worldGeneration = worldGeneration;
   }
 
   @Override
@@ -103,6 +121,7 @@ public class Box2DPhysics extends IntervalSystem {
 
   public void init() {
     Validate.validState(box2d == null);
+    worldGeneration++;
     box2d = new World(Vector2.Zero, true);
   }
 
@@ -125,7 +144,10 @@ public class Box2DPhysics extends IntervalSystem {
   @Override
   protected void inserted(int entityId) {
     Box2DBody wrapper = mBox2DBody.get(entityId);
-    if (wrapper.body == null) wrapper.body = createBody(entityId);
+    if (wrapper.body == null) {
+      wrapper.body = createBody(entityId);
+      wrapper.worldGeneration = worldGeneration;
+    }
     if (wrapper.body == null) mBox2DBody.remove(entityId);
   }
 

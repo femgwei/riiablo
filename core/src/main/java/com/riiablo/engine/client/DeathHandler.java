@@ -292,10 +292,7 @@ public class DeathHandler extends PassiveSystem {
       }
       // Destroy physics body so corpse doesn't block movement
       if (mBox2DBody.has(entityId)) {
-        Body body = mBox2DBody.get(entityId).body;
-        if (body != null) {
-          box2d.getPhysics().destroyBody(body);
-        }
+        box2d.destroyBody(mBox2DBody.get(entityId));
         mBox2DBody.remove(entityId);
       }
 
@@ -384,10 +381,7 @@ public class DeathHandler extends PassiveSystem {
   private void handlePlayerCorpseMode(int playerId) {
     // Destroy physics body so corpse doesn't block movement
     if (mBox2DBody.has(playerId)) {
-      Body body = mBox2DBody.get(playerId).body;
-      if (body != null) {
-        box2d.getPhysics().destroyBody(body);
-      }
+      box2d.destroyBody(mBox2DBody.get(playerId));
       mBox2DBody.remove(playerId);
     }
 

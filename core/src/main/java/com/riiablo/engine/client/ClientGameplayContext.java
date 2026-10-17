@@ -10,6 +10,7 @@ import com.riiablo.audio.Audio;
 import com.riiablo.codec.StringTBLs;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.mpq.MPQFileHandleResolver;
+import com.riiablo.Palettes;
 import com.riiablo.save.CharData;
 import com.riiablo.screen.GameScreen;
 import java.util.Objects;
@@ -43,6 +44,7 @@ public final class ClientGameplayContext {
   private final FileHandle home;
   private final String languageCode;
   private final MPQFileHandleResolver mpqs;
+  private final Palettes palettes;
 
   public ClientGameplayContext(CharData charData, IntSupplier playerId,
       Supplier<GameScreen> game, IntConsumer actTransition, AssetManager assets,
@@ -66,6 +68,15 @@ public final class ClientGameplayContext {
       Audio audio, com.riiablo.Cursor cursor, Files files, PaletteIndexedBatch batch,
       Fonts fonts, Colors colors, StringTBLs strings, FileHandle saves, FileHandle home,
       String languageCode, MPQFileHandleResolver mpqs) {
+    this(charData, playerId, game, actTransition, assets, audio, cursor, files, batch,
+        fonts, colors, strings, saves, home, languageCode, mpqs, null);
+  }
+
+  public ClientGameplayContext(CharData charData, IntSupplier playerId,
+      Supplier<GameScreen> game, IntConsumer actTransition, AssetManager assets,
+      Audio audio, com.riiablo.Cursor cursor, Files files, PaletteIndexedBatch batch,
+      Fonts fonts, Colors colors, StringTBLs strings, FileHandle saves, FileHandle home,
+      String languageCode, MPQFileHandleResolver mpqs, Palettes palettes) {
     this.charData = charData;
     this.playerId = Objects.requireNonNull(playerId, "playerId");
     this.game = Objects.requireNonNull(game, "game");
@@ -82,6 +93,7 @@ public final class ClientGameplayContext {
     this.home = home;
     this.languageCode = languageCode;
     this.mpqs = mpqs;
+    this.palettes = palettes;
   }
 
   public CharData charData() { return charData; }
@@ -99,6 +111,7 @@ public final class ClientGameplayContext {
   public FileHandle home() { return home; }
   public String languageCode() { return languageCode; }
   public MPQFileHandleResolver mpqs() { return mpqs; }
+  public Palettes palettes() { return palettes; }
 
   /** Delivers an accepted server act transition to the owning screen. */
   public boolean transitionAct(int act) {
@@ -116,6 +129,7 @@ public final class ClientGameplayContext {
         game -> { if (Riiablo.game != null) Riiablo.game.setAct(game); },
         Riiablo.assets, Riiablo.audio, Riiablo.cursor, Riiablo.files, Riiablo.batch,
         Riiablo.fonts, Riiablo.colors, Riiablo.string, Riiablo.saves, Riiablo.home,
-        Riiablo.language == null ? null : Riiablo.language.resourceCode, Riiablo.mpqs);
+        Riiablo.language == null ? null : Riiablo.language.resourceCode, Riiablo.mpqs,
+        Riiablo.palettes);
   }
 }

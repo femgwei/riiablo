@@ -2,7 +2,6 @@ package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
-import com.badlogic.gdx.physics.box2d.Body;
 import com.riiablo.engine.EntitySystemAdapter;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.map.Box2DPhysics;
@@ -16,7 +15,8 @@ public class Box2DDisposer extends EntitySystemAdapter {
   @Override
   protected void removed(int entityId) {
     if (!mBox2DBody.has(entityId)) return;
-    Body body = mBox2DBody.get(entityId).body;
-    if (body != null) box2d.getPhysics().destroyBody(body);
+    com.riiablo.engine.server.component.Box2DBody wrapper = mBox2DBody.get(entityId);
+    if (box2d != null) box2d.destroyBody(wrapper);
+    else wrapper.body = null;
   }
 }

@@ -12,6 +12,8 @@ import com.badlogic.gdx.utils.BooleanArray;
 @PooledWeaver
 public class Box2DBody extends Component {
   public Body body;
+  /** Generation of the Box2D world that owns {@link #body}. */
+  public long worldGeneration;
   public final Array<Fixture> skillMoveFixtures = new Array<>();
   public final BooleanArray skillMoveSensors = new BooleanArray();
 }

@@ -14,6 +14,18 @@
   `ClientNetworkSessionTest`、`GameScreenAssemblyTest` 通过。真实双客户端、Android
   真机、人工观感和性能仍未验收。
 
+## 2026-10-17 跨 Act / 加载中退出生命周期收口
+
+- [x] `GameLoadingScreen` 捕获所属 `ClientGameplayContext`，加载显示代次在 hide/
+  dispose 时失效；迟到的 AssetManager 完成回调不再继续访问已释放的 Map 或弹出旧
+  屏幕。销毁后的加载屏幕拒绝再次提交 Act 加载。
+- [x] `Box2DPhysics` 为每个物理世界分配代次，`Box2DBody` 记录所属代次。跨 Act
+  清空并重建物理世界后，迟到的实体删除/死亡回调会跳过旧 Body，不会向新 World
+  销毁旧指针；当前世界的 Body 仍由统一安全入口销毁。
+- [x] 定向验证：`Box2DPhysicsTest`、上下文/网络会话/GameScreen 装配测试及
+  `core:compileJava` 通过。真实跨 Act 双客户端、加载屏中强制退出和长压仍需运行环境
+  验证，未将其写成已通过。
+
 ## 2026-10-17 客户端系统上下文与独立装配
 
 - [x] 新增 `ClientGameplayContext`，由 GameScreen 捕获角色、动态本地实体、当前

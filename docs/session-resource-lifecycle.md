@@ -11,6 +11,19 @@
   `GameScreenAssemblyTest` 均通过。本轮没有把真实双客户端、Android 真机、人工画面
   /声音/输入或性能结论写成通过。
 
+# 2026-10-17 跨 Act 与加载中退出边界
+
+- `GameLoadingScreen` 现在绑定所属 `ClientGameplayContext`，并以 show/hide/dispose
+  代次门禁异步加载完成回调。加载屏被退出或所属 GameScreen 已销毁后，迟到的完成事件
+  不再调用 Map 的 finish/generate 或弹出旧屏幕；同一个加载屏在销毁后也不能重新提交
+  Act 加载。
+- `Box2DPhysics` 为每个重建的物理 World 分配代次，`Box2DBody` 保存 body 所属代次。
+  `Box2DDisposer`、DeathHandler 和重建入口统一经过安全销毁方法；旧 World 的迟到
+  删除回调只清空旧包装器，不会向新 World 传入已失效的 Body 指针。
+- 验证已完成：`Box2DPhysicsTest`、`ClientGameplayContextTest`、
+  `ClientNetworkSessionTest`、`GameScreenAssemblyTest` 及 `core:compileJava`。真实
+  跨 Act 双客户端、加载屏中强制退出和长期压力仍需真实运行环境复验。
+
 # 2026-10-17 客户端系统边界与后台生命周期补充
 
 - GameScreen 现在创建并注册一个 `ClientGameplayContext`，系统通过该上下文读取
