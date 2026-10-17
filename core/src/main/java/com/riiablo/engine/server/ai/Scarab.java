@@ -59,7 +59,7 @@ public class Scarab extends AI {
   float time;
   
   // AI state tracking
-  int aiParam0 = 0;  // Command state (0=normal, 1=commanding)
+  int aiParam0 = 0;  // Ordinary pursuit phase, independent of AiCommand.
 
   public Scarab(int entityId) {
     super(entityId);
@@ -110,35 +110,6 @@ public class Scarab extends AI {
     float targetDistance = targetDistances[0];
     Vector2 entityPos = mPosition.get(entityId).position;
 
-    // D2MOD: Check command state
-    if (aiParam0 == 1) {
-      if (targetId != Engine.INVALID_ENTITY) {
-        Vector2 targetPos = mPosition.get(targetId).position;
-        boolean bCombat = isInCombat(targetId);
-        
-        // D2MOD: If in combat and has skill, use it
-        if (bCombat && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-          // D2MOD: Use skill (nSkill[0])
-          // TODO: Implement skill casting
-          aiParam0 = 0;
-          pathfinder.findPath(entityId, null);
-          lookAt(targetId);
-          stateMachine.changeState(State.ATTACK);
-          mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-          mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-          time = MathUtils.random(1f, 2);
-          return;
-        } else {
-          // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 100, 0)
-          // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
-          walkTo(targetPos, 100, targetId);
-          stateMachine.changeState(State.APPROACH);
-          time = MathUtils.random(1f, 2);
-          return;
-        }
-      }
-    }
-
     if (targetId == Engine.INVALID_ENTITY) {
       // No target, idle behavior
       switch (stateMachine.getCurrentState()) {
@@ -175,8 +146,8 @@ public class Scarab extends AI {
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
         walkTo(targetPos, targetId);
         stateMachine.changeState(State.APPROACH);
-        // D2MOD: 10% chance to exit command state
-        if (MathUtils.randomBoolean(0.1f)) {
+        // Native AI_RollPercentage > 10 clears the ordinary pursuit phase.
+        if (rollAiPercentage() > 10) {
           aiParam0 = 0;
         }
         time = MathUtils.random(1f, 2);
@@ -191,33 +162,26 @@ public class Scarab extends AI {
       }
     }
 
-    // D2MOD: In combat
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    // Fn020 rolls attack first. Jab is only eligible after that roll succeeds.
+    if (rollAiChance(params[0])) {
+      if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
+          && rollAiChance(params[3])) {
+        useMonsterSkill(0, targetId, targetPos);
+        stateMachine.changeState(State.JAB);
+        return;
+      }
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
-      byte attackMode = params.length > 1 && MathUtils.randomBoolean(params[1] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+      byte attackMode = rollAiChance(params[1]) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
       mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
       time = MathUtils.random(1f, 2);
       return;
-    } else {
-      // D2MOD: Check jab chance
-      if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-        pathfinder.findPath(entityId, null);
-        lookAt(targetId);
-        stateMachine.changeState(State.JAB);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
-        return;
-      } else {
-        stateMachine.changeState(State.IDLE);
-        time = params.length > 2 ? params[2] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
-        return;
-      }
     }
+    stateMachine.changeState(State.IDLE);
+    time = params[2] * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override
