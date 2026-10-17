@@ -1,6 +1,8 @@
 package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.ComponentMapper;
 import com.artemis.World;
@@ -21,9 +23,10 @@ class AuthoritativeInterpolationSystemTest {
       int entityId = world.create();
       ComponentMapper<Position> positions = world.getMapper(Position.class);
       ComponentMapper<Angle> angles = world.getMapper(Angle.class);
-      positions.create(entityId).position.set(4f, 0f);
+      positions.create(entityId).initializeNativeCell(4, 0);
       angles.create(entityId).set(new com.badlogic.gdx.math.Vector2(0f, 1f));
       world.process();
+      assertTrue(positions.get(entityId).hasNativePrecision());
 
       interpolation.record(entityId, 1, 1000,
           true, 0f, 0f, true, 1f, 0f);
@@ -35,6 +38,8 @@ class AuthoritativeInterpolationSystemTest {
 
       interpolation.endRender();
       assertEquals(4f, positions.get(entityId).position.x, 0f);
+      assertFalse(positions.get(entityId).hasNativePrecision(),
+          "restoring the float projection must not restore raw precision");
       assertEquals(0f, angles.get(entityId).angle.x, 0f);
       assertEquals(1f, angles.get(entityId).angle.y, 0f);
     } finally {
@@ -52,7 +57,7 @@ class AuthoritativeInterpolationSystemTest {
     try {
       int entityId = world.create();
       ComponentMapper<Position> positions = world.getMapper(Position.class);
-      positions.create(entityId).position.set(5f, 2f);
+      positions.create(entityId).initializeNativeCell(5, 2);
       world.process();
 
       interpolation.correctLocal(entityId, 1f, 0f, false);
@@ -60,6 +65,8 @@ class AuthoritativeInterpolationSystemTest {
       assertEquals(6f, positions.get(entityId).position.x, 0.0001f);
       interpolation.endRender();
       assertEquals(5f, positions.get(entityId).position.x, 0f);
+      assertFalse(positions.get(entityId).hasNativePrecision(),
+          "temporary visual correction must latch raw invalidation");
 
       interpolation.beginRender(0.04f);
       assertEquals(5.6667f, positions.get(entityId).position.x, 0.001f);

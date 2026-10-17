@@ -1601,6 +1601,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       death.respawnPlayerAtTown(localPlayerId);
     }
     if (mPosition.has(localPlayerId)) {
+      mPosition.get(localPlayerId).invalidateNativePrecision();
       mPosition.get(localPlayerId).position.set(result.x(), result.y());
       if (networkSynchronizer != null) {
         networkSynchronizer.resetPrediction(result.x(), result.y());
@@ -1765,6 +1766,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           local.dropPartyUntilMillis = result.groundPartyUntilMillis();
           local.partyShareGold = result.groundPartyShareGold();
           if (mPosition.has(localEntityId)) {
+            mPosition.get(localEntityId).invalidateNativePrecision();
             mPosition.get(localEntityId).position.set(result.groundX(), result.groundY());
           }
         } catch (Throwable t) {

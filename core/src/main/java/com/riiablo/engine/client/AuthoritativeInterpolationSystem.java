@@ -86,6 +86,7 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       if (entry.buffer.hasPosition() && mPosition.has(entityId)) {
         Position position = mPosition.get(entityId);
         entry.authoritativePosition.set(position.position);
+        position.invalidateNativePrecision();
         position.position.set(entry.buffer.samplePosition(tmp));
         entry.positionApplied = true;
         changed = true;
@@ -122,6 +123,7 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       Position position = mPosition.get(entityId);
       correction.authoritative.set(position.position);
       float alpha = Math.max(0f, correction.remaining / LocalCorrection.DURATION);
+      position.invalidateNativePrecision();
       position.position.mulAdd(correction.offset, alpha);
       correction.remaining -= Math.max(0f, renderDelta);
       localApplied.add(entityId);
@@ -136,6 +138,7 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       if (entry == null) continue;
       int entityId = applied.get(i);
       if (entry.positionApplied && mPosition.has(entityId)) {
+        mPosition.get(entityId).invalidateNativePrecision();
         mPosition.get(entityId).position.set(entry.authoritativePosition);
       }
       if (entry.angleApplied && mAngle.has(entityId)) {
@@ -159,6 +162,7 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       int entityId = localApplied.get(i);
       LocalCorrection correction = localCorrections.get(entityId);
       if (correction != null && mPosition.has(entityId)) {
+        mPosition.get(entityId).invalidateNativePrecision();
         mPosition.get(entityId).position.set(correction.authoritative);
       }
     }
