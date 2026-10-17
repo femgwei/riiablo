@@ -17,12 +17,32 @@ class BaboonEscapeFallbackTest extends RiiabloTest {
   @Test void rejectedEscapeWalksAroundSelfUsingNativeSeedDraws() { verifyFallback(true); }
   @Test void rejectedLocalWalkDoesNotRetryOrChasePlayer() { verifyFallback(false); }
 
+  @Test void acceptedEscapeRetainsConfiguredVelocityBonus() {
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      try (Fixture f = new Fixture("baboon1", difficulty, 10)) {
+        Baboon ai = (Baboon) f.ai;
+        f.health(50, 100);
+        ai.aiParam0 = 4;
+        int expectedBonus = Math.min(
+            100 * ai.monster.monstats.Run / ai.monster.monstats.Velocity - 100, 120);
+        assertTrue(expectedBonus > 0);
+        ai.update(0.04f);
+        assertEquals("ESCAPE", ai.getState());
+        assertEquals(expectedBonus / 100f,
+            f.world.getMapper(com.riiablo.engine.server.component.Velocity.class)
+                .get(f.actor).modeSpeedBonusMultiplier);
+      }
+    }
+  }
+
   private void verifyFallback(boolean acceptLocalWalk) {
     for (int seedValue : new int[] {0, 1, 2, 123456}) {
       try (Fixture f = new Fixture("baboon1", 0, 10)) {
         Baboon ai = (Baboon) f.ai;
         f.health(50, 100);
         ai.aiParam0 = 4;
+        assertTrue(ai.monster.monstats.Run > ai.monster.monstats.Velocity,
+            "Fixture must exercise a nonzero escape bonus");
         Riiablo.gameSeed = seedValue;
         D2Seed seed = new D2Seed(seedValue ^ (f.actor * 0x45D9F3B), 666);
         boolean axis = (Seed.rollRandomNumber(seed) & 1L) != 0;
@@ -43,6 +63,8 @@ class BaboonEscapeFallbackTest extends RiiabloTest {
         assertEquals(acceptLocalWalk ? "APPROACH" : "IDLE", ai.getState());
         assertEquals(ai.SLEEP, ai.time);
         assertNull(f.casting());
+        assertEquals(0f, f.world.getMapper(com.riiablo.engine.server.component.Velocity.class)
+            .get(f.actor).modeSpeedBonusMultiplier);
         assertEquals(Seed.rollRandomNumber(seed) & 0xffffffffL, ai.rollAiRandomNumber());
       }
     }

@@ -243,7 +243,8 @@ public class Baboon extends AI {
           // Can't escape
           if (!bCombat) {
             // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 5u)
-            stateMachine.changeState(walkCloseToSelf(5, nVel) ? State.APPROACH : State.IDLE);
+            // The failed escape mode change consumed its temporary velocity bonus.
+            stateMachine.changeState(walkCloseToSelf(5, 0) ? State.APPROACH : State.IDLE);
             return;
           } else {
             // Attack
