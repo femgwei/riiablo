@@ -198,7 +198,7 @@ public class Scarab extends AI {
       mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-      time = MathUtils.random(1f, 2);
+      // Fn020 returns after issuing the attack, without an extra random wait.
       return;
     }
     // Fn020 ends a declined attack with IdleInNeutralMode, cancelling movement.

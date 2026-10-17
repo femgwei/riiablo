@@ -36,6 +36,7 @@ class ScarabAttackChoiceTest extends RiiabloTest {
           ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
       ai.update(0.04f);
       assertEquals("ATTACK", ai.getState());
+      assertEquals(ai.SLEEP, ai.time);
       assertEquals(expected, f.sequence().mode1);
       assertEquals(Engine.Monster.MODE_NU, f.sequence().mode2);
       assertEquals(com.riiablo.skill.SkillCodes.attack, f.casting().skillId);
