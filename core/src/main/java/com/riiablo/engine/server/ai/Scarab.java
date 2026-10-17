@@ -1,9 +1,6 @@
 package com.riiablo.engine.server.ai;
 
-import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
-import com.artemis.EntitySubscription;
-import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
@@ -11,12 +8,9 @@ import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -51,15 +45,12 @@ public class Scarab extends AI {
     }
   }
 
-  protected ComponentMapper<Class> mClass;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
-
-  private EntitySubscription enemyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -73,14 +64,6 @@ public class Scarab extends AI {
   public Scarab(int entityId) {
     super(entityId);
     stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
-  }
-
-  @Override
-  public void initialize() {
-    super.initialize();
-    enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-            .all(Class.class)
-            .one(Player.class));
   }
 
   @Override
@@ -122,23 +105,10 @@ public class Scarab extends AI {
 
     time = SLEEP;
 
-    // Find target
-    int targetId = Engine.INVALID_ENTITY;
-    float targetDistance = Float.MAX_VALUE;
+    float[] targetDistances = {Float.MAX_VALUE};
+    int targetId = findNearestTargetWithAidist(targetDistances);
+    float targetDistance = targetDistances[0];
     Vector2 entityPos = mPosition.get(entityId).position;
-    
-    IntBag entities = enemyEntities.getEntities();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int ent = entities.get(i);
-      if (isValidEnemyTarget(ent)) {
-        Vector2 targetPos = mPosition.get(ent).position;
-        float dst = entityPos.dst(targetPos);
-        if (dst < targetDistance) {
-          targetDistance = dst;
-          targetId = ent;
-        }
-      }
-    }
 
     // D2MOD: Check command state
     if (aiParam0 == 1) {

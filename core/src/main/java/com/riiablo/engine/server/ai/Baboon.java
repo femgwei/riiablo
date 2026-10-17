@@ -1,9 +1,6 @@
 package com.riiablo.engine.server.ai;
 
-import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
-import com.artemis.EntitySubscription;
-import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
@@ -11,12 +8,9 @@ import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -52,7 +46,6 @@ public class Baboon extends AI {
     }
   }
 
-  protected ComponentMapper<Class> mClass;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
@@ -60,8 +53,6 @@ public class Baboon extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
-
-  private static EntitySubscription enemyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -77,16 +68,6 @@ public class Baboon extends AI {
   public Baboon(int entityId) {
     super(entityId);
     stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
-  }
-
-  @Override
-  public void initialize() {
-    super.initialize();
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class)
-              .one(Player.class));
-    }
   }
 
   @Override
@@ -162,23 +143,10 @@ public class Baboon extends AI {
         aiParam2 = 0;
       }
 
-      // Find target
-      int targetId = Engine.INVALID_ENTITY;
-      float targetDistance = Float.MAX_VALUE;
+      float[] targetDistances = {Float.MAX_VALUE};
+      int targetId = findNearestTargetWithAidist(targetDistances);
+      float targetDistance = targetDistances[0];
       Vector2 entityPos = mPosition.get(entityId).position;
-      
-      IntBag entities = enemyEntities.getEntities();
-      for (int i = 0, size = entities.size(); i < size; i++) {
-        int ent = entities.get(i);
-        if (mClass.has(ent) && mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
-          Vector2 targetPos = mPosition.get(ent).position;
-          float dst = entityPos.dst(targetPos);
-          if (dst < targetDistance) {
-            targetDistance = dst;
-            targetId = ent;
-          }
-        }
-      }
 
       if (targetId != Engine.INVALID_ENTITY) {
         Vector2 targetPos = mPosition.get(targetId).position;
@@ -247,23 +215,10 @@ public class Baboon extends AI {
       }
     }
 
-    // Find target
-    int targetId = Engine.INVALID_ENTITY;
-    float targetDistance = Float.MAX_VALUE;
+    float[] targetDistances = {Float.MAX_VALUE};
+    int targetId = findNearestTargetWithAidist(targetDistances);
+    float targetDistance = targetDistances[0];
     Vector2 entityPos = mPosition.get(entityId).position;
-    
-    IntBag entities = enemyEntities.getEntities();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int ent = entities.get(i);
-      if (mClass.has(ent) && mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
-        Vector2 targetPos = mPosition.get(ent).position;
-        float dst = entityPos.dst(targetPos);
-        if (dst < targetDistance) {
-          targetDistance = dst;
-          targetId = ent;
-        }
-      }
-    }
 
     if (targetId == Engine.INVALID_ENTITY) {
       stopMovement();
