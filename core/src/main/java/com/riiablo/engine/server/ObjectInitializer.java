@@ -36,6 +36,8 @@ public class ObjectInitializer extends BaseEntitySystem {
   protected CofManager cofs;
   @Wire(name = "map")
   protected Map map;
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
 
   @Override
   protected void inserted(int entityId) {
@@ -75,8 +77,8 @@ public class ObjectInitializer extends BaseEntitySystem {
         Levels.Entry level = getLevel(entityId);
         boolean active = level != null
             && level.Waypoint != 0xFF
-            && Riiablo.charData != null
-            && Riiablo.charData.isWaypointActivated(level.Act, level.Waypoint);
+            && character() != null
+            && character().isWaypointActivated(level.Act, level.Waypoint);
         cofs.setMode(entityId, active ? Engine.Object.MODE_ON : Engine.Object.MODE_NU);
         break;
       case 18:
@@ -108,6 +110,10 @@ public class ObjectInitializer extends BaseEntitySystem {
     normalizeInactiveShrineMode(entityId, base, nativeState);
     restorePersistentInteractionState(entityId, base, nativeState);
     syncSnapshotState(entityId, nativeState);
+  }
+
+  private com.riiablo.save.CharData character() {
+    return serverContext != null ? serverContext.character() : Riiablo.charData;
   }
 
   /**

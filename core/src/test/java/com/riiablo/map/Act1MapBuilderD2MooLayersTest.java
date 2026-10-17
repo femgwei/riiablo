@@ -441,7 +441,7 @@ class Act1MapBuilderD2MooLayersTest {
     putSpecial(underground, Map.ID.VIS_1_15);
     putSpecial(underground, Map.ID.VIS_4_38); // level 11 is not exported yet
 
-    Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(map);
+    map.act1Builder().linkNativeWarpSpecials(map);
 
     assertEquals(Map.ID.VIS_0_03, stony.getWarp(Map.ID.VIS_4_40));
     assertEquals(Map.ID.VIS_4_40, underground.getWarp(Map.ID.VIS_0_03));
@@ -483,7 +483,7 @@ class Act1MapBuilderD2MooLayersTest {
     putSpecial(bloodMoor, Map.ID.VIS_5_42);
     putSpecial(denOfEvil, Map.ID.VIS_0_03);
 
-    Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(map);
+    map.act1Builder().linkNativeWarpSpecials(map);
 
     assertEquals(Map.ID.VIS_0_03, bloodMoor.getWarp(Map.ID.VIS_5_42));
     assertEquals(Map.ID.VIS_5_42, denOfEvil.getWarp(Map.ID.VIS_0_03));

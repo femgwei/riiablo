@@ -86,6 +86,57 @@ class ClientScreenTransitionTest {
     assertEquals(0, stack().size);
   }
 
+  @Test void successiveActLoadsCreateFreshViewsAndRetainSessionDependenciesOnce() {
+    com.riiablo.Colors previousColors = com.riiablo.Riiablo.colors;
+    com.riiablo.Riiablo.colors = new com.riiablo.Colors();
+    AssetManager assets = mock(AssetManager.class);
+    when(assets.contains(anyString())).thenReturn(true);
+    when(assets.isLoaded(anyString())).thenReturn(true);
+    when(assets.update()).thenReturn(true);
+    com.riiablo.codec.DC6 dc6 = mock(com.riiablo.codec.DC6.class);
+    when(assets.get(any(com.badlogic.gdx.assets.AssetDescriptor.class))).thenReturn(dc6);
+    com.riiablo.codec.Animation animation = mock(com.riiablo.codec.Animation.class);
+    com.riiablo.map.Map map = mock(com.riiablo.map.Map.class);
+    ScreenAssetScope session = new ScreenAssetScope(assets);
+    Array<com.badlogic.gdx.assets.AssetDescriptor> dependencies = new Array<>();
+    com.badlogic.gdx.assets.AssetDescriptor<com.badlogic.gdx.audio.Sound> dependency =
+        new com.badlogic.gdx.assets.AssetDescriptor<>("session.wav", com.badlogic.gdx.audio.Sound.class);
+    dependencies.add(dependency);
+    LoadingScreenHost host = new LoadingScreenHost(null, null, null,
+        () -> {}, client::popScreen, client::clearAndSet);
+    try (org.mockito.MockedConstruction<com.badlogic.gdx.scenes.scene2d.Stage> stages =
+            mockConstruction(com.badlogic.gdx.scenes.scene2d.Stage.class);
+         org.mockito.MockedStatic<com.riiablo.codec.Animation> animations =
+            mockStatic(com.riiablo.codec.Animation.class)) {
+      animations.when(() -> com.riiablo.codec.Animation.newAnimation(dc6)).thenReturn(animation);
+      Probe game = probe("game");
+      client.setScreen(game);
+      GameLoadingScreen loader = new GameLoadingScreen(map, dependencies, session, host);
+      for (int act = 0; act < 3; act++) {
+        GameLoadingScreen previous = loader;
+        loader = loader.nextLoad(); // same ownership boundary used by GameScreen.setAct
+        assertNotSame(previous, loader);
+        loader.loadAct(act);
+        client.pushScreen(loader);
+        loader.render(0.04f); // real pop hides and permanently disposes this loader
+        assertSame(game, client.getScreen());
+        loader.render(0.04f); // late frames cannot regenerate or pop the game
+        verify(map).setAct(act);
+      }
+      assertEquals(3, stages.constructed().size());
+      for (com.badlogic.gdx.scenes.scene2d.Stage stage : stages.constructed()) verify(stage).dispose();
+      verify(map, times(3)).finishLoading();
+      verify(map, times(3)).generate();
+      verify(assets).load(dependency);
+      verify(assets, never()).unload(dependency.fileName);
+      session.dispose();
+      verify(assets).unload(dependency.fileName);
+    } finally {
+      session.dispose();
+      com.riiablo.Riiablo.colors = previousColors;
+    }
+  }
+
   @Test void replaceWithAnOlderStackEntryStillDisposesPrevious() {
     Probe a = probe("a"), b = probe("b"), c = probe("c");
     client.setScreen(a);

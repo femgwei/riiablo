@@ -216,7 +216,7 @@ class GameScreenAssemblyTest {
         + "NativeShrinePresentationSystem OverlayStepper DamageHandler DeathHandler CorpseManager "
         + "Act2QuestDialogController Act4QuestDialogController "
         + (local ? "Act1QuestDialogController ActTransitionSystem EnvironmentObjectSystem "
-            + "Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem Act4QuestSystem "
+            + "NativeQuestRandomState Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem Act4QuestSystem "
             + "Act5QuestSystem Act2TaintedSunQuestSystem Act2DurielQuestSystem NativeMercenaryRewardSystem "
             + "MercenaryFollowSystem SummonedPetSystem AssassinTrapSystem MercenarySkillSystem "
             + "NativeCountessRewardSystem NativeCharsiImbueSystem ServerSkillSystem "

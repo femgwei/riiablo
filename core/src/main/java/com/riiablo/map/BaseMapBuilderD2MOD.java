@@ -25,7 +25,9 @@ import com.riiablo.map.Map.Zone;
  * - 区域创建
  * - 地形生成
  */
-public class BaseMapBuilderD2MOD {
+public class BaseMapBuilderD2MOD extends MapBuilderResources {
+  public BaseMapBuilderD2MOD() { super(); }
+  public BaseMapBuilderD2MOD(MapResources resources) { super(resources); }
   protected static final String TAG = "BaseMapBuilderD2MOD";
   protected static final boolean DEBUG = true;
   protected static final boolean DEBUG_BUILD = DEBUG && true;
@@ -257,12 +259,12 @@ public class BaseMapBuilderD2MOD {
           int index = MathUtils.random(available.size - 1);
           if (i == 0 && zone.level.rangedspawn && available.size > 1) {
             for (int attempt = 0; attempt < 20; attempt++) {
-              MonStats.Entry candidate = Riiablo.files.monstats.get(available.get(index));
+              MonStats.Entry candidate = zone.map.files().monstats.get(available.get(index));
               if (candidate != null && candidate.rangedtype) break;
               index = MathUtils.random(available.size - 1);
             }
           }
-          MonStats.Entry entry = Riiablo.files.monstats.get(available.removeIndex(index));
+          MonStats.Entry entry = zone.map.files().monstats.get(available.removeIndex(index));
           if (entry != null && entry.isSpawn) selected.add(entry);
         }
         MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
@@ -383,7 +385,7 @@ public class BaseMapBuilderD2MOD {
           if (preset.populationGroupSize <= 0 || preset.spawned) continue;
           int x = Math.round(zone.x() + preset.x), y = Math.round(zone.y() + preset.y);
           Map.RoomEx room = zone.findRoomEx(x, y);
-          MonStats.Entry monster = Riiablo.files.monstats.get(preset.monsterId);
+          MonStats.Entry monster = zone.map.files().monstats.get(preset.monsterId);
           if (room != null && monster != null)
             NativeRoomMonsterPopulation.addGroupAt(zone, room, monster, preset.populationGroupSize,
                 packId++, rng, x, y);

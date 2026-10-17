@@ -93,6 +93,17 @@ import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 
 public class Actioneer extends PassiveSystem {
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
   private static final Logger log = LogManager.getLogger(Actioneer.class);
   private boolean lastCastAccepted;
 
@@ -315,7 +326,7 @@ public class Actioneer extends PassiveSystem {
     }
     boolean player = mPlayer.has(entityId);
     boolean rangedNormalAttack = player && isPlayerRangedNormalAttack(entityId);
-    final Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    final Skills.Entry skill = files().skills.get(skillId);
     boolean lightningStrike = isLightningStrikeSkill(skill);
     boolean requiresMeleeRange = requiresNormalMeleeCastRange(
         skillId, targetId, player, rangedNormalAttack)
@@ -722,7 +733,7 @@ public class Actioneer extends PassiveSystem {
     }
     
     // Get skill entry and validate it exists before processing
-    final Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    final Skills.Entry skill = files().skills.get(casting.skillId);
     if (skill == null) {
       log.warn("Skill {} not found for entity {}, cancelling casting", casting.skillId, event.entityId);
       mCasting.remove(event.entityId);
@@ -825,7 +836,7 @@ public class Actioneer extends PassiveSystem {
     Casting cast = mCasting.get(event.entityId);
     if (cast == null || cast.monInferno == null || cast.monInferno.nextUpdate < 0
         || cast.monInferno.frame < cast.monInferno.nextUpdate) return;
-    updateMonInferno(event.entityId, cast, Riiablo.files.skills.get(cast.skillId));
+    updateMonInferno(event.entityId, cast, files().skills.get(cast.skillId));
   }
 
   private void updateMonInferno(int entityId, Casting cast, Skills.Entry skill) {
@@ -861,7 +872,7 @@ public class Actioneer extends PassiveSystem {
   public void onSubmergeSequenceUpdate(com.riiablo.engine.server.event.SubmergeSequenceUpdateEvent event) {
     Sequence seq = mSequence.get(event.entityId);
     Casting casting = mCasting.get(event.entityId);
-    Skills.Entry skill = casting == null ? null : Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry skill = casting == null ? null : files().skills.get(casting.skillId);
     if (seq == null || !seq.started || !seq.nativeFrogHidden || seq.nativeSubmergeHeld
         || skill == null || skill.srvdofunc != 94) return;
     srvdofunc(event.entityId, 94, casting.targetId, casting.targetVec);
@@ -873,7 +884,7 @@ public class Actioneer extends PassiveSystem {
     Casting cast = mCasting.get(event.entityId);
     NativeDiabRun run = cast == null ? null : cast.diabRun;
     if (run == null) return;
-    Skills.Entry skill = Riiablo.files.skills.get(cast.skillId);
+    Skills.Entry skill = files().skills.get(cast.skillId);
     int point = run.cursor >>> 8;
     if (run.moving && mPathfind.has(event.entityId)
         && mPathfind.get(event.entityId).stalledTime > 0f) {
@@ -907,7 +918,7 @@ public class Actioneer extends PassiveSystem {
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
     final Casting casting = mCasting.get(event.entityId);
     final int completedTargetId = casting.targetId;
-    Skills.Entry completedSkill = Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry completedSkill = files().skills.get(casting.skillId);
     if (casting.diabRun != null) {
       pathfinder.findPath(event.entityId, null);
       log.info("[DIAB_RUN] phase=end source={} target={} loops={} hitProcessed={}",
@@ -1122,7 +1133,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 54: { // St54 snapshots the unit target, then clears path tracking.
         Casting cast = mCasting.get(entityId);
-        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        Skills.Entry skill = cast == null ? null : files().skills.get(cast.skillId);
         if (!NativeDiabRun.supports(skill)) break;
         if (targetId < 0 || !world.getEntityManager().isActive(targetId) || !mPosition.has(targetId)) {
           cancelCasting(entityId, "diab_run_requires_unit_target");
@@ -1146,7 +1157,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 3: { // throw, or native Unsummon SrvSt03
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (ServerSkillSystem.isUnsummonSkill(skill, casting != null ? casting.skillId : -1)) {
           log.info("[UNSUMMON] phase=start entity={} target={} delegated=keyframe",
               entityId, targetId);
@@ -1162,7 +1173,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 5: { // Left-hand action; Jab owns native player sequence 1.
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         // D2MOO SrvSt05 returns failure when SUNIT_GetTargetUnit cannot
         // resolve a target. Do not leave a Jab sequence armed to consume
         // animation keyframes after that authoritative start rejection.
@@ -1183,7 +1194,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 6: { // Amazon Power/Charged Strike; roll once before the keyframe
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (AmazonSkills.usesNativeMeleeDurability(skill)
             && (skill.Id == SkillId.POWER_STRIKE || skill.Id == SkillId.CHARGED_STRIKE)) {
           prepareAmazonElementalStrike(entityId, targetId);
@@ -1212,7 +1223,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 12: { // SKILLS_SrvSt12_Telekinesis_DragonFlight
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         // Telekinesis shares SrvSt12 but does not use the Dragon Flight
         // sequence or melee target rules.
         if (skill == null || skill.srvdofunc != 52) break;
@@ -1251,7 +1262,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 24: { // SKILLS_SrvSt24_DragonTalon
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY
             || !isInMeleeRange(entityId, targetId, 0)) {
           log.info("[ASSASSIN_DRAGON_TALON] phase=start_reject entity={} target={} reason=range_or_target",
@@ -1273,7 +1284,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 25: { // SKILLS_SrvSt25_64_DragonClaw_MonFrenzy (Dragon Claw table entry)
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         Item right = equippedClaw(entityId, BodyLoc.RARM);
         Item left = equippedClaw(entityId, BodyLoc.LARM);
         if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY) {
@@ -1299,7 +1310,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 26: { // SKILLS_SrvSt26_BladeFury
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (casting == null || !ServerSkillSystem.isBladeFurySkill(skill)
             || skill.srvmissilea == null || skill.srvmissilea.isEmpty()
             || !mUnitStates.has(entityId)) {
@@ -1341,7 +1352,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 27: { // SKILLS_SrvSt27_DragonTail
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY
             || !mPosition.has(entityId) || !mPosition.has(targetId)
             || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -1394,7 +1405,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 28: { // SKILLS_SrvSt28_BladeShield
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (casting == null || skill == null || !mUnitStates.has(entityId)) {
           log.info("[ASSASSIN_BLADE_SHIELD] phase=start_reject entity={} reason=missing_state_or_skill",
               entityId);
@@ -1442,7 +1453,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 36: { // SKILLS_SrvSt36_HolyShield: shield is a hard native gate
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (!mPlayer.has(entityId) || !PaladinSkills.isHolyShield(skill)
             || equippedShield(entityId) == null) {
           log.info("[PALADIN_HOLY_SHIELD] phase=start_reject source={} reason=no_shield_or_skill",
@@ -1516,16 +1527,16 @@ public class Actioneer extends PassiveSystem {
       case 62: { // Native MinionSpawner freezes summon data at skill start.
         Casting cast = mCasting.get(entityId);
         Monster source = mMonster.get(entityId);
-        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        Skills.Entry skill = cast == null ? null : files().skills.get(cast.skillId);
         if (cast == null || source == null || skill == null) break;
         // bFromMonster=1 reads the monster row, never Skills.summon.
         MonStats.Entry row = hasText(source.monstats.spawn)
-            ? Riiablo.files.monstats.get(source.monstats.spawn) : null;
-        if (row == null && source.nativeSpawnClassId >= 0) row = Riiablo.files.monstats.get(source.nativeSpawnClassId);
+            ? files().monstats.get(source.monstats.spawn) : null;
+        if (row == null && source.nativeSpawnClassId >= 0) row = files().monstats.get(source.nativeSpawnClassId);
         if (row == null) break;
         cast.nativeSummonClass = row.hcIdx;
         cast.nativeSummonMode = !hasText(source.monstats.spawnmode)
-            ? Engine.Monster.MODE_NU : Riiablo.files.MonMode.index(source.monstats.spawnmode);
+            ? Engine.Monster.MODE_NU : files().MonMode.index(source.monstats.spawnmode);
         if (cast.nativeSummonMode < 0) cast.nativeSummonMode = Engine.Monster.MODE_NU;
         cast.nativeSummonPosition.set(mPosition.get(entityId).position)
             .add(source.monstats.spawnx, source.monstats.spawny);
@@ -1534,7 +1545,7 @@ public class Actioneer extends PassiveSystem {
       case 53: // SKILLS_SrvSt53_MonInferno (verified 95/152 consumers)
       case 59: { // ImpInferno shares the scheduler, with its own 3-frame interval.
         Casting cast = mCasting.get(entityId);
-        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        Skills.Entry skill = cast == null ? null : files().skills.get(cast.skillId);
         Monster monster = mMonster.get(entityId);
         if (!NativeMonInferno.supports(skill, monster, mSequence.get(entityId))) {
           log.warn("Unported MonInferno start source={} skill={} srvdo={} (MonSeq not ported)",
@@ -1554,7 +1565,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 31: { // SKILLS_SrvSt31_Charge
         Casting charge = mCasting.get(entityId);
-        Skills.Entry chargeSkill = charge != null ? Riiablo.files.skills.get(charge.skillId) : null;
+        Skills.Entry chargeSkill = charge != null ? files().skills.get(charge.skillId) : null;
         if (mPlayer.has(entityId) && chargeSkill != null && chargeSkill.Id == SkillId.CHARGE) {
           if (targetId == Engine.INVALID_ENTITY || !isAlive(targetId)
               || !mPosition.has(targetId) || !canDamageRelation(entityId, targetId, true,
@@ -1599,7 +1610,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 37: { // Zeal/Fury/BloodLordFrenzy shared start function
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (skill != null && skill.Id == SkillId.ZEAL) {
           int level = Math.max(1, skillLevel(entityId, casting.skillId));
           int strikes = PaladinSkills.getZealAttackCount(skill, level);
@@ -1716,14 +1727,14 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null && Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null && files() != null && files().skills != null
+        ? files().skills.get(casting.skillId) : null;
     int skillId = casting != null ? casting.skillId : -1;
     int level = Math.max(1, skillId >= 0 ? skillLevel(entityId, skillId) : 1);
     SummonedPet pet = mSummonedPet.get(entityId);
     int ownerId = pet != null ? pet.ownerId : Engine.INVALID_ENTITY;
     Missiles.Entry missile = skill != null && skill.srvmissilea != null
-        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
+        ? files().Missiles.get(skill.srvmissilea) : null;
     UnitStates targetStates = mUnitStates.has(targetId) ? mUnitStates.get(targetId) : null;
     StateList stateList = targetStates != null ? targetStates.stateList : null;
     Corpse corpse = mCorpse.get(targetId);
@@ -1791,7 +1802,7 @@ public class Actioneer extends PassiveSystem {
         break;
       case 4: { // SKILLS_SrvDo004_Unsummon
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (ServerSkillSystem.isUnsummonSkill(skill, casting != null ? casting.skillId : -1)
             && casting != null && mSummonedPet.has(casting.targetId)) {
           SummonedPetSystem pets = world.getSystem(SummonedPetSystem.class);
@@ -1823,7 +1834,7 @@ public class Actioneer extends PassiveSystem {
       }
       case 13: { // SKILLS_SrvDo013_Fend_Zeal_Fury
         Casting casting = mCasting.get(entityId);
-        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
         if (skill != null && skill.Id == SkillId.FEND) resolveFend(entityId);
         else if (skill != null && skill.Id == SkillId.ZEAL) resolveZeal(entityId);
         else if (DruidSkills.isFury(skill)) resolveFury(entityId);
@@ -1854,7 +1865,7 @@ public class Actioneer extends PassiveSystem {
       case 109: { // monster Frenzy / BloodLordFrenzy
         Casting vengeanceCasting = mCasting.get(entityId);
         Skills.Entry vengeanceSkill = vengeanceCasting != null
-            ? Riiablo.files.skills.get(vengeanceCasting.skillId) : null;
+            ? files().skills.get(vengeanceCasting.skillId) : null;
         if (srvdofunc == 2 && vengeanceSkill != null && vengeanceSkill.Id == SkillId.IMPALE) {
           resolveImpale(entityId, targetId);
           break;
@@ -1870,7 +1881,7 @@ public class Actioneer extends PassiveSystem {
         }
         Casting activeCasting = mCasting.get(entityId);
         Skills.Entry activeSkill = activeCasting != null
-            ? Riiablo.files.skills.get(activeCasting.skillId) : null;
+            ? files().skills.get(activeCasting.skillId) : null;
         int activeSkillLevel = activeCasting != null
             ? Math.max(1, skillLevel(entityId, activeCasting.skillId)) : 1;
         boolean frenzyAttack = srvdofunc == 9 || srvdofunc == 109;
@@ -2108,7 +2119,7 @@ public class Actioneer extends PassiveSystem {
         // Check if this is a throwing attack and consume quantity
         if (mCasting.has(entityId)) {
           Casting casting = mCasting.get(entityId);
-          Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+          Skills.Entry skill = files().skills.get(casting.skillId);
           boolean isThrowAttack = NativeSkillResolver.isThrowableSkill(skill);
           if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
             Item weapon = getThrowableWeapon(entityId);
@@ -2404,7 +2415,7 @@ public class Actioneer extends PassiveSystem {
           UnitStates unitStates = mUnitStates.get(entityId);
           if (unitStates.stateList != null) {
             progressiveRelease = AssassinSkills.resolveProgressiveRelease(
-                unitStates.stateList, id -> Riiablo.files.skills.get(id),
+                unitStates.stateList, id -> files().skills.get(id),
                 id -> skillLevel(entityId, id));
             if (progressiveRelease.hasEffects()) {
               applyAssassinProgressiveDamage(entityId, targetId, progressiveRelease,
@@ -2433,7 +2444,7 @@ public class Actioneer extends PassiveSystem {
         if (AssassinSkills.isProgressiveStrike(srvdofunc) && mCasting.has(entityId)
             && mUnitStates.has(entityId)) {
           Casting casting = mCasting.get(entityId);
-          Skills.Entry chargeSkill = Riiablo.files.skills.get(casting.skillId);
+          Skills.Entry chargeSkill = files().skills.get(casting.skillId);
           UnitStates unitStates = mUnitStates.get(entityId);
           if (unitStates.stateList == null) unitStates.init(world, entityId);
           UnitState charge = AssassinSkills.addProgressiveCharge(unitStates.stateList,
@@ -2590,7 +2601,7 @@ public class Actioneer extends PassiveSystem {
             || !mCorpse.has(targetId) || !mCorpse.get(targetId).usable
             || !mAttributesWrapper.has(targetId) || !mAttributesWrapper.has(entityId)) break;
         Casting cast = mCasting.get(entityId);
-        Skills.Entry skill = cast == null ? null : Riiablo.files.skills.get(cast.skillId);
+        Skills.Entry skill = cast == null ? null : files().skills.get(cast.skillId);
         if (skill == null) break;
         int corpseLife = mAttributesWrapper.get(targetId).attrs.getValue(Stat.maxhp, 0);
         mCorpse.get(targetId).usable = false;
@@ -2610,9 +2621,9 @@ public class Actioneer extends PassiveSystem {
         Vector2 position = cast.nativeSummonPosition.cpy();
         Map.Zone zone = map.getZone(position);
         if (zone == null) break;
-        MonStats.Entry summonRow = Riiablo.files.monstats.get(cast.nativeSummonClass);
+        MonStats.Entry summonRow = files().monstats.get(cast.nativeSummonClass);
         com.riiablo.codec.excel.MonStats2.Entry dimensions = summonRow == null ? null
-            : Riiablo.files.monstats2.get(summonRow.MonStatsEx);
+            : files().monstats2.get(summonRow.MonStatsEx);
         int footprint = dimensions == null ? 1 : Math.max(1, dimensions.SizeX);
         if (!zone.findFreeCoordinates(position, footprint, 0, false, position)
             && !zone.findFreeCoordinates(position, footprint, 4, false, position)) break;
@@ -2730,7 +2741,7 @@ public class Actioneer extends PassiveSystem {
       case 116: { // SKILLS_SrvDo116_Wearwolf_Wearbear
         Casting casting = mCasting.get(entityId);
         Skills.Entry shapeSkill = casting != null
-            ? Riiablo.files.skills.get(casting.skillId) : null;
+            ? files().skills.get(casting.skillId) : null;
         if (shapeSkill == null || !mUnitStates.has(entityId)) {
           log.info("[DRUID_SHAPE] phase=reject entity={} skill={} reason=missing_skill_or_state",
               entityId, casting != null ? casting.skillId : -1);
@@ -2742,7 +2753,7 @@ public class Actioneer extends PassiveSystem {
         DruidSkills.ShapeShiftResult result = DruidSkills.applyShapeShiftState(
             unitStates.stateList, shapeSkill, level, entityId,
             name -> baseSkillLevel(entityId, name),
-            name -> Riiablo.files.skills.get(name));
+            name -> files().skills.get(name));
         UnitState state = result.appliedState;
         log.info("[DRUID_SHAPE] phase={} entity={} skill={} level={} state={} removed={} "
                 + "duration={} damage={} defense={} attackRating={} animationRate={} "
@@ -2813,7 +2824,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt06: roll Power/Charged Strike once and retain its combat record. */
   private void prepareAmazonElementalStrike(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !AmazonSkills.usesNativeMeleeDurability(skill)
         || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
         || !mAttributesWrapper.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
@@ -2861,7 +2872,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt07: roll Impale once and retain the combat record for SrvDo002. */
   private void prepareImpale(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || skill.Id != SkillId.IMPALE
         || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
         || !mAttributesWrapper.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
@@ -2907,7 +2918,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     CombatSystem.CombatResult combat = casting.impaleCombat;
-    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry skill = files().skills.get(casting.skillId);
     Item weapon = casting.impaleWeapon;
     casting.impaleCombat = null;
     casting.impaleTargetId = Engine.INVALID_ENTITY;
@@ -2965,7 +2976,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt09: choose the first target and cap attacks by nearby targets/calc1. */
   private void prepareFend(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     int resolved = targetId != Engine.INVALID_ENTITY && isAlive(targetId)
         && isValidFrenzyTarget(entityId, targetId) ? targetId
         : findNextFendTarget(entityId, Engine.INVALID_ENTITY);
@@ -3017,7 +3028,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvDo013 Fend: resolve one hit, then advance to the next target. */
   private void resolveFend(int entityId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !casting.fendInitialized || skill == null
         || skill.Id != SkillId.FEND || casting.fendRemainingStrikes <= 0
         || !mAttributesWrapper.has(entityId) || !isAlive(entityId)) return;
@@ -3092,7 +3103,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt16: roll one dagger combat record before the attack keyframe. */
   private void preparePoisonDagger(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     Item weapon = activeAttackWeapon(entityId);
     if (casting == null || !NecromancerSkills.isPoisonDagger(skill)
         || !NecromancerSkills.isPoisonDaggerWeapon(weapon)
@@ -3228,7 +3239,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt32 allocates one hit record before Conversion's keyframe. */
   private void prepareConversion(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || skill.srvdofunc != 79
         || targetId == Engine.INVALID_ENTITY || !mMonster.has(targetId)
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -3283,7 +3294,7 @@ public class Actioneer extends PassiveSystem {
    */
   private void resolveConversion(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     int level = casting != null ? Math.max(1, skillLevel(entityId, casting.skillId)) : 1;
     String reject = null;
     if (casting == null || !casting.conversionPrepared
@@ -3310,7 +3321,7 @@ public class Actioneer extends PassiveSystem {
     boolean success = false;
     if (reject == null) {
       int seed = conversionSeeds.get(entityId,
-          NativeRng.forUnit(Riiablo.gameSeed ^ skill.Id, entityId).state());
+          NativeRng.forUnit(gameSeed() ^ skill.Id, entityId).state());
       NativeRng rng = new NativeRng(seed);
       roll = rng.nextInt(100);
       conversionSeeds.put(entityId, rng.state());
@@ -3390,7 +3401,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt56: resolve hit once and retain the combat record for SrvDo120. */
   private void prepareFeralMaul(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !DruidSkills.isFeralRageOrMaul(skill)
         || !mUnitStates.has(entityId) || targetId == Engine.INVALID_ENTITY
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -3476,7 +3487,7 @@ public class Actioneer extends PassiveSystem {
     UnitStates states = mUnitStates.get(entityId);
     if (states == null) return;
     if (states.stateList == null) states.init(world, entityId);
-    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry skill = files().skills.get(casting.skillId);
     int level = Math.max(1, skillLevel(entityId, casting.skillId));
     UnitState feralState = DruidSkills.applyFeralMaulState(
         states.stateList, skill, level, entityId);
@@ -3518,7 +3529,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt57/SrvSt58: validate shape/range and retain one hit roll. */
   private void prepareDruidElementalMelee(int entityId, int targetId, boolean rabies) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     boolean matching = rabies ? DruidSkills.isRabies(skill) : DruidSkills.isFireClaws(skill);
     if (casting == null || !matching || targetId == Engine.INVALID_ENTITY
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -3614,7 +3625,7 @@ public class Actioneer extends PassiveSystem {
     casting.rabiesCombat = null;
     casting.rabiesTargetId = Engine.INVALID_ENTITY;
     casting.rabiesPrepared = false;
-    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry skill = files().skills.get(casting.skillId);
     resolveDruidElementalMeleeDamage(entityId, targetId, combat, "RABIES");
     if (!mUnitStates.has(targetId) || !isAlive(targetId)) return;
     UnitStates targetStates = mUnitStates.get(targetId);
@@ -3654,7 +3665,7 @@ public class Actioneer extends PassiveSystem {
    */
   private void resolveZeal(int entityId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !casting.zealInitialized || skill == null
         || skill.Id != SkillId.ZEAL || casting.zealRemainingStrikes <= 0
         || !mAttributesWrapper.has(entityId) || !isAlive(entityId)) return;
@@ -3716,7 +3727,7 @@ public class Actioneer extends PassiveSystem {
 
   private void resolveFury(int entityId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !casting.furyInitialized || !DruidSkills.isFury(skill)
         || casting.furyRemainingStrikes <= 0 || !mAttributesWrapper.has(entityId)
         || !mUnitStates.has(entityId) || !isAlive(entityId)) {
@@ -3811,7 +3822,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvDo122: wolf/bear melee hit with post-hit life/mana steal. */
   private void resolveHunger(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || !DruidSkills.isHunger(skill)
         || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
         || !mAttributesWrapper.has(targetId) || !mUnitStates.has(entityId)
@@ -3912,7 +3923,7 @@ public class Actioneer extends PassiveSystem {
       int level, CombatSystem.CombatResult combat) {
     if (factory == null || skill == null || !mPosition.has(infectedId)
         || skill.srvmissilea == null || skill.srvmissilea.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null) return;
     int missileId = factory.createMissile(
         row, Vector2.X, mPosition.get(infectedId).position, sourceId);
@@ -4188,8 +4199,8 @@ public class Actioneer extends PassiveSystem {
     }
     if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null) {
       MonStats.Entry row = mMonster.get(entityId).monstats;
-      String name = Riiablo.files.skills.get(skillId) != null
-          ? Riiablo.files.skills.get(skillId).skill : null;
+      String name = files().skills.get(skillId) != null
+          ? files().skills.get(skillId).skill : null;
       String[] names = {row.Skill1, row.Skill2, row.Skill3, row.Skill4,
           row.Skill5, row.Skill6, row.Skill7, row.Skill8};
       int[] levels = {row.Sk1lvl, row.Sk2lvl, row.Sk3lvl, row.Sk4lvl,
@@ -4203,7 +4214,7 @@ public class Actioneer extends PassiveSystem {
 
   /** Skills.txt .blvl references hard points and deliberately excludes +skills. */
   private int baseSkillLevel(int entityId, String skillName) {
-    Skills.Entry skill = skillName == null ? null : Riiablo.files.skills.get(skillName);
+    Skills.Entry skill = skillName == null ? null : files().skills.get(skillName);
     if (skill == null) return 0;
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       return Math.max(0, mPlayer.get(entityId).data.getSkill(skill.Id));
@@ -4250,7 +4261,7 @@ public class Actioneer extends PassiveSystem {
 
   private void startWhirlwind(int entityId, int targetId, Vector2 targetVec) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || !mPosition.has(entityId)
         || !mVelocity.has(entityId) || !isAlive(entityId)) {
       rejectWhirlwind(entityId, "missing_runtime_data");
@@ -4299,7 +4310,7 @@ public class Actioneer extends PassiveSystem {
 
   private void startBerserk(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || skill.srvdofunc != 2
         || targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
         || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)) {
@@ -4362,7 +4373,7 @@ public class Actioneer extends PassiveSystem {
 
   void resolveWhirlwindPulse(int entityId, WhirlwindRuntime runtime, boolean initialWindow) {
     if (runtime == null || !mAttributesWrapper.has(entityId)) return;
-    Skills.Entry skill = Riiablo.files.skills.get(runtime.skillId);
+    Skills.Entry skill = files().skills.get(runtime.skillId);
     if (skill == null) return;
     int count = !initialWindow && hasTwoWhirlwindWeapons(entityId) ? 2 : 1;
     for (int i = 0; i < count; i++) {
@@ -4436,9 +4447,10 @@ public class Actioneer extends PassiveSystem {
         : whirlwindPrimaryWeapon(entityId);
     if (weapon == null) return 10;
     int nativeAttackSpeed = 45;
-    if (Riiablo.anim != null && mCofReference.has(entityId)) {
+    com.riiablo.codec.D2 animations = serverContext != null ? serverContext.animations() : Riiablo.anim;
+    if (animations != null && mCofReference.has(entityId)) {
       CofReference cof = mCofReference.get(entityId);
-      com.riiablo.codec.D2.Entry anim = Riiablo.anim.getEntry(
+      com.riiablo.codec.D2.Entry anim = animations.getEntry(
           cof.token + "A1" + Engine.getWClass(cof.wclass));
       if (anim != null && anim.framesPerDir > 0 && anim.speed > 0) {
         int baseAttackRate = weapon.base instanceof Weapons.Entry
@@ -4636,8 +4648,9 @@ public class Actioneer extends PassiveSystem {
       return mPlayer.get(entityId).data.getItems().getEquippedThrowableWeapon();
     }
     // Legacy local tests may construct a player without the Player component.
-    return Riiablo.charData == null ? null
-        : Riiablo.charData.getItems().getEquippedThrowableWeapon();
+    com.riiablo.save.CharData character = serverContext != null
+        ? serverContext.character() : Riiablo.charData;
+    return character == null ? null : character.getItems().getEquippedThrowableWeapon();
   }
 
   private static boolean hasPositiveQuantity(Item item) {
@@ -4765,8 +4778,8 @@ public class Actioneer extends PassiveSystem {
       // is suppressed and the current skill/sequence continues.
       if (mCasting.has(victimId)) {
         Casting casting = mCasting.get(victimId);
-        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-            ? Riiablo.files.skills.get(casting.skillId) : null;
+        Skills.Entry skill = files() != null && files().skills != null
+            ? files().skills.get(casting.skillId) : null;
         if (!blockReactionMayInterrupt(skill)) {
           log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={}",
               victimId, skill.skill, casting.skillId);
@@ -4961,8 +4974,8 @@ public class Actioneer extends PassiveSystem {
     int range = Math.max(0, release.fireFieldRange);
     if (range <= 0 || release.fireStageMissile == null
         || release.fireStageMissile.isEmpty()) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.fireStageMissile);
-    Skills.Entry skill = Riiablo.files.skills.get(release.fireSkillId);
+    Missiles.Entry row = files().Missiles.get(release.fireStageMissile);
+    Skills.Entry skill = files().skills.get(release.fireSkillId);
     if (row == null || skill == null) {
       log.warn("[ASSASSIN_FISTS] phase=stage3_reject source={} missile={} reason=missing_data",
           sourceId, release.fireStageMissile);
@@ -4970,7 +4983,7 @@ public class Actioneer extends PassiveSystem {
     }
 
     int seed = assassinProgressiveSeeds.get(sourceId,
-        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.fireSkillId * 31);
+        gameSeed() ^ sourceId * 0x45D9F3B ^ release.fireSkillId * 31);
     NativeRng rng = new NativeRng(seed);
     int area = range * range;
     int created = 0;
@@ -5024,8 +5037,8 @@ public class Actioneer extends PassiveSystem {
   private int createClawsNova(int sourceId, Vector2 origin,
       AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
     if (release.lightningNovaMissile == null || release.lightningNovaMissile.isEmpty()) return 0;
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.lightningNovaMissile);
-    Skills.Entry skill = Riiablo.files.skills.get(release.lightningSkillId);
+    Missiles.Entry row = files().Missiles.get(release.lightningNovaMissile);
+    Skills.Entry skill = files().skills.get(release.lightningSkillId);
     if (row == null || skill == null) {
       log.warn("[ASSASSIN_CLAWS] phase=stage2_reject source={} missile={} reason=missing_data",
           sourceId, release.lightningNovaMissile);
@@ -5059,8 +5072,8 @@ public class Actioneer extends PassiveSystem {
   private int createClawsChargedBolts(int sourceId, Vector2 origin,
       AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
     if (release.lightningBoltMissile == null || release.lightningBoltMissile.isEmpty()) return 0;
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.lightningBoltMissile);
-    Skills.Entry skill = Riiablo.files.skills.get(release.lightningSkillId);
+    Missiles.Entry row = files().Missiles.get(release.lightningBoltMissile);
+    Skills.Entry skill = files().skills.get(release.lightningSkillId);
     if (row == null || skill == null) {
       log.warn("[ASSASSIN_CLAWS] phase=stage3_reject source={} missile={} reason=missing_data",
           sourceId, release.lightningBoltMissile);
@@ -5068,7 +5081,7 @@ public class Actioneer extends PassiveSystem {
     }
     int step = Math.max(1, Math.min(64, release.lightningBoltStep));
     int seed = assassinProgressiveSeeds.get(sourceId,
-        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.lightningSkillId * 31);
+        gameSeed() ^ sourceId * 0x45D9F3B ^ release.lightningSkillId * 31);
     NativeRng rng = new NativeRng(seed);
     int created = 0;
     for (int i = 0; i < 64; i += step) {
@@ -5186,15 +5199,15 @@ public class Actioneer extends PassiveSystem {
     int range = Math.max(0, release.coldCubeRange);
     if (range <= 0 || release.coldCubeMissile == null
         || release.coldCubeMissile.isEmpty()) return 0;
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.coldCubeMissile);
-    Skills.Entry skill = Riiablo.files.skills.get(release.coldSkillId);
+    Missiles.Entry row = files().Missiles.get(release.coldCubeMissile);
+    Skills.Entry skill = files().skills.get(release.coldSkillId);
     if (row == null || skill == null) {
       log.warn("[ASSASSIN_BLADES] phase=stage3_reject source={} missile={} reason=missing_data",
           sourceId, release.coldCubeMissile);
       return 0;
     }
     int seed = assassinProgressiveSeeds.get(sourceId,
-        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.coldSkillId * 31);
+        gameSeed() ^ sourceId * 0x45D9F3B ^ release.coldSkillId * 31);
     NativeRng rng = new NativeRng(seed);
     int area = range * range;
     int created = 0;
@@ -5253,7 +5266,7 @@ public class Actioneer extends PassiveSystem {
   /** SrvDo040 creates one meteor-center controller at the finishing target. */
   private int createPhoenixMeteor(int sourceId, Vector2 origin,
       AssassinSkills.ProgressiveRelease release) {
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    Missiles.Entry row = files().Missiles.get(release.phoenixStageMissile);
     if (row == null) return 0;
     int missileId = factory.createMissile(row, Vector2.X, origin, sourceId);
     if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) return 0;
@@ -5267,12 +5280,12 @@ public class Actioneer extends PassiveSystem {
   /** SrvDo143/sub_6FCF6D70 emits every PrgCalc2-th direction in the 64 table. */
   private int createPhoenixChainLightning(int sourceId, Vector2 origin,
       AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    Missiles.Entry row = files().Missiles.get(release.phoenixStageMissile);
     if (row == null) return 0;
-    Skills.Entry skill = Riiablo.files.skills.get(release.phoenixSkillId);
+    Skills.Entry skill = files().skills.get(release.phoenixSkillId);
     int step = Math.max(1, Math.min(64, release.phoenixStageValue));
     int seed = assassinProgressiveSeeds.get(sourceId,
-        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
+        gameSeed() ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
     NativeRng rng = new NativeRng(seed);
     int created = 0;
     for (int i = 0; i < 64; i += step) {
@@ -5307,11 +5320,11 @@ public class Actioneer extends PassiveSystem {
   /** SrvDo041 creates PrgCalc3 chaos-ice missiles with independent target offsets. */
   private int createPhoenixChaosIce(int sourceId, Vector2 origin,
       AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
-    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    Missiles.Entry row = files().Missiles.get(release.phoenixStageMissile);
     if (row == null) return 0;
     int count = Math.max(0, release.phoenixStageValue);
     int seed = assassinProgressiveSeeds.get(sourceId,
-        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
+        gameSeed() ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
     NativeRng rng = new NativeRng(seed);
     int created = 0;
     for (int i = 0; i < count; i++) {
@@ -5401,7 +5414,7 @@ public class Actioneer extends PassiveSystem {
 
   /** Server-owned one-shot visual so every connected client sees the same blast. */
   private int createDragonTailExplosionVisual(int sourceId, Vector2 origin) {
-    Missiles.Entry row = Riiablo.files.Missiles.get("dragontail missile");
+    Missiles.Entry row = files().Missiles.get("dragontail missile");
     if (row == null || factory == null) return Engine.INVALID_ENTITY;
     int missileId = factory.createMissile(row, Vector2.X, origin, sourceId);
     if (missileId != Engine.INVALID_ENTITY && mMissile.has(missileId)) {
@@ -5656,9 +5669,9 @@ public class Actioneer extends PassiveSystem {
     }
 
     Skills.Entry skill = mCasting.has(entityId)
-        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+        ? files().skills.get(mCasting.get(entityId).skillId) : null;
     int level = monsterSkillLevelFor(entityId, skill);
-    int[] range = resolveBestowPercentRange(skill, level);
+    int[] range = resolveBestowPercentRange(files(), skill, level);
     int minPercent = range[0];
     int maxPercent = range[1];
     boolean fallback = range[2] != 0;
@@ -5734,7 +5747,7 @@ public class Actioneer extends PassiveSystem {
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
 
     Skills.Entry skill = mCasting.has(entityId)
-        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+        ? files().skills.get(mCasting.get(entityId).skillId) : null;
     int stunFrames = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill,
         monsterSkillLevelFor(entityId, skill));
     if (stunFrames > 0) StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
@@ -5761,7 +5774,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     Skills.Entry skill = mCasting.has(entityId)
-        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+        ? files().skills.get(mCasting.get(entityId).skillId) : null;
     int level = monsterSkillLevelFor(entityId, skill);
     int percent = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
     percent = Math.max(0, percent);
@@ -5799,7 +5812,7 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId);
       return;
     }
-    MonStats.Entry egg = Riiablo.files.monstats.get(spawnId);
+    MonStats.Entry egg = files().monstats.get(spawnId);
     if (egg == null) {
       log.warn("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=spawn_lookup_failed spawn={}",
           entityId, targetId, spawnId);
@@ -5848,7 +5861,7 @@ public class Actioneer extends PassiveSystem {
   private void resolveSwarmMove(int entityId) {
     if (!mAnimData.has(entityId) || !mCasting.has(entityId)) return;
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    Skills.Entry skill = files().skills.get(casting.skillId);
     if (skill == null) return;
     int level = monsterSkillLevelFor(entityId, skill);
     int frame = SkillFormula.evaluate(skill.calc1, skill, level);
@@ -5870,7 +5883,7 @@ public class Actioneer extends PassiveSystem {
     Monster source = mMonster.get(entityId);
     String spawnId = source.monstats != null ? source.monstats.spawn : null;
     if (!hasText(spawnId) && source.nativeSpawnClassId >= 0) {
-      MonStats.Entry selected = Riiablo.files.monstats.get(source.nativeSpawnClassId);
+      MonStats.Entry selected = files().monstats.get(source.nativeSpawnClassId);
       if (selected != null) spawnId = selected.Id;
     }
     // Native MONSTERS_GetSpawnMode_XY falls back to the minion chain when a
@@ -5883,7 +5896,7 @@ public class Actioneer extends PassiveSystem {
       log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=missing_spawn_row", entityId);
       return;
     }
-    MonStats.Entry spawn = Riiablo.files.monstats.get(spawnId);
+    MonStats.Entry spawn = files().monstats.get(spawnId);
     if (spawn == null) {
       log.warn("[MONSTER_NEST] phase=spawn_rejected source={} reason=spawn_lookup_failed spawn={}",
           entityId, spawnId);
@@ -5962,7 +5975,7 @@ public class Actioneer extends PassiveSystem {
   /** Native SrvSt35_Vengeance: reserve one rotating elemental hit record. */
   private void prepareVengeance(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || skill.Id != SkillId.VENGEANCE
         || targetId == Engine.INVALID_ENTITY || !mPlayer.has(entityId)
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -6074,7 +6087,7 @@ public class Actioneer extends PassiveSystem {
   /** Native player branch of SKILLS_SrvDo067_Charge. */
   private void resolvePlayerCharge(int entityId, int targetId) {
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     int resolvedTarget = targetId != Engine.INVALID_ENTITY ? targetId
         : casting != null ? casting.chargeTargetId : Engine.INVALID_ENTITY;
     if (casting == null || skill == null || skill.Id != SkillId.CHARGE
@@ -6160,7 +6173,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     Skills.Entry skill = mCasting.has(entityId)
-        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+        ? files().skills.get(mCasting.get(entityId).skillId) : null;
     int level = monsterSkillLevelFor(entityId, skill);
     int bonusPercent = Math.max(0, SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level));
     float damage = combat.totalDamage * (100f + bonusPercent) / 100f;
@@ -6185,7 +6198,7 @@ public class Actioneer extends PassiveSystem {
         || !mAttributesWrapper.has(targetId) || !mPosition.has(entityId)
         || !mPosition.has(targetId)) return;
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (skill == null || skill.srvdofunc != 150
         || !isInMeleeRangeAtTick(entityId, targetId, 0,
             casting != null ? casting.positionSnapshotTick : 0L)) return;
@@ -6204,7 +6217,7 @@ public class Actioneer extends PassiveSystem {
     UnitState holyShield = stateList(entityId) != null
         ? stateList(entityId).getState(StateId.HOLYSHIELD) : null;
     if (holyShield != null && holyShield.skillId >= 0) {
-      Skills.Entry hs = Riiablo.files.skills.get(holyShield.skillId);
+      Skills.Entry hs = files().skills.get(holyShield.skillId);
       int hsLevel = Math.max(1, holyShield.level);
       int hsBonus = hs != null ? Math.max(0, SkillFormula.evaluate(hs.calc1, hs, hsLevel)) : 0;
       min += hsBonus;
@@ -6262,7 +6275,7 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (skill == null || skill.srvdofunc != 64
         || !isInMeleeRangeAtTick(entityId, targetId, 0,
             casting != null ? casting.positionSnapshotTick : 0L)) {
@@ -6352,11 +6365,15 @@ public class Actioneer extends PassiveSystem {
 
   /** Returns {minPercent, maxPercent, fallbackToZakarumHeal(0/1)}. */
   static int[] resolveBestowPercentRange(Skills.Entry skill, int level) {
+    return resolveBestowPercentRange(Riiablo.files, skill, level);
+  }
+
+  static int[] resolveBestowPercentRange(com.riiablo.Files files, Skills.Entry skill, int level) {
     int min = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
     int max = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill, level);
     int fallback = 0;
     if (min <= 0 && max <= 0) {
-      Skills.Entry heal = Riiablo.files.skills.get("ZakarumHeal");
+      Skills.Entry heal = files == null ? null : files.skills.get("ZakarumHeal");
       min = SkillFormula.evaluate(heal != null ? heal.calc1 : "15+5*lvl", heal, level);
       max = SkillFormula.evaluate(heal != null ? heal.calc2 : "50", heal, level);
       fallback = 1;
@@ -6463,7 +6480,7 @@ public class Actioneer extends PassiveSystem {
     String missileName = monsterAttackMissileName(entityId);
     if (missileName == null || missileName.isEmpty()) return false;
 
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("[MONSTER_MISSILE] lookup_failed entity={} target={} missile={}",
           entityId, targetId, missileName);
@@ -6477,7 +6494,7 @@ public class Actioneer extends PassiveSystem {
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
     direction.nor();
     com.riiablo.codec.excel.DifficultyLevels.Entry difficulty =
-        Riiablo.files.DifficultyLevels.get(combatDifficulty());
+        files().DifficultyLevels.get(combatDifficulty());
     int missileLevel = mMercenary.has(entityId) && mAttributesWrapper.has(entityId)
         ? Math.max(1, statInt(mAttributesWrapper.get(entityId).attrs, Stat.level))
         : difficulty == null ? 1 : difficulty.MonsterSkillBonus + 1;
@@ -6563,7 +6580,7 @@ public class Actioneer extends PassiveSystem {
     if (!mMonster.has(entityId) || !mCasting.has(entityId)) return false;
     int skillId = mCasting.get(entityId).skillId;
     if (skillId == SkillCodes.attack) return false;
-    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    Skills.Entry skill = files().skills.get(skillId);
     return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
         || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
         || hasText(skill.cltmissilea) || hasText(skill.cltmissileb)

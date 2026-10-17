@@ -154,6 +154,48 @@ test {
   }
 }
 
+// One gate for session isolation, loading/navigation, resources and representative server behavior.
+task subsystemRegression(type: Test) {
+  group = 'verification'
+  description = 'Tests subsystem ownership and lifecycle boundaries without starting game clients.'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    includeTestsMatching 'com.riiablo.screen.*'
+    includeTestsMatching 'com.riiablo.engine.client.ClientGameplayContextTest'
+    includeTestsMatching 'com.riiablo.engine.client.ClientNetworkSessionTest'
+    includeTestsMatching 'com.riiablo.engine.client.ClientAudioSession*'
+    includeTestsMatching 'com.riiablo.engine.server.ServerGameplayContextTest'
+    includeTestsMatching 'com.riiablo.engine.server.ServerSystemIsolationTest'
+    includeTestsMatching 'com.riiablo.engine.server.AuthoritativeSimulationTest'
+    includeTestsMatching 'com.riiablo.engine.SimulationSession*Test'
+    includeTestsMatching 'com.riiablo.map.MapAssetLifecycleTest'
+    includeTestsMatching 'com.riiablo.map.MapBuilderIsolationTest'
+    includeTestsMatching 'com.riiablo.map.Act1MapBuilderD2MooLayersTest'
+    includeTestsMatching 'com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest'
+    includeTestsMatching 'com.riiablo.map.MapManager*'
+    includeTestsMatching 'com.riiablo.map.Box2DPhysicsTest'
+    includeTestsMatching 'com.riiablo.engine.server.ObjectInitializer*'
+    includeTestsMatching 'com.riiablo.engine.server.ServerEntityFactory*'
+    includeTestsMatching 'com.riiablo.engine.server.ActioneerTest'
+    includeTestsMatching 'com.riiablo.engine.server.BestowIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.ShamanFireballAuditTest'
+    includeTestsMatching 'com.riiablo.engine.server.AmazonDamageOwnershipTest'
+    includeTestsMatching 'com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest'
+    includeTestsMatching 'com.riiablo.engine.server.BarbarianWhirlwindTest'
+    includeTestsMatching 'com.riiablo.engine.server.NecromancerSummonIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NecromancerCurseIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NecromancerBoneWallIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NecromancerPoisonNovaIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NecromancerDamageOwnershipTest'
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
 // Map-only regression gate for the Act II–V layout work.  Keep this separate
 // from the full core test task so a second machine can verify map topology,
 // Warp links, native RoomEx projection, DT1 export, and preset-unit queues

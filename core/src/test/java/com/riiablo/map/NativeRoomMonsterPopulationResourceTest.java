@@ -14,10 +14,10 @@ class NativeRoomMonsterPopulationResourceTest extends RiiabloTest {
     int checked = 0;
     for (int act = 1; act <= 4; act++) {
       Map map = new Map(1, 0);
-      if (act == 1) Act2MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
-      if (act == 2) Act3MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
-      if (act == 3) Act4MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
-      if (act == 4) Act5MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
+      if (act == 1) map.act2Builder().generate(map, 1, 0);
+      if (act == 2) map.act3Builder().generate(map, 1, 0);
+      if (act == 3) map.act4Builder().generate(map, 1, 0);
+      if (act == 4) map.act5Builder().generate(map, 1, 0);
       int nativeZones = 0;
       for (Map.Zone zone : map.getZones()) {
         if (zone.isTown() || zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()) continue;

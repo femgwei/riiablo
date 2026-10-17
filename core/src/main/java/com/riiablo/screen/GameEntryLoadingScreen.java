@@ -6,7 +6,6 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.riiablo.Client;
 import com.riiablo.Fonts;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
@@ -29,7 +28,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
 
   private final AssetManager assets;
   private final Fonts fonts;
-  private final Client client;
+  private final LoadingScreenHost host;
   private final Supplier<? extends Screen> nextScreen;
   private Stage stage;
   private ScreenAssetScope visibleAssets;
@@ -50,14 +49,19 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   }
 
   GameEntryLoadingScreen(Supplier<? extends Screen> nextScreen) {
+    this(nextScreen, Riiablo.assets, Riiablo.fonts, LoadingScreenHost.fromGlobals());
+  }
+
+  GameEntryLoadingScreen(Supplier<? extends Screen> nextScreen, AssetManager assets,
+      Fonts fonts, LoadingScreenHost host) {
     this.nextScreen = Objects.requireNonNull(nextScreen, "nextScreen");
-    assets = Objects.requireNonNull(Riiablo.assets, "assets");
-    fonts = Objects.requireNonNull(Riiablo.fonts, "fonts");
-    client = Objects.requireNonNull(Riiablo.client, "client");
+    this.assets = Objects.requireNonNull(assets, "assets");
+    this.fonts = Objects.requireNonNull(fonts, "fonts");
+    this.host = Objects.requireNonNull(host, "host");
   }
 
   private void createStage() {
-    stage = new Stage(Riiablo.defaultViewport, Riiablo.batch);
+    stage = new Stage(host.viewport, host.batch);
 
     visibleAssets.load(LOADING);
     assets.finishLoadingAsset(LOADING);
@@ -78,7 +82,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
   @Override public void show() {
     if (disposed || entered) throw new IllegalStateException("entry loading screen is finished");
     if (visibleAssets != null) return;
-    Riiablo.viewport = Riiablo.defaultViewport;
+    host.activate();
     // Once staged fonts are indexed, the following GameLoadingScreen is the
     // only visible progress screen. Keeping this screen black for the tiny
     // handoff prevents the loading animation from appearing twice.
@@ -120,7 +124,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
         entered = true; // before initialization/factory/Client callbacks can re-enter
         fonts.initializeGameplayFonts();
         Gdx.app.log(TAG, "Gameplay fonts ready; entering game");
-        client.clearAndSet(Objects.requireNonNull(nextScreen.get(), "next screen"));
+        host.enter(Objects.requireNonNull(nextScreen.get(), "next screen"));
         return;
       }
       drawLoading(delta);
@@ -141,7 +145,7 @@ public final class GameEntryLoadingScreen extends ScreenAdapter {
 
   private void drawLoading(float delta) {
     if (!showEntryLoading) return;
-    Riiablo.batch.setPalette(Riiablo.palettes.loading);
+    host.batch.setPalette(host.palettes.loading);
     stage.act(delta);
     stage.draw();
   }

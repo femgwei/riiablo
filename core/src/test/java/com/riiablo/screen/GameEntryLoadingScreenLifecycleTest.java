@@ -104,6 +104,39 @@ class GameEntryLoadingScreenLifecycleTest {
     assertThrows(IllegalStateException.class, screen::show);
   }
 
+  @Test void explicitHostOwnsStageDrawingAndNavigationAfterAllGlobalsAreReplaced() {
+    com.badlogic.gdx.utils.viewport.Viewport viewport =
+        mock(com.badlogic.gdx.utils.viewport.Viewport.class);
+    PaletteIndexedBatch batch = Riiablo.batch;
+    Palettes palettes = Riiablo.palettes;
+    java.util.concurrent.atomic.AtomicInteger activations = new java.util.concurrent.atomic.AtomicInteger();
+    LoadingScreenHost host = new LoadingScreenHost(viewport, batch, palettes,
+        activations::incrementAndGet, () -> {}, client::clearAndSet);
+    Screen game = mock(Screen.class);
+    GameEntryLoadingScreen screen = new GameEntryLoadingScreen(() -> game, owner, fonts, host);
+    screens.add(screen);
+    AssetManager replacementAssets = mock(AssetManager.class);
+    Fonts replacementFonts = mock(Fonts.class);
+    Client replacementClient = mock(Client.class);
+    PaletteIndexedBatch replacementBatch = mock(PaletteIndexedBatch.class);
+    Riiablo.assets = replacementAssets;
+    Riiablo.fonts = replacementFonts;
+    Riiablo.client = replacementClient;
+    Riiablo.batch = replacementBatch;
+    Riiablo.palettes = null;
+    screen.show();
+    screen.render(0.04f);
+    verify(batch).setPalette(palettes.loading);
+    assertEquals(1, activations.get());
+    when(fonts.finishQueueGameplayFonts()).thenReturn(true);
+    when(owner.update()).thenReturn(true);
+    screen.render(0.04f);
+    verify(client).clearAndSet(game);
+    screen.dispose();
+    verifyNoInteractions(replacementAssets, replacementFonts, replacementClient, replacementBatch);
+    verify(batch, never()).dispose();
+  }
+
   @Test void repeatedShowHideDisposeBalanceOneTransientView() {
     GameEntryLoadingScreen screen = entry(() -> mock(Screen.class));
     screen.show();

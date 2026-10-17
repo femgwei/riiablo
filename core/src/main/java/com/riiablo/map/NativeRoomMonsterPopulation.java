@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import java.util.Random;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.NativeGroundPathProfile;
@@ -56,7 +55,7 @@ final class NativeRoomMonsterPopulation {
       int party = Act1MapBuilderD2MOD.partySize(monster.PartyMin, monster.PartyMax, random.nextInt(Integer.MAX_VALUE));
       for (int i = 0; i < party; i++) {
         String id = Act1MapBuilderD2MOD.partyMinion(monster, i);
-        MonStats.Entry minion = id == null ? null : Riiablo.files.monstats.get(id);
+        MonStats.Entry minion = id == null ? null : zone.map.files().monstats.get(id);
         if (minion != null && addCompanion(zone, room, minion, member, packId, true, random)) created++;
       }
     }
@@ -79,7 +78,7 @@ final class NativeRoomMonsterPopulation {
 
   private static boolean canPlace(Map.Zone zone, Map.RoomEx room, MonStats.Entry monster, int x, int y) {
     if (!room.contains(x, y)) return false;
-    MonStats2.Entry stats = Riiablo.files.monstats2.get(monster.MonStatsEx);
+    MonStats2.Entry stats = zone.map.files().monstats2.get(monster.MonStatsEx);
     int size = stats == null ? 2 : Math.max(1, stats.SizeX);
     if (zone.map.isBlockedForPath(zone, x, y,
         NativeGroundPathProfile.forUnit(false, monster).terrainFlags, size, false)) return false;

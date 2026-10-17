@@ -33,8 +33,10 @@ import java.util.Set;
  * - source/D2Common/src/Drlg/DrlgOutPlace.cpp (gAct2OutdoorDrlgLink, gAct2CanyonDrlgLink)
  * - source/D2Common/src/Drlg/DrlgOutDesr.cpp (DRLGOUTDESR_InitAct2OutdoorLevel)
  */
-public enum Act2MapBuilderD2MOD implements MapBuilder {
-  INSTANCE;
+public final class Act2MapBuilderD2MOD extends MapBuilderResources implements MapBuilder {
+
+  public Act2MapBuilderD2MOD() { super(); }
+  public Act2MapBuilderD2MOD(MapResources resources) { super(resources); }
 
   /** Reject records from another act when the loaded LvlPrest table is mismatched. */
   private static boolean isAct2Preset(LvlPrest.Entry preset) {
@@ -114,7 +116,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     }
 
     int levelLink = linkData.links[iteration].levelLink;
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.calculateCoordOffset(linkData.coords[levelLink], linkData.coords[iteration], linkData.rand[0][iteration], 0);
     return true;
   }
@@ -135,7 +137,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     }
 
     int levelLink = linkData.links[iteration].levelLink;
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.calculateCoordOffsetAlt(linkData.coords[levelLink], linkData.coords[iteration], linkData.rand[0][iteration], 1);
     return true;
   }
@@ -156,7 +158,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     }
 
     int levelLink = linkData.links[iteration].levelLink;
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.calculateCoordOffset(linkData.coords[levelLink], linkData.coords[iteration], linkData.rand[0][iteration], 0);
     return true;
   }
@@ -187,7 +189,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // 初始化区域尺寸（从 Levels.txt 读取）
     for (int i = 0; i < act2Links.length && act2Links[i] != null; i++) {
       linkData.links[i] = act2Links[i];
-      Levels.Entry level = Riiablo.files.Levels.get(act2Links[i].level);
+      Levels.Entry level = files().Levels.get(act2Links[i].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act2Links[i].level);
         continue;
@@ -202,7 +204,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int counter = 0;
     while (counter < act2Links.length && act2Links[counter] != null) {
       boolean success = false;
-      Levels.Entry level = Riiablo.files.Levels.get(act2Links[counter].level);
+      Levels.Entry level = files().Levels.get(act2Links[counter].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act2Links[counter].level);
         break;
@@ -211,7 +213,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       // 根据区域类型选择处理函数
       if (act2Links[counter].level == LEVEL_LUTGHOLEIN) {
         // sub_6FD81330 - 第一个区域（城镇），使用 Levels.txt 中的偏移
-        BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+        BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
         success = base.placeFirstLevel(linkData, counter, level);
       } else if (act2Links[counter].level == LEVEL_ROCKYWASTE) {
         // sub_6FD81B30 - ROCKYWASTE
@@ -239,7 +241,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       }
 
       // 检查重叠（参考 DRLGOUTPLACE_LinkAct2Outdoors）
-      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
       if (success && base.checkNotOverlapping(linkData, counter, linkData.links[counter].levelLink)) {
         counter++;
       } else {
@@ -281,14 +283,14 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     String townSourceFile = null;
     for (int i = 0; i < act2Links.length && act2Links[i] != null; i++) {
       if (act2Links[i].level == LEVEL_LUTGHOLEIN) {
-        Levels.Entry level = Riiablo.files.Levels.get(act2Links[i].level);
+        Levels.Entry level = files().Levels.get(act2Links[i].level);
         final int drlgType = level.DrlgType;
         final boolean isPresetLevel = drlgType == 2; // 2 == DRLGTYPE_PRESET
 
         // 查找与 level 对应的 preset（仅当 DrlgType 为 PRESET 时才整图使用）
         LvlPrest.Entry preset = null;
         if (isPresetLevel) {
-          for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+          for (LvlPrest.Entry p : files().LvlPrest) {
             if (p.LevelId == act2Links[i].level) {
               preset = p;
               break;
@@ -296,7 +298,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           }
         }
 
-        BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+        BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
         base.factory = factory;
         base.socket = socket;
 
@@ -337,7 +339,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         continue; // 跳过城镇
       }
       
-      Levels.Entry level = Riiablo.files.Levels.get(act2Links[i].level);
+      Levels.Entry level = files().Levels.get(act2Links[i].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act2Links[i].level);
         continue;
@@ -345,7 +347,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       
       // 查找与 level 对应的 preset
       LvlPrest.Entry preset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == act2Links[i].level) {
           preset = p;
           break;
@@ -353,7 +355,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       }
       
       Zone zone;
-      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
       base.factory = factory;
       base.socket = socket;
       
@@ -394,10 +396,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // D2Common 的 gAct2CanyonDrlgLink 把 Canyon 接在 Valley of Snakes
     // 的运行时坐标之后。旧实现直接使用 Levels.OffsetX/OffsetY，虽然
     // Warp 表项存在，但入口会把玩家送到另一块不相连的地图。
-    Levels.Entry canyonLevel = Riiablo.files.Levels.get(LEVEL_CANYONOFTHEMAGI);
+    Levels.Entry canyonLevel = files().Levels.get(LEVEL_CANYONOFTHEMAGI);
     if (canyonLevel != null) {
       LvlPrest.Entry canyonPreset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == LEVEL_CANYONOFTHEMAGI) {
           canyonPreset = p;
           break;
@@ -410,7 +412,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         if (numFiles > 0) {
           int selectIndex = MathUtils.random(numFiles - 1);
           int select = fileId[selectIndex];
-          BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+          BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
           base.factory = factory;
           base.socket = socket;
 
@@ -505,7 +507,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
 
   /** Places the fixed Canyon of the Magi tomb-entry ring from D2Common. */
   static void placeCanyonTombEntries(Zone zone) {
-    if (zone == null || Riiablo.files == null || Riiablo.files.LvlPrest == null
+    if (zone == null || zone.map.files() == null || zone.map.files().LvlPrest == null
         || zone.presets == null) return;
     final int[][] entries = {
         {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_ENDS, 8, 0, 0}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 6, 0, 2}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 4, 0, 1}, {D2LvlPrestIds.LVLPREST_ACT2_DESERT_CLIFF_RIGHT_KING_TOMB, 2, 0, 0},
@@ -515,7 +517,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     for (int[] entry : entries) {
       int def = entry[0], gx = entry[1], gy = entry[2], file = entry[3];
       if (gx < 0 || gy < 0 || gx >= zone.gridsX || gy >= zone.gridsY) continue;
-      LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
+      LvlPrest.Entry preset = zone.map.files().LvlPrest.get(def);
       if (!isAct2DesertPreset(preset)) continue;
       int[] files = new int[6];
       int count = Preset.getPresets(preset, files);
@@ -544,8 +546,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
 
   private static void placeDesertExit(Zone zone, int seed) {
     int def = desertExitPresetDef(zone.level.Id);
-    if (def < 0 || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
-    LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
+    if (def < 0 || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
+    LvlPrest.Entry preset = zone.map.files().LvlPrest.get(def);
     if (!isAct2DesertPreset(preset) || zone.gridsX < 3 || zone.gridsY < 3) return;
 
     int[] fileIds = new int[6];
@@ -567,12 +569,12 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   /** Adds Rocky Waste's native Lut Gholein transition preset when resources provide it. */
   static void placeDesertTownTransition(Zone zone) {
     if (zone == null || zone.presets == null || zone.gridsX < 1 || zone.gridsY < 1
-        || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+        || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
     // The native direction is selected from the town link; without room-link metadata,
     // use the north transition at the north-west edge as a deterministic fallback.
     int[] defs = {D2LvlPrestIds.LVLPREST_ACT2_DESERT_TRANSITION_N, D2LvlPrestIds.LVLPREST_ACT2_DESERT_TRANSITION_W};
     for (int def : defs) {
-      LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+      LvlPrest.Entry p = zone.map.files().LvlPrest.get(def);
       if (!isAct2Preset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count <= 0) continue;
@@ -611,7 +613,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         int gx = slot % zone.gridsX, gy = slot / zone.gridsX;
         if (gx == 0 || gy == 0 || gx == zone.gridsX - 1 || gy == zone.gridsY - 1
             || zone.presets[gx][gy] != null) continue;
-        LvlPrest.Entry p = Riiablo.files.LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
+        LvlPrest.Entry p = zone.map.files().LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
         if (p == null || p.File == null) continue;
         int[] files = new int[6]; int count = Preset.getPresets(p, files);
         if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
@@ -636,7 +638,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     for (int[] e : selected) {
       int gx = e[2], gy = e[3];
       if (zone.presets[gx][gy] != null) continue;
-      LvlPrest.Entry p = Riiablo.files.LvlPrest.get(e[0]);
+      LvlPrest.Entry p = zone.map.files().LvlPrest.get(e[0]);
       if (!isAct2DesertPreset(p)) continue;
       int[] files = new int[6]; int count = Preset.getPresets(p, files);
       if (count > 0) zone.presets[gx][gy] = Preset.of(p, files[e[1] >= 0 && e[1] < count ? e[1] : 0]);
@@ -650,9 +652,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
    * handles Palace Cellars, Sewers and Arcane Sanctuary.
    */
   private void createAct2LinkedDungeonZones(Map map, int diff, int seed) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
 
-    List<Act2WarpEdge> edges = discoverAct2WarpEdges(Riiablo.files.Levels);
+    List<Act2WarpEdge> edges = discoverAct2WarpEdges(files().Levels);
     if (edges.isEmpty()) {
       Gdx.app.log(TAG, "Act2 linked dungeon discovery: no Vis/Warp edges in Levels.txt");
       return;
@@ -668,7 +670,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     }
 
     HashMap<Integer, Levels.Entry> levelsById = new HashMap<>();
-    for (Levels.Entry level : Riiablo.files.Levels) {
+    for (Levels.Entry level : files().Levels) {
       if (level != null) levelsById.put(level.Id, level);
     }
 
@@ -705,7 +707,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
               direction.nativeRotation(), direction.branchPresetDef(),
               direction.summonerPresetDef()));
         }
-        zone.generator = new BaseMapBuilderD2MOD() {{
+        zone.generator = new BaseMapBuilderD2MOD(resources) {{
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
@@ -741,7 +743,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       anchor = createLinkedDungeonZone(map, canyon, diff, seed,
           placement[0], placement[1]);
       if (anchor != null) {
-        anchor.generator = new BaseMapBuilderD2MOD() {{
+        anchor.generator = new BaseMapBuilderD2MOD(resources) {{
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
@@ -785,7 +787,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         Zone zone = createLinkedDungeonZone(map, tomb, diff, seed,
             placement[0], placement[1]);
         if (zone == null) continue;
-        zone.generator = new BaseMapBuilderD2MOD() {{
+        zone.generator = new BaseMapBuilderD2MOD(resources) {{
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
@@ -833,11 +835,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       configureAct2DungeonWarps(map);
     }
 
-    TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
+    TopologyReport report = validateAct2Topology(files().Levels, generated);
     Gdx.app.log(TAG, String.format(
         "Act2 linked dungeon summary: edges=%d created=%d generated=%d missingTargets=%d missingReverse=%d",
         report.edgeCount, created, generated.size(), report.missingTargets, report.missingReverse));
-    TombTopologyReport tombReport = validateAct2TombTopology(Riiablo.files.Levels, generated);
+    TombTopologyReport tombReport = validateAct2TombTopology(files().Levels, generated);
     Gdx.app.log(TAG, String.format(
         "Act2 tomb topology: levels=%d/%d edges=%d reverseMissing=%d generatedMissing=%d staticDurielEdges=%d",
         tombReport.presentLevels, tombReport.expectedLevels, tombReport.tombEdges,
@@ -847,7 +849,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private Zone createLinkedDungeonZone(Map map, Levels.Entry level, int diff, int seed,
       int x, int y) {
     LvlPrest.Entry preset = findPreset(level.Id);
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {{
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {{
       factory = Act2MapBuilderD2MOD.this.factory;
       socket = Act2MapBuilderD2MOD.this.socket;
     }};
@@ -890,9 +892,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int act = zone.level.Act + 1;
     for (Map.NativeObject object : zone.getNativeObjects()) {
       int objectId = object.presetIndex;
-      if (object.ds1Raw && Riiablo.files != null && Riiablo.files.obj != null
-          && objectId >= 0 && objectId < Riiablo.files.obj.getSize(act)) {
-        objectId = Riiablo.files.obj.getObjectId(act, objectId);
+      if (object.ds1Raw && zone.map.files() != null && zone.map.files().obj != null
+          && objectId >= 0 && objectId < zone.map.files().obj.getSize(act)) {
+        objectId = zone.map.files().obj.getObjectId(act, objectId);
       }
       NativePresetObjectResolver.Resolution resolution = NativePresetObjectResolver.resolve(
           act, zone.level.Id, objectId, seed, object.x, object.y);
@@ -908,8 +910,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     return 1;
   }
 
-  private static LvlPrest.Entry findPreset(int levelId) {
-    for (LvlPrest.Entry preset : Riiablo.files.LvlPrest) {
+  private LvlPrest.Entry findPreset(int levelId) {
+    for (LvlPrest.Entry preset : files().LvlPrest) {
       if (preset != null && preset.LevelId == levelId) return preset;
     }
     return null;
@@ -998,9 +1000,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
    * marker so MapManager can still build a collision-validated Warp entity.
    */
   void configureAct2TombWarps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     Zone canyon = findZoneByLevelId(map, LEVEL_CANYONOFTHEMAGI);
-    Levels.Entry canyonLevel = Riiablo.files.Levels.get(LEVEL_CANYONOFTHEMAGI);
+    Levels.Entry canyonLevel = files().Levels.get(LEVEL_CANYONOFTHEMAGI);
     if (canyon == null || canyonLevel == null) return;
     if (DEBUG_BUILD) {
       Gdx.app.log(TAG, "Act2 Canyon warp table vis="
@@ -1027,7 +1029,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     for (int tombId = Act2TombSelection.FIRST_TOMB_LEVEL;
         tombId <= Act2TombSelection.LAST_TOMB_LEVEL; tombId++) {
       Zone tomb = findZoneByLevelId(map, tombId);
-      Levels.Entry tombLevel = Riiablo.files.Levels.get(tombId);
+      Levels.Entry tombLevel = files().Levels.get(tombId);
       if (tomb == null || tombLevel == null) continue;
       int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp,
           tombId, canyonSlots);
@@ -1059,7 +1061,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       if (tombConfigured[i]) continue;
       int tombId = Act2TombSelection.FIRST_TOMB_LEVEL + i;
       Zone tomb = findZoneByLevelId(map, tombId);
-      Levels.Entry tombLevel = Riiablo.files.Levels.get(tombId);
+      Levels.Entry tombLevel = files().Levels.get(tombId);
       if (tomb == null || tombLevel == null) continue;
       int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp,
           tombId, canyonSlots);
@@ -1089,11 +1091,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
    * the destination override and the rendered interaction in sync.</p>
    */
   void configureAct2DungeonWarps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     IntMap<IntSet> reservedByLevel = new IntMap<>();
     int configured = 0;
     int skippedQuest = 0;
-    for (Act2WarpEdge edge : discoverAct2WarpEdges(Riiablo.files.Levels)) {
+    for (Act2WarpEdge edge : discoverAct2WarpEdges(files().Levels)) {
       // Outdoor links are injected by configureAct2OutdoorWarps, and Tombs
       // have their own seven-link allocator.  Duriel's Lair is opened only
       // by the Horadric Orifice quest Warp, never by a static Vis/Warp edge.
@@ -1104,8 +1106,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
 
       Zone source = findZoneByLevelId(map, edge.sourceLevelId);
       Zone destination = findZoneByLevelId(map, edge.destinationLevelId);
-      Levels.Entry sourceLevel = Riiablo.files.Levels.get(edge.sourceLevelId);
-      Levels.Entry destinationLevel = Riiablo.files.Levels.get(edge.destinationLevelId);
+      Levels.Entry sourceLevel = files().Levels.get(edge.sourceLevelId);
+      Levels.Entry destinationLevel = files().Levels.get(edge.destinationLevelId);
       if (source == null || destination == null || sourceLevel == null || destinationLevel == null) {
         continue;
       }
@@ -1365,7 +1367,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       for (int side = 0; side < 2; side++) {
         int levelId = ACT2_OUTDOOR_LINKS[i][side];
         if (states.containsKey(levelId)) continue;
-        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Levels.Entry level = files().Levels.get(levelId);
         if (level == null) {
           Gdx.app.error(TAG, "Act2 warp level missing: " + levelId);
           continue;

@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.utils.Array;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.ObjGroup;
 import com.riiablo.codec.excel.Objects;
@@ -19,7 +18,7 @@ final class NativeObjectPopulation {
   int populate(Map.Zone zone, Map.RoomEx onlyRoom) {
     if (zone.isTown() || !zone.hasNativeRoomTopology()) return 0;
     if (groups == null) groups = Excel.load(ObjGroup.class,
-        Riiablo.mpqs.resolve("data\\global\\excel\\ObjGroup.txt"));
+        zone.map.mpqs().resolve("data\\global\\excel\\ObjGroup.txt"));
     Region region = regions.get(zone);
     if (region == null) {
       D2Seed control = controls.get(zone.map);
@@ -57,7 +56,7 @@ final class NativeObjectPopulation {
         int roll = next(roomSeed, 100), cumulative = 0;
         for (int member = 0; member < 8 && group.ID[member] != 0; member++) {
           cumulative += group.PROB[member];
-          Objects.Entry base = Riiablo.files.objects.get(group.ID[member]);
+          Objects.Entry base = zone.map.files().objects.get(group.ID[member]);
           if (base == null) throw new IllegalStateException("Missing Objects row " + group.ID[member]);
           // The legacy table projects Gore to boolean; both 0 and 1 pass
           // D2Game's nGore <= 2 check. Do not reject all corpse objects.
@@ -114,7 +113,7 @@ final class NativeObjectPopulation {
   }
 
   private static int themeBarrels(Map.Zone zone, Map.RoomEx room, D2Seed seed) {
-    Objects.Entry barrel = Riiablo.files.objects.get(7);
+    Objects.Entry barrel = zone.map.files().objects.get(7);
     if (barrel == null) return 0;
     int created = 0;
     int xEnd = room.x + room.width + 1;
@@ -160,9 +159,9 @@ final class NativeObjectPopulation {
     for (Map.NativeObject other : zone.getNativeObjects()) {
       int classId = other.resolvedObjectId;
       if (classId < 0) classId = other.ds1Raw
-          ? Riiablo.files.obj.getObjectId(zone.level.Act + 1, other.presetIndex) : other.presetIndex;
+          ? zone.map.files().obj.getObjectId(zone.level.Act + 1, other.presetIndex) : other.presetIndex;
       if (classId < 0) continue;
-      Objects.Entry base = Riiablo.files.objects.get(classId);
+      Objects.Entry base = zone.map.files().objects.get(classId);
       if (base == null || !base.HasCollision[other.currentMode()]) continue;
       int ox = Math.round(zone.x() + other.x - base.SizeX / 2f);
       int oy = Math.round(zone.y() + other.y - base.SizeY / 2f);
@@ -204,7 +203,7 @@ final class NativeObjectPopulation {
     return bounds(r, x, y, b.SizeX, b.SizeY, 2) && clear(z, x, y, b.SizeX + 2, b.SizeY + 2);
   }
   private static void barrels(Map.Zone z, Map.RoomEx r, int density, D2Seed seed, String source) {
-    Objects.Entry b = Riiablo.files.objects.get(7);
+    Objects.Entry b = z.map.files().objects.get(7);
     next(seed, 100);
     int remaining = densityCount(density, r.width, r.height), attempts = 2 * remaining, count = 0;
     while (remaining > 0 && attempts-- > 0) {

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class Act2TombEntranceResourceTest extends RiiabloTest {
   @Test void reportedRockyWasteRetainsNativeTombEntranceArtwork() {
     Map map = new Map(127897359, 0);
-    Act2MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
+    map.act2Builder().generate(map, map.seed, 0);
     Map.Zone rocky = null;
     for (Map.Zone zone : map.getZones()) if (zone.levelId() == 41) rocky = zone;
     assertNotNull(rocky);

@@ -8,8 +8,10 @@ import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
-public enum Act3MapBuilder implements MapBuilder {
-  INSTANCE;
+public final class Act3MapBuilder extends MapBuilderResources implements MapBuilder {
+
+  public Act3MapBuilder() { super(); }
+  public Act3MapBuilder(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act3MapBuilder";
   private static final boolean DEBUG       = true;
@@ -18,8 +20,8 @@ public enum Act3MapBuilder implements MapBuilder {
   @Override
   public void generate(Map map, int seed, int diff) {
     int def = Map.ACT_DEF[2];
-    LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
-    Levels.Entry   level  = Riiablo.files.Levels.get(preset.LevelId);
+    LvlPrest.Entry preset = files().LvlPrest.get(def);
+    Levels.Entry   level  = files().Levels.get(preset.LevelId);
     if (DEBUG_BUILD) Gdx.app.debug(TAG, level.LevelName);
 
     int fileId[] = new int[6];

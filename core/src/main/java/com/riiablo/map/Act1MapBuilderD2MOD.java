@@ -58,8 +58,10 @@ import com.riiablo.map.d2moo.NativeLevelSeamAnchor;
  * - source/D2Common/src/Drlg/DrlgOutWild.cpp
  * - source/D2Common/src/Drlg/DrlgOutdoors.cpp
  */
-public enum Act1MapBuilderD2MOD implements MapBuilder {
-  INSTANCE;
+public final class Act1MapBuilderD2MOD extends MapBuilderResources implements MapBuilder {
+
+  public Act1MapBuilderD2MOD() { super(); }
+  public Act1MapBuilderD2MOD(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act1MapBuilderD2MOD";
   private static final boolean DEBUG = true;
@@ -148,16 +150,16 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    * 当 D2MOO_JAVA getLayout 失败（如 DT1 路径不可用）时，用 Levels.txt 尺寸拼一个简单布局，
    * 保证至少能创建城镇等 zone，避免无 zone 导致 GameScreen NPE。
    */
-  private static Act1LayoutResult createFallbackLayout(int diff, int burialGroundsId) {
-    Levels.Entry stony = Riiablo.files.Levels.get(LEVEL_STONYFIELD);
-    Levels.Entry cold = Riiablo.files.Levels.get(LEVEL_COLDPLAINS);
-    Levels.Entry blood = Riiablo.files.Levels.get(LEVEL_BLOODMOOR);
-    Levels.Entry town = Riiablo.files.Levels.get(LEVEL_ROGUEENCAMPMENT);
-    Levels.Entry burial = Riiablo.files.Levels.get(burialGroundsId);
-    Levels.Entry black = Riiablo.files.Levels.get(LEVEL_BLACKMARSH);
-    Levels.Entry tamoe = Riiablo.files.Levels.get(LEVEL_TAMOEHIGHLAND);
-    Levels.Entry dark = Riiablo.files.Levels.get(LEVEL_DARKWOOD);
-    Levels.Entry underground = Riiablo.files.Levels.get(LEVEL_UNDERGROUNDPASSAGELVL1);
+  private Act1LayoutResult createFallbackLayout(int diff, int burialGroundsId) {
+    Levels.Entry stony = files().Levels.get(LEVEL_STONYFIELD);
+    Levels.Entry cold = files().Levels.get(LEVEL_COLDPLAINS);
+    Levels.Entry blood = files().Levels.get(LEVEL_BLOODMOOR);
+    Levels.Entry town = files().Levels.get(LEVEL_ROGUEENCAMPMENT);
+    Levels.Entry burial = files().Levels.get(burialGroundsId);
+    Levels.Entry black = files().Levels.get(LEVEL_BLACKMARSH);
+    Levels.Entry tamoe = files().Levels.get(LEVEL_TAMOEHIGHLAND);
+    Levels.Entry dark = files().Levels.get(LEVEL_DARKWOOD);
+    Levels.Entry underground = files().Levels.get(LEVEL_UNDERGROUNDPASSAGELVL1);
     if (stony == null || cold == null || blood == null || town == null || burial == null
         || black == null || tamoe == null || dark == null || underground == null) return null;
 
@@ -251,7 +253,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     MathUtils.random.setSeed(seed);
 
     // Burial Grounds 的关卡 ID（从 Levels.txt 解析）
-    for (Levels.Entry e : Riiablo.files.Levels) {
+    for (Levels.Entry e : files().Levels) {
       if (e != null && "Burial Grounds".equals(e.LevelName)) {
         burialGroundsId = e.Id;
         break;
@@ -281,7 +283,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format("=== D2MOO_JAVA Act1 Layout (seed=0x%08X, diff=%d) ===", seed, diff));
       for (int i = 0; i < result.levelIds.length; i++) {
-        Levels.Entry lev = Riiablo.files.Levels.get(result.levelIds[i]);
+        Levels.Entry lev = files().Levels.get(result.levelIds[i]);
         Gdx.app.debug(TAG, String.format("  Zone[%d]: %s (id=%d) at (%d,%d) size %dx%d",
             i, lev != null ? lev.LevelName : "?", result.levelIds[i],
             result.coords[i][0], result.coords[i][1], result.coords[i][2], result.coords[i][3]));
@@ -292,7 +294,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // DrlgLevel 初始化
     final int NUM_ZONES = result.levelIds.length;
     for (int i = 0; i < NUM_ZONES; i++) {
-      Levels.Entry level = Riiablo.files.Levels.get(result.levelIds[i]);
+      Levels.Entry level = files().Levels.get(result.levelIds[i]);
       if (level != null && !drlgLevels.containsKey(level.Id)) {
         int w = result.coords[i][2], h = result.coords[i][3];
         // Every linked outdoor level may be rotated or resized for this seed;
@@ -314,14 +316,14 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     Zone townZone = null;
     for (int i = 0; i < NUM_ZONES; i++) {
       if (result.levelIds[i] == LEVEL_ROGUEENCAMPMENT) {
-        Levels.Entry level = Riiablo.files.Levels.get(result.levelIds[i]);
+        Levels.Entry level = files().Levels.get(result.levelIds[i]);
         final int drlgType = level.DrlgType;
         final boolean isPresetLevel = drlgType == 2; // 2 == DRLGTYPE_PRESET
 
         // 查找与 level 对应的 preset（仅当 DrlgType 为 PRESET 时才整图使用）
         LvlPrest.Entry preset = null;
         if (isPresetLevel) {
-          for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+          for (LvlPrest.Entry p : files().LvlPrest) {
             if (p.LevelId == result.levelIds[i]) {
               preset = p;
               break;
@@ -424,11 +426,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // 创建其他区域（跳过城镇）
     for (int i = 0; i < NUM_ZONES; i++) {
       if (result.levelIds[i] == LEVEL_ROGUEENCAMPMENT) continue;
-      Levels.Entry level = Riiablo.files.Levels.get(result.levelIds[i]);
+      Levels.Entry level = files().Levels.get(result.levelIds[i]);
       
       // 查找与 level 对应的 preset（LvlPrest.LevelId == level.id）
       LvlPrest.Entry preset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == result.levelIds[i]) {
           preset = p;
           break;
@@ -439,7 +441,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         Gdx.app.debug(TAG, "No preset found for level " + level.LevelName + " (id=" + result.levelIds[i] + ")");
         // 查找是否有其他preset的LevelId匹配
         boolean foundAny = false;
-        for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+        for (LvlPrest.Entry p : files().LvlPrest) {
           if (p.LevelId == result.levelIds[i]) {
             if (!foundAny) {
               Gdx.app.debug(TAG, "  Searching for preset with LevelId=" + result.levelIds[i] + "...");
@@ -559,13 +561,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             if (i == 0 && zone.level.rangedspawn && available.size > 1) {
               for (int attempt = 0; attempt < 20; attempt++) {
                 String candidate = available.get(index);
-                MonStats.Entry entry = Riiablo.files.monstats.get(candidate);
+                MonStats.Entry entry = files().monstats.get(candidate);
                 if (entry != null && entry.rangedtype) break;
                 index = MathUtils.random(available.size - 1);
               }
             }
             String mon = available.removeIndex(index);
-            MonStats.Entry entry = Riiablo.files.monstats.get(mon);
+            MonStats.Entry entry = files().monstats.get(mon);
             if (entry != null && entry.isSpawn) selected.add(entry);
           }
 
@@ -783,7 +785,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                   for (int k = 0; k < partyCount; k++) {
                     String minionId = partyMinion(monster, k);
                     if (minionId == null) continue;
-                    MonStats.Entry minion = Riiablo.files.monstats.get(minionId);
+                    MonStats.Entry minion = files().monstats.get(minionId);
                     if (minion == null) {
                       Gdx.app.error(TAG, "Missing party minion " + minionId
                           + " for leader " + monster.Id);
@@ -831,7 +833,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
           
           // 获取该 SubType 的所有 LvlSub 记录
-          LvlSub.Entry[] lvlSubEntries = Riiablo.files.LvlSub.getByType(subType);
+          LvlSub.Entry[] lvlSubEntries = files().LvlSub.getByType(subType);
           if (lvlSubEntries == null || lvlSubEntries.length == 0) {
             if (DEBUG_BUILD) {
               Gdx.app.debug(TAG, String.format("pickSubThemes: no LvlSub entries found for subType=%d in %s", 
@@ -891,7 +893,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
           
           int subType = drlgLevel.subType;
-          LvlSub.Entry[] lvlSubEntries = Riiablo.files.LvlSub.getByType(subType);
+          LvlSub.Entry[] lvlSubEntries = files().LvlSub.getByType(subType);
           
           if (lvlSubEntries == null || lvlSubEntries.length == 0) {
             return;
@@ -1441,7 +1443,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                   try {
                     // Act1 DS1 MonPreset indices are local to the act's
                     // MonPreset bucket, not MonStats class IDs.
-                    placement = Riiablo.files.MonPreset.getPlace(1, index);
+                    placement = files().MonPreset.getPlace(1, index);
                   } catch (RuntimeException ignored) {
                     // Keep the direct class-id path below for native units
                     // created after DS1 expansion.
@@ -1453,25 +1455,25 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                   return;
                 }
                 placement = resolveActOnePlacement(placement, exportLevelId);
-                MonStats.Entry monster = resolveD2MooPresetMonster(index, placement);
+                MonStats.Entry monster = resolveD2MooPresetMonster(files(), index, placement);
                 int superUniqueId = -1;
                 String superUniqueKey = null;
                 SuperUniques.Entry superUnique = placement == null
-                    || Riiablo.files.SuperUniques == null
-                    ? null : Riiablo.files.SuperUniques.get(placement);
+                    || files().SuperUniques == null
+                    ? null : files().SuperUniques.get(placement);
                 if (monster == null && superUnique != null) {
-                  monster = Riiablo.files.monstats.get(superUnique.MonClass);
+                  monster = files().monstats.get(superUnique.MonClass);
                   superUniqueId = superUnique.hcIdx;
                   superUniqueKey = superUnique.Superunique;
                 }
                 if (monster == null && superUnique == null
-                    && Riiablo.files.SuperUniques != null) {
+                    && files().SuperUniques != null) {
                   // D2MOO encodes preset SuperUniques as
                   // MonStatsCount + hcIdx (MonPlace follows SuperUniques).
-                  int suIndex = index - Riiablo.files.monstats.size();
-                  superUnique = Riiablo.files.SuperUniques.get(suIndex);
+                  int suIndex = index - files().monstats.size();
+                  superUnique = files().SuperUniques.get(suIndex);
                   if (superUnique != null) {
-                    monster = Riiablo.files.monstats.get(superUnique.MonClass);
+                    monster = files().monstats.get(superUnique.MonClass);
                     superUniqueId = superUnique.hcIdx;
                     superUniqueKey = superUnique.Superunique;
                   }
@@ -1815,11 +1817,16 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    * quest marker and Navi's defensive AI from ever being installed.</p>
    */
   public static MonStats.Entry resolveD2MooPresetMonster(int index, String placement) {
-    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    return resolveD2MooPresetMonster(Riiablo.files, index, placement);
+  }
+
+  public static MonStats.Entry resolveD2MooPresetMonster(com.riiablo.Files files,
+      int index, String placement) {
+    if (files == null || files.monstats == null) return null;
     if (index == D2MonsterIds.MONSTER_NAVI) {
-      MonStats.Entry navi = Riiablo.files.monstats.get("navi");
+      MonStats.Entry navi = files.monstats.get("navi");
       if (navi != null) return navi;
-      for (MonStats.Entry candidate : Riiablo.files.monstats) {
+      for (MonStats.Entry candidate : files.monstats) {
         if (candidate != null
             && candidate.hcIdx == com.riiablo.engine.server.monster.MonsterType.NAVI) {
           return candidate;
@@ -1827,8 +1834,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       }
     }
     return placement == null
-        ? Riiablo.files.monstats.get(index)
-        : Riiablo.files.monstats.get(placement);
+        ? files.monstats.get(index)
+        : files.monstats.get(placement);
   }
 
   /** MonsterRegion.cpp's MonPlace switch has no spawn handler for these rows. */
@@ -1861,10 +1868,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   private void queuePresetPack(Array<Map.NativeMonster> output, int levelId, int roomId,
       int mode, int x, int y, String placement) {
-    Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Levels.Entry level = files().Levels.get(levelId);
     Array<MonStats.Entry> candidates = new Array<>();
     for (String key : NativeMonsterRegion.monsterColumns(level, drlgContext.diff)) {
-      MonStats.Entry monster = key == null ? null : Riiablo.files.monstats.get(key);
+      MonStats.Entry monster = key == null ? null : files().monstats.get(key);
       if (monster != null && monster.isSpawn && monster.Rarity > 0) candidates.add(monster);
     }
     if (candidates.isEmpty()) {
@@ -1939,7 +1946,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private void queueMonsterSpawn(int levelId, MonStats.Entry monster, float x, float y,
       int packId, boolean minion) {
     if (monster == null) return;
-    MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monster.MonStatsEx);
+    MonStats2.Entry monstats2 = files().monstats2.get(monster.MonStatsEx);
     int size = monstats2 == null ? 1 : Math.max(1, monstats2.SizeX);
     Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.get(levelId);
     if (pending == null) {
@@ -2031,7 +2038,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
     if (!questBossSpawned.add(zone.level.Id)) return;
 
-    MonStats.Entry bloodRaven = Riiablo.files.monstats.get("bloodraven");
+    MonStats.Entry bloodRaven = files().monstats.get("bloodraven");
     if (bloodRaven == null) {
       Gdx.app.error(TAG, "[BLOODRAVEN_SPAWN] phase=failed reason=missing_monstats row=bloodraven");
       return;
@@ -2598,7 +2605,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       int subType = drlgLevel.subType;
       int subTheme = drlgLevel.levelsEntry != null ? Math.min(Math.max(0, drlgLevel.levelsEntry.SubTheme), 4) : 0;
 
-      LvlSub.Entry[] lvlSubEntries = Riiablo.files.LvlSub.getByType(subType);
+      LvlSub.Entry[] lvlSubEntries = files().LvlSub.getByType(subType);
       if (lvlSubEntries == null || lvlSubEntries.length == 0) continue;
 
       DrlgGrid drlgGrid = drlgLevel.drlgGrid;
@@ -2711,7 +2718,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
     
     int subType = drlgLevel.subType;
-    LvlSub.Entry[] lvlSubEntries = Riiablo.files.LvlSub.getByType(subType);
+    LvlSub.Entry[] lvlSubEntries = files().LvlSub.getByType(subType);
     
     // 减少调试日志，避免性能问题
     // if (DEBUG_BUILD) {
@@ -2883,7 +2890,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     
     // 加载 DS1 文件
     try {
-      com.badlogic.gdx.files.FileHandle fileHandle = Riiablo.mpqs.resolve("data\\global\\tiles\\" + entry.File);
+      com.badlogic.gdx.files.FileHandle fileHandle = mpqs().resolve("data\\global\\tiles\\" + entry.File);
       if (!fileHandle.exists()) {
         if (DEBUG_BUILD) {
           Gdx.app.debug(TAG, String.format("initializeLvlSubDs1: DS1 file not found: %s", entry.File));
@@ -3083,7 +3090,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    * 建议：
    * - 先在游戏里跑一圈，让对应 level 的区域被生成（Zone.generate 被调用，影子写入完成）；
    * - 然后通过调试代码或命令调用：
-   *     Act1MapBuilderD2MOD.INSTANCE.debugDumpTileGrid(LEVEL_BLOODMOOR, 4);
+   *     map.act1Builder().debugDumpTileGrid(LEVEL_BLOODMOOR, 4);
    */
   public void debugDumpTileGrid(int levelId, int sampleStep) {
     if (!DEBUG_BUILD) return;

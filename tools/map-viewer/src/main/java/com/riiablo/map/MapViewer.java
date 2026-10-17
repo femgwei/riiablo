@@ -302,7 +302,7 @@ public class MapViewer extends Tool {
 
 //    Riiablo.engine = engine = new Engine();
 
-    map = new Map(seed, diff);
+    map = new Map(seed, diff, MapResources.fromGlobals());
 
     mapManager = new MapManager();
 
@@ -352,6 +352,8 @@ public class MapViewer extends Tool {
         .build()
         .register("iso", mapRenderer.iso)
         .register("map", map)
+        .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(
+            Riiablo.files, map.seed(), Riiablo.charData, Riiablo.anim))
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", null)
@@ -361,7 +363,7 @@ public class MapViewer extends Tool {
     mPosition = engine.getMapper(Position.class);
 
     engine.inject(map);
-    engine.inject(Act1MapBuilder.INSTANCE);
+    map.injectBuilders(engine);
 
     map.setAct(act);
     map.load();

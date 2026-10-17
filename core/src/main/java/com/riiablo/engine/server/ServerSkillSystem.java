@@ -94,6 +94,17 @@ import com.badlogic.gdx.utils.IntIntMap;
  * active frame.</p>
  */
 public class ServerSkillSystem extends PassiveSystem {
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
   private double nativeElapsedFrames;
   /** MonsterUnique suicide modifier: one direct packet, visual missile only. */
   public void resolveSuicideExplosion(int source, int coldLength, int radius, long seedRoll) {
@@ -108,7 +119,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int raw = base.A1MinD + (span > 0 ? (int) (seedRoll % span) : 0);
     String name = coldLength == 1 ? "suicidefireexplode"
         : coldLength < 2 ? "suicidecorpseexplode" : "suicideiceexplode";
-    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    Missiles.Entry row = files().Missiles.get(name);
     if (row == null || factory == null) return;
     Vector2 origin = mPosition.get(source).position;
     int visual = factory.createMissile(row, new Vector2(1, 0), origin, source, 1);
@@ -267,7 +278,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // Monsters use their existing AI/casting path and do not have player mana.
     if (!mPlayer.has(event.entityId)) return;
 
-    Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
+    Skills.Entry skill = files().skills.get(event.skillId);
     if (skill == null) {
       reject(event, 7, "skill data is missing");
       return;
@@ -529,10 +540,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
   }
 
-  private static int nativeCastDelayFrames(Skills.Entry skill) {
-    if (skill == null || Riiablo.files == null || Riiablo.files.NativeSkills == null) return 0;
+  private int nativeCastDelayFrames(Skills.Entry skill) {
+    if (skill == null || files() == null || files().NativeSkills == null) return 0;
     com.riiablo.codec.excel.NativeSkills.Entry row =
-        Riiablo.files.NativeSkills.get(skill.Id);
+        files().NativeSkills.get(skill.Id);
     Integer delay = row == null ? null : row.integer("delay");
     return delay == null ? 0 : Math.max(0, delay);
   }
@@ -595,10 +606,10 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!mPosition.has(event.entityId)) return;
     if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)
         && !mMercenary.has(event.entityId)) return;
-    Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
+    Skills.Entry skill = files().skills.get(event.skillId);
     if (skill == null) return;
     if (skill.Id == 286) { // Native Baal Monster Spawn: stationary target controller.
-      Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissile);
+      Missiles.Entry row = files().Missiles.get(skill.srvmissile);
       if (row == null || row.pSrvHitFunc != 54) return;
       Vector2 origin = resolveTargetPoint(event, mPosition.get(event.entityId).position, new Vector2());
       int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
@@ -626,7 +637,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (skill.srvdofunc == 131) {
       int target = event.targetId;
       if (target < 0 || !hasPositiveLife(target)) return;
-      com.riiablo.codec.excel.States.Entry definition = Riiablo.files.States.get(skill.auratargetstate);
+      com.riiablo.codec.excel.States.Entry definition = files().States.get(skill.auratargetstate);
       if (definition == null) return;
       int level = getSkillLevel(event.entityId, skill.Id);
       UnitStates holder = mUnitStates.get(target);
@@ -639,16 +650,16 @@ public class ServerSkillSystem extends PassiveSystem {
             name -> getBaseSkillLevel(event.entityId, name));
         if (roll >= chance && !holder.stateList.hasState(definition.id)) {
           MonStats.Entry old = mMonster.get(target).monstats;
-          MonStats.Entry variant = Riiablo.files.monstats.get(old.BaseId);
+          MonStats.Entry variant = files().monstats.get(old.BaseId);
           int depth = 0;
           while (variant != null && variant.hcIdx != old.hcIdx && depth < 128) {
-            variant = Riiablo.files.monstats.get(variant.NextInClass); depth++;
+            variant = files().monstats.get(variant.NextInClass); depth++;
           }
-          MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
-          if (summon != null) summon = Riiablo.files.monstats.get(summon.BaseId);
+          MonStats.Entry summon = files().monstats.get(skill.summon);
+          if (summon != null) summon = files().monstats.get(summon.BaseId);
           for (int i = 0; i < depth && summon != null; i++)
-            summon = Riiablo.files.monstats.get(summon.NextInClass);
-          int mode = hasText(skill.summode) ? Riiablo.files.MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
+            summon = files().monstats.get(summon.NextInClass);
+          int mode = hasText(skill.summode) ? files().MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
           if (summon != null && factory != null && factory.reinitializeMonster(target,
               summon.hcIdx, mode >= 0 && mode < 16 ? mode : Engine.Monster.MODE_NU)) {
             UnitStates transformed = mUnitStates.get(target);
@@ -678,16 +689,16 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (skill.srvdofunc == 132) {
       if (!mMonster.has(event.entityId)) return;
-      Missiles.Entry base = Riiablo.files.Missiles.get(skill.srvmissilea);
+      Missiles.Entry base = files().Missiles.get(skill.srvmissilea);
       if (base == null || base.Id <= 0) return;
       Monster monster = mMonster.get(event.entityId);
-      MonStats.Entry variant = Riiablo.files.monstats.get(monster.monstats.BaseId);
+      MonStats.Entry variant = files().monstats.get(monster.monstats.BaseId);
       int depth = 0;
       while (variant != null && variant.hcIdx != monster.monstats.hcIdx && depth < 128) {
-        variant = Riiablo.files.monstats.get(variant.NextInClass);
+        variant = files().monstats.get(variant.NextInClass);
         depth++;
       }
-      Missiles.Entry row = Riiablo.files.Missiles.get(base.Id + depth);
+      Missiles.Entry row = files().Missiles.get(base.Id + depth);
       if (row == null) return;
       Vector2 start = mPosition.get(event.entityId).position;
       Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start);
@@ -716,12 +727,12 @@ public class ServerSkillSystem extends PassiveSystem {
         if (factory == null || !world.getEntityManager().isActive(target)
             || token != null && !token.isCurrent(world, target)
             || !mPosition.has(target) || hasPositiveLife(target)) return;
-        MonStats.Entry summon = hasText(skill.summon) ? Riiablo.files.monstats.get(skill.summon) : null;
-        if (summon == null) summon = Riiablo.files.monstats.get("painworm1");
+        MonStats.Entry summon = hasText(skill.summon) ? files().monstats.get(skill.summon) : null;
+        if (summon == null) summon = files().monstats.get("painworm1");
         if (summon == null) return;
         Vector2 position = mPosition.get(target).position;
         int spawned = factory.createMonster(summon, position.x, position.y);
-        int mode = hasText(skill.summode) ? Riiablo.files.MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
+        int mode = hasText(skill.summode) ? files().MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
         if (spawned >= 0 && mode >= 0 && mode < 16) {
           CofManager cofs = world.getSystem(CofManager.class);
           if (cofs != null) cofs.setMode(spawned, (byte) mode, true);
@@ -1227,7 +1238,7 @@ public class ServerSkillSystem extends PassiveSystem {
         : new String[] {skill.cltmissilea, skill.cltmissileb,
             skill.cltmissilec, skill.cltmissiled};
     if ((event.srvdofunc == 85 || skill.srvdofunc == 85) && mMonster.has(event.entityId)) {
-      missileNames[0] = resolveMonsterChainMissile(mMonster.get(event.entityId), missileNames[0]);
+      missileNames[0] = resolveMonsterChainMissile(files(), mMonster.get(event.entityId), missileNames[0]);
       // SrvDo085 rejects an invalid upgraded ID; do not fall back to a basic attack missile.
       if (missileNames[0] == null) return;
     }
@@ -1267,7 +1278,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int created = 0;
     for (String missileName : missileNames) {
       if (missileName == null || missileName.isEmpty()) continue;
-      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+      Missiles.Entry missile = files().Missiles.get(missileName);
       if (missile == null) {
         log.warn("Server skill missile lookup failed: entity={}, skill={}, missile={}",
             event.entityId, event.skillId, missileName);
@@ -1404,7 +1415,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** SrvDo134 rolls one packet, then applies it directly to the nearby units. */
   private void applySiegeBeastStomp(SkillDoEvent event, Skills.Entry skill) {
-    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry missile = files().Missiles.get(skill.srvmissilea);
     if (missile == null || missile.Id <= 0 || !mAttributesWrapper.has(event.entityId)) return;
     int source = event.entityId;
     int level = getSkillLevel(source, skill.Id);
@@ -1475,8 +1486,8 @@ public class ServerSkillSystem extends PassiveSystem {
     int stateId = StateId.THUNDERSTORM;
     if (skill.aurastate != null && !skill.aurastate.isEmpty()
         && !"thunderstorm".equalsIgnoreCase(skill.aurastate.trim())) {
-      States.Entry row = Riiablo.files != null && Riiablo.files.States != null
-          ? Riiablo.files.States.get(skill.aurastate.trim()) : null;
+      States.Entry row = files() != null && files().States != null
+          ? files().States.get(skill.aurastate.trim()) : null;
       if (row != null) stateId = row.id;
     }
     int duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,
@@ -1501,8 +1512,8 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private int skillIdByName(String name) {
-    if (name == null || Riiablo.files == null || Riiablo.files.skills == null) return -1;
-    Skills.Entry entry = Riiablo.files.skills.get(name);
+    if (name == null || files() == null || files().skills == null) return -1;
+    Skills.Entry entry = files().skills.get(name);
     return entry != null ? entry.Id : -1;
   }
 
@@ -1520,8 +1531,8 @@ public class ServerSkillSystem extends PassiveSystem {
         SorceressSkills.getStaticFieldMinimumDamageFixed(skill, skillLevel);
     int difficulty = combatDifficulty(event.entityId, event.entityId);
     com.riiablo.codec.excel.DifficultyLevels.Entry difficultyRow =
-        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
-            ? Riiablo.files.DifficultyLevels.get(difficulty) : null;
+        files() != null && files().DifficultyLevels != null
+            ? files().DifficultyLevels.get(difficulty) : null;
     boolean expansion = !mPlayer.has(event.entityId)
         || mPlayer.get(event.entityId).data == null
         || mPlayer.get(event.entityId).data.isExpansion();
@@ -1718,7 +1729,7 @@ public class ServerSkillSystem extends PassiveSystem {
     UnitState armor = NecromancerSkills.applyBoneArmorState(
         states.stateList, skill, skillLevel, event.entityId,
         name -> getBaseSkillLevel(event.entityId, name),
-        name -> Riiablo.files.skills.get(name));
+        name -> files().skills.get(name));
     if (armor == null) {
       log.warn("[NECRO_BONE_ARMOR] phase=reject entity={} skill={} reason=native_state_data",
           event.entityId, event.skillId);
@@ -1821,7 +1832,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (value == 0 && mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       int level = Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.FIRE_MASTERY));
       if (level > 0) {
-        Skills.Entry mastery = Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+        Skills.Entry mastery = files().skills.get(SkillId.FIRE_MASTERY);
         value = SorceressSkills.getFireMasteryPercent(mastery, level);
       }
     }
@@ -1971,7 +1982,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     applySummonSkillStats(owner, entity, skill, skillLevel, true);
     if (mCofReference.has(entity) && skill.summode != null && !skill.summode.isEmpty()) {
-      int mode = Riiablo.files.MonMode.index(skill.summode);
+      int mode = files().MonMode.index(skill.summode);
       if (mode >= 0) mCofReference.get(entity).mode = (byte) mode;
     }
     if (mAngle.has(entity)) {
@@ -2056,7 +2067,7 @@ public class ServerSkillSystem extends PassiveSystem {
       UnitStates states = mUnitStates.get(targetId);
       if (states.stateList == null) states.init(world, targetId);
       UnitState state = states.stateList.applyCurseState(
-          Riiablo.files != null ? Riiablo.files.States : null,
+          files() != null ? files().States : null,
           StateId.DIMVISION, duration, skillLevel, event.entityId, event.skillId,
           Math.abs(defenseReduction), Stat.item_armor_percent, defenseReduction,
           NativeStatResolver.Operation.ADD);
@@ -2073,7 +2084,7 @@ public class ServerSkillSystem extends PassiveSystem {
   /** SrvDo102: same target for every maker; only the seeded initializer spreads them. */
   private int nextDiabWallCastId;
   private void spawnDiabWall(SkillDoEvent event, Skills.Entry skill, int level) {
-    Missiles.Entry row = skill.srvmissilea == null ? null : Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = skill.srvmissilea == null ? null : files().Missiles.get(skill.srvmissilea);
     if (row == null) return;
     Vector2 start = mPosition.get(event.entityId).position;
     Vector2 target = event.targetVec == null ? new Vector2() : new Vector2(event.targetVec);
@@ -2470,8 +2481,8 @@ public class ServerSkillSystem extends PassiveSystem {
     float range2 = range * (float) range;
     int difficulty = curseDifficulty(event.entityId);
     com.riiablo.codec.excel.DifficultyLevels.Entry difficultyRow =
-        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
-            ? Riiablo.files.DifficultyLevels.get(difficulty) : null;
+        files() != null && files().DifficultyLevels != null
+            ? files().DifficultyLevels.get(difficulty) : null;
     int affected = 0;
     int curseStateId = NecromancerSkills.resolveCurseStateId(
         skill.auratargetstate, skill.skill);
@@ -2495,13 +2506,13 @@ public class ServerSkillSystem extends PassiveSystem {
           ? mAttributesWrapper.get(targetId).attrs : null;
       boolean playerOrHireling = mPlayer.has(targetId) || mMercenary.has(targetId);
       UnitState state = NecromancerSkills.applyCurse(
-          targetStates.stateList, Riiablo.files != null ? Riiablo.files.States : null,
+          targetStates.stateList, files() != null ? files().States : null,
           skill, skillLevel, event.entityId, difficultyRow,
           targetAttributes, playerOrHireling);
       if (state != null) {
         affected++;
         if (function == 61) {
-          int seed = Riiablo.gameSeed ^ event.entityId * 0x45D9F3B
+          int seed = gameSeed() ^ event.entityId * 0x45D9F3B
               ^ targetId * 31 ^ event.skillId;
           mNativeAiTargetOverride.create(targetId).setConfuse(
               event.entityId, event.skillId, state.duration, seed);
@@ -2605,7 +2616,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    MonStats.Entry summon = files().monstats.get(skill.summon);
     if (summon == null) {
       log.warn("[ASSASSIN_SHADOW] phase=reject owner={} skill={} row={} reason=missing_monstats",
           event.entityId, event.skillId, skill.summon);
@@ -2646,7 +2657,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    MonStats.Entry summon = files().monstats.get(skill.summon);
     if (summon == null) {
       log.warn("[ASSASSIN_TRAP] phase=reject owner={} skill={} row={} reason=missing_monstats",
           event.entityId, event.skillId, skill.summon);
@@ -2668,7 +2679,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mSummonedPet.has(petId)) {
       com.riiablo.engine.server.component.SummonedPet trap = mSummonedPet.get(petId);
       Skills.Entry attackSkill = summon.Skill1 == null || summon.Skill1.isEmpty()
-          ? null : Riiablo.files.skills.get(summon.Skill1);
+          ? null : files().skills.get(summon.Skill1);
       int shots = attackSkill != null
           ? SkillFormula.evaluate(attackSkill.calc4, attackSkill, skillLevel,
               name -> getBaseSkillLevel(event.entityId, name)) : 0;
@@ -2781,7 +2792,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnPrimePoisonNova(
       SkillDoEvent event, Skills.Entry skill, Vector2 start, int level) {
     Missiles.Entry row = hasText(skill.srvmissilea)
-        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
+        ? files().Missiles.get(skill.srvmissilea) : null;
     if (row == null) return;
     int[] x = {0, 1, 2, 2, 2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1};
     int[] y = {2, 2, 2, 1, 0, -1, -2, -2, -2, -2, -2, -1, 0, 1, 2, 2};
@@ -2829,7 +2840,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("Server nova missile lookup failed: entity={}, skill={}, missile={}",
           event.entityId, event.skillId, missileName);
@@ -2871,7 +2882,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = missileName != null ? files().Missiles.get(missileName) : null;
     if (row == null) {
       log.warn("[DRUID_FISSURE] phase=reject source={} reason=missing_controller name={}",
           event.entityId, missileName);
@@ -2911,7 +2922,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = missileName != null ? files().Missiles.get(missileName) : null;
     if (row == null) {
       log.warn("[DRUID_VOLCANO] phase=reject source={} reason=missing_controller name={}",
           event.entityId, missileName);
@@ -2958,7 +2969,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (states.stateList == null) states.init(world, event.entityId);
     int stateId = event.skillId == SkillId.HURRICANE ? StateId.HURRICANE : StateId.ARMAGEDDON;
     if (skill.aurastate != null && !skill.aurastate.isEmpty()) {
-      States.Entry row = Riiablo.files.States.get(skill.aurastate.trim());
+      States.Entry row = files().States.get(skill.aurastate.trim());
       if (row != null) stateId = row.id;
     }
     int duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,
@@ -2983,7 +2994,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnDruidFissure(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[DRUID_FISSURE] phase=reject source={} skill={} reason=missing_missile name={}",
           event.entityId, skill.Id, missileName);
@@ -3035,7 +3046,7 @@ public class ServerSkillSystem extends PassiveSystem {
       SkillDoEvent event, Skills.Entry skill, Vector2 start, int skillLevel) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = missileName != null ? files().Missiles.get(missileName) : null;
     if (row == null) {
       log.warn("[SORCERESS_CHARGED_BOLT] phase=reject source={} skill={} "
               + "reason=missing_missile name={}",
@@ -3088,7 +3099,7 @@ public class ServerSkillSystem extends PassiveSystem {
       SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[NECRO_POISON_NOVA] phase=reject source={} skill={} reason=missing_missile name={}",
           event.entityId, event.skillId, missileName);
@@ -3137,8 +3148,8 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnFireWall(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
     String makerName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
     String fireName = firstNonEmpty(skill.srvmissileb, skill.cltmissileb);
-    Missiles.Entry makerRow = makerName != null ? Riiablo.files.Missiles.get(makerName) : null;
-    Missiles.Entry fireRow = fireName != null ? Riiablo.files.Missiles.get(fireName) : null;
+    Missiles.Entry makerRow = makerName != null ? files().Missiles.get(makerName) : null;
+    Missiles.Entry fireRow = fireName != null ? files().Missiles.get(fireName) : null;
     if (makerRow == null || fireRow == null) {
       log.warn("[SORCERESS_FIRE_WALL] phase=reject source={} reason=missing_missile "
               + "maker={} fire={}", event.entityId, makerName, fireName);
@@ -3204,7 +3215,7 @@ public class ServerSkillSystem extends PassiveSystem {
   /** D2MOO SKILLS_SrvDo028_Meteor: create the centre missile at the target. */
   private void spawnMeteor(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     // SrvDo028 also launches HellMeteorDown directly at the selected point
     // (SkillSor.cpp 0x6FD174E0 -> Skills.cpp 0x6FD115E0, flags=1).
     // Its SrvHit13 projectile is not a delayed SrvHit14 Meteor center.
@@ -3264,7 +3275,7 @@ public class ServerSkillSystem extends PassiveSystem {
   /** D2MOO SKILLS_SrvDo028 + MISSMODE_SrvDo10: create one Blizzard center. */
   private void spawnBlizzard(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
-    Missiles.Entry center = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry center = missileName != null ? files().Missiles.get(missileName) : null;
     if (center == null || center.pSrvDoFunc != 10) {
       log.warn("[SORCERESS_BLIZZARD] phase=reject source={} skill={} missile={} reason=missing_center",
           event.entityId, skill != null ? skill.Id : -1, missileName);
@@ -3310,7 +3321,7 @@ public class ServerSkillSystem extends PassiveSystem {
   /** D2MOO SrvDo026: create one root missile and defer each jump to SrvHit12. */
   private void spawnChainLightning(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[CHAIN_LIGHTNING] phase=reject source={} reason=missing_missile name={}",
           event.entityId, missileName);
@@ -3353,7 +3364,7 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[AMAZON_CHARGED_STRIKE] phase=reject source={} reason=missing_missile name={}",
           event.entityId, missileName);
@@ -3419,7 +3430,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (event.targetId < 0 || !mPosition.has(event.targetId)
         || !isHostile(event.entityId, event.targetId)) return;
     String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[AMAZON_LIGHTNING_STRIKE] phase=reject source={} reason=missing_missile name={}",
           event.entityId, missileName);
@@ -3461,7 +3472,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnSorceressInferno(
       SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
     String missileName = hasText(skill.srvmissilea) ? skill.srvmissilea : skill.srvmissile;
-    Missiles.Entry row = hasText(missileName) ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry row = hasText(missileName) ? files().Missiles.get(missileName) : null;
     if (row == null) {
       log.warn("[SORCERESS_INFERNO] phase=reject source={} reason=missing_missile name={}",
           event.entityId, missileName);
@@ -3516,7 +3527,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, skillLevel, mana != null ? mana.asFixed() : -1f, manaCost);
       return;
     }
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null) {
       log.warn("[ASSASSIN_BLADE_FURY] phase=reject source={} missile={} reason=missing_row",
           event.entityId, skill.srvmissilea);
@@ -3558,7 +3569,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (skill == null) return;
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[ASSASSIN_SHOCK_FIELD] phase=reject source={} skill={} reason=missing_missile name={}",
           event.entityId, skill.Id, missileName);
@@ -3567,10 +3578,10 @@ public class ServerSkillSystem extends PassiveSystem {
 
     int count = skill.prgcalc != null && skill.prgcalc.length > 0
         ? SkillFormula.evaluate(skill.prgcalc[0], skill, skillLevel,
-            name -> getBaseSkillLevel(event.entityId, name), ServerSkillSystem::resolveSkill)
+            name -> getBaseSkillLevel(event.entityId, name), this::resolveSkill)
         : 0;
     int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel,
-        name -> getBaseSkillLevel(event.entityId, name), ServerSkillSystem::resolveSkill);
+        name -> getBaseSkillLevel(event.entityId, name), this::resolveSkill);
     if (count <= 0) {
       log.info("[ASSASSIN_SHOCK_FIELD] phase=reject source={} skill={} level={} "
               + "reason=non_positive_progressive_count formula={}",
@@ -3617,7 +3628,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 caster, boolean valkyrie) {
     if (!mPlayer.has(event.entityId)) return;
     MonStats.Entry summon = skill.summon == null || skill.summon.isEmpty()
-        ? null : Riiablo.files.monstats.get(skill.summon);
+        ? null : files().monstats.get(skill.summon);
     if (summon == null) {
       log.warn("[AMAZON_{}] phase=reject owner={} skill={} reason=missing_summon row={}",
           valkyrie ? "VALKYRIE" : "DECOY", event.entityId, event.skillId, skill.summon);
@@ -3713,7 +3724,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // native row's formula says so, and vice versa.
     int petLevel = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, skillLevel,
         name -> getBaseSkillLevel(event.entityId, name),
-        name -> Riiablo.files.skills.get(name)));
+        name -> files().skills.get(name)));
     if (petAttrs != null) {
       StatRef level = petAttrs.get(Stat.level, StatRef.obtain());
       if (level != null) level.set(petLevel);
@@ -3773,7 +3784,7 @@ public class ServerSkillSystem extends PassiveSystem {
     String summonName = skill.summon == null || skill.summon.isEmpty()
         ? "hydra" : skill.summon;
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
-    MonStats.Entry summon = Riiablo.files.monstats.get(summonName);
+    MonStats.Entry summon = files().monstats.get(summonName);
     if (summon == null) {
       log.warn("[HYDRA] phase=reject owner={} skill={} row={} reason=missing_monstats",
           event.entityId, event.skillId, summonName);
@@ -3818,7 +3829,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int skillLevel, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea,
         firstNonEmpty(skill.srvmissile, skill.cltmissilea));
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[DRUID_FIRESTORM] phase=reject source={} skill={} reason=missing_missile name={}",
           event.entityId, skill.Id, missileName);
@@ -3859,7 +3870,7 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, skill.Id, skillLevel, missile.Missile, count, created, skill.calc1);
   }
 
-  private static void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,
+  private void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,
       java.util.function.ToIntFunction<String> baseSkills) {
     if (attrs == null || skill == null || skill.passivestat == null
         || skill.passivecalc == null) return;
@@ -3869,7 +3880,7 @@ public class ServerSkillSystem extends PassiveSystem {
       short stat = Stat.index(name);
       if (stat < 0) continue;
       int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level, baseSkills,
-          skillName -> Riiablo.files.skills.get(skillName));
+          skillName -> files().skills.get(skillName));
       if (value != 0) attrs.base().put(stat, value);
     }
   }
@@ -3997,7 +4008,7 @@ public class ServerSkillSystem extends PassiveSystem {
     target.set(com.badlogic.gdx.math.MathUtils.floor(target.x), com.badlogic.gdx.math.MathUtils.floor(target.y));
     int distance = NativeDeathMaul.distance(mPosition.get(event.entityId).position, target);
     if (target.isZero() || distance > 100) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null || row.Id <= 0) return;
     int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
     int id = createMissile(row, Vector2.X, target, event.entityId, null, level);
@@ -4084,7 +4095,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId, total, centre);
       return;
     }
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = files().Missiles.get(missileName);
     if (missile == null) {
       log.warn("SrvDo008 missile lookup failed: entity={}, skill={}, missile={}",
           event.entityId, event.skillId, missileName);
@@ -4136,7 +4147,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // hand-to-hand.  Strafe's two rows are strafearrow/strafebolt.
     String missileName = selectSrvDo008Missile(event.entityId, skill);
     if (missileName == null) missileName = firstNonEmpty(skill.srvmissile, skill.cltmissilea);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[GUIDED_ARROW] phase=reject entity={} skill={} reason=missing_missile name={}",
           event.entityId, event.skillId, missileName);
@@ -4197,7 +4208,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 start, int skillLevel) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
     if (missileName == null) missileName = firstNonEmpty(skill.srvmissile, skill.cltmissilea);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    Missiles.Entry missile = missileName != null ? files().Missiles.get(missileName) : null;
     if (missile == null) {
       log.warn("[STRAFE] phase=reject entity={} reason=missing_missile name={}",
           event.entityId, missileName);
@@ -4428,7 +4439,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /** D2MOO SrvDo095_MonInferno / SrvDo152_DiabLight; controls MODECHANGE vs ENDANIM. */
   private int spawnMonInferno(SkillDoEvent event, Skills.Entry skill) {
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null) return -1;
     Vector2 start = mPosition.get(event.entityId).position;
     // A valid unit target takes precedence over the original click position.
@@ -4500,7 +4511,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, skill != null ? skill.Id : -1);
       return;
     }
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null) {
       log.warn("[FIST_OF_HEAVENS] phase=do_reject source={} missile={} reason=missing_row",
           event.entityId, skill.srvmissilea);
@@ -4525,7 +4536,7 @@ public class ServerSkillSystem extends PassiveSystem {
         name -> getBaseSkillLevel(event.entityId, name));
 
     com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
-        Riiablo.files.NativeSkills != null ? Riiablo.files.NativeSkills.get(skill.Id) : null;
+        files().NativeSkills != null ? files().NativeSkills.get(skill.Id) : null;
     String overlay = nativeSkill != null ? nativeSkill.string("srvoverlay") : "";
     log.info("[FIST_OF_HEAVENS] phase=delay_create source={} target={} missileId={} "
             + "level={} position=({}, {}) lifetime={} overlay={}",
@@ -4537,7 +4548,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnPaladinBlessedHammer(
       SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
     if (!PaladinSkills.isBlessedHammer(skill) || !hasText(skill.srvmissilea)) return;
-    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
     if (row == null) {
       log.warn("[BLESSED_HAMMER] phase=reject entity={} missile={} reason=missing_row",
           event.entityId, skill.srvmissilea);
@@ -4672,13 +4683,17 @@ public class ServerSkillSystem extends PassiveSystem {
    * BaseId/NextInClass chain generated by D2Common.
    */
   static String resolveMonsterChainMissile(Monster monster, String baseMissileName) {
+    return resolveMonsterChainMissile(Riiablo.files, monster, baseMissileName);
+  }
+
+  static String resolveMonsterChainMissile(com.riiablo.Files files, Monster monster, String baseMissileName) {
     if (monster == null || monster.monstats == null || !hasText(baseMissileName)) {
       return null;
     }
-    Missiles.Entry baseMissile = Riiablo.files.Missiles.get(baseMissileName);
+    Missiles.Entry baseMissile = files.Missiles.get(baseMissileName);
     if (baseMissile == null) return null;
-    int chainId = getMonsterChainId(monster.monstats);
-    Missiles.Entry resolved = Riiablo.files.Missiles.get(baseMissile.Id + chainId);
+    int chainId = getMonsterChainId(files, monster.monstats);
+    Missiles.Entry resolved = files.Missiles.get(baseMissile.Id + chainId);
     if (resolved == null) return null;
     log.info("[SHAMAN_FIREBALL] phase=missile_resolve monster={} baseMissile={} "
             + "chainId={} missile={} missileId={} celFile={}",
@@ -4688,13 +4703,17 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   static int getMonsterChainId(MonStats.Entry monster) {
+    return getMonsterChainId(Riiablo.files, monster);
+  }
+
+  static int getMonsterChainId(com.riiablo.Files files, MonStats.Entry monster) {
     if (monster == null || !hasText(monster.Id)) return 0;
     String baseId = hasText(monster.BaseId) ? monster.BaseId : monster.Id;
-    MonStats.Entry cursor = Riiablo.files.monstats.get(baseId);
+    MonStats.Entry cursor = files.monstats.get(baseId);
     for (int chainId = 0; cursor != null && chainId < 256; chainId++) {
       if (monster.Id.equalsIgnoreCase(cursor.Id)) return chainId;
       if (!hasText(cursor.NextInClass) || cursor.NextInClass.equalsIgnoreCase(cursor.Id)) break;
-      cursor = Riiablo.files.monstats.get(cursor.NextInClass);
+      cursor = files.monstats.get(cursor.NextInClass);
     }
     return 0;
   }
@@ -4708,8 +4727,8 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (mSummonedPet.has(entityId)) {
       com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
-      Skills.Entry summonSkill = pet != null && Riiablo.files != null && Riiablo.files.skills != null
-          ? Riiablo.files.skills.get(pet.skillId) : null;
+      Skills.Entry summonSkill = pet != null && files() != null && files().skills != null
+          ? files().skills.get(pet.skillId) : null;
       int granted = DruidSkills.getSummonGrantedSkillLevel(summonSkill,
           pet != null ? pet.skillLevel : 1, skillId,
           name -> pet != null ? getBaseSkillLevel(pet.ownerId, name) : 0);
@@ -4725,8 +4744,8 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       Monster monster = mMonster.get(entityId);
       if (monster.monstats != null) {
-        String skillName = Riiablo.files.skills.get(skillId) != null
-            ? Riiablo.files.skills.get(skillId).skill : null;
+        String skillName = files().skills.get(skillId) != null
+            ? files().skills.get(skillId).skill : null;
         String[] names = {
             monster.monstats.Skill1, monster.monstats.Skill2,
             monster.monstats.Skill3, monster.monstats.Skill4,
@@ -4779,7 +4798,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, target, skill.skill);
       return true;
     }
-    NativeRng rng = new NativeRng(Riiablo.gameSeed ^ event.entityId * 0x45D9F3B ^ target * 31);
+    NativeRng rng = new NativeRng(gameSeed() ^ event.entityId * 0x45D9F3B ^ target * 31);
     int chance = function == 69
         ? BarbarianSkills.getFindPotionChance(skill, level)
         : function == 72 ? BarbarianSkills.getFindItemChance(skill, level) : 100;
@@ -4850,7 +4869,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int corpseMaxHp = nativeCorpseExplosionLife(corpseId, corpseAttrs);
     int[] percent = NecromancerSkills.getCorpseExplosionDamagePercent(skill, skillLevel);
     NativeRng rng = NativeRng.forUnit(
-        Riiablo.gameSeed ^ source * 31 ^ skill.Id * 131, corpseId);
+        gameSeed() ^ source * 31 ^ skill.Id * 131, corpseId);
     int rolledPercent = percent[0];
     if (percent[1] > percent[0]) rolledPercent += rng.nextInt(percent[1] - percent[0]);
     int total = Math.max(0, corpseMaxHp * rolledPercent / 100);
@@ -4949,7 +4968,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int source = event.entityId;
     int corpseId = event.targetId;
     Missiles.Entry cloudRow = skill != null && skill.srvmissilea != null
-        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
+        ? files().Missiles.get(skill.srvmissilea) : null;
     if (!NecromancerSkills.isPoisonExplosion(skill) || cloudRow == null || factory == null
         || isTownCorpse(corpseId) || !mPosition.has(corpseId)
         || !reserveCorpse(corpseId, false, skillLevel, source, skill.Id)) {
@@ -5107,13 +5126,13 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   /** Skills.txt summon names are symbolic and are not consistently cased in 1.10f. */
-  private static MonStats.Entry resolveSummonMonster(String summonName) {
+  private MonStats.Entry resolveSummonMonster(String summonName) {
     if (summonName == null || summonName.isEmpty()) return null;
-    MonStats.Entry summon = Riiablo.files.monstats.get(summonName);
-    if (summon == null) summon = Riiablo.files.monstats.get(
+    MonStats.Entry summon = files().monstats.get(summonName);
+    if (summon == null) summon = files().monstats.get(
         summonName.toLowerCase(java.util.Locale.ROOT));
     if (summon != null) return summon;
-    for (MonStats.Entry candidate : Riiablo.files.monstats) {
+    for (MonStats.Entry candidate : files().monstats) {
       if (candidate != null && candidate.Id != null
           && candidate.Id.equalsIgnoreCase(summonName)) return candidate;
     }
@@ -5121,13 +5140,13 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   /** Native txt compilation resolves symbolic skill references without preserving case. */
-  private static Skills.Entry resolveSkill(String skillName) {
+  private Skills.Entry resolveSkill(String skillName) {
     if (skillName == null || skillName.trim().isEmpty()
-        || Riiablo.files == null || Riiablo.files.skills == null) return null;
+        || files() == null || files().skills == null) return null;
     String name = skillName.trim();
-    Skills.Entry skill = Riiablo.files.skills.get(name);
+    Skills.Entry skill = files().skills.get(name);
     if (skill != null) return skill;
-    for (Skills.Entry candidate : Riiablo.files.skills) {
+    for (Skills.Entry candidate : files().skills) {
       if (candidate != null && candidate.skill != null
           && candidate.skill.equalsIgnoreCase(name)) return candidate;
     }
@@ -5504,7 +5523,7 @@ public class ServerSkillSystem extends PassiveSystem {
         missileName = skill.srvmissileb;
       }
     }
-    Missiles.Entry missile = missileName == null ? null : Riiablo.files.Missiles.get(missileName);
+    Missiles.Entry missile = missileName == null ? null : files().Missiles.get(missileName);
     if (missile == null) return;
     int id = createMissile(missile, new Vector2(1, 0), mPosition.get(corpseId).position,
         source, null, level);
@@ -5574,7 +5593,7 @@ public class ServerSkillSystem extends PassiveSystem {
         "javelins"
     };
     for (String candidate : candidates) {
-      Missiles.Entry missile = Riiablo.files.Missiles.get(candidate);
+      Missiles.Entry missile = files().Missiles.get(candidate);
       if (missile != null) return missile.Missile;
     }
     log.warn("[THROW_ATTACK] phase=missile_resolve_failed entity={} skill={} weaponCode={}",
@@ -5592,7 +5611,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (weapon == null || weapon.type == null) return null;
     String name = weapon.type.is(Type.BOW) ? "arrow"
         : weapon.type.is(Type.XBOW) ? "bolt" : null;
-    return name != null && Riiablo.files.Missiles.get(name) != null ? name : null;
+    return name != null && files().Missiles.get(name) != null ? name : null;
   }
 
   private boolean isPlayerRangedNormalAttack(int entityId, int skillId) {

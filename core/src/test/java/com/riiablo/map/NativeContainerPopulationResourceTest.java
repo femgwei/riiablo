@@ -64,11 +64,11 @@ class NativeContainerPopulationResourceTest extends RiiabloTest {
       int seed = Integer.parseInt(seedText.trim());
       for (int act = 0; act < 5; act++) {
         Map map = new Map(seed, 0);
-        if (act == 0) Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 1) Act2MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 2) Act3MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 3) Act4MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 4) Act5MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
+        if (act == 0) map.act1Builder().generate(map, seed, 0);
+        if (act == 1) map.act2Builder().generate(map, seed, 0);
+        if (act == 2) map.act3Builder().generate(map, seed, 0);
+        if (act == 3) map.act4Builder().generate(map, seed, 0);
+        if (act == 4) map.act5Builder().generate(map, seed, 0);
         NativeObjectPopulation population = new NativeObjectPopulation();
         for (Map.Zone zone : map.getZones()) {
           if (zone.isTown()) continue;

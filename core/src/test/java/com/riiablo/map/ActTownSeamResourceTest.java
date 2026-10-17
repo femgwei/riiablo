@@ -10,17 +10,17 @@ class ActTownSeamResourceTest extends RiiabloTest {
   @Test void townAndFirstOutdoorHaveAnOpenNativeTerrainSeam() {
     for (int act = 1; act <= 4; act++) {
       Map map = new Map(127897359, 0);
-      if (act == 1) Act2MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
-      if (act == 2) Act3MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
-      if (act == 3) Act4MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
+      if (act == 1) map.act2Builder().generate(map, map.seed, 0);
+      if (act == 2) map.act3Builder().generate(map, map.seed, 0);
+      if (act == 3) map.act4Builder().generate(map, map.seed, 0);
       if (act == 4) {
         java.io.PrintStream previous = System.err;
         java.io.ByteArrayOutputStream warnings = new java.io.ByteArrayOutputStream();
         try {
           System.setErr(new java.io.PrintStream(warnings));
-          Act5MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
-          Act5MapBuilderD2MOD.INSTANCE.configureAct5OutdoorWarps(map);
-          Act5MapBuilderD2MOD.INSTANCE.configureAct5QuestWarps(map);
+          map.act5Builder().generate(map, map.seed, 0);
+          map.act5Builder().configureAct5OutdoorWarps(map);
+          map.act5Builder().configureAct5QuestWarps(map);
         } finally { System.setErr(previous); }
         previous.print(warnings.toString());
         assertFalse(warnings.toString().contains("sub_6FD84780:"),

@@ -11,7 +11,7 @@ class Act2TombHiddenWallResourceTest extends RiiabloTest {
     for (String seedText : System.getProperty("map.audit.seeds", "127897359").split(",")) {
       int seed = Integer.parseInt(seedText.trim());
       Map map = new Map(seed, 0);
-      Act2MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
+      map.act2Builder().generate(map, seed, 0);
       DT1s library = new DT1s();
       java.util.Set<String> loaded = new java.util.HashSet<>();
       int hiddenWalls = 0;

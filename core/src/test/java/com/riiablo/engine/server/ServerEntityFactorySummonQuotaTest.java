@@ -100,6 +100,7 @@ class ServerEntityFactorySummonQuotaTest extends RiiabloTest {
             factory, new SummonedPetSystem())
         .build()
         .register("factory", factory)
+        .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry())
         .register("map", new Map(0, 0)));
 
     int owner() {

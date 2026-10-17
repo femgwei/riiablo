@@ -39,6 +39,17 @@ public abstract class EntityFactory extends PassiveSystem {
   @Wire(name = "map")
   protected Map map;
 
+  @Wire(name = "serverContext", failOnNull = false)
+  protected com.riiablo.engine.server.ServerGameplayContext serverContext;
+
+  protected final com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  protected final int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
   private final Vector2 tmpVec2 = new Vector2();
 
   protected final int createEntity(Class.Type type, String classname) {
@@ -67,10 +78,10 @@ public abstract class EntityFactory extends PassiveSystem {
       String objectType;
       switch (object.type) {
         case DS1.Object.DYNAMIC_TYPE:
-          objectType = Riiablo.files.MonPreset.getPlace(preset.getDS1().getAct(), object.id);
+          objectType = files().MonPreset.getPlace(preset.getDS1().getAct(), object.id);
           break;
         case DS1.Object.STATIC_TYPE:
-          objectType = String.valueOf(Riiablo.files.obj.getObjectId(preset.getDS1().getAct(), object.id));
+          objectType = String.valueOf(files().obj.getObjectId(preset.getDS1().getAct(), object.id));
           break;
         default:
           objectType = null;

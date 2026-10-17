@@ -6136,7 +6136,7 @@ public class D2GS extends ApplicationAdapter {
     }
 
     Gdx.app.log(TAG, "Generating map...");
-    map = new Map(seed, diff);
+    map = new Map(seed, diff, com.riiablo.map.MapResources.fromGlobals());
     mapManager = new MapManager();
     Gdx.app.log(TAG, "  generating act 1...");
     long start = TimeUtils.millis();
@@ -6161,6 +6161,8 @@ public class D2GS extends ApplicationAdapter {
         .register("factory", factory)
         .register("player", player)
         .register("outPackets", outPackets)
+        .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(
+            Riiablo.files, map.seed(), null, Riiablo.anim))
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
         .register("townPortalRegistry", townPortalRegistry)
@@ -6193,8 +6195,7 @@ public class D2GS extends ApplicationAdapter {
 
     world.inject(map);
     map.setEntityFactory(factory);
-    world.inject(Act1MapBuilder.INSTANCE);
-    world.inject(Act1MapBuilderD2MOD.INSTANCE);
+    map.injectBuilders(world);
 
     map.generate();
     mapManager.createEntities();

@@ -286,7 +286,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   public void mapBuilderCreatesDiscoveredAct1SublevelZones() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    map.act1Builder().generate(map, seed, DEFAULT_DIFFICULTY);
     try {
       int[][] routes = nativeSublevelRoutes();
       for (int[] route : routes) {
@@ -294,7 +294,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         Map.Zone target = map.findZone(Riiablo.files.Levels.get(route[0]));
         assertNotNull(source, "source zone is missing " + route[1]);
         assertNotNull(target, "auto-discovered zone is missing " + route[0]);
-        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(route[0]),
+        assertTrue(map.act1Builder().hasD2MooExport(route[0]),
             "native export was rejected " + route[0]);
         assertTrue(target.width() > 0 && target.height() > 0,
             "discovered zone has invalid bounds " + route[0]);
@@ -310,7 +310,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   public void mapBuilderCreatesContinuousMonasteryZones() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    map.act1Builder().generate(map, seed, DEFAULT_DIFFICULTY);
     try {
       Map.Zone tamoe = zone(map, D2LevelIds.LEVEL_TAMOEHIGHLAND);
       Map.Zone gate = zone(map, D2LevelIds.LEVEL_MONASTERYGATE);
@@ -333,7 +333,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           D2LevelIds.LEVEL_BARRACKS,
           D2LevelIds.LEVEL_INNERCLOISTER,
           D2LevelIds.LEVEL_CATHEDRAL }) {
-        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
+        assertTrue(map.act1Builder().hasD2MooExport(levelId),
             "native monastery export was rejected " + levelId);
       }
     } finally {
@@ -396,7 +396,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     int difficulty = Integer.getInteger("d2.difficulty", DEFAULT_DIFFICULTY);
     Map map = new Map(seed, difficulty);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, difficulty);
+    map.act1Builder().generate(map, seed, difficulty);
     try {
       int[][] links = {
           { D2LevelIds.LEVEL_MONASTERYGATE, D2LevelIds.LEVEL_OUTERCLOISTER },
@@ -451,7 +451,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   public void mapBuilderCreatesDynamicPortalDestinations() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    map.act1Builder().generate(map, seed, DEFAULT_DIFFICULTY);
     try {
       for (int levelId : new int[] {
           D2LevelIds.LEVEL_TRISTRAM,
@@ -459,7 +459,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         Map.Zone destination = zone(map, levelId);
         assertTrue(destination.width() > 0 && destination.height() > 0,
             "dynamic portal destination has invalid bounds " + levelId);
-        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
+        assertTrue(map.act1Builder().hasD2MooExport(levelId),
             "dynamic portal destination was not exported " + levelId);
       }
     } finally {

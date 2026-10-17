@@ -10,6 +10,7 @@ import java.util.Objects;
 final class ScreenAssetScope implements Disposable {
   final AssetManager assets;
   private final AssetReferenceScope references;
+  private final java.util.Set<String> once = new java.util.HashSet<>();
 
   ScreenAssetScope(AssetManager assets) {
     this.assets = Objects.requireNonNull(assets, "assets");
@@ -20,7 +21,16 @@ final class ScreenAssetScope implements Disposable {
     references.load(asset);
   }
 
+  /** Dependencies shared across successive Act loading views belong to the session. */
+  void loadOnce(AssetDescriptor asset) {
+    String key = asset.fileName;
+    if (once.contains(key)) return;
+    references.load(asset);
+    once.add(key);
+  }
+
   @Override public void dispose() {
+    once.clear();
     references.dispose();
   }
 }

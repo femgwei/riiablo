@@ -22,8 +22,10 @@ import com.riiablo.map.d2moo.Act5D2MOOLayoutBridge;
  * - source/D2Common/src/Drlg/DrlgOutPlace.cpp (gAct5OutdoorDrlgLink, gAct5TundraDrlgLink)
  * - source/D2Common/src/Drlg/DrlgOutSiege.cpp (DRLGOUTSIEGE_InitAct5OutdoorLevel)
  */
-public enum Act5MapBuilderD2MOD implements MapBuilder {
-  INSTANCE;
+public final class Act5MapBuilderD2MOD extends MapBuilderResources implements MapBuilder {
+
+  public Act5MapBuilderD2MOD() { super(); }
+  public Act5MapBuilderD2MOD(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act5MapBuilderD2MOD";
   private static final boolean DEBUG = true;
@@ -121,7 +123,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     // 初始化区域尺寸
     for (int i = 0; i < act5Links.length && act5Links[i] != null; i++) {
       linkData.links[i] = act5Links[i];
-      Levels.Entry level = Riiablo.files.Levels.get(act5Links[i].level);
+      Levels.Entry level = files().Levels.get(act5Links[i].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act5Links[i].level);
         continue;
@@ -142,13 +144,13 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     int counter = 0;
     while (counter < act5Links.length && act5Links[counter] != null) {
       boolean success = false;
-      Levels.Entry level = Riiablo.files.Levels.get(act5Links[counter].level);
+      Levels.Entry level = files().Levels.get(act5Links[counter].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act5Links[counter].level);
         break;
       }
       
-      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
       
       if (counter == 0) {
         // sub_6FD81330 - Harrogath is the anchor level.
@@ -187,16 +189,16 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     int offsetY = -linkData.coords[townIndex].y;
     
     // 创建区域
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.factory = factory;
     base.socket = socket;
 
     for (int i = 0; i < act5Links.length && act5Links[i] != null; i++) {
-      Levels.Entry level = Riiablo.files.Levels.get(act5Links[i].level);
+      Levels.Entry level = files().Levels.get(act5Links[i].level);
       if (level == null) continue;
       
       LvlPrest.Entry preset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == act5Links[i].level) {
           preset = p;
           break;
@@ -239,7 +241,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     int branchX = 32;
     for (Zone existing : map.zones) branchX = Math.max(branchX, existing.x() + existing.width() + 32);
     for (int levelId = 109; levelId <= 132; levelId++) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null || map.findZone(level) != null) continue;
       Zone branch = base.createZoneWithGenerator(map, level, diff, branchX, 0);
       branch.generator = base.createMonsterGenerator(socket);
@@ -270,14 +272,14 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   }
 
   private void createNihlathakQuestZones(Map map, int diff, BaseMapBuilderD2MOD base) {
-    if (map == null || base == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || base == null || files() == null || files().Levels == null) return;
     int cursor = 0;
     for (Zone existing : map.zones) {
       if (existing != null) cursor = Math.max(cursor, existing.x() + existing.width());
     }
     cursor += 32;
     for (int levelId : ACT5_NIHLATHAK_CHAIN) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null) {
         Gdx.app.error(TAG, "A5Q4 level missing: " + levelId);
         continue;
@@ -314,12 +316,12 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   }
 
   private void configureAct5WarpLinks(Map map, int[][] links, String label) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     IntMap<RuntimeWarpState> states = new IntMap<>();
     for (int[] link : links) {
       for (int levelId : link) {
         if (states.containsKey(levelId)) continue;
-        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Levels.Entry level = files().Levels.get(levelId);
         if (level == null) {
           Gdx.app.error(TAG, "Act5 warp level missing: " + levelId);
           continue;

@@ -26,8 +26,10 @@ import com.d2moo.common.seed.Seed;
  * - source/D2Common/src/Drlg/DrlgOutPlace.cpp (DRLGOUTPLACE_InitAct3OutdoorLevel)
  * - source/D2Common/src/Drlg/DrlgOutJung.cpp (DRLGOUTJUNG_BuildJungle, DRLGOUTPLACE_BuildKurast)
  */
-public enum Act3MapBuilderD2MOD implements MapBuilder {
-  INSTANCE;
+public final class Act3MapBuilderD2MOD extends MapBuilderResources implements MapBuilder {
+
+  public Act3MapBuilderD2MOD() { super(); }
+  public Act3MapBuilderD2MOD(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act3MapBuilderD2MOD";
   private static final boolean DEBUG = true;
@@ -109,14 +111,14 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
 
     // D2MOD: Act3 的地图生成逻辑
     // 1. 首先创建城镇（KURASTDOCKTOWN）
-    Levels.Entry townLevel = Riiablo.files.Levels.get(LEVEL_KURASTDOCKTOWN);
+    Levels.Entry townLevel = files().Levels.get(LEVEL_KURASTDOCKTOWN);
     if (townLevel == null) {
       Gdx.app.error(TAG, "Town level not found: " + LEVEL_KURASTDOCKTOWN);
       return;
     }
 
     LvlPrest.Entry townPreset = null;
-    for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+    for (LvlPrest.Entry p : files().LvlPrest) {
       if (p.LevelId == LEVEL_KURASTDOCKTOWN) {
         townPreset = p;
         break;
@@ -124,7 +126,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     }
 
     if (townPreset == null) {
-      townPreset = Riiablo.files.LvlPrest.get(Map.ACT_DEF[2]);
+      townPreset = files().LvlPrest.get(Map.ACT_DEF[2]);
     }
 
     int fileId[] = new int[6];
@@ -136,7 +138,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     int selectIndex = MathUtils.random(numFiles - 1);
     int select = fileId[selectIndex];
 
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.factory = factory;
     base.socket = socket;
     Zone townZone = base.createZoneWithPreset(map, townLevel, townPreset, select, 
@@ -148,7 +150,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     int posY = 0;
     
     for (int levelId : jungleLevels) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null) continue;
 
     int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
@@ -164,11 +166,11 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     // 参考 DRLGOUTPLACE_BuildKurast
     int[] kurastLevels = {LEVEL_LOWERKURAST, LEVEL_KURASTBAZAAR, LEVEL_UPPERKURAST};
     for (int levelId : kurastLevels) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null) continue;
 
       LvlPrest.Entry preset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == levelId) {
           preset = p;
           break;
@@ -211,7 +213,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         D2LevelIds.LEVEL_DURANCEOFHATELEVEL3
     };
     for (int levelId : tailLevels) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
       int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
       int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
@@ -234,7 +236,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     // 1.10f resources are available.
     int undergroundY = posY - 32;
     for (int levelId : ACT3_UNDERGROUND_PRIMARY) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
       int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
       int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
@@ -250,7 +252,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       }
     }
     for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
       int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
       int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
@@ -267,10 +269,10 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     }
 
     // 4. 创建 TRAVINCAL（特殊区域）
-    Levels.Entry travincalLevel = Riiablo.files.Levels.get(LEVEL_TRAVINCAL);
+    Levels.Entry travincalLevel = files().Levels.get(LEVEL_TRAVINCAL);
     if (travincalLevel != null) {
       LvlPrest.Entry travincalPreset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == LEVEL_TRAVINCAL) {
           travincalPreset = p;
           break;
@@ -332,8 +334,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   }
 
   static void placeNativeKurastBorders(Zone zone, int jungleInterlink) {
-    if (Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
-    placeNativeKurastBorders(zone, Riiablo.files.LvlPrest::get, jungleInterlink);
+    if (zone.map.files() == null || zone.map.files().LvlPrest == null) return;
+    placeNativeKurastBorders(zone, zone.map.files().LvlPrest::get, jungleInterlink);
   }
 
   static boolean usesGenericOutdoorBorders(int levelId) {
@@ -433,8 +435,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   /** Compatibility anchors for Kurast sewer/temple/waypoint presets. */
   static void placeNativeKurastSpecials(Zone zone) {
     if (zone == null || zone.presets == null || zone.level == null
-        || zone.nativeTileGrid() != null || Riiablo.files == null
-        || Riiablo.files.LvlPrest == null || zone.gridsX < 5 || zone.gridsY < 5) return;
+        || zone.nativeTileGrid() != null || zone.map.files() == null
+        || zone.map.files().LvlPrest == null || zone.gridsX < 5 || zone.gridsY < 5) return;
     int sewer = -1;
     int temple = -1;
     int waypoint = com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BURBS_WAYPOINT;
@@ -458,14 +460,14 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   static void placeNativeCausewayBridge(Zone zone) {
     if (zone == null || zone.level == null
         || zone.level.Id != LEVEL_KURASTCAUSEWAY || zone.nativeTileGrid() != null
-        || zone.presets == null || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+        || zone.presets == null || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
     placeKurastSpecial(zone, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_BRIDGE, 0, 0);
   }
 
   static void placeNativeTravincalEdges(Zone zone) {
     if (zone == null || zone.level == null || zone.level.Id != LEVEL_TRAVINCAL
         || zone.nativeTileGrid() != null || zone.presets == null
-        || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+        || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
     int[][] entries = {
         {795, 0, 0}, {796, 2, 0}, {797, 6, 0},
         {798, 0, 4}, {799, 2, 4}, {800, 6, 4}
@@ -480,7 +482,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   private static void placeKurastSpecial(Zone zone, int def, int gx, int gy) {
     if (gx < 0 || gy < 0 || gx >= zone.gridsX || gy >= zone.gridsY
         || zone.presets[gx][gy] != null) return;
-    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+    LvlPrest.Entry p = zone.map.files().LvlPrest.get(def);
     if (p == null || p.File == null) return;
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
@@ -491,7 +493,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   static void placeNativeKurastFills(Zone zone) {
     if (zone == null || zone.level == null || zone.presets == null
         || zone.nativeTileGrid() != null || zone.gridsX < 5 || zone.gridsY < 5
-        || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
+        || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
     int def;
     if (zone.level.Id == D2LevelIds.LEVEL_LOWERKURAST) def = 760;
     else if (zone.level.Id == D2LevelIds.LEVEL_KURASTBAZAAR) def = 777;
@@ -505,7 +507,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
             || gx + 1 >= zone.gridsX || gy + 1 >= zone.gridsY
             || zone.presets[gx + 1][gy] != null || zone.presets[gx][gy + 1] != null
             || zone.presets[gx + 1][gy + 1] != null) continue;
-        LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+        LvlPrest.Entry p = zone.map.files().LvlPrest.get(def);
         if (p == null || p.File == null) return;
         int[] files = new int[6];
         int count = Preset.getPresets(p, files);
@@ -526,7 +528,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   }
 
   private static void placeKurastFill(Zone zone, int def, int width, int height) {
-    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+    LvlPrest.Entry p = zone.map.files().LvlPrest.get(def);
     if (p == null || p.File == null || Preset.getPresets(p, new int[6]) == 0) return;
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
@@ -561,8 +563,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     } else {
       return;
     }
-    if (zone.presets[gx][gy] != null || Riiablo.files == null || Riiablo.files.LvlPrest == null) return;
-    LvlPrest.Entry p = Riiablo.files.LvlPrest.get(def);
+    if (zone.presets[gx][gy] != null || zone.map.files() == null || zone.map.files().LvlPrest == null) return;
+    LvlPrest.Entry p = zone.map.files().LvlPrest.get(def);
     if (p == null || p.File == null) return;
     int[] files = new int[6];
     int count = Preset.getPresets(p, files);
@@ -575,12 +577,12 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
    * slot instead of replacing Levels.txt, so preserve that slot behaviour.
    */
   void configureAct3OutdoorWarps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     IntMap<RuntimeWarpState> states = new IntMap<>();
     for (int[] link : ACT3_OUTDOOR_LINKS) {
       for (int levelId : link) {
         if (states.containsKey(levelId)) continue;
-        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Levels.Entry level = files().Levels.get(levelId);
         if (level != null) states.put(levelId, new RuntimeWarpState(level.Vis, level.Warp));
       }
     }
@@ -639,21 +641,21 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
    * logical marker for every endpoint so floor exits are interactable too.
    */
   private void configureAct3UndergroundWarps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     IntMap<RuntimeWarpState> states = new IntMap<>();
     for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = files().Levels.get(levelId);
       if (level != null) states.put(levelId, new RuntimeWarpState(level.Vis, level.Warp));
     }
     for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
-      Levels.Entry source = Riiablo.files.Levels.get(levelId);
+      Levels.Entry source = files().Levels.get(levelId);
       RuntimeWarpState sourceState = states.get(levelId);
       if (source == null || sourceState == null || source.Vis == null || source.Warp == null) continue;
       int count = Math.min(8, Math.min(source.Vis.length, source.Warp.length));
       for (int slot = 0; slot < count; slot++) {
         int destinationId = source.Vis[slot];
         if (destinationId <= 0 || source.Warp[slot] < 0) continue;
-        Levels.Entry destination = Riiablo.files.Levels.get(destinationId);
+        Levels.Entry destination = files().Levels.get(destinationId);
         if (destination == null) continue;
         RuntimeWarpState destinationState = states.get(destinationId);
         if (destinationState == null) {
@@ -683,15 +685,15 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
    * available without changing the native level table.
    */
   private void configureAct3DungeonGraphWarps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     IntMap<RuntimeWarpState> states = new IntMap<>();
-    for (Levels.Entry level : Riiablo.files.Levels) {
+    for (Levels.Entry level : files().Levels) {
       if (level != null && level.Id >= LEVEL_SPIDERFOREST && level.Id <= 102) {
         states.put(level.Id, new RuntimeWarpState(level.Vis, level.Warp));
       }
     }
     int configured = 0;
-    for (Levels.Entry source : Riiablo.files.Levels) {
+    for (Levels.Entry source : files().Levels) {
       if (source == null || source.Id < LEVEL_SPIDERFOREST || source.Id > 102
           || source.Vis == null || source.Warp == null) continue;
       int count = Math.min(8, Math.min(source.Vis.length, source.Warp.length));
@@ -701,7 +703,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
             || destinationId > 102 || !isStaticAct3DungeonEdge(source.Id, destinationId)) {
           continue;
         }
-        Levels.Entry destination = Riiablo.files.Levels.get(destinationId);
+        Levels.Entry destination = files().Levels.get(destinationId);
         if (destination == null || findZone(map, source.Id) == null
             || findZone(map, destinationId) == null) continue;
         RuntimeWarpState destinationState = states.get(destinationId);
@@ -733,8 +735,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       int destinationLevelId) {
     Zone source = findZone(map, sourceLevelId);
     Zone destination = findZone(map, destinationLevelId);
-    Levels.Entry sourceLevel = Riiablo.files.Levels.get(sourceLevelId);
-    Levels.Entry destinationLevel = Riiablo.files.Levels.get(destinationLevelId);
+    Levels.Entry sourceLevel = map.files().Levels.get(sourceLevelId);
+    Levels.Entry destinationLevel = map.files().Levels.get(destinationLevelId);
     if (source == null || destination == null || sourceLevel == null || destinationLevel == null) return;
     int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationLevelId);
     if (sourceSlot < 0) sourceSlot = firstFreeWarpSlot(source);
@@ -991,16 +993,16 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   private static int warpOffsetX(Zone zone, int mainIndex) {
     if (zone == null || zone.level == null || zone.level.Warp == null
         || mainIndex < 0 || mainIndex >= zone.level.Warp.length
-        || zone.level.Warp[mainIndex] < 0 || Riiablo.files == null || Riiablo.files.LvlWarp == null) return 0;
-    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+        || zone.level.Warp[mainIndex] < 0 || zone.map.files() == null || zone.map.files().LvlWarp == null) return 0;
+    LvlWarp.Entry entry = zone.map.files().LvlWarp.get(zone.level.Warp[mainIndex]);
     return entry == null ? 0 : entry.OffsetX;
   }
 
   private static int warpOffsetY(Zone zone, int mainIndex) {
     if (zone == null || zone.level == null || zone.level.Warp == null
         || mainIndex < 0 || mainIndex >= zone.level.Warp.length
-        || zone.level.Warp[mainIndex] < 0 || Riiablo.files == null || Riiablo.files.LvlWarp == null) return 0;
-    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+        || zone.level.Warp[mainIndex] < 0 || zone.map.files() == null || zone.map.files().LvlWarp == null) return 0;
+    LvlWarp.Entry entry = zone.map.files().LvlWarp.get(zone.level.Warp[mainIndex]);
     return entry == null ? 0 : entry.OffsetY;
   }
 

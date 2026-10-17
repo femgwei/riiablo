@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
@@ -19,6 +20,7 @@ import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.ServerGameplayContext;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -31,6 +33,17 @@ public class MapManager extends PassiveSystem {
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private Files files() {
+    return serverContext != null ? serverContext.files() : Riiablo.files;
+  }
+
+  private com.riiablo.save.CharData character() {
+    return serverContext != null ? serverContext.character() : Riiablo.charData;
+  }
 
   protected ComponentMapper<Object> mObject;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -64,7 +77,7 @@ public class MapManager extends PassiveSystem {
         int destinationOverride = zone.level == null ? -1
             : map.getWarpDestinationOverride(zone.level.Id, mainIndex);
         Map.Zone destination = destinationOverride > 0
-            ? map.findZone(Riiablo.files.Levels.get(destinationOverride)) : null;
+            ? map.findZone(files().Levels.get(destinationOverride)) : null;
         if (map.isNativeSeamConnection(zone, destination)) continue;
         if (!hasWarpDestination(zone.level, mainIndex, destinationOverride)) {
           Gdx.app.debug(TAG, String.format(
@@ -87,7 +100,7 @@ public class MapManager extends PassiveSystem {
           if (!nativeWarpSlots.add(mainIndex)) continue;
           com.riiablo.codec.excel.LvlWarp.Entry bounds = zone.level.Warp == null
               || mainIndex >= zone.level.Warp.length ? null
-              : Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+              : files().LvlWarp.get(zone.level.Warp[mainIndex]);
           if (bounds != null) {
             // DrlgRoomTile.cpp AddWarp applies these offsets before exporting
             // UNIT_TILE. Undo them only for the factory's tile-origin API;
@@ -291,7 +304,7 @@ public class MapManager extends PassiveSystem {
       // it as one-based. Act I therefore uses table section 1 here. Units
       // generated after DS1 loading carry a direct Objects.txt class id.
       int objectId = object.ds1Raw
-          ? resolveDs1ObjectId(objectAct, object.presetIndex)
+          ? resolveDs1ObjectId(files(), objectAct, object.presetIndex)
           : object.presetIndex;
       boolean clientRiverPresentation = shouldMaterializeSpawnedObject(objectId,
           object.spawned,
@@ -370,9 +383,9 @@ public class MapManager extends PassiveSystem {
         // across room re-entry and lets the client show the matching native
         // shrine glyph before the first interaction.
         if (resolution.kind == NativePresetObjectResolver.Kind.SHRINE
-            && nativeState.shrineId < 0 && Riiablo.files.Shrines != null) {
+            && nativeState.shrineId < 0 && files().Shrines != null) {
           int shrineId = com.riiablo.engine.server.object.NativeShrineResolver.resolve(
-              Riiablo.files.Shrines, nativeBaseFor(resolvedObjectId), objectId,
+              files().Shrines, nativeBaseFor(files(), resolvedObjectId), objectId,
               zone.level.Id, map.seed, object.x, object.y);
           nativeState.persistShrineId(shrineId);
         }
@@ -381,7 +394,7 @@ public class MapManager extends PassiveSystem {
         // transient OP mode from their DS1 preset.  OP is the activation
         // sequence, not the idle visual state; a fresh/unactivated shrine must
         // always enter NU before its COF is exposed to the renderer.
-        Objects.Entry nativeBase = Riiablo.files.objects.get(resolvedObjectId);
+        Objects.Entry nativeBase = files().objects.get(resolvedObjectId);
         if (!nativeState.activated
           && NativeObjectOperateTable.resolve(nativeBase, resolution.kind)
                 == Lifecycle.SHRINE) {
@@ -435,14 +448,14 @@ public class MapManager extends PassiveSystem {
             zone.presetSourceFile(), object.sourceFile);
   }
 
-  private static com.riiablo.codec.excel.Objects.Entry nativeBaseFor(int objectId) {
-    return Riiablo.files == null || Riiablo.files.objects == null
-        ? null : Riiablo.files.objects.get(objectId);
+  private static com.riiablo.codec.excel.Objects.Entry nativeBaseFor(
+      Files files, int objectId) {
+    return files == null || files.objects == null ? null : files.objects.get(objectId);
   }
 
-  private static int resolveDs1ObjectId(int act, int presetIndex) {
-    if (presetIndex < 0 || presetIndex >= Riiablo.files.obj.getSize(act)) return 573;
-    return Riiablo.files.obj.getObjectId(act, presetIndex);
+  private static int resolveDs1ObjectId(Files files, int act, int presetIndex) {
+    if (files == null || presetIndex < 0 || presetIndex >= files.obj.getSize(act)) return 573;
+    return files.obj.getObjectId(act, presetIndex);
   }
 
   static boolean isClientRiverObject(int objectId) {
@@ -509,8 +522,8 @@ public class MapManager extends PassiveSystem {
     Levels.Entry level = zone != null ? zone.level : null;
     boolean active = level != null
         && level.Waypoint != 0xFF
-        && Riiablo.charData != null
-        && Riiablo.charData.isWaypointActivated(level.Act, level.Waypoint);
+        && character() != null
+        && character().isWaypointActivated(level.Act, level.Waypoint);
     reference.mode = resolveWaypointInitialMode(active);
     Gdx.app.log(TAG, String.format(
         "Waypoint initial visual state: entity=%d level=%s(%d) active=%s mode=%s",
@@ -524,8 +537,8 @@ public class MapManager extends PassiveSystem {
 
   private boolean isWaypoint(DS1 ds1, DS1.Object object) {
     if (object.type != DS1.Object.STATIC_TYPE) return false;
-    int objectId = Riiablo.files.obj.getObjectId(ds1.getAct(), object.id);
-    Objects.Entry base = Riiablo.files.objects.get(objectId);
+    int objectId = files().obj.getObjectId(ds1.getAct(), object.id);
+    Objects.Entry base = files().objects.get(objectId);
     return base != null
         && (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) != 0;
   }
@@ -589,13 +602,13 @@ public class MapManager extends PassiveSystem {
     for (int i = 0; i < zone.nativeObjects.size; i++) {
       Map.NativeObject nativeObject = zone.nativeObjects.get(i);
       int objectId = nativeObject.ds1Raw
-          ? resolveDs1ObjectId(objectAct, nativeObject.presetIndex)
+          ? resolveDs1ObjectId(files(), objectAct, nativeObject.presetIndex)
           : nativeObject.presetIndex;
       NativePresetObjectResolver.Resolution resolution =
           NativePresetObjectResolver.resolve(objectAct, zone.level.Id, objectId,
               map.seed, nativeObject.x, nativeObject.y);
       if (!resolution.shouldCreate()) continue;
-      Objects.Entry base = Riiablo.files.objects.get(resolution.classId);
+      Objects.Entry base = files().objects.get(resolution.classId);
       if (base == null || (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == 0) continue;
       return zone.findRoomEx(zone.x + nativeObject.x, zone.y + nativeObject.y);
     }

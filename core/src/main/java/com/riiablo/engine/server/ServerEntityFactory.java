@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.ai.NecroPet;
 import com.riiablo.attributes.Attributes;
@@ -172,7 +173,7 @@ public class ServerEntityFactory extends EntityFactory {
   public int createDynamicObject(int act, int monPresetId, float x, float y) {
     String objectType;
     try {
-      MonPreset.Entry preset = Riiablo.files.MonPreset.get(act, monPresetId);
+      MonPreset.Entry preset = files().MonPreset.get(act, monPresetId);
       objectType = preset != null ? preset.Place : null;
     } catch (RuntimeException ex) {
       log.error("[MONSTER_PLACEMENT] phase=resolve_failed act={} presetId={} reason={}",
@@ -183,20 +184,20 @@ public class ServerEntityFactory extends EntityFactory {
         act, monPresetId, objectType, x, y);
     
     // 首先尝试从 MonStats 表查找（普通怪物）
-    MonStats.Entry monstats = Riiablo.files.monstats.get(objectType);
+    MonStats.Entry monstats = files().monstats.get(objectType);
 
     // D2Game's placement directives are not MonStats keys. Resolve the
     // single-monster directives to their native base rows before giving up;
     // group directives (unique/champion packs) remain a separate generator.
-    if (monstats == null) monstats = resolvePlacementMonster(objectType);
+    if (monstats == null) monstats = resolvePlacementMonster(files(), objectType);
     
     // 如果找不到，尝试从 SuperUniques 表查找（超级暗金怪）
     com.riiablo.codec.excel.SuperUniques.Entry superUnique = null;
-    if (monstats == null && Riiablo.files.SuperUniques != null) {
-      superUnique = Riiablo.files.SuperUniques.get(objectType);
+    if (monstats == null && files().SuperUniques != null) {
+      superUnique = files().SuperUniques.get(objectType);
       if (superUnique != null) {
         // SuperUnique 的 MonClass 字段指向实际的 MonStats 记录
-        monstats = Riiablo.files.monstats.get(superUnique.MonClass);
+        monstats = files().monstats.get(superUnique.MonClass);
       }
     }
     
@@ -220,7 +221,7 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createStaticObject(int act, int objId, float x, float y) {
-    int objectType = Riiablo.files.obj.getObjectId(act, objId);
+    int objectType = files().obj.getObjectId(act, objId);
     return createStaticObjectBase(objectType, x, y);
   }
 
@@ -230,7 +231,7 @@ public class ServerEntityFactory extends EntityFactory {
   }
 
   private int createStaticObjectBase(int objectId, float x, float y) {
-    Objects.Entry base = Riiablo.files.objects.get(objectId);
+    Objects.Entry base = files().objects.get(objectId);
     if (base == null) return Engine.INVALID_ENTITY;
 
     // Objects.txt's ClientFn=2 is the native client-side rain-ripple
@@ -258,7 +259,7 @@ public class ServerEntityFactory extends EntityFactory {
 
     if (base.Draw) {
       // D2Common COMPOSIT_GetCof uses ObjType, not Objects.Token.
-      mCofReference.create(id).set(Riiablo.files.ObjType.get(base.Id).Token, initialMode);
+      mCofReference.create(id).set(files().ObjType.get(base.Id).Token, initialMode);
       int[] component = mCofComponents.create(id).component;
       Arrays.fill(component, CofComponents.COMPONENT_NULL);
       mCofAlphas.create(id);
@@ -286,6 +287,11 @@ public class ServerEntityFactory extends EntityFactory {
 
   /** Resolves MonPreset.Place directives that spawn one concrete monster. */
   public static MonStats.Entry resolvePlacementMonster(String placement) {
+    return resolvePlacementMonster(Riiablo.files, placement);
+  }
+
+  private static MonStats.Entry resolvePlacementMonster(Files files, String placement) {
+    if (files == null) return null;
     if (placement == null) return null;
     String normalized = placement.trim().toLowerCase(java.util.Locale.ROOT);
     String monsterId;
@@ -302,7 +308,7 @@ public class ServerEntityFactory extends EntityFactory {
       default:
         return null;
     }
-    return Riiablo.files.monstats.get(monsterId);
+    return files.monstats.get(monsterId);
   }
 
   protected static boolean isWaypointObject(Objects.Entry base) {
@@ -383,7 +389,7 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {
     if (!mMonster.has(entityId) || !mPosition.has(entityId) || mode < 0 || mode >= 16) return false;
-    MonStats.Entry row = Riiablo.files.monstats.get(monsterId);
+    MonStats.Entry row = files().monstats.get(monsterId);
     if (row == null || !row.enabled) return false;
     Vector2 position = mPosition.get(entityId).position;
     int rebuilt = initializeMonster(entityId, monsterId, position.x, position.y,
@@ -402,12 +408,12 @@ public class ServerEntityFactory extends EntityFactory {
 
   private int initializeMonster(int existingId, int monsterId, float x, float y,
       int rank, long affixes, int championType, int uniqueId) {
-    MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
+    MonStats.Entry monstats = files().monstats.get(monsterId);
     if (monstats == null) {
       log.error("[MONSTER_NATIVE_STATS] monster row missing: id={}", monsterId);
       return Engine.INVALID_ENTITY;
     }
-    MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monstats.MonStatsEx);
+    MonStats2.Entry monstats2 = files().monstats2.get(monstats.MonStatsEx);
     if (monstats2 == null) {
       log.error("[MONSTER_NATIVE_STATS] MonStats2 row missing: monster={} row={}",
           monstats.Id, monstats.MonStatsEx);
@@ -496,7 +502,7 @@ public class ServerEntityFactory extends EntityFactory {
       // allocation, so initialize here rather than in BaalCrab.initialize().
       mNativeAiPathCache.create(id).allocated();
     }
-    monster.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
+    monster.rngState = NativeRng.forUnit(gameSeed(), id).state();
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
 
     Attributes attrs = existingId != Engine.INVALID_ENTITY && mAttributesWrapper.has(id)
@@ -577,8 +583,8 @@ public class ServerEntityFactory extends EntityFactory {
     if (existingId != Engine.INVALID_ENTITY) reference.clearVisualOverride();
     // D2 COF table uses MonStats.Code (abbreviation like "FA"), not Id (full name like "fallen1")
     reference.token  = monstats.Code;
-    reference.mode   = monstats.spawnmode.isEmpty() ? Engine.Monster.MODE_NU : (byte) Riiablo.files.MonMode.index(monstats.spawnmode);
-    int weaponClass = Riiablo.files.WeaponClass.index(monstats2.BaseW);
+    reference.mode   = monstats.spawnmode.isEmpty() ? Engine.Monster.MODE_NU : (byte) files().MonMode.index(monstats.spawnmode);
+    int weaponClass = files().WeaponClass.index(monstats2.BaseW);
     reference.wclass = nativeMonsterWeaponClass(weaponClass);
     if (weaponClass < Engine.WEAPON_NIL || weaponClass > Engine.WEAPON_HT2) {
       log.info("[MONSTER_ANIMATION] monster={} BaseW={} resolved=HTH reason=unknown_base_weapon",
@@ -593,7 +599,7 @@ public class ServerEntityFactory extends EntityFactory {
         hasComponentValue = true;
         String[] v = StringUtils.remove(ComponentV, '"').split(",");
         int random = MathUtils.random(0, v.length - 1);
-        component[i] = Riiablo.files.compcode.index(v[random]);
+        component[i] = files().compcode.index(v[random]);
       }
     }
     // A few native summon rows (most notably Valkyrie/Dopplezon) leave
@@ -685,7 +691,7 @@ public class ServerEntityFactory extends EntityFactory {
       }
     }
 
-    MonStats2.Entry summonStats2 = Riiablo.files.monstats2.get(summon.MonStatsEx);
+    MonStats2.Entry summonStats2 = files().monstats2.get(summon.MonStatsEx);
     int footprint = summonStats2 != null ? Math.max(1, summonStats2.SizeX) : 1;
     summonPosition.set(x, y);
     Map.Zone zone = map != null ? map.getZone(x, y) : null;
@@ -751,7 +757,7 @@ public class ServerEntityFactory extends EntityFactory {
   @Override
   public int createDiabPrisonSegment(int monsterId, int x, int y) {
     Map.Zone zone = map == null ? null : map.getZone(x, y);
-    MonStats.Entry row = Riiablo.files.monstats.get(monsterId);
+    MonStats.Entry row = files().monstats.get(monsterId);
     if (row == null || monsterId < 340 || monsterId > 343 || x == 0 || y == 0 || zone == null || zone.isTown()
         || !isStaticFootprintFree(zone, x, y, 1)) return Engine.INVALID_ENTITY;
     DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
@@ -774,7 +780,7 @@ public class ServerEntityFactory extends EntityFactory {
           ownerId, summon != null ? summon.Id : "null", x, y);
       return Engine.INVALID_ENTITY;
     }
-    MonStats2.Entry stats2 = Riiablo.files.monstats2.get(summon.MonStatsEx);
+    MonStats2.Entry stats2 = files().monstats2.get(summon.MonStatsEx);
     Map.Zone zone = map.getZone(x, y);
     int footprint = stats2 != null ? Math.max(1, stats2.SizeX) : 1;
     if (zone == null || zone.isTown() || !isStaticFootprintFree(zone, x, y, footprint)) {
@@ -958,14 +964,14 @@ public class ServerEntityFactory extends EntityFactory {
     } else {
       String configuredMode = monster.monstats2.ResurrectMode;
       if (configuredMode != null && !configuredMode.isEmpty()) {
-        int mode = Riiablo.files.MonMode.index(configuredMode);
+        int mode = files().MonMode.index(configuredMode);
         if (mode >= 0 && mode < 16) resurrectMode = mode;
       }
       mSequence.create(monsterId).sequence((byte) resurrectMode, Engine.Monster.MODE_NU);
 
       configuredSkill = monster.monstats2.ResurrectSkill;
       Skills.Entry resurrectSkill = configuredSkill == null || configuredSkill.isEmpty()
-          ? null : Riiablo.files.skills.get(configuredSkill);
+          ? null : files().skills.get(configuredSkill);
       if (resurrectSkill != null) {
         Vector2 position = mPosition.get(monsterId).position;
         mCasting.create(monsterId).set(
@@ -1166,7 +1172,7 @@ public class ServerEntityFactory extends EntityFactory {
     if (com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(index)) {
       int destination = com.riiablo.engine.server.quest.QuestWarp.destinationLevelId(index);
       Map.Zone zone = sourceZoneHint != null ? sourceZoneHint : map.getZone(x, y);
-      Levels.Entry destinationLevel = Riiablo.files.Levels.get(destination);
+      Levels.Entry destinationLevel = files().Levels.get(destination);
       LvlWarp.Entry portalBounds = neutralWarpBounds();
       if (zone == null || destinationLevel == null || portalBounds == null) {
         log.error("[QUEST_WARP] creation failed: sourceZone={} destination={} bounds={}",
@@ -1260,7 +1266,7 @@ public class ServerEntityFactory extends EntityFactory {
       return Engine.INVALID_ENTITY;
     }
 
-    Levels.Entry dstLevel = Riiablo.files.Levels.get(dst);
+    Levels.Entry dstLevel = files().Levels.get(dst);
     if (dstLevel == null) {
       Gdx.app.error(TAG, String.format("[WARP] destination level missing source=%d mainIndex=%d dst=%d override=%d index=0x%08X",
           zone.level.Id, mainIndex, dst, dstFromOverride, index));
@@ -1269,7 +1275,7 @@ public class ServerEntityFactory extends EntityFactory {
       return Engine.INVALID_ENTITY;
     }
 
-    LvlWarp.Entry warp = Riiablo.files.LvlWarp.get(wrp);
+    LvlWarp.Entry warp = files().LvlWarp.get(wrp);
     if (warp == null && dstFromOverride > 0) warp = neutralWarpBounds();
     if (warp == null) {
       // LvlWarp entry not found, skip creating warp
@@ -1312,11 +1318,11 @@ public class ServerEntityFactory extends EntityFactory {
 
   /** Returns a usable LvlWarp bounds record even when a reduced table omits
    * the conventional id 0 row used by quest portals and synthetic markers. */
-  private static LvlWarp.Entry neutralWarpBounds() {
-    if (Riiablo.files == null || Riiablo.files.LvlWarp == null) return null;
-    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(0);
+  private LvlWarp.Entry neutralWarpBounds() {
+    if (files() == null || files().LvlWarp == null) return null;
+    LvlWarp.Entry entry = files().LvlWarp.get(0);
     if (entry != null) return entry;
-    for (LvlWarp.Entry candidate : Riiablo.files.LvlWarp) {
+    for (LvlWarp.Entry candidate : files().LvlWarp) {
       if (candidate != null) return candidate;
     }
     return null;
@@ -1350,7 +1356,7 @@ public class ServerEntityFactory extends EntityFactory {
 
   private int createMissile(int missileId, Vector2 angle, Vector2 position,
       int ownerId, int damageLevel) {
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileId);
+    Missiles.Entry missile = files().Missiles.get(missileId);
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
     missileComponent.set(missile, position, missile.Range).setOwner(ownerId);
@@ -1360,7 +1366,7 @@ public class ServerEntityFactory extends EntityFactory {
           com.riiablo.engine.server.component.Missile.nativeRangeFrames(missile,
               damageLevel);
     }
-    missileComponent.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
+    missileComponent.rngState = NativeRng.forUnit(gameSeed(), id).state();
 
     Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)
         ? mAttributesWrapper.get(ownerId).attrs : null;

@@ -192,7 +192,7 @@ public class Main extends ApplicationAdapter {
     }
 
     Gdx.app.log(TAG, "Generating map...");
-    map = new Map(seed, diff);
+    map = new Map(seed, diff, com.riiablo.map.MapResources.fromGlobals());
     mapManager = new MapManager();
     Gdx.app.log(TAG, "  generating act 1...");
     long start = TimeUtils.millis();
@@ -239,6 +239,8 @@ public class Main extends ApplicationAdapter {
         ;
     WorldConfiguration config = builder.build()
         .register("map", map)
+        .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(
+            Riiablo.files, map.seed(), null, Riiablo.anim))
         .register("factory", factory)
         .register("player", server.player)
         .register("outPackets", server.outPackets)
@@ -246,7 +248,7 @@ public class Main extends ApplicationAdapter {
     Riiablo.engine = world = new World(config);
 
     world.inject(map);
-    world.inject(Act1MapBuilder.INSTANCE);
+    map.injectBuilders(world);
     world.inject(packetProcessor);
 
     map.generate();

@@ -19,8 +19,10 @@ import com.riiablo.map.d2moo.Act4D2MOOLayoutBridge;
  * 参考 D2MOD:
  * - source/D2Common/src/Drlg/DrlgOutPlace.cpp (gAct4OutdoorDrlgLink, gAct4ChaosSanctumDrlgLink)
  */
-public enum Act4MapBuilderD2MOD implements MapBuilder {
-  INSTANCE;
+public final class Act4MapBuilderD2MOD extends MapBuilderResources implements MapBuilder {
+
+  public Act4MapBuilderD2MOD() { super(); }
+  public Act4MapBuilderD2MOD(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act4MapBuilderD2MOD";
   private static final boolean DEBUG = true;
@@ -52,7 +54,7 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     linkData.rand[0][iteration] = linkData.rand[1][iteration];
 
     int levelLink = linkData.links[iteration].levelLink;
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     
     // 随机选择使用哪个函数计算偏移
     if ((MathUtils.random.nextInt() & 1) == 0) {
@@ -86,7 +88,7 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     // 初始化区域尺寸
     for (int i = 0; i < act4Links.length && act4Links[i] != null; i++) {
       linkData.links[i] = act4Links[i];
-      Levels.Entry level = Riiablo.files.Levels.get(act4Links[i].level);
+      Levels.Entry level = files().Levels.get(act4Links[i].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act4Links[i].level);
         continue;
@@ -101,13 +103,13 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     int counter = 0;
     while (counter < act4Links.length && act4Links[counter] != null) {
       boolean success = false;
-      Levels.Entry level = Riiablo.files.Levels.get(act4Links[counter].level);
+      Levels.Entry level = files().Levels.get(act4Links[counter].level);
       if (level == null) {
         Gdx.app.error(TAG, "Level not found: " + act4Links[counter].level);
         break;
       }
       
-      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+      BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
       
       if (act4Links[counter].level == LEVEL_THEPANDEMONIUMFORTRESS) {
         // sub_6FD81330 - 第一个区域（城镇）
@@ -178,16 +180,16 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     int offsetY = -linkData.coords[townIndex].y;
     
     // 创建区域
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     base.factory = factory;
     base.socket = socket;
     
     for (int i = 0; i < act4Links.length && act4Links[i] != null; i++) {
-      Levels.Entry level = Riiablo.files.Levels.get(act4Links[i].level);
+      Levels.Entry level = files().Levels.get(act4Links[i].level);
       if (level == null) continue;
       
       LvlPrest.Entry preset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == act4Links[i].level) {
           preset = p;
           break;
@@ -221,10 +223,10 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     }
 
     // 处理 CHAOSSANCTUM（独立区域）
-    Levels.Entry chaosLevel = Riiablo.files.Levels.get(LEVEL_CHAOSSANCTUM);
+    Levels.Entry chaosLevel = files().Levels.get(LEVEL_CHAOSSANCTUM);
     if (chaosLevel != null) {
       LvlPrest.Entry chaosPreset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
+      for (LvlPrest.Entry p : files().LvlPrest) {
         if (p.LevelId == LEVEL_CHAOSSANCTUM) {
           chaosPreset = p;
           break;
@@ -272,12 +274,12 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
 
   /** Installs native first-empty-slot links for the Act IV progression. */
   void configureAct4Warps(Map map) {
-    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    if (map == null || files() == null || files().Levels == null) return;
     int configured = 0;
     for (int i = 0; i + 1 < ACT4_CHAIN.length; i++) {
       int sourceId = ACT4_CHAIN[i], destinationId = ACT4_CHAIN[i + 1];
-      Levels.Entry sourceLevel = Riiablo.files.Levels.get(sourceId);
-      Levels.Entry destinationLevel = Riiablo.files.Levels.get(destinationId);
+      Levels.Entry sourceLevel = files().Levels.get(sourceId);
+      Levels.Entry destinationLevel = files().Levels.get(destinationId);
       Zone source = findZone(map, sourceId), destination = findZone(map, destinationId);
       if (sourceLevel == null || destinationLevel == null || source == null || destination == null) continue;
       int sourceSlot = configuredSlot(map, sourceId, destinationId);
@@ -392,7 +394,7 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     for (int i = 0; i < ACT4_CHAIN.length; i++) {
       int levelId = ACT4_CHAIN[i];
       if (findZone(map, levelId) != null) continue;
-      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      Levels.Entry level = map.files().Levels.get(levelId);
       if (level == null) continue;
       int width = NativeDataTables.levelSizeX(level, diff, 1) * 5;
       int height = NativeDataTables.levelSizeY(level, diff, 1) * 5;

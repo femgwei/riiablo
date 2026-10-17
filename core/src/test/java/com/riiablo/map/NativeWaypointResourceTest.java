@@ -21,10 +21,10 @@ class NativeWaypointResourceTest extends RiiabloTest {
       int checked = 0;
       for (int act = 1; act <= 4; act++) {
         Map map = new Map(seed, 0);
-        if (act == 1) Act2MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 2) Act3MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 3) Act4MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
-        if (act == 4) Act5MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
+        if (act == 1) map.act2Builder().generate(map, seed, 0);
+        if (act == 2) map.act3Builder().generate(map, seed, 0);
+        if (act == 3) map.act4Builder().generate(map, seed, 0);
+        if (act == 4) map.act5Builder().generate(map, seed, 0);
         MapManager manager = new MapManager();
         manager.map = map;
         for (Map.Zone zone : map.getZones()) {
@@ -42,7 +42,7 @@ class NativeWaypointResourceTest extends RiiabloTest {
 
   @Test void painWaypointTravelMaterializesDeferredRoomAndReusesExactCenter() {
     Map map = new Map(127897359, 0);
-    Act5MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
+    map.act5Builder().generate(map, map.seed, 0);
     Map.Zone zone = map.findZone(Riiablo.files.Levels.get(123));
     MapManager manager = new MapManager();
     ObjectFactory factory = new ObjectFactory();

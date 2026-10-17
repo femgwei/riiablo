@@ -15,8 +15,10 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
-public enum Act1MapBuilder implements MapBuilder {
-  INSTANCE;
+public final class Act1MapBuilder extends MapBuilderResources implements MapBuilder {
+
+  public Act1MapBuilder() { super(); }
+  public Act1MapBuilder(MapResources resources) { super(resources); }
 
   private static final String TAG = "Act1MapBuilder";
   private static final boolean DEBUG       = true;
@@ -31,8 +33,8 @@ public enum Act1MapBuilder implements MapBuilder {
   @Override
   public void generate(Map map, int seed, int diff) {
     int def = Map.ACT_DEF[0];
-    LvlPrest.Entry preset = Riiablo.files.LvlPrest.get(def);
-    Levels.Entry   level  = Riiablo.files.Levels.get(preset.LevelId);
+    LvlPrest.Entry preset = files().LvlPrest.get(def);
+    Levels.Entry   level  = files().Levels.get(preset.LevelId);
     if (DEBUG_BUILD) Gdx.app.debug(TAG, level.LevelName);
 
     int fileId[] = new int[6];
@@ -45,21 +47,21 @@ public enum Act1MapBuilder implements MapBuilder {
     zone.town = true;
     Zone prev = zone;
 
-    level = Riiablo.files.Levels.get(2);
+    level = files().Levels.get(2);
     zone = map.addZone(level, 8, 8);
     zone.setPosition(prev.width - zone.width, -zone.height);
     if (DEBUG_BUILD) Gdx.app.debug(TAG, "Moved " + zone.level.LevelName + " " + zone);
 
-    Preset SB   = Preset.of(Riiablo.files.LvlPrest.get(4),  0);
-    Preset EB   = Preset.of(Riiablo.files.LvlPrest.get(5),  0);
-    Preset NB   = Preset.of(Riiablo.files.LvlPrest.get(6),  0);
-    Preset WB   = Preset.of(Riiablo.files.LvlPrest.get(7),  0);
-    Preset NWB  = Preset.of(Riiablo.files.LvlPrest.get(9),  0);
-    Preset LRC  = Preset.of(Riiablo.files.LvlPrest.get(27), 0);
-    Preset UR   = Preset.of(Riiablo.files.LvlPrest.get(26), 3);
-    Preset URNB = Preset.of(Riiablo.files.LvlPrest.get(26), 1);
-    Preset SWB  = Preset.of(Riiablo.files.LvlPrest.get(8),  0);
-    Preset LB   = Preset.of(Riiablo.files.LvlPrest.get(12), 0);
+    Preset SB   = Preset.of(files().LvlPrest.get(4),  0);
+    Preset EB   = Preset.of(files().LvlPrest.get(5),  0);
+    Preset NB   = Preset.of(files().LvlPrest.get(6),  0);
+    Preset WB   = Preset.of(files().LvlPrest.get(7),  0);
+    Preset NWB  = Preset.of(files().LvlPrest.get(9),  0);
+    Preset LRC  = Preset.of(files().LvlPrest.get(27), 0);
+    Preset UR   = Preset.of(files().LvlPrest.get(26), 3);
+    Preset URNB = Preset.of(files().LvlPrest.get(26), 1);
+    Preset SWB  = Preset.of(files().LvlPrest.get(8),  0);
+    Preset LB   = Preset.of(files().LvlPrest.get(12), 0);
 
     for (int y = 0; y < zone.gridsY; y++) {
       zone.presets[0][y] = EB;
@@ -77,10 +79,10 @@ public enum Act1MapBuilder implements MapBuilder {
     zone.presets[2][zone.gridsY - 1] = SB;
     zone.presets[3][zone.gridsY - 1] = LB;
 
-    zone.presets[6][zone.gridsY - 2] = Preset.of(Riiablo.files.LvlPrest.get(48), 1);
+    zone.presets[6][zone.gridsY - 2] = Preset.of(files().LvlPrest.get(48), 1);
 
     // ID_VIS_5_42
-    zone.presets[5][zone.gridsY - 2] = Preset.of(Riiablo.files.LvlPrest.get(52), 0);
+    zone.presets[5][zone.gridsY - 2] = Preset.of(files().LvlPrest.get(52), 0);
     zone.setWarp(Map.ID.VIS_5_42, Map.ID.VIS_0_03);
     zone.generator = new Zone.Generator() {
       final float SPAWN_MULT = 2f;
@@ -93,7 +95,7 @@ public enum Act1MapBuilder implements MapBuilder {
         MonStats.Entry[] monstats = new MonStats.Entry[numMon];
         for (int i = 0; i < numMon; i++) {
           String mon = zone.level.mon[i];
-          monstats[i] = Riiablo.files.monstats.get(mon);
+          monstats[i] = files().monstats.get(mon);
           prob += monstats[i].Rarity;
         }
 
@@ -132,13 +134,13 @@ public enum Act1MapBuilder implements MapBuilder {
       }
     };
 
-    level = Riiablo.files.Levels.get(8);
+    level = files().Levels.get(8);
     zone = map.addZone(level, 24, 24);
     zone.setPosition(level.OffsetX, level.OffsetY);
     if (DEBUG_BUILD) Gdx.app.debug(TAG, "Moved " + zone.level.LevelName + " " + zone);
-    zone.presets[0][1] = Preset.of(Riiablo.files.LvlPrest.get(84), 0);
-    zone.presets[1][1] = Preset.of(Riiablo.files.LvlPrest.get(61), 1);
-    zone.presets[1][0] = Preset.of(Riiablo.files.LvlPrest.get(97), 0);
+    zone.presets[0][1] = Preset.of(files().LvlPrest.get(84), 0);
+    zone.presets[1][1] = Preset.of(files().LvlPrest.get(61), 1);
+    zone.presets[1][0] = Preset.of(files().LvlPrest.get(97), 0);
     zone.setWarp(Map.ID.VIS_0_03, Map.ID.VIS_5_42);
   }
 }

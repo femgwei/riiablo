@@ -10485,3 +10485,40 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
 - [x] 该任务排除通用 Box2D/对象碰撞和 Act I 资源实验测试，避免把非地图完成门槛的
   环境依赖混入 A2--A5 地图回归；完整 `:core:test` 仍保留给全量验证。
 - [x] 另一台电脑可直接执行：`./gradlew.bat :core:mapRegression --no-daemon`。
+
+## 2026-10-17 子系统依赖与生命周期集中改造
+
+- [x] `ServerGameplayContext` 显式绑定每个 World 的 Files、seed、可选角色和动画表；
+  EntityFactory/ServerEntityFactory、Actioneer、ServerSkillSystem、ObjectInitializer 与
+  MapManager 的相关生产读取使用该上下文。独立 D2GS 不再从客户端角色读取初始 waypoint。
+- [x] 新增 `ServerSystemHarness`，直接装配 EventSystem、被测系统和命名服务，按
+  AuthoritativeSimulation 的 25Hz 边界推进；不创建 Client、窗口或 socket。
+  双 World 实测使用相同实体 ID、不同技能/导弹表及 seed；替换全局 Files 后仍生成各自的导弹。
+- [x] `MapResources` 显式传入表、资源管理器、MPQ、COF 和 cvar 服务；地图首次加载、
+  后续完成与释放均使用所属资源。Act I--V 的原生及兼容构建器共十个 enum 单例改为实例，
+  缓存、生成状态、factory/socket 注入归所属 Map。GameScreen、D2GS、旧 Netty 入口、
+  MapViewer 与原有资源测试同步更新。
+- [x] 两类加载屏通过 LoadingScreenHost 借用显示资源与导航回调；构造后的全局宿主替换
+  不会改变其 batch、palette、viewport 或导航目标。修复 Client.popScreen 永久 dispose
+  加载屏之后，GameScreen 在下一次 Act 旅行继续复用已销毁对象的问题；每次生成新视图，
+  会话依赖只持有一次引用。真实 Client 导航夹具连续完成三个 Act 的 push/load/pop。
+- [x] 新增集中入口 `:core:subsystemRegression`，覆盖客户端上下文、屏幕生命周期与导航、
+  地图资源、双 World 隔离、工厂/物件及代表性技能。该入口是本次依赖边界回归，
+  不等同于全部技能数据验收；`core:test` 的其余测试仍保留。
+- [x] 最终统一执行 `:core:subsystemRegression` 共 760 项：758 项通过、0 项失败、
+  2 项跳过（MercenaryHudAssetProbeTest 的两项资源探针，不计作通过）；
+  `:core:mapRegression` 203 项通过，D2GS 装配 5 项通过。
+  core、desktop、D2GS、旧 Netty 服务端及 MapViewer 编译通过，统一构建成功。
+  各入口可能覆盖相同测试，不把不同任务的项数相加作为去重后的全量测试数。
+- [x] 单次复现本轮统一检查：
+  `./gradlew.bat :core:subsystemRegression :core:mapRegression :server:d2gs:test --tests '*D2GSSimulationAssemblyTest' :desktop:compileJava :server:d2gs:compileJava :server:netty:compileJava :tools:map-viewer:compileJava --console=plain`。
+- [ ] 尚未达到 dark-magic 式全系统独立分层：Stat.entry/属性编解码、部分技能辅助器、
+  MissileCollisionSystem、D2MOO 桥接层的全局表/静态缓存与共享 RNG、GameScreen 的部分
+  UI/宿主访问仍需迁移；core 也尚未按编译依赖拆成独立模块。
+- [ ] 扩展技能回归初次执行 755 项，9 项失败、2 项跳过。其中新增的 Bestow 表隔离
+  夹具暴露属性层仍依赖 ItemStatCost；夹具保留该共享表，单独替换技能表以验证 Actioneer
+  的边界。SummonQuota 夹具补齐缺失的 townPortalRegistry。其余六项来自
+  AmazonSkillSpecializationTest（持续火焰时长/描述）、NecromancerExplosionIntegrationTest
+  （伤害/吸收范围）及 NecromancerGolemSideEffectTest（原始 TXT Param5 期望 10，安装值 0），
+  仍未通过；本次没有修改这些技能业务或放宽断言，不能报告全量测试通过。
+- [ ] 本轮未执行真实双客户端、Android 真机、人工画面对照、长期压力或性能验收。

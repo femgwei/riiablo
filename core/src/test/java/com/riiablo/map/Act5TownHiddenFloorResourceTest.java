@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class Act5TownHiddenFloorResourceTest extends RiiabloTest {
   @Test void townCollisionArtworkStaysHiddenWithoutRemovingCollision() {
     Map map = new Map(127897359, 0);
-    Act5MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
+    map.act5Builder().generate(map, map.seed, 0);
     Map.Zone town = null;
     for (Map.Zone zone : map.getZones()) if (zone.levelId() == 109) town = zone;
     assertNotNull(town);

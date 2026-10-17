@@ -146,6 +146,32 @@ class MapAssetLifecycleTest {
     verifyNoInteractions(Riiablo.assets);
   }
 
+  @Test void explicitMapsUseDifferentManagersFromTheirFirstLoadDespiteGlobalReplacement() {
+    AssetManager other = new AssetManager(FileHandle::new, false);
+    other.setLoader(Resource.class, new ResourceLoader());
+    AssetManager replacement = mock(AssetManager.class);
+    Map first = new Map(1, 0, new MapResources(mock(com.riiablo.Files.class), assets, null));
+    Map second = new Map(2, 0, new MapResources(mock(com.riiablo.Files.class), other, null));
+    Map.Zone a = zone("shared"), b = zone("shared");
+    a.map = first; first.zones.add(a);
+    b.map = second; second.zones.add(b);
+    Riiablo.assets = replacement;
+    try {
+      first.load(); second.load();
+      Resource firstResource = assets.finishLoadingAsset("shared");
+      Resource secondResource = other.finishLoadingAsset("shared");
+      assertNotSame(firstResource, secondResource);
+      first.finishLoading(); second.finishLoading();
+      first.dispose();
+      assertEquals(1, firstResource.disposals);
+      assertEquals(0, secondResource.disposals);
+      assertSame(secondResource, other.get("shared"));
+      second.dispose();
+      assertEquals(1, secondResource.disposals);
+      verifyNoInteractions(replacement);
+    } finally { first.dispose(); second.dispose(); other.dispose(); }
+  }
+
   @Test void unloadFailureStillClearsAllZonesAndIndicesWithoutRetry() {
     AssetManager owner = mock(AssetManager.class);
     when(owner.contains(anyString())).thenReturn(true);

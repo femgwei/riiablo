@@ -32,7 +32,7 @@ class NativeLevelTypesResourceTest extends RiiabloTest {
 
   @Test void actFiveProductionDependenciesInstallNativeTerrain() {
     Map map = new Map(127897359, 0);
-    Act5MapBuilderD2MOD.INSTANCE.generate(map, map.seed, 0);
+    map.act5Builder().generate(map, map.seed, 0);
     for (Map.Zone zone : map.getZones()) {
       DT1s library = new DT1s();
       // Exercise Zone's production type/mask selection. Loading the DT1s

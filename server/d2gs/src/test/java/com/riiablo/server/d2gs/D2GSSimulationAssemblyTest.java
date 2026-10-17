@@ -31,7 +31,7 @@ public class D2GSSimulationAssemblyTest {
     // Artemis reserves the three built-in slots until World construction.
     assertEquals(Arrays.asList(("<reserved> <reserved> <reserved> "
         + "EventSystem MenuManager DialogManager NpcVendorSessionSystem ZoneTransitionCleanupSystem "
-        + "Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem Act4QuestSystem "
+        + "NativeQuestRandomState Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem Act4QuestSystem "
         + "Act5QuestSystem Act2TaintedSunQuestSystem Act2DurielQuestSystem NativeMercenaryRewardSystem "
         + "NativeCountessRewardSystem NativeCharsiImbueSystem ServerNetworkIdManager SerializationManager "
         + "MapManager ServerItemManager ItemGenerator CofManager EnvironmentSystem ObjectInitializer "

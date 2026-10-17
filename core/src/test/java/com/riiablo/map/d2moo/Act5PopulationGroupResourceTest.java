@@ -13,7 +13,7 @@ class Act5PopulationGroupResourceTest extends RiiabloTest {
     zone.map = new Map(1, 0);
     // Other tests use the same real bridge; the group metadata needs no GL.
     Map map = zone.map;
-    com.riiablo.map.Act5MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
+    map.act5Builder().generate(map, 1, 0);
     zone = map.findZone(Riiablo.files.Levels.get(110));
     assertNotNull(zone);
     assertEquals(0, zone.level.MonDen[0], "normal Bloody Foothills depends on preset groups");

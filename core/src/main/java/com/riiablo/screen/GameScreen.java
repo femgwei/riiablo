@@ -80,6 +80,7 @@ import com.riiablo.engine.client.ClientAudioSession;
 import com.riiablo.engine.client.ClientGameplayContext;
 import com.riiablo.engine.client.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.engine.server.InteractionRange;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.AnimDataResolver;
@@ -767,7 +768,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // 同一角色每次进入游戏地图相同；不同角色/新游戏地图不同
     int mapSeed = resolveMapSeed(charData);
     config = new EngineConfig(mapSeed, charData.diff);
-    map = new Map(config.seed(), config.diff());
+    map = new Map(config.seed(), config.diff(), com.riiablo.map.MapResources.fromGlobals());
     mapManager = new MapManager();
     partyManager = new com.riiablo.engine.server.party.PartyManager();
     renderer = new RenderSystem(Riiablo.batch, map);
@@ -799,6 +800,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             }))
         .register("iso", iso)
         .register("clientContext", clientGameplayContext)
+        .register("serverContext", new ServerGameplayContext(Riiablo.files, map.seed(), charData, Riiablo.anim))
         .register("config", config)
         .register("factory", factory)
         .register("itemController", itemController)
@@ -824,8 +826,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // hacked until I can rewrite into proper system
     engine.inject(map);
     map.setEntityFactory(factory);
-    engine.inject(Act1MapBuilder.INSTANCE);
-    engine.inject(Act1MapBuilderD2MOD.INSTANCE);
+    map.injectBuilders(engine);
 
     if (mobileControls != null) engine.inject(mobileControls);
 
@@ -1813,6 +1814,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     engine.getSystem(Box2DPhysics.class).clear();
 
+    loadingScreen = loadingScreen.nextLoad();
     loadingScreen.loadAct(act);
     Riiablo.client.pushScreen(loadingScreen);
   }

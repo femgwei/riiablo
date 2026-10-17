@@ -80,9 +80,11 @@ class BestowIntegrationTest extends RiiabloTest {
     Skills.Entry bestow = Riiablo.files.skills.get("Bestow");
     Actioneer actioneer = new Actioneer();
     NoopFactory factory = new NoopFactory();
+    com.riiablo.Files worldFiles = Riiablo.files;
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), actioneer, new Pathfinder(), factory)
-        .build().register("map", new Map(0, 0)).register("factory", factory));
+        .build().register("map", new Map(0, 0)).register("factory", factory)
+        .register("serverContext", new ServerGameplayContext(worldFiles, 0)));
     try {
       int source = world.create();
       world.getMapper(Monster.class).create(source).set(sourceRow, sourceRow2);
@@ -103,6 +105,15 @@ class BestowIntegrationTest extends RiiabloTest {
       actioneer.cast(source, bestow.Id, target, new Vector2(11, 10));
       float before = targetAttrs.get(Stat.hitpoints).asFixed();
       MathUtils.random.setSeed(0xBE57L);
+      // The attribute codec still shares ItemStatCost; the action system must
+      // retain its own skill/heal rows even when the replacement host has none.
+      com.riiablo.Files replacement = org.mockito.Mockito.mock(com.riiablo.Files.class);
+      try {
+        java.lang.reflect.Field costs = com.riiablo.Files.class.getField("ItemStatCost");
+        costs.setAccessible(true);
+        costs.set(replacement, worldFiles.ItemStatCost);
+      } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+      Riiablo.files = replacement;
       world.getSystem(EventSystem.class).dispatch(
           com.riiablo.engine.server.event.AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_ATK));
       float after = targetAttrs.get(Stat.hitpoints).asFixed();
@@ -110,6 +121,7 @@ class BestowIntegrationTest extends RiiabloTest {
       System.out.println("[BESTOW_CHAIN] source=" + source + " target=" + target
           + " hp=" + before + "->" + after + " status=PASS");
     } finally {
+      Riiablo.files = worldFiles;
       world.dispose();
     }
   }

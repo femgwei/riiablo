@@ -16,7 +16,7 @@ class NativeObjectTourResourceTest extends RiiabloTest {
     try {
       com.badlogic.gdx.utils.Collections.allocateIterators = false;
       Map map = new Map(1, 0);
-      Act2MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
+      map.act2Builder().generate(map, 1, 0);
       Map.Zone a = map.findZone(Riiablo.files.Levels.get(41));
       Map.Zone b = map.findZone(Riiablo.files.Levels.get(42));
       assertTrue(map.isNativeSeamConnection(a, b), "caught bridge exception must not hide missing outdoor seams");
@@ -31,7 +31,7 @@ class NativeObjectTourResourceTest extends RiiabloTest {
     for (String seedText : System.getProperty("map.audit.seeds", "1").split(",")) {
       int seed = Integer.parseInt(seedText.trim());
       Map map = new Map(seed, 0);
-      Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, 0);
+      map.act1Builder().generate(map, seed, 0);
       Map.Zone zone = map.findZone(Riiablo.files.Levels.get(25));
       assertNotNull(zone);
       assertTrue(zone.hasNativeRoomTopology(), "level25 cannot pass with a local fallback and zero native objects");
@@ -99,7 +99,7 @@ class NativeObjectTourResourceTest extends RiiabloTest {
 
   @Test void monasterySeamPreservesNativeCrossLevelRoomNeighbors() {
     Map map = new Map(1, 0);
-    Act1MapBuilderD2MOD.INSTANCE.generate(map, 1, 0);
+    map.act1Builder().generate(map, 1, 0);
     Map.Zone first = map.findZone(Riiablo.files.Levels.get(27));
     Map.Zone second = map.findZone(Riiablo.files.Levels.get(26));
     assertTrue(map.isNativeSeamConnection(first, second));
