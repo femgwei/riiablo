@@ -19,6 +19,7 @@ import com.badlogic.gdx.utils.TimeUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationClock;
+import com.riiablo.engine.shared.network.QuestRequestRouter;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
@@ -51,7 +52,7 @@ import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
 
 @All
-public class ClientNetworkSynchronizer extends IntervalSystem {
+public class ClientNetworkSynchronizer extends IntervalSystem implements QuestRequestRouter {
   private static final String TAG = "ClientNetworkSyncronizer";
   private static final boolean DEBUG         = true;
   private static final boolean DEBUG_PACKET  = DEBUG && !true;

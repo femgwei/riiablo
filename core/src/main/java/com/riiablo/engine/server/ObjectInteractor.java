@@ -36,6 +36,7 @@ import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.engine.shared.network.QuestRequestRouter;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -68,7 +69,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected CofManager cofs;
 
   @Wire(failOnNull = false)
-  protected com.riiablo.engine.client.ClientNetworkSynchronizer clientNetwork;
+  protected QuestRequestRouter clientNetwork;
 
   @Wire(failOnNull = false)
   protected WarpInteractor warpInteractor;

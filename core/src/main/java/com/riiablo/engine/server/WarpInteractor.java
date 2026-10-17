@@ -26,6 +26,7 @@ import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
 import com.riiablo.engine.server.quest.QuestWarpPolicy;
+import com.riiablo.engine.shared.network.QuestRequestRouter;
 import com.riiablo.Riiablo;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.net.packet.d2gs.QuestOperation;
@@ -57,7 +58,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected Actioneer actioneer;
   protected EventSystem events;
   @Wire(failOnNull = false)
-  protected com.riiablo.engine.client.ClientNetworkSynchronizer clientNetwork;
+  protected QuestRequestRouter clientNetwork;
 
   @Wire(name = "map")
   protected Map map;

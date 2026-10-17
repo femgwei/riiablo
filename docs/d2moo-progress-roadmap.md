@@ -1,5 +1,15 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 服务端交互与客户端网络边界
+
+- [x] 新增共享层 `QuestRequestRouter`，`ClientNetworkSynchronizer` 实现该接口；
+  `WarpInteractor` 和 `ObjectInteractor` 只依赖请求接口，不再直接导入客户端同步器。
+  离线/纯服务端世界仍走原本的权威交互路径，网络客户端装配继续通过 Artemis 注入
+  同一请求能力。
+- [x] 验证：`:core:compileJava`、`:core:compileTestJava`、
+  `:core:architectureRegression`、`:core:subsystemRegression` 通过；服务端机制包
+  不再新增指向 `engine.client` 的直接依赖。
+
 ## 2026-10-17 D2MOO 表缓存上下文化
 
 - [x] `D2MOO_JAVA` 的 `DataTbls` 保留静态 API 兼容层，但缓存和索引迁入
