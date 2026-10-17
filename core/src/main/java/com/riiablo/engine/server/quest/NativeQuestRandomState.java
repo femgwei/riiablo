@@ -16,7 +16,14 @@ public final class NativeQuestRandomState extends BaseSystem {
   private boolean restored;
 
   @Override protected void initialize() {
-    if (!restored) Seed.initLowSeed(seed, map == null ? Riiablo.gameSeed : map.seed());
+    if (!restored) {
+      int gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+      // D2Game: QUESTS_InitQuestData seeds QuestControl from one roll of the
+      // game-owned stream, rather than copying the game seed directly.
+      D2Seed gameRandom = new D2Seed();
+      Seed.initLowSeed(gameRandom, gameSeed);
+      Seed.initLowSeed(seed, (int) Seed.rollRandomNumber(gameRandom));
+    }
   }
 
   public D2Seed seed() { return seed; }

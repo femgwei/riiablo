@@ -33,5 +33,5 @@ Baboon、Scarab 在本批前已有专用类；新增实表检查同时覆盖这�
 
 ## 任务 RNG 后续核对
 
-NativeQuestRandomState 当前只提供世界内共享种子及高低位导出/恢复接口；尚未安装完整世界存档读写入口，不能宣称重启恢复已落地。restore 在 ECS initialize 前调用时会保留恢复状态，避免初始化覆盖。现有 SerializationManager 是实体网络同步，不能直接当作世界存档。原版从 game-owned seed 掷点初始化 QuestControl 的链路尚待接入；直接使用地图种子只是当前兼容初始化。
+NativeQuestRandomState 当前提供世界内共享种子及高低位导出/恢复接口；初始化已按原版先从 game-owned seed 随机流掷出 QuestControl 低位种子。尚未安装完整世界存档读写入口，不能宣称重启恢复已落地。restore 在 ECS initialize 前调用时会保留恢复状态，避免初始化覆盖。现有 SerializationManager 是实体网络同步，不能直接当作世界存档。
 
