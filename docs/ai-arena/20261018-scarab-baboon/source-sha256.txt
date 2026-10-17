@@ -1,0 +1,5 @@
+3799a9ce914dbc9067b0b4fa3ff1e01e862eac6164dba7593b219fbd64229631  core/src/main/java/com/riiablo/engine/server/ai/Scarab.java
+e35e3b87e7b2107b40abf7dfd30e00fa4b55d2bd34e5289f75182b49a342b5e3  core/src/main/java/com/riiablo/engine/server/ai/Baboon.java
+f63aabe6394619aa8adfb4b889e57919586c0df956b7928871a035036b6df969  core/src/main/java/com/riiablo/engine/server/Pathfinder.java
+9c6f3bf014ab473acdfb93ca739ee613cc7db07304165f415e1607500e0005a2  core/src/main/java/com/riiablo/engine/server/ai/NativeTowardPathProbe.java
+7be824fb21e3273d9f39f401b05dca10f2e1e08d993d024f92b5ad54b6ae2343  server/d2gs/src/main/java/com/riiablo/server/d2gs/MonsterAiArena.java
