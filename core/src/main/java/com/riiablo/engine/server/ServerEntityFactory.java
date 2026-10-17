@@ -431,29 +431,39 @@ public class ServerEntityFactory extends EntityFactory {
     com.d2moo.common.drlg.D2Seed seed = room != null ? room.runtimeSeed()
         : legacySpawnSeeds.computeIfAbsent(zone, ignored -> new com.d2moo.common.drlg.D2Seed(0, 666));
     int mask = NativeMonsterSpawnSearch.collisionMask(dimensions.spawnCol);
-    // SpawnCol 1 normally selects special floor tiles, not this perimeter
-    // branch. Fail closed until that tile metadata is projected.
-    if (dimensions.spawnCol == 1) return Engine.INVALID_ENTITY;
-    final int[] selected = {Engine.INVALID_ENTITY};
-    NativeMonsterSpawnSearch.search(seed, centerX, centerY, searchRadius, (px, py) -> {
+    final int[] selected = new int[2];
+    boolean found;
+    if (NativeMonsterSpawnSearch.usesSpecialFloor(monsterId, dimensions.spawnCol)) {
+      found = NativeMonsterSpawnSearch.searchSpecialFloor(seed, room == null ? null : room.nativeSpawnRoom(),
+          (px, py, probeSize, probeMask) -> collision.isFreeForMonsterSpawnMask(
+              replaceSource ? sourceId : Engine.INVALID_ENTITY, zone, px, py, probeSize, probeMask),
+          (px, py) -> { selected[0] = px; selected[1] = py; return true; });
+    } else {
+      found = NativeMonsterSpawnSearch.search(seed, centerX, centerY, searchRadius, (px, py) -> {
         if (px == 0 || py == 0 || !zone.contains(px, py)
             || room != null && !room.contains(px, py)
             || !zone.areRoomsAdjacent(sourcePosition.x, sourcePosition.y, px, py)
             || !collision.isFreeForMonsterSpawnMask(
                 replaceSource ? sourceId : Engine.INVALID_ENTITY, zone, px, py, size, mask)) return false;
-        int id = createMonster(monsterId, px, py);
-        if (id == Engine.INVALID_ENTITY) return false;
-        applyNativeUnitFlags(id, unitFlags);
-        if (mode != Engine.Monster.MODE_NU) {
-          mSequence.create(id).sequence((byte) mode, Engine.Monster.MODE_NU);
-          CofManager cofs = world.getSystem(CofManager.class);
-          if (cofs != null) cofs.setMode(id, (byte) mode, true);
-        }
-        collision.reserveMonsterSpawn(id, px, py, size);
-        selected[0] = id;
+        selected[0] = px; selected[1] = py;
         return true;
-    });
-    return selected[0];
+      });
+    }
+    if (!found || selected[0] == 0 || selected[1] == 0 || !zone.contains(selected[0], selected[1])
+        || !zone.areRoomsAdjacent(sourcePosition.x, sourcePosition.y, selected[0], selected[1]))
+      return Engine.INVALID_ENTITY;
+    // Native selects once, then allocates once; allocation failure must not
+    // resume the search or consume another ring's RNG.
+    int id = createMonster(monsterId, selected[0], selected[1]);
+    if (id == Engine.INVALID_ENTITY) return id;
+    applyNativeUnitFlags(id, unitFlags);
+    if (mode != Engine.Monster.MODE_NU) {
+      mSequence.create(id).sequence((byte) mode, Engine.Monster.MODE_NU);
+      CofManager cofs = world.getSystem(CofManager.class);
+      if (cofs != null) cofs.setMode(id, (byte) mode, true);
+    }
+    collision.reserveMonsterSpawn(id, selected[0], selected[1], size);
+    return id;
   }
 
   @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {

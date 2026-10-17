@@ -2898,6 +2898,10 @@ public class Map implements Disposable {
     public int populationSeed() { return populationSeed; }
     public int populationSeedHigh() { return populationSeedHigh; }
     private com.d2moo.common.drlg.D2Seed runtimeSeed;
+    /** Native ordered floor records are owned by the active room, not render tiles. */
+    public com.d2moo.common.drlg.D2ActiveRoom nativeSpawnRoom() {
+      return runtimeSeedSource == null ? null : runtimeSeedSource.getRoom();
+    }
     /** Active-room stream shared by object population and later AI spawning. */
     public com.d2moo.common.drlg.D2Seed runtimeSeed() {
       if (runtimeSeed == null) {

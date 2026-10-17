@@ -13,6 +13,36 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaggotSpawnExecutionTest extends RiiabloTest {
+  @Test void realFactoryUsesNativeWaterFloorRecordsAndCommitsBirthModeImmediately() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      MonStats.Entry child = null;
+      for (MonStats.Entry candidate : Riiablo.files.monstats) {
+        com.riiablo.codec.excel.MonStats2.Entry dimensions = Riiablo.files.monstats2.get(candidate.MonStatsEx);
+        if (candidate.enabled && dimensions != null
+            && NativeMonsterSpawnSearch.usesSpecialFloor(candidate.hcIdx, dimensions.spawnCol)) {
+          child = candidate; break;
+        }
+      }
+      assertNotNull(child, "1.10F must provide a special-floor monster row");
+      com.d2moo.common.drlg.D2ActiveRoom active = NativeMonsterSpawnSearchTest.waterRoom(3);
+      active.setNTileXPos(20); active.setNTileYPos(20);
+      active.getPRoomTiles().getPFloorTiles()[1].setNPosX(10);
+      active.getPRoomTiles().getPFloorTiles()[1].setNPosY(10);
+      active.setSeed(new com.d2moo.common.drlg.D2Seed(0, 666));
+      com.d2moo.common.drlg.D2DrlgRoom raw = new com.d2moo.common.drlg.D2DrlgRoom();
+      raw.setRoom(active);
+      f.zone.addRoomEx(100, 100, 100, 100).setNativePopulationMetadata(raw);
+      f.collisions.refreshNow();
+      int id = f.factory.createMonsterChild(f.source, child.hcIdx, Engine.Monster.MODE_S1,
+          1, 1, 0, false, NativeUnitFlags.NO_EXPERIENCE);
+      assertTrue(id >= 0, child.Id);
+      assertEquals(153f, f.pos(id).x); assertEquals(153f, f.pos(id).y);
+      assertEquals(Engine.Monster.MODE_S1, f.world.getMapper(CofReference.class).get(id).mode);
+      assertEquals(666, active.getSeed().getNLowSeed());
+      assertTrue(f.world.getMapper(NativeUnitFlags.class).get(id).has(NativeUnitFlags.NO_EXPERIENCE));
+    }
+  }
+
   @Test void spawnMasksDistinguishTerrainObjectsItemsAndUnitMarkers() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       f.zone.or(170, 170, DT1.Tile.FLAG_BLOCK_WALK);

@@ -1,5 +1,17 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：SpawnCol=1 特殊地板分支
+
+- 本地 1.10F D2Game.dll 0x6FC68FEE–0x6FC69136 核实：普通 SpawnCol=1 从活动房间的原生 floor 数组取候选，材质必须含水位 0x2；触手链 ID 258–263、HellMeteor ID 153 则走普通周界搜索。
+- 原始数组顺序、null 槽及 nFloors 均保留，不从渲染地板重建排序。RoomEx 新增只读访问当前活动房间入口；缺失原生数组时仍拒绝，不假造候选。
+- 只 roll 一次，以低 32 位 unsigned % nFloors 取起点，零改为 1；终止于起点前一项，因此保留原版跳过该项的行为。缺数组、数量非正及数组容量不符不 roll；有效数组即使没有可用水地板仍 roll 一次。nFloors=1 时原版存在非法索引，安全实现消耗对应一次 roll 后拒绝。
+- 中心为 `(room.tileOrigin + floor.localTile) * 5 + 3`；先检查中心 MONSTER 位，再按 (0,-3)、(3,0)、(0,3)、(-3,0) 四个泊位，以 size=2/mask=0x1C09 检查；成功时出生在地板中心，不是泊位位置。
+- 四方向顺序与 mask 同时对照只读数据地址 0x6FD28BC8–0x6FD28BE8。候选选定后只分配一次；分配失败不重新搜索或额外消耗 RNG。
+- 新增受控原生 floor/RNG/碰撞探针回归，以及真实 1.10F 怪物表 + 服务端工厂的特殊地板出生、NOXP 和出生 COF 模式测试。这不是自然地图或 DCC/GL 视觉验收。
+- 尚未补齐的 missile/no-presence/完整 16 位碰撞标记、分配 flags=66、活动房间初始种子回退边界保持不变。触手/陨石普通分支的 0x1C0 mask 仍受这些标记层边界约束。
+
+本批使用本地 1.10F 数据与隔离构建：NativeMonsterSpawnSearchTest（10）、MaggotSpawnExecutionTest（6）、RoomExAdjacencyTest（5）、NestSwarmIntegrationTest（3），共 24 项全部通过；`:core:architectureRegression` 同次执行成功。
+
 ## 依据与搜索规则
 
 D2MOO `MonsterSpawn.cpp` 的 `D2GAME_SpawnNormalMonster_6FC68E30` 仍是 return nullptr 加注释反编译。
@@ -27,7 +39,7 @@ RoomEx.runtimeSeed 首次访问时如已有活动房间，就共享其实时 see
 
 ## 仍未完成，不能称作完整原版验收
 
-- SpawnCol=1 的通常路径是特殊地板贴图搜索，并有触手/陨石例外；本入口明确拒绝它，未用普通周界假冒。特殊贴图、missile 标记层、部分 no-presence 单位标记及分配 flags=66 等仍需补齐。
+- 初批曾拒绝 SpawnCol=1；特殊地板搜索与触手/陨石例外现已继续接入，见本文顶部后续记录。missile 标记层、部分 no-presence 单位标记及分配 flags=66 等仍需补齐。
 - 现有宿主物件层与动态索引不是完整 16 位原生碰撞网格；本批只对已存在的各层按原生 mask 分类，未宣称所有碰撞矩阵/特殊状态组合完成。
 - 孵化只替换活体占位，未增加完整 CORPSE 标记与所有 dead-collision 交互。
 - 客户端回归使用真实 MPQ COF 和动画状态，不加载 DCC/GL 场景截图；全怪物、自然地图、资源异步切换下的视觉效果仍需实机验收。
