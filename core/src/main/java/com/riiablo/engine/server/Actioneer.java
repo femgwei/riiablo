@@ -2566,6 +2566,10 @@ public class Actioneer extends PassiveSystem {
         }
         break;
       }
+      case 84: { // native MaggotEgg: hatch children once, then consume the egg
+        resolveMaggotEgg(entityId);
+        break;
+      }
       case 86: { // native MaggotDown: heal current life by calc1 percent
         resolveMaggotDown(entityId);
         break;
@@ -5792,6 +5796,40 @@ public class Actioneer extends PassiveSystem {
         entityId, level, percent, before, after, maxHp.asFixed());
   }
 
+  /** D2MOO SKILLS_SrvDo084_MaggotEgg; placement uses the host collision adapter. */
+  private void resolveMaggotEgg(int entityId) {
+    if (!mMonster.has(entityId) || !mPosition.has(entityId) || !mCasting.has(entityId)
+        || factory == null) return;
+    Casting cast = mCasting.get(entityId);
+    if (cast.monsterHatchResolved) return;
+    Skills.Entry skill = files().skills.get(cast.skillId);
+    Monster egg = mMonster.get(entityId);
+    MonStats.Entry child = egg.monstats == null || !hasText(egg.monstats.spawn) ? null
+        : files().monstats.get(egg.monstats.spawn);
+    if (skill == null || child == null) return;
+    cast.monsterHatchResolved = true;
+    Vector2 origin = mPosition.get(entityId).position;
+    int count = Math.max(0, SkillFormula.evaluate(skill.calc1, skill,
+        Math.max(1, skillLevel(entityId, skill.Id))));
+    int mode = files().MonMode.index(egg.monstats.spawnmode);
+    if (mode < 0 || mode >= 16) mode = Engine.Monster.MODE_NU;
+    int produced = 0;
+    if (count > 0 && factory.createMonsterChild(entityId, child.hcIdx, mode,
+        origin.x, origin.y, 0, true, NativeUnitFlags.NO_EXPERIENCE) >= 0) produced++;
+    int ring = 1;
+    for (int attempt = 0; produced < count && ring < 5 && attempt < 2L * count; attempt++) {
+      int id = factory.createMonsterChild(entityId, child.hcIdx, Engine.Monster.MODE_S1,
+          origin.x, origin.y, ring * 3, true, NativeUnitFlags.NO_EXPERIENCE);
+      if (id >= 0) produced++;
+      else ring++;
+    }
+    if (mAttributesWrapper.has(entityId)) {
+      StatRef hp = mAttributesWrapper.get(entityId).attrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp != null) hp.set(0f);
+    }
+    events.dispatch(DeathEvent.obtain(entityId, entityId));
+  }
+
   /** D2MOO SKILLS_SrvDo087_MaggotLay. */
   private void resolveMaggotLay(int entityId, int targetId) {
     if (!mMonster.has(entityId) || factory == null || !mPosition.has(entityId)
@@ -5802,12 +5840,6 @@ public class Actioneer extends PassiveSystem {
     }
     Monster source = mMonster.get(entityId);
     String spawnId = source.monstats != null ? source.monstats.spawn : null;
-    // D2GAME_GetSummonIdFromSkill falls back to the monster minion chain when
-    // the row has no explicit spawn column (common for crow nests).
-    if (!hasText(spawnId) && source.monstats != null) {
-      spawnId = hasText(source.monstats.minion1) ? source.monstats.minion1
-          : source.monstats.minion2;
-    }
     // D2GAME_GetSummonIdFromSkill falls back to the monster minion chain when
     // the row has no explicit spawn column (common for crow nests).
     if (!hasText(spawnId) && source.monstats != null) {
@@ -5834,7 +5866,10 @@ public class Actioneer extends PassiveSystem {
     float spawnY = origin.y + offsetY;
     int spawned;
     try {
-      spawned = factory.createMonster(egg, spawnX, spawnY);
+      int mode = files().MonMode.index(source.monstats.spawnmode);
+      if (mode < 0 || mode >= 16) mode = Engine.Monster.MODE_NU;
+      spawned = factory.createMonsterChild(entityId, egg.hcIdx, mode, spawnX, spawnY,
+          0, false, NativeUnitFlags.MAGGOT_LAY_SUMMON);
     } catch (RuntimeException ex) {
       log.warn("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=spawn_exception spawn={} error={}",
           entityId, targetId, spawnId, ex.toString());

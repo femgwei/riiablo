@@ -91,6 +91,32 @@ public final class SkillFormula {
     }
 
     private int expression() {
+      int value = comparison();
+      if (consume('?')) {
+        int whenTrue = expression();
+        consume(':');
+        int whenFalse = expression();
+        return value != 0 ? whenTrue : whenFalse;
+      }
+      return value;
+    }
+
+    private int comparison() {
+      int value = sum();
+      while (true) {
+        if (consume('<')) {
+          boolean inclusive = consume('=');
+          int right = sum();
+          value = (inclusive ? value <= right : value < right) ? 1 : 0;
+        } else if (consume('>')) {
+          boolean inclusive = consume('=');
+          int right = sum();
+          value = (inclusive ? value >= right : value > right) ? 1 : 0;
+        } else return value;
+      }
+    }
+
+    private int sum() {
       int value = term();
       while (true) {
         skipWhitespace();

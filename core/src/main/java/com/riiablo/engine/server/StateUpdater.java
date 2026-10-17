@@ -1503,6 +1503,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // Keep requested velocity unscaled. VelocityAdder and Box2D's pre-sync
     // each apply this multiplier once after Pathfinder selects the direction.
     velocity.stateSpeedMultiplier = 1f;
+    velocity.nativeMonsterVelocityBonus = 0f;
+    if (velocity.nativeMonsterSpeed && mAttributesWrapper.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      if (attrs != null) velocity.baseSpeedMultiplier = attrs.getValue(Stat.velocitypercent, 75) / 100f;
+    }
     velocity.stateMovementLocked = false;
     
     // 检查冰冻状态 - 完全停止移动
@@ -1526,8 +1531,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     UnitState frenzy = stateList.getState(StateId.FRENZY);
     if (frenzy == null) frenzy = stateList.getState(StateId.MONFRENZY);
     if (frenzy != null) {
-      frenzyPercent = mPlayer.has(entityId) ? frenzy.resolvedVelocityModifier()
-          : Math.min(200, Math.max(0, frenzy.velocityModifier));
+      frenzyPercent = frenzy.resolvedVelocityModifier();
     }
     
     // 减速状态
@@ -1560,20 +1564,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       return;
     }
     
-    // 应用减速（限制最大减速为90%）
-    if (slowPercent > 0) {
-      slowPercent = Math.min(slowPercent, 90);
-      velocity.stateSpeedMultiplier = 1.0f - (slowPercent / 100.0f);
-    }
-    if (frenzyPercent > 0 && !velocity.stateMovementLocked) {
-      velocity.stateSpeedMultiplier *= 1.0f + frenzyPercent / 100.0f;
-    }
-    int auraVelocityPercent = stateList.getTotalVelocityModifier();
-    if (auraVelocityPercent != 0 && !velocity.stateMovementLocked) {
-      // Aura velocity modifiers are percentages; unlike Frenzy they are not
-      // stack counts and are therefore applied independently.
-      auraVelocityPercent = Math.max(-90, Math.min(200, auraVelocityPercent));
-      velocity.stateSpeedMultiplier *= 1.0f + auraVelocityPercent / 100.0f;
+    int stateVelocityPercent = stateList.getTotalVelocityModifier() + frenzyPercent - slowPercent;
+    if (velocity.nativeMonsterSpeed) {
+      velocity.nativeMonsterVelocityBonus = stateVelocityPercent;
+    } else {
+      // Legacy non-native fixtures retain a percentage-relative base of 100.
+      velocity.stateSpeedMultiplier = Math.max(0.25f, 1f + stateVelocityPercent / 100f);
     }
   }
 

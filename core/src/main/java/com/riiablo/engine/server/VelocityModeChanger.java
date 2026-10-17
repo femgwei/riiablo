@@ -139,7 +139,7 @@ public class VelocityModeChanger extends IteratingSystem {
         setMovementMode(entityId,
             running ? mMovementModes.get(entityId).RN : mMovementModes.get(entityId).WL,
             currentVelocity);
-        float intendedSpeed = velocity.speed(running);
+        float intendedSpeed = velocity.speed(running) * velocity.movementMultiplier();
         animData.override = movementAnimationRate(
             baseAnimSpeed, intendedSpeed, running ? velocity.runSpeed : velocity.walkSpeed);
       } else {

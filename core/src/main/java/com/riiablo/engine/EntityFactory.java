@@ -137,6 +137,12 @@ public abstract class EntityFactory extends PassiveSystem {
         rank, affixes, championType, uniqueId);
   }
 
+  /** Collision-checked child placement; detached factories must not silently bypass it. */
+  public int createMonsterChild(int sourceId, int monsterId, int mode, float x, float y,
+      int searchRadius, boolean replaceSource, int unitFlags) {
+    return Engine.INVALID_ENTITY;
+  }
+
   /**
    * Creates a player-owned monster-shaped summon. Client and detached test
    * factories may decline this server-authoritative operation.

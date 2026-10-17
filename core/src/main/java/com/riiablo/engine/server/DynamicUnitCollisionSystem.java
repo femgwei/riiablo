@@ -193,6 +193,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         other -> sharesCollisionSpace(zone, other));
   }
 
+  public boolean isFreeForMonsterSpawnReplacing(int sourceId, Map.Zone zone, int x, int y, int size) {
+    return !enabled || grid.isFreeWithSize(sourceId, x, y, size,
+        other -> sharesCollisionSpace(zone, other));
+  }
+
   /** Reserve a successfully created exact-position monster within this tick. */
   public void reserveMonsterSpawn(int entityId, int x, int y, int size) {
     if (enabled) grid.put(entityId, x, y, size);

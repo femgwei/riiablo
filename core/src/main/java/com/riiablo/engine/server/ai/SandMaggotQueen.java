@@ -1,6 +1,5 @@
 package com.riiablo.engine.server.ai;
 
-import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
 import com.riiablo.codec.excel.MonStats;
 
@@ -10,33 +9,47 @@ public class SandMaggotQueen extends NativeDecisionAI {
   static final int PARAM_DELAY = 1;
 
   private int spawned;
-  private float nextSpawn;
+  private int spawnPhase;
 
   public SandMaggotQueen(int entityId) {
     super(entityId);
   }
 
   @Override
-  protected void beforeThink(float delta) {
-    nextSpawn = Math.max(0f, nextSpawn - Math.max(0f, delta));
-  }
-
-  @Override
   protected void think(int targetId, float distance, boolean combat) {
-    if (spawned >= params[PARAM_MAX_SPAWN] || nextSpawn > 0f) {
+    if (spawnPhase == 2) {
+      spawnPhase = 0;
+      idle(25 * Math.max(0, params[PARAM_DELAY]));
+      return;
+    }
+    if (spawnPhase == 0) {
+      if (spawned >= params[PARAM_MAX_SPAWN]) {
+        idle(params[PARAM_DELAY]);
+        return;
+      }
+      startMode(8, Engine.INVALID_ENTITY);
+      spawnPhase = 1;
       idle(params[PARAM_DELAY]);
       return;
     }
-    MonStats.Entry minion = monster.monstats.minion1 == null
-        ? null : files().monstats.get(monster.monstats.minion1);
-    if (minion == null || factory == null || !mPosition.has(entityId)) {
-      idle(params[PARAM_DELAY]);
-      return;
+    // MONSTERS_GetMinionSpawnInfo maps the queen's chain index to sandmaggot.
+    MonStats.Entry queen = files().monstats.get(monster.monstats.BaseId);
+    MonStats.Entry minion = files().monstats.get("sandmaggot1");
+    java.util.HashSet<String> visited = new java.util.HashSet<>();
+    while (queen != null && minion != null && queen.hcIdx != monster.monstats.hcIdx
+        && visited.add(queen.Id)) {
+      queen = files().monstats.get(queen.NextInClass);
+      minion = files().monstats.get(minion.NextInClass);
     }
-    com.badlogic.gdx.math.Vector2 position = mPosition.get(entityId).position;
-    int child = factory.createMonster(minion.hcIdx, position.x, position.y);
-    if (child != Engine.INVALID_ENTITY) ++spawned;
-    nextSpawn = Math.max(0, params[PARAM_DELAY]) * Animation.FRAME_DURATION;
+    if (queen != null && queen.hcIdx == monster.monstats.hcIdx && minion != null
+        && factory != null && mPosition.has(entityId)) {
+      com.badlogic.gdx.math.Vector2 position = mPosition.get(entityId).position;
+      int child = factory.createMonsterChild(entityId, minion.hcIdx, Engine.Monster.MODE_S1,
+          position.x + 8, position.y, 6, false,
+          com.riiablo.engine.server.component.NativeUnitFlags.NO_EXPERIENCE);
+      if (child != Engine.INVALID_ENTITY) ++spawned;
+    }
+    spawnPhase = 2;
     idle(params[PARAM_DELAY]);
   }
 }

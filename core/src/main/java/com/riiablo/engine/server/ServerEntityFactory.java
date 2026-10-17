@@ -407,6 +407,45 @@ public class ServerEntityFactory extends EntityFactory {
     return id;
   }
 
+  @Override
+  public int createMonsterChild(int sourceId, int monsterId, int mode, float x, float y,
+      int searchRadius, boolean replaceSource, int unitFlags) {
+    if (map == null || !mMonster.has(sourceId) || !mMapWrapper.has(sourceId) || !mPosition.has(sourceId)
+        || mode < 0 || mode >= 16 || searchRadius < 0 || searchRadius > 12
+        || !Float.isFinite(x) || !Float.isFinite(y)) return Engine.INVALID_ENTITY;
+    MapWrapper source = mMapWrapper.get(sourceId);
+    Map.Zone zone = source.zone;
+    MonStats.Entry row = files().monstats.get(monsterId);
+    MonStats2.Entry dimensions = row == null ? null : files().monstats2.get(row.MonStatsEx);
+    if (zone == null || zone.isTown() || dimensions == null) return Engine.INVALID_ENTITY;
+    int size = Math.max(1, dimensions.SizeX);
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision == null) return Engine.INVALID_ENTITY;
+    int centerX = Map.round(x), centerY = Map.round(y);
+    Vector2 sourcePosition = mPosition.get(sourceId).position;
+    // Host placement projection, not the native room-seeded perimeter order.
+    for (int radius = 0; radius <= searchRadius; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
+        if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+        int px = centerX + dx, py = centerY + dy;
+        if (!zone.contains(px, py)
+            || !zone.areRoomsAdjacent(sourcePosition.x, sourcePosition.y, px, py)
+            || map.isBlockedForPath(zone, px, py,
+                NativeGroundPathProfile.forUnit(false, row).terrainFlags, size, false)
+            || !collision.isFreeForMonsterSpawnReplacing(
+                replaceSource ? sourceId : Engine.INVALID_ENTITY, zone, px, py, size)) continue;
+        int id = createMonster(monsterId, px, py);
+        if (id == Engine.INVALID_ENTITY) return id;
+        applyNativeUnitFlags(id, unitFlags);
+        if (mode != Engine.Monster.MODE_NU)
+          mSequence.create(id).sequence((byte) mode, Engine.Monster.MODE_NU);
+        collision.reserveMonsterSpawn(id, px, py, size);
+        return id;
+      }
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
   @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {
     if (!mMonster.has(entityId) || !mPosition.has(entityId) || mode < 0 || mode >= 16) return false;
     MonStats.Entry row = files().monstats.get(monsterId);
@@ -601,6 +640,7 @@ public class ServerEntityFactory extends EntityFactory {
     // generation; treating it as displacement speed makes animation and
     // authoritative movement diverge.
     mVelocity.create(id).setMonster(monstats.Velocity);
+    mVelocity.get(id).baseSpeedMultiplier = attrs.getValue(Stat.velocitypercent, 75) / 100f;
     mAngle.create(id);
 
     CofReference reference = mCofReference.create(id);

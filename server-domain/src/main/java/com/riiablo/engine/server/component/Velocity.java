@@ -19,6 +19,8 @@ public class Velocity extends PooledComponent {
   public boolean nativePlayerSpeed;
   public boolean movementRunning;
   public float nativePlayerVelocityBonus;
+  public boolean nativeMonsterSpeed;
+  public float nativeMonsterVelocityBonus;
 
   /** Base percentage for the unit type: players use 100%, monsters use 75%. */
   public float baseSpeedMultiplier = 1f;
@@ -38,6 +40,8 @@ public class Velocity extends PooledComponent {
     nativePlayerSpeed = false;
     movementRunning = false;
     nativePlayerVelocityBonus = 0f;
+    nativeMonsterSpeed = false;
+    nativeMonsterVelocityBonus = 0f;
     baseSpeedMultiplier = 1f;
     modeSpeedBonusMultiplier = 0f;
     stateSpeedMultiplier = 1f;
@@ -45,6 +49,8 @@ public class Velocity extends PooledComponent {
   }
 
   public Velocity set(float walkSpeed, float runSpeed) {
+    nativeMonsterSpeed = false;
+    nativeMonsterVelocityBonus = 0f;
     nativePlayerSpeed = false;
     movementRunning = false;
     nativePlayerVelocityBonus = 0f;
@@ -69,6 +75,7 @@ public class Velocity extends PooledComponent {
    */
   public Velocity setMonster(float baseVelocity) {
     set(baseVelocity, baseVelocity);
+    nativeMonsterSpeed = true;
     baseSpeedMultiplier = MONSTER_BASE_SPEED_MULTIPLIER;
     modeSpeedBonusMultiplier = 0f;
     return this;
@@ -96,6 +103,13 @@ public class Velocity extends PooledComponent {
   /** Applied once by the position integrator, never baked into requested velocity. */
   public float movementMultiplier() {
     if (stateMovementLocked) return 0f;
+    if (nativeMonsterSpeed) {
+      float requestedPercent = Math.max(MIN_SPEED_MULTIPLIER,
+          baseSpeedMultiplier + modeSpeedBonusMultiplier);
+      float effectivePercent = Math.max(MIN_SPEED_MULTIPLIER,
+          baseSpeedMultiplier + modeSpeedBonusMultiplier + nativeMonsterVelocityBonus / 100f);
+      return effectivePercent / requestedPercent * Math.max(0f, stateSpeedMultiplier);
+    }
     if (nativePlayerSpeed && movementRunning && runSpeed > 0f) {
       return Math.max(0.25f * walkSpeed / runSpeed,
           1f + nativePlayerVelocityBonus / 100f * walkSpeed / runSpeed);
