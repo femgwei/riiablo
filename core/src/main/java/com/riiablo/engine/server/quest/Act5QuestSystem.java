@@ -1648,6 +1648,7 @@ public class Act5QuestSystem extends ContextualQuestSystem {
           Position position = mPosition.get(id);
           if (position == null || !chamber.contains(Math.round(position.position.x),
               Math.round(position.position.y))) {
+            position.invalidateNativePrecision();
             position.position.set(chamber.x() + chamber.width() * 0.5f,
                 chamber.y() + chamber.height() * 0.5f);
             if (mMapWrapper != null && mMapWrapper.has(id)) {

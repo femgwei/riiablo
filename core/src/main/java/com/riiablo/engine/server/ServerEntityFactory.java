@@ -135,7 +135,9 @@ public class ServerEntityFactory extends EntityFactory {
     mUnitStates.create(id).init(world, id);
     mMapWrapper.create(id).set(map, map.getZone(position));
 
-    mPosition.create(id).position.set(position);
+    Position playerPosition = mPosition.create(id);
+    playerPosition.invalidateNativePrecision();
+    playerPosition.position.set(position);
     // CharStats stores native speed units; setPlayer converts to subtiles/sec.
     com.riiablo.codec.excel.CharStats.Entry charStats = charData.classId != null ? charData.classId.entry() : null;
     float walkSpeed = charStats != null && charStats.WalkVelocity > 0
@@ -254,7 +256,9 @@ public class ServerEntityFactory extends EntityFactory {
         || objectId == 60) ? Engine.Object.MODE_ON : Class.Type.OBJ.DEFAULT_MODE;
     object.mode = initialMode;
 
-    mPosition.create(id).position.set(x, y);
+    Position objectPosition = mPosition.create(id);
+    objectPosition.invalidateNativePrecision();
+    objectPosition.position.set(x, y);
     mMapWrapper.create(id).set(map, map.getZone(x, y));
 
     if (base.Draw) {
@@ -1190,7 +1194,9 @@ public class ServerEntityFactory extends EntityFactory {
       int id = super.createEntity(Class.Type.WRP, "quest-warp");
       mWarp.create(id).set(index, portalBounds, destinationLevel);
       mMapWrapper.create(id).set(map, zone);
-      mPosition.create(id).position.set(x, y);
+      Position questWarpPosition = mPosition.create(id);
+      questWarpPosition.invalidateNativePrecision();
+      questWarpPosition.position.set(x, y);
       mInteractable.create(id).set(3.0f, warpInteractor);
       mNetworked.create(id);
       log.info("[QUEST_WARP] created: entity={} source={} destination={} position=({}, {})",
@@ -1296,7 +1302,9 @@ public class ServerEntityFactory extends EntityFactory {
     mWarp.create(id).set(index, warp, dstLevel);
     mMapWrapper.create(id).set(map, zone);
 
-    mPosition.create(id).position.set(x, y).add(warp.OffsetX, warp.OffsetY);
+    Position warpPosition = mPosition.create(id);
+    warpPosition.invalidateNativePrecision();
+    warpPosition.position.set(x, y).add(warp.OffsetX, warp.OffsetY);
 
     mInteractable.create(id).set(3.0f, warpInteractor);
     mNetworked.create(id);
@@ -1314,7 +1322,9 @@ public class ServerEntityFactory extends EntityFactory {
     com.riiablo.engine.server.item.GroundDropOwnership.created(id);
     mItem.create(id).set(item);
 
-    mPosition.create(id).position.set(x, y);
+    Position itemPosition = mPosition.create(id);
+    itemPosition.invalidateNativePrecision();
+    itemPosition.position.set(x, y);
     // Ground items are native room units too. Without MapWrapper they fall
     // through NetworkSynchronizer's legacy broadcast path and leak to every
     // client/level instead of following RoomEx visibility and persistence.
