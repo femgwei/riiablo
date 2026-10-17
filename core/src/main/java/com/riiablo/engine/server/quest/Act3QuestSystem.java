@@ -80,6 +80,7 @@ public class Act3QuestSystem extends BaseSystem {
   private boolean darkWandererCoordinatesCalculated;
   private boolean darkWandererDeparted;
   private int darkWandererEntity = -1;
+  private com.riiablo.engine.server.component.NativePathIdentity.Token darkWandererIdentity;
   private long darkWandererDepartureFrame = -1;
   private long darkWandererFrame;
   private double darkWandererElapsed;
@@ -121,6 +122,10 @@ public class Act3QuestSystem extends BaseSystem {
           darkWandererEntity = factory.createMonster(row,
               darkWandererCoordinates.x, darkWandererCoordinates.y);
           if (darkWandererEntity < 0) continue;
+          com.riiablo.engine.server.component.NativePathIdentity identity =
+              world.getMapper(com.riiablo.engine.server.component.NativePathIdentity.class)
+                  .get(darkWandererEntity);
+          darkWandererIdentity = identity == null ? null : identity.token();
         }
         darkWandererInitialized = true;
         break;
@@ -128,6 +133,12 @@ public class Act3QuestSystem extends BaseSystem {
     }
     if (!darkWandererDeparted && darkWandererDepartureFrame >= 0
         && darkWandererFrame >= darkWandererDepartureFrame) {
+      if (darkWandererIdentity != null
+          && !darkWandererIdentity.isCurrent(world, darkWandererEntity)) {
+        // A delayed quest callback must never target a recycled ECS id.
+        darkWandererDeparted = true;
+        return;
+      }
       darkWandererDeparted = true;
       IntBag players = playersByZone.getEntities();
       for (int i = 0; i < players.size(); i++) {
@@ -250,7 +261,9 @@ public class Act3QuestSystem extends BaseSystem {
   }
 
   public void scheduleDarkWandererDeparture(int entityId, long frame) {
-    if (entityId == darkWandererEntity && darkWandererDepartureFrame < 0)
+    if (entityId == darkWandererEntity
+        && (darkWandererIdentity == null || darkWandererIdentity.isCurrent(world, entityId))
+        && darkWandererDepartureFrame < 0)
       darkWandererDepartureFrame = (frame / 20 + 3) * 20;
   }
 
