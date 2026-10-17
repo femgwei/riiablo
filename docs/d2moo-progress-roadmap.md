@@ -10535,5 +10535,6 @@ Corpsefire 金色名称、4 倍生命、抗性和 Spectral Hit 元素伤害。
   `TestDependencyDirection` 扫描 Java import 边，禁止 server/attributes/item/map 机制包
   新增指向 client/screen/widget 的反向依赖；当前已知桥接作为显式基线记录，迁移一个桥接
   时必须同时删除对应基线，新增桥接会直接失败。
-- [x] 本次架构复核定向测试：core 82 项、D2GS 装配 5 项全部通过；架构约束单独入口随后
-  运行并纳入后续统一门禁。该约束是依赖方向防回退，不等同于全系统已经完成隔离。
+- [x] 本次架构复核定向测试：core 82 项、D2GS 装配 5 项全部通过；架构约束单独入口
+  1 项通过，并已加入 `subsystemRegression`，该门禁现为 761 项（759 通过、2 跳过、
+  0 失败）。该约束是依赖方向防回退，不等同于全系统已经完成隔离。
