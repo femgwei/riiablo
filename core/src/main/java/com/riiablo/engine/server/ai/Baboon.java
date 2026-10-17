@@ -202,11 +202,10 @@ public class Baboon extends AI {
 
         // D2MOD: If far (distance >= 24) and not in special state
         if (targetDistance >= 24 && !checkSpecialAiState()) {
-          if (MathUtils.randomBoolean(0.33f)) {
-            // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
-            pathfinder.findPath(entityId, targetPos, false, targetId);
-            stateMachine.changeState(State.APPROACH);
+          if (rollAiPercentage() < 33) {
+            pathfinder.findNativeOrbit(entityId, targetId, 4, (rollAiRandomNumber() & 255L) < 128L);
           }
+          stopMovement();
           stateMachine.changeState(State.IDLE);
           time = 20f * com.riiablo.codec.Animation.FRAME_DURATION;
           return;
@@ -317,12 +316,11 @@ public class Baboon extends AI {
       }
 
       // D2MOD: 20% chance to circle
-      if (MathUtils.randomBoolean(0.2f)) {
-        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
-        stateMachine.changeState(State.APPROACH);
+      if (rollAiPercentage() < 20) {
+        boolean orbit = pathfinder.findNativeOrbit(
+            entityId, targetId, 3, (rollAiRandomNumber() & 255L) < 128L);
+        stateMachine.changeState(orbit ? State.APPROACH : State.IDLE);
         aiParam1 = 0;
-        time = MathUtils.random(1f, 2);
         return;
       }
     }
