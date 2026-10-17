@@ -18,6 +18,7 @@ public final class ServerGameplayContext {
   private final int gameSeed;
   private final CharData character;
   private final com.riiablo.codec.D2 animations;
+  private final com.riiablo.mpq.MPQFileHandleResolver mpqs;
   private final java.util.function.Consumer<CharData> characterStore;
 
   public ServerGameplayContext(Files files, int gameSeed) {
@@ -35,10 +36,18 @@ public final class ServerGameplayContext {
 
   public ServerGameplayContext(Files files, int gameSeed, CharData character,
       com.riiablo.codec.D2 animations, java.util.function.Consumer<CharData> characterStore) {
+    this(files, gameSeed, character, animations, null, characterStore);
+  }
+
+  public ServerGameplayContext(Files files, int gameSeed, CharData character,
+      com.riiablo.codec.D2 animations,
+      com.riiablo.mpq.MPQFileHandleResolver mpqs,
+      java.util.function.Consumer<CharData> characterStore) {
     this.files = Objects.requireNonNull(files, "files");
     this.gameSeed = gameSeed;
     this.character = character;
     this.animations = animations;
+    this.mpqs = mpqs;
     this.characterStore = Objects.requireNonNull(characterStore, "characterStore");
   }
 
@@ -56,11 +65,14 @@ public final class ServerGameplayContext {
 
   public com.riiablo.codec.D2 animations() { return animations; }
 
+  public com.riiablo.mpq.MPQFileHandleResolver mpqs() { return mpqs; }
+
   public void persistCharacter(CharData data) { characterStore.accept(data); }
 
   /** Compatibility bridge for old tests and tools that have no server host. */
   public static ServerGameplayContext fromGlobals() {
     return new ServerGameplayContext(Riiablo.files, Riiablo.gameSeed, Riiablo.charData, Riiablo.anim,
+        Riiablo.mpqs,
         data -> { if (Riiablo.saves != null) com.riiablo.save.D2SWriter.INSTANCE.save(data); });
   }
 }

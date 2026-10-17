@@ -64,9 +64,9 @@ abstract class NativeDecisionAI extends AI {
   }
 
   protected final int monsterFootprint(String rowId) {
-    com.riiablo.codec.excel.MonStats.Entry row = com.riiablo.Riiablo.files.monstats.get(rowId);
+    com.riiablo.codec.excel.MonStats.Entry row = files().monstats.get(rowId);
     com.riiablo.codec.excel.MonStats2.Entry dimensions = row == null ? null
-        : com.riiablo.Riiablo.files.monstats2.get(row.MonStatsEx);
+        : files().monstats2.get(row.MonStatsEx);
     return dimensions == null ? 1 : Math.max(1, dimensions.SizeX);
   }
 

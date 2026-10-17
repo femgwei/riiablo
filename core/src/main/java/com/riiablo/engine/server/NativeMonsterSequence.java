@@ -1,13 +1,20 @@
 package com.riiablo.engine.server;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Files;
+import com.riiablo.mpq.MPQFileHandleResolver;
 import java.util.ArrayList;
 import java.util.List;
 
 /** MonSeq source points and actions; the sequence clock is independent of COF speed. */
 public final class NativeMonsterSequence {
-  private static final java.util.Map<String, NativeMonsterSequence> CACHE = new java.util.HashMap<>();
-  private static java.lang.Object source;
+  private static final class CacheState {
+    final java.util.Map<String, NativeMonsterSequence> cache = new java.util.HashMap<>();
+    Files files;
+    MPQFileHandleResolver source;
+  }
+  private static final ThreadLocal<CacheState> CURRENT =
+      ThreadLocal.withInitial(CacheState::new);
   public final byte mode;
   public final int[] frames;
   public final byte[] modes;
@@ -16,19 +23,30 @@ public final class NativeMonsterSequence {
     this.mode = mode; this.frames = frames; this.modes = modes; this.actions = actions;
   }
   public static NativeMonsterSequence load(String name) {
+    return load(name, Riiablo.files, Riiablo.mpqs);
+  }
+
+  public static NativeMonsterSequence load(String name, Files files,
+      MPQFileHandleResolver mpqs) {
     if (name == null || !name.startsWith("seq_")) return null;
-    if (source != Riiablo.mpqs) { CACHE.clear(); source = Riiablo.mpqs; }
-    NativeMonsterSequence cached = CACHE.get(name);
+    CacheState state = CURRENT.get();
+    if (state.source != mpqs || state.files != files) {
+      state.cache.clear();
+      state.source = mpqs;
+      state.files = files;
+    }
+    if (mpqs == null || files == null || files.MonMode == null) return null;
+    NativeMonsterSequence cached = state.cache.get(name);
     if (cached != null) return cached;
     List<Integer> frames = new ArrayList<>();
     List<Byte> actions = new ArrayList<>();
     List<Byte> modes = new ArrayList<>();
     int mode = -1;
-    String text = Riiablo.mpqs.resolve("data\\global\\excel\\monseq.txt").readString("windows-1252");
+    String text = mpqs.resolve("data\\global\\excel\\monseq.txt").readString("windows-1252");
     for (String line : text.split("\\r?\\n")) {
       String[] columns = line.split("\\t", -1);
       if (columns.length < 5 || !name.equals(columns[0])) continue;
-      int pointMode = Riiablo.files.MonMode.index(columns[1]);
+      int pointMode = files.MonMode.index(columns[1]);
       if (mode < 0) mode = pointMode;
       modes.add((byte) pointMode);
       frames.add(Integer.parseInt(columns[2]));
@@ -38,7 +56,7 @@ public final class NativeMonsterSequence {
     int[] f = new int[frames.size()]; byte[] a = new byte[f.length], m = new byte[f.length];
     for (int i = 0; i < f.length; i++) { f[i] = frames.get(i); a[i] = actions.get(i); m[i] = modes.get(i); }
     NativeMonsterSequence result = new NativeMonsterSequence((byte) mode, f, m, a);
-    CACHE.put(name, result);
+    state.cache.put(name, result);
     return result;
   }
 }

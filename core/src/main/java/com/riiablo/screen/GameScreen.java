@@ -800,7 +800,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             }))
         .register("iso", iso)
         .register("clientContext", clientGameplayContext)
-        .register("serverContext", new ServerGameplayContext(Riiablo.files, map.seed(), charData, Riiablo.anim))
+        .register("serverContext", new ServerGameplayContext(Riiablo.files, map.seed(), charData,
+            Riiablo.anim, Riiablo.mpqs, data -> {
+              if (Riiablo.saves != null) com.riiablo.save.D2SWriter.INSTANCE.save(data);
+            }))
         .register("config", config)
         .register("factory", factory)
         .register("itemController", itemController)

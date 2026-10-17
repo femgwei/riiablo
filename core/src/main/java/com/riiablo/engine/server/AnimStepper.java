@@ -33,8 +33,14 @@ public class AnimStepper extends IntervalIteratingSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
 
   protected EventSystem events;
+
+  private com.riiablo.Files files() {
+    return serverContext != null ? serverContext.files() : com.riiablo.Riiablo.files;
+  }
 
   public AnimStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -150,8 +156,8 @@ public class AnimStepper extends IntervalIteratingSystem {
       int previous = sequence.nativeMonsterCursor;
       if (previous >= data.frames.length << 8) return;
       int next = Math.min(data.frames.length << 8, previous + delta);
-      boolean charge = casting != null && com.riiablo.Riiablo.files.skills.get(casting.skillId) != null
-          && com.riiablo.Riiablo.files.skills.get(casting.skillId).srvdofunc == 67;
+      boolean charge = casting != null && files().skills.get(casting.skillId) != null
+          && files().skills.get(casting.skillId).srvdofunc == 67;
       int pointIndex = Math.min(data.frames.length - 1, next >>> 8);
       boolean movingPoint = data.modes[pointIndex] == Engine.Monster.MODE_WL
           || data.modes[pointIndex] == Engine.Monster.MODE_RN;

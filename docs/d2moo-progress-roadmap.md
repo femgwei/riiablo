@@ -11,6 +11,16 @@
 - [ ] 其他具体 AI 文件仍有同类兼容访问，下一步按共享 AI 辅助入口继续收口，直到
   服务器技能/状态/掉落路径都只从 `ServerGameplayContext` 取表。
 
+## 2026-10-17 AI 运行时与 MonSeq 缓存上下文化
+
+- [x] `NativeDecisionAI`、`GenericMonster`、`GenericSpawner` 和 `AnimStepper` 的
+  表访问统一经服务器上下文；`ServerGameplayContext` 增加可选 MPQ resolver，生产
+  `GameScreen` 装配时同时传入 Files/MPQ。
+- [x] `NativeMonsterSequence` 的 MonSeq 缓存改为线程上下文并按 Files/MPQ 身份隔离，
+  `AI` 使用显式资源重载；旧无参 `load` 仅作为兼容入口。编译、架构和子系统回归均通过。
+- [ ] 具体 AI/技能/掉落类仍有较多兼容读取，后续继续按基类辅助入口迁移，暂不宣称
+  服务端已经达到零全局引用。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II

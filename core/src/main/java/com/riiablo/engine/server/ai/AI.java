@@ -628,7 +628,9 @@ public abstract class AI implements Interactable.Interactor {
 
     String configuredMode = monsterSkillMode(monster.monstats, skillIndex);
     com.riiablo.engine.server.NativeMonsterSequence nativeSequence =
-        com.riiablo.engine.server.NativeMonsterSequence.load(configuredMode);
+        com.riiablo.engine.server.NativeMonsterSequence.load(configuredMode, files(),
+            serverContext == null || serverContext.mpqs() == null
+                ? com.riiablo.Riiablo.mpqs : serverContext.mpqs());
     int mode = nativeSequence == null ? sequenceMode : nativeSequence.mode;
     if (mode < 0) {
       mode = configuredMode != null && !configuredMode.isEmpty()
