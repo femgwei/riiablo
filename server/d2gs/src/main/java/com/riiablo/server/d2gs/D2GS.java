@@ -8367,6 +8367,7 @@ public class D2GS extends ApplicationAdapter {
       return false;
     }
 
+    position.invalidateNativePrecision();
     position.position.set(arrival);
     wrapper.set(map, destination);
     Map.RoomEx room = destination.findRoomEx(arrival.x, arrival.y);

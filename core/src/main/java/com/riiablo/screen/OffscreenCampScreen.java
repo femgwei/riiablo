@@ -1310,6 +1310,7 @@ public final class OffscreenCampScreen extends GameScreen {
       }
     }
     Position position = engine.getMapper(Position.class).get(player);
+    position.invalidateNativePrecision();
     position.position.set(destination);
     Box2DBody body = engine.getMapper(Box2DBody.class).get(player);
     if (body != null && body.body != null) body.body.setTransform(destination, 0);

@@ -1854,6 +1854,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     actioneer.moveTo(player, Engine.INVALID_ENTITY);
 
     Position position = engine.getMapper(Position.class).get(player);
+    position.invalidateNativePrecision();
     position.position.set(destination);
     Box2DBody box2d = engine.getMapper(Box2DBody.class).get(player);
     if (box2d != null && box2d.body != null) box2d.body.setTransform(destination, 0);
