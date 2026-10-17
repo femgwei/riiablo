@@ -245,7 +245,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
       if (enabled && (mask & 0x100) != 0 && hasSpawnMonsterMarker(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
-        if (!sharesCollisionSpace(zone, other)) return false;
+        if (!hasPresence(other) || !sharesCollisionSpace(zone, other)) return false;
         int bits = isPlayer(other) ? 0x80 : 0x100;
         Position position = mPosition.get(other);
         if (position != null) {
@@ -434,7 +434,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         if (!monster.nativeRestoredCollisionPattern && NativeGroundPathProfile.hasNoPresence(stats)) return false;
       }
     }
-    return true;
+    return footprint(entityId) != 0;
   }
 
   /**
@@ -449,7 +449,9 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private int footprint(int entityId) {
     if (mMonster.has(entityId) && mMonster.get(entityId).frogSmallPresence) return 1;
-    return mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
+    // #11281: NONE for zero, SMALL_UNIT_PRESENCE for invalid sizes.
+    return size >= 0 && size <= 3 ? size : 1;
   }
 
   /**

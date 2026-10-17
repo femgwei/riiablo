@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：尺寸 0 与非法尺寸的宿主 pattern 边界
+
+- 来源：Path.cpp 的尺寸到 pattern 数组以 NONE 开头，D2Common_11281 对越界尺寸先返回 SMALL_UNIT_PRESENCE，再处理可进城/交互的宠物转换；NONE 不写 footprint 或 NO_PATH/PET。
+- 宿主 hasPresence/footprint 不再将合法 size=0 强制提升为 1；非法值统一为小型普通 footprint，避免出生 MONSTER 投影把 size>3 当成 3×3、或把非法大值当成带十字 NO_PATH 的大型 pattern。
+- 保留初始 WRAITH1 显式 SMALL_NO_PRESENCE 特例；复活走尺寸重建后，size=0 确实不再投影 MONSTER/NO_PATH/PET。出生查询也忽略旧行走索引中已失去 presence 的实体。
+- 底层 UnitCollisionGrid 供兼容调用的零尺寸回退未修改；本批在宿主实体参与索引/出生查询前落实原生 NONE。缺失 Size 组件的旧夹具仍沿用小型默认；动态尺寸变更后行走索引仍需既有 refresh/重建流程。玩家完整 PLAYER footprint、共享位网格残留及客户端图形验收不属于本批范围。
+- 验证：SpawnPatternSizeIntegrationTest（3）、CorpseSpawnCollisionIntegrationTest（6）、DynamicUnitCollisionSystemTest（12）、FrogPresenceIntegrationTest（7），共 28 项通过，architectureRegression 通过；日志 `build/ai-pattern-size-validation.log`。未运行全量测试。
+
 ## 后续：复活按尺寸重建 pattern 的运行时状态
 
 - 来源：SkillMonst.cpp 的 SKILLS_ResurrectUnit 调用 D2Common_10214；Path.cpp 的该函数使用 D2Common_11281_CollisionPatternFromSize 重建，后者按 size 及可进城/交互元数据选择普通/宠物 pattern，没有初始 PATH_AllocDynamicPath 的 WRAITH1 特例。

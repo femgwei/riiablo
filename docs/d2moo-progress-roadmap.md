@@ -1,5 +1,10 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 宿主尺寸 pattern 边界
+
+- size=0 作为 NONE 不参与活体 presence；非法尺寸回退小型普通 pattern，修复出生标记误扩大为大型范围的问题。
+- 初始幽灵特例与复活后尺寸重建保持区分；底层兼容网格 API 未改变。验证及边界见 [出生搜索专项记录](ai-native-spawn-search-2026-10-18.md)。
+
 ## 2026-10-18 复活运行时 collision pattern
 
 - 依据 D2Common_10214/11281，通用复活按 runtime Size 重建普通/宠物 pattern，不重复幽灵的初始分配特例。
