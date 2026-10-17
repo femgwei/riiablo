@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-17 AI 固定点接入：骨牢段整数分配
+
+- 首个生产入口 createDiabPrisonSegment 从明确整数落点建立新分配的 fp16 格心；
+  不从既有浮点实体还原低位，不修改宿主显示位置。
+- 普通 float 怪物初始化/同位置重建显式失效旧 raw；一般出生接口仍不建立原生精度。
+- 仅接通精确整数创建，不代表通用移动或 NativePathUnitBinding 已完成。
+- 46 项定向测试及 architectureRegression 通过；骨牢旧夹具补齐命名注册后验收。
+- 依据、定向回归和边界见 [本批记录](ai-position-spawn-2026-10-17.md)。
+
 ## 2026-10-17 AI 固定点接入：显式坐标精度契约
 
 - Position 只通过显式整格分配输入或 raw fp16 输入建立精度状态，保留完整 uint32 低位；

@@ -27,6 +27,9 @@ class DiabPrisonIntegrationTest extends RiiabloTest {
         int id=group.get(i); Monster m=f.world.getMapper(Monster.class).get(id);
         assertEquals(340+i,m.monstats.hcIdx); assertEquals(group.first(),m.minionOwnerId);
         assertEquals(new Vector2(128+offsets[i][0],128+offsets[i][1]),f.pos(id));
+        Position position = f.world.getMapper(Position.class).get(id);
+        assertEquals(((128 + offsets[i][0]) << 16) | 0x8000, position.nativePrecisionX());
+        assertEquals(((128 + offsets[i][1]) << 16) | 0x8000, position.nativePrecisionY());
         assertFalse(f.world.getMapper(SummonedPet.class).has(id));
         assertTrue(f.world.getMapper(NativeUnitFlags.class).get(id).has(NativeUnitFlags.NO_TREASURE_CLASS));
         assertTrue(f.hp(id)>0); assertTrue(f.collisions.hasPresence(id));
@@ -116,6 +119,33 @@ class DiabPrisonIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test void nativeCellInputRejectsOutOfRangeBeforeAllocating() {
+    try (Fixture f = new Fixture("diablo")) {
+      int count = f.world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(Monster.class)).getEntities().size();
+      assertEquals(-1, f.factory.createDiabPrisonSegment(340, -1, 140));
+      assertEquals(-1, f.factory.createDiabPrisonSegment(340, 140, 65536));
+      assertEquals(-1, f.factory.createDiabPrisonSegment(340, 65536, 140));
+      f.tick();
+      assertEquals(count, f.world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(Monster.class)).getEntities().size());
+    }
+  }
+
+  @Test void legacyMonsterRebuildAtSameProjectionDoesNotRetainNativeLowWords() {
+    try (Fixture f = new Fixture("diablo")) {
+      int row = Riiablo.files.monstats.get("fallen1").hcIdx;
+      int id = f.factory.createMonster(row, 150, 150);
+      Position position = f.world.getMapper(Position.class).get(id);
+      assertFalse(position.hasNativePrecision(), "ordinary float creation is not a raw source");
+      position.initializeNativeCell(150, 150);
+      assertTrue(position.hasNativePrecision());
+      assertTrue(f.factory.reinitializeMonster(id, row, Engine.Monster.MODE_NU));
+      assertEquals(new Vector2(150, 150), position.position);
+      assertFalse(position.hasNativePrecision(), "same-valued legacy rebuild must invalidate explicitly");
+    }
+  }
+
   static class Fixture implements AutoCloseable {
     final World previous=Riiablo.engine;
     final com.riiablo.codec.D2 previousAnim=Riiablo.anim;
@@ -129,7 +159,8 @@ class DiabPrisonIntegrationTest extends RiiabloTest {
           new ObjectInteractor(),new WarpInteractor(),new ItemInteractor(),new CofManager(),
           new StateUpdater(),new Actioneer(),new ServerSkillSystem(),new ServerMonsterCorpseSystem(),
           new SequenceHandler(),new AnimStepper(),new AnimDataResolver(),collisions,path,
-          new VelocityAdder(),factory).build().register("map",map).register("factory",factory));
+          new VelocityAdder(),factory).build().register("map",map).register("factory",factory)
+          .register("townPortalRegistry",new com.riiablo.engine.server.portal.TownPortalRegistry()));
       Riiablo.engine=world;world.setDelta(SimulationClock.STEP_SECONDS);
       target=factory.createPlayer("PrisonTarget",Riiablo.AMAZON,128,128);
       attrs(target).base().put(Stat.hitpoints,1000000);attrs(target).base().put(Stat.maxhp,1000000);attrs(target).reset();

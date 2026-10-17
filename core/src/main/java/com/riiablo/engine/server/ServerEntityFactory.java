@@ -561,7 +561,11 @@ public class ServerEntityFactory extends EntityFactory {
         attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH,
         combatMultiplier);
 
-    mPosition.create(id).position.set(x, y);
+    Position spawnPosition = mPosition.create(id);
+    // Reinitialization may reuse this component at the identical float point.
+    // A legacy allocation/rebuild does not establish native low words.
+    spawnPosition.invalidateNativePrecision();
+    spawnPosition.position.set(x, y);
     // Monsters created by map/quest generators must carry their owning zone,
     // just like players and objects. Without this, quest systems cannot see
     // the generated boss and clients may resolve the wrong level at a boundary.
@@ -756,6 +760,9 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createDiabPrisonSegment(int monsterId, int x, int y) {
+    // This exact-cell allocation is the source of new precision, not a
+    // reconstruction of an existing unit's floating-point position.
+    if (x <= 0 || x > 0xFFFF || y <= 0 || y > 0xFFFF) return Engine.INVALID_ENTITY;
     Map.Zone zone = map == null ? null : map.getZone(x, y);
     MonStats.Entry row = files().monstats.get(monsterId);
     if (row == null || monsterId < 340 || monsterId > 343 || x == 0 || y == 0 || zone == null || zone.isTown()
@@ -765,6 +772,7 @@ public class ServerEntityFactory extends EntityFactory {
       return Engine.INVALID_ENTITY;
     int id = createMonster(monsterId, x, y);
     if (id < 0) return id;
+    mPosition.get(id).initializeNativeCell(x, y);
     mSequence.create(id).sequence(Engine.Monster.MODE_S1, Engine.Monster.MODE_NU);
     if (collision != null) collision.reserveMonsterSpawn(id, x, y, 1);
     return id;
