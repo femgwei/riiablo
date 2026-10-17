@@ -251,7 +251,12 @@ public class Act3QuestSystem extends BaseSystem {
 
   @Override
   protected void initialize() {
-    com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, Riiablo.gameSeed);
+    // D2Game seeds quest control from the game-owned seed.  The authoritative
+    // map is the server's world seed, so prefer it over the process-wide
+    // client fallback; this keeps multiple worlds isolated while all Act III
+    // quest rolls in one world consume the same stream.
+    long gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+    com.d2moo.common.seed.Seed.initLowSeed(wandererQuestSeed, (int) gameSeed);
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
   }
