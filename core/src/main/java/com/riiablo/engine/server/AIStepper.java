@@ -38,11 +38,14 @@ public class AIStepper extends IteratingSystem {
     com.riiablo.engine.server.ai.AI ai = mAIWrapper.get(event.victim).ai;
     if (ai != null) ai.onNativeHit(event.attacker);
     Monster monster = mMonster.get(event.victim);
-    if (MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS)
+    boolean chargedBolts = MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS);
+    boolean lightningEnchanted = MonsterAffix.hasAffix(monster.affixes, MonsterAffix.LIGHTNING_ENCHANTED);
+    if ((chargedBolts || lightningEnchanted)
         && monster.chargedBoltsCooldown <= 0f) {
       ServerSkillSystem skills = world.getSystem(ServerSkillSystem.class);
       if (skills != null) {
-        skills.emitScarabChargedBolts(event.victim);
+        if (chargedBolts) skills.emitScarabChargedBolts(event.victim);
+        else skills.emitLightningEnchantedBolts(event.victim);
         // Native MONSTERUNIQUE_ScarabModeChange defers the callback by two
         // frames; this guard also coalesces multi-packet damage in one swing.
         monster.chargedBoltsCooldown = 2f / 25f;

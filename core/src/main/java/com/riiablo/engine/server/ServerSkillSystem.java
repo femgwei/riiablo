@@ -186,6 +186,25 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
   }
+
+  /** Native MONSTERUNIQUE_CastLightUniqueMissile for Lightning Enchanted
+   * uniques: two bolts along each cardinal direction. */
+  public void emitLightningEnchantedBolts(int source) {
+    if (!mMonster.has(source) || !mPosition.has(source) || factory == null) return;
+    Missiles.Entry row = files() == null || files().Missiles == null
+        ? null : files().Missiles.get("lightunique");
+    if (row == null) return;
+    Vector2 origin = mPosition.get(source).position;
+    int level = mAttributesWrapper.has(source)
+        ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt() / 2)
+        : 1;
+    for (int i = 0; i < 4; i++) {
+      float angle = i * MathUtils.PI2 / 4f;
+      Vector2 direction = new Vector2(MathUtils.cos(angle), MathUtils.sin(angle));
+      createMissile(row, direction, origin, source, null, level);
+      createMissile(row, direction, origin, source, null, level);
+    }
+  }
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
   private static final int NOVA_MISSILE_COUNT = 64;
