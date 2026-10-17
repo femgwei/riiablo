@@ -1,6 +1,7 @@
 package com.riiablo.architecture;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,16 @@ import org.junit.jupiter.api.Test;
  * entry, while adding another bridge fails this test.</p>
  */
 class DependencyDirectionTest {
+  private static final Pattern COMMENTS_AND_STRINGS = Pattern.compile(
+      "/\\*.*?\\*/|//[^\\n]*|\"(?:\\\\.|[^\"\\\\])*+\"", Pattern.DOTALL);
+
+  @Test void globalScannerHandlesLongStringsWithoutRecursiveRegexOverflow() {
+    String literal = "\"" + "x".repeat(100000) + "\\\" Riiablo.files\"";
+    assertEquals("Riiablo.mpqs;  ;  \nRiiablo.gameSeed;", COMMENTS_AND_STRINGS.matcher(
+        "Riiablo.mpqs; " + literal + "; // MathUtils.random\nRiiablo.gameSeed;").replaceAll(" "));
+    assertEquals(" \n ", COMMENTS_AND_STRINGS.matcher(
+        "/* Riiablo.files */\n\"escaped \\\\ and \\\" quote\"").replaceAll(" "));
+  }
   private static final Pattern IMPORT = Pattern.compile("^\\s*import\\s+(?:static\\s+)?([^;]+);\\s*$");
   private static final String[] OUTWARD = {
       "com.riiablo.engine.client",
@@ -58,16 +69,12 @@ class DependencyDirectionTest {
     }
     Pattern globals = Pattern.compile(
         "\\bRiiablo\\s*\\.\\s*(?:files|mpqs|gameSeed)\\b|\\bMathUtils\\s*\\.\\s*random\\b|\\bINSTANCE\\b");
-    // Escaped characters and ordinary characters are disjoint alternatives.
-    // Possessive repetition avoids recursive backtracking on long literals.
-    Pattern commentsAndStrings = Pattern.compile(
-        "/\\*.*?\\*/|//[^\\n]*|\"(?:\\\\.|[^\"\\\\])*+\"", Pattern.DOTALL);
     List<String> violations = new ArrayList<>();
     try (Stream<Path> paths = Files.walk(sourceRoot)) {
       for (Path file : (Iterable<Path>) paths.filter(path -> path.toString().endsWith(".java"))::iterator) {
         String relative = sourceRoot.relativize(file).toString().replace('\\', '/');
         if (!isMechanismPackage(relative)) continue;
-        String text = commentsAndStrings.matcher(new String(
+        String text = COMMENTS_AND_STRINGS.matcher(new String(
             Files.readAllBytes(file), StandardCharsets.UTF_8)).replaceAll(" ");
         Matcher matcher = globals.matcher(text);
         int count = 0;
