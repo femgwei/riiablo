@@ -15,6 +15,31 @@ import org.junit.jupiter.api.Test;
 
 /** Remaining native handlers, exercised against installed 1.10f data. */
 class Remaining20261017AiIntegrationTest extends RiiabloTest {
+  @Test void ancientBossScorePrefersInjuredTargetsBeyondOrdinaryAiDistance() {
+    try (Fixture f = new Fixture("ancientbarb2", 0, 1000)) {
+      com.riiablo.attributes.Attributes healthy = com.riiablo.attributes.Attributes.obtainStandard();
+      healthy.base().put(com.riiablo.attributes.Stat.hitpoints, 100f);
+      healthy.base().put(com.riiablo.attributes.Stat.maxhp, 100f);
+      healthy.reset();
+      f.world.getMapper(AttributesWrapper.class).create(f.target).attrs = healthy;
+      Ancient ai = (Ancient) f.ai;
+      int healthyScore = ai.bossTargetScore(f.target);
+      int injured = f.world.create();
+      f.world.getMapper(Player.class).create(injured);
+      f.world.getMapper(Position.class).create(injured).position.set(2010, 10);
+      com.riiablo.attributes.Attributes wounded = com.riiablo.attributes.Attributes.obtainStandard();
+      wounded.base().put(com.riiablo.attributes.Stat.hitpoints, 19f);
+      wounded.base().put(com.riiablo.attributes.Stat.maxhp, 100f);
+      wounded.reset();
+      f.world.getMapper(AttributesWrapper.class).create(injured).attrs = wounded;
+      f.world.process();
+      assertTrue(ai.bossTargetScore(injured) > healthyScore);
+      float[] distance = {0};
+      assertEquals(injured, ai.findNearestTargetWithAidist(distance));
+      assertTrue(distance[0] > 1000);
+    }
+  }
+
   @Test void ancientCandidatesRequireTheSameWorldAndLevel() {
     try (Fixture f = new Fixture("ancientbarb1", 0, 8)) {
       com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0);

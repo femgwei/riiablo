@@ -8,10 +8,83 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.attributes.Stat;
 
 /** Fn133 dispatches the distinct Talic, Madawc and Korlic handlers. */
 public class Ancient extends NativeDecisionAI {
   public Ancient(int entityId) { super(entityId); }
+
+  @Override protected int findNearestTargetWithAidist(float[] distance) {
+    // Talic alone retains the ordinary tick target before the boss fallback.
+    // Keep explicit control effects at the shared AI authority boundary.
+    if (mNativeAiTargetOverride.has(entityId)) return super.findNearestTargetWithAidist(distance);
+    if ("ancientbarb1".equals(monster.monstats.Id)) {
+      int ordinary = super.findNearestTargetWithAidist(distance);
+      if (ordinary != Engine.INVALID_ENTITY) return ordinary;
+    }
+    int selected = Engine.INVALID_ENTITY;
+    int best = 0;
+    com.artemis.utils.IntBag units = getEnemyEntities().getEntities();
+    for (int i = 0; i < units.size(); i++) {
+      int id = units.get(i);
+      if (!sameLevel(id) || !isValidEnemyTargetWithoutAiScope(id)) continue;
+      int score = bossTargetScore(id);
+      if (score > best) { best = score; selected = id; }
+    }
+    distance[0] = selected < 0 ? Float.MAX_VALUE : nativeAiDistance(
+        mPosition.get(entityId).position, mPosition.get(selected).position);
+    return selected;
+  }
+
+  /** AITHINK_GetTargetScore with the null command used by all three Ancients. */
+  int bossTargetScore(int id) {
+    if (mMonster.has(id) && (mMonster.get(id).monstats == null
+        || mMonster.get(id).monstats.threat <= 1)) return 0;
+    boolean melee = isInNativeMeleeRange(id);
+    int resist = (stat(id, Stat.fireresist) + stat(id, Stat.lightresist)
+        + (melee ? stat(id, Stat.coldresist) : 0)
+        + 4 * (stat(id, Stat.damageresist) + 2 * stat(id, Stat.magicresist))) / 15;
+    int damage = (stat(id, Stat.maxdamage) + stat(id, Stat.firemaxdam)
+        + stat(id, Stat.lightmaxdam) + stat(id, Stat.magicmaxdam)
+        + stat(id, Stat.coldmaxdam) + (stat(id, Stat.poisonmaxdam) >> 8)) / 2;
+    int skills = (handRank(id, com.badlogic.gdx.Input.Buttons.LEFT)
+        + handRank(id, com.badlogic.gdx.Input.Buttons.RIGHT)) / 4;
+    UnitStates states = mUnitStates.get(id);
+    int cold = states != null && states.stateList != null
+        && states.stateList.hasState(StateId.COLD) ? 100 : 0;
+    com.riiablo.engine.server.component.MapWrapper wrapper = mMapWrapper.get(entityId);
+    boolean barrier = false;
+    if (!melee && wrapper != null && wrapper.map != null && wrapper.zone != null) {
+      com.badlogic.gdx.ai.utils.Ray<Vector2> ray =
+          new com.badlogic.gdx.ai.utils.Ray<>(new Vector2(), new Vector2());
+      ray.set(mPosition.get(entityId).position, mPosition.get(id).position);
+      barrier = wrapper.map.castRay(wrapper.zone, ray,
+          com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP, 0,
+          new com.badlogic.gdx.ai.utils.Collision<>(new Vector2(), new Vector2()), false);
+    }
+    int range = melee ? 100 : barrier ? 0 : 75;
+    int score = (resist + 5 * range + 2 * (damage + skills + 2 * cold)
+        + (nativeLifePercent(id) < 20 ? 300 : 0)) / 22;
+    return score == 0 ? 1 : score;
+  }
+
+  private int stat(int id, short stat) {
+    com.riiablo.attributes.Attributes attrs = mAttributesWrapper.has(id)
+        ? mAttributesWrapper.get(id).attrs : null;
+    return attrs == null ? 0 : attrs.getValue(stat, 0);
+  }
+
+  private int handRank(int id, int button) {
+    com.riiablo.save.CharData data = mPlayer.has(id) ? mPlayer.get(id).data : null;
+    if (data == null) return 0;
+    int skillId = data.getAction(button);
+    int level = data.getSkill(skillId);
+    if (level <= 0) return 0;
+    UnitStates states = mUnitStates.get(id);
+    if (states != null && states.stateList != null) level += states.stateList.getTotalSkillModifier();
+    com.riiablo.codec.excel.NativeSkills.Entry row = Riiablo.files.NativeSkills.get(skillId);
+    return row == null ? 0 : Math.max(0, level) * (row.nativeInteger("attackrank") & 255);
+  }
 
   /** Native AITHINK_AreUnitsInSameLevel cull; ordinary acquisition must not
    * select a unit from another level even when its coordinates are nearby. */

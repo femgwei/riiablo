@@ -38,3 +38,6 @@ NativeQuestRandomState 当前提供世界内共享种子及高低位导出/恢�
 
 Ancient 目标选择：普通候选扫描已加入同世界、同关卡筛选，并通过不同关卡/同关卡/不同世界专项测试；完整 AITHINK_GetTargetForBoss 评分、玩家节点顺序以及 Talic 与另外两位的选敌入口差异仍待移植，不能称整条 Boss 选敌依赖已完成。
 
+
+Ancient 后续：已接入 null-command Boss 评分（抗性、伤害、双手技能等级与 attackrank、COLD、低生命、近战/弹道阻挡），并区分 Talic 普通目标优先与 Madawc/Korlic 直接评分选敌。当前评分候选仍使用 ECS 遍历次序，原版玩家组/子节点平分顺序以及 node9 阻路回退未完成，不宣称完整等价。
+
