@@ -185,7 +185,6 @@ public class Baboon extends AI {
           byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
           mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-          time = MathUtils.random(1f, 2);
           return;
         }
 
@@ -196,7 +195,6 @@ public class Baboon extends AI {
           // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
           walkTo(targetPos, nVel, targetId);
           stateMachine.changeState(State.APPROACH);
-          time = MathUtils.random(1f, 2);
           return;
         }
 
@@ -233,7 +231,6 @@ public class Baboon extends AI {
             mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
           }
         }
-        time = MathUtils.random(1f, 2);
         return;
       }
     }
@@ -278,7 +275,6 @@ public class Baboon extends AI {
       // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
       return;
     }
 
@@ -298,7 +294,6 @@ public class Baboon extends AI {
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(15f).add(entityPos);
         walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
-        time = MathUtils.random(1f, 2);
         return;
       }
 
@@ -311,7 +306,6 @@ public class Baboon extends AI {
         byte attackMode = rollAiChance(params[3]) ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_A2;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
         return;
       }
 
@@ -335,7 +329,6 @@ public class Baboon extends AI {
       mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-      time = MathUtils.random(1f, 2);
       return;
     }
 
