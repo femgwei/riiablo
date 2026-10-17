@@ -31,9 +31,34 @@ public class Ancient extends NativeDecisionAI {
       int score = bossTargetScore(id);
       if (score > best) { best = score; selected = id; }
     }
+    selected = node9Fallback(selected, units);
     distance[0] = selected < 0 ? Float.MAX_VALUE : nativeAiDistance(
         mPosition.get(entityId).position, mPosition.get(selected).position);
     return selected;
+  }
+
+  private int node9Fallback(int primary, com.artemis.utils.IntBag units) {
+    int candidate = Engine.INVALID_ENTITY;
+    int best = 0;
+    long order = 0;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeTargetNode> nodes =
+        Riiablo.engine.getMapper(com.riiablo.engine.server.component.NativeTargetNode.class);
+    for (int i = units.size() - 1; i >= 0; i--) {
+      int id = units.get(i);
+      if (!sameLevel(id) || !isValidEnemyTargetWithoutAiScope(id)) continue;
+      com.riiablo.engine.server.component.NativeTargetNode node = nodes.get(id);
+      if (node == null || !node.isNode9() || node.order() == 0) continue;
+      int score = bossTargetScore(id);
+      if (score > best || score == best && node.order() > order) {
+        best = score;
+        order = node.order();
+        candidate = id;
+      }
+    }
+    if (candidate < 0 || primary >= 0 && isInNativeMeleeRange(primary)) return primary;
+    if (candidate >= 0 && nativeAiDistance(mPosition.get(entityId).position,
+        mPosition.get(candidate).position) < 5f) return candidate;
+    return primary;
   }
 
   /** Target nodes visit player slots in order, then newest children first.
