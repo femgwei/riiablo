@@ -11,6 +11,18 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Counts population after installing real terrain; preset export counts alone miss it. */
 class NativePopulationAuditResourceTest extends RiiabloTest {
   @Test void populationOnRealTerrain() {
+    // Population uses DT1 headers/collision; retain neither pixels nor native
+    // pixmaps while auditing all five acts with several seeds.
+    boolean loadData = DT1.loadData;
+    DT1.loadData = false;
+    try {
+      auditPopulationOnRealTerrain();
+    } finally {
+      DT1.loadData = loadData;
+    }
+  }
+
+  private void auditPopulationOnRealTerrain() {
     ObjGroup groups = Excel.load(ObjGroup.class, Riiablo.mpqs.resolve("data\\global\\excel\\ObjGroup.txt"));
     for (int index = 0; index < Riiablo.files.MonPreset.getSize(5); index++) {
       String place = Riiablo.files.MonPreset.getPlace(5, index);
