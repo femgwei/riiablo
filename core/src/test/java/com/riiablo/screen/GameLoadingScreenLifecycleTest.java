@@ -72,18 +72,25 @@ class GameLoadingScreenLifecycleTest {
         screen.show();
       }
       screen.hide();
-      screen.dispose();
       verify(stages.constructed().get(0)).dispose();
       verify(owner).unload(LOADING);
       verify(owner, never()).unload(dependency.fileName);
       if (!fail) {
         screen.loadAct(2);
-        screen.show(); // also safe after Client disposed the popped loader
+        screen.show();
         screen.hide();
         verify(stages.constructed().get(1)).dispose();
         verify(owner, times(2)).unload(LOADING);
         verify(map).setAct(1);
         verify(map).setAct(2);
+
+        screen.dispose();
+        screen.loadAct(3);
+        screen.show(); // a disposed loader must reject a new Act load
+        assertEquals(2, stages.constructed().size());
+        verify(map, never()).setAct(3);
+      } else {
+        screen.dispose();
       }
       session.dispose();
       session.dispose();
