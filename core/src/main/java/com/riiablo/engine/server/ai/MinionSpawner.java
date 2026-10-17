@@ -25,7 +25,8 @@ public class MinionSpawner extends NativeDecisionAI {
       }
       if (hasSkill(0) && nearby < params[1]) {
         deadline = nativeFrame() + params[2];
-        count++; cast(0, targetId); return;
+        if (castAt(0, targetId, mPosition.get(targetId).position)) count++;
+        return;
       }
     }
     idle(params[1]);
