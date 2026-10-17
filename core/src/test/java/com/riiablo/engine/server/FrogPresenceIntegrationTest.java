@@ -23,7 +23,11 @@ class FrogPresenceIntegrationTest extends RiiabloTest {
       assertTrue(f.factory.enterFrogHidden(f.actor));
       assertFalse(f.collisions.hasPresence(f.actor));
       assertTrue(f.collisions.isFreeForFrogEmergence(-1, 30, 30, 2));
+      Position precision = f.world.getMapper(Position.class).get(f.actor);
+      precision.initializeNativeCell(30, 30);
       assertTrue(f.factory.restoreFrogPresence(f.actor));
+      assertEquals(new Vector2(30, 30), precision.position);
+      assertFalse(precision.hasNativePrecision(), "same-position float landing must invalidate raw");
       assertTrue(f.collisions.hasPresence(f.actor));
       assertFalse(f.collisions.isFreeForFrogEmergence(-1, 30, 30, 2));
       assertFalse(f.factory.restoreFrogPresence(f.actor));
@@ -40,10 +44,15 @@ class FrogPresenceIntegrationTest extends RiiabloTest {
         f.world.getMapper(Position.class).get(blocker).position.set(30, 30);
         f.collisions.refreshNow();
         assertEquals(pet, f.collisions.isFreeForFrogEmergence(f.actor, 30, 30, 2));
+        Position precision = f.world.getMapper(Position.class).get(f.actor);
+        precision.initializeNativeCell(30, 30);
         assertTrue(f.factory.restoreFrogPresence(f.actor));
         Vector2 pos = f.world.getMapper(Position.class).get(f.actor).position;
         assertEquals(pet, pos.equals(new Vector2(30, 30)), "ordinary units require a free relocation");
         assertTrue(f.collisions.hasPresence(f.actor));
+        // Restore without querying raw first: invalidation must survive a matching projection.
+        pos.set(30, 30);
+        assertFalse(precision.hasNativePrecision());
       }
     }
   }
@@ -57,7 +66,10 @@ class FrogPresenceIntegrationTest extends RiiabloTest {
       f.factory.enterFrogHidden(f.actor);
       for (int y = 20; y < 41; y++) for (int x = 20; x < 41; x++)
         f.zone.or(x, y, DT1.Tile.FLAG_BLOCK_PLAYER_WALK);
+      Position precision = f.world.getMapper(Position.class).get(f.actor);
+      precision.initializeNativeCell(30, 30);
       assertFalse(f.factory.restoreFrogPresence(f.actor));
+      assertTrue(precision.hasNativePrecision(), "failed search does not commit a float landing");
       assertTrue(f.world.getMapper(Monster.class).get(f.actor).frogNoPresence);
       assertEquals(NativeUnitFlags.MONSTER_TARGET,
           f.world.getMapper(NativeUnitFlags.class).get(f.actor).flags() & NativeUnitFlags.MONSTER_TARGET);

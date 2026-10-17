@@ -1149,6 +1149,7 @@ public class ServerEntityFactory extends EntityFactory {
         }
       }
       if (bestDistance == Integer.MAX_VALUE) continue;
+      mPosition.get(monsterId).invalidateNativePrecision();
       position.set(best);
       monster.frogNoPresence = false;
       monster.frogSmallPresence = true;
