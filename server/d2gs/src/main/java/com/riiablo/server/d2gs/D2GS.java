@@ -1396,7 +1396,9 @@ public class D2GS extends ApplicationAdapter {
         server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
             .create(fixture).set(server.map, ownerWrapper.zone);
         if (ownerPosition != null) {
-          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+          Position fixturePosition = server.world.getMapper(Position.class).create(fixture);
+          fixturePosition.invalidateNativePrecision();
+          fixturePosition.position.set(ownerPosition.position);
         }
         server.world.process();
         server.world.getSystem(EventSystem.class).dispatch(
@@ -1446,7 +1448,9 @@ public class D2GS extends ApplicationAdapter {
         server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
             .create(fixture).set(server.map, ownerWrapper.zone);
         if (ownerPosition != null) {
-          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+          Position fixturePosition = server.world.getMapper(Position.class).create(fixture);
+          fixturePosition.invalidateNativePrecision();
+          fixturePosition.position.set(ownerPosition.position);
         }
         server.world.process();
         server.world.getSystem(EventSystem.class).dispatch(
@@ -5408,7 +5412,9 @@ public class D2GS extends ApplicationAdapter {
         server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
             .create(fixture).set(server.map, ownerWrapper.zone);
         if (ownerPosition != null) {
-          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+          Position fixturePosition = server.world.getMapper(Position.class).create(fixture);
+          fixturePosition.invalidateNativePrecision();
+          fixturePosition.position.set(ownerPosition.position);
         }
         com.riiablo.attributes.Attributes attrs = com.riiablo.attributes.Attributes.obtainStandard();
         attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 1f);
@@ -5453,7 +5459,9 @@ public class D2GS extends ApplicationAdapter {
                 6; // D2MOO SUPERUNIQUE_THE_COUNTESS (1.10f)
         server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
             .create(fixture).set(server.map, ownerWrapper.zone);
-        server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        Position fixturePosition = server.world.getMapper(Position.class).create(fixture);
+        fixturePosition.invalidateNativePrecision();
+        fixturePosition.position.set(ownerPosition.position);
         server.world.process();
         EventSystem events = server.world.getSystem(EventSystem.class);
         events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
@@ -5489,7 +5497,9 @@ public class D2GS extends ApplicationAdapter {
             .create(fixture).monstats = stats;
         server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
             .create(fixture).set(server.map, ownerWrapper.zone);
-        server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        Position fixturePosition = server.world.getMapper(Position.class).create(fixture);
+        fixturePosition.invalidateNativePrecision();
+        fixturePosition.position.set(ownerPosition.position);
         server.world.process();
         EventSystem events = server.world.getSystem(EventSystem.class);
         events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
