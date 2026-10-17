@@ -31,6 +31,9 @@ public class PositionSerializer implements FlatBuffersSerializer<Position, Posit
   @Override
   public Position getData(EntitySync sync, int j, Position c) {
     getTable(sync, j);
+    // The wire format carries only floats, even when their projection happens
+    // to match a previously known raw position exactly.
+    c.invalidateNativePrecision();
     Vector2 position = c.position;
     position.x = table.x();
     position.y = table.y();

@@ -103,6 +103,10 @@ public class VelocityAdder extends IteratingSystem {
   }
 
   private void recordMovement(int entityId, boolean requested) {
+    Position position = mPosition.get(entityId);
+    // A legacy floating-point displacement is not a native fp16 step. Latch
+    // invalidation now, even if a later tick returns to the old projection.
+    if (!start.equals(position.position)) position.invalidateNativePrecision();
     if (!mPathfind.has(entityId)) return;
     Pathfind path = mPathfind.get(entityId);
     path.recordMovement(requested, start.dst2(mPosition.get(entityId).position),

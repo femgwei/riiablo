@@ -11,6 +11,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VelocityAdderTest {
+  @Test void legacyMovementInvalidatesRawPrecisionButIdleTicksPreserveIt() {
+    World world = new World(new WorldConfigurationBuilder().with(
+        new DynamicUnitCollisionSystem(false), new VelocityAdder()).build());
+    try {
+      int id = world.create();
+      Position position = world.getMapper(Position.class).create(id).initializeNativeCell(10, 20);
+      Velocity velocity = world.getMapper(Velocity.class).create(id);
+      world.setDelta(0.04f);
+      world.process();
+      assertEquals(0x000A8000, position.nativePrecisionX());
+      velocity.velocity.set(6, 0);
+      world.process();
+      assertFalse(position.hasNativePrecision());
+      position.position.set(10, 20);
+      assertFalse(position.hasNativePrecision());
+    } finally { world.dispose(); }
+  }
+
   static final class BlockedMap extends Map {
     private final Zone zone = new Zone();
     BlockedMap() { super(1, 0); }
