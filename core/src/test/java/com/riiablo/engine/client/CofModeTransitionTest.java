@@ -55,7 +55,8 @@ class CofModeTransitionTest {
     CofManager cofs = new CofManager();
     World world = new World(new WorldConfigurationBuilder().with(
         new EventSystem(), cofs, new CofUnloader(), new CofResolver(), new CofLoader(),
-        new CofLayerLoader(), new CofLayerCacher()).build());
+        new CofLayerLoader(), new CofLayerCacher()).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int player = createComposite(world, Class.Type.PLR, "AM", Engine.Player.MODE_RN);
       if (missingBlock) world.getSystem(CofResolver.class).inserted(player);
@@ -134,7 +135,8 @@ class CofModeTransitionTest {
     CofManager cofs = new CofManager();
     World world = new World(new WorldConfigurationBuilder().with(
         new EventSystem(), cofs, new CofUnloader(), new CofResolver(), new CofLoader(),
-        new CofLayerLoader(), new CofLayerCacher()).build());
+        new CofLayerLoader(), new CofLayerCacher()).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int id = world.create();
       world.getMapper(Class.class).create(id).type = Class.Type.PLR;
@@ -173,7 +175,8 @@ class CofModeTransitionTest {
     CofManager cofs = new CofManager();
     World world = new World(new WorldConfigurationBuilder().with(
         new EventSystem(), cofs, new CofUnloader(), new CofResolver(), new CofLoader(),
-        new CofLayerLoader(), new CofLayerCacher()).build());
+        new CofLayerLoader(), new CofLayerCacher()).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int id = world.create();
       world.getMapper(Class.class).create(id).type = Class.Type.PLR;

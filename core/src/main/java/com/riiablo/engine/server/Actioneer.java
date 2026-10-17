@@ -1131,6 +1131,14 @@ public class Actioneer extends PassiveSystem {
     log.traceEntry("srvstfunc(entityId: {}, srvstfunc: {}, targetId: {}, targetVec: {})",
         entityId, srvstfunc, targetId, targetVec);
     switch (srvstfunc) {
+      case 43: { // MaggotEgg: clear live targeting and replace live collision.
+        if (mNativeUnitFlags.has(entityId))
+          mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
+        if (mCasting.has(entityId)) mCasting.get(entityId).monsterHatchStarted = true;
+        DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+        if (collision != null) collision.removeMonsterSpawnPresence(entityId);
+        break;
+      }
       case 0:
         break;
       case 54: { // St54 snapshots the unit target, then clears path tracking.

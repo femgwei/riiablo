@@ -13,6 +13,28 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaggotSpawnExecutionTest extends RiiabloTest {
+  @Test void spawnMasksDistinguishTerrainObjectsItemsAndUnitMarkers() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      f.zone.or(170, 170, DT1.Tile.FLAG_BLOCK_WALK);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 170, 170, 1, 0x3c01));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 170, 170, 1, 0));
+      f.zone.adjustObjectCollision(175, 175, 1, 1, 1);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 175, 175, 1, 0x400));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 175, 175, 1, 0x800));
+      f.zone.adjustObjectCollision(178, 178, 1, 1, 1, true);
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 178, 178, 1, 0x800));
+      int item = f.world.create();
+      f.world.getMapper(Item.class).create(item);
+      f.world.getMapper(Position.class).create(item).position.set(180, 180);
+      f.world.process(); f.collisions.refreshNow();
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x200));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 128, 128, 1, 0x80));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 128, 128, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 128, 128, 1, 0x1000));
+    }
+  }
+
   @Test void queenStagesSpawnAndEnforcesSuccessfulSpawnLimit() throws Exception {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       MonStats.Entry row = Riiablo.files.monstats.get("maggotqueen1");
@@ -34,8 +56,8 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
       f.world.process();
       assertEquals(1, count(f, childRow));
       int child = first(f, childRow);
-      assertEquals(168f, f.pos(child).x);
-      assertEquals(160f, f.pos(child).y);
+      assertEquals(3f, Math.max(Math.abs(f.pos(child).x - 168), Math.abs(f.pos(child).y - 160)),
+          "native queen search starts on radius three, never at the center");
       assertTrue(f.world.getMapper(NativeUnitFlags.class).get(child).has(NativeUnitFlags.NO_EXPERIENCE));
       think.invoke(ai, f.target, 10f, false);
       think.invoke(ai, f.target, 10f, false);
@@ -85,6 +107,13 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
       assertEquals(84, skill.srvdofunc);
       f.world.getMapper(Casting.class).create(egg).skillId = skill.Id;
       f.collisions.refreshNow();
+      java.lang.reflect.Method start = Actioneer.class.getDeclaredMethod("srvstfunc",
+          int.class, int.class, int.class, com.badlogic.gdx.math.Vector2.class);
+      start.setAccessible(true);
+      start.invoke(f.world.getSystem(Actioneer.class), egg, 43, Engine.INVALID_ENTITY, null);
+      assertFalse(f.world.getMapper(NativeUnitFlags.class).get(egg).has(NativeUnitFlags.MONSTER_TARGET));
+      f.collisions.refreshNow();
+      assertFalse(f.collisions.hasPresence(egg));
       invoke(f, egg, 84, Engine.INVALID_ENTITY);
       f.world.process();
       int produced = count(f, larva.hcIdx);

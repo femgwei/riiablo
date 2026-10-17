@@ -14,6 +14,29 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void genericMonsterMonSeqUsesAuthoritativeFramesAndReleasesAtSequenceEnd() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIRNHTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 512;
+      com.riiablo.engine.server.component.Sequence sequence = world.getMapper(
+          com.riiablo.engine.server.component.Sequence.class).create(id);
+      sequence.nativeMonster = com.riiablo.engine.server.NativeMonsterSequence.load("seq_reanimatedcharge");
+      assertNotNull(sequence.nativeMonster);
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame : new int[] {5, 5, 2, 9, 0}) {
+        data.frame = frame << 8; world.process(); assertEquals(frame, animation.getFrame());
+      }
+      sequence.sequence((byte) 0, (byte) 0);
+      world.process();
+      assertEquals(2, animation.getFrame());
+    } finally { world.dispose(); }
+  }
+
   @Test void deathMaulFollowsRepeatedA2SourceFrames() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

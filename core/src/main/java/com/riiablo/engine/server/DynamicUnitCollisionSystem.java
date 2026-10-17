@@ -30,6 +30,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   protected ComponentMapper<com.riiablo.engine.server.component.WhirlwindRuntime> mWhirlwindRuntime;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
@@ -198,10 +199,55 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         other -> sharesCollisionSpace(zone, other));
   }
 
+  /** SpawnCol uses native masks, not the unit's walking/flight profile. */
+  public boolean isFreeForMonsterSpawnMask(int sourceId, Map.Zone zone, int x, int y, int size, int mask) {
+    if (size < 0 || size > 3) return false;
+    int radius = size >= 2 ? 1 : 0;
+    for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
+      if (size == 2 && dx != 0 && dy != 0) continue;
+      final int px = x + dx, py = y + dy;
+      if (!zone.contains(px, py)) return false;
+      int flags = zone.staticFlagsWorld(px, py);
+      if (zone.objectCollisionReferences(px, py) > 0) flags |= 0x400;
+      if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
+      if ((flags & mask) != 0) return false;
+      if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
+        if (!sharesCollisionSpace(zone, other)) return false;
+        int bits = isPlayer(other) ? 0x80 : 0x100;
+        Position position = mPosition.get(other);
+        if (position != null) {
+          int distance = Math.abs(Map.round(position.position.x) - px)
+              + Math.abs(Map.round(position.position.y) - py);
+          if (distance <= (footprint(other) >= 3 ? 1 : 0))
+            bits |= isPetPresence(other) ? 0x2000 : 0x1000;
+        }
+        return (bits & mask) != 0;
+      })) return false;
+      if ((mask & 0x200) != 0 && hasSpawnItem(zone, px, py)) return false;
+      // Missile collision bits are not maintained for every projectile yet;
+      // SpawnCol=1's special floor branch is rejected by the factory.
+    }
+    return true;
+  }
+
+  private boolean hasSpawnItem(Map.Zone zone, int x, int y) {
+    IntBag ids = world.getAspectSubscriptionManager().get(Aspect.all(
+        com.riiablo.engine.server.component.Item.class, Position.class)).getEntities();
+    for (int i = 0; i < ids.size(); i++) {
+      int id = ids.get(i);
+      Position position = mPosition.get(id);
+      if (sharesCollisionSpace(zone, id) && Map.round(position.position.x) == x
+          && Map.round(position.position.y) == y) return true;
+    }
+    return false;
+  }
+
   /** Reserve a successfully created exact-position monster within this tick. */
   public void reserveMonsterSpawn(int entityId, int x, int y, int size) {
     if (enabled) grid.put(entityId, x, y, size);
   }
+
+  public void removeMonsterSpawnPresence(int entityId) { grid.remove(entityId); }
 
   /** Landing/placement query: every indexed unit blocks, including the owner. */
   public boolean isFreeForLanding(int moverId, int x, int y, int size) {
@@ -240,6 +286,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   public boolean hasPresence(int entityId) {
+    if (mCasting.has(entityId) && mCasting.get(entityId).monsterHatchStarted) return false;
     if (!mClass.has(entityId) || !mVelocity.has(entityId)) return false;
     Class.Type type = mClass.get(entityId).type;
     if (type != Class.Type.MON && type != Class.Type.PLR) return false;

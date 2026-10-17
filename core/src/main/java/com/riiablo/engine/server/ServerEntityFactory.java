@@ -77,6 +77,8 @@ import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ServerEntityFactory extends EntityFactory {
+  private final java.util.IdentityHashMap<Map.Zone, com.d2moo.common.drlg.D2Seed> legacySpawnSeeds =
+      new java.util.IdentityHashMap<>();
   static byte nativeMonsterWeaponClass(int resolvedClass) {
     // D2Composit.cpp COMPOSIT_GetWeaponClassIdFromCode returns native
     // class 0 (HTH) for an unknown code; riiablo's HTH index is 1.
@@ -423,27 +425,35 @@ public class ServerEntityFactory extends EntityFactory {
     if (collision == null) return Engine.INVALID_ENTITY;
     int centerX = Map.round(x), centerY = Map.round(y);
     Vector2 sourcePosition = mPosition.get(sourceId).position;
-    // Host placement projection, not the native room-seeded perimeter order.
-    for (int radius = 0; radius <= searchRadius; radius++) {
-      for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
-        if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
-        int px = centerX + dx, py = centerY + dy;
-        if (!zone.contains(px, py)
+    Map.RoomEx room = zone.findRoomEx(sourcePosition.x, sourcePosition.y);
+    // Legacy/synthetic maps have no native room stream. Keep that fallback
+    // separate; never seed a real room stream from a monster or global RNG.
+    com.d2moo.common.drlg.D2Seed seed = room != null ? room.runtimeSeed()
+        : legacySpawnSeeds.computeIfAbsent(zone, ignored -> new com.d2moo.common.drlg.D2Seed(0, 666));
+    int mask = NativeMonsterSpawnSearch.collisionMask(dimensions.spawnCol);
+    // SpawnCol 1 normally selects special floor tiles, not this perimeter
+    // branch. Fail closed until that tile metadata is projected.
+    if (dimensions.spawnCol == 1) return Engine.INVALID_ENTITY;
+    final int[] selected = {Engine.INVALID_ENTITY};
+    NativeMonsterSpawnSearch.search(seed, centerX, centerY, searchRadius, (px, py) -> {
+        if (px == 0 || py == 0 || !zone.contains(px, py)
+            || room != null && !room.contains(px, py)
             || !zone.areRoomsAdjacent(sourcePosition.x, sourcePosition.y, px, py)
-            || map.isBlockedForPath(zone, px, py,
-                NativeGroundPathProfile.forUnit(false, row).terrainFlags, size, false)
-            || !collision.isFreeForMonsterSpawnReplacing(
-                replaceSource ? sourceId : Engine.INVALID_ENTITY, zone, px, py, size)) continue;
+            || !collision.isFreeForMonsterSpawnMask(
+                replaceSource ? sourceId : Engine.INVALID_ENTITY, zone, px, py, size, mask)) return false;
         int id = createMonster(monsterId, px, py);
-        if (id == Engine.INVALID_ENTITY) return id;
+        if (id == Engine.INVALID_ENTITY) return false;
         applyNativeUnitFlags(id, unitFlags);
-        if (mode != Engine.Monster.MODE_NU)
+        if (mode != Engine.Monster.MODE_NU) {
           mSequence.create(id).sequence((byte) mode, Engine.Monster.MODE_NU);
+          CofManager cofs = world.getSystem(CofManager.class);
+          if (cofs != null) cofs.setMode(id, (byte) mode, true);
+        }
         collision.reserveMonsterSpawn(id, px, py, size);
-        return id;
-      }
-    }
-    return Engine.INVALID_ENTITY;
+        selected[0] = id;
+        return true;
+    });
+    return selected[0];
   }
 
   @Override public boolean reinitializeMonster(int entityId, int monsterId, int mode) {

@@ -58,8 +58,10 @@ class DependencyDirectionTest {
     }
     Pattern globals = Pattern.compile(
         "\\bRiiablo\\s*\\.\\s*(?:files|mpqs|gameSeed)\\b|\\bMathUtils\\s*\\.\\s*random\\b|\\bINSTANCE\\b");
+    // Escaped characters and ordinary characters are disjoint alternatives.
+    // Possessive repetition avoids recursive backtracking on long literals.
     Pattern commentsAndStrings = Pattern.compile(
-        "/\\*.*?\\*/|//[^\\n]*|\"(?:\\\\.|[^\"\\\\])*\"", Pattern.DOTALL);
+        "/\\*.*?\\*/|//[^\\n]*|\"(?:\\\\.|[^\"\\\\])*+\"", Pattern.DOTALL);
     List<String> violations = new ArrayList<>();
     try (Stream<Path> paths = Files.walk(sourceRoot)) {
       for (Path file : (Iterable<Path>) paths.filter(path -> path.toString().endsWith(".java"))::iterator) {

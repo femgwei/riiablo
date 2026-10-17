@@ -6,6 +6,21 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RoomExAdjacencyTest {
+  @Test void populationAndAiShareLiveActiveRoomSeedWithoutResettingIt() {
+    com.d2moo.common.drlg.D2DrlgRoom raw = new com.d2moo.common.drlg.D2DrlgRoom();
+    raw.setSeed(new com.d2moo.common.drlg.D2Seed(123, 456));
+    com.d2moo.common.drlg.D2ActiveRoom active = new com.d2moo.common.drlg.D2ActiveRoom();
+    com.d2moo.common.drlg.D2Seed live = new com.d2moo.common.drlg.D2Seed(789, 666);
+    active.setSeed(live); raw.setRoom(active);
+    Map.RoomEx room = new Map.RoomEx(0, 0, 0, 40, 40);
+    room.setNativePopulationMetadata(raw);
+    org.junit.jupiter.api.Assertions.assertSame(live, room.runtimeSeed());
+    com.d2moo.common.seed.Seed.rollRandomNumber(room.runtimeSeed());
+    room.setNativePopulationMetadata(raw);
+    org.junit.jupiter.api.Assertions.assertSame(live, room.runtimeSeed());
+    org.junit.jupiter.api.Assertions.assertNotEquals(789, live.getNLowSeed());
+  }
+
   @Test
   void nativeSeamVisibilityRequiresLevelQualifiedRoomLinks() {
     Map map = new Map(1, 0);

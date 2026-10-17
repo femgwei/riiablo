@@ -2850,8 +2850,10 @@ public class Map implements Disposable {
     private int populationOutdoorFlag80;
     private int populationSeed;
     private int populationSeedHigh = 666;
+    private com.d2moo.common.drlg.D2DrlgRoom runtimeSeedSource;
 
     public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
+      runtimeSeedSource = room;
       // Local room IDs restart at zero in each Zone. Preserve the level as
       // well so native pRoomsNear links survive cross-level seam projection.
       com.d2moo.common.drlg.D2DrlgRoom[] near = room.getPpRoomsNear();
@@ -2898,8 +2900,13 @@ public class Map implements Disposable {
     private com.d2moo.common.drlg.D2Seed runtimeSeed;
     /** Active-room stream shared by object population and later AI spawning. */
     public com.d2moo.common.drlg.D2Seed runtimeSeed() {
-      if (runtimeSeed == null) runtimeSeed = new com.d2moo.common.drlg.D2Seed(
-          populationSeed, populationSeedHigh);
+      if (runtimeSeed == null) {
+        com.d2moo.common.drlg.D2ActiveRoom active = runtimeSeedSource == null ? null : runtimeSeedSource.getRoom();
+        // DUNGEON_AllocRoom has its own seed, rolled from RoomEx's stream.
+        // Share that live object, not an inactive-room snapshot or a copy.
+        runtimeSeed = active != null && active.getSeed() != null ? active.getSeed()
+            : new com.d2moo.common.drlg.D2Seed(populationSeed, populationSeedHigh);
+      }
       return runtimeSeed;
     }
     public int rollAiSpawnCoordinate(int limit) {

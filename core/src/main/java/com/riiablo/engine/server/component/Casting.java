@@ -81,6 +81,7 @@ public class Casting extends PooledComponent {
   /** Prevents a native monster basic projectile from being emitted twice. */
   public boolean monsterLeapStarted;
   public boolean monsterHatchResolved;
+  public boolean monsterHatchStarted;
   public boolean monsterLeapHit;
   public boolean monsterMissileCreated;
   /** Used-skill Param1 and MODECHANGE/ENDANIM state, never shared between casts. */
@@ -184,6 +185,7 @@ public class Casting extends PooledComponent {
     strafeTargetIds.clear();
     monsterLeapStarted = false;
     monsterHatchResolved = false;
+    monsterHatchStarted = false;
     monsterLeapHit = false;
     monsterMissileCreated = false;
     monInferno = null;
@@ -225,6 +227,7 @@ public class Casting extends PooledComponent {
   protected void reset() {
     monsterLeapStarted = false;
     monsterHatchResolved = false;
+    monsterHatchStarted = false;
     monsterLeapHit = false;
     nativeSummonClass = -1;
     nativeSummonMode = 0;
