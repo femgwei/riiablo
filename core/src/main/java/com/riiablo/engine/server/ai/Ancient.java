@@ -136,7 +136,7 @@ public class Ancient extends NativeDecisionAI {
     if (level <= 0) return 0;
     UnitStates states = mUnitStates.get(id);
     if (states != null && states.stateList != null) level += states.stateList.getTotalSkillModifier();
-    com.riiablo.codec.excel.NativeSkills.Entry row = Riiablo.files.NativeSkills.get(skillId);
+    com.riiablo.codec.excel.NativeSkills.Entry row = files().NativeSkills.get(skillId);
     return row == null ? 0 : Math.max(0, level) * (row.nativeInteger("attackrank") & 255);
   }
 
@@ -165,7 +165,7 @@ public class Ancient extends NativeDecisionAI {
 
   private boolean hasNamedState(int id, String name) {
     if (name == null || name.isEmpty()) return false;
-    States.Entry state = Riiablo.files.States.get(name);
+    States.Entry state = files().States.get(name);
     UnitStates states = mUnitStates.get(id);
     return state != null && state.id > 0 && states != null && states.stateList != null
         && states.stateList.hasState(state.id);
@@ -199,7 +199,7 @@ public class Ancient extends NativeDecisionAI {
       if (combat && rollAiChance(params[3]) && escape(targetId, params[4], 0)) {
         delayDecision(25); return;
       }
-      Skills.Entry shout = hasSkill(0) ? Riiablo.files.skills.get(monster.monstats.Skill1) : null;
+      Skills.Entry shout = hasSkill(0) ? files().skills.get(monster.monstats.Skill1) : null;
       if (shout != null && !hasNamedState(entityId, shout.aurastate)
           && !hasNamedState(targetId, shout.auratargetstate) && rollAiChance(params[2])
           && castAt(0, Engine.INVALID_ENTITY, new Vector2())) return;

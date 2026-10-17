@@ -30,6 +30,15 @@
   `:core:subsystemRegression` 通过。
 - [ ] AI 目录仍有其他具体类的表访问，继续按同一入口迁移。
 
+## 2026-10-17 AI 具体实现第二组上下文化
+
+- [x] `Ancient`、`BaalCrab`、`CatapultSpotter`、`FallenShaman` 和 `InvisoSpawner`
+  的 NativeSkills、States、Skills、MonStats、MonStats2 查询改用所属 AI 的
+  `files()`；`InvisoSpawner` 保留静态测试兼容入口，生产生成路径使用实例上下文。
+- [x] `:core:compileJava`、`:core:architectureRegression`、
+  `:core:subsystemRegression` 通过。
+- [ ] AI 目录剩余具体类仍有兼容表访问，继续迁移后再收紧兼容预算。
+
 ## 2026-10-17 生产地图生成统一显式 D2MOO 上下文
 
 - [x] `Map` 提供与自身 `MapResources` 对应的 `d2mooContext()`；Act II Arcane、Act II

@@ -332,7 +332,7 @@ public class BaalCrab extends NativeDecisionAI {
     CharData data = mPlayer.has(id) ? mPlayer.get(id).data : null;
     if (data == null) return 0;
     int skillId = data.getAction(button);
-    NativeSkills.Entry skill = Riiablo.files.NativeSkills.get(skillId);
+    NativeSkills.Entry skill = files().NativeSkills.get(skillId);
     return skill == null ? 0
         : effectiveHandSkillLevel(id, data, skillId) * (skill.nativeInteger("attackrank") & 0xFF);
   }
@@ -502,8 +502,8 @@ public class BaalCrab extends NativeDecisionAI {
     // Also catches a clone created this tick, before subscription insertion.
     if (isLivingMonster(peer) && mMonster.get(peer).baalLinkedOwnerId == entityId) return;
 
-    MonStats.Entry row = Riiablo.files.monstats.get("baalclone");
-    MonStats2.Entry stats2 = row == null ? null : Riiablo.files.monstats2.get(row.MonStatsEx);
+    MonStats.Entry row = files().monstats.get("baalclone");
+    MonStats2.Entry stats2 = row == null ? null : files().monstats2.get(row.MonStatsEx);
     Attributes source = mAttributesWrapper.has(entityId) ? mAttributesWrapper.get(entityId).attrs : null;
     if (row == null || !"BaalCrabClone".equals(row.AI) || stats2 == null || source == null
         || source.get(Stat.maxhp) == null || source.get(Stat.hitpoints) == null) return;

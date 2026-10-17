@@ -22,10 +22,10 @@ public class CatapultSpotter extends NativeDecisionAI {
     Vector2 source = mPosition.get(entityId).position;
     com.riiablo.map.Map.RoomEx room = wrapper.zone.findRoomEx(source.x, source.y);
     if (room == null) return true;
-    com.riiablo.codec.excel.MonStats.Entry variant = Riiablo.files.monstats.get(monster.monstats.BaseId);
+    com.riiablo.codec.excel.MonStats.Entry variant = files().monstats.get(monster.monstats.BaseId);
     int depth = 0;
     while (variant != null && variant.hcIdx != monster.monstats.hcIdx && depth < 4) {
-      variant = Riiablo.files.monstats.get(variant.NextInClass); depth++;
+      variant = files().monstats.get(variant.NextInClass); depth++;
     }
     if (depth >= 4) return true;
     int[] dx = {0, -1, -1, 1}, dy = {-1, 0, 0, 0};
@@ -79,7 +79,7 @@ public class CatapultSpotter extends NativeDecisionAI {
       idle(15);
       return;
     }
-    Skills.Entry skill = Riiablo.files.skills.get(SKILLS[shotType]);
+    Skills.Entry skill = files().skills.get(SKILLS[shotType]);
     if (skill != null && castFixed(skill.Id, Engine.Monster.MODE_A1,
         Engine.INVALID_ENTITY, free)) lastShot = nativeFrame();
     else idle(15);

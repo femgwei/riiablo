@@ -177,8 +177,8 @@ public class FallenShaman extends AI {
 
   /** Finds the native resurrection skill instead of assuming it is Skill1. */
   private int findResurrectionSkillIndex() {
-    if (monster == null || monster.monstats == null || Riiablo.files == null
-        || Riiablo.files.skills == null) return -1;
+    if (monster == null || monster.monstats == null || files() == null
+        || files().skills == null) return -1;
     String[] names = {
         monster.monstats.Skill1, monster.monstats.Skill2, monster.monstats.Skill3,
         monster.monstats.Skill4, monster.monstats.Skill5, monster.monstats.Skill6,
@@ -186,7 +186,7 @@ public class FallenShaman extends AI {
     for (int i = 0; i < names.length; i++) {
       String name = names[i];
       if (name == null || name.isEmpty()) continue;
-      Skills.Entry skill = Riiablo.files.skills.get(name);
+      Skills.Entry skill = files().skills.get(name);
       if (skill != null && skill.srvdofunc == 97) return i;
       if (name.toLowerCase().contains("resurrect") || name.toLowerCase().contains("raise")) return i;
     }
