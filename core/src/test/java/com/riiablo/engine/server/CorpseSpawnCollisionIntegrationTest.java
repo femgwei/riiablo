@@ -8,6 +8,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CorpseSpawnCollisionIntegrationTest extends RiiabloTest {
+  @Test void resurrectionRestoresLiveFootprintBeforeSubscriptionInsertion() {
+    try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
+      int id = f.factory.createMonster(Riiablo.files.monstats.get("fallen1").hcIdx, 180, 180);
+      f.world.process();
+      f.attrs(id).get(com.riiablo.attributes.Stat.hitpoints).set(0);
+      f.events.dispatch(DeathEvent.obtain(f.source, id));
+      f.world.process();
+      f.world.getMapper(Corpse.class).create(id).reset(Corpse.DEFAULT_DURATION, true);
+      assertFalse(f.world.getMapper(Velocity.class).has(id));
+      assertTrue(f.factory.resurrectMonster(id, f.source));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x1000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x8000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(id, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.factory.resurrectMonster(id, f.source));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+    }
+  }
+
   @Test void deadColKeepsLiveFootprintInsteadOfAddingCorpseMask() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       int id = f.factory.createMonster(Riiablo.files.monstats.get("fallen1").hcIdx, 180, 180);
@@ -39,6 +58,8 @@ class CorpseSpawnCollisionIntegrationTest extends RiiabloTest {
       assertTrue(f.factory.reinitializeMonster(id, Riiablo.files.monstats.get("fallen1").hcIdx,
           com.riiablo.engine.Engine.Monster.MODE_NU));
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x8000));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x1000));
     }
   }
 

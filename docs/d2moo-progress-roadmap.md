@@ -1,5 +1,10 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 复活占位同帧恢复
+
+- 对齐 SKILLS_ResurrectUnit 的即时活体碰撞写入，修复普通复活/Revive 与原实体重初始化后、Velocity 订阅更新前的出生检查空窗。
+- 保留现有单位 pattern 分类；完整复活 pattern 矩阵和原始共享位网格残留仍待对齐。来源及验证见 [出生搜索专项记录](ai-native-spawn-search-2026-10-18.md)。
+
 ## 2026-10-18 怪物服务端 CORPSE 标记
 
 - 普通怪物死亡开始与虫卵开始孵化写入服务端 3×3 CORPSE 出生查询层；deadCol 保留原占位，不误套客户端尸体十字。

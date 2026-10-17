@@ -481,7 +481,10 @@ public class ServerEntityFactory extends EntityFactory {
     com.riiablo.map.Box2DPhysics physics = world.getSystem(com.riiablo.map.Box2DPhysics.class);
     if (physics != null) physics.rebuildMonsterBody(entityId);
     DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
-    if (collisions != null) collisions.refreshNow();
+    if (collisions != null) {
+      collisions.refreshNow();
+      reserveRestoredMonsterCollision(entityId, collisions);
+    }
     return true;
   }
 
@@ -1081,6 +1084,8 @@ public class ServerEntityFactory extends EntityFactory {
       }
     }
 
+    DynamicUnitCollisionSystem restoredCollision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (restoredCollision != null) reserveRestoredMonsterCollision(monsterId, restoredCollision);
     log.info("[MONSTER_RAISE] phase=restored source={} target={} monster={} hp={} "
             + "mode={} resurrectSkill={} resurrected={} resurrectedBy={} playerRevive={} "
             + "ai={} position=({}, {})",
@@ -1095,6 +1100,12 @@ public class ServerEntityFactory extends EntityFactory {
     return playerRevive
         ? new NecroPet(monsterId)
         : AI.findAI(monsterId, monstats != null ? monstats.AI : null);
+  }
+
+  private void reserveRestoredMonsterCollision(int id, DynamicUnitCollisionSystem collisions) {
+    Vector2 position = mPosition.get(id).position;
+    collisions.reserveMonsterSpawn(id, Map.round(position.x), Map.round(position.y),
+        mSize.has(id) ? mSize.get(id).size : 1);
   }
 
   @Override

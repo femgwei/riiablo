@@ -1,5 +1,12 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：复活活体占位的同帧恢复
+
+- 来源：SkillMonst.cpp 的 SKILLS_ResurrectUnit 在恢复生命与 footprint mask 后调用 D2Common_10214，并立即 COLLISION_SetMaskWithPattern；Path.cpp 的 D2Common_10214 也同步重建 pattern/footprint，而不是等待下一帧单位列表刷新。
+- 普通复活/Revive 共用的 restoreMonster 成功结束时，现在立即登记活体占位；原实体 reinitializeMonster 刷新现有订阅后再登记恢复者，避免 Velocity 在死亡时被移除、复活时订阅尚未重插造成的同帧出生空窗。
+- 沿用已有 hasPresence/单位 pattern 分类与 source 排除，不改变落点选择、AI 思考、复活技能时序或失败请求；原始共享 CORPSE bit 残留、复活幽灵等完整 pattern 切换矩阵仍不属于本批验证范围。
+- 验证：CorpseSpawnCollisionIntegrationTest（4）、MaggotSpawnExecutionTest（9）、ServerMonsterCorpseSystemTest（6）、NativeSelfResurrectDataTest（1），共 20 项通过，architectureRegression 通过；日志 `build/ai-resurrection-marker-validation.log`。未运行全量测试或客户端图形验收。
+
 ## 后续：怪物服务端 CORPSE 出生标记层
 
 - 来源：MonsterMode.cpp 死亡开始仅在非 deadCol 分支调用 PATH_SetUnitDeadCollision(...,1)；Path.cpp 的服务端分支移除活体 footprint 并写 3×3 COLLIDE_CORPSE。SkillMonst.cpp 的 SrvSt43_MaggotEgg 无条件调用同一函数。客户端的 SMALL_NO_PRESENCE 尸体十字不是服务端规则。
