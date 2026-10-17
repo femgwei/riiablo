@@ -35,7 +35,7 @@ class MissileRoomTrackingTest {
       missile.ownerId = -1;
       missile.range = 200;
       missile.roomId = first.id;
-      world.getMapper(Position.class).create(entityId).position.set(10, 10);
+      Position position = world.getMapper(Position.class).create(entityId).initializeNativeCell(10, 10);
       world.getMapper(Velocity.class).create(entityId).velocity.set(40, 0);
       world.getMapper(MapWrapper.class).create(entityId).set(map, zone);
 
@@ -44,6 +44,10 @@ class MissileRoomTrackingTest {
       assertEquals(50f, world.getMapper(Position.class).get(entityId).position.x, 0.001f);
       assertEquals(second.id, missile.roomId,
           "D2MOO missile events continue while UNITS_GetRoom follows the crossing");
+      // Do not query raw before restoring the old vector: divergence checks
+      // alone would otherwise mask the missing write-boundary invalidation.
+      position.position.set(10, 10);
+      org.junit.jupiter.api.Assertions.assertFalse(position.hasNativePrecision());
     } finally {
       world.dispose();
     }

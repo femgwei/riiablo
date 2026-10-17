@@ -1385,7 +1385,9 @@ public class ServerEntityFactory extends EntityFactory {
     MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
         ownerMode, Math.max(1, damageLevel), 0);
 
-    mPosition.create(id).position.set(position);
+    Position missilePosition = mPosition.create(id);
+    missilePosition.invalidateNativePrecision();
+    missilePosition.position.set(position);
     MapWrapper ownerMap = ownerId >= 0 && mMapWrapper.has(ownerId)
         ? mMapWrapper.get(ownerId) : null;
     Map.Zone missileZone = ownerMap != null && ownerMap.zone != null

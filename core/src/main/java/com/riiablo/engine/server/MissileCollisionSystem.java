@@ -251,6 +251,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         world.delete(entityId);
         return;
       }
+      position.invalidateNativePrecision();
       position.position.set(mPosition.get(missile.attachedEntityId).position);
       velocity.velocity.setZero();
     }
@@ -373,6 +374,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         moveDistance = position.position.dst(next);
       }
       if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
+      position.invalidateNativePrecision();
       position.position.set(next);
       if (missile.diabWallMaker) missile.diabWallMoved =
           MathUtils.floor(lastPos.x) != MathUtils.floor(next.x)
@@ -430,6 +432,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           // Only synthetic/legacy distance-limited rows clamp this endpoint.
           clampToRangeEndpoint(lastPos, position.position,
               missile.distanceTraveled - moveDistance, moveDistance, missile.range, tmpVec);
+          position.invalidateNativePrecision();
           position.position.set(tmpVec);
           missile.distanceTraveled = missile.range;
         }
@@ -629,6 +632,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       lastPos.set(position.position);
       if (checkNativeMapCollision(entityId, missile, lastPos, blessedHammerNext)) return;
 
+      position.invalidateNativePrecision();
       position.position.set(blessedHammerNext);
       missile.distanceTraveled += stepLength;
       remaining -= stepLength;
@@ -1100,6 +1104,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
+    position.invalidateNativePrecision();
     position.position.set(mPosition.get(infectedId).position);
     controller.remainingFrames -= Math.max(1, elapsedFrames);
     if (controller.remainingFrames <= 0) {
@@ -1325,6 +1330,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (impact != null && !impact.isZero(0.0001f)) {
       // Raycast points are already in world subtiles.  Keep the missile on
       // the impact edge for the explosion callback and diagnostics.
+      mPosition.get(entityId).invalidateNativePrecision();
       mPosition.get(entityId).position.set(impact);
     }
     log.debug("[MISSILE_MAP_HIT] missileId={} missile={} owner={} collideType={} "
@@ -3243,6 +3249,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (cloud == null || position == null || velocity == null || !cloud.poisonCloudTraveling) return;
     float remaining = position.position.dst(cloud.poisonCloudTarget);
     if (remaining > Math.max(0.05f, moveDistance) && moveDistance > 0f) return;
+    position.invalidateNativePrecision();
     position.position.set(cloud.poisonCloudTarget);
     velocity.velocity.setZero();
     cloud.poisonCloudTraveling = false;
