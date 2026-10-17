@@ -100,6 +100,38 @@ class NativeObjectPopulationResourceTest extends com.riiablo.RiiabloTest {
     assertEquals(0, new NativeObjectPopulation().populate(zone, null));
     assertEquals(3, NativeObjectPopulation.densityCount(64,40,40));
   }
+  @Test void explicitMapResourcesPopulateWithoutGlobalFilesOrArchives() {
+    com.riiablo.Files previousFiles = Riiablo.files;
+    com.riiablo.mpq.MPQFileHandleResolver previousMpqs = Riiablo.mpqs;
+    MapResources resources = new MapResources(previousFiles, null, previousMpqs);
+    // Verify rocks, chests, barrels, urns and baskets against the compatibility
+    // path, then remove the global services before constructing the populator.
+    for (int group : new int[]{38,3,10,29,52}) {
+      Map.Zone baseline = zone(group), isolated = zone(group);
+      isolated.map = new Map(1, 0, resources);
+      int expected = new NativeObjectPopulation().populate(baseline, null);
+      assertTrue(expected > 0, "empty reference group=" + group);
+      try {
+        Riiablo.files = null;
+        Riiablo.mpqs = null;
+        NativeObjectPopulation population = new NativeObjectPopulation();
+        assertEquals(expected, population.populate(isolated, null), "group=" + group);
+        for (int i = 0; i < expected; i++) {
+          Map.NativeObject a = baseline.getNativeObjects().get(i);
+          Map.NativeObject b = isolated.getNativeObjects().get(i);
+          assertEquals(a.presetIndex, b.presetIndex);
+          assertEquals(a.roomId, b.roomId);
+          assertEquals(a.x, b.x);
+          assertEquals(a.y, b.y);
+          assertEquals(a.sourceFile, b.sourceFile);
+        }
+        assertEquals(0, population.populate(isolated, null), "reactivation group=" + group);
+      } finally {
+        Riiablo.files = previousFiles;
+        Riiablo.mpqs = previousMpqs;
+      }
+    }
+  }
   @Test void skippedExpansionJarRollsStillAdvanceTheSharedObjectSeed() {
     NativeObjectPopulation population = new NativeObjectPopulation();
     // With room seed (0,666), group 106 selects jar 443 in all 16 rooms.
