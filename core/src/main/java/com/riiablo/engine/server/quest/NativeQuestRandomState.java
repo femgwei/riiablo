@@ -20,5 +20,10 @@ public final class NativeQuestRandomState extends BaseSystem {
 
   public D2Seed seed() { return seed; }
 
+  /** Snapshot hooks used by the authoritative world save/reload boundary. */
+  public int lowSeed() { return seed.getNLowSeed(); }
+  public int highSeed() { return seed.getNHighSeed(); }
+  public void restore(int lowSeed, int highSeed) { seed.setSeeds(lowSeed, highSeed); }
+
   @Override protected void processSystem() {}
 }
