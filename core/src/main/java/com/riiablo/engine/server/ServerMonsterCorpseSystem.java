@@ -228,6 +228,11 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   private void releaseDeadMovement(int entityId) {
     Monster monster = mMonster.get(entityId);
     boolean retainDeadCollision = monster != null && monster.monstats2 != null && monster.monstats2.deadCol;
+    if (!retainDeadCollision && monster != null) {
+      monster.nativeCorpseCollision = true;
+      DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+      if (collision != null) collision.markMonsterDeadCollision(entityId);
+    }
     if (retainDeadCollision && mVelocity.has(entityId)) {
       mVelocity.get(entityId).velocity.setZero();
       mVelocity.get(entityId).stateMovementLocked = true;

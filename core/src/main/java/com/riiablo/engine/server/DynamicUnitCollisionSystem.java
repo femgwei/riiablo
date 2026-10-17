@@ -46,6 +46,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private EntitySubscription units;
   private final com.badlogic.gdx.utils.IntSet spawnMissiles = new com.badlogic.gdx.utils.IntSet();
   private final com.badlogic.gdx.utils.IntSet spawnUnits = new com.badlogic.gdx.utils.IntSet();
+  private final com.badlogic.gdx.utils.IntSet corpseUnits = new com.badlogic.gdx.utils.IntSet();
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
   private final Vector2 resolved = new Vector2();
@@ -60,6 +61,15 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void initialize() {
+    world.getAspectSubscriptionManager().get(Aspect.all(Monster.class, Position.class))
+        .addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
+          @Override public void inserted(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) corpseUnits.add(ids.get(i));
+          }
+          @Override public void removed(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) corpseUnits.remove(ids.get(i));
+          }
+        });
     world.getAspectSubscriptionManager().get(Aspect.all(
         com.riiablo.engine.server.component.Missile.class, Position.class))
         .addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
@@ -232,6 +242,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (zone.objectCollisionReferences(px, py) > 0) flags |= 0x400;
       if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
       if ((flags & mask) != 0) return false;
+      if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
       if (enabled && (mask & 0x100) != 0 && hasSpawnNoPresenceMarker(sourceId, zone, px, py)) return false;
       if (enabled && !grid.isFreeWithSize(sourceId, px, py, 1, other -> {
         if (!sharesCollisionSpace(zone, other)) return false;
@@ -261,6 +272,26 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     spawnUnits.add(id);
   }
 
+  /** Native server dead collision is a 3x3 CORPSE marker, not live presence. */
+  public void markMonsterDeadCollision(int id) {
+    if (!mMonster.has(id)) return;
+    mMonster.get(id).nativeCorpseCollision = true;
+    corpseUnits.add(id);
+    grid.remove(id);
+  }
+
+  private boolean hasSpawnCorpse(int sourceId, Map.Zone zone, int x, int y) {
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = corpseUnits.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (id == sourceId || !mMonster.has(id) || !mPosition.has(id)
+          || !mMonster.get(id).nativeCorpseCollision || !sharesCollisionSpace(zone, id)) continue;
+      Position position = mPosition.get(id);
+      if (Math.abs(Map.round(position.position.x) - x) <= 1
+          && Math.abs(Map.round(position.position.y) - y) <= 1) return true;
+    }
+    return false;
+  }
+
   private boolean hasSpawnNoPresenceMarker(int sourceId, Map.Zone zone, int x, int y) {
     for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = spawnUnits.iterator(); it.hasNext;) {
       int id = it.next();
@@ -268,6 +299,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           || !mMonster.has(id) || !mPosition.has(id) || !mVelocity.has(id)
           || !sharesCollisionSpace(zone, id)) continue;
       Monster monster = mMonster.get(id);
+      if (monster.nativeCorpseCollision) continue;
       com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
       if (mCorpse.has(id) || lifecycle != null && lifecycle.phase.ordinal()
           >= com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal()) continue;
@@ -379,6 +411,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   public boolean hasPresence(int entityId) {
+    if (mMonster.has(entityId) && mMonster.get(entityId).nativeCorpseCollision) return false;
     if (mCasting.has(entityId) && mCasting.get(entityId).monsterHatchStarted) return false;
     if (!mClass.has(entityId) || !mVelocity.has(entityId)) return false;
     Class.Type type = mClass.get(entityId).type;

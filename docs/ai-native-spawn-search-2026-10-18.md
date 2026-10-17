@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：怪物服务端 CORPSE 出生标记层
+
+- 来源：MonsterMode.cpp 死亡开始仅在非 deadCol 分支调用 PATH_SetUnitDeadCollision(...,1)；Path.cpp 的服务端分支移除活体 footprint 并写 3×3 COLLIDE_CORPSE。SkillMonst.cpp 的 SrvSt43_MaggotEgg 无条件调用同一函数。客户端的 SMALL_NO_PRESENCE 尸体十字不是服务端规则。
+- 普通怪物死亡开始立即登记 3×3 CORPSE=0x8000，移除活体索引；deadCol 保留原占位且不新增该标记。虫卵孵化开始也写该层，不再只清活体占位。
+- 登记独立于 Velocity 和 DD 的 Corpse 组件、usable/fading，速度组件移除后仍可查询；按同碰撞空间与 source 排除查询，实体删除清理。正常复活与原实体重初始化清除运行时标志。
+- 当前仍是按实体投影的出生 mask 查询层，不是原版共享位网格：重叠尸体按独立实体保留，不模拟删除一具尸体清掉其他实体同位 bit 的原始互清。未接入玩家死碰撞、完整尸体传送/移除规则、大型潜伏残留及客户端图形验收；默认 SpawnCol mask 不含 CORPSE 时不会额外阻挡出生。
+- 验证：CorpseSpawnCollisionIntegrationTest（3）、ServerMonsterCorpseSystemTest（6）、MaggotSpawnExecutionTest（9）、FrogPresenceIntegrationTest（7）、ImpMountCollisionIntegrationTest（2），共 27 项通过，architectureRegression 通过；日志 `build/ai-corpse-spawn-validation.log`。未运行全量测试或客户端图形验收。
+
 ## 后续：小型潜伏 footprint 的中心清除与移动
 
 - 来源：AiThink.cpp 的 FrogDemon 分支先 ResetMask 中心 NO_PATH/MONSTER，再设 SMALL_NO_PRESENCE；Path.cpp 的 PATH_SetUnitCollisionPattern 仅修改字段。D2Collision.cpp 的 COLLISION_SetUnitCollisionMask 在后续迁移时按新模式清旧十字、写新十字；Step.cpp 的普通移动循环在整数格未变化时跳过迁移写入。

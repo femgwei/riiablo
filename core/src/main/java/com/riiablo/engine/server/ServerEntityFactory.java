@@ -1019,6 +1019,7 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     mCorpse.remove(monsterId);
+    monster.nativeCorpseCollision = false;
     // D2MOO's SKILLS_ResurrectUnit restores a retained corpse as a live,
     // targetable monster. Reopen the authoritative lifecycle as well, or the
     // next death event is incorrectly treated as a duplicate of the old death.

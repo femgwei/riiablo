@@ -1136,7 +1136,8 @@ public class Actioneer extends PassiveSystem {
           mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
         if (mCasting.has(entityId)) mCasting.get(entityId).monsterHatchStarted = true;
         DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
-        if (collision != null) collision.removeMonsterSpawnPresence(entityId);
+        if (mMonster.has(entityId)) mMonster.get(entityId).nativeCorpseCollision = true;
+        if (collision != null) collision.markMonsterDeadCollision(entityId);
         break;
       }
       case 0:

@@ -216,6 +216,8 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
       assertFalse(f.world.getMapper(NativeUnitFlags.class).get(egg).has(NativeUnitFlags.MONSTER_TARGET));
       f.collisions.refreshNow();
       assertFalse(f.collisions.hasPresence(egg));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 171, 171, 1, 0x8000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 170, 170, 1, 0x1100));
       invoke(f, egg, 84, Engine.INVALID_ENTITY);
       f.world.process();
       int produced = count(f, larva.hcIdx);
