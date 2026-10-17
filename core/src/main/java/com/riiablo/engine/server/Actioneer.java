@@ -4059,7 +4059,7 @@ public class Actioneer extends PassiveSystem {
     return true;
   }
 
-  /** D2MOO SrvDo027: validate the landing subtile, warp, and clear stale movement intent. */
+  /** D2MOO SrvDo129: mounting preserves the imp's collision pattern and footprint. */
   private void resolveImpTeleport(int entityId, int targetId, Vector2 targetVec) {
     Monster imp = mMonster.get(entityId);
     if (imp == null || !"imp1".equals(imp.monstats.BaseId)) return;
@@ -4087,11 +4087,17 @@ public class Actioneer extends PassiveSystem {
       mNativeUnitFlags.create(entityId).set(NativeUnitFlags.MONSTER_TARGET);
       Box2DBody physics = mBox2DBody.get(entityId);
       if (physics != null && physics.body != null) physics.body.setActive(true);
+      reserveImpTeleportPresence(entityId);
       return;
     }
     if (targetId == Engine.INVALID_ENTITY) { resolveTeleport(entityId, targetVec); return; }
     Monster mount = mMonster.get(targetId);
     if (mount == null || mount.nativeOwnerId >= 0 || !mPosition.has(targetId)) return;
+    com.riiablo.engine.server.component.UnitLifecycle mountLifecycle = world.getMapper(
+        com.riiablo.engine.server.component.UnitLifecycle.class).get(targetId);
+    if (mCorpse.has(targetId) || mountLifecycle != null && mountLifecycle.isDead()) return;
+    if (mAttributesWrapper.has(targetId) && mAttributesWrapper.get(targetId).attrs
+        .getValue(Stat.hitpoints, 0f) <= 0f) return;
     String base = mount.monstats.BaseId;
     if (!"barricadetower".equals(base) && !"siegebeast1".equals(base)) return;
     MapWrapper sourceMap = mMapWrapper.get(entityId);
@@ -4121,6 +4127,15 @@ public class Actioneer extends PassiveSystem {
     Box2DBody physics = mBox2DBody.get(entityId);
     if (physics != null && physics.body != null) physics.body.setActive(false);
     mNativeUnitFlags.create(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
+    reserveImpTeleportPresence(entityId);
+  }
+
+  private void reserveImpTeleportPresence(int entityId) {
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision == null || !mPosition.has(entityId)) return;
+    Vector2 position = mPosition.get(entityId).position;
+    collision.reserveMonsterSpawn(entityId, Map.round(position.x), Map.round(position.y),
+        mSize.has(entityId) ? mSize.get(entityId).size : 1);
   }
 
   boolean resolveTeleport(int entityId, Vector2 targetVec) {

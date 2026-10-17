@@ -1,5 +1,13 @@
 # 普通出生搜索与客户端 MonSeq（2026-10-18）
 
+## 后续：骑乘小恶魔保留占位
+
+- D2MOO 调用链：`SkillDruid.cpp` 的 SrvDo129 调用 `sub_6FCBDFE0(...,1,0)`，经 `SUnit.cpp`、`PathMisc.cpp` 的 D2Common_10229 到 `Step.cpp` 的 sub_6FDAD5E0，使用现有 collision pattern/footprint 迁移网格；上坐骑只另设 ATTACHED、owner、目标位与特殊 AI16，不清 footprint。AiThink.cpp 的 AI16 初始化/思考也未将其切换为 no-presence。
+- 因此移除宿主中“骑乘 imp 无占位”的错误推断。上下坐骑立即迁移动态占位，出生查询不必等下一帧；拒绝尸体、死亡生命周期或生命归零的坐骑。
+- 重建索引保留相互 owner/身份有效的 imp 与塔/攻城兽的合法重叠，避免重建把骑乘者或坐骑挪走；不对一般怪物 owner 关系放宽重叠修复。
+- 潜伏暂未改动：FrogDemon 的原版 AI 清中心 NO_PATH/MONSTER 后只更改 pattern 字段，PATH_SetUnitCollisionPattern 不重写网格。该过渡与移动后的十字投影不能混为静态幽灵规则，仍待独立对齐；完整尸体层和自然地图视觉验收也未完成。
+- 验证：ImpMountCollisionIntegrationTest（2）、MaggotSpawnExecutionTest（9）、NativeMonsterSpawnSearchTest（10）、DynamicUnitCollisionSystemTest（12）、FrogPresenceIntegrationTest（5），共 38 项通过，architectureRegression 通过；日志 `build/ai-imp-mount-validation.log`。未运行全量测试与客户端图形验收。
+
 ## 后续：幽灵的 no-presence 出生标记
 
 - 来源：D2MOO `D2Common/src/Path/Path.cpp` 的 `PATH_AllocDynamicPath` 为 BaseId=WRAITH1 设置 SMALL_NO_PRESENCE，保留 MONSTER footprint；`D2Collision.cpp` 的 `COLLISION_SetMaskWithPattern` 对该模式仅写十字形传入 mask，不写 NO_PATH/PET。

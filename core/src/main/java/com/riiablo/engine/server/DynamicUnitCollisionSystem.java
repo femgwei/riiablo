@@ -129,7 +129,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int size = footprint(entityId);
       if (grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) {
         grid.put(entityId, x, y, size);
-      } else if (isOwnedCompanionOverlappingOwner(entityId)) {
+      } else if (isOwnedCompanionOverlappingOwner(entityId) || isMountedPair(entityId)) {
         // Keep the real position in the collision index. MercenaryFollowSystem
         // will install a native Escape path; changing the coordinate here
         // produces a visible one-cell teleport when the player approaches.
@@ -366,8 +366,6 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (type == Class.Type.MON && mMonster.has(entityId)) {
       Monster monster = mMonster.get(entityId);
       if (monster.frogNoPresence) return false;
-      if (monster.nativeOwnerId >= 0 && monster.monstats != null
-          && "imp1".equals(monster.monstats.BaseId)) return false;
       if (!isDynamicObstacle(monster)) return false;
       MonStats.Entry stats = monster.monstats;
       if (stats != null) {
@@ -525,5 +523,24 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private boolean isOwnedCompanionOverlappingOwner(int entityId) {
     int ownerId = ownedCompanionOwner(entityId);
     return ownerId >= 0 && isPlayer(ownerId) && mPosition.has(ownerId);
+  }
+
+  private boolean isMountedPair(int id) {
+    if (!mMonster.has(id)) return false;
+    Monster monster = mMonster.get(id);
+    int ownerId = monster.nativeOwnerId;
+    if (ownerId < 0 || !mMonster.has(ownerId)
+        || monster.nativeOwnerIdentity != null && !monster.nativeOwnerIdentity.isCurrent(world, ownerId)) return false;
+    Monster owner = mMonster.get(ownerId);
+    if (owner.nativeOwnerId != id || owner.nativeOwnerIdentity != null
+        && !owner.nativeOwnerIdentity.isCurrent(world, id)) return false;
+    String base = monster.monstats == null ? null : monster.monstats.BaseId;
+    String ownerBase = owner.monstats == null ? null : owner.monstats.BaseId;
+    return "imp1".equals(base) && isImpMount(ownerBase)
+        || "imp1".equals(ownerBase) && isImpMount(base);
+  }
+
+  private static boolean isImpMount(String base) {
+    return "barricadetower".equals(base) || "siegebeast1".equals(base);
   }
 }
