@@ -19,6 +19,8 @@ public class Monster extends Component {
   public int championType;
   /** Unique monster affix bit mask and owner link for minions. */
   public long affixes;
+  /** Simulation time until the next struck charged-bolt burst. */
+  public float chargedBoltsCooldown;
   public int uniqueId;
 
   /**
@@ -91,6 +93,7 @@ public class Monster extends Component {
     championType = -1;
     affixes = 0L;
     uniqueId = -1;
+    chargedBoltsCooldown = 0f;
     baalWaveIndex = -1;
     baalWaveSuperUniqueId = -1;
     baalWaveRoomId = -1;

@@ -87,6 +87,8 @@ public final class MonsterAffix {
 
   /** 击退 - 攻击击退目标 */
   public static final long KNOCKBACK = 1L << 22;
+  /** Charged bolts released when the monster is struck (MonUMod 16). */
+  public static final long CHARGED_BOLTS = 1L << 23;
 
   //==========================================================================
   // 普通难度可用词缀
@@ -189,6 +191,7 @@ public final class MonsterAffix {
         case 8: affixes |= MAGIC_RESISTANT; break;
         case 9: affixes |= FIRE_ENCHANTED; break;
         case 17: affixes |= LIGHTNING_ENCHANTED; break;
+        case 16: affixes |= CHARGED_BOLTS; break;
         case 18: affixes |= COLD_ENCHANTED; break;
         case 23: affixes |= POISON_ENCHANTED; break;
         case 25: affixes |= MANA_BURN; break;

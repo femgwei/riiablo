@@ -26,6 +26,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.skill.SkillCodes;
+import com.riiablo.engine.server.monster.MonsterAffix;
 
 @Wire(failOnNull = false)
 @All({AIWrapper.class, Position.class, Monster.class})
@@ -36,6 +37,17 @@ public class AIStepper extends IteratingSystem {
         || !mAIWrapper.has(event.victim)) return;
     com.riiablo.engine.server.ai.AI ai = mAIWrapper.get(event.victim).ai;
     if (ai != null) ai.onNativeHit(event.attacker);
+    Monster monster = mMonster.get(event.victim);
+    if (MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS)
+        && monster.chargedBoltsCooldown <= 0f) {
+      ServerSkillSystem skills = world.getSystem(ServerSkillSystem.class);
+      if (skills != null) {
+        skills.emitScarabChargedBolts(event.victim);
+        // Native MONSTERUNIQUE_ScarabModeChange defers the callback by two
+        // frames; this guard also coalesces multi-packet damage in one swing.
+        monster.chargedBoltsCooldown = 2f / 25f;
+      }
+    }
   }
   private static final Logger log = LogManager.getLogger(AIStepper.class);
 
@@ -97,6 +109,7 @@ public class AIStepper extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Monster monster = mMonster.get(entityId);
+    monster.chargedBoltsCooldown = Math.max(0f, monster.chargedBoltsCooldown - world.getDelta());
     MapWrapper entityMap = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     if (monster.spawnZone != null && entityMap != null
         && entityMap.zone != null

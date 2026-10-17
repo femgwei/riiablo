@@ -164,6 +164,28 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
   }
+
+  /** Native MONSTERUNIQUE_CastBugLightningMissile: eight charged-bolt missiles
+   * emitted from a scarab carrying MonUMod 16 after a real damaging hit. */
+  public void emitScarabChargedBolts(int source) {
+    if (!mMonster.has(source) || !mPosition.has(source) || factory == null) return;
+    Missiles.Entry row = files() == null || files().Missiles == null
+        ? null : files().Missiles.get("buglightning");
+    if (row == null) return;
+    Vector2 origin = mPosition.get(source).position;
+    for (int i = 0; i < 8; i++) {
+      float angle = i * MathUtils.PI2 / 8f;
+      Vector2 direction = new Vector2(MathUtils.cos(angle), MathUtils.sin(angle));
+      int id = createMissile(row, direction, origin, source, null,
+          mAttributesWrapper.has(source)
+              ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt())
+              : 1);
+      if (id >= 0 && mMissile.has(id)) {
+        mMissile.get(id).nativeLifetimeFrames = 77;
+        mMissile.get(id).range = 77;
+      }
+    }
+  }
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
   private static final int NOVA_MISSILE_COUNT = 64;
