@@ -16,10 +16,7 @@ public final class NativeMonsterSequence {
     this.mode = mode; this.frames = frames; this.modes = modes; this.actions = actions;
   }
   public static NativeMonsterSequence load(String name) {
-    if (name == null || !java.util.Arrays.asList("seq_ancientwhirlwind", "seq_ancientleap",
-        "seq_genericspawner", "seq_mosquitoskill", "seq_vileres", "seq_undeadbestow",
-        "seq_fethisraise", "seq_reanimatedcharge", "seq_siegebeastcharge",
-        "seq_nihlathakarctic", "seq_serpentcharge", "seq_impinferno").contains(name)) return null;
+    if (name == null || !name.startsWith("seq_")) return null;
     if (source != Riiablo.mpqs) { CACHE.clear(); source = Riiablo.mpqs; }
     NativeMonsterSequence cached = CACHE.get(name);
     if (cached != null) return cached;
@@ -37,7 +34,7 @@ public final class NativeMonsterSequence {
       frames.add(Integer.parseInt(columns[2]));
       actions.add(columns[4].isEmpty() ? (byte) 0 : Byte.parseByte(columns[4]));
     }
-    if (frames.isEmpty() || mode < 0) throw new IllegalStateException("Missing MonSeq: " + name);
+    if (frames.isEmpty() || mode < 0) return null;
     int[] f = new int[frames.size()]; byte[] a = new byte[f.length], m = new byte[f.length];
     for (int i = 0; i < f.length; i++) { f[i] = frames.get(i); a[i] = actions.get(i); m[i] = modes.get(i); }
     NativeMonsterSequence result = new NativeMonsterSequence((byte) mode, f, m, a);

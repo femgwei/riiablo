@@ -42,3 +42,6 @@ Ancient 目标选择：普通候选扫描已加入同世界、同关卡筛选，
 Ancient 后续：已接入 null-command Boss 评分（抗性、伤害、双手技能等级与 attackrank、COLD、低生命、近战/弹道阻挡），并区分 Talic 普通目标优先与 Madawc/Korlic 直接评分选敌。当前评分候选仍使用 ECS 遍历次序，原版玩家组/子节点平分顺序以及 node9 阻路回退未完成，不宣称完整等价。
 Ancient 选敌后续已补齐玩家槽位/子节点顺序及 node9 近距离阻路回退；仍需自然地图验证完整节点注册时序。
 
+
+MonSeq 依赖：NativeMonsterSequence 已从 12 个硬编码名称改为动态读取所有 monseq.txt 的 seq_* 定义，缓存仍按 MPQ 数据源隔离；已通过安装数据中全部已引用 seq_* 行的加载测试。动作帧固定点/客户端 COF 表现仍需逐序列验收。
+

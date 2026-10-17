@@ -109,6 +109,18 @@ class Remaining20261017AiIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test void everyInstalledMonSeqRowCanBeLoadedDynamically() {
+    java.util.Set<String> names = new java.util.HashSet<>();
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      for (String mode : new String[] {row.Sk1mode, row.Sk2mode, row.Sk3mode, row.Sk4mode,
+          row.Sk5mode, row.Sk6mode, row.Sk7mode, row.Sk8mode}) {
+        if (mode != null && mode.startsWith("seq_")) names.add(mode);
+      }
+    }
+    for (String name : names) assertNotNull(
+        com.riiablo.engine.server.NativeMonsterSequence.load(name), name);
+  }
+
   private String row(String name) {
     for (MonStats.Entry row : Riiablo.files.monstats)
       if (name.equals(row.AI)) return row.Id;
