@@ -153,11 +153,11 @@ public class Scarab extends AI {
         time = MathUtils.random(1f, 2);
         return;
       } else {
-        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 0, 0)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        // Fn020 passes no distance override; MonsterMode resolves it to five.
+        boolean orbit = pathfinder.findNativeOrbit(
+            entityId, targetId, 5, (rollAiRandomNumber() & 255L) < 128L);
         aiParam0 = 1;
-        stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
+        stateMachine.changeState(orbit ? State.APPROACH : State.IDLE);
         return;
       }
     }

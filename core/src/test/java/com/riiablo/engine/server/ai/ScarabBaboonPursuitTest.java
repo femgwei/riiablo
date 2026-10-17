@@ -26,7 +26,11 @@ class ScarabBaboonPursuitTest extends RiiabloTest {
           assertFalse(f.world.getMapper(Class.class).has(f.target));
           f.ai.update(0.04f);
           assertEquals("APPROACH", f.ai.getState(), name + "/" + difficulty);
-          verify(f.paths).findPath(eq(f.actor), eq(f.targetPosition()), eq(false), eq(f.target));
+          if ("Scarab".equals(name)) {
+            verify(f.paths).findNativeOrbit(eq(f.actor), eq(f.target), eq(5), anyBoolean());
+          } else {
+            verify(f.paths).findPath(eq(f.actor), eq(f.targetPosition()), eq(false), eq(f.target));
+          }
         }
       }
   }
