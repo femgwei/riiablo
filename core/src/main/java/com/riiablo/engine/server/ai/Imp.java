@@ -46,6 +46,7 @@ public class Imp extends NativeDecisionAI {
       return;
     }
     stopMovement();
+    mPosition.get(entityId).invalidateNativePrecision();
     mPosition.get(entityId).position.set(mPosition.get(owner).position);
     com.riiablo.engine.server.component.MapWrapper mapping = mMapWrapper.get(owner);
     if (mapping != null) mMapWrapper.create(entityId).set(mapping.map, mapping.zone);
