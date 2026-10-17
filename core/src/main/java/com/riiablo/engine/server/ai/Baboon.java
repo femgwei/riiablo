@@ -108,6 +108,19 @@ public class Baboon extends AI {
     return memory != null && memory.isUncontrolled();
   }
 
+  /** AITACTICS_WalkCloseToUnit: four unit-seed draws around this monster. */
+  private boolean walkCloseToSelf(int radius, int velocityBonus) {
+    boolean axis = (rollAiRandomNumber() & 1L) != 0;
+    int random = (int) (rollAiRandomNumber() % radius);
+    int x = axis ? radius : random;
+    int y = axis ? random : radius;
+    if ((rollAiRandomNumber() & 1L) != 0) x = -x;
+    if ((rollAiRandomNumber() & 1L) != 0) y = -y;
+    Vector2 source = mPosition.get(entityId).position;
+    return walkTo(new Vector2((int) source.x + x, (int) source.y + y),
+        velocityBonus, Engine.INVALID_ENTITY);
+  }
+
   private void changeRegen(int delta) {
     if (!mAttributesWrapper.has(entityId)) return;
     com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(entityId).attrs;
@@ -209,8 +222,8 @@ public class Baboon extends AI {
           // Can't escape
           if (!bCombat) {
             // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 5u)
-            pathfinder.findPath(entityId, targetPos, false, targetId);
-            stateMachine.changeState(State.APPROACH);
+            stateMachine.changeState(walkCloseToSelf(5, nVel) ? State.APPROACH : State.IDLE);
+            return;
           } else {
             // Attack
             pathfinder.findPath(entityId, null);
