@@ -252,9 +252,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (size == 2 && dx != 0 && dy != 0) continue;
       final int px = x + dx, py = y + dy;
       if (!zone.contains(px, py)) return false;
-      int flags = zone.staticFlagsWorld(px, py);
-      if (zone.objectCollisionReferences(px, py) > 0) flags |= 0x400;
-      if (zone.doorCollisionReferences(px, py) > 0) flags |= 0x800;
+      int flags = zone.nativeCollisionFlagsWorld(px, py);
       if ((flags & mask) != 0) return false;
       if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
       if (enabled && (mask & 0x100) != 0 && hasSpawnMonsterMarker(sourceId, zone, px, py)) return false;

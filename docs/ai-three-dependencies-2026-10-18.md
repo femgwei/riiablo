@@ -1,5 +1,27 @@
 # AI 三项依赖联合推进（2026-10-18，未整体完成）
 
+## 接续增量：Zone 共享位网格与对象/门
+
+- Zone 新增持久 unsigned 16-bit `D2CollisionGrid`，首次访问拷入当前地形，后续
+  DT1 `or` 同步置位；存储使用本地坐标，Zone 重定位不丢位，重新分配尺寸和释放时清理。
+- 生产 `ObjectCollisionUpdater` 在创建、模式变化、移动、换 Zone、删除时更新共享位；
+  未变化的对象不重写。重叠对象之一清位会清掉同位，后续帧不会按剩余 owner 自动恢复。
+- 对象掩码依据 D2MOO `Units.cpp::UNITS_GetCollisionMask`：门按 BlocksVis /
+  BlockMissile 选择 0x806 / 0x804 / 0x400，普通对象 0x404 / 0x400，
+  TownPortal SubClass=4 使用 0x8000。低位也共享，因此清门可清掉重叠地形的可见性位。
+- `isFreeForMonsterSpawnMask` 的地形/对象部分读取生产共享网格；不再把对象/门
+  reference count 投影为高位。旧行走规划器继续使用独立 reference 层。
+- **边界**：活体 PLAYER/MONSTER、NO_PATH/PET、飞弹、尸体和物品仍沿用原投影查询；
+  `DynamicUnitCollisionSystem` 的行走索引仍每帧重建。跨 Zone 的整对象迁移已覆盖，
+  跨接缝 footprint 裁切/相邻房间解析尚未迁移。不能据此宣布生产碰撞全链已经原生化。
+
+最终验证：`build/ai-shared-collision-zone-verified.log` 构建成功，35 项定向测试
+（对象/门 12、出生搜索 10、原生移动 8、底层网格 5）及 3 项架构回归全部通过，
+failures/errors/skipped 均为 0。未跑全 core，部分模块架构依赖任务为 UP-TO-DATE。
+前次 final 日志因另一聊天并发新增战斗测试、其对应主类尚未重新编译而失败；
+方法源码就绪后完整重跑上述入口通过，没有修改该聊天文件或放宽断言。
+以上为无渲染人工夹具，不替代自然地图或 GL 验收。
+
 ## 本轮收尾：生产移动和动作衔接
 
 - 普通怪物现在可在服务端及本地权威客户端走 raw fp16 步进；输入必须同时具备

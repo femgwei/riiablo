@@ -1279,6 +1279,8 @@ public class Map implements Disposable {
     LvlTypes.Entry type;
     DT1s           dt1s;
     byte           flags[];
+    /** Persistent native mask storage. This is bit state, never owner/reference counts. */
+    private com.d2moo.common.collision.D2CollisionGrid nativeCollision;
     /** Per-subtile references contributed by colliding object units. */
     short          objectBlockWalkRefs[];
     /** Colliding object references which specifically belong to door units. */
@@ -1362,6 +1364,7 @@ public class Map implements Disposable {
         height = tilesY * DT1.Tile.SUBTILE_SIZE;
         free(flags); flags = obtainByteArray(width * height);
         objectBlockWalkRefs = objectDoorRefs = null;
+        nativeCollision = null;
         for (DT1.Tile[] layer : tiles) free(layer);
         Arrays.fill(tiles, null);
         if (gridSizeX <= 0) gridSizeX = Math.max(1, tilesX);
@@ -1505,6 +1508,7 @@ public class Map implements Disposable {
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.nativeTileGrid = null;
       this.nativeDt1Mask = 0;
+      this.nativeCollision = null;
       this.nativeWallTileTypes.clear();
       this.nativeWallTileTypesByTile.clear();
       this.nativeWallTileTypesByCoord.clear();
@@ -1568,6 +1572,7 @@ public class Map implements Disposable {
 
       free(flags);
       flags = null;
+      nativeCollision = null;
       objectBlockWalkRefs = null;
       objectDoorRefs = null;
 
@@ -1987,6 +1992,39 @@ public class Map implements Disposable {
       return staticFlags(worldX - x, worldY - y);
     }
 
+    /**
+     * Native 16-bit collision at a world cell. Runtime bits persist across
+     * frames and clear by mask, as in D2Common COLLISION_SetMask/ResetMask.
+     * Units are migrated separately.
+     */
+    public int nativeCollisionFlagsWorld(int worldX, int worldY) {
+      if (!contains(worldX, worldY) || flags == null) return 0xFFFF;
+      return nativeCollisionGrid().flagsAt(worldX - x, worldY - y);
+    }
+
+    private com.d2moo.common.collision.D2CollisionGrid nativeCollisionGrid() {
+      if (nativeCollision == null) {
+        // Local storage survives zone re-anchoring; callers use world cells.
+        nativeCollision = new com.d2moo.common.collision.D2CollisionGrid(0, 0, width, height);
+        for (int localY = 0; localY < height; localY++) {
+          for (int localX = 0; localX < width; localX++) {
+            nativeCollision.setMask(localX, localY, staticFlags(localX, localY));
+          }
+        }
+      }
+      return nativeCollision;
+    }
+
+    public void setNativeCollisionMask(int worldX, int worldY, int mask) {
+      if (!contains(worldX, worldY) || flags == null) return;
+      nativeCollisionGrid().setMask(worldX - x, worldY - y, mask);
+    }
+
+    public void resetNativeCollisionMask(int worldX, int worldY, int mask) {
+      if (!contains(worldX, worldY) || flags == null) return;
+      nativeCollisionGrid().resetMask(worldX - x, worldY - y, mask);
+    }
+
     /** Number of currently active native object footprints at a world cell. */
     public int objectCollisionReferences(int worldX, int worldY) {
       if (objectBlockWalkRefs == null || worldX < x || worldY < y
@@ -2029,6 +2067,13 @@ public class Map implements Disposable {
     public void adjustObjectCollision(
         int worldX, int worldY, int objectWidth, int objectHeight, int delta,
         boolean door) {
+      adjustObjectCollision(worldX, worldY, objectWidth, objectHeight, delta,
+          door, door ? 0x804 : 0x400);
+    }
+
+    public void adjustObjectCollision(
+        int worldX, int worldY, int objectWidth, int objectHeight, int delta,
+        boolean door, int nativeMask) {
       if (delta == 0 || objectWidth <= 0 || objectHeight <= 0 || flags == null) return;
       int startX = Math.max(worldX, x);
       int startY = Math.max(worldY, y);
@@ -2045,6 +2090,11 @@ public class Map implements Disposable {
 
       for (int dy = startY; dy < endY; dy++) {
         for (int dx = startX; dx < endX; dx++) {
+          // Native object masks are shared bits: removing one overlapping
+          // object clears the bit even if another object previously set it.
+          // Keep legacy walking references while its planner is migrated.
+          if (delta > 0) setNativeCollisionMask(dx, dy, nativeMask);
+          else resetNativeCollisionMask(dx, dy, nativeMask);
           int index = index(width, dx - x, dy - y);
           int references = objectBlockWalkRefs[index] + delta;
           // A negative value means a lifecycle caller became unbalanced. Do
@@ -2167,6 +2217,7 @@ public class Map implements Disposable {
     }
 
     public int or(int x, int y, int flags) {
+      if (nativeCollision != null) nativeCollision.setMask(x, y, flags & 0xFF);
       return (this.flags[index(width, x, y)] |= flags) & 0xFF;
     }
 

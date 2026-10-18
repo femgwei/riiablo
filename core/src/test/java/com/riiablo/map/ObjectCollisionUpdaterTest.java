@@ -17,6 +17,120 @@ import org.junit.jupiter.api.Test;
 class ObjectCollisionUpdaterTest {
 
   @Test
+  void nativeObjectOverlapClearsSharedBitAndDoesNotReappearNextFrame() {
+    Fixture fixture = new Fixture();
+    try {
+      int first = fixture.create(object(1, 1, true, false, false), 5, 5, Engine.Object.MODE_NU);
+      fixture.create(object(1, 1, true, false, false), 5, 5, Engine.Object.MODE_NU);
+      fixture.world.process();
+      assertEquals(0x400, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      fixture.mode(first, Engine.Object.MODE_ON);
+      fixture.world.process();
+      assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      fixture.world.process();
+      assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      // The compatibility walking planner still uses owner reference counts.
+      fixture.assertBlocked(5, 5, true);
+      assertTrue(fixture.world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class)
+          .isFreeForMonsterSpawnMask(-1, fixture.zone, 5, 5, 1, 0x400));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
+  void nativeDoorUsesUnitsMaskAndDeletesWithoutRestoringClearedTerrainBits() {
+    Fixture fixture = new Fixture();
+    try {
+      fixture.zone.or(5, 5, 2);
+      Objects.Entry door = object(1, 1, true, false, false);
+      door.IsDoor = true;
+      door.BlocksVis = true;
+      int id = fixture.create(door, 5, 5, Engine.Object.MODE_NU);
+      fixture.world.process();
+      assertEquals(0x806, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      assertFalse(fixture.world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class)
+          .isFreeForMonsterSpawnMask(-1, fixture.zone, 5, 5, 1, 0x800));
+      fixture.world.delete(id);
+      fixture.world.process();
+      assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      assertEquals(2, fixture.zone.staticFlagsWorld(5, 5));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
+  void nativeGridPreservesUnsignedBitsAndTracksLateTerrainAndZoneReanchoring() {
+    Fixture fixture = new Fixture();
+    try {
+      fixture.zone.setNativeCollisionMask(4, 4, 0x18000);
+      fixture.zone.or(4, 4, 1);
+      assertEquals(0x8001, fixture.zone.nativeCollisionFlagsWorld(4, 4));
+      fixture.zone.setPosition(100, 200);
+      assertEquals(0x8001, fixture.zone.nativeCollisionFlagsWorld(104, 204));
+      assertEquals(0xFFFF, fixture.zone.nativeCollisionFlagsWorld(4, 4));
+      fixture.zone.resetNativeCollisionMask(104, 204, 0x8000);
+      assertEquals(1, fixture.zone.nativeCollisionFlagsWorld(104, 204));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
+  void nativeObjectMaskIncludesMissileBarrierAndPortalCorpseBit() {
+    Fixture fixture = new Fixture();
+    try {
+      Objects.Entry solid = object(1, 1, true, false, false);
+      solid.BlockMissile = true;
+      fixture.create(solid, 3, 3, Engine.Object.MODE_NU);
+      Objects.Entry portal = object(1, 1, true, false, false);
+      portal.SubClass = 4;
+      fixture.create(portal, 7, 7, Engine.Object.MODE_NU);
+      fixture.world.process();
+      assertEquals(0x404, fixture.zone.nativeCollisionFlagsWorld(3, 3));
+      assertEquals(0x8000, fixture.zone.nativeCollisionFlagsWorld(7, 7));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
+  void nativeObjectMoveTransfersFootprintAndMaskChangesAreObserved() {
+    Fixture fixture = new Fixture();
+    try {
+      Objects.Entry door = object(1, 1, true, false, false);
+      door.IsDoor = true;
+      door.BlockMissile = true;
+      int id = fixture.create(door, 3, 3, Engine.Object.MODE_NU);
+      fixture.world.process();
+      assertEquals(0x804, fixture.zone.nativeCollisionFlagsWorld(3, 3));
+      fixture.world.getMapper(Position.class).get(id).position.set(7, 7);
+      fixture.world.process();
+      assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(3, 3));
+      assertEquals(0x804, fixture.zone.nativeCollisionFlagsWorld(7, 7));
+      door.BlockMissile = false;
+      fixture.world.process();
+      assertEquals(0x400, fixture.zone.nativeCollisionFlagsWorld(7, 7));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
+  void nativeObjectZoneTransferClearsOldGridAndWritesDestination() {
+    Fixture fixture = new Fixture();
+    try {
+      Map.Zone destination = new Map.Zone();
+      destination.map = fixture.map;
+      destination.x = 12;
+      destination.width = destination.height = 12;
+      destination.flags = new byte[144];
+      fixture.map.zones.add(destination);
+      int id = fixture.create(object(1, 1, true, false, false), 5, 5, Engine.Object.MODE_NU);
+      fixture.world.process();
+      fixture.world.getMapper(Position.class).get(id).position.set(17, 5);
+      fixture.world.getMapper(MapWrapper.class).get(id).set(fixture.map, destination);
+      fixture.world.process();
+      assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
+      assertEquals(0x400, destination.nativeCollisionFlagsWorld(17, 5));
+      fixture.world.delete(id);
+      fixture.world.process();
+      assertEquals(0, destination.nativeCollisionFlagsWorld(17, 5));
+    } finally { fixture.dispose(); }
+  }
+
+  @Test
   void headlessDoorFollowsNativeModeCollisionAndRestoresAfterRecreation() {
     Fixture fixture = new Fixture();
     try {
@@ -170,7 +284,7 @@ class ObjectCollisionUpdaterTest {
       zone.flags = new byte[zone.width * zone.height];
       map.zones.add(zone);
       world = new World(new WorldConfigurationBuilder()
-          .with(new ObjectCollisionUpdater())
+          .with(new ObjectCollisionUpdater(), new com.riiablo.engine.server.DynamicUnitCollisionSystem())
           .build().register("map", map));
     }
 

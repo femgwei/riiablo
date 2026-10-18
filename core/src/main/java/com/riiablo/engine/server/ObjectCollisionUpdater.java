@@ -83,13 +83,14 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     int y = position == null ? 0 : MathUtils.round(position.position.y - height / 2f);
     Footprint previous = footprints.get(entityId);
     boolean door = base != null && base.IsDoor;
-    if (previous != null && previous.matches(zone, x, y, width, height, enabled, door)) return;
+    int nativeMask = nativeCollisionMask(base);
+    if (previous != null && previous.matches(zone, x, y, width, height, enabled, door, nativeMask)) return;
     if (previous != null) previous.remove();
 
     // Cache both colliding and non-colliding modes. Without the latter every
     // static decoration was treated as a state transition on every 25 Hz
     // tick, flooding long-running headless tests with millions of lines.
-    Footprint next = new Footprint(zone, x, y, width, height, door, enabled);
+    Footprint next = new Footprint(zone, x, y, width, height, door, enabled, nativeMask);
     if (enabled && zone != null && width > 0 && height > 0) next.add();
     footprints.put(entityId, next);
     if (Gdx.app != null && (previous == null || previous.enabled != enabled || previous.zone != zone
@@ -114,6 +115,17 @@ public class ObjectCollisionUpdater extends IteratingSystem {
         && base.HasCollision[mode];
   }
 
+  /** D2Common Units.cpp::UNITS_GetCollisionMask (object branch). */
+  static int nativeCollisionMask(Objects.Entry base) {
+    if (base == null) return 0;
+    if (base.IsDoor) {
+      if (base.BlocksVis) return 0x806;
+      return base.BlockMissile ? 0x804 : 0x400;
+    }
+    if ((base.SubClass & 4) != 0) return 0x8000;
+    return base.BlockMissile ? 0x404 : 0x400;
+  }
+
   private static final class Footprint {
     final Map.Zone zone;
     final int x;
@@ -122,9 +134,10 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     final int height;
     final boolean door;
     final boolean enabled;
+    final int nativeMask;
 
     Footprint(Map.Zone zone, int x, int y, int width, int height,
-        boolean door, boolean enabled) {
+        boolean door, boolean enabled, int nativeMask) {
       this.zone = zone;
       this.x = x;
       this.y = y;
@@ -132,21 +145,23 @@ public class ObjectCollisionUpdater extends IteratingSystem {
       this.height = height;
       this.door = door;
       this.enabled = enabled;
+      this.nativeMask = nativeMask;
     }
 
     boolean matches(Map.Zone zone, int x, int y, int width, int height,
-        boolean enabled, boolean door) {
+        boolean enabled, boolean door, int nativeMask) {
       return this.enabled == enabled && this.zone == zone && this.x == x && this.y == y
-          && this.width == width && this.height == height && this.door == door;
+          && this.width == width && this.height == height && this.door == door
+          && this.nativeMask == nativeMask;
     }
 
     void add() {
-      zone.adjustObjectCollision(x, y, width, height, 1, door);
+      zone.adjustObjectCollision(x, y, width, height, 1, door, nativeMask);
     }
 
     void remove() {
       if (enabled && zone != null && width > 0 && height > 0) {
-        zone.adjustObjectCollision(x, y, width, height, -1, door);
+        zone.adjustObjectCollision(x, y, width, height, -1, door, nativeMask);
       }
     }
   }
