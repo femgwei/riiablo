@@ -26,6 +26,12 @@ varying vec2 v_texCoord;
 varying vec4 tint;
 varying vec2 worldPosition;
 
+vec4 paletteColor(vec4 indexed) {
+  // workaround for https://github.com/collinsmith/riiablo/issues/139
+  if (indexed.a == 0.99609375) indexed.a -= 0.00390625;
+  return texture2D(ColorTable, indexed.ar);
+}
+
 void main() {
   vec4 color = texture2D(u_texture, v_texCoord);
   // Intensity/alpha indexed textures carry the DCC palette index in the
@@ -46,6 +52,8 @@ void main() {
   bool selfLit = blendMode == 2 || blendMode == 8 || blendMode == 11
       || blendMode == 15
       || blendMode == 12 || blendMode == 14 || blendMode == 16;
+  vec4 upperLightIndex = color;
+  float lightRowBlend = 0.0;
   if (lightingEnabled != 0 && !selfLit) {
     float intensity = ambientIntensity;
     for (int i = 0; i < 16; i++) {
@@ -55,7 +63,10 @@ void main() {
       vec2 delta = (samplePosition - source.xy) / max(source.zw, vec2(1.0));
       float falloff = 1.0 - smoothstep(0.35, 1.0, length(delta));
       vec3 localLight = localLightColors[i] * falloff;
-      intensity = max(intensity, max(localLight.r, max(localLight.g, localLight.b)));
+      // Fade all the way to the ambient floor. Clamping an independent light
+      // against ambient cuts off the tail early, leaving a visible ellipse.
+      float strength = max(localLight.r, max(localLight.g, localLight.b));
+      intensity = max(intensity, mix(ambientIntensity, 1.0, strength));
     }
     // The native PL2 rows leave deep-night outdoor units too subdued on the
     // modern display path. Apply a restrained display-space lift in indexed
@@ -65,18 +76,23 @@ void main() {
     intensity = pow(clamp(intensity, 0.0, 1.0), 0.80);
     float lightByte = floor(intensity * 255.0 + 0.5);
     if (lightByte < 255.0 && color.a > 0.0) {
-      float row = floor(lightByte / 8.0);
+      // Retain PL2's authored colours, but interpolate their resolved RGB
+      // rather than quantizing a smooth per-pixel light into visible rings.
+      // Palette indices themselves must never be linearly interpolated.
+      float level = min(intensity * 255.0 / 8.0, 31.0);
+      float row = floor(level);
+      upperLightIndex = texture2D(LightMap,
+          vec2(color.a, (min(row + 1.0, 31.0) + 0.5) / 32.0));
+      lightRowBlend = fract(level);
       color.r = (row + 0.5) / 32.0;
       color = texture2D(LightMap, color.ar);
     }
   }
 
-  // workaround for https://github.com/collinsmith/riiablo/issues/139
-  if (color.a == 0.99609375) { // index 255 == float(255 / 256)
-    color.a = color.a - 0.00390625; // index 255 -> 254 by subtracting float(1 / 256)
+  color = paletteColor(color);
+  if (lightRowBlend > 0.0) {
+    color = mix(color, paletteColor(upperLightIndex), lightRowBlend);
   }
-
-  color = texture2D(ColorTable, color.ar);
 
   // PL2 can map an authored nonzero pixel to palette index 0 in darkness.
   // That pixel is opaque black, not a transparent hole in a wall/object.
