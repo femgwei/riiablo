@@ -38,7 +38,8 @@ public class AIStepper extends IteratingSystem {
     com.riiablo.engine.server.ai.AI ai = mAIWrapper.get(event.victim).ai;
     if (ai != null) ai.onNativeHit(event.attacker);
     Monster monster = mMonster.get(event.victim);
-    boolean chargedBolts = MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS);
+    boolean chargedBolts = monster.nativeChargedBolts
+        || MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS);
     if (chargedBolts
         && monster.chargedBoltsCooldown <= 0f) {
       ServerSkillSystem skills = world.getSystem(ServerSkillSystem.class);

@@ -390,6 +390,7 @@ public class ServerSkillSystem extends PassiveSystem {
         ? null : files().Missiles.get("buglightning");
     if (row == null) return;
     Vector2 origin = mPosition.get(source).position;
+    int created = 0;
     for (int i = 0; i < 8; i++) {
       float angle = i * MathUtils.PI2 / 8f;
       Vector2 direction = new Vector2(MathUtils.cos(angle), MathUtils.sin(angle));
@@ -398,10 +399,12 @@ public class ServerSkillSystem extends PassiveSystem {
               ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt())
               : 1);
       if (id >= 0 && mMissile.has(id)) {
+        created++;
         mMissile.get(id).nativeLifetimeFrames = 77;
         mMissile.get(id).range = 77;
       }
     }
+    log.info("[SCARAB_BOLTS] source={} missile=buglightning created={}", source, created);
   }
 
   /** Native MONSTERUNIQUE_CastLightUniqueMissile for Lightning Enchanted

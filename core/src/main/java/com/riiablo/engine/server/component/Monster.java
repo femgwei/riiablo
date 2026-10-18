@@ -50,6 +50,8 @@ public class Monster extends Component {
   public int nativeSelfResurrections;
   /** MonsterSpawn's base-class MONUMOD_SELFRESURRECT assignment. */
   public boolean nativeSelfResurrect;
+  /** MonsterSpawn's base-class MONUMOD_CHARGEDBOLTS, independent of unique affixes. */
+  public boolean nativeChargedBolts;
   /** Baal's reciprocal UNITS_StoreOwner link (distinct from the minion owner). */
   public int baalLinkedOwnerId = -1;
   /** Successful Baal clone creations, native AiParam[1]; deaths do not refund it. */
@@ -120,6 +122,7 @@ public class Monster extends Component {
     nativeRequestedMountIdentity = null;
     nativeSelfResurrections = 0;
     nativeSelfResurrect = monstats != null && "reanimatedhorde1".equals(monstats.BaseId);
+    nativeChargedBolts = monstats != null && "scarab1".equals(monstats.BaseId);
     baalLinkedOwnerId = -1;
     baalClonesCreated = 0;
     rngState = 0;
