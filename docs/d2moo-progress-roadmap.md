@@ -5006,6 +5006,25 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 主攻击编排集中迁移：新增 `:server-domain` NativeAttackResolver、NativeAttackData、
+  NativeDefenseData。完整快照攻击的命中→盾挡→被动防御→物理/元素掷骰→暴击/致命/
+  压碎→转换/减免/吸收→PvP→总伤害/偷取及冷/毒长度编排进入领域层，可在无 core、
+  无 ECS/MPQ、无全局 RNG 的独立 classpath 执行。保留既有整数顺序和 RNG 短路，
+  不统一 legacy/native 闪电路径，不新增原版机制修正。
+  core 既有 AttackerData/DefenderData/HitResult 保留名称、构造和继承的公开字段，
+  Attributes 引用仅留在宿主 DefenderData；Gates 回调保留 public 命中/格挡率与
+  protected 盾挡覆盖入口、AR/Defense 在虚命中率调用前捕获的顺序，以及成功 BL 时
+  立即写回 lastblockframe。领域层只更新标量快照，不直接扣血/扣蓝或应用状态。
+  宿主诊断改为对最终同一结果包记录完整命中/防御/伤害字段；外部结构化飞弹审计不变。
+  `PreviousAttackResolver` 冻结 `5399da276` 主流程/助手（仅省略日志和 Attributes 写回，
+  既有纯数学核及随机服务共享），`AttackPipelineMigrationTest` 4,000 组混合快照对照
+  宿主与独立领域入口的全部包字段、HP 视图、格挡帧、随机 bound/顺序及后续 RNG 状态；
+  单独验证虚入口调用次序和真实 Attributes 写回。领域测试补齐短路、混合 PvP/固定点、
+  毒伤延后、冷长度延期与快照数组所有权。此为迁移等价验证，不是完整原版战斗验收。
+  显式 1.10f 核心扩大定向回归 78 类/255 项、domain 56 项、架构约束 3 项全部通过，
+  失败/错误/跳过均为 0；编译及模块边界检查通过。未跑全仓全量或客户端实机。
+  后续重点：收敛各特殊攻击入口的宿主快照适配和状态应用边界；客户端实机另机验证。
+
 - 随机/被动防御边界集中迁移：新增 `:server-domain` NativeCombatRolls，显式注入
   共享 IntUnaryOperator；主攻击命中掷骰、近战闭区间/飞弹半开区间、盾挡、暴击、
   致命与压碎判定，以及生产快照被动防御优先级迁入领域层。保留 alwaysHit 的命中

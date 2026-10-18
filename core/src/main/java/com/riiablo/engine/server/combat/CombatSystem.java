@@ -32,7 +32,6 @@ import com.riiablo.engine.server.state.UnitState;
  * @author riiablo team
  */
 public class CombatSystem {
-  private final DefenseCalculator defenseCalculatorResolver;
   private static final Logger log = LogManager.getLogger(CombatSystem.class);
 
 
@@ -117,208 +116,14 @@ public class CombatSystem {
   /**
    * 攻击者数据
    */
-  public static class AttackerData {
-    /** 实体 ID */
-    public int entityId;
-
-    /** 是否是玩家 */
-    public boolean isPlayer;
-
-    /** 等级 */
-    public int level;
-
-    /** 力量 */
-    public int strength;
-
-    /** 敏捷 */
-    public int dexterity;
-
-    /** 攻击等级（Attack Rating） */
-    public int attackRating;
-
-    /** 攻击等级百分比加成 */
-    public int attackRatingPercent;
-
-    /** 武器最小伤害 */
-    public int minDamage;
-
-    /** 武器最大伤害 */
-    public int maxDamage;
-
-    /** 增强伤害百分比 */
-    public int enhancedDamagePercent;
-
-    /** Skill-owned physical conversion applied before target resistances. */
-    public int physicalConversionPercent;
-    public int physicalConversionType = DAMAGE_PHYSICAL;
-
-    /** 各元素伤害（火/电/冰/毒/魔法） */
-    public int[] elementalMinDamage = new int[DAMAGE_TYPE_COUNT];
-    public int[] elementalMaxDamage = new int[DAMAGE_TYPE_COUNT];
-
-    /** Target-class bonus applied to rolled magic damage before mitigation. */
-    public int magicTargetBonusPercent;
-
-    /** Native percentage resistance pierce, indexed by damage type. */
-    public int[] elementalPierce = new int[DAMAGE_TYPE_COUNT];
-
-    /** 对恶魔攻击等级加成 */
-    public int demonToHit;
-
-    /** 对亡灵攻击等级加成 */
-    public int undeadToHit;
-
-    /** Native item_demondamage/undeaddamage target-class percentages. */
-    public int demonDamagePercent;
-    public int undeadDamagePercent;
-
-    /** Sanctuary ignores positive physical resistance on undead targets. */
-    public boolean bypassUndeadPhysicalResistance;
-
-    /** 致命一击（Deadly Strike）几率 */
-    public int deadlyStrike;
-
-    /** 暴击（Critical Strike）几率 */
-    public int criticalStrike;
-
-    /** 压碎性打击（Crushing Blow）几率 */
-    public int crushingBlow;
-
-    /** 无视目标防御 */
-    public boolean ignoreTargetDefense;
-
-    /** 攻击是否是远程（投射物） */
-    public boolean isMissile;
-    /** Opt-in 8.8 elemental packet; legacy callers remain in whole HP. */
-    public boolean fixedPointElements;
-
-    /** Missiles.txt ToHit is disabled, so collision itself guarantees a hit. */
-    public boolean alwaysHit;
-
-    /** 生命偷取百分比 */
-    public int lifeLeech;
-
-    /** 法力偷取百分比 */
-    public int manaLeech;
-
-    /** 击中后冰冻敌人时间（帧） */
-    public int coldLength;
-
-    /** 毒素持续时间（帧） */
-    public int poisonLength;
-
-    /** 使用的技能 ID（-1 表示普通攻击） */
-    public int skillId = -1;
-
-    /** 技能等级 */
-    public int skillLevel;
-
-    /** Difficulty snapshot used for monster cold-length scaling. */
-    public int difficulty;
-    /** Native state application owns difficulty scaling for production packets. */
-    public boolean stateDurationsDeferred;
-  }
+  public static class AttackerData extends NativeAttackData {}
 
   /**
    * 防御者数据
    */
-  public static class DefenderData {
-    /** 实体 ID */
-    public int entityId;
-
-    /** 是否是玩家 */
-    public boolean isPlayer;
-
-    /** 是否是怪物 */
-    public boolean isMonster;
-
-    /**
-     * Whether the native Ignore Target Defense property is allowed to zero
-     * this defender's armor class.  D2 excludes players, unique/super-unique
-     * monsters, bosses, and hirelings; synthetic callers default to true so
-     * ordinary monster behavior remains backwards compatible.
-     */
-    public boolean ignoreTargetDefenseAllowed = true;
-
-    /** 等级 */
-    public int level;
-
-    /** 敏捷 */
-    public int dexterity;
-
-    /** 防御等级（Defense） */
-    public int defense;
-
-    /** 对近战防御 */
-    public int defenseVsMelee;
-
-    /** 对远程防御 */
-    public int defenseVsMissile;
-
-    /** 生命值 */
-    public int currentLife;
-    public int maxLife;
-
-    /** 格挡率 */
-    public int blockChance;
-
-    /** 是否正在格挡（持盾） */
-    public boolean canBlock;
-    /** The defender has an actual active shield equipped. */
-    public boolean hasEquippedShield = true;
-    /** CharStats.txt BlockFactor, kept separate from item ToBlock. */
-    public int blockFactor;
-    /** Native movement mode: running lowers shield block chance to one third. */
-    public boolean isRunning;
-    /** Native item_fasterblockrate and lastblockframe snapshots. */
-    public int fasterBlockRate;
-    public int lastBlockFrame;
-    public int currentFrame;
-    /** Runtime stat list used to persist native lastblockframe after BL. */
+  public static class DefenderData extends NativeDefenseData {
+    /** Runtime attribute list stays in the host, never in the domain snapshot. */
     Attributes combatAttributes;
-
-    /** Native passive-defense context. Callers may set isMoving for Evade. */
-    public int attackType = DefenseCalculator.ATTACK_MELEE;
-    public boolean isMoving;
-    public int passiveDodge;
-    public int passiveAvoid;
-    public int passiveEvade;
-    public int passiveWeaponBlock;
-
-    /** 各元素抗性 */
-    public int[] resistances = new int[DAMAGE_TYPE_COUNT];
-
-    /** Native maximum resistance caps (75 + max*resist stats). */
-    public int[] maxResistances = {0, 75, 75, 75, 75, 75};
-
-    /** 物理伤害减免（Damage Reduced） */
-    public int damageReduced;
-
-    /** 物理伤害减免百分比 */
-    public int damageReducedPercent;
-
-    /** 魔法伤害减免 */
-    public int magicDamageReduced;
-
-    /** 是否是恶魔 */
-    public boolean isDemon;
-
-    /** 是否是亡灵 */
-    public boolean isUndead;
-
-    /** 是否免疫物理 */
-    public boolean immunePhysical;
-
-    /** 是否免疫各元素 */
-    public boolean[] immuneElemental = new boolean[DAMAGE_TYPE_COUNT];
-
-    /** Native cold-state duration gates evaluated after cold resistance. */
-    public boolean cannotBeFrozen;
-    public boolean halfFreezeDuration;
-
-    /** Native elemental absorption, applied after resistance. */
-    public int[] absorbPercent = new int[DAMAGE_TYPE_COUNT];
-    public int[] absorbFlat = new int[DAMAGE_TYPE_COUNT];
   }
 
   /**
@@ -332,27 +137,22 @@ public class CombatSystem {
   //==========================================================================
 
   private final NativeCombatRolls rolls;
+  private final NativeAttackResolver attackResolver;
 
   /** Compatibility RNG for old tools that do not bind a server world. */
   public CombatSystem() {
     java.util.function.IntUnaryOperator random = bound -> MathUtils.random(bound - 1);
     this.rolls = new NativeCombatRolls(random);
-    this.defenseCalculatorResolver = new DefenseCalculator(random);
+    this.attackResolver = new NativeAttackResolver(rolls);
   }
 
   public CombatSystem(com.riiablo.engine.server.NativeRng rng) {
     java.util.function.IntUnaryOperator random = java.util.Objects.requireNonNull(rng, "rng")::nextInt;
     this.rolls = new NativeCombatRolls(random);
-    this.defenseCalculatorResolver = new DefenseCalculator(random);
+    this.attackResolver = new NativeAttackResolver(rolls);
   }
 
-  private int rollInclusive(int min, int max) {
-    return rolls.inclusive(min, max);
-  }
 
-  private int rollMissileDamage(int minimum, int maximum) {
-    return rolls.missileDamage(minimum, maximum);
-  }
 
   /**
    * Builds the native-style combat context from the attributes that belong to
@@ -384,20 +184,9 @@ public class CombatSystem {
    * the effective AR/defense, chance and roll together prevents diagnostics
    * and damage paths from recomputing different snapshots of the same attack.
    */
-  public static final class HitResult {
-    public final int attackRating;
-    public final int targetDefense;
-    public final int chance;
-    public final int roll;
-    public final boolean hit;
-
-    private HitResult(int attackRating, int targetDefense, int chance,
-        int roll, boolean hit) {
-      this.attackRating = attackRating;
-      this.targetDefense = targetDefense;
-      this.chance = chance;
-      this.roll = roll;
-      this.hit = hit;
+  public static final class HitResult extends NativeAttackResolver.Hit {
+    private HitResult(NativeAttackResolver.Hit hit) {
+      super(hit.attackRating, hit.targetDefense, hit.chance, hit.roll, hit.hit);
     }
   }
 
@@ -945,7 +734,7 @@ public class CombatSystem {
       d.maxResistances[DAMAGE_COLD] +=
           defenderStates.getTotalStatContribution(Stat.maxcoldresist);
     }
-    int duration = applyElementalResistance(
+    int duration = NativeAttackResolver.applyElementalResistance(
         baseDuration, d, DAMAGE_COLD, Math.max(0, piercePercent));
     if (d.cannotBeFrozen) return 0;
     if (d.halfFreezeDuration) duration /= 2;
@@ -1085,10 +874,6 @@ public class CombatSystem {
         absorbPercentStats[damageType] != 0 ? statInt(defender, absorbPercentStats[damageType], 0) : 0,
         absorbFlatStats[damageType] != 0 ? statInt(defender, absorbFlatStats[damageType], 0) : 0);
     return result;
-  }
-
-  private static int saturatingInt(long value) {
-    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) value);
   }
 
   /** Native monster direct packet: PDR before resistance, player 50% cap, no minimum damage.
@@ -1900,154 +1685,26 @@ public class CombatSystem {
    * @param defender 防御者数据
    * @return 战斗结果
    */
-  public CombatResult calculateAttack(AttackerData attacker, DefenderData defender) {
-    CombatResult result = new CombatResult();
-    result.elementalScale = attacker.fixedPointElements ? 256 : 1;
-
-    // 1. Resolve the complete hit packet once. Both the combat result and
-    // the structured missile audit consume this same AR/defense/chance/roll
-    // snapshot instead of recalculating individual fields.
-    HitResult hit = rollHit(attacker, defender);
-    result.attackRating = hit.attackRating;
-    result.targetDefense = hit.targetDefense;
-    result.hitChance = hit.chance;
-    result.hitRoll = hit.roll;
-    result.hit = hit.hit;
-
-    if (!result.hit) {
-      log.debug("[COMBAT_HIT] result=miss ar={} defense={} attackerLevel={} defenderLevel={} chance={}%",
-          calculateEffectiveAttackRating(attacker, defender),
-          calculateEffectiveDefense(attacker, defender), attacker.level, defender.level,
-          result.hitChance);
-      return result;
-    }
-
-    // D2MOO SUNITDMG_ApplyBlockOrDodge evaluates shield block first. Missile
-    // mode requests this branch only when the packet has physical damage;
-    // elemental-only spell missiles continue to Avoid/Weapon Block instead.
-    if (defender.canBlock && hasBlockablePhysicalDamage(attacker)) {
-      int blockChance = calculateBlockChance(defender);
-      result.blocked = rollShieldBlock(blockChance);
-
-      if (result.blocked) {
-        result.defenseType = DefenseCalculator.DEFENSE_BLOCK;
-        result.blockAnimationAllowed = canPlayBlockAnimation(defender);
-        log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
-        return result;
-      }
-    }
-
-    // If shield block fails, native code falls through to Weapon Block and
-    // Dodge/Avoid/Evade in that order.
-    int passiveDefense = defenseCalculatorResolver.checkPassiveDefense(
-        defender.attackType, defender.isMoving, defender.passiveDodge,
-        defender.passiveAvoid, defender.passiveEvade, defender.passiveWeaponBlock);
-    if (passiveDefense == DefenseCalculator.DEFENSE_DODGE
-        || passiveDefense == DefenseCalculator.DEFENSE_AVOID
-        || passiveDefense == DefenseCalculator.DEFENSE_EVADE
-        || passiveDefense == DefenseCalculator.DEFENSE_WEAPON_BLOCK) {
-      result.blocked = true;
-      result.defenseType = passiveDefense;
-      log.debug("[COMBAT_DEFENSE] passive={} attackType={} moving={}",
-          passiveDefense, defender.attackType, defender.isMoving);
-      return result;
-    }
-
-    // 3. 计算基础物理伤害
-    int baseDamage = calculateBaseDamage(attacker, defender);
-
-    // 4. 判定暴击/致命一击
-    result.critical = rollCriticalStrike(attacker);
-    // D2MOO only rolls Deadly Strike after the passive/mastery critical
-    // branch fails. This preserves both native RNG consumption and the
-    // mutually-exclusive result flags.
-    result.deadlyStrike = !result.critical && rollDeadlyStrike(attacker);
-
-    // 暴击和致命一击不叠加，取较高者
-    if (result.critical || result.deadlyStrike) {
-      baseDamage *= 2;
-    }
-
-    // 5. 判定压碎性打击
-    result.crushingBlow = rollCrushingBlow(attacker);
-    if (result.crushingBlow) {
-      int crushDamage = calculateCrushingBlowDamage(defender);
-      baseDamage += crushDamage;
-    }
-
-    // 6. Skill conversion occurs before either resistance branch. Frenzy's
-    // calc4 converts physical damage to magic without losing item elements.
-    int convertedDamage = 0;
-    if (attacker.physicalConversionPercent > 0
-        && attacker.physicalConversionType > DAMAGE_PHYSICAL
-        && attacker.physicalConversionType < DAMAGE_TYPE_COUNT) {
-      convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
-      baseDamage -= convertedDamage;
-    }
-    result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
-        defender.isUndead && attacker.bypassUndeadPhysicalResistance);
-
-    // 7. 计算元素伤害
-    // D2Game runs ColdLen through the same cold-resistance/pierce row as
-    // cold damage, then applies Cannot Be Frozen / Half Freeze Duration.
-    result.coldDuration = applyElementalResistance(
-        Math.max(0, attacker.coldLength), defender, DAMAGE_COLD,
-        attacker.elementalPierce[DAMAGE_COLD]);
-    if (defender.cannotBeFrozen) result.coldDuration = 0;
-    else if (defender.halfFreezeDuration) result.coldDuration /= 2;
-    if (!attacker.stateDurationsDeferred) {
-      result.coldDuration = scaleMonsterColdDuration(
-          result.coldDuration, defender.isMonster, attacker.difficulty);
-    }
-    result.poisonDuration = Math.max(0, attacker.poisonLength);
-    for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-      int elemDamage = calculateElementalDamage(attacker, i);
-      if (i == attacker.physicalConversionType) elemDamage += convertedDamage * result.elementalScale;
-      if (i == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0) {
-        elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
-      }
-      if (elemDamage > 0) {
-        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
-          resolveNativeLightningDamage(elemDamage, attacker, defender, result);
-          continue;
-        }
-        result.elementalDamage[i] = applyElementalResistance(
-            elemDamage, defender, i, attacker.elementalPierce[i], result.elementalScale);
-        int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i,
-            result.elementalScale);
-        result.elementalDamage[i] -= absorbed;
-        result.absorbedLife += absorbed;
-      }
-    }
-
-    // Preserve legacy ordering outside the opted-in Nova lightning packet,
-    // which already applied native PvP scaling before mitigation.
-    if (attacker.isPlayer && defender.isPlayer) {
-      result.physicalDamage = result.physicalDamage * PVP_DAMAGE_PERCENT / 100;
-      for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) continue;
-        result.elementalDamage[i] = (int) ((long) result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100);
-      }
-    }
-
-    // 8. 计算总伤害
-    result.totalDamage = result.physicalDamage;
-    for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-      // Poison damage is applied by StateUpdater over its duration. Do not
-      // also apply it as an immediate hit when a duration is present.
-      if (i != DAMAGE_POISON || result.poisonDuration <= 0) {
-        result.totalDamage += result.elementalDamage[i] / result.elementalScale;
-      }
-    }
-
-    // 9. 计算偷取
-    result.lifeStolen = calculateLifeLeech(result.physicalDamage, attacker);
-    result.manaStolen = calculateManaLeech(result.physicalDamage, attacker);
-
-    log.debug("[COMBAT_HIT] result=hit physical={} total={} chance={}% crit={} deadly={} crushing={}",
-        result.physicalDamage, result.totalDamageHp(), result.hitChance,
+  public CombatResult calculateAttack(final AttackerData attacker, final DefenderData defender) {
+    CombatResult result = attackResolver.resolve(attacker, defender, new CombatResult(),
+        new NativeAttackResolver.Gates() {
+          @Override public void resolveHit(NativeDamagePacket out, int roll) {
+            NativeAttackResolver.copyHit(out, calculateHit(attacker, defender, roll));
+          }
+          @Override public int blockChance() {
+            return calculateBlockChance(defender);
+          }
+          @Override public boolean shieldBlock(int chance) {
+            return rollShieldBlock(chance);
+          }
+          @Override public boolean blockAnimation() {
+            return canPlayBlockAnimation(defender);
+          }
+        });
+    log.debug("[COMBAT_HIT] hit={} blocked={} defenseType={} ar={} defense={} chance={} roll={} physical={} total={} crit={} deadly={} crushing={}",
+        result.hit, result.blocked, result.defenseType, result.attackRating, result.targetDefense,
+        result.hitChance, result.hitRoll, result.physicalDamage, result.totalDamageHp(),
         result.critical, result.deadlyStrike, result.crushingBlow);
-
     return result;
   }
 
@@ -2070,51 +1727,24 @@ public class CombatSystem {
    * </pre>
    */
   public int calculateHitChance(AttackerData attacker, DefenderData defender) {
-    int rating = calculateEffectiveAttackRating(attacker, defender);
-    int defense = calculateEffectiveDefense(attacker, defender);
-    if (attacker.ignoreTargetDefense && attacker.isPlayer && !defender.isPlayer
-        && defender.ignoreTargetDefenseAllowed) defense = 0;
-    return NativeCombatMath.hitChance(rating, defense, attacker.level, defender.level);
+    return NativeAttackResolver.calculateHitChance(attacker, defender);
   }
 
   /** Resolves a deterministic native hit roll for boundary and replay tests. */
   public HitResult calculateHit(AttackerData attacker, DefenderData defender, int roll) {
     if (attacker == null || defender == null) {
-      return new HitResult(0, 0, MIN_TO_HIT_CHANCE, -1, false);
+      return new HitResult(NativeAttackResolver.calculateHit(attacker, defender, roll));
     }
-    int attackRating = calculateEffectiveAttackRating(attacker, defender);
-    int targetDefense = calculateEffectiveDefense(attacker, defender);
+    int rating = NativeAttackResolver.calculateEffectiveAttackRating(attacker, defender);
+    int defense = NativeAttackResolver.calculateEffectiveDefense(attacker, defender);
     int chance = attacker.alwaysHit ? 100 : calculateHitChance(attacker, defender);
-    int normalizedRoll = attacker.alwaysHit ? -1 : Math.max(0, Math.min(99, roll));
-    boolean hit = attacker.alwaysHit || normalizedRoll < chance;
-    return new HitResult(attackRating, targetDefense, chance, normalizedRoll, hit);
+    return new HitResult(NativeAttackResolver.calculateHit(
+        rating, defense, chance, roll, attacker.alwaysHit));
   }
 
-  private HitResult rollHit(AttackerData attacker, DefenderData defender) {
-    return calculateHit(attacker, defender, rolls.hitRoll());
-  }
-
-  /**
-   * 计算有效攻击等级
-   */
-  private int calculateEffectiveAttackRating(AttackerData attacker, DefenderData defender) {
-    return NativeCombatMath.effectiveAttackRating(attacker.attackRating, attacker.isPlayer,
-        attacker.dexterity, attacker.attackRatingPercent, attacker.demonToHit, attacker.undeadToHit,
-        defender.isDemon, defender.isUndead);
-  }
-
-  /**
-   * 计算有效防御等级
-   */
-  private int calculateEffectiveDefense(AttackerData attacker, DefenderData defender) {
-    return NativeCombatMath.effectiveDefense(defender.defense, defender.defenseVsMissile,
-        defender.defenseVsMelee, attacker.isMissile);
-  }
 
   static boolean hasBlockablePhysicalDamage(AttackerData attacker) {
-    if (attacker == null) return false;
-    if (!attacker.isMissile) return true;
-    return attacker.maxDamage > 0 && attacker.physicalConversionPercent < 100;
+    return NativeAttackResolver.hasBlockablePhysicalDamage(attacker);
   }
 
   /** Test seam for the defender-owned native block roll. */
@@ -2136,191 +1766,23 @@ public class CombatSystem {
    * </pre>
    */
   public int calculateBlockChance(DefenderData defender) {
-    return NativeCombatMath.blockChance(defender.canBlock, defender.isPlayer,
-        defender.hasEquippedShield, defender.blockFactor, defender.blockChance,
-        defender.dexterity, defender.level, defender.isRunning);
+    return NativeAttackResolver.calculateBlockChance(defender);
   }
 
   /** Native lastblockframe gate: block still succeeds, but BL is throttled. */
   private boolean canPlayBlockAnimation(DefenderData defender) {
-    int interval = Math.max(0, defender.fasterBlockRate) / 8 + 15;
-    long elapsed = (long) defender.currentFrame - defender.lastBlockFrame;
-    boolean allowed = elapsed > interval;
-    if (allowed) defender.lastBlockFrame = defender.currentFrame;
+    boolean allowed = NativeAttackResolver.advanceBlockAnimation(defender);
     if (allowed && defender.combatAttributes != null) {
       defender.combatAttributes.aggregate().put(Stat.lastblockframe, defender.currentFrame);
     }
     return allowed;
   }
 
-  //==========================================================================
-  // 伤害计算
-  //==========================================================================
-
-  /**
-   * 计算基础物理伤害
-   */
-  private int calculateBaseDamage(AttackerData attacker, DefenderData defender) {
-    // Keep zero-profile adaptation here; random range semantics live in the domain.
-    if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;
-    int minimum = Math.max(0, Math.min(attacker.minDamage, attacker.maxDamage));
-    int damage = attacker.isMissile
-        ? rollMissileDamage(minimum, attacker.maxDamage)
-        : rollInclusive(minimum, attacker.maxDamage);
-    return NativeCombatMath.physicalDamageAfterBonuses(damage, attacker.isMissile, attacker.strength,
-        attacker.enhancedDamagePercent, attacker.demonDamagePercent, attacker.undeadDamagePercent,
-        defender != null && defender.isDemon, defender != null && defender.isUndead);
-  }
-
-  /**
-   * 计算元素伤害
-   */
-  private int calculateElementalDamage(AttackerData attacker, int damageType) {
-    int scale = attacker.fixedPointElements ? 256 : 1;
-    int minDmg = scale == 1 ? attacker.elementalMinDamage[damageType]
-        : saturatingInt((long) attacker.elementalMinDamage[damageType] * scale);
-    int maxDmg = scale == 1 ? attacker.elementalMaxDamage[damageType]
-        : saturatingInt((long) attacker.elementalMaxDamage[damageType] * scale);
-
-    if (maxDmg <= 0) {
-      return 0;
-    }
-
-    return attacker.isMissile
-        ? rollMissileDamage(minDmg, maxDmg)
-        : rollInclusive(minDmg, maxDmg);
-  }
-
-  /**
-   * D2Game {@code MISSMODE_RollDamageValue} passes {@code max - min} to
-   * {@code ITEMS_RollLimitedRandomNumber}; the canonical getter maximum is
-   * therefore excluded from missile damage rolls.
-   */
+  /** Compatibility global RNG entry point; production uses the injected domain stream. */
   public static int rollNativeMissileDamage(int minimum, int maximum) {
     int min = Math.max(0, minimum);
     int max = Math.max(min, maximum);
     return max > min ? MathUtils.random(min, max - 1) : min;
-  }
-
-  /**
-   * 计算压碎性打击伤害
-   * 
-   * <p>压碎性打击：
-   * <ul>
-   *   <li>对普通怪物：当前生命的 25%</li>
-   *   <li>对 BOSS：当前生命的 10%</li>
-   *   <li>对玩家：当前生命的 10%</li>
-   * </ul>
-   */
-  private int calculateCrushingBlowDamage(DefenderData defender) {
-    int percent = defender.isPlayer ? 10 : 25;
-    return defender.currentLife * percent / 100;
-  }
-
-  //==========================================================================
-  // 伤害减免
-  //==========================================================================
-
-  /**
-   * 应用物理伤害减免
-   */
-  private int applyPhysicalDamageReduction(int damage, DefenderData defender) {
-    return applyPhysicalDamageReduction(damage, defender, false);
-  }
-
-  private int applyPhysicalDamageReduction(
-      int damage, DefenderData defender, boolean bypassResistance) {
-    return NativeCombatMath.physicalReduction(damage, defender.immunePhysical,
-        defender.damageReducedPercent, defender.damageReduced, bypassResistance);
-  }
-
-  /** Nova's 8.8 lightning row from SUNITDMG_CalculateTotalDamage / ApplyResistancesAndAbsorb. */
-  private void resolveNativeLightningDamage(int rawDamage, AttackerData attacker,
-      DefenderData defender, CombatResult result) {
-    int type = DAMAGE_LIGHTNING;
-    if (defender.immuneElemental[type]
-        || (defender.isMonster && defender.resistances[type] >= 100)) return;
-    NativeFixedElementalMath.lightningDamage(result, rawDamage, attacker.isPlayer, defender.isPlayer,
-        defender.isMonster, defender.immuneElemental[type], defender.resistances[type],
-        defender.maxResistances[type], attacker.elementalPierce[type], defender.magicDamageReduced,
-        defender.absorbPercent[type], defender.absorbFlat[type]);
-  }
-
-  /** Applies elemental resistance using the legacy attack ordering. */
-  private int applyElementalResistance(int damage, DefenderData defender, int damageType,
-      int piercePercent) {
-    return applyElementalResistance(damage, defender, damageType, piercePercent, 1);
-  }
-
-  private int applyElementalResistance(int damage, DefenderData defender, int damageType,
-      int piercePercent, int scale) {
-    // Preserve the early immunity return and missing-channel default from the host adapter.
-    if (defender.immuneElemental[damageType]) return 0;
-    int maximum = defender.maxResistances != null
-        && damageType < defender.maxResistances.length && defender.maxResistances[damageType] > 0
-        ? defender.maxResistances[damageType] : 75;
-    return NativeCombatMath.legacyElementalResistance(damage, false,
-        defender.resistances[damageType], maximum, piercePercent,
-        damageType != DAMAGE_POISON && damageType != DAMAGE_PHYSICAL,
-        defender.magicDamageReduced, scale);
-  }
-
-  private int absorbElementalDamage(int damage, DefenderData defender, int damageType) {
-    return absorbElementalDamage(damage, defender, damageType, 1);
-  }
-
-  private int absorbElementalDamage(int damage, DefenderData defender, int damageType, int scale) {
-    if (damage <= 0 || defender.absorbPercent == null || damageType >= defender.absorbPercent.length) {
-      return 0;
-    }
-    int flat = defender.absorbFlat != null && damageType < defender.absorbFlat.length
-        ? defender.absorbFlat[damageType] : 0;
-    return NativeCombatMath.elementalAbsorb(damage, defender.absorbPercent[damageType], flat, scale);
-  }
-
-  //==========================================================================
-  // 暴击和特殊攻击
-  //==========================================================================
-
-  /**
-   * 判定暴击（Critical Strike - 来自技能）
-   */
-  private boolean rollCriticalStrike(AttackerData attacker) {
-    return rolls.percent(Math.min(attacker.criticalStrike, MAX_CRIT_CHANCE));
-  }
-
-  /**
-   * 判定致命一击（Deadly Strike - 来自装备）
-   */
-  private boolean rollDeadlyStrike(AttackerData attacker) {
-    return rolls.percent(Math.min(attacker.deadlyStrike, MAX_CRIT_CHANCE));
-  }
-
-  /**
-   * 判定压碎性打击
-   */
-  private boolean rollCrushingBlow(AttackerData attacker) {
-    return rolls.percent(attacker.crushingBlow);
-  }
-
-  //==========================================================================
-  // 偷取计算
-  //==========================================================================
-
-  /**
-   * 计算生命偷取
-   * 
-   * <p>注意：生命偷取仅对物理伤害有效
-   */
-  private int calculateLifeLeech(int physicalDamage, AttackerData attacker) {
-    return NativeCombatMath.leech(physicalDamage, attacker.lifeLeech);
-  }
-
-  /**
-   * 计算法力偷取
-   */
-  private int calculateManaLeech(int physicalDamage, AttackerData attacker) {
-    return NativeCombatMath.leech(physicalDamage, attacker.manaLeech);
   }
 
   //==========================================================================

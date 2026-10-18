@@ -48,8 +48,8 @@ public final class NativeCombatRolls {
           ? NativeCombatConstants.DEFENSE_EVADE : NativeCombatConstants.DEFENSE_NONE;
     }
     if (weaponBlock > 0 && passive(weaponBlock)) return NativeCombatConstants.DEFENSE_WEAPON_BLOCK;
-    if (attackType == 0 && dodge > 0 && passive(dodge)) return NativeCombatConstants.DEFENSE_DODGE;
-    if (attackType == 1 && avoid > 0 && passive(avoid)) return NativeCombatConstants.DEFENSE_AVOID;
+    if (attackType == NativeCombatConstants.ATTACK_MELEE && dodge > 0 && passive(dodge)) return NativeCombatConstants.DEFENSE_DODGE;
+    if (attackType == NativeCombatConstants.ATTACK_RANGED && avoid > 0 && passive(avoid)) return NativeCombatConstants.DEFENSE_AVOID;
     return NativeCombatConstants.DEFENSE_NONE;
   }
 }

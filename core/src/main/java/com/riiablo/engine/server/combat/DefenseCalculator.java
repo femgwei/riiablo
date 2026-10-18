@@ -61,11 +61,11 @@ public class DefenseCalculator {
   //==========================================================================
 
   /** 近战攻击 */
-  public static final int ATTACK_MELEE = 0;
+  public static final int ATTACK_MELEE = NativeCombatConstants.ATTACK_MELEE;
   /** 远程攻击 */
-  public static final int ATTACK_RANGED = 1;
+  public static final int ATTACK_RANGED = NativeCombatConstants.ATTACK_RANGED;
   /** 魔法攻击 */
-  public static final int ATTACK_MAGIC = 2;
+  public static final int ATTACK_MAGIC = NativeCombatConstants.ATTACK_MAGIC;
 
   //==========================================================================
   // 防御结果

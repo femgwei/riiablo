@@ -14,6 +14,31 @@ public class CombatSystemTest extends RiiabloTest {
   private final CombatSystem combat = new CombatSystem();
 
   @Test
+  public void extractedPipelinePersistsOnlyAllowedBlockAnimationFrames() {
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override protected boolean rollShieldBlock(int chance) {
+        return true;
+      }
+    };
+    CombatSystem.AttackerData a = new CombatSystem.AttackerData();
+    a.alwaysHit = true;
+    CombatSystem.DefenderData d = new CombatSystem.DefenderData();
+    d.canBlock = true;
+    d.combatAttributes = attrs(100, 1, 0, 1, 1, 100);
+    d.combatAttributes.aggregate().put(Stat.lastblockframe, 0);
+    d.currentFrame = 16;
+    assertTrue(deterministicBlock.calculateAttack(a, d).blockAnimationAllowed);
+    assertEquals(16, d.combatAttributes.get(Stat.lastblockframe).asInt());
+    d.currentFrame = 17;
+    assertTrue(!deterministicBlock.calculateAttack(a, d).blockAnimationAllowed);
+    assertEquals(16, d.lastBlockFrame);
+    assertEquals(16, d.combatAttributes.get(Stat.lastblockframe).asInt());
+    d.currentFrame = 32;
+    assertTrue(deterministicBlock.calculateAttack(a, d).blockAnimationAllowed);
+    assertEquals(32, d.combatAttributes.get(Stat.lastblockframe).asInt());
+  }
+
+  @Test
   public void specialAttackEntryPointsPreserveInjectedResistanceAndClassicMode() {
     Attributes attacker = attrs(100, 20, 0, 1, 1, 10000);
     attacker.base().put(Stat.firemindam, 100);

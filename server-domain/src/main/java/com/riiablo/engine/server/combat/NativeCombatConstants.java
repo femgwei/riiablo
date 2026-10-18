@@ -17,6 +17,9 @@ public final class NativeCombatConstants {
   public static final int DEFENSE_AVOID = 3;
   public static final int DEFENSE_EVADE = 4;
   public static final int DEFENSE_WEAPON_BLOCK = 5;
+  public static final int ATTACK_MELEE = 0;
+  public static final int ATTACK_RANGED = 1;
+  public static final int ATTACK_MAGIC = 2;
 
   public static final int BASE_TO_HIT_CHANCE = 5;
   public static final int MIN_TO_HIT_CHANCE = 5;
