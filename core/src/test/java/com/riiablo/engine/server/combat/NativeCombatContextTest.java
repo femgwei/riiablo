@@ -6,6 +6,22 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void coldAndFreezeKeepSeparateTableDivisorsAndSafeFallbacks() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.MonsterColdDivisor = 3;
+    row.MonsterFreezeDivisor = 5;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    assertEquals(3, NativeDifficultyRules.tableMonsterColdDivisor(context));
+    assertEquals(5, NativeDifficultyRules.tableMonsterFreezeDivisor(context));
+    row.MonsterColdDivisor = 0;
+    row.MonsterFreezeDivisor = -1;
+    assertEquals(1, NativeDifficultyRules.tableMonsterColdDivisor(context));
+    assertEquals(1, NativeDifficultyRules.tableMonsterFreezeDivisor(context));
+    assertEquals(1, NativeDifficultyRules.tableMonsterColdDivisor(NativeCombatContext.normal()));
+    assertEquals(1, NativeDifficultyRules.tableMonsterFreezeDivisor(NativeCombatContext.normal()));
+  }
+  @Test
   void aiCurseDivisorUsesTableAndSafelyHandlesMissingOrInvalidValues() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();

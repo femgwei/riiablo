@@ -2177,13 +2177,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private int coldDivisor(int difficulty) {
-    DifficultyLevels.Entry entry = difficultyEntry(difficulty);
-    return entry == null ? 1 : Math.max(1, entry.MonsterColdDivisor);
+    return com.riiablo.engine.server.combat.NativeDifficultyRules.tableMonsterColdDivisor(
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
+            difficulty, difficultyEntry(difficulty)));
   }
 
   private int freezeDivisor(int difficulty) {
-    DifficultyLevels.Entry entry = difficultyEntry(difficulty);
-    return entry == null ? 1 : Math.max(1, entry.MonsterFreezeDivisor);
+    return com.riiablo.engine.server.combat.NativeDifficultyRules.tableMonsterFreezeDivisor(
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
+            difficulty, difficultyEntry(difficulty)));
   }
 
   private DifficultyLevels.Entry difficultyEntry(int difficulty) {

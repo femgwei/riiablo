@@ -4,6 +4,17 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** State-duration path: a missing table preserves the existing divisor of one. */
+  public static int tableMonsterColdDivisor(NativeCombatContext context) {
+    return context.difficultyRow() == null ? 1
+        : Math.max(1, context.difficultyRow().MonsterColdDivisor);
+  }
+
+  public static int tableMonsterFreezeDivisor(NativeCombatContext context) {
+    return context.difficultyRow() == null ? 1
+        : Math.max(1, context.difficultyRow().MonsterFreezeDivisor);
+  }
+
   /** Table-driven reduction for AI curse duration; absent/invalid rows use one. */
   public static int aiCurseDivisor(NativeCombatContext context) {
     return context.difficultyRow() == null ? 1

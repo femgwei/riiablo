@@ -5000,6 +5000,11 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 冰冷/冻结状态难度规则迁移：`StateUpdater` 通过上下文读取独立的
+  `MonsterColdDivisor` / `MonsterFreezeDivisor`，规则集中于 `NativeDifficultyRules`。
+  保留缺表/非正值回退 1；不合并旧 CombatSystem 的 1/2/4 兼容路径，避免改变语义。
+  已补表值隔离和回退测试代码；按小改要求仅检查 diff，未运行编译/测试。
+
 - AI 诅咒难度规则迁移：`NecromancerSkills.curseDifficultyDivisor` 委托上下文规则
   `NativeDifficultyRules.aiCurseDivisor`，统一消费 `DifficultyLevels.AiCurseDivisor`；
   只影响原先使用此除数的 AI 诅咒，保留缺表、零值和负值回退 1 的行为。
