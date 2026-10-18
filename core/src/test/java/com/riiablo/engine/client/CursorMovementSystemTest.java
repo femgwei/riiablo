@@ -96,6 +96,15 @@ class CursorMovementSystemTest {
   }
 
   @Test
+  void heldPointerRetriesAStalledPathWithoutChangingDirection() {
+    Pathfind pathfind = new Pathfind();
+    pathfind.destination.set(20f, 10f);
+    pathfind.recordMovement(true, 0f, 0.25f, true);
+    assertTrue(CursorMovementSystem.shouldRefreshHeldGroundPath(
+        new Vector2(10f, 10f), pathfind, new Vector2(20f, 10f)));
+  }
+
+  @Test
   void heldPointerRefreshesNearPathEndOrAfterDirectionChange() {
     Vector2 position = new Vector2(10f, 10f);
     Pathfind pathfind = new Pathfind();

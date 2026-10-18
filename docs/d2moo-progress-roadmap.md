@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 长按地面移动绕障
+
+- 玩家地面坐标指令改用已有 best-reachable A*：目标落在障碍 footprint 内时，寻找最接近目标的可达路径，避免直接退回直线撞点而停在障碍前。实体追踪与怪物路径保留各自规则。
+- 长按路径停滞 0.25 秒后允许重新规划，即使鼠标方向没有明显变化。
+- 参考 D2MOO `PathMisc.cpp:PATH_Straight_Compute` 的朝目标推进和局部 A* 绕障策略；本次没有宣称实现原版客户端输入频率或完整原生路径算法。
+- 新增真实 A* / 碰撞移动夹具，覆盖阻挡目标附近的小墙绕行，以及固定方向长按停滞重试；实机长按手感仍需另一台电脑验收。
+- 验证：主代码编译通过；`CursorMovementSystemTest`、`PathfinderTerrainPursuitTest` 隔离编译运行通过。常规测试编译受既有 `MonsterAiParamParityTest` 引用缺失的 Vulture 常量阻断；使用本地 build 目录临时 Gradle init 脚本只编译上述两类测试。未执行真实 MPQ 渲染验收。
+
 ## 2026-10-18 A2 城镇 Automap 假水井图标
 
 - 移除 Automap 将对象 122/183/185 硬编码为水井图标 309 的回退。D2MOO `ObjectsIds.h` 中 122 为 `OBJECT_JERHYN_PLACEHOLDER2`、183 为 `OBJECT_CHEST_LEFT_MEDIUM_JUNGLE`。

@@ -734,7 +734,11 @@ public class Pathfinder extends IteratingSystem {
     MapWrapper owner = mMapWrapper.has(src) ? mMapWrapper.get(src) : null;
     com.riiablo.engine.server.component.Casting cast = mCasting.get(src);
     boolean runPath = cast != null && cast.diabRun != null;
-    boolean success = runPath
+    // Ground clicks may land inside a prop's footprint. Search toward the
+    // closest reachable node instead of clipping the command to the first
+    // obstacle on a ray; that clipping discards valid routes around props.
+    boolean playerGroundPath = mPlayer.has(src) && targetEntityId == Engine.INVALID_ENTITY;
+    boolean success = (runPath || playerGroundPath)
         ? map.findPartialPath(owner == null ? null : owner.zone,
             srcPos, targetPos, flags, size, path, obstacle, canOpenDoors(src))
         : map.findPath(owner == null ? null : owner.zone,

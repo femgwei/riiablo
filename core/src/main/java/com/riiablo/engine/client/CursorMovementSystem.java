@@ -565,6 +565,9 @@ public class CursorMovementSystem extends BaseSystem {
       Vector2 position, Pathfind pathfind, Vector2 requestedDestination) {
     if (position == null || pathfind == null || requestedDestination == null) return true;
     if (pathfind.targetEntityId != Engine.INVALID_ENTITY) return true;
+    // A stable pointer must not preserve a path that no longer makes progress
+    // (for example after a unit occupies its next segment).
+    if (pathfind.stalledTime >= 0.25f) return true;
 
     float remainingX = pathfind.destination.x - position.x;
     float remainingY = pathfind.destination.y - position.y;

@@ -22,6 +22,23 @@ import org.junit.jupiter.api.Test;
 
 /** Carved terrain, real A*, swept movement and dynamic occupancy; not generated-map coverage. */
 class PathfinderTerrainPursuitTest {
+  @Test void playerGroundClickOnBlockedGoalFindsRouteAroundSmallObstacle() {
+    try (Fixture f = new Fixture((x, y) -> x == 20 && y >= 7 && y <= 13)) {
+      f.world.getMapper(Monster.class).remove(f.actor);
+      f.world.getMapper(Player.class).create(f.actor);
+      f.world.process();
+      // The goal is beyond the wall but its size-three footprint touches it.
+      // A ray fallback stops on the near side; best-reachable A* goes around.
+      assertTrue(f.paths.findPath(f.actor, new Vector2(21, 10), true));
+      for (int i = 0; i < 240; i++) {
+        f.world.process();
+        Vector2 p = f.position(f.actor);
+        assertFalse(f.map.isBlockedForPath(Map.round(p.x), Map.round(p.y), 1, 3, false));
+      }
+      assertTrue(f.position(f.actor).x > 20, "must reach the far side rather than stop at the ray hit");
+    }
+  }
+
   @Test void ordinaryLargeMonsterUsesTheSameThreeCellDoorFootprintAsDoorOpeners() {
     try (Fixture f = new Fixture((x, y) -> x == 20 && (y < 9 || y > 11), false)) {
       assertTrue(f.start());
@@ -122,6 +139,12 @@ class PathfinderTerrainPursuitTest {
               graph.searchNodePath(search, call.getArgument(1), call.getArgument(2),
                   call.getArgument(3), call.getArgument(4), call.getArgument(5),
                   call.getArgument(6), call.getArgument(7), call.getArgument(8), call.getArgument(9)));
+      when(map.findPartialPath(nullable(Map.Zone.class), any(Vector2.class), any(Vector2.class),
+          anyInt(), anyInt(), any(GraphPath.class), nullable(MapGraph.Obstacle.class),
+          anyBoolean())).thenAnswer(call ->
+              graph.searchPartialNodePath(search, call.getArgument(1), call.getArgument(2),
+                  call.getArgument(3), call.getArgument(4), call.getArgument(5),
+                  call.getArgument(6), call.getArgument(7)));
       when(map.castRay(nullable(Map.Zone.class), any(Ray.class), anyInt(), anyInt(),
           any(Collision.class), anyBoolean())).thenAnswer(call ->
               rays.findCollision(call.getArgument(1), call.getArgument(2), call.getArgument(3),
