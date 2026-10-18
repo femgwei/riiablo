@@ -388,21 +388,10 @@ public class ServerSkillSystem extends PassiveSystem {
     Missiles.Entry row = files() == null || files().Missiles == null
         ? null : files().Missiles.get("buglightning");
     if (row == null) return;
-    Vector2 origin = mPosition.get(source).position;
-    int created = 0;
-    for (int i = 0; i < 8; i++) {
-      float angle = i * MathUtils.PI2 / 8f;
-      Vector2 direction = new Vector2(MathUtils.cos(angle), MathUtils.sin(angle));
-      int id = createMissile(row, direction, origin, source, null,
-          mAttributesWrapper.has(source)
-              ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt())
-              : 1);
-      if (id >= 0 && mMissile.has(id)) {
-        created++;
-        mMissile.get(id).nativeLifetimeFrames = 77;
-        mMissile.get(id).range = 77;
-      }
-    }
+    int level = mAttributesWrapper.has(source)
+        ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt())
+        : 1;
+    int created = emitNativeMonsterChargedBolts(source, row, level);
     log.info("[SCARAB_BOLTS] source={} missile=buglightning created={}", source, created);
   }
 
@@ -413,16 +402,41 @@ public class ServerSkillSystem extends PassiveSystem {
     Missiles.Entry row = files() == null || files().Missiles == null
         ? null : files().Missiles.get("lightunique");
     if (row == null) return;
-    Vector2 origin = mPosition.get(source).position;
     int level = mAttributesWrapper.has(source)
         ? Math.max(1, mAttributesWrapper.get(source).attrs.get(Stat.level, StatRef.obtain()).asInt() / 2)
         : 1;
+    emitNativeMonsterChargedBolts(source, row, level);
+  }
+
+  /** MonsterUnique's cardinal pairs, initialized by SkillSor's charged-bolt seed policy. */
+  private int emitNativeMonsterChargedBolts(int source, Missiles.Entry row, int level) {
+    Vector2 position = mPosition.get(source).position;
+    int x = MathUtils.floor(position.x), y = MathUtils.floor(position.y);
+    Vector2 origin = new Vector2(x, y);
+    int[] dx = {0, 1, 0, -1}, dy = {-1, 0, 1, 0};
+    int created = 0;
     for (int i = 0; i < 4; i++) {
-      float angle = i * MathUtils.PI2 / 4f;
-      Vector2 direction = new Vector2(MathUtils.cos(angle), MathUtils.sin(angle));
-      createMissile(row, direction, origin, source, null, level);
-      createMissile(row, direction, origin, source, null, level);
+      int main = AssassinTrapSystem.chargedBoltMainDirection(x, y, x + dx[i], y + dy[i]);
+      for (int ordinal = 0; ordinal < 2; ordinal++) {
+        long seed = AssassinTrapSystem.chargedBoltRoll(x + ordinal, 666);
+        Vector2 direction = AssassinTrapSystem.chargedBoltVector(
+            AssassinTrapSystem.chargedBoltDirection(main, (int) seed), new Vector2());
+        int id = createMissile(row, direction, origin, source, null, level);
+        if (id < 0 || !mMissile.has(id)) continue;
+        Missile bolt = mMissile.get(id);
+        bolt.chargedBoltPath = true;
+        bolt.chargedBoltMainDirection = main;
+        bolt.chargedBoltSeedLow = (int) seed;
+        bolt.chargedBoltSeedHigh = (int) (seed >>> 32);
+        bolt.chargedBoltNextTurnDistance = 2f;
+        bolt.chargedBoltTargetX = x + dx[i];
+        bolt.chargedBoltTargetY = y + dy[i];
+        bolt.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(row, level);
+        bolt.range = Math.min(77f, Math.max(1f, bolt.range));
+        created++;
+      }
     }
+    return created;
   }
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
