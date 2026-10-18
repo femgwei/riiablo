@@ -24,6 +24,7 @@ public final class NativeCombatConstants {
   public static final int MIN_RESISTANCE = -100;
   public static final int ABSOLUTE_MAX_RESISTANCE = 95;
   public static final int PVP_HIT_FACTOR = 2;
+  public static final int PVP_DAMAGE_PERCENT = 17;
   public static final int MIN_BLOCK_CHANCE = 0;
   public static final int MAX_BLOCK_CHANCE = 75;
   public static final int BLOCK_DEXTERITY_FACTOR = 2;

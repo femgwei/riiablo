@@ -82,7 +82,7 @@ public class CombatSystem {
   public static final int PVP_HIT_FACTOR = NativeCombatConstants.PVP_HIT_FACTOR;
 
   /** Diablo II player-vs-player damage scalar (approximately one sixth). */
-  public static final int PVP_DAMAGE_PERCENT = 17;
+  public static final int PVP_DAMAGE_PERCENT = NativeCombatConstants.PVP_DAMAGE_PERCENT;
 
   /** 等级差异每级影响（用于命中计算） */
   public static final int LEVEL_DIFF_MODIFIER = 2;
@@ -402,18 +402,10 @@ public class CombatSystem {
   }
 
   /** Signed 8.8 result used by Static Field's fractional native damage path. */
-  public static class StaticFieldDamageResult {
-    public int damageFixed;
-    public int absorbedLifeFixed;
-    public boolean immune;
-  }
+  public static class StaticFieldDamageResult extends NativeFixedElementalMath.Result {}
 
   /** Signed 8.8 result for persistent elemental ground missiles. */
-  public static class FixedElementalDamageResult {
-    public int damageFixed;
-    public int absorbedLifeFixed;
-    public boolean immune;
-  }
+  public static class FixedElementalDamageResult extends NativeFixedElementalMath.Result {}
 
   /**
    * Resolves an attack with an optional native monster attack profile.
@@ -1057,39 +1049,11 @@ public class CombatSystem {
       result.immune = true;
       return result;
     }
-    resistance -= Math.max(0, piercePercent);
-    int maximumResistance = Math.min(ABSOLUTE_MAX_RESISTANCE,
-        75 + statInt(defender, maximumStats[damageType], 0));
-    resistance = Math.max(MIN_RESISTANCE, Math.min(maximumResistance, resistance));
-
-    // Native SUNITDMG_CalculateTotalDamage scales PvP before flat reduction,
-    // resistance and absorb. This ordering matters for sub-point fire ticks.
-    long reduced = rawDamageFixed;
-    if (attackerPlayer && defenderPlayer) {
-      reduced = reduced * PVP_DAMAGE_PERCENT / 100L;
-    }
-    long flatReduction = (long) Math.max(0,
-        statInt(defender, Stat.magic_damage_reduction, 0)) << 8;
-    if (flatReduction > 0 && damageRate > 0) {
-      flatReduction = flatReduction * damageRate / 1024L;
-    }
-    reduced = Math.max(0L, reduced - flatReduction);
-    reduced = reduced * (100L - resistance) / 100L;
-
-    int absorbPercent = absorbPercentStats[damageType] != 0
-        ? Math.max(0, Math.min(40,
-            statInt(defender, absorbPercentStats[damageType], 0))) : 0;
-    long absorbed = reduced * absorbPercent / 100L;
-    if (absorbFlatStats[damageType] != 0) {
-      long flatFixed = (long) Math.max(0,
-          statInt(defender, absorbFlatStats[damageType], 0)) << 8;
-      absorbed += Math.min(flatFixed, Math.max(0L, reduced - absorbed));
-    }
-    absorbed = Math.min(reduced, Math.max(0L, absorbed));
-    long damage = Math.max(0L, reduced - absorbed);
-
-    result.damageFixed = saturatingInt(damage);
-    result.absorbedLifeFixed = saturatingInt(absorbed);
+    NativeFixedElementalMath.rateDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
+        resistance, statInt(defender, maximumStats[damageType], 0), piercePercent,
+        statInt(defender, Stat.magic_damage_reduction, 0), damageRate,
+        absorbPercentStats[damageType] != 0 ? statInt(defender, absorbPercentStats[damageType], 0) : 0,
+        absorbFlatStats[damageType] != 0 ? statInt(defender, absorbFlatStats[damageType], 0) : 0);
     return result;
   }
 
@@ -1137,35 +1101,11 @@ public class CombatSystem {
       result.immune = true;
       return result;
     }
-    int maximumResistance = 75 + statInt(defender, maximumStats[damageType], 0);
-    maximumResistance = Math.min(ABSOLUTE_MAX_RESISTANCE, maximumResistance);
-    resistance = Math.max(MIN_RESISTANCE, Math.min(maximumResistance, resistance));
-
-    long adjusted = rawDamageFixed;
-    if (resistance < 0) {
-      adjusted = 100L * adjusted / (100L - resistance);
-    }
-    long reduced = adjusted * (100L - resistance) / 100L;
-    // Magic Damage Reduced by X applies to the same non-poison elemental
-    // packet as the regular attack path, after resistance and before absorb.
-    if (damageType != DAMAGE_POISON) {
-      reduced = Math.max(0L, reduced - statInt(defender, Stat.magic_damage_reduction, 0));
-    }
-    int absorbPercent = absorbPercentStats[damageType] != 0
-        ? Math.max(0, Math.min(100,
-            statInt(defender, absorbPercentStats[damageType], 0))) : 0;
-    long absorbed = reduced * absorbPercent / 100L;
-    if (absorbFlatStats[damageType] != 0) {
-      long flatFixed = (long) Math.max(0,
-          statInt(defender, absorbFlatStats[damageType], 0)) << 8;
-      absorbed += Math.min(flatFixed, Math.max(0L, reduced - absorbed));
-    }
-    absorbed = Math.min(reduced, Math.max(0L, absorbed));
-    long damage = Math.max(0L, reduced - absorbed);
-    if (attackerPlayer && defenderPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100L;
-
-    result.damageFixed = saturatingInt(damage);
-    result.absorbedLifeFixed = saturatingInt(absorbed);
+    NativeFixedElementalMath.staticFieldDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
+        resistance, statInt(defender, maximumStats[damageType], 0), damageType == DAMAGE_POISON,
+        damageType != DAMAGE_POISON ? statInt(defender, Stat.magic_damage_reduction, 0) : 0,
+        absorbPercentStats[damageType] != 0 ? statInt(defender, absorbPercentStats[damageType], 0) : 0,
+        absorbFlatStats[damageType] != 0 ? statInt(defender, absorbFlatStats[damageType], 0) : 0);
     return result;
   }
 
@@ -2341,28 +2281,12 @@ public class CombatSystem {
   private void resolveNativeLightningDamage(int rawDamage, AttackerData attacker,
       DefenderData defender, CombatResult result) {
     int type = DAMAGE_LIGHTNING;
-    long resistance = defender.resistances[type];
-    // Monster immunity is checked before passive pierce; player resistance
-    // above 100 remains subject to the ordinary maximum resistance cap.
-    if (defender.immuneElemental[type] || (defender.isMonster && resistance >= 100)) return;
-    resistance -= attacker.elementalPierce[type];
-    if (!defender.isMonster) {
-      resistance = Math.min(resistance,
-          Math.min(ABSOLUTE_MAX_RESISTANCE, defender.maxResistances[type]));
-    }
-    resistance = Math.max(MIN_RESISTANCE, Math.min(100L, resistance));
-
-    long damage = rawDamage;
-    if (attacker.isPlayer && defender.isPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100L;
-    damage = Math.max(0L, damage - (long) Math.max(0, defender.magicDamageReduced) * 256);
-    damage = damage * (100 - resistance) / 100L;
-
-    int percent = Math.max(0, Math.min(40, defender.absorbPercent[type]));
-    long absorbed = damage * percent / 100L;
-    absorbed += Math.min(damage - absorbed,
-        (long) Math.max(0, defender.absorbFlat[type]) * 256);
-    result.elementalDamage[type] = saturatingInt(damage - absorbed);
-    result.absorbedLife = saturatingInt((long) result.absorbedLife + absorbed);
+    if (defender.immuneElemental[type]
+        || (defender.isMonster && defender.resistances[type] >= 100)) return;
+    NativeFixedElementalMath.lightningDamage(result, rawDamage, attacker.isPlayer, defender.isPlayer,
+        defender.isMonster, defender.immuneElemental[type], defender.resistances[type],
+        defender.maxResistances[type], attacker.elementalPierce[type], defender.magicDamageReduced,
+        defender.absorbPercent[type], defender.absorbFlat[type]);
   }
 
   /** Applies elemental resistance using the legacy attack ordering. */
