@@ -10,6 +10,11 @@ public class ReanimatedHorde extends NativeDecisionAI {
   private boolean deathScheduled;
   public ReanimatedHorde(int entityId) { super(entityId); }
 
+  @Override protected boolean recoverRadiusMovement(com.badlogic.gdx.math.Vector2 destination,
+      int budget, int bonus) {
+    return RadiusMovementRecovery.recover(this, destination, budget, bonus);
+  }
+
   @Override public void kill() {
     if (deathScheduled) return;
     deathScheduled = true;

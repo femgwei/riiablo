@@ -7,6 +7,11 @@ import com.riiablo.engine.Engine;
 /** D2MOO AITHINK_Fn115_SiegeBeast, 0x6FCE0610. */
 public class SiegeBeast extends SiegeTower {
   public SiegeBeast(int entityId) { super(entityId); }
+
+  @Override protected boolean recoverRadiusMovement(com.badlogic.gdx.math.Vector2 destination,
+      int budget, int bonus) {
+    return RadiusMovementRecovery.recover(this, destination, budget, bonus);
+  }
   @Override protected void thinkWithoutTarget() { idle(1); }
   @Override protected void think(int targetId, float distance, boolean combat) {
     if (monster.monstats.Align == 0) recruitImp(params[0] * params[0]);

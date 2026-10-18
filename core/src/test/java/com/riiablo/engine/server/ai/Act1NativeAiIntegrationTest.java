@@ -649,11 +649,11 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
     final int actor;
     final int target;
 
-    Fixture(String rowId, int difficulty, float distance) {
+    Fixture(String rowId, int difficulty, float distance, com.artemis.BaseSystem... extraSystems) {
       EntityFactory factory = new NoopFactory();
       world = new World(new WorldConfigurationBuilder()
           .with(new EventSystem(), probe, new Pathfinder(), new CofManager(), factory,
-              new com.riiablo.engine.server.NativePlayerTargetSlots())
+              new com.riiablo.engine.server.NativePlayerTargetSlots()).with(extraSystems)
           .build().register("factory", factory).register("map", new Map(1, difficulty)));
       Riiablo.engine = world;
       MonStats.Entry row = Riiablo.files.monstats.get(rowId);
