@@ -39,13 +39,11 @@ public class AIStepper extends IteratingSystem {
     if (ai != null) ai.onNativeHit(event.attacker);
     Monster monster = mMonster.get(event.victim);
     boolean chargedBolts = MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS);
-    boolean lightningEnchanted = MonsterAffix.hasAffix(monster.affixes, MonsterAffix.LIGHTNING_ENCHANTED);
-    if ((chargedBolts || lightningEnchanted)
+    if (chargedBolts
         && monster.chargedBoltsCooldown <= 0f) {
       ServerSkillSystem skills = world.getSystem(ServerSkillSystem.class);
       if (skills != null) {
-        if (chargedBolts) skills.emitScarabChargedBolts(event.victim);
-        else skills.emitLightningEnchantedBolts(event.victim);
+        skills.emitScarabChargedBolts(event.victim);
         // Native MONSTERUNIQUE_ScarabModeChange defers the callback by two
         // frames; this guard also coalesces multi-packet damage in one swing.
         monster.chargedBoltsCooldown = 2f / 25f;

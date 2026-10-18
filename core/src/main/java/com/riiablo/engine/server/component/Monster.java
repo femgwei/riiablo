@@ -23,6 +23,7 @@ public class Monster extends Component {
   public float chargedBoltsCooldown;
   public boolean fireDeathExplosionScheduled;
   public boolean coldDeathNovaScheduled;
+  public double lightningEnchantedLastFrame;
   public int uniqueId;
 
   /**
@@ -106,6 +107,7 @@ public class Monster extends Component {
     chargedBoltsCooldown = 0f;
     fireDeathExplosionScheduled = false;
     coldDeathNovaScheduled = false;
+    lightningEnchantedLastFrame = 0;
     baalWaveIndex = -1;
     baalWaveSuperUniqueId = -1;
     baalWaveRoomId = -1;

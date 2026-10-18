@@ -112,8 +112,37 @@ public class ServerSkillSystem extends PassiveSystem {
   private static final class FireDeathEvent {
     int source;
     boolean cold;
+    boolean lightning;
     double due;
     com.riiablo.engine.server.component.NativePathIdentity.Token identity;
+  }
+
+  @Subscribe
+  public void onLightningEnchantedMode(com.riiablo.engine.server.event.ModeChangeEvent event) {
+    if (event.mode != Engine.Monster.MODE_GH || !mMonster.has(event.entityId)) return;
+    Monster monster = mMonster.get(event.entityId);
+    if (!MonsterRank.isUnique(monster.rank)
+        || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
+            com.riiablo.engine.server.monster.MonsterAffix.LIGHTNING_ENCHANTED)) return;
+    com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(event.entityId);
+    if (identity == null || identity.token() == null) return;
+    for (FireDeathEvent pending : fireDeaths) {
+      if (pending.lightning && pending.identity == identity.token()) return;
+    }
+    FireDeathEvent pending = new FireDeathEvent();
+    pending.source = event.entityId;
+    pending.identity = identity.token();
+    pending.due = nativeElapsedFrames + 2;
+    pending.lightning = true;
+    fireDeaths.add(pending);
+  }
+
+  private void resolveLightningEnchantedHit(int source) {
+    Monster monster = mMonster.get(source);
+    if (monster == null || nativeElapsedFrames - monster.lightningEnchantedLastFrame + .00001 < 10) return;
+    monster.lightningEnchantedLastFrame = nativeElapsedFrames;
+    emitLightningEnchantedBolts(source);
   }
 
   @Subscribe
@@ -420,7 +449,8 @@ public class ServerSkillSystem extends PassiveSystem {
     // Death explosions may enqueue more deaths; resolve outside the queue iterator.
     for (FireDeathEvent pending : ready) {
       if (pending.identity.isCurrent(world, pending.source)) {
-        if (pending.cold) resolveColdEnchantedDeath(pending.source);
+        if (pending.lightning) resolveLightningEnchantedHit(pending.source);
+        else if (pending.cold) resolveColdEnchantedDeath(pending.source);
         else resolveFireEnchantedDeath(pending.source);
       }
     }
@@ -448,7 +478,8 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   @Override
   protected boolean checkProcessing() {
-    return !fireDeaths.isEmpty() || poisonJavelinDelayFrames.size > 0 || bladeFuryDelayFrames.size > 0;
+    // LE compares absolute game frames even when no callback or cast delay is queued.
+    return true;
   }
 
   @Override
