@@ -330,6 +330,7 @@ class NativePathShadowTest {
     zone.objectBlockWalkRefs = new short[32 * 32];
     zone.objectDoorRefs = new short[32 * 32];
     zone.objectBlockWalkRefs[16 * 32 + 16] = zone.objectDoorRefs[16 * 32 + 16] = 1;
+    zone.setNativeCollisionMask(16,16,0x804);
     List<NativePathShadow.Result> rows = new ArrayList<>();
     map.setPathShadow(new NativePathShadow(1, 3, rows::add));
     GraphPath path = new GraphPath();
@@ -341,6 +342,7 @@ class NativePathShadowTest {
     assertTrue(row.canOpenDoors);
     assertTrue(map.isBlockedForPath(16, 16, FLAGS, 1, false), "door filter restored after observation");
     zone.objectBlockWalkRefs[16 * 32 + 16]++;
+    zone.setNativeCollisionMask(16,16,0x400);
     assertFalse(map.findPath(new Vector2(10, 16), new Vector2(22, 16), FLAGS, 1,
         path, null, 31, -1, true));
     assertEquals(NativePathShadow.Status.COMPARED, rows.get(1).status);

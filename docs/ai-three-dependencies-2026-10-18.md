@@ -139,3 +139,41 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 其他聊天未纳入本轮提交的 Pathfinder、SequenceHandler、VelocityAdder 全局访问增长，
 不能将最新工作区架构回归报告为通过。未扩大基线或修改这些并行文件。
 最终服务端/桌面编译通过：build/ai-shared-collision-phase1-compile.log（2026-10-19）。
+
+
+## 第二阶段：原生路径执行主干增量（2026-10-19）
+
+本轮接入了生产原生请求、续路和移动 tick，第二阶段尚未整体验收完成，不能把本节
+理解为“完整原生路径及全部特殊路线已完成”。第一阶段的共享碰撞基础继续使用。
+
+- 新增 D2PathTick，按 PathMisc.cpp #10226 / Step.cpp 消费 ACTIVE、原生点游标、
+  nDist/nDistance、第五次加速度更新、阻挡后的游标及 0x8/0x4 标志和中心复位。
+- NativePathRuntime 在可信 raw fp16、MonStats/NativeUnitFlags、有效 Zone 网格及完整
+  RoomEx 邻接来源下接管普通怪物路径、Toward、CW/CCW circle 和 type13 chase。
+  普通模式请求按 MonsterMode.cpp 使用 type13、默认搜索距离5、续路预算20；初次
+  失败按 sub_6FC65680 重试 type15。续路使用 D2PathContinuation，停止依赖宿主0.5秒
+  追踪计时器和动态阻挡 A* 恢复。原生拒绝不自动改走宿主 A*。
+- 请求走真实共享位 remove owner / optional target / search / restore target / owner，
+  同一 tick 的多个子步不重新同步旧 Position，最终提交 raw 位置后再发布占位。
+  房间缓存使用原生有序邻接，跨 level 接缝更新 MapWrapper；网格替换时重抓房间图。
+  外部传送/精度失效及目标 allocation token 失效会撤销旧游标，避免回写旧坐标。
+- 旋风构造 mask 保持0xC01，移动改为完整0x1025，读取 NO_PATH 并排除自身 footprint；
+  不再把高位全部截掉。缺少生产碰撞服务的旧工具世界仍可使用地形射线。
+- 跳跃在可信 raw 位置、25Hz 与 MonStats.Run 安全整数域内，使用 type9、Run<<8
+  和原生 tick 推进；飞行清除 footprint、落地恢复，冻结不丢低位。原有技能调用者
+  仍负责起跳动画、目标/落点选择。没有可信输入时保留旧兼容实现。
+- Pathfinder、VelocityAdder、SequenceHandler 的技能表读取接入现有 ServerGameplayContext，
+  不扩大架构回归的全局访问基线。
+
+仍需收口：玩家/所有特殊技能的生产调度尚未全部迁移；type0/1/7/8/11/12/16 虽有独立
+移植模块，不能据此声称全部接入宿主调用链。显式 lead speed/目标 raw facing、技能速度/
+加速度写入、各 AI 的额外模式参数和完整 native allocation lifetime 还需逐入口核对。
+Charge/击退的现有宿主调用、旋风的浮点构造射线、跳跃落点搜索及起落技能阶段仍有兼容
+实现。原生主干运行时只信任其已经接管的字段；未知输入不提升为已原生化。
+自然地图整链、GL、跨电脑与规模性能验收仍属第四阶段，未在本轮完成。
+
+本轮验证：build/ai-native-path-phase2-third.log 的扩展功能回归573项全部通过，
+其后增加跳跃/传送保护与 World 上下文修正。最终源码定向复跑66项（含生产路径12项、
+原生tick7项、共享碰撞14项及旋风/跳跃/Charge/MonSeq等既有回归），失败/错误/跳过均0；
+architectureRegression 3项通过，服务端与桌面端编译通过。
+最终日志 build/ai-native-path-phase2-verified.log。未跑整个 core 测试集，没有自然地图或GL验收。

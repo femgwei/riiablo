@@ -7,8 +7,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 
-/** Request-local RoomEx projection for diagnostics, not a live active-room graph.
- * Rebuild after loading/unloading zones. Never feeds production movement. */
+/** Ordered RoomEx projection shared by native requests and runtime room recaching.
+ * Rebuild after loading/unloading zones or replacing their collision grids. */
 public final class NativePathRoomGraph {
   private final IdentityHashMap<Map.RoomEx, D2PathRequest.Room> rooms = new IdentityHashMap<>();
 

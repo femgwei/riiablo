@@ -34,6 +34,8 @@ class WhirlwindCollisionTest {
     assertFalse(WhirlwindCollision.blocks(4, true));
     assertTrue(WhirlwindCollision.blocks(4, false));
     assertTrue(WhirlwindCollision.blocks(0x20, false));
+    assertFalse(WhirlwindCollision.blocks(0x1000, true));
+    assertTrue(WhirlwindCollision.blocks(0x1000, false));
     assertFalse(WhirlwindCollision.blocks(8, true));
     assertFalse(WhirlwindCollision.blocks(8, false));
   }

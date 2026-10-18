@@ -55,6 +55,11 @@ public final class ServerGameplayContext {
     return files;
   }
 
+  /** World-scoped tables, with the existing compatibility bridge for old tools. */
+  public static Files files(ServerGameplayContext context) {
+    return context == null ? legacyFiles() : context.files();
+  }
+
   /** One world's table, game mode and state-duration ownership for combat. */
   public com.riiablo.engine.server.combat.NativeCombatContext combatContext(int difficulty) {
     return com.riiablo.engine.server.combat.NativeCombatContext.forGameplay(difficulty,

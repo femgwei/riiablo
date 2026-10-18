@@ -20,9 +20,7 @@ final class WhirlwindCollision {
         if (size == 2 && dx != 0 && dy != 0) continue;
         Map.Zone zone = map.getZone(x + dx, y + dy);
         if (zone == null) return true; // native invalid cell: COLLIDE_BLANK
-        // This compatibility ray handles terrain and objects. The native
-        // Whirlwind path's NO_PATH schedule belongs to the path migration.
-        int flags = zone.nativeCollisionFlagsWorld(x + dx, y + dy) & 0xFFF;
+        int flags = zone.nativeCollisionFlagsWorld(x + dx, y + dy);
         if (blocks(flags, constructing)) return true;
       }
     }
@@ -32,14 +30,24 @@ final class WhirlwindCollision {
   /** Matches the existing floating-world ray sampling; returns the last clear point. */
   static boolean cast(Map map, Vector2 start, Vector2 end, int size,
       boolean constructing, Vector2 lastClear) {
+    return cast(map,start,end,size,constructing,lastClear,-1,null);
+  }
+
+  static boolean cast(Map map, Vector2 start, Vector2 end, int size,
+      boolean constructing, Vector2 lastClear, int sourceId, DynamicUnitCollisionSystem units) {
     lastClear.set(start);
     if (map == null || map.getZone(start) == null) { lastClear.set(end); return false; }
     float distance = start.dst(end);
     int samples = Math.max(1, (int) Math.ceil(distance * 5f));
+    if (units != null) units.refreshNow();
     Vector2 point = new Vector2();
     for (int i = 0; i <= samples; i++) {
       point.set(start).lerp(end, (float) i / samples);
-      if (blocked(map, point, size, constructing)) return true;
+      boolean blocked = units != null && sourceId >= 0 && units.hasNativePathCollision(sourceId)
+          ? units.nativePathBlocked(sourceId,Map.round(point.x),Map.round(point.y),size,
+              constructing ? START_MASK : MOVE_MASK)
+          : blocked(map, point, size, constructing);
+      if (blocked) return true;
       lastClear.set(point);
     }
     return false;

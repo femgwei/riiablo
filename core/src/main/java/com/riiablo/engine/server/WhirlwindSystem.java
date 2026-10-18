@@ -46,6 +46,7 @@ public class WhirlwindSystem extends IteratingSystem {
 
   protected Actioneer actioneer;
 
+
   @Wire(name = "map", failOnNull = false)
   protected Map map;
 
@@ -142,7 +143,8 @@ public class WhirlwindSystem extends IteratingSystem {
     if (map == null || map.getZone(start) == null || velocity.isZero(0.0001f)) return false;
     stepEnd.set(start).mulAdd(velocity, delta * Math.max(0f, stateMultiplier));
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
-    return WhirlwindCollision.cast(map, start, stepEnd, size, false, collision.point);
+    return WhirlwindCollision.cast(map, start, stepEnd, size, false, collision.point,entityId,
+        world.getSystem(DynamicUnitCollisionSystem.class));
   }
 
   private boolean isAlive(int entityId) {

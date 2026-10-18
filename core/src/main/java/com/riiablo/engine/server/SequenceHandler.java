@@ -28,6 +28,10 @@ import com.riiablo.logger.Logger;
 @All({CofReference.class, Sequence.class, AnimData.class})
 public class SequenceHandler extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(SequenceHandler.class);
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() { return ServerGameplayContext.files(serverContext); }
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<Sequence> mSequence;
@@ -194,8 +198,8 @@ public class SequenceHandler extends IteratingSystem {
         // action. Advancing the cursor only visits subsequent points.
         byte action = sequence.nativeMonster.actions[0];
         boolean chargeMovement = casting != null
-            && Riiablo.files.skills.get(casting.skillId) != null
-            && Riiablo.files.skills.get(casting.skillId).srvdofunc == 67
+            && files().skills.get(casting.skillId) != null
+            && files().skills.get(casting.skillId).srvdofunc == 67
             && (sequence.mode1 == com.riiablo.engine.Engine.Monster.MODE_WL
                 || sequence.mode1 == com.riiablo.engine.Engine.Monster.MODE_RN);
         if (action != 0 && action != com.riiablo.engine.Engine.KEYFRAME_SND && !chargeMovement)
@@ -370,7 +374,7 @@ public class SequenceHandler extends IteratingSystem {
     cofs.setMode(entityId, mode, true);
     AnimData anim = mAnimData.get(entityId);
     int rollbackPercent = 60;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(casting.skillId);
     if (skill != null && skill.Param != null && skill.Param.length > 2
         && skill.Param[2] > 0) {
       rollbackPercent = Math.min(100, skill.Param[2]);

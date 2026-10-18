@@ -45,6 +45,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
+  protected ComponentMapper<com.riiablo.engine.server.component.Leap> mLeap;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private final SharedUnitCollisionIndex shared = new SharedUnitCollisionIndex();
@@ -233,6 +234,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private SharedUnitCollisionIndex.Footprint nativeFootprint(int id) {
     if (com.artemis.PendingEntityDeletion.isDeleted(world, id)) return null;
+    if (mLeap.has(id) && mLeap.get(id).nativeTick != null) return null;
     com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
     if (lifecycle != null && lifecycle.phase.ordinal()
         >= com.riiablo.engine.server.component.UnitLifecycle.Phase.REMOVED.ordinal()) return null;
@@ -306,6 +308,57 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Per-unit movement boundary; allocation already registered this id. */
   public void synchronizeNativeCollision(int id) {
     synchronizeNative(id);
+  }
+
+  /** #10142 owns a real remove/search/restore transaction, with no query-time repaint. */
+  int computeNativePath(com.d2moo.common.path.D2PathRequest.State request, int ownerId, int targetId) {
+    synchronizeNativeAll();
+    final SharedUnitCollisionIndex.Footprint owner = shared.get(ownerId);
+    final SharedUnitCollisionIndex.Footprint target = shared.get(targetId);
+    final Map.Zone zone = zoneOf(ownerId);
+    return com.d2moo.common.path.D2PathRequest.compute(request, false,
+        new com.d2moo.common.path.D2PathRequest.Effects() {
+          public boolean removeOwner(com.d2moo.common.path.D2PathRequest.State s) {
+            shared.remove(ownerId); return owner != null;
+          }
+          public boolean removeTarget(com.d2moo.common.path.D2PathRequest.State s) {
+            if (target == null) return false;
+            shared.remove(targetId); return true;
+          }
+          public void addTarget(com.d2moo.common.path.D2PathRequest.State s) { shared.update(targetId, target); }
+          public void addOwner(com.d2moo.common.path.D2PathRequest.State s) { shared.update(ownerId, owner); }
+          public boolean blocked(com.d2moo.common.path.D2PathRequest.State s, int x, int y) {
+            return shared.check(zone, x, y, s.collisionPattern, s.unitSize, s.moveMask, -1, -1) != 0;
+          }
+          public int search(com.d2moo.common.path.D2PathRequest.Search search) {
+            return com.d2moo.common.path.D2PathDispatch.compute(search, (x,y) -> blocked(search.state,x,y));
+          }
+        });
+  }
+
+  int nativePathPattern(int id) {
+    synchronizeNative(id);
+    SharedUnitCollisionIndex.Footprint footprint = shared.get(id);
+    return footprint == null ? D2Collision.PATTERN_NONE : footprint.pattern;
+  }
+
+  boolean nativePathBlocked(int id, int x, int y, int size, int mask) {
+    Map.Zone zone = zoneOf(id);
+    if (!nativeZone(zone)) return false;
+    SharedUnitCollisionIndex.Footprint footprint = shared.get(id);
+    int pattern = footprint == null ? testPattern(size) : footprint.pattern;
+    return shared.check(zone,x,y,pattern,size,mask,id,-1) != 0;
+  }
+
+  boolean hasNativePathCollision(int id) { return nativeZone(zoneOf(id)); }
+
+  /** Caller synchronizes once before the tick, then commits precision before publishing again. */
+  boolean moveNativePath(int id, int x, int y, int mask, boolean unchecked) {
+    SharedUnitCollisionIndex.Footprint footprint = shared.get(id);
+    if (footprint == null) return unchecked || shared.check(zoneOf(id),x,y,
+        D2Collision.PATTERN_NONE,0,mask,-1,-1) == 0;
+    if (unchecked) { shared.update(id,footprint.at(x,y)); return true; }
+    return shared.move(id, footprint.at(x,y), mask);
   }
 
   /** Explicit deletion boundary for consumers which perform more work in the same tick. */
@@ -636,7 +689,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (!enabled || destination == null) return true;
     if (nativeZone(zoneOf(entityId))) {
       return moveNative(entityId, Map.round(destination.x), Map.round(destination.y),
-          mWhirlwindRuntime.has(entityId) ? 0 : dynamicMoveMask(entityId));
+          mWhirlwindRuntime.has(entityId) ? WhirlwindCollision.MOVE_MASK : dynamicMoveMask(entityId));
     }
     if (!hasPresence(entityId)) {
       observeHiddenFrogMove(entityId, destination);
@@ -666,7 +719,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Same as {@link #tryMove(int, Vector2)}, but useful for tests and probes. */
   public boolean tryMove(int entityId, int x, int y, int size) {
     if (!enabled) return true;
-    if (nativeZone(zoneOf(entityId))) return moveNative(entityId, x, y, dynamicMoveMask(entityId));
+    if (nativeZone(zoneOf(entityId))) return moveNative(entityId, x, y,
+        mWhirlwindRuntime.has(entityId) ? WhirlwindCollision.MOVE_MASK : dynamicMoveMask(entityId));
     return grid.move(entityId, -1, x, y, size);
   }
 

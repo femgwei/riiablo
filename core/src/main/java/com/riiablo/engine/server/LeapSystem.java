@@ -29,6 +29,19 @@ public class LeapSystem extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Leap leap = mLeap.get(entityId);
+    if (leap.nativeTick != null || NativeLeapMotion.supports(world,entityId,leap)) {
+      boolean active=NativeLeapMotion.advance(world,entityId,leap);
+      if (mBox2DBody.has(entityId) && mBox2DBody.get(entityId).body != null) {
+        mBox2DBody.get(entityId).body.setTransform(mPosition.get(entityId).position,0f);
+        mBox2DBody.get(entityId).body.setLinearVelocity(0f,0f);
+      }
+      if (!active) {
+        mLeap.remove(entityId);
+        DynamicUnitCollisionSystem collision=world.getSystem(DynamicUnitCollisionSystem.class);
+        if(collision!=null) collision.synchronizeNativeCollision(entityId);
+      }
+      return;
+    }
     leap.elapsed = Math.min(leap.duration, leap.elapsed + Math.max(0f, world.delta));
     float alpha = MathUtils.clamp(leap.elapsed / leap.duration, 0f, 1f);
     // Smooth horizontal motion; the sprite's native leap animation supplies

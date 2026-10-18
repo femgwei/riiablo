@@ -15,12 +15,15 @@ public class Leap extends PooledComponent {
   public final Vector2 destination = new Vector2();
   public float elapsed;
   public float duration;
+  /** Non-null only when native precision and a native Run table velocity are available. */
+  public com.d2moo.common.path.D2PathTick.State nativeTick;
   @EntityId public int targetId = Engine.INVALID_ENTITY;
 
   public Leap set(Vector2 start, Vector2 destination, float duration, int targetId) {
     this.start.set(start);
     this.destination.set(destination);
     this.elapsed = 0f;
+    nativeTick = null;
     this.duration = Math.max(0.001f, duration);
     this.targetId = targetId;
     return this;
@@ -31,6 +34,7 @@ public class Leap extends PooledComponent {
     start.setZero();
     destination.setZero();
     elapsed = 0f;
+    nativeTick = null;
     duration = 0f;
     targetId = Engine.INVALID_ENTITY;
   }

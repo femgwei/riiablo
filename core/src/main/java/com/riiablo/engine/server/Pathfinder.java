@@ -42,6 +42,10 @@ import java.util.Iterator;
 @All({Pathfind.class, Position.class, Velocity.class})
 public class Pathfinder extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(Pathfinder.class);
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() { return ServerGameplayContext.files(serverContext); }
   static final int MOVEMENT_DIRECTIONS = 16;
   static final int ADJACENT_DIRECTION_STABLE_FRAMES = 3;
   static final float DYNAMIC_BLOCK_REPATH_TIME = 0.25f;
@@ -88,6 +92,11 @@ public class Pathfinder extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    Pathfind nativePath = mPathfind.get(entityId);
+    if (nativePath.nativeRuntime != null) {
+      nativePath.nativeRuntime.prepare();
+      return;
+    }
     Velocity velocity = mVelocity.get(entityId);
     if (velocity.stateMovementLocked) {
       velocity.velocity.setZero();
@@ -233,7 +242,7 @@ public class Pathfinder extends IteratingSystem {
             missileName = monster.monstats.MissA2;
           }
           if (missileName != null) {
-            com.riiablo.codec.excel.Missiles.Entry missile = com.riiablo.Riiablo.files.Missiles.get(missileName);
+            com.riiablo.codec.excel.Missiles.Entry missile = files().Missiles.get(missileName);
             if (missile != null) {
               rangedRangeThreshold = missile.Range - 2f;
               if (rangedRangeThreshold < meleeRangeThreshold) {
@@ -324,10 +333,10 @@ public class Pathfinder extends IteratingSystem {
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
     if (isMonsterCharge(entityId)) {
       speed = NativeMonsterCharge.requestedSpeed(mMonster.get(entityId).monstats,
-          com.riiablo.Riiablo.files.skills.get(cast.skillId), velocity);
+          files().skills.get(cast.skillId), velocity);
     }
     if (cast != null && cast.diabRun != null && cast.diabRun.moving) {
-      speed = NativeDiabRun.baseSpeed(com.riiablo.Riiablo.files.skills.get(cast.skillId), 1)
+      speed = NativeDiabRun.baseSpeed(files().skills.get(cast.skillId), 1)
           * Math.max(Velocity.MIN_SPEED_MULTIPLIER, velocity.baseSpeedMultiplier + velocity.modeSpeedBonusMultiplier);
     }
     if (speed <= 0f) {
@@ -376,7 +385,7 @@ public class Pathfinder extends IteratingSystem {
     if (!mMonster.has(entityId)) return false;
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
     com.riiablo.codec.excel.Skills.Entry skill = cast == null ? null
-        : com.riiablo.Riiablo.files.skills.get(cast.skillId);
+        : files().skills.get(cast.skillId);
     return skill != null && skill.srvdofunc == 67;
   }
 
@@ -458,6 +467,12 @@ public class Pathfinder extends IteratingSystem {
   }
 
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
+    if (mPosition.has(targetId)) {
+      Boolean nativeResult = NativePathRuntime.request(world,src,map,dynamicCollision,
+          mPosition.get(targetId).position,targetId,directionOffset == 0 ? 2 : directionOffset > 0 ? 5 : 6,
+          budget,directionOffset);
+      if (nativeResult != null) return nativeResult;
+    }
     // These projected waypoints do not establish complete native dynamic-path
     // state. Like ordinary path requests, they must not retain a trusted cache.
     if (mNativeAiPathCache.has(src)) mNativeAiPathCache.get(src).invalidate();
@@ -510,6 +525,11 @@ public class Pathfinder extends IteratingSystem {
 
   /** Type 13 uses Toward with flag 0x100 and retains the live target. */
   public boolean findNativeChase(int src, int targetId) {
+    if (mPosition.has(targetId)) {
+      Boolean nativeResult = NativePathRuntime.request(world,src,map,dynamicCollision,
+          mPosition.get(targetId).position,targetId,13,77,0);
+      if (nativeResult != null) return nativeResult;
+    }
     if (!findNativePath(src, targetId, 77, 0)) return false;
     Pathfind path = mPathfind.get(src);
     path.nativePathType = 13;
@@ -547,6 +567,10 @@ public class Pathfinder extends IteratingSystem {
       mVelocity.get(src).velocity.setZero();
       return false;
     }
+
+    Boolean nativeResult = NativePathRuntime.request(world,src,map,dynamicCollision,
+        target,targetEntityId,13,5,0);
+    if (nativeResult != null) return nativeResult;
 
     Vector2 position = mPosition.get(src).position;
     // Fn023 changes the dynamic path to a straight coordinate flight with

@@ -13,6 +13,7 @@ import java.util.Iterator;
 @PooledWeaver
 public class Pathfind extends PooledComponent {
   public GraphPath path;
+  public com.riiablo.engine.server.NativePathRuntime nativeRuntime;
   /** A bounded native path must stop on obstruction rather than turn into A*. */
   public boolean nativeBounded;
   public int nativePathType;
@@ -43,6 +44,7 @@ public class Pathfind extends PooledComponent {
   public String movementBlockReason = "none";
 
   public void reset() {
+    nativeRuntime = null;
     nativeTargetIndex = -1;
     nativeBounded = false;
     nativePathType = 0;
@@ -67,6 +69,7 @@ public class Pathfind extends PooledComponent {
 
   /** Retain the source centre when a fractional start cannot sweep to node two. */
   public Pathfind set(GraphPath path, boolean startAtSource) {
+    nativeRuntime = null;
     nativeBounded = false;
     nativePathType = 0;
     this.path = path;

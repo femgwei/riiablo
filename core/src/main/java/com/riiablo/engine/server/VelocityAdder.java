@@ -24,6 +24,10 @@ import com.d2moo.common.path.D2PathStep;
 @All({Position.class, Velocity.class})
 public class VelocityAdder extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(VelocityAdder.class);
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.Files files() { return ServerGameplayContext.files(serverContext); }
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
@@ -63,7 +67,16 @@ public class VelocityAdder extends IteratingSystem {
     // in one place. Moving missiles here as well would advance them twice.
     if (mMissile.has(entityId)) return;
     Velocity velocity = mVelocity.get(entityId);
+    if (mLeap.has(entityId) && mLeap.get(entityId).nativeTick != null) {
+      velocity.nativeMovementOwned = true;
+      return;
+    }
     velocity.nativeMovementOwned = false;
+    Pathfind nativePath = mPathfind.get(entityId);
+    if (nativePath != null && nativePath.nativeRuntime != null) {
+      nativePath.nativeRuntime.advance();
+      return;
+    }
     if (moveNativeMonster(entityId, velocity) || nativeOnly) return;
     if (velocity.stateMovementLocked) return;
 
@@ -127,7 +140,7 @@ public class VelocityAdder extends IteratingSystem {
     int nativeVelocity;
     try {
       com.riiablo.codec.excel.Skills.Entry skill = cast == null ? null
-          : com.riiablo.Riiablo.files.skills.get(cast.skillId);
+          : files().skills.get(cast.skillId);
       nativeVelocity = NativeMonsterCharge.supports(skill)
           ? NativeMonsterCharge.nativeVelocity(mMonster.get(id).monstats, skill, velocity)
           : velocity.nativeMonsterVelocity();
@@ -210,7 +223,7 @@ public class VelocityAdder extends IteratingSystem {
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
     if (mWhirlwindRuntime.has(entityId)) {
-      if (WhirlwindCollision.cast(map, from, to, size, false, collision.point)) {
+      if (WhirlwindCollision.cast(map, from, to, size, false, collision.point,entityId,dynamicCollision)) {
         blockReason = "terrain";
         return false;
       }
