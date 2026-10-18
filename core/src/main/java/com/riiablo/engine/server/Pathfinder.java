@@ -280,16 +280,23 @@ public class Pathfinder extends IteratingSystem {
     // D2MOD: Check if path is valid (has path points)
     // Similar to PATH_GetNumberOfPathPoints in D2MOD
     // If target is zero or no more path points, stop movement
-    if (target.isZero() || (!targets.hasNext() && tmpVec2.epsilonEquals(target, 0.1f))) {
+    Position sourcePosition = mPosition.get(entityId);
+    boolean nativeWaypoint = velocity.nativeMonsterBaseVelocity >= 0
+        && sourcePosition.hasNativePrecision() && pathfind.hasNativeWaypoint();
+    boolean reachedWaypoint = nativeWaypoint
+        ? sourcePosition.nativePrecisionX() == com.d2moo.common.path.D2PathStep.toFp16Center(pathfind.nativeWaypointX())
+            && sourcePosition.nativePrecisionY() == com.d2moo.common.path.D2PathStep.toFp16Center(pathfind.nativeWaypointY())
+        : tmpVec2.epsilonEquals(target, 0.1f);
+    if (target.isZero() && !nativeWaypoint || (!targets.hasNext() && reachedWaypoint)) {
       // Path is invalid or completed, stop movement
       findPath(entityId, null);
       return;
     }
     
     // Check if reached current target waypoint
-    if (tmpVec2.epsilonEquals(target, 0.1f)) {
+    if (reachedWaypoint) {
       if (targets.hasNext()) {
-        target.set(targets.next());
+        pathfind.advanceTarget();
       } else {
         // No more path points, stop movement
         findPath(entityId, null);

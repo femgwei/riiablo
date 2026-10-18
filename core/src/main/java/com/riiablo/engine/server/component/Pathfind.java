@@ -20,6 +20,8 @@ public class Pathfind extends PooledComponent {
   public final Vector2 target = new Vector2();
   /** Final reachable destination used by network clients to send intent, not waypoints. */
   public final Vector2 destination = new Vector2();
+  private int nativeTargetIndex = -1;
+  private int nativeTargetX, nativeTargetY;
   
   // Track target entity for dynamic repathing (e.g., following player)
   public int targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
@@ -41,6 +43,7 @@ public class Pathfind extends PooledComponent {
   public String movementBlockReason = "none";
 
   public void reset() {
+    nativeTargetIndex = -1;
     nativeBounded = false;
     nativePathType = 0;
     path = null;
@@ -70,11 +73,47 @@ public class Pathfind extends PooledComponent {
     targets = path.vectorIterator();
     Vector2 position = targets.next();
     target.set(!startAtSource && targets.hasNext() ? targets.next() : position);
+    nativeTargetIndex = !startAtSource && path.getCount() > 1 ? 1 : 0;
+    captureIntegerTarget();
     destination.set(path.getNodePosition(path.getCount() - 1));
     stalledTime = 0f;
     blockedByDynamic = false;
     movementBlockReason = "none";
     return this;
+  }
+
+  public boolean advanceTarget() {
+    if (!targets.hasNext()) return false;
+    target.set(targets.next());
+    if (nativeTargetIndex >= 0) { nativeTargetIndex++; captureIntegerTarget(); }
+    return true;
+  }
+
+  private void captureIntegerTarget() {
+    if (path == null || nativeTargetIndex < 0 || nativeTargetIndex >= path.getCount()) {
+      nativeTargetIndex = -1;
+      return;
+    }
+    com.riiablo.map.pfa.Point2 point = path.get(nativeTargetIndex);
+    nativeTargetX = point.x;
+    nativeTargetY = point.y;
+  }
+
+  /** Provenance is the integer Point2 graph, not an integer-looking Vector2. */
+  public boolean hasNativeWaypoint() {
+    return nativeTargetIndex >= 0 && nativeTargetX >= 0 && nativeTargetX <= 65535
+        && nativeTargetY >= 0 && nativeTargetY <= 65535
+        && target.x == nativeTargetX && target.y == nativeTargetY;
+  }
+
+  public int nativeWaypointX() {
+    if (!hasNativeWaypoint()) throw new IllegalStateException("integer waypoint source unknown");
+    return nativeTargetX;
+  }
+
+  public int nativeWaypointY() {
+    if (!hasNativeWaypoint()) throw new IllegalStateException("integer waypoint source unknown");
+    return nativeTargetY;
   }
 
   public void recordMovement(

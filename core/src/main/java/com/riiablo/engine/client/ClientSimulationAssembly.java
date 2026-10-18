@@ -167,6 +167,7 @@ public final class ClientSimulationAssembly {
       // FIXME: crash when changing acts in multiplayer
       builder.with(new Box2DDisposer());
     }
+    if (mode.isAuthoritative()) builder.with(new com.riiablo.engine.server.VelocityAdder(true));
     builder
         .with(new Box2DSynchronizerPre())
         .with(new Box2DPhysics(SimulationClock.STEP_SECONDS))

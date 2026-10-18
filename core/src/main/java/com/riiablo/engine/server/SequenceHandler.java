@@ -187,6 +187,8 @@ public class SequenceHandler extends IteratingSystem {
       // otherwise it inherits the previous frame and can skip its keyframe.
       cofs.setMode(entityId, sequence.mode1, true);
       mAnimData.get(entityId).override = -1;
+      if (sequence.nativeMonster != null)
+        mAnimData.get(entityId).frame = sequence.nativeMonster.frames[0] << 8;
     } else if (!sequence.nativeJab && mCofReference.get(entityId).mode != sequence.mode1) {
       // Log sequence start for debugging
       com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);

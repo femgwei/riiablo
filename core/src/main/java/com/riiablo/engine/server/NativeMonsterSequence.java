@@ -19,8 +19,18 @@ public final class NativeMonsterSequence {
   public final int[] frames;
   public final byte[] modes;
   public final byte[] actions;
-  private NativeMonsterSequence(byte mode, int[] frames, byte[] modes, byte[] actions) {
+  NativeMonsterSequence(byte mode, int[] frames, byte[] modes, byte[] actions) {
     this.mode = mode; this.frames = frames; this.modes = modes; this.actions = actions;
+  }
+
+  /** Non-wrapping SequenceTbls.cpp event selection, with an exclusive end sentinel. */
+  public int lastActionPoint(int previous, int next) {
+    if (previous < 0 || next < previous) throw new IllegalArgumentException("forward cursor required");
+    int last = -1;
+    int start = previous == next ? next >>> 8 : (previous >>> 8) + 1;
+    for (int point = start; point <= (next >>> 8) && point < actions.length; point++)
+      if (actions[point] != 0) last = point;
+    return last;
   }
   public static NativeMonsterSequence load(String name) {
     return load(name, Riiablo.files, Riiablo.mpqs);

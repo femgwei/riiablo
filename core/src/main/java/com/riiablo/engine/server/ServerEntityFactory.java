@@ -664,7 +664,7 @@ public class ServerEntityFactory extends EntityFactory {
     // monsters. MonStats.Run only participates in run-animation-rate table
     // generation; treating it as displacement speed makes animation and
     // authoritative movement diverge.
-    mVelocity.create(id).setMonster(monstats.Velocity);
+    mVelocity.create(id).setMonsterFromNativeTable(monstats.Velocity);
     mVelocity.get(id).baseSpeedMultiplier = attrs.getValue(Stat.velocitypercent, 75) / 100f;
     mAngle.create(id);
 
@@ -1037,7 +1037,7 @@ public class ServerEntityFactory extends EntityFactory {
       mLifecycle.get(monsterId).revive();
     }
     mRunning.remove(monsterId);
-    mVelocity.create(monsterId).setMonster(monster.monstats.Velocity)
+    mVelocity.create(monsterId).setMonsterFromNativeTable(monster.monstats.Velocity)
         .stateMovementLocked = false;
     mMovementModes.create(monsterId).set(
         Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);

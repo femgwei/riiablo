@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Velocity;
 public class Box2DSynchronizerPre extends IteratingSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<com.riiablo.engine.server.component.Position> mPosition;
   protected ComponentMapper<com.riiablo.engine.server.component.WhirlwindRuntime> mWhirlwindRuntime;
   private final Vector2 movement = new Vector2();
 
@@ -23,6 +24,15 @@ public class Box2DSynchronizerPre extends IteratingSystem {
     Body body = wrapper.body;
     if (body == null) return;
     applySkillMoveCollision(wrapper, mWhirlwindRuntime.has(entityId));
+    if (mVelocity.get(entityId).nativeMovementOwned && mPosition.has(entityId)
+        && mPosition.get(entityId).hasNativePrecision()) {
+      // Native collision already resolved this fixed tick. Physics follows the
+      // committed position; a second integration would erase raw low words.
+      body.setLinearVelocity(0f, 0f);
+      body.setType(BodyDef.BodyType.StaticBody);
+      body.setTransform(mPosition.get(entityId).position, body.getAngle());
+      return;
+    }
     Vector2 velocity = resolveMovementVelocity(mVelocity.get(entityId), movement);
     body.setLinearVelocity(velocity);
 

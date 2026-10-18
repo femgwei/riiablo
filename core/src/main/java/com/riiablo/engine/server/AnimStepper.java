@@ -181,12 +181,15 @@ public class AnimStepper extends IntervalIteratingSystem {
       }
       sequence.nativeMonsterCursor = next;
       animData.frame = data.frames[Math.min(data.frames.length - 1, next >>> 8)] << 8;
-      for (int point = (previous >>> 8) + 1; point <= (next >>> 8) && point < data.actions.length; point++) {
-        boolean movement = data.modes[point] == Engine.Monster.MODE_WL
-            || data.modes[point] == Engine.Monster.MODE_RN;
-        if (data.actions[point] != 0 && data.actions[point] != Engine.KEYFRAME_SND
-            && !(charge && movement))
-          events.dispatch(AnimDataKeyframeEvent.obtain(entityId, data.actions[point]));
+      // DATATBLS_ComputeSequenceAnimation discards intermediate events: only
+      // the last nonzero event crossed by this tick survives, even a sound.
+      int actionPoint = data.lastActionPoint(previous, next);
+      if (actionPoint >= 0) {
+        boolean movement = data.modes[actionPoint] == Engine.Monster.MODE_WL
+            || data.modes[actionPoint] == Engine.Monster.MODE_RN;
+        byte action = data.actions[actionPoint];
+        if (action != Engine.KEYFRAME_SND && !(charge && movement))
+          events.dispatch(AnimDataKeyframeEvent.obtain(entityId, action));
       }
       if (next == data.frames.length << 8) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
       return;

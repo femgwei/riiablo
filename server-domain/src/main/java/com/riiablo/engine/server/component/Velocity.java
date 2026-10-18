@@ -20,6 +20,10 @@ public class Velocity extends PooledComponent {
   public boolean movementRunning;
   public float nativePlayerVelocityBonus;
   public boolean nativeMonsterSpeed;
+  /** Explicit MonStats integer source; -1 is the legacy world-speed contract. */
+  public int nativeMonsterBaseVelocity = -1;
+  /** This tick's fixed-point integrator owns position; physics must only follow. */
+  public boolean nativeMovementOwned;
   public float nativeMonsterVelocityBonus;
 
   /** Base percentage for the unit type: players use 100%, monsters use 75%. */
@@ -41,6 +45,8 @@ public class Velocity extends PooledComponent {
     movementRunning = false;
     nativePlayerVelocityBonus = 0f;
     nativeMonsterSpeed = false;
+    nativeMonsterBaseVelocity = -1;
+    nativeMovementOwned = false;
     nativeMonsterVelocityBonus = 0f;
     baseSpeedMultiplier = 1f;
     modeSpeedBonusMultiplier = 0f;
@@ -49,6 +55,8 @@ public class Velocity extends PooledComponent {
   }
 
   public Velocity set(float walkSpeed, float runSpeed) {
+    nativeMonsterBaseVelocity = -1;
+    nativeMovementOwned = false;
     nativeMonsterSpeed = false;
     nativeMonsterVelocityBonus = 0f;
     nativePlayerSpeed = false;
@@ -79,6 +87,27 @@ public class Velocity extends PooledComponent {
     baseSpeedMultiplier = MONSTER_BASE_SPEED_MULTIPLIER;
     modeSpeedBonusMultiplier = 0f;
     return this;
+  }
+
+  /** Native table units: (Velocity << 8) * 4096 >> 8 per 25 Hz frame. */
+  public Velocity setMonsterFromNativeTable(int baseVelocity) {
+    if (baseVelocity < 0 || baseVelocity > 32767)
+      throw new IllegalArgumentException("native nonnegative int16 monster velocity required");
+    setMonster(baseVelocity * PLAYER_NATIVE_SPEED_SCALE);
+    nativeMonsterBaseVelocity = baseVelocity;
+    return this;
+  }
+
+  /** UNITS_UpdateRunWalkAnimRateAndVelocity: integer percentage then /100. */
+  public int nativeMonsterVelocity() {
+    if (nativeMonsterBaseVelocity < 0) throw new IllegalStateException("native velocity source unknown");
+    if (stateMovementLocked) return 0;
+    int percent = Math.max(25, Math.round((baseSpeedMultiplier + modeSpeedBonusMultiplier) * 100f
+        + nativeMonsterVelocityBonus));
+    long velocity = (long) percent * (nativeMonsterBaseVelocity << 8) / 100;
+    if (velocity > Integer.MAX_VALUE / 4096)
+      throw new IllegalArgumentException("native direction-vector multiply would overflow");
+    return (int) velocity;
   }
 
   /** Mirrors the temporary STAT_VELOCITYPERCENT added by AITACTICS_SetVelocity. */

@@ -16,6 +16,37 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
+  @Test void crossedPointsKeepOnlyLastNativeEventIncludingSoundOverwrite() {
+    byte mode = Engine.Monster.MODE_A1;
+    NativeMonsterSequence sequence = new NativeMonsterSequence(mode,
+        new int[] {5, 6, 7, 8}, new byte[] {mode, mode, mode, mode},
+        new byte[] {0, Engine.KEYFRAME_ATK, Engine.KEYFRAME_MIS, Engine.KEYFRAME_SND});
+    assertEquals(2, sequence.lastActionPoint(0, 2 << 8));
+    assertEquals(3, sequence.lastActionPoint(0, 3 << 8));
+    assertEquals(-1, sequence.lastActionPoint(256, 300));
+    assertEquals(1, sequence.lastActionPoint(256, 256));
+    assertEquals(-1, sequence.lastActionPoint(4 << 8, 4 << 8));
+  }
+
+  @Test void sequenceInitializationImmediatelyPublishesSourceFrameZeroPoint() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), new SequenceHandler()).build());
+    try {
+      int id = world.create();
+      byte mode = Engine.Monster.MODE_A1;
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(id)
+          .set("DI", mode);
+      AnimData anim = world.getMapper(AnimData.class).create(id);
+      Sequence sequence = world.getMapper(Sequence.class).create(id).sequence(mode, mode);
+      sequence.nativeMonster = new NativeMonsterSequence(mode, new int[] {5, 6},
+          new byte[] {mode, mode}, new byte[] {0, 0});
+      world.process();
+      assertTrue(sequence.started);
+      assertEquals(5 << 8, anim.frame);
+      assertEquals(0, sequence.nativeMonsterCursor);
+    } finally { world.dispose(); }
+  }
+
   @Test void realMonSeqActionsRunAtTheirOwnPointsRegardlessOfCofMarkersAndSpeed() {
     for (String name : new String[] {"seq_ancientwhirlwind", "seq_ancientleap", "seq_genericspawner",
         "seq_mosquitoskill", "seq_vileres", "seq_undeadbestow", "seq_fethisraise",

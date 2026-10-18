@@ -14,6 +14,31 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void authoritativeFrameWaitsUntilSelectedCofAndLayersAgree() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      COF oldCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIRNHTH.cof"));
+      COF nextCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIA2HTH.cof"));
+      animation.setCOF(oldCof); animation.setFrame(1);
+      com.riiablo.engine.client.component.CofWrapper cof = world.getMapper(
+          com.riiablo.engine.client.component.CofWrapper.class).create(id);
+      cof.cof = nextCof;
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id).nativeMummy = true;
+      world.getMapper(AnimData.class).create(id).frame = 3 << 8;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      world.process();
+      assertEquals(1, animation.getFrame(), "do not seek new-mode frames into old layers");
+      animation.setCOF(nextCof);
+      world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).create(id);
+      world.process(); assertEquals(0, animation.getFrame(), "dirty layers are not ready");
+      world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).remove(id);
+      world.process(); assertEquals(3, animation.getFrame());
+    } finally { world.dispose(); }
+  }
+
   @Test void mummySequenceFollowsBackwardRepeatedAndHeldAuthoritativeFrames() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

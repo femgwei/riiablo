@@ -39,10 +39,10 @@ class MonsterSpeedCompositionTest extends RiiabloTest {
       Velocity velocity = f.world.getMapper(Velocity.class).get(id);
       int percent = f.attrs(id).getValue(Stat.velocitypercent, 0);
       assertTrue(percent > 75);
-      assertEquals(row.Velocity * percent / 100f,
+      assertEquals(row.Velocity * Velocity.PLAYER_NATIVE_SPEED_SCALE * percent / 100f,
           velocity.speed(false) * velocity.movementMultiplier(), 0.0001f);
       f.world.getSystem(StateUpdater.class).refreshAfterSkillMove(id);
-      assertEquals(row.Velocity * percent / 100f,
+      assertEquals(row.Velocity * Velocity.PLAYER_NATIVE_SPEED_SCALE * percent / 100f,
           velocity.speed(false) * velocity.movementMultiplier(), 0.0001f);
     }
   }

@@ -19,6 +19,8 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<com.riiablo.engine.client.component.CofWrapper> mCofWrapper;
+  protected ComponentMapper<com.riiablo.engine.shared.component.CofDirtyComponents> mCofDirty;
 
   public AnimationStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -49,6 +51,8 @@ public class AnimationStepper extends IntervalIteratingSystem {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the
       // resident emergence COF forward would show the opposite action.
+      com.riiablo.engine.client.component.CofWrapper cof = mCofWrapper.get(entityId);
+      if (mCofDirty.has(entityId) || cof != null && cof.cof != wrapper.animation.getCOF()) return;
       int frameCount = wrapper.animation.getNumFramesPerDir();
       if (frameCount > 0) {
         int frame = Math.max(0, Math.min(frameCount - 1, animData.frame >>> 8));

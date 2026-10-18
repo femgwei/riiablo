@@ -19,6 +19,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
+import com.d2moo.common.path.D2PathStep;
 
 @All({Position.class, Velocity.class})
 public class VelocityAdder extends IteratingSystem {
@@ -33,6 +34,15 @@ public class VelocityAdder extends IteratingSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<com.riiablo.engine.server.component.WhirlwindRuntime> mWhirlwindRuntime;
+  protected ComponentMapper<com.riiablo.engine.server.component.Leap> mLeap;
+  protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.Angle> mAngle;
+  private final boolean nativeOnly;
+
+  public VelocityAdder() { this(false); }
+
+  /** Local physics worlds install only the native route; replicas install neither. */
+  public VelocityAdder(boolean nativeOnly) { this.nativeOnly = nativeOnly; }
 
   @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
@@ -53,6 +63,8 @@ public class VelocityAdder extends IteratingSystem {
     // in one place. Moving missiles here as well would advance them twice.
     if (mMissile.has(entityId)) return;
     Velocity velocity = mVelocity.get(entityId);
+    velocity.nativeMovementOwned = false;
+    if (moveNativeMonster(entityId, velocity) || nativeOnly) return;
     if (velocity.stateMovementLocked) return;
 
     Position position = mPosition.get(entityId);
@@ -102,11 +114,51 @@ public class VelocityAdder extends IteratingSystem {
         position.position.x, position.position.y, moved, !moved);
   }
 
+  private boolean moveNativeMonster(int id, Velocity velocity) {
+    Position position = mPosition.get(id);
+    if (!mMonster.has(id) || velocity.nativeMonsterBaseVelocity < 0 || !position.hasNativePrecision()
+        || Math.abs(world.delta - com.riiablo.engine.SimulationClock.STEP_SECONDS) > 0.000001f
+        || velocity.stateSpeedMultiplier != 1f || mLeap.has(id) || mWhirlwindRuntime.has(id)) return false;
+    com.riiablo.engine.server.component.Casting cast = mCasting.get(id);
+    if (cast != null && cast.diabRun != null) return false; // skill-owned speed, not MonStats
+    boolean requested = !velocity.velocity.isZero(0.001f);
+    Pathfind path = mPathfind.get(id);
+    if (requested && (path == null || !path.hasNativeWaypoint())) return false;
+    int nativeVelocity;
+    try { nativeVelocity = velocity.nativeMonsterVelocity(); }
+    catch (IllegalArgumentException unsupported) { return false; }
+    velocity.nativeMovementOwned = true;
+    if (!requested || velocity.stateMovementLocked) return true;
+    start.set(position.position);
+    blockReason = "none";
+    int targetX = D2PathStep.toFp16Center(path.nativeWaypointX());
+    int targetY = D2PathStep.toFp16Center(path.nativeWaypointY());
+    D2PathStep.DirectionVector direction = D2PathStep.directionVector(
+        position.nativePrecisionX(), position.nativePrecisionY(), targetX, targetY);
+    D2PathStep.StepResult result = position.stepNativeUnit((direction.x * nativeVelocity) >> 8,
+        (direction.y * nativeVelocity) >> 8, targetX, targetY, (x, y, nx, ny) ->
+            canMove(id, candidate.set(x, y), desired.set(nx, ny)));
+    recordMovement(id, true);
+    // Requested velocity is rebuilt by Pathfinder next tick. Expose actual
+    // displacement to mode/facing consumers and never feed it through physics.
+    velocity.velocity.set(position.position).sub(start).scl(1f / world.delta);
+    if (result.blocked && result.crossedCells == 0) velocity.velocity.setZero();
+    if (mAngle.has(id) && !velocity.velocity.isZero())
+      mAngle.get(id).target.set(velocity.velocity).nor();
+    MapWrapper wrapper = mMapWrapper.get(id);
+    if (wrapper != null && wrapper.zone != null && !wrapper.roomIdPinned) {
+      Map.RoomEx room = wrapper.zone.findRoomEx(position.position.x, position.position.y);
+      wrapper.roomId = room == null ? -1 : room.id;
+    }
+    return true;
+  }
+
   private void recordMovement(int entityId, boolean requested) {
     Position position = mPosition.get(entityId);
     // A legacy floating-point displacement is not a native fp16 step. Latch
     // invalidation now, even if a later tick returns to the old projection.
-    if (!start.equals(position.position)) position.invalidateNativePrecision();
+    if (!mVelocity.get(entityId).nativeMovementOwned && !start.equals(position.position))
+      position.invalidateNativePrecision();
     if (!mPathfind.has(entityId)) return;
     Pathfind path = mPathfind.get(entityId);
     path.recordMovement(requested, start.dst2(mPosition.get(entityId).position),
