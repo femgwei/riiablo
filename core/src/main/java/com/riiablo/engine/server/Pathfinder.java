@@ -102,6 +102,16 @@ public class Pathfinder extends IteratingSystem {
       return;
     }
 
+    // Players must recover on the tick after an actual dynamic rejection,
+    // including single-click orders that have no held-input refresh loop.
+    if (mPlayer.has(entityId) && shouldRepathPlayerAfterDynamicBlock(pathfind)) {
+      int targetId = pathfind.targetEntityId;
+      Vector2 goal = new Vector2(targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+          ? mPosition.get(targetId).position : pathfind.destination);
+      if (!repathPreservingMovementIntent(entityId, goal, targetId)) findPath(entityId, null);
+      return;
+    }
+
     // A path is computed before other units move.  If a unit then occupies a
     // later waypoint (for example, the first Fallen reaches the player and
     // starts attacking in a narrow passage), the old path keeps requesting a
@@ -605,6 +615,10 @@ public class Pathfinder extends IteratingSystem {
         && pathfind.stalledTime >= DYNAMIC_BLOCK_REPATH_TIME;
   }
 
+  static boolean shouldRepathPlayerAfterDynamicBlock(Pathfind pathfind) {
+    return pathfind != null && pathfind.blockedByDynamic && pathfind.stalledTime > 0f;
+  }
+
   private boolean repathPreservingMovementIntent(
       int entityId, Vector2 target, int targetEntityId) {
     Velocity velocity = mVelocity.get(entityId);
@@ -758,14 +772,16 @@ public class Pathfinder extends IteratingSystem {
       boolean startAtSource = false;
       if (path.getCount() >= 2 && !srcPos.epsilonEquals(path.getNodePosition(0), 0.1f)) {
         ray.set(srcPos, path.getNodePosition(1));
-        if (map.castRay(owner == null ? null : owner.zone, ray, flags, size, collision, canOpenDoors(src))) {
+        if (map.castRay(owner == null ? null : owner.zone, ray, flags, size, collision, canOpenDoors(src))
+            || !isDynamicSegmentFree(src, targetEntityId, size, srcPos, path.getNodePosition(1))) {
           ray.set(srcPos, path.getNodePosition(0));
           // Re-centre by ordinary movement within the already occupied cell,
           // never snap coordinates or relax the swept collision. An off-centre
           // start can otherwise enter a forbidden side cross before the legal
           // native diagonal node and repeat the same terrain stall forever.
           startAtSource = !map.castRay(owner == null ? null : owner.zone,
-              ray, flags, size, collision, canOpenDoors(src));
+              ray, flags, size, collision, canOpenDoors(src))
+              && isDynamicSegmentFree(src, targetEntityId, size, srcPos, path.getNodePosition(0));
         }
       }
       Pathfind pathfind = mPathfind.create(src).set(path, startAtSource);

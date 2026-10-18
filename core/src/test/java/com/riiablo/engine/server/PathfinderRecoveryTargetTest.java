@@ -31,6 +31,25 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void playerGroundOrderRepathsAfterOneDynamicBlockedTickAndKeepsRunning() {
+    try (Fixture f = new Fixture()) {
+      f.world.getMapper(Monster.class).remove(f.actor);
+      f.world.getMapper(com.riiablo.engine.server.component.Player.class).create(f.actor);
+      assertTrue(f.paths.findPath(f.actor, new Vector2(20, 10)));
+      f.velocity().setModeSpeedBonusPercent(50);
+      float originalSpeed = f.velocity().modeSpeedBonusMultiplier;
+      f.world.getMapper(Running.class).create(f.actor);
+      f.path().recordMovement(true, 0f, 0.04f, true);
+      int previousQueries = f.partialQueries;
+      f.paths.process(f.actor);
+      assertEquals(previousQueries + 1, f.partialQueries);
+      assertEquals(new Vector2(20, 10), f.path().destination);
+      assertEquals(Engine.INVALID_ENTITY, f.path().targetEntityId);
+      assertEquals(0f, f.path().stalledTime);
+      assertTrue(f.world.getMapper(Running.class).has(f.actor));
+      assertEquals(originalSpeed, f.velocity().modeSpeedBonusMultiplier);
+    }
+  }
   @Test void projectedNativeRequestsInvalidateCachedNativeStateOnSuccessAndRejection() {
     try (Fixture f = new Fixture()) {
       f.world.getMapper(NativePathIdentity.class).create(f.target).allocated(f.world, f.target);

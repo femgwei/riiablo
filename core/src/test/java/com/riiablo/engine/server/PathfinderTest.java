@@ -18,6 +18,17 @@ import com.riiablo.map.pfa.GraphPath;
 import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
+  @Test void playerRecoversOnFirstBlockedTickWithoutWaitingForHeldInput() {
+    Pathfind path = new Pathfind();
+    assertFalse(Pathfinder.shouldRepathPlayerAfterDynamicBlock(path));
+    path.recordMovement(true, 0f, 0.04f, true);
+    assertTrue(Pathfinder.shouldRepathPlayerAfterDynamicBlock(path));
+    assertFalse(Pathfinder.shouldRepathAfterDynamicBlock(path));
+    path.recordMovement(true, 0.1f, 0.04f, true);
+    assertFalse(Pathfinder.shouldRepathPlayerAfterDynamicBlock(path));
+    path.recordMovement(true, 0f, 0.04f, false);
+    assertFalse(Pathfinder.shouldRepathPlayerAfterDynamicBlock(path));
+  }
   @Test void offCentreStartKeepsTheSourceWaypointWithoutConsumingTheNextNode() {
     GraphPath path = new GraphPath();
     path.add(new Point2(5, 5));

@@ -1,5 +1,12 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 玩家贴身受阻后的起步寻路
+
+- 玩家坐标移动被动态单位实际阻挡后，下一逻辑帧重新规划路径，保留目的地、跑步和速度倍率；单击移动也能恢复，不再依赖按住鼠标的 0.25 秒刷新。怪物原有重寻路节奏保留。
+- 小数起点接入首个路径点时同时检查地形与动态占位，必要时通过正常移动回到源格中心，避免直接切入相邻大型怪物的占位。
+- 原生依据：D2MOO `D2Common/src/Path/Path.cpp` 路径计算将 `nMoveTestCollisionMask` 带入搜索，并在搜索期间移除自身占位；本次不修改原生单位尺寸。
+- 验证：`:core:test --tests com.riiablo.engine.server.PathfinderTest --tests com.riiablo.engine.server.PathfinderLargeTargetApproachTest --tests com.riiablo.engine.server.PathfinderRecoveryTargetTest --no-daemon` 通过（50 项）；圣甲虫贴身后亚马逊起步的实际手感待用户实机验收。
+
 ## 2026-10-18 闪电导弹加法混合
 
 - 修正 `BlendMode.ADDITIVE`：从 Screen 类混合改为 `ONE, ONE`，恢复源颜色与背景直接相加；shader 在相加前遮掉透明索引并保留调用方透明度。
