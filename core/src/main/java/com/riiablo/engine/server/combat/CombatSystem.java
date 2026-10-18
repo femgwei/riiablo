@@ -667,6 +667,27 @@ public class CombatSystem {
         defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements);
   }
 
+  /** Table-backed attack entry; legacy integer overloads keep stock-rule fallback. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      NativeCombatContext context, int magicTargetBonusPercent,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, boolean fixedPointElements) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        context, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements);
+  }
+
   /** Resolves a fixed elemental packet for area effects that have no missile
    *  entity. This keeps hand-written skill explosions on the same native
    *  resistance/absorb/PvP chain as regular attacks.
@@ -1449,6 +1470,30 @@ public class CombatSystem {
       int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus,
       boolean fixedPointElements) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, precomputedPhysicalDamage,
+        physicalConversionPercent, physicalConversionType, mastery,
+        NativeCombatContext.ofDifficulty(difficulty), magicTargetBonusPercent,
+        defenderDemon, defenderUndead, defenderIgnoreTargetDefenseAllowed,
+        enhancedDamageBonus, fixedPointElements);
+  }
+
+  private CombatResult calculateAttackInternal(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, boolean precomputedPhysicalDamage,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList.WeaponMasteryBonus mastery, NativeCombatContext context,
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus,
+      boolean fixedPointElements) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -1460,7 +1505,7 @@ public class CombatSystem {
     a.isMissile = missile;
     a.fixedPointElements = fixedPointElements;
     a.alwaysHit = alwaysHit;
-    NativeCombatContext combatContext = NativeCombatContext.ofDifficulty(difficulty)
+    NativeCombatContext combatContext = context
         .withCombatants(attackerPlayer, defenderPlayer)
         .withTargetType(defenderDemon, defenderUndead);
     a.difficulty = combatContext.difficulty();
@@ -1682,7 +1727,7 @@ public class CombatSystem {
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
     int difficultyPenalty = defenderPlayer
-        ? NativeDifficultyRules.remainingResistancePenalty(defender, difficulty) : 0;
+        ? NativeDifficultyRules.remainingResistancePenalty(defender, combatContext) : 0;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
       if (i != DAMAGE_MAGIC) d.resistances[i] += difficultyPenalty;
     }

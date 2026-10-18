@@ -2340,24 +2340,26 @@ public class Actioneer extends PassiveSystem {
               ? null : MonsterUniqueModifiers.rollSpectralHit(
                   attackingMonster, attackerAttrs, combatDifficulty());
           if (uniqueAttack == null) {
-            combat = combatSystemResolver.calculateAttackAgainstMonsterType(
+            combat = combatSystemResolver.calculateAttackAtDifficulty(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
-                monsterAttackRating(entityId),
+                monsterAttackRating(entityId), false, null, null, 0, 0,
                 stateList(entityId), stateList(targetId), isEntityMoving(targetId),
                 weaponMastery(entityId, attackWeapon, false),
+                nativeDifficultyContext(), 0,
                 isDemonTarget(targetId), isUndeadTarget(targetId),
-                ignoreTargetDefenseAllowed);
+                ignoreTargetDefenseAllowed, false);
           } else {
-            combat = combatSystemResolver.calculateAttackAgainstMonsterType(
+            combat = combatSystemResolver.calculateAttackAtDifficulty(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
-                monsterAttackRating(entityId), uniqueAttack.min, uniqueAttack.max,
+                monsterAttackRating(entityId), false, uniqueAttack.min, uniqueAttack.max,
                 uniqueAttack.coldLength, uniqueAttack.poisonLength,
                 stateList(entityId), stateList(targetId), isEntityMoving(targetId),
                 weaponMastery(entityId, attackWeapon, false),
+                nativeDifficultyContext(), 0,
                 isDemonTarget(targetId), isUndeadTarget(targetId),
-                ignoreTargetDefenseAllowed, combatDifficulty());
+                ignoreTargetDefenseAllowed, false);
           }
         }
         // D2Game UNITEVENT_ATTACKEDINMELEE is emitted for every valid melee

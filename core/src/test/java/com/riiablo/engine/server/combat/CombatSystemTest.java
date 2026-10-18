@@ -629,6 +629,43 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void attackContextCarriesCustomResistancePenaltyThroughMeleeAndMissile() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    int[] minimum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] maximum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    minimum[CombatSystem.DAMAGE_FIRE] = maximum[CombatSystem.DAMAGE_FIRE] = 100;
+    minimum[CombatSystem.DAMAGE_MAGIC] = maximum[CombatSystem.DAMAGE_MAGIC] = 100;
+    for (boolean missile : new boolean[] {false, true}) {
+      for (int penalty : new int[] {-37, 12}) {
+        row.ResistPenalty = penalty;
+        Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+        for (boolean folded : new boolean[] {false, true}) {
+          defender.base().put(Stat.fireresist, folded ? penalty : 0);
+          defender.setDifficultyResistanceIncluded(folded);
+          defender.reset();
+          CombatSystem.CombatResult result = combat.calculateAttackAtDifficulty(
+              attacker, defender, false, true, missile, 1, 1, 1000, true,
+              minimum, maximum, 0, 0, null, null, false, null, context,
+              0, false, false, true, false);
+          assertEquals(100 - penalty, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+          assertEquals(100, result.elementalDamage[CombatSystem.DAMAGE_MAGIC]);
+        }
+        defender.base().put(Stat.fireresist, 0);
+        defender.setDifficultyResistanceIncluded(false);
+        defender.reset();
+        CombatSystem.CombatResult monster = combat.calculateAttackAtDifficulty(
+            attacker, defender, false, false, missile, 1, 1, 1000, true,
+            minimum, maximum, 0, 0, null, null, false, null, context,
+            0, false, false, true, false);
+        assertEquals(100, monster.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      }
+    }
+  }
+
+  @Test
   public void difficultyResistancePenaltyDoesNotApplyToMonsterTargets() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);

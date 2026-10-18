@@ -1743,7 +1743,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           alwaysHit,
           null, null, 0, 0,
           stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
-          missileMastery(missile), combatDifficulty(ownerId, targetId),
+          missileMastery(missile), nativeDifficultyContext(combatDifficulty(ownerId, targetId)),
           blessedHammerTargetBonusPercent(
               missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
