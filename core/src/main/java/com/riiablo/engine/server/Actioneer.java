@@ -3171,7 +3171,7 @@ public class Actioneer extends PassiveSystem {
       CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
           MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
-          stateList(targetId), combatDifficulty());
+          stateList(targetId), nativeDifficultyContext());
       int itemPoisonDuration = statInt(attacker, Stat.poisonlength);
       float itemPoisonPerFrame = CombatSystem.totalPoisonToPerFrame(
           combat.elementalDamage[CombatSystem.DAMAGE_POISON], itemPoisonDuration);
@@ -3598,7 +3598,7 @@ public class Actioneer extends PassiveSystem {
       int rawFixed = MathUtils.random(elemental[0], elemental[1]);
       CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
-          rawFixed, duration, stateList(targetId), combatDifficulty());
+          rawFixed, duration, stateList(targetId), nativeDifficultyContext());
       // Weapon poison was already resolved by the melee record. It is also an
       // 8.8 rate and must not be treated as whole damage per frame.
       int weaponPoisonDuration = statInt(attacker, Stat.poisonlength);
@@ -5536,6 +5536,13 @@ public class Actioneer extends PassiveSystem {
     // summons/mercenaries are intentionally excluded from the PvP scalar.
     return isPlayerEntity(sourceId) && isPlayerEntity(targetId)
         ? damage * CombatSystem.PVP_DAMAGE_PERCENT / 100 : damage;
+  }
+
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
+    int difficulty = combatDifficulty();
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
+        files() != null && files().DifficultyLevels != null
+            ? files().DifficultyLevels.get(difficulty) : null);
   }
 
   private int combatDifficulty() {

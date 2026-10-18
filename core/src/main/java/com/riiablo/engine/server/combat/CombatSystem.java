@@ -676,7 +676,16 @@ public class CombatSystem {
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
     return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates, difficulty, false);
+        damageType, rawDamage, piercePercent, defenderStates,
+        NativeCombatContext.ofDifficulty(difficulty), false);
+  }
+
+  public CombatResult calculateFixedElementalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamage, int piercePercent,
+      StateList defenderStates, NativeCombatContext context) {
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamage, piercePercent, defenderStates, context, false);
   }
 
   /** Native direct packet: MDR before resistance, no monster player-cap, 40% absorb cap. */
@@ -685,13 +694,14 @@ public class CombatSystem {
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
     return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates, difficulty, true);
+        damageType, rawDamage, piercePercent, defenderStates,
+        NativeCombatContext.ofDifficulty(difficulty), true);
   }
 
   private CombatResult calculateFixedElementalDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
-      StateList defenderStates, int difficulty, boolean nativePacket) {
+      StateList defenderStates, NativeCombatContext context, boolean nativePacket) {
     CombatResult result = new CombatResult();
     result.reset();
     if (defender == null || damageType <= DAMAGE_PHYSICAL
@@ -705,7 +715,7 @@ public class CombatSystem {
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
-    int penalty = defenderPlayer ? NativeDifficultyRules.remainingResistancePenalty(defender, difficulty) : 0;
+    int penalty = defenderPlayer ? NativeDifficultyRules.remainingResistancePenalty(defender, context) : 0;
     // Native difficulty penalties exclude physical and magic resistance.
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
       if (i != DAMAGE_MAGIC) d.resistances[i] += penalty;
@@ -1059,13 +1069,21 @@ public class CombatSystem {
       Attributes attacker, Attributes defender, boolean defenderPlayer,
       boolean attackerPlayer, int rawDamageFixed, int baseDuration,
       StateList defenderStates, int difficulty) {
+    return calculateFixedPoisonDamage(attacker, defender, defenderPlayer, attackerPlayer,
+        rawDamageFixed, baseDuration, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  public CombatResult calculateFixedPoisonDamage(
+      Attributes attacker, Attributes defender, boolean defenderPlayer,
+      boolean attackerPlayer, int rawDamageFixed, int baseDuration,
+      StateList defenderStates, NativeCombatContext context) {
     int mastery = statInt(attacker, Stat.passive_pois_mastery, 0);
     long mastered = (long) Math.max(0, rawDamageFixed) * Math.max(0, 100 + mastery) / 100L;
     int rawSnapshot = mastered >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mastered;
     int pierce = statInt(attacker, Stat.item_pierce_pois, 0)
         + statInt(attacker, Stat.passive_pois_pierce, 0);
     return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer,
-        rawSnapshot, pierce, baseDuration, defenderStates, difficulty);
+        rawSnapshot, pierce, baseDuration, defenderStates, context);
   }
 
   /** Replays a Rabies cast snapshot against a newly infected target. */
@@ -1073,14 +1091,23 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int rawDamageFixed, int piercePercent, int baseDuration,
       StateList defenderStates, int difficulty) {
+    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer,
+        rawDamageFixed, piercePercent, baseDuration, defenderStates,
+        NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  public CombatResult calculateFixedPoisonDamageSnapshot(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int rawDamageFixed, int piercePercent, int baseDuration,
+      StateList defenderStates, NativeCombatContext context) {
     CombatResult result = calculateFixedElementalDamage(
         defender, defenderPlayer, attackerPlayer, DAMAGE_POISON,
-        rawDamageFixed, piercePercent, defenderStates, difficulty);
+        rawDamageFixed, piercePercent, defenderStates, context);
     result.poisonRawDamageFixed = Math.max(0, rawDamageFixed);
     result.poisonPiercePercent = Math.max(0, piercePercent);
     result.poisonBaseDuration = Math.max(0, baseDuration);
     result.poisonDuration = resolvePoisonDuration(defender, defenderPlayer,
-        result.poisonBaseDuration, result.poisonPiercePercent, defenderStates, difficulty);
+        result.poisonBaseDuration, result.poisonPiercePercent, defenderStates, context);
     result.poisonDamagePerFrame = fixed8RateToPerFrame(
         result.elementalDamage[DAMAGE_POISON]);
     // Poison is a state payload, not immediate hit-point damage.
@@ -1112,6 +1139,12 @@ public class CombatSystem {
 
   static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
       int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
+    return resolvePoisonDuration(defender, defenderPlayer, baseDuration, piercePercent,
+        defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
+      int baseDuration, int piercePercent, StateList defenderStates, NativeCombatContext context) {
     if (defender == null || baseDuration <= 0) return 0;
     if (defenderStates != null && defenderStates.hasState(StateId.SHRINE_RESIST_POISON)) {
       return 0;
@@ -1119,7 +1152,7 @@ public class CombatSystem {
     int resistance = statInt(defender, Stat.item_poisonlengthresist, 0)
         - Math.max(0, Math.min(100, piercePercent));
     // CharData folds elemental resistance only, not poison length resistance.
-    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(difficulty);
+    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(context);
     resistance = defenderPlayer
         ? Math.max(-100, Math.min(75, resistance))
         : Math.max(-100, Math.min(100, resistance));

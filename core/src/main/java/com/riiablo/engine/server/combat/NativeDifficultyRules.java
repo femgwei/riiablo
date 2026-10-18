@@ -14,6 +14,10 @@ public final class NativeDifficultyRules {
   public static int remainingResistancePenalty(
       com.riiablo.attributes.Attributes defender, NativeCombatContext context) {
     if (defender.difficultyResistanceIncluded()) return 0;
+    return playerResistancePenalty(context);
+  }
+
+  public static int playerResistancePenalty(NativeCombatContext context) {
     return context.difficultyRow() == null ? playerResistancePenalty(context.difficulty())
         : tableResistancePenalty(context);
   }

@@ -704,6 +704,39 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void poisonSnapshotUsesTableForRateAndIndependentLength() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    for (int penalty : new int[] {-37, 12}) {
+      row.ResistPenalty = penalty;
+      CombatSystem.CombatResult raw = combat.calculateFixedPoisonDamage(
+          attacker, defender, true, false, 25600, 100, null, context);
+      assertEquals(100 - penalty, raw.poisonDuration);
+      assertEquals((float) (100 - penalty), raw.poisonDamagePerFrame, 0.0001f);
+      defender.base().put(Stat.poisonresist, penalty);
+      defender.setDifficultyResistanceIncluded(true);
+      defender.reset();
+      CombatSystem.CombatResult folded = combat.calculateFixedPoisonDamageSnapshot(
+          defender, true, false, 25600, 0, 100, null, context);
+      assertEquals(raw.poisonDuration, folded.poisonDuration);
+      assertEquals(raw.poisonDamagePerFrame, folded.poisonDamagePerFrame, 0.0001f);
+      defender.base().put(Stat.poisonresist, 0);
+      defender.setDifficultyResistanceIncluded(false);
+      defender.reset();
+      CombatSystem.CombatResult monster = combat.calculateFixedPoisonDamageSnapshot(
+          defender, false, false, 25600, 0, 100, null, context);
+      assertEquals(100, monster.poisonDuration);
+      assertEquals(100f, monster.poisonDamagePerFrame, 0.0001f);
+      CombatSystem.CombatResult magic = combat.calculateFixedElementalDamage(
+          defender, true, false, CombatSystem.DAMAGE_MAGIC, 100, 0, null, context);
+      assertEquals(100, magic.totalDamage);
+    }
+  }
+
+  @Test
   public void elementalAbsorbAppliesPercentThenFlatAndRecordsLife() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(50, 1, 0, 1, 1, 1);

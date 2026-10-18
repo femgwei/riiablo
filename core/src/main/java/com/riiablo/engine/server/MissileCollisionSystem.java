@@ -1139,7 +1139,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           combatSystemResolver.calculateFixedPoisonDamageSnapshot(
               attrs, mPlayer.has(targetId), controller.rabiesAttackerPlayer,
               controller.rabiesRawDamageFixed, controller.rabiesPoisonPierce,
-              duration, targetStates.stateList, difficulty);
+              duration, targetStates.stateList, nativeDifficultyContext(difficulty));
       UnitState infected = targetStates.stateList.addState(
           StateId.RABIES, duration, Math.max(1, controller.damageLevel),
           controller.rabiesSourceId);
@@ -2027,7 +2027,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             targetAttrs, mPlayer.has(targetId), missile.poisonAttackerPlayer,
             raw, missile.poisonPiercePercent,
             Math.max(1, missile.poisonDurationFrames), targetStates,
-            combatDifficulty(missile.ownerId, targetId));
+            nativeDifficultyContext(combatDifficulty(missile.ownerId, targetId)));
     if (poison.poisonDamagePerFrame > 0f && poison.poisonDuration > 0) {
       StatusEffectApplier.forWorld(world).applyPoison(
           targetId, poison.poisonDamagePerFrame, poison.poisonDuration, missile.ownerId);
@@ -2267,11 +2267,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     return stateList(targetId);
   }
 
-  /** Resolves the authoritative difficulty from the projectile's current map.
-   *  Owner and target wrappers can be absent during cross-zone handoff, so use
-   *  either side and fall back to Normal (the CombatSystem compatibility
-   *  overload has the same default).
-   */
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
+        files() != null && files().DifficultyLevels != null
+            ? files().DifficultyLevels.get(difficulty) : null);
+  }
+
+  /** Resolves difficulty from target/owner map, falling back to Normal during handoff. */
   private int combatDifficulty(int ownerId, int targetId) {
     if (mMapWrapper.has(targetId)) {
       MapWrapper wrapper = mMapWrapper.get(targetId);

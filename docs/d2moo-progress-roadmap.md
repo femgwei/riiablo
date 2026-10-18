@@ -5000,6 +5000,15 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 固定毒素伤害/长度表行传递：CombatSystem 固定元素伤害、毒素施放和传播快照新增
+  NativeCombatContext 重载，毒匕首、狂犬病及毒素导弹/传播四个生产调用传入当前难度表。
+  伤害与长度共享表行，但仅元素抗性检查“已折入惩罚”标记，毒素长度抗性仍独立补扣。
+  依据 D2MOO `SUnitDmg.cpp:771` 的 Plen/Pois 独立抗性行及 `:965` 难度表追加逻辑。
+  旧整数入口保留兼容；其余固定伤害生产调用、普通攻击及 Classic 模式仍待后续迁移。
+  新增正/负自定义表值、原始/已折入属性、怪物免扣、魔法抗性豁免回归。
+  定向测试 `CombatSystemTest`、`NativeCombatContextTest` 共 60 项通过，模块边界检查通过；
+  未执行客户端实机验证或全量回归。
+
 - 冰冷/冻结长度表行传递：ServerSkillSystem 两个 `resolveColdLengthBeforeState`
   生产调用注入当前 World 的难度表；CombatSystem 新增上下文重载，未折入惩罚的属性
   优先读取 `ResistPenalty`，已折入属性继续跳过补扣。旧整数入口和缺表夹具保留原值 fallback。
