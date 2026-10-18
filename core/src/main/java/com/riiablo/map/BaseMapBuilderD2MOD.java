@@ -239,9 +239,11 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
   protected Zone.Generator createMonsterGenerator(final com.badlogic.gdx.net.Socket finalSocket) {
     return new Zone.Generator() {
       MonStats.Entry[] monsters;
+      boolean nativePopulationQueued;
 
       @Override
       public void init(Zone zone) {
+        java.util.Random selection = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
         int prob = 0;
         int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
         String[] columns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
@@ -256,12 +258,12 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         Array<MonStats.Entry> selected = new Array<>();
         int selectionCount = Math.min(numMon, available.size);
         for (int i = 0; i < selectionCount; i++) {
-          int index = MathUtils.random(available.size - 1);
+          int index = selection.nextInt(available.size);
           if (i == 0 && zone.level.rangedspawn && available.size > 1) {
             for (int attempt = 0; attempt < 20; attempt++) {
               MonStats.Entry candidate = zone.map.files().monstats.get(available.get(index));
               if (candidate != null && candidate.rangedtype) break;
-              index = MathUtils.random(available.size - 1);
+              index = selection.nextInt(available.size);
             }
           }
           MonStats.Entry entry = zone.map.files().monstats.get(available.removeIndex(index));
@@ -376,9 +378,24 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
       @Override
       public void finish(Zone zone) {
         if (zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()
-            || zone.isTown() || finalSocket != null) return;
+            || zone.isTown() || finalSocket != null || nativePopulationQueued) return;
         java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
         int packId = 0;
+        int uniqueCount = 0, populationRooms = 0, visitedRooms = 0;
+        for (Map.RoomEx room : zone.getRoomsEx()) {
+          if ((room.populationFlags() & com.d2moo.common.drlg.D2DrlgRoomFlags.POPULATION_ZERO) == 0)
+            populationRooms++;
+          for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
+            packId = Math.max(packId, spawn.packId + 1);
+            if (spawn.superUniqueId >= 0 || spawn.rank == com.riiablo.engine.server.monster.MonsterRank.UNIQUE
+                || spawn.rank == com.riiablo.engine.server.monster.MonsterRank.CHAMPION) uniqueCount++;
+          }
+        }
+        int bossMin = NativeMonsterEliteRules.bossMin(zone.level, zone.diff);
+        int bossMax = NativeMonsterEliteRules.bossMax(zone.level, zone.diff);
+        NativeMonsterEliteRules elites = bossMin > 0 || bossMax > 0
+            ? NativeMonsterEliteRules.load(zone.map.mpqs()) : null;
+        nativePopulationQueued = true;
         // Normal Act V outdoor levels have MonDen=0 and rely on these DS1
         // MonPlace group markers. Expand only after native collision exists.
         for (Map.NativeMonster preset : zone.getNativeMonsters()) {
@@ -393,12 +410,20 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         if (monsters == null || monsters.length == 0) return;
         for (Map.RoomEx room : zone.getRoomsEx()) {
           if ((room.populationFlags() & com.d2moo.common.drlg.D2DrlgRoomFlags.POPULATION_ZERO) != 0) continue;
+          visitedRooms++;
           // D2GAME_PopulateRoom samples one population cell per 3x3 subtiles.
           for (int y = room.y + 1; y < room.y + room.height - 1; y += 3) {
             for (int x = room.x + 1; x < room.x + room.width - 1; x += 3) {
               if (!NativeMonsterRegion.densityRoll(NativeMonsterRegion.density(zone.level, zone.diff),
                   rng.nextInt(100000))) continue;
-              MonStats.Entry monster = monsters[rng.nextInt(monsters.length)];
+              MonStats.Entry monster = replacePlaceSpawn(zone, monsters[rng.nextInt(monsters.length)], 20, rng);
+              if (elites != null && NativeMonsterEliteRules.selectElite(
+                  uniqueCount, bossMin, bossMax, visitedRooms, populationRooms, rng)) {
+                MonStats.Entry boss = chooseElite(zone, rng);
+                if (boss != null) uniqueCount += NativeRoomMonsterPopulation.addElite(
+                    zone, room, boss, packId++, rng, elites);
+                continue;
+              }
               if (monster == null || !NativeMonsterRegion.sparsePopulationRoll(
                   monster.sparsePopulate, rng.nextInt(100))) continue;
               int min = NativeDataTables.minGroup(monster), max = NativeDataTables.maxGroup(monster);
@@ -408,6 +433,29 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
             }
           }
         }
+      }
+
+      private MonStats.Entry chooseElite(Zone zone, java.util.Random rng) {
+        // Normal bosses use the complete umon list, NOT the NumMon subset.
+        if (zone.diff == 0) {
+          Array<MonStats.Entry> candidates = new Array<>();
+          if (zone.level.umon != null) for (String id : zone.level.umon) {
+            if (id == null || id.isEmpty() || "0".equals(id)) continue;
+            MonStats.Entry candidate = zone.map.files().monstats.get(id);
+            if (candidate != null) candidates.add(candidate);
+          }
+          return candidates.size == 0 ? null : candidates.get(rng.nextInt(candidates.size));
+        }
+        return replacePlaceSpawn(zone, monsters[rng.nextInt(monsters.length)], 0, rng);
+      }
+
+      private MonStats.Entry replacePlaceSpawn(Zone zone, MonStats.Entry monster,
+          int chance, java.util.Random rng) {
+        if (monster != null && monster.placespawn && monster.spawn != null && !monster.spawn.isEmpty()) {
+          MonStats.Entry replacement = zone.map.files().monstats.get(monster.spawn);
+          if (replacement != null && rng.nextInt(100) > chance) return replacement;
+        }
+        return monster;
       }
 
       /**

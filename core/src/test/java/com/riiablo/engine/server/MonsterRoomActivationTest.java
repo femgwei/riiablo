@@ -29,6 +29,48 @@ import org.junit.jupiter.api.Test;
 
 class MonsterRoomActivationTest {
   @Test
+  void randomEliteMetadataAndOwnerSurviveDeferredRoomActivation() {
+    Map map = new Map(0, 0);
+    Map.Zone zone = nativeThreeRoomZone();
+    zone.map = map;
+    Map.RoomEx room = zone.getRoomsEx().first();
+    long strong = com.riiablo.engine.server.monster.MonsterAffix.EXTRA_STRONG;
+    room.addIntegerMonsterSpawn(7, 10, 10, 41, false, MonsterRank.UNIQUE, strong, -1);
+    room.addIntegerMonsterSpawn(7, 12, 10, 41, true, MonsterRank.MINION, strong, -1);
+    room.addIntegerMonsterSpawn(7, 15, 10, 42, false, MonsterRank.CHAMPION, 0L, MonsterRank.CHAMP_GHOSTLY);
+    RecordingFactory factory = new RecordingFactory();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, zone);
+      world.process();
+      assertEquals(3, factory.monstersCreated);
+      assertEquals(3, factory.integerSelectionsCreated);
+      com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(Monster.class)).getEntities();
+      int leaderId = -1, minionId = -1;
+      for (int i = 0; i < entities.size(); i++) {
+        int id = entities.get(i);
+        Monster monster = world.getMapper(Monster.class).get(id);
+        if (monster.rank == MonsterRank.UNIQUE) { leaderId = id; assertEquals(strong, monster.affixes); }
+        if (monster.rank == MonsterRank.MINION) { minionId = id; assertEquals(strong, monster.affixes); }
+        if (monster.rank == MonsterRank.CHAMPION) assertEquals(MonsterRank.CHAMP_GHOSTLY, monster.championType);
+      }
+      assertTrue(leaderId >= 0 && minionId >= 0);
+      assertEquals(leaderId, world.getMapper(Monster.class).get(minionId).minionOwnerId);
+      assertEquals(leaderId, world.getMapper(Monster.class).get(minionId).uniqueId);
+      world.process();
+      assertEquals(3, factory.monstersCreated);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void nativeRoomActivationSleepsAndWakesMonsterAi() {
     AIStepper stepper = new AIStepper();
     World world = new World(new WorldConfigurationBuilder().with(new RoomActivationSystem(), stepper).build());
@@ -558,7 +600,9 @@ class MonsterRoomActivationTest {
         int championType, int uniqueId) {
       lastRank = rank;
       lastUniqueId = uniqueId;
-      return createMonster(monsterId, x, y);
+      int id = createMonster(monsterId, x, y);
+      world.getMapper(Monster.class).get(id).setRank(rank, affixes, championType, uniqueId);
+      return id;
     }
   }
 

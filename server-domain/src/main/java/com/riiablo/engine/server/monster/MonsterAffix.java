@@ -195,6 +195,7 @@ public final class MonsterAffix {
         case 18: affixes |= COLD_ENCHANTED; break;
         case 23: affixes |= POISON_ENCHANTED; break;
         case 25: affixes |= MANA_BURN; break;
+        case 26: affixes |= TELEPORTATION; break;
         case 27: affixes |= SPECTRAL_HIT; break;
         case 28: affixes |= STONE_SKIN; break;
         case 29: affixes |= MULTISHOT; break;

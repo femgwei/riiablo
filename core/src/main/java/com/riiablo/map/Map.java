@@ -3067,10 +3067,15 @@ public class Map implements Disposable {
     /** Preserves explicit integer selection inputs, not final factory coordinates. */
     public void addIntegerMonsterSpawn(int monsterId, int worldX, int worldY,
         int packId, boolean minion) {
+      addIntegerMonsterSpawn(monsterId, worldX, worldY, packId, minion,
+          com.riiablo.engine.server.monster.MonsterRank.NORMAL, 0L, -1);
+    }
+
+    public void addIntegerMonsterSpawn(int monsterId, int worldX, int worldY,
+        int packId, boolean minion, int rank, long affixes, int championType) {
       if (!monsterPopulationSpawned) {
         pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY,
-            packId, minion, -1, null,
-            com.riiablo.engine.server.monster.MonsterRank.NORMAL, true, worldX, worldY));
+            packId, minion, -1, null, rank, true, worldX, worldY, affixes, championType));
       }
     }
 
@@ -3152,7 +3157,7 @@ public class Map implements Disposable {
     public final int monsterId;
     public final float x;
     public final float y;
-    /** Room-local pack key; -1 means no explicit native owner relation. */
+    /** Zone-local pack key; -1 means no explicit native owner relation. */
     public final int packId;
     /** True when this entry is a party minion of the pack leader. */
     public final boolean minion;
@@ -3161,6 +3166,8 @@ public class Map implements Disposable {
     /** SuperUniques.txt key, retained for diagnostics and marker identity. */
     public final String superUniqueKey;
     public final int rank;
+    public final long affixes;
+    public final int championType;
 
     MonsterSpawn(int monsterId, float x, float y) {
       this(monsterId, x, y, -1, false);
@@ -3178,12 +3185,13 @@ public class Map implements Disposable {
 
     MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
         int superUniqueId, String superUniqueKey, int rank) {
-      this(monsterId, x, y, packId, minion, superUniqueId, superUniqueKey, rank, false, 0, 0);
+      this(monsterId, x, y, packId, minion, superUniqueId, superUniqueKey, rank, false, 0, 0, 0L, -1);
     }
 
     private MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
         int superUniqueId, String superUniqueKey, int rank,
-        boolean integerSelectionKnown, int integerSelectionX, int integerSelectionY) {
+        boolean integerSelectionKnown, int integerSelectionX, int integerSelectionY,
+        long affixes, int championType) {
       this.integerSelectionKnown = integerSelectionKnown;
       this.integerSelectionX = integerSelectionX;
       this.integerSelectionY = integerSelectionY;
@@ -3195,6 +3203,8 @@ public class Map implements Disposable {
       this.superUniqueId = superUniqueId;
       this.superUniqueKey = superUniqueKey;
       this.rank = rank;
+      this.affixes = affixes;
+      this.championType = championType;
     }
   }
 

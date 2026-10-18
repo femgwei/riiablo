@@ -372,17 +372,17 @@ public class RoomActivationSystem extends IteratingSystem {
           }
         }
         long affixes = superUniqueRow == null
-            ? MonsterAffix.NONE : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
+            ? spawn.affixes : MonsterAffix.fromUniqueMods(superUniqueRow.Mod);
         int monsterId = spawn.hasIntegerSelection()
             ? factory.createMonsterAtIntegerSelection(spawn.monsterId,
                 spawn.integerSelectionX(), spawn.integerSelectionY(),
                 superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
                     : spawn.rank,
-                affixes, -1, superUnique ? spawn.superUniqueId : -1)
+                affixes, spawn.championType, superUnique ? spawn.superUniqueId : -1)
             : factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
                 superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
                     : spawn.rank,
-                affixes, -1, superUnique ? spawn.superUniqueId : -1);
+                affixes, spawn.championType, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         if (spawn.monsterId == com.riiablo.engine.server.monster.MonsterType.NAVI) {
           log.info("[NAVI_SPAWN] level={} room={} entity={} position=({}, {})",
@@ -430,7 +430,10 @@ public class RoomActivationSystem extends IteratingSystem {
       if (mapping == null || mapping.zone != zone || value.nativePackId < 0
           || value.nativePackLeader) continue;
       Integer owner = leaders.get(value.nativePackId);
-      if (owner != null) value.setMinionOwner(owner);
+      if (owner != null) {
+        value.setMinionOwner(owner);
+        if (value.rank == com.riiablo.engine.server.monster.MonsterRank.MINION) value.uniqueId = owner;
+      }
     }
   }
 
