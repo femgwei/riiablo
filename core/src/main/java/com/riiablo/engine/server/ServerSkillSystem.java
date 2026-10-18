@@ -107,6 +107,94 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private double nativeElapsedFrames;
+  private final java.util.List<FireDeathEvent> fireDeaths = new java.util.ArrayList<>();
+
+  private static final class FireDeathEvent {
+    int source;
+    double due;
+    com.riiablo.engine.server.component.NativePathIdentity.Token identity;
+  }
+
+  @Subscribe
+  public void onFireEnchantedDeath(DeathEvent event) {
+    if (!mMonster.has(event.victim) || !mPosition.has(event.victim)) return;
+    Monster monster = mMonster.get(event.victim);
+    if (monster.fireDeathExplosionScheduled || !MonsterRank.isUnique(monster.rank)
+        || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
+            com.riiablo.engine.server.monster.MonsterAffix.FIRE_ENCHANTED)) return;
+    com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(event.victim);
+    // Production births allocate this token. Never retain a bare recycled entity id.
+    if (identity == null || identity.token() == null) return;
+    monster.fireDeathExplosionScheduled = true;
+    FireDeathEvent pending = new FireDeathEvent();
+    pending.source = event.victim;
+    pending.identity = identity.token();
+    pending.due = nativeElapsedFrames + 4;
+    fireDeaths.add(pending);
+  }
+
+  static int fireDeathMaximum(int baseHp, int percentage) {
+    return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, (long) baseHp * percentage / 100));
+  }
+
+  protected void resolveFireEnchantedDeath(int source) {
+    if (!mMonster.has(source) || !mPosition.has(source) || !mAttributesWrapper.has(source)) return;
+    Monster monster = mMonster.get(source);
+    int difficulty = combatDifficulty(source, source);
+    MonsterStatsCalculator.MonsterStatsInit base = new MonsterStatsCalculator.MonsterStatsInit();
+    int level = (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1);
+    if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files(), monster.monstats.hcIdx,
+        1, difficulty, level, (short) 1, base)) return;
+    int maximum = fireDeathMaximum(base.maxHP, files().DifficultyLevels.get(difficulty).MonsterCEDamagePercent);
+    int minimum = (int) ((long) maximum * 60 / 100);
+    NativeRng rng = new NativeRng(monster.rngState);
+    int rolled = minimum + (maximum > minimum ? rng.nextInt(maximum - minimum) : 0);
+    monster.rngState = rng.state();
+    Missiles.Entry row = files().Missiles.get("monstercorpseexplode");
+    if (row == null || factory == null) return;
+    Vector2 origin = new Vector2(mPosition.get(source).position);
+    int visual = factory.createMissile(row, Vector2.X, origin, source, 1);
+    if (visual < 0) return;
+    if (mMissile.has(visual)) mMissile.get(visual).presentationOnly = true;
+    IntBag units = world.getAspectSubscriptionManager().get(
+        Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    int[] targets = java.util.Arrays.copyOf(units.getData(), units.size());
+    // Native <<6 per channel is one quarter of the rolled integer in 8.8.
+    // Existing direct combat helpers project this to integer damage.
+    int channel = rolled / 4;
+    int radius = difficulty + 4;
+    for (int target : targets) {
+      if (target == source || !world.getEntityManager().isActive(target)
+          || !hasPositiveLife(target) || !sameZone(source, target) || isTownUnit(target)
+          || !isHostile(source, target) || !mNativeUnitFlagsValid(target)
+          || mPosition.get(target).position.dst2(origin) > radius * radius) continue;
+      Attributes defender = mAttributesWrapper.get(target).attrs;
+      StateList states = stateList(target);
+      CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
+          defender, mPlayer.has(target), channel, states);
+      CombatSystem.CombatResult fire = combatSystemResolver.calculateNativeFixedElementalDamage(
+          defender, mPlayer.has(target), false, CombatSystem.DAMAGE_FIRE, channel, 0, states, difficulty);
+      applyElementalAbsorbForFireDeath(defender, fire.absorbedLife);
+      DamageEvent damage = DamageEvent.obtainMissile(source, target,
+          physical.totalDamage + fire.totalDamage, physical.physicalDamage, null);
+      damage.fireDamage = fire.totalDamage;
+      if (events != null) events.dispatch(damage);
+      StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+      hp.sub(Math.max(0f, damage.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+      }
+    }
+  }
+
+  private static void applyElementalAbsorbForFireDeath(Attributes attrs, float amount) {
+    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
+    if (amount > 0 && hp != null && max != null)
+      hp.add(Math.max(0f, Math.min(amount, max.asFixed() - hp.asFixed())));
+  }
 
   @Subscribe
   public void onMonsterMeleeHit(com.riiablo.engine.server.event.MeleeAttackEvent event) {
@@ -285,6 +373,16 @@ public class ServerSkillSystem extends PassiveSystem {
   @Override
   protected void processSystem() {
     nativeElapsedFrames += Math.max(0f, world.delta) * 25.0;
+    java.util.List<FireDeathEvent> ready = new java.util.ArrayList<>();
+    for (java.util.Iterator<FireDeathEvent> it = fireDeaths.iterator(); it.hasNext();) {
+      FireDeathEvent pending = it.next();
+      if (!pending.identity.isCurrent(world, pending.source)) { it.remove(); continue; }
+      if (nativeElapsedFrames + .00001 >= pending.due) { ready.add(pending); it.remove(); }
+    }
+    // Death explosions may enqueue more deaths; resolve outside the queue iterator.
+    for (FireDeathEvent pending : ready) {
+      if (pending.identity.isCurrent(world, pending.source)) resolveFireEnchantedDeath(pending.source);
+    }
     int elapsed = Math.max(1, Math.round(world.delta * 25f));
     IntIntMap.Entries entries = poisonJavelinDelayFrames.entries();
     while (entries.hasNext) {
@@ -309,7 +407,7 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   @Override
   protected boolean checkProcessing() {
-    return poisonJavelinDelayFrames.size > 0 || bladeFuryDelayFrames.size > 0;
+    return !fireDeaths.isEmpty() || poisonJavelinDelayFrames.size > 0 || bladeFuryDelayFrames.size > 0;
   }
 
   @Override
