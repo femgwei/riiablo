@@ -29,8 +29,9 @@ class ObjectCollisionUpdaterTest {
       assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
       fixture.world.process();
       assertEquals(0, fixture.zone.nativeCollisionFlagsWorld(5, 5));
-      // The compatibility walking planner still uses owner reference counts.
-      fixture.assertBlocked(5, 5, true);
+      assertEquals(1, fixture.zone.objectCollisionReferences(5, 5));
+      // Diagnostic references must not restore cleared native bits for walking.
+      fixture.assertBlocked(5, 5, false);
       assertTrue(fixture.world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class)
           .isFreeForMonsterSpawnMask(-1, fixture.zone, 5, 5, 1, 0x400));
     } finally { fixture.dispose(); }
@@ -65,7 +66,7 @@ class ObjectCollisionUpdaterTest {
       assertEquals(0x8001, fixture.zone.nativeCollisionFlagsWorld(4, 4));
       fixture.zone.setPosition(100, 200);
       assertEquals(0x8001, fixture.zone.nativeCollisionFlagsWorld(104, 204));
-      assertEquals(0xFFFF, fixture.zone.nativeCollisionFlagsWorld(4, 4));
+      assertEquals(0x27, fixture.zone.nativeCollisionFlagsWorld(4, 4));
       fixture.zone.resetNativeCollisionMask(104, 204, 0x8000);
       assertEquals(1, fixture.zone.nativeCollisionFlagsWorld(104, 204));
     } finally { fixture.dispose(); }
@@ -161,7 +162,7 @@ class ObjectCollisionUpdaterTest {
   }
 
   @Test
-  void overlappingObjectsKeepCollisionUntilEveryReferenceIsRemoved() {
+  void overlappingObjectRemovalClearsSharedWalkingBitDespiteRemainingReference() {
     Fixture fixture = new Fixture();
     try {
       Objects.Entry solid = object(3, 3, true, false, false);
@@ -172,7 +173,8 @@ class ObjectCollisionUpdaterTest {
 
       fixture.mode(first, Engine.Object.MODE_ON);
       fixture.world.process();
-      fixture.assertBlocked(5, 5, true);
+      fixture.assertBlocked(5, 5, false);
+      assertEquals(1, fixture.zone.objectCollisionReferences(5, 5));
 
       fixture.world.delete(second);
       fixture.world.process();
@@ -217,6 +219,7 @@ class ObjectCollisionUpdaterTest {
     try {
       Objects.Entry door = object(1, 1, true, false, false);
       door.IsDoor = true;
+      door.BlockMissile = true;
       int doorEntity = fixture.create(door, 3, 3, Engine.Object.MODE_NU);
       fixture.create(object(1, 1, true, false, false), 7, 7, Engine.Object.MODE_NU);
       fixture.world.process();
@@ -241,6 +244,7 @@ class ObjectCollisionUpdaterTest {
     try {
       Objects.Entry door = object(1, 1, true, false, false);
       door.IsDoor = true;
+      door.BlockMissile = true;
       fixture.create(door, 3, 3, Engine.Object.MODE_NU);
       fixture.create(object(1, 1, true, false, false), 7, 7, Engine.Object.MODE_NU);
       fixture.world.process();

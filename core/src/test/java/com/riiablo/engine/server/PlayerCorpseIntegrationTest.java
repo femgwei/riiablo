@@ -53,6 +53,7 @@ class PlayerCorpseIntegrationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(events, cofs, death, retrieval)
         .build()
+        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
         .register("map", map)
         .register("iso", new IsometricCamera()));
     try {

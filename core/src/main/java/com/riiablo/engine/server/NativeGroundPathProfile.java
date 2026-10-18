@@ -4,8 +4,8 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.map.DT1;
 
 /** Ground terrain projection of D2Common's player and monster path masks.
- * Objects and doors remain in Map's separate reference layers; unit markers
- * are tested by DynamicUnitCollisionSystem.
+ * Map reads terrain/object/door bits from its persistent shared grid; unit
+ * movement masks are tested by DynamicUnitCollisionSystem against that grid.
  */
 public enum NativeGroundPathProfile {
   PLAYER(DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_PLAYER_WALK),

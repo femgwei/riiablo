@@ -152,17 +152,22 @@ final class NativeObjectPopulation {
     int minX = x - width / 2, minY = y - height / 2;
     for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++) {
       int wx = minX + dx, wy = minY + dy;
-      if (!zone.contains(wx, wy) || (zone.staticFlags(wx - zone.x(), wy - zone.y())
-          & (mask & 0xFF)) != 0
-          || zone.objectCollisionReferences(wx, wy) > 0) return false;
+      if (zone.nativeCollisionZone(wx, wy) == null
+          || (zone.nativeCollisionFlagsWorld(wx, wy) & mask) != 0) return false;
     }
     for (Map.NativeObject other : zone.getNativeObjects()) {
+      // A materialized object's current bits are already in the shared grid.
+      // Re-projecting its owner here would resurrect cleared overlapping bits.
+      if (other.entityId >= 0) continue;
       int classId = other.resolvedObjectId;
       if (classId < 0) classId = other.ds1Raw
           ? zone.map.files().obj.getObjectId(zone.level.Act + 1, other.presetIndex) : other.presetIndex;
       if (classId < 0) continue;
       Objects.Entry base = zone.map.files().objects.get(classId);
       if (base == null || !base.HasCollision[other.currentMode()]) continue;
+      int objectMask = com.d2moo.common.collision.D2Collision.objectMask(
+          base.IsDoor, base.BlocksVis, base.BlockMissile, base.SubClass);
+      if ((objectMask & mask) == 0) continue;
       int ox = Math.round(zone.x() + other.x - base.SizeX / 2f);
       int oy = Math.round(zone.y() + other.y - base.SizeY / 2f);
       if (minX < ox + base.SizeX && minX + width > ox && minY < oy + base.SizeY && minY + height > oy) return false;

@@ -18,9 +18,9 @@ class ImpMountCollisionIntegrationTest extends RiiabloTest {
       assertTrue(f.collisions.hasPresence(imp));
       assertFalse(f.world.getMapper(NativeUnitFlags.class).get(imp).has(NativeUnitFlags.MONSTER_TARGET));
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 170, 170, 1, 0x100));
-      // Exclude the mount: the rider must still supply MONSTER and NO_PATH.
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(mount, f.zone, 180, 180, 1, 0x100));
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(mount, f.zone, 180, 180, 1, 0x1000));
+      // Rider and mount write shared bits; excluding one suppresses the same bits.
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x1100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(mount, f.zone, 180, 180, 1, 0x1100));
       f.collisions.rebuildNow();
       assertEquals(new Vector2(180, 180), f.pos(imp));
       assertEquals(new Vector2(180, 180), f.pos(mount));
@@ -29,6 +29,8 @@ class ImpMountCollisionIntegrationTest extends RiiabloTest {
       assertTrue(f.world.getMapper(NativeUnitFlags.class).get(imp).has(NativeUnitFlags.MONSTER_TARGET));
       assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 170, 170, 1, 0x100));
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(mount, f.zone, 180, 180, 1, 0x100));
+      assertEquals(0, f.zone.nativeCollisionFlagsWorld(180, 180) & 0x1100,
+          "dismount clears the rider's old shared bits, including the mount centre");
     }
   }
 

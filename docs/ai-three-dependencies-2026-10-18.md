@@ -109,3 +109,33 @@ failures/errors/skipped 均为 0。未跑全 core，部分模块架构依赖任�
 组件判定并在最终复跑覆盖。地形/接缝用例为人工 fixture，不是自然地图验收。
 未运行整个 core/AI 测试集；架构任务中的部分模块测试为 UP-TO-DATE。
 本文件记录的是三项的可复核增量，不是三项一次性全部完成的声明。
+
+## 四阶段收敛：第一阶段生产共享碰撞（2026-10-18）
+
+第一阶段代码接入完成，验证结果见下方记录；第二阶段完整原生路径调度、第三阶段动作全覆盖、
+第四阶段自然地图/GL/跨电脑验收仍分别待办。本节更新此前“动态单位仍为 owner 投影”的状态。
+
+- 有有效碰撞数据的 Zone 使用持久 16 位共享网格（short 存储）。玩家、怪物、PET、尸体、
+  飞弹、地面物品与对象/门在状态变化时写位或清位；重叠删除/移动允许互清，不按 owner 计数
+  或每帧重绘恢复。无有效 Zone 数据的 reduced world 保留兼容路径。
+- 工厂分配、移动失败恢复、传送、死亡/复活、组件移除及 ECS pending deletion 发布碰撞变化。
+  蛙魔隐藏遵循中心清位和 field-only pattern 切换，大 footprint 残留保留。
+- footprint 跨真实原生房间接缝更新，不混入 detached overlapping level；保存网格 generation，
+  旧 footprint 不清新网格。对象 mask 按 Units.cpp 区分门、视线、飞弹及 TownPortal。
+- 生产路径/出生/对象落点查询读取共享位；materialized object 不再通过 owner 投影补回。
+  未实体化对象仍作为分配 staging footprint。飞弹接入占位发布，命中算法未在本阶段完整移植。
+- 查询前逐实体比较变化，避免重绘，但仍有 O(N) 扫描；尚未做自然地图规模性能验收。
+  Whirlwind 仍保留宿主穿单位兼容路线，NO_PATH 特殊调度随第二阶段处理。
+- 原版依据：D2Common Path.cpp 的分配、pattern 更新及 deadCol；Units.cpp 对象 mask；
+  AiThink.cpp FrogDemon；D2Collision.cpp 共享 set/reset/invalid 0x27；Missiles.cpp Collision/Size。
+
+未跑整个 core 测试集；人工 ECS/Zone fixture 和无渲染资源测试不能替代自然地图整链或 GL 验收。
+验证收尾（2026-10-19）：扩展轮 142 项中 141 通过，新加网格替换测试因误用 8 位
+terrain.or 写 0x804 失败；改为 16 位 setter 并加入删除前断言后，最终单独复跑
+SharedCollisionRuntimeTest 共 14 项，failures/errors/skipped 全为 0。夹具自行设置并恢复
+Gdx.app，避免测试顺序依赖。日志：build/ai-shared-collision-phase1-verified.log、
+build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegression 和
+服务端/桌面编译通过；最新工作区 architectureRegression 为 3 项中 1 项失败，原因是
+其他聊天未纳入本轮提交的 Pathfinder、SequenceHandler、VelocityAdder 全局访问增长，
+不能将最新工作区架构回归报告为通过。未扩大基线或修改这些并行文件。
+最终服务端/桌面编译通过：build/ai-shared-collision-phase1-compile.log（2026-10-19）。

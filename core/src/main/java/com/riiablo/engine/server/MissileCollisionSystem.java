@@ -182,6 +182,18 @@ public class MissileCollisionSystem extends IteratingSystem {
   
   @Override
   protected void process(int entityId) {
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision != null) collision.synchronizeNativeCollision(entityId);
+    try {
+      processMissile(entityId);
+    } finally {
+      // All early exits (including expiry and hit deletion) publish collision
+      // before the next missile/skill callback in this simulation tick.
+      if (collision != null) collision.synchronizeNativeCollision(entityId);
+    }
+  }
+
+  private void processMissile(int entityId) {
     Missile missile = mMissile.get(entityId);
     if (!missile.authoritative) return;
     Position position = mPosition.get(entityId);

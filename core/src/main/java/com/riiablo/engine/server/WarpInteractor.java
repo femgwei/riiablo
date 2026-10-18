@@ -291,6 +291,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     if (wrapper == null) wrapper = mMapWrapper.create(entityId);
     wrapper.set(map, destination);
+    if (dynamicCollision != null) dynamicCollision.reserveNativeCollision(entityId);
     Map.RoomEx room = destination.findRoomEx(arrival.x, arrival.y);
     wrapper.roomId = room == null ? -1 : room.id;
 

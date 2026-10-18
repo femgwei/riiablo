@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.codec.excel.MonStats2;
@@ -85,6 +86,7 @@ class DynamicUnitCollisionSystemTest {
       outdoor.setNativeTileGrid(new com.riiablo.drlg.TileGrid(2,2), 0);
       town.setNativeTileGrid(new com.riiablo.drlg.TileGrid(2,2), 0);
       outdoor.setPosition(-10,0);
+      outdoor.map = map; town.map = map;
       map.getZones().add(outdoor); map.getZones().add(town);
       int a = world.create(), b = world.create();
       for (int id : new int[] {a,b}) {
@@ -100,8 +102,10 @@ class DynamicUnitCollisionSystemTest {
       world.getMapper(com.riiablo.engine.server.component.Position.class).get(b).position.set(0,5);
       collision.refreshNow();
       assertTrue(map.areZonesAdjacent(outdoor,town));
-      assertTrue(collision.isFreeForPath(a,-1,0,5,2), "An A1 unit must not block an unrelated A5 rectangle");
-      assertTrue(collision.isFreeForPath(outdoor,a,-1,0,5,2));
+      assertEquals(0x27, outdoor.nativeCollisionFlagsWorld(0,5),
+          "unlinked rectangles cannot resolve each other's grid cells");
+      assertFalse(collision.isFreeForPath(a,-1,0,5,2), "native invalid room is blocked independently of unit owners");
+      assertFalse(collision.isFreeForPath(outdoor,a,-1,0,5,2));
       assertTrue(collision.pathBlockers(a,0,5,2).size == 0);
       town.level.Id = 109;
       map.addWarpDestinationOverride(109,0,110); town.setNativeSeamAnchor(0,0,5);

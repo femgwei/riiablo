@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 class WhirlwindCollisionTest {
   @Test void sweepClipsConstructionAtObjectsButMovementOnlyAtStaticBarriers() {
     com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone() {
-      @Override public int staticFlagsWorld(int x, int y) { return x >= 4 ? 1 : 0; }
-      @Override public int objectCollisionReferences(int x, int y) { return x == 2 ? 1 : 0; }
-      @Override public int doorCollisionReferences(int x, int y) { return 0; }
+      @Override public int nativeCollisionFlagsWorld(int x, int y) {
+        return x >= 4 ? 1 : x == 2 ? 0x400 : 0;
+      }
     };
     com.riiablo.map.Map map = new com.riiablo.map.Map(0, 0) {
       @Override public Zone getZone(int x, int y) { return zone; }
@@ -26,16 +26,16 @@ class WhirlwindCollisionTest {
   }
 
   @Test void constructionAndMovementUseNativeStageMasks() {
-    assertTrue(WhirlwindCollision.blocks(1, 0, 0, true));
-    assertTrue(WhirlwindCollision.blocks(1, 0, 0, false));
-    assertTrue(WhirlwindCollision.blocks(0, 1, 0, true));
-    assertTrue(WhirlwindCollision.blocks(0, 1, 1, true));
-    assertFalse(WhirlwindCollision.blocks(0, 1, 1, false));
-    assertFalse(WhirlwindCollision.blocks(4, 0, 0, true));
-    assertTrue(WhirlwindCollision.blocks(4, 0, 0, false));
-    assertTrue(WhirlwindCollision.blocks(0x20, 0, 0, false));
-    assertFalse(WhirlwindCollision.blocks(8, 0, 0, true));
-    assertFalse(WhirlwindCollision.blocks(8, 0, 0, false));
+    assertTrue(WhirlwindCollision.blocks(1, true));
+    assertTrue(WhirlwindCollision.blocks(1, false));
+    assertTrue(WhirlwindCollision.blocks(0x400, true));
+    assertTrue(WhirlwindCollision.blocks(0xC00, true));
+    assertFalse(WhirlwindCollision.blocks(0xC00, false));
+    assertFalse(WhirlwindCollision.blocks(4, true));
+    assertTrue(WhirlwindCollision.blocks(4, false));
+    assertTrue(WhirlwindCollision.blocks(0x20, false));
+    assertFalse(WhirlwindCollision.blocks(8, true));
+    assertFalse(WhirlwindCollision.blocks(8, false));
   }
 
   @Test void physicsSensorsRestoreTheirOriginalValuesAfterSkillMove() {

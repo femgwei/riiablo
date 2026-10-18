@@ -37,6 +37,13 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     if (mObject.has(entityId) && mPosition.has(entityId)) process(entityId);
   }
 
+  /** Publish mode/deletion transitions before a same-tick collision query. */
+  public void synchronizeCollision() {
+    com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Object.class, Position.class)).getEntities();
+    for (int i = 0; i < ids.size(); i++) process(ids.get(i));
+  }
+
   private void setBox2DCollision(int entityId, boolean enabled) {
     Box2DBody bodyWrapper = mBox2DBody.get(entityId);
     // Object entities can enter the ECS one frame before Box2DPhysics creates
@@ -50,6 +57,10 @@ public class ObjectCollisionUpdater extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    if (com.artemis.PendingEntityDeletion.isDeleted(world, entityId)) {
+      removed(entityId);
+      return;
+    }
     CofReference reference = mCofReference.get(entityId);
     Object object = mObject.get(entityId);
     Objects.Entry base = object == null ? null : object.base;
@@ -118,12 +129,8 @@ public class ObjectCollisionUpdater extends IteratingSystem {
   /** D2Common Units.cpp::UNITS_GetCollisionMask (object branch). */
   static int nativeCollisionMask(Objects.Entry base) {
     if (base == null) return 0;
-    if (base.IsDoor) {
-      if (base.BlocksVis) return 0x806;
-      return base.BlockMissile ? 0x804 : 0x400;
-    }
-    if ((base.SubClass & 4) != 0) return 0x8000;
-    return base.BlockMissile ? 0x404 : 0x400;
+    return com.d2moo.common.collision.D2Collision.objectMask(
+        base.IsDoor, base.BlocksVis, base.BlockMissile, base.SubClass);
   }
 
   private static final class Footprint {
@@ -135,6 +142,9 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     final boolean door;
     final boolean enabled;
     final int nativeMask;
+    final int generation;
+    final Map.Zone[] cellZones;
+    final int[] cellGenerations;
 
     Footprint(Map.Zone zone, int x, int y, int width, int height,
         boolean door, boolean enabled, int nativeMask) {
@@ -146,22 +156,52 @@ public class ObjectCollisionUpdater extends IteratingSystem {
       this.door = door;
       this.enabled = enabled;
       this.nativeMask = nativeMask;
+      this.generation = zone == null ? 0 : zone.nativeCollisionGeneration();
+      int cells = enabled && zone != null && width > 0 && height > 0 ? width * height : 0;
+      cellZones = new Map.Zone[cells];
+      cellGenerations = new int[cells];
+      for (int dy = 0; dy < height && cells > 0; dy++) for (int dx = 0; dx < width; dx++) {
+        int index = dy * width + dx;
+        Map.Zone owner = zone.nativeCollisionZone(x + dx, y + dy);
+        cellZones[index] = owner;
+        cellGenerations[index] = owner == null ? 0 : owner.nativeCollisionGeneration();
+      }
     }
 
     boolean matches(Map.Zone zone, int x, int y, int width, int height,
         boolean enabled, boolean door, int nativeMask) {
-      return this.enabled == enabled && this.zone == zone && this.x == x && this.y == y
+      if (!(this.enabled == enabled && this.zone == zone && this.x == x && this.y == y
           && this.width == width && this.height == height && this.door == door
-          && this.nativeMask == nativeMask;
+          && this.nativeMask == nativeMask
+          && (zone == null || generation == zone.nativeCollisionGeneration()))) return false;
+      for (int i = 0; i < cellZones.length; i++) {
+        Map.Zone owner = zone.nativeCollisionZone(x + i % width, y + i / width);
+        if (cellZones[i] != owner
+            || owner != null && cellGenerations[i] != owner.nativeCollisionGeneration()) return false;
+      }
+      return true;
     }
 
     void add() {
-      zone.adjustObjectCollision(x, y, width, height, 1, door, nativeMask);
+      zone.adjustObjectCollision(x, y, width, height, 1, door, 0);
+      alterNative(true);
     }
 
     void remove() {
-      if (enabled && zone != null && width > 0 && height > 0) {
-        zone.adjustObjectCollision(x, y, width, height, -1, door, nativeMask);
+      if (enabled && zone != null && width > 0 && height > 0
+          && generation == zone.nativeCollisionGeneration()) {
+        zone.adjustObjectCollision(x, y, width, height, -1, door, 0);
+      }
+      alterNative(false);
+    }
+
+    private void alterNative(boolean set) {
+      for (int i = 0; i < cellZones.length; i++) {
+        Map.Zone owner = cellZones[i];
+        if (owner == null || owner.nativeCollisionGeneration() != cellGenerations[i]) continue;
+        int cx = x + i % width, cy = y + i / width;
+        if (set) owner.setNativeCollisionMask(cx, cy, nativeMask);
+        else owner.resetNativeCollisionMask(cx, cy, nativeMask);
       }
     }
   }

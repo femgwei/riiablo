@@ -10,7 +10,7 @@ public final class D2CollisionGrid {
     private final int originY;
     private final int width;
     private final int height;
-    private final int[] flags;
+    private final short[] flags;
 
     public D2CollisionGrid(int originX, int originY, int width, int height) {
         long area = (long) width * height;
@@ -21,7 +21,7 @@ public final class D2CollisionGrid {
         this.originY = originY;
         this.width = width;
         this.height = height;
-        this.flags = new int[(int) area];
+        this.flags = new short[(int) area];
     }
 
     public int originX() {
@@ -56,21 +56,21 @@ public final class D2CollisionGrid {
 
     public int flagsAt(int x, int y) {
         int index = indexOf(x, y);
-        return index < 0 ? D2Collision.COLLIDE_MASK_INVALID : flags[index];
+        return index < 0 ? D2Collision.COLLIDE_MASK_INVALID : flags[index] & 0xFFFF;
     }
 
     public void setMask(int x, int y, int mask) {
         int index = indexOf(x, y);
-        if (index >= 0) flags[index] = D2Collision.setMask(flags[index], mask);
+        if (index >= 0) flags[index] = (short) D2Collision.setMask(flags[index], mask);
     }
 
     public void resetMask(int x, int y, int mask) {
         int index = indexOf(x, y);
-        if (index >= 0) flags[index] = D2Collision.resetMask(flags[index], mask);
+        if (index >= 0) flags[index] = (short) D2Collision.resetMask(flags[index], mask);
     }
 
     public void clear() {
-        Arrays.fill(flags, 0);
+        Arrays.fill(flags, (short) 0);
     }
 
     public int checkMaskWithSizeXY(int x, int y, int sizeX, int sizeY, int mask) {

@@ -38,15 +38,18 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
     }
   }
 
-  @Test void overlappingWraithMarkersKeepOtherOwnerWhenSourceIsExcluded() {
+  @Test void overlappingWraithMarkersUseSharedBitsAndDoNotReappearAfterRemoval() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       int first = f.factory.createMonster(Riiablo.files.monstats.get("wraith1").hcIdx, 180, 180);
       int second = f.factory.createMonster(Riiablo.files.monstats.get("wraith1").hcIdx, 180, 180);
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 180, 180, 1, 0x100));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 180, 180, 1, 0x100));
       f.world.process();
       f.world.delete(second); f.world.process();
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 180, 180, 1, 0x100));
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));
+      f.collisions.refreshNow();
+      assertEquals(0, f.zone.nativeCollisionFlagsWorld(180, 180) & 0x100);
     }
   }
 
@@ -59,6 +62,7 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
       missile.missile.Size = 2;
       Position position = f.world.getMapper(Position.class).create(id);
       position.position.set(180, 180);
+      f.world.getMapper(MapWrapper.class).create(id).set(f.map, f.zone);
       f.collisions.reserveMissileSpawn(id);
       assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x40));
       assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 180, 1, 0x40));
@@ -128,6 +132,7 @@ class MaggotSpawnExecutionTest extends RiiabloTest {
       int item = f.world.create();
       f.world.getMapper(Item.class).create(item);
       f.world.getMapper(Position.class).create(item).position.set(180, 180);
+      f.world.getMapper(MapWrapper.class).create(item).set(f.map, f.zone);
       f.world.process(); f.collisions.refreshNow();
       assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x200));
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x100));

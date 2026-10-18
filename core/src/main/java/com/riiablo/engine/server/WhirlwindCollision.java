@@ -8,10 +8,7 @@ final class WhirlwindCollision {
   static final int START_MASK = 0x0c01; // WALL | OBJECT | DOOR
   static final int MOVE_MASK = 0x1025; // WALL | MISSILE_BARRIER | BLANK | NO_PATH
 
-  static boolean blocks(int staticFlags, int objects, int doors, boolean constructing) {
-    int nativeFlags = staticFlags & 0xff;
-    if (objects > 0) nativeFlags |= 0x400;
-    if (doors > 0) nativeFlags |= 0x800;
+  static boolean blocks(int nativeFlags, boolean constructing) {
     return (nativeFlags & (constructing ? START_MASK : MOVE_MASK)) != 0;
   }
 
@@ -23,9 +20,10 @@ final class WhirlwindCollision {
         if (size == 2 && dx != 0 && dy != 0) continue;
         Map.Zone zone = map.getZone(x + dx, y + dy);
         if (zone == null) return true; // native invalid cell: COLLIDE_BLANK
-        if (blocks(zone.staticFlagsWorld(x + dx, y + dy),
-            zone.objectCollisionReferences(x + dx, y + dy),
-            zone.doorCollisionReferences(x + dx, y + dy), constructing)) return true;
+        // This compatibility ray handles terrain and objects. The native
+        // Whirlwind path's NO_PATH schedule belongs to the path migration.
+        int flags = zone.nativeCollisionFlagsWorld(x + dx, y + dy) & 0xFFF;
+        if (blocks(flags, constructing)) return true;
       }
     }
     return false;

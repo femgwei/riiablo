@@ -51,13 +51,14 @@ class PlayerCorpseSpawnCollisionTest extends RiiabloTest {
     }
   }
 
-  @Test void removalAndOverlapKeepOnlySurvivingCorpseMarker() {
+  @Test void overlappingCorpseRemovalClearsSharedBitWithoutOwnerReconstruction() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       int first = corpse(f, 180, 180), second = corpse(f, 180, 180);
       f.world.process();
       f.world.getMapper(Corpse.class).remove(first);
       f.world.process();
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x8000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x8000));
+      assertEquals(0, f.zone.nativeCollisionFlagsWorld(180, 180) & 0x8000);
       f.world.getMapper(Corpse.class).remove(second);
       f.world.process();
       assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 180, 180, 1, 0x8000));

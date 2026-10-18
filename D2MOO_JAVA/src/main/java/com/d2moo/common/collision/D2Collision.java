@@ -55,6 +55,14 @@ public final class D2Collision {
             COLLIDE_DOOR | COLLIDE_MISSILE_BARRIER | COLLIDE_VISIBLE;
     public static final int COLLIDE_MASK_BLOCKS_DOOR =
             COLLIDE_PLAYER | COLLIDE_MONSTER | COLLIDE_CORPSE;
+
+    /** D2Common Units.cpp::UNITS_GetCollisionMask, UNIT_OBJECT branch. */
+    public static int objectMask(boolean door, boolean blocksVis, boolean blockMissile, int subClass) {
+        if (door) return blocksVis ? COLLIDE_MASK_DOOR_BLOCK_VIS
+                : blockMissile ? COLLIDE_DOOR | COLLIDE_MISSILE_BARRIER : COLLIDE_OBJECT;
+        if ((subClass & 4) != 0) return COLLIDE_CORPSE;
+        return blockMissile ? COLLIDE_OBJECT | COLLIDE_MISSILE_BARRIER : COLLIDE_OBJECT;
+    }
     public static final int COLLIDE_MASK_SPAWN =
             COLLIDE_WALL | COLLIDE_ITEM | COLLIDE_OBJECT | COLLIDE_DOOR | COLLIDE_NO_PATH | COLLIDE_PET;
     public static final int COLLIDE_MASK_PLACEMENT =

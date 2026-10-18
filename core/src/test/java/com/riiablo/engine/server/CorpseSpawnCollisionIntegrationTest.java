@@ -106,15 +106,19 @@ class CorpseSpawnCollisionIntegrationTest extends RiiabloTest {
     }
   }
 
-  @Test void overlapKeepsOtherCorpseAndDeletionClearsItsMarker() {
+  @Test void overlapUsesSharedCorpseBitsAndDeletionDoesNotRebuildOtherOwner() {
     try (DiabPrisonIntegrationTest.Fixture f = new DiabPrisonIntegrationTest.Fixture("diablo")) {
       int first = f.factory.createMonster(Riiablo.files.monstats.get("fallen1").hcIdx, 180, 180);
       int second = f.factory.createMonster(Riiablo.files.monstats.get("fallen1").hcIdx, 180, 180);
       f.collisions.markMonsterDeadCollision(first);
       f.collisions.markMonsterDeadCollision(second);
-      assertFalse(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 181, 181, 1, 0x8000));
+      assertFalse(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x8000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 181, 181, 1, 0x8000),
+          "source exclusion suppresses a shared bit, not a counted owner");
       f.world.process(); f.world.delete(second); f.world.process();
-      assertTrue(f.collisions.isFreeForMonsterSpawnMask(first, f.zone, 181, 181, 1, 0x8000));
+      assertTrue(f.collisions.isFreeForMonsterSpawnMask(-1, f.zone, 181, 181, 1, 0x8000));
+      f.collisions.refreshNow();
+      assertEquals(0, f.zone.nativeCollisionFlagsWorld(181, 181) & 0x8000);
     }
   }
 }

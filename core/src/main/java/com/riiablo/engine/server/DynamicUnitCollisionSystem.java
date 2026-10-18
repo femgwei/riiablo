@@ -21,6 +21,8 @@ import com.riiablo.engine.server.collision.CollisionSize;
 import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.badlogic.gdx.utils.IntMap;
+import com.d2moo.common.collision.D2Collision;
 
 /** Maintains D2-style dynamic unit footprints without physics-engine pushing. */
 public class DynamicUnitCollisionSystem extends BaseSystem {
@@ -42,8 +44,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
+  private final SharedUnitCollisionIndex shared = new SharedUnitCollisionIndex();
+  private final IntMap<LegacyFootprint> legacy = new IntMap<>();
+  private final com.badlogic.gdx.utils.IntSet registered = new com.badlogic.gdx.utils.IntSet();
+  private EntitySubscription positioned;
+  private static final class LegacyFootprint {
+    int x, y, size;
+    Map.Zone zone;
+  }
   private final com.badlogic.gdx.utils.IntSet newUnits = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription units;
   private final com.badlogic.gdx.utils.IntSet spawnMissiles = new com.badlogic.gdx.utils.IntSet();
@@ -64,6 +75,21 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void initialize() {
+    positioned = world.getAspectSubscriptionManager().get(Aspect.all(Position.class));
+    positioned.addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
+      @Override public void inserted(IntBag ids) {
+        for (int i = 0; i < ids.size(); i++) synchronizeNative(ids.get(i));
+      }
+      @Override public void removed(IntBag ids) {
+        for (int i = 0; i < ids.size(); i++) {
+          int id = ids.get(i);
+          shared.remove(id);
+          grid.remove(id);
+          legacy.remove(id);
+          registered.remove(id);
+        }
+      }
+    });
     world.getAspectSubscriptionManager().get(Aspect.all(
         com.riiablo.engine.server.component.PlayerCorpse.class,
         com.riiablo.engine.server.component.Corpse.class, Position.class))
@@ -107,6 +133,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         for (int i = 0; i < entities.size(); i++) {
           newUnits.remove(entities.get(i));
           spawnUnits.remove(entities.get(i));
+          grid.remove(entities.get(i));
+          legacy.remove(entities.get(i));
         }
       }
     });
@@ -132,7 +160,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private void rebuildNow(boolean relocateOverlaps) {
     if (!enabled || units == null) return;
-    grid.clear();
+    synchronizeNativeAll();
     IntBag entities = units.getEntities();
     // Preserve player positions when a deferred room population appears on
     // top of an arrival point.  Insert players first, then relocate monsters
@@ -146,11 +174,25 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private void insertUnits(IntBag entities, boolean players, boolean relocateOverlaps) {
     for (int i = 0; i < entities.size(); i++) {
       int entityId = entities.get(i);
-      if (!hasPresence(entityId) || isPlayer(entityId) != players) continue;
+      if (isPlayer(entityId) != players) continue;
+      if (!hasPresence(entityId)) {
+        grid.remove(entityId);
+        legacy.remove(entityId);
+        continue;
+      }
       Position position = mPosition.get(entityId);
       int x = Map.round(position.position.x);
       int y = Map.round(position.position.y);
       int size = footprint(entityId);
+      Map.Zone zone = zoneOf(entityId);
+      LegacyFootprint previous = legacy.get(entityId);
+      if (previous != null && previous.x == x && previous.y == y && previous.size == size
+          && previous.zone == zone) continue;
+      // Generated maps use native allocation and bit state. The owner index
+      // remains diagnostic there; spawn relocation is only a legacy fallback.
+      if (zone != null && zone.hasNativeCollisionData()) {
+        grid.put(entityId, x, y, size);
+      } else
       if (grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) {
         grid.put(entityId, x, y, size);
       } else if (isOwnedCompanionOverlappingOwner(entityId) || isMountedPair(entityId)) {
@@ -165,11 +207,117 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
         // the room topology finishes loading.
         grid.put(entityId, x, y, size);
       }
+      LegacyFootprint next = new LegacyFootprint();
+      next.x = Map.round(position.position.x); next.y = Map.round(position.position.y);
+      next.size = size; next.zone = zone;
+      legacy.put(entityId, next);
     }
   }
 
+  private Map.Zone zoneOf(int id) {
+    if (id < 0 || !mMapWrapper.has(id)) return null;
+    MapWrapper wrapper = mMapWrapper.get(id);
+    return wrapper == null ? null : wrapper.zone;
+  }
+
+  private void synchronizeNativeAll() {
+    if (!enabled || positioned == null) return;
+    ObjectCollisionUpdater objects = world.getSystem(ObjectCollisionUpdater.class);
+    if (objects != null) objects.synchronizeCollision();
+    IntBag ids = positioned.getEntities();
+    for (int i = 0; i < ids.size(); i++) synchronizeNative(ids.get(i));
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = registered.iterator(); it.hasNext;) {
+      synchronizeNative(it.next());
+    }
+  }
+
+  private SharedUnitCollisionIndex.Footprint nativeFootprint(int id) {
+    if (com.artemis.PendingEntityDeletion.isDeleted(world, id)) return null;
+    com.riiablo.engine.server.component.UnitLifecycle lifecycle = mLifecycle.get(id);
+    if (lifecycle != null && lifecycle.phase.ordinal()
+        >= com.riiablo.engine.server.component.UnitLifecycle.Phase.REMOVED.ordinal()) return null;
+    Map.Zone zone = zoneOf(id);
+    if (zone == null || !zone.hasNativeCollisionData() || !mPosition.has(id)) return null;
+    Position p = mPosition.get(id);
+    int x = Map.round(p.position.x), y = Map.round(p.position.y);
+    int pattern = SharedUnitCollisionIndex.WITH_SIZE, size = 1, mask;
+    boolean hidden = false;
+    if (mPlayerCorpse.has(id) && mCorpse.has(id) && !mPlayer.has(id)) {
+      mask = D2Collision.COLLIDE_CORPSE; size = 3;
+    } else if (mMonster.has(id) && (mMonster.get(id).nativeCorpseCollision
+        || lifecycle != null && lifecycle.isDead() && (mMonster.get(id).monstats2 == null
+            || !mMonster.get(id).monstats2.deadCol))) {
+      mask = D2Collision.COLLIDE_CORPSE; size = 3;
+    } else if (mMissile.has(id)) {
+      com.riiablo.engine.server.component.Missile missile = mMissile.get(id);
+      if (!missile.authoritative || missile.presentationOnly || missile.missile == null
+          || !missile.missile.Collision) return null;
+      size = missile.missile.Size;
+      if (size < 1 || size > 3) return null;
+      mask = D2Collision.COLLIDE_MISSILE;
+    } else if (mItem.has(id)) {
+      mask = D2Collision.COLLIDE_ITEM;
+    } else if (mClass.has(id) && mVelocity.has(id)
+        && (isPlayer(id) || mClass.get(id).type == Class.Type.MON)) {
+      if (isPlayer(id) && mPlayerCorpse.has(id)) return null;
+      mask = isPlayer(id) ? D2Collision.COLLIDE_PLAYER : D2Collision.COLLIDE_MONSTER;
+      size = footprint(id);
+      boolean allocationWraith = mMonster.has(id) && !mMonster.get(id).nativeRestoredCollisionPattern
+          && NativeGroundPathProfile.isWraith(mMonster.get(id).monstats);
+      if (size == 0 && !allocationWraith) return null;
+      pattern = size >= 3 ? D2Collision.PATTERN_BIG_UNIT_PRESENCE : D2Collision.PATTERN_SMALL_UNIT_PRESENCE;
+      if (isPetPresence(id)) pattern += 2;
+      if (mMonster.has(id)) {
+        Monster monster = mMonster.get(id);
+        if (mCasting.has(id) && mCasting.get(id).monsterHatchStarted) return null;
+        hidden = monster.frogNoPresence;
+        if (hidden || monster.vultureAirborne
+            || !monster.nativeRestoredCollisionPattern && NativeGroundPathProfile.isWraith(monster.monstats)) {
+          pattern = D2Collision.PATTERN_SMALL_NO_PRESENCE;
+        } else if (!monster.nativeRestoredCollisionPattern && !isDynamicObstacle(monster)) return null;
+      }
+    } else return null;
+    Map.Zone center = zone.nativeCollisionZone(x, y);
+    return new SharedUnitCollisionIndex.Footprint(center == null ? zone : center,
+        x, y, pattern, size, mask, hidden);
+  }
+
+  /** Apply only observed transitions. Identical state never rewrites the grid. */
+  private void synchronizeNative(int id) {
+    if (!enabled) return;
+    SharedUnitCollisionIndex.Footprint next = nativeFootprint(id);
+    if (next != null && next.hidden && shared.get(id) == null) {
+      int size = mSize.has(id) ? mSize.get(id).size : 1;
+      int initialPattern = size >= 3 ? D2Collision.PATTERN_BIG_UNIT_PRESENCE
+          : size == 0 ? D2Collision.PATTERN_NONE : D2Collision.PATTERN_SMALL_UNIT_PRESENCE;
+      shared.update(id, new SharedUnitCollisionIndex.Footprint(next.zone, next.x, next.y,
+          initialPattern, size, next.mask, false));
+    }
+    shared.update(id, next);
+  }
+
+  /** Same-tick allocation boundary for ground items and other positioned units. */
+  public void reserveNativeCollision(int id) {
+    synchronizeNativeAll();
+    registered.add(id);
+    synchronizeNative(id);
+  }
+
+  /** Per-unit movement boundary; allocation already registered this id. */
+  public void synchronizeNativeCollision(int id) {
+    synchronizeNative(id);
+  }
+
+  /** Explicit deletion boundary for consumers which perform more work in the same tick. */
+  public void releaseNativeCollision(int id) {
+    shared.remove(id);
+    grid.remove(id);
+    legacy.remove(id);
+    registered.remove(id);
+  }
+
   private boolean isPlayer(int entityId) {
-    return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+    return entityId >= 0 && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
   }
 
   private boolean relocateOverlappingUnit(int entityId, int originX, int originY,
@@ -215,17 +363,31 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Used by the pathfinder; targetId is ignored for approach paths. */
   public boolean isFreeForPath(int moverId, int targetId,
       int x, int y, int size) {
+    Map.Zone zone = zoneOf(moverId);
+    if (enabled && nativeZone(zone)) {
+      synchronizeNativeAll();
+      return shared.check(zone, x, y, testPattern(size), size, dynamicMoveMask(moverId),
+          moverId, pathIgnored(moverId, targetId)) == 0;
+    }
     return !enabled || grid.isFree(moverId, targetId, x, y, size,
         blockerFor(moverId));
   }
 
   public com.badlogic.gdx.utils.IntArray pathBlockers(int moverId, int x, int y, int size) {
+    if (nativeZone(zoneOf(moverId)) && isFreeForPath(moverId, -1, x, y, size)) {
+      return new com.badlogic.gdx.utils.IntArray();
+    }
     return grid.blockers(moverId, Engine.INVALID_ENTITY, x, y, size, blockerFor(moverId));
   }
 
   /** Warp/staging queries must test the destination, before changing the wrapper. */
   public boolean isFreeForPath(Map.Zone destination, int moverId, int targetId,
       int x, int y, int size) {
+    if (enabled && nativeZone(destination)) {
+      synchronizeNativeAll();
+      return shared.check(destination, x, y, testPattern(size), size, dynamicMoveMask(moverId),
+          moverId, pathIgnored(moverId, targetId)) == 0;
+    }
     NativePathProfile profile = nativePathProfile(moverId);
     int ownerId = ownedCompanionOwner(moverId);
     return !enabled || grid.isFree(moverId, targetId, x, y, size, entityId ->
@@ -235,11 +397,19 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   /** MonsterSpawn uses CheckMaskWithSize, not the larger walking pattern. */
   public boolean isFreeForMonsterSpawn(Map.Zone zone, int x, int y, int size) {
+    if (enabled && nativeZone(zone)) {
+      synchronizeNativeAll();
+      return shared.check(zone, x, y, SharedUnitCollisionIndex.WITH_SIZE, size, 0x3000, -1, -1) == 0;
+    }
     return !enabled || grid.isFreeWithSize(Engine.INVALID_ENTITY, x, y, size,
         other -> sharesCollisionSpace(zone, other));
   }
 
   public boolean isFreeForMonsterSpawnReplacing(int sourceId, Map.Zone zone, int x, int y, int size) {
+    if (enabled && nativeZone(zone)) {
+      synchronizeNativeAll();
+      return shared.check(zone, x, y, SharedUnitCollisionIndex.WITH_SIZE, size, 0x3000, sourceId, -1) == 0;
+    }
     return !enabled || grid.isFreeWithSize(sourceId, x, y, size,
         other -> sharesCollisionSpace(zone, other));
   }
@@ -247,6 +417,10 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** SpawnCol uses native masks, not the unit's walking/flight profile. */
   public boolean isFreeForMonsterSpawnMask(int sourceId, Map.Zone zone, int x, int y, int size, int mask) {
     if (size < 0 || size > 3) return false;
+    if (nativeZone(zone)) {
+      synchronizeNativeAll();
+      return shared.check(zone, x, y, SharedUnitCollisionIndex.WITH_SIZE, size, mask, sourceId, -1) == 0;
+    }
     int radius = size >= 2 ? 1 : 0;
     for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
       if (size == 2 && dx != 0 && dy != 0) continue;
@@ -278,16 +452,19 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Factory registration makes newborn missiles visible before subscription insertion. */
   public void reserveMissileSpawn(int id) {
     spawnMissiles.add(id);
+    reserveNativeCollision(id);
   }
 
   /** Marker-only registration does not add walking presence. */
   public void registerMonsterSpawnMarkers(int id) {
     spawnUnits.add(id);
+    reserveNativeCollision(id);
   }
 
   /** Player allocation writes collision before ECS subscription insertion. */
   public void reservePlayerSpawn(int id) {
     spawnUnits.add(id);
+    reserveNativeCollision(id);
     if (enabled && hasPresence(id) && mPosition.has(id)) {
       Position position = mPosition.get(id);
       grid.put(id, Map.round(position.position.x), Map.round(position.position.y), footprint(id));
@@ -315,12 +492,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     mMonster.get(id).nativeCorpseCollision = true;
     corpseUnits.add(id);
     grid.remove(id);
+    legacy.remove(id);
+    reserveNativeCollision(id);
   }
 
   /** The retained inventory corpse, not the respawnable player, owns this box. */
   public void reservePlayerCorpse(int playerId, int corpseId) {
     grid.remove(playerId);
+    legacy.remove(playerId);
+    shared.remove(playerId);
     playerCorpses.add(corpseId);
+    reserveNativeCollision(corpseId);
   }
 
   private boolean hasSpawnCorpse(int sourceId, Map.Zone zone, int x, int y) {
@@ -415,16 +597,29 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (enabled && hasPresence(entityId)) grid.put(entityId, x, y, size);
   }
 
-  public void removeMonsterSpawnPresence(int entityId) { grid.remove(entityId); }
+  public void removeMonsterSpawnPresence(int entityId) {
+    grid.remove(entityId);
+    legacy.remove(entityId);
+    synchronizeNative(entityId);
+  }
 
   /** Landing/placement query: every indexed unit blocks, including the owner. */
   public boolean isFreeForLanding(int moverId, int x, int y, int size) {
+    if (enabled && nativeZone(zoneOf(moverId))) {
+      synchronizeNativeAll();
+      return shared.check(zoneOf(moverId), x, y, testPattern(size), size, 0x3000, moverId, -1) == 0;
+    }
     return !enabled || grid.isFree(moverId, Engine.INVALID_ENTITY, x, y, size,
         sameSpaceBlocker(moverId));
   }
 
   /** Dynamic NO_PATH portion of the native relocation mask 0x1C09 (no PET bit). */
   public boolean isFreeForFrogEmergence(int moverId, int x, int y, int size) {
+    if (enabled && nativeZone(zoneOf(moverId))) {
+      synchronizeNativeAll();
+      return shared.check(zoneOf(moverId), x, y, SharedUnitCollisionIndex.WITH_SIZE,
+          size, 0x1C09, moverId, -1) == 0;
+    }
     return !enabled || grid.isFreeWithSize(moverId, x, y, size,
         other -> sharesCollisionSpace(moverId, other) && !isPetPresence(other));
   }
@@ -432,12 +627,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Reserves a landing immediately so later pets in this tick see it. */
   public boolean tryLand(int moverId, int x, int y, int size) {
     if (!enabled || !hasPresence(moverId)) return true;
+    if (nativeZone(zoneOf(moverId))) return moveNative(moverId, x, y, 0x3000, false);
     return grid.move(moverId, Engine.INVALID_ENTITY, x, y, size, sameSpaceBlocker(moverId));
   }
 
   /** Transfers a unit to a destination without pushing another unit. */
   public boolean tryMove(int entityId, Vector2 destination) {
     if (!enabled || destination == null) return true;
+    if (nativeZone(zoneOf(entityId))) {
+      return moveNative(entityId, Map.round(destination.x), Map.round(destination.y),
+          mWhirlwindRuntime.has(entityId) ? 0 : dynamicMoveMask(entityId));
+    }
     if (!hasPresence(entityId)) {
       observeHiddenFrogMove(entityId, destination);
       return true;
@@ -466,7 +666,52 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Same as {@link #tryMove(int, Vector2)}, but useful for tests and probes. */
   public boolean tryMove(int entityId, int x, int y, int size) {
     if (!enabled) return true;
+    if (nativeZone(zoneOf(entityId))) return moveNative(entityId, x, y, dynamicMoveMask(entityId));
     return grid.move(entityId, -1, x, y, size);
+  }
+
+  private static boolean nativeZone(Map.Zone zone) {
+    return zone != null && zone.hasNativeCollisionData();
+  }
+
+  private static int testPattern(int size) {
+    return size == 0 ? D2Collision.PATTERN_NONE : size == 3
+        ? D2Collision.PATTERN_BIG_UNIT_PRESENCE : D2Collision.PATTERN_SMALL_UNIT_PRESENCE;
+  }
+
+  private int pathIgnored(int moverId, int targetId) {
+    int owner = ownedCompanionOwner(moverId);
+    return owner >= 0 ? owner : targetId;
+  }
+
+  private int dynamicMoveMask(int id) {
+    if (id >= 0 && mMonster.has(id)) {
+      Monster monster = mMonster.get(id);
+      if (monster.frogNoPresence || monster.vultureAirborne
+          || NativeGroundPathProfile.isWraith(monster.monstats)) return 0;
+    }
+    NativePathProfile profile = nativePathProfile(id);
+    return profile == NativePathProfile.MONSTER || profile == NativePathProfile.MONSTER_CAN_OPEN_DOORS
+        ? 0x3000 : 0x1000;
+  }
+
+  private boolean moveNative(int id, int x, int y, int mask) {
+    return moveNative(id, x, y, mask, true);
+  }
+
+  private boolean moveNative(int id, int x, int y, int mask, boolean ignoreOwner) {
+    synchronizeNativeAll();
+    SharedUnitCollisionIndex.Footprint current = nativeFootprint(id);
+    if (current == null) return true;
+    SharedUnitCollisionIndex.Footprint next = current.at(x, y);
+    // Retain native pet-owner escape compatibility without rebuilding owner bits.
+    int owner = ownedCompanionOwner(id);
+    if (ignoreOwner && owner >= 0
+        && shared.check(next.zone, x, y, next.pattern, next.size, mask, id, owner) == 0) mask = 0;
+    if (!shared.move(id, next, mask)) return false;
+    if (hasPresence(id)) grid.put(id, x, y, footprint(id));
+    observeHiddenFrogMove(id, new Vector2(x, y));
+    return true;
   }
 
   public boolean hasPresence(int entityId) {
@@ -556,7 +801,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   private NativePathProfile nativePathProfile(int moverId) {
-    if (!mMonster.has(moverId)) return NativePathProfile.PLAYER;
+    if (moverId < 0 || !mMonster.has(moverId)) return NativePathProfile.PLAYER;
     Monster monster = mMonster.get(moverId);
     MonStats.Entry stats = monster == null ? null : monster.monstats;
     if (stats != null && stats.flying) return NativePathProfile.FLYING;

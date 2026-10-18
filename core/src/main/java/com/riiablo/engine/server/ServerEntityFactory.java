@@ -559,6 +559,8 @@ public class ServerEntityFactory extends EntityFactory {
     int id = existingId == Engine.INVALID_ENTITY
         ? super.createEntity(Class.Type.MON, monstats.Id) : existingId;
     if (existingId != Engine.INVALID_ENTITY) {
+      DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+      if (collision != null) collision.releaseNativeCollision(id);
       NativeTargetNodes.get(world, id).detach();
       if (mUnitStates.has(id) && mUnitStates.get(id).stateList != null)
         mUnitStates.get(id).stateList.discardAll();
@@ -1439,6 +1441,8 @@ public class ServerEntityFactory extends EntityFactory {
     mMapWrapper.create(id).set(map, map == null ? null : map.getZone(x, y));
     mInteractable.create(id).set(1f, itemInteractor);
     mNetworked.create(id);
+    DynamicUnitCollisionSystem collisions = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collisions != null) collisions.reserveNativeCollision(id);
     return id;
   }
 
