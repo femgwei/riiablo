@@ -315,12 +315,13 @@ public final class ClientNpc extends Npc {
 
 
   @Override protected void presentInteraction() {
-    // D2 attaches sound index 10 to the healer NPC interaction.  Keep this
-    // client-side trigger unconditional for healer NPCs: the authoritative
+    // D2 attaches sound event 10, not Sounds.txt index 10. Retail 1.10f
+    // D2Client 0x6FB51920 dispatches it to 0x6FB5197A: sound 2673 (shrine_refill).
+    // Keep this client-side trigger unconditional for healer NPCs: the authoritative
     // stat update may already be reflected in the client snapshot by the time
     // this interaction callback runs.
     if (isHealer(monstats == null ? -1 : monstats.hcIdx) && Riiablo.audio != null) {
-      Riiablo.audio.play("cursor_convert_ready", true);
+      Riiablo.audio.play("shrine_refill", true);
     }
 
     // TODO: need some kind of static method that can take in some state params, e.g., character
