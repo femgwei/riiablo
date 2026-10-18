@@ -5000,6 +5000,23 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 生产纯算术集中迁移：新增 `:server-domain` NativeCombatMath，承接有效 AR/防御、
+  命中率、格挡率、已掷出物理伤害的增伤、物理减免、legacy 元素抗性/MDR、吸收和
+  物理偷取。CombatSystem 对应十个宿主方法改为适配/委托，DefenseCalculator 的
+  标量格挡率也复用同一内核；属性读取、ITD 资格、
+  零伤害档案分支、近战包含上界/导弹排除上界的随机掷值和状态写入仍留在 core。
+  共享边界常量归 NativeCombatConstants，旧 CombatSystem 常量保留别名。
+  不合并另一条 fixed-point lightning 原生结算路径，不调整当前 legacy 的抗性→MDR
+  顺序、物理最小一点、running 格挡 cap-before-divide 或既有偷取策略。
+  独立 domain 边界测试覆盖截断、负抗、免疫/绕过、缩放、饱和和百分比范围；core
+  迁移夹具冻结 `b0ff5c994` 的原实现，进行 2,000 组固定种子快照对照，并核对完整
+  物理/火焰包、吸收/偷取及 RNG 最终状态。此夹具证明迁移等价，不冒充新增原版机制证据。
+  显式 1.10f 广覆盖回归 73 类/236 项通过；最后的 DefenseCalculator 同式格挡适配
+  与常量归并后，再跑核心定向 71 项、domain 31 项、架构约束 3 项全部通过，
+  失败/错误/跳过均为 0，编译和模块边界检查通过。测试任务有重叠，不累加成全量数。
+  未执行全仓全量/客户端实机验证，完整攻击编排、原生 fixed-point lightning、
+  属性适配和状态应用仍在 core，不宣称整个战斗系统已独立。
+
 - 物理分层后续集中批次：NativeCombatContext、NativeDamagePacket 移入现有
   `:server-domain`（包名/类型名不变）；纯难度规则提取为 NativeDifficultyPolicy，
   `:core` 的 NativeDifficultyRules 保留完整旧签名作为委托门面，仅 Attributes 的

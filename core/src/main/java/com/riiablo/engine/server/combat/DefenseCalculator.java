@@ -43,13 +43,13 @@ public class DefenseCalculator {
   //==========================================================================
 
   /** 最大格挡率 */
-  public static final int MAX_BLOCK_CHANCE = 75;
+  public static final int MAX_BLOCK_CHANCE = NativeCombatConstants.MAX_BLOCK_CHANCE;
 
   /** 最大闪避率 */
   public static final int MAX_DODGE_CHANCE = 75;
 
   /** 格挡基础敏捷需求 */
-  public static final int BLOCK_BASE_DEX = 15;
+  public static final int BLOCK_BASE_DEX = NativeCombatConstants.BLOCK_BASE_DEX;
 
   /** PvP 伤害减免系数 */
   public static final int PVP_DAMAGE_DIVISOR = 6;
@@ -214,11 +214,9 @@ public class DefenseCalculator {
       return 0;
     }
 
-    // D2Common UNITS_GetBlockRate expansion formula. baseBlockChance already
-    // contains the class block factor plus the equipped shield's ToBlock.
-    int effectiveBlock = baseBlockChance * Math.max(0, dexterity - BLOCK_BASE_DEX)
-        / (Math.max(level, 1) * 2);
-    return Math.max(0, Math.min(MAX_BLOCK_CHANCE, effectiveBlock));
+    // This scalar entry receives combined class+shield block; no movement penalty here.
+    return NativeCombatMath.blockChance(true, true, true, 0, baseBlockChance,
+        dexterity, level, false);
   }
 
   /**
