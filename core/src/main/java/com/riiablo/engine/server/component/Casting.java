@@ -13,6 +13,10 @@ import com.riiablo.item.Item;
 
 @PooledWeaver
 public class Casting extends PooledComponent {
+  private static final java.util.concurrent.atomic.AtomicLong ACTION_IDS =
+      new java.util.concurrent.atomic.AtomicLong();
+  /** Diagnostic identity survives component pooling and multi-stage sequence changes. */
+  public long actionId;
   public int skillId = -1;
   public int nativeSummonClass = -1;
   public int nativeSummonMode;
@@ -132,6 +136,7 @@ public class Casting extends PooledComponent {
 
   public Casting set(int skillId, int targetId, Vector2 targetVec,
       long positionSnapshotTick) {
+    actionId = ACTION_IDS.incrementAndGet();
     nativeSummonClass = -1;
     nativeSummonMode = 0;
     nativeSummonPosition.setZero();

@@ -85,19 +85,22 @@ public final class MonsterAiArena extends ApplicationAdapter {
     public boolean fallback, specialAssert, specialPassed;
     public String special = "NOT_IMPLEMENTED", coverage = "BASELINE_ONLY";
     public float damage;
+    public List<MonsterActionTiming.Action> actionTimings = new ArrayList<>();
+    public int unmatchedExecutions;
   }
 
   static final class Config {
     String home = System.getenv("D2_HOME");
     Path output;
     int ticks = 500, seed = 1, difficulty;
-    boolean catalogOnly;
+    boolean catalogOnly, attackTiming;
     Set<String> monsters = new TreeSet<>();
     static Config parse(String[] args) {
       Config config = new Config();
       for (int i = 0; i < args.length; i++) {
         String arg = args[i];
         if (arg.equals("--catalog-only")) { config.catalogOnly = true; continue; }
+        if (arg.equals("--attack-timing")) { config.attackTiming = true; continue; }
         if (++i == args.length) throw new IllegalArgumentException("Missing value for " + arg);
         String value = args[i];
         switch (arg) {
@@ -145,7 +148,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
       Files.write(config.output.resolve("inventory.txt"), catalog.summary().getBytes(StandardCharsets.UTF_8));
       List<Result> results = new ArrayList<>();
       for (MonsterAiCatalog.Row row : catalog.rows.values()) {
-        for (String scenario : scenarios(row.monster)) results.add(result(row, scenario));
+        List<String> cases = scenarios(row.monster);
+        if (config.attackTiming) cases.add("approach");
+        for (String scenario : cases) results.add(result(row, scenario));
       }
       report(catalog, results); // Persist the entire denominator before executing the first case.
       Json json = new Json();
@@ -297,6 +302,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
           || result.scenario.equals("inferno-cycle") || result.scenario.equals("diab-cold") ? 3 : 18;
       if (result.scenario.equals("deathmaul-cycle")) distance = 10;
       if (result.scenario.equals("duriel-engage")) distance = 10;
+      if (result.scenario.equals("approach")) distance = 8;
       if (bloodManaScene) distance = 3;
       // Keep full footprints inside the arena; (0,0) is also a legacy path sentinel.
       int playerId = factory.createPlayer(player, new Vector2(128, 128));
@@ -305,6 +311,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (subject == Engine.INVALID_ENTITY) throw new IllegalStateException("Factory rejected subject");
       zone.attachEntity(subject);
       probe.subject = subject;
+      probe.timingPlayer = playerId;
+      result.actionTimings = probe.timing.actions;
+      probe.watchProjectiles();
+      capture.line("MonsterProfile token=" + row.monster.Code + " killable=" + row.monster.killable
+          + " aip1=" + Arrays.toString(row.monster.aip1)
+          + " aip2=" + Arrays.toString(row.monster.aip2) + " aip3=" + Arrays.toString(row.monster.aip3)
+          + " aip4=" + Arrays.toString(row.monster.aip4) + " aidist=" + Arrays.toString(row.monster.aidist)
+          + " skill1=" + row.monster.Skill1 + " skill2=" + row.monster.Skill2);
       if (bloodManaScene) probe.bloodManaPlayer = playerId;
       probe.bladeBloodManaScene = bladeBloodManaScene;
       probe.frogSubject = "FrogDemon".equals(row.monster.AI);
@@ -403,6 +417,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
               new Vector2(bird).add(-3, 0), false, Engine.INVALID_ENTITY);
         }
         simulation.tick(null, null);
+        probe.observeAction();
         result.ticks++;
         if (!world.getEntityManager().isActive(subject)) {
           if (result.scenario.equals("orphan")) { result.specialPassed = true; break; }
@@ -538,6 +553,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("diab-run") ? "DIAB_RUN_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       if (result.scenario.equals("diab-prison") && result.specialPassed) result.special = "DIAB_PRISON_OBSERVED";
       if (vultureScene && result.specialPassed) result.special = "VULTURE_FLIGHT_LANDING_DAMAGE_OBSERVED";
+      probe.timing.close(capture.tick);
+      result.actionTimings = probe.timing.actions;
+      result.unmatchedExecutions = probe.timing.unmatchedExecutions;
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {
@@ -667,6 +685,53 @@ public final class MonsterAiArena extends ApplicationAdapter {
   }
 
   static final class Probe extends PassiveSystem {
+    final MonsterActionTiming timing = new MonsterActionTiming();
+    final Set<String> timingProfiles = new TreeSet<>();
+    void observeAction() {
+      if (subject < 0 || world == null) return;
+      Casting cast = world.getMapper(Casting.class).get(subject);
+      Sequence seq = world.getMapper(Sequence.class).get(subject);
+      timing.observe(capture.tick, cast == null ? 0 : cast.actionId, cast != null && cast.skillId >= 0,
+          cast == null ? -1 : cast.skillId, cast == null ? -1 : cast.targetId,
+          seq == null ? -1 : seq.mode1, timingPlayer);
+      if (cast != null && cast.skillId == 172 && capture.tick < 40) {
+        AnimData anim = world.getMapper(AnimData.class).get(subject);
+        capture.line("GargoylePlayback started=" + (seq != null && seq.started)
+            + " frame=" + (anim == null ? -1 : anim.frame)
+            + " lastKeyframe=" + (anim == null ? -1 : anim.lastKeyframeIndex));
+      }
+      if (cast != null && seq != null && seq.started
+          && timingProfiles.add(cast.skillId + ":" + seq.mode1)) {
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(cast.skillId);
+        AnimData anim = world.getMapper(AnimData.class).get(subject);
+        capture.line("ActionProfile skill=" + cast.skillId + " name=" + (skill == null ? "?" : skill.skill)
+            + " mode=" + seq.mode1 + " srvst=" + (skill == null ? -1 : skill.srvstfunc)
+            + " srvdo=" + (skill == null ? -1 : skill.srvdofunc)
+            + " animFrames=" + (anim == null ? -1 : anim.numFrames)
+            + " speed=" + (anim == null ? -1 : anim.speed)
+            + " nativeActions=" + (seq.nativeMonster == null ? "none" : Arrays.toString(seq.nativeMonster.actions))
+            + " keyframes=" + (anim == null ? "null" : Arrays.toString(anim.keyframes)));
+      }
+    }
+    int timingPlayer = -1;
+    void watchProjectiles() {
+      world.getAspectSubscriptionManager().get(Aspect.all(
+          com.riiablo.engine.server.component.Missile.class)).addSubscriptionListener(
+          new com.artemis.EntitySubscription.SubscriptionListener() {
+            @Override public void inserted(com.artemis.utils.IntBag ids) {
+              for (int i = 0; i < ids.size(); i++) {
+                com.riiablo.engine.server.component.Missile missile = world.getMapper(
+                    com.riiablo.engine.server.component.Missile.class).get(ids.get(i));
+                if (missile != null && missile.ownerId == subject && !missile.presentationOnly) {
+                  timing.projectile(capture.tick, missile.skillId);
+                  capture.line("ProjectileCreated subject=" + subject + " entity=" + ids.get(i)
+                      + " skill=" + missile.skillId);
+                }
+              }
+            }
+            @Override public void removed(com.artemis.utils.IntBag ids) {}
+          });
+    }
     int subject = -1;
     int emergeSkill = -1;
     boolean frogSubject;
@@ -712,7 +777,21 @@ public final class MonsterAiArena extends ApplicationAdapter {
     int lastInfernoCount;
     final CaseLog capture;
     Probe(CaseLog capture) { this.capture = capture; }
+    @Subscribe public void timingKeyframe(com.riiablo.engine.server.event.AnimDataKeyframeEvent event) {
+      if (event.entityId != subject || world == null) return;
+      Casting cast = world.getMapper(Casting.class).get(subject);
+      if (cast != null && cast.skillId == 172)
+        capture.line("GargoyleKeyframe keyframe=" + event.keyframe + " skill=" + cast.skillId);
+    }
+    @Subscribe public void melee(com.riiablo.engine.server.event.MeleeAttackEvent event) {
+      if (event.attacker != subject) return;
+      observeAction();
+      timing.melee(capture.tick, event.hit);
+      capture.line("MeleeAttempt subject=" + subject + " target=" + event.victim
+          + " hit=" + event.hit + " blocked=" + event.blocked);
+    }
     @Subscribe public void start(com.riiablo.engine.server.event.SkillStartEvent event) {
+      if (event.entityId == subject) observeAction();
       if (event.entityId != subject || !frogSubject) return;
       capture.line("FrogSkillStart subject=" + subject + " skill=" + event.skillId
           + " target=" + event.targetId + " srvstfunc=" + event.srvstfunc);
@@ -727,6 +806,14 @@ public final class MonsterAiArena extends ApplicationAdapter {
       if (event.entityId == bloodManaPlayer) capture.line("BloodManaPlayerSkillDo player="
           + event.entityId + " skill=" + event.skillId + " srvdofunc=" + event.srvdofunc);
       if (event.entityId != subject) return;
+      int timingSkill = event.skillId;
+      if (timingSkill < 0 && !timing.actions.isEmpty()) {
+        MonsterActionTiming.Action last = timing.actions.get(timing.actions.size() - 1);
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(last.skill);
+        if (skill != null && skill.srvdofunc == event.srvdofunc) timingSkill = last.skill;
+      }
+      observeAction();
+      timing.execute(capture.tick, timingSkill);
       if (event.srvdofunc == 30 && (event.skillId == 309 || event.skillId == 310)) {
         succubusCurseTarget = event.targetId;
         succubusCurseSkill = event.skillId;

@@ -1,0 +1,20 @@
+[
+  {
+    "seed": 1,
+    "source": "build\\attack-timing-physical-seed1-20261018",
+    "sha256": "f9491d758fc5cc53f76cb001bc2bdb04929d5eb5d4096ebed2c4672a53564f41",
+    "completed": "All catalog rows recorded; not an AI correctness PASS."
+  },
+  {
+    "seed": 2,
+    "source": "build\\attack-timing-physical-seed2-20261018",
+    "sha256": "41ef7bf805d2a87fe180eb7ccbdafa60d125eb1ad7fe15760d39cb05ed2c42e5",
+    "completed": "All catalog rows recorded; not an AI correctness PASS."
+  },
+  {
+    "seed": 3,
+    "source": "build\\attack-timing-physical-seed3-20261018",
+    "sha256": "5b237ff480f3ebe7c2ae9af2f9ae1480ad9e3ff84e9198ce0cd3b38b4e6bdf02",
+    "completed": "All catalog rows recorded; not an AI correctness PASS."
+  }
+]

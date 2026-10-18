@@ -44,6 +44,7 @@ tasks.register('monsterAiArena', JavaExec) {
   if (home) args '--home', home
   if (project.hasProperty('arenaMonsters')) args '--monsters', project.property('arenaMonsters')
   if (project.hasProperty('arenaCatalogOnly')) args '--catalog-only'
+  if (project.hasProperty('arenaAttackTiming')) args '--attack-timing'
 }
 
 run {
