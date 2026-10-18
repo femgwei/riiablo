@@ -31,6 +31,24 @@ import static org.mockito.Mockito.*;
 
 /** Real ECS recovery/consumption; a scripted map isolates target-state transfer from search choice. */
 class PathfinderRecoveryTargetTest {
+  @Test void continuouslyMovingTargetDoesNotStarvePursuitVelocity() {
+    try (Fixture f = new Fixture()) {
+      f.start();
+      for (int tick = 0; tick < 20; tick++) {
+        f.targetPosition().add(0, 0.6f);
+        f.velocity().velocity.setZero();
+        f.paths.process(f.actor);
+        assertFalse(f.velocity().velocity.isZero(), "pursuit stalled at tick " + tick);
+        Vector2 position = f.world.getMapper(Position.class).get(f.actor).position;
+        assertTrue(f.velocity().velocity.dot(new Vector2(f.targetPosition()).sub(position)) > 0);
+        position.mulAdd(f.velocity().velocity, 0.04f);
+        assertEquals(f.target, f.path().targetEntityId);
+      }
+      assertTrue(f.world.getMapper(Position.class).get(f.actor).position.x > 10f);
+      assertTrue(f.world.getMapper(Running.class).has(f.actor));
+    }
+  }
+
   @Test void playerGroundOrderRepathsAfterOneDynamicBlockedTickAndKeepsRunning() {
     try (Fixture f = new Fixture()) {
       f.world.getMapper(Monster.class).remove(f.actor);

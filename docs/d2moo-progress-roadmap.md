@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 移动目标导致近战追击停顿
+
+- 对照 D2MOO `AiThink.cpp:AITHINK_Fn010_CorruptRogue`，女猎人接近/奔跑分支
+  不以玩家停止移动为条件。定位到 ECS Pathfinder 的目标位移重寻路分支立即返回，
+  目标连续移动超过 0.5 格时反复跳过当帧速度计算。
+- 重新寻路成功后当帧消费替换路径并更新速度；若切入 NativePathRuntime，交还其
+  prepare/advance；失败仍按既有拒绝路径处理。
+- 新增连续 20 帧移动目标回归：修复前第 0 帧速度为零，修复后通过，检查正向移动和
+  目标身份、奔跑意图保留。追击/大体型接近专项 37 项中 36 项通过；唯一失败为已记录的
+  `skillOwnedMovementDoesNotUseOrdinaryApproachFallback` 夹具 `files().skills` 空指针。
+- 实际女猎人绕行追击、转向和近战表现待另一台电脑验证。
+- 验证：新增回归单独运行通过；真实 1.10f `:desktop:offscreenCamp` 完成，Gradle
+  返回 0，客户端关闭检查 `result=PASS`。营地烟测仅覆盖启动/资源接线，不替代野外追击验收。
+
 ## 2026-10-19 回城门消失后残留碰撞
 
 - 本地模式此前未注册 `Box2DDisposer`，回城门实体删除后静态物理碰撞体仍留在世界中。

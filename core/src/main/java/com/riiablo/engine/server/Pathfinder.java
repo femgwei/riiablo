@@ -288,12 +288,21 @@ public class Pathfinder extends IteratingSystem {
       if (shouldRepath || exhaustedShortOfTarget) {
         if (pathfind.nativePathType == 13) {
           int bonus = Math.round(mVelocity.get(entityId).modeSpeedBonusMultiplier * 100f);
-          if (findNativeChase(entityId, targetId))
-            mVelocity.get(entityId).setModeSpeedBonusPercent(bonus);
+          if (!findNativeChase(entityId, targetId)) return;
+          mVelocity.get(entityId).setModeSpeedBonusPercent(bonus);
+        } else {
+          if (!repathPreservingMovementIntent(entityId, targetPos, targetId)) return;
+        }
+        // Consume the replacement route in this same tick. A moving target
+        // can trigger a search every tick; returning here starves movement
+        // until the target stands still (or retains an obsolete direction).
+        pathfind = mPathfind.get(entityId);
+        if (pathfind.nativeRuntime != null) {
+          pathfind.nativeRuntime.prepare();
           return;
         }
-        repathPreservingMovementIntent(entityId, targetPos, targetId);
-        return;
+        target = pathfind.target;
+        targets = pathfind.targets;
       }
     }
     
