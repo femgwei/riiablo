@@ -486,6 +486,9 @@ public abstract class AI implements Interactable.Interactor {
   /** Read-only diagnostic snapshot; must not perform a fresh target scan or consume RNG. */
   public String getDecisionDiagnostics() { return "unavailable"; }
 
+  /** Authoritative action completed and entered monster neutral mode. */
+  public void onActionReturnedToNeutral() {}
+
   public String getState() {
     return "";
   }

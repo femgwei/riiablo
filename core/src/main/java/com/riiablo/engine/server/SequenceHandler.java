@@ -41,6 +41,7 @@ public class SequenceHandler extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<WhirlwindRuntime> mWhirlwindRuntime;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.AIWrapper> mAIWrapper;
 
   protected CofManager cofs;
   protected net.mostlyoriginal.api.event.common.EventSystem events;
@@ -130,6 +131,11 @@ public class SequenceHandler extends IteratingSystem {
     log.info("=== SequenceHandler.onAnimDataFinished ===");
     log.info("Entity: {}, Removing Sequence, mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);
     cofs.setMode(event.entityId, sequence.mode2);
+    if (mMonster.has(event.entityId)
+        && sequence.mode2 == com.riiablo.engine.Engine.Monster.MODE_NU) {
+      com.riiablo.engine.server.component.AIWrapper ai = mAIWrapper.get(event.entityId);
+      if (ai != null && ai.ai != null) ai.ai.onActionReturnedToNeutral();
+    }
     mAnimData.get(event.entityId).override = -1;
     mSequence.remove(event.entityId);
     log.info("After removal: Has Sequence: {}", mSequence.has(event.entityId));

@@ -29,6 +29,17 @@ abstract class NativeDecisionAI extends AI {
     super(entityId);
   }
 
+  @Override public final void onActionReturnedToNeutral() {
+    // D2Game sub_6FC64310: retain a future AI event; otherwise schedule
+    // MonStats AIdel from entry into NU, using 15 for a nonpositive delay.
+    long now = nativeFrame();
+    if (nextThinkFrame <= now) {
+      int delay = Math.round(SLEEP / Animation.FRAME_DURATION);
+      nextThinkFrame = Float.isInfinite(SLEEP) ? Long.MAX_VALUE
+          : now + (delay > 0 ? delay : 15);
+    }
+  }
+
   @Override
   public final void update(float delta) {
     elapsedFrames += Math.max(0f, delta) / (double) Animation.FRAME_DURATION;

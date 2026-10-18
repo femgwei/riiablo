@@ -16,6 +16,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SequenceHandlerTest {
+  @Test void monsterAttackCompletionNotifiesAiOnEntryIntoNeutral() {
+    SequenceHandler handler = new SequenceHandler();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), handler).build());
+    try {
+      int id = world.create();
+      world.getMapper(CofReference.class).create(id).set("VD", Engine.Monster.MODE_A1);
+      world.getMapper(AnimData.class).create(id);
+      world.getMapper(com.riiablo.engine.server.component.Monster.class).create(id);
+      com.riiablo.engine.server.ai.AI ai = org.mockito.Mockito.mock(com.riiablo.engine.server.ai.AI.class);
+      world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).create(id).ai = ai;
+      world.process();
+      world.getMapper(Sequence.class).create(id)
+          .sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+      handler.onAnimDataFinished(
+          com.riiablo.engine.server.event.AnimDataFinishedEvent.obtain(id));
+      org.mockito.Mockito.verify(ai).onActionReturnedToNeutral();
+    } finally { world.dispose(); }
+  }
+
   @Test
   void monsterMonSeqJabFinishesWithoutEnteringPlayerFollowupMode() {
     SequenceHandler handler = new SequenceHandler();

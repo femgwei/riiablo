@@ -23,3 +23,19 @@ MonsterMode/path tick 实现，也不替代正在开发的原生路径运行时�
 公共输出目录的首次测试编译受并发写入冲突阻断，随后通过本地
 `build/vulture-recovery.init.gradle` 隔离构建输出完成测试。
 未执行原报告场景的真实 MPQ/画面验收。
+
+## 攻击结束后的 AI 调度
+
+确认原版 `MonsterMode.cpp::sub_6FC63680` 在攻击结束时返回 NU，
+NU 入口 `sub_6FC64310` 在没有未来 AI 事件时按 MonStats.AIdel 安排下次决策，
+非正值回退为 15 帧。此前 Java 动作锁移除后可立即再决策，遗漏了此阶段。
+
+SequenceHandler 现在在怪物动作正常结束并进入 NU 时通知 AI；NativeDecisionAI
+保留未来的决策时间，仅在到期/无等待事件时，从 NU 入口安排难度对应 AIdel。
+其他 AI 默认忽略通知；多段技能提前返回、玩家动作与非 NU 结束不触发该通知。
+本次不调整攻击概率或动画速度，也不实现冻结/眩晕的完整原版事件分支。
+
+新增精确 15 帧攻击边界、未来事件保留、零延迟回退与 SequenceHandler 通知接线回归。
+验证：独立输出目录下运行 VultureAttackCadenceTest、SequenceHandlerTest、
+VultureFlightTest 和 VultureApproachBoundaryTest，20 项全部通过，无失败或跳过。
+编译与模块边界检查通过；原报告场景的实际攻击节奏仍待跨电脑验证。
