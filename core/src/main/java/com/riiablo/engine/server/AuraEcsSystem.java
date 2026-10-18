@@ -54,9 +54,8 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
     int difficulty = map != null ? map.getDifficulty() : 0;
-    com.riiablo.Files files = serverContext != null ? serverContext.files() : Riiablo.files;
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
-        files != null && files.DifficultyLevels != null ? files.DifficultyLevels.get(difficulty) : null);
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : com.riiablo.engine.server.ServerGameplayContext.legacyCombatContext(difficulty);
   }
   private static final Logger log = LogManager.getLogger(AuraEcsSystem.class);
 

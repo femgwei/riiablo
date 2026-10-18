@@ -215,6 +215,8 @@ public class CombatSystem {
 
     /** Difficulty snapshot used for monster cold-length scaling. */
     public int difficulty;
+    /** Native state application owns difficulty scaling for production packets. */
+    public boolean stateDurationsDeferred;
   }
 
   /**
@@ -366,8 +368,15 @@ public class CombatSystem {
   public CombatResult calculateAttack(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
-        0, 0, 0);
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile, 0, 0, 0,
+        context);
   }
 
   /**
@@ -417,8 +426,18 @@ public class CombatSystem {
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
-        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false);
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride,
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false, context);
   }
 
   /** Variant of the native attack-profile overload with runtime states. */
@@ -427,9 +446,19 @@ public class CombatSystem {
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, StateList attackerStates, StateList defenderStates) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
-        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
-        null, null, 0, 0, attackerStates, defenderStates);
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, attackerStates,
+        defenderStates, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false, null, null, 0, 0,
+        attackerStates, defenderStates, context);
   }
 
   /** Attack-profile overload carrying movement context for Evade. */
@@ -439,9 +468,20 @@ public class CombatSystem {
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
-        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
-        null, null, 0, 0, attackerStates, defenderStates, defenderMoving);
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, attackerStates,
+        defenderStates, defenderMoving, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false, null, null, 0, 0,
+        attackerStates, defenderStates, defenderMoving, context);
   }
 
   public CombatResult calculateAttack(
@@ -450,9 +490,20 @@ public class CombatSystem {
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
-        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
-        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, mastery);
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, attackerStates,
+        defenderStates, defenderMoving, mastery, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false, null, null, 0, 0,
+        attackerStates, defenderStates, defenderMoving, mastery, context);
   }
 
   public CombatResult calculateAttack(
@@ -460,9 +511,19 @@ public class CombatSystem {
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, boolean alwaysHit) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
-        null, null, 0, 0);
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit, null, null, 0,
+        0, context);
   }
 
   /** Resolves an attack with a per-animation native monster elemental profile. */
@@ -473,10 +534,23 @@ public class CombatSystem {
       int attackRatingOverride, boolean alwaysHit,
       int[] elementalMinOverride, int[] elementalMaxOverride,
       int coldLengthOverride, int poisonLengthOverride) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        null, null);
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride, null, null,
+        context);
   }
 
   /**
@@ -492,10 +566,24 @@ public class CombatSystem {
       int[] elementalMinOverride, int[] elementalMaxOverride,
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, false);
+        attackerStates, defenderStates, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, false, context);
   }
 
   /** Full native combat context including movement for Amazon Evade. */
@@ -508,10 +596,25 @@ public class CombatSystem {
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
-    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, null);
+        attackerStates, defenderStates, defenderMoving, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, null, context);
   }
 
   /** Full context plus the native item-layered mastery selected for this attack. */
@@ -524,11 +627,26 @@ public class CombatSystem {
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
+    return calculateAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, mastery, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery, NativeCombatContext context) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0, 0,
-        false, false, true);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, context, 0,
+        false, false, true, 0, false);
   }
 
   /** Regular attack with the native monster-type context needed by Sanctuary. */
@@ -683,8 +801,8 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        context, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, context,
+        Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
         defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements);
   }
 
@@ -696,17 +814,16 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
-    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates,
-        NativeCombatContext.ofDifficulty(difficulty), false);
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
+        piercePercent, defenderStates, NativeCombatContext.ofDifficulty(difficulty), false);
   }
 
   public CombatResult calculateFixedElementalDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, NativeCombatContext context) {
-    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates, context, false);
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
+        piercePercent, defenderStates, context, false);
   }
 
   /** Native direct packet: MDR before resistance, no monster player-cap, 40% absorb cap. */
@@ -714,17 +831,16 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
-    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates,
-        NativeCombatContext.ofDifficulty(difficulty), true);
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
+        piercePercent, defenderStates, NativeCombatContext.ofDifficulty(difficulty), true);
   }
 
   public CombatResult calculateNativeFixedElementalDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, NativeCombatContext context) {
-    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamage, piercePercent, defenderStates, context, true);
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
+        piercePercent, defenderStates, context, true);
   }
 
   private CombatResult calculateFixedElementalDamage(
@@ -905,8 +1021,8 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamageFixed, int piercePercent, int damageRate,
       StateList defenderStates, int difficulty) {
-    return calculateFixedElementalRateDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamageFixed, piercePercent, damageRate, defenderStates,
+    return calculateFixedElementalRateDamage(defender, defenderPlayer, attackerPlayer, damageType,
+        rawDamageFixed, piercePercent, damageRate, defenderStates,
         NativeCombatContext.ofDifficulty(difficulty));
   }
 
@@ -987,8 +1103,8 @@ public class CombatSystem {
   public StaticFieldDamageResult calculateStaticFieldDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamageFixed, StateList defenderStates, int difficulty) {
-    return calculateStaticFieldDamage(defender, defenderPlayer, attackerPlayer,
-        damageType, rawDamageFixed, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+    return calculateStaticFieldDamage(defender, defenderPlayer, attackerPlayer, damageType,
+        rawDamageFixed, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
   }
 
   public StaticFieldDamageResult calculateStaticFieldDamage(
@@ -1114,8 +1230,8 @@ public class CombatSystem {
       Attributes attacker, Attributes defender, boolean defenderPlayer,
       boolean attackerPlayer, int rawDamageFixed, int baseDuration,
       StateList defenderStates, int difficulty) {
-    return calculateFixedPoisonDamage(attacker, defender, defenderPlayer, attackerPlayer,
-        rawDamageFixed, baseDuration, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+    return calculateFixedPoisonDamage(attacker, defender, defenderPlayer, attackerPlayer, rawDamageFixed,
+        baseDuration, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
   }
 
   public CombatResult calculateFixedPoisonDamage(
@@ -1127,8 +1243,8 @@ public class CombatSystem {
     int rawSnapshot = mastered >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mastered;
     int pierce = statInt(attacker, Stat.item_pierce_pois, 0)
         + statInt(attacker, Stat.passive_pois_pierce, 0);
-    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer,
-        rawSnapshot, pierce, baseDuration, defenderStates, context);
+    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer, rawSnapshot,
+        pierce, baseDuration, defenderStates, context);
   }
 
   /** Replays a Rabies cast snapshot against a newly infected target. */
@@ -1136,9 +1252,8 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int rawDamageFixed, int piercePercent, int baseDuration,
       StateList defenderStates, int difficulty) {
-    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer,
-        rawDamageFixed, piercePercent, baseDuration, defenderStates,
-        NativeCombatContext.ofDifficulty(difficulty));
+    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer, rawDamageFixed,
+        piercePercent, baseDuration, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
   }
 
   public CombatResult calculateFixedPoisonDamageSnapshot(
@@ -1215,9 +1330,20 @@ public class CombatSystem {
       int attackMinDamage, int attackMaxDamage, int attackRating,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
-    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
-        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
-        attackerStates, defenderStates, defenderMoving, null);
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, attackerStates, defenderStates, defenderMoving,
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context) {
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL, attackerStates,
+        defenderStates, defenderMoving, null, context);
   }
 
   /** Native shape attack with a precomputed physical packet and elemental range. */
@@ -1226,11 +1352,19 @@ public class CombatSystem {
       boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
       int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
       StateList attackerStates, StateList defenderStates, boolean defenderMoving) {
-    return calculatePrecomputedMeleeElementalAttack(
-        attacker, defender, attackerPlayer, defenderPlayer,
-        physicalMin, physicalMax, attackRating, elementalMin, elementalMax,
-        coldLength, poisonLength, 0, DAMAGE_PHYSICAL,
-        attackerStates, defenderStates, defenderMoving);
+    return calculatePrecomputedMeleeElementalAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        physicalMin, physicalMax, attackRating, elementalMin, elementalMax, coldLength, poisonLength,
+        attackerStates, defenderStates, defenderMoving, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeElementalAttackWithContext(
+      Attributes attacker, Attributes defender, boolean attackerPlayer,
+      boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
+      int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving, NativeCombatContext context) {
+    return calculatePrecomputedMeleeElementalAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        physicalMin, physicalMax, attackRating, elementalMin, elementalMax, coldLength, poisonLength, 0,
+        DAMAGE_PHYSICAL, attackerStates, defenderStates, defenderMoving, context);
   }
 
   /** Native melee packet with both skill elements and physical conversion. */
@@ -1240,6 +1374,18 @@ public class CombatSystem {
       int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
       int physicalConversionPercent, int physicalConversionType,
       StateList attackerStates, StateList defenderStates, boolean defenderMoving) {
+    return calculatePrecomputedMeleeElementalAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        physicalMin, physicalMax, attackRating, elementalMin, elementalMax, coldLength, poisonLength,
+        physicalConversionPercent, physicalConversionType, attackerStates, defenderStates,
+        defenderMoving, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeElementalAttackWithContext(
+      Attributes attacker, Attributes defender, boolean attackerPlayer,
+      boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
+      int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving, NativeCombatContext context) {
     int[] combinedMin = new int[DAMAGE_TYPE_COUNT];
     int[] combinedMax = new int[DAMAGE_TYPE_COUNT];
     short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
@@ -1269,9 +1415,9 @@ public class CombatSystem {
     if (coldLength <= 0) coldLength = statInt(attacker, Stat.coldlength, 0);
     if (poisonLength <= 0) poisonLength = statInt(attacker, Stat.poisonlength, 0);
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
-        physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
-        coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, null, 0, 0, false, false, true);
+        physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax, coldLength,
+        poisonLength, attackerStates, defenderStates, defenderMoving, true, physicalConversionPercent,
+        physicalConversionType, null, context, 0, false, false, true, 0, false);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */
@@ -1281,9 +1427,20 @@ public class CombatSystem {
       int attackMinDamage, int attackMaxDamage, int attackRating,
       StateList attackerStates, StateList defenderStates, boolean defenderMoving,
       StateList.WeaponMasteryBonus mastery) {
-    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
-        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
-        attackerStates, defenderStates, defenderMoving, mastery);
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, attackerStates, defenderStates, defenderMoving,
+        mastery, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      StateList.WeaponMasteryBonus mastery, NativeCombatContext context) {
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL, attackerStates,
+        defenderStates, defenderMoving, mastery, context);
   }
 
   /**
@@ -1299,6 +1456,21 @@ public class CombatSystem {
       int conversionPercent, int conversionType,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, int difficulty,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed) {
+    return calculateLightningStrikeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        lightningMin, lightningMax, damagePercent, conversionPercent, conversionType, attackerStates,
+        defenderStates, defenderMoving, NativeCombatContext.ofDifficulty(difficulty), defenderDemon,
+        defenderUndead, defenderIgnoreTargetDefenseAllowed);
+  }
+
+  public CombatResult calculateLightningStrikeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int lightningMin, int lightningMax, int damagePercent,
+      int conversionPercent, int conversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context,
       boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed) {
     int[] elementalMin = new int[DAMAGE_TYPE_COUNT];
@@ -1321,12 +1493,11 @@ public class CombatSystem {
         elementalMax[DAMAGE_LIGHTNING] + Math.max(0, lightningMax));
     int coldLength = statInt(attacker, Stat.coldlength, 0);
     int poisonLength = statInt(attacker, Stat.poisonlength, 0);
-    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
-        0, 0, 0, false, elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, false,
-        Math.max(0, Math.min(100, conversionPercent)), conversionType, null,
-        difficulty, 0, defenderDemon, defenderUndead,
-        defenderIgnoreTargetDefenseAllowed, Math.max(0, damagePercent));
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false, 0, 0, 0,
+        false, elementalMin, elementalMax, coldLength, poisonLength, attackerStates, defenderStates,
+        defenderMoving, false, Math.max(0, Math.min(100, conversionPercent)), conversionType, null,
+        context, 0, defenderDemon, defenderUndead, defenderIgnoreTargetDefenseAllowed,
+        Math.max(0, damagePercent), false);
   }
 
   public CombatResult calculatePrecomputedMeleeAttack(
@@ -1336,9 +1507,22 @@ public class CombatSystem {
       int physicalConversionPercent, int physicalConversionType,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
-    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
         attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
-        physicalConversionType, attackerStates, defenderStates, defenderMoving, null);
+        physicalConversionType, attackerStates, defenderStates, defenderMoving,
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context) {
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
+        physicalConversionType, attackerStates, defenderStates, defenderMoving, null, context);
   }
 
   public CombatResult calculatePrecomputedMeleeAttack(
@@ -1348,10 +1532,23 @@ public class CombatSystem {
       int physicalConversionPercent, int physicalConversionType,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
+        physicalConversionType, attackerStates, defenderStates, defenderMoving, mastery,
+        NativeCombatContext.normal());
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery, NativeCombatContext context) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
-        attackMinDamage, attackMaxDamage, attackRating, false,
-        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, mastery, 0, 0, false, false, true);
+        attackMinDamage, attackMaxDamage, attackRating, false, null, null, 0, 0, attackerStates,
+        defenderStates, defenderMoving, true, physicalConversionPercent, physicalConversionType, mastery,
+        context, 0, false, false, true, 0, false);
   }
 
   /**
@@ -1366,6 +1563,18 @@ public class CombatSystem {
       int skillToHitPercent, boolean alwaysHit,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
+    return calculateBladeShieldAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer, skillMinDamage,
+        skillMaxDamage, sourceDamageScale, skillToHitPercent, alwaysHit, attackerStates, defenderStates,
+        defenderMoving, NativeCombatContext.normal());
+  }
+
+  public CombatResult calculateBladeShieldAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int skillMinDamage, int skillMaxDamage, int sourceDamageScale,
+      int skillToHitPercent, boolean alwaysHit,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, NativeCombatContext context) {
     int scale = Math.max(0, sourceDamageScale);
     int sourceMin = statInt(attacker, Stat.mindamage, 0);
     int sourceMax = Math.max(sourceMin, statInt(attacker, Stat.maxdamage, sourceMin));
@@ -1406,10 +1615,9 @@ public class CombatSystem {
     int attackRating = statInt(attacker, Stat.tohit, 0);
     attackRating = attackRating * Math.max(0, 100 + skillToHitPercent) / 100;
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
-        physicalMin, physicalMax, attackRating, alwaysHit,
-        elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0, 0,
-        false, false, true);
+        physicalMin, physicalMax, attackRating, alwaysHit, elementalMin, elementalMax, coldLength,
+        poisonLength, attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null,
+        context, 0, false, false, true, 0, false);
   }
 
   private CombatResult calculateAttackInternal(
@@ -1475,9 +1683,8 @@ public class CombatSystem {
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, precomputedPhysicalDamage,
         physicalConversionPercent, physicalConversionType, mastery,
-        NativeCombatContext.ofDifficulty(difficulty), magicTargetBonusPercent,
-        defenderDemon, defenderUndead, defenderIgnoreTargetDefenseAllowed,
-        enhancedDamageBonus, fixedPointElements);
+        NativeCombatContext.ofDifficulty(difficulty), magicTargetBonusPercent, defenderDemon,
+        defenderUndead, defenderIgnoreTargetDefenseAllowed, enhancedDamageBonus, fixedPointElements);
   }
 
   private CombatResult calculateAttackInternal(
@@ -1509,6 +1716,7 @@ public class CombatSystem {
         .withCombatants(attackerPlayer, defenderPlayer)
         .withTargetType(defenderDemon, defenderUndead);
     a.difficulty = combatContext.difficulty();
+    a.stateDurationsDeferred = combatContext.stateDurationsDeferred();
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
@@ -1890,8 +2098,10 @@ public class CombatSystem {
         attacker.elementalPierce[DAMAGE_COLD]);
     if (defender.cannotBeFrozen) result.coldDuration = 0;
     else if (defender.halfFreezeDuration) result.coldDuration /= 2;
-    result.coldDuration = scaleMonsterColdDuration(
-        result.coldDuration, defender.isMonster, attacker.difficulty);
+    if (!attacker.stateDurationsDeferred) {
+      result.coldDuration = scaleMonsterColdDuration(
+          result.coldDuration, defender.isMonster, attacker.difficulty);
+    }
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);

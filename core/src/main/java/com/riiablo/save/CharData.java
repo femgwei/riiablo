@@ -257,8 +257,8 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
     DifficultyLevels.Entry diff = Riiablo.files.DifficultyLevels.get(this.diff);
     int resistancePenalty = com.riiablo.engine.server.combat.NativeDifficultyRules
-        .tableResistancePenalty(com.riiablo.engine.server.combat.NativeCombatContext
-            .ofDifficulty(this.diff, diff));
+        .playerResistancePenalty(com.riiablo.engine.server.combat.NativeCombatContext
+            .forGameplay(this.diff, diff, isExpansion()));
     statData.setDifficultyResistanceIncluded(true);
     mercData.statData.setDifficultyResistanceIncluded(true);
     StatListRef base = statData.base();

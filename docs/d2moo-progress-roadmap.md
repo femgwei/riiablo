@@ -5000,6 +5000,29 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 本阶段集中收尾：Actioneer 所有剩余攻击调用（28 处）迁移到显式 WithContext
+  接口，覆盖预计算近战、元素/转化、Lightning Strike、普通怪物技能和 Vengeance；
+  StateUpdater Blade Shield、AssassinTrapSystem 尸爆同步接入。旧签名保留委托，
+  新接口独立命名以避免旧 `null` 武器精通参数产生重载歧义。全仓生产调用审计不再
+  直接调用无上下文 calculateAttack/预计算攻击/BladeShield/LightningStrike 入口。
+  ServerGameplayContext 集中提供当前 World 表行、游戏模式和状态时长归属；无角色的
+  dedicated host 暂保留 Expansion 默认，legacy 全局入口仍仅作为兼容桥，并非全局依赖清零。
+  Classic 抗性惩罚使用 0/-20/-50，Expansion 优先读表；CharData 玩家/佣兵基础抗性
+  初始化同步按角色模式处理。依据 D2MOO `SUnitDmg.cpp:965` 的分支。
+  生产攻击冷时长不再在 CombatSystem 预先按 1/2/4 除一次，交由 StateUpdater 根据
+  MonsterColdDivisor/MonsterFreezeDivisor 应用；护甲反击也改用除数前长度入口。
+  原因：生产状态层已处理除数，先除再应用会重复缩短；依据 `SUnitDmg.cpp:1570/:1688`。
+  旧直接计算夹具保留历史缩短语义，不删除兼容接口。
+  专精测试的 5/9 硬编码改为独立 D2MOO `D2Common_11033` 公式及当前行 Param[4/5]
+  oracle（同时断言 dm56），验证 1.10f 表中的 3/6，而非修改运行时专精来迎合另一版本预期。
+  新增各特殊攻击表传递、Classic/Expansion、派生上下文保留模式、冷时长单次处理和
+  CharData 玩家/佣兵模式初始化回归。并行会话正修改 Sequence/呈现问题，不混入本次提交。
+  最终使用显式 1.10f 数据及独立 core 构建目录执行 72 类/232 项定向回归，全部通过，
+  失败/错误/跳过均为 0；覆盖上述入口、各职业集成、全部 GoldenDamageTest、服务端隔离，
+  编译和模块边界检查通过。未执行全仓全量回归或客户端实机验证。
+  本阶段战斗入口上下文迁移已收尾；不代表整个项目已完成 dark-magic 式物理模块拆分。
+  另一台电脑验证重点：Classic/Expansion 三难度抗性、怪物冰冷/冻结时长、特殊近战与陷阱伤害。
+
 - 普通攻击上下文迁移第一批：共享攻击内核新增 NativeCombatContext 入口，不再丢弃
   注入难度表；普通近战、唯一怪物附加元素和通用导弹三个生产入口接入当前服务端表。
   玩家原始抗性优先消费表值，已折入属性防重扣，物理/魔法豁免不变。

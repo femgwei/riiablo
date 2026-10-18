@@ -513,9 +513,13 @@ public class AssassinTrapSystem extends IteratingSystem {
       attack.base().put(Stat.mindamage, physical);
       attack.base().put(Stat.maxdamage, physical);
       attack.reset();
-      CombatSystem.CombatResult result = combatSystemResolver.calculateAttack(
+      MapWrapper wrapper = mMapWrapper.has(sentryId) ? mMapWrapper.get(sentryId) : null;
+      int difficulty = wrapper != null && wrapper.map != null ? wrapper.map.getDifficulty() : 0;
+      com.riiablo.engine.server.combat.NativeCombatContext context = serverContext != null
+          ? serverContext.combatContext(difficulty) : ServerGameplayContext.legacyCombatContext(difficulty);
+      CombatSystem.CombatResult result = combatSystemResolver.calculateAttackWithContext(
           attack, targetAttrs, false, false, true, 0, 0, 0, true,
-          elementalMin, elementalMax, 0, 0);
+          elementalMin, elementalMax, 0, 0, context);
       if (!result.hit || result.blocked
           || (result.totalDamage <= 0 && result.absorbedLife <= 0)) continue;
       DamageEvent event = DamageEvent.obtain(sentryId, targetId, result.totalDamage);

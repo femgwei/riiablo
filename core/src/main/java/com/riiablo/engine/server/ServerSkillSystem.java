@@ -230,8 +230,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files(), monster.monstats.hcIdx,
         1, difficulty, level, (short) 1, base)) return;
     com.riiablo.engine.server.combat.NativeCombatContext combatContext =
-        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
-            difficulty, files().DifficultyLevels.get(difficulty));
+        nativeDifficultyContext(difficulty);
     int maximum = com.riiablo.engine.server.combat.NativeDifficultyRules
         .monsterCorpseExplosionMaximum(base.maxHP, combatContext);
     int minimum = (int) ((long) maximum * 60 / 100);
@@ -1819,7 +1818,7 @@ public class ServerSkillSystem extends PassiveSystem {
         || mPlayer.get(event.entityId).data == null
         || mPlayer.get(event.entityId).data.isExpansion();
     com.riiablo.engine.server.combat.NativeCombatContext combatContext =
-        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty, difficultyRow);
+        com.riiablo.engine.server.combat.NativeCombatContext.forGameplay(difficulty, difficultyRow, expansion);
     int floorPercent = com.riiablo.engine.server.combat.NativeDifficultyRules
         .staticFieldLifeFloorPercent(combatContext, expansion);
     int damageType = staticFieldDamageType(skill.EType);
@@ -5330,10 +5329,8 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
-    com.riiablo.codec.excel.DifficultyLevels.Entry row =
-        files() != null && files().DifficultyLevels != null
-            ? files().DifficultyLevels.get(difficulty) : null;
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty, row);
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : ServerGameplayContext.legacyCombatContext(difficulty);
   }
 
   private int combatDifficulty(int source, int target) {

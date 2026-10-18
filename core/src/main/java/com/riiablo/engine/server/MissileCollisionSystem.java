@@ -2268,9 +2268,8 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
-        files() != null && files().DifficultyLevels != null
-            ? files().DifficultyLevels.get(difficulty) : null);
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : com.riiablo.engine.server.ServerGameplayContext.legacyCombatContext(difficulty);
   }
 
   /** Resolves difficulty from target/owner map, falling back to Normal during handoff. */

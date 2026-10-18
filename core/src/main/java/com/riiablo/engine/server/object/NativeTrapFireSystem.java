@@ -32,9 +32,8 @@ public class NativeTrapFireSystem extends BaseSystem {
   protected com.riiablo.engine.server.ServerGameplayContext serverContext;
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
-    com.riiablo.Files files = serverContext != null ? serverContext.files() : com.riiablo.Riiablo.files;
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
-        files != null && files.DifficultyLevels != null ? files.DifficultyLevels.get(difficulty) : null);
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : com.riiablo.engine.server.ServerGameplayContext.legacyCombatContext(difficulty);
   }
   private static final Logger log = LogManager.getLogger(NativeTrapFireSystem.class);
 

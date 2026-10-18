@@ -55,6 +55,21 @@ public final class ServerGameplayContext {
     return files;
   }
 
+  /** One world's table, game mode and state-duration ownership for combat. */
+  public com.riiablo.engine.server.combat.NativeCombatContext combatContext(int difficulty) {
+    return com.riiablo.engine.server.combat.NativeCombatContext.forGameplay(difficulty,
+        files.DifficultyLevels != null ? files.DifficultyLevels.get(difficulty) : null,
+        character == null || character.isExpansion());
+  }
+
+  /** Compatibility only: production server hosts register their own context. */
+  public static com.riiablo.engine.server.combat.NativeCombatContext legacyCombatContext(int difficulty) {
+    return com.riiablo.engine.server.combat.NativeCombatContext.forGameplay(difficulty,
+        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
+            ? Riiablo.files.DifficultyLevels.get(difficulty) : null,
+        Riiablo.charData == null || Riiablo.charData.isExpansion());
+  }
+
   public int gameSeed() {
     return gameSeed;
   }

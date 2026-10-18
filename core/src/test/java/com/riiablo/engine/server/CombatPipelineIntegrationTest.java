@@ -253,7 +253,8 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
       assertNotNull(snapshot);
       assertEquals(38, snapshot.masteryAttackRatingPercent);
       assertEquals(33, snapshot.masteryDamagePercent);
-      assertEquals(9, snapshot.masteryCriticalChance);
+      assertEquals(NativeMasteryOracle.throwingCriticalChance(
+          Riiablo.files.skills.get("Throwing Mastery"), 2), snapshot.masteryCriticalChance);
       assertEquals(0, harness.probe.damageEvents,
           "mastery state must be removed while the projectile is still in flight");
       states.stateList.removeState(StateId.THROWINGMASTERY);

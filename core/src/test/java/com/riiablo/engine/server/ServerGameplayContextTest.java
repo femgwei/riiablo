@@ -3,6 +3,7 @@ package com.riiablo.engine.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
@@ -10,6 +11,20 @@ import com.riiablo.save.CharData;
 import org.junit.jupiter.api.Test;
 
 class ServerGameplayContextTest {
+  @Test
+  void combatModeBelongsToWorldAndDedicatedDefaultsToExpansion() {
+    Files files = mock(Files.class);
+    CharData character = mock(CharData.class);
+    ServerGameplayContext classic = new ServerGameplayContext(files, 1, character);
+    assertEquals(-50, com.riiablo.engine.server.combat.NativeDifficultyRules
+        .playerResistancePenalty(classic.combatContext(2)));
+    assertEquals(true, classic.combatContext(2).stateDurationsDeferred());
+    when(character.isExpansion()).thenReturn(true);
+    assertEquals(-100, com.riiablo.engine.server.combat.NativeDifficultyRules
+        .playerResistancePenalty(classic.combatContext(2)));
+    assertEquals(true, new ServerGameplayContext(files, 2).combatContext(2).expansion());
+  }
+
   @Test
   void keepsWorldDataAndSeedWhenGlobalHostChanges() {
     Files worldFiles = mock(Files.class);

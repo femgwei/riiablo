@@ -15,6 +15,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CharDataResetTest extends RiiabloTest {
   @Test
+  void resistanceInitializationUsesCharacterModeForPlayerAndMercenary() {
+    CharData character = new CharData();
+    short[] resistances = {Stat.fireresist, Stat.lightresist, Stat.coldresist, Stat.poisonresist};
+    for (boolean expansion : new boolean[] {false, true}) {
+      character.flags = expansion ? D2S.FLAG_EXPANSION : 0;
+      for (int difficulty = 0; difficulty < 3; difficulty++) {
+        character.diff = difficulty;
+        character.softReset();
+        int expected = expansion ? com.riiablo.Riiablo.files.DifficultyLevels.get(difficulty).ResistPenalty
+            : new int[] {0, -20, -50}[difficulty];
+        for (Attributes stats : new Attributes[] {character.statData, character.mercData.statData}) {
+          assertTrue(stats.difficultyResistanceIncluded());
+          for (short stat : resistances) assertEquals(expected, stats.base().getValue(stat, 999));
+        }
+      }
+    }
+  }
+
+  @Test
   void clearingFreshCharacterDoesNotRebuildEmptyAttributes() throws Exception {
     Logger logger = LogManager.getLogger(Attributes.class);
     Appender original = logger.getAppender();

@@ -14,6 +14,64 @@ public class CombatSystemTest extends RiiabloTest {
   private final CombatSystem combat = new CombatSystem();
 
   @Test
+  public void specialAttackEntryPointsPreserveInjectedResistanceAndClassicMode() {
+    Attributes attacker = attrs(100, 20, 0, 1, 1, 10000);
+    attacker.base().put(Stat.firemindam, 100);
+    attacker.base().put(Stat.firemaxdam, 100);
+    attacker.reset();
+    Attributes defender = attrs(1000, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.ResistPenalty = -37;
+    for (boolean expansion : new boolean[] {false, true}) {
+      NativeCombatContext context = NativeCombatContext.forGameplay(2, row, expansion);
+      int expected = expansion ? 137 : 150;
+      assertEquals(expected, untilHit(() -> combat.calculateAttackWithContext(
+          attacker, defender, false, true, false, context)).elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(expected, untilHit(() -> combat.calculatePrecomputedMeleeAttackWithContext(
+          attacker, defender, false, true, 1, 1, 10000, null, null, false, context))
+          .elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(expected, untilHit(() -> combat.calculatePrecomputedMeleeElementalAttackWithContext(
+          attacker, defender, false, true, 1, 1, 10000, null, null, 0, 0,
+          null, null, false, context)).elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(expected, untilHit(() -> combat.calculateLightningStrikeAttackWithContext(
+          attacker, defender, false, true, 0, 0, 0, 0, CombatSystem.DAMAGE_LIGHTNING,
+          null, null, false, context, false, false, true)).elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(expected, combat.calculateBladeShieldAttackWithContext(
+          attacker, defender, false, true, 1, 1, 128, 0, true,
+          null, null, false, context).elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    }
+  }
+
+  private static CombatSystem.CombatResult untilHit(
+      java.util.function.Supplier<CombatSystem.CombatResult> attack) {
+    for (int attempt = 0; attempt < 100; attempt++) {
+      CombatSystem.CombatResult result = attack.get();
+      if (result.hit && !result.blocked) return result;
+    }
+    throw new AssertionError("attack never hit");
+  }
+
+  @Test
+  public void gameplayColdLengthIsNotDividedBeforeStateApplication() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(1000, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.MonsterColdDivisor = 7;
+    NativeCombatContext context = NativeCombatContext.forGameplay(2, row, true);
+    int[] minimum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] maximum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    minimum[CombatSystem.DAMAGE_COLD] = maximum[CombatSystem.DAMAGE_COLD] = 1;
+    CombatSystem.CombatResult result = combat.calculateAttackAtDifficulty(
+        attacker, defender, false, false, true, 1, 1, 1000, true,
+        minimum, maximum, 140, 0, null, null, false, null, context,
+        0, false, false, true, false);
+    assertEquals(140, result.coldDuration, "state application owns the table's division by seven");
+    assertEquals(7, NativeDifficultyRules.tableMonsterColdDivisor(context));
+  }
+
+  @Test
   public void itemPoisonTotalDamageUsesFixedRatePerFrame() {
     assertEquals(58, CombatSystem.totalPoisonToBitRate(17, 75));
     assertEquals(58f / 256f, CombatSystem.totalPoisonToPerFrame(17, 75), 0.000001f);

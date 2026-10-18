@@ -1393,10 +1393,10 @@ public class Actioneer extends PassiveSystem {
         int[] kickDamage = AssassinSkills.calculateDragonTailKickDamage(
             skill, level, attacker, equippedBoots(entityId));
         int attackRating = AssassinSkills.dragonTailAttackRating(skill, level, attacker);
-        CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+        CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             kickDamage[0], kickDamage[1], attackRating,
-            stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+            stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
         if (!combat.hit || combat.blocked) {
           log.info("[ASSASSIN_DRAGON_TAIL] phase=start_reject entity={} target={} reason={} chance={} ",
               entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
@@ -2184,12 +2184,12 @@ public class Actioneer extends PassiveSystem {
               berserkWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getBerserkMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, berserkWeapon, false));
+              weaponMastery(entityId, berserkWeapon, false), nativeDifficultyContext());
           log.info("[BERSERK] phase=roll source={} target={} skill={} weapon={} "
                   + "damageRange={}..{} enhancedPercent={} conversion={} chance={}",
               entityId, targetId, activeCasting != null ? activeCasting.skillId : -1,
@@ -2206,12 +2206,12 @@ public class Actioneer extends PassiveSystem {
               frenzyWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getFrenzyMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, frenzyWeapon, false));
+              weaponMastery(entityId, frenzyWeapon, false), nativeDifficultyContext());
           log.info("[FRENZY] phase=roll source={} target={} index={} weapon={} "
                   + "damageRange={}..{} enhancedPercent={} attackRating={} conversion={}",
               entityId, targetId, frenzyStrike + 1, frenzyWeapon.code,
@@ -2223,10 +2223,10 @@ public class Actioneer extends PassiveSystem {
         } else if (frenzyAttack) {
           int attackRating = BarbarianSkills.getFrenzyAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId), attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
         } else if (dragonTail) {
           if (activeCasting == null || activeSkill == null) break;
           if (dragonTailCombat == null) {
@@ -2234,10 +2234,10 @@ public class Actioneer extends PassiveSystem {
                 activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
             int attackRating = AssassinSkills.dragonTailAttackRating(
                 activeSkill, activeSkillLevel, attackerAttrs);
-            dragonTailCombat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+            dragonTailCombat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer,
                 kickDamage[0], kickDamage[1], attackRating,
-                stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
           }
           combat = dragonTailCombat;
           activeCasting.dragonTailCombat = null;
@@ -2253,10 +2253,10 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
           int attackRating = AssassinSkills.dragonTalonAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               kickDamage[0], kickDamage[1], attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
           log.info("[ASSASSIN_DRAGON_TALON] phase=kick entity={} target={} index={} remaining={} "
                   + "damageRange={}..{} attackRating={} last={}",
               entityId, targetId, activeCasting.dragonTalonSuccessfulKicks + 1,
@@ -2267,10 +2267,10 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
           int attackRating = AssassinSkills.dragonFlightAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               kickDamage[0], kickDamage[1], attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
           log.info("[ASSASSIN_DRAGON_FLIGHT] phase=kick entity={} target={} "
                   + "damageRange={}..{} attackRating={} chance={}",
               entityId, targetId, kickDamage[0], kickDamage[1], attackRating,
@@ -2280,10 +2280,10 @@ public class Actioneer extends PassiveSystem {
               activeSkill, activeSkillLevel, attackerAttrs, dragonClawWeapon);
           int attackRating = AssassinSkills.dragonClawAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs);
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               clawDamage[0], clawDamage[1], attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
           log.info("[ASSASSIN_DRAGON_CLAW] phase=strike entity={} target={} index={} hand={} "
                   + "weapon={} damageRange={}..{} attackRating={} remaining={}",
               entityId, targetId, dragonClawStrike + 1,
@@ -2299,12 +2299,12 @@ public class Actioneer extends PassiveSystem {
           int conversion = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, Math.min(100,
                   SkillFormula.evaluate(activeSkill.calc4, activeSkill, activeSkillLevel))) : 0;
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, lightningDamageType(activeSkill.EType),
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, jabWeapon, false));
+              weaponMastery(entityId, jabWeapon, false), nativeDifficultyContext());
           log.info("[AMAZON_JAB] phase=roll source={} target={} level={} strike={} "
                   + "damageRange={}..{} attackRating={} chance={}",
               entityId, targetId, activeSkillLevel,
@@ -2323,12 +2323,12 @@ public class Actioneer extends PassiveSystem {
               SkillFormula.evaluate(activeSkill.calc1, activeSkill, level));
           int conversionPercent = activeSkill.EType != null && !activeSkill.EType.isEmpty()
               ? Math.max(0, SkillFormula.evaluate(activeSkill.calc4, activeSkill, level)) : 0;
-          combat = combatSystemResolver.calculateLightningStrikeAttack(
+          combat = combatSystemResolver.calculateLightningStrikeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               lightningMin, lightningMax, damagePercent,
               conversionPercent, lightningDamageType(activeSkill.EType),
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              combatDifficulty(), isDemonTarget(targetId), isUndeadTarget(targetId),
+              nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
               ignoreTargetDefenseAllowed);
           log.info("[AMAZON_LIGHTNING_STRIKE] phase=melee_hit source={} target={} level={} "
                   + "lightning={}..{} damagePercent={} conversion={} chance={}",
@@ -2867,13 +2867,13 @@ public class Actioneer extends PassiveSystem {
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
     CombatSystem.CombatResult combat = combatSystemResolver
-        .calculatePrecomputedMeleeElementalAttack(
+        .calculatePrecomputedMeleeElementalAttackWithContext(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], amazonAttackRating(
                 entityId, skill, level, attacker, isPlayerEntity(entityId)),
             elementalMin, elementalMax, 0, 0, conversion,
             lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
-            isEntityMoving(targetId));
+            isEntityMoving(targetId), nativeDifficultyContext());
     casting.amazonElementalCombat = combat;
     casting.amazonElementalTargetId = targetId;
     casting.amazonElementalWeapon = weapon;
@@ -2911,11 +2911,11 @@ public class Actioneer extends PassiveSystem {
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(
             skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating, conversion,
         lightningDamageType(skill.EType), stateList(entityId), stateList(targetId),
-        isEntityMoving(targetId), weaponMastery(entityId, weapon, false));
+        isEntityMoving(targetId), weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     casting.impaleCombat = combat;
     casting.impaleTargetId = targetId;
     casting.impaleWeapon = weapon;
@@ -3074,11 +3074,11 @@ public class Actioneer extends PassiveSystem {
         entityId, skill, level, attacker, isPlayerEntity(entityId));
     int conversion = skill.EType != null && !skill.EType.isEmpty()
         ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(target),
         damage[0], damage[1], attackRating, conversion,
         lightningDamageType(skill.EType), stateList(entityId), stateList(target),
-        isEntityMoving(target), weaponMastery(entityId, weapon, false));
+        isEntityMoving(target), weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     int strike = ++casting.fendStrikeIndex;
     casting.fendRemainingStrikes--;
     casting.fendStrikeProcessed = true;
@@ -3156,7 +3156,7 @@ public class Actioneer extends PassiveSystem {
     int[] physical = NecromancerSkills.getPoisonDaggerPhysicalDamage(
         skill, level, attacker, weapon, attackerStates);
     CombatSystem.CombatResult combat = combatSystemResolver
-        .calculatePrecomputedMeleeElementalAttack(
+        .calculatePrecomputedMeleeElementalAttackWithContext(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], NecromancerSkills.getPoisonDaggerAttackRating(
                 skill, level, attacker, isPlayerEntity(entityId)),
@@ -3164,7 +3164,7 @@ public class Actioneer extends PassiveSystem {
             new int[CombatSystem.DAMAGE_TYPE_COUNT], 0,
             NecromancerSkills.getPoisonDaggerDurationFrames(
                 skill, level, name -> baseSkillLevel(entityId, name)),
-            attackerStates, stateList(targetId), isEntityMoving(targetId));
+            attackerStates, stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     int[] poisonRange = NecromancerSkills.getPoisonDaggerDamage(
         skill, level, name -> baseSkillLevel(entityId, name));
     int poisonDuration = NecromancerSkills.getPoisonDaggerDurationFrames(
@@ -3284,10 +3284,10 @@ public class Actioneer extends PassiveSystem {
     int level = Math.max(1, skillLevel(entityId, skill.Id));
     int toHit = statInt(attacker, Stat.tohit) + skill.ToHit
         + Math.max(0, level - 1) * skill.LevToHit;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, false,
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage), toHit,
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     casting.conversionPrepared = true;
     casting.conversionTargetId = targetId;
     casting.conversionHit = combat.hit && !combat.blocked;
@@ -3458,11 +3458,11 @@ public class Actioneer extends PassiveSystem {
         skill, level, attacker, weapon, states.stateList);
     int attackRating = DruidSkills.getFeralMaulAttackRating(
         skill, level, attacker, attackerPlayer);
-    casting.feralMaulCombat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    casting.feralMaulCombat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, attackerPlayer, targetPlayer,
         damage[0], damage[1], attackRating,
         states.stateList, stateList(targetId), isEntityMoving(targetId),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     casting.feralMaulTargetId = targetId;
     // The SrvSt56 combat record sees the old Maul stat-list. The stack gained
     // by SrvDo120 must not stun or enhance the strike that created it.
@@ -3590,12 +3590,12 @@ public class Actioneer extends PassiveSystem {
     int duration = rabies ? DruidSkills.getRabiesPoisonDuration(
         skill, level, name -> baseSkillLevel(entityId, name)) : 0;
     CombatSystem.CombatResult combat = combatSystemResolver
-        .calculatePrecomputedMeleeElementalAttack(
+        .calculatePrecomputedMeleeElementalAttackWithContext(
             attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
             physical[0], physical[1], DruidSkills.getShapeAttackRating(
                 skill, level, attacker, isPlayerEntity(entityId)),
             elementalMin, elementalMax, 0, duration,
-            unitStates.stateList, stateList(targetId), isEntityMoving(targetId));
+            unitStates.stateList, stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     if (rabies && combat.hit && !combat.blocked) {
       int rawFixed = MathUtils.random(elemental[0], elemental[1]);
       CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
@@ -3707,10 +3707,10 @@ public class Actioneer extends PassiveSystem {
     int attackRating = statInt(attacker, Stat.tohit);
     int arBonus = PaladinSkills.getZealAttackRatingPercent(skill, level);
     attackRating += attackRating * arBonus / 100;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(target), min, max, attackRating,
         stateList(entityId), stateList(target), isEntityMoving(target),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     casting.zealStrikeIndex++;
     casting.zealRemainingStrikes--;
     casting.zealStrikeProcessed = true;
@@ -3786,11 +3786,11 @@ public class Actioneer extends PassiveSystem {
         skill, level, attacker, weapon, unitStates.stateList);
     int attackRating = DruidSkills.getShapeAttackRating(
         skill, level, attacker, isPlayerEntity(entityId));
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(current),
         damage[0], damage[1], attackRating,
         unitStates.stateList, stateList(current), isEntityMoving(current),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
 
     int strike = ++casting.furyStrikeIndex;
     casting.furyRemainingStrikes--;
@@ -3863,10 +3863,10 @@ public class Actioneer extends PassiveSystem {
     int[] damage = DruidSkills.calculateShapeWeaponDamage(
         skill, level, attacker, weapon, states.stateList);
     CombatSystem.CombatResult combat = combatSystemResolver
-        .calculatePrecomputedMeleeAttack(attacker, defender,
+        .calculatePrecomputedMeleeAttackWithContext(attacker, defender,
             isPlayerEntity(entityId), isPlayerEntity(targetId), damage[0], damage[1],
             DruidSkills.getShapeAttackRating(skill, level, attacker, isPlayerEntity(entityId)),
-            states.stateList, stateList(targetId), isEntityMoving(targetId));
+            states.stateList, stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       if (combat.blocked) queueHitReaction(targetId, combat);
@@ -4436,11 +4436,11 @@ public class Actioneer extends PassiveSystem {
         stateList(entityId));
     int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
         skill, level, attacker, isPlayerEntity(entityId), weapon, stateList(entityId));
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
@@ -5542,9 +5542,8 @@ public class Actioneer extends PassiveSystem {
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
     int difficulty = combatDifficulty();
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
-        files() != null && files().DifficultyLevels != null
-            ? files().DifficultyLevels.get(difficulty) : null);
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : com.riiablo.engine.server.ServerGameplayContext.legacyCombatContext(difficulty);
   }
 
   private int combatDifficulty() {
@@ -5641,12 +5640,12 @@ public class Actioneer extends PassiveSystem {
         profile.elementalMax[CombatSystem.DAMAGE_MAGIC],
         profile.matchedElementProfiles);
 
-    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackWithContext(
         attacker, defender, false, isPlayerEntity(targetId), false,
         profile.minDamage, profile.maxDamage, profile.attackRating, false,
         profile.elementalMin, profile.elementalMax,
         profile.coldLength, profile.poisonLength,
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=miss chance={}",
@@ -5766,10 +5765,10 @@ public class Actioneer extends PassiveSystem {
       maxDamage = statInt(attacker, Stat.maxdamage);
       attackRating = statInt(attacker, Stat.tohit);
     }
-    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackWithContext(
         attacker, defender, false, isPlayerEntity(targetId), false,
         minDamage, maxDamage, attackRating,
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[MONSTER_SMITE] phase=result source={} target={} result=miss chance={} distance={}",
@@ -6095,12 +6094,12 @@ public class Actioneer extends PassiveSystem {
     int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
         statInt(attacker, Stat.tohit));
     Item weapon = activeAttackWeapon(entityId);
-    casting.vengeanceCombat = combatSystemResolver.calculateAttack(
+    casting.vengeanceCombat = combatSystemResolver.calculateAttackWithContext(
         attacker, defender, true, isPlayerEntity(targetId), false,
         physicalMin, physicalMax, attackRating, false,
         elementalMin, elementalMax, coldLength, 0,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     casting.vengeanceTargetId = targetId;
     casting.vengeanceElementType = hitClassElement;
     casting.vengeancePrepared = true;
@@ -6191,10 +6190,10 @@ public class Actioneer extends PassiveSystem {
     int maxDamage = Math.max(minDamage, statInt(attacker, Stat.maxdamage));
     int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
         statInt(attacker, Stat.tohit));
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(resolvedTarget), minDamage, maxDamage,
         attackRating, stateList(entityId), stateList(resolvedTarget), isEntityMoving(resolvedTarget),
-        weaponMastery(entityId, weapon, false));
+        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
     casting.chargeHitProcessed = true;
     casting.chargeTargetId = resolvedTarget;
     int bonus = Math.max(0, PaladinSkills.getChargeDamagePercent(skill, level));
@@ -6238,11 +6237,11 @@ public class Actioneer extends PassiveSystem {
     }
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackWithContext(
         attacker, defender, false, isPlayerEntity(targetId), false,
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit),
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result={} chance={}",
@@ -6300,10 +6299,10 @@ public class Actioneer extends PassiveSystem {
       min += hsBonus;
       max += hsBonus;
     }
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(targetId), min, max,
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
-        isEntityMoving(targetId));
+        isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SMITE] phase=result source={} target={} result={} chance={}",
@@ -6365,11 +6364,11 @@ public class Actioneer extends PassiveSystem {
     if (attacker == null || defender == null || !canDamageRelation(
         entityId, targetId, true, isPlayerEntity(targetId))) return;
     int level = Math.max(1, skillLevel(entityId, skill.Id));
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttack(
+    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(targetId),
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
-        isEntityMoving(targetId));
+        isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} result={} chance={}",

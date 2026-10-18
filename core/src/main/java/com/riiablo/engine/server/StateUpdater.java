@@ -347,9 +347,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? mUnitStates.get(sourceId).stateList : null;
     StateList targetStates = mUnitStates.has(targetId)
         ? mUnitStates.get(targetId).stateList : null;
-    return combatSystemResolver.resolveColdDuration(
+    return combatSystemResolver.resolveColdLengthBeforeState(
         mAttributesWrapper.get(targetId).attrs, isPlayerAligned(targetId), duration,
-        armorColdPierce(sourceId, sourceStates), targetStates, difficulty());
+        armorColdPierce(sourceId, sourceStates), targetStates, nativeDifficultyContext());
   }
 
   private int armorColdPierce(int entityId, StateList states) {
@@ -1690,10 +1690,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       }
       int toHitPercent = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
       boolean alwaysHit = (skill.ResultFlags & 1) != 0;
-      CombatSystem.CombatResult combat = combatSystemResolver.calculateBladeShieldAttack(
+      CombatSystem.CombatResult combat = combatSystemResolver.calculateBladeShieldAttackWithContext(
           source, target, isPlayerAligned(entityId), isPlayerAligned(targetId),
           skillDamage[0], skillDamage[1], skill.SrcDam, toHitPercent, alwaysHit,
-          states, targetStates, isMoving(targetId));
+          states, targetStates, isMoving(targetId), nativeDifficultyContext());
       if (!combat.hit || combat.blocked) continue;
       StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
@@ -2178,8 +2178,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
     int difficulty = difficulty();
-    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
-        difficulty, difficultyEntry(difficulty));
+    return serverContext != null ? serverContext.combatContext(difficulty)
+        : com.riiablo.engine.server.ServerGameplayContext.legacyCombatContext(difficulty);
   }
 
   private int coldDivisor(int difficulty) {

@@ -22,6 +22,8 @@ public final class NativeCombatContext {
   private final boolean defenderDemon;
   private final boolean defenderUndead;
   private final int playerCount;
+  private final boolean expansion;
+  private final boolean stateDurationsDeferred;
 
   private NativeCombatContext(int difficulty) {
     this(difficulty, null, false, false, false, false, 1);
@@ -30,6 +32,13 @@ public final class NativeCombatContext {
   private NativeCombatContext(int difficulty, DifficultyLevels.Entry difficultyRow,
       boolean attackerPlayer, boolean defenderPlayer, boolean defenderDemon,
       boolean defenderUndead, int playerCount) {
+    this(difficulty, difficultyRow, attackerPlayer, defenderPlayer, defenderDemon,
+        defenderUndead, playerCount, true, false);
+  }
+
+  private NativeCombatContext(int difficulty, DifficultyLevels.Entry difficultyRow,
+      boolean attackerPlayer, boolean defenderPlayer, boolean defenderDemon,
+      boolean defenderUndead, int playerCount, boolean expansion, boolean stateDurationsDeferred) {
     this.difficulty = NativeDifficultyRules.clamp(difficulty);
     this.difficultyRow = difficultyRow;
     this.attackerPlayer = attackerPlayer;
@@ -37,6 +46,8 @@ public final class NativeCombatContext {
     this.defenderDemon = defenderDemon;
     this.defenderUndead = defenderUndead;
     this.playerCount = Math.max(1, Math.min(8, playerCount));
+    this.expansion = expansion;
+    this.stateDurationsDeferred = stateDurationsDeferred;
   }
 
   public static NativeCombatContext normal() {
@@ -55,18 +66,29 @@ public final class NativeCombatContext {
 
   public NativeCombatContext withCombatants(boolean attackerPlayer, boolean defenderPlayer) {
     return new NativeCombatContext(difficulty, difficultyRow, attackerPlayer, defenderPlayer,
-        defenderDemon, defenderUndead, playerCount);
+        defenderDemon, defenderUndead, playerCount, expansion, stateDurationsDeferred);
   }
 
   public NativeCombatContext withTargetType(boolean defenderDemon, boolean defenderUndead) {
     return new NativeCombatContext(difficulty, difficultyRow, attackerPlayer, defenderPlayer,
-        defenderDemon, defenderUndead, playerCount);
+        defenderDemon, defenderUndead, playerCount, expansion, stateDurationsDeferred);
   }
 
   public NativeCombatContext withPlayerCount(int playerCount) {
     return new NativeCombatContext(difficulty, difficultyRow, attackerPlayer, defenderPlayer,
-        defenderDemon, defenderUndead, playerCount);
+        defenderDemon, defenderUndead, playerCount, expansion, stateDurationsDeferred);
   }
+
+  /** Production states own cold/freeze difficulty divisors; do not pre-divide their packet. */
+  public static NativeCombatContext forGameplay(int difficulty,
+      DifficultyLevels.Entry row, boolean expansion) {
+    return new NativeCombatContext(difficulty, row, false, false, false, false, 1,
+        expansion, true);
+  }
+
+  public boolean expansion() { return expansion; }
+
+  public boolean stateDurationsDeferred() { return stateDurationsDeferred; }
 
   public int difficulty() {
     return difficulty;

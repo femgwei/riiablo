@@ -18,6 +18,8 @@ public final class NativeDifficultyRules {
   }
 
   public static int playerResistancePenalty(NativeCombatContext context) {
+    // D2MOO SUNITDMG: Classic ignores DifficultyLevels.ResistPenalty.
+    if (!context.expansion()) return context.isHell() ? -50 : context.isNightmare() ? -20 : 0;
     return context.difficultyRow() == null ? playerResistancePenalty(context.difficulty())
         : tableResistancePenalty(context);
   }

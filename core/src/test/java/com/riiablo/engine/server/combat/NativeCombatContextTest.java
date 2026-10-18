@@ -6,6 +6,23 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void classicPenaltiesIgnoreExpansionTableAndDerivedContextsKeepMode() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.ResistPenalty = -37;
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      NativeCombatContext classic = NativeCombatContext.forGameplay(difficulty, row, false)
+          .withCombatants(true, true).withTargetType(true, true).withPlayerCount(4);
+      assertEquals(false, classic.expansion());
+      assertEquals(true, classic.stateDurationsDeferred());
+      assertEquals(new int[] {0, -20, -50}[difficulty],
+          NativeDifficultyRules.playerResistancePenalty(classic));
+      assertEquals(-37, NativeDifficultyRules.playerResistancePenalty(
+          NativeCombatContext.forGameplay(difficulty, row, true)));
+    }
+  }
+
+  @Test
   void tableResistancePenaltyPreservesInjectedSignedValues() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();

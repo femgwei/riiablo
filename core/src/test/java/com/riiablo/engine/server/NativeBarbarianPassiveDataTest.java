@@ -100,12 +100,15 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
       assertEquals(i < 3 ? 36 : 38, SkillFormula.evaluate(skill.passivecalc[0], skill, 2));
       assertEquals(28, SkillFormula.evaluate(skill.passivecalc[1], skill, 1));
       assertEquals(33, SkillFormula.evaluate(skill.passivecalc[1], skill, 2));
-      assertEquals(5, SkillFormula.evaluate(skill.passivecalc[2], skill, 1));
-      assertEquals(9, SkillFormula.evaluate(skill.passivecalc[2], skill, 2));
+      assertEquals(NativeMasteryOracle.criticalChance(skill, 1),
+          SkillFormula.evaluate(skill.passivecalc[2], skill, 1));
+      assertEquals(NativeMasteryOracle.criticalChance(skill, 2),
+          SkillFormula.evaluate(skill.passivecalc[2], skill, 2));
     }
     assertEquals(36, BarbarianSkills.calculateWeaponMasteryAttackRatingBonus(2));
     assertEquals(33, BarbarianSkills.calculateWeaponMasteryDamageBonus(2));
-    assertEquals(9, BarbarianSkills.getWeaponMasteryCriticalChance(2));
+    assertEquals(NativeMasteryOracle.criticalChance(skill("Sword Mastery"), 2),
+        BarbarianSkills.getWeaponMasteryCriticalChance(2));
   }
 
   @Test
@@ -119,18 +122,19 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     states.getWeaponMastery(weapon("ssd"), false, bonus);
     assertEquals(36, bonus.attackRatingPercent);
     assertEquals(33, bonus.damagePercent);
-    assertEquals(9, bonus.criticalChance);
+    assertEquals(NativeMasteryOracle.criticalChance(skill("Sword Mastery"), 2), bonus.criticalChance);
 
     states.getWeaponMastery(weapon("hax"), false, bonus);
     assertEquals(28, bonus.attackRatingPercent);
     assertEquals(28, bonus.damagePercent);
-    assertEquals(5, bonus.criticalChance);
+    assertEquals(NativeMasteryOracle.criticalChance(skill("Axe Mastery"), 1), bonus.criticalChance);
 
     Item javelin = weapon("jav");
     states.getWeaponMastery(javelin, true, bonus);
     assertEquals(38, bonus.attackRatingPercent);
     assertEquals(33, bonus.damagePercent);
-    assertEquals(9, bonus.criticalChance);
+    assertEquals(NativeMasteryOracle.throwingCriticalChance(skill("Throwing Mastery"), 2),
+        bonus.criticalChance);
     states.getWeaponMastery(javelin, false, bonus);
     assertTrue(bonus.isEmpty(), "throw mastery must not leak into a melee jab");
 
@@ -177,7 +181,8 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
       assertFalse(sword.throwingMastery);
       assertEquals(36, sword.masteryAttackRatingModifier);
       assertEquals(33, sword.masteryDamageModifier);
-      assertEquals(9, sword.masteryCriticalChance);
+      assertEquals(NativeMasteryOracle.criticalChance(skill("Sword Mastery"), 2),
+          sword.masteryCriticalChance);
       UnitState throwing = states.getState(StateId.THROWINGMASTERY);
       assertNotNull(throwing);
       assertTrue(throwing.throwingMastery);
