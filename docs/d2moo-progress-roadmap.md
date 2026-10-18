@@ -5005,6 +5005,8 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 - [x] `CombatSystem` 和 `MonsterUtil` 统一使用该规则层；保留旧的整数难度入口，避免
   一次性改动技能、导弹和 D2GS 的所有调用方。
 - [x] 增加纯规则回归，覆盖难度边界、`0/-40/-100` 抗性惩罚和 `1/2/4` 冷冻时长除数。
+- [x] 新增 `NativeDamagePacket` 作为可复用的 `D2DamageStrc` 可观察字段边界；现有
+  `CombatResult` 继承该数据包，保持攻击、导弹和状态调用方兼容。
 - [ ] 下一阶段将 `DifficultyLevels.txt` 行、PvP/玩家数量和 `D2DamageStrc` flags 纳入
   `NativeCombatContext`，再逐步减少 `CombatSystem` 的原始整数参数。
 

@@ -1,0 +1,87 @@
+package com.riiablo.engine.server.combat;
+
+/**
+ * Mutable native damage record shared by attacks, missiles and state effects.
+ *
+ * <p>This is the Java boundary corresponding to the observable parts of
+ * D2MOO's {@code D2DamageStrc}.  It carries the packet and result flags; ECS
+ * systems remain responsible for applying the resulting life change.
+ */
+public class NativeDamagePacket {
+  public boolean hit;
+  public boolean blocked;
+  public boolean blockAnimationAllowed;
+  public int defenseType = DefenseCalculator.DEFENSE_NONE;
+  public boolean critical;
+  public boolean deadlyStrike;
+  public boolean crushingBlow;
+  public int physicalDamage;
+  public int[] elementalDamage = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+  public int totalDamage;
+  public int elementalScale = 1;
+  public int lifeStolen;
+  public int manaStolen;
+  public int absorbedLife;
+  public int hitChance;
+  public int attackRating;
+  public int targetDefense;
+  public int hitRoll = -1;
+  public int coldDuration;
+  public int poisonDuration;
+  public float poisonDamagePerFrame;
+  public int poisonRawDamageFixed;
+  public int poisonPiercePercent;
+  public int poisonBaseDuration;
+
+  public float elementalDamageHp(int type) {
+    return elementalDamage[type] / (float) elementalScale;
+  }
+
+  public float absorbedLifeHp() {
+    return absorbedLife / (float) elementalScale;
+  }
+
+  public float totalDamageHp() {
+    if (elementalScale == 1) return totalDamage;
+    float total = physicalDamage;
+    for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
+      if (i != CombatSystem.DAMAGE_POISON || poisonDuration <= 0) {
+        total += elementalDamageHp(i);
+      }
+    }
+    return total;
+  }
+
+  public boolean isAmazonPassiveDefense() {
+    return defenseType == DefenseCalculator.DEFENSE_DODGE
+        || defenseType == DefenseCalculator.DEFENSE_AVOID
+        || defenseType == DefenseCalculator.DEFENSE_EVADE;
+  }
+
+  public void reset() {
+    hit = false;
+    blocked = false;
+    blockAnimationAllowed = false;
+    defenseType = DefenseCalculator.DEFENSE_NONE;
+    critical = false;
+    deadlyStrike = false;
+    crushingBlow = false;
+    physicalDamage = 0;
+    for (int i = 0; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
+    totalDamage = 0;
+    elementalScale = 1;
+    lifeStolen = 0;
+    manaStolen = 0;
+    absorbedLife = 0;
+    hitChance = 0;
+    attackRating = 0;
+    targetDefense = 0;
+    hitRoll = -1;
+    coldDuration = 0;
+    poisonDuration = 0;
+    poisonDamagePerFrame = 0f;
+    poisonRawDamageFixed = 0;
+    poisonPiercePercent = 0;
+    poisonBaseDuration = 0;
+  }
+}
