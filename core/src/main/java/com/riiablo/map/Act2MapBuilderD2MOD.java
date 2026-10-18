@@ -1451,7 +1451,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           continue;
         }
 
-        DS1.Cell destinationCell = findReverseWarp(map, destination, source.level.Id);
+        DS1.Cell destinationCell = findReverseWarp(map, source, sourceCell, destination);
         if (destinationCell == null) {
           missingReverse++;
           if (missingReverse <= 16) {
@@ -1480,11 +1480,28 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
     return null;
   }
 
-  private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {
+  static DS1.Cell findReverseWarp(Map map, Zone source, DS1.Cell sourceCell,
+      Zone destination) {
     if (destination.specials == null) return null;
+    // DrlgDrlgRoom.cpp sub_6FD77BB0 pairs the nth Vis entry to a level
+    // with that level's nth reverse Vis entry. Lut Gholein has two distinct
+    // sewer entrances: selecting the first reverse marker collapses both.
+    int ordinal = 0;
+    for (int slot = 0; slot < sourceCell.mainIndex; slot++) {
+      if (effectiveVis(map, source, slot) == destination.level.Id) ordinal++;
+    }
+    int reverseSlot = -1;
+    for (int slot = 0; slot < 8; slot++) {
+      if (effectiveVis(map, destination, slot) == source.level.Id && ordinal-- == 0) {
+        reverseSlot = slot;
+        break;
+      }
+    }
+    if (reverseSlot < 0) return null;
     for (IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
       DS1.Cell cell = entry.value;
-      if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+      if (cell == null || !Map.ID.WARPS.contains(cell.id)
+          || cell.mainIndex != reverseSlot) continue;
       int target = map.getWarpDestinationOverride(destination.level.Id, cell.mainIndex);
       boolean nativeSlotValid = destination.level.Warp != null && cell.mainIndex >= 0
           && cell.mainIndex < destination.level.Warp.length
@@ -1494,9 +1511,16 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           && cell.mainIndex >= 0 && cell.mainIndex < destination.level.Vis.length) {
         target = destination.level.Vis[cell.mainIndex];
       }
-      if (target == sourceLevelId) return cell;
+      if (target == source.level.Id) return cell;
     }
     return null;
+  }
+
+  private static int effectiveVis(Map map, Zone zone, int slot) {
+    int override = map.getWarpDestinationOverride(zone.level.Id, slot);
+    if (override > 0) return override;
+    return zone.level.Vis != null && slot < zone.level.Vis.length
+        ? zone.level.Vis[slot] : 0;
   }
 
   /** Small Java equivalent of DRLG_SetWarpId's slot-selection portion. */
