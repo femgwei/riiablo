@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.combat.NativeDifficultyRules;
 
 /**
  * 怪物工具类 - 基于 D2MOD Monster.cpp 移植
@@ -196,16 +197,7 @@ public final class MonsterUtil {
    * @return 抗性减少值
    */
   public static int getResistancePenalty(int difficulty) {
-    switch (difficulty) {
-      case DIFFICULTY_NORMAL:
-        return 0;
-      case DIFFICULTY_NIGHTMARE:
-        return -40; // 噩梦 -40%
-      case DIFFICULTY_HELL:
-        return -100; // 地狱 -100%
-      default:
-        return 0;
-    }
+    return NativeDifficultyRules.playerResistancePenalty(difficulty);
   }
 
   /**
