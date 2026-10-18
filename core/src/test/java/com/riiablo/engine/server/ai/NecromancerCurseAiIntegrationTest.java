@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 /** Authoritative AI target behavior for D2Game's Dim Vision/Attract/Confuse modes. */
 class NecromancerCurseAiIntegrationTest extends RiiabloTest {
   @Test
-  void ordinaryMonsterDropsTargetOutsideItsSpawnLeash() {
+  void ordinaryMonsterRetainsNearbyTargetFarFromItsSpawnAnchor() {
     Fixture fixture = new Fixture();
     try {
       int actor = fixture.monster(0, 0);
@@ -53,10 +53,10 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
       fixture.world.getMapper(Position.class).get(player).position.set(1000, 0);
       fixture.world.getMapper(Pathfind.class).create(actor).targetEntityId = player;
 
-      assertEquals(Engine.INVALID_ENTITY, ai.nearest(),
-          "being close to the monster must not extend pursuit indefinitely");
-      assertFalse(fixture.world.getMapper(Pathfind.class).has(actor),
-          "losing the target must cancel the stale chase path");
+      assertEquals(player, ai.nearest(),
+          "native aiDist follows the monster instead of its spawn anchor");
+      assertTrue(fixture.world.getMapper(Pathfind.class).has(actor),
+          "a nearby valid target must not lose its chase path at a spawn-radius boundary");
     } finally {
       fixture.close();
     }

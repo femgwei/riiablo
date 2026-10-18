@@ -896,34 +896,6 @@ public abstract class AI implements Interactable.Interactor {
     return (float) Math.floor((minor + 2f * major) / 2f);
   }
 
-  /**
-   * Keeps ordinary monsters in the activation area where they spawned. The
-   * regular aiDist check is relative to the monster and therefore moves with
-   * it; by itself it can sustain an unlimited chase. Native RoomEx maps use
-   * the spawn room plus its immediate sight ring. Legacy maps use a wider
-   * fixed radius so acquiring and losing a target do not happen at one edge.
-   */
-  private boolean isWithinSpawnPursuitScope(int targetId) {
-    if (monster == null || !monster.hasSpawnAnchor
-        || mSummonedPet.has(entityId) || !mPosition.has(targetId)) return true;
-    Position targetPosition = mPosition.get(targetId);
-    if (monster.spawnZone != null && monster.spawnZone.hasNativeRoomTopology()) {
-      if (mMapWrapper.has(entityId)) {
-        MapWrapper wrapper = mMapWrapper.get(entityId);
-        Map.Zone targetZone = wrapper != null && wrapper.map != null
-            ? wrapper.map.getZone(targetPosition.position) : null;
-        if (targetZone != null && targetZone != monster.spawnZone
-            && wrapper.map.areZonesAdjacent(monster.spawnZone, targetZone)) return true;
-      }
-      return monster.spawnZone.areRoomsAdjacent(
-          monster.spawnX, monster.spawnY,
-          targetPosition.position.x, targetPosition.position.y);
-    }
-    float pursuitDistance = resolveAiDistance() * 2f;
-    Vector2 spawn = tmpVec2.set(monster.spawnX, monster.spawnY);
-    return nativeAiDistance(spawn, targetPosition.position) <= pursuitDistance;
-  }
-
   protected int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
     Vector2 entityPos = mPosition.get(entityId).position;
     int targetId = Engine.INVALID_ENTITY;
@@ -1076,7 +1048,9 @@ public abstract class AI implements Interactable.Interactor {
         return false;
       }
     }
-    if (ordinaryScope && !isWithinSpawnPursuitScope(targetId)) return false;
+    // D2Game AIUTIL measures aiDist from the unit's current coordinates.
+    // Room activation is handled by AIStepper; a fixed spawn-room leash would
+    // drop a nearby fleeing player before the player actually enters town.
     // Reuse the native aiDist limit for legacy AI implementations that still
     // iterate their own subscription.  A zero MonStats value is not unlimited:
     // D2Game falls back to 35.  Keep the same weighted grid metric as the
