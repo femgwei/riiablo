@@ -294,6 +294,8 @@ public class RenderSystem extends BaseEntitySystem {
   int                 viewBuffer[];
   Array<Integer>      cache[][][];
   private final RenderSpatialIndex spatialIndex = new RenderSpatialIndex();
+  private final com.badlogic.gdx.utils.IntMap<Long> invisibleBodies =
+      new com.badlogic.gdx.utils.IntMap<>();
   private final RenderCacheMetrics cacheMetrics = new RenderCacheMetrics();
   private final RenderInterest renderInterest = new RenderInterest();
   private int visibleCellCount;
@@ -413,11 +415,13 @@ public class RenderSystem extends BaseEntitySystem {
   @Override
   protected void removed(int entityId) {
     spatialIndex.remove(entityId);
+    invisibleBodies.remove(entityId);
   }
 
   @Override
   protected void dispose() {
     spatialIndex.clear();
+    invisibleBodies.clear();
     debugEntitites = null;
   }
 
@@ -1301,6 +1305,7 @@ public class RenderSystem extends BaseEntitySystem {
             region == null ? "null" : region.getRegionWidth() + "x" + region.getRegionHeight()));
       }
       animation.draw(batch, tmp.x, tmp.y);
+      diagnoseInvisibleBody(entity, animation, pos);
 
       if (overlay != null && !overlay.entry.PreDraw) {
         overlay.animation.draw(batch, tmp.x, tmp.y);
@@ -1309,6 +1314,36 @@ public class RenderSystem extends BaseEntitySystem {
 
   private boolean isPresentationMissile(int entity) {
     return mMissile.has(entity) && mMissile.get(entity).presentationOnly;
+  }
+
+  private void diagnoseInvisibleBody(int entity, Animation animation, Vector2 position) {
+    Object object = mObject.get(entity);
+    if (!mMonster.has(entity) && (object == null || object.base == null || !object.base.Draw)) return;
+    if (animation.getDrawableLayerCount() > 0) {
+      Long previous = invisibleBodies.remove(entity);
+      if (previous != null && previous == Long.MAX_VALUE) {
+        Gdx.app.log(TAG, "[COMPOSITE_VISIBLE] entity=" + entity);
+      }
+      return;
+    }
+    long now = TimeUtils.millis();
+    Long since = invisibleBodies.get(entity);
+    if (since == null) {
+      invisibleBodies.put(entity, now);
+      return;
+    }
+    if (since == Long.MAX_VALUE || now - since < 1000) return;
+    invisibleBodies.put(entity, Long.MAX_VALUE);
+    CofReference reference = mCofReference.get(entity);
+    Gdx.app.error(TAG, "[COMPOSITE_INVISIBLE] entity=" + entity
+        + " object=" + (object == null || object.base == null ? -1 : object.base.Id)
+        + " token=" + (reference == null ? "null" : reference.effectiveToken())
+        + " mode=" + (reference == null ? -1 : reference.mode)
+        + " position=" + position + " cof=" + (animation.getCOF() != null)
+        + " frame=" + animation.getFrame() + "/" + animation.getNumFramesPerDir()
+        + " direction=" + animation.getDirection()
+        + " components=" + (mCofComponents.has(entity)
+            ? java.util.Arrays.toString(mCofComponents.get(entity).component) : "null"));
   }
 
   private boolean isIceExplosion(int entity) {

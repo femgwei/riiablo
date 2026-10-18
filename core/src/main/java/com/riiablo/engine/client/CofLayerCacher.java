@@ -77,6 +77,33 @@ public class CofLayerCacher extends IteratingSystem {
           Gdx.app.log(TAG, "[PLAYER_ANIM] phase=recover entity=" + entityId
               + " mode=" + (reference == null ? -1 : reference.mode));
         }
+      } else {
+        // Matching COFs alone do not guarantee a complete resident sprite.
+        // A lost/replaced transient layer can otherwise remain invisible
+        // indefinitely on an idle shrine, or across a retained corpse revival.
+        int missing = 0;
+        CofComponentDescriptors owned = mCofComponentDescriptors.get(entityId);
+        COF cof = animation.getCOF();
+        if (cof == null) return;
+        for (int l = 0; l < cof.getNumLayers(); l++) {
+          int c = cof.getLayer(l).component;
+          AssetDescriptor<? extends DC> descriptor = owned.descriptors[c];
+          if (descriptor == null || mCofComponents.get(entityId).component[c]
+              == CofComponents.COMPONENT_NIL) continue;
+          Animation.Layer layer = animation.getLayer(c);
+          if (clientContext.assets() != null && clientContext.assets().isLoaded(descriptor)
+              && (layer == null || layer.getDC() != clientContext.assets().get(descriptor))) {
+            missing |= 1 << c;
+          }
+        }
+        if (missing != Dirty.NONE) {
+          // Rebind this entity's already-owned assets. Do not acquire another
+          // reference or reload optional layers absent from the retail MPQ.
+          mCofLoadingComponents.create(entityId).flags |= missing;
+          if (Gdx.app != null) Gdx.app.log(TAG,
+              "[COMPOSITE_RECOVER] entity=" + entityId + " reason=resident_layer_mismatch flags="
+                  + Dirty.toString(missing));
+        }
       }
       return;
     }

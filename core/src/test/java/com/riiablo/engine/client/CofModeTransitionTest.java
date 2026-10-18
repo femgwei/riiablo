@@ -24,6 +24,37 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class CofModeTransitionTest {
+  @Test void recycledMonsterIdInitializesShrineComposite() {
+    AssetManager saved = Riiablo.assets;
+    Colors savedColors = Riiablo.colors;
+    Riiablo.colors = new Colors();
+    AssetManager assets = Riiablo.assets = mock(AssetManager.class);
+    COF fallen = cof();
+    COF shrine = cof();
+    when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(true);
+    when(assets.get(any(AssetDescriptor.class))).thenAnswer(call ->
+        ((AssetDescriptor<?>) call.getArgument(0)).fileName.contains("FA") ? fallen : shrine);
+    World world = new World(new WorldConfigurationBuilder().with(
+        new EventSystem(), new CofManager(), new CofUnloader(), new CofResolver(),
+        new CofLoader(), new CofLayerLoader(), new CofLayerCacher()).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int old = createComposite(world, Class.Type.MON, "FA", Engine.Monster.MODE_NU);
+      for (int i = 0; i < 5; i++) world.process();
+      assertSame(fallen, world.getMapper(AnimationWrapper.class).get(old).animation.getCOF());
+      world.delete(old);
+      world.process();
+      int reused = createComposite(world, Class.Type.OBJ, "SH", Engine.Object.MODE_NU);
+      assertEquals(old, reused, "exercise actual Artemis id reuse");
+      for (int i = 0; i < 5; i++) world.process();
+      assertSame(shrine, world.getMapper(AnimationWrapper.class).get(reused).animation.getCOF());
+    } finally {
+      world.dispose();
+      Riiablo.assets = saved;
+      Riiablo.colors = savedColors;
+    }
+  }
+
   @Test void monsterKeepsResidentCompositeUntilAttackLayersAreReady() {
     AssetManager saved = Riiablo.assets;
     Colors savedColors = Riiablo.colors;

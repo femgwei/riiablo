@@ -537,6 +537,26 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     layer.draw(batch, direction, frame, x, y);
   }
 
+  /** Resident GPU layers for this frame; call after draw so lazy directions are loaded. */
+  public int getDrawableLayerCount() {
+    if (frame < 0 || frame >= numFrames) return 0;
+    int count = 0;
+    int realDirection = cof == null ? 0 : DC.Direction.toRealDir(direction, cof.getNumDirections());
+    int size = cof == null ? layers.length : cof.getNumLayers();
+    for (int l = 0; l < size; l++) {
+      Layer layer = layers[cof == null ? l : cof.getLayerOrder(realDirection, frame, l)];
+      if (layer == null || layer.dc == null || layer.regions == null
+          || layer.tint.a <= 0f
+          || direction < 0 || direction >= layer.regions.length) continue;
+      TextureRegion[] regions = layer.regions[direction];
+      if (regions == null || frame >= regions.length) continue;
+      TextureRegion region = regions[frame];
+      if (region != null && region.getTexture() != null
+          && region.getTexture().getTextureObjectHandle() != 0) count++;
+    }
+    return count;
+  }
+
 
   public void drawShadow(PaletteIndexedBatch batch, float x, float y) {
     drawShadow(batch, x, y, true);
